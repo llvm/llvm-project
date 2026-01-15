@@ -2,10 +2,10 @@
 
 ## Check non-relocatable object file handling.
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readelf --call-graph-info %t1 2>&1 | count 0
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t1 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t1 2>&1 | count 0
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t1 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM_NONRELOC -DFILE=%t1
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t1 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t1 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --check-prefix=JSON_NONRELOC -DFILE=%t1
 
 ## We do not support GNU format console output for --call-graph-info as it is an LLVM only info.
@@ -231,10 +231,10 @@ Symbols:
 
 ## Check relocatable object file handling.
 # RUN: yaml2obj --docnum=2 %s -o %t2
-# RUN: llvm-readelf --call-graph-info %t2 2>&1 | count 0
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t2 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t2 2>&1 | count 0
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t2 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM_RELOC -DFILE=%t2
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t2 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t2 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --check-prefix=JSON_RELOC -DFILE=%t2
 
 ## We do not support GNU format console output for --call-graph-info as it is an LLVM only info.
@@ -456,9 +456,9 @@ Symbols:
 
 ## Check ARM 32-bit Thumb address handling.
 # RUN: yaml2obj --docnum=3 %s -o %t3
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t3 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t3 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM_ARM_THUMB -DFILE=%t3
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t3 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t3 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --check-prefix=JSON_ARM_THUMB -DFILE=%t3
 
 # LLVM_ARM_THUMB:      CallGraph [

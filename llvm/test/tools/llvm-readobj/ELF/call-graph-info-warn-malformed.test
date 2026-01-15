@@ -4,9 +4,9 @@
 
 ## Tests that --call-graph-info warns if there is no section of type SHT_LLVM_CALL_GRAPH.
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t1 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t1 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t1 --check-prefix=WARN_NO_SECTION
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t1 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t1 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t1 --check-prefix=WARN_NO_SECTION
 
 # WARN_NO_SECTION: warning: '[[FILE]]': no SHT_LLVM_CALL_GRAPH section found
@@ -21,9 +21,9 @@ FileHeader:
 
 ## Check format version number.
 # RUN: yaml2obj --docnum=2 %s -o %t2
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t2 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t2 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t2 --check-prefix=WARN_FMT_VERSION
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t2 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t2 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t2 --check-prefix=WARN_FMT_VERSION
 
 # WARN_FMT_VERSION: warning: '[[FILE]]': unknown format version value [1] in SHT_LLVM_CALL_GRAPH type section
@@ -50,9 +50,9 @@ Symbols:
 
 ## Check missing flags.
 # RUN: yaml2obj --docnum=3 %s -o %t3
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t3 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t3 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t3 --check-prefix=WARN_MISSING_FLAG
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t3 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t3 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t3 --check-prefix=WARN_MISSING_FLAG
 
 # WARN_MISSING_FLAG: warning: '[[FILE]]': failed while reading call graph info's Flags unexpected end of data at offset 0x1 while reading [0x1, 0x2)
@@ -80,9 +80,9 @@ Symbols:
 
 ## Check Flags.
 # RUN: yaml2obj --docnum=4 %s -o %t4
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t4 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t4 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t4 --check-prefix=WARN_FLAG
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t4 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t4 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t4 --check-prefix=WARN_FLAG
 
 # WARN_FLAG: warning: '[[FILE]]': unexpected Flags value [8]
@@ -110,9 +110,9 @@ Symbols:
 
 ## Check missing function entry PC.
 # RUN: yaml2obj --docnum=5 %s -o %t5
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t5 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t5 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t5 --check-prefix=WARN_MISSING_PC
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t5 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t5 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t5 --check-prefix=WARN_MISSING_PC
 
 # WARN_MISSING_PC: warning: '[[FILE]]': failed while reading call graph info function entry PC unexpected end of data at offset 0x2 while reading [0x2, 0xa)
@@ -141,9 +141,9 @@ Symbols:
 
 ## Check missing function Type ID.
 # RUN: yaml2obj --docnum=6 %s -o %t6
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t6 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t6 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN_MISSING_TYPEID
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t6 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t6 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN_MISSING_TYPEID
 
 # WARN_MISSING_TYPEID: warning: '[[FILE]]': failed while reading function type ID unexpected end of data at offset 0xa while reading [0xa, 0x12)
@@ -173,9 +173,9 @@ Symbols:
 
 ## Check missing number of direct callees.
 # RUN: yaml2obj --docnum=7 %s -o %t7
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t7 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t7 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t7 --check-prefix=WARN_MISSING_DIRECT
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t7 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t7 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t7 --check-prefix=WARN_MISSING_DIRECT
 
 # WARN_MISSING_DIRECT: warning: '[[FILE]]': failed while reading number of direct callees unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
@@ -206,9 +206,9 @@ Symbols:
 
 ## Check missing direct callee.
 # RUN: yaml2obj --docnum=8 %s -o %t8
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t8 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t8 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN_MISSING_CALLEE
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t8 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t8 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN_MISSING_CALLEE
 
 # WARN_MISSING_CALLEE: warning: '[[FILE]]': failed while reading direct callee unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
@@ -240,9 +240,9 @@ Symbols:
 
 ## Check missing number of indirect target type IDs.
 # RUN: yaml2obj --docnum=9 %s -o %t9
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t9 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t9 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t9 --check-prefix=WARN_MISSING_NUM_INDIRECT
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t9 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t9 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t9 --check-prefix=WARN_MISSING_NUM_INDIRECT
 
 # WARN_MISSING_NUM_INDIRECT: warning: '[[FILE]]': failed while reading number of indirect target type IDs unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
@@ -273,9 +273,9 @@ Symbols:
 
 ## Check missing indirect target type ID.
 # RUN: yaml2obj --docnum=10 %s -o %t10
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t10 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t10 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t10 --check-prefix=WARN_MISSING_INDIRECT_TARGET_TYPE_ID
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t10 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t10 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t10 --check-prefix=WARN_MISSING_INDIRECT_TARGET_TYPE_ID
 
 # WARN_MISSING_INDIRECT_TARGET_TYPE_ID: warning: '[[FILE]]': failed while reading indirect target type ID unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
@@ -307,10 +307,10 @@ Symbols:
 
 ## Check missing relocation information.
 # RUN: yaml2obj --docnum=11 %s -o %t11
-# RUN: llvm-readelf --call-graph-info %t11 2>&1 | count 0
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t11 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t11 2>&1 | count 0
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t11 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t11 --check-prefix=WARN_NO_RELOC
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t11 2>&1 | \
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t11 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t11 --check-prefix=WARN_NO_RELOC
 
 # WARN_NO_RELOC: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type id for 2 indirect targets
