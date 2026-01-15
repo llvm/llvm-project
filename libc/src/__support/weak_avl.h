@@ -194,8 +194,9 @@ template <typename T> class WeakAVLNode {
     if (succ->parent) {
       bool node_was_right = succ->parent->children[1] == node;
       succ->parent->children[node_was_right] = succ;
-    } else
+    } else {
       root = succ;
+    }
 
     // 3) If the physical removal was under `node`, fixup parent must be the
     //    successor (since `node` is deleted and successor now occupies that
@@ -255,6 +256,8 @@ public:
 
   // Find data in the subtree rooted at root. If not found, returns nullptr.
   // `Compare` returns integer values for ternary comparison.
+  // Unlike other interfaces, `find` does not modify the tree; hence we pass
+  // the `root` by value.
   template <typename Compare>
   LIBC_INLINE static WeakAVLNode *find(WeakAVLNode *root, T data,
                                        Compare comp) {
@@ -318,7 +321,6 @@ public:
       parent = node->parent;
       if (parent)
         is_right = (parent->children[1] == node);
-      continue;
     }
     // We finish if node has reaches the root -- otherwise, we end up with
     // two more cases.
@@ -332,72 +334,73 @@ public:
     //    2    1           =>       1    1
     //   /      \                  /      \
     // (N)       (*)             (N)       (*)
-    if (parent->has_rank_diff_2(is_right))
+    if (parent->has_rank_diff_2(is_right)) {
       parent->toggle_rank_diff_2(is_right);
-    else {
-      LIBC_ASSERT(!node->both_flags_set() &&
-                  "there should be no 2-2 node along the insertion fixup path");
-
-      LIBC_ASSERT((node == allocated || node->any_flag_set()) &&
-                  "Internal node must have a child with rank-difference 2, "
-                  "otherwise it should have already been handled.");
-
-      // Case 3: node's sibling has rank-difference 2. And node has a 1-node
-      // along the same direction. We can do a single rotation to fix the
-      // trinode.
-      //                   (GP)                            (GP)
-      //               0    |   X      Rotate               |
-      //         (N) ----- (P)           =>                (N)
-      //     1  /   \  2      \  2                      1  /  \ 1
-      //      (C1)   \         \                        (C1)   (P)
-      //             (C2)       (S)                         1 /  \ 1
-      //                                                    (C2)  (S)
-      if (node->has_rank_diff_2(!is_right)) {
-        WeakAVLNode *new_subroot = rotate(root, parent, is_right);
-        new_subroot->clear_flags();
-        parent->clear_flags();
-      }
-      // Case 4: node's sibling has rank-difference 2. And node has a 1-node
-      // along the opposite direction. We need a double rotation to fix the
-      // trinode.
-      //                   (GP)                            (GP)
-      //               0    |   X      Zig-Zag              |      X
-      //         (N) ----- (P)           =>                (C1)
-      //     2  /   \  1      \  2                      1  /  \ 1
-      //       /    (C1)       \                        (N)    (P)
-      //     (C2) L /  \ R      (S)                  1 / \ L R / \ 1
-      //          (A)  (B)                           (C2) (A)(B) (S)
-      // (mirrored)
-      //         (GP)                                      (GP)
-      //        X | 0                Zig-Zag                |      X
-      //         (P) ----- (N)           =>                (C1)
-      //    2  /         1 / \ 2                        1  /  \ 1
-      //      /         (C1)  \                         (P)    (N)
-      //    (S)       L /  \ R (C2)                   1 / \ L R / \ 1
-      //              (A)  (B)                        (S)(A)  (B)(C2)
-      else {
-        WeakAVLNode *subroot1 = rotate(root, node, !is_right); // First rotation
-        [[maybe_unused]] WeakAVLNode *subroot2 =
-            rotate(root, parent, is_right); // Second rotation
-        LIBC_ASSERT(subroot1 == subroot2 &&
-                    "Subroots after double rotation should be the same");
-        bool subroot_left_diff_2 = subroot1->left_rank_diff_2;
-        bool subroot_right_diff_2 = subroot1->right_rank_diff_2;
-        node->clear_flags();
-        parent->clear_flags();
-        subroot1->clear_flags();
-        // Select destinations
-        WeakAVLNode *dst_left = is_right ? parent : node;
-        WeakAVLNode *dst_right = is_right ? node : parent;
-        // Masked toggles
-        if (subroot_left_diff_2)
-          dst_left->toggle_rank_diff_2(true);
-
-        if (subroot_right_diff_2)
-          dst_right->toggle_rank_diff_2(false);
-      }
+      return allocated;
     }
 
+    // At this point, we know there is a violation but one-step fix is possible.
+    LIBC_ASSERT(!node->both_flags_set() &&
+                "there should be no 2-2 node along the insertion fixup path");
+
+    LIBC_ASSERT((node == allocated || node->any_flag_set()) &&
+                "Internal node must have a child with rank-difference 2, "
+                "otherwise it should have already been handled.");
+
+    // Case 3: node's sibling has rank-difference 2. And node has a 1-node
+    // along the same direction. We can do a single rotation to fix the
+    // trinode.
+    //                   (GP)                            (GP)
+    //               0    |   X      Rotate               |
+    //         (N) ----- (P)           =>                (N)
+    //     1  /   \  2      \  2                      1  /  \ 1
+    //      (C1)   \         \                        (C1)   (P)
+    //             (C2)       (S)                         1 /  \ 1
+    //                                                    (C2)  (S)
+    if (node->has_rank_diff_2(!is_right)) {
+      WeakAVLNode *new_subroot = rotate(root, parent, is_right);
+      new_subroot->clear_flags();
+      parent->clear_flags();
+      return allocated;
+    }
+    // Case 4: node's sibling has rank-difference 2. And node has a 1-node
+    // along the opposite direction. We need a double rotation to fix the
+    // trinode.
+    //                   (GP)                            (GP)
+    //               0    |   X      Zig-Zag              |      X
+    //         (N) ----- (P)           =>                (C1)
+    //     2  /   \  1      \  2                      1  /  \ 1
+    //       /    (C1)       \                        (N)    (P)
+    //     (C2) L /  \ R      (S)                  1 / \ L R / \ 1
+    //          (A)  (B)                           (C2) (A)(B) (S)
+    // (mirrored)
+    //         (GP)                                      (GP)
+    //        X | 0                Zig-Zag                |      X
+    //         (P) ----- (N)           =>                (C1)
+    //    2  /         1 / \ 2                        1  /  \ 1
+    //      /         (C1)  \                         (P)    (N)
+    //    (S)       L /  \ R (C2)                   1 / \ L R / \ 1
+    //              (A)  (B)                        (S)(A)  (B)(C2)
+
+    WeakAVLNode *subroot1 = rotate(root, node, !is_right); // First rotation
+    [[maybe_unused]] WeakAVLNode *subroot2 =
+        rotate(root, parent, is_right); // Second rotation
+    LIBC_ASSERT(subroot1 == subroot2 &&
+                "Subroots after double rotation should be the same");
+    bool subroot_left_diff_2 = subroot1->left_rank_diff_2;
+    bool subroot_right_diff_2 = subroot1->right_rank_diff_2;
+    node->clear_flags();
+    parent->clear_flags();
+    subroot1->clear_flags();
+    // Select destinations
+    WeakAVLNode *dst_left = is_right ? parent : node;
+    WeakAVLNode *dst_right = is_right ? node : parent;
+    // Masked toggles
+    if (subroot_left_diff_2)
+      dst_left->toggle_rank_diff_2(true);
+
+    if (subroot_right_diff_2)
+      dst_right->toggle_rank_diff_2(false);
     return allocated;
   }
 
@@ -499,19 +502,20 @@ public:
       new_subroot->clear_flags();
       new_subroot->toggle_rank_diff_2(sibling_is_right);
 
-      // Cursor only needs to be updated if it become a 2-2 node
+      // Cursor only needs to be updated if it becomes a 2-2 node
       if (sibling_alter_child_has_rank_diff_2) {
         // Demote a 2-2 cursor if it is a leaf
-        if (cursor->is_leaf()) {
+        bool cursor_is_leaf = cursor->is_leaf();
+        if (cursor_is_leaf)
           cursor->clear_flags();
-          new_subroot->toggle_rank_diff_2(!sibling_is_right);
-          LIBC_ASSERT(new_subroot->both_flags_set() &&
-                      "sibling should become a 2-2 node.");
-        } else {
-          cursor->toggle_rank_diff_2(sibling_is_right);
-          LIBC_ASSERT(cursor->both_flags_set() &&
-                      "cursor should become a 2-2 node.");
-        }
+
+        // If cursor is now a leaf, then its parent (which should be the pivot)
+        // becomes a 2-2 node after cursor's demotion. Otherwise, cursor itself
+        // should become a 2-2 node.
+        WeakAVLNode *candidate = cursor_is_leaf ? new_subroot : cursor;
+        candidate->toggle_rank_diff_2(sibling_is_right ^ cursor_is_leaf);
+        LIBC_ASSERT(candidate->both_flags_set() &&
+                    "target node should become a 2-2 node.");
       }
     }
     // Case 4. continue from Case 3; but rank-difference 1 child T of sibling
