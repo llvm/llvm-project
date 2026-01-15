@@ -271,7 +271,5 @@ class TestFrameVarDILCast(TestBase):
         self.expect(
             "frame variable '(myName)InnerFoo'",
             error=True,
-            substrs=[
-                "expected 'eof', got: <'InnerFoo' (identifier)>"
-            ],
+            substrs=["expected 'eof', got: <'InnerFoo' (identifier)>"],
         )

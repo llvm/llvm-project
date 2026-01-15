@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     int y;
   };
 
-  struct myName myStruct = { 98, 99 };
+  struct myName myStruct = {98, 99};
   int myName = 37;
 
   return 0; // Set a breakpoint here
