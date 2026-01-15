@@ -1100,9 +1100,9 @@ PPCTTIImpl::getVPLegalizationStrategy(const VPIntrinsic &PI) const {
 }
 
 bool PPCTTIImpl::hasActiveVectorLength() const {
-  unsigned CPU = ST->getCPUDirective();
-  if (!PPCEVL)
+  if (!PPCEVL || !ST->isPPC64())
     return false;
+  unsigned CPU = ST->getCPUDirective();
   return CPU == PPC::DIR_PWR10 || CPU == PPC::DIR_PWR_FUTURE ||
          (Pwr9EVL && CPU == PPC::DIR_PWR9);
 }
