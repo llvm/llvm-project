@@ -4559,7 +4559,12 @@ libc_math_function(
     additional_deps = [":__support_math_logbf128"],
 )
 
-libc_math_function(name = "logbf16")
+libc_math_function(
+    name = "logbf16",
+    additional_deps = [
+        ":__support_math_logbf16",
+    ],
+)
 
 libc_math_function(name = "lrint")
 
@@ -7887,5 +7892,13 @@ libc_function(
         ":__support_common",
         ":types_size_t",
         ":types_wchar_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_logbf16",
+    hdrs = ["src/__support/math/logbf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
     ],
 )
