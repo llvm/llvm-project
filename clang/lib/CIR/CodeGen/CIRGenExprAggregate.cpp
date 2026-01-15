@@ -130,8 +130,12 @@ public:
                      Expr *exprToVisit, ArrayRef<Expr *> args,
                      Expr *arrayFiller);
 
+  void emitFinalDestCopy(QualType type, RValue src);
+
   /// Perform the final copy to DestPtr, if desired.
-  void emitFinalDestCopy(QualType type, const LValue &src);
+  void emitFinalDestCopy(QualType type, const LValue &src,
+                         CIRGenFunction::ExprValueKind srcValueKind =
+                             CIRGenFunction::EVK_NonRValue);
 
   void emitCopy(QualType type, const AggValueSlot &dest,
                 const AggValueSlot &src);
@@ -397,7 +401,8 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXThrowExpr");
   }
   void VisitAtomicExpr(AtomicExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitAtomicExpr");
+    RValue result = cgf.emitAtomicExpr(e);
+    emitFinalDestCopy(e->getType(), result);
   }
 };
 
@@ -587,14 +592,33 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   }
 }
 
+/// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
+void AggExprEmitter::emitFinalDestCopy(QualType type, RValue src) {
+  assert(src.isAggregate() && "value must be aggregate value!");
+  LValue srcLV = cgf.makeAddrLValue(src.getAggregateAddress(), type);
+  emitFinalDestCopy(type, srcLV, CIRGenFunction::EVK_RValue);
+}
+
 /// Perform the final copy to destPtr, if desired.
-void AggExprEmitter::emitFinalDestCopy(QualType type, const LValue &src) {
+void AggExprEmitter::emitFinalDestCopy(
+    QualType type, const LValue &src,
+    CIRGenFunction::ExprValueKind srcValueKind) {
   // If dest is ignored, then we're evaluating an aggregate expression
   // in a context that doesn't care about the result.  Note that loads
   // from volatile l-values force the existence of a non-ignored
   // destination.
   if (dest.isIgnored())
     return;
+
+  if (srcValueKind == CIRGenFunction::EVK_RValue) {
+    if (type.isNonTrivialToPrimitiveDestructiveMove() == QualType::PCK_Struct) {
+      cgf.cgm.errorNYI("emitFinalDestCopy: EVK_RValue & PCK_Struct");
+    }
+  } else {
+    if (type.isNonTrivialToPrimitiveCopy() == QualType::PCK_Struct) {
+      cgf.cgm.errorNYI("emitFinalDestCopy: !EVK_RValue & PCK_Struct");
+    }
+  }
 
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
   assert(!cir::MissingFeatures::aggEmitFinalDestCopyRValue());
