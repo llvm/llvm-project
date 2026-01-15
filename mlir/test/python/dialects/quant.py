@@ -42,6 +42,11 @@ def test_type_hierarchy():
         assert not isinstance(sub_channel, quant.UniformQuantizedType)
         assert not isinstance(sub_channel, quant.UniformQuantizedPerAxisType)
 
+        generic_t = Type(uniform)
+        assert type(generic_t) is Type
+        r = quant.QuantizedType.cast_to_storage_type(generic_t)
+        assert isinstance(r, IntegerType)
+
 
 # CHECK-LABEL: TEST: test_any_quantized_type
 @run

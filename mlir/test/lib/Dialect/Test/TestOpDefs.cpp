@@ -745,7 +745,7 @@ void RegionIfOp::getSuccessorRegions(
         &getJoinRegion())
       regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
     else
-      regions.push_back(RegionSuccessor(getOperation(), getResults()));
+      regions.push_back(RegionSuccessor::parent(getResults()));
     return;
   }
 
@@ -772,7 +772,7 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
   if (point.isParent())
     regions.emplace_back(&getRegion());
   else
-    regions.emplace_back(getOperation(), getResults());
+    regions.push_back(RegionSuccessor::parent(getResults()));
 }
 
 void AnyCondOp::getRegionInvocationBounds(
@@ -861,6 +861,16 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), {getUmin(), getUmax(), getSmin(), getSmax()});
+}
+
+//===----------------------------------------------------------------------===//
+// TestWithoutBoundsOp
+//===----------------------------------------------------------------------===//
+
+void TestWithoutBoundsOp::inferResultRangesFromOptional(
+    ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRanges) {
+  // Mimic ops with uninitialized range.
+  setResultRanges(getResult(), IntegerValueRange{});
 }
 
 //===----------------------------------------------------------------------===//
@@ -1232,7 +1242,7 @@ void LoopBlockOp::getSuccessorRegions(
   if (point.isParent())
     return;
 
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.push_back(RegionSuccessor::parent(getOperation()->getResults()));
 }
 
 OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
@@ -1338,7 +1348,7 @@ void TestStoreWithARegion::getSuccessorRegions(
   if (point.isParent())
     regions.emplace_back(&getBody(), getBody().front().getArguments());
   else
-    regions.emplace_back(getOperation(), getOperation()->getResults());
+    regions.push_back(RegionSuccessor::parent(getOperation()->getResults()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1352,7 +1362,7 @@ void TestStoreWithALoopRegion::getSuccessorRegions(
   // enter the body.
   regions.emplace_back(
       RegionSuccessor(&getBody(), getBody().front().getArguments()));
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.push_back(RegionSuccessor::parent(getOperation()->getResults()));
 }
 
 //===----------------------------------------------------------------------===//
