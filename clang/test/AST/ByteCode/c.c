@@ -415,5 +415,5 @@ void CopyArrayToFnPtr(void) { *(VC2 *)func_ = C2; }
 _Complex double returnsComplex(); // pedantic-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 void callReturnsComplex(void) {
   _Complex double c;
-  c = foo(0.);
+  c = returnsComplex(0.); // all-warning {{passing arguments to 'returnsComplex' without a prototype is deprecated in all versions of C and is not supported in C23}}
 }
