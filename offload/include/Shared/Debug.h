@@ -174,10 +174,11 @@ private:
   bool ShouldEmitNewLineOnDestruction;
   bool NeedEndNewLine = false;
 
-  /// Small buffer to reduce interference between different threads
+  /// Buffer to reduce interference between different threads
   /// writing at the same time to the underlying stream.
   static constexpr size_t BufferSize = 256;
   llvm::SmallString<BufferSize> Buffer;
+
   // Stream to write into Buffer. Its flushed to Os upon destruction.
   llvm::raw_svector_ostream BufferStrm;
 
