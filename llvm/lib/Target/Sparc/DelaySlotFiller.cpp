@@ -404,6 +404,7 @@ static bool combineRestoreADD(MachineBasicBlock &MBB,
   //
   // After :  restore <op0>, <op1>, %o[0-7]
 
+  const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
   Register reg = AddMI->getOperand(0).getReg();
   if (reg < SP::I0 || reg > SP::I7)
     return false;
@@ -414,12 +415,11 @@ static bool combineRestoreADD(MachineBasicBlock &MBB,
   bool IsCall = LastInst != MBB.end() && LastInst->isCall();
 
   if (IsCall && AddMI->getOpcode() == SP::ADDrr &&
-      (AddMI->getOperand(1).getReg() == SP::O7 ||
-       AddMI->getOperand(2).getReg() == SP::O7))
+      AddMI->readsRegister(SP::O7, TRI))
     return false;
 
   if (IsCall && AddMI->getOpcode() == SP::ADDri &&
-      AddMI->getOperand(1).getReg() == SP::O7)
+      AddMI->readsRegister(SP::O7, TRI))
     return false;
 
   // Erase RESTORE.
@@ -446,6 +446,7 @@ static bool combineRestoreOR(MachineBasicBlock &MBB,
   //
   // After :  restore <op0>, <op1>, %o[0-7]
 
+  const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
   Register reg = OrMI->getOperand(0).getReg();
   if (reg < SP::I0 || reg > SP::I7)
     return false;
@@ -467,8 +468,7 @@ static bool combineRestoreOR(MachineBasicBlock &MBB,
   bool IsCall = LastInst != MBB.end() && LastInst->isCall();
 
   if (IsCall && OrMI->getOpcode() == SP::ORrr &&
-      (OrMI->getOperand(1).getReg() == SP::O7 ||
-       OrMI->getOperand(2).getReg() == SP::O7))
+      OrMI->readsRegister(SP::O7, TRI))
     return false;
 
   // Erase RESTORE.
