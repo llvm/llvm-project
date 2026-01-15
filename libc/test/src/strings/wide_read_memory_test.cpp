@@ -1,10 +1,18 @@
+//===-- Memory bounds check test for wide-read functions ------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // For performance, some vector-based libc functions read data outside of, but
 // adjacent to, the input address. For example, string_length can read both
 // before and after the data in its src parameter. As part of the
-// implementation, it is allowed to do this. However, the code must take care
-// to avoid address errors. The sanitizers can't distinguish between "the
+// implementation, it is allowed to do this. However, the code must take care to
+// avoid address errors. The sanitizers can't distinguish between "the
 // implementation" and user-code, and so report an error. Therefore we can't use
-// them to check if functions like thees have memory errors.
+// them to check if functions like these have memory errors.
 //
 // This test uses mprotect to simulate address sanitization. Tests that read too
 // far outside data will segfault.
