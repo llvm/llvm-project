@@ -58,6 +58,69 @@ void setMatrixScalar(out float2x1 M, int index, float S) {
     M[index] = S;
 }
 
+// CHECK-LABEL: define hidden void @_Z13setBoolMatrixRu11matrix_typeILm4ELm4EbEiDv4_b(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[M:%.*]], i32 noundef [[INDEX:%.*]], <4 x i1> noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = zext <4 x i1> [[V]] to <4 x i32>
+// CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i1>
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[INDEX_ADDR]], align 4
+// CHECK-NEXT:    [[MATRIX_LOAD:%.*]] = load <16 x i32>, ptr [[TMP2]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i1> [[LOADEDV]] to <4 x i32>
+// CHECK-NEXT:    [[TMP5:%.*]] = add i32 0, [[TMP3]]
+// CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i32 0
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i32> [[MATRIX_LOAD]], i32 [[TMP6]], i32 [[TMP5]]
+// CHECK-NEXT:    [[TMP8:%.*]] = add i32 4, [[TMP3]]
+// CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP4]], i32 1
+// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i32> [[TMP7]], i32 [[TMP9]], i32 [[TMP8]]
+// CHECK-NEXT:    [[TMP11:%.*]] = add i32 8, [[TMP3]]
+// CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP4]], i32 2
+// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i32> [[TMP10]], i32 [[TMP12]], i32 [[TMP11]]
+// CHECK-NEXT:    [[TMP14:%.*]] = add i32 12, [[TMP3]]
+// CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
+// CHECK-NEXT:    [[TMP16:%.*]] = insertelement <16 x i32> [[TMP13]], i32 [[TMP15]], i32 [[TMP14]]
+// CHECK-NEXT:    store <16 x i32> [[TMP16]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void setBoolMatrix(out bool4x4 M, int index, bool4 V) {
+    M[index] = V;
+}
+
+// CHECK-LABEL: define hidden void @_Z19setBoolMatrixScalarRu11matrix_typeILm2ELm1EbEib(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(8) [[M:%.*]], i32 noundef [[INDEX:%.*]], i1 noundef [[S:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[S_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
+// CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[S]] to i32
+// CHECK-NEXT:    store i32 [[STOREDV]], ptr [[S_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[S_ADDR]], align 4
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[TMP0]] to i1
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x i1> poison, i1 [[LOADEDV]], i64 0
+// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x i1> [[SPLAT_SPLATINSERT]], <1 x i1> poison, <1 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[INDEX_ADDR]], align 4
+// CHECK-NEXT:    [[MATRIX_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = zext <1 x i1> [[SPLAT_SPLAT]] to <1 x i32>
+// CHECK-NEXT:    [[TMP4:%.*]] = add i32 0, [[TMP2]]
+// CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i32> [[TMP3]], i32 0
+// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[MATRIX_LOAD]], i32 [[TMP5]], i32 [[TMP4]]
+// CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[TMP1]], align 4
+// CHECK-NEXT:    ret void
+//
+void setBoolMatrixScalar(out bool2x1 M, int index, bool S) {
+    M[index] = S;
+}
+
 // CHECK-LABEL: define hidden void @_Z19setMatrixConstIndexRu11matrix_typeILm4ELm4EiES_(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[M:%.*]], <16 x i32> noundef [[N:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

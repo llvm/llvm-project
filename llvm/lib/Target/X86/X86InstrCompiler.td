@@ -1381,11 +1381,11 @@ def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (INDIRECT_THUNK_TCRETURN64 ptr_rc_tailcall:$dst, timm:$off)>,
-          Requires<[In64BitMode, IsNotWin64CCFunc, UseIndirectThunkCalls]>;
+          Requires<[In64BitMode, UseIndirectThunkCalls]>;
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (INDIRECT_THUNK_TCRETURN32 ptr_rc_tailcall:$dst, timm:$off)>,
-          Requires<[Not64BitMode, IsNotWin64CCFunc, UseIndirectThunkCalls]>;
+          Requires<[Not64BitMode, UseIndirectThunkCalls]>;
 
 def : Pat<(X86tcret (i64 tglobaladdr:$dst), timm:$off),
           (TCRETURNdi64 tglobaladdr:$dst, timm:$off)>,

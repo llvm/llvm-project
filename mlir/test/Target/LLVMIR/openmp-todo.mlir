@@ -173,15 +173,6 @@ llvm.func @target_allocate(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @target_device(%x : i32) {
-  omp.target device(%x : i32) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
@@ -346,45 +337,6 @@ llvm.func @taskloop_collapse(%lb : i32, %ub : i32, %step : i32, %lb1 : i32, %ub1
 }
 
 // -----
-
-llvm.func @taskloop_final(%lb : i32, %ub : i32, %step : i32, %true : i1) {
-  // expected-error@below {{not yet implemented: Unhandled clause final in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop final(%true) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @taskloop_grainsize(%lb : i32, %ub : i32, %step : i32, %grainsize : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause grainsize in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop grainsize(%grainsize: i32) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @taskloop_if(%lb : i32, %ub : i32, %step : i32, %true : i1) {
-  // expected-error@below {{not yet implemented: Unhandled clause if in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop if(%true) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
  omp.declare_reduction @add_reduction_i32 : i32 init {
   ^bb0(%arg0: i32):
     %0 = llvm.mlir.constant(0 : i32) : i32
@@ -407,58 +359,6 @@ llvm.func @taskloop_inreduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.pt
 }
 
 // -----
-
-llvm.func @taskloop_mergeable(%lb : i32, %ub : i32, %step : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause mergeable in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop mergeable {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @taskloop_nogroup(%lb : i32, %ub : i32, %step : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause nogroup in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop nogroup {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @taskloop_num_tasks(%lb : i32, %ub : i32, %step : i32, %numtasks : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause num_tasks in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop num_tasks(%numtasks: i32) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @taskloop_priority(%lb : i32, %ub : i32, %step : i32, %priority : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause priority in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop priority(%priority: i32) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
  omp.declare_reduction @add_reduction_i32 : i32 init {
   ^bb0(%arg0: i32):
     %0 = llvm.mlir.constant(0 : i32) : i32
@@ -473,19 +373,6 @@ llvm.func @taskloop_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr)
   // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.taskloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
   omp.taskloop reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @taskloop_untied(%lb : i32, %ub : i32, %step : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause untied in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop untied {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
