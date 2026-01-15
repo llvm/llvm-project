@@ -26,6 +26,7 @@ static_library("Basic") {
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
     "//clang/include/clang/Basic:BuiltinTemplates",
     "//clang/include/clang/Basic:Builtins",
+    "//clang/include/clang/Basic:BuiltinsAMDGPU",
     "//clang/include/clang/Basic:BuiltinsBPF",
     "//clang/include/clang/Basic:BuiltinsDirectX",
     "//clang/include/clang/Basic:BuiltinsHexagon",
