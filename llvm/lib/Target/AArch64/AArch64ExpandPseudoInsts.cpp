@@ -137,8 +137,8 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                                        unsigned BitSize) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
-  uint64_t RenamableState =
-      MI.getOperand(0).isRenamable() ? RegState::Renamable : 0;
+  unsigned RenamableState =
+      getRenamableRegState(MI.getOperand(0).isRenamable());
   uint64_t Imm = MI.getOperand(1).getImm();
 
   if (DstReg == AArch64::XZR || DstReg == AArch64::WZR) {
@@ -617,7 +617,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   }
 
   // Preserve undef state until DOP's reg is defined.
-  unsigned DOPRegState = MI.getOperand(DOPIdx).isUndef() ? RegState::Undef : 0;
+  unsigned DOPRegState = getUndefRegState(MI.getOperand(DOPIdx).isUndef());
 
   //
   // Create the destructive operation (if required)
@@ -792,9 +792,8 @@ bool AArch64ExpandPseudo::expandSVESpillFill(MachineBasicBlock &MBB,
   assert((Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI ||
           Opc == AArch64::LDR_PXI || Opc == AArch64::STR_PXI) &&
          "Unexpected opcode");
-  unsigned RState = (Opc == AArch64::LDR_ZXI || Opc == AArch64::LDR_PXI)
-                        ? RegState::Define
-                        : 0;
+  unsigned RState =
+      getDefRegState(Opc == AArch64::LDR_ZXI || Opc == AArch64::LDR_PXI);
   unsigned sub0 = (Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI)
                       ? AArch64::zsub0
                       : AArch64::psub0;

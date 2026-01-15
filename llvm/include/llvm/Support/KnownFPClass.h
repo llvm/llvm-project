@@ -192,6 +192,12 @@ struct KnownFPClass {
     signBitMustBeZero();
   }
 
+  static KnownFPClass fabs(const KnownFPClass &Src) {
+    KnownFPClass Known = Src;
+    Known.fabs();
+    return Known;
+  }
+
   // Enum of min/max intrinsics to avoid dependency on IR.
   enum class MinMaxKind {
     minimum,
