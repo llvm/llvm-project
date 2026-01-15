@@ -584,6 +584,13 @@ bool Debugger::SetUseSourceCache(bool b) {
   }
   return ret;
 }
+
+bool Debugger::GetMarkSkippedFrames() const {
+  const uint32_t idx = ePropertyMarkSkippedFrames;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_debugger_properties[idx].default_uint_value != 0);
+}
+
 bool Debugger::GetHighlightSource() const {
   const uint32_t idx = ePropertyHighlightSource;
   return GetPropertyAtIndexAs<bool>(

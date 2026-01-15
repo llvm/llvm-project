@@ -1851,9 +1851,9 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
                          uint32_t num_frames, uint32_t num_frames_with_source,
                          bool stop_format, bool show_hidden, bool only_stacks) {
 
+  ExecutionContext exe_ctx(shared_from_this());
+  Target *target = exe_ctx.GetTargetPtr();
   if (!only_stacks) {
-    ExecutionContext exe_ctx(shared_from_this());
-    Target *target = exe_ctx.GetTargetPtr();
     Process *process = exe_ctx.GetProcessPtr();
     strm.Indent();
     bool is_selected = false;
@@ -1892,7 +1892,7 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
         (GetID() != GetProcess()->GetThreadList().GetSelectedThread()->GetID()))
       strm.IndentMore();
     else
-      show_selected_frame = true;
+      show_selected_frame = target->GetDebugger().GetMarkSkippedFrames();
 
     num_frames_shown = GetStackFrameList()->GetStatus(
         strm, start_frame, num_frames, show_frame_info, num_frames_with_source,

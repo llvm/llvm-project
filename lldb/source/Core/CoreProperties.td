@@ -114,6 +114,10 @@ let Definition = "debugger" in {
     Global,
     DefaultTrue,
     Desc<"If true, LLDB will highlight the displayed source code.">;
+  def MarkSkippedFrames: Property<"mark-skipped-frames", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"If true, LLDB will add a marker to delimit skipped frames.">;
   def StopShowColumn: Property<"stop-show-column", "Enum">,
     DefaultEnumValue<"eStopShowColumnAnsiOrCaret">,
     EnumValues<"OptionEnumValues(s_stop_show_column_values)">,
