@@ -11,14 +11,12 @@
 // <ranges>
 
 //   V models only input_range
-//     friend constexpr bool opreator==(const outer_iterator& x, default_sentinel_t);
-//     friend constexpr difference_type operator-(default_sentinel_t t, const outer_iterator& i)
-//       requires sized_sentinel_for<sentinel_t<V>, iterator_t<V>>;
-//     friend constexpr difference_type operator-(const outer_iterator& i, default_sentinel_t t)
-//       requires sized_sentinel_for<sentinel_t<V>, iterator_t<V>>;
+//     friend constexpr bool operator==(const outer_iterator& x, default_sentinel_t);
+//     friend constexpr bool operator==(const inner_iterator& x, default_sentinel_t);
 
 //   V models forward_range
-//     friend constexpr bool operator==(const iterator& x, const iterator& y)
+//     friend constexpr bool operator==(const iterator& x, const iterator& y);
+//     friend constexpr bool operator==(const iterator& x, default_sentinel_t);
 //     friend constexpr bool operator<(const iterator& x, const iterator& y)
 //       requires random_access_range<Base>;
 //     friend constexpr bool operator>(const iterator& x, const iterator& y)
@@ -31,7 +29,6 @@
 //       requires random_access_range<Base> &&
 //                three_way_comparable<iterator_t<Base>>;
 
-#include <algorithm>
 #include <cassert>
 #include <compare>
 #include <iterator>
@@ -53,20 +50,22 @@ constexpr bool test() {
     assert(it == std::default_sentinel);
   }
 
-  // Test `friend constexpr difference_type operator-(default_sentinel_t t, const outer_iterator& i)`
+  // Test `friend constexpr bool operator==(const inner_iterator& x, default_sentinel_t)`
   {
-    assert(input_chunked.end() - input_chunked.begin() == 4);
-  }
-
-  // Test `friend constexpr difference_type operator-(const outer_iterator& i, default_sentinel_t)`
-  {
-    assert(input_chunked.begin() - input_chunked.end() == -4);
+    /*chunk_view::__inner_iterator*/ std::input_iterator auto it = (*input_chunked.begin()).begin();
+    std::ranges::advance(it, 3);
+    assert(it == std::default_sentinel);
   }
 
   // Test `friend constexpr bool operator==(const iterator& x, const iterator& y)`
   {
     assert(chunked.begin() == chunked.begin());
     assert(chunked.end() == chunked.end());
+  }
+
+  // Test `friend constexpr bool operator==(const iterator& x, default_sentinel)`
+  {
+    assert(chunked.end() == std::default_sentinel);
   }
 
   // Test `friend constexpr bool operator<(const iterator& x, const iterator& y)`
@@ -79,7 +78,7 @@ constexpr bool test() {
     assert(chunked.end() > chunked.begin());
   }
 
-  // Test `friend constexpr bool operator>=(const iterator& x, const iterator& y)`
+  // Test `friend constexpr bool operator<=(const iterator& x, const iterator& y)`
   {
     assert(chunked.begin() <= chunked.begin());
     assert(chunked.begin() <= chunked.end());
