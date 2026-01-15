@@ -758,7 +758,19 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   // Strip CXXDefaultArgExpr before check:
   if (const auto *DefaultArgE = dyn_cast<CXXDefaultArgExpr>(Ptr))
     Ptr = DefaultArgE->getExpr();
-  Ptr = tryConstantFoldConditionalExpr(Ptr, Ctx);
+  // Try to perform constant fold recursively:
+  if (const auto *NewPtr =
+          tryConstantFoldConditionalExpr(Ptr->IgnoreParenImpCasts(), Ctx);
+      NewPtr != Ptr)
+    return isNullTermPointer(NewPtr, Ctx);
+  // Split the analysis for conditional expressions that cannot be
+  // constant-folded:
+  if (const auto *CondE =
+          dyn_cast<ConditionalOperator>(Ptr->IgnoreParenImpCasts())) {
+    return isNullTermPointer(CondE->getLHS(), Ctx) &&
+           isNullTermPointer(CondE->getRHS(), Ctx);
+  }
+
   if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
     return true;
   if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
