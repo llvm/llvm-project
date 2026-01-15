@@ -865,8 +865,7 @@ class DebugCommunication(object):
         *,
         program: Optional[str] = None,
         pid: Optional[int] = None,
-        debuggerId: Optional[int] = None,
-        targetId: Optional[int] = None,
+        session: Optional[dict[str, int]] = None,
         waitFor=False,
         initCommands: Optional[list[str]] = None,
         preRunCommands: Optional[list[str]] = None,
@@ -886,10 +885,8 @@ class DebugCommunication(object):
             args_dict["pid"] = pid
         if program is not None:
             args_dict["program"] = program
-        if debuggerId is not None:
-            args_dict["debuggerId"] = debuggerId
-        if targetId is not None:
-            args_dict["targetId"] = targetId
+        if session is not None:
+            args_dict["session"] = session
         if waitFor:
             args_dict["waitFor"] = waitFor
         args_dict["initCommands"] = self.init_commands
