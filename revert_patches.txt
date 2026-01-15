@@ -1,4 +1,4 @@
 ---
-breaks build devicelibs
-[OpenCL] Set KHR extensions minimum version to OpenCL 1.0 (#175120)"
+breaks build rocsparse
+[LV] Vectorize conditional scalar assignments (#158088)
 ---
