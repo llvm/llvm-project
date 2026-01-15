@@ -14,35 +14,11 @@
 #include <utility>
 #include <vector>
 
-#include "test_range.h"
-
-struct NonSimpleView {
-  std::tuple<std::ptrdiff_t, int> begin();
-  std::tuple<std::ptrdiff_t, int> end();
-  const std::tuple<std::ptrdiff_t, int> begin() const;
-  const std::tuple<std::ptrdiff_t, int> end() const;
-};
-static_assert(!simple_view<NonSimpleView>);
-// concept __range_with_movable_references
-static_assert(std::ranges::input_range<NonSimpleView>);
-static_assert(std::move_constructible<std::ranges::range_reference_t<NonSimpleView>>);
-static_assert(std::move_constructible<std::ranges::range_rvalue_reference_t<NonSimpleView>>);
-
 void test() {
-  // std::vector<int> range;
-  // auto subrange   = std::ranges::subrange(range.begin(), range.end() - 1);
-  // using SubrangeT = decltype(subrange);
-  // static_assert(!simple_view<SubrangeT>);
-  // // concept __range_with_movable_references
-  // static_assert(std::ranges::input_range<SubrangeT>);
-  // static_assert(std::move_constructible<std::ranges::range_reference_t<SubrangeT>>);
-  // static_assert(std::move_constructible<std::ranges::range_rvalue_reference_t<SubrangeT>>);
-  NonSimpleView range;
+  std::vector<int> range;
   std::ranges::enumerate_view ev{range};
 
   // [range.enumerate.view]
-
-  // auto ev = subrange | std::views::enumerate;
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   ev.begin();

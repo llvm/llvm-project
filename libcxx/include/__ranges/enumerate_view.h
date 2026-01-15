@@ -75,7 +75,7 @@ public:
   {
     return __iterator<false>(ranges::begin(__base_), 0);
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires __range_with_movable_references<const _View>
   {
     return __iterator<true>(ranges::begin(__base_), 0);

@@ -42,9 +42,8 @@ constexpr void test() {
     auto it = ev.begin();
 
     using DifferenceT = std::iter_difference_t<decltype(it)>;
-    std::same_as<DifferenceT> decltype(auto) index = it.index();
 
-    static_assert(noexcept(it.index()));
+    std::same_as<DifferenceT> decltype(auto) index = it.index();
 
     assert(std::cmp_equal(0, index));
     ++it;
@@ -54,6 +53,8 @@ constexpr void test() {
     ++it;
 
     assert(it == ev.end());
+
+    static_assert(noexcept(it.index()));
   }
 
   // const
@@ -61,9 +62,8 @@ constexpr void test() {
     auto it = std::as_const(ev).begin();
 
     using DifferenceT = std::iter_difference_t<decltype(it)>;
-    std::same_as<DifferenceT> decltype(auto) index = it.index();
 
-    static_assert(noexcept(it.index()));
+    std::same_as<DifferenceT> decltype(auto) index = it.index();
 
     assert(std::cmp_equal(0, index));
     ++it;
@@ -73,6 +73,8 @@ constexpr void test() {
     ++it;
 
     assert(it == ev.end());
+
+    static_assert(noexcept(it.index()));
   }
 }
 

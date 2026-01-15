@@ -51,7 +51,6 @@ Implemented Papers
   (`Github <https://llvm.org/PR105381>`__)
 - P2835R7: Expose ``std::atomic_ref``'s object address (`Github <https://llvm.org/PR118377>`__)
 - P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://llvm.org/PR105424>`__)
-- P2164R9: ``views::enumerate`` (`Github <https://llvm.org/PR105251>`__)
 - P3168R2: Give ``std::optional`` Range Support
   (guarded by ``-fexperimental-library``, `Github <https://llvm.org/PR105430>`__)
 - P3567R2: ``flat_meow`` Fixes (`Github <https://llvm.org/PR162022>`__)
