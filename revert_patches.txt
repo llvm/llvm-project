@@ -1,7 +1,4 @@
 ---
-breaks build rocsparse
-[LV] Vectorize conditional scalar assignments (#158088)
----
 needs downstream PR
 [AMDGPU] Programmatically port old `.def` clang builtins to `.td` (#175873)
 ---
