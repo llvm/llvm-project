@@ -948,8 +948,8 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
                                          for the comparison.
  ET __builtin_reduce_addf(VT a)          unordered floating-point add reduction.                                floating point types
  ET __builtin_reduce_addf(VT a, ET s)    ordered floating-point add reduction, initializing the accumulator     floating point types
-                                         with `(ET)s`, then adding each lane of the `a` in-order, starting from
-                                         lane 0.
+                                         with `(ET)s`, then adding each lane of the `a` in-order, starting
+                                         from lane 0.
 ======================================= ====================================================================== ==================================
 
 *Masked Builtins*
