@@ -816,8 +816,13 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   bool IsIndirect = false;
   Register IndirectIdx;
 
+  // Use indirect calls when callee is pointer in a register
+  // or it's a weak (interposable) or non-function global.
+  // Makes sure aliases behave.
   if (Info.Callee.isReg() ||
-      (Info.Callee.isGlobal() && Info.Callee.getGlobal()->isInterposable())) {
+      (Info.Callee.isGlobal() &&
+       (Info.Callee.getGlobal()->isInterposable() ||
+        !Info.Callee.getGlobal()->getValueType()->isFunctionTy()))) {
     IsIndirect = true;
     CallInst = MIRBuilder.buildInstr(Info.LoweredTailCall
                                          ? WebAssembly::RET_CALL_INDIRECT
@@ -987,7 +992,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     }
   } else {
     if (Info.Callee.isGlobal()) {
-      if (Info.Callee.getGlobal()->isInterposable()) {
+      if (IsIndirect) {
         // Placeholder for the type index.
         // This gets replaced with the correct value in
         // WebAssemblyMCInstLower.cpp
