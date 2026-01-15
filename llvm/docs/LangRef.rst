@@ -15010,16 +15010,13 @@ Overview:
 
 The '``llvm.structured.gep``' intrinsic (structured **G**\ et\ **E**\ lement\ **P**\ tr) computes a new pointer address
 resulting of a logical indexing into the ``<source>`` pointer. The returned
-address depends on the indices and may depend on the layout of %basetype at
-runtime.
+address depends on the indices and may depend on the layout of ``<basetype>``
+at runtime.
 
 Arguments:
 """"""""""
 
-``<ty> basetype``:
-The actual value passed is ignored, and should be ``poison``.
-
-``ptr <source>``:
+``ptr elementtype(<basetype>) <source>``:
 A pointer to a memory location assumed to hold a completely laid out value
 with the same type as ``basetype``. The physical layout of ``basetype`` is
 target dependent, and is not always known at compile time.
@@ -15029,17 +15026,16 @@ GEP with the same source pointer but a different ``basetype``.
 
 The ``source`` argument must be annotated with an :ref:`elementtype
 <attr_elementtype>` attribute at the call-site. This attribute specifies the
-type of the element pointed by the pointer source. This type will be
-used along with the provided indices and source operands to compute a new
-pointer representing the result of a logical indexing into a basetype
+type of the element pointed to by the pointer source. This type will be
+used along with the provided indices and source operand to compute a new
+pointer representing the result of a logical indexing into the basetype
 pointed by source.
 
 ``[i32/i64] index, ...``:
-Indices used to traverse into the basetype and determine the target element
-this instruction computes an offset for. Indices can be 32-bit or 64-bit
-unsigned integers. Indices being handled one by one, both sizes can be mixed
-in the same instruction. The precision used to compute the resulting pointer
-is target-dependent.
+Indices used to traverse into the basetype and compute a pointer to the target
+element. Indices can be 32-bit or 64-bit unsigned integers. Indices being
+handled one by one, both sizes can be mixed in the same instruction. The
+precision used to compute the resulting pointer is target-dependent.
 When used to index into a struct, only integer constants are allowed.
 
 Semantics:
@@ -15067,7 +15063,7 @@ element in the logical layout by overflowing:
 - If the indexed type is a struct with N fields, the index must be an
   immediate/constant value in the range ``[0; N[``.
 - If indexing into an array or vector, the index can be a variable, but
-  assumed to be inbounds with regards to the current basetype logical layout.
+  is assumed to be inbounds with regards to the current basetype logical layout.
 - If the traversed type is an array or vector of N elements with ``N > 0``,
   the index is assumed to belong to ``[0; N[``.
 - If the traversed type is an array of size ``0``, the array size is assumed
@@ -15100,7 +15096,7 @@ Could be translated to:
 .. code-block:: llvm
 
     %A = type { i32, i32, i32, i32 }
-    %src = call ptr @llvm.structured.gep(%A poison, ptr %my_struct, i32 1)
+    %src = call ptr @llvm.structured.gep(ptr elementtype(%A) %my_struct, i32 1)
     %val = load i32, ptr %src
 
 **A more complex case**
@@ -15136,7 +15132,7 @@ The store is simple:
 
 .. code-block:: llvm
 
-    %dst = call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 0, i32 2, i32 0, i32 1)
+    %dst = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 0, i32 2, i32 0, i32 1)
     store i32 12, ptr %dst
 
 But the load depends on a dynamic index. This means accessing logically the
@@ -15144,8 +15140,8 @@ first 4 elements is different than accessing the last:
 
 .. code-block:: llvm
 
-    %firsts = call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 0, i32 %index, i32 0)
-    %last = call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 1)
+    %firsts = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 0, i32 %index, i32 0)
+    %last = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 1)
 
 And because :ref:`i_structured_gep` always assumes indexing inbounds, we
 cannot reach the last element by doing:
@@ -15153,7 +15149,7 @@ cannot reach the last element by doing:
 .. code-block:: llvm
 
     ; BAD
-    call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 0, i32 5, i32 0)
+    call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 0, i32 5, i32 0)
 
 If codegen knew nothing about the physical layout of ``%S``, a condition
 would be required to select between ``%firsts`` and ``%last`` depending on
@@ -15166,7 +15162,7 @@ address every vector in the array, generating the following code:
 .. code-block:: llvm
 
     %T = type [ 5 x { <3 x i32>, i32 } ]
-    %ptr = call ptr @llvm.structured.gep(%T poison, ptr %my_struct, i32 %index, i32 0, i32 1)
+    %ptr = call ptr @llvm.structured.gep(ptr elementtype(%T) %my_struct, i32 %index, i32 0, i32 1)
     store i32 12, ptr %ptr
 
 This is, however, dependent on context that codegen has an insight on. This
