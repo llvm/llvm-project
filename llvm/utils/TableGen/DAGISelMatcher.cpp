@@ -180,8 +180,7 @@ void SwitchOpcodeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
 }
 
 void CheckTypeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
-  OS << Indent << "CheckType " << getEnumName(Type) << ", ResNo=" << ResNo
-     << '\n';
+  OS << Indent << "CheckType " << Type << ", ResNo=" << ResNo << '\n';
 }
 
 void SwitchTypeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
@@ -194,8 +193,7 @@ void SwitchTypeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
 }
 
 void CheckChildTypeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
-  OS << Indent << "CheckChildType " << ChildNo << " " << getEnumName(Type)
-     << '\n';
+  OS << Indent << "CheckChildType " << ChildNo << " " << Type << '\n';
 }
 
 void CheckIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
@@ -245,7 +243,7 @@ void CheckImmAllZerosVMatcher::printImpl(raw_ostream &OS, indent Indent) const {
 }
 
 void EmitIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
-  OS << Indent << "EmitInteger " << Val << " VT=" << getEnumName(VT) << '\n';
+  OS << Indent << "EmitInteger " << Val << " VT=" << VT << '\n';
 }
 
 void EmitRegisterMatcher::printImpl(raw_ostream &OS, indent Indent) const {
@@ -254,7 +252,7 @@ void EmitRegisterMatcher::printImpl(raw_ostream &OS, indent Indent) const {
     OS << Reg->getName();
   else
     OS << "zero_reg";
-  OS << " VT=" << getEnumName(VT) << '\n';
+  OS << " VT=" << VT << '\n';
 }
 
 void EmitConvertToTargetMatcher::printImpl(raw_ostream &OS,
@@ -281,8 +279,8 @@ void EmitNodeMatcherCommon::printImpl(raw_ostream &OS, indent Indent) const {
   OS << (isa<MorphNodeToMatcher>(this) ? "MorphNodeTo: " : "EmitNode: ")
      << CGI.Namespace << "::" << CGI.getName() << ": <todo flags> ";
 
-  for (MVT VT : VTs)
-    OS << ' ' << getEnumName(VT);
+  for (const ValueTypeByHwMode &VT : VTs)
+    OS << ' ' << VT;
   OS << '(';
   for (unsigned Operand : Operands)
     OS << Operand << ' ';
@@ -316,19 +314,26 @@ void MorphNodeToMatcher::anchor() {}
 
 // isContradictoryImpl Implementations.
 
-static bool TypesAreContradictory(MVT T1, MVT T2) {
+static bool TypesAreContradictory(const ValueTypeByHwMode &VT1,
+                                  const ValueTypeByHwMode &VT2) {
   // If the two types are the same, then they are the same, so they don't
   // contradict.
-  if (T1 == T2)
+  if (VT1 == VT2)
     return false;
 
+  if (!VT1.isSimple() || !VT2.isSimple())
+    return false;
+
+  MVT T1 = VT1.getSimple();
+  MVT T2 = VT2.getSimple();
+
   if (T1 == MVT::pAny)
-    return TypesAreContradictory(MVT::iPTR, T2) &&
-           TypesAreContradictory(MVT::cPTR, T2);
+    return TypesAreContradictory(MVT(MVT::iPTR), T2) &&
+           TypesAreContradictory(MVT(MVT::cPTR), T2);
 
   if (T2 == MVT::pAny)
-    return TypesAreContradictory(T1, MVT::iPTR) &&
-           TypesAreContradictory(T1, MVT::cPTR);
+    return TypesAreContradictory(T1, MVT(MVT::iPTR)) &&
+           TypesAreContradictory(T1, MVT(MVT::cPTR));
 
   // If either type is about iPtr, then they don't conflict unless the other
   // one is not a scalar integer type.

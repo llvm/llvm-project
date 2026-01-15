@@ -282,7 +282,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
 #endif
 
         if (ResultsMatch) {
-          ArrayRef<MVT> VTs = EN->getVTList();
+          ArrayRef<ValueTypeByHwMode> VTs = EN->getVTList();
           ArrayRef<unsigned> Operands = EN->getOperandList();
           MatcherPtr->reset(new MorphNodeToMatcher(
               EN->getInstruction(), VTs, Operands, EN->hasChain(),
@@ -518,10 +518,11 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
     if (AllTypeChecks) {
       CheckTypeMatcher *CTM = cast_or_null<CheckTypeMatcher>(
           FindNodeWithKind(Optn, Matcher::CheckType));
-      if (!CTM ||
+      if (!CTM || !CTM->getType().isSimple() ||
           // iPTR/cPTR checks could alias any other case without us knowing,
           // don't bother with them.
-          CTM->getType() == MVT::iPTR || CTM->getType() == MVT::cPTR ||
+          CTM->getType().getSimple() == MVT::iPTR ||
+          CTM->getType().getSimple() == MVT::cPTR ||
           // SwitchType only works for result #0.
           CTM->getResNo() != 0 ||
           // If the CheckType isn't at the start of the list, see if we can move
@@ -563,7 +564,7 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
 
       auto *CTM = cast<CheckTypeMatcher>(M);
       Matcher *MatcherWithoutCTM = Optn->unlinkNode(CTM);
-      MVT CTMTy = CTM->getType();
+      MVT CTMTy = CTM->getType().getSimple();
       delete CTM;
 
       unsigned &Entry = TypeEntry[CTMTy.SimpleTy];

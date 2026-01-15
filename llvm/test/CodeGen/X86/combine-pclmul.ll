@@ -4,8 +4,7 @@
 define <2 x i64> @test_extract_pclmulqdq_v4i64_v2i64(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_extract_pclmulqdq_v4i64_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpclmulqdq $1, %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vpclmulqdq $1, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %clmul = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> %a0, <4 x i64> %a1, i8 1)
@@ -16,8 +15,7 @@ define <2 x i64> @test_extract_pclmulqdq_v4i64_v2i64(<4 x i64> %a0, <4 x i64> %a
 define <4 x i64> @test_extract_pclmulqdq_v8i64_v4i64(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: test_extract_pclmulqdq_v8i64_v4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpclmulqdq $1, %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    vpclmulqdq $1, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %clmul = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> %a0, <8 x i64> %a1, i8 1)
   %res = shufflevector <8 x i64> %clmul, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
