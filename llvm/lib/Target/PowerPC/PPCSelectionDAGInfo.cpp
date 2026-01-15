@@ -97,3 +97,9 @@ PPCSelectionDAGInfo::EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL,
                                              const CallInst *CI) const {
   return DAG.getStrlen(Chain, DL, Src, CI);
 }
+
+std::pair<SDValue, SDValue> PPCSelectionDAGInfo::EmitTargetCodeForStrstr(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Op1, SDValue Op2,
+    const CallInst *CI) const {
+  return DAG.getStrstr(Chain, dl, Op1, Op2, CI);
+}
