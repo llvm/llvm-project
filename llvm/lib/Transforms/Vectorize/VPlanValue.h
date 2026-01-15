@@ -32,8 +32,8 @@ namespace llvm {
 class raw_ostream;
 class Type;
 class Value;
-class VPSlotTracker;
 class VPDef;
+class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
 class VPPhiAccessors;
@@ -42,7 +42,6 @@ class VPPhiAccessors;
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
 /// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
-  friend class VPDef;
   friend class VPlan;
   friend struct VPIRValue;
   friend struct VPSymbolicValue;
@@ -209,7 +208,7 @@ struct VPSymbolicValue : public VPValue {
 class VPRecipeValue : public VPValue {
   friend class VPValue;
   friend class VPDef;
-  /// Pointer to the VPDef that defines this VPValue.
+  /// Pointer to the VPRecipeBase that defines this VPValue.
   VPRecipeBase *Def;
 
   /// Returns true if this VPRecipeValue is defined by \p D.
@@ -331,11 +330,7 @@ public:
 /// Single-value VPDefs that also inherit from VPValue must make sure to inherit
 /// from VPDef before VPValue.
 class VPDef {
-  friend class VPValue;
   friend class VPRecipeValue;
-
-  /// Subclass identifier (for isa/dyn_cast).
-  const unsigned char SubclassID;
 
   /// The VPValues defined by this VPDef.
   TinyPtrVector<VPRecipeValue *> DefinedValues;
@@ -359,7 +354,7 @@ class VPDef {
   }
 
 public:
-  VPDef(const unsigned char SC) : SubclassID(SC) {}
+  VPDef() {}
 
   virtual ~VPDef() {
     for (VPRecipeValue *D : to_vector(DefinedValues)) {
@@ -401,11 +396,6 @@ public:
 
   /// Returns the number of values defined by the VPDef.
   unsigned getNumDefinedValues() const { return DefinedValues.size(); }
-
-  /// \return an ID for the concrete type of this object.
-  /// This is used to implement the classof checks. This should not be used
-  /// for any other purpose, as the values may change as LLVM evolves.
-  unsigned getVPDefID() const { return SubclassID; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the VPDef to stderr (for debugging).

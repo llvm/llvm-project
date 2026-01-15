@@ -388,6 +388,9 @@ class LLVM_ABI_FOR_TEST VPRecipeBase
   friend VPBasicBlock;
   friend class VPBlockUtils;
 
+  /// Subclass identifier (for isa/dyn_cast).
+  const unsigned char SubclassID;
+
   /// Each VPRecipe belongs to a single VPBasicBlock.
   VPBasicBlock *Parent = nullptr;
 
@@ -449,14 +452,9 @@ public:
 
   VPRecipeBase(const unsigned char SC, ArrayRef<VPValue *> Operands,
                DebugLoc DL = DebugLoc::getUnknown())
-      : VPDef(SC), VPUser(Operands), DL(DL) {}
+      : VPDef(), VPUser(Operands), SubclassID(SC), DL(DL) {}
 
   ~VPRecipeBase() override = default;
-
-  /// \return an ID for the concrete type of this object.
-  /// This is used to implement the classof checks. This should not be used
-  /// for any other purpose, as the values may change as LLVM evolves.
-  unsigned getVPRecipeID() const { return getVPDefID(); }
 
   /// Clone the current recipe.
   virtual VPRecipeBase *clone() = 0;
@@ -506,6 +504,9 @@ public:
   ///
   /// \returns an iterator pointing to the element after the erased one
   iplist<VPRecipeBase>::iterator eraseFromParent();
+
+  /// \return an ID for the concrete type of this object.
+  unsigned getVPRecipeID() const { return SubclassID; }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPDef *D) {
