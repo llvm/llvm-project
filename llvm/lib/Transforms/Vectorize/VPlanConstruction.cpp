@@ -1134,6 +1134,23 @@ template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
   return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
 }
 
+/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
+/// inserted for predicated reductions or tail folding.
+static VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
+  VPValue *BackedgeVal = PhiR->getBackedgeValue();
+  if (auto *Res =
+          findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal))
+    return Res;
+
+  // Look through selects inserted for tail folding or predicated reductions.
+  VPRecipeBase *SelR =
+      findUserOf(BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+  if (!SelR)
+    return nullptr;
+  return findUserOf<VPInstruction::ComputeReductionResult>(
+      cast<VPSingleDefRecipe>(SelR));
+}
+
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto GetMinOrMaxCompareValue =
       [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
@@ -1229,20 +1246,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
     // If we exit early due to NaNs, compute the final reduction result based on
     // the reduction phi at the beginning of the last vector iteration.
-    VPValue *BackedgeVal = RedPhiR->getBackedgeValue();
-    auto *RdxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal);
-
-    // Look through selects inserted for tail folding.
-    if (!RdxResult) {
-      auto *SelR = cast<VPSingleDefRecipe>(
-          *find_if(BackedgeVal->users(),
-                   [PhiR = RedPhiR](VPUser *U) { return U != PhiR; }));
-      assert(match(SelR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
-             "SelR must be a select");
-      RdxResult = findUserOf<VPInstruction::ComputeReductionResult>(SelR);
-      assert(RdxResult && "must find a ComputeReductionResult");
-    }
+    auto *RdxResult = findComputeReductionResult(RedPhiR);
+    assert(RdxResult && "must find a ComputeReductionResult");
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
                                               RdxResult->getOperand(0));
