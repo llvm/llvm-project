@@ -323,18 +323,21 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
 
   MachineBasicBlock::instr_iterator Prev = std::prev(I);
   auto isProgramStateSALU = [this](MachineInstr *MI) {
-    return TII->isBarrier(MI->getOpcode()) ||
-           TII->isWaitcnt(MI || (SIInstrInfo::isProgramStateSALU(*MI) &&
-                                 MI->getOpcode() != AMDGPU::S_SET_VGPR_MSB));
+    return TII->isBarrier(MI->getOpcode()) || TII->isWaitcnt(MI->getOpcode()) ||
+           (SIInstrInfo::isProgramStateSALU(*MI) &&
+            MI->getOpcode() != AMDGPU::S_SET_VGPR_MSB);
   };
-
-  if (!isProgramStateSALU(&*Prev))
-    return I;
 
   while (!Prev.isEnd() && (Prev != Prev->getParent()->begin()) &&
          isProgramStateSALU(&*Prev)) {
     --Prev;
   }
+
+  // We have to return the next instruction because we will insert before the
+  // iterator we return
+  if (!Prev.isEnd() && !isProgramStateSALU(&*Prev))
+    return std::next(Prev);
+
   return Prev;
 }
 
