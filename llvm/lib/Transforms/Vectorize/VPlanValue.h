@@ -208,11 +208,14 @@ struct VPSymbolicValue : public VPValue {
 class VPRecipeValue : public VPValue {
   friend class VPValue;
   friend class VPDef;
+
   /// Pointer to the VPRecipeBase that defines this VPValue.
   VPRecipeBase *Def;
 
+#if !defined(NDEBUG)
   /// Returns true if this VPRecipeValue is defined by \p D.
   bool isDefinedBy(const VPDef *D) const;
+#endif
 
 public:
   VPRecipeValue(VPRecipeBase *Def, Value *UV = nullptr);
@@ -396,15 +399,6 @@ public:
 
   /// Returns the number of values defined by the VPDef.
   unsigned getNumDefinedValues() const { return DefinedValues.size(); }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Dump the VPDef to stderr (for debugging).
-  LLVM_ABI_FOR_TEST void dump() const;
-
-  /// Each concrete VPDef prints itself.
-  virtual void print(raw_ostream &O, const Twine &Indent,
-                     VPSlotTracker &SlotTracker) const = 0;
-#endif
 };
 
 } // namespace llvm

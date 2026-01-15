@@ -548,7 +548,7 @@ public:
 
   /// Print the recipe, delegating to printRecipe().
   void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override final;
+             VPSlotTracker &SlotTracker) const;
 #endif
 
 protected:
