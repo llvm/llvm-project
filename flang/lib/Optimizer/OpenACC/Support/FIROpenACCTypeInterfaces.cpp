@@ -12,7 +12,6 @@
 
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCTypeInterfaces.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
-#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -1489,27 +1488,6 @@ template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genStore(
     mlir::Value valueToStore,
     mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
 
-/// Helper function to check if a CUDA attribute represents device data.
-static bool isCUDADeviceAttribute(cuf::DataAttribute attr) {
-  return attr == cuf::DataAttribute::Device ||
-         attr == cuf::DataAttribute::Managed ||
-         attr == cuf::DataAttribute::Constant ||
-         attr == cuf::DataAttribute::Shared ||
-         attr == cuf::DataAttribute::Unified;
-}
-
-/// Helper function to check if an operation has CUDA device data attributes.
-static bool hasCUDADeviceDataAttr(mlir::Operation *op) {
-  if (!op)
-    return false;
-
-  // Check for CUF data attribute on the operation
-  if (auto dataAttr = cuf::getDataAttr(op))
-    if (isCUDADeviceAttribute(dataAttr.getValue()))
-      return true;
-
-  return false;
-}
 
 /// Check CUDA attributes on a function argument.
 static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
@@ -1526,7 +1504,7 @@ static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
     if (argIndex < funcLike.getNumArguments())
       if (auto attr = funcLike.getArgAttr(argIndex, cuf::getDataAttrName()))
         if (auto cudaAttr = mlir::dyn_cast<cuf::DataAttributeAttr>(attr))
-          return isCUDADeviceAttribute(cudaAttr.getValue());
+          return cuf::isDeviceDataAttribute(cudaAttr.getValue());
   }
   return false;
 }
@@ -1545,7 +1523,7 @@ static bool isDeviceDataImpl(mlir::Value var) {
     return false;
 
   // Check for CUDA attributes on the defining operation.
-  if (hasCUDADeviceDataAttr(defOp))
+  if (cuf::hasDeviceDataAttr(defOp))
     return true;
 
   // Handle operations that access a partial entity - check if the base entity

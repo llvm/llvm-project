@@ -12,7 +12,6 @@
 
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCOpsInterfaces.h"
 
-#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -87,14 +86,8 @@ mlir::Region *GlobalVariableModel::getInitRegion(mlir::Operation *op) const {
 }
 
 bool GlobalVariableModel::isDeviceData(mlir::Operation *op) const {
-  if (auto dataAttr = cuf::getDataAttr(op)) {
-    auto attr = dataAttr.getValue();
-    return attr == cuf::DataAttribute::Device ||
-           attr == cuf::DataAttribute::Managed ||
-           attr == cuf::DataAttribute::Constant ||
-           attr == cuf::DataAttribute::Shared ||
-           attr == cuf::DataAttribute::Unified;
-  }
+  if (auto dataAttr = cuf::getDataAttr(op))
+    return cuf::isDeviceDataAttribute(dataAttr.getValue());
   return false;
 }
 
