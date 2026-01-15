@@ -285,16 +285,17 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion,
       !acc::isMappableType(val.getType()))
     return false;
 
-  if (accSupport.isValidValueUse(val, accRegion))
-    return false;
-
   // If this is already coming from a data clause, we do not need to generate
   // another.
   if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(val.getDefiningOp()))
     return false;
 
-  // If this is only used by private clauses, it is not a real live-in.
-  if (acc::isOnlyUsedByPrivateClauses(val, accRegion))
+  // Device data is a candidate - it will get a deviceptr clause.
+  if (acc::isDeviceValue(val))
+    return true;
+
+  // If it is otherwise valid, skip it.
+  if (accSupport.isValidValueUse(val, accRegion))
     return false;
 
   return true;
@@ -472,7 +473,16 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                   /*structured=*/true, /*implicit=*/true,
                                   accSupport.getVariableName(var),
                                   acc::getBounds(op));
-  } else if (isScalar) {
+  }
+
+  if (acc::isDeviceValue(var)) {
+    // If the variable is device data, use deviceptr clause.
+    return acc::DevicePtrOp::create(builder, loc, var,
+                                    /*structured=*/true, /*implicit=*/true,
+                                    accSupport.getVariableName(var));
+  }
+
+  if (isScalar) {
     if (enableImplicitReductionCopy &&
         acc::isOnlyUsedByReductionClauses(var,
                                           computeConstructOp->getRegion(0))) {

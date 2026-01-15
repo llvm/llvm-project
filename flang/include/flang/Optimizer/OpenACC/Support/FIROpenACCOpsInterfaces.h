@@ -66,6 +66,7 @@ struct GlobalVariableModel
           GlobalVariableModel, fir::GlobalOp> {
   bool isConstant(mlir::Operation *op) const;
   mlir::Region *getInitRegion(mlir::Operation *op) const;
+  bool isDeviceData(mlir::Operation *op) const;
 };
 
 template <typename Op>
