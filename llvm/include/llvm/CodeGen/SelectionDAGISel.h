@@ -77,6 +77,8 @@ public:
   bool MatchFilterFuncName = false;
   StringRef FuncName;
 
+  // HwMode to be used by getValueTypeForHwMode. This will be initialized
+  // based on the subtarget used by the MachineFunction.
   unsigned HwMode;
 
   explicit SelectionDAGISel(TargetMachine &tm,
