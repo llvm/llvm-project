@@ -178,7 +178,7 @@ def G_VSLIDEUP_VL : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_VSLIDEUP_VL, riscv_slideup_vl>;
 
-// Psuedo equivalent to RISCVISD::CLSW
+// Pseudo equivalent to RISCVISD::CLSW
 def G_CLSW : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);

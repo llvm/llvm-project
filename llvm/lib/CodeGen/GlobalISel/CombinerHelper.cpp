@@ -8571,12 +8571,10 @@ bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
       return;
     }
 
-    Register Tmp = MRI.createGenericVirtualRegister(Ty);
-    B.buildCTLS(Tmp, X);
+    auto Ctls = B.buildCTLS(Ty, X);
+    auto One = B.buildConstant(Ty, 1);
 
-    LLT STy = Ty.getScalarType();
-    Register One = B.buildConstant(STy, 1).getReg(0);
-    B.buildAdd(Dst, Tmp, One);
+    B.buildAdd(Dst, Ctls, One);
   };
 
   return true;

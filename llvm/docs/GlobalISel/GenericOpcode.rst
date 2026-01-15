@@ -510,7 +510,7 @@ the number of extra leading ones.
 
 .. code-block:: none
 
-  %2:_(s33) = G_CTLS %1
+  %2:_(s32) = G_CTLS %1
 
 G_ABDS, G_ABDU
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
