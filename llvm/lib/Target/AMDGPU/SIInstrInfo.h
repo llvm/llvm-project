@@ -135,6 +135,11 @@ public:
       unsigned SubIdx, const TargetRegisterClass *SubRC) const;
 
 private:
+  bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
+                   bool NeedInversion) const;
+
+  bool invertSCCUse(MachineInstr *SCCDef) const;
+
   void swapOperands(MachineInstr &Inst) const;
 
   std::pair<bool, MachineBasicBlock *>
@@ -325,6 +330,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
       int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
@@ -1594,6 +1600,8 @@ public:
 
   bool isBasicBlockPrologue(const MachineInstr &MI,
                             Register Reg = Register()) const override;
+
+  bool canAddToBBProlog(const MachineInstr &MI) const;
 
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator InsPt,

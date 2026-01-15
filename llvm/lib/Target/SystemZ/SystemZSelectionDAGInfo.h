@@ -67,10 +67,12 @@ public:
                           SDValue Src, SDValue Char, SDValue Length,
                           MachinePointerInfo SrcPtrInfo) const override;
 
-  std::pair<SDValue, SDValue> EmitTargetCodeForStrcpy(
-      SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dest,
-      SDValue Src, MachinePointerInfo DestPtrInfo,
-      MachinePointerInfo SrcPtrInfo, bool isStpcpy) const override;
+  std::pair<SDValue, SDValue>
+  EmitTargetCodeForStrcpy(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                          SDValue Dest, SDValue Src,
+                          MachinePointerInfo DestPtrInfo,
+                          MachinePointerInfo SrcPtrInfo, bool isStpcpy,
+                          const CallInst *CI) const override;
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForStrcmp(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,

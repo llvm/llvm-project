@@ -63,7 +63,6 @@ define half @from_bits(i16 %bits) nounwind {
 ; CHECK-NOT: __extend
 ; CHECK-NOT: __trunc
 ; CHECK-NOT: __gnu
-; BAD:       __extendhfsf2
     %f = bitcast i16 %bits to half
     ret half %f
 }
@@ -73,7 +72,6 @@ define i16 @to_bits(half %f) nounwind {
 ; CHECK-NOT: __extend
 ; CHECK-NOT: __trunc
 ; CHECK-NOT: __gnu
-; BAD:       __truncsfhf2
     %bits = bitcast half %f to i16
     ret i16 %bits
 }
