@@ -2773,8 +2773,8 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       Address DstAddr = Dst.getMatrixAddress();
       llvm::Type *DestAddrTy = DstAddr.getElementType();
       llvm::Type *ElemTy = DestAddrTy->getScalarType();
-      CharUnits ElemAlign = CharUnits::fromQuantity(
-          CGM.getDataLayout().getPrefTypeAlign(ElemTy));
+      CharUnits ElemAlign =
+          CharUnits::fromQuantity(CGM.getDataLayout().getPrefTypeAlign(ElemTy));
 
       assert(ElemTy->getScalarSizeInBits() >= 8 &&
              "matrix element type must be at least byte-sized");
@@ -2783,9 +2783,8 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       if (RowVal->getType()->getScalarType()->getPrimitiveSizeInBits() <
           ElemTy->getScalarSizeInBits()) {
         auto *RowValVecTy = cast<llvm::FixedVectorType>(RowVal->getType());
-        llvm::Type *StorageElmTy =
-            llvm::FixedVectorType::get(ElemTy->getScalarType(),
-                                       RowValVecTy->getNumElements());
+        llvm::Type *StorageElmTy = llvm::FixedVectorType::get(
+            ElemTy->getScalarType(), RowValVecTy->getNumElements());
         RowVal = Builder.CreateZExt(RowVal, StorageElmTy);
       }
 
