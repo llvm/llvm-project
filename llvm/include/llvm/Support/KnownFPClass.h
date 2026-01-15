@@ -240,6 +240,7 @@ struct KnownFPClass {
 
     // X * X is always non-negative or a NaN.
     Known.knownNot(fcNegative);
+    Known.propagateNaN(Src);
     return Known;
   }
 
