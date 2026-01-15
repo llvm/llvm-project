@@ -804,6 +804,9 @@ namespace llvm {
     GF2P8AFFINEQB,
     GF2P8MULB,
 
+    // Carry-less multiplication
+    PCLMULQDQ,
+
     // LWP insert record.
     LWPINS,
 
@@ -1072,6 +1075,19 @@ namespace llvm {
   //===--------------------------------------------------------------------===//
   //  X86 Implementation of the TargetLowering interface
   class X86TargetLowering final : public TargetLowering {
+    // Copying needed for an outgoing byval argument.
+    enum ByValCopyKind {
+      // Argument is already in the correct location, no copy needed.
+      NoCopy,
+      // Argument value is currently in the local stack frame, needs copying to
+      // outgoing arguemnt area.
+      CopyOnce,
+      // Argument value is currently in the outgoing argument area, but not at
+      // the correct offset, so needs copying via a temporary in local stack
+      // space.
+      CopyViaTemp,
+    };
+
   public:
     explicit X86TargetLowering(const X86TargetMachine &TM,
                                const X86Subtarget &STI);
@@ -1777,6 +1793,9 @@ namespace llvm {
     SDValue LowerADDROFRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAME_TO_ARGS_OFFSET(SDValue Op, SelectionDAG &DAG) const;
+    ByValCopyKind ByValNeedsCopyForTailCall(SelectionDAG &DAG, SDValue Src,
+                                            SDValue Dst,
+                                            ISD::ArgFlagsTy Flags) const;
     SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
