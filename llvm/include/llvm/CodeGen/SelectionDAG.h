@@ -2131,6 +2131,9 @@ public:
                                               const APInt &DemandedElts,
                                               unsigned Depth = 0) const;
 
+  LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
+      SDValue Op, bool ForSigned, unsigned Depth = 0) const;
+
   /// Combine constant ranges from computeConstantRange() and
   /// computeKnownBits().
   LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
