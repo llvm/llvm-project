@@ -973,7 +973,7 @@ emitCtorDtorPair(mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder,
 /// Return true iff this OpenACC clause is valid for lowering a global/COMMON
 /// symbol via module-level global ctor/dtor.
 ///
-/// OpenACC 3.0:
+/// OpenACC 3.4:
 /// - 3000: In a Fortran module declaration section, only create, copyin,
 ///         device_resident clauses are allowed.
 /// - 3001: link is also allowed.
