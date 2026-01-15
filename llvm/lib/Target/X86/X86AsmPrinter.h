@@ -9,9 +9,22 @@
 #ifndef LLVM_LIB_TARGET_X86_X86ASMPRINTER_H
 #define LLVM_LIB_TARGET_X86_X86ASMPRINTER_H
 
+#include "X86TargetMachine.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/FaultMaps.h"
+#include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 
 // Implemented in X86MCInstLower.cpp
 namespace {
@@ -19,7 +32,6 @@ namespace {
 }
 
 namespace llvm {
-class MCCodeEmitter;
 class MCStreamer;
 class X86Subtarget;
 class TargetMachine;
@@ -194,6 +206,30 @@ public:
   bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const override {
     return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
   }
+
+  std::function<ProfileSummaryInfo *(Module &)> GetPSI;
+  std::function<StaticDataProfileInfo *(Module &)> GetSDPI;
+};
+
+class X86AsmPrinterPass : public PassInfoMixin<X86AsmPrinterPass> {
+public:
+  X86AsmPrinterPass(TargetMachine &TM, CreateMCStreamer CreateAsmStreamer)
+      : TM(TM), CreateAsmStreamer(CreateAsmStreamer) {};
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    std::unique_ptr<MCStreamer> AsmStreamer = cantFail(CreateAsmStreamer(TM));
+    X86AsmPrinter AsmPrinter(TM, std::move(AsmStreamer));
+    AsmPrinter.GetPSI = [&MAM](Module &M) {
+      return &MAM.getResult<ProfileSummaryAnalysis>(M);
+    };
+    // TODO(boomanaiden154): Port the SDPI analysis to the new pass manager.
+    AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+    return runOnModuleNewPM(M, MAM, AsmPrinter);
+  }
+
+private:
+  TargetMachine &TM;
+  CreateMCStreamer CreateAsmStreamer;
 };
 
 } // end namespace llvm
