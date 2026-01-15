@@ -2834,7 +2834,6 @@ libc_support_library(
     ],
 )
 
-
 libc_support_library(
     name = "__support_math_frexpf16",
     hdrs = ["src/__support/math/frexpf16.h"],
