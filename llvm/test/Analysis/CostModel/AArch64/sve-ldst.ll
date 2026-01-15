@@ -48,7 +48,7 @@ define void @scalable_stores() {
 define void @scalable_ext_loads() {
 ; CHECK-LABEL: 'scalable_ext_loads'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv16i8 = load <vscale x 16 x i8>, ptr undef, align 16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %zext.nxv16i8to16 = zext <vscale x 16 x i8> %load.nxv16i8 to <vscale x 16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %zext.nxv16i8to16 = zext <vscale x 16 x i8> %load.nxv16i8 to <vscale x 16 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv8i8 = load <vscale x 8 x i8>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %zext.nxv8i8to16 = zext <vscale x 8 x i8> %load.nxv8i8 to <vscale x 8 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv4i8 = load <vscale x 4 x i8>, ptr undef, align 4
@@ -56,13 +56,13 @@ define void @scalable_ext_loads() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv2i8 = load <vscale x 2 x i8>, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %zext.nxv2i8to64 = zext <vscale x 2 x i8> %load.nxv2i8 to <vscale x 2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv8i16 = load <vscale x 8 x i16>, ptr undef, align 16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %zext.nxv8i16to32 = zext <vscale x 8 x i16> %load.nxv8i16 to <vscale x 8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %zext.nxv8i16to32 = zext <vscale x 8 x i16> %load.nxv8i16 to <vscale x 8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv4i16 = load <vscale x 4 x i16>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %zext.nxv4i16to32 = zext <vscale x 4 x i16> %load.nxv4i16 to <vscale x 4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv2i16 = load <vscale x 2 x i16>, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %zext.nxv2i16to64 = zext <vscale x 2 x i16> %load.nxv2i16 to <vscale x 2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv4i32 = load <vscale x 4 x i32>, ptr undef, align 16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %zext.nxv4i32to64 = zext <vscale x 4 x i32> %load.nxv4i32 to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %zext.nxv4i32to64 = zext <vscale x 4 x i32> %load.nxv4i32 to <vscale x 4 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %zext.nxv2i32to64 = zext <vscale x 2 x i32> %load.nxv2i32 to <vscale x 2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv4i8.2 = load <vscale x 4 x i8>, ptr undef, align 4
@@ -72,9 +72,9 @@ define void @scalable_ext_loads() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv8i8.2 = load <vscale x 8 x i8>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %zext.nxv8i8to32 = zext <vscale x 8 x i8> %load.nxv8i8.2 to <vscale x 8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load.nxv8i8.3 = load <vscale x 8 x i8>, ptr undef, align 8
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %zext.nxv8i8to64 = zext <vscale x 8 x i8> %load.nxv8i8.3 to <vscale x 8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %zext.nxv8i8to64 = zext <vscale x 8 x i8> %load.nxv8i8.3 to <vscale x 8 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv16i8 = load <vscale x 16 x i8>, ptr undef, align 16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %sext.nxv16i8to16 = sext <vscale x 16 x i8> %load2.nxv16i8 to <vscale x 16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %sext.nxv16i8to16 = sext <vscale x 16 x i8> %load2.nxv16i8 to <vscale x 16 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv8i8 = load <vscale x 8 x i8>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %sext.nxv8i8to16 = sext <vscale x 8 x i8> %load2.nxv8i8 to <vscale x 8 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv4i8 = load <vscale x 4 x i8>, ptr undef, align 4
@@ -82,13 +82,13 @@ define void @scalable_ext_loads() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv2i8 = load <vscale x 2 x i8>, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %sext.nxv2i8to64 = sext <vscale x 2 x i8> %load2.nxv2i8 to <vscale x 2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv8i16 = load <vscale x 8 x i16>, ptr undef, align 16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %sext.nxv8i16to32 = sext <vscale x 8 x i16> %load2.nxv8i16 to <vscale x 8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %sext.nxv8i16to32 = sext <vscale x 8 x i16> %load2.nxv8i16 to <vscale x 8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv4i16 = load <vscale x 4 x i16>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %sext.nxv4i16to32 = sext <vscale x 4 x i16> %load2.nxv4i16 to <vscale x 4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv2i16 = load <vscale x 2 x i16>, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %sext.nxv2i16to64 = sext <vscale x 2 x i16> %load2.nxv2i16 to <vscale x 2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv4i32 = load <vscale x 4 x i32>, ptr undef, align 16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %sext.nxv4i32to64 = sext <vscale x 4 x i32> %load2.nxv4i32 to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %sext.nxv4i32to64 = sext <vscale x 4 x i32> %load2.nxv4i32 to <vscale x 4 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %sext.nxv2i32to64 = sext <vscale x 2 x i32> %load2.nxv2i32 to <vscale x 2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv4i8.2 = load <vscale x 4 x i8>, ptr undef, align 4
@@ -98,7 +98,7 @@ define void @scalable_ext_loads() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv8i8.2 = load <vscale x 8 x i8>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %sext.nxv8i8to32 = sext <vscale x 8 x i8> %load2.nxv8i8.2 to <vscale x 8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %load2.nxv8i8.3 = load <vscale x 8 x i8>, ptr undef, align 8
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %sext.nxv8i8to64 = sext <vscale x 8 x i8> %load2.nxv8i8.3 to <vscale x 8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %sext.nxv8i8to64 = sext <vscale x 8 x i8> %load2.nxv8i8.3 to <vscale x 8 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 
