@@ -39,11 +39,17 @@ llvm.func @rocdl_special_regs() -> i32 {
   // CHECK: call range(i64 1, 65) i64 @__ockl_get_local_size(i32 0)
   %17 = rocdl.workgroup.dim.x range <i32, 1, 65> : i64
 
+  // CHECK: call i32 @llvm.amdgcn.wave.id()
+  %18 = rocdl.wave.id : i32
+
+  // CHECK: call range(i32 32, 65) i32 @llvm.amdgcn.wave.id()
+  %19 = rocdl.wave.id range <i32, 32, 65> : i32
+
   // CHECK: call i32 @llvm.amdgcn.wavefrontsize()
-  %18 = rocdl.wavefrontsize : i32
+  %20 = rocdl.wavefrontsize : i32
 
   // CHECK: call range(i32 32, 65) i32 @llvm.amdgcn.wavefrontsize()
-  %19 = rocdl.wavefrontsize range <i32, 32, 65> : i32
+  %21 = rocdl.wavefrontsize range <i32, 32, 65> : i32
 
   llvm.return %1 : i32
 }
