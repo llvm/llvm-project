@@ -1566,6 +1566,8 @@ public:
 
   bool hasGFX1250Insts() const { return GFX1250Insts; }
 
+  bool hasINVWBL2WaitCntRequirement() const { return GFX1250Insts; }
+
   bool hasVOPD3() const { return GFX1250Insts; }
 
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
