@@ -1512,7 +1512,7 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
 }
 
 TargetLowering::AtomicExpansionKind
-XtensaTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+XtensaTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   return AtomicExpansionKind::CmpXChg;
 }
 

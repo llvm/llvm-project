@@ -116,7 +116,7 @@ public:
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,

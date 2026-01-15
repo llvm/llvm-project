@@ -1555,7 +1555,8 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
 // TargetLowering Implementation
 //===----------------------------------------------------------------------===//
 
-TargetLowering::AtomicExpansionKind SparcTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+TargetLowering::AtomicExpansionKind
+SparcTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   if (AI->getOperation() == AtomicRMWInst::Xchg &&
       AI->getType()->getPrimitiveSizeInBits() == 32)
     return AtomicExpansionKind::None; // Uses xchg instruction

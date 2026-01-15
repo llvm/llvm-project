@@ -24977,7 +24977,7 @@ Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 }
 
 TargetLowering::AtomicExpansionKind
-RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+RISCVTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // atomicrmw {fadd,fsub} must be expanded to use compare-exchange, as floating
   // point operations can't be used in an lr/sc sequence without breaking the
   // forward-progress guarantee.
@@ -25092,7 +25092,7 @@ Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
 
 TargetLowering::AtomicExpansionKind
 RISCVTargetLowering::shouldExpandAtomicCmpXchgInIR(
-    AtomicCmpXchgInst *CI) const {
+    const AtomicCmpXchgInst *CI) const {
   // Don't expand forced atomics, we want to have __sync libcalls instead.
   if (Subtarget.hasForcedAtomics())
     return AtomicExpansionKind::None;

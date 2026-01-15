@@ -568,11 +568,12 @@ public:
   bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
                                     const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
   AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
   void emitExpandAtomicAddrSpacePredicate(Instruction *AI) const;
   void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;

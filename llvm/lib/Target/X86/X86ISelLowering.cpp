@@ -32106,7 +32106,8 @@ enum BitTestKind : unsigned {
   NotShiftBit
 };
 
-static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
+static std::pair<const Value *, BitTestKind>
+FindSingleBitChange(const Value *V) {
   using namespace llvm::PatternMatch;
   BitTestKind BTK = UndefBit;
   if (auto *C = dyn_cast<ConstantInt>(V)) {
@@ -32169,7 +32170,8 @@ static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
 }
 
 TargetLowering::AtomicExpansionKind
-X86TargetLowering::shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const {
+X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
+    const AtomicRMWInst *AI) const {
   using namespace llvm::PatternMatch;
   // If the atomicrmw's result isn't actually used, we can just add a "lock"
   // prefix to a normal instruction for these operations.
@@ -32189,7 +32191,7 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const {
   // SETCC(And(AtomicRMW(P, power_of_2), power_of_2)) with LShr and Xor
   // (depending on CC). This pattern can only use bts/btr/btc but we don't
   // detect it.
-  Instruction *I = AI->user_back();
+  const Instruction *I = AI->user_back();
   auto BitChange = FindSingleBitChange(AI->getValOperand());
   if (BitChange.second == UndefBit || !AI->hasOneUse() ||
       I->getOpcode() != Instruction::And ||
@@ -32282,7 +32284,7 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   } else {
     assert(BitTested.second == ShiftBit || BitTested.second == NotShiftBit);
 
-    Value *SI = BitTested.first;
+    Value *SI = const_cast<Value *>(BitTested.first);
     assert(SI != nullptr);
 
     // BT{S|R|C} on memory operand don't modulo bit position so we need to
@@ -32323,14 +32325,14 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   AI->eraseFromParent();
 }
 
-static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
+static bool shouldExpandCmpArithRMWInIR(const AtomicRMWInst *AI) {
   using namespace llvm::PatternMatch;
   if (!AI->hasOneUse())
     return false;
 
   Value *Op = AI->getOperand(1);
   CmpPredicate Pred;
-  Instruction *I = AI->user_back();
+  const Instruction *I = AI->user_back();
   AtomicRMWInst::BinOp Opc = AI->getOperation();
   if (Opc == AtomicRMWInst::Add) {
     if (match(I, m_c_ICmp(Pred, m_Sub(m_ZeroInt(), m_Specific(Op)), m_Value())))
@@ -32451,7 +32453,7 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
 }
 
 TargetLowering::AtomicExpansionKind
-X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+X86TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   unsigned NativeWidth = Subtarget.is64Bit() ? 64 : 32;
   Type *MemType = AI->getType();
 
