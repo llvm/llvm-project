@@ -2965,7 +2965,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
     EVI = dyn_cast<ExtractValueInst>(V);
     if (EVI) {
       V = EVI->getOperand(0);
-      if (!llvm::all_of(EVI->indices(), [](unsigned idx) { return idx == 0; }))
+      if (!llvm::all_of(EVI->indices(), equal_to(0)))
         return false;
     }
 

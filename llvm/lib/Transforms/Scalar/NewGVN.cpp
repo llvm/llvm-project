@@ -1804,7 +1804,7 @@ NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps,
   Value *AllSameValue = *(Filtered.begin());
   ++Filtered.begin();
   // Can't use std::equal here, sadly, because filter.begin moves.
-  if (llvm::all_of(Filtered, [&](Value *Arg) { return Arg == AllSameValue; })) {
+  if (llvm::all_of(Filtered, equal_to(AllSameValue))) {
     // Can't fold phi(undef, X) -> X unless X can't be poison (thus X is undef
     // in the worst case).
     if (HasUndef && !isGuaranteedNotToBePoison(AllSameValue, AC, nullptr, DT))

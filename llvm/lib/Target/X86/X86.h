@@ -349,14 +349,30 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
 FunctionPass *createX86PreLegalizerCombiner();
 FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
 FunctionPass *createX86LoadValueInjectionRetHardeningPass();
-FunctionPass *createX86SpeculativeLoadHardeningPass();
 FunctionPass *createX86SpeculativeExecutionSideEffectSuppression();
-FunctionPass *createX86ArgumentStackSlotPass();
+
+class X86SpeculativeLoadHardeningPass
+    : public PassInfoMixin<X86SpeculativeLoadHardeningPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86SpeculativeLoadHardeningLegacyPass();
+
+class X86ArgumentStackSlotPass
+    : public PassInfoMixin<X86ArgumentStackSlotPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86ArgumentStackSlotLegacyPass();
 
 void initializeCompressEVEXLegacyPass(PassRegistry &);
 void initializeX86FixupBWInstLegacyPass(PassRegistry &);
 void initializeFixupLEAsLegacyPass(PassRegistry &);
-void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
+void initializeX86ArgumentStackSlotLegacyPass(PassRegistry &);
 void initializeX86AsmPrinterPass(PassRegistry &);
 void initializeX86FixupInstTuningLegacyPass(PassRegistry &);
 void initializeX86FixupVectorConstantsLegacyPass(PassRegistry &);
@@ -385,7 +401,7 @@ void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigLegacyPass(PassRegistry &);
 void initializeX86ReturnThunksPass(PassRegistry &);
 void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
-void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
+void initializeX86SpeculativeLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
 void initializeX86WinEHUnwindV2Pass(PassRegistry &);

@@ -6437,7 +6437,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
       unsigned Limit = getNumElems(CurrentOrder.size(), PartSz, I);
       MutableArrayRef<unsigned> Slice = CurrentOrder.slice(I * PartSz, Limit);
       // Shuffle of at least 2 vectors - ignore.
-      if (any_of(Slice, [&](unsigned I) { return I != NumScalars; })) {
+      if (any_of(Slice, not_equal_to(NumScalars))) {
         llvm::fill(Slice, NumScalars);
         ShuffledSubMasks.set(I);
         continue;
@@ -12673,7 +12673,7 @@ protected:
       // <poison,poison,poison,poison,0,1,2,poison,poison,1,2,3> etc. for VF 4).
       if (Limit % VF == 0 && all_of(seq<int>(0, Limit / VF), [=](int Idx) {
             ArrayRef<int> Slice = Mask.slice(Idx * VF, VF);
-            return all_of(Slice, [](int I) { return I == PoisonMaskElem; }) ||
+            return all_of(Slice, equal_to(PoisonMaskElem)) ||
                    ShuffleVectorInst::isIdentityMask(Slice, VF);
           }))
         return true;
@@ -14482,8 +14482,7 @@ public:
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
     unsigned NumParts = ::getNumberOfParts(TTI, MaskVecTy, Mask.size());
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
-    const auto *It =
-        find_if(Mask, [](int Idx) { return Idx != PoisonMaskElem; });
+    const auto *It = find_if(Mask, not_equal_to(PoisonMaskElem));
     unsigned Part = std::distance(Mask.begin(), It) / SliceSize;
     estimateNodesPermuteCost(E1, &E2, Mask, Part, SliceSize);
   }
@@ -14497,8 +14496,7 @@ public:
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
     unsigned NumParts = ::getNumberOfParts(TTI, MaskVecTy, Mask.size());
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
-    const auto *It =
-        find_if(Mask, [](int Idx) { return Idx != PoisonMaskElem; });
+    const auto *It = find_if(Mask, not_equal_to(PoisonMaskElem));
     unsigned Part = std::distance(Mask.begin(), It) / SliceSize;
     estimateNodesPermuteCost(E1, nullptr, Mask, Part, SliceSize);
     if (!SameNodesEstimated && InVectors.size() == 1)
@@ -17330,7 +17328,7 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
   // shuffle of a single/two vectors the scalars are extracted from.
   std::optional<TTI::ShuffleKind> Res =
       isFixedVectorShuffle(GatheredExtracts, Mask, AC);
-  if (!Res || all_of(Mask, [](int Idx) { return Idx == PoisonMaskElem; })) {
+  if (!Res || all_of(Mask, equal_to(PoisonMaskElem))) {
     // TODO: try to check other subsets if possible.
     // Restore the original VL if attempt was not successful.
     copy(SavedVL, VL.begin());
@@ -19675,8 +19673,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                                             NewMask, CostKind);
               InstructionCost BVCost = TTI->getVectorInstrCost(
                   Instruction::InsertElement, VecTy, CostKind,
-                  *find_if(Mask, [](int I) { return I != PoisonMaskElem; }),
-                  Vec, V);
+                  *find_if(Mask, not_equal_to(PoisonMaskElem)), Vec, V);
               // Shuffle required?
               if (count(BVMask, PoisonMaskElem) <
                   static_cast<int>(BVMask.size() - 1)) {
@@ -26010,6 +26007,7 @@ private:
         case RecurKind::FindFirstIVUMin:
         case RecurKind::FindLastIVSMax:
         case RecurKind::FindLastIVUMax:
+        case RecurKind::FindLast:
         case RecurKind::FMaxNum:
         case RecurKind::FMinNum:
         case RecurKind::FMaximumNum:
@@ -26151,6 +26149,7 @@ private:
     case RecurKind::FindFirstIVUMin:
     case RecurKind::FindLastIVSMax:
     case RecurKind::FindLastIVUMax:
+    case RecurKind::FindLast:
     case RecurKind::FMaxNum:
     case RecurKind::FMinNum:
     case RecurKind::FMaximumNum:
@@ -26257,6 +26256,7 @@ private:
     case RecurKind::FindFirstIVUMin:
     case RecurKind::FindLastIVSMax:
     case RecurKind::FindLastIVUMax:
+    case RecurKind::FindLast:
     case RecurKind::FMaxNum:
     case RecurKind::FMinNum:
     case RecurKind::FMaximumNum:

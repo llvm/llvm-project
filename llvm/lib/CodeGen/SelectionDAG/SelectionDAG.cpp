@@ -1572,6 +1572,10 @@ SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
   assert(VT.bitsLE(OpVT) && "Not extending!");
   if (OpVT == VT)
     return Op;
+  // TODO: Use computeKnownBits instead of AssertZext.
+  if (Op.getOpcode() == ISD::AssertZext &&
+      cast<VTSDNode>(Op.getOperand(1))->getVT().bitsLE(VT))
+    return Op;
   APInt Imm = APInt::getLowBitsSet(OpVT.getScalarSizeInBits(),
                                    VT.getScalarSizeInBits());
   return getNode(ISD::AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT));
@@ -3868,6 +3872,14 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     unsigned PossibleLZ = Known2.countMaxLeadingZeros();
     unsigned LowBits = llvm::bit_width(PossibleLZ);
     Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
+  case ISD::CTLS: {
+    unsigned MinRedundantSignBits =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1) - 1;
+    ConstantRange Range(APInt(BitWidth, MinRedundantSignBits),
+                        APInt(BitWidth, BitWidth));
+    Known = Range.toKnownBits();
     break;
   }
   case ISD::CTPOP: {

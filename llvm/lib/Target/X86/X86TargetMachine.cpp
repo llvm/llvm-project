@@ -90,7 +90,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86DomainReassignmentLegacyPass(PR);
   initializeX86AvoidSFBLegacyPass(PR);
   initializeX86AvoidTrailingCallLegacyPassPass(PR);
-  initializeX86SpeculativeLoadHardeningPassPass(PR);
+  initializeX86SpeculativeLoadHardeningLegacyPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
   initializeX86FlagsCopyLoweringLegacyPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
@@ -100,7 +100,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
-  initializeX86ArgumentStackSlotPassPass(PR);
+  initializeX86ArgumentStackSlotLegacyPass(PR);
   initializeX86AsmPrinterPass(PR);
   initializeX86FixupInstTuningLegacyPass(PR);
   initializeX86FixupVectorConstantsLegacyPass(PR);
@@ -462,7 +462,7 @@ bool X86PassConfig::addInstSelector() {
     addPass(createCleanupLocalDynamicTLSPass());
 
   addPass(createX86GlobalBaseRegPass());
-  addPass(createX86ArgumentStackSlotPass());
+  addPass(createX86ArgumentStackSlotLegacyPass());
   return false;
 }
 
@@ -522,7 +522,7 @@ void X86PassConfig::addPreRegAlloc() {
 
   addPass(createX86SuppressAPXForRelocationLegacyPass());
 
-  addPass(createX86SpeculativeLoadHardeningPass());
+  addPass(createX86SpeculativeLoadHardeningLegacyPass());
   addPass(createX86FlagsCopyLoweringLegacyPass());
   addPass(createX86DynAllocaExpanderLegacyPass());
 
