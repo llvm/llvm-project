@@ -67,18 +67,12 @@ std::optional<int64_t> GetIndexValue(ValueObject &valobj) {
 ValueObjectSP GetNthStorage(ValueObject &outer, int64_t index) {
   // We need to find the std::_Variant_storage base class.
 
-  // Navigate "down" to std::_Variant_base by finding the holder of "_Which".
-  // This might be down a few levels if a variant member isn't trivially
-  // destructible/copyable/etc.
-  ValueObjectSP which_sp = outer.GetChildMemberWithName("_Which");
-  if (!which_sp)
+  // -> std::_SMF_control (typedef to std::_Variant_base)
+  ValueObjectSP container_sp = outer.GetSP()->GetChildAtIndex(0);
+  if (!container_sp)
     return nullptr;
-  ValueObject *parent = which_sp->GetParent();
-  if (!parent)
-    return nullptr;
-
-  // Now go to std::_Variant_storage.
-  ValueObjectSP container_sp = parent->GetChildAtIndex(0);
+  // -> std::_Variant_storage
+  container_sp = container_sp->GetChildAtIndex(0);
   if (!container_sp)
     return nullptr;
 
