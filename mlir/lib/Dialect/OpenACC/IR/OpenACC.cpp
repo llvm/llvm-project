@@ -245,6 +245,12 @@ struct MemRefPointerLikeModel
     memref::StoreOp::create(builder, loc, valueToStore, memrefValue);
     return true;
   }
+
+  bool isDeviceData(Type pointer, Value var) const {
+    auto memrefTy = cast<T>(pointer);
+    Attribute memSpace = memrefTy.getMemorySpace();
+    return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
+  }
 };
 
 struct LLVMPointerPointerLikeModel
@@ -289,6 +295,12 @@ struct MemrefGlobalVariableModel
   Region *getInitRegion(Operation *op) const {
     // GlobalOp uses attributes for initialization, not regions
     return nullptr;
+  }
+
+  bool isDeviceData(Operation *op) const {
+    auto globalOp = cast<memref::GlobalOp>(op);
+    Attribute memSpace = globalOp.getType().getMemorySpace();
+    return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
   }
 };
 
