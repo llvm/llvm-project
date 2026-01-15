@@ -307,7 +307,7 @@ This option is only used if [`LIBOMP_USE_HWLOC`](LIBOMP_USE_HWLOC) is `ON`.
 : Additional Fortran compiler flags.
 
 
-### Options for `libompt`
+### Options for OMPT Support
 
 (LIBOMP_OMPT_SUPPORT)=
 **LIBOMP_OMPT_SUPPORT**:BOOL
@@ -329,6 +329,15 @@ This option is `OFF` if this feature is not supported for the platform.
 **LIBOMPTEST_INSTALL_COMPONENTS**: BOOL (default: `OFF`)
 : Whether to also copy `libomptest.so` into
 [`CMAKE_INSTALL_PREFIX`][CMAKE_INSTALL_PREFIX] during `ninja install`.
+
+
+### Options for `libompd`
+
+**LIBOMP_OMPD_SUPPORT**:BOOL
+: Enable building the libompd library.
+
+**LIBOMPD_LD_STD_FLAGS**:STRING
+: Use `-stdlibc++` instead of `-libc++` library for C++.
 
 
 ### Options for offload/`libomptarget`
