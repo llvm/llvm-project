@@ -195,6 +195,78 @@ static SPIRVType *deduceTypeFromUses(Register Reg, MachineFunction &MF,
   return nullptr;
 }
 
+static SPIRVType *deduceGEPType(MachineInstr *I, SPIRVGlobalRegistry *GR,
+                                MachineIRBuilder &MIB) {
+  LLVM_DEBUG(dbgs() << "Deducing GEP type for: " << *I);
+  Register PtrReg = I->getOperand(3).getReg();
+  SPIRVType *PtrType = GR->getSPIRVTypeForVReg(PtrReg);
+  if (!PtrType) {
+    LLVM_DEBUG(dbgs() << "  Could not get type for pointer operand.\n");
+    return nullptr;
+  }
+
+  SPIRVType *PointeeType = GR->getPointeeType(PtrType);
+  if (!PointeeType) {
+    LLVM_DEBUG(dbgs() << "  Could not get pointee type from pointer type.\n");
+    return nullptr;
+  }
+
+  MachineRegisterInfo *MRI = MIB.getMRI();
+
+  // The first index (operand 4) steps over the pointer, so the type doesn't
+  // change.
+  for (unsigned i = 5; i < I->getNumOperands(); ++i) {
+    LLVM_DEBUG(dbgs() << "  Traversing index " << i
+                      << ", current type: " << *PointeeType);
+    switch (PointeeType->getOpcode()) {
+    case SPIRV::OpTypeArray:
+    case SPIRV::OpTypeRuntimeArray:
+    case SPIRV::OpTypeVector: {
+      Register ElemTypeReg = PointeeType->getOperand(1).getReg();
+      PointeeType = GR->getSPIRVTypeForVReg(ElemTypeReg);
+      break;
+    }
+    case SPIRV::OpTypeStruct: {
+      MachineOperand &IdxOp = I->getOperand(i);
+      if (!IdxOp.isReg()) {
+        LLVM_DEBUG(dbgs() << "  Index is not a register.\n");
+        return nullptr;
+      }
+      MachineInstr *Def = MRI->getVRegDef(IdxOp.getReg());
+      if (!Def) {
+        LLVM_DEBUG(
+            dbgs() << "  Could not find definition for index register.\n");
+        return nullptr;
+      }
+
+      uint64_t IndexVal = foldImm(IdxOp, MRI);
+      if (IndexVal >= PointeeType->getNumOperands() - 1) {
+        LLVM_DEBUG(dbgs() << "  Struct index out of bounds.\n");
+        return nullptr;
+      }
+
+      Register MemberTypeReg = PointeeType->getOperand(IndexVal + 1).getReg();
+      PointeeType = GR->getSPIRVTypeForVReg(MemberTypeReg);
+      break;
+    }
+    default:
+      LLVM_DEBUG(dbgs() << "  Unknown type opcode for GEP traversal.\n");
+      return nullptr;
+    }
+
+    if (!PointeeType) {
+      LLVM_DEBUG(dbgs() << "  Could not resolve next pointee type.\n");
+      return nullptr;
+    }
+  }
+  LLVM_DEBUG(dbgs() << "  Final pointee type: " << *PointeeType);
+
+  SPIRV::StorageClass::StorageClass SC = GR->getPointerStorageClass(PtrType);
+  SPIRVType *Res = GR->getOrCreateSPIRVPointerType(PointeeType, MIB, SC);
+  LLVM_DEBUG(dbgs() << "  Deduced GEP type: " << *Res);
+  return Res;
+}
+
 static SPIRVType *deduceResultTypeFromOperands(MachineInstr *I,
                                                SPIRVGlobalRegistry *GR,
                                                MachineIRBuilder &MIB) {
@@ -202,17 +274,30 @@ static SPIRVType *deduceResultTypeFromOperands(MachineInstr *I,
   switch (I->getOpcode()) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT:
     return deduceIntTypeFromResult(ResVReg, MIB, GR);
   case TargetOpcode::G_BUILD_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, I->getNumOperands());
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, 3);
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+  case TargetOpcode::G_INTRINSIC: {
+    auto IntrinsicID = cast<GIntrinsic>(I)->getIntrinsicID();
+    if (IntrinsicID == Intrinsic::spv_gep)
+      return deduceGEPType(I, GR, MIB);
+    break;
+  }
+  case TargetOpcode::G_LOAD: {
+    SPIRVType *PtrType = deduceTypeFromSingleOperand(I, MIB, GR, 1);
+    return PtrType ? GR->getPointeeType(PtrType) : nullptr;
+  }
   default:
     if (I->getNumDefs() == 1 && I->getNumOperands() > 1 &&
         I->getOperand(1).isReg())
       return deduceTypeFromSingleOperand(I, MIB, GR, 1);
-    return nullptr;
   }
+  return nullptr;
 }
 
 static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,

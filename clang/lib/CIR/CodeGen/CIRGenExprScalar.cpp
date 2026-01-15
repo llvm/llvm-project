@@ -181,10 +181,11 @@ public:
   mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
     return cgf.emitCoawaitExpr(*s).getValue();
   }
+
   mlir::Value VisitCoyieldExpr(CoyieldExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: coyield");
-    return {};
+    return cgf.emitCoyieldExpr(*e).getValue();
   }
+
   mlir::Value VisitUnaryCoawait(const UnaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: unary coawait");
     return {};
@@ -552,8 +553,8 @@ public:
     }
 
     assert(castKind.has_value() && "Internal error: CastKind not set.");
-    return cir::CastOp::create(builder, src.getLoc(), fullDstTy, *castKind,
-                               src);
+    return builder.createOrFold<cir::CastOp>(src.getLoc(), fullDstTy, *castKind,
+                                             src);
   }
 
   mlir::Value
@@ -801,9 +802,9 @@ public:
 
   mlir::Value emitUnaryOp(const UnaryOperator *e, cir::UnaryOpKind kind,
                           mlir::Value input, bool nsw = false) {
-    return cir::UnaryOp::create(builder,
-                                cgf.getLoc(e->getSourceRange().getBegin()),
-                                input.getType(), kind, input, nsw);
+    return builder.createOrFold<cir::UnaryOp>(
+        cgf.getLoc(e->getSourceRange().getBegin()), input.getType(), kind,
+        input, nsw);
   }
 
   mlir::Value VisitUnaryNot(const UnaryOperator *e) {
@@ -2241,6 +2242,40 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 
     auto ty = mlir::cast<cir::DataMemberType>(cgf.convertType(destTy));
     return builder.getNullDataMemberPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
+  }
+
+  case CK_BaseToDerivedMemberPointer:
+  case CK_DerivedToBaseMemberPointer: {
+    mlir::Value src = Visit(subExpr);
+
+    assert(!cir::MissingFeatures::memberFuncPtrAuthInfo());
+
+    QualType derivedTy =
+        kind == CK_DerivedToBaseMemberPointer ? subExpr->getType() : destTy;
+    const auto *mpType = derivedTy->castAs<MemberPointerType>();
+    NestedNameSpecifier qualifier = mpType->getQualifier();
+    assert(qualifier && "member pointer without class qualifier");
+    const Type *qualifierType = qualifier.getAsType();
+    assert(qualifierType && "member pointer qualifier is not a type");
+    const CXXRecordDecl *derivedClass = qualifierType->getAsCXXRecordDecl();
+    CharUnits offset =
+        cgf.cgm.computeNonVirtualBaseClassOffset(derivedClass, ce->path());
+
+    mlir::Location loc = cgf.getLoc(subExpr->getExprLoc());
+    mlir::Type resultTy = cgf.convertType(destTy);
+    mlir::IntegerAttr offsetAttr = builder.getIndexAttr(offset.getQuantity());
+
+    if (subExpr->getType()->isMemberFunctionPointerType()) {
+      cgf.cgm.errorNYI(subExpr->getSourceRange(),
+                       "VisitCastExpr: member function pointer");
+      return {};
+    }
+
+    if (kind == CK_BaseToDerivedMemberPointer)
+      return cir::DerivedDataMemberOp::create(builder, loc, resultTy, src,
+                                              offsetAttr);
+    return cir::BaseDataMemberOp::create(builder, loc, resultTy, src,
+                                         offsetAttr);
   }
 
   case CK_LValueToRValue:
