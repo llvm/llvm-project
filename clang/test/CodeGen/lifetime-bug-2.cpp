@@ -23,8 +23,14 @@ void foo(){
 // CHECK-NEXT: invoke void @f1
 // CHECK-NEXT: to label %[[CONT:.*]] unwind label %[[LPAD1:.*]]
 //
+// CHECK: [[CONT]]:
+// CHECK-NEXT: @llvm.lifetime.end.p0(ptr [[TMP2]])
+// CHECK-NEXT: invoke void @f2
+// CHECK-NEXT: to label %[[CONT2:.*]] unwind label %[[LPAD2:.*]]
+//
+// CHECK: [[CONT2]]:
+// CHECK-NEXT: lifetime.end.p0(ptr [[TMP1]])
+//
 // CHECK: [[LPAD1]]:
 // CHECK-NEXT: landingpad
-// CHECK: llvm.lifetime.end.p0(ptr [[TMP2]])
 // CHECK: llvm.lifetime.end.p0(ptr [[TMP1]])
-
