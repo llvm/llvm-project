@@ -6208,6 +6208,113 @@ static bool hasMoreUses(const MachineInstr &MI0, const MachineInstr &MI1,
                        MRI.use_instr_nodbg_end());
 }
 
+// Check if all uses of a multiply can be contracted into FMA operations.
+// Returns true if all uses of the multiply are contractable, meaning the
+// multiply can potentially be eliminated through FMA contraction.
+// Returns false if any use cannot be contracted, which would mean contracting
+// would duplicate the multiply without reducing the total number of operations.
+//
+// This uses a simple, non-recursive check for the following patterns:
+//   - fmul --> fadd/fsub: Direct contraction
+//   - fmul --> fneg --> fsub: FNEG folds into FMA with negated operand
+//   - fmul --> fpext --> {fadd, fsub, fma}: FPEXT folds if it can be folded
+//   - fmul --> fma: Assume FMA contraction will handle it (to avoid complexity)
+static bool allMulUsesCanBeContracted(const MachineInstr &MI,
+                                      const MachineRegisterInfo &MRI,
+                                      const unsigned PreferredFusedOpcode) {
+  const auto &TLI = *MI.getMF()->getSubtarget().getTargetLowering();
+  Register MulReg = MI.getOperand(0).getReg();
+
+  // Check all uses of the multiply result
+  for (const MachineInstr &UseMI : MRI.use_nodbg_instructions(MulReg)) {
+    unsigned Opcode = UseMI.getOpcode();
+
+    // Direct FADD/FSUB uses
+    if (Opcode == TargetOpcode::G_FADD || Opcode == TargetOpcode::G_FSUB) {
+      continue;
+    }
+
+    // FNEG --> FSUB pattern
+    // Also handles FNEG --> FPEXT --> FSUB
+    if (Opcode == TargetOpcode::G_FNEG) {
+      Register FNegReg = UseMI.getOperand(0).getReg();
+      // ALL users of the FNEG must be contractable FSUBs or FPEXTs leading to
+      // FSUBs
+      for (const MachineInstr &FNegUseMI :
+           MRI.use_nodbg_instructions(FNegReg)) {
+        unsigned FNegUseOpcode = FNegUseMI.getOpcode();
+
+        if (FNegUseOpcode == TargetOpcode::G_FSUB)
+          continue;
+        if (FNegUseOpcode == TargetOpcode::G_FPEXT) {
+          // FNEG --> FPEXT --> FSUB
+          Register FNegFPExtReg = FNegUseMI.getOperand(0).getReg();
+          for (const MachineInstr &FNegFPExtUseMI :
+               MRI.use_nodbg_instructions(FNegFPExtReg)) {
+            if (FNegFPExtUseMI.getOpcode() != TargetOpcode::G_FSUB)
+              return false;
+            // FPEXT use is FSUB, check if can be folded in
+            if (!TLI.isFPExtFoldable(
+                    FNegFPExtUseMI, PreferredFusedOpcode,
+                    MRI.getType(FNegFPExtUseMI.getOperand(0).getReg()),
+                    MRI.getType(FNegReg)))
+              return false;
+          }
+          continue;
+        }
+        return false;
+      }
+      continue;
+    }
+
+    // FP_EXTEND - check if ALL users are FADD, FSUB, FMA, or FNEG --> FSUB
+    if (Opcode == TargetOpcode::G_FPEXT) {
+      Register FPExtReg = UseMI.getOperand(0).getReg();
+
+      // ALL users of the FP_EXTEND must be contractable operations or FNEGs
+      for (const MachineInstr &FPExtUseMI :
+           MRI.use_nodbg_instructions(FPExtReg)) {
+        if (!TLI.isFPExtFoldable(FPExtUseMI, PreferredFusedOpcode,
+                                 MRI.getType(FPExtUseMI.getOperand(0).getReg()),
+                                 MRI.getType(MulReg)))
+          return false;
+        unsigned ExtUseOpcode = FPExtUseMI.getOpcode();
+        if (ExtUseOpcode == TargetOpcode::G_FADD ||
+            ExtUseOpcode == TargetOpcode::G_FSUB ||
+            ExtUseOpcode == TargetOpcode::G_FMA ||
+            ExtUseOpcode == TargetOpcode::G_FMAD) {
+          continue;
+        }
+        if (ExtUseOpcode == TargetOpcode::G_FNEG) {
+          // FP_EXTEND --> FNEG --> FSUB
+          Register FPExtFNegReg = FPExtUseMI.getOperand(0).getReg();
+          for (const MachineInstr &FPExtFNegUseMI :
+               MRI.use_nodbg_instructions(FPExtFNegReg)) {
+            if (FPExtFNegUseMI.getOpcode() != TargetOpcode::G_FSUB)
+              return false;
+          }
+          continue;
+        }
+        return false;
+      }
+      continue;
+    }
+
+    // FMA - assume a mul being used by an FMA will get contracted.
+    // There is a chance we may miss some corner cases where we will still have
+    // the mul left over, but this keeps the analysis simple and maintains
+    // existing behavior in the worse case.
+    if (Opcode == TargetOpcode::G_FMA || Opcode == TargetOpcode::G_FMAD) {
+      continue;
+    }
+
+    // Any other use type is not contractable
+    return false;
+  }
+
+  return true;
+}
+
 bool CombinerHelper::canCombineFMadOrFMA(MachineInstr &MI,
                                          bool &AllowFusionGlobally,
                                          bool &HasFMAD, bool &Aggressive,
@@ -6265,7 +6372,9 @@ bool CombinerHelper::matchCombineFAddFMulToFMadOrFMA(
 
   // fold (fadd (fmul x, y), z) -> (fma x, y, z)
   if (isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
-      (Aggressive || MRI.hasOneNonDBGUse(LHS.Reg))) {
+      (MRI.hasOneNonDBGUse(LHS.Reg) ||
+       (Aggressive &&
+        allMulUsesCanBeContracted(*LHS.MI, MRI, PreferredFusedOpcode)))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
                    {LHS.MI->getOperand(1).getReg(),
@@ -6276,7 +6385,9 @@ bool CombinerHelper::matchCombineFAddFMulToFMadOrFMA(
 
   // fold (fadd x, (fmul y, z)) -> (fma y, z, x)
   if (isContractableFMul(*RHS.MI, AllowFusionGlobally) &&
-      (Aggressive || MRI.hasOneNonDBGUse(RHS.Reg))) {
+      (MRI.hasOneNonDBGUse(RHS.Reg) ||
+       (Aggressive &&
+        allMulUsesCanBeContracted(*RHS.MI, MRI, PreferredFusedOpcode)))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
                    {RHS.MI->getOperand(1).getReg(),
@@ -6319,6 +6430,7 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMA(
   MachineInstr *FpExtSrc;
   if (mi_match(LHS.Reg, MRI, m_GFPExt(m_MInstr(FpExtSrc))) &&
       isContractableFMul(*FpExtSrc, AllowFusionGlobally) &&
+      allMulUsesCanBeContracted(*FpExtSrc, MRI, PreferredFusedOpcode) &&
       TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
                           MRI.getType(FpExtSrc->getOperand(1).getReg()))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
@@ -6334,6 +6446,7 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMA(
   // Note: Commutes FADD operands.
   if (mi_match(RHS.Reg, MRI, m_GFPExt(m_MInstr(FpExtSrc))) &&
       isContractableFMul(*FpExtSrc, AllowFusionGlobally) &&
+      allMulUsesCanBeContracted(*FpExtSrc, MRI, PreferredFusedOpcode) &&
       TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
                           MRI.getType(FpExtSrc->getOperand(1).getReg()))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
@@ -6463,6 +6576,7 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
       mi_match(LHS.MI->getOperand(3).getReg(), MRI,
                m_GFPExt(m_MInstr(FMulMI))) &&
       isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+      allMulUsesCanBeContracted(*FMulMI, MRI, PreferredFusedOpcode) &&
       TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
                           MRI.getType(FMulMI->getOperand(0).getReg()))) {
     MatchInfo = [=](MachineIRBuilder &B) {
@@ -6483,6 +6597,7 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
       FMAMI->getOpcode() == PreferredFusedOpcode) {
     MachineInstr *FMulMI = MRI.getVRegDef(FMAMI->getOperand(3).getReg());
     if (isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+        allMulUsesCanBeContracted(*FMulMI, MRI, PreferredFusedOpcode) &&
         TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
                             MRI.getType(FMAMI->getOperand(0).getReg()))) {
       MatchInfo = [=](MachineIRBuilder &B) {
@@ -6504,6 +6619,7 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
       mi_match(RHS.MI->getOperand(3).getReg(), MRI,
                m_GFPExt(m_MInstr(FMulMI))) &&
       isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+      allMulUsesCanBeContracted(*FMulMI, MRI, PreferredFusedOpcode) &&
       TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
                           MRI.getType(FMulMI->getOperand(0).getReg()))) {
     MatchInfo = [=](MachineIRBuilder &B) {
@@ -6524,6 +6640,7 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
       FMAMI->getOpcode() == PreferredFusedOpcode) {
     MachineInstr *FMulMI = MRI.getVRegDef(FMAMI->getOperand(3).getReg());
     if (isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+        allMulUsesCanBeContracted(*FMulMI, MRI, PreferredFusedOpcode) &&
         TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
                             MRI.getType(FMAMI->getOperand(0).getReg()))) {
       MatchInfo = [=](MachineIRBuilder &B) {
@@ -6570,7 +6687,9 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
   // fold (fsub (fmul x, y), z) -> (fma x, y, -z)
   if (FirstMulHasFewerUses &&
       (isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
-       (Aggressive || MRI.hasOneNonDBGUse(LHS.Reg)))) {
+       (MRI.hasOneNonDBGUse(LHS.Reg) ||
+        (Aggressive &&
+         allMulUsesCanBeContracted(*LHS.MI, MRI, PreferredFusedOpcode))))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       Register NegZ = B.buildFNeg(DstTy, RHS.Reg).getReg(0);
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
@@ -6580,8 +6699,10 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
     return true;
   }
   // fold (fsub x, (fmul y, z)) -> (fma -y, z, x)
-  else if ((isContractableFMul(*RHS.MI, AllowFusionGlobally) &&
-            (Aggressive || MRI.hasOneNonDBGUse(RHS.Reg)))) {
+  if (isContractableFMul(*RHS.MI, AllowFusionGlobally) &&
+      (MRI.hasOneNonDBGUse(RHS.Reg) ||
+       (Aggressive &&
+        allMulUsesCanBeContracted(*RHS.MI, MRI, PreferredFusedOpcode)))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       Register NegY =
           B.buildFNeg(DstTy, RHS.MI->getOperand(1).getReg()).getReg(0);
@@ -6613,8 +6734,10 @@ bool CombinerHelper::matchCombineFSubFNegFMulToFMadOrFMA(
   MachineInstr *FMulMI;
   // fold (fsub (fneg (fmul x, y)), z) -> (fma (fneg x), y, (fneg z))
   if (mi_match(LHSReg, MRI, m_GFNeg(m_MInstr(FMulMI))) &&
-      (Aggressive || (MRI.hasOneNonDBGUse(LHSReg) &&
-                      MRI.hasOneNonDBGUse(FMulMI->getOperand(0).getReg()))) &&
+      ((MRI.hasOneNonDBGUse(LHSReg) &&
+        MRI.hasOneNonDBGUse(FMulMI->getOperand(0).getReg())) ||
+       (Aggressive &&
+        allMulUsesCanBeContracted(*FMulMI, MRI, PreferredFusedOpcode))) &&
       isContractableFMul(*FMulMI, AllowFusionGlobally)) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       Register NegX =
@@ -6628,8 +6751,10 @@ bool CombinerHelper::matchCombineFSubFNegFMulToFMadOrFMA(
 
   // fold (fsub x, (fneg (fmul, y, z))) -> (fma y, z, x)
   if (mi_match(RHSReg, MRI, m_GFNeg(m_MInstr(FMulMI))) &&
-      (Aggressive || (MRI.hasOneNonDBGUse(RHSReg) &&
-                      MRI.hasOneNonDBGUse(FMulMI->getOperand(0).getReg()))) &&
+      ((MRI.hasOneNonDBGUse(RHSReg) &&
+        MRI.hasOneNonDBGUse(FMulMI->getOperand(0).getReg())) ||
+       (Aggressive &&
+        allMulUsesCanBeContracted(*FMulMI, MRI, PreferredFusedOpcode))) &&
       isContractableFMul(*FMulMI, AllowFusionGlobally)) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
@@ -6654,6 +6779,7 @@ bool CombinerHelper::matchCombineFSubFpExtFMulToFMadOrFMA(
   Register LHSReg = MI.getOperand(1).getReg();
   Register RHSReg = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  const auto &TLI = *MI.getMF()->getSubtarget().getTargetLowering();
 
   unsigned PreferredFusedOpcode =
       HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
@@ -6662,7 +6788,12 @@ bool CombinerHelper::matchCombineFSubFpExtFMulToFMadOrFMA(
   // fold (fsub (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), (fneg z))
   if (mi_match(LHSReg, MRI, m_GFPExt(m_MInstr(FMulMI))) &&
       isContractableFMul(*FMulMI, AllowFusionGlobally) &&
-      (Aggressive || MRI.hasOneNonDBGUse(LHSReg))) {
+      ((MRI.hasOneNonDBGUse(LHSReg) &&
+        MRI.hasOneNonDBGUse(FMulMI->getOperand(0).getReg())) ||
+       (Aggressive &&
+        allMulUsesCanBeContracted(*FMulMI, MRI, PreferredFusedOpcode))) &&
+      TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstTy,
+                          MRI.getType(FMulMI->getOperand(0).getReg()))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       Register FpExtX =
           B.buildFPExt(DstTy, FMulMI->getOperand(1).getReg()).getReg(0);
@@ -6678,7 +6809,12 @@ bool CombinerHelper::matchCombineFSubFpExtFMulToFMadOrFMA(
   // fold (fsub x, (fpext (fmul y, z))) -> (fma (fneg (fpext y)), (fpext z), x)
   if (mi_match(RHSReg, MRI, m_GFPExt(m_MInstr(FMulMI))) &&
       isContractableFMul(*FMulMI, AllowFusionGlobally) &&
-      (Aggressive || MRI.hasOneNonDBGUse(RHSReg))) {
+      ((MRI.hasOneNonDBGUse(RHSReg) &&
+        MRI.hasOneNonDBGUse(FMulMI->getOperand(0).getReg())) ||
+       (Aggressive &&
+        allMulUsesCanBeContracted(*FMulMI, MRI, PreferredFusedOpcode))) &&
+      TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstTy,
+                          MRI.getType(FMulMI->getOperand(0).getReg()))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       Register FpExtY =
           B.buildFPExt(DstTy, FMulMI->getOperand(1).getReg()).getReg(0);
@@ -6726,6 +6862,7 @@ bool CombinerHelper::matchCombineFSubFpExtFNegFMulToFMadOrFMA(
   if ((mi_match(LHSReg, MRI, m_GFPExt(m_GFNeg(m_MInstr(FMulMI)))) ||
        mi_match(LHSReg, MRI, m_GFNeg(m_GFPExt(m_MInstr(FMulMI))))) &&
       isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+      allMulUsesCanBeContracted(*FMulMI, MRI, PreferredFusedOpcode) &&
       TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstTy,
                           MRI.getType(FMulMI->getOperand(0).getReg()))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
@@ -6742,6 +6879,7 @@ bool CombinerHelper::matchCombineFSubFpExtFNegFMulToFMadOrFMA(
   if ((mi_match(RHSReg, MRI, m_GFPExt(m_GFNeg(m_MInstr(FMulMI)))) ||
        mi_match(RHSReg, MRI, m_GFNeg(m_GFPExt(m_MInstr(FMulMI))))) &&
       isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+      allMulUsesCanBeContracted(*FMulMI, MRI, PreferredFusedOpcode) &&
       TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstTy,
                           MRI.getType(FMulMI->getOperand(0).getReg()))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
