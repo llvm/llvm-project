@@ -10,6 +10,7 @@ mlir_target_link_libraries(MLIROpenACCTests
   MLIRIR
   MLIRAffineDialect
   MLIRFuncDialect
+  MLIRGPUDialect
   MLIRMemRefDialect
   MLIRArithDialect
   MLIROpenACCDialect

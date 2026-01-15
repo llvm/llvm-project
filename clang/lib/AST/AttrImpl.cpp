@@ -289,21 +289,20 @@ namespace {
 //  - DeclArgument
 //  - OMPTraitInfoArgument
 //  - VariadicOMPInteropInfoArgument
-template <class T> constexpr bool useDefaultEquality() {
-  return std::is_same_v<T, StringRef> || std::is_same_v<T, VersionTuple> ||
-         std::is_same_v<T, IdentifierInfo *> || std::is_same_v<T, ParamIdx> ||
-         std::is_same_v<T, Attr *> || std::is_same_v<T, char *> ||
-         std::is_enum_v<T> || std::is_integral_v<T>;
-}
+#define USE_DEFAULT_EQUALITY                                                   \
+  (std::is_same_v<T, StringRef> || std::is_same_v<T, VersionTuple> ||          \
+   std::is_same_v<T, IdentifierInfo *> || std::is_same_v<T, ParamIdx> ||       \
+   std::is_same_v<T, Attr *> || std::is_same_v<T, char *> ||                   \
+   std::is_enum_v<T> || std::is_integral_v<T>)
 
 template <class T>
-typename std::enable_if_t<!useDefaultEquality<T>(), bool>
+typename std::enable_if_t<!USE_DEFAULT_EQUALITY, bool>
 equalAttrArgs(T A, T B, StructuralEquivalenceContext &Context) {
   return false;
 }
 
 template <class T>
-typename std::enable_if_t<useDefaultEquality<T>(), bool>
+typename std::enable_if_t<USE_DEFAULT_EQUALITY, bool>
 equalAttrArgs(T A1, T A2, StructuralEquivalenceContext &Context) {
   return A1 == A2;
 }
