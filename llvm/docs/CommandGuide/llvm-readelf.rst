@@ -38,18 +38,6 @@ OPTIONS
  Display the contents of the basic block address map section(s), which contain the
  address of each function, along with the relative offset of each basic block.
 
-.. option:: --call-graph-info
-
-  Display the call graph section entries i.e. for each function
-  its identifying information, each of its direct callees' information
-  and for each indirect callee a 64 bit number representing the callee's
-  function signature. This information can be used to reconstruct
-  the program call graph.
-
-.. option:: --cg-profile
-
- Display the callgraph profile section.
-
 .. option:: --decompress, -z
 
   Dump decompressed section content when used with ``-x`` or ``-p``.
@@ -74,6 +62,10 @@ OPTIONS
 .. option:: --dynamic-table, --dynamic, -d
 
  Display the dynamic table.
+
+.. option:: --cg-profile
+
+ Display the callgraph profile section.
 
 .. option:: --histogram, -I
 
