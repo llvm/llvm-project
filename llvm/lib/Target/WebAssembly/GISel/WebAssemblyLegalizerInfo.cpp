@@ -114,6 +114,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder({G_UMIN, G_UMAX, G_SMIN, G_SMAX}).lower();
+  getActionDefinitionsBuilder({G_USUBSAT, G_USUBO}).lower();
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FDIV, G_FMUL, G_FNEG, G_FABS,
                                G_FCEIL, G_FFLOOR, G_FSQRT, G_INTRINSIC_TRUNC,
