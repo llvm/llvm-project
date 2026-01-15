@@ -3170,9 +3170,9 @@ lldb::addr_t ProcessGDBRemote::DoAllocateMemory(size_t size,
 
   if (m_gdb_comm.SupportsAllocDeallocMemory() != eLazyBoolNo) {
     allocated_addr = m_gdb_comm.AllocateMemory(size, permissions);
-    if (allocated_addr != LLDB_INVALID_ADDRESS ||
-        m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolYes)
-      return allocated_addr;
+    assert((allocated_addr == LLDB_INVALID_ADDRESS ||
+            m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolYes) &&
+           "Memory can only be allocated if the support is enabled");
   }
 
   if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolNo) {
