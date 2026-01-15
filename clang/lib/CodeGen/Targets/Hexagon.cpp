@@ -316,10 +316,10 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
         llvm::ConstantInt::get(CGF.Int32Ty, (ArgAlign - 1)),
         "align_current_saved_reg_area_pointer");
 
-    __current_saved_reg_area_pointer_int =
-        CGF.Builder.CreateAnd(__current_saved_reg_area_pointer_int,
-                              llvm::ConstantInt::get(CGF.Int32Ty, -ArgAlign),
-                              "align_current_saved_reg_area_pointer");
+    __current_saved_reg_area_pointer_int = CGF.Builder.CreateAnd(
+        __current_saved_reg_area_pointer_int,
+        llvm::ConstantInt::getSigned(CGF.Int32Ty, -ArgAlign),
+        "align_current_saved_reg_area_pointer");
 
     __current_saved_reg_area_pointer =
         CGF.Builder.CreateIntToPtr(__current_saved_reg_area_pointer_int,
@@ -367,10 +367,10 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
                               llvm::ConstantInt::get(CGF.Int32Ty, ArgAlign - 1),
                               "align_overflow_area_pointer");
 
-    __overflow_area_pointer_int =
-        CGF.Builder.CreateAnd(__overflow_area_pointer_int,
-                              llvm::ConstantInt::get(CGF.Int32Ty, -ArgAlign),
-                              "align_overflow_area_pointer");
+    __overflow_area_pointer_int = CGF.Builder.CreateAnd(
+        __overflow_area_pointer_int,
+        llvm::ConstantInt::getSigned(CGF.Int32Ty, -ArgAlign),
+        "align_overflow_area_pointer");
 
     __overflow_area_pointer = CGF.Builder.CreateIntToPtr(
         __overflow_area_pointer_int, __overflow_area_pointer->getType(),
