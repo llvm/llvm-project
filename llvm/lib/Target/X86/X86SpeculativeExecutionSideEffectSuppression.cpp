@@ -56,7 +56,7 @@ static cl::opt<bool>
 
 namespace {
 
-constexpr StringRef X86SesesPassName =
+constexpr StringRef X86SESESPassName =
     "X86 Speculative Execution Side Effect Suppression";
 
 class X86SpeculativeExecutionSideEffectSuppressionLegacy
@@ -66,7 +66,7 @@ public:
       : MachineFunctionPass(ID) {}
 
   static char ID;
-  StringRef getPassName() const override { return X86SesesPassName; }
+  StringRef getPassName() const override { return X86SESESPassName; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
@@ -100,7 +100,7 @@ bool runX86SpeculativeExecutionSideEffectSuppression(MachineFunction &MF) {
       !Subtarget.useSpeculativeExecutionSideEffectSuppression())
     return false;
 
-  LLVM_DEBUG(dbgs() << "********** " << X86SesesPassName << " : "
+  LLVM_DEBUG(dbgs() << "********** " << X86SESESPassName << " : "
                     << MF.getName() << " **********\n");
   bool Modified = false;
   const X86InstrInfo *TII = Subtarget.getInstrInfo();
