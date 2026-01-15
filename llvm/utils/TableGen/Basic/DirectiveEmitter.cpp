@@ -1362,7 +1362,8 @@ static void generateClauseClassMacro(const DirectiveLanguage &DirLang,
   OS << "#undef CLAUSE\n";
 }
 
-static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang, raw_ostream &OS) {
+static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
+                                        raw_ostream &OS) {
   OS << "// Constexpr functions\n";
 
   generateIsAllowedClauseConstexpr(DirLang, OS << "\n");
