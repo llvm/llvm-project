@@ -2735,11 +2735,6 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
           Val = Builder.CreateZExt(Val, ElemTy->getScalarType());
 
         llvm::Value *Idx = Dst.getMatrixIdx();
-        if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
-          const auto *const MatTy = Dst.getType()->castAs<ConstantMatrixType>();
-          llvm::MatrixBuilder MB(Builder);
-          MB.CreateIndexAssumption(Idx, MatTy->getNumElementsFlattened());
-        }
         llvm::Value *Zero = llvm::ConstantInt::get(Int32Ty, 0);
         Address DstElemAddr =
             Builder.CreateGEP(DstAddr, {Zero, Idx}, DestAddrTy, ElemAlign);
