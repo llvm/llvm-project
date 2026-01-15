@@ -128,8 +128,8 @@
 ; CHECK-NEXT:      Live Interval Analysis
 ; CHECK-NEXT:      Register Coalescer
 ; CHECK-NEXT:      Rename Disconnected Subregister Components
-; CHECK-NEXT:      Machine Instruction Scheduler
 ; CHECK-NEXT:      Machine Block Frequency Analysis
+; CHECK-NEXT:      Machine Instruction Scheduler
 ; CHECK-NEXT:      Debug Variable Analysis
 ; CHECK-NEXT:      Live Stack Slot Analysis
 ; CHECK-NEXT:      Virtual Register Map
