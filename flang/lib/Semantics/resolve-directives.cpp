@@ -334,6 +334,28 @@ public:
 
   bool Pre(const parser::AccClause::UseDevice &x) {
     ResolveAccObjectList(x.v, Symbol::Flag::AccUseDevice);
+    // use_device is only valid on host_data directive
+    assert(GetContext().directive == llvm::acc::Directive::ACCD_host_data &&
+        "use_device clause is only valid on host_data directive");
+    // Check for duplicate use_device variables
+    for (const auto &accObject : x.v.v) {
+      if (const auto *designator{
+              std::get_if<parser::Designator>(&accObject.u)}) {
+        if (const auto *name{
+                parser::GetDesignatorNameIfDataRef(*designator)}) {
+          if (name->symbol) {
+            if (HasUseDeviceObject(*name->symbol)) {
+              context_.Say(name->source,
+                  "'%s' appears in more than one USE_DEVICE clause "
+                  "on the same HOST_DATA directive"_err_en_US,
+                  name->ToString());
+            } else {
+              AddUseDeviceObject(*name->symbol);
+            }
+          }
+        }
+      }
+    }
     return false;
   }
 
@@ -379,6 +401,15 @@ private:
       const llvm::acc::Clause clause, const parser::AccObjectList &objectList);
   void AddRoutineInfoToSymbol(
       Symbol &, const parser::OpenACCRoutineConstruct &);
+
+  // Track use_device variables
+  void AddUseDeviceObject(SymbolRef object) { useDeviceObjects_.insert(object); }
+  void ClearUseDeviceObjects() { useDeviceObjects_.clear(); }
+  bool HasUseDeviceObject(const Symbol &object) {
+    return useDeviceObjects_.find(object) != useDeviceObjects_.end();
+  }
+  UnorderedSymbolSet useDeviceObjects_;
+
   Scope *topScope_;
 };
 
@@ -1185,6 +1216,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
     break;
   }
   ClearDataSharingAttributeObjects();
+  ClearUseDeviceObjects();
   return true;
 }
 
