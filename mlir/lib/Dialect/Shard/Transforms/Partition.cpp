@@ -668,7 +668,7 @@ partitionOperation(ShardOp shardOp, IRMapping &partitionMap,
 //   - each tensor arg must have exactly one use, which must be a shard.shard
 //   operation
 static LogicalResult checkFullyAnnotated(Block &block) {
-  for (auto arg : block.getArguments()) {
+  for (const BlockArgument &arg : block.getArguments()) {
     auto rankedTensorArg = dyn_cast<TypedValue<RankedTensorType>>(arg);
     if (!rankedTensorArg || rankedTensorArg.getType().getRank() == 0)
       continue;
@@ -679,7 +679,7 @@ static LogicalResult checkFullyAnnotated(Block &block) {
              << arg.getArgNumber() << " in block "
              << block.computeBlockNumber();
     Operation *useOp = *rankedTensorArg.getUsers().begin();
-    ShardOp shardOp = llvm::dyn_cast<ShardOp>(useOp);
+    auto shardOp = dyn_cast<ShardOp>(useOp);
     if (!shardOp)
       return emitError(block.getParent()->getLoc())
              << "Cannot partition: expected a shard.shard op for block "
@@ -702,7 +702,7 @@ static LogicalResult checkFullyAnnotated(Operation *op) {
   if (op->hasTrait<OpTrait::ConstantLike>())
     return success();
 
-  for (auto &operand : op->getOpOperands()) {
+  for (OpOperand &operand : op->getOpOperands()) {
     // non-tensor and 0d-tensor operands are ignored
     auto rankedTT = dyn_cast<RankedTensorType>(operand.get().getType());
     if (!rankedTT || rankedTT.getRank() == 0)
@@ -713,12 +713,12 @@ static LogicalResult checkFullyAnnotated(Operation *op) {
       return op->emitError() << "Cannot partition: tensor operand "
                              << operand.getOperandNumber()
                              << " must be defined by a shard.shard operation.";
-    else if (!shard.getAnnotateForUsers())
+    if (!shard.getAnnotateForUsers())
       return op->emitError()
              << "Cannot partition: shard.shard for operand "
              << operand.getOperandNumber() << " must set 'annotate_for_users'.";
   }
-  for (auto result : op->getResults()) {
+  for (const OpResult &result : op->getResults()) {
     if (!result.hasOneUse())
       return op->emitError()
              << "Cannot partition: result " << result.getResultNumber()
@@ -728,7 +728,7 @@ static LogicalResult checkFullyAnnotated(Operation *op) {
       return op->emitError()
              << "Cannot partition: user of result " << result.getResultNumber()
              << " must be shard.shard operation.";
-    else if (shard.getAnnotateForUsers())
+    if (shard.getAnnotateForUsers())
       return op->emitError() << "Cannot partition: shard.shard for result "
                              << result.getResultNumber()
                              << " must not set 'annotate_for_users'.";
@@ -760,7 +760,7 @@ partitionOperation(Operation &op, IRMapping &partitionMap,
                               builder);
   }
 
-  // check if operation is correctly and fully annotated
+  // Check if operation is correctly and fully annotated.
   if (failed(checkFullyAnnotated(&op)))
     return failure();
 
