@@ -66,6 +66,7 @@ struct GlobalVariableModel
           GlobalVariableModel, fir::GlobalOp> {
   bool isConstant(mlir::Operation *op) const;
   mlir::Region *getInitRegion(mlir::Operation *op) const;
+  bool isDeviceData(mlir::Operation *op) const;
 };
 
 template <typename Op>
@@ -85,6 +86,14 @@ template <typename Op>
 struct OutlineRematerializationModel
     : public mlir::acc::OutlineRematerializationOpInterface::ExternalModel<
           OutlineRematerializationModel<Op>, Op> {};
+
+/// External model for OffloadRegionOpInterface.
+/// This interface marks operations whose regions are targets for offloading
+/// and outlining.
+template <typename Op>
+struct OffloadRegionModel
+    : public mlir::acc::OffloadRegionOpInterface::ExternalModel<
+          OffloadRegionModel<Op>, Op> {};
 
 } // namespace fir::acc
 

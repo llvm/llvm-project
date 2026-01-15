@@ -11,6 +11,7 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 
 using namespace mlir;
+using namespace mlir::emitc;
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(EmitC, emitc, mlir::emitc::EmitCDialect)
 

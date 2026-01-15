@@ -120,6 +120,8 @@ CODEGENOPT(StackSizeSection  , 1, 0, Benign) ///< Set when -fstack-size-section 
 ///< Set when -femit-compact-unwind-non-canonical is enabled.
 CODEGENOPT(EmitCompactUnwindNonCanonical, 1, 0, Benign)
 
+CODEGENOPT(EmitSFrameUnwind, 1, 0, Benign) ///< Set when -sframe is enabled.
+
 ///< Set when -fxray-always-emit-customevents is enabled.
 CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0, Benign)
 
@@ -463,6 +465,10 @@ CODEGENOPT(AAPCSBitfieldWidth, 1, 1, Benign)
 /// Floating point opcodes that support exception flag gathering quiet and
 /// propagate signaling NaN inputs per IEEE 754-2008 (AMDGPU Only)
 CODEGENOPT(EmitIEEENaNCompliantInsts, 1, 1, Benign)
+
+/// Enable expanded waitcnt for profiling (AMDGPU Only)
+/// Expands s_waitcnt instructions to help PC-sampling profilers identify stalls.
+CODEGENOPT(AMDGPUExpandWaitcntProfiling, 1, 0, Benign)
 
 // Whether to emit Swift Async function extended frame information: auto,
 // never, always.
