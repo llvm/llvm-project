@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Const0:]] = OpConstant %[[#Int]] 0
@@ -15,15 +16,16 @@
 ; CHECK-DAG: %[[#Const60:]] = OpConstant %[[#Int]] 60
 ; CHECK-DAG: %[[#Arr:]] = OpTypeArray %[[#Int]] %[[#]]
 ; CHECK-DAG: %[[#PtrArr:]] = OpTypePointer Function %[[#Arr]]
+; CHECK-DAG: %[[#PtrPriv:]] = OpTypePointer Private %[[#Int]]
 
-@G = addrspace(1) global i32 0, align 4
+@G = internal addrspace(10) global i32 0, align 4
 
 define void @main() #0 {
 entry:
 ; CHECK: %[[#Var:]] = OpVariable %[[#PtrArr]] Function
 
 ; CHECK: %[[#Idx:]] = OpLoad %[[#Int]]
-  %idx = load i32, ptr addrspace(1) @G, align 4
+  %idx = load i32, ptr addrspace(10) @G, align 4
 
 
 ; CHECK: %[[#PtrElt0:]] = OpInBoundsAccessChain %[[#]] %[[#Var]] %[[#Const0]]
@@ -55,12 +57,8 @@ entry:
   %res = extractelement <6 x i32> %vec6, i32 %idx
   
 ; CHECK: OpStore {{.*}} %[[#Ld]]
-  store i32 %res, ptr addrspace(1) @G, align 4
+  store i32 %res, ptr addrspace(10) @G, align 4
   ret void
 }
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
-
-
-
-
