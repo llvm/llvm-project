@@ -567,7 +567,7 @@ LLVM_ABI FunctionPass *createCFIFixup();
 LLVM_ABI FunctionPass *createCFIInstrInserter();
 
 // Expands floating point instructions.
-FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
+LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp

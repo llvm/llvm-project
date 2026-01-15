@@ -9,13 +9,14 @@
 #ifndef LLVM_CODEGEN_INLINEASMPREPARE_H
 #define LLVM_CODEGEN_INLINEASMPREPARE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
 class InlineAsmPreparePass : public PassInfoMixin<InlineAsmPreparePass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm
