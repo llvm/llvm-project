@@ -365,7 +365,7 @@ define void @agnostic_za_buffer_alloc_with_stack_probes() nounwind "aarch64_za_s
 ; CHECK-SDAG-NEXT:    cmp sp, x19
 ; CHECK-SDAG-NEXT:    b.le .LBB7_3
 ; CHECK-SDAG-NEXT:  // %bb.2: // in Loop: Header=BB7_1 Depth=1
-; CHECK-SDAG-NEXT:    str xzr, [sp]
+; CHECK-SDAG-NEXT:    ldr xzr, [sp]
 ; CHECK-SDAG-NEXT:    b .LBB7_1
 ; CHECK-SDAG-NEXT:  .LBB7_3:
 ; CHECK-SDAG-NEXT:    mov sp, x19
@@ -395,7 +395,7 @@ define void @agnostic_za_buffer_alloc_with_stack_probes() nounwind "aarch64_za_s
 ; CHECK-NEXT:    cmp sp, x19
 ; CHECK-NEXT:    b.le .LBB7_3
 ; CHECK-NEXT:  // %bb.2: // in Loop: Header=BB7_1 Depth=1
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB7_1
 ; CHECK-NEXT:  .LBB7_3:
 ; CHECK-NEXT:    mov sp, x19

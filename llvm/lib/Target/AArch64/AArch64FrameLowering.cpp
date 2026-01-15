@@ -3760,11 +3760,15 @@ AArch64FrameLowering::inlineStackProbeLoopExactMultiple(
   emitFrameOffset(*LoopMBB, LoopMBB->end(), DL, AArch64::SP, AArch64::SP,
                   StackOffset::getFixed(-ProbeSize), TII,
                   MachineInstr::FrameSetup);
-  // STR XZR, [SP]
-  BuildMI(*LoopMBB, LoopMBB->end(), DL, TII->get(AArch64::STRXui))
-      .addReg(AArch64::XZR)
+  // LDR XZR, [SP]
+  BuildMI(*LoopMBB, LoopMBB->end(), DL, TII->get(AArch64::LDRXui))
+      .addDef(AArch64::XZR)
       .addReg(AArch64::SP)
       .addImm(0)
+      .addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getUnknownStack(MF),
+          MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+          Align(8)))
       .setMIFlags(MachineInstr::FrameSetup);
   // CMP SP, TargetReg
   BuildMI(*LoopMBB, LoopMBB->end(), DL, TII->get(AArch64::SUBSXrx64),
@@ -3822,11 +3826,15 @@ void AArch64FrameLowering::inlineStackProbeFixed(
                       MachineInstr::FrameSetup, false, false, nullptr,
                       EmitAsyncCFI && !HasFP, CFAOffset);
       CFAOffset += StackOffset::getFixed(ProbeSize);
-      // STR XZR, [SP]
-      BuildMI(*MBB, MBBI, DL, TII->get(AArch64::STRXui))
-          .addReg(AArch64::XZR)
+      // LDR XZR, [SP]
+      BuildMI(*MBB, MBBI, DL, TII->get(AArch64::LDRXui))
+          .addDef(AArch64::XZR)
           .addReg(AArch64::SP)
           .addImm(0)
+          .addMemOperand(MF.getMachineMemOperand(
+              MachinePointerInfo::getUnknownStack(MF),
+              MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+              Align(8)))
           .setMIFlags(MachineInstr::FrameSetup);
     }
   } else if (NumBlocks != 0) {
@@ -3854,11 +3862,15 @@ void AArch64FrameLowering::inlineStackProbeFixed(
                     MachineInstr::FrameSetup, false, false, nullptr,
                     EmitAsyncCFI && !HasFP, CFAOffset);
     if (ResidualSize > AArch64::StackProbeMaxUnprobedStack) {
-      // STR XZR, [SP]
-      BuildMI(*MBB, MBBI, DL, TII->get(AArch64::STRXui))
-          .addReg(AArch64::XZR)
+      // LDR XZR, [SP]
+      BuildMI(*MBB, MBBI, DL, TII->get(AArch64::LDRXui))
+          .addDef(AArch64::XZR)
           .addReg(AArch64::SP)
           .addImm(0)
+          .addMemOperand(MF.getMachineMemOperand(
+              MachinePointerInfo::getUnknownStack(MF),
+              MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+              Align(8)))
           .setMIFlags(MachineInstr::FrameSetup);
     }
   }
