@@ -56,6 +56,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
@@ -160,6 +161,7 @@ public:
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -880,5 +882,6 @@ SILowerControlFlowPass::run(MachineFunction &MF,
   PA.preserve<SlotIndexesAnalysis>();
   PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<LiveVariablesAnalysis>();
+  PA.preserve<MachineBlockFrequencyAnalysis>();
   return PA;
 }

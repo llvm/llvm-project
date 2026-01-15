@@ -1303,8 +1303,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
 
-  // select !c, x, y -> select c, y, x
+  // select c, false, true -> not c
   VPValue *C;
+  if (match(Def, m_Select(m_VPValue(C), m_False(), m_True())))
+    return Def->replaceAllUsesWith(Builder.createNot(C));
+
+  // select !c, x, y -> select c, y, x
   if (match(Def, m_Select(m_Not(m_VPValue(C)), m_VPValue(X), m_VPValue(Y)))) {
     Def->setOperand(0, C);
     Def->setOperand(1, Y);

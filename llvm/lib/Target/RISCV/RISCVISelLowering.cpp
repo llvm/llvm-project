@@ -23710,36 +23710,23 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
 // The caller is responsible for loading the full value if the argument is
 // passed with CCValAssign::Indirect.
 static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
-                                const CCValAssign &VA, const SDLoc &DL) {
+                                const CCValAssign &VA, const SDLoc &DL,
+                                const RISCVTargetLowering &TLI) {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   EVT LocVT = VA.getLocVT();
-  EVT ValVT = VA.getValVT();
   EVT PtrVT = MVT::getIntegerVT(DAG.getDataLayout().getPointerSizeInBits(0));
-  if (VA.getLocInfo() == CCValAssign::Indirect) {
-    // When the value is a scalable vector, we save the pointer which points to
-    // the scalable vector value in the stack. The ValVT will be the pointer
-    // type, instead of the scalable vector type.
-    ValVT = LocVT;
-  }
-  int FI = MFI.CreateFixedObject(ValVT.getStoreSize(), VA.getLocMemOffset(),
+  int FI = MFI.CreateFixedObject(LocVT.getStoreSize(), VA.getLocMemOffset(),
                                  /*IsImmutable=*/true);
   SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
-  SDValue Val;
+  SDValue Val = DAG.getLoad(
+      LocVT, DL, Chain, FIN,
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
 
-  ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
-  switch (VA.getLocInfo()) {
-  default:
-    llvm_unreachable("Unexpected CCValAssign::LocInfo");
-  case CCValAssign::Full:
-  case CCValAssign::Indirect:
-  case CCValAssign::BCvt:
-    break;
-  }
-  Val = DAG.getExtLoad(
-      ExtType, DL, LocVT, Chain, FIN,
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), ValVT);
-  return Val;
+  if (VA.getLocInfo() == CCValAssign::Indirect)
+    return Val;
+
+  return convertLocVTToValVT(DAG, Val, VA, DL, TLI.getSubtarget());
 }
 
 static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
@@ -23887,7 +23874,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     } else if (VA.isRegLoc())
       ArgValue = unpackFromRegLoc(DAG, Chain, VA, DL, Ins[InsIdx], *this);
     else
-      ArgValue = unpackFromMemLoc(DAG, Chain, VA, DL);
+      ArgValue = unpackFromMemLoc(DAG, Chain, VA, DL, *this);
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
       // If the original argument was split and passed by reference (e.g. i128
@@ -24990,7 +24977,7 @@ Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 }
 
 TargetLowering::AtomicExpansionKind
-RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+RISCVTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // atomicrmw {fadd,fsub} must be expanded to use compare-exchange, as floating
   // point operations can't be used in an lr/sc sequence without breaking the
   // forward-progress guarantee.
@@ -25105,7 +25092,7 @@ Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
 
 TargetLowering::AtomicExpansionKind
 RISCVTargetLowering::shouldExpandAtomicCmpXchgInIR(
-    AtomicCmpXchgInst *CI) const {
+    const AtomicCmpXchgInst *CI) const {
   // Don't expand forced atomics, we want to have __sync libcalls instead.
   if (Subtarget.hasForcedAtomics())
     return AtomicExpansionKind::None;

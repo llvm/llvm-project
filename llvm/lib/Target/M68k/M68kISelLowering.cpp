@@ -191,7 +191,7 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
 }
 
 TargetLoweringBase::AtomicExpansionKind
-M68kTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+M68kTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   return Subtarget.atLeastM68020()
              ? TargetLoweringBase::AtomicExpansionKind::CmpXChg
              : TargetLoweringBase::AtomicExpansionKind::None;
