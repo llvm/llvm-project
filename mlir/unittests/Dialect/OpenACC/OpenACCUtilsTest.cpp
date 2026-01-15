@@ -1435,8 +1435,9 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefNoAddressSpace) {
 
 TEST_F(OpenACCUtilsTest, isDeviceValueNonMappableType) {
   // Test with a non-mappable type (i32 value)
-  auto constOp = arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(42));
-  Value val = constOp.getResult();
+  OwningOpRef<arith::ConstantOp> constOp =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(42));
+  Value val = constOp->getResult();
 
   // Should return false since i32 is not a MappableType or PointerLikeType
   EXPECT_FALSE(isDeviceValue(val));
