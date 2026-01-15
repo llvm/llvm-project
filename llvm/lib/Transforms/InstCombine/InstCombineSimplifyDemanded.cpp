@@ -2030,7 +2030,8 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask,
   case fcNegInf:
     return ConstantFP::getInfinity(Ty, true);
   case fcQNan:
-    return ConstantFP::getQNaN(Ty);
+    // Payload bits cannot be dropped for pure signbit operations.
+    return IsCanonicalizing ? ConstantFP::getQNaN(Ty) : nullptr;
   default:
     return nullptr;
   }
