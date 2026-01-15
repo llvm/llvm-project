@@ -420,8 +420,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass);
 INITIALIZE_PASS_END(MachineSchedulerLegacy, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
-MachineSchedulerLegacy::MachineSchedulerLegacy()
-    : MachineFunctionPass(ID) {
+MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {
   initializeMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
 }
 

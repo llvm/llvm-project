@@ -129,7 +129,7 @@ public:
     auto *MLIWrapper = P->getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
     auto *MDTWrapper =
         P->getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-    auto *PDTWrapper = 
+    auto *PDTWrapper =
         P->getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
     auto *MBPIWrapper =
         P->getAnalysisIfAvailable<MachineBranchProbabilityInfoWrapperPass>();
