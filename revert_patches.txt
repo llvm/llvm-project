@@ -1,4 +1,3 @@
 ---
-needs downstream PR
-[AMDGPU] Programmatically port old `.def` clang builtins to `.td` (#175873)
+vacancy
 ---
