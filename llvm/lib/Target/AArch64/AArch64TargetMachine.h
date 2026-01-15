@@ -25,7 +25,6 @@ class AArch64TargetMachine : public CodeGenTargetMachineImpl {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<AArch64Subtarget>> SubtargetMap;
-  bool UseGISelForOptNoneOnly = false;
 
   /// Reset internal state.
   void reset() override;
@@ -82,7 +81,9 @@ public:
 
   /// Returns true if the new SME ABI lowering should be used.
   bool useNewSMEABILowering() const { return UseNewSMEABILowering; }
-  bool useGlobalISelForOptNoneOnly() const { return UseGISelForOptNoneOnly; }
+
+  /// Returns the optimisation level that enables GlobalISel.
+  unsigned getEnableGlobalISelAtO() const;
 
 private:
   bool isLittle;

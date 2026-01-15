@@ -341,9 +341,6 @@ public:
   /// By default, it's enabled for non O0 levels.
   virtual bool isGISelCSEEnabled() const;
 
-  /// Return true if GlobalISel should be run for a given function
-  virtual bool useGlobalISelFor(const Function &F) const { return true; }
-
   /// Returns the CSEConfig object to use for the current optimization level.
   virtual std::unique_ptr<CSEConfigBase> getCSEConfig() const;
 

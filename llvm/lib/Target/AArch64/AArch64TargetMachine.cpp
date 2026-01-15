@@ -397,15 +397,11 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
 
   // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
   // MachO/CodeModel::Large, which GlobalISel does not support.
-  if (TargetSupportsGISel) {
-    if (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO) {
-      setGlobalISel(true);
-      setGlobalISelAbort(GlobalISelAbortMode::Disable);
-    } else if (!GlobalISelFlag && !Options.EnableGlobalISel) {
-      setGlobalISel(true);
-      setGlobalISelAbort(GlobalISelAbortMode::Disable);
-      UseGISelForOptNoneOnly = true;
-    }
+  if (TargetSupportsGISel &&
+      (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO ||
+       (!GlobalISelFlag && !Options.EnableGlobalISel))) {
+    setGlobalISel(true);
+    setGlobalISelAbort(GlobalISelAbortMode::Disable);
   }
 
   // AArch64 supports the MachineOutliner.
@@ -420,6 +416,10 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   // AArch64 supports fixing up the DWARF unwind information.
   if (!getMCAsmInfo()->usesWindowsCFI())
     setCFIFixup(true);
+}
+
+unsigned AArch64TargetMachine::getEnableGlobalISelAtO() const {
+  return EnableGlobalISelAtO;
 }
 
 AArch64TargetMachine::~AArch64TargetMachine() = default;
@@ -559,7 +559,6 @@ public:
   void addIRPasses()  override;
   bool addPreISel() override;
   void addCodeGenPrepare() override;
-  bool useGlobalISelFor(const Function &F) const override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -725,12 +724,6 @@ void AArch64PassConfig::addCodeGenPrepare() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createTypePromotionLegacyPass());
   TargetPassConfig::addCodeGenPrepare();
-}
-
-bool AArch64PassConfig::useGlobalISelFor(const Function &F) const {
-  if (getAArch64TargetMachine().useGlobalISelForOptNoneOnly())
-    return F.hasOptNone();
-  return true;
 }
 
 bool AArch64PassConfig::addInstSelector() {
