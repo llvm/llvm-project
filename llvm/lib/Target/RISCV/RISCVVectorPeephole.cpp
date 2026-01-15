@@ -832,13 +832,13 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   // Make sure the mask dominates True and its copies, otherwise move down True
   // so it does. VL will always dominate since if it's a register they need to
   // be the same.
-  for (MachineInstr *TrueCopy : TrueCopies) {
-    [[maybe_unused]] bool CanDominate = ensureDominates(MaskOp, *TrueCopy);
-    assert(CanDominate &&
-           "Mask should always be able to dominate copies of True");
-  }
   if (!ensureDominates(MaskOp, True))
     return false;
+  for (MachineInstr *TrueCopy : TrueCopies) {
+    [[maybe_unused]] bool CanDominate =
+        ensureDominates(True.getOperand(0), *TrueCopy);
+    assert(CanDominate && "True should always be able to dominate its COPYs");
+  }
 
   if (NeedsCommute) {
     auto [OpIdx1, OpIdx2] = *NeedsCommute;
