@@ -1812,7 +1812,6 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   HI.name = printName(Ctx, ND);
   // FIXME: Populate HI.detail the way we do in symbolToHierarchyItem?
   HI.kind = SK;
-  HI.tags = getSymbolTags(ND);
   HI.range = Range{sourceLocToPosition(SM, DeclRange->getBegin()),
                    sourceLocToPosition(SM, DeclRange->getEnd())};
   HI.selectionRange = Range{NameBegin, NameEnd};

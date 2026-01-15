@@ -129,10 +129,6 @@ std::vector<SemanticTokensEdit> diffTokens(llvm::ArrayRef<SemanticToken> Before,
 // are not included.
 std::vector<Range> getInactiveRegions(ParsedAST &AST);
 
-// Indicates whether declaration D is a unique definition (as opposed to a
-// declaration).
-bool isUniqueDefinition(const NamedDecl *Decl);
-
 } // namespace clangd
 } // namespace clang
 

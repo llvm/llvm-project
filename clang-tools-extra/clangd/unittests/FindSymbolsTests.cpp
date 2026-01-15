@@ -1140,25 +1140,65 @@ TEST(DocumentSymbolsTest, PragmaMarkGroupsNoNesting) {
 
 TEST(DocumentSymbolsTest, SymbolTags) {
   TestTU TU;
-  Annotations Main(R"(
-      class A {
-        virtual void f() const = 0;
-      };
-    )");
+  Annotations Main(R"cpp(
+    class AbstractClass {
+      public:
+        virtual ~AbstractClass() = default;
+        virtual void f1() = 0;
+        void f2() const;
+      protected:
+        void f3(){}
+      private:
+        static void f4(){}
+    };
+
+    void AbstractClass::f2() const {}
+
+    class ImplClass final: public AbstractClass {
+      public:
+        void f1() final {}
+    };
+    )cpp");
 
   TU.Code = Main.code().str();
   auto Symbols = getSymbols(TU.build());
   EXPECT_THAT(
       Symbols,
-      ElementsAre(
-          AllOf(withName("A"),
-                withSymbolTags(SymbolTag::Abstract, SymbolTag::Definition,
-                               SymbolTag::Declaration),
+      UnorderedElementsAre(
+          AllOf(
+              withName("AbstractClass"),
+              withSymbolTags(SymbolTag::Abstract, SymbolTag::Declaration,
+                             SymbolTag::Definition),
+              children(
+                  AllOf(withName("~AbstractClass"),
+                        withSymbolTags(SymbolTag::Public, SymbolTag::Virtual,
+                                       SymbolTag::Declaration,
+                                       SymbolTag::Definition)),
+                  AllOf(withName("f1"),
+                        withSymbolTags(SymbolTag::Public, SymbolTag::Abstract,
+                                       SymbolTag::Virtual,
+                                       SymbolTag::Declaration)),
+                  AllOf(withName("f2"), withSymbolTags(SymbolTag::Public,
+                                                       SymbolTag::Declaration,
+                                                       SymbolTag::ReadOnly)),
+                  AllOf(withName("f3"), withSymbolTags(SymbolTag::Protected,
+                                                       SymbolTag::Declaration,
+                                                       SymbolTag::Definition)),
+                  AllOf(withName("f4"),
+                        withSymbolTags(SymbolTag::Private, SymbolTag::Static,
+                                       SymbolTag::Declaration,
+                                       SymbolTag::Definition)))),
+          AllOf(withName("AbstractClass::f2"),
+                withSymbolTags(SymbolTag::Public, SymbolTag::Declaration,
+                               SymbolTag::Definition, SymbolTag::ReadOnly)),
+          AllOf(withName("ImplClass"),
+                withSymbolTags(SymbolTag::Final, SymbolTag::Declaration,
+                               SymbolTag::Definition),
                 children(AllOf(
-                    withName("f"),
-                    withSymbolTags(SymbolTag::ReadOnly, SymbolTag::Virtual,
-                                   SymbolTag::Abstract, SymbolTag::Declaration,
-                                   SymbolTag::Private))))));
+                    withName("f1"),
+                    withSymbolTags(SymbolTag::Public, SymbolTag::Final,
+                                   SymbolTag::Virtual, SymbolTag::Declaration,
+                                   SymbolTag::Definition))))));
 }
 
 } // namespace

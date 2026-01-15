@@ -1104,6 +1104,8 @@ struct CodeAction {
 };
 llvm::json::Value toJSON(const CodeAction &);
 
+/// Symbol tags are extra annotations that can be attached to a symbol.
+/// \see https://github.com/microsoft/language-server-protocol/pull/2003
 enum class SymbolTag {
   Deprecated = 1,
   Private = 2,
@@ -1125,6 +1127,10 @@ enum class SymbolTag {
   Declaration = 18,
   Definition = 19,
   ReadOnly = 20,
+
+  // Update as needed
+  FirstTag = Deprecated,
+  LastTag = ReadOnly
 };
 llvm::json::Value toJSON(SymbolTag);
 /// Represents programming constructs like variables, classes, interfaces etc.

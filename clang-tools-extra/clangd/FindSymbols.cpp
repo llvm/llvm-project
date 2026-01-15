@@ -33,7 +33,6 @@ namespace {
 SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
   return (1 << static_cast<unsigned>(ST));
 }
-} // namespace
 
 // "Static" means many things in C++, only some get the "static" modifier.
 //
@@ -139,6 +138,8 @@ bool isFinal(const Decl *D) {
   return false;
 }
 
+// Indicates whether declaration D is a unique definition (as opposed to a
+// declaration).
 bool isUniqueDefinition(const NamedDecl *Decl) {
   if (auto *Func = dyn_cast<FunctionDecl>(Decl))
     return Func->isThisDeclarationADefinition();
@@ -155,6 +156,7 @@ bool isUniqueDefinition(const NamedDecl *Decl) {
          isa<TemplateTemplateParmDecl>(Decl) || isa<ObjCCategoryDecl>(Decl) ||
          isa<ObjCImplDecl>(Decl);
 }
+} // namespace
 
 // Backwards-compatible default behavior: determine whether this NamedDecl is
 // definition based on `isUniqueDefinition`, assuming that ND is a declaration.
@@ -220,9 +222,9 @@ std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
 
   // Iterate through SymbolTag enum values and collect any that are present in
   // the bitmask. SymbolTag values are in the numeric range
-  // [Deprecated .. ReadOnly].
-  constexpr unsigned MinTag = static_cast<unsigned>(SymbolTag::Deprecated);
-  constexpr unsigned MaxTag = static_cast<unsigned>(SymbolTag::ReadOnly);
+  // [FirstTag .. LastTag].
+  constexpr unsigned MinTag = static_cast<unsigned>(SymbolTag::FirstTag);
+  constexpr unsigned MaxTag = static_cast<unsigned>(SymbolTag::LastTag);
   for (unsigned I = MinTag; I <= MaxTag; ++I) {
     auto ST = static_cast<SymbolTag>(I);
     if (symbolTags & toSymbolTagBitmask(ST))
