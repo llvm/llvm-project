@@ -650,6 +650,15 @@ public:
     return errorNYI(loc.getBegin(), feature, name) << loc;
   }
 
+  /// Emit a general error that something can't be done.
+  void error(SourceLocation loc, llvm::StringRef error);
+
+  /// Print out an error that codegen doesn't support the specified stmt yet.
+  void errorUnsupported(const Stmt *s, llvm::StringRef type);
+
+  /// Print out an error that codegen doesn't support the specified decl yet.
+  void errorUnsupported(const Decl *d, llvm::StringRef type);
+
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
