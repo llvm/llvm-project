@@ -1935,6 +1935,21 @@ private:
   /// Get the function name of a reduction function.
   std::string getReductionFuncName(StringRef Name) const;
 
+  /// Generate a Fortran descriptor for array reductions
+  ///
+  /// \param DescriptorAddr Address of the descriptor to initialize
+  /// \param DataPtr Pointer to the actual data the descriptor should reference
+  /// \param ElemType Type of elements in the array (may be array type)
+  /// \param DescriptorType Type of the descriptor structure
+  /// \param DataPtrPtrGen Callback to get the base_ptr field in the descriptor
+  ///
+  /// \return Error if DataPtrPtrGen fails, otherwise success.
+  InsertPointOrErrorTy generateReductionDescriptor(
+      Value *DescriptorAddr, Value *DataPtr, Value *SrcDescriptorAddr,
+      Type *DescriptorType,
+      function_ref<InsertPointOrErrorTy(InsertPointTy, Value *, Value *&)>
+          DataPtrPtrGen);
+
   /// Emits reduction function.
   /// \param ReducerName Name of the function calling the reduction.
   /// \param ReductionInfos Array type containing the ReductionOps.

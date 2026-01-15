@@ -3075,19 +3075,16 @@ Error OpenMPIRBuilder::emitReductionListCopy(
                       RemoteLaneOffset, ReductionArrayTy, IsByRefElem);
 
       if (IsByRefElem) {
-        Value *GEP;
-        InsertPointOrErrorTy GenResult =
-            RI.DataPtrPtrGen(Builder.saveIP(),
-                             Builder.CreatePointerBitCastOrAddrSpaceCast(
-                                 DestAlloca, Builder.getPtrTy(), ".ascast"),
-                             GEP);
+        // Copy descriptor from source and update base_ptr to shuffled data
+        Value *DestDescriptorAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+            DestAlloca, Builder.getPtrTy(), ".ascast");
+
+        InsertPointOrErrorTy GenResult = generateReductionDescriptor(
+            DestDescriptorAddr, LocalStorage, SrcElementAddr,
+            RI.ByRefAllocatedType, RI.DataPtrPtrGen);
 
         if (!GenResult)
           return GenResult.takeError();
-
-        Builder.CreateStore(Builder.CreatePointerBitCastOrAddrSpaceCast(
-                                LocalStorage, Builder.getPtrTy(), ".ascast"),
-                            GEP);
       }
     } else {
       switch (RI.EvaluationKind) {
@@ -3577,6 +3574,37 @@ Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
   return SarFunc;
 }
 
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::generateReductionDescriptor(
+    Value *DescriptorAddr, Value *DataPtr, Value *SrcDescriptorAddr,
+    Type *DescriptorType,
+    function_ref<InsertPointOrErrorTy(InsertPointTy, Value *, Value *&)>
+        DataPtrPtrGen) {
+
+  // Copy the source descriptor to preserve all metadata (rank, extents,
+  // strides, etc.)
+  Value *DescriptorSize =
+      Builder.getInt64(M.getDataLayout().getTypeStoreSize(DescriptorType));
+  Builder.CreateMemCpy(
+      DescriptorAddr, M.getDataLayout().getPrefTypeAlign(DescriptorType),
+      SrcDescriptorAddr, M.getDataLayout().getPrefTypeAlign(DescriptorType),
+      DescriptorSize);
+
+  // Update the base pointer field to point to the local shuffled data
+  Value *DataPtrField;
+  InsertPointOrErrorTy GenResult =
+      DataPtrPtrGen(Builder.saveIP(), DescriptorAddr, DataPtrField);
+
+  if (!GenResult)
+    return GenResult.takeError();
+
+  Builder.CreateStore(Builder.CreatePointerBitCastOrAddrSpaceCast(
+                          DataPtr, Builder.getPtrTy(), ".ascast"),
+                      DataPtrField);
+
+  return Builder.saveIP();
+}
+
 Expected<Function *> OpenMPIRBuilder::emitListToGlobalCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
     AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
@@ -3789,15 +3817,24 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
         ReductionsBufferTy, BufferVD, 0, En.index());
 
     if (!IsByRef.empty() && IsByRef[En.index()]) {
-      Value *ByRefDataPtr;
+      // Get source descriptor from the reduce list argument
+      Value *ReduceList =
+          Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
+      Value *SrcElementPtrPtr =
+          Builder.CreateInBoundsGEP(RedListArrayTy, ReduceList,
+                                    {ConstantInt::get(IndexTy, 0),
+                                     ConstantInt::get(IndexTy, En.index())});
+      Value *SrcDescriptorAddr =
+          Builder.CreateLoad(Builder.getPtrTy(), SrcElementPtrPtr);
 
+      // Copy descriptor from source and update base_ptr to global buffer data
       InsertPointOrErrorTy GenResult =
-          RI.DataPtrPtrGen(Builder.saveIP(), ByRefAlloc, ByRefDataPtr);
+          generateReductionDescriptor(ByRefAlloc, GlobValPtr, SrcDescriptorAddr,
+                                      RI.ByRefAllocatedType, RI.DataPtrPtrGen);
 
       if (!GenResult)
         return GenResult.takeError();
 
-      Builder.CreateStore(GlobValPtr, ByRefDataPtr);
       Builder.CreateStore(ByRefAlloc, TargetElementPtrPtr);
     } else {
       Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
@@ -4023,13 +4060,23 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
         ReductionsBufferTy, BufferVD, 0, En.index());
 
     if (!IsByRef.empty() && IsByRef[En.index()]) {
-      Value *ByRefDataPtr;
+      // Get source descriptor from the reduce list
+      Value *ReduceListVal =
+          Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
+      Value *SrcElementPtrPtr =
+          Builder.CreateInBoundsGEP(RedListArrayTy, ReduceListVal,
+                                    {ConstantInt::get(IndexTy, 0),
+                                     ConstantInt::get(IndexTy, En.index())});
+      Value *SrcDescriptorAddr =
+          Builder.CreateLoad(Builder.getPtrTy(), SrcElementPtrPtr);
+
+      // Copy descriptor from source and update base_ptr to global buffer data
       InsertPointOrErrorTy GenResult =
-          RI.DataPtrPtrGen(Builder.saveIP(), ByRefAlloc, ByRefDataPtr);
+          generateReductionDescriptor(ByRefAlloc, GlobValPtr, SrcDescriptorAddr,
+                                      RI.ByRefAllocatedType, RI.DataPtrPtrGen);
       if (!GenResult)
         return GenResult.takeError();
 
-      Builder.CreateStore(GlobValPtr, ByRefDataPtr);
       Builder.CreateStore(ByRefAlloc, TargetElementPtrPtr);
     } else {
       Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
