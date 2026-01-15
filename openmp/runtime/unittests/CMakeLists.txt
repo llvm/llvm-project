@@ -88,3 +88,4 @@ add_openmp_testsuite(
 
 add_subdirectory(ADT)
 add_subdirectory(String)
+add_subdirectory(Traits)
