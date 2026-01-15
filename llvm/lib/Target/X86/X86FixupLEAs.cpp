@@ -528,12 +528,12 @@ bool FixupLEAsImpl::optLEAALU(MachineBasicBlock::iterator &I,
   NewMI1 = BuildMI(MBB, InsertPos, AluI->getDebugLoc(), TII->get(NewOpcode),
                    AluDestReg)
                .addReg(AluDestReg, RegState::Kill)
-               .addReg(BaseReg, getKillRegState(KilledBase));
+               .addReg(BaseReg, KilledBase ? RegState::Kill : 0);
   NewMI1->addRegisterDead(X86::EFLAGS, TRI);
   NewMI2 = BuildMI(MBB, InsertPos, AluI->getDebugLoc(), TII->get(NewOpcode),
                    AluDestReg)
                .addReg(AluDestReg, RegState::Kill)
-               .addReg(IndexReg, getKillRegState(KilledIndex));
+               .addReg(IndexReg, KilledIndex ? RegState::Kill : 0);
   NewMI2->addRegisterDead(X86::EFLAGS, TRI);
 
   // Clear the old Kill flags.
