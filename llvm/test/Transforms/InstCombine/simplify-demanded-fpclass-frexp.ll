@@ -213,7 +213,8 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__frexp_select_unknown_or_pinf__u
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_nofpclass_pinf__frexp_select_unknown_or_pinf__use_other_output(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_PINF:%.*]] = call half @returns_pinf()
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_PINF]]
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    [[FREXP_EXP:%.*]] = extractvalue { half, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    store i32 [[FREXP_EXP]], ptr [[PTR]], align 4
@@ -250,7 +251,8 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__frexp_select_unknown_or_pinf__u
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_nofpclass_pinf__frexp_select_unknown_or_pinf__use_struct(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_PINF:%.*]] = call half @returns_pinf()
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_PINF]]
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    store { half, i32 } [[FREXP]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
