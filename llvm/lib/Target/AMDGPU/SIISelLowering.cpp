@@ -230,9 +230,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
           ISD::FCEIL,    ISD::FTRUNC,     ISD::FRINT,   ISD::FNEARBYINT,
           ISD::FROUND,   ISD::FROUNDEVEN, ISD::FFLOOR,  ISD::FCANONICALIZE,
           ISD::SETCC}) {
-      // FIXME: The promoted to type shouldn't need to be explicit
       setOperationAction(Opc, MVT::bf16, Promote);
-      AddPromotedToType(Opc, MVT::bf16, MVT::f32);
     }
 
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Expand);

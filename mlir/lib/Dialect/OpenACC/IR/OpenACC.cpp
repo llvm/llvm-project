@@ -2889,9 +2889,17 @@ LogicalResult acc::HostDataOp::verify() {
     return emitError("at least one operand must appear on the host_data "
                      "operation");
 
-  for (mlir::Value operand : getDataClauseOperands())
-    if (!mlir::isa<acc::UseDeviceOp>(operand.getDefiningOp()))
+  llvm::SmallPtrSet<mlir::Value, 4> seenVars;
+  for (mlir::Value operand : getDataClauseOperands()) {
+    auto useDeviceOp =
+        mlir::dyn_cast<acc::UseDeviceOp>(operand.getDefiningOp());
+    if (!useDeviceOp)
       return emitError("expect data entry operation as defining op");
+
+    // Check for duplicate use_device clauses
+    if (!seenVars.insert(useDeviceOp.getVar()).second)
+      return emitError("duplicate use_device variable");
+  }
   return success();
 }
 

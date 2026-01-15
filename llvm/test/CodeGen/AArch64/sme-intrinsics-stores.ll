@@ -460,9 +460,8 @@ define void @str_with_off_many_var_high(i32 %tile_slice, ptr %ptr, i64 %vnum) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    add w8, w2, #32
 ; CHECK-NEXT:    rdsvl x10, #1
-; CHECK-NEXT:    mov w9, w8
+; CHECK-NEXT:    sxtw x9, w8
 ; CHECK-NEXT:    add w12, w0, w8
-; CHECK-NEXT:    sxtw x9, w9
 ; CHECK-NEXT:    madd x9, x10, x9, x1
 ; CHECK-NEXT:    str za[w12, 1], [x9, #1, mul vl]
 ; CHECK-NEXT:    str za[w12, 2], [x9, #2, mul vl]
