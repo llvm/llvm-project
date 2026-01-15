@@ -12,10 +12,12 @@
 
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCTypeInterfaces.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -1486,5 +1488,132 @@ template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genStore(
     mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::Value valueToStore,
     mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+
+/// Helper function to check if a CUDA attribute represents device data.
+static bool isCUDADeviceAttribute(cuf::DataAttribute attr) {
+  return attr == cuf::DataAttribute::Device ||
+         attr == cuf::DataAttribute::Managed ||
+         attr == cuf::DataAttribute::Constant ||
+         attr == cuf::DataAttribute::Shared ||
+         attr == cuf::DataAttribute::Unified;
+}
+
+/// Helper function to check if an operation has CUDA device data attributes.
+static bool hasCUDADeviceDataAttr(mlir::Operation *op) {
+  if (!op)
+    return false;
+
+  // Check for CUF data attribute on the operation
+  if (auto dataAttr = cuf::getDataAttr(op)) {
+    if (isCUDADeviceAttribute(dataAttr.getValue()))
+      return true;
+  }
+
+  return false;
+}
+
+/// Check CUDA attributes on a function argument.
+static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
+  auto *owner = blockArg.getOwner();
+  if (!owner)
+    return false;
+
+  auto *parentOp = owner->getParentOp();
+  if (!parentOp)
+    return false;
+
+  if (auto funcLike = mlir::dyn_cast<mlir::FunctionOpInterface>(parentOp)) {
+    unsigned argIndex = blockArg.getArgNumber();
+    if (argIndex < funcLike.getNumArguments()) {
+      if (auto attr = funcLike.getArgAttr(argIndex, cuf::getDataAttrName())) {
+        if (auto cudaAttr = mlir::dyn_cast<cuf::DataAttributeAttr>(attr))
+          return isCUDADeviceAttribute(cudaAttr.getValue());
+      }
+    }
+  }
+  return false;
+}
+
+/// Shared implementation for checking if a value represents device data.
+static bool isDeviceDataImpl(mlir::Value var) {
+  // Strip casts to find the underlying value.
+  mlir::Value currentVal = stripCasts(var, /*stripDeclare=*/false);
+
+  // Handle block arguments (function parameters)
+  if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(currentVal))
+    return hasCUDADeviceAttrOnFuncArg(blockArg);
+
+  mlir::Operation *defOp = currentVal.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // Check for CUDA attributes on the defining operation.
+  if (hasCUDADeviceDataAttr(defOp))
+    return true;
+
+  // Handle operations that access a partial entity - check if the base entity
+  // is device data.
+  if (auto partialAccess =
+          mlir::dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+    if (mlir::Value base = partialAccess.getBaseEntity())
+      return isDeviceDataImpl(base);
+  }
+
+  // Handle fir.rebox - if the underlying box is device data, so is the result.
+  if (auto rebox = mlir::dyn_cast<fir::ReboxOp>(defOp))
+    return isDeviceDataImpl(rebox.getBox());
+
+  // Handle fir.embox - check if the underlying memref is device data.
+  if (auto embox = mlir::dyn_cast<fir::EmboxOp>(defOp))
+    return isDeviceDataImpl(embox.getMemref());
+
+  // Handle address_of - check the referenced global.
+  if (auto addrOfIface =
+          mlir::dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+    auto symbol = addrOfIface.getSymbol();
+    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+      return global.isDeviceData();
+    return false;
+  }
+
+  return false;
+}
+
+template <typename Ty>
+bool OpenACCPointerLikeModel<Ty>::isDeviceData(mlir::Type pointer,
+                                               mlir::Value var) const {
+  return isDeviceDataImpl(var);
+}
+
+template bool OpenACCPointerLikeModel<fir::ReferenceType>::isDeviceData(
+    mlir::Type, mlir::Value) const;
+template bool
+    OpenACCPointerLikeModel<fir::PointerType>::isDeviceData(mlir::Type,
+                                                            mlir::Value) const;
+template bool
+    OpenACCPointerLikeModel<fir::HeapType>::isDeviceData(mlir::Type,
+                                                         mlir::Value) const;
+template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::isDeviceData(
+    mlir::Type, mlir::Value) const;
+
+template <typename Ty>
+bool OpenACCMappableModel<Ty>::isDeviceData(mlir::Type type,
+                                            mlir::Value var) const {
+  return isDeviceDataImpl(var);
+}
+
+template bool
+    OpenACCMappableModel<fir::BaseBoxType>::isDeviceData(mlir::Type,
+                                                         mlir::Value) const;
+template bool
+    OpenACCMappableModel<fir::ReferenceType>::isDeviceData(mlir::Type,
+                                                           mlir::Value) const;
+template bool
+    OpenACCMappableModel<fir::HeapType>::isDeviceData(mlir::Type,
+                                                      mlir::Value) const;
+template bool
+    OpenACCMappableModel<fir::PointerType>::isDeviceData(mlir::Type,
+                                                         mlir::Value) const;
 
 } // namespace fir::acc

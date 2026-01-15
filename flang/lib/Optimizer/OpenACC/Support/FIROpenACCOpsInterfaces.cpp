@@ -12,6 +12,8 @@
 
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCOpsInterfaces.h"
 
+#include "flang/Optimizer/Builder/CUFCommon.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -82,6 +84,18 @@ bool GlobalVariableModel::isConstant(mlir::Operation *op) const {
 mlir::Region *GlobalVariableModel::getInitRegion(mlir::Operation *op) const {
   auto globalOp = mlir::cast<fir::GlobalOp>(op);
   return globalOp.hasInitializationBody() ? &globalOp.getRegion() : nullptr;
+}
+
+bool GlobalVariableModel::isDeviceData(mlir::Operation *op) const {
+  if (auto dataAttr = cuf::getDataAttr(op)) {
+    auto attr = dataAttr.getValue();
+    return attr == cuf::DataAttribute::Device ||
+           attr == cuf::DataAttribute::Managed ||
+           attr == cuf::DataAttribute::Constant ||
+           attr == cuf::DataAttribute::Shared ||
+           attr == cuf::DataAttribute::Unified;
+  }
+  return false;
 }
 
 // Helper to recursively process address-of operations in derived type
