@@ -570,14 +570,38 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS1, _}, {{Sgpr32Trunc}, {None}, UniCstExt}});
   addRulesForGOpcs({G_FREEZE}).Any({{DivS1}, {{Vcc}, {Vcc}}});
 
-  addRulesForGOpcs({G_ICMP})
-      .Any({{UniS1, _, S32}, {{Sgpr32Trunc}, {None, Sgpr32, Sgpr32}}})
-      .Any({{DivS1, _, S32}, {{Vcc}, {None, Vgpr32, Vgpr32}}})
-      .Any({{DivS1, _, S64}, {{Vcc}, {None, Vgpr64, Vgpr64}}});
+  Predicate isSignedICmp([](const MachineInstr &MI) -> bool {
+    auto Pred =
+        static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+    return CmpInst::isSigned(Pred);
+  });
 
-  addRulesForGOpcs({G_FCMP})
-      .Any({{UniS1, _, S32}, {{UniInVcc}, {None, Vgpr32, Vgpr32}}})
-      .Any({{DivS1, _, S32}, {{Vcc}, {None, Vgpr32, Vgpr32}}});
+  Predicate isEqualityICmp([](const MachineInstr &MI) -> bool {
+    auto Pred =
+        static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+    return ICmpInst::isEquality(Pred);
+  });
+
+  bool HasScalarCompareEq64 = ST->hasScalarCompareEq64();
+  // clang-format off
+  addRulesForGOpcs({G_ICMP})
+      .Any({{{UniS1, _, S16}, isEqualityICmp}, {{Sgpr32Trunc}, {None, Sgpr32ZExt, Sgpr32ZExt}}})
+      .Any({{{UniS1, _, S16}, !isEqualityICmp && isSignedICmp}, {{Sgpr32Trunc}, {None, Sgpr32SExt, Sgpr32SExt}}})
+      .Any({{{UniS1, _, S16}, !isEqualityICmp && !isSignedICmp}, {{Sgpr32Trunc}, {None, Sgpr32ZExt, Sgpr32ZExt}}})
+      .Any({{{DivS1, _, S16}}, {{Vcc}, {None, Vgpr16, Vgpr16}}})
+      .Any({{{UniS1, _, S32}}, {{Sgpr32Trunc}, {None, Sgpr32, Sgpr32}}})
+      .Any({{{DivS1, _, S32}}, {{Vcc}, {None, Vgpr32, Vgpr32}}})
+      .Any({{{UniS1, _, S64}, isEqualityICmp}, {{Sgpr32Trunc}, {None, Sgpr64, Sgpr64}}}, HasScalarCompareEq64)
+      .Any({{{UniS1, _, S64}, isEqualityICmp}, {{UniInVcc}, {None, Vgpr64, Vgpr64}}}, !HasScalarCompareEq64)
+      .Any({{{UniS1, _, S64}, !isEqualityICmp}, {{UniInVcc}, {None, Vgpr64, Vgpr64}}})
+      .Any({{{DivS1, _, S64}}, {{Vcc}, {None, Vgpr64, Vgpr64}}})
+      .Any({{{UniS1, _, Ptr32}}, {{Sgpr32Trunc}, {None, SgprPtr32, SgprPtr32}}})
+      .Any({{{DivS1, _, Ptr32}}, {{Vcc}, {None, VgprPtr32, VgprPtr32}}})
+      .Any({{{UniS1, _, Ptr64}, isEqualityICmp}, {{Sgpr32Trunc}, {None, SgprPtr64, SgprPtr64}}}, HasScalarCompareEq64)
+      .Any({{{UniS1, _, Ptr64}, isEqualityICmp}, {{UniInVcc}, {None, VgprPtr64, VgprPtr64}}}, !HasScalarCompareEq64)
+      .Any({{{UniS1, _, Ptr64}, !isEqualityICmp}, {{UniInVcc}, {None, VgprPtr64, VgprPtr64}}})
+      .Any({{{DivS1, _, Ptr64}}, {{Vcc}, {None, VgprPtr64, VgprPtr64}}});
+  // clang-format on
 
   addRulesForGOpcs({G_BRCOND})
       .Any({{UniS1}, {{}, {Sgpr32AExtBoolInReg}}})
@@ -1087,6 +1111,20 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS1, S32}, {{UniInVcc}, {Vgpr32}}})
       .Any({{DivS1, S64}, {{Vcc}, {Vgpr64}}})
       .Any({{UniS1, S64}, {{UniInVcc}, {Vgpr64}}});
+
+  addRulesForGOpcs({G_FCMP}, Standard)
+      .Any({{UniS1, _, S16}, {{Sgpr32Trunc}, {None, Sgpr16, Sgpr16}}},
+           hasSALUFloat)
+      .Any({{UniS1, _, S16}, {{UniInVcc}, {None, Vgpr16, Vgpr16}}},
+           !hasSALUFloat)
+      .Any({{DivS1, _, S16}, {{Vcc}, {None, Vgpr16, Vgpr16}}})
+      .Any({{UniS1, _, S32}, {{Sgpr32Trunc}, {None, Sgpr32, Sgpr32}}},
+           hasSALUFloat)
+      .Any({{UniS1, _, S32}, {{UniInVcc}, {None, Vgpr32, Vgpr32}}},
+           !hasSALUFloat)
+      .Any({{DivS1, _, S32}, {{Vcc}, {None, Vgpr32, Vgpr32}}})
+      .Any({{UniS1, _, S64}, {{UniInVcc}, {None, Vgpr64, Vgpr64}}})
+      .Any({{DivS1, _, S64}, {{Vcc}, {None, Vgpr64, Vgpr64}}});
 
   using namespace Intrinsic;
 

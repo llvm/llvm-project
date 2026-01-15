@@ -875,12 +875,15 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
     std::string layoutMaskName =
         xegpu::getTemporaryLayoutName(storeScatterOp->getOpOperand(3));
 
-    xegpu::LayoutAttr layoutPayload =
-        storeScatterOp->getAttrOfType<xegpu::LayoutAttr>(layoutPayloadName);
-    xegpu::LayoutAttr layoutOffsets =
-        storeScatterOp->getAttrOfType<xegpu::LayoutAttr>(layoutOffsetsName);
-    xegpu::LayoutAttr layoutMask =
-        storeScatterOp->getAttrOfType<xegpu::LayoutAttr>(layoutMaskName);
+    xegpu::DistributeLayoutAttr layoutPayload =
+        storeScatterOp->getAttrOfType<xegpu::DistributeLayoutAttr>(
+            layoutPayloadName);
+    xegpu::DistributeLayoutAttr layoutOffsets =
+        storeScatterOp->getAttrOfType<xegpu::DistributeLayoutAttr>(
+            layoutOffsetsName);
+    xegpu::DistributeLayoutAttr layoutMask =
+        storeScatterOp->getAttrOfType<xegpu::DistributeLayoutAttr>(
+            layoutMaskName);
 
     FailureOr<VectorType> distStoreVecByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutPayload, storeVecTy);

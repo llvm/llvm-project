@@ -13,13 +13,17 @@
 # CHECK: DW_TAG_GNU_call_site
 # CHECK-NEXT: DW_AT_abstract_origin {{.*}} "func2"
 # CHECK: DW_TAG_GNU_call_site_parameter
-# CHECK-NOT:   DW_AT_location      (DW_OP_reg2 W0)
 # CHECK-NEXT:   DW_AT_location      (DW_OP_reg2 W2)
 # CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_fbreg +28)
 # CHECK-EMPTY: 
 # CHECK-NEXT: DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT:   DW_AT_location      (DW_OP_reg1 W1)
 # CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_breg19 W19-4)
+# CHECK-EMPTY: 
+# CHECK-NEXT: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg0 W0)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_breg19 W19+2)
+# CHECK-NOT: DW_TAG_GNU_call_site_parameter
 # CHECK: DW_TAG_GNU_call_site
 # CHECK-NEXT: DW_AT_abstract_origin {{.*}} "func2")
 # CHECK-NEXT: DW_AT_low_pc
@@ -29,10 +33,10 @@
 # CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_lit13)
 # CHECK-EMPTY: 
 # CHECK-NEXT: DW_TAG_GNU_call_site_parameter
-# W2 loads memory location. We can't rely that memory location won't be changed.
-# CHECK-NOT:   DW_AT_location      (DW_OP_reg2 W2)
 # CHECK-NEXT:   DW_AT_location      (DW_OP_reg1 W1)
 # CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_constu 0xc0)
+# W2 loads memory location. We can't rely that memory location won't be changed.
+# CHECK-NOT: DW_TAG_GNU_call_site_parameter
 --- |
   ; ModuleID = 'describe-call-pram-load-instruction.c'
   source_filename = "describe-call-pram-load-instruction.c"
