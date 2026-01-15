@@ -1488,7 +1488,6 @@ template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genStore(
     mlir::Value valueToStore,
     mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
 
-
 /// Check CUDA attributes on a function argument.
 static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
   auto *owner = blockArg.getOwner();
