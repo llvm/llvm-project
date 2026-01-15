@@ -349,10 +349,7 @@ Sections:
         '10', '0', '0', '0', '0', '0', '0', '0', # baz()'s address
         '32', '0', '0', '0', '0', '0', '0', '0', # baz()'s TypeID Unknown
       ]
-  - Name:   .rela.llvm.callgraph
-    Type:   SHT_RELA
-    Flags:  [ SHF_INFO_LINK ]
-    Link:   .symtab
+  - Type:   SHT_RELA
     Relocations:
       # 1. Pointer to foo() definition
       - Offset: 0x2
