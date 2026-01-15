@@ -12,10 +12,13 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::xegpu;
@@ -279,11 +282,45 @@ struct TestXeGPUSgToWiDistributeExperimental
     MLIRContext *ctx = &getContext();
 
     TypeConverter typeConverter;
-    // After distribution, there are no layouts associated with the tensor_desc
-    // types.
-    typeConverter.addConversion(
-        [](xegpu::TensorDescType type) { return type.dropLayouts(); });
     typeConverter.addConversion([](Type type) { return type; });
+    typeConverter.addConversion([](TensorDescType type) -> Type {
+      if (type.getLayoutAttr()) {
+        return type.dropLayouts();
+      }
+      return type;
+    });
+    auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
+                               mlir::ValueRange inputs,
+                               mlir::Location loc) -> mlir::Value {
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+          .getResult(0);
+    };
+    // Define a vector materialization cast. If the input and output have same
+    // number of elements, perform a shape cast. Otherwise, use
+    // UnrealizedConversionCastOp to handle the conversion.
+    auto vectorMaterializationCast = [](OpBuilder &builder, Type type,
+                                        ValueRange inputs,
+                                        Location loc) -> Value {
+      if (inputs.size() != 1)
+        return {};
+      auto input = inputs.front();
+      auto inputVecTy = dyn_cast<VectorType>(input.getType());
+      auto targetVecTy = dyn_cast<VectorType>(type);
+      if (inputVecTy && targetVecTy) {
+        if (inputVecTy.getNumElements() == targetVecTy.getNumElements()) {
+          return vector::ShapeCastOp::create(builder, loc, targetVecTy, input)
+              .getResult();
+        }
+        return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+            .getResult(0);
+      }
+
+      return {};
+    };
+    typeConverter.addSourceMaterialization(materializeCast);
+    typeConverter.addTargetMaterialization(materializeCast);
+    typeConverter.addSourceMaterialization(vectorMaterializationCast);
+    typeConverter.addTargetMaterialization(vectorMaterializationCast);
 
     ConversionTarget target(*ctx);
     // CreateNdDescOp is legal only if its result type has no layout attribute.
@@ -291,6 +328,14 @@ struct TestXeGPUSgToWiDistributeExperimental
         [&](xegpu::CreateNdDescOp op) {
           return !op.getType().getLayoutAttr();
         });
+    // Any anchor XeGPU op is legal only if it has no anchor layout.
+    target.addDynamicallyLegalDialect<xegpu::XeGPUDialect>([](Operation *op) {
+      auto anchorOp = dyn_cast<AnchorLayoutInterface>(op);
+      if (!anchorOp)
+        return true;
+      return !anchorOp.getAnchorLayout();
+    });
+
     RewritePatternSet patterns(ctx);
     xegpu::populateXeGPUSgToWiDistributeExperimentalPatterns(patterns,
                                                              typeConverter);

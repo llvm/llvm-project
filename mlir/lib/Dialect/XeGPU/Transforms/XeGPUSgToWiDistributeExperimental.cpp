@@ -24,7 +24,6 @@ namespace xegpu {
 } // namespace mlir
 
 using namespace mlir;
-using namespace mlir::xegpu;
 
 namespace {
 
@@ -35,14 +34,45 @@ struct CreateNdDescOpPattern
   LogicalResult
   matchAndRewrite(xegpu::CreateNdDescOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto resultType = op.getType();
+    xegpu::TensorDescType resultType = op.getType();
     // If no layout, nothing to do.
     if (!resultType.getLayout())
       return failure();
 
     auto newOp = xegpu::CreateNdDescOp::create(
-        rewriter, op.getLoc(), resultType.dropLayouts(), op->getOperands(),
+        rewriter, op.getLoc(), resultType.dropLayouts(), op.getOperands(),
         op->getAttrs());
+    rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
+struct LoadNdOpPattern : public OpConversionPattern<xegpu::LoadNdOp> {
+  using OpConversionPattern<xegpu::LoadNdOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::LoadNdOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr layout = op.getAnchorLayout();
+    // If no layout, nothing to do.
+    if (!layout)
+      return failure();
+    // Check if the layout attached to the tensor descriptor is same as the
+    // anchor layout. Otherwise, this is a conflict.
+    if (op.getTensorDescType().getLayout() != layout)
+      return rewriter.notifyMatchFailure(
+          op, "conflicting layout attributes on tensor descriptor and anchor");
+    auto distributedVectorTypeOrFailure =
+        xegpu::getDistributedVectorType(op.getTensorDescType());
+    if (failed(distributedVectorTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "unable to compute distributed vector type from the layout");
+    llvm::errs() << "adaptor tensor desc: " << adaptor.getTensorDesc() << "\n";
+    auto newOp = xegpu::LoadNdOp::create(
+        rewriter, op.getLoc(), distributedVectorTypeOrFailure.value(),
+        adaptor.getTensorDesc(), op.getMixedOffsets(), op.getPackedAttr(),
+        op.getTransposeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
+        op.getL3HintAttr(), /**layout**/ nullptr);
     rewriter.replaceOp(op, newOp.getResult());
     return success();
   }
@@ -57,26 +87,27 @@ struct XeGPUSgToWiDistributeExperimentalPass
 } // namespace
 
 void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
-  // Recover layouts.
-  Operation *op = getOperation();
-  if (!xegpu::recoverTemporaryLayouts(op)) {
-    signalPassFailure();
-    return;
-  }
+  // // Recover layouts.
+  // Operation *op = getOperation();
+  // if (!xegpu::recoverTemporaryLayouts(op)) {
+  //   signalPassFailure();
+  //   return;
+  // }
 
-  // Define conversion target
-  ConversionTarget target(getContext());
-  target.addLegalDialect<index::IndexDialect, memref::MemRefDialect,
-                         vector::VectorDialect>();
-  target.addDynamicallyLegalDialect<xegpu::XeGPUDialect>(
-      [](Operation *op) { return true; });
+  // // Define conversion target
+  // ConversionTarget target(getContext());
+  // target.addLegalDialect<index::IndexDialect, memref::MemRefDialect,
+  //                        vector::VectorDialect>();
+  // target.addDynamicallyLegalDialect<xegpu::XeGPUDialect>(
+  //     [](Operation *op) { return true; });
 
-  // Define type converter
-  TypeConverter typeConverter;
-  typeConverter.addConversion([](Type type) { return type; });
+  // // Define type converter
+  // TypeConverter typeConverter;
+  // typeConverter.addConversion([](Type type) { return type; });
 }
 
 void xegpu::populateXeGPUSgToWiDistributeExperimentalPatterns(
     RewritePatternSet &patterns, TypeConverter &typeConverter) {
-  patterns.add<CreateNdDescOpPattern>(typeConverter, patterns.getContext());
+  patterns.add<CreateNdDescOpPattern, LoadNdOpPattern>(typeConverter,
+                                                       patterns.getContext());
 }
