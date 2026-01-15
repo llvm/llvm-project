@@ -74,8 +74,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
 #include "llvm/CAS/OnDiskKeyValueDB.h"
 #include "llvm/Support/Compiler.h"
@@ -292,9 +292,11 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
   llvm::scope_exit UnlockFD([&]() { unlockFileThreadSafe(FD); });
 
   std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
+#ifndef _WIN32
   if (Error E =
           ondisk::OnDiskCASLogger::openIfEnabled(RootPath).moveInto(Logger))
     return std::move(E);
+#endif
 
   SmallString<8> Bytes;
   if (Error E = sys::fs::readNativeFileToEOF(File, Bytes))
@@ -318,7 +320,7 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
   llvm::scope_exit Log([&] {
     if (!Logger)
       return;
-    Logger->log_UnifiedOnDiskCache_validateIfNeeded(
+    Logger->logUnifiedOnDiskCacheValidateIfNeeded(
         RootPath, BootTime, ValidationBootTime, CheckHash, AllowRecovery,
         ForceValidation, LLVMCasBinaryPath, LogValidationError, Skipped,
         Recovered);
@@ -442,9 +444,11 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
     DBDirs->push_back((Twine(DBDirPrefix) + "1").str());
 
   std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
+#ifndef _WIN32
   if (Error E =
           ondisk::OnDiskCASLogger::openIfEnabled(RootPath).moveInto(Logger))
     return std::move(E);
+#endif
 
   /// If there is only one directory open databases on it. If there are 2 or
   /// more directories, get the most recent directories and chain them, with the
@@ -526,10 +530,10 @@ bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
     return false;
 
   // If the hard limit is beyond 85%, declare above limit and request clean up.
-  unsigned CurrentPrecent =
+  unsigned CurrentPercent =
       std::max(PrimaryGraphDB->getHardStorageLimitUtilization(),
                PrimaryKVDB->getHardStorageLimitUtilization());
-  if (CurrentPrecent > 85)
+  if (CurrentPercent > 85)
     return true;
 
   // We allow each of the directories in the chain to reach up to half the
@@ -612,7 +616,7 @@ Error UnifiedOnDiskCache::collectGarbage(StringRef Path,
   for (StringRef UnusedSubDir : *DBDirs) {
     sys::path::append(PathBuf, UnusedSubDir);
     if (Logger)
-      Logger->log_UnifiedOnDiskCache_collectGarbage(PathBuf);
+      Logger->logUnifiedOnDiskCacheCollectGarbage(PathBuf);
     if (std::error_code EC = sys::fs::remove_directories(PathBuf))
       return createFileError(PathBuf, EC);
     sys::path::remove_filename(PathBuf);

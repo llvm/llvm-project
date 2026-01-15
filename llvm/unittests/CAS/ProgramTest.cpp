@@ -8,6 +8,7 @@
 
 #include "llvm/Support/Program.h"
 #include "llvm/CAS/MappedFileRegionArena.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/FileSystem.h"
@@ -24,6 +25,8 @@ extern char **environ;
 
 using namespace llvm;
 using namespace llvm::cas;
+
+#if LLVM_ENABLE_ONDISK_CAS
 
 extern const char *TestMainArgv0;
 static char ProgramID = 0;
@@ -238,3 +241,5 @@ TEST_F(CASProgramTest, MappedFileRegionArenaSizeTest) {
   sys::fs::remove(FilePath);
   sys::fs::remove_directories(sys::path::parent_path(FilePath));
 }
+
+#endif // LLVM_ENABLE_ONDISK_CAS

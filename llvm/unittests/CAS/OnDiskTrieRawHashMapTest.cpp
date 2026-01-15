@@ -8,13 +8,17 @@
 
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 
+#if LLVM_ENABLE_ONDISK_CAS
 using namespace llvm;
 using namespace llvm::cas;
+
+namespace {
 
 struct OnDiskTrieRawHashMapTestFixture
     : public ::testing::TestWithParam<size_t> {
@@ -198,7 +202,8 @@ TEST(OnDiskTrieRawHashMapTest, OutOfSpace) {
   ASSERT_THAT_ERROR(OnDiskTrieRawHashMap::create(
                         Temp.path("NoSpace2").str(), "index",
                         /*NumHashBits=*/8, /*DataSize=*/8, /*MaxFileSize=*/118,
-                        /*NewInitialFileSize=*/std::nullopt, /*Logger=*/nullptr,
+                        /*NewInitialFileSize=*/std::nullopt,
+                        /*Logger=*/nullptr,
                         /*NewTableNumRootBits=*/1, /*NewTableNumSubtrieBits=*/1)
                         .moveInto(Trie),
                     Succeeded());
@@ -210,3 +215,7 @@ TEST(OnDiskTrieRawHashMapTest, OutOfSpace) {
   ASSERT_THAT_ERROR(Trie->insert({Hash0, Data0v1}).moveInto(Insertion),
                     Failed());
 }
+
+} // namespace
+
+#endif // LLVM_ENABLE_ONDISK_CAS
