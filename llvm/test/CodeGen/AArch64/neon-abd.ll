@@ -558,11 +558,10 @@ define <2 x i32> @combine_sabd_2s_zerosign_negative(<2 x i32> %a, <2 x i32> %b) 
 define <8 x i32> @sabd_8h_splat_imm(<8 x i16> %a) {
 ; CHECK-LABEL: sabd_8h_splat_imm:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #89
-; CHECK-NEXT:    sshll v3.4s, v0.4h, #0
-; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    sabd v1.4s, v0.4s, v2.4s
-; CHECK-NEXT:    sabd v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    movi v2.4h, #89
+; CHECK-NEXT:    movi v1.8h, #89
+; CHECK-NEXT:    sabdl2 v1.4s, v0.8h, v1.8h
+; CHECK-NEXT:    sabdl v0.4s, v0.4h, v2.4h
 ; CHECK-NEXT:    ret
 entry:
   %conv = sext <8 x i16> %a to <8 x i32>
@@ -579,11 +578,10 @@ entry:
 define <8 x i32> @uabd_8h_splat_imm(<8 x i16> %a) {
 ; CHECK-LABEL: uabd_8h_splat_imm:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #89
-; CHECK-NEXT:    ushll v3.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    uabd v1.4s, v0.4s, v2.4s
-; CHECK-NEXT:    uabd v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    movi v2.4h, #89
+; CHECK-NEXT:    movi v1.8h, #89
+; CHECK-NEXT:    uabdl2 v1.4s, v0.8h, v1.8h
+; CHECK-NEXT:    uabdl v0.4s, v0.4h, v2.4h
 ; CHECK-NEXT:    ret
 entry:
   %conv = zext <8 x i16> %a to <8 x i32>
@@ -600,14 +598,13 @@ entry:
 define <8 x i32> @sabd_8h_bv_imm(<8 x i16> %a) {
 ; CHECK-LABEL: sabd_8h_bv_imm:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    adrp x8, .LCPI45_0
-; CHECK-NEXT:    sshll v2.4s, v0.4h, #0
-; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
 ; CHECK-NEXT:    adrp x9, .LCPI45_1
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI45_0]
-; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI45_1]
-; CHECK-NEXT:    sabd v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    sabd v0.4s, v2.4s, v3.4s
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI45_0]
+; CHECK-NEXT:    ldr d3, [x9, :lo12:.LCPI45_1]
+; CHECK-NEXT:    sabdl v0.4s, v0.4h, v3.4h
+; CHECK-NEXT:    sabdl v1.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
 entry:
   %conv = sext <8 x i16> %a to <8 x i32>
@@ -624,14 +621,13 @@ entry:
 define <8 x i32> @uabd_8h_bv_imm(<8 x i16> %a) {
 ; CHECK-LABEL: uabd_8h_bv_imm:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    adrp x8, .LCPI46_0
-; CHECK-NEXT:    ushll v2.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
 ; CHECK-NEXT:    adrp x9, .LCPI46_1
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI46_0]
-; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI46_1]
-; CHECK-NEXT:    uabd v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uabd v0.4s, v2.4s, v3.4s
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI46_0]
+; CHECK-NEXT:    ldr d3, [x9, :lo12:.LCPI46_1]
+; CHECK-NEXT:    uabdl v0.4s, v0.4h, v3.4h
+; CHECK-NEXT:    uabdl v1.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
 entry:
   %conv = zext <8 x i16> %a to <8 x i32>
