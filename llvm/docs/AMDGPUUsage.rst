@@ -6672,8 +6672,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
     *expected count* of ``BO`` are equal after ``B`` is performed. ``B`` is the only barrier operation in ``S``
     that causes the *signal count* and *expected count* of ``BO`` to be equal.
 
-* For every barrier operation ``X``, there is a barrier *init* ``I`` such that ``I -> X`` in
-  *thread-barrier-order<BO>*.
+* For every barrier operation ``X``, there is a barrier *init* ``I`` such that ``I`` *happens-before* ``X``.
 * For every barrier *signal* ``S`` performed on a barrier *object* ``BO``:
 
   * The immediate successor of ``S`` in *thread-barrier-order<BO>* is a barrier *wait*. :sup:`WIP`
@@ -6779,6 +6778,7 @@ Informally, we can deduce from the above formal model that execution barriers be
 
 * Barriers cannot complete "out-of-thin-air"; a barrier *wait* ``W`` cannot depend on a barrier operation
  ``X`` to complete if ``W -> X`` in *barrier-executes-before*.
+* It is undefined behavior to operate on an uninitialized barrier.
 
 Execution Barrier GFX6-11
 +++++++++++++++++++++++++
