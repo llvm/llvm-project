@@ -1453,8 +1453,7 @@ SmallVector<StringRef> LTO::getLibFuncSymbols(const Triple &TT,
   TargetLibraryInfo TLI(*TLII);
   SmallVector<StringRef> LibFuncSymbols;
   LibFuncSymbols.reserve(LibFunc::NumLibFuncs);
-  for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs); I != E;
-       ++I) {
+  for (unsigned I = LibFunc::Begin_LibFunc; I != LibFunc::End_LibFunc; ++I) {
     LibFunc F = static_cast<LibFunc>(I);
     if (TLI.has(F))
       LibFuncSymbols.push_back(Saver.save(TLI.getName(F)).data());
