@@ -17,26 +17,11 @@ define double @scvtf64_i32(double %a0) {
 ; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX2-LABEL: scvtf64_i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX2-NEXT:    vcvtdq2pd %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-VL-LABEL: scvtf64_i32:
-; AVX512-VL:       # %bb.0:
-; AVX512-VL-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX512-VL-NEXT:    vcvtdq2pd %xmm0, %xmm0
-; AVX512-VL-NEXT:    retq
-;
-; AVX512-NOVL-LABEL: scvtf64_i32:
-; AVX512-NOVL:       # %bb.0:
-; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NOVL-NEXT:    vcvttpd2dq %zmm0, %ymm0
-; AVX512-NOVL-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512-NOVL-NEXT:    vzeroupper
-; AVX512-NOVL-NEXT:    retq
+; AVX-LABEL: scvtf64_i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; AVX-NEXT:    retq
   %ii = fptosi double %a0 to i32
   %ff = sitofp i32 %ii to double
   ret double %ff

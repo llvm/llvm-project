@@ -20201,7 +20201,6 @@ static SDValue vectorizeExtractedCast(SDValue Cast, const SDLoc &DL,
 static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
                                 SelectionDAG &DAG,
                                 const X86Subtarget &Subtarget) {
-  // TODO: Allow FP_TO_UINT.
   SDValue CastToInt = CastToFP.getOperand(0);
   MVT VT = CastToFP.getSimpleValueType();
   if ((CastToInt.getOpcode() != ISD::FP_TO_SINT &&
@@ -20224,9 +20223,12 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
   unsigned SrcSize = SrcVT.getSizeInBits();
   unsigned IntSize = IntVT.getSizeInBits();
   unsigned VTSize = VT.getSizeInBits();
-  unsigned ToIntOpcode, ToFPOpcode;
-  unsigned Width = 128;
   bool IsUnsigned = CastToInt.getOpcode() == ISD::FP_TO_UINT;
+  unsigned ToIntOpcode =
+      SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
+  unsigned ToFPOpcode =
+      IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
+  unsigned Width = 128;
 
   if (Subtarget.hasVLX() && Subtarget.hasDQI()) {
     // AVX512DQ+VLX
@@ -20235,31 +20237,24 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
           SrcSize != IntSize ? X86ISD::CVTTP2UI : (unsigned)ISD::FP_TO_UINT;
       ToFPOpcode =
           IntSize != VTSize ? X86ISD::CVTUI2P : (unsigned)ISD::UINT_TO_FP;
-    } else {
-      ToIntOpcode =
-          SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
-      ToFPOpcode =
-          IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
     }
-  } else if (Subtarget.hasDQI()) {
-    // Need to extend width for AVX512DQ without AVX512VL.
-    Width = 512;
-    ToIntOpcode = CastToInt.getOpcode();
-    ToFPOpcode = IsUnsigned ? ISD::UINT_TO_FP : ISD::SINT_TO_FP;
   } else {
-    // SSE2 can only perform f64/f32 <-> i32 signed.
-    if (IsUnsigned || IntVT == MVT::i64)
-      return SDValue();
-    ToIntOpcode =
-        SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
-    ToFPOpcode =
-        IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
+    if (IsUnsigned || IntVT == MVT::i64) {
+      // SSE2 can only perform f64/f32 <-> i32 signed.
+      if (!Subtarget.hasAVX512())
+        return SDValue();
+
+      // Need to extend width for AVX512DQ without AVX512VL.
+      Width = 512;
+      ToIntOpcode = CastToInt.getOpcode();
+      ToFPOpcode = IsUnsigned ? ISD::UINT_TO_FP : ISD::SINT_TO_FP;
+    }
   }
 
   MVT VecSrcVT, VecIntVT, VecVT;
   unsigned NumElts;
   unsigned SrcElts, VTElts;
-  // Some conversions are only legal with uniform vector sizes on AVXDQ.
+  // Some conversions are only legal with uniform vector sizes on AVX512DQ.
   if (Width == 512) {
     NumElts = std::min(Width / IntSize, Width / SrcSize);
     SrcElts = NumElts;
