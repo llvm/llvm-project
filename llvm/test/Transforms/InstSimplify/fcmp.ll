@@ -36,8 +36,7 @@ define i1 @pr130408(x86_fp80 %x) {
 
 define i1 @direct_bitcast() {
 ; CHECK-LABEL: @direct_bitcast(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt bfloat bitcast (half 0xH7C00 to bfloat), 0xR7F80
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = fcmp ogt bfloat bitcast (half 0xH7C00 to bfloat), 0xR7F80 ; rhs is +inf
   ret i1 %cmp
@@ -45,8 +44,7 @@ define i1 @direct_bitcast() {
 
 define i1 @bitcast_first() {
 ; CHECK-LABEL: @bitcast_first(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt bfloat bitcast (half 0xH7C00 to bfloat), 0xR7F80
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %lhs = bitcast half 0xH7C00 to bfloat
   %cmp = fcmp ogt bfloat %lhs, 0xR7F80
@@ -55,8 +53,7 @@ define i1 @bitcast_first() {
 
 define i1 @uge() {
 ; CHECK-LABEL: @uge(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge bfloat bitcast (half 0xH7C00 to bfloat), 0xRFF80
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = fcmp uge bfloat bitcast (half 0xH7C00 to bfloat), 0xRff80
   ret i1 %cmp
@@ -65,8 +62,7 @@ define i1 @uge() {
 @g = external global i8
 define i1 @cannot_be_folded() {
 ; CHECK-LABEL: @cannot_be_folded(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt bfloat bitcast (i16 ptrtoint (ptr @g to i16) to bfloat), 0xR7F80
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = fcmp ogt bfloat bitcast (i16 ptrtoint (ptr @g to i16) to bfloat), 0xR7F80 ; rhs is +inf
   ret i1 %cmp

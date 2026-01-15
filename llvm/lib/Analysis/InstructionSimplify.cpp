@@ -4108,13 +4108,17 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   assert(CmpInst::isFPPredicate(Pred) && "Not an FP compare!");
 
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
-    if (Constant *CRHS = dyn_cast<Constant>(RHS))
-      return ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI,
-                                             Q.CxtI);
-
-    // If we have a constant, make sure it is on the RHS.
-    std::swap(LHS, RHS);
-    Pred = CmpInst::getSwappedPredicate(Pred);
+    if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
+      auto *Result = ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL,
+                                                     Q.TLI, Q.CxtI);
+      // if the folding isn't successfull, fall back to the rest of the logic
+      if (Result != nullptr)
+        return Result;
+    } else {
+      // If we have a constant, make sure it is on the RHS.
+      std::swap(LHS, RHS);
+      Pred = CmpInst::getSwappedPredicate(Pred);
+    }
   }
 
   // Fold trivial predicates.
