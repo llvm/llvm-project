@@ -35,4 +35,7 @@ contains
     ! CHECK: fir.call %[[CAST]](%[[BOX_REF]]#0) {{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
     call pass_array_val(arr)
   end subroutine
+
+  ! CHECK: func.func private @_QPpass_array_ptr(!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+  ! CHECK: func.func private @_QPpass_array_val(!fir.box<!fir.array<?xf32>>)
 end module
