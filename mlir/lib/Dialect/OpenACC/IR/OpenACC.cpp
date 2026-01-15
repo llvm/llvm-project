@@ -411,7 +411,7 @@ getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
     return;
   }
 
-  regions.push_back(RegionSuccessor(op, op->getResults()));
+  regions.push_back(RegionSuccessor::parent(op->getResults()));
 }
 
 void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
@@ -460,13 +460,13 @@ void LoopOp::getSuccessorRegions(RegionBranchPoint point,
       regions.push_back(RegionSuccessor(&getRegion()));
       return;
     }
-    regions.push_back(RegionSuccessor(getOperation(), getResults()));
+    regions.push_back(RegionSuccessor::parent(getResults()));
     return;
   }
 
   // Structured loops: model a loop-shaped region graph similar to scf.for.
   regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+  regions.push_back(RegionSuccessor::parent(getResults()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1438,7 +1438,7 @@ static LogicalResult createDestroyRegion(OpBuilder &builder, Location loc,
       cast<TypedValue<PointerLikeType>>(destroyBlock->getArgument(1));
   if (isa<MappableType>(varType)) {
     auto mappableTy = cast<MappableType>(varType);
-    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree))
+    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree, bounds))
       return failure();
   } else {
     assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
@@ -2889,9 +2889,17 @@ LogicalResult acc::HostDataOp::verify() {
     return emitError("at least one operand must appear on the host_data "
                      "operation");
 
-  for (mlir::Value operand : getDataClauseOperands())
-    if (!mlir::isa<acc::UseDeviceOp>(operand.getDefiningOp()))
+  llvm::SmallPtrSet<mlir::Value, 4> seenVars;
+  for (mlir::Value operand : getDataClauseOperands()) {
+    auto useDeviceOp =
+        mlir::dyn_cast<acc::UseDeviceOp>(operand.getDefiningOp());
+    if (!useDeviceOp)
       return emitError("expect data entry operation as defining op");
+
+    // Check for duplicate use_device clauses
+    if (!seenVars.insert(useDeviceOp.getVar()).second)
+      return emitError("duplicate use_device variable");
+  }
   return success();
 }
 

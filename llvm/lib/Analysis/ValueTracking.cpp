@@ -834,12 +834,26 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
         continue;
       if (RetainedKnowledge RK = getKnowledgeFromBundle(
               *I, I->bundle_op_info_begin()[Elem.Index])) {
-        if (RK.WasOn == V &&
-            (RK.AttrKind == Attribute::NonNull ||
-             (RK.AttrKind == Attribute::Dereferenceable &&
-              !NullPointerIsDefined(Q.CxtI->getFunction(),
-                                    V->getType()->getPointerAddressSpace()))) &&
-            isValidAssumeForContext(I, Q.CxtI, Q.DT))
+        if (RK.WasOn != V)
+          continue;
+        bool AssumeImpliesNonNull = [&]() {
+          if (RK.AttrKind == Attribute::NonNull)
+            return true;
+
+          if (RK.AttrKind == Attribute::Dereferenceable) {
+            if (NullPointerIsDefined(Q.CxtI->getFunction(),
+                                     V->getType()->getPointerAddressSpace()))
+              return false;
+            assert(RK.IRArgValue &&
+                   "Dereferenceable attribute without IR argument?");
+
+            auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
+            return CI && !CI->isZero();
+          }
+
+          return false;
+        }();
+        if (AssumeImpliesNonNull && isValidAssumeForContext(I, Q.CxtI, Q.DT))
           return true;
       }
       continue;
@@ -2131,6 +2145,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // Maybe even element count so need to clear ones.
         if (VecTy->isScalableTy() || EvenCnt)
           Known.One.clearAllBits();
+        break;
+      }
+      case Intrinsic::vector_reduce_add: {
+        auto *VecTy = dyn_cast<FixedVectorType>(I->getOperand(0)->getType());
+        if (!VecTy)
+          break;
+        computeKnownBits(I->getOperand(0), Known, Q, Depth + 1);
+        Known = Known.reduceAdd(VecTy->getNumElements());
         break;
       }
       case Intrinsic::umin:
@@ -3540,6 +3562,11 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         // NB: We don't do usub_sat here as in any case we can prove its
         // non-zero, we will fold it to `sub nuw` in InstCombine.
       case Intrinsic::ssub_sat:
+        // For most types, if x != y then ssub.sat x, y != 0.  But
+        // ssub.sat.i1 0, -1 = 0, because 1 saturates to 0.  This means
+        // isNonZeroSub will do the wrong thing for ssub.sat.i1.
+        if (BitWidth == 1)
+          return false;
         return isNonZeroSub(DemandedElts, Q, BitWidth, II->getArgOperand(0),
                             II->getArgOperand(1), Depth);
       case Intrinsic::sadd_sat:
@@ -4872,11 +4899,17 @@ void llvm::adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
                                           Value *Arm, bool Invert,
                                           const SimplifyQuery &SQ,
                                           unsigned Depth) {
+
+  KnownFPClass KnownSrc;
   computeKnownFPClassFromCond(Arm, Cond,
-                              /*CondIsTrue=*/!Invert, SQ.CxtI, Known,
+                              /*CondIsTrue=*/!Invert, SQ.CxtI, KnownSrc,
                               Depth + 1);
-  // TODO: Do we need to check isGuaranteedNotToBeUndef, like the KnownBits
-  // case?
+  KnownSrc = KnownSrc.unionWith(Known);
+  if (KnownSrc.isUnknown())
+    return;
+
+  if (isGuaranteedNotToBeUndef(Arm, SQ.AC, SQ.CxtI, SQ.DT, Depth + 1))
+    Known = KnownSrc;
 }
 
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
@@ -5220,26 +5253,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
 
-      // Integer results cannot be subnormal.
-      Known.knownNot(fcSubnormal);
-
-      Known.propagateNaN(KnownSrc, true);
-
-      // Pass through infinities, except PPC_FP128 is a special case for
-      // intrinsics other than trunc.
-      if (IID == Intrinsic::trunc || !V->getType()->isMultiUnitFPType()) {
-        if (KnownSrc.isKnownNeverPosInfinity())
-          Known.knownNot(fcPosInf);
-        if (KnownSrc.isKnownNeverNegInfinity())
-          Known.knownNot(fcNegInf);
-      }
-
-      // Negative round ups to 0 produce -0
-      if (KnownSrc.isKnownNever(fcPosFinite))
-        Known.knownNot(fcPosFinite);
-      if (KnownSrc.isKnownNever(fcNegFinite))
-        Known.knownNot(fcNegFinite);
-
+      Known = KnownFPClass::roundToIntegral(
+          KnownSrc, IID == Intrinsic::trunc,
+          V->getType()->getScalarType()->isMultiUnitFPType());
       break;
     }
     case Intrinsic::exp:
@@ -5552,7 +5568,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // Doubling 0 will give the same 0.
         if (SelfAdd && KnownRHS.isKnownNeverLogicalPosZero(Mode) &&
             (Mode.Output == DenormalMode::IEEE ||
-             Mode.Output == DenormalMode::PreserveSign))
+             (Mode.Output == DenormalMode::PreserveSign &&
+              KnownRHS.isKnownNeverPosSubnormal()) ||
+             (Mode.Output == DenormalMode::PositiveZero &&
+              KnownRHS.isKnownNeverSubnormal())))
           Known.knownNot(fcPosZero);
 
         // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
@@ -7554,9 +7573,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::ctlz:
       case Intrinsic::cttz:
       case Intrinsic::abs:
-        if (cast<ConstantInt>(II->getArgOperand(1))->isNullValue())
-          return false;
-        break;
+        // We're not considering flags so it is safe to just return false.
+        return false;
       case Intrinsic::sshl_sat:
       case Intrinsic::ushl_sat:
         if (!includesPoison(Kind) ||

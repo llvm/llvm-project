@@ -12403,15 +12403,15 @@ defm VAESDECLAST  : avx512_vaes<0xDF, "vaesdeclast", "int_x86_aesni_aesdeclast">
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasAVX512, HasVPCLMULQDQ] in
-defm VPCLMULQDQZ : vpclmulqdq<VR512, i512mem, loadv8i64, int_x86_pclmulqdq_512>,
+defm VPCLMULQDQZ : vpclmulqdq<VR512, i512mem, loadv8i64, v8i64>,
                               EVEX, VVVV, EVEX_V512, EVEX_CD8<64, CD8VF>, WIG;
 
 let Predicates = [HasVLX, HasVPCLMULQDQ] in {
-defm VPCLMULQDQZ128 : vpclmulqdq<VR128X, i128mem, loadv2i64, int_x86_pclmulqdq>,
+defm VPCLMULQDQZ128 : vpclmulqdq<VR128X, i128mem, loadv2i64, v2i64>,
                               EVEX, VVVV, EVEX_V128, EVEX_CD8<64, CD8VF>, WIG;
 
-defm VPCLMULQDQZ256: vpclmulqdq<VR256X, i256mem, loadv4i64,
-                                int_x86_pclmulqdq_256>, EVEX, VVVV, EVEX_V256,
+defm VPCLMULQDQZ256: vpclmulqdq<VR256X, i256mem, loadv4i64, v4i64>,
+                                EVEX, VVVV, EVEX_V256,
                                 EVEX_CD8<64, CD8VF>, WIG;
 }
 

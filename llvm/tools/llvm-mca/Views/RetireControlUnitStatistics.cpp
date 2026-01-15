@@ -83,7 +83,6 @@ void RetireControlUnitStatistics::printView(raw_ostream &OS) const {
              << "\nAverage Used ROB Entries per cy:  " << AvgUsage
              << format("  ( %.1f%% )\n", NormalizedAvgPercentage);
 
-  TempStream.flush();
   OS << Buffer;
 }
 
