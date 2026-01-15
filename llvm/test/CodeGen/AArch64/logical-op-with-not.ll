@@ -320,3 +320,399 @@ define i64 @mvn_ror_i64(i64 %0) {
   %5 = xor i64 %4, -1
   ret i64 %5
 }
+
+define void @array_and_not_i8(ptr %a, i8 %m) {
+; CHECK-LABEL: array_and_not_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:  .LBB26_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrb w10, [x0, x8]
+; CHECK-NEXT:    and w10, w10, w9
+; CHECK-NEXT:    strb w10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    b.ne .LBB26_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i8 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv
+  %load = load i8, ptr %arrayidx, align 1
+  %and = and i8 %load, %not
+  store i8 %and, ptr %arrayidx, align 1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_and_not_i16(ptr %a, i16 %m) {
+; CHECK-LABEL: array_and_not_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:  .LBB27_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrh w10, [x0, x8]
+; CHECK-NEXT:    and w10, w10, w9
+; CHECK-NEXT:    strh w10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #2
+; CHECK-NEXT:    cmp x8, #32
+; CHECK-NEXT:    b.ne .LBB27_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i16 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i16, ptr %a, i64 %indvars.iv
+  %load = load i16, ptr %arrayidx, align 2
+  %and = and i16 %load, %not
+  store i16 %and, ptr %arrayidx, align 2
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_and_not_i32(ptr %a, i32 %m) {
+; CHECK-LABEL: array_and_not_i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:  .LBB28_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr w10, [x0, x8]
+; CHECK-NEXT:    and w10, w10, w9
+; CHECK-NEXT:    str w10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #4
+; CHECK-NEXT:    cmp x8, #64
+; CHECK-NEXT:    b.ne .LBB28_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i32 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv
+  %load = load i32, ptr %arrayidx, align 4
+  %and = and i32 %load, %not
+  store i32 %and, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_and_not_i64(ptr %a, i64 %m) {
+; CHECK-LABEL: array_and_not_i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn x9, x1
+; CHECK-NEXT:  .LBB29_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr x10, [x0, x8]
+; CHECK-NEXT:    and x10, x10, x9
+; CHECK-NEXT:    str x10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    b.ne .LBB29_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i64 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i64, ptr %a, i64 %indvars.iv
+  %load = load i64, ptr %arrayidx, align 8
+  %and = and i64 %load, %not
+  store i64 %and, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_or_not_i8(ptr %a, i8 %m) {
+; CHECK-LABEL: array_or_not_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:  .LBB30_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrb w10, [x0, x8]
+; CHECK-NEXT:    orr w10, w10, w9
+; CHECK-NEXT:    strb w10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    b.ne .LBB30_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i8 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv
+  %load = load i8, ptr %arrayidx, align 1
+  %or = or i8 %load, %not
+  store i8 %or, ptr %arrayidx, align 1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_or_not_i16(ptr %a, i16 %m) {
+; CHECK-LABEL: array_or_not_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:  .LBB31_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrh w10, [x0, x8]
+; CHECK-NEXT:    orr w10, w10, w9
+; CHECK-NEXT:    strh w10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #2
+; CHECK-NEXT:    cmp x8, #32
+; CHECK-NEXT:    b.ne .LBB31_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i16 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i16, ptr %a, i64 %indvars.iv
+  %load = load i16, ptr %arrayidx, align 2
+  %or = or i16 %load, %not
+  store i16 %or, ptr %arrayidx, align 2
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_or_not_i32(ptr %a, i32 %m) {
+; CHECK-LABEL: array_or_not_i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:  .LBB32_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr w10, [x0, x8]
+; CHECK-NEXT:    orr w10, w10, w9
+; CHECK-NEXT:    str w10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #4
+; CHECK-NEXT:    cmp x8, #64
+; CHECK-NEXT:    b.ne .LBB32_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i32 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv
+  %load = load i32, ptr %arrayidx, align 4
+  %or = or i32 %load, %not
+  store i32 %or, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_or_not_i64(ptr %a, i64 %m) {
+; CHECK-LABEL: array_or_not_i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn x9, x1
+; CHECK-NEXT:  .LBB33_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr x10, [x0, x8]
+; CHECK-NEXT:    orr x10, x10, x9
+; CHECK-NEXT:    str x10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    b.ne .LBB33_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i64 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i64, ptr %a, i64 %indvars.iv
+  %load = load i64, ptr %arrayidx, align 8
+  %or = or i64 %load, %not
+  store i64 %or, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_xor_not_i8(ptr %a, i8 %m) {
+; CHECK-LABEL: array_xor_not_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:  .LBB34_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrb w10, [x0, x8]
+; CHECK-NEXT:    eor w10, w10, w9
+; CHECK-NEXT:    strb w10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    b.ne .LBB34_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i8 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv
+  %load = load i8, ptr %arrayidx, align 1
+  %xor = xor i8 %load, %not
+  store i8 %xor, ptr %arrayidx, align 1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_xor_not_i16(ptr %a, i16 %m) {
+; CHECK-LABEL: array_xor_not_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:  .LBB35_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrh w10, [x0, x8]
+; CHECK-NEXT:    eor w10, w10, w9
+; CHECK-NEXT:    strh w10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #2
+; CHECK-NEXT:    cmp x8, #32
+; CHECK-NEXT:    b.ne .LBB35_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i16 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i16, ptr %a, i64 %indvars.iv
+  %load = load i16, ptr %arrayidx, align 2
+  %xor = xor i16 %load, %not
+  store i16 %xor, ptr %arrayidx, align 2
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_xor_not_i32(ptr %a, i32 %m) {
+; CHECK-LABEL: array_xor_not_i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:  .LBB36_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr w10, [x0, x8]
+; CHECK-NEXT:    eor w10, w10, w9
+; CHECK-NEXT:    str w10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #4
+; CHECK-NEXT:    cmp x8, #64
+; CHECK-NEXT:    b.ne .LBB36_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i32 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv
+  %load = load i32, ptr %arrayidx, align 4
+  %xor = xor i32 %load, %not
+  store i32 %xor, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_xor_not_i64(ptr %a, i64 %m) {
+; CHECK-LABEL: array_xor_not_i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn x9, x1
+; CHECK-NEXT:  .LBB37_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr x10, [x0, x8]
+; CHECK-NEXT:    eor x10, x10, x9
+; CHECK-NEXT:    str x10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    b.ne .LBB37_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i64 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i64, ptr %a, i64 %indvars.iv
+  %load = load i64, ptr %arrayidx, align 8
+  %xor = xor i64 %load, %not
+  store i64 %xor, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
