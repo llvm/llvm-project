@@ -85,3 +85,20 @@ void test2() {
   // CHECK: store i32 16
   gi = __builtin_object_size(&c->bs[0].buf[0], 3);
 }
+
+void test3() {
+  struct A {
+    int a;
+  };
+  struct B {
+    int b;
+  };
+  struct C : A, B {};
+
+  C c;
+
+  int gi;
+  // CHECK: store i32 8
+  gi = __builtin_object_size((B*)&c, 3);
+
+}
