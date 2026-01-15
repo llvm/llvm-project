@@ -15896,6 +15896,44 @@ static SDValue ConvertSETCCToXori(SDNode *N, SelectionDAG &DAG) {
   llvm_unreachable("Should not reach here.");
 }
 
+SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
+                                                  DAGCombinerInfo &DCI) const {
+  if (N->getValueType(0) != MVT::i32 && N->getValueType(0) != MVT::i64)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  if (N0.getOpcode() == ISD::SETCC) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+    SDValue LHS = N0.getOperand(0);
+    SDValue RHS = N0.getOperand(1);
+    // Match: sext (setcc x, 0, eq) or sext (setcc 0, x, eq)
+    if (CC == ISD::SETEQ && (isNullConstant(LHS) || isNullConstant(RHS))) {
+      SDLoc dl(N);
+      SelectionDAG &DAG = DCI.DAG;
+
+      EVT VT = N->getValueType(0);
+
+      SDValue X = isNullConstant(LHS) ? RHS : LHS;
+      EVT XVT = X.getValueType(); // The type of x in the setcc x, 0, eq.
+
+      // If input is i32 but result is i64, we need to extend first
+      if (XVT != VT) {
+        // Zero-extend i32 to i64 before ADDC
+        X = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, X);
+      }
+
+      // Generate: rlwinm(subfe(addic(x, -1), addic(x, -1)), 0, mask)
+      SDValue MinusOne = DAG.getAllOnesConstant(dl, VT);
+      SDValue Addic = DAG.getNode(PPCISD::ADDC, dl, DAG.getVTList(VT, MVT::i32),
+                                  X, MinusOne);
+      SDValue Carry = Addic.getValue(1);
+      return DAG.getNode(PPCISD::SUBE, dl, DAG.getVTList(VT, MVT::i32), Addic,
+                         Addic, Carry);
+    }
+  }
+  return SDValue();
+}
+
 SDValue PPCTargetLowering::combineSetCC(SDNode *N,
                                         DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::SETCC &&
@@ -17491,11 +17529,14 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         return N->getOperand(0);
     }
     break;
+  case ISD::SIGN_EXTEND:
+    if (SDValue SECC = combineSignExtendSetCC(N, DCI))
+      return SECC;
+    [[fallthrough]];
   case ISD::ZERO_EXTEND:
     if (SDValue RetV = combineZextSetccWithZero(N, DCI.DAG))
       return RetV;
     [[fallthrough]];
-  case ISD::SIGN_EXTEND:
   case ISD::ANY_EXTEND:
     return DAGCombineExtBoolTrunc(N, DCI);
   case ISD::TRUNCATE:
