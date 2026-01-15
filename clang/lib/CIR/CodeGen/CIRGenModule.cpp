@@ -2709,6 +2709,26 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
   return errorNYI(loc.getBegin(), feature) << loc;
 }
 
+void CIRGenModule::error(SourceLocation loc, StringRef error) {
+  unsigned diagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error, "%0");
+  getDiags().Report(astContext.getFullLoc(loc), diagID) << error;
+}
+
+/// Print out an error that codegen doesn't support the specified stmt yet.
+void CIRGenModule::errorUnsupported(const Stmt *s, llvm::StringRef type) {
+  unsigned diagId = diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                          "cannot compile this %0 yet");
+  diags.Report(astContext.getFullLoc(s->getBeginLoc()), diagId)
+      << type << s->getSourceRange();
+}
+
+/// Print out an error that codegen doesn't support the specified decl yet.
+void CIRGenModule::errorUnsupported(const Decl *d, llvm::StringRef type) {
+  unsigned diagId = diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                          "cannot compile this %0 yet");
+  diags.Report(astContext.getFullLoc(d->getLocation()), diagId) << type;
+}
+
 void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
                                    cir::LabelOp label) {
   [[maybe_unused]] auto result =
