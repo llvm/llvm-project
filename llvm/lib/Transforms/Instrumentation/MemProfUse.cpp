@@ -396,38 +396,57 @@ static void addVPMetadata(Module &M, Instruction &I,
   if (!ClMemProfAttachCalleeGuids || CalleeGuids.empty())
     return;
 
-  if (I.getMetadata(LLVMContext::MD_prof)) {
-    uint64_t Unused;
-    // TODO: When merging is implemented, increase this to a typical ICP value
-    // (e.g., 3-6) For now, we only need to check if existing data exists, so 1
-    // is sufficient
-    auto ExistingVD = getValueProfDataFromInst(I, IPVK_IndirectCallTarget,
-                                               /*MaxNumValueData=*/1, Unused);
-    // We don't know how to merge value profile data yet.
-    if (!ExistingVD.empty()) {
-      return;
-    }
-  }
-
-  SmallVector<InstrProfValueData, 4> VDs;
+  // Prepare the vector of value data, initializing from any existing
+  // value-profile metadata present on the instruction so that we merge the
+  // new CalleeGuids into the existing entries.
+  SmallVector<InstrProfValueData> VDs;
   uint64_t TotalCount = 0;
 
-  for (const GlobalValue::GUID CalleeGUID : CalleeGuids) {
-    InstrProfValueData VD;
-    VD.Value = CalleeGUID;
+  if (I.getMetadata(LLVMContext::MD_prof)) {
+    // Read all existing entries so we can merge them. Use a large
+    // MaxNumValueData to retrieve all existing entries.
+    VDs = getValueProfDataFromInst(I, IPVK_IndirectCallTarget,
+                                   /*MaxNumValueData=*/UINT32_MAX, TotalCount);
+  }
+
+  // Save the original size for use later in detecting whether any were added.
+  const size_t OriginalSize = VDs.size();
+
+  // Initialize the set of existing guids with the original list.
+  DenseSet<uint64_t> ExistingValues(
+      llvm::from_range,
+      llvm::map_range(
+          VDs, [](const InstrProfValueData &Entry) { return Entry.Value; }));
+
+  // Merge CalleeGuids into list of existing VDs, by appending any that are not
+  // already included.
+  VDs.reserve(OriginalSize + CalleeGuids.size());
+  for (auto G : CalleeGuids) {
+    if (!ExistingValues.insert(G).second)
+      continue;
+    InstrProfValueData NewEntry;
+    NewEntry.Value = G;
     // For MemProf, we don't have actual call counts, so we assign
     // a weight of 1 to each potential target.
     // TODO: Consider making this weight configurable or increasing it to
     // improve effectiveness for ICP.
-    VD.Count = 1;
-    VDs.push_back(VD);
-    TotalCount += VD.Count;
+    NewEntry.Count = 1;
+    TotalCount += NewEntry.Count;
+    VDs.push_back(NewEntry);
   }
 
-  if (!VDs.empty()) {
-    annotateValueSite(M, I, VDs, TotalCount, IPVK_IndirectCallTarget,
-                      VDs.size());
-  }
+  // Update the VP metadata if we added any new callee GUIDs to the list.
+  assert(VDs.size() >= OriginalSize);
+  if (VDs.size() == OriginalSize)
+    return;
+
+  // First clear the existing !prof.
+  I.setMetadata(LLVMContext::MD_prof, nullptr);
+
+  // No need to sort the updated VDs as all appended entries have the same count
+  // of 1, which is no larger than any existing entries. The incoming list of
+  // CalleeGuids should already be deterministic for a given profile.
+  annotateValueSite(M, I, VDs, TotalCount, IPVK_IndirectCallTarget, VDs.size());
 }
 
 static void handleAllocSite(
@@ -683,8 +702,14 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     for (auto &StackFrame : CS.Frames) {
       uint64_t StackId = computeStackId(StackFrame);
       ArrayRef<Frame> FrameSlice = ArrayRef<Frame>(CS.Frames).drop_front(Idx++);
-      ArrayRef<GlobalValue::GUID> CalleeGuids(CS.CalleeGuids);
-      LocHashToCallSites[StackId].push_back({FrameSlice, CalleeGuids});
+      // The callee guids for the slice containing all frames (due to the
+      // increment above Idx is now 1) comes from the CalleeGuids recorded in
+      // the CallSite. For the slices not containing the leaf-most frame, the
+      // callee guid is simply the function GUID of the prior frame.
+      LocHashToCallSites[StackId].push_back(
+          {FrameSlice, (Idx == 1 ? CS.CalleeGuids
+                                 : ArrayRef<GlobalValue::GUID>(
+                                       CS.Frames[Idx - 2].Function))});
 
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.

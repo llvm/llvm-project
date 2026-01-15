@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
+#include <cassert>
 #include <optional>
 
 using namespace llvm;
@@ -1165,6 +1166,66 @@ json::Value toJSON(const ExceptionDetails &ED) {
     result.insert({"stackTrace", ED.stackTrace});
   if (!ED.innerException.empty())
     result.insert({"innerException", ED.innerException});
+
+  return result;
+}
+
+llvm::json::Value toJSON(const CompileUnit &CU) {
+  json::Object result{{"compileUnitPath", CU.compileUnitPath}};
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, StackFrameFormat &SFF,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.mapOptional("parameters", SFF.parameters) &&
+         O.mapOptional("parameterTypes", SFF.parameterTypes) &&
+         O.mapOptional("parameterNames", SFF.parameterNames) &&
+         O.mapOptional("parameterValues", SFF.parameterValues) &&
+         O.mapOptional("line", SFF.line) &&
+         O.mapOptional("module", SFF.module) &&
+         O.mapOptional("includeAll", SFF.includeAll);
+}
+
+llvm::json::Value toJSON(const StackFrame::PresentationHint &PH) {
+  switch (PH) {
+  case StackFrame::ePresentationHintNone:
+    return "";
+  case StackFrame::ePresentationHintNormal:
+    return "normal";
+  case StackFrame::ePresentationHintLabel:
+    return "label";
+  case StackFrame::ePresentationHintSubtle:
+    return "subtle";
+  }
+  llvm_unreachable("unhandled stackFrame presentationHint.");
+}
+
+llvm::json::Value toJSON(const StackFrame &SF) {
+  json::Object result{{"id", SF.id}, {"name", SF.name}};
+
+  if (SF.source) {
+    result.insert({"source", *SF.source});
+    assert(SF.line != LLDB_INVALID_LINE_NUMBER);
+    result.insert({"line", SF.line});
+    result.insert({"column", SF.column});
+    if (SF.endLine != 0 && SF.endLine != LLDB_INVALID_LINE_NUMBER)
+      result.insert({"endLine", SF.endLine});
+    if (SF.endColumn != 0 && SF.endColumn != LLDB_INVALID_COLUMN_NUMBER)
+      result.insert({"endColumn", SF.endColumn});
+  } else {
+    result.insert({"line", 0});
+    result.insert({"column", 0});
+  }
+  if (SF.canRestart)
+    result.insert({"canRestart", SF.canRestart});
+  if (SF.instructionPointerReference != LLDB_INVALID_ADDRESS)
+    result.insert({"instructionPointerReference",
+                   EncodeMemoryReference(SF.instructionPointerReference)});
+  if (SF.moduleId)
+    result.insert({"moduleId", *SF.moduleId});
+  if (SF.presentationHint != StackFrame::ePresentationHintNone)
+    result.insert({"presentationHint", SF.presentationHint});
 
   return result;
 }

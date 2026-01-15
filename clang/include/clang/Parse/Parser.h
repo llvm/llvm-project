@@ -2117,10 +2117,14 @@ private:
 
   ExprResult ParseUnevaluatedStringInAttribute(const IdentifierInfo &AttrName);
 
-  bool
-  ParseAttributeArgumentList(const clang::IdentifierInfo &AttrName,
-                             SmallVectorImpl<Expr *> &Exprs,
-                             ParsedAttributeArgumentsProperties ArgsProperties);
+  /// Parses a comma-delimited list of arguments of an attribute \p AttrName,
+  /// filling \p Exprs. \p ArgsProperties specifies which of the arguments
+  /// should be parsed as unevaluated string literals. \p Arg is the number
+  /// of arguments parsed before calling / this function (the index of the
+  /// argument to be parsed next).
+  bool ParseAttributeArgumentList(
+      const IdentifierInfo &AttrName, SmallVectorImpl<Expr *> &Exprs,
+      ParsedAttributeArgumentsProperties ArgsProperties, unsigned Arg);
 
   /// Parses syntax-generic attribute arguments for attributes which are
   /// known to the implementation, and adds them to the given ParsedAttributes
@@ -2834,8 +2838,6 @@ private:
   mutable IdentifierInfo *Ident_final;
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
-  mutable IdentifierInfo *Ident_trivially_relocatable_if_eligible;
-  mutable IdentifierInfo *Ident_replaceable_if_eligible;
 
   /// Representation of a class that has been parsed, including
   /// any member function declarations or definitions that need to be
@@ -3129,7 +3131,7 @@ private:
 
   /// isClassCompatibleKeyword - Determine whether the next token is a C++11
   /// 'final', a C++26 'trivially_relocatable_if_eligible',
-  /// 'replaceable_if_eligible', or Microsoft 'sealed' or 'abstract' contextual
+  /// or Microsoft 'sealed' or 'abstract' contextual
   /// keyword.
   bool isClassCompatibleKeyword() const;
 
@@ -3599,16 +3601,8 @@ private:
   /// \endverbatim
   AccessSpecifier getAccessSpecifierIfPresent() const;
 
-  bool isCXX2CTriviallyRelocatableKeyword(Token Tok) const;
-  bool isCXX2CTriviallyRelocatableKeyword() const;
-  void ParseCXX2CTriviallyRelocatableSpecifier(SourceLocation &TRS);
-
-  bool isCXX2CReplaceableKeyword(Token Tok) const;
-  bool isCXX2CReplaceableKeyword() const;
-  void ParseCXX2CReplaceableSpecifier(SourceLocation &MRS);
-
   /// 'final', a C++26 'trivially_relocatable_if_eligible',
-  /// 'replaceable_if_eligible', or Microsoft 'sealed' or 'abstract' contextual
+  /// or Microsoft 'sealed' or 'abstract' contextual
   /// keyword.
   bool isClassCompatibleKeyword(Token Tok) const;
 

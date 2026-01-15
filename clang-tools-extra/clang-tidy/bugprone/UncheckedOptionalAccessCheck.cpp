@@ -22,7 +22,7 @@ using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessDiagnostic;
 using dataflow::UncheckedOptionalAccessModel;
 
-static constexpr llvm::StringLiteral FuncID("fun");
+static constexpr StringRef FuncID = "fun";
 
 void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;

@@ -414,6 +414,7 @@ enum OperandType : unsigned {
   OPERAND_SIMM12_LSB00000,
   OPERAND_SIMM16,
   OPERAND_SIMM16_NONZERO,
+  OPERAND_SIMM20,
   OPERAND_SIMM20_LI,
   OPERAND_SIMM26,
   OPERAND_CLUI_IMM,
@@ -461,6 +462,8 @@ enum OperandType : unsigned {
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
   OPERAND_AVL,
+
+  OPERAND_VMASK,
 };
 } // namespace RISCVOp
 
