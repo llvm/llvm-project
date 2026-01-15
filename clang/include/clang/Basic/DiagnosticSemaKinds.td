@@ -838,6 +838,8 @@ def warn_redecl_library_builtin : Warning<
   InGroup<DiagGroup<"incompatible-library-redeclaration">>;
 def err_builtin_definition : Error<"definition of builtin function %0">;
 def err_builtin_redeclare : Error<"cannot redeclare builtin function %0">;
+def err_invalid_builtin_argument : Error<"invalid argument '%0' to %1">;
+
 def err_arm_invalid_specialreg : Error<"invalid special register for builtin">;
 def err_arm_invalid_coproc : Error<"coprocessor %0 must be configured as "
   "%select{GCP|CDE}1">;
@@ -8429,7 +8431,7 @@ def err_bad_dynamic_cast_not_polymorphic : Error<"%0 is not polymorphic">;
 
 // Other C++ expressions
 def err_need_header_before_typeid : Error<
-  "you need to include <typeinfo> before using the 'typeid' operator">;
+  "you need to include <typeinfo>%select{| or import std}0 before using the 'typeid' operator">;
 def err_need_header_before_placement_new : Error<
   "no matching %0 function for non-allocating placement new expression; "
   "include <new>">;
@@ -13173,11 +13175,17 @@ def warn_sycl_external_missing_on_first_decl : Warning<
 
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
-  "the %0 attribute cannot be applied to a"
-  " %select{non-static member function|variadic function|deleted function|"
-           "defaulted function|constexpr function|consteval function|"
-           "function declared with the 'noreturn' attribute|coroutine|"
-           "function defined with a function try block}1">;
+  "the %0 attribute cannot be applied to a %enum_select<InvalidSKEPReason>{"
+      "%NonStaticMemberFn{non-static member function}|"
+      "%VariadicFn{variadic function}|"
+      "%DeletedFn{deleted function}|"
+      "%DefaultedFn{defaulted function}|"
+      "%ConstexprFn{constexpr function}|"
+      "%ConstevalFn{consteval function}|"
+      "%NoreturnFn{function declared with the 'noreturn' attribute}|"
+      "%Coroutine{coroutine}|"
+      "%FunctionTryBlock{function defined with a function try block}"
+      "}1">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "the %0 kernel name argument does not match prior"
   " declaration%diff{: $ vs $|}1,2">;
@@ -13330,6 +13338,7 @@ def warn_hlsl_register_type_c_packoffset: Warning<"binding type 'c' ignored in b
 def warn_hlsl_deprecated_register_type_b: Warning<"binding type 'b' only applies to constant buffers. The 'bool constant' binding type is no longer supported">, InGroup<LegacyConstantRegisterBinding>, DefaultError;
 def warn_hlsl_deprecated_register_type_i: Warning<"binding type 'i' ignored. The 'integer constant' binding type is no longer supported">, InGroup<LegacyConstantRegisterBinding>, DefaultError;
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
+def err_hlsl_register_number_too_large : Error<"register number should not exceed 4294967295">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
 def err_hlsl_space_on_global_constant : Error<"register space cannot be specified on global constants">;
 def warn_hlsl_implicit_binding : Warning<"resource has implicit register binding">, InGroup<HLSLImplicitBinding>, DefaultIgnore;

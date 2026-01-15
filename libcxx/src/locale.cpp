@@ -60,9 +60,8 @@ struct __libcpp_unique_locale {
 
   __locale::__locale_t __loc_;
 
-private:
-  __libcpp_unique_locale(__libcpp_unique_locale const&);
-  __libcpp_unique_locale& operator=(__libcpp_unique_locale const&);
+  __libcpp_unique_locale(__libcpp_unique_locale const&) = delete;
+  __libcpp_unique_locale& operator=(__libcpp_unique_locale const&) = delete;
 };
 
 #ifdef __cloc_defined
@@ -86,16 +85,6 @@ T& make(Args... args) {
   alignas(T) static std::byte buf[sizeof(T)];
   auto* obj = ::new (&buf) T(args...);
   return *obj;
-}
-
-template <typename T, size_t N>
-inline constexpr size_t countof(const T (&)[N]) {
-  return N;
-}
-
-template <typename T>
-inline constexpr size_t countof(const T* const begin, const T* const end) {
-  return static_cast<size_t>(end - begin);
 }
 
 string build_name(const string& other, const string& one, locale::category c) {
@@ -2329,7 +2318,7 @@ static codecvt_base::result utf16be_to_ucs4(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xFC00) == 0xDC00)
       return codecvt_base::error;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2340,7 +2329,7 @@ static codecvt_base::result utf16be_to_ucs4(
     } else {
       if (frm_end - frm_nxt < 4)
         return codecvt_base::partial;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[2] << 8 | frm_nxt[3]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[2] << 8) | frm_nxt[3]);
       if ((c2 & 0xFC00) != 0xDC00)
         return codecvt_base::error;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2365,7 +2354,7 @@ static int utf16be_to_ucs4_length(
       frm_nxt += 2;
   }
   for (size_t nchar32_t = 0; frm_nxt < frm_end - 1 && nchar32_t < mx; ++nchar32_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xFC00) == 0xDC00)
       break;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2375,7 +2364,7 @@ static int utf16be_to_ucs4_length(
     } else {
       if (frm_end - frm_nxt < 4)
         break;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[2] << 8 | frm_nxt[3]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[2] << 8) | frm_nxt[3]);
       if ((c2 & 0xFC00) != 0xDC00)
         break;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2443,7 +2432,7 @@ static codecvt_base::result utf16le_to_ucs4(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xFC00) == 0xDC00)
       return codecvt_base::error;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2454,7 +2443,7 @@ static codecvt_base::result utf16le_to_ucs4(
     } else {
       if (frm_end - frm_nxt < 4)
         return codecvt_base::partial;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[3] << 8 | frm_nxt[2]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[3] << 8) | frm_nxt[2]);
       if ((c2 & 0xFC00) != 0xDC00)
         return codecvt_base::error;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2479,7 +2468,7 @@ static int utf16le_to_ucs4_length(
       frm_nxt += 2;
   }
   for (size_t nchar32_t = 0; frm_nxt < frm_end - 1 && nchar32_t < mx; ++nchar32_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xFC00) == 0xDC00)
       break;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2489,7 +2478,7 @@ static int utf16le_to_ucs4_length(
     } else {
       if (frm_end - frm_nxt < 4)
         break;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[3] << 8 | frm_nxt[2]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[3] << 8) | frm_nxt[2]);
       if ((c2 & 0xFC00) != 0xDC00)
         break;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2546,7 +2535,7 @@ static codecvt_base::result utf16be_to_ucs2(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       return codecvt_base::error;
     *to_nxt = c1;
@@ -2567,7 +2556,7 @@ static int utf16be_to_ucs2_length(
       frm_nxt += 2;
   }
   for (size_t nchar16_t = 0; frm_nxt < frm_end - 1 && nchar16_t < mx; ++nchar16_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       break;
     frm_nxt += 2;
@@ -2620,7 +2609,7 @@ static codecvt_base::result utf16le_to_ucs2(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       return codecvt_base::error;
     *to_nxt = c1;
@@ -2642,7 +2631,7 @@ static int utf16le_to_ucs2_length(
       frm_nxt += 2;
   }
   for (size_t nchar16_t = 0; frm_nxt < frm_end - 1 && nchar16_t < mx; ++nchar16_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       break;
     frm_nxt += 2;
@@ -3947,13 +3936,7 @@ wstring numpunct<wchar_t>::do_falsename() const { return L"false"; }
 
 // numpunct_byname<char>
 
-numpunct_byname<char>::numpunct_byname(const char* nm, size_t refs) : numpunct<char>(refs) { __init(nm); }
-
-numpunct_byname<char>::numpunct_byname(const string& nm, size_t refs) : numpunct<char>(refs) { __init(nm.c_str()); }
-
-numpunct_byname<char>::~numpunct_byname() {}
-
-void numpunct_byname<char>::__init(const char* nm) {
+numpunct_byname<char>::numpunct_byname(const char* nm, size_t refs) : numpunct<char>(refs) {
   typedef numpunct<char> base;
   if (strcmp(nm, "C") != 0) {
     __libcpp_unique_locale loc(nm);
@@ -3974,18 +3957,14 @@ void numpunct_byname<char>::__init(const char* nm) {
   }
 }
 
+numpunct_byname<char>::numpunct_byname(const string& nm, size_t refs) : numpunct_byname<char>(nm.c_str(), refs) {}
+
+numpunct_byname<char>::~numpunct_byname() {}
+
 // numpunct_byname<wchar_t>
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-numpunct_byname<wchar_t>::numpunct_byname(const char* nm, size_t refs) : numpunct<wchar_t>(refs) { __init(nm); }
-
-numpunct_byname<wchar_t>::numpunct_byname(const string& nm, size_t refs) : numpunct<wchar_t>(refs) {
-  __init(nm.c_str());
-}
-
-numpunct_byname<wchar_t>::~numpunct_byname() {}
-
-void numpunct_byname<wchar_t>::__init(const char* nm) {
+numpunct_byname<wchar_t>::numpunct_byname(const char* nm, size_t refs) : numpunct<wchar_t>(refs) {
   if (strcmp(nm, "C") != 0) {
     __libcpp_unique_locale loc(nm);
     if (!loc)
@@ -4002,6 +3981,10 @@ void numpunct_byname<wchar_t>::__init(const char* nm) {
     // localization for truename and falsename is not available
   }
 }
+
+numpunct_byname<wchar_t>::numpunct_byname(const string& nm, size_t refs) : numpunct_byname<wchar_t>(nm.c_str(), refs) {}
+
+numpunct_byname<wchar_t>::~numpunct_byname() {}
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 // num_get helpers
@@ -4369,7 +4352,7 @@ string __time_get_storage<char>::__analyze(char fmt, const ctype<char>& ct) {
   char f[3] = {0};
   f[0]      = '%';
   f[1]      = fmt;
-  size_t n  = __locale::__strftime(buf, countof(buf), f, &t, __loc_);
+  size_t n  = __locale::__strftime(buf, std::size(buf), f, &t, __loc_);
   char* bb  = buf;
   char* be  = buf + n;
   string result;
@@ -4500,12 +4483,12 @@ wstring __time_get_storage<wchar_t>::__analyze(char fmt, const ctype<wchar_t>& c
   char f[3] = {0};
   f[0]      = '%';
   f[1]      = fmt;
-  __locale::__strftime(buf, countof(buf), f, &t, __loc_);
+  __locale::__strftime(buf, std::size(buf), f, &t, __loc_);
   wchar_t wbuf[100];
   wchar_t* wbb   = wbuf;
   mbstate_t mb   = {0};
   const char* bb = buf;
-  size_t j       = __locale::__mbsrtowcs(wbb, &bb, countof(wbuf), &mb, __loc_);
+  size_t j       = __locale::__mbsrtowcs(wbb, &bb, std::size(wbuf), &mb, __loc_);
   if (j == size_t(-1))
     std::__throw_runtime_error("locale not supported");
   wchar_t* wbe = wbb + j;
@@ -4626,25 +4609,25 @@ void __time_get_storage<char>::init(const ctype<char>& ct) {
   // __weeks_
   for (int i = 0; i < 7; ++i) {
     t.tm_wday = i;
-    __locale::__strftime(buf, countof(buf), "%A", &t, __loc_);
+    __locale::__strftime(buf, std::size(buf), "%A", &t, __loc_);
     __weeks_[i] = buf;
-    __locale::__strftime(buf, countof(buf), "%a", &t, __loc_);
+    __locale::__strftime(buf, std::size(buf), "%a", &t, __loc_);
     __weeks_[i + 7] = buf;
   }
   // __months_
   for (int i = 0; i < 12; ++i) {
     t.tm_mon = i;
-    __locale::__strftime(buf, countof(buf), "%B", &t, __loc_);
+    __locale::__strftime(buf, std::size(buf), "%B", &t, __loc_);
     __months_[i] = buf;
-    __locale::__strftime(buf, countof(buf), "%b", &t, __loc_);
+    __locale::__strftime(buf, std::size(buf), "%b", &t, __loc_);
     __months_[i + 12] = buf;
   }
   // __am_pm_
   t.tm_hour = 1;
-  __locale::__strftime(buf, countof(buf), "%p", &t, __loc_);
+  __locale::__strftime(buf, std::size(buf), "%p", &t, __loc_);
   __am_pm_[0] = buf;
   t.tm_hour   = 13;
-  __locale::__strftime(buf, countof(buf), "%p", &t, __loc_);
+  __locale::__strftime(buf, std::size(buf), "%p", &t, __loc_);
   __am_pm_[1] = buf;
   __c_        = __analyze('c', ct);
   __r_        = __analyze('r', ct);
@@ -4663,18 +4646,18 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
   // __weeks_
   for (int i = 0; i < 7; ++i) {
     t.tm_wday = i;
-    __locale::__strftime(buf, countof(buf), "%A", &t, __loc_);
+    __locale::__strftime(buf, std::size(buf), "%A", &t, __loc_);
     mb             = mbstate_t();
     const char* bb = buf;
-    size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
+    size_t j       = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
       std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __weeks_[i].assign(wbuf, wbe);
-    __locale::__strftime(buf, countof(buf), "%a", &t, __loc_);
+    __locale::__strftime(buf, std::size(buf), "%a", &t, __loc_);
     mb = mbstate_t();
     bb = buf;
-    j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
+    j  = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
       std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
@@ -4683,18 +4666,18 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
   // __months_
   for (int i = 0; i < 12; ++i) {
     t.tm_mon = i;
-    __locale::__strftime(buf, countof(buf), "%B", &t, __loc_);
+    __locale::__strftime(buf, std::size(buf), "%B", &t, __loc_);
     mb             = mbstate_t();
     const char* bb = buf;
-    size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
+    size_t j       = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
       std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __months_[i].assign(wbuf, wbe);
-    __locale::__strftime(buf, countof(buf), "%b", &t, __loc_);
+    __locale::__strftime(buf, std::size(buf), "%b", &t, __loc_);
     mb = mbstate_t();
     bb = buf;
-    j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
+    j  = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
       std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
@@ -4702,19 +4685,19 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
   }
   // __am_pm_
   t.tm_hour = 1;
-  __locale::__strftime(buf, countof(buf), "%p", &t, __loc_);
+  __locale::__strftime(buf, std::size(buf), "%p", &t, __loc_);
   mb             = mbstate_t();
   const char* bb = buf;
-  size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
+  size_t j       = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, __loc_);
   if (j == size_t(-1))
     std::__throw_runtime_error("locale not supported");
   wbe = wbuf + j;
   __am_pm_[0].assign(wbuf, wbe);
   t.tm_hour = 13;
-  __locale::__strftime(buf, countof(buf), "%p", &t, __loc_);
+  __locale::__strftime(buf, std::size(buf), "%p", &t, __loc_);
   mb = mbstate_t();
   bb = buf;
-  j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
+  j  = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, __loc_);
   if (j == size_t(-1))
     std::__throw_runtime_error("locale not supported");
   wbe = wbuf + j;
@@ -4943,7 +4926,7 @@ void __time_put::__do_put(char* __nb, char*& __ne, const tm* __tm, char __fmt, c
   char fmt[] = {'%', __fmt, __mod, 0};
   if (__mod != 0)
     swap(fmt[1], fmt[2]);
-  size_t n = __locale::__strftime(__nb, countof(__nb, __ne), fmt, __tm, __loc_);
+  size_t n = __locale::__strftime(__nb, std::distance(__nb, __ne), fmt, __tm, __loc_);
   __ne     = __nb + n;
 }
 
@@ -4954,7 +4937,7 @@ void __time_put::__do_put(wchar_t* __wb, wchar_t*& __we, const tm* __tm, char __
   __do_put(__nar, __ne, __tm, __fmt, __mod);
   mbstate_t mb     = {0};
   const char* __nb = __nar;
-  size_t j         = __locale::__mbsrtowcs(__wb, &__nb, countof(__wb, __we), &mb, __loc_);
+  size_t j         = __locale::__mbsrtowcs(__wb, &__nb, std::distance(__wb, __we), &mb, __loc_);
   if (j == size_t(-1))
     std::__throw_runtime_error("locale not supported");
   __we = __wb + j;
@@ -5429,7 +5412,7 @@ void moneypunct_byname<wchar_t, false>::init(const char* nm) {
   wchar_t wbuf[100];
   mbstate_t mb   = {0};
   const char* bb = lc->currency_symbol;
-  size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
+  size_t j       = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, loc.get());
   if (j == size_t(-1))
     std::__throw_runtime_error("locale not supported");
   wchar_t* wbe = wbuf + j;
@@ -5443,7 +5426,7 @@ void moneypunct_byname<wchar_t, false>::init(const char* nm) {
   else {
     mb = mbstate_t();
     bb = lc->positive_sign;
-    j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
+    j  = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, loc.get());
     if (j == size_t(-1))
       std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
@@ -5454,7 +5437,7 @@ void moneypunct_byname<wchar_t, false>::init(const char* nm) {
   else {
     mb = mbstate_t();
     bb = lc->negative_sign;
-    j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
+    j  = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, loc.get());
     if (j == size_t(-1))
       std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
@@ -5484,7 +5467,7 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
   wchar_t wbuf[100];
   mbstate_t mb   = {0};
   const char* bb = lc->int_curr_symbol;
-  size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
+  size_t j       = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, loc.get());
   if (j == size_t(-1))
     std::__throw_runtime_error("locale not supported");
   wchar_t* wbe = wbuf + j;
@@ -5502,7 +5485,7 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
   else {
     mb = mbstate_t();
     bb = lc->positive_sign;
-    j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
+    j  = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, loc.get());
     if (j == size_t(-1))
       std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
@@ -5517,7 +5500,7 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
   else {
     mb = mbstate_t();
     bb = lc->negative_sign;
-    j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
+    j  = __locale::__mbsrtowcs(wbuf, &bb, std::size(wbuf), &mb, loc.get());
     if (j == size_t(-1))
       std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;

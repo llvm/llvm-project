@@ -371,7 +371,7 @@ static void generateRegionConstraintVerifiers(
     std::string textualConditionName = "any region";
 
     if (auto regionDefOp =
-            dyn_cast<irdl::RegionOp>(regionsOp->getArgs()[i].getDefiningOp())) {
+            regionsOp->getArgs()[i].getDefiningOp<irdl::RegionOp>()) {
       // Generate constraint condition based on RegionOp attributes
       SmallVector<std::string> conditionParts;
       SmallVector<std::string> descriptionParts;

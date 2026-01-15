@@ -141,7 +141,8 @@ protected:
   LLVM_ABI void growHungoffUses(unsigned N, bool WithExtraValues = false);
 
 protected:
-  ~User() = default; // Use deleteValue() to delete a generic Instruction.
+  // Use deleteValue() to delete a generic User.
+  LLVM_ABI ~User();
 
 public:
   User(const User &) = delete;
