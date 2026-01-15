@@ -25,6 +25,48 @@ Value mlir::getAPFloatSemanticsValue(OpBuilder &b, Location loc,
                                    b.getIntegerAttr(b.getI32Type(), sem));
 }
 
+Value mlir::forEachScalarValue(
+    mlir::RewriterBase &rewriter, Location loc, Value operand1, Value operand2,
+    Type resultType, llvm::function_ref<Value(Value, Value, Type)> fn) {
+  auto vecTy1 = dyn_cast<VectorType>(operand1.getType());
+  if (operand2) {
+    // Sanity check: Operand types must match.
+    assert(vecTy1 == dyn_cast<VectorType>(operand2.getType()) &&
+           "expected same vector types");
+  }
+  if (!vecTy1) {
+    // Not a vector. Call the function directly.
+    return fn(operand1, operand2, resultType);
+  }
+
+  // Prepare scalar operands.
+  ResultRange sclars1 =
+      vector::ToElementsOp::create(rewriter, loc, operand1)->getResults();
+  SmallVector<Value> scalars2;
+  if (!operand2) {
+    // No second operand. Create a vector of empty values.
+    scalars2.assign(vecTy1.getNumElements(), Value());
+  } else {
+    llvm::append_range(
+        scalars2,
+        vector::ToElementsOp::create(rewriter, loc, operand2)->getResults());
+  }
+
+  // Call the function for each pair of scalar operands.
+  auto resultVecType = cast<VectorType>(resultType);
+  SmallVector<Value> results;
+  for (auto [scalar1, scalar2] : llvm::zip_equal(sclars1, scalars2)) {
+    Value result = fn(scalar1, scalar2, resultVecType.getElementType());
+    results.push_back(result);
+  }
+
+  // Package the results into a vector.
+  return vector::FromElementsOp::create(
+      rewriter, loc,
+      vecTy1.cloneWith(/*shape=*/std::nullopt, results.front().getType()),
+      results);
+}
+
 LogicalResult mlir::checkPreconditions(RewriterBase &rewriter, Operation *op) {
   for (Value value : llvm::concat<Value>(op->getOperands(), op->getResults())) {
     Type type = value.getType();
