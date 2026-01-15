@@ -4343,15 +4343,11 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     ElementCount VF) const {
   // Cross iteration phis such as fixed-order recurrences and FMaxNum/FMinNum
   // reductions need special handling and are currently unsupported.
-  // FindLast reductions also require special handling for the synthesized
-  // mask PHI.
   if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
         if (!Legal->isReductionVariable(&Phi))
           return Legal->isFixedOrderRecurrence(&Phi);
-        RecurKind Kind =
-            Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind();
-        return RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) ||
-               RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind);
+        return RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+            Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind());
       }))
     return false;
 
@@ -4656,14 +4652,6 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   const bool HasReductions =
       any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
              IsaPred<VPReductionPHIRecipe>);
-
-  // FIXME: implement interleaving for FindLast transform correctly.
-  if (any_of(make_second_range(Legal->getReductionVars()),
-             [](const RecurrenceDescriptor &RdxDesc) {
-               return RecurrenceDescriptor::isFindLastRecurrenceKind(
-                   RdxDesc.getRecurrenceKind());
-             }))
-    return 1;
 
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
@@ -8597,11 +8585,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                                 *Plan))
     return nullptr;
 
-  // Create whole-vector selects for find-last recurrences.
-  if (!VPlanTransforms::runPass(VPlanTransforms::handleFindLastReductions,
-                                *Plan))
-    return nullptr;
-
   // Transform recipes to abstract recipes if it is legal and beneficial and
   // clamp the range for better cost estimation.
   // TODO: Enable following transform when the EVL-version of extended-reduction
@@ -8873,8 +8856,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     RecurKind RK = RdxDesc.getRecurrenceKind();
     if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
-         !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) &&
-         !RecurrenceDescriptor::isFindLastRecurrenceKind(RK))) {
+         !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
           getRecurrenceIdentity(RK, PhiTy, RdxDesc.getFastMathFlags()));
@@ -10015,18 +9997,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Override IC if user provided an interleave count.
   IC = UserIC > 0 ? UserIC : IC;
-
-  // FIXME: Enable interleaving for FindLast reductions.
-  if (any_of(LVL.getReductionVars().values(), [](auto &RdxDesc) {
-        return RecurrenceDescriptor::isFindLastRecurrenceKind(
-            RdxDesc.getRecurrenceKind());
-      })) {
-    LLVM_DEBUG(dbgs() << "LV: Not interleaving due to FindLast reduction.\n");
-    IntDiagMsg = {"FindLastPreventsScalarInterleaving",
-                  "Unable to interleave due to FindLast reduction."};
-    InterleaveLoop = false;
-    IC = 1;
-  }
 
   // Emit diagnostic messages, if any.
   const char *VAPassName = Hints.vectorizeAnalysisPassName();
