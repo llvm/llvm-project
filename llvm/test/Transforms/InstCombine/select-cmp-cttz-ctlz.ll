@@ -733,11 +733,9 @@ define i32 @test_ctlz_sub_zero_not_poison(i32 %arg) {
 
 define i32 @test_ctlz_sub_zero_poison(i32 %arg) {
 ; CHECK-LABEL: @test_ctlz_sub_zero_poison(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ARG]], i1 true)
+; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ARG:%.*]], i1 false)
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTZ]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 0, i32 [[SUB]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %cmp = icmp eq i32 %arg, 0
   %ctz = call i32 @llvm.ctlz.i32(i32 %arg, i1 true)
@@ -776,11 +774,9 @@ define i32 @test_cttz_sub_zero_not_poison(i32 %arg) {
 
 define i32 @test_cttz_sub_zero_poison(i32 %arg) {
 ; CHECK-LABEL: @test_cttz_sub_zero_poison(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
+; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ARG:%.*]], i1 false)
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTZ]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 0, i32 [[SUB]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %cmp = icmp eq i32 %arg, 0
   %ctz = call i32 @llvm.cttz.i32(i32 %arg, i1 true)
@@ -817,9 +813,7 @@ define i32 @test_abs_int_min_not_poison(i32 %arg) {
 
 define i32 @test_abs_int_min_poison(i32 %arg) {
 ; CHECK-LABEL: @test_abs_int_min_poison(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], -2147483648
-; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[ARG]], i1 true)
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 -2147483648, i32 [[ABS]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[ARG:%.*]], i1 false)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp eq i32 %arg, u0x80000000
