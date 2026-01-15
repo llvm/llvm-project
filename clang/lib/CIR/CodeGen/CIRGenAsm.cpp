@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticSema.h"
+
 #include "CIRGenFunction.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -83,16 +85,153 @@ static void collectClobbers(const CIRGenFunction &cgf, const AsmStmt &s,
   }
 }
 
+static void
+collectInOutConstraintInfos(const CIRGenFunction &cgf, const AsmStmt &s,
+                            SmallVectorImpl<TargetInfo::ConstraintInfo> &out,
+                            SmallVectorImpl<TargetInfo::ConstraintInfo> &in) {
+
+  for (unsigned i = 0, e = s.getNumOutputs(); i != e; ++i) {
+    StringRef name;
+    if (const GCCAsmStmt *gas = dyn_cast<GCCAsmStmt>(&s))
+      name = gas->getOutputName(i);
+    TargetInfo::ConstraintInfo info(s.getOutputConstraint(i), name);
+    // `validateOutputConstraint` modifies the `info` object by setting the
+    // read/write, clobber, allows-register, and allows-memory process.
+    bool isValid = cgf.getTarget().validateOutputConstraint(info);
+    (void)isValid;
+    assert(isValid && "Failed to parse output constraint");
+    out.push_back(info);
+  }
+
+  for (unsigned i = 0, e = s.getNumInputs(); i != e; ++i) {
+    StringRef name;
+    if (const GCCAsmStmt *gas = dyn_cast<GCCAsmStmt>(&s))
+      name = gas->getInputName(i);
+    TargetInfo::ConstraintInfo info(s.getInputConstraint(i), name);
+    // `validateInputConstraint` modifies the `info` object by setting the
+    // read/write, clobber, allows-register, and allows-memory process.
+    bool isValid = cgf.getTarget().validateInputConstraint(out, info);
+    assert(isValid && "Failed to parse input constraint");
+    (void)isValid;
+    in.push_back(info);
+  }
+}
+
+static void emitAsmStores(CIRGenFunction &cgf, const AsmStmt &s,
+                          const llvm::ArrayRef<mlir::Value> regResults,
+                          const llvm::ArrayRef<mlir::Type> resultRegTypes,
+                          const llvm::ArrayRef<mlir::Type> resultTruncRegTypes,
+                          const llvm::ArrayRef<LValue> resultRegDests,
+                          const llvm::ArrayRef<QualType> resultRegQualTys,
+                          const llvm::BitVector &resultTypeRequiresCast,
+                          const llvm::BitVector &resultRegIsFlagReg) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  CIRGenModule &cgm = cgf.cgm;
+  mlir::MLIRContext *ctx = builder.getContext();
+
+  assert(regResults.size() == resultRegTypes.size());
+  assert(regResults.size() == resultTruncRegTypes.size());
+  assert(regResults.size() == resultRegDests.size());
+
+  // ResultRegDests can be also populated by addReturnRegisterOutputs() above,
+  // in which case its size may grow.
+  assert(resultTypeRequiresCast.size() <= resultRegDests.size());
+  assert(resultRegIsFlagReg.size() <= resultRegDests.size());
+
+  for (unsigned i = 0, e = regResults.size(); i != e; ++i) {
+    mlir::Value tmp = regResults[i];
+    mlir::Type truncTy = resultTruncRegTypes[i];
+
+    if (i < resultRegIsFlagReg.size() && resultRegIsFlagReg[i])
+      assert(!cir::MissingFeatures::asmLLVMAssume());
+
+    // If the result type of the LLVM IR asm doesn't match the result type of
+    // the expression, do the conversion.
+    if (resultRegTypes[i] != truncTy) {
+
+      // Truncate the integer result to the right size, note that TruncTy can be
+      // a pointer.
+      if (mlir::isa<cir::FPTypeInterface>(truncTy)) {
+        tmp = builder.createFloatingCast(tmp, truncTy);
+      } else if (isa<cir::PointerType>(truncTy) &&
+                 isa<cir::IntType>(tmp.getType())) {
+        uint64_t resSize = cgm.getDataLayout().getTypeSizeInBits(truncTy);
+        tmp = builder.createIntCast(
+            tmp, cir::IntType::get(ctx, (unsigned)resSize, false));
+        tmp = builder.createIntToPtr(tmp, truncTy);
+      } else if (isa<cir::PointerType>(tmp.getType()) &&
+                 isa<cir::IntType>(truncTy)) {
+        uint64_t tmpSize = cgm.getDataLayout().getTypeSizeInBits(tmp.getType());
+        tmp = builder.createPtrToInt(
+            tmp, cir::IntType::get(ctx, (unsigned)tmpSize, false));
+        tmp = builder.createIntCast(tmp, truncTy);
+      } else if (isa<cir::IntType>(truncTy)) {
+        tmp = builder.createIntCast(tmp, truncTy);
+      } else if (isa<cir::VectorType>(truncTy)) {
+        assert(!cir::MissingFeatures::asmVectorType());
+      }
+    }
+
+    LValue dest = resultRegDests[i];
+    // ResultTypeRequiresCast elements correspond to the first
+    // ResultTypeRequiresCast.size() elements of RegResults.
+    if ((i < resultTypeRequiresCast.size()) && resultTypeRequiresCast[i]) {
+      unsigned size = cgf.getContext().getTypeSize(resultRegQualTys[i]);
+      Address addr =
+          dest.getAddress().withElementType(builder, resultRegTypes[i]);
+      if (cgm.getTargetCIRGenInfo().isScalarizableAsmOperand(cgf, truncTy)) {
+        builder.createStore(cgf.getLoc(s.getAsmLoc()), tmp, addr);
+        continue;
+      }
+
+      QualType ty =
+          cgf.getContext().getIntTypeForBitwidth(size, /*Signed=*/false);
+      if (ty.isNull()) {
+        const Expr *outExpr = s.getOutputExpr(i);
+        cgm.getDiags().Report(outExpr->getExprLoc(),
+                              diag::err_store_value_to_reg);
+        return;
+      }
+      dest = cgf.makeAddrLValue(addr, ty);
+    }
+
+    cgf.emitStoreThroughLValue(RValue::get(tmp), dest);
+  }
+}
+
 mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   // Assemble the final asm string.
   std::string asmString = s.generateAsmString(getContext());
+  SourceLocation srcLoc = s.getAsmLoc();
+  mlir::Location loc = getLoc(srcLoc);
+
+  // Get all the output and input constraints together.
+  SmallVector<TargetInfo::ConstraintInfo> outputConstraintInfos;
+  SmallVector<TargetInfo::ConstraintInfo> inputConstraintInfos;
+  collectInOutConstraintInfos(*this, s, outputConstraintInfos,
+                              inputConstraintInfos);
 
   bool isGCCAsmGoto = false;
 
   std::string constraints;
-  std::vector<mlir::Value> outArgs;
-  std::vector<mlir::Value> inArgs;
-  std::vector<mlir::Value> inOutArgs;
+  SmallVector<LValue> resultRegDests;
+  SmallVector<QualType> resultRegQualTys;
+  SmallVector<mlir::Type> resultRegTypes;
+  SmallVector<mlir::Type> resultTruncRegTypes;
+  SmallVector<mlir::Type> argTypes;
+  SmallVector<mlir::Type> argElemTypes;
+  SmallVector<mlir::Value> args;
+  SmallVector<mlir::Value> outArgs;
+  SmallVector<mlir::Value> inArgs;
+  SmallVector<mlir::Value> inOutArgs;
+  llvm::BitVector resultTypeRequiresCast;
+  llvm::BitVector resultRegIsFlagReg;
+
+  // Keep track of out constraints for tied input operand.
+  SmallVector<std::string> outputConstraints;
+
+  // Keep track of defined physregs.
+  llvm::SmallSet<std::string, 8> physRegOutputs;
 
   // An inline asm can be marked readonly if it meets the following conditions:
   //  - it doesn't have any sideeffects
@@ -102,11 +241,112 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   // in addition to meeting the conditions listed above.
   bool readOnly = true, readNone = true;
 
-  if (s.getNumInputs() != 0 || s.getNumOutputs() != 0) {
+  if (s.getNumInputs() != 0) {
     assert(!cir::MissingFeatures::asmInputOperands());
-    assert(!cir::MissingFeatures::asmOutputOperands());
-    cgm.errorNYI(s.getAsmLoc(), "asm with operands");
+    cgm.errorNYI(srcLoc, "asm with input operands");
   }
+
+  std::string outputConstraint;
+  for (unsigned i = 0, e = s.getNumOutputs(); i != e; ++i) {
+    TargetInfo::ConstraintInfo &info = outputConstraintInfos[i];
+
+    // Simplify the output constraint.
+    outputConstraint = s.getOutputConstraint(i);
+    outputConstraint = getTarget().simplifyConstraint(
+        StringRef(outputConstraint).drop_front());
+
+    const Expr *outExpr = s.getOutputExpr(i);
+    outExpr = outExpr->IgnoreParenNoopCasts(getContext());
+
+    std::string gccReg;
+    outputConstraint = s.addVariableConstraints(
+        outputConstraint, *outExpr, getTarget(), info.earlyClobber(),
+        [&](const Stmt *unspStmt, StringRef msg) {
+          cgm.errorUnsupported(unspStmt, msg);
+        },
+        &gccReg);
+
+    // Give an error on multiple outputs to same physreg.
+    if (!gccReg.empty() && !physRegOutputs.insert(gccReg).second)
+      cgm.error(srcLoc, "multiple outputs to hard register: " + gccReg);
+
+    outputConstraints.push_back(outputConstraint);
+    LValue dest = emitLValue(outExpr);
+
+    if (!constraints.empty())
+      constraints += ',';
+
+    // If this is a register output, then make the inline a sm return it
+    // by-value.  If this is a memory result, return the value by-reference.
+    QualType qty = outExpr->getType();
+    const bool isScalarOrAggregate =
+        hasScalarEvaluationKind(qty) || hasAggregateEvaluationKind(qty);
+    if (!info.allowsMemory() && isScalarOrAggregate) {
+      constraints += "=" + outputConstraint;
+      resultRegQualTys.push_back(qty);
+      resultRegDests.push_back(dest);
+
+      bool isFlagReg = llvm::StringRef(outputConstraint).starts_with("{@cc");
+      resultRegIsFlagReg.push_back(isFlagReg);
+
+      mlir::Type ty = convertTypeForMem(qty);
+      const bool requiresCast =
+          info.allowsRegister() &&
+          (cgm.getTargetCIRGenInfo().isScalarizableAsmOperand(*this, ty) ||
+           isa<cir::RecordType, cir::ArrayType>(ty));
+
+      resultTruncRegTypes.push_back(ty);
+      resultTypeRequiresCast.push_back(requiresCast);
+
+      if (requiresCast) {
+        unsigned size = getContext().getTypeSize(qty);
+        if (size == 0)
+          cgm.error(outExpr->getExprLoc(), "output size should not be zero");
+
+        ty = cir::IntType::get(&getMLIRContext(), size, false);
+      }
+
+      resultRegTypes.push_back(ty);
+      // If this output is tied to an input, and if the input is larger, then
+      // we need to set the actual result type of the inline asm node to be the
+      // same as the input type.
+      if (info.hasMatchingInput())
+        assert(!cir::MissingFeatures::asmInputOperands());
+
+      if (mlir::Type adjTy = cgm.getTargetCIRGenInfo().adjustInlineAsmType(
+              *this, outputConstraint, resultRegTypes.back()))
+        resultRegTypes.back() = adjTy;
+      else
+        cgm.getDiags().Report(srcLoc, diag::err_asm_invalid_type_in_input)
+            << outExpr->getType() << outputConstraint;
+
+      // Update largest vector width for any vector types.
+      assert(!cir::MissingFeatures::asmVectorType());
+    } else {
+      Address destAddr = dest.getAddress();
+
+      // Matrix types in memory are represented by arrays, but accessed through
+      // vector pointers, with the alignment specified on the access operation.
+      // For inline assembly, update pointer arguments to use vector pointers.
+      // Otherwise there will be a mis-match if the matrix is also an
+      // input-argument which is represented as vector.
+      if (isa<MatrixType>(outExpr->getType().getCanonicalType()))
+        destAddr =
+            destAddr.withElementType(builder, convertType(outExpr->getType()));
+
+      argTypes.push_back(destAddr.getType());
+      argElemTypes.push_back(destAddr.getElementType());
+      outArgs.push_back(destAddr.getPointer());
+      args.push_back(destAddr.getPointer());
+      constraints += "=*";
+      constraints += outputConstraint;
+      readOnly = readNone = false;
+    }
+
+    if (info.isReadWrite())
+      assert(!cir::MissingFeatures::asmInputOperands());
+
+  } // iterate over output operands
 
   bool hasUnwindClobber = false;
   collectClobbers(*this, s, constraints, hasUnwindClobber, readOnly, readNone);
@@ -115,8 +355,15 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
 
   mlir::Type resultType;
 
+  if (resultRegTypes.size() == 1)
+    resultType = resultRegTypes[0];
+  else if (resultRegTypes.size() > 1)
+    resultType = builder.getAnonRecordTy(resultRegTypes, /*packed=*/false,
+                                         /*padded=*/false);
+
   bool hasSideEffect = s.isVolatile() || s.getNumOutputs() == 0;
 
+  std::vector<mlir::Value> regResults;
   cir::InlineAsmOp ia = cir::InlineAsmOp::create(
       builder, getLoc(s.getAsmLoc()), resultType, operands, asmString,
       constraints, hasSideEffect, inferFlavor(cgm, s), mlir::ArrayAttr());
@@ -127,10 +374,56 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
     assert(!cir::MissingFeatures::asmUnwindClobber());
   } else {
     assert(!cir::MissingFeatures::asmMemoryEffects());
+
+    mlir::Value result;
+    if (ia.getNumResults())
+      result = ia.getResult(0);
+
+    llvm::SmallVector<mlir::Attribute> operandAttrs;
+
+    int i = 0;
+    for (auto typ : argElemTypes) {
+      if (typ) {
+        auto op = args[i++];
+        assert(mlir::isa<cir::PointerType>(op.getType()) &&
+               "pointer type expected");
+        assert(cast<cir::PointerType>(op.getType()).getPointee() == typ &&
+               "element type differs from pointee type!");
+
+        operandAttrs.push_back(mlir::UnitAttr::get(&getMLIRContext()));
+      } else {
+        // We need to add an attribute for every arg since later, during
+        // the lowering to LLVM IR the attributes will be assigned to the
+        // CallInsn argument by index, i.e. we can't skip null type here
+        operandAttrs.push_back(mlir::Attribute());
+      }
+    }
+    assert(args.size() == operandAttrs.size() &&
+           "The number of attributes is not even with the number of operands");
+
+    ia.setOperandAttrsAttr(builder.getArrayAttr(operandAttrs));
+
+    if (resultRegTypes.size() == 1) {
+      regResults.push_back(result);
+    } else if (resultRegTypes.size() > 1) {
+      CharUnits alignment = CharUnits::One();
+      mlir::Value dest =
+          emitAlloca("__asm_result", resultType, loc, alignment, false);
+      Address addr = Address(dest, alignment);
+      builder.createStore(loc, result, addr);
+
+      for (unsigned i = 0, e = resultRegTypes.size(); i != e; ++i) {
+        cir::PointerType typ = builder.getPointerTo(resultRegTypes[i]);
+        cir::GetMemberOp ptr = builder.createGetMember(loc, typ, dest, "", i);
+        cir::LoadOp tmp = builder.createLoad(loc, Address(ptr, alignment));
+        regResults.push_back(tmp);
+      }
+    }
   }
 
-  llvm::SmallVector<mlir::Attribute> operandAttrs;
-  ia.setOperandAttrsAttr(builder.getArrayAttr(operandAttrs));
+  emitAsmStores(*this, s, regResults, resultRegTypes, resultTruncRegTypes,
+                resultRegDests, resultRegQualTys, resultTypeRequiresCast,
+                resultRegIsFlagReg);
 
   return mlir::success();
 }

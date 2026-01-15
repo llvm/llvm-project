@@ -40,6 +40,7 @@ class AttributeCommonInfo;
 class FunctionDecl;
 class OMPTraitInfo;
 class OpenACCClause;
+struct StructuralEquivalenceContext;
 
 /// Attr - This represents one attribute.
 class Attr : public AttributeCommonInfo {
@@ -111,6 +112,9 @@ public:
   Attr *clone(ASTContext &C) const;
 
   bool isLateParsed() const { return IsLateParsed; }
+
+  bool isEquivalent(const Attr &Other,
+                    StructuralEquivalenceContext &Context) const;
 
   // Pretty print this attribute.
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
