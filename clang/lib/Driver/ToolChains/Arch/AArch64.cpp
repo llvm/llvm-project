@@ -159,10 +159,11 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::string MarchLowerCase = March.lower();
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
+  if (Split.first == "native")
+    return DecodeAArch64Mcpu(D, MarchLowerCase, Extensions);
+
   const llvm::AArch64::ArchInfo *ArchInfo =
       llvm::AArch64::parseArch(Split.first);
-  if (Split.first == "native")
-    ArchInfo = llvm::AArch64::getArchForCpu(llvm::sys::getHostCPUName().str());
   if (!ArchInfo)
     return false;
 
