@@ -343,14 +343,7 @@ public:
               std::get_if<parser::Designator>(&accObject.u)}) {
         if (const auto *name{parser::GetDesignatorNameIfDataRef(*designator)}) {
           if (name->symbol) {
-            if (HasUseDeviceObject(*name->symbol)) {
-              context_.Say(name->source,
-                  "'%s' appears in more than one USE_DEVICE clause "
-                  "on the same HOST_DATA directive"_err_en_US,
-                  name->ToString());
-            } else {
-              AddUseDeviceObject(*name->symbol);
-            }
+            AddUseDeviceObject(*name->symbol, *name);
           }
         }
       }
@@ -401,14 +394,18 @@ private:
   void AddRoutineInfoToSymbol(
       Symbol &, const parser::OpenACCRoutineConstruct &);
 
-  // Track use_device variables
-  void AddUseDeviceObject(SymbolRef object) {
-    useDeviceObjects_.insert(object);
+  // Track use_device variables and check for duplicates.
+  // Emits an error if the object was already added.
+  void AddUseDeviceObject(const Symbol &object, const parser::Name &name) {
+    auto result = useDeviceObjects_.insert(object);
+    if (!result.second) {
+      context_.Say(name.source,
+          "'%s' appears in more than one USE_DEVICE clause "
+          "on the same HOST_DATA directive"_err_en_US,
+          name.ToString());
+    }
   }
   void ClearUseDeviceObjects() { useDeviceObjects_.clear(); }
-  bool HasUseDeviceObject(const Symbol &object) {
-    return useDeviceObjects_.find(object) != useDeviceObjects_.end();
-  }
   UnorderedSymbolSet useDeviceObjects_;
 
   Scope *topScope_;
