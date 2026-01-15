@@ -420,6 +420,196 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
   llvm_unreachable("Unhandled case in switch");
 }
 
+static Instruction *getPointerOperand(Instruction *AI) {
+  if (auto *LI = dyn_cast<LoadInst>(AI))
+    return dyn_cast<Instruction>(LI->getPointerOperand());
+  if (auto *SI = dyn_cast<StoreInst>(AI))
+    return dyn_cast<Instruction>(SI->getPointerOperand());
+
+  return nullptr;
+}
+
+static const std::array<Intrinsic::ID, 2> HandleIntrins = {
+    Intrinsic::dx_resource_handlefrombinding,
+    Intrinsic::dx_resource_handlefromimplicitbinding,
+};
+
+static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
+  SmallVector<Value *> Worklist = {Ptr};
+  SmallVector<IntrinsicInst *> Handles;
+
+  while (!Worklist.empty()) {
+    Value *X = Worklist.pop_back_val();
+
+    if (!X->getType()->isPointerTy() && !X->getType()->isTargetExtTy())
+      return {}; // Early exit on store/load into non-resource
+
+    if (auto *Phi = dyn_cast<PHINode>(X))
+      for (Use &V : Phi->incoming_values())
+        Worklist.push_back(V.get());
+    else if (auto *Select = dyn_cast<SelectInst>(X))
+      for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
+        Worklist.push_back(V);
+    else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
+      Intrinsic::ID IID = II->getIntrinsicID();
+
+      if (IID == Intrinsic::dx_resource_getpointer)
+        Worklist.push_back(II->getArgOperand(/*Handle=*/0));
+
+      if (llvm::is_contained(HandleIntrins, IID))
+        Handles.push_back(II);
+    }
+  }
+
+  return Handles;
+}
+
+static hlsl::Binding getBinding(IntrinsicInst *Handle,
+                                DXILResourceTypeMap &DRTM) {
+  auto *HandleTy = cast<TargetExtType>(Handle->getType());
+  dxil::ResourceClass Class = DRTM[HandleTy].getResourceClass();
+  uint32_t Space = cast<ConstantInt>(Handle->getArgOperand(0))->getZExtValue();
+  uint32_t LowerBound =
+      cast<ConstantInt>(Handle->getArgOperand(1))->getZExtValue();
+  int32_t Size = cast<ConstantInt>(Handle->getArgOperand(2))->getZExtValue();
+  uint32_t UpperBound = Size < 0 ? UINT32_MAX : LowerBound + Size - 1;
+
+  return hlsl::Binding(Class, Space, LowerBound, UpperBound, nullptr);
+}
+
+static bool haveCommonBinding(ArrayRef<IntrinsicInst *> Handles,
+                              DXILResourceTypeMap &DRTM) {
+  unsigned NumHandles = Handles.size();
+  if (NumHandles <= 1)
+    return false; // No-legalization required
+
+  hlsl::Binding B = getBinding(Handles[0], DRTM);
+  for (unsigned I = 1; I < NumHandles; I++)
+    if (B != getBinding(Handles[I], DRTM))
+      return false; // No-legalization is possible
+
+  return true;
+}
+
+// getHandleIndicies traverses up the control flow that a ptr came from and
+// propogates back the GetPtrIdx and HandleIdx:
+//
+//  - GetPtrIdx is the index of dx.resource.getpointer
+//  - HandleIdx is the index of dx.resource.handlefrom.*
+static std::pair<Value *, Value *>
+getHandleIndicies(Instruction *I,
+                  SmallSetVector<Instruction *, 16> &DeadInsts) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
+      DeadInsts.insert(II);
+      return {nullptr, II->getArgOperand(/*Index=*/3)};
+    }
+
+    if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+      auto *V = dyn_cast<Instruction>(II->getArgOperand(/*Handle=*/0));
+      auto Idx = getHandleIndicies(V, DeadInsts);
+      assert(Idx.first == nullptr &&
+             "Encountered multiple dx.resource.getpointers in ptr chain?");
+
+      DeadInsts.insert(II);
+      return {II->getArgOperand(1), Idx.second};
+    }
+  }
+
+  if (auto *Phi = dyn_cast<PHINode>(I)) {
+    unsigned NumEdges = Phi->getNumIncomingValues();
+    assert(NumEdges != 0 && "Malformed Phi Node");
+
+    IRBuilder<> Builder(Phi);
+    PHINode *GetPtrPhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
+    PHINode *HandlePhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
+
+    bool HasGetPtr = true;
+    for (unsigned I = 0; I < NumEdges; I++) {
+      auto *BB = Phi->getIncomingBlock(I);
+      auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(I));
+      auto [GetPtrIdx, HandleIdx] = getHandleIndicies(V, DeadInsts);
+      HasGetPtr &= GetPtrIdx != nullptr;
+      if (HasGetPtr)
+        GetPtrPhi->addIncoming(GetPtrIdx, BB);
+      HandlePhi->addIncoming(HandleIdx, BB);
+    }
+
+    if (HasGetPtr)
+      Builder.Insert(GetPtrPhi);
+    else
+      GetPtrPhi = nullptr;
+
+    Builder.Insert(HandlePhi);
+
+    DeadInsts.insert(Phi);
+    return {GetPtrPhi, HandlePhi};
+  }
+
+  if (auto *Select = dyn_cast<SelectInst>(I)) {
+    auto *TrueV = dyn_cast<Instruction>(Select->getTrueValue());
+    auto [TrueGetPtrIdx, TrueHandleIdx] = getHandleIndicies(TrueV, DeadInsts);
+
+    auto *FalseV = dyn_cast<Instruction>(Select->getFalseValue());
+    auto [FalseGetPtrIdx, FalseHandleIdx] =
+        getHandleIndicies(FalseV, DeadInsts);
+
+    IRBuilder<> Builder(Select);
+    Value *GetPtrSelect = nullptr;
+
+    if (TrueGetPtrIdx && FalseGetPtrIdx)
+      GetPtrSelect = Builder.CreateSelect(Select->getCondition(), TrueGetPtrIdx,
+                                          FalseGetPtrIdx);
+
+    auto *HandleSelect = Builder.CreateSelect(Select->getCondition(),
+                                              TrueHandleIdx, FalseHandleIdx);
+    DeadInsts.insert(Select);
+    return {GetPtrSelect, HandleSelect};
+  }
+
+  llvm_unreachable("collectUsedHandles should assure this does not occur");
+}
+
+static void
+replaceHandleWithIndicies(Instruction *Ptr, IntrinsicInst *OldHandle,
+                          SmallSetVector<Instruction *, 16> &DeadInsts) {
+  auto [GetPtrIdx, HandleIdx] = getHandleIndicies(Ptr, DeadInsts);
+
+  IRBuilder<> Builder(Ptr);
+  IntrinsicInst *Handle = cast<IntrinsicInst>(OldHandle->clone());
+  Handle->setArgOperand(/*Index=*/3, HandleIdx);
+  Builder.Insert(Handle);
+
+  auto *GetPtr = Builder.CreateIntrinsic(
+      Ptr->getType(), Intrinsic::dx_resource_getpointer, {Handle, GetPtrIdx});
+
+  Ptr->replaceAllUsesWith(GetPtr);
+  DeadInsts.insert(Ptr);
+}
+
+static bool tryReplaceHandlesWithIndices(Function &F,
+                                         DXILResourceTypeMap &DRTM) {
+  SmallSetVector<Instruction *, 16> DeadInsts;
+  for (BasicBlock &BB : make_early_inc_range(F))
+    for (Instruction &I : BB)
+      if (auto *PtrOp = getPointerOperand(&I)) {
+        SmallVector<IntrinsicInst *> Handles = collectUsedHandles(PtrOp);
+        if (Handles.size() <= 1)
+          continue;
+        // Can replace with an index into handle call
+        if (haveCommonBinding(Handles, DRTM))
+          replaceHandleWithIndicies(PtrOp, Handles[0], DeadInsts);
+      }
+
+  bool MadeChanges = DeadInsts.size() > 0;
+
+  for (auto *I : llvm::reverse(DeadInsts))
+    if (I->hasNUses(0)) // Handle maybe used elsewhere aside from replaced path
+      I->eraseFromParent();
+
+  return MadeChanges;
+}
+
 static SmallVector<Instruction *> collectBlockUseDef(Instruction *Start) {
   SmallPtrSet<Instruction *, 32> Visited;
   SmallVector<Instruction *, 32> Worklist;
@@ -549,13 +739,17 @@ static bool hoistGetPtrUses(Function &F, DXILResourceTypeMap &DRTM) {
 }
 
 static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
-
-  // Undo any InstCombine optimizations that caused a dx.resource.getpointer
-  // ptr to sink. Since a Convergent op can't sink through control flow, we are
-  // guarenteed that the only case this could occur is through GVN. Which is
-  // handled above. We are then safe to use the below transform.
+  // Try to replace dx.resource.handlefrom.*.binding and dx.resource.getpointer
+  // calls with their respective index values and propogate the index values to
+  // be used at resource access. This legalizes the use of handles when:
+  //  - A local resource is created from an Index into a global binding
+  //  - GVN sink of store/load of a ptr/handle
+  bool MadeReplacements = tryReplaceHandlesWithIndices(F, DRTM);
+  // Since a Convergent op can't sink through control flow, and GVN is handled
+  // above, we can now undo any InstCombine optimizations that caused a
+  // dx.resource.getpointer ptr to sink by hoisting it back up.
   bool MadeHoistChanges = hoistGetPtrUses(F, DRTM);
-  return MadeHoistChanges;
+  return MadeReplacements || MadeHoistChanges;
 }
 
 static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
