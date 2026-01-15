@@ -207,7 +207,9 @@ static size_t findCommentStart(StringRef line) {
   if (slashPos == StringRef::npos)
     return StringRef::npos;
 
-  // Fast path: no quote before the '//', so it's a real comment.
+  // Fast path: comment at start of line, or no quote before the '//'.
+  if (slashPos == 0)
+    return 0;
   size_t quotePos = line.find('"');
   if (quotePos == StringRef::npos || quotePos > slashPos)
     return slashPos;
@@ -218,7 +220,7 @@ static size_t findCommentStart(StringRef line) {
     char c = line[i];
     if (inString) {
       // Skip escaped characters inside strings.
-      if (c == '\\' && i + 1 < e) {
+      if (c == '\\') {
         ++i;
         continue;
       }
