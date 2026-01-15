@@ -293,11 +293,11 @@ void ReachingDefInfo::run(MachineFunction &mf) {
 }
 
 void ReachingDefInfo::print(raw_ostream &OS) {
-  OS << "RDA results for " << MF->getName() << "\n";
   int Num = 0;
   DenseMap<MachineInstr *, int> InstToNumMap;
   SmallPtrSet<MachineInstr *, 2> Defs;
   for (MachineBasicBlock &MBB : *MF) {
+    OS << printMBBReference(MBB) << ":\n";
     for (MachineInstr &MI : MBB) {
       for (MachineOperand &MO : MI.operands()) {
         Register Reg;

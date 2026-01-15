@@ -410,7 +410,6 @@ define <vscale x 4 x i1> @lane_mask_nxv4i1_imm5() {
 ; CHECK-LABEL: lane_mask_nxv4i1_imm5:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #5 // =0x5
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -432,7 +431,6 @@ define <vscale x 16 x i1> @lane_mask_nxv16i1_imm10() {
 ; CHECK-LABEL: lane_mask_nxv16i1_imm10:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #10 // =0xa
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
