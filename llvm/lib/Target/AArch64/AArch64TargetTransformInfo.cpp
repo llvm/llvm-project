@@ -6777,6 +6777,11 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     [[fallthrough]];
   case Instruction::And:
   case Instruction::Or:
+    // Shift can be fold into scalar AND/ORR/EOR,
+    // but not the non-negated operand of BIC/ORN/EON.
+    if (!(I->getType()->isVectorTy() && ST->hasNEON()) &&
+        match(I, m_c_BinOp(m_Shift(m_Value(), m_ConstantInt()), m_Value())))
+      break;
     for (auto &Op : I->operands()) {
       // (and/or/xor X, (not Y)) -> (bic/orn/eon X, Y)
       if (match(Op.get(), m_Not(m_Value()))) {
