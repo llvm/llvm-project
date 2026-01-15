@@ -415,9 +415,8 @@ define <vscale x 32 x bfloat> @vfmax_vv_nxv32bf16_unmasked(<vscale x 32 x bfloat
 ; CHECK-NEXT:    vl8r.v v0, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmfeq.vv v24, v8, v8
+; CHECK-NEXT:    vmfeq.vv v0, v8, v8
 ; CHECK-NEXT:    vmfeq.vv v7, v16, v16
-; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vmerge.vvm v24, v8, v16, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
@@ -994,9 +993,8 @@ define <vscale x 32 x half> @vfmax_vv_nxv32f16_unmasked(<vscale x 32 x half> %va
 ; ZVFHMIN-NEXT:    vl8r.v v0, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmfeq.vv v24, v8, v8
+; ZVFHMIN-NEXT:    vmfeq.vv v0, v8, v8
 ; ZVFHMIN-NEXT:    vmfeq.vv v7, v16, v16
-; ZVFHMIN-NEXT:    vmv1r.v v0, v24
 ; ZVFHMIN-NEXT:    vmerge.vvm v24, v8, v16, v0
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 4
