@@ -1884,13 +1884,13 @@ void OmpVisitor::ResolveMapperModifier(const parser::OmpMapper &mapper) {
       context().Say(mapper.v.source,
           "Name '%s' should be a mapper name"_err_en_US, mapper.v.source);
     else
-      const_cast<parser::OmpMapper &>(mapper).v.symbol = symbol;
+      mapper.v.symbol = symbol;
   } else {
     // Allow the special 'default' mapper identifier without prior
     // declaration so lowering can recognize and handle it. Emit an
     // error for any other missing mapper identifier.
     if (mapper.v.source.ToString() == "default") {
-      const_cast<parser::OmpMapper &>(mapper).v.symbol =
+      mapper.v.symbol =
           &MakeSymbol(mapper.v, MiscDetails{MiscDetails::Kind::ConstructName});
     } else {
       context().Say(
