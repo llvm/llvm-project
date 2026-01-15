@@ -182,6 +182,13 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
                 mlir::acc::FirstprivateRecipeOp>(definingOp))
     return true;
 
+  // Check if the defining op is a global variable that is device data.
+  // Device data is already resident on the device and does not need mapping.
+  if (auto globalVar =
+          mlir::dyn_cast<mlir::acc::GlobalVariableOpInterface>(definingOp))
+    if (globalVar.isDeviceData())
+      return true;
+
   // Check if the defining op is a function
   if (auto func =
           mlir::dyn_cast_if_present<mlir::FunctionOpInterface>(definingOp)) {
@@ -206,6 +213,55 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   // A declare attribute is needed for symbol references.
   bool hasDeclare = definingOp->hasAttr(mlir::acc::getDeclareAttrName());
   return hasDeclare;
+}
+
+bool mlir::acc::isDeviceValue(mlir::Value val) {
+  // Check if the value is device data via type interfaces.
+  // Device data is already resident on the device and does not need mapping.
+  if (auto mappableTy = dyn_cast<mlir::acc::MappableType>(val.getType()))
+    if (mappableTy.isDeviceData(val))
+      return true;
+
+  if (auto pointerLikeTy = dyn_cast<mlir::acc::PointerLikeType>(val.getType()))
+    if (pointerLikeTy.isDeviceData(val))
+      return true;
+
+  // Handle operations that access a partial entity - check if the base entity
+  // is device data.
+  if (auto *defOp = val.getDefiningOp()) {
+    if (auto partialAccess =
+            dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+      if (mlir::Value base = partialAccess.getBaseEntity())
+        return isDeviceValue(base);
+    }
+
+    // Handle address_of - check if the referenced global is device data.
+    if (auto addrOfIface =
+            dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+      auto symbol = addrOfIface.getSymbol();
+      if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+              mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+        return global.isDeviceData();
+    }
+  }
+
+  return false;
+}
+
+bool mlir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
+  // If this is produced by an ACC data entry operation, it is valid.
+  if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(val.getDefiningOp()))
+    return true;
+
+  // If the value is only used by private clauses, it is not a live-in.
+  if (isOnlyUsedByPrivateClauses(val, region))
+    return true;
+
+  // If this is device data, it is valid.
+  if (isDeviceValue(val))
+    return true;
+
+  return false;
 }
 
 llvm::SmallVector<mlir::Value>

@@ -104,22 +104,20 @@ entry:
 declare i32 @strlen(ptr noundef) nounwind
 attributes #0 = { strictfp }
 
-define ptr @test_memmove(ptr noundef %destination, ptr noundef %source, i32 noundef %num) #0 {
+; Function Attrs: noinline nounwind optnone
+define ptr @test_memmove(ptr noundef %dst, ptr noundef %src, i32 noundef %n) nounwind {
 ; CHECK-AIX-32-P9-LABEL: test_memmove:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    mflr r0
-; CHECK-AIX-32-P9-NEXT:    stwu r1, -80(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r0, 88(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r31, 76(r1) # 4-byte Folded Spill
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
 ; CHECK-AIX-32-P9-NEXT:    mr r31, r3
-; CHECK-AIX-32-P9-NEXT:    stw r3, 72(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r4, 68(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r5, 64(r1)
 ; CHECK-AIX-32-P9-NEXT:    bl .___memmove[PR]
 ; CHECK-AIX-32-P9-NEXT:    nop
 ; CHECK-AIX-32-P9-NEXT:    mr r3, r31
-; CHECK-AIX-32-P9-NEXT:    lwz r31, 76(r1) # 4-byte Folded Reload
-; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 80
+; CHECK-AIX-32-P9-NEXT:    lwz r31, 60(r1) # 4-byte Folded Reload
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
 ; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
 ; CHECK-AIX-32-P9-NEXT:    mtlr r0
 ; CHECK-AIX-32-P9-NEXT:    blr
@@ -127,50 +125,32 @@ define ptr @test_memmove(ptr noundef %destination, ptr noundef %source, i32 noun
 ; CHECK-LINUX32-P9-LABEL: test_memmove:
 ; CHECK-LINUX32-P9:       # %bb.0: # %entry
 ; CHECK-LINUX32-P9-NEXT:    mflr r0
-; CHECK-LINUX32-P9-NEXT:    stwu r1, -32(r1)
-; CHECK-LINUX32-P9-NEXT:    stw r0, 36(r1)
-; CHECK-LINUX32-P9-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LINUX32-P9-NEXT:    .cfi_offset lr, 4
-; CHECK-LINUX32-P9-NEXT:    .cfi_offset r30, -8
-; CHECK-LINUX32-P9-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r30, 8(r1) # 4-byte Folded Spill
 ; CHECK-LINUX32-P9-NEXT:    mr r30, r3
-; CHECK-LINUX32-P9-NEXT:    stw r3, 20(r1)
-; CHECK-LINUX32-P9-NEXT:    stw r4, 16(r1)
-; CHECK-LINUX32-P9-NEXT:    stw r5, 12(r1)
 ; CHECK-LINUX32-P9-NEXT:    bl memmove
 ; CHECK-LINUX32-P9-NEXT:    mr r3, r30
-; CHECK-LINUX32-P9-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
-; CHECK-LINUX32-P9-NEXT:    lwz r0, 36(r1)
-; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 32
+; CHECK-LINUX32-P9-NEXT:    lwz r30, 8(r1) # 4-byte Folded Reload
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
 ; CHECK-LINUX32-P9-NEXT:    mtlr r0
 ; CHECK-LINUX32-P9-NEXT:    blr
 entry:
-  %destination.addr = alloca ptr, align 4
-  %source.addr = alloca ptr, align 4
-  %num.addr = alloca i32, align 4
-  store ptr %destination, ptr %destination.addr, align 4
-  store ptr %source, ptr %source.addr, align 4
-  store i32 %num, ptr %num.addr, align 4
-  %0 = load ptr, ptr %destination.addr, align 4
-  %1 = load ptr, ptr %source.addr, align 4
-  %2 = load i32, ptr %num.addr, align 4
-  call void @llvm.memmove.p0.p0.i32(ptr align 1 %0, ptr align 1 %1, i32 %2, i1 false)
-  ret ptr %0
+  call void @llvm.memmove.p0.p0.i32(ptr align 1 %dst, ptr align 1 %src, i32 %n, i1 false)
+  ret ptr %dst
 }
-
 declare void @llvm.memmove.p0.p0.i32(ptr writeonly captures(none), ptr readonly captures(none), i32, i1 immarg)
 
-define void @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
+define ptr @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
 ; CHECK-AIX-32-P9-LABEL: strcpy_test:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    mflr r0
-; CHECK-AIX-32-P9-NEXT:    stwu r1, -80(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r0, 88(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r3, 72(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r4, 64(r1)
-; CHECK-AIX-32-P9-NEXT:    bl .strcpy[PR]
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    bl .___strcpy[PR]
 ; CHECK-AIX-32-P9-NEXT:    nop
-; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 80
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
 ; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
 ; CHECK-AIX-32-P9-NEXT:    mtlr r0
 ; CHECK-AIX-32-P9-NEXT:    blr
@@ -178,24 +158,210 @@ define void @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
 ; CHECK-LINUX32-P9-LABEL: strcpy_test:
 ; CHECK-LINUX32-P9:       # %bb.0: # %entry
 ; CHECK-LINUX32-P9-NEXT:    mflr r0
-; CHECK-LINUX32-P9-NEXT:    stwu r1, -32(r1)
-; CHECK-LINUX32-P9-NEXT:    stw r0, 36(r1)
-; CHECK-LINUX32-P9-NEXT:    stw r3, 24(r1)
-; CHECK-LINUX32-P9-NEXT:    stw r4, 16(r1)
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
 ; CHECK-LINUX32-P9-NEXT:    bl strcpy
-; CHECK-LINUX32-P9-NEXT:    lwz r0, 36(r1)
-; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 32
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
 ; CHECK-LINUX32-P9-NEXT:    mtlr r0
 ; CHECK-LINUX32-P9-NEXT:    blr
 entry:
-  %dest.addr = alloca ptr, align 8
-  %src.addr = alloca ptr, align 8
-  store ptr %dest, ptr %dest.addr, align 8
-  store ptr %src, ptr %src.addr, align 8
-  %0 = load ptr, ptr %dest.addr, align 8
-  %1 = load ptr, ptr %src.addr, align 8
-  %call = call ptr @strcpy(ptr noundef %0, ptr noundef %1)
-  ret void
+  %call = call ptr @strcpy(ptr noundef %dest, ptr noundef %src)
+  ret ptr %call
 }
 
 declare ptr @strcpy(ptr noundef, ptr noundef)
+
+define ptr @stpcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
+; CHECK-AIX-32-P9-LABEL: stpcpy_test:
+; CHECK-AIX-32-P9:       # %bb.0: # %entry
+; CHECK-AIX-32-P9-NEXT:    mflr r0
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    bl .stpcpy[PR]
+; CHECK-AIX-32-P9-NEXT:    nop
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
+; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
+; CHECK-AIX-32-P9-NEXT:    mtlr r0
+; CHECK-AIX-32-P9-NEXT:    blr
+;
+; CHECK-LINUX32-P9-LABEL: stpcpy_test:
+; CHECK-LINUX32-P9:       # %bb.0: # %entry
+; CHECK-LINUX32-P9-NEXT:    mflr r0
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    bl stpcpy
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
+; CHECK-LINUX32-P9-NEXT:    mtlr r0
+; CHECK-LINUX32-P9-NEXT:    blr
+entry:
+  %call = call ptr @stpcpy(ptr noundef %dest, ptr noundef %src)
+  ret ptr %call
+}
+
+declare ptr @stpcpy(ptr noundef, ptr noundef)
+
+define ptr @test_memcpy(ptr noundef %dst, ptr noundef %src, i32 noundef %n) nounwind {
+; CHECK-AIX-32-P9-LABEL: test_memcpy:
+; CHECK-AIX-32-P9:       # %bb.0:
+; CHECK-AIX-32-P9-NEXT:    mflr r0
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
+; CHECK-AIX-32-P9-NEXT:    mr r31, r3
+; CHECK-AIX-32-P9-NEXT:    bl .___memmove[PR]
+; CHECK-AIX-32-P9-NEXT:    nop
+; CHECK-AIX-32-P9-NEXT:    mr r3, r31
+; CHECK-AIX-32-P9-NEXT:    lwz r31, 60(r1) # 4-byte Folded Reload
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
+; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
+; CHECK-AIX-32-P9-NEXT:    mtlr r0
+; CHECK-AIX-32-P9-NEXT:    blr
+;
+; CHECK-LINUX32-P9-LABEL: test_memcpy:
+; CHECK-LINUX32-P9:       # %bb.0:
+; CHECK-LINUX32-P9-NEXT:    mflr r0
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r30, 8(r1) # 4-byte Folded Spill
+; CHECK-LINUX32-P9-NEXT:    mr r30, r3
+; CHECK-LINUX32-P9-NEXT:    bl memcpy
+; CHECK-LINUX32-P9-NEXT:    mr r3, r30
+; CHECK-LINUX32-P9-NEXT:    lwz r30, 8(r1) # 4-byte Folded Reload
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
+; CHECK-LINUX32-P9-NEXT:    mtlr r0
+; CHECK-LINUX32-P9-NEXT:    blr
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %dst, ptr align 1 %src, i32 %n, i1 false)
+  ret ptr %dst
+}
+
+declare void @llvm.memcpy.p0.p0.i32(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i32, i1 immarg)
+
+define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i32 noundef %num) nounwind {
+; CHECK-AIX-32-P9-LABEL: test_memset:
+; CHECK-AIX-32-P9:       # %bb.0: # %entry
+; CHECK-AIX-32-P9-NEXT:    mflr r0
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
+; CHECK-AIX-32-P9-NEXT:    mr r31, r3
+; CHECK-AIX-32-P9-NEXT:    bl .___memset[PR]
+; CHECK-AIX-32-P9-NEXT:    nop
+; CHECK-AIX-32-P9-NEXT:    mr r3, r31
+; CHECK-AIX-32-P9-NEXT:    lwz r31, 60(r1) # 4-byte Folded Reload
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
+; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
+; CHECK-AIX-32-P9-NEXT:    mtlr r0
+; CHECK-AIX-32-P9-NEXT:    blr
+;
+; CHECK-LINUX32-P9-LABEL: test_memset:
+; CHECK-LINUX32-P9:       # %bb.0: # %entry
+; CHECK-LINUX32-P9-NEXT:    mflr r0
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r30, 8(r1) # 4-byte Folded Spill
+; CHECK-LINUX32-P9-NEXT:    mr r30, r3
+; CHECK-LINUX32-P9-NEXT:    bl memset
+; CHECK-LINUX32-P9-NEXT:    mr r3, r30
+; CHECK-LINUX32-P9-NEXT:    lwz r30, 8(r1) # 4-byte Folded Reload
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
+; CHECK-LINUX32-P9-NEXT:    mtlr r0
+; CHECK-LINUX32-P9-NEXT:    blr
+entry:
+  %0 = trunc i32 %value to i8
+  call void @llvm.memset.p0.i32(ptr align 1 %dst, i8 %0, i32 %num, i1 false)
+  ret ptr %dst
+}
+
+define ptr @test_strstr(ptr noundef %s1, ptr noundef %s2) nounwind {
+; CHECK-AIX-32-P9-LABEL: test_strstr:
+; CHECK-AIX-32-P9:       # %bb.0: # %entry
+; CHECK-AIX-32-P9-NEXT:    mflr r0
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    bl .___strstr[PR]
+; CHECK-AIX-32-P9-NEXT:    nop
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
+; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
+; CHECK-AIX-32-P9-NEXT:    mtlr r0
+; CHECK-AIX-32-P9-NEXT:    blr
+;
+; CHECK-LINUX32-P9-LABEL: test_strstr:
+; CHECK-LINUX32-P9:       # %bb.0: # %entry
+; CHECK-LINUX32-P9-NEXT:    mflr r0
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    bl strstr
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
+; CHECK-LINUX32-P9-NEXT:    mtlr r0
+; CHECK-LINUX32-P9-NEXT:    blr
+entry:
+  %call = call ptr @strstr(ptr noundef %s1, ptr noundef %s2)
+  ret ptr %call
+}
+
+declare ptr @strstr(ptr noundef, ptr noundef)
+
+define ptr @test_memccpy(ptr noalias noundef %dst, ptr noalias noundef %src, i32 noundef signext %c, i32 noundef %n) nounwind {
+; CHECK-AIX-32-P9-LABEL: test_memccpy:
+; CHECK-AIX-32-P9:       # %bb.0: # %entry
+; CHECK-AIX-32-P9-NEXT:    mflr r0
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    bl .memccpy[PR]
+; CHECK-AIX-32-P9-NEXT:    nop
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
+; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
+; CHECK-AIX-32-P9-NEXT:    mtlr r0
+; CHECK-AIX-32-P9-NEXT:    blr
+;
+; CHECK-LINUX32-P9-LABEL: test_memccpy:
+; CHECK-LINUX32-P9:       # %bb.0: # %entry
+; CHECK-LINUX32-P9-NEXT:    mflr r0
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    bl memccpy
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
+; CHECK-LINUX32-P9-NEXT:    mtlr r0
+; CHECK-LINUX32-P9-NEXT:    blr
+entry:
+  %call = call ptr @memccpy(ptr noundef %dst, ptr noundef %src, i32 noundef signext %c, i32 noundef %n)
+  ret ptr %call
+}
+
+declare ptr @memccpy(ptr noundef, ptr noundef, i32 noundef signext, i32 noundef)
+
+define signext i32 @test_strcmp(ptr noundef %s1, ptr noundef %s2) nounwind {
+; CHECK-AIX-32-P9-LABEL: test_strcmp:
+; CHECK-AIX-32-P9:       # %bb.0: # %entry
+; CHECK-AIX-32-P9-NEXT:    mflr r0
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    bl .strcmp[PR]
+; CHECK-AIX-32-P9-NEXT:    nop
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
+; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
+; CHECK-AIX-32-P9-NEXT:    mtlr r0
+; CHECK-AIX-32-P9-NEXT:    blr
+;
+; CHECK-LINUX32-P9-LABEL: test_strcmp:
+; CHECK-LINUX32-P9:       # %bb.0: # %entry
+; CHECK-LINUX32-P9-NEXT:    mflr r0
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    bl strcmp
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
+; CHECK-LINUX32-P9-NEXT:    mtlr r0
+; CHECK-LINUX32-P9-NEXT:    blr
+entry:
+  %call = call signext i32 @strcmp(ptr noundef %s1, ptr noundef %s2)
+  ret i32 %call
+}
+
+declare signext i32 @strcmp(ptr noundef, ptr noundef)

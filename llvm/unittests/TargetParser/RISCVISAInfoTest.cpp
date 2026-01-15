@@ -1313,6 +1313,7 @@ R"(All available -march extensions for RISC-V
     svnapot              1.0
     svpbmt               1.0
     svvptc               1.0
+    xaifet               1.0
     xandesbfhcvt         5.0
     xandesperf           5.0
     xandesvbfhcvt        5.0
@@ -1331,6 +1332,7 @@ R"(All available -march extensions for RISC-V
     xmipscmov            1.0
     xmipsexectl          1.0
     xmipslsp             1.0
+    xqccmp               0.3
     xqci                 0.13
     xqcia                0.7
     xqciac               0.3
@@ -1401,7 +1403,6 @@ Experimental extensions
     zvqdotq              0.0
     smpmpmt              0.6
     svukte               0.3
-    xqccmp               0.3
     xrivosvisni          0.1
     xrivosvizip          0.1
     xsfmclic             0.1

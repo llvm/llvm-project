@@ -635,7 +635,6 @@ void BottleneckAnalysis::printView(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   printBottleneckHints(TempStream);
-  TempStream.flush();
   OS << Buffer;
   printCriticalSequence(OS);
 }

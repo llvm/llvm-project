@@ -485,8 +485,10 @@ define amdgpu_kernel void @fmuladd_f16_imm_a(
 ; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-DENORM-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX11-DENORM-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX11-DENORM-TRUE16-NEXT:    v_fmac_f16_e32 v1.l, 0x4200, v0.l
-; GFX11-DENORM-TRUE16-NEXT:    buffer_store_b16 v1, off, s[8:11], 0
+; GFX11-DENORM-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-DENORM-TRUE16-NEXT:    v_fmamk_f16 v0.l, v0.l, 0x4200, v0.h
+; GFX11-DENORM-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-DENORM-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-DENORM-FAKE16-LABEL: fmuladd_f16_imm_a:
@@ -509,8 +511,8 @@ define amdgpu_kernel void @fmuladd_f16_imm_a(
 ; GFX11-DENORM-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-DENORM-FAKE16-NEXT:    s_mov_b32 s8, s0
 ; GFX11-DENORM-FAKE16-NEXT:    s_mov_b32 s9, s1
-; GFX11-DENORM-FAKE16-NEXT:    v_fmac_f16_e32 v1, 0x4200, v0
-; GFX11-DENORM-FAKE16-NEXT:    buffer_store_b16 v1, off, s[8:11], 0
+; GFX11-DENORM-FAKE16-NEXT:    v_fmamk_f16 v0, v0, 0x4200, v1
+; GFX11-DENORM-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-DENORM-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %b,
@@ -717,8 +719,10 @@ define amdgpu_kernel void @fmuladd_f16_imm_b(
 ; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-DENORM-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX11-DENORM-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX11-DENORM-TRUE16-NEXT:    v_fmac_f16_e32 v1.l, 0x4200, v0.l
-; GFX11-DENORM-TRUE16-NEXT:    buffer_store_b16 v1, off, s[8:11], 0
+; GFX11-DENORM-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-DENORM-TRUE16-NEXT:    v_fmamk_f16 v0.l, v0.l, 0x4200, v0.h
+; GFX11-DENORM-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-DENORM-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-DENORM-FAKE16-LABEL: fmuladd_f16_imm_b:
@@ -741,8 +745,8 @@ define amdgpu_kernel void @fmuladd_f16_imm_b(
 ; GFX11-DENORM-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-DENORM-FAKE16-NEXT:    s_mov_b32 s8, s0
 ; GFX11-DENORM-FAKE16-NEXT:    s_mov_b32 s9, s1
-; GFX11-DENORM-FAKE16-NEXT:    v_fmac_f16_e32 v1, 0x4200, v0
-; GFX11-DENORM-FAKE16-NEXT:    buffer_store_b16 v1, off, s[8:11], 0
+; GFX11-DENORM-FAKE16-NEXT:    v_fmamk_f16 v0, v0, 0x4200, v1
+; GFX11-DENORM-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-DENORM-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,

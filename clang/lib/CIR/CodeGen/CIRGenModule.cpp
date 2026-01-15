@@ -1527,9 +1527,18 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   const auto *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
 
   // A member function pointer.
-  if (isa<CXXMethodDecl>(decl)) {
-    errorNYI(e->getSourceRange(), "emitMemberPointerConstant: method pointer");
-    return {};
+  if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
+    auto ty = mlir::cast<cir::MethodType>(convertType(e->getType()));
+    if (methodDecl->isVirtual()) {
+      assert(!cir::MissingFeatures::virtualMethodAttr());
+      errorNYI(e->getSourceRange(),
+               "emitMemberPointerConstant: virtual method pointer");
+      return {};
+    }
+
+    cir::FuncOp methodFuncOp = getAddrOfFunction(methodDecl);
+    return cir::ConstantOp::create(builder, loc,
+                                   builder.getMethodAttr(ty, methodFuncOp));
   }
 
   // Otherwise, a member data pointer.
@@ -2698,6 +2707,26 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
 DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature) {
   return errorNYI(loc.getBegin(), feature) << loc;
+}
+
+void CIRGenModule::error(SourceLocation loc, StringRef error) {
+  unsigned diagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error, "%0");
+  getDiags().Report(astContext.getFullLoc(loc), diagID) << error;
+}
+
+/// Print out an error that codegen doesn't support the specified stmt yet.
+void CIRGenModule::errorUnsupported(const Stmt *s, llvm::StringRef type) {
+  unsigned diagId = diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                          "cannot compile this %0 yet");
+  diags.Report(astContext.getFullLoc(s->getBeginLoc()), diagId)
+      << type << s->getSourceRange();
+}
+
+/// Print out an error that codegen doesn't support the specified decl yet.
+void CIRGenModule::errorUnsupported(const Decl *d, llvm::StringRef type) {
+  unsigned diagId = diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                          "cannot compile this %0 yet");
+  diags.Report(astContext.getFullLoc(d->getLocation()), diagId) << type;
 }
 
 void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,

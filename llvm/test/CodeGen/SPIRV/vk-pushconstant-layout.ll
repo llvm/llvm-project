@@ -5,6 +5,8 @@
 %struct.T = type { [3 x <2 x float>] }
 %struct.S = type <{ float, <3 x float>, %struct.T }>
 
+; CHECK-NOT: OpCapability Linkage
+
 ; CHECK-DAG: %[[#PTR_PCS:]] = OpTypePointer PushConstant %[[#S_S:]]
 
 ; CHECK-DAG: %[[#F32:]] = OpTypeFloat 32

@@ -297,7 +297,8 @@ public:
   llvm::Expected<protocol::EvaluateResponseBody>
   Run(const protocol::EvaluateArguments &) const override;
   FeatureSet GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureEvaluateForHovers};
+    return {protocol::eAdapterFeatureEvaluateForHovers,
+            protocol::eAdapterFeatureClipboardContext};
   }
 };
 

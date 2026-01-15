@@ -96,6 +96,10 @@ private:
                              APInt &Inst, APInt &Scratch,
                              const MCSubtargetInfo &STI) const;
 
+  template <bool HasSrc0, bool HasSrc1, bool HasSrc2>
+  APInt postEncodeVOP3(const MCInst &MI, APInt EncodedValue,
+                       const MCSubtargetInfo &STI) const;
+
   APInt postEncodeVOPCX(const MCInst &MI, APInt EncodedValue,
                         const MCSubtargetInfo &STI) const;
 };
@@ -719,6 +723,23 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
   llvm_unreachable("Encoding of this operand type is not supported yet.");
 }
 
+template <bool HasSrc0, bool HasSrc1, bool HasSrc2>
+APInt AMDGPUMCCodeEmitter::postEncodeVOP3(const MCInst &MI, APInt EncodedValue,
+                                          const MCSubtargetInfo &STI) const {
+  if (!AMDGPU::isGFX10Plus(STI))
+    return EncodedValue;
+  // Set unused source fields in VOP3 encodings to inline immediate 0 to avoid
+  // hardware conservatively assuming the instruction reads SGPRs.
+  constexpr uint64_t InlineImmediate0 = 0x80;
+  if (!HasSrc0)
+    EncodedValue |= InlineImmediate0 << 32;
+  if (!HasSrc1)
+    EncodedValue |= InlineImmediate0 << 41;
+  if (!HasSrc2)
+    EncodedValue |= InlineImmediate0 << 50;
+  return EncodedValue;
+}
+
 APInt AMDGPUMCCodeEmitter::postEncodeVOPCX(const MCInst &MI, APInt EncodedValue,
                                            const MCSubtargetInfo &STI) const {
   // GFX10+ v_cmpx opcodes promoted to VOP3 have implied dst=EXEC.
@@ -732,7 +753,7 @@ APInt AMDGPUMCCodeEmitter::postEncodeVOPCX(const MCInst &MI, APInt EncodedValue,
          Desc.hasImplicitDefOfPhysReg(AMDGPU::EXEC));
   EncodedValue |= MRI.getEncodingValue(AMDGPU::EXEC_LO) &
                   AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
-  return EncodedValue;
+  return postEncodeVOP3<true, true, false>(MI, EncodedValue, STI);
 }
 
 #include "AMDGPUGenMCCodeEmitter.inc"
