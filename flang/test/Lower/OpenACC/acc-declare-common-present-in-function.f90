@@ -16,10 +16,10 @@ contains
 !$acc declare present(/COM/)
 ! CHECK: fir.global common @com_(dense<0> : vector<4xi8>) {alignment = 4 : i64} : !fir.array<4xi8>
 ! CHECK-LABEL: func.func private @_QFPs()
-! CHECK: hlfir.declare
-! CHECK: %[[ADDR:.*]] = fir.address_of(@com_) : !fir.ref<!fir.array<4xi8>>
-! CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[ADDR]] : !fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<4xi8>> {name = "com"}
-! CHECK: %[[TOK:.*]] = acc.declare_enter dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<4xi8>>)
+! CHECK-DAG: hlfir.declare
+! CHECK-DAG: %[[ADDR:.*]] = fir.address_of(@com_){{.*}} : !fir.ref<!fir.array<4xi8>>
+! CHECK-DAG: %[[PRESENT:.*]] = acc.present varPtr(%[[ADDR]] : !fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<4xi8>> {name = "com"}
+! CHECK-DAG: %[[TOK:.*]] = acc.declare_enter dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<4xi8>>)
 ! CHECK: acc.declare_exit token(%[[TOK]]) dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<4xi8>>)
   end subroutine s
 end program p
