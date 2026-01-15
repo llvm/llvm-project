@@ -24561,11 +24561,6 @@ bool SLPVectorizerPass::vectorizeStores(
                               find_if(RangeSizes, IsNotVectorized)) +
                 1));
         unsigned VF = bit_ceil(CandidateVFs.front()) * 2;
-        unsigned Limit =
-            getFloorFullVectorNumberOfElements(*TTI, StoreTy, MaxTotalNum);
-        CandidateVFs.clear();
-        if (bit_floor(Limit) == VF)
-          CandidateVFs.push_back(Limit);
         if (VF > MaxTotalNum || VF >= StoresLimit)
           break;
         for (std::pair<unsigned, unsigned> &P : RangeSizes) {
@@ -24574,6 +24569,11 @@ bool SLPVectorizerPass::vectorizeStores(
         }
         // Attempt again to vectorize even larger chains if all previous
         // attempts were unsuccessful because of the cost issues.
+        CandidateVFs.clear();
+        unsigned Limit =
+            getFloorFullVectorNumberOfElements(*TTI, StoreTy, MaxTotalNum);
+        if (bit_floor(Limit) == VF)
+          CandidateVFs.push_back(Limit);
         CandidateVFs.push_back(VF);
       }
     }
