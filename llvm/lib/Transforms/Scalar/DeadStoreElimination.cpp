@@ -1222,8 +1222,7 @@ struct DSEState {
     if (isa<AllocaInst>(V))
       return true;
 
-    auto I = InvisibleToCallerAfterRet.insert({V, false});
-    if (I.second && InvisibleToCallerAfterRetBounded.contains(V)) {
+    if (InvisibleToCallerAfterRetBounded.contains(V)) {
       int64_t ValueOffset;
       const Value *BaseValue =
           GetPointerBaseWithConstantOffset(Ptr, ValueOffset, DL);
@@ -1235,6 +1234,7 @@ struct DSEState {
           ValueOffset >= 0)
         return true;
     }
+    auto I = InvisibleToCallerAfterRet.insert({V, false});
     if (I.second && isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
       I.first->second = capturesNothing(PointerMayBeCaptured(
           V, /*ReturnCaptures=*/true, CaptureComponents::Provenance));
