@@ -44619,6 +44619,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::VSHLV:
     case X86ISD::VSRLV:
     case X86ISD::VSRAV:
+    case X86ISD::PCLMULQDQ:
       // Float ops.
     case X86ISD::FMAX:
     case X86ISD::FMIN:
@@ -59954,6 +59955,21 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           })) {
         return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(VT, Ops, 0),
                            ConcatSubOperand(VT, Ops, 1), Op0.getOperand(2));
+      }
+      break;
+    case X86ISD::PCLMULQDQ:
+      if (!IsSplat && Subtarget.hasVPCLMULQDQ() &&
+          (VT.is256BitVector() ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op0.getOperand(2) == Op.getOperand(2);
+          })) {
+        SDValue LHS = CombineSubOperand(VT, Ops, 0);
+        SDValue RHS = CombineSubOperand(VT, Ops, 1);
+        if (LHS || RHS)
+          return DAG.getNode(
+              Opcode, DL, VT, LHS ? LHS : ConcatSubOperand(VT, Ops, 0),
+              RHS ? RHS : ConcatSubOperand(VT, Ops, 1), Op0.getOperand(2));
       }
       break;
     case ISD::ADD:
