@@ -85,28 +85,31 @@ static void collectClobbers(const CIRGenFunction &cgf, const AsmStmt &s,
   }
 }
 
-using ConstraintInfos = SmallVector<TargetInfo::ConstraintInfo, 4>;
+static void
+collectInOutConstraintInfos(const CIRGenFunction &cgf, const AsmStmt &s,
+                            SmallVectorImpl<TargetInfo::ConstraintInfo> &out,
+                            SmallVectorImpl<TargetInfo::ConstraintInfo> &in) {
 
-static void collectInOutConstraintInfos(const CIRGenFunction &cgf,
-                                        const AsmStmt &s, ConstraintInfos &out,
-                                        ConstraintInfos &in) {
-
-  for (unsigned i = 0, e = s.getNumOutputs(); i != e; i++) {
+  for (unsigned i = 0, e = s.getNumOutputs(); i != e; ++i) {
     StringRef name;
     if (const GCCAsmStmt *gas = dyn_cast<GCCAsmStmt>(&s))
       name = gas->getOutputName(i);
     TargetInfo::ConstraintInfo info(s.getOutputConstraint(i), name);
+    // `validateOutputConstraint` modifies the `info` object by setting the
+    // read/write, clobber, allows-register, and allows-memory process.
     bool isValid = cgf.getTarget().validateOutputConstraint(info);
     (void)isValid;
     assert(isValid && "Failed to parse output constraint");
     out.push_back(info);
   }
 
-  for (unsigned i = 0, e = s.getNumInputs(); i != e; i++) {
+  for (unsigned i = 0, e = s.getNumInputs(); i != e; ++i) {
     StringRef name;
     if (const GCCAsmStmt *gas = dyn_cast<GCCAsmStmt>(&s))
       name = gas->getInputName(i);
     TargetInfo::ConstraintInfo info(s.getInputConstraint(i), name);
+    // `validateInputConstraint` modifies the `info` object by setting the
+    // read/write, clobber, allows-register, and allows-memory process.
     bool isValid = cgf.getTarget().validateInputConstraint(out, info);
     assert(isValid && "Failed to parse input constraint");
     (void)isValid;
@@ -148,7 +151,7 @@ static void emitAsmStores(CIRGenFunction &cgf, const AsmStmt &s,
 
       // Truncate the integer result to the right size, note that TruncTy can be
       // a pointer.
-      if (mlir::isa<mlir::FloatType>(truncTy)) {
+      if (mlir::isa<cir::FPTypeInterface>(truncTy)) {
         tmp = builder.createFloatingCast(tmp, truncTy);
       } else if (isa<cir::PointerType>(truncTy) &&
                  isa<cir::IntType>(tmp.getType())) {
@@ -203,29 +206,29 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   mlir::Location loc = getLoc(srcLoc);
 
   // Get all the output and input constraints together.
-  ConstraintInfos outputConstraintInfos;
-  ConstraintInfos inputConstraintInfos;
+  SmallVector<TargetInfo::ConstraintInfo> outputConstraintInfos;
+  SmallVector<TargetInfo::ConstraintInfo> inputConstraintInfos;
   collectInOutConstraintInfos(*this, s, outputConstraintInfos,
                               inputConstraintInfos);
 
   bool isGCCAsmGoto = false;
 
   std::string constraints;
-  std::vector<LValue> resultRegDests;
-  std::vector<QualType> resultRegQualTys;
-  std::vector<mlir::Type> resultRegTypes;
-  std::vector<mlir::Type> resultTruncRegTypes;
-  std::vector<mlir::Type> argTypes;
-  std::vector<mlir::Type> argElemTypes;
-  std::vector<mlir::Value> args;
-  std::vector<mlir::Value> outArgs;
-  std::vector<mlir::Value> inArgs;
-  std::vector<mlir::Value> inOutArgs;
+  SmallVector<LValue> resultRegDests;
+  SmallVector<QualType> resultRegQualTys;
+  SmallVector<mlir::Type> resultRegTypes;
+  SmallVector<mlir::Type> resultTruncRegTypes;
+  SmallVector<mlir::Type> argTypes;
+  SmallVector<mlir::Type> argElemTypes;
+  SmallVector<mlir::Value> args;
+  SmallVector<mlir::Value> outArgs;
+  SmallVector<mlir::Value> inArgs;
+  SmallVector<mlir::Value> inOutArgs;
   llvm::BitVector resultTypeRequiresCast;
   llvm::BitVector resultRegIsFlagReg;
 
   // Keep track of out constraints for tied input operand.
-  std::vector<std::string> outputConstraints;
+  SmallVector<std::string> outputConstraints;
 
   // Keep track of defined physregs.
   llvm::SmallSet<std::string, 8> physRegOutputs;
@@ -243,11 +246,12 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
     cgm.errorNYI(srcLoc, "asm with input operands");
   }
 
-  for (unsigned i = 0, e = s.getNumOutputs(); i != e; i++) {
+  std::string outputConstraint;
+  for (unsigned i = 0, e = s.getNumOutputs(); i != e; ++i) {
     TargetInfo::ConstraintInfo &info = outputConstraintInfos[i];
 
     // Simplify the output constraint.
-    std::string outputConstraint(s.getOutputConstraint(i));
+    outputConstraint = s.getOutputConstraint(i);
     outputConstraint = getTarget().simplifyConstraint(
         StringRef(outputConstraint).drop_front());
 
