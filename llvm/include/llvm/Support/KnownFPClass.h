@@ -192,6 +192,12 @@ struct KnownFPClass {
     signBitMustBeZero();
   }
 
+  static KnownFPClass fneg(const KnownFPClass &Src) {
+    KnownFPClass Known = Src;
+    Known.fneg();
+    return Known;
+  }
+
   static KnownFPClass fabs(const KnownFPClass &Src) {
     KnownFPClass Known = Src;
     Known.fabs();
