@@ -86,6 +86,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class vector {
+#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+  using __split_buffer _LIBCPP_NODEBUG  = __split_buffer<_Tp, _Allocator, __split_buffer_size_layout>;
+#else
+  using __split_buffer _LIBCPP_NODEBUG  = __split_buffer<_Tp, _Allocator, __split_buffer_pointer_layout>;
+#endif
 public:
   ///
   /// Types
@@ -605,7 +610,6 @@ public:
 
 private:
   using __sentinel_type _LIBCPP_NODEBUG = size_type;
-  using __split_buffer _LIBCPP_NODEBUG  = __split_buffer<_Tp, _Allocator, __split_buffer_size_layout>;
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __raw_sentinel() const _NOEXCEPT {
     return __size_;
@@ -656,7 +660,6 @@ private:
 #else
 
 private:
-  using __split_buffer _LIBCPP_NODEBUG  = __split_buffer<_Tp, _Allocator, __split_buffer_pointer_layout>;
   using __sentinel_type _LIBCPP_NODEBUG = pointer;
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __raw_sentinel() const _NOEXCEPT {
