@@ -664,6 +664,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-using>` check to correctly provide fix-its
   for typedefs of pointers or references to array types.
 
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
+  positives on trivially copyable types with a non-public copy constructor.
+
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
   the type of the diagnosed variable.
