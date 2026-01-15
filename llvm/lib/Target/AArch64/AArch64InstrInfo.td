@@ -10648,7 +10648,7 @@ def : Pat<(i64 (int_aarch64_neon_urshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
 // Patterns for nontemporal/no-allocate stores.
 // We have to resort to tricks to turn a single-input store into a store pair,
 // because there is no single-input nontemporal store, only STNP.
-let Predicates = [IsLE] in {
+let Predicates = [IsLE, NotForCodeSize] in {
 
 // Make non-temporal store patterns have high complexity so they are prioritized
 // for non-temporal stores over temporal store patterns.

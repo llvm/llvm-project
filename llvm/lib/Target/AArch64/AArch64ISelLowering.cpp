@@ -7248,6 +7248,7 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
     ElementCount EC = MemVT.getVectorElementCount();
     if (StoreNode->isNonTemporal() && MemVT.getSizeInBits() == 256u &&
         EC.isKnownEven() && DAG.getDataLayout().isLittleEndian() &&
+        !DAG.shouldOptForSize() &&
         (MemVT.getScalarSizeInBits() == 8u ||
          MemVT.getScalarSizeInBits() == 16u ||
          MemVT.getScalarSizeInBits() == 32u ||
