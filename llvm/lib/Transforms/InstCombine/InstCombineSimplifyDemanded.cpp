@@ -2550,21 +2550,38 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       auto *FPOp = cast<FPMathOperator>(CI);
 
-      bool ChangedFlags = false;
       FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+      FastMathFlags InferredFMF = FMF;
 
-      // TODO: Add NSZ flag if we know the result will not be sensitive on the
-      // sign of 0.
-      if (!FPOp->hasNoNaNs() &&
+      if (!FMF.noSignedZeros()) {
+        // Add NSZ flag if we know the result will not be sensitive to the sign
+        // of 0.
+        FPClassTest ZeroMask = fcZero;
+
+        Type *EltTy = VTy->getScalarType();
+        DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+        if (Mode != DenormalMode::getIEEE())
+          ZeroMask |= fcSubnormal;
+
+        bool ResultNotLogical0 = (ValidResults & ZeroMask) == fcNone;
+        if (ResultNotLogical0 || ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
+                                   KnownRHS.isKnownNeverLogicalPosZero(Mode)) &&
+                                  (KnownLHS.isKnownNeverLogicalPosZero(Mode) ||
+                                   KnownRHS.isKnownNeverLogicalNegZero(Mode))))
+          InferredFMF.setNoSignedZeros(true);
+      }
+
+      if (!FMF.noNaNs() &&
           ((PropagateNaN && (ValidResults & fcNan) == fcNone) ||
            (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN()))) {
         CI->dropUBImplyingAttrsAndMetadata();
-        CI->setHasNoNaNs(true);
-        ChangedFlags = true;
+        InferredFMF.setNoNaNs(true);
       }
 
-      if (ChangedFlags)
+      if (InferredFMF != FMF) {
+        CI->setFastMathFlags(InferredFMF);
         return FPOp;
+      }
 
       return nullptr;
     }
