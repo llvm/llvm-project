@@ -7082,12 +7082,17 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
     Value *Ptr0, Value *PtrN, StridedPtrInfo &SPtrInfo) const {
   const size_t Sz = PointerOps.size();
   SmallVector<int64_t> SortedOffsetsFromBase(Sz);
-  // Go through `PointerOps` in sorted order and record offsets from `Ptr0`.
+  // Go through `PointerOps` in sorted order and record offsets from
+  // PointerOps[0]. We use PointerOps[0] rather than Ptr0 because
+  // sortPtrAccesses only validates getPointersDiff for pairs relative to
+  // PointerOps[0]. This is safe since only offset differences are used below.
   for (unsigned I : seq<unsigned>(Sz)) {
     Value *Ptr =
         SortedIndices.empty() ? PointerOps[I] : PointerOps[SortedIndices[I]];
-    SortedOffsetsFromBase[I] =
-        *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
+    std::optional<int64_t> Offset =
+        getPointersDiff(ScalarTy, PointerOps[0], ScalarTy, Ptr, *DL, *SE);
+    assert(Offset && "sortPtrAccesses should have validated this pointer");
+    SortedOffsetsFromBase[I] = *Offset;
   }
 
   // The code below checks that `SortedOffsetsFromBase` looks as follows:
@@ -7436,10 +7441,18 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
       Ptr0 = PointerOps[Order.front()];
       PtrN = PointerOps[Order.back()];
     }
-    std::optional<int64_t> Diff =
-        getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
+    // sortPtrAccesses validates getPointersDiff for all pointers relative to
+    // PointerOps[0], so compute the span using PointerOps[0] as intermediate:
+    //   Diff = offset(PtrN) - offset(Ptr0) relative to PointerOps[0]
+    std::optional<int64_t> Diff0 =
+        getPointersDiff(ScalarTy, PointerOps[0], ScalarTy, Ptr0, *DL, *SE);
+    std::optional<int64_t> DiffN =
+        getPointersDiff(ScalarTy, PointerOps[0], ScalarTy, PtrN, *DL, *SE);
+    assert(Diff0 && DiffN &&
+           "sortPtrAccesses should have validated these pointers");
+    int64_t Diff = *DiffN - *Diff0;
     // Check that the sorted loads are consecutive.
-    if (static_cast<uint64_t>(*Diff) == Sz - 1)
+    if (static_cast<uint64_t>(Diff) == Sz - 1)
       return LoadsState::Vectorize;
     if (isMaskedLoadCompress(VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT,
                              *TLI, [&](Value *V) {
@@ -7451,7 +7464,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
         cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
             ->getAlign();
     if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, Alignment, Order,
-                                       *Diff, Ptr0, PtrN, SPtrInfo))
+                                       Diff, Ptr0, PtrN, SPtrInfo))
       return LoadsState::StridedVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
