@@ -185,6 +185,9 @@ NetBSD Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
+  (#GH118233)
+
 AVR Support
 ^^^^^^^^^^^
 
@@ -235,6 +238,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support for ``transparent`` clause in task and taskloop directives.
 
 Improvements
 ^^^^^^^^^^^^

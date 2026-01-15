@@ -1155,6 +1155,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::OR, MVT::i128, Custom);
     setOperationAction(ISD::XOR, MVT::i128, Custom);
 
+    if (Subtarget.hasPCLMUL()) {
+      if (Subtarget.is64Bit()) {
+        setOperationAction(ISD::CLMUL, MVT::i64, Custom);
+        setOperationAction(ISD::CLMULH, MVT::i64, Custom);
+      }
+      setOperationAction(ISD::CLMUL, MVT::i32, Custom);
+      setOperationAction(ISD::CLMUL, MVT::i16, Custom);
+      setOperationAction(ISD::CLMUL, MVT::i8, Custom);
+    }
+
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
       setOperationAction(ISD::SMAX, VT, VT == MVT::v8i16 ? Legal : Custom);
       setOperationAction(ISD::SMIN, VT, VT == MVT::v8i16 ? Legal : Custom);
@@ -29625,9 +29635,25 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   uint64_t SizeInBits = VT.getScalarSizeInBits();
+  // When one operand is a zero (positive or negative), we can avoid signed-zero
+  // ordering (potentially by flipping the operand order). x86's FMIN behaves
+  // like `X < Y ? X : Y`; FMAX likewise behaves like `X > Y ? X : Y`. Since
+  // zeroes compare as equal regardless of sign, the second operand is chosen
+  // whenever both operands are zero. So, here are the formulations for both
+  // operations and both signs that give us the correctly-ordered result, even
+  // if X is a signed zero:
+  //
+  // - `min(X, -0.0)` -> `X < -0.0 ? X : -0.0`
+  // - `min(X, 0.0)` -> `0.0 < X ? 0.0 : X`
+  // - `max(X, -0.0)` -> `-0.0 > X ? -0.0 : X`
+  // - `max(X, 0.0)` -> `X > 0.0 ? X : 0.0`
+  //
+  // Here, `PreferredZero` refers to the zero that goes in the "else" branch
+  // (it's "preferred" because it's chosen if both operands are equal or
+  // unordered). `OppositeZero` refers to the zero that *doesn't* go in the
+  // "else" branch.
   APInt PreferredZero = APInt::getZero(SizeInBits);
   APInt OppositeZero = PreferredZero;
-  EVT IVT = VT.changeTypeToInteger();
   X86ISD::NodeType MinMaxOp;
   if (IsMaxOp) {
     MinMaxOp = X86ISD::FMAX;
@@ -29639,8 +29665,8 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   EVT SetCCType =
       TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
 
-  // The tables below show the expected result of Max in cases of NaN and
-  // signed zeros.
+  // The tables below show the expected result of Max in cases of NaN and signed
+  // zeros.
   //
   //                 Y                       Y
   //             Num   xNaN              +0     -0
@@ -29650,12 +29676,9 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   //    xNaN  |   X  |  X/Y |     -0  |  +0  |  -0  |
   //          ---------------         ---------------
   //
-  // It is achieved by means of FMAX/FMIN with preliminary checks and operand
-  // reordering.
-  //
-  // We check if any of operands is NaN and return NaN. Then we check if any of
-  // operands is zero or negative zero (for fmaximum and fminimum respectively)
-  // to ensure the correct zero is returned.
+  // It is achieved by means of FMAX/FMIN with preliminary checks, operand
+  // reordering if one operand is a constant, and bitwise operations and selects
+  // to handle signed zero and NaN operands otherwise.
   auto MatchesZero = [](SDValue Op, APInt Zero) {
     Op = peekThroughBitcasts(Op);
     if (auto *CstOp = dyn_cast<ConstantFPSDNode>(Op))
@@ -29686,15 +29709,17 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                           Op->getFlags().hasNoSignedZeros() ||
                           DAG.isKnownNeverZeroFloat(X) ||
                           DAG.isKnownNeverZeroFloat(Y);
-  SDValue NewX, NewY;
+  bool ShouldHandleZeros = true;
+  SDValue NewX = X;
+  SDValue NewY = Y;
   if (IgnoreSignedZero || MatchesZero(Y, PreferredZero) ||
       MatchesZero(X, OppositeZero)) {
     // Operands are already in right order or order does not matter.
-    NewX = X;
-    NewY = Y;
+    ShouldHandleZeros = false;
   } else if (MatchesZero(X, PreferredZero) || MatchesZero(Y, OppositeZero)) {
     NewX = Y;
     NewY = X;
+    ShouldHandleZeros = false;
   } else if (!VT.isVector() && (VT == MVT::f16 || Subtarget.hasDQI()) &&
              (Op->getFlags().hasNoNaNs() || IsXNeverNaN || IsYNeverNaN)) {
     if (IsXNeverNaN)
@@ -29716,34 +29741,12 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
     NewX = DAG.getSelect(DL, VT, NeedSwap, Y, X);
     NewY = DAG.getSelect(DL, VT, NeedSwap, X, Y);
     return DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
-  } else {
-    SDValue IsXSigned;
-    if (Subtarget.is64Bit() || VT != MVT::f64) {
-      SDValue XInt = DAG.getNode(ISD::BITCAST, DL, IVT, X);
-      SDValue ZeroCst = DAG.getConstant(0, DL, IVT);
-      IsXSigned = DAG.getSetCC(DL, SetCCType, XInt, ZeroCst, ISD::SETLT);
-    } else {
-      assert(VT == MVT::f64);
-      SDValue Ins = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v2f64,
-                                DAG.getConstantFP(0, DL, MVT::v2f64), X,
-                                DAG.getVectorIdxConstant(0, DL));
-      SDValue VX = DAG.getNode(ISD::BITCAST, DL, MVT::v4f32, Ins);
-      SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, VX,
-                               DAG.getVectorIdxConstant(1, DL));
-      Hi = DAG.getBitcast(MVT::i32, Hi);
-      SDValue ZeroCst = DAG.getConstant(0, DL, MVT::i32);
-      EVT SetCCType = TLI.getSetCCResultType(DAG.getDataLayout(),
-                                             *DAG.getContext(), MVT::i32);
-      IsXSigned = DAG.getSetCC(DL, SetCCType, Hi, ZeroCst, ISD::SETLT);
-    }
-    if (MinMaxOp == X86ISD::FMAX) {
-      NewX = DAG.getSelect(DL, VT, IsXSigned, X, Y);
-      NewY = DAG.getSelect(DL, VT, IsXSigned, Y, X);
-    } else {
-      NewX = DAG.getSelect(DL, VT, IsXSigned, Y, X);
-      NewY = DAG.getSelect(DL, VT, IsXSigned, X, Y);
-    }
   }
+
+  [[maybe_unused]] EVT SVT = VT.getScalarType();
+  assert(VT.isFloatingPoint() &&
+         (SVT == MVT::f16 || SVT == MVT::f32 || SVT == MVT::f64) &&
+         "Unexpected type in LowerFMINIMUM_FMAXIMUM");
 
   bool IgnoreNaN = DAG.getTarget().Options.NoNaNsFPMath ||
                    Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN);
@@ -29759,10 +29762,80 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
 
   SDValue MinMax = DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
 
+  // We handle signed-zero ordering by taking the larger (or smaller) sign bit.
+  if (ShouldHandleZeros) {
+    const fltSemantics &Sem = VT.getFltSemantics();
+    unsigned EltBits = VT.getScalarSizeInBits();
+    bool IsFakeVector = !VT.isVector();
+    MVT LogicVT = VT.getSimpleVT();
+    if (IsFakeVector)
+      LogicVT = VT == MVT::f64   ? MVT::v2f64
+                : VT == MVT::f32 ? MVT::v4f32
+                                 : MVT::v8f16;
+
+    // We take the sign bit from the first operand and combine it with the
+    // output sign bit (see below). Right now, if ShouldHandleZeros is true, the
+    // operands will never have been swapped. If you add another optimization
+    // that swaps the input operands if one is a known value, make sure this
+    // logic stays correct!
+    SDValue LogicX = NewX;
+    SDValue LogicMinMax = MinMax;
+    if (IsFakeVector) {
+      // Promote scalars to vectors for bitwise operations.
+      LogicX = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, LogicVT, NewX);
+      LogicMinMax = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, LogicVT, MinMax);
+    }
+
+    // x86's min/max operations return the second operand if both inputs are
+    // signed zero. For the maximum operation, we want to "and" the sign bit of
+    // the output with the sign bit of the first operand--that means that if the
+    // first operand is +0.0, the output will be too. For the minimum, it's the
+    // opposite: we "or" the output sign bit with the sign bit of the first
+    // operand, ensuring that if the first operand is -0.0, the output will be
+    // too.
+    SDValue Result;
+    if (IsMaxOp) {
+      // getSignedMaxValue returns a bit pattern of all ones but the highest
+      // bit. We "or" that with the first operand, then "and" that with the max
+      // operation's result. That clears only the sign bit, and only if the
+      // first operand is positive.
+      SDValue OrMask = DAG.getConstantFP(
+          APFloat(Sem, APInt::getSignedMaxValue(EltBits)), DL, LogicVT);
+      SDValue MaskedSignBit =
+          DAG.getNode(X86ISD::FOR, DL, LogicVT, LogicX, OrMask);
+      Result =
+          DAG.getNode(X86ISD::FAND, DL, LogicVT, MaskedSignBit, LogicMinMax);
+    } else {
+      // Likewise, getSignMask returns a bit pattern with only the highest bit
+      // set. This one *sets* only the sign bit, and only if the first operand
+      // is *negative*.
+      SDValue AndMask = DAG.getConstantFP(
+          APFloat(Sem, APInt::getSignMask(EltBits)), DL, LogicVT);
+      SDValue MaskedSignBit =
+          DAG.getNode(X86ISD::FAND, DL, LogicVT, LogicX, AndMask);
+      Result =
+          DAG.getNode(X86ISD::FOR, DL, LogicVT, MaskedSignBit, LogicMinMax);
+    }
+
+    // Extract scalar back from vector.
+    if (IsFakeVector)
+      MinMax = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Result,
+                           DAG.getVectorIdxConstant(0, DL));
+    else
+      MinMax = Result;
+  }
+
   if (IgnoreNaN || DAG.isKnownNeverNaN(IsNum ? NewY : NewX))
     return MinMax;
 
-  SDValue NaNSrc = IsNum ? MinMax : NewX;
+  // The x86 min/max return the second operand if either is NaN, which doesn't
+  // match the numeric or non-numeric semantics. For the non-numeric versions,
+  // we want to return NaN if either operand is NaN. To do that, we check if
+  // NewX (the first operand) is NaN, and select it if so. For the numeric
+  // versions, we want to return the non-NaN operand if there is one. So we
+  // check if NewY (the second operand) is NaN, and again select the first
+  // operand if so.
+  SDValue NaNSrc = IsNum ? NewY : NewX;
   SDValue IsNaN = DAG.getSetCC(DL, SetCCType, NaNSrc, NaNSrc, ISD::SETUO);
 
   return DAG.getSelect(DL, VT, IsNaN, NewX, MinMax);
@@ -33081,6 +33154,51 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(ISD::OR, DL, VT, Lo, Hi);
 }
 
+static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
+                          SelectionDAG &DAG) {
+  assert(Subtarget.hasPCLMUL() && "PCLMUL required for CLMUL lowering");
+
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
+    return SDValue();
+
+  bool IsHigh = Op.getOpcode() == ISD::CLMULH;
+  assert((!IsHigh || Subtarget.is64Bit()) && "CLMULH requires 64-bit");
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+
+  // On 64-bit, use i64/v2i64. On 32-bit, i64 is not legal, use i32/v4i32.
+  MVT ScalarVT = Subtarget.is64Bit() ? MVT::i64 : MVT::i32;
+  MVT VecVT = Subtarget.is64Bit() ? MVT::v2i64 : MVT::v4i32;
+
+  if (VT != ScalarVT) {
+    LHS = DAG.getNode(ISD::ANY_EXTEND, DL, ScalarVT, LHS);
+    RHS = DAG.getNode(ISD::ANY_EXTEND, DL, ScalarVT, RHS);
+  }
+
+  LHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, LHS);
+  RHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, RHS);
+  LHS = DAG.getBitcast(MVT::v2i64, LHS);
+  RHS = DAG.getBitcast(MVT::v2i64, RHS);
+
+  SDValue Result = DAG.getNode(X86ISD::PCLMULQDQ, DL, MVT::v2i64, LHS, RHS,
+                               DAG.getTargetConstant(0, DL, MVT::i8));
+
+  // CLMUL: extract element 0 (low 64 bits)
+  // CLMULH: extract element 1 (high 64 bits)
+  unsigned ExtractIdx = IsHigh ? 1 : 0;
+  Result = DAG.getBitcast(VecVT, Result);
+  Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Result,
+                       DAG.getVectorIdxConstant(ExtractIdx, DL));
+
+  if (VT != ScalarVT)
+    Result = DAG.getNode(ISD::TRUNCATE, DL, VT, Result);
+
+  return Result;
+}
+
 static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
                            SelectionDAG &DAG) {
   SDLoc DL(Op);
@@ -33829,6 +33947,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_LOAD_AND:    return lowerAtomicArith(Op, DAG, Subtarget);
   case ISD::ATOMIC_STORE:       return LowerATOMIC_STORE(Op, DAG, Subtarget);
   case ISD::BITREVERSE:         return LowerBITREVERSE(Op, Subtarget, DAG);
+  case ISD::CLMUL:
+  case ISD::CLMULH:             return LowerCLMUL(Op, Subtarget, DAG);
   case ISD::PARITY:             return LowerPARITY(Op, Subtarget, DAG);
   case ISD::BUILD_VECTOR:       return LowerBUILD_VECTOR(Op, DAG);
   case ISD::CONCAT_VECTORS:     return LowerCONCAT_VECTORS(Op, Subtarget, DAG);
@@ -35627,6 +35747,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(GF2P8MULB)
   NODE_NAME_CASE(GF2P8AFFINEQB)
   NODE_NAME_CASE(GF2P8AFFINEINVQB)
+  NODE_NAME_CASE(PCLMULQDQ)
   NODE_NAME_CASE(NT_CALL)
   NODE_NAME_CASE(NT_BRIND)
   NODE_NAME_CASE(UMWAIT)
@@ -44498,6 +44619,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::VSHLV:
     case X86ISD::VSRLV:
     case X86ISD::VSRAV:
+    case X86ISD::PCLMULQDQ:
       // Float ops.
     case X86ISD::FMAX:
     case X86ISD::FMIN:
@@ -59833,6 +59955,21 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           })) {
         return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(VT, Ops, 0),
                            ConcatSubOperand(VT, Ops, 1), Op0.getOperand(2));
+      }
+      break;
+    case X86ISD::PCLMULQDQ:
+      if (!IsSplat && Subtarget.hasVPCLMULQDQ() &&
+          (VT.is256BitVector() ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op0.getOperand(2) == Op.getOperand(2);
+          })) {
+        SDValue LHS = CombineSubOperand(VT, Ops, 0);
+        SDValue RHS = CombineSubOperand(VT, Ops, 1);
+        if (LHS || RHS)
+          return DAG.getNode(
+              Opcode, DL, VT, LHS ? LHS : ConcatSubOperand(VT, Ops, 0),
+              RHS ? RHS : ConcatSubOperand(VT, Ops, 1), Op0.getOperand(2));
       }
       break;
     case ISD::ADD:

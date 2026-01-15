@@ -153,7 +153,6 @@ struct MissingFeatures {
   static bool emitBodyAndFallthrough() { return false; }
   static bool coroOutsideFrameMD() { return false; }
   static bool coroCoReturn() { return false; }
-  static bool coroCoYield() { return false; }
   static bool coroutineExceptions() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
@@ -217,9 +216,10 @@ struct MissingFeatures {
   static bool asmGoto() { return false; }
   static bool asmInputOperands() { return false; }
   static bool asmLabelAttr() { return false; }
+  static bool asmLLVMAssume() { return false; }
   static bool asmMemoryEffects() { return false; }
-  static bool asmOutputOperands() { return false; }
   static bool asmUnwindClobber() { return false; }
+  static bool asmVectorType() { return false; }
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeBuiltin() { return false; }

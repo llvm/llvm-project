@@ -492,7 +492,7 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | memscope clause for atomic and flush                        | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| transparent clause (hull tasks)                             | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
+| transparent clause (hull tasks)                             | :part:`partial`           | :none:`unclaimed`         |  Clang parsing/sema  https://github.com/llvm/llvm-project/pull/166810    |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | rule-based compound directives                              | :part:`In Progress`       | :part:`In Progress`       | kparzysz                                                                 |
 |                                                             |                           |                           | Testing for Fortran missing                                              |

@@ -444,6 +444,15 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
     //  View(const View &v);
     ArgList = getRValueOrigins(Arg, ArgList);
     flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
+  } else if (Arg->getType()->isPointerType()) {
+    // GSL pointer is constructed from a raw pointer. Flow only the outermost
+    // raw pointer. Example:
+    //  View(const char*);
+    //  Span<int*>(const in**);
+    OriginList *ArgList = getOriginsList(*Arg);
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        getOriginsList(*CCE)->getOuterOriginID(), ArgList->getOuterOriginID(),
+        /*Kill=*/true));
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
@@ -485,6 +494,14 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     }
     return PVD ? PVD->hasAttr<clang::LifetimeBoundAttr>() : false;
   };
+  auto shouldTrackPointerImplicitObjectArg = [FD](unsigned I) -> bool {
+    const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+    if (!Method || !Method->isInstance())
+      return false;
+    return I == 0 &&
+           isGslPointerType(Method->getFunctionObjectParameterType()) &&
+           shouldTrackImplicitObjectArg(Method);
+  };
   if (Args.empty())
     return;
   bool KillSrc = true;
@@ -505,6 +522,14 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         flow(CallList, ArgList, KillSrc);
         KillSrc = false;
       }
+    } else if (shouldTrackPointerImplicitObjectArg(I)) {
+      assert(ArgList->getLength() >= 2 &&
+             "Object arg of pointer type should have atleast two origins");
+      // See through the GSLPointer reference to see the pointer's value.
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          CallList->getOuterOriginID(),
+          ArgList->peelOuterOrigin()->getOuterOriginID(), KillSrc));
+      KillSrc = false;
     } else if (IsArgLifetimeBound(I)) {
       // Lifetimebound on a non-GSL-ctor function means the returned
       // pointer/reference itself must not outlive the arguments. This

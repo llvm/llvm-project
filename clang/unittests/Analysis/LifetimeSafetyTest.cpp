@@ -1751,6 +1751,56 @@ TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_MapFind) {
   EXPECT_THAT(Origin("it"), HasLoansTo({"m"}, "p1"));
 }
 
+TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_GSLPointerArg) {
+  SetupTest(R"(
+    namespace std {
+
+    template<typename T>
+    struct basic_string_view {
+      basic_string_view();
+      basic_string_view(const T *);
+      const T *begin() const;
+      const T *data() const;
+    };
+    using string_view = basic_string_view<char>;
+
+    template<typename T>
+    struct basic_string {
+      basic_string();
+      basic_string(const T *);
+      const T *c_str() const;
+      operator basic_string_view<T> () const;
+      const T *data() const;
+    };
+    using string = basic_string<char>;
+    }
+
+    void target() {
+      std::string s1;
+      std::string_view sv1 = s1;
+      
+      std::string s2;
+      const char* sv2 = std::string_view(s2).begin();
+      
+      std::string s3;
+      const char* sv3 = std::string_view(s3).data();
+      
+      std::string s4;
+      std::string_view sv4 = std::string_view{std::string_view(s4).data()};
+            
+      std::string s5;
+      const char* data5 = std::string_view(s5).data();
+      std::string_view sv5 = data5;
+      POINT(end);
+    }
+  )");
+  EXPECT_THAT(Origin("sv1"), HasLoansTo({"s1"}, "end"));
+  EXPECT_THAT(Origin("sv2"), HasLoansTo({"s2"}, "end"));
+  EXPECT_THAT(Origin("sv3"), HasLoansTo({"s3"}, "end"));
+  EXPECT_THAT(Origin("sv4"), HasLoansTo({"s4"}, "end"));
+  EXPECT_THAT(Origin("sv5"), HasLoansTo({"s5"}, "end"));
+}
+
 // ========================================================================= //
 //                    Tests for shouldTrackFirstArgument
 // ========================================================================= //

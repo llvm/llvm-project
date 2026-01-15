@@ -7179,6 +7179,14 @@ static bool HandleWebAssemblyFuncrefAttr(TypeProcessingState &State,
     return true;
   }
 
+  // Check that the type is a function pointer type.
+  QualType Desugared = QT.getDesugaredType(S.Context);
+  const auto *Ptr = dyn_cast<PointerType>(Desugared);
+  if (!Ptr || !Ptr->getPointeeType()->isFunctionType()) {
+    S.Diag(PAttr.getLoc(), diag::err_attribute_webassembly_funcref);
+    return true;
+  }
+
   // Add address space to type based on its attributes.
   LangAS ASIdx = LangAS::wasm_funcref;
   QualType Pointee = QT->getPointeeType();
