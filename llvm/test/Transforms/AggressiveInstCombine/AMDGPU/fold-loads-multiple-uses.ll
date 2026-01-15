@@ -38,5 +38,3 @@ define i32 @fold_i32_multiple_uses(ptr %input, ptr %output) {
   store i32 %val, ptr %output, align 4
   ret i32 %val
 }
-
-declare i32 @llvm.amdgcn.perm(i32, i32, i32)
