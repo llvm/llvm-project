@@ -2955,6 +2955,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     Instruction *I, FPClassTest DemandedMask, KnownFPClass &Known,
     Instruction *CxtI, unsigned Depth) {
+  FastMathFlags FMF;
+  if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
+    FMF = FPOp->getFastMathFlags();
+    if (FMF.noNaNs())
+      DemandedMask &= ~fcNan;
+
+    if (FMF.noInfs())
+      DemandedMask &= ~fcInf;
+  }
+
   switch (I->getOpcode()) {
   case Instruction::Select: {
     // TODO: Can we infer which side it came from based on adjusted result
@@ -2981,6 +2991,24 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     const CallInst *CI = cast<CallInst>(I);
     const Intrinsic::ID IID = CI->getIntrinsicID();
     switch (IID) {
+    case Intrinsic::fabs: {
+      Value *Src = CI->getArgOperand(0);
+      KnownFPClass KnownSrc =
+          computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
+
+      if ((DemandedMask & fcNan) == fcNone)
+        KnownSrc.knownNot(fcNan);
+      if ((DemandedMask & fcInf) == fcNone)
+        KnownSrc.knownNot(fcInf);
+
+      // TODO: If the only sign bit difference is due to -0, look at source if
+      // nsz.
+      if (KnownSrc.SignBit == false || ((DemandedMask & fcNan) == fcNone &&
+                                        KnownSrc.isKnownNever(fcNegative)))
+        return Src;
+      Known = KnownFPClass::fabs(KnownSrc);
+      break;
+    }
     case Intrinsic::maximum:
     case Intrinsic::minimum:
     case Intrinsic::maximumnum:
