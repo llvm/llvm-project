@@ -218,6 +218,10 @@ protected:
   // to consult this later on.
   virtual bool ShouldStop(Event *event_ptr) { return true; }
 
+  // Shared implementation for when a trap instruction leaves the CPU PC at
+  // the trap instruction instead of just after it.
+  void SkipOverTrapInstruction();
+
   // Classes that inherit from StackID can see and modify these
   lldb::ThreadWP m_thread_wp; // The thread corresponding to the stop reason.
   uint32_t m_stop_id;   // The process stop ID for which this stop info is valid

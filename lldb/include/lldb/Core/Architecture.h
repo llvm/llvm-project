@@ -139,12 +139,11 @@ public:
     return lldb::UnwindPlanSP();
   }
 
-  /// Returns whether a given byte sequence is a valid breakpoint for the
-  /// architecture. Some architectures have breakpoint instructions that
-  /// have immediates that can take on any value, resulting in a family
-  /// of valid byte sequences. If the observed byte sequence is shorter
-  /// than the reference then they are considered not to match, even if
-  /// the initial bytes would match.
+  /// Returns whether a given byte sequence is a valid trap instruction for the
+  /// architecture. Some architectures feature instructions that have immediates
+  /// that can take on any value, resulting in a family of valid byte sequences.
+  /// If the observed byte sequence is shorter than the reference then they are
+  /// considered not to match, even if the initial bytes would match.
   virtual bool IsValidTrapInstruction(llvm::ArrayRef<uint8_t> reference,
                                       llvm::ArrayRef<uint8_t> observed) const {
     if (reference.size() > observed.size())

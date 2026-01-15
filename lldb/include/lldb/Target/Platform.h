@@ -341,6 +341,17 @@ public:
   llvm::ArrayRef<uint8_t> SoftwareTrapOpcodeBytes(const ArchSpec &arch,
                                                   size_t size_hint = 0);
 
+  /// Get the suggested size hint for a trap instruction on the given target.
+  ///
+  /// \param[in] target
+  ///     The target of the inferior
+  /// \param addr
+  ///     The address of the instruction
+  /// \param bytes
+  ///     The raw bytes of the instruction
+  size_t GetTrapOpcodeSizeHint(Target &target, Address addr,
+                               llvm::ArrayRef<uint8_t> bytes);
+
   virtual size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  BreakpointSite *bp_site);
 
