@@ -824,16 +824,20 @@ define i32 @loadCombine_4consecutive_hasOneUse3(ptr %p) {
 define i32 @loadCombine_4consecutive_hasOneUse4(ptr %p) {
 ; LE-LABEL: @loadCombine_4consecutive_hasOneUse4(
 ; LE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 2
-; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P]], align 1
-; LE-NEXT:    [[TMP1:%.*]] = load i16, ptr [[P]], align 1
-; LE-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
+; LE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
+; LE-NEXT:    [[L1:%.*]] = load i16, ptr [[P]], align 1
+; LE-NEXT:    [[TMP1:%.*]] = zext i16 [[L1]] to i32
 ; LE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
+; LE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
 ; LE-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
+; LE-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
 ; LE-NEXT:    [[S3:%.*]] = shl i32 [[E3]], 16
-; LE-NEXT:    call void @use(i32 [[TMP2]])
-; LE-NEXT:    [[O2:%.*]] = or i32 [[TMP2]], [[S3]]
+; LE-NEXT:    [[S4:%.*]] = shl i32 [[E4]], 24
+; LE-NEXT:    call void @use(i32 [[TMP1]])
+; LE-NEXT:    [[O2:%.*]] = or i32 [[TMP1]], [[S3]]
 ; LE-NEXT:    call void @use(i32 [[O2]])
-; LE-NEXT:    ret i32 [[L1]]
+; LE-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
+; LE-NEXT:    ret i32 [[O3]]
 ;
 ; BE-LABEL: @loadCombine_4consecutive_hasOneUse4(
 ; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1

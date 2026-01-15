@@ -643,11 +643,10 @@ struct LoadOps {
 // (ZExt(L1) << shift1) | (ZExt(L2) << shift2) -> ZExt(L3) << shift1
 // (ZExt(L1) << shift1) | ZExt(L2) -> ZExt(L3)
 static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
-                               AliasAnalysis &AA) {
+                               AliasAnalysis &AA, bool IsRoot = false) {
   uint64_t ShAmt2;
   Value *X;
   Instruction *L1, *L2;
-  bool IsRoot = (LOps.FoundRoot == false && LOps.Root == nullptr);
 
   // For the root instruction, allow multiple uses since the final result
   // may legitimately be used in multiple places. For intermediate values,
@@ -660,7 +659,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
                                             ShAmt2)))))
     return false;
 
-  if (!foldLoadsRecursive(X, LOps, DL, AA) && LOps.FoundRoot)
+  if (!foldLoadsRecursive(X, LOps, DL, AA, false) && LOps.FoundRoot)
     // Avoid Partial chain merge.
     return false;
 
@@ -800,7 +799,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     return false;
 
   LoadOps LOps;
-  if (!foldLoadsRecursive(&I, LOps, DL, AA) || !LOps.FoundRoot)
+  if (!foldLoadsRecursive(&I, LOps, DL, AA, true) || !LOps.FoundRoot)
     return false;
 
   IRBuilder<> Builder(&I);
