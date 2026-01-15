@@ -958,6 +958,61 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
+void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
+  assert(Plan.getExitBlocks().size() == 1 &&
+         "only a single-exit block is supported currently");
+  assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
+             Plan.getMiddleBlock() &&
+         "the exit block must have middle block as single predecessor");
+
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+
+  Header->splitAt(Header->getFirstNonPhi());
+
+  // Create the header mask, insert it in the header and branch on it.
+  auto *IV =
+      new VPWidenCanonicalIVRecipe(Header->getParent()->getCanonicalIV());
+  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  Builder.insert(IV);
+  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
+  VPValue *HeaderMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
+  Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
+
+  VPBasicBlock *Latch = LoopRegion->getExitingBasicBlock();
+  VPValue *IVInc;
+  [[maybe_unused]] bool TermBranchOnCount =
+      match(Latch->getTerminator(),
+            m_BranchOnCount(m_VPValue(IVInc),
+                            m_Specific(&Plan.getVectorTripCount())));
+  assert(TermBranchOnCount &&
+         match(IVInc, m_Add(m_Specific(LoopRegion->getCanonicalIV()),
+                            m_Specific(&Plan.getVFxUF()))) &&
+         "Unexpected terminator");
+
+  // Split the latch at the IV update, and branch to it from the header mask.
+  VPBasicBlock *LatchSplit =
+      Latch->splitAt(IVInc->getDefiningRecipe()->getIterator());
+  VPBlockUtils::connectBlocks(Header, LatchSplit);
+
+  // Any extract of the last element must be updated to extract from the last
+  // active lane of the header mask instead (i.e., the lane corresponding to the
+  // last active iteration).
+  Builder.setInsertPoint(Plan.getMiddleBlock()->getTerminator());
+  for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
+    VPValue *Op;
+    if (!match(&R, m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op)))))
+      continue;
+
+    // Compute the index of the last active lane.
+    VPValue *LastActiveLane =
+        Builder.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
+    auto *Ext =
+        Builder.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
+    R.getVPSingleValue()->replaceAllUsesWith(Ext);
+  }
+}
+
 // Likelyhood of bypassing the vectorized loop due to a runtime check block,
 // including memory overlap checks block and wrapping/unit-stride checks block.
 static constexpr uint32_t CheckBypassWeights[] = {1, 127};

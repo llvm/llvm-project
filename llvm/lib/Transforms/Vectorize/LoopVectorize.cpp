@@ -8463,11 +8463,13 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     InterleaveGroups.insert(IG);
   }
 
+  if (CM.foldTailByMasking())
+    VPlanTransforms::foldTailByMasking(*Plan);
+
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  auto BlockMaskCache = VPlanTransforms::introduceMasksAndLinearize(
-      *Plan, CM.foldTailByMasking());
+  auto BlockMaskCache = VPlanTransforms::introduceMasksAndLinearize(*Plan);
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
@@ -8726,7 +8728,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     auto *RR = dyn_cast<VPReductionRecipe>(OrigExitingVPV->getDefiningRecipe());
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         (!RR || !RR->isPartialReduction())) {
-      VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
+      VPValue *Cond = RecipeBuilder.getBlockInMask(
+          cast<VPBasicBlock>(PhiR->getParent()->getSuccessors().front()));
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
               ? std::make_optional(RdxDesc.getFastMathFlags())
