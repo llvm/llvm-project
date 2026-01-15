@@ -542,6 +542,61 @@ static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
   return builder.createVecCompare(loc, pred, op0, op1);
 }
 
+static mlir::Value emitX86Fpclass(CIRGenBuilderTy &builder, mlir::Location loc,
+                                  unsigned builtinID,
+                                  SmallVectorImpl<mlir::Value> &ops) {
+  unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+  mlir::Value maskIn = ops[2];
+  ops.erase(ops.begin() + 2);
+
+  StringRef intrinsicName;
+  switch (builtinID) {
+  default:
+    llvm_unreachable("Unsupported fpclass builtin");
+  case X86::BI__builtin_ia32_vfpclassbf16128_mask:
+    intrinsicName = "x86.avx10.fpclass.bf16.128";
+    break;
+  case X86::BI__builtin_ia32_vfpclassbf16256_mask:
+    intrinsicName = "x86.avx10.fpclass.bf16.256";
+    break;
+  case X86::BI__builtin_ia32_vfpclassbf16512_mask:
+    intrinsicName = "x86.avx10.fpclass.bf16.512";
+    break;
+  case X86::BI__builtin_ia32_fpclassph128_mask:
+    intrinsicName = "x86.avx512fp16.fpclass.ph.128";
+    break;
+  case X86::BI__builtin_ia32_fpclassph256_mask:
+    intrinsicName = "x86.avx512fp16.fpclass.ph.256";
+    break;
+  case X86::BI__builtin_ia32_fpclassph512_mask:
+    intrinsicName = "x86.avx512fp16.fpclass.ph.512";
+    break;
+  case X86::BI__builtin_ia32_fpclassps128_mask:
+    intrinsicName = "x86.avx512.fpclass.ps.128";
+    break;
+  case X86::BI__builtin_ia32_fpclassps256_mask:
+    intrinsicName = "x86.avx512.fpclass.ps.256";
+    break;
+  case X86::BI__builtin_ia32_fpclassps512_mask:
+    intrinsicName = "x86.avx512.fpclass.ps.512";
+    break;
+  case X86::BI__builtin_ia32_fpclasspd128_mask:
+    intrinsicName = "x86.avx512.fpclass.pd.128";
+    break;
+  case X86::BI__builtin_ia32_fpclasspd256_mask:
+    intrinsicName = "x86.avx512.fpclass.pd.256";
+    break;
+  case X86::BI__builtin_ia32_fpclasspd512_mask:
+    intrinsicName = "x86.avx512.fpclass.pd.512";
+    break;
+  }
+
+  auto cmpResultTy = cir::VectorType::get(builder.getSIntNTy(1), numElts);
+  mlir::Value fpclass =
+      emitIntrinsicCallOp(builder, loc, intrinsicName, cmpResultTy, ops);
+  return emitX86MaskedCompareResult(builder, fpclass, numElts, maskIn, loc);
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -1848,6 +1903,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_addcarryx_u64:
   case X86::BI__builtin_ia32_subborrow_u32:
   case X86::BI__builtin_ia32_subborrow_u64:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case X86::BI__builtin_ia32_fpclassps128_mask:
   case X86::BI__builtin_ia32_fpclassps256_mask:
   case X86::BI__builtin_ia32_fpclassps512_mask:
@@ -1860,10 +1919,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_fpclasspd128_mask:
   case X86::BI__builtin_ia32_fpclasspd256_mask:
   case X86::BI__builtin_ia32_fpclasspd512_mask:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    return emitX86Fpclass(builder, getLoc(expr->getExprLoc()), builtinID, ops);
   case X86::BI__builtin_ia32_vp2intersect_q_512:
   case X86::BI__builtin_ia32_vp2intersect_q_256:
   case X86::BI__builtin_ia32_vp2intersect_q_128:

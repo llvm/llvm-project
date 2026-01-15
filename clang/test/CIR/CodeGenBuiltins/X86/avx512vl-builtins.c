@@ -310,3 +310,4 @@ __m128d test_mm_maskz_expand_pd(__mmask8 __U, __m128d __A) {
 
   return _mm_maskz_expand_pd(__U,__A);
 }
+
