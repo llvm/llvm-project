@@ -463,6 +463,9 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
   if (!usePseudoProbes())
     return;
 
+  LLVM_DEBUG(dbgs() << "Decoding pseudo probe in " << Obj->getFileName()
+                    << "\n");
+
   MCPseudoProbeDecoder::Uint64Set GuidFilter;
   MCPseudoProbeDecoder::Uint64Map FuncStartAddresses;
   if (ShowDisassemblyOnly) {
