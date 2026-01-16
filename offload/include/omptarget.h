@@ -80,6 +80,10 @@ enum tgt_map_type {
   // Attach pointer and pointee, after processing all other maps.
   // Applicable to map-entering directives. Does not change ref-count.
   OMP_TGT_MAPTYPE_ATTACH = 0x4000,
+  // When a lookup fails, fall back to using null as the translated pointer,
+  // instead of preserving the original pointer's value. Currently only
+  // useful in conjunction with RETURN_PARAM.
+  OMP_TGT_MAPTYPE_FB_NULLIFY = 0x8000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1

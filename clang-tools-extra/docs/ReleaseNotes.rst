@@ -103,6 +103,16 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check:
+
+  - Added support for analyzing function parameters with the `AnalyzeParameters`
+    option.
+
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
+  positives on trivially copyable types with a non-public copy constructor.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

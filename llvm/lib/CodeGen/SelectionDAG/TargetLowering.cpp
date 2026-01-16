@@ -5954,7 +5954,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 
     // Compute the value type for each operand.
     switch (OpInfo.Type) {
-    case InlineAsm::isOutput:
+    case InlineAsm::isOutput: {
       // Indirect outputs just consume an argument.
       if (OpInfo.isIndirect) {
         OpInfo.CallOperandVal = Call.getArgOperand(ArgNo);
@@ -5964,17 +5964,17 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       // The return value of the call is this value.  As such, there is no
       // corresponding argument.
       assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
+      EVT VT;
       if (auto *STy = dyn_cast<StructType>(Call.getType())) {
-        OpInfo.ConstraintVT =
-            getAsmOperandValueType(DL, STy->getElementType(ResNo))
-                .getSimpleVT();
+        VT = getAsmOperandValueType(DL, STy->getElementType(ResNo));
       } else {
         assert(ResNo == 0 && "Asm only has one result!");
-        OpInfo.ConstraintVT =
-            getAsmOperandValueType(DL, Call.getType()).getSimpleVT();
+        VT = getAsmOperandValueType(DL, Call.getType());
       }
+      OpInfo.ConstraintVT = VT.isSimple() ? VT.getSimpleVT() : MVT::Other;
       ++ResNo;
       break;
+    }
     case InlineAsm::isInput:
       OpInfo.CallOperandVal = Call.getArgOperand(ArgNo);
       break;
@@ -9729,9 +9729,12 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
   if (MaskVT.isScalableVector())
     VScaleRange = getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  unsigned EltWidth = TLI.getBitWidthForCttzElements(
+  uint64_t EltWidth = TLI.getBitWidthForCttzElements(
       BoolVT.getTypeForEVT(*DAG.getContext()), MaskVT.getVectorElementCount(),
       /*ZeroIsPoison=*/true, &VScaleRange);
+  // If the step vector element type is smaller than the mask element type,
+  // use the mask type directly to avoid widening issues.
+  EltWidth = std::max(EltWidth, BoolVT.getFixedSizeInBits());
   EVT StepVT = MVT::getIntegerVT(EltWidth);
   EVT StepVecVT = MaskVT.changeVectorElementType(*DAG.getContext(), StepVT);
 

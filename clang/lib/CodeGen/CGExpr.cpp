@@ -2218,6 +2218,10 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
 
   if (Ty->isExtVectorBoolType() || Ty->isConstantMatrixBoolType()) {
     llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+
+    if (Value->getType() == StoreTy)
+      return Value;
+
     if (StoreTy->isVectorTy() && StoreTy->getScalarSizeInBits() >
                                      Value->getType()->getScalarSizeInBits())
       return Builder.CreateZExt(Value, StoreTy);
@@ -2744,6 +2748,20 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 
       llvm::Value *Row = Dst.getMatrixRowIdx();
       llvm::Value *RowVal = Src.getScalarVal(); // <NumCols x T>
+
+      if (RowVal->getType()->isIntOrIntVectorTy(1)) {
+        // NOTE: If matrix single subscripting becomes a feature in languages
+        // other than HLSL, the following assert should be removed and the
+        // assert condition should be made part of the enclosing if-statement
+        // condition as is the case for similar logic for Dst.isMatrixElt()
+        assert(getLangOpts().HLSL);
+        auto *RowValVecTy = cast<llvm::FixedVectorType>(RowVal->getType());
+        llvm::Type *StorageElmTy =
+            llvm::FixedVectorType::get(MatrixVec->getType()->getScalarType(),
+                                       RowValVecTy->getNumElements());
+        RowVal = Builder.CreateZExt(RowVal, StorageElmTy);
+      }
+
       llvm::MatrixBuilder MB(Builder);
 
       llvm::Constant *ColConstsIndices = nullptr;

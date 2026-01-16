@@ -6977,7 +6977,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
 }
 
 NVPTXTargetLowering::AtomicExpansionKind
-NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();
 
   if (AI->isFloatingPointOperation()) {
