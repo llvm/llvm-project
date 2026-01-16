@@ -650,7 +650,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     checkInt(ctx, loc, val, 32, rel);
     checkAlignment(ctx, loc, val, 4, rel);
     // Although jirl adds the immediate as a signed value, it is always positive
-    // in this case, so no adjustment is needed, unlink CALL36.
+    // in this case, so no adjustment is needed, unlike CALL36.
     uint32_t hi20 = extractBits(val, 31, 12);
     // Despite the name, the lower part is actually 12 bits with 4-byte aligned.
     uint32_t lo10 = extractBits(val, 11, 2);
