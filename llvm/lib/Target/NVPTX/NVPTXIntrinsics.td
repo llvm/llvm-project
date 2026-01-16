@@ -5836,7 +5836,7 @@ foreach dim = ["x", "y", "z"] in {
 // tcgen05.mma Helpers
 //
 
-class Tcgen05MMABase<bit Sp, string ASpace, string Kind, int CtaGroup,
+class Tcgen05MMABase<bit IsSparse, string ASpace, string Kind, int CtaGroup,
                      string CollectorUsage> :
         NVPTXInst<(outs), (ins), "?", []>,
         Requires<[]> {
@@ -5855,9 +5855,9 @@ class Tcgen05MMABase<bit Sp, string ASpace, string Kind, int CtaGroup,
                   !eq(Kind, "i8"): 3,
                 );
 
-  dag SparseMetadataIns = !if(Sp, (ins B32:$spmetadata), (ins));
-  string SparseMetadataStr = !if(Sp, ", [$spmetadata]", "");
-  dag SparseMetadataIntr = !if(Sp, (ins i32:$spmetadata), (ins));
+  dag SparseMetadataIns = !if(IsSparse, (ins B32:$spmetadata), (ins));
+  string SparseMetadataStr = !if(IsSparse, ", [$spmetadata]", "");
+  dag SparseMetadataIntr = !if(IsSparse, (ins i32:$spmetadata), (ins));
 
   string AOperandStr = !if(!eq(ASpace, "tensor"), "[$a]", "$a");
   NVPTXRegClass ARegClass = !if(!eq(ASpace, "tensor"), B32, B64);
@@ -5873,7 +5873,7 @@ class Tcgen05MMABase<bit Sp, string ASpace, string Kind, int CtaGroup,
   let OutOperandList = (outs);
 
   string Prefix = "tcgen05.mma";
-  string SpCtaKindStr = !if(Sp, ".sp", "")
+  string SpCtaKindStr = !if(IsSparse, ".sp", "")
                         # ".cta_group::" # CtaGroup
                         # ".kind::" # Kind;
 
@@ -5889,23 +5889,23 @@ class Tcgen05MMABase<bit Sp, string ASpace, string Kind, int CtaGroup,
 // tcgen05.mma Instructions
 //
 
-class Tcgen05MMAInst<bit Sp, string ASpace, string Kind, int CtaGroup,
-                     string CollectorUsage, bit ScaleInputD, bit AShift> :
-        Tcgen05MMABase<Sp, ASpace, Kind, CtaGroup, CollectorUsage> {
+class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
+                     string CollectorUsage, bit IsScaleInputD, bit IsAShift> :
+        Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsage> {
 
   let Predicates = !cond(
-    !eq(ScaleInputD, 1) : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
+    IsScaleInputD : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
     !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
     true : [callSubtarget<"hasTcgen05InstSupport">]
   );
 
   Intrinsic Intrin = !cast<Intrinsic>(
-                        NVVM_TCGEN05_MMA<Sp, ASpace, AShift, ScaleInputD>.record_name
+                        NVVM_TCGEN05_MMA<IsSparse, ASpace, IsAShift, IsScaleInputD>.record_name
                      );
 
-  dag ScaleInpIns = !if(ScaleInputD, (ins i64imm:$scale_input_d), (ins));
-  string ScaleInpStr = !if(ScaleInputD, ", $scale_input_d", "");
-  dag ScaleInpIntr = !if(ScaleInputD, (Intrin i64:$scale_input_d), (Intrin));
+  dag ScaleInpIns = !if(IsScaleInputD, (ins i64imm:$scale_input_d), (ins));
+  string ScaleInpStr = !if(IsScaleInputD, ", $scale_input_d", "");
+  dag ScaleInpIntr = !if(IsScaleInputD, (Intrin i64:$scale_input_d), (Intrin));
 
   let InOperandList = !con(BaseInOperandList,
                            ScaleInpIns);
@@ -5913,7 +5913,7 @@ class Tcgen05MMAInst<bit Sp, string ASpace, string Kind, int CtaGroup,
   let AsmString = Prefix
                   # SpCtaKindStr
                   # ".collector::a::" # CollectorUsage
-                  # !if(!eq(AShift, 1), ".ashift", "")
+                  # !if(IsAShift, ".ashift", "")
                   # BaseOperandsStr
                   # InputDStr
                   # ScaleInpStr
@@ -5929,7 +5929,7 @@ class Tcgen05MMAInst<bit Sp, string ASpace, string Kind, int CtaGroup,
 }
 
 // tcgen05.mma
-foreach sp = [0, 1] in {
+foreach sparse = [0, 1] in {
   foreach space = ["tensor", "shared"] in {
     foreach kind = ["f16", "tf32", "f8f6f4", "i8"] in {
       foreach cta_group = [1, 2] in {
@@ -5938,22 +5938,22 @@ foreach sp = [0, 1] in {
                                           !eq(kind, "tf32")), [0, 1], [0]) in {
             foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
 
-              def : Tcgen05MMAInst<sp, space, kind, cta_group, collector_usage,
-                                   scale_input_d, ashift>;
+              def : Tcgen05MMAInst<sparse, space, kind, cta_group,
+                                   collector_usage, scale_input_d, ashift>;
             } // ashift
           } // scale_input_d
         } // collector_usage
       } // cta_group
     } // kind
   } // space
-} // sp
+} // sparse
 
 //
 // tcgen05.mma.disable_output_lane Helpers
 //
 
-class Tcgen05MMADisableOutputLaneTypeProfile<bit Sp, string ASpace,
-                                             int CtaGroup, bit ScaleInputD>:
+class Tcgen05MMADisableOutputLaneTypeProfile<bit IsSparse, string ASpace,
+                                             int CtaGroup, bit IsScaleInputD>:
         SDTypeProfile<0, 0, []> {
   int DisableOutputLaneVecSize = !mul(4, CtaGroup);
 
@@ -5961,8 +5961,8 @@ class Tcgen05MMADisableOutputLaneTypeProfile<bit Sp, string ASpace,
     [i32],                                      // d
     !if(!eq(ASpace, "tensor"), [i32], [i64]),   // a
     [i64, i32, i1],                             // b, idesc, enable_inp_d
-    !if(!eq(Sp, 1), [i32], []),                 // spmetadata
-    !if(!eq(ScaleInputD, 1), [i64], []),        // scale_input_d
+    !if(IsSparse, [i32], []),                   // spmetadata
+    !if(IsScaleInputD, [i64], []),              // scale_input_d
     !listsplat(i32, DisableOutputLaneVecSize),  // disable_output_lane
     [i32, i32]                                  // kind, collector_usage
   );
@@ -5970,38 +5970,39 @@ class Tcgen05MMADisableOutputLaneTypeProfile<bit Sp, string ASpace,
   let NumOperands = !size(Constraints);
 }
 
-class Tcgen05MMADisableOutputLaneSDNode<bit Sp, string ASpace,
-                                        int CtaGroup, bit ScaleInput, bit AShift>:
+class Tcgen05MMADisableOutputLaneSDNode<bit IsSparse, string ASpace,
+                                        int CtaGroup, bit IsScaleInput,
+                                        bit IsAShift>:
         SDNode<"NVPTXISD::TCGEN05_MMA"
-                # !if(!eq(Sp, 1), "_SP", "")
+                # !if(IsSparse, "_SP", "")
                 # "_" # !toupper(ASpace)
-                # !if(!eq(ScaleInput, 1), "_SCALE_D", "")
+                # !if(IsScaleInput, "_SCALE_D", "")
                 # "_DISABLE_OUTPUT_LANE_CG" # CtaGroup
-                # !if(!eq(AShift, 1), "_ASHIFT", ""),
-        Tcgen05MMADisableOutputLaneTypeProfile<Sp, ASpace, CtaGroup, ScaleInput>,
+                # !if(IsAShift, "_ASHIFT", ""),
+        Tcgen05MMADisableOutputLaneTypeProfile<IsSparse, ASpace, CtaGroup, IsScaleInput>,
                     [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
 
 //
 // tcgen05.mma.disable_output_lane Instructions
 //
 
-class Tcgen05MMADisableOutputLaneInst<bit Sp, string ASpace, string Kind,
+class Tcgen05MMADisableOutputLaneInst<bit IsSparse, string ASpace, string Kind,
                                       int CtaGroup, string CollectorUsage,
-                                      bit ScaleInputD, bit AShift> :
-        Tcgen05MMABase<Sp, ASpace, Kind, CtaGroup, CollectorUsage> {
+                                      bit IsScaleInputD, bit IsAShift> :
+        Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsage> {
 
   let Predicates = !cond(
-    !eq(ScaleInputD, 1) : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
+    IsScaleInputD : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
     !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
     true : [callSubtarget<"hasTcgen05InstSupport">]
   );
 
-  SDNode Opcode = Tcgen05MMADisableOutputLaneSDNode<Sp, ASpace, CtaGroup,
-                                                    ScaleInputD, AShift>;
+  SDNode Opcode = Tcgen05MMADisableOutputLaneSDNode<IsSparse, ASpace, CtaGroup,
+                                                    IsScaleInputD, IsAShift>;
 
-  dag ScaleInpIns = !if(ScaleInputD, (ins i64imm:$scale_input_d), (ins));
-  string ScaleInpStr = !if(ScaleInputD, ", $scale_input_d", "");
-  dag ScaleInpIntr = !if(ScaleInputD, (Opcode i64:$scale_input_d), (Opcode));
+  dag ScaleInpIns = !if(IsScaleInputD, (ins i64imm:$scale_input_d), (ins));
+  string ScaleInpStr = !if(IsScaleInputD, ", $scale_input_d", "");
+  dag ScaleInpIntr = !if(IsScaleInputD, (Opcode i64:$scale_input_d), (Opcode));
 
   // disable output lane
   int DisableOutputLaneVecSize = !mul(4, CtaGroup);
@@ -6032,7 +6033,7 @@ class Tcgen05MMADisableOutputLaneInst<bit Sp, string ASpace, string Kind,
 
   let AsmString = Prefix
                   # SpCtaKindStr
-                  # !if(!eq(AShift, 1), ".ashift", "")
+                  # !if(IsAShift, ".ashift", "")
                   # ".collector::a::" # CollectorUsage
                   # BaseOperandsStr
                   # ", " # DisableOutputLaneStr
@@ -6050,7 +6051,7 @@ class Tcgen05MMADisableOutputLaneInst<bit Sp, string ASpace, string Kind,
 }
 
 // tcgen05.mma.disable_output_lane
-foreach sp = [0, 1] in {
+foreach sparse = [0, 1] in {
   foreach space = ["tensor", "shared"] in {
     foreach kind = ["f16", "tf32", "f8f6f4", "i8"] in {
       foreach cta_group = [1, 2] in {
@@ -6059,7 +6060,7 @@ foreach sp = [0, 1] in {
                                           !eq(kind, "tf32")), [0, 1], [0]) in {
             foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
               def :
-                Tcgen05MMADisableOutputLaneInst<sp, space, kind, cta_group,
+                Tcgen05MMADisableOutputLaneInst<sparse, space, kind, cta_group,
                                                 collector_usage, scale_input_d,
                                                 ashift>;
             } // ashift
@@ -6068,27 +6069,28 @@ foreach sp = [0, 1] in {
       } // cta_group
     } // kind
   } // space
-} // sp
+} // sparse
 
 //
 // tcgen05.mma.block_scale Instructions
 //
 
-class Tcgen05MMABlockScaleInst<bit Sp, string ASpace, string Kind, int CtaGroup,
-                               string ScaleVecSize, string CollectorUsage>:
-        Tcgen05MMABase<Sp, ASpace, Kind, CtaGroup, CollectorUsage> {
+class Tcgen05MMABlockScaleInst<bit IsSparse, string ASpace, string Kind,
+                               int CtaGroup, string ScaleVecSize,
+                               string CollectorUsage>:
+        Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsage> {
 
   let Predicates = !cond(
-    !and(!eq(Sp, 1),
+    !and(IsSparse,
          !eq(Kind, "mxf4")) : [callSubtarget<"hasTcgen05MMASparseMxf4">],
-    !and(!eq(Sp, 1),
+    !and(IsSparse,
          !eq(Kind, "mxf4nvf4")) : [callSubtarget<"hasTcgen05MMASparseMxf4nvf4">],
     !ne(ScaleVecSize, "") : [callSubtarget<"hasTcgen05InstSupport">, hasPTX<88>],
     true : [callSubtarget<"hasTcgen05InstSupport">]
   );
 
   Intrinsic Intrin = !cast<Intrinsic>(
-                             NVVM_TCGEN05_MMA_BLOCKSCALE<Sp, ASpace, Kind, ScaleVecSize>.record_name);
+                             NVVM_TCGEN05_MMA_BLOCKSCALE<IsSparse, ASpace, Kind, ScaleVecSize>.record_name);
 
   let KindVal = !cond(
                   !eq(Kind, "mxf8f6f4") : 0,
@@ -6118,31 +6120,31 @@ class Tcgen05MMABlockScaleInst<bit Sp, string ASpace, string Kind, int CtaGroup,
 }
 
 // tcgen05.mma.block_scale
-foreach sp = [0, 1] in {
+foreach sparse = [0, 1] in {
   foreach space = ["tensor", "shared"] in {
     foreach kind = ["mxf8f6f4", "mxf4", "mxf4nvf4"] in {
       foreach scale_vec_size = ["", ".block16", ".block32"] in {
         foreach cta_group = [1, 2] in {
           foreach collector_usage = ["fill", "use", "lastuse", "discard"] in {
             if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
-              def : Tcgen05MMABlockScaleInst<sp, space, kind, cta_group, scale_vec_size,
-                                             collector_usage>;
+              def : Tcgen05MMABlockScaleInst<sparse, space, kind, cta_group,
+                                             scale_vec_size, collector_usage>;
             }
           } // collector_usage
         } // cta_group
       } // scale_vec_size
     } // kind
   } // space
-} // sp
+} // sparse
 
 //
 // tcgen05.mma.ws Instructions
 //
 
-class Tcgen05MMAWSInst<bit Sp, string ASpace, string Kind,
+class Tcgen05MMAWSInst<bit IsSparse, string ASpace, string Kind,
                        int CollectorBufferB, string CollectorUsage,
-                       bit HasZeroColMask> :
-        Tcgen05MMABase<Sp, ASpace, Kind, /*CtaGroup=*/ 1, CollectorUsage> {
+                       bit IsZeroColMask> :
+        Tcgen05MMABase<IsSparse, ASpace, Kind, /*CtaGroup=*/ 1, CollectorUsage> {
 
   let Predicates = !cond(
     !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
@@ -6150,11 +6152,11 @@ class Tcgen05MMAWSInst<bit Sp, string ASpace, string Kind,
   );
 
   Intrinsic Intrin = !cast<Intrinsic>(
-                            NVVM_TCGEN05_MMA_WS<Sp, ASpace, HasZeroColMask>.record_name);
+                            NVVM_TCGEN05_MMA_WS<IsSparse, ASpace, IsZeroColMask>.record_name);
 
-  dag ZeroColMaskIns = !if(HasZeroColMask, (ins B64:$zero_col_mask), (ins));
-  string ZeroColMaskStr = !if(HasZeroColMask, ", $zero_col_mask", "");
-  dag ZeroColMaskIntr = !if(HasZeroColMask,
+  dag ZeroColMaskIns = !if(IsZeroColMask, (ins B64:$zero_col_mask), (ins));
+  string ZeroColMaskStr = !if(IsZeroColMask, ", $zero_col_mask", "");
+  dag ZeroColMaskIntr = !if(IsZeroColMask,
                             (Intrin i64:$zero_col_mask), (Intrin));
 
   let InOperandList = !con(BaseInOperandList,
@@ -6180,20 +6182,20 @@ class Tcgen05MMAWSInst<bit Sp, string ASpace, string Kind,
 }
 
 // tcgen05.mma.ws
-foreach sp = [0, 1] in {
+foreach sparse = [0, 1] in {
   foreach space = ["shared", "tensor"] in {
     foreach kind = ["f16", "tf32", "f8f6f4", "i8"] in {
       foreach collector_buffer_b = [0, 1, 2, 3] in {
         foreach collector_usage_op = ["discard", "fill", "use", "lastuse"] in {
           foreach zero_col_mask = [0, 1] in {
-              def : Tcgen05MMAWSInst<sp, space, kind, collector_buffer_b,
+              def : Tcgen05MMAWSInst<sparse, space, kind, collector_buffer_b,
                                      collector_usage_op, zero_col_mask>;
           } // zero_col_mask
         } // collector_usage_op
       } // collector_buffer_b
     } //kind
   } // space
-} // sp
+} // sparse
 
 //
 // tensormap.replace Instructions
