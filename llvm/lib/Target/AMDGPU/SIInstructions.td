@@ -1357,22 +1357,22 @@ multiclass f16_to_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (and_oneuse i32:$src0, 0x7fff))),
+    (f32 (any_f16_to_fp (and_oneuse i32:$src0, 0x7fff))),
     (cvt_f32_f16_inst_e64 SRCMODS.ABS, $src0)
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (i32 (srl_oneuse (and_oneuse i32:$src0, 0x7fff0000), (i32 16))))),
+    (f32 (any_f16_to_fp (i32 (srl_oneuse (and_oneuse i32:$src0, 0x7fff0000), (i32 16))))),
     (cvt_f32_f16_inst_e64 SRCMODS.ABS, (i32 (V_LSHRREV_B32_e64 (i32 16), i32:$src0)))
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (or_oneuse i32:$src0, 0x8000))),
+    (f32 (any_f16_to_fp (or_oneuse i32:$src0, 0x8000))),
     (cvt_f32_f16_inst_e64 SRCMODS.NEG_ABS, $src0)
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (xor_oneuse i32:$src0, 0x8000))),
+    (f32 (any_f16_to_fp (xor_oneuse i32:$src0, 0x8000))),
     (cvt_f32_f16_inst_e64 SRCMODS.NEG, $src0)
   >;
 

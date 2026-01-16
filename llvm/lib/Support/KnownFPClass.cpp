@@ -233,6 +233,52 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  KnownFPClass Known;
+
+  // Adding positive and negative infinity produces NaN.
+  // TODO: Check sign of infinities.
+  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()))
+    Known.knownNot(fcNan);
+
+  if (KnownLHS.cannotBeOrderedLessThanZero() &&
+      KnownRHS.cannotBeOrderedLessThanZero())
+    Known.knownNot(OrderedLessThanZeroMask);
+
+  if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
+      KnownRHS.cannotBeOrderedGreaterThanZero())
+    Known.knownNot(OrderedGreaterThanZeroMask);
+
+  // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
+  if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
+       KnownRHS.isKnownNeverLogicalNegZero(Mode)) &&
+      // Make sure output negative denormal can't flush to -0
+      (Mode.Output == DenormalMode::IEEE ||
+       Mode.Output == DenormalMode::PositiveZero))
+    Known.knownNot(fcNegZero);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
+                                     DenormalMode Mode) {
+  KnownFPClass Known = fadd(KnownSrc, KnownSrc, Mode);
+
+  // Doubling 0 will give the same 0.
+  if (KnownSrc.isKnownNeverLogicalPosZero(Mode) &&
+      (Mode.Output == DenormalMode::IEEE ||
+       (Mode.Output == DenormalMode::PreserveSign &&
+        KnownSrc.isKnownNeverPosSubnormal()) ||
+       (Mode.Output == DenormalMode::PositiveZero &&
+        KnownSrc.isKnownNeverSubnormal())))
+    Known.knownNot(fcPosZero);
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
                                 const KnownFPClass &KnownRHS,
                                 DenormalMode Mode) {
@@ -373,6 +419,34 @@ KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
   // Sign bit of a nan isn't guaranteed.
   if (!Known.isKnownNeverNaN())
     Known.SignBit = std::nullopt;
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
+                                           bool IsTrunc,
+                                           bool IsMultiUnitFPType) {
+  KnownFPClass Known;
+
+  // Integer results cannot be subnormal.
+  Known.knownNot(fcSubnormal);
+
+  Known.propagateNaN(KnownSrc, true);
+
+  // Pass through infinities, except PPC_FP128 is a special case for
+  // intrinsics other than trunc.
+  if (IsTrunc || !IsMultiUnitFPType) {
+    if (KnownSrc.isKnownNeverPosInfinity())
+      Known.knownNot(fcPosInf);
+    if (KnownSrc.isKnownNeverNegInfinity())
+      Known.knownNot(fcNegInf);
+  }
+
+  // Negative round ups to 0 produce -0
+  if (KnownSrc.isKnownNever(fcPosFinite))
+    Known.knownNot(fcPosFinite);
+  if (KnownSrc.isKnownNever(fcNegFinite))
+    Known.knownNot(fcNegFinite);
 
   return Known;
 }

@@ -1088,7 +1088,6 @@ void SampleProfileLoaderBaseImpl<BT>::finalizeWeightPropagation(
   // Samples->getHeadSamples() + 1 to avoid functions with zero count.
   if (SampleProfileUseProfi) {
     const BasicBlockT *EntryBB = getEntryBB(&F);
-    ErrorOr<uint64_t> EntryWeight = getBlockWeight(EntryBB);
     if (BlockWeights[EntryBB] > 0) {
       getFunction(F).setEntryCount(
           ProfileCount(BlockWeights[EntryBB], Function::PCT_Real),

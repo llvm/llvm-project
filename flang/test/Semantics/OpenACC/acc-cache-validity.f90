@@ -38,6 +38,18 @@ program openacc_cache_validity
   !ERROR: Only array element or subarray are allowed in CACHE directive
   !$acc cache(/i/)
 
+  !ERROR: The CACHE directive requires at least one of the bounds in the array section subscript triplet to be specified
+  !$acc cache(a(:))
+
+  !ERROR: The CACHE directive requires at least one of the bounds in the array section subscript triplet to be specified
+  !$acc cache(aa(:,:))
+
+  !ERROR: The CACHE directive does not support strided array sections
+  !$acc cache(a(1:10:2))
+
+  !ERROR: The CACHE directive does not support strided array sections
+  !$acc cache(aa(1:10:2, 1:5))
+
   end do
 
   !ERROR: The CACHE directive must be inside a loop
