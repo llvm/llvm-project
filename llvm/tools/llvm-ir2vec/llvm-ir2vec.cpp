@@ -148,7 +148,7 @@ static cl::opt<EmbeddingLevel>
 namespace ir2vec {
 
 /// Process the module and generate output based on selected subcommand
-Error processModule(Module &M, raw_ostream &OS) {
+static Error processModule(Module &M, raw_ostream &OS) {
   IR2VecTool Tool(M);
 
   if (EmbeddingsSubCmd) {
@@ -181,7 +181,7 @@ Error processModule(Module &M, raw_ostream &OS) {
 namespace mir2vec {
 
 /// Setup MIR context from input file
-Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
+static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
   SMDiagnostic Err;
 
   auto MIR = createMIRParserFromFile(InputFile, Err, Ctx.Context);
@@ -226,7 +226,7 @@ Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
 
 /// Generic vocabulary initialization and processing
 template <typename ProcessFunc>
-Error processWithVocabulary(MIRContext &Ctx, raw_ostream &OS,
+static Error processWithVocabulary(MIRContext &Ctx, raw_ostream &OS,
                             bool useLayoutVocab, ProcessFunc processFn) {
   MIR2VecTool Tool(*Ctx.MMI);
 
@@ -256,7 +256,7 @@ Error processWithVocabulary(MIRContext &Ctx, raw_ostream &OS,
 }
 
 /// Process module for triplet generation
-Error processModuleForTriplets(MIRContext &Ctx, raw_ostream &OS) {
+static Error processModuleForTriplets(MIRContext &Ctx, raw_ostream &OS) {
   return processWithVocabulary(Ctx, OS, /*useLayoutVocab=*/true,
                                [&](MIR2VecTool &Tool) -> Error {
                                  Tool.writeTripletsToStream(*Ctx.M, OS);
@@ -265,7 +265,7 @@ Error processModuleForTriplets(MIRContext &Ctx, raw_ostream &OS) {
 }
 
 /// Process module for entity generation
-Error processModuleForEntities(MIRContext &Ctx, raw_ostream &OS) {
+static Error processModuleForEntities(MIRContext &Ctx, raw_ostream &OS) {
   return processWithVocabulary(Ctx, OS, /*useLayoutVocab=*/true,
                                [&](MIR2VecTool &Tool) -> Error {
                                  Tool.writeEntitiesToStream(OS);
@@ -274,7 +274,7 @@ Error processModuleForEntities(MIRContext &Ctx, raw_ostream &OS) {
 }
 
 /// Process module for embedding generation
-Error processModuleForEmbeddings(MIRContext &Ctx, raw_ostream &OS) {
+static Error processModuleForEmbeddings(MIRContext &Ctx, raw_ostream &OS) {
   return processWithVocabulary(
       Ctx, OS, /*useLayoutVocab=*/false, [&](MIR2VecTool &Tool) -> Error {
         if (!FunctionName.empty()) {
@@ -305,7 +305,7 @@ Error processModuleForEmbeddings(MIRContext &Ctx, raw_ostream &OS) {
 }
 
 /// Main entry point for MIR processing
-Error processModule(const std::string &InputFile, raw_ostream &OS) {
+static Error processModule(const std::string &InputFile, raw_ostream &OS) {
   MIRContext Ctx;
 
   // Setup MIR context (parse file, setup target machine, etc.)
