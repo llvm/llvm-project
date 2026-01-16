@@ -8,7 +8,6 @@
 #include "src/math/hypotf.h"
 #include "src/__support/math/hypotf.h"
 
-
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
