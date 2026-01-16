@@ -14630,7 +14630,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
   auto *Load = dyn_cast<LoadSDNode>(Frozen ? N0.getOperand(0) : N0);
   // TODO: Support multiple uses of the load/freeze when frozen.
   if (!Load || !ISD::isNON_EXTLoad(Load) || !ISD::isUNINDEXEDLoad(Load) ||
-      (Frozen && (!Load->hasOneUse() || !N0->hasOneUse())))
+      (Frozen && (!Load->hasNUsesOfValue(1, 0) || !N0.hasOneUse())))
     return {};
 
   // If this is zext nneg, see if it would make sense to treat it as a sext.
@@ -14659,26 +14659,41 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
   bool DoXform = true;
   SmallVector<SDNode *, 4> SetCCs;
   if (!Load->hasOneUse())
-    DoXform =
-        ExtendUsesToFormExtLoad(VT, N, SDValue(Load, 0), ExtOpc, SetCCs, TLI);
+    DoXform = ExtendUsesToFormExtLoad(VT, N, Frozen ? N0 : SDValue(Load, 0),
+                                      ExtOpc, SetCCs, TLI);
   if (VT.isVector())
     DoXform &= TLI.isVectorLoadExtDesirable(SDValue(N, 0));
   if (!DoXform)
     return {};
 
-  SDValue ExtLoad = DAG.getExtLoad(
-      ExtLoadType, SDLoc(Load), VT, Load->getChain(), Load->getBasePtr(),
-      Load->getValueType(0), Load->getMemOperand());
+  SDLoc DL(Load);
+  SDValue ExtLoad =
+      DAG.getExtLoad(ExtLoadType, DL, VT, Load->getChain(), Load->getBasePtr(),
+                     Load->getValueType(0), Load->getMemOperand());
+  assert((!Frozen || SetCCs.empty()) &&
+         "Don't know to extend setcc uses of the frozen value");
   Combiner.ExtendSetCCUses(SetCCs, SDValue(Load, 0), ExtLoad, ExtOpc);
   // If the load value is used only by N, replace it via CombineTo N.
-  bool NoReplaceTrunc = Load->hasOneUse();
-  Combiner.CombineTo(N, Frozen ? DAG.getFreeze(ExtLoad) : ExtLoad);
+  bool NoReplaceTrunc = Frozen ? N0->hasOneUse() : Load->hasOneUse();
+  SDValue Res;
+  if (Frozen) {
+    Res = DAG.getFreeze(ExtLoad);
+    Res = DAG.getNode(ExtLoadType == ISD::SEXTLOAD ? ISD::AssertSext
+                                                   : ISD::AssertZext,
+                      DL, Res.getValueType(), Res,
+                      DAG.getValueType(Load->getValueType(0).getScalarType()));
+  } else {
+    Res = ExtLoad;
+  }
+  Combiner.CombineTo(N, Res);
   if (NoReplaceTrunc) {
     DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), ExtLoad.getValue(1));
     Combiner.recursivelyDeleteUnusedNodes(Load);
   } else {
+    assert(!Frozen &&
+           "Don't know how to handle multiple uses of freeze(extload())");
     SDValue Trunc =
-        DAG.getNode(ISD::TRUNCATE, SDLoc(Load), Load->getValueType(0), ExtLoad);
+        DAG.getNode(ISD::TRUNCATE, DL, Load->getValueType(0), ExtLoad);
     Combiner.CombineTo(Load, Trunc, ExtLoad.getValue(1));
   }
   return SDValue(N, 0); // Return N so it doesn't get rechecked!

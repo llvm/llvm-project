@@ -376,30 +376,24 @@ define <vscale x 2 x i64> @load_frozen_before_sext_multiuse4(ptr %src1, ptr %src
 define <vscale x 16 x i64> @load_frozen_before_zext_multiuse5_dst_illegal(ptr %src, ptr %dst) {
 ; CHECK-LABEL: load_frozen_before_zext_multiuse5_dst_illegal:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z24.d, #3 // =0x3
-; CHECK-NEXT:    sunpklo z1.h, z0.b
-; CHECK-NEXT:    sunpkhi z0.h, z0.b
-; CHECK-NEXT:    str z24, [x1, #7, mul vl]
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1sb { z1.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z2.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1sb { z3.d }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld1sb { z4.d }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld1sb { z5.d }, p0/z, [x0, #5, mul vl]
+; CHECK-NEXT:    ld1sb { z6.d }, p0/z, [x0, #6, mul vl]
+; CHECK-NEXT:    ld1sb { z7.d }, p0/z, [x0, #7, mul vl]
 ; CHECK-NEXT:    str z24, [x1, #6, mul vl]
-; CHECK-NEXT:    str z24, [x1, #5, mul vl]
+; CHECK-NEXT:    str z24, [x1, #7, mul vl]
 ; CHECK-NEXT:    str z24, [x1, #4, mul vl]
-; CHECK-NEXT:    sunpklo z2.s, z1.h
-; CHECK-NEXT:    sunpkhi z3.s, z1.h
-; CHECK-NEXT:    sunpklo z5.s, z0.h
-; CHECK-NEXT:    sunpkhi z7.s, z0.h
-; CHECK-NEXT:    str z24, [x1, #3, mul vl]
+; CHECK-NEXT:    str z24, [x1, #5, mul vl]
 ; CHECK-NEXT:    str z24, [x1, #2, mul vl]
-; CHECK-NEXT:    str z24, [x1, #1, mul vl]
-; CHECK-NEXT:    sunpklo z0.d, z2.s
-; CHECK-NEXT:    sunpkhi z1.d, z2.s
-; CHECK-NEXT:    sunpklo z2.d, z3.s
-; CHECK-NEXT:    sunpkhi z3.d, z3.s
-; CHECK-NEXT:    sunpklo z4.d, z5.s
-; CHECK-NEXT:    sunpkhi z5.d, z5.s
-; CHECK-NEXT:    sunpklo z6.d, z7.s
-; CHECK-NEXT:    sunpkhi z7.d, z7.s
+; CHECK-NEXT:    str z24, [x1, #3, mul vl]
 ; CHECK-NEXT:    str z24, [x1]
+; CHECK-NEXT:    str z24, [x1, #1, mul vl]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 16 x i8>, ptr %src, align 1
   %load.frozen = freeze <vscale x 16 x i8> %load
@@ -413,9 +407,8 @@ define <vscale x 2 x i64> @load_frozen_before_sext_multiuse5_src_illegal(ptr %sr
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.d, #3 // =0x3
-; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    str z1, [x1]
-; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x i8>, ptr %src, align 1
   %load.frozen = freeze <vscale x 2 x i8> %load
@@ -427,15 +420,12 @@ define <vscale x 2 x i64> @load_frozen_before_sext_multiuse5_src_illegal(ptr %sr
 define <vscale x 4 x i64> @load_frozen_before_sext_multiuse5_both_illegal(ptr %src, ptr %dst) {
 ; CHECK-LABEL: load_frozen_before_sext_multiuse5_both_illegal:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z2.d, #3 // =0x3
-; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1sb { z1.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    str z2, [x1, #1, mul vl]
 ; CHECK-NEXT:    str z2, [x1]
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    sxtb z1.s, p0/m, z0.s
-; CHECK-NEXT:    sunpklo z0.d, z1.s
-; CHECK-NEXT:    sunpkhi z1.d, z1.s
 ; CHECK-NEXT:    ret
   %load = load <vscale x 4 x i8>, ptr %src, align 1
   %load.frozen = freeze <vscale x 4 x i8> %load
