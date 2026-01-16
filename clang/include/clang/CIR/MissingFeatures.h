@@ -91,7 +91,6 @@ struct MissingFeatures {
   static bool opFuncUnwindTablesAttr() { return false; }
   static bool opFuncWillReturn() { return false; }
   static bool opFuncNoReturn() { return false; }
-  static bool setFunctionAttributes() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
 
   // CallOp handling
