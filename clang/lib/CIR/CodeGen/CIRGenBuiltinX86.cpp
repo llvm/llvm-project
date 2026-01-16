@@ -1855,10 +1855,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
         emitIntrinsicCallOp(builder, loc, intrinsicName, resRecord);
     mlir::Value rand =
         cir::ExtractMemberOp::create(builder, loc, randTy, call, 0);
-    Address addr =
-        Address(ops[0], clang::CharUnits::fromQuantity(
-                            builder.getCIRIntOrFloatBitWidth(randTy) / 8));
-    builder.createStore(loc, rand, addr);
+    builder.CIRBaseBuilderTy::createStore(loc, rand, ops[0]);
 
     return cir::ExtractMemberOp::create(builder, loc, builder.getUInt32Ty(),
                                         call, 1);
