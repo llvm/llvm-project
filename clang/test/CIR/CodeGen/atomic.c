@@ -158,6 +158,33 @@ void c11_load(_Atomic(int) *ptr) {
 // OGCG:   %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
 // OGCG: }
 
+struct Pair {
+  int x;
+  int y;
+};
+
+void c11_load_aggregate() {
+  _Atomic(struct Pair) a;
+  __c11_atomic_load(&a, __ATOMIC_RELAXED);
+  __c11_atomic_load(&a, __ATOMIC_ACQUIRE);
+  __c11_atomic_load(&a, __ATOMIC_SEQ_CST);
+}
+
+// CIR-LABEL: @c11_load_aggregate
+// CIR: %{{.*}} = cir.load {{.*}} syncscope(system) atomic(relaxed) %{{.*}} : !cir.ptr<!u64i>, !u64i
+// CIR: %{{.*}} = cir.load {{.*}} syncscope(system) atomic(acquire) %{{.*}} : !cir.ptr<!u64i>, !u64i
+// CIR: %{{.*}} = cir.load {{.*}} syncscope(system) atomic(seq_cst) %{{.*}} : !cir.ptr<!u64i>, !u64i
+
+// LLVM-LABEL: @c11_load_aggregate
+// LLVM: %{{.*}} = load atomic i64, ptr %{{.*}} monotonic, align 8
+// LLVM: %{{.*}} = load atomic i64, ptr %{{.*}} acquire, align 8
+// LLVM: %{{.*}} = load atomic i64, ptr %{{.*}} seq_cst, align 8
+
+// OGCG-LABEL: @c11_load_aggregate
+// OGCG: %{{.*}} = load atomic i64, ptr %{{.*}} monotonic, align 8
+// OGCG: %{{.*}} = load atomic i64, ptr %{{.*}} acquire, align 8
+// OGCG: %{{.*}} = load atomic i64, ptr %{{.*}} seq_cst, align 8
+
 void store(int *ptr, int x) {
   __atomic_store(ptr, &x, __ATOMIC_RELAXED);
   __atomic_store(ptr, &x, __ATOMIC_RELEASE);

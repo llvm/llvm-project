@@ -28,6 +28,8 @@
 
   define void @store_large_offset_no_opt(ptr %p) #0 { ret void }
 
+  define void @store_large_offset_two_uses(ptr %p) #0 { ret void }
+
   attributes #0 = { minsize }
 
 ...
@@ -504,8 +506,6 @@ body:             |
     ; RV32XQCI-NEXT: {{  $}}
     ; RV32XQCI-NEXT: renamable $x11 = ADDI $x0, 1
     ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, renamable $x10, 4000 :: (volatile store (s32))
-    ; RV32XQCI-NEXT: renamable $x11 = ADDI $x0, 3
-    ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, killed renamable $x10, 4004 :: (volatile store (s32))
     ; RV32XQCI-NEXT: PseudoRET
     ;
     ; RV32XQCI_ZCB-LABEL: name: store_large_offset_no_opt
@@ -513,11 +513,54 @@ body:             |
     ; RV32XQCI_ZCB-NEXT: {{  $}}
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 1
     ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, renamable $x10, 4000 :: (volatile store (s32))
-    ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 3
-    ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, killed renamable $x10, 4004 :: (volatile store (s32))
     ; RV32XQCI_ZCB-NEXT: PseudoRET
     ;
     ; RV32XQCI_NOXQCILIA-LABEL: name: store_large_offset_no_opt
+    ; RV32XQCI_NOXQCILIA: liveins: $x10
+    ; RV32XQCI_NOXQCILIA-NEXT: {{  $}}
+    ; RV32XQCI_NOXQCILIA-NEXT: renamable $x11 = ADDI $x0, 1
+    ; RV32XQCI_NOXQCILIA-NEXT: QC_E_SW killed renamable $x11, renamable $x10, 4000 :: (volatile store (s32))
+    ; RV32XQCI_NOXQCILIA-NEXT: PseudoRET
+    ;
+    ; RV32XQCI_ZCB_NOXQCILIA-LABEL: name: store_large_offset_no_opt
+    ; RV32XQCI_ZCB_NOXQCILIA: liveins: $x10
+    ; RV32XQCI_ZCB_NOXQCILIA-NEXT: {{  $}}
+    ; RV32XQCI_ZCB_NOXQCILIA-NEXT: renamable $x11 = ADDI $x0, 1
+    ; RV32XQCI_ZCB_NOXQCILIA-NEXT: QC_E_SW killed renamable $x11, renamable $x10, 4000 :: (volatile store (s32))
+    ; RV32XQCI_ZCB_NOXQCILIA-NEXT: PseudoRET
+    renamable $x11 = ADDI $x0, 1
+    QC_E_SW killed renamable $x11, renamable $x10, 4000 :: (volatile store (s32))
+    PseudoRET
+
+...
+---
+name:            store_large_offset_two_uses
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x10
+
+    ; RV32XQCI-LABEL: name: store_large_offset_two_uses
+    ; RV32XQCI: liveins: $x10
+    ; RV32XQCI-NEXT: {{  $}}
+    ; RV32XQCI-NEXT: renamable $x11 = ADDI $x0, 1
+    ; RV32XQCI-NEXT: $x12 = QC_E_ADDI $x10, 3968
+    ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, $x12, 32 :: (volatile store (s32))
+    ; RV32XQCI-NEXT: renamable $x11 = ADDI $x0, 3
+    ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, killed $x12, 36 :: (volatile store (s32))
+    ; RV32XQCI-NEXT: PseudoRET
+    ;
+    ; RV32XQCI_ZCB-LABEL: name: store_large_offset_two_uses
+    ; RV32XQCI_ZCB: liveins: $x10
+    ; RV32XQCI_ZCB-NEXT: {{  $}}
+    ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 1
+    ; RV32XQCI_ZCB-NEXT: $x12 = QC_E_ADDI $x10, 3968
+    ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, $x12, 32 :: (volatile store (s32))
+    ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 3
+    ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, killed $x12, 36 :: (volatile store (s32))
+    ; RV32XQCI_ZCB-NEXT: PseudoRET
+    ;
+    ; RV32XQCI_NOXQCILIA-LABEL: name: store_large_offset_two_uses
     ; RV32XQCI_NOXQCILIA: liveins: $x10
     ; RV32XQCI_NOXQCILIA-NEXT: {{  $}}
     ; RV32XQCI_NOXQCILIA-NEXT: renamable $x11 = ADDI $x0, 1
@@ -526,7 +569,7 @@ body:             |
     ; RV32XQCI_NOXQCILIA-NEXT: QC_E_SW killed renamable $x11, killed renamable $x10, 4004 :: (volatile store (s32))
     ; RV32XQCI_NOXQCILIA-NEXT: PseudoRET
     ;
-    ; RV32XQCI_ZCB_NOXQCILIA-LABEL: name: store_large_offset_no_opt
+    ; RV32XQCI_ZCB_NOXQCILIA-LABEL: name: store_large_offset_two_uses
     ; RV32XQCI_ZCB_NOXQCILIA: liveins: $x10
     ; RV32XQCI_ZCB_NOXQCILIA-NEXT: {{  $}}
     ; RV32XQCI_ZCB_NOXQCILIA-NEXT: renamable $x11 = ADDI $x0, 1

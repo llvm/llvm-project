@@ -2274,7 +2274,7 @@ public:
         !I->getOperand(1).isImm() || I->getOperand(0).getReg() != AArch64::X16)
       return 0;
     TargetHiBits = &*I;
-    Addr |= (Address + ((int64_t)I->getOperand(1).getImm() << 12)) &
+    Addr |= (Address + ((uint64_t)I->getOperand(1).getImm() << 12)) &
             0xFFFFFFFFFFFFF000ULL;
     Target = Addr;
     return 3;
@@ -2788,9 +2788,10 @@ public:
     bool CallTarget = BTI == BTIKind::C || BTI == BTIKind::JC;
     bool JumpTarget = BTI == BTIKind::J || BTI == BTIKind::JC;
     unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
-    bool IsExplicitBTI =
-        Inst.getOpcode() == AArch64::HINT && Inst.getNumOperands() == 1 &&
-        Inst.getOperand(0).isImm() && Inst.getOperand(0).getImm() == HintNum;
+    bool IsExplicitBTI = Inst.getOpcode() == AArch64::HINT &&
+                         MCPlus::getNumPrimeOperands(Inst) == 1 &&
+                         Inst.getOperand(0).isImm() &&
+                         Inst.getOperand(0).getImm() == HintNum;
 
     // Only "BTI C" can be implicit.
     bool IsImplicitBTI =
@@ -2818,7 +2819,7 @@ public:
     // x16 or x17. If the operand is not x16 or x17, it can be accepted by a BTI
     // j or BTI jc (and not BTI c).
     if (isIndirectBranch(Call)) {
-      assert(Call.getNumOperands() == 1 &&
+      assert(MCPlus::getNumPrimeOperands(Call) == 1 &&
              "Indirect branch needs to have 1 operand.");
       assert(Call.getOperand(0).isReg() &&
              "Indirect branch does not have a register operand.");
@@ -2856,7 +2857,7 @@ public:
     // x16 or x17. If the operand is not x16 or x17, it can be accepted by a
     // BTI j or BTI jc (and not BTI c).
     if (isIndirectBranch(Call)) {
-      assert(Call.getNumOperands() == 1 &&
+      assert(MCPlus::getNumPrimeOperands(Call) == 1 &&
              "Indirect branch needs to have 1 operand.");
       assert(Call.getOperand(0).isReg() &&
              "Indirect branch does not have a register operand.");
@@ -2971,7 +2972,7 @@ public:
 
   std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
-                        BinaryBasicBlock::iterator CallInst) const override {
+                        InstructionListType::iterator CallInst) const override {
     MCPhysReg SizeReg = getIntArgRegister(2);
     if (SizeReg == getNoRegister())
       return std::nullopt;
