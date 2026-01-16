@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/ilogbf128.h"
-
 #include "src/__support/math/ilogbf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
