@@ -224,8 +224,8 @@ func.func @fold_mul_splat_i8() -> tensor<10xi32> {
   %two = "tosa.const"() {values = dense<32> : tensor<10xi8>} : () -> tensor<10xi8>
   %shift = "tosa.const"() {values = dense<3> : tensor<1xi8>} : () -> tensor<1xi8>
   %mul = tosa.mul %one, %two, %shift : (tensor<10xi8>, tensor<10xi8>, tensor<1xi8>) -> tensor<10xi32>
-  // CHECK: %[[THREE:.+]] = "tosa.const"() <{values = dense<68> : tensor<10xi32>}
-  // CHECK: return %[[THREE]]
+  // CHECK: %[[SIXTY_EIGHT:.+]] = "tosa.const"() <{values = dense<68> : tensor<10xi32>}
+  // CHECK: return %[[SIXTY_EIGHT]]
   return %mul : tensor<10xi32>
 }
 
@@ -237,8 +237,8 @@ func.func @fold_mul_splat_f32() -> tensor<10xf32> {
   %two = "tosa.const"() {values = dense<2.0> : tensor<10xf32>} : () -> tensor<10xf32>
   %shift = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   %mul = tosa.mul %one, %two, %shift : (tensor<10xf32>, tensor<10xf32>, tensor<1xi8>) -> tensor<10xf32>
-  // CHECK: %[[THREE:.+]] = "tosa.const"() <{values = dense<6.000000e+00> : tensor<10xf32>}
-  // CHECK: return %[[THREE]]
+  // CHECK: %[[SIX:.+]] = "tosa.const"() <{values = dense<6.000000e+00> : tensor<10xf32>}
+  // CHECK: return %[[SIX]]
   return %mul : tensor<10xf32>
 }
 
@@ -269,8 +269,8 @@ func.func @fold_sub_splat_i32() -> tensor<10xi32> {
   %one = "tosa.const"() {values = dense<1> : tensor<10xi32>} : () -> tensor<10xi32>
   %two = "tosa.const"() {values = dense<2> : tensor<10xi32>} : () -> tensor<10xi32>
   %sub = tosa.sub %one, %two : (tensor<10xi32>, tensor<10xi32>) -> tensor<10xi32>
-  // CHECK: %[[THREE:.+]] = "tosa.const"() <{values = dense<-1> : tensor<10xi32>}
-  // CHECK: return %[[THREE]]
+  // CHECK: %[[NEGATIVE_ONE:.+]] = "tosa.const"() <{values = dense<-1> : tensor<10xi32>}
+  // CHECK: return %[[NEGATIVE_ONE]]
   return %sub : tensor<10xi32>
 }
 
@@ -281,8 +281,8 @@ func.func @fold_sub_splat_f32() -> tensor<10xf32> {
   %one = "tosa.const"() {values = dense<1.0> : tensor<10xf32>} : () -> tensor<10xf32>
   %two = "tosa.const"() {values = dense<2.0> : tensor<10xf32>} : () -> tensor<10xf32>
   %sub = tosa.sub %one, %two : (tensor<10xf32>, tensor<10xf32>) -> tensor<10xf32>
-  // CHECK: %[[THREE:.+]] = "tosa.const"() <{values = dense<-1.000000e+00> : tensor<10xf32>}
-  // CHECK: return %[[THREE]]
+  // CHECK: %[[NEGATIVE_ONE:.+]] = "tosa.const"() <{values = dense<-1.000000e+00> : tensor<10xf32>}
+  // CHECK: return %[[NEGATIVE_ONE]]
   return %sub : tensor<10xf32>
 }
 
