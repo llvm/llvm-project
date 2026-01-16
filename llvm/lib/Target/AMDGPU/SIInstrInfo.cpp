@@ -3859,12 +3859,31 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
       if (NewOpc == AMDGPU::V_FMAMK_F16_t16 ||
           NewOpc == AMDGPU::V_FMAMK_F16_fake16) {
-        auto Tmp = MRI->createVirtualRegister(getRegClass(get(NewOpc), 0));
+        const TargetRegisterClass *NewRC = getRegClass(get(NewOpc), 0);
+        auto Tmp = MRI->createVirtualRegister(NewRC);
         BuildMI(*UseMI.getParent(), std::next(UseMI.getIterator()),
                 UseMI.getDebugLoc(), get(AMDGPU::COPY),
                 UseMI.getOperand(0).getReg())
             .addReg(Tmp, RegState::Kill);
         UseMI.getOperand(0).setReg(Tmp);
+        if (UseMI.getOperand(1).isReg() &&
+            RI.isVGPR(*MRI, UseMI.getOperand(1).getReg())) {
+          auto Tmp = MRI->createVirtualRegister(NewRC);
+          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
+                  get(AMDGPU::COPY), Tmp)
+              .addReg(UseMI.getOperand(1).getReg());
+          UseMI.getOperand(1).setReg(Tmp);
+          UseMI.getOperand(1).setIsKill();
+        }
+        if (UseMI.getOperand(3).isReg() &&
+            RI.isVGPR(*MRI, UseMI.getOperand(3).getReg())) {
+          auto Tmp = MRI->createVirtualRegister(NewRC);
+          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
+                  get(AMDGPU::COPY), Tmp)
+              .addReg(UseMI.getOperand(3).getReg());
+          UseMI.getOperand(3).setReg(Tmp);
+          UseMI.getOperand(3).setIsKill();
+        }
       }
 
       bool DeleteDef = MRI->use_nodbg_empty(Reg);
@@ -3936,12 +3955,31 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
       if (NewOpc == AMDGPU::V_FMAAK_F16_t16 ||
           NewOpc == AMDGPU::V_FMAAK_F16_fake16) {
-        auto Tmp = MRI->createVirtualRegister(getRegClass(get(NewOpc), 0));
+        const TargetRegisterClass *NewRC = getRegClass(get(NewOpc), 0);
+        auto Tmp = MRI->createVirtualRegister(NewRC);
         BuildMI(*UseMI.getParent(), std::next(UseMI.getIterator()),
                 UseMI.getDebugLoc(), get(AMDGPU::COPY),
                 UseMI.getOperand(0).getReg())
             .addReg(Tmp, RegState::Kill);
         UseMI.getOperand(0).setReg(Tmp);
+        if (UseMI.getOperand(1).isReg() &&
+            RI.isVGPR(*MRI, UseMI.getOperand(1).getReg())) {
+          auto Tmp = MRI->createVirtualRegister(NewRC);
+          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
+                  get(AMDGPU::COPY), Tmp)
+              .addReg(UseMI.getOperand(1).getReg());
+          UseMI.getOperand(1).setReg(Tmp);
+          UseMI.getOperand(1).setIsKill();
+        }
+        if (UseMI.getOperand(2).isReg() &&
+            RI.isVGPR(*MRI, UseMI.getOperand(2).getReg())) {
+          auto Tmp = MRI->createVirtualRegister(NewRC);
+          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
+                  get(AMDGPU::COPY), Tmp)
+              .addReg(UseMI.getOperand(2).getReg());
+          UseMI.getOperand(2).setReg(Tmp);
+          UseMI.getOperand(2).setIsKill();
+        }
       }
 
       // It might happen that UseMI was commuted
