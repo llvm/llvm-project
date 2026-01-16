@@ -310,7 +310,7 @@ void Symbol::Dump(Stream *s, Target *target, uint32_t index,
   }
 }
 
-uint32_t Symbol::GetPrologueByteSize() {
+uint32_t Symbol::GetPrologueByteSize() const {
   if (m_type == eSymbolTypeCode || m_type == eSymbolTypeResolver) {
     if (!m_type_data_resolved) {
       m_type_data_resolved = true;
