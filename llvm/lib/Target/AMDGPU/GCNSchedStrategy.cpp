@@ -2033,13 +2033,11 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
     const DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     const SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
-  MachineBranchProbabilityInfo MBPI;
-  MachineBlockFrequencyInfo MBFI;
+  MachineBlockFrequencyInfo *MBFI = DAG.MBFI;
 
-  MBFI.calculate(MF, MBPI, *DAG.MLI);
   int64_t BestSpillCost = 0;
   int64_t Cost = 0;
-  uint64_t EntryFreq = MBFI.getEntryFreq().getFrequency();
+  uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
 
   std::pair<unsigned, unsigned> MaxVectorRegs =
       ST.getMaxNumVectorRegs(MF.getFunction());
@@ -2064,7 +2062,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
 
     uint64_t BlockFreq =
-        MBFI.getBlockFreq(DAG.Regions[Region].first->getParent())
+        MBFI->getBlockFreq(DAG.Regions[Region].first->getParent())
             .getFrequency();
 
     bool RelativeFreqIsDenom = EntryFreq > BlockFreq;
@@ -2105,7 +2103,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     auto DefReg = DefMI->getOperand(0).getReg();
     uint64_t DefFreq =
         EntryFreq
-            ? MBFI.getBlockFreq(DefMI->getParent()).getFrequency() / EntryFreq
+            ? MBFI->getBlockFreq(DefMI->getParent()).getFrequency() / EntryFreq
             : 1;
 
     const TargetRegisterClass *RC = DAG.MRI.getRegClass(DefReg);
@@ -2115,7 +2113,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   // Account for CopyForUse copies in each block that the register is used.
   for (auto &[UseBlock, UseRegs] : CopyForUse) {
     uint64_t UseFreq =
-        EntryFreq ? MBFI.getBlockFreq(UseBlock).getFrequency() / EntryFreq : 1;
+        EntryFreq ? MBFI->getBlockFreq(UseBlock).getFrequency() / EntryFreq : 1;
 
     for (Register UseReg : UseRegs) {
       const TargetRegisterClass *RC = DAG.MRI.getRegClass(UseReg);
@@ -2421,7 +2419,7 @@ bool RewriteMFMAFormStage::rewrite(
       }
 
       // Replace the operand for all users.
-      for (auto *User : RUDst.second) {
+      for (MachineOperand *User : RUDst.second) {
         User->setReg(NewUseReg);
       }
 
@@ -2443,12 +2441,13 @@ bool RewriteMFMAFormStage::rewrite(
   }
 
   // Finally, do the reclassification of the MFMA registers.
-  for (auto RewriteReg : RewriteRegs) {
+  for (Register RewriteReg : RewriteRegs) {
     Register RegToRewrite = RewriteReg;
 
     // Be sure to update the replacement register and not the original.
-    if (RedefMap.contains(RewriteReg))
-      RegToRewrite = RedefMap[RewriteReg];
+    DenseMap<Register, Register>::iterator RI = RedefMap.find(RewriteReg);
+    if (RI != RedefMap.end())
+      RegToRewrite = RI->second;
 
     const TargetRegisterClass *CurrRC = DAG.MRI.getRegClass(RegToRewrite);
     const TargetRegisterClass *AGPRRC = SRI->getEquivalentAGPRClass(CurrRC);

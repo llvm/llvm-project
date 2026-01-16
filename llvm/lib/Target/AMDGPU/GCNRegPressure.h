@@ -122,7 +122,7 @@ struct GCNRegPressure {
                                 ? (UnifiedPressure - CombinedThreshold)
                                 : 0;
 
-    return std::max(UnifiedSpill, (ArchSpill + AGPRSpill));
+    return std::max(UnifiedSpill, ArchSpill + AGPRSpill);
   }
 
   void inc(unsigned Reg,
