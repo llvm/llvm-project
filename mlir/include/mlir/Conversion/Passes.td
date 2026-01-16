@@ -198,6 +198,10 @@ def ArithToAPFloatConversionPass
     calls (APFloatWrappers.cpp). APFloat is a software implementation of
     floating-point arithmetic operations.
   }];
+  let options = [
+    ListOption<"sourceTypeStrs", "source-types", "std::string",
+      "MLIR types without arithmetic support on a given target">,
+  ];
   let dependentDialects = ["arith::ArithDialect", "func::FuncDialect",
                            "vector::VectorDialect"];
 }
@@ -787,6 +791,10 @@ def MathToAPFloatConversionPass
     calls (APFloatWrappers.cpp). APFloat is a software implementation of
     floating-point mathmetic operations.
   }];
+  let options = [
+    ListOption<"sourceTypeStrs", "source-types", "std::string",
+      "MLIR types without arithmetic support on a given target">,
+  ];
   let dependentDialects = ["math::MathDialect", "func::FuncDialect"];
 }
 

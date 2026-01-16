@@ -52,13 +52,14 @@ struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
   BinaryArithOpToAPFloatConversion(MLIRContext *context,
                                    const char *APFloatName,
                                    SymbolOpInterface symTable,
+                                   ArrayRef<Type> sourceTypes,
                                    PatternBenefit benefit = 1)
       : OpRewritePattern<OpTy>(context, benefit), symTable(symTable),
-        APFloatName(APFloatName) {};
+        APFloatName(APFloatName), sourceTypes(sourceTypes) {};
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(checkPreconditions(rewriter, op)))
+    if (failed(checkPreconditions(rewriter, op, sourceTypes)))
       return failure();
 
     // Get APFloat function from runtime library.
@@ -103,17 +104,19 @@ struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
 
   SymbolOpInterface symTable;
   const char *APFloatName;
+  ArrayRef<Type> sourceTypes;
 };
 
 template <typename OpTy>
 struct FpToFpConversion final : OpRewritePattern<OpTy> {
   FpToFpConversion(MLIRContext *context, SymbolOpInterface symTable,
-                   PatternBenefit benefit = 1)
-      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable) {}
+                   ArrayRef<Type> sourceTypes, PatternBenefit benefit = 1)
+      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable),
+        sourceTypes(sourceTypes) {}
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(checkPreconditions(rewriter, op)))
+    if (failed(checkPreconditions(rewriter, op, sourceTypes)))
       return failure();
 
     // Get APFloat function from runtime library.
@@ -160,18 +163,20 @@ struct FpToFpConversion final : OpRewritePattern<OpTy> {
   }
 
   SymbolOpInterface symTable;
+  ArrayRef<Type> sourceTypes;
 };
 
 template <typename OpTy>
 struct FpToIntConversion final : OpRewritePattern<OpTy> {
   FpToIntConversion(MLIRContext *context, SymbolOpInterface symTable,
-                    bool isUnsigned, PatternBenefit benefit = 1)
+                    bool isUnsigned, ArrayRef<Type> sourceTypes,
+                    PatternBenefit benefit = 1)
       : OpRewritePattern<OpTy>(context, benefit), symTable(symTable),
-        isUnsigned(isUnsigned) {}
+        isUnsigned(isUnsigned), sourceTypes(sourceTypes) {}
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(checkPreconditions(rewriter, op)))
+    if (failed(checkPreconditions(rewriter, op, sourceTypes)))
       return failure();
 
     // Get APFloat function from runtime library.
@@ -222,18 +227,20 @@ struct FpToIntConversion final : OpRewritePattern<OpTy> {
 
   SymbolOpInterface symTable;
   bool isUnsigned;
+  ArrayRef<Type> sourceTypes;
 };
 
 template <typename OpTy>
 struct IntToFpConversion final : OpRewritePattern<OpTy> {
   IntToFpConversion(MLIRContext *context, SymbolOpInterface symTable,
-                    bool isUnsigned, PatternBenefit benefit = 1)
+                    bool isUnsigned, ArrayRef<Type> sourceTypes,
+                    PatternBenefit benefit = 1)
       : OpRewritePattern<OpTy>(context, benefit), symTable(symTable),
-        isUnsigned(isUnsigned) {}
+        isUnsigned(isUnsigned), sourceTypes(sourceTypes) {}
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(checkPreconditions(rewriter, op)))
+    if (failed(checkPreconditions(rewriter, op, sourceTypes)))
       return failure();
 
     // Get APFloat function from runtime library.
@@ -294,16 +301,19 @@ struct IntToFpConversion final : OpRewritePattern<OpTy> {
 
   SymbolOpInterface symTable;
   bool isUnsigned;
+  ArrayRef<Type> sourceTypes;
 };
 
 struct CmpFOpToAPFloatConversion final : OpRewritePattern<arith::CmpFOp> {
   CmpFOpToAPFloatConversion(MLIRContext *context, SymbolOpInterface symTable,
+                            ArrayRef<Type> sourceTypes,
                             PatternBenefit benefit = 1)
-      : OpRewritePattern<arith::CmpFOp>(context, benefit), symTable(symTable) {}
+      : OpRewritePattern<arith::CmpFOp>(context, benefit), symTable(symTable),
+        sourceTypes(sourceTypes) {}
 
   LogicalResult matchAndRewrite(arith::CmpFOp op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(checkPreconditions(rewriter, op)))
+    if (failed(checkPreconditions(rewriter, op, sourceTypes)))
       return failure();
 
     // Get APFloat function from runtime library.
@@ -445,16 +455,19 @@ struct CmpFOpToAPFloatConversion final : OpRewritePattern<arith::CmpFOp> {
   }
 
   SymbolOpInterface symTable;
+  ArrayRef<Type> sourceTypes;
 };
 
 struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
   NegFOpToAPFloatConversion(MLIRContext *context, SymbolOpInterface symTable,
+                            ArrayRef<Type> sourceTypes,
                             PatternBenefit benefit = 1)
-      : OpRewritePattern<arith::NegFOp>(context, benefit), symTable(symTable) {}
+      : OpRewritePattern<arith::NegFOp>(context, benefit), symTable(symTable),
+        sourceTypes(sourceTypes) {}
 
   LogicalResult matchAndRewrite(arith::NegFOp op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(checkPreconditions(rewriter, op)))
+    if (failed(checkPreconditions(rewriter, op, sourceTypes)))
       return failure();
 
     // Get APFloat function from runtime library.
@@ -497,6 +510,7 @@ struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
   }
 
   SymbolOpInterface symTable;
+  ArrayRef<Type> sourceTypes;
 };
 
 namespace {
@@ -510,36 +524,46 @@ struct ArithToAPFloatConversionPass final
 void ArithToAPFloatConversionPass::runOnOperation() {
   MLIRContext *context = &getContext();
   RewritePatternSet patterns(context);
-  patterns.add<BinaryArithOpToAPFloatConversion<arith::AddFOp>>(context, "add",
-                                                                getOperation());
+
+  FailureOr<SmallVector<Type>> sourceTypes =
+      parseSourceTypes(llvm::to_vector(sourceTypeStrs), context);
+  if (failed(sourceTypes))
+    return signalPassFailure();
+
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::AddFOp>>(
+      context, "add", getOperation(), *sourceTypes);
   patterns.add<BinaryArithOpToAPFloatConversion<arith::SubFOp>>(
-      context, "subtract", getOperation());
+      context, "subtract", getOperation(), *sourceTypes);
   patterns.add<BinaryArithOpToAPFloatConversion<arith::MulFOp>>(
-      context, "multiply", getOperation());
+      context, "multiply", getOperation(), *sourceTypes);
   patterns.add<BinaryArithOpToAPFloatConversion<arith::DivFOp>>(
-      context, "divide", getOperation());
+      context, "divide", getOperation(), *sourceTypes);
   patterns.add<BinaryArithOpToAPFloatConversion<arith::RemFOp>>(
-      context, "remainder", getOperation());
+      context, "remainder", getOperation(), *sourceTypes);
   patterns.add<BinaryArithOpToAPFloatConversion<arith::MinNumFOp>>(
-      context, "minnum", getOperation());
+      context, "minnum", getOperation(), *sourceTypes);
   patterns.add<BinaryArithOpToAPFloatConversion<arith::MaxNumFOp>>(
-      context, "maxnum", getOperation());
+      context, "maxnum", getOperation(), *sourceTypes);
   patterns.add<BinaryArithOpToAPFloatConversion<arith::MinimumFOp>>(
-      context, "minimum", getOperation());
+      context, "minimum", getOperation(), *sourceTypes);
   patterns.add<BinaryArithOpToAPFloatConversion<arith::MaximumFOp>>(
-      context, "maximum", getOperation());
+      context, "maximum", getOperation(), *sourceTypes);
   patterns
       .add<FpToFpConversion<arith::ExtFOp>, FpToFpConversion<arith::TruncFOp>,
            CmpFOpToAPFloatConversion, NegFOpToAPFloatConversion>(
-          context, getOperation());
+          context, getOperation(), *sourceTypes);
   patterns.add<FpToIntConversion<arith::FPToSIOp>>(context, getOperation(),
-                                                   /*isUnsigned=*/false);
+                                                   /*isUnsigned=*/false,
+                                                   *sourceTypes);
   patterns.add<FpToIntConversion<arith::FPToUIOp>>(context, getOperation(),
-                                                   /*isUnsigned=*/true);
+                                                   /*isUnsigned=*/true,
+                                                   *sourceTypes);
   patterns.add<IntToFpConversion<arith::SIToFPOp>>(context, getOperation(),
-                                                   /*isUnsigned=*/false);
+                                                   /*isUnsigned=*/false,
+                                                   *sourceTypes);
   patterns.add<IntToFpConversion<arith::UIToFPOp>>(context, getOperation(),
-                                                   /*isUnsigned=*/true);
+                                                   /*isUnsigned=*/true,
+                                                   *sourceTypes);
   LogicalResult result = success();
   ScopedDiagnosticHandler scopedHandler(context, [&result](Diagnostic &diag) {
     if (diag.getSeverity() == DiagnosticSeverity::Error) {

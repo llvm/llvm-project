@@ -28,12 +28,14 @@ using namespace mlir::func;
 
 struct AbsFOpToAPFloatConversion final : OpRewritePattern<math::AbsFOp> {
   AbsFOpToAPFloatConversion(MLIRContext *context, SymbolOpInterface symTable,
+                            ArrayRef<Type> sourceTypes,
                             PatternBenefit benefit = 1)
-      : OpRewritePattern<math::AbsFOp>(context, benefit), symTable(symTable) {}
+      : OpRewritePattern<math::AbsFOp>(context, benefit), symTable(symTable),
+        sourceTypes(sourceTypes) {}
 
   LogicalResult matchAndRewrite(math::AbsFOp op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(checkPreconditions(rewriter, op)))
+    if (failed(checkPreconditions(rewriter, op, sourceTypes)))
       return failure();
     // Get APFloat function from runtime library.
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
@@ -72,19 +74,21 @@ struct AbsFOpToAPFloatConversion final : OpRewritePattern<math::AbsFOp> {
   }
 
   SymbolOpInterface symTable;
+  ArrayRef<Type> sourceTypes;
 };
 
 template <typename OpTy>
 struct IsOpToAPFloatConversion final : OpRewritePattern<OpTy> {
   IsOpToAPFloatConversion(MLIRContext *context, const char *APFloatName,
                           SymbolOpInterface symTable,
+                          ArrayRef<Type> sourceTypes,
                           PatternBenefit benefit = 1)
       : OpRewritePattern<OpTy>(context, benefit), symTable(symTable),
-        APFloatName(APFloatName) {};
+        APFloatName(APFloatName), sourceTypes(sourceTypes) {};
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(checkPreconditions(rewriter, op)))
+    if (failed(checkPreconditions(rewriter, op, sourceTypes)))
       return failure();
     // Get APFloat function from runtime library.
     auto i1 = IntegerType::get(symTable->getContext(), 1);
@@ -121,16 +125,19 @@ struct IsOpToAPFloatConversion final : OpRewritePattern<OpTy> {
 
   SymbolOpInterface symTable;
   const char *APFloatName;
+  ArrayRef<Type> sourceTypes;
 };
 
 struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
   FmaOpToAPFloatConversion(MLIRContext *context, SymbolOpInterface symTable,
+                           ArrayRef<Type> sourceTypes,
                            PatternBenefit benefit = 1)
-      : OpRewritePattern<math::FmaOp>(context, benefit), symTable(symTable) {};
+      : OpRewritePattern<math::FmaOp>(context, benefit), symTable(symTable),
+        sourceTypes(sourceTypes) {};
 
   LogicalResult matchAndRewrite(math::FmaOp op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(checkPreconditions(rewriter, op)))
+    if (failed(checkPreconditions(rewriter, op, sourceTypes)))
       return failure();
     // Cast operands to 64-bit integers.
     mlir::Type resType = op.getResult().getType();
@@ -210,6 +217,7 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
   }
 
   SymbolOpInterface symTable;
+  ArrayRef<Type> sourceTypes;
 };
 
 namespace {
@@ -224,16 +232,22 @@ void MathToAPFloatConversionPass::runOnOperation() {
   MLIRContext *context = &getContext();
   RewritePatternSet patterns(context);
 
-  patterns.add<AbsFOpToAPFloatConversion>(context, getOperation());
-  patterns.add<IsOpToAPFloatConversion<math::IsFiniteOp>>(context, "finite",
-                                                          getOperation());
-  patterns.add<IsOpToAPFloatConversion<math::IsInfOp>>(context, "infinite",
-                                                       getOperation());
-  patterns.add<IsOpToAPFloatConversion<math::IsNaNOp>>(context, "nan",
-                                                       getOperation());
-  patterns.add<IsOpToAPFloatConversion<math::IsNormalOp>>(context, "normal",
-                                                          getOperation());
-  patterns.add<FmaOpToAPFloatConversion>(context, getOperation());
+  FailureOr<SmallVector<Type>> sourceTypes =
+      parseSourceTypes(llvm::to_vector(sourceTypeStrs), context);
+  if (failed(sourceTypes))
+    return signalPassFailure();
+
+  patterns.add<AbsFOpToAPFloatConversion>(context, getOperation(),
+                                          *sourceTypes);
+  patterns.add<IsOpToAPFloatConversion<math::IsFiniteOp>>(
+      context, "finite", getOperation(), *sourceTypes);
+  patterns.add<IsOpToAPFloatConversion<math::IsInfOp>>(
+      context, "infinite", getOperation(), *sourceTypes);
+  patterns.add<IsOpToAPFloatConversion<math::IsNaNOp>>(
+      context, "nan", getOperation(), *sourceTypes);
+  patterns.add<IsOpToAPFloatConversion<math::IsNormalOp>>(
+      context, "normal", getOperation(), *sourceTypes);
+  patterns.add<FmaOpToAPFloatConversion>(context, getOperation(), *sourceTypes);
 
   LogicalResult result = success();
   ScopedDiagnosticHandler scopedHandler(context, [&result](Diagnostic &diag) {
