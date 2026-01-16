@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17 %s bugprone-unsafe-functions %t --
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-unsafe-functions %t --
 
 namespace std {
 template <class T1, class T2>
@@ -16,5 +16,5 @@ std::pair<T*, std::ptrdiff_t>
 
 void test() {
   (void)std::get_temporary_buffer<int>(64);
-  // CHECK-MESSAGES:           :[[@LINE-1]]:9: warning: function 'get_temporary_buffer<int>' is bugprone, has no performance advantage, was deprecated in C++17 and removed in C++20; 'operator new[]' should be used instead
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: function 'get_temporary_buffer<int>' is bugprone, has no performance advantage, was deprecated in C++17 and removed in C++20; 'operator new[]' should be used instead
 }
