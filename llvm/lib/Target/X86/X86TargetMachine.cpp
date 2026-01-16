@@ -95,7 +95,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86SpeculativeExecutionSideEffectSuppressionLegacyPass(PR);
   initializeX86FlagsCopyLoweringLegacyPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
-  initializeX86LoadValueInjectionRetHardeningPassPass(PR);
+  initializeX86LoadValueInjectionRetHardeningLegacyPass(PR);
   initializeX86OptimizeLEAsLegacyPass(PR);
   initializeX86PartialReductionLegacyPass(PR);
   initializePseudoProbeInserterPass(PR);
@@ -611,7 +611,7 @@ void X86PassConfig::addPreEmitPass2() {
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsPass());
   }
-  addPass(createX86LoadValueInjectionRetHardeningPass());
+  addPass(createX86LoadValueInjectionRetHardeningLegacyPass());
 
   // Insert pseudo probe annotation for callsite profiling
   addPass(createPseudoProbeInserter());

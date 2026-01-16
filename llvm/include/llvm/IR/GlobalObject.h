@@ -143,6 +143,8 @@ public:
   using Value::hasMetadata;
   using Value::setMetadata;
 
+  LLVM_ABI bool hasMetadataOtherThanDebugLoc() const;
+
   /// Copy metadata from Src, adjusting offsets by Offset.
   LLVM_ABI void copyMetadata(const GlobalObject *Src, unsigned Offset);
 

@@ -388,6 +388,15 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
+bool GlobalObject::hasMetadataOtherThanDebugLoc() const {
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  getAllMetadata(MDs);
+  for (const auto &V : MDs)
+    if (V.first != LLVMContext::MD_dbg)
+      return true;
+  return false;
+}
+
 template <typename Operation>
 static const GlobalObject *
 findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases,

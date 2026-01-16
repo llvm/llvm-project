@@ -8542,6 +8542,8 @@ void OMPClauseWriter::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
+  Record.writeEnum(C->getFallbackModifier());
+  Record.AddSourceLocation(C->getFallbackModifierLoc());
   for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *VE : C->private_copies())

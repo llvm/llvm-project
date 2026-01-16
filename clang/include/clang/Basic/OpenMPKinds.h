@@ -218,6 +218,14 @@ enum OpenMPNeedDevicePtrModifier {
   OMPC_NEED_DEVICE_PTR_unknown,
 };
 
+/// OpenMP 6.1 use_device_ptr fallback modifier
+enum OpenMPUseDevicePtrFallbackModifier {
+#define OPENMP_USE_DEVICE_PTR_FALLBACK_MODIFIER(Name)                          \
+  OMPC_USE_DEVICE_PTR_FALLBACK_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_USE_DEVICE_PTR_FALLBACK_unknown,
+};
+
 /// OpenMP bindings for the 'bind' clause.
 enum OpenMPBindClauseKind {
 #define OPENMP_BIND_KIND(Name) OMPC_BIND_##Name,

@@ -277,31 +277,11 @@ protected:
  public:
   DominatorTreeBase() = default;
 
-  DominatorTreeBase(DominatorTreeBase &&Arg)
-      : Roots(std::move(Arg.Roots)), DomTreeNodes(std::move(Arg.DomTreeNodes)),
-        NodeNumberMap(std::move(Arg.NodeNumberMap)), RootNode(Arg.RootNode),
-        Parent(Arg.Parent), DFSInfoValid(Arg.DFSInfoValid),
-        SlowQueries(Arg.SlowQueries), BlockNumberEpoch(Arg.BlockNumberEpoch) {
-    Arg.wipe();
-  }
-
-  DominatorTreeBase &operator=(DominatorTreeBase &&RHS) {
-    if (this == &RHS)
-      return *this;
-    Roots = std::move(RHS.Roots);
-    DomTreeNodes = std::move(RHS.DomTreeNodes);
-    NodeNumberMap = std::move(RHS.NodeNumberMap);
-    RootNode = RHS.RootNode;
-    Parent = RHS.Parent;
-    DFSInfoValid = RHS.DFSInfoValid;
-    SlowQueries = RHS.SlowQueries;
-    BlockNumberEpoch = RHS.BlockNumberEpoch;
-    RHS.wipe();
-    return *this;
-  }
-
   DominatorTreeBase(const DominatorTreeBase &) = delete;
   DominatorTreeBase &operator=(const DominatorTreeBase &) = delete;
+
+  DominatorTreeBase(DominatorTreeBase &&Arg) = default;
+  DominatorTreeBase &operator=(DominatorTreeBase &&RHS) = default;
 
   /// Iteration over roots.
   ///
@@ -1000,18 +980,6 @@ protected:
       B = IDom;  // Walk up the tree
 
     return B == A;
-  }
-
-  /// Wipe this tree's state without releasing any resources.
-  ///
-  /// This is essentially a post-move helper only. It leaves the object in an
-  /// assignable and destroyable state, but otherwise invalid.
-  void wipe() {
-    DomTreeNodes.clear();
-    if constexpr (!GraphHasNodeNumbers<NodeT *>)
-      NodeNumberMap.clear();
-    RootNode = nullptr;
-    Parent = nullptr;
   }
 };
 
