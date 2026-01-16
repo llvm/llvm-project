@@ -425,33 +425,19 @@ for.end:                                          ; preds = %for.body
 ;;    *B++ = A[i + 2*n];
 
 define void @strong9(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
-; CHECK-ALL-LABEL: 'strong9'
-; CHECK-ALL-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-ALL-NEXT:    da analyze - none!
-; CHECK-ALL-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx2, align 4
-; CHECK-ALL-NEXT:    da analyze - none!
-; CHECK-ALL-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-ALL-NEXT:    da analyze - confused!
-; CHECK-ALL-NEXT:  Src: %0 = load i32, ptr %arrayidx2, align 4 --> Dst: %0 = load i32, ptr %arrayidx2, align 4
-; CHECK-ALL-NEXT:    da analyze - none!
-; CHECK-ALL-NEXT:  Src: %0 = load i32, ptr %arrayidx2, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-ALL-NEXT:    da analyze - confused!
-; CHECK-ALL-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-ALL-NEXT:    da analyze - none!
-;
-; CHECK-STRONG-SIV-LABEL: 'strong9'
-; CHECK-STRONG-SIV-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-STRONG-SIV-NEXT:    da analyze - none!
-; CHECK-STRONG-SIV-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx2, align 4
-; CHECK-STRONG-SIV-NEXT:    da analyze - flow [*|<]!
-; CHECK-STRONG-SIV-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-STRONG-SIV-NEXT:    da analyze - confused!
-; CHECK-STRONG-SIV-NEXT:  Src: %0 = load i32, ptr %arrayidx2, align 4 --> Dst: %0 = load i32, ptr %arrayidx2, align 4
-; CHECK-STRONG-SIV-NEXT:    da analyze - none!
-; CHECK-STRONG-SIV-NEXT:  Src: %0 = load i32, ptr %arrayidx2, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-STRONG-SIV-NEXT:    da analyze - confused!
-; CHECK-STRONG-SIV-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-STRONG-SIV-NEXT:    da analyze - none!
+; CHECK-LABEL: 'strong9'
+; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx2, align 4
+; CHECK-NEXT:    da analyze - flow [*|<]!
+; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
+; CHECK-NEXT:    da analyze - confused!
+; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx2, align 4 --> Dst: %0 = load i32, ptr %arrayidx2, align 4
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx2, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
+; CHECK-NEXT:    da analyze - confused!
+; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
+; CHECK-NEXT:    da analyze - none!
 ;
 entry:
   %cmp1 = icmp eq i64 %n, 0

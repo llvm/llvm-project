@@ -17,7 +17,7 @@ define void @symbolicrdiv0(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
@@ -86,7 +86,7 @@ define void @symbolicrdiv1(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx9, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx9, align 4 --> Dst: %0 = load i32, ptr %arrayidx9, align 4
@@ -157,7 +157,7 @@ define void @symbolicrdiv2(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
@@ -226,7 +226,7 @@ define void @symbolicrdiv3(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx6, align 4 --> Dst: %0 = load i32, ptr %arrayidx6, align 4
@@ -293,7 +293,7 @@ define void @symbolicrdiv4(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
@@ -361,7 +361,7 @@ define void @symbolicrdiv5(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
@@ -429,7 +429,7 @@ define void @symbolicrdiv6(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - output [* *]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [* *|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4

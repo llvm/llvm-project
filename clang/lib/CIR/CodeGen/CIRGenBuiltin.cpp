@@ -22,6 +22,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -57,6 +58,127 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   if (exprTy != result.getType())
     result = builder.createIntCast(result, exprTy);
 
+  return RValue::get(result);
+}
+
+/// Emit the conversions required to turn the given value into an
+/// integer of the given size.
+static mlir::Value emitToInt(CIRGenFunction &cgf, mlir::Value v, QualType t,
+                             cir::IntType intType) {
+  v = cgf.emitToMemory(v, t);
+
+  if (mlir::isa<cir::PointerType>(v.getType()))
+    return cgf.getBuilder().createPtrToInt(v, intType);
+
+  assert(v.getType() == intType);
+  return v;
+}
+
+static mlir::Value emitFromInt(CIRGenFunction &cgf, mlir::Value v, QualType t,
+                               mlir::Type resultType) {
+  v = cgf.emitFromMemory(v, t);
+
+  if (mlir::isa<cir::PointerType>(resultType))
+    return cgf.getBuilder().createIntToPtr(v, resultType);
+
+  assert(v.getType() == resultType);
+  return v;
+}
+
+static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
+  ASTContext &astContext = cgf.getContext();
+  Address ptr = cgf.emitPointerWithAlignment(e->getArg(0));
+  unsigned bytes =
+      mlir::isa<cir::PointerType>(ptr.getElementType())
+          ? astContext.getTypeSizeInChars(astContext.VoidPtrTy).getQuantity()
+          : cgf.cgm.getDataLayout().getTypeSizeInBits(ptr.getElementType()) /
+                cgf.cgm.getASTContext().getCharWidth();
+
+  unsigned align = ptr.getAlignment().getQuantity();
+  if (align % bytes != 0) {
+    DiagnosticsEngine &diags = cgf.cgm.getDiags();
+    diags.Report(e->getBeginLoc(), diag::warn_sync_op_misaligned);
+    // Force address to be at least naturally-aligned.
+    return ptr.withAlignment(CharUnits::fromQuantity(bytes));
+  }
+  return ptr;
+}
+
+/// Utility to insert an atomic instruction based on Intrinsic::ID
+/// and the expression node.
+static mlir::Value makeBinaryAtomicValue(
+    CIRGenFunction &cgf, cir::AtomicFetchKind kind, const CallExpr *expr,
+    mlir::Type *originalArgType, mlir::Value *emittedArgValue = nullptr,
+    cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent) {
+
+  QualType type = expr->getType();
+  QualType ptrType = expr->getArg(0)->getType();
+
+  assert(ptrType->isPointerType());
+  assert(
+      cgf.getContext().hasSameUnqualifiedType(type, ptrType->getPointeeType()));
+  assert(cgf.getContext().hasSameUnqualifiedType(type,
+                                                 expr->getArg(1)->getType()));
+
+  Address destAddr = checkAtomicAlignment(cgf, expr);
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  mlir::Value val = cgf.emitScalarExpr(expr->getArg(1));
+  mlir::Type valueType = val.getType();
+  mlir::Value destValue = destAddr.emitRawPointer();
+
+  if (ptrType->getPointeeType()->isPointerType()) {
+    // Pointer to pointer
+    // `cir.atomic.fetch` expects a pointer to an integer type, so we cast
+    // ptr<ptr<T>> to ptr<intPtrSize>
+    cir::IntType ptrSizeInt =
+        builder.getSIntNTy(cgf.getContext().getTypeSize(ptrType));
+    destValue =
+        builder.createBitcast(destValue, builder.getPointerTo(ptrSizeInt));
+    val = emitToInt(cgf, val, type, ptrSizeInt);
+  } else {
+    // Pointer to integer type
+    cir::IntType intType =
+        ptrType->getPointeeType()->isUnsignedIntegerType()
+            ? builder.getUIntNTy(cgf.getContext().getTypeSize(type))
+            : builder.getSIntNTy(cgf.getContext().getTypeSize(type));
+    val = emitToInt(cgf, val, type, intType);
+  }
+
+  // This output argument is needed for post atomic fetch operations
+  // that calculate the result of the operation as return value of
+  // <binop>_and_fetch builtins. The `AtomicFetch` operation only updates the
+  // memory location and returns the old value.
+  if (emittedArgValue) {
+    *emittedArgValue = val;
+    *originalArgType = valueType;
+  }
+
+  auto rmwi = cir::AtomicFetchOp::create(
+      builder, cgf.getLoc(expr->getSourceRange()), destValue, val, kind,
+      ordering, false, /* is volatile */
+      true);           /* fetch first */
+  return rmwi->getResult(0);
+}
+
+static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
+                                   cir::AtomicFetchKind atomicOpkind,
+                                   const CallExpr *e, cir::BinOpKind binopKind,
+                                   bool invert = false) {
+  mlir::Value emittedArgValue;
+  mlir::Type originalArgType;
+  clang::QualType typ = e->getType();
+  mlir::Value result = makeBinaryAtomicValue(
+      cgf, atomicOpkind, e, &originalArgType, &emittedArgValue);
+  clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
+  result = cir::BinOp::create(builder, result.getLoc(), binopKind, result,
+                              emittedArgValue);
+
+  if (invert)
+    result = cir::UnaryOp::create(builder, result.getLoc(),
+                                  cir::UnaryOpKind::Not, result);
+
+  result = emitFromInt(cgf, result, typ, originalArgType);
   return RValue::get(result);
 }
 
@@ -1267,36 +1389,50 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_fetch_and_max:
   case Builtin::BI__sync_fetch_and_umin:
   case Builtin::BI__sync_fetch_and_umax:
+    return errorBuiltinNYI(*this, e, builtinID);
+    return getUndefRValue(e->getType());
   case Builtin::BI__sync_add_and_fetch_1:
   case Builtin::BI__sync_add_and_fetch_2:
   case Builtin::BI__sync_add_and_fetch_4:
   case Builtin::BI__sync_add_and_fetch_8:
   case Builtin::BI__sync_add_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Add, e,
+                                cir::BinOpKind::Add);
   case Builtin::BI__sync_sub_and_fetch_1:
   case Builtin::BI__sync_sub_and_fetch_2:
   case Builtin::BI__sync_sub_and_fetch_4:
   case Builtin::BI__sync_sub_and_fetch_8:
   case Builtin::BI__sync_sub_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Sub, e,
+                                cir::BinOpKind::Sub);
   case Builtin::BI__sync_and_and_fetch_1:
   case Builtin::BI__sync_and_and_fetch_2:
   case Builtin::BI__sync_and_and_fetch_4:
   case Builtin::BI__sync_and_and_fetch_8:
   case Builtin::BI__sync_and_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::And, e,
+                                cir::BinOpKind::And);
   case Builtin::BI__sync_or_and_fetch_1:
   case Builtin::BI__sync_or_and_fetch_2:
   case Builtin::BI__sync_or_and_fetch_4:
   case Builtin::BI__sync_or_and_fetch_8:
   case Builtin::BI__sync_or_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Or, e,
+                                cir::BinOpKind::Or);
   case Builtin::BI__sync_xor_and_fetch_1:
   case Builtin::BI__sync_xor_and_fetch_2:
   case Builtin::BI__sync_xor_and_fetch_4:
   case Builtin::BI__sync_xor_and_fetch_8:
   case Builtin::BI__sync_xor_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Xor, e,
+                                cir::BinOpKind::Xor);
   case Builtin::BI__sync_nand_and_fetch_1:
   case Builtin::BI__sync_nand_and_fetch_2:
   case Builtin::BI__sync_nand_and_fetch_4:
   case Builtin::BI__sync_nand_and_fetch_8:
   case Builtin::BI__sync_nand_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Nand, e,
+                                cir::BinOpKind::And, true);
   case Builtin::BI__sync_val_compare_and_swap_1:
   case Builtin::BI__sync_val_compare_and_swap_2:
   case Builtin::BI__sync_val_compare_and_swap_4:
@@ -1430,8 +1566,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     // Finally, store the result using the pointer.
     bool isVolatile =
         resultArg->getType()->getPointeeType().isVolatileQualified();
-    builder.createStore(loc, emitToMemory(arithOp.getResult(), resultQTy),
-                        resultPtr, isVolatile);
+    builder.createStore(loc, arithOp.getResult(), resultPtr, isVolatile);
 
     return RValue::get(arithOp.getOverflow());
   }

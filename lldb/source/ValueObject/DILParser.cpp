@@ -180,7 +180,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
 //  postfix_expression:
 //    primary_expression
 //    postfix_expression "[" expression "]"
-//    postfix_expression "[" expression "-" expression "]"
+//    postfix_expression "[" expression ":" expression "]"
 //    postfix_expression "." id_expression
 //    postfix_expression "->" id_expression
 //
@@ -195,12 +195,16 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
       m_dil_lexer.Advance();
       ASTNodeUP index = ParseExpression();
       assert(index && "ASTNodeUP must not contain a nullptr");
-      if (CurToken().GetKind() == Token::minus) {
+      if (CurToken().GetKind() == Token::colon) {
         m_dil_lexer.Advance();
         ASTNodeUP last_index = ParseExpression();
         assert(last_index && "ASTNodeUP must not contain a nullptr");
         lhs = std::make_unique<BitFieldExtractionNode>(
             loc, std::move(lhs), std::move(index), std::move(last_index));
+      } else if (CurToken().GetKind() == Token::minus) {
+        BailOut("use of '-' for bitfield range is deprecated; use ':' instead",
+                CurToken().GetLocation(), CurToken().GetSpelling().length());
+        return std::make_unique<ErrorNode>();
       } else {
         lhs = std::make_unique<ArraySubscriptNode>(loc, std::move(lhs),
                                                    std::move(index));
