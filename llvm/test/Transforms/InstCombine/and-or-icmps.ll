@@ -3721,3 +3721,16 @@ define i1 @merge_range_check_or(i8 %a) {
   %and = or i1 %cmp1, %cmp2
   ret i1 %and
 }
+
+; Just a very complicated way of checking if v1 == 0.
+define i1 @complicated_zero_equality_test(i64 %v1) {
+; CHECK-LABEL: @complicated_zero_equality_test(
+; CHECK-NEXT:    [[V5:%.*]] = icmp eq i64 [[V1:%.*]], 0
+; CHECK-NEXT:    ret i1 [[V5]]
+;
+  %v2 = trunc i64 %v1 to i32
+  %v3 = icmp eq i32 %v2, 0
+  %v4 = icmp ult i64 %v1, 4294967296 ; 2 ^ 32
+  %v5 = and i1 %v4, %v3
+  ret i1 %v5
+}

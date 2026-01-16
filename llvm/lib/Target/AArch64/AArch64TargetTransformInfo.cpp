@@ -4024,11 +4024,14 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // This is recognising a LD1 single-element structure to one lane of one
     // register instruction. I.e., if this is an `insertelement` instruction,
     // and its second operand is a load, then we will generate a LD1, which
-    // are expensive instructions.
-    if (I && dyn_cast<LoadInst>(I->getOperand(1)))
+    // are expensive instructions on some uArchs.
+    if (I && isa<LoadInst>(I->getOperand(1))) {
+      if (ST->hasFastLD1Single())
+        return 0;
       return CostKind == TTI::TCK_CodeSize
                  ? 0
                  : ST->getVectorInsertExtractBaseCost() + 1;
+    }
 
     // i1 inserts and extract will include an extra cset or cmp of the vector
     // value. Increase the cost by 1 to account.

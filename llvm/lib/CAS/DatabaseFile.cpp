@@ -34,6 +34,7 @@ Error ondisk::checkTable(StringRef Label, size_t Expected, size_t Observed,
 
 Expected<DatabaseFile>
 DatabaseFile::create(const Twine &Path, uint64_t Capacity,
+                     std::shared_ptr<OnDiskCASLogger> Logger,
                      function_ref<Error(DatabaseFile &)> NewDBConstructor) {
   // Constructor for if the file doesn't exist.
   auto NewFileConstructor = [&](MappedFileRegionArena &Alloc) -> Error {
@@ -49,9 +50,10 @@ DatabaseFile::create(const Twine &Path, uint64_t Capacity,
 
   // Get or create the file.
   MappedFileRegionArena Alloc;
-  if (Error E = MappedFileRegionArena::create(Path, Capacity, sizeof(Header),
-                                              NewFileConstructor)
-                    .moveInto(Alloc))
+  if (Error E =
+          MappedFileRegionArena::create(Path, Capacity, sizeof(Header),
+                                        std::move(Logger), NewFileConstructor)
+              .moveInto(Alloc))
     return std::move(E);
 
   return DatabaseFile::get(
