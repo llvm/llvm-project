@@ -15,7 +15,7 @@ unary_operator = "*" | "&" | "+" | "-";
 
 postfix_expression = primary_expression
                    | postfix_expression "[" expression "]"
-                   | postfix_expression "[" expression "-" expression "]"
+                   | postfix_expression "[" expression ":" expression "]"
                    | postfix_expression "." id_expression
                    | postfix_expression "->" id_expression ;
 
