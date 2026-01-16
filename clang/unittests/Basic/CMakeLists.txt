@@ -19,4 +19,5 @@ add_distinct_clang_unittest(BasicTests
   LLVMTestingSupport
   LLVM_COMPONENTS
   Support
+  TargetParser
   )

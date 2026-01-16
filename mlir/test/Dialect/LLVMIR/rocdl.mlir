@@ -32,6 +32,8 @@ func.func @rocdl_special_regs() -> i32 {
   %13 = rocdl.grid.dim.y : i32
   // CHECK: rocdl.grid.dim.z : i32
   %14 = rocdl.grid.dim.z : i32
+  // CHECK: rocdl.wave.id : i32
+  %15 = rocdl.wave.id : i32
   llvm.return %0 : i32
 }
 
@@ -99,6 +101,13 @@ func.func @rocdl.math.ops(%a: f32, %b: f16, %c: bf16) {
   %sqrt0 = rocdl.sqrt %a f32 -> f32
   %sqrt1 = rocdl.sqrt %b f16 -> f16
   %sqrt2 = rocdl.sqrt %c bf16 -> bf16
+
+  // CHECK: %{{.*}} = rocdl.rsq %{{.*}} f32 -> f32
+  // CHECK: %{{.*}} = rocdl.rsq %{{.*}} f16 -> f16
+  // CHECK: %{{.*}} = rocdl.rsq %{{.*}} bf16 -> bf16
+  %rsq0 = rocdl.rsq %a f32 -> f32
+  %rsq1 = rocdl.rsq %b f16 -> f16
+  %rsq2 = rocdl.rsq %c bf16 -> bf16
   llvm.return
 }
 
@@ -843,16 +852,16 @@ llvm.func @rocdl.global.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3
   llvm.return
 }
 
-llvm.func @rocdl.cluster.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+llvm.func @rocdl.cluster.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>, %mask: i32) {
   // CHECK-LABEL @rocdl.cluster.load.async.to.lds
-  // CHECK: rocdl.cluster.load.async.to.lds.b8 %{{.*}}, %{{.*}}, 0, 0, 0
-  // CHECK: rocdl.cluster.load.async.to.lds.b32 %{{.*}}, %{{.*}}, 0, 0, 0
-  // CHECK: rocdl.cluster.load.async.to.lds.b64 %{{.*}}, %{{.*}}, 0, 0, 0
-  // CHECK: rocdl.cluster.load.async.to.lds.b128 %{{.*}}, %{{.*}}, 0, 0, 0
-  rocdl.cluster.load.async.to.lds.b8 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
-  rocdl.cluster.load.async.to.lds.b32 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
-  rocdl.cluster.load.async.to.lds.b64 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
-  rocdl.cluster.load.async.to.lds.b128 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: rocdl.cluster.load.async.to.lds.b8 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  // CHECK: rocdl.cluster.load.async.to.lds.b32 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  // CHECK: rocdl.cluster.load.async.to.lds.b64 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  // CHECK: rocdl.cluster.load.async.to.lds.b128 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  rocdl.cluster.load.async.to.lds.b8 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.cluster.load.async.to.lds.b32 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.cluster.load.async.to.lds.b64 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.cluster.load.async.to.lds.b128 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
   llvm.return
 }
 
@@ -961,7 +970,7 @@ llvm.func @rocdl.global.prefetch(%ptr : !llvm.ptr<1>) {
 
 llvm.func @rocdl.flat.prefetch(%ptr : !llvm.ptr) {
   // CHECK-LABEL: rocdl.flat.prefetch
-  // CHECK: rocdl.flat.prefetch %{{.*}}, scope 0 : !llvm.ptr 
+  // CHECK: rocdl.flat.prefetch %{{.*}}, scope 0 : !llvm.ptr
   rocdl.flat.prefetch %ptr, scope 0 : !llvm.ptr
   llvm.return
 }
@@ -1190,6 +1199,13 @@ llvm.func @rocdl.s.sleep() {
   llvm.return
 }
 
+llvm.func @rocdl.s.nop() {
+  // CHECK-LABEL: rocdl.s.nop
+  // CHECK: rocdl.s.nop 0
+  rocdl.s.nop 0
+  llvm.return
+}
+
 llvm.func @rocdl.s.barrier() {
   // CHECK-LABEL: rocdl.s.barrier
   // CHECK: rocdl.s.barrier
@@ -1199,64 +1215,71 @@ llvm.func @rocdl.s.barrier() {
 
 llvm.func @rocdl.s.barrier.init(%ptr : !llvm.ptr<3>) {
   // CHECK-LABEL: rocdl.s.barrier.init
-  // CHECK: rocdl.s.barrier.init %[[PTR:.+]], 1
-  rocdl.s.barrier.init %ptr, 1
+  // CHECK: rocdl.s.barrier.init %{{.*}} member_cnt = 1 : !llvm.ptr<3>
+  rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<3>
   llvm.return
 }
 
 llvm.func @rocdl.s.barrier.signal() {
   // CHECK-LABEL: rocdl.s.barrier.signal
-  // CHECK: rocdl.s.barrier.signal -1
-  rocdl.s.barrier.signal -1
+  // CHECK: rocdl.s.barrier.signal id = -1
+  rocdl.s.barrier.signal id = -1
   llvm.return
 }
 
 llvm.func @rocdl.s.barrier.signal.var(%ptr : !llvm.ptr<3>) {
   // CHECK-LABEL: rocdl.s.barrier.signal.var
-  // CHECK: rocdl.s.barrier.signal.var %[[PTR:.+]], 1
-  rocdl.s.barrier.signal.var %ptr, 1
+  // CHECK: rocdl.s.barrier.signal.var %{{.*}} member_cnt = 1 : !llvm.ptr<3>
+  rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<3>
   llvm.return
 }
 
 llvm.func @rocdl.s.barrier.join(%ptr : !llvm.ptr<3>) {
   // CHECK-LABEL: rocdl.s.barrier.join
-  // CHECK: rocdl.s.barrier.join %[[PTR:.+]]
-  rocdl.s.barrier.join %ptr
+  // CHECK: rocdl.s.barrier.join %{{.*}} : !llvm.ptr<3>
+  rocdl.s.barrier.join %ptr : !llvm.ptr<3>
   llvm.return
 }
 
 llvm.func @rocdl.s.barrier.leave() {
   // CHECK-LABEL: rocdl.s.barrier.leave
-  // CHECK: rocdl.s.barrier.leave 1
-  rocdl.s.barrier.leave 1
+  // CHECK: rocdl.s.barrier.leave id = 1
+  rocdl.s.barrier.leave id = 1
   llvm.return
 }
 
 llvm.func @rocdl.s.barrier.wait() {
   // CHECK-LABEL: rocdl.s.barrier.wait
-  // CHECK: rocdl.s.barrier.wait -1
-  rocdl.s.barrier.wait -1
+  // CHECK: rocdl.s.barrier.wait id = -1
+  rocdl.s.barrier.wait id = -1
   llvm.return
 }
 
 llvm.func @rocdl.s.barrier.signal.isfirst() {
   // CHECK-LABEL: rocdl.s.barrier.signal.isfirst
-  // CHECK: rocdl.s.barrier.signal.isfirst 1
-  %0 = rocdl.s.barrier.signal.isfirst 1 : i1
+  // CHECK: rocdl.s.barrier.signal.isfirst id = 1 -> i1
+  %0 = rocdl.s.barrier.signal.isfirst id = 1 -> i1
   llvm.return
 }
 
 llvm.func @rocdl.s.get.barrier.state() {
   // CHECK-LABEL: rocdl.s.get.barrier.state
-  // CHECK: rocdl.s.get.barrier.state 1
-  %0 = rocdl.s.get.barrier.state 1 : i32
+  // CHECK: rocdl.s.get.barrier.state id = 1 -> i32
+  %0 = rocdl.s.get.barrier.state id = 1 -> i32
   llvm.return
 }
 
 llvm.func @rocdl.s.get.named.barrier.state(%ptr : !llvm.ptr<3>) {
   // CHECK-LABEL: rocdl.s.get.named.barrier.state
-  // CHECK: rocdl.s.get.named.barrier.state %[[PTR:.+]]
-  %0 = rocdl.s.get.named.barrier.state %ptr : i32
+  // CHECK: rocdl.s.get.named.barrier.state %{{.*}} : !llvm.ptr<3> -> i32
+  %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<3> -> i32
+  llvm.return
+}
+
+llvm.func @rocdl.s.wakeup.barrier(%ptr : !llvm.ptr<3>) {
+  // CHECK-LABEL: rocdl.s.wakeup.barrier
+  // CHECK: rocdl.s.wakeup.barrier %{{.*}} : !llvm.ptr<3>
+  rocdl.s.wakeup.barrier %ptr : !llvm.ptr<3>
   llvm.return
 }
 

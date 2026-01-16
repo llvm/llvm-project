@@ -178,6 +178,8 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                 .addImm(I->Op2));
       }
       break;
+    case AArch64::EONXrs:
+    case AArch64::EORXrs:
     case AArch64::ORRWrs:
     case AArch64::ORRXrs: {
       Register DstReg = MI.getOperand(0).getReg();

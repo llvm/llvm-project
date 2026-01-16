@@ -594,9 +594,10 @@ static bool isMemcpyEquivalentSpecialMember(CodeGenModule &CGM,
 
   // Non-trivially-copyable fields with pointer field protection need to be
   // copied one by one.
-  if (!CGM.getContext().arePFPFieldsTriviallyCopyable(D->getParent()) &&
-      CGM.getContext().hasPFPFields(
-          CGM.getContext().getCanonicalTagType(D->getParent())))
+  ASTContext &Ctx = CGM.getContext();
+  const CXXRecordDecl *Parent = D->getParent();
+  if (!Ctx.arePFPFieldsTriviallyCopyable(Parent) &&
+      Ctx.hasPFPFields(Ctx.getCanonicalTagType(Parent)))
     return false;
 
   // We can emit a memcpy for a trivial copy or move constructor/assignment.
@@ -1517,7 +1518,8 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
   if (Dtor->getArrayOperatorDelete()) {
     if (!Dtor->getGlobalArrayOperatorDelete()) {
       CGF.EmitDeleteCall(Dtor->getArrayOperatorDelete(), allocatedPtr,
-                         CGF.getContext().getCanonicalTagType(ClassDecl));
+                         CGF.getContext().getCanonicalTagType(ClassDecl),
+                         numElements, cookieSize);
     } else {
       // If global operator[] is set, the class had its own operator delete[].
       // In that case, check the 4th bit. If it is set, we need to call
@@ -1534,12 +1536,14 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
       CGF.Builder.CreateCondBr(ShouldCallGlobDelete, ClassDelete, GlobDelete);
       CGF.EmitBlock(ClassDelete);
       CGF.EmitDeleteCall(Dtor->getArrayOperatorDelete(), allocatedPtr,
-                         CGF.getContext().getCanonicalTagType(ClassDecl));
+                         CGF.getContext().getCanonicalTagType(ClassDecl),
+                         numElements, cookieSize);
       CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
 
       CGF.EmitBlock(GlobDelete);
       CGF.EmitDeleteCall(Dtor->getGlobalArrayOperatorDelete(), allocatedPtr,
-                         CGF.getContext().getCanonicalTagType(ClassDecl));
+                         CGF.getContext().getCanonicalTagType(ClassDecl),
+                         numElements, cookieSize);
     }
   } else {
     // No operators delete[] were found, so emit a trap.

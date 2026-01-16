@@ -109,6 +109,8 @@ cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
       return std::error_code();
     int Error = errno;
     if (Error == EWOULDBLOCK) {
+      if (Timeout.count() == 0)
+        break;
       // Match sys::fs::tryLockFile, which sleeps for 1 ms per attempt.
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       continue;
