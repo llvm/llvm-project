@@ -705,7 +705,7 @@ void AArch64PassConfig::addIRPasses() {
     if (TM->getTargetTriple().isWindowsArm64EC())
       addPass(createAArch64Arm64ECCallLoweringPass());
     else
-      addPass(createCFGuardCheckPass());
+      addPass(createCFGuardPass());
   }
 
   if (TM->Options.JMCInstrument)

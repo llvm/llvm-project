@@ -67,6 +67,7 @@ public:
   using VectorLibrary = llvm::driver::VectorLibrary;
   using ZeroCallUsedRegsKind = llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind;
   using WinX64EHUnwindV2Mode = llvm::WinX64EHUnwindV2Mode;
+  using ControlFlowGuardMechanism = llvm::ControlFlowGuardMechanism;
 
   using DebugCompressionType = llvm::DebugCompressionType;
   using EmitDwarfUnwindType = llvm::EmitDwarfUnwindType;
