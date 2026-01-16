@@ -107,17 +107,13 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
     auto *VPI = dyn_cast<VPInstruction>(VPV);
     if (VPI && VPI->getOpcode() == VPInstruction::Broadcast)
       VPV = VPI->getOperand(0);
-    auto *IRV = dyn_cast<VPIRValue>(VPV);
-    if (!IRV)
-      return false;
-    assert(!IRV->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(IRV->getValue());
+    auto *CI = dyn_cast<VPConstantInt>(VPV);
     if (!CI)
       return false;
 
     if (BitWidth != 0 && CI->getBitWidth() != BitWidth)
       return false;
-    return P.isValue(CI->getValue());
+    return P.isValue(CI->getAPInt());
   }
 };
 
@@ -181,14 +177,10 @@ struct bind_apint {
   bind_apint(const APInt *&Res) : Res(Res) {}
 
   bool match(VPValue *VPV) const {
-    auto *IRV = dyn_cast<VPIRValue>(VPV);
-    if (!IRV)
-      return false;
-    assert(!IRV->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(IRV->getValue());
+    auto *CI = dyn_cast<VPConstantInt>(VPV);
     if (!CI)
       return false;
-    Res = &CI->getValue();
+    Res = &CI->getAPInt();
     return true;
   }
 };
