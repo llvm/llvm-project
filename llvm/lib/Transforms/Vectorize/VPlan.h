@@ -443,6 +443,7 @@ public:
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
+    VPWidenShuffleSC,
     VPBlendSC,
     VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.
@@ -639,6 +640,7 @@ public:
     case VPRecipeBase::VPWidenIntrinsicSC:
     case VPRecipeBase::VPWidenMemIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
+    case VPRecipeBase::VPWidenShuffleSC:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
     case VPRecipeBase::VPCurrentIterationPHISC:
@@ -1134,6 +1136,7 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPRecipeID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenIntrinsicSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenMemIntrinsicSC ||
+           R->getVPRecipeID() == VPRecipeBase::VPWidenShuffleSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReductionSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReplicateSC ||
@@ -1277,6 +1280,16 @@ public:
     // part if it is scalar. In the latter case, the recipe will be removed
     // during unrolling.
     ExtractPenultimateElement,
+    // ExtractVectors(VectorOp, Index, DeinterleaveFactor):
+    // Extract multiple (if VF>1) subvectors from its first operand into a
+    // result vector. This is equivalent to deinterleave.segments intrinsics.
+    ExtractVectors,
+    // ConcatVectors(Vec0, Vec1):
+    // Concatenate VF*2 subvectors from two sources. This will interleave
+    // subvectors (of Vec0's initial type) from both sources using
+    // interleave.segments intrinsics.
+    ConcatVectors,
+    // TODO-REVEC: ExtractElements
     LogicalAnd,     // Non-poison propagating logical And.
     LogicalOr,      // Non-poison propagating logical Or.
     NumActiveLanes, // Counts the number of active lanes in a mask.
@@ -1932,7 +1945,7 @@ protected:
   }
 
   /// Helper function to produce the widened intrinsic call.
-  CallInst *createVectorCall(VPTransformState &State);
+  Instruction *createVectorCall(VPTransformState &State);
 
 public:
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
@@ -2177,6 +2190,50 @@ protected:
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
 #endif
+};
+
+/// Widen a known shufflevector pattern using llvm.vector.segmented.shuffle.
+class VPWidenShuffleRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
+
+public:
+  VPWidenShuffleRecipe(ArrayRef<VPValue *> Operands, ArrayRef<int> ShuffleMask,
+                       Type *OriginalType, const VPIRFlags &Flags = {},
+                       const VPIRMetadata &Metadata = {},
+                       DebugLoc DL = DebugLoc::getUnknown())
+      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenShuffleSC, Operands,
+                            OriginalType, Flags, DL),
+        VPIRMetadata(Metadata), ShuffleMask(ShuffleMask) {
+    assert(Operands.size() == 2);
+  }
+
+  ~VPWidenShuffleRecipe() override = default;
+
+  VPWidenShuffleRecipe *clone() override {
+    return new VPWidenShuffleRecipe(operands(), getShuffleMask(),
+                                    getScalarType(), *this, *this,
+                                    getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPWidenShuffleSC);
+
+  void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  unsigned getOpcode() const { return Instruction::ShuffleVector; }
+
+  /// Return the shuffle mask that is applied within each segment.
+  ArrayRef<int> getShuffleMask() const { return ShuffleMask; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
+
+private:
+  SmallVector<int, 8> ShuffleMask;
 };
 
 /// A recipe for handling GEP instructions.
@@ -2829,6 +2886,9 @@ public:
       : VPHeaderPHIRecipe(VPRecipeBase::VPReductionPHISC, Phi, &Start),
         VPIRFlags(Flags), Kind(Kind), Style(Style),
         HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {
+    assert((!getScalarType()->isVectorTy() || !isPartialReduction()) &&
+           "Unexpected partial reduction for vector PHI. Did a wide vector "
+           "type pass legality checks?");
     addOperand(&BackedgeValue);
   }
 

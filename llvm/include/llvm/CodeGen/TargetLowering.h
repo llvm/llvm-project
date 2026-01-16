@@ -3344,9 +3344,12 @@ public:
   /// \p DI represents the deinterleaveN intrinsic.
   /// \p GapMask is a mask with zeros for components / fields that may not be
   /// accessed.
-  virtual bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                                IntrinsicInst *DI,
-                                                const APInt &GapMask) const {
+  /// \p DeinterleaveSegments Whether to deinterleave <MinEC x EltTy> segments
+  ///                         instead of elements.
+  virtual bool
+  lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                   IntrinsicInst *DI, const APInt &GapMask,
+                                   bool DeinterleaveSegments) const {
     return false;
   }
 
@@ -3360,9 +3363,12 @@ public:
   /// component being interwoven) mask.  Can be nullptr, in which case the
   /// result is uncondiitional.
   /// \p InterleaveValues contains the interleaved values.
+  /// \p InterleaveSegments Whether to interleave <MinEC x EltTy> segments
+  ///                       instead of elements.
   virtual bool
   lowerInterleaveIntrinsicToStore(Instruction *Store, Value *Mask,
-                                  ArrayRef<Value *> InterleaveValues) const {
+                                  ArrayRef<Value *> InterleaveValues,
+                                  bool InterleaveSegments) const {
     return false;
   }
 

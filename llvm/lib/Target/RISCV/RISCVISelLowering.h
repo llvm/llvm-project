@@ -443,13 +443,14 @@ public:
                              ShuffleVectorInst *SVI, unsigned Factor,
                              const APInt &GapMask) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                        IntrinsicInst *DI,
-                                        const APInt &GapMask) const override;
+  bool
+  lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                   IntrinsicInst *DI, const APInt &GapMask,
+                                   bool DeinterleaveSegments) const override;
 
-  bool lowerInterleaveIntrinsicToStore(
-      Instruction *Store, Value *Mask,
-      ArrayRef<Value *> InterleaveValues) const override;
+  bool lowerInterleaveIntrinsicToStore(Instruction *Store, Value *Mask,
+                                       ArrayRef<Value *> InterleaveValues,
+                                       bool InterleaveSegments) const override;
 
   bool supportKCFIBundles() const override { return true; }
 

@@ -43,7 +43,7 @@ define void @scalable_mul() #0 {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %mul_nxv8i16 = mul <vscale x 8 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %mul_nxv4i32 = mul <vscale x 4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %mul_nxv2i64 = mul <vscale x 2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %mul_nxv1i64 = mul <vscale x 1 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %mul_nxv1i64 = mul <vscale x 1 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:
@@ -62,7 +62,7 @@ define void @scalable_add() #0 {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %add_nxv8i16 = add <vscale x 8 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %add_nxv4i32 = add <vscale x 4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %add_nxv2i64 = add <vscale x 2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %add_nxv1i64 = add <vscale x 1 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %add_nxv1i64 = add <vscale x 1 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:

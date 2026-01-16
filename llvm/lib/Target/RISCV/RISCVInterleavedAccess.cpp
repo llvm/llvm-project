@@ -355,11 +355,11 @@ bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
 }
 
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    Instruction *Load, Value *Mask, IntrinsicInst *DI,
-    const APInt &GapMask) const {
+    Instruction *Load, Value *Mask, IntrinsicInst *DI, const APInt &GapMask,
+    bool DeinterleaveSegments) const {
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   assert(GapMask.getBitWidth() == Factor);
-  if (Factor > 8)
+  if (Factor > 8 || DeinterleaveSegments)
     return false;
 
   // We only support cases where the skipped fields are the trailing ones.
@@ -463,9 +463,10 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 }
 
 bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
-    Instruction *Store, Value *Mask, ArrayRef<Value *> InterleaveValues) const {
+    Instruction *Store, Value *Mask, ArrayRef<Value *> InterleaveValues,
+    bool InterleaveSegments) const {
   unsigned Factor = InterleaveValues.size();
-  if (Factor > 8)
+  if (Factor > 8 || InterleaveSegments)
     return false;
 
   IRBuilder<> Builder(Store);

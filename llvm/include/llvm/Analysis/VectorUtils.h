@@ -176,13 +176,20 @@ LLVM_ABI bool isVectorIntrinsicWithStructReturnOverloadAtField(
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its intrinsic ID, in case it does not found it return not_intrinsic.
 LLVM_ABI Intrinsic::ID
-getVectorIntrinsicIDForCall(const CallInst *CI, const TargetLibraryInfo *TLI);
+getVectorIntrinsicIDForCall(const CallInst *CI, const TargetLibraryInfo *TLI,
+                            const TargetTransformInfo *TTI = nullptr);
 
 /// Returns the corresponding factor of llvm.vector.interleaveN intrinsics.
 LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);
 
 /// Returns the corresponding factor of llvm.vector.deinterleaveN intrinsics.
 LLVM_ABI unsigned getDeinterleaveIntrinsicFactor(Intrinsic::ID ID);
+
+/// Whether the intrinsic corresponds to llvm.vector.interleave.segmentsN.
+LLVM_ABI bool isInterleaveSegmentsIntrinsic(Intrinsic::ID ID);
+
+/// Whether the intrinsic corresponds to llvm.vector.deinterleave.segmentsN.
+LLVM_ABI bool isDeinterleaveSegmentsIntrinsic(Intrinsic::ID ID);
 
 /// Given a deinterleaveN intrinsic, return the (narrow) vector type of each
 /// factor.

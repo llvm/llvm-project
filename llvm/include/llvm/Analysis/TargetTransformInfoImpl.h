@@ -393,6 +393,16 @@ public:
     return false;
   }
 
+  virtual bool isLegalMaskedSegmentGather(Type *DataType,
+                                          Align Alignment) const {
+    return false;
+  }
+
+  virtual bool isLegalMaskedSegmentScatter(Type *DataType,
+                                           Align Alignment) const {
+    return false;
+  }
+
   virtual bool forceScalarizeMaskedGather(VectorType *DataType,
                                           Align Alignment) const {
     return false;
@@ -480,6 +490,22 @@ public:
   virtual bool useColdCCForColdCall(Function &F) const { return false; }
 
   virtual bool useFastCCForInternalCall(Function &F) const { return true; }
+
+  virtual bool isTargetIntrinsicVectorizable(Intrinsic::ID ID) const {
+    return false;
+  }
+
+  virtual bool isSupportedTargetRecurrence(Intrinsic::ID ID,
+                                           RecurKind RK) const {
+    return false;
+  }
+
+  virtual Instruction *
+  vectorizeTargetIntrinsic(Intrinsic::ID VectorIID, ArrayRef<Type *> TysForDecl,
+                           ArrayRef<Value *> WideArgs, IRBuilderBase &Builder,
+                           const Instruction &OrigInst) const {
+    llvm_unreachable("Not implemented");
+  }
 
   virtual bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                                   unsigned ScalarOpdIdx) const {
@@ -777,6 +803,13 @@ public:
     return 1;
   }
 
+  virtual InstructionCost
+  getSegmentedShuffleCost(TTI::ShuffleKind Kind, VectorType *VTy,
+                          ArrayRef<int> Mask,
+                          TTI::TargetCostKind CostKind) const {
+    return InstructionCost::getInvalid();
+  }
+
   virtual InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst,
                                            Type *Src, TTI::CastContextHint CCH,
                                            TTI::TargetCostKind CostKind,
@@ -909,6 +942,13 @@ public:
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond, bool UseMaskForGaps) const {
     return 1;
+  }
+
+  virtual InstructionCost getSegmentInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+      bool UseMaskForCond, bool UseMaskForGaps) const {
+    return InstructionCost::getInvalid();
   }
 
   virtual InstructionCost

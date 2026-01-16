@@ -18,6 +18,59 @@ define void @deinterleave_nxi8_factor2(ptr %ptr) #0 {
   ret void
 }
 
+define void @deinterleave_nxi8_factor2_masked(ptr %ptr, <vscale x 16 x i1> %mask) #0 {
+; CHECK-LABEL: define void @deinterleave_nxi8_factor2_masked
+; CHECK-SAME: (ptr [[PTR:%.*]], <vscale x 16 x i1> [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MASK_WIDE:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[MASK]], <vscale x 16 x i1> [[MASK]])
+; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv16i8.p0(<vscale x 16 x i1> [[MASK]], ptr [[PTR]])
+; CHECK-NEXT:    [[EXTRACT1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[LDN]], 1
+; CHECK-NEXT:    [[EXTRACT2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[LDN]], 0
+; CHECK-NEXT:    ret void
+;
+  %mask.wide = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  %load = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8.p0(ptr %ptr, i32 8, <vscale x 32 x i1> %mask.wide, <vscale x 32 x i8> poison)
+  %deinterleave = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %load)
+  %extract1 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleave, 1
+  %extract2 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleave, 0
+  ret void
+}
+
+define void @deinterleave_nxi8_factor2_masked_zero_passthru(ptr %ptr, <vscale x 16 x i1> %mask) #0 {
+; CHECK-LABEL: define void @deinterleave_nxi8_factor2_masked_zero_passthru
+; CHECK-SAME: (ptr [[PTR:%.*]], <vscale x 16 x i1> [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MASK_WIDE:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[MASK]], <vscale x 16 x i1> [[MASK]])
+; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv16i8.p0(<vscale x 16 x i1> [[MASK]], ptr [[PTR]])
+; CHECK-NEXT:    [[EXTRACT1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[LDN]], 1
+; CHECK-NEXT:    [[EXTRACT2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[LDN]], 0
+; CHECK-NEXT:    ret void
+;
+  %mask.wide = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  %load = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8.p0(ptr %ptr, i32 8, <vscale x 32 x i1> %mask.wide, <vscale x 32 x i8> splat (i8 0))
+  %deinterleave = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %load)
+  %extract1 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleave, 1
+  %extract2 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleave, 0
+  ret void
+}
+
+; Passthru is neither 0 nor poison, this isn't supported yet.
+define void @deinterleave_nxi8_factor2_masked_other_passthru(ptr %ptr, <vscale x 16 x i1> %mask) #0 {
+; CHECK-LABEL: define void @deinterleave_nxi8_factor2_masked_other_passthru
+; CHECK-SAME: (ptr [[PTR:%.*]], <vscale x 16 x i1> [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MASK_WIDE:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[MASK]], <vscale x 16 x i1> [[MASK]])
+; CHECK-NEXT:    [[LOAD:%.*]] = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8.p0(ptr align 8 [[PTR]], <vscale x 32 x i1> [[MASK_WIDE]], <vscale x 32 x i8> splat (i8 5))
+; CHECK-NEXT:    [[DEINTERLEAVE:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[LOAD]])
+; CHECK-NEXT:    [[EXTRACT1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[DEINTERLEAVE]], 1
+; CHECK-NEXT:    [[EXTRACT2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[DEINTERLEAVE]], 0
+; CHECK-NEXT:    ret void
+;
+  %mask.wide = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  %load = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8.p0(ptr %ptr, i32 8, <vscale x 32 x i1> %mask.wide, <vscale x 32 x i8> splat (i8 5))
+  %deinterleave = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %load)
+  %extract1 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleave, 1
+  %extract2 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleave, 0
+  ret void
+}
+
 define void @deinterleave_nxi16_factor2(ptr %ptr) #0 {
 ; CHECK-LABEL: define void @deinterleave_nxi16_factor2
 ; CHECK-SAME: (ptr [[PTR:%.*]]) #[[ATTR0]] {
@@ -30,6 +83,19 @@ define void @deinterleave_nxi16_factor2(ptr %ptr) #0 {
   %deinterleave = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.vector.deinterleave2.nxv16i16(<vscale x 16 x i16> %load)
   %extract1 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %deinterleave, 0
   %extract2 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %deinterleave, 1
+  ret void
+}
+
+define void @deinterleave_nxi16_factor2_masked(ptr %ptr, <vscale x 8 x i1> %mask) #0 {
+; CHECK-LABEL: define void @deinterleave_nxi16_factor2_masked
+; CHECK-SAME: (ptr [[PTR:%.*]], <vscale x 8 x i1> [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MASK_WIDE:%.*]] = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> [[MASK]], <vscale x 8 x i1> [[MASK]])
+; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld2.sret.nxv8i16.p0(<vscale x 8 x i1> [[MASK]], ptr [[PTR]])
+; CHECK-NEXT:    ret void
+;
+  %mask.wide = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
+  %load = call <vscale x 16 x i16> @llvm.masked.load.nxv16i16.p0(ptr %ptr, i32 16, <vscale x 16 x i1> %mask.wide, <vscale x 16 x i16> poison)
+  %deinterleave = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.vector.deinterleave2.nxv16i16(<vscale x 16 x i16> %load)
   ret void
 }
 
@@ -48,6 +114,23 @@ define void @deinterleave_nx8xi32_factor2(ptr %ptr) #0 {
   ret void
 }
 
+define void @deinterleave_nx8xi32_factor2_masked(ptr %ptr, <vscale x 4 x i1> %mask) #0 {
+; CHECK-LABEL: define void @deinterleave_nx8xi32_factor2_masked
+; CHECK-SAME: (ptr [[PTR:%.*]], <vscale x 4 x i1> [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MASK_WIDE:%.*]] = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> [[MASK]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv4i32.p0(<vscale x 4 x i1> [[MASK]], ptr [[PTR]])
+; CHECK-NEXT:    [[EXTRACT1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 0
+; CHECK-NEXT:    [[EXTRACT2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 1
+; CHECK-NEXT:    ret void
+;
+  %mask.wide = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
+  %load = call <vscale x 8 x i32> @llvm.masked.load.nxv8i32.p0(ptr %ptr, i32 32, <vscale x 8 x i1> %mask.wide, <vscale x 8 x i32> poison)
+  %deinterleave = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %load)
+  %extract1 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %deinterleave, 0
+  %extract2 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %deinterleave, 1
+  ret void
+}
+
 define void @deinterleave_nxi64_factor2(ptr %ptr) #0 {
 ; CHECK-LABEL: define void @deinterleave_nxi64_factor2
 ; CHECK-SAME: (ptr [[PTR:%.*]]) #[[ATTR0]] {
@@ -57,6 +140,23 @@ define void @deinterleave_nxi64_factor2(ptr %ptr) #0 {
 ; CHECK-NEXT:    ret void
 ;
   %load = load <vscale x 4 x i64>, ptr %ptr, align 8
+  %deinterleave = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave2.nxv4i64(<vscale x 4 x i64> %load)
+  %extract1 = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %deinterleave, 0
+  %extract2 = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %deinterleave, 1
+  ret void
+}
+
+define void @deinterleave_nxi64_factor2_masked(ptr %ptr, <vscale x 2 x i1> %mask) #0 {
+; CHECK-LABEL: define void @deinterleave_nxi64_factor2_masked
+; CHECK-SAME: (ptr [[PTR:%.*]], <vscale x 2 x i1> [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MASK_WIDE:%.*]] = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> [[MASK]], <vscale x 2 x i1> [[MASK]])
+; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld2.sret.nxv2i64.p0(<vscale x 2 x i1> [[MASK]], ptr [[PTR]])
+; CHECK-NEXT:    [[EXTRACT1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN]], 0
+; CHECK-NEXT:    [[EXTRACT2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[LDN]], 1
+; CHECK-NEXT:    ret void
+;
+  %mask.wide = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
+  %load = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0(ptr %ptr, i32 64, <vscale x 4 x i1> %mask.wide, <vscale x 4 x i64> poison)
   %deinterleave = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave2.nxv4i64(<vscale x 4 x i64> %load)
   %extract1 = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %deinterleave, 0
   %extract2 = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %deinterleave, 1
@@ -116,6 +216,19 @@ define void @interleave_nxi8_factor2(ptr %ptr, <vscale x 16 x i8> %l, <vscale x 
 ;
   %interleave = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %l, <vscale x 16 x i8> %r)
   store <vscale x 32 x i8> %interleave, ptr %ptr, align 1
+  ret void
+}
+
+define void @interleave_nxi8_factor2_masked(ptr %ptr, <vscale x 16 x i8> %l, <vscale x 16 x i8> %r, <vscale x 16 x i1> %mask) #0 {
+; CHECK-LABEL: define void @interleave_nxi8_factor2_masked
+; CHECK-SAME: (ptr [[PTR:%.*]], <vscale x 16 x i8> [[L:%.*]], <vscale x 16 x i8> [[R:%.*]], <vscale x 16 x i1> [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MASK_WIDE:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[MASK]], <vscale x 16 x i1> [[MASK]])
+; CHECK-NEXT:    call void @llvm.aarch64.sve.st2.nxv16i8.p0(<vscale x 16 x i8> [[L]], <vscale x 16 x i8> [[R]], <vscale x 16 x i1> [[MASK]], ptr [[PTR]])
+; CHECK-NEXT:    ret void
+;
+  %interleave = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %l, <vscale x 16 x i8> %r)
+  %mask.wide = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  call void @llvm.masked.store.nxv32i8(<vscale x 32 x i8> %interleave, ptr %ptr, i32 8, <vscale x 32 x i1> %mask.wide)
   ret void
 }
 

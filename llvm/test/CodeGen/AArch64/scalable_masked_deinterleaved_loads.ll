@@ -12,6 +12,30 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld2_nxv16i8(<vscale x 16 
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleaved.vec
 }
 
+define { <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld2_nxv16i8_all_true(ptr %p) {
+; CHECK-LABEL: foo_ld2_nxv16i8_all_true:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %wide.masked.vec = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8(ptr %p, i32 1, <vscale x 32 x i1> splat (i1 true), <vscale x 32 x i8> poison)
+  %deinterleaved.vec = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %wide.masked.vec)
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleaved.vec
+}
+
+; TODO: This gets combined by the VECTOR_DEINTERLEAVE DAGCombiner,
+; even though the InterleavedAccess pass bails out.
+define { <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld2_nxv16i8_all_false(ptr %p) {
+; CHECK-LABEL: foo_ld2_nxv16i8_all_false:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pfalse p0.b
+; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %wide.masked.vec = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8(ptr %p, i32 1, <vscale x 32 x i1> splat (i1 false), <vscale x 32 x i8> poison)
+  %deinterleaved.vec = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %wide.masked.vec)
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleaved.vec
+}
+
 define { <vscale x 8 x i16>, <vscale x 8 x i16> } @foo_ld2_nxv8i16(<vscale x 8 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld2_nxv8i16:
 ; CHECK:       // %bb.0:

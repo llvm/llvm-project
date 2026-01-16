@@ -161,6 +161,13 @@ public:
     return Lane;
   }
 
+  /// Returns the offset of this lane from the start of the last
+  /// <N x ElTy> subvector.
+  unsigned getOffsetInLastSubvec() const {
+    assert(LaneKind == Kind::ScalableLast);
+    return Lane;
+  }
+
   /// Returns an expression describing the lane index that can be used at
   /// runtime.
   Value *getAsRuntimeExpr(IRBuilderBase &Builder, const ElementCount &VF) const;
@@ -213,6 +220,10 @@ struct VPTransformState {
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
   Value *get(const VPValue *Def, const VPLane &Lane);
+
+  /// Get the generated Value for \p Def, stretched by \p StretchFactor.
+  /// If the latter is 1, then this is equivalent to get(Def).
+  Value *getAndStretch(const VPValue *Def, ElementCount StretchFactor);
 
   bool hasVectorValue(const VPValue *Def) {
     return Data.VPV2Vector.contains(Def);

@@ -49,7 +49,7 @@ using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
-    VPlan &Plan, const TargetLibraryInfo &TLI) {
+    VPlan &Plan, const TargetLibraryInfo &TLI, const TargetTransformInfo &TTI) {
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion());
@@ -91,7 +91,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
                                            Ingredient.operands(), *VPI,
                                            Ingredient.getDebugLoc(), GEP);
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
-          Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI);
+          Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI, &TTI);
           if (VectorID == Intrinsic::not_intrinsic)
             return false;
 
@@ -6705,6 +6705,9 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
   SmallVector<VPPartialReductionChain> Chain;
   RecurKind RK = RedPhiR->getRecurrenceKind();
   Type *PhiType = RedPhiR->getScalarType();
+  // REVEC: Avoid partial reductions
+  if (PhiType->isVectorTy())
+    return std::nullopt;
   TypeSize PHISize = PhiType->getPrimitiveSizeInBits();
 
   // Work backwards from the ExitValue examining each reduction operation.
@@ -7043,7 +7046,8 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
   auto *CalledFn = cast<Function>(
       VPI.getOperand(VPI.getNumOperandsWithoutMask() - 1)->getLiveInIRValue());
   Type *ResultTy = VPI.getScalarType();
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &CostCtx.TLI);
+  Intrinsic::ID ID =
+      getVectorIntrinsicIDForCall(CI, &CostCtx.TLI, &CostCtx.TTI);
   bool MaskRequired = CostCtx.isMaskRequired(CI);
 
   // Pseudo intrinsics (assume, lifetime, ...) are always scalarized.
@@ -7103,7 +7107,8 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
       VPSingleDefRecipe *Replacement = nullptr;
       switch (Decision.Kind) {
       case CallWideningDecision::KindTy::Intrinsic: {
-        Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &CostCtx.TLI);
+        Intrinsic::ID ID =
+            getVectorIntrinsicIDForCall(CI, &CostCtx.TLI, &CostCtx.TTI);
         Type *ResultTy = VPI->getScalarType();
         Replacement = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, *VPI,
                                                  *VPI, VPI->getDebugLoc());

@@ -139,10 +139,18 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_SPLICE_RIGHT:
     Res = PromoteIntRes_VECTOR_SPLICE(N);
     break;
+  case ISD::VECTOR_BROADCAST:
+    Res = PromoteIntRes_VECTOR_BROADCAST(N);
+    break;
   case ISD::VECTOR_INTERLEAVE:
   case ISD::VECTOR_DEINTERLEAVE:
+  case ISD::VECTOR_INTERLEAVE_SEGMENTS:
+  case ISD::VECTOR_DEINTERLEAVE_SEGMENTS:
     Res = PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(N);
     return;
+  case ISD::VECTOR_SEGMENTED_SHUFFLE:
+    Res = PromoteIntRes_VECTOR_SEGMENTED_SHUFFLE(N);
+    break;
   case ISD::INSERT_VECTOR_ELT:
                          Res = PromoteIntRes_INSERT_VECTOR_ELT(N); break;
   case ISD::BUILD_VECTOR:
@@ -2211,6 +2219,16 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PARTIAL_REDUCE_SUMLA:
     Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
     break;
+  case ISD::PARTIAL_REDUCE_ADD:
+  case ISD::PARTIAL_REDUCE_SMAX:
+  case ISD::PARTIAL_REDUCE_SMIN:
+  case ISD::PARTIAL_REDUCE_UMAX:
+  case ISD::PARTIAL_REDUCE_UMIN:
+    Res = PromoteIntOp_PARTIAL_REDUCE_ToFixed(N, OpNo);
+    break;
+  case ISD::VECTOR_BROADCAST:
+    Res = PromoteIntOp_VECTOR_BROADCAST(N);
+    break;
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
     Res = PromoteIntOp_LOOP_DEPENDENCE_MASK(N);
@@ -3096,6 +3114,54 @@ SDValue DAGTypeLegalizer::PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N) {
   NewOps[2] = ZExtPromotedInteger(N->getOperand(2));
   NewOps[3] = N->getOperand(3);
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_BROADCAST(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Src = GetPromotedInteger(N->getOperand(0));
+  EVT SrcVT = Src.getValueType();
+  EVT OrigVT = N->getValueType(0);
+  EVT NewVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getVectorElementType(),
+                               OrigVT.getVectorElementCount());
+  SDValue Res = DAG.getNode(ISD::VECTOR_BROADCAST, DL, NewVT, Src);
+  return DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Res);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_ToFixed(SDNode *N,
+                                                              unsigned OpNo) {
+  assert(OpNo == 1 && "Only expected to widen the source vector");
+  SDLoc DL(N);
+  SDValue Src;
+  unsigned ExtOpc;
+  switch (N->getOpcode()) {
+  case ISD::PARTIAL_REDUCE_ADD:
+    Src = GetPromotedInteger(N->getOperand(1));
+    ExtOpc = ISD::ANY_EXTEND;
+    break;
+  case ISD::PARTIAL_REDUCE_SMAX:
+  case ISD::PARTIAL_REDUCE_SMIN:
+    Src = SExtPromotedInteger(N->getOperand(1));
+    ExtOpc = ISD::SIGN_EXTEND;
+    break;
+  case ISD::PARTIAL_REDUCE_UMAX:
+  case ISD::PARTIAL_REDUCE_UMIN:
+    Src = ZExtPromotedInteger(N->getOperand(1));
+    ExtOpc = ISD::ZERO_EXTEND;
+    break;
+  default:
+    llvm_unreachable("Unexpected partial recution opcode.");
+  }
+  EVT SrcVT = Src.getValueType();
+  EVT VT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getVectorElementType(),
+                            SrcVT.getVectorMinNumElements());
+  SDValue Acc;
+  if (ISD::NodeType BaseOpc = ISD::getVecReduceBaseOpcode(N->getOpcode());
+      DAG.isIdentityElement(BaseOpc, SDNodeFlags(), N->getOperand(0), 0))
+    Acc = DAG.getIdentityElement(BaseOpc, DL, VT, SDNodeFlags());
+  else
+    Acc = DAG.getNode(ExtOpc, DL, VT, N->getOperand(0));
+  SDValue Res = DAG.getNode(N->getOpcode(), DL, VT, Acc, Src);
+  return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), Res);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6148,6 +6214,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
   return DAG.getNode(N->getOpcode(), dl, OutVT, V0, V1, N->getOperand(2));
 }
 
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_BROADCAST(SDNode *N) {
+  SDLoc DL(N);
+
+  EVT OutVT = N->getValueType(0);
+  EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
+  assert(NOutVT.isVector() && "This type must be promoted to a vector type");
+  EVT NInVT = N->getOperand(0).getValueType().changeVectorElementType(
+      *DAG.getContext(), NOutVT.getVectorElementType());
+
+  SDValue Op = DAG.getNode(ISD::ANY_EXTEND, DL, NInVT, N->getOperand(0));
+  return DAG.getNode(N->getOpcode(), DL, NOutVT, Op);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N) {
   SDLoc DL(N);
   unsigned Factor = N->getNumOperands();
@@ -6163,6 +6242,15 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N
     SetPromotedInteger(SDValue(N, i), Res.getValue(i));
 
   return SDValue();
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SEGMENTED_SHUFFLE(SDNode *N) {
+  SDLoc DL(N);
+  auto *SSV = cast<SegmentedShuffleVectorSDNode>(N);
+  SDValue V0 = GetPromotedInteger(N->getOperand(0));
+  SDValue V1 = GetPromotedInteger(N->getOperand(1));
+  EVT OutVT = V0.getValueType();
+  return DAG.getVectorSegmentedShuffle(OutVT, DL, V0, V1, SSV->getMask());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {

@@ -1093,14 +1093,19 @@ bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
   return true;
 }
 
-constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
+Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK, Type *Ty) {
+  // TODO-REVEC: Do not rely on partial.reduce intrinsics for scalable->fixed
+  // vector reductions. They enforce no restrictions on lane ordering and we do
+  // not want to change their semantics.
   switch (RK) {
   default:
     llvm_unreachable("Unexpected recurrence kind");
   case RecurKind::AddChainWithSubs:
   case RecurKind::Sub:
   case RecurKind::Add:
-    return Intrinsic::vector_reduce_add;
+  case RecurKind::TargetIntAccumulation:
+    return Ty->isVectorTy() ? Intrinsic::vector_partial_reduce_add
+                            : Intrinsic::vector_reduce_add;
   case RecurKind::Mul:
     return Intrinsic::vector_reduce_mul;
   case RecurKind::And:
@@ -1117,13 +1122,17 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   case RecurKind::FMul:
     return Intrinsic::vector_reduce_fmul;
   case RecurKind::SMax:
-    return Intrinsic::vector_reduce_smax;
+    return Ty->isVectorTy() ? Intrinsic::vector_partial_reduce_smax
+                            : Intrinsic::vector_reduce_smax;
   case RecurKind::SMin:
-    return Intrinsic::vector_reduce_smin;
+    return Ty->isVectorTy() ? Intrinsic::vector_partial_reduce_smin
+                            : Intrinsic::vector_reduce_smin;
   case RecurKind::UMax:
-    return Intrinsic::vector_reduce_umax;
+    return Ty->isVectorTy() ? Intrinsic::vector_partial_reduce_umax
+                            : Intrinsic::vector_reduce_umax;
   case RecurKind::UMin:
-    return Intrinsic::vector_reduce_umin;
+    return Ty->isVectorTy() ? Intrinsic::vector_partial_reduce_umin
+                            : Intrinsic::vector_reduce_umin;
   case RecurKind::FMax:
   case RecurKind::FMaxNum:
     return Intrinsic::vector_reduce_fmax;
@@ -1210,12 +1219,16 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {
   default:
     llvm_unreachable("Unknown min/max recurrence kind");
   case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_partial_reduce_umin:
     return Intrinsic::umin;
   case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_partial_reduce_umax:
     return Intrinsic::umax;
   case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_partial_reduce_smin:
     return Intrinsic::smin;
   case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_partial_reduce_smax:
     return Intrinsic::smax;
   case Intrinsic::vector_reduce_fmin:
     return Intrinsic::minnum;
@@ -1490,6 +1503,35 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
 }
 
+bool llvm::isPartialReductionIntrinsicID(Intrinsic::ID RdxID) {
+  switch (RdxID) {
+  default:
+    llvm_unreachable("Expecting a reduction intrinsic");
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::vector_reduce_fmul:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmaximum:
+  case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fminimum:
+    return false;
+  case Intrinsic::vector_partial_reduce_add:
+  case Intrinsic::vector_partial_reduce_smax:
+  case Intrinsic::vector_partial_reduce_umax:
+  case Intrinsic::vector_partial_reduce_smin:
+  case Intrinsic::vector_partial_reduce_umin:
+    return true;
+  }
+}
+
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
                                   FastMathFlags Flags) {
   bool Negative = false;
@@ -1507,10 +1549,16 @@ Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
     return ConstantExpr::getBinOpIdentity(Opc, Ty, false,
                                           Flags.noSignedZeros());
   }
+  case Intrinsic::vector_partial_reduce_add:
+    return Constant::getNullValue(Ty);
   case Intrinsic::vector_reduce_umax:
   case Intrinsic::vector_reduce_umin:
   case Intrinsic::vector_reduce_smin:
-  case Intrinsic::vector_reduce_smax: {
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_partial_reduce_smax:
+  case Intrinsic::vector_partial_reduce_umax:
+  case Intrinsic::vector_partial_reduce_smin:
+  case Intrinsic::vector_partial_reduce_umin: {
     Intrinsic::ID ScalarID = getMinMaxReductionIntrinsicOp(RdxID);
     return ConstantExpr::getIntrinsicIdentity(ScalarID, Ty);
   }
@@ -1536,15 +1584,16 @@ Value *llvm::getRecurrenceIdentity(RecurKind K, Type *Tp, FastMathFlags FMF) {
   assert((!(K == RecurKind::FMin || K == RecurKind::FMax) ||
           (FMF.noNaNs() && FMF.noSignedZeros())) &&
          "nnan, nsz is expected to be set for FP min/max reduction.");
-  Intrinsic::ID RdxID = getReductionIntrinsicID(K);
+  Intrinsic::ID RdxID = getReductionIntrinsicID(K, Tp);
   return getReductionIdentity(RdxID, Tp, FMF);
 }
 
 Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
-                                   RecurKind RdxKind) {
-  auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
+                                   RecurKind RdxKind, Type *ReducedTy) {
+  if (!ReducedTy)
+    ReducedTy = cast<VectorType>(Src->getType())->getElementType();
   auto getIdentity = [&]() {
-    return getRecurrenceIdentity(RdxKind, SrcVecEltTy,
+    return getRecurrenceIdentity(RdxKind, ReducedTy,
                                  Builder.getFastMathFlags());
   };
   switch (RdxKind) {
@@ -1567,7 +1616,12 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::FMaximum:
   case RecurKind::FMinimumNum:
   case RecurKind::FMaximumNum:
-    return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
+  case RecurKind::TargetIntAccumulation: {
+    Intrinsic::ID IID = getReductionIntrinsicID(RdxKind, ReducedTy);
+    if (isPartialReductionIntrinsicID(IID))
+      return Builder.CreateIntrinsic(ReducedTy, IID, {getIdentity(), Src});
+    return Builder.CreateUnaryIntrinsic(IID, Src);
+  }
   case RecurKind::FMulAdd:
   case RecurKind::FAddChainWithSubs:
   case RecurKind::FSub:
@@ -1585,11 +1639,11 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          !RecurrenceDescriptor::isFindRecurrenceKind(Kind) &&
          "AnyOf and FindIV reductions are not supported.");
-  Intrinsic::ID Id = getReductionIntrinsicID(Kind);
+  auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
+  Intrinsic::ID Id = getReductionIntrinsicID(Kind, EltTy);
   auto VPID = VPIntrinsic::getForIntrinsic(Id);
   assert(VPReductionIntrinsic::isVPReduction(VPID) &&
          "No VPIntrinsic for this reduction");
-  auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
   Value *Iden = getRecurrenceIdentity(Kind, EltTy, Builder.getFastMathFlags());
   Value *Ops[] = {Iden, Src, Mask, EVL};
   return Builder.CreateIntrinsic(EltTy, VPID, Ops);
@@ -1613,11 +1667,11 @@ Value *llvm::createOrderedReduction(IRBuilderBase &Builder, RecurKind Kind,
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
-  Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd);
+  auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
+  Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd, EltTy);
   auto VPID = VPIntrinsic::getForIntrinsic(Id);
   assert(VPReductionIntrinsic::isVPReduction(VPID) &&
          "No VPIntrinsic for this reduction");
-  auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
   Value *Ops[] = {Start, Src, Mask, EVL};
   return Builder.CreateIntrinsic(EltTy, VPID, Ops);
 }

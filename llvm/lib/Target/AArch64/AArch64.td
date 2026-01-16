@@ -51,6 +51,12 @@ def AArch64InstrInfo : InstrInfo;
 include "AArch64SystemOperands.td"
 
 //===----------------------------------------------------------------------===//
+// Vector Intrinsic Re-vectorization Mappings (NEON to SVE)
+//===----------------------------------------------------------------------===//
+
+include "AArch64VectorIntrinsicMappings.td"
+
+//===----------------------------------------------------------------------===//
 // AArch64 Processors supported.
 //
 

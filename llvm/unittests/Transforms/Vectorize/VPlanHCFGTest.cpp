@@ -199,13 +199,14 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
 
   TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
+  TargetTransformInfo TTI(DL);
   // Current VPlan construction doesn't add a terminator for top-level loop
   // latches. Add it before running transform.
   cast<VPBasicBlock>(Plan->getVectorLoopRegion()->getExiting())
       ->appendRecipe(new VPInstruction(
           VPInstruction::BranchOnCond,
           {Plan->getOrAddLiveIn(ConstantInt::getTrue(F->getContext()))}));
-  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, TLI);
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, TLI, TTI);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_EQ(0u, Entry->getNumPredecessors());

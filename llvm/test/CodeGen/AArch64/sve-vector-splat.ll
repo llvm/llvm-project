@@ -43,6 +43,16 @@ define <vscale x 2 x i64> @sve_splat_2xi64(i64 %val) {
   ret <vscale x 2 x i64> %splat
 }
 
+define <vscale x 1 x i64> @sve_splat_1xi64(i64 %val) {
+; CHECK-LABEL: sve_splat_1xi64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, x0
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 1 x i64> poison, i64 %val, i32 0
+  %splat = shufflevector <vscale x 1 x i64> %ins, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+  ret <vscale x 1 x i64> %splat
+}
+
 define <vscale x 16 x i8> @sve_splat_16xi8_imm() {
 ; CHECK-LABEL: sve_splat_16xi8_imm:
 ; CHECK:       // %bb.0:
@@ -869,8 +879,8 @@ define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv2f64_imm_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    adrp x8, .LCPI96_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI96_0
+; CHECK-NEXT:    adrp x8, .LCPI97_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI97_0
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   ret <vscale x 2 x double> splat(double 3.33)

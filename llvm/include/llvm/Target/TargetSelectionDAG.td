@@ -911,6 +911,14 @@ def vector_insert_subvec : SDNode<"ISD::INSERT_SUBVECTOR",
 def extract_subvector : SDNode<"ISD::EXTRACT_SUBVECTOR", SDTSubVecExtract, []>;
 def insert_subvector : SDNode<"ISD::INSERT_SUBVECTOR", SDTSubVecInsert, []>;
 
+def vector_broadcast : SDNode<"ISD::VECTOR_BROADCAST",
+    SDTypeProfile<1, 1, [SDTCisVec<1>, SDTCisVec<0>]>,
+    []>;
+
+def vector_stretch : SDNode<"ISD::VECTOR_STRETCH",
+    SDTypeProfile<1, 1, [SDTCisSubVecOfVec<1, 0>]>,
+    []>;
+
 def find_last_active
     : SDNode<"ISD::VECTOR_FIND_LAST_ACTIVE",
              SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>, []>;

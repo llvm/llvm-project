@@ -1334,14 +1334,29 @@ static InterleaveIntrinsic InterleaveIntrinsics[] = {
     {Intrinsic::vector_interleave6, Intrinsic::vector_deinterleave6},
     {Intrinsic::vector_interleave7, Intrinsic::vector_deinterleave7},
     {Intrinsic::vector_interleave8, Intrinsic::vector_deinterleave8},
+    {Intrinsic::vector_interleave_segments2,
+     Intrinsic::vector_deinterleave_segments2},
+    {Intrinsic::not_intrinsic, Intrinsic::not_intrinsic},
+    {Intrinsic::vector_interleave_segments4,
+     Intrinsic::vector_deinterleave_segments4},
 };
 
-Intrinsic::ID Intrinsic::getInterleaveIntrinsicID(unsigned Factor) {
+Intrinsic::ID Intrinsic::getInterleaveIntrinsicID(unsigned Factor,
+                                                  bool InterleaveSegments) {
+  if (InterleaveSegments) {
+    assert((Factor == 2 || Factor == 4) && "Unexpected factor");
+    return InterleaveIntrinsics[Factor + 5].Interleave;
+  }
   assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
   return InterleaveIntrinsics[Factor - 2].Interleave;
 }
 
-Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
+Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor,
+                                                    bool DeinterleaveSegments) {
+  if (DeinterleaveSegments) {
+    assert((Factor == 2 || Factor == 4) && "Unexpected factor");
+    return InterleaveIntrinsics[Factor + 5].Deinterleave;
+  }
   assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }

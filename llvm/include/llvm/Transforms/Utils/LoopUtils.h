@@ -471,7 +471,8 @@ LLVM_ABI bool canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
 
 /// Returns the llvm.vector.reduce intrinsic that corresponds to the recurrence
 /// kind.
-LLVM_ABI constexpr Intrinsic::ID getReductionIntrinsicID(RecurKind RK);
+LLVM_ABI Intrinsic::ID getReductionIntrinsicID(RecurKind RK, Type *Ty);
+
 /// Returns the llvm.vector.reduce min/max intrinsic that corresponds to the
 /// intrinsic op.
 LLVM_ABI Intrinsic::ID getMinMaxReductionIntrinsicID(Intrinsic::ID IID);
@@ -492,6 +493,9 @@ LLVM_ABI RecurKind getMinMaxReductionRecurKind(Intrinsic::ID RdxID);
 
 /// Returns the comparison predicate used when expanding a min/max reduction.
 LLVM_ABI CmpInst::Predicate getMinMaxReductionPredicate(RecurKind RK);
+
+/// Whether RdxID corresponds to a llvm.vector.partial.reduce.xxxx intrinsic.
+LLVM_ABI bool isPartialReductionIntrinsicID(Intrinsic::ID RdxID);
 
 /// Given information about an @llvm.vector.reduce.* intrinsic, return
 /// the identity value for the reduction.
@@ -534,7 +538,8 @@ LLVM_ABI Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src,
 /// additional information supplied in \p RdxKind.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
-                                      RecurKind RdxKind);
+                                      RecurKind RdxKind,
+                                      Type *ReducedTy = nullptr);
 /// Overloaded function to generate vector-predication intrinsics for
 /// reduction.
 LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,

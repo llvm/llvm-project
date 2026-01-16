@@ -6093,6 +6093,38 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "const x86_amx is not allowed in argument!");
   }
 
+  auto CheckMaskedSegmentMemOpTypes = [&](Type *DataTy, Type *PtrTy,
+                                          Type *MaskTy,
+                                          StringRef IntrinsicName) {
+    auto *DataVTy = dyn_cast<VectorType>(DataTy);
+    Check(
+        DataVTy && DataVTy->getElementCount().isScalable(),
+        (Twine(IntrinsicName) + ": data type must be a scalable vector").str(),
+        Call);
+
+    auto *PtrVTy = dyn_cast<VectorType>(PtrTy);
+    Check(PtrVTy && PtrVTy->getElementCount() == ElementCount::getScalable(1),
+          (Twine(IntrinsicName) + ": pointer type must be <vscale x 1 x ptr>")
+              .str(),
+          Call);
+    if (PtrVTy)
+      Check(
+          PtrVTy->getElementType()->isPointerTy(),
+          (Twine(IntrinsicName) + ": pointer vector elements must be pointers")
+              .str(),
+          Call);
+
+    auto *MaskVTy = dyn_cast<VectorType>(MaskTy);
+    Check(
+        MaskVTy && MaskVTy->getElementCount() == ElementCount::getScalable(1),
+        (Twine(IntrinsicName) + ": mask type must be <vscale x 1 x i1>").str(),
+        Call);
+    if (MaskVTy)
+      Check(MaskVTy->getElementType()->isIntegerTy(1),
+            (Twine(IntrinsicName) + ": mask vector elements must be i1").str(),
+            Call);
+  };
+
   switch (ID) {
   default:
     break;
@@ -6703,6 +6735,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "masked_store: vector mask must be same length as value", Call);
     break;
   }
+
+  case Intrinsic::masked_segment_gather: {
+    CheckMaskedSegmentMemOpTypes(
+        Call.getType(), Call.getArgOperand(0)->getType(),
+        Call.getArgOperand(1)->getType(), "masked_segment_gather");
+    break;
+  }
+  case Intrinsic::masked_segment_scatter: {
+    CheckMaskedSegmentMemOpTypes(
+        Call.getArgOperand(0)->getType(), Call.getArgOperand(1)->getType(),
+        Call.getArgOperand(2)->getType(), "masked_segment_scatter");
+    break;
+  }
+
   case Intrinsic::experimental_guard: {
     Check(isa<CallInst>(Call), "experimental_guard cannot be invoked", Call);
     Check(Call.countOperandBundlesOfType(LLVMContext::OB_deopt) == 1,

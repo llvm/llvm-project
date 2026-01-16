@@ -27,6 +27,7 @@ tablegen(LLVM AArch64GenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM AArch64GenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM AArch64GenSystemOperands.inc -gen-searchable-tables)
 tablegen(LLVM AArch64GenExegesis.inc -gen-exegesis)
+tablegen(LLVM AArch64GenVectorIntrinsicMappings.inc -gen-searchable-tables)
 
 add_public_tablegen_target(AArch64CommonTableGen)
 

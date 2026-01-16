@@ -125,6 +125,9 @@ public:
     return ST->hasSVE();
   }
 
+  bool isSupportedTargetRecurrence(Intrinsic::ID ID,
+                                   RecurKind RK) const override;
+
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
     bool Vector = (ClassID == 1);
     if (Vector) {
@@ -191,6 +194,10 @@ public:
 
   InstructionCost getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
                                          TTI::TargetCostKind CostKind) const;
+
+  InstructionCost
+  getSegmentGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                TTI::TargetCostKind CostKind) const;
 
   bool isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst,
                           Type *Src) const;
@@ -294,6 +301,24 @@ public:
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                           MemIntrinsicInfo &Info) const override;
 
+  bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                          unsigned ScalarOpdIdx) const override;
+
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const override;
+
+  /// Compute the list of Types required to get the right declaration of
+  /// the overloaded \p ID intrinsic.
+  SmallVector<Type *, 2> computeTysForDecl(Intrinsic::ID ID, Type *RetTy,
+                                           ArrayRef<Value *> Args) const;
+
+  bool isTargetIntrinsicVectorizable(Intrinsic::ID ID) const override;
+
+  Instruction *
+  vectorizeTargetIntrinsic(Intrinsic::ID VectorIID, ArrayRef<Type *> TysForDecl,
+                           ArrayRef<Value *> WideArgs, IRBuilderBase &Builder,
+                           const Instruction &OrigInst) const override;
+
   bool isElementTypeLegalForScalableVector(Type *Ty) const override {
     if (Ty->isPointerTy())
       return true;
@@ -307,6 +332,13 @@ public:
     if (Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
         Ty->isIntegerTy(32) || Ty->isIntegerTy(64))
       return true;
+
+    if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+      return (FVTy->getElementType()->isIntegerTy(1) ||
+              DL.getTypeSizeInBits(FVTy) == AArch64::SVEBitsPerBlock ||
+              DL.getTypeSizeInBits(FVTy) == AArch64::SVEBitsPerBlock / 2) &&
+             FVTy->getNumElements() > 1 &&
+             isElementTypeLegalForScalableVector(FVTy->getElementType());
 
     return false;
   }
@@ -371,6 +403,25 @@ public:
 
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) const override {
     return isLegalMaskedGatherScatter(DataType);
+  }
+
+  bool isLegalMaskedSegmentGatherScatter(Type *DataType) const {
+    if (!ST->isSVEAvailable() || !ST->hasSVE2p1())
+      return false;
+
+    TypeSize SegmentSizeInBits = DL.getTypeSizeInBits(DataType);
+    return SegmentSizeInBits == TypeSize(64U, true) ||
+           SegmentSizeInBits == TypeSize(128U, true);
+  }
+
+  bool isLegalMaskedSegmentScatter(Type *DataType,
+                                   Align Alignment) const override {
+    return isLegalMaskedSegmentGatherScatter(DataType);
+  }
+
+  bool isLegalMaskedSegmentGather(Type *DataType,
+                                  Align Alignment) const override {
+    return isLegalMaskedSegmentGatherScatter(DataType);
   }
 
   bool isLegalBroadcastLoad(Type *ElementTy,
@@ -446,6 +497,11 @@ public:
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
 
+  InstructionCost getSegmentInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
+
   bool shouldConsiderAddressTypePromotion(
       const Instruction &I,
       bool &AllowPromotionWithoutCommonHeader) const override;
@@ -508,6 +564,11 @@ public:
                  ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
+
+  InstructionCost
+  getSegmentedShuffleCost(TTI::ShuffleKind Kind, VectorType *VTy,
+                          ArrayRef<int> Mask,
+                          TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
   getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,

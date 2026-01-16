@@ -30,6 +30,7 @@ class ScalarEvolution;
 class SCEV;
 class SCEVPredicate;
 class StoreInst;
+class TargetTransformInfo;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
@@ -68,6 +69,8 @@ enum class RecurKind {
   FindLast, ///< FindLast reduction with select(cmp(),x,y) where x and y
                   ///< are an integer type, one is the current recurrence value,
                   ///< and the other is an arbitrary value.
+  TargetIntAccumulation, ///< A custom operation that accumulates integers in
+                         ///< its first operand.
   // clang-format on
   // TODO: Any_of and FindLast reduction need not be restricted to integer type
   // only.
@@ -154,10 +157,10 @@ public:
   /// advances the instruction pointer 'I' from the compare instruction to the
   /// select instruction and stores this pointer in 'PatternLastInst' member of
   /// the returned struct.
-  LLVM_ABI static InstDesc isRecurrenceInstr(Loop *L, PHINode *Phi,
-                                             Instruction *I, RecurKind Kind,
-                                             InstDesc &Prev,
-                                             ScalarEvolution *SE);
+  LLVM_ABI static InstDesc
+  isRecurrenceInstr(Loop *L, PHINode *Phi, Instruction *I, RecurKind Kind,
+                    InstDesc &Prev, ScalarEvolution *SE,
+                    const TargetTransformInfo *TTI = nullptr);
 
   /// Returns true if instruction I has multiple uses in Insts
   LLVM_ABI static bool hasMultipleUsesOf(Instruction *I,
@@ -201,7 +204,8 @@ public:
   AddReductionVar(PHINode *Phi, RecurKind Kind, Loop *TheLoop,
                   RecurrenceDescriptor &RedDes, DemandedBits *DB = nullptr,
                   AssumptionCache *AC = nullptr, DominatorTree *DT = nullptr,
-                  ScalarEvolution *SE = nullptr);
+                  ScalarEvolution *SE = nullptr,
+                  const TargetTransformInfo *TTI = nullptr);
 
   /// Returns true if Phi is a reduction in TheLoop. The RecurrenceDescriptor
   /// is returned in RedDes. If either \p DB is non-null or \p AC and \p DT are
@@ -211,7 +215,8 @@ public:
   LLVM_ABI static bool
   isReductionPHI(PHINode *Phi, Loop *TheLoop, RecurrenceDescriptor &RedDes,
                  DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
-                 DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr);
+                 DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr,
+                 const TargetTransformInfo *TTI = nullptr);
 
   /// Returns true if Phi is a fixed-order recurrence. A fixed-order recurrence
   /// is a non-reduction recurrence relation in which the value of the
@@ -297,6 +302,10 @@ public:
 
   static bool isFindRecurrenceKind(RecurKind Kind) {
     return isFindLastRecurrenceKind(Kind) || isFindIVRecurrenceKind(Kind);
+  }
+
+  static bool isTargetRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::TargetIntAccumulation;
   }
 
   /// Returns the type of the recurrence. This type can be narrower than the

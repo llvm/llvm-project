@@ -159,6 +159,9 @@ public:
   /// should be stack expanded.
   bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
 
+  /// Return true if the given segmented shuffle mask can be codegen'd directly
+  bool isSegmentedShuffleMaskSupported(ArrayRef<int> M) const;
+
   /// Similar to isShuffleMaskLegal. Return true is the given 'select with zero'
   /// shuffle mask can be codegen'd directly.
   bool isVectorClearMaskLegal(ArrayRef<int> M, EVT VT) const override;
@@ -237,13 +240,14 @@ public:
                              ShuffleVectorInst *SVI, unsigned Factor,
                              const APInt &GapMask) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                        IntrinsicInst *DI,
-                                        const APInt &GapMask) const override;
+  bool
+  lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                   IntrinsicInst *DI, const APInt &GapMask,
+                                   bool DeinterleaveSegments) const override;
 
-  bool lowerInterleaveIntrinsicToStore(
-      Instruction *Store, Value *Mask,
-      ArrayRef<Value *> InterleaveValues) const override;
+  bool lowerInterleaveIntrinsicToStore(Instruction *Store, Value *Mask,
+                                       ArrayRef<Value *> InterleaveValues,
+                                       bool InterleaveSegments) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
@@ -510,8 +514,11 @@ public:
   /// Returns true if \p VecTy is a legal interleaved access type. This
   /// function checks the vector element type and the overall width of the
   /// vector.
+  /// \p AccessSegments Whether segments of multiple elements are
+  ///                   (de)interleaved, as opposed to single elements.
   bool isLegalInterleavedAccessType(VectorType *VecTy, const DataLayout &DL,
-                                    bool &UseScalable) const;
+                                    bool &UseScalable,
+                                    bool AccessSegments = false) const;
 
   /// Returns the number of interleaved accesses that will be generated when
   /// lowering accesses of the given type.
@@ -746,16 +753,21 @@ private:
   SDValue LowerEXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_SEGMENTED_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDUPQLane(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG,
                               unsigned NewOp) const;
   SDValue LowerToScalableOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SPLICE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_STRETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_DEINTERLEAVE_SEGMENTS(SDValue Op,
+                                            SelectionDAG &DAG) const;
   SDValue LowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_INTERLEAVE_SEGMENTS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_HISTOGRAM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGET_ACTIVE_LANE_MASK(SDValue Op, SelectionDAG &DAG) const;
@@ -787,6 +799,8 @@ private:
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE_MUL(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPARTIAL_REDUCE_ToFixed(SDValue Op, SelectionDAG &DAG,
+                                      Intrinsic::ID ToIID) const;
   SDValue LowerATOMIC_LOAD_AND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;

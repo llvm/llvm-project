@@ -2892,10 +2892,12 @@ Constant *ConstantExpr::getIntrinsicIdentity(Intrinsic::ID ID, Type *Ty) {
     return Constant::getAllOnesValue(Ty);
   case Intrinsic::smax:
     return Constant::getIntegerValue(
-        Ty, APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
+        Ty,
+        APInt::getSignedMinValue(Ty->getScalarType()->getIntegerBitWidth()));
   case Intrinsic::smin:
     return Constant::getIntegerValue(
-        Ty, APInt::getSignedMaxValue(Ty->getIntegerBitWidth()));
+        Ty,
+        APInt::getSignedMaxValue(Ty->getScalarType()->getIntegerBitWidth()));
   default:
     return nullptr;
   }

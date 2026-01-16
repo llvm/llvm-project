@@ -465,6 +465,7 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
     return ISD::FMUL;
   case ISD::VECREDUCE_ADD:
   case ISD::VP_REDUCE_ADD:
+  case ISD::PARTIAL_REDUCE_ADD:
     return ISD::ADD;
   case ISD::VECREDUCE_MUL:
   case ISD::VP_REDUCE_MUL:
@@ -480,15 +481,19 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
     return ISD::XOR;
   case ISD::VECREDUCE_SMAX:
   case ISD::VP_REDUCE_SMAX:
+  case ISD::PARTIAL_REDUCE_SMAX:
     return ISD::SMAX;
   case ISD::VECREDUCE_SMIN:
   case ISD::VP_REDUCE_SMIN:
+  case ISD::PARTIAL_REDUCE_SMIN:
     return ISD::SMIN;
   case ISD::VECREDUCE_UMAX:
   case ISD::VP_REDUCE_UMAX:
+  case ISD::PARTIAL_REDUCE_UMAX:
     return ISD::UMAX;
   case ISD::VECREDUCE_UMIN:
   case ISD::VP_REDUCE_UMIN:
+  case ISD::PARTIAL_REDUCE_UMIN:
     return ISD::UMIN;
   case ISD::VECREDUCE_FMAX:
   case ISD::VP_REDUCE_FMAX:
@@ -2412,6 +2417,47 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
 
   auto *N = newSDNode<ShuffleVectorSDNode>(VTs, dl.getIROrder(),
                                            dl.getDebugLoc(), MaskAlloc);
+  createOperands(N, Ops);
+
+  CSEMap.InsertNode(N, IP);
+  InsertNode(N);
+  SDValue V = SDValue(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  return V;
+}
+
+SDValue SelectionDAG::getVectorSegmentedShuffle(EVT VT, const SDLoc &DL,
+                                                SDValue N1, SDValue N2,
+                                                ArrayRef<int> Mask) {
+  assert(VT == N1.getValueType() && VT == N2.getValueType() &&
+         "Invalid VECTOR_SHUFFLE");
+  const unsigned SegmentSize = Mask.size();
+  assert(VT.getVectorElementCount().isKnownMultipleOf(SegmentSize) &&
+         "VECTOR_SEGMENTED_SHUFFLE's element count is not a multiple of the "
+         "mask length!");
+
+  // TODO-REVEC: Some canonicalisation like in getVectorShuffle().
+
+  SDVTList VTs = getVTList(VT);
+  FoldingSetNodeID ID;
+  SDValue Ops[2] = {N1, N2};
+  AddNodeIDNode(ID, ISD::VECTOR_SEGMENTED_SHUFFLE, VTs, Ops);
+  for (unsigned Idx = 0; Idx != SegmentSize; ++Idx)
+    ID.AddInteger(Mask[Idx]);
+
+  void *IP = nullptr;
+  if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
+    return SDValue(E, 0);
+
+  // Allocate the mask array for the node out of the BumpPtrAllocator, since
+  // SDNode doesn't have access to it.  This memory will be "leaked" when
+  // the node is deallocated, but recovered when the NodeAllocator is released.
+  int *MaskAlloc = OperandAllocator.Allocate<int>(SegmentSize);
+  llvm::copy(Mask, MaskAlloc);
+
+  auto *N = newSDNode<SegmentedShuffleVectorSDNode>(
+      VTs, DL.getIROrder(), DL.getDebugLoc(),
+      ArrayRef<int>(MaskAlloc, SegmentSize));
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
@@ -8958,6 +9004,21 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
     break;
   }
+  case ISD::VECTOR_BROADCAST:
+  case ISD::VECTOR_STRETCH: {
+    [[maybe_unused]] EVT InputVT = N1.getValueType();
+    assert(InputVT.isVector() && VT.isVector() &&
+           "Expected the input and output of the "
+           "VECTOR_BROADCAST/VECTOR_STRETCH node to be "
+           "vectors!");
+    assert(VT.getVectorElementCount().hasKnownScalarFactor(
+               InputVT.getVectorElementCount()) &&
+           "Expected the element count of the output of the "
+           "VECTOR_BROADCAST/VECTOR_STRETCH "
+           "node to be a positive integer multiple of the element count of the "
+           "source operand!");
+    break;
+  }
   case ISD::BITCAST:
     // Fold bit_convert nodes from a type to themselves.
     if (N1.getValueType() == VT)
@@ -8984,6 +9045,24 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.isUndef() || N2.isUndef())
       return N3;
 
+    break;
+  }
+  case ISD::PARTIAL_REDUCE_ADD:
+  case ISD::PARTIAL_REDUCE_SMAX:
+  case ISD::PARTIAL_REDUCE_SMIN:
+  case ISD::PARTIAL_REDUCE_UMAX:
+  case ISD::PARTIAL_REDUCE_UMIN: {
+    [[maybe_unused]] EVT AccVT = N1.getValueType();
+    [[maybe_unused]] EVT InputVT = N2.getValueType();
+    assert(InputVT.isVector() &&
+           "Expected the second operand of the PARTIAL_REDUCE_xxxx "
+           "node to be of vector type!");
+    assert(VT.isVector() && VT == AccVT &&
+           "Expected the first operand of the PARTIAL_REDUCE_xxxx node to "
+           "have the same type as its result!");
+    assert(InputVT.getVectorElementType() == AccVT.getVectorElementType() &&
+           "Expected the element type of the input and accumulator operands of "
+           "the PARTIAL_REDUCE_xxxx node to be identical!");
     break;
   }
   case ISD::PARTIAL_REDUCE_UMLA:
@@ -14968,9 +15047,11 @@ SDValue SelectionDAG::getIdentityElement(unsigned Opcode, const SDLoc &DL,
   case ISD::UMIN:
     return getAllOnesConstant(DL, VT);
   case ISD::SMAX:
-    return getConstant(APInt::getSignedMinValue(VT.getSizeInBits()), DL, VT);
+    return getConstant(APInt::getSignedMinValue(VT.getScalarSizeInBits()), DL,
+                       VT);
   case ISD::SMIN:
-    return getConstant(APInt::getSignedMaxValue(VT.getSizeInBits()), DL, VT);
+    return getConstant(APInt::getSignedMaxValue(VT.getScalarSizeInBits()), DL,
+                       VT);
   case ISD::FADD:
     // If flags allow, prefer positive zero since it's generally cheaper
     // to materialize on most targets.

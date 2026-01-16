@@ -270,7 +270,8 @@ static Value *getMaskOperand(IntrinsicInst *II) {
 //  (2) Some mask effectively skips a certain field, and this element is a mask
 //  in which inactive lanes represent fields that are skipped (i.e. "gaps").
 static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
-                                         ElementCount LeafValueEC);
+                                         ElementCount LeafValueEC,
+                                         bool AccessSegments = false);
 
 static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
                                          VectorType *LeafValueTy) {
@@ -584,12 +585,13 @@ static void getGapMask(const Constant &MaskConst, unsigned Factor,
 }
 
 static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
-                                         ElementCount LeafValueEC) {
+                                         ElementCount LeafValueEC,
+                                         bool AccessSegments) {
   auto GapMask = APInt::getAllOnes(Factor);
 
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     if (unsigned F = getInterleaveIntrinsicFactor(IMI->getIntrinsicID());
-        F && F == Factor) {
+        F && F == Factor && !AccessSegments) {
       Value *RefArg = nullptr;
       // Check if all the intrinsic arguments are the same, except those that
       // are zeros, which we mark as gaps in the gap mask.
@@ -610,15 +612,22 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
       // nullptr.
       return {RefArg ? RefArg : IMI->getArgOperand(0), GapMask};
     }
+
+    // Check if the wide mask is stretched from a narrow mask with the right EC.
+    if (IMI->getIntrinsicID() == Intrinsic::vector_stretch &&
+        cast<VectorType>(IMI->getArgOperand(0)->getType())->getElementCount() ==
+            LeafValueEC) {
+      return {IMI->getArgOperand(0), GapMask};
+    }
   }
 
   // Masks that are assembled from bitwise AND.
   if (auto *AndOp = dyn_cast<BinaryOperator>(WideMask);
       AndOp && AndOp->getOpcode() == Instruction::And) {
     auto [MaskLHS, GapMaskLHS] =
-        getMask(AndOp->getOperand(0), Factor, LeafValueEC);
+        getMask(AndOp->getOperand(0), Factor, LeafValueEC, AccessSegments);
     auto [MaskRHS, GapMaskRHS] =
-        getMask(AndOp->getOperand(1), Factor, LeafValueEC);
+        getMask(AndOp->getOperand(1), Factor, LeafValueEC, AccessSegments);
     if (!MaskLHS || !MaskRHS)
       return {nullptr, GapMask};
     // Using IRBuilder here so that any trivial constants could be folded right
@@ -632,7 +641,7 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
       // All-ones or all-zeros mask.
       return {ConstantVector::getSplat(LeafValueEC, Splat), GapMask};
 
-    if (LeafValueEC.isFixed()) {
+    if (LeafValueEC.isFixed() && !AccessSegments) {
       unsigned LeafMaskLen = LeafValueEC.getFixedValue();
       // First, check if we use a gap mask to skip some of the factors / fields.
       getGapMask(*ConstMask, Factor, LeafMaskLen, GapMask);
@@ -653,6 +662,10 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
       return {ConstantVector::get(LeafMask), GapMask};
     }
   }
+
+  // Abort if we are (de)interleaving segments
+  if (AccessSegments)
+    return {nullptr, GapMask};
 
   if (auto *SVI = dyn_cast<ShuffleVectorInst>(WideMask)) {
     Type *Op1Ty = SVI->getOperand(1)->getType();
@@ -696,6 +709,8 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   assert(Factor && "unexpected deinterleave intrinsic");
+  bool DeinterleaveSegments =
+      isDeinterleaveSegmentsIntrinsic(DI->getIntrinsicID());
 
   Value *Mask = nullptr;
   auto GapMask = APInt::getAllOnes(Factor);
@@ -712,8 +727,13 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
 
     // Check mask operand. Handle both all-true/false and interleaved mask.
+    ElementCount NarrowMaskEC =
+        getDeinterleavedVectorType(DI)->getElementCount();
+    if (DeinterleaveSegments)
+      NarrowMaskEC =
+          NarrowMaskEC.divideCoefficientBy(NarrowMaskEC.getKnownMinValue());
     std::tie(Mask, GapMask) =
-        getMask(getMaskOperand(II), Factor, getDeinterleavedVectorType(DI));
+        getMask(getMaskOperand(II), Factor, NarrowMaskEC, DeinterleaveSegments);
     if (!Mask)
       return false;
 
@@ -725,7 +745,8 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   }
 
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerDeinterleaveIntrinsicToLoad(LoadedVal, Mask, DI, GapMask))
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(LoadedVal, Mask, DI, GapMask,
+                                             DeinterleaveSegments))
     return false;
 
   DeadInsts.insert(DI);
@@ -747,6 +768,8 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
   SmallVector<Value *, 8> InterleaveValues(IntII->args());
   const unsigned Factor = getInterleaveIntrinsicFactor(IntII->getIntrinsicID());
   assert(Factor && "unexpected interleave intrinsic");
+  bool InterleaveSegments =
+      isInterleaveSegmentsIntrinsic(IntII->getIntrinsicID());
 
   Value *Mask = nullptr;
   if (II) {
@@ -755,9 +778,14 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
       return false;
     // Check mask operand. Handle both all-true/false and interleaved mask.
     APInt GapMask(Factor, 0);
+
+    ElementCount NarrowMaskEC =
+        cast<VectorType>(InterleaveValues[0]->getType())->getElementCount();
+    if (InterleaveSegments)
+      NarrowMaskEC =
+          NarrowMaskEC.divideCoefficientBy(NarrowMaskEC.getKnownMinValue());
     std::tie(Mask, GapMask) =
-        getMask(getMaskOperand(II), Factor,
-                cast<VectorType>(InterleaveValues[0]->getType()));
+        getMask(getMaskOperand(II), Factor, NarrowMaskEC, InterleaveSegments);
     if (!Mask)
       return false;
     // We haven't supported gap mask if it's interleaving using intrinsics. Yet
@@ -777,7 +805,8 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
   }
 
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerInterleaveIntrinsicToStore(StoredBy, Mask, InterleaveValues))
+  if (!TLI->lowerInterleaveIntrinsicToStore(StoredBy, Mask, InterleaveValues,
+                                            InterleaveSegments))
     return false;
 
   // We now have a target-specific store, so delete the old one.

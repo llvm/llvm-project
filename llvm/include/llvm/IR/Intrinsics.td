@@ -2667,6 +2667,16 @@ def int_masked_scatter:
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrWriteMem]>;
 
+def int_masked_segment_gather:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [llvm_anyvector_ty, LLVMType<nxv1i1>, LLVMMatchType<0>],
+            [IntrReadMem]>;
+
+def int_masked_segment_scatter:
+  DefaultAttrsIntrinsic<[],
+            [llvm_anyvector_ty, llvm_anyvector_ty, LLVMType<nxv1i1>],
+            [IntrWriteMem]>;
+
 def int_masked_expandload:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
             [llvm_ptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -3011,6 +3021,33 @@ foreach n = 2...8 in {
                               [IntrNoMem, IntrSpeculatable]>;
 }
 
+foreach n = {2, 4} in {
+  def int_vector_interleave_segments#n :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                             !listsplat(LLVMOneNthElementsVectorType<0, n>, n),
+                             [IntrNoMem]>;
+
+  def int_vector_deinterleave_segments#n :
+      DefaultAttrsIntrinsic<!listsplat(LLVMOneNthElementsVectorType<0, n>, n),
+                            [llvm_anyvector_ty],
+                            [IntrNoMem]>;
+}
+
+// vector_broadcast( SrcVector )
+// Broadcast a vector in a larger one.
+// This is the equivalent of a vector splat for vector types.
+def int_vector_broadcast : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                 [llvm_anyvector_ty],
+                                                 [IntrNoMem, IntrSpeculatable]>;
+
+// vector_stretch( SrcVector )
+// Duplicate each element of SrcVector in place the same number of times until
+// matching the vector width of the output type.
+// The width of the output type is expected to be a multiple of the input vector.
+def int_vector_stretch : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                               [llvm_anyvector_ty],
+                                               [IntrNoMem, IntrSpeculatable]>;
+
 //===-------------- Intrinsics to perform partial reduction ---------------===//
 
 def int_vector_partial_reduce_add : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
@@ -3022,6 +3059,32 @@ def int_vector_partial_reduce_add : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
 def int_vector_partial_reduce_fadd : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
                                        [llvm_anyfloat_ty, llvm_anyfloat_ty],
                                        [IntrNoMem]>;
+
+def int_vector_partial_reduce_smax : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                       [llvm_anyvector_ty, llvm_anyvector_ty],
+                                       [IntrNoMem, IntrSpeculatable]>;
+def int_vector_partial_reduce_smin : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                       [llvm_anyvector_ty, llvm_anyvector_ty],
+                                       [IntrNoMem, IntrSpeculatable]>;
+def int_vector_partial_reduce_umax : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                       [llvm_anyvector_ty, llvm_anyvector_ty],
+                                       [IntrNoMem, IntrSpeculatable]>;
+def int_vector_partial_reduce_umin : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                       [llvm_anyvector_ty, llvm_anyvector_ty],
+                                       [IntrNoMem, IntrSpeculatable]>;
+
+//===--------------------- Segmented shufflevector -----------------------===//
+// This allows to re-vectorise shufflevector instructions.
+
+// vector_segmented_shuffle( Src0, Src1, Mask )
+// Arbitrary segmented shufflevector. The length of the segment is determined
+// by the length of the mask.
+def int_vector_segmented_shuffle :
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                        [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+// TODO-REVEC: Add an IntrinsicProperty for constant vector operands.
+// TODO-REVEC: Enforce that the mask operand has i32 elements.
 
 //===----------------- Pointer Authentication Intrinsics ------------------===//
 //

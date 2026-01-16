@@ -40,6 +40,18 @@ define void @masked_trunc_store_nxv4i8(ptr %a, <vscale x 4 x i32> %val, ptr %b, 
   ret void
 }
 
+; Stretched masks cannot be folded for truncating stores.
+define void @masked_trunc_store_nxv4i8_i64_mask(ptr %a, <vscale x 4 x i32> %val, ptr %b, <vscale x 2 x i1> %mask) nounwind {
+; CHECK-LABEL: masked_trunc_store_nxv4i8_i64_mask:
+; CHECK:         trn1 p0.s, p0.s, p0.s
+; CHECK-NEXT:    st1b { z0.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %mask.stretched = call <vscale x 4 x i1> @llvm.vector.stretch.nxv4i1.nxv2i1(<vscale x 2 x i1> %mask)
+  %trunc = trunc <vscale x 4 x i32> %val to <vscale x 4 x i8>
+  call void @llvm.masked.store.nxv4i8(<vscale x 4 x i8> %trunc, ptr %b, i32 4, <vscale x 4 x i1> %mask.stretched)
+  ret void
+}
+
 define void @masked_trunc_store_nxv4i16(ptr %a, <vscale x 4 x i32> %val, ptr %b, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_trunc_store_nxv4i16:
 ; CHECK-NEXT: st1h { z0.s }, p0, [x1]

@@ -294,11 +294,13 @@ LLVM_ABI bool isSignatureValid(Function *F,
 LLVM_ABI std::optional<Function *> remangleIntrinsicFunction(Function *F);
 
 /// Returns the corresponding llvm.vector.interleaveN intrinsic for factor N.
-LLVM_ABI Intrinsic::ID getInterleaveIntrinsicID(unsigned Factor);
+LLVM_ABI Intrinsic::ID
+getInterleaveIntrinsicID(unsigned Factor, bool InterleaveSegments = false);
 
 /// Returns the corresponding llvm.vector.deinterleaveN intrinsic for factor
 /// N.
-LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
+LLVM_ABI Intrinsic::ID
+getDeinterleaveIntrinsicID(unsigned Factor, bool DeinterleaveSegments = false);
 
 /// Print the argument info for the arguments with ArgInfo.
 LLVM_ABI void printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS,

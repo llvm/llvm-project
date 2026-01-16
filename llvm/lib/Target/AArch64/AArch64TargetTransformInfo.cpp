@@ -34,6 +34,73 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "aarch64tti"
 
+// Define the struct for the generated intrinsic mapping table
+namespace {
+struct NEONToSVEIntrinsicMapping {
+  StringRef NEONIntrinsic;
+  StringRef SVEIntrinsic;
+  StringRef ArgMappings; // Comma-separated string: "T,Z,A:0,A:1"
+  bool isCustom() const { return SVEIntrinsic.empty() || ArgMappings.empty(); }
+};
+
+/// Specifies how to build an argument for an SVE intrinsic, possibly from
+/// another argument of an equivalent NEON intrinsic.
+class ArgMapping {
+public:
+  enum MappingKind { True, Zero, Poison, Arg, Imm };
+
+  ArgMapping(StringRef Spec) {
+    if (Spec == "T") {
+      Kind = True;
+    } else if (Spec == "Z") {
+      Kind = Zero;
+    } else if (Spec == "P") {
+      Kind = Poison;
+    } else if (Spec.starts_with("A:")) {
+      Kind = Arg;
+      unsigned Idx;
+      if (Spec.substr(2).getAsInteger(10, Idx))
+        llvm_unreachable("Invalid argument index in mapping!");
+      Index = Idx;
+    } else if (Spec.starts_with("I:")) {
+      Kind = Imm;
+      unsigned Idx;
+      if (Spec.substr(2).getAsInteger(10, Idx))
+        llvm_unreachable("Invalid argument index in mapping!");
+      Index = Idx;
+    } else {
+      llvm_unreachable("Unknown argument mapping kind!");
+    }
+  }
+
+  MappingKind getKind() const { return Kind; }
+
+  unsigned getArgIndex() const {
+    assert((Kind == Arg || Kind == Imm) &&
+           "getArgIndex called on non-Arg mapping");
+    return *Index;
+  }
+
+private:
+  MappingKind Kind;
+  std::optional<unsigned> Index;
+};
+
+// Parse comma-separated argument mapping string into ArgMapping objects
+static SmallVector<ArgMapping, 4> parseArgMappings(StringRef ArgMappingsStr) {
+  SmallVector<ArgMapping, 4> Result;
+  SmallVector<StringRef, 4> Specs;
+  ArgMappingsStr.split(Specs, ',');
+  for (StringRef Spec : Specs)
+    Result.emplace_back(Spec);
+  return Result;
+}
+} // end anonymous namespace
+
+// Include generated vector intrinsic mapping table
+#define GET_IntrinsicMappingTable_IMPL
+#include "AArch64GenVectorIntrinsicMappings.inc"
+
 static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
                                                cl::init(true), cl::Hidden);
 
@@ -597,7 +664,7 @@ static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
   //        using ptrue with a specific VL.
   if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy)) {
     unsigned EC = VTy->getElementCount().getKnownMinValue();
-    if (!isPowerOf2_64(EC) || !VTy->isScalableTy())
+    if (!isPowerOf2_64(EC) || !VTy->isScalableTy() || EC == 1)
       return InstructionCost::getInvalid();
 
     // HistCnt only supports 32b and 64b element types
@@ -624,8 +691,15 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   // sufficiently reliable.
   auto *RetTy = ICA.getReturnType();
   if (auto *VTy = dyn_cast<ScalableVectorType>(RetTy))
-    if (VTy->getElementCount() == ElementCount::getScalable(1))
+    if (VTy->getElementCount() == ElementCount::getScalable(1) &&
+        ICA.getID() != Intrinsic::masked_load &&
+        ICA.getID() != Intrinsic::masked_store)
       return InstructionCost::getInvalid();
+
+  auto IsAcceptableTyForREVEC = [](const Type *Ty) {
+    return Ty->getPrimitiveSizeInBits().getKnownMinValue() <=
+           AArch64::SVEBitsPerBlock;
+  };
 
   switch (ICA.getID()) {
   case Intrinsic::experimental_vector_histogram_add: {
@@ -1191,7 +1265,82 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::vector_broadcast: {
+    // Duplicating quads requires SVE2p1 or SME2p1.
+    return (ST->hasSVE2p1() || ST->hasSME2p1()) ? InstructionCost(1)
+                                                : InstructionCost::getInvalid();
+  }
+  case Intrinsic::vector_partial_reduce_add:
+  case Intrinsic::vector_partial_reduce_smax:
+  case Intrinsic::vector_partial_reduce_umax:
+  case Intrinsic::vector_partial_reduce_smin:
+  case Intrinsic::vector_partial_reduce_umin: {
+    // TODO-REVEC: Give sensible costs based on types.
+    // Partial reductions from scalable to fixed vectors require SVE2p1.
+    return ST->hasSVE2p1() ? InstructionCost(1) : InstructionCost::getInvalid();
+  }
+  case Intrinsic::vector_deinterleave_segments2: {
+    // UZP of 64-bit elements or smaller only requires SVE.
+    // TODO-REVEC: Actually allow segments of e.g. 32 bits. Currently codegen
+    // isn't amazing and requires +f64mm.
+    unsigned SegmentSizeInBits =
+        RetTy->getPrimitiveSizeInBits().getKnownMinValue();
+    return SegmentSizeInBits == (AArch64::SVEBitsPerBlock / 2) && ST->hasSVE()
+               ? InstructionCost(1)
+               : InstructionCost::getInvalid();
+  }
+  case Intrinsic::vector_interleave_segments2: {
+    // Interleaving of scalable 64-bit vectors is selected using uzpq1.
+    // Interleaving of scalable 128-bit vectors is selected using zipq1+zipq2
+    // Both require SVE2.1.
+    unsigned SegmentSizeInBits =
+        RetTy->getPrimitiveSizeInBits().getKnownMinValue();
+    return ST->hasSVE2p1() &&
+                   (SegmentSizeInBits == (AArch64::SVEBitsPerBlock / 2) ||
+                    SegmentSizeInBits == (AArch64::SVEBitsPerBlock))
+               ? InstructionCost(1)
+               : InstructionCost::getInvalid();
+  }
+  case Intrinsic::aarch64_neon_sshl:
+  case Intrinsic::aarch64_neon_ushl: {
+    // Re-vectorising NEON's non-saturating non-rounding bi-directional shl
+    // requires the use of two SVE bi-directional shl: one for the non-rounding
+    // part and one for the non-saturating part. (+masking)
+    if (!IsAcceptableTyForREVEC(RetTy))
+      return InstructionCost::getInvalid();
+    return RetTy->isScalableTy() ? InstructionCost(2) : InstructionCost(1);
+  }
+  case Intrinsic::aarch64_neon_addp:
+  case Intrinsic::aarch64_neon_faddp: {
+    // Re-vectorising NEON's ADDP requires prior deinterleaving because SVE does
+    // not have have a ADDPQ variant working like NEON within quads.
+    // Re-vectorising 64-bit NEON requires even more instructions.
+    if (!IsAcceptableTyForREVEC(RetTy))
+      return InstructionCost::getInvalid();
+    return RetTy->isScalableTy() ? InstructionCost(2) : InstructionCost(1);
+  }
+  case Intrinsic::aarch64_neon_tbl1:
+  case Intrinsic::aarch64_neon_tbl2:
+  case Intrinsic::aarch64_neon_tbl3:
+  case Intrinsic::aarch64_neon_tbl4: {
+    assert(ICA.getArgs().size() >= 2 &&
+           "Tbl needs at least one source and one mask");
+    if (!IsAcceptableTyForREVEC(RetTy) ||
+        !all_of(ICA.getArgTypes(), IsAcceptableTyForREVEC))
+      return InstructionCost::getInvalid();
+    const unsigned NumSrcs = ICA.getArgs().size() - 1;
+    return RetTy->isScalableTy() ? InstructionCost(NumSrcs)
+                                 : InstructionCost(1);
+  }
   default:
+    // Only allow REVEC of NEON intrinsics when the types are at most scalable
+    // 128-bit vectors. This avoids crashes when forcing e.g. VF = vscale x 2.
+    if (isTargetIntrinsicVectorizable(ICA.getID()) && RetTy->isScalableTy()) {
+      return (IsAcceptableTyForREVEC(RetTy) &&
+              all_of(ICA.getArgTypes(), IsAcceptableTyForREVEC))
+                 ? InstructionCost(1)
+                 : InstructionCost::getInvalid();
+    }
     break;
   }
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
@@ -3382,6 +3531,14 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                  const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
+
+  // TODO-REVEC: Some casts for nxv1 types are supported, but others like
+  // float<->int conversions aren't.
+  // Until codegen works for every type, let's be conservative.
+  if (auto *VTy = dyn_cast<VectorType>(Dst);
+      VTy && VTy->getElementCount() == ElementCount::getScalable(1))
+    return InstructionCost::getInvalid();
+
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
   if (I && I->hasOneUser()) {
@@ -4366,11 +4523,13 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
-  // it. This change will be removed when code-generation for these types is
-  // sufficiently reliable.
+  // it until all instructions are vetted.
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  static const std::set<int> Vettedx1Ops = {ISD::ADD, ISD::SUB, ISD::MUL};
   if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
     if (VTy->getElementCount() == ElementCount::getScalable(1))
-      return InstructionCost::getInvalid();
+      if (!Vettedx1Ops.count(ISD))
+        return InstructionCost::getInvalid();
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -4379,7 +4538,6 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   // Increase the cost for half and bfloat types if not architecturally
   // supported.
@@ -4906,6 +5064,9 @@ AArch64TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_scatter:
   case Intrinsic::masked_gather:
     return getGatherScatterOpCost(MICA, CostKind);
+  case Intrinsic::masked_segment_scatter:
+  case Intrinsic::masked_segment_gather:
+    return getSegmentGatherScatterOpCost(MICA, CostKind);
   case Intrinsic::masked_load:
   case Intrinsic::masked_expandload:
   case Intrinsic::masked_store:
@@ -4930,12 +5091,9 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT->getElementType()->isIntegerTy(1))
     return InstructionCost::getInvalid();
 
-  // The code-generator is currently not able to handle scalable vectors
-  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
-  // it. This change will be removed when code-generation for these types is
-  // sufficiently reliable.
+  // <vscale x 1 x eltty> operations require mask adaptation
   if (VT->getElementCount() == ElementCount::getScalable(1))
-    return InstructionCost::getInvalid();
+    return LT.first + 1;
 
   InstructionCost MemOpCost = LT.first;
   if (MICA.getID() == Intrinsic::masked_expandload) {
@@ -5024,6 +5182,20 @@ AArch64TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
   return LT.first * MemOpCost * getMaxNumElements(LegalVF);
 }
 
+InstructionCost AArch64TTIImpl::getSegmentGatherScatterOpCost(
+    const MemIntrinsicCostAttributes &MICA,
+    TTI::TargetCostKind CostKind) const {
+  // TODO-REVEC: This needs proper costs.
+  Type *DataTy = MICA.getDataType();
+  unsigned SegmentSizeInBits =
+      DataTy->getPrimitiveSizeInBits().getKnownMinValue();
+  assert((SegmentSizeInBits == 64U || SegmentSizeInBits == 128U) &&
+         "Illegal segment size.");
+  unsigned SegmentsPerQuad = AArch64::SVEBitsPerBlock / SegmentSizeInBits;
+  unsigned VScaleEstimate = std::max(ST->getVScaleForTuning(), 2U);
+  return VScaleEstimate * SegmentsPerQuad;
+}
+
 bool AArch64TTIImpl::useNeonVector(const Type *Ty) const {
   return isa<FixedVectorType>(Ty) && !ST->useSVEForFixedLengthVectors();
 }
@@ -5045,16 +5217,23 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
 
-  // The code-generator is currently not able to handle scalable vectors
-  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
-  // it. This change will be removed when code-generation for these types is
-  // sufficiently reliable.
+  // <vscale x 1 x eltty> operations require crafting a new mask
+  if (auto *VTy = dyn_cast<ScalableVectorType>(Ty)) {
+    if (VTy->getElementCount() == ElementCount::getScalable(1)) {
+      Intrinsic::ID IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                                      : Intrinsic::masked_store;
+      return getMaskedMemoryOpCost(
+                 MemIntrinsicCostAttributes(IID, Ty, Alignment, AddressSpace),
+                 CostKind) +
+             1;
+    }
+  }
+
   // We also only support full register predicate loads and stores.
   if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
-    if (VTy->getElementCount() == ElementCount::getScalable(1) ||
-        (VTy->getElementType()->isIntegerTy(1) &&
-         !VTy->getElementCount().isKnownMultipleOf(
-             ElementCount::getScalable(16))))
+    if (VTy->getElementType()->isIntegerTy(1) &&
+        !VTy->getElementCount().isKnownMultipleOf(
+            ElementCount::getScalable(16)))
       return InstructionCost::getInvalid();
 
   // TODO: consider latency as well for TCK_SizeAndLatency.
@@ -5167,6 +5346,26 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
                                            UseMaskForCond, UseMaskForGaps);
 }
 
+InstructionCost AArch64TTIImpl::getSegmentInterleavedMemoryOpCost(
+    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+    bool UseMaskForCond, bool UseMaskForGaps) const {
+
+  auto *VecVTy = cast<VectorType>(VecTy);
+  auto *SubVecTy = VectorType::getOneNthElementsVectorType(VecVTy, Factor);
+
+  bool UseScalable;
+  if (!TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable,
+                                         /*AccessSegments=*/true))
+    return InstructionCost::getInvalid();
+
+  // The mask might need stretching inside the loop.
+  unsigned StretchCost = UseMaskForCond ? 1U : 0U;
+  return StretchCost +
+         getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices, Alignment,
+                                    AddressSpace, CostKind, UseMaskForCond,
+                                    UseMaskForGaps);
+}
 InstructionCost
 AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
   InstructionCost Cost = 0;
@@ -5654,6 +5853,370 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     break;
   }
   return true;
+}
+
+bool AArch64TTIImpl::isSupportedTargetRecurrence(Intrinsic::ID ID,
+                                                 RecurKind RK) const {
+  switch (ID) {
+  case Intrinsic::aarch64_neon_udot:
+  case Intrinsic::aarch64_neon_sdot:
+  case Intrinsic::aarch64_neon_usdot:
+    return RK == RecurKind::TargetIntAccumulation;
+  default:
+    return false;
+  }
+}
+
+bool AArch64TTIImpl::isTargetIntrinsicWithScalarOpAtArg(
+    Intrinsic::ID ID, unsigned ScalarOpdIdx) const {
+  switch (ID) {
+  case Intrinsic::aarch64_neon_rshrn:
+  case Intrinsic::aarch64_neon_sqrshrn:
+  case Intrinsic::aarch64_neon_sqrshrun:
+  case Intrinsic::aarch64_neon_sqshrn:
+  case Intrinsic::aarch64_neon_sqshrun:
+  case Intrinsic::aarch64_neon_uqrshrn:
+  case Intrinsic::aarch64_neon_uqshrn:
+    return ScalarOpdIdx == 1;
+  case Intrinsic::aarch64_neon_vsli:
+  case Intrinsic::aarch64_neon_vsri:
+    return ScalarOpdIdx == 2;
+  default:
+    return BaseT::isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
+  }
+}
+
+bool AArch64TTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                                            int OpdIdx) const {
+  switch (ID) {
+  case Intrinsic::aarch64_neon_facge:
+  case Intrinsic::aarch64_neon_facgt:
+  case Intrinsic::aarch64_neon_fcvtzs:
+  case Intrinsic::aarch64_neon_fcvtzu:
+    return OpdIdx == -1 || OpdIdx == 0;
+  case Intrinsic::aarch64_sve_facge:
+  case Intrinsic::aarch64_sve_facgt:
+    return OpdIdx == 1;
+  case Intrinsic::aarch64_sve_fcvtzs:
+  case Intrinsic::aarch64_sve_fcvtzu:
+    return OpdIdx == -1 || OpdIdx == 2;
+  case Intrinsic::aarch64_sve_fcvtx_f32f64:
+  case Intrinsic::aarch64_sve_fcvtxnt_f32f64:
+    return false;
+  case Intrinsic::aarch64_sve_sqxtnb:
+  case Intrinsic::aarch64_sve_sqxtnt:
+  case Intrinsic::aarch64_sve_sqxtunb:
+  case Intrinsic::aarch64_sve_sqxtunt:
+  case Intrinsic::aarch64_sve_uqxtnb:
+  case Intrinsic::aarch64_sve_uqxtnt:
+    return OpdIdx == 0;
+  case Intrinsic::aarch64_sve_rshrnb:
+  case Intrinsic::aarch64_sve_sqrshrnb:
+  case Intrinsic::aarch64_sve_sqrshrunb:
+  case Intrinsic::aarch64_sve_sqshrnb:
+  case Intrinsic::aarch64_sve_sqshrunb:
+  case Intrinsic::aarch64_sve_uqrshrnb:
+  case Intrinsic::aarch64_sve_uqshrnb:
+    return OpdIdx == 0;
+  default:
+    // For all other intrinsics, it's so far okay to pretend only the return
+    // type is overloaded.
+    return BaseT::isTargetIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
+  }
+}
+
+SmallVector<Type *, 2>
+AArch64TTIImpl::computeTysForDecl(Intrinsic::ID ID, Type *RetTy,
+                                  ArrayRef<Value *> Args) const {
+  SmallVector<Type *, 2> Tys;
+  if (isTargetIntrinsicWithOverloadTypeAtArg(ID, -1))
+    Tys.push_back(RetTy);
+  for (auto [ArgIdx, Arg] : enumerate(Args))
+    if (isTargetIntrinsicWithOverloadTypeAtArg(ID, ArgIdx))
+      Tys.push_back(Arg->getType());
+  return Tys;
+}
+
+bool AArch64TTIImpl::isTargetIntrinsicVectorizable(Intrinsic::ID ID) const {
+
+  // Need SVE2.1 to consider revectorisation of NEON intrinsics
+  if (!ST->hasSVE2p1())
+    return false;
+
+  return lookupNEONToSVEMappingByNEONIntrinsic(Intrinsic::getBaseName(ID));
+}
+
+/// Generate a segmented UZP shuffle that can later be selected to UZPQ.
+/// \pre Src0 and Src1 are scalable vectors
+Instruction *getSegmentedUZP(Value *Src0, Value *Src1, bool EvenElts,
+                             IRBuilderBase &Builder) {
+  assert(isa<ScalableVectorType>(Src0->getType()));
+  auto *VTy = cast<ScalableVectorType>(Src0->getType());
+  const unsigned SegmentSize = VTy->getMinNumElements();
+  SmallVector<int, 8> Mask(SegmentSize);
+  transform(seq<int>(SegmentSize), Mask.begin(),
+            [EvenElts](int Idx) { return EvenElts ? Idx * 2 : Idx * 2 + 1; });
+  return Builder.CreateSegmentedShuffleVector(Src0, Src1, Mask);
+}
+
+/// Concatenate the even words of \p Src with its odd words within each quad.
+/// I.e. generate UZPQ1 Src.w,, (EXT Src, 4).w
+Instruction *concatEvenThenOddWordsWithinQuads(Value *Src,
+                                               IRBuilderBase &Builder,
+                                               bool ConcatWords = false) {
+  assert(Src->getType()->getPrimitiveSizeInBits().getKnownMinValue() ==
+             AArch64::SVEBitsPerBlock &&
+         "Expected legal SVE vector.");
+  assert(!Src->getType()->getScalarType()->isIntegerTy(32) &&
+         "Unexpected nxv4i32 input");
+  Type *OrigTy = Src->getType();
+  Src = Builder.CreateBitCast(Src,
+                              ScalableVectorType::get(Builder.getInt32Ty(), 4));
+  Value *ShiftOddToEven =
+      Builder.CreateVectorSpliceLeft(Src, PoisonValue::get(Src->getType()), 1);
+  Instruction *Res =
+      getSegmentedUZP(Src, ShiftOddToEven, /*EvenElts=*/true, Builder);
+  return cast<Instruction>(Builder.CreateBitCast(Res, OrigTy));
+}
+
+Instruction *AArch64TTIImpl::vectorizeTargetIntrinsic(
+    Intrinsic::ID VectorIID, ArrayRef<Type *> TysForDecl,
+    ArrayRef<Value *> WideArgs, IRBuilderBase &Builder,
+    const Instruction &OrigInst) const {
+
+  // Look up the mapping in the generated table
+  StringRef NEONIntrinsicName = Intrinsic::getBaseName(VectorIID);
+  const NEONToSVEIntrinsicMapping *Mapping =
+      lookupNEONToSVEMappingByNEONIntrinsic(NEONIntrinsicName);
+  if (!Mapping)
+    llvm_unreachable("Unimplemented intrinsic vectorisation!");
+
+  auto IsScaledNEONOrScalar = [](const Value *V) -> bool {
+    if (V->getType()->isIntegerTy())
+      return true;
+    auto *SVTy = dyn_cast<ScalableVectorType>(V->getType());
+    if (!SVTy)
+      return false;
+    unsigned FixedBits = SVTy->getMinNumElements() *
+                         SVTy->getElementType()->getScalarSizeInBits();
+    return FixedBits == AArch64::SVEBitsPerBlock ||
+           FixedBits == (AArch64::SVEBitsPerBlock / 2);
+  };
+  auto ToSVETy = [&](Type *Ty) -> Type * {
+    if (!Ty->isVectorTy())
+      return Ty;
+    auto *SVTy = cast<ScalableVectorType>(Ty);
+    unsigned FixedBits = SVTy->getMinNumElements() *
+                         SVTy->getElementType()->getScalarSizeInBits();
+    return toVectorTy(
+        Ty, ElementCount::getFixed(AArch64::SVEBitsPerBlock / FixedBits));
+  };
+
+  // For scaled 64-bit vectors, interleave/deinterleave even elements to makes
+  // them valid SVE types. This plays nicely for both int and fp types later
+  // during ISel.
+  auto ToSVEVal = [&](Value *V) -> Value * {
+    Type *LegalSVETy = ToSVETy(V->getType());
+    if (LegalSVETy == V->getType())
+      return V;
+    return Builder.CreateVectorInterleave({V, PoisonValue::get(V->getType())});
+  };
+  auto FromSVEInst = [&](Instruction *I, Type *ExpectedTy) -> Instruction * {
+    if (ExpectedTy == I->getType())
+      return I;
+    auto *RevecTy = cast<VectorType>(I->getType());
+    auto *ExpectedEltTy = cast<VectorType>(ExpectedTy)->getElementType();
+    if (RevecTy->getElementType() != ExpectedEltTy) {
+      assert(RevecTy->getElementType()->isIntegerTy(1) &&
+             "Only expected SVE predicate to be turned into NEON vector.");
+      Type *NeonQuadPredTy =
+          VectorType::get(ExpectedEltTy, RevecTy->getElementCount());
+      I = cast<Instruction>(Builder.CreateZExt(I, NeonQuadPredTy));
+    }
+    if (ExpectedTy == I->getType())
+      return I;
+    auto *Deinterleave = Builder.CreateIntrinsic(
+        Intrinsic::vector_deinterleave2, I->getType(), I);
+    return cast<Instruction>(Builder.CreateExtractValue(Deinterleave, {0U}));
+  };
+
+  auto Zero = [&](Type *Ty) { return Constant::getNullValue(ToSVETy(Ty)); };
+  auto Poison = [&](Type *Ty) { return PoisonValue::get(ToSVETy(Ty)); };
+  auto True = [&](Type *Ty) {
+    auto *VectorTy = cast<VectorType>(ToSVETy(Ty));
+    // SVE intrinsics that narrow the element type have a predicate type with
+    // half as many elements as their return type because every odd lane is
+    // zeroed/undefined.
+    bool IsNarrowing = any_of(WideArgs, [Ty](const Value *V) {
+      return V->getType()->getScalarSizeInBits() > Ty->getScalarSizeInBits();
+    });
+    if (IsNarrowing)
+      VectorTy = VectorType::getOneNthElementsVectorType(VectorTy, 2);
+    auto *PredTy = VectorType::get(IntegerType::get(Ty->getContext(), 1),
+                                   VectorTy->getElementCount());
+    return Constant::getAllOnesValue(PredTy);
+  };
+  auto Arg = [&](unsigned ArgIdx) {
+    assert(ArgIdx < WideArgs.size() && "Argument index out of range!");
+    Value *V = WideArgs[ArgIdx];
+    return ToSVEVal(V);
+  };
+  auto Imm = [&](unsigned ArgIdx) {
+    assert(ArgIdx < WideArgs.size() && "Argument index out of range!");
+    Value *V = WideArgs[ArgIdx];
+    assert(isa<Constant>(V) && cast<Constant>(V)->getSplatValue());
+    return cast<Constant>(V)->getSplatValue();
+  };
+
+  assert(all_of(WideArgs, IsScaledNEONOrScalar) &&
+         "Expected SVE-compatible values.");
+
+  // Custom lower some intrinsics.
+  switch (VectorIID) {
+  case Intrinsic::aarch64_neon_uaddlp:
+  case Intrinsic::aarch64_neon_saddlp: {
+    // ADDLP works with adjacent elements: scaled 64-bit NEON inputs cannot be
+    // legalised to SVE by interleaving. Instead, extend and use a normal ADDP.
+    Type *SrcTy = WideArgs[0]->getType();
+    if (SrcTy->getPrimitiveSizeInBits().getKnownMinValue() != 64U)
+      break;
+
+    Type *DstTy = TysForDecl[0];
+    Type *WideSrcTy = ToSVETy(DstTy);
+    const bool IsSigned = VectorIID == Intrinsic::aarch64_neon_saddlp;
+    Value *Src = IsSigned ? Builder.CreateSExt(WideArgs[0], WideSrcTy)
+                          : Builder.CreateZExt(WideArgs[0], WideSrcTy);
+    return FromSVEInst(Builder.CreateIntrinsic(Intrinsic::aarch64_sve_addp,
+                                               {WideSrcTy},
+                                               {True(WideSrcTy), Src, Src}),
+                       DstTy);
+  }
+  case Intrinsic::aarch64_neon_addp:
+  case Intrinsic::aarch64_neon_faddp: {
+    Type *Ty = TysForDecl[0];
+    const bool IsInt = VectorIID == Intrinsic::aarch64_neon_addp;
+    // ADDP works with adjacent elements: scaled 64-bit NEON inputs cannot be
+    // legalised to SVE by interleaving with undef elements.
+    // Instead, deinterleave and use a normal ADD.
+
+    // But if the initial NEON vector contained a single pair, we can
+    // directly use SVE's ADDP without prior UZPQ de-interleaving.
+    unsigned NeonVecSize = OrigInst.getType()->getPrimitiveSizeInBits();
+    unsigned PairSize = OrigInst.getType()->getScalarSizeInBits() * 2;
+    unsigned NumPairsPerSrc = NeonVecSize / PairSize;
+    if (Ty == ToSVETy(Ty) && NumPairsPerSrc == 1) {
+      Intrinsic::ID IID =
+          IsInt ? Intrinsic::aarch64_sve_addp : Intrinsic::aarch64_sve_faddp;
+      return Builder.CreateIntrinsic(IID, {Ty},
+                                     {True(Ty), WideArgs[0], WideArgs[1]});
+    }
+
+    // Within each segment, ensure we have all the pairwise adds from Args0
+    // followed by those of Add1.
+    Value *EvenElts =
+        getSegmentedUZP(WideArgs[0], WideArgs[1], /*EvenElts=*/true, Builder);
+    Value *OddElts =
+        getSegmentedUZP(WideArgs[0], WideArgs[1], /*EvenElts=*/false, Builder);
+    auto *Res =
+        cast<Instruction>(IsInt ? Builder.CreateAdd(EvenElts, OddElts)
+                                : Builder.CreateFAdd(EvenElts, OddElts));
+
+    // The segment type might not match the original type (VF = vscale x 2),
+    // i.e. the original type is 64-bit but our segments are 128-bit.
+    // Then, ensure that within each 64-bit segment, the lo 32-bit are pairwise
+    // adds from Arg0 and the hi 32-bit are pairwise adds from Arg1.
+    if (NeonVecSize != Ty->getPrimitiveSizeInBits().getKnownMinValue()) {
+      assert(NeonVecSize == 64U && Ty == ToSVETy(Ty) &&
+             "Expected REVEC from NEON 64-bit to legal SVE");
+      Res = concatEvenThenOddWordsWithinQuads(Res, Builder);
+    }
+    return Res;
+  }
+  case Intrinsic::aarch64_neon_sshl:
+  case Intrinsic::aarch64_neon_ushl: {
+    // SVE does not have a "plain" non-saturating non-rounding shl.
+    // This means we need to use [su]rshl for positive shift amounts
+    // and [su]qshl for negative shift amounts (effectively a shift right).
+    const bool IsSignedShift = VectorIID == Intrinsic::aarch64_neon_sshl;
+    Intrinsic::ID SHLIID = IsSignedShift ? Intrinsic::aarch64_sve_srshl
+                                         : Intrinsic::aarch64_sve_urshl;
+    Intrinsic::ID SHRIID = IsSignedShift ? Intrinsic::aarch64_sve_sqshl
+                                         : Intrinsic::aarch64_sve_uqshl;
+    Type *ArgTy = TysForDecl[0];
+    Value *Arg0 = Arg(0);
+    Value *Arg1 = Arg(1);
+    Value *SHLMask = Builder.CreateICmpSLE(
+        Arg1, ConstantInt::get(ToSVETy(ArgTy), 0), "shl.mask");
+    Value *SHL = Builder.CreateIntrinsic(SHLIID, {ToSVETy(ArgTy)},
+                                         {SHLMask, Arg0, Arg1});
+    Value *SHRMask =
+        Builder.CreateIntrinsic(Intrinsic::ctlz, {SHLMask->getType()},
+                                {SHLMask, Builder.getTrue()}, {}, "shr.mask");
+    return FromSVEInst(Builder.CreateIntrinsic(SHRIID, {ToSVETy(ArgTy)},
+                                               {SHRMask, SHL, Arg1}, {},
+                                               "wide.bidir.shl"),
+                       ArgTy);
+  }
+  case Intrinsic::aarch64_neon_tbl1:
+  case Intrinsic::aarch64_neon_tbl2:
+  case Intrinsic::aarch64_neon_tbl3:
+  case Intrinsic::aarch64_neon_tbl4: {
+    Type *Ty = TysForDecl[0];
+    assert(OrigInst.getType()->getPrimitiveSizeInBits() ==
+               Ty->getPrimitiveSizeInBits().getKnownMinValue() &&
+           "Unexpected vscale x 2 REVEC");
+    Value *Src0 = Arg(0);
+    Value *Mask = Arg(WideArgs.size() - 1);
+    Instruction *Res = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_tblq,
+                                               {Src0->getType()}, {Src0, Mask});
+    for (unsigned SrcIdx = 1; SrcIdx < WideArgs.size() - 1; ++SrcIdx) {
+      Value *Src = Arg(SrcIdx);
+      Mask = Builder.CreateSub(Mask, ConstantInt::get(Mask->getType(), 16));
+      Res = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_tbxq,
+                                    {Src->getType()}, {Res, Src, Mask});
+    }
+    return FromSVEInst(Res, Ty);
+  }
+  }
+  assert(!Mapping->isCustom() &&
+         "NEON intrinsic was expected to be custom-lowered to SVE");
+
+  // Note: Contrary to NEON, SVE intrinsics usually have less overload types
+  // because argument types are inferred.
+  Type *Ty = TysForDecl[0];
+  SmallVector<Value *, 4> SVEArgs;
+
+  // Parse and apply argument mappings from the table
+  SmallVector<ArgMapping, 4> ArgMappings =
+      parseArgMappings(Mapping->ArgMappings);
+  for (const ArgMapping &AM : ArgMappings) {
+    switch (AM.getKind()) {
+    case ArgMapping::True:
+      SVEArgs.push_back(True(Ty));
+      break;
+    case ArgMapping::Zero:
+      SVEArgs.push_back(Zero(Ty));
+      break;
+    case ArgMapping::Poison:
+      SVEArgs.push_back(Poison(Ty));
+      break;
+    case ArgMapping::Arg:
+      SVEArgs.push_back(Arg(AM.getArgIndex()));
+      break;
+    case ArgMapping::Imm:
+      assert(AM.getArgIndex() < WideArgs.size() &&
+             "Argument index out of range!");
+      SVEArgs.push_back(Imm(AM.getArgIndex()));
+      break;
+    }
+  }
+
+  Intrinsic::ID SVEIntrinsicID =
+      Intrinsic::lookupIntrinsicID(Mapping->SVEIntrinsic);
+  auto TysForSVEDecl = computeTysForDecl(SVEIntrinsicID, ToSVETy(Ty), SVEArgs);
+  assert(SVEIntrinsicID != Intrinsic::not_intrinsic);
+  return FromSVEInst(
+      Builder.CreateIntrinsic(SVEIntrinsicID, TysForSVEDecl, SVEArgs), Ty);
 }
 
 /// See if \p I should be considered for address type promotion. We check if \p
@@ -6191,6 +6754,10 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
          "Expected the same scalar types");
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
+  if (SrcTy->getElementCount() == ElementCount::getScalable(1) ||
+      DstTy->getElementCount() == ElementCount::getScalable(1))
+    return InstructionCost::getInvalid();
+
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
   // into smaller vectors and sum the cost of each shuffle.
   if (!Mask.empty() && isa<FixedVectorType>(SrcTy) && LT.second.isVector() &&
@@ -6542,6 +7109,35 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
     Kind = TTI::SK_ExtractSubvector;
   return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
                                Args, CxtI);
+}
+
+InstructionCost
+AArch64TTIImpl::getSegmentedShuffleCost(TTI::ShuffleKind Kind, VectorType *VTy,
+                                        ArrayRef<int> ShuffleMask,
+                                        TTI::TargetCostKind CostKind) const {
+  const unsigned SegmentSize = ShuffleMask.size();
+
+  // Can only use instructions like zipq and other q variants if VTy can be seen
+  // as <vscale x SegmentTy> where SegmentTy is at most 128b.
+  if (!VTy->isScalableTy() ||
+      VTy->getElementCount().getKnownMinValue() != SegmentSize ||
+      VTy->getPrimitiveSizeInBits().getKnownMinValue() >
+          AArch64::SVEBitsPerBlock)
+    return InstructionCost::getInvalid();
+
+  // TODO-REVEC: Some shuffles only require SVE, but it's easier to just require
+  // sve2p1 for HVLA.
+  if (!ST->hasSVE2p1() && !ST->hasSME2p1())
+    return InstructionCost::getInvalid();
+
+  // TODO-REVEC: Give sensible costs based on types?
+  if (TLI->isSegmentedShuffleMaskSupported(ShuffleMask))
+    return InstructionCost(1);
+
+  bool HasTwoInputs = any_of(ShuffleMask, [SegmentSize](int EltIdx) {
+    return EltIdx >= int(SegmentSize);
+  });
+  return HasTwoInputs ? InstructionCost(3) : InstructionCost(2);
 }
 
 static bool containsDecreasingPointers(Loop *TheLoop,

@@ -91,7 +91,8 @@ void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
 /// Report successful vectorization of the loop. In case an outer loop is
 /// vectorized, prepend "outer" to the vectorization remark.
 void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
-                         ElementCount VFWidth, unsigned IC);
+                         ElementCount VFWidth, unsigned IC,
+                         bool ContainsVectors);
 
 } // namespace LoopVectorizationUtils
 

@@ -70,6 +70,8 @@ public:
   /// scalar loop.
   VPHistogramRecipe *widenIfHistogram(VPInstruction *VPI);
 
+  VPSingleDefRecipe *tryToWidenShuffle(VPInstruction *VPI);
+
   /// If \p VPI is a store of a reduction into an invariant address, delete it.
   /// If it is the final store of a reduction result, a uniform store recipe
   /// will be created for it in the middle block. Returns `true` if replacement

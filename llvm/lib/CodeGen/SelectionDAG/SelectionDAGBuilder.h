@@ -607,6 +607,7 @@ private:
   void visitExtractElement(const User &I);
   void visitInsertElement(const User &I);
   void visitShuffleVector(const User &I);
+  void visitVectorSegmentedShuffle(const CallInst &I);
 
   void visitExtractValue(const ExtractValueInst &I);
   void visitInsertValue(const InsertValueInst &I);
@@ -622,6 +623,8 @@ private:
   void visitMaskedStore(const CallInst &I, bool IsCompressing = false);
   void visitMaskedGather(const CallInst &I);
   void visitMaskedScatter(const CallInst &I);
+  void visitMaskedSegmentGather(const CallInst &I);
+  void visitMaskedSegmentScatter(const CallInst &I);
   void visitAtomicCmpXchg(const AtomicCmpXchgInst &I);
   void visitAtomicRMW(const AtomicRMWInst &I);
   void visitFence(const FenceInst &I);
@@ -685,10 +688,14 @@ private:
   void visitGCResult(const GCResultInst &I);
 
   void visitVectorReduce(const CallInst &I, unsigned Intrinsic);
+  bool visitPartialReduceToFixed(const CallInst &I, unsigned ISDOpcode);
   void visitVectorReverse(const CallInst &I);
   void visitVectorSplice(const CallInst &I);
-  void visitVectorInterleave(const CallInst &I, unsigned Factor);
-  void visitVectorDeinterleave(const CallInst &I, unsigned Factor);
+  void visitVectorInterleave(const CallInst &I, unsigned Factor,
+                             bool InterleaveSegments = false);
+  void visitVectorDeinterleave(const CallInst &I, unsigned Factor,
+                               bool DeinterleaveSegments = false);
+  void visitNamedVectorShuffle(const CallInst &I);
   void visitStepVector(const CallInst &I);
 
   void visitUserOp1(const Instruction &I) {

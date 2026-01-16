@@ -623,6 +623,18 @@ enum NodeType {
   /// Result[I][J] = CONCAT_VECTORS(...)[I + N * J]
   VECTOR_DEINTERLEAVE,
 
+  /// VECTOR_DEINTERLEAVE_SEGMENTS(VEC1, VEC2, ...)
+  /// Returns N vectors from N input vectors, where N is the factor to
+  /// deinterleave. All input and output vectors must have the same type
+  /// and must be scalable.
+  ///
+  /// As opposed to VECTOR_DEINTERLEAVE, this variant deinterleaves fixed-size
+  /// segments (subvectors) instead of elements. The size of the segments
+  /// corresponds to the minimum number of elements of the inputs.
+  /// e.g. VECTOR_DEINTERLEAVE_SEGMENTS nxv4i32 Src1, nxv4i32 Src2
+  ///      will deinterleave v4i32 segments.
+  VECTOR_DEINTERLEAVE_SEGMENTS,
+
   /// VECTOR_INTERLEAVE(VEC1, VEC2, ...) - Returns N vectors from N input
   /// vectors, where N is the factor to interleave. All input and
   /// output vectors must have the same type.
@@ -633,6 +645,33 @@ enum NodeType {
   /// Interleaved[I] = VEC(I % N)[I / N]
   /// Result[J] = EXTRACT_SUBVECTOR(Interleaved, J * getVectorMinNumElements())
   VECTOR_INTERLEAVE,
+
+  /// VECTOR_INTERLEAVE_SEGMENTS(VEC1, VEC2, ...)
+  /// Returns N vectors from N input vectors, where N is the factor to
+  /// interleave. All input and output vectors must have the same type
+  /// and must be scalable.
+  ///
+  /// As opposed to VECTOR_INTERLEAVE, this variant interleaves fixed-size
+  /// segments (subvectors) instead of elements. The size of the segments
+  /// corresponds to the minimum number of elements of the inputs.
+  /// e.g. VECTOR_INTERLEAVE_SEGMENTS nxv4i32 Src1, nxv4i32 Src2
+  ///      will interleave v4i32 segments.
+  VECTOR_INTERLEAVE_SEGMENTS,
+
+  /// VECTOR_BROADCAST(SRC_SUBVEC)
+  /// Duplicate a vector in a larger vector. The element count of the result
+  /// type is expected to be a multiple of the input vector's.
+  VECTOR_BROADCAST,
+
+  /// VECTOR_STRETCH(SRC_VEC)
+  /// Duplicate each element of SRC_VEC in place the same number of times until
+  /// matching the vector width of the output type. The width of the output type
+  /// is expected to be a compile-time-known multiple of the input vector.
+  /// The element type of the input and output types must also be the same.
+  ///
+  /// VECTOR_STRETCH(nxv2i1 {true, false}) -> nxv8i1
+  ///   yields nxv8i1 {true, true, true, true, false, false, false, false}
+  VECTOR_STRETCH,
 
   /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,
   /// whose elements are shuffled using the following algorithm:
@@ -647,6 +686,13 @@ enum NodeType {
   /// 'vperm' instruction, except that the indices must be constants and are
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
+
+  /// VECTOR_SEGMENTED_SHUFFLE(VEC1, VEC2) - Returns a vector of the same type
+  /// as VEC1/VEC2. The node also contains a mask, whose length must be a known
+  /// multiple of the vector length. That length determines the segment size.
+  /// VEC1 and VEC2 will be divided into multiple segments of that size, and
+  /// the mask will be applied on each of them to form the output segments.
+  VECTOR_SEGMENTED_SHUFFLE,
 
   /// VECTOR_SPLICE_LEFT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
   /// left by OFFSET elements and returns the lower half.
@@ -1525,6 +1571,14 @@ enum NodeType {
   VECREDUCE_SMIN,
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
+
+  // PARTIAL_REDUCE_xxxx(Accumulator, Source)
+  // Reduce a scalable vector to a fixed-length one and accumulate it.
+  PARTIAL_REDUCE_ADD,
+  PARTIAL_REDUCE_SMAX,
+  PARTIAL_REDUCE_SMIN,
+  PARTIAL_REDUCE_UMAX,
+  PARTIAL_REDUCE_UMIN,
 
   /// PARTIAL_REDUCE_[U|S]MLA(Accumulator, Input1, Input2)
   /// The partial reduction nodes sign or zero extend Input1 and Input2

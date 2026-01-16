@@ -32,12 +32,14 @@ define <vscale x 4 x i1> @cmp_nxv4i64() {
 ; Check icmp for legal predicate vectors.
 define void @cmp_legal_pred() {
 ; CHECK-LABEL: 'cmp_legal_pred'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v = icmp ne <vscale x 1 x i1> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %1 = icmp ne <vscale x 2 x i1> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %2 = icmp ne <vscale x 4 x i1> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %3 = icmp ne <vscale x 8 x i1> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %4 = icmp ne <vscale x 16 x i1> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
+  %v = icmp ne <vscale x 1 x i1> undef, undef
   %1 = icmp ne <vscale x 2 x i1> undef, undef
   %2 = icmp ne <vscale x 4 x i1> undef, undef
   %3 = icmp ne <vscale x 8 x i1> undef, undef

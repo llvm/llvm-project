@@ -869,12 +869,13 @@ public:
   LLVM_ABI CallInst *CreateMaskedGather(Type *Ty, Value *Ptrs, Align Alignment,
                                         Value *Mask = nullptr,
                                         Value *PassThru = nullptr,
-                                        const Twine &Name = "");
+                                        const Twine &Name = "",
+                                        bool GatherSegments = false);
 
   /// Create a call to Masked Scatter intrinsic
   LLVM_ABI CallInst *CreateMaskedScatter(Value *Val, Value *Ptrs,
-                                         Align Alignment,
-                                         Value *Mask = nullptr);
+                                         Align Alignment, Value *Mask = nullptr,
+                                         bool ScatterSegments = false);
 
   /// Create a call to Masked Expand Load intrinsic
   LLVM_ABI CallInst *CreateMaskedExpandLoad(Type *Ty, Value *Ptr,
@@ -2678,8 +2679,21 @@ public:
     return CreateShuffleVector(V, PoisonValue::get(V->getType()), Mask, Name);
   }
 
+  Instruction *CreateSegmentedShuffleVector(Value *V1, Value *V2,
+                                            ArrayRef<int> Mask,
+                                            const Twine &Name = "") {
+    auto *VTy = cast<ScalableVectorType>(V1->getType());
+    auto *SegmentTy =
+        FixedVectorType::get(VTy->getElementType(), VTy->getMinNumElements());
+    Constant *MaskV =
+        ShuffleVectorInst::convertShuffleMaskForBitcode(Mask, SegmentTy);
+    return CreateIntrinsic(Intrinsic::vector_segmented_shuffle,
+                           {VTy, MaskV->getType()}, {V1, V2, MaskV});
+  }
+
   LLVM_ABI Value *CreateVectorInterleave(ArrayRef<Value *> Ops,
-                                         const Twine &Name = "");
+                                         const Twine &Name = "",
+                                         bool InterleaveSegments = false);
 
   Value *CreateExtractValue(Value *Agg, ArrayRef<unsigned> Idxs,
                             const Twine &Name = "") {

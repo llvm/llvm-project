@@ -299,11 +299,25 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
-  if (!VecPart->getType()->isVectorTy()) {
+  // If VecPart's type is the same as the initial pre-vectorisation type,
+  // Def hasn't been vectorised. We are done.
+  Type *InitialTy = Def->getScalarType();
+  if (VecPart->getType() == InitialTy) {
     assert(Lane.isFirstLane() && "cannot get lane > 0 for scalar");
     return VecPart;
   }
+
+  // Last case: Extract a lane of type InitialTy from a vectorised value.
   // TODO: Cache created scalar values.
+  if (auto *InitVTy = dyn_cast<VectorType>(InitialTy)) {
+    assert(!InitialTy->isScalableTy() && "REVEC: Unexpected scalable vector");
+    int EC = InitVTy->getElementCount().getFixedValue();
+    // Shift the demanded InitVTy-typed lane into lane 0.
+    int NumLanesFromEnd = VF.getKnownMinValue() - Lane.getOffsetInLastSubvec();
+    auto *ShiftLastSubvec = Builder.CreateVectorSpliceRight(
+        VecPart, PoisonValue::get(VecPart->getType()), NumLanesFromEnd * EC);
+    return Builder.CreateExtractVector(InitialTy, ShiftLastSubvec, uint64_t(0));
+  }
   Value *LaneV = Lane.getAsRuntimeExpr(Builder, VF);
   auto *Extract = Builder.CreateExtractElement(VecPart, LaneV);
   // set(Def, Extract, Instance);
@@ -328,7 +342,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   auto GetBroadcastInstrs = [this](Value *V) {
     if (VF.isScalar())
       return V;
-    // Broadcast the scalar into all locations in the vector.
+    // Broadcast the value into all locations in the vector.
     Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
     return Shuf;
   };
@@ -346,6 +360,25 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   Value *VectorValue = GetBroadcastInstrs(ScalarValue);
   set(Def, VectorValue);
   return VectorValue;
+}
+
+Value *VPTransformState::getAndStretch(const VPValue *Def,
+                                       ElementCount StretchFactor) {
+  Value *V = get(Def);
+
+  if (StretchFactor.isScalar())
+    return V;
+
+  ElementCount InitialEC = getElementCount(V->getType());
+  if (InitialEC.isScalar())
+    return Builder.CreateVectorSplat(StretchFactor, V);
+
+  // Now we know that V is a vector value that needs to be stretched.
+  assert((!InitialEC.isScalable() || !StretchFactor.isScalable()) &&
+         "Trying to stretch a scalable value by a scalable count");
+  Type *ResultTy = toVectorTy(V->getType(), StretchFactor);
+  return Builder.CreateIntrinsic(Intrinsic::vector_stretch,
+                                 {ResultTy, V->getType()}, {V}, nullptr);
 }
 
 void VPTransformState::setDebugLocFrom(DebugLoc DL) {

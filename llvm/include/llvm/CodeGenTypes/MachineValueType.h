@@ -538,6 +538,10 @@ namespace llvm {
     /// to a concrete value type.
     LLVM_ABI static MVT getVT(Type *Ty, bool HandleUnknown = false);
 
+    /// Get a vector of equal size as \p VT which has \p p NewEC elements.
+    /// \pre VT's element count is a multiple of NewEC.
+    LLVM_ABI static MVT getSameSizeVT(MVT VT, ElementCount NewEC);
+
     /// Returns an APFloat semantics tag appropriate for the value type. If this
     /// is a vector type, the element semantics are returned.
     LLVM_ABI const fltSemantics &getFltSemantics() const;

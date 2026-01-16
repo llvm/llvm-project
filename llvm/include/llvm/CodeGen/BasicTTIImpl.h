@@ -1970,6 +1970,25 @@ public:
                                      VarMask, Alignment, I),
           CostKind);
     }
+    case Intrinsic::masked_segment_scatter: {
+      const Value *Mask = Args[2];
+      bool VarMask = !isa<Constant>(Mask);
+      Align Alignment = I->getParamAlign(1).valueOrOne();
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(Intrinsic::masked_segment_scatter,
+                                     ICA.getArgTypes()[0], Args[1], VarMask,
+                                     Alignment, I),
+          CostKind);
+    }
+    case Intrinsic::masked_segment_gather: {
+      const Value *Mask = Args[1];
+      bool VarMask = !isa<Constant>(Mask);
+      Align Alignment = I->getParamAlign(0).valueOrOne();
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(Intrinsic::masked_segment_gather, RetTy,
+                                     Args[0], VarMask, Alignment, I),
+          CostKind);
+    }
     case Intrinsic::masked_compressstore: {
       const Value *Data = Args[0];
       const Value *Mask = Args[2];
@@ -2074,6 +2093,17 @@ public:
       IntrinsicCostAttributes Attrs(
           IID, RetTy, {Args[0]->getType(), Args[1]->getType()}, FMF, I, 1);
       return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
+    }
+    case Intrinsic::vector_segmented_shuffle: {
+      auto *VTy = cast<VectorType>(RetTy);
+      if (Args.size() == 3 && isa<Constant>(Args[2])) {
+        SmallVector<int, 8> Mask;
+        ShuffleVectorInst::getShuffleMask(cast<Constant>(Args[2]), Mask);
+        return thisT()->getSegmentedShuffleCost(
+            TargetTransformInfo::SK_PermuteTwoSrc, VTy, Mask, CostKind);
+      }
+      return thisT()->getSegmentedShuffleCost(
+          TargetTransformInfo::SK_PermuteTwoSrc, VTy, {}, CostKind);
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {

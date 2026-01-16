@@ -30,6 +30,7 @@
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
@@ -629,10 +630,11 @@ CallInst *IRBuilderBase::CreateMaskedIntrinsic(Intrinsic::ID Id,
 /// \p Name     - name of the result variable
 CallInst *IRBuilderBase::CreateMaskedGather(Type *Ty, Value *Ptrs,
                                             Align Alignment, Value *Mask,
-                                            Value *PassThru,
-                                            const Twine &Name) {
+                                            Value *PassThru, const Twine &Name,
+                                            bool GatherSegments) {
   auto *VecTy = cast<VectorType>(Ty);
-  ElementCount NumElts = VecTy->getElementCount();
+  ElementCount NumElts =
+      GatherSegments ? ElementCount::getScalable(1) : VecTy->getElementCount();
   auto *PtrsTy = cast<VectorType>(Ptrs->getType());
   assert(NumElts == PtrsTy->getElementCount() && "Element count mismatch");
 
@@ -647,8 +649,9 @@ CallInst *IRBuilderBase::CreateMaskedGather(Type *Ty, Value *Ptrs,
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  CallInst *CI = CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops,
-                                       OverloadedTypes, Name);
+  Intrinsic::ID IID = GatherSegments ? Intrinsic::masked_segment_gather
+                                     : Intrinsic::masked_gather;
+  CallInst *CI = CreateMaskedIntrinsic(IID, Ops, OverloadedTypes, Name);
   CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), Alignment));
   return CI;
 }
@@ -661,10 +664,12 @@ CallInst *IRBuilderBase::CreateMaskedGather(Type *Ty, Value *Ptrs,
 /// \p Mask  - vector of booleans which indicates what vector lanes should
 ///            be accessed in memory
 CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
-                                             Align Alignment, Value *Mask) {
+                                             Align Alignment, Value *Mask,
+                                             bool ScatterSegments) {
   auto *PtrsTy = cast<VectorType>(Ptrs->getType());
   auto *DataTy = cast<VectorType>(Data->getType());
-  ElementCount NumElts = PtrsTy->getElementCount();
+  ElementCount NumElts = ScatterSegments ? ElementCount::getScalable(1)
+                                         : PtrsTy->getElementCount();
 
   if (!Mask)
     Mask = getAllOnesMask(NumElts);
@@ -674,8 +679,9 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  CallInst *CI =
-      CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, OverloadedTypes);
+  Intrinsic::ID IID = ScatterSegments ? Intrinsic::masked_segment_scatter
+                                      : Intrinsic::masked_scatter;
+  CallInst *CI = CreateMaskedIntrinsic(IID, Ops, OverloadedTypes);
   CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), Alignment));
   return CI;
 }
@@ -1250,6 +1256,24 @@ Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
                                         const Twine &Name) {
   assert(EC.isNonZero() && "Cannot splat to an empty vector!");
 
+  if (V->getType()->isVectorTy()) {
+    auto *VectorTy = cast<VectorType>(V->getType());
+    assert(!isa<ScalableVectorType>(VectorTy));
+
+    // If the value was already a constant splat, just recreate it with a
+    // bigger element count.
+    if (auto *VectorConstant = dyn_cast<Constant>(V);
+        VectorConstant && VectorConstant->getSplatValue()) {
+      ElementCount ActualEC =
+          EC.multiplyCoefficientBy(VectorTy->getElementCount().getFixedValue());
+      return CreateVectorSplat(ActualEC, VectorConstant->getSplatValue(), Name);
+    }
+
+    auto *WideVectorTy = toVectorTy(VectorTy, EC);
+    return CreateIntrinsic(Intrinsic::vector_broadcast,
+                           {WideVectorTy, VectorTy}, {V}, {}, Name);
+  }
+
   // First insert it into a poison vector so we can shuffle it.
   Value *Poison = PoisonValue::get(VectorType::get(V->getType(), EC));
   V = CreateInsertElement(Poison, V, getInt64(0), Name + ".splatinsert");
@@ -1261,7 +1285,8 @@ Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
 }
 
 Value *IRBuilderBase::CreateVectorInterleave(ArrayRef<Value *> Ops,
-                                             const Twine &Name) {
+                                             const Twine &Name,
+                                             bool InterleaveSegments) {
   assert(Ops.size() >= 2 && Ops.size() <= 8 &&
          "Unexpected number of operands to interleave");
 
@@ -1275,7 +1300,8 @@ Value *IRBuilderBase::CreateVectorInterleave(ArrayRef<Value *> Ops,
   }
 #endif
 
-  unsigned IID = Intrinsic::getInterleaveIntrinsicID(Ops.size());
+  unsigned IID =
+      Intrinsic::getInterleaveIntrinsicID(Ops.size(), InterleaveSegments);
   auto *SubvecTy = cast<VectorType>(Ops[0]->getType());
   Type *DestTy = VectorType::get(SubvecTy->getElementType(),
                                  SubvecTy->getElementCount() * Ops.size());

@@ -277,6 +277,36 @@ define <vscale x 16 x i8> @sel_nxv16i8(<vscale x 16 x i1> %p, <vscale x 16 x i8>
   ret <vscale x 16 x i8> %sel
 }
 
+define <vscale x 16 x i8> @sel_nxv16i8_i64_mask(<vscale x 2 x i1> %mask, <vscale x 16 x i8> %dst, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: sel_nxv16i8_i64_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %p.stretched = call <vscale x 16 x i1> @llvm.vector.stretch.nxv16i1.nxv2i1(<vscale x 2 x i1> %mask)
+  %sel = select <vscale x 16 x i1> %p.stretched, <vscale x 16 x i8> %a, <vscale x 16 x i8> %dst
+  ret <vscale x 16 x i8> %sel
+}
+
+define <vscale x 16 x i8> @sel_nxv16i8_i32_mask(<vscale x 4 x i1> %mask, <vscale x 16 x i8> %dst, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: sel_nxv16i8_i32_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %p.stretched = call <vscale x 16 x i1> @llvm.vector.stretch.nxv16i1.nxv4i1(<vscale x 4 x i1> %mask)
+  %sel = select <vscale x 16 x i1> %p.stretched, <vscale x 16 x i8> %a, <vscale x 16 x i8> %dst
+  ret <vscale x 16 x i8> %sel
+}
+
+define <vscale x 16 x i8> @sel_nxv16i8_i16_mask(<vscale x 8 x i1> %mask, <vscale x 16 x i8> %dst, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: sel_nxv16i8_i16_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %p.stretched = call <vscale x 16 x i1> @llvm.vector.stretch.nxv16i1.nxv8i1(<vscale x 8 x i1> %mask)
+  %sel = select <vscale x 16 x i1> %p.stretched, <vscale x 16 x i8> %a, <vscale x 16 x i8> %dst
+  ret <vscale x 16 x i8> %sel
+}
+
 define <vscale x 8 x i16> @sel_nxv8i16(<vscale x 8 x i1> %p, <vscale x 8 x i16> %dst, <vscale x 8 x i16> %a) {
 ; CHECK-LABEL: sel_nxv8i16:
 ; CHECK:       // %bb.0:

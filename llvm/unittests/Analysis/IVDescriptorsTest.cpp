@@ -15,6 +15,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -382,4 +383,106 @@ TEST(IVDescriptorsTest, InvariantStoreNoSCEV) {
                              RecurrenceDescriptor::isReductionPHI(Phi, L, Rdx);
                          EXPECT_FALSE(IsRdxPhi);
                        });
+}
+
+/// Test that vector add reductions are detected.
+TEST(IVDescriptorsTest, VectorIntAdd) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseIR(Context,
+                                      R"(define <4 x i32> @foo(ptr %A) {
+entry:
+  br label %loop
+
+loop:                                           ; preds = %entry, %loop
+  %indvars.iv = phi i64 [ %indvars.iv.next, %loop ], [ 0, %entry ]
+  %sum.02 = phi <4 x i32> [ %l7, %loop ], [ zeroinitializer, %entry ]
+  %l2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %l3 = load <4 x i32>, ptr %l2, align 4
+  %l7 = add <4 x i32> %sum.02, %l3
+  %indvars.iv.next = add i64 %indvars.iv, 4
+  %exitcond = icmp eq i64 %indvars.iv.next, 256
+  br i1 %exitcond, label %loop.exit, label %loop
+
+loop.exit:                                      ; preds = %loop
+  %sum.0.lcssa = phi <4 x i32> [ %l7, %loop ]
+  ret <4 x i32> %sum.0.lcssa
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        BasicBlock *Header = F.getEntryBlock().getSingleSuccessor();
+        assert(Header->getName() == "loop");
+        Loop *L = LI.getLoopFor(Header);
+        ASSERT_NE(L, nullptr);
+        PHINode &Phi = *std::next(Header->phis().begin());
+        assert(Phi.getName() == "sum.02");
+
+        RecurrenceDescriptor Rdx;
+        bool IsRdxPhi = RecurrenceDescriptor::isReductionPHI(
+            &Phi, L, Rdx, /*DB=*/nullptr, /*AC=*/nullptr, /*DT=*/nullptr, &SE,
+            /*TTI=*/nullptr);
+        EXPECT_TRUE(IsRdxPhi);
+        const RecurKind RK = Rdx.getRecurrenceKind();
+        EXPECT_EQ(RK, RecurKind::Add);
+
+        Type *Ty = Rdx.getRecurrenceType();
+        EXPECT_EQ(Ty, VectorType::get(IntegerType::get(Context, 32),
+                                      ElementCount::getFixed(4)));
+        EXPECT_EQ(Ty, Phi.getType());
+
+        // Identity is expected to be (<4 x i32> zeroinitializer).
+        EXPECT_EQ(getRecurrenceIdentity(RK, Ty, Rdx.getFastMathFlags()),
+                  Constant::getNullValue(Ty));
+
+        EXPECT_EQ(Rdx.getRecurrenceStartValue(), Constant::getNullValue(Ty));
+        EXPECT_EQ(Rdx.getLoopExitInstr()->getName(), "l7");
+      });
+}
+
+/// Test that vector add reductions are detected when there is more than one
+/// reduction operation (add).
+TEST(IVDescriptorsTest, VectorIntAddTwice) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseIR(Context,
+                                      R"(define <4 x i32> @foo(ptr %A) {
+entry:
+  br label %loop
+
+loop:                                           ; preds = %entry, %loop
+  %indvars.iv = phi i64 [ %indvars.iv.next, %loop ], [ 0, %entry ]
+  %sum.02 = phi <4 x i32> [ %l7, %loop ], [ zeroinitializer, %entry ]
+  %l2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %l3 = load <4 x i32>, ptr %l2, align 4
+  %l6 = add <4 x i32> %sum.02, %l3
+  %l7 = add <4 x i32> %l6, splat (i32 1)
+  %indvars.iv.next = add i64 %indvars.iv, 4
+  %exitcond = icmp eq i64 %indvars.iv.next, 256
+  br i1 %exitcond, label %loop.exit, label %loop
+
+loop.exit:                                      ; preds = %loop
+  %sum.0.lcssa = phi <4 x i32> [ %l7, %loop ]
+  ret <4 x i32> %sum.0.lcssa
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        BasicBlock *Header = F.getEntryBlock().getSingleSuccessor();
+        Loop *L = LI.getLoopFor(Header);
+        PHINode &Phi = *std::next(Header->phis().begin());
+        assert(Phi.getName() == "sum.02");
+
+        RecurrenceDescriptor Rdx;
+        bool IsRdxPhi = RecurrenceDescriptor::isReductionPHI(
+            &Phi, L, Rdx, /*DB=*/nullptr, /*AC=*/nullptr, /*DT=*/nullptr, &SE);
+        EXPECT_TRUE(IsRdxPhi);
+        EXPECT_EQ(Rdx.getRecurrenceKind(), RecurKind::Add);
+
+        Type *Ty = Rdx.getRecurrenceType();
+        EXPECT_EQ(Ty, VectorType::get(IntegerType::get(Context, 32),
+                                      ElementCount::getFixed(4)));
+        EXPECT_EQ(Ty, Phi.getType());
+
+        EXPECT_EQ(Rdx.getRecurrenceStartValue(), Constant::getNullValue(Ty));
+        EXPECT_EQ(Rdx.getLoopExitInstr()->getName(), "l7");
+      });
 }

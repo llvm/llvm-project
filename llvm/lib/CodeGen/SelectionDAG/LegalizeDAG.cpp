@@ -3768,7 +3768,30 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(TLI.expandVectorSplice(Node, DAG));
     break;
   }
-  case ISD::VECTOR_DEINTERLEAVE: {
+  case ISD::VECTOR_STRETCH: {
+    ElementCount InEC =
+        Node->getOperand(0).getValueType().getVectorElementCount();
+    EVT OutVT = Node->getValueType(0);
+    ElementCount OutEC = OutVT.getVectorElementCount();
+    unsigned StretchFactor = OutEC.getKnownScalarFactor(InEC);
+    if (StretchFactor <= 2 || !isPowerOf2_32(StretchFactor))
+      break;
+    // TODO-REVEC: If we are to upstream VECTOR_STRETCH, SDAG needs to handle
+    // legalisation for non power-of-2 types as well. We also need to ensure
+    // that the target supports VECTOR_STRETCH of factor 2, otherwise this
+    // transformation does not help.
+
+    // Expand one VECTOR_STRETCH into two by stretching to (InEC * 2) first.
+    EVT IntermediateVT = EVT::getVectorVT(
+        *DAG.getContext(), OutVT.getVectorElementType(), InEC * 2);
+    SDValue ToMidVT = DAG.getNode(ISD::VECTOR_STRETCH, dl, IntermediateVT,
+                                  Node->getOperand(0));
+    SDValue ToOutVT = DAG.getNode(ISD::VECTOR_STRETCH, dl, OutVT, ToMidVT);
+    Results.push_back(ToOutVT);
+    break;
+  }
+  case ISD::VECTOR_DEINTERLEAVE:
+  case ISD::VECTOR_DEINTERLEAVE_SEGMENTS: {
     unsigned Factor = Node->getNumOperands();
     if (Factor <= 2 || Factor % 2 != 0)
       break;
@@ -3777,23 +3800,23 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SmallVector<EVT> HalfVTs(Factor / 2, VecVT);
     // Deinterleave at Factor/2 so each result contains two factors interleaved:
     // a0b0 c0d0 a1b1 c1d1 -> [a0c0 b0d0] [a1c1 b1d1]
-    SDValue L = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, HalfVTs,
+    SDValue L = DAG.getNode(Node->getOpcode(), dl, HalfVTs,
                             ArrayRef(Ops).take_front(Factor / 2));
-    SDValue R = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, HalfVTs,
+    SDValue R = DAG.getNode(Node->getOpcode(), dl, HalfVTs,
                             ArrayRef(Ops).take_back(Factor / 2));
     Results.resize(Factor);
     // Deinterleave the 2 factors out:
     // [a0c0 a1c1] [b0d0 b1d1] -> a0a1 b0b1 c0c1 d0d1
     for (unsigned I = 0; I < Factor / 2; I++) {
-      SDValue Deinterleave =
-          DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, {VecVT, VecVT},
-                      {L.getValue(I), R.getValue(I)});
+      SDValue Deinterleave = DAG.getNode(Node->getOpcode(), dl, {VecVT, VecVT},
+                                         {L.getValue(I), R.getValue(I)});
       Results[I] = Deinterleave.getValue(0);
       Results[I + Factor / 2] = Deinterleave.getValue(1);
     }
     break;
   }
-  case ISD::VECTOR_INTERLEAVE: {
+  case ISD::VECTOR_INTERLEAVE:
+  case ISD::VECTOR_INTERLEAVE_SEGMENTS: {
     unsigned Factor = Node->getNumOperands();
     if (Factor <= 2 || Factor % 2 != 0)
       break;
@@ -3804,15 +3827,15 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // a0a1 b0b1 c0c1 d0d1 -> [a0c0 b0d0] [a1c1 b1d1]
     for (unsigned I = 0; I < Factor / 2; I++) {
       SDValue Interleave =
-          DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, {VecVT, VecVT},
+          DAG.getNode(Node->getOpcode(), dl, {VecVT, VecVT},
                       {Node->getOperand(I), Node->getOperand(I + Factor / 2)});
       LOps.push_back(Interleave.getValue(0));
       ROps.push_back(Interleave.getValue(1));
     }
     // Interleave at Factor/2:
     // [a0c0 b0d0] [a1c1 b1d1] -> a0b0 c0d0 a1b1 c1d1
-    SDValue L = DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, HalfVTs, LOps);
-    SDValue R = DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, HalfVTs, ROps);
+    SDValue L = DAG.getNode(Node->getOpcode(), dl, HalfVTs, LOps);
+    SDValue R = DAG.getNode(Node->getOpcode(), dl, HalfVTs, ROps);
     for (unsigned I = 0; I < Factor / 2; I++)
       Results.push_back(L.getValue(I));
     for (unsigned I = 0; I < Factor / 2; I++)

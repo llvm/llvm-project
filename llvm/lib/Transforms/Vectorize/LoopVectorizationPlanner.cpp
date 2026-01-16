@@ -120,11 +120,13 @@ void LoopVectorizationUtils::reportVectorizationInfo(
 void LoopVectorizationUtils::reportVectorization(OptimizationRemarkEmitter *ORE,
                                                  Loop *TheLoop,
                                                  ElementCount VFWidth,
-                                                 unsigned IC) {
+                                                 unsigned IC,
+                                                 bool ContainsVectors) {
   LLVM_DEBUG(debugVectorizationMessage(
       "Vectorizing: ", TheLoop->isInnermost() ? "innermost loop" : "outer loop",
       nullptr));
-  StringRef LoopType = TheLoop->isInnermost() ? "" : "outer ";
+  StringRef LoopType =
+      TheLoop->isInnermost() ? (ContainsVectors ? "vector " : "") : "outer ";
   ORE->emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "Vectorized", TheLoop->getStartLoc(),
                               TheLoop->getHeader())
@@ -154,10 +156,17 @@ bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
     return false;
   auto *Ty = getLoadStoreType(V);
   Align Align = getLoadStoreAlignment(V);
+  bool Revec = Ty->isVectorTy();
+
   if (VF.isVector())
-    Ty = VectorType::get(Ty, VF);
-  return ForceTargetSupportsGatherScatterOps ||
-         (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
+    Ty = toVectorTy(Ty, VF);
+
+  if (ForceTargetSupportsGatherScatterOps)
+    return true;
+  if (Revec)
+    return (LI && TTI.isLegalMaskedSegmentGather(Ty, Align)) ||
+           (SI && TTI.isLegalMaskedSegmentScatter(Ty, Align));
+  return (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
          (SI && TTI.isLegalMaskedScatter(Ty, Align));
 }
 
@@ -278,7 +287,8 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
   else
     MaxPermissibleVFWithoutMaxBW.FixedVF = MaxVF;
 
-  if (useMaxBandwidth(ComputeScalableMaxVF)) {
+  // REVEC: Avoid creating "illegal" scalable types by choosing VF > vscale x 1.
+  if (useMaxBandwidth(ComputeScalableMaxVF) && !Legal->LoopContainsVectors) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
         ComputeScalableMaxVF);
@@ -337,7 +347,9 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
 
   // Disable scalable vectorization if the loop contains unsupported reductions.
   if (!all_of(Legal->getReductionVars(), [&](const auto &Reduction) -> bool {
-        return TTI.isLegalToVectorizeReduction(Reduction.second, MaxScalableVF);
+        return RecurrenceDescriptor::isTargetRecurrenceKind(
+                   Reduction.second.getRecurrenceKind()) ||
+               TTI.isLegalToVectorizeReduction(Reduction.second, MaxScalableVF);
       })) {
     reportVectorizationInfo(
         "Scalable vectorization not supported for the reduction "
@@ -349,6 +361,8 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
   // Disable scalable vectorization if the loop contains any instructions
   // with element types not supported for scalable vectors.
   if (any_of(ElementTypesInLoop, [&](Type *Ty) {
+        if (isa<FixedVectorType>(Ty) && !VectorizeVectorLoops)
+          return false;
         return !Ty->isVoidTy() && !TTI.isElementTypeLegalForScalableVector(Ty);
       })) {
     reportVectorizationInfo("Scalable vectorization is not supported "
@@ -411,6 +425,11 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
   auto MaxSafeFixedVF = ElementCount::getFixed(MaxSafeElementsPowerOf2);
   auto MaxSafeScalableVF = getMaxLegalScalableVF(MaxSafeElementsPowerOf2);
 
+  // A vector loop can only be interleaved or widened to a scalable vector loop.
+  // TODO-REVEC: Support fixed-length REVEC
+  if (Legal->LoopContainsVectors)
+    MaxSafeFixedVF = ElementCount::getFixed(1);
+
   if (!Legal->isSafeForAnyVectorWidth())
     MaxSafeElements = MaxSafeElementsPowerOf2;
 
@@ -426,9 +445,13 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
 
     if (ElementCount::isKnownLE(UserVF, MaxSafeUserVF)) {
       // If `VF=vscale x N` is safe, then so is `VF=N`
-      if (UserVF.isScalable())
-        return FixedScalableVFPair(
-            ElementCount::getFixed(UserVF.getKnownMinValue()), UserVF);
+      // ... unless doing REVEC.
+      if (UserVF.isScalable()) {
+        auto UserVFAsFixed = ElementCount::getFixed(UserVF.getKnownMinValue());
+        return ElementCount::isKnownLE(UserVFAsFixed, MaxSafeFixedVF)
+                   ? FixedScalableVFPair(UserVFAsFixed, UserVF)
+                   : FixedScalableVFPair(MaxSafeFixedVF, UserVF);
+      }
 
       return UserVF;
     }
@@ -517,17 +540,19 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
       // for casts on the input operands of the recurrence.
       MinWidth = std::min(
           MinWidth,
-          std::min(RdxDesc.getMinWidthCastToRecurrenceTypeInBits(),
-                   RdxDesc.getRecurrenceType()->getScalarSizeInBits()));
-      MaxWidth = std::max(MaxWidth,
-                          RdxDesc.getRecurrenceType()->getScalarSizeInBits());
+          std::min<unsigned>(RdxDesc.getMinWidthCastToRecurrenceTypeInBits(),
+                             DL.getTypeSizeInBits(RdxDesc.getRecurrenceType())
+                                 .getFixedValue()));
+      MaxWidth = std::max<unsigned>(
+          MaxWidth,
+          DL.getTypeSizeInBits(RdxDesc.getRecurrenceType()).getFixedValue());
     }
   } else {
     for (Type *T : ElementTypesInLoop) {
-      MinWidth = std::min<unsigned>(
-          MinWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
-      MaxWidth = std::max<unsigned>(
-          MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
+      MinWidth =
+          std::min<unsigned>(MinWidth, DL.getTypeSizeInBits(T).getFixedValue());
+      MaxWidth =
+          std::max<unsigned>(MaxWidth, DL.getTypeSizeInBits(T).getFixedValue());
     }
   }
   return {MinWidth, MaxWidth};

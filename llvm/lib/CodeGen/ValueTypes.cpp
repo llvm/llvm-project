@@ -295,6 +295,15 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   }
 }
 
+MVT MVT::getSameSizeVT(MVT VT, ElementCount NewEC) {
+  ElementCount OrigEC = VT.getVectorElementCount();
+  assert(OrigEC.isKnownMultipleOf(NewEC));
+  unsigned Factor = OrigEC.getKnownScalarFactor(NewEC);
+  MVT EltTy = VT.getVectorElementType();
+  MVT IntTy = MVT::getIntegerVT(EltTy.getSizeInBits() * Factor);
+  return MVT::getVectorVT(IntTy, NewEC);
+}
+
 /// getEVT - Return the value type corresponding to the specified type.
 /// If HandleUnknown is true, unknown types are returned as Other, otherwise
 /// they are invalid.

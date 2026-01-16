@@ -53,6 +53,7 @@ class CondBrInst;
 class Function;
 class GlobalValue;
 class InstCombiner;
+class IRBuilderBase;
 class OptimizationRemarkEmitter;
 class InterleavedAccessInfo;
 class IntrinsicInst;
@@ -932,6 +933,13 @@ public:
   LLVM_ABI bool forceScalarizeMaskedScatter(VectorType *Type,
                                             Align Alignment) const;
 
+  /// Return true if the target supports masked scatter of <vscale x SegmentTy>.
+  LLVM_ABI bool isLegalMaskedSegmentScatter(Type *DataType,
+                                            Align Alignment) const;
+  /// Return true if the target supports masked gather of <vscale x SegmentTy>.
+  LLVM_ABI bool isLegalMaskedSegmentGather(Type *DataType,
+                                           Align Alignment) const;
+
   /// Return true if the target supports masked compress store.
   LLVM_ABI bool isLegalMaskedCompressStore(Type *DataType,
                                            Align Alignment) const;
@@ -1035,6 +1043,24 @@ public:
   /// Return true if the input function is internal, should use fastcc calling
   /// convention.
   LLVM_ABI bool useFastCCForInternalCall(Function &F) const;
+
+  /// Return true if the target intrinsic can be (re)vectorized.
+  /// The return type as well as all arguments are expected to be widened,
+  /// unless isTargetIntrinsicWithScalarOpAtArg() specifies otherwise.
+  LLVM_ABI bool isTargetIntrinsicVectorizable(Intrinsic::ID ID) const;
+
+  /// Return true if the intrinsic \p ID is supported for a \p RK
+  /// reduction pattern.
+  LLVM_ABI bool isSupportedTargetRecurrence(Intrinsic::ID ID,
+                                            RecurKind RK) const;
+
+  /// Return the (re)vectorized intrinsic call after the types and values have
+  /// been widened. This is only called for intrinsics that have passed
+  /// isTargetIntrinsicVectorizable() checks.
+  LLVM_ABI Instruction *
+  vectorizeTargetIntrinsic(Intrinsic::ID VectorIID, ArrayRef<Type *> TysForDecl,
+                           ArrayRef<Value *> WideArgs, IRBuilderBase &Builder,
+                           const Instruction &OrigInst) const;
 
   /// Identifies if the vector form of the intrinsic has a scalar operand.
   LLVM_ABI bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
@@ -1556,6 +1582,11 @@ public:
       VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const;
 
+  /// \return the cost of a segmented shuffle, i.e. llvm.segmented.shuffle.
+  LLVM_ABI InstructionCost getSegmentedShuffleCost(
+      ShuffleKind Kind, VectorType *VTy, ArrayRef<int> Mask,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+
   /// Represents a hint about the context in which a cast is used.
   ///
   /// For zext/sext, the context of the cast is the operand, which must be a
@@ -1706,6 +1737,14 @@ public:
   /// \p UseMaskForCond indicates if the memory access is predicated.
   /// \p UseMaskForGaps indicates if gaps should be masked.
   LLVM_ABI InstructionCost getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
+
+  /// Similar to \p getInterleavedMemoryOpCost, but for scalable types only,
+  /// where <MinEc x EltTy> segments are (de)interleaved instead of elements.
+  LLVM_ABI InstructionCost getSegmentInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,

@@ -13,7 +13,7 @@ define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: Cost of 2 for VF 16: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of Invalid for VF vscale x 1: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: Cost of 1 for VF vscale x 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
@@ -92,7 +92,7 @@ define void @sext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
 ; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
 ; CHECK-COST: Cost of 2 for VF 16: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of Invalid for VF vscale x 1: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
 ; CHECK-COST: Cost of 1 for VF vscale x 2: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
 ; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
 ; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN-CAST ir<%conv> = sext ir<%0> to i16

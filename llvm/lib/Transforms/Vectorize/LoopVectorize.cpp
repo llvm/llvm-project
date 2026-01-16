@@ -168,6 +168,8 @@ const char VerboseDebug[] = DEBUG_TYPE "-verbose";
 #endif
 
 STATISTIC(LoopsVectorized, "Number of loops vectorized");
+STATISTIC(VectorLoopsVectorized, "Number of vector loops revectorized (VF>1)");
+STATISTIC(VectorLoopsInterleaved, "Number of vector loops interleaved (IC>1)");
 STATISTIC(LoopsAnalyzed, "Number of loops analyzed for vectorization");
 STATISTIC(LoopsEpilogueVectorized, "Number of epilogues vectorized");
 STATISTIC(LoopsEarlyExitVectorized, "Number of early exit loops vectorized");
@@ -1123,6 +1125,9 @@ public:
       ChosenTailFoldingStyle = TailFoldingStyle::None;
       return;
     }
+
+    assert(!Legal->LoopContainsVectors &&
+           "Predicating re-vectorised instructions isn't supported yet");
 
     // Default to TTI preference, but allow command line override.
     ChosenTailFoldingStyle = TTI.getPreferredTailFoldingStyle();
@@ -2141,7 +2146,7 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                              : ScalarCallCost * VF.getKnownMinValue() +
                                    getScalarizationOverhead(CI, VF);
 
-  if (getVectorIntrinsicIDForCall(CI, TLI)) {
+  if (getVectorIntrinsicIDForCall(CI, TLI, &TTI)) {
     InstructionCost IntrinsicCost = getVectorIntrinsicCost(CI, VF);
     return std::min(Cost, IntrinsicCost);
   }
@@ -2157,7 +2162,7 @@ static Type *maybeVectorizeType(Type *Ty, ElementCount VF) {
 InstructionCost
 LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
                                                    ElementCount VF) const {
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI, &TTI);
   assert(ID && "Expected intrinsic call!");
   Type *RetTy = maybeVectorizeType(CI->getType(), VF);
   FastMathFlags FMF;
@@ -2414,7 +2419,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
       return true;
     auto *CI = cast<CallInst>(I);
     // A vector intrinsic or library variant lowering avoids scalarization.
-    return !getVectorIntrinsicIDForCall(CI, TLI) &&
+    return !getVectorIntrinsicIDForCall(CI, TLI, &TTI) &&
            !hasVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI);
   }
   case Instruction::Load:
@@ -3219,6 +3224,13 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             })
             .Case([](const VPReductionRecipe *R) {
               return RecurrenceDescriptor::getOpcode(R->getRecurrenceKind());
+            })
+            .Case<VPWidenShuffleRecipe>(
+                [](const auto *R) { return Instruction::ShuffleVector; })
+            .Default([](const auto *R) -> unsigned {
+              LLVM_DEBUG(R->dump());
+              llvm_unreachable(
+                  "Unhandled recipe type in emitInvalidCostRemarks");
             });
 
     // If the next recipe is different, or if there are no other pairs,
@@ -3247,8 +3259,21 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
           Name = CalledFn->getName();
         }
         OS << " call to " << Name;
-      } else
-        OS << " " << Instruction::getOpcodeName(Opcode);
+      } else {
+        // TODO-REVEC: This isn't great to handle VPInst-specific opcodes here,
+        // but I want to avoid a larger refactoring that would create conflicts.
+        switch (Opcode) {
+        case VPInstruction::ExtractVectors:
+          OS << " ExtractVectors";
+          break;
+        case VPInstruction::ConcatVectors:
+          OS << " ConcatVectors";
+          break;
+        default:
+          OS << " " << Instruction::getOpcodeName(Opcode);
+          break;
+        }
+      }
       reportVectorizationInfo(OutString, "InvalidCost", ORE, OrigLoop, nullptr,
                               R->getDebugLoc());
       Tail = Tail.drop_front(Subset.size());
@@ -3301,6 +3326,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPBlendSC:
       case VPRecipeBase::VPFirstOrderRecurrencePHISC:
       case VPRecipeBase::VPHistogramSC:
+      case VPRecipeBase::VPWidenShuffleSC:
       case VPRecipeBase::VPWidenPHISC:
       case VPRecipeBase::VPWidenIntOrFpInductionSC:
       case VPRecipeBase::VPWidenPointerInductionSC:
@@ -3672,6 +3698,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // exits because the VPInstruction::AnyOf code cannot currently handle
   // multiple parts.
   if (Plan.hasEarlyExit())
+    return 1;
+
+  if (Legal->LoopContainsVectors && !InterleaveRevecLoops)
     return 1;
 
   const bool HasReductions =
@@ -4377,8 +4406,17 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   unsigned AS = getLoadStoreAddressSpace(InsertPos);
 
+  // REVEC: Can only handle ValTy segments due to how (de)interleave.segments
+  // intrinsics work, so expect VF=vscalex1
+  if (ValTy->isVectorTy() && VF.getKnownMinValue() != 1)
+    return InstructionCost::getInvalid();
+
+  // TODO-REVEC: Support reversing segments
+  if (ValTy->isVectorTy() && Group->isReverse())
+    return InstructionCost::getInvalid();
+
   unsigned InterleaveFactor = Group->getFactor();
-  auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
+  auto *WideVecTy = toVectorTy(ValTy, VF * InterleaveFactor);
 
   // Holds the indices of existing members in the interleaved group.
   SmallVector<unsigned, 4> Indices;
@@ -4390,12 +4428,19 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   bool UseMaskForGaps =
       (Group->requiresScalarEpilogue() && !isEpilogueAllowed()) ||
       (isa<StoreInst>(I) && !Group->isFull());
-  InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
-      InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
-      Group->getAlign(), AS, Config.CostKind, isMaskRequired(I),
-      UseMaskForGaps);
+  InstructionCost Cost =
+      ValTy->isVectorTy()
+          ? TTI.getSegmentInterleavedMemoryOpCost(
+                InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
+                Group->getAlign(), AS, Config.CostKind, isMaskRequired(I),
+                UseMaskForGaps)
+          : TTI.getInterleavedMemoryOpCost(
+                InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
+                Group->getAlign(), AS, Config.CostKind, isMaskRequired(I),
+                UseMaskForGaps);
 
   if (Group->isReverse()) {
+    assert(!ValTy->isVectorTy() && "Cannot reverse segments yet.");
     // TODO: Add support for reversed masked interleaved access.
     assert(!isMaskRequired(I) &&
            "Reverse masked interleaved access not supported.");
@@ -4485,6 +4530,10 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
   Instruction *RedOp = RetI->getOperand(1) == LastChain
                            ? dyn_cast<Instruction>(RetI->getOperand(0))
                            : dyn_cast<Instruction>(RetI->getOperand(1));
+
+  // TODO-REVEC: Let's not bother with the legacy cost model.
+  if (I->getOperand(0)->getType()->isVectorTy())
+    return std::nullopt;
 
   VectorTy = VectorType::get(I->getOperand(0)->getType(), VectorTy);
 
@@ -4624,6 +4673,9 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
 
   if (VF.isScalar())
     return 0;
+
+  assert(!isa<VectorType>(I->getType()) &&
+         "Unexpected vector type for fixed VF");
 
   InstructionCost Cost = 0;
   Type *RetTy = toVectorizedTy(I->getType(), VF);
@@ -5135,6 +5187,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // fold away.  We can generalize this for all operations using the notion
     // of neutral elements.  (TODO)
     if (I->getOpcode() == Instruction::Mul &&
+        PSE.getSE()->isSCEVable(I->getOperand(0)->getType()) &&
         ((TheLoop->isLoopInvariant(I->getOperand(0)) &&
           PSE.getSCEV(I->getOperand(0))->isOne()) ||
          (TheLoop->isLoopInvariant(I->getOperand(1)) &&
@@ -5173,8 +5226,23 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   }
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
-    const SCEV *CondSCEV = SE->getSCEV(SI->getCondition());
-    bool ScalarCond = (SE->isLoopInvariant(CondSCEV, TheLoop));
+    Type *CondTy = SI->getCondition()->getType();
+    assert(CondTy->isVectorTy() || SE->isSCEVable(CondTy));
+
+    // TODO-REVEC: Support Select instructions
+    // If the condition is already a vector, check whether we can
+    // re-vectorise it.
+    if (CondTy->isVectorTy() && !VF.isScalar()) {
+      assert(VF.isScalable() && "Unexpected fixed VF for re-vectorisation");
+      if (!TTI.isElementTypeLegalForScalableVector(CondTy))
+        return InstructionCost::getInvalid();
+    }
+
+    bool ScalarCond = false;
+    if (SE->isSCEVable(CondTy)) {
+      const SCEV *CondSCEV = SE->getSCEV(SI->getCondition());
+      ScalarCond = (SE->isLoopInvariant(CondSCEV, TheLoop));
+    }
 
     const Value *Op0, *Op1;
     using namespace llvm::PatternMatch;
@@ -5193,9 +5261,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
           I);
     }
 
-    Type *CondTy = SI->getCondition()->getType();
     if (!ScalarCond)
-      CondTy = VectorType::get(CondTy, VF);
+      CondTy = toVectorTy(CondTy, VF);
 
     CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
     if (auto *Cmp = dyn_cast<CmpInst>(SI->getCondition()))
@@ -5344,6 +5411,11 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::Freeze:
     return TTI::TCC_Free;
   default:
+    // TODO-REVEC: If re-vectorising, we can expect new instruction opcodes to
+    // reach here. Be conservative.
+    if (I->getType()->isVectorTy() && !VF.isScalar())
+      return InstructionCost::getInvalid();
+
     // This opcode is unknown. Assume that it is the same as 'mul'.
     return TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy,
                                       Config.CostKind);
@@ -6340,6 +6412,53 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
                                VPI->getDebugLoc());
 }
 
+VPSingleDefRecipe *VPRecipeBuilder::tryToWidenShuffle(VPInstruction *VPI) {
+  assert(VPI->getOpcode() == Instruction::ShuffleVector);
+  auto &SVI = *cast<ShuffleVectorInst>(VPI->getUnderlyingInstr());
+
+  ArrayRef<int> Mask = SVI.getShuffleMask();
+  auto Size = Mask.size();
+  unsigned NumSrcElts =
+      cast<FixedVectorType>(SVI.getOperand(0)->getType())->getNumElements();
+
+  VPValue *Src0 = VPI->getOperand(0);
+  VPValue *Src1 = VPI->getOperand(1);
+
+  // Detect "aligned" subvector extracts of half the size.
+  if (int Index; SVI.isExtractSubvectorMask(Index) && Size == NumSrcElts / 2 &&
+                 Index % Size == 0) {
+    const unsigned Factor = NumSrcElts / Size;
+    Type *I32Ty = IntegerType::getInt32Ty(SVI.getContext());
+    VPValue *IndexV = Plan.getOrAddLiveIn(ConstantInt::get(I32Ty, Index));
+    VPValue *FactorV = Plan.getOrAddLiveIn(ConstantInt::get(I32Ty, Factor));
+    return new VPInstruction(VPInstruction::ExtractVectors,
+                             {Src0, IndexV, FactorV});
+  }
+
+  // Detect concatenation shuffles, including concat with undef
+  // and concat with self.
+  bool IsFirstSrcShuffle =
+      all_of(Mask, [NumSrcElts](int Idx) { return Idx < int(NumSrcElts); });
+  if (SVI.isConcat() || (Size == NumSrcElts * 2 && IsFirstSrcShuffle &&
+                         SVI.isIdentityWithPadding())) {
+    return new VPInstruction(VPInstruction::ConcatVectors, {Src0, Src1});
+  }
+  if (Size == NumSrcElts * 2 && IsFirstSrcShuffle &&
+      ShuffleVectorInst::isIdentityMask(Mask.take_front(NumSrcElts),
+                                        NumSrcElts) &&
+      ShuffleVectorInst::isIdentityMask(Mask.take_back(NumSrcElts),
+                                        NumSrcElts)) {
+    return new VPInstruction(VPInstruction::ConcatVectors, {Src0, Src0});
+  }
+
+  if (SVI.changesLength())
+    return nullptr;
+
+  return new VPWidenShuffleRecipe({Src0, Src1}, SVI.getShuffleMask(),
+                                  SVI.getType(), VPIRFlags(SVI),
+                                  cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
+}
+
 bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
     VPInstruction *VPI, VPBuilder &FinalRedStoresBuilder) {
   StoreInst *SI;
@@ -6475,6 +6594,9 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                                  CastR->getResultType(), CI, *VPI, *VPI,
                                  VPI->getDebugLoc());
   }
+
+  if (VPI->getOpcode() == Instruction::ShuffleVector)
+    return tryToWidenShuffle(VPI);
 
   return tryToWiden(VPI);
 }
@@ -6614,7 +6736,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   if (Plan->isOuterLoop()) {
     for (ElementCount VF : Range)
       Plan->addVF(VF);
-    if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI))
+    if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI,
+                                                                TTI))
       return nullptr;
     VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
                                                    /*FoldTail=*/false);
@@ -8216,15 +8339,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     ORE->emit([&]() {
       return OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
                                 L->getHeader())
-             << "interleaved loop (interleaved count: "
-             << NV("InterleaveCount", IC) << ")";
+             << "interleaved " << (LVL.LoopContainsVectors ? "vector " : "")
+             << "loop (interleaved count: " << NV("InterleaveCount", IC) << ")";
     });
   } else {
     // Report the vectorization decision.
-    reportVectorization(ORE, L, VF.Width, IC);
+    reportVectorization(ORE, L, VF.Width, IC, LVL.LoopContainsVectors);
   }
   if (ORE->allowExtraAnalysis(LV_NAME))
     checkMixedPrecision(L, ORE);
+
+  if (LVL.LoopContainsVectors) {
+    if (!VF.Width.isScalar())
+      ++VectorLoopsVectorized;
+    if (IC > 1)
+      ++VectorLoopsInterleaved;
+  }
 
   // If we decided that it is *legal* to interleave or vectorize the loop, then
   // do it.

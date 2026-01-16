@@ -16,6 +16,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -56,6 +57,7 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::AnyOf:
   case RecurKind::FindIV:
   case RecurKind::FindLast:
+  case RecurKind::TargetIntAccumulation:
     return true;
   }
   return false;
@@ -263,10 +265,11 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK) {
 static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
                                                 ScalarEvolution *SE) {
   Type *Ty = Phi->getType();
+  Type *ScalarTy = Ty->getScalarType();
   BasicBlock *Latch = TheLoop->getLoopLatch();
   if (Phi->getNumIncomingValues() != 2 ||
       Phi->getParent() != TheLoop->getHeader() ||
-      (!Ty->isIntegerTy() && !Ty->isFloatingPointTy()) || !Latch)
+      (!ScalarTy->isIntegerTy() && !ScalarTy->isFloatingPointTy()) || !Latch)
     return {};
 
   auto GetMinMaxRK = [](Value *V, Value *&A, Value *&B) -> RecurKind {
@@ -438,7 +441,7 @@ static bool isFindLastLikePhi(PHINode *Phi, PHINode *HeaderPhi,
 bool RecurrenceDescriptor::AddReductionVar(
     PHINode *Phi, RecurKind Kind, Loop *TheLoop, RecurrenceDescriptor &RedDes,
     DemandedBits *DB, AssumptionCache *AC, DominatorTree *DT,
-    ScalarEvolution *SE) {
+    ScalarEvolution *SE, const TargetTransformInfo *TTI) {
   if (Phi->getNumIncomingValues() != 2)
     return false;
 
@@ -604,8 +607,14 @@ bool RecurrenceDescriptor::AddReductionVar(
       return false;
 
     // Reductions of instructions such as Div, and Sub is only possible if the
-    // LHS is the reduction variable.
-    if (!Cur->isCommutative() && !IsAPhi && !isa<SelectInst>(Cur) &&
+    // LHS is the reduction variable. The only 3-input commutative instruction
+    // that is handled safely is fmuladd. Note that because it is a CallInst,
+    // it has an extra operand: the function address.
+    const bool IsSafelyCommutative =
+        Cur->isCommutative() &&
+        (!isa<IntrinsicInst>(Cur) || Cur->getNumOperands() == 3 ||
+         isFMulAddIntrinsic(Cur));
+    if (!IsSafelyCommutative && !IsAPhi && !isa<SelectInst>(Cur) &&
         !isa<ICmpInst>(Cur) && !isa<FCmpInst>(Cur) &&
         !VisitedInsts.count(dyn_cast<Instruction>(Cur->getOperand(0))))
       return false;
@@ -614,7 +623,8 @@ bool RecurrenceDescriptor::AddReductionVar(
     // the starting value (the Phi or an AND instruction if the Phi has been
     // type-promoted).
     if (Cur != Start) {
-      ReduxDesc = isRecurrenceInstr(TheLoop, Phi, Cur, Kind, ReduxDesc, SE);
+      ReduxDesc =
+          isRecurrenceInstr(TheLoop, Phi, Cur, Kind, ReduxDesc, SE, TTI);
       ExactFPMathInst = ExactFPMathInst == nullptr
                             ? ReduxDesc.getExactFPMathInst()
                             : ExactFPMathInst;
@@ -984,10 +994,9 @@ RecurrenceDescriptor::isConditionalRdxPattern(Instruction *I) {
   return InstDesc(true, I);
 }
 
-RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
-                                        Instruction *I, RecurKind Kind,
-                                        InstDesc &Prev, ScalarEvolution *SE) {
+RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
+    Loop *L, PHINode *OrigPhi, Instruction *I, RecurKind Kind, InstDesc &Prev,
+    ScalarEvolution *SE, const TargetTransformInfo *TTI) {
   assert(Prev.getRecKind() == RecurKind::None || Prev.getRecKind() == Kind);
   switch (I->getOpcode()) {
   default:
@@ -1037,6 +1046,10 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
     if (isFMulAddIntrinsic(I))
       return InstDesc(Kind == RecurKind::FMulAdd, I,
                       I->hasAllowReassoc() ? nullptr : I);
+    if (auto *II = dyn_cast<IntrinsicInst>(I))
+      return InstDesc(
+          TTI && TTI->isSupportedTargetRecurrence(II->getIntrinsicID(), Kind),
+          I);
     return InstDesc(false, I);
   }
 }
@@ -1059,7 +1072,8 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
                                           RecurrenceDescriptor &RedDes,
                                           DemandedBits *DB, AssumptionCache *AC,
                                           DominatorTree *DT,
-                                          ScalarEvolution *SE) {
+                                          ScalarEvolution *SE,
+                                          const TargetTransformInfo *TTI) {
   if (AddReductionVar(Phi, RecurKind::Add, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found an ADD reduction PHI." << *Phi << "\n");
     return true;
@@ -1130,6 +1144,13 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   if (AddReductionVar(Phi, RecurKind::FMulAdd, TheLoop, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found an FMulAdd reduction PHI." << *Phi << "\n");
+    return true;
+  }
+
+  if (AddReductionVar(Phi, RecurKind::TargetIntAccumulation, TheLoop, RedDes,
+                      DB, AC, DT, SE, TTI)) {
+    LLVM_DEBUG(dbgs() << "Found a TargetIntAccumulation reduction PHI." << *Phi
+                      << "\n");
     return true;
   }
 
@@ -1231,6 +1252,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Sub;
   case RecurKind::AddChainWithSubs:
   case RecurKind::Add:
+  case RecurKind::TargetIntAccumulation:
     return Instruction::Add;
   case RecurKind::Mul:
     return Instruction::Mul;

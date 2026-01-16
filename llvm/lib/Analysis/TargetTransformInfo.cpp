@@ -523,6 +523,16 @@ bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType,
   return TTIImpl->isLegalMaskedScatter(DataType, Alignment);
 }
 
+bool TargetTransformInfo::isLegalMaskedSegmentScatter(Type *DataType,
+                                                      Align Alignment) const {
+  return TTIImpl->isLegalMaskedSegmentScatter(DataType, Alignment);
+}
+
+bool TargetTransformInfo::isLegalMaskedSegmentGather(Type *DataType,
+                                                     Align Alignment) const {
+  return TTIImpl->isLegalMaskedSegmentGather(DataType, Alignment);
+}
+
 bool TargetTransformInfo::forceScalarizeMaskedGather(VectorType *DataType,
                                                      Align Alignment) const {
   return TTIImpl->forceScalarizeMaskedGather(DataType, Alignment);
@@ -627,6 +637,24 @@ bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
 
 bool TargetTransformInfo::useFastCCForInternalCall(Function &F) const {
   return TTIImpl->useFastCCForInternalCall(F);
+}
+
+bool TargetTransformInfo::isTargetIntrinsicVectorizable(
+    Intrinsic::ID ID) const {
+  return TTIImpl->isTargetIntrinsicVectorizable(ID);
+}
+
+bool TargetTransformInfo::isSupportedTargetRecurrence(Intrinsic::ID ID,
+                                                      RecurKind RK) const {
+  return TTIImpl->isSupportedTargetRecurrence(ID, RK);
+}
+
+Instruction *TargetTransformInfo::vectorizeTargetIntrinsic(
+    Intrinsic::ID VectorIID, ArrayRef<Type *> TysForDecl,
+    ArrayRef<Value *> WideArgs, IRBuilderBase &Builder,
+    const Instruction &OrigInst) const {
+  return TTIImpl->vectorizeTargetIntrinsic(VectorIID, TysForDecl, WideArgs,
+                                           Builder, OrigInst);
 }
 
 bool TargetTransformInfo::isTargetIntrinsicWithScalarOpAtArg(
@@ -1049,6 +1077,16 @@ InstructionCost TargetTransformInfo::getShuffleCost(
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getSegmentedShuffleCost(
+    ShuffleKind Kind, VectorType *VTy, ArrayRef<int> Mask,
+    TTI::TargetCostKind CostKind) const {
+  assert(VTy->getElementCount().isKnownMultipleOf(Mask.size()));
+  InstructionCost Cost =
+      TTIImpl->getSegmentedShuffleCost(Kind, VTy, Mask, CostKind);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 TargetTransformInfo::PartialReductionExtendKind
 TargetTransformInfo::getPartialReductionExtendKind(Instruction *I) {
   if (auto *Cast = dyn_cast<CastInst>(I))
@@ -1255,6 +1293,17 @@ InstructionCost TargetTransformInfo::getInterleavedMemoryOpCost(
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) const {
   InstructionCost Cost = TTIImpl->getInterleavedMemoryOpCost(
+      Opcode, VecTy, Factor, Indices, Alignment, AddressSpace, CostKind,
+      UseMaskForCond, UseMaskForGaps);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost TargetTransformInfo::getSegmentInterleavedMemoryOpCost(
+    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+    bool UseMaskForCond, bool UseMaskForGaps) const {
+  InstructionCost Cost = TTIImpl->getSegmentInterleavedMemoryOpCost(
       Opcode, VecTy, Factor, Indices, Alignment, AddressSpace, CostKind,
       UseMaskForCond, UseMaskForGaps);
   assert(Cost >= 0 && "TTI should not produce negative costs!");

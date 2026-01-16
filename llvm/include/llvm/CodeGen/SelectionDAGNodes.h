@@ -1812,6 +1812,29 @@ public:
   }
 };
 
+/// This SDNode is used to implement the code generator
+/// support for llvm.vector.segmented.shuffle
+/// TODO-REVEC: Share some code with ShuffleVectorSDNode.
+class SegmentedShuffleVectorSDNode : public SDNode {
+  // The memory for Mask is owned by the SelectionDAG's OperandAllocator, and
+  // is freed when the SelectionDAG object is destroyed.
+  ArrayRef<int> Mask;
+
+protected:
+  friend class SelectionDAG;
+
+  SegmentedShuffleVectorSDNode(SDVTList VTs, unsigned Order, const DebugLoc &DL,
+                               ArrayRef<int> M)
+      : SDNode(ISD::VECTOR_SEGMENTED_SHUFFLE, Order, DL, VTs), Mask(M) {}
+
+public:
+  ArrayRef<int> getMask() const { return Mask; }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::VECTOR_SEGMENTED_SHUFFLE;
+  }
+};
+
 class ConstantSDNode : public SDNode {
   friend class SelectionDAG;
 

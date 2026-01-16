@@ -184,6 +184,19 @@ define <vscale x 4 x i32> @add_stepvector_nxv4i32_1(i32 %data) {
   ret <vscale x 4 x i32> %4
 }
 
+define <vscale x 2 x i32> @add_stepvector_nxv2i32_1(i32 %data) {
+; CHECK-LABEL: add_stepvector_nxv2i32_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    index z0.d, x0, #1
+; CHECK-NEXT:    ret
+  %1 = insertelement <vscale x 2 x i32> poison, i32 %data, i32 0
+  %2 = shufflevector <vscale x 2 x i32> %1, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %3 = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
+  %4 = add <vscale x 2 x i32> %3, %2
+  ret <vscale x 2 x i32> %4
+}
+
 define <vscale x 4 x i32> @multiple_use_stepvector_nxv4i32_1(i32 %data) {
 ; CHECK-LABEL: multiple_use_stepvector_nxv4i32_1:
 ; CHECK:       // %bb.0:
@@ -212,6 +225,60 @@ define <vscale x 2 x i64> @add_stepvector_nxv2i64_1(i64 %data) {
   %3 = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
   %4 = add <vscale x 2 x i64> %2, %3
   ret <vscale x 2 x i64> %4
+}
+
+define <vscale x 2 x i64> @add_stepvector_nxv2i64_1_from_i32(i32 %data) {
+; CHECK-LABEL: add_stepvector_nxv2i64_1_from_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    index z0.d, x0, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %1 = insertelement <vscale x 2 x i32> poison, i32 %data, i32 0
+  %splat.data = shufflevector <vscale x 2 x i32> %1, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %3 = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
+  %based = add <vscale x 2 x i32> %3, %splat.data
+  %4 = sext <vscale x 2 x i32> %based to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %4
+}
+
+define <vscale x 1 x i64> @add_stepvector_nxv1i64_1_simple(i64 %data) {
+; CHECK-LABEL: add_stepvector_nxv1i64_1_simple:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    ret
+  %3 = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+  ret <vscale x 1 x i64> %3
+}
+
+define <vscale x 1 x i1> @add_stepvector_nxv1i64_1_cmp(i64 %data) {
+; CHECK-LABEL: add_stepvector_nxv1i64_1_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    punpklo p0.h, p1.b
+; CHECK-NEXT:    ret
+  %1 = insertelement <vscale x 1 x i64> poison, i64 %data, i32 0
+  %splat.data = shufflevector <vscale x 1 x i64> %1, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+  %3 = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+  %4 = icmp ne <vscale x 1 x i64> %3, %splat.data
+  ret <vscale x 1 x i1> %4
+}
+
+define <vscale x 1 x i64> @add_stepvector_nxv1i64_4(i64 %data) {
+; CHECK-LABEL: add_stepvector_nxv1i64_4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    index z0.d, x0, #4
+; CHECK-NEXT:    ret
+  %1 = insertelement <vscale x 1 x i64> poison, i64 %data, i32 0
+  %2 = shufflevector <vscale x 1 x i64> %1, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+  %3 = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+  %scaled = mul <vscale x 1 x i64> %3, splat (i64 4)
+  %4 = add <vscale x 1 x i64> %2, %scaled
+  ret <vscale x 1 x i64> %4
 }
 
 define <vscale x 2 x i64> @multiple_use_stepvector_nxv2i64_1(i64 %data) {

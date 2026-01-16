@@ -4359,6 +4359,25 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   setValue(&I, DAG.getBuildVector(VT, DL, Ops));
 }
 
+void SelectionDAGBuilder::visitVectorSegmentedShuffle(const CallInst &I) {
+  SDValue Src1 = getValue(I.getOperand(0));
+  SDValue Src2 = getValue(I.getOperand(1));
+
+  assert(isa<Constant>(I.getOperand(2)) &&
+         "vector.segmented.shuffle must have a constant mask.");
+  auto *MaskOp = cast<Constant>(I.getOperand(2));
+  SmallVector<int, 16> Mask;
+  ShuffleVectorInst::getShuffleMask(MaskOp, Mask);
+
+  SDLoc DL = getCurSDLoc();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+  assert(VT == Src1.getValueType());
+
+  setValue(&I, DAG.getVectorSegmentedShuffle(VT, DL, Src1, Src2, Mask));
+  return;
+}
+
 void SelectionDAGBuilder::visitInsertValue(const InsertValueInst &I) {
   ArrayRef<unsigned> Indices = I.getIndices();
   const Value *Op0 = I.getOperand(0);
@@ -5088,6 +5107,69 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
   SDValue Ops[] = { getMemoryRoot(), Src0, Mask, Base, Index, Scale };
   SDValue Scatter = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), VT, sdl,
                                          Ops, MMO, ISD::SIGNED_SCALED, false);
+  DAG.setRoot(Scatter);
+  setValue(&I, Scatter);
+}
+
+void SelectionDAGBuilder::visitMaskedSegmentGather(const CallInst &I) {
+  SDLoc DL = getCurSDLoc();
+
+  // @llvm.masked.segment.gather.*(Ptrs, Mask, Src0)
+  const Value *Ptr = I.getArgOperand(0);
+  SDValue Ptrs = getValue(Ptr);
+  SDValue Mask = getValue(I.getArgOperand(1));
+  SDValue Src0 = getValue(I.getArgOperand(2));
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+  Align Alignment = I.getParamAlign(0).valueOrOne();
+  unsigned AS = Ptr->getType()->getScalarType()->getPointerAddressSpace();
+  const MDNode *Ranges = getRangeMetadata(I);
+
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(AS), MachineMemOperand::MOLoad,
+      LocationSize::beforeOrAfterPointer(), Alignment, I.getAAMetadata(),
+      Ranges);
+
+  SDValue Ops[] = {
+      DAG.getRoot(),
+      DAG.getTargetConstant(Intrinsic::masked_segment_gather, DL,
+                            TLI.getPointerTy(DAG.getDataLayout())),
+      Ptrs, Mask, Src0};
+  SDValue Gather = DAG.getMemIntrinsicNode(
+      ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(VT, MVT::Other), Ops, VT,
+      MMO);
+
+  PendingLoads.push_back(Gather.getValue(1));
+  setValue(&I, Gather);
+}
+
+void SelectionDAGBuilder::visitMaskedSegmentScatter(const CallInst &I) {
+  SDLoc DL = getCurSDLoc();
+
+  // @llvm.masked.segment.scatter.*(Data, Ptrs, Mask)
+  SDValue Data = getValue(I.getArgOperand(0));
+  const Value *Ptr = I.getArgOperand(1);
+  SDValue Ptrs = getValue(Ptr);
+  SDValue Mask = getValue(I.getArgOperand(2));
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = Data.getValueType();
+  Align Alignment = I.getParamAlign(1).valueOrOne();
+  unsigned AS = Ptr->getType()->getScalarType()->getPointerAddressSpace();
+
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(AS), MachineMemOperand::MOStore,
+      LocationSize::beforeOrAfterPointer(), Alignment, I.getAAMetadata());
+
+  SDValue Ops[] = {
+      getMemoryRoot(),
+      DAG.getTargetConstant(Intrinsic::masked_segment_scatter, DL,
+                            TLI.getPointerTy(DAG.getDataLayout())),
+      Data, Ptrs, Mask};
+  SDValue Scatter = DAG.getMemIntrinsicNode(
+      ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, VT, MMO);
+
   DAG.setRoot(Scatter);
   setValue(&I, Scatter);
 }
@@ -6919,11 +7001,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::masked_gather:
     visitMaskedGather(I);
     return;
+  case Intrinsic::masked_segment_gather:
+    visitMaskedSegmentGather(I);
+    return;
   case Intrinsic::masked_load:
     visitMaskedLoad(I);
     return;
   case Intrinsic::masked_scatter:
     visitMaskedScatter(I);
+    return;
+  case Intrinsic::masked_segment_scatter:
+    visitMaskedSegmentScatter(I);
     return;
   case Intrinsic::masked_store:
     visitMaskedStore(I);
@@ -8340,6 +8428,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::vector_partial_reduce_add: {
+
+    // Use PARTIAL_REDUCE_ADD when going from scalable to fixed.
+    // Otherwise, use PARTIAL_REDUCE_UMLA to allow further combining.
+    if (visitPartialReduceToFixed(I, ISD::PARTIAL_REDUCE_ADD))
+      return;
+
     SDValue Acc = getValue(I.getOperand(0));
     SDValue Input = getValue(I.getOperand(1));
     setValue(&I,
@@ -8355,6 +8449,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                      Input, DAG.getConstantFP(1.0, sdl, Input.getValueType())));
     return;
   }
+  case Intrinsic::vector_partial_reduce_smax:
+    visitPartialReduceToFixed(I, ISD::PARTIAL_REDUCE_SMAX);
+    return;
+  case Intrinsic::vector_partial_reduce_smin:
+    visitPartialReduceToFixed(I, ISD::PARTIAL_REDUCE_SMIN);
+    return;
+  case Intrinsic::vector_partial_reduce_umax:
+    visitPartialReduceToFixed(I, ISD::PARTIAL_REDUCE_UMAX);
+    return;
+  case Intrinsic::vector_partial_reduce_umin:
+    visitPartialReduceToFixed(I, ISD::PARTIAL_REDUCE_UMIN);
+    return;
   case Intrinsic::experimental_cttz_elts: {
     SDValue Op = getValue(I.getOperand(0));
     EVT OpVT = Op.getValueType();
@@ -8447,11 +8553,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_interleave2:
     visitVectorInterleave(I, 2);
     return;
+  case Intrinsic::vector_interleave_segments2:
+    visitVectorInterleave(I, 2, true);
+    return;
   case Intrinsic::vector_interleave3:
     visitVectorInterleave(I, 3);
     return;
   case Intrinsic::vector_interleave4:
     visitVectorInterleave(I, 4);
+    return;
+  case Intrinsic::vector_interleave_segments4:
+    visitVectorInterleave(I, 4, true);
     return;
   case Intrinsic::vector_interleave5:
     visitVectorInterleave(I, 5);
@@ -8468,11 +8580,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_deinterleave2:
     visitVectorDeinterleave(I, 2);
     return;
+  case Intrinsic::vector_deinterleave_segments2:
+    visitVectorDeinterleave(I, 2, true);
+    return;
   case Intrinsic::vector_deinterleave3:
     visitVectorDeinterleave(I, 3);
     return;
   case Intrinsic::vector_deinterleave4:
     visitVectorDeinterleave(I, 4);
+    return;
+  case Intrinsic::vector_deinterleave_segments4:
+    visitVectorDeinterleave(I, 4, true);
     return;
   case Intrinsic::vector_deinterleave5:
     visitVectorDeinterleave(I, 5);
@@ -8486,6 +8604,22 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_deinterleave8:
     visitVectorDeinterleave(I, 8);
     return;
+  case Intrinsic::vector_broadcast: {
+    SDValue Vec = getValue(I.getOperand(0));
+    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::VECTOR_BROADCAST, sdl, ResultVT, Vec));
+    return;
+  }
+
+  case Intrinsic::vector_segmented_shuffle:
+    visitVectorSegmentedShuffle(I);
+    return;
+  case Intrinsic::vector_stretch: {
+    SDValue Vec = getValue(I.getOperand(0));
+    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::VECTOR_STRETCH, sdl, ResultVT, Vec));
+    return;
+  }
   case Intrinsic::experimental_vector_compress:
     setValue(&I, DAG.getNode(ISD::VECTOR_COMPRESS, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
@@ -11291,6 +11425,21 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
   setValue(&I, Res);
 }
 
+bool SelectionDAGBuilder::visitPartialReduceToFixed(const CallInst &I,
+                                                    unsigned ISDOpcode) {
+  auto *AccTy = cast<VectorType>(I.getOperand(0)->getType());
+  auto *SrcTy = cast<VectorType>(I.getOperand(1)->getType());
+  SDValue Acc = getValue(I.getOperand(0));
+  SDValue Input = getValue(I.getOperand(1));
+  if (AccTy->getElementCount().isScalable() !=
+      SrcTy->getElementCount().isScalable()) {
+    SDLoc DL = getCurSDLoc();
+    setValue(&I, DAG.getNode(ISDOpcode, DL, Acc.getValueType(), Acc, Input));
+    return true;
+  };
+  return false;
+}
+
 /// Returns an AttributeList representing the attributes applied to the return
 /// value of the given call.
 static AttributeList getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
@@ -12920,7 +13069,8 @@ void SelectionDAGBuilder::visitVectorReverse(const CallInst &I) {
 }
 
 void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I,
-                                                  unsigned Factor) {
+                                                  unsigned Factor,
+                                                  bool DeinterleaveSegments) {
   auto DL = getCurSDLoc();
   SDValue InVec = getValue(I.getOperand(0));
 
@@ -12930,6 +13080,34 @@ void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I,
 
   EVT OutVT = ValueVTs[0];
   unsigned OutNumElts = OutVT.getVectorMinNumElements();
+
+  // Rewrite VECTOR_DEINTERLEAVE_SEGMENTS as VECTOR_DEINTERLEAVE for legal
+  // types.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (DeinterleaveSegments && Factor == 2 &&
+      TLI.isOperationLegalOrCustom(ISD::VECTOR_DEINTERLEAVE,
+                                   InVec.getValueType())) {
+    EVT InVT = InVec.getValueType();
+    assert(InVT.isScalableVector() &&
+           "VECTOR_DEINTERLEAVE_SEGMENTS for a fixed vector?");
+    assert(InVT.isSimple() &&
+           "VECTOR_DEINTERLEAVE_SEGMENTS of extended types?");
+    MVT VTForDeinterleave =
+        MVT::getSameSizeVT(InVT.getSimpleVT(), ElementCount::getScalable(2));
+    SDValue InBitcast = DAG.getBitcast(VTForDeinterleave, InVec);
+    SDValue Res = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                              {VTForDeinterleave, VTForDeinterleave},
+                              {InBitcast, InBitcast});
+    SDValue Even = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT,
+                               DAG.getBitcast(InVT, Res.getValue(0)),
+                               DAG.getVectorIdxConstant(0, DL));
+    SDValue Odd = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT,
+                              DAG.getBitcast(InVT, Res.getValue(1)),
+                              DAG.getVectorIdxConstant(0, DL));
+    SDValue Merged = DAG.getMergeValues({Even, Odd}, getCurSDLoc());
+    setValue(&I, Merged);
+    return;
+  }
 
   SmallVector<SDValue, 4> SubVecs(Factor);
   for (unsigned i = 0; i != Factor; ++i) {
@@ -12950,13 +13128,15 @@ void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I,
     return;
   }
 
-  SDValue Res = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
-                            DAG.getVTList(ValueVTs), SubVecs);
+  unsigned Opc = DeinterleaveSegments ? ISD::VECTOR_DEINTERLEAVE_SEGMENTS
+                                      : ISD::VECTOR_DEINTERLEAVE;
+  SDValue Res = DAG.getNode(Opc, DL, DAG.getVTList(ValueVTs), SubVecs);
   setValue(&I, Res);
 }
 
 void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I,
-                                                unsigned Factor) {
+                                                unsigned Factor,
+                                                bool InterleaveSegments) {
   auto DL = getCurSDLoc();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT InVT = getValue(I.getOperand(0)).getValueType();
@@ -12980,8 +13160,9 @@ void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I,
   }
 
   SmallVector<EVT, 8> ValueVTs(Factor, InVT);
-  SDValue Res =
-      DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, DAG.getVTList(ValueVTs), InVecs);
+  unsigned Opc = InterleaveSegments ? ISD::VECTOR_INTERLEAVE_SEGMENTS
+                                    : ISD::VECTOR_INTERLEAVE;
+  SDValue Res = DAG.getNode(Opc, DL, DAG.getVTList(ValueVTs), InVecs);
 
   SmallVector<SDValue, 8> Results(Factor);
   for (unsigned i = 0; i < Factor; ++i)

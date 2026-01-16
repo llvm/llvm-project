@@ -233,11 +233,17 @@ bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its ID, in case it does not found it return not_intrinsic.
-Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
-                                                const TargetLibraryInfo *TLI) {
+Intrinsic::ID
+llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
+                                  const TargetLibraryInfo *TLI,
+                                  const TargetTransformInfo *TTI) {
   Intrinsic::ID ID = getIntrinsicForCallSite(*CI, TLI);
   if (ID == Intrinsic::not_intrinsic)
     return Intrinsic::not_intrinsic;
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID) &&
+      TTI->isTargetIntrinsicVectorizable(ID))
+    return ID;
 
   if (isTriviallyVectorizable(ID) || ID == Intrinsic::lifetime_start ||
       ID == Intrinsic::lifetime_end || ID == Intrinsic::assume ||
@@ -250,10 +256,12 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
 unsigned llvm::getInterleaveIntrinsicFactor(Intrinsic::ID ID) {
   switch (ID) {
   case Intrinsic::vector_interleave2:
+  case Intrinsic::vector_interleave_segments2:
     return 2;
   case Intrinsic::vector_interleave3:
     return 3;
   case Intrinsic::vector_interleave4:
+  case Intrinsic::vector_interleave_segments4:
     return 4;
   case Intrinsic::vector_interleave5:
     return 5;
@@ -271,10 +279,12 @@ unsigned llvm::getInterleaveIntrinsicFactor(Intrinsic::ID ID) {
 unsigned llvm::getDeinterleaveIntrinsicFactor(Intrinsic::ID ID) {
   switch (ID) {
   case Intrinsic::vector_deinterleave2:
+  case Intrinsic::vector_deinterleave_segments2:
     return 2;
   case Intrinsic::vector_deinterleave3:
     return 3;
   case Intrinsic::vector_deinterleave4:
+  case Intrinsic::vector_deinterleave_segments4:
     return 4;
   case Intrinsic::vector_deinterleave5:
     return 5;
@@ -286,6 +296,26 @@ unsigned llvm::getDeinterleaveIntrinsicFactor(Intrinsic::ID ID) {
     return 8;
   default:
     return 0;
+  }
+}
+
+bool llvm::isInterleaveSegmentsIntrinsic(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::vector_interleave_segments2:
+  case Intrinsic::vector_interleave_segments4:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool llvm::isDeinterleaveSegmentsIntrinsic(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::vector_deinterleave_segments2:
+  case Intrinsic::vector_deinterleave_segments4:
+    return true;
+  default:
+    return false;
   }
 }
 

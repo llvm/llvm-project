@@ -4,7 +4,8 @@
 
 target triple = "arm64-apple-macosx"
 
-; REMARKS: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): load
+; REMARKS: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): sext
+; REMARKS: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): call to llvm.masked.sdiv
 ; Test case for https://github.com/llvm/llvm-project/issues/160792.
 define void @replicate_sdiv_conditional(ptr noalias %a, ptr noalias %b, ptr noalias %c) #0 {
 ; CHECK-LABEL: define void @replicate_sdiv_conditional(

@@ -1985,6 +1985,22 @@ let Predicates = [HasSVE_or_SME] in {
   defm TRN1_PPP : sve_int_perm_bin_perm_pp<0b100, "trn1", AArch64trn1, int_aarch64_sve_trn1_b16, int_aarch64_sve_trn1_b32, int_aarch64_sve_trn1_b64>;
   defm TRN2_PPP : sve_int_perm_bin_perm_pp<0b101, "trn2", AArch64trn2, int_aarch64_sve_trn2_b16, int_aarch64_sve_trn2_b32, int_aarch64_sve_trn2_b64>;
 
+  // Stretch predicates.
+  def : Pat<(nxv2i1 (vector_stretch nxv1i1:$Ps)),
+            (TRN1_PPP_D PPR:$Ps, PPR:$Ps)>;
+  def : Pat<(nxv4i1 (vector_stretch nxv2i1:$Ps)),
+            (TRN1_PPP_S PPR:$Ps, PPR:$Ps)>;
+  def : Pat<(nxv8i1 (vector_stretch nxv4i1:$Ps)),
+            (TRN1_PPP_H PPR:$Ps, PPR:$Ps)>;
+  def : Pat<(nxv16i1 (vector_stretch nxv8i1:$Ps)),
+            (TRN1_PPP_B PPR:$Ps, PPR:$Ps)>;
+
+  // Unpack then stretch predicates
+  def : Pat<(nxv2i1 (vector_stretch (extract_subvector nxv2i1:$Ps, (i64 0)))),
+            (ZIP1_PPP_D PPR:$Ps, PPR:$Ps)>;
+  def : Pat<(nxv2i1 (vector_stretch (extract_subvector nxv2i1:$Ps, (i64 1)))),
+            (ZIP2_PPP_D PPR:$Ps, PPR:$Ps)>;
+
   // Extract lo/hi halves of legal predicate types.
   def : Pat<(nxv1i1 (extract_subvector nxv2i1:$Ps, (i64 0))),
             (PUNPKLO_PP PPR:$Ps)>;

@@ -312,6 +312,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   auto &DL = LI->getDataLayout();
+  if (!DL.getTypeStoreSize(LI->getType()).isFixed())
+    return false;
   Value *Ptr = LI->getPointerOperand();
   const SCEV *PtrSCEV = SE.getSCEV(Ptr);
   APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),

@@ -1403,9 +1403,11 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_VECTOR_SPLICE(N, Lo, Hi);
     break;
   case ISD::VECTOR_DEINTERLEAVE:
+  case ISD::VECTOR_DEINTERLEAVE_SEGMENTS:
     SplitVecRes_VECTOR_DEINTERLEAVE(N);
     return;
   case ISD::VECTOR_INTERLEAVE:
+  case ISD::VECTOR_INTERLEAVE_SEGMENTS:
     SplitVecRes_VECTOR_INTERLEAVE(N);
     return;
   case ISD::VAARG:
@@ -3699,6 +3701,8 @@ void DAGTypeLegalizer::SplitVecRes_GET_ACTIVE_LANE_MASK(SDNode *N, SDValue &Lo,
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
+  assert(N->getOpcode() == ISD::VECTOR_DEINTERLEAVE ||
+         N->getOpcode() == ISD::VECTOR_DEINTERLEAVE_SEGMENTS);
   unsigned Factor = N->getNumOperands();
 
   SmallVector<SDValue, 8> Ops(Factor * 2);
@@ -3712,16 +3716,18 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   SmallVector<EVT, 8> VTs(Factor, Ops[0].getValueType());
 
   SDLoc DL(N);
-  SDValue ResLo = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, VTs,
-                              ArrayRef(Ops).slice(0, Factor));
-  SDValue ResHi = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, VTs,
-                              ArrayRef(Ops).slice(Factor, Factor));
+  SDValue ResLo =
+      DAG.getNode(N->getOpcode(), DL, VTs, ArrayRef(Ops).slice(0, Factor));
+  SDValue ResHi =
+      DAG.getNode(N->getOpcode(), DL, VTs, ArrayRef(Ops).slice(Factor, Factor));
 
   for (unsigned i = 0; i != Factor; ++i)
     SetSplitVector(SDValue(N, i), ResLo.getValue(i), ResHi.getValue(i));
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_INTERLEAVE(SDNode *N) {
+  assert(N->getOpcode() == ISD::VECTOR_INTERLEAVE ||
+         N->getOpcode() == ISD::VECTOR_INTERLEAVE_SEGMENTS);
   unsigned Factor = N->getNumOperands();
 
   SmallVector<SDValue, 8> Ops(Factor * 2);
@@ -3735,10 +3741,10 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_INTERLEAVE(SDNode *N) {
   SmallVector<EVT, 8> VTs(Factor, Ops[0].getValueType());
 
   SDLoc DL(N);
-  SDValue Res[] = {DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, VTs,
-                               ArrayRef(Ops).slice(0, Factor)),
-                   DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, VTs,
-                               ArrayRef(Ops).slice(Factor, Factor))};
+  SDValue Res[] = {
+      DAG.getNode(N->getOpcode(), DL, VTs, ArrayRef(Ops).slice(0, Factor)),
+      DAG.getNode(N->getOpcode(), DL, VTs,
+                  ArrayRef(Ops).slice(Factor, Factor))};
 
   for (unsigned i = 0; i != Factor; ++i) {
     unsigned IdxLo = 2 * i;

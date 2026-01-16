@@ -216,7 +216,8 @@ struct VPlanTransforms {
   /// to a wide recipe if needed.
   LLVM_ABI_FOR_TEST static bool
   tryToConvertVPInstructionsToVPRecipes(VPlan &Plan,
-                                        const TargetLibraryInfo &TLI);
+                                        const TargetLibraryInfo &TLI,
+                                        const TargetTransformInfo &TTI);
 
   /// Try to legalize reductions with multiple in-loop uses. Currently only
   /// strict and non-strict min/max reductions used by FindLastIV reductions are

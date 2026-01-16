@@ -15,6 +15,19 @@ define <vscale x 2 x i64> @masked_sload_nxv2i8(ptr %a, <vscale x 2 x i1> %mask) 
   ret <vscale x 2 x i64> %ext
 }
 
+; Stretched masks cannot be folded for extending loads.
+define <vscale x 2 x i64> @masked_sload_nxv2i8_i128_mask(ptr %a, <vscale x 1 x i1> %mask) {
+; CHECK-LABEL: masked_sload_nxv2i8_i128_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1 p0.d, p0.d, p0.d
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %mask.stretched = call <vscale x 2 x i1> @llvm.vector.stretch.nxv2i1.nxv1i1(<vscale x 1 x i1> %mask)
+  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %a, i32 1, <vscale x 2 x i1> %mask.stretched, <vscale x 2 x i8> poison)
+  %ext = sext <vscale x 2 x i8> %load to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %ext
+}
+
 define <vscale x 2 x i64> @masked_sload_nxv2i16(ptr %a, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_sload_nxv2i16:
 ; CHECK:       // %bb.0:
@@ -41,6 +54,19 @@ define <vscale x 4 x i32> @masked_sload_nxv4i8(ptr %a, <vscale x 4 x i1> %mask) 
 ; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> poison)
+  %ext = sext <vscale x 4 x i8> %load to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %ext
+}
+
+; Stretched masks cannot be folded for extending loads.
+define <vscale x 4 x i32> @masked_sload_nxv4i8_i64_mask(ptr %a, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_sload_nxv4i8_i64_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1 p0.s, p0.s, p0.s
+; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %mask.stretched = call <vscale x 4 x i1> @llvm.vector.stretch.nxv4i1.nxv2i1(<vscale x 2 x i1> %mask)
+  %load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %a, i32 1, <vscale x 4 x i1> %mask.stretched, <vscale x 4 x i8> poison)
   %ext = sext <vscale x 4 x i8> %load to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %ext
 }

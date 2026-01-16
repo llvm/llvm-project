@@ -889,6 +889,14 @@ public:
   LLVM_ABI SDValue getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
                                     SDValue N2, ArrayRef<int> Mask);
 
+  /// Return an ISD::VECTOR_SEGMENTED_SHUFFLE node.
+  /// The types of \p N1 and \p N2 must match VT, which is expected to be a
+  /// scalable vector. The length of \p Mask must be a known multiple of VT's
+  /// ElementCount.
+  LLVM_ABI SDValue getVectorSegmentedShuffle(EVT VT, const SDLoc &DL,
+                                             SDValue N1, SDValue N2,
+                                             ArrayRef<int> Mask);
+
   /// Return an ISD::BUILD_VECTOR node. The number of elements in VT,
   /// which must be a vector type, must match the number of operands in Ops.
   /// The operands must have the same type as (or, for integers, a type wider
