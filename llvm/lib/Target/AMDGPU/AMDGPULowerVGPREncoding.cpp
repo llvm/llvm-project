@@ -320,7 +320,7 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
 
   // "Program State instructions" are instructions which are used to control
   // operation of the GPU rather than performing arithmetic. Such instructions
-  // have different coiussing rules w.r.t s_set_vgpr_msb.
+  // have different coissuing rules w.r.t s_set_vgpr_msb.
   auto isProgramStateInstr = [this](MachineInstr *MI) {
     unsigned Opc = MI->getOpcode();
     return TII->isBarrier(Opc) || TII->isWaitcnt(Opc) ||
