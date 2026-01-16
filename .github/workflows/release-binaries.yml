@@ -337,3 +337,4 @@ jobs:
           attestation-name: ${{ runner.os }}-${{ runner.arch }}-release-binary-attestation
           digest: ${{ needs.build-release-package.outputs.digest }}
           upload: ${{ needs.prepare.outputs.upload }}
+          user-token: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
