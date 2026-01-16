@@ -3017,9 +3017,13 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   if (&*BI != RetI)
     return false;
 
-  /// Only dup the ReturnInst if the CallInst is likely to be emitted as a tail
-  /// call.
-  const Function *F = BB->getParent();
+  // Only dup the ReturnInst if the CallInst is likely to be emitted as a tail
+  // call.
+  auto MayBePermittedAsTailCall = [&](const auto *CI) {
+    return TLI->mayBeEmittedAsTailCall(CI) &&
+           attributesPermitTailCall(BB->getParent(), CI, RetI, *TLI);
+  };
+
   SmallVector<BasicBlock *, 4> TailCallBBs;
   // Record the call instructions so we can insert any fake uses
   // that need to be preserved before them.
@@ -3032,8 +3036,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
       BasicBlock *PredBB = PN->getIncomingBlock(I);
       // Make sure the phi value is indeed produced by the tail call.
       if (CI && CI->hasOneUse() && CI->getParent() == PredBB &&
-          TLI->mayBeEmittedAsTailCall(CI) &&
-          attributesPermitTailCall(F, CI, RetI, *TLI)) {
+          MayBePermittedAsTailCall(CI)) {
         TailCallBBs.push_back(PredBB);
         CallInsts.push_back(CI);
       } else {
@@ -3054,8 +3057,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
         if (CI && CI->use_empty() &&
             isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
             IncomingVal == CI->getArgOperand(0) &&
-            TLI->mayBeEmittedAsTailCall(CI) &&
-            attributesPermitTailCall(F, CI, RetI, *TLI)) {
+            MayBePermittedAsTailCall(CI)) {
           TailCallBBs.push_back(PredBB);
           CallInsts.push_back(CI);
         }
@@ -3068,8 +3070,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
         continue;
       if (Instruction *I = Pred->rbegin()->getPrevNode()) {
         CallInst *CI = dyn_cast<CallInst>(I);
-        if (CI && CI->use_empty() && TLI->mayBeEmittedAsTailCall(CI) &&
-            attributesPermitTailCall(F, CI, RetI, *TLI)) {
+        if (CI && CI->use_empty() && MayBePermittedAsTailCall(CI)) {
           // Either we return void or the return value must be the first
           // argument of a known intrinsic or library function.
           if (!V || isa<UndefValue>(V) ||
