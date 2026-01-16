@@ -93,7 +93,7 @@ size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
   case WasmAddressType::Memory:
   case WasmAddressType::Object:
     return ProcessGDBRemote::ReadMemory(vm_addr, buf, size, error);
-  default:
+  case WasmAddressType::Invalid:
     break;
   }
 
