@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
@@ -18,6 +20,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace mlir;
@@ -250,35 +253,6 @@ struct TestXeGPUSGDistribute
   }
 };
 
-static FailureOr<VectorType>
-getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
-                                VectorType originalType) {
-  if (!layout)
-    return failure();
-  assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
-         "Expecting a valid layout.");
-  SmallVector<int64_t> effectiveLaneLayout =
-      layout.getEffectiveLaneLayoutAsInt();
-  assert(static_cast<size_t>(originalType.getRank()) >=
-             effectiveLaneLayout.size() &&
-         "Rank of the original vector type should be greater or equal to the "
-         "size of the lane layout to distribute the vector type.");
-  SmallVector<int64_t> distributedShape(originalType.getShape());
-  // Only distribute the last `laneLayout.size()` dimensions. The remaining
-  // dimensions are not distributed.
-  unsigned distributionStart =
-      originalType.getRank() - effectiveLaneLayout.size();
-  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
-    if (i < distributionStart)
-      continue;
-    // Check if the dimension can be distributed evenly.
-    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
-      return failure();
-    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
-  }
-  return VectorType::get(distributedShape, originalType.getElementType());
-}
-
 struct TestXeGPUSgToWiDistributeExperimental
     : public PassWrapper<TestXeGPUSgToWiDistributeExperimental,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -311,7 +285,12 @@ struct TestXeGPUSgToWiDistributeExperimental
     MLIRContext *ctx = &getContext();
 
     TypeConverter typeConverter;
-    typeConverter.addConversion([](Type type) { return type; });
+    typeConverter.addConversion([](Type type) -> std::optional<Type> {
+      // non tensor_desc and vector types are legal as is.
+      if (!isa<TensorDescType, VectorType>(type))
+        return type;
+      return std::nullopt;
+    });
     typeConverter.addConversion([](TensorDescType type) -> Type {
       if (type.getLayoutAttr()) {
         return type.dropLayouts();
@@ -324,16 +303,16 @@ struct TestXeGPUSgToWiDistributeExperimental
       // If no valid layout, nothing to do.
       if (!layout || !layout.isForSubgroup())
         return std::nullopt;
-      Operation *op = v.getDefiningOp();
-      if (isa<LoadNdOp>(op)) {
-        auto loadNdOp = cast<LoadNdOp>(op);
-        layout = loadNdOp.getAnchorLayout();
-        auto newTyOrFailure =
-            getDistributedVectorType(loadNdOp.getTensorDescType());
-        if (succeeded(newTyOrFailure))
-          return *newTyOrFailure;
-        return std::nullopt;
-      }
+      // Operation *op = v.getDefiningOp();
+      // if (isa<LoadNdOp>(op)) {
+      //   auto loadNdOp = cast<LoadNdOp>(op);
+      //   layout = loadNdOp.getAnchorLayout();
+      //   auto newTyOrFailure =
+      //       getDistributedVectorType(loadNdOp.getTensorDescType());
+      //   if (succeeded(newTyOrFailure))
+      //     return *newTyOrFailure;
+      //   return std::nullopt;
+      // }
       // For other vector types, distribute based on the lane layout.
       if (isa<VectorType>(type)) {
         auto newTyOrFailure =
@@ -349,34 +328,8 @@ struct TestXeGPUSgToWiDistributeExperimental
       return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
           .getResult(0);
     };
-    // // Define a vector materialization cast. If the input and output have
-    // same
-    // // number of elements, perform a shape cast. Otherwise, use
-    // // UnrealizedConversionCastOp to handle the conversion.
-    // auto vectorMaterializationCast = [](OpBuilder &builder, Type type,
-    //                                     ValueRange inputs,
-    //                                     Location loc) -> Value {
-    //   if (inputs.size() != 1)
-    //     return {};
-    //   auto input = inputs.front();
-    //   auto inputVecTy = dyn_cast<VectorType>(input.getType());
-    //   auto targetVecTy = dyn_cast<VectorType>(type);
-    //   if (inputVecTy && targetVecTy) {
-    //     if (inputVecTy.getNumElements() == targetVecTy.getNumElements()) {
-    //       return vector::ShapeCastOp::create(builder, loc, targetVecTy,
-    //       input)
-    //           .getResult();
-    //     }
-    //     return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
-    //         .getResult(0);
-    //   }
-
-    //   return {};
-    // };
     typeConverter.addSourceMaterialization(materializeCast);
     typeConverter.addTargetMaterialization(materializeCast);
-    // typeConverter.addSourceMaterialization(vectorMaterializationCast);
-    // typeConverter.addTargetMaterialization(vectorMaterializationCast);
 
     ConversionTarget target(*ctx);
     // CreateNdDescOp is legal only if its result type has no layout attribute.
@@ -391,11 +344,46 @@ struct TestXeGPUSgToWiDistributeExperimental
         return true;
       return !anchorOp.getAnchorLayout();
     });
+    target.addDynamicallyLegalOp<arith::ConstantOp>(
+        [=](arith::ConstantOp op) -> bool {
+          // If the result type is not a vector, it's legal.
+          if (!isa<VectorType>(op.getResult().getType()))
+            return true;
+          // For vector result types, check if it has a layout attribute.
+          return !xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+        });
+    // In math and arith dialects, only handle elementwise ops with a single
+    // result and with a result layout attribute.
+    target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(
+        [=](Operation *op) -> std::optional<bool> {
+          // Only handle elementwise mappable ops
+          if (!OpTrait::hasElementwiseMappableTraits(op))
+            return true;
+          // Only handle ops with single vector result
+          if (op->getNumResults() != 1)
+            return true;
+
+          VectorType resultType =
+              dyn_cast<VectorType>(op->getResult(0).getType());
+          if (!resultType)
+            return true;
+
+          // Check if all operands are vectors of the same shape
+          for (Value operand : op->getOperands()) {
+            VectorType operandType = dyn_cast<VectorType>(operand.getType());
+            if (!operandType ||
+                operandType.getShape() != resultType.getShape()) {
+              return true;
+            }
+          }
+          return !xegpu::getTemporaryLayout(
+              dyn_cast<OpResult>(op->getResult(0)));
+        });
+    target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
 
     RewritePatternSet patterns(ctx);
     xegpu::populateXeGPUSgToWiDistributeExperimentalPatterns(patterns,
                                                              typeConverter);
-    target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
 
     (void)applyPartialConversion(getOperation(), target, std::move(patterns));
   }

@@ -65,48 +65,6 @@ namespace {
 static constexpr unsigned regularPatternBenefit = 1;
 static constexpr unsigned highPatternBenefit = 2;
 
-/// Helper function to get  distributed vector type for a source vector type
-/// according to the lane_layout. We simply divide each dimension of tensor
-/// descriptor shape by corresponding lane_layout dimension. If
-/// array_length > 1, that is appended to the front of the ditributed shape.
-/// NOTE: This is the vector type that will be returned by the
-/// gpu.warp_execute_on_lane0 op.
-///
-/// Examples:
-/// | original vector shape | lane_layout | distributed vector shape |
-/// |-----------------------|-------------|--------------------------|
-/// | 32x16                 | [1, 16]     | 32x1                     |
-/// | 32x16                 | [2, 8]      | 16x2                     |
-/// | 2x32x16               | [1, 16]     | 2x32x1                   |
-static FailureOr<VectorType>
-getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
-                                VectorType originalType) {
-  if (!layout)
-    return failure();
-  assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
-         "Expecting a valid layout.");
-  SmallVector<int64_t> effectiveLaneLayout =
-      layout.getEffectiveLaneLayoutAsInt();
-  assert(static_cast<size_t>(originalType.getRank()) >=
-             effectiveLaneLayout.size() &&
-         "Rank of the original vector type should be greater or equal to the "
-         "size of the lane layout to distribute the vector type.");
-  SmallVector<int64_t> distributedShape(originalType.getShape());
-  // Only distribute the last `laneLayout.size()` dimensions. The remaining
-  // dimensions are not distributed.
-  unsigned distributionStart =
-      originalType.getRank() - effectiveLaneLayout.size();
-  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
-    if (i < distributionStart)
-      continue;
-    // Check if the dimension can be distributed evenly.
-    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
-      return failure();
-    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
-  }
-  return VectorType::get(distributedShape, originalType.getElementType());
-}
-
 /// Helper function to resolve types if the distributed type out of
 /// gpu.warp_execute_on_lane0 is different from the expected xegpu SIMT type.
 /// Example 1:
@@ -409,7 +367,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
           storeOp, "the source tensor descriptor lacks layout attribute");
 
     FailureOr<VectorType> distributedTypeByWarpOpOrFailure =
-        getDistVecTypeBasedOnLaneLayout(layout, storeOp.getValueType());
+        xegpu::getDistVecTypeBasedOnLaneLayout(layout, storeOp.getValueType());
     if (failed(distributedTypeByWarpOpOrFailure))
       return rewriter.notifyMatchFailure(storeOp,
                                          "Failed to distribute the type");
