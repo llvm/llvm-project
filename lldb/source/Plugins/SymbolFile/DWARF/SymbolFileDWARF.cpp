@@ -2625,7 +2625,7 @@ SymbolFileDWARF::ResolveFunctionCallLabel(FunctionCallLabel &label) {
           subst_or_err.takeError());
 
     if (!*subst_or_err)
-      return llvm::createStringError(
+      return llvm::createStringErrorV(
           "got invalid substituted mangled named (substituted "
           "{0} for {1} in mangled name {2})",
           from, variant, label.lookup_name);

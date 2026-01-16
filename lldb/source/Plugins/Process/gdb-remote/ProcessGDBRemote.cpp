@@ -2892,7 +2892,7 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
   // The sizes and the data are separated by a `;`.
   auto [sizes_str, memory_data] = response_str.split(';');
   if (sizes_str.size() == response_str.size())
-    return llvm::createStringError(
+    return llvm::createStringErrorV(
         "MultiMemRead response missing field separator ';' in: '{0}'",
         response_str);
 
@@ -2900,14 +2900,13 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
   for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
     uint64_t read_size;
     if (size_str.getAsInteger(16, read_size))
-      return llvm::createStringError(
+      return llvm::createStringErrorV(
           "MultiMemRead response has invalid size string: {0}", size_str);
 
     if (memory_data.size() < read_size)
-      return llvm::createStringError(
-          "MultiMemRead response did not have enough data, "
-          "requested sizes: {0}",
-          sizes_str);
+      return llvm::createStringErrorV("MultiMemRead response did not have "
+                                      "enough data, requested sizes: {0}",
+                                      sizes_str);
 
     llvm::StringRef region_to_read = memory_data.take_front(read_size);
     memory_data = memory_data.drop_front(read_size);
