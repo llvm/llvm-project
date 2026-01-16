@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   BitReader
   BitstreamReader
   Option
+  Plugins
   ProfileData
   Support
   TargetParser

@@ -1607,8 +1607,9 @@ bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
       (prev_sc->function == nullptr && prev_sc->symbol == nullptr)) {
     initial_function = true;
   }
-  return FormatEntity::Format(*format, s, sc, exe_ctx, addr, nullptr,
-                              function_changed, initial_function);
+  return FormatEntity::Formatter(sc, exe_ctx, addr, function_changed,
+                                 initial_function)
+      .Format(*format, s);
 }
 
 void Debugger::AssertCallback(llvm::StringRef message,
@@ -2482,6 +2483,9 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
   AddBoolConfigEntry(*config_up, "editline_wchar", LLDB_EDITLINE_USE_WCHAR,
                      "A boolean value that indicates if editline wide "
                      "characters support is enabled in LLDB");
+  AddBoolConfigEntry(
+      *config_up, "zlib", LLVM_ENABLE_ZLIB,
+      "A boolean value that indicates if zlib support is enabled in LLDB");
   AddBoolConfigEntry(
       *config_up, "lzma", LLDB_ENABLE_LZMA,
       "A boolean value that indicates if lzma support is enabled in LLDB");

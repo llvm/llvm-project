@@ -89,12 +89,36 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
     mlir::Value iv = mlir::arith::MulIOp::create(
         rewriter, loc, scfLoopLikeOp.getSingleInductionVar().value(), step);
     iv = mlir::arith::AddIOp::create(rewriter, loc, low, iv);
+    mlir::Value firIV = doLoopOp.getInductionVar();
+    firIV.replaceAllUsesWith(iv);
 
-    if (!results.empty()) {
-      rewriter.setInsertionPointToEnd(&scfLoopBody);
-      mlir::scf::YieldOp::create(rewriter, resultOp->getLoc(), results);
+    mlir::Value finalValue;
+    if (hasFinalValue) {
+      // Prefer re-using an existing `arith.addi` in the moved loop body if it
+      // already computes the next `iv + step`.
+      if (!results.empty()) {
+        if (auto addOp = results.front().getDefiningOp<mlir::arith::AddIOp>()) {
+          mlir::Value lhs = addOp.getLhs();
+          mlir::Value rhs = addOp.getRhs();
+          if ((lhs == iv && rhs == step) || (lhs == step && rhs == iv))
+            finalValue = results.front();
+        }
+      }
+      if (!finalValue)
+        finalValue = mlir::arith::AddIOp::create(rewriter, loc, iv, step);
     }
-    doLoopOp.getInductionVar().replaceAllUsesWith(iv);
+
+    if (hasFinalValue || !results.empty()) {
+      rewriter.setInsertionPointToEnd(&scfLoopBody);
+      llvm::SmallVector<mlir::Value> yieldOperands;
+      if (hasFinalValue) {
+        yieldOperands.push_back(finalValue);
+        llvm::append_range(yieldOperands, results.drop_front());
+      } else {
+        llvm::append_range(yieldOperands, results);
+      }
+      mlir::scf::YieldOp::create(rewriter, resultOp->getLoc(), yieldOperands);
+    }
     rewriter.replaceAllUsesWith(
         doLoopOp.getRegionIterArgs(),
         hasFinalValue ? scfLoopLikeOp.getRegionIterArgs().drop_front()

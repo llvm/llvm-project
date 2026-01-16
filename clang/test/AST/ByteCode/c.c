@@ -405,3 +405,15 @@ typedef struct S64 {
 _Static_assert((((I64){}, 1)), ""); // all-warning {{left operand of comma operator has no effect}} \
                                     // pedantic-warning {{use of an empty initializer is a C23 extension}} \
                                     // pedantic-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+
+#define V(N) __attribute__((vector_size(N)))
+#define C2 (VC2){0, 1}
+char func_(void);
+typedef V(2) char VC2;
+void CopyArrayToFnPtr(void) { *(VC2 *)func_ = C2; }
+
+_Complex double returnsComplex(); // pedantic-warning {{a function declaration without a prototype is deprecated in all versions of C}}
+void callReturnsComplex(void) {
+  _Complex double c;
+  c = returnsComplex(0.); // all-warning {{passing arguments to 'returnsComplex' without a prototype is deprecated in all versions of C and is not supported in C23}}
+}

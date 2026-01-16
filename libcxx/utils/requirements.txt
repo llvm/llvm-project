@@ -1,3 +1,4 @@
+click
 GitPython
 numpy
 pandas

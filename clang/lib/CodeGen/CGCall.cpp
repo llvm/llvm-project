@@ -150,7 +150,7 @@ static CanQual<FunctionProtoType> GetFormalType(const CXXMethodDecl *MD) {
 /// and it makes ABI code a little easier to be able to assume that
 /// all parameter and return types are top-level unqualified.
 static CanQualType GetReturnType(QualType RetTy) {
-  return RetTy->getCanonicalTypeUnqualified().getUnqualifiedType();
+  return RetTy->getCanonicalTypeUnqualified();
 }
 
 /// Arrange the argument and result information for a value of the given
@@ -1310,35 +1310,21 @@ static llvm::Value *CoerceIntOrPtrToIntOrPtr(llvm::Value *Val, llvm::Type *Ty,
   return Val;
 }
 
-static std::vector<PFPField> findPFPCoercedFields(CodeGenFunction &CGF,
-                                                  QualType SrcFETy) {
-  // Coercion directly through memory does not work if the structure has pointer
-  // field protection because the struct in registers has a different bit
-  // pattern to the struct in memory, so we must read the elements one by one
-  // and use them to form the coerced structure.
-  std::vector<PFPField> PFPFields;
-  CGF.getContext().findPFPFields(SrcFETy, CharUnits::Zero(), PFPFields,
-                                 /*IncludeVBases=*/true);
-
-  // Because we don't know which union member is selected, we don't modify the
-  // in-memory representation when passing a pointer that is part of a union
-  // field. This requires the union member to be trivially copyable;
-  // non-trivially-copyable unions cannot be directly passed by value.
-  llvm::erase_if(PFPFields, [](PFPField F) { return F.isWithinUnion; });
-  return PFPFields;
-}
-
 static llvm::Value *CreatePFPCoercedLoad(Address Src, QualType SrcFETy,
                                          llvm::Type *Ty, CodeGenFunction &CGF) {
-  std::vector<PFPField> PFPFields = findPFPCoercedFields(CGF, SrcFETy);
+  std::vector<PFPField> PFPFields = CGF.getContext().findPFPFields(SrcFETy);
   if (PFPFields.empty())
     return nullptr;
 
   auto LoadCoercedField = [&](CharUnits Offset,
                               llvm::Type *FieldType) -> llvm::Value * {
-    if (!PFPFields.empty() && PFPFields[0].offset == Offset) {
-      auto fieldAddr = CGF.EmitAddressOfPFPField(Src, PFPFields[0]);
-      llvm::Value *FieldVal = CGF.Builder.CreateLoad(fieldAddr);
+    // Check whether the field at Offset is a PFP field. This function is called
+    // in ascending order of offset, and PFPFields is sorted by offset. This
+    // means that we only need to check the first element (and remove it from
+    // PFPFields if matching).
+    if (!PFPFields.empty() && PFPFields[0].Offset == Offset) {
+      auto FieldAddr = CGF.EmitAddressOfPFPField(Src, PFPFields[0]);
+      llvm::Value *FieldVal = CGF.Builder.CreateLoad(FieldAddr);
       if (isa<llvm::IntegerType>(FieldType))
         FieldVal = CGF.Builder.CreatePtrToInt(FieldVal, FieldType);
       PFPFields.erase(PFPFields.begin());
@@ -1350,6 +1336,10 @@ static llvm::Value *CreatePFPCoercedLoad(Address Src, QualType SrcFETy,
             .withElementType(FieldType);
     return CGF.Builder.CreateLoad(FieldAddr);
   };
+
+  // The types handled by this function are the only ones that may be generated
+  // by AArch64ABIInfo::classify{Argument,Return}Type for struct types with
+  // pointers. PFP is only supported on AArch64.
   if (isa<llvm::IntegerType>(Ty) || isa<llvm::PointerType>(Ty)) {
     auto Addr = CGF.EmitAddressOfPFPField(Src, PFPFields[0]);
     llvm::Value *Val = CGF.Builder.CreateLoad(Addr);
@@ -1357,24 +1347,14 @@ static llvm::Value *CreatePFPCoercedLoad(Address Src, QualType SrcFETy,
       Val = CGF.Builder.CreatePtrToInt(Val, Ty);
     return Val;
   }
-  if (auto *AT = dyn_cast<llvm::ArrayType>(Ty)) {
-    auto *ET = AT->getElementType();
-    CharUnits wordSize = CGF.getContext().toCharUnitsFromBits(
-        CGF.CGM.getDataLayout().getTypeSizeInBits(ET));
-    CharUnits Offset = CharUnits::Zero();
-    llvm::Value *Val = llvm::PoisonValue::get(AT);
-    for (unsigned i = 0; i != AT->getNumElements(); ++i, Offset += wordSize)
-      Val = CGF.Builder.CreateInsertValue(Val, LoadCoercedField(Offset, ET), i);
-    return Val;
-  }
-  auto *ST = cast<llvm::StructType>(Ty);
-  llvm::Value *Val = llvm::PoisonValue::get(ST);
-  auto *SL = CGF.CGM.getDataLayout().getStructLayout(ST);
-  for (unsigned i = 0; i != ST->getNumElements(); ++i) {
-    CharUnits Offset = CharUnits::fromQuantity(SL->getElementOffset(i));
-    Val = CGF.Builder.CreateInsertValue(
-        Val, LoadCoercedField(Offset, ST->getElementType(i)), i);
-  }
+  auto *AT = cast<llvm::ArrayType>(Ty);
+  auto *ET = AT->getElementType();
+  CharUnits WordSize = CGF.getContext().toCharUnitsFromBits(
+      CGF.CGM.getDataLayout().getTypeSizeInBits(ET));
+  CharUnits Offset = CharUnits::Zero();
+  llvm::Value *Val = llvm::PoisonValue::get(AT);
+  for (unsigned Idx = 0; Idx != AT->getNumElements(); ++Idx, Offset += WordSize)
+    Val = CGF.Builder.CreateInsertValue(Val, LoadCoercedField(Offset, ET), Idx);
   return Val;
 }
 
@@ -1469,46 +1449,43 @@ static llvm::Value *CreateCoercedLoad(Address Src, QualType SrcFETy,
 
 static bool CreatePFPCoercedStore(llvm::Value *Src, QualType SrcFETy,
                                   Address Dst, CodeGenFunction &CGF) {
-  std::vector<PFPField> PFPFields = findPFPCoercedFields(CGF, SrcFETy);
+  std::vector<PFPField> PFPFields = CGF.getContext().findPFPFields(SrcFETy);
   if (PFPFields.empty())
     return false;
 
   llvm::Type *SrcTy = Src->getType();
   auto StoreCoercedField = [&](CharUnits Offset, llvm::Value *FieldVal) {
-    if (!PFPFields.empty() && PFPFields[0].offset == Offset) {
-      auto fieldAddr = CGF.EmitAddressOfPFPField(Dst, PFPFields[0]);
+    if (!PFPFields.empty() && PFPFields[0].Offset == Offset) {
+      auto FieldAddr = CGF.EmitAddressOfPFPField(Dst, PFPFields[0]);
       if (isa<llvm::IntegerType>(FieldVal->getType()))
         FieldVal = CGF.Builder.CreateIntToPtr(FieldVal, CGF.VoidPtrTy);
-      CGF.Builder.CreateStore(FieldVal, fieldAddr);
+      CGF.Builder.CreateStore(FieldVal, FieldAddr);
       PFPFields.erase(PFPFields.begin());
     } else {
-      auto fieldAddr = CGF.Builder
+      auto FieldAddr = CGF.Builder
                            .CreateConstInBoundsByteGEP(
                                Dst.withElementType(CGF.Int8Ty), Offset)
                            .withElementType(FieldVal->getType());
-      CGF.Builder.CreateStore(FieldVal, fieldAddr);
+      CGF.Builder.CreateStore(FieldVal, FieldAddr);
     }
   };
 
+  // The types handled by this function are the only ones that may be generated
+  // by AArch64ABIInfo::classify{Argument,Return}Type for struct types with
+  // pointers. PFP is only supported on AArch64.
   if (isa<llvm::IntegerType>(SrcTy) || isa<llvm::PointerType>(SrcTy)) {
     if (isa<llvm::IntegerType>(SrcTy))
       Src = CGF.Builder.CreateIntToPtr(Src, CGF.VoidPtrTy);
     auto Addr = CGF.EmitAddressOfPFPField(Dst, PFPFields[0]);
     CGF.Builder.CreateStore(Src, Addr);
-  } else if (auto *AT = dyn_cast<llvm::ArrayType>(SrcTy)) {
+  } else {
+    auto *AT = cast<llvm::ArrayType>(SrcTy);
     auto *ET = AT->getElementType();
     CharUnits WordSize = CGF.getContext().toCharUnitsFromBits(
         CGF.CGM.getDataLayout().getTypeSizeInBits(ET));
     CharUnits Offset = CharUnits::Zero();
     for (unsigned i = 0; i != AT->getNumElements(); ++i, Offset += WordSize)
       StoreCoercedField(Offset, CGF.Builder.CreateExtractValue(Src, i));
-  } else {
-    auto *ST = cast<llvm::StructType>(SrcTy);
-    auto *SL = CGF.CGM.getDataLayout().getStructLayout(ST);
-    for (unsigned i = 0; i != ST->getNumElements(); ++i) {
-      CharUnits Offset = CharUnits::fromQuantity(SL->getElementOffset(i));
-      StoreCoercedField(Offset, CGF.Builder.CreateExtractValue(Src, i));
-    }
   }
   return true;
 }
@@ -5754,7 +5731,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         } else {
           uint64_t SrcSize = SrcTypeSize.getFixedValue();
           uint64_t DstSize = DstTypeSize.getFixedValue();
-          bool HasPFPFields = !findPFPCoercedFields(*this, I->Ty).empty();
+          bool HasPFPFields = getContext().hasPFPFields(I->Ty);
 
           // If the source type is smaller than the destination type of the
           // coerce-to logic, copy the source value into a temp alloca the size
@@ -5770,9 +5747,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                   CreatePFPCoercedLoad(Src, I->Ty, ArgInfo.getCoerceToType(),
                                        *this),
                   TempAlloca);
-            } else {
+            } else
               Builder.CreateMemCpy(TempAlloca, Src, SrcSize);
-            }
             Src = TempAlloca;
           } else {
             Src = Src.withElementType(STy);

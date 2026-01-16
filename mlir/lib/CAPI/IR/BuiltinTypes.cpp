@@ -35,6 +35,8 @@ MlirType mlirIntegerTypeGet(MlirContext ctx, unsigned bitwidth) {
   return wrap(IntegerType::get(unwrap(ctx), bitwidth));
 }
 
+MlirStringRef mlirIntegerTypeGetName(void) { return wrap(IntegerType::name); }
+
 MlirType mlirIntegerTypeSignedGet(MlirContext ctx, unsigned bitwidth) {
   return wrap(IntegerType::get(unwrap(ctx), bitwidth, IntegerType::Signed));
 }
@@ -73,6 +75,8 @@ MlirType mlirIndexTypeGet(MlirContext ctx) {
   return wrap(IndexType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirIndexTypeGetName(void) { return wrap(IndexType::name); }
+
 //===----------------------------------------------------------------------===//
 // Floating-point types.
 //===----------------------------------------------------------------------===//
@@ -97,6 +101,10 @@ MlirType mlirFloat4E2M1FNTypeGet(MlirContext ctx) {
   return wrap(Float4E2M1FNType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirFloat4E2M1FNTypeGetName(void) {
+  return wrap(Float4E2M1FNType::name);
+}
+
 MlirTypeID mlirFloat6E2M3FNTypeGetTypeID() {
   return wrap(Float6E2M3FNType::getTypeID());
 }
@@ -107,6 +115,10 @@ bool mlirTypeIsAFloat6E2M3FN(MlirType type) {
 
 MlirType mlirFloat6E2M3FNTypeGet(MlirContext ctx) {
   return wrap(Float6E2M3FNType::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirFloat6E2M3FNTypeGetName(void) {
+  return wrap(Float6E2M3FNType::name);
 }
 
 MlirTypeID mlirFloat6E3M2FNTypeGetTypeID() {
@@ -121,6 +133,10 @@ MlirType mlirFloat6E3M2FNTypeGet(MlirContext ctx) {
   return wrap(Float6E3M2FNType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirFloat6E3M2FNTypeGetName(void) {
+  return wrap(Float6E3M2FNType::name);
+}
+
 MlirTypeID mlirFloat8E5M2TypeGetTypeID() {
   return wrap(Float8E5M2Type::getTypeID());
 }
@@ -131,6 +147,10 @@ bool mlirTypeIsAFloat8E5M2(MlirType type) {
 
 MlirType mlirFloat8E5M2TypeGet(MlirContext ctx) {
   return wrap(Float8E5M2Type::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirFloat8E5M2TypeGetName(void) {
+  return wrap(Float8E5M2Type::name);
 }
 
 MlirTypeID mlirFloat8E4M3TypeGetTypeID() {
@@ -145,6 +165,10 @@ MlirType mlirFloat8E4M3TypeGet(MlirContext ctx) {
   return wrap(Float8E4M3Type::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirFloat8E4M3TypeGetName(void) {
+  return wrap(Float8E4M3Type::name);
+}
+
 MlirTypeID mlirFloat8E4M3FNTypeGetTypeID() {
   return wrap(Float8E4M3FNType::getTypeID());
 }
@@ -155,6 +179,10 @@ bool mlirTypeIsAFloat8E4M3FN(MlirType type) {
 
 MlirType mlirFloat8E4M3FNTypeGet(MlirContext ctx) {
   return wrap(Float8E4M3FNType::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirFloat8E4M3FNTypeGetName(void) {
+  return wrap(Float8E4M3FNType::name);
 }
 
 MlirTypeID mlirFloat8E5M2FNUZTypeGetTypeID() {
@@ -169,6 +197,10 @@ MlirType mlirFloat8E5M2FNUZTypeGet(MlirContext ctx) {
   return wrap(Float8E5M2FNUZType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirFloat8E5M2FNUZTypeGetName(void) {
+  return wrap(Float8E5M2FNUZType::name);
+}
+
 MlirTypeID mlirFloat8E4M3FNUZTypeGetTypeID() {
   return wrap(Float8E4M3FNUZType::getTypeID());
 }
@@ -179,6 +211,10 @@ bool mlirTypeIsAFloat8E4M3FNUZ(MlirType type) {
 
 MlirType mlirFloat8E4M3FNUZTypeGet(MlirContext ctx) {
   return wrap(Float8E4M3FNUZType::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirFloat8E4M3FNUZTypeGetName(void) {
+  return wrap(Float8E4M3FNUZType::name);
 }
 
 MlirTypeID mlirFloat8E4M3B11FNUZTypeGetTypeID() {
@@ -193,6 +229,10 @@ MlirType mlirFloat8E4M3B11FNUZTypeGet(MlirContext ctx) {
   return wrap(Float8E4M3B11FNUZType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirFloat8E4M3B11FNUZTypeGetName(void) {
+  return wrap(Float8E4M3B11FNUZType::name);
+}
+
 MlirTypeID mlirFloat8E3M4TypeGetTypeID() {
   return wrap(Float8E3M4Type::getTypeID());
 }
@@ -203,6 +243,10 @@ bool mlirTypeIsAFloat8E3M4(MlirType type) {
 
 MlirType mlirFloat8E3M4TypeGet(MlirContext ctx) {
   return wrap(Float8E3M4Type::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirFloat8E3M4TypeGetName(void) {
+  return wrap(Float8E3M4Type::name);
 }
 
 MlirTypeID mlirFloat8E8M0FNUTypeGetTypeID() {
@@ -217,6 +261,10 @@ MlirType mlirFloat8E8M0FNUTypeGet(MlirContext ctx) {
   return wrap(Float8E8M0FNUType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirFloat8E8M0FNUTypeGetName(void) {
+  return wrap(Float8E8M0FNUType::name);
+}
+
 MlirTypeID mlirBFloat16TypeGetTypeID() {
   return wrap(BFloat16Type::getTypeID());
 }
@@ -229,6 +277,8 @@ MlirType mlirBF16TypeGet(MlirContext ctx) {
   return wrap(BFloat16Type::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirBF16TypeGetName(void) { return wrap(BFloat16Type::name); }
+
 MlirTypeID mlirFloat16TypeGetTypeID() { return wrap(Float16Type::getTypeID()); }
 
 bool mlirTypeIsAF16(MlirType type) {
@@ -238,6 +288,8 @@ bool mlirTypeIsAF16(MlirType type) {
 MlirType mlirF16TypeGet(MlirContext ctx) {
   return wrap(Float16Type::get(unwrap(ctx)));
 }
+
+MlirStringRef mlirF16TypeGetName(void) { return wrap(Float16Type::name); }
 
 MlirTypeID mlirFloatTF32TypeGetTypeID() {
   return wrap(FloatTF32Type::getTypeID());
@@ -251,6 +303,8 @@ MlirType mlirTF32TypeGet(MlirContext ctx) {
   return wrap(FloatTF32Type::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirTF32TypeGetName(void) { return wrap(FloatTF32Type::name); }
+
 MlirTypeID mlirFloat32TypeGetTypeID() { return wrap(Float32Type::getTypeID()); }
 
 bool mlirTypeIsAF32(MlirType type) {
@@ -261,6 +315,8 @@ MlirType mlirF32TypeGet(MlirContext ctx) {
   return wrap(Float32Type::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirF32TypeGetName(void) { return wrap(Float32Type::name); }
+
 MlirTypeID mlirFloat64TypeGetTypeID() { return wrap(Float64Type::getTypeID()); }
 
 bool mlirTypeIsAF64(MlirType type) {
@@ -270,6 +326,8 @@ bool mlirTypeIsAF64(MlirType type) {
 MlirType mlirF64TypeGet(MlirContext ctx) {
   return wrap(Float64Type::get(unwrap(ctx)));
 }
+
+MlirStringRef mlirF64TypeGetName(void) { return wrap(Float64Type::name); }
 
 //===----------------------------------------------------------------------===//
 // None type.
@@ -285,6 +343,8 @@ MlirType mlirNoneTypeGet(MlirContext ctx) {
   return wrap(NoneType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirNoneTypeGetName(void) { return wrap(NoneType::name); }
+
 //===----------------------------------------------------------------------===//
 // Complex type.
 //===----------------------------------------------------------------------===//
@@ -298,6 +358,8 @@ bool mlirTypeIsAComplex(MlirType type) {
 MlirType mlirComplexTypeGet(MlirType elementType) {
   return wrap(ComplexType::get(unwrap(elementType)));
 }
+
+MlirStringRef mlirComplexTypeGetName(void) { return wrap(ComplexType::name); }
 
 MlirType mlirComplexTypeGetElementType(MlirType type) {
   return wrap(llvm::cast<ComplexType>(unwrap(type)).getElementType());
@@ -380,6 +442,8 @@ MlirType mlirVectorTypeGet(intptr_t rank, const int64_t *shape,
                               unwrap(elementType)));
 }
 
+MlirStringRef mlirVectorTypeGetName(void) { return wrap(VectorType::name); }
+
 MlirType mlirVectorTypeGetChecked(MlirLocation loc, intptr_t rank,
                                   const int64_t *shape, MlirType elementType) {
   return wrap(VectorType::getChecked(
@@ -443,6 +507,10 @@ MlirType mlirRankedTensorTypeGet(intptr_t rank, const int64_t *shape,
                             unwrap(elementType), unwrap(encoding)));
 }
 
+MlirStringRef mlirRankedTensorTypeGetName(void) {
+  return wrap(RankedTensorType::name);
+}
+
 MlirType mlirRankedTensorTypeGetChecked(MlirLocation loc, intptr_t rank,
                                         const int64_t *shape,
                                         MlirType elementType,
@@ -458,6 +526,10 @@ MlirAttribute mlirRankedTensorTypeGetEncoding(MlirType type) {
 
 MlirType mlirUnrankedTensorTypeGet(MlirType elementType) {
   return wrap(UnrankedTensorType::get(unwrap(elementType)));
+}
+
+MlirStringRef mlirUnrankedTensorTypeGetName(void) {
+  return wrap(UnrankedTensorType::name);
 }
 
 MlirType mlirUnrankedTensorTypeGetChecked(MlirLocation loc,
@@ -485,6 +557,8 @@ MlirType mlirMemRefTypeGet(MlirType elementType, intptr_t rank,
           : llvm::cast<MemRefLayoutAttrInterface>(unwrap(layout)),
       unwrap(memorySpace)));
 }
+
+MlirStringRef mlirMemRefTypeGetName(void) { return wrap(MemRefType::name); }
 
 MlirType mlirMemRefTypeGetChecked(MlirLocation loc, MlirType elementType,
                                   intptr_t rank, const int64_t *shape,
@@ -554,6 +628,10 @@ MlirType mlirUnrankedMemRefTypeGet(MlirType elementType,
       UnrankedMemRefType::get(unwrap(elementType), unwrap(memorySpace)));
 }
 
+MlirStringRef mlirUnrankedMemRefTypeGetName(void) {
+  return wrap(UnrankedMemRefType::name);
+}
+
 MlirType mlirUnrankedMemRefTypeGetChecked(MlirLocation loc,
                                           MlirType elementType,
                                           MlirAttribute memorySpace) {
@@ -581,6 +659,8 @@ MlirType mlirTupleTypeGet(MlirContext ctx, intptr_t numElements,
   ArrayRef<Type> typeRef = unwrapList(numElements, elements, types);
   return wrap(TupleType::get(unwrap(ctx), typeRef));
 }
+
+MlirStringRef mlirTupleTypeGetName(void) { return wrap(TupleType::name); }
 
 intptr_t mlirTupleTypeGetNumTypes(MlirType type) {
   return llvm::cast<TupleType>(unwrap(type)).size();
@@ -612,6 +692,8 @@ MlirType mlirFunctionTypeGet(MlirContext ctx, intptr_t numInputs,
   (void)unwrapList(numResults, results, resultsList);
   return wrap(FunctionType::get(unwrap(ctx), inputsList, resultsList));
 }
+
+MlirStringRef mlirFunctionTypeGetName(void) { return wrap(FunctionType::name); }
 
 intptr_t mlirFunctionTypeGetNumInputs(MlirType type) {
   return llvm::cast<FunctionType>(unwrap(type)).getNumInputs();
@@ -649,6 +731,8 @@ MlirType mlirOpaqueTypeGet(MlirContext ctx, MlirStringRef dialectNamespace,
       OpaqueType::get(StringAttr::get(unwrap(ctx), unwrap(dialectNamespace)),
                       unwrap(typeData)));
 }
+
+MlirStringRef mlirOpaqueTypeGetName(void) { return wrap(OpaqueType::name); }
 
 MlirStringRef mlirOpaqueTypeGetDialectNamespace(MlirType type) {
   return wrap(
