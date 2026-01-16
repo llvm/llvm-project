@@ -11,7 +11,7 @@
 // class map
 
 // template <class InputIterator>
-//   constexpr void insert(InputIterator first, InputIterator last); // constexpr since C++26
+//   void insert(InputIterator first, InputIterator last); // constexpr since C++26
 
 #include <array>
 #include <cassert>

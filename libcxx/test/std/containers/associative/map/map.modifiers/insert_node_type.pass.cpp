@@ -12,7 +12,7 @@
 
 // class map
 
-// constexpr insert_return_type insert(node_type&&); // constexpr since C++26
+// insert_return_type insert(node_type&&);
 
 #include <map>
 #include <memory>
@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class Container, class T>
-TEST_CONSTEXPR_CXX26 void verify_insert_return_type(T&& t) {
+void verify_insert_return_type(T&& t) {
   using verified_type = std::remove_cv_t<std::remove_reference_t<T>>;
   static_assert(std::is_aggregate_v<verified_type>);
   static_assert(std::is_same_v<verified_type, typename Container::insert_return_type>);
@@ -50,7 +50,7 @@ node_factory(Container& c, typename Container::key_type const& key, typename Con
 }
 
 template <class Container>
-TEST_CONSTEXPR_CXX26 void testContainer(Container& c) {
+void test(Container& c) {
   auto* nf = &node_factory<Container>;
 
   Container c2;
@@ -85,8 +85,7 @@ TEST_CONSTEXPR_CXX26 void testContainer(Container& c) {
     assert(!irt.inserted);
     assert(!irt.node.empty());
     assert(irt.position == c.find(0));
-    if (!TEST_IS_CONSTANT_EVALUATED)
-      assert(irt.node.key() == 0 && irt.node.mapped() == 42);
+    assert(irt.node.key() == 0 && irt.node.mapped() == 42);
     verify_insert_return_type<Container>(irt);
   }
 
@@ -98,20 +97,11 @@ TEST_CONSTEXPR_CXX26 void testContainer(Container& c) {
   }
 }
 
-TEST_CONSTEXPR_CXX26
-bool test() {
-  std::map<int, int> m;
-  testContainer(m);
-  std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
-  testContainer(m2);
-  return true;
-}
-
 int main(int, char**) {
-  test();
-#if TEST_STD_VER >= 26
-  static_assert(test());
-#endif
+  std::map<int, int> m;
+  test(m);
+  std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
+  test(m2);
 
   return 0;
 }

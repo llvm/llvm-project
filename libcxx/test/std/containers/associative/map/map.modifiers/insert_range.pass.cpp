@@ -14,7 +14,7 @@
 // <map>
 
 // template<container-compatible-range<value_type> R>
-//   constexpr void insert_range(R&& rg); // C++23, constexpr since C++26
+//   void insert_range(R&& rg); // C++23, constexpr since C++26
 
 #include <map>
 

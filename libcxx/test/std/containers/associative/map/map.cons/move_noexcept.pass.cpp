@@ -8,7 +8,7 @@
 
 // <map>
 
-// constexpr map(map&&)
+// map(map&&)
 //        noexcept(is_nothrow_move_constructible<allocator_type>::value &&
 //                 is_nothrow_move_constructible<key_compare>::value); // constexpr since C++26
 

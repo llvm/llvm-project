@@ -12,7 +12,7 @@
 
 // class map
 
-// constexpr iterator insert(const_iterator hint, node_type&&);
+// iterator insert(const_iterator hint, node_type&&);
 
 #include <map>
 #include "test_macros.h"
@@ -27,7 +27,7 @@ node_factory(Container& c, typename Container::key_type const& key, typename Con
 }
 
 template <class Container>
-TEST_CONSTEXPR_CXX26 void test(Container& c) {
+void test(Container& c) {
   auto* nf = &node_factory<Container>;
 
   Container c2;
@@ -51,21 +51,11 @@ TEST_CONSTEXPR_CXX26 void test(Container& c) {
   }
 }
 
-TEST_CONSTEXPR_CXX26
-bool test() {
+int main(int, char**) {
   std::map<int, int> m;
   test(m);
   std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
   test(m2);
-  return true;
-}
-
-int main(int, char**) {
-  test();
-
-#if TEST_STD_VER >= 26
-  static_assert(test());
-#endif
 
   return 0;
 }

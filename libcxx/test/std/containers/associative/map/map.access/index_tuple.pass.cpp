@@ -12,7 +12,7 @@
 
 // class map
 
-// constexpr mapped_type& operator[](const key_type& k); // constexpr since C++26
+// mapped_type& operator[](const key_type& k);// constexpr since C++26
 
 // https://llvm.org/PR16542
 

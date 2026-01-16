@@ -10,7 +10,7 @@
 
 // class map
 
-// constexpr size_type max_size() const; // constexpr since C++26
+// size_type max_size() const;// constexpr since C++26
 
 #include <cassert>
 #include <limits>

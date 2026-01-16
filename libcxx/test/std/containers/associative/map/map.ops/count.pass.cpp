@@ -10,7 +10,7 @@
 
 // class map
 
-// constexpr size_type count(const key_type& k) const; // constexpr since C++26
+// size_type count(const key_type& k) const; // constexpr since C++26
 
 #include <map>
 #include <cassert>

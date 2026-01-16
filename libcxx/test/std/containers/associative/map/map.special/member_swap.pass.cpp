@@ -10,7 +10,7 @@
 
 // class map
 
-// constexpr void swap(map& m); // constexpr since C++26
+// void swap(map& m); // constexpr since C++26
 
 #include <map>
 #include <cassert>

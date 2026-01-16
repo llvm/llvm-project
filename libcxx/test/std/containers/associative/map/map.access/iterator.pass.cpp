@@ -10,20 +10,20 @@
 
 // class map
 
-// constexpr       iterator begin();       // constexpr since C++26
-// constexpr const_iterator begin() const; // constexpr since C++26
-// constexpr       iterator end();         // constexpr since C++26
-// constexpr const_iterator end()   const; // constexpr since C++26
+//       iterator begin();// constexpr since C++26
+// const_iterator begin() const;// constexpr since C++26
+//       iterator end();// constexpr since C++26
+// const_iterator end()   const;// constexpr since C++26
 //
-// constexpr reverse_iterator       rbegin();       // constexpr since C++26
-// constexpr const_reverse_iterator rbegin() const; // constexpr since C++26
-// constexpr reverse_iterator       rend();         // constexpr since C++26
-// constexpr const_reverse_iterator rend()   const; // constexpr since C++26
+//       reverse_iterator rbegin();// constexpr since C++26
+// const_reverse_iterator rbegin() const;// constexpr since C++26
+//       reverse_iterator rend();// constexpr since C++26
+// const_reverse_iterator rend()   const;// constexpr since C++26
 //
-// constexpr const_iterator         cbegin()  const; // constexpr since C++26
-// constexpr const_iterator         cend()    const; // constexpr since C++26
-// constexpr const_reverse_iterator crbegin() const; // constexpr since C++26
-// constexpr const_reverse_iterator crend()   const; // constexpr since C++26
+// const_iterator         cbegin()  const;// constexpr since C++26
+// const_iterator         cend()    const;// constexpr since C++26
+// const_reverse_iterator crbegin() const;// constexpr since C++26
+// const_reverse_iterator crend()   const;// constexpr since C++26
 
 #include <map>
 #include <cassert>

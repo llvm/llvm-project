@@ -13,9 +13,10 @@
 // class map
 
 // template<typename K>
-//         constexpr pair<iterator,iterator>             equal_range(const K& x);        // C++14, constexpr since C++26
+//         pair<iterator,iterator>             equal_range(const K& x); // C++14, constexpr since C++26
 // template<typename K>
-//         constexpr pair<const_iterator,const_iterator> equal_range(const K& x) const;  // C++14, constexpr since C++26
+//         pair<const_iterator,const_iterator> equal_range(const K& x) const;
+//         // C++14, constexpr since C++26
 
 #include <cassert>
 #include <map>

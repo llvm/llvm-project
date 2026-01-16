@@ -12,7 +12,7 @@
 
 // class map
 
-// constexpr map(map&& m); // constexpr since C++26
+// map(map&& m); // constexpr since C++26
 
 #include <map>
 #include <cassert>

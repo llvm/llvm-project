@@ -9,28 +9,28 @@
 // <map>
 
 // template<class Key, class T, class Compare, class Alloc>
-// constexpr bool operator==(const std::map<Key, T, Compare, Alloc>& lhs,
-//                 const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
+// bool operator==(const std::map<Key, T, Compare, Alloc>& lhs,
+//                 const std::map<Key, T, Compare, Alloc>& rhs);
 //
 // template<class Key, class T, class Compare, class Alloc>
-// constexpr bool operator!=(const std::map<Key, T, Compare, Alloc>& lhs,
-//                 const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
+// bool operator!=(const std::map<Key, T, Compare, Alloc>& lhs,
+//                 const std::map<Key, T, Compare, Alloc>& rhs);
 //
 // template<class Key, class T, class Compare, class Alloc>
-// constexpr bool operator<(const std::map<Key, T, Compare, Alloc>& lhs,
-//                const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
+// bool operator<(const std::map<Key, T, Compare, Alloc>& lhs,
+//                const std::map<Key, T, Compare, Alloc>& rhs);
 //
 // template<class Key, class T, class Compare, class Alloc>
-// constexpr bool operator>(const std::map<Key, T, Compare, Alloc>& lhs,
-//                const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
+// bool operator>(const std::map<Key, T, Compare, Alloc>& lhs,
+//                const std::map<Key, T, Compare, Alloc>& rhs);
 //
 // template<class Key, class T, class Compare, class Alloc>
-// constexpr bool operator<=(const std::map<Key, T, Compare, Alloc>& lhs,
-//                 const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
+// bool operator<=(const std::map<Key, T, Compare, Alloc>& lhs,
+//                 const std::map<Key, T, Compare, Alloc>& rhs);
 //
 // template<class Key, class T, class Compare, class Alloc>
-// constexpr bool operator>=(const std::map<Key, T, Compare, Alloc>& lhs,
-//                 const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
+// bool operator>=(const std::map<Key, T, Compare, Alloc>& lhs,
+//                 const std::map<Key, T, Compare, Alloc>& rhs);
 
 #include <map>
 #include <cassert>

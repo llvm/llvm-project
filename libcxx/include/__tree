@@ -2062,10 +2062,9 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(_NodeHandle&& __n
   __node_pointer __ptr = __nh.__ptr_;
   auto [__parent, __child] = __find_equal(__ptr->__get_value());
   if (__child != nullptr)
-    return _InsertReturnType{
-        iterator(std::__static_fancy_pointer_cast<__node_pointer>(__child)), false, std::move(__nh)};
+    return _InsertReturnType{iterator(static_cast<__node_pointer>(__child)), false, std::move(__nh)};
 
-  __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__ptr));
+  __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__ptr));
   __nh.__release_ptr();
   return _InsertReturnType{iterator(__ptr), true, _NodeHandle()};
 }
@@ -2082,7 +2081,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(const_iterator __
   auto [__parent, __child] = __find_equal(__hint, __dummy, __ptr->__get_value());
   __node_pointer __r       = std::__static_fancy_pointer_cast<__node_pointer>(__child);
   if (__child == nullptr) {
-    __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__ptr));
+    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__ptr));
     __r = __ptr;
     __nh.__release_ptr();
   }

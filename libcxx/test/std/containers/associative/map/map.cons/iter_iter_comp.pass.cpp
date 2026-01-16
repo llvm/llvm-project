@@ -11,7 +11,7 @@
 // class map
 
 // template <class InputIterator>
-//     constexpr map(InputIterator first, InputIterator last, const key_compare& comp); // constexpr since C++26
+//     map(InputIterator first, InputIterator last, const key_compare& comp); // constexpr since C++26
 
 #include <map>
 #include <cassert>

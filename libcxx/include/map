@@ -10,8 +10,6 @@
 #ifndef _LIBCPP_MAP
 #define _LIBCPP_MAP
 
-// clang-format off
-
 /*
 
     map synopsis
@@ -59,175 +57,177 @@ public:
     };
 
     // construct/copy/destroy:
-    constexpr map()
+    map()
         noexcept(
             is_nothrow_default_constructible<allocator_type>::value &&
             is_nothrow_default_constructible<key_compare>::value &&
-            is_nothrow_copy_constructible<key_compare>::value);                                               // constexpr since C++26
-    constexpr explicit map(const key_compare& comp);                                                          // constexpr since C++26
-    constexpr map(const key_compare& comp, const allocator_type& a);                                          // constexpr since C++26
+            is_nothrow_copy_constructible<key_compare>::value);
+    explicit map(const key_compare& comp);
+    map(const key_compare& comp, const allocator_type& a);
     template <class InputIterator>
-        constexpr map(InputIterator first, InputIterator last,
-            const key_compare& comp = key_compare());                                                         // constexpr since C++26
+        map(InputIterator first, InputIterator last,
+            const key_compare& comp = key_compare());
     template <class InputIterator>
-        constexpr map(InputIterator first, InputIterator last,
-            const key_compare& comp, const allocator_type& a);                                                // constexpr since C++26
+        map(InputIterator first, InputIterator last,
+            const key_compare& comp, const allocator_type& a);
     template<container-compatible-range<value_type> R>
-        constexpr map(from_range_t, R&& rg, const Compare& comp = Compare(), const Allocator& = Allocator()); // C++23, constexpr since C++26
-    constexpr map(const map& m);                                                                              // constexpr since C++26
-    constexpr map(map&& m)
+      map(from_range_t, R&& rg, const Compare& comp = Compare(), const Allocator& = Allocator()); // C++23
+    map(const map& m);
+    map(map&& m)
         noexcept(
             is_nothrow_move_constructible<allocator_type>::value &&
-            is_nothrow_move_constructible<key_compare>::value);                                               // constexpr since C++26
-    constexpr explicit map(const allocator_type& a);                                                          // constexpr since C++26
-    constexpr map(const map& m, const allocator_type& a);                                                     // constexpr since C++26
-    constexpr map(map&& m, const allocator_type& a);                                                          // constexpr since C++26
-    constexpr map(initializer_list<value_type> il, const key_compare& comp = key_compare());                  // constexpr since C++26
-    constexpr map(initializer_list<value_type> il, const key_compare& comp, const allocator_type& a);         // constexpr since C++26
+            is_nothrow_move_constructible<key_compare>::value);
+    explicit map(const allocator_type& a);
+    map(const map& m, const allocator_type& a);
+    map(map&& m, const allocator_type& a);
+    map(initializer_list<value_type> il, const key_compare& comp = key_compare());
+    map(initializer_list<value_type> il, const key_compare& comp, const allocator_type& a);
     template <class InputIterator>
-        constexpr map(InputIterator first, InputIterator last, const allocator_type& a)
-            : map(first, last, Compare(), a) {}                                                               // C++14, constexpr since C++26
+        map(InputIterator first, InputIterator last, const allocator_type& a)
+            : map(first, last, Compare(), a) {}  // C++14
     template<container-compatible-range<value_type> R>
-      constexpr map(from_range_t, R&& rg, const Allocator& a))
-        : map(from_range, std::forward<R>(rg), Compare(), a) { }                                              // C++23, constexpr since C++26
-    constexpr map(initializer_list<value_type> il, const allocator_type& a)
-        : map(il, Compare(), a) {}                                                                            // C++14, constexpr since C++26
-   constexpr ~map();                                                                                          // constexpr since C++26
+      map(from_range_t, R&& rg, const Allocator& a))
+        : map(from_range, std::forward<R>(rg), Compare(), a) { } // C++23
+    map(initializer_list<value_type> il, const allocator_type& a)
+        : map(il, Compare(), a) {}  // C++14
+   ~map();
 
-    constexpr map& operator=(const map& m);                                    // constexpr since C++26
-    constexpr map& operator=(map&& m)
+    map& operator=(const map& m);
+    map& operator=(map&& m)
         noexcept(
             allocator_type::propagate_on_container_move_assignment::value &&
             is_nothrow_move_assignable<allocator_type>::value &&
-            is_nothrow_move_assignable<key_compare>::value);                   // constexpr since C++26
-    constexpr map& operator=(initializer_list<value_type> il);                 // constexpr since C++26
+            is_nothrow_move_assignable<key_compare>::value);
+    map& operator=(initializer_list<value_type> il);
 
     // iterators:
-    constexpr iterator       begin() noexcept;       // constexpr since C++26
-    constexpr const_iterator begin() const noexcept; // constexpr since C++26
-    constexpr iterator       end() noexcept;         // constexpr since C++26
-    constexpr const_iterator end()   const noexcept; // constexpr since C++26
+          iterator begin() noexcept;
+    const_iterator begin() const noexcept;
+          iterator end() noexcept;
+    const_iterator end()   const noexcept;
 
-    constexpr reverse_iterator       rbegin() noexcept;       // constexpr since C++26
-    constexpr const_reverse_iterator rbegin() const noexcept; // constexpr since C++26
-    constexpr reverse_iterator       rend() noexcept;         // constexpr since C++26
-    constexpr const_reverse_iterator rend()   const noexcept; // constexpr since C++26
+          reverse_iterator rbegin() noexcept;
+    const_reverse_iterator rbegin() const noexcept;
+          reverse_iterator rend() noexcept;
+    const_reverse_iterator rend()   const noexcept;
 
-    constexpr const_iterator         cbegin()  const noexcept; // constexpr since C++26
-    constexpr const_iterator         cend()    const noexcept; // constexpr since C++26
-    constexpr const_reverse_iterator crbegin() const noexcept; // constexpr since C++26
-    constexpr const_reverse_iterator crend()   const noexcept; // constexpr since C++26
+    const_iterator         cbegin()  const noexcept;
+    const_iterator         cend()    const noexcept;
+    const_reverse_iterator crbegin() const noexcept;
+    const_reverse_iterator crend()   const noexcept;
 
     // capacity:
-    constexpr bool      empty()    const noexcept; // constexpr since C++26
-    constexpr size_type size()     const noexcept; // constexpr since C++26
-    constexpr size_type max_size() const noexcept; // constexpr since C++26
+    bool      empty()    const noexcept;
+    size_type size()     const noexcept;
+    size_type max_size() const noexcept;
 
     // element access:
-    constexpr mapped_type& operator[](const key_type& k); // constexpr since C++26
-    constexpr mapped_type& operator[](key_type&& k);      // constexpr since C++26
+    mapped_type& operator[](const key_type& k);
+    mapped_type& operator[](key_type&& k);
 
-          constexpr mapped_type& at(const key_type& k);       // constexpr since C++26
-    constexpr const mapped_type& at(const key_type& k) const; // constexpr since C++26
+          mapped_type& at(const key_type& k);
+    const mapped_type& at(const key_type& k) const;
 
     // modifiers:
     template <class... Args>
-      constexpr pair<iterator, bool> emplace(Args&&... args);                                      // constexpr since C++26
+        pair<iterator, bool> emplace(Args&&... args);
     template <class... Args>
-      constexpr iterator emplace_hint(const_iterator position, Args&&... args);                    // constexpr since C++26
-    constexpr pair<iterator, bool> insert(const value_type& v);                                    // constexpr since C++26
-    constexpr pair<iterator, bool> insert(      value_type&& v);                                   // C++17, constexpr since C++26
-    template <class P> constexpr pair<iterator, bool> insert(P&& p); // constexpr since C++26
-    constexpr iterator insert(const_iterator position, const value_type& v);                       // constexpr since C++26
-    constexpr iterator insert(const_iterator position,       value_type&& v);                      // C++17, constexpr since C++26
-    template <class P> constexpr iterator insert(const_iterator position, P&& p);                  // constexpr since C++26
-    template <class InputIterator> constexpr void insert(InputIterator first, InputIterator last); // constexpr since C++26
-
+        iterator emplace_hint(const_iterator position, Args&&... args);
+    pair<iterator, bool> insert(const value_type& v);
+    pair<iterator, bool> insert(      value_type&& v);                                // C++17
+    template <class P>
+        pair<iterator, bool> insert(P&& p);
+    iterator insert(const_iterator position, const value_type& v);
+    iterator insert(const_iterator position,       value_type&& v);                   // C++17
+    template <class P>
+        iterator insert(const_iterator position, P&& p);
+    template <class InputIterator>
+        void insert(InputIterator first, InputIterator last);
     template<container-compatible-range<value_type> R>
-      constexpr void insert_range(R&& rg);                                                         // C++23, constexpr since C++26
-    constexpr void insert(initializer_list<value_type> il);                                        // constexpr since C++26
+      void insert_range(R&& rg);                                                      // C++23
+    void insert(initializer_list<value_type> il);
 
-    constexpr node_type extract(const_iterator position);                                       // C++17, constexpr since C++26
-    constexpr node_type extract(const key_type& x);                                             // C++17, constexpr since C++26
-    constexpr insert_return_type insert(node_type&& nh);                                        // C++17, constexpr since C++26
-    constexpr iterator insert(const_iterator hint, node_type&& nh);                             // C++17, constexpr since C++26
+    node_type extract(const_iterator position);                                       // C++17
+    node_type extract(const key_type& x);                                             // C++17
+    insert_return_type insert(node_type&& nh);                                        // C++17
+    iterator insert(const_iterator hint, node_type&& nh);                             // C++17
 
     template <class... Args>
-      constexpr pair<iterator, bool> try_emplace(const key_type& k, Args&&... args);          // C++17, constexpr since C++26
+        pair<iterator, bool> try_emplace(const key_type& k, Args&&... args);          // C++17
     template <class... Args>
-      constexpr pair<iterator, bool> try_emplace(key_type&& k, Args&&... args);               // C++17, constexpr since C++26
+        pair<iterator, bool> try_emplace(key_type&& k, Args&&... args);               // C++17
     template <class... Args>
-      constexpr iterator try_emplace(const_iterator hint, const key_type& k, Args&&... args); // C++17, constexpr since C++26
+        iterator try_emplace(const_iterator hint, const key_type& k, Args&&... args); // C++17
     template <class... Args>
-      constexpr iterator try_emplace(const_iterator hint, key_type&& k, Args&&... args);      // C++17, constexpr since C++26
+        iterator try_emplace(const_iterator hint, key_type&& k, Args&&... args);      // C++17
     template <class M>
-      constexpr pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);            // C++17, constexpr since C++26
+        pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);            // C++17
     template <class M>
-      constexpr pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj);                 // C++17, constexpr since C++26
+        pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj);                 // C++17
     template <class M>
-      constexpr iterator insert_or_assign(const_iterator hint, const key_type& k, M&& obj);   // C++17, constexpr since C++26
+        iterator insert_or_assign(const_iterator hint, const key_type& k, M&& obj);   // C++17
     template <class M>
-      constexpr iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj);        // C++17, constexpr since C++26
+        iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj);        // C++17
 
-    constexpr iterator  erase(const_iterator position);                   // constexpr since C++26
-    constexpr iterator  erase(iterator position);                         // C++14, constexpr since C++26
-    constexpr size_type erase(const key_type& k);                         // constexpr since C++26
-    constexpr iterator  erase(const_iterator first, const_iterator last); // constexpr since C++26
-    constexpr void clear() noexcept;                                      // constexpr since C++26
+    iterator  erase(const_iterator position);
+    iterator  erase(iterator position); // C++14
+    size_type erase(const key_type& k);
+    iterator  erase(const_iterator first, const_iterator last);
+    void clear() noexcept;
 
     template<class C2>
-      constexpr void merge(map<Key, T, C2, Allocator>& source);         // C++17, constexpr since C++26
+      void merge(map<Key, T, C2, Allocator>& source);         // C++17
     template<class C2>
-      constexpr void merge(map<Key, T, C2, Allocator>&& source);        // C++17, constexpr since C++26
+      void merge(map<Key, T, C2, Allocator>&& source);        // C++17
     template<class C2>
-      constexpr void merge(multimap<Key, T, C2, Allocator>& source);    // C++17, constexpr since C++26
+      void merge(multimap<Key, T, C2, Allocator>& source);    // C++17
     template<class C2>
-      constexpr void merge(multimap<Key, T, C2, Allocator>&& source);   // C++17, constexpr since C++26
+      void merge(multimap<Key, T, C2, Allocator>&& source);   // C++17
 
-    constexpr void swap(map& m)
+    void swap(map& m)
         noexcept(allocator_traits<allocator_type>::is_always_equal::value &&
-            is_nothrow_swappable<key_compare>::value);                  // C++17, constexpr since C++26
+            is_nothrow_swappable<key_compare>::value); // C++17
 
     // observers:
-    constexpr allocator_type get_allocator() const noexcept; // constexpr since C++26
-    constexpr key_compare    key_comp()      const;          // constexpr since C++26
-    constexpr value_compare  value_comp()    const;          // constexpr since C++26
+    allocator_type get_allocator() const noexcept;
+    key_compare    key_comp()      const;
+    value_compare  value_comp()    const;
 
     // map operations:
-    constexpr        iterator find(const key_type& k);      // constexpr since C++26
-    constexpr const_iterator find(const key_type& k) const; // constexpr since C++26
+          iterator find(const key_type& k);
+    const_iterator find(const key_type& k) const;
     template<typename K>
-        constexpr iterator find(const K& x);              // C++14, constexpr since C++26
+        iterator find(const K& x);              // C++14
     template<typename K>
-        constexpr const_iterator find(const K& x) const;  // C++14, constexpr since C++26
+        const_iterator find(const K& x) const;  // C++14
 
     template<typename K>
-      constexpr size_type count(const K& x) const;           // C++14, constexpr since C++26
-    constexpr size_type      count(const key_type& k) const; // constexpr since C++26
+      size_type count(const K& x) const;        // C++14
+    size_type      count(const key_type& k) const;
 
-    constexpr bool           contains(const key_type& x) const;  // C++20, constexpr since C++26
-    template<class K> constexpr bool contains(const K& x) const; // C++20, constexpr since C++26
+    bool           contains(const key_type& x) const;  // C++20
+    template<class K> bool contains(const K& x) const; // C++20
 
-    constexpr iterator       lower_bound(const key_type& k);       // constexpr since C++26
-    constexpr const_iterator lower_bound(const key_type& k) const; // constexpr since C++26
+          iterator lower_bound(const key_type& k);
+    const_iterator lower_bound(const key_type& k) const;
     template<typename K>
-        constexpr iterator       lower_bound(const K& x);          // C++14, constexpr since C++26
+        iterator lower_bound(const K& x);              // C++14
     template<typename K>
-        constexpr const_iterator lower_bound(const K& x) const;    // C++14, constexpr since C++26
+        const_iterator lower_bound(const K& x) const;  // C++14
 
-    constexpr iterator       upper_bound(const key_type& k);       // constexpr since C++26
-    constexpr const_iterator upper_bound(const key_type& k) const; // constexpr since C++26
+          iterator upper_bound(const key_type& k);
+    const_iterator upper_bound(const key_type& k) const;
     template<typename K>
-        constexpr iterator upper_bound(const K& x);                // C++14, constexpr since C++26
+        iterator upper_bound(const K& x);              // C++14
     template<typename K>
-        constexpr const_iterator upper_bound(const K& x) const;    // C++14, constexpr since C++26
+        const_iterator upper_bound(const K& x) const;  // C++14
 
-    constexpr pair<iterator,iterator>             equal_range(const key_type& k);       // constexpr since C++26
-    constexpr pair<const_iterator,const_iterator> equal_range(const key_type& k) const; // constexpr since C++26
+    pair<iterator,iterator>             equal_range(const key_type& k);
+    pair<const_iterator,const_iterator> equal_range(const key_type& k) const;
     template<typename K>
-        constexpr pair<iterator,iterator>             equal_range(const K& x);          // C++14, constexpr since C++26
+        pair<iterator,iterator>             equal_range(const K& x);        // C++14
     template<typename K>
-        constexpr pair<const_iterator,const_iterator> equal_range(const K& x) const;    // C++14, constexpr since C++26
+        pair<const_iterator,const_iterator> equal_range(const K& x) const;  // C++14
 };
 
 template <class InputIterator,
@@ -261,7 +261,7 @@ map(initializer_list<pair<const Key, T>>, Allocator) -> map<Key, T, less<Key>, A
 template <class Key, class T, class Compare, class Allocator>
 bool
 operator==(const map<Key, T, Compare, Allocator>& x,
-           const map<Key, T, Compare, Allocator>& y); // constexpr since C++26
+           const map<Key, T, Compare, Allocator>& y);
 
 template <class Key, class T, class Compare, class Allocator>
 bool
@@ -297,11 +297,11 @@ template<class Key, class T, class Compare, class Allocator>
 template <class Key, class T, class Compare, class Allocator>
 void
 swap(map<Key, T, Compare, Allocator>& x, map<Key, T, Compare, Allocator>& y)
-    noexcept(noexcept(x.swap(y))); // constexpr since C++26
+    noexcept(noexcept(x.swap(y)));
 
 template <class Key, class T, class Compare, class Allocator, class Predicate>
 typename map<Key, T, Compare, Allocator>::size_type
-erase_if(map<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20, constexpr since C++26
+erase_if(map<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 
 
 template <class Key, class T, class Compare = less<Key>,
@@ -411,7 +411,7 @@ public:
     template <class... Args>
         iterator emplace(Args&&... args);
     template <class... Args>
-      iterator emplace_hint(const_iterator position, Args&&... args);
+        iterator emplace_hint(const_iterator position, Args&&... args);
     iterator insert(const value_type& v);
     iterator insert(      value_type&& v);                                            // C++17
     template <class P>
@@ -570,8 +570,6 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 }  // std
 
 */
-
-// clang-format off
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 #  include <__cxx03/map>

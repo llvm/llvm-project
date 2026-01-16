@@ -10,7 +10,7 @@
 
 // class value_compare
 
-// constexpr bool operator()( const value_type& lhs, const value_type& rhs ) const; // constexpr since C++26
+// bool operator()( const value_type& lhs, const value_type& rhs ) const; // constexpr since C++26
 
 #include <map>
 #include <cassert>

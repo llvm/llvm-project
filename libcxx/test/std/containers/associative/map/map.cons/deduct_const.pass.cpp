@@ -24,7 +24,7 @@
 // template<class Key, class Allocator>
 // map(initializer_list<Key>, Allocator)
 //   -> map<Key, less<Key>, Allocator>;
-
+// constexpr since C++26
 #include <algorithm> // std::equal
 #include <cassert>
 #include <climits> // INT_MAX

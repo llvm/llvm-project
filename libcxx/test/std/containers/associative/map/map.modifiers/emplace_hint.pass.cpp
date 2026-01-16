@@ -13,7 +13,7 @@
 // class map
 
 // template <class... Args>
-//   constexpr iterator emplace_hint(const_iterator position, Args&&... args); // constexpr since C++26
+//   iterator emplace_hint(const_iterator position, Args&&... args); // constexpr since C++26
 
 #include <map>
 #include <cassert>

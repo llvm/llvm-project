@@ -10,7 +10,7 @@
 
 // <map>
 
-// constexpr void swap(map& c)
+// void swap(map& c)
 //     noexcept(!allocator_type::propagate_on_container_swap::value ||
 //              __is_nothrow_swappable<allocator_type>::value); // constexpr since C++26
 //

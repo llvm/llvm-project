@@ -12,7 +12,7 @@
 
 // class map
 
-// constexpr map(map&& m, const allocator_type& a); // constexpr since C++26
+// map(map&& m, const allocator_type& a); // constexpr since C++26
 
 #include <map>
 #include <cassert>

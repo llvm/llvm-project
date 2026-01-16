@@ -11,7 +11,7 @@
 // class map
 
 // template <class Key, class T, class Compare, class Allocator>
-//   constexpr void
+//   void
 //   swap(map<Key, T, Compare, Allocator>& x, map<Key, T, Compare, Allocator>& y); // constexpr since C++26
 
 #include <map>

@@ -10,8 +10,8 @@
 
 // class map
 
-// constexpr       iterator upper_bound(const key_type& k);       // constexpr since C++26
-// constexpr const_iterator upper_bound(const key_type& k) const; // constexpr since C++26
+//       iterator upper_bound(const key_type& k); // constexpr since C++26
+// const_iterator upper_bound(const key_type& k) const; // constexpr since C++26
 
 #include <map>
 #include <cassert>

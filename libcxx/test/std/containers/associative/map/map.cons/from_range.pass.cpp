@@ -9,10 +9,10 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // template<container-compatible-range<value_type> R>
-//   constexpr map(from_range_t, R&& rg, const Compare& comp = Compare(), const Allocator& = Allocator()); // C++23, constexpr since C++26
+//   map(from_range_t, R&& rg, const Compare& comp = Compare(), const Allocator& = Allocator()); // C++23, constexpr since C++26
 //
 // template<container-compatible-range<value_type> R>
-//   constexpr map(from_range_t, R&& rg, const Allocator& a))
+//   map(from_range_t, R&& rg, const Allocator& a))
 //     : map(from_range, std::forward<R>(rg), Compare(), a) { } // C++23, constexpr since C++26
 
 #include <array>
