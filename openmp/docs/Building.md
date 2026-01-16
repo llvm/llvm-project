@@ -45,7 +45,7 @@ git clone https://github.com/llvm/llvm-project.git
 cd llvm-project
 mkdir build
 cd build
-cmake ../llvm -G Ninja           \
+cmake ../llvm -G Ninja            \
     -DCMAKE_BUILD_TYPE=Release    \
     -DCMAKE_INSTALL_PREFIX=<PATH> \
     -DLLVM_ENABLE_PROJECTS=clang  \
@@ -197,7 +197,7 @@ Compiling OpenMP with the MSVC compiler for a
 However, offloading is not supported on the Windows platform.
 
 
-### Building on MacOS
+### Building on macOS
 
 On macOS machines, it is possible to build universal (or fat) libraries which
 include both i386 and x86_64 architecture objects in a single archive.
@@ -210,11 +210,6 @@ $ cmake ../llvm -G Ninja                    \
     ..
 $ ninja
 ```
-
-There is also an option [`LIBOMP_OSX_ARCHITECTURES`](LIBOMP_OSX_ARCHITECTURES)
-which can be set in case this is an LLVM source tree build. It will only apply
-for the `libomp` library avoids having the entire LLVM/Clang build produce
-universal binaries.
 
 
 ## CMake Parameter Reference
@@ -232,7 +227,8 @@ OpenMP libraries.
 ### Options for All Libraries
 
 **OPENMP_TEST_FLAGS**:STRING (default: *empty*), **OPENMP_TEST_OPENMP_FLAGS**:STRING (default: `-fopenmp`)
-: Additional command line flags to use in the regression tests.
+: Additional command line flags passed to Clang when compiling the regression
+tests.
 
 **OPENMP_INSTALL_LIBDIR**:STRING (default: `lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE}`)
 : Location, relative to [`CMAKE_INSTALL_PREFIX`][CMAKE_INSTALL_PREFIX], where to
@@ -251,7 +247,7 @@ build for.  This value is ignored if `LIBOMP_ARCH` does not equal `mic`.
 **LIBOMP_USE_VERSION_SYMBOLS**:BOOL
 : Use versioned symbols for building the library.  This option only makes sense
 for ELF based libraries where version symbols are supported (Linux*, some BSD*
-variants).  It is `OFF` by default for Windows* and macOS*, but `ON` for
+variants).  It is `OFF` by default for Windows and macOS, but `ON` for
 other Unix based operating systems.
 
 **LIBOMP_ENABLE_SHARED**:BOOL (default: `ON`)
@@ -318,7 +314,7 @@ This option is only used if [`LIBOMP_USE_HWLOC`](LIBOMP_USE_HWLOC) is `ON`.
 **LIBOMP_OMPT_SUPPORT**:BOOL
 : Include support for the OpenMP Tools Interface (OMPT).
 This option is supported and `ON` by default for x86, x86_64, AArch64,
-PPC64, RISCV64, LoongArch64, and s390x on Linux* and macOS*.
+PPC64, RISCV64, LoongArch64, and s390x on Linux and macOS.
 This option is `OFF` if this feature is not supported for the platform.
 
 **OPENMP_ENABLE_OMPT_TOOLS**:BOOL
