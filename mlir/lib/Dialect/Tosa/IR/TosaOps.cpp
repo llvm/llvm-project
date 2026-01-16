@@ -2141,7 +2141,8 @@ LogicalResult tosa::PadOp::verify() {
   if (!inputType || !outputType)
     return success();
 
-  if (failed(verifyRanksMatch(this, inputType, outputType, "input", "output")))
+  if (failed(verifyRanksMatch(getOperation(), inputType, outputType, "input",
+                              "output")))
     return failure();
 
   auto inputRank = inputType.getRank();
