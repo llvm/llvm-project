@@ -6520,7 +6520,7 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // shall be a constant expression; the result of E is the underlying constant
   // of the annotation. Among other requirements it means we need to check that
   // the type obeys is_copy_construbtible.
-  if (const CXXRecordDecl *RD = CE->getType()->getAsCXXRecordDecl(); RD) {
+  if (const CXXRecordDecl *RD = CE->getType()->getAsCXXRecordDecl()) {
     for (auto *Ctor : RD->ctors()) {
       if (Ctor->isCopyOrMoveConstructor() &&
           (Ctor->isDeleted() || Ctor->getAccess() == AS_private)) {

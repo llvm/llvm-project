@@ -10,8 +10,8 @@ struct [[=1]] f1 {};
 struct [[=1, =F{true}, =f]] f2 {};
 struct [[=1]] [[=2]] f3 {};
 // Declaration
-[[=1]] const F f4{};
-const F [[=1]] f40{};
+[[=1]] const F f4{}; // before declarator
+const F [[=1]] f40{}; // after declarator
 void f41([[=F{false}]]int i) {} // function parameters
 template<class T> [[=3]] void f42(T t); // non dep on template decl
 // Redeclaration
