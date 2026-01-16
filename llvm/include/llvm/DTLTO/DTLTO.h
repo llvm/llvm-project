@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef LLVM_DTLTO_H
-#define LLVM_DTLTO_H
+#ifndef LLVM_DTLTO_DTLTO_H
+#define LLVM_DTLTO_DTLTO_H
 
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -15,6 +15,19 @@
 namespace llvm {
 namespace lto {
 
+// The primary purpose of this class is to enable distributed ThinLTO backend
+// compilations to support archive members as inputs. For distributed
+// compilation, each input must exist as an individual bitcode file on disk and
+// be identified by its ModuleID.
+//
+// This requirement is not met for archive members, as an archive is a
+// collection of files rather than a standalone file. To address this, the class
+// ensures that an individual bitcode file exists for each input file (by
+// writing it out if necessary) and updates the ModuleID to point to it.
+//
+// The class also ensures that bitcode input files are preserved until enough of
+// the LTO pipeline has executed to determine the required per-module
+// information, such as whether a module will participate in ThinLTO.
 class DTLTO : public LTO {
   using Base = LTO;
 
@@ -28,8 +41,11 @@ public:
   addInput(std::unique_ptr<InputFile> InputPtr) override;
 
 protected:
+  // Save the content of ThinLTO-enabled archive members to individual bitcode
+  // files named after the module ID.
   LLVM_ABI llvm::Error handleArchiveInputs() override;
 
+  // Remove temporary archive member files created to enable distribution.
   LLVM_ABI void cleanup() override;
 
 private:
@@ -37,24 +53,17 @@ private:
   BumpPtrAllocator PtrAlloc;
   StringSaver Saver{PtrAlloc};
 
-  // Determines if a file at the given path is a thin archive file.
-  Expected<bool> isThinArchive(const StringRef ArchivePath);
-
-  // Write the archive member content to a file named after the module ID.
-  Error saveInputArchiveMember(lto::InputFile *Input);
-
-  // Iterates through all input files and saves their content
-  // to files if they are regular archive members.
-  Error saveInputArchiveMembers();
+  // Return true if the file at the given path is a thin archive.
+  Expected<bool> isThinArchive(StringRef ArchivePath);
 
   // Array of input bitcode files for LTO.
-  std::vector<std::shared_ptr<lto::InputFile>> InputFiles;
+  std::vector<std::shared_ptr<InputFile>> InputFiles;
 
-  // A cache to avoid repeatedly reading the same archive file.
-  StringMap<bool> ArchiveFiles;
+  // Cache of whether an archive path refers to a thin archive.
+  StringMap<bool> ArchiveIsThinCache;
 };
 
 } // namespace lto
 } // namespace llvm
 
-#endif // LLVM_DTLTO_H
+#endif // LLVM_DTLTO_DTLTO_H
