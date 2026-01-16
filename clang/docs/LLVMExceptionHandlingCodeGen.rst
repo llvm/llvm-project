@@ -13,6 +13,9 @@ handling (EH) and C++ cleanups. It focuses on the data structures and control
 flow patterns used to model normal and exceptional exits, and it outlines how
 the generated IR differs across common ABI models.
 
+For details on the LLVM IR representation of exception handling, see
+:doc:`LLVM Exception Handling <https://llvm.org/docs/ExceptionHandling.html>`.
+
 Core Model
 ==========
 
@@ -62,29 +65,44 @@ components:
 - ``CGCXXABI`` (and its ABI-specific implementations such as
   ``ItaniumCXXABI`` and ``MicrosoftCXXABI``) provide ABI-specific lowering for
   throws, catch handling, and destructor emission details.
-- C++ expression, class, and statement emission logic drives construction and
-  destruction, and is responsible for pushing/popping cleanups in response to
-  AST constructs.
+- The cleanup and exception handling code generation is driven by the flow of
+  ``CodeGenFunction`` and its helper classes traversing the AST to emit IR for
+  C++ expressions, classes, and statements.
 
-These components interact along a consistent pattern: AST traversal in
-``CodeGenFunction`` emits code and pushes cleanups or EH scopes; ``EHScopeStack``
-records scope nesting; cleanup and exception helpers materialize the CFG as
-scopes are popped; and ``CGCXXABI`` supplies ABI-specific details for landing
-pads or funclets.
+AST traversal in ``CodeGenFunction`` emits code and pushes cleanups or EH scopes,
+``EHScopeStack`` records scope nesting, cleanup and exception helpers materialize
+the CFG as scopes are popped, and ``CGCXXABI`` supplies ABI-specific details for
+landing pads or funclets.
 
-Normal Cleanups and Branch Fixups
-=================================
+Cleanup Destination Routing
+===========================
 
-Normal control flow exits (``return``, ``break``, ``goto``, fallthrough, etc.)
-are threaded through cleanups by creating explicit cleanup blocks. The
-implementation supports unresolved branches to labels by emitting an optimistic
-branch and recording a fixup. When a cleanup is popped, fixups are threaded
-through the cleanup by turning that optimistic branch into a switch that
-dispatches to the correct destination after the cleanup runs.
+When multiple control flow exits (``return``, ``break``, ``continue``,
+fallthrough) pass through the same cleanup, the generated IR shares a single
+cleanup block among them. Before entering the cleanup, each exit path stores a
+unique index into a "cleanup destination" slot. After the cleanup code runs, a
+``switch`` instruction loads this index and dispatches to the appropriate final
+destination. This avoids duplicating cleanup code for each exit while preserving
+correct control flow.
 
-Cleanups use a switch on an internal "cleanup destination" slot even for simple
-source constructs. It is a general mechanism that allows multiple exits to share
-the same cleanup code while still reaching the correct final destination.
+For example, if a function has both a ``return`` and a ``break`` that exit
+through the same destructor cleanup, both paths branch to the shared cleanup
+block after storing their respective destination indices. The cleanup epilogue
+then switches on the stored index to reach either the return block or the
+loop-exit block.
+
+When only a single exit passes through a cleanup (the common case), the switch
+is unnecessary and the cleanup block branches directly to its sole destination.
+
+Branch Fixups for Forward Gotos
+-------------------------------
+
+A ``goto`` statement that jumps forward to a label not yet seen poses a special
+problem. The destination's enclosing cleanup scope is unknown at the point the
+``goto`` is emitted. This is handled by emitting an optimistic branch and
+recording a "fixup." When the cleanup scope is later popped, any recorded fixups
+are resolved by rewriting the branch to thread through the cleanup block and
+adding the destination to the cleanup's switch.
 
 Exceptional Cleanups and EH Dispatch
 ====================================
@@ -95,9 +113,10 @@ depending on the target ABI.
 
 For Itanium-style EH (such as is used on x86-64 Linux), the IR uses ``invoke``
 to call potentially-throwing operations and a ``landingpad`` instruction to
-capture the exception and selector values. The landing pad aggregates the
-in-scope catch, filter, and cleanup clauses, then branches to a dispatch block
-that compares the selector to type IDs and jumps to the appropriate handler.
+capture the exception and selector values. The landing pad aggregates any
+catch and cleanup clauses for the current scope, and branches to a dispatch
+block that compares the selector to type IDs and jumps to the appropriate
+handler.
 
 For Windows, LLVM IR uses funclet-style EH: ``catchswitch`` and ``catchpad`` for
 handlers, and ``cleanuppad`` for cleanups, with ``catchret`` and ``cleanupret``
@@ -107,12 +126,17 @@ are interpreted by the backend.
 Personality and ABI Selection
 =============================
 
-The IR generation selects a personality function based on language options and
-the target ABI (e.g., Itanium, MSVC SEH, SJLJ, Wasm EH). This decision affects:
+Each function with exception handling constructs is associated with a
+personality function (e.g. __gxx_personality_v0 for C++ on Linux). The
+personality function determines the ABI-specifc EH behavior of the
+function. The IR generation selects a personality function based on language
+options and the target ABI (e.g., Itanium, MSVC SEH, SJLJ, Wasm EH). This
+decision affects:
 
 - Whether the IR uses landing pads or funclet pads.
 - The shape of dispatch logic for catch and filter scopes.
 - How termination or rethrow paths are modeled.
+- Whether certain helper functions such as exception filters must be outlined.
 
 Because the personality choice is made during IR generation, the CFG shape
 directly reflects ABI-specific details.
@@ -148,6 +172,9 @@ High-level behavior
 Codegen flow and key components
 -------------------------------
 
+- The surrounding compound statement enters a ``CodeGenFunction::LexicalScope``,
+  which is a ``RunCleanupsScope`` and is responsible for popping local cleanups
+  at the end of the block.
 - ``CodeGenFunction::EmitDecl`` routes the local variable to
   ``CodeGenFunction::EmitVarDecl`` and then ``CodeGenFunction::EmitAutoVarDecl``,
   which in turn calls ``EmitAutoVarAlloca``, ``EmitAutoVarInit``, and
@@ -172,26 +199,9 @@ Codegen flow and key components
   its ``Emit`` method generates a loop that calls the destructor on the
   initialized range in reverse order.
 
-Call-Graph Summary
-------------------
-
-.. code-block:: text
-
-  EmitDecl
-    -> EmitVarDecl
-      -> EmitAutoVarDecl
-        -> EmitAutoVarAlloca
-        -> EmitAutoVarInit
-          -> EmitCXXAggrConstructorCall
-            -> RunCleanupsScope
-            -> pushRegularPartialArrayCleanup
-            -> EmitCXXConstructorCall (per element)
-        -> EmitAutoVarCleanups
-          -> emitAutoVarTypeCleanup
-            -> pushDestroy / pushFullExprCleanup
-              -> DestroyObject cleanup
-                -> destroyCXXObject
-                  -> EmitCXXDestructorCall
+The above function names and flow are accurate as of LLVM 22.0, but this is
+subject to change as the code evolves, and this document might not be updated to
+reflect the exact functions used.
 
 Example: Temporary object materialization
 =========================================
@@ -235,32 +245,7 @@ Codegen flow and key functions
 - The cleanup ultimately uses ``DestroyObject`` and
   ``CodeGenFunction::destroyCXXObject``, which emits
   ``CodeGenFunction::EmitCXXDestructorCall``.
-- The call to ``useMyClass`` is emitted while the temporary is live, and the
-  cleanup scope ensures the destructor runs on both normal and EH exits.
 
-Call-Graph Summary
-------------------
-
-.. code-block:: text
-
-  EmitExprWithCleanups
-    -> RunCleanupsScope
-    -> EmitMaterializeTemporaryExpr
-      -> createReferenceTemporary
-      -> EmitAnyExprToMem
-        -> EmitCXXConstructExpr
-          -> EmitCXXConstructorCall
-      -> pushTemporaryCleanup
-        -> pushDestroy
-          -> DestroyObject cleanup
-            -> destroyCXXObject
-              -> EmitCXXDestructorCall
-
-Notes on Variations
-===================
-
-The exact shape of generated LLVM IR depends on target ABI, language options,
-and optimization level. For example, filters, ``noexcept`` termination scopes,
-and async EH options can introduce additional dispatch blocks, personality
-selection differences, or outlined helper functions. The patterns above capture
-the essential structure used for EH and cleanup handling on the named targets.
+The above function names and flow are accurate as of LLVM 22.0, but this is
+subject to change as the code evolves, and this document might not be updated to
+reflect the exact functions used.
