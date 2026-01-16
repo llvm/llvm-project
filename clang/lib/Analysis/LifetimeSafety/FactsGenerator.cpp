@@ -444,6 +444,15 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
     //  View(const View &v);
     ArgList = getRValueOrigins(Arg, ArgList);
     flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
+  } else if (Arg->getType()->isPointerType()) {
+    // GSL pointer is constructed from a raw pointer. Flow only the outermost
+    // raw pointer. Example:
+    //  View(const char*);
+    //  Span<int*>(const in**);
+    OriginList *ArgList = getOriginsList(*Arg);
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        getOriginsList(*CCE)->getOuterOriginID(), ArgList->getOuterOriginID(),
+        /*Kill=*/true));
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
