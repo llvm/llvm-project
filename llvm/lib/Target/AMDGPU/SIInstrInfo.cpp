@@ -1326,9 +1326,19 @@ bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
   case AMDGPU::AV_MOV_B64_IMM_PSEUDO:
   case AMDGPU::S_MOV_B64_IMM_PSEUDO:
-  case AMDGPU::V_MOV_B64_PSEUDO: {
+  case AMDGPU::V_MOV_B64_PSEUDO:
+  case AMDGPU::V_MOV_B16_t16_e32: {
     const MachineOperand &Src0 = MI.getOperand(1);
     if (Src0.isImm()) {
+      ImmVal = Src0.getImm();
+      return MI.getOperand(0).getReg() == Reg;
+    }
+
+    return false;
+  }
+  case AMDGPU::V_MOV_B16_t16_e64: {
+    const MachineOperand &Src0 = MI.getOperand(2);
+    if (Src0.isImm() && !MI.getOperand(1).getImm()) {
       ImmVal = Src0.getImm();
       return MI.getOperand(0).getReg() == Reg;
     }
@@ -2934,7 +2944,7 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   auto I = MBB.end();
   auto &MCCtx = MF->getContext();
 
-  if (ST.hasAddPC64Inst()) {
+  if (ST.useAddPC64Inst()) {
     MCSymbol *Offset =
         MCCtx.createTempSymbol("offset", /*AlwaysAddSuffix=*/true);
     auto AddPC = BuildMI(MBB, I, DL, get(AMDGPU::S_ADD_PC_I64))
@@ -3545,6 +3555,8 @@ static unsigned getNewFMAAKInst(const GCNSubtarget &ST, unsigned Opc) {
   case AMDGPU::V_FMAC_F16_e64:
   case AMDGPU::V_FMAC_F16_t16_e64:
   case AMDGPU::V_FMAC_F16_fake16_e64:
+  case AMDGPU::V_FMAC_F16_t16_e32:
+  case AMDGPU::V_FMAC_F16_fake16_e32:
   case AMDGPU::V_FMA_F16_e64:
     return ST.hasTrue16BitInsts() ? ST.useRealTrue16Insts()
                                         ? AMDGPU::V_FMAAK_F16_t16
@@ -3577,6 +3589,8 @@ static unsigned getNewFMAMKInst(const GCNSubtarget &ST, unsigned Opc) {
   case AMDGPU::V_FMAC_F16_e64:
   case AMDGPU::V_FMAC_F16_t16_e64:
   case AMDGPU::V_FMAC_F16_fake16_e64:
+  case AMDGPU::V_FMAC_F16_t16_e32:
+  case AMDGPU::V_FMAC_F16_fake16_e32:
   case AMDGPU::V_FMA_F16_e64:
     return ST.hasTrue16BitInsts() ? ST.useRealTrue16Insts()
                                         ? AMDGPU::V_FMAMK_F16_t16
@@ -3776,13 +3790,6 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (pseudoToMCOpcode(NewOpc) == -1)
         return false;
 
-      // V_FMAMK_F16_t16 takes VGPR_16_Lo128 operands while V_FMAMK_F16_fake16
-      // takes VGPR_32_Lo128 operands, so the rewrite would also require
-      // restricting their register classes. For now just bail out.
-      if (NewOpc == AMDGPU::V_FMAMK_F16_t16 ||
-          NewOpc == AMDGPU::V_FMAMK_F16_fake16)
-        return false;
-
       const std::optional<int64_t> SubRegImm = extractSubregFromImm(
           Imm, RegSrc == Src1 ? Src0->getSubReg() : Src1->getSubReg());
 
@@ -3806,6 +3813,35 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
       removeModOperands(UseMI);
       UseMI.setDesc(get(NewOpc));
+
+      if (NewOpc == AMDGPU::V_FMAMK_F16_t16 ||
+          NewOpc == AMDGPU::V_FMAMK_F16_fake16) {
+        const TargetRegisterClass *NewRC = getRegClass(get(NewOpc), 0);
+        auto Tmp = MRI->createVirtualRegister(NewRC);
+        BuildMI(*UseMI.getParent(), std::next(UseMI.getIterator()),
+                UseMI.getDebugLoc(), get(AMDGPU::COPY),
+                UseMI.getOperand(0).getReg())
+            .addReg(Tmp, RegState::Kill);
+        UseMI.getOperand(0).setReg(Tmp);
+        if (UseMI.getOperand(1).isReg() &&
+            RI.isVGPR(*MRI, UseMI.getOperand(1).getReg())) {
+          auto Tmp = MRI->createVirtualRegister(NewRC);
+          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
+                  get(AMDGPU::COPY), Tmp)
+              .addReg(UseMI.getOperand(1).getReg());
+          UseMI.getOperand(1).setReg(Tmp);
+          UseMI.getOperand(1).setIsKill();
+        }
+        if (UseMI.getOperand(3).isReg() &&
+            RI.isVGPR(*MRI, UseMI.getOperand(3).getReg())) {
+          auto Tmp = MRI->createVirtualRegister(NewRC);
+          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
+                  get(AMDGPU::COPY), Tmp)
+              .addReg(UseMI.getOperand(3).getReg());
+          UseMI.getOperand(3).setReg(Tmp);
+          UseMI.getOperand(3).setIsKill();
+        }
+      }
 
       bool DeleteDef = MRI->use_nodbg_empty(Reg);
       if (DeleteDef)
@@ -3854,13 +3890,6 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (pseudoToMCOpcode(NewOpc) == -1)
         return false;
 
-      // V_FMAAK_F16_t16 takes VGPR_16_Lo128 operands while V_FMAAK_F16_fake16
-      // takes VGPR_32_Lo128 operands, so the rewrite would also require
-      // restricting their register classes. For now just bail out.
-      if (NewOpc == AMDGPU::V_FMAAK_F16_t16 ||
-          NewOpc == AMDGPU::V_FMAAK_F16_fake16)
-        return false;
-
       // FIXME: This would be a lot easier if we could return a new instruction
       // instead of having to modify in place.
 
@@ -3880,6 +3909,36 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       // These come before src2.
       removeModOperands(UseMI);
       UseMI.setDesc(get(NewOpc));
+
+      if (NewOpc == AMDGPU::V_FMAAK_F16_t16 ||
+          NewOpc == AMDGPU::V_FMAAK_F16_fake16) {
+        const TargetRegisterClass *NewRC = getRegClass(get(NewOpc), 0);
+        auto Tmp = MRI->createVirtualRegister(NewRC);
+        BuildMI(*UseMI.getParent(), std::next(UseMI.getIterator()),
+                UseMI.getDebugLoc(), get(AMDGPU::COPY),
+                UseMI.getOperand(0).getReg())
+            .addReg(Tmp, RegState::Kill);
+        UseMI.getOperand(0).setReg(Tmp);
+        if (UseMI.getOperand(1).isReg() &&
+            RI.isVGPR(*MRI, UseMI.getOperand(1).getReg())) {
+          auto Tmp = MRI->createVirtualRegister(NewRC);
+          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
+                  get(AMDGPU::COPY), Tmp)
+              .addReg(UseMI.getOperand(1).getReg());
+          UseMI.getOperand(1).setReg(Tmp);
+          UseMI.getOperand(1).setIsKill();
+        }
+        if (UseMI.getOperand(2).isReg() &&
+            RI.isVGPR(*MRI, UseMI.getOperand(2).getReg())) {
+          auto Tmp = MRI->createVirtualRegister(NewRC);
+          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
+                  get(AMDGPU::COPY), Tmp)
+              .addReg(UseMI.getOperand(2).getReg());
+          UseMI.getOperand(2).setReg(Tmp);
+          UseMI.getOperand(2).setIsKill();
+        }
+      }
+
       // It might happen that UseMI was commuted
       // and we now have SGPR as SRC1. If so 2 inlined
       // constant and SGPR are illegal.

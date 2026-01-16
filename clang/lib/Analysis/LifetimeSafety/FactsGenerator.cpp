@@ -444,6 +444,15 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
     //  View(const View &v);
     ArgList = getRValueOrigins(Arg, ArgList);
     flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
+  } else if (Arg->getType()->isPointerType()) {
+    // GSL pointer is constructed from a raw pointer. Flow only the outermost
+    // raw pointer. Example:
+    //  View(const char*);
+    //  Span<int*>(const in**);
+    OriginList *ArgList = getOriginsList(*Arg);
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        getOriginsList(*CCE)->getOuterOriginID(), ArgList->getOuterOriginID(),
+        /*Kill=*/true));
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
@@ -463,6 +472,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         bool IsGslConstruction) {
   OriginList *CallList = getOriginsList(*Call);
   // Ignore functions returning values with no origin.
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD || !CallList)
     return;
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
