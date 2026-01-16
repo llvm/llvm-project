@@ -691,8 +691,8 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
   }
 
   if (IgnoreStaticSizedArrays) {
-    // If we made it here, it means a size was found for the var being
-    // accessed. If it's fixed size, we can ignore it.
+    // If we made it here, it means a size was found for the var being accessed
+    // (either string literal or array). If it's fixed size, we can ignore it.
     return true;
   }
 
