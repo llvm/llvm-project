@@ -15,7 +15,7 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
-#include "Common/DAGISelMatcher.h"
+#include "DAGISelMatcher.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -425,6 +425,12 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 }
 
 static unsigned emitMVT(MVT VT, raw_ostream &OS) {
+  // Print the MVT directly if it doesn't require a VBR.
+  if (VT.SimpleTy <= 127) {
+    OS << getEnumName(VT) << ',';
+    return 1;
+  }
+
   if (!OmitComments)
     OS << "/*" << getEnumName(VT) << "*/";
   return EmitVBRValue(VT.SimpleTy, OS);

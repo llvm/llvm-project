@@ -19,6 +19,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/CAS/OnDiskDataAllocator.h"
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
+#include <atomic>
 
 namespace llvm::cas::ondisk {
 

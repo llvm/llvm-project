@@ -163,13 +163,18 @@ Changes to the RISC-V Backend
 * Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
 * DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
   to be used together when building for the RISC-V platform.
-* The Xqci Qualcomm uC Vendor Extension is no longger marked as experimental.
+* The Xqci Qualcomm uC Vendor Extension is no longer marked as experimental.
+* The Xqccmp Qualcomm Vendor Extension is no longer marked as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
 
 * `half` now uses a soft float lowering, which resolves various precision and
   bitcast issues.
+
+- The `wasm32-wasi` target has been renamed to `wasm32-wasip1`. The old
+  option is still recognized, though by default will emit a deprecation
+  warning.
 
 Changes to the Windows Target
 -----------------------------

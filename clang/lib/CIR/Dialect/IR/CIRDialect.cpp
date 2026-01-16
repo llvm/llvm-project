@@ -2481,6 +2481,38 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
 
   return {};
 }
+
+//===----------------------------------------------------------------------===//
+// BaseDataMemberOp & DerivedDataMemberOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyMemberPtrCast(Operation *op, mlir::Value src,
+                                         mlir::Type resultTy) {
+  // Let the operand type be T1 C1::*, let the result type be T2 C2::*.
+  // Verify that T1 and T2 are the same type.
+  mlir::Type inputMemberTy;
+  mlir::Type resultMemberTy;
+  if (mlir::isa<cir::DataMemberType>(src.getType())) {
+    inputMemberTy =
+        mlir::cast<cir::DataMemberType>(src.getType()).getMemberTy();
+    resultMemberTy = mlir::cast<cir::DataMemberType>(resultTy).getMemberTy();
+  }
+  assert(!cir::MissingFeatures::memberFuncPtrCast());
+  if (inputMemberTy != resultMemberTy)
+    return op->emitOpError()
+           << "member types of the operand and the result do not match";
+
+  return mlir::success();
+}
+
+LogicalResult cir::BaseDataMemberOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+LogicalResult cir::DerivedDataMemberOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
 //===----------------------------------------------------------------------===//
 // AwaitOp
 //===----------------------------------------------------------------------===//

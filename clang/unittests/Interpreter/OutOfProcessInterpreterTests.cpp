@@ -27,6 +27,7 @@
 #include "llvm/TargetParser/Host.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
 #include <memory>
 #include <signal.h>
 #include <sstream>
@@ -101,47 +102,43 @@ static std::string getExecutorPath() {
   return ExecutorPath.str().str();
 }
 
-static std::string getOrcRuntimePath() {
-  llvm::SmallString<256> RuntimePath(llvm::sys::fs::getMainExecutable(
-      nullptr, reinterpret_cast<void *>(&getOrcRuntimePath)));
-  removePathComponent(5, RuntimePath);
-  llvm::sys::path::append(RuntimePath, CLANG_INSTALL_LIBDIR_BASENAME, "clang",
-                          CLANG_VERSION_MAJOR_STRING, "lib");
-
-  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
-  if (SystemTriple.isOSBinFormatMachO()) {
-    llvm::sys::path::append(RuntimePath, "darwin", "liborc_rt_osx.a");
-  } else if (SystemTriple.isOSBinFormatELF()) {
-    llvm::sys::path::append(RuntimePath, "x86_64-unknown-linux-gnu",
-                            "liborc_rt.a");
+class OutOfProcessInterpreterTest : public InterpreterTestBase {
+protected:
+  static bool HostSupportsOutOfProcessJIT() {
+    if (!InterpreterTestBase::HostSupportsJIT())
+      return false;
+    return !getExecutorPath().empty();
   }
-  return RuntimePath.str().str();
-}
+};
 
-static std::unique_ptr<Interpreter>
+struct OutOfProcessInterpreterInfo {
+  std::string OrcRuntimePath;
+  std::unique_ptr<Interpreter> Interpreter;
+};
+
+static OutOfProcessInterpreterInfo
 createInterpreterWithRemoteExecution(std::shared_ptr<IOContext> io_ctx,
                                      const Args &ExtraArgs = {}) {
   Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
   llvm::append_range(ClangArgs, ExtraArgs);
-  auto CB = clang::IncrementalCompilerBuilder();
-  CB.SetCompilerArgs(ClangArgs);
-  auto CI = cantFail(CB.CreateCpp());
 
-  clang::Interpreter::JITConfig Config;
+  auto Config = std::make_unique<IncrementalExecutorBuilder>();
   llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
 
   if (SystemTriple.isOSBinFormatELF() || SystemTriple.isOSBinFormatMachO()) {
-    Config.IsOutOfProcess = true;
-    Config.OOPExecutor = getExecutorPath();
-    Config.UseSharedMemory = false;
-    Config.SlabAllocateSize = 0;
-    Config.OrcRuntimePath = getOrcRuntimePath();
+    Config->IsOutOfProcess = true;
+    Config->OOPExecutor = getExecutorPath();
+    Config->UseSharedMemory = false;
+    Config->SlabAllocateSize = 0;
 
+    // Capture the raw file descriptors by value explicitly. This lambda will
+    // be invoked in the child process after fork(), so capturing the fd ints is
+    // safe and avoids capturing FILE* pointers or outer 'this'.
     int stdin_fd = fileno(io_ctx->stdin_file.get());
     int stdout_fd = fileno(io_ctx->stdout_file.get());
     int stderr_fd = fileno(io_ctx->stderr_file.get());
 
-    Config.CustomizeFork = [=] {
+    Config->CustomizeFork = [stdin_fd, stdout_fd, stderr_fd]() {
       auto redirect = [](int from, int to) {
         if (from != to) {
           dup2(from, to);
@@ -153,37 +150,37 @@ createInterpreterWithRemoteExecution(std::shared_ptr<IOContext> io_ctx,
       redirect(stdout_fd, STDOUT_FILENO);
       redirect(stderr_fd, STDERR_FILENO);
 
+      // Unbuffer the stdio in the child; useful for deterministic tests.
       setvbuf(stdout, nullptr, _IONBF, 0);
       setvbuf(stderr, nullptr, _IONBF, 0);
 
+      // Helpful marker for the unit-test to assert that fork customization ran.
       printf("CustomizeFork executed\n");
       fflush(stdout);
     };
   }
-
-  return cantFail(clang::Interpreter::create(std::move(CI), Config));
+  auto CB = IncrementalCompilerBuilder();
+  CB.SetCompilerArgs(ClangArgs);
+  CB.SetDriverCompilationCallback(Config->UpdateOrcRuntimePathCB);
+  auto CI = cantFail(CB.CreateCpp());
+  return {Config->OrcRuntimePath,
+          cantFail(Interpreter::create(std::move(CI), std::move(Config)))};
 }
 
 static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
   return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
 }
 
-TEST_F(InterpreterTestBase, SanityWithRemoteExecution) {
-  if (!HostSupportsJIT())
-    GTEST_SKIP();
-
-  std::string OrcRuntimePath = getOrcRuntimePath();
-  std::string ExecutorPath = getExecutorPath();
-
-  if (!llvm::sys::fs::exists(OrcRuntimePath) ||
-      !llvm::sys::fs::exists(ExecutorPath))
+TEST_F(OutOfProcessInterpreterTest, SanityWithRemoteExecution) {
+  if (!HostSupportsOutOfProcessJIT())
     GTEST_SKIP();
 
   auto io_ctx = std::make_shared<IOContext>();
   ASSERT_TRUE(io_ctx->initializeTempFiles());
 
-  std::unique_ptr<Interpreter> Interp =
+  OutOfProcessInterpreterInfo Info =
       createInterpreterWithRemoteExecution(io_ctx);
+  Interpreter *Interp = Info.Interpreter.get();
   ASSERT_TRUE(Interp);
 
   using PTU = PartialTranslationUnit;
@@ -196,8 +193,31 @@ TEST_F(InterpreterTestBase, SanityWithRemoteExecution) {
   std::string captured_stdout = io_ctx->readStdoutContent();
   std::string captured_stderr = io_ctx->readStderrContent();
 
-  EXPECT_TRUE(captured_stdout.find("CustomizeFork executed") !=
-              std::string::npos);
+  EXPECT_NE(std::string::npos, captured_stdout.find("CustomizeFork executed"));
+}
+
+TEST_F(OutOfProcessInterpreterTest, FindRuntimeInterface) {
+  if (!HostSupportsOutOfProcessJIT())
+    GTEST_SKIP();
+
+  // make a fresh io context for this test
+  auto io_ctx = std::make_shared<IOContext>();
+  ASSERT_TRUE(io_ctx->initializeTempFiles());
+
+  OutOfProcessInterpreterInfo I = createInterpreterWithRemoteExecution(io_ctx);
+  ASSERT_TRUE(I.Interpreter);
+
+  // FIXME: Not yet supported.
+  // cantFail(I->Parse("int a = 1; a"));
+  // cantFail(I->Parse("int b = 2; b"));
+  // cantFail(I->Parse("int c = 3; c"));
+
+  // // Make sure no clang::Value logic is attached by the Interpreter.
+  // Value V1;
+  // llvm::cantFail(I->ParseAndExecute("int x = 42;"));
+  // llvm::cantFail(I->ParseAndExecute("x", &V1));
+  // EXPECT_FALSE(V1.isValid());
+  // EXPECT_FALSE(V1.hasValue());
 }
 
 } // end anonymous namespace

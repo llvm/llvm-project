@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-dynamic-static-initializers %t -- -- -fno-threadsafe-statics
+// RUN: %check_clang_tidy %s bugprone-dynamic-static-initializers %t -- -- -fno-threadsafe-statics -fno-delayed-template-parsing
 
 int fact(int n) {
   return (n == 0) ? 1 : n * fact(n - 1);
@@ -63,3 +63,6 @@ struct TemplateStruct {
 
 template <typename T>
 constexpr T kGlobalMin{std::numeric_limits<T>::min()}; // no warning
+
+extern const int late_constexpr;
+constexpr int late_constexpr = 42; // no warning

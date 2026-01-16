@@ -126,9 +126,10 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     be side-effect free.
 
     A "region branch point" indicates a point from which a branch originates. It
-    can indicate either a terminator in any of the immediately nested region of
-    this op or `RegionBranchPoint::parent()`. In the latter case, the branch
-    originates from outside of the op, i.e., when first executing this op.
+    can indicate either a `RegionBranchTerminatorOpInterface` terminator in any
+    of the immediately nested regions of this op or
+    `RegionBranchPoint::parent()`. In the latter case, the branch originates
+    from outside of the op, i.e., when first executing this op.
 
     A "region successor" indicates the target of a branch. It can indicate
     either a region of this op or this op itself. In the former case, the region
@@ -140,6 +141,16 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     By default, successor operands and successor block arguments/successor
     results must have the same type. `areTypesCompatible` can be implemented to
     allow non-equal types.
+
+
+    Note: This interface works in conjunction with
+    `RegionBranchTerminatorOpInterface`. All immediately nested block
+    terminators that model branching between regions must implement the
+    `RegionBranchTerminatorOpInterface`. Otherwise, analyses/transformations
+    may miss control flow edges and produce incorrect results. Not every block
+    terminator is necessarily a region branch terminator: e.g., in the presence
+    of unstructured control flow, a block terminator could indicate a branch to
+    a different block within the same region.
 
     Example:
 
@@ -206,7 +217,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Returns the potential region successors when branching from `point`.
+        Returns all potential region successors when branching from `point`.
         These are the regions that may be selected during the flow of control.
 
         When `point = RegionBranchPoint::parent()`, this method returns the
@@ -370,7 +381,14 @@ def RegionBranchTerminatorOpInterface :
   let description = [{
     This interface provides information for branching terminator operations
     in the presence of a parent `RegionBranchOpInterface` implementation. It
-    specifies which operands are passed to which successor region.
+    acts as a marker for valid region branch points and specifies which
+    operands are passed to which region successor.
+
+    Note: If an operation does not implement the
+    `RegionBranchTerminatorOpInterface`, then that op has no region successors.
+    (However, there may be other block terminators in the same region that
+    implement the `RegionBranchTerminatorOpInterface`, so the enclosing region
+    may have region successors.)
   }];
   let cppNamespace = "::mlir";
 

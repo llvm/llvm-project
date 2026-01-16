@@ -1488,9 +1488,8 @@ def HasVendorXwchc
 // Qualcomm Extensions
 
 def FeatureVendorXqccmp
-    : RISCVExperimentalExtension<0, 3,
-                                 "Qualcomm 16-bit Push/Pop and Double Moves",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 3, "Qualcomm 16-bit Push/Pop and Double Moves",
+                     [FeatureStdExtZca]>;
 def HasVendorXqccmp
     : Predicate<"Subtarget->hasVendorXqccmp()">,
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
