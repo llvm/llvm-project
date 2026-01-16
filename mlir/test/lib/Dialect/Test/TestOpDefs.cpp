@@ -788,7 +788,7 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
 }
 
 ValueRange AnyCondOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
 }
 
 void AnyCondOp::getRegionInvocationBounds(

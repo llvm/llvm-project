@@ -2407,7 +2407,7 @@ void WarpExecuteOnLane0Op::getSuccessorRegions(
 }
 
 ValueRange WarpExecuteOnLane0Op::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
 }
 void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
                                  TypeRange resultTypes, Value laneId,

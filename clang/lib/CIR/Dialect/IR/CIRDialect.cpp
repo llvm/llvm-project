@@ -1187,7 +1187,8 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
 }
 
 mlir::ValueRange cir::IfOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getOperation()->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 void cir::IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
@@ -1231,7 +1232,8 @@ void cir::ScopeOp::getSuccessorRegions(
 }
 
 mlir::ValueRange cir::ScopeOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getOperation()->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 void cir::ScopeOp::build(
@@ -1398,7 +1400,8 @@ void cir::CaseOp::getSuccessorRegions(
 }
 
 mlir::ValueRange cir::CaseOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getOperation()->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
@@ -1429,7 +1432,8 @@ void cir::SwitchOp::getSuccessorRegions(
 }
 
 mlir::ValueRange cir::SwitchOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getOperation()->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 void cir::SwitchOp::build(OpBuilder &builder, OperationState &result,
@@ -1661,7 +1665,8 @@ void cir::GlobalOp::getSuccessorRegions(
 }
 
 mlir::ValueRange cir::GlobalOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getOperation()->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
@@ -2339,7 +2344,8 @@ void cir::TernaryOp::getSuccessorRegions(
 }
 
 mlir::ValueRange cir::TernaryOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getOperation()->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 void cir::TernaryOp::build(
@@ -3576,7 +3582,8 @@ void cir::TryOp::getSuccessorRegions(
 }
 
 mlir::ValueRange cir::TryOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getOperation()->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 static void
