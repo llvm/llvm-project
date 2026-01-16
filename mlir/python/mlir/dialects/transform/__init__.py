@@ -310,6 +310,8 @@ class NamedSequenceOp(NamedSequenceOp):
             sym_visibility=sym_visibility,
             arg_attrs=arg_attrs,
             res_attrs=res_attrs,
+            loc=loc,
+            ip=ip,
         )
         self.regions[0].blocks.append(*input_types)
 
@@ -466,6 +468,54 @@ def apply_registered_pass(
         loc=loc,
         ip=ip,
     ).result
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ForeachOp(ForeachOp):
+    def __init__(
+        self,
+        results: Sequence[Type],
+        targets: Sequence[Union[Operation, Value, OpView]],
+        *,
+        with_zip_shortest: Optional[bool] = False,
+        loc=None,
+        ip=None,
+    ):
+        targets = [_get_op_result_or_value(target) for target in targets]
+        super().__init__(
+            results_=results,
+            targets=targets,
+            with_zip_shortest=with_zip_shortest,
+            loc=loc,
+            ip=ip,
+        )
+        self.regions[0].blocks.append(*[target.type for target in targets])
+
+    @property
+    def body(self) -> Block:
+        return self.regions[0].blocks[0]
+
+    @property
+    def bodyTargets(self) -> BlockArgumentList:
+        return self.regions[0].blocks[0].arguments
+
+
+def foreach(
+    results: Sequence[Type],
+    targets: Sequence[Union[Operation, Value, OpView]],
+    *,
+    with_zip_shortest: Optional[bool] = False,
+    loc=None,
+    ip=None,
+) -> Union[OpResult, OpResultList, ForeachOp]:
+    results = ForeachOp(
+        results=results,
+        targets=targets,
+        with_zip_shortest=with_zip_shortest,
+        loc=loc,
+        ip=ip,
+    ).results
+    return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
 
 
 AnyOpTypeT = NewType("AnyOpType", AnyOpType)

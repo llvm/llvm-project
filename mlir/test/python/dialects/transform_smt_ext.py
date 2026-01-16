@@ -53,7 +53,7 @@ def testConstrainParamsOp(target):
 
     # CHECK: transform.smt.constrain_params(%[[PARAM_AS_PARAM]])
     compute_with_params = transform_smt.ConstrainParamsOp(
-        [transform.ParamType.get(ir.IntegerType.get_signless(32))],
+        [transform.AnyParamType.get()],
         [symbolic_value_as_param],
         [smt.IntType.get()],
     )

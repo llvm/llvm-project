@@ -524,7 +524,19 @@ struct ControlDropUnitDims {
   RankReductionStrategy rankReductionStrategy =
       RankReductionStrategy::ReassociativeReshape;
 
+  /// Instances of this type are used to control which dimensions of an operand
+  /// are considered for dropping unit extent dimensions. The parameter to the
+  /// function is the operation itself, the expected return is a list of
+  /// dimensions to consider for dropping unit extent dimensions. If the
+  /// operation should not be have any dimensions dropped, implementations
+  /// should return an empty list.
   using ControlFnTy = std::function<SmallVector<unsigned>(Operation *)>;
+
+  /// Function to control which dimensions, if any, are to be considered for
+  /// dropping unit extent dimensions. The default behavior is to consider all
+  /// dimensions of a \c linalg.generic or \c tensor.pad operation for dropping.
+  /// Users of the \ref dropUnitDims interface can override the default behavior
+  /// by setting this member to their own implementation.
   ControlFnTy controlFn = [](Operation *op) {
     if (auto genericOp = dyn_cast_or_null<GenericOp>(op)) {
       return llvm::to_vector(llvm::seq<unsigned>(0, genericOp.getNumLoops()));
@@ -535,6 +547,79 @@ struct ControlDropUnitDims {
     }
     return SmallVector<unsigned>{};
   };
+
+  /// Instances of this type are used to control how operand values are
+  /// collapsed after dropping unit extent dimensions. Next to the control
+  /// struct, rewriter and location, the function receives the operand value to
+  /// collapse, the new target shape and how old dimensions should be grouped.
+  /// The function needs to insert the necessary operations to collapse the
+  /// operand to the target shape and returns the new operand value.
+  /// If the operand should not be collapsed, the function should return
+  /// failure, leading to the transformation to be aborted.
+  using CollapseFnTy = std::function<FailureOr<Value>(
+      RewriterBase &, Location, Value, ArrayRef<int64_t>,
+      ArrayRef<ReassociationIndices>, const ControlDropUnitDims &)>;
+
+  /// Function to control how operands are collapsed into their new target shape
+  /// after dropping unit extent dimensions. For the default behavior
+  /// \see linalg::collapseValue.
+  /// Users of the \ref dropUnitDims interface can override the default behavior
+  /// by setting this member to their own implementation.
+  CollapseFnTy collapseFn =
+      [](RewriterBase &rewriter, Location loc, Value operand,
+         ArrayRef<int64_t> targetShape,
+         ArrayRef<ReassociationIndices> reassociation,
+         const ControlDropUnitDims &control) -> FailureOr<Value> {
+    return collapseValue(rewriter, loc, operand, targetShape, reassociation,
+                         control);
+  };
+
+  /// Instances of this type are used to control how result values are expanded
+  /// into their original shape after dropping unit extent dimensions. Next to
+  /// the control construct, rewriter and location, the function recieves the
+  /// result value, the original value to replace and and information on how the
+  /// new dimensions were grouped.
+  /// The function needs to insert the necessary operations to expand the
+  /// result to the original shape and returns the new result value.
+  /// If the result should not be expanded, the function should return
+  /// failure, leading to the transformation to be aborted.
+  using ExpandFnTy = std::function<FailureOr<Value>(
+      RewriterBase &, Location, Value, Value, ArrayRef<ReassociationIndices>,
+      const ControlDropUnitDims &)>;
+
+  /// Function to control how results are expanded into their original shape
+  /// after dropping unit extent dimensions. The default behavior
+  /// \see linalg::expandValue.
+  /// Users of the \ref dropUnitDims interface can override the default behavior
+  /// by setting this member to their own implementation.
+  ExpandFnTy expandFn =
+      [](RewriterBase &rewriter, Location loc, Value result, Value origDest,
+         ArrayRef<ReassociationIndices> reassociation,
+         const ControlDropUnitDims &control) -> FailureOr<Value> {
+    return expandValue(rewriter, loc, result, origDest, reassociation, control);
+  };
+
+private:
+  /// Collapse the given \p value to \p targetShape. The \p reassociation is
+  /// used when `rankReductionStrategy` of \p control is set to
+  /// `RankReductionStrategy::ReassociativeReshape`. Will return failure if the
+  /// operand has memref type with a non-identity layout or tensor type with an
+  /// encoding.
+  static FailureOr<Value>
+  collapseValue(RewriterBase &rewriter, Location loc, Value operand,
+                ArrayRef<int64_t> targetShape,
+                ArrayRef<ReassociationIndices> reassociation,
+                const ControlDropUnitDims &control);
+
+  /// Expand the given \p value so that the type matches the type of \p
+  /// origDest. The \p reassociation is used when `rankReductionStrategy` of \p
+  /// control is set to `RankReductionStrategy::ReassociativeReshape`. Will
+  /// return failure if the original destination has tensor type with an
+  /// encoding.
+  static FailureOr<Value>
+  expandValue(RewriterBase &rewriter, Location loc, Value result,
+              Value origDest, ArrayRef<ReassociationIndices> reassociation,
+              const ControlDropUnitDims &control);
 };
 
 struct DropUnitDimsResult {
@@ -546,10 +631,21 @@ using DroppedUnitDimsBuilder = std::function<IndexingMapOpInterface(
     ArrayRef<Value> newOperands, ArrayRef<AffineMap> newIndexingMaps,
     const llvm::SmallDenseSet<unsigned> &droppedDims)>;
 
+/// Drop unit extent dimensions from the \p op and its operands.
+/// The transformation is aborted if unit dimensions cannot be dropped from any
+/// of the operands. Note that this function may insert trivially dead
+/// operations if the transformation is aborted and should therefore not be
+/// called from greedy drivers.
 FailureOr<DropUnitDimsResult>
 dropUnitDims(RewriterBase &rewriter, IndexingMapOpInterface op,
              const DroppedUnitDimsBuilder &droppedUnitDimsBuilder,
              const ControlDropUnitDims &options);
+
+/// Drop unit extent dimensions from the \p genericOp and its operands.
+/// The transformation is aborted if unit dimensions cannot be dropped from any
+/// of the operands. Note that this function may insert trivially dead
+/// operations if the transformation is aborted and should therefore not be
+/// called from greedy drivers.
 FailureOr<DropUnitDimsResult> dropUnitDims(RewriterBase &rewriter,
                                            GenericOp genericOp,
                                            const ControlDropUnitDims &options);
@@ -561,6 +657,9 @@ struct ElementwiseOpFusionResult {
   Operation *fusedOp;
   llvm::DenseMap<Value, Value> replacements;
 };
+/// This transformation is intended to be used with a top-down traversal
+/// (from producer to consumer). In that way fusion logic can safely handle
+/// producers with multiple users.
 FailureOr<ElementwiseOpFusionResult>
 fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
 
@@ -1542,16 +1641,16 @@ FailureOr<linalg::GenericOp> deduplicateOperandsAndRemoveDeadResults(
 //===----------------------------------------------------------------------===//
 
 /// Rewrites 2-D convolution ops with size-1 window dimensions into 1-D
-/// convolution ops.
+/// convolution ops. Works with both named ops and equivalent generic ops.
 template <typename Conv2DOp, typename Conv1DOp>
 struct DownscaleSizeOneWindowed2DConvolution final
-    : public OpRewritePattern<Conv2DOp> {
-  using OpRewritePattern<Conv2DOp>::OpRewritePattern;
+    : public OpInterfaceRewritePattern<LinalgOp> {
+  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
 
-  FailureOr<Conv1DOp> returningMatchAndRewrite(Conv2DOp convOp,
+  FailureOr<Conv1DOp> returningMatchAndRewrite(LinalgOp convOp,
                                                PatternRewriter &rewriter) const;
 
-  LogicalResult matchAndRewrite(Conv2DOp convOp,
+  LogicalResult matchAndRewrite(LinalgOp convOp,
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(convOp, rewriter);
   }
@@ -1565,29 +1664,28 @@ extern template struct DownscaleSizeOneWindowed2DConvolution<Conv2DNchwFchwOp,
 /// Rewrites 2-D depthwise convolution ops with size-1 (w, kw) or (h, kh)
 /// dimensions into 1-D depthwise convolution ops.
 struct DownscaleDepthwiseConv2DNhwcHwcOp final
-    : public OpRewritePattern<DepthwiseConv2DNhwcHwcOp> {
+    : public OpInterfaceRewritePattern<LinalgOp> {
   DownscaleDepthwiseConv2DNhwcHwcOp(MLIRContext *context,
                                     PatternBenefit benefit = 1)
-      : OpRewritePattern<DepthwiseConv2DNhwcHwcOp>(context, benefit) {}
+      : OpInterfaceRewritePattern<LinalgOp>(context, benefit) {}
 
   FailureOr<DepthwiseConv1DNwcWcOp>
-  returningMatchAndRewrite(DepthwiseConv2DNhwcHwcOp convOp,
-                           PatternRewriter &rewriter) const;
+  returningMatchAndRewrite(LinalgOp convOp, PatternRewriter &rewriter) const;
 
-  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcOp convOp,
+  LogicalResult matchAndRewrite(LinalgOp convOp,
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(convOp, rewriter);
   }
 };
 
-struct DownscaleConv2DOp final : public OpRewritePattern<Conv2DOp> {
+struct DownscaleConv2DOp final : public OpInterfaceRewritePattern<LinalgOp> {
   DownscaleConv2DOp(MLIRContext *context, PatternBenefit benefit = 1)
-      : OpRewritePattern<Conv2DOp>(context, benefit) {}
+      : OpInterfaceRewritePattern<LinalgOp>(context, benefit) {}
 
-  FailureOr<Conv1DOp> returningMatchAndRewrite(Conv2DOp convOp,
+  FailureOr<Conv1DOp> returningMatchAndRewrite(LinalgOp convOp,
                                                PatternRewriter &rewriter) const;
 
-  LogicalResult matchAndRewrite(Conv2DOp convOp,
+  LogicalResult matchAndRewrite(LinalgOp convOp,
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(convOp, rewriter);
   }
@@ -1992,9 +2090,15 @@ void populateFuseTensorPadWithProducerLinalgOpPatterns(
 void populateSimplifyDepthwiseConvPatterns(RewritePatternSet &patterns);
 
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
-/// tensors via reassociative reshape ops.
+/// tensors and memref.
+/// Note that these patterns should not be used with a greedy driver.
 void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns,
                                         ControlDropUnitDims &options);
+
+/// Populates canonicalization patterns that simplify IR after folding
+/// unit-extent dimensions.
+void populateFoldUnitExtentDimsCanonicalizationPatterns(
+    RewritePatternSet &patterns, ControlDropUnitDims &options);
 
 /// A pattern that converts init operands to input operands.
 void populateMoveInitOperandsToInputPattern(RewritePatternSet &patterns);

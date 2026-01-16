@@ -41,30 +41,30 @@ endif()
 # Define the target specific triples and ELF machine values.
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le$")
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS
-       "powerpc64le-ibm-linux-gnu" "powerpc64le-ibm-linux-gnu-LTO")
+       "powerpc64le-ibm-linux-gnu")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64$")
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS
-       "powerpc64-ibm-linux-gnu" "powerpc64-ibm-linux-gnu-LTO")
+       "powerpc64-ibm-linux-gnu")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64$")
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS
-       "x86_64-unknown-linux-gnu" "x86_64-unknown-linux-gnu-LTO")
+       "x86_64-unknown-linux-gnu")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64$")
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS
-       "aarch64-unknown-linux-gnu" "aarch64-unknown-linux-gnu-LTO")
+       "aarch64-unknown-linux-gnu")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "s390x$")
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS
-       "s390x-ibm-linux-gnu" "s390x-ibm-linux-gnu-LTO")
+       "s390x-ibm-linux-gnu")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv64$")
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS
-       "riscv64-unknown-linux-gnu" "riscv64-unknown-linux-gnu-LTO")
+       "riscv64-unknown-linux-gnu")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "loongarch64$")
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS
-       "loongarch64-unknown-linux-gnu" "loongarch64-unknown-linux-gnu-LTO")
+       "loongarch64-unknown-linux-gnu")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 endif()

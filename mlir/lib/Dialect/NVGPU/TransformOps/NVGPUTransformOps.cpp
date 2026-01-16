@@ -49,19 +49,7 @@ void ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
   /// device-side async tokens cannot be materialized in nvvm. We just
   /// convert them to a dummy i32 type in order to easily drop them during
   /// conversion.
-  populateGpuMemorySpaceAttributeConversions(
-      llvmTypeConverter, [](gpu::AddressSpace space) -> unsigned {
-        switch (space) {
-        case gpu::AddressSpace::Global:
-          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
-        case gpu::AddressSpace::Workgroup:
-          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
-        case gpu::AddressSpace::Private:
-          return 0;
-        }
-        llvm_unreachable("unknown address space enum value");
-        return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
-      });
+  nvgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
   llvmTypeConverter.addConversion([&](DeviceAsyncTokenType type) -> Type {
     return llvmTypeConverter.convertType(
         IntegerType::get(type.getContext(), 32));
@@ -792,7 +780,7 @@ FailureOr<Operation *> MmaSyncBuilder::buildMmaSync(LinalgOp linalgOp) {
   if (failed(maybeInfo))
     return failure();
 
-  MmaSyncInfo info = *maybeInfo;
+  const MmaSyncInfo &info = *maybeInfo;
   auto [lhsIndexFn, rhsIndexFn, resIndexFn] = info.indexFns;
   auto [lhsShape, rhsShape, resShape] = info.vectorShapes;
   Value lhs = buildMmaSyncMemRefLoadOperand(b, loc, laneId, lhsMemRef,

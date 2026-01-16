@@ -10,11 +10,16 @@
 
 template <class T>
 class c {
+public:
+  c(const c &) {}
+  c(c &&) noexcept {}
   void f() {}
 };
 
 template class __declspec(dllexport) c<int>;
 
+// CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIiEC1ERKS0_
+// CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIiEC1EOS0_
 // CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIiE1fEv
 
 extern template class __declspec(dllexport) c<char>;
@@ -26,6 +31,18 @@ extern template class c<double>;
 template class __declspec(dllexport) c<double>;
 
 // CHECK-NOT: define {{.*}} dllexport {{.*}} @_ZN1cIdE1fEv
+
+extern template class __declspec(dllimport) c<short>;
+
+// CHECK: declare dllimport {{.*}} @_ZN1cIsEC1ERKS0_
+// CHECK: declare dllimport {{.*}} @_ZN1cIsEC1EOS0_
+// CHECK: declare dllimport {{.*}} @_ZN1cIsE1fEv
+
+void use_ctors(c<short> &&x) {
+  c<short> y{x};
+  c<short> z{static_cast<c<short> &&>(x)};
+  z.f();
+}
 
 template <class T>
 struct outer {

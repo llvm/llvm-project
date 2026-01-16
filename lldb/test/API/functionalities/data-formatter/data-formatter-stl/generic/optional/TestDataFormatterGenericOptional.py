@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class GenericOptionalDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def do_test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
 
@@ -55,7 +57,11 @@ class GenericOptionalDataFormatterTestCase(TestBase):
         self.expect(
             "frame var numbers",
             substrs=[
-                "(optional_int_vect) numbers =  Has Value=true  {",
+                (
+                    "(std::optional<std::vector<int, std::allocator<int>>>) numbers =  Has Value=true  {"
+                    if self.getDebugInfo() == "pdb"
+                    else "(optional_int_vect) numbers =  Has Value=true  {"
+                ),
                 "Value = size=4 {",
                 "[0] = 1",
                 "[1] = 2",
@@ -69,7 +75,11 @@ class GenericOptionalDataFormatterTestCase(TestBase):
         self.expect(
             "frame var ostring",
             substrs=[
-                "(optional_string) ostring =  Has Value=true  {",
+                (
+                    "(std::optional<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>) ostring =  Has Value=true  {"
+                    if self.getDebugInfo() == "pdb"
+                    else "(optional_string) ostring =  Has Value=true  {"
+                ),
                 'Value = "hello"',
                 "}",
             ],

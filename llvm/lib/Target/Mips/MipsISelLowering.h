@@ -152,8 +152,6 @@ class TargetRegisterClass;
       return ABI.IsN64() ? Mips::A1_64 : Mips::A1;
     }
 
-    bool softPromoteHalfType() const override { return true; }
-
     bool isJumpTableRelative() const override {
       return getTargetMachine().isPositionIndependent();
     }
@@ -504,6 +502,10 @@ class TargetRegisterClass;
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       return true;
     }
+
+    int getCPURegisterIndex(StringRef Name) const;
+
+    ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 
     /// Emit a sign-extension using sll/sra, seb, or seh appropriately.
     MachineBasicBlock *emitSignExtendToI32InReg(MachineInstr &MI,

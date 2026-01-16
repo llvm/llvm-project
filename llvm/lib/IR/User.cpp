@@ -8,6 +8,7 @@
 
 #include "llvm/IR/User.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IntrinsicInst.h"
 
@@ -144,19 +145,24 @@ void *User::allocateFixedOperandUser(size_t Size, unsigned Us,
   assert(DescBytesToAllocate % sizeof(void *) == 0 &&
          "We need this to satisfy alignment constraints for Uses");
 
-  uint8_t *Storage = static_cast<uint8_t *>(
-      ::operator new(Size + sizeof(Use) * Us + DescBytesToAllocate));
-  Use *Start = reinterpret_cast<Use *>(Storage + DescBytesToAllocate);
-  Use *End = Start + Us;
-  User *Obj = reinterpret_cast<User *>(End);
+  size_t LeadingSize = DescBytesToAllocate + sizeof(Use) * Us;
+
+  // Ensure we allocate at least one pointer's worth of space before the main
+  // user allocation. We use this memory to pass information from the destructor
+  // to the deletion operator, so it can recover the true allocation start.
+  LeadingSize = std::max(LeadingSize, sizeof(void *));
+
+  uint8_t *Storage = static_cast<uint8_t *>(::operator new(LeadingSize + Size));
+  User *Obj = reinterpret_cast<User *>(Storage + LeadingSize);
+  Use *Operands = reinterpret_cast<Use *>(Obj) - Us;
   Obj->NumUserOperands = Us;
   Obj->HasHungOffUses = false;
   Obj->HasDescriptor = DescBytes != 0;
-  for (; Start != End; Start++)
-    new (Start) Use(Obj);
+  for (unsigned I = 0; I < Us; ++I)
+    new (&Operands[I]) Use(Obj);
 
   if (DescBytes != 0) {
-    auto *DescInfo = reinterpret_cast<DescriptorInfo *>(Storage + DescBytes);
+    auto *DescInfo = reinterpret_cast<DescriptorInfo *>(Operands) - 1;
     DescInfo->SizeInBytes = DescBytes;
   }
 
@@ -189,31 +195,42 @@ void *User::operator new(size_t Size, HungOffOperandsAllocMarker) {
 //                         User operator delete Implementation
 //===----------------------------------------------------------------------===//
 
-// Repress memory sanitization, due to use-after-destroy by operator
-// delete. Bug report 24578 identifies this issue.
-LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE void User::operator delete(void *Usr) {
+User::~User() {
   // Hung off uses use a single Use* before the User, while other subclasses
   // use a Use[] allocated prior to the user.
-  User *Obj = static_cast<User *>(Usr);
-  if (Obj->HasHungOffUses) {
-    assert(!Obj->HasDescriptor && "not supported!");
+  void *AllocStart = nullptr;
+  if (HasHungOffUses) {
+    assert(!HasDescriptor && "not supported!");
 
-    Use **HungOffOperandList = static_cast<Use **>(Usr) - 1;
+    Use **HungOffOperandList = reinterpret_cast<Use **>(this) - 1;
     // drop the hung off uses.
-    Use::zap(*HungOffOperandList, *HungOffOperandList + Obj->NumUserOperands,
+    Use::zap(*HungOffOperandList, *HungOffOperandList + NumUserOperands,
              /* Delete */ true);
-    ::operator delete(HungOffOperandList);
-  } else if (Obj->HasDescriptor) {
-    Use *UseBegin = static_cast<Use *>(Usr) - Obj->NumUserOperands;
-    Use::zap(UseBegin, UseBegin + Obj->NumUserOperands, /* Delete */ false);
+    AllocStart = HungOffOperandList;
+  } else if (HasDescriptor) {
+    Use *UseBegin = reinterpret_cast<Use *>(this) - NumUserOperands;
+    Use::zap(UseBegin, UseBegin + NumUserOperands, /* Delete */ false);
 
     auto *DI = reinterpret_cast<DescriptorInfo *>(UseBegin) - 1;
-    uint8_t *Storage = reinterpret_cast<uint8_t *>(DI) - DI->SizeInBytes;
-    ::operator delete(Storage);
-  } else {
-    Use *Storage = static_cast<Use *>(Usr) - Obj->NumUserOperands;
-    Use::zap(Storage, Storage + Obj->NumUserOperands,
+    AllocStart = reinterpret_cast<uint8_t *>(DI) - DI->SizeInBytes;
+  } else if (NumUserOperands > 0) {
+    Use *Storage = reinterpret_cast<Use *>(this) - NumUserOperands;
+    Use::zap(Storage, Storage + NumUserOperands,
              /* Delete */ false);
-    ::operator delete(Storage);
+    AllocStart = Storage;
+  } else {
+    // Handle the edge case where there are no operands and no descriptor.
+    AllocStart = (void **)(this) - 1;
   }
+
+  // Operator delete needs to know where the allocation started. To avoid
+  // use-after-destroy, we have to store the allocation start outside the User
+  // object memory. The `User` new operator always allocates least one pointer
+  // before the User, so we can use that to store the allocation start. As a
+  // special case, we avoid this extra prefix allocation for ConstantData
+  // instances, since those are extremely common.
+  if (!isa<ConstantData>(this))
+    ((void **)this)[-1] = AllocStart;
 }
+
+void User::operator delete(void *Usr) { ::operator delete(((void **)Usr)[-1]); }

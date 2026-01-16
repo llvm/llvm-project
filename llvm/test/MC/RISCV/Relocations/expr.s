@@ -10,10 +10,13 @@
 
 ## This is linker-relaxable to avoid resolving the following fixups
 call relax
+# CHECK-RELOC:      R_RISCV_CALL_PLT
+# CHECK-RELOC-NEXT: R_RISCV_RELAX
 
 jal zero, .LBB0+16
 # CHECK-INSTR: jal zero, 0x10
-# CHECK-RELOC:  R_RISCV_JAL
+# CHECK-RELOC-NEXT: R_RISCV_JAL
+# CHECK-RELOC-NEXT: R_RISCV_RELAX
 
 beq a0, a1, .LBB1+32
 # CHECK-INSTR: beq a0, a1, 0x20
@@ -24,11 +27,12 @@ c.j     .+32
 
 c.j     .LBB2+4
 # CHECK-INSTR: c.j   0x22
-# CHECK-RELOC-NEXT:      R_RISCV_RVC_JUMP
+# CHECK-RELOC-NEXT: R_RISCV_RVC_JUMP
 
 c.beqz a0, .-2
 # CHECK-INSTR: c.beqz a0, 0x12
 
 call relax
-# CHECK-RELOC-NEXT:  R_RISCV_CALL_PLT
+# CHECK-RELOC-NEXT: R_RISCV_CALL_PLT
+# CHECK-RELOC-NEXT: R_RISCV_RELAX
 .LBB2:

@@ -546,11 +546,19 @@ public:
     return TypePromoteInteger;
   }
 
-  // Return true if the half type should be promoted using soft promotion rules
-  // where each operation is promoted to f32 individually, then converted to
-  // fp16. The default behavior is to promote chains of operations, keeping
-  // intermediate results in f32 precision and range.
-  virtual bool softPromoteHalfType() const { return false; }
+  /// Warning: this option is problem-prone and tends to introduce
+  /// float miscompilations:
+  ///
+  /// - https://github.com/llvm/llvm-project/issues/97975
+  /// - https://github.com/llvm/llvm-project/issues/97981
+  ///
+  /// It should not be overridden to `false` except for special cases.
+  ///
+  /// Return true if the half type should be promoted using soft promotion rules
+  /// where each operation is promoted to f32 individually, then converted to
+  /// fp16. The default behavior is to promote chains of operations, keeping
+  /// intermediate results in f32 precision and range.
+  virtual bool softPromoteHalfType() const { return true; }
 
   // Return true if, for soft-promoted half, the half type should be passed to
   // and returned from functions as f32. The default behavior is to pass as
@@ -1174,6 +1182,17 @@ public:
     return getTypeConversion(Context, VT).second;
   }
 
+  /// Perform getTypeToTransformTo repeatedly until a legal type is obtained.
+  /// Useful for vector operations that might take multiple steps to legalize.
+  EVT getLegalTypeToTransformTo(LLVMContext &Context, EVT VT) const {
+    EVT LegalVT = getTypeToTransformTo(Context, VT);
+    while (LegalVT != VT) {
+      VT = LegalVT;
+      LegalVT = getTypeToTransformTo(Context, VT);
+    }
+    return LegalVT;
+  }
+
   /// For types supported by the target, this is an identity function.  For
   /// types that must be expanded (i.e. integer types that are larger than the
   /// largest integer register or illegal floating point types), this returns
@@ -1481,6 +1500,10 @@ public:
   bool isOperationLegal(unsigned Op, EVT VT) const {
     return (VT == MVT::Other || isTypeLegal(VT)) &&
            getOperationAction(Op, VT) == Legal;
+  }
+
+  bool isOperationExpandOrLibCall(unsigned Op, EVT VT) const {
+    return isOperationExpand(Op, VT) || getOperationAction(Op, VT) == LibCall;
   }
 
   /// Return how this load with extension should be treated: either it is legal,
@@ -1922,9 +1945,7 @@ public:
   /// to replace a call to llvm.memset. The value is set by the target at the
   /// performance threshold for such a replacement. If OptSize is true,
   /// return the limit for functions that have OptSize attribute.
-  unsigned getMaxStoresPerMemset(bool OptSize) const {
-    return OptSize ? MaxStoresPerMemsetOptSize : MaxStoresPerMemset;
-  }
+  unsigned getMaxStoresPerMemset(bool OptSize) const;
 
   /// Get maximum # of store operations permitted for llvm.memcpy
   ///
@@ -1932,9 +1953,7 @@ public:
   /// to replace a call to llvm.memcpy. The value is set by the target at the
   /// performance threshold for such a replacement. If OptSize is true,
   /// return the limit for functions that have OptSize attribute.
-  unsigned getMaxStoresPerMemcpy(bool OptSize) const {
-    return OptSize ? MaxStoresPerMemcpyOptSize : MaxStoresPerMemcpy;
-  }
+  unsigned getMaxStoresPerMemcpy(bool OptSize) const;
 
   /// \brief Get maximum # of store operations to be glued together
   ///
@@ -1961,9 +1980,7 @@ public:
   /// to replace a call to llvm.memmove. The value is set by the target at the
   /// performance threshold for such a replacement. If OptSize is true,
   /// return the limit for functions that have OptSize attribute.
-  unsigned getMaxStoresPerMemmove(bool OptSize) const {
-    return OptSize ? MaxStoresPerMemmoveOptSize : MaxStoresPerMemmove;
-  }
+  unsigned getMaxStoresPerMemmove(bool OptSize) const;
 
   /// Determine if the target supports unaligned memory accesses.
   ///
@@ -2205,13 +2222,13 @@ public:
   }
 
   /// Returns the size in bits of the maximum div/rem the backend supports.
-  /// Larger operations will be expanded by ExpandLargeDivRem.
+  /// Larger operations will be expanded by ExpandIRInsts.
   unsigned getMaxDivRemBitWidthSupported() const {
     return MaxDivRemBitWidthSupported;
   }
 
   /// Returns the size in bits of the maximum fp to/from int conversion the
-  /// backend supports. Larger operations will be expanded by ExpandFp.
+  /// backend supports. Larger operations will be expanded by ExpandIRInsts.
   unsigned getMaxLargeFPConvertBitWidthSupported() const {
     return MaxLargeFPConvertBitWidthSupported;
   }
@@ -2235,19 +2252,20 @@ public:
     return false;
   }
 
+  /// Whether AtomicExpandPass should automatically insert a seq_cst trailing
+  /// fence without reducing the ordering for this atomic store. Defaults to
+  /// false.
+  virtual bool
+  shouldInsertTrailingSeqCstFenceForAtomicStore(const Instruction *I) const {
+    return false;
+  }
+
   // The memory ordering that AtomicExpandPass should assign to a atomic
   // instruction that it has lowered by adding fences. This can be used
   // to "fold" one of the fences into the atomic instruction.
   virtual AtomicOrdering
   atomicOperationOrderAfterFenceSplit(const Instruction *I) const {
     return AtomicOrdering::Monotonic;
-  }
-
-  /// Whether AtomicExpandPass should automatically insert a trailing fence
-  /// without reducing the ordering for this atomic. Defaults to false.
-  virtual bool
-  shouldInsertTrailingFenceForAtomicStore(const Instruction *I) const {
-    return false;
   }
 
   /// Perform a load-linked operation on Addr, returning a "Value *" with the
@@ -2420,13 +2438,14 @@ public:
   /// Returns how the given atomic cmpxchg should be expanded by the IR-level
   /// AtomicExpand pass.
   virtual AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const {
     return AtomicExpansionKind::None;
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
   /// AtomicRMW, if at all. Default is to never expand.
-  virtual AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  virtual AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
     return RMW->isFloatingPointOperation() ?
       AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
   }
@@ -2870,13 +2889,13 @@ protected:
   }
 
   /// Set the size in bits of the maximum div/rem the backend supports.
-  /// Larger operations will be expanded by ExpandLargeDivRem.
+  /// Larger operations will be expanded by ExpandIRInsts.
   void setMaxDivRemBitWidthSupported(unsigned SizeInBits) {
     MaxDivRemBitWidthSupported = SizeInBits;
   }
 
   /// Set the size in bits of the maximum fp to/from int conversion the backend
-  /// supports. Larger operations will be expanded by ExpandFp.
+  /// supports. Larger operations will be expanded by ExpandIRInsts.
   void setMaxLargeFPConvertBitWidthSupported(unsigned SizeInBits) {
     MaxLargeFPConvertBitWidthSupported = SizeInBits;
   }
@@ -3608,6 +3627,8 @@ public:
     return RuntimeLibcallInfo;
   }
 
+  const LibcallLoweringInfo &getLibcallLoweringInfo() const { return Libcalls; }
+
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     Libcalls.setLibcallImpl(Call, Impl);
   }
@@ -3727,12 +3748,12 @@ private:
   unsigned MaxAtomicSizeInBitsSupported;
 
   /// Size in bits of the maximum div/rem size the backend supports.
-  /// Larger operations will be expanded by ExpandLargeDivRem.
+  /// Larger operations will be expanded by ExpandIRInsts.
   unsigned MaxDivRemBitWidthSupported;
 
   /// Size in bits of the maximum fp to/from int conversion size the
   /// backend supports. Larger operations will be expanded by
-  /// ExpandFp.
+  /// ExpandIRInsts.
   unsigned MaxLargeFPConvertBitWidthSupported;
 
   /// Size in bits of the minimum cmpxchg or ll/sc operation the
@@ -3841,6 +3862,7 @@ private:
   const RTLIB::RuntimeLibcallsInfo RuntimeLibcallInfo;
 
   /// The list of libcalls that the target will use.
+  /// FIXME: This should not live here; it should come from an analysis.
   LibcallLoweringInfo Libcalls;
 
   /// The bits of IndexedModeActions used to store the legalisation actions
@@ -5471,6 +5493,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandFunnelShift(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand carryless multiply.
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand rotations.
   /// \param N Node to expand

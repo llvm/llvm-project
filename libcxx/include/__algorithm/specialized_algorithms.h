@@ -18,11 +18,19 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace _Algorithm {
+struct __copy {};
 struct __fill_n {};
+struct __for_each {};
 } // namespace _Algorithm
 
 template <class>
 struct __single_iterator;
+
+template <class, class>
+struct __iterator_pair;
+
+template <class>
+struct __single_range;
 
 // This struct allows specializing algorithms for specific arguments. This is useful when we know a more efficient
 // algorithm implementation for e.g. library-defined iterators. _Alg is one of tags defined inside the _Algorithm

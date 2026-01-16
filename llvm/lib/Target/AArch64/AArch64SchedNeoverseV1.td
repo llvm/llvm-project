@@ -1481,7 +1481,7 @@ def : InstRW<[V1Write_2c_1M0], (instregex "^REV_PP_[BHSD]$",
 
 // Predicate set/initialize/find next
 // Predicate unpack and widen
-def : InstRW<[V1Write_2c_1M0], (instrs PTEST_PP,
+def : InstRW<[V1Write_2c_1M0], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST,
                                        PUNPKHI_PP, PUNPKLO_PP)>;
 
 // Predicate select

@@ -252,12 +252,23 @@ static bool hasPossibleIncompatibleOps(const Function *F,
   return false;
 }
 
-APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
+static void extractAttrFeatures(const Function &F, const AArch64TTIImpl *TTI,
+                                SmallVectorImpl<StringRef> &Features) {
   StringRef AttributeStr =
-      isMultiversionedFunction(F) ? "fmv-features" : "target-features";
+      TTI->isMultiversionedFunction(F) ? "fmv-features" : "target-features";
   StringRef FeatureStr = F.getFnAttribute(AttributeStr).getValueAsString();
-  SmallVector<StringRef, 8> Features;
   FeatureStr.split(Features, ",");
+}
+
+APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
+  SmallVector<StringRef, 8> Features;
+  extractAttrFeatures(F, this, Features);
+  return AArch64::getCpuSupportsMask(Features);
+}
+
+APInt AArch64TTIImpl::getPriorityMask(const Function &F) const {
+  SmallVector<StringRef, 8> Features;
+  extractAttrFeatures(F, this, Features);
   return AArch64::getFMVPriority(Features);
 }
 
@@ -636,7 +647,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // v2i64 types get converted to cmp+bif hence the cost of 2
     if (LT.second == MVT::v2i64)
       return LT.first * 2;
-    if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidMinMaxTys, equal_to(LT.second)))
       return LT.first;
     break;
   }
@@ -652,7 +663,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // need to extend the type, as it uses shr(qadd(shl, shl)).
     unsigned Instrs =
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits() ? 1 : 4;
-    if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidSatTys, equal_to(LT.second)))
       return LT.first * Instrs;
 
     TypeSize TS = getDataLayout().getTypeSizeInBits(RetTy);
@@ -668,7 +679,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                      MVT::v8i16, MVT::v2i32, MVT::v4i32,
                                      MVT::v2i64};
     auto LT = getTypeLegalizationCost(RetTy);
-    if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidAbsTys, equal_to(LT.second)))
       return LT.first;
     break;
   }
@@ -676,7 +687,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     static const auto ValidAbsTys = {MVT::v4i16, MVT::v8i16, MVT::v2i32,
                                      MVT::v4i32, MVT::v2i64};
     auto LT = getTypeLegalizationCost(RetTy);
-    if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }) &&
+    if (any_of(ValidAbsTys, equal_to(LT.second)) &&
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits())
       return LT.first;
     break;
@@ -1050,6 +1061,19 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       // typically have the same latency and half the throughput as a vector
       // add instruction.
       return 4;
+    }
+    break;
+  }
+  case Intrinsic::loop_dependence_raw_mask:
+  case Intrinsic::loop_dependence_war_mask: {
+    // The whilewr/rw instructions require SVE2 or SME.
+    if (ST->hasSVE2() || ST->hasSME()) {
+      EVT VecVT = getTLI()->getValueType(DL, RetTy);
+      unsigned EltSizeInBytes =
+          cast<ConstantInt>(ICA.getArgs()[2])->getZExtValue();
+      if (is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes) &&
+          VecVT.getVectorMinNumElements() == (16 / EltSizeInBytes))
+        return 1;
     }
     break;
   }
@@ -1446,6 +1470,10 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_orr:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_orr_u)
         .setMatchingIROpcode(Instruction::Or);
+  case Intrinsic::aarch64_sve_shsub:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_shsub_u);
+  case Intrinsic::aarch64_sve_shsubr:
+    return SVEIntrinsicInfo::defaultMergingOp();
   case Intrinsic::aarch64_sve_sqrshl:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqrshl_u);
   case Intrinsic::aarch64_sve_sqshl:
@@ -1454,6 +1482,10 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqsub_u);
   case Intrinsic::aarch64_sve_srshl:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_srshl_u);
+  case Intrinsic::aarch64_sve_uhsub:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uhsub_u);
+  case Intrinsic::aarch64_sve_uhsubr:
+    return SVEIntrinsicInfo::defaultMergingOp();
   case Intrinsic::aarch64_sve_uqrshl:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uqrshl_u);
   case Intrinsic::aarch64_sve_uqshl:
@@ -4628,9 +4660,9 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
       static const auto ValidFP16MinMaxTys = {MVT::v4f16, MVT::v8f16};
 
       auto LT = getTypeLegalizationCost(ValTy);
-      if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }) ||
+      if (any_of(ValidMinMaxTys, equal_to(LT.second)) ||
           (ST->hasFullFP16() &&
-           any_of(ValidFP16MinMaxTys, [&LT](MVT M) { return M == LT.second; })))
+           any_of(ValidFP16MinMaxTys, equal_to(LT.second))))
         return LT.first;
     }
 
@@ -5333,20 +5365,11 @@ void AArch64TTIImpl::getUnrollingPreferences(
   }
 
   // Apply subtarget-specific unrolling preferences.
-  switch (ST->getProcFamily()) {
-  case AArch64Subtarget::AppleA14:
-  case AArch64Subtarget::AppleA15:
-  case AArch64Subtarget::AppleA16:
-  case AArch64Subtarget::AppleM4:
+  if (ST->isAppleMLike())
     getAppleRuntimeUnrollPreferences(L, SE, UP, *this);
-    break;
-  case AArch64Subtarget::Falkor:
-    if (EnableFalkorHWPFUnrollFix)
-      getFalkorUnrollingPreferences(L, SE, UP);
-    break;
-  default:
-    break;
-  }
+  else if (ST->getProcFamily() == AArch64Subtarget::Falkor &&
+           EnableFalkorHWPFUnrollFix)
+    getFalkorUnrollingPreferences(L, SE, UP);
 
   // If this is a small, multi-exit loop similar to something like std::find,
   // then there is typically a performance improvement achieved by unrolling.
@@ -5521,6 +5544,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   case RecurKind::FMax:
   case RecurKind::FMulAdd:
   case RecurKind::AnyOf:
+  case RecurKind::FindLast:
     return true;
   default:
     return false;
@@ -5892,6 +5916,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i16)
       return Cost;
+    // i16 -> i32 is natively supported with SVE2p1
+    if (AccumLT.second.getScalarType() == MVT::i32 &&
+        InputLT.second.getScalarType() == MVT::i16 &&
+        (ST->hasSVE2p1() || ST->hasSME2()))
+      return Cost;
     // i8 -> i64 is supported with an extra level of extends
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i8)
@@ -6111,8 +6140,13 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   unsigned Unused;
   if (LT.second.isFixedLengthVector() &&
       LT.second.getVectorNumElements() == Mask.size() &&
-      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
+      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc ||
+       // Discrepancies between isTRNMask and ShuffleVectorInst::isTransposeMask
+       // mean that we can end up with shuffles that satisfy isTRNMask, but end
+       // up labelled as TTI::SK_InsertSubvector. (e.g. {2, 0}).
+       Kind == TTI::SK_InsertSubvector) &&
       (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
+       isTRNMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
        isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        isREVMask(Mask, LT.second.getScalarSizeInBits(),
                  LT.second.getVectorNumElements(), 16) ||
@@ -6560,6 +6594,8 @@ static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   return false;
 }
 
+static bool isFNeg(Value *Op) { return match(Op, m_FNeg(m_Value())); }
+
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
@@ -6583,6 +6619,12 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
           cast<VectorType>(I->getType())->getElementType()->isHalfTy() &&
           !ST->hasFullFP16())
         return false;
+
+      if (isFNeg(II->getOperand(0)))
+        Ops.push_back(&II->getOperandUse(0));
+      if (isFNeg(II->getOperand(1)))
+        Ops.push_back(&II->getOperandUse(1));
+
       [[fallthrough]];
     case Intrinsic::aarch64_neon_sqdmull:
     case Intrinsic::aarch64_neon_sqdmulh:
@@ -6719,12 +6761,23 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     Ops.push_back(&I->getOperandUse(0));
     return true;
   }
+  case Instruction::FMul:
+    // fmul with contract flag can be combined with fadd into fma.
+    // Sinking fneg into this block enables fmls pattern.
+    if (cast<FPMathOperator>(I)->hasAllowContract()) {
+      if (isFNeg(I->getOperand(0)))
+        Ops.push_back(&I->getOperandUse(0));
+      if (isFNeg(I->getOperand(1)))
+        Ops.push_back(&I->getOperandUse(1));
+    }
+    break;
+
   default:
     break;
   }
 
   if (!I->getType()->isVectorTy())
-    return false;
+    return !Ops.empty();
 
   switch (I->getOpcode()) {
   case Instruction::Sub:
@@ -6896,11 +6949,11 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
   case Instruction::FMul: {
     // For SVE the lane-indexing is within 128-bits, so we can't fold splats.
     if (I->getType()->isScalableTy())
-      return false;
+      return !Ops.empty();
 
     if (cast<VectorType>(I->getType())->getElementType()->isHalfTy() &&
         !ST->hasFullFP16())
-      return false;
+      return !Ops.empty();
 
     // Sink splats for index lane variants
     if (isSplatShuffle(I->getOperand(0)))

@@ -550,7 +550,7 @@ public:
     return *this;
   }
 
-  /// test - Check if (This - RHS) is zero.
+  /// test - Check if (This - RHS) is non-zero.
   /// This is the same as reset(RHS) and any().
   bool test(const BitVector &RHS) const {
     unsigned ThisWords = Bits.size();
@@ -566,6 +566,9 @@ public:
 
     return false;
   }
+
+  /// subsetOf - Check if This is a subset of RHS.
+  bool subsetOf(const BitVector &RHS) const { return !test(RHS); }
 
   template <class F, class... ArgTys>
   static BitVector &apply(F &&f, BitVector &Out, BitVector const &Arg,

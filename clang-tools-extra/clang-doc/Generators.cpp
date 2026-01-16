@@ -164,6 +164,10 @@ Error MustacheGenerator::generateDocumentation(
 
 Expected<std::string> MustacheGenerator::getInfoTypeStr(Object *Info,
                                                         StringRef Filename) {
+  // Checking for a USR ensures that only the special top-level index file is
+  // caught here, since it is not an Info.
+  if (Filename == "index" && !Info->get("USR"))
+    return "index";
   auto StrValue = (*Info)["InfoType"];
   if (StrValue.kind() != json::Value::Kind::String)
     return createStringError("JSON file '%s' does not contain key: 'InfoType'.",
@@ -243,8 +247,6 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
 [[maybe_unused]] static int YAMLGeneratorAnchorDest = YAMLGeneratorAnchorSource;
 [[maybe_unused]] static int MDGeneratorAnchorDest = MDGeneratorAnchorSource;
 [[maybe_unused]] static int HTMLGeneratorAnchorDest = HTMLGeneratorAnchorSource;
-[[maybe_unused]] static int MHTMLGeneratorAnchorDest =
-    MHTMLGeneratorAnchorSource;
 [[maybe_unused]] static int JSONGeneratorAnchorDest = JSONGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang

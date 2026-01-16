@@ -235,7 +235,7 @@ Error UnifiedOnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
 }
 
 Error UnifiedOnDiskActionCache::validate() const {
-  auto ValidateRef = [](FileOffset Offset, ArrayRef<char> Value) -> Error {
+  auto ValidateRef = [this](FileOffset Offset, ArrayRef<char> Value) -> Error {
     auto ID = ondisk::UnifiedOnDiskCache::getObjectIDFromValue(Value);
     auto formatError = [&](Twine Msg) {
       return createStringError(
@@ -244,8 +244,8 @@ Error UnifiedOnDiskActionCache::validate() const {
               utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
               Msg.str());
     };
-    if (ID.getOpaqueData() == 0)
-      return formatError("zero is not a valid ref");
+    if (Error E = UniDB->getGraphDB().validateObjectID(ID))
+      return formatError(llvm::toString(std::move(E)));
     return Error::success();
   };
   return UniDB->getKeyValueDB().validate(ValidateRef);

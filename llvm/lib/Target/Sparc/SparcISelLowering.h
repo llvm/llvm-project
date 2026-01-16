@@ -28,8 +28,6 @@ namespace llvm {
 
     bool useSoftFloat() const override;
 
-    bool softPromoteHalfType() const override { return true; }
-
     /// computeKnownBitsForTargetNode - Determine which of the bits specified
     /// in Mask are known to be either zero or one and return them in the
     /// KnownZero/KnownOne bitsets.
@@ -195,7 +193,8 @@ namespace llvm {
       return true;
     }
 
-    AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    AtomicExpansionKind
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
     void ReplaceNodeResults(SDNode *N,
                             SmallVectorImpl<SDValue>& Results,
