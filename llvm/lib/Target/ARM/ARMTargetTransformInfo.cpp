@@ -107,6 +107,55 @@ bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
   // the callers'.
   bool MatchSubset = ((CallerBits & CalleeBits) & InlineFeaturesAllowed) ==
                      (CalleeBits & InlineFeaturesAllowed);
+
+  LLVM_DEBUG({
+    if (!MatchExact || !MatchSubset) {
+      dbgs() << "=== Inline compatibility debug ===\n";
+      dbgs() << "Caller: " << Caller->getName() << "\n";
+      dbgs() << "Callee: " << Callee->getName() << "\n";
+
+      // Bit diffs
+      FeatureBitset MissingInCaller = CalleeBits & ~CallerBits; // callee-only
+      FeatureBitset ExtraInCaller = CallerBits & ~CalleeBits;   // caller-only
+
+      // Counts
+      dbgs() << "Only-in-caller bit count: " << ExtraInCaller.count() << "\n";
+      dbgs() << "Only-in-callee bit count: " << MissingInCaller.count() << "\n";
+
+      dbgs() << "Only-in-caller feature indices [";
+      {
+        bool First = true;
+        for (size_t I = 0, E = ExtraInCaller.size(); I < E; ++I) {
+          if (ExtraInCaller.test(I)) {
+            if (!First)
+              dbgs() << ", ";
+            dbgs() << I;
+            First = false;
+          }
+        }
+      }
+      dbgs() << "]\n";
+
+      dbgs() << "Only-in-callee feature indices [";
+      {
+        bool First = true;
+        for (size_t I = 0, E = MissingInCaller.size(); I < E; ++I) {
+          if (MissingInCaller.test(I)) {
+            if (!First)
+              dbgs() << ", ";
+            dbgs() << I;
+            First = false;
+          }
+        }
+      }
+      dbgs() << "]\n";
+
+      // Indices map to features as found in
+      // llvm-project/(your_build)/lib/Target/ARM/ARMGenSubtargetInfo.inc
+      dbgs() << "MatchExact=" << (MatchExact ? "true" : "false")
+             << " MatchSubset=" << (MatchSubset ? "true" : "false") << "\n";
+    }
+  });
   return MatchExact && MatchSubset;
 }
 
