@@ -13,7 +13,16 @@ class MyResponder(MockGDBServerResponder):
         return "E01"
 
     def readRegisters(self):
-        return "20000000000000002000000000000000f0c154bfffff00005daa985a8fea0b48f0b954bfffff0000ad13cce570150b48380000000000000070456abfffff0000a700000000000000000000000000000001010101010101010000000000000000f0c154bfffff00000f2700000000000008e355bfffff0000080e55bfffff0000281041000000000010de61bfffff00005c05000000000000f0c154bfffff000090fcffffffff00008efcffffffff00008ffcffffffff00000000000000000000001000000000000090fcffffffff000000d06cbfffff0000f0c154bfffff00000100000000000000d0b954bfffff0000e407400000000000d0b954bfffff0000e40740000000000000100000"
+        return "".join(
+            [
+                # x0
+                "2000000000000000",
+                # x1..x30, sp, pc
+                32 * "0000000000000000",
+                # cpsr
+                "00000000",
+            ]
+        )
 
 
 class TestExprNoAlloc(GDBRemoteTestBase):
@@ -37,4 +46,4 @@ class TestExprNoAlloc(GDBRemoteTestBase):
             self, self.dbg.GetListener(), process, [lldb.eStateStopped]
         )
 
-        self.expect_expr("$x1", result_type="unsigned long", result_value="32")
+        self.expect_expr("$x0", result_type="unsigned long", result_value="32")
