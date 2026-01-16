@@ -3250,6 +3250,9 @@ static bool buildMinMaxAccess(isl::set Set,
   Set = Set.remove_divs();
   polly::simplify(Set);
 
+  if (Set.is_null())
+    return false;
+
   if (unsignedFromIslSize(Set.n_basic_set()) > RunTimeChecksMaxAccessDisjuncts)
     Set = Set.simple_hull();
 

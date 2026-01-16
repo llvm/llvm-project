@@ -412,6 +412,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__aarch64__");
   }
 
+  if (getTriple().isLFI())
+    Builder.defineMacro("__LFI__");
+
   // Inline assembly supports AArch64 flag outputs.
   Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
 
@@ -473,6 +476,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                       Twine(Opts.WCharSize ? Opts.WCharSize : 4));
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
+
+  // Clang supports range prefetch intrinsics
+  Builder.defineMacro("__ARM_PREFETCH_RANGE", "1");
 
   if (FPU & NeonMode) {
     Builder.defineMacro("__ARM_NEON", "1");

@@ -46,6 +46,7 @@ add_flang_library(flangFrontend
 
   LINK_COMPONENTS
   Passes
+  Plugins
   Analysis
   BitReader
   Extensions

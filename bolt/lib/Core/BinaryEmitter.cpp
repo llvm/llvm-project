@@ -232,7 +232,7 @@ void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
 }
 
 void BinaryEmitter::emitFunctions() {
-  auto emit = [&](const std::vector<BinaryFunction *> &Functions) {
+  auto emit = [&](const BinaryFunctionListType &Functions) {
     const bool HasProfile = BC.NumProfiledFuncs > 0;
     const bool OriginalAllowAutoPadding = Streamer.getAllowAutoPadding();
     for (BinaryFunction *Function : Functions) {
@@ -282,11 +282,7 @@ void BinaryEmitter::emitFunctions() {
   }
 
   // Emit functions in sorted order.
-  std::vector<BinaryFunction *> SortedFunctions = BC.getSortedFunctions();
-  emit(SortedFunctions);
-
-  // Emit functions added by BOLT.
-  emit(BC.getInjectedBinaryFunctions());
+  emit(BC.getOutputBinaryFunctions());
 
   // Mark the end of hot text.
   if (opts::HotText) {

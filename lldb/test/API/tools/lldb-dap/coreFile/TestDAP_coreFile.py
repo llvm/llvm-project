@@ -67,7 +67,7 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
 
         self.create_debug_adapter()
         resp = self.attach(
-            program=exe_file, coreFile=wrong_core_file, expectFailure=True
+            program=exe_file, coreFile=wrong_core_file, waitForResponse=True
         )
         self.assertIsNotNone(resp)
         self.assertFalse(resp["success"], "Expected failure in response {resp!r}")

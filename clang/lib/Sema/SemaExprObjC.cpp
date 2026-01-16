@@ -4007,7 +4007,7 @@ static bool CheckObjCBridgeNSCast(Sema &S, QualType castType, Expr *castExpr,
   while (const auto *TD = T->getAs<TypedefType>()) {
     TypedefNameDecl *TDNDecl = TD->getDecl();
     if (TB *ObjCBAttr = getObjCBridgeAttr<TB>(TD)) {
-      if (IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
+      if (const IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
         HadTheAttribute = true;
         if (Parm->isStr("id"))
           return true;
@@ -4070,7 +4070,7 @@ static bool CheckObjCBridgeCFCast(Sema &S, QualType castType, Expr *castExpr,
   while (const auto *TD = T->getAs<TypedefType>()) {
     TypedefNameDecl *TDNDecl = TD->getDecl();
     if (TB *ObjCBAttr = getObjCBridgeAttr<TB>(TD)) {
-      if (IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
+      if (const IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
         HadTheAttribute = true;
         if (Parm->isStr("id"))
           return true;
@@ -4228,9 +4228,9 @@ bool SemaObjC::checkObjCBridgeRelatedComponents(
   if (!ObjCBAttr)
     return false;
 
-  IdentifierInfo *RCId = ObjCBAttr->getRelatedClass();
-  IdentifierInfo *CMId = ObjCBAttr->getClassMethod();
-  IdentifierInfo *IMId = ObjCBAttr->getInstanceMethod();
+  const IdentifierInfo *RCId = ObjCBAttr->getRelatedClass();
+  const IdentifierInfo *CMId = ObjCBAttr->getClassMethod();
+  const IdentifierInfo *IMId = ObjCBAttr->getInstanceMethod();
   if (!RCId)
     return false;
   NamedDecl *Target = nullptr;

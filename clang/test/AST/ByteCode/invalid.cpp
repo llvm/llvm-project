@@ -123,3 +123,12 @@ namespace InvalidIntPtrRecord {
   };
   Size_t foo() { return (Size_t)(&((struct S *)0)->a); }
 }
+
+namespace RetVoidInInvalidFunc {
+
+  constexpr bool foo() { return; } // both-error {{non-void constexpr function 'foo' should return a value}}
+  template <int N> struct X {
+    int v = N;
+  };
+  X<foo()> x; // both-error {{non-type template argument is not a constant expression}}
+}

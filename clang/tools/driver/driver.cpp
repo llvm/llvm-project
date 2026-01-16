@@ -38,6 +38,7 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -264,8 +265,14 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   }
 
   // Handle -cc1 integrated tools.
-  if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
+  if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1")) {
+    // Note that this only enables the sandbox for direct -cc1 invocations and
+    // out-of-process -cc1 invocations launched by the driver. For in-process
+    // -cc1 invocations launched by the driver, the sandbox is enabled in
+    // CC1Command::Execute() for better crash recovery.
+    auto EnableSandbox = llvm::sys::sandbox::scopedEnable();
     return ExecuteCC1Tool(Args, ToolContext, VFS);
+  }
 
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()

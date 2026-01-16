@@ -54,6 +54,7 @@ DILParser::Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
                    fragile_ivar, check_ptr_vs_member, error);
 
   ASTNodeUP node_up = parser.Run();
+  assert(node_up && "ASTNodeUP must not contain a nullptr");
 
   if (error)
     return error;
@@ -122,7 +123,7 @@ ASTNodeUP DILParser::ParseCastExpression() {
     Expect(Token::r_paren);
     m_dil_lexer.Advance();
     auto rhs = ParseCastExpression();
-
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
     return std::make_unique<CastNode>(loc, type_id.value(), std::move(rhs),
                                       CastKind::eNone);
   }
@@ -153,6 +154,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
     auto rhs = ParseCastExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
     switch (token.GetKind()) {
     case Token::star:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Deref,
@@ -177,40 +179,31 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
 //
 //  postfix_expression:
 //    primary_expression
-//    postfix_expression "[" integer_literal "]"
-//    postfix_expression "[" integer_literal "-" integer_literal "]"
+//    postfix_expression "[" expression "]"
+//    postfix_expression "[" expression "-" expression "]"
 //    postfix_expression "." id_expression
 //    postfix_expression "->" id_expression
 //
 ASTNodeUP DILParser::ParsePostfixExpression() {
   ASTNodeUP lhs = ParsePrimaryExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
   while (CurToken().IsOneOf({Token::l_square, Token::period, Token::arrow})) {
     uint32_t loc = CurToken().GetLocation();
     Token token = CurToken();
     switch (token.GetKind()) {
     case Token::l_square: {
       m_dil_lexer.Advance();
-      std::optional<int64_t> index = ParseIntegerConstant();
-      if (!index) {
-        BailOut(
-            llvm::formatv("failed to parse integer constant: {0}", CurToken()),
-            CurToken().GetLocation(), CurToken().GetSpelling().length());
-        return std::make_unique<ErrorNode>();
-      }
+      ASTNodeUP index = ParseExpression();
+      assert(index && "ASTNodeUP must not contain a nullptr");
       if (CurToken().GetKind() == Token::minus) {
         m_dil_lexer.Advance();
-        std::optional<int64_t> last_index = ParseIntegerConstant();
-        if (!last_index) {
-          BailOut(llvm::formatv("failed to parse integer constant: {0}",
-                                CurToken()),
-                  CurToken().GetLocation(), CurToken().GetSpelling().length());
-          return std::make_unique<ErrorNode>();
-        }
+        ASTNodeUP last_index = ParseExpression();
+        assert(last_index && "ASTNodeUP must not contain a nullptr");
         lhs = std::make_unique<BitFieldExtractionNode>(
-            loc, std::move(lhs), std::move(*index), std::move(*last_index));
+            loc, std::move(lhs), std::move(index), std::move(last_index));
       } else {
         lhs = std::make_unique<ArraySubscriptNode>(loc, std::move(lhs),
-                                                   std::move(*index));
+                                                   std::move(index));
       }
       Expect(Token::r_square);
       m_dil_lexer.Advance();
@@ -533,31 +526,6 @@ void DILParser::BailOut(const std::string &error, uint32_t loc,
   m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
 }
 
-// FIXME: Remove this once subscript operator uses ScalarLiteralNode.
-// Parse a integer_literal.
-//
-//  integer_literal:
-//    ? Integer constant ?
-//
-std::optional<int64_t> DILParser::ParseIntegerConstant() {
-  std::string number_spelling;
-  if (CurToken().GetKind() == Token::minus) {
-    // StringRef::getAsInteger<>() can parse negative numbers.
-    // FIXME: Remove this once unary minus operator is added.
-    number_spelling = "-";
-    m_dil_lexer.Advance();
-  }
-  number_spelling.append(CurToken().GetSpelling());
-  llvm::StringRef spelling_ref = number_spelling;
-  int64_t raw_value;
-  if (!spelling_ref.getAsInteger<int64_t>(0, raw_value)) {
-    m_dil_lexer.Advance();
-    return raw_value;
-  }
-
-  return std::nullopt;
-}
-
 // Parse a numeric_literal.
 //
 //  numeric_literal:
@@ -570,11 +538,11 @@ ASTNodeUP DILParser::ParseNumericLiteral() {
     numeric_constant = ParseIntegerLiteral();
   else
     numeric_constant = ParseFloatingPointLiteral();
-  if (!numeric_constant) {
+  if (numeric_constant->GetKind() == NodeKind::eErrorNode) {
     BailOut(llvm::formatv("Failed to parse token as numeric-constant: {0}",
                           CurToken()),
             CurToken().GetLocation(), CurToken().GetSpelling().length());
-    return std::make_unique<ErrorNode>();
+    return numeric_constant;
   }
   m_dil_lexer.Advance();
   return numeric_constant;
@@ -602,7 +570,7 @@ ASTNodeUP DILParser::ParseIntegerLiteral() {
   if (!spelling_ref.getAsInteger(radix, raw_value))
     return std::make_unique<IntegerLiteralNode>(token.GetLocation(), raw_value,
                                                 radix, is_unsigned, type);
-  return nullptr;
+  return std::make_unique<ErrorNode>();
 }
 
 ASTNodeUP DILParser::ParseFloatingPointLiteral() {
@@ -618,7 +586,7 @@ ASTNodeUP DILParser::ParseFloatingPointLiteral() {
       spelling_ref, llvm::APFloat::rmNearestTiesToEven);
   if (!errorToBool(StatusOrErr.takeError()))
     return std::make_unique<FloatLiteralNode>(token.GetLocation(), raw_float);
-  return nullptr;
+  return std::make_unique<ErrorNode>();
 }
 
 void DILParser::Expect(Token::Kind kind) {

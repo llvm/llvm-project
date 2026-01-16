@@ -1827,7 +1827,7 @@ TEST_F(FindExplicitReferencesTest, AllRefsInFoo) {
               int (*$2^fptr)(int $3^a, int) = nullptr;
              }
            )cpp",
-           "0: targets = {(unnamed)}\n"
+           "0: targets = {(unnamed class)}\n"
            "1: targets = {x}, decl\n"
            "2: targets = {fptr}, decl\n"
            "3: targets = {a}, decl\n"},
