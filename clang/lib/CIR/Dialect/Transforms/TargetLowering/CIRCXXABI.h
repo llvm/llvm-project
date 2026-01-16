@@ -81,6 +81,10 @@ public:
   virtual mlir::Value lowerDataMemberCmp(cir::CmpOp op, mlir::Value loweredLhs,
                                          mlir::Value loweredRhs,
                                          mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value lowerMethodCmp(cir::CmpOp op, mlir::Value loweredLhs,
+                                     mlir::Value loweredRhs,
+                                     mlir::OpBuilder &builder) const = 0;
 };
 
 /// Creates an Itanium-family ABI.
