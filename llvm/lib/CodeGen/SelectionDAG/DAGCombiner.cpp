@@ -14626,14 +14626,18 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                                   ISD::LoadExtType ExtLoadType,
                                   ISD::NodeType ExtOpc,
                                   bool NonNegZExt = false) {
-  if (!ISD::isNON_EXTLoad(N0.getNode()) || !ISD::isUNINDEXEDLoad(N0.getNode()))
+  bool Frozen = N0.getOpcode() == ISD::FREEZE;
+  auto *Load = dyn_cast<LoadSDNode>(Frozen ? N0.getOperand(0) : N0);
+  // TODO: Support multiple uses of the load/freeze when frozen.
+  if (!Load || !ISD::isNON_EXTLoad(Load) || !ISD::isUNINDEXEDLoad(Load) ||
+      (Frozen && (!Load->hasOneUse() || !N0->hasOneUse())))
     return {};
 
   // If this is zext nneg, see if it would make sense to treat it as a sext.
   if (NonNegZExt) {
     assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
            "Unexpected load type or opcode");
-    for (SDNode *User : N0->users()) {
+    for (SDNode *User : Load->users()) {
       if (User->getOpcode() == ISD::SETCC) {
         ISD::CondCode CC = cast<CondCodeSDNode>(User->getOperand(2))->get();
         if (ISD::isSignedIntSetCC(CC)) {
@@ -14648,35 +14652,34 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
   // TODO: isFixedLengthVector() should be removed and any negative effects on
   // code generation being the result of that target's implementation of
   // isVectorLoadExtDesirable().
-  if ((LegalOperations || VT.isFixedLengthVector() ||
-       !cast<LoadSDNode>(N0)->isSimple()) &&
-      !TLI.isLoadExtLegal(ExtLoadType, VT, N0.getValueType()))
+  if ((LegalOperations || VT.isFixedLengthVector() || !Load->isSimple()) &&
+      !TLI.isLoadExtLegal(ExtLoadType, VT, Load->getValueType(0)))
     return {};
 
   bool DoXform = true;
   SmallVector<SDNode *, 4> SetCCs;
-  if (!N0.hasOneUse())
-    DoXform = ExtendUsesToFormExtLoad(VT, N, N0, ExtOpc, SetCCs, TLI);
+  if (!Load->hasOneUse())
+    DoXform =
+        ExtendUsesToFormExtLoad(VT, N, SDValue(Load, 0), ExtOpc, SetCCs, TLI);
   if (VT.isVector())
     DoXform &= TLI.isVectorLoadExtDesirable(SDValue(N, 0));
   if (!DoXform)
     return {};
 
-  LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-  SDValue ExtLoad = DAG.getExtLoad(ExtLoadType, SDLoc(LN0), VT, LN0->getChain(),
-                                   LN0->getBasePtr(), N0.getValueType(),
-                                   LN0->getMemOperand());
-  Combiner.ExtendSetCCUses(SetCCs, N0, ExtLoad, ExtOpc);
+  SDValue ExtLoad = DAG.getExtLoad(
+      ExtLoadType, SDLoc(Load), VT, Load->getChain(), Load->getBasePtr(),
+      Load->getValueType(0), Load->getMemOperand());
+  Combiner.ExtendSetCCUses(SetCCs, SDValue(Load, 0), ExtLoad, ExtOpc);
   // If the load value is used only by N, replace it via CombineTo N.
-  bool NoReplaceTrunc = SDValue(LN0, 0).hasOneUse();
-  Combiner.CombineTo(N, ExtLoad);
+  bool NoReplaceTrunc = Load->hasOneUse();
+  Combiner.CombineTo(N, Frozen ? DAG.getFreeze(ExtLoad) : ExtLoad);
   if (NoReplaceTrunc) {
-    DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
-    Combiner.recursivelyDeleteUnusedNodes(LN0);
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), ExtLoad.getValue(1));
+    Combiner.recursivelyDeleteUnusedNodes(Load);
   } else {
     SDValue Trunc =
-        DAG.getNode(ISD::TRUNCATE, SDLoc(N0), N0.getValueType(), ExtLoad);
-    Combiner.CombineTo(LN0, Trunc, ExtLoad.getValue(1));
+        DAG.getNode(ISD::TRUNCATE, SDLoc(Load), Load->getValueType(0), ExtLoad);
+    Combiner.CombineTo(Load, Trunc, ExtLoad.getValue(1));
   }
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }

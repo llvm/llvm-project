@@ -247,7 +247,6 @@ define <vscale x 2 x i64> @load_frozen_before_zext(ptr %src) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    and z0.d, z0.d, #0xff
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x i8>, ptr %src
   %load.frozen = freeze <vscale x 2 x i8> %load
@@ -258,11 +257,9 @@ define <vscale x 2 x i64> @load_frozen_before_zext(ptr %src) {
 define <vscale x 8 x i32> @load_frozen_before_zext_needs_splitting(ptr %src) {
 ; CHECK-LABEL: load_frozen_before_zext_needs_splitting:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1b { z1.h }, p0/z, [x0]
-; CHECK-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-NEXT:    uunpklo z0.s, z1.h
-; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x i8>, ptr %src
   %load.frozen = freeze <vscale x 8 x i8> %load
