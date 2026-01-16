@@ -23,7 +23,7 @@
 
 namespace llvm {
 /// A simple registry entry which provides only a name, description, and
-/// no-argument constructor.
+/// an `CtorParamTypes&&` variadic parameterized constructor.
 template <typename T, typename... CtorParamTypes> class SimpleRegistryEntry {
   using FactoryFnRef = function_ref<std::unique_ptr<T>(CtorParamTypes &&...)>;
   StringRef Name, Desc;
