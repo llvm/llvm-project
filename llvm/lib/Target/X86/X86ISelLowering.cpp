@@ -43896,6 +43896,44 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return true;
     break;
   }
+  case X86ISD::PCLMULQDQ: {
+    APInt LHSUndef, LHSZero;
+    APInt RHSUndef, RHSZero;
+    SDValue LHS = Op.getOperand(0);
+    SDValue RHS = Op.getOperand(1);
+    uint64_t Imm = Op.getConstantOperandVal(2);
+    assert(VT.getScalarType() == MVT::i64 && LHS.getValueType() == VT &&
+           LHS.getValueType() == RHS.getValueType() &&
+           "Unexpected PCLMULQDQ types");
+
+    // TODO: Modify demanded masks based off DemandedElts as well, check if each
+    // 128-bit lane is demanded at all.
+    APInt DemandedLHS =
+        APInt::getSplat(NumElts, APInt(2, (Imm & 0x01) ? 2 : 1));
+    APInt DemandedRHS =
+        APInt::getSplat(NumElts, APInt(2, (Imm & 0x10) ? 2 : 1));
+
+    if (SimplifyDemandedVectorElts(LHS, DemandedLHS, LHSUndef, LHSZero, TLO,
+                                   Depth + 1))
+      return true;
+    if (SimplifyDemandedVectorElts(RHS, DemandedRHS, RHSUndef, RHSZero, TLO,
+                                   Depth + 1))
+      return true;
+
+    // TODO: Multiply by zero.
+
+    SDValue NewLHS = SimplifyMultipleUseDemandedVectorElts(LHS, DemandedLHS,
+                                                           TLO.DAG, Depth + 1);
+    SDValue NewRHS = SimplifyMultipleUseDemandedVectorElts(RHS, DemandedRHS,
+                                                           TLO.DAG, Depth + 1);
+    if (NewLHS || NewRHS) {
+      NewLHS = NewLHS ? NewLHS : LHS;
+      NewRHS = NewRHS ? NewRHS : RHS;
+      return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewLHS,
+                                               NewRHS, Op.getOperand(2)));
+    }
+    break;
+  }
   case X86ISD::PSADBW: {
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
@@ -61633,6 +61671,17 @@ static SDValue combinePDEP(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combinePCLMULQDQ(SDNode *N, SelectionDAG &DAG,
+                                TargetLowering::DAGCombinerInfo &DCI) {
+  unsigned NumElts = N->getSimpleValueType(0).getVectorNumElements();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedVectorElts(SDValue(N, 0), APInt::getAllOnes(NumElts),
+                                     DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 // Fixup the MMX intrinsics' types: in IR they are expressed with <1 x i64>,
 // and so SelectionDAGBuilder creates them with v1i64 types, but they need to
 // use x86mmx instead.
@@ -61910,6 +61959,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SUBV_BROADCAST_LOAD: return combineBROADCAST_LOAD(N, DAG, DCI);
   case X86ISD::MOVDQ2Q:     return combineMOVDQ2Q(N, DAG);
   case X86ISD::PDEP:        return combinePDEP(N, DAG, DCI);
+  case X86ISD::PCLMULQDQ:   return combinePCLMULQDQ(N, DAG, DCI);
   case ISD::INTRINSIC_WO_CHAIN:  return combineINTRINSIC_WO_CHAIN(N, DAG, DCI);
   case ISD::INTRINSIC_W_CHAIN:  return combineINTRINSIC_W_CHAIN(N, DAG, DCI);
   case ISD::INTRINSIC_VOID:  return combineINTRINSIC_VOID(N, DAG, DCI);

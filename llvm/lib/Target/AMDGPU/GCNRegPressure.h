@@ -234,6 +234,12 @@ public:
 
   /// Whether the current RP is at or below the defined pressure target.
   bool satisfied() const;
+  bool hasVectorRegisterExcess() const;
+
+  unsigned getMaxSGPRs() const { return MaxSGPRs; }
+  unsigned getMaxVGPRs() const {
+    return UnifiedRF ? MaxUnifiedVGPRs : MaxVGPRs;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   friend raw_ostream &operator<<(raw_ostream &OS, const GCNRPTarget &Target) {
