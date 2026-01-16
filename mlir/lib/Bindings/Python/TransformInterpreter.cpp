@@ -71,12 +71,6 @@ static void populateTransformInterpreterSubmodule(nb::module_ &m) {
          PyOperationBase &transformModule, const PyTransformOptions &options) {
         mlir::python::CollectDiagnosticsToStringScope scope(
             mlirOperationGetContext(transformRoot.getOperation()));
-
-        // Calling back into Python to invalidate everything under the payload
-        // root. This is awkward, but we don't have access to PyMlirContext
-        // object here otherwise.
-        nb::object obj = nb::cast(payloadRoot);
-
         MlirLogicalResult result = mlirTransformApplyNamedSequence(
             payloadRoot.getOperation(), transformRoot.getOperation(),
             transformModule.getOperation(), options.options);
