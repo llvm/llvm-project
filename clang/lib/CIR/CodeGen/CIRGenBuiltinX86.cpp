@@ -293,9 +293,8 @@ static mlir::Value emitX86MaskedCompareResult(CIRGenBuilderTy &builder,
 // TODO: The cgf parameter should be removed when all the NYI cases are
 // implemented.
 static std::optional<mlir::Value>
-emitX86MaskedCompare(CIRGenBuilderTy &builder, unsigned cc,
-                     bool isSigned, ArrayRef<mlir::Value> ops,
-                     mlir::Location loc) {
+emitX86MaskedCompare(CIRGenBuilderTy &builder, unsigned cc, bool isSigned,
+                     ArrayRef<mlir::Value> ops, mlir::Location loc) {
   assert((ops.size() == 2 || ops.size() == 4) &&
          "Unexpected number of arguments");
   unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
@@ -1748,7 +1747,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_selectsbf_128:
   case X86::BI__builtin_ia32_selectss_128:
   case X86::BI__builtin_ia32_selectsd_128:
-      cgm.errorNYI(expr->getSourceRange(),
+    cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
