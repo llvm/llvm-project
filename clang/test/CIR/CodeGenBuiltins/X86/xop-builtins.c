@@ -45,7 +45,6 @@ __m128i test_mm_roti_epi8(__m128i a) {
 
 __m128i test_mm_roti_epi16(__m128i a) {
   // CIR-LABEL: test_mm_roti_epi16
-  // CIR: cir.cast integral %{{.*}} : !u8i -> !u16i
   // CIR: cir.vec.splat %{{.*}} : !{{[us]}}16i, !cir.vector<8 x !u16i> 
   // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}} : (!cir.vector<8 x !{{[su]}}16i>, !cir.vector<8 x !{{[su]}}16i>, !cir.vector<8 x !u16i>) -> !cir.vector<8 x !{{[su]}}16i> 
   
@@ -61,7 +60,6 @@ __m128i test_mm_roti_epi16(__m128i a) {
 
 __m128i test_mm_roti_epi32(__m128i a) {
   // CIR-LABEL: test_mm_roti_epi32
-  // CIR: cir.cast integral %{{.*}} : !u8i -> !u32i
   // CIR: cir.vec.splat %{{.*}} : !{{[us]}}32i, !cir.vector<4 x !u32i> 
   // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}} : (!cir.vector<4 x !{{[su]}}32i>, !cir.vector<4 x !{{[su]}}32i>, !cir.vector<4 x !u32i>) -> !cir.vector<4 x !{{[su]}}32i> 
   
@@ -77,7 +75,6 @@ __m128i test_mm_roti_epi32(__m128i a) {
 
 __m128i test_mm_roti_epi64(__m128i a) {
   // CIR-LABEL: test_mm_roti_epi64
-  // CIR: cir.cast integral %{{.*}} : !u8i -> !u64i
   // CIR: cir.vec.splat %{{.*}} : !u64i, !cir.vector<2 x !u64i> 
   // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}} : (!cir.vector<2 x !{{[su]}}64i>, !cir.vector<2 x !{{[su]}}64i>, !cir.vector<2 x !u64i>) -> !cir.vector<2 x !s64i> 
   

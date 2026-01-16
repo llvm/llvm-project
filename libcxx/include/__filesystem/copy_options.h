@@ -50,15 +50,15 @@ enum class copy_options : unsigned short {
   return static_cast<copy_options>(~static_cast<unsigned short>(__lhs));
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline copy_options& operator&=(copy_options& __lhs, copy_options __rhs) {
+_LIBCPP_HIDE_FROM_ABI inline copy_options& operator&=(copy_options& __lhs, copy_options __rhs) {
   return __lhs = __lhs & __rhs;
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline copy_options& operator|=(copy_options& __lhs, copy_options __rhs) {
+_LIBCPP_HIDE_FROM_ABI inline copy_options& operator|=(copy_options& __lhs, copy_options __rhs) {
   return __lhs = __lhs | __rhs;
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline copy_options& operator^=(copy_options& __lhs, copy_options __rhs) {
+_LIBCPP_HIDE_FROM_ABI inline copy_options& operator^=(copy_options& __lhs, copy_options __rhs) {
   return __lhs = __lhs ^ __rhs;
 }
 

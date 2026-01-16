@@ -153,7 +153,7 @@ struct MissingFeatures {
   static bool emitBodyAndFallthrough() { return false; }
   static bool coroOutsideFrameMD() { return false; }
   static bool coroCoReturn() { return false; }
-  static bool coroCoYield() { return false; }
+  static bool coroutineExceptions() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -192,6 +192,7 @@ struct MissingFeatures {
   // LowerModule handling
   static bool lowerModuleCodeGenOpts() { return false; }
   static bool lowerModuleLangOpts() { return false; }
+  static bool targetLoweringInfo() { return false; }
 
   // Misc
   static bool aarch64SIMDIntrinsics() { return false; }
@@ -215,9 +216,10 @@ struct MissingFeatures {
   static bool asmGoto() { return false; }
   static bool asmInputOperands() { return false; }
   static bool asmLabelAttr() { return false; }
+  static bool asmLLVMAssume() { return false; }
   static bool asmMemoryEffects() { return false; }
-  static bool asmOutputOperands() { return false; }
   static bool asmUnwindClobber() { return false; }
+  static bool asmVectorType() { return false; }
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeBuiltin() { return false; }
@@ -301,6 +303,8 @@ struct MissingFeatures {
   static bool makeTripleAlwaysPresent() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
+  static bool memberFuncPtrAuthInfo() { return false; }
+  static bool memberFuncPtrCast() { return false; }
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
@@ -344,6 +348,7 @@ struct MissingFeatures {
   static bool useEHCleanupForArray() { return false; }
   static bool vaArgABILowering() { return false; }
   static bool vectorConstants() { return false; }
+  static bool virtualMethodAttr() { return false; }
   static bool vlas() { return false; }
   static bool vtableInitialization() { return false; }
   static bool vtableEmitMetadata() { return false; }

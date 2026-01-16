@@ -156,6 +156,12 @@ llvm.func @nvvm_special_regs() -> i32 {
   %76 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 0> : i32
   // CHECK: %77 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %77 = nvvm.read.ptx.sreg.tid.x range <i32, 4294967295, 4294967295> : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.total_smem_size()
+  %78 = nvvm.read.ptx.sreg.total.smem.size : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.dynamic_smem_size()
+  %79 = nvvm.read.ptx.sreg.dynamic.smem.size : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.aggr_smem_size()
+  %80 = nvvm.read.ptx.sreg.aggr.smem.size : i32
   llvm.return %1 : i32
 }
 
