@@ -6,11 +6,8 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class MyResponder(MockGDBServerResponder):
-    def other(self, packet) -> str:
-        if packet.startswith("_M"):
-            return "E04"
-        else:
-            return super().other(packet)
+    def _M(self, size, permissions) -> str:
+        return "E04"
 
     def readRegister(self, regnum):
         return "E01"
