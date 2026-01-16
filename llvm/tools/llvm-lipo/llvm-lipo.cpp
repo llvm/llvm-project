@@ -49,7 +49,6 @@ static const StringRef ToolName = "llvm-lipo";
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   reportError(Buf);
 }
 
@@ -58,7 +57,6 @@ static const StringRef ToolName = "llvm-lipo";
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   WithColor::error(errs(), ToolName) << "'" << File << "': " << Buf;
   exit(EXIT_FAILURE);
 }

@@ -237,15 +237,9 @@ std::string getRecipeName(mlir::acc::RecipeKind kind, Type type, Value var,
   switch (kind) {
   case mlir::acc::RecipeKind::private_recipe:
     prefixOS << "privatization";
-    // Private recipes do not currently include bounds in the name
-    // TODO: They should include them - but lowering tests would need to
-    // be updated.
     break;
   case mlir::acc::RecipeKind::firstprivate_recipe:
     prefixOS << "firstprivatization";
-    // Add bounds to the prefix if applicable (only for firstprivate)
-    if (!bounds.empty() && areAllBoundsConstant(bounds))
-      prefixOS << getBoundsString(bounds);
     break;
   case mlir::acc::RecipeKind::reduction_recipe:
     prefixOS << "reduction";
@@ -253,11 +247,11 @@ std::string getRecipeName(mlir::acc::RecipeKind kind, Type type, Value var,
     if (reductionOp != mlir::acc::ReductionOperator::AccNone)
       prefixOS << "_"
                << mlir::acc::stringifyReductionOperator(reductionOp).str();
-    // Add bounds to the prefix if applicable (only for reduction)
-    if (!bounds.empty() && areAllBoundsConstant(bounds))
-      prefixOS << getBoundsString(bounds);
     break;
   }
+
+  if (!bounds.empty())
+    prefixOS << getBoundsString(bounds);
 
   auto kindMap = var && var.getDefiningOp()
                      ? fir::getKindMapping(var.getDefiningOp())

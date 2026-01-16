@@ -2025,7 +2025,7 @@ the symbol can now be resolved.
 If the debug server has requested all the symbols it wants, the final response
 will be `OK` (whether they were all found or not).
 
-If LLDB did find all the symbols and recieves an `OK` it does not need to send
+If LLDB did find all the symbols and receives an `OK` it does not need to send
 `qSymbol::` again during the debug session.
 
 **Priority To Implement:** Low, this is rarely used.
