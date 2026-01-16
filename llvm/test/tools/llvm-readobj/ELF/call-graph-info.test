@@ -165,7 +165,6 @@ Sections:
   - Name:   .text
     Type:   SHT_PROGBITS
     Flags:  [ SHF_ALLOC, SHF_EXECINSTR ]
-    Size:   0x2000
   - Name:   .llvm.callgraph
     Type:   SHT_LLVM_CALL_GRAPH
     Flags:  [ SHF_LINK_ORDER ]
@@ -362,7 +361,6 @@ FileHeader:
 Sections:
   - Name:   .text
     Type:   SHT_PROGBITS
-    Size:   0x84
   - Name:   .llvm.callgraph
     Type:   SHT_LLVM_CALL_GRAPH
     Flags:  [ SHF_LINK_ORDER ]
@@ -492,7 +490,6 @@ FileHeader:
 Sections:
   - Name:   .text
     Type:   SHT_PROGBITS
-    Size:   0x100
   - Name:   .llvm.callgraph
     Type:   SHT_LLVM_CALL_GRAPH
     Flags:  [ SHF_LINK_ORDER ]

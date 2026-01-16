@@ -35,7 +35,6 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-    Size:  5
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
@@ -63,7 +62,6 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-    Size:  5
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
@@ -92,7 +90,6 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-    Size:  5
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
@@ -121,7 +118,6 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-    Size:  5
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
@@ -151,7 +147,6 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-    Size:  5
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
@@ -279,7 +274,6 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-    Size:  5
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
@@ -318,7 +312,6 @@ FileHeader:
 Sections:
   - Name: .text
     Type: SHT_PROGBITS
-    Size: 12 ## or whatever size is needed for all the data
   - Name: .llvm.callgraph
     Type: SHT_LLVM_CALL_GRAPH
     ContentArray: [
