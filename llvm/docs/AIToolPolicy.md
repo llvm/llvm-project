@@ -127,9 +127,9 @@ If or when it becomes clear that a GitHub issue or PR is off-track and not
 moving in the right direction, maintainers should apply the `extractive` label
 to help other reviewers prioritize their review time.
 
-If a contributor responds but doesn't make their change meaningfully less
-extractive, maintainers should escalate to the relevant moderation or admin
-team for the space (GitHub, Discourse, Discord, etc) to lock the conversation.
+If a contributor fails to make their change meaningfully less extractive,
+maintainers should escalate to the relevant moderation or admin team for the
+space (GitHub, Discourse, Discord, etc) to lock the conversation.
 
 ## Copyright
 
