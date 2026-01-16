@@ -34,7 +34,7 @@ CHECK:      "name": "Add input for DTLTO"
 CHECK:      "name": "Add input for DTLTO"
 CHECK:      "name": "Remove temporary inputs for DTLTO"
 CHECK:      "name": "Save input archive member for DTLTO"
-CHECK-SAME:   "detail": "t1.a(t1.bc at [[#ARCHIVE_OFFSET:]]).1.[[PID:[a-fA-F0-9]+]].o"
+CHECK-SAME:   "detail": "t1.a(t1.bc at [[#ARCHIVE_OFFSET:]]).1.[[PID:[A-F0-9]+]].o"
 CHECK:      "name": "Total Add input for DTLTO"
 CHECK-SAME:   "count": 2,
 CHECK:      "name": "Total Remove temporary inputs for DTLTO"

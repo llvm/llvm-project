@@ -120,6 +120,9 @@ Expected<bool> lto::DTLTO::isThinArchive(const StringRef ArchivePath) {
 // Removes any temporary regular archive member files that were created during
 // processing.
 void lto::DTLTO::removeTempFiles() {
+  if (!RemoveTempFiles)
+    return;
+
   TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
   for (auto &Input : InputFiles) {
     if (Input->isMemberOfArchive())

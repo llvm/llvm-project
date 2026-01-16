@@ -29,6 +29,9 @@ private:
   // Removes temporary files.
   LLVM_ABI void removeTempFiles();
 
+  // Internal bookeeping.
+  bool RemoveTempFiles = true;
+
   // Determines if a file at the given path is a thin archive file.
   Expected<bool> isThinArchive(const StringRef ArchivePath);
 
