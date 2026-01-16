@@ -200,13 +200,15 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
   }
 
   EVT PointerVT = TLI->getPointerTy(DAG.getDataLayout());
-  SDValue Symbol = DAG.getExternalSymbol(TLI->getLibcallName(NewLC), PointerVT);
+  SDValue Symbol =
+      DAG.getExternalSymbol(DAG.getLibcalls().getLibcallName(NewLC), PointerVT);
   Args.emplace_back(Size, DAG.getDataLayout().getIntPtrType(*DAG.getContext()));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   PointerType *RetTy = PointerType::getUnqual(*DAG.getContext());
   CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-      TLI->getLibcallCallingConv(NewLC), RetTy, Symbol, std::move(Args));
+      DAG.getLibcalls().getLibcallCallingConv(NewLC), RetTy, Symbol,
+      std::move(Args));
 
   auto [Result, ChainOut] = TLI->LowerCallTo(CLI);
   return UsesResult ? DAG.getMergeValues({Result, ChainOut}, DL) : ChainOut;
