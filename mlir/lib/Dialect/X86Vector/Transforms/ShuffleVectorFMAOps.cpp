@@ -23,7 +23,7 @@ namespace {
 
 // Validates whether the given operation is an x86vector operation and has only
 // one consumer.
-static bool validateX86OpsHasOneUser(Value op) {
+static bool validateFMAOperands(Value op) {
   if (auto cvt = op.getDefiningOp<x86vector::CvtPackedEvenIndexedToF32Op>())
     return cvt.getResult().hasOneUse();
 
@@ -46,7 +46,7 @@ static bool validateVectorFMAOp(vector::FMAOp fmaOp) {
       !isa<x86vector::CvtPackedEvenIndexedToF32Op>(rhs.getDefiningOp()))
     return false;
 
-  if (!validateX86OpsHasOneUser(lhs) || !validateX86OpsHasOneUser(rhs))
+  if (!validateFMAOperands(lhs) || !validateFMAOperands(rhs))
     return false;
 
   if (lhs.getDefiningOp()->getBlock() != rhs.getDefiningOp()->getBlock())
@@ -66,7 +66,7 @@ static bool validateVectorFMAOp(vector::FMAOp fmaOp) {
 }
 
 // Moves vector.fma along with the lhs and rhs defining operation before its
-// comsumer. If the consumer is vector.ShapeCastOp and has only one user then
+// consumer. If the consumer is vector.ShapeCastOp and has only one user then
 // move before the consumer of vector.ShapeCastOp.
 // TODO: Move before first consumer, if there are multiple.
 static void moveFMA(vector::FMAOp fmaOp) {
@@ -116,15 +116,15 @@ static void moveFMA(vector::FMAOp fmaOp) {
 //   %1 = x86vector.avx.bcst_to_f32.packed
 //   %2 = x86vector.avx.cvt.packed.odd.indexed_to_f32
 //   %3 = vector.fma %1, %2, %arg1
-//   %4 = x86vector.avx.bcst_to_f32.packed
-//   %5 = x86vector.avx.cvt.packed.odd.indexed_to_f32
-//   %6 = vector.fma %4, %5, %arg2
 //   %7 = x86vector.avx.bcst_to_f32.packed
-//   %8 = x86vector.avx.cvt.packed.even.indexed_to_f32
-//   %9 = vector.fma %7, %8, %3
+//   %8 = x86vector.avx.cvt.packed.odd.indexed_to_f32
+//   %9 = vector.fma %7, %8, %arg2
+//   %4 = x86vector.avx.bcst_to_f32.packed
+//   %5 = x86vector.avx.cvt.packed.even.indexed_to_f32
+//   %6 = vector.fma %4, %5, %3
 //   %10 = x86vector.avx.bcst_to_f32.packed
 //   %11 = x86vector.avx.cvt.packed.even.indexed_to_f32
-//   %12 = vector.fma %10, %11, %6
+//   %12 = vector.fma %10, %11, %9
 //   yield %9, %12
 // ```
 // TODO: Shuffling supported only if the FMA, lhs/rhs defining operations
