@@ -53,9 +53,10 @@
 
 using namespace llvm;
 
-cl::opt<bool> EnableMachineCombinerPassX86("x86-machine-combiner",
-                               cl::desc("Enable the machine combiner pass"),
-                               cl::init(true), cl::Hidden);
+cl::opt<bool>
+    EnableMachineCombinerPassX86("x86-machine-combiner",
+                                 cl::desc("Enable the machine combiner pass"),
+                                 cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableTileRAPass("x86-tile-ra",
