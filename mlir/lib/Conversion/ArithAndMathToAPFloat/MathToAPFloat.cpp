@@ -133,7 +133,13 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
     if (failed(checkPreconditions(rewriter, op)))
       return failure();
     // Cast operands to 64-bit integers.
-    auto floatTy = cast<FloatType>(op.getResult().getType());
+    mlir::Type resType = op.getResult().getType();
+    auto floatTy = dyn_cast<FloatType>(resType);
+    if (!floatTy) {
+      auto vecTy1 = dyn_cast<VectorType>(resType);
+      assert(vecTy1 && "expected VectorType");
+      floatTy = llvm::cast<FloatType>(vecTy1.getElementType());
+    }
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
     FailureOr<FuncOp> fn = lookupOrCreateFnDecl(
@@ -147,8 +153,17 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
     IntegerType intWType = rewriter.getIntegerType(floatTy.getWidth());
     IntegerType int64Type = rewriter.getI64Type();
 
-    auto scalarFMA = [&rewriter, &loc, &floatTy, &fn, &intWType](
-                         Value operand, Value multiplicand, Value addend) {
+    auto scalarFMA = [&rewriter, &loc, &floatTy, &fn, &intWType,
+                      &int64Type](Value a, Value b, Value c) {
+      Value operand = arith::ExtUIOp::create(
+          rewriter, loc, int64Type,
+          arith::BitcastOp::create(rewriter, loc, intWType, a));
+      Value multiplicand = arith::ExtUIOp::create(
+          rewriter, loc, int64Type,
+          arith::BitcastOp::create(rewriter, loc, intWType, b));
+      Value addend = arith::ExtUIOp::create(
+          rewriter, loc, int64Type,
+          arith::BitcastOp::create(rewriter, loc, intWType, c));
       // Call APFloat function.
       Value semValue = getAPFloatSemanticsValue(rewriter, loc, floatTy);
       SmallVector<Value> params = {semValue, operand, multiplicand, addend};
@@ -190,16 +205,7 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
       return success();
     }
 
-    Value operand = arith::ExtUIOp::create(
-        rewriter, loc, int64Type,
-        arith::BitcastOp::create(rewriter, loc, intWType, op.getA()));
-    Value multiplicand = arith::ExtUIOp::create(
-        rewriter, loc, int64Type,
-        arith::BitcastOp::create(rewriter, loc, intWType, op.getB()));
-    Value addend = arith::ExtUIOp::create(
-        rewriter, loc, int64Type,
-        arith::BitcastOp::create(rewriter, loc, intWType, op.getC()));
-    Value repl = scalarFMA(operand, multiplicand, addend);
+    Value repl = scalarFMA(op.getA(), op.getB(), op.getC());
     rewriter.replaceOp(op, repl);
     return success();
   }
