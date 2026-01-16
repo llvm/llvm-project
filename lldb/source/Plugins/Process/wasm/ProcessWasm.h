@@ -35,7 +35,9 @@ struct wasm_addr_t {
   wasm_addr_t(WasmAddressType type, uint32_t module_id, uint32_t offset)
       : offset(offset), module_id(module_id), type(type) {}
 
-  WasmAddressType GetType() { return static_cast<WasmAddressType>(type); }
+  WasmAddressType GetType() const { return static_cast<WasmAddressType>(type); }
+  uint32_t GetModuleID() const { return module_id; }
+  uint32_t GetOffset() const { return offset; }
 
   operator lldb::addr_t() { return *(uint64_t *)this; }
 };
