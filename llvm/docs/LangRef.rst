@@ -15070,6 +15070,10 @@ element in the logical layout by overflowing:
   to be known at runtime, and the instruction assumes the index is always
   inbound.
 
+In all cases **except** when the accessed type is a 0-sized array**, indexing
+out of bounds yields `poison`. When the index value is unknown, optimizations
+can use the type bounds to determine the range of values the index can have.
+
 If the source pointer is poison, the instruction returns poison.
 The resulting pointer belongs to the same address space as ``source``.
 
@@ -15154,10 +15158,11 @@ cannot reach the last element by doing:
 If codegen knew nothing about the physical layout of ``%S``, a condition
 would be required to select between ``%firsts`` and ``%last`` depending on
 the value of ``%index``.
-But in our case, the codegen knows that some logical layouts are equivalent
-to others (even if the physical layout is unknown).
-In this context, it knows that the following type can be used to logically
-address every vector in the array, generating the following code:
+But if the codegen knows that some logical layouts are lowered to the same
+physical layout, it can interchangeably use them.
+In this example, the codegen knows `%S` and `%T` have the same physical
+layout (even if layout itself is unknown). Hence, the codegen can access
+every element in the array with a single structured.gep:
 
 .. code-block:: llvm
 
@@ -15165,8 +15170,8 @@ address every vector in the array, generating the following code:
     %ptr = call ptr @llvm.structured.gep(ptr elementtype(%T) %my_struct, i32 %index, i32 0, i32 1)
     store i32 12, ptr %ptr
 
-This is, however, dependent on context that codegen has an insight on. This
-logical layout equivalence is not a generic rule.
+This is, however, dependent on context that codegen has an insight on. The
+fact that `%T` and `%S` are equivalent depends on the target & frontend.
 
 
 .. _int_get_dynamic_area_offset:
