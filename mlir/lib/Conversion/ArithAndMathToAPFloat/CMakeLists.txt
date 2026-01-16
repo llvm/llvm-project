@@ -47,4 +47,5 @@ add_mlir_conversion_library(MLIRMathToAPFloat
   MLIRMathDialect
   MLIRFuncDialect
   MLIRFuncUtils
+  MLIRVectorDialect
   )
