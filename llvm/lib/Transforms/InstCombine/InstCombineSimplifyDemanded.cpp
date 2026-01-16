@@ -3012,9 +3012,12 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       KnownSrc.knownNot(fcInf);
 
     // If the source value is known negative, we can directly fold to it.
-
-    // TODO: If the only sign bit difference is for 0, ignore it for nsz.
     if (KnownSrc.SignBit == true)
+      return Src;
+
+    // If the only sign bit difference is for 0, ignore it with nsz.
+    if ((FMF.noSignedZeros() || FabsFMF.noSignedZeros()) &&
+        KnownSrc.isKnownNever(KnownFPClass::OrderedGreaterThanZeroMask | fcNan))
       return Src;
 
     Known = KnownFPClass::fneg(KnownFPClass::fabs(KnownSrc));
@@ -3034,11 +3037,15 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       if ((DemandedMask & fcInf) == fcNone)
         KnownSrc.knownNot(fcInf);
 
-      // TODO: If the only sign bit difference is due to -0, look at source if
-      // nsz.
       if (KnownSrc.SignBit == false || ((DemandedMask & fcNan) == fcNone &&
                                         KnownSrc.isKnownNever(fcNegative)))
         return Src;
+
+      // If the only sign bit difference is due to -0, ignore it with nsz
+      if (FMF.noSignedZeros() &&
+          KnownSrc.isKnownNever(KnownFPClass::OrderedLessThanZeroMask | fcNan))
+        return Src;
+
       Known = KnownFPClass::fabs(KnownSrc);
       break;
     }
