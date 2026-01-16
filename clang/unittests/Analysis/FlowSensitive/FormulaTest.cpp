@@ -9,10 +9,13 @@
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Arena.h"
 #include "clang/Analysis/FlowSensitive/FormulaSerialization.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <string>
 
 namespace {
 
@@ -82,6 +85,12 @@ TEST_F(SerializeFormulaTest, NestedBinaryUnary) {
   EXPECT_EQ(Out, "=|V0V1V1");
 }
 
+TEST_F(SerializeFormulaTest, NestedBinaryUnaryNots) {
+  serializeFormula(A.makeEquals(A.makeOr(A1, A.makeNot(A2)), A.makeNot(A2)),
+                   OS);
+  EXPECT_EQ(Out, "=|V0!V1!V1");
+}
+
 TEST_F(SerializeFormulaTest, NestedBinaryBinary) {
   serializeFormula(A.makeEquals(A.makeOr(A1, A2), A.makeAnd(A1, A2)), OS);
   EXPECT_EQ(Out, "=|V0V1&V0V1");
@@ -94,7 +103,7 @@ protected:
     AtomMap[1] = Atom2;
   }
 
-  // Convenience wrapper for `testParseFormula`.
+  // Convenience wrapper for `parseFormula`.
   llvm::Expected<const Formula *> testParseFormula(llvm::StringRef Str) {
     return parseFormula(Str, A, AtomMap);
   }
@@ -154,6 +163,12 @@ TEST_F(ParseFormulaTest, NestedBinaryUnary) {
                        HasValue(&A.makeEquals(A.makeOr(A1, A2), A2)));
 }
 
+TEST_F(ParseFormulaTest, NestedBinaryUnaryNots) {
+  EXPECT_THAT_EXPECTED(
+      testParseFormula("=|V0!V1!V1"),
+      HasValue(&A.makeEquals(A.makeOr(A1, A.makeNot(A2)), A.makeNot(A2))));
+}
+
 TEST_F(ParseFormulaTest, NestedBinaryBinary) {
   EXPECT_THAT_EXPECTED(
       testParseFormula("=|V0V1&V0V1"),
@@ -194,6 +209,8 @@ TEST_F(ParseFormulaTest, MalformedFormulaFails) {
   EXPECT_THAT_EXPECTED(testParseFormula("|V0"), Failed());
   EXPECT_THAT_EXPECTED(testParseFormula(">V0"), Failed());
   EXPECT_THAT_EXPECTED(testParseFormula("=V0"), Failed());
+  // Too many operands
+  EXPECT_THAT_EXPECTED(testParseFormula("=V0V1V2"), Failed());
 }
 
 } // namespace

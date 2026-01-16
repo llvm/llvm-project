@@ -745,7 +745,6 @@ static uint64_t SpecialAddr(MCDwarfLineTableParams Params, uint64_t op) {
 void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
                              int64_t LineDelta, uint64_t AddrDelta,
                              SmallVectorImpl<char> &Out) {
-  uint8_t Buf[16];
   uint64_t Temp, Opcode;
   bool NeedCopy = false;
 
@@ -763,7 +762,7 @@ void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
       Out.push_back(dwarf::DW_LNS_const_add_pc);
     else if (AddrDelta) {
       Out.push_back(dwarf::DW_LNS_advance_pc);
-      Out.append(Buf, Buf + encodeULEB128(AddrDelta, Buf));
+      appendLEB128<LEB128Sign::Unsigned>(Out, AddrDelta);
     }
     Out.push_back(dwarf::DW_LNS_extended_op);
     Out.push_back(1);
@@ -779,7 +778,7 @@ void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
   if (Temp >= Params.DWARF2LineRange ||
       Temp + Params.DWARF2LineOpcodeBase > 255) {
     Out.push_back(dwarf::DW_LNS_advance_line);
-    Out.append(Buf, Buf + encodeSLEB128(LineDelta, Buf));
+    appendLEB128<LEB128Sign::Signed>(Out, LineDelta);
 
     LineDelta = 0;
     Temp = 0 - Params.DWARF2LineBase;
@@ -815,7 +814,7 @@ void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
 
   // Otherwise use DW_LNS_advance_pc.
   Out.push_back(dwarf::DW_LNS_advance_pc);
-  Out.append(Buf, Buf + encodeULEB128(AddrDelta, Buf));
+  appendLEB128<LEB128Sign::Unsigned>(Out, AddrDelta);
 
   if (NeedCopy)
     Out.push_back(dwarf::DW_LNS_copy);

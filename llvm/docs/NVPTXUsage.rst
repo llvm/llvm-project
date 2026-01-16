@@ -902,14 +902,14 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.fence.proxy.async.generic.acquire.sync_restrict.space.cluster.scope.cluster()
-  declare void @llvm.nvvm.fence.proxy.async.generic.release.sync_restrict.space.cta.scope.cluster()
+  declare void @llvm.nvvm.fence.proxy.async_generic.acquire.sync_restrict.space.cluster.scope.cluster()
+  declare void @llvm.nvvm.fence.proxy.async_generic.release.sync_restrict.space.cta.scope.cluster()
 
 Overview:
 """""""""
 
 `nvvm.fence.proxy.async_generic.{semantics}.sync_restrict` are used to establish
-ordering between a prior memory access performed via the `async proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>__`
+ordering between a prior memory access performed via the `async proxy <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>`__
 and a subsequent memory access performed via the generic proxy.
 ``nvvm.fence.proxy.async_generic.release.sync_restrict`` can form a release
 sequence that synchronizes with an acquire sequence that contains the
@@ -941,7 +941,7 @@ Overview:
 
 `nvvm.fence.proxy.{proxykind}` intrinsics represent a fence with bi-directional
 proxy ordering that is established between the memory accesses done between the
-`generic proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>__`
+`generic proxy <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>`__
 and the proxy specified by `proxykind`. A `bi-directional proxy` ordering between
 two proxykinds establishes two `uni-directional` proxy orderings: one from the
 first proxykind to the second proxykind and the other from the second proxykind

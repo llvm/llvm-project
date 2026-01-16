@@ -2055,12 +2055,6 @@ void MappingTraits<ELFYAML::CallGraphEntryWeight>::mapping(
   IO.mapRequired("Weight", E.Weight);
 }
 
-LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_AFL_REG)
-LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_ABI_FP)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_EXT)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_ASE)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_FLAGS1)
-
 } // end namespace yaml
 
 } // end namespace llvm

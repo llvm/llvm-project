@@ -2500,30 +2500,42 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitFPExtInst(CastInst &I) { handleShadowOr(I); }
   void visitFPTruncInst(CastInst &I) { handleShadowOr(I); }
 
-  /// Propagate shadow for bitwise AND.
+  /// Generic handler to compute shadow for bitwise AND.
   ///
-  /// This code is exact, i.e. if, for example, a bit in the left argument
-  /// is defined and 0, then neither the value not definedness of the
-  /// corresponding bit in B don't affect the resulting shadow.
-  void visitAnd(BinaryOperator &I) {
-    IRBuilder<> IRB(&I);
-    //  "And" of 0 and a poisoned value results in unpoisoned value.
-    //  1&1 => 1;     0&1 => 0;     p&1 => p;
-    //  1&0 => 0;     0&0 => 0;     p&0 => 0;
-    //  1&p => p;     0&p => 0;     p&p => p;
-    //  S = (S1 & S2) | (V1 & S2) | (S1 & V2)
-    Value *S1 = getShadow(&I, 0);
-    Value *S2 = getShadow(&I, 1);
-    Value *V1 = I.getOperand(0);
-    Value *V2 = I.getOperand(1);
+  /// This is used by 'visitAnd' but also as a primitive for other handlers.
+  ///
+  /// This code is precise: it implements the rule that "And" of an initialized
+  /// zero bit always results in an initialized value:
+  //    1&1 => 1;     0&1 => 0;     p&1 => p;
+  //    1&0 => 0;     0&0 => 0;     p&0 => 0;
+  //    1&p => p;     0&p => 0;     p&p => p;
+  //
+  //    S = (S1 & S2) | (V1 & S2) | (S1 & V2)
+  Value *handleBitwiseAnd(IRBuilder<> &IRB, Value *V1, Value *V2, Value *S1,
+                          Value *S2) {
+    Value *S1S2 = IRB.CreateAnd(S1, S2);
+    Value *V1S2 = IRB.CreateAnd(V1, S2);
+    Value *S1V2 = IRB.CreateAnd(S1, V2);
+
     if (V1->getType() != S1->getType()) {
       V1 = IRB.CreateIntCast(V1, S1->getType(), false);
       V2 = IRB.CreateIntCast(V2, S2->getType(), false);
     }
-    Value *S1S2 = IRB.CreateAnd(S1, S2);
-    Value *V1S2 = IRB.CreateAnd(V1, S2);
-    Value *S1V2 = IRB.CreateAnd(S1, V2);
-    setShadow(&I, IRB.CreateOr({S1S2, V1S2, S1V2}));
+
+    return IRB.CreateOr({S1S2, V1S2, S1V2});
+  }
+
+  /// Handler for bitwise AND operator.
+  void visitAnd(BinaryOperator &I) {
+    IRBuilder<> IRB(&I);
+    Value *V1 = I.getOperand(0);
+    Value *V2 = I.getOperand(1);
+    Value *S1 = getShadow(&I, 0);
+    Value *S2 = getShadow(&I, 1);
+
+    Value *OutShadow = handleBitwiseAnd(IRB, V1, V2, S1, S2);
+
+    setShadow(&I, OutShadow);
     setOriginForNaryOp(I);
   }
 
@@ -4004,12 +4016,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // in an initialized zero element.
       //
       // This is analogous to bitwise AND, where "AND" of 0 and a poisoned value
-      // results in an unpoisoned value. We can therefore adapt the visitAnd()
-      // instrumentation:
-      //   OutShadow =   (SaNonZero & SbNonZero)
-      //               | (VaNonZero & SbNonZero)
-      //               | (SaNonZero & VbNonZero)
-      //   where non-zero is checked on a per-element basis (not per bit).
+      // results in an unpoisoned value.
       Value *VaInt = Va;
       Value *VbInt = Vb;
       if (!Va->getType()->isIntegerTy()) {
@@ -4017,14 +4024,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         VbInt = CreateAppToShadowCast(IRB, Vb);
       }
 
+      // We check for non-zero on a per-element basis, not per-bit.
       Value *VaNonZero = IRB.CreateIsNotNull(VaInt);
       Value *VbNonZero = IRB.CreateIsNotNull(VbInt);
 
-      Value *SaAndSbNonZero = IRB.CreateAnd(SaNonZero, SbNonZero);
-      Value *VaAndSbNonZero = IRB.CreateAnd(VaNonZero, SbNonZero);
-      Value *SaAndVbNonZero = IRB.CreateAnd(SaNonZero, VbNonZero);
-
-      And = IRB.CreateOr({SaAndSbNonZero, VaAndSbNonZero, SaAndVbNonZero});
+      And = handleBitwiseAnd(IRB, VaNonZero, VbNonZero, SaNonZero, SbNonZero);
     } else {
       And = IRB.CreateOr({SaNonZero, SbNonZero});
     }
@@ -5348,6 +5352,100 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       OC.DoneAndStoreOrigin(DL.getTypeStoreSize(OutputVectorTy),
                             OutputOriginPtr);
     }
+  }
+
+  // <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8
+  //               (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  // <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8
+  //               (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  // <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8
+  //               (<4 x i32> R%, <16 x i8> %X, <16 x i8> %Y)
+  //
+  // Note:
+  // - < 4 x *> is a 2x2 matrix
+  // - <16 x *> is a 2x8 matrix and 8x2 matrix respectively
+  //
+  // The general shadow propagation approach is:
+  // 1) get the shadows of the input matrices %X and %Y
+  // 2) change the shadow values to 0x1 if the corresponding value is fully
+  //    initialized, and 0x0 otherwise
+  // 3) perform a matrix multiplication on the shadows of %X and %Y. The output
+  //    will be a 2x2 matrix; for each element, a value of 0x8 means all the
+  //    corresponding inputs were clean.
+  // 4) blend in the shadow of %R
+  //
+  // TODO: consider allowing multiplication of zero with an uninitialized value
+  //       to result in an initialized value.
+  //
+  // TODO: handle floating-point matrix multiply using ummla on the shadows:
+  //   case Intrinsic::aarch64_neon_bfmmla:
+  //     handleNEONMatrixMultiply(I, /*ARows=*/ 2, /*ACols=*/ 4,
+  //                                 /*BRows=*/ 4, /*BCols=*/ 2);
+  //
+  void handleNEONMatrixMultiply(IntrinsicInst &I, unsigned int ARows,
+                                unsigned int ACols, unsigned int BRows,
+                                unsigned int BCols) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 3);
+    Value *R = I.getArgOperand(0);
+    Value *A = I.getArgOperand(1);
+    Value *B = I.getArgOperand(2);
+
+    assert(I.getType() == R->getType());
+
+    assert(isa<FixedVectorType>(R->getType()));
+    assert(isa<FixedVectorType>(A->getType()));
+    assert(isa<FixedVectorType>(B->getType()));
+
+    [[maybe_unused]] FixedVectorType *RTy = cast<FixedVectorType>(R->getType());
+    [[maybe_unused]] FixedVectorType *ATy = cast<FixedVectorType>(A->getType());
+    [[maybe_unused]] FixedVectorType *BTy = cast<FixedVectorType>(B->getType());
+
+    assert(ACols == BRows);
+    assert(ATy->getNumElements() == ARows * ACols);
+    assert(BTy->getNumElements() == BRows * BCols);
+    assert(RTy->getNumElements() == ARows * BCols);
+
+    LLVM_DEBUG(dbgs() << "### R: " << *RTy->getElementType() << "\n");
+    LLVM_DEBUG(dbgs() << "### A: " << *ATy->getElementType() << "\n");
+    if (RTy->getElementType()->isIntegerTy()) {
+      // Types are not identical e.g., <4 x i32> %R, <16 x i8> %A
+      assert(ATy->getElementType()->isIntegerTy());
+    } else {
+      assert(RTy->getElementType()->isFloatingPointTy());
+      assert(ATy->getElementType()->isFloatingPointTy());
+    }
+    assert(ATy->getElementType() == BTy->getElementType());
+
+    Value *ShadowR = getShadow(&I, 0);
+    Value *ShadowA = getShadow(&I, 1);
+    Value *ShadowB = getShadow(&I, 2);
+
+    // If the value is fully initialized, the shadow will be 000...001.
+    // Otherwise, the shadow will be all zero.
+    // (This is the opposite of how we typically handle shadows.)
+    ShadowA = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(A)),
+                             ShadowA->getType());
+    ShadowB = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(B)),
+                             ShadowB->getType());
+
+    Value *ShadowAB = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {getCleanShadow(R), ShadowA, ShadowB});
+
+    Value *FullyInit = ConstantVector::getSplat(
+        RTy->getElementCount(),
+        ConstantInt::get(cast<VectorType>(getShadowTy(R))->getElementType(),
+                         ACols));
+
+    ShadowAB = IRB.CreateSExt(IRB.CreateICmpNE(ShadowAB, FullyInit),
+                              ShadowAB->getType());
+
+    ShadowR = IRB.CreateSExt(IRB.CreateICmpNE(ShadowR, getCleanShadow(R)),
+                             ShadowR->getType());
+
+    setShadow(&I, IRB.CreateOr(ShadowAB, ShadowR));
+    setOriginForNaryOp(I);
   }
 
   /// Handle intrinsics by applying the intrinsic to the shadows.
@@ -6725,6 +6823,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleNEONVectorMultiplyIntrinsic(I);
       break;
     }
+
+    case Intrinsic::aarch64_neon_smmla:
+    case Intrinsic::aarch64_neon_ummla:
+    case Intrinsic::aarch64_neon_usmmla:
+      handleNEONMatrixMultiply(I, /*ARows=*/2, /*ACols=*/8, /*BRows=*/8,
+                               /*BCols=*/2);
+      break;
 
     default:
       return false;

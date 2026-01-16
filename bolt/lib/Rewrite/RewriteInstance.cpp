@@ -484,6 +484,13 @@ Error RewriteInstance::setProfile(StringRef Filename) {
 
 /// Return true if the function \p BF should be disassembled.
 static bool shouldDisassemble(const BinaryFunction &BF) {
+
+  const BinaryContext &BC = BF.getBinaryContext();
+  // Disassemble PLT functions for BTI binaries to check if they need landing
+  // pads when targeting them in LongJmp.
+  if (BC.usesBTI() && BF.isPLTFunction())
+    return true;
+
   if (BF.isPseudo())
     return false;
 

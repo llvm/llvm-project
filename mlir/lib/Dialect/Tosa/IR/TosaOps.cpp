@@ -731,22 +731,30 @@ static LogicalResult verifyConvOpModes(T op) {
 
   auto accType = op.getAccType();
   if (inputEType.isInteger(8) && !accType.isInteger(32))
-    return op.emitOpError("accumulator type for i8 tensor is not i32");
+    return op.emitOpError("accumulator type for i8 tensor is not i32, got ")
+           << accType;
 
   if (inputEType.isInteger(16) && !accType.isInteger(48))
-    return op.emitOpError("accumulator type for i16 tensor is not i48");
+    return op.emitOpError("accumulator type for i16 tensor is not i48, got ")
+           << accType;
 
-  if (isa<Float8E5M2Type, Float8E4M3Type>(inputEType) && !accType.isF16())
-    return op.emitOpError("accumulator type for f8 tensor is not f16");
+  if (isa<Float8E5M2Type, Float8E4M3Type>(inputEType) &&
+      !(accType.isF16() || accType.isF32()))
+    return op.emitOpError("accumulator type for f8 tensor is not f16/f32, got ")
+           << accType;
 
   if (inputEType.isF16() && !(accType.isF16() || accType.isF32()))
-    return op.emitOpError("accumulator type for f16 tensor is not f16/f32");
+    return op.emitOpError(
+               "accumulator type for f16 tensor is not f16/f32, got ")
+           << accType;
 
   if (inputEType.isBF16() && !accType.isF32())
-    return op.emitOpError("accumulator type for bf16 tensor is not f32");
+    return op.emitOpError("accumulator type for bf16 tensor is not f32, got ")
+           << accType;
 
   if (inputEType.isF32() && !accType.isF32())
-    return op.emitOpError("accumulator type for f32 tensor is not f32");
+    return op.emitOpError("accumulator type for f32 tensor is not f32, got ")
+           << accType;
 
   auto resultEType =
       llvm::cast<ShapedType>(op.getResult().getType()).getElementType();

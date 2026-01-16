@@ -1846,18 +1846,29 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   DenseMap<unsigned, GCNRPTarget> OptRegions;
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(F);
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(F);
+  bool HasVectorRegisterExcess;
+
   auto ResetTargetRegions = [&]() {
     OptRegions.clear();
+    HasVectorRegisterExcess = false;
     for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
       const GCNRegPressure &RP = DAG.Pressure[I];
       GCNRPTarget Target(MaxSGPRs, MaxVGPRs, MF, RP);
       if (!Target.satisfied())
         OptRegions.insert({I, Target});
+      // We are willing to consider a RP that does not satisfy the target
+      // as long as it doesn't result in spilling to memory. We
+      // tolerate SGPR spills to VGPR since these have a lower impact on the
+      // performance.
+      // VGPR/AGPR excess could be aliviated by copying to an AGPR/VGPR.
+      // Currently, we consider any spilling as bad (we should consider this
+      // case in the future).
+      HasVectorRegisterExcess |= Target.hasVectorRegisterExcess();
     }
   };
 
   ResetTargetRegions();
-  if (!OptRegions.empty() || DAG.MinOccupancy >= MFI.getMaxWavesPerEU()) {
+  if (HasVectorRegisterExcess || DAG.MinOccupancy >= MFI.getMaxWavesPerEU()) {
     // In addition to register usage being above addressable limits, occupancy
     // below the minimum is considered like "spilling" as well.
     TargetOcc = std::nullopt;

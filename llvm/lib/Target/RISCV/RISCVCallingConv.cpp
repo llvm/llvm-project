@@ -510,25 +510,11 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     return false;
   }
 
-  // Split arguments might be passed indirectly, so keep track of the pending
-  // values. Split vectors are passed via a mix of registers and indirectly, so
-  // treat them as we would any other argument.
-  if (ValVT.isScalarInteger() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
-    LocVT = XLenVT;
-    LocInfo = CCValAssign::Indirect;
-    PendingLocs.push_back(
-        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
-    PendingArgFlags.push_back(ArgFlags);
-    if (!ArgFlags.isSplitEnd()) {
-      return false;
-    }
-  }
-
   // If the split argument only had two elements, it should be passed directly
   // in registers or on the stack.
   if (ValVT.isScalarInteger() && ArgFlags.isSplitEnd() &&
-      PendingLocs.size() <= 2) {
-    assert(PendingLocs.size() == 2 && "Unexpected PendingLocs.size()");
+      PendingLocs.size() <= 1) {
+    assert(PendingLocs.size() == 1 && "Unexpected PendingLocs.size()");
     // Apply the normal calling convention rules to the first half of the
     // split argument.
     CCValAssign VA = PendingLocs[0];
@@ -538,6 +524,18 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     return CC_RISCVAssign2XLen(
         XLen, State, VA, AF, ValNo, ValVT, LocVT, ArgFlags,
         ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E);
+  }
+
+  // Split arguments might be passed indirectly, so keep track of the pending
+  // values. Split vectors are passed via a mix of registers and indirectly, so
+  // treat them as we would any other argument.
+  if (ValVT.isScalarInteger() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
+    PendingLocs.push_back(
+        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+    PendingArgFlags.push_back(ArgFlags);
+    if (!ArgFlags.isSplitEnd()) {
+      return false;
+    }
   }
 
   // Allocate to a register if possible, or else a stack slot.
@@ -592,10 +590,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     for (auto &It : PendingLocs) {
       if (Reg)
-        It.convertToReg(Reg);
+        State.addLoc(CCValAssign::getReg(It.getValNo(), It.getValVT(), Reg,
+                                         XLenVT, CCValAssign::Indirect));
       else
-        It.convertToMem(StackOffset);
-      State.addLoc(It);
+        State.addLoc(CCValAssign::getMem(It.getValNo(), It.getValVT(),
+                                         StackOffset, XLenVT,
+                                         CCValAssign::Indirect));
     }
     PendingLocs.clear();
     PendingArgFlags.clear();

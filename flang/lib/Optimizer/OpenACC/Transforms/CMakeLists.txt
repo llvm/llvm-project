@@ -10,6 +10,7 @@ add_flang_library(FIROpenACCTransforms
   FIRAnalysis
   FIRBuilder
   FIRDialect
+  FIRDialectSupport
   FIROpenACCAnalysis
   HLFIRDialect
 

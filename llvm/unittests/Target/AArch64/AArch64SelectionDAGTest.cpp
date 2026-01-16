@@ -64,8 +64,8 @@ protected:
     if (!DAG)
       report_fatal_error("DAG?");
     OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
-              nullptr);
+    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+              MMI, nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
@@ -336,6 +336,57 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_ADDC) {
   // N5     = 00000101
   auto Op = DAG->getNode(ISD::ADDC, Loc, IntVT, Nsign3, N5);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op), 2u);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_ABDS) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = MVT::v8i8;
+
+  auto N0 = DAG->getConstant(0x00, Loc, IntVT);
+  auto V0 = DAG->getConstant(0x00, Loc, VecVT);
+  auto Nsign1 = DAG->getConstant(0x55, Loc, IntVT);
+
+  auto UnknownScalar = DAG->getUNDEF(IntVT);
+  auto UnknownVec = DAG->getUNDEF(VecVT);
+
+  // AssertSext to i4 guarantees 5 sign bits in i8
+  // Op5Sig = sssss???
+  auto Op5Sig = DAG->getNode(ISD::AssertSext, Loc, IntVT, UnknownScalar,
+                             DAG->getValueType(MVT::i4));
+
+  // Vec5Sig = sssss??? per element
+  auto Vec5Sig = DAG->getNode(ISD::AssertSext, Loc, VecVT, UnknownVec,
+                              DAG->getValueType(MVT::i4));
+
+  // LHS early out
+  // Nsign1 = 01010101
+  // N0     = 00000000
+  auto OpLhsEo = DAG->getNode(ISD::ABDS, Loc, IntVT, Nsign1, N0);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpLhsEo), 1u);
+
+  // Normal scalar case
+  // Op5Sig = sssss???
+  // N0     = 00000000
+  auto OpScalar = DAG->getNode(ISD::ABDS, Loc, IntVT, Op5Sig, N0);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpScalar), 4u);
+
+  // Normal vector case
+  // Vec5Sig = sssss???
+  // V0      = 00000000
+  auto OpVec = DAG->getNode(ISD::ABDS, Loc, VecVT, Vec5Sig, V0);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpVec), 4u);
+
+  // RHS early out
+  // N0     = 00000000
+  // Nsign1 = 01010101
+  auto OpRhsEo = DAG->getNode(ISD::ABDS, Loc, IntVT, N0, Nsign1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpRhsEo), 1u);
+
+  // Zero case
+  // N0 = 00000000
+  auto OpZero = DAG->getNode(ISD::ABDS, Loc, IntVT, N0, N0);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpZero), 8u);
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {

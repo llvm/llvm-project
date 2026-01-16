@@ -2814,6 +2814,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fsqrt",
+    hdrs = ["src/__support/math/fsqrt.h"],
+    deps = [
+        ":__support_fputil_sqrt",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_inv_trigf_utils",
     hdrs = ["src/__support/math/inv_trigf_utils.h"],
     deps = [
@@ -3143,6 +3151,16 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_expxf16_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_dfmal",
+    hdrs = ["src/__support/math/dfmal.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
     ],
 )
 
@@ -3746,7 +3764,7 @@ libc_math_function(name = "ddivf128")
 libc_math_function(
     name = "dfmal",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_dfmal",
     ],
 )
 
@@ -4278,7 +4296,7 @@ libc_math_function(name = "fromfpxf16")
 libc_math_function(
     name = "fsqrt",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_fsqrt",
     ],
 )
 

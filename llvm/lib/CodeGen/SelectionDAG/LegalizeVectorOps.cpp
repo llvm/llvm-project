@@ -2264,7 +2264,7 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
   // converted to their none strict counterpart.
   assert(!Node->isStrictFPOpcode() && "Unexpected strict fp operation!");
 
-  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported)
     return false;
 

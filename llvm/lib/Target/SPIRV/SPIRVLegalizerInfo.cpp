@@ -535,6 +535,66 @@ static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpvType,
   return ConvReg;
 }
 
+static bool needsVectorLegalization(const LLT &Ty, const SPIRVSubtarget &ST) {
+  if (!Ty.isVector())
+    return false;
+  unsigned NumElements = Ty.getNumElements();
+  unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
+  return (NumElements > 4 && !isPowerOf2_32(NumElements)) ||
+         NumElements > MaxVectorSize;
+}
+
+static bool legalizeLoad(LegalizerHelper &Helper, MachineInstr &MI,
+                         SPIRVGlobalRegistry *GR) {
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register PtrReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  if (!DstTy.isVector())
+    return true;
+
+  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
+  if (!needsVectorLegalization(DstTy, ST))
+    return true;
+
+  SmallVector<Register, 8> SplitRegs;
+  LLT EltTy = DstTy.getElementType();
+  unsigned NumElts = DstTy.getNumElements();
+
+  LLT PtrTy = MRI.getType(PtrReg);
+  auto Zero = MIRBuilder.buildConstant(LLT::scalar(32), 0);
+
+  for (unsigned i = 0; i < NumElts; ++i) {
+    auto Idx = MIRBuilder.buildConstant(LLT::scalar(32), i);
+    Register EltPtr = MRI.createGenericVirtualRegister(PtrTy);
+
+    MIRBuilder.buildIntrinsic(Intrinsic::spv_gep, ArrayRef<Register>{EltPtr})
+        .addImm(1) // InBounds
+        .addUse(PtrReg)
+        .addUse(Zero.getReg(0))
+        .addUse(Idx.getReg(0));
+
+    MachinePointerInfo EltPtrInfo;
+    Align EltAlign = Align(1);
+    if (!MI.memoperands_empty()) {
+      MachineMemOperand *MMO = *MI.memoperands_begin();
+      EltPtrInfo =
+          MMO->getPointerInfo().getWithOffset(i * EltTy.getSizeInBytes());
+      EltAlign = commonAlignment(MMO->getAlign(), i * EltTy.getSizeInBytes());
+    }
+
+    Register EltReg = MRI.createGenericVirtualRegister(EltTy);
+    MIRBuilder.buildLoad(EltReg, EltPtr, EltPtrInfo, EltAlign);
+    SplitRegs.push_back(EltReg);
+  }
+
+  MIRBuilder.buildBuildVector(DstReg, SplitRegs);
+  MI.eraseFromParent();
+  return true;
+}
+
 static bool legalizeStore(LegalizerHelper &Helper, MachineInstr &MI,
                           SPIRVGlobalRegistry *GR) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
@@ -623,18 +683,40 @@ bool SPIRVLegalizerInfo::legalizeCustom(
     }
     return true;
   }
+  case TargetOpcode::G_LOAD:
+    return legalizeLoad(Helper, MI, GR);
   case TargetOpcode::G_STORE:
     return legalizeStore(Helper, MI, GR);
   }
 }
 
-static bool needsVectorLegalization(const LLT &Ty, const SPIRVSubtarget &ST) {
-  if (!Ty.isVector())
-    return false;
-  unsigned NumElements = Ty.getNumElements();
-  unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
-  return (NumElements > 4 && !isPowerOf2_32(NumElements)) ||
-         NumElements > MaxVectorSize;
+static MachineInstrBuilder
+createStackTemporaryForVector(LegalizerHelper &Helper, SPIRVGlobalRegistry *GR,
+                              Register SrcReg, LLT SrcTy,
+                              MachinePointerInfo &PtrInfo, Align &VecAlign) {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  VecAlign = Helper.getStackTemporaryAlignment(SrcTy);
+  auto StackTemp = Helper.createStackTemporary(
+      TypeSize::getFixed(SrcTy.getSizeInBytes()), VecAlign, PtrInfo);
+
+  // Set the type of StackTemp to a pointer to an array of the element type.
+  SPIRVType *SpvSrcTy = GR->getSPIRVTypeForVReg(SrcReg);
+  SPIRVType *EltSpvTy = GR->getScalarOrVectorComponentType(SpvSrcTy);
+  const Type *LLVMEltTy = GR->getTypeForSPIRVType(EltSpvTy);
+  const Type *LLVMArrTy =
+      ArrayType::get(const_cast<Type *>(LLVMEltTy), SrcTy.getNumElements());
+  SPIRVType *ArrSpvTy = GR->getOrCreateSPIRVType(
+      LLVMArrTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+  SPIRVType *PtrToArrSpvTy = GR->getOrCreateSPIRVPointerType(
+      ArrSpvTy, MIRBuilder, SPIRV::StorageClass::Function);
+
+  Register StackReg = StackTemp.getReg(0);
+  MRI.setRegClass(StackReg, GR->getRegClass(PtrToArrSpvTy));
+  GR->assignSPIRVTypeToVReg(PtrToArrSpvTy, StackReg, MIRBuilder.getMF());
+
+  return StackTemp;
 }
 
 static bool legalizeSpvBitcast(LegalizerHelper &Helper, MachineInstr &MI,
@@ -697,11 +779,10 @@ static bool legalizeSpvInsertElt(LegalizerHelper &Helper, MachineInstr &MI,
     }
 
     LLT EltTy = SrcTy.getElementType();
-    Align VecAlign = Helper.getStackTemporaryAlignment(SrcTy);
-
+    Align VecAlign;
     MachinePointerInfo PtrInfo;
-    auto StackTemp = Helper.createStackTemporary(
-        TypeSize::getFixed(SrcTy.getSizeInBytes()), VecAlign, PtrInfo);
+    auto StackTemp = createStackTemporaryForVector(Helper, GR, SrcReg, SrcTy,
+                                                   PtrInfo, VecAlign);
 
     MIRBuilder.buildStore(SrcReg, StackTemp, PtrInfo, VecAlign);
 
@@ -763,26 +844,10 @@ static bool legalizeSpvExtractElt(LegalizerHelper &Helper, MachineInstr &MI,
     }
 
     LLT EltTy = SrcTy.getElementType();
-    Align VecAlign = Helper.getStackTemporaryAlignment(SrcTy);
-
+    Align VecAlign;
     MachinePointerInfo PtrInfo;
-    auto StackTemp = Helper.createStackTemporary(
-        TypeSize::getFixed(SrcTy.getSizeInBytes()), VecAlign, PtrInfo);
-
-    // Set the type of StackTemp to a pointer to an array of the element type.
-    SPIRVType *SpvSrcTy = GR->getSPIRVTypeForVReg(SrcReg);
-    SPIRVType *EltSpvTy = GR->getScalarOrVectorComponentType(SpvSrcTy);
-    const Type *LLVMEltTy = GR->getTypeForSPIRVType(EltSpvTy);
-    const Type *LLVMArrTy =
-        ArrayType::get(const_cast<Type *>(LLVMEltTy), SrcTy.getNumElements());
-    SPIRVType *ArrSpvTy = GR->getOrCreateSPIRVType(
-        LLVMArrTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
-    SPIRVType *PtrToArrSpvTy = GR->getOrCreateSPIRVPointerType(
-        ArrSpvTy, MIRBuilder, SPIRV::StorageClass::Function);
-
-    Register StackReg = StackTemp.getReg(0);
-    MRI.setRegClass(StackReg, GR->getRegClass(PtrToArrSpvTy));
-    GR->assignSPIRVTypeToVReg(PtrToArrSpvTy, StackReg, *MI.getMF());
+    auto StackTemp = createStackTemporaryForVector(Helper, GR, SrcReg, SrcTy,
+                                                   PtrInfo, VecAlign);
 
     MIRBuilder.buildStore(SrcReg, StackTemp, PtrInfo, VecAlign);
 
@@ -807,6 +872,38 @@ static bool legalizeSpvExtractElt(LegalizerHelper &Helper, MachineInstr &MI,
   return true;
 }
 
+static bool legalizeSpvConstComposite(LegalizerHelper &Helper, MachineInstr &MI,
+                                      SPIRVGlobalRegistry *GR) {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  if (!needsVectorLegalization(DstTy, ST))
+    return true;
+
+  SmallVector<Register, 8> SrcRegs;
+  if (MI.getNumOperands() == 2) {
+    // The "null" case: no values are attached.
+    LLT EltTy = DstTy.getElementType();
+    auto Zero = MIRBuilder.buildConstant(EltTy, 0);
+    SPIRVType *SpvDstTy = GR->getSPIRVTypeForVReg(DstReg);
+    SPIRVType *SpvEltTy = GR->getScalarOrVectorComponentType(SpvDstTy);
+    GR->assignSPIRVTypeToVReg(SpvEltTy, Zero.getReg(0), MIRBuilder.getMF());
+    for (unsigned i = 0; i < DstTy.getNumElements(); ++i)
+      SrcRegs.push_back(Zero.getReg(0));
+  } else {
+    for (unsigned i = 2; i < MI.getNumOperands(); ++i) {
+      SrcRegs.push_back(MI.getOperand(i).getReg());
+    }
+  }
+  MIRBuilder.buildBuildVector(DstReg, SrcRegs);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool SPIRVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   LLVM_DEBUG(dbgs() << "legalizeIntrinsic: " << MI);
@@ -818,6 +915,8 @@ bool SPIRVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeSpvInsertElt(Helper, MI, GR);
   case Intrinsic::spv_extractelt:
     return legalizeSpvExtractElt(Helper, MI, GR);
+  case Intrinsic::spv_const_composite:
+    return legalizeSpvConstComposite(Helper, MI, GR);
   }
   return true;
 }

@@ -351,6 +351,7 @@ def ROCDL_ClusterIdXOp : ROCDL_SpecialIdRegisterOp<"cluster.id.x">;
 def ROCDL_ClusterIdYOp : ROCDL_SpecialIdRegisterOp<"cluster.id.y">;
 def ROCDL_ClusterIdZOp : ROCDL_SpecialIdRegisterOp<"cluster.id.z">;
 
+def ROCDL_WaveId : ROCDL_SpecialIdRegisterOp<"wave.id">;
 def ROCDL_WavefrontSizeOp : ROCDL_SpecialIdRegisterOp<"wavefrontsize">;
 
 //===----------------------------------------------------------------------===//
@@ -1298,7 +1299,7 @@ def ROCDL_RawBufferAtomicCmpSwap :
 
 def ROCDL_GlobalPrefetchOp :
   ROCDL_IntrOp<"global.prefetch", [], [], [], 0, 0, 1, 0, [1], ["scope"]> {
-  dag args = (ins Arg<LLVM_PointerInAddressSpace<1>, "", [MemRead]>:$ptr,
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<1>, "", [MemRead, MemRead]>:$ptr,
                   I32Attr:$scope);
   let arguments = !con(args, baseArgs);
   let description = [{
@@ -1316,7 +1317,7 @@ def ROCDL_GlobalPrefetchOp :
 
 def ROCDL_FlatPrefetchOp :
   ROCDL_IntrOp<"flat.prefetch", [], [], [], 0, 0, 1, 0, [1], ["scope"]> {
-  dag args = (ins Arg<LLVM_PointerInAddressSpace<0>, "", [MemRead]>:$ptr,
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<0>, "", [MemRead, MemRead]>:$ptr,
                   I32Attr:$scope);
   let arguments = !con(args, baseArgs);
   let description = [{
@@ -2140,6 +2141,7 @@ def ROCDLExp : ROCDL_Math_IntrOp<"exp">;
 def ROCDLExp2 : ROCDL_Math_IntrOp<"exp2">;
 def ROCDLLog : ROCDL_Math_IntrOp<"log">;
 def ROCDLSqrt : ROCDL_Math_IntrOp<"sqrt">;
+def ROCDLRsq : ROCDL_Math_IntrOp<"rsq">;
 
 //===----------------------------------------------------------------------===//
 // ROCDL target attribute.

@@ -1644,9 +1644,6 @@ private:
 
   std::unique_ptr<CodeGenPGO> PGO;
 
-  /// Bitmap used by MC/DC to track condition outcomes of a boolean expression.
-  Address MCDCCondBitmapAddr = Address::invalid();
-
   /// Calculate branch weights appropriate for PGO data
   llvm::MDNode *createProfileWeights(uint64_t TrueCount,
                                      uint64_t FalseCount) const;

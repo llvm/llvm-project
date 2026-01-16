@@ -777,6 +777,8 @@ if (RUNTIMES_USE_LIBC STREQUAL "picolibc")
   config_define(1 _LIBCPP_LIBC_NEWLIB)
 elseif (RUNTIMES_USE_LIBC STREQUAL "newlib")
   config_define(1 _LIBCPP_LIBC_NEWLIB)
+elseif (RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
+  config_define(1 _LIBCPP_LIBC_LLVM_LIBC)
 endif()
 
 # TODO: Remove in LLVM 21. We're leaving an error to make this fail explicitly.

@@ -1015,6 +1015,36 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
   });
 }
 
+Error OnDiskGraphDB::validateObjectID(ObjectID ExternalRef) {
+  auto formatError = [&](Twine Msg) {
+    return createStringError(
+        llvm::errc::illegal_byte_sequence,
+        "bad ref=0x" +
+            utohexstr(ExternalRef.getOpaqueData(), /*LowerCase=*/true) + ": " +
+            Msg.str());
+  };
+
+  if (ExternalRef.getOpaqueData() == 0)
+    return formatError("zero is not a valid ref");
+
+  InternalRef InternalRef = getInternalRef(ExternalRef);
+  auto I = getIndexProxyFromRef(InternalRef);
+  if (!I)
+    return formatError(llvm::toString(I.takeError()));
+  auto Hash = getDigest(*I);
+
+  OnDiskTrieRawHashMap::ConstOnDiskPtr P = Index.find(Hash);
+  if (!P)
+    return formatError("not found using hash " + toHex(Hash));
+  IndexProxy OtherI = getIndexProxyFromPointer(P);
+  ObjectID OtherRef = getExternalReference(makeInternalRef(OtherI.Offset));
+  if (OtherRef != ExternalRef)
+    return formatError("ref does not match indexed offset " +
+                       utohexstr(OtherRef.getOpaqueData(), /*LowerCase=*/true) +
+                       " for hash " + toHex(Hash));
+  return Error::success();
+}
+
 void OnDiskGraphDB::print(raw_ostream &OS) const {
   OS << "on-disk-root-path: " << RootPath << "\n";
 

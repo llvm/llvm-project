@@ -1498,10 +1498,10 @@ defm CC_SImm16NonZero_QC : SelectCC_GPR_riirr<GPRNoX0, simm16nonzero>;
 defm CC_UImm16NonZero_QC : SelectCC_GPR_riirr<GPRNoX0, uimm16nonzero>;
 
 class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
-    : Pat<(riscv_selectcc_frag:$cc (i32 GPRNoX0:$lhs), InTyImm:$Constant, Cond,
-                                   (i32 GPRNoX0:$truev), GPRNoX0:$falsev),
-          (OpNode GPRNoX0:$lhs, InTyImm:$Constant,
-           (IntCCtoRISCVCC $cc), GPRNoX0:$truev, GPRNoX0:$falsev)>;
+    : Pat<(riscv_selectcc (i32 GPRNoX0:$lhs), InTyImm:$Constant, Cond:$cc,
+                          (i32 GPRNoX0:$truev), GPRNoX0:$falsev),
+          (OpNode GPRNoX0:$lhs, InTyImm:$Constant, (CCtoRISCVCC $cc),
+                  GPRNoX0:$truev, GPRNoX0:$falsev)>;
 
 let Predicates = [HasVendorXqciac, IsRV32] in {
 def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12_lo:$imm12))),

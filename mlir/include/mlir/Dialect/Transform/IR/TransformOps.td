@@ -26,7 +26,8 @@ include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 def AlternativesOp : TransformDialectOp<"alternatives",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands",
-         "getRegionInvocationBounds"]>,
+         "getRegionInvocationBounds",
+         "getSuccessorInputs"]>,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      IsolatedFromAbove, PossibleTopLevelTransformOpTrait,
@@ -624,7 +625,7 @@ def ForeachOp : TransformDialectOp<"foreach",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-         "getEntrySuccessorOperands"]>,
+         "getEntrySuccessorOperands", "getSuccessorInputs"]>,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">
     ]> {
   let summary = "Executes the body for each element of the payload";
@@ -1238,7 +1239,8 @@ def SelectOp : TransformDialectOp<"select",
 def SequenceOp : TransformDialectOp<"sequence",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands",
-         "getRegionInvocationBounds"]>,
+         "getRegionInvocationBounds",
+         "getSuccessorInputs"]>,
      MatchOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,

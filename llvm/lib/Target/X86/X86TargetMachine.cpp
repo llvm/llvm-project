@@ -53,9 +53,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableMachineCombinerPass("x86-machine-combiner",
-                               cl::desc("Enable the machine combiner pass"),
-                               cl::init(true), cl::Hidden);
+cl::opt<bool>
+    X86EnableMachineCombinerPass("x86-machine-combiner",
+                                 cl::desc("Enable the machine combiner pass"),
+                                 cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableTileRAPass("x86-tile-ra",
@@ -90,8 +91,8 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86DomainReassignmentLegacyPass(PR);
   initializeX86AvoidSFBLegacyPass(PR);
   initializeX86AvoidTrailingCallLegacyPassPass(PR);
-  initializeX86SpeculativeLoadHardeningPassPass(PR);
-  initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
+  initializeX86SpeculativeLoadHardeningLegacyPass(PR);
+  initializeX86SpeculativeExecutionSideEffectSuppressionLegacyPass(PR);
   initializeX86FlagsCopyLoweringLegacyPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
@@ -497,7 +498,7 @@ void X86PassConfig::addPreLegalizeMachineIR() {
 
 bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
-  if (EnableMachineCombinerPass)
+  if (X86EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
   addPass(createX86CmovConversionLegacyPass());
   return true;
@@ -522,7 +523,7 @@ void X86PassConfig::addPreRegAlloc() {
 
   addPass(createX86SuppressAPXForRelocationLegacyPass());
 
-  addPass(createX86SpeculativeLoadHardeningPass());
+  addPass(createX86SpeculativeLoadHardeningLegacyPass());
   addPass(createX86FlagsCopyLoweringLegacyPass());
   addPass(createX86DynAllocaExpanderLegacyPass());
 
@@ -587,7 +588,7 @@ void X86PassConfig::addPreEmitPass2() {
   // passes don't move the code around the LFENCEs in a way that will hurt the
   // correctness of this pass. This placement has been shown to work based on
   // hand inspection of the codegen output.
-  addPass(createX86SpeculativeExecutionSideEffectSuppression());
+  addPass(createX86SpeculativeExecutionSideEffectSuppressionLegacyPass());
   addPass(createX86IndirectThunksPass());
   addPass(createX86ReturnThunksPass());
 

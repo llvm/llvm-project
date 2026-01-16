@@ -1516,18 +1516,26 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // Check that copy is full with static size.
   const DataLayout &DL = DestAlloca->getDataLayout();
   std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
-  if (!SrcSize || Size != *SrcSize) {
-    LLVM_DEBUG(dbgs() << "Stack Move: Source alloca size mismatch\n");
-    return false;
-  }
   std::optional<TypeSize> DestSize = DestAlloca->getAllocationSize(DL);
-  if (!DestSize || Size != *DestSize) {
+  if (!SrcSize || !DestSize)
+    return false;
+  if (*SrcSize != *DestSize)
+    if (!SrcSize->isFixed() || !DestSize->isFixed())
+      return false;
+  if (Size != *DestSize) {
     LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
     return false;
   }
 
   if (!SrcAlloca->isStaticAlloca() || !DestAlloca->isStaticAlloca())
     return false;
+
+  // Check if it will be legal to combine allocas without breaking dominator.
+  bool MoveSrc = !DT->dominates(SrcAlloca, DestAlloca);
+  if (MoveSrc) {
+    if (!DT->dominates(DestAlloca, SrcAlloca))
+      return false;
+  }
 
   // Check that src and dest are never captured, unescaped allocas. Also
   // find the nearest common dominator and postdominator for all users in
@@ -1536,7 +1544,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
   SmallPtrSet<Instruction *, 4> AAMetadataInstrs;
-  bool SrcNotDom = false;
 
   auto CaptureTrackingWithModRef =
       [&](Instruction *AI, function_ref<bool(Instruction *)> ModRefCallback,
@@ -1550,10 +1557,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
       Instruction *I = Worklist.pop_back_val();
       for (const Use &U : I->uses()) {
         auto *UI = cast<Instruction>(U.getUser());
-        // If any use that isn't dominated by SrcAlloca exists, we move src
-        // alloca to the entry before the transformation.
-        if (!DT->dominates(SrcAlloca, UI))
-          SrcNotDom = true;
 
         if (Visited.size() >= MaxUsesToExplore) {
           LLVM_DEBUG(
@@ -1671,14 +1674,23 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (DestAddressCaptured && SrcAddressCaptured)
     return false;
 
-  // We can do the transformation. First, move the SrcAlloca to the start of the
-  // BB.
-  if (SrcNotDom)
-    SrcAlloca->moveBefore(*SrcAlloca->getParent(),
-                          SrcAlloca->getParent()->getFirstInsertionPt());
+  // We can now do the transformation. First move the Src if it was after Dest.
+  if (MoveSrc)
+    SrcAlloca->moveBefore(DestAlloca->getIterator());
+
   // Align the allocas appropriately.
   SrcAlloca->setAlignment(
       std::max(SrcAlloca->getAlign(), DestAlloca->getAlign()));
+
+  // Size the allocas appropriately.
+  if (*SrcSize != *DestSize) {
+    // Only possible if both sizes are fixed (due to earlier check)
+    // Set Src to the type and array size of Dest if Dest was larger
+    if (DestSize->getFixedValue() > SrcSize->getFixedValue()) {
+      SrcAlloca->setAllocatedType(DestAlloca->getAllocatedType());
+      SrcAlloca->setOperand(0, DestAlloca->getArraySize());
+    }
+  }
 
   // Merge the two allocas.
   DestAlloca->replaceAllUsesWith(SrcAlloca);
@@ -1707,7 +1719,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
   }
 
-  LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
+  LLVM_DEBUG(dbgs() << "Stack Move: Performed stack-move optimization\n");
   NumStackMove++;
   return true;
 }

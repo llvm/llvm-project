@@ -2294,7 +2294,7 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   assert(Kind <= 3 && "unexpected kind");
   bool UseFieldDesc = (Kind & 1u);
   bool ReportMinimum = (Kind & 2u);
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  Pointer Ptr = S.Stk.pop<Pointer>();
 
   if (Call->getArg(0)->HasSideEffects(ASTCtx)) {
     // "If there are any side effects in them, it returns (size_t) -1
@@ -2332,6 +2332,13 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
     }
   }
 
+  // The "closest surrounding subobject" is NOT a base class,
+  // so strip the base class casts.
+  if (UseFieldDesc && Ptr.isBaseClass()) {
+    while (Ptr.isBaseClass())
+      Ptr = Ptr.getBase();
+  }
+
   const Descriptor *Desc = UseFieldDesc ? Ptr.getFieldDesc() : DeclDesc;
   assert(Desc);
 
@@ -2341,10 +2348,12 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
 
   unsigned ByteOffset;
   if (UseFieldDesc) {
-    if (Ptr.isBaseClass())
+    if (Ptr.isBaseClass()) {
+      assert(computePointerOffset(ASTCtx, Ptr.getBase()) <=
+             computePointerOffset(ASTCtx, Ptr));
       ByteOffset = computePointerOffset(ASTCtx, Ptr.getBase()) -
                    computePointerOffset(ASTCtx, Ptr);
-    else {
+    } else {
       if (Ptr.inArray())
         ByteOffset =
             computePointerOffset(ASTCtx, Ptr) -

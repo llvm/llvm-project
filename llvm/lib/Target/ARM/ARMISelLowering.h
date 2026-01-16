@@ -385,9 +385,9 @@ class VectorType;
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+    shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
     bool useLoadStackGuardNode(const Module &M) const override;
 

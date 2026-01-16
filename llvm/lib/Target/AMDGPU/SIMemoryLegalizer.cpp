@@ -1974,6 +1974,17 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     --MI;
 
+  // Target requires a waitcnt to ensure that the proceeding INV has completed
+  // as it may get reorded with following load instructions.
+  if (ST.hasINVWBL2WaitCntRequirement() && Scope > SIAtomicScope::CLUSTER) {
+    insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD,
+               /*IsCrossAddrSpaceOrdering=*/false, Pos, AtomicOrdering::Acquire,
+               /*AtomicsOnly=*/false);
+
+    if (Pos == Position::AFTER)
+      --MI;
+  }
+
   return true;
 }
 
@@ -2001,19 +2012,15 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
     //
     // Emitting it for lower scopes is a slow no-op, so we omit it
     // for performance.
+    std::optional<AMDGPU::CPol::CPol> NeedsWB;
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-          .addImm(AMDGPU::CPol::SCOPE_SYS);
-      Changed = true;
+      NeedsWB = AMDGPU::CPol::SCOPE_SYS;
       break;
     case SIAtomicScope::AGENT:
       // GFX12.5 may have >1 L2 per device so we must emit a device scope WB.
-      if (ST.hasGFX1250Insts()) {
-        BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-            .addImm(AMDGPU::CPol::SCOPE_DEV);
-        Changed = true;
-      }
+      if (ST.hasGFX1250Insts())
+        NeedsWB = AMDGPU::CPol::SCOPE_DEV;
       break;
     case SIAtomicScope::CLUSTER:
     case SIAtomicScope::WORKGROUP:
@@ -2024,6 +2031,20 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
       break;
     default:
       llvm_unreachable("Unsupported synchronization scope");
+    }
+
+    if (NeedsWB) {
+      // Target requires a waitcnt to ensure that the proceeding store
+      // proceeding store/rmw operations have completed in L2 so their data will
+      // be written back by the WB instruction.
+      if (ST.hasINVWBL2WaitCntRequirement())
+        insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+                   /*IsCrossAddrSpaceOrdering=*/false, Pos,
+                   AtomicOrdering::Release,
+                   /*AtomicsOnly=*/false);
+
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB)).addImm(*NeedsWB);
+      Changed = true;
     }
 
     if (Pos == Position::AFTER)

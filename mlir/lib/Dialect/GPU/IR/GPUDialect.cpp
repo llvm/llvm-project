@@ -2398,7 +2398,7 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
 void WarpExecuteOnLane0Op::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent(getResults()));
+    regions.push_back(RegionSuccessor::parent());
     return;
   }
 
@@ -2406,6 +2406,9 @@ void WarpExecuteOnLane0Op::getSuccessorRegions(
   regions.push_back(RegionSuccessor(&getWarpRegion()));
 }
 
+ValueRange WarpExecuteOnLane0Op::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+}
 void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
                                  TypeRange resultTypes, Value laneId,
                                  int64_t warpSize) {

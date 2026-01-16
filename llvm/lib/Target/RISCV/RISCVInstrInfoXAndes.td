@@ -781,16 +781,16 @@ defm CC_UImmLog2XLen_NDS : SelectCC_GPR_riirr<GPR, uimmlog2xlen>;
 defm CC_UImm7_NDS        : SelectCC_GPR_riirr<GPR, uimm7>;
 
 class SelectNDS_BB<CondCode Cond>
-    : Pat<(riscv_selectcc_frag:$cc (and(XLenVT GPR:$lhs), PowerOf2:$mask), 0,
-              Cond, (XLenVT GPR:$truev), GPR:$falsev),
+    : Pat<(riscv_selectcc (and (XLenVT GPR:$lhs), PowerOf2:$mask), 0,
+                          Cond:$cc, (XLenVT GPR:$truev), GPR:$falsev),
           (Select_GPR_Using_CC_UImmLog2XLen_NDS GPR:$lhs, (Log2 PowerOf2:$mask),
-              (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+              (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 class SelectNDS_BC<CondCode Cond>
-    : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), uimm7:$cimm, Cond,
+    : Pat<(riscv_selectcc (XLenVT GPR:$lhs), uimm7:$cimm, Cond:$cc,
               (XLenVT GPR:$truev), GPR:$falsev),
           (Select_GPR_Using_CC_UImm7_NDS GPR:$lhs, uimm7:$cimm,
-              (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+              (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 let Predicates = [HasVendorXAndesPerf] in {
   def : NDS_BBPat<SETEQ, NDS_BBC>;

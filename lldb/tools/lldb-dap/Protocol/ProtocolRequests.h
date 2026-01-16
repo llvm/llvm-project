@@ -317,6 +317,15 @@ using LaunchResponse = VoidResponse;
 /// An invalid 'frameId' default value.
 #define LLDB_DAP_INVALID_FRAME_ID UINT64_MAX
 
+struct DAPSession {
+  /// Unique ID of an existing target to attach to.
+  lldb::user_id_t targetId;
+
+  /// ID of an existing debugger instance to use.
+  lldb::user_id_t debuggerId;
+};
+bool fromJSON(const llvm::json::Value &, DAPSession &, llvm::json::Path);
+
 /// lldb-dap specific attach arguments.
 struct AttachRequestArguments {
   /// Common lldb-dap configuration values for launching/attaching operations.
@@ -351,11 +360,8 @@ struct AttachRequestArguments {
   /// Path to the core file to debug.
   std::string coreFile;
 
-  /// Unique ID of an existing target to attach to.
-  std::optional<lldb::user_id_t> targetId;
-
-  /// ID of an existing debugger instance to use.
-  std::optional<int> debuggerId;
+  /// An Existing session that consist of a target and debugger.
+  std::optional<DAPSession> session;
 
   /// @}
 };

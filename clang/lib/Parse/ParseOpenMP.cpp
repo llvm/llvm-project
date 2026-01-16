@@ -3179,6 +3179,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_message:
   case OMPC_ompx_dyn_cgroup_mem:
   case OMPC_dyn_groupprivate:
+  case OMPC_transparent:
     // OpenMP [2.5, Restrictions]
     //  At most one num_threads clause can appear on the directive.
     // OpenMP [2.8.1, simd construct, Restrictions]

@@ -215,15 +215,7 @@ bool FIRToMemRef::memrefIsDeviceData(Operation *memref) const {
   if (isa<ACC_DATA_ENTRY_OPS>(memref))
     return true;
 
-  if (cuf::DataAttributeAttr cudaAttr = cuf::getDataAttr(memref)) {
-    cuf::DataAttribute attrValue = cudaAttr.getValue();
-    return attrValue == cuf::DataAttribute::Device ||
-           attrValue == cuf::DataAttribute::Managed ||
-           attrValue == cuf::DataAttribute::Constant ||
-           attrValue == cuf::DataAttribute::Shared ||
-           attrValue == cuf::DataAttribute::Unified;
-  }
-  return false;
+  return cuf::hasDeviceDataAttr(memref);
 }
 
 mlir::Attribute FIRToMemRef::findCudaDataAttr(Value val) const {

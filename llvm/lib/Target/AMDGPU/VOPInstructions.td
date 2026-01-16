@@ -199,9 +199,10 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
   let isConvergent         = ps.isConvergent;
-  let PostEncoderMethod = ps.PostEncoderMethod;
 
   VOPProfile Pfl = ps.Pfl;
+
+  let PostEncoderMethod = !if(!and(Pfl.HasSrc0, Pfl.HasSrc1, Pfl.HasSrc2), "", "postEncodeVOP3<"#Pfl.HasSrc0#","#Pfl.HasSrc1#","#Pfl.HasSrc2#">");
 }
 
 class VOP3_Real_Gen <VOP_Pseudo ps, GFXGen Gen, string asm_name = ps.Mnemonic> :

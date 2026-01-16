@@ -214,6 +214,7 @@ Status ProcessWindows::DoLaunch(Module *exe_module,
   error = LaunchProcess(launch_info, delegate);
   if (error.Success())
     SetID(launch_info.GetProcessID());
+  m_pty = launch_info.GetPTYSP();
   return error;
 }
 
@@ -650,8 +651,10 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
+  if (m_pty)
+    m_pty->Close();
+
   TargetSP target = CalculateTarget();
-  target->GetProcessLaunchInfo().GetPTY().Close();
   if (target) {
     ModuleSP executable_module = target->GetExecutableModule();
     ModuleList unloaded_modules;

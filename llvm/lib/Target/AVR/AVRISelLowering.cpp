@@ -513,7 +513,7 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
     Args.push_back(Entry);
   }
 
-  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
+  SDValue Callee = DAG.getExternalSymbol(DAG.getLibcalls().getLibcallName(LC),
                                          getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = (Type *)StructType::get(Ty, Ty);
@@ -522,7 +522,8 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
+      .setLibCallee(DAG.getLibcalls().getLibcallCallingConv(LC), RetTy, Callee,
+                    std::move(Args))
       .setInRegister()
       .setSExtResult(IsSigned)
       .setZExtResult(!IsSigned);
