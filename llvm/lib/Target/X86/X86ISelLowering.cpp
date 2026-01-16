@@ -22542,11 +22542,17 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
       Entry.IsZExt = true;
       Args.push_back(Entry);
 
-      SDValue Callee = DAG.getExternalSymbol(
-          DAG.getLibcalls().getLibcallName(RTLIB::FPEXT_F16_F32),
-          getPointerTy(DAG.getDataLayout()));
+      RTLIB::LibcallImpl FPExtImpl =
+          DAG.getLibcalls().getLibcallImpl(RTLIB::FPEXT_F16_F32);
+      if (FPExtImpl == RTLIB::Unsupported)
+        return SDValue();
+      CallingConv::ID CC =
+          DAG.getLibcalls().getLibcallImplCallingConv(FPExtImpl);
+
+      SDValue Callee =
+          DAG.getExternalSymbol(FPExtImpl, getPointerTy(DAG.getDataLayout()));
       CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-          CallingConv::C, EVT(VT).getTypeForEVT(*DAG.getContext()), Callee,
+          CC, EVT(VT).getTypeForEVT(*DAG.getContext()), Callee,
           std::move(Args));
 
       SDValue Res;
@@ -22640,12 +22646,18 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     Entry.IsZExt = true;
     Args.push_back(Entry);
 
-    SDValue Callee = DAG.getExternalSymbol(
-        DAG.getLibcalls().getLibcallName(
-            SVT == MVT::f64 ? RTLIB::FPROUND_F64_F16 : RTLIB::FPROUND_F32_F16),
-        getPointerTy(DAG.getDataLayout()));
+    RTLIB::LibcallImpl FPRoundImpl = DAG.getLibcalls().getLibcallImpl(
+        SVT == MVT::f64 ? RTLIB::FPROUND_F64_F16 : RTLIB::FPROUND_F32_F16);
+    if (FPRoundImpl == RTLIB::Unsupported)
+      return SDValue();
+
+    CallingConv::ID CC =
+        DAG.getLibcalls().getLibcallImplCallingConv(FPRoundImpl);
+
+    SDValue Callee =
+        DAG.getExternalSymbol(FPRoundImpl, getPointerTy(DAG.getDataLayout()));
     CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-        CallingConv::C, EVT(MVT::i16).getTypeForEVT(*DAG.getContext()), Callee,
+        CC, EVT(MVT::i16).getTypeForEVT(*DAG.getContext()), Callee,
         std::move(Args));
 
     SDValue Res;
@@ -30371,14 +30383,18 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
     Args.emplace_back(StackPtr, PointerType::get(*DAG.getContext(), 0));
   }
 
-  SDValue Callee = DAG.getExternalSymbol(DAG.getLibcalls().getLibcallName(LC),
-                                         getPointerTy(DAG.getDataLayout()));
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SDValue();
+
+  SDValue Callee =
+      DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
       .setLibCallee(
-          DAG.getLibcalls().getLibcallCallingConv(LC),
+          DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
           static_cast<EVT>(MVT::v2i64).getTypeForEVT(*DAG.getContext()), Callee,
           std::move(Args))
       .setInRegister()
@@ -62732,7 +62748,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                         ? &X86::GR32RegClass
                                         : &X86::GR32_NOREX2RegClass);
-        if (VT != MVT::f80 && !VT.isVector())
+        if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
           return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                         ? &X86::GR64RegClass
                                         : &X86::GR64_NOREX2RegClass);
@@ -62748,7 +62764,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
         return std::make_pair(0U, &X86::GR32_ABCDRegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64_ABCDRegClass);
       break;
     case 'r':   // GENERAL_REGS
@@ -62766,7 +62782,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                       ? &X86::GR32RegClass
                                       : &X86::GR32_NOREX2RegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                       ? &X86::GR64RegClass
                                       : &X86::GR64_NOREX2RegClass);
@@ -62779,7 +62795,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
         return std::make_pair(0U, &X86::GR32_NOREXRegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64_NOREXRegClass);
       break;
     case 'f':  // FP Stack registers.
@@ -63007,7 +63023,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
       if (VT == MVT::i32 || VT == MVT::f32)
         return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
       break;
     case 'R':
@@ -63017,7 +63033,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::GR16RegClass);
       if (VT == MVT::i32 || VT == MVT::f32)
         return std::make_pair(0U, &X86::GR32RegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64RegClass);
       break;
     }
