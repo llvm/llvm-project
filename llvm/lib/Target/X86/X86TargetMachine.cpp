@@ -54,7 +54,7 @@
 using namespace llvm;
 
 cl::opt<bool>
-    EnableMachineCombinerPassX86("x86-machine-combiner",
+    X86EnableMachineCombinerPass("x86-machine-combiner",
                                  cl::desc("Enable the machine combiner pass"),
                                  cl::init(true), cl::Hidden);
 
@@ -498,7 +498,7 @@ void X86PassConfig::addPreLegalizeMachineIR() {
 
 bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
-  if (EnableMachineCombinerPassX86)
+  if (X86EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
   addPass(createX86CmovConversionLegacyPass());
   return true;

@@ -27,7 +27,7 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> EnableMachineCombinerPassX86;
+extern cl::opt<bool> X86EnableMachineCombinerPass;
 
 namespace {
 
@@ -117,7 +117,7 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
 
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(EarlyIfConverterPass(), PMW);
-  if (EnableMachineCombinerPassX86) {
+  if (X86EnableMachineCombinerPass) {
     // TODO(boomanaiden154): Add the MachineCombinerPass here once it has been
     // ported to the new pass manager.
   }
