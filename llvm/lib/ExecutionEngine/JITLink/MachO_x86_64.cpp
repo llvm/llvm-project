@@ -521,9 +521,9 @@ struct CompactUnwindTraits_MachO_x86_64
     return (Encoding & EncodingModeMask) == DWARFMode;
   }
 
-  static bool encodingCannotBeMerged(uint32_t Encoding) {
+  static bool encodingCanBeMerged(uint32_t Encoding) {
     constexpr uint32_t StackIndirectMode = 0x03000000;
-    return (Encoding & EncodingModeMask) == StackIndirectMode;
+    return (Encoding & EncodingModeMask) != StackIndirectMode;
   }
 };
 
