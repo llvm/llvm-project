@@ -35,8 +35,7 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-  - Name:  .llvm.callgraph
-    Type:  SHT_LLVM_CALL_GRAPH
+  - Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
       0x01, ## Format Version - only supported value is 0x00
     ]
@@ -59,15 +58,11 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-  - Name:  .llvm.callgraph
-    Type:  SHT_LLVM_CALL_GRAPH
-    ContentArray: [
-      ## --- foo ---
+  - Type:  SHT_LLVM_CALL_GRAPH
+    ContentArray: [      
       0x00, ## Format Version
       ##<Missing flags
     ]
-Symbols:
-  - Name:  foo
 ...
 
 ## Check Flags.
@@ -87,15 +82,11 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-  - Name:  .llvm.callgraph
-    Type:  SHT_LLVM_CALL_GRAPH
-    ContentArray: [
-      ## --- foo ---
+  - Type:  SHT_LLVM_CALL_GRAPH
+    ContentArray: [      
       0x00, ## Format Version
       0x08, ## Flags - only valid values are 0x00 to 0x07
     ]
-Symbols:
-  - Name:  foo
 ...
 
 ## Check missing function entry PC.
@@ -115,16 +106,12 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-  - Name:  .llvm.callgraph
-    Type:  SHT_LLVM_CALL_GRAPH
-    ContentArray: [
-      ## --- foo ---
+  - Type:  SHT_LLVM_CALL_GRAPH
+    ContentArray: [      
       0x00, ## Format Version
       0x00, ## Flags
       ##<Missing function entry PC
     ]
-Symbols:
-  - Name:  foo
 ...
 
 ## Check missing function Type ID.
@@ -144,17 +131,13 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-  - Name:  .llvm.callgraph
-    Type:  SHT_LLVM_CALL_GRAPH
-    ContentArray: [
-      ## --- foo ---
+  - Type:  SHT_LLVM_CALL_GRAPH
+    ContentArray: [      
       0x00, ## Format Version
       0x00, ## Flags
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
       ##<Missing Type ID
     ]
-Symbols:
-  - Name:  foo
 ...
 
 ## Check missing number of direct callees.
@@ -174,19 +157,14 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-    Size:  5
-  - Name:  .llvm.callgraph
-    Type:  SHT_LLVM_CALL_GRAPH
-    ContentArray: [
-      ## --- foo ---
+  - Type:  SHT_LLVM_CALL_GRAPH
+    ContentArray: [      
       0x00, ## Format Version
       0x02, ## Flags (HasDirectCallees)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## TypeID unknown
       ##<Missing NumDirectCallees (ULEB128)
     ]
-Symbols:
-  - Name:  foo
 ...
 
 ## Check missing direct callee.
@@ -206,11 +184,8 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-    Size:  5
-  - Name:  .llvm.callgraph
-    Type:  SHT_LLVM_CALL_GRAPH
+  - Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- foo ---
       0x00, ## Format Version
       0x02, ## Flags (HasDirectCallees)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
@@ -218,8 +193,6 @@ Sections:
       0x01, ## NumDirectCallees
       ##<Missing direct callee address
     ]
-Symbols:
-  - Name:  foo
 ...
 
 ## Check missing number of indirect target type IDs.
@@ -239,19 +212,14 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-    Size:  5
-  - Name:  .llvm.callgraph
-    Type:  SHT_LLVM_CALL_GRAPH
+  - Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- foo ---
       0x00, ## Format Version
       0x04, ## Flags (HasIndirectCallees)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## TypeID unknown
       ##<Missing NumIndirectTargetTypeIDs (ULEB128)
     ]
-Symbols:
-  - Name:  foo
 ...
 
 ## Check missing indirect target type ID.
@@ -271,10 +239,8 @@ FileHeader:
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
-  - Name:  .llvm.callgraph
-    Type:  SHT_LLVM_CALL_GRAPH
-    ContentArray: [
-      ## --- foo ---
+  - Type:  SHT_LLVM_CALL_GRAPH
+    ContentArray: [      
       0x00, ## Format Version
       0x04, ## Flags (HasIndirectCallees)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
@@ -282,8 +248,6 @@ Sections:
       0x01, ## NumIndirectTargetTypeIDs (1)
       ##<Missing indirect call entries here.
     ]
-Symbols:
-  - Name:  foo
 ...
 
 ## Check missing relocation information.

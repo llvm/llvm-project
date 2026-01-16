@@ -165,8 +165,7 @@ Sections:
   - Name:   .text
     Type:   SHT_PROGBITS
     Flags:  [ SHF_ALLOC, SHF_EXECINSTR ]
-  - Name:   .llvm.callgraph
-    Type:   SHT_LLVM_CALL_GRAPH
+  - Type:   SHT_LLVM_CALL_GRAPH
     Flags:  [ SHF_LINK_ORDER ]
     Link:   .text
     ContentArray: [
