@@ -35,11 +35,7 @@ define void @use_assume(i1 %arg) {
 
 define void @use_trap() {
 ; CHECK-LABEL: define void @use_trap(
-<<<<<<< HEAD
-; CHECK-SAME: ) #[[ATTR0]] {
-=======
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
->>>>>>> main
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    ret void
 ;
@@ -49,11 +45,7 @@ define void @use_trap() {
 
 define void @use_debugtrap() {
 ; CHECK-LABEL: define void @use_debugtrap(
-<<<<<<< HEAD
-; CHECK-SAME: ) #[[ATTR0]] {
-=======
 ; CHECK-SAME: ) #[[ATTR1]] {
->>>>>>> main
 ; CHECK-NEXT:    call void @llvm.debugtrap()
 ; CHECK-NEXT:    ret void
 ;
@@ -63,11 +55,7 @@ define void @use_debugtrap() {
 
 define void @use_ubsantrap() {
 ; CHECK-LABEL: define void @use_ubsantrap(
-<<<<<<< HEAD
-; CHECK-SAME: ) #[[ATTR0]] {
-=======
 ; CHECK-SAME: ) #[[ATTR1]] {
->>>>>>> main
 ; CHECK-NEXT:    call void @llvm.ubsantrap(i8 0)
 ; CHECK-NEXT:    ret void
 ;
@@ -77,18 +65,10 @@ define void @use_ubsantrap() {
 
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-<<<<<<< HEAD
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nounwind "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) "target-cpu"="gfx90a" }
-=======
 ; CHECK: attributes #[[ATTR1]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nounwind "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR6:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) "target-cpu"="gfx90a" }
->>>>>>> main
 ;.
