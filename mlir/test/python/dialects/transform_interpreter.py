@@ -172,9 +172,9 @@ def check_builtin():
     module = builtin_d.ModuleOp()
     with module.context, ir.Location.unknown():
         transform_module = builtin_d.Module.create()
-        transform_module.operation.attributes["transform.with_named_sequence"] = (
-            ir.UnitAttr.get()
-        )
+        transform_module.operation.attributes[
+            "transform.with_named_sequence"
+        ] = ir.UnitAttr.get()
         with ir.InsertionPoint(transform_module.body):
             named_sequence = NamedSequenceOp("__transform_main", [any_op_t()], [])
             with ir.InsertionPoint(named_sequence.body):
