@@ -66,6 +66,7 @@
 #include "math/ldexpf.h"
 #include "math/ldexpf128.h"
 #include "math/ldexpf16.h"
+#include "math/llogbf.h"
 #include "math/log.h"
 #include "math/logbf.h"
 #include "math/logbf128.h"
