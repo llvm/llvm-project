@@ -274,7 +274,6 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
   if (error.Success())
     return error;
 
-  const bool always_create = false;
   error = ModuleList::GetSharedModule(module_spec, module_sp, old_modules,
                                       did_create_ptr);
 
