@@ -2610,20 +2610,56 @@ def : GCNPat <
   (V_EXP_F32_e64 SRCMODS.NONE, (V_MUL_LEGACY_F32_e64 $src1_mods, $src1, SRCMODS.NONE, (V_LOG_F32_e64 $src0_mods, $src0), 0, 0))
 >;
 
+// Divergent i1 -> i32 extension patterns (result in VGPR)
 def : GCNPat <
-  (i32 (sext i1:$src0)),
+  (i32 (DivergentUnaryFrag<sext> i1:$src0)),
   (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                      /*src1mod*/(i32 0), /*src1*/(i32 -1), i1:$src0)
 >;
 
 class Ext32Pat <SDNode ext> : GCNPat <
-  (i32 (ext i1:$src0)),
+  (i32 (DivergentUnaryFrag<ext> i1:$src0)),
   (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                      /*src1mod*/(i32 0), /*src1*/(i32 1), i1:$src0)
 >;
 
 def : Ext32Pat <zext>;
 def : Ext32Pat <anyext>;
+
+// Uniform i1 -> i32 extension patterns (result stays in SGPR)
+// For uniform i1: value is either -1 (all true) or 0 (all false)
+// zext: -1 & 1 = 1, 0 & 1 = 0
+// anyext: same as zext
+// sext: just copy the value (i1 -1 sign-extends to i32 -1)
+let SubtargetPredicate = isWave32, WaveSizePredicate = isWave32 in {
+  def : GCNPat <
+    (i32 (UniformUnaryFrag<zext> i1:$src0)),
+    (S_AND_B32 (i32 (COPY_TO_REGCLASS i1:$src0, SReg_32)), (i32 1))
+  >;
+  def : GCNPat <
+    (i32 (UniformUnaryFrag<anyext> i1:$src0)),
+    (S_AND_B32 (i32 (COPY_TO_REGCLASS i1:$src0, SReg_32)), (i32 1))
+  >;
+  def : GCNPat <
+    (i32 (UniformUnaryFrag<sext> i1:$src0)),
+    (COPY_TO_REGCLASS i1:$src0, SReg_32)
+  >;
+}
+
+let SubtargetPredicate = isWave64, WaveSizePredicate = isWave64 in {
+  def : GCNPat <
+    (i32 (UniformUnaryFrag<zext> i1:$src0)),
+    (S_AND_B32 (i32 (EXTRACT_SUBREG i1:$src0, sub0)), (i32 1))
+  >;
+  def : GCNPat <
+    (i32 (UniformUnaryFrag<anyext> i1:$src0)),
+    (S_AND_B32 (i32 (EXTRACT_SUBREG i1:$src0, sub0)), (i32 1))
+  >;
+  def : GCNPat <
+    (i32 (UniformUnaryFrag<sext> i1:$src0)),
+    (EXTRACT_SUBREG i1:$src0, sub0)
+  >;
+}
 
 // The multiplication scales from [0,1) to the unsigned integer range,
 // rounding down a bit to avoid unwanted overflow.
