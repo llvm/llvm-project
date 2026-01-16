@@ -145,7 +145,7 @@ LLVM_ABI bool isTriviallyVectorizable(Intrinsic::ID ID);
 /// Note: There are intrinsics where implementing vectorization for the
 /// intrinsic is redundant, but we want to implement scalarization of the
 /// vector. To prevent the requirement that an intrinsic also implements
-/// vectorization we provide this seperate function.
+/// vectorization we provide this separate function.
 LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID,
                                       const TargetTransformInfo *TTI);
 
@@ -632,6 +632,9 @@ public:
     // This is a group of loads, with gaps, and without a last-member
     return true;
   }
+
+  /// Return true if this group is full, i.e. it has no gaps.
+  bool isFull() const { return getNumMembers() == getFactor(); }
 
 private:
   uint32_t Factor; // Interleave Factor.

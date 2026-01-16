@@ -391,6 +391,9 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.RemarksKeepAll =
       !Args.hasArg(OPT_remarks_drop_without_debug);
 
+  Options.LinkOpts.IncludeSwiftModulesFromInterface =
+      Args.hasArg(OPT_include_swiftmodules_from_interface);
+
   if (opt::Arg *BuildVariantSuffix = Args.getLastArg(OPT_build_variant_suffix))
     Options.LinkOpts.BuildVariantSuffix = BuildVariantSuffix->getValue();
 
@@ -870,7 +873,6 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
                 "-fat64 flag to force a 64-bit header and silence this "
                 "warning.",
                 FileOffset);
-            return EXIT_FAILURE;
           }
           FileOffset += stat->getSize();
         }

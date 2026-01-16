@@ -91,3 +91,25 @@ class TestDAP_disassemble(lldbdap_testcase.DAPTestCaseBase):
         # clear breakpoints
         self.set_source_breakpoints(source, [])
         self.continue_to_exit()
+
+    def test_disassemble_empty_memory_reference(self):
+        """
+        Tests the 'disassemble' request with empty memory reference.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.c"
+        bp_line_no = line_number(source, "// breakpoint 1")
+        self.set_source_breakpoints(source, [bp_line_no])
+        self.continue_to_next_stop()
+
+        instructions = self.dap_server.request_disassemble(
+            memoryReference="", instructionOffset=0, instructionCount=50
+        )
+        self.assertEqual(len(instructions), 50)
+        for instruction in instructions:
+            self.assertEqual(instruction["presentationHint"], "invalid")
+
+        # clear breakpoints
+        self.set_source_breakpoints(source, [])
+        self.continue_to_exit()

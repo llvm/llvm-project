@@ -6,10 +6,10 @@
 ## This test is similar to test/MC/CSKY/relocation-specifier.s.
 
 # RELOC32: '.rela.data'
-# RELOC32: R_LARCH_32 00000000 .data + 0
+# RELOC32: R_LARCH_32 00000000 local
 
 # RELOC64: '.rela.data'
-# RELOC64: R_LARCH_32 0000000000000000 .data + 0
+# RELOC64: R_LARCH_32 0000000000000000 local
 
 # CHECK: TLS GLOBAL DEFAULT UND gd
 # CHECK: TLS GLOBAL DEFAULT UND ld

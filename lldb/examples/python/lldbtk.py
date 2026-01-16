@@ -4,12 +4,8 @@ import lldb
 import shlex
 import sys
 
-try:
-    from tkinter import *
-    import tkinter.ttk as ttk
-except ImportError:
-    from Tkinter import *
-    import ttk
+from tkinter import *
+import tkinter.ttk as ttk
 
 
 class ValueTreeItemDelegate(object):

@@ -1,4 +1,4 @@
-//===--- DesignatedInitializers.h - clang-tidy ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,9 @@
 /// This file provides utilities for designated initializers.
 ///
 //===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_DESIGNATEDINITIALIZERS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_DESIGNATEDINITIALIZERS_H
 
 #include "clang/AST/Expr.h"
 #include "clang/Basic/SourceLocation.h"
@@ -40,3 +43,5 @@ llvm::DenseMap<clang::SourceLocation, std::string>
 getUnwrittenDesignators(const clang::InitListExpr *Syn);
 
 } // namespace clang::tidy::utils
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_DESIGNATEDINITIALIZERS_H

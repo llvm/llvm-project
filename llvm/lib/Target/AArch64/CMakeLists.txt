@@ -61,6 +61,7 @@ add_llvm_target(AArch64CodeGen
   AArch64CompressJumpTables.cpp
   AArch64ConditionOptimizer.cpp
   AArch64RedundantCopyElimination.cpp
+  AArch64RedundantCondBranchPass.cpp
   AArch64ISelDAGToDAG.cpp
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp
@@ -76,6 +77,7 @@ add_llvm_target(AArch64CodeGen
   AArch64PromoteConstant.cpp
   AArch64PBQPRegAlloc.cpp
   AArch64RegisterInfo.cpp
+  AArch64SMEAttributes.cpp
   AArch64SLSHardening.cpp
   AArch64SelectionDAGInfo.cpp
   AArch64SpeculationHardening.cpp
@@ -89,7 +91,9 @@ add_llvm_target(AArch64CodeGen
   SMEABIPass.cpp
   SMEPeepholeOpt.cpp
   SVEIntrinsicOpts.cpp
+  MachineSMEABIPass.cpp
   AArch64SIMDInstrOpt.cpp
+  AArch64PrologueEpilogue.cpp
 
   DEPENDS
   intrinsics_gen
@@ -106,6 +110,7 @@ add_llvm_target(AArch64CodeGen
   Core
   GlobalISel
   MC
+  Passes
   Scalar
   SelectionDAG
   Support

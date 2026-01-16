@@ -1,4 +1,4 @@
-//===--- UseUsingCheck.cpp - clang-tidy------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,15 +26,15 @@ AST_MATCHER(clang::LinkageSpecDecl, isExternCLinkage) {
 
 namespace clang::tidy::modernize {
 
-static constexpr llvm::StringLiteral ExternCDeclName = "extern-c-decl";
-static constexpr llvm::StringLiteral ParentDeclName = "parent-decl";
-static constexpr llvm::StringLiteral TagDeclName = "tag-decl";
-static constexpr llvm::StringLiteral TypedefName = "typedef";
-static constexpr llvm::StringLiteral DeclStmtName = "decl-stmt";
+static constexpr StringRef ExternCDeclName = "extern-c-decl";
+static constexpr StringRef ParentDeclName = "parent-decl";
+static constexpr StringRef TagDeclName = "tag-decl";
+static constexpr StringRef TypedefName = "typedef";
+static constexpr StringRef DeclStmtName = "decl-stmt";
 
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
+      IgnoreMacros(Options.get("IgnoreMacros", true)),
       IgnoreExternC(Options.get("IgnoreExternC", false)) {}
 
 void UseUsingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -114,12 +114,12 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   if (ExternCDecl && IgnoreExternC)
     return;
 
-  SourceLocation StartLoc = MatchedDecl->getBeginLoc();
+  const SourceLocation StartLoc = MatchedDecl->getBeginLoc();
 
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
 
-  static constexpr llvm::StringLiteral UseUsingWarning =
+  static constexpr StringRef UseUsingWarning =
       "use 'using' instead of 'typedef'";
 
   // Warn at StartLoc but do not fix if there is macro or array.
@@ -172,7 +172,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
             .str(),
         ExtraReference.str()};
   }();
-  StringRef Name = MatchedDecl->getName();
+  const StringRef Name = MatchedDecl->getName();
   SourceRange ReplaceRange = MatchedDecl->getSourceRange();
 
   // typedefs with multiple comma-separated definitions produce multiple
@@ -223,7 +223,8 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       return;
   }
 
-  std::string Replacement = (Using + Name + " = " + Type + QualifierStr).str();
+  const std::string Replacement =
+      (Using + Name + " = " + Type + QualifierStr).str();
   Diag << FixItHint::CreateReplacement(ReplaceRange, Replacement);
 }
 } // namespace clang::tidy::modernize

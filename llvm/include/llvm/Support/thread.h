@@ -34,7 +34,7 @@ typedef PVOID HANDLE;
 
 namespace llvm {
 
-#if LLVM_ON_UNIX || _WIN32
+#if defined(LLVM_ON_UNIX) || defined(_WIN32)
 
 /// LLVM thread following std::thread interface with added constructor to
 /// specify stack size.
@@ -49,7 +49,7 @@ class thread {
   }
 
 public:
-#if LLVM_ON_UNIX
+#ifdef LLVM_ON_UNIX
   using native_handle_type = pthread_t;
   using id = pthread_t;
   using start_routine_type = void *(*)(void *);
@@ -127,7 +127,7 @@ LLVM_ABI thread::id llvm_thread_get_current_id_impl();
 template <class Function, class... Args>
 thread::thread(std::optional<unsigned> StackSizeInBytes, Function &&f,
                Args &&...args) {
-  typedef std::tuple<std::decay_t<Function>, std::decay_t<Args>...> CalleeTuple;
+  using CalleeTuple = std::tuple<std::decay_t<Function>, std::decay_t<Args>...>;
   std::unique_ptr<CalleeTuple> Callee(
       new CalleeTuple(std::forward<Function>(f), std::forward<Args>(args)...));
 

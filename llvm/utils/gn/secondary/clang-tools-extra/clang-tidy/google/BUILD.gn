@@ -12,13 +12,13 @@ static_library("google") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "AvoidCStyleCastsCheck.cpp",
     "AvoidNSObjectNewCheck.cpp",
     "AvoidThrowingObjCExceptionCheck.cpp",
     "AvoidUnderscoreInGoogletestNameCheck.cpp",
     "DefaultArgumentsCheck.cpp",
     "ExplicitConstructorCheck.cpp",
     "ExplicitMakePairCheck.cpp",
+    "FloatTypesCheck.cpp",
     "FunctionNamingCheck.cpp",
     "GlobalNamesInHeadersCheck.cpp",
     "GlobalVariableDeclarationCheck.cpp",

@@ -50,6 +50,9 @@ def HasFP16 :
     Predicate<"Subtarget->hasFP16()">,
     AssemblerPredicate<(all_of FeatureFP16), "fp16">;
 
+def HasGC : Predicate<"Subtarget->hasGC()">,
+            AssemblerPredicate<(all_of FeatureGC), "gc">;
+
 def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,
     AssemblerPredicate<(all_of FeatureMultiMemory), "multimemory">;
@@ -75,9 +78,6 @@ def NotHasNontrappingFPToInt :
 def HasReferenceTypes :
     Predicate<"Subtarget->hasReferenceTypes()">,
     AssemblerPredicate<(all_of FeatureReferenceTypes), "reference-types">;
-
-def HasGC : Predicate<"Subtarget->hasGC()">,
-            AssemblerPredicate<(all_of FeatureGC), "gc">;
 
 def HasRelaxedSIMD :
     Predicate<"Subtarget->hasRelaxedSIMD()">,
@@ -460,8 +460,8 @@ def : Pat<(i64 (WebAssemblyWrapperREL texternalsym:$addr)),
 include "WebAssemblyInstrMemory.td"
 include "WebAssemblyInstrCall.td"
 include "WebAssemblyInstrControl.td"
-include "WebAssemblyInstrInteger.td"
 include "WebAssemblyInstrConv.td"
+include "WebAssemblyInstrInteger.td"
 include "WebAssemblyInstrFloat.td"
 include "WebAssemblyInstrAtomics.td"
 include "WebAssemblyInstrSIMD.td"

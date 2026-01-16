@@ -58,12 +58,48 @@ void SARIFDiagnostic::emitDiagnosticMessage(
   if (Loc.isValid())
     Result = addLocationToResult(Result, Loc, PLoc, Ranges, *Diag);
 
+  for (auto &[RelLoc, RelPLoc] : RelatedLocationsCache)
+    Result = addRelatedLocationToResult(Result, RelLoc, RelPLoc);
+  RelatedLocationsCache.clear();
+
   Writer->appendResult(Result);
+}
+
+void SARIFDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
+  // We always emit include location before results, for example:
+  //
+  // In file included from ...
+  // In file included from ...
+  // error: ...
+  //
+  // At this time We cannot peek the SarifRule. But what we
+  // do is to push it into a cache and wait for next time
+  // \ref SARIFDiagnostic::emitDiagnosticMessage to pick it up.
+  RelatedLocationsCache.push_back({Loc, PLoc});
+}
+
+void SARIFDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
+                                         StringRef ModuleName) {
+  RelatedLocationsCache.push_back({Loc, PLoc});
 }
 
 SarifResult SARIFDiagnostic::addLocationToResult(
     SarifResult Result, FullSourceLoc Loc, PresumedLoc PLoc,
     ArrayRef<CharSourceRange> Ranges, const Diagnostic &Diag) {
+  auto Locations = getSarifLocation(Loc, PLoc, Ranges);
+  return Result.addLocations(Locations);
+}
+
+SarifResult SARIFDiagnostic::addRelatedLocationToResult(SarifResult Result,
+                                                        FullSourceLoc Loc,
+                                                        PresumedLoc PLoc) {
+  auto Locations = getSarifLocation(Loc, PLoc, {});
+  return Result.addRelatedLocations(Locations);
+}
+
+llvm::SmallVector<CharSourceRange>
+SARIFDiagnostic::getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
+                                  ArrayRef<CharSourceRange> Ranges) {
   SmallVector<CharSourceRange> Locations = {};
 
   if (PLoc.isInvalid()) {
@@ -75,7 +111,7 @@ SarifResult SARIFDiagnostic::addLocationToResult(
         // FIXME(llvm-project/issues/57366): File-only locations
       }
     }
-    return Result;
+    return {};
   }
 
   FileID CaretFileID = Loc.getExpansionLoc().getFileID();
@@ -127,10 +163,11 @@ SarifResult SARIFDiagnostic::addLocationToResult(
   SourceLocation DiagLoc = SM.translateLineCol(FID, PLoc.getLine(), ColNo);
 
   // FIXME(llvm-project/issues/57366): Properly process #line directives.
-  Locations.push_back(
-      CharSourceRange{SourceRange{DiagLoc, DiagLoc}, /* ITR = */ false});
+  CharSourceRange Range = {SourceRange{DiagLoc, DiagLoc}, /* ITR = */ false};
+  if (Range.isValid())
+    Locations.push_back(std::move(Range));
 
-  return Result.setLocations(Locations);
+  return Locations;
 }
 
 SarifRule
@@ -204,15 +241,6 @@ llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,
 void SARIFDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
                                         DiagnosticsEngine::Level Level,
                                         ArrayRef<CharSourceRange> Ranges) {
-  assert(false && "Not implemented in SARIF mode");
-}
-
-void SARIFDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
-  assert(false && "Not implemented in SARIF mode");
-}
-
-void SARIFDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
-                                         StringRef ModuleName) {
   assert(false && "Not implemented in SARIF mode");
 }
 

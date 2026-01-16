@@ -50,7 +50,7 @@ llvm::Expected<uint32_t> lldb_private::formatters::
 lldb::ValueObjectSP
 lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
-  if (idx == 0)
+  if (idx == 0 && m_storage && m_element_type.IsValid())
     return m_storage->Cast(m_element_type)->Clone(ConstString("Value"));
   return nullptr;
 }
@@ -64,9 +64,18 @@ lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::Update() {
   if (!storage_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_element_type = m_backend.GetCompilerType().GetTypeTemplateArgument(0);
-  if (!m_element_type)
+  CompilerType backend_type = m_backend.GetCompilerType();
+  if (!backend_type)
     return lldb::ChildCacheState::eRefetch;
+
+  m_element_type = backend_type.GetTypeTemplateArgument(0);
+  if (!m_element_type) {
+    // PDB doesn't have info about templates, so use value_type which equals T.
+    m_element_type = backend_type.GetDirectNestedTypeWithName("value_type");
+
+    if (!m_element_type)
+      return lldb::ChildCacheState::eRefetch;
+  }
 
   m_storage = storage_sp.get();
   return lldb::ChildCacheState::eRefetch;
@@ -83,7 +92,9 @@ llvm::Expected<size_t> lldb_private::formatters::
 lldb_private::SyntheticChildrenFrontEnd *
 lldb_private::formatters::MsvcStlAtomicSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  return new MsvcStlAtomicSyntheticFrontEnd(valobj_sp);
+  if (valobj_sp && IsMsvcStlAtomic(*valobj_sp))
+    return new MsvcStlAtomicSyntheticFrontEnd(valobj_sp);
+  return nullptr;
 }
 
 bool lldb_private::formatters::MsvcStlAtomicSummaryProvider(
@@ -98,5 +109,11 @@ bool lldb_private::formatters::MsvcStlAtomicSummaryProvider(
     stream << summary;
     return true;
   }
+  return false;
+}
+
+bool lldb_private::formatters::IsMsvcStlAtomic(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_Storage") != nullptr;
   return false;
 }

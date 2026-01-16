@@ -297,11 +297,16 @@ class CommitRequestGreeter:
                 print(e)
                 continue
 
+        total_prs_url = f"https://github.com/llvm/llvm-project/pulls?q=author%3A{self.issue.user.login}+is%3Apr"
+        merged_prs_url = total_prs_url + "+is%3Amerged"
         comment = f"""
             ### Activity Summary:
-            * [{total_prs} Pull Requests](https://github.com/llvm/llvm-project/pulls/{self.issue.user.login}) ({merged_prs} merged)
+            * [{total_prs} Pull Requests]({total_prs_url})
+            * [{merged_prs} Merged Pull Requests]({merged_prs_url})
             * Top 3 Committers: {get_user_values_str(get_top_values(merged_by))}
             * Top 3 Reviewers: {get_user_values_str(get_top_values(reviewed_by))}
+
+            Reviewers should clearly state their reasoning for accepting or rejecting this request, and finish with a clear statement such as \"I approve of this request\", \"LGTM\", or \"I do not approve of this request\". Please review the instructions for [obtaining commit access](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access).
         """
         self.issue.create_comment(textwrap.dedent(comment))
 
@@ -492,7 +497,7 @@ class ReleaseWorkflow:
         if pr.state != "closed":
             return
 
-        gh = github.Github(login_or_token=self.token)
+        gh = github.Github(auth=github.Auth.Token(self.token))
         query = """
             query($node_id: ID!) {
               node(id: $node_id) {

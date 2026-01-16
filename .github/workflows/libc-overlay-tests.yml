@@ -16,38 +16,32 @@ jobs:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2022, windows-2025, macos-14]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2022, windows-2025, macos-15]
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
-            ccache-variant: sccache
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
-          # TODO: remove ccache logic when https://github.com/hendrikmuhs/ccache-action/issues/279 is resolved.
           - os: ubuntu-24.04-arm
-            ccache-variant: ccache
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
           - os: windows-2022
-            ccache-variant: sccache
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
           - os: windows-2025
-            ccache-variant: sccache
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
-          - os: macos-14
-            ccache-variant: sccache
+          - os: macos-15
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
     
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     
     # Libc's build is relatively small comparing with other components of LLVM.
     # A fresh linux overlay takes about 180MiB of uncompressed disk space, which can
@@ -57,11 +51,11 @@ jobs:
     # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
     # frequent small object writes.
     - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
+      uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
       with:
         max-size: 1G
         key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
-        variant: ${{ matrix.ccache-variant }}
+        variant: sccache
     
     # MPFR is required by some of the mathlib tests.
     - name: Prepare dependencies (Ubuntu)
@@ -97,8 +91,8 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.compiler.c_compiler }}
         -DCMAKE_BUILD_TYPE=Debug
-        -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
-        -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
+        -DCMAKE_C_COMPILER_LAUNCHER=sccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
         -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
         -DLLVM_ENABLE_RUNTIMES=libc

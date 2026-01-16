@@ -6,11 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // check that <utility> functions are marked [[nodiscard]]
-
-// clang-format off
 
 #include <utility>
 
@@ -19,13 +15,31 @@
 void test() {
   int i = 0;
 
-  std::forward<int>(i);     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::forward<int>(1);     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(i);             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move_if_noexcept(i); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::forward<int>(i); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::forward<int>(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::move(i);         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::move_if_noexcept(i);
 
 #if TEST_STD_VER >= 17
   std::as_const(i); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
+
+#if TEST_STD_VER >= 20
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::cmp_equal(94, 82);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::cmp_not_equal(94, 82);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::cmp_less(94, 82);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::cmp_greater(94, 82);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::cmp_less_equal(94, 82);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::cmp_greater_equal(94, 82);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::in_range<long>(49);
 #endif
 
 #if TEST_STD_VER >= 23

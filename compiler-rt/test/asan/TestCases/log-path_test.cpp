@@ -1,9 +1,5 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
-// XFAIL: android
-// UNSUPPORTED: ios
-//
-// The for loop in the backticks below requires bash.
-// REQUIRES: shell
+// UNSUPPORTED: ios, android
 //
 // RUN: %clangxx_asan  %s -o %t
 
@@ -25,7 +21,8 @@
 // RUN: FileCheck %s --check-prefix=CHECK-BAD-DIR < %t.out
 
 // Too long log_path.
-// RUN: %env_asan_opts=log_path=`for((i=0;i<10000;i++)); do echo -n $i; done` \
+// RUN: %python -c "for i in range(0, 10000): print(i, end='')" > %t.long_log_path
+// RUN: %env_asan_opts=log_path=%{readfile:%t.long_log_path} \
 // RUN:   not %run %t 2> %t.out
 // RUN: FileCheck %s --check-prefix=CHECK-LONG < %t.out
 
@@ -35,7 +32,7 @@
 // RUN: not cat %t.log.*
 
 // FIXME: log_path is not supported on Windows yet.
-// XFAIL: target={{.*windows-msvc.*}}
+// UNSUPPORTED: system-windows
 
 #include <stdlib.h>
 #include <string.h>

@@ -26,6 +26,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVGlobalRegistry.cpp
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
+  SPIRVLegalizeImplicitBinding.cpp
   SPIRVStripConvergentIntrinsics.cpp
   SPIRVLegalizePointerCast.cpp
   SPIRVMergeRegionExitTargets.cpp
@@ -35,10 +36,12 @@ add_llvm_target(SPIRVCodeGen
   SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
   SPIRVStructurizer.cpp
+  SPIRVCombinerHelper.cpp
   SPIRVPreLegalizer.cpp
   SPIRVPreLegalizerCombiner.cpp
   SPIRVPostLegalizer.cpp
   SPIRVPrepareFunctions.cpp
+  SPIRVPrepareGlobals.cpp
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVRegularizer.cpp
@@ -47,6 +50,8 @@ add_llvm_target(SPIRVCodeGen
   SPIRVTargetTransformInfo.cpp
   SPIRVUtils.cpp
   SPIRVEmitNonSemanticDI.cpp
+  SPIRVCBufferAccess.cpp
+  SPIRVPushConstantAccess.cpp
 
   LINK_COMPONENTS
   Analysis
@@ -56,8 +61,9 @@ add_llvm_target(SPIRVCodeGen
   Core
   Demangle
   GlobalISel
-  SPIRVAnalysis
+  FrontendHLSL
   MC
+  SPIRVAnalysis
   SPIRVDesc
   SPIRVInfo
   ScalarOpts

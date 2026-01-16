@@ -37,7 +37,7 @@ class LLVM_ABI Task : public RTTIExtends<Task, RTTIRoot> {
 public:
   static char ID;
 
-  virtual ~Task() = default;
+  ~Task() override = default;
 
   /// Description of the task to be performed. Used for logging.
   virtual void printDescription(raw_ostream &OS) = 0;

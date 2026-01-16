@@ -80,10 +80,10 @@ Pattern::Pattern(const void *rootValue, RootKind rootKind,
   if (generatedNames.empty())
     return;
   generatedOps.reserve(generatedNames.size());
-  std::transform(generatedNames.begin(), generatedNames.end(),
-                 std::back_inserter(generatedOps), [context](StringRef name) {
-                   return OperationName(name, context);
-                 });
+  llvm::append_range(generatedOps,
+                     llvm::map_range(generatedNames, [context](StringRef name) {
+                       return OperationName(name, context);
+                     }));
 }
 
 //===----------------------------------------------------------------------===//
@@ -278,9 +278,9 @@ void RewriterBase::replaceUsesWithIf(ValueRange from, ValueRange to,
   assert(from.size() == to.size() && "incorrect number of replacements");
   bool allReplaced = true;
   for (auto it : llvm::zip_equal(from, to)) {
-    bool r;
+    bool r = true;
     replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor,
-                      /*allUsesReplaced=*/&r);
+                      /*allUsesReplaced=*/allUsesReplaced ? &r : nullptr);
     allReplaced &= r;
   }
   if (allUsesReplaced)

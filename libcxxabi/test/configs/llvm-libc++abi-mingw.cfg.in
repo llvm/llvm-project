@@ -11,7 +11,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib} -lc++'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --prepend_env PATH=%{install-prefix}/bin -- '
+    '%{executor} --execdir %{temp} --prepend_env PATH=%{install-prefix}/bin -- '
 ))
 
 import os, site

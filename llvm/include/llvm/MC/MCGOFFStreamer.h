@@ -14,25 +14,25 @@
 
 namespace llvm {
 class GOFFObjectWriter;
+class MCSymbolGOFF;
 
 class MCGOFFStreamer : public MCObjectStreamer {
 
 public:
   MCGOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
                  std::unique_ptr<MCObjectWriter> OW,
-                 std::unique_ptr<MCCodeEmitter> Emitter)
-      : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
-                         std::move(Emitter)) {}
+                 std::unique_ptr<MCCodeEmitter> Emitter);
 
   ~MCGOFFStreamer() override;
+
+  void finishImpl() override;
 
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
 
   GOFFObjectWriter &getWriter();
 
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
-    return false;
-  }
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
+
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override {}
 };

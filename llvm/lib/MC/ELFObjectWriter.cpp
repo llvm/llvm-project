@@ -401,16 +401,15 @@ static bool isIFunc(const MCSymbolELF *Symbol) {
         mergeTypeForSet(Symbol->getType(), ELF::STT_GNU_IFUNC) !=
             ELF::STT_GNU_IFUNC)
       return false;
-    Symbol = &cast<MCSymbolELF>(Value->getSymbol());
+    Symbol = &static_cast<const MCSymbolELF &>(Value->getSymbol());
   }
   return true;
 }
 
 void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
                             ELFSymbolData &MSD) {
-  const auto &Symbol = cast<MCSymbolELF>(*MSD.Symbol);
-  const MCSymbolELF *Base =
-      cast_or_null<MCSymbolELF>(Asm.getBaseSymbol(Symbol));
+  auto &Symbol = static_cast<const MCSymbolELF &>(*MSD.Symbol);
+  auto *Base = static_cast<const MCSymbolELF *>(Asm.getBaseSymbol(Symbol));
 
   // This has to be in sync with when computeSymbolTable uses SHN_ABS or
   // SHN_COMMON.
@@ -446,7 +445,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
     const MCSymbolELF *Sym = &Symbol;
     while (Sym->isVariable()) {
       if (auto *Expr = dyn_cast<MCSymbolRefExpr>(Sym->getVariableValue())) {
-        Sym = cast<MCSymbolELF>(&Expr->getSymbol());
+        Sym = static_cast<const MCSymbolELF *>(&Expr->getSymbol());
         if (!Sym->getSize())
           continue;
         ESize = Sym->getSize();
@@ -523,7 +522,7 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
   // Add the data for the symbols.
   bool HasLargeSectionIndex = false;
   for (auto It : llvm::enumerate(Asm.symbols())) {
-    const auto &Symbol = cast<MCSymbolELF>(It.value());
+    auto &Symbol = static_cast<const MCSymbolELF &>(It.value());
     if (!isInSymtab(Symbol))
       continue;
 
@@ -533,7 +532,7 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
     }
 
     ELFSymbolData MSD;
-    MSD.Symbol = cast<MCSymbolELF>(&Symbol);
+    MSD.Symbol = static_cast<const MCSymbolELF *>(&Symbol);
     MSD.Order = It.index();
 
     bool Local = Symbol.getBinding() == ELF::STB_LOCAL;
@@ -542,12 +541,12 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
     if (Symbol.isAbsolute()) {
       MSD.SectionIndex = ELF::SHN_ABS;
     } else if (Symbol.isCommon()) {
-      if (Symbol.isTargetCommon()) {
-        MSD.SectionIndex = Symbol.getIndex();
-      } else {
+      auto Shndx = Symbol.getIndex();
+      if (!Shndx) {
         assert(!Local);
-        MSD.SectionIndex = ELF::SHN_COMMON;
+        Shndx = ELF::SHN_COMMON;
       }
+      MSD.SectionIndex = Shndx;
     } else if (Symbol.isUndefined()) {
       if (Symbol.isSignature() && !Symbol.isUsedInReloc()) {
         MSD.SectionIndex = RevGroupMap.lookup(&Symbol);
@@ -1175,7 +1174,7 @@ void ELFObjectWriter::executePostLayoutBinding() {
   // versions declared with @@@ to be renamed.
   for (const Symver &S : Symvers) {
     StringRef AliasName = S.Name;
-    const auto &Symbol = cast<MCSymbolELF>(*S.Sym);
+    auto &Symbol = static_cast<const MCSymbolELF &>(*S.Sym);
     size_t Pos = AliasName.find('@');
     assert(Pos != StringRef::npos);
 
@@ -1185,8 +1184,8 @@ void ELFObjectWriter::executePostLayoutBinding() {
     if (Rest.starts_with("@@@"))
       Tail = Rest.substr(Symbol.isUndefined() ? 2 : 1);
 
-    auto *Alias =
-        cast<MCSymbolELF>(Asm->getContext().getOrCreateSymbol(Prefix + Tail));
+    auto *Alias = static_cast<MCSymbolELF *>(
+        Asm->getContext().getOrCreateSymbol(Prefix + Tail));
     Asm->registerSymbol(*Alias);
     const MCExpr *Value = MCSymbolRefExpr::create(&Symbol, Asm->getContext());
     Alias->setVariableValue(Value);
@@ -1218,7 +1217,8 @@ void ELFObjectWriter::executePostLayoutBinding() {
   }
 
   for (const MCSymbol *&Sym : AddrsigSyms) {
-    if (const MCSymbol *R = Renames.lookup(cast<MCSymbolELF>(Sym)))
+    if (const MCSymbol *R =
+            Renames.lookup(static_cast<const MCSymbolELF *>(Sym)))
       Sym = R;
     if (Sym->isInSection() && Sym->getName().starts_with(".L"))
       Sym = Sym->getSection().getBeginSymbol();
@@ -1234,7 +1234,7 @@ void ELFObjectWriter::executePostLayoutBinding() {
       continue;
     auto *Expr = Alias->getVariableValue();
     if (const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr)) {
-      auto &Sym = cast<MCSymbolELF>(Inner->getSymbol());
+      auto &Sym = static_cast<const MCSymbolELF &>(Inner->getSymbol());
       if (Asm->registerSymbol(Sym))
         Sym.setBinding(ELF::STB_WEAK);
     }
@@ -1316,7 +1316,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   auto &Section = static_cast<const MCSectionELF &>(*F.getParent());
   MCContext &Ctx = getContext();
 
-  const auto *SymA = cast_or_null<MCSymbolELF>(Target.getAddSym());
+  auto *SymA = static_cast<const MCSymbolELF *>(Target.getAddSym());
   const MCSectionELF *SecA =
       (SymA && SymA->isInSection())
           ? static_cast<const MCSectionELF *>(&SymA->getSection())
@@ -1328,7 +1328,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   uint64_t FixupOffset = Asm->getFragmentOffset(F) + Fixup.getOffset();
   uint64_t Addend = Target.getConstant();
   if (auto *RefB = Target.getSubSym()) {
-    const auto &SymB = cast<MCSymbolELF>(*RefB);
+    auto &SymB = static_cast<const MCSymbolELF &>(*RefB);
     if (SymB.isUndefined()) {
       Ctx.reportError(Fixup.getLoc(),
                       Twine("symbol '") + SymB.getName() +
@@ -1363,7 +1363,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
                        !mc::isRelocRelocation(Fixup.getKind());
   if (UseSectionSym && useSectionSymbol(Target, SymA, Addend, Type)) {
     Addend += Asm->getSymbolOffset(*SymA);
-    SymA = cast<MCSymbolELF>(SecA->getBeginSymbol());
+    SymA = static_cast<const MCSymbolELF *>(SecA->getBeginSymbol());
   } else if (const MCSymbolELF *R = Renames.lookup(SymA)) {
     SymA = R;
   }
@@ -1383,7 +1383,7 @@ bool ELFObjectWriter::usesRela(const MCTargetOptions *TO,
 
 bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
     const MCSymbol &SA, const MCFragment &FB, bool InSet, bool IsPCRel) const {
-  const auto &SymA = cast<MCSymbolELF>(SA);
+  auto &SymA = static_cast<const MCSymbolELF &>(SA);
   if (IsPCRel) {
     assert(!InSet);
     if (SymA.getBinding() != ELF::STB_LOCAL ||

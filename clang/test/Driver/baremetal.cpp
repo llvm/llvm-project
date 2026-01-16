@@ -4,6 +4,18 @@
 // RUN:   | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
 // CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD"
 
+// RUN: %clang %s -### --target=arm-none-eabi -o %t.out 2>&1 \
+// RUN:     --sysroot=%S/Inputs/multiarch-sysroot-tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM %s
+// CHECK-ARM: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}arm-unknown-none-eabi{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-ARM: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}arm-unknown-none-eabi{{[/\\]+}}include"
+
+// RUN: %clang %s -### --target=aarch64-none-elf -o %t.out 2>&1 \
+// RUN:     --sysroot=%S/Inputs/multiarch-sysroot-tree \
+// RUN:   | FileCheck --check-prefix=CHECK-AARCH64 %s
+// CHECK-AARCH64: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}aarch64-unknown-none-elf{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-AARCH64: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}aarch64-unknown-none-elf{{[/\\]+}}include"
+
 // RUN: %clang %s -### --target=armv6m-none-eabi -o %t.out 2>&1 \
 // RUN:     -T semihosted.lds \
 // RUN:     -L some/directory/user/asked/for \
@@ -126,11 +138,11 @@
 // CHECK-V6M-NDL: "-Bstatic" "-m" "armelf" "-EL"
 // CHECK-V6M-NDL-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm{{[/\\]+}}lib"
 
-// RUN: rm -rf %T/baremetal_cxx_sysroot
-// RUN: mkdir -p %T/baremetal_cxx_sysroot/usr/include/c++/v1
+// RUN: rm -rf %t.dir/baremetal_cxx_sysroot
+// RUN: mkdir -p %t.dir/baremetal_cxx_sysroot/usr/include/c++/v1
 // RUN: %clangxx %s -### 2>&1 \
 // RUN:     --target=armv6m-none-eabi \
-// RUN:     --sysroot=%T/baremetal_cxx_sysroot \
+// RUN:     --sysroot=%t.dir/baremetal_cxx_sysroot \
 // RUN:     -stdlib=libc++ \
 // RUN:   | FileCheck --check-prefix=CHECK-V6M-LIBCXX-USR %s
 // CHECK-V6M-LIBCXX-USR: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -162,6 +174,16 @@
 // RUN: %clang -### --target=arm-none-eabi -rtlib=libgcc --unwindlib=libgcc -v %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-RTLIB-GCC
 // CHECK-RTLIB-GCC: -lgcc
+
+// RUN: %clang -### --target=arm-none-eabi -nolibc -rtlib=compiler-rt %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NOLIBC
+// CHECK-NOLIBC-NOT: "-lc"
+// CHECK-NOLIBC: "{{[^"]*}}libclang_rt.builtins.a"
+
+// RUN: %clang -### --target=arm-none-eabi -nostdlib -rtlib=compiler-rt %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NOSTDLIB
+// CHECK-NOSTDLIB-NOT: "-lc"
+// CHECK-NOSTDLIB-NOT: "{{[^"]*}}libclang_rt.builtins.a"
 
 // RUN: %clang -### --target=arm-none-eabi -v %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-SYSROOT-INC
@@ -558,24 +580,24 @@
 
 // Check that compiler-rt library without the arch filename suffix will
 // be used if present.
-// RUN: rm -rf %T/baremetal_clang_rt_noarch
-// RUN: mkdir -p %T/baremetal_clang_rt_noarch/lib
-// RUN: touch %T/baremetal_clang_rt_noarch/lib/libclang_rt.builtins.a
+// RUN: rm -rf %t.dir/baremetal_clang_rt_noarch
+// RUN: mkdir -p %t.dir/baremetal_clang_rt_noarch/lib
+// RUN: touch %t.dir/baremetal_clang_rt_noarch/lib/libclang_rt.builtins.a
 // RUN: %clang %s -### 2>&1 \
 // RUN:     --target=armv6m-none-eabi \
-// RUN:     --sysroot=%T/baremetal_clang_rt_noarch \
+// RUN:     --sysroot=%t.dir/baremetal_clang_rt_noarch \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-NOARCH %s
 // CHECK-CLANGRT-NOARCH: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-CLANGRT-NOARCH-NOT: "{{[^"]*}}libclang_rt.builtins.a"
 
 // Check that compiler-rt library with the arch filename suffix will be
 // used if present.
-// RUN: rm -rf %T/baremetal_clang_rt_arch
-// RUN: mkdir -p %T/baremetal_clang_rt_arch/lib
-// RUN: touch %T/baremetal_clang_rt_arch/lib/libclang_rt.builtins-armv6m.a
+// RUN: rm -rf %t.dir/baremetal_clang_rt_arch
+// RUN: mkdir -p %t.dir/baremetal_clang_rt_arch/lib
+// RUN: touch %t.dir/baremetal_clang_rt_arch/lib/libclang_rt.builtins-armv6m.a
 // RUN: %clang %s -### 2>&1 \
 // RUN:     --target=armv6m-none-eabi \
-// RUN:     --sysroot=%T/baremetal_clang_rt_arch \
+// RUN:     --sysroot=%t.dir/baremetal_clang_rt_arch \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARCH %s
 // CHECK-CLANGRT-ARCH: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-CLANGRT-ARCH-NOT: "{{[^"]*}}libclang_rt.builtins.a"

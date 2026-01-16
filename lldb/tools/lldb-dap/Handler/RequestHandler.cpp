@@ -18,6 +18,7 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBEnvironment.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
 #include <mutex>
 
 #if !defined(_WIN32)
@@ -51,6 +52,33 @@ static uint32_t SetLaunchFlag(uint32_t flags, bool flag,
   return flags;
 }
 
+static void
+SetupIORedirection(const std::vector<std::optional<std::string>> &stdio,
+                   lldb::SBLaunchInfo &launch_info) {
+  size_t n = std::max(stdio.size(), static_cast<size_t>(3));
+  for (size_t i = 0; i < n; i++) {
+    std::optional<std::string> path;
+    if (stdio.size() <= i)
+      path = stdio.back();
+    else
+      path = stdio[i];
+    if (!path)
+      continue;
+    switch (i) {
+    case 0:
+      launch_info.AddOpenFileAction(i, path->c_str(), true, false);
+      break;
+    case 1:
+    case 2:
+      launch_info.AddOpenFileAction(i, path->c_str(), false, true);
+      break;
+    default:
+      launch_info.AddOpenFileAction(i, path->c_str(), true, true);
+      break;
+    }
+  }
+}
+
 static llvm::Error
 RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   if (!dap.clientFeatures.contains(
@@ -80,7 +108,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
       arguments.configuration.program, arguments.args, arguments.env,
-      arguments.cwd, comm_file.m_path, debugger_pid,
+      arguments.cwd, comm_file.m_path, debugger_pid, arguments.stdio,
       arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
@@ -130,11 +158,12 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 void BaseRequestHandler::Run(const Request &request) {
   // If this request was cancelled, send a cancelled response.
   if (dap.IsCancelled(request)) {
-    Response cancelled{/*request_seq=*/request.seq,
-                       /*command=*/request.command,
-                       /*success=*/false,
-                       /*message=*/eResponseMessageCancelled,
-                       /*body=*/std::nullopt};
+    Response cancelled{
+        /*request_seq=*/request.seq,
+        /*command=*/request.command,
+        /*success=*/false,
+        /*message=*/eResponseMessageCancelled,
+    };
     dap.Send(cancelled);
     return;
   }
@@ -154,7 +183,7 @@ void BaseRequestHandler::Run(const Request &request) {
 
 llvm::Error BaseRequestHandler::LaunchProcess(
     const protocol::LaunchRequestArguments &arguments) const {
-  auto launchCommands = arguments.launchCommands;
+  const std::vector<std::string> &launchCommands = arguments.launchCommands;
 
   // Instantiate a launch info instance for the target.
   auto launch_info = dap.target.GetLaunchInfo();
@@ -176,6 +205,9 @@ llvm::Error BaseRequestHandler::LaunchProcess(
       env.Set(kv.first().data(), kv.second.c_str(), true);
     launch_info.SetEnvironment(env, true);
   }
+
+  if (!arguments.stdio.empty() && !arguments.disableSTDIO)
+    SetupIORedirection(arguments.stdio, launch_info);
 
   launch_info.SetDetachOnError(arguments.detachOnError);
   launch_info.SetShellExpandArguments(arguments.shellExpandArguments);
@@ -226,7 +258,7 @@ llvm::Error BaseRequestHandler::LaunchProcess(
 
 void BaseRequestHandler::PrintWelcomeMessage() const {
 #ifdef LLDB_DAP_WELCOME_MESSAGE
-  dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
+  dap.SendOutput(eOutputCategoryConsole, LLDB_DAP_WELCOME_MESSAGE);
 #endif
 }
 
@@ -235,6 +267,74 @@ bool BaseRequestHandler::HasInstructionGranularity(
   if (std::optional<llvm::StringRef> value = arguments.getString("granularity"))
     return value == "instruction";
   return false;
+}
+
+void BaseRequestHandler::BuildErrorResponse(
+    llvm::Error err, protocol::Response &response) const {
+  // Handle the ErrorSuccess case.
+  if (!err) {
+    response.success = true;
+    return;
+  }
+
+  response.success = false;
+
+  llvm::handleAllErrors(
+      std::move(err),
+      [&](const NotStoppedError &err) {
+        response.message = lldb_dap::protocol::eResponseMessageNotStopped;
+      },
+      [&](const DAPError &err) {
+        protocol::ErrorMessage error_message;
+        error_message.sendTelemetry = false;
+        error_message.format = err.getMessage();
+        error_message.showUser = err.getShowUser();
+        error_message.id = err.convertToErrorCode().value();
+        error_message.url = err.getURL();
+        error_message.urlLabel = err.getURLLabel();
+        protocol::ErrorResponseBody body;
+        body.error = error_message;
+
+        response.body = body;
+      },
+      [&](const llvm::ErrorInfoBase &err) {
+        protocol::ErrorMessage error_message;
+        error_message.showUser = true;
+        error_message.sendTelemetry = false;
+        error_message.format = err.message();
+        error_message.id = err.convertToErrorCode().value();
+        protocol::ErrorResponseBody body;
+        body.error = error_message;
+
+        response.body = body;
+      });
+}
+
+void BaseRequestHandler::SendError(llvm::Error err,
+                                   protocol::Response &response) const {
+  BuildErrorResponse(std::move(err), response);
+  Send(response);
+}
+
+void BaseRequestHandler::SendSuccess(
+    protocol::Response &response, std::optional<llvm::json::Value> body) const {
+  response.success = true;
+  if (body)
+    response.body = std::move(*body);
+
+  Send(response);
+}
+
+void BaseRequestHandler::Send(protocol::Response &response) const {
+  // Mark the request as 'cancelled' if the debugger was interrupted while
+  // evaluating this handler.
+  if (dap.debugger.InterruptRequested()) {
+    response.success = false;
+    response.message = protocol::eResponseMessageCancelled;
+    response.body = std::nullopt;
+  }
+
+  dap.Send(response);
 }
 
 } // namespace lldb_dap

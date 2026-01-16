@@ -41,13 +41,14 @@ BreakpointLocationList::Create(const Address &addr,
 }
 
 bool BreakpointLocationList::ShouldStop(StoppointCallbackContext *context,
-                                        lldb::break_id_t break_id) {
+                                        lldb::break_id_t break_id,
+                                        lldb::BreakpointLocationSP &bp_loc_sp) {
   BreakpointLocationSP bp = FindByID(break_id);
   if (bp) {
     // Let the BreakpointLocation decide if it should stop here (could not have
     // reached it's target hit count yet, or it could have a callback that
     // decided it shouldn't stop (shared library loads/unloads).
-    return bp->ShouldStop(context);
+    return bp->ShouldStop(context, bp_loc_sp);
   }
   // We should stop here since this BreakpointLocation isn't valid anymore or
   // it doesn't exist.

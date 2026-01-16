@@ -2,11 +2,6 @@
 ; RUN: llc < %s -march=nvptx64 --debug-counter=dagcombine=0 | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 --debug-counter=dagcombine=0 | %ptxas-verify %}
 
-; REQUIRES: asserts
-; asserts are required for --debug-counter=dagcombine=0 to have the intended
-; effect of disabling DAG combines, which exposes the bug. When combines are
-; enabled the bug does not occur.
-
 %struct.1float = type <{ [1 x float] }>
 
 declare i32 @callee(%struct.1float %a)
@@ -14,7 +9,7 @@ declare i32 @callee(%struct.1float %a)
 define i32 @test(%struct.1float alignstack(32) %data) {
 ; CHECK-LABEL: test(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_param_0];

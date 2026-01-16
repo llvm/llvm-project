@@ -75,13 +75,14 @@ define void @fcvt_v8f16_to_v8f32(<8 x half> %a, ptr %b) {
 ; CHECK-LABEL: fcvt_v8f16_to_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    uunpklo z1.s, z0.h
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    fcvt z1.s, p0/m, z1.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
-; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    fcvt z1.s, p0/m, z1.h
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvt_v8f16_to_v8f32:
@@ -124,19 +125,21 @@ define void @fcvt_v16f16_to_v16f32(<16 x half> %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    uunpklo z2.s, z1.h
-; CHECK-NEXT:    uunpklo z3.s, z0.h
+; CHECK-NEXT:    movprfx z2, z1
+; CHECK-NEXT:    ext z2.b, z2.b, z1.b, #8
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    fcvt z2.s, p0/m, z2.h
-; CHECK-NEXT:    fcvt z3.s, p0/m, z3.h
+; CHECK-NEXT:    uunpklo z2.s, z2.h
+; CHECK-NEXT:    uunpklo z3.s, z3.h
 ; CHECK-NEXT:    fcvt z1.s, p0/m, z1.h
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
-; CHECK-NEXT:    stp q3, q0, [x0]
-; CHECK-NEXT:    stp q2, q1, [x0, #32]
+; CHECK-NEXT:    fcvt z2.s, p0/m, z2.h
+; CHECK-NEXT:    fcvt z3.s, p0/m, z3.h
+; CHECK-NEXT:    stp q0, q3, [x0]
+; CHECK-NEXT:    stp q1, q2, [x0, #32]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvt_v16f16_to_v16f32:
@@ -588,21 +591,18 @@ define void @fcvt_v16f16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov x8, #6 // =0x6
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    ld1h { z5.d }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
 ; CHECK-NEXT:    mov x8, #2 // =0x2
-; CHECK-NEXT:    fcvt z3.d, p0/m, z3.h
+; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
 ; CHECK-NEXT:    ld1h { z7.d }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    fcvt z3.d, p0/m, z3.h
+; CHECK-NEXT:    fcvt z6.d, p0/m, z6.h
 ; CHECK-NEXT:    fcvt z4.d, p0/m, z4.h
+; CHECK-NEXT:    fcvt z5.d, p0/m, z5.h
 ; CHECK-NEXT:    stp q0, q1, [x1, #96]
-; CHECK-NEXT:    movprfx z0, z5
-; CHECK-NEXT:    fcvt z0.d, p0/m, z5.h
-; CHECK-NEXT:    movprfx z1, z6
-; CHECK-NEXT:    fcvt z1.d, p0/m, z6.h
+; CHECK-NEXT:    fcvt z7.d, p0/m, z7.h
 ; CHECK-NEXT:    stp q2, q3, [x1, #64]
-; CHECK-NEXT:    movprfx z2, z7
-; CHECK-NEXT:    fcvt z2.d, p0/m, z7.h
-; CHECK-NEXT:    stp q4, q0, [x1, #32]
-; CHECK-NEXT:    stp q1, q2, [x1]
+; CHECK-NEXT:    stp q4, q5, [x1, #32]
+; CHECK-NEXT:    stp q6, q7, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvt_v16f16_v16f64:

@@ -10,6 +10,6 @@
 #include <clc/geometric/clc_normalize.h>
 #include <clc/math/clc_half_rsqrt.h>
 
-#define __FLOAT_ONLY
+#define __CLC_FLOAT_ONLY
 #define __CLC_BODY <clc_fast_normalize.inc>
 #include <clc/math/gentype.inc>

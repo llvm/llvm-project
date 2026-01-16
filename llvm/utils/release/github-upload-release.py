@@ -10,6 +10,9 @@
 # Create and manage releases in the llvm github project.
 #
 # This script requires python3 and the PyGithub module.
+
+# Requirements and lockfiles can be found in llvm/utils/git/requirements.upload_release.txt.in
+# and llvm/utils/git/requirements.upload_release.txt
 #
 # Example Usage:
 #
@@ -58,7 +61,7 @@ def create_release(repo, release, tag=None, name=None, message=None):
 * [Linux x86_64](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-X64.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-X64.tar.xz.jsonl))
 * [Linux Arm64](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-ARM64.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-ARM64.tar.xz.jsonl))
 AUTOMATIC_DOWNLOAD_LINKS_END -->
-<!-- * [Linux Armv7-a](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-armv7a-linux-gnueabihf.tar.gz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}}/clang+llvm-{release}-armv7a-linux-gnueabihf.tar.gz.sig)) -->
+<!-- * [Linux Armv7-a](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-armv7a-linux-gnueabihf.tar.gz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-armv7a-linux-gnueabihf.tar.gz.sig)) -->
 
 <!-- AUTOMATIC_DOWNLOAD_LINKS_BEGIN
 * [macOS Apple Silicon](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-ARM64.tar.xz) (ARM64) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-ARM64.tar.xz.jsonl))
@@ -67,7 +70,7 @@ AUTOMATIC_DOWNLOAD_LINKS_END -->
 
 <!-- * Windows x64 (64-bit): [installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win64.exe) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win64.exe.sig)), [archive](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz.sig)) -->
 <!-- * Windows x86 (32-bit): [installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win32.exe) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win32.exe.sig)) -->
-<!-- * Windows on Arm (ARM64): [installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-woa64.exe) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-woa64.exe.sig)), [archive](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.sig)) -->
+<!-- * Windows on Arm (ARM64): [installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-woa64.exe) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-woa64.exe.sig)), [archive](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.sig)) -->
 
 Download links will appear here once builds have completed. <!-- AUTOMATIC_DOWNLOAD_LINKS_PLACEHOLDER -->
 

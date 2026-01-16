@@ -11,6 +11,6 @@
 
 #include <clc/internal/clc.h>
 
-_CLC_OVERLOAD _CLC_DECL size_t __clc_get_local_size(uint dim);
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL size_t __clc_get_local_size(uint dim);
 
 #endif // __CLC_WORKITEM_CLC_GET_LOCAL_SIZE_H__

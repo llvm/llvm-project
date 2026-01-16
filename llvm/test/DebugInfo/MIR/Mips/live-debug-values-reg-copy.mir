@@ -118,8 +118,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
@@ -182,7 +182,7 @@ body:             |
     DBG_VALUE $s0, $noreg, !15, !DIExpression(), debug-location !19
     DBG_VALUE $s0_64, $noreg, !15, !DIExpression(), debug-location !19
     DBG_VALUE $f12, $noreg, !14, !DIExpression(), debug-location !19
-    renamable $d0_64 = CVT_D64_S renamable $f12, debug-location !19
+    renamable $d0_64 = CVT_D64_S renamable $f12, implicit $fcr31, debug-location !19
     renamable $at_64 = LUi64 target-flags(mips-highest) %const.0
     renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-higher) %const.0
     renamable $at_64 = DSLL killed renamable $at_64, 16
@@ -209,7 +209,7 @@ body:             |
     renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-abs-hi) %const.2
     renamable $at_64 = DSLL killed renamable $at_64, 16
     renamable $f1 = LWC1 killed renamable $at_64, target-flags(mips-abs-lo) %const.2 :: (load (s32) from constant-pool)
-    renamable $f0 = FADD_S killed renamable $f0, killed renamable $f1, debug-location !19
+    renamable $f0 = FADD_S killed renamable $f0, killed renamable $f1, implicit $fcr31, debug-location !19
     J %bb.3, implicit-def dead $at, debug-location !19
 
   bb.2.if.else:
@@ -222,7 +222,7 @@ body:             |
     renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-abs-hi) %const.1
     renamable $at_64 = DSLL killed renamable $at_64, 16
     renamable $f0 = LWC1 killed renamable $at_64, target-flags(mips-abs-lo) %const.1 :: (load (s32) from constant-pool)
-    renamable $f24 = FADD_S killed renamable $f12, killed renamable $f0, debug-location !19
+    renamable $f24 = FADD_S killed renamable $f12, killed renamable $f0, implicit $fcr31, debug-location !19
     DBG_VALUE $f24, $noreg, !14, !DIExpression(), debug-location !19
     $f12 = COPY renamable $f24, debug-location !19
     JAL @externFunc2, csr_n64, implicit-def dead $ra, implicit $f12, implicit-def $sp, implicit-def $f0, debug-location !19
@@ -233,7 +233,7 @@ body:             |
     $f12 = COPY renamable $f24, debug-location !19
     JAL @externFunc, csr_n64, implicit-def dead $ra, implicit $f12, implicit-def $sp, implicit-def dead $f0, debug-location !19
     renamable $f0 = PseudoCVT_S_W killed renamable $s0, debug-location !19
-    renamable $f0 = FADD_S killed renamable $f25, killed renamable $f0, debug-location !19
+    renamable $f0 = FADD_S killed renamable $f25, killed renamable $f0, implicit $fcr31, debug-location !19
     ; This instruction is inserted additionally in order to test moving variable's value from one float register to another.
     $f26 = FMOV_S killed $f24, debug-location !19
 

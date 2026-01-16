@@ -1,4 +1,4 @@
-//===--- ForwardDeclarationNamespaceCheck.cpp - clang-tidy ------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,7 +46,7 @@ void ForwardDeclarationNamespaceCheck::check(
     const MatchFinder::MatchResult &Result) {
   if (const auto *RecordDecl =
           Result.Nodes.getNodeAs<CXXRecordDecl>("record_decl")) {
-    StringRef DeclName = RecordDecl->getName();
+    const StringRef DeclName = RecordDecl->getName();
     if (RecordDecl->isThisDeclarationADefinition()) {
       DeclNameToDefinitions[DeclName].push_back(RecordDecl);
     } else {
@@ -69,10 +69,9 @@ void ForwardDeclarationNamespaceCheck::check(
     //      struct B { friend A; };
     //    \endcode
     // `A` will not be marked as "referenced" in the AST.
-    if (const TypeSourceInfo *Tsi = Decl->getFriendType()) {
-      QualType Desugared = Tsi->getType().getDesugaredType(*Result.Context);
-      FriendTypes.insert(Desugared.getTypePtr());
-    }
+    if (const TypeSourceInfo *Tsi = Decl->getFriendType())
+      FriendTypes.insert(
+          Tsi->getType()->getCanonicalTypeUnqualified().getTypePtr());
   }
 }
 
@@ -99,9 +98,8 @@ static bool haveSameNamespaceOrTranslationUnit(const CXXRecordDecl *Decl1,
 
 static std::string getNameOfNamespace(const CXXRecordDecl *Decl) {
   const auto *ParentDecl = Decl->getLexicalParent();
-  if (ParentDecl->getDeclKind() == Decl::TranslationUnit) {
+  if (ParentDecl->getDeclKind() == Decl::TranslationUnit)
     return "(global)";
-  }
   const auto *NsDecl = cast<NamespaceDecl>(ParentDecl);
   std::string Ns;
   llvm::raw_string_ostream OStream(Ns);
@@ -116,10 +114,11 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
     // If more than 1 declaration exists, we check if all are in the same
     // namespace.
     for (const auto *CurDecl : Declarations) {
-      if (CurDecl->hasDefinition() || CurDecl->isReferenced()) {
+      if (CurDecl->hasDefinition() || CurDecl->isReferenced())
         continue; // Skip forward declarations that are used/referenced.
-      }
-      if (FriendTypes.contains(CurDecl->getTypeForDecl())) {
+      if (FriendTypes.contains(CurDecl->getASTContext()
+                                   .getCanonicalTagType(CurDecl)
+                                   ->getTypePtr())) {
         continue; // Skip forward declarations referenced as friend.
       }
       if (CurDecl->getLocation().isMacroID() ||
@@ -128,9 +127,8 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
       }
       // Compare with all other declarations with the same name.
       for (const auto *Decl : Declarations) {
-        if (Decl == CurDecl) {
+        if (Decl == CurDecl)
           continue; // Don't compare with self.
-        }
         if (!CurDecl->hasDefinition() &&
             !haveSameNamespaceOrTranslationUnit(CurDecl, Decl)) {
           diag(CurDecl->getLocation(),
@@ -146,9 +144,8 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
       // Check if a definition in another namespace exists.
       const auto DeclName = CurDecl->getName();
       auto It = DeclNameToDefinitions.find(DeclName);
-      if (It == DeclNameToDefinitions.end()) {
+      if (It == DeclNameToDefinitions.end())
         continue; // No definition in this translation unit, we can skip it.
-      }
       // Make a warning for each definition with the same name (in other
       // namespaces).
       const auto &Definitions = It->second;

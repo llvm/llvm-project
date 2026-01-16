@@ -9,22 +9,25 @@
 ; CHECK: OpExtension "SPV_INTEL_fp_max_error"
 
 ; CHECK: OpName %[[#CalleeName:]] "callee"
-; CHECK: OpName %[[#F3:]] "f3"
-; CHECK: OpDecorate %[[#F3]] FPMaxErrorDecorationINTEL 1075838976
+; CHECK: OpDecorate %[[#F3:]] FPMaxErrorDecorationINTEL 1075838976
 ; CHECK: OpDecorate %[[#Callee:]] FPMaxErrorDecorationINTEL 1065353216
 
 ; CHECK: %[[#FloatTy:]] = OpTypeFloat 32
-; CHECK: %[[#Callee]] = OpFunctionCall %[[#FloatTy]] %[[#CalleeName]]
 
 define float @callee(float %f1, float %f2) {
 entry:
 ret float %f1
 }
 
-define void @test_fp_max_error_decoration(float %f1, float %f2) {
+; CHECK: %[[#F3]] = OpFDiv %[[#FloatTy]]
+; CHECK: %[[#Callee]] = OpFunctionCall %[[#FloatTy]] %[[#CalleeName]]
+
+define void @test_fp_max_error_decoration(float %f1, float %f2, float* %out) {
 entry:
 %f3 = fdiv float %f1, %f2, !fpmath !0
-call float @callee(float %f1, float %f2), !fpmath !1
+store volatile float %f3, float* %out
+%call = call float @callee(float %f1, float %f2), !fpmath !1
+store volatile float %call, float* %out
 ret void
 }
 

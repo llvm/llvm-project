@@ -203,12 +203,11 @@ def AffineLoopUnroll : InterfacePass<"affine-loop-unroll", "FunctionOpInterface"
   let summary = "Unroll affine loops";
   let constructor = "mlir::affine::createLoopUnrollPass()";
   let options = [
-    Option<"unrollFactor", "unroll-factor", "unsigned", /*default=*/"4",
-           "Use this unroll factor for all loops being unrolled">,
+    Option<"unrollFactor", "unroll-factor", "int64_t", /*default=*/"4",
+           "Use this unroll factor for all loops being unrolled, "
+           "set it to -1, and it will fully unroll.">,
     Option<"unrollUpToFactor", "unroll-up-to-factor", "bool",
            /*default=*/"false", "Allow unrolling up to the factor specified">,
-    Option<"unrollFull", "unroll-full", "bool", /*default=*/"false",
-           "Fully unroll loops">,
     Option<"numRepetitions", "unroll-num-reps", "unsigned", /*default=*/"1",
            "Unroll innermost loops repeatedly this many times">,
     Option<"unrollFullThreshold", "unroll-full-threshold", "unsigned",

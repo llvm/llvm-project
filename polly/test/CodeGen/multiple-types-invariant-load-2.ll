@@ -1,11 +1,10 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -S \
-; RUN: -polly-allow-differing-element-types < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S -polly-allow-differing-element-types < %s | FileCheck %s
 
 ; CHECK: polly
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @hoge(ptr %arg) #0 {
+define void @hoge(ptr %arg) {
 bb:
   br label %bb3
 
@@ -21,8 +20,6 @@ bb7:                                              ; preds = %bb4, %bb3
   %tmp8 = phi i8 [ 1, %bb3 ], [ undef, %bb4 ]
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

@@ -330,6 +330,9 @@ export namespace std {
 
   // [meta.const.eval], constant evaluation context
   using std::is_constant_evaluated;
+#if _LIBCPP_STD_VER >= 26 && __has_builtin(__builtin_is_within_lifetime)
+  using std::is_within_lifetime;
+#endif
 
   // [depr.meta.types]
   using std::aligned_storage;

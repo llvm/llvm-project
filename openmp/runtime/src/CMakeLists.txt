@@ -10,11 +10,12 @@
 
 include(ExtendPath)
 
-# The generated headers will be placed in clang's resource directory if present.
-if(NOT LLVM_TREE_AVAILABLE)
-  set(LIBOMP_HEADERS_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
-else()
+# The generated headers will be placed in clang's resource if using it to
+# compile openmp in a runtimes-bootstrapping build.
+if(LLVM_TREE_AVAILABLE AND LLVM_RUNTIMES_BUILD)
   set(LIBOMP_HEADERS_INTDIR ${LLVM_BINARY_DIR}/${LIBOMP_HEADERS_INSTALL_PATH})
+else()
+  set(LIBOMP_HEADERS_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 # Configure omp.h, kmp_config.h and omp-tools.h if necessary
@@ -121,7 +122,7 @@ else()
     # Unix specific files
     libomp_append(LIBOMP_CXXFILES z_Linux_util.cpp)
     libomp_append(LIBOMP_CXXFILES kmp_gsupport.cpp)
-    if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
       libomp_append(LIBOMP_GNUASMFILES z_AIX_asm.S) # AIX assembly file
     else()
       libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
@@ -167,6 +168,7 @@ endif()
 
 # Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
 # avoid an unwanted dependency on libstdc++.so.
+add_compile_definitions(_GLIBCXX_NO_ASSERTIONS)
 if(NOT WIN32)
   add_definitions(-U_GLIBCXX_ASSERTIONS)
 endif()
@@ -218,7 +220,7 @@ if(OPENMP_MSVC_NAME_SCHEME)
     LINK_FLAGS "${LIBOMP_CONFIGURED_LDFLAGS}"
     LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
  )
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LIBOMP_SHARED_OUTPUT_NAME "omp" CACHE STRING "Output name for the shared libomp runtime library.")
   set_target_properties(omp PROPERTIES
     OUTPUT_NAME "${LIBOMP_SHARED_OUTPUT_NAME}"
@@ -252,23 +254,35 @@ set(LIBOMP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 
 # Add symbolic links to libomp
 if(NOT WIN32)
-  add_custom_command(TARGET omp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE}
-      libgomp${LIBOMP_LIBRARY_SUFFIX}
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE}
-      libiomp5${LIBOMP_LIBRARY_SUFFIX}
-    WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
-  )
-  if(LIBOMP_ENABLE_SHARED)
-    if(APPLE)
-      set(VERSIONED_LIBGOMP_NAME libgomp.1${LIBOMP_LIBRARY_SUFFIX})
-    else()
-      set(VERSIONED_LIBGOMP_NAME libgomp${LIBOMP_LIBRARY_SUFFIX}.1)
-    endif()
+  if(AIX)
+    # On AIX, libomp.a is the name for both static and shared objects.
+    set(LIBOMP_AIX_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
     add_custom_command(TARGET omp POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE} ${VERSIONED_LIBGOMP_NAME}
+      COMMAND ${CMAKE_COMMAND} -E create_symlink
+        ${LIBOMP_LIB_NAME}${LIBOMP_AIX_SUFFIX} libgomp${LIBOMP_AIX_SUFFIX}
+      COMMAND ${CMAKE_COMMAND} -E create_symlink
+        ${LIBOMP_LIB_NAME}${LIBOMP_AIX_SUFFIX} libiomp5${LIBOMP_AIX_SUFFIX}
       WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
     )
+  else()
+    add_custom_command(TARGET omp POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE}
+        libiomp5${LIBOMP_LIBRARY_SUFFIX}
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE}
+        libgomp${LIBOMP_LIBRARY_SUFFIX}
+      WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
+    )
+    if(LIBOMP_ENABLE_SHARED)
+      if(APPLE)
+        set(VERSIONED_LIBGOMP_NAME libgomp.1${LIBOMP_LIBRARY_SUFFIX})
+      else()
+        set(VERSIONED_LIBGOMP_NAME libgomp${LIBOMP_LIBRARY_SUFFIX}.1)
+      endif()
+      add_custom_command(TARGET omp POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE} ${VERSIONED_LIBGOMP_NAME}
+        WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
+      )
+    endif()
   endif()
 endif()
 
@@ -363,51 +377,6 @@ if(WIN32)
   endif()
 endif()
 
-# Building the Fortran module files
-# One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
-configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
-configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
-
-set(BUILD_FORTRAN_MODULES False)
-if (NOT ${LIBOMP_FORTRAN_MODULES_COMPILER} STREQUAL "")
-  # If libomp is built as an LLVM runtime and the flang compiler is available,
-  # compile the Fortran module files.
-  message(STATUS "configuring openmp to build Fortran module files using ${LIBOMP_FORTRAN_MODULES_COMPILER}")
-  set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
-  add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
-  add_custom_command(
-    OUTPUT omp_lib.mod omp_lib_kinds.mod
-    COMMAND ${LIBOMP_FORTRAN_MODULES_COMPILER} -cpp -fsyntax-only ${LIBOMP_FORTRAN_SOURCE_FILE}
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}
-      ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
-  )
-  set(BUILD_FORTRAN_MODULES True)
-elseif(${LIBOMP_FORTRAN_MODULES})
-  # The following requests explicit building of the Fortran module files
-  # Workaround for gfortran to build modules with the
-  # omp_sched_monotonic integer parameter
-  if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-    set(ADDITIONAL_Fortran_FLAGS "-fno-range-check")
-  endif()
-  add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
-  set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Misc")
-  libomp_get_fflags(LIBOMP_CONFIGURED_FFLAGS)
-  if(CMAKE_Fortran_COMPILER_SUPPORTS_F90)
-    set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
-  else()
-    message(FATAL_ERROR "Fortran module build requires Fortran 90 compiler")
-  endif()
-  add_custom_command(
-    OUTPUT omp_lib.mod omp_lib_kinds.mod
-    COMMAND ${CMAKE_Fortran_COMPILER} -c ${ADDITIONAL_Fortran_FLAGS}
-            ${LIBOMP_CONFIGURED_FFLAGS} ${LIBOMP_FORTRAN_SOURCE_FILE}
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}
-      ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
-  )
-  set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES omp_lib${CMAKE_C_OUTPUT_EXTENSION})
-  set(BUILD_FORTRAN_MODULES True)
-endif()
-
 # Move files to exports/ directory if requested
 if(${LIBOMP_COPY_EXPORTS})
   include(LibompExports)
@@ -457,13 +426,19 @@ else()
   if(${LIBOMP_INSTALL_ALIASES})
     # Create aliases (symlinks) of the library for backwards compatibility
     extend_path(outdir "${CMAKE_INSTALL_PREFIX}" "${OPENMP_INSTALL_LIBDIR}")
+    if(AIX)
+      # On AIX, libomp.a is the name for both static and shared objects.
+      set(LIBRARY_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
+    else()
+      set(LIBRARY_SUFFIX ${LIBOMP_LIBRARY_SUFFIX})
+    endif()
     set(LIBOMP_ALIASES "libgomp;libiomp5")
     foreach(alias IN LISTS LIBOMP_ALIASES)
-      install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
-        \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY
+      install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_NAME}${LIBRARY_SUFFIX}\"
+        \"${alias}${LIBRARY_SUFFIX}\" WORKING_DIRECTORY
         \"\$ENV{DESTDIR}${outdir}\")")
     endforeach()
-    if(LIBOMP_ENABLE_SHARED)
+    if(LIBOMP_ENABLE_SHARED AND NOT AIX)
       install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
         \"${VERSIONED_LIBGOMP_NAME}\" WORKING_DIRECTORY
         \"\$ENV{DESTDIR}${outdir}\")")
@@ -481,16 +456,4 @@ if(${LIBOMP_OMPT_SUPPORT})
   # install under legacy name ompt.h
   install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
   set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
-endif()
-if(${BUILD_FORTRAN_MODULES})
-  set (destination ${LIBOMP_HEADERS_INSTALL_PATH})
-  if (NOT ${LIBOMP_MODULES_INSTALL_PATH} STREQUAL "")
-    set (destination ${LIBOMP_MODULES_INSTALL_PATH})
-  endif()
-  install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
-    ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.mod
-    ${CMAKE_CURRENT_BINARY_DIR}/omp_lib_kinds.mod
-    DESTINATION ${destination}
-  )
 endif()
