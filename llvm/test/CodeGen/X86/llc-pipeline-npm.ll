@@ -65,8 +65,7 @@
 ; O0-NEXT: stack-frame-layout
 ; O0-NEXT: x86-seses
 ; O0-NEXT: x86-return-thunks
-; O0-NEXT: x86-lvi-ret
-; O0-NEXT: verify)
+; O0-NEXT: x86-lvi-ret)
 ; O0-NEXT: free-machine-function)
 
 ; O2: require<MachineModuleAnalysis>
@@ -179,8 +178,7 @@
 ; O2-NEXT: stack-frame-layout
 ; O2-NEXT: x86-seses
 ; O2-NEXT: x86-return-thunks
-; O2-NEXT: x86-lvi-ret
-; O2-NEXT: verify)
+; O2-NEXT: x86-lvi-ret)
 ; O2-NEXT: free-machine-function)
 
 ; O0-WINDOWS: require<MachineModuleAnalysis>
@@ -242,8 +240,7 @@
 ; O0-WINDOWS-NEXT: x86-return-thunks
 ; O0-WINDOWS-NEXT: x86-avoid-trailing-call
 ; O0-WINDOWS-NEXT: x86-lvi-ret
-; O0-WINDOWS-NEXT: x86-wineh-unwindv2
-; O0-WINDOWS-NEXT: verify)
+; O0-WINDOWS-NEXT: x86-wineh-unwindv2)
 ; O0-WINDOWS-NEXT: free-machine-function)
 
 ; O3-WINDOWS: require<MachineModuleAnalysis>
@@ -359,6 +356,5 @@
 ; O3-WINDOWS-NEXT: x86-return-thunks
 ; O3-WINDOWS-NEXT: x86-avoid-trailing-call
 ; O3-WINDOWS-NEXT: x86-lvi-ret
-; O3-WINDOWS-NEXT: x86-wineh-unwindv2
-; O3-WINDOWS-NEXT: verify)
+; O3-WINDOWS-NEXT: x86-wineh-unwindv2)
 ; O3-WINDOWS-NEXT: free-machine-function)
