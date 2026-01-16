@@ -633,7 +633,7 @@ invalid.block:
 
 define void @crash_conditional_load_for_uncountable_exit_argptr(ptr dereferenceable(40) noalias %store.area, ptr dereferenceable(4) %load.area, i1 %skip.cond) {
 ; CHECK-LABEL: LV: Checking a loop in 'crash_conditional_load_for_uncountable_exit_argptr'
-; CHECK:       LV: Not vectorizing: Loop has too many uncountable exits.
+; CHECK:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
 entry:
   br label %for.body
 
