@@ -15,7 +15,7 @@ subroutine test_order()
 end subroutine
 
 !CHECK: - file:         {{.*}}
-!CHECK:   line:         9
+!CHECK:   line:         [[@LINE-8]]
 !CHECK:   construct:    do
 !CHECK:   clauses:
 !CHECK:     - clause:   order
@@ -31,7 +31,7 @@ subroutine test_order_reproducible()
 end subroutine
 
 !CHECK: - file:         {{.*}}
-!CHECK:   line:         25
+!CHECK:   line:         [[@LINE-8]]
 !CHECK:   construct:    simd
 !CHECK:   clauses:
 !CHECK:     - clause:   order
@@ -47,7 +47,7 @@ subroutine test_order_unconstrained()
 end subroutine
 
 !CHECK: - file:         {{.*}}
-!CHECK:   line:         41
+!CHECK:   line:         [[@LINE-8]]
 !CHECK:   construct:    target teams distribute parallel do simd
 !CHECK:   clauses:
 !CHECK:     - clause:   order
