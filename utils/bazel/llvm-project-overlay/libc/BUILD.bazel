@@ -175,6 +175,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_types_float_t",
+    hdrs = ["include/llvm-libc-types/float_t.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_types_cfloat128",
     hdrs = ["include/llvm-libc-types/cfloat128.h"],
     deps = [
@@ -1136,6 +1141,17 @@ libc_support_library(
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16sqrtl",
+    hdrs = ["src/__support/math/f16sqrtl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":llvm_libc_types_float_t",
     ],
 )
 
@@ -3980,7 +3996,8 @@ libc_math_function(
 libc_math_function(
     name = "f16sqrtl",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_f16sqrtl",
+        ":errno",
     ],
 )
 
