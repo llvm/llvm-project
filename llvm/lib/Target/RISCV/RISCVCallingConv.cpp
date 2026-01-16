@@ -528,7 +528,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   // Split arguments might be passed indirectly, so keep track of the pending
-  // values. Split vectors are passed via a mix of registers and indirectly, so
+  // values. Split vectors excluding P extension packed vectors(see
+  // isPExtPackedType) are passed via a mix of registers and indirectly, so
   // treat them as we would any other argument.
   if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
       (ArgFlags.isSplit() || !PendingLocs.empty())) {
