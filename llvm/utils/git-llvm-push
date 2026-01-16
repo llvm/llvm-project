@@ -365,10 +365,11 @@ class LLVMPRAutomator:
             text=True,
             read_only=True,
         )
-        if result.stdout.strip():
-            raise LlvmPrError(
-                "Your working tree is dirty. Please stash or commit your changes."
-            )
+        for file_path in [line.strip() for line in result.stdout.split("\n")[:-1]]:
+            if not file_path.startswith("?"):
+                raise LlvmPrError(
+                    "Your working tree is dirty. Please stash or commit your changes."
+                )
 
     def _rebase_current_branch(self) -> None:
         self._check_work_tree()

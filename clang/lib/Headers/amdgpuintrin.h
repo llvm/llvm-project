@@ -27,9 +27,6 @@ _Pragma("omp begin declare variant match(device = {arch(amdgcn)})");
 #define __gpu_global __attribute__((address_space(1)))
 #define __gpu_generic __attribute__((address_space(0)))
 
-// Attribute to declare a function as a kernel.
-#define __gpu_kernel __attribute__((amdgpu_kernel, visibility("protected")))
-
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
   return __builtin_amdgcn_grid_size_x() / __builtin_amdgcn_workgroup_size_x();

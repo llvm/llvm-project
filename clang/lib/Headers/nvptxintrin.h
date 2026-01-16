@@ -31,9 +31,6 @@ _Pragma("omp begin declare variant match(device = {arch(nvptx64)})");
 #define __gpu_global __attribute__((address_space(1)))
 #define __gpu_generic __attribute__((address_space(0)))
 
-// Attribute to declare a function as a kernel.
-#define __gpu_kernel __attribute__((nvptx_kernel, visibility("protected")))
-
 // Returns the number of CUDA blocks in the 'x' dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
   return __nvvm_read_ptx_sreg_nctaid_x();
