@@ -472,6 +472,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         bool IsGslConstruction) {
   OriginList *CallList = getOriginsList(*Call);
   // Ignore functions returning values with no origin.
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD || !CallList)
     return;
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
