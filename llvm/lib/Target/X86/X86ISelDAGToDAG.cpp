@@ -603,7 +603,7 @@ namespace {
     bool onlyUsesZeroFlag(SDValue Flags) const;
     bool hasNoSignFlagUses(SDValue Flags) const;
     bool hasNoCarryFlagUses(SDValue Flags) const;
-    bool checkTCRetRegUsage(SDNode *N, LoadSDNode *Load) const;
+    bool checkTCRetEnoughRegs(SDNode *N) const;
   };
 
   class X86DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -1367,10 +1367,6 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
           (Subtarget->is64Bit() ||
            !getTargetMachine().isPositionIndependent())))) {
 
-      if (N->getOpcode() == X86ISD::TC_RETURN &&
-          !checkTCRetRegUsage(N, nullptr))
-        continue;
-
       /// Also try moving call address load from outside callseq_start to just
       /// before the call to allow it to be folded.
       ///
@@ -1394,6 +1390,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       SDValue Chain = N->getOperand(0);
       SDValue Load  = N->getOperand(1);
       if (!isCalleeLoad(Load, Chain, HasCallSeq))
+        continue;
+      if (N->getOpcode() == X86ISD::TC_RETURN && !checkTCRetEnoughRegs(N))
         continue;
       moveBelowOrigChain(CurDAG, Load, SDValue(N, 0), Chain);
       ++NumLoadMoved;
@@ -3506,40 +3504,56 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
   return true;
 }
 
-bool X86DAGToDAGISel::checkTCRetRegUsage(SDNode *N, LoadSDNode *Load) const {
+bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
+  // Check that there is enough volatile registers to load the callee address.
+
   const X86RegisterInfo *RI = Subtarget->getRegisterInfo();
-  const TargetRegisterClass *TailCallGPRs = RI->getGPRsForTailCall(*MF);
-  unsigned MaxGPRs = TailCallGPRs->getNumRegs();
+  unsigned AvailGPRs;
   if (Subtarget->is64Bit()) {
-    assert(TailCallGPRs->contains(X86::RSP));
-    assert(TailCallGPRs->contains(X86::RIP));
-    MaxGPRs -= 2; // Can't use RSP or RIP for the address in general.
+    const TargetRegisterClass *TCGPRs =
+        Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())
+            ? &X86::GR64_TCW64RegClass
+            : &X86::GR64_TCRegClass;
+    // Can't use RSP or RIP for the load in general.
+    assert(TCGPRs->contains(X86::RSP));
+    assert(TCGPRs->contains(X86::RIP));
+    AvailGPRs = TCGPRs->getNumRegs() - 2;
   } else {
-    assert(TailCallGPRs->contains(X86::ESP));
-    MaxGPRs -= 1; // Can't use ESP for the address in general.
+    const TargetRegisterClass *TCGPRs =
+        MF->getFunction().getCallingConv() == CallingConv::HiPE
+            ? &X86::GR32RegClass
+            : &X86::GR32_TCRegClass;
+    // Can't use ESP for the address in general.
+    assert(TCGPRs->contains(X86::ESP));
+    AvailGPRs = TCGPRs->getNumRegs() - 1;
   }
 
-  // The load's base and index potentially need two registers.
+  // The load's base and index need up to two registers.
   unsigned LoadGPRs = 2;
 
-  if (Load) {
-    // But not if it's loading from a frame slot or global.
-    // XXX: Couldn't we be indexing off of the global though?
-    const SDValue &BasePtr = Load->getBasePtr();
+  assert(N->getOpcode() == X86ISD::TC_RETURN);
+  // X86tcret args: (*chain, ptr, imm, regs..., glue)
+
+  if (Subtarget->is32Bit()) {
+    // FIXME: This was carried from X86tcret_1reg which was used for 32-bit,
+    // but it should apply to 64-bit too.
+    const SDValue& BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
     if (isa<FrameIndexSDNode>(BasePtr)) {
-      LoadGPRs = 0;
+      LoadGPRs -= 1; // Base is ESP, no reg needed.
     } else if (BasePtr->getNumOperands() &&
-               isa<GlobalAddressSDNode>(BasePtr->getOperand(0)))
-      LoadGPRs = 0;
+               isa<GlobalAddressSDNode>(BasePtr->getOperand(0))) {
+      assert(!getTargetMachine().isPositionIndependent());
+      LoadGPRs -= 1; // Base is a global (immediate since this is non-PIC), no
+                     // reg needed.
+    }
   }
 
-  unsigned TCGPRs = 0;
-  // X86tcret args: (*chain, ptr, imm, regs..., glue)
+  unsigned ArgGPRs = 0;
   for (unsigned I = 3, E = N->getNumOperands(); I != E; ++I) {
     if (const auto *RN = dyn_cast<RegisterSDNode>(N->getOperand(I))) {
       if (!RI->isGeneralPurposeRegister(*MF, RN->getReg()))
         continue;
-      if (++TCGPRs + LoadGPRs > MaxGPRs)
+      if (++ArgGPRs + LoadGPRs > AvailGPRs)
         return false;
     }
   }
