@@ -185,3 +185,4 @@ def check_builtin():
             transform_module.body.operations[0],
             transform_module,
         )
+        module.operation.verify()
