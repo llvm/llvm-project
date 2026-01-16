@@ -12,7 +12,12 @@
 
 // This predicate is true when the rs2 operand of vlse or vsse is x0, false
 // otherwise.
-def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
+// Note: in our pseudo RVV MachinInstr, rs2 is the fourth operand. However,
+// it's the third operand of its MCInst form, so this predicate will not
+// be triggered by llvm-mca, which checks against MCInst.
+def VLDSX0Pred
+    : AllOfSchedPreds<[FeatureSchedPredicate<TuneOptimizedZeroStrideLoad>,
+                       MCSchedPredicate<CheckRegOperand<3, X0>>]>;
 
 // This scheduling predicate is true when subtarget feature TuneHasSingleElementVecFP64
 // is enabled.

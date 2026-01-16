@@ -541,9 +541,9 @@ FunctionCallee AllocToken::getTokenAllocFunction(const CallBase &CB,
     NewParams.push_back(IntPtrTy); // token ID
   TokenAllocName += Callee->getName();
   FunctionType *NewFTy = FunctionType::get(RetTy, NewParams, false);
-  FunctionCallee TokenAlloc = Mod.getOrInsertFunction(TokenAllocName, NewFTy);
-  if (Function *F = dyn_cast<Function>(TokenAlloc.getCallee()))
-    F->copyAttributesFrom(Callee); // preserve attrs
+  AttributeList NewAttrs = Callee->getAttributes();
+  FunctionCallee TokenAlloc =
+      Mod.getOrInsertFunction(TokenAllocName, NewFTy, NewAttrs);
 
   if (Key.has_value())
     TokenAllocFunctions[*Key] = TokenAlloc;

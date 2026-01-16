@@ -249,3 +249,15 @@ define i32 @n11_shamt_is_smaller(i32 %x, i32 %nbits) {
   %t3 = shl i32 %t1, %t2 ; shift is smaller than mask
   ret i32 %t3
 }
+
+define i16 @bw16(i16 %arg) {
+; CHECK-LABEL: @bw16(
+; CHECK-NEXT:    [[SHL1:%.*]] = shl i16 [[ARG:%.*]], 8
+; CHECK-NEXT:    [[SHL2:%.*]] = ashr exact i16 [[SHL1]], 7
+; CHECK-NEXT:    ret i16 [[SHL2]]
+;
+  %shl1 = shl i16 %arg, 8
+  %ashr = ashr exact i16 %shl1, 8
+  %shl2 = shl i16 %ashr, 1
+  ret i16 %shl2
+}

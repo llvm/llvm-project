@@ -8,3 +8,18 @@ struct Box {
 
 using FloatBox = Box<float>;
 using IntBox = Box<int>;
+
+template <typename T>
+struct MoveOnly {
+  T value;
+};
+
+template <>
+struct MoveOnly<float> {
+  double value;
+};
+
+struct MoveOnlyBox {
+  MoveOnly<int> value1;
+  MoveOnly<float> value2;
+};

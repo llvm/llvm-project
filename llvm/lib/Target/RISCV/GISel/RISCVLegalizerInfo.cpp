@@ -149,7 +149,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, sXLen, sXLen);
 
   getActionDefinitionsBuilder(
-      {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
+      {G_UADDE, G_UADDO, G_USUBE, G_USUBO, G_READ_REGISTER, G_WRITE_REGISTER})
+      .lower();
 
   getActionDefinitionsBuilder({G_SADDE, G_SADDO, G_SSUBE, G_SSUBO})
       .minScalar(0, sXLen)
@@ -799,6 +800,8 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::riscv_vsetvli:
+  case Intrinsic::riscv_vsetvlimax:
   case Intrinsic::riscv_masked_atomicrmw_add:
   case Intrinsic::riscv_masked_atomicrmw_sub:
   case Intrinsic::riscv_masked_cmpxchg:

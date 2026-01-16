@@ -68,4 +68,13 @@ static void BM_vector_bool_reserve(benchmark::State& state) {
 }
 BENCHMARK(BM_vector_bool_reserve)->Name("vector<bool>::reserve()");
 
+static void BM_vector_bool_resize(benchmark::State& state) {
+  for (auto _ : state) {
+    std::vector<bool> vec;
+    vec.resize(100);
+    benchmark::DoNotOptimize(vec);
+  }
+}
+BENCHMARK(BM_vector_bool_resize)->Name("vector<bool>::resize()");
+
 BENCHMARK_MAIN();

@@ -301,3 +301,11 @@ void foo() {
   U g{};
 }
 } // namespace GH112560
+
+// CHECK:     VarDecl {{.*}} invalid x 'auto *' cinit
+// CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
+// CHECK-NEXT:   `-CallExpr {{.*}} 'int'
+// DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
+void brokenDeducedVarDecl() {
+   auto* x = some_func(nullptr);
+}
