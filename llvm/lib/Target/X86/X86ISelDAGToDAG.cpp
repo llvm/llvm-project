@@ -1004,7 +1004,9 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     if ((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
         N->getSimpleValueType(0).isVector() && !mayPreventLoadFold()) {
       APInt SplatVal;
-      if (X86::isConstantSplat(N->getOperand(1), SplatVal) &&
+      if (!ISD::isBuildVectorOfConstantSDNodes(
+              peekThroughBitcasts(N->getOperand(0)).getNode()) &&
+          X86::isConstantSplat(N->getOperand(1), SplatVal) &&
           SplatVal.isOne()) {
         SDLoc DL(N);
 
@@ -1873,8 +1875,8 @@ bool X86DAGToDAGISel::matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM,
   // For more information see http://people.redhat.com/drepper/tls.pdf
   if (isNullConstant(Address) && AM.Segment.getNode() == nullptr &&
       !IndirectTlsSegRefs &&
-      (Subtarget->isTargetGlibc() || Subtarget->isTargetAndroid() ||
-       Subtarget->isTargetFuchsia())) {
+      (Subtarget->isTargetGlibc() || Subtarget->isTargetMusl() ||
+       Subtarget->isTargetAndroid() || Subtarget->isTargetFuchsia())) {
     if (Subtarget->isTarget64BitILP32() && !AllowSegmentRegForX32)
       return true;
     switch (N->getPointerInfo().getAddrSpace()) {
@@ -3309,7 +3311,8 @@ bool X86DAGToDAGISel::isSExtAbsoluteSymbolRef(unsigned Width, SDNode *N) const {
   // space, so globals can be a sign extended 32-bit immediate.
   // In other code models, small globals are in the low 2GB of the address
   // space, so sign extending them is equivalent to zero extending them.
-  return Width == 32 && !TM.isLargeGlobalValue(GV);
+  return TM.getCodeModel() != CodeModel::Large && Width == 32 &&
+         !TM.isLargeGlobalValue(GV);
 }
 
 X86::CondCode X86DAGToDAGISel::getCondFromNode(SDNode *N) const {

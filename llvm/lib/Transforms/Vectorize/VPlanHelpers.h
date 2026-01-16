@@ -334,15 +334,15 @@ struct VPCostContext {
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
   TargetTransformInfo::TargetCostKind CostKind;
-  ScalarEvolution &SE;
+  PredicatedScalarEvolution &PSE;
   const Loop *L;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
                 const VPlan &Plan, LoopVectorizationCostModel &CM,
                 TargetTransformInfo::TargetCostKind CostKind,
-                ScalarEvolution &SE, const Loop *L)
+                PredicatedScalarEvolution &PSE, const Loop *L)
       : TTI(TTI), TLI(TLI), Types(Plan), LLVMCtx(Plan.getContext()), CM(CM),
-        CostKind(CostKind), SE(SE), L(L) {}
+        CostKind(CostKind), PSE(PSE), L(L) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -394,21 +394,40 @@ class VPSlotTracker {
   /// require slot tracking.
   std::unique_ptr<ModuleSlotTracker> MST;
 
+  /// Cached metadata kind names from the Module's LLVMContext.
+  SmallVector<StringRef> MDNames;
+
+  /// Cached Module pointer for printing metadata.
+  const Module *M = nullptr;
+
   void assignName(const VPValue *V);
-  void assignNames(const VPlan &Plan);
+  LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
   std::string getName(const Value *V);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
-    if (Plan)
+    if (Plan) {
       assignNames(*Plan);
+      if (auto *ScalarHeader = Plan->getScalarHeader())
+        M = ScalarHeader->getIRBasicBlock()->getModule();
+    }
   }
 
   /// Returns the name assigned to \p V, if there is one, otherwise try to
   /// construct one from the underlying value, if there's one; else return
   /// <badref>.
   std::string getOrCreateName(const VPValue *V) const;
+
+  /// Returns the cached metadata kind names.
+  ArrayRef<StringRef> getMDNames() {
+    if (MDNames.empty() && M)
+      M->getContext().getMDKindNames(MDNames);
+    return MDNames;
+  }
+
+  /// Returns the cached Module pointer.
+  const Module *getModule() const { return M; }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

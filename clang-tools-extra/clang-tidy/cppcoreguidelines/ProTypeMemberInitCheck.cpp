@@ -103,10 +103,9 @@ static std::string
 toCommaSeparatedString(const R &OrderedDecls,
                        const SmallPtrSetImpl<const T *> &DeclsToInit) {
   SmallVector<StringRef, 16> Names;
-  for (const T *Decl : OrderedDecls) {
+  for (const T *Decl : OrderedDecls)
     if (DeclsToInit.contains(Decl))
       Names.emplace_back(getName(Decl));
-  }
   return llvm::join(Names.begin(), Names.end(), ", ");
 }
 
@@ -254,9 +253,8 @@ getInitializationsInOrder(const CXXRecordDecl &ClassDecl,
   Decls.clear();
   for (const auto &Base : ClassDecl.bases()) {
     // Decl may be null if the base class is a template parameter.
-    if (const NamedDecl *Decl = getCanonicalRecordDecl(Base.getType())) {
+    if (const NamedDecl *Decl = getCanonicalRecordDecl(Base.getType()))
       Decls.emplace_back(Decl);
-    }
   }
   forEachField(ClassDecl, ClassDecl.fields(),
                [&](const FieldDecl *F) { Decls.push_back(F); });
@@ -361,7 +359,8 @@ void ProTypeMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 // FIXME: Copied from clang/lib/Sema/SemaDeclCXX.cpp.
-static bool isIncompleteOrZeroLengthArrayType(ASTContext &Context, QualType T) {
+static bool isIncompleteOrZeroLengthArrayType(const ASTContext &Context,
+                                              QualType T) {
   if (T->isIncompleteArrayType())
     return true;
 
@@ -375,15 +374,14 @@ static bool isIncompleteOrZeroLengthArrayType(ASTContext &Context, QualType T) {
   return false;
 }
 
-static bool isEmpty(ASTContext &Context, const QualType &Type) {
-  if (const CXXRecordDecl *ClassDecl = Type->getAsCXXRecordDecl()) {
+static bool isEmpty(const ASTContext &Context, const QualType &Type) {
+  if (const CXXRecordDecl *ClassDecl = Type->getAsCXXRecordDecl())
     return ClassDecl->isEmpty();
-  }
   return isIncompleteOrZeroLengthArrayType(Context, Type);
 }
 
-static llvm::StringLiteral getInitializer(QualType QT, bool UseAssignment) {
-  static constexpr llvm::StringLiteral DefaultInitializer = "{}";
+static StringRef getInitializer(QualType QT, bool UseAssignment) {
+  static constexpr StringRef DefaultInitializer = "{}";
   if (!UseAssignment)
     return DefaultInitializer;
 
@@ -431,19 +429,13 @@ static llvm::StringLiteral getInitializer(QualType QT, bool UseAssignment) {
   }
 }
 
-void ProTypeMemberInitCheck::checkMissingMemberInitializer(
-    ASTContext &Context, const CXXRecordDecl &ClassDecl,
-    const CXXConstructorDecl *Ctor) {
-  const bool IsUnion = ClassDecl.isUnion();
-
-  if (IsUnion && ClassDecl.hasInClassInitializer())
-    return;
-
-  // Gather all fields (direct and indirect) that need to be initialized.
-  SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
+static void
+computeFieldsToInit(const ASTContext &Context, const RecordDecl &Record,
+                    bool IgnoreArrays,
+                    SmallPtrSetImpl<const FieldDecl *> &FieldsToInit) {
   bool AnyMemberHasInitPerUnion = false;
   forEachFieldWithFilter(
-      ClassDecl, ClassDecl.fields(), AnyMemberHasInitPerUnion,
+      Record, Record.fields(), AnyMemberHasInitPerUnion,
       [&](const FieldDecl *F) {
         if (IgnoreArrays && F->getType()->isArrayType())
           return;
@@ -458,6 +450,19 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
             !AnyMemberHasInitPerUnion)
           FieldsToInit.insert(F);
       });
+}
+
+void ProTypeMemberInitCheck::checkMissingMemberInitializer(
+    ASTContext &Context, const CXXRecordDecl &ClassDecl,
+    const CXXConstructorDecl *Ctor) {
+  const bool IsUnion = ClassDecl.isUnion();
+
+  if (IsUnion && ClassDecl.hasInClassInitializer())
+    return;
+
+  // Gather all fields (direct and indirect) that need to be initialized.
+  SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
+  computeFieldsToInit(Context, ClassDecl, IgnoreArrays, FieldsToInit);
   if (FieldsToInit.empty())
     return;
 
@@ -507,7 +512,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   // Collect all fields but only suggest a fix for the first member of unions,
   // as initializing more than one union member is an error.
   SmallPtrSet<const FieldDecl *, 16> FieldsToFix;
-  AnyMemberHasInitPerUnion = false;
+  bool AnyMemberHasInitPerUnion = false;
   forEachFieldWithFilter(ClassDecl, ClassDecl.fields(),
                          AnyMemberHasInitPerUnion, [&](const FieldDecl *F) {
                            if (!FieldsToInit.contains(F))
@@ -541,7 +546,6 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
 void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
     const ASTContext &Context, const CXXRecordDecl &ClassDecl,
     const CXXConstructorDecl *Ctor) {
-
   // Gather any base classes that need to be initialized.
   SmallVector<const RecordDecl *, 4> AllBases;
   SmallPtrSet<const RecordDecl *, 4> BasesToInit;
@@ -563,10 +567,9 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
     if (Ctor->isImplicit())
       return;
 
-    for (const CXXCtorInitializer *Init : Ctor->inits()) {
+    for (const CXXCtorInitializer *Init : Ctor->inits())
       if (Init->isBaseInitializer() && Init->isWritten())
         BasesToInit.erase(Init->getBaseClass()->getAsCXXRecordDecl());
-    }
   }
 
   if (BasesToInit.empty())
@@ -583,6 +586,17 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
 
 void ProTypeMemberInitCheck::checkUninitializedTrivialType(
     const ASTContext &Context, const VarDecl *Var) {
+  // Verify that the record actually needs initialization
+  const CXXRecordDecl *Record = Var->getType()->getAsCXXRecordDecl();
+  if (!Record)
+    return;
+
+  SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
+  computeFieldsToInit(Context, *Record, IgnoreArrays, FieldsToInit);
+
+  if (FieldsToInit.empty())
+    return;
+
   const DiagnosticBuilder Diag =
       diag(Var->getBeginLoc(), "uninitialized record type: %0") << Var;
 

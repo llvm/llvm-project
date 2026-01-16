@@ -300,6 +300,12 @@ def AVX512_512_SET0 : I<0, Pseudo, (outs VR512:$dst), (ins), "",
                [(set VR512:$dst, (v16i32 immAllZerosV))]>;
 def AVX512_512_SETALLONES : I<0, Pseudo, (outs VR512:$dst), (ins), "",
                [(set VR512:$dst, (v16i32 immAllOnesV))]>;
+let AddedComplexity = 1, Predicates = [HasVLX] in {
+  def AVX512_128_SETALLONES : I<0, Pseudo, (outs VR128X:$dst), (ins),
+                                "", [(set VR128X:$dst, (v4i32 immAllOnesV))]>;
+  def AVX512_256_SETALLONES : I<0, Pseudo, (outs VR256X:$dst), (ins),
+                                "", [(set VR256X:$dst, (v8i32 immAllOnesV))]>;
+}
 }
 
 let Predicates = [HasAVX512] in {
@@ -12346,6 +12352,25 @@ defm : AVX512_scalar_unary_math_patterns<any_fsqrt, "SQRTSS", X86Movss, v4f32x_i
 defm : AVX512_scalar_unary_math_patterns<any_fsqrt, "SQRTSD", X86Movsd, v2f64x_info>;
 defm : AVX512_scalar_unary_math_patterns<any_fsqrt, "SQRTSH", X86Movsh, v8f16x_info>;
 
+multiclass AVX512_scalar_unary_math_patterns_with_immediate<
+    SDPatternOperator OpNode, string OpcPrefix, SDNode Move,
+    X86VectorVTInfo _> {
+  let Predicates = [HasAVX512] in {
+    def : Pat<(_.VT(Move _.VT:$dst, (scalar_to_vector(OpNode
+                                        (extractelt _.VT:$src, (i64 0)),
+                                        i32:$imm)))),
+              (!cast<Instruction>("V"#OpcPrefix#"Zrri_Int") _.VT:$dst,
+                  _.VT:$src, i32:$imm)>;
+  }
+}
+
+defm : AVX512_scalar_unary_math_patterns_with_immediate<
+           X86any_VRndScale, "RNDSCALESS", X86Movss, v4f32x_info>;
+defm : AVX512_scalar_unary_math_patterns_with_immediate<
+           X86any_VRndScale, "RNDSCALESD", X86Movsd, v2f64x_info>;
+defm : AVX512_scalar_unary_math_patterns_with_immediate<
+           X86any_VRndScale, "RNDSCALESH", X86Movsh, v8f16x_info>;
+
 //===----------------------------------------------------------------------===//
 // AES instructions
 //===----------------------------------------------------------------------===//
@@ -12378,15 +12403,15 @@ defm VAESDECLAST  : avx512_vaes<0xDF, "vaesdeclast", "int_x86_aesni_aesdeclast">
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasAVX512, HasVPCLMULQDQ] in
-defm VPCLMULQDQZ : vpclmulqdq<VR512, i512mem, loadv8i64, int_x86_pclmulqdq_512>,
+defm VPCLMULQDQZ : vpclmulqdq<VR512, i512mem, loadv8i64, v8i64>,
                               EVEX, VVVV, EVEX_V512, EVEX_CD8<64, CD8VF>, WIG;
 
 let Predicates = [HasVLX, HasVPCLMULQDQ] in {
-defm VPCLMULQDQZ128 : vpclmulqdq<VR128X, i128mem, loadv2i64, int_x86_pclmulqdq>,
+defm VPCLMULQDQZ128 : vpclmulqdq<VR128X, i128mem, loadv2i64, v2i64>,
                               EVEX, VVVV, EVEX_V128, EVEX_CD8<64, CD8VF>, WIG;
 
-defm VPCLMULQDQZ256: vpclmulqdq<VR256X, i256mem, loadv4i64,
-                                int_x86_pclmulqdq_256>, EVEX, VVVV, EVEX_V256,
+defm VPCLMULQDQZ256: vpclmulqdq<VR256X, i256mem, loadv4i64, v4i64>,
+                                EVEX, VVVV, EVEX_V256,
                                 EVEX_CD8<64, CD8VF>, WIG;
 }
 

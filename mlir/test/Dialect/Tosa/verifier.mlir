@@ -1222,3 +1222,116 @@ func.func @test_cast_to_block_scaled_data_scale_channel_mismatch(%arg0: tensor<4
   %0:2 = tosa.cast_to_block_scaled %arg0 {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<4x32xf32>) -> (tensor<4x32xf4E2M1FN>, tensor<4x2xf8E8M0FNU>)
   return %0#0, %0#1 : tensor<4x32xf4E2M1FN>, tensor<4x2xf8E8M0FNU>
 }
+
+// -----
+
+func.func @test_clamp_quantized(%arg0:tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>) -> (tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>) {
+    // expected-error@+1 {{'tosa.clamp' op min/max attributes types are incompatible with input/output element types.}}
+    %0 = tosa.clamp %arg0 {max_val = 127 : i8, min_val = -128 : i8} : (tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>) -> tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>
+    return %0 : tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>
+}
+
+// -----
+
+func.func @test_elementwise_shape_op_same_inputs_rank(%arg0: !tosa.shape<4>, %arg1: !tosa.shape<3>) -> !tosa.shape<4> {
+  // expected-error@+1 {{'tosa.add_shape' op operands don't have matching ranks}}
+  %0 = tosa.add_shape %arg0, %arg1 : (!tosa.shape<4>, !tosa.shape<3>) -> !tosa.shape<4>
+  return %0 : !tosa.shape<4>
+}
+
+// -----
+
+func.func @test_elementwise_shape_op_same_input_output_rank(%arg0: !tosa.shape<4>, %arg1: !tosa.shape<4>) -> !tosa.shape<3> {
+  // expected-error@+1 {{'tosa.div_floor_shape' op result shape has different rank than operands}}
+  %0 = tosa.div_floor_shape %arg0, %arg1 : (!tosa.shape<4>, !tosa.shape<4>) -> !tosa.shape<3>
+  return %0 : !tosa.shape<3>
+}
+
+// -----
+
+func.func @test_dim_invalid_output_rank(%arg0: tensor<1x2x3xi32>) -> !tosa.shape<2> {
+  // expected-error@+1 {{'tosa.dim' op expect output shape type to contain one element, got '!tosa.shape<2>'}}
+  %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<1x2x3xi32>) -> !tosa.shape<2>
+  return %0 : !tosa.shape<2>
+}
+
+// -----
+
+func.func @test_dim_invalid_axis(%arg0: tensor<1x2x3xi32>) -> !tosa.shape<1> {
+  // expected-error@+1 {{'tosa.dim' op expect axis to be in the range [0, 3), got 4}}
+  %0 = tosa.dim %arg0 {axis = 4 : i32} : (tensor<1x2x3xi32>) -> !tosa.shape<1>
+  return %0 : !tosa.shape<1>
+}
+
+// -----
+
+func.func @test_dim_scalar(%arg0: tensor<i32>) -> !tosa.shape<1> {
+  // expected-error@+1 {{'tosa.dim' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<i32>'}}
+  %0 = tosa.dim %arg0 {axis = 4 : i32} : (tensor<i32>) -> !tosa.shape<1>
+  return %0 : !tosa.shape<1>
+}
+
+// -----
+
+func.func @test_concat_shape_rank_mismatch() -> !tosa.shape<4> {
+  %0 = tosa.const_shape {values = dense<[10]> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %1 = tosa.const_shape {values = dense<[10, 15]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %2 = tosa.const_shape {values = dense<[5, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.concat_shape' op requires output shape rank to be equal to the sum of the input shape ranks (5), got 4}}
+  %3 = tosa.concat_shape %0, %1, %2 : (!tosa.shape<1>, !tosa.shape<2>, !tosa.shape<2>) -> !tosa.shape<4>
+  return %3 : !tosa.shape<4>
+}
+
+// -----
+
+func.func @test_slice_shape_negative_start() -> !tosa.shape<3> {
+  %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %1 = "tosa.const"() {values = dense<-1> : tensor<1xi32>} : () -> tensor<1xi32>
+  %2 = "tosa.const"() {values = dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.slice_shape' op expected non-negative start index, got -1}}
+  %3 = tosa.slice_shape %0, %1, %2 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
+  return %3 : !tosa.shape<3>
+}
+
+// -----
+
+func.func @test_slice_shape_non_positive_size() -> !tosa.shape<3> {
+  %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %1 = "tosa.const"() {values = dense<1> : tensor<1xi32>} : () -> tensor<1xi32>
+  %2 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.slice_shape' op expected positive size, got 0}}
+  %3 = tosa.slice_shape %0, %1, %2 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
+  return %3 : !tosa.shape<3>
+}
+
+// -----
+
+func.func @test_slice_out_of_range() -> !tosa.shape<3> {
+  %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %1 = "tosa.const"() {values = dense<5> : tensor<1xi32>} : () -> tensor<1xi32>
+  %2 = "tosa.const"() {values = dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.slice_shape' op expected start + size to be less than or equal to input shape rank (6), got 8}}
+  %3 = tosa.slice_shape %0, %1, %2 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
+  return %3 : !tosa.shape<3>
+}
+
+// -----
+
+func.func @test_slice_shape_incorrect_output_size() -> !tosa.shape<4> {
+  %shape = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %start = "tosa.const"() {values = dense<1> : tensor<1xi32>} : () -> tensor<1xi32>
+  %size  = "tosa.const"() {values = dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.slice_shape' op expected output type size to be equal to size attribute, got 4 vs 3}}
+  %slice = tosa.slice_shape %shape, %start, %size : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<4>
+  return %slice : !tosa.shape<4>
+}
+
+// -----
+
+func.func @test_mod_shape_input1_input2_rank_mismatch() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %b = tosa.const_shape {values = dense<[1, 2, 3, 4, 5]> : tensor<5xindex>} : () -> !tosa.shape<5>
+  // expected-error@+1 {{'tosa.mod_shape' op operands don't have matching ranks}}
+  %c = tosa.mod_shape %a, %b : (!tosa.shape<6>, !tosa.shape<5>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}

@@ -135,6 +135,11 @@ bool InProcessPrintingASTConsumer::HandleTopLevelDecl(DeclGroupRef DGR) {
   if (DGR.isNull())
     return true;
 
+  CompilerInstance *CI = Interp.getCompilerInstance();
+  DiagnosticsEngine &Diags = CI->getDiagnostics();
+  if (Diags.hasErrorOccurred())
+    return true;
+
   for (Decl *D : DGR)
     if (auto *TLSD = llvm::dyn_cast<TopLevelStmtDecl>(D))
       if (TLSD && TLSD->isSemiMissing()) {

@@ -17,7 +17,6 @@
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 #include "gtest/gtest.h"
-#include <memory>
 
 namespace llvm {
 

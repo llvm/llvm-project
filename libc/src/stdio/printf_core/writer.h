@@ -38,36 +38,65 @@ template <WriteMode write_mode> struct Mode {
 #endif
 };
 
+template <WriteMode write_mode> class Writer;
+
 template <WriteMode write_mode> struct WriteBuffer {
-  using StreamWriter = int (*)(cpp::string_view, void *);
   char *buff;
-  const char *init_buff; // for checking when resize.
   size_t buff_len;
   size_t buff_cur = 0;
-
-  // The stream writer will be called when the buffer is full. It will be passed
-  // string_views to write to the stream.
-  const StreamWriter stream_writer;
-  void *output_target;
-
   // The current writing mode in case the user wants runtime dispatch of the
   // stream writer with function pointers.
   [[maybe_unused]] WriteMode write_mode_;
 
-  LIBC_INLINE WriteBuffer(char *buff, size_t buff_len, StreamWriter hook,
-                          void *target)
-      : buff(buff), init_buff(buff), buff_len(buff_len), stream_writer(hook),
-        output_target(target), write_mode_(WriteMode::FLUSH_TO_STREAM) {}
+protected:
+  LIBC_INLINE WriteBuffer(char *buff, size_t buff_len, WriteMode mode)
+      : buff(buff), buff_len(buff_len), write_mode_(mode) {}
 
-  LIBC_INLINE WriteBuffer(char *buff, size_t buff_len)
-      : buff(buff), init_buff(buff), buff_len(buff_len), stream_writer(nullptr),
-        output_target(nullptr),
-        write_mode_(WriteMode::FILL_BUFF_AND_DROP_OVERFLOW) {}
+private:
+  friend class Writer<write_mode>;
+  // The overflow_write method will handle the case when adding new_str to
+  // the buffer would overflow it. Specific actions will depend on the buffer
+  // type / write_mode.
+  LIBC_INLINE int overflow_write(cpp::string_view new_str);
+};
 
-  LIBC_INLINE WriteBuffer(char *buff, size_t buff_len, StreamWriter hook)
-      : buff(buff), init_buff(buff), buff_len(buff_len), stream_writer(hook),
-        output_target(this), write_mode_(WriteMode::RESIZE_AND_FILL_BUFF) {}
+// Buffer variant that discards characters that don't fit into the buffer.
+struct DropOverflowBuffer
+    : public WriteBuffer<Mode<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value> {
+  LIBC_INLINE DropOverflowBuffer(char *buff, size_t buff_len)
+      : WriteBuffer<Mode<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>(
+            buff, buff_len, WriteMode::FILL_BUFF_AND_DROP_OVERFLOW) {}
 
+  LIBC_INLINE int fill_remaining_to_buff(cpp::string_view new_str) {
+    if (buff_cur < buff_len) {
+      size_t bytes_to_write = buff_len - buff_cur;
+      if (bytes_to_write > new_str.size()) {
+        bytes_to_write = new_str.size();
+      }
+      inline_memcpy(buff + buff_cur, new_str.data(), bytes_to_write);
+      buff_cur += bytes_to_write;
+    }
+    return WRITE_OK;
+  }
+};
+
+// Buffer variant that flushes to stream when it gets full.
+struct FlushingBuffer
+    : public WriteBuffer<Mode<WriteMode::FLUSH_TO_STREAM>::value> {
+  // The stream writer will be called when the buffer is full. It will be passed
+  // string_views to write to the stream.
+  using StreamWriter = int (*)(cpp::string_view, void *);
+  const StreamWriter stream_writer;
+  void *output_target;
+
+  LIBC_INLINE FlushingBuffer(char *buff, size_t buff_len, StreamWriter hook,
+                             void *target)
+      : WriteBuffer<Mode<WriteMode::FLUSH_TO_STREAM>::value>(
+            buff, buff_len, WriteMode::FLUSH_TO_STREAM),
+        stream_writer(hook), output_target(target) {}
+
+  // Flushes the entire current buffer to stream, followed by the new_str (if
+  // non-empty).
   LIBC_INLINE int flush_to_stream(cpp::string_view new_str) {
     if (buff_cur > 0) {
       int retval = stream_writer({buff, buff_cur}, output_target);
@@ -83,47 +112,60 @@ template <WriteMode write_mode> struct WriteBuffer {
     return WRITE_OK;
   }
 
-  LIBC_INLINE int fill_remaining_to_buff(cpp::string_view new_str) {
-    if (buff_cur < buff_len) {
-      size_t bytes_to_write = buff_len - buff_cur;
-      if (bytes_to_write > new_str.size()) {
-        bytes_to_write = new_str.size();
-      }
-      inline_memcpy(buff + buff_cur, new_str.data(), bytes_to_write);
-      buff_cur += bytes_to_write;
-    }
-    return WRITE_OK;
-  }
+  LIBC_INLINE int flush_to_stream() { return flush_to_stream({}); }
+};
 
+// Buffer variant that calls a resizing callback when it gets full.
+struct ResizingBuffer
+    : public WriteBuffer<Mode<WriteMode::RESIZE_AND_FILL_BUFF>::value> {
+  using ResizeWriter = int (*)(cpp::string_view, ResizingBuffer *);
+  const ResizeWriter resize_writer;
+  const char *init_buff; // for checking when resize.
+
+  LIBC_INLINE ResizingBuffer(char *buff, size_t buff_len, ResizeWriter hook)
+      : WriteBuffer<Mode<WriteMode::RESIZE_AND_FILL_BUFF>::value>(
+            buff, buff_len, WriteMode::RESIZE_AND_FILL_BUFF),
+        resize_writer(hook), init_buff(buff) {}
+
+  // Invokes the callback that is supposed to resize the buffer and make
+  // it large enough to fit the new_str addition.
   LIBC_INLINE int resize_and_write(cpp::string_view new_str) {
-    return stream_writer(new_str, output_target);
-  }
-
-  // The overflow_write method is intended to be called to write the contents of
-  // the buffer and new_str to the stream_writer if it exists. If a resizing
-  // hook is provided, it will resize the buffer and write the contents. If
-  // neither a stream_writer nor a resizing hook is provided, it will fill the
-  // remaining space in the buffer with new_str and drop the overflow. Calling
-  // this with an empty string will flush the buffer if relevant.
-
-  LIBC_INLINE int overflow_write(cpp::string_view new_str) {
-    if constexpr (write_mode == WriteMode::RUNTIME_DISPATCH) {
-      if (write_mode_ == WriteMode::FILL_BUFF_AND_DROP_OVERFLOW)
-        return fill_remaining_to_buff(new_str);
-      else if (write_mode_ == WriteMode::FLUSH_TO_STREAM)
-        return flush_to_stream(new_str);
-      else if (write_mode_ == WriteMode::RESIZE_AND_FILL_BUFF)
-        return resize_and_write(new_str);
-    } else if constexpr (write_mode == WriteMode::FILL_BUFF_AND_DROP_OVERFLOW) {
-      return fill_remaining_to_buff(new_str);
-    } else if constexpr (write_mode == WriteMode::FLUSH_TO_STREAM) {
-      return flush_to_stream(new_str);
-    } else if constexpr (write_mode == WriteMode::RESIZE_AND_FILL_BUFF) {
-      return resize_and_write(new_str);
-    }
-    __builtin_unreachable();
+    return resize_writer(new_str, this);
   }
 };
+
+template <>
+LIBC_INLINE int WriteBuffer<WriteMode::RUNTIME_DISPATCH>::overflow_write(
+    cpp::string_view new_str) {
+  if (write_mode_ == WriteMode::FILL_BUFF_AND_DROP_OVERFLOW)
+    return reinterpret_cast<DropOverflowBuffer *>(this)->fill_remaining_to_buff(
+        new_str);
+  else if (write_mode_ == WriteMode::FLUSH_TO_STREAM)
+    return reinterpret_cast<FlushingBuffer *>(this)->flush_to_stream(new_str);
+  else if (write_mode_ == WriteMode::RESIZE_AND_FILL_BUFF)
+    return reinterpret_cast<ResizingBuffer *>(this)->resize_and_write(new_str);
+  __builtin_unreachable();
+}
+
+template <>
+LIBC_INLINE int
+WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::overflow_write(
+    cpp::string_view new_str) {
+  return reinterpret_cast<DropOverflowBuffer *>(this)->fill_remaining_to_buff(
+      new_str);
+}
+
+template <>
+LIBC_INLINE int WriteBuffer<WriteMode::FLUSH_TO_STREAM>::overflow_write(
+    cpp::string_view new_str) {
+  return reinterpret_cast<FlushingBuffer *>(this)->flush_to_stream(new_str);
+}
+
+template <>
+LIBC_INLINE int WriteBuffer<WriteMode::RESIZE_AND_FILL_BUFF>::overflow_write(
+    cpp::string_view new_str) {
+  return reinterpret_cast<ResizingBuffer *>(this)->resize_and_write(new_str);
+}
 
 template <WriteMode write_mode> class Writer final {
   WriteBuffer<write_mode> &wb;

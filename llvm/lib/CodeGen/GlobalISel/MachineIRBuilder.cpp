@@ -38,8 +38,10 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
 //------------------------------------------------------------------------------
 
 MachineInstrBuilder MachineIRBuilder::buildInstrNoInsert(unsigned Opcode) {
-  return BuildMI(getMF(), {getDL(), getPCSections(), getMMRAMetadata()},
-                 getTII().get(Opcode));
+  return BuildMI(
+      getMF(),
+      {getDL(), getPCSections(), getMMRAMetadata(), getDeactivationSymbol()},
+      getTII().get(Opcode));
 }
 
 MachineInstrBuilder MachineIRBuilder::insertInstr(MachineInstrBuilder MIB) {
@@ -361,7 +363,9 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
                                                     int64_t Val) {
   auto IntN = IntegerType::get(getMF().getFunction().getContext(),
                                Res.getLLTTy(*getMRI()).getScalarSizeInBits());
-  ConstantInt *CI = ConstantInt::get(IntN, Val, true);
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  ConstantInt *CI = ConstantInt::getSigned(IntN, Val, /*implicitTrunc=*/true);
   return buildConstant(Res, *CI);
 }
 

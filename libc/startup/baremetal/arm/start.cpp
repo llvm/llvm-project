@@ -131,20 +131,30 @@ namespace LIBC_NAMESPACE_DECL {
   __arm_wsr("CPSR_c", 0x13); // SVC
 #endif
 
-#ifdef __ARM_FP
-// Enable FPU
-#if __ARM_ARCH_PROFILE == 'M'
+#if __ARM_ARCH_PROFILE == 'M' &&                                               \
+    (defined(__ARM_FP) || defined(__ARM_FEATURE_MVE))
+  // Enable FPU and MVE. They can't be enabled independently: the two are
+  // governed by the same bits in CPACR.
   // Based on
   // https://developer.arm.com/documentation/dui0646/c/Cortex-M7-Peripherals/Floating-Point-Unit/Enabling-the-FPU
-  // Set CPACR cp10 and cp11
-  auto cpacr = (volatile uint32_t *const)0xE000ED88;
+  // Set CPACR cp10 and cp11.
+  auto cpacr = reinterpret_cast<volatile uint32_t *const>(0xE000ED88);
   *cpacr |= (0xF << 20);
   __dsb(0xF);
   __isb(0xF);
-#elif __ARM_ARCH_PROFILE == 'A' || __ARM_ARCH_PROFILE == 'R'
+#if defined(__ARM_FEATURE_MVE)
+  // Initialize low-overhead-loop tail predication to its neutral state
+  uint32_t fpscr;
+  __asm__ __volatile__("vmrs %0, FPSCR" : "=r"(fpscr) : :);
+  fpscr |= (0x4 << 16);
+  __asm__ __volatile__("vmsr FPSCR, %0" : : "r"(fpscr) :);
+#endif
+#elif (__ARM_ARCH_PROFILE == 'A' || __ARM_ARCH_PROFILE == 'R') &&              \
+    defined(__ARM_FP)
+  // Enable FPU.
   // Based on
   // https://developer.arm.com/documentation/dui0472/m/Compiler-Coding-Practices/Enabling-NEON-and-FPU-for-bare-metal
-  // Set CPACR cp10 and cp11
+  // Set CPACR cp10 and cp11.
   uint32_t cpacr = __arm_rsr("p15:0:c1:c0:2");
   cpacr |= (0xF << 20);
   __arm_wsr("p15:0:c1:c0:2", cpacr);
@@ -152,9 +162,8 @@ namespace LIBC_NAMESPACE_DECL {
   // Set FPEXC.EN
   uint32_t fpexc;
   __asm__ __volatile__("vmrs %0, FPEXC" : "=r"(fpexc) : :);
-  fpexc |= (1 << 30);
+  fpexc |= (0x1 << 30);
   __asm__ __volatile__("vmsr FPEXC, %0" : : "r"(fpexc) :);
-#endif
 #endif
 
   // Perform the equivalent of scatterloading

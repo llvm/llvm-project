@@ -42,10 +42,12 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
 
   let summary = "Set xegpu.layout attribute to a xegpu.create_nd_desc op result.";
   let description = [{
-    Given an `xegpu.create_nd_desc` operation, this transform adds `xegpu.layout`
-    attribute to the result tensor descriptor. The layout is defined by the
-    `sg_layout`, and `sg_data` and optional `inst_data` attributes. Returns a handle
-    to the transformed op.
+    Given an `xegpu.create_nd_desc` operation, this transform adds
+    `xegpu.layout` attribute to the result tensor descriptor. The layout is
+    defined by the `sg_layout`, and `sg_data` and optional `inst_data`
+    attributes. If `slice_dims` is provided, the `xegpu.layout` attribute is
+    wrapped in an `xegpu.slice<..., dims=slice_dims>` attribute. Returns a handle to
+    the transformed op.
   }];
 
   let arguments = (ins
@@ -55,7 +57,8 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
                    Variadic<TransformAnyParamTypeOrAnyHandle>:$inst_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
-                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$slice_dims
                    );
 
   let results = (outs TransformHandleTypeInterface:$transformed);
@@ -63,7 +66,8 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedSgLayout,
                    "ArrayRef<OpFoldResult>":$mixedSgData,
-                   "ArrayRef<OpFoldResult>":$mixedInstData
+                   "ArrayRef<OpFoldResult>":$mixedInstData,
+                   "ArrayRef<int64_t>":$sliceDims
                    )>,
   ];
 
@@ -72,6 +76,7 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
     `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
     `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
     (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
+    (`slice_dims` `=` $slice_dims^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -107,7 +112,9 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
     Sets the `xegpu.layout` attribute of an op. If `result=true`, sets the
     `layout_result_{index}`, otherwise `layout_operand_{index}` attribute. The
     target operand/result value is defined by the `index` argument. The layout
-    is defined by the `sg_layout`, `sg_data` and optional `inst_data` attributes.
+    is defined by the `sg_layout`, `sg_data` and optional `inst_data`
+    attributes. If `slice_dims` is provided, the `xegpu.layout` attribute is
+    wrapped in an `xegpu.slice<..., dims=slice_dims>` attribute.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
@@ -118,6 +125,7 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$slice_dims,
                    DefaultValuedAttr<UnitAttr, "false">:$result
                    );
 
@@ -128,6 +136,7 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
                    "ArrayRef<OpFoldResult>":$mixedSgLayout,
                    "ArrayRef<OpFoldResult>":$mixedSgData,
                    "ArrayRef<OpFoldResult>":$mixedInstData,
+                   "ArrayRef<int64_t>":$sliceDims,
                    CArg<"bool", "false">:$result
                    )>,
   ];
@@ -137,6 +146,7 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
     `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
     `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
     (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
+    (`slice_dims` `=` $slice_dims^)?
     attr-dict `:` qualified(type(operands))
   }];
 
@@ -240,6 +250,92 @@ def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
         return OpFoldResult(getDynamicNbPrefetch());
       return OpFoldResult(IntegerAttr::get(
                           IntegerType::get(cxt, 64), getStaticNbPrefetch()));
+    }
+  }];
+}
+
+def ConvertLayoutOp : Op<Transform_Dialect, "xegpu.convert_layout", [
+  AttrSizedOperandSegments,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  TransformOpInterface
+]> {
+
+  let summary = "Convert xegpu.layout attribute for a value.";
+  let description = [{
+    Adds an `xegpu.convert_layout` op to convert the `xegpu.layout` attribute
+    of a value. The input and target layouts are defined by the `*sg_layout`,
+    `*sg_data` and optional `*inst_data` attributes. Returns a handle to the
+    emitted `xegpu.convert_layout` op.
+  }];
+
+  let arguments = (ins TransformValueHandleTypeInterface:$target,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$input_sg_layout,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$input_sg_data,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$input_inst_data,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$target_sg_layout,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$target_sg_data,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$target_inst_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_input_sg_layout,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_input_sg_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_input_inst_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_target_sg_layout,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_target_sg_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_target_inst_data
+                   );
+
+  let results = (outs TransformHandleTypeInterface:$newConvertOp);
+  let builders = [
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedInputSgLayout,
+                   "ArrayRef<OpFoldResult>":$mixedInputSgData,
+                   "ArrayRef<OpFoldResult>":$mixedInputInstData,
+                   "ArrayRef<OpFoldResult>":$mixedTargetSgLayout,
+                   "ArrayRef<OpFoldResult>":$mixedTargetSgData,
+                   "ArrayRef<OpFoldResult>":$mixedTargetInstData
+                   )>,
+  ];
+
+  let assemblyFormat = [{
+    $target
+    `input_sg_layout` `=` custom<DynamicIndexList>($input_sg_layout, $static_input_sg_layout)
+    `input_sg_data` `=` custom<DynamicIndexList>($input_sg_data, $static_input_sg_data)
+    (`input_inst_data` `=` custom<DynamicIndexList>($input_inst_data, $static_input_inst_data)^)?
+    `target_sg_layout` `=` custom<DynamicIndexList>($target_sg_layout, $static_target_sg_layout)
+    `target_sg_data` `=` custom<DynamicIndexList>($target_sg_data, $static_target_sg_data)
+    (`target_inst_data` `=` custom<DynamicIndexList>($target_inst_data, $static_target_inst_data)^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedInputSgLayout() {
+      Builder b(getContext());
+      return getMixedValues(getStaticInputSgLayout(), getInputSgLayout(), b);
+    }
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedInputSgData() {
+      Builder b(getContext());
+      return getMixedValues(getStaticInputSgData(), getInputSgData(), b);
+    }
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedInputInstData() {
+      Builder b(getContext());
+      return getMixedValues(getStaticInputInstData(), getInputInstData(), b);
+    }
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedTargetSgLayout() {
+      Builder b(getContext());
+      return getMixedValues(getStaticTargetSgLayout(), getTargetSgLayout(), b);
+    }
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedTargetSgData() {
+      Builder b(getContext());
+      return getMixedValues(getStaticTargetSgData(), getTargetSgData(), b);
+    }
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedTargetInstData() {
+      Builder b(getContext());
+      return getMixedValues(getStaticTargetInstData(), getTargetInstData(), b);
     }
   }];
 }

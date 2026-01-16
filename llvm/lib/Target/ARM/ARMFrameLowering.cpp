@@ -1138,6 +1138,12 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
           .add(predOps(ARMCC::AL));
     }
 
+    const ARMTargetLowering *TLI = STI.getTargetLowering();
+    RTLIB::LibcallImpl ChkStkLibcall = TLI->getLibcallImpl(RTLIB::STACK_PROBE);
+    if (ChkStkLibcall == RTLIB::Unsupported)
+      reportFatalUsageError("no available implementation of __chkstk");
+    const char *ChkStk = TLI->getLibcallImplName(ChkStkLibcall).data();
+
     switch (TM.getCodeModel()) {
     case CodeModel::Tiny:
       llvm_unreachable("Tiny code model not available on ARM.");
@@ -1146,14 +1152,14 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     case CodeModel::Kernel:
       BuildMI(MBB, MBBI, dl, TII.get(ARM::tBL))
           .add(predOps(ARMCC::AL))
-          .addExternalSymbol("__chkstk")
+          .addExternalSymbol(ChkStk)
           .addReg(ARM::R4, RegState::Implicit)
           .setMIFlags(MachineInstr::FrameSetup);
       break;
     case CodeModel::Large:
       BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi32imm), ARM::R12)
-        .addExternalSymbol("__chkstk")
-        .setMIFlags(MachineInstr::FrameSetup);
+          .addExternalSymbol(ChkStk)
+          .setMIFlags(MachineInstr::FrameSetup);
 
       BuildMI(MBB, MBBI, dl, TII.get(ARM::tBLXr))
           .add(predOps(ARMCC::AL))
@@ -2536,7 +2542,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   (void)TRI;  // Silence unused warning in non-assert builds.
-  Register FramePtr = RegInfo->getFrameRegister(MF);
+  Register FramePtr = STI.getFramePointerReg();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
       STI.getPushPopSplitVariation(MF);
 
@@ -2783,7 +2789,11 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);
 
-    if (HasFP) {
+    // Save the FP if:
+    // 1. We currently need it (HasFP), OR
+    // 2. We might need it later due to stack realignment from aligned DPRCS2
+    //    saves (which will make hasFP() become true in emitPrologue).
+    if (HasFP || (isFPReserved(MF) && AFI->getNumAlignedDPRCS2Regs() > 0)) {
       SavedRegs.set(FramePtr);
       // If the frame pointer is required by the ABI, also spill LR so that we
       // emit a complete frame record.

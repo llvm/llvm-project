@@ -231,6 +231,20 @@ public:
 
   lldb::LanguageType GetLanguage() const;
 
+  /// Compares the two symbol contexts, considering that the symbol may or may
+  /// not be present. If both symbols are present, compare them, if one of the
+  /// symbols is not present, consider the symbol contexts as equal as long as
+  /// the other fields are equal.
+  ///
+  /// This function exists because SymbolContexts are often created without the
+  /// symbol, which is filled in later on, after its creation.
+  static bool CompareConsideringPossiblyNullSymbol(const SymbolContext &lhs,
+                                                   const SymbolContext &rhs);
+
+  /// Compares the two symbol contexts, except for the symbol field.
+  static bool CompareWithoutSymbol(const SymbolContext &lhs,
+                                   const SymbolContext &rhs);
+
   /// Find a block that defines the function represented by this symbol
   /// context.
   ///

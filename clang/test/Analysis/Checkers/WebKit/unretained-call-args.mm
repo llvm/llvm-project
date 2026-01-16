@@ -625,6 +625,8 @@ void Derived<Traits>::send(typename Traits::MessageType messageType) const
 
 } // namespace template_function
 
+SomeObj *allocObj();
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
@@ -647,6 +649,7 @@ void Derived<Traits>::send(typename Traits::MessageType messageType) const
   [self doWork:__null];
   [self doWork:nil];
   [NSApp run];
+  adoptNS([allocObj() init]);
 }
 
 - (SomeObj *)getSomeObj {

@@ -16,7 +16,9 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 
 namespace fir {
+class AddrOfOp;
 class DeclareOp;
+class GlobalOp;
 } // namespace fir
 
 namespace hlfir {
@@ -52,6 +54,46 @@ struct PartialEntityAccessModel<hlfir::DeclareOp>
   mlir::Value getBaseEntity(mlir::Operation *op) const;
   bool isCompleteView(mlir::Operation *op) const;
 };
+
+struct AddressOfGlobalModel
+    : public mlir::acc::AddressOfGlobalOpInterface::ExternalModel<
+          AddressOfGlobalModel, fir::AddrOfOp> {
+  mlir::SymbolRefAttr getSymbol(mlir::Operation *op) const;
+};
+
+struct GlobalVariableModel
+    : public mlir::acc::GlobalVariableOpInterface::ExternalModel<
+          GlobalVariableModel, fir::GlobalOp> {
+  bool isConstant(mlir::Operation *op) const;
+  mlir::Region *getInitRegion(mlir::Operation *op) const;
+  bool isDeviceData(mlir::Operation *op) const;
+};
+
+template <typename Op>
+struct IndirectGlobalAccessModel
+    : public mlir::acc::IndirectGlobalAccessOpInterface::ExternalModel<
+          IndirectGlobalAccessModel<Op>, Op> {
+  void getReferencedSymbols(mlir::Operation *op,
+                            llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+                            mlir::SymbolTable *symbolTable) const;
+};
+
+/// External model for OutlineRematerializationOpInterface.
+/// This interface marks operations that are candidates for rematerialization
+/// during outlining. These operations produce synthetic types or values
+/// that cannot be passed as arguments to outlined regions.
+template <typename Op>
+struct OutlineRematerializationModel
+    : public mlir::acc::OutlineRematerializationOpInterface::ExternalModel<
+          OutlineRematerializationModel<Op>, Op> {};
+
+/// External model for OffloadRegionOpInterface.
+/// This interface marks operations whose regions are targets for offloading
+/// and outlining.
+template <typename Op>
+struct OffloadRegionModel
+    : public mlir::acc::OffloadRegionOpInterface::ExternalModel<
+          OffloadRegionModel<Op>, Op> {};
 
 } // namespace fir::acc
 

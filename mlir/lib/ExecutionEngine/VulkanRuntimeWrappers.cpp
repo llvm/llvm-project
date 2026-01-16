@@ -156,7 +156,7 @@ mgpuLaunchKernel(void *vkKernel, size_t gridX, size_t gridY, size_t gridZ,
                  size_t /*blockX*/, size_t /*blockY*/, size_t /*blockZ*/,
                  size_t /*smem*/, void *vkRuntimeManager, void **params,
                  void ** /*extra*/, size_t paramsCount) {
-  auto manager = static_cast<VulkanRuntimeManager *>(vkRuntimeManager);
+  auto *manager = static_cast<VulkanRuntimeManager *>(vkRuntimeManager);
 
   // GpuToLLVMConversionPass with the kernelBarePtrCallConv and
   // kernelIntersperseSizeCallConv options will set up the params array like:
@@ -180,7 +180,7 @@ mgpuLaunchKernel(void *vkKernel, size_t gridX, size_t gridY, size_t gridZ,
                                           static_cast<uint32_t>(gridY),
                                           static_cast<uint32_t>(gridZ)});
 
-  auto function = static_cast<VulkanFunction *>(vkKernel);
+  auto *function = static_cast<VulkanFunction *>(vkKernel);
   // Expected size should be in bytes.
   manager->setShaderModule(
       function->module->blobData(),

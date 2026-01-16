@@ -172,13 +172,19 @@ def CallAndMessageChecker
                          "false", InAlpha>,
            CmdLineOption<
                Boolean, "NilReceiver",
-               "Check whether the reciever in the message expression is nil",
+               "Check whether the receiver in the message expression is nil",
                "true", Released>,
            CmdLineOption<
                Boolean, "UndefReceiver",
-               "Check whether the reciever in the message expression is "
+               "Check whether the receiver in the message expression is "
                "undefined",
                "true", Released>,
+           CmdLineOption<
+               Boolean, "ArgPointeeInitializednessComplete",
+               "If set to true, treat a struct as initialized when all of its "
+               "members are initialized, otherwise when it has any initialized "
+               "member (used only at ArgPointeeInitializedness)",
+               "false", Released>,
 ]>,
       Documentation<HasDocumentation>;
 

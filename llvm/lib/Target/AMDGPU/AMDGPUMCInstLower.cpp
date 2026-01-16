@@ -229,7 +229,8 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.addOperand(Src);
     return;
   } else if (Opcode == AMDGPU::SI_TCRETURN ||
-             Opcode == AMDGPU::SI_TCRETURN_GFX) {
+             Opcode == AMDGPU::SI_TCRETURN_GFX ||
+             Opcode == AMDGPU::SI_TCRETURN_CHAIN) {
     // TODO: How to use branch immediate and avoid register+add?
     Opcode = AMDGPU::S_SETPC_B64;
   } else if (AMDGPU::getT16D16Helper(Opcode)) {
@@ -243,7 +244,7 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
 
   int MCOpcode = TII->pseudoToMCOpcode(Opcode);
   if (MCOpcode == -1) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("AMDGPUMCInstLower::lower - Pseudo instruction doesn't have "
                 "a target-specific version: " + Twine(MI->getOpcode()));
   }
@@ -332,7 +333,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   StringRef Err;
   if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("Illegal instruction detected: " + Err);
     MI->print(errs());
   }
@@ -402,6 +403,16 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (MI->isMetaInstruction()) {
       if (isVerbose())
         OutStreamer->emitRawComment(" meta instruction");
+      return;
+    }
+
+    unsigned Opc = MI->getOpcode();
+    if (LLVM_UNLIKELY(Opc == TargetOpcode::STATEPOINT ||
+                      Opc == TargetOpcode::STACKMAP ||
+                      Opc == TargetOpcode::PATCHPOINT)) {
+      LLVMContext &Ctx = MI->getMF()->getFunction().getContext();
+      Ctx.emitError("unhandled statepoint-like instruction");
+      OutStreamer->emitRawComment("unsupported statepoint/stackmap/patchpoint");
       return;
     }
 

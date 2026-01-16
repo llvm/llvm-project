@@ -126,8 +126,6 @@ public:
     return true;
   }
 
-  bool enableTerminalRule() const override { return true; }
-
   bool enableSubRegLiveness() const override {
     return true;
   }

@@ -1520,7 +1520,9 @@ inline bool operator!=(DIDerivedType::PtrAuthData Lhs,
 /// is also a DIType.
 class DISubrangeType : public DIType {
 public:
-  typedef PointerUnion<ConstantInt *, DIVariable *, DIExpression *> BoundType;
+  typedef PointerUnion<ConstantInt *, DIVariable *, DIExpression *,
+                       DIDerivedType *>
+      BoundType;
 
 private:
   friend class LLVMContextImpl;
@@ -1940,6 +1942,8 @@ public:
   DIType *getSpecification() const {
     return cast_or_null<DIType>(getRawSpecification());
   }
+
+  bool isNameSimplified() const { return getFlags() & FlagNameIsSimplified; }
 
   Metadata *getRawBitStride() const {
     return getOperand(MY_FIRST_OPERAND + 12);
@@ -2446,6 +2450,7 @@ public:
   }
   bool isExplicit() const { return getFlags() & FlagExplicit; }
   bool isPrototyped() const { return getFlags() & FlagPrototyped; }
+  bool isNameSimplified() const { return getFlags() & FlagNameIsSimplified; }
   bool areAllCallsDescribed() const {
     return getFlags() & FlagAllCallsDescribed;
   }

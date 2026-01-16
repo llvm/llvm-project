@@ -22,6 +22,9 @@ struct support::adapt_operations<std::multiset<K>> {
 
   using InsertionResult = typename std::multiset<K>::iterator;
   static auto get_iterator(InsertionResult const& result) { return result; }
+
+  template <class Allocator>
+  using rebind_alloc = std::multiset<K, std::less<K>, Allocator>;
 };
 
 int main(int argc, char** argv) {

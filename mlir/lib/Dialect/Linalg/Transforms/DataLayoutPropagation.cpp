@@ -988,7 +988,7 @@ public:
         .Case([&](tensor::ExpandShapeOp op) {
           return bubbleUpPackOpThroughExpandShape(op, packOp, rewriter);
         })
-        .Default([](Operation *) { return failure(); });
+        .Default(failure());
   }
 
 private:
@@ -1112,7 +1112,7 @@ public:
           return pushDownUnPackOpThroughExpandShape(unPackOp, op, rewriter,
                                                     controlFn);
         })
-        .Default([](Operation *) { return failure(); });
+        .Default(failure());
   }
 
 private:

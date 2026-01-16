@@ -634,10 +634,9 @@ public:
   /// function. Writing to a constant register has no effect.
   LLVM_ABI bool isConstantPhysReg(MCRegister PhysReg) const;
 
-  /// Get an iterator over the pressure sets affected by the given physical or
-  /// virtual register. If RegUnit is physical, it must be a register unit (from
-  /// MCRegUnitIterator).
-  PSetIterator getPressureSets(Register RegUnit) const;
+  /// Get an iterator over the pressure sets affected by the virtual register
+  /// or register unit.
+  PSetIterator getPressureSets(VirtRegOrUnit VRegOrUnit) const;
 
   //===--------------------------------------------------------------------===//
   // Virtual Register Info
@@ -1249,15 +1248,16 @@ class PSetIterator {
 public:
   PSetIterator() = default;
 
-  PSetIterator(Register RegUnit, const MachineRegisterInfo *MRI) {
+  PSetIterator(VirtRegOrUnit VRegOrUnit, const MachineRegisterInfo *MRI) {
     const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
-    if (RegUnit.isVirtual()) {
-      const TargetRegisterClass *RC = MRI->getRegClass(RegUnit);
+    if (VRegOrUnit.isVirtualReg()) {
+      const TargetRegisterClass *RC =
+          MRI->getRegClass(VRegOrUnit.asVirtualReg());
       PSet = TRI->getRegClassPressureSets(RC);
       Weight = TRI->getRegClassWeight(RC).RegWeight;
     } else {
-      PSet = TRI->getRegUnitPressureSets(RegUnit);
-      Weight = TRI->getRegUnitWeight(RegUnit);
+      PSet = TRI->getRegUnitPressureSets(VRegOrUnit.asMCRegUnit());
+      Weight = TRI->getRegUnitWeight(VRegOrUnit.asMCRegUnit());
     }
     if (*PSet == -1)
       PSet = nullptr;
@@ -1278,8 +1278,8 @@ public:
 };
 
 inline PSetIterator
-MachineRegisterInfo::getPressureSets(Register RegUnit) const {
-  return PSetIterator(RegUnit, this);
+MachineRegisterInfo::getPressureSets(VirtRegOrUnit VRegOrUnit) const {
+  return PSetIterator(VRegOrUnit, this);
 }
 
 } // end namespace llvm
