@@ -10,7 +10,6 @@ executable("llvm-dwarfdump") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
-    "Coverage.cpp",
     "SectionSizes.cpp",
     "Statistics.cpp",
     "llvm-dwarfdump.cpp",

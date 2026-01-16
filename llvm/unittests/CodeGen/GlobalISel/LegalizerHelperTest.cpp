@@ -2050,7 +2050,7 @@ TEST_F(AArch64GISelMITest, LibcallFPExt) {
       B.buildInstr(TargetOpcode::G_FPEXT, {S128}, {Copies[1]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
               Helper.libcall(*MIBFPExt1, DummyLocObserver));
@@ -2094,7 +2094,7 @@ TEST_F(AArch64GISelMITest, LibcallFPTrunc) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBFPTrunc1, DummyLocObserver));
 
@@ -2162,7 +2162,7 @@ TEST_F(AArch64GISelMITest, LibcallMul) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBMul32, DummyLocObserver));
@@ -2220,7 +2220,7 @@ TEST_F(AArch64GISelMITest, LibcallSRem) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBSRem32, DummyLocObserver));
@@ -2278,7 +2278,7 @@ TEST_F(AArch64GISelMITest, LibcallURem) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBURem32, DummyLocObserver));
@@ -2337,7 +2337,7 @@ TEST_F(AArch64GISelMITest, LibcallCtlzZeroUndef) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBCtlz32, DummyLocObserver));
@@ -2389,7 +2389,7 @@ TEST_F(AArch64GISelMITest, LibcallFAdd) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBAdd32, DummyLocObserver));
@@ -2442,7 +2442,7 @@ TEST_F(AArch64GISelMITest, LibcallFSub) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBSub32, DummyLocObserver));
@@ -2494,7 +2494,7 @@ TEST_F(AArch64GISelMITest, LibcallFMul) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -2548,7 +2548,7 @@ TEST_F(AArch64GISelMITest, LibcallFDiv) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBDiv32, DummyLocObserver));
@@ -2599,7 +2599,7 @@ TEST_F(AArch64GISelMITest, LibcallFExp) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBExp32, DummyLocObserver));
@@ -2647,7 +2647,7 @@ TEST_F(AArch64GISelMITest, LibcallFExp2) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBExp232, DummyLocObserver));
@@ -2695,7 +2695,7 @@ TEST_F(AArch64GISelMITest, LibcallFRem) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBFRem32, DummyLocObserver));
@@ -2743,7 +2743,7 @@ TEST_F(AArch64GISelMITest, LibcallFPow) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBPow32, DummyLocObserver));
@@ -2792,7 +2792,7 @@ TEST_F(AArch64GISelMITest, LibcallFMa) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBMa32, DummyLocObserver));
@@ -2839,7 +2839,7 @@ TEST_F(AArch64GISelMITest, LibcallFCeil) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -2887,7 +2887,7 @@ TEST_F(AArch64GISelMITest, LibcallFFloor) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -2935,7 +2935,7 @@ TEST_F(AArch64GISelMITest, LibcallFMinNum) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -2986,7 +2986,7 @@ TEST_F(AArch64GISelMITest, LibcallFMaxNum) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -3037,7 +3037,7 @@ TEST_F(AArch64GISelMITest, LibcallFSqrt) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -3085,7 +3085,7 @@ TEST_F(AArch64GISelMITest, LibcallFRint) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -3136,7 +3136,7 @@ TEST_F(AArch64GISelMITest, LibcallFNearbyInt) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -3181,7 +3181,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.narrowScalar(*MIBExtractS32, 1, S32));
@@ -3229,7 +3229,7 @@ TEST_F(AArch64GISelMITest, LowerInsert) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*InsertS64S32, 0, LLT{}));
@@ -3307,7 +3307,7 @@ TEST_F(AArch64GISelMITest, LowerFFloor) {
   auto Floor = B.buildFFloor(LLT::scalar(64), Copies[0], MachineInstr::MIFlag::FmNoInfs);
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*Floor, 0, LLT()));
@@ -3340,7 +3340,7 @@ TEST_F(AArch64GISelMITest, LowerBSWAP) {
   auto BSwap = B.buildBSwap(LLT::fixed_vector(2, 32), Cast);
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*BSwap, 0, LLT()));
@@ -3417,7 +3417,7 @@ TEST_F(AArch64GISelMITest, LowerUDIVREM) {
       B.buildInstr(TargetOpcode::G_UDIVREM, {S64, S64}, {Copies[0], Copies[1]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*UDivrem, 0, S64));
@@ -3451,7 +3451,7 @@ TEST_F(AArch64GISelMITest, LowerSelect) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*SELECT, 0, S32));
@@ -3492,7 +3492,7 @@ TEST_F(AArch64GISelMITest, WidenUnmerge) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -3701,10 +3701,11 @@ TEST_F(AArch64GISelMITest, CreateLibcall) {
 
   LLVMContext &Ctx = MF->getFunction().getContext();
   auto *RetTy = Type::getVoidTy(Ctx);
+  LegalizerHelper Helper(*MF, Info, Observer, B);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
-            createLibcall(B, "abort", {{}, RetTy, 0}, {}, CallingConv::C,
-                          DummyLocObserver, nullptr));
+            Helper.createLibcall("abort", {{}, RetTy, 0}, {}, CallingConv::C,
+                                 DummyLocObserver, nullptr));
 
   auto CheckStr = R"(
   CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp

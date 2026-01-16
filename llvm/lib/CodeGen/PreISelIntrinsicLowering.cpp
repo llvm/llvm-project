@@ -778,7 +778,7 @@ public:
 
   bool runOnModule(Module &M) override {
     const LibcallLoweringModuleAnalysisResult &ModuleLibcalls =
-        getAnalysis<LibcallLoweringInfoWrapper>().getResult();
+        getAnalysis<LibcallLoweringInfoWrapper>().getResult(M);
 
     auto LookupTTI = [this](Function &F) -> TargetTransformInfo & {
       return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);

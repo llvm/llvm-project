@@ -493,6 +493,8 @@ LLVM_ABI FunctionPass *createInterleavedLoadCombinePass();
 ///
 LLVM_ABI ModulePass *createLowerEmuTLSPass();
 
+LLVM_ABI ModulePass *createLibcallLoweringInfoWrapper();
+
 /// This pass lowers the \@llvm.load.relative and \@llvm.objc.* intrinsics to
 /// instructions.  This is unsafe to do earlier because a pass may combine the
 /// constant initializer into the load, which may result in an overflowing
