@@ -974,15 +974,14 @@ class OpenMP_NumTeamsClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$num_teams_num_dims,
-    Variadic<IntLikeType>:$num_teams_dims_values,
+    Variadic<IntLikeType>:$num_teams_vals,
     Optional<AnyInteger>:$num_teams_lower,
     Optional<AnyInteger>:$num_teams_upper
   );
 
   let optAssemblyFormat = [{
     `num_teams` `(` custom<NumTeamsClause>(
-      $num_teams_num_dims, $num_teams_dims_values, type($num_teams_dims_values),
+      $num_teams_vals, type($num_teams_vals),
       $num_teams_lower, type($num_teams_lower),
       $num_teams_upper, type($num_teams_upper)
     ) `)`
@@ -992,13 +991,14 @@ class OpenMP_NumTeamsClauseSkip<
     The `num_teams` clause specifies the bounds on the league space formed by the
     construct on which it appears.
 
-    With dims modifier: (OpenMP 6.1 requirement)
-    - Uses `num_teams_num_dims` (dimension count) and `num_teams_dims_values` (upper bounds list)
-    - Specifies upper bounds for each dimension (all must have same type)
-    - Format: `num_teams(dims(N): upper_bound_0, ..., upper_bound_N-1 : type)`
-    - Example: `num_teams(dims(3): %ub0, %ub1, %ub2 : i32)`
+    Multi-dimensional (OpenMP 6.1 dims modifier):
+    - Uses `num_teams_vals` with multiple values (one per dimension)
+    - Values may have different types; they will be cast at LLVM IR translation
+    - Format: `num_teams(%v0, %v1, ... : type0, type1, ...)`
+    - Example: `num_teams(%ub0, %ub1, %ub2 : i32, i64, i32)`
+    - The number of dimensions is implicitly `num_teams_vals.size()`
 
-    Without dims modifier:
+    Uni-dimensional (legacy format):
     - Uses `num_teams_upper` and optional `num_teams_lower`
     - If lower bound not specified, it defaults to upper bound value
     - Format: `num_teams(lower : type to upper : type)` or `num_teams(to upper : type)`
@@ -1006,24 +1006,24 @@ class OpenMP_NumTeamsClauseSkip<
   }];
 
   let extraClassDeclaration = [{
-    /// Returns true if the dims modifier is explicitly present
-    bool hasNumTeamsDimsModifier() {
-      return getNumTeamsNumDims().has_value() && getNumTeamsNumDims().value();
+    /// Returns true if using the multi-dimensional values format
+    bool hasNumTeamsMultiDim() {
+      return !getNumTeamsVals().empty();
     }
 
     /// Returns the number of dimensions specified for num_teams
     unsigned getNumTeamsDimsCount() {
-      if (!hasNumTeamsDimsModifier())
-        return 1;
-      return static_cast<unsigned>(*getNumTeamsNumDims());
+      if (hasNumTeamsMultiDim())
+        return getNumTeamsVals().size();
+      return getNumTeamsUpper() ? 1 : 0;
     }
 
-    /// Returns the value for a specific dimension index
-    /// Index must be less than getNumTeamsDimsCount()
-    ::mlir::Value getNumTeamsDimsValue(unsigned index) {
-      assert(index < getNumTeamsDimsCount() &&
+    /// Returns the value for a specific dimension index (multi-dim format)
+    /// Index must be less than getNumTeamsVals().size()
+    ::mlir::Value getNumTeamsVal(unsigned index) {
+      assert(index < getNumTeamsVals().size() &&
              "Num teams dims index out of bounds");
-      return getNumTeamsDimsValues()[index];
+      return getNumTeamsVals()[index];
     }
   }];
 }

@@ -376,6 +376,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         op.getTaskReductionSyms())
       result = todo("task_reduction");
   };
+  auto checkNumTeamsMultiDim = [&todo](auto op, LogicalResult &result) {
+    if (op.hasNumTeamsMultiDim())
+      result = todo("num_teams with multi-dimensional values");
+  };
 
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
@@ -400,6 +404,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TeamsOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
+        checkNumTeamsMultiDim(op, result);
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
@@ -2023,11 +2028,6 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   if (failed(checkImplementationStatus(*op)))
     return failure();
-
-  if (op.hasNumTeamsDimsModifier()) {
-    return op.emitError(
-        "Lowering of num_teams with dims modifier is not yet implemented.");
-  }
 
   DenseMap<Value, llvm::Value *> reductionVariableMap;
   unsigned numReductionVars = op.getNumReductionVars();
@@ -6040,10 +6040,6 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
     for (Operation *user : blockArg.getUsers()) {
       llvm::TypeSwitch<Operation *>(user)
           .Case([&](omp::TeamsOp teamsOp) {
-            // num_teams dims and values are not yet supported
-            assert(!teamsOp.hasNumTeamsDimsModifier() &&
-                   "Lowering of num_teams with dims modifier is not yet "
-                   "implemented.");
             if (teamsOp.getNumTeamsLower() == blockArg)
               numTeamsLower = hostEvalVar;
             else if (teamsOp.getNumTeamsUpper() == blockArg)
@@ -6166,10 +6162,6 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     // host_eval, but instead evaluated prior to entry to the region. This
     // ensures values are mapped and available inside of the target region.
     if (auto teamsOp = castOrGetParentOfType<omp::TeamsOp>(capturedOp)) {
-      // num_teams dims and values are not yet supported
-      assert(
-          !teamsOp.hasNumTeamsDimsModifier() &&
-          "Lowering of num_teams with dims modifier is not yet implemented.");
       numTeamsLower = teamsOp.getNumTeamsLower();
       numTeamsUpper = teamsOp.getNumTeamsUpper();
       threadLimit = teamsOp.getThreadLimit();

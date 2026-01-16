@@ -1077,7 +1077,7 @@ func.func @parallel_wsloop_reduction(%lb : index, %ub : index, %step : index) {
 
 // CHECK-LABEL: omp_teams
 func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
-                     %data_var : memref<i32>) -> () {
+                     %data_var : memref<i32>, %ub64 : i64, %ub16 : i16) -> () {
   // Test nesting inside of omp.target
   omp.target {
     // CHECK: omp.teams
@@ -1109,8 +1109,15 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
     omp.terminator
   }
 
-  // CHECK: omp.teams num_teams(dims(3): %{{.*}}, %{{.*}}, %{{.*}} : i32)
-  omp.teams num_teams(dims(3): %lb, %ub, %ub : i32) {
+  // CHECK: omp.teams num_teams(%{{.*}}, %{{.*}}, %{{.*}} : i32, i32, i32)
+  omp.teams num_teams(%lb, %ub, %ub : i32, i32, i32) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Test num_teams with mixed types.
+  // CHECK: omp.teams num_teams(%{{.*}}, %{{.*}}, %{{.*}} : i32, i64, i16)
+  omp.teams num_teams(%lb, %ub64, %ub16 : i32, i64, i16) {
     // CHECK: omp.terminator
     omp.terminator
   }
@@ -3080,7 +3087,7 @@ func.func @omp_target_host_eval(%x : i32) {
   // CHECK: omp.teams num_teams( to %[[HOST_ARG]] : i32)
   // CHECK-SAME: thread_limit(%[[HOST_ARG]] : i32)
   omp.target host_eval(%x -> %arg0 : i32) {
-    omp.teams num_teams(to %arg0 : i32) thread_limit(%arg0 : i32) {
+    omp.teams num_teams( to %arg0 : i32) thread_limit(%arg0 : i32) {
       omp.terminator
     }
     omp.terminator
