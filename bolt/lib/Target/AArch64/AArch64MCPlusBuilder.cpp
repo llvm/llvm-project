@@ -1844,8 +1844,21 @@ public:
     }
   }
 
+  bool isReversibleBranch(const MCInst &Inst) const override {
+    if (isCompAndBranch(Inst)) {
+      unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
+      if (needsImmDec(InvertedOpcode))
+        return Inst.getOperand(1).getImm() > 0;
+      if (needsImmInc(InvertedOpcode))
+        return Inst.getOperand(1).getImm() < 63;
+    }
+    return MCPlusBuilder::isReversibleBranch(Inst);
+  }
+
   void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
+    assert(isReversibleBranch(Inst) && "Cannot reverse branch");
+
     if (isTB(Inst) || isCB(Inst) || isCompAndBranch(Inst)) {
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
       Inst.setOpcode(InvertedOpcode);
@@ -1856,15 +1869,10 @@ public:
       // when reversing the branch condition.
       if (needsRegSwap(InvertedOpcode))
         std::swap(Inst.getOperand(0), Inst.getOperand(1));
-      else if (needsImmDec(InvertedOpcode)) {
-        assert(Inst.getOperand(1).getImm() > 0 &&
-               "compare-and-branch immediate operand out-of-bounds");
+      else if (needsImmDec(InvertedOpcode))
         Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() - 1);
-      } else if (needsImmInc(InvertedOpcode)) {
-        assert(Inst.getOperand(1).getImm() < 63 &&
-               "compare-and-branch immediate operand out-of-bounds");
+      else if (needsImmInc(InvertedOpcode))
         Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() + 1);
-      }
     } else if (Inst.getOpcode() == AArch64::Bcc) {
       Inst.getOperand(0).setImm(AArch64CC::getInvertedCondCode(
           static_cast<AArch64CC::CondCode>(Inst.getOperand(0).getImm())));

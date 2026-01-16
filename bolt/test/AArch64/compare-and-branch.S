@@ -50,6 +50,16 @@ baz:
 .Lcold_baz:
     ret
 
+  .globl  irreversible
+  .type irreversible, %function
+irreversible:
+# FDATA: 1 irreversible #.entry_irreversible# 10
+.entry_irreversible:
+    cbgt x0, #63, .Lcold_irreversible
+    mov x0, #4
+.Lcold_irreversible:
+    ret
+
 ## Force relocation mode.
 .if RELOCATION_MODE
 .reloc 0, R_AARCH64_NONE
@@ -80,6 +90,12 @@ baz:
 # RELOC-MODE-NEXT:            {{.*}} b            0x[[ADDR7:[0-9a-f]+]] <{{.*}}>
 # RELOC-MODE-NEXT: [[ADDR6]]: {{.*}} b            0x[[ADDR8:[0-9a-f]+]] <{{.*}}>
 
+# RELOC-MODE: <irreversible>:
+# RELOC-MODE-NEXT:            {{.*}} cbgt x0, #0x3f, 0x[[ADDR9:[0-9a-f]+]] <{{.*}}>
+# RELOC-MODE-NEXT:            {{.*}} b               0x[[ADDR10:[0-9a-f]+]] <{{.*}}>
+# RELOC-MODE-NEXT: [[ADDR9]]: {{.*}} b               0x[[ADDR11:[0-9a-f]+]] <{{.*}}>
+
+
 # RELOC-MODE: Disassembly of section .text.cold:
 
 # RELOC-MODE: <foo.cold.0>:
@@ -93,6 +109,10 @@ baz:
 # RELOC-MODE: <baz.cold.0>:
 # RELOC-MODE-NEXT: [[ADDR7]]: {{.*}} mov x0, #0x3 // =3
 # RELOC-MODE-NEXT: [[ADDR8]]: {{.*}} ret
+
+# RELOC-MODE: <irreversible.cold.0>:
+# RELOC-MODE-NEXT: [[ADDR10]]: {{.*}} mov x0, #0x4 // =4
+# RELOC-MODE-NEXT: [[ADDR11]]: {{.*}} ret
 
 
 # NON-RELOC-MODE: Disassembly of section .text:
@@ -112,6 +132,12 @@ baz:
 # NON-RELOC-MODE-NEXT:            {{.*}} b            0x[[ADDR7:[0-9a-f]+]] <{{.*}}>
 # NON-RELOC-MODE-NEXT: [[ADDR6]]: {{.*}} b            0x[[ADDR8:[0-9a-f]+]] <{{.*}}>
 
+# NON-RELOC-MODE: <irreversible>:
+# NON-RELOC-MODE-NEXT:            {{.*}} cbgt x0, #0x3f, 0x[[ADDR9:[0-9a-f]+]] <{{.*}}>
+# NON-RELOC-MODE-NEXT:            {{.*}} b               0x[[ADDR10:[0-9a-f]+]] <{{.*}}>
+# NON-RELOC-MODE-NEXT: [[ADDR9]]: {{.*}} b               0x[[ADDR11:[0-9a-f]+]] <{{.*}}>
+
+
 # NON-RELOC-MODE: Disassembly of section .bolt.text:
 
 # NON-RELOC-MODE: <foo.cold.0>:
@@ -125,3 +151,7 @@ baz:
 # NON-RELOC-MODE: <baz.cold.0>:
 # NON-RELOC-MODE-NEXT: [[ADDR8]]: {{.*}} mov x0, #0x3 // =3
 # NON-RELOC-MODE-NEXT: [[ADDR7]]: {{.*}} ret
+
+# NON-RELOC-MODE: <irreversible.cold.0>:
+# NON-RELOC-MODE-NEXT: [[ADDR10]]: {{.*}} mov x0, #0x4 // =4
+# NON-RELOC-MODE-NEXT: [[ADDR11]]: {{.*}} ret
