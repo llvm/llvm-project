@@ -82,6 +82,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ExtractLastPart:
+  case VPInstruction::ExtractLastActive:
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
   case VPInstruction::ReductionStartVector:
@@ -165,8 +166,14 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
     auto *CI = cast<ConstantInt>(R->getOperand(1)->getLiveInIRValue());
     return StructTy->getTypeAtIndex(CI->getZExtValue());
   }
-  case Instruction::Select:
-    return inferScalarType(R->getOperand(1));
+  case Instruction::Select: {
+    Type *ResTy = inferScalarType(R->getOperand(1));
+    VPValue *OtherV = R->getOperand(2);
+    assert(inferScalarType(OtherV) == ResTy &&
+           "different types inferred for different operands");
+    CachedTypes[OtherV] = ResTy;
+    return ResTy;
+  }
   default:
     break;
   }

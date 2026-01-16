@@ -603,6 +603,14 @@ add_header_library(
 )
 
 add_header_library(
+  fsqrt
+  HDRS
+    fsqrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_header_library(
   inv_trigf_utils
   HDRS
     inv_trigf_utils.h
@@ -1086,4 +1094,14 @@ add_header_library(
     libc.src.__support.math.range_reduction_double
     libc.src.__support.math.sincos_eval
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  dfmal
+  HDRS
+    dfmal.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
