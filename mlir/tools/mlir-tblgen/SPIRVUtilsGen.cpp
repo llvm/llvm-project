@@ -496,9 +496,16 @@ static mlir::GenRegistration
 // directly use the constant value as attribute in SPIR-V dialect. So need
 // to handle them separately from normal enum attributes.
 constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
-    "SPIRV_ScopeAttr", "SPIRV_KHR_CooperativeMatrixUseAttr",
-    "SPIRV_KHR_CooperativeMatrixLayoutAttr", "SPIRV_MemorySemanticsAttr",
-    "SPIRV_MatrixLayoutAttr"};
+    "SPIRV_ScopeAttr",
+    "SPIRV_KHR_CooperativeMatrixUseAttr",
+    "SPIRV_KHR_CooperativeMatrixLayoutAttr",
+    "SPIRV_MemorySemanticsAttr",
+    "SPIRV_MatrixLayoutAttr",
+    "SPIRV_TosaExtAccTypeAttr",
+    "SPIRV_TosaExtResizeModeAttr",
+    "SPIRV_TosaExtNaNPropagationModeAttr",
+    "SPIRV_TosaExtRoundingModeAttr",
+};
 
 /// Generates code to serialize attributes of a SPIRV_Op `op` into `os`. The
 /// generates code extracts the attribute with name `attrName` from
@@ -552,6 +559,18 @@ static void emitAttributeSerialization(const Attribute &attr,
     os << tabs << "    return failure();\n";
     os << tabs << "  }\n";
     os << tabs << formatv("  {0}.push_back(attrTypeID);\n", operandList);
+  } else if (attr.getAttrDefName() == "SPIRV_I32ConstAttr" ||
+             attr.getAttrDefName() == "SPIRV_BoolConstAttr" ||
+             attr.getAttrDefName() == "SPIRV_TosaNumericalAttr") {
+    os << tabs
+       << formatv(
+              "  {0}.push_back(prepareConstantScalar({1}.getLoc(), attr));\n",
+              operandList, opVar);
+  } else if (attr.getAttrDefName().contains("TensorArm")) {
+    os << tabs
+       << formatv("  {0}.push_back(prepareConstant({1}.getLoc(), "
+                  "llvm::cast<DenseElementsAttr>(attr).getType(), attr));\n",
+                  operandList, opVar);
   } else {
     PrintFatalError(
         loc,
@@ -846,19 +865,40 @@ static void emitAttributeDeserialization(const Attribute &attr,
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "TypeAttr::get(getType({2}[{3}++]))));\n",
                   attrList, attrName, words, wordIndex);
+  } else if (attr.getAttrDefName() == "SPIRV_I32ConstAttr" ||
+             attr.getAttrDefName() == "SPIRV_BoolConstAttr" ||
+             attr.getAttrDefName() == "SPIRV_TosaNumericalAttr" ||
+            attr.getAttrDefName().contains("TensorArm")) {
+    os << tabs
+       << formatv("std::optional<std::pair<Attribute, Type>> c = "
+                  "getConstant({0}[{1}++]);\n",
+                  words, wordIndex);
+    os << tabs << "if (!c.has_value()) {\n";
+    os << tabs
+       << formatv("  "
+                  "return emitError(unknownLoc, \"could not fetch "
+                  "constant "
+                  "attribute "
+                  "for {0}\") << "
+                  "{1} << \" of \" << {2}.size() << \" processed\";\n",
+                  attrName, wordIndex, words);
+    os << tabs << "}\n";
+    os << tabs
+       << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
+                  "c.value().first));\n",
+                  attrList, attrName);
   } else {
-    PrintFatalError(
-        loc, llvm::Twine(
-                 "unhandled attribute type in deserialization generation : '") +
-                 attrName + llvm::Twine("'"));
+    PrintFatalError(loc, llvm::Twine("unhandled attribute type in "
+                                     "deserialization generation : '") +
+                             attrName + llvm::Twine("'"));
   }
 }
 
 /// Generates the code to deserialize the result of an SPIRV_Op `op` into
 /// `os`. The generated code gets the type of the result specified at
-/// `words`[`wordIndex`], the SSA ID for the result at position `wordIndex` + 1
-/// and updates the `resultType` and `valueID` with the parsed type and SSA ID,
-/// respectively.
+/// `words`[`wordIndex`], the SSA ID for the result at position `wordIndex` +
+/// 1 and updates the `resultType` and `valueID` with the parsed type and SSA
+/// ID, respectively.
 static void emitResultDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
                                       StringRef tabs, StringRef words,
                                       StringRef wordIndex,
@@ -900,8 +940,8 @@ static void emitResultDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
 
 /// Generates the code to deserialize the operands of an SPIRV_Op `op` into
 /// `os`. The generated code reads the `words` of the binary instruction, from
-/// position `wordIndex` to the end, and either gets the Value corresponding to
-/// the ID encoded, or deserializes the attributes encoded. The parsed
+/// position `wordIndex` to the end, and either gets the Value corresponding
+/// to the ID encoded, or deserializes the attributes encoded. The parsed
 /// operand(attribute) is added to the `operands` list or `attributes` list.
 static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
                                        StringRef tabs, StringRef words,
@@ -928,10 +968,10 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
          << formatv("  auto arg = getValue({0}[{1}]);\n", words, wordIndex);
       os << tabs << "  if (!arg) {\n";
       os << tabs
-         << formatv(
-                "    return emitError(unknownLoc, \"unknown result <id> : \") "
-                "<< {0}[{1}];\n",
-                words, wordIndex);
+         << formatv("    return emitError(unknownLoc, \"unknown result <id> "
+                    ": \") "
+                    "<< {0}[{1}];\n",
+                    words, wordIndex);
       os << tabs << "  }\n";
       os << tabs << formatv("  {0}.push_back(arg);\n", operands);
       if (!valueArg->isVariableLength()) {
@@ -1031,17 +1071,17 @@ static void emitDeserializationFunction(const Record *attrClass,
   }
 
   // According to SPIR-V spec:
-  // This location information applies to the instructions physically following
-  // this instruction, up to the first occurrence of any of the following: the
-  // next end of block.
+  // This location information applies to the instructions physically
+  // following this instruction, up to the first occurrence of any of the
+  // following: the next end of block.
   os << formatv("  if ({0}.hasTrait<OpTrait::IsTerminator>())\n", opVar);
   os << formatv("    (void)clearDebugLine();\n");
   os << "  return success();\n";
   os << "}\n\n";
 }
 
-/// Generates the prologue for the function that dispatches the deserialization
-/// based on the `opcode`.
+/// Generates the prologue for the function that dispatches the
+/// deserialization based on the `opcode`.
 static void initDispatchDeserializationFn(StringRef opcode, StringRef words,
                                           raw_ostream &os) {
   os << formatv("LogicalResult spirv::Deserializer::"
@@ -1064,8 +1104,8 @@ static void emitDeserializationDispatch(const Operator &op, const Record *def,
                 words);
 }
 
-/// Generates the epilogue for the function that dispatches the deserialization
-/// of the operation.
+/// Generates the epilogue for the function that dispatches the
+/// deserialization of the operation.
 static void finalizeDispatchDeserializationFn(StringRef opcode,
                                               raw_ostream &os) {
   os << "  default:\n";
@@ -1152,8 +1192,8 @@ static void emitExtendedSetDeserializationDispatch(const RecordKeeper &records,
   os << "}\n";
 }
 
-/// Emits all the autogenerated serialization/deserializations functions for the
-/// SPIRV_Ops.
+/// Emits all the autogenerated serialization/deserializations functions for
+/// the SPIRV_Ops.
 static bool emitSerializationFns(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Serialization Utilities/Functions", os,
                              records);
@@ -1271,9 +1311,9 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
       getAvailabilities(srcOp.getDef());
 
   // First collect all availability classes this op should implement.
-  // All availability instances keep information for the generated interface and
-  // the instance's specific requirement. Here we remember a random instance so
-  // we can get the information regarding the generated interface.
+  // All availability instances keep information for the generated interface
+  // and the instance's specific requirement. Here we remember a random
+  // instance so we can get the information regarding the generated interface.
   llvm::StringMap<Availability> availClasses;
   for (const Availability &avail : opAvailabilities)
     availClasses.try_emplace(avail.getClass(), avail);
@@ -1336,8 +1376,8 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
           if (availClassName == caseAvail.getClass())
             caseSpecs.push_back({enumerant, caseAvail});
 
-      // If this attribute kind does not have any availability spec from any of
-      // its cases, no more work to do.
+      // If this attribute kind does not have any availability spec from any
+      // of its cases, no more work to do.
       if (caseSpecs.empty())
         continue;
 
