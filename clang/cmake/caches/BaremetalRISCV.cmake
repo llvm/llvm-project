@@ -18,6 +18,7 @@ foreach(target ${TRIPLES})
   set(BUILTINS_${target}_CMAKE_SYSTEM_NAME Generic-ELF CACHE STRING "")
   set(BUILTINS_${target}_COMPILER_RT_BAREMETAL_BUILD ON CACHE BOOL "")
   set(BUILTINS_${target}_COMPILER_RT_OS_DIR ${target} CACHE STRING "")
+  set(BUILTINS_${target}_LLVM_CONFIG_NO_EXPORTS ON CACHE BOOL "")
 
   # enable compiler-rt in runtimes
   set(RUNTIMES_${target}_ENABLE_RUNTIMES compiler-rt CACHE STRING "")
@@ -27,6 +28,7 @@ foreach(target ${TRIPLES})
   set(RUNTIMES_${target}_CMAKE_SYSTEM_NAME Generic-ELF CACHE STRING "")
   set(RUNTIMES_${target}_COMPILER_RT_BAREMETAL_BUILD ON CACHE BOOL "")
   set(RUNTIMES_${target}_COMPILER_RT_OS_DIR ${target} CACHE STRING "")
+  set(RUNTIMES_${target}_LLVM_CONFIG_NO_EXPORTS ON CACHE BOOL "")
 
   # additional runtimes config for compiler-rt
   set(RUNTIMES_${target}_COMPILER_RT_BUILD_LIBFUZZER OFF CACHE BOOL "")
