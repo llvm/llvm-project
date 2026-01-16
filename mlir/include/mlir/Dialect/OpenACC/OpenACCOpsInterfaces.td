@@ -75,6 +75,10 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       }]>,
     InterfaceMethod<"Get the initialization region (returns nullptr if none)",
       "::mlir::Region*", "getInitRegion", (ins)>,
+    InterfaceMethod<"Check if the global variable is device data",
+      "bool", "isDeviceData", (ins), [{
+        return false;
+      }]>,
   ];
 }
 
@@ -119,6 +123,17 @@ def OutlineRematerializationOpInterface : OpInterface<"OutlineRematerializationO
     if (!::mlir::isMemoryEffectFree($_op))
       return $_op->emitOpError("must be memory effect free");
     return ::mlir::success();
+  }];
+}
+
+def OffloadRegionOpInterface : OpInterface<"OffloadRegionOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations whose regions are targets for offloading
+    and outlining. Operations implementing this interface indicate that
+    their regions will be extracted and compiled separately (e.g., as
+    device kernels or outlined functions).
   }];
 }
 

@@ -1684,7 +1684,9 @@ def OpenACC_ParallelOp
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                            ["getSuccessorInputs"]>,
+                  OffloadRegionOpInterface,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "parallel construct";
@@ -1884,7 +1886,9 @@ def OpenACC_SerialOp
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                            ["getSuccessorInputs"]>,
+                  OffloadRegionOpInterface,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "serial construct";
@@ -2024,7 +2028,9 @@ def OpenACC_KernelsOp
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                            ["getSuccessorInputs"]>,
+                  OffloadRegionOpInterface,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "kernels construct";
@@ -2205,7 +2211,8 @@ def OpenACC_KernelEnvironmentOp
     : OpenACC_Op<"kernel_environment",
                  [AttrSizedOperandSegments, RecursiveMemoryEffects, SingleBlock,
                   NoTerminator,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                            ["getSuccessorInputs"]>,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "Decomposition of compute constructs to capture data mapping "
@@ -2258,7 +2265,8 @@ def OpenACC_KernelEnvironmentOp
 def OpenACC_DataOp
     : OpenACC_Op<
           "data", [AttrSizedOperandSegments, RecursiveMemoryEffects,
-                   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                             ["getSuccessorInputs"]>,
                    MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                   MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "data construct";
@@ -2534,7 +2542,8 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data",
 def OpenACC_HostDataOp
     : OpenACC_Op<"host_data",
                  [AttrSizedOperandSegments,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                            ["getSuccessorInputs"]>,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "host_data construct";
@@ -2580,7 +2589,8 @@ def OpenACC_LoopOp
                    RecursiveMemoryEffects,
                    DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                    DeclareOpInterfaceMethods<LoopLikeOpInterface>,
-                   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                             ["getSuccessorInputs"]>,
                    MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {
   let summary = "loop construct";
 

@@ -779,6 +779,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // a diagnostic if appropriate.
     return this->delegate(SubExpr);
 
+  case CK_LValueBitCast:
+    return this->emitInvalidCast(CastKind::ReinterpretLike, /*Fatal=*/true, CE);
+
   default:
     return this->emitInvalid(CE);
   }
@@ -1381,6 +1384,10 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
     } else {
       if (!this->emitPop(ResultElemT, E))
         return false;
+      // Remove the Complex temporary pointer we created ourselves at the
+      // beginning of this function.
+      if (!Initializing)
+        return this->emitPopPtr(E);
     }
   }
   return true;
@@ -3685,34 +3692,42 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
       QualType InitType = Init->getType();
       size_t StaticInitElems = 0;
       const Expr *DynamicInit = nullptr;
+      OptPrimType ElemT;
+
       if (const ConstantArrayType *CAT =
               Ctx.getASTContext().getAsConstantArrayType(InitType)) {
         StaticInitElems = CAT->getZExtSize();
+        // Initialize the first S element from the initializer.
         if (!this->visitInitializer(Init))
           return false;
 
-        if (const auto *ILE = dyn_cast<InitListExpr>(Init);
-            ILE && ILE->hasArrayFiller())
-          DynamicInit = ILE->getArrayFiller();
+        if (const auto *ILE = dyn_cast<InitListExpr>(Init)) {
+          if (ILE->hasArrayFiller())
+            DynamicInit = ILE->getArrayFiller();
+          else if (isa<StringLiteral>(ILE->getInit(0)))
+            ElemT = classifyPrim(CAT->getElementType());
+        }
       }
 
       // The initializer initializes a certain number of elements, S.
       // However, the complete number of elements, N, might be larger than that.
       // In this case, we need to get an initializer for the remaining elements.
-      // There are to cases:
+      // There are three cases:
       //   1) For the form 'new Struct[n];', the initializer is a
       //      CXXConstructExpr and its type is an IncompleteArrayType.
       //   2) For the form 'new Struct[n]{1,2,3}', the initializer is an
       //      InitListExpr and the initializer for the remaining elements
       //      is the array filler.
+      //   3) StringLiterals don't have an array filler, so we need to zero
+      //      the remaining elements.
 
-      if (DynamicInit || InitType->isIncompleteArrayType()) {
+      if (DynamicInit || ElemT || InitType->isIncompleteArrayType()) {
         const Function *CtorFunc = nullptr;
         if (const auto *CE = dyn_cast<CXXConstructExpr>(Init)) {
           CtorFunc = getFunction(CE->getConstructor());
           if (!CtorFunc)
             return false;
-        } else if (!DynamicInit)
+        } else if (!DynamicInit && !ElemT)
           DynamicInit = Init;
 
         LabelTy EndLabel = this->getLabel();
@@ -3778,6 +3793,13 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
             if (!this->emitPopPtr(E))
               return false;
           }
+        } else if (ElemT) {
+          if (!this->visitZeroInitializer(
+                  *ElemT, InitType->getAsArrayTypeUnsafe()->getElementType(),
+                  Init))
+            return false;
+          if (!this->emitStorePop(*ElemT, E))
+            return false;
         } else {
           assert(CtorFunc);
           if (!this->emitCall(CtorFunc, 0, E))
@@ -5134,6 +5156,10 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
   } break;
+  case Builtin::BI__assume:
+  case Builtin::BI__builtin_assume:
+    // Argument is not evaluated.
+    break;
   default:
     if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
       // Put arguments on the stack.
@@ -7076,6 +7102,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
       return this->emitGetPtrParam(It->second.Offset, E);
     }
+
+    if (!Ctx.getLangOpts().CPlusPlus23 && IsReference)
+      return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                      /*InitializerFailed=*/false, E);
   }
   // Local variables.
   if (auto It = Locals.find(D); It != Locals.end()) {

@@ -3506,7 +3506,14 @@ private:
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-    localSymbols.pushScope();
+
+    // Cache constructs should not push/pop a scope because they need to update
+    // the symbol map for subsequent statements in the same loop body.
+    bool isCacheConstruct =
+        std::holds_alternative<Fortran::parser::OpenACCCacheConstruct>(acc.u);
+
+    if (!isCacheConstruct)
+      localSymbols.pushScope();
     mlir::Value exitCond = genOpenACCConstruct(
         *this, bridge.getSemanticsContext(), getEval(), acc, localSymbols);
 
@@ -3605,7 +3612,8 @@ private:
       for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
         genFIR(e);
     }
-    localSymbols.popScope();
+    if (!isCacheConstruct)
+      localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
 
     if (accLoop && exitCond) {
@@ -4011,16 +4019,17 @@ private:
         }
         const auto &caseRange =
             std::get<Fortran::parser::CaseValueRange::Range>(caseValueRange.u);
-        if (caseRange.lower && caseRange.upper) {
+        const auto &[lower, upper]{caseRange.t};
+        if (lower && upper) {
           attrList.push_back(fir::ClosedIntervalAttr::get(context));
-          addValue(*caseRange.lower);
-          addValue(*caseRange.upper);
-        } else if (caseRange.lower) {
+          addValue(*lower);
+          addValue(*upper);
+        } else if (lower) {
           attrList.push_back(fir::LowerBoundAttr::get(context));
-          addValue(*caseRange.lower);
+          addValue(*lower);
         } else {
           attrList.push_back(fir::UpperBoundAttr::get(context));
-          addValue(*caseRange.upper);
+          addValue(*upper);
         }
       }
     }
@@ -4171,28 +4180,45 @@ private:
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
     Fortran::lower::StatementContext stmtCtx;
     pushActiveConstruct(getEval(), stmtCtx);
+    Fortran::lower::pft::Evaluation &eval = getEval();
+    bool unstructuredContext = eval.lowerAsUnstructured();
 
-    for (Fortran::lower::pft::Evaluation &e :
-         getEval().getNestedEvaluations()) {
-      if (e.getIf<Fortran::parser::ChangeTeamStmt>()) {
-        maybeStartBlock(e.block);
-        setCurrentPosition(e.position);
-        genFIR(e);
-      } else if (e.getIf<Fortran::parser::EndChangeTeamStmt>()) {
-        maybeStartBlock(e.block);
-        setCurrentPosition(e.position);
-        genFIR(e);
-      } else {
-        genFIR(e);
-      }
-    }
+    // CHANGE TEAM statement
+    Fortran::lower::pft::Evaluation &changeTeamStmtEval =
+        eval.getFirstNestedEvaluation();
+    auto *changeTeamStmt =
+        changeTeamStmtEval.getIf<Fortran::parser::ChangeTeamStmt>();
+    assert(changeTeamStmt && "ChangeTeamStmt not found");
+    mif::ChangeTeamOp changeOp =
+        genChangeTeamStmt(*this, changeTeamStmtEval, *changeTeamStmt);
+    mlir::Block *entryBlock = changeOp.getBody();
+    builder->setInsertionPointToStart(entryBlock);
+
+    if (unstructuredContext)
+      Fortran::lower::createEmptyRegionBlocks<mif::EndTeamOp>(
+          *builder, eval.getNestedEvaluations());
+    builder->setInsertionPointToStart(entryBlock);
+
+    // CHANGE TEAM body code.
+    auto iter = eval.getNestedEvaluations().begin()++;
+    for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
+      genFIR(*iter, unstructuredContext);
+
+    // END TEAM statement
+    Fortran::lower::pft::Evaluation &endTeamEval = *iter;
+    auto *endTeamStmt = endTeamEval.getIf<Fortran::parser::EndChangeTeamStmt>();
+    assert(endTeamStmt && "EndChangeTeamStmt not found");
+    if (unstructuredContext)
+      maybeStartBlock(endTeamEval.block);
+
+    mlir::Block &endBody = changeOp.getRegion().back();
+    builder->setInsertionPointToEnd(&endBody);
+    genEndChangeTeamStmt(*this, endTeamEval, *endTeamStmt);
+    assert(mlir::isa_and_nonnull<mif::EndTeamOp>(endBody.getTerminator()) &&
+           "missing end team terminator");
+    builder->setInsertionPointAfter(changeOp.getOperation());
+
     popActiveConstruct();
-  }
-  void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {
-    genChangeTeamStmt(*this, getEval(), stmt);
-  }
-  void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {
-    genEndChangeTeamStmt(*this, getEval(), stmt);
   }
 
   void genFIR(const Fortran::parser::CriticalConstruct &criticalConstruct) {
@@ -6171,6 +6197,8 @@ private:
   void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
   void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
   void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
+  void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {}  // nop
+  void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {} // nop
 
   /// Generate FIR for Evaluation \p eval.
   void genFIR(Fortran::lower::pft::Evaluation &eval,
@@ -6183,6 +6211,17 @@ private:
       maybeStartBlock(eval.isConstruct() && eval.lowerAsStructured()
                           ? eval.getFirstNestedEvaluation().block
                           : eval.block);
+
+    // Add scope for constructs inside acc.loop to properly contain symbol
+    // bindings (e.g., from cache directive) within the construct.
+    bool needsAccScope =
+        eval.isConstruct() && Fortran::lower::isInOpenACCLoop(*builder);
+    if (needsAccScope)
+      localSymbols.pushScope();
+    llvm::scope_exit popAccScope([&]() {
+      if (needsAccScope)
+        localSymbols.popScope();
+    });
 
     // Generate evaluation specific code. Even nop calls should usually reach
     // here in case they start a new block or require generation of a generic

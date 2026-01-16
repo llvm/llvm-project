@@ -141,7 +141,7 @@ void SPIRVDialect::initialize() {
 }
 
 std::string SPIRVDialect::getAttributeName(Decoration decoration) {
-  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decoration));
+  return getDecorationString(decoration);
 }
 
 //===----------------------------------------------------------------------===//

@@ -390,7 +390,7 @@ func.func @test_pad_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1
 
 func.func @test_reshape_rank_invalid(%arg0: tensor<13x21x3xf32>) -> tensor<1x1x1x1x1x1x819xf32> {
   %1 = tosa.const_shape {values = dense<[1, 1, 1, 1, 1, 1, 819]> : tensor<7xindex>} : () -> !tosa.shape<7>
-  // expected-error@+1 {{'tosa.reshape' op failed shape type level check: '!tosa.shape<7>' exceeds MAX_RANK}}
+  // expected-error@+1 {{'tosa.reshape' op failed level check: result rank(shape) <= MAX_RANK}}
   %0 = "tosa.reshape"(%arg0, %1) : (tensor<13x21x3xf32>, !tosa.shape<7>) -> tensor<1x1x1x1x1x1x819xf32>
   return %0 : tensor<1x1x1x1x1x1x819xf32>
 }
@@ -1665,22 +1665,22 @@ func.func @test_cast_to_block_scaled_invalid_rank(%arg0: tensor<1x2x3x4x5x6x7x32
 
 // -----
 
-func.func @test_add_shape_invalid_rank() -> !tosa.shape<13> {
-  %a = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]> : tensor<13xindex>} : () -> !tosa.shape<13>
-  %b = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]> : tensor<13xindex>} : () -> !tosa.shape<13>
-  // expected-error@+1 {{'tosa.add_shape' op failed shape type level check: '!tosa.shape<13>' exceeds MAX_RANK}}
-  %c = tosa.add_shape %a, %b : (!tosa.shape<13>, !tosa.shape<13>) -> !tosa.shape<13>
-  return %c : !tosa.shape<13>
+func.func @test_add_shape_invalid_rank() -> !tosa.shape<17> {
+  %a = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  %b = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.add_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %c = tosa.add_shape %a, %b : (!tosa.shape<17>, !tosa.shape<17>) -> !tosa.shape<17>
+  return %c : !tosa.shape<17>
 }
 
 // -----
 
-func.func @test_div_floor_shape_invalid_rank() -> !tosa.shape<7> {
-  %a = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7]> : tensor<7xindex>} : () -> !tosa.shape<7>
-  %b = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7]> : tensor<7xindex>} : () -> !tosa.shape<7>
-  // expected-error@+1 {{'tosa.div_floor_shape' op failed shape type level check: '!tosa.shape<7>' exceeds MAX_RANK}}
-  %c = tosa.div_floor_shape %a, %b : (!tosa.shape<7>, !tosa.shape<7>) -> !tosa.shape<7>
-  return %c : !tosa.shape<7>
+func.func @test_div_floor_shape_invalid_rank() -> !tosa.shape<17> {
+  %a = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  %b = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.div_floor_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %c = tosa.div_floor_shape %a, %b : (!tosa.shape<17>, !tosa.shape<17>) -> !tosa.shape<17>
+  return %c : !tosa.shape<17>
 }
 
 // -----
@@ -1690,7 +1690,6 @@ func.func @test_dim(%arg0: tensor<1x2x3x4x5x6x7x8xi32>) -> !tosa.shape<1> {
   %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<1x2x3x4x5x6x7x8xi32>) -> !tosa.shape<1>
   return %0 : !tosa.shape<1>
 }
-
 
 // -----
 
@@ -1718,4 +1717,112 @@ func.func @test_concat_shape_invalid_list_size() {
                           !tosa.shape<0>
                          ) -> !tosa.shape<0>
   return
+}
+
+// -----
+
+func.func @test_exp2_shape_invalid_rank() -> !tosa.shape<17> {
+  %0 = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.exp2_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %1 = tosa.exp2_shape %0 : (!tosa.shape<17>) -> !tosa.shape<17>
+  return %1 : !tosa.shape<17>
+}
+
+// -----
+
+func.func @test_log2_floor_shape_invalid_rank() -> !tosa.shape<17> {
+  %0 = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.log2_floor_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %1 = tosa.log2_floor_shape %0 : (!tosa.shape<17>) -> !tosa.shape<17>
+  return %1 : !tosa.shape<17>
+}
+
+// -----
+
+func.func @test_log2_ceil_shape_invalid_rank() -> !tosa.shape<17> {
+  %0 = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.log2_ceil_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %1 = tosa.log2_ceil_shape %0 : (!tosa.shape<17>) -> !tosa.shape<17>
+  return %1 : !tosa.shape<17>
+}
+
+// -----
+
+func.func @test_mod_shape_invalid_rank() -> !tosa.shape<17> {
+  %a = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  %b = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.mod_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %c = tosa.mod_shape %a, %b : (!tosa.shape<17>, !tosa.shape<17>) -> !tosa.shape<17>
+  return %c : !tosa.shape<17>
+}
+
+// -----
+
+func.func @test_conv2d_block_scaled_invalid_size(%arg0: tensor<67108864x4x4x64xf4E2M1FN>, %arg1: tensor<67108864x4x4x2xf8E8M0FNU>, %arg2: tensor<8x1x1x64xf4E2M1FN>, %arg3: tensor<8x1x1x2xf8E8M0FNU>, %arg4: tensor<1xf32>) -> tensor<67108864x4x4x8xf32> {
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %dilation = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.conv2d_block_scaled' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %0 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %pad, %stride, %dilation {block_size = BLOCK_SIZE_32} : (tensor<67108864x4x4x64xf4E2M1FN>, tensor<67108864x4x4x2xf8E8M0FNU>, tensor<8x1x1x64xf4E2M1FN>, tensor<8x1x1x2xf8E8M0FNU>, tensor<1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<67108864x4x4x8xf32>
+  return %0 : tensor<67108864x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv2d_block_scaled_dilation_y(%arg0: tensor<1x8191x8191x32xf8E4M3FN>, %arg1: tensor<1x8191x8191x1xf8E8M0FNU>, %arg2: tensor<16x1025x1024x32xf8E4M3FN>, %arg3: tensor<16x1025x1024x1xf8E8M0FNU>, %arg4: tensor<16xf32>) -> tensor<1x9x7178x16xf32> {
+  %pad = tosa.const_shape {values = dense<[10, 0, 10, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %dilation = tosa.const_shape {values = dense<[8, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.conv2d_block_scaled' op failed level check: dilation_y * KH <= MAX_KERNEL}}
+  %0 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %pad, %stride, %dilation {block_size = BLOCK_SIZE_32} :
+            (tensor<1x8191x8191x32xf8E4M3FN>, tensor<1x8191x8191x1xf8E8M0FNU>, tensor<16x1025x1024x32xf8E4M3FN>, tensor<16x1025x1024x1xf8E8M0FNU>, tensor<16xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x9x7178x16xf32>
+  return %0 : tensor<1x9x7178x16xf32>
+}
+
+// -----
+
+func.func @test_conv2d_block_scaled_dilation_x(%arg0: tensor<1x8191x8191x32xf8E4M3FN>, %arg1: tensor<1x8191x8191x1xf8E8M0FNU>, %arg2: tensor<16x1024x1025x32xf8E4M3FN>, %arg3: tensor<16x1024x1025x1xf8E8M0FNU>, %arg4: tensor<16xf32>) -> tensor<1x7178x9x16xf32> {
+  %pad = tosa.const_shape {values = dense<[10, 0, 10, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %dilation = tosa.const_shape {values = dense<[1, 8]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.conv2d_block_scaled' op failed level check: dilation_x * KW <= MAX_KERNEL}}
+  %0 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %pad, %stride, %dilation {block_size = BLOCK_SIZE_32} :
+            (tensor<1x8191x8191x32xf8E4M3FN>, tensor<1x8191x8191x1xf8E8M0FNU>, tensor<16x1024x1025x32xf8E4M3FN>, tensor<16x1024x1025x1xf8E8M0FNU>, tensor<16xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x7178x9x16xf32>
+  return %0 : tensor<1x7178x9x16xf32>
+}
+
+// -----
+
+func.func @test_conv2d_block_scaled_pad_top(%arg0: tensor<1x32x32x32xf8E4M3FN>, %arg1: tensor<1x32x32x1xf8E8M0FNU>, %arg2: tensor<16x2x2x32xf8E4M3FN>, %arg3: tensor<16x2x2x1xf8E8M0FNU>, %arg4: tensor<16xf32>) -> tensor<1x8224x31x16xf32> {
+  %pad = tosa.const_shape {values = dense<[8193, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %dilation = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.conv2d_block_scaled' op failed level check: pad <= MAX_KERNEL}}
+  %0 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %pad, %stride, %dilation {block_size = #tosa.block_size<BLOCK_SIZE_32>} :
+            (tensor<1x32x32x32xf8E4M3FN>, tensor<1x32x32x1xf8E8M0FNU>, tensor<16x2x2x32xf8E4M3FN>, tensor<16x2x2x1xf8E8M0FNU>, tensor<16xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8224x31x16xf32>
+  return %0 : tensor<1x8224x31x16xf32>
+}
+
+// -----
+
+func.func @test_conv2d_block_scaled_pad_right(%arg0: tensor<1x32x32x32xf8E4M3FN>, %arg1: tensor<1x32x32x1xf8E8M0FNU>, %arg2: tensor<16x2x2x32xf8E4M3FN>, %arg3: tensor<16x2x2x1xf8E8M0FNU>, %arg4: tensor<16xf32>) -> tensor<1x31x8224x16xf32> {
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 8193]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %dilation = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.conv2d_block_scaled' op failed level check: pad <= MAX_KERNEL}}
+  %0 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %pad, %stride, %dilation {block_size = #tosa.block_size<BLOCK_SIZE_32>} :
+            (tensor<1x32x32x32xf8E4M3FN>, tensor<1x32x32x1xf8E8M0FNU>, tensor<16x2x2x32xf8E4M3FN>, tensor<16x2x2x1xf8E8M0FNU>, tensor<16xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x31x8224x16xf32>
+  return %0 : tensor<1x31x8224x16xf32>
+}
+
+// -----
+
+func.func @test_conv2d_block_scaled_stride_y(%arg0: tensor<1x8194x33x32xf8E4M3FN>, %arg1: tensor<1x8194x33x1xf8E8M0FNU>, %arg2: tensor<16x2x2x32xf8E4M3FN>, %arg3: tensor<16x2x2x1xf8E8M0FNU>, %arg4: tensor<16xf32>) -> tensor<1x2x32x16xf32> {
+  %pad = tosa.const_shape {values = dense<[1, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %stride = tosa.const_shape {values = dense<[8193, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %dilation = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.conv2d_block_scaled' op failed level check: stride <= MAX_KERNEL}}
+  %0 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %pad, %stride, %dilation {block_size = #tosa.block_size<BLOCK_SIZE_32>} :
+            (tensor<1x8194x33x32xf8E4M3FN>, tensor<1x8194x33x1xf8E8M0FNU>, tensor<16x2x2x32xf8E4M3FN>, tensor<16x2x2x1xf8E8M0FNU>, tensor<16xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x2x32x16xf32>
+  return %0 : tensor<1x2x32x16xf32>
 }

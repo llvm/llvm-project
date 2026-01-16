@@ -8,11 +8,8 @@
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-unknown-linux-gnu
-// UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 // XFAIL: intelgpu
 
 #include <omp.h>
@@ -30,42 +27,42 @@ int main(void) {
   }
 }
 // CHECK: Display 8 of the 8 last kernel launch traces
-// CHECK: Kernel 0: {{.*}} (__omp_offloading_{{.*}}_main_l27)
+// CHECK: Kernel 0: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-6]])
 // CHECK:     launchKernel
 // NDEBG:     main
-// DEBUG:     main {{.*}}kernel_crash_many.c:27
+// DEBUG:     main {{.*}}kernel_crash_many.c:[[@LINE-9]]
 //
-// CHECK: Kernel 1: {{.*}} (__omp_offloading_{{.*}}_main_l23)
-// CHECK:     launchKernel
-// NDEBG:     main
-// DEBUG:     main {{.*}}kernel_crash_many.c:
-//
-// CHECK: Kernel 2: {{.*}} (__omp_offloading_{{.*}}_main_l23)
+// CHECK: Kernel 1: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-15]])
 // CHECK:     launchKernel
 // NDEBG:     main
 // DEBUG:     main {{.*}}kernel_crash_many.c:
 //
-// CHECK: Kernel 3: {{.*}} (__omp_offloading_{{.*}}_main_l23)
+// CHECK: Kernel 2: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-20]])
 // CHECK:     launchKernel
 // NDEBG:     main
 // DEBUG:     main {{.*}}kernel_crash_many.c:
 //
-// CHECK: Kernel 4: {{.*}} (__omp_offloading_{{.*}}_main_l23)
+// CHECK: Kernel 3: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-25]])
 // CHECK:     launchKernel
 // NDEBG:     main
 // DEBUG:     main {{.*}}kernel_crash_many.c:
 //
-// CHECK: Kernel 5: {{.*}} (__omp_offloading_{{.*}}_main_l23)
+// CHECK: Kernel 4: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-30]])
 // CHECK:     launchKernel
 // NDEBG:     main
 // DEBUG:     main {{.*}}kernel_crash_many.c:
 //
-// CHECK: Kernel 6: {{.*}} (__omp_offloading_{{.*}}_main_l23)
+// CHECK: Kernel 5: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-35]])
 // CHECK:     launchKernel
 // NDEBG:     main
 // DEBUG:     main {{.*}}kernel_crash_many.c:
 //
-// CHECK: Kernel 7: {{.*}} (__omp_offloading_{{.*}}_main_l23)
+// CHECK: Kernel 6: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-40]])
+// CHECK:     launchKernel
+// NDEBG:     main
+// DEBUG:     main {{.*}}kernel_crash_many.c:
+//
+// CHECK: Kernel 7: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-45]])
 // CHECK:     launchKernel
 // NDEBG:     main
 // DEBUG:     main {{.*}}kernel_crash_many.c:

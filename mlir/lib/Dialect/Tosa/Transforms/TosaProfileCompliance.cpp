@@ -112,6 +112,18 @@ ProfileInfoDepot::populateProfileInfo(tosa::DepthwiseConv2DOp op) {
 }
 
 template <>
+LogicalResult
+ProfileInfoDepot::populateProfileInfo(tosa::Conv2DBlockScaledOp op) {
+  addValue(op.getInputData());
+  addValue(op.getInputScale());
+  addValue(op.getWeightData());
+  addValue(op.getWeightScale());
+  addValue(op.getBias());
+  addValue(op.getOutput());
+  return success();
+}
+
+template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::PadOp op) {
   addValue(op.getInput1());
   addValue(op.getPadConst());
@@ -245,6 +257,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(AvgPool2d)
   POPULATE_PROFILE_INFO_CUSTOM(TransposeConv2D)
   POPULATE_PROFILE_INFO_CUSTOM(Conv2D)
+  POPULATE_PROFILE_INFO_CUSTOM(Conv2DBlockScaled)
   POPULATE_PROFILE_INFO_CUSTOM(Conv3D)
   POPULATE_PROFILE_INFO_CUSTOM(DepthwiseConv2D)
   POPULATE_PROFILE_INFO_CUSTOM(Mul)
@@ -329,6 +342,12 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_SKIP(ConstShape)
   POPULATE_PROFILE_INFO_SKIP(DivCeilShape)
   POPULATE_PROFILE_INFO_SKIP(DivFloorShape)
+  POPULATE_PROFILE_INFO_SKIP(Exp2Shape)
+  POPULATE_PROFILE_INFO_SKIP(Log2CeilShape)
+  POPULATE_PROFILE_INFO_SKIP(Log2FloorShape)
+  POPULATE_PROFILE_INFO_SKIP(MaxShape)
+  POPULATE_PROFILE_INFO_SKIP(MinShape)
+  POPULATE_PROFILE_INFO_SKIP(ModShape)
   POPULATE_PROFILE_INFO_SKIP(MulShape)
   POPULATE_PROFILE_INFO_SKIP(SliceShape)
   POPULATE_PROFILE_INFO_SKIP(SubShape)
