@@ -109,6 +109,10 @@ public:
 
   bool hasBitIntType() const override { return true; }
 
+  size_t getMaxBitIntWidth() const override {
+    return llvm::IntegerType::MAX_INT_BITS;
+  }
+
   bool hasBFloat16Type() const override { return true; }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;

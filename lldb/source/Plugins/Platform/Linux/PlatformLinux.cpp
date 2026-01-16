@@ -15,6 +15,7 @@
 #endif
 
 #include "Plugins/Process/Utility/LinuxSignals.h"
+#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
@@ -22,6 +23,7 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -220,6 +222,7 @@ void PlatformLinux::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
   m_trap_handlers.push_back(ConstString("__kernel_rt_sigreturn"));
   m_trap_handlers.push_back(ConstString("__restore_rt"));
+  m_trap_handlers.push_back(ConstString("__vdso_rt_sigreturn"));
 }
 
 static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
@@ -302,12 +305,92 @@ static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
   return unwind_plan_sp;
 }
 
-lldb::UnwindPlanSP
-PlatformLinux::GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
-                                        ConstString name) {
+static lldb::UnwindPlanSP GetRISCVTrapHandlerUnwindPlan(ConstString name,
+                                                        uint32_t fp_flags) {
+  if (name != "__vdso_rt_sigreturn")
+    return {};
+
+  UnwindPlan::Row row;
+
+  // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
+  //  - 128-byte siginfo struct
+  //  - ucontext struct:
+  //     - 8-byte long (uc_flags)
+  //     - 8-byte pointer (*uc_link)
+  //     - 24-byte struct (uc_stack)
+  //     - 8-byte struct (uc_sigmask)
+  //     - 120-byte of padding to allow sigset_t to be expanded in the future
+  //     - 8 bytes of padding because sigcontext has 16-byte alignment
+  //     - struct sigcontext uc_mcontext
+  // [1]
+  // https://github.com/torvalds/linux/blob/master/arch/riscv/kernel/signal.c
+
+  constexpr size_t siginfo_size = 128;
+  constexpr size_t uc_flags_size = 8;
+  constexpr size_t uc_link_ptr_size = 8;
+  constexpr size_t uc_stack_size = 24;
+  constexpr size_t uc_sigmask_size = 8;
+  constexpr size_t padding_size = 128;
+
+  constexpr size_t offset = siginfo_size + uc_flags_size + uc_link_ptr_size +
+                            uc_stack_size + uc_sigmask_size + padding_size;
+
+  // In user_regs_struct GPRs are always 64-bit length
+  size_t gpr_size = 8;
+  row.GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_riscv, offset);
+  for (uint32_t reg_num = gpr_first_riscv; reg_num < gpr_first_riscv + 32;
+       ++reg_num)
+    row.SetRegisterLocationToAtCFAPlusOffset(reg_num, reg_num * gpr_size,
+                                             false);
+
+  size_t fpr_size = 0;
+  switch (fp_flags) {
+  case ArchSpec::eRISCV_float_abi_soft:
+    fpr_size = 0;
+    break;
+  case ArchSpec::eRISCV_float_abi_single:
+    fpr_size = 4;
+    break;
+  case ArchSpec::eRISCV_float_abi_double:
+    fpr_size = 8;
+    break;
+  case ArchSpec::eRISCV_float_abi_quad:
+    fpr_size = 16;
+    break;
+  }
+
+  if (fpr_size != 0) {
+    for (uint32_t reg_num = fpr_first_riscv; reg_num < fpr_first_riscv + 32;
+         ++reg_num) {
+      size_t fpr_offset =
+          gpr_size * 32 + (reg_num - fpr_first_riscv) * fpr_size;
+      row.SetRegisterLocationToAtCFAPlusOffset(reg_num, fpr_offset, false);
+    }
+
+    size_t fpr_fcsr_offset = gpr_size * 32 + fpr_size * 32;
+    row.SetRegisterLocationToAtCFAPlusOffset(fpr_fcsr_riscv, fpr_fcsr_offset,
+                                             false);
+  }
+
+  UnwindPlanSP unwind_plan_sp = std::make_shared<UnwindPlan>(eRegisterKindLLDB);
+  unwind_plan_sp->AppendRow(std::move(row));
+  unwind_plan_sp->SetSourceName("RISC-V Linux sigcontext");
+  unwind_plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
+  unwind_plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  unwind_plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+
+  return unwind_plan_sp;
+}
+
+lldb::UnwindPlanSP PlatformLinux::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
+                                                           ConstString name) {
+  llvm::Triple triple = arch.GetTriple();
   if (triple.isAArch64())
     return GetAArch64TrapHandlerUnwindPlan(name);
-
+  if (triple.isRISCV()) {
+    uint32_t fp_flags = arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask;
+    return GetRISCVTrapHandlerUnwindPlan(name, fp_flags);
+  }
   return {};
 }
 
