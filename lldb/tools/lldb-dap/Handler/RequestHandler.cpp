@@ -22,7 +22,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 
-#if !defined(_WIN32)
+#ifdef _WIN32
+#include "lldb/Host/windows/PosixApi.h"
+#else
 #include <unistd.h>
 #endif
 
@@ -61,25 +63,25 @@ static uint32_t SetLaunchFlag(uint32_t flags, bool flag,
 static void
 SetupIORedirection(const std::vector<std::optional<std::string>> &stdio,
                    lldb::SBLaunchInfo &launch_info) {
-  size_t n = std::max(stdio.size(), static_cast<size_t>(3));
-  for (size_t i = 0; i < n; i++) {
-    std::optional<std::string> path;
-    if (stdio.size() <= i)
-      path = stdio.back();
-    else
-      path = stdio[i];
-    if (!path)
+  for (const auto &[idx, value_opt] : llvm::enumerate(stdio)) {
+    if (!value_opt)
       continue;
-    switch (i) {
+    const std::string &path = value_opt.value();
+    assert(!path.empty() && "paths should not be empty");
+
+    const int fd = static_cast<int>(idx);
+    switch (fd) {
     case 0:
-      launch_info.AddOpenFileAction(i, path->c_str(), true, false);
+      launch_info.AddOpenFileAction(STDIN_FILENO, path.c_str(), true, false);
       break;
     case 1:
+      launch_info.AddOpenFileAction(STDOUT_FILENO, path.c_str(), false, true);
+      break;
     case 2:
-      launch_info.AddOpenFileAction(i, path->c_str(), false, true);
+      launch_info.AddOpenFileAction(STDERR_FILENO, path.c_str(), false, true);
       break;
     default:
-      launch_info.AddOpenFileAction(i, path->c_str(), true, true);
+      launch_info.AddOpenFileAction(fd, path.c_str(), true, true);
       break;
     }
   }

@@ -460,3 +460,127 @@ body:             |
     $d1 = COPY %2(s64)
     RET_ReallyLR implicit $d0, implicit $d1
 ...
+---
+name:            test_s32_to_2s16_unmerge
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $s0
+    ; CHECK-LABEL: name: test_s32_to_2s16_unmerge
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.ssub
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY [[INSERT_SUBREG]].hsub
+    ; CHECK-NEXT: [[DUPi16_:%[0-9]+]]:fpr16 = DUPi16 [[INSERT_SUBREG]], 1
+    ; CHECK-NEXT: $h0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $h1 = COPY [[DUPi16_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0, implicit $h1
+    %0:fpr(s32) = COPY $s0
+    %1:fpr(s16), %2:fpr(s16) = G_UNMERGE_VALUES %0(s32)
+    $h0 = COPY %1(s16)
+    $h1 = COPY %2(s16)
+    RET_ReallyLR implicit $h0, implicit $h1
+...
+---
+name:            test_s64_to_2s32_unmerge
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $d0
+    ; CHECK-LABEL: name: test_s64_to_2s32_unmerge
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY [[INSERT_SUBREG]].ssub
+    ; CHECK-NEXT: [[DUPi32_:%[0-9]+]]:fpr32 = DUPi32 [[INSERT_SUBREG]], 1
+    ; CHECK-NEXT: $s0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $s1 = COPY [[DUPi32_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0, implicit $s1
+    %0:fpr(s64) = COPY $d0
+    %1:fpr(s32), %2:fpr(s32) = G_UNMERGE_VALUES %0(s64)
+    $s0 = COPY %1(s32)
+    $s1 = COPY %2(s32)
+    RET_ReallyLR implicit $s0, implicit $s1
+...
+---
+name:            test_s64_to_4s16_unmerge
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $d0
+    ; CHECK-LABEL: name: test_s64_to_4s16_unmerge
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY]], %subreg.dsub
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[COPY]], %subreg.dsub
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY [[INSERT_SUBREG]].hsub
+    ; CHECK-NEXT: [[DUPi16_:%[0-9]+]]:fpr16 = DUPi16 [[INSERT_SUBREG]], 1
+    ; CHECK-NEXT: [[DUPi16_1:%[0-9]+]]:fpr16 = DUPi16 [[INSERT_SUBREG1]], 2
+    ; CHECK-NEXT: [[DUPi16_2:%[0-9]+]]:fpr16 = DUPi16 [[INSERT_SUBREG2]], 3
+    ; CHECK-NEXT: $h0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $h1 = COPY [[DUPi16_]]
+    ; CHECK-NEXT: $h2 = COPY [[DUPi16_1]]
+    ; CHECK-NEXT: $h3 = COPY [[DUPi16_2]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0, implicit $h1, implicit $h2, implicit $h3
+    %0:fpr(s64) = COPY $d0
+    %1:fpr(s16), %2:fpr(s16), %3:fpr(s16), %4:fpr(s16) = G_UNMERGE_VALUES %0(s64)
+    $h0 = COPY %1(s16)
+    $h1 = COPY %2(s16)
+    $h2 = COPY %3(s16)
+    $h3 = COPY %4(s16)
+    RET_ReallyLR implicit $h0, implicit $h1, implicit $h2, implicit $h3
+...
+---
+name:            test_s32_to_4s8_unmerge
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $s0
+    ; CHECK-LABEL: name: test_s32_to_4s8_unmerge
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.ssub
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY]], %subreg.ssub
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[COPY]], %subreg.ssub
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr8 = COPY [[INSERT_SUBREG]].bsub
+    ; CHECK-NEXT: [[DUPi8_:%[0-9]+]]:fpr8 = DUPi8 [[INSERT_SUBREG]], 1
+    ; CHECK-NEXT: [[DUPi8_1:%[0-9]+]]:fpr8 = DUPi8 [[INSERT_SUBREG1]], 2
+    ; CHECK-NEXT: [[DUPi8_2:%[0-9]+]]:fpr8 = DUPi8 [[INSERT_SUBREG2]], 3
+    ; CHECK-NEXT: $b0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $b1 = COPY [[DUPi8_]]
+    ; CHECK-NEXT: $b2 = COPY [[DUPi8_1]]
+    ; CHECK-NEXT: $b3 = COPY [[DUPi8_2]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $b0, implicit $b1, implicit $b2, implicit $b3
+    %0:fpr(s32) = COPY $s0
+    %1:fpr(s8), %2:fpr(s8), %3:fpr(s8), %4:fpr(s8) = G_UNMERGE_VALUES %0(s32)
+    $b0 = COPY %1(s8)
+    $b1 = COPY %2(s8)
+    $b2 = COPY %3(s8)
+    $b3 = COPY %4(s8)
+    RET_ReallyLR implicit $b0, implicit $b1, implicit $b2, implicit $b3
+...

@@ -2143,7 +2143,7 @@ pushCancelFinalizationCB(SmallVectorImpl<llvm::BranchInst *> &cancelTerminators,
   auto finiCB = [&](llvm::OpenMPIRBuilder::InsertPointTy ip) -> llvm::Error {
     llvm::IRBuilderBase::InsertPointGuard guard(llvmBuilder);
 
-    // ip is currently in the block branched to if cancellation occured.
+    // ip is currently in the block branched to if cancellation occurred.
     // We need to create a branch to terminate that block.
     llvmBuilder.restoreIP(ip);
 

@@ -2607,7 +2607,7 @@ void IterateOp::getSuccessorRegions(RegionBranchPoint point,
   // or back into the operation itself.
   regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
   // It is possible for loop not to enter the body.
-  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+  regions.push_back(RegionSuccessor::parent(getResults()));
 }
 
 void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,

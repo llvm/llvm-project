@@ -54,6 +54,9 @@ using namespace llvm::PatternMatch;
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
@@ -967,7 +970,7 @@ bool llvm::setLoopEstimatedTripCount(
     return true;
 
   // Calculate taken and exit weights.
-  unsigned LatchExitWeight = 0;
+  unsigned LatchExitWeight = ProfcheckDisableMetadataFixes ? 0 : 1;
   unsigned BackedgeTakenWeight = 0;
 
   if (EstimatedTripCount != 0) {
@@ -1477,7 +1480,7 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                    RecurKind Kind, Value *Mask, Value *EVL) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+         !RecurrenceDescriptor::isFindRecurrenceKind(Kind) &&
          "AnyOf and FindIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto VPID = VPIntrinsic::getForIntrinsic(Id);

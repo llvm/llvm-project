@@ -12,19 +12,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterpreterTestFixture.h"
+
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Mangle.h"
-#include "clang/Basic/Version.h"
-#include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
+
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Host.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -113,7 +115,7 @@ protected:
 
 struct OutOfProcessInterpreterInfo {
   std::string OrcRuntimePath;
-  std::unique_ptr<Interpreter> Interpreter;
+  std::unique_ptr<Interpreter> Interp;
 };
 
 static OutOfProcessInterpreterInfo
@@ -180,7 +182,7 @@ TEST_F(OutOfProcessInterpreterTest, SanityWithRemoteExecution) {
 
   OutOfProcessInterpreterInfo Info =
       createInterpreterWithRemoteExecution(io_ctx);
-  Interpreter *Interp = Info.Interpreter.get();
+  Interpreter *Interp = Info.Interp.get();
   ASSERT_TRUE(Interp);
 
   using PTU = PartialTranslationUnit;
@@ -205,7 +207,7 @@ TEST_F(OutOfProcessInterpreterTest, FindRuntimeInterface) {
   ASSERT_TRUE(io_ctx->initializeTempFiles());
 
   OutOfProcessInterpreterInfo I = createInterpreterWithRemoteExecution(io_ctx);
-  ASSERT_TRUE(I.Interpreter);
+  ASSERT_TRUE(I.Interp);
 
   // FIXME: Not yet supported.
   // cantFail(I->Parse("int a = 1; a"));
