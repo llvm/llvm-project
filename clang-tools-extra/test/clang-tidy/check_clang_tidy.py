@@ -49,6 +49,7 @@ import platform
 import re
 import subprocess
 import sys
+from collections import defaultdict
 from typing import Dict, List, Sequence, Tuple
 
 
@@ -123,7 +124,7 @@ class CheckRunner:
             self.clang_tidy_extra_args = self.clang_tidy_extra_args[:i]
 
         self.check_header_map: Dict[str, str] = {}
-        self.header_dir: str = self.temp_file_name + ".headers"
+        self.header_dir = f"{self.temp_file_name}.headers"
         if self.check_headers:
             self.check_header_map = {
                 os.path.normcase(
@@ -314,9 +315,9 @@ class CheckRunner:
                 check_file,
                 "--check-prefixes=" + ",".join(active_prefixes),
                 (
-                    "--match-full-lines"
-                    if not self.match_partial_fixes
-                    else "--strict-whitespace"  # Keeping past behavior.
+                    "--strict-whitespace"  # Keeping past behavior.
+                    if self.match_partial_fixes
+                    else "--match-full-lines"
                 ),
             ]
         )
@@ -330,7 +331,7 @@ class CheckRunner:
         if not check_file and not self.has_check_messages:
             return
 
-        messages_file = messages_file or (self.temp_file_name + ".msg")
+        messages_file = messages_file or f"{self.temp_file_name}.msg"
         check_file = check_file or self.input_file_name
 
         active_prefixes = self._filter_prefixes(self.messages.prefixes, check_file)
@@ -382,9 +383,7 @@ class CheckRunner:
         if not self.check_headers:
             return clang_tidy_output
 
-        header_messages: Dict[str, List[str]] = {
-            t: [] for t in self.check_header_map.keys()
-        }
+        header_messages = defaultdict(list)
         remaining_lines: List[str] = []
         current_file: str = ""
 
@@ -396,13 +395,15 @@ class CheckRunner:
             match = re.match(r"^(.+):\d+:\d+: ", line)
             if match:
                 abs_path = os.path.normcase(os.path.abspath(match.group(1)))
-                current_file = abs_path if abs_path in header_messages else ""
+                current_file = abs_path if abs_path in self.check_header_map else ""
 
-            header_messages.get(current_file, remaining_lines).append(line)
+            dest_list = (
+                header_messages[current_file] if current_file else remaining_lines
+            )
+            dest_list.append(line)
 
-        for temp_header, messages_list in header_messages.items():
-            original_header = self.check_header_map[temp_header]
-            messages = "".join(messages_list)
+        for temp_header, original_header in self.check_header_map.items():
+            messages = "".join(header_messages[temp_header])
             if not messages:
                 continue
 
