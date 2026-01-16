@@ -709,15 +709,14 @@ llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
   auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
   auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
 
-  if (!SIPreEmitPeephole().run(MF)) {
-    if (MDT)
-      MDT->updateBlockNumbers();
-    if (MPDT)
-      MPDT->updateBlockNumbers();
-    return PreservedAnalyses::all();
-  }
+  if (SIPreEmitPeephole().run(MF))
+    return getMachineFunctionPassPreservedAnalyses();
 
-  return getMachineFunctionPassPreservedAnalyses();
+  if (MDT)
+    MDT->updateBlockNumbers();
+  if (MPDT)
+    MPDT->updateBlockNumbers();
+  return PreservedAnalyses::all();
 }
 
 bool SIPreEmitPeephole::run(MachineFunction &MF) {

@@ -3549,14 +3549,15 @@ MachineBlockPlacementPass::run(MachineFunction &MF,
                        false);
   MachineBlockPlacement MBP(MBPI, MLI, PSI, std::move(MBFI), MPDT,
                             AllowTailMerge);
-  if (!MBP.run(MF)) {
-    if (MDT)
-      MDT->updateBlockNumbers();
-    if (MPDT)
-      MPDT->updateBlockNumbers();
-    return PreservedAnalyses::all();
-  }
-  return getMachineFunctionPassPreservedAnalyses();
+
+  if (MBP.run(MF))
+    return getMachineFunctionPassPreservedAnalyses();
+
+  if (MDT)
+    MDT->updateBlockNumbers();
+  if (MPDT)
+    MPDT->updateBlockNumbers();
+  return PreservedAnalyses::all();
 }
 
 void MachineBlockPlacementPass::printPipeline(

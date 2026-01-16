@@ -142,16 +142,15 @@ PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
   MBFIWrapper MBBFreqInfo(MBFI);
   BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo, MBPI,
                       PSI);
-  if (!Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
-                               MF.getSubtarget().getRegisterInfo())) {
-    if (MDT)
-      MDT->updateBlockNumbers();
-    if (MPDT)
-      MPDT->updateBlockNumbers();
-    return PreservedAnalyses::all();
-  }
+  if (Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
+                              MF.getSubtarget().getRegisterInfo()))
+    return getMachineFunctionPassPreservedAnalyses();
 
-  return getMachineFunctionPassPreservedAnalyses();
+  if (MDT)
+    MDT->updateBlockNumbers();
+  if (MPDT)
+    MPDT->updateBlockNumbers();
+  return PreservedAnalyses::all();
 }
 
 bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
