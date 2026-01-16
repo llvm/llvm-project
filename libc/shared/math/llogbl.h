@@ -1,4 +1,4 @@
-//===-- Implementation header for llogbl ------------------------*- C++ -*-===//
+//===-- Shared llogbl function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_LLOGBL_H
-#define LLVM_LIBC_SRC_MATH_LLOGBL_H
+#ifndef LLVM_LIBC_SHARED_MATH_LLOGBL_H
+#define LLVM_LIBC_SHARED_MATH_LLOGBL_H
 
-#include "src/__support/macros/config.h"
+#include "shared/libc_common.h"
+#include "src/__support/math/llogbl.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-long llogbl(long double x);
+using math::llogbl;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_LLOGBL_H
+#endif // LLVM_LIBC_SHARED_MATH_LLOGBL_H

@@ -86,10 +86,14 @@ add_fp_unittest(
     libc.src.__support.math.ldexpf
     libc.src.__support.math.ldexpf128
     libc.src.__support.math.ldexpf16
+<<<<<<< HEAD
     libc.src.__support.math.llogbf
     libc.src.__support.math.llogbf128
     libc.src.__support.math.llogbf16
     libc.src.__support.math.logf16    
+=======
+    libc.src.__support.math.llogbl
+>>>>>>> 238d90f8ed77 (fix: [libc][math] Refactor llogbl implementation to header-only in src/__support/math folder)
     libc.src.__support.math.rsqrtf
     libc.src.__support.math.rsqrtf16
     libc.src.__support.math.sqrtf16

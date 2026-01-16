@@ -797,6 +797,7 @@ add_header_library(
 )
 
 add_header_library(
+<<<<<<< HEAD
   llogbf
   HDRS
     llogbf.h
@@ -825,6 +826,13 @@ add_header_library(
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.include.llvm-libc-macros.float16_macros
+=======
+  llogbl
+  HDRS
+    llogbl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+>>>>>>> 238d90f8ed77 (fix: [libc][math] Refactor llogbl implementation to header-only in src/__support/math folder)
 )
 
 add_header_library(

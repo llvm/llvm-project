@@ -6,15 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_LLOGBL_H
-#define LLVM_LIBC_SRC_MATH_LLOGBL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LLOGBL_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_LLOGBL_H
 
+#include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-long llogbl(long double x);
+namespace math {
+
+LIBC_INLINE static constexpr long llogbl(long double x) {
+  return fputil::intlogb<long>(x);
+}
+
+} // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_LLOGBL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_LLOGBL_H
