@@ -39,8 +39,8 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      # --- Entry 1: foo (foo) ---
-      0x01, # Format Version - only supported value is 0x00
+      ## --- Entry 1: foo (foo) ---
+      0x01, ## Format Version - only supported value is 0x00
     ]
 Symbols:
   - Name:  foo
@@ -67,9 +67,9 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      # --- Entry 1: foo (foo) ---
-      0x00, # Format Version
-      #< Missing flags
+      ## --- Entry 1: foo (foo) ---
+      0x00, ## Format Version
+      ##<Missing flags
     ]
 Symbols:
   - Name:  foo
@@ -96,9 +96,9 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      # --- Entry 1: foo (foo) ---
-      0x00, # Format Version
-      0x08, # Flags - only valid values are 0x00 to 0x07
+      ## --- Entry 1: foo (foo) ---
+      0x00, ## Format Version
+      0x08, ## Flags - only valid values are 0x00 to 0x07
     ]
 Symbols:
   - Name:  foo
@@ -125,10 +125,10 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      # --- Entry 1: foo (foo) ---
-      0x00, # Format Version
-      0x00, # Flags
-      #< Missing function entry PC
+      ## --- Entry 1: foo (foo) ---
+      0x00, ## Format Version
+      0x00, ## Flags
+      ##<Missing function entry PC
     ]
 Symbols:
   - Name:  foo
@@ -155,11 +155,11 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      # --- Entry 1: foo (foo) ---
-      0x00, # Format Version
-      0x00, # Flags
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Function entry address
-      #< Missing Type ID
+      ## --- Entry 1: foo (foo) ---
+      0x00, ## Format Version
+      0x00, ## Flags
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
+      ##<Missing Type ID
     ]
 Symbols:
   - Name:  foo
@@ -186,12 +186,12 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      # --- Entry 1: foo (foo) ---
-      0x00, # Format Version
-      0x02, # Flags (HasDirectCallees)
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Function entry address
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # TypeID unknown
-      #< Missing NumDirectCallees (ULEB128)
+      ## --- Entry 1: foo (foo) ---
+      0x00, ## Format Version
+      0x02, ## Flags (HasDirectCallees)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## TypeID unknown
+      ##<Missing NumDirectCallees (ULEB128)
     ]
 Symbols:
   - Name:  foo
@@ -218,13 +218,13 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      # --- Entry 1: foo (foo) ---
-      0x00, # Format Version
-      0x02, # Flags (HasDirectCallees)
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Function entry address
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # TypeID unknown
-      0x01, # NumDirectCallees
-      #< Missing direct callee address
+      ## --- Entry 1: foo (foo) ---
+      0x00, ## Format Version
+      0x02, ## Flags (HasDirectCallees)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## TypeID unknown
+      0x01, ## NumDirectCallees
+      ##<Missing direct callee address
     ]
 Symbols:
   - Name:  foo
@@ -251,12 +251,12 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      # --- Entry 1: foo (foo) ---
-      0x00, # Format Version
-      0x04, # Flags (HasIndirectCallees)
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Function entry address
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # TypeID unknown
-      #< Missing NumIndirectTargetTypeIDs (ULEB128)
+      ## --- Entry 1: foo (foo) ---
+      0x00, ## Format Version
+      0x04, ## Flags (HasIndirectCallees)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## TypeID unknown
+      ##<Missing NumIndirectTargetTypeIDs (ULEB128)
     ]
 Symbols:
   - Name:  foo
@@ -283,13 +283,13 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      # --- Entry 1: foo (foo) ---
-      0x00, # Format Version
-      0x04, # Flags (HasIndirectCallees)
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Function entry address
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # TypeID unknown
-      0x01, # NumIndirectTargetTypeIDs (1)
-      #< Missing indirect call entries here.
+      ## --- Entry 1: foo (foo) ---
+      0x00, ## Format Version
+      0x04, ## Flags (HasIndirectCallees)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## TypeID unknown
+      0x01, ## NumIndirectTargetTypeIDs (1)
+      ##<Missing indirect call entries here.
     ]
 Symbols:
   - Name:  foo
@@ -322,22 +322,22 @@ Sections:
   - Name: .llvm.callgraph
     Type: SHT_LLVM_CALL_GRAPH
     ContentArray: [
-        '0', # Format version number
-        '3', # Flag IsIndirectTarget true, HasDirectCallees true
-        '0', '0', '0', '0', '0', '0', '0', '0', # foo()'s address
-        '0', '0', '0', '0', '0', '0', '0', '0', # foo()'s TypeID Unknown
-        '1', # NumDirectCallees
-        '0', '0', '0', '0', '0', '0', '0', '0', # Direct callee foo()'s address
-        '0', # Format version number
-        '5', # Flag IsIndirectTarget true, HasIndirectTargetTypeIDs true
-        '6', '0', '0', '0', '0', '0', '0', '0', # bar()'s address
-        '0', '0', '0', '0', '0', '0', '0', '0', # bar()'s TypeID Unknown
-        '1', # NumIndirectTargetTypeIDs
-        '16', '0', '0', '0', '0', '0', '0', '0', # Indirect callee type ID
-        '0', # Format version number
-        '1', # Flag IsIndirectTarget true
-        '10', '0', '0', '0', '0', '0', '0', '0', # baz()'s address
-        '32', '0', '0', '0', '0', '0', '0', '0', # baz()'s TypeID Unknown
+        '0', ## Format version number
+        '3', ## Flag IsIndirectTarget true, HasDirectCallees true
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s address
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s TypeID Unknown
+        '1', ## NumDirectCallees
+        '0', '0', '0', '0', '0', '0', '0', '0', ## Direct callee foo()'s address
+        '0', ## Format version number
+        '5', ## Flag IsIndirectTarget true, HasIndirectTargetTypeIDs true
+        '6', '0', '0', '0', '0', '0', '0', '0', ## bar()'s address
+        '0', '0', '0', '0', '0', '0', '0', '0', ## bar()'s TypeID Unknown
+        '1', ## NumIndirectTargetTypeIDs
+        '16', '0', '0', '0', '0', '0', '0', '0', ## Indirect callee type ID
+        '0', ## Format version number
+        '1', ## Flag IsIndirectTarget true
+        '10', '0', '0', '0', '0', '0', '0', '0', ## baz()'s address
+        '32', '0', '0', '0', '0', '0', '0', '0', ## baz()'s TypeID Unknown
       ]
   - Type:   SHT_RELA
     Relocations:
