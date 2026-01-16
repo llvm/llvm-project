@@ -52,7 +52,7 @@ define i1 @bitcast_first() {
 }
 
 define i1 @direct_bitcast_uge() {
-; CHECK-LABEL: @uge(
+; CHECK-LABEL: @direct_bitcast_uge(
 ; CHECK-NEXT:    ret i1 true
 ;
   %cmp = fcmp uge bfloat bitcast (half 0xH7C00 to bfloat), 0xRff80
@@ -61,7 +61,7 @@ define i1 @direct_bitcast_uge() {
 
 @g = external global i8
 define i1 @bitcast_cannot_be_folded() {
-; CHECK-LABEL: @cannot_be_folded(
+; CHECK-LABEL: @bitcast_cannot_be_folded(
 ; CHECK-NEXT:    ret i1 false
 ;
   %cmp = fcmp ogt bfloat bitcast (i16 ptrtoint (ptr @g to i16) to bfloat), 0xR7F80 ; rhs is +inf
