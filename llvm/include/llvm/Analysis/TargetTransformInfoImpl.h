@@ -730,7 +730,8 @@ public:
     case Instruction::SRem:
     case Instruction::UDiv:
     case Instruction::URem:
-      // FIXME: Unlikely to be true for CodeSize.
+      if (CostKind == TTI::TCK_CodeSize)
+        break;
       return TTI::TCC_Expensive;
     case Instruction::And:
     case Instruction::Or:
