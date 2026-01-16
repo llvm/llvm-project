@@ -23,6 +23,7 @@
 #include "CIRCXXABI.h"
 #include "LowerModule.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace cir {
@@ -260,32 +261,32 @@ mlir::Value LowerItaniumCXXABI::lowerMethodCmp(cir::CmpOp op,
   assert(op.getKind() == cir::CmpOpKind::eq ||
          op.getKind() == cir::CmpOpKind::ne);
 
+  mlir::ImplicitLocOpBuilder locBuilder(op.getLoc(), builder);
   cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
   mlir::Value ptrdiffZero = cir::ConstantOp::create(
-      builder, op.getLoc(), cir::IntAttr::get(ptrdiffCIRTy, 0));
-  mlir::Location loc = op.getLoc();
+      locBuilder, cir::IntAttr::get(ptrdiffCIRTy, 0));
 
   mlir::Value lhsPtrField =
-      cir::ExtractMemberOp::create(builder, loc, ptrdiffCIRTy, loweredLhs, 0);
+      cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredLhs, 0);
   mlir::Value rhsPtrField =
-      cir::ExtractMemberOp::create(builder, loc, ptrdiffCIRTy, loweredRhs, 0);
+      cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredRhs, 0);
   mlir::Value ptrCmp =
-      cir::CmpOp::create(builder, loc, op.getKind(), lhsPtrField, rhsPtrField);
+      cir::CmpOp::create(locBuilder, op.getKind(), lhsPtrField, rhsPtrField);
   mlir::Value ptrCmpToNull =
-      cir::CmpOp::create(builder, loc, op.getKind(), lhsPtrField, ptrdiffZero);
+      cir::CmpOp::create(locBuilder, op.getKind(), lhsPtrField, ptrdiffZero);
 
   mlir::Value lhsAdjField =
-      cir::ExtractMemberOp::create(builder, loc, ptrdiffCIRTy, loweredLhs, 1);
+      cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredLhs, 1);
   mlir::Value rhsAdjField =
-      cir::ExtractMemberOp::create(builder, loc, ptrdiffCIRTy, loweredRhs, 1);
+      cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredRhs, 1);
   mlir::Value adjCmp =
-      cir::CmpOp::create(builder, loc, op.getKind(), lhsAdjField, rhsAdjField);
+      cir::CmpOp::create(locBuilder, op.getKind(), lhsAdjField, rhsAdjField);
 
   auto create_and = [&](mlir::Value lhs, mlir::Value rhs) {
-    return cir::BinOp::create(builder, loc, cir::BinOpKind::And, lhs, rhs);
+    return cir::BinOp::create(locBuilder, cir::BinOpKind::And, lhs, rhs);
   };
   auto create_or = [&](mlir::Value lhs, mlir::Value rhs) {
-    return cir::BinOp::create(builder, loc, cir::BinOpKind::Or, lhs, rhs);
+    return cir::BinOp::create(locBuilder, cir::BinOpKind::Or, lhs, rhs);
   };
 
   mlir::Value result;
