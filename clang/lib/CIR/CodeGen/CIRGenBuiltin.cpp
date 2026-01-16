@@ -131,8 +131,10 @@ static mlir::Value makeBinaryAtomicValue(
     // Pointer to pointer
     // `cir.atomic.fetch` expects a pointer to an integer type, so we cast
     // ptr<ptr<T>> to ptr<intPtrSize>
-    cir::IntType ptrSizeInt = builder.getSIntNTy(cgf.getContext().getTypeSize(ptrType));
-    destValue = builder.createBitcast(destValue, builder.getPointerTo(ptrSizeInt));
+    cir::IntType ptrSizeInt =
+        builder.getSIntNTy(cgf.getContext().getTypeSize(ptrType));
+    destValue =
+        builder.createBitcast(destValue, builder.getPointerTo(ptrSizeInt));
     val = emitToInt(cgf, val, type, ptrSizeInt);
   } else {
     // Pointer to integer type
@@ -153,9 +155,9 @@ static mlir::Value makeBinaryAtomicValue(
   }
 
   auto rmwi = cir::AtomicFetchOp::create(
-      builder, cgf.getLoc(expr->getSourceRange()), destValue,
-      val, kind, ordering, false, /* is volatile */
-      true);                      /* fetch first */
+      builder, cgf.getLoc(expr->getSourceRange()), destValue, val, kind,
+      ordering, false, /* is volatile */
+      true);           /* fetch first */
   return rmwi->getResult(0);
 }
 
