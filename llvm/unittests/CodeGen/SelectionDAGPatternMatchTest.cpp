@@ -597,13 +597,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
 
   // If DAG is not provided all matches fail regardless of the value
   EXPECT_FALSE(sd_match(NegativeValue, m_Negative(m_Value(BindVal))));
-  EXPECT_FALSE(
-      sd_match(NonNegativeValue, m_NonNegative(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(NonNegativeValue, m_NonNegative(m_Value(BindVal))));
   EXPECT_FALSE(sd_match(NegativeValue, m_NonZero(m_Value(BindVal))));
-  EXPECT_FALSE(
-      sd_match(NegativeValue, m_NonPositive(m_Value(BindVal))));
-  EXPECT_FALSE(
-      sd_match(PositiveValue, m_StrictlyPositive(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(NegativeValue, m_NonPositive(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(PositiveValue, m_StrictlyPositive(m_Value(BindVal))));
 
   EXPECT_TRUE(sd_match(VScale, m_VScale(m_Value())));
 
