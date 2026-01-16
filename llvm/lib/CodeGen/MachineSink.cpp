@@ -309,8 +309,10 @@ public:
     AU.addPreserved<MachineCycleInfoWrapperPass>();
     AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    if (UseBlockFreqInfo)
+    if (UseBlockFreqInfo) {
       AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+    }
     AU.addRequired<TargetPassConfig>();
   }
 };
@@ -781,6 +783,8 @@ MachineSinkingPass::run(MachineFunction &MF,
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineCycleAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
+  if (UseBlockFreqInfo)
+    PA.preserve<MachineBlockFrequencyAnalysis>();
   return PA;
 }
 

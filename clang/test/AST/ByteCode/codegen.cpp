@@ -13,6 +13,10 @@ int &pastEnd = arr[2];
 // CHECK: @F = constant ptr @arr, align 8
 int &F = arr[0];
 
+// CHECK: @_ZL1q = internal global [4294967294 x i8] zeroinitializer, align 16
+static char q[-2U];
+void useQ() { char *p = q + 1; }
+
 struct S {
   int a;
   float c[3];
