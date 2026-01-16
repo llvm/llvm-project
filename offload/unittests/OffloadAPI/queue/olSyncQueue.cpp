@@ -16,3 +16,7 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olSyncQueueTest);
 TEST_P(olSyncQueueTest, SuccessEmptyQueue) {
   ASSERT_SUCCESS(olSyncQueue(Queue));
 }
+
+TEST_P(olSyncQueueTest, SuccessEmptyAsyncQueue) {
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+}

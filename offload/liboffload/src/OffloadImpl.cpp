@@ -1236,6 +1236,7 @@ Error olQueryAsync_impl(ol_queue_handle_t Queue) {
     if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo))
       return Err;
   }
+  return Error::success();
 }
 
 } // namespace offload
