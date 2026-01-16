@@ -61,7 +61,7 @@
 ; O0: live-debug-values<emit-debug-entry-values>
 ; O0: machine-sanmd
 ; O0: stack-frame-layout
-; O0: CFIInstrInserterPass
+; O0: x86-seses
 ; O0: verify)
 ; O0: free-machine-function)
 
@@ -169,7 +169,7 @@
 ; O2: live-debug-values<emit-debug-entry-values>
 ; O2: machine-sanmd
 ; O2: stack-frame-layout
-; O2: CFIInstrInserterPass
+; O2: x86-seses
 ; O2: verify)
 ; O2: free-machine-function)
 
@@ -226,8 +226,8 @@
 ; O0-WINDOWS: live-debug-values<emit-debug-entry-values>
 ; O0-WINDOWS: machine-sanmd
 ; O0-WINDOWS: stack-frame-layout
+; O0-WINDOWS: x86-seses
 ; O0-WINDOWS: x86-avoid-trailing-call
-; O0-WINDOWS: CFGuardLongjmpPass
 ; O0-WINDOWS: verify)
 ; O0-WINDOWS: free-machine-function)
 
@@ -337,7 +337,7 @@
 ; O3-WINDOWS: live-debug-values<emit-debug-entry-values>
 ; O3-WINDOWS: machine-sanmd
 ; O3-WINDOWS: stack-frame-layout
+; O3-WINDOWS: x86-seses
 ; O3-WINDOWS: x86-avoid-trailing-call
-; O3-WINDOWS: CFGuardLongjmpPass
 ; O3-WINDOWS: verify)
 ; O3-WINDOWS: free-machine-function)
