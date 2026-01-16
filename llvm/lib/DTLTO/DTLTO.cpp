@@ -216,4 +216,7 @@ llvm::Error lto::DTLTO::handleArchiveInputs() {
 }
 
 // Cleanup after LTO is complete.
-void lto::DTLTO::cleanup() { removeTempFiles(); }
+void lto::DTLTO::cleanup() {
+  removeTempFiles();
+  LTO::cleanup();
+}
