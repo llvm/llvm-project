@@ -16035,7 +16035,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     for (unsigned I = 0; I != DataBytes; ++I) {
       uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
       Result ^= Byte;
-      for (int J = 0; J < 8; ++J) {
+      for (int J = 0; J != 8; ++J) {
         Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
       }
     }
