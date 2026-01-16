@@ -95,6 +95,9 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
+* DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
+
 Changes to the MIPS Backend
 ---------------------------
 
@@ -133,6 +136,8 @@ Changes to the Debug Info
 
 Changes to the LLVM tools
 -------------------------
+
+* `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
 
 Changes to LLDB
 ---------------

@@ -917,9 +917,7 @@ private:
     // Bitmask of the VmemTypes of VMEM instructions for this VGPR.
     unsigned VMEMTypes = 0;
 
-    bool empty() const {
-      return all_of(Scores, [](unsigned K) { return K == 0; }) && !VMEMTypes;
-    }
+    bool empty() const { return all_of(Scores, equal_to(0)) && !VMEMTypes; }
   };
 
   struct SGPRInfo {

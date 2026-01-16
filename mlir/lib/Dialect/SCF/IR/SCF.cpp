@@ -307,7 +307,7 @@ void ExecuteRegionOp::getSuccessorRegions(
   }
 
   // Otherwise, the region branches back to the parent operation.
-  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+  regions.push_back(RegionSuccessor::parent(getResults()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -337,7 +337,7 @@ void ConditionOp::getSuccessorRegions(
     regions.emplace_back(&whileOp.getAfter(),
                          whileOp.getAfter().getArguments());
   if (!boolAttr || !boolAttr.getValue())
-    regions.emplace_back(whileOp.getOperation(), whileOp.getResults());
+    regions.push_back(RegionSuccessor::parent(whileOp.getResults()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -427,6 +427,40 @@ std::optional<SmallVector<OpFoldResult>> ForOp::getLoopSteps() {
 
 std::optional<SmallVector<OpFoldResult>> ForOp::getLoopUpperBounds() {
   return SmallVector<OpFoldResult>{OpFoldResult(getUpperBound())};
+}
+
+bool ForOp::isValidInductionVarType(Type type) {
+  return type.isIndex() || type.isSignlessInteger();
+}
+
+LogicalResult ForOp::setLoopLowerBounds(ArrayRef<OpFoldResult> bounds) {
+  if (bounds.size() != 1)
+    return failure();
+  if (auto val = dyn_cast<Value>(bounds[0])) {
+    setLowerBound(val);
+    return success();
+  }
+  return failure();
+}
+
+LogicalResult ForOp::setLoopUpperBounds(ArrayRef<OpFoldResult> bounds) {
+  if (bounds.size() != 1)
+    return failure();
+  if (auto val = dyn_cast<Value>(bounds[0])) {
+    setUpperBound(val);
+    return success();
+  }
+  return failure();
+}
+
+LogicalResult ForOp::setLoopSteps(ArrayRef<OpFoldResult> steps) {
+  if (steps.size() != 1)
+    return failure();
+  if (auto val = dyn_cast<Value>(steps[0])) {
+    setStep(val);
+    return success();
+  }
+  return failure();
 }
 
 std::optional<ResultRange> ForOp::getLoopResults() { return getResults(); }
@@ -670,7 +704,7 @@ void ForOp::getSuccessorRegions(RegionBranchPoint point,
   // back into the operation itself. It is possible for loop not to enter the
   // body.
   regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
-  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+  regions.push_back(RegionSuccessor::parent(getResults()));
 }
 
 SmallVector<Region *> ForallOp::getLoopRegions() { return {&getRegion()}; }
@@ -1782,21 +1816,26 @@ void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ForallOpReplaceConstantInductionVar>(context);
 }
 
-/// Given the region at `index`, or the parent operation if `index` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
 void ForallOp::getSuccessorRegions(RegionBranchPoint point,
                                    SmallVectorImpl<RegionSuccessor> &regions) {
-  // In accordance with the semantics of forall, its body is executed in
-  // parallel by multiple threads. We should not expect to branch back into
-  // the forall body after the region's execution is complete.
-  if (point.isParent())
-    regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
-  else
-    regions.push_back(
-        RegionSuccessor(getOperation(), getOperation()->getResults()));
+  // There are two region branch points:
+  // 1. "parent": entering the forall op for the first time.
+  // 2. scf.in_parallel terminator
+  if (point.isParent()) {
+    // When first entering the forall op, the control flow typically branches
+    // into the forall body. (In parallel for multiple threads.)
+    regions.push_back(RegionSuccessor(&getRegion()));
+    // However, when there are 0 threads, the control flow may branch back to
+    // the parent immediately.
+    regions.push_back(RegionSuccessor::parent(
+        ResultRange{getResults().end(), getResults().end()}));
+  } else {
+    // In accordance with the semantics of forall, its body is executed in
+    // parallel by multiple threads. We should not expect to branch back into
+    // the forall body after the region's execution is complete.
+    regions.push_back(RegionSuccessor::parent(
+        ResultRange{getResults().end(), getResults().end()}));
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -2077,7 +2116,7 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
   // The `then` and the `else` region branch back to the parent operation or one
   // of the recursive parent operations (early exit case).
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor(getOperation(), getResults()));
+    regions.push_back(RegionSuccessor::parent(getResults()));
     return;
   }
 
@@ -2086,8 +2125,7 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
   // Don't consider the else region if it is empty.
   Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    regions.push_back(
-        RegionSuccessor(getOperation(), getOperation()->getResults()));
+    regions.push_back(RegionSuccessor::parent(getResults()));
   else
     regions.push_back(RegionSuccessor(elseRegion));
 }
@@ -2104,7 +2142,7 @@ void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
     if (!getElseRegion().empty())
       regions.emplace_back(&getElseRegion());
     else
-      regions.emplace_back(getOperation(), getResults());
+      regions.emplace_back(RegionSuccessor::parent(getResults()));
   }
 }
 
@@ -3119,8 +3157,8 @@ void ParallelOp::getSuccessorRegions(
   // back into the operation itself. It is possible for loop not to enter the
   // body.
   regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor(
-      getOperation(), ResultRange{getResults().end(), getResults().end()}));
+  regions.push_back(RegionSuccessor::parent(
+      ResultRange{getResults().end(), getResults().end()}));
 }
 
 //===----------------------------------------------------------------------===//
@@ -3279,7 +3317,7 @@ void WhileOp::getSuccessorRegions(RegionBranchPoint point,
     return;
   }
 
-  regions.emplace_back(getOperation(), getResults());
+  regions.push_back(RegionSuccessor::parent(getResults()));
   regions.emplace_back(&getAfter(), getAfter().getArguments());
 }
 
@@ -3810,7 +3848,7 @@ void IndexSwitchOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &successors) {
   // All regions branch back to the parent op.
   if (!point.isParent()) {
-    successors.emplace_back(getOperation(), getResults());
+    successors.push_back(RegionSuccessor::parent(getResults()));
     return;
   }
 
