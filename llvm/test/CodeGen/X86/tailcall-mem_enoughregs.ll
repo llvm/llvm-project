@@ -59,6 +59,16 @@ entry:
 ; WIN64: jmpq *globl(%rip)
 }
 
+; CHECK-LABEL: test2_stack:
+define i32 @test2_stack(ptr %func, ptr %b) {
+entry:
+  %call = tail call i32 %func(i32 inreg 1, i32 inreg 2)
+  ret i32 %call
+
+; and if the load is from the stack (on 32-bit, %func is passed on the stack):
+; LIN32: jmpl *4(%esp)
+}
+
 define i32 @test6(ptr %a, ptr %b) {
 entry:
   %func = load ptr, ptr %a

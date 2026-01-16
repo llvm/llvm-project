@@ -3538,7 +3538,6 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
     // but it could apply to 64-bit too.
     const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
     if (isa<FrameIndexSDNode>(BasePtr)) {
-      // FIXME: This isn't covered by any tests. Is it necessary?
       LoadGPRs -= 1; // Base is ESP, no reg needed.
     } else if (BasePtr->getNumOperands() &&
                isa<GlobalAddressSDNode>(BasePtr->getOperand(0))) {
