@@ -428,7 +428,7 @@ getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
 
 static ValueRange getSingleRegionSuccessorInputs(Operation *op,
                                                  RegionSuccessor successor) {
-  return successor.isParent() ? op->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(op->getResults()) : ValueRange();
 }
 
 void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
