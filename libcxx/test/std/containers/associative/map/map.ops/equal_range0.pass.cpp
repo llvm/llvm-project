@@ -12,8 +12,8 @@
 
 // class map
 
-// constexpr pair<iterator,iterator>             equal_range(const key_type& k); // constexpr since C++26
-// constexpr pair<const_iterator,const_iterator> equal_range(const key_type& k) const; // constexpr since C++26
+// pair<iterator,iterator>             equal_range(const key_type& k); // constexpr since C++26
+// pair<const_iterator,const_iterator> equal_range(const key_type& k) const; // constexpr since C++26
 //
 //   The member function templates find, count, lower_bound, upper_bound, and
 // equal_range shall not participate in overload resolution unless the

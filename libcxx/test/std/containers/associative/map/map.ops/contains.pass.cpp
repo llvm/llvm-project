@@ -13,7 +13,7 @@
 
 // <map>
 
-// constexpr bool contains(const key_type& x) const; // constexpr since C++26
+// bool contains(const key_type& x) const; // constexpr since C++26
 
 #include "test_macros.h"
 

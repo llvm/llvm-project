@@ -8,7 +8,7 @@
 
 // <map>
 
-// constexpr map()
+// map()
 //    noexcept(
 //        is_nothrow_default_constructible<allocator_type>::value &&
 //        is_nothrow_default_constructible<key_compare>::value &&

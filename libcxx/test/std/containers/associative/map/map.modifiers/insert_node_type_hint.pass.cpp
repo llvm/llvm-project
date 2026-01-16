@@ -12,7 +12,7 @@
 
 // class map
 
-// constexpr iterator insert(const_iterator hint, node_type&&);
+// iterator insert(const_iterator hint, node_type&&);
 
 #include <map>
 #include "test_macros.h"

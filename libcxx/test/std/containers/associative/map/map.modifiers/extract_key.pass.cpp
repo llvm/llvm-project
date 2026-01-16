@@ -12,7 +12,7 @@
 
 // class map
 
-// constexpr node_type extract(key_type const&); // constexpr since C++26
+// node_type extract(key_type const&); // constexpr since C++26
 
 #include <map>
 #include "test_macros.h"

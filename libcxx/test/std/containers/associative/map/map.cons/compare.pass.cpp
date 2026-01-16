@@ -10,7 +10,7 @@
 
 // class map
 
-// constexpr explicit map(const key_compare& comp); // constexpr since C++26
+// explicit map(const key_compare& comp); // constexpr since C++26
 
 #include <map>
 #include <cassert>

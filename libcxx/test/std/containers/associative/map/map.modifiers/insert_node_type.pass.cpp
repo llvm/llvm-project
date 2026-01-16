@@ -12,7 +12,7 @@
 
 // class map
 
-// constexpr insert_return_type insert(node_type&&); // constexpr since C++26
+// insert_return_type insert(node_type&&); // constexpr since C++26
 
 #include <map>
 #include <memory>
