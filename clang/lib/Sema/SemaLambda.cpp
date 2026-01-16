@@ -2165,7 +2165,10 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
   // set as CurContext seems more faithful to the source.
   TemplateOrNonTemplateCallOperatorDecl->setLexicalDeclContext(Class);
 
-  PopExpressionEvaluationContext();
+  {
+    ContextRAII SaveContext(*this, CallOperator, /*NewThisContext=*/false);
+    PopExpressionEvaluationContext();
+  }
 
   sema::AnalysisBasedWarnings::Policy WP =
       AnalysisWarnings.getPolicyInEffectAt(EndLoc);
