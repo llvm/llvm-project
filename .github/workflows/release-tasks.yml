@@ -112,6 +112,7 @@ jobs:
       contents: write # For updating the release message.
     if: '!cancelled()'
     needs:
+      - validate-tag
       - release-binaries
 
     steps:

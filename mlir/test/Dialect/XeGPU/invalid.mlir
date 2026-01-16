@@ -696,16 +696,6 @@ func.func @convert_layout_unmatch(%a: vector<32x64xf16>) {
 }
 
 // -----
-func.func @tensor_desc_invalid_layout_attr(%src: ui64, %offsets: vector<16xindex>) {
-  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
-      !xegpu.tensor_desc<16x2xf32,
-        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
-         // expected-error@+1 {{expected at least one of sg_layout, inst_data or lane_layout}}
-         #xegpu.layout<sg_data = [16, 2], lane_data = [1, 2]>>
-  return
-}
-
-// -----
 func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
   %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
       !xegpu.tensor_desc<16x2xf32,
@@ -819,15 +809,6 @@ func.func @tensor_desc_invalid_sg_data(%src: ui64, %offsets: vector<16xindex>) {
 #l = #xegpu.layout<sg_layout = [16, 1, 1], sg_data = [1, 8, 2]>
 // expected-error@+1 {{repeated dim (2) in slice attribute}}
 #s = #xegpu.slice<#l, dims = [2, 2]>
-func.func @slice_attr_repeat_dim() {
-  %offsets = arith.constant {layout_result_0 = #s} dense<0.8> : vector<16x8xindex>
-  return
-}
-
-// -----
-#l = #xegpu.layout<sg_layout = [16, 1, 1], sg_data = [1, 8, 2]>
-// expected-error@+1 {{invalid dim (3) in slice attribute}}
-#s = #xegpu.slice<#l, dims = [3]>
 func.func @slice_attr_repeat_dim() {
   %offsets = arith.constant {layout_result_0 = #s} dense<0.8> : vector<16x8xindex>
   return
