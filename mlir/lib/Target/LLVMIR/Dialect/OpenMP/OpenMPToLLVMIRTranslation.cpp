@@ -380,6 +380,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.hasNumTeamsMultiDim())
       result = todo("num_teams with multi-dimensional values");
   };
+  auto checkThreadLimitMultiDim = [&todo](auto op, LogicalResult &result) {
+    if (op.hasThreadLimitMultiDim())
+      result = todo("thread_limit with multi-dimensional values");
+  };
 
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
@@ -404,7 +408,8 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TeamsOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
-        checkNumTeams(op, result);
+        checkNumTeamsMultiDim(op, result);
+        checkThreadLimitMultiDim(op, result);
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
@@ -442,6 +447,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkBare(op, result);
         checkInReduction(op, result);
+        checkThreadLimitMultiDim(op, result);
       })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are
@@ -2075,8 +2081,8 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
     numTeamsUpper = moduleTranslation.lookupValue(numTeamsUpperVar);
 
   llvm::Value *threadLimit = nullptr;
-  if (Value threadLimitVar = op.getThreadLimitDimensionValue(0))
-    threadLimit = moduleTranslation.lookupValue(threadLimitVar);
+  if (!op.getThreadLimitVals().empty())
+    threadLimit = moduleTranslation.lookupValue(op.getThreadLimitVal(0));
 
   llvm::Value *ifExpr = nullptr;
   if (Value ifVar = op.getIfExpr())
@@ -6045,7 +6051,8 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
               numTeamsLower = hostEvalVar;
             else if (teamsOp.getNumTeamsUpper() == blockArg)
               numTeamsUpper = hostEvalVar;
-            else if (teamsOp.getThreadLimitDimensionValue(0) == blockArg)
+            else if (!teamsOp.getThreadLimitVals().empty() &&
+                     teamsOp.getThreadLimitVal(0) == blockArg)
               threadLimit = hostEvalVar;
             else
               llvm_unreachable("unsupported host_eval use");
@@ -6165,7 +6172,8 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     if (auto teamsOp = castOrGetParentOfType<omp::TeamsOp>(capturedOp)) {
       numTeamsLower = teamsOp.getNumTeamsLower();
       numTeamsUpper = teamsOp.getNumTeamsUpper();
-      threadLimit = teamsOp.getThreadLimitDimensionValue(0);
+      if (!teamsOp.getThreadLimitVals().empty())
+        threadLimit = teamsOp.getThreadLimitVal(0);
     }
 
     if (auto parallelOp = castOrGetParentOfType<omp::ParallelOp>(capturedOp))
@@ -6210,8 +6218,8 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
 
   // Extract 'thread_limit' clause from 'target' and 'teams' directives.
   int32_t targetThreadLimitVal = -1, teamsThreadLimitVal = -1;
-  setMaxValueFromClause(targetOp.getThreadLimitDimensionValue(0),
-                        targetThreadLimitVal);
+  if (!targetOp.getThreadLimitVals().empty())
+    setMaxValueFromClause(targetOp.getThreadLimitVal(0), targetThreadLimitVal);
   setMaxValueFromClause(threadLimit, teamsThreadLimitVal);
 
   // Extract 'max_threads' clause from 'parallel' or set to 1 if it's SIMD.
@@ -6290,9 +6298,11 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
                          teamsThreadLimit, &lowerBounds, &upperBounds, &steps);
 
   // TODO: Handle constant 'if' clauses.
-  if (Value targetThreadLimit = targetOp.getThreadLimitDimensionValue(0))
+  if (!targetOp.getThreadLimitVals().empty()) {
+    Value targetThreadLimit = targetOp.getThreadLimitVal(0);
     attrs.TargetThreadLimit.front() =
         moduleTranslation.lookupValue(targetThreadLimit);
+  }
 
   if (numTeamsLower)
     attrs.MinTeams = moduleTranslation.lookupValue(numTeamsLower);

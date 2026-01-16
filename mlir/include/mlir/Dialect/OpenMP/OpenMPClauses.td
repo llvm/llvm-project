@@ -1452,52 +1452,48 @@ class OpenMP_ThreadLimitClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$thread_limit_num_dims,
-    Variadic<IntLikeType>:$thread_limit_dims_values
+    Variadic<IntLikeType>:$thread_limit_vals
   );
 
   let optAssemblyFormat = [{
     `thread_limit` `(` custom<ThreadLimitClause>(
-      $thread_limit_num_dims, $thread_limit_dims_values, type($thread_limit_dims_values)
+      $thread_limit_vals, type($thread_limit_vals)
     ) `)`
   }];
 
   let description = [{
     The `thread_limit` clause specifies the limit on the number of threads.
 
-    With dims modifier:
-    - The number of dimensions is specified by the `thread_limit_num_dims`.
-    - The values for each dimension are specified by the `thread_limit_dims_values`.
-    - Format: `thread_limit(dims(N): values : type)`
-    - Example: `thread_limit(dims(2): %n, %m : i64)`
+    Multi-dimensional format (dims modifier):
+    - Multiple values can be specified for multi-dimensional thread limits.
+    - The number of dimensions is derived from the number of values.
+    - Values can have different integer types.
+    - Format: `thread_limit(%v1, %v2, ... : type1, type2, ...)`
+    - Example: `thread_limit(%n, %m : i32, i64)`
 
-    Without dims modifier:
-    - The number of threads is specified by the single value in `thread_limit_dims_values`.
-    - Format: `thread_limit(value : type)`
-    - Example: `thread_limit(%n : i64)`
+    Single value format:
+    - A single value specifies the thread limit.
+    - Format: `thread_limit(%value : type)`
+    - Example: `thread_limit(%n : i32)`
   }];
 
   let extraClassDeclaration = [{
-    /// Returns true if the dims modifier is explicitly present
-    bool hasThreadLimitDimsModifier() {
-      return getThreadLimitNumDims().has_value() && getThreadLimitNumDims().value();
+    /// Returns true if using multi-dimensional values (more than one value)
+    bool hasThreadLimitMultiDim() {
+      return getThreadLimitVals().size() > 1;
     }
 
-    /// Returns the number of dimensions specified by dims modifier
+    /// Returns the number of dimensions specified for thread_limit
     unsigned getThreadLimitDimsCount() {
-      if (!hasThreadLimitDimsModifier())
-        return 1;
-      return static_cast<unsigned>(*getThreadLimitNumDims());
+      return getThreadLimitVals().size();
     }
 
     /// Returns the value for a specific dimension index
-    /// Index must be less than getThreadLimitDimsCount()
-    ::mlir::Value getThreadLimitDimensionValue(unsigned index) {
-      assert(index < getThreadLimitDimsCount() &&
-             "Thread limit dims index out of bounds");
-      if (getThreadLimitDimsValues().empty())
-        return nullptr;
-      return getThreadLimitDimsValues()[index];
+    /// Index must be less than getThreadLimitVals().size()
+    ::mlir::Value getThreadLimitVal(unsigned index) {
+      assert(index < getThreadLimitVals().size() &&
+             "Thread limit index out of bounds");
+      return getThreadLimitVals()[index];
     }
   }];
 }

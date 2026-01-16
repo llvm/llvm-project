@@ -21,7 +21,7 @@ subroutine teams_numteams(num_teams)
   integer, intent(inout) :: num_teams
 
   ! CHECK: omp.teams
-  ! CHECK-SAME: num_teams( to %{{.*}}: i32)
+  ! CHECK-SAME: num_teams(to %{{.*}}: i32)
   !$omp teams num_teams(4)
   ! CHECK: fir.call
   call f1()

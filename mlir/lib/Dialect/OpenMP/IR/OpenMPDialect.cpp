@@ -2210,20 +2210,8 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                   /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars,
                   clauses.mapVars, clauses.nowait, clauses.privateVars,
                   makeArrayAttr(ctx, clauses.privateSyms),
-                  clauses.privateNeedsBarrier, clauses.threadLimitNumDims,
-                  clauses.threadLimitDimsValues,
+                  clauses.privateNeedsBarrier, clauses.threadLimitVals,
                   /*private_maps=*/nullptr);
-}
-
-// helper for thread_limit clause restrictions
-static LogicalResult
-verifyThreadLimitClause(Operation *op,
-                        std::optional<IntegerAttr> threadLimitNumDims,
-                        OperandRange threadLimitDimsValues) {
-  if (failed(verifyDimsModifier(op, threadLimitNumDims, threadLimitDimsValues)))
-    return failure();
-
-  return success();
 }
 
 LogicalResult TargetOp::verify() {
@@ -2235,10 +2223,6 @@ LogicalResult TargetOp::verify() {
     return failure();
 
   if (failed(verifyMapClause(*this, getMapVars())))
-    return failure();
-
-  if (failed(verifyThreadLimitClause(*this, getThreadLimitNumDimsAttr(),
-                                     getThreadLimitDimsValues())))
     return failure();
 
   return verifyPrivateVarsMapping(*this);
@@ -2258,7 +2242,7 @@ LogicalResult TargetOp::verifyRegions() {
       if (auto teamsOp = dyn_cast<TeamsOp>(user)) {
         if (teamsOp.getNumTeamsLower() == hostEvalArg ||
             teamsOp.getNumTeamsUpper() == hostEvalArg ||
-            llvm::is_contained(teamsOp.getThreadLimitDimsValues(), hostEvalArg))
+            llvm::is_contained(teamsOp.getThreadLimitVals(), hostEvalArg))
           continue;
 
         return emitOpError() << "host_eval argument only legal as 'num_teams' "
@@ -2652,7 +2636,7 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
                  clauses.reductionVars,
                  makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                  makeArrayAttr(ctx, clauses.reductionSyms),
-                 clauses.threadLimit);
+                 clauses.threadLimitVals);
 }
 
 // Verify num_teams clause
@@ -2706,11 +2690,6 @@ LogicalResult TeamsOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
-
-  // Check for thread_limit clause restrictions
-  if (failed(verifyThreadLimitClause(*this, getThreadLimitNumDimsAttr(),
-                                     getThreadLimitDimsValues())))
-    return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());
@@ -4636,7 +4615,7 @@ static void printNumTeamsClause(OpAsmPrinter &p, Operation *op,
       p << " : " << upperBoundType;
     } else {
       // Upper only: to upper : type
-      p << "to ";
+      p << " to ";
       p.printOperand(upperBound);
       p << " : " << upperBoundType;
     }
@@ -4647,31 +4626,24 @@ static void printNumTeamsClause(OpAsmPrinter &p, Operation *op,
 // Parser and printer for thread_limit clause
 //===----------------------------------------------------------------------===//
 static ParseResult
-parseThreadLimitClause(OpAsmParser &parser, IntegerAttr &dimsAttr,
+parseThreadLimitClause(OpAsmParser &parser,
                        SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
                        SmallVectorImpl<Type> &types) {
-  // Try parsing with dims modifier: dims(N): values : type
-  if (succeeded(parseDimsModifierWithValues(parser, dimsAttr, values, types))) {
-    return success();
-  }
-
-  // Without dims modifier: value : type
-  OpAsmParser::UnresolvedOperand singleValue;
-  Type singleType;
-  if (parser.parseOperand(singleValue) || parser.parseColon() ||
-      parser.parseType(singleType)) {
+  // Parse comma-separated list of values with their types
+  // Format: %v1, %v2, ... : type1, type2, ...
+  if (parser.parseOperandList(values) || parser.parseColon() ||
+      parser.parseTypeList(types)) {
     return failure();
   }
-  values.push_back(singleValue);
-  types.push_back(singleType);
   return success();
 }
 
 static void printThreadLimitClause(OpAsmPrinter &p, Operation *op,
-                                   IntegerAttr dimsAttr, OperandRange values,
-                                   TypeRange types) {
-  // Multidimensional: dims(N): values : type
-  printDimsModifierWithValues(p, dimsAttr, values, types);
+                                   OperandRange values, TypeRange types) {
+  // Print values with their types
+  llvm::interleaveComma(values, p, [&](Value v) { p << v; });
+  p << " : ";
+  llvm::interleaveComma(types, p, [&](Type t) { p << t; });
 }
 
 #define GET_ATTRDEF_CLASSES

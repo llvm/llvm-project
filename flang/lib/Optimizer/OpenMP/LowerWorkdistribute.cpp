@@ -766,8 +766,7 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
       targetOp.getInReductionSymsAttr(), targetOp.getIsDevicePtrVars(),
       innerMapInfos, targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
       targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
-      targetOp.getThreadLimitNumDimsAttr(), targetOp.getThreadLimitDimsValues(),
-      targetOp.getPrivateMapsAttr());
+      targetOp.getThreadLimitVals(), targetOp.getPrivateMapsAttr());
   rewriter.inlineRegionBefore(targetOp.getRegion(), newTargetOp.getRegion(),
                               newTargetOp.getRegion().begin());
   rewriter.replaceOp(targetOp, targetDataOp);
@@ -1486,8 +1485,7 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
       targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
       targetOp.getIsDevicePtrVars(), preMapOperands, targetOp.getNowaitAttr(),
       targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
-      targetOp.getPrivateNeedsBarrierAttr(),
-      targetOp.getThreadLimitNumDimsAttr(), targetOp.getThreadLimitDimsValues(),
+      targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVals(),
       targetOp.getPrivateMapsAttr());
   auto *preTargetBlock = rewriter.createBlock(
       &preTargetOp.getRegion(), preTargetOp.getRegion().begin(), {}, {});
@@ -1577,8 +1575,7 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
       targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
       targetOp.getIsDevicePtrVars(), postMapOperands, targetOp.getNowaitAttr(),
       targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
-      targetOp.getPrivateNeedsBarrierAttr(),
-      targetOp.getThreadLimitNumDimsAttr(), targetOp.getThreadLimitDimsValues(),
+      targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVals(),
       targetOp.getPrivateMapsAttr());
   auto *isolatedTargetBlock =
       rewriter.createBlock(&isolatedTargetOp.getRegion(),
@@ -1658,8 +1655,7 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
       targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
       targetOp.getIsDevicePtrVars(), postMapOperands, targetOp.getNowaitAttr(),
       targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
-      targetOp.getPrivateNeedsBarrierAttr(),
-      targetOp.getThreadLimitNumDimsAttr(), targetOp.getThreadLimitDimsValues(),
+      targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVals(),
       targetOp.getPrivateMapsAttr());
   // Create the block for postTargetOp
   auto *postTargetBlock = rewriter.createBlock(
