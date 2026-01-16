@@ -9,10 +9,10 @@
 ;;   *out = get_sub_group_gt_mask();
 ;; }
 
-define dso_local spir_kernel void @test_mask(<4 x i32> addrspace(1)* nocapture noundef writeonly %out) local_unnamed_addr {
+define dso_local spir_kernel void @test_mask(ptr addrspace(1) nocapture noundef writeonly %out) local_unnamed_addr {
 entry:
   %call = tail call spir_func <4 x i32> @_Z21get_sub_group_gt_maskv()
-  store <4 x i32> %call, <4 x i32> addrspace(1)* %out, align 16
+  store <4 x i32> %call, ptr addrspace(1) %out, align 16
   ret void
 }
 

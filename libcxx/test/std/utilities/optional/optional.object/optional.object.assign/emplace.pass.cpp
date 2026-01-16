@@ -231,6 +231,7 @@ constexpr bool test_ref() {
     auto& v = opt.emplace(t);
     static_assert(std::is_same_v<T&, decltype(v)>);
     assert(static_cast<bool>(opt) == true);
+    ASSERT_NOEXCEPT(opt.emplace(t));
     assert(*opt == t);
     assert(&v == &*opt);
     assert(&t == &*opt);

@@ -1,0 +1,16 @@
+# RUN: llc -run-pass none -o - %s 2>&1 | FileCheck %s
+
+# Test ehscope-entry machine basic block parameters
+
+---
+name:            test
+body: |
+  ; CHECK: bb.0 (ehscope-entry):
+  bb.0 (ehscope-entry):
+...
+---
+name:            withalign
+body: |
+  ; CHECK: bb.0 (ehscope-entry, align 8):
+  bb.0 (align 8, ehscope-entry):
+...

@@ -2,7 +2,7 @@ FROM docker.io/library/ubuntu:24.04 AS base
 ENV LLVM_SYSROOT=/opt/llvm
 
 FROM base AS stage1-toolchain
-ENV LLVM_VERSION=21.1.3
+ENV LLVM_VERSION=21.1.8
 
 RUN apt-get update && \
     apt-get install -y \
@@ -99,7 +99,7 @@ WORKDIR /home/gha
 
 FROM ci-container AS ci-container-agent
 
-ENV GITHUB_RUNNER_VERSION=2.330.0
+ENV GITHUB_RUNNER_VERSION=2.331.0
 
 RUN mkdir actions-runner && \
     cd actions-runner && \

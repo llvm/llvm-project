@@ -237,7 +237,7 @@ define i8 @phis_of_switch_multiple_stage1(i8 noundef %arg) {
 ; CHECK:       case345:
 ; CHECK-NEXT:    br label [[CASE0123456]]
 ; CHECK:       case0123456:
-; CHECK-NEXT:    [[PHI1234567:%.*]] = phi i8 [ 7, [[START:%.*]] ], [ 2, [[CASE1]] ], [ 1, [[CASE0]] ], [ 3, [[CASE012]] ], [ 5, [[CASE4]] ], [ 4, [[CASE3]] ], [ 6, [[CASE345]] ]
+; CHECK-NEXT:    [[PHI1234567:%.*]] = phi i8 [ 7, [[START:%.*]] ], [ 3, [[CASE012]] ], [ 2, [[CASE1]] ], [ 1, [[CASE0]] ], [ 5, [[CASE4]] ], [ 4, [[CASE3]] ], [ 6, [[CASE345]] ]
 ; CHECK-NEXT:    ret i8 [[PHI1234567]]
 ;
 start:

@@ -1018,7 +1018,7 @@ Environment::createLocAndMaybeValue(QualType Ty,
                                     int Depth, int &CreatedValuesCount) {
   if (!Visited.insert(Ty.getCanonicalType()).second)
     return createStorageLocation(Ty.getNonReferenceType());
-  auto EraseVisited = llvm::make_scope_exit(
+  llvm::scope_exit EraseVisited(
       [&Visited, Ty] { Visited.erase(Ty.getCanonicalType()); });
 
   Ty = Ty.getNonReferenceType();
