@@ -465,9 +465,9 @@ private:
       auto &Last = Records.back();
 
       bool NextNeedsDWARF = CURecTraits::encodingSpecifiesDWARF(Next.Encoding);
-      bool CannotBeMerged = CURecTraits::encodingCannotBeMerged(Next.Encoding);
-      if (NextNeedsDWARF || (Next.Encoding != Last.Encoding) ||
-          CannotBeMerged || Next.LSDA || Last.LSDA)
+      bool CanBeMerged = CURecTraits::encodingCanBeMerged(Next.Encoding);
+      if (NextNeedsDWARF || (Next.Encoding != Last.Encoding) || !CanBeMerged ||
+          Next.LSDA || Last.LSDA)
         Records.push_back(Next);
     }
 
