@@ -2252,8 +2252,7 @@ LogicalResult TargetOp::verifyRegions() {
       if (auto parallelOp = dyn_cast<ParallelOp>(user)) {
         if (bitEnumContainsAny(execFlags, TargetRegionFlags::spmd) &&
             parallelOp->isAncestor(capturedOp) &&
-            llvm::is_contained(parallelOp.getNumThreadsDimsValues(),
-                               hostEvalArg))
+            llvm::is_contained(parallelOp.getNumThreadsVals(), hostEvalArg))
           continue;
 
         return emitOpError()
@@ -2505,8 +2504,7 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        ArrayRef<NamedAttribute> attributes) {
   ParallelOp::build(builder, state, /*allocate_vars=*/ValueRange(),
                     /*allocator_vars=*/ValueRange(), /*if_expr=*/nullptr,
-                    /*num_threads_dims=*/nullptr,
-                    /*num_threads_values=*/ValueRange(),
+                    /*num_threads_vals=*/ValueRange(),
                     /*private_vars=*/ValueRange(),
                     /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
                     /*proc_bind_kind=*/nullptr,
@@ -2519,8 +2517,7 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        const ParallelOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   ParallelOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                    clauses.ifExpr, clauses.numThreadsNumDims,
-                    clauses.numThreadsDimsValues, clauses.privateVars,
+                    clauses.ifExpr, clauses.numThreadsVals, clauses.privateVars,
                     makeArrayAttr(ctx, clauses.privateSyms),
                     clauses.privateNeedsBarrier, clauses.procBindKind,
                     clauses.reductionMod, clauses.reductionVars,
@@ -2571,23 +2568,7 @@ static LogicalResult verifyPrivateVarList(OpType &op) {
   return success();
 }
 
-// Helper: Verify num_threads clause
-LogicalResult
-verifyNumThreadsClause(Operation *op,
-                       std::optional<IntegerAttr> numThreadsNumDims,
-                       OperandRange numThreadsDimsValues) {
-  if (failed(verifyDimsModifier(op, numThreadsNumDims, numThreadsDimsValues)))
-    return failure();
-  return success();
-}
-
 LogicalResult ParallelOp::verify() {
-  // verify num_threads clause restrictions
-  if (failed(verifyNumThreadsClause(getOperation(),
-                                    this->getNumThreadsNumDimsAttr(),
-                                    this->getNumThreadsDimsValues())))
-    return failure();
-
   // verify allocate clause restrictions
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
@@ -4650,30 +4631,24 @@ static void printNumTeamsClause(OpAsmPrinter &p, Operation *op,
 // Parser and printer for num_threads clause
 //===----------------------------------------------------------------------===//
 static ParseResult
-parseNumThreadsClause(OpAsmParser &parser, IntegerAttr &dimsAttr,
+parseNumThreadsClause(OpAsmParser &parser,
                       SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
                       SmallVectorImpl<Type> &types) {
-  if (succeeded(parseDimsModifierWithValues(parser, dimsAttr, values, types))) {
-    return success();
-  }
-
-  // Without dims modifier: value : type
-  OpAsmParser::UnresolvedOperand singleValue;
-  Type singleType;
-  if (parser.parseOperand(singleValue) || parser.parseColon() ||
-      parser.parseType(singleType)) {
+  // Parse comma-separated list of values with their types
+  // Format: %v1, %v2, ... : type1, type2, ...
+  if (parser.parseOperandList(values) || parser.parseColon() ||
+      parser.parseTypeList(types)) {
     return failure();
   }
-  values.push_back(singleValue);
-  types.push_back(singleType);
   return success();
 }
 
 static void printNumThreadsClause(OpAsmPrinter &p, Operation *op,
-                                  IntegerAttr dimsAttr, OperandRange values,
-                                  TypeRange types) {
-  // Multidimensional: dims(N): values : type
-  printDimsModifierWithValues(p, dimsAttr, values, types);
+                                  OperandRange values, TypeRange types) {
+  // Print values with their types
+  llvm::interleaveComma(values, p, [&](Value v) { p << v; });
+  p << " : ";
+  llvm::interleaveComma(types, p, [&](Type t) { p << t; });
 }
 
 #define GET_ATTRDEF_CLASSES

@@ -30,37 +30,6 @@ func.func @num_threads_once(%n : si32) {
 
 // -----
 
-func.func @num_threads_dims_no_values() {
-  // expected-error@+1 {{dims modifier requires values to be specified}}
-  "omp.parallel"() ({
-    omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0>, num_threads_num_dims = 2 : i64} : () -> ()
-  return
-}
-
-// -----
-
-func.func @num_threads_dims_mismatch(%n : i64) {
-  // expected-error@+1 {{dims(2) specified but 1 values provided}}
-  omp.parallel num_threads(dims(2): %n : i64) {
-    omp.terminator
-  }
-
-  return
-}
-
-// -----
-
-func.func @num_threads_multiple_values_without_dims(%n : i64, %m: i64) {
-  // expected-error@+1 {{dims values can only be specified with dims modifier}}
-  "omp.parallel"(%n, %m) ({
-    omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,0,0,2,0,0>} : (i64, i64) -> ()
-  return
-}
-
-// -----
-
 func.func @nowait_not_allowed(%n : memref<i32>) {
   // expected-error@+1 {{expected '{' to begin a region}}
   omp.parallel nowait {}

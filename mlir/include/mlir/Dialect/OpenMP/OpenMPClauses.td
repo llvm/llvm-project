@@ -1069,53 +1069,48 @@ class OpenMP_NumThreadsClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$num_threads_num_dims,
-    Variadic<IntLikeType>:$num_threads_dims_values
+    Variadic<IntLikeType>:$num_threads_vals
   );
 
   let optAssemblyFormat = [{
     `num_threads` `(` custom<NumThreadsClause>(
-      $num_threads_num_dims, $num_threads_dims_values, type($num_threads_dims_values)
+      $num_threads_vals, type($num_threads_vals)
     ) `)`
   }];
 
   let description = [{
-    num_threads clause specifies the desired number of threads in the team
-    space formed by the construct on which it appears.
+    The `num_threads` clause specifies the number of threads.
 
-    With dims modifier:
-    - Uses `num_threads_num_dims` (dimension count) and `num_threads_dims_values` (upper bounds list)
-    - Specifies upper bounds for each dimension (all must have same type)
-    - Format: `num_threads(dims(N): upper_bound_0, ..., upper_bound_N-1 : type)`
-    - Example: `num_threads(dims(3): %ub0, %ub1, %ub2 : i32)`
+    Multi-dimensional format (dims modifier):
+    - Multiple values can be specified for multi-dimensional thread counts.
+    - The number of dimensions is derived from the number of values.
+    - Values can have different integer types.
+    - Format: `num_threads(%v1, %v2, ... : type1, type2, ...)`
+    - Example: `num_threads(%n, %m : i32, i64)`
 
-    Without dims modifier:
-    - The number of threads is specified by single value in `num_threads_dims_values`
-    - Format: `num_threads(value : type)`
+    Single value format:
+    - A single value specifies the number of threads.
+    - Format: `num_threads(%value : type)`
     - Example: `num_threads(%n : i32)`
   }];
 
   let extraClassDeclaration = [{
-    /// Returns true if the dims modifier is explicitly present
-    bool hasNumThreadsDimsModifier() {
-      return getNumThreadsNumDims().has_value() && getNumThreadsNumDims().value();
+    /// Returns true if using multi-dimensional values (more than one value)
+    bool hasNumThreadsMultiDim() {
+      return getNumThreadsVals().size() > 1;
     }
 
-    /// Returns the number of dimensions specified by dims modifier
+    /// Returns the number of dimensions specified for num_threads
     unsigned getNumThreadsDimsCount() {
-      if (!hasNumThreadsDimsModifier())
-        return 1;
-      return static_cast<unsigned>(*getNumThreadsNumDims());
+      return getNumThreadsVals().size();
     }
 
     /// Returns the value for a specific dimension index
-    /// Index must be less than getNumThreadsDimsCount()
-    ::mlir::Value getNumThreadsDimsValue(unsigned index) {
-      assert(index < getNumThreadsDimsCount() &&
-             "Num threads dims index out of bounds");
-      if(getNumThreadsDimsValues().empty())
-        return nullptr;
-      return getNumThreadsDimsValues()[index];
+    /// Index must be less than getNumThreadsVals().size()
+    ::mlir::Value getNumThreadsVal(unsigned index) {
+      assert(index < getNumThreadsVals().size() &&
+             "Num threads index out of bounds");
+      return getNumThreadsVals()[index];
     }
   }];
 }

@@ -516,7 +516,7 @@ bool ClauseProcessor::processNumThreads(
     mlir::omp::NumThreadsClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::NumThreads>()) {
     // OMPIRBuilder expects `NUM_THREADS` clause as a `Value`.
-    result.numThreadsDimsValues.push_back(
+    result.numThreadsVals.push_back(
         fir::getBase(converter.genExprValue(clause->v, stmtCtx)));
     return true;
   }

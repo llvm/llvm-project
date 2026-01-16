@@ -380,6 +380,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.hasNumTeamsMultiDim())
       result = todo("num_teams with multi-dimensional values");
   };
+  auto checkNumThreadsMultiDim = [&todo](auto op, LogicalResult &result) {
+    if (op.hasNumThreadsMultiDim())
+      result = todo("num_threads with multi-dimensional values");
+  };
 
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
@@ -431,6 +435,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::ParallelOp op) {
         checkAllocate(op, result);
         checkReduction(op, result);
+        checkNumThreadsMultiDim(op, result);
       })
       .Case([&](omp::SimdOp op) { checkReduction(op, result); })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
@@ -3268,11 +3273,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   if (auto ifVar = opInst.getIfExpr())
     ifCond = moduleTranslation.lookupValue(ifVar);
   llvm::Value *numThreads = nullptr;
-  // num_threads dims and values are not yet supported
-  assert(!opInst.hasNumThreadsDimsModifier() &&
-         "Lowering of num_threads with dims modifier is not yet implemented.");
-  if (auto numThreadsVar = opInst.getNumThreadsDimsValue(0))
-    numThreads = moduleTranslation.lookupValue(numThreadsVar);
+  if (!opInst.getNumThreadsVals().empty())
+    numThreads = moduleTranslation.lookupValue(opInst.getNumThreadsVal(0));
   auto pbKind = llvm::omp::OMP_PROC_BIND_default;
   if (auto bind = opInst.getProcBindKind())
     pbKind = getProcBindKind(*bind);
@@ -6053,11 +6055,8 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
               llvm_unreachable("unsupported host_eval use");
           })
           .Case([&](omp::ParallelOp parallelOp) {
-            // num_threads dims and values are not yet supported
-            assert(!parallelOp.hasNumThreadsDimsModifier() &&
-                   "Lowering of num_threads with dims modifier is not yet "
-                   "implemented.");
-            if (parallelOp.getNumThreadsDimsValue(0) == blockArg)
+            if (!parallelOp.getNumThreadsVals().empty() &&
+                parallelOp.getNumThreadsVal(0) == blockArg)
               numThreads = hostEvalVar;
             else
               llvm_unreachable("unsupported host_eval use");
@@ -6175,11 +6174,8 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     }
 
     if (auto parallelOp = castOrGetParentOfType<omp::ParallelOp>(capturedOp)) {
-      // num_threads dims and values are not yet supported
-      assert(
-          !parallelOp.hasNumThreadsDimsModifier() &&
-          "Lowering of num_threads with dims modifier is not yet implemented.");
-      numThreads = parallelOp.getNumThreadsDimsValue(0);
+      if (!parallelOp.getNumThreadsVals().empty())
+        numThreads = parallelOp.getNumThreadsVal(0);
     }
   }
 
