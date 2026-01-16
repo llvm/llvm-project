@@ -131,6 +131,16 @@ template <typename SPSSig> struct SPSWrapperFunction {
                             WrapperFunctionSPSSerializer<SPSSig>(),
                             std::forward<Handler>(H));
   }
+
+  /// Convenience override that takes ArgBytes as an
+  /// orc_rt_WrapperFunctionBuffer.
+  template <typename Handler>
+  static void handle(orc_rt_SessionRef S, uint64_t CallId,
+                     orc_rt_WrapperFunctionReturn Return,
+                     orc_rt_WrapperFunctionBuffer ArgBytes, Handler &&H) {
+    handle(S, CallId, Return, WrapperFunctionBuffer(ArgBytes),
+           std::forward<Handler>(H));
+  }
 };
 
 } // namespace orc_rt
