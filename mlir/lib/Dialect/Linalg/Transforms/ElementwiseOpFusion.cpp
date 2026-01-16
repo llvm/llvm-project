@@ -1810,9 +1810,8 @@ static LinalgOp createCollapsedOp(LinalgOp op,
                                   RewriterBase &rewriter) {
   if (GenericOp genericOp = dyn_cast<GenericOp>(op.getOperation())) {
     return cloneToCollapsedOp(rewriter, genericOp, collapsingInfo);
-  } else {
-    return cloneToCollapsedOp(rewriter, op, collapsingInfo);
   }
+  return cloneToCollapsedOp(rewriter, op, collapsingInfo);
 }
 
 /// Implementation of fusion with reshape operation by collapsing dimensions.
@@ -1901,11 +1900,9 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
           applyPermutationMap(indexingMap, ArrayRef(loopBound));
       Value result;
       if (isa<MemRefType>(collapsedOpResult.getType())) {
-        MemRefType expandShapeResultType = MemRefType::get(
-            originalResultType.getShape(), originalResultType.getElementType());
         result = memref::ExpandShapeOp::create(
-            rewriter, loc, expandShapeResultType, collapsedOpResult,
-            reassociation, resultShape);
+            rewriter, loc, originalResultType, collapsedOpResult, reassociation,
+            resultShape);
       } else {
         result = tensor::ExpandShapeOp::create(
             rewriter, loc, originalResultType, collapsedOpResult, reassociation,

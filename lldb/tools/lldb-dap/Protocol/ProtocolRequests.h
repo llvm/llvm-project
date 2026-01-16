@@ -31,6 +31,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace lldb_dap::protocol {
@@ -1183,6 +1184,127 @@ struct EvaluateResponseBody {
   uint64_t valueLocationReference = LLDB_DAP_INVALID_VALUE_LOC;
 };
 llvm::json::Value toJSON(const EvaluateResponseBody &);
+
+/// Arguments for `pause` request.
+struct PauseArguments {
+  /// Pause execution for this thread.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+};
+bool fromJSON(const llvm::json::Value &, PauseArguments &, llvm::json::Path);
+
+/// Response to `pause` request. This is just an acknowledgement, so no body
+/// field is required.
+using PauseResponse = VoidResponse;
+
+/// Arguments for `locations` request.
+struct LocationsArguments {
+  /// Location reference to resolve.
+  uint64_t locationReference = LLDB_DAP_INVALID_VALUE_LOC;
+};
+bool fromJSON(const llvm::json::Value &, LocationsArguments &,
+              llvm::json::Path);
+
+/// Response to 'locations' request.
+struct LocationsResponseBody {
+  /// The source containing the location; either `source.path` or
+  /// `source.sourceReference` must be specified.
+  Source source;
+
+  /// The line number of the location. The client capability `linesStartAt1`
+  /// determines whether it is 0- or 1-based.
+  uint32_t line = LLDB_INVALID_LINE_NUMBER;
+
+  /// Position of the location within the `line`. It is measured in UTF-16 code
+  /// units and the client capability `columnsStartAt1` determines whether it is
+  /// 0- or 1-based. If no column is given, the first position in the start line
+  /// is assumed.
+  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
+
+  /// End line of the location, present if the location refers to a range. The
+  /// client capability `linesStartAt1` determines whether it is 0- or 1-based.
+  uint32_t endLine = LLDB_INVALID_LINE_NUMBER;
+
+  /// End position of the location within `endLine`, present if the location
+  /// refers to a range. It is measured in UTF-16 code units and the client
+  /// capability `columnsStartAt1` determines whether it is 0- or 1-based.
+  uint32_t endColumn = LLDB_INVALID_COLUMN_NUMBER;
+};
+llvm::json::Value toJSON(const LocationsResponseBody &);
+
+/// Arguments for `compileUnits` request.
+struct CompileUnitsArguments {
+  /// The ID of the module.
+  std::string moduleId;
+};
+bool fromJSON(const llvm::json::Value &, CompileUnitsArguments &,
+              llvm::json::Path);
+
+/// Response to `compileUnits` request.
+struct CompileUnitsResponseBody {
+  /// Array of compile units.
+  std::vector<CompileUnit> compileUnits;
+};
+llvm::json::Value toJSON(const CompileUnitsResponseBody &);
+
+/// Arguments for `testGetTargetBreakpoints` request.
+using TestGetTargetBreakpointsArguments = EmptyArguments;
+
+/// Response to `testGetTargetBreakpoints` request.
+struct TestGetTargetBreakpointsResponseBody {
+  /// Array of all breakpoints that are currently set in the target.
+  std::vector<Breakpoint> breakpoints;
+};
+llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &);
+
+/// Arguments for `restart` request.
+struct RestartArguments {
+  /// The latest version of the `launch` or `attach` configuration.
+  std::variant<std::monostate, LaunchRequestArguments, AttachRequestArguments>
+      arguments = std::monostate{};
+};
+bool fromJSON(const llvm::json::Value &, RestartArguments &, llvm::json::Path);
+
+/// Response to `restart` request. This is just an acknowledgement, so no body
+/// field is required.
+using RestartResponse = VoidResponse;
+
+/// Arguments for `stackTrace` request.
+struct StackTraceArguments {
+  /// Retrieve the stacktrace for this thread.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// The index of the first frame to return; if omitted frames start at 0.
+  uint32_t startFrame = 0;
+
+  /// The maximum number of frames to return. If levels is not specified or 0,
+  /// all frames are returned.
+  uint32_t levels = 0;
+
+  /// Specifies details on how to format the returned `StackFrame.name`. The
+  /// debug adapter may format requested details in any way that would make
+  /// sense to a developer. The attribute is only honored by a debug adapter if
+  /// the corresponding capability `supportsValueFormattingOptions` is true.
+  std::optional<StackFrameFormat> format;
+};
+bool fromJSON(const llvm::json::Value &, StackTraceArguments &,
+              llvm::json::Path);
+
+/// Response to `stackTrace` request.
+struct StackTraceResponseBody {
+  /// The frames of the stack frame. If the array has length zero, there are no
+  /// stack frames available.
+  /// This means that there is no location information available.
+  std::vector<StackFrame> stackFrames;
+
+  /// The total number of frames available in the stack. If omitted or if
+  /// `totalFrames` is larger than the available frames, a client is expected to
+  /// request frames until a request returns less frames than requested (which
+  /// indicates the end of the stack). Returning monotonically increasing
+  /// `totalFrames` values for subsequent requests can be used to enforce paging
+  /// in the client.
+  uint32_t totalFrames = 0;
+};
+llvm::json::Value toJSON(const StackTraceResponseBody &);
 
 } // namespace lldb_dap::protocol
 

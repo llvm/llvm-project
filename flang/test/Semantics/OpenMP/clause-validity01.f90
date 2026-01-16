@@ -426,7 +426,7 @@ use omp_lib
      enddo
   enddo
   !omp end do nowait
-  !$omp end parallel 
+  !$omp end parallel
 
 ! 2.11.4 parallel-do-simd-clause -> parallel-clause |
 !                                   do-simd-clause
@@ -591,7 +591,7 @@ use omp_lib
      allc = 3.14
   enddo
 
-  !$omp target enter data map(alloc:A) device(0) 
-  !$omp target exit data map(delete:A) device(0) 
+  !$omp target enter data map(alloc:A) device(0)
+  !$omp target exit data map(delete:A) device(0)
 
 end program

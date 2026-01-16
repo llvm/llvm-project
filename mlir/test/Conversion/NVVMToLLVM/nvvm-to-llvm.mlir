@@ -678,21 +678,6 @@ llvm.func @inline_ptx_multi_rw_r(%a : i32, %b : i32,  %rw_c : f32, %rw_d : f32) 
    llvm.return %r5 : f32
 }
 
-
-// -----
-
-// CHECK-LABEL: @nvvm_pmevent
-llvm.func @nvvm_pmevent() {
-  // CHECK: %[[S0:.+]] = llvm.mlir.constant(10 : i32) : i32
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "pmevent $0;", "n" %[[S0]] : (i32) -> ()
-  
-  nvvm.pmevent id = 10
-  // CHECK: %[[S1:.+]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "pmevent $0;", "n" %[[S1]] : (i32) -> ()
-  nvvm.pmevent id = 4
-  llvm.return
-}
-
 // -----
 
 llvm.func @inline_ptx_pack_4i8(%src : vector<4xi8>,  %mask : i32, %zero: i32)  {

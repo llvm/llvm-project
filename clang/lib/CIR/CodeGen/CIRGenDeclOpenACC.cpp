@@ -306,13 +306,15 @@ class OpenACCRoutineClauseEmitter final
   CIRGenModule &cgm;
   CIRGen::CIRGenBuilderTy &builder;
   mlir::acc::RoutineOp routineOp;
+  const clang::FunctionDecl *funcDecl;
   llvm::SmallVector<mlir::acc::DeviceType> lastDeviceTypeValues;
 
 public:
   OpenACCRoutineClauseEmitter(CIRGenModule &cgm,
                               CIRGen::CIRGenBuilderTy &builder,
-                              mlir::acc::RoutineOp routineOp)
-      : cgm(cgm), builder(builder), routineOp(routineOp) {}
+                              mlir::acc::RoutineOp routineOp,
+                              const clang::FunctionDecl *funcDecl)
+      : cgm(cgm), builder(builder), routineOp(routineOp), funcDecl(funcDecl) {}
 
   void emitClauses(ArrayRef<const OpenACCClause *> clauses) {
     this->VisitClauseList(clauses);
@@ -362,6 +364,24 @@ public:
     for (const DeviceTypeArgument &arg : clause.getArchitectures())
       lastDeviceTypeValues.push_back(decodeDeviceType(arg.getIdentifierInfo()));
   }
+
+  void VisitBindClause(const OpenACCBindClause &clause) {
+    if (clause.isStringArgument()) {
+      mlir::StringAttr value =
+          builder.getStringAttr(clause.getStringArgument()->getString());
+
+      routineOp.addBindStrName(builder.getContext(), lastDeviceTypeValues,
+                               value);
+    } else {
+      assert(clause.isIdentifierArgument());
+      std::string bindName = cgm.getOpenACCBindMangledName(
+          clause.getIdentifierArgument(), funcDecl);
+
+      routineOp.addBindIDName(
+          builder.getContext(), lastDeviceTypeValues,
+          mlir::SymbolRefAttr::get(builder.getContext(), bindName));
+    }
+  }
 };
 } // namespace
 
@@ -402,6 +422,6 @@ void CIRGenModule::emitOpenACCRoutineDecl(
       mlir::acc::getRoutineInfoAttrName(),
       mlir::acc::RoutineInfoAttr::get(func.getContext(), funcRoutines));
 
-  OpenACCRoutineClauseEmitter emitter{*this, builder, routineOp};
+  OpenACCRoutineClauseEmitter emitter{*this, builder, routineOp, funcDecl};
   emitter.emitClauses(clauses);
 }

@@ -29,7 +29,6 @@
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <array>
-#include <functional>
 #include <map>
 #include <numeric>
 #include <vector>
@@ -237,15 +236,6 @@ raw_ostream &operator<<(raw_ostream &OS, const TypeSetByHwMode &T);
 
 struct TypeInfer {
   TypeInfer(TreePattern &T) : TP(T) {}
-
-  bool isConcrete(const TypeSetByHwMode &VTS, bool AllowEmpty) const {
-    return VTS.isValueTypeByHwMode(AllowEmpty);
-  }
-  ValueTypeByHwMode getConcrete(const TypeSetByHwMode &VTS,
-                                bool AllowEmpty) const {
-    assert(VTS.isValueTypeByHwMode(AllowEmpty));
-    return VTS.getValueTypeByHwMode();
-  }
 
   /// The protocol in the following functions (Merge*, force*, Enforce*,
   /// expand*) is to return "true" if a change has been made, "false"
@@ -682,9 +672,6 @@ public:
 
   // Type accessors.
   unsigned getNumTypes() const { return Types.size(); }
-  ValueTypeByHwMode getType(unsigned ResNo) const {
-    return Types[ResNo].getValueTypeByHwMode();
-  }
   const std::vector<TypeSetByHwMode> &getExtTypes() const { return Types; }
   const TypeSetByHwMode &getExtType(unsigned ResNo) const {
     return Types[ResNo];
@@ -928,7 +915,6 @@ public:
   const std::vector<TreePatternNodePtr> &getTrees() const { return Trees; }
   unsigned getNumTrees() const { return Trees.size(); }
   const TreePatternNodePtr &getTree(unsigned i) const { return Trees[i]; }
-  void setTree(unsigned i, TreePatternNodePtr Tree) { Trees[i] = Tree; }
   const TreePatternNodePtr &getOnlyTree() const {
     assert(Trees.size() == 1 && "Doesn't have exactly one pattern!");
     return Trees[0];
@@ -1134,14 +1120,10 @@ private:
   TypeSetByHwMode LegalVTS;
   TypeSetByHwMode LegalPtrVTS;
 
-  using PatternRewriterFn = std::function<void(TreePattern *)>;
-  PatternRewriterFn PatternRewriter;
-
   unsigned NumScopes = 0;
 
 public:
-  CodeGenDAGPatterns(const RecordKeeper &R,
-                     PatternRewriterFn PatternRewriter = nullptr);
+  CodeGenDAGPatterns(const RecordKeeper &R);
 
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }

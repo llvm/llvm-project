@@ -1090,8 +1090,7 @@ bool TargetPassConfig::addISelPasses() {
 
   PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
   addPass(createPreISelIntrinsicLoweringPass());
-  addPass(createExpandLargeDivRemPass());
-  addPass(createExpandFpPass(getOptLevel()));
+  addPass(createExpandIRInstsPass(getOptLevel()));
   addIRPasses();
   addCodeGenPrepare();
   addPassesToHandleExceptions();
@@ -1247,7 +1246,7 @@ void TargetPassConfig::addMachinePasses() {
   }
 
   if (GCEmptyBlocks)
-    addPass(llvm::createGCEmptyBasicBlocksPass());
+    addPass(llvm::createGCEmptyBasicBlocksLegacyPass());
 
   if (EnableFSDiscriminator)
     addPass(createMIRAddFSDiscriminatorsPass(
@@ -1299,8 +1298,10 @@ void TargetPassConfig::addMachinePasses() {
           TM->getBBSectionsFuncListBuf()));
       if (BasicBlockSectionMatchInfer)
         addPass(llvm::createBasicBlockMatchingAndInferencePass());
-      else
+      else {
         addPass(llvm::createBasicBlockPathCloningPass());
+        addPass(llvm::createInsertCodePrefetchPass());
+      }
     }
     addPass(llvm::createBasicBlockSectionsPass());
   }

@@ -1414,7 +1414,6 @@ This is prefixed by `STRING`, a colon and a space.
 - **Class:** subroutine
 - **Syntax:** `CALL PERROR(STRING)`
 
-<<<<<<< HEAD
 ### Non-Standard Intrinsics: SRAND
 
 #### Description

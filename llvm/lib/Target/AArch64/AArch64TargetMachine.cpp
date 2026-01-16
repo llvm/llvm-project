@@ -225,7 +225,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableNewSMEABILowering("aarch64-new-sme-abi",
                             cl::desc("Enable new lowering for the SME ABI"),
-                            cl::init(false), cl::Hidden);
+                            cl::init(true), cl::Hidden);
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {

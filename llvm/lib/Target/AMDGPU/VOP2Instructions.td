@@ -1266,14 +1266,14 @@ let Constraints = "$vdst = $src2",
 defm V_FMAC_F32 : VOP2Inst_VOPD <"v_fmac_f32", VOP_MAC_F32, 0x0, "v_fmac_f32">;
 } // End SubtargetPredicate = HasDLInsts
 
-let SubtargetPredicate = HasFmaLegacy32 in {
+let SubtargetPredicate = HasFmacLegacy32 in {
 
 let Constraints = "$vdst = $src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1 in
 defm V_FMAC_LEGACY_F32 : VOP2Inst <"v_fmac_legacy_f32", VOP_MAC_LEGACY_F32>;
 
-} // End SubtargetPredicate = HasFmaLegacy32
+} // End SubtargetPredicate = HasFmacLegacy32
 
 let SubtargetPredicate = HasFmacF64Inst,
     Constraints = "$vdst = $src2",
@@ -1481,7 +1481,7 @@ let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
 } // End SubtargetPredicate = isGFX12Plus, isReMaterializable = 1
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, isReMaterializable = 1,
-    SchedRW = [WriteDoubleAdd], isCommutable = 1 in {
+    SchedRW = [WriteDoubleAdd], isCommutable = 1, IsDPMACCInstruction = 1 in {
   defm V_MIN_NUM_F64 : VOP2Inst_VOPD <"v_min_num_f64", VOP_F64_F64_F64, 0x24, "v_min_num_f64", fminnum_like>;
   defm V_MAX_NUM_F64 : VOP2Inst_VOPD <"v_max_num_f64", VOP_F64_F64_F64, 0x23, "v_max_num_f64", fmaxnum_like>;
 }

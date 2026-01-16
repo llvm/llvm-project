@@ -235,6 +235,8 @@ cl::opt<bool> MemProfFixupImportant(
     "memprof-fixup-important", cl::init(true), cl::Hidden,
     cl::desc("Enables edge fixup for important contexts"));
 
+extern cl::opt<unsigned> MaxSummaryIndirectEdges;
+
 } // namespace llvm
 
 namespace {
@@ -1505,8 +1507,11 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::duplicateContextIds(
     NewContextIds.insert(++LastContextId);
     OldToNewContextIds[OldId].insert(LastContextId);
     assert(ContextIdToAllocationType.count(OldId));
-    // The new context has the same allocation type as original.
+    // The new context has the same allocation type and size info as original.
     ContextIdToAllocationType[LastContextId] = ContextIdToAllocationType[OldId];
+    auto CSI = ContextIdToContextSizeInfos.find(OldId);
+    if (CSI != ContextIdToContextSizeInfos.end())
+      ContextIdToContextSizeInfos[LastContextId] = CSI->second;
     if (DotAllocContextIds.contains(OldId))
       DotAllocContextIds.insert(LastContextId);
   }
@@ -3235,13 +3240,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
        << ")\n";
   if (!Clones.empty()) {
     OS << "\tClones: ";
-    bool First = true;
-    for (auto *C : Clones) {
-      if (!First)
-        OS << ", ";
-      First = false;
-      OS << C << " NodeId: " << C->NodeId;
-    }
+    ListSeparator LS;
+    for (auto *C : Clones)
+      OS << LS << C << " NodeId: " << C->NodeId;
     OS << "\n";
   } else if (CloneOf) {
     OS << "\tClone of " << CloneOf << " NodeId: " << CloneOf->NodeId << "\n";
@@ -3406,6 +3407,11 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
       assert(Func != G->NodeToCallingFunc.end());
       LabelString +=
           G->getLabel(Func->second, Node->Call.call(), Node->Call.cloneNo());
+      for (auto &MatchingCall : Node->MatchingCalls) {
+        LabelString += "\n";
+        LabelString += G->getLabel(Func->second, MatchingCall.call(),
+                                   MatchingCall.cloneNo());
+      }
     } else {
       LabelString += "null call";
       if (Node->Recursive)
@@ -6067,8 +6073,8 @@ unsigned MemProfContextDisambiguation::recordICPInfo(
   uint32_t NumCandidates;
   uint64_t TotalCount;
   auto CandidateProfileData =
-      ICallAnalysis->getPromotionCandidatesForInstruction(CB, TotalCount,
-                                                          NumCandidates);
+      ICallAnalysis->getPromotionCandidatesForInstruction(
+          CB, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
   if (CandidateProfileData.empty())
     return 0;
 

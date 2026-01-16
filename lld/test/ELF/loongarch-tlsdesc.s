@@ -3,8 +3,8 @@
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 a.s -o a.64.o
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 c.s -o c.64.o
 # RUN: ld.lld -shared -soname=c.64.so c.64.o -o c.64.so
-# RUN: llvm-mc -filetype=obj -triple=loongarch32 --defsym ELF32=1 a.s -o a.32.o
-# RUN: llvm-mc -filetype=obj -triple=loongarch32 --defsym ELF32=1 c.s -o c.32.o
+# RUN: llvm-mc -filetype=obj -triple=loongarch32 --mattr=+32s --defsym ELF32=1 a.s -o a.32.o
+# RUN: llvm-mc -filetype=obj -triple=loongarch32 --mattr=+32s --defsym ELF32=1 c.s -o c.32.o
 # RUN: ld.lld -shared -soname=c.32.so c.32.o -o c.32.so
 
 # RUN: ld.lld -shared -z now a.64.o c.64.o -o a.64.so

@@ -30,7 +30,7 @@ AST_MATCHER(Type, sugaredNullptrType) {
 
 } // namespace
 
-static const char CastSequence[] = "sequence";
+static constexpr char CastSequence[] = "sequence";
 
 /// Create a matcher that finds implicit casts as well as the head of a
 /// sequence of zero or more nested explicit casts that have an implicit cast
@@ -238,9 +238,8 @@ public:
 
     auto *CastSubExpr = C->getSubExpr()->IgnoreParens();
     // Ignore cast expressions which cast nullptr literal.
-    if (isa<CXXNullPtrLiteralExpr>(CastSubExpr)) {
+    if (isa<CXXNullPtrLiteralExpr>(CastSubExpr))
       return true;
-    }
 
     if (!FirstSubExpr)
       FirstSubExpr = CastSubExpr;
@@ -286,9 +285,8 @@ public:
       EndLoc = SM.getFileLoc(EndLoc);
     }
 
-    if (!isReplaceableRange(StartLoc, EndLoc, SM)) {
+    if (!isReplaceableRange(StartLoc, EndLoc, SM))
       return skipSubTree();
-    }
     replaceWithNullptr(Check, SM, StartLoc, EndLoc);
 
     return true;
@@ -395,9 +393,8 @@ private:
   /// - TestLoc is not from a macro expansion.
   /// - TestLoc is from a different macro expansion.
   bool expandsFrom(SourceLocation TestLoc, SourceLocation TestMacroLoc) {
-    if (TestLoc.isFileID()) {
+    if (TestLoc.isFileID())
       return false;
-    }
 
     SourceLocation Loc = TestLoc, MacroLoc;
 
@@ -409,9 +406,8 @@ private:
       Loc = Expansion.getExpansionLocStart();
 
       if (!Expansion.isMacroArgExpansion()) {
-        if (Loc.isFileID()) {
+        if (Loc.isFileID())
           return Loc == TestMacroLoc;
-        }
         // Since Loc is still a macro ID and it's not an argument expansion, we
         // don't need to do the work of handling an argument expansion. Simply
         // keep recursively expanding until we hit a FileID or a macro arg
@@ -458,10 +454,9 @@ private:
         // they are InitListsExpr (semantic and syntactic form). In this case we
         // can choose any one here, and the ASTVisitor will take care of
         // traversing the right one.
-        for (const auto &Parent : Parents) {
+        for (const auto &Parent : Parents)
           if (!Parent.get<InitListExpr>())
             return false;
-        }
       }
 
       const DynTypedNode &Parent = Parents[0];

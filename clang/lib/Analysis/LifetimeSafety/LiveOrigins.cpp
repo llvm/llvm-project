@@ -121,13 +121,21 @@ public:
   /// dominates this program point. A write operation kills the liveness of
   /// the origin since it overwrites the value.
   Lattice transfer(Lattice In, const UseFact &UF) {
-    OriginID OID = UF.getUsedOrigin();
-    // Write kills liveness.
-    if (UF.isWritten())
-      return Lattice(Factory.remove(In.LiveOrigins, OID));
-    // Read makes origin live with definite confidence (dominates this point).
-    return Lattice(Factory.add(In.LiveOrigins, OID,
-                               LivenessInfo(&UF, LivenessKind::Must)));
+    Lattice Out = In;
+    for (const OriginList *Cur = UF.getUsedOrigins(); Cur;
+         Cur = Cur->peelOuterOrigin()) {
+      OriginID OID = Cur->getOuterOriginID();
+      // Write kills liveness.
+      if (UF.isWritten()) {
+        Out = Lattice(Factory.remove(Out.LiveOrigins, OID));
+      } else {
+        // Read makes origin live with definite confidence (dominates this
+        // point).
+        Out = Lattice(Factory.add(Out.LiveOrigins, OID,
+                                  LivenessInfo(&UF, LivenessKind::Must)));
+      }
+    }
+    return Out;
   }
 
   /// An escaping origin (e.g., via return) makes the origin live with definite

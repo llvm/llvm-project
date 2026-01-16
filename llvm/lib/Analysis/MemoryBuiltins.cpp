@@ -707,8 +707,8 @@ Value *llvm::lowerObjectSizeCall(
 
       // The non-constant size expression cannot evaluate to -1.
       if (!isa<Constant>(Size) || !isa<Constant>(Offset))
-        Builder.CreateAssumption(
-            Builder.CreateICmpNE(Ret, ConstantInt::get(ResultType, -1)));
+        Builder.CreateAssumption(Builder.CreateICmpNE(
+            Ret, ConstantInt::getAllOnesValue(ResultType)));
 
       return Ret;
     }

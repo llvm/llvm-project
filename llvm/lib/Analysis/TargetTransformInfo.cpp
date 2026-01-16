@@ -294,16 +294,14 @@ bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
   return TTIImpl->hasBranchDivergence(F);
 }
 
-bool TargetTransformInfo::isSourceOfDivergence(const Value *V) const {
+InstructionUniformity
+llvm::TargetTransformInfo::getInstructionUniformity(const Value *V) const {
+  // Calls with the NoDivergenceSource attribute are always uniform.
   if (const auto *Call = dyn_cast<CallBase>(V)) {
     if (Call->hasFnAttr(Attribute::NoDivergenceSource))
-      return false;
+      return InstructionUniformity::AlwaysUniform;
   }
-  return TTIImpl->isSourceOfDivergence(V);
-}
-
-bool llvm::TargetTransformInfo::isAlwaysUniform(const Value *V) const {
-  return TTIImpl->isAlwaysUniform(V);
+  return TTIImpl->getInstructionUniformity(V);
 }
 
 bool llvm::TargetTransformInfo::isValidAddrSpaceCast(unsigned FromAS,
@@ -1432,6 +1430,10 @@ bool TargetTransformInfo::hasArmWideBranch(bool Thumb) const {
 
 APInt TargetTransformInfo::getFeatureMask(const Function &F) const {
   return TTIImpl->getFeatureMask(F);
+}
+
+APInt TargetTransformInfo::getPriorityMask(const Function &F) const {
+  return TTIImpl->getPriorityMask(F);
 }
 
 bool TargetTransformInfo::isMultiversionedFunction(const Function &F) const {

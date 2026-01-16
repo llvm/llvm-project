@@ -33,57 +33,63 @@ AsmParserContext::getInstructionLocation(const Instruction *I) const {
 
 Function *
 AsmParserContext::getFunctionAtLocation(const FileLocRange &Query) const {
-  for (auto &[F, Loc] : Functions) {
-    if (Loc.contains(Query))
-      return F;
-  }
+  auto It = FunctionsInverse.find(Query.Start);
+  if (It.stop() <= Query.End)
+    return *It;
   return nullptr;
 }
 
 Function *AsmParserContext::getFunctionAtLocation(const FileLoc &Query) const {
-  return getFunctionAtLocation(FileLocRange(Query, Query));
+  return FunctionsInverse.lookup(Query, nullptr);
 }
 
 BasicBlock *
 AsmParserContext::getBlockAtLocation(const FileLocRange &Query) const {
-  for (auto &[BB, Loc] : Blocks) {
-    if (Loc.contains(Query))
-      return BB;
-  }
+  auto It = BlocksInverse.find(Query.Start);
+  if (It.stop() <= Query.End)
+    return *It;
   return nullptr;
 }
 
 BasicBlock *AsmParserContext::getBlockAtLocation(const FileLoc &Query) const {
-  return getBlockAtLocation(FileLocRange(Query, Query));
+  return BlocksInverse.lookup(Query, nullptr);
 }
 
 Instruction *
 AsmParserContext::getInstructionAtLocation(const FileLocRange &Query) const {
-  for (auto &[I, Loc] : Instructions) {
-    if (Loc.contains(Query))
-      return I;
-  }
+  auto It = InstructionsInverse.find(Query.Start);
+  if (It.stop() <= Query.End)
+    return *It;
   return nullptr;
 }
 
 Instruction *
 AsmParserContext::getInstructionAtLocation(const FileLoc &Query) const {
-  return getInstructionAtLocation(FileLocRange(Query, Query));
+  return InstructionsInverse.lookup(Query, nullptr);
 }
 
 bool AsmParserContext::addFunctionLocation(Function *F,
                                            const FileLocRange &Loc) {
-  return Functions.insert({F, Loc}).second;
+  bool Inserted = Functions.insert({F, Loc}).second;
+  if (Inserted)
+    FunctionsInverse.insert(Loc.Start, Loc.End, F);
+  return Inserted;
 }
 
 bool AsmParserContext::addBlockLocation(BasicBlock *BB,
                                         const FileLocRange &Loc) {
-  return Blocks.insert({BB, Loc}).second;
+  bool Inserted = Blocks.insert({BB, Loc}).second;
+  if (Inserted)
+    BlocksInverse.insert(Loc.Start, Loc.End, BB);
+  return Inserted;
 }
 
 bool AsmParserContext::addInstructionLocation(Instruction *I,
                                               const FileLocRange &Loc) {
-  return Instructions.insert({I, Loc}).second;
+  bool Inserted = Instructions.insert({I, Loc}).second;
+  if (Inserted)
+    InstructionsInverse.insert(Loc.Start, Loc.End, I);
+  return Inserted;
 }
 
 } // namespace llvm

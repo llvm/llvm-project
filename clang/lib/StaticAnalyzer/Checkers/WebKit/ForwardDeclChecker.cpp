@@ -266,11 +266,11 @@ public:
     while (ArgExpr) {
       ArgExpr = ArgExpr->IgnoreParenCasts();
       if (auto *InnerCE = dyn_cast<CallExpr>(ArgExpr)) {
-        auto *InnerCallee = InnerCE->getDirectCallee();
-        if (InnerCallee && InnerCallee->isInStdNamespace() &&
-            safeGetName(InnerCallee) == "move" && InnerCE->getNumArgs() == 1) {
-          ArgExpr = InnerCE->getArg(0);
-          continue;
+        if (auto *InnerCallee = InnerCE->getDirectCallee()) {
+          if (isStdOrWTFMove(InnerCallee) && InnerCE->getNumArgs() == 1) {
+            ArgExpr = InnerCE->getArg(0);
+            continue;
+          }
         }
       }
       if (auto *UO = dyn_cast<UnaryOperator>(ArgExpr)) {

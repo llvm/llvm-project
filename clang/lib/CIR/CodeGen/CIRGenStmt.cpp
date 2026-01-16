@@ -19,6 +19,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
+#include "clang/AST/StmtOpenMP.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -159,6 +160,12 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitCXXTryStmt(cast<CXXTryStmt>(*s));
   case Stmt::CXXForRangeStmtClass:
     return emitCXXForRangeStmt(cast<CXXForRangeStmt>(*s), attr);
+  case Stmt::CoroutineBodyStmtClass:
+    return emitCoroutineBody(cast<CoroutineBodyStmt>(*s));
+  case Stmt::IndirectGotoStmtClass:
+    return emitIndirectGotoStmt(cast<IndirectGotoStmt>(*s));
+  case Stmt::CoreturnStmtClass:
+    return emitCoreturnStmt(cast<CoreturnStmt>(*s));
   case Stmt::OpenACCComputeConstructClass:
     return emitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*s));
   case Stmt::OpenACCLoopConstructClass:
@@ -191,7 +198,187 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::MSAsmStmtClass:
     return emitAsmStmt(cast<AsmStmt>(*s));
   case Stmt::OMPScopeDirectiveClass:
+    return emitOMPScopeDirective(cast<OMPScopeDirective>(*s));
   case Stmt::OMPErrorDirectiveClass:
+    return emitOMPErrorDirective(cast<OMPErrorDirective>(*s));
+  case Stmt::OMPParallelDirectiveClass:
+    return emitOMPParallelDirective(cast<OMPParallelDirective>(*s));
+  case Stmt::OMPTaskwaitDirectiveClass:
+    return emitOMPTaskwaitDirective(cast<OMPTaskwaitDirective>(*s));
+  case Stmt::OMPTaskyieldDirectiveClass:
+    return emitOMPTaskyieldDirective(cast<OMPTaskyieldDirective>(*s));
+  case Stmt::OMPBarrierDirectiveClass:
+    return emitOMPBarrierDirective(cast<OMPBarrierDirective>(*s));
+  case Stmt::OMPMetaDirectiveClass:
+    return emitOMPMetaDirective(cast<OMPMetaDirective>(*s));
+  case Stmt::OMPCanonicalLoopClass:
+    return emitOMPCanonicalLoop(cast<OMPCanonicalLoop>(*s));
+  case Stmt::OMPSimdDirectiveClass:
+    return emitOMPSimdDirective(cast<OMPSimdDirective>(*s));
+  case Stmt::OMPTileDirectiveClass:
+    return emitOMPTileDirective(cast<OMPTileDirective>(*s));
+  case Stmt::OMPUnrollDirectiveClass:
+    return emitOMPUnrollDirective(cast<OMPUnrollDirective>(*s));
+  case Stmt::OMPFuseDirectiveClass:
+    return emitOMPFuseDirective(cast<OMPFuseDirective>(*s));
+  case Stmt::OMPForDirectiveClass:
+    return emitOMPForDirective(cast<OMPForDirective>(*s));
+  case Stmt::OMPForSimdDirectiveClass:
+    return emitOMPForSimdDirective(cast<OMPForSimdDirective>(*s));
+  case Stmt::OMPSectionsDirectiveClass:
+    return emitOMPSectionsDirective(cast<OMPSectionsDirective>(*s));
+  case Stmt::OMPSectionDirectiveClass:
+    return emitOMPSectionDirective(cast<OMPSectionDirective>(*s));
+  case Stmt::OMPSingleDirectiveClass:
+    return emitOMPSingleDirective(cast<OMPSingleDirective>(*s));
+  case Stmt::OMPMasterDirectiveClass:
+    return emitOMPMasterDirective(cast<OMPMasterDirective>(*s));
+  case Stmt::OMPCriticalDirectiveClass:
+    return emitOMPCriticalDirective(cast<OMPCriticalDirective>(*s));
+  case Stmt::OMPParallelForDirectiveClass:
+    return emitOMPParallelForDirective(cast<OMPParallelForDirective>(*s));
+  case Stmt::OMPParallelForSimdDirectiveClass:
+    return emitOMPParallelForSimdDirective(
+        cast<OMPParallelForSimdDirective>(*s));
+  case Stmt::OMPParallelMasterDirectiveClass:
+    return emitOMPParallelMasterDirective(cast<OMPParallelMasterDirective>(*s));
+  case Stmt::OMPParallelSectionsDirectiveClass:
+    return emitOMPParallelSectionsDirective(
+        cast<OMPParallelSectionsDirective>(*s));
+  case Stmt::OMPTaskDirectiveClass:
+    return emitOMPTaskDirective(cast<OMPTaskDirective>(*s));
+  case Stmt::OMPTaskgroupDirectiveClass:
+    return emitOMPTaskgroupDirective(cast<OMPTaskgroupDirective>(*s));
+  case Stmt::OMPFlushDirectiveClass:
+    return emitOMPFlushDirective(cast<OMPFlushDirective>(*s));
+  case Stmt::OMPDepobjDirectiveClass:
+    return emitOMPDepobjDirective(cast<OMPDepobjDirective>(*s));
+  case Stmt::OMPScanDirectiveClass:
+    return emitOMPScanDirective(cast<OMPScanDirective>(*s));
+  case Stmt::OMPOrderedDirectiveClass:
+    return emitOMPOrderedDirective(cast<OMPOrderedDirective>(*s));
+  case Stmt::OMPAtomicDirectiveClass:
+    return emitOMPAtomicDirective(cast<OMPAtomicDirective>(*s));
+  case Stmt::OMPTargetDirectiveClass:
+    return emitOMPTargetDirective(cast<OMPTargetDirective>(*s));
+  case Stmt::OMPTeamsDirectiveClass:
+    return emitOMPTeamsDirective(cast<OMPTeamsDirective>(*s));
+  case Stmt::OMPCancellationPointDirectiveClass:
+    return emitOMPCancellationPointDirective(
+        cast<OMPCancellationPointDirective>(*s));
+  case Stmt::OMPCancelDirectiveClass:
+    return emitOMPCancelDirective(cast<OMPCancelDirective>(*s));
+  case Stmt::OMPTargetDataDirectiveClass:
+    return emitOMPTargetDataDirective(cast<OMPTargetDataDirective>(*s));
+  case Stmt::OMPTargetEnterDataDirectiveClass:
+    return emitOMPTargetEnterDataDirective(
+        cast<OMPTargetEnterDataDirective>(*s));
+  case Stmt::OMPTargetExitDataDirectiveClass:
+    return emitOMPTargetExitDataDirective(cast<OMPTargetExitDataDirective>(*s));
+  case Stmt::OMPTargetParallelDirectiveClass:
+    return emitOMPTargetParallelDirective(cast<OMPTargetParallelDirective>(*s));
+  case Stmt::OMPTargetParallelForDirectiveClass:
+    return emitOMPTargetParallelForDirective(
+        cast<OMPTargetParallelForDirective>(*s));
+  case Stmt::OMPTaskLoopDirectiveClass:
+    return emitOMPTaskLoopDirective(cast<OMPTaskLoopDirective>(*s));
+  case Stmt::OMPTaskLoopSimdDirectiveClass:
+    return emitOMPTaskLoopSimdDirective(cast<OMPTaskLoopSimdDirective>(*s));
+  case Stmt::OMPMaskedTaskLoopDirectiveClass:
+    return emitOMPMaskedTaskLoopDirective(cast<OMPMaskedTaskLoopDirective>(*s));
+  case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
+    return emitOMPMaskedTaskLoopSimdDirective(
+        cast<OMPMaskedTaskLoopSimdDirective>(*s));
+  case Stmt::OMPMasterTaskLoopDirectiveClass:
+    return emitOMPMasterTaskLoopDirective(cast<OMPMasterTaskLoopDirective>(*s));
+  case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
+    return emitOMPMasterTaskLoopSimdDirective(
+        cast<OMPMasterTaskLoopSimdDirective>(*s));
+  case Stmt::OMPParallelGenericLoopDirectiveClass:
+    return emitOMPParallelGenericLoopDirective(
+        cast<OMPParallelGenericLoopDirective>(*s));
+  case Stmt::OMPParallelMaskedDirectiveClass:
+    return emitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*s));
+  case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
+    return emitOMPParallelMaskedTaskLoopDirective(
+        cast<OMPParallelMaskedTaskLoopDirective>(*s));
+  case Stmt::OMPParallelMaskedTaskLoopSimdDirectiveClass:
+    return emitOMPParallelMaskedTaskLoopSimdDirective(
+        cast<OMPParallelMaskedTaskLoopSimdDirective>(*s));
+  case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
+    return emitOMPParallelMasterTaskLoopDirective(
+        cast<OMPParallelMasterTaskLoopDirective>(*s));
+  case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
+    return emitOMPParallelMasterTaskLoopSimdDirective(
+        cast<OMPParallelMasterTaskLoopSimdDirective>(*s));
+  case Stmt::OMPDistributeDirectiveClass:
+    return emitOMPDistributeDirective(cast<OMPDistributeDirective>(*s));
+  case Stmt::OMPDistributeParallelForDirectiveClass:
+    return emitOMPDistributeParallelForDirective(
+        cast<OMPDistributeParallelForDirective>(*s));
+  case Stmt::OMPDistributeParallelForSimdDirectiveClass:
+    return emitOMPDistributeParallelForSimdDirective(
+        cast<OMPDistributeParallelForSimdDirective>(*s));
+  case Stmt::OMPDistributeSimdDirectiveClass:
+    return emitOMPDistributeSimdDirective(cast<OMPDistributeSimdDirective>(*s));
+  case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
+    return emitOMPTargetParallelGenericLoopDirective(
+        cast<OMPTargetParallelGenericLoopDirective>(*s));
+  case Stmt::OMPTargetParallelForSimdDirectiveClass:
+    return emitOMPTargetParallelForSimdDirective(
+        cast<OMPTargetParallelForSimdDirective>(*s));
+  case Stmt::OMPTargetSimdDirectiveClass:
+    return emitOMPTargetSimdDirective(cast<OMPTargetSimdDirective>(*s));
+  case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
+    return emitOMPTargetTeamsGenericLoopDirective(
+        cast<OMPTargetTeamsGenericLoopDirective>(*s));
+  case Stmt::OMPTargetUpdateDirectiveClass:
+    return emitOMPTargetUpdateDirective(cast<OMPTargetUpdateDirective>(*s));
+  case Stmt::OMPTeamsDistributeDirectiveClass:
+    return emitOMPTeamsDistributeDirective(
+        cast<OMPTeamsDistributeDirective>(*s));
+  case Stmt::OMPTeamsDistributeSimdDirectiveClass:
+    return emitOMPTeamsDistributeSimdDirective(
+        cast<OMPTeamsDistributeSimdDirective>(*s));
+  case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
+    return emitOMPTeamsDistributeParallelForSimdDirective(
+        cast<OMPTeamsDistributeParallelForSimdDirective>(*s));
+  case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
+    return emitOMPTeamsDistributeParallelForDirective(
+        cast<OMPTeamsDistributeParallelForDirective>(*s));
+  case Stmt::OMPTeamsGenericLoopDirectiveClass:
+    return emitOMPTeamsGenericLoopDirective(
+        cast<OMPTeamsGenericLoopDirective>(*s));
+  case Stmt::OMPTargetTeamsDirectiveClass:
+    return emitOMPTargetTeamsDirective(cast<OMPTargetTeamsDirective>(*s));
+  case Stmt::OMPTargetTeamsDistributeDirectiveClass:
+    return emitOMPTargetTeamsDistributeDirective(
+        cast<OMPTargetTeamsDistributeDirective>(*s));
+  case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
+    return emitOMPTargetTeamsDistributeParallelForDirective(
+        cast<OMPTargetTeamsDistributeParallelForDirective>(*s));
+  case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
+    return emitOMPTargetTeamsDistributeParallelForSimdDirective(
+        cast<OMPTargetTeamsDistributeParallelForSimdDirective>(*s));
+  case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
+    return emitOMPTargetTeamsDistributeSimdDirective(
+        cast<OMPTargetTeamsDistributeSimdDirective>(*s));
+  case Stmt::OMPInteropDirectiveClass:
+    return emitOMPInteropDirective(cast<OMPInteropDirective>(*s));
+  case Stmt::OMPDispatchDirectiveClass:
+    return emitOMPDispatchDirective(cast<OMPDispatchDirective>(*s));
+  case Stmt::OMPGenericLoopDirectiveClass:
+    return emitOMPGenericLoopDirective(cast<OMPGenericLoopDirective>(*s));
+  case Stmt::OMPReverseDirectiveClass:
+    return emitOMPReverseDirective(cast<OMPReverseDirective>(*s));
+  case Stmt::OMPInterchangeDirectiveClass:
+    return emitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*s));
+  case Stmt::OMPAssumeDirectiveClass:
+    return emitOMPAssumeDirective(cast<OMPAssumeDirective>(*s));
+  case Stmt::OMPMaskedDirectiveClass:
+    return emitOMPMaskedDirective(cast<OMPMaskedDirective>(*s));
+  case Stmt::OMPStripeDirectiveClass:
+    return emitOMPStripeDirective(cast<OMPStripeDirective>(*s));
   case Stmt::LabelStmtClass:
   case Stmt::AttributedStmtClass:
   case Stmt::GotoStmtClass:
@@ -199,15 +386,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
   case Stmt::SYCLKernelCallStmtClass:
-  case Stmt::CoroutineBodyStmtClass:
-    return emitCoroutineBody(cast<CoroutineBodyStmt>(*s));
-  case Stmt::CoreturnStmtClass:
-  case Stmt::IndirectGotoStmtClass:
-    return emitIndirectGotoStmt(cast<IndirectGotoStmt>(*s));
-  case Stmt::OMPParallelDirectiveClass:
-  case Stmt::OMPTaskwaitDirectiveClass:
-  case Stmt::OMPTaskyieldDirectiveClass:
-  case Stmt::OMPBarrierDirectiveClass:
   case Stmt::CapturedStmtClass:
   case Stmt::ObjCAtTryStmtClass:
   case Stmt::ObjCAtThrowStmtClass:
@@ -215,80 +393,9 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::ObjCForCollectionStmtClass:
   case Stmt::ObjCAutoreleasePoolStmtClass:
   case Stmt::SEHTryStmtClass:
-  case Stmt::OMPMetaDirectiveClass:
-  case Stmt::OMPCanonicalLoopClass:
-  case Stmt::OMPSimdDirectiveClass:
-  case Stmt::OMPTileDirectiveClass:
-  case Stmt::OMPUnrollDirectiveClass:
-  case Stmt::OMPFuseDirectiveClass:
-  case Stmt::OMPForDirectiveClass:
-  case Stmt::OMPForSimdDirectiveClass:
-  case Stmt::OMPSectionsDirectiveClass:
-  case Stmt::OMPSectionDirectiveClass:
-  case Stmt::OMPSingleDirectiveClass:
-  case Stmt::OMPMasterDirectiveClass:
-  case Stmt::OMPCriticalDirectiveClass:
-  case Stmt::OMPParallelForDirectiveClass:
-  case Stmt::OMPParallelForSimdDirectiveClass:
-  case Stmt::OMPParallelMasterDirectiveClass:
-  case Stmt::OMPParallelSectionsDirectiveClass:
-  case Stmt::OMPTaskDirectiveClass:
-  case Stmt::OMPTaskgroupDirectiveClass:
-  case Stmt::OMPFlushDirectiveClass:
-  case Stmt::OMPDepobjDirectiveClass:
-  case Stmt::OMPScanDirectiveClass:
-  case Stmt::OMPOrderedDirectiveClass:
-  case Stmt::OMPAtomicDirectiveClass:
-  case Stmt::OMPTargetDirectiveClass:
-  case Stmt::OMPTeamsDirectiveClass:
-  case Stmt::OMPCancellationPointDirectiveClass:
-  case Stmt::OMPCancelDirectiveClass:
-  case Stmt::OMPTargetDataDirectiveClass:
-  case Stmt::OMPTargetEnterDataDirectiveClass:
-  case Stmt::OMPTargetExitDataDirectiveClass:
-  case Stmt::OMPTargetParallelDirectiveClass:
-  case Stmt::OMPTargetParallelForDirectiveClass:
-  case Stmt::OMPTaskLoopDirectiveClass:
-  case Stmt::OMPTaskLoopSimdDirectiveClass:
-  case Stmt::OMPMaskedTaskLoopDirectiveClass:
-  case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
-  case Stmt::OMPMasterTaskLoopDirectiveClass:
-  case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
-  case Stmt::OMPParallelGenericLoopDirectiveClass:
-  case Stmt::OMPParallelMaskedDirectiveClass:
-  case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
-  case Stmt::OMPParallelMaskedTaskLoopSimdDirectiveClass:
-  case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
-  case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
-  case Stmt::OMPDistributeDirectiveClass:
-  case Stmt::OMPDistributeParallelForDirectiveClass:
-  case Stmt::OMPDistributeParallelForSimdDirectiveClass:
-  case Stmt::OMPDistributeSimdDirectiveClass:
-  case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
-  case Stmt::OMPTargetParallelForSimdDirectiveClass:
-  case Stmt::OMPTargetSimdDirectiveClass:
-  case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
-  case Stmt::OMPTargetUpdateDirectiveClass:
-  case Stmt::OMPTeamsDistributeDirectiveClass:
-  case Stmt::OMPTeamsDistributeSimdDirectiveClass:
-  case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
-  case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
-  case Stmt::OMPTeamsGenericLoopDirectiveClass:
-  case Stmt::OMPTargetTeamsDirectiveClass:
-  case Stmt::OMPTargetTeamsDistributeDirectiveClass:
-  case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
-  case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
-  case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
-  case Stmt::OMPInteropDirectiveClass:
-  case Stmt::OMPDispatchDirectiveClass:
-  case Stmt::OMPGenericLoopDirectiveClass:
-  case Stmt::OMPReverseDirectiveClass:
-  case Stmt::OMPInterchangeDirectiveClass:
-  case Stmt::OMPAssumeDirectiveClass:
-  case Stmt::OMPMaskedDirectiveClass:
-  case Stmt::OMPStripeDirectiveClass:
   case Stmt::ObjCAtCatchStmtClass:
   case Stmt::ObjCAtFinallyStmtClass:
+  case Stmt::DeferStmtClass:
     cgm.errorNYI(s->getSourceRange(),
                  std::string("emitStmt: ") + s->getStmtClassName());
     return mlir::failure();
@@ -1104,6 +1211,8 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
   for (auto caseOp : cases)
     terminateBody(builder, caseOp.getCaseRegion(), caseOp.getLoc());
   terminateBody(builder, swop.getBody(), swop.getLoc());
+
+  swop.setAllEnumCasesCovered(s.isAllEnumCasesCovered());
 
   return res;
 }

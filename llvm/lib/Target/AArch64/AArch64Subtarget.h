@@ -178,6 +178,7 @@ public:
     case AppleA16:
     case AppleA17:
     case AppleM4:
+    case AppleM5:
       return true;
     default:
       return false;
@@ -308,6 +309,7 @@ public:
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
   bool isWindowsArm64EC() const { return TargetTriple.isWindowsArm64EC(); }
+  bool isLFI() const { return TargetTriple.isLFI(); }
 
   bool isTargetCOFF() const { return TargetTriple.isOSBinFormatCOFF(); }
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
@@ -465,12 +467,6 @@ public:
   /// add + cnt instructions.
   bool useScalarIncVL() const;
 
-  const char* getChkStkName() const {
-    if (isWindowsArm64EC())
-      return "#__chkstk_arm64ec";
-    return "__chkstk";
-  }
-
   /// Choose a method of checking LR before performing a tail call.
   AArch64PAuth::AuthCheckMethod
   getAuthenticatedLRCheckMethod(const MachineFunction &MF) const;
@@ -484,6 +480,8 @@ public:
   /// a function.
   std::optional<uint16_t>
   getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
+
+  bool enableAggressiveInterleaving() const { return AggressiveInterleaving; }
 };
 } // End llvm namespace
 

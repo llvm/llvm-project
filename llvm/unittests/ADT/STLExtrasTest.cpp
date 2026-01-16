@@ -701,6 +701,41 @@ TEST(STLExtrasTest, AppendValues) {
   EXPECT_THAT(Set, UnorderedElementsAre(1, 2, 3));
 }
 
+TEST(STLExtrasTest, AppendValuesReserve) {
+  // A vector wrapper that tracks reserve() calls.
+  struct TrackedVector : std::vector<int> {
+    using std::vector<int>::vector;
+    size_t LastReservedSize = 0;
+    unsigned ReserveCallCount = 0;
+
+    void reserve(size_t N) {
+      LastReservedSize = N;
+      ++ReserveCallCount;
+      std::vector<int>::reserve(N);
+    }
+  };
+
+  // When empty, reserve should be called.
+  TrackedVector Empty;
+  append_values(Empty, 1, 2, 3);
+  EXPECT_EQ(Empty.ReserveCallCount, 1u);
+  EXPECT_EQ(Empty.LastReservedSize, 3u);
+  EXPECT_THAT(Empty, ElementsAre(1, 2, 3));
+
+  // Appending more values to a now non-empty container should still not
+  // reserve.
+  append_values(Empty, 4, 5);
+  EXPECT_EQ(Empty.ReserveCallCount, 1u);
+  EXPECT_THAT(Empty, ElementsAre(1, 2, 3, 4, 5));
+
+  // When non-empty, reserve should NOT be called to avoid preventing
+  // exponential growth.
+  TrackedVector NonEmpty = {1, 2};
+  append_values(NonEmpty, 3, 4);
+  EXPECT_EQ(NonEmpty.ReserveCallCount, 0u);
+  EXPECT_THAT(NonEmpty, ElementsAre(1, 2, 3, 4));
+}
+
 TEST(STLExtrasTest, ADLTest) {
   some_namespace::some_struct s{{1, 2, 3, 4, 5}, ""};
   some_namespace::some_struct s2{{2, 4, 6, 8, 10}, ""};
@@ -1693,10 +1728,191 @@ TEST(STLExtrasTest, ProductOf) {
   EXPECT_EQ(product_of(V3), 2.0f);
 }
 
+TEST(STLExtrasTest, ReverseConditionally) {
+  std::vector<char> foo = {'a', 'b', 'c'};
+
+  // Test backwards.
+  std::vector<char> ReverseResults;
+  for (char Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/true)) {
+    ReverseResults.emplace_back(Value);
+  }
+  EXPECT_THAT(ReverseResults, ElementsAre('c', 'b', 'a'));
+
+  // Test forwards.
+  std::vector<char> ForwardResults;
+  for (char Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/false)) {
+    ForwardResults.emplace_back(Value);
+  }
+  EXPECT_THAT(ForwardResults, ElementsAre('a', 'b', 'c'));
+
+  // Test modifying collection.
+  for (char &Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/true)) {
+    ++Value;
+  }
+  EXPECT_THAT(foo, ElementsAre('b', 'c', 'd'));
+}
+
 struct Foo;
 struct Bar {};
 
 static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
 static_assert(!is_incomplete_v<Bar>, "Bar is defined");
+
+TEST(STLExtrasTest, Search) {
+  // Test finding a subsequence in the middle.
+  std::vector<int> Haystack = {1, 2, 3, 4, 5, 6, 7, 8};
+  std::vector<int> Needle = {4, 5, 6};
+  auto It = llvm::search(Haystack, Needle);
+  EXPECT_NE(It, Haystack.end());
+  EXPECT_EQ(It, Haystack.begin() + 3);
+  EXPECT_THAT(std::vector<int>(It, It + 3), ElementsAre(4, 5, 6));
+
+  // Test finding at the beginning.
+  std::vector<int> Needle2 = {1, 2, 3};
+  auto It2 = llvm::search(Haystack, Needle2);
+  EXPECT_NE(It2, Haystack.end());
+  EXPECT_EQ(It2, Haystack.begin());
+  EXPECT_THAT(std::vector<int>(It2, It2 + 3), ElementsAre(1, 2, 3));
+
+  // Test finding at the end.
+  std::vector<int> Needle3 = {6, 7, 8};
+  auto It3 = llvm::search(Haystack, Needle3);
+  EXPECT_NE(It3, Haystack.end());
+  EXPECT_EQ(It3, Haystack.begin() + 5);
+  EXPECT_THAT(std::vector<int>(It3, It3 + 3), ElementsAre(6, 7, 8));
+
+  // Test not finding a subsequence.
+  std::vector<int> Needle4 = {9, 10, 11};
+  auto It4 = llvm::search(Haystack, Needle4);
+  EXPECT_EQ(It4, Haystack.end());
+
+  // Test with empty needle (should find at beginning).
+  std::vector<int> EmptyNeedle;
+  auto It5 = llvm::search(Haystack, EmptyNeedle);
+  EXPECT_NE(It5, Haystack.end());
+  EXPECT_EQ(It5, Haystack.begin());
+
+  // Test with empty haystack.
+  std::vector<int> EmptyHaystack;
+  auto It6 = llvm::search(EmptyHaystack, Needle);
+  EXPECT_EQ(It6, EmptyHaystack.end());
+  // Test with both empty.
+  auto It7 = llvm::search(EmptyHaystack, EmptyNeedle);
+  EXPECT_EQ(It7, EmptyHaystack.end());
+  EXPECT_EQ(It7, EmptyHaystack.begin());
+
+  // Test with predicate version.
+  std::vector<int> Haystack2 = {10, 20, 30, 40, 50};
+  std::vector<int> Needle5 = {20, 30};
+  std::vector<int> Needle6 = {200, 300};
+  auto It8 =
+      llvm::search(Haystack2, Needle5, [](int a, int b) { return a == b; });
+  EXPECT_NE(It8, Haystack2.end());
+  EXPECT_EQ(It8, Haystack2.begin() + 1);
+
+  // Test with predicate that doesn't match.
+  auto It9 =
+      llvm::search(Haystack2, Needle6, [](int a, int b) { return a == b; });
+  EXPECT_EQ(It9, Haystack2.end());
+
+  // Test with StringRef.
+  StringRef Str = "Hello, World!";
+  StringRef Sub = "World";
+  auto It10 = llvm::search(Str, Sub);
+  EXPECT_NE(It10, Str.end());
+  EXPECT_EQ(*It10, 'W');
+
+  // Test with ArrayRef.
+  ArrayRef<int> ArrRef = Haystack;
+  ArrayRef<int> NeedleRef = Needle;
+  auto It11 = llvm::search(ArrRef, NeedleRef);
+  EXPECT_NE(It11, ArrRef.end());
+  EXPECT_EQ(It11, ArrRef.begin() + 3);
+}
+
+TEST(STLExtrasTest, AdjacentFind) {
+  // Test finding adjacent equal elements.
+  std::vector<int> V = {1, 2, 3, 3, 4, 5};
+  auto It = llvm::adjacent_find(V);
+  EXPECT_NE(It, V.end());
+  EXPECT_EQ(It, V.begin() + 2);
+  EXPECT_EQ(*It, 3);
+  EXPECT_EQ(*(It + 1), 3);
+
+  // Test not finding adjacent equal elements.
+  std::vector<int> V2 = {1, 2, 3, 4, 5};
+  auto It2 = llvm::adjacent_find(V2);
+  EXPECT_EQ(It2, V2.end());
+
+  // Test finding at the beginning.
+  std::vector<int> V3 = {1, 1, 2, 3, 4};
+  auto It3 = llvm::adjacent_find(V3);
+  EXPECT_NE(It3, V3.end());
+  EXPECT_EQ(It3, V3.begin());
+  EXPECT_EQ(*It3, 1);
+  EXPECT_EQ(*(It3 + 1), 1);
+
+  // Test finding at the end.
+  std::vector<int> V4 = {1, 2, 3, 4, 5, 5};
+  auto It4 = llvm::adjacent_find(V4);
+  EXPECT_NE(It4, V4.end());
+  EXPECT_EQ(It4, V4.begin() + 4);
+  EXPECT_EQ(*It4, 5);
+  EXPECT_EQ(*(It4 + 1), 5);
+
+  // Test with empty range.
+  std::vector<int> Empty;
+  auto It5 = llvm::adjacent_find(Empty);
+  EXPECT_EQ(It5, Empty.end());
+
+  // Test with single element.
+  std::vector<int> Single = {42};
+  auto It6 = llvm::adjacent_find(Single);
+  EXPECT_EQ(It6, Single.end());
+
+  // Test with predicate version - finding adjacent elements that satisfy
+  // predicate.
+  std::vector<int> V5 = {1, 2, 4, 3, 5, 6};
+  auto It7 = llvm::adjacent_find(V5, [](int a, int b) { return a > b; });
+  EXPECT_NE(It7, V5.end());
+  EXPECT_EQ(It7, V5.begin() + 2);
+  EXPECT_EQ(*It7, 4);
+  EXPECT_EQ(*(It7 + 1), 3);
+
+  // Test with predicate that doesn't match.
+  std::vector<int> V6 = {1, 2, 3, 4, 5};
+  auto It8 = llvm::adjacent_find(V6, [](int a, int b) { return a > b; });
+  EXPECT_EQ(It8, V6.end());
+
+  // Test with predicate finding equal elements.
+  std::vector<int> V7 = {1, 2, 3, 3, 4};
+  auto It9 = llvm::adjacent_find(V7, [](int a, int b) { return a == b; });
+  EXPECT_NE(It9, V7.end());
+  EXPECT_EQ(It9, V7.begin() + 2);
+
+  // Test with StringRef.
+  StringRef Str = "Helo";
+  auto It10 = llvm::adjacent_find(Str);
+  EXPECT_EQ(It10, Str.end());
+
+  StringRef Str2 = "Helllo";
+  auto It11 = llvm::adjacent_find(Str2);
+  EXPECT_NE(It11, Str2.end());
+  EXPECT_EQ(*It11, 'l');
+  EXPECT_EQ(*(It11 + 1), 'l');
+
+  // Test with ArrayRef.
+  ArrayRef<int> ArrRef = V;
+  auto It12 = llvm::adjacent_find(ArrRef);
+  EXPECT_NE(It12, ArrRef.end());
+  EXPECT_EQ(It12, ArrRef.begin() + 2);
+
+  // Test with list (non-random access iterator).
+  std::list<int> L = {1, 2, 3, 3, 4, 5};
+  auto It13 = llvm::adjacent_find(L);
+  EXPECT_NE(It13, L.end());
+  EXPECT_EQ(*It13, 3);
+  EXPECT_EQ(*std::next(It13), 3);
+}
 
 } // namespace

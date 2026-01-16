@@ -942,25 +942,27 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       DIType *AllocSiteTy = dyn_cast_or_null<DIType>(MI.getHeapAllocMarker());
 
       // If this is a direct call, find the callee's subprogram.
-      // In the case of an indirect call find the register that holds
-      // the callee.
+      // In the case of an indirect call find the register or memory location
+      // that holds the callee address.
       const MachineOperand &CalleeOp = TII->getCalleeOperand(MI);
       bool PhysRegCalleeOperand =
           CalleeOp.isReg() && CalleeOp.getReg().isPhysical();
-      // Hack: WebAssembly CALL instructions have MCInstrDesc that does not
-      // describe the call target operand.
-      if (CalleeOp.getOperandNo() < MI.getDesc().operands().size()) {
-        const MCOperandInfo &MCOI =
-            MI.getDesc().operands()[CalleeOp.getOperandNo()];
-        PhysRegCalleeOperand =
-            PhysRegCalleeOperand && MCOI.OperandType == MCOI::OPERAND_REGISTER;
-      }
-
-      unsigned CallReg = 0;
+      MachineLocation CallTarget{0};
+      int64_t Offset = 0;
       const DISubprogram *CalleeSP = nullptr;
       const Function *CalleeDecl = nullptr;
       if (PhysRegCalleeOperand) {
-        CallReg = CalleeOp.getReg(); // might be zero
+        bool Scalable = false;
+        const MachineOperand *BaseOp = nullptr;
+        const TargetRegisterInfo &TRI =
+            *Asm->MF->getSubtarget().getRegisterInfo();
+        if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, Scalable, &TRI)) {
+          if (BaseOp && BaseOp->isReg() && !Scalable)
+            CallTarget = MachineLocation(BaseOp->getReg(), /*Indirect*/ true);
+        }
+
+        if (!CallTarget.isIndirect())
+          CallTarget = MachineLocation(CalleeOp.getReg()); // Might be zero.
       } else if (CalleeOp.isGlobal()) {
         CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
         if (CalleeDecl)
@@ -969,7 +971,8 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       // Omit DIE if we can't tell where the call goes *and* we don't want to
       // add metadata to it.
-      if (CalleeSP == nullptr && CallReg == 0 && AllocSiteTy == nullptr)
+      if (CalleeSP == nullptr && CallTarget.getReg() == 0 &&
+          AllocSiteTy == nullptr)
         continue;
 
       // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
@@ -997,16 +1000,18 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       assert((IsTail || PCAddr) && "Non-tail call without return PC");
 
-      LLVM_DEBUG(dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
-                        << (CalleeDecl ? CalleeDecl->getName()
-                                       : StringRef(MF.getSubtarget()
-                                                       .getRegisterInfo()
-                                                       ->getName(CallReg)))
-                        << (IsTail ? " [IsTail]" : "") << "\n");
+      LLVM_DEBUG(
+          dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
+                 << (CalleeDecl
+                         ? CalleeDecl->getName()
+                         : StringRef(
+                               MF.getSubtarget().getRegisterInfo()->getName(
+                                   CallTarget.getReg())))
+                 << (IsTail ? " [IsTail]" : "") << "\n");
 
-      DIE &CallSiteDIE =
-          CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, CalleeDecl, IsTail,
-                                       PCAddr, CallAddr, CallReg, AllocSiteTy);
+      DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(
+          ScopeDIE, CalleeSP, CalleeDecl, IsTail, PCAddr, CallAddr, CallTarget,
+          Offset, AllocSiteTy);
 
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {
