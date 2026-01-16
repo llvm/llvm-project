@@ -5,105 +5,107 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefixes=W64-ERR --implicit-check-not=error: %s
 
 //  INSTS=
-//      v_add3_u32_e64_dpp <_0>
-//      v_add_co_u32_e64_dpp <_1>
-//      v_add_lshl_u32_e64_dpp <_0>
-//      v_add_nc_i16_e64_dpp <_2>
-//      v_add_nc_i32_e64_dpp <_3>
-//      v_add_nc_u16_e64_dpp <_2>
-//      v_alignbit_b32_e64_dpp <_4>
-//      v_alignbyte_b32_e64_dpp <_4>
-//      v_and_b16_e64_dpp <_5>
-//      v_and_or_b32_e64_dpp <_0>
-//      v_ashrrev_i16_e64_dpp <_5>
-//      v_bcnt_u32_b32_e64_dpp <_6>
-//      v_bfe_i32_e64_dpp <_0>
-//      v_bfe_u32_e64_dpp <_0>
-//      v_bfi_b32_e64_dpp <_0>
-//      v_bfm_b32_e64_dpp <_6>
-//      v_cndmask_b16_e64_dpp <_7>
-//      v_cubeid_f32_e64_dpp <_8>
-//      v_cubema_f32_e64_dpp <_8>
-//      v_cubesc_f32_e64_dpp <_8>
-//      v_cubetc_f32_e64_dpp <_8>
-//      v_cvt_pk_i16_f32_e64_dpp <_9>
-//      v_cvt_pk_i16_i32_e64_dpp <_6>
-//      v_cvt_pk_norm_i16_f16_e64_dpp <_10>
-//      v_cvt_pk_norm_u16_f16_e64_dpp <_10>
-//      v_cvt_pk_u16_f32_e64_dpp <_9>
-//      v_cvt_pk_u16_u32_e64_dpp <_6>
-//      v_cvt_pk_u8_f32_e64_dpp <_11>
-//      v_cvt_pk_norm_i16_f32_e64_dpp <_9>
-//      v_cvt_pk_norm_u16_f32_e64_dpp <_9>
-//      v_div_fixup_f16_e64_dpp <_12>
-//      v_fma_f16_e64_dpp <_12>
-//      v_fma_f32_e64_dpp <_8>
-//      v_ldexp_f32_e64_dpp <_13>
-//      v_lerp_u8_e64_dpp <_0>
-//      v_lshl_add_u32_e64_dpp <_0>
-//      v_lshl_or_b32_e64_dpp <_0>
-//      v_lshlrev_b16_e64_dpp <_5>
-//      v_lshrrev_b16_e64_dpp <_5>
-//      v_mad_i16_e64_dpp <_14>
-//      v_mad_i32_i16_e64_dpp <_15>
-//      v_mad_i32_i24_e64_dpp <_16>
-//      v_mad_u16_e64_dpp <_14>
-//      v_mad_u32_u16_e64_dpp <_15>
-//      v_mad_u32_u24_e64_dpp <_16>
-//      v_max3_f16_e64_dpp <_12>
-//      v_max3_f32_e64_dpp <_8>
-//      v_max3_i16_e64_dpp <_17>
-//      v_max3_i32_e64_dpp <_0>
-//      v_max3_u16_e64_dpp <_17>
-//      v_max3_u32_e64_dpp <_0>
-//      v_max_i16_e64_dpp <_5>
-//      v_max_u16_e64_dpp <_5>
-//      v_maxmin_f16_e64_dpp <_18>
-//      v_maxmin_f32_e64_dpp <_8>
-//      v_maxmin_i32_e64_dpp <_0>
-//      v_maxmin_u32_e64_dpp <_0>
-//      v_mbcnt_hi_u32_b32_e64_dpp <_6>
-//      v_mbcnt_lo_u32_b32_e64_dpp <_6>
-//      v_med3_f16_e64_dpp <_12>
-//      v_med3_f32_e64_dpp <_8>
-//      v_med3_i16_e64_dpp <_17>
-//      v_med3_i32_e64_dpp <_0>
-//      v_med3_u16_e64_dpp <_17>
-//      v_med3_u32_e64_dpp <_0>
-//      v_min3_f16_e64_dpp <_12>
-//      v_min3_f32_e64_dpp <_8>
-//      v_min3_i16_e64_dpp <_17>
-//      v_min3_i32_e64_dpp <_0>
-//      v_min3_u16_e64_dpp <_17>
-//      v_min3_u32_e64_dpp <_0>
-//      v_min_i16_e64_dpp <_5>
-//      v_min_u16_e64_dpp <_5>
-//      v_minmax_f16_e64_dpp <_18>
-//      v_minmax_f32_e64_dpp <_8>
-//      v_minmax_i32_e64_dpp <_0>
-//      v_minmax_u32_e64_dpp <_0>
-//      v_msad_u8_e64_dpp <_16>
-//      v_mul_lo_u16_e64_dpp <_5>
-//      v_mullit_f32_e64_dpp <_8>
-//      v_or3_b32_e64_dpp <_0>
-//      v_or_b16_e64_dpp <_5>
-//      v_pack_b32_f16_e64_dpp <_10>
-//      v_perm_b32_e64_dpp <_0>
-//      v_sad_hi_u8_e64_dpp <_16>
-//      v_sad_u16_e64_dpp <_16>
-//      v_sad_u32_e64_dpp <_16>
-//      v_sad_u8_e64_dpp <_16>
-//      v_sub_co_u32_e64_dpp <_1>
-//      v_sub_nc_i16_e64_dpp <_2>
-//      v_sub_nc_i32_e64_dpp <_3>
-//      v_sub_nc_u16_e64_dpp <_2>
-//      v_subrev_co_u32_e64_dpp <_1>
-//      v_xad_u32_e64_dpp <_0>
-//      v_xor3_b32_e64_dpp <_0>
-//      v_xor_b16_e64_dpp <_5>
-//      v_dot2_f16_f16_e64_dpp <_20>
-//      v_dot2_bf16_bf16_e64_dpp <_20>
-//      v_dot2_f32_bf16_e64_dpp <_21>
+//      v_add3_u32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_add_co_u32_e64_dpp <OPS-32-M64-32-32>
+//      v_add_lshl_u32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_add_nc_i16_e64_dpp <OPS-16-16-16>
+//      v_add_nc_i32_e64_dpp <OPS-32-32-32-XMOD-XMULDIV>
+//      v_add_nc_u16_e64_dpp <OPS-16-16-16>
+//      v_alignbit_b32_e64_dpp <OPS-32-32-32-16>
+//      v_alignbyte_b32_e64_dpp <OPS-32-32-32-16>
+//      v_and_b16_e64_dpp <OPS-16-16-16-XCLAMP>
+//      v_and_or_b32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_ashrrev_i16_e64_dpp <OPS-16-16-16-XCLAMP>
+//      v_bcnt_u32_b32_e64_dpp <OPS-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_bfe_i32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_bfe_u32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_bfi_b32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_bfm_b32_e64_dpp <OPS-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_cndmask_b16_e64_dpp <OPS-16-16-16-M64>
+//      v_cubeid_f32_e64_dpp <OPS-32-32-32-32>
+//      v_cubema_f32_e64_dpp <OPS-32-32-32-32>
+//      v_cubesc_f32_e64_dpp <OPS-32-32-32-32>
+//      v_cubetc_f32_e64_dpp <OPS-32-32-32-32>
+//      v_cvt_pk_i16_f32_e64_dpp <OPS-32-32-32-XMULDIV-XCLAMP>
+//      v_cvt_pk_i16_i32_e64_dpp <OPS-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_cvt_pk_norm_i16_f16_e64_dpp <OPS-32-16-16>
+//      v_cvt_pk_norm_u16_f16_e64_dpp <OPS-32-16-16>
+//      v_cvt_pk_u16_f32_e64_dpp <OPS-32-32-32-XMULDIV-XCLAMP>
+//      v_cvt_pk_u16_u32_e64_dpp <OPS-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_cvt_pk_u8_f32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_cvt_pk_u8_f32_e64_dpp v5, <MOD32-XIMM>, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
+//      v_cvt_pk_norm_i16_f32_e64_dpp <OPS-32-32-32-XMULDIV-XCLAMP>
+//      v_cvt_pk_norm_u16_f32_e64_dpp <OPS-32-32-32-XMULDIV-XCLAMP>
+//      v_div_fixup_f16_e64_dpp <OPS-16-16-16-16-XMULDIV>
+//      v_fma_f16_e64_dpp <OPS-16-16-16-16-XMULDIV>
+//      v_fma_f32_e64_dpp <OPS-32-32-32-32>
+//      v_ldexp_f32_e64_dpp <OPS-32-32-32>
+//      v_lerp_u8_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_lshl_add_u32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_lshl_or_b32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_lshlrev_b16_e64_dpp <OPS-16-16-16-XCLAMP>
+//      v_lshrrev_b16_e64_dpp <OPS-16-16-16-XCLAMP>
+//      v_mad_i16_e64_dpp <OPS-16-16-16-16-XMOD-XMULDIV>
+//      v_mad_i32_i16_e64_dpp <OPS-32-16-16-32>
+//      v_mad_i32_i24_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV>
+//      v_mad_u16_e64_dpp <OPS-16-16-16-16-XMOD-XMULDIV>
+//      v_mad_u32_u16_e64_dpp <OPS-32-16-16-32>
+//      v_mad_u32_u24_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV>
+//      v_max3_f16_e64_dpp <OPS-16-16-16-16-XMULDIV>
+//      v_max3_f32_e64_dpp <OPS-32-32-32-32>
+//      v_max3_i16_e64_dpp <OPS-16-16-16-16-XMOD-XMULDIV-XCLAMP>
+//      v_max3_i32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_max3_u16_e64_dpp <OPS-16-16-16-16-XMOD-XMULDIV-XCLAMP>
+//      v_max3_u32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_max_i16_e64_dpp <OPS-16-16-16-XCLAMP>
+//      v_max_u16_e64_dpp <OPS-16-16-16-XCLAMP>
+//      v_maxmin_f16_e64_dpp <OPS-16-16-16-16>
+//      v_maxmin_f32_e64_dpp <OPS-32-32-32-32>
+//      v_maxmin_i32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_maxmin_u32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_mbcnt_hi_u32_b32_e64_dpp <OPS-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_mbcnt_lo_u32_b32_e64_dpp <OPS-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_med3_f16_e64_dpp <OPS-16-16-16-16-XMULDIV>
+//      v_med3_f32_e64_dpp <OPS-32-32-32-32>
+//      v_med3_i16_e64_dpp <OPS-16-16-16-16-XMOD-XMULDIV-XCLAMP>
+//      v_med3_i32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_med3_u16_e64_dpp <OPS-16-16-16-16-XMOD-XMULDIV-XCLAMP>
+//      v_med3_u32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_min3_f16_e64_dpp <OPS-16-16-16-16-XMULDIV>
+//      v_min3_f32_e64_dpp <OPS-32-32-32-32>
+//      v_min3_i16_e64_dpp <OPS-16-16-16-16-XMOD-XMULDIV-XCLAMP>
+//      v_min3_i32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_min3_u16_e64_dpp <OPS-16-16-16-16-XMOD-XMULDIV-XCLAMP>
+//      v_min3_u32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_min_i16_e64_dpp <OPS-16-16-16-XCLAMP>
+//      v_min_u16_e64_dpp <OPS-16-16-16-XCLAMP>
+//      v_minmax_f16_e64_dpp <OPS-16-16-16-16>
+//      v_minmax_f32_e64_dpp <OPS-32-32-32-32>
+//      v_minmax_i32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_minmax_u32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_msad_u8_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV>
+//      v_mul_lo_u16_e64_dpp <OPS-16-16-16-XCLAMP>
+//      v_mullit_f32_e64_dpp <OPS-32-32-32-32>
+//      v_or3_b32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_or_b16_e64_dpp <OPS-16-16-16-XCLAMP>
+//      v_pack_b32_f16_e64_dpp <OPS-32-16-16>
+//      v_perm_b32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_sad_hi_u8_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV>
+//      v_sad_u16_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV>
+//      v_sad_u32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV>
+//      v_sad_u8_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV>
+//      v_sub_co_u32_e64_dpp <OPS-32-M64-32-32>
+//      v_sub_nc_i16_e64_dpp <OPS-16-16-16>
+//      v_sub_nc_i32_e64_dpp <OPS-32-32-32-XMOD-XMULDIV>
+//      v_sub_nc_u16_e64_dpp <OPS-16-16-16>
+//      v_subrev_co_u32_e64_dpp <OPS-32-M64-32-32>
+//      v_xad_u32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_xor3_b32_e64_dpp <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
+//      v_xor_b16_e64_dpp <OPS-16-16-16-XCLAMP>
+//      v_dot2_f16_f16_e64_dpp <OPS-16-32-32-16>
+//      v_dot2_bf16_bf16_e64_dpp <OPS-16-32-32-16>
+//      v_dot2_f32_bf16_e64_dpp v5, v1, v2, s3 dpp8:[7,6,5,4,3,2,1,0]
+//      v_dot2_f32_bf16_e64_dpp v0, v1, v2, v3 neg_lo:[0,1,1] neg_hi:[1,0,1] dpp8:[7,6,5,4,3,2,1,0]
 //
 //  <SREG-M64>=
 //      s6
@@ -181,36 +183,32 @@
 //      mul:4
 //      div:2
 //
-//  <_0>=
+//  <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>=
 //      v5, v1, v2, <SRC32> dpp8:[7,6,5,4,3,2,1,0]
 //      v255, v255, v255, v255 dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] <FI>
 //      v5, v1, v2, v3 <DPP>
 //
-//  <_11>=
-//      <_0>
-//      v5, <MOD32-XIMM>, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
-//
-//  <_16>=
-//      <_0>
+//  <OPS-32-32-32-32-XMOD-XMULDIV>=
+//      <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
 //      v5, v1, v2, v3 clamp dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_8>=
-//      <_0>
+//  <OPS-32-32-32-32>=
+//      <OPS-32-32-32-32-XMOD-XMULDIV-XCLAMP>
 //      v5, v1, v2, <MOD32> dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1, <MOD32-XIMM>, v3 dpp8:[7,6,5,4,3,2,1,0]
 //      v5, <MOD32-XIMM>, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1, v2, v3 <MULDIV> dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1, v2, v3 clamp dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_1>=
+//  <OPS-32-M64-32-32>=
 //      v5, <SREG-M64>, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 //      v255, null, v255, v255 dpp8:[7,6,5,4,3,2,1,0]
 //      v5, s6, v1, v2 dpp8:[7,6,5,4,3,2,1,0] <FI>
 //      v5, s6, v1, v2 <DPP>
 //      v5, s6, v1, v2 clamp dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_5>=
+//  <OPS-16-16-16-XCLAMP>=
 //      v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 //      v255.l, v255.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
 //      v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] <FI>
@@ -219,38 +217,38 @@
 //      v5.l, v1.h, v2.l dpp8:[7,6,5,4,3,2,1,0]
 //      v5.h, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_2>=
-//      <_5>
+//  <OPS-16-16-16>=
+//      <OPS-16-16-16-XCLAMP>
 //      v5.l, v1.l, v2.l clamp dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_6>=
+//  <OPS-32-32-32-XMOD-XMULDIV-XCLAMP>=
 //      v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 //      v255, v255, v255 dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] <FI>
 //      v5, v1, v2 <DPP>
 //
-//  <_9>=
-//      <_6>
+//  <OPS-32-32-32-XMULDIV-XCLAMP>=
+//      <OPS-32-32-32-XMOD-XMULDIV-XCLAMP>
 //      v5, v1, <MOD32-XIMM> dpp8:[7,6,5,4,3,2,1,0]
 //      v5, <MOD32-XIMM>, v2 dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_3>=
-//      <_6>
+//  <OPS-32-32-32-XMOD-XMULDIV>=
+//      <OPS-32-32-32-XMOD-XMULDIV-XCLAMP>
 //      v5, v1, v2 clamp dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_13>=
-//      <_6>
+//  <OPS-32-32-32>=
+//      <OPS-32-32-32-XMOD-XMULDIV-XCLAMP>
 //      v5, <MOD32-XIMM>, v2 dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1, v2 <MULDIV> dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1, v2 clamp dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_4>=
+//  <OPS-32-32-32-16>=
 //      v5, v1, v2, <SRC16> dpp8:[7,6,5,4,3,2,1,0]
 //      v255, v255, v255, v255 dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1, v2, v3.l dpp8:[7,6,5,4,3,2,1,0] <FI>
 //      v5, v1, v2, v3.l <DPP>
 //
-//  <_7>=
+//  <OPS-16-16-16-M64>=
 //      v5.l, v1.l, v2.l, <SREG-M64> dpp8:[7,6,5,4,3,2,1,0]
 //      v255.l, v255.l, v255.l, null dpp8:[7,6,5,4,3,2,1,0]
 //      v5.l, v1.l, v2.l, s6 dpp8:[7,6,5,4,3,2,1,0] <FI>
@@ -261,7 +259,7 @@
 //      v5.l, v1.l, <MOD16-XIMM>, s6 dpp8:[7,6,5,4,3,2,1,0]
 //      v5.l, <MOD16-XIMM>, v2.l, s6 dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_10>=
+//  <OPS-32-16-16>=
 //      v5, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 //      v255, v255.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] <FI>
@@ -273,7 +271,7 @@
 //      v5, v1.l, <MOD16-XIMM> dpp8:[7,6,5,4,3,2,1,0]
 //      v5, <MOD16-XIMM>, v2.l dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_17>=
+//  <OPS-16-16-16-16-XMOD-XMULDIV-XCLAMP>=
 //      v5.l, v1.l, v2.l, <SRC16> dpp8:[7,6,5,4,3,2,1,0]
 //      v255.l, v255.l, v255.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
 //      v5.l, v1.l, v2.l, v3.l dpp8:[7,6,5,4,3,2,1,0] <FI>
@@ -287,22 +285,22 @@
 //      v5.h, v1.l, v2.l, v3.l dpp8:[7,6,5,4,3,2,1,0]
 //      v5.h, v1.l, v2.l, v3.l op_sel:[0,0,0,1] dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_14>=
-//      <_17>
+//  <OPS-16-16-16-16-XMOD-XMULDIV>=
+//      <OPS-16-16-16-16-XMOD-XMULDIV-XCLAMP>
 //      v5.l, v1.l, v2.l, v3.l clamp dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_12>=
-//      <_17>
+//  <OPS-16-16-16-16-XMULDIV>=
+//      <OPS-16-16-16-16-XMOD-XMULDIV-XCLAMP>
 //      v5.l, v1.l, v2.l, <MOD16> dpp8:[7,6,5,4,3,2,1,0]
 //      v5.l, v1.l, <MOD16-XIMM>, v3.l dpp8:[7,6,5,4,3,2,1,0]
 //      v5.l, <MOD16-XIMM>, v2.l, v3.l dpp8:[7,6,5,4,3,2,1,0]
 //      v5.l, v1.l, v2.l, v3.l clamp dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_18>=
-//      <_12>
+//  <OPS-16-16-16-16>=
+//      <OPS-16-16-16-16-XMULDIV>
 //      v5.l, v1.l, v2.l, v3.l <MULDIV> dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_15>=
+//  <OPS-32-16-16-32>=
 //      v5, v1.l, v2.l, <SRC32> dpp8:[7,6,5,4,3,2,1,0]
 //      v255, v255.l, v255.l, v255 dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1.l, v2.l, v3 dpp8:[7,6,5,4,3,2,1,0] <FI>
@@ -313,7 +311,7 @@
 //      v5, v1.h, v2.l, v3 op_sel:[1,0,0,0] dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1.l, v2.l, v3 clamp dpp8:[7,6,5,4,3,2,1,0]
 //
-//  <_20>=
+//  <OPS-16-32-32-16>=
 //      v5.l, v1, v2, <SRC16> dpp8:[7,6,5,4,3,2,1,0]
 //      v255.l, v255, v255, v255.l dpp8:[7,6,5,4,3,2,1,0]
 //      v5.l, v1, v2, v3.l dpp8:[7,6,5,4,3,2,1,0] <FI>
@@ -326,10 +324,6 @@
 //      v5.l, v1, v2, <MOD16> dpp8:[7,6,5,4,3,2,1,0]
 //      v5.l, v1, <MOD32-XIMM>, v3.l dpp8:[7,6,5,4,3,2,1,0]
 //      v5.l, <MOD32-XIMM>, v2, v3.l dpp8:[7,6,5,4,3,2,1,0]
-//
-//  <_21>=
-//      v5, v1, v2, s3 dpp8:[7,6,5,4,3,2,1,0]
-//      v0, v1, v2, v3 neg_lo:[0,1,1] neg_hi:[1,0,1] dpp8:[7,6,5,4,3,2,1,0]
 
 v_add3_u32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_add3_u32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x55,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
