@@ -733,6 +733,10 @@ LoongArch Support
 ^^^^^^^^^^^^^^^^^
 - Enable linker relaxation by default for loongarch64.
 
+- Introduce LASX and LSX conversion intrinsics.
+
+- `__attribute__((target("lasx")))` now implies the `lsx` feature.
+
 - DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
   to be used together when building for the LoongArch platform.
 
