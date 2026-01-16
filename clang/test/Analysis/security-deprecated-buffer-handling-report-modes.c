@@ -12,20 +12,17 @@
 // RUN: %{analyze-cmd} -std=gnu11 %{ReportMode}=actionable %{EnableAnnexK} -verify=common
 
 // These cases should not warn:
-// RUN: %{analyze-cmd} -std=gnu99                                          -verify=c99-default
-// RUN: %{analyze-cmd} -std=gnu99 %{ReportMode}=actionable                 -verify=c99-actionable
-// RUN: %{analyze-cmd} -std=gnu99 %{ReportMode}=c11-only                   -verify=c99-c11only
-// RUN: %{analyze-cmd} -std=gnu11 %{ReportMode}=actionable                 -verify=c11-actionable-noannex
+// RUN: %{analyze-cmd} -std=gnu99                                          -verify=no-warning
+// RUN: %{analyze-cmd} -std=gnu99 %{ReportMode}=actionable                 -verify=no-warning
+// RUN: %{analyze-cmd} -std=gnu99 %{ReportMode}=c11-only                   -verify=no-warning
+// RUN: %{analyze-cmd} -std=gnu11 %{ReportMode}=actionable                 -verify=no-warning
 
 #include "Inputs/system-header-simulator.h"
 
 extern char buf[128];
 extern char src[128];
 
-// c99-default-no-diagnostics
-// c99-actionable-no-diagnostics
-// c99-c11only-no-diagnostics
-// c11-actionable-noannex-no-diagnostics
+// no-warning-no-diagnostics
 
 void test_memcpy(void) {
   memcpy(buf, src, 10);
