@@ -35,7 +35,7 @@ enum Flags : uint8_t {
   IsIndirectTarget = 1u << 0,
   HasDirectCallees = 1u << 1,
   HasIndirectCallees = 1u << 2,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ HasIndirectCallees)
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/HasIndirectCallees)
 };
 } // namespace callgraph
 
