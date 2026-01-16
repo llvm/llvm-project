@@ -3860,7 +3860,12 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
   } else if (IsPointer(relevant) && !IsProcedure(relevant)) {
     // object pointers are always ok
   } else if (auto dyType{evaluate::DynamicType::From(relevant)}) {
-    if (dyType->IsPolymorphic() && !dyType->IsAssumedType() &&
+    if (IsProcedurePointer(symbol) && !symbol.attrs().test(Attr::EXTERNAL) &&
+        dyType->IsPolymorphic() && !result) {
+      // Procedure pointers are allowed to have polymorphic (CLASS) type.
+      // However, declarations like "CLASS(...), EXTERNAL, POINTER :: proc"
+      // are also classified as procedure pointers and must be excluded.
+    } else if (dyType->IsPolymorphic() && !dyType->IsAssumedType() &&
         !(IsDummy(symbol) && !IsProcedure(relevant))) { // C708
       messages_.Say(
           "CLASS entity '%s' must be a dummy argument, allocatable, or object pointer"_err_en_US,
