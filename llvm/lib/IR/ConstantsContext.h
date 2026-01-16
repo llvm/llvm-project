@@ -178,7 +178,9 @@ public:
   Constant *ShuffleMaskForBitcode;
 
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { return User::operator delete(Ptr, AllocMarker); }
+  void operator delete(void *Ptr) {
+    return User::operator delete(Ptr, AllocMarker);
+  }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);

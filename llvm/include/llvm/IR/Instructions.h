@@ -1958,7 +1958,9 @@ public:
                              InsertPosition InsertBefore = nullptr);
 
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { return User::operator delete(Ptr, AllocMarker); }
+  void operator delete(void *Ptr) {
+    return User::operator delete(Ptr, AllocMarker);
+  }
 
   /// Swap the operands and adjust the mask to preserve the semantics
   /// of the instruction.
@@ -4145,7 +4147,9 @@ protected:
   LLVM_ABI CatchSwitchInst *cloneImpl() const;
 
 public:
-  void operator delete(void *Ptr) { return User::operator delete(Ptr, AllocMarker); }
+  void operator delete(void *Ptr) {
+    return User::operator delete(Ptr, AllocMarker);
+  }
 
   static CatchSwitchInst *Create(Value *ParentPad, BasicBlock *UnwindDest,
                                  unsigned NumHandlers,

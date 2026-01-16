@@ -156,7 +156,8 @@ public:
   /// Placement delete - required by std, called if the ctor throws.
   LLVM_ABI void operator delete(void *Usr, HungOffOperandsAllocMarker);
   /// Placement delete - required by std, called if the ctor throws.
-  LLVM_ABI void operator delete(void *Usr, IntrusiveOperandsAndDescriptorAllocMarker);
+  LLVM_ABI void operator delete(void *Usr,
+                                IntrusiveOperandsAndDescriptorAllocMarker);
   /// Placement delete - required by std, called if the ctor throws.
   LLVM_ABI void operator delete(void *Usr, IntrusiveOperandsAllocMarker Marker);
 

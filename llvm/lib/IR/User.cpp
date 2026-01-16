@@ -233,15 +233,11 @@ User::~User() {
 
 void User::operator delete(void *Usr) { ::operator delete(((void **)Usr)[-1]); }
 
-// Repress memory sanitization, due to use-after-destroy by operator
-// delete. Bug report 24578 identifies this issue.
 void User::operator delete(void *Usr, HungOffOperandsAllocMarker) {
   Use **HungOffOperandList = static_cast<Use **>(Usr) - 1;
   ::operator delete(HungOffOperandList);
 }
 
-// Repress memory sanitization, due to use-after-destroy by operator
-// delete. Bug report 24578 identifies this issue.
 void User::operator delete(void *Usr,
                            IntrusiveOperandsAndDescriptorAllocMarker Marker) {
   unsigned NumOps = Marker.NumOps;
@@ -251,8 +247,6 @@ void User::operator delete(void *Usr,
   ::operator delete(Storage);
 }
 
-// Repress memory sanitization, due to use-after-destroy by operator
-// delete. Bug report 24578 identifies this issue.
 void User::operator delete(void *Usr, IntrusiveOperandsAllocMarker Marker) {
   unsigned NumOps = Marker.NumOps;
   size_t LeadingSize = sizeof(Use) * NumOps;
