@@ -136,6 +136,8 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  constexpr auto TDLCV_valb = AKind::TDLCV_valb;
 // CHECK-NEXT:  constexpr auto TDLCV_valc = AKind::TDLCV_valc;
 // CHECK-EMPTY:
+// CHECK-NEXT:  // Constexpr functions.
+// CHECK-EMPTY:
 // CHECK-NEXT:  constexpr std::optional<bool> isAllowedClauseForDirectiveOpt(Directive D, Clause C, unsigned Version) {
 // CHECK-NEXT:    switch (D) {
 // CHECK-NEXT:      case TDLD_dira:

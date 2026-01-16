@@ -112,6 +112,8 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 4;
 // CHECK-EMPTY:
+// CHECK-NEXT:  // Constexpr functions.
+// CHECK-EMPTY:
 // CHECK-NEXT:  constexpr std::optional<bool> isAllowedClauseForDirectiveOpt(Directive D, Clause C, unsigned Version) {
 // CHECK-NEXT:    switch (D) {
 // CHECK-NEXT:      case TDLD_dira:

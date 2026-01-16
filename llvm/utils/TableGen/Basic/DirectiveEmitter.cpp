@@ -1364,6 +1364,8 @@ static void generateClauseClassMacro(const DirectiveLanguage &DirLang,
 
 static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
                                         raw_ostream &OS) {
+  OS << "// Constexpr functions.\n";
+  OS << "\n";
   generateIsAllowedClauseConstexpr(DirLang, OS);
   OS << "\n";
   generateGetDirectiveAssociationConstexpr(DirLang, OS);
