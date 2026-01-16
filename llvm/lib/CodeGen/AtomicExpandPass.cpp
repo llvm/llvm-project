@@ -107,7 +107,7 @@ private:
   AtomicCmpXchgInst *convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI);
   static Value *insertRMWCmpXchgLoop(
       IRBuilderBase &Builder, Type *ResultType, Value *Addr, Align AddrAlign,
-      AtomicOrdering MemOpOrder, SyncScope::ID SSID, bool IsVolatile,
+      AtomicOrdering MemOpOrder, SyncScope::ID SSID,
       function_ref<Value *(IRBuilderBase &, Value *)> PerformOp,
       CreateCmpXchgInstFun CreateCmpXchg, Instruction *MetadataSrc);
   bool tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI);
@@ -1002,7 +1002,6 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
   }
   AtomicOrdering MemOpOrder = AI->getOrdering();
   SyncScope::ID SSID = AI->getSyncScopeID();
-  bool IsVolatile = AI->isVolatile();
 
   ReplacementIRBuilder Builder(AI, *DL);
 
@@ -1026,10 +1025,9 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
 
   Value *OldResult;
   if (ExpansionKind == TargetLoweringBase::AtomicExpansionKind::CmpXChg) {
-    OldResult = insertRMWCmpXchgLoop(Builder, PMV.WordType, PMV.AlignedAddr,
-                                     PMV.AlignedAddrAlignment, MemOpOrder, SSID,
-                                     IsVolatile, PerformPartwordOp,
-                                     createCmpXchgInstFun, AI);
+    OldResult = insertRMWCmpXchgLoop(
+        Builder, PMV.WordType, PMV.AlignedAddr, PMV.AlignedAddrAlignment,
+        MemOpOrder, SSID, PerformPartwordOp, createCmpXchgInstFun, AI);
   } else {
     assert(ExpansionKind == TargetLoweringBase::AtomicExpansionKind::LLSC);
     OldResult = insertRMWLLSCLoop(Builder, PMV.WordType, PMV.AlignedAddr,
@@ -1651,7 +1649,7 @@ bool AtomicExpandImpl::simplifyIdempotentRMW(AtomicRMWInst *RMWI) {
 
 Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
     IRBuilderBase &Builder, Type *ResultTy, Value *Addr, Align AddrAlign,
-    AtomicOrdering MemOpOrder, SyncScope::ID SSID, bool IsVolatile,
+    AtomicOrdering MemOpOrder, SyncScope::ID SSID,
     function_ref<Value *(IRBuilderBase &, Value *)> PerformOp,
     CreateCmpXchgInstFun CreateCmpXchg, Instruction *MetadataSrc) {
   LLVMContext &Ctx = Builder.getContext();
@@ -1685,8 +1683,8 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   LoadInst *InitLoaded = Builder.CreateAlignedLoad(ResultTy, Addr, AddrAlign);
   // TODO: The initial load must be strong to avoid a data race with concurrent
   // stores. Issue a strong load with the same synchronization scope as the
-  // atomicrmw instruction here.
-  InitLoaded->setVolatile(IsVolatile);
+  // atomicrmw instruction here. If the instruction being emulated is volatile,
+  // issue a volatile load.
   Builder.CreateBr(LoopBB);
 
   // Start the main loop block now that we've taken care of the preliminaries.
@@ -1756,7 +1754,7 @@ bool llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
   // loop for the FP atomics.
   Value *Loaded = AtomicExpandImpl::insertRMWCmpXchgLoop(
       Builder, AI->getType(), AI->getPointerOperand(), AI->getAlign(),
-      AI->getOrdering(), AI->getSyncScopeID(), AI->isVolatile(),
+      AI->getOrdering(), AI->getSyncScopeID(),
       [&](IRBuilderBase &Builder, Value *Loaded) {
         return buildAtomicRMWValue(AI->getOperation(), Builder, Loaded,
                                    AI->getValOperand());
