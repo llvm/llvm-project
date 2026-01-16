@@ -10,15 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
-#include "Plugins/TypeSystem/Swift/SwiftDWARFImporterForClangTypes.h"
-#include "Plugins/TypeSystem/Swift/StoringDiagnosticConsumer.h"
-#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
-
 #include "SwiftASTContext.h"
+#include "LLDBExplicitModuleLoader.h"
+#include "LLDBImplicitModuleLoader.h"
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
+#include "StoringDiagnosticConsumer.h"
+#include "SwiftDWARFImporterForClangTypes.h"
 #include "SwiftDemangle.h"
 #include "TypeSystemSwift.h"
 #include "TypeSystemSwiftTypeRef.h"
+
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 #include "swift/AST/ASTContext.h"
@@ -917,7 +918,8 @@ static std::string GetClangModulesCacheProperty() {
 }
 
 void SwiftASTContext::ConfigureCASStorage(const SymbolContext &sc) {
-  auto cas = ModuleList::GetOrCreateCAS(sc.module_sp);
+  llvm::Expected<ModuleList::CAS> cas =
+      ModuleList::GetOrCreateCAS(sc.module_sp);
   if (!cas) {
     HEALTH_LOG_PRINTF("Did not create CAS: %s",
                       toString(cas.takeError()).c_str());
@@ -3935,9 +3937,10 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
   }
 
   // 4. Create and install the serialized module loader.
-  std::unique_ptr<swift::ModuleLoader> serialized_module_loader_up(
-      swift::ImplicitSerializedModuleLoader::create(
-          *m_ast_context_up, m_dependency_tracker.get(), loading_mode));
+  std::unique_ptr<swift::ModuleLoader> serialized_module_loader_up =
+      LLDBImplicitSwiftModuleLoader::create(
+          *m_ast_context_up, m_dependency_tracker.get(), loading_mode,
+          std::static_pointer_cast<SwiftASTContext>(shared_from_this()));
   if (serialized_module_loader_up)
     m_ast_context_up->addModuleLoader(std::move(serialized_module_loader_up));
 
@@ -9253,8 +9256,16 @@ LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
               "-module-wrap and linked.");
 
     if (toplevel.GetStringRef() == swift::STDLIB_NAME) {
-      swift_ast_context.RaiseFatalError(
-          "Could not import Swift standard library");
+      if (swift_ast_context.HasExplicitModules()) {
+        swift_ast_context.RaiseFatalError(
+            "Could not import Swift standard library using only explicit "
+            "modules.\n"
+            "Enabling implicit modules now; this operation may succeed on "
+            "retry.");
+        Target::GetGlobalProperties().SetSwiftAllowImplicitModules(true);
+      } else
+        swift_ast_context.RaiseFatalError(
+            "Could not import Swift standard library");
       return llvm::createStringError("Could not import Swift standard library");
     }
   }
@@ -9434,26 +9445,27 @@ llvm::Error SwiftASTContext::GetCompileUnitImportsImpl(
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         *modules) {
   // If EBM is enabled, disable implicit modules during contextual imports.
-  bool turn_off_implicit = m_has_explicit_modules;
-  if (Target::GetGlobalProperties().GetSwiftAllowImplicitModules())
-    turn_off_implicit = false;
-  
+  m_implicit_modules_disabled =
+      m_has_explicit_modules &&
+      !Target::GetGlobalProperties().GetSwiftAllowImplicitModules();
+
   auto reset = llvm::make_scope_exit([&] {
-    if (turn_off_implicit) {
-      LOG_PRINTF(GetLog(LLDBLog::Types), "Turning on implicit modules");
-      if (m_module_interface_loader) {
-        auto &opts = m_module_interface_loader->getOptions();
-        opts.disableImplicitSwiftModule = false;
-        opts.disableBuildingInterface = false;
-      }
-      if (m_clangimporter) {
-        auto &clang_instance = const_cast<clang::CompilerInstance &>(
-            m_clangimporter->getClangInstance());
-        clang_instance.getLangOpts().ImplicitModules = true;
-      }
+    if (!m_implicit_modules_disabled)
+      return;
+    m_implicit_modules_disabled = false;
+    LOG_PRINTF(GetLog(LLDBLog::Types), "Turning on implicit modules");
+    if (m_module_interface_loader) {
+      auto &opts = m_module_interface_loader->getOptions();
+      opts.disableImplicitSwiftModule = false;
+      opts.disableBuildingInterface = false;
+    }
+    if (m_clangimporter) {
+      auto &clang_instance = const_cast<clang::CompilerInstance &>(
+          m_clangimporter->getClangInstance());
+      clang_instance.getLangOpts().ImplicitModules = true;
     }
   });
-  if (turn_off_implicit) {
+  if (m_implicit_modules_disabled) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "Turning off implicit modules");
     // Swift.
     if (m_module_interface_loader) {
@@ -9469,9 +9481,6 @@ llvm::Error SwiftASTContext::GetCompileUnitImportsImpl(
     if (m_clangimporter) {
       auto &clang_instance = const_cast<clang::CompilerInstance &>(
           m_clangimporter->getClangInstance());
-      // AddExtraArgs is supposed to always turn implicit modules on.
-      assert(clang_instance.getLangOpts().ImplicitModules &&
-             "ClangImporter implicit module support is off");
       clang_instance.getLangOpts().ImplicitModules = false;
     }
   }
@@ -9528,6 +9537,7 @@ llvm::Error SwiftASTContext::GetCompileUnitImportsImpl(
   // If we haven't already loaded an explicitly tracked one, import the Swift
   // standard library and its dependencies.
   if (!loaded_stdlib) {
+    m_implicit_modules_disabled = false;
     SourceModule swift_module;
     swift_module.path.emplace_back(swift::STDLIB_NAME);
     auto stdlib = LoadOneModule(swift_module, *this, process_sp,

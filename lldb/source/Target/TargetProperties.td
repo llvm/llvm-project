@@ -29,6 +29,11 @@ let Definition = "target_experimental" in {
   def SwiftAllowImplicitModules: Property<"swift-allow-implicit-modules", "Boolean">,
     DefaultFalse,
     Desc<"Allows implicit module imports in an explicitly-built target.">;
+  def SwiftAllowImplicitModuleLoader
+      : Property<"swift-allow-implicit-module-loader", "Boolean">,
+        DefaultTrue,
+        Desc<
+            "Enable the implicit module loader in an explicitly-built target.">;
   def SwiftPCMValidation: Property<"swift-pcm-validation", "Enum">,
     Global,
     DefaultEnumValue<"llvm::to_underlying(AutoBool::Auto)">,

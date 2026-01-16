@@ -2542,7 +2542,7 @@ SwiftASTContextSP TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext(
     TargetSP target_sp = GetTargetWP().lock();
     if (target_sp)
       process_sp = target_sp->GetProcessSP();
-    if (auto error =
+    if (llvm::Error error =
             swift_ast_context->PerformCompileUnitImports(sc, process_sp)) {
       if (target_sp) {
         if (StreamSP errs_sp = target_sp->GetDebugger().GetAsyncErrorStream())

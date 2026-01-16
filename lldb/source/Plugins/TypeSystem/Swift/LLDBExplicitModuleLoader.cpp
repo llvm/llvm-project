@@ -11,8 +11,12 @@
 //===---------------------------------------------------------------------===//
 
 #include "LLDBExplicitModuleLoader.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
+
 #include "swift/Serialization/SerializedModuleLoader.h"
 #include <swift/Frontend/ModuleInterfaceLoader.h>
+
 namespace lldb_private {
 
 LLDBExplicitSwiftModuleLoader::LLDBExplicitSwiftModuleLoader(
@@ -81,7 +85,8 @@ LLDBExplicitSwiftModuleLoader::loadModule(swift::SourceLoc importLoc,
                                           swift::ImportPath::Module path,
                                           bool AllowMemoryCache) {
   if (m_casml)
-    if (auto *decl = m_casml->loadModule(importLoc, path, AllowMemoryCache))
+    if (swift::ModuleDecl *decl =
+            m_casml->loadModule(importLoc, path, AllowMemoryCache))
       return decl;
   return m_esml->loadModule(importLoc, path, AllowMemoryCache);
 }
@@ -123,11 +128,18 @@ void LLDBExplicitSwiftModuleLoader::verifyAllModules() {
 void LLDBExplicitSwiftModuleLoader::addExplicitModulePath(llvm::StringRef name,
                                                           std::string path) {
   if (m_cas && m_casml) {
-    auto parsed_id = m_cas->parseID(path);
-    if (parsed_id)
+    llvm::Expected<llvm::cas::CASID> parsed_id = m_cas->parseID(path);
+    if (parsed_id) {
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "discovered explicitly tracked module \"{0}\" at CAS id \"{1}\"",
+               name, path);
       return m_casml->addExplicitModulePath(name, path);
+    }
     llvm::consumeError(parsed_id.takeError());
   }
+  LLDB_LOG(GetLog(LLDBLog::Types),
+           "discovered explicitly tracked module \"{0}\" at \"{1}\"", name,
+           path);
   m_esml->addExplicitModulePath(name, path);
 }
 

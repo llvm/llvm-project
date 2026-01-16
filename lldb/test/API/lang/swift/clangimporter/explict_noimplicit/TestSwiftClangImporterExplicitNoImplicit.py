@@ -23,8 +23,13 @@ class TestSwiftClangImporterExplicitNoImplicit(TestBase):
                                           extra_images=['Dylib'])
         log = self.getBuildArtifact("types.log")
         self.expect('log enable lldb types -f "%s"' % log)
+        self.expect('settings set target.experimental.swift-allow-implicit-module-loader false')
+        # This is expected to fail because the dependencies of Dylib
+        # (including the stdlib) are implicit modules.
+        self.expect("expression obj", error=True)
+        self.expect('settings set target.experimental.swift-allow-implicit-module-loader true')
         self.expect("expression obj", DATA_TYPES_DISPLAYED_CORRECTLY,
                     substrs=["hidden"])
         self.filecheck('platform shell cat "%s"' % log, __file__)
-#       CHECK-NOT: IMPLICIT-CLANG-MODULE-CACHE/{{.*}}/SwiftShims-{{.*}}.pcm
-#       CHECK: IMPLICIT-CLANG-MODULE-CACHE/{{.*}}/Hidden-{{.*}}.pcm
+        # CHECK-NOT: IMPLICIT-CLANG-MODULE-CACHE/{{.*}}/SwiftShims-{{.*}}.pcm
+        # CHECK: IMPLICIT-CLANG-MODULE-CACHE/{{.*}}/Hidden-{{.*}}.pcm
