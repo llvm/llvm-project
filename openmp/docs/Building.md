@@ -118,7 +118,7 @@ to have been built from the same Git commit as OpenMP. It will, however, use the
 compiler detected by CMake, usually gcc. To also make it use Clang, add
 `-DCMAKE_C_COMPILER=../build/bin/clang -DCMAKE_C_COMPILER=../build/bin/clang++`.
 In any case, it will use Clang from `LLVM_BINARY_DIR` for running the regression
-tests.
+tests. `LLVM_BINARY_DIR` can also be omitted in which case testing is disabled.
 
 
 (build_offload_capable_compiler)=
@@ -141,7 +141,7 @@ cd build
 cmake ../llvm -G Ninja                                                     \
     -DCMAKE_BUILD_TYPE=Release                                             \
     -DCMAKE_INSTALL_PREFIX=<PATH>                                          \
-    -DLLVM_ENABLE_PROJECTS=clang                                           \
+    -DLLVM_ENABLE_PROJECTS="clang;lld"                                     \
     -DLLVM_ENABLE_RUNTIMES="openmp;offload"                                \
     -DLLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa;nvptx64-nvidia-cuda"
 ninja                            # Build
@@ -149,14 +149,17 @@ ninja check-openmp check-offload # Run regression and unit tests
 ninja install                    # Installs files to <PATH>/bin, <PATH>/lib, etc
 ```
 
+The additional `LLVM_ENABLE_PROJECTS=lld` is needed to compile LLVM
+bitcode of the GPU-side device runtime which uses LTO.
+
 If using a [default/standalone runtimes build](default_runtimes_build), ensure
 that in addition to `LLVM_BINARY_DIR`, `CMAKE_C_COMPILER` and
-`CMAKE_CXX_COMPILER` is Clang built from the same git commit as OpenMP, and that
-`AMDGPU` and `NVPTX` is enabled in its ``LLVM_TARGETS_TO_BUILD`` configuration
-(which is by default).
+`CMAKE_CXX_COMPILER` is Clang built from the same git commit as OpenMP, as well
+as lld, and that `AMDGPU` and `NVPTX` is enabled in its
+``LLVM_TARGETS_TO_BUILD`` configuration (which it is by default).
 
-In practice the setup above will probably missing requirements such as linker
-that supports LLVM-IR for LTO, and the device-side toolchain libraries. A more
+In practice the setup above will probably missing requirements for actually
+running programs on GPUs such as device-side toolchain libraries. A more
 complete build on the device requires more options. Using CMake's
 [`-C`](https://cmake.org/cmake/help/latest/manual/cmake.1.html#cmdoption-cmake-C)
 option allows to conveniently use pre-defined set from a file.
