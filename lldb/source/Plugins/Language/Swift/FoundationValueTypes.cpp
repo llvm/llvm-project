@@ -132,6 +132,7 @@ bool lldb_private::formatters::swift::SwiftURL_SummaryProvider(
   std::string base;
   ValueObjectSP base_url_sp(valobj.GetChildAtNamePath({g__baseURL}));
   if (base_url_sp) {
+    // `GetSyntheticValue()` + `HasChildren()` checks for non-nil Optional.
     if (ValueObjectSP synth = base_url_sp->GetSyntheticValue()) {
       if (synth->HasChildren()) {
         if (!synth->GetSummaryAsCString(base, options))
