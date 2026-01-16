@@ -1366,7 +1366,6 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
          (N->getOpcode() == X86ISD::TC_RETURN &&
           (Subtarget->is64Bit() ||
            !getTargetMachine().isPositionIndependent())))) {
-
       /// Also try moving call address load from outside callseq_start to just
       /// before the call to allow it to be folded.
       ///
