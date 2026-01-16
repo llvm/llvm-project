@@ -8,7 +8,6 @@
 
 #include "src/math/llogb.h"
 #include "src/__support/math/llogb.h"
-#include "src/__support/common.h" // LLVM_LIBC_FUNCTION
 
 namespace LIBC_NAMESPACE_DECL {
 
