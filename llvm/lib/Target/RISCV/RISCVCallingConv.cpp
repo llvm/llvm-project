@@ -324,7 +324,7 @@ static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo, CCState &State,
 // Implements the RISC-V calling convention. Returns true upon failure.
 bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                    CCState &State, bool IsFixed, bool IsRet, Type *OrigTy) {
+                    CCState &State, bool IsRet, Type *OrigTy) {
   const MachineFunction &MF = State.getMachineFunction();
   const DataLayout &DL = MF.getDataLayout();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
@@ -379,12 +379,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     break;
   case RISCVABI::ABI_ILP32F:
   case RISCVABI::ABI_LP64F:
-    UseGPRForF16_F32 = !IsFixed;
+    UseGPRForF16_F32 = ArgFlags.isVarArg();
     break;
   case RISCVABI::ABI_ILP32D:
   case RISCVABI::ABI_LP64D:
-    UseGPRForF16_F32 = !IsFixed;
-    UseGPRForF64 = !IsFixed;
+    UseGPRForF16_F32 = ArgFlags.isVarArg();
+    UseGPRForF64 = ArgFlags.isVarArg();
     break;
   }
 
@@ -465,7 +465,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   // currently if we are using ILP32E calling convention. This behavior may be
   // changed when RV32E/ILP32E is ratified.
   unsigned TwoXLenInBytes = (2 * XLen) / 8;
-  if (!IsFixed && ArgFlags.getNonZeroOrigAlign() == TwoXLenInBytes &&
+  if (ArgFlags.isVarArg() && ArgFlags.getNonZeroOrigAlign() == TwoXLenInBytes &&
       DL.getTypeAllocSize(OrigTy) == TwoXLenInBytes &&
       ABI != RISCVABI::ABI_ILP32E) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
@@ -510,25 +510,11 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     return false;
   }
 
-  // Split arguments might be passed indirectly, so keep track of the pending
-  // values. Split vectors are passed via a mix of registers and indirectly, so
-  // treat them as we would any other argument.
-  if (ValVT.isScalarInteger() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
-    LocVT = XLenVT;
-    LocInfo = CCValAssign::Indirect;
-    PendingLocs.push_back(
-        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
-    PendingArgFlags.push_back(ArgFlags);
-    if (!ArgFlags.isSplitEnd()) {
-      return false;
-    }
-  }
-
   // If the split argument only had two elements, it should be passed directly
   // in registers or on the stack.
   if (ValVT.isScalarInteger() && ArgFlags.isSplitEnd() &&
-      PendingLocs.size() <= 2) {
-    assert(PendingLocs.size() == 2 && "Unexpected PendingLocs.size()");
+      PendingLocs.size() <= 1) {
+    assert(PendingLocs.size() == 1 && "Unexpected PendingLocs.size()");
     // Apply the normal calling convention rules to the first half of the
     // split argument.
     CCValAssign VA = PendingLocs[0];
@@ -538,6 +524,18 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     return CC_RISCVAssign2XLen(
         XLen, State, VA, AF, ValNo, ValVT, LocVT, ArgFlags,
         ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E);
+  }
+
+  // Split arguments might be passed indirectly, so keep track of the pending
+  // values. Split vectors are passed via a mix of registers and indirectly, so
+  // treat them as we would any other argument.
+  if (ValVT.isScalarInteger() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
+    PendingLocs.push_back(
+        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+    PendingArgFlags.push_back(ArgFlags);
+    if (!ArgFlags.isSplitEnd()) {
+      return false;
+    }
   }
 
   // Allocate to a register if possible, or else a stack slot.
@@ -592,10 +590,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     for (auto &It : PendingLocs) {
       if (Reg)
-        It.convertToReg(Reg);
+        State.addLoc(CCValAssign::getReg(It.getValNo(), It.getValVT(), Reg,
+                                         XLenVT, CCValAssign::Indirect));
       else
-        It.convertToMem(StackOffset);
-      State.addLoc(It);
+        State.addLoc(CCValAssign::getMem(It.getValNo(), It.getValVT(),
+                                         StackOffset, XLenVT,
+                                         CCValAssign::Indirect));
     }
     PendingLocs.clear();
     PendingArgFlags.clear();
@@ -620,8 +620,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 // benchmark. But theoretically, it may have benefit for some cases.
 bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
                            CCValAssign::LocInfo LocInfo,
-                           ISD::ArgFlagsTy ArgFlags, CCState &State,
-                           bool IsFixed, bool IsRet, Type *OrigTy) {
+                           ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsRet,
+                           Type *OrigTy) {
   const MachineFunction &MF = State.getMachineFunction();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVTargetLowering &TLI = *Subtarget.getTargetLowering();
@@ -741,7 +741,7 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
 
 bool llvm::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                         CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                        CCState &State) {
+                        Type *OrigTy, CCState &State) {
   if (ArgFlags.isNest()) {
     report_fatal_error(
         "Attribute 'nest' is not supported in GHC calling convention");

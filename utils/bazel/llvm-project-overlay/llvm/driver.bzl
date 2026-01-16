@@ -6,7 +6,7 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@rules_cc//cc:defs.bzl", "CcInfo", "cc_binary")
 
 # Mapping from every tool to the cc_library that implements the tool's entrypoint.
 _TOOLS = {
@@ -28,7 +28,6 @@ _TOOLS = {
     "llvm-nm": "//llvm:llvm-nm-lib",
     "llvm-objcopy": "//llvm:llvm-objcopy-lib",
     "llvm-objdump": "//llvm:llvm-objdump-lib",
-    "llvm-profdata": "//llvm:llvm-profdata-lib",
     "llvm-rc": "//llvm:llvm-rc-lib",
     "llvm-readobj": "//llvm:llvm-readobj-lib",
     "llvm-size": "//llvm:llvm-size-lib",

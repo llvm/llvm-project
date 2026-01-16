@@ -10,21 +10,21 @@ define void @pred_mip_12(ptr %dst, ptr %src, i32 %n, i64 %offset) {
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i32 [[N:%.*]], i64 [[OFFSET:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[OFFSET]], [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; CHECK:       [[OUTER_LOOP_LOOPEXIT:.*]]:
-; CHECK-NEXT:    [[PTR_IV_NEXT_LCSSA:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[INNER_LOOP:.*]] ]
 ; CHECK-NEXT:    br label %[[OUTER_LOOP]]
 ; CHECK:       [[OUTER_LOOP]]:
-; CHECK-NEXT:    [[OUTER_PTR:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[PTR_IV_NEXT_LCSSA]], %[[OUTER_LOOP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[OUTER_PTR:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[SCEVGEP]], %[[OUTER_LOOP_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
-; CHECK-NEXT:    br label %[[INNER_LOOP]]
+; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
 ; CHECK:       [[INNER_LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[INNER_LOOP]] ], [ 0, %[[INNER_LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT]], %[[INNER_LOOP]] ], [ [[SRC]], %[[INNER_LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[OUTER_PTR]], align 1
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[PTR_IV]], i64 [[OFFSET]]
 ; CHECK-NEXT:    store i8 [[L]], ptr [[DST]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], [[SMAX]]

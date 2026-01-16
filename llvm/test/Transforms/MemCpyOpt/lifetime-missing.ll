@@ -7,7 +7,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-grtev4-linux-gnu"
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
+declare void @llvm.lifetime.start.p0(ptr nocapture) #0
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 define void @test() {
@@ -26,7 +26,7 @@ entry:
   %agg.tmp.sroa.14 = alloca [20 x i8], align 4
   %agg.tmp.sroa.14.128.sroa_idx = getelementptr i8, ptr %agg.tmp.sroa.14, i64 4
   call void @llvm.memset.p0.i64(ptr %agg.tmp.sroa.14.128.sroa_idx, i8 0, i64 1, i1 false)
-  call void @llvm.lifetime.start.p0(i64 20, ptr %agg.tmp3.sroa.35)
+  call void @llvm.lifetime.start.p0(ptr %agg.tmp3.sroa.35)
   call void @llvm.memcpy.p0.p0.i64(ptr %agg.tmp3.sroa.35, ptr %agg.tmp.sroa.14, i64 20, i1 false)
   %agg.tmp3.sroa.35.128.sroa_idx = getelementptr i8, ptr %agg.tmp3.sroa.35, i64 4
   call void @llvm.memcpy.p0.p0.i64(ptr inttoptr (i64 4 to ptr), ptr %agg.tmp3.sroa.35.128.sroa_idx, i64 1, i1 false)

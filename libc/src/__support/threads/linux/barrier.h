@@ -36,14 +36,19 @@ public:
   int wait();
 };
 
-static_assert(
-    sizeof(Barrier) == sizeof(pthread_barrier_t),
-    "The public pthread_barrier_t type cannot accommodate the internal "
-    "barrier type.");
+static_assert(sizeof(Barrier) <= sizeof(pthread_barrier_t),
+              "The public pthread_barrier_t type cannot accommodate the "
+              "internal barrier type.");
 
-static_assert(alignof(Barrier) == alignof(pthread_barrier_t),
-              "The public pthread_barrier_t type has a different alignment "
-              "than the internal barrier type.");
+static_assert(alignof(Barrier) <= alignof(pthread_barrier_t),
+              "The public pthread_barrier_t type has insufficient alignment "
+              "for the internal barrier type.");
+
+static_assert(sizeof(CndVar) <= 24,
+              "CndVar size exceeds the size in __barrier_type.h");
+
+static_assert(sizeof(Mutex) <= 24,
+              "Mutex size exceeds the size in __barrier_type.h");
 
 } // namespace LIBC_NAMESPACE_DECL
 

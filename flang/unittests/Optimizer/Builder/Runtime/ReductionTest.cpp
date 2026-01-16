@@ -12,7 +12,7 @@
 
 TEST_F(RuntimeCallTest, genAllTest) {
   mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value undef = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
   mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   mlir::Value all = fir::runtime::genAll(*firBuilder, loc, undef, dim);
   checkCallOp(all.getDefiningOp(), "_FortranAAll", 2);
@@ -20,8 +20,8 @@ TEST_F(RuntimeCallTest, genAllTest) {
 
 TEST_F(RuntimeCallTest, genAllDescriptorTest) {
   mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value result = firBuilder->create<fir::UndefOp>(loc, seqTy10);
-  mlir::Value mask = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  mlir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
   mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   fir::runtime::genAllDescriptor(*firBuilder, loc, result, mask, dim);
   checkCallOpFromResultBox(result, "_FortranAAllDim", 3);
@@ -29,7 +29,7 @@ TEST_F(RuntimeCallTest, genAllDescriptorTest) {
 
 TEST_F(RuntimeCallTest, genAnyTest) {
   mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value undef = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
   mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   mlir::Value any = fir::runtime::genAny(*firBuilder, loc, undef, dim);
   checkCallOp(any.getDefiningOp(), "_FortranAAny", 2);
@@ -37,8 +37,8 @@ TEST_F(RuntimeCallTest, genAnyTest) {
 
 TEST_F(RuntimeCallTest, genAnyDescriptorTest) {
   mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value result = firBuilder->create<fir::UndefOp>(loc, seqTy10);
-  mlir::Value mask = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  mlir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
   mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   fir::runtime::genAnyDescriptor(*firBuilder, loc, result, mask, dim);
   checkCallOpFromResultBox(result, "_FortranAAnyDim", 3);
@@ -46,7 +46,7 @@ TEST_F(RuntimeCallTest, genAnyDescriptorTest) {
 
 TEST_F(RuntimeCallTest, genCountTest) {
   mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value undef = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
   mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   mlir::Value count = fir::runtime::genCount(*firBuilder, loc, undef, dim);
   checkCallOp(count.getDefiningOp(), "_FortranACount", 2);
@@ -54,8 +54,8 @@ TEST_F(RuntimeCallTest, genCountTest) {
 
 TEST_F(RuntimeCallTest, genCountDimTest) {
   mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value result = firBuilder->create<fir::UndefOp>(loc, seqTy10);
-  mlir::Value mask = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  mlir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
   mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   mlir::Value kind = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   fir::runtime::genCountDim(*firBuilder, loc, result, mask, dim, kind);
@@ -114,7 +114,7 @@ TEST_F(RuntimeCallTest, genMinValTest) {
 
 TEST_F(RuntimeCallTest, genParityTest) {
   mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value undef = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
   mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   mlir::Value parity = fir::runtime::genParity(*firBuilder, loc, undef, dim);
   checkCallOp(parity.getDefiningOp(), "_FortranAParity", 2);
@@ -122,8 +122,8 @@ TEST_F(RuntimeCallTest, genParityTest) {
 
 TEST_F(RuntimeCallTest, genParityDescriptorTest) {
   mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value result = firBuilder->create<fir::UndefOp>(loc, seqTy10);
-  mlir::Value mask = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  mlir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
   mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   fir::runtime::genParityDescriptor(*firBuilder, loc, result, mask, dim);
   checkCallOpFromResultBox(result, "_FortranAParityDim", 3);

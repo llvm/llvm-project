@@ -28,6 +28,7 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -56,6 +57,7 @@ class OptimizationRemarkEmitter;
 class PHINode;
 class TargetLibraryInfo;
 class Value;
+class IntrinsicInst;
 /// A private "module" namespace for types and utilities used by GVN. These
 /// are implementation details and should not be used by clients.
 namespace LLVM_LIBRARY_VISIBILITY_NAMESPACE gvn {
@@ -321,11 +323,6 @@ private:
   };
   LeaderMap LeaderTable;
 
-  // Block-local map of equivalent values to their leader, does not
-  // propagate to any successors. Entries added mid-block are applied
-  // to the remaining instructions in the block.
-  SmallMapVector<Value *, Value *, 4> ReplaceOperandsWithMap;
-
   // Map the block to reversed postorder traversal number. It is used to
   // find back edge easily.
   DenseMap<AssertingVH<BasicBlock>, uint32_t> BlockRPONumber;
@@ -349,6 +346,7 @@ private:
 
   // Helper functions of redundant load elimination.
   bool processLoad(LoadInst *L);
+  bool processMaskedLoad(IntrinsicInst *I);
   bool processNonLocalLoad(LoadInst *L);
   bool processAssumeIntrinsic(AssumeInst *II);
 
@@ -400,9 +398,9 @@ private:
   void verifyRemoved(const Instruction *I) const;
   bool splitCriticalEdges();
   BasicBlock *splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ);
-  bool replaceOperandsForInBlockEquality(Instruction *I) const;
-  bool propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
-                         bool DominatesByEdge);
+  bool
+  propagateEquality(Value *LHS, Value *RHS,
+                    const std::variant<BasicBlockEdge, Instruction *> &Root);
   bool processFoldableCondBr(BranchInst *BI);
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();

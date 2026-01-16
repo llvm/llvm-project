@@ -39,8 +39,8 @@ let Predicates = [HasDotProd] in {
 def ext_addv_to_udot_addv : GICombineRule<
   (defs root:$root, ext_addv_to_udot_addv_matchinfo:$matchinfo),
   (match (wip_match_opcode G_VECREDUCE_ADD):$root,
-         [{ return matchExtAddvToUdotAddv(*${root}, MRI, STI, ${matchinfo}); }]),
-  (apply [{ applyExtAddvToUdotAddv(*${root}, MRI, B, Observer, STI, ${matchinfo}); }])
+         [{ return matchExtAddvToDotAddv(*${root}, MRI, STI, ${matchinfo}); }]),
+  (apply [{ applyExtAddvToDotAddv(*${root}, MRI, B, Observer, STI, ${matchinfo}); }])
 >;
 }
 
@@ -62,21 +62,23 @@ class push_opcode_through_ext<Instruction opcode, Instruction extOpcode> : GICom
 
 def push_sub_through_zext : push_opcode_through_ext<G_SUB, G_ZEXT>;
 def push_add_through_zext : push_opcode_through_ext<G_ADD, G_ZEXT>;
+def push_mul_through_zext : push_opcode_through_ext<G_MUL, G_ZEXT>;
 def push_sub_through_sext : push_opcode_through_ext<G_SUB, G_SEXT>;
 def push_add_through_sext : push_opcode_through_ext<G_ADD, G_SEXT>;
+def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
-                                      fconstant_to_constant,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
-                                      shuffle_to_extract,
                                       ext_addv_to_udot_addv,
                                       ext_uaddv_to_uaddlv,
                                       push_sub_through_zext,
                                       push_add_through_zext,
+                                      push_mul_through_zext,
                                       push_sub_through_sext,
-                                      push_add_through_sext]> {
+                                      push_add_through_sext,
+                                      push_mul_through_sext]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -337,7 +339,7 @@ def AArch64PostLegalizerLowering
     : GICombiner<"AArch64PostLegalizerLoweringImpl",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
-                        lower_vector_fcmp, form_truncstore,
+                        lower_vector_fcmp, form_truncstore, fconstant_to_constant,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
                         vector_unmerge_lowering, insertelt_nonconst,
@@ -347,9 +349,10 @@ def AArch64PostLegalizerLowering
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
-                       [copy_prop, cast_of_cast_combines, buildvector_of_truncate,
-                        integer_of_truncate, mutate_anyext_to_zext,
-                        combines_for_extload, combine_indexed_load_store, sext_trunc_sextload,
+                       [copy_prop, cast_of_cast_combines, constant_fold_fp_ops, 
+                        buildvector_of_truncate, integer_of_truncate,
+                        mutate_anyext_to_zext, combines_for_extload, 
+                        combine_indexed_load_store, sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
@@ -363,5 +366,7 @@ def AArch64PostLegalizerCombiner
                         select_to_minmax, or_to_bsp, combine_concat_vector,
                         commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
-                        combine_mul_cmlt, combine_use_vector_truncate, extmultomull]> {
+                        combine_mul_cmlt, combine_use_vector_truncate,
+                        extmultomull, truncsat_combines, lshr_of_trunc_of_lshr,
+                        funnel_shift_from_or_shift_constants_are_legal]> {
 }

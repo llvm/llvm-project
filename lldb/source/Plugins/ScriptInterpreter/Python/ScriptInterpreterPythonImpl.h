@@ -99,6 +99,11 @@ public:
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 
+  lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() override;
+
+  lldb::ScriptedFrameProviderInterfaceSP
+  CreateScriptedFrameProviderInterface() override;
+
   lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() override;
 
@@ -120,7 +125,7 @@ public:
   GetChildAtIndex(const StructuredData::ObjectSP &implementor,
                   uint32_t idx) override;
 
-  llvm::Expected<int>
+  llvm::Expected<uint32_t>
   GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
                           const char *child_name) override;
 
@@ -475,7 +480,7 @@ public:
         StreamString run_string;
         run_string.Printf("run_python_interpreter (%s)",
                           m_python->GetDictionaryName());
-        PyRun_SimpleString(run_string.GetData());
+        python::RunSimpleString(run_string.GetData());
       }
     }
     SetIsDone(true);

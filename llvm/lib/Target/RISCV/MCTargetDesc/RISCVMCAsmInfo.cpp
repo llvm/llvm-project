@@ -21,6 +21,7 @@ using namespace llvm;
 void RISCVMCAsmInfo::anchor() {}
 
 RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT) {
+  IsLittleEndian = TT.isLittleEndian();
   CodePointerSize = CalleeSaveStackSlotSize = TT.isArch64Bit() ? 8 : 4;
   CommentString = "#";
   AlignmentIsInBytes = false;
@@ -56,4 +57,17 @@ void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
   printExpr(OS, *Expr.getSubExpr());
   if (HasSpecifier)
     OS << ')';
+}
+
+RISCVMCAsmInfoDarwin::RISCVMCAsmInfoDarwin() {
+  CodePointerSize = 4;
+  PrivateGlobalPrefix = "L";
+  PrivateLabelPrefix = "L";
+  SeparatorString = "%%";
+  CommentString = ";";
+  AlignmentIsInBytes = false;
+  SupportsDebugInformation = true;
+  ExceptionsType = ExceptionHandling::DwarfCFI;
+  Data16bitsDirective = "\t.half\t";
+  Data32bitsDirective = "\t.word\t";
 }

@@ -1,4 +1,4 @@
-// UNSUPPORTED: system-windows
+// UNSUPPORTED: system-windows, system-cygwin
 
 // RUN: %clang -### -target x86_64-linux-gnu --offload=spirv64 \
 // RUN:   --no-offload-new-driver --hip-path=%S/Inputs/hipspv -nohipwrapperinc %s \
@@ -14,7 +14,7 @@
 // CHECK-SAME: "-o" [[DEV_BC:".*bc"]]
 // CHECK-SAME: "-x" "hip"
 
-// CHECK: {{".*llvm-link"}} [[DEV_BC]] "-o" [[LINK_BC:".*bc"]]
+// CHECK: {{".*llvm-link"}} "-o" [[LINK_BC:".*bc"]] [[DEV_BC]]
 
 // CHECK: {{".*opt"}} [[LINK_BC]] "-load-pass-plugin"
 // CHECK-SAME: {{".*/hipspv/lib/libLLVMHipSpvPasses.so"}}

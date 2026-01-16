@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================================
 Clang |release| |ReleaseNotesTitle|
 ===========================================
@@ -37,13 +40,8 @@ Potentially Breaking Changes
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
-- The ``__has_builtin`` function now only considers the currently active target when being used with target offloading.
-
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
-- For C++20 modules, the Reduced BMI mode will be the default option. This may introduce
-  regressions if your build system supports two-phase compilation model but haven't support
-  reduced BMI or it is a compiler bug or a bug in users code.
 
 ABI Changes in This Version
 ---------------------------
@@ -89,20 +87,9 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
-- Added ``__builtin_elementwise_minnumnum`` and ``__builtin_elementwise_maxnumnum``.
-
-- Trapping UBSan (e.g. ``-fsanitize-trap=undefined``) now emits a string describing the reason for 
-  trapping into the generated debug info. This feature allows debuggers (e.g. LLDB) to display 
-  the reason for trapping if the trap is reached. The string is currently encoded in the debug 
-  info as an artificial frame that claims to be inlined at the trap location. The function used 
-  for the artificial frame is an artificial function whose name encodes the reason for trapping. 
-  The encoding used is currently the same as ``__builtin_verbose_trap`` but might change in the future. 
-  This feature is enabled by default but can be disabled by compiling with 
-  ``-fno-sanitize-annotate-debug-info-traps``.
 
 New Compiler Flags
 ------------------
-- New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 
 Deprecated Compiler Flags
 -------------------------
@@ -111,18 +98,13 @@ Modified Compiler Flags
 -----------------------
 
 Removed Compiler Flags
--------------------------
+----------------------
 
 Attribute Changes in Clang
 --------------------------
 
 Improvements to Clang's diagnostics
 -----------------------------------
-- Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
-  diagnostics for function effects (``[[clang::nonblocking]]`` and ``[[clang::nonallocating]]``).
-  Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
-  Added a new warning in this group for the case where the attribute is missing/implicit on
-  an override of a virtual method.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -132,8 +114,6 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
-- Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
-  ``#pragma pop_macro("")``. (#GH149762).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -141,16 +121,8 @@ Bug Fixes to Compiler Builtins
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods.
-  (#GH141504)
-
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
-- Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
-- Suppress ``-Wdeprecated-declarations`` in implicitly generated functions. (#GH147293)
-- Fix a crash when deleting a pointer to an incomplete array (#GH150359).
-- Fix an assertion failure when expression in assumption attribute
-  (``[[assume(expr)]]``) creates temporary objects.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -160,6 +132,10 @@ Miscellaneous Bug Fixes
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash when attempting to jump over initialization of a variable with variably modified type. (#GH175540)
+- Fixed a crash when using loop hint with a value dependent argument inside a
+  generic lambda. (#GH172289)
 
 OpenACC Specific Changes
 ------------------------
@@ -188,6 +164,9 @@ Windows Support
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
+- DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
+
 RISC-V Support
 ^^^^^^^^^^^^^^
 
@@ -206,6 +185,9 @@ NetBSD Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
+  (#GH118233)
+
 AVR Support
 ^^^^^^^^^^^
 
@@ -220,8 +202,7 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
-- Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
-  parameters.
+- Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
 
 clang-format
 ------------
@@ -234,20 +215,14 @@ Code Completion
 
 Static Analyzer
 ---------------
-- The Clang Static Analyzer now handles parenthesized initialization.
-  (#GH148875)
 
-New features
-^^^^^^^^^^^^
-
-Crash and bug fixes
-^^^^^^^^^^^^^^^^^^^
-
-Improvements
-^^^^^^^^^^^^
-
-Moved checkers
-^^^^^^^^^^^^^^
+.. comment:
+  This is for the Static Analyzer.
+  Using the caret `^^^` underlining for subsections:
+    - Crash and bug fixes
+    - New checkers and features
+    - Improvements
+    - Moved checkers
 
 .. _release-notes-sanitizers:
 
@@ -259,9 +234,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
-- Added parsing and semantic analysis support for the ``need_device_addr``
-  modifier in the ``adjust_args`` clause.
-- Allow array length to be omitted in array section subscript expression.
+- Added support for ``transparent`` clause in task and taskloop directives.
 
 Improvements
 ^^^^^^^^^^^^

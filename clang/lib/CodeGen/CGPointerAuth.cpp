@@ -426,10 +426,10 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
                                         llvm::ConstantInt *OtherDiscriminator) {
   llvm::Constant *AddressDiscriminator;
   if (StorageAddress) {
-    assert(StorageAddress->getType() == UnqualPtrTy);
+    assert(StorageAddress->getType() == DefaultPtrTy);
     AddressDiscriminator = StorageAddress;
   } else {
-    AddressDiscriminator = llvm::Constant::getNullValue(UnqualPtrTy);
+    AddressDiscriminator = llvm::Constant::getNullValue(DefaultPtrTy);
   }
 
   llvm::ConstantInt *IntegerDiscriminator;
@@ -440,9 +440,10 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
     IntegerDiscriminator = llvm::ConstantInt::get(Int64Ty, 0);
   }
 
-  return llvm::ConstantPtrAuth::get(Pointer,
-                                    llvm::ConstantInt::get(Int32Ty, Key),
-                                    IntegerDiscriminator, AddressDiscriminator);
+  return llvm::ConstantPtrAuth::get(
+      Pointer, llvm::ConstantInt::get(Int32Ty, Key), IntegerDiscriminator,
+      AddressDiscriminator,
+      /*DeactivationSymbol=*/llvm::Constant::getNullValue(DefaultPtrTy));
 }
 
 /// Does a given PointerAuthScheme require us to sign a value
@@ -464,6 +465,14 @@ llvm::Constant *CodeGenModule::getConstantSignedPointer(
 
   return getConstantSignedPointer(Pointer, Schema.getKey(), StorageAddress,
                                   OtherDiscriminator);
+}
+
+llvm::Constant *
+CodeGen::getConstantSignedPointer(CodeGenModule &CGM, llvm::Constant *Pointer,
+                                  unsigned Key, llvm::Constant *StorageAddress,
+                                  llvm::ConstantInt *OtherDiscriminator) {
+  return CGM.getConstantSignedPointer(Pointer, Key, StorageAddress,
+                                      OtherDiscriminator);
 }
 
 /// If applicable, sign a given constant function pointer with the ABI rules for
@@ -521,7 +530,7 @@ llvm::Constant *CodeGenModule::getMemberFunctionPointer(llvm::Constant *Pointer,
         cast_or_null<llvm::ConstantInt>(PointerAuth.getDiscriminator()));
 
   if (const auto *MFT = dyn_cast<MemberPointerType>(FT.getTypePtr())) {
-    if (MFT->hasPointeeToToCFIUncheckedCalleeFunctionType())
+    if (MFT->hasPointeeToCFIUncheckedCalleeFunctionType())
       Pointer = llvm::NoCFIValue::get(cast<llvm::GlobalValue>(Pointer));
   }
 
@@ -531,7 +540,7 @@ llvm::Constant *CodeGenModule::getMemberFunctionPointer(llvm::Constant *Pointer,
 llvm::Constant *CodeGenModule::getMemberFunctionPointer(const FunctionDecl *FD,
                                                         llvm::Type *Ty) {
   QualType FT = FD->getType();
-  FT = getContext().getMemberPointerType(FT, /*Qualifier=*/nullptr,
+  FT = getContext().getMemberPointerType(FT, /*Qualifier=*/std::nullopt,
                                          cast<CXXMethodDecl>(FD)->getParent());
   return getMemberFunctionPointer(getRawFunctionPointer(FD, Ty), FT);
 }

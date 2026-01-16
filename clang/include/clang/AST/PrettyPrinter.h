@@ -15,6 +15,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "llvm/ADT/STLForwardCompat.h"
 
 namespace clang {
 
@@ -55,17 +56,19 @@ public:
 /// This type is intended to be small and suitable for passing by value.
 /// It is very frequently copied.
 struct PrintingPolicy {
-  enum SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
+  enum class SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
 
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
-        SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
-        SuppressScope(false), SuppressUnwrittenScope(false),
-        SuppressInlineNamespace(SuppressInlineNamespaceMode::Redundant),
-        SuppressElaboration(false), SuppressInitializers(false),
-        ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
-        SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
+        SuppressTagKeyword(LO.CPlusPlus), SuppressTagKeywordInAnonNames(false),
+        IncludeTagDefinition(false), SuppressScope(false),
+        SuppressUnwrittenScope(false),
+        SuppressInlineNamespace(
+            llvm::to_underlying(SuppressInlineNamespaceMode::Redundant)),
+        SuppressInitializers(false), ConstantArraySizeAsWritten(false),
+        AnonymousTagLocations(true), SuppressStrongLifetime(false),
+        SuppressLifetimeQualifiers(false),
         SuppressTemplateArgsInCXXConstructors(false),
         SuppressDefaultTemplateArgs(true), Bool(LO.Bool),
         Nullptr(LO.CPlusPlus11 || LO.C23), NullptrTypeInNamespace(LO.CPlusPlus),
@@ -122,6 +125,15 @@ struct PrintingPolicy {
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressTagKeyword : 1;
 
+  /// Whether type printing should skip printing the tag keyword
+  /// of anonymous entities. E.g.,
+  ///
+  /// * \c (anonymous) as opopsed to (anonymous struct)
+  /// * \c (unnamed) as opposed to (unnamed enum)
+  ///
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SuppressTagKeywordInAnonNames : 1;
+
   /// When true, include the body of a tag definition.
   ///
   /// This is used to place the definition of a struct
@@ -149,11 +161,6 @@ struct PrintingPolicy {
   /// removed.
   LLVM_PREFERRED_TYPE(SuppressInlineNamespaceMode)
   unsigned SuppressInlineNamespace : 2;
-
-  /// Ignore qualifiers and tag keywords as specified by elaborated type sugar,
-  /// instead letting the underlying type print as normal.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SuppressElaboration : 1;
 
   /// Suppress printing of variable initializers.
   ///

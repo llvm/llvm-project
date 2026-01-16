@@ -47,6 +47,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -915,7 +916,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // move the bitcast as well, which we don't handle.
   if (SkippedLifetimeStart) {
     auto *LifetimeArg =
-        dyn_cast<Instruction>(SkippedLifetimeStart->getOperand(1));
+        dyn_cast<Instruction>(SkippedLifetimeStart->getOperand(0));
     if (LifetimeArg && LifetimeArg->getParent() == C->getParent() &&
         C->comesBefore(LifetimeArg))
       return false;
@@ -1010,8 +1011,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
       // Lifetime of srcAlloca ends at lifetime.end.
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
         if (II->getIntrinsicID() == Intrinsic::lifetime_end &&
-            II->getArgOperand(1)->stripPointerCasts() == srcAlloca &&
-            cast<ConstantInt>(II->getArgOperand(0))->uge(srcSize))
+            II->getArgOperand(0) == srcAlloca)
           break;
       }
 
@@ -1160,7 +1160,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   IRBuilder<> Builder(M);
   auto *CopySource = MDep->getSource();
   Instruction *NewCopySource = nullptr;
-  auto CleanupOnRet = llvm::make_scope_exit([&] {
+  llvm::scope_exit CleanupOnRet([&] {
     if (NewCopySource && NewCopySource->use_empty())
       // Safety: It's safe here because we will only allocate more instructions
       // after finishing all BatchAA queries, but we have to be careful if we
@@ -1367,6 +1367,10 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Value *SizeDiff = Builder.CreateSub(DestSize, SrcSize);
   Value *MemsetLen = Builder.CreateSelect(
       Ule, ConstantInt::getNullValue(DestSize->getType()), SizeDiff);
+  // FIXME (#167968): we could explore estimating the branch_weights based on
+  // value profiling data about the 2 sizes.
+  if (auto *SI = dyn_cast<SelectInst>(MemsetLen))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
   Instruction *NewMemSet =
       Builder.CreateMemSet(Builder.CreatePtrAdd(Dest, SrcSize),
                            MemSet->getOperand(1), MemsetLen, Alignment);
@@ -1384,39 +1388,17 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   return true;
 }
 
-/// Determine whether the pointer V had only undefined content (due to Def) up
-/// to the given Size, either because it was freshly alloca'd or started its
-/// lifetime.
+/// Determine whether the pointer V had only undefined content (due to Def),
+/// either because it was freshly alloca'd or started its lifetime.
 static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
-                             MemoryDef *Def, Value *Size) {
+                             MemoryDef *Def) {
   if (MSSA->isLiveOnEntryDef(Def))
     return isa<AllocaInst>(getUnderlyingObject(V));
 
-  if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst())) {
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
-      auto *LTSize = cast<ConstantInt>(II->getArgOperand(0));
-
-      if (auto *CSize = dyn_cast<ConstantInt>(Size)) {
-        if (AA.isMustAlias(V, II->getArgOperand(1)) &&
-            LTSize->getZExtValue() >= CSize->getZExtValue())
-          return true;
-      }
-
-      // If the lifetime.start covers a whole alloca (as it almost always
-      // does) and we're querying a pointer based on that alloca, then we know
-      // the memory is definitely undef, regardless of how exactly we alias.
-      // The size also doesn't matter, as an out-of-bounds access would be UB.
-      if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V))) {
-        if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
-          const DataLayout &DL = Alloca->getDataLayout();
-          if (std::optional<TypeSize> AllocaSize =
-                  Alloca->getAllocationSize(DL))
-            if (*AllocaSize == LTSize->getValue())
-              return true;
-        }
-      }
-    }
-  }
+  if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst()))
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+      if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V)))
+        return II->getArgOperand(0) == Alloca;
 
   return false;
 }
@@ -1428,13 +1410,12 @@ static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
 // which cannot deal with offsets), we use the full 0..CopySize range.
 static bool overreadUndefContents(MemorySSA *MSSA, MemCpyInst *MemCpy,
                                   MemIntrinsic *MemSrc, BatchAAResults &BAA) {
-  Value *CopySize = MemCpy->getLength();
   MemoryLocation MemCpyLoc = MemoryLocation::getForSource(MemCpy);
   MemoryUseOrDef *MemSrcAccess = MSSA->getMemoryAccess(MemSrc);
   MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
       MemSrcAccess->getDefiningAccess(), MemCpyLoc, BAA);
   if (auto *MD = dyn_cast<MemoryDef>(Clobber))
-    if (hasUndefContents(MSSA, BAA, MemCpy->getSource(), MD, CopySize))
+    if (hasUndefContents(MSSA, BAA, MemCpy->getSource(), MD))
       return true;
   return false;
 }
@@ -1535,12 +1516,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // Check that copy is full with static size.
   const DataLayout &DL = DestAlloca->getDataLayout();
   std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
-  if (!SrcSize || Size != *SrcSize) {
-    LLVM_DEBUG(dbgs() << "Stack Move: Source alloca size mismatch\n");
-    return false;
-  }
   std::optional<TypeSize> DestSize = DestAlloca->getAllocationSize(DL);
-  if (!DestSize || Size != *DestSize) {
+  if (!SrcSize || !DestSize)
+    return false;
+  if (*SrcSize != *DestSize)
+    if (!SrcSize->isFixed() || !DestSize->isFixed())
+      return false;
+  if (Size != *DestSize) {
     LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
     return false;
   }
@@ -1548,31 +1530,33 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (!SrcAlloca->isStaticAlloca() || !DestAlloca->isStaticAlloca())
     return false;
 
+  // Check if it will be legal to combine allocas without breaking dominator.
+  bool MoveSrc = !DT->dominates(SrcAlloca, DestAlloca);
+  if (MoveSrc) {
+    if (!DT->dominates(DestAlloca, SrcAlloca))
+      return false;
+  }
+
   // Check that src and dest are never captured, unescaped allocas. Also
   // find the nearest common dominator and postdominator for all users in
   // order to shrink wrap the lifetimes, and instructions with noalias metadata
   // to remove them.
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
-  SmallSet<Instruction *, 4> AAMetadataInstrs;
-  bool SrcNotDom = false;
+  SmallPtrSet<Instruction *, 4> AAMetadataInstrs;
 
   auto CaptureTrackingWithModRef =
-      [&](Instruction *AI,
-          function_ref<bool(Instruction *)> ModRefCallback) -> bool {
+      [&](Instruction *AI, function_ref<bool(Instruction *)> ModRefCallback,
+          bool &AddressCaptured) -> bool {
     SmallVector<Instruction *, 8> Worklist;
     Worklist.push_back(AI);
     unsigned MaxUsesToExplore = getDefaultMaxUsesToExploreForCaptureTracking();
     Worklist.reserve(MaxUsesToExplore);
-    SmallSet<const Use *, 20> Visited;
+    SmallPtrSet<const Use *, 20> Visited;
     while (!Worklist.empty()) {
       Instruction *I = Worklist.pop_back_val();
       for (const Use &U : I->uses()) {
         auto *UI = cast<Instruction>(U.getUser());
-        // If any use that isn't dominated by SrcAlloca exists, we move src
-        // alloca to the entry before the transformation.
-        if (!DT->dominates(SrcAlloca, UI))
-          SrcNotDom = true;
 
         if (Visited.size() >= MaxUsesToExplore) {
           LLVM_DEBUG(
@@ -1583,8 +1567,9 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         if (!Visited.insert(&U).second)
           continue;
         UseCaptureInfo CI = DetermineUseCaptureKind(U, AI);
-        if (capturesAnything(CI.UseCC))
+        if (capturesAnyProvenance(CI.UseCC))
           return false;
+        AddressCaptured |= capturesAddress(CI.UseCC);
 
         if (UI->mayReadOrWriteMemory()) {
           if (UI->isLifetimeStartOrEnd()) {
@@ -1651,7 +1636,9 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return true;
   };
 
-  if (!CaptureTrackingWithModRef(DestAlloca, DestModRefCallback))
+  bool DestAddressCaptured = false;
+  if (!CaptureTrackingWithModRef(DestAlloca, DestModRefCallback,
+                                 DestAddressCaptured))
     return false;
   // Bailout if Dest may have any ModRef before Store.
   if (!ReachabilityWorklist.empty() &&
@@ -1677,17 +1664,33 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return true;
   };
 
-  if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback))
+  bool SrcAddressCaptured = false;
+  if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback,
+                                 SrcAddressCaptured))
     return false;
 
-  // We can do the transformation. First, move the SrcAlloca to the start of the
-  // BB.
-  if (SrcNotDom)
-    SrcAlloca->moveBefore(*SrcAlloca->getParent(),
-                          SrcAlloca->getParent()->getFirstInsertionPt());
+  // If both the source and destination address are captured, the fact that they
+  // are no longer two separate allocations may be observed.
+  if (DestAddressCaptured && SrcAddressCaptured)
+    return false;
+
+  // We can now do the transformation. First move the Src if it was after Dest.
+  if (MoveSrc)
+    SrcAlloca->moveBefore(DestAlloca->getIterator());
+
   // Align the allocas appropriately.
   SrcAlloca->setAlignment(
       std::max(SrcAlloca->getAlign(), DestAlloca->getAlign()));
+
+  // Size the allocas appropriately.
+  if (*SrcSize != *DestSize) {
+    // Only possible if both sizes are fixed (due to earlier check)
+    // Set Src to the type and array size of Dest if Dest was larger
+    if (DestSize->getFixedValue() > SrcSize->getFixedValue()) {
+      SrcAlloca->setAllocatedType(DestAlloca->getAllocatedType());
+      SrcAlloca->setOperand(0, DestAlloca->getArraySize());
+    }
+  }
 
   // Merge the two allocas.
   DestAlloca->replaceAllUsesWith(SrcAlloca);
@@ -1716,7 +1719,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
   }
 
-  LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
+  LLVM_DEBUG(dbgs() << "Stack Move: Performed stack-move optimization\n");
   NumStackMove++;
   return true;
 }
@@ -1836,7 +1839,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       }
     }
 
-    if (hasUndefContents(MSSA, BAA, M->getSource(), MD, M->getLength())) {
+    if (hasUndefContents(MSSA, BAA, M->getSource(), MD)) {
       LLVM_DEBUG(dbgs() << "Removed memcpy from undef\n");
       eraseInstruction(M);
       ++NumMemCpyInstr;

@@ -20,7 +20,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -273,7 +272,7 @@ MemoryEffects llvm::computeFunctionBodyMemoryAccess(Function &F,
 /// Deduce readonly/readnone/writeonly attributes for the SCC.
 template <typename AARGetterT>
 static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
-                           SmallSet<Function *, 8> &Changed) {
+                           SmallPtrSet<Function *, 8> &Changed) {
   MemoryEffects ME = MemoryEffects::none();
   MemoryEffects RecursiveArgME = MemoryEffects::none();
   for (Function *F : SCCNodes) {
@@ -1002,7 +1001,7 @@ determinePointerAccessAttrs(Argument *A,
 
 /// Deduce returned attributes for the SCC.
 static void addArgumentReturnedAttrs(const SCCNodeSet &SCCNodes,
-                                     SmallSet<Function *, 8> &Changed) {
+                                     SmallPtrSet<Function *, 8> &Changed) {
   // Check each function in turn, determining if an argument is always returned.
   for (Function *F : SCCNodes) {
     // We can infer and propagate function attributes only when we know that the
@@ -1238,7 +1237,7 @@ static bool inferInitializes(Argument &A, Function &F) {
 
 /// Deduce nocapture attributes for the SCC.
 static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
-                             SmallSet<Function *, 8> &Changed,
+                             SmallPtrSet<Function *, 8> &Changed,
                              bool SkipInitializes) {
   ArgumentGraph AG;
 
@@ -1510,7 +1509,7 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
 
 /// Deduce noalias attributes for the SCC.
 static void addNoAliasAttrs(const SCCNodeSet &SCCNodes,
-                            SmallSet<Function *, 8> &Changed) {
+                            SmallPtrSet<Function *, 8> &Changed) {
   // Check each function in turn, determining which functions return noalias
   // pointers.
   for (Function *F : SCCNodes) {
@@ -1623,7 +1622,7 @@ static bool isReturnNonNull(Function *F, const SCCNodeSet &SCCNodes,
 
 /// Deduce nonnull attributes for the SCC.
 static void addNonNullAttrs(const SCCNodeSet &SCCNodes,
-                            SmallSet<Function *, 8> &Changed) {
+                            SmallPtrSet<Function *, 8> &Changed) {
   // Speculative that all functions in the SCC return only nonnull
   // pointers.  We may refute this as we analyze functions.
   bool SCCReturnsNonNull = true;
@@ -1680,7 +1679,7 @@ static void addNonNullAttrs(const SCCNodeSet &SCCNodes,
 
 /// Deduce noundef attributes for the SCC.
 static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
-                            SmallSet<Function *, 8> &Changed) {
+                            SmallPtrSet<Function *, 8> &Changed) {
   // Check each function in turn, determining which functions return noundef
   // values.
   for (Function *F : SCCNodes) {
@@ -1788,13 +1787,13 @@ public:
     InferenceDescriptors.push_back(AttrInference);
   }
 
-  void run(const SCCNodeSet &SCCNodes, SmallSet<Function *, 8> &Changed);
+  void run(const SCCNodeSet &SCCNodes, SmallPtrSet<Function *, 8> &Changed);
 };
 
 /// Perform all the requested attribute inference actions according to the
 /// attribute predicates stored before.
 void AttributeInferer::run(const SCCNodeSet &SCCNodes,
-                           SmallSet<Function *, 8> &Changed) {
+                           SmallPtrSet<Function *, 8> &Changed) {
   SmallVector<InferenceDescriptor, 4> InferInSCC = InferenceDescriptors;
   // Go through all the functions in SCC and check corresponding attribute
   // assumptions for each of them. Attributes that are invalid for this SCC
@@ -1969,7 +1968,7 @@ static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
 ///
 /// Returns true if any changes to function attributes were made.
 static void inferConvergent(const SCCNodeSet &SCCNodes,
-                            SmallSet<Function *, 8> &Changed) {
+                            SmallPtrSet<Function *, 8> &Changed) {
   AttributeInferer AI;
 
   // Request to remove the convergent attribute from all functions in the SCC
@@ -2000,7 +1999,7 @@ static void inferConvergent(const SCCNodeSet &SCCNodes,
 ///
 /// Returns true if any changes to function attributes were made.
 static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
-                                         SmallSet<Function *, 8> &Changed) {
+                                         SmallPtrSet<Function *, 8> &Changed) {
   AttributeInferer AI;
 
   if (!DisableNoUnwindInference)
@@ -2068,8 +2067,38 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
   AI.run(SCCNodes, Changed);
 }
 
+// Determines if the function 'F' can be marked 'norecurse'.
+// It returns true if any call within 'F' could lead to a recursive
+// call back to 'F', and false otherwise.
+// The 'AnyFunctionsAddressIsTaken' parameter is a module-wide flag
+// that is true if any function's address is taken, or if any function
+// has external linkage. This is used to determine the safety of
+// external/library calls.
+static bool mayHaveRecursiveCallee(Function &F,
+                                   bool AnyFunctionsAddressIsTaken = true) {
+  for (const auto &BB : F) {
+    for (const auto &I : BB.instructionsWithoutDebug()) {
+      if (const auto *CB = dyn_cast<CallBase>(&I)) {
+        const Function *Callee = CB->getCalledFunction();
+        if (!Callee || Callee == &F)
+          return true;
+
+        if (Callee->doesNotRecurse())
+          continue;
+
+        if (!AnyFunctionsAddressIsTaken ||
+            (Callee->isDeclaration() &&
+             Callee->hasFnAttribute(Attribute::NoCallback)))
+          continue;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
-                              SmallSet<Function *, 8> &Changed) {
+                              SmallPtrSet<Function *, 8> &Changed) {
   // Try and identify functions that do not recurse.
 
   // If the SCC contains multiple nodes we know for sure there is recursion.
@@ -2079,33 +2108,19 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   Function *F = *SCCNodes.begin();
   if (!F || !F->hasExactDefinition() || F->doesNotRecurse())
     return;
-
-  // If all of the calls in F are identifiable and are to norecurse functions, F
-  // is norecurse. This check also detects self-recursion as F is not currently
-  // marked norecurse, so any called from F to F will not be marked norecurse.
-  for (auto &BB : *F)
-    for (auto &I : BB.instructionsWithoutDebug())
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        Function *Callee = CB->getCalledFunction();
-        if (!Callee || Callee == F ||
-            (!Callee->doesNotRecurse() &&
-             !(Callee->isDeclaration() &&
-               Callee->hasFnAttribute(Attribute::NoCallback))))
-          // Function calls a potentially recursive function.
-          return;
-      }
-
-  // Every call was to a non-recursive function other than this function, and
-  // we have no indirect recursion as the SCC size is one. This function cannot
-  // recurse.
-  F->setDoesNotRecurse();
-  ++NumNoRecurse;
-  Changed.insert(F);
+  if (!mayHaveRecursiveCallee(*F)) {
+    // Every call was to a non-recursive function other than this function, and
+    // we have no indirect recursion as the SCC size is one. This function
+    // cannot recurse.
+    F->setDoesNotRecurse();
+    ++NumNoRecurse;
+    Changed.insert(F);
+  }
 }
 
 // Set the noreturn function attribute if possible.
 static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,
-                             SmallSet<Function *, 8> &Changed) {
+                             SmallPtrSet<Function *, 8> &Changed) {
   for (Function *F : SCCNodes) {
     if (!F || !F->hasExactDefinition() || F->hasFnAttribute(Attribute::Naked) ||
         F->doesNotReturn())
@@ -2166,7 +2181,7 @@ static bool allPathsGoThroughCold(Function &F) {
 
 // Set the cold function attribute if possible.
 static void addColdAttrs(const SCCNodeSet &SCCNodes,
-                         SmallSet<Function *, 8> &Changed) {
+                         SmallPtrSet<Function *, 8> &Changed) {
   for (Function *F : SCCNodes) {
     if (!F || !F->hasExactDefinition() || F->hasFnAttribute(Attribute::Naked) ||
         F->hasFnAttribute(Attribute::Cold) || F->hasFnAttribute(Attribute::Hot))
@@ -2213,7 +2228,7 @@ static bool functionWillReturn(const Function &F) {
 
 // Set the willreturn function attribute if possible.
 static void addWillReturn(const SCCNodeSet &SCCNodes,
-                          SmallSet<Function *, 8> &Changed) {
+                          SmallPtrSet<Function *, 8> &Changed) {
   for (Function *F : SCCNodes) {
     if (!F || F->willReturn() || !functionWillReturn(*F))
       continue;
@@ -2239,7 +2254,7 @@ static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
 }
 
 template <typename AARGetterT>
-static SmallSet<Function *, 8>
+static SmallPtrSet<Function *, 8>
 deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
                        bool ArgAttrsOnly) {
   SCCNodesResult Nodes = createSCCNodeSet(Functions);
@@ -2248,7 +2263,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   if (Nodes.SCCNodes.empty())
     return {};
 
-  SmallSet<Function *, 8> Changed;
+  SmallPtrSet<Function *, 8> Changed;
   if (ArgAttrsOnly) {
     // ArgAttrsOnly means to only infer attributes that may aid optimizations
     // on the *current* function. "initializes" attribute is to aid
@@ -2328,7 +2343,7 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
     // through function attributes.
     for (auto *U : Changed->users()) {
       if (auto *Call = dyn_cast<CallBase>(U)) {
-        if (Call->getCalledFunction() == Changed)
+        if (Call->getCalledOperand() == Changed)
           FAM.invalidate(*Call->getFunction(), FuncPA);
       }
     }
@@ -2428,5 +2443,64 @@ ReversePostOrderFunctionAttrsPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   PreservedAnalyses PA;
   PA.preserve<LazyCallGraphAnalysis>();
+  return PA;
+}
+
+PreservedAnalyses NoRecurseLTOInferencePass::run(Module &M,
+                                                 ModuleAnalysisManager &MAM) {
+
+  // Check if any function in the whole program has its address taken or has
+  // potentially external linkage.
+  // We use this information when inferring norecurse attribute: If there is
+  // no function whose address is taken and all functions have internal
+  // linkage, there is no path for a callback to any user function.
+  bool AnyFunctionsAddressIsTaken = false;
+  for (Function &F : M) {
+    if (F.isDeclaration() || F.doesNotRecurse())
+      continue;
+    if (!F.hasLocalLinkage() || F.hasAddressTaken()) {
+      AnyFunctionsAddressIsTaken = true;
+      break;
+    }
+  }
+
+  // Run norecurse inference on all RefSCCs in the LazyCallGraph for this
+  // module.
+  bool Changed = false;
+  LazyCallGraph &CG = MAM.getResult<LazyCallGraphAnalysis>(M);
+  CG.buildRefSCCs();
+
+  for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
+    // Skip any RefSCC that is part of a call cycle. A RefSCC containing more
+    // than one SCC indicates a recursive relationship involving indirect calls.
+    if (RC.size() > 1)
+      continue;
+
+    // RefSCC contains a single-SCC. SCC size > 1 indicates mutually recursive
+    // functions. Ex: foo1 -> foo2 -> foo3 -> foo1.
+    LazyCallGraph::SCC &S = *RC.begin();
+    if (S.size() > 1)
+      continue;
+
+    // Get the single function from this SCC.
+    Function &F = S.begin()->getFunction();
+    if (!F.hasExactDefinition() || F.doesNotRecurse())
+      continue;
+
+    // If the analysis confirms that this function has no recursive calls
+    // (either direct, indirect, or through external linkages),
+    // we can safely apply the norecurse attribute.
+    if (!mayHaveRecursiveCallee(F, AnyFunctionsAddressIsTaken)) {
+      F.setDoesNotRecurse();
+      ++NumNoRecurse;
+      Changed = true;
+    }
+  }
+
+  PreservedAnalyses PA;
+  if (Changed)
+    PA.preserve<LazyCallGraphAnalysis>();
+  else
+    PA = PreservedAnalyses::all();
   return PA;
 }

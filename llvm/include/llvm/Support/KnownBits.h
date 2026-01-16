@@ -94,6 +94,13 @@ public:
     One.setAllBits();
   }
 
+  /// Make all bits known to be both zero and one. Useful before a loop that
+  /// calls intersectWith.
+  void setAllConflict() {
+    Zero.setAllBits();
+    One.setAllBits();
+  }
+
   /// Returns true if this value is known to be negative.
   bool isNegative() const { return One.isSignBitSet(); }
 
@@ -107,6 +114,9 @@ public:
   bool isStrictlyPositive() const {
     return Zero.isSignBitSet() && !One.isZero();
   }
+
+  /// Returns true if this value is known to be non-positive.
+  bool isNonPositive() const { return getSignedMaxValue().isNonPositive(); }
 
   /// Make this value negative.
   void makeNegative() {
@@ -487,8 +497,27 @@ public:
   /// Update known bits based on XORing with RHS.
   LLVM_ABI KnownBits &operator^=(const KnownBits &RHS);
 
+  /// Shift known bits left by ShAmt. Shift in bits are unknown.
+  KnownBits &operator<<=(unsigned ShAmt) {
+    Zero <<= ShAmt;
+    One <<= ShAmt;
+    return *this;
+  }
+
+  /// Shift known bits right by ShAmt. Shifted in bits are unknown.
+  KnownBits &operator>>=(unsigned ShAmt) {
+    Zero.lshrInPlace(ShAmt);
+    One.lshrInPlace(ShAmt);
+    return *this;
+  }
+
   /// Compute known bits for the absolute value.
   LLVM_ABI KnownBits abs(bool IntMinIsPoison = false) const;
+
+  /// Compute known bits for horizontal add for a vector with NumElts
+  /// elements, where each element has the known bits represented by this
+  /// object.
+  LLVM_ABI KnownBits reduceAdd(unsigned NumElts) const;
 
   KnownBits byteSwap() const {
     return KnownBits(Zero.byteSwap(), One.byteSwap());

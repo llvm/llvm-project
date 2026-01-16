@@ -4,7 +4,7 @@
 !!       -static-libflang_rt in the future. Need to add that option here.
 
 !! Because flang-rt currently only supports
-!! LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON, use 
+!! LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON, use
 !! resource_dir_with_per_target_subdir as inputs.
 
 ! Check powerpc64-ibm-aix 64-bit linking to static flang-rt by default
@@ -26,7 +26,7 @@
 ! AIX64-LD-PER-TARGET-DEFAULT-NOT:      "-L/[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}powerpc64-ibm-aix"
 
 
-! Check powerpc64-ibm-aix 64-bit linking to static flang-rt by option 
+! Check powerpc64-ibm-aix 64-bit linking to static flang-rt by option
 ! RUN: %flang -static-libflangrt -Werror %s -### 2>&1 \
 ! RUN:        --target=powerpc64-ibm-aix \
 ! RUN:        -resource-dir=%S/../../../clang/test/Driver/Inputs/resource_dir_with_per_target_subdir \
@@ -44,7 +44,7 @@
 ! AIX64-LD-PER-TARGET-STATIC-SAME:     "-lpthread"
 
 
-! Check powerpc64-ibm-aix 64-bit linking to shared flang-rt by option 
+! Check powerpc64-ibm-aix 64-bit linking to shared flang-rt by option
 ! RUN: %flang -shared-libflangrt -Werror %s -### 2>&1 \
 ! RUN:        --target=powerpc64-ibm-aix \
 ! RUN:        -resource-dir=%S/../../../clang/test/Driver/Inputs/resource_dir_with_per_target_subdir \

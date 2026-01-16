@@ -865,7 +865,7 @@ exit:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
+declare void @llvm.lifetime.start.p0(ptr nocapture) #0
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
 
 declare void @use.i64(i64)
@@ -883,7 +883,7 @@ define i64 @test_a_not_captured_at_all(ptr %ptr, ptr %ptr.2, i1 %c) {
 ; CHECK-NEXT:    call void @use.i64(i64 [[LV_2]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[A]], i8 0, i64 8, i1 false)
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[A]], align 4
@@ -902,7 +902,7 @@ then:
   br label %exit
 
 exit:
-  call void @llvm.lifetime.start.p0(i64 8, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   store i64 99, ptr %a
   call void @clobber()
   call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 8, i1 false)
@@ -1112,7 +1112,7 @@ else:
 
 declare void @capture_and_clobber_multiple(ptr, ptr)
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define i64 @earliest_escape_ptrtoint(ptr %p.1) {
 ; CHECK-LABEL: @earliest_escape_ptrtoint(
@@ -1122,7 +1122,7 @@ define i64 @earliest_escape_ptrtoint(ptr %p.1) {
 ; CHECK-NEXT:    [[LV_1:%.*]] = load ptr, ptr [[P_1:%.*]], align 8
 ; CHECK-NEXT:    [[LV_2:%.*]] = load i64, ptr [[LV_1]], align 4
 ; CHECK-NEXT:    store ptr [[A_1]], ptr [[P_1]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[A_2]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_2]])
 ; CHECK-NEXT:    ret i64 [[LV_2]]
 ;
 entry:
@@ -1134,7 +1134,7 @@ entry:
   store ptr %a.1, ptr %p.1, align 8
   %int = ptrtoint ptr %a.2 to i64
   store i64 %int , ptr %a.2, align 8
-  call void @llvm.lifetime.end.p0(i64 8, ptr %a.2)
+  call void @llvm.lifetime.end.p0(ptr %a.2)
   ret i64 %lv.2
 }
 

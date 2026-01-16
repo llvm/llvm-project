@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/Matchers.h"
 #include <optional>
 
@@ -251,9 +252,9 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
 LogicalResult AllocTensorOp::verify() {
   if (getCopy() && !getDynamicSizes().empty())
     return emitError("dynamic sizes not needed when copying a tensor");
-  if (!getCopy() && getType().getNumDynamicDims() != getDynamicSizes().size())
-    return emitError("expected ")
-           << getType().getNumDynamicDims() << " dynamic sizes";
+  if (!getCopy() && failed(verifyDynamicDimensionCount(
+                        getOperation(), getType(), getDynamicSizes())))
+    return failure();
   if (getCopy() && getCopy().getType() != getType())
     return emitError("expected that `copy` and return type match");
   return success();
@@ -463,8 +464,12 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     // which otherwise could prevent removal of unnecessary allocs.
     Value canonicalSource = source;
     while (auto iface = dyn_cast_or_null<ViewLikeOpInterface>(
-               canonicalSource.getDefiningOp()))
+               canonicalSource.getDefiningOp())) {
+      if (canonicalSource != iface.getViewDest()) {
+        break;
+      }
       canonicalSource = iface.getViewSource();
+    }
 
     std::optional<Operation *> maybeCloneDeallocOp =
         memref::findDealloc(cloneOp.getOutput());
@@ -806,14 +811,12 @@ struct ToBufferOfCast : public OpRewritePattern<ToBufferOp> {
     if (!srcTensorType)
       return failure();
     auto currentOutputMemRefType =
-        dyn_cast<MemRefType>(toBuffer.getResult().getType());
+        dyn_cast<BaseMemRefType>(toBuffer.getResult().getType());
     if (!currentOutputMemRefType)
       return failure();
 
-    auto memrefType = MemRefType::get(srcTensorType.getShape(),
-                                      srcTensorType.getElementType(),
-                                      currentOutputMemRefType.getLayout(),
-                                      currentOutputMemRefType.getMemorySpace());
+    auto memrefType = currentOutputMemRefType.cloneWith(
+        srcTensorType.getShape(), srcTensorType.getElementType());
     Value memref = ToBufferOp::create(rewriter, toBuffer.getLoc(), memrefType,
                                       tensorCastOperand.getOperand(),
                                       toBuffer.getReadOnly());
@@ -844,7 +847,7 @@ struct LoadOfToBuffer : public OpRewritePattern<memref::LoadOp> {
   LogicalResult matchAndRewrite(memref::LoadOp load,
                                 PatternRewriter &rewriter) const override {
     auto toBuffer = load.getMemref().getDefiningOp<ToBufferOp>();
-    if (!toBuffer)
+    if (!toBuffer || !toBuffer.getReadOnly())
       return failure();
 
     rewriter.replaceOpWithNewOp<tensor::ExtractOp>(load, toBuffer.getTensor(),

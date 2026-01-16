@@ -376,11 +376,13 @@ namespace {
     const Stmt *S;
     ExprEngine &Eng;
     const ProgramPoint &PP;
+    bool AtDeclInit;
 
-    CheckBindContext(const CheckersTy &checkers,
-                     SVal loc, SVal val, const Stmt *s, ExprEngine &eng,
+    CheckBindContext(const CheckersTy &checkers, SVal loc, SVal val,
+                     const Stmt *s, bool AtDeclInit, ExprEngine &eng,
                      const ProgramPoint &pp)
-        : Checkers(checkers), Loc(loc), Val(val), S(s), Eng(eng), PP(pp) {}
+        : Checkers(checkers), Loc(loc), Val(val), S(s), Eng(eng), PP(pp),
+          AtDeclInit(AtDeclInit) {}
 
     CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
@@ -391,7 +393,7 @@ namespace {
       const ProgramPoint &L = PP.withTag(checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L);
 
-      checkFn(Loc, Val, S, C);
+      checkFn(Loc, Val, S, AtDeclInit, C);
     }
   };
 
@@ -408,10 +410,10 @@ namespace {
 /// Run checkers for binding of a value to a location.
 void CheckerManager::runCheckersForBind(ExplodedNodeSet &Dst,
                                         const ExplodedNodeSet &Src,
-                                        SVal location, SVal val,
-                                        const Stmt *S, ExprEngine &Eng,
+                                        SVal location, SVal val, const Stmt *S,
+                                        bool AtDeclInit, ExprEngine &Eng,
                                         const ProgramPoint &PP) {
-  CheckBindContext C(BindCheckers, location, val, S, Eng, PP);
+  CheckBindContext C(BindCheckers, location, val, S, AtDeclInit, Eng, PP);
   llvm::TimeTraceScope TimeScope{
       "CheckerManager::runCheckersForBind",
       [&val]() { return getTimeTraceBindMetadata(val); }};
@@ -729,19 +731,22 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
     ExplodedNodeSet checkDst;
     NodeBuilder B(Pred, checkDst, Eng.getBuilderContext());
 
+    ProgramStateRef State = Pred->getState();
+    CallEventRef<> UpdatedCall = Call.cloneWithState(State);
+
     // Check if any of the EvalCall callbacks can evaluate the call.
     for (const auto &EvalCallChecker : EvalCallCheckers) {
       // TODO: Support the situation when the call doesn't correspond
       // to any Expr.
       ProgramPoint L = ProgramPoint::getProgramPoint(
-          Call.getOriginExpr(), ProgramPoint::PostStmtKind,
+          UpdatedCall->getOriginExpr(), ProgramPoint::PostStmtKind,
           Pred->getLocationContext(), EvalCallChecker.Checker);
       bool evaluated = false;
-      { // CheckerContext generates transitions(populates checkDest) on
+      { // CheckerContext generates transitions (populates checkDest) on
         // destruction, so introduce the scope to make sure it gets properly
         // populated.
         CheckerContext C(B, Eng, Pred, L);
-        evaluated = EvalCallChecker(Call, C);
+        evaluated = EvalCallChecker(*UpdatedCall, C);
       }
 #ifndef NDEBUG
       if (evaluated && evaluatorChecker) {
@@ -772,7 +777,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
     // If none of the checkers evaluated the call, ask ExprEngine to handle it.
     if (!evaluatorChecker) {
       NodeBuilder B(Pred, Dst, Eng.getBuilderContext());
-      Eng.defaultEvalCall(B, Pred, Call, CallOpts);
+      Eng.defaultEvalCall(B, Pred, *UpdatedCall, CallOpts);
     }
   }
 }

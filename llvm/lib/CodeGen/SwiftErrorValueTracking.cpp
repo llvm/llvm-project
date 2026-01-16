@@ -14,7 +14,6 @@
 
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -179,7 +178,7 @@ void SwiftErrorValueTracking::propagateVRegs() {
       // Check whether we have a single vreg def from all predecessors.
       // Otherwise we need a phi.
       SmallVector<std::pair<MachineBasicBlock *, Register>, 4> VRegs;
-      SmallSet<const MachineBasicBlock *, 8> Visited;
+      SmallPtrSet<const MachineBasicBlock *, 8> Visited;
       for (auto *Pred : MBB->predecessors()) {
         if (!Visited.insert(Pred).second)
           continue;

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/SubsystemRAII.h"
@@ -19,6 +20,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -435,145 +437,215 @@ struct DemanglingPartsTestCase {
 DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
     // clang-format off
    { "_ZNVKO3BarIN2ns3QuxIiEEE1CIPFi3FooIS_IiES6_EEE6methodIS6_EENS5_IT_SC_E5InnerIiEESD_SD_",
-     { /*.BasenameRange=*/{92, 98}, /*.ScopeRange=*/{36, 92}, /*.ArgumentsRange=*/{ 108, 158 },
-       /*.QualifiersRange=*/{158, 176}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{92, 98}, /*.TemplateArgumentsRange=*/{98, 108}, /*.ScopeRange=*/{36, 92},
+       /*.ArgumentsRange=*/{108, 158}, /*.QualifiersRange=*/{158, 176}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"method",
      /*.scope=*/"Bar<ns::Qux<int>>::C<int (*)(Foo<Bar<int>, Bar<int>>)>::",
      /*.qualifiers=*/" const volatile &&"
    },
    { "_Z7getFuncIfEPFiiiET_",
-     { /*.BasenameRange=*/{6, 13}, /*.ScopeRange=*/{6, 6}, /*.ArgumentsRange=*/{ 20, 27 },
-       /*.QualifiersRange=*/{38, 38}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{6, 13}, /*.TemplateArgumentsRange=*/{13, 20}, /*.ScopeRange=*/{6, 6},
+       /*.ArgumentsRange=*/{20, 27}, /*.QualifiersRange=*/{38, 38}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"getFunc",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_ZN1f1b1c1gEv",
-     { /*.BasenameRange=*/{9, 10}, /*.ScopeRange=*/{0, 9}, /*.ArgumentsRange=*/{ 10, 12 },
-       /*.QualifiersRange=*/{12, 12}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{9, 10}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 9},
+       /*.ArgumentsRange=*/{10, 12}, /*.QualifiersRange=*/{12, 12}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"g",
      /*.scope=*/"f::b::c::",
      /*.qualifiers=*/""
    },
    { "_ZN5test73fD1IiEEDTcmtlNS_1DEL_ZNS_1bEEEcvT__EES2_",
-     { /*.BasenameRange=*/{45, 48}, /*.ScopeRange=*/{38, 45}, /*.ArgumentsRange=*/{ 53, 58 },
-       /*.QualifiersRange=*/{58, 58}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{45, 48}, /*.TemplateArgumentsRange=*/{48, 53}, /*.ScopeRange=*/{38, 45},
+       /*.ArgumentsRange=*/{53, 58}, /*.QualifiersRange=*/{58, 58}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fD1",
      /*.scope=*/"test7::",
      /*.qualifiers=*/""
    },
    { "_ZN5test73fD1IiEEDTcmtlNS_1DEL_ZNS_1bINDT1cE1dEEEEEcvT__EES2_",
-     { /*.BasenameRange=*/{61, 64}, /*.ScopeRange=*/{54, 61}, /*.ArgumentsRange=*/{ 69, 79 },
-       /*.QualifiersRange=*/{79, 79}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{61, 64}, /*.TemplateArgumentsRange=*/{64, 69},/*.ScopeRange=*/{54, 61},
+       /*.ArgumentsRange=*/{69, 79}, /*.QualifiersRange=*/{79, 79}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fD1",
      /*.scope=*/"test7::",
      /*.qualifiers=*/""
    },
    { "_ZN5test7INDT1cE1dINDT1cE1dEEEE3fD1INDT1cE1dINDT1cE1dEEEEEDTcmtlNS_1DEL_ZNS_1bINDT1cE1dEEEEEcvT__EES2_",
-     { /*.BasenameRange=*/{120, 123}, /*.ScopeRange=*/{81, 120}, /*.ArgumentsRange=*/{ 155, 168 },
-       /*.QualifiersRange=*/{168, 168}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{120, 123}, /*.TemplateArgumentsRange=*/{123, 155}, /*.ScopeRange=*/{81, 120},
+       /*.ArgumentsRange=*/{155, 168}, /*.QualifiersRange=*/{168, 168}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fD1",
      /*.scope=*/"test7<decltype(c)::d<decltype(c)::d>>::",
      /*.qualifiers=*/""
    },
    { "_ZN8nlohmann16json_abi_v3_11_310basic_jsonINSt3__13mapENS2_6vectorENS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEEbxydS8_NS0_14adl_serializerENS4_IhNS8_IhEEEEvE5parseIRA29_KcEESE_OT_NS2_8functionIFbiNS0_6detail13parse_event_tERSE_EEEbb",
-     { /*.BasenameRange=*/{687, 692}, /*.ScopeRange=*/{343, 687}, /*.ArgumentsRange=*/{ 713, 1174 },
-       /*.QualifiersRange=*/{1174, 1174}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{687, 692}, /*.TemplateArgumentsRange=*/{692, 713}, /*.ScopeRange=*/{343, 687},
+       /*.ArgumentsRange=*/{713, 1174}, /*.QualifiersRange=*/{1174, 1174}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"parse",
      /*.scope=*/"nlohmann::json_abi_v3_11_3::basic_json<std::__1::map, std::__1::vector, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>, bool, long long, unsigned long long, double, std::__1::allocator, nlohmann::json_abi_v3_11_3::adl_serializer, std::__1::vector<unsigned char, std::__1::allocator<unsigned char>>, void>::",
      /*.qualifiers=*/""
    },
    { "_ZN8nlohmann16json_abi_v3_11_310basic_jsonINSt3__13mapENS2_6vectorENS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEEbxydS8_NS0_14adl_serializerENS4_IhNS8_IhEEEEvEC1EDn",
-     { /*.BasenameRange=*/{344, 354}, /*.ScopeRange=*/{0, 344}, /*.ArgumentsRange=*/{ 354, 370 },
-       /*.QualifiersRange=*/{370, 370}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{344, 354}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 344},
+       /*.ArgumentsRange=*/{354, 370}, /*.QualifiersRange=*/{370, 370}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"basic_json",
      /*.scope=*/"nlohmann::json_abi_v3_11_3::basic_json<std::__1::map, std::__1::vector, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>, bool, long long, unsigned long long, double, std::__1::allocator, nlohmann::json_abi_v3_11_3::adl_serializer, std::__1::vector<unsigned char, std::__1::allocator<unsigned char>>, void>::",
      /*.qualifiers=*/""
    },
    { "_Z3fppIiEPFPFvvEiEf",
-     { /*.BasenameRange=*/{10, 13}, /*.ScopeRange=*/{10, 10}, /*.ArgumentsRange=*/{ 18, 25 },
-      /*.QualifiersRange=*/{34,34}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{10, 13}, /*.TemplateArgumentsRange=*/{13, 18}, /*.ScopeRange=*/{10, 10},
+      /*.ArgumentsRange=*/{18, 25}, /*.QualifiersRange=*/{34,34}, /*.NameQualifiersRange=*/{0, 0},
+      /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_Z3fppIiEPFPFvvEN2ns3FooIiEEEf",
-     { /*.BasenameRange=*/{10, 13}, /*.ScopeRange=*/{10, 10}, /*.ArgumentsRange=*/{ 18, 25 },
-       /*.QualifiersRange=*/{43, 43}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{10, 13}, /*.TemplateArgumentsRange=*/{13, 18}, /*.ScopeRange=*/{10, 10},
+       /*.ArgumentsRange=*/{18, 25}, /*.QualifiersRange=*/{43, 43}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_Z3fppIiEPFPFvPFN2ns3FooIiEENS2_3BarIfE3QuxEEEPFS2_S2_EEf",
-     { /*.BasenameRange=*/{10, 13}, /*.ScopeRange=*/{10, 10}, /*.ArgumentsRange=*/{ 18, 25 },
-       /*.QualifiersRange=*/{108, 108}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{10, 13}, /*.TemplateArgumentsRange=*/{13, 18}, /*.ScopeRange=*/{10, 10},
+       /*.ArgumentsRange=*/{18, 25}, /*.QualifiersRange=*/{108, 108}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvvEiEf",
-     { /*.BasenameRange=*/{64, 67}, /*.ScopeRange=*/{10, 64}, /*.ArgumentsRange=*/{ 72, 79 },
-       /*.QualifiersRange=*/{88, 88}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{64, 67}, /*.TemplateArgumentsRange=*/{67, 72}, /*.ScopeRange=*/{10, 64},
+       /*.ArgumentsRange=*/{72, 79}, /*.QualifiersRange=*/{88, 88}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::",
      /*.qualifiers=*/""
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvvES2_Ef",
-     { /*.BasenameRange=*/{64, 67}, /*.ScopeRange=*/{10, 64}, /*.ArgumentsRange=*/{ 72, 79 },
-       /*.QualifiersRange=*/{97, 97}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{64, 67}, /*.TemplateArgumentsRange=*/{67, 72}, /*.ScopeRange=*/{10, 64},
+       /*.ArgumentsRange=*/{72, 79}, /*.QualifiersRange=*/{97, 97}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::",
      /*.qualifiers=*/"",
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvPFS2_S5_EEPFS2_S2_EEf",
-     { /*.BasenameRange=*/{64, 67}, /*.ScopeRange=*/{10, 64}, /*.ArgumentsRange=*/{ 72, 79 },
-       /*.QualifiersRange=*/{162, 162}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{64, 67}, /*.TemplateArgumentsRange=*/{67, 72}, /*.ScopeRange=*/{10, 64},
+       /*.ArgumentsRange=*/{72, 79}, /*.QualifiersRange=*/{162, 162}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::",
      /*.qualifiers=*/"",
    },
    { "_ZNKO2ns3ns23Bar3fooIiEEPFPFNS0_3FooIiEEiENS3_IfEEEi",
-     { /*.BasenameRange=*/{37, 40}, /*.ScopeRange=*/{23, 37}, /*.ArgumentsRange=*/{ 45, 50 },
-       /*.QualifiersRange=*/{78, 87}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{37, 40}, /*.TemplateArgumentsRange=*/{40, 45}, /*.ScopeRange=*/{23, 37},
+       /*.ArgumentsRange=*/{45, 50}, /*.QualifiersRange=*/{78, 87}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"foo",
      /*.scope=*/"ns::ns2::Bar::",
      /*.qualifiers=*/" const &&",
    },
    { "_ZTV11ImageLoader",
-     { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{ 0, 0 },
-       /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{0, 0}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 0},
+       /*.ArgumentsRange=*/{0, 0}, /*.QualifiersRange=*/{0, 0}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"",
      /*.scope=*/"",
      /*.qualifiers=*/"",
      /*.valid_basename=*/false
    },
    { "___ZNK5dyld313MachOAnalyzer18forEachInitializerER11DiagnosticsRKNS0_15VMAddrConverterEU13block_pointerFvjEPKv_block_invoke.204",
-     { /*.BasenameRange=*/{55, 73}, /*.ScopeRange=*/{33, 55}, /*.ArgumentsRange=*/{ 73, 181 },
-       /*.QualifiersRange=*/{181, 187}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{55, 73}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{33, 55},
+       /*.ArgumentsRange=*/{73, 181}, /*.QualifiersRange=*/{181, 187}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"forEachInitializer",
      /*.scope=*/"dyld3::MachOAnalyzer::",
      /*.qualifiers=*/" const",
    },
    { "_ZZN5dyld45startEPNS_10KernelArgsEPvS2_ENK3$_1clEv",
-     { /*.BasenameRange=*/{53, 63}, /*.ScopeRange=*/{0, 53}, /*.ArgumentsRange=*/{ 63, 65 },
-       /*.QualifiersRange=*/{65, 71}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{53, 63}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 53},
+       /*.ArgumentsRange=*/{63, 65}, /*.QualifiersRange=*/{65, 71}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::start(dyld4::KernelArgs*, void*, void*)::$_1::",
      /*.qualifiers=*/" const",
    },
    { "_ZZNK5dyld46Loader38runInitializersBottomUpPlusUpwardLinksERNS_12RuntimeStateEENK3$_0clEv",
-     { /*.BasenameRange=*/{88, 98}, /*.ScopeRange=*/{0, 88}, /*.ArgumentsRange=*/{ 98, 100 },
-       /*.QualifiersRange=*/{100, 106}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{88, 98}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 88},
+       /*.ArgumentsRange=*/{98, 100}, /*.QualifiersRange=*/{100, 106}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::Loader::runInitializersBottomUpPlusUpwardLinks(dyld4::RuntimeState&) const::$_0::",
      /*.qualifiers=*/" const",
    },
    { "_ZZNK5dyld46Loader38runInitializersBottomUpPlusUpwardLinksERNS_12RuntimeStateEENK3$_0clEv.cold",
-     { /*.BasenameRange=*/{88, 98}, /*.ScopeRange=*/{0, 88}, /*.ArgumentsRange=*/{ 98, 100 },
-       /*.QualifiersRange=*/{100, 106}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{88, 98}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 88},
+       /*.ArgumentsRange=*/{98, 100}, /*.QualifiersRange=*/{100, 106}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::Loader::runInitializersBottomUpPlusUpwardLinks(dyld4::RuntimeState&) const::$_0::",
      /*.qualifiers=*/" const",
+   },
+   {"_Z4funcILN3foo4EnumE1EEvv",
+     {
+       /*.BasenameRange=*/{5, 9}, /*.TemplateArgumentsRange=*/{9, 23}, /*.ScopeRange=*/{5, 5},
+       /*.ArgumentsRange=*/{23, 25}, /*.QualifiersRange=*/{25, 25}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
+     /*.basename=*/"func",
+     /*.scope=*/"",
+     /*.qualifiers=*/"",
    }
     // clang-format on
 };
@@ -617,11 +689,12 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
   auto demangled = std::string_view(*OB);
 
   ASSERT_EQ(OB->NameInfo.hasBasename(), valid_basename);
-
   EXPECT_EQ(OB->NameInfo.BasenameRange, info.BasenameRange);
+  EXPECT_EQ(OB->NameInfo.TemplateArgumentsRange, info.TemplateArgumentsRange);
   EXPECT_EQ(OB->NameInfo.ScopeRange, info.ScopeRange);
   EXPECT_EQ(OB->NameInfo.ArgumentsRange, info.ArgumentsRange);
   EXPECT_EQ(OB->NameInfo.QualifiersRange, info.QualifiersRange);
+  EXPECT_EQ(OB->NameInfo.NameQualifiersRange, info.NameQualifiersRange);
 
   auto get_part = [&](const std::pair<size_t, size_t> &loc) {
     return demangled.substr(loc.first, loc.second - loc.first);
@@ -638,57 +711,97 @@ INSTANTIATE_TEST_SUITE_P(DemanglingPartsTests, DemanglingPartsTestFixture,
 struct DemangledNameInfoTestCase {
   DemangledNameInfo expected_info;
   bool valid_basename;
+  bool valid_template;
   bool valid_scope;
   bool valid_arguments;
   bool valid_qualifiers;
+  bool valid_name_qualifiers;
   bool valid_prefix;
   bool valid_suffix;
 };
 
 DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
     // clang-format off
-   {
-    { /*.BasenameRange=*/{0, 10}, /*.ScopeRange=*/{1, 0}, /*.ArgumentsRange=*/{1, 0},
-      /*.QualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
+  {
+    {
+      /*.BasenameRange=*/{0, 10}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
-      /*valid_basename=*/true, /*valid_scope=*/false, /*valid_arguments=*/false,
-      /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/false,
-   },
-   {
-    { /*.BasenameRange=*/{1, 0}, /*.ScopeRange=*/{0, 10}, /*.ArgumentsRange=*/{1, 0},
-      /*.QualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
+    /*valid_basename=*/true, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{0, 10}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
-      /*valid_basename=*/false, /*valid_scope=*/true, /*valid_arguments=*/false,
-      /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/false,
-   },
-   {
-    { /*.BasenameRange=*/{1, 0}, /*.ScopeRange=*/{1, 0}, /*.ArgumentsRange=*/{0, 10},
-      /*.QualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
+    /*valid_basename=*/false, /*valid_name_qualifiers=*/true, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{0, 10},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
-      /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/true,
-      /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/false,
-   },
-   {
-    { /*.BasenameRange=*/{1, 0}, /*.ScopeRange=*/{1, 0}, /*.ArgumentsRange=*/{1, 0},
-      /*.QualifiersRange=*/{0, 10}, /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/true,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{0, 10}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
-      /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/false,
-      /*valid_qualifiers=*/true, /*valid_prefix=*/false, /*valid_suffix=*/false,
-   },
-   {
-    { /*.BasenameRange=*/{1, 0}, /*.ScopeRange=*/{1, 0}, /*.ArgumentsRange=*/{1, 0},
-      /*.QualifiersRange=*/{1, 0}, /*.PrefixRange=*/{0, 10}, /*.SuffixRange=*/{1, 0}
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/true, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{0, 10}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
-      /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/false,
-      /*valid_qualifiers=*/false, /*valid_prefix=*/true, /*valid_suffix=*/false,
-   },
-   {
-    { /*.BasenameRange=*/{1, 0}, /*.ScopeRange=*/{1, 0}, /*.ArgumentsRange=*/{1, 0},
-      /*.QualifiersRange=*/{1, 0}, /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{0, 10}
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/true, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{0, 10},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
     },
-      /*valid_basename=*/false, /*valid_scope=*/false, /*valid_arguments=*/false,
-      /*valid_qualifiers=*/false, /*valid_prefix=*/false, /*valid_suffix=*/true,
-   },
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/true,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{0, 10}, /*.SuffixRange=*/{1, 0}
+    },
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/true, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{0, 10}
+    },
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/true,
+  },
     // clang-format on
 };
 
@@ -696,13 +809,16 @@ struct DemangledNameInfoTestFixture
     : public ::testing::TestWithParam<DemangledNameInfoTestCase> {};
 
 TEST_P(DemangledNameInfoTestFixture, DemangledNameInfoRanges) {
-  const auto &[info, valid_basename, valid_scope, valid_arguments,
-               valid_qualifiers, valid_prefix, valid_suffix] = GetParam();
+  const auto &[info, valid_basename, valid_template_arguments, valid_scope,
+               valid_arguments, valid_qualifiers, valid_name_qualifiers,
+               valid_prefix, valid_suffix] = GetParam();
 
   ASSERT_EQ(info.hasBasename(), valid_basename);
+  ASSERT_EQ(info.hasTemplateArguments(), valid_template_arguments);
   ASSERT_EQ(info.hasScope(), valid_scope);
   ASSERT_EQ(info.hasArguments(), valid_arguments);
   ASSERT_EQ(info.hasQualifiers(), valid_qualifiers);
+  ASSERT_EQ(info.hasNameQualifiers(), valid_name_qualifiers);
   ASSERT_EQ(info.hasPrefix(), valid_prefix);
   ASSERT_EQ(info.hasSuffix(), valid_suffix);
 }
@@ -748,25 +864,45 @@ TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
 
   auto tracked_name = llvm::StringRef(*OB);
 
-  auto return_left = tracked_name.slice(0, OB->NameInfo.ScopeRange.first);
-  auto scope = tracked_name.slice(OB->NameInfo.ScopeRange.first,
-                                  OB->NameInfo.ScopeRange.second);
-  auto basename = tracked_name.slice(OB->NameInfo.BasenameRange.first,
-                                     OB->NameInfo.BasenameRange.second);
-  auto template_args = tracked_name.slice(OB->NameInfo.BasenameRange.second,
-                                          OB->NameInfo.ArgumentsRange.first);
-  auto args = tracked_name.slice(OB->NameInfo.ArgumentsRange.first,
-                                 OB->NameInfo.ArgumentsRange.second);
-  auto return_right = tracked_name.slice(OB->NameInfo.ArgumentsRange.second,
-                                         OB->NameInfo.QualifiersRange.first);
-  auto qualifiers = tracked_name.slice(OB->NameInfo.QualifiersRange.first,
-                                       OB->NameInfo.QualifiersRange.second);
-  auto suffix = tracked_name.slice(OB->NameInfo.QualifiersRange.second,
-                                   llvm::StringRef::npos);
+  std::string reconstructed_name;
 
-  auto reconstructed_name =
-      llvm::join_items("", return_left, scope, basename, template_args, args,
-                       return_right, qualifiers, suffix);
+  auto return_left =
+      CPlusPlusLanguage::GetDemangledReturnTypeLHS(tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(return_left, llvm::Succeeded());
+  reconstructed_name += *return_left;
+
+  auto scope = CPlusPlusLanguage::GetDemangledScope(tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(scope, llvm::Succeeded());
+  reconstructed_name += *scope;
+
+  auto basename =
+      CPlusPlusLanguage::GetDemangledBasename(tracked_name, OB->NameInfo);
+  reconstructed_name += basename;
+
+  auto template_args = CPlusPlusLanguage::GetDemangledTemplateArguments(
+      tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(template_args, llvm::Succeeded());
+  reconstructed_name += *template_args;
+
+  auto args = CPlusPlusLanguage::GetDemangledFunctionArguments(tracked_name,
+                                                               OB->NameInfo);
+  EXPECT_THAT_EXPECTED(args, llvm::Succeeded());
+  reconstructed_name += *args;
+
+  auto return_right =
+      CPlusPlusLanguage::GetDemangledReturnTypeRHS(tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(return_right, llvm::Succeeded());
+  reconstructed_name += *return_right;
+
+  auto qualifiers = CPlusPlusLanguage::GetDemangledFunctionQualifiers(
+      tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(qualifiers, llvm::Succeeded());
+  reconstructed_name += *qualifiers;
+
+  auto suffix =
+      CPlusPlusLanguage::GetDemangledFunctionSuffix(tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(suffix, llvm::Succeeded());
+  reconstructed_name += *suffix;
 
   EXPECT_EQ(reconstructed_name, demangled);
 }

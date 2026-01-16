@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void f(int *A) {
 ;      for (int i = 0; i < 1024; i++)

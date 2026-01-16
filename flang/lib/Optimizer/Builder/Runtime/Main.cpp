@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Runtime/CUDA/init.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
@@ -23,8 +24,8 @@ using namespace Fortran::runtime;
 /// Create a `int main(...)` that calls the Fortran entry point
 void fir::runtime::genMain(
     fir::FirOpBuilder &builder, mlir::Location loc,
-    const std::vector<Fortran::lower::EnvironmentDefault> &defs,
-    bool initCuda) {
+    const std::vector<Fortran::lower::EnvironmentDefault> &defs, bool initCuda,
+    bool initCoarrayEnv) {
   auto *context = builder.getContext();
   auto argcTy = builder.getDefaultIntegerType();
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(context);
@@ -69,6 +70,8 @@ void fir::runtime::genMain(
         loc, RTNAME_STRING(CUFInit), mlir::FunctionType::get(context, {}, {}));
     fir::CallOp::create(builder, loc, initFn);
   }
+  if (initCoarrayEnv)
+    mif::InitOp::create(builder, loc);
 
   fir::CallOp::create(builder, loc, qqMainFn);
   fir::CallOp::create(builder, loc, stopFn);

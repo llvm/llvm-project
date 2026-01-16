@@ -401,11 +401,17 @@ public:
     llvm_unreachable("getting host associated type in CallerInterface");
   }
 
+  std::optional<mlir::Value> getOriginalPassArg() const {
+    return originalPassArg;
+  }
+  void setOriginalPassArg(mlir::Value x) { originalPassArg = x; }
+
 private:
   /// Check that the input vector is complete.
   bool verifyActualInputs() const;
   const Fortran::evaluate::ProcedureRef &procRef;
   llvm::SmallVector<mlir::Value> actualInputs;
+  std::optional<mlir::Value> originalPassArg;
 };
 
 //===----------------------------------------------------------------------===//
@@ -477,6 +483,12 @@ getOrDeclareFunction(const Fortran::evaluate::ProcedureDesignator &,
 /// functions).
 mlir::Type getDummyProcedureType(const Fortran::semantics::Symbol &dummyProc,
                                  Fortran::lower::AbstractConverter &);
+
+/// Return the type of an argument that is a dummy procedure pointer. This
+/// will be a reference to a boxed procedure.
+mlir::Type
+getDummyProcedurePointerType(const Fortran::semantics::Symbol &dummyProcPtr,
+                             Fortran::lower::AbstractConverter &);
 
 /// Return !fir.boxproc<() -> ()> type.
 mlir::Type getUntypedBoxProcType(mlir::MLIRContext *context);

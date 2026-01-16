@@ -39,7 +39,7 @@ program openacc_serial_validity
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial
 
@@ -162,14 +162,14 @@ program openacc_serial_validity
 
   !$acc serial device_type(*) async
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the SERIAL directive
   !$acc serial device_type(*) if(.TRUE.)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial
 

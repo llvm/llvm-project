@@ -97,8 +97,8 @@ ABIArgInfo HexagonABIInfo::classifyArgumentType(QualType Ty,
                                                 unsigned *RegsLeft) const {
   if (!isAggregateTypeForABI(Ty)) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getDecl()->getIntegerType();
+    if (const auto *ED = Ty->getAsEnumDecl())
+      Ty = ED->getIntegerType();
 
     uint64_t Size = getContext().getTypeSize(Ty);
     if (Size <= 64)
@@ -160,8 +160,8 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
 
   if (!isAggregateTypeForABI(RetTy)) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy = EnumTy->getDecl()->getIntegerType();
+    if (const auto *ED = RetTy->getAsEnumDecl())
+      RetTy = ED->getIntegerType();
 
     if (Size > 64 && RetTy->isBitIntType())
       return getNaturalAlignIndirect(
@@ -316,10 +316,10 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
         llvm::ConstantInt::get(CGF.Int32Ty, (ArgAlign - 1)),
         "align_current_saved_reg_area_pointer");
 
-    __current_saved_reg_area_pointer_int =
-        CGF.Builder.CreateAnd(__current_saved_reg_area_pointer_int,
-                              llvm::ConstantInt::get(CGF.Int32Ty, -ArgAlign),
-                              "align_current_saved_reg_area_pointer");
+    __current_saved_reg_area_pointer_int = CGF.Builder.CreateAnd(
+        __current_saved_reg_area_pointer_int,
+        llvm::ConstantInt::getSigned(CGF.Int32Ty, -ArgAlign),
+        "align_current_saved_reg_area_pointer");
 
     __current_saved_reg_area_pointer =
         CGF.Builder.CreateIntToPtr(__current_saved_reg_area_pointer_int,
@@ -367,10 +367,10 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
                               llvm::ConstantInt::get(CGF.Int32Ty, ArgAlign - 1),
                               "align_overflow_area_pointer");
 
-    __overflow_area_pointer_int =
-        CGF.Builder.CreateAnd(__overflow_area_pointer_int,
-                              llvm::ConstantInt::get(CGF.Int32Ty, -ArgAlign),
-                              "align_overflow_area_pointer");
+    __overflow_area_pointer_int = CGF.Builder.CreateAnd(
+        __overflow_area_pointer_int,
+        llvm::ConstantInt::getSigned(CGF.Int32Ty, -ArgAlign),
+        "align_overflow_area_pointer");
 
     __overflow_area_pointer = CGF.Builder.CreateIntToPtr(
         __overflow_area_pointer_int, __overflow_area_pointer->getType(),

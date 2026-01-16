@@ -22,10 +22,12 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
 
 using namespace clang;
+using ::testing::IsEmpty;
 
 namespace clang {
 class SourceManagerTestHelper {
@@ -40,8 +42,8 @@ namespace {
 class SourceManagerTest : public ::testing::Test {
 protected:
   SourceManagerTest()
-      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+      : FileMgr(FileMgrOpts),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
@@ -49,7 +51,6 @@ protected:
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
@@ -378,6 +379,20 @@ TEST_F(SourceManagerTest, getInvalidBOM) {
                 llvm::StringLiteral::withInnerNUL(
                     "\xFF\xFE\x00\x00#include <iostream>"))),
             "UTF-32 (LE)");
+}
+
+TEST_F(SourceManagerTest, sourceRangeWorksWithDenseSet) {
+  llvm::DenseSet<SourceRange> Set;
+  SourceRange TestRange = {SourceLocation::getFromRawEncoding(10),
+                           SourceLocation::getFromRawEncoding(11)};
+  ASSERT_THAT(Set, IsEmpty());
+  Set.insert(TestRange);
+  ASSERT_EQ(Set.size(), 1U);
+  ASSERT_TRUE(Set.contains(TestRange));
+  ASSERT_FALSE(Set.contains({SourceLocation::getFromRawEncoding(10),
+                             SourceLocation::getFromRawEncoding(10)}));
+  Set.erase(TestRange);
+  ASSERT_THAT(Set, IsEmpty());
 }
 
 // Regression test - there was an out of bound access for buffers not terminated by zero.

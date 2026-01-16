@@ -24,107 +24,107 @@ struct A {
 
   int read_field() {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'read_field' can be made const
-    // CHECK-FIXES: {{^}}  int read_field() const {
+    // CHECK-FIXES: int read_field() const {
     return M;
   }
 
   int read_struct_field() {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'read_struct_field' can be made const
-    // CHECK-FIXES: {{^}}  int read_struct_field() const {
+    // CHECK-FIXES: int read_struct_field() const {
     return Struct.M;
   }
 
   int read_const_field() {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'read_const_field' can be made const
-    // CHECK-FIXES: {{^}}  int read_const_field() const {
+    // CHECK-FIXES: int read_const_field() const {
     return ConstM;
   }
 
   int read_fields_in_parentheses() {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'read_fields_in_parentheses' can be made const
-    // CHECK-FIXES: {{^}}  int read_fields_in_parentheses() const {
+    // CHECK-FIXES: int read_fields_in_parentheses() const {
     return (this)->M + (((((Struct.M))))) + ((this->ConstM));
   }
 
   void call_const_member() {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'call_const_member' can be made const
-    // CHECK-FIXES: {{^}}  void call_const_member() const {
+    // CHECK-FIXES: void call_const_member() const {
     already_const();
   }
 
   void call_const_member_on_public_field() {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'call_const_member_on_public_field' can be made const
-    // CHECK-FIXES: {{^}}  void call_const_member_on_public_field() const {
+    // CHECK-FIXES: void call_const_member_on_public_field() const {
     S.const_method();
   }
 
   void call_const_member_on_public_field_ref() {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'call_const_member_on_public_field_ref' can be made const
-    // CHECK-FIXES: {{^}}  void call_const_member_on_public_field_ref() const {
+    // CHECK-FIXES: void call_const_member_on_public_field_ref() const {
     Sref.const_method();
   }
 
   const Str &return_public_field_ref() {
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: method 'return_public_field_ref' can be made const
-    // CHECK-FIXES: {{^}}  const Str &return_public_field_ref() const {
+    // CHECK-FIXES: const Str &return_public_field_ref() const {
     return S;
   }
 
   const A *return_this_const() {
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: method 'return_this_const' can be made const
-    // CHECK-FIXES: {{^}}  const A *return_this_const() const {
+    // CHECK-FIXES: const A *return_this_const() const {
     return this;
   }
 
   const A &return_this_const_ref() {
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: method 'return_this_const_ref' can be made const
-    // CHECK-FIXES: {{^}}  const A &return_this_const_ref() const {
+    // CHECK-FIXES: const A &return_this_const_ref() const {
     return *this;
   }
 
   void const_use() {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'const_use' can be made const
-    // CHECK-FIXES: {{^}}  void const_use() const {
+    // CHECK-FIXES: void const_use() const {
     free_const_use(this);
   }
 
   void const_use_ref() {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'const_use_ref' can be made const
-    // CHECK-FIXES: {{^}}  void const_use_ref() const {
+    // CHECK-FIXES: void const_use_ref() const {
     free_const_use(*this);
   }
 
   auto trailingReturn() -> int {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'trailingReturn' can be made const
-    // CHECK-FIXES: {{^}}  auto trailingReturn() const -> int {
+    // CHECK-FIXES: auto trailingReturn() const -> int {
     return M;
   }
 
   int volatileFunction() volatile {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'volatileFunction' can be made const
-    // CHECK-FIXES: {{^}}  int volatileFunction() const volatile {
+    // CHECK-FIXES: int volatileFunction() const volatile {
     return M;
   }
 
   int restrictFunction() __restrict {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'restrictFunction' can be made const
-    // CHECK-FIXES: {{^}}  int restrictFunction() const __restrict {
+    // CHECK-FIXES: int restrictFunction() const __restrict {
     return M;
   }
 
   int refFunction() & {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'refFunction' can be made const
-    // CHECK-FIXES: {{^}}  int refFunction() const & {
+    // CHECK-FIXES: int refFunction() const & {
     return M;
   }
 
   void out_of_line_call_const();
-  // CHECK-FIXES: {{^}}  void out_of_line_call_const() const;
+  // CHECK-FIXES: void out_of_line_call_const() const;
 };
 
 void A::out_of_line_call_const() {
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: method 'out_of_line_call_const' can be made const
-  // CHECK-FIXES: {{^}}void A::out_of_line_call_const() const {
+  // CHECK-FIXES: void A::out_of_line_call_const() const {
   already_const();
 }
 } // namespace Diagnose

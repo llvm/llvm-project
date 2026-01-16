@@ -132,8 +132,8 @@ static void genVectorStore(PatternRewriter &rewriter, Location loc, Value mem,
     SmallVector<Value> scalarArgs(idxs);
     Value indexVec = idxs.back();
     scalarArgs.back() = constantIndex(rewriter, loc, 0);
-    vector::ScatterOp::create(rewriter, loc, mem, scalarArgs, indexVec, vmask,
-                              rhs);
+    vector::ScatterOp::create(rewriter, loc, /*resultType=*/nullptr, mem,
+                              scalarArgs, indexVec, vmask, rhs);
     return;
   }
   vector::MaskedStoreOp::create(rewriter, loc, mem, idxs, vmask, rhs);
@@ -533,8 +533,10 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       VectorType vtp = vectorType(vl, init.getType());
       Value vinit = genVectorReducInit(rewriter, loc, yield->getOperand(0),
                                        forOp.getRegionIterArg(0), init, vtp);
-      forOpNew = scf::ForOp::create(rewriter, loc, forOp.getLowerBound(),
-                                    forOp.getUpperBound(), step, vinit);
+      forOpNew =
+          scf::ForOp::create(rewriter, loc, forOp.getLowerBound(),
+                             forOp.getUpperBound(), step, vinit,
+                             /*bodyBuilder=*/nullptr, forOp.getUnsignedCmp());
       forOpNew->setAttr(
           LoopEmitter::getLoopEmitterLoopAttrName(),
           forOp->getAttr(LoopEmitter::getLoopEmitterLoopAttrName()));
@@ -605,8 +607,8 @@ public:
 
   ForOpRewriter(MLIRContext *context, unsigned vectorLength,
                 bool enableVLAVectorization, bool enableSIMDIndex32)
-      : OpRewritePattern(context), vl{vectorLength, enableVLAVectorization,
-                                      enableSIMDIndex32} {}
+      : OpRewritePattern(context),
+        vl{vectorLength, enableVLAVectorization, enableSIMDIndex32} {}
 
   LogicalResult matchAndRewrite(scf::ForOp op,
                                 PatternRewriter &rewriter) const override {

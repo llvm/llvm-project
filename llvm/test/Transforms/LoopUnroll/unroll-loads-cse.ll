@@ -12,7 +12,7 @@ define void @cse_matching_load_from_previous_unrolled_iteration(ptr %src, ptr no
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -35,15 +35,15 @@ define void @cse_matching_load_from_previous_unrolled_iteration(ptr %src, ptr no
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA_LOOPEXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       exit.unr-lcssa.loopexit:
-; CHECK-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP]] ]
-; CHECK-NEXT:    br label [[EXIT_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA:%.*]], label [[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit.unr-lcssa:
-; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR_PH]], [[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[IV_UNR1:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER]], label [[EXIT:%.*]]
 ; CHECK:       loop.epil.preheader:
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR1]], [[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    br label [[LOOP_EPIL:%.*]]
 ; CHECK:       loop.epil:
 ; CHECK-NEXT:    [[GEP_SRC_12_EPIL:%.*]] = getelementptr i64, ptr [[SRC_12]], i64 [[IV_UNR]]
@@ -88,7 +88,7 @@ define void @cse_different_load_types(ptr %src, ptr noalias %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -115,15 +115,15 @@ define void @cse_different_load_types(ptr %src, ptr noalias %dst, i64 %N) {
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA_LOOPEXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       exit.unr-lcssa.loopexit:
-; CHECK-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP]] ]
-; CHECK-NEXT:    br label [[EXIT_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA:%.*]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit.unr-lcssa:
-; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR_PH]], [[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[IV_UNR1:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER]], label [[EXIT:%.*]]
 ; CHECK:       loop.epil.preheader:
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR1]], [[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    br label [[LOOP_EPIL:%.*]]
 ; CHECK:       loop.epil:
 ; CHECK-NEXT:    [[GEP_SRC_12_EPIL:%.*]] = getelementptr i64, ptr [[SRC_12]], i64 [[IV_UNR]]
@@ -170,7 +170,7 @@ define void @cse_volatile_loads(ptr %src, ptr noalias %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -195,15 +195,15 @@ define void @cse_volatile_loads(ptr %src, ptr noalias %dst, i64 %N) {
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA_LOOPEXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       exit.unr-lcssa.loopexit:
-; CHECK-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP]] ]
-; CHECK-NEXT:    br label [[EXIT_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA:%.*]], label [[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       exit.unr-lcssa:
-; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR_PH]], [[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[IV_UNR1:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER]], label [[EXIT:%.*]]
 ; CHECK:       loop.epil.preheader:
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR1]], [[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    br label [[LOOP_EPIL:%.*]]
 ; CHECK:       loop.epil:
 ; CHECK-NEXT:    [[GEP_SRC_12_EPIL:%.*]] = getelementptr i64, ptr [[SRC_12]], i64 [[IV_UNR]]
@@ -248,7 +248,7 @@ define void @cse_atomic_loads(ptr %src, ptr noalias %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -273,15 +273,15 @@ define void @cse_atomic_loads(ptr %src, ptr noalias %dst, i64 %N) {
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA_LOOPEXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       exit.unr-lcssa.loopexit:
-; CHECK-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP]] ]
-; CHECK-NEXT:    br label [[EXIT_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA:%.*]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit.unr-lcssa:
-; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR_PH]], [[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[IV_UNR1:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER]], label [[EXIT:%.*]]
 ; CHECK:       loop.epil.preheader:
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR1]], [[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    br label [[LOOP_EPIL:%.*]]
 ; CHECK:       loop.epil:
 ; CHECK-NEXT:    [[GEP_SRC_12_EPIL:%.*]] = getelementptr i64, ptr [[SRC_12]], i64 [[IV_UNR]]
@@ -326,7 +326,7 @@ define void @cse_load_may_be_clobbered(ptr %src, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -351,15 +351,15 @@ define void @cse_load_may_be_clobbered(ptr %src, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA_LOOPEXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
-; CHECK:       exit.unr-lcssa.loopexit:
-; CHECK-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP]] ]
-; CHECK-NEXT:    br label [[EXIT_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA:%.*]], label [[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       exit.unr-lcssa:
-; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR_PH]], [[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[IV_UNR1:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER]], label [[EXIT:%.*]]
 ; CHECK:       loop.epil.preheader:
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR1]], [[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    br label [[LOOP_EPIL:%.*]]
 ; CHECK:       loop.epil:
 ; CHECK-NEXT:    [[GEP_SRC_12_EPIL:%.*]] = getelementptr i64, ptr [[SRC_12]], i64 [[IV_UNR]]
@@ -419,7 +419,7 @@ define void @loop_body_with_dead_blocks(ptr %src) {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i32 [[L_2]], 1
-; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT:%.*]], label [[LOOP_HEADER_1:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT:%.*]], label [[LOOP_HEADER_1:%.*]]
 ; CHECK:       loop.header.1:
 ; CHECK-NEXT:    br label [[LOOP_BB_1:%.*]]
 ; CHECK:       loop.bb.1:
@@ -429,7 +429,7 @@ define void @loop_body_with_dead_blocks(ptr %src) {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[L_2_1:%.*]] = load i32, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[C_2_1:%.*]] = icmp eq i32 [[L_2_1]], 1
-; CHECK-NEXT:    br i1 [[C_2_1]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_2_1]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -471,7 +471,5 @@ exit:
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = !{!"llvm.loop.unroll.count", i32 2}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
 ;.

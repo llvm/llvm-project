@@ -97,6 +97,10 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
+  uint64_t getImmOpValueZibi(const MCInst &MI, unsigned OpNo,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
+
   uint64_t getImmOpValue(const MCInst &MI, unsigned OpNo,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
@@ -340,8 +344,11 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
   // Drop any fixup added so we can add the correct one.
   Fixups.resize(FixupStartIndex);
 
-  if (SrcSymbol.isExpr())
+  if (SrcSymbol.isExpr()) {
     addFixup(Fixups, Offset, SrcSymbol.getExpr(), RISCV::fixup_riscv_jal);
+    if (STI.hasFeature(RISCV::FeatureRelax))
+      Fixups.back().setLinkerRelaxable();
+  }
 }
 
 // Expand PseudoLongQC_(E_)Bxxx to an inverted conditional branch and an
@@ -388,8 +395,11 @@ void RISCVMCCodeEmitter::expandQCLongCondBrImm(const MCInst &MI,
   support::endian::write(CB, JBinary, llvm::endianness::little);
   // Drop any fixup added so we can add the correct one.
   Fixups.resize(FixupStartIndex);
-  if (SrcSymbol.isExpr())
+  if (SrcSymbol.isExpr()) {
     addFixup(Fixups, Offset, SrcSymbol.getExpr(), RISCV::fixup_riscv_jal);
+    if (STI.hasFeature(RISCV::FeatureRelax))
+      Fixups.back().setLinkerRelaxable();
+  }
 }
 
 void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
@@ -559,6 +569,19 @@ RISCVMCCodeEmitter::getImmOpValueAsrN(const MCInst &MI, unsigned OpNo,
   return getImmOpValue(MI, OpNo, Fixups, STI);
 }
 
+uint64_t
+RISCVMCCodeEmitter::getImmOpValueZibi(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isImm() && "Zibi operand must be an immediate");
+  int64_t Res = MO.getImm();
+  if (Res == -1)
+    return 0;
+
+  return Res;
+}
+
 uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
@@ -576,8 +599,21 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
          "getImmOpValue expects only expressions or immediates");
   const MCExpr *Expr = MO.getExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
-  unsigned FixupKind = RISCV::fixup_riscv_invalid;
+
+  // `RelaxCandidate` must be set to `true` in two cases:
+  // - The fixup's relocation gets a R_RISCV_RELAX relocation
+  // - The underlying instruction may be relaxed to an instruction that gets a
+  //   `R_RISCV_RELAX` relocation.
+  //
+  // The actual emission of `R_RISCV_RELAX` will be handled in
+  // `RISCVAsmBackend::applyFixup`.
   bool RelaxCandidate = false;
+  auto AsmRelaxToLinkerRelaxable = [&]() -> void {
+    if (!STI.hasFeature(RISCV::FeatureExactAssembly))
+      RelaxCandidate = true;
+  };
+
+  unsigned FixupKind = RISCV::fixup_riscv_invalid;
   if (Kind == MCExpr::Specifier) {
     const auto *RVExpr = cast<MCSpecifierExpr>(Expr);
     FixupKind = RVExpr->getSpecifier();
@@ -628,9 +664,6 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
         llvm_unreachable("VK_TPREL_LO used with unexpected instruction format");
       RelaxCandidate = true;
       break;
-    case ELF::R_RISCV_TPREL_HI20:
-      RelaxCandidate = true;
-      break;
     case ELF::R_RISCV_CALL_PLT:
       FixupKind = RISCV::fixup_riscv_call_plt;
       RelaxCandidate = true;
@@ -639,23 +672,40 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_qc_abs20_u;
       RelaxCandidate = true;
       break;
+    case ELF::R_RISCV_GOT_HI20:
+    case ELF::R_RISCV_TPREL_HI20:
+    case ELF::R_RISCV_TLSDESC_HI20:
+      RelaxCandidate = true;
+      break;
     }
   } else if (Kind == MCExpr::SymbolRef || Kind == MCExpr::Binary) {
     // FIXME: Sub kind binary exprs have chance of underflow.
     if (MIFrm == RISCVII::InstFormatJ) {
       FixupKind = RISCV::fixup_riscv_jal;
+      RelaxCandidate = true;
     } else if (MIFrm == RISCVII::InstFormatB) {
       FixupKind = RISCV::fixup_riscv_branch;
+      // Relaxes to B<cc>; JAL, with fixup_riscv_jal
+      AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatCJ) {
       FixupKind = RISCV::fixup_riscv_rvc_jump;
+      // Relaxes to JAL with fixup_riscv_jal
+      AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatCB) {
       FixupKind = RISCV::fixup_riscv_rvc_branch;
+      // Relaxes to B<cc>; JAL, with fixup_riscv_jal
+      AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatCI) {
       FixupKind = RISCV::fixup_riscv_rvc_imm;
+      // Relaxes to `QC.E.LI` with fixup_riscv_qc_e_32
+      if (STI.hasFeature(RISCV::FeatureVendorXqcili))
+        AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatI) {
       FixupKind = RISCV::fixup_riscv_12_i;
     } else if (MIFrm == RISCVII::InstFormatQC_EB) {
       FixupKind = RISCV::fixup_riscv_qc_e_branch;
+      // Relaxes to QC.E.B<cc>I; JAL, with fixup_riscv_jal
+      AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatQC_EAI) {
       FixupKind = RISCV::fixup_riscv_qc_e_32;
       RelaxCandidate = true;
@@ -670,9 +720,9 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   assert(FixupKind != RISCV::fixup_riscv_invalid && "Unhandled expression!");
 
   addFixup(Fixups, 0, Expr, FixupKind);
-  // If linker relaxation is enabled and supported by this relocation, set
-  // a bit so that if fixup is unresolved, a R_RISCV_RELAX relocation will be
-  // appended.
+  // If linker relaxation is enabled and supported by this relocation, set a bit
+  // so that the assembler knows the size of the instruction is not fixed/known,
+  // and the relocation will need a R_RISCV_RELAX relocation.
   if (EnableRelax && RelaxCandidate)
     Fixups.back().setLinkerRelaxable();
   ++MCNumFixups;
@@ -686,7 +736,7 @@ unsigned RISCVMCCodeEmitter::getVMaskReg(const MCInst &MI, unsigned OpNo,
   MCOperand MO = MI.getOperand(OpNo);
   assert(MO.isReg() && "Expected a register.");
 
-  switch (MO.getReg()) {
+  switch (MO.getReg().id()) {
   default:
     llvm_unreachable("Invalid mask register.");
   case RISCV::V0:

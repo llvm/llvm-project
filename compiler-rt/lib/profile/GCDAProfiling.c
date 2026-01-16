@@ -21,6 +21,11 @@
 
 #if !defined(__Fuchsia__)
 
+#if defined(__linux__)
+// For fdopen()
+#define _DEFAULT_SOURCE
+#endif
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdint.h>

@@ -997,8 +997,8 @@ define <33 x i32> @v33i32_func_v33i32_i32(ptr addrspace(1) %p, i32 %idx) #0 {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY3]](s32)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 256
-  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[MV]], [[MUL]](s64)
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = nsw G_MUL [[SEXT]], [[C]]
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = nusw inbounds G_PTR_ADD [[MV]], [[MUL]](s64)
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p1) = COPY [[PTR_ADD]](p1)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[COPY4]](p1) :: (load (<33 x s32>) from %ir.gep, align 256, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD]](<33 x s32>), [[COPY]](p5) :: (store (<33 x s32>), align 256, addrspace 5)

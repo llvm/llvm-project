@@ -77,7 +77,6 @@ namespace llvm {
 
     /// Override to support customized stack guard loading.
     bool useLoadStackGuardNode(const Module &M) const override;
-    void insertSSPDeclarations(Module &M) const override;
 
     /// getSetCCResultType - Return the ISD::SETCC ValueType
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -139,8 +138,7 @@ namespace llvm {
 
     SDValue LowerF128_LibCallArg(SDValue Chain, ArgListTy &Args, SDValue Arg,
                                  const SDLoc &DL, SelectionDAG &DAG) const;
-    SDValue LowerF128Op(SDValue Op, SelectionDAG &DAG,
-                        const char *LibFuncName,
+    SDValue LowerF128Op(SDValue Op, SelectionDAG &DAG, RTLIB::Libcall LibFunc,
                         unsigned numArgs) const;
     SDValue LowerF128Compare(SDValue LHS, SDValue RHS, unsigned &SPCC,
                              const SDLoc &DL, SelectionDAG &DAG) const;
@@ -177,6 +175,16 @@ namespace llvm {
 
     bool isCheapToSpeculateCttz(Type *Ty) const override;
 
+    bool enableAggressiveFMAFusion(EVT VT) const override { return true; };
+
+    bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                    EVT VT) const override;
+
+    Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                  AtomicOrdering Ord) const override;
+    Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                   AtomicOrdering Ord) const override;
+
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       // FIXME: We insert fences for each atomics and generate
       // sub-optimal code for PSO/TSO. (Approximately nobody uses any
@@ -184,7 +192,8 @@ namespace llvm {
       return true;
     }
 
-    AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    AtomicExpansionKind
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
     void ReplaceNodeResults(SDNode *N,
                             SmallVectorImpl<SDValue>& Results,

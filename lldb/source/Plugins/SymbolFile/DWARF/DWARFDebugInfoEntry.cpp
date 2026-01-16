@@ -284,9 +284,10 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 /// Adds all attributes of the DIE at the top of the \c worklist to the
 /// \c attributes list. Specifcations and abstract origins are added
 /// to the \c worklist if the referenced DIE has not been seen before.
-static bool GetAttributes(llvm::SmallVectorImpl<DWARFDIE> &worklist,
-                          llvm::SmallSet<DWARFDebugInfoEntry const *, 3> &seen,
-                          DWARFAttributes &attributes) {
+static bool
+GetAttributes(llvm::SmallVectorImpl<DWARFDIE> &worklist,
+              llvm::SmallPtrSet<DWARFDebugInfoEntry const *, 3> &seen,
+              DWARFAttributes &attributes) {
   assert(!worklist.empty() && "Need at least one DIE to visit.");
   assert(seen.size() >= 1 &&
          "Need to have seen at least the currently visited entry.");
@@ -366,7 +367,7 @@ DWARFAttributes DWARFDebugInfoEntry::GetAttributes(const DWARFUnit *cu,
   // Keep track if DIEs already seen to prevent infinite recursion.
   // Value of '3' was picked for the same reason that
   // DWARFDie::findRecursively does.
-  llvm::SmallSet<DWARFDebugInfoEntry const *, 3> seen;
+  llvm::SmallPtrSet<DWARFDebugInfoEntry const *, 3> seen;
   seen.insert(this);
 
   do {
