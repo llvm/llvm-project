@@ -1,0 +1,45 @@
+// RUN: %check_clang_tidy -std=c++11,c++14 %s bugprone-unsafe-to-allow-exceptions %t -- -- -fexceptions
+
+struct may_throw {
+  may_throw(may_throw&&) throw(int) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: function 'may_throw' should not throw exceptions but it is still marked as throwable [bugprone-unsafe-to-allow-exceptions]
+  }
+  may_throw& operator=(may_throw&&) noexcept(false) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: function 'operator=' should not throw exceptions but it is still marked as throwable
+  }
+  ~may_throw() noexcept(false) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: function '~may_throw' should not throw exceptions but it is still marked as throwable
+  }
+
+  void f() noexcept(false) {
+  }
+};
+
+struct no_throw {
+  no_throw(no_throw&&) throw() {
+  }
+  no_throw& operator=(no_throw&&) noexcept(true) {
+  }
+  ~no_throw() noexcept(true) {
+  }
+};
+
+int main() noexcept(false) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'main' should not throw exceptions but it is still marked as throwable
+  return 0;
+}
+
+void swap(int&, int&) noexcept(false) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'swap' should not throw exceptions but it is still marked as throwable
+}
+
+void iter_swap(int&, int&) noexcept(false) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'iter_swap' should not throw exceptions but it is still marked as throwable
+}
+
+void iter_move(int&) noexcept(false) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'iter_move' should not throw exceptions but it is still marked as throwable
+}
+
+void swap(double&, double&) {
+}
