@@ -371,13 +371,16 @@ CUDA path:
 
   $ clang-tidy source.cu --removed-arg="-gencode" --removed-arg="arch=.." --extra-arg="--cuda-path=/path/to/cuda"
 
-By default, :program:`clang-tidy` will use the host compilation, which is
-sufficient to analyze both host and device code. To specifically perform device
-compilation, use the ``--cuda-device-only`` flag:
+By default, :program:`clang-tidy` will analyze both host and device code.
+To restrict the analysis to a specific side and specifically choose device
+compilation flags, use the ``--extra-arg`` flag to pass the arguments.
+
+For example, to perform device analysis only, use
+the ``--cuda-device-only`` flag:
 
 .. code-block:: console
 
-  $ clang-tidy source.cu -- --cuda-path=/path/to/cuda --cuda-device-only
+  $ clang-tidy source.cu --extra-arg="--cuda-device-only" --extra-arg="--cuda-path=/path/to/cuda"
 
 Clang-Tidy Automation
 =====================
