@@ -38,11 +38,8 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- foo ---
       0x01, ## Format Version - only supported value is 0x00
     ]
-Symbols:
-  - Name:  foo
 ...
 
 ## Check missing flags.
