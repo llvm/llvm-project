@@ -13,6 +13,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/utility/move.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
