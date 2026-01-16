@@ -1312,8 +1312,23 @@ bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
 /// \returns Maximum VaVdst value that can be encoded.
 unsigned getVaVdstBitMask();
 
+/// \returns Maximum VaSdst value that can be encoded.
+unsigned getVaSdstBitMask();
+
+/// \returns Maximum VaSsrc value that can be encoded.
+unsigned getVaSsrcBitMask();
+
+/// \returns Maximum HoldCnt value that can be encoded.
+unsigned getHoldCntBitMask();
+
 /// \returns Maximum VmVsrc value that can be encoded.
 unsigned getVmVsrcBitMask();
+
+/// \returns Maximum VaVcc value that can be encoded.
+unsigned getVaVccBitMask();
+
+/// \returns Maximum SaSdst value that can be encoded.
+unsigned getSaSdstBitMask();
 
 /// \returns Decoded VaVdst from given immediate \p Encoded.
 unsigned decodeFieldVaVdst(unsigned Encoded);

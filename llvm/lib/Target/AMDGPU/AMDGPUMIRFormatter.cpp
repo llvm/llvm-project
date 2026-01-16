@@ -16,10 +16,61 @@
 
 using namespace llvm;
 
+static constexpr const char *SWaitAluImmPrefix = ".";
+static constexpr const char *SWaitAluDelim = "_";
+
+static constexpr const char *VaVdstName = "VaVdst";
+static constexpr const char *VaSdstName = "VaSdst";
+static constexpr const char *VaSsrcName = "VaSsrc";
+static constexpr const char *HoldCntName = "HoldCnt";
+static constexpr const char *VmVsrcName = "VmVsrc";
+static constexpr const char *VaVccName = "VaVcc";
+static constexpr const char *SaSdstName = "SaSdst";
+
+static constexpr const char *AllOff = "AllOff";
+
+void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm,
+                                          llvm::raw_ostream &OS) const {
+  bool PrintPrefix = true;
+  bool PrintDelim = false;
+  bool NonePrinted = true;
+  auto PrintFieldIfNotMax = [&](const char *Descr, auto &Fn, unsigned Max) {
+    auto Num = Fn(Imm);
+    if (Num != Max) {
+      OS << (PrintPrefix ? SWaitAluImmPrefix : "")
+         << (PrintDelim ? SWaitAluDelim : "") << Descr << SWaitAluDelim
+         << Fn(Imm);
+      PrintDelim = true;
+      PrintPrefix = false;
+      NonePrinted = false;
+    }
+  };
+  PrintFieldIfNotMax(VaVdstName, AMDGPU::DepCtr::decodeFieldVaVdst,
+                     AMDGPU::DepCtr::getVaVdstBitMask());
+  PrintFieldIfNotMax(VaSdstName, AMDGPU::DepCtr::decodeFieldVaSdst,
+                     AMDGPU::DepCtr::getVaSdstBitMask());
+  PrintFieldIfNotMax(VaSsrcName, AMDGPU::DepCtr::decodeFieldVaSsrc,
+                     AMDGPU::DepCtr::getVaSsrcBitMask());
+  PrintFieldIfNotMax(HoldCntName, AMDGPU::DepCtr::decodeFieldHoldCnt,
+                     AMDGPU::DepCtr::getHoldCntBitMask());
+  PrintFieldIfNotMax(VmVsrcName, AMDGPU::DepCtr::decodeFieldVmVsrc,
+                     AMDGPU::DepCtr::getVmVsrcBitMask());
+  PrintFieldIfNotMax(VaVccName, AMDGPU::DepCtr::decodeFieldVaVcc,
+                     AMDGPU::DepCtr::getVaVccBitMask());
+  PrintFieldIfNotMax(SaSdstName, AMDGPU::DepCtr::decodeFieldSaSdst,
+                     AMDGPU::DepCtr::getSaSdstBitMask());
+  if (NonePrinted)
+    OS << SWaitAluImmPrefix << AllOff;
+}
+
 void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
                       std::optional<unsigned int> OpIdx, int64_t Imm) const {
 
   switch (MI.getOpcode()) {
+  case AMDGPU::S_WAITCNT_DEPCTR:
+    assert(OpIdx == 0 && "Imm is expected to be the 0'th operand!");
+    printSWaitAluImm(Imm, OS);
+    break;
   case AMDGPU::S_DELAY_ALU:
     assert(OpIdx == 0);
     printSDelayAluImm(Imm, OS);
@@ -39,6 +90,8 @@ bool AMDGPUMIRFormatter::parseImmMnemonic(const unsigned OpCode,
 {
 
   switch (OpCode) {
+  case AMDGPU::S_WAITCNT_DEPCTR:
+    return parseSWaitAluImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
   case AMDGPU::S_DELAY_ALU:
     return parseSDelayAluImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
   default:
@@ -88,6 +141,92 @@ void AMDGPUMIRFormatter::printSDelayAluImm(int64_t Imm,
 
   OS << "_id1_";
   Outdep(Id1);
+}
+
+bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
+    const unsigned int OpIdx, int64_t &Imm, llvm::StringRef &Src,
+    llvm::MIRFormatter::ErrorCallbackType &ErrorCallback) const {
+  // TODO: For now accept integer masks for compatibility with old MIR.
+  if (!Src.consumeInteger(10, Imm))
+    return false;
+
+  // Initialize with all ones because this disables all checks.
+  Imm = std::numeric_limits<uint64_t>::max();
+  // The input is in the form: .Name1_Num1_Name2_Num2
+  // Drop the '.' prefix.
+  bool Expected = Src.consume_front(SWaitAluImmPrefix);
+  if (!Expected)
+    return ErrorCallback(Src.begin(), "Expected prefix");
+  bool Empty = true;
+
+  // Special case for all off.
+  if (Src == AllOff)
+    return false;
+
+  // Parse a counter name, number pair in each iteration.
+  while (!Src.empty()) {
+    // Src: Name1_Num1_Name2_Num2
+    //           ^
+    size_t Delim1Idx = Src.find(SWaitAluDelim);
+    if (Delim1Idx == StringRef::npos) {
+      if (Empty)
+        return ErrorCallback(Src.begin() + Src.size(),
+                             "Expected <CounterName>_<CounterNum>");
+      break;
+    }
+    // Src: Name1_Num1_Name2_Num2
+    //      ^^^^^
+    StringRef Name = Src.substr(0, Delim1Idx);
+    // Src: Name1_Num1_Name2_Num2
+    //                ^
+    size_t Delim2Idx = Src.find(SWaitAluDelim, Delim1Idx + 1);
+    // Src: Name1_Num1_Name2_Num2
+    //            ^^^^
+    StringRef NumStr = Src.substr(Delim1Idx + 1, Delim2Idx);
+    if (Name.empty() || NumStr.empty())
+      return ErrorCallback(Src.begin() + Delim1Idx,
+                           "Expected <CounterName>_<CounterNum>");
+    // Make sure the counter number is legal.
+    int64_t Num;
+    if (NumStr.consumeInteger(10, Num) || Num < 0)
+      return ErrorCallback(Src.begin() + Delim1Idx + 1,
+                           "Expected non-negative integer counter number");
+
+    // Encode the counter number into Imm.
+    unsigned Max;
+    if (Name == VaVdstName) {
+      Max = llvm::AMDGPU::DepCtr::getVaVdstBitMask();
+      Imm = llvm::AMDGPU::DepCtr::encodeFieldVaVdst(Imm, Num);
+    } else if (Name == VmVsrcName) {
+      Max = llvm::AMDGPU::DepCtr::getVmVsrcBitMask();
+      Imm = llvm::AMDGPU::DepCtr::encodeFieldVmVsrc(Imm, Num);
+    } else if (Name == VaSdstName) {
+      Max = llvm::AMDGPU::DepCtr::getVaSdstBitMask();
+      Imm = llvm::AMDGPU::DepCtr::encodeFieldVaSdst(Imm, Num);
+    } else if (Name == VaSsrcName) {
+      Max = llvm::AMDGPU::DepCtr::getVaSsrcBitMask();
+      Imm = llvm::AMDGPU::DepCtr::encodeFieldVaSsrc(Imm, Num);
+    } else if (Name == HoldCntName) {
+      Max = llvm::AMDGPU::DepCtr::getHoldCntBitMask();
+      Imm = llvm::AMDGPU::DepCtr::encodeFieldHoldCnt(Imm, Num);
+    } else if (Name == VaVccName) {
+      Max = llvm::AMDGPU::DepCtr::getVaVccBitMask();
+      Imm = llvm::AMDGPU::DepCtr::encodeFieldVaVcc(Imm, Num);
+    } else if (Name == SaSdstName) {
+      Max = llvm::AMDGPU::DepCtr::getSaSdstBitMask();
+      Imm = llvm::AMDGPU::DepCtr::encodeFieldSaSdst(Imm, Num);
+    } else {
+      return ErrorCallback(Src.begin(), "Bad counter name");
+    }
+    // Don't allow the values to reach their maximum value.
+    if (Num >= Max)
+      return ErrorCallback(Src.begin() + Delim1Idx + 1,
+                           "Counter value too large");
+    // Drop the part of Src that we just parsed.
+    // Src: Name2_Num2
+    Src = Src.substr(Delim2Idx != StringRef::npos ? Delim2Idx + 1 : Delim2Idx);
+  }
+  return false;
 }
 
 bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
