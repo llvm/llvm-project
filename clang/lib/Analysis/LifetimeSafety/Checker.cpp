@@ -199,11 +199,13 @@ public:
       const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
       if (!FD)
         continue;
-      const FunctionDecl *CanonicalFD = FD->getCanonicalDecl();
-      ParmVarDecl *CanonicalPVD = const_cast<ParmVarDecl *>(
-          CanonicalFD->getParamDecl(PVD->getFunctionScopeIndex()));
-      if (!CanonicalPVD->hasAttr<LifetimeBoundAttr>()) {
-        CanonicalPVD->addAttr(
+      // Propagates inferred attributes via the most recent declaration to
+      // ensure visibility for callers in post-order analysis
+      const FunctionDecl *MostRecentFD = FD->getMostRecentDecl();
+      ParmVarDecl *MostRecentPVD = const_cast<ParmVarDecl *>(
+          MostRecentFD->getParamDecl(PVD->getFunctionScopeIndex()));
+      if (!MostRecentPVD->hasAttr<LifetimeBoundAttr>()) {
+        MostRecentPVD->addAttr(
             LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
       }
     }
