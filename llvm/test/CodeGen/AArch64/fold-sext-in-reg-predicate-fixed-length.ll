@@ -6,11 +6,9 @@ target triple = "aarch64"
 define <16 x i8> @active_lane_mask_mload(ptr %p, i64 %n) {
 ; CHECK-LABEL: active_lane_mask_mload:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    whilelo p0.b, xzr, x1
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    whilelo p1.b, xzr, x1
+; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
