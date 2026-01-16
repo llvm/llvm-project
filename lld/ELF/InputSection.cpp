@@ -666,8 +666,9 @@ struct RISCVPCRel {
   static constexpr const char *hiReloc = "R_RISCV_PCREL_HI20";
 
   static bool isHiReloc(uint32_t type) {
-    return type == R_RISCV_PCREL_HI20 || type == R_RISCV_GOT_HI20 ||
-           type == R_RISCV_TLS_GD_HI20 || type == R_RISCV_TLS_GOT_HI20;
+    return is_contained({R_RISCV_PCREL_HI20, R_RISCV_GOT_HI20,
+                         R_RISCV_TLS_GD_HI20, R_RISCV_TLS_GOT_HI20},
+                        type);
   }
 };
 
@@ -676,11 +677,11 @@ struct LoongArchPCAdd {
   static constexpr const char *hiReloc = "R_LARCH_*PCADD_HI20";
 
   static bool isHiReloc(uint32_t type) {
-    return type == R_LARCH_PCADD_HI20 || type == R_LARCH_GOT_PCADD_HI20 ||
-           type == R_LARCH_TLS_IE_PCADD_HI20 ||
-           type == R_LARCH_TLS_LD_PCADD_HI20 ||
-           type == R_LARCH_TLS_GD_PCADD_HI20 ||
-           type == R_LARCH_TLS_DESC_PCADD_HI20;
+    return is_contained({R_LARCH_PCADD_HI20, R_LARCH_GOT_PCADD_HI20,
+                         R_LARCH_TLS_IE_PCADD_HI20, R_LARCH_TLS_LD_PCADD_HI20,
+                         R_LARCH_TLS_GD_PCADD_HI20,
+                         R_LARCH_TLS_DESC_PCADD_HI20},
+                        type);
   }
 };
 
