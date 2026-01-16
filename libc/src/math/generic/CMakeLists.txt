@@ -260,7 +260,7 @@ add_entrypoint_object(
   HDRS
     ../dfmal.h
   DEPENDS
-    libc.src.__support.FPUtil.fma
+    libc.src.__support.math.dfmal
 )
 
 add_entrypoint_object(
@@ -5223,7 +5223,7 @@ add_entrypoint_object(
   HDRS
     ../fsqrt.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.math.fsqrt
 )
 
 add_entrypoint_object(

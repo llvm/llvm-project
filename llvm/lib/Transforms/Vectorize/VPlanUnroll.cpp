@@ -371,7 +371,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
                       m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
-                      m_VPValue(), m_VPValue(Op1))) ||
+                      m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeFindIVResult>(
                       m_VPValue(), m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));

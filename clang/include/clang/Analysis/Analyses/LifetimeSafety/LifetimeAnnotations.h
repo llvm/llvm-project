@@ -10,7 +10,6 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 
-#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 
 namespace clang ::lifetimes {
@@ -45,12 +44,6 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD);
 /// lifetimebound, either due to an explicit lifetimebound attribute on the
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
-
-/// Check if a function has a lifetimebound attribute on its function type
-/// (which represents the implicit 'this' parameter for methods).
-/// Returns the attribute if found, nullptr otherwise.
-const LifetimeBoundAttr *
-getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI);
 
 // Returns true if the implicit object argument (this) of a method call should
 // be tracked for GSL lifetime analysis. This applies to STL methods that return
