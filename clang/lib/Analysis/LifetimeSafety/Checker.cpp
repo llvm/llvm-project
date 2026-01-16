@@ -20,6 +20,7 @@
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -160,11 +161,36 @@ public:
     }
   }
 
+  /// Returns the declaration of a function that is visible across translation
+  /// units, if such a declaration exists and is different from the definition.
+  static const FunctionDecl *getCrossTUDecl(const ParmVarDecl &PVD,
+                                            SourceManager &SM) {
+    const auto *FD = dyn_cast<FunctionDecl>(PVD.getDeclContext());
+    if (!FD)
+      return nullptr;
+    if (!FD->isExternallyVisible())
+      return nullptr;
+    const FileID DefinitionFile = SM.getFileID(FD->getLocation());
+    for (const FunctionDecl *Redecl : FD->redecls())
+      if (SM.getFileID(Redecl->getLocation()) != DefinitionFile)
+        return Redecl;
+
+    return nullptr;
+  }
+
   void suggestAnnotations() {
     if (!Reporter)
       return;
-    for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap)
-      Reporter->suggestAnnotation(PVD, EscapeExpr);
+    SourceManager &SM = AST.getSourceManager();
+    for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap) {
+      if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
+        Reporter->suggestAnnotation(
+            SuggestionScope::CrossTU,
+            CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
+            EscapeExpr);
+      else
+        Reporter->suggestAnnotation(SuggestionScope::IntraTU, PVD, EscapeExpr);
+    }
   }
 
   void inferAnnotations() {

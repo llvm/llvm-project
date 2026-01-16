@@ -55,6 +55,7 @@ unittest("SupportTests") {
     "HashBuilderTest.cpp",
     "IndexedAccessorTest.cpp",
     "InstructionCostTest.cpp",
+    "IntegerInclusiveIntervalTest.cpp",
     "InterleavedRangeTest.cpp",
     "JSONTest.cpp",
     "JobserverTest.cpp",

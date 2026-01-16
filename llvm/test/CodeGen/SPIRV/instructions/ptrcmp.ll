@@ -28,8 +28,8 @@
 ; CHECK-COMPAT: [[EQ]] = OpFunction
 ; CHECK-COMPAT-NOT: OpPtrEqual
 ; CHECK-COMPAT: OpFunctionEnd
-define i1 @test_eq(i16* %a, i16* %b) {
-  %r = icmp eq i16* %a, %b
+define i1 @test_eq(ptr %a, ptr %b) {
+  %r = icmp eq ptr %a, %b
   ret i1 %r
 }
 
@@ -43,8 +43,8 @@ define i1 @test_eq(i16* %a, i16* %b) {
 ; CHECK-COMPAT: [[NE]] = OpFunction
 ; CHECK-COMPAT-NOT: OpPtrNotEqual
 ; CHECK-COMPAT: OpFunctionEnd
-define i1 @test_ne(i16* %a, i16* %b) {
-  %r = icmp ne i16* %a, %b
+define i1 @test_ne(ptr %a, ptr %b) {
+  %r = icmp ne ptr %a, %b
   ret i1 %r
 }
 
@@ -57,8 +57,8 @@ define i1 @test_ne(i16* %a, i16* %b) {
 ; CHECK:      [[R:%.*]] = OpSLessThan {{%.+}} [[AI]] [[BI]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i1 @test_slt(i16* %a, i16* %b) {
-  %r = icmp slt i16* %a, %b
+define i1 @test_slt(ptr %a, ptr %b) {
+  %r = icmp slt ptr %a, %b
   ret i1 %r
 }
 
@@ -71,8 +71,8 @@ define i1 @test_slt(i16* %a, i16* %b) {
 ; CHECK:      [[R:%.*]] = OpULessThan {{%.+}} [[AI]] [[BI]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i1 @test_ult(i16* %a, i16* %b) {
-  %r = icmp ult i16* %a, %b
+define i1 @test_ult(ptr %a, ptr %b) {
+  %r = icmp ult ptr %a, %b
   ret i1 %r
 }
 
@@ -85,8 +85,8 @@ define i1 @test_ult(i16* %a, i16* %b) {
 ; CHECK:      [[R:%.*]] = OpULessThanEqual {{%.+}} [[AI]] [[BI]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i1 @test_ule(i16* %a, i16* %b) {
-  %r = icmp ule i16* %a, %b
+define i1 @test_ule(ptr %a, ptr %b) {
+  %r = icmp ule ptr %a, %b
   ret i1 %r
 }
 
@@ -99,8 +99,8 @@ define i1 @test_ule(i16* %a, i16* %b) {
 ; CHECK:      [[R:%.*]] = OpSLessThanEqual {{%.+}} [[AI]] [[BI]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i1 @test_sle(i16* %a, i16* %b) {
-  %r = icmp sle i16* %a, %b
+define i1 @test_sle(ptr %a, ptr %b) {
+  %r = icmp sle ptr %a, %b
   ret i1 %r
 }
 
@@ -113,8 +113,8 @@ define i1 @test_sle(i16* %a, i16* %b) {
 ; CHECK:      [[R:%.*]] = OpUGreaterThan {{%.+}} [[AI]] [[BI]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i1 @test_ugt(i16* %a, i16* %b) {
-  %r = icmp ugt i16* %a, %b
+define i1 @test_ugt(ptr %a, ptr %b) {
+  %r = icmp ugt ptr %a, %b
   ret i1 %r
 }
 
@@ -127,8 +127,8 @@ define i1 @test_ugt(i16* %a, i16* %b) {
 ; CHECK:      [[R:%.*]] = OpSGreaterThan {{%.+}} [[AI]] [[BI]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i1 @test_sgt(i16* %a, i16* %b) {
-  %r = icmp sgt i16* %a, %b
+define i1 @test_sgt(ptr %a, ptr %b) {
+  %r = icmp sgt ptr %a, %b
   ret i1 %r
 }
 
@@ -141,8 +141,8 @@ define i1 @test_sgt(i16* %a, i16* %b) {
 ; CHECK:      [[R:%.*]] = OpUGreaterThanEqual {{%.+}} [[AI]] [[BI]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i1 @test_uge(i16* %a, i16* %b) {
-  %r = icmp uge i16* %a, %b
+define i1 @test_uge(ptr %a, ptr %b) {
+  %r = icmp uge ptr %a, %b
   ret i1 %r
 }
 
@@ -155,7 +155,7 @@ define i1 @test_uge(i16* %a, i16* %b) {
 ; CHECK:      [[R:%.*]] = OpSGreaterThanEqual {{%.+}} [[AI]] [[BI]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i1 @test_sge(i16* %a, i16* %b) {
-  %r = icmp sge i16* %a, %b
+define i1 @test_sge(ptr %a, ptr %b) {
+  %r = icmp sge ptr %a, %b
   ret i1 %r
 }

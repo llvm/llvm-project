@@ -155,5 +155,30 @@ int main(int, char**) {
   //
   // Unfortunately, this is extremely hard to test portably so we don't have a test for this error condition right now.
 
+  {
+    class CopyOnly {
+    public:
+      CopyOnly() {}
+      CopyOnly(const CopyOnly&) = default;
+      CopyOnly(CopyOnly&&)      = delete;
+
+      void operator()(const CopyOnly&) const {}
+    };
+    CopyOnly c;
+    std::jthread t(c, c);
+  }
+
+  {
+    class MoveOnly {
+    public:
+      MoveOnly() {}
+      MoveOnly(const MoveOnly&) = delete;
+      MoveOnly(MoveOnly&&)      = default;
+
+      void operator()(MoveOnly&&) const {}
+    };
+    std::jthread t(MoveOnly{}, MoveOnly{});
+  }
+
   return 0;
 }

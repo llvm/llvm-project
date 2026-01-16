@@ -412,7 +412,7 @@ private:
   /// stored within that section.
   ///
   /// \returns either the decompressed object file stored within the
-  /// .gnu_debugdata section or \c nullptr if an error occured or if there's no
+  /// .gnu_debugdata section or \c nullptr if an error occurred or if there's no
   /// section with that name.
   std::shared_ptr<ObjectFileELF> GetGnuDebugDataObjectFile();
 
@@ -424,7 +424,7 @@ private:
   /// found.
   ///
   /// \return The bytes that represent the string table data or \c std::nullopt
-  ///         if an error occured.
+  ///         if an error occurred.
   std::optional<lldb_private::DataExtractor> GetDynamicData();
 
   /// Get the bytes that represent the dynamic string table data.
@@ -435,7 +435,7 @@ private:
   /// DT_STRSZ .dynamic entries.
   ///
   /// \return The bytes that represent the string table data or \c std::nullopt
-  ///         if an error occured.
+  ///         if an error occurred.
   std::optional<lldb_private::DataExtractor> GetDynstrData();
 
   /// Read the bytes pointed to by the \a dyn dynamic entry.
@@ -453,7 +453,7 @@ private:
   ///                   before reading data.
   ///
   /// \return The bytes that represent the dynanic entries data or
-  ///         \c std::nullopt if an error occured or the data is not available.
+  ///         \c std::nullopt if an error occurred or the data is not available.
   std::optional<lldb_private::DataExtractor>
   ReadDataFromDynamic(const elf::ELFDynamic *dyn, uint64_t length,
                       uint64_t offset = 0);
@@ -468,7 +468,7 @@ private:
   ///
   /// \return The bytes that represent the symbol table data from the .dynamic
   ///         section or section headers or \c std::nullopt if an error
-  ///         occured or if there is no dynamic symbol data available.
+  ///         occurred or if there is no dynamic symbol data available.
   std::optional<lldb_private::DataExtractor>
   GetDynsymDataFromDynamic(uint32_t &num_symbols);
 
