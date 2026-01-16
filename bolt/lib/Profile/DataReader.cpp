@@ -344,11 +344,17 @@ std::error_code DataReader::parseInput() {
   }
   FileBuf = std::move(MB.get());
   ParsingBuf = FileBuf->getBuffer();
+
+  if (ParsingBuf.empty()) {
+    Diag << "WARNING: empty profile data file: " << Filename << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+
   if (std::error_code EC = parse())
     return EC;
-  if (!ParsingBuf.empty())
-    Diag << "WARNING: invalid profile data detected at line " << Line
-         << ". Possibly corrupted profile.\n";
+
+  Diag << "WARNING: invalid profile data detected at line " << Line
+      << ". Possibly corrupted profile.\n";
 
   buildLTONameMaps();
 
