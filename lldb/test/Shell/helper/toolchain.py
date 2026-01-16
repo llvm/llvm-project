@@ -260,6 +260,9 @@ def use_support_substitutions(config):
     swift_driver_args = []
     if platform.system() in ["Darwin"]:
         swift_args += ["-sdk", sdk_path]
+    swift_driver_extra_args = getattr(config, "swift_driver_extra_args", [])
+    if swift_driver_extra_args:
+        swift_args += swift_driver_extra_args
     tools = [
         ToolSubst(
             "%target-swiftc",
