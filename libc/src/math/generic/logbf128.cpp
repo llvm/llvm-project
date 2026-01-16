@@ -8,6 +8,7 @@
 
 #include "src/math/logbf128.h"
 #include "src/__support/math/logbf128.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float128, logbf128, (float128 x)) {
