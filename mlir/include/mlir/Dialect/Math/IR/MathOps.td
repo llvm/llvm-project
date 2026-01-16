@@ -367,7 +367,7 @@ def Math_ClampFOp : Math_FloatTernaryOp<"clampf"> {
     ```
       clampf(value, min, max) = maxf(minf(value, max), min)
     ```
-    If `min>max` the resulting value is undefined.
+    If `min > max` the resulting value is poison.
 
     Example:
 
