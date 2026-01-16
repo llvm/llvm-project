@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/InterleavedRange.h"
 #include <algorithm>
 #include <cassert>
@@ -87,7 +88,7 @@ public:
   }
 
 private:
-  std::vector<PBQPNum> Data;
+  llvm::SmallVector<PBQPNum, 0> Data;
 };
 
 /// Return a hash_value for the given vector.

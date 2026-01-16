@@ -20,6 +20,7 @@
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/Thunk.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include <memory>
 #include <utility>
 
@@ -253,10 +254,10 @@ private:
   // in the virtual table group.
   VTableIndicesTy VTableIndices;
 
-  std::vector<VTableComponent> VTableComponents;
+  llvm::SmallVector<VTableComponent, 0> VTableComponents;
 
   /// Contains thunks needed by vtables, sorted by indices.
-  std::vector<VTableThunkTy> VTableThunks;
+  llvm::SmallVector<VTableThunkTy, 0> VTableThunks;
 
   /// Address points for all vtables.
   AddressPointsMapTy AddressPoints;

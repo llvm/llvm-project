@@ -23977,7 +23977,7 @@ bool SLPVectorizerPass::vectorizeStores(
       unsigned End = Operands.size();
       unsigned Repeat = 0;
       constexpr unsigned MaxAttempts = 4;
-      std::vector<std::pair<unsigned, unsigned>> RangeSizesStorage(
+      llvm::SmallVector<std::pair<unsigned, unsigned>> RangeSizesStorage(
           Operands.size(), {1, 1});
       // The `slice` and `drop_front` interfaces are convenient
       const auto RangeSizes = MutableArrayRef(RangeSizesStorage);
