@@ -4660,8 +4660,8 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 s33, s0
-; GFX1250-DAGISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_set_vgpr_msb 0xc000 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-DAGISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call amdgpu_gfx <2 x half>(<2 x half>, <2 x half>) @gfx_callee(<2 x half> %y, <2 x half> %x) convergent
   ret <2 x half> %ret
@@ -11142,8 +11142,8 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 s33, s0
-; GFX1250-DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_set_vgpr_msb 0xc000 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call float(ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @callee, <8 x float> %x) convergent
   store float %ret, ptr %p

@@ -344,6 +344,12 @@
 // CHECK-XLINKER: -device-linker=a{{.*}}-device-linker=nvptx64-nvidia-cuda=b{{.*}}-device-linker=nvptx64-nvidia-cuda=c{{.*}}--
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
+// RUN:     -Xoffload-compiler a -Xoffload-compiler-nvptx64-nvidia-cuda b -Xoffload-compiler-nvptx64 c \
+// RUN:     %s 2>&1 | FileCheck --check-prefix=CHECK-XCOMPILER %s
+
+// CHECK-XCOMPILER: -device-compiler=a{{.*}}-device-compiler=nvptx64-nvidia-cuda=b{{.*}}-device-compiler=nvptx64-nvidia-cuda=c{{.*}}--
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-FEATURES %s
 
 // CHECK-LTO-FEATURES: llvm-offload-binary{{.*}}--image={{.*}}feature=+ptx{{[0-9]+}}

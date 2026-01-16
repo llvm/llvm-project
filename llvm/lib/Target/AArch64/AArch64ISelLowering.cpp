@@ -8993,7 +8993,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         auto *RetTy = EVT(MVT::i64).getTypeForEVT(*DAG.getContext());
         TargetLowering::CallLoweringInfo CLI(DAG);
         CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-            DAG.getLibcalls().getLibcallCallingConv(LC), RetTy, Callee, {});
+            DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy, Callee,
+            {});
         std::tie(Size, Chain) = LowerCallTo(CLI);
       }
       if (Size) {
