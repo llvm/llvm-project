@@ -14,6 +14,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
 #include "clang/AST/Expr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
@@ -201,11 +202,11 @@ public:
         continue;
       // Propagates inferred attributes via the most recent declaration to
       // ensure visibility for callers in post-order analysis.
-      const FunctionDecl *MostRecentFD = FD->getMostRecentDecl();
-      ParmVarDecl *MostRecentPVD = const_cast<ParmVarDecl *>(
-          MostRecentFD->getParamDecl(PVD->getFunctionScopeIndex()));
-      if (!MostRecentPVD->hasAttr<LifetimeBoundAttr>()) {
-        MostRecentPVD->addAttr(
+      FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+      ParmVarDecl *InferredPVD = const_cast<ParmVarDecl *>(
+          FD->getParamDecl(PVD->getFunctionScopeIndex()));
+      if (!InferredPVD->hasAttr<LifetimeBoundAttr>()) {
+        InferredPVD->addAttr(
             LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
       }
     }
