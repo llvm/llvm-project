@@ -2099,7 +2099,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   // For each CopyForDef, increase the cost by the register size while
   // accounting for block frequency.
   for (MachineInstr *DefMI : CopyForDef) {
-    auto DefReg = DefMI->getOperand(0).getReg();
+    Register DefReg = DefMI->getOperand(0).getReg();
     uint64_t DefFreq =
         EntryFreq
             ? MBFI->getBlockFreq(DefMI->getParent()).getFrequency() / EntryFreq
