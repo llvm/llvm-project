@@ -1095,10 +1095,9 @@ namespace {
     return IsAnnexKAvailable;
   case ReportPolicy::C11Only:
     return IsC11OrLaterStandard;
-  default:
-    llvm_unreachable("Unknown ReportPolicy value");
   }
-};
+  llvm_unreachable("Unknown ReportPolicy value");
+}
 
 class SecuritySyntaxChecker : public Checker<check::ASTCodeBody> {
 public:
