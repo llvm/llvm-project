@@ -61,8 +61,9 @@ public:
                         mlir::Value loweredAddr, mlir::Value loweredMember,
                         mlir::OpBuilder &builder) const override;
 
-  void lowerGetMethod(cir::GetMethodOp op, mlir::Value (&loweredResults)[2],
-                      mlir::Value loweredMethod, mlir::Value loweredObjectPtr,
+  void lowerGetMethod(cir::GetMethodOp op, mlir::Value &callee,
+                      mlir::Value &thisArg, mlir::Value loweredMethod,
+                      mlir::Value loweredObjectPtr,
                       mlir::ConversionPatternRewriter &rewriter) const override;
 
   mlir::Value lowerBaseDataMember(cir::BaseDataMemberOp op,
@@ -226,7 +227,7 @@ mlir::Operation *LowerItaniumCXXABI::lowerGetRuntimeMember(
 }
 
 void LowerItaniumCXXABI::lowerGetMethod(
-    cir::GetMethodOp op, mlir::Value (&loweredResults)[2],
+    cir::GetMethodOp op, mlir::Value &callee, mlir::Value &thisArg,
     mlir::Value loweredMethod, mlir::Value loweredObjectPtr,
     mlir::ConversionPatternRewriter &rewriter) const {
   // In the Itanium and ARM ABIs, method pointers have the form:
@@ -251,8 +252,6 @@ void LowerItaniumCXXABI::lowerGetMethod(
   // the function to call.
 
   mlir::ImplicitLocOpBuilder locBuilder(op.getLoc(), rewriter);
-  mlir::Value &callee = loweredResults[0];
-  mlir::Value &adjustedThis = loweredResults[1];
   mlir::Type calleePtrTy = op.getCallee().getType();
 
   cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
@@ -272,7 +271,7 @@ void LowerItaniumCXXABI::lowerGetMethod(
                             op.getObject().getType().getAddrSpace());
   mlir::Value thisVoidPtr = cir::CastOp::create(
       locBuilder, thisVoidPtrTy, cir::CastKind::bitcast, loweredObjectPtr);
-  adjustedThis =
+  thisArg =
       cir::PtrStrideOp::create(locBuilder, thisVoidPtrTy, thisVoidPtr, adj);
 
   // Load the "ptr" field of the member function pointer and determine if it
@@ -299,8 +298,8 @@ void LowerItaniumCXXABI::lowerGetMethod(
         cir::PointerType::get(cir::IntType::get(b.getContext(), 8, true));
     auto vtablePtrPtrTy = cir::PointerType::get(
         vtablePtrTy, op.getObject().getType().getAddrSpace());
-    auto vtablePtrPtr = cir::CastOp::create(
-        b, loc, vtablePtrPtrTy, cir::CastKind::bitcast, adjustedThis);
+    auto vtablePtrPtr = cir::CastOp::create(b, loc, vtablePtrPtrTy,
+                                            cir::CastKind::bitcast, thisArg);
     assert(!cir::MissingFeatures::opTBAA());
     mlir::Value vtablePtr =
         cir::LoadOp::create(b, loc, vtablePtrPtr, /*isDeref=*/false,

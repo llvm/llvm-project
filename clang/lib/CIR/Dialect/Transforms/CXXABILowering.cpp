@@ -255,10 +255,11 @@ mlir::LogicalResult CIRDerivedDataMemberOpABILowering::matchAndRewrite(
 mlir::LogicalResult CIRGetMethodOpABILowering::matchAndRewrite(
     cir::GetMethodOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Value loweredResults[2];
+  mlir::Value callee;
+  mlir::Value thisArg;
   lowerModule->getCXXABI().lowerGetMethod(
-      op, loweredResults, adaptor.getMethod(), adaptor.getObject(), rewriter);
-  rewriter.replaceOp(op, loweredResults);
+      op, callee, thisArg, adaptor.getMethod(), adaptor.getObject(), rewriter);
+  rewriter.replaceOp(op, {callee, thisArg});
   return mlir::success();
 }
 

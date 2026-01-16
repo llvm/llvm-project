@@ -70,7 +70,7 @@ public:
   /// operations that act on the ABI types. The lowered result values will be
   /// stored in the given loweredResults array.
   virtual void
-  lowerGetMethod(cir::GetMethodOp op, mlir::Value (&loweredResults)[2],
+  lowerGetMethod(cir::GetMethodOp op, mlir::Value &callee, mlir::Value &thisArg,
                  mlir::Value loweredMethod, mlir::Value loweredObjectPtr,
                  mlir::ConversionPatternRewriter &rewriter) const = 0;
 
