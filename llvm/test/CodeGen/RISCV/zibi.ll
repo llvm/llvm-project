@@ -99,9 +99,7 @@ define i32 @test_beq_1(i32 signext %a) nounwind {
 ; ZIBI-NEXT:    beqi a0, 1, .LBB5_2
 ; ZIBI-NEXT:  # %bb.1: # %f
 ; ZIBI-NEXT:    li a0, 0
-; ZIBI-NEXT:    ret
 ; ZIBI-NEXT:  .LBB5_2: # %t
-; ZIBI-NEXT:    li a0, 1
 ; ZIBI-NEXT:    ret
   %cmp = icmp eq i32 %a, 1
   br i1 %cmp, label %t, label %f, !prof !0
