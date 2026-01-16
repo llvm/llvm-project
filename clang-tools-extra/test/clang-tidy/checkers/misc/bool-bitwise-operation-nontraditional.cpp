@@ -409,3 +409,12 @@ int bad_in_template_lambda_captured(T a, T b) {
 }
 
 int dummy = bad_in_template(true, false) + bad_in_template_lambda_captured(false, true);
+
+void test_bug_isBooleanBitwise_recursive_classification() {
+    bool a = true, b = false, c = true;
+    int i = 0;
+
+    bool result1 = (a + b) bitor i;
+
+    bool result2 = (a * b + c) bitor i;
+}

@@ -266,6 +266,9 @@ public:
     if (!BinOp)
       return false;
 
+    if (!isBitwiseOperation(BinOp->getOpcodeStr()))
+      return false;
+
     const bool IsBooleanLHS = isBooleanType(BinOp->getLHS());
     const bool IsBooleanRHS = isBooleanType(BinOp->getRHS());
 
