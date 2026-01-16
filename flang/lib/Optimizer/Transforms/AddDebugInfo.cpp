@@ -53,7 +53,7 @@ class AddDebugInfoPass : public fir::impl::AddDebugInfoBase<AddDebugInfoPass> {
                        mlir::LLVM::DIFileAttr fileAttr,
                        mlir::LLVM::DIScopeAttr scopeAttr,
                        fir::DebugTypeGenerator &typeGen,
-                       mlir::SymbolTable *symbolTable);
+                       mlir::SymbolTable *symbolTable, mlir::Value dummyScope);
 
 public:
   AddDebugInfoPass(fir::AddDebugInfoOptions options) : Base(options) {}
@@ -144,69 +144,88 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
     fir::DebugTypeGenerator &typeGen, mlir::SymbolTable *symbolTable) {
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
-  std::optional<std::int64_t> optint;
-  mlir::Operation *op = declOp.getMemref().getDefiningOp();
 
-  if (auto conOp = mlir::dyn_cast_if_present<fir::ConvertOp>(op))
-    op = conOp.getValue().getDefiningOp();
+  std::optional<std::int64_t> offset;
+  mlir::Value storage = declOp.getStorage();
+  if (!storage)
+    return false;
 
-  if (auto cordOp = mlir::dyn_cast_if_present<fir::CoordinateOp>(op)) {
-    auto coors = cordOp.getCoor();
-    if (coors.size() != 1)
-      return false;
-    optint = fir::getIntIfConstant(coors[0]);
-    if (!optint)
-      return false;
-    op = cordOp.getRef().getDefiningOp();
-    if (auto conOp2 = mlir::dyn_cast_if_present<fir::ConvertOp>(op))
-      op = conOp2.getValue().getDefiningOp();
+  // Extract offset from storage_offset attribute
+  uint64_t storageOffset = declOp.getStorageOffset();
+  if (storageOffset != 0)
+    offset = static_cast<std::int64_t>(storageOffset);
 
-    if (auto addrOfOp = mlir::dyn_cast_if_present<fir::AddrOfOp>(op)) {
-      mlir::SymbolRefAttr sym = addrOfOp.getSymbol();
-      if (auto global =
-              symbolTable->lookup<fir::GlobalOp>(sym.getRootReference())) {
+  // Get the GlobalOp from the storage value.
+  // The storage may be wrapped in ConvertOp, so unwrap it first.
+  mlir::Operation *storageOp = storage.getDefiningOp();
+  if (auto convertOp = mlir::dyn_cast_if_present<fir::ConvertOp>(storageOp))
+    storageOp = convertOp.getValue().getDefiningOp();
 
-        unsigned line = getLineFromLoc(global.getLoc());
-        llvm::StringRef commonName(sym.getRootReference());
-        // FIXME: We are trying to extract the name of the common block from the
-        // name of the global. As part of mangling, GetCommonBlockObjectName can
-        // add a trailing _ in the name of that global. The demangle function
-        // does not seem to handle such cases. So the following hack is used to
-        // remove the trailing '_'.
-        if (commonName != Fortran::common::blankCommonObjectName &&
-            commonName.back() == '_')
-          commonName = commonName.drop_back();
-        mlir::LLVM::DICommonBlockAttr commonBlock =
-            getOrCreateCommonBlockAttr(commonName, fileAttr, scopeAttr, line);
-        mlir::LLVM::DITypeAttr diType = typeGen.convertType(
-            fir::unwrapRefType(declOp.getType()), fileAttr, scopeAttr, declOp);
-        line = getLineFromLoc(declOp.getLoc());
-        auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
-            context, commonBlock, mlir::StringAttr::get(context, name),
-            declOp.getUniqName(), fileAttr, line, diType,
-            /*isLocalToUnit*/ false, /*isDefinition*/ true, /* alignInBits*/ 0);
-        mlir::LLVM::DIExpressionAttr expr;
-        if (*optint != 0) {
-          llvm::SmallVector<mlir::LLVM::DIExpressionElemAttr> ops;
-          ops.push_back(mlir::LLVM::DIExpressionElemAttr::get(
-              context, llvm::dwarf::DW_OP_plus_uconst, *optint));
-          expr = mlir::LLVM::DIExpressionAttr::get(context, ops);
-        }
-        auto dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
-            global.getContext(), gvAttr, expr);
-        globalToGlobalExprsMap[global].push_back(dbgExpr);
-        return true;
-      }
-    }
+  auto addrOfOp = mlir::dyn_cast_if_present<fir::AddrOfOp>(storageOp);
+  if (!addrOfOp)
+    return false;
+
+  mlir::SymbolRefAttr sym = addrOfOp.getSymbol();
+  fir::GlobalOp global =
+      symbolTable->lookup<fir::GlobalOp>(sym.getRootReference());
+  if (!global)
+    return false;
+
+  // Check if the global is actually a common block by demangling its name.
+  // Module EQUIVALENCE variables also use storage operands but are mangled
+  // as VARIABLE type, so we reject them to avoid treating them as common
+  // blocks.
+  llvm::StringRef globalSymbol = sym.getRootReference();
+  auto globalResult = fir::NameUniquer::deconstruct(globalSymbol);
+  if (globalResult.first == fir::NameUniquer::NameKind::VARIABLE)
+    return false;
+
+  // FIXME: We are trying to extract the name of the common block from the
+  // name of the global. As part of mangling, GetCommonBlockObjectName can
+  // add a trailing _ in the name of that global. The demangle function
+  // does not seem to handle such cases. So the following hack is used to
+  // remove the trailing '_'.
+  llvm::StringRef commonName = globalSymbol;
+  if (commonName != Fortran::common::blankCommonObjectName &&
+      !commonName.empty() && commonName.back() == '_')
+    commonName = commonName.drop_back();
+
+  // Create the debug attributes.
+  unsigned line = getLineFromLoc(global.getLoc());
+  mlir::LLVM::DICommonBlockAttr commonBlock =
+      getOrCreateCommonBlockAttr(commonName, fileAttr, scopeAttr, line);
+
+  mlir::LLVM::DITypeAttr diType = typeGen.convertType(
+      fir::unwrapRefType(declOp.getType()), fileAttr, scopeAttr, declOp);
+
+  line = getLineFromLoc(declOp.getLoc());
+  auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
+      context, commonBlock, mlir::StringAttr::get(context, name),
+      declOp.getUniqName(), fileAttr, line, diType,
+      /*isLocalToUnit*/ false, /*isDefinition*/ true, /* alignInBits*/ 0);
+
+  // Create DIExpression for offset if needed
+  mlir::LLVM::DIExpressionAttr expr;
+  if (offset && *offset != 0) {
+    llvm::SmallVector<mlir::LLVM::DIExpressionElemAttr> ops;
+    ops.push_back(mlir::LLVM::DIExpressionElemAttr::get(
+        context, llvm::dwarf::DW_OP_plus_uconst, *offset));
+    expr = mlir::LLVM::DIExpressionAttr::get(context, ops);
   }
-  return false;
+
+  auto dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
+      global.getContext(), gvAttr, expr);
+  globalToGlobalExprsMap[global].push_back(dbgExpr);
+
+  return true;
 }
 
 void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
                                        mlir::LLVM::DIFileAttr fileAttr,
                                        mlir::LLVM::DIScopeAttr scopeAttr,
                                        fir::DebugTypeGenerator &typeGen,
-                                       mlir::SymbolTable *symbolTable) {
+                                       mlir::SymbolTable *symbolTable,
+                                       mlir::Value dummyScope) {
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
   auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
@@ -230,7 +249,7 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
 
   // Get the dummy argument position from the explicit attribute.
   unsigned argNo = 0;
-  if (declOp.getDummyScope()) {
+  if (dummyScope && declOp.getDummyScope() == dummyScope) {
     if (auto argNoOpt = declOp.getDummyArgNo())
       argNo = *argNoOpt;
   }
@@ -610,6 +629,21 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
   addTargetOpDISP(/*lineTableOnly=*/false, entities);
 
+  // Find the first dummy_scope definition. This is the one of the current
+  // function. The other ones may come from inlined calls. The variables inside
+  // those inlined calls should not be identified as arguments of the current
+  // function.
+  mlir::Value dummyScope;
+  funcOp.walk([&](fir::UndefOp undef) -> mlir::WalkResult {
+    // TODO: delay fir.dummy_scope translation to undefined until
+    // codegeneration. This is nicer and safer to match.
+    if (llvm::isa<fir::DummyScopeType>(undef.getType())) {
+      dummyScope = undef;
+      return mlir::WalkResult::interrupt();
+    }
+    return mlir::WalkResult::advance();
+  });
+
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
     mlir::LLVM::DISubprogramAttr spTy = spAttr;
     if (auto tOp = declOp->getParentOfType<mlir::omp::TargetOp>()) {
@@ -619,7 +653,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
           spTy = sp;
       }
     }
-    handleDeclareOp(declOp, fileAttr, spTy, typeGen, symbolTable);
+    handleDeclareOp(declOp, fileAttr, spTy, typeGen, symbolTable, dummyScope);
   });
   // commonBlockMap ensures that we don't create multiple DICommonBlockAttr of
   // the same name in one function. But it is ok (rather required) to create

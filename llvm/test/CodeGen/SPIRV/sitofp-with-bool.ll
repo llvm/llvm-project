@@ -19,6 +19,6 @@ define dso_local spir_kernel void @K(ptr addrspace(1) nocapture %A, i32 %B) loca
 entry:
   %cmp = icmp sgt i32 %B, 0
   %conv = sitofp i1 %cmp to float
-  store float %conv, float addrspace(1)* %A, align 4
+  store float %conv, ptr addrspace(1) %A, align 4
   ret void
 }

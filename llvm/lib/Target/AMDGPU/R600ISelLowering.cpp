@@ -13,6 +13,7 @@
 
 #include "R600ISelLowering.h"
 #include "AMDGPU.h"
+#include "AMDGPUSelectionDAGInfo.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"
@@ -29,7 +30,8 @@ using namespace llvm;
 
 R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
                                        const R600Subtarget &STI)
-    : AMDGPUTargetLowering(TM, STI), Subtarget(&STI), Gen(STI.getGeneration()) {
+    : AMDGPUTargetLowering(TM, STI, STI), Subtarget(&STI),
+      Gen(STI.getGeneration()) {
   addRegisterClass(MVT::f32, &R600::R600_Reg32RegClass);
   addRegisterClass(MVT::i32, &R600::R600_Reg32RegClass);
   addRegisterClass(MVT::v2f32, &R600::R600_Reg64RegClass);
@@ -2176,18 +2178,20 @@ SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
 }
 
 TargetLowering::AtomicExpansionKind
-R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+R600TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   switch (RMW->getOperation()) {
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
     // FIXME: Cayman at least appears to have instructions for this, but the
-    // instruction defintions appear to be missing.
+    // instruction definitions appear to be missing.
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg: {
     const DataLayout &DL = RMW->getFunction()->getDataLayout();

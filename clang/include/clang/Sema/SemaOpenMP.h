@@ -981,6 +981,11 @@ public:
                                         SourceLocation StartLoc,
                                         SourceLocation LParenLoc,
                                         SourceLocation EndLoc);
+  /// Called on well-formed 'transparent' clause.
+  OMPClause *ActOnOpenMPTransparentClause(Expr *Transparent,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation EndLoc);
   /// Called on well-formed 'proc_bind' clause.
   OMPClause *ActOnOpenMPProcBindClause(llvm::omp::ProcBindKind Kind,
                                        SourceLocation KindLoc,
@@ -1174,6 +1179,8 @@ public:
     int ExtraModifier = -1; ///< Additional modifier for linear, map, depend or
                             ///< lastprivate clause.
     int OriginalSharingModifier = 0; // Default is shared
+    int NeedDevicePtrModifier = 0;
+    SourceLocation NeedDevicePtrModifierLoc;
     SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
         MapTypeModifiers;
     SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>
@@ -1349,7 +1356,7 @@ public:
   OMPClause *
   ActOnOpenMPToClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
                       ArrayRef<SourceLocation> MotionModifiersLoc,
-                      CXXScopeSpec &MapperIdScopeSpec,
+                      Expr *IteratorModifier, CXXScopeSpec &MapperIdScopeSpec,
                       DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                       ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                       ArrayRef<Expr *> UnresolvedMappers = {});
@@ -1357,7 +1364,7 @@ public:
   OMPClause *
   ActOnOpenMPFromClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
                         ArrayRef<SourceLocation> MotionModifiersLoc,
-                        CXXScopeSpec &MapperIdScopeSpec,
+                        Expr *IteratorModifier, CXXScopeSpec &MapperIdScopeSpec,
                         DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                         ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                         ArrayRef<Expr *> UnresolvedMappers = {});
@@ -1469,6 +1476,13 @@ public:
   int getOpenMPDeviceNum() const;
 
   void setOpenMPDeviceNumID(StringRef ID);
+
+  enum class OpenMPImpexType {
+    OMP_NotImpex = 0,
+    OMP_Impex = 1,
+    OMP_Import = 2,
+    OMP_Export = 3
+  };
 
 private:
   void *VarDataSharingAttributesStack;

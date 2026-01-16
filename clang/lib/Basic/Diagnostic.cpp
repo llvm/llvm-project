@@ -525,8 +525,7 @@ std::unique_ptr<WarningsSpecialCaseList>
 WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
                                 std::string &Err) {
   auto WarningSuppressionList = std::make_unique<WarningsSpecialCaseList>();
-  if (!WarningSuppressionList->createInternal(&Input, Err,
-                                              /*OrderBySize=*/true))
+  if (!WarningSuppressionList->createInternal(&Input, Err))
     return nullptr;
   return WarningSuppressionList;
 }
@@ -588,15 +587,12 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
 
   StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
 
-  StringRef LongestSup = DiagSection->getLongestMatch("src", F, "");
-  if (LongestSup.empty())
+  unsigned LastSup = DiagSection->getLastMatch("src", F, "");
+  if (LastSup == 0)
     return false;
 
-  StringRef LongestEmit = DiagSection->getLongestMatch("src", F, "emit");
-  if (LongestEmit.empty())
-    return true;
-
-  return LongestSup.size() > LongestEmit.size();
+  unsigned LastEmit = DiagSection->getLastMatch("src", F, "emit");
+  return LastSup > LastEmit;
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,

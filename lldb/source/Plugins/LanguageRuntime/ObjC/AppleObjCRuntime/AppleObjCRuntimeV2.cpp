@@ -320,7 +320,7 @@ extern "C"
 static const char *g_get_shared_cache_class_info_name =
     "__lldb_apple_objc_v2_get_shared_cache_class_info";
 
-static const char *g_get_shared_cache_class_info_body = R"(
+static const char *g_get_shared_cache_class_info_definitions = R"(
 
 extern "C"
 {
@@ -411,6 +411,9 @@ struct ClassInfo
     Class isa;
     uint32_t hash;
 }  __attribute__((__packed__));
+)";
+
+static const char *g_get_shared_cache_class_info_body = R"(
 
 uint32_t
 __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
@@ -1962,6 +1965,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
                       class_name_getter_function_name.AsCString(),
                       class_name_getter_function_name.AsCString());
 
+  shared_class_expression += g_get_shared_cache_class_info_definitions;
   shared_class_expression += g_get_shared_cache_class_info_body;
 
   auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
@@ -2115,7 +2119,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     return DescriptorMapUpdateResult::Fail();
   }
 
-  auto deallocate_class_infos = llvm::make_scope_exit([&] {
+  llvm::scope_exit deallocate_class_infos([&] {
     // Deallocate the memory we allocated for the ClassInfo array
     if (class_infos_addr != LLDB_INVALID_ADDRESS)
       process->DeallocateMemory(class_infos_addr);
@@ -2138,7 +2142,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     }
   }
 
-  auto deallocate_class_buffer = llvm::make_scope_exit([&] {
+  llvm::scope_exit deallocate_class_buffer([&] {
     // Deallocate the memory we allocated for the Class array
     if (class_buffer_addr != LLDB_INVALID_ADDRESS)
       process->DeallocateMemory(class_buffer_addr);

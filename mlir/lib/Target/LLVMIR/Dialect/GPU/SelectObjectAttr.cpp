@@ -124,10 +124,10 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
   }
 
   IRBuilder<> builder(module.getContext());
-  auto i32Ty = builder.getInt32Ty();
-  auto i64Ty = builder.getInt64Ty();
-  auto ptrTy = builder.getPtrTy(0);
-  auto voidTy = builder.getVoidTy();
+  auto *i32Ty = builder.getInt32Ty();
+  auto *i64Ty = builder.getInt64Ty();
+  auto *ptrTy = builder.getPtrTy(0);
+  auto *voidTy = builder.getVoidTy();
 
   // Embed the module as a global object.
   auto *modulePtr = new GlobalVariable(
@@ -147,13 +147,12 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
           "mgpuModuleLoadJIT", FunctionType::get(ptrTy, {ptrTy, i32Ty}, false));
       Constant *optValue = ConstantInt::get(i32Ty, optLevel);
       return builder.CreateCall(moduleLoadFn, {serializedObj, optValue});
-    } else {
-      FunctionCallee moduleLoadFn = module.getOrInsertFunction(
-          "mgpuModuleLoad", FunctionType::get(ptrTy, {ptrTy, i64Ty}, false));
-      Constant *binarySize =
-          ConstantInt::get(i64Ty, serializedStr.size() + (addNull ? 1 : 0));
-      return builder.CreateCall(moduleLoadFn, {serializedObj, binarySize});
     }
+    FunctionCallee moduleLoadFn = module.getOrInsertFunction(
+        "mgpuModuleLoad", FunctionType::get(ptrTy, {ptrTy, i64Ty}, false));
+    Constant *binarySize =
+        ConstantInt::get(i64Ty, serializedStr.size() + (addNull ? 1 : 0));
+    return builder.CreateCall(moduleLoadFn, {serializedObj, binarySize});
   }();
   builder.CreateStore(moduleObj, modulePtr);
   builder.CreateRetVoid();
@@ -429,7 +428,7 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
   // a stream to make a synchronous kernel launch.
   Value *stream = nullptr;
   // Sync & destroy the stream, for synchronous launches.
-  auto destroyStream = make_scope_exit([&]() {
+  llvm::scope_exit destroyStream([&]() {
     builder.CreateCall(getStreamSyncFn(), {stream});
     builder.CreateCall(getStreamDestroyFn(), {stream});
   });

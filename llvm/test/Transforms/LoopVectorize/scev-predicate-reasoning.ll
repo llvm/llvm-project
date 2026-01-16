@@ -90,7 +90,7 @@ define void @integer_induction_wraps_scev_predicate_known(i32 %x, ptr %call, ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr ptr, ptr [[CALL]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

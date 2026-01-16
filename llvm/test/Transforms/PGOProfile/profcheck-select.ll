@@ -15,7 +15,11 @@
 ; RUN: not opt -passes=prof-verify %t/verify-missing.ll 2>&1 | FileCheck %t/verify-missing.ll
 
 ; verify we can disable it. It's sufficient to see opt not failing. 
-; RUN: opt -passes=prof-verify -profcheck-annotate-select=0 %t/verify-missing.ll
+; RUN: opt -passes=prof-verify -profcheck-annotate-select=0 --disable-output %t/verify-missing.ll
+
+; verify vector selects without profiles are OK. It's sufficient opt doesn't fail.
+; RUN: opt -passes=prof-verify --disable-output %t/verify-vec.ll
+
 
 ;--- inject.ll
 declare void @foo(i32 %a);
@@ -24,8 +28,16 @@ define void @bar(i1 %c) {
   call void @foo(i32 %v)
   ret void
 }
+
+define <2 x i32> @vec(<2 x i1> %c, <2 x i32> %v1, <2 x i32> %v2) {
+  %r = select <2 x i1> %c, <2 x i32> %v1, <2 x i32> %v2
+  ret <2 x i32> %r
+}
+
 ; CHECK-LABEL: @bar
 ; CHECK: %v = select i1 %c, i32 1, i32 2, !prof !1
+; CHECK-LABEL: @vec
+; CHECK-NOT: select {{.*}} !prof
 ; CHECK: !0 = !{!"function_entry_count", i64 1000}
 ; CHECK: !1 = !{!"branch_weights", i32 2, i32 3}
 
@@ -65,3 +77,9 @@ define void @bar(i1 %c) !prof !0 {
 }
 !0 = !{!"function_entry_count", i64 1000}
 ; CHECK: Profile verification failed: select annotation missing
+
+;--- verify-vec.ll
+define <2 x i32> @vec(<2 x i1> %c, <2 x i32> %v1, <2 x i32> %v2) !prof !{!"function_entry_count", i32 10} {
+  %r = select <2 x i1> %c, <2 x i32> %v1, <2 x i32> %v2
+  ret <2 x i32> %r
+}

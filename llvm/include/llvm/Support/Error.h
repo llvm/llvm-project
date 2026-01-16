@@ -21,6 +21,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -1306,7 +1307,7 @@ inline Error createStringError(std::error_code EC, char const *Fmt,
                                const Ts &... Vals) {
   std::string Buffer;
   raw_string_ostream(Buffer) << format(Fmt, Vals...);
-  return make_error<StringError>(Buffer, EC);
+  return make_error<StringError>(std::move(Buffer), EC, true);
 }
 
 LLVM_ABI Error createStringError(std::string &&Msg, std::error_code EC);
@@ -1333,6 +1334,21 @@ template <typename... Ts>
 inline Error createStringError(std::errc EC, char const *Fmt,
                                const Ts &... Vals) {
   return createStringError(std::make_error_code(EC), Fmt, Vals...);
+}
+
+// LLVM formatv versions of llvm::createStringError
+
+template <typename... Ts>
+inline Error createStringErrorV(std::error_code EC, char const *Fmt,
+                                Ts &&...Vals) {
+  return make_error<StringError>(formatv(Fmt, std::forward<Ts>(Vals)...).str(),
+                                 EC, true);
+}
+
+template <typename... Ts>
+inline Error createStringErrorV(char const *Fmt, Ts &&...Vals) {
+  return createStringErrorV(llvm::inconvertibleErrorCode(), Fmt,
+                            std::forward<Ts>(Vals)...);
 }
 
 /// This class wraps a filename and another Error.

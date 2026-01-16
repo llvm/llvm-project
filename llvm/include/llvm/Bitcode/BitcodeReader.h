@@ -137,6 +137,11 @@ struct ParserCallbacks {
 
     StringRef getModuleIdentifier() const { return ModuleIdentifier; }
 
+    // Assign a new module identifier to this bitcode module.
+    void setModuleIdentifier(llvm::StringRef ModuleId) {
+      ModuleIdentifier = ModuleId;
+    }
+
     /// Read the bitcode module and prepare for lazy deserialization of function
     /// bodies. If ShouldLazyLoadMetadata is true, lazily load metadata as well.
     /// If IsImporting is true, this module is being parsed for ThinLTO

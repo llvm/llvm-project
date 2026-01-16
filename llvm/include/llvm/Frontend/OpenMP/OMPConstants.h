@@ -201,7 +201,7 @@ enum class OMPDynGroupprivateFallbackType : uint64_t {
 };
 
 // Default OpenMP mapper name suffix.
-inline constexpr const char *OmpDefaultMapperName = ".omp.default.mapper";
+inline constexpr const char *OmpDefaultMapperName = "_omp_default_mapper";
 
 /// Values for bit flags used to specify the mapping type for
 /// offloading.
@@ -252,6 +252,10 @@ enum class OpenMPOffloadMappingFlags : uint64_t {
   // Attach pointer and pointee, after processing all other maps.
   // Applicable to map-entering directives. Does not change ref-count.
   OMP_MAP_ATTACH = 0x4000,
+  // When a lookup fails, fall back to using null as the translated pointer,
+  // instead of preserving the original pointer's value. Currently only
+  // useful in conjunction with RETURN_PARAM.
+  OMP_MAP_FB_NULLIFY = 0x8000,
   /// Signal that the runtime library should use args as an array of
   /// descriptor_dim pointers and use args_size as dims. Used when we have
   /// non-contiguous list items in target update directive

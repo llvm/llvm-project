@@ -198,7 +198,7 @@ as error. Specifically on x86/x86-64 target if the pointer address space is
 dereference is not defined as error. See `X86/X86-64 Language Extensions
 <https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
 for reference.
-	
+
 If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
 to true (the default value), then this checker never reports dereference of
 pointers with a specified address space. If the option is set to false, then
@@ -1664,6 +1664,23 @@ Warn on uses of the 'bzero' function.
    bzero(ptr, n); // warn
  }
 
+.. _security-insecureAPI-decodeValueOfObjCType:
+
+security.insecureAPI.decodeValueOfObjCType (C)
+""""""""""""""""""""""""""""""""""""""""""""""
+Warn on uses of the Objective-C method ``-decodeValueOfObjCType:at:``.
+
+.. code-block:: objc
+
+  void test(NSCoder *decoder) {
+    unsigned int x;
+    [decoder decodeValueOfObjCType:"I" at:&x]; // warn
+  }
+
+This diagnostic is emitted only on Apple platforms where the safer
+``-decodeValueOfObjCType:at:size:`` alternative is available
+(iOS 11+, macOS 10.13+, tvOS 11+, watchOS 4.0+).
+
 .. _security-insecureAPI-getpw:
 
 security.insecureAPI.getpw (C)
@@ -1946,7 +1963,7 @@ unix.BlockInCriticalSection (C, C++)
 Check for calls to blocking functions inside a critical section.
 Blocking functions detected by this checker: ``sleep, getc, fgets, read, recv``.
 Critical section handling functions modeled by this checker:
-``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``.
+``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock, scoped_lock``.
 
 .. code-block:: c
 

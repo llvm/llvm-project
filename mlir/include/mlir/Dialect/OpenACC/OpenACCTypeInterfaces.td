@@ -176,6 +176,62 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
         return false;
       }]
     >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates a load operation from the pointer-like type. This dereferences
+        the pointer and returns the loaded value.
+
+        The `srcPtr` parameter is the pointer to load from. If the current type is
+        represented in a way that it does not capture the pointee type, `valueType`
+        must be passed in to provide the necessary type information.
+
+        Returns the loaded value, or an empty Value if load generation failed.
+      }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"genLoad",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$srcPtr,
+                    "::mlir::Type":$valueType),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates a store operation to the pointer-like type. This stores a value
+        to the memory location pointed to by the pointer.
+
+        The `destPtr` parameter is the pointer to store to. The `valueToStore`
+        parameter is the value to be stored. The type information is derived from
+        the valueToStore parameter itself.
+
+        Returns true if store was successfully generated, false otherwise.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"genStore",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::Value":$valueToStore,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$destPtr),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the pointer points to device data.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isDeviceData",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
   ];
 }
 
@@ -298,7 +354,7 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         return ::mlir::acc::VariableTypeCategory::uncategorized;
       }]
     >,
-      InterfaceMethod<
+    InterfaceMethod<
       /*description=*/[{
         Generates the operations that would be normally placed in a recipe's
         init region. It inserts at the builder's current location.
@@ -339,6 +395,38 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"generateCopy",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::MappableType>":$from,
+                    "::mlir::TypedValue<::mlir::acc::MappableType>":$to,
+                    "::mlir::ValueRange":$bounds),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"generateCombiner",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::MappableType>":$dest,
+                    "::mlir::TypedValue<::mlir::acc::MappableType>":$source,
+                    "::mlir::ValueRange":$bounds,
+                    "::mlir::acc::ReductionOperator":$op,
+                    "::mlir::Attribute":$fastmathFlags),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
         Generates destruction operations for a privatized value previously
         produced by `generatePrivateInit`. This is typically inserted in a
         recipe's destroy region, after all uses of the privatized value.
@@ -349,6 +437,9 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         cleanup required for the given type. If no destruction is required,
         this function should be a no-op and return `true`.
 
+        The `bounds` must be passed when only a section of the variable was
+        privatized. 
+
         Returns true if destruction was successfully generated or deemed not
         necessary, false otherwise.
       }],
@@ -356,10 +447,23 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
       /*methodName=*/"generatePrivateDestroy",
       /*args=*/(ins "::mlir::OpBuilder &":$builder,
                     "::mlir::Location":$loc,
-                    "::mlir::Value":$privatized),
+                    "::mlir::Value":$privatized,
+                    "::mlir::ValueRange":$extents),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return true;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the variable represents device data.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isDeviceData",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
       }]
     >,
   ];
