@@ -7,10 +7,10 @@
 define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32I-LABEL: func:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    add a1, a0, a1
-; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    neg a0, a0
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    sltu a1, a0, a1
+; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: func:
@@ -56,10 +56,10 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ;
 ; RV64I-LABEL: func2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a1, a0, a1
-; RV64I-NEXT:    sltu a0, a1, a0
-; RV64I-NEXT:    neg a0, a0
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    sltu a1, a0, a1
+; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZbb-LABEL: func2:

@@ -3018,7 +3018,7 @@ define <vscale x 64 x i16> @vp_bitreverse_nxv64i16(<vscale x 64 x i16> %va, <vsc
 ; CHECK-NEXT:    slli a3, a3, 2
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a4
 ; CHECK-NEXT:    sub a4, a0, a3
-; CHECK-NEXT:    sltu a5, a0, a4
+; CHECK-NEXT:    sltu a5, a3, a0
 ; CHECK-NEXT:    addi a5, a5, -1
 ; CHECK-NEXT:    and a5, a5, a4
 ; CHECK-NEXT:    lui a6, 5
@@ -3079,7 +3079,7 @@ define <vscale x 64 x i16> @vp_bitreverse_nxv64i16(<vscale x 64 x i16> %va, <vsc
 ; CHECK-ZVBB-NEXT:    slli a1, a1, 2
 ; CHECK-ZVBB-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-ZVBB-NEXT:    sub a2, a0, a1
-; CHECK-ZVBB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVBB-NEXT:    sltu a3, a1, a0
 ; CHECK-ZVBB-NEXT:    addi a3, a3, -1
 ; CHECK-ZVBB-NEXT:    and a2, a3, a2
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
@@ -3104,7 +3104,7 @@ define <vscale x 64 x i16> @vp_bitreverse_nxv64i16_unmasked(<vscale x 64 x i16> 
 ; CHECK-NEXT:    lui a2, 3
 ; CHECK-NEXT:    slli a3, a3, 2
 ; CHECK-NEXT:    sub a4, a0, a3
-; CHECK-NEXT:    sltu a5, a0, a4
+; CHECK-NEXT:    sltu a5, a3, a0
 ; CHECK-NEXT:    addi a5, a5, -1
 ; CHECK-NEXT:    and a5, a5, a4
 ; CHECK-NEXT:    lui a6, 5
@@ -3160,7 +3160,7 @@ define <vscale x 64 x i16> @vp_bitreverse_nxv64i16_unmasked(<vscale x 64 x i16> 
 ; CHECK-ZVBB-NEXT:    csrr a1, vlenb
 ; CHECK-ZVBB-NEXT:    slli a1, a1, 2
 ; CHECK-ZVBB-NEXT:    sub a2, a0, a1
-; CHECK-ZVBB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVBB-NEXT:    sltu a3, a1, a0
 ; CHECK-ZVBB-NEXT:    addi a3, a3, -1
 ; CHECK-ZVBB-NEXT:    and a2, a3, a2
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e16, m8, ta, ma

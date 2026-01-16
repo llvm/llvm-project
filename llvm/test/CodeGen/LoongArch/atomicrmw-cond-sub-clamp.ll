@@ -203,9 +203,9 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; LA64-NEXT:    move $a5, $a4
 ; LA64-NEXT:    srl.w $a4, $a4, $a2
 ; LA64-NEXT:    andi $a4, $a4, 255
-; LA64-NEXT:    sub.d $a6, $a4, $a1
-; LA64-NEXT:    sltu $a4, $a4, $a6
-; LA64-NEXT:    masknez $a4, $a6, $a4
+; LA64-NEXT:    sltu $a6, $a1, $a4
+; LA64-NEXT:    sub.d $a4, $a4, $a1
+; LA64-NEXT:    masknez $a4, $a4, $a6
 ; LA64-NEXT:    sll.w $a4, $a4, $a2
 ; LA64-NEXT:    and $a6, $a5, $a3
 ; LA64-NEXT:    or $a6, $a6, $a4
@@ -252,9 +252,9 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; LA64-NEXT:    move $a5, $a4
 ; LA64-NEXT:    srl.w $a4, $a4, $a2
 ; LA64-NEXT:    bstrpick.d $a4, $a4, 15, 0
-; LA64-NEXT:    sub.d $a6, $a4, $a1
-; LA64-NEXT:    sltu $a4, $a4, $a6
-; LA64-NEXT:    masknez $a4, $a6, $a4
+; LA64-NEXT:    sltu $a6, $a1, $a4
+; LA64-NEXT:    sub.d $a4, $a4, $a1
+; LA64-NEXT:    masknez $a4, $a4, $a6
 ; LA64-NEXT:    sll.w $a4, $a4, $a2
 ; LA64-NEXT:    and $a6, $a5, $a3
 ; LA64-NEXT:    or $a6, $a6, $a4
@@ -292,9 +292,9 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB6_3 Depth 2
 ; LA64-NEXT:    move $a3, $a2
-; LA64-NEXT:    sub.d $a2, $a2, $a1
-; LA64-NEXT:    sltu $a4, $a3, $a2
-; LA64-NEXT:    masknez $a4, $a2, $a4
+; LA64-NEXT:    sltu $a2, $a1, $a2
+; LA64-NEXT:    sub.d $a4, $a3, $a1
+; LA64-NEXT:    masknez $a4, $a4, $a2
 ; LA64-NEXT:  .LBB6_3: # %atomicrmw.start
 ; LA64-NEXT:    # Parent Loop BB6_1 Depth=1
 ; LA64-NEXT:    # => This Inner Loop Header: Depth=2
@@ -328,9 +328,9 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB7_3 Depth 2
 ; LA64-NEXT:    move $a3, $a2
-; LA64-NEXT:    sub.d $a2, $a2, $a1
-; LA64-NEXT:    sltu $a4, $a3, $a2
-; LA64-NEXT:    masknez $a4, $a2, $a4
+; LA64-NEXT:    sltu $a2, $a1, $a2
+; LA64-NEXT:    sub.d $a4, $a3, $a1
+; LA64-NEXT:    masknez $a4, $a4, $a2
 ; LA64-NEXT:  .LBB7_3: # %atomicrmw.start
 ; LA64-NEXT:    # Parent Loop BB7_1 Depth=1
 ; LA64-NEXT:    # => This Inner Loop Header: Depth=2

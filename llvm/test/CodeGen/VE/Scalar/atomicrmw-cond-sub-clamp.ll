@@ -138,10 +138,10 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    and %s4, %s5, (32)0
 ; CHECK-NEXT:    srl %s4, %s4, %s0
 ; CHECK-NEXT:    and %s4, %s4, (56)0
-; CHECK-NEXT:    subs.w.sx %s6, %s4, %s3
-; CHECK-NEXT:    cmpu.w %s4, %s6, %s4
-; CHECK-NEXT:    cmov.w.gt %s6, (0)1, %s4
-; CHECK-NEXT:    sla.w.sx %s4, %s6, %s0
+; CHECK-NEXT:    cmpu.w %s6, %s4, %s3
+; CHECK-NEXT:    subs.w.sx %s4, %s4, %s3
+; CHECK-NEXT:    cmov.w.gt %s4, (0)1, %s6
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    and %s6, %s5, %s2
 ; CHECK-NEXT:    or %s4, %s6, %s4
 ; CHECK-NEXT:    cas.w %s4, (%s1), %s5
@@ -174,10 +174,10 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    and %s4, %s5, (32)0
 ; CHECK-NEXT:    srl %s4, %s4, %s0
 ; CHECK-NEXT:    and %s4, %s4, (48)0
-; CHECK-NEXT:    subs.w.sx %s6, %s4, %s3
-; CHECK-NEXT:    cmpu.w %s4, %s6, %s4
-; CHECK-NEXT:    cmov.w.gt %s6, (0)1, %s4
-; CHECK-NEXT:    sla.w.sx %s4, %s6, %s0
+; CHECK-NEXT:    cmpu.w %s6, %s4, %s3
+; CHECK-NEXT:    subs.w.sx %s4, %s4, %s3
+; CHECK-NEXT:    cmov.w.gt %s4, (0)1, %s6
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    and %s6, %s5, %s2
 ; CHECK-NEXT:    or %s4, %s6, %s4
 ; CHECK-NEXT:    cas.w %s4, (%s1), %s5
@@ -200,8 +200,8 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; CHECK-NEXT:  .LBB6_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    or %s3, 0, %s2
+; CHECK-NEXT:    cmpu.w %s4, %s2, %s1
 ; CHECK-NEXT:    subs.w.sx %s2, %s2, %s1
-; CHECK-NEXT:    cmpu.w %s4, %s2, %s3
 ; CHECK-NEXT:    cmov.w.gt %s2, (0)1, %s4
 ; CHECK-NEXT:    cas.w %s2, (%s0), %s3
 ; CHECK-NEXT:    brne.w %s2, %s3, .LBB6_1
@@ -222,7 +222,7 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    or %s3, 0, %s2
 ; CHECK-NEXT:    subs.l %s2, %s2, %s1
-; CHECK-NEXT:    cmpu.l %s4, %s2, %s3
+; CHECK-NEXT:    cmpu.l %s4, %s3, %s1
 ; CHECK-NEXT:    cmov.l.gt %s2, (0)1, %s4
 ; CHECK-NEXT:    cas.l %s2, (%s0), %s3
 ; CHECK-NEXT:    brne.l %s2, %s3, .LBB7_1

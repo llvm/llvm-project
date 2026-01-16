@@ -258,10 +258,10 @@ define <256 x i8> @vmax_vx_v258i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 zero
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
-; CHECK-NEXT:    addi a1, a2, -128
-; CHECK-NEXT:    sltu a4, a2, a1
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a1, a4, a1
+; CHECK-NEXT:    sltiu a1, a2, 129
+; CHECK-NEXT:    addi a4, a2, -128
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    and a1, a1, a4
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    bltu a2, a3, .LBB22_2
@@ -289,10 +289,10 @@ define <256 x i8> @vmax_vx_v258i8_unmasked(<256 x i8> %va, i8 %b, i32 zeroext %e
 ; CHECK-NEXT:  .LBB23_2:
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, a0
-; CHECK-NEXT:    addi a2, a1, -128
-; CHECK-NEXT:    sltu a1, a1, a2
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    sltiu a2, a1, 129
+; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    addi a1, a1, -128
+; CHECK-NEXT:    and a1, a2, a1
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v16, v16, a0
 ; CHECK-NEXT:    ret
@@ -1001,10 +1001,10 @@ define <32 x i64> @vmax_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl
 ; CHECK-NEXT:    li a2, -1
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, a2, v0.t
-; CHECK-NEXT:    addi a1, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    sltiu a1, a0, 17
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    addi a0, a0, -16
+; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v16, v16, a2, v0.t

@@ -958,7 +958,7 @@ define <vscale x 16 x i64> @fshr_v16i64(<vscale x 16 x i64> %a, <vscale x 16 x i
 ; CHECK-NEXT:    sub a5, a4, a1
 ; CHECK-NEXT:    add a6, a2, a3
 ; CHECK-NEXT:    vl8re64.v v8, (a6)
-; CHECK-NEXT:    sltu a6, a4, a5
+; CHECK-NEXT:    sltu a6, a1, a4
 ; CHECK-NEXT:    addi a6, a6, -1
 ; CHECK-NEXT:    and a5, a6, a5
 ; CHECK-NEXT:    srli a6, a1, 3
@@ -1059,7 +1059,7 @@ define <vscale x 16 x i64> @fshl_v16i64(<vscale x 16 x i64> %a, <vscale x 16 x i
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    add a3, a2, a5
 ; CHECK-NEXT:    vl8re64.v v8, (a3)
-; CHECK-NEXT:    sltu a3, a4, a6
+; CHECK-NEXT:    sltu a3, a1, a4
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a6, a3, a6
 ; CHECK-NEXT:    li a3, 63

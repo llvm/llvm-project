@@ -1267,10 +1267,10 @@ define <32 x double> @vp_round_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroe
 ; RV32ZVFH-NEXT:    vfabs.v v24, v8, v0.t
 ; RV32ZVFH-NEXT:    lui a1, %hi(.LCPI26_0)
 ; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI26_0)(a1)
-; RV32ZVFH-NEXT:    addi a1, a0, -16
-; RV32ZVFH-NEXT:    sltu a0, a0, a1
-; RV32ZVFH-NEXT:    addi a0, a0, -1
-; RV32ZVFH-NEXT:    and a0, a0, a1
+; RV32ZVFH-NEXT:    sltiu a1, a0, 17
+; RV32ZVFH-NEXT:    addi a0, a0, -16
+; RV32ZVFH-NEXT:    neg a1, a1
+; RV32ZVFH-NEXT:    and a0, a1, a0
 ; RV32ZVFH-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; RV32ZVFH-NEXT:    vmflt.vf v6, v24, fa5, v0.t
 ; RV32ZVFH-NEXT:    fsrmi a1, 4
@@ -1313,12 +1313,12 @@ define <32 x double> @vp_round_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroe
 ; RV64ZVFH-NEXT:    li a1, 1075
 ; RV64ZVFH-NEXT:    slli a1, a1, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a1
-; RV64ZVFH-NEXT:    addi a1, a0, -16
-; RV64ZVFH-NEXT:    sltu a0, a0, a1
-; RV64ZVFH-NEXT:    addi a0, a0, -1
+; RV64ZVFH-NEXT:    sltiu a1, a0, 17
+; RV64ZVFH-NEXT:    addi a0, a0, -16
+; RV64ZVFH-NEXT:    neg a1, a1
+; RV64ZVFH-NEXT:    and a0, a1, a0
 ; RV64ZVFH-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; RV64ZVFH-NEXT:    vmflt.vf v6, v24, fa5, v0.t
-; RV64ZVFH-NEXT:    and a0, a0, a1
 ; RV64ZVFH-NEXT:    fsrmi a1, 4
 ; RV64ZVFH-NEXT:    vmv1r.v v0, v6
 ; RV64ZVFH-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
@@ -1358,10 +1358,10 @@ define <32 x double> @vp_round_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroe
 ; RV32ZVFHMIN-NEXT:    vfabs.v v24, v8, v0.t
 ; RV32ZVFHMIN-NEXT:    lui a1, %hi(.LCPI26_0)
 ; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI26_0)(a1)
-; RV32ZVFHMIN-NEXT:    addi a1, a0, -16
-; RV32ZVFHMIN-NEXT:    sltu a0, a0, a1
-; RV32ZVFHMIN-NEXT:    addi a0, a0, -1
-; RV32ZVFHMIN-NEXT:    and a0, a0, a1
+; RV32ZVFHMIN-NEXT:    sltiu a1, a0, 17
+; RV32ZVFHMIN-NEXT:    addi a0, a0, -16
+; RV32ZVFHMIN-NEXT:    neg a1, a1
+; RV32ZVFHMIN-NEXT:    and a0, a1, a0
 ; RV32ZVFHMIN-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v6, v24, fa5, v0.t
 ; RV32ZVFHMIN-NEXT:    fsrmi a1, 4
@@ -1404,12 +1404,12 @@ define <32 x double> @vp_round_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroe
 ; RV64ZVFHMIN-NEXT:    li a1, 1075
 ; RV64ZVFHMIN-NEXT:    slli a1, a1, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a1
-; RV64ZVFHMIN-NEXT:    addi a1, a0, -16
-; RV64ZVFHMIN-NEXT:    sltu a0, a0, a1
-; RV64ZVFHMIN-NEXT:    addi a0, a0, -1
+; RV64ZVFHMIN-NEXT:    sltiu a1, a0, 17
+; RV64ZVFHMIN-NEXT:    addi a0, a0, -16
+; RV64ZVFHMIN-NEXT:    neg a1, a1
+; RV64ZVFHMIN-NEXT:    and a0, a1, a0
 ; RV64ZVFHMIN-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v6, v24, fa5, v0.t
-; RV64ZVFHMIN-NEXT:    and a0, a0, a1
 ; RV64ZVFHMIN-NEXT:    fsrmi a1, 4
 ; RV64ZVFHMIN-NEXT:    vmv1r.v v0, v6
 ; RV64ZVFHMIN-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
@@ -1449,10 +1449,10 @@ define <32 x double> @vp_round_v32f64_unmasked(<32 x double> %va, i32 zeroext %e
 ; RV32ZVFH-NEXT:    vfabs.v v24, v8
 ; RV32ZVFH-NEXT:    lui a2, %hi(.LCPI27_0)
 ; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI27_0)(a2)
-; RV32ZVFH-NEXT:    addi a2, a0, -16
-; RV32ZVFH-NEXT:    sltu a0, a0, a2
-; RV32ZVFH-NEXT:    addi a0, a0, -1
-; RV32ZVFH-NEXT:    and a0, a0, a2
+; RV32ZVFH-NEXT:    sltiu a2, a0, 17
+; RV32ZVFH-NEXT:    addi a0, a0, -16
+; RV32ZVFH-NEXT:    neg a2, a2
+; RV32ZVFH-NEXT:    and a0, a2, a0
 ; RV32ZVFH-NEXT:    fsrmi a2, 4
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v24, fa5
 ; RV32ZVFH-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
@@ -1487,10 +1487,10 @@ define <32 x double> @vp_round_v32f64_unmasked(<32 x double> %va, i32 zeroext %e
 ; RV64ZVFH-NEXT:    li a2, 1075
 ; RV64ZVFH-NEXT:    slli a2, a2, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a2
-; RV64ZVFH-NEXT:    addi a2, a0, -16
-; RV64ZVFH-NEXT:    sltu a0, a0, a2
-; RV64ZVFH-NEXT:    addi a0, a0, -1
-; RV64ZVFH-NEXT:    and a0, a0, a2
+; RV64ZVFH-NEXT:    sltiu a2, a0, 17
+; RV64ZVFH-NEXT:    addi a0, a0, -16
+; RV64ZVFH-NEXT:    neg a2, a2
+; RV64ZVFH-NEXT:    and a0, a2, a0
 ; RV64ZVFH-NEXT:    fsrmi a2, 4
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v24, fa5
 ; RV64ZVFH-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
@@ -1524,10 +1524,10 @@ define <32 x double> @vp_round_v32f64_unmasked(<32 x double> %va, i32 zeroext %e
 ; RV32ZVFHMIN-NEXT:    vfabs.v v24, v8
 ; RV32ZVFHMIN-NEXT:    lui a2, %hi(.LCPI27_0)
 ; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI27_0)(a2)
-; RV32ZVFHMIN-NEXT:    addi a2, a0, -16
-; RV32ZVFHMIN-NEXT:    sltu a0, a0, a2
-; RV32ZVFHMIN-NEXT:    addi a0, a0, -1
-; RV32ZVFHMIN-NEXT:    and a0, a0, a2
+; RV32ZVFHMIN-NEXT:    sltiu a2, a0, 17
+; RV32ZVFHMIN-NEXT:    addi a0, a0, -16
+; RV32ZVFHMIN-NEXT:    neg a2, a2
+; RV32ZVFHMIN-NEXT:    and a0, a2, a0
 ; RV32ZVFHMIN-NEXT:    fsrmi a2, 4
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v24, fa5
 ; RV32ZVFHMIN-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
@@ -1562,10 +1562,10 @@ define <32 x double> @vp_round_v32f64_unmasked(<32 x double> %va, i32 zeroext %e
 ; RV64ZVFHMIN-NEXT:    li a2, 1075
 ; RV64ZVFHMIN-NEXT:    slli a2, a2, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a2
-; RV64ZVFHMIN-NEXT:    addi a2, a0, -16
-; RV64ZVFHMIN-NEXT:    sltu a0, a0, a2
-; RV64ZVFHMIN-NEXT:    addi a0, a0, -1
-; RV64ZVFHMIN-NEXT:    and a0, a0, a2
+; RV64ZVFHMIN-NEXT:    sltiu a2, a0, 17
+; RV64ZVFHMIN-NEXT:    addi a0, a0, -16
+; RV64ZVFHMIN-NEXT:    neg a2, a2
+; RV64ZVFHMIN-NEXT:    and a0, a2, a0
 ; RV64ZVFHMIN-NEXT:    fsrmi a2, 4
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v24, fa5
 ; RV64ZVFHMIN-NEXT:    vsetvli zero, a0, e64, m8, ta, ma

@@ -198,22 +198,22 @@ define <vscale x 128 x i1> @vpmerge_nxv128i1(<vscale x 128 x i1> %va, <vscale x 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
+; CHECK-NEXT:    sub a3, a0, a2
+; CHECK-NEXT:    sltu a0, a2, a0
+; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    sub a2, a0, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
-; CHECK-NEXT:    sltu a0, a0, a2
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmv1r.v v0, v4
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
-; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a0, a0, a3
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmsne.vi v24, v8, 0
-; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    vmv1r.v v0, v5
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
@@ -547,7 +547,7 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; CHECK-NEXT:    add a2, a0, a1
 ; CHECK-NEXT:    sub a4, a3, a1
 ; CHECK-NEXT:    vl8r.v v24, (a2)
-; CHECK-NEXT:    sltu a2, a3, a4
+; CHECK-NEXT:    sltu a2, a1, a3
 ; CHECK-NEXT:    vl8r.v v8, (a0)
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a2, a2, a4
@@ -583,7 +583,7 @@ define <vscale x 128 x i8> @vpmerge_vx_nxv128i8(i8 %a, <vscale x 128 x i8> %vb, 
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    sub a3, a2, a1
-; CHECK-NEXT:    sltu a4, a2, a3
+; CHECK-NEXT:    sltu a4, a1, a2
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a3, a4, a3
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, tu, ma
@@ -611,7 +611,7 @@ define <vscale x 128 x i8> @vpmerge_vi_nxv128i8(<vscale x 128 x i8> %vb, <vscale
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub a2, a1, a0
-; CHECK-NEXT:    sltu a3, a1, a2
+; CHECK-NEXT:    sltu a3, a0, a1
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma

@@ -469,7 +469,7 @@ define <vscale x 32 x i16> @vfptoui_nxv32i16_nxv32f32(<vscale x 32 x float> %va,
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
@@ -497,7 +497,7 @@ define <vscale x 32 x i32> @vfptoui_nxv32i32_nxv32f32(<vscale x 32 x float> %va,
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
@@ -520,7 +520,7 @@ define <vscale x 32 x i32> @vfptoui_nxv32i32_nxv32f32_unmasked(<vscale x 32 x fl
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma

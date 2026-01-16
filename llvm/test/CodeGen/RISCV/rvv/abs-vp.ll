@@ -519,7 +519,7 @@ define <vscale x 16 x i64> @vp_abs_nxv16i64(<vscale x 16 x i64> %va, <vscale x 1
 ; CHECK-NEXT:    srli a2, a1, 3
 ; CHECK-NEXT:    sub a3, a0, a1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sltu a2, a0, a3
+; CHECK-NEXT:    sltu a2, a1, a0
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
@@ -543,7 +543,7 @@ define <vscale x 16 x i64> @vp_abs_nxv16i64_unmasked(<vscale x 16 x i64> %va, i3
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma

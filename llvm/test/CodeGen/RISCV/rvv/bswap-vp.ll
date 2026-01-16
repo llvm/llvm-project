@@ -1534,7 +1534,7 @@ define <vscale x 64 x i16> @vp_bswap_nxv64i16(<vscale x 64 x i16> %va, <vscale x
 ; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
@@ -1561,7 +1561,7 @@ define <vscale x 64 x i16> @vp_bswap_nxv64i16(<vscale x 64 x i16> %va, <vscale x
 ; CHECK-ZVKB-NEXT:    slli a1, a1, 2
 ; CHECK-ZVKB-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-ZVKB-NEXT:    sub a2, a0, a1
-; CHECK-ZVKB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVKB-NEXT:    sltu a3, a1, a0
 ; CHECK-ZVKB-NEXT:    addi a3, a3, -1
 ; CHECK-ZVKB-NEXT:    and a2, a3, a2
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
@@ -1584,7 +1584,7 @@ define <vscale x 64 x i16> @vp_bswap_nxv64i16_unmasked(<vscale x 64 x i16> %va, 
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
@@ -1606,7 +1606,7 @@ define <vscale x 64 x i16> @vp_bswap_nxv64i16_unmasked(<vscale x 64 x i16> %va, 
 ; CHECK-ZVKB-NEXT:    csrr a1, vlenb
 ; CHECK-ZVKB-NEXT:    slli a1, a1, 2
 ; CHECK-ZVKB-NEXT:    sub a2, a0, a1
-; CHECK-ZVKB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVKB-NEXT:    sltu a3, a1, a0
 ; CHECK-ZVKB-NEXT:    addi a3, a3, -1
 ; CHECK-ZVKB-NEXT:    and a2, a3, a2
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a2, e16, m8, ta, ma

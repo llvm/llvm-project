@@ -93,7 +93,7 @@ define <vscale x 32 x float> @vfpext_nxv32f16_nxv32f32(<vscale x 32 x half> %a, 
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma

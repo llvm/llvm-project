@@ -556,7 +556,7 @@ define <vscale x 128 x i8> @vsaddu_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub a2, a1, a0
-; CHECK-NEXT:    sltu a3, a1, a2
+; CHECK-NEXT:    sltu a3, a0, a1
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
@@ -579,7 +579,7 @@ define <vscale x 128 x i8> @vsaddu_vi_nxv128i8_unmasked(<vscale x 128 x i8> %va,
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
@@ -1311,7 +1311,7 @@ define <vscale x 32 x i32> @vsaddu_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale 
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
@@ -1334,7 +1334,7 @@ define <vscale x 32 x i32> @vsaddu_vi_nxv32i32_unmasked(<vscale x 32 x i32> %va,
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma

@@ -1076,10 +1076,10 @@ define <128 x i1> @fcmp_oeq_vv_v128f16(<128 x half> %va, <128 x half> %vb, <128 
 ; ZVFH-NEXT:  .LBB43_2:
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; ZVFH-NEXT:    vmfeq.vv v6, v8, v24, v0.t
-; ZVFH-NEXT:    addi a0, a2, -64
-; ZVFH-NEXT:    sltu a1, a2, a0
-; ZVFH-NEXT:    addi a1, a1, -1
-; ZVFH-NEXT:    and a0, a1, a0
+; ZVFH-NEXT:    sltiu a0, a2, 65
+; ZVFH-NEXT:    neg a0, a0
+; ZVFH-NEXT:    addi a1, a2, -64
+; ZVFH-NEXT:    and a0, a0, a1
 ; ZVFH-NEXT:    vmv1r.v v0, v7
 ; ZVFH-NEXT:    addi a1, sp, 16
 ; ZVFH-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
@@ -3929,10 +3929,10 @@ define <32 x i1> @fcmp_oeq_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 x
 ; CHECK-NEXT:  .LBB87_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v6, v8, v24, v0.t
-; CHECK-NEXT:    addi a0, a2, -16
-; CHECK-NEXT:    sltu a1, a2, a0
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    sltiu a0, a2, 17
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    addi a2, a2, -16
+; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload

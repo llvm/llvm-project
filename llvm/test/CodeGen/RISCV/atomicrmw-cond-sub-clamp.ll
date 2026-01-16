@@ -715,7 +715,7 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    zext.b a0, a3
 ; RV32I-NEXT:    sub a1, a0, s1
-; RV32I-NEXT:    sltu a0, a0, a1
+; RV32I-NEXT:    sltu a0, s1, a0
 ; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    and a2, a0, a1
 ; RV32I-NEXT:    sb a3, 3(sp)
@@ -755,7 +755,7 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; RV32IA-NEXT:    srl a4, a4, a0
 ; RV32IA-NEXT:    zext.b a4, a4
 ; RV32IA-NEXT:    sub a6, a4, a1
-; RV32IA-NEXT:    sltu a4, a4, a6
+; RV32IA-NEXT:    sltu a4, a1, a4
 ; RV32IA-NEXT:    addi a4, a4, -1
 ; RV32IA-NEXT:    and a4, a4, a6
 ; RV32IA-NEXT:    sll a4, a4, a0
@@ -792,7 +792,7 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    zext.b a0, a3
 ; RV64I-NEXT:    sub a1, a0, s1
-; RV64I-NEXT:    sltu a0, a0, a1
+; RV64I-NEXT:    sltu a0, s1, a0
 ; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    and a2, a0, a1
 ; RV64I-NEXT:    sb a3, 7(sp)
@@ -832,7 +832,7 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; RV64IA-NEXT:    sext.w a6, a3
 ; RV64IA-NEXT:    zext.b a5, a5
 ; RV64IA-NEXT:    sub a7, a5, a1
-; RV64IA-NEXT:    sltu a5, a5, a7
+; RV64IA-NEXT:    sltu a5, a1, a5
 ; RV64IA-NEXT:    addi a5, a5, -1
 ; RV64IA-NEXT:    and a5, a5, a7
 ; RV64IA-NEXT:    sllw a5, a5, a0
@@ -877,7 +877,7 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    and a0, a3, s1
 ; RV32I-NEXT:    sub a1, a0, s2
-; RV32I-NEXT:    sltu a0, a0, a1
+; RV32I-NEXT:    sltu a0, s2, a0
 ; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    and a2, a0, a1
 ; RV32I-NEXT:    sh a3, 14(sp)
@@ -920,7 +920,7 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; RV32IA-NEXT:    srl a5, a5, a0
 ; RV32IA-NEXT:    and a5, a5, a3
 ; RV32IA-NEXT:    sub a7, a5, a1
-; RV32IA-NEXT:    sltu a5, a5, a7
+; RV32IA-NEXT:    sltu a5, a1, a5
 ; RV32IA-NEXT:    addi a5, a5, -1
 ; RV32IA-NEXT:    and a5, a5, a7
 ; RV32IA-NEXT:    sll a5, a5, a0
@@ -961,7 +961,7 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    and a0, a3, s1
 ; RV64I-NEXT:    sub a1, a0, s2
-; RV64I-NEXT:    sltu a0, a0, a1
+; RV64I-NEXT:    sltu a0, s2, a0
 ; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    and a2, a0, a1
 ; RV64I-NEXT:    sh a3, 14(sp)
@@ -1004,7 +1004,7 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; RV64IA-NEXT:    sext.w a7, a4
 ; RV64IA-NEXT:    and a6, a6, a3
 ; RV64IA-NEXT:    sub t0, a6, a1
-; RV64IA-NEXT:    sltu a6, a6, t0
+; RV64IA-NEXT:    sltu a6, a1, a6
 ; RV64IA-NEXT:    addi a6, a6, -1
 ; RV64IA-NEXT:    and a6, a6, t0
 ; RV64IA-NEXT:    sllw a6, a6, a0
@@ -1044,7 +1044,7 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; RV32I-NEXT:  .LBB6_1: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    sub a0, a3, s1
-; RV32I-NEXT:    sltu a1, a3, a0
+; RV32I-NEXT:    sltu a1, s1, a3
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    and a2, a1, a0
 ; RV32I-NEXT:    sw a3, 0(sp)
@@ -1075,7 +1075,7 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; RV32IA-NEXT:    # Child Loop BB6_3 Depth 2
 ; RV32IA-NEXT:    mv a3, a2
 ; RV32IA-NEXT:    sub a2, a2, a1
-; RV32IA-NEXT:    sltu a4, a3, a2
+; RV32IA-NEXT:    sltu a4, a1, a3
 ; RV32IA-NEXT:    addi a4, a4, -1
 ; RV32IA-NEXT:    and a4, a4, a2
 ; RV32IA-NEXT:  .LBB6_3: # %atomicrmw.start
@@ -1298,7 +1298,7 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; RV64I-NEXT:  .LBB7_1: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    sub a0, a3, s1
-; RV64I-NEXT:    sltu a1, a3, a0
+; RV64I-NEXT:    sltu a1, s1, a3
 ; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    and a2, a1, a0
 ; RV64I-NEXT:    sd a3, 0(sp)
@@ -1329,7 +1329,7 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; RV64IA-NEXT:    # Child Loop BB7_3 Depth 2
 ; RV64IA-NEXT:    mv a3, a2
 ; RV64IA-NEXT:    sub a2, a2, a1
-; RV64IA-NEXT:    sltu a4, a3, a2
+; RV64IA-NEXT:    sltu a4, a1, a3
 ; RV64IA-NEXT:    addi a4, a4, -1
 ; RV64IA-NEXT:    and a4, a4, a2
 ; RV64IA-NEXT:  .LBB7_3: # %atomicrmw.start

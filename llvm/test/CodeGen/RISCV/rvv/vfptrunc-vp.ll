@@ -92,7 +92,7 @@ define <vscale x 16 x float> @vfptrunc_nxv16f32_nxv16f64(<vscale x 16 x double> 
 ; CHECK-NEXT:    srli a2, a1, 3
 ; CHECK-NEXT:    sub a3, a0, a1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sltu a2, a0, a3
+; CHECK-NEXT:    sltu a2, a1, a0
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
@@ -135,11 +135,11 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:    slli a3, a1, 1
 ; CHECK-NEXT:    add a6, a0, a4
 ; CHECK-NEXT:    sub a0, a2, a3
-; CHECK-NEXT:    sltu a4, a2, a0
+; CHECK-NEXT:    sltu a4, a3, a2
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a0, a4, a0
 ; CHECK-NEXT:    sub a4, a0, a1
-; CHECK-NEXT:    sltu a7, a0, a4
+; CHECK-NEXT:    sltu a7, a1, a0
 ; CHECK-NEXT:    addi a7, a7, -1
 ; CHECK-NEXT:    and a4, a7, a4
 ; CHECK-NEXT:    srli a7, a1, 2
@@ -162,7 +162,7 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB8_4:
 ; CHECK-NEXT:    sub a0, a2, a1
-; CHECK-NEXT:    sltu a3, a2, a0
+; CHECK-NEXT:    sltu a3, a1, a2
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a0, a3, a0
 ; CHECK-NEXT:    vmv1r.v v0, v6

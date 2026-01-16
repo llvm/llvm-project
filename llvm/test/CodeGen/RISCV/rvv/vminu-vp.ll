@@ -395,7 +395,7 @@ define <vscale x 128 x i8> @vminu_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <v
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    sub a3, a2, a1
-; CHECK-NEXT:    sltu a4, a2, a3
+; CHECK-NEXT:    sltu a4, a1, a2
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a3, a4, a3
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
@@ -420,7 +420,7 @@ define <vscale x 128 x i8> @vminu_vx_nxv128i8_unmasked(<vscale x 128 x i8> %va, 
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub a3, a1, a2
-; CHECK-NEXT:    sltu a4, a1, a3
+; CHECK-NEXT:    sltu a4, a2, a1
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a3, a4, a3
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
@@ -934,7 +934,7 @@ define <vscale x 32 x i32> @vminu_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    sub a3, a1, a2
-; CHECK-NEXT:    sltu a4, a1, a3
+; CHECK-NEXT:    sltu a4, a2, a1
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a3, a4, a3
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
@@ -959,7 +959,7 @@ define <vscale x 32 x i32> @vminu_vx_nxv32i32_unmasked(<vscale x 32 x i32> %va, 
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    sub a3, a1, a2
-; CHECK-NEXT:    sltu a4, a1, a3
+; CHECK-NEXT:    sltu a4, a2, a1
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a3, a4, a3
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
@@ -986,11 +986,11 @@ define <vscale x 32 x i32> @vminu_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i
 ; RV32-NEXT:    srli a2, a1, 2
 ; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV32-NEXT:    vminu.vx v8, v8, a0, v0.t
-; RV32-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
+; RV32-NEXT:    slli a3, a1, 1
+; RV32-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v0, v0, a2
-; RV32-NEXT:    slli a2, a1, 1
-; RV32-NEXT:    sub a2, a1, a2
-; RV32-NEXT:    sltu a1, a1, a2
+; RV32-NEXT:    sub a2, a1, a3
+; RV32-NEXT:    sltu a1, a3, a1
 ; RV32-NEXT:    addi a1, a1, -1
 ; RV32-NEXT:    and a1, a1, a2
 ; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
@@ -1006,7 +1006,7 @@ define <vscale x 32 x i32> @vminu_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i
 ; RV64-NEXT:    slli a2, a1, 1
 ; RV64-NEXT:    vslidedown.vx v0, v0, a3
 ; RV64-NEXT:    sub a3, a1, a2
-; RV64-NEXT:    sltu a4, a1, a3
+; RV64-NEXT:    sltu a4, a2, a1
 ; RV64-NEXT:    addi a4, a4, -1
 ; RV64-NEXT:    and a3, a4, a3
 ; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma

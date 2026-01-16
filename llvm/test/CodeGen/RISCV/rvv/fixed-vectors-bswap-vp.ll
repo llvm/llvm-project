@@ -1275,10 +1275,10 @@ define <128 x i16> @vp_bswap_v128i16(<128 x i16> %va, <128 x i1> %m, i32 zeroext
 ; CHECK-NEXT:    vsrl.vi v24, v8, 8, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 8, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v24, v0.t
-; CHECK-NEXT:    addi a1, a0, -64
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    sltiu a1, a0, 65
+; CHECK-NEXT:    addi a0, a0, -64
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vsrl.vi v24, v16, 8, v0.t
@@ -1302,10 +1302,10 @@ define <128 x i16> @vp_bswap_v128i16_unmasked(<128 x i16> %va, i32 zeroext %evl)
 ; CHECK-NEXT:    vsrl.vi v24, v8, 8
 ; CHECK-NEXT:    vsll.vi v8, v8, 8
 ; CHECK-NEXT:    vor.vv v8, v8, v24
-; CHECK-NEXT:    addi a1, a0, -64
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    sltiu a1, a0, 65
+; CHECK-NEXT:    addi a0, a0, -64
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vsrl.vi v24, v16, 8
 ; CHECK-NEXT:    vsll.vi v16, v16, 8

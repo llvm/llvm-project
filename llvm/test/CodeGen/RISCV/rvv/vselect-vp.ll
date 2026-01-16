@@ -308,12 +308,12 @@ define <vscale x 32 x i32> @select_nxv32i32(<vscale x 32 x i1> %a, <vscale x 32 
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a4, a3, 3
 ; CHECK-NEXT:    slli a1, a3, 1
-; CHECK-NEXT:    srli a3, a3, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    sub a5, a2, a1
 ; CHECK-NEXT:    vl8re32.v v24, (a4)
-; CHECK-NEXT:    sltu a4, a2, a5
+; CHECK-NEXT:    sltu a4, a1, a2
 ; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    srli a3, a3, 2
 ; CHECK-NEXT:    vl8re32.v v8, (a0)
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    and a4, a4, a5
@@ -349,14 +349,14 @@ define <vscale x 32 x i32> @select_evl_nxv32i32(<vscale x 32 x i1> %a, <vscale x
 ; RV32-NEXT:    slli a2, a1, 3
 ; RV32-NEXT:    add a0, a0, a2
 ; RV32-NEXT:    slli a2, a1, 1
-; RV32-NEXT:    sub a2, a1, a2
 ; RV32-NEXT:    vl8re32.v v24, (a0)
-; RV32-NEXT:    sltu a0, a1, a2
-; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    sub a0, a1, a2
+; RV32-NEXT:    sltu a2, a2, a1
+; RV32-NEXT:    addi a2, a2, -1
 ; RV32-NEXT:    srli a1, a1, 2
 ; RV32-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v0, v0, a1
-; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    and a0, a2, a0
 ; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; RV32-NEXT:    vmerge.vvm v16, v24, v16, v0
 ; RV32-NEXT:    ret
@@ -376,16 +376,16 @@ define <vscale x 32 x i32> @select_evl_nxv32i32(<vscale x 32 x i1> %a, <vscale x
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a3, a1, 3
 ; RV64-NEXT:    slli a2, a1, 1
-; RV64-NEXT:    srli a4, a1, 2
 ; RV64-NEXT:    add a3, a0, a3
-; RV64-NEXT:    sub a5, a1, a2
+; RV64-NEXT:    sub a4, a1, a2
+; RV64-NEXT:    sltu a5, a2, a1
 ; RV64-NEXT:    vl8re32.v v24, (a3)
-; RV64-NEXT:    sltu a3, a1, a5
-; RV64-NEXT:    addi a3, a3, -1
+; RV64-NEXT:    addi a5, a5, -1
+; RV64-NEXT:    srli a3, a1, 2
 ; RV64-NEXT:    vl8re32.v v8, (a0)
-; RV64-NEXT:    vslidedown.vx v0, v0, a4
-; RV64-NEXT:    and a3, a3, a5
-; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
+; RV64-NEXT:    vslidedown.vx v0, v0, a3
+; RV64-NEXT:    and a4, a5, a4
+; RV64-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; RV64-NEXT:    vmerge.vvm v16, v24, v16, v0
 ; RV64-NEXT:    bltu a1, a2, .LBB28_2
 ; RV64-NEXT:  # %bb.1:
@@ -637,10 +637,10 @@ define <vscale x 16 x double> @select_nxv16f64(<vscale x 16 x i1> %a, <vscale x 
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a3, a1, 3
 ; CHECK-NEXT:    sub a4, a2, a1
+; CHECK-NEXT:    sltu a5, a1, a2
 ; CHECK-NEXT:    add a3, a0, a3
-; CHECK-NEXT:    sltu a5, a2, a4
-; CHECK-NEXT:    vl8re64.v v24, (a3)
 ; CHECK-NEXT:    addi a5, a5, -1
+; CHECK-NEXT:    vl8re64.v v24, (a3)
 ; CHECK-NEXT:    srli a3, a1, 3
 ; CHECK-NEXT:    vl8re64.v v8, (a0)
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a3

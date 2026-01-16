@@ -11596,7 +11596,9 @@ void TargetLowering::expandUADDSUBO(
                      DAG.getConstant(0, dl, Node->getValueType(0)), ISD::SETNE);
   } else {
     ISD::CondCode CC = IsAdd ? ISD::SETULT : ISD::SETUGT;
-    SetCC = DAG.getSetCC(dl, SetCCType, Result, LHS, CC);
+    SDValue CompareLHS = IsAdd ? Result : LHS;
+    SDValue CompareRHS = RHS;
+    SetCC = DAG.getSetCC(dl, SetCCType, CompareLHS, CompareRHS, CC);
   }
   Overflow = DAG.getBoolExtOrTrunc(SetCC, dl, ResultType, ResultType);
 }

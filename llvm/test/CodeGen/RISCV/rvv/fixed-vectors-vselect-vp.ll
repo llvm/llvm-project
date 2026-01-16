@@ -143,15 +143,15 @@ define <256 x i8> @select_v256i8(<256 x i1> %a, <256 x i8> %b, <256 x i8> %c, i3
 ; CHECK-NEXT:    vmv1r.v v6, v8
 ; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    li a2, 128
-; CHECK-NEXT:    addi a4, a1, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v24, (a0)
-; CHECK-NEXT:    addi a0, a3, -128
-; CHECK-NEXT:    vle8.v v8, (a4)
-; CHECK-NEXT:    sltu a4, a3, a0
+; CHECK-NEXT:    addi a0, a1, 128
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    sltiu a0, a3, 129
+; CHECK-NEXT:    neg a0, a0
 ; CHECK-NEXT:    vle8.v v16, (a1)
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a0, a4, a0
+; CHECK-NEXT:    addi a1, a3, -128
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v24, v8, v24, v0
@@ -342,12 +342,12 @@ define <32 x i64> @select_v32i64(<32 x i1> %a, <32 x i64> %b, <32 x i64> %c, i32
 ; CHECK-NEXT:  .LBB25_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
-; CHECK-NEXT:    addi a0, a2, -16
-; CHECK-NEXT:    sltu a1, a2, a0
-; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    sltiu a0, a2, 17
+; CHECK-NEXT:    addi a2, a2, -16
+; CHECK-NEXT:    neg a0, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
@@ -511,12 +511,12 @@ define <64 x float> @select_v64f32(<64 x i1> %a, <64 x float> %b, <64 x float> %
 ; CHECK-NEXT:  .LBB35_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
-; CHECK-NEXT:    addi a0, a2, -32
-; CHECK-NEXT:    sltu a1, a2, a0
-; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    sltiu a0, a2, 33
+; CHECK-NEXT:    addi a2, a2, -32
+; CHECK-NEXT:    neg a0, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 4
-; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma

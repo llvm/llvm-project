@@ -318,7 +318,7 @@ define zeroext i1 @vpreduce_or_nxv128i1(i1 zeroext %s, <vscale x 128 x i1> %v, <
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub a3, a1, a2
-; CHECK-NEXT:    sltu a4, a1, a3
+; CHECK-NEXT:    sltu a4, a2, a1
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a3, a4, a3
 ; CHECK-NEXT:    vmv1r.v v0, v10

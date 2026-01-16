@@ -96,10 +96,10 @@ define <32 x double> @vfpext_v32f32_v32f64(<32 x float> %a, <32 x i1> %m, i32 ze
 ; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v8, v0.t
-; CHECK-NEXT:    addi a1, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    sltiu a1, a0, 17
+; CHECK-NEXT:    addi a0, a0, -16
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 16
 ; CHECK-NEXT:    vmv1r.v v0, v24

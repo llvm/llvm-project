@@ -354,10 +354,10 @@ define <256 x i8> @vadd_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
-; CHECK-NEXT:    addi a0, a1, -128
-; CHECK-NEXT:    sltu a3, a1, a0
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a0, a3, a0
+; CHECK-NEXT:    sltiu a0, a1, 129
+; CHECK-NEXT:    addi a3, a1, -128
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    and a0, a0, a3
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
 ; CHECK-NEXT:    bltu a1, a2, .LBB32_2
@@ -383,10 +383,10 @@ define <256 x i8> @vadd_vi_v258i8_unmasked(<256 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:  .LBB33_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, -1
-; CHECK-NEXT:    addi a1, a0, -128
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    sltiu a1, a0, 129
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    addi a0, a0, -128
+; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v16, v16, -1
 ; CHECK-NEXT:    ret
@@ -1328,10 +1328,10 @@ define <32 x i64> @vadd_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl
 ; CHECK-NEXT:  .LBB108_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
-; CHECK-NEXT:    addi a1, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    sltiu a1, a0, 17
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    addi a0, a0, -16
+; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
@@ -1351,10 +1351,10 @@ define <32 x i64> @vadd_vi_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:  .LBB109_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, -1
-; CHECK-NEXT:    addi a1, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    sltiu a1, a0, 17
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    addi a0, a0, -16
+; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v16, v16, -1
 ; CHECK-NEXT:    ret

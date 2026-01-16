@@ -2386,10 +2386,10 @@ define <128 x i16> @vp_bitreverse_v128i16(<128 x i16> %va, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    vsrl.vi v24, v8, 8, v0.t
 ; CHECK-NEXT:    lui a1, 1
 ; CHECK-NEXT:    lui a2, 3
-; CHECK-NEXT:    addi a3, a0, -64
-; CHECK-NEXT:    sltu a0, a0, a3
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a3, a0, a3
+; CHECK-NEXT:    sltiu a3, a0, 65
+; CHECK-NEXT:    addi a0, a0, -64
+; CHECK-NEXT:    neg a3, a3
+; CHECK-NEXT:    and a3, a3, a0
 ; CHECK-NEXT:    lui a0, 5
 ; CHECK-NEXT:    vsll.vi v8, v8, 8, v0.t
 ; CHECK-NEXT:    addi a1, a1, -241
@@ -2450,10 +2450,10 @@ define <128 x i16> @vp_bitreverse_v128i16_unmasked(<128 x i16> %va, i32 zeroext 
 ; CHECK-NEXT:    vsll.vi v8, v8, 8
 ; CHECK-NEXT:    lui a2, 1
 ; CHECK-NEXT:    lui a3, 3
-; CHECK-NEXT:    addi a4, a0, -64
-; CHECK-NEXT:    sltu a0, a0, a4
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a4
+; CHECK-NEXT:    sltiu a4, a0, 65
+; CHECK-NEXT:    addi a0, a0, -64
+; CHECK-NEXT:    neg a4, a4
+; CHECK-NEXT:    and a0, a4, a0
 ; CHECK-NEXT:    lui a4, 5
 ; CHECK-NEXT:    vor.vv v8, v8, v24
 ; CHECK-NEXT:    addi a2, a2, -241

@@ -19,9 +19,9 @@ declare {<2 x i128>, <2 x i1>} @llvm.uadd.with.overflow.v2i128(<2 x i128>, <2 x 
 define <1 x i32> @uaddo_v1i32(<1 x i32> %a0, <1 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v1i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    cmhi v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    str s1, [x0]
+; CHECK-NEXT:    add v2.2s, v0.2s, v1.2s
+; CHECK-NEXT:    cmhi v0.2s, v1.2s, v2.2s
+; CHECK-NEXT:    str s2, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<1 x i32>, <1 x i1>} @llvm.uadd.with.overflow.v1i32(<1 x i32> %a0, <1 x i32> %a1)
   %val = extractvalue {<1 x i32>, <1 x i1>} %t, 0
@@ -34,9 +34,9 @@ define <1 x i32> @uaddo_v1i32(<1 x i32> %a0, <1 x i32> %a1, ptr %p2) nounwind {
 define <2 x i32> @uaddo_v2i32(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    cmhi v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    str d1, [x0]
+; CHECK-NEXT:    add v2.2s, v0.2s, v1.2s
+; CHECK-NEXT:    cmhi v0.2s, v1.2s, v2.2s
+; CHECK-NEXT:    str d2, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<2 x i32>, <2 x i1>} @llvm.uadd.with.overflow.v2i32(<2 x i32> %a0, <2 x i32> %a1)
   %val = extractvalue {<2 x i32>, <2 x i1>} %t, 0
@@ -49,11 +49,11 @@ define <2 x i32> @uaddo_v2i32(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) nounwind {
 define <3 x i32> @uaddo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v3i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    mov s2, v1.s[2]
-; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    str d1, [x0]
-; CHECK-NEXT:    str s2, [x0, #8]
+; CHECK-NEXT:    add v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    mov s1, v2.s[2]
+; CHECK-NEXT:    str d2, [x0]
+; CHECK-NEXT:    str s1, [x0, #8]
 ; CHECK-NEXT:    ret
   %t = call {<3 x i32>, <3 x i1>} @llvm.uadd.with.overflow.v3i32(<3 x i32> %a0, <3 x i32> %a1)
   %val = extractvalue {<3 x i32>, <3 x i1>} %t, 0
@@ -66,9 +66,9 @@ define <3 x i32> @uaddo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 define <4 x i32> @uaddo_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    add v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    str q2, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<4 x i32>, <4 x i1>} @llvm.uadd.with.overflow.v4i32(<4 x i32> %a0, <4 x i32> %a1)
   %val = extractvalue {<4 x i32>, <4 x i1>} %t, 0
@@ -94,21 +94,21 @@ define <6 x i32> @uaddo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    mov v0.s[2], w2
 ; CHECK-NEXT:    ld1 { v1.s }[2], [x8]
 ; CHECK-NEXT:    add x8, sp, #8
-; CHECK-NEXT:    add v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    add v3.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    ld1 { v1.s }[3], [x8]
 ; CHECK-NEXT:    ldr x8, [sp, #32]
 ; CHECK-NEXT:    mov v0.s[3], w3
-; CHECK-NEXT:    cmhi v3.4s, v3.4s, v2.4s
-; CHECK-NEXT:    str d2, [x8, #16]
-; CHECK-NEXT:    mov w5, v3.s[1]
-; CHECK-NEXT:    fmov w4, s3
-; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    str q1, [x8]
-; CHECK-NEXT:    mov w1, v0.s[1]
-; CHECK-NEXT:    mov w2, v0.s[2]
-; CHECK-NEXT:    mov w3, v0.s[3]
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    cmhi v2.4s, v2.4s, v3.4s
+; CHECK-NEXT:    str d3, [x8, #16]
+; CHECK-NEXT:    mov w5, v2.s[1]
+; CHECK-NEXT:    fmov w4, s2
+; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    cmhi v1.4s, v1.4s, v0.4s
+; CHECK-NEXT:    str q0, [x8]
+; CHECK-NEXT:    mov w1, v1.s[1]
+; CHECK-NEXT:    mov w2, v1.s[2]
+; CHECK-NEXT:    mov w3, v1.s[3]
+; CHECK-NEXT:    fmov w0, s1
 ; CHECK-NEXT:    ret
   %t = call {<6 x i32>, <6 x i1>} @llvm.uadd.with.overflow.v6i32(<6 x i32> %a0, <6 x i32> %a1)
   %val = extractvalue {<6 x i32>, <6 x i1>} %t, 0
@@ -121,11 +121,11 @@ define <6 x i32> @uaddo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 define <8 x i32> @uaddo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v3.4s, v1.4s, v3.4s
-; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    cmhi v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    stp q2, q3, [x0]
+; CHECK-NEXT:    add v4.4s, v0.4s, v2.4s
+; CHECK-NEXT:    add v5.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmhi v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    cmhi v1.4s, v3.4s, v5.4s
+; CHECK-NEXT:    stp q4, q5, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<8 x i32>, <8 x i1>} @llvm.uadd.with.overflow.v8i32(<8 x i32> %a0, <8 x i32> %a1)
   %val = extractvalue {<8 x i32>, <8 x i1>} %t, 0
@@ -139,7 +139,7 @@ define <16 x i32> @uaddo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v4.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmhi v0.16b, v0.16b, v4.16b
+; CHECK-NEXT:    cmhi v0.16b, v1.16b, v4.16b
 ; CHECK-NEXT:    str q4, [x0]
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    zip1 v2.8b, v0.8b, v0.8b
@@ -171,7 +171,7 @@ define <8 x i32> @uaddo_v8i16(<8 x i16> %a0, <8 x i16> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v2.8h, v0.8h, v1.8h
-; CHECK-NEXT:    cmhi v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    cmhi v0.8h, v1.8h, v2.8h
 ; CHECK-NEXT:    str q2, [x0]
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    zip1 v1.8b, v0.8b, v0.8b
@@ -194,9 +194,9 @@ define <8 x i32> @uaddo_v8i16(<8 x i16> %a0, <8 x i16> %a1, ptr %p2) nounwind {
 define <2 x i32> @uaddo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.2d, v0.2d, v1.2d
-; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    add v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    cmhi v0.2d, v1.2d, v2.2d
+; CHECK-NEXT:    str q2, [x0]
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
   %t = call {<2 x i64>, <2 x i1>} @llvm.uadd.with.overflow.v2i64(<2 x i64> %a0, <2 x i64> %a1)

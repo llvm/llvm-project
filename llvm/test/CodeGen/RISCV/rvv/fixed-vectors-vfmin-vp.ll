@@ -381,10 +381,10 @@ define <32 x double> @vfmin_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:  .LBB26_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v24, v0.t
-; CHECK-NEXT:    addi a0, a2, -16
-; CHECK-NEXT:    sltu a1, a2, a0
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    sltiu a0, a2, 17
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    addi a2, a2, -16
+; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
@@ -416,10 +416,10 @@ define <32 x double> @vfmin_vv_v32f64_unmasked(<32 x double> %va, <32 x double> 
 ; CHECK-NEXT:  .LBB27_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v0
-; CHECK-NEXT:    addi a0, a2, -16
-; CHECK-NEXT:    sltu a1, a2, a0
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    sltiu a0, a2, 17
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    addi a2, a2, -16
+; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v16, v16, v24
 ; CHECK-NEXT:    ret
