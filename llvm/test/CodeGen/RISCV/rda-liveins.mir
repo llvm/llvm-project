@@ -135,9 +135,6 @@ body:             |
 ---
 name:            test5
 tracksRegLiveness: true
-stack:
-  - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 8,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -147,11 +144,29 @@ body:             |
   bb.1:
     liveins: $x10
     $x10 = ADDI, $x10, 2
-    SD $x10, %stack.0, 0 :: (store (s64))
-    SD $x10, %stack.0, 0 :: (store (s64))
-    SD $x10, %stack.0, 0 :: (store (s64))
-    PseudoBR %bb.2, implicit-def $x10
 
   bb.2:
     liveins: $x10
     PseudoRET implicit $x10
+
+---
+name:            test6
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: Reaching definitions for for machine function: entry_bb_is_a_loop
+  ; CHECK-NEXT: %bb.0:
+  ; CHECK-NEXT: $x10:{ 0 livein }
+  ; CHECK-NEXT: 0: $x10 = ADDI $x10, 1
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: $x10:{ 1 }
+  ; CHECK-NEXT: $x0:{ }
+  ; CHECK-NEXT: 2: BNE $x10, $x0, %bb.0
+  bb.0.entry:
+    liveins: $x10
+    $x10 = ADDI $x10, 1
+    BNE $x10, $x0, %bb.0
+
+  bb.1:
+    PseudoRET
+
+...
