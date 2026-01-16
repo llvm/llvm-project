@@ -18,7 +18,11 @@ if (NOT LLVM_ENABLE_RTTI AND COMPILER_HAS_NORTTI_FLAG)
 endif()
 
 if (WIN32)
-  # 0x900: Search for the dependency DLLs only in the System32 directory and in the directory with sycl-ls.exe
+  # For security purposes, searches for dependent libraries are limited to
+  # the combination of directories specified by the following flags of
+  # LoadLibraryEx().
+  # - LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR (0x100)
+  # - LOAD_LIBRARY_SEARCH_SYSTEM32     (0x800)
   target_link_options(sycl-ls PRIVATE LINKER:/DEPENDENTLOADFLAG:0x900)
 endif()
 install(TARGETS sycl-ls

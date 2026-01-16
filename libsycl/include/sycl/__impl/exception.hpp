@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the SYCL 2020 Exception class
+/// This file contains the declaration of the SYCL 2020 exception class
 /// interface (4.13.2.)
 ///
 //===----------------------------------------------------------------------===//

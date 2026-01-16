@@ -25,8 +25,8 @@ void discoverOffloadDevices() {
                  OL_PLATFORM_BACKEND_LAST>;
 
   PerBackendDataType Mapping;
-  // olIterateDevices calls lambda for every device.
-  // Returning early means jump to next iteration/next device.
+  // olIterateDevices() calls the lambda for each device. Devices that fail
+  // probes or that report unknown backends are silently ignored.
   callNoCheck(
       olIterateDevices,
       [](ol_device_handle_t Dev, void *User) -> bool {
@@ -34,23 +34,25 @@ void discoverOffloadDevices() {
         ol_platform_handle_t Plat = nullptr;
         ol_result_t Res = callNoCheck(
             olGetDeviceInfo, Dev, OL_DEVICE_INFO_PLATFORM, sizeof(Plat), &Plat);
-        // If error occurs, ignore platform and continue iteration
+        // If an error occurs, ignore the device and continue iteration.
         if (Res != OL_SUCCESS)
           return true;
 
         ol_platform_backend_t OlBackend = OL_PLATFORM_BACKEND_UNKNOWN;
         Res = callNoCheck(olGetPlatformInfo, Plat, OL_PLATFORM_INFO_BACKEND,
                           sizeof(OlBackend), &OlBackend);
-        // If error occurs, ignore platform and continue iteration
+        // If an error occurs, ignore the device and continue iteration.
         if (Res != OL_SUCCESS)
           return true;
 
-        // Skip host & unknown backends
+        // Ignore host and unknown backends
         if (OL_PLATFORM_BACKEND_HOST == OlBackend ||
             OL_PLATFORM_BACKEND_UNKNOWN == OlBackend)
           return true;
 
-        // Ensure backend index fits into array size
+        // Ignore the device if the backend index exceeds the number of backends
+        // known at compile time. This should only happen when running with a
+        // newer version of liboffload than libsycl was compiled with.
         if (OlBackend >= OL_PLATFORM_BACKEND_LAST)
           return true;
 

@@ -71,13 +71,13 @@ int main(int argc, char **argv) {
         std::cout << "    Version  : " << PlatformVersion << std::endl;
         std::cout << "    Name     : " << PlatformName << std::endl;
         std::cout << "    Vendor   : " << PlatformVendor << std::endl;
-
         std::cout << "    Devices  : " << "unknown" << std::endl;
       }
     }
   } catch (sycl::exception &e) {
     std::cerr << "SYCL Exception encountered: " << e.what() << std::endl
               << std::endl;
+    return EXIT_FAILURE;
   }
 
   return EXIT_SUCCESS;

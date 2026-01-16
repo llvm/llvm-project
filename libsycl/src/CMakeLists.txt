@@ -19,17 +19,17 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
     LLVMOffload
   )
 
-  target_include_directories(
-    ${LIB_OBJ_NAME}
+  target_include_directories(${LIB_OBJ_NAME}
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}
       ${LIBSYCL_BUILD_INCLUDE_DIR}
       $<TARGET_PROPERTY:LLVMOffload,INTERFACE_INCLUDE_DIRECTORIES>
   )
 
-  set_target_properties(${LIB_TARGET_NAME} PROPERTIES
-                        LINKER_LANGUAGE CXX
-                        POSITION_INDEPENDENT_CODE TRUE)
+  set_target_properties(${LIB_TARGET_NAME}
+      PROPERTIES
+        LINKER_LANGUAGE CXX
+        POSITION_INDEPENDENT_CODE TRUE)
 
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     # Install stripped PDB
@@ -53,9 +53,11 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
 
     if (UNIX AND NOT APPLE)
       set(linker_script "${CMAKE_CURRENT_SOURCE_DIR}/ld-version-script.txt")
-      target_link_libraries(
-          ${LIB_TARGET_NAME} PRIVATE "-Wl,--version-script=${linker_script}")
-      set_target_properties(${LIB_TARGET_NAME} PROPERTIES LINK_DEPENDS ${linker_script})
+      target_link_libraries(${LIB_TARGET_NAME}
+        PRIVATE "-Wl,--version-script=${linker_script}")
+      set_target_properties(${LIB_TARGET_NAME}
+        PROPERTIES
+          LINK_DEPENDS ${linker_script})
     endif()
   endif()
 
@@ -68,10 +70,14 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
       LLVMOffload
   )
 
-  set_target_properties(${LIB_TARGET_NAME} PROPERTIES
-                        VERSION ${LIBSYCL_VERSION_STRING}
-                        SOVERSION ${LIBSYCL_VERSION_STRING})
-  set_target_properties(${LIB_TARGET_NAME} PROPERTIES OUTPUT_NAME ${LIB_OUTPUT_NAME})
+  set_target_properties(${LIB_TARGET_NAME}
+    PROPERTIES
+      VERSION ${LIBSYCL_VERSION_STRING}
+      SOVERSION ${LIBSYCL_VERSION_STRING})
+  set_target_properties(${LIB_TARGET_NAME}
+    PROPERTIES
+      OUTPUT_NAME ${LIB_OUTPUT_NAME})
+
 endfunction(add_sycl_rt_library)
 
 set(LIBSYCL_SOURCES
@@ -84,8 +90,11 @@ set(LIBSYCL_SOURCES
     "detail/offload/offload_topology.cpp"
 )
 
-add_sycl_rt_library(${LIBSYCL_LIB_NAME} sycl_object ${LIBSYCL_SHARED_OUTPUT_NAME}
-                    SOURCES ${LIBSYCL_SOURCES})
+add_sycl_rt_library(${LIBSYCL_LIB_NAME}
+  sycl_object
+  ${LIBSYCL_SHARED_OUTPUT_NAME}
+  SOURCES
+    ${LIBSYCL_SOURCES})
 
 install(TARGETS ${LIBSYCL_RT_LIBS}
   ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}" COMPONENT libsycl

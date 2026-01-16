@@ -40,8 +40,7 @@ public:
   /// \param PlatformIndex is a platform index in a backend (needed for a proper
   /// indexing in device selector).
   /// All platform impls are created during first getPlatforms() call.
-  explicit PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex,
-                        PrivateTag);
+  PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex, PrivateTag);
 
   ~PlatformImpl() = default;
 
@@ -56,10 +55,11 @@ public:
   /// \returns std::vector of all platforms that are available in the system.
   static const std::vector<PlatformImplUPtr> &getPlatforms();
 
-  /// Returns raw underlying offload platform handle.
+  /// Returns the raw underlying offload platform handle.
   ///
-  /// It does not retain handle. It is caller responsibility to make sure that
-  /// platform stays alive while raw handle is in use.
+  /// The caller is responsible for ensuring that the returned handle is only
+  /// used while the PlatformImpl object from which it was obtained is still
+  /// within its lifetime.
   ///
   /// \return a raw offload platform handle.
   const ol_platform_handle_t &getHandleRef() const { return MOffloadPlatform; }

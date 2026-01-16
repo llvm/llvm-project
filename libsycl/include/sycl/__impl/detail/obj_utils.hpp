@@ -27,19 +27,22 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-// Note! This class relies on the fact that all SYCL interface
-// classes contain "impl" field that points to implementation object. "impl"
-// field should be accessible from this class.
+// SYCL interface classes are required to contain an `impl` data member
+// which points to the corresponding implementation object. The data
+// member is required to be accessible by the `ImpUtils` class. SYCL
+// interface classes that declare the data member private or protected
+// are required to befriend the `ImpUtils` class.
 struct ImplUtils {
-  // Helper function for extracting implementation from SYCL's interface
-  // objects.
-  template <class Obj>
-  static const decltype(Obj::impl) &getSyclObjImpl(const Obj &SyclObj) {
-    assert(SyclObj.impl && "every constructor should create an impl");
-    return SyclObj.impl;
+  // Helper function to access an implementation object from a SYCL interface
+  // object.
+  template <typename SyclObject>
+  static const decltype(SyclObject::impl) &
+  getSyclObjImpl(const SyclObject &Obj) {
+    assert(Obj.impl && "every constructor should create an impl");
+    return Obj.impl;
   }
 
-  // Helper function for creation SYCL interface objects from implementations.
+  // Helper function to create a SYCL interface object from an implementation.
   template <typename SyclObject, typename Impl>
   static SyclObject createSyclObjFromImpl(Impl &&ImplObj) {
     if constexpr (std::is_same_v<decltype(SyclObject::impl),
@@ -50,10 +53,10 @@ struct ImplUtils {
   }
 };
 
-template <class Obj>
-auto getSyclObjImpl(const Obj &SyclObj)
-    -> decltype(ImplUtils::getSyclObjImpl(SyclObj)) {
-  return ImplUtils::getSyclObjImpl(SyclObj);
+template <typename SyclObject>
+auto getSyclObjImpl(const SyclObject &Obj)
+    -> decltype(ImplUtils::getSyclObjImpl(Obj)) {
+  return ImplUtils::getSyclObjImpl(Obj);
 }
 
 template <typename SyclObject, typename Impl>
