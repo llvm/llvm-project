@@ -867,9 +867,8 @@ define void @test_dag_loop() {
 ; CHECK-NEXT:    vmseq.vv v0, v12, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vsetivli zero, 1, e16, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m8, tu, mu
 ; CHECK-NEXT:    vle16.v v8, (zero), v0.t
-; CHECK-NEXT:    vsetivli zero, 0, e16, m8, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (zero)
 ; CHECK-NEXT:    ret
 entry:
