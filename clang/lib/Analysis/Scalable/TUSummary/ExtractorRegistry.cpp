@@ -15,22 +15,18 @@ using namespace ssaf;
 LLVM_INSTANTIATE_REGISTRY(TUSummaryExtractorRegistry)
 
 bool ssaf::isTUSummaryExtractorRegistered(llvm::StringRef SummaryName) {
-  for (const auto &Entry : TUSummaryExtractorRegistry::entries()) {
-    if (Entry.getName() == SummaryName) {
+  for (const auto &Entry : TUSummaryExtractorRegistry::entries())
+    if (Entry.getName() == SummaryName)
       return true;
-    }
-  }
   return false;
 }
 
 std::unique_ptr<ASTConsumer>
 ssaf::makeTUSummaryExtractor(llvm::StringRef SummaryName,
                              TUSummaryBuilder &Builder) {
-  for (const auto &Entry : TUSummaryExtractorRegistry::entries()) {
-    if (Entry.getName() == SummaryName) {
+  for (const auto &Entry : TUSummaryExtractorRegistry::entries())
+    if (Entry.getName() == SummaryName)
       return Entry.instantiate(Builder);
-    }
-  }
   assert(false && "Unknown SummaryExtractor name");
   return nullptr;
 }
