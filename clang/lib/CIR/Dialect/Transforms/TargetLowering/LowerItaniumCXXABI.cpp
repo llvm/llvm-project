@@ -23,6 +23,7 @@
 #include "CIRCXXABI.h"
 #include "LowerModule.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace cir {
@@ -249,16 +250,17 @@ void LowerItaniumCXXABI::lowerGetMethod(
   // If the member is non-virtual, memptr.ptr is the address of
   // the function to call.
 
+  mlir::ImplicitLocOpBuilder locBuilder(op.getLoc(), rewriter);
   mlir::Value &callee = loweredResults[0];
   mlir::Value &adjustedThis = loweredResults[1];
   mlir::Type calleePtrTy = op.getCallee().getType();
 
   cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
-  mlir::Value ptrdiffOne = cir::ConstantOp::create(
-      rewriter, op.getLoc(), cir::IntAttr::get(ptrdiffCIRTy, 1));
+  mlir::Value ptrdiffOne =
+      cir::ConstantOp::create(locBuilder, cir::IntAttr::get(ptrdiffCIRTy, 1));
 
-  mlir::Value adj = cir::ExtractMemberOp::create(
-      rewriter, op.getLoc(), ptrdiffCIRTy, loweredMethod, 1);
+  mlir::Value adj =
+      cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredMethod, 1);
   if (useARMMethodPtrABI) {
     op.emitError("ARM method ptr abi NYI");
     return;
@@ -266,26 +268,25 @@ void LowerItaniumCXXABI::lowerGetMethod(
 
   // Apply the adjustment to the 'this' pointer.
   mlir::Type thisVoidPtrTy =
-      cir::PointerType::get(cir::VoidType::get(rewriter.getContext()),
+      cir::PointerType::get(cir::VoidType::get(locBuilder.getContext()),
                             op.getObject().getType().getAddrSpace());
-  mlir::Value thisVoidPtr =
-      cir::CastOp::create(rewriter, op.getLoc(), thisVoidPtrTy,
-                          cir::CastKind::bitcast, loweredObjectPtr);
-  adjustedThis = cir::PtrStrideOp::create(rewriter, op.getLoc(), thisVoidPtrTy,
-                                          thisVoidPtr, adj);
+  mlir::Value thisVoidPtr = cir::CastOp::create(
+      locBuilder, thisVoidPtrTy, cir::CastKind::bitcast, loweredObjectPtr);
+  adjustedThis =
+      cir::PtrStrideOp::create(locBuilder, thisVoidPtrTy, thisVoidPtr, adj);
 
   // Load the "ptr" field of the member function pointer and determine if it
   // points to a virtual function.
-  mlir::Value methodPtrField = cir::ExtractMemberOp::create(
-      rewriter, op.getLoc(), ptrdiffCIRTy, loweredMethod, 0);
+  mlir::Value methodPtrField =
+      cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredMethod, 0);
   mlir::Value virtualBit = cir::BinOp::create(
       rewriter, op.getLoc(), cir::BinOpKind::And, methodPtrField, ptrdiffOne);
   mlir::Value isVirtual;
   if (useARMMethodPtrABI)
     llvm_unreachable("ARM method ptr abi NYI");
   else
-    isVirtual = cir::CmpOp::create(rewriter, op.getLoc(), cir::CmpOpKind::eq,
-                                   virtualBit, ptrdiffOne);
+    isVirtual = cir::CmpOp::create(locBuilder, cir::CmpOpKind::eq, virtualBit,
+                                   ptrdiffOne);
 
   assert(!cir::MissingFeatures::emitCFICheck());
   assert(!cir::MissingFeatures::emitVFEInfo());
@@ -320,10 +321,10 @@ void LowerItaniumCXXABI::lowerGetMethod(
 
     // Apply the offset to the vtable pointer and get the pointer to the target
     // virtual function. Then load that pointer to get the callee.
-    mlir::Value vfpAddr = cir::PtrStrideOp::create(
-        rewriter, op.getLoc(), vtablePtrTy, vtablePtr, vtableOffset);
+    mlir::Value vfpAddr = cir::PtrStrideOp::create(locBuilder, vtablePtrTy,
+                                                   vtablePtr, vtableOffset);
     auto vfpPtrTy = cir::PointerType::get(calleePtrTy);
-    mlir::Value vfpPtr = cir::CastOp::create(rewriter, op.getLoc(), vfpPtrTy,
+    mlir::Value vfpPtr = cir::CastOp::create(locBuilder, vfpPtrTy,
                                              cir::CastKind::bitcast, vfpAddr);
     auto fnPtr = cir::LoadOp::create(b, loc, vfpPtr,
                                      /*isDeref=*/false, /*isVolatile=*/false,
@@ -337,7 +338,7 @@ void LowerItaniumCXXABI::lowerGetMethod(
 
   callee =
       cir::TernaryOp::create(
-          rewriter, op.getLoc(), isVirtual, /*thenBuilder=*/buildVirtualCallee,
+          locBuilder, isVirtual, /*thenBuilder=*/buildVirtualCallee,
           /*elseBuilder=*/
           [&](mlir::OpBuilder &b, mlir::Location loc) {
             auto fnPtr = cir::CastOp::create(
