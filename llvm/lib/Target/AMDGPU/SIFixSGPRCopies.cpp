@@ -1013,7 +1013,7 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
           // after SelectionDAG. Therefore, we treat all inline asm as mandatory
           // SGPR use.
           if (U.isInlineAsm())
-              Info.HasMandatorySGPRUse = true;
+            Info.HasMandatorySGPRUse = true;
           Users.push_back(&U);
         }
       }
