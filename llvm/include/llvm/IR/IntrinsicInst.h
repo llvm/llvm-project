@@ -1820,13 +1820,18 @@ public:
 
   unsigned getIndicesCount() const { return getNumOperands() - 2; }
 
+  Value* getIndexOperand(size_t Index) const {
+    assert(Index < getIndicesCount());
+    return getOperand(Index + 1);
+  }
+
   Type *getResultElementType() const {
     Type *CurrentType = getBaseType();
     for (unsigned I = 0; I < getIndicesCount(); I++) {
       if (ArrayType *AT = dyn_cast<ArrayType>(CurrentType)) {
         CurrentType = AT->getElementType();
       } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
-        ConstantInt *CI = cast<ConstantInt>(getOperand(I + 1));
+        ConstantInt *CI = cast<ConstantInt>(getIndexOperand(I));
         CurrentType = ST->getElementType(CI->getZExtValue());
       } else {
         // FIXME(Keenuts): add testing reaching those places once initial
