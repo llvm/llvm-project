@@ -702,9 +702,9 @@ define i32 @ashr() {
 
 define i32 @udiv() {
 ; CHECK-LABEL: 'udiv'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = udiv i16 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I16 = udiv i16 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I32 = udiv i32 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = udiv i64 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V1I16 = udiv <1 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V2I16 = udiv <2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V4I16 = udiv <4 x i16> undef, undef
@@ -738,9 +738,9 @@ define i32 @udiv() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SIFIVE-X280-LABEL: 'udiv'
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = udiv i16 undef, undef
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, undef
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I16 = udiv i16 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I32 = udiv i32 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I64 = udiv i64 undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V1I16 = udiv <1 x i16> undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V2I16 = udiv <2 x i16> undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V4I16 = udiv <4 x i16> undef, undef
@@ -818,9 +818,9 @@ define i32 @udiv() {
 
 define i32 @urem() {
 ; CHECK-LABEL: 'urem'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I32 = urem i32 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V1I16 = urem <1 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V2I16 = urem <2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V4I16 = urem <4 x i16> undef, undef
@@ -854,9 +854,9 @@ define i32 @urem() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SIFIVE-X280-LABEL: 'urem'
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = urem i16 undef, undef
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = urem i32 undef, undef
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I16 = urem i16 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I32 = urem i32 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I64 = urem i64 undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V1I16 = urem <1 x i16> undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V2I16 = urem <2 x i16> undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V4I16 = urem <4 x i16> undef, undef
@@ -934,9 +934,9 @@ define i32 @urem() {
 
 define i32 @sdiv() {
 ; CHECK-LABEL: 'sdiv'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = sdiv i16 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = sdiv i32 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = sdiv i64 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I16 = sdiv i16 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I32 = sdiv i32 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = sdiv i64 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V1I16 = sdiv <1 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V2I16 = sdiv <2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V4I16 = sdiv <4 x i16> undef, undef
@@ -970,9 +970,9 @@ define i32 @sdiv() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SIFIVE-X280-LABEL: 'sdiv'
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = sdiv i16 undef, undef
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = sdiv i32 undef, undef
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = sdiv i64 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I16 = sdiv i16 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I32 = sdiv i32 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I64 = sdiv i64 undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V1I16 = sdiv <1 x i16> undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V2I16 = sdiv <2 x i16> undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V4I16 = sdiv <4 x i16> undef, undef
@@ -1050,9 +1050,9 @@ define i32 @sdiv() {
 
 define i32 @srem() {
 ; CHECK-LABEL: 'srem'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I32 = srem i32 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V1I16 = srem <1 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V2I16 = srem <2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V4I16 = srem <4 x i16> undef, undef
@@ -1086,9 +1086,9 @@ define i32 @srem() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SIFIVE-X280-LABEL: 'srem'
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I16 = srem i16 undef, undef
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = srem i32 undef, undef
-; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = srem i64 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I16 = srem i16 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I32 = srem i32 undef, undef
+; SIFIVE-X280-NEXT:  Cost Model: Found costs of 4 for: %I64 = srem i64 undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V1I16 = srem <1 x i16> undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V2I16 = srem <2 x i16> undef, undef
 ; SIFIVE-X280-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %V4I16 = srem <4 x i16> undef, undef
