@@ -2544,9 +2544,9 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
                                      .addReg(AArch64::X0)
                                      .addExpr(Target)
                                      .addImm(0),
-                                 STI);
+                                 *STI);
   } else {
-    emitAddress(AArch64::X0, Target, AArch64::X16, IsDSOLocal, STI);
+    emitAddress(AArch64::X0, Target, AArch64::X16, IsDSOLocal, *STI);
   }
   if (HasAddressDiversity) {
     auto *PlacePlusDisc = MCBinaryExpr::createAdd(
@@ -2554,7 +2554,7 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
         MCConstantExpr::create(Disc, OutStreamer->getContext()),
         OutStreamer->getContext());
     emitAddress(AArch64::X1, PlacePlusDisc, AArch64::X16, /*IsDSOLocal=*/true,
-                STI);
+                *STI);
   } else {
     if (!isUInt<16>(Disc)) {
       OutContext.reportError(SMLoc(), "AArch64 PAC Discriminator '" +
@@ -2583,13 +2583,13 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   const MCSymbolRefExpr *EmuPACRef =
       MCSymbolRefExpr::create(EmuPAC, OutStreamer->getContext());
   OutStreamer->emitInstruction(MCInstBuilder(AArch64::B).addExpr(EmuPACRef),
-                               STI);
+                               *STI);
 
   // We need a RET despite the above tail call because the deactivation symbol
   // may replace the tail call with a NOP.
   if (DSExpr)
     OutStreamer->emitInstruction(
-        MCInstBuilder(AArch64::RET).addReg(AArch64::LR), STI);
+        MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
   OutStreamer->popSection();
 
   return MCSymbolRefExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
