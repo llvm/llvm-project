@@ -8762,27 +8762,26 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
     RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
+    // For AnyOf reductions, find the select among PhiR's users. This is used
+    // both to find NewVal for ComputeAnyOfResult and to adjust the reduction.
+    VPRecipeBase *AnyOfSelect = nullptr;
+    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
+      AnyOfSelect = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
+        return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+      }));
+    }
     if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind)) {
       VPValue *Start = PhiR->getStartValue();
       VPValue *Sentinel = Plan->getOrAddLiveIn(RdxDesc.getSentinelValue());
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeFindIVResult,
                                {PhiR, Start, Sentinel, NewExitingVPV}, ExitDL);
-    } else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
+    } else if (AnyOfSelect) {
       VPValue *Start = PhiR->getStartValue();
-      // Find the NewVal from the original scalar select. NewVal is the value
-      // selected when the condition is true (i.e., the non-phi operand).
-      // We need to find the SelectInst among the original phi's users.
-      auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingInstr());
-      SelectInst *SI = nullptr;
-      for (auto *U : OrigPhi->users()) {
-        if ((SI = dyn_cast<SelectInst>(U)))
-          break;
-      }
-      assert(SI && "AnyOf reduction must have a select user");
-      Value *NewValIR = SI->getTrueValue() == OrigPhi ? SI->getFalseValue()
-                                                      : SI->getTrueValue();
-      VPValue *NewVal = Plan->getOrAddLiveIn(NewValIR);
+      // NewVal is the non-phi operand of the select.
+      VPValue *NewVal = AnyOfSelect->getOperand(1) == PhiR
+                            ? AnyOfSelect->getOperand(2)
+                            : AnyOfSelect->getOperand(1);
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
                                {Start, NewVal, NewExitingVPV}, ExitDL);
@@ -8850,25 +8849,22 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // with a boolean reduction phi node to check if the condition is true in
     // any iteration. The final value is selected by the final
     // ComputeReductionResult.
-    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      auto *Select = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
-        return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
-      }));
-      VPValue *Cmp = Select->getOperand(0);
+    if (AnyOfSelect) {
+      VPValue *Cmp = AnyOfSelect->getOperand(0);
       // If the compare is checking the reduction PHI node, adjust it to check
       // the start value.
       if (VPRecipeBase *CmpR = Cmp->getDefiningRecipe())
         CmpR->replaceUsesOfWith(PhiR, PhiR->getStartValue());
-      Builder.setInsertPoint(Select);
+      Builder.setInsertPoint(AnyOfSelect);
 
       // If the true value of the select is the reduction phi, the new value is
       // selected if the negated condition is true in any iteration.
-      if (Select->getOperand(1) == PhiR)
+      if (AnyOfSelect->getOperand(1) == PhiR)
         Cmp = Builder.createNot(Cmp);
       VPValue *Or = Builder.createOr(PhiR, Cmp);
-      Select->getVPSingleValue()->replaceAllUsesWith(Or);
-      // Delete Select now that it has invalid types.
-      ToDelete.push_back(Select);
+      AnyOfSelect->getVPSingleValue()->replaceAllUsesWith(Or);
+      // Delete AnyOfSelect now that it has invalid types.
+      ToDelete.push_back(AnyOfSelect);
 
       // Convert the reduction phi to operate on bools.
       PhiR->setOperand(0, Plan->getFalse());
@@ -9462,7 +9458,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
 
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
-      if (RdxResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
+      RecurKind RK = ReductionPhi->getRecurrenceKind();
+      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
         Value *StartV = RdxResult->getOperand(0)->getLiveInIRValue();
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
@@ -9472,7 +9469,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         ResumeV = Builder.CreateICmpNE(ResumeV, StartV);
         if (auto *I = dyn_cast<Instruction>(ResumeV))
           InstsToMove.push_back(I);
-      } else if (RdxResult->getOpcode() == VPInstruction::ComputeFindIVResult) {
+      } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(RK)) {
         Value *StartV = getStartValueFromReductionResult(RdxResult);
         ToFrozen[StartV] = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
             EPI.MainLoopIterationCountCheck);
