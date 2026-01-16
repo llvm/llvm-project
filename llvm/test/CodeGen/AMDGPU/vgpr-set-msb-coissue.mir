@@ -11,8 +11,8 @@ body:             |
     ; CHECK: liveins: $vgpr10, $vgpr11, $vgpr900, $vgpr901
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $vgpr11 = nofpexcept V_EXP_F32_e32 killed $vgpr10, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_WAIT_DSCNT 0
     ; CHECK-NEXT: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: S_WAIT_DSCNT 0
     ; CHECK-NEXT: S_BARRIER_SIGNAL_IMM -1
     ; CHECK-NEXT: S_BARRIER_WAIT -1
     ; CHECK-NEXT: $vgpr256 = nofpexcept V_EXP_F32_e32 killed $vgpr257, implicit $mode, implicit $exec

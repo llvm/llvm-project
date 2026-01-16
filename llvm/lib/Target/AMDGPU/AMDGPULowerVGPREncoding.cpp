@@ -319,9 +319,9 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
     return I;
 
   auto isProgramStateSALU = [this](MachineInstr *MI) {
-    return TII->isBarrier(MI->getOpcode()) ||
-           TII->isWaitcnt(MI || (SIInstrInfo::isProgramStateSALU(*MI) &&
-                                 MI->getOpcode() != AMDGPU::S_SET_VGPR_MSB));
+    return TII->isBarrier(MI->getOpcode()) || TII->isWaitcnt(MI->getOpcode()) ||
+           (SIInstrInfo::isProgramStateSALU(*MI) &&
+            MI->getOpcode() != AMDGPU::S_SET_VGPR_MSB);
   };
 
   while (!I.isEnd() && I != I->getParent()->begin()) {
