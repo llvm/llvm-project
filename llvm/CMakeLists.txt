@@ -894,6 +894,9 @@ else()
   option(LLVM_BUILD_LLVM_C_DYLIB "Build libllvm-c re-export library (Darwin only)" OFF)
 endif()
 
+option(LLVM_CONFIG_NO_EXPORTS "Suppress exports in CMake package" OFF)
+mark_as_advanced(LLVM_CONFIG_NO_EXPORTS)
+
 # Used to test building the llvm shared library with explicit symbol visibility on
 # Windows and Linux. For ELF platforms default symbols visibility is set to hidden.
 set(LLVM_BUILD_LLVM_DYLIB_VIS FALSE CACHE BOOL "")
