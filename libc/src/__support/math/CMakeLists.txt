@@ -1062,6 +1062,15 @@ add_header_library(
 )
 
 add_header_library(
+  logbf128
+  HDRS
+    logbf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
   log_range_reduction
   HDRS
     log_range_reduction.h
