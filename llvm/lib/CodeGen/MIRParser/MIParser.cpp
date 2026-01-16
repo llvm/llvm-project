@@ -447,6 +447,7 @@ public:
                        MachineBasicBlock *&AddFalthroughFrom);
   bool parseBasicBlockLiveins(MachineBasicBlock &MBB);
   bool parseBasicBlockSuccessors(MachineBasicBlock &MBB);
+  bool parseBasicBlockPrefetchTargets(MachineBasicBlock &MBB);
 
   bool parseNamedRegister(Register &Reg);
   bool parseVirtualRegister(VRegInfo *&Info);
@@ -926,6 +927,27 @@ bool MIParser::parseBasicBlockSuccessors(MachineBasicBlock &MBB) {
   return false;
 }
 
+bool MIParser::parseBasicBlockPrefetchTargets(MachineBasicBlock &MBB) {
+  assert(Token.is(MIToken::kw_prefetch_targets));
+  lex();
+  if (expectAndConsume(MIToken::colon))
+    return true;
+  if (Token.isNewlineOrEOF()) // Allow an empty list.
+    return false;
+  SmallVector<unsigned> PrefetchTargets;
+  do {
+    if (Token.isNot(MIToken::IntegerLiteral))
+      return error("expected an integer literal");
+    unsigned Index;
+    if (getUnsigned(Index))
+      return true;
+    PrefetchTargets.push_back(Index);
+    lex();
+  } while (consumeIfPresent(MIToken::comma));
+  MBB.setPrefetchTargetCallsiteIndexes(PrefetchTargets);
+  return false;
+}
+
 bool MIParser::parseBasicBlock(MachineBasicBlock &MBB,
                                MachineBasicBlock *&AddFalthroughFrom) {
   // Skip the definition.
@@ -955,6 +977,9 @@ bool MIParser::parseBasicBlock(MachineBasicBlock &MBB,
       ExplicitSuccessors = true;
     } else if (Token.is(MIToken::kw_liveins)) {
       if (parseBasicBlockLiveins(MBB))
+        return true;
+    } else if (Token.is(MIToken::kw_prefetch_targets)) {
+      if (parseBasicBlockPrefetchTargets(MBB))
         return true;
     } else if (consumeIfPresent(MIToken::Newline)) {
       continue;

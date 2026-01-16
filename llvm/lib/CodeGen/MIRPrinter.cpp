@@ -771,6 +771,17 @@ void printMBB(raw_ostream &OS, MFPrintState &State,
     HasLineAttributes = true;
   }
 
+  // Print prefetch targets
+  if (!MBB.getPrefetchTargetCallsiteIndexes().empty()) {
+    OS.indent(2) << "prefetch-targets: ";
+    ListSeparator LS;
+    for (unsigned I : MBB.getPrefetchTargetCallsiteIndexes()) {
+        OS << LS << I;
+    }
+    OS << "\n";
+    HasLineAttributes = true;
+  }
+
   if (HasLineAttributes && !MBB.empty())
     OS << "\n";
   bool IsInBundle = false;
