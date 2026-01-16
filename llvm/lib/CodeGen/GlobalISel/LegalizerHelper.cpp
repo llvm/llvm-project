@@ -748,6 +748,28 @@ LegalizerHelper::emitModfLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
   return LegalizerHelper::Legalized;
 }
 
+static RTLIB::Libcall getConvRTLibDesc(unsigned Opcode, Type *ToType,
+                                       Type *FromType) {
+  auto ToMVT = MVT::getVT(ToType);
+  auto FromMVT = MVT::getVT(FromType);
+
+  switch (Opcode) {
+  case TargetOpcode::G_FPEXT:
+    return RTLIB::getFPEXT(FromMVT, ToMVT);
+  case TargetOpcode::G_FPTRUNC:
+    return RTLIB::getFPROUND(FromMVT, ToMVT);
+  case TargetOpcode::G_FPTOSI:
+    return RTLIB::getFPTOSINT(FromMVT, ToMVT);
+  case TargetOpcode::G_FPTOUI:
+    return RTLIB::getFPTOUINT(FromMVT, ToMVT);
+  case TargetOpcode::G_SITOFP:
+    return RTLIB::getSINTTOFP(FromMVT, ToMVT);
+  case TargetOpcode::G_UITOFP:
+    return RTLIB::getUINTTOFP(FromMVT, ToMVT);
+  }
+  llvm_unreachable("Unsupported libcall function");
+}
+
 LegalizerHelper::LegalizeResult LegalizerHelper::conversionLibcall(
     MachineInstr &MI, Type *ToType, Type *FromType,
     LostDebugLocObserver &LocObserver, bool IsSigned) const {
@@ -980,28 +1002,6 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
     return LegalizerHelper::UnableToLegalize;
 
   return LegalizerHelper::Legalized;
-}
-
-static RTLIB::Libcall getConvRTLibDesc(unsigned Opcode, Type *ToType,
-                                       Type *FromType) {
-  auto ToMVT = MVT::getVT(ToType);
-  auto FromMVT = MVT::getVT(FromType);
-
-  switch (Opcode) {
-  case TargetOpcode::G_FPEXT:
-    return RTLIB::getFPEXT(FromMVT, ToMVT);
-  case TargetOpcode::G_FPTRUNC:
-    return RTLIB::getFPROUND(FromMVT, ToMVT);
-  case TargetOpcode::G_FPTOSI:
-    return RTLIB::getFPTOSINT(FromMVT, ToMVT);
-  case TargetOpcode::G_FPTOUI:
-    return RTLIB::getFPTOUINT(FromMVT, ToMVT);
-  case TargetOpcode::G_SITOFP:
-    return RTLIB::getSINTTOFP(FromMVT, ToMVT);
-  case TargetOpcode::G_UITOFP:
-    return RTLIB::getUINTTOFP(FromMVT, ToMVT);
-  }
-  llvm_unreachable("Unsupported libcall function");
 }
 
 static RTLIB::Libcall
