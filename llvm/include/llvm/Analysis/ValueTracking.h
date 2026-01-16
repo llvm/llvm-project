@@ -1011,6 +1011,10 @@ LLVM_ABI bool matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
 ///  T | T | F
 ///  F | T | T
 /// (A)
+LLVM_ABI bool matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                    PHINode *&P, Value *&Init,
+                                                    Value *&OtherOp0,
+                                                    Value *&OtherOp1);
 LLVM_ABI std::optional<bool>
 isImpliedCondition(const Value *LHS, const Value *RHS, const DataLayout &DL,
                    bool LHSIsTrue = true, unsigned Depth = 0);
