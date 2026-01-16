@@ -1,4 +1,4 @@
-# This file sets up a CMakeCache for the Pico SDK toolchain build.
+# This file sets up a CMakeCache for the Raspberry Pi Pico toolchain build.
 
 set(CMAKE_BUILD_TYPE Release CACHE STRING "")
 
