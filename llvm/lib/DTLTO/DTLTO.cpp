@@ -215,4 +215,3 @@ void lto::DTLTO::cleanup() {
   }
   Base::cleanup();
 }
-
