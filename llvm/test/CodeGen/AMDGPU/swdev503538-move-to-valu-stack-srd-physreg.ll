@@ -11,8 +11,8 @@
 define i32 @move_to_valu_assert_srd_is_physreg_swdev503538(ptr addrspace(1) %ptr) {
 entry:
   %idx = load i32, ptr addrspace(1) %ptr, align 4
-  %zero = extractelement <4 x i32> zeroinitializer, i32 %idx
-  %alloca = alloca [2048 x i8], i32 %zero, align 8, addrspace(5)
+  %mask = and i32 %idx, 0
+  %alloca = alloca [2048 x i8], i32 %mask, align 8, addrspace(5)
   %ld = load i32, ptr addrspace(5) %alloca, align 8
   call void @llvm.memset.p5.i32(ptr addrspace(5) %alloca, i8 0, i32 2048, i1 false)
   ret i32 %ld
