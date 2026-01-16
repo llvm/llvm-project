@@ -4748,9 +4748,10 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   // setcc X, 0, setlt --> X  (when X is all sign bits)
   // setcc X, 0, setne --> X  (when X is all sign bits)
   //
-  // When we know that X has 0 or -1 in each lane, this comparison will produce
-  // X. This is only true when boolean contents are represented via 0s and -1s.
-  if (OpVT.isVector() && VT == OpVT &&
+  // When we know that X has 0 or -1 in each element (or scalar), this
+  // comparison will produce X. This is only true when boolean contents are
+  // represented via 0s and -1s.
+  if (VT == OpVT &&
       // Check that the result of setcc is 0 and -1.
       getBooleanContents(VT) == ZeroOrNegativeOneBooleanContent &&
       // Match only for checks X < 0 and X != 0
