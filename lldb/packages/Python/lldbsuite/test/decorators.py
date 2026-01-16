@@ -1114,6 +1114,7 @@ def skipUnlessBoundsSafety(func):
 
     return skipTestIfFn(is_compiler_with_bounds_safety)(func)
 
+
 def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB *itself* under ASAN."""
     return skipTestIfFn(is_running_under_asan)(func)
