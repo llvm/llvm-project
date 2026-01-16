@@ -159,3 +159,22 @@ def repeated_include():
         interp.copy_symbols_and_merge_into(main, callee2)
     except ValueError as e:
         assert "doubly defined symbol @callee2" in str(e)
+
+
+@test_in_context
+def check_builtin():
+    module = builtin_d.ModuleOp()
+    with module.context, ir.Location.unknown():
+        transform_module = builtin_d.Module.create()
+        transform_module.operation.attributes["transform.with_named_sequence"] = (
+            ir.UnitAttr.get()
+        )
+        with ir.InsertionPoint(transform_module.body):
+            named_sequence = NamedSequenceOp("__transform_main", [any_op_t()], [])
+            with ir.InsertionPoint(named_sequence.body):
+                YieldOp([])
+        interp.apply_named_sequence(
+            module,
+            transform_module.body.operations[0],
+            transform_module,
+        )
