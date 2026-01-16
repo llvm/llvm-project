@@ -1820,7 +1820,7 @@ public:
 
   unsigned getIndicesCount() const { return getNumOperands() - 2; }
 
-  Value* getIndexOperand(size_t Index) const {
+  Value *getIndexOperand(size_t Index) const {
     assert(Index < getIndicesCount());
     return getOperand(Index + 1);
   }
