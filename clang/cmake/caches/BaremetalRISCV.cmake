@@ -1,4 +1,4 @@
-# Build clang and compiler-rt for Baremetal RISC-V (cross-compiling)
+# Build clang and compiler-rt targeting Baremetal RISC-V (cross-compiling)
 #
 # Use this as:
 #
@@ -15,7 +15,7 @@ set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON CACHE BOOL "")
 foreach(target ${TRIPLES})
   # builtins config
   set(BUILTINS_${target}_CMAKE_BUILD_TYPE Release CACHE STRING "")
-  set(BUILTINS_${target}_CMAKE_SYSTEM_NAME Generic-ELF CACHE STRING "")
+  set(BUILTINS_${target}_CMAKE_SYSTEM_NAME Generic CACHE STRING "")
   set(BUILTINS_${target}_COMPILER_RT_BAREMETAL_BUILD ON CACHE BOOL "")
   set(BUILTINS_${target}_COMPILER_RT_OS_DIR ${target} CACHE STRING "")
   set(BUILTINS_${target}_LLVM_CONFIG_NO_EXPORTS ON CACHE BOOL "")
@@ -25,7 +25,7 @@ foreach(target ${TRIPLES})
 
   # runtimes config
   set(RUNTIMES_${target}_CMAKE_BUILD_TYPE Release CACHE STRING "")
-  set(RUNTIMES_${target}_CMAKE_SYSTEM_NAME Generic-ELF CACHE STRING "")
+  set(RUNTIMES_${target}_CMAKE_SYSTEM_NAME Generic CACHE STRING "")
   set(RUNTIMES_${target}_COMPILER_RT_BAREMETAL_BUILD ON CACHE BOOL "")
   set(RUNTIMES_${target}_COMPILER_RT_OS_DIR ${target} CACHE STRING "")
   set(RUNTIMES_${target}_LLVM_CONFIG_NO_EXPORTS ON CACHE BOOL "")
