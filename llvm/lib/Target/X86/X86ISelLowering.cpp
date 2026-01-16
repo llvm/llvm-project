@@ -22542,11 +22542,17 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
       Entry.IsZExt = true;
       Args.push_back(Entry);
 
-      SDValue Callee = DAG.getExternalSymbol(
-          DAG.getLibcalls().getLibcallName(RTLIB::FPEXT_F16_F32),
-          getPointerTy(DAG.getDataLayout()));
+      RTLIB::LibcallImpl FPExtImpl =
+          DAG.getLibcalls().getLibcallImpl(RTLIB::FPEXT_F16_F32);
+      if (FPExtImpl == RTLIB::Unsupported)
+        return SDValue();
+      CallingConv::ID CC =
+          DAG.getLibcalls().getLibcallImplCallingConv(FPExtImpl);
+
+      SDValue Callee =
+          DAG.getExternalSymbol(FPExtImpl, getPointerTy(DAG.getDataLayout()));
       CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-          CallingConv::C, EVT(VT).getTypeForEVT(*DAG.getContext()), Callee,
+          CC, EVT(VT).getTypeForEVT(*DAG.getContext()), Callee,
           std::move(Args));
 
       SDValue Res;
@@ -22640,12 +22646,18 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     Entry.IsZExt = true;
     Args.push_back(Entry);
 
-    SDValue Callee = DAG.getExternalSymbol(
-        DAG.getLibcalls().getLibcallName(
-            SVT == MVT::f64 ? RTLIB::FPROUND_F64_F16 : RTLIB::FPROUND_F32_F16),
-        getPointerTy(DAG.getDataLayout()));
+    RTLIB::LibcallImpl FPRoundImpl = DAG.getLibcalls().getLibcallImpl(
+        SVT == MVT::f64 ? RTLIB::FPROUND_F64_F16 : RTLIB::FPROUND_F32_F16);
+    if (FPRoundImpl == RTLIB::Unsupported)
+      return SDValue();
+
+    CallingConv::ID CC =
+        DAG.getLibcalls().getLibcallImplCallingConv(FPRoundImpl);
+
+    SDValue Callee =
+        DAG.getExternalSymbol(FPRoundImpl, getPointerTy(DAG.getDataLayout()));
     CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-        CallingConv::C, EVT(MVT::i16).getTypeForEVT(*DAG.getContext()), Callee,
+        CC, EVT(MVT::i16).getTypeForEVT(*DAG.getContext()), Callee,
         std::move(Args));
 
     SDValue Res;
@@ -30371,14 +30383,18 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
     Args.emplace_back(StackPtr, PointerType::get(*DAG.getContext(), 0));
   }
 
-  SDValue Callee = DAG.getExternalSymbol(DAG.getLibcalls().getLibcallName(LC),
-                                         getPointerTy(DAG.getDataLayout()));
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SDValue();
+
+  SDValue Callee =
+      DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
       .setLibCallee(
-          DAG.getLibcalls().getLibcallCallingConv(LC),
+          DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
           static_cast<EVT>(MVT::v2i64).getTypeForEVT(*DAG.getContext()), Callee,
           std::move(Args))
       .setInRegister()
@@ -35829,6 +35845,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CVTTP2UIS)
   NODE_NAME_CASE(MCVTTP2UIS)
   NODE_NAME_CASE(POP_FROM_X87_REG)
+  NODE_NAME_CASE(TC_RETURN_GLOBALADDR)
+  NODE_NAME_CASE(CALL_GLOBALADDR)
   }
   return nullptr;
 #undef NODE_NAME_CASE
