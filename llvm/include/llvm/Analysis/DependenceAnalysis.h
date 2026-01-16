@@ -355,6 +355,86 @@ public:
 
   Function *getFunction() const { return F; }
 
+  /// The property of monotonicity of a SCEV. To define the monotonicity, assume
+  /// a SCEV defined within N-nested loops. Let i_k denote the iteration number
+  /// of the k-th loop. Then we can regard the SCEV as an N-ary function:
+  ///
+  ///   F(i_1, i_2, ..., i_N)
+  ///
+  /// For the domain of F, see the comment of SCEVMonotonicityDomain.
+  ///
+  /// A function F is said to be "monotonically increasing with respect to the
+  /// k-th loop" if x <= y implies the following condition:
+  ///
+  ///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) <=
+  ///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
+  ///
+  /// where i_1, ..., i_{k-1}, i_{k+1}, ..., i_N, x, and y are elements of their
+  /// respective domains.
+  ///
+  /// Likewise F is "monotonically decreasing with respect to the k-th loop"
+  /// if x <= y implies
+  ///
+  ///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) >=
+  ///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
+  ///
+  /// A function F that is monotonically increasing or decreasing with respect
+  /// to the k-th loop is simply called "monotonic with respect to k-th loop".
+  ///
+  /// A function F is said to be "multivariate monotonic" when it is monotonic
+  /// with respect to all of the N loops.
+  ///
+  /// Since integer comparison can be either signed or unsigned, we need to
+  /// distinguish monotonicity in the signed sense from that in the unsigned
+  /// sense. Note that the inequality "x <= y" merely indicates loop progression
+  /// and is not affected by the difference between signed and unsigned order.
+  ///
+  /// Currently we only consider monotonicity in a signed sense.
+  enum class SCEVMonotonicityType {
+    /// We don't know anything about the monotonicity of the SCEV.
+    Unknown,
+
+    /// The SCEV is loop-invariant with respect to the outermost loop. In other
+    /// words, the function F corresponding to the SCEV is a constant function.
+    Invariant,
+
+    /// The function F corresponding to the SCEV is multivariate monotonic in a
+    /// signed sense. Note that the multivariate monotonic function may also be
+    /// a constant function. The order employed in the definition of
+    /// monotonicity is not strict order.
+    MultivariateSignedMonotonic,
+  };
+
+  /// The domain of monotonicity. Monotonicity checking is a 2-ary function that
+  /// recieves a function F and a domain D, and returns whether F is monotonic
+  /// over D.
+  ///
+  /// Note: Let F be an N-ary function:
+  ///
+  ///   F(i_1, i_2, ..., i_N)
+  ///
+  /// In other words, F is a SCEV defined within N-nested loops. Here, loops are
+  /// numbered from outermost to innermost. That is, the first loop is the
+  /// outermost loop and i_1 is its iteration number. Similarly, the N-th loop
+  /// is the innermost loop and i_N is its iteration number.
+  enum class SCEVMonotonicityDomain {
+    /// [0, BTC_1] x [0, BTC_2] x ... x [0, BTC_N], where BTC_k is the exact
+    /// backedge-taken count of the k-th loop. If either of BTC_k is unknown,
+    /// the entire domain is ill-defined for F.
+    Entire,
+
+    /// [L_1, U_1] x [L_2, U_2] x ... x [L_N, U_N], where L_k and U_k are the
+    /// natural numbers that satisfy the following conditions:
+    ///
+    ///   If F(c_1, ..., c_N) is "actually executed", then L_k <= c_k <= U_k.
+    ///
+    /// This means that the effective domain is a superset of where F is
+    /// actually executed. Notably, L_k and U_k are not explicitly computed. We
+    /// only require the existence of such L_k and U_k. Also, we do not require
+    /// L_k and U_k to be the tightest bounds.
+    Effective,
+  };
+
 private:
   AAResults *AA;
   ScalarEvolution *SE;

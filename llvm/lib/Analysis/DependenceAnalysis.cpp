@@ -211,101 +211,22 @@ void DependenceAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 namespace {
 
-/// The property of monotonicity of a SCEV. To define the monotonicity, assume
-/// a SCEV defined within N-nested loops. Let i_k denote the iteration number
-/// of the k-th loop. Then we can regard the SCEV as an N-ary function:
-///
-///   F(i_1, i_2, ..., i_N)
-///
-/// For the domain of F, see the comment of SCEVMonotonicityDomain.
-///
-/// A function F is said to be "monotonically increasing with respect to the
-/// k-th loop" if x <= y implies the following condition:
-///
-///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) <=
-///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
-///
-/// where i_1, ..., i_{k-1}, i_{k+1}, ..., i_N, x, and y are elements of their
-/// respective domains.
-///
-/// Likewise F is "monotonically decreasing with respect to the k-th loop"
-/// if x <= y implies
-///
-///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) >=
-///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
-///
-/// A function F that is monotonically increasing or decreasing with respect to
-/// the k-th loop is simply called "monotonic with respect to k-th loop".
-///
-/// A function F is said to be "multivariate monotonic" when it is monotonic
-/// with respect to all of the N loops.
-///
-/// Since integer comparison can be either signed or unsigned, we need to
-/// distinguish monotonicity in the signed sense from that in the unsigned
-/// sense. Note that the inequality "x <= y" merely indicates loop progression
-/// and is not affected by the difference between signed and unsigned order.
-///
-/// Currently we only consider monotonicity in a signed sense.
-enum class SCEVMonotonicityType {
-  /// We don't know anything about the monotonicity of the SCEV.
-  Unknown,
-
-  /// The SCEV is loop-invariant with respect to the outermost loop. In other
-  /// words, the function F corresponding to the SCEV is a constant function.
-  Invariant,
-
-  /// The function F corresponding to the SCEV is multivariate monotonic in a
-  /// signed sense. Note that the multivariate monotonic function may also be a
-  /// constant function. The order employed in the definition of monotonicity
-  /// is not strict order.
-  MultivariateSignedMonotonic,
-};
-
-/// The domain of monotonicity. Monotonicity checking is a 2-ary function that
-/// recieves a function F and a domain D, and returns whether F is monotonic
-/// over D.
-///
-///
-/// Note: Let F be an N-ary function:
-///
-///   F(i_1, i_2, ..., i_N)
-///
-/// In other words, F is a SCEV defined within N-nested loops. Here, loops are
-/// numbered from outermost to innermost. That is, the first loop is the
-/// outermost loop and i_1 is its iteration number. Similarly, the N-th loop is
-/// the innermost loop and i_N is its iteration number.
-enum class SCEVMonotonicityDomain {
-  /// [0, BTC_1] x [0, BTC_2] x ... x [0, BTC_N], where BTC_k is the exact
-  /// backedge-taken count of the k-th loop. If either of BTC_k is unknown, the
-  /// entire domain is ill-defined for F.
-  Entire,
-
-  /// [L_1, U_1] x [L_2, U_2] x ... x [L_N, U_N], where L_k and U_k are the
-  /// natural numbers that satisfy the following conditions:
-  ///
-  ///   If F(c_1, ..., c_N) is "actually executed", then L_k <= c_k <= U_k.
-  ///
-  /// This means that the effective domain is a superset of where F is actually
-  /// executed. Notably, L_k and U_k are not explicitly computed. We only
-  /// require the existence of such L_k and U_k. Also, we do not require L_k and
-  /// U_k to be the tightest bounds.
-  Effective,
-};
-
 struct SCEVMonotonicity {
-  SCEVMonotonicity(SCEVMonotonicityType Type,
+  SCEVMonotonicity(DependenceInfo::SCEVMonotonicityType Type,
                    const SCEV *FailurePoint = nullptr);
 
-  SCEVMonotonicityType getType() const { return Type; }
+  DependenceInfo::SCEVMonotonicityType getType() const { return Type; }
 
   const SCEV *getFailurePoint() const { return FailurePoint; }
 
-  bool isUnknown() const { return Type == SCEVMonotonicityType::Unknown; }
+  bool isUnknown() const {
+    return Type == DependenceInfo::SCEVMonotonicityType::Unknown;
+  }
 
   void print(raw_ostream &OS, unsigned Depth) const;
 
 private:
-  SCEVMonotonicityType Type;
+  DependenceInfo::SCEVMonotonicityType Type;
 
   /// The subexpression that caused Unknown. Mainly for debugging purpose.
   const SCEV *FailurePoint;
@@ -323,9 +244,9 @@ struct SCEVMonotonicityChecker
   /// Check the monotonicity of \p Expr over \p Domain. \p Expr must be integer
   /// type. If \p OutermostLoop is not null, \p Expr must be defined in \p
   /// OutermostLoop or one of its nested loops.
-  SCEVMonotonicity checkMonotonicity(const SCEV *Expr,
-                                     const Loop *OutermostLoop,
-                                     SCEVMonotonicityDomain Domain);
+  SCEVMonotonicity
+  checkMonotonicity(const SCEV *Expr, const Loop *OutermostLoop,
+                    DependenceInfo::SCEVMonotonicityDomain Domain);
 
 private:
   ScalarEvolution *SE;
@@ -334,7 +255,7 @@ private:
   const Loop *OutermostLoop;
 
   /// The domain of monotonicity being checked.
-  SCEVMonotonicityDomain Domain;
+  DependenceInfo::SCEVMonotonicityDomain Domain;
 
   /// Set to true if we have found an addrec of the innermost loop during the
   /// visit.
@@ -349,7 +270,8 @@ private:
 
   /// A helper to create an Unknown SCEVMonotonicity.
   SCEVMonotonicity createUnknown(const SCEV *FailurePoint) {
-    return SCEVMonotonicity(SCEVMonotonicityType::Unknown, FailurePoint);
+    return SCEVMonotonicity(DependenceInfo::SCEVMonotonicityType::Unknown,
+                            FailurePoint);
   }
 
   /// An auxiliary function for visitAddRecExpr.
@@ -358,10 +280,10 @@ private:
   SCEVMonotonicity visitAddRecExpr(const SCEVAddRecExpr *Expr);
 
   SCEVMonotonicity visitConstant(const SCEVConstant *) {
-    return SCEVMonotonicity(SCEVMonotonicityType::Invariant);
+    return SCEVMonotonicity(DependenceInfo::SCEVMonotonicityType::Invariant);
   }
   SCEVMonotonicity visitVScale(const SCEVVScale *) {
-    return SCEVMonotonicity(SCEVMonotonicityType::Invariant);
+    return SCEVMonotonicity(DependenceInfo::SCEVMonotonicityType::Invariant);
   }
 
   // TODO: Handle more cases.
@@ -527,10 +449,12 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
       const SCEV *AccessFn = SE.removePointerBase(PtrSCEV);
       OS.indent(2) << "Inst: " << Inst << "\n";
       OS.indent(2) << "Expr: " << *AccessFn << "\n";
-      for (SCEVMonotonicityDomain D : {SCEVMonotonicityDomain::Entire,
-                                       SCEVMonotonicityDomain::Effective}) {
-        OS.indent(2) << (D == SCEVMonotonicityDomain::Entire ? "Entire"
-                                                             : "Effective")
+      for (DependenceInfo::SCEVMonotonicityDomain D :
+           {DependenceInfo::SCEVMonotonicityDomain::Entire,
+            DependenceInfo::SCEVMonotonicityDomain::Effective}) {
+        OS.indent(2) << (D == DependenceInfo::SCEVMonotonicityDomain::Entire
+                             ? "Entire"
+                             : "Effective")
                      << " Domain:\n";
         SCEVMonotonicity Mon =
             Checker.checkMonotonicity(AccessFn, OutermostLoop, D);
@@ -737,26 +661,26 @@ bool FullDependence::inSameSDLoops(unsigned Level) const {
 //===----------------------------------------------------------------------===//
 // SCEVMonotonicity
 
-SCEVMonotonicity::SCEVMonotonicity(SCEVMonotonicityType Type,
+SCEVMonotonicity::SCEVMonotonicity(DependenceInfo::SCEVMonotonicityType Type,
                                    const SCEV *FailurePoint)
     : Type(Type), FailurePoint(FailurePoint) {
-  assert(
-      ((Type == SCEVMonotonicityType::Unknown) == (FailurePoint != nullptr)) &&
-      "FailurePoint must be provided iff Type is Unknown");
+  assert(((Type == DependenceInfo::SCEVMonotonicityType::Unknown) ==
+          (FailurePoint != nullptr)) &&
+         "FailurePoint must be provided iff Type is Unknown");
 }
 
 void SCEVMonotonicity::print(raw_ostream &OS, unsigned Depth) const {
   OS.indent(Depth) << "Monotonicity: ";
   switch (Type) {
-  case SCEVMonotonicityType::Unknown:
+  case DependenceInfo::SCEVMonotonicityType::Unknown:
     assert(FailurePoint && "FailurePoint must be provided for Unknown");
     OS << "Unknown\n";
     OS.indent(Depth) << "Reason: " << *FailurePoint << "\n";
     break;
-  case SCEVMonotonicityType::Invariant:
+  case DependenceInfo::SCEVMonotonicityType::Invariant:
     OS << "Invariant\n";
     break;
-  case SCEVMonotonicityType::MultivariateSignedMonotonic:
+  case DependenceInfo::SCEVMonotonicityType::MultivariateSignedMonotonic:
     OS << "MultivariateSignedMonotonic\n";
     break;
   }
@@ -768,14 +692,13 @@ bool SCEVMonotonicityChecker::isLoopInvariant(const SCEV *Expr) const {
 
 SCEVMonotonicity SCEVMonotonicityChecker::invariantOrUnknown(const SCEV *Expr) {
   if (isLoopInvariant(Expr))
-    return SCEVMonotonicity(SCEVMonotonicityType::Invariant);
+    return SCEVMonotonicity(DependenceInfo::SCEVMonotonicityType::Invariant);
   return createUnknown(Expr);
 }
 
-SCEVMonotonicity
-SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
-                                           const Loop *OutermostLoop,
-                                           SCEVMonotonicityDomain Domain) {
+SCEVMonotonicity SCEVMonotonicityChecker::checkMonotonicity(
+    const SCEV *Expr, const Loop *OutermostLoop,
+    DependenceInfo::SCEVMonotonicityDomain Domain) {
   assert((!OutermostLoop || OutermostLoop->isOutermost()) &&
          "OutermostLoop must be outermost");
   assert(Expr->getType()->isIntegerTy() && "Expr must be integer type");
@@ -814,7 +737,7 @@ SCEVMonotonicityChecker::visitAddRecExprAux(const SCEVAddRecExpr *Expr) {
     return createUnknown(Expr);
 
   switch (Domain) {
-  case SCEVMonotonicityDomain::Entire:
+  case DependenceInfo::SCEVMonotonicityDomain::Entire:
     // If this is not the innermost loop, only checking nowrap is not enough.
     // Consider the following pseudo code:
     //
@@ -835,12 +758,13 @@ SCEVMonotonicityChecker::visitAddRecExprAux(const SCEVAddRecExpr *Expr) {
     if (!SE->hasLoopInvariantBackedgeTakenCount(L))
       return createUnknown(Expr);
     break;
-  case SCEVMonotonicityDomain::Effective:
+  case DependenceInfo::SCEVMonotonicityDomain::Effective:
     // Nothing to do for now.
     break;
   }
 
-  return SCEVMonotonicity(SCEVMonotonicityType::MultivariateSignedMonotonic);
+  return SCEVMonotonicity(
+      DependenceInfo::SCEVMonotonicityType::MultivariateSignedMonotonic);
 }
 
 SCEVMonotonicity
