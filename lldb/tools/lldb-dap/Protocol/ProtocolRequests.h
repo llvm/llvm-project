@@ -318,10 +318,10 @@ using LaunchResponse = VoidResponse;
 #define LLDB_DAP_INVALID_FRAME_ID UINT64_MAX
 
 struct DAPSession {
-  /// A Unique ID of an existing target to attach to.
+  /// A unique ID of an existing target to attach to.
   lldb::user_id_t targetId;
 
-  /// A Unique ID of an existing debugger instance to use.
+  /// A unique ID of an existing debugger instance to use.
   lldb::user_id_t debuggerId;
 };
 bool fromJSON(const llvm::json::Value &, DAPSession &, llvm::json::Path);
