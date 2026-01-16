@@ -1814,8 +1814,6 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
-  Value *getPointerOperand() const { return getOperand(1); }
-
   Type *getBaseType() const {
     return getParamAttr(0, Attribute::ElementType).getValueAsType();
   }
@@ -1825,14 +1823,10 @@ public:
   Type *getResultElementType() const {
     Type *CurrentType = getBaseType();
     for (unsigned I = 0; I < getIndicesCount(); I++) {
-      Value *V = getOperand(I + 1);
-      ConstantInt *CI = dyn_cast<ConstantInt>(V);
-      if (!CI)
-        return nullptr;
-
       if (ArrayType *AT = dyn_cast<ArrayType>(CurrentType)) {
         CurrentType = AT->getElementType();
       } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
+        ConstantInt *CI = cast<ConstantInt>(getOperand(I + 1));
         CurrentType = ST->getElementType(CI->getZExtValue());
       } else {
         // FIXME(Keenuts): add testing reaching those places once initial
