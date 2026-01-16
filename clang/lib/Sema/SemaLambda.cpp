@@ -2166,7 +2166,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
   TemplateOrNonTemplateCallOperatorDecl->setLexicalDeclContext(Class);
 
   {
-    ContextRAII SaveContext(*this, CallOperator, /*NewThisContext=*/false);
+    ContextRAII SavedContext(*this, CallOperator, /*NewThisContext=*/false);
     PopExpressionEvaluationContext();
   }
 
