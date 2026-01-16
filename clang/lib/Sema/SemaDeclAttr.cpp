@@ -6510,7 +6510,7 @@ static void handleRequiresCapabilityAttr(Sema &S, Decl *D,
 static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Expr *CE = AL.getArgAsExpr(0);
   // If the expression is dependent we merely attach an unevaluated annotation
-  // to be later evaluated at instantiation
+  // to be later evaluated at instantiation.
   if (CE->isValueDependent()) {
     D->addAttr(CXX26AnnotationAttr::Create(S.Context, CE, AL));
     return;
