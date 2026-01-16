@@ -1103,7 +1103,7 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
     omp.terminator
   }
 
-  // CHECK: omp.teams num_teams( to %{{.+}} : i32)
+  // CHECK: omp.teams num_teams(to %{{.+}} : i32)
   omp.teams num_teams(to %ub : i32) {
     // CHECK: omp.terminator
     omp.terminator
@@ -3084,7 +3084,7 @@ func.func @omp_target_private_with_map_idx(%map1: memref<?xi32>, %map2: memref<?
 
 func.func @omp_target_host_eval(%x : i32) {
   // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
-  // CHECK: omp.teams num_teams( to %[[HOST_ARG]] : i32)
+  // CHECK: omp.teams num_teams(to %[[HOST_ARG]] : i32)
   // CHECK-SAME: thread_limit(%[[HOST_ARG]] : i32)
   omp.target host_eval(%x -> %arg0 : i32) {
     omp.teams num_teams( to %arg0 : i32) thread_limit(%arg0 : i32) {

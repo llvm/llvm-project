@@ -4616,7 +4616,7 @@ static void printNumTeamsClause(OpAsmPrinter &p, Operation *op,
       p << " : " << upperBoundType;
     } else {
       // Upper only: to upper : type
-      p << " to ";
+      p << "to ";
       p.printOperand(upperBound);
       p << " : " << upperBoundType;
     }
