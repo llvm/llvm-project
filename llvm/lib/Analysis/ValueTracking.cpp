@@ -5890,6 +5890,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (P->getNumIncomingValues() == 2) {
       Value *RecurValue = P->getIncomingValue(1);
       IntrinsicInst* I = dyn_cast<IntrinsicInst>(RecurValue);
+      if (!I)
+        break;
       Value *R, *L;
       Value *Init;
       PHINode *PN;
