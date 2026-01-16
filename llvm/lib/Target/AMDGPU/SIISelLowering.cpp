@@ -18694,7 +18694,7 @@ getPrivateAtomicExpansionKind(const GCNSubtarget &STI) {
 }
 
 TargetLowering::AtomicExpansionKind
-SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return getPrivateAtomicExpansionKind(*getSubtarget());
@@ -18793,7 +18793,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
           Op == AtomicRMWInst::Xor) {
         // Atomic sub/or/xor do not work over PCI express, but atomic add
         // does. InstCombine transforms these with 0 to or, so undo that.
-        if (Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
+        if (const Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
             ConstVal && ConstVal->isNullValue())
           return AtomicExpansionKind::CustomExpand;
       }
@@ -18992,7 +18992,8 @@ SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
+SITargetLowering::shouldExpandAtomicCmpXchgInIR(
+    const AtomicCmpXchgInst *CmpX) const {
   unsigned AddrSpace = CmpX->getPointerAddressSpace();
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return getPrivateAtomicExpansionKind(*getSubtarget());
