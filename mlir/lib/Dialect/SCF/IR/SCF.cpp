@@ -311,7 +311,8 @@ void ExecuteRegionOp::getSuccessorRegions(
 }
 
 ValueRange ExecuteRegionOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getOperation()->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2137,7 +2138,8 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
 }
 
 ValueRange IfOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getOperation()->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
@@ -3875,7 +3877,8 @@ void IndexSwitchOp::getSuccessorRegions(
 }
 
 ValueRange IndexSwitchOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getOperation()->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 void IndexSwitchOp::getEntrySuccessorRegions(

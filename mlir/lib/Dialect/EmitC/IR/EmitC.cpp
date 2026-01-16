@@ -893,7 +893,8 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
 }
 
 ValueRange IfOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getOperation()->getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
