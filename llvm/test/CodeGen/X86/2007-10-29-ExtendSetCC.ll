@@ -27,16 +27,16 @@ define signext i16 @t_freeze(ptr %p)   {
 ; CHECK-LABEL: t_freeze:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movzwl (%ecx), %eax
-; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    movswl (%ecx), %eax
+; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    js .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %cond_next
-; CHECK-NEXT:    cwtl
 ; CHECK-NEXT:    andl $15, %eax
 ; CHECK-NEXT:    movl %eax, (%ecx)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB1_1: # %cond_true
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retl
 entry:
 	%ld = load i16, ptr %p, align 2
