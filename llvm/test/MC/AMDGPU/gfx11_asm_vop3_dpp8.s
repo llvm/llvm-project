@@ -246,7 +246,7 @@
 //
 //  <OPS-32-32-32-16>=
 //      v5, v1, v2, <SRC16> dpp8:[7,6,5,4,3,2,1,0]
-//      v255, v255, v255, v255 dpp8:[7,6,5,4,3,2,1,0]
+//      v255, v255, v255, v255.l dpp8:[7,6,5,4,3,2,1,0]
 //      v5, v1, v2, v3.l dpp8:[7,6,5,4,3,2,1,0] <FI>
 //      v5, v1, v2, v3.l <DPP>
 //
@@ -630,9 +630,8 @@ v_alignbit_b32_e64_dpp v5, v1, v2, 0.5 dpp8:[7,6,5,4,3,2,1,0]
 v_alignbit_b32_e64_dpp v5, v1, v2, src_scc dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_alignbit_b32_e64_dpp v5, v1, v2, src_scc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x16,0xd6,0xe9,0x04,0xf6,0x03,0x01,0x77,0x39,0x05]
 
-v_alignbit_b32_e64_dpp v255, v255, v255, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11-ASM: v_alignbit_b32_e64_dpp v255, v255, v255, v255 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xff,0x00,0x16,0xd6,0xe9,0xfe,0xff,0x07,0xff,0x77,0x39,0x05]
-// GFX11-DIS: v_alignbit_b32_e64_dpp v255, v255, v255, v255.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xff,0x00,0x16,0xd6,0xe9,0xfe,0xff,0x07,0xff,0x77,0x39,0x05]
+v_alignbit_b32_e64_dpp v255, v255, v255, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: v_alignbit_b32_e64_dpp v255, v255, v255, v255.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xff,0x00,0x16,0xd6,0xe9,0xfe,0xff,0x07,0xff,0x77,0x39,0x05]
 
 v_alignbit_b32_e64_dpp v5, v1, v2, v3.l dpp8:[7,6,5,4,3,2,1,0] fi:0
 // GFX11: v_alignbit_b32_e64_dpp v5, v1, v2, v3.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x16,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
@@ -692,9 +691,8 @@ v_alignbyte_b32_e64_dpp v5, v1, v2, 0.5 dpp8:[7,6,5,4,3,2,1,0]
 v_alignbyte_b32_e64_dpp v5, v1, v2, src_scc dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_alignbyte_b32_e64_dpp v5, v1, v2, src_scc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x17,0xd6,0xe9,0x04,0xf6,0x03,0x01,0x77,0x39,0x05]
 
-v_alignbyte_b32_e64_dpp v255, v255, v255, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11-ASM: v_alignbyte_b32_e64_dpp v255, v255, v255, v255 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xff,0x00,0x17,0xd6,0xe9,0xfe,0xff,0x07,0xff,0x77,0x39,0x05]
-// GFX11-DIS: v_alignbyte_b32_e64_dpp v255, v255, v255, v255.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xff,0x00,0x17,0xd6,0xe9,0xfe,0xff,0x07,0xff,0x77,0x39,0x05]
+v_alignbyte_b32_e64_dpp v255, v255, v255, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: v_alignbyte_b32_e64_dpp v255, v255, v255, v255.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xff,0x00,0x17,0xd6,0xe9,0xfe,0xff,0x07,0xff,0x77,0x39,0x05]
 
 v_alignbyte_b32_e64_dpp v5, v1, v2, v3.l dpp8:[7,6,5,4,3,2,1,0] fi:0
 // GFX11: v_alignbyte_b32_e64_dpp v5, v1, v2, v3.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x17,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
