@@ -1,22 +1,28 @@
-; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-compute %s | FileCheck %s
+; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-compute %s | FileCheck --check-prefix LOWER %s
+; RUN: opt -S -scalarizer -mtriple=dxil-pc-shadermodel6.3-library < %s | FileCheck --check-prefix SCALAR %s
 
 %dx.types.fouri32 = type { i32, i32, i32, i32 }
 
-define <4 x i32> @wave_ballot_simple(i1 noundef %p1) {
+define %dx.types.fouri32 @wave_ballot_simple(i1 noundef %p1) {
 entry:
-; CHECK: call %dx.types.fouri32 @dx.op.waveActiveBallot(i32 116, i1 %p1)
+; LOWER: call %dx.types.fouri32 @dx.op.waveActiveBallot(i32 116, i1 %p1)
+; SCALAR: call { i32, i32, i32, i32 } @llvm.dx.wave.ballot.i32(i1 %p1)
+
+  %s = call %dx.types.fouri32 @llvm.dx.wave.ballot(i1 %p1)
+ 
+; Scalarization may occur
+; CHECK: extractvalue
+; CHECK: insertvalue
+; CHECK: extractvalue
+; CHECK: insertvalue
+; CHECK: extractvalue
+; CHECK: insertvalue
+; CHECK: extractvalue
+; CHECK: insertvalue
+
 ; CHECK-NOT: ret %dx.types.fouri32
 ; CHECK: ret <4 x i32>
-  %s = call %dx.types.fouri32 @llvm.dx.wave.ballot(i1 %p1)
-  %v0 = extractvalue %dx.types.fouri32 %s, 0
-  %v1 = extractvalue %dx.types.fouri32 %s, 1
-  %v2 = extractvalue %dx.types.fouri32 %s, 2
-  %v3 = extractvalue %dx.types.fouri32 %s, 3
-  %vec = insertelement <4 x i32> poison, i32 %v0, i32 0
-  %vec1 = insertelement <4 x i32> %vec, i32 %v1, i32 1
-  %vec2 = insertelement <4 x i32> %vec1, i32 %v2, i32 2
-  %vec3 = insertelement <4 x i32> %vec2, i32 %v3, i32 3
-  ret <4 x i32> %vec3
+  ret %dx.types.fouri32 %s
 }
 
 declare %dx.types.fouri32 @llvm.dx.wave.ballot(i1)
