@@ -16,7 +16,6 @@
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 
@@ -120,10 +119,10 @@ void Fortran::lower::genChangeTeamConstruct(
   TODO(converter.getCurrentLocation(), "coarray: CHANGE TEAM construct");
 }
 
-void Fortran::lower::genChangeTeamStmt(
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::pft::Evaluation &,
-    const Fortran::parser::ChangeTeamStmt &stmt) {
+mif::ChangeTeamOp
+Fortran::lower::genChangeTeamStmt(Fortran::lower::AbstractConverter &converter,
+                                  Fortran::lower::pft::Evaluation &,
+                                  const Fortran::parser::ChangeTeamStmt &stmt) {
   mlir::Location loc = converter.getCurrentLocation();
   converter.checkCoarrayEnabled();
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
@@ -164,9 +163,7 @@ void Fortran::lower::genChangeTeamStmt(
       Fortran::semantics::GetExpr(std::get<Fortran::parser::TeamValue>(stmt.t));
   team = fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
 
-  mif::ChangeTeamOp changeOp = mif::ChangeTeamOp::create(
-      builder, loc, team, statAddr, errMsgAddr, /*terminator*/ false);
-  builder.setInsertionPointToStart(changeOp.getBody());
+  return mif::ChangeTeamOp::create(builder, loc, team, statAddr, errMsgAddr);
 }
 
 void Fortran::lower::genEndChangeTeamStmt(
@@ -198,9 +195,7 @@ void Fortran::lower::genEndChangeTeamStmt(
                statOrErr.u);
   }
 
-  mif::EndTeamOp endOp =
-      mif::EndTeamOp::create(builder, loc, statAddr, errMsgAddr);
-  builder.setInsertionPointAfter(endOp.getParentOp());
+  mif::EndTeamOp::create(builder, loc, statAddr, errMsgAddr);
 }
 
 void Fortran::lower::genFormTeamStatement(

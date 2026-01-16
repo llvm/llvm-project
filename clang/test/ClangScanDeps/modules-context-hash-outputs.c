@@ -1,5 +1,5 @@
 // If secondary output files such as .d are enabled, ensure it affects the
-// module context hash since it may impact the resulting module build commands.
+// context hash since it may impact the resulting module build commands.
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
