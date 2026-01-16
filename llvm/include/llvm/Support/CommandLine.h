@@ -597,7 +597,9 @@ public:
     Value = V;
   }
 
-  // Returns whether this instance matches V.
+  // If the option has a value assigned and the data type is equality-comparable
+  // with itself, returns the result of comparing `V` with the stored value.
+  // Otherwise, returns false.
   bool compare(const DataType &V) const {
     if constexpr (has_equality_comparison_v<DataType>) {
       return Valid && (Value == V);
