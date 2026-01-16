@@ -444,10 +444,10 @@ public:
   getRuntimeLibcallSymbols(const Triple &TT);
 
 protected:
-  // Finalise inputs before run().
+  // Called at the start of run().
   virtual Error handleArchiveInputs() { return Error::success(); }
 
-  // Clean up after run().
+  // Called before returning from run().
   virtual void cleanup() {}
 
 private:
