@@ -4392,7 +4392,10 @@ libc_math_function(name = "ilogb")
 
 libc_math_function(name = "ilogbf")
 
-libc_math_function(name = "ilogbl")
+libc_math_function(
+    name = "ilogbl",
+    additional_deps = ["__support_math_ilogbl"],
+)
 
 libc_math_function(name = "ilogbf128")
 
@@ -7929,5 +7932,13 @@ libc_function(
         ":__support_common",
         ":types_size_t",
         ":types_wchar_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ilogbl",
+    hdrs = ["src/__support/math/ilogbl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
     ],
 )

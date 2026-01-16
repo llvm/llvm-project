@@ -957,6 +957,16 @@ add_header_library(
 )
 
 add_header_library(
+  ilogbl
+  HDRS
+    ilogbl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   range_reduction_double
   HDRS
     range_reduction_double_common.h

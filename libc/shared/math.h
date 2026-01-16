@@ -64,6 +64,7 @@
 #include "math/fsqrt.h"
 #include "math/hypotf.h"
 #include "math/ilogbf16.h"
+#include "math/ilogbl.h"
 #include "math/ldexpf.h"
 #include "math/ldexpf128.h"
 #include "math/ldexpf16.h"
