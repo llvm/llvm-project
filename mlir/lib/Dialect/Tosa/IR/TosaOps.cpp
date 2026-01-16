@@ -822,9 +822,8 @@ static LogicalResult verifyConvOpErrorIf(T op) {
       const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
       if (outputSize != ShapedType::kDynamic && calculatedOutSize != outputSize)
         return op.emitOpError("calculated output ")
-               << dimName << " did not match expected: "
-               << "calculated=" << calculatedOutSize
-               << ", expected=" << outputSize;
+               << dimName << " did not match expected: " << "calculated="
+               << calculatedOutSize << ", expected=" << outputSize;
 
       return success();
     };
@@ -1112,9 +1111,8 @@ static LogicalResult verifyPoolingOp(T op) {
     const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
     if (ShapedType::isStatic(outputSize) && calculatedOutSize != outputSize)
       return op.emitOpError("calculated output ")
-             << dimName << " did not match expected: "
-             << "calculated=" << calculatedOutSize
-             << ", expected=" << outputSize;
+             << dimName << " did not match expected: " << "calculated="
+             << calculatedOutSize << ", expected=" << outputSize;
 
     return success();
   };
@@ -2032,8 +2030,7 @@ LogicalResult MatmulTBlockScaledOp::verify() {
       multiplesOfC != C / blockSize)
     return emitOpError(
                "expect scale operands dimension 2 to equal C/block_size (")
-           << C << "/" << blockSize << ")"
-           << ", got " << multiplesOfC;
+           << C << "/" << blockSize << ")" << ", got " << multiplesOfC;
 
   // Verify output shape
   N = ShapedType::isDynamic(N) ? D : N;
@@ -3986,8 +3983,8 @@ LogicalResult CastFromBlockScaledOp::verify() {
   const Type outputDataType = getResult().getType();
   if (failed(verifyCompatibleShape(inputDataType, outputDataType)))
     return emitOpError() << "require compatible shapes for input_data ("
-                         << inputDataType << ") and "
-                         << "output_data (" << outputDataType << ")";
+                         << inputDataType << ") and " << "output_data ("
+                         << outputDataType << ")";
 
   const ShapeAdaptor inputDataShape = ShapeAdaptor(inputDataType);
 
@@ -4014,10 +4011,10 @@ LogicalResult CastFromBlockScaledOp::verify() {
           failed(verifyCompatibleShape(
               ArrayRef<int64_t>(inputDataDims).drop_back(1),
               ArrayRef<int64_t>(inputScaleDims).drop_back(1))))
-        return emitOpError() << "require compatible shapes for input_data ("
-                             << inputDataType << ") and "
-                             << "input_scale (" << inputScaleType
-                             << ") except for the last dimension";
+        return emitOpError()
+               << "require compatible shapes for input_data (" << inputDataType
+               << ") and " << "input_scale (" << inputScaleType
+               << ") except for the last dimension";
 
       const SmallVector<int64_t, 2> dimsToCheck{inputDataLastDim / blockSize,
                                                 inputScaleDims.back()};
@@ -4062,8 +4059,8 @@ LogicalResult CastToBlockScaledOp::verify() {
   const Type outputDataType = getResult(0).getType();
   if (failed(verifyCompatibleShape(inputDataType, outputDataType)))
     return emitOpError() << "require compatible shapes for input_data ("
-                         << inputDataType << ") and "
-                         << "output_data (" << outputDataType << ")";
+                         << inputDataType << ") and " << "output_data ("
+                         << outputDataType << ")";
 
   const unsigned int blockSize =
       BlockSizeAttr::getBlockSizeValue(getBlockSize());
@@ -4092,8 +4089,8 @@ LogicalResult CastToBlockScaledOp::verify() {
             ArrayRef<int64_t>(outputDataDims).drop_back(1),
             ArrayRef<int64_t>(outputScaleDims).drop_back(1))))
       return emitOpError() << "require compatible shapes for output_data ("
-                           << outputDataType << ") and "
-                           << "output_scale (" << outputScaleType
+                           << outputDataType << ") and " << "output_scale ("
+                           << outputScaleType
                            << ") except for the last dimension";
 
     const int64_t outputDataLastDim = outputDataDims.back();
@@ -4269,9 +4266,9 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
 
     if (functionType.getNumInputs() != operands.size()) {
       return parser.emitError(parser.getCurrentLocation())
-             << "expected as many input types as operands "
-             << "(expected " << operands.size() << " got "
-             << functionType.getNumInputs() << ")";
+             << "expected as many input types as operands " << "(expected "
+             << operands.size() << " got " << functionType.getNumInputs()
+             << ")";
     }
 
     // Resolve input operands.
@@ -4520,9 +4517,8 @@ ParseResult WhileOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (functionType.getNumInputs() != operands.size()) {
     return parser.emitError(typeLoc)
-           << "expected as many input types as operands "
-           << "(expected " << operands.size() << " got "
-           << functionType.getNumInputs() << ")";
+           << "expected as many input types as operands " << "(expected "
+           << operands.size() << " got " << functionType.getNumInputs() << ")";
   }
 
   // Resolve input operands.
