@@ -10,7 +10,7 @@
 
 // class map
 
-// map(const map& m); // constexpr since C++26
+// constexpr map(const map& m); // constexpr since C++26
 
 #include <cassert>
 #include <map>

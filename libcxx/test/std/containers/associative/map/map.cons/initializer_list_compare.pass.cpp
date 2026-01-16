@@ -12,7 +12,7 @@
 
 // class map
 
-// map(initializer_list<value_type> il, const key_compare& comp); // constexpr since C++26
+// constexpr map(initializer_list<value_type> il, const key_compare& comp); // constexpr since C++26
 
 #include <map>
 #include <cassert>

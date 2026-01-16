@@ -13,7 +13,7 @@
 // class map
 
 // template<typename K>
-//   size_type count(const K& x) const;        // C++14, constexpr since C++26
+//   constexpr size_type count(const K& x) const;        // C++14, constexpr since C++26
 
 #include <cassert>
 #include <map>

@@ -11,7 +11,7 @@
 
 // template <class Key, class T, class Compare, class Allocator, class Predicate>
 //   typename map<Key, T, Compare, Allocator>::size_type
-//   erase_if(map<Key, T, Compare, Allocator>& c, Predicate pred); // constexpr since C++26
+//   constexpr erase_if(map<Key, T, Compare, Allocator>& c, Predicate pred); // constexpr since C++26
 
 #include <map>
 

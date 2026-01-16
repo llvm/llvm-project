@@ -10,7 +10,7 @@
 
 // class map
 
-// void clear() noexcept; // constexpr since C++26
+// constexpr void clear() noexcept; // constexpr since C++26
 
 #include <map>
 #include <cassert>

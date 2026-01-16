@@ -13,13 +13,13 @@
 // class map
 
 // template <class... Args>
-//  pair<iterator, bool> try_emplace(const key_type& k, Args&&... args);          // C++17, constexpr since C++26
+//  constexpr pair<iterator, bool> try_emplace(const key_type& k, Args&&... args);          // C++17, constexpr since C++26
 // template <class... Args>
-//  pair<iterator, bool> try_emplace(key_type&& k, Args&&... args);               // C++17, constexpr since C++26
+//  constexpr pair<iterator, bool> try_emplace(key_type&& k, Args&&... args);               // C++17, constexpr since C++26
 // template <class... Args>
-//  iterator try_emplace(const_iterator hint, const key_type& k, Args&&... args); // C++17, constexpr since C++26
+//  constexpr iterator try_emplace(const_iterator hint, const key_type& k, Args&&... args); // C++17, constexpr since C++26
 // template <class... Args>
-//  iterator try_emplace(const_iterator hint, key_type&& k, Args&&... args);      // C++17, constexpr since C++26
+//  constexpr iterator try_emplace(const_iterator hint, key_type&& k, Args&&... args);      // C++17, constexpr since C++26
 
 #include <map>
 #include <cassert>

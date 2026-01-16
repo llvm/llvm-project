@@ -13,7 +13,7 @@
 // class map
 
 // template <class... Args>
-//   pair<iterator, bool> emplace(Args&&... args); // constexpr since C++26
+//   constexpr pair<iterator, bool> emplace(Args&&... args); // constexpr since C++26
 
 #include <map>
 #include <cassert>

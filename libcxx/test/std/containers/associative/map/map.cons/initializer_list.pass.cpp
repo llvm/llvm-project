@@ -12,7 +12,7 @@
 
 // class map
 
-// map(initializer_list<value_type> il); // constexpr since C++26
+// constexpr map(initializer_list<value_type> il); // constexpr since C++26
 
 #include <map>
 #include <cassert>

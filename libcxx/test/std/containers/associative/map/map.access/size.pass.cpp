@@ -10,7 +10,7 @@
 
 // class map
 
-// size_type size() const;// constexpr since C++26
+// constexpr size_type size() const; // constexpr since C++26
 
 #include <map>
 #include <cassert>

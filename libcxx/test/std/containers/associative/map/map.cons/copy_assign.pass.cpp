@@ -10,7 +10,7 @@
 
 // class map
 
-// map& operator=(const map& m); // constexpr since C++26
+// constexpr map& operator=(const map& m); // constexpr since C++26
 
 #include <algorithm>
 #include <cassert>

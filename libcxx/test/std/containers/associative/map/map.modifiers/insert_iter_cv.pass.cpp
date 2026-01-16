@@ -10,7 +10,7 @@
 
 // class map
 
-// iterator insert(const_iterator position, const value_type& v); // constexpr since C++26
+// constexpr iterator insert(const_iterator position, const value_type& v); // constexpr since C++26
 
 #include <map>
 #include <cassert>

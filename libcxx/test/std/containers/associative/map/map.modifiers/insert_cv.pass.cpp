@@ -10,7 +10,7 @@
 
 // class map
 
-// pair<iterator, bool> insert(const value_type& v); // constexpr since C++26
+// constexpr pair<iterator, bool> insert(const value_type& v); // constexpr since C++26
 
 #include <map>
 #include <cassert>

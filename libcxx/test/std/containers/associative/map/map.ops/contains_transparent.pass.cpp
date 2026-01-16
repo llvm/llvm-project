@@ -13,7 +13,7 @@
 
 // <map>
 
-// template<class K> bool contains(const K& x) const; // C++20, constexpr since C++26
+// template<class K> constexpr bool contains(const K& x) const; // C++20, constexpr since C++26
 
 #include "test_macros.h"
 
