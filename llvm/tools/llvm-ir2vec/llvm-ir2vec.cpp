@@ -227,7 +227,7 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
 /// Generic vocabulary initialization and processing
 template <typename ProcessFunc>
 static Error processWithVocabulary(MIRContext &Ctx, raw_ostream &OS,
-                            bool useLayoutVocab, ProcessFunc processFn) {
+                                   bool useLayoutVocab, ProcessFunc processFn) {
   MIR2VecTool Tool(*Ctx.MMI);
 
   // Initialize appropriate vocabulary type
