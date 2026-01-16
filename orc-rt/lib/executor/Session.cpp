@@ -100,7 +100,7 @@ void Session::shutdownComplete() {
 
 void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
                             orc_rt_WrapperFunctionBuffer ResultBytes) {
-  unwrap(S)->sendWrapperResult(CallId, ResultBytes);
+  unwrap(S)->sendWrapperResult(CallId, WrapperFunctionBuffer(ResultBytes));
 }
 
 } // namespace orc_rt
