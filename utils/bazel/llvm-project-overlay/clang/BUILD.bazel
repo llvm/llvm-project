@@ -1808,7 +1808,6 @@ cc_library(
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
-        "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Option",
         "//llvm:OrcDebugging",

@@ -638,7 +638,6 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
     libc.include.llvm-libc-macros.float16_macros
 )
 

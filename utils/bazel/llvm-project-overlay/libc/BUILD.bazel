@@ -2810,7 +2810,6 @@ libc_support_library(
     deps = [
         ":__support_fputil_fma",
         ":__support_macros_config",
-        ":__support_macros_properties_types",
         ":llvm_libc_macros_float16_macros",
     ],
 )
