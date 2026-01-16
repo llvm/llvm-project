@@ -47,3 +47,9 @@ class TestExprNoAlloc(GDBRemoteTestBase):
         )
 
         self.expect_expr("$x0", result_type="unsigned long", result_value="32")
+        res = self.target.EvaluateExpression("(int)foo()")
+        self.assertFalse(res.GetError().Success())
+        self.assertIn(
+            "Can't evaluate the expression without a running target",
+            res.GetError().GetCString(),
+        )
