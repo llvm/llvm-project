@@ -3536,7 +3536,7 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
   if (Subtarget->is32Bit()) {
     // FIXME: This was carried from X86tcret_1reg which was used for 32-bit,
     // but it could apply to 64-bit too.
-    const SDValue& BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
+    const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
     if (isa<FrameIndexSDNode>(BasePtr)) {
       // FIXME: This isn't covered by any tests. Is it necessary?
       LoadGPRs -= 1; // Base is ESP, no reg needed.
