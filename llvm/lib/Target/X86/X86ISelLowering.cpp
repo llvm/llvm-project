@@ -62732,7 +62732,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                         ? &X86::GR32RegClass
                                         : &X86::GR32_NOREX2RegClass);
-        if (VT != MVT::f80 && !VT.isVector())
+        if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
           return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                         ? &X86::GR64RegClass
                                         : &X86::GR64_NOREX2RegClass);
@@ -62748,7 +62748,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
         return std::make_pair(0U, &X86::GR32_ABCDRegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64_ABCDRegClass);
       break;
     case 'r':   // GENERAL_REGS
@@ -62766,7 +62766,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                       ? &X86::GR32RegClass
                                       : &X86::GR32_NOREX2RegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                       ? &X86::GR64RegClass
                                       : &X86::GR64_NOREX2RegClass);
@@ -62779,7 +62779,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
         return std::make_pair(0U, &X86::GR32_NOREXRegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64_NOREXRegClass);
       break;
     case 'f':  // FP Stack registers.
@@ -63007,7 +63007,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
       if (VT == MVT::i32 || VT == MVT::f32)
         return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
       break;
     case 'R':
@@ -63017,7 +63017,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::GR16RegClass);
       if (VT == MVT::i32 || VT == MVT::f32)
         return std::make_pair(0U, &X86::GR32RegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64RegClass);
       break;
     }
