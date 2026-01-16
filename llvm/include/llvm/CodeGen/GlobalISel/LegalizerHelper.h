@@ -476,6 +476,8 @@ public:
                                            LLT Ty);
   LLVM_ABI LegalizeResult narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
                                            LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
+                                           LLT Ty);
   LLVM_ABI LegalizeResult narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx,
                                             LLT Ty);
   LLVM_ABI LegalizeResult narrowScalarFLDEXP(MachineInstr &MI, unsigned TypeIdx,
