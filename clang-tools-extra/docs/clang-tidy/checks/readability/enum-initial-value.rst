@@ -36,13 +36,18 @@ The following three cases are accepted:
     c2 = 2,
   };
 
-  enum D {    // Invalid, d1 is not explicitly initialized!
+  enum D {    // warning: initial values in enum 'D' are not consistent,
+              //          consider explicit initialization of all, none or only
+              //          the first enumerator (uninitialized enumerators: 'd1')
     d0 = 0,
     d1,
     d2 = 2,
   };
 
-  enum E {    // Invalid, e1, e3, and e5 are not explicitly initialized.
+  enum E {    // warning: initial values in enum 'E' are not consistent,
+              //          consider explicit initialization of all, none or only
+              //          the first enumerator (uninitialized enumerators:
+              //          'e1', 'e3' and 'e5')
     e0 = 0,
     e1,
     e2 = 2,

@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-enum-initial-value %t
 
 enum class EError {
-  // CHECK-MESSAGES: :[[@LINE-1]]:1:  warning: initial values in enum 'EError' are not consistent
+  // CHECK-MESSAGES: :[[@LINE-1]]:1:  warning: initial values in enum 'EError' are not consistent, consider explicit initialization of all, none or only the first enumerator (uninitialized enumerators: 'EError_b')
   EError_a = 1,
   EError_b,
   // CHECK-FIXES: EError_b = 2,
