@@ -505,9 +505,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasMulHi)
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasMulHi);
 
-  addRulesForGOpcs({G_AMDGPU_MAD_U64_U32, G_AMDGPU_MAD_I64_I32}, Standard)
+  bool hasFullRate = ST->hasFullRate64Ops();
+  addRulesForGOpcs({G_AMDGPU_MAD_U64_U32}, Standard)
       .Div(S64, {{Vgpr64, Vcc}, {Vgpr32, Vgpr32, Vgpr64}})
-      .Uni(S64, {{Sgpr64, SgprS1}, {Sgpr32, Sgpr32, Sgpr64}, UniMAD64});
+      .Uni(S64, {{UniInVgprS64, UniInVcc}, {Vgpr32, Vgpr32, Vgpr64}},
+           hasFullRate)
+      .Uni(S64, {{Sgpr64, SgprS1}, {Sgpr32, Sgpr32, Sgpr64}, UniMAD64},
+           !hasFullRate);
 
   addRulesForGOpcs({G_XOR, G_OR, G_AND}, StandardB)
       .Any({{UniS1}, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}}})
