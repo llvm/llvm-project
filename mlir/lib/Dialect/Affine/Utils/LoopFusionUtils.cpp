@@ -22,6 +22,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -251,20 +252,20 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
                                         FusionStrategy fusionStrategy) {
   // Return 'failure' if 'dstLoopDepth == 0'.
   if (dstLoopDepth == 0) {
-    LLVM_DEBUG(llvm::dbgs() << "Cannot fuse loop nests at depth 0\n");
+    LDBG() << "Cannot fuse loop nests at depth 0";
     return FusionResult::FailPrecondition;
   }
   // Return 'failure' if 'srcForOp' and 'dstForOp' are not in the same block.
   auto *block = srcForOp->getBlock();
   if (block != dstForOp->getBlock()) {
-    LLVM_DEBUG(llvm::dbgs() << "Cannot fuse loop nests in different blocks\n");
+    LDBG() << "Cannot fuse loop nests in different blocks";
     return FusionResult::FailPrecondition;
   }
 
   // Return 'failure' if no valid insertion point for fused loop nest in 'block'
   // exists which would preserve dependences.
   if (!getFusedLoopNestInsertionPoint(srcForOp, dstForOp)) {
-    LLVM_DEBUG(llvm::dbgs() << "Fusion would violate dependences in block\n");
+    LDBG() << "Fusion would violate dependences in block";
     return FusionResult::FailBlockDependence;
   }
 
@@ -277,14 +278,14 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
   // Gather all load and store from 'forOpA' which precedes 'forOpB' in 'block'.
   SmallVector<Operation *, 4> opsA;
   if (!gatherLoadsAndStores(forOpA, opsA)) {
-    LLVM_DEBUG(llvm::dbgs() << "Fusing loops with affine.if unsupported\n");
+    LDBG() << "Fusing loops with affine.if unsupported";
     return FusionResult::FailPrecondition;
   }
 
   // Gather all load and store from 'forOpB' which succeeds 'forOpA' in 'block'.
   SmallVector<Operation *, 4> opsB;
   if (!gatherLoadsAndStores(forOpB, opsB)) {
-    LLVM_DEBUG(llvm::dbgs() << "Fusing loops with affine.if unsupported\n");
+    LDBG() << "Fusing loops with affine.if unsupported";
     return FusionResult::FailPrecondition;
   }
 
@@ -296,7 +297,7 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
     // TODO: 'getMaxLoopDepth' does not support forward slice fusion.
     assert(isSrcForOpBeforeDstForOp && "Unexpected forward slice fusion");
     if (getMaxLoopDepth(opsA, opsB) < dstLoopDepth) {
-      LLVM_DEBUG(llvm::dbgs() << "Fusion would violate loop dependences\n");
+      LDBG() << "Fusion would violate loop dependences";
       return FusionResult::FailFusionDependence;
     }
   }
@@ -339,12 +340,12 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
       strategyOpsA, opsB, dstLoopDepth, numCommonLoops,
       isSrcForOpBeforeDstForOp, srcSlice);
   if (sliceComputationResult.value == SliceComputationResult::GenericFailure) {
-    LLVM_DEBUG(llvm::dbgs() << "computeSliceUnion failed\n");
+    LDBG() << "computeSliceUnion failed";
     return FusionResult::FailPrecondition;
   }
   if (sliceComputationResult.value ==
       SliceComputationResult::IncorrectSliceFailure) {
-    LLVM_DEBUG(llvm::dbgs() << "Incorrect slice computation\n");
+    LDBG() << "Incorrect slice computation";
     return FusionResult::FailIncorrectSlice;
   }
 
@@ -477,7 +478,7 @@ bool mlir::affine::getLoopNestStats(AffineForOp forOpRoot,
     auto *parentForOp = forOp->getParentOp();
     if (forOp != forOpRoot) {
       if (!isa<AffineForOp>(parentForOp)) {
-        LLVM_DEBUG(llvm::dbgs() << "Expected parent AffineForOp\n");
+        LDBG() << "Expected parent AffineForOp";
         return WalkResult::interrupt();
       }
       // Add mapping to 'forOp' from its parent AffineForOp.
@@ -498,7 +499,7 @@ bool mlir::affine::getLoopNestStats(AffineForOp forOpRoot,
     std::optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
     if (!maybeConstTripCount) {
       // Currently only constant trip count loop nests are supported.
-      LLVM_DEBUG(llvm::dbgs() << "Non-constant trip count unsupported\n");
+      LDBG() << "Non-constant trip count unsupported";
       return WalkResult::interrupt();
     }
 

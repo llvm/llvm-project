@@ -430,11 +430,11 @@ bool ScanfSpecifier::fixType(QualType QT, QualType RawQT,
   QualType PT = QT->getPointeeType();
 
   // If it's an enum, get its underlying type.
-  if (const EnumType *ETy = PT->getAs<EnumType>()) {
+  if (const auto *ED = PT->getAsEnumDecl()) {
     // Don't try to fix incomplete enums.
-    if (!ETy->getDecl()->isComplete())
+    if (!ED->isComplete())
       return false;
-    PT = ETy->getDecl()->getIntegerType();
+    PT = ED->getIntegerType();
   }
 
   const BuiltinType *BT = PT->getAs<BuiltinType>();

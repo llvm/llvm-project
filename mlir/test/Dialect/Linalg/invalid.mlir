@@ -109,7 +109,7 @@ func.func @generic_wrong_iterator(%arg0: memref<1xi32>) {
 // -----
 
 func.func @generic_one_d_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
-  // expected-error @+1 {{expected operand rank (1) to match the result rank of indexing_map #0 (2)}}
+  // expected-error @+1 {{expected operand #0 rank (1) to match the result rank of indexing_map (2)}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> (0, 0)> ],
     iterator_types = []}
@@ -123,7 +123,7 @@ func.func @generic_one_d_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i
 
 func.func @generic_scalar_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
   %cst = arith.constant 0.0 : f32
-  // expected-error @+1 {{expected operand rank (0) to match the result rank of indexing_map #0 (1)}}
+  // expected-error @+1 {{expected operand #0 rank (0) to match the result rank of indexing_map (1)}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> (0)>, affine_map<() -> (0, 0)> ],
     iterator_types = []}
@@ -163,6 +163,58 @@ func.func @generic_singular_maps(%arg0: memref<?xf32, affine_map<(i)[off]->(off 
   ^bb(%0: f32, %1: f32):
       linalg.yield %1: f32
   }
+}
+
+// -----
+
+func.func @generic_index_rank0(%arg0: tensor<f32>) -> tensor<f32> {
+// expected-error @+1 {{expected operand #0 rank (0) to match the result rank of indexing_map (1)}}
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0) -> (d0)>,
+      affine_map<(d0) -> (d0)>
+    ],
+    iterator_types = ["parallel"]}
+      ins(%arg0 : tensor<f32>)
+     outs(%arg0 : tensor<f32>) {
+  ^bb(%0: f32, %1: f32):
+    linalg.yield %1 : f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// -----
+
+func.func @generic_index_domain_error(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+// expected-error @+1 {{expected operand #1 rank (1) to match the result rank of indexing_map (2)}}
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0) -> (d0)>,
+      affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]}
+      ins(%arg0 : tensor<4xf32>)
+     outs(%arg0 : tensor<4xf32>) {
+  ^bb(%0: f32):
+    linalg.yield %0 : f32
+  } -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+// -----
+
+#map_with_symbol = affine_map<(d0)[s0] -> (d0 + s0)>
+
+func.func @generic_indexing_map_with_symbol(%arg0: tensor<8xf32>) -> tensor<8xf32> {
+  // expected-error @+1 {{unexpected symbols in indexing_map #0}}
+  %0 = linalg.generic {
+    indexing_maps = [#map_with_symbol, #map_with_symbol],
+    iterator_types = ["parallel"]
+  } ins(%arg0 : tensor<8xf32>)
+    outs(%arg0 : tensor<8xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    linalg.yield %in : f32
+  } -> tensor<8xf32>
+  return %0 : tensor<8xf32>
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -296,7 +348,7 @@ func.func @generic(%arg0: memref<?x?xf32>) {
 // // -----
 
 func.func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?xf32>, %c3: memref<?x?x?xf32>) {
-  // expected-error @+1 {{expected operand rank (2) to match the result rank of indexing_map #1 (3)}}
+  // expected-error @+1 {{expected operand #1 rank (2) to match the result rank of indexing_map (3)}}
   linalg.batch_matmul ins(%a3, %b3: memref<?x?x?xf32>, memref<?x?xf32>)
                      outs(%c3 : memref<?x?x?xf32>)
   return
@@ -352,6 +404,24 @@ func.func @illegal_fill_tensor_with_memref_return
 
 // -----
 
+func.func @illegal_fill_element_type_truncation(%arg0 : tensor<2xf32>, %arg1 : f64) -> tensor<2xf32>
+{
+  // expected-error @+1 {{'linalg.fill' op expected fill value type ('f64') to match output element type ('f32')}}
+  %0 = linalg.fill ins(%arg1 : f64) outs(%arg0 : tensor<2xf32>) -> tensor<2xf32>
+  return %0 : tensor<2xf32>
+}
+
+// -----
+
+func.func @illegal_fill_element_type_extension(%arg0 : tensor<2xi32>, %arg1 : i16) -> tensor<2xi32>
+{
+  // expected-error @+1 {{'linalg.fill' op expected fill value type ('i16') to match output element type ('i32')}}
+  %0 = linalg.fill ins(%arg1 : i16) outs(%arg0 : tensor<2xi32>) -> tensor<2xi32>
+  return %0 : tensor<2xi32>
+}
+
+// -----
+
 func.func @illegal_fill_value_type(%arg0 : tensor<2x2xf32>, %arg1 : tensor<2xf32>) -> tensor<2x2xf32>
 {
   // expected-error @+1 {{expected op with scalar input}}
@@ -371,7 +441,7 @@ func.func @invalid_static_matmul(%arg0: memref<2x4xf32>, %arg1: memref<3x4xf32>,
 // -----
 
 func.func @invalid_scalar_input_matmul(%arg0: f32, %arg1: memref<3x4xf32>, %arg2: memref<2x4xf32>) {
-  // expected-error @+1 {{'linalg.matmul' op expected operand rank (0) to match the result rank of indexing_map #0 (2)}}
+  // expected-error @+1 {{'linalg.matmul' op expected operand #0 rank (0) to match the result rank of indexing_map (2)}}
   linalg.matmul ins(%arg0, %arg1 : f32, memref<3x4xf32>)
                 outs(%arg2 : memref<2x4xf32>)
   return
@@ -483,7 +553,7 @@ func.func @invalid_bcast_b(%arg0: memref<3x5xf32>, %arg1: memref<7xf32>, %arg2: 
 // -----
 
 func.func @invalid_bcast_a_rank_mismatch(%arg0: memref<3x5xf32>, %arg1: memref<5x7xf32>, %arg2: memref<3x7xf32>) {
-  // expected-error @+1 {{'linalg.matmul' op expected operand rank (2) to match the result rank of indexing_map #0 (1)}}
+  // expected-error @+1 {{'linalg.matmul' op expected operand #0 rank (2) to match the result rank of indexing_map (1)}}
   linalg.matmul indexing_maps = [
                        affine_map<(d0, d1, d2) -> (d2)>,
                        affine_map<(d0, d1, d2) -> (d2, d1)>,
@@ -496,7 +566,7 @@ func.func @invalid_bcast_a_rank_mismatch(%arg0: memref<3x5xf32>, %arg1: memref<5
 // -----
 
 func.func @invalid_bcast_b_rank_mismatch(%arg0: memref<3x5xf32>, %arg1: memref<5x7xf32>, %arg2: memref<3x7xf32>) {
-  // expected-error @+1 {{'linalg.matmul' op expected operand rank (2) to match the result rank of indexing_map #1 (1)}}
+  // expected-error @+1 {{'linalg.matmul' op expected operand #1 rank (2) to match the result rank of indexing_map (1)}}
   linalg.matmul indexing_maps = [
                        affine_map<(d0, d1, d2) -> (d0, d2)>,
                        affine_map<(d0, d1, d2) -> (d2)>,
@@ -681,7 +751,7 @@ func.func @map_binary_wrong_yield_operands(
    %add = linalg.map
           ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
           outs(%init:tensor<64xf32>)
-          (%lhs_elem: f32, %rhs_elem: f32) {
+          (%lhs_elem: f32, %rhs_elem: f32, %out: f32) {
             %0 = arith.addf %lhs_elem, %rhs_elem: f32
             // expected-error @+1{{'linalg.yield' op expected number of yield values (2) to match the number of inits / outs operands of the enclosing LinalgOp (1)}}
             linalg.yield %0, %0: f32, f32
@@ -694,11 +764,11 @@ func.func @map_binary_wrong_yield_operands(
 func.func @map_input_mapper_arity_mismatch(
     %lhs: tensor<64xf32>, %rhs: tensor<64xf32>, %init: tensor<64xf32>)
     -> tensor<64xf32> {
-  // expected-error@+1{{'linalg.map' op expects number of operands to match the arity of mapper, but got: 2 and 3}}
+  // expected-error@+1{{'linalg.map' op expects number of operands to match the arity of mapper, but got: 3 and 4}}
   %add = linalg.map
       ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
       outs(%init:tensor<64xf32>)
-      (%lhs_elem: f32, %rhs_elem: f32, %extra_elem: f32) {
+      (%lhs_elem: f32, %rhs_elem: f32, %out: f32, %extra_elem: f32) {
         %0 = arith.addf %lhs_elem, %rhs_elem: f32
         linalg.yield %0: f32
       }
@@ -714,7 +784,7 @@ func.func @map_input_mapper_type_mismatch(
   %add = linalg.map
       ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
       outs(%init:tensor<64xf32>)
-      (%lhs_elem: f64, %rhs_elem: f64) {
+      (%lhs_elem: f64, %rhs_elem: f64, %out: f32) {
         %0 = arith.addf %lhs_elem, %rhs_elem: f64
         linalg.yield %0: f64
       }
@@ -730,7 +800,7 @@ func.func @map_input_output_shape_mismatch(
   %add = linalg.map
       ins(%lhs, %rhs : tensor<64x64xf32>, tensor<64x64xf32>)
       outs(%init:tensor<32xf32>)
-      (%lhs_elem: f32, %rhs_elem: f32) {
+      (%lhs_elem: f32, %rhs_elem: f32, %out: f32) {
         %0 = arith.addf %lhs_elem, %rhs_elem: f32
         linalg.yield %0: f32
       }
@@ -1144,7 +1214,7 @@ func.func @mmt4d_dims_mismatch(%A: tensor<16x16x8x1xf32>,
 func.func @mmt4d_rank_mismatch(%A: tensor<16x16x8x1xf32>,
                  %B: tensor<16x16x8x1xf32>,
                  %C_in: tensor<8x8xf32>) -> tensor<8x8xf32> {
-    // expected-error @+1 {{expected operand rank (2) to match the result rank of indexing_map #2 (4)}}
+    // expected-error @+1 {{expected operand #2 rank (2) to match the result rank of indexing_map (4)}}
     %res = linalg.mmt4d
                      ins(%A, %B: tensor<16x16x8x1xf32>, tensor<16x16x8x1xf32>)
                      outs(%C_in: tensor<8x8xf32>)
@@ -1913,6 +1983,125 @@ func.func @reduce_non_operation_name(%arg0: tensor<4xf32>, %arg1: tensor<f32>) -
 
 // -----
 
+//===----------------------------------------------------------------------===//
+// linalg.pooling_nhwc_*
+//===----------------------------------------------------------------------===//
+
+func.func @pooling_nhwc_max_unsigned_float_type(
+    %input: tensor<1x4x4x1xf32>,
+    %filter: tensor<2x2xf32>,
+    %init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nhwc_max_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xf32>, tensor<2x2xf32>)
+      outs (%init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32>
+  return %0 : tensor<1x2x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nhwc_max_unsigned_i1(
+    %input: tensor<1x4x4x1xi1>,
+    %filter: tensor<2x2xi1>,
+    %init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nhwc_max_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xi1>, tensor<2x2xi1>)
+      outs (%init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1>
+  return %0 : tensor<1x2x2x1xi1>
+}
+
+// -----
+
+func.func @pooling_nhwc_min_unsigned_float_type(
+    %input: tensor<1x4x4x1xf32>,
+    %filter: tensor<2x2xf32>,
+    %init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nhwc_min_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xf32>, tensor<2x2xf32>)
+      outs (%init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32>
+  return %0 : tensor<1x2x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nhwc_min_unsigned_i1(
+    %input: tensor<1x4x4x1xi1>,
+    %filter: tensor<2x2xi1>,
+    %init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nhwc_min_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xi1>, tensor<2x2xi1>)
+      outs (%init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1>
+  return %0 : tensor<1x2x2x1xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// linalg.pooling_nwc_*
+//===----------------------------------------------------------------------===//
+
+func.func @pooling_nwc_max_unsigned_float_type(
+    %input: tensor<1x4x1xf32>,
+    %filter: tensor<2xf32>,
+    %init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nwc_max_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xf32>, tensor<2xf32>)
+      outs (%init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32>
+  return %0 : tensor<1x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nwc_max_unsigned_i1(
+    %input: tensor<1x4x1xi1>,
+    %filter: tensor<2xi1>,
+    %init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nwc_max_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xi1>, tensor<2xi1>)
+      outs (%init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1>
+  return %0 : tensor<1x2x1xi1>
+}
+
+// -----
+
+func.func @pooling_nwc_min_unsigned_float_type(
+    %input: tensor<1x4x1xf32>,
+    %filter: tensor<2xf32>,
+    %init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nwc_min_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xf32>, tensor<2xf32>)
+      outs (%init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32>
+  return %0 : tensor<1x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nwc_min_unsigned_i1(
+    %input: tensor<1x4x1xi1>,
+    %filter: tensor<2xi1>,
+    %init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nwc_min_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xi1>, tensor<2xi1>)
+      outs (%init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1>
+  return %0 : tensor<1x2x1xi1>
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // Tests for generic infrastructure for named Ops. The actual Ops used are

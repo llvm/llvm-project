@@ -226,9 +226,7 @@ public:
   /// DWARF Frame entries accessors
   iterator begin() const { return Entries.begin(); }
   iterator end() const { return Entries.end(); }
-  iterator_range<iterator> entries() const {
-    return iterator_range<iterator>(Entries.begin(), Entries.end());
-  }
+  iterator_range<iterator> entries() const { return Entries; }
 
   uint64_t getEHFrameAddress() const { return EHFrameAddress; }
 };

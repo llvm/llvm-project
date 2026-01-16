@@ -32,7 +32,7 @@ ASM_FUNCTION_X86_RE = re.compile(
 )
 
 ASM_FUNCTION_ARM_RE = re.compile(
-    r'^(?P<func>[0-9a-zA-Z_$]+):[ \t]*@+[ \t]*@"?(?P=func)"?\n'  # f: (name of function)
+    r'^(?P<func>[0-9a-zA-Z_$]+):[ \t]*(@+[ \t]*@"?(?P=func)"?)?\n'  # f: (name of function)
     r"(?:\.L(?P=func)\$local:\n)?"  # drop .L<func>$local:
     r"(?:\s*\.type\s+\.L(?P=func)\$local,@function\n)?"  # drop .type .L<func>$local
     r"\s+\.fnstart\n"  # .fnstart
@@ -42,18 +42,18 @@ ASM_FUNCTION_ARM_RE = re.compile(
 )
 
 ASM_FUNCTION_AARCH64_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*\/\/[ \t]*@"?(?P=func)"?( (Function|Tail Call))?\n'
+    r'^(?P<func>_?[a-zA-Z][^:]*):[ \t]*(\/\/[ \t]*@"?(?P=func)"?)?( (Function|Tail Call))?\n'
     r"(?:[ \t]+.cfi_startproc\n)?"  # drop optional cfi noise
-    r"(?P<body>.*?)\n"
+    r"(?P<body>.*?)"
     # This list is incomplete
-    r"^\s*(\.Lfunc_end[0-9]+|// -- End function)",
+    r"^\s*(\.Lfunc_end[0-9]+:|// -- End function)",
     flags=(re.M | re.S),
 )
 
 ASM_FUNCTION_AMDGPU_RE = re.compile(
-    r"\.type\s+_?(?P<func>[^,\n]+),@function\n"
+    r"\.type\s+(_|\.L)?(?P<func>[^,\n]+),@function\n"
     r"(^\s*\.amdgpu_hsa_kernel (?P=func)\n)?"
-    r'^_?(?P=func):(?:[ \t]*;+[ \t]*@"?(?P=func)"?)?\n'
+    r'^(_|\.L)?(?P=func):(?:[ \t]*;+[ \t]*@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"  # (body of the function)
     # This list is incomplete
     r"^\s*(\.Lfunc_end[0-9]+:\n|\.section)",
@@ -173,7 +173,7 @@ ASM_FUNCTION_ARM_DARWIN_RE = re.compile(
 )
 
 ASM_FUNCTION_ARM_MACHO_RE = re.compile(
-    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
+    r'^_(?P<func>[^:]+):[ \t]*(@[ \t]@"?(?P=func)"?)?\n'
     r"([ \t]*.cfi_startproc\n[ \t]*)?"
     r"(?P<body>.*?)\n"
     r"[ \t]*\.cfi_endproc\n",
@@ -181,21 +181,21 @@ ASM_FUNCTION_ARM_MACHO_RE = re.compile(
 )
 
 ASM_FUNCTION_THUMBS_DARWIN_RE = re.compile(
-    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
+    r'^_(?P<func>[^:]+):[ \t]*(@[ \t]@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"
     r"[ \t]*\.data_region\n",
     flags=(re.M | re.S),
 )
 
 ASM_FUNCTION_THUMB_DARWIN_RE = re.compile(
-    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
+    r'^_(?P<func>[^:]+):[ \t]*(@[ \t]@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"
     r"^[ \t]*@[ \t]--[ \t]End[ \t]function",
     flags=(re.M | re.S),
 )
 
 ASM_FUNCTION_ARM_IOS_RE = re.compile(
-    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
+    r'^_(?P<func>[^:]+):[ \t]*(@[ \t]@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)"
     r"^[ \t]*@[ \t]--[ \t]End[ \t]function",
     flags=(re.M | re.S),
@@ -570,10 +570,13 @@ def get_run_handler(triple):
         "arm64": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
         "arm64e": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "arm64ec": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
+        "arm64-apple-darwin": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "arm64-apple-ios": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "arm64-apple-macosx": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "armv7-apple-ios": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_IOS_RE),
         "armv7-apple-darwin": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_DARWIN_RE),
+        "armv7k-apple-watchos": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_DARWIN_RE),
+        "thumbv7k-apple-watchos": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_DARWIN_RE),
         "thumb": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
         "thumb-macho": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
         "thumbv5-macho": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),

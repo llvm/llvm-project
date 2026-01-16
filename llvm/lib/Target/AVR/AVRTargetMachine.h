@@ -48,6 +48,8 @@ public:
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
 
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
+
   bool isNoopAddrSpaceCast(unsigned SrcAs, unsigned DestAs) const override {
     // While AVR has different address spaces, they are all represented by
     // 16-bit pointers that can be freely casted between (of course, a pointer

@@ -96,10 +96,10 @@ static LogicalResult checkAndUpdateCapabilityRequirements(
 }
 
 static void addAllImpliedCapabilities(SetVector<spirv::Capability> &caps) {
-  for (spirv::Capability cap : caps) {
-    ArrayRef<spirv::Capability> impliedCaps = getDirectImpliedCapabilities(cap);
-    caps.insert_range(impliedCaps);
-  }
+  SetVector<spirv::Capability> tmp;
+  for (spirv::Capability cap : caps)
+    tmp.insert_range(getRecursiveImpliedCapabilities(cap));
+  caps.insert_range(std::move(tmp));
 }
 
 void UpdateVCEPass::runOnOperation() {
@@ -158,6 +158,12 @@ void UpdateVCEPass::runOnOperation() {
     if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op))
       valueTypes.push_back(globalVar.getType());
 
+    // If the op is FunctionLike make sure to process input and result types.
+    if (auto funcOpInterface = dyn_cast<FunctionOpInterface>(op)) {
+      llvm::append_range(valueTypes, funcOpInterface.getArgumentTypes());
+      llvm::append_range(valueTypes, funcOpInterface.getResultTypes());
+    }
+
     // Requirements from values' types
     SmallVector<ArrayRef<spirv::Extension>, 4> typeExtensions;
     SmallVector<ArrayRef<spirv::Capability>, 8> typeCapabilities;
@@ -175,13 +181,28 @@ void UpdateVCEPass::runOnOperation() {
         return WalkResult::interrupt();
     }
 
-    addAllImpliedCapabilities(deducedCapabilities);
-
     return WalkResult::advance();
   });
 
   if (walkResult.wasInterrupted())
     return signalPassFailure();
+
+  addAllImpliedCapabilities(deducedCapabilities);
+
+  // Update min version requirement for capabilities after deducing them.
+  for (spirv::Capability cap : deducedCapabilities) {
+    if (std::optional<spirv::Version> minVersion = spirv::getMinVersion(cap)) {
+      deducedVersion = std::max(deducedVersion, *minVersion);
+      if (deducedVersion > allowedVersion) {
+        module.emitError("Capability '")
+            << spirv::stringifyCapability(cap) << "' requires min version "
+            << spirv::stringifyVersion(deducedVersion)
+            << " but target environment allows up to "
+            << spirv::stringifyVersion(allowedVersion);
+        return signalPassFailure();
+      }
+    }
+  }
 
   // TODO: verify that the deduced version is consistent with
   // SPIR-V ops' maximal version requirements.

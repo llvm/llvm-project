@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+class CallInst;
 class SelectionDAG;
 
 //===----------------------------------------------------------------------===//
@@ -111,6 +112,16 @@ public:
     return SDValue();
   }
 
+  /// Emit target-specific code that performs a strstr, in cases where that is
+  /// faster than a libcall. The first returned SDValue is the result of the
+  /// strstr and the second is the chain. Both SDValues can be null if a normal
+  /// libcall should be used.
+  virtual std::pair<SDValue, SDValue>
+  EmitTargetCodeForStrstr(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                          SDValue Op1, SDValue Op2, const CallInst *CI) const {
+    return std::make_pair(SDValue(), SDValue());
+  }
+
   /// Emit target-specific code that performs a memcmp/bcmp, in cases where that is
   /// faster than a libcall. The first returned SDValue is the result of the
   /// memcmp and the second is the chain. Both SDValues can be null if a normal
@@ -118,8 +129,7 @@ public:
   virtual std::pair<SDValue, SDValue>
   EmitTargetCodeForMemcmp(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                           SDValue Op1, SDValue Op2, SDValue Op3,
-                          MachinePointerInfo Op1PtrInfo,
-                          MachinePointerInfo Op2PtrInfo) const {
+                          const CallInst *CI) const {
     return std::make_pair(SDValue(), SDValue());
   }
 
@@ -140,11 +150,10 @@ public:
   /// of the destination string for strcpy, a pointer to the null terminator
   /// for stpcpy) and the second is the chain.  Both SDValues can be null
   /// if a normal libcall should be used.
-  virtual std::pair<SDValue, SDValue>
-  EmitTargetCodeForStrcpy(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
-                          SDValue Dest, SDValue Src,
-                          MachinePointerInfo DestPtrInfo,
-                          MachinePointerInfo SrcPtrInfo, bool isStpcpy) const {
+  virtual std::pair<SDValue, SDValue> EmitTargetCodeForStrcpy(
+      SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dest,
+      SDValue Src, MachinePointerInfo DestPtrInfo,
+      MachinePointerInfo SrcPtrInfo, bool isStpcpy, const CallInst *CI) const {
     return std::make_pair(SDValue(), SDValue());
   }
 
@@ -162,7 +171,7 @@ public:
 
   virtual std::pair<SDValue, SDValue>
   EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
-                          SDValue Src, MachinePointerInfo SrcPtrInfo) const {
+                          SDValue Src, const CallInst *CI) const {
     return std::make_pair(SDValue(), SDValue());
   }
 

@@ -584,9 +584,10 @@ public:
   dropUBImplyingAttrsAndUnknownMetadata(ArrayRef<unsigned> KnownIDs = {});
 
   /// Drop any attributes or metadata that can cause immediate undefined
-  /// behavior. Retain other attributes/metadata on a best-effort basis.
-  /// This should be used when speculating instructions.
-  LLVM_ABI void dropUBImplyingAttrsAndMetadata();
+  /// behavior. Retain other attributes/metadata on a best-effort basis, as well
+  /// as those passed in `Keep`. This should be used when speculating
+  /// instructions.
+  LLVM_ABI void dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep = {});
 
   /// Return true if this instruction has UB-implying attributes
   /// that can cause immediate undefined behavior.
@@ -761,6 +762,12 @@ public:
   /// applied to any type.
   ///
   LLVM_ABI bool isCommutative() const LLVM_READONLY;
+
+  /// Checks if the operand is commutative. In commutative operations, not all
+  /// operands might commutable, e.g. for fmuladd only 2 first operands are
+  /// commutable.
+  LLVM_ABI bool isCommutableOperand(unsigned Op) const LLVM_READONLY;
+
   static bool isCommutative(unsigned Opcode) {
     switch (Opcode) {
     case Add: case FAdd:

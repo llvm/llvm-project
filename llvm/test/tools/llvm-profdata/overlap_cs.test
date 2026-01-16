@@ -2,7 +2,7 @@ RUN: llvm-profdata overlap -cs %p/Inputs/overlap_1_cs.proftext %p/Inputs/overlap
 RUN: llvm-profdata merge %p/Inputs/overlap_1_cs.proftext -o %t_1_cs.profdata
 RUN: llvm-profdata merge %p/Inputs/overlap_2_cs.proftext -o %t_2_cs.profdata
 RUN: llvm-profdata overlap -cs %t_1_cs.profdata %t_2_cs.profdata | FileCheck %s -check-prefix=OVERLAP
-OVERLAP: Profile overlap infomation for base_profile: {{.*}} and test_profile:
+OVERLAP: Profile overlap information for base_profile: {{.*}} and test_profile:
 OVERLAP: Program level:
 OVERLAP:  # of functions overlap: 1
 OVERLAP:  Edge profile overlap: 80.000%

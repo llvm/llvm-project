@@ -33,6 +33,10 @@ LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionRISCV, InstructionRISCV)
 
 namespace lldb_private {
 
+// RISC-V General Purpose Register numbers
+static constexpr uint32_t RISCV_GPR_SP = 2; // x2 is the stack pointer
+static constexpr uint32_t RISCV_GPR_FP = 8; // x8 is the frame pointer
+
 /// Returns all values wrapped in Optional, or std::nullopt if any of the values
 /// is std::nullopt.
 template <typename... Ts>
@@ -106,6 +110,16 @@ static uint32_t FPREncodingToLLDB(uint32_t reg_encode) {
   if (reg_encode <= 31)
     return fpr_f0_riscv + reg_encode;
   return LLDB_INVALID_REGNUM;
+}
+
+// Helper function to get register info from GPR encoding
+static std::optional<RegisterInfo>
+GPREncodingToRegisterInfo(EmulateInstructionRISCV &emulator,
+                          uint32_t reg_encode) {
+  uint32_t lldb_reg = GPREncodingToLLDB(reg_encode);
+  if (lldb_reg == LLDB_INVALID_REGNUM)
+    return std::nullopt;
+  return emulator.GetRegisterInfo(eRegisterKindLLDB, lldb_reg);
 }
 
 bool Rd::Write(EmulateInstructionRISCV &emulator, uint64_t value) {
@@ -230,10 +244,34 @@ Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(E)) {
   auto addr = LoadStoreAddr(emulator, inst);
   if (!addr)
     return false;
-  return transformOptional(
-             emulator.ReadMem<T>(*addr),
-             [&](T t) { return inst.rd.Write(emulator, extend(E(t))); })
-      .value_or(false);
+
+  // Set up context for the load operation, similar to ARM64.
+  EmulateInstructionRISCV::Context context;
+
+  // Get register info for base register
+  std::optional<RegisterInfo> reg_info_rs1 =
+      GPREncodingToRegisterInfo(emulator, inst.rs1.rs);
+
+  if (!reg_info_rs1)
+    return false;
+
+  // Set context type based on whether this is a stack-based load.
+  if (inst.rs1.rs == RISCV_GPR_SP)
+    context.type = EmulateInstruction::eContextPopRegisterOffStack;
+  else
+    context.type = EmulateInstruction::eContextRegisterLoad;
+
+  // Set the context address information
+  context.SetAddress(*addr);
+
+  // Read from memory with context and write to register.
+  bool success = false;
+  uint64_t value =
+      emulator.ReadMemoryUnsigned(context, *addr, sizeof(T), 0, &success);
+  if (!success)
+    return false;
+
+  return inst.rd.Write(emulator, extend(E(T(value))));
 }
 
 template <typename I, typename T>
@@ -242,9 +280,35 @@ Store(EmulateInstructionRISCV &emulator, I inst) {
   auto addr = LoadStoreAddr(emulator, inst);
   if (!addr)
     return false;
-  return transformOptional(
-             inst.rs2.Read(emulator),
-             [&](uint64_t rs2) { return emulator.WriteMem<T>(*addr, rs2); })
+
+  // Set up context for the store operation, similar to ARM64.
+  EmulateInstructionRISCV::Context context;
+
+  // Get register info for source and base registers.
+  std::optional<RegisterInfo> reg_info_rs1 =
+      GPREncodingToRegisterInfo(emulator, inst.rs1.rs);
+  std::optional<RegisterInfo> reg_info_rs2 =
+      GPREncodingToRegisterInfo(emulator, inst.rs2.rs);
+
+  if (!reg_info_rs1 || !reg_info_rs2)
+    return false;
+
+  // Set context type based on whether this is a stack-based store.
+  if (inst.rs1.rs == RISCV_GPR_SP)
+    context.type = EmulateInstruction::eContextPushRegisterOnStack;
+  else
+    context.type = EmulateInstruction::eContextRegisterStore;
+
+  // Set the context to show which register is being stored to which base
+  // register + offset.
+  context.SetRegisterToRegisterPlusOffset(*reg_info_rs2, *reg_info_rs1,
+                                          SignExt(inst.imm));
+
+  return transformOptional(inst.rs2.Read(emulator),
+                           [&](uint64_t rs2) {
+                             return emulator.WriteMemoryUnsigned(
+                                 context, *addr, rs2, sizeof(T));
+                           })
       .value_or(false);
 }
 
@@ -737,11 +801,44 @@ public:
   bool operator()(SH inst) { return Store<SH, uint16_t>(m_emu, inst); }
   bool operator()(SW inst) { return Store<SW, uint32_t>(m_emu, inst); }
   bool operator()(ADDI inst) {
-    return transformOptional(inst.rs1.ReadI64(m_emu),
-                             [&](int64_t rs1) {
-                               return inst.rd.Write(
-                                   m_emu, rs1 + int64_t(SignExt(inst.imm)));
-                             })
+    return transformOptional(
+               inst.rs1.ReadI64(m_emu),
+               [&](int64_t rs1) {
+                 uint64_t result = rs1 + uint64_t(SignExt(inst.imm));
+                 // Check if this is a stack pointer adjustment.
+                 if (inst.rd.rd == RISCV_GPR_SP &&
+                     inst.rs1.rs == RISCV_GPR_SP) {
+                   EmulateInstruction::Context context;
+                   context.type =
+                       EmulateInstruction::eContextAdjustStackPointer;
+                   context.SetImmediateSigned(SignExt(inst.imm));
+                   uint32_t sp_lldb_reg = GPREncodingToLLDB(RISCV_GPR_SP);
+                   RegisterValue registerValue;
+                   registerValue.SetUInt64(result);
+                   return m_emu.WriteRegister(context, eRegisterKindLLDB,
+                                              sp_lldb_reg, registerValue);
+                 }
+                 // Check if this is setting up the frame pointer.
+                 // addi fp, sp, imm -> fp = sp + imm (frame pointer setup).
+                 if (inst.rd.rd == RISCV_GPR_FP &&
+                     inst.rs1.rs == RISCV_GPR_SP) {
+                   EmulateInstruction::Context context;
+                   context.type = EmulateInstruction::eContextSetFramePointer;
+                   auto sp_reg_info = m_emu.GetRegisterInfo(
+                       eRegisterKindLLDB, GPREncodingToLLDB(RISCV_GPR_SP));
+                   if (sp_reg_info) {
+                     context.SetRegisterPlusOffset(*sp_reg_info,
+                                                   SignExt(inst.imm));
+                   }
+                   uint32_t fp_lldb_reg = GPREncodingToLLDB(RISCV_GPR_FP);
+                   RegisterValue registerValue;
+                   registerValue.SetUInt64(result);
+                   return m_emu.WriteRegister(context, eRegisterKindLLDB,
+                                              fp_lldb_reg, registerValue);
+                 }
+                 // Regular ADDI instruction.
+                 return inst.rd.Write(m_emu, result);
+               })
         .value_or(false);
   }
   bool operator()(SLTI inst) {
@@ -1231,32 +1328,36 @@ public:
         m_emu, inst, 8, ZextD,
         [](uint64_t a, uint64_t b) { return std::max(a, b); });
   }
-  template <typename T>
-  bool F_Load(T inst, const fltSemantics &(*semantics)(),
-              unsigned int numBits) {
+  template <typename I, typename T>
+  bool F_Load(I inst, const fltSemantics &(*semantics)()) {
     return transformOptional(inst.rs1.Read(m_emu),
                              [&](auto &&rs1) {
-                               uint64_t addr = rs1 + uint64_t(inst.imm);
-                               uint64_t bits = *m_emu.ReadMem<uint64_t>(addr);
+                               uint64_t addr =
+                                   rs1 + uint64_t(SignExt(inst.imm));
+                               uint64_t bits = *m_emu.ReadMem<T>(addr);
+                               unsigned numBits = sizeof(T) * 8;
                                APFloat f(semantics(), APInt(numBits, bits));
                                return inst.rd.WriteAPFloat(m_emu, f);
                              })
         .value_or(false);
   }
-  bool operator()(FLW inst) { return F_Load(inst, &APFloat::IEEEsingle, 32); }
-  template <typename T> bool F_Store(T inst, bool isDouble) {
+  bool operator()(FLW inst) {
+    return F_Load<FLW, uint32_t>(inst, &APFloat::IEEEsingle);
+  }
+  template <typename I, typename T> bool F_Store(I inst, bool isDouble) {
     return transformOptional(zipOpt(inst.rs1.Read(m_emu),
                                     inst.rs2.ReadAPFloat(m_emu, isDouble)),
                              [&](auto &&tup) {
                                auto [rs1, rs2] = tup;
-                               uint64_t addr = rs1 + uint64_t(inst.imm);
+                               uint64_t addr =
+                                   rs1 + uint64_t(SignExt(inst.imm));
                                uint64_t bits =
                                    rs2.bitcastToAPInt().getZExtValue();
-                               return m_emu.WriteMem<uint64_t>(addr, bits);
+                               return m_emu.WriteMem<T>(addr, bits);
                              })
         .value_or(false);
   }
-  bool operator()(FSW inst) { return F_Store(inst, false); }
+  bool operator()(FSW inst) { return F_Store<FSW, uint32_t>(inst, false); }
   std::tuple<bool, APFloat> FusedMultiplyAdd(APFloat rs1, APFloat rs2,
                                              APFloat rs3) {
     auto opStatus = rs1.fusedMultiplyAdd(rs2, rs3, m_emu.GetRoundingMode());
@@ -1519,8 +1620,10 @@ public:
   bool operator()(FCVT_S_LU inst) {
     return FCVT_f2i(inst, &Rs::Read, APFloat::IEEEsingle());
   }
-  bool operator()(FLD inst) { return F_Load(inst, &APFloat::IEEEdouble, 64); }
-  bool operator()(FSD inst) { return F_Store(inst, true); }
+  bool operator()(FLD inst) {
+    return F_Load<FLD, uint64_t>(inst, &APFloat::IEEEdouble);
+  }
+  bool operator()(FSD inst) { return F_Store<FSD, uint64_t>(inst, true); }
   bool operator()(FMADD_D inst) { return FMA(inst, true, 1.0f, 1.0f); }
   bool operator()(FMSUB_D inst) { return FMA(inst, true, 1.0f, -1.0f); }
   bool operator()(FNMSUB_D inst) { return FMA(inst, true, -1.0f, 1.0f); }
@@ -1745,6 +1848,61 @@ EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
   return array[reg_index];
 }
 
+bool EmulateInstructionRISCV::SetInstruction(const Opcode &opcode,
+                                             const Address &inst_addr,
+                                             Target *target) {
+  // Call the base class implementation.
+  if (!EmulateInstruction::SetInstruction(opcode, inst_addr, target))
+    return false;
+
+  // Extract instruction data from the opcode.
+  uint32_t inst_data = 0;
+  const void *opcode_data = m_opcode.GetOpcodeBytes();
+  if (!opcode_data)
+    return false;
+
+  if (m_opcode.GetByteSize() == 2) {
+    // 16-bit compressed instruction.
+    const uint16_t *data = static_cast<const uint16_t *>(opcode_data);
+    inst_data = *data;
+  } else if (m_opcode.GetByteSize() == 4) {
+    // 32-bit instruction.
+    const uint32_t *data = static_cast<const uint32_t *>(opcode_data);
+    inst_data = *data;
+  } else {
+    return false;
+  }
+
+  // Decode the instruction.
+  auto decoded_inst = Decode(inst_data);
+  if (!decoded_inst)
+    return false;
+
+  // Store the decoded result.
+  m_decoded = *decoded_inst;
+  return true;
+}
+
+bool EmulateInstructionRISCV::CreateFunctionEntryUnwind(
+    UnwindPlan &unwind_plan) {
+  unwind_plan.Clear();
+  unwind_plan.SetRegisterKind(eRegisterKindLLDB);
+
+  UnwindPlan::Row row;
+
+  row.GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_riscv, 0);
+  row.SetRegisterLocationToSame(gpr_ra_riscv, /*must_replace=*/false);
+  row.SetRegisterLocationToSame(gpr_fp_riscv, /*must_replace=*/false);
+
+  unwind_plan.AppendRow(std::move(row));
+  unwind_plan.SetSourceName("EmulateInstructionRISCV");
+  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
+  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  unwind_plan.SetReturnAddressRegister(gpr_ra_riscv);
+  return true;
+}
+
 bool EmulateInstructionRISCV::SetTargetTriple(const ArchSpec &arch) {
   return SupportsThisArch(arch);
 }
@@ -1807,7 +1965,7 @@ RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
     Log *log = GetLog(LLDBLog::Unwind);
     LLDB_LOGF(log,
               "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
-              "corresponding load reserve insturuction",
+              "corresponding load reserve instruction",
               __FUNCTION__);
     return {*pc + (inst->is_rvc ? 2u : 4u)};
   }
@@ -1839,7 +1997,7 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
   EmulateInstructionRISCV *riscv_emulator =
       static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
 
-  // Handle instructions between LR and SC. According to unprivilleged
+  // Handle instructions between LR and SC. According to unprivileged
   // RISC-V ISA there can be at most 16 instructions in the sequence.
 
   lldb::addr_t entry_pc = pc; // LR instruction address
@@ -1872,7 +2030,7 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
     Log *log = GetLog(LLDBLog::Unwind);
     LLDB_LOGF(log,
               "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
-              "corresponding store conditional insturuction",
+              "corresponding store conditional instruction",
               __FUNCTION__);
     return {entry_pc + (lr_inst->is_rvc ? 2u : 4u)};
   }

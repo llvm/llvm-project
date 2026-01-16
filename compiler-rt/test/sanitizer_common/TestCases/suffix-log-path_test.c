@@ -2,14 +2,11 @@
 // RUN: mkdir -p %t.dir
 // RUN: %clang %s -o %t.dir/suffix-log-path_test-binary
 
-// The glob below requires bash.
-// REQUIRES: shell
-
 // Good log_path with suffix.
 // RUN: %env_tool_opts=log_path=%t.dir/sanitizer.log:log_exe_name=1:log_suffix=.txt %run %t.dir/suffix-log-path_test-binary 2> %t.out
 // RUN: FileCheck %s < %t.dir/sanitizer.log.suffix-log-path_test-binary.*.txt
 
-// UNSUPPORTED: ios, android
+// UNSUPPORTED: darwin-remote, android
 
 #include <stdlib.h>
 #include <string.h>

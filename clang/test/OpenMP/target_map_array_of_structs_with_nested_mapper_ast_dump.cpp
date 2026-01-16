@@ -27,7 +27,7 @@ void foo() {
 // DUM-NEXT:  |-OMPMapClause {{.*}}<<invalid sloc>> <implicit>
 // DUM-NEXT:  | |-MemberExpr {{.*}}<line:9:3> 'int' lvalue .e
 // DUM-NEXT:  | | `-DeclRefExpr {{.*}}<<invalid sloc>> 'D' lvalue Var {{.*}} '_s' 'D'
-// DUM-NEXT:  | |-MemberExpr {{.*}}<line:10:3> 'C' lvalue .f {{.*}}
+// DUM-NEXT:  | |-MemberExpr {{.*}}<line:10:3> 'C':'struct C' lvalue .f {{.*}}
 // DUM-NEXT:  | | `-DeclRefExpr {{.*}}<<invalid sloc>> 'D' lvalue Var {{.*}} '_s' 'D'
 // DUM-NEXT:  | `-MemberExpr {{.*}}<line:11:3> 'int' lvalue .h {{.*}}
 // DUM-NEXT:  |   `-DeclRefExpr {{.*}}<<invalid sloc>> 'D' lvalue Var {{.*}} '_s' 'D'

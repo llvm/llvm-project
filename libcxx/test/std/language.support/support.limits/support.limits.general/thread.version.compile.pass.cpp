@@ -56,7 +56,7 @@
 #    error "__cpp_lib_formatters should not be defined before c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_jthread
 #      error "__cpp_lib_jthread should be defined in c++20"
 #    endif
@@ -65,7 +65,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_jthread
-#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
@@ -84,7 +84,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_jthread
 #      error "__cpp_lib_jthread should be defined in c++23"
 #    endif
@@ -93,7 +93,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_jthread
-#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
@@ -112,7 +112,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_jthread
 #      error "__cpp_lib_jthread should be defined in c++26"
 #    endif
@@ -121,7 +121,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_jthread
-#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 

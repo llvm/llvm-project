@@ -70,41 +70,41 @@ void basic_tests() {
   std::string ss;
   ss.find("a") == std::string::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of find() == npos
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ss, "a");{{$}}
+  // CHECK-FIXES: !absl::StrContains(ss, "a");
 
   ss.find("a") != std::string::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of find() != npos
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(ss, "a");{{$}}
+  // CHECK-FIXES: absl::StrContains(ss, "a");
 
   std::string::npos != ss.find("a");
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(ss, "a");{{$}}
+  // CHECK-FIXES: absl::StrContains(ss, "a");
 
   std::string_view ssv;
   ssv.find("a") == std::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ssv, "a");{{$}}
+  // CHECK-FIXES: !absl::StrContains(ssv, "a");
 
   ssv.find("a") != std::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(ssv, "a");{{$}}
+  // CHECK-FIXES: absl::StrContains(ssv, "a");
 
   std::string_view::npos != ssv.find("a");
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(ssv, "a");{{$}}
+  // CHECK-FIXES: absl::StrContains(ssv, "a");
 
   absl::string_view asv;
   asv.find("a") == absl::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(asv, "a");{{$}}
+  // CHECK-FIXES: !absl::StrContains(asv, "a");
 
   asv.find("a") != absl::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(asv, "a");{{$}}
+  // CHECK-FIXES: absl::StrContains(asv, "a");
 
   absl::string_view::npos != asv.find("a");
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(asv, "a");{{$}}
+  // CHECK-FIXES: absl::StrContains(asv, "a");
 }
 
 // Confirms that it works even if you mix-and-match the type for find and for
@@ -115,29 +115,29 @@ void mismatched_npos() {
   std::string ss;
   ss.find("a") == std::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ss, "a");{{$}}
+  // CHECK-FIXES: !absl::StrContains(ss, "a");
 
   ss.find("a") != absl::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(ss, "a");{{$}}
+  // CHECK-FIXES: absl::StrContains(ss, "a");
 
   std::string_view ssv;
   ssv.find("a") == absl::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ssv, "a");{{$}}
+  // CHECK-FIXES: !absl::StrContains(ssv, "a");
 
   ssv.find("a") != std::string::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(ssv, "a");{{$}}
+  // CHECK-FIXES: absl::StrContains(ssv, "a");
 
   absl::string_view asv;
   asv.find("a") == std::string::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(asv, "a");{{$}}
+  // CHECK-FIXES: !absl::StrContains(asv, "a");
 
   asv.find("a") != std::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(asv, "a");{{$}}
+  // CHECK-FIXES: absl::StrContains(asv, "a");
 }
 
 // Confirms that it works even when the needle or the haystack are more
@@ -146,41 +146,41 @@ void subexpression_tests() {
   std::string ss, ss2;
   foo_ss(ss).find(ss2) == std::string::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(foo_ss(ss), ss2);{{$}}
+  // CHECK-FIXES: !absl::StrContains(foo_ss(ss), ss2);
 
   ss.find(foo_ss(ss2)) != std::string::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(ss, foo_ss(ss2));{{$}}
+  // CHECK-FIXES: absl::StrContains(ss, foo_ss(ss2));
 
   foo_ss(bar_ss()).find(foo_ss(ss2)) != std::string::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(foo_ss(bar_ss()), foo_ss(ss2));{{$}}
+  // CHECK-FIXES: absl::StrContains(foo_ss(bar_ss()), foo_ss(ss2));
 
   std::string_view ssv, ssv2;
   foo_ssv(ssv).find(ssv2) == std::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(foo_ssv(ssv), ssv2);{{$}}
+  // CHECK-FIXES: !absl::StrContains(foo_ssv(ssv), ssv2);
 
   ssv.find(foo_ssv(ssv2)) != std::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(ssv, foo_ssv(ssv2));{{$}}
+  // CHECK-FIXES: absl::StrContains(ssv, foo_ssv(ssv2));
 
   foo_ssv(bar_ssv()).find(foo_ssv(ssv2)) != std::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(foo_ssv(bar_ssv()), foo_ssv(ssv2));{{$}}
+  // CHECK-FIXES: absl::StrContains(foo_ssv(bar_ssv()), foo_ssv(ssv2));
 
   absl::string_view asv, asv2;
   foo_asv(asv).find(asv2) == absl::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(foo_asv(asv), asv2);{{$}}
+  // CHECK-FIXES: !absl::StrContains(foo_asv(asv), asv2);
 
   asv.find(foo_asv(asv2)) != absl::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(asv, foo_asv(asv2));{{$}}
+  // CHECK-FIXES: absl::StrContains(asv, foo_asv(asv2));
 
   foo_asv(bar_asv()).find(foo_asv(asv2)) != absl::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}absl::StrContains(foo_asv(bar_asv()), foo_asv(asv2));{{$}}
+  // CHECK-FIXES: absl::StrContains(foo_asv(bar_asv()), foo_asv(asv2));
 }
 
 // Confirms that it works with string literal, char* and const char* parameters.
@@ -191,58 +191,58 @@ void string_literal_and_char_ptr_tests() {
   std::string ss;
   ss.find("c") == std::string::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ss, "c");{{$}}
+  // CHECK-FIXES: !absl::StrContains(ss, "c");
 
   ss.find(c) == std::string::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ss, c);{{$}}
+  // CHECK-FIXES: !absl::StrContains(ss, c);
 
   ss.find(cc) == std::string::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ss, cc);{{$}}
+  // CHECK-FIXES: !absl::StrContains(ss, cc);
 
   std::string_view ssv;
   ssv.find("c") == std::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ssv, "c");{{$}}
+  // CHECK-FIXES: !absl::StrContains(ssv, "c");
 
   ssv.find(c) == std::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ssv, c);{{$}}
+  // CHECK-FIXES: !absl::StrContains(ssv, c);
 
   ssv.find(cc) == std::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ssv, cc);{{$}}
+  // CHECK-FIXES: !absl::StrContains(ssv, cc);
 
   absl::string_view asv;
   asv.find("c") == absl::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(asv, "c");{{$}}
+  // CHECK-FIXES: !absl::StrContains(asv, "c");
 
   asv.find(c) == absl::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(asv, c);{{$}}
+  // CHECK-FIXES: !absl::StrContains(asv, c);
 
   asv.find(cc) == absl::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(asv, cc);{{$}}
+  // CHECK-FIXES: !absl::StrContains(asv, cc);
 }
 
 void char_param_tests() {
   std::string ss;
   ss.find('c') == std::string::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ss, 'c');{{$}}
+  // CHECK-FIXES: !absl::StrContains(ss, 'c');
 
   std::string_view ssv;
   ssv.find('c') == std::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ssv, 'c');{{$}}
+  // CHECK-FIXES: !absl::StrContains(ssv, 'c');
 
   absl::string_view asv;
   asv.find('c') == absl::string_view::npos;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
-  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(asv, 'c');{{$}}
+  // CHECK-FIXES: !absl::StrContains(asv, 'c');
 }
 
 #define FOO(a, b, c, d) ((a).find(b) == std::string::npos ? (c) : (d))

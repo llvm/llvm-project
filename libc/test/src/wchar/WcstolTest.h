@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/properties/architectures.h"
@@ -177,8 +178,8 @@ struct WcstoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
     wchar_t small_string[4] = {L'\0', L'\0', L'\0', L'\0'};
     for (int base = 2; base <= 36; ++base) {
       for (int first_digit = 0; first_digit <= 36; ++first_digit) {
-        small_string[0] = static_cast<wchar_t>(
-            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit));
+        small_string[0] =
+            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit);
         if (first_digit < base) {
           ASSERT_EQ(func(small_string, nullptr, base),
                     static_cast<ReturnT>(first_digit));
@@ -192,11 +193,11 @@ struct WcstoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 
     for (int base = 2; base <= 36; ++base) {
       for (int first_digit = 0; first_digit <= 36; ++first_digit) {
-        small_string[0] = static_cast<wchar_t>(
-            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit));
+        small_string[0] =
+            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit);
         for (int second_digit = 0; second_digit <= 36; ++second_digit) {
-          small_string[1] = static_cast<wchar_t>(
-              LIBC_NAMESPACE::internal::int_to_b36_wchar(second_digit));
+          small_string[1] =
+              LIBC_NAMESPACE::internal::int_to_b36_wchar(second_digit);
           if (first_digit < base && second_digit < base) {
             ASSERT_EQ(
                 func(small_string, nullptr, base),
@@ -216,14 +217,14 @@ struct WcstoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 
     for (int base = 2; base <= 36; ++base) {
       for (int first_digit = 0; first_digit <= 36; ++first_digit) {
-        small_string[0] = static_cast<wchar_t>(
-            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit));
+        small_string[0] =
+            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit);
         for (int second_digit = 0; second_digit <= 36; ++second_digit) {
-          small_string[1] = static_cast<wchar_t>(
-              LIBC_NAMESPACE::internal::int_to_b36_wchar(second_digit));
+          small_string[1] =
+              LIBC_NAMESPACE::internal::int_to_b36_wchar(second_digit);
           for (int third_digit = 0; third_digit <= limit; ++third_digit) {
-            small_string[2] = static_cast<wchar_t>(
-                LIBC_NAMESPACE::internal::int_to_b36_wchar(third_digit));
+            small_string[2] =
+                LIBC_NAMESPACE::internal::int_to_b36_wchar(third_digit);
 
             if (first_digit < base && second_digit < base &&
                 third_digit < base) {

@@ -73,6 +73,10 @@ __int128_t PR11705 = (__int128_t)&PR11705;
 // CHECK: @_ZZ23UnfoldableAddrLabelDiffvE1x = internal global i128 0
 void UnfoldableAddrLabelDiff() { static __int128_t x = (long)&&a-(long)&&b; a:b:return;}
 
+// CHECK: @_ZZ24UnfoldableAddrLabelDiff2vE1x = internal global i16 0
+void UnfoldableAddrLabelDiff2() { static short x = (long)&&a-(long)&&b; a:b:return;}
+
+
 // But make sure we do fold this.
 // CHECK: @_ZZ21FoldableAddrLabelDiffvE1x = internal global i64 sub (i64 ptrtoint (ptr blockaddress(@_Z21FoldableAddrLabelDiffv
 void FoldableAddrLabelDiff() { static long x = (long)&&a-(long)&&b; a:b:return;}

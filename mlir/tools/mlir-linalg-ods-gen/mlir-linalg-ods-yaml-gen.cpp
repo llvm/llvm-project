@@ -449,7 +449,7 @@ static bool isAttribute(LinalgOperandDefKind kind) {
 }
 
 // Get the enum name for the given operand kind.
-std::string convertOperandKindToEnumName(LinalgOperandDefKind kind) {
+static std::string convertOperandKindToEnumName(LinalgOperandDefKind kind) {
   switch (kind) {
   case LinalgOperandDefKind::UnaryFnAttr:
     return std::string("UnaryFn");
@@ -466,7 +466,7 @@ std::string convertOperandKindToEnumName(LinalgOperandDefKind kind) {
 }
 
 // Get the enum name for the given function kind.
-std::string convertFunctionKindToEnumName(ScalarFnKind kind) {
+static std::string convertFunctionKindToEnumName(ScalarFnKind kind) {
   switch (kind) {
   case ScalarFnKind::Unary:
     return std::string("UnaryFn");
@@ -505,7 +505,7 @@ static const char bannerFormat[] = R"FMT(
 // {3}: documentation (summary + description)
 // {4}: op attribute list
 // {5}: builder methods taking standalone attribute parameters
-// {6}: additional method defintions
+// {6}: additional method definitions
 // {7}: additional methods for attributes used by indexing maps
 static const char structuredOpOdsHeaderFormat[] = R"FMT(
 //===----------------------------------------------------------------------===//

@@ -10,9 +10,6 @@
 ; RUN:   -riscv-v-vector-bits-max=128 -verify-machineinstrs \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,VLEN128
 
-declare iXLen @llvm.riscv.vsetvli.iXLen(iXLen, iXLen, iXLen)
-declare iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen, iXLen)
-
 define iXLen @test_vsetvli_e8m1(iXLen %avl) nounwind {
 ; CHECK-LABEL: test_vsetvli_e8m1:
 ; CHECK:       # %bb.0:
@@ -102,8 +99,6 @@ define void @test_vsetvlimax_e32m2_nouse() nounwind {
   ret void
 }
 
-declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.iXLen(<vscale x 4 x i32>, ptr, iXLen)
-
 ; Check that we remove the redundant vsetvli when followed by another operation
 define <vscale x 4 x i32> @redundant_vsetvli(iXLen %avl, ptr %ptr) nounwind {
 ; CHECK-LABEL: redundant_vsetvli:
@@ -112,7 +107,7 @@ define <vscale x 4 x i32> @redundant_vsetvli(iXLen %avl, ptr %ptr) nounwind {
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 1)
-  %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.iXLen(<vscale x 4 x i32> undef, ptr %ptr, iXLen %vl)
+  %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.iXLen(<vscale x 4 x i32> poison, ptr %ptr, iXLen %vl)
   ret <vscale x 4 x i32> %x
 }
 
@@ -129,7 +124,7 @@ define <vscale x 4 x i32> @repeated_vsetvli(iXLen %avl, ptr %ptr) nounwind {
 ; CHECK-NEXT:    ret
   %vl0 = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 1)
   %vl1 = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %vl0, iXLen 2, iXLen 1)
-  %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.iXLen(<vscale x 4 x i32> undef, ptr %ptr, iXLen %vl1)
+  %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.iXLen(<vscale x 4 x i32> poison, ptr %ptr, iXLen %vl1)
   ret <vscale x 4 x i32> %x
 }
 

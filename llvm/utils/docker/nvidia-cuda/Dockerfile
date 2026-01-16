@@ -6,7 +6,7 @@
 #
 #===----------------------------------------------------------------------===//
 # Stage 1. Check out LLVM source code and run the build.
-FROM nvidia/cuda:12.6.3-devel-ubuntu24.04 AS builder
+FROM docker.io/nvidia/cuda:12.6.3-devel-ubuntu24.04 AS builder
 LABEL maintainer="LLVM Developers"
 # Install llvm build dependencies.
 RUN apt-get update && \
@@ -26,7 +26,7 @@ RUN /tmp/scripts/build_install_llvm.sh --to /tmp/clang-install ${buildscript_arg
 
 
 # Stage 2. Produce a minimal release image with build results.
-FROM nvidia/cuda:12.6.3-devel-ubuntu24.04
+FROM docker.io/nvidia/cuda:12.6.3-devel-ubuntu24.04
 LABEL maintainer="LLVM Developers"
 # Copy clang installation into this container.
 COPY --from=builder /tmp/clang-install/ /usr/local/

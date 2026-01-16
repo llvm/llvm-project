@@ -21,7 +21,7 @@ using namespace llvm;
 
 MCAsmInfoGOFF::MCAsmInfoGOFF() {
   Data64bitsDirective = "\t.quad\t";
-  HasDotTypeDotSizeDirective = false;
+  WeakRefDirective = "WXTRN";
   PrivateGlobalPrefix = "L#";
   PrivateLabelPrefix = "L#";
   ZeroDirective = "\t.space\t";
@@ -62,6 +62,8 @@ static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
     OS << ',';
     OS << "RMODE(";
     switch (Rmode) {
+    case GOFF::ESD_RMODE_None:
+      llvm_unreachable("");
     case GOFF::ESD_RMODE_24:
       OS << "24";
       break;
@@ -70,8 +72,6 @@ static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
       break;
     case GOFF::ESD_RMODE_64:
       OS << "64";
-      break;
-    case GOFF::ESD_RMODE_None:
       break;
     }
     OS << ')';

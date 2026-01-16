@@ -11,18 +11,26 @@ from lldbsuite.test import lldbutil
 
 
 class StdU8StringDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def do_test(self):
         lldbutil.run_to_source_breakpoint(
             self, "Set break point at this line.", lldb.SBFileSpec("main.cpp")
         )
 
+        string_name = (
+            "std::basic_string<char8_t, std::char_traits<char8_t>, std::allocator<char8_t>>"
+            if self.getDebugInfo() == "pdb"
+            else "std::u8string"
+        )
+
         self.expect(
             "frame variable",
             substrs=[
-                '(std::u8string) u8_string_small = u8"🍄"',
-                '(std::u8string) u8_string = u8"❤️👍📄📁😃🧑‍🌾"',
-                '(std::u8string) u8_empty = u8""',
-                '(std::u8string) u8_text = u8"ABCd"',
+                f'({string_name}) u8_string_small = u8"🍄"',
+                f'({string_name}) u8_string = u8"❤️👍📄📁😃🧑‍🌾"',
+                f'({string_name}) u8_empty = u8""',
+                f'({string_name}) u8_text = u8"ABCd"',
             ],
         )
 

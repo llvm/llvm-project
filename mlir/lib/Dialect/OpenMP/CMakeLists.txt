@@ -1,3 +1,5 @@
+add_subdirectory(Transforms)
+
 add_mlir_dialect_library(MLIROpenMPDialect
   IR/OpenMPDialect.cpp
 

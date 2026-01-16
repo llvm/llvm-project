@@ -267,6 +267,18 @@ multiclass sse12_move_rm<RegisterClass RC, ValueType vt, X86MemOperand x86memop,
   }
 }
 
+// pseudo instruction for fp16 spilling.
+let isPseudo = 1, Predicates = [HasSSE2] in {
+  let mayStore = 1 in
+  def MOVSHPmr : I<0, Pseudo, (outs), (ins f32mem:$dst, FR16X:$src), "",
+                   [], SSEPackedSingle>,
+                   Sched<[WriteFStore]>;
+  let  mayLoad = 1 in
+  def MOVSHPrm : I<0, Pseudo, (outs FR16X:$dst), (ins f32mem:$src), "",
+                   [], SSEPackedSingle>,
+                   Sched<[WriteFLoad]>;
+}
+
 defm MOVSS : sse12_move<FR32, X86Movss, v4f32, f32mem, "movss",
                         SSEPackedSingle, UseSSE1>, TB, XS;
 defm MOVSD : sse12_move<FR64, X86Movsd, v2f64, f64mem, "movsd",
@@ -4852,12 +4864,12 @@ let isCommutable = 0 in {
   defm VPSIGND    : SS3I_binop_rm_int<0x0A, "vpsignd",
                                       int_x86_ssse3_psign_d_128,
                                       SchedWriteVecALU.XMM, load, 0>, VEX, VVVV, WIG;
-  defm VPHADDSW   : SS3I_binop_rm_int<0x03, "vphaddsw",
-                                      int_x86_ssse3_phadd_sw_128,
-                                      SchedWritePHAdd.XMM, load, 0>, VEX, VVVV, WIG;
-  defm VPHSUBSW   : SS3I_binop_rm_int<0x07, "vphsubsw",
-                                      int_x86_ssse3_phsub_sw_128,
-                                      SchedWritePHAdd.XMM, load, 0>, VEX, VVVV, WIG;
+  defm VPHADDSW    : SS3I_binop_rm<0x03, "vphaddsw", X86hadds, v8i16, v8i16, VR128,
+                                  load, i128mem,
+                                  SchedWritePHAdd.XMM, 0>, VEX, VVVV, WIG;
+  defm VPHSUBSW    : SS3I_binop_rm<0x07, "vphsubsw", X86hsubs, v8i16, v8i16, VR128,
+                                  load, i128mem,
+                                  SchedWritePHAdd.XMM, 0>, VEX, VVVV, WIG;
 }
 }
 
@@ -4895,12 +4907,12 @@ let isCommutable = 0 in {
                                        SchedWriteVecALU.YMM>, VEX, VVVV, VEX_L, WIG;
   defm VPSIGND   : SS3I_binop_rm_int_y<0x0A, "vpsignd", int_x86_avx2_psign_d,
                                        SchedWriteVecALU.YMM>, VEX, VVVV, VEX_L, WIG;
-  defm VPHADDSW  : SS3I_binop_rm_int_y<0x03, "vphaddsw",
-                                       int_x86_avx2_phadd_sw,
-                                       SchedWritePHAdd.YMM>, VEX, VVVV, VEX_L, WIG;
-  defm VPHSUBSW  : SS3I_binop_rm_int_y<0x07, "vphsubsw",
-                                       int_x86_avx2_phsub_sw,
-                                       SchedWritePHAdd.YMM>, VEX, VVVV, VEX_L, WIG;
+  defm VPHADDSWY  : SS3I_binop_rm<0x03, "vphaddsw", X86hadds, v16i16, v16i16,
+                                  VR256, load, i256mem,
+                                  SchedWritePHAdd.YMM, 0>, VEX, VVVV, VEX_L, WIG;
+  defm VPHSUBSWY  : SS3I_binop_rm<0x07, "vphsubsw", X86hsubs, v16i16, v16i16,
+                                  VR256, load, i256mem,
+                                  SchedWritePHAdd.YMM, 0>, VEX, VVVV, VEX_L, WIG;
 }
 }
 
@@ -4923,12 +4935,10 @@ let isCommutable = 0 in {
                                      SchedWriteVecALU.XMM, memop>;
   defm PSHUFB    : SS3I_binop_rm<0x00, "pshufb", X86pshufb, v16i8, v16i8, VR128,
                                  memop, i128mem, SchedWriteVarShuffle.XMM>;
-  defm PHADDSW   : SS3I_binop_rm_int<0x03, "phaddsw",
-                                     int_x86_ssse3_phadd_sw_128,
-                                     SchedWritePHAdd.XMM, memop>;
-  defm PHSUBSW   : SS3I_binop_rm_int<0x07, "phsubsw",
-                                     int_x86_ssse3_phsub_sw_128,
-                                     SchedWritePHAdd.XMM, memop>;
+  defm PHADDSW   : SS3I_binop_rm<0x03, "phaddsw", X86hadds, v8i16, v8i16, VR128,
+                                 memop, i128mem, SchedWritePHAdd.XMM>;
+  defm PHSUBSW   : SS3I_binop_rm<0x07, "phsubsw", X86hsubs, v8i16, v8i16, VR128,
+                                 memop, i128mem, SchedWritePHAdd.XMM>;
   defm PMADDUBSW : SS3I_binop_rm<0x04, "pmaddubsw", X86vpmaddubsw, v8i16,
                                  v16i8, VR128, memop, i128mem,
                                  SchedWriteVecIMul.XMM>;
@@ -5696,6 +5706,31 @@ let Predicates = [UseSSE41, OptForSize] in {
   def : Pat<(X86any_VRndScale (loadf64 addr:$src1), timm:$src2),
             (ROUNDSDmi addr:$src1, timm:$src2)>;
 }
+
+multiclass scalar_unary_math_patterns_with_immediate<
+    SDPatternOperator OpNode, string OpcPrefix, SDNode Move, ValueType VT> {
+  let Predicates = [UseSSE41] in {
+    def : Pat<(VT(Move VT:$dst, (scalar_to_vector(OpNode
+                                    (extractelt VT:$src, (i64 0)),
+                                    i32:$imm)))),
+              (!cast<Instruction>(OpcPrefix#ri_Int) VT:$dst, VT:$src,
+                  i32:$imm)>;
+  }
+
+  // Repeat for AVX versions of the instructions.
+  let Predicates = [UseAVX] in {
+    def : Pat<(VT(Move VT:$dst, (scalar_to_vector(OpNode
+                                    (extractelt VT:$src, (i64 0)),
+                                    i32:$imm)))),
+              (!cast<Instruction>("V"#OpcPrefix#ri_Int) VT:$dst, VT:$src,
+                  i32:$imm)>;
+  }
+}
+
+defm : scalar_unary_math_patterns_with_immediate<X86any_VRndScale, "ROUNDSS",
+                                                 X86Movss, v4f32>;
+defm : scalar_unary_math_patterns_with_immediate<X86any_VRndScale, "ROUNDSD",
+                                                 X86Movsd, v2f64>;
 
 //===----------------------------------------------------------------------===//
 // SSE4.1 - Packed Bit Test
@@ -6886,26 +6921,26 @@ def AESIMCrm : AES8I<0xDB, MRMSrcMem, (outs VR128:$dst),
 
 // AES Round Key Generation Assist
 let Predicates = [HasAVX, HasAES] in {
-  def VAESKEYGENASSIST128rr : AESAI<0xDF, MRMSrcReg, (outs VR128:$dst),
+  def VAESKEYGENASSISTrri : AESAI<0xDF, MRMSrcReg, (outs VR128:$dst),
       (ins VR128:$src1, u8imm:$src2),
       "vaeskeygenassist\t{$src2, $src1, $dst|$dst, $src1, $src2}",
       [(set VR128:$dst,
         (int_x86_aesni_aeskeygenassist VR128:$src1, timm:$src2))]>,
       Sched<[WriteAESKeyGen]>, VEX, WIG;
-  def VAESKEYGENASSIST128rm : AESAI<0xDF, MRMSrcMem, (outs VR128:$dst),
+  def VAESKEYGENASSISTrmi : AESAI<0xDF, MRMSrcMem, (outs VR128:$dst),
       (ins i128mem:$src1, u8imm:$src2),
       "vaeskeygenassist\t{$src2, $src1, $dst|$dst, $src1, $src2}",
       [(set VR128:$dst,
         (int_x86_aesni_aeskeygenassist (load addr:$src1), timm:$src2))]>,
       Sched<[WriteAESKeyGen.Folded]>, VEX, WIG;
 }
-def AESKEYGENASSIST128rr : AESAI<0xDF, MRMSrcReg, (outs VR128:$dst),
+def AESKEYGENASSISTrri : AESAI<0xDF, MRMSrcReg, (outs VR128:$dst),
   (ins VR128:$src1, u8imm:$src2),
   "aeskeygenassist\t{$src2, $src1, $dst|$dst, $src1, $src2}",
   [(set VR128:$dst,
     (int_x86_aesni_aeskeygenassist VR128:$src1, timm:$src2))]>,
   Sched<[WriteAESKeyGen]>;
-def AESKEYGENASSIST128rm : AESAI<0xDF, MRMSrcMem, (outs VR128:$dst),
+def AESKEYGENASSISTrmi : AESAI<0xDF, MRMSrcMem, (outs VR128:$dst),
   (ins i128mem:$src1, u8imm:$src2),
   "aeskeygenassist\t{$src2, $src1, $dst|$dst, $src1, $src2}",
   [(set VR128:$dst,
@@ -6930,20 +6965,20 @@ let Predicates = [NoAVX, HasPCLMUL] in {
               (ins VR128:$src1, VR128:$src2, u8imm:$src3),
               "pclmulqdq\t{$src3, $src2, $dst|$dst, $src2, $src3}",
               [(set VR128:$dst,
-                (int_x86_pclmulqdq VR128:$src1, VR128:$src2, timm:$src3))]>,
+                (v2i64 (X86pclmulqdq VR128:$src1, VR128:$src2, timm:$src3)))]>,
                 Sched<[WriteCLMul]>;
 
     def PCLMULQDQrmi : PCLMULIi8<0x44, MRMSrcMem, (outs VR128:$dst),
               (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
               "pclmulqdq\t{$src3, $src2, $dst|$dst, $src2, $src3}",
               [(set VR128:$dst,
-                 (int_x86_pclmulqdq VR128:$src1, (memop addr:$src2),
-                  timm:$src3))]>,
+                 (v2i64 (X86pclmulqdq VR128:$src1, (memop addr:$src2),
+                  timm:$src3)))]>,
               Sched<[WriteCLMul.Folded, WriteCLMul.ReadAfterFold]>;
   } // Constraints = "$src1 = $dst"
 
-  def : Pat<(int_x86_pclmulqdq (memop addr:$src2), VR128:$src1,
-                                (i8 timm:$src3)),
+  def : Pat<(v2i64 (X86pclmulqdq (memop addr:$src2), VR128:$src1,
+                                (i8 timm:$src3))),
             (PCLMULQDQrmi VR128:$src1, addr:$src2,
                           (PCLMULCommuteImm timm:$src3))>;
 } // Predicates = [NoAVX, HasPCLMUL]
@@ -6961,36 +6996,34 @@ foreach LO = ["hq","lq"] in {
 
 // AVX carry-less Multiplication instructions
 multiclass vpclmulqdq<RegisterClass RC, X86MemOperand MemOp,
-                      PatFrag LdFrag, Intrinsic IntId> {
+                      PatFrag LdFrag, ValueType OpVT> {
   let isCommutable = 1 in
   def rri : PCLMULIi8<0x44, MRMSrcReg, (outs RC:$dst),
              (ins RC:$src1, RC:$src2, u8imm:$src3),
              "vpclmulqdq\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
              [(set RC:$dst,
-               (IntId RC:$src1, RC:$src2, timm:$src3))]>,
+               (OpVT (X86pclmulqdq RC:$src1, RC:$src2, timm:$src3)))]>,
              Sched<[WriteCLMul]>;
 
   def rmi : PCLMULIi8<0x44, MRMSrcMem, (outs RC:$dst),
              (ins RC:$src1, MemOp:$src2, u8imm:$src3),
              "vpclmulqdq\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
              [(set RC:$dst,
-                (IntId RC:$src1, (LdFrag addr:$src2), timm:$src3))]>,
+                (OpVT (X86pclmulqdq RC:$src1, (LdFrag addr:$src2), timm:$src3)))]>,
              Sched<[WriteCLMul.Folded, WriteCLMul.ReadAfterFold]>;
 
   // We can commute a load in the first operand by swapping the sources and
   // rotating the immediate.
-  def : Pat<(IntId (LdFrag addr:$src2), RC:$src1, (i8 timm:$src3)),
+  def : Pat<(OpVT (X86pclmulqdq (LdFrag addr:$src2), RC:$src1, (i8 timm:$src3))),
             (!cast<Instruction>(NAME#"rmi") RC:$src1, addr:$src2,
                                             (PCLMULCommuteImm timm:$src3))>;
 }
 
 let Predicates = [HasAVX, NoVLX_Or_NoVPCLMULQDQ, HasPCLMUL] in
-defm VPCLMULQDQ : vpclmulqdq<VR128, i128mem, load,
-                             int_x86_pclmulqdq>, VEX, VVVV, WIG;
+defm VPCLMULQDQ : vpclmulqdq<VR128, i128mem, load, v2i64>, VEX, VVVV, WIG;
 
 let Predicates = [NoVLX, HasVPCLMULQDQ] in
-defm VPCLMULQDQY : vpclmulqdq<VR256, i256mem, load,
-                              int_x86_pclmulqdq_256>, VEX, VVVV, VEX_L, WIG;
+defm VPCLMULQDQY : vpclmulqdq<VR256, i256mem, load, v4i64>, VEX, VVVV, VEX_L, WIG;
 
 multiclass vpclmulqdq_aliases_impl<string InstStr, RegisterClass RC,
                                    X86MemOperand MemOp, string Hi, string Lo> {

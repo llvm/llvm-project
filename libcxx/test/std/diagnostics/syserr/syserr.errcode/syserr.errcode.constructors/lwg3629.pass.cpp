@@ -12,7 +12,7 @@
 
 // template <ErrorCodeEnum E> error_code(E e);
 
-// Regression test for https://github.com/llvm/llvm-project/issues/57614
+// Regression test for https://llvm.org/PR57614
 
 int make_error_code; // It's important that this comes before <system_error>
 

@@ -99,7 +99,7 @@ function(llvm_ExternalProject_Add name source_dir)
       list(APPEND ARG_TOOLCHAIN_TOOLS flang)
     endif ()
     # AIX 64-bit XCOFF and big AR format is not yet supported in some of these tools.
-    if(NOT _cmake_system_name STREQUAL AIX)
+    if(NOT _cmake_system_name STREQUAL "AIX")
       list(APPEND ARG_TOOLCHAIN_TOOLS lld llvm-ar llvm-ranlib llvm-nm llvm-objdump)
       if(_cmake_system_name STREQUAL Darwin)
         list(APPEND ARG_TOOLCHAIN_TOOLS llvm-libtool-darwin llvm-lipo)

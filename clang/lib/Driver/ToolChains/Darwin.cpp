@@ -14,8 +14,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -51,15 +51,15 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
   // translation.
 
   return llvm::StringSwitch<llvm::Triple::ArchType>(Str)
-      .Cases("i386", "i486", "i486SX", "i586", "i686", llvm::Triple::x86)
-      .Cases("pentium", "pentpro", "pentIIm3", "pentIIm5", "pentium4",
+      .Cases({"i386", "i486", "i486SX", "i586", "i686"}, llvm::Triple::x86)
+      .Cases({"pentium", "pentpro", "pentIIm3", "pentIIm5", "pentium4"},
              llvm::Triple::x86)
-      .Cases("x86_64", "x86_64h", llvm::Triple::x86_64)
+      .Cases({"x86_64", "x86_64h"}, llvm::Triple::x86_64)
       // This is derived from the driver.
-      .Cases("arm", "armv4t", "armv5", "armv6", "armv6m", llvm::Triple::arm)
-      .Cases("armv7", "armv7em", "armv7k", "armv7m", llvm::Triple::arm)
-      .Cases("armv7s", "xscale", llvm::Triple::arm)
-      .Cases("arm64", "arm64e", llvm::Triple::aarch64)
+      .Cases({"arm", "armv4t", "armv5", "armv6", "armv6m"}, llvm::Triple::arm)
+      .Cases({"armv7", "armv7em", "armv7k", "armv7m"}, llvm::Triple::arm)
+      .Cases({"armv7s", "xscale"}, llvm::Triple::arm)
+      .Cases({"arm64", "arm64e"}, llvm::Triple::aarch64)
       .Case("arm64_32", llvm::Triple::aarch64_32)
       .Case("r600", llvm::Triple::r600)
       .Case("amdgcn", llvm::Triple::amdgcn)
@@ -566,8 +566,6 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-static void AppendPlatformPrefix(SmallString<128> &Path, const llvm::Triple &T);
-
 void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,
@@ -795,13 +793,15 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       NonStandardSearchPath =
           Version.getMajor() < 605 ||
           (Version.getMajor() == 605 && Version.getMinor().value_or(0) < 1);
+    } else {
+      NonStandardSearchPath = getMachOToolChain().HasPlatformPrefix(Triple);
     }
 
     if (NonStandardSearchPath) {
       if (auto *Sysroot = Args.getLastArg(options::OPT_isysroot)) {
         auto AddSearchPath = [&](StringRef Flag, StringRef SearchPath) {
           SmallString<128> P(Sysroot->getValue());
-          AppendPlatformPrefix(P, Triple);
+          getMachOToolChain().AppendPlatformPrefix(P, Triple);
           llvm::sys::path::append(P, SearchPath);
           if (getToolChain().getVFS().exists(P)) {
             CmdArgs.push_back(Args.MakeArgString(Flag + P));
@@ -1035,12 +1035,12 @@ static const char *ArmMachOArchName(StringRef Arch) {
       .Case("xscale", "xscale")
       .Case("armv4t", "armv4t")
       .Case("armv7", "armv7")
-      .Cases("armv7a", "armv7-a", "armv7")
-      .Cases("armv7r", "armv7-r", "armv7")
-      .Cases("armv7em", "armv7e-m", "armv7em")
-      .Cases("armv7k", "armv7-k", "armv7k")
-      .Cases("armv7m", "armv7-m", "armv7m")
-      .Cases("armv7s", "armv7-s", "armv7s")
+      .Cases({"armv7a", "armv7-a"}, "armv7")
+      .Cases({"armv7r", "armv7-r"}, "armv7")
+      .Cases({"armv7em", "armv7e-m"}, "armv7em")
+      .Cases({"armv7k", "armv7-k"}, "armv7k")
+      .Cases({"armv7m", "armv7-m"}, "armv7m")
+      .Cases({"armv7s", "armv7-s"}, "armv7s")
       .Default(nullptr);
 }
 
@@ -1079,7 +1079,7 @@ StringRef MachO::getMachOArchName(const ArgList &Args) const {
 
   case llvm::Triple::thumb:
   case llvm::Triple::arm:
-    if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ))
+    if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
       if (const char *Arch = ArmMachOArchName(A->getValue()))
         return Arch;
 
@@ -1344,7 +1344,7 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
+std::string MachO::getCompilerRT(const ArgList &Args, StringRef Component,
                                  FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "
@@ -1363,7 +1363,7 @@ std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
   return std::string(FullPath);
 }
 
-std::string Darwin::getCompilerRT(const ArgList &, StringRef Component,
+std::string Darwin::getCompilerRT(const ArgList &Args, StringRef Component,
                                   FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "
@@ -1609,7 +1609,12 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib)) {
       AddLinkSanitizerLibArgs(Args, CmdArgs, "fuzzer", /*shared=*/false);
 
-        // Libfuzzer is written in C++ and requires libcxx.
+      // Libfuzzer is written in C++ and requires libcxx.
+      // Since darwin::Linker::ConstructJob already adds -lc++ for clang++
+      // by default if ShouldLinkCXXStdlib(Args), we only add the option if
+      // !ShouldLinkCXXStdlib(Args). This avoids duplicate library errors
+      // on Darwin.
+      if (!ShouldLinkCXXStdlib(Args))
         AddCXXStdlibLibArgs(Args, CmdArgs);
     }
     if (Sanitize.needsStatsRt()) {
@@ -1908,10 +1913,15 @@ struct DarwinPlatform {
   /// the platform from the SDKPath.
   DarwinSDKInfo inferSDKInfo() {
     assert(Kind == InferredFromSDK && "can infer SDK info only");
-    return DarwinSDKInfo(getOSVersion(),
-                         /*MaximumDeploymentTarget=*/
-                         VersionTuple(getOSVersion().getMajor(), 0, 99),
-                         getOSFromPlatform(Platform));
+    llvm::Triple::OSType OS = getOSFromPlatform(Platform);
+    StringRef PlatformPrefix =
+        (Platform == DarwinPlatformKind::DriverKit) ? "/System/DriverKit" : "";
+    return DarwinSDKInfo(
+        getOSVersion(), /*MaximumDeploymentTarget=*/
+        VersionTuple(getOSVersion().getMajor(), 0, 99),
+        {DarwinSDKInfo::SDKPlatformInfo(llvm::Triple::Apple, OS,
+                                        llvm::Triple::UnknownEnvironment,
+                                        llvm::Triple::MachO, PlatformPrefix)});
   }
 
 private:
@@ -2601,12 +2611,25 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 }
 
+bool DarwinClang::HasPlatformPrefix(const llvm::Triple &T) const {
+  if (SDKInfo)
+    return !SDKInfo->getPlatformPrefix(T).empty();
+  else
+    return Darwin::HasPlatformPrefix(T);
+}
+
 // For certain platforms/environments almost all resources (e.g., headers) are
 // located in sub-directories, e.g., for DriverKit they live in
 // <SYSROOT>/System/DriverKit/usr/include (instead of <SYSROOT>/usr/include).
-static void AppendPlatformPrefix(SmallString<128> &Path,
-                                 const llvm::Triple &T) {
-  if (T.isDriverKit()) {
+void DarwinClang::AppendPlatformPrefix(SmallString<128> &Path,
+                                       const llvm::Triple &T) const {
+  if (SDKInfo) {
+    const StringRef PlatformPrefix = SDKInfo->getPlatformPrefix(T);
+    if (!PlatformPrefix.empty())
+      llvm::sys::path::append(Path, PlatformPrefix);
+  } else if (T.isDriverKit()) {
+    // The first version of DriverKit didn't have SDKSettings.json, manually add
+    // its prefix.
     llvm::sys::path::append(Path, "System", "DriverKit");
   }
 }
@@ -2988,7 +3011,7 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
   if (!BoundArch.empty()) {
     StringRef Name = BoundArch;
     const Option MCpu = Opts.getOption(options::OPT_mcpu_EQ);
-    const Option MArch = Opts.getOption(clang::driver::options::OPT_march_EQ);
+    const Option MArch = Opts.getOption(options::OPT_march_EQ);
 
     // This code must be kept in sync with LLVM's getArchTypeForDarwinArch,
     // which defines the list of which architectures we accept.
@@ -3115,8 +3138,22 @@ sdkSupportsBuiltinModules(const std::optional<DarwinSDKInfo> &SDKInfo) {
     // the old behavior which is to not use builtin modules.
     return false;
 
+  DarwinSDKInfo::SDKPlatformInfo PlatformInfo =
+      SDKInfo->getCanonicalPlatformInfo();
+  switch (PlatformInfo.getEnvironment()) {
+  case llvm::Triple::UnknownEnvironment:
+  case llvm::Triple::Simulator:
+  case llvm::Triple::MacABI:
+    // Standard xnu/Mach/Darwin based environments depend on the SDK version.
+    break;
+
+  default:
+    // All other environments support builtin modules from the start.
+    return true;
+  }
+
   VersionTuple SDKVersion = SDKInfo->getVersion();
-  switch (SDKInfo->getOS()) {
+  switch (PlatformInfo.getOS()) {
   // Existing SDKs added support for builtin modules in the fall
   // 2024 major releases.
   case llvm::Triple::MacOSX:
@@ -3187,28 +3224,46 @@ void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
 
   ToolChain::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
 
-  // On arm64e, enable pointer authentication (for the return address and
-  // indirect calls), as well as usage of the intrinsics.
-  if (getArchName() == "arm64e") {
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
-                           options::OPT_fno_ptrauth_returns))
-      CC1Args.push_back("-fptrauth-returns");
-
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
-                           options::OPT_fno_ptrauth_intrinsics))
-      CC1Args.push_back("-fptrauth-intrinsics");
-
+  // On arm64e, we enable all the features required for the Darwin userspace
+  // ABI
+  if (getTriple().isArm64e()) {
+    // Core platform ABI
     if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
                            options::OPT_fno_ptrauth_calls))
       CC1Args.push_back("-fptrauth-calls");
-
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                           options::OPT_fno_ptrauth_returns))
+      CC1Args.push_back("-fptrauth-returns");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                           options::OPT_fno_ptrauth_intrinsics))
+      CC1Args.push_back("-fptrauth-intrinsics");
     if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
                            options::OPT_fno_ptrauth_indirect_gotos))
       CC1Args.push_back("-fptrauth-indirect-gotos");
-
     if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
                            options::OPT_fno_ptrauth_auth_traps))
       CC1Args.push_back("-fptrauth-auth-traps");
+
+    // C++ v-table ABI
+    if (!DriverArgs.hasArg(
+            options::OPT_fptrauth_vtable_pointer_address_discrimination,
+            options::OPT_fno_ptrauth_vtable_pointer_address_discrimination))
+      CC1Args.push_back("-fptrauth-vtable-pointer-address-discrimination");
+    if (!DriverArgs.hasArg(
+            options::OPT_fptrauth_vtable_pointer_type_discrimination,
+            options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
+      CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
+
+    // Objective-C ABI
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_isa,
+                           options::OPT_fno_ptrauth_objc_isa))
+      CC1Args.push_back("-fptrauth-objc-isa");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_class_ro,
+                           options::OPT_fno_ptrauth_objc_class_ro))
+      CC1Args.push_back("-fptrauth-objc-class-ro");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_interface_sel,
+                           options::OPT_fno_ptrauth_objc_interface_sel))
+      CC1Args.push_back("-fptrauth-objc-interface-sel");
   }
 }
 

@@ -16,6 +16,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFEnumAttr.cpp.inc"
@@ -27,6 +28,42 @@ namespace cuf {
 void CUFDialect::registerAttributes() {
   addAttributes<ClusterDimsAttr, DataAttributeAttr, DataTransferKindAttr,
                 LaunchBoundsAttr, ProcAttributeAttr>();
+}
+
+cuf::DataAttributeAttr getDataAttr(mlir::Operation *op) {
+  if (!op)
+    return {};
+
+  if (auto dataAttr =
+          op->getAttrOfType<cuf::DataAttributeAttr>(cuf::getDataAttrName()))
+    return dataAttr;
+
+  // When the attribute is declared on the operation, it doesn't have a prefix.
+  if (auto dataAttr =
+          op->getAttrOfType<cuf::DataAttributeAttr>(cuf::dataAttrName))
+    return dataAttr;
+
+  return {};
+}
+
+bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value) {
+  if (auto dataAttr = getDataAttr(op))
+    return dataAttr.getValue() == value;
+  return false;
+}
+
+bool isDeviceDataAttribute(cuf::DataAttribute attr) {
+  return attr == cuf::DataAttribute::Device ||
+         attr == cuf::DataAttribute::Managed ||
+         attr == cuf::DataAttribute::Constant ||
+         attr == cuf::DataAttribute::Shared ||
+         attr == cuf::DataAttribute::Unified;
+}
+
+bool hasDeviceDataAttr(mlir::Operation *op) {
+  if (auto dataAttr = getDataAttr(op))
+    return isDeviceDataAttribute(dataAttr.getValue());
+  return false;
 }
 
 } // namespace cuf

@@ -61,20 +61,16 @@ public:
   unsigned getSize() const { return BaseSize; }
   /// Returns the full size of the record, including records.
   unsigned getFullSize() const { return BaseSize + VirtualSize; }
-  /// Returns a field.
-  const Field *getField(const FieldDecl *FD) const;
-  /// Returns a base descriptor.
-  const Base *getBase(const RecordDecl *FD) const;
-  /// Returns a base descriptor.
-  const Base *getBase(QualType T) const;
-  /// Returns a virtual base descriptor.
-  const Base *getVirtualBase(const RecordDecl *RD) const;
   /// Returns the destructor of the record, if any.
   const CXXDestructorDecl *getDestructor() const {
     if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(Decl))
       return CXXDecl->getDestructor();
     return nullptr;
   }
+
+  /// Returns true for anonymous unions and records
+  /// with no destructor or for those with a trivial destructor.
+  bool hasTrivialDtor() const;
 
   using const_field_iter = FieldList::const_iterator;
   llvm::iterator_range<const_field_iter> fields() const {
@@ -83,6 +79,8 @@ public:
 
   unsigned getNumFields() const { return Fields.size(); }
   const Field *getField(unsigned I) const { return &Fields[I]; }
+  /// Returns a field.
+  const Field *getField(const FieldDecl *FD) const;
 
   using const_base_iter = BaseList::const_iterator;
   llvm::iterator_range<const_base_iter> bases() const {
@@ -94,6 +92,10 @@ public:
     assert(I < getNumBases());
     return &Bases[I];
   }
+  /// Returns a base descriptor.
+  const Base *getBase(QualType T) const;
+  /// Returns a base descriptor.
+  const Base *getBase(const RecordDecl *FD) const;
 
   using const_virtual_iter = VirtualBaseList::const_iterator;
   llvm::iterator_range<const_virtual_iter> virtual_bases() const {
@@ -102,6 +104,8 @@ public:
 
   unsigned getNumVirtualBases() const { return VirtualBases.size(); }
   const Base *getVirtualBase(unsigned I) const { return &VirtualBases[I]; }
+  /// Returns a virtual base descriptor.
+  const Base *getVirtualBase(const RecordDecl *RD) const;
 
   void dump(llvm::raw_ostream &OS, unsigned Indentation = 0,
             unsigned Offset = 0) const;

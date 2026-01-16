@@ -82,6 +82,7 @@ class PreprocessorLexer;
 class PreprocessorOptions;
 class ScratchBuffer;
 class TargetInfo;
+class NoTrivialPPDirectiveTracer;
 
 namespace Builtin {
 class Context;
@@ -225,7 +226,7 @@ class Preprocessor {
       LangOptions::FPEvalMethodKind::FEM_UnsetOnCommandLine;
 
   // Next __COUNTER__ value, starts at 0.
-  unsigned CounterValue = 0;
+  uint32_t CounterValue = 0;
 
   enum {
     /// Maximum depth of \#includes.
@@ -352,6 +353,11 @@ private:
 
   /// First pp-token source location in current translation unit.
   SourceLocation FirstPPTokenLoc;
+
+  /// A preprocessor directive tracer to trace whether the preprocessing
+  /// state changed. These changes would mean most semantically observable
+  /// preprocessor state, particularly anything that is order dependent.
+  NoTrivialPPDirectiveTracer *DirTracer = nullptr;
 
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
@@ -608,6 +614,8 @@ private:
     bool isImplementationUnit() const {
       return State == NamedModuleImplementation && !getName().contains(':');
     }
+
+    bool isNotAModuleDecl() const { return State == NotAModuleDecl; }
 
     StringRef getName() const {
       assert(isNamedModule() && "Can't get name from a non named module");
@@ -1111,6 +1119,10 @@ private:
   /// The file ID for the PCH through header.
   FileID PCHThroughHeaderFileID;
 
+  /// The file ID for the predefines that come from the PCH.
+  /// This is only set when modules are in effect.
+  FileID PCHPredefinesFileID;
+
   /// Whether tokens are being skipped until a #pragma hdrstop is seen.
   bool SkippingUntilPragmaHdrStop = false;
 
@@ -1307,6 +1319,13 @@ public:
   /// Returns the FileID for the preprocessor predefines.
   FileID getPredefinesFileID() const { return PredefinesFileID; }
 
+  /// Returns the FileID for the predefines loaded from the PCH.
+  FileID getPCHPredefinesFileID() const {
+    assert(getLangOpts().Modules &&
+           "PCHPredefinedFileID is only set when modules is in effect!");
+    return PCHPredefinesFileID;
+  }
+
   /// \{
   /// Accessors for preprocessor callbacks.
   ///
@@ -1319,6 +1338,7 @@ public:
                                                 std::move(Callbacks));
     Callbacks = std::move(C);
   }
+  void removePPCallbacks() { Callbacks.reset(); }
   /// \}
 
   /// Get the number of tokens processed so far.
@@ -2413,8 +2433,8 @@ public:
   bool SawDateOrTime() const {
     return DATELoc != SourceLocation() || TIMELoc != SourceLocation();
   }
-  unsigned getCounterValue() const { return CounterValue; }
-  void setCounterValue(unsigned V) { CounterValue = V; }
+  uint32_t getCounterValue() const { return CounterValue; }
+  void setCounterValue(uint32_t V) { CounterValue = V; }
 
   LangOptions::FPEvalMethodKind getCurrentFPEvalMethod() const {
     assert(CurrentFPEvalMethod != LangOptions::FEM_UnsetOnCommandLine &&
@@ -3090,6 +3110,10 @@ public:
   /// is same as itself before the call.
   bool setDeserializedSafeBufferOptOutMap(
       const SmallVectorImpl<SourceLocation> &SrcLocSeqs);
+
+  /// Whether we've seen pp-directives which may have changed the preprocessing
+  /// state.
+  bool hasSeenNoTrivialPPDirective() const;
 
 private:
   /// Helper functions to forward lexing to the actual lexer. They all share the

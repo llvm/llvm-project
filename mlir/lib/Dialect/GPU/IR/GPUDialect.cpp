@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -208,7 +209,7 @@ Type MMAMatrixType::getElementType() const { return getImpl()->elementType; }
 StringRef MMAMatrixType::getOperand() const { return getImpl()->getOperand(); }
 
 bool MMAMatrixType::isValidElementType(Type elementType) {
-  return elementType.isF16() || elementType.isF32() ||
+  return elementType.isF16() || elementType.isF32() || elementType.isF64() ||
          elementType.isUnsignedInteger(8) || elementType.isSignedInteger(8) ||
          elementType.isInteger(32);
 }
@@ -225,7 +226,7 @@ MMAMatrixType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 
   if (!MMAMatrixType::isValidElementType(elementType))
     return emitError()
-           << "MMAMatrixType elements must be SI8, UI8, I32, F16, or F32";
+           << "MMAMatrixType elements must be SI8, UI8, I32, F16, F32, or F64";
 
   return success();
 }
@@ -375,7 +376,7 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
         os << shape.back() << 'x' << fragTy.getElementType();
         os << ", \"" << fragTy.getOperand() << "\"" << '>';
       })
-      .Default([](Type) { llvm_unreachable("unexpected 'gpu' type kind"); });
+      .DefaultUnreachable("unexpected 'gpu' type kind");
 }
 
 static LogicalResult verifyKnownLaunchSizeAttr(Operation *op,
@@ -395,6 +396,8 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
   if (attr.getName() == getKnownBlockSizeAttrHelper().getName())
     return verifyKnownLaunchSizeAttr(op, attr);
   if (attr.getName() == getKnownGridSizeAttrHelper().getName())
+    return verifyKnownLaunchSizeAttr(op, attr);
+  if (attr.getName() == getKnownClusterSizeAttrHelper().getName())
     return verifyKnownLaunchSizeAttr(op, attr);
   if (!llvm::isa<UnitAttr>(attr.getValue()) ||
       attr.getName() != getContainerModuleAttrName())
@@ -535,17 +538,26 @@ parseAttributions(OpAsmParser &parser, StringRef keyword,
                                   /*allowType=*/true);
 }
 
-/// Prints a GPU function memory attribution.
 static void printAttributions(OpAsmPrinter &p, StringRef keyword,
-                              ArrayRef<BlockArgument> values) {
+                              ArrayRef<BlockArgument> values,
+                              ArrayAttr attributes = {}) {
   if (values.empty())
     return;
 
-  auto printBlockArg = [](BlockArgument v) {
-    return llvm::formatv("{} : {}", v, v.getType());
-  };
-  p << ' ' << keyword << '('
-    << llvm::interleaved(llvm::map_range(values, printBlockArg)) << ')';
+  p << ' ' << keyword << '(';
+  llvm::interleaveComma(
+      llvm::enumerate(values), p, [&p, attributes](auto pair) {
+        BlockArgument v = pair.value();
+        p << v << " : " << v.getType();
+
+        size_t attributionIndex = pair.index();
+        DictionaryAttr attrs;
+        if (attributes && attributionIndex < attributes.size())
+          attrs = llvm::cast<DictionaryAttr>(attributes[attributionIndex]);
+        if (attrs)
+          p.printOptionalAttrDict(attrs.getValue());
+      });
+  p << ')';
 }
 
 /// Verifies a GPU function memory attribution.
@@ -756,7 +768,8 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      Type asyncTokenType, ValueRange asyncDependencies,
                      TypeRange workgroupAttributions,
                      TypeRange privateAttributions, Value clusterSizeX,
-                     Value clusterSizeY, Value clusterSizeZ) {
+                     Value clusterSizeY, Value clusterSizeZ,
+                     FlatSymbolRefAttr module, FlatSymbolRefAttr function) {
   OpBuilder::InsertionGuard g(builder);
 
   // Add a WorkGroup attribution attribute. This attribute is required to
@@ -780,6 +793,12 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
     result.addOperands(clusterSizeZ);
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
+
+  // Add optional module and function attributes.
+  if (module)
+    result.addAttribute(getModuleAttrName(result.name), module);
+  if (function)
+    result.addAttribute(getFunctionAttrName(result.name), function);
 
   // Create a kernel body region with kNumConfigRegionAttributes + N memory
   // attributions, where the first kNumConfigRegionAttributes arguments have
@@ -944,6 +963,21 @@ void LaunchOp::print(OpAsmPrinter &p) {
     p << ' ' << getDynamicSharedMemorySizeKeyword() << ' '
       << getDynamicSharedMemorySize();
 
+  // Print optional module attribute.
+  StringRef moduleAttrName = getModuleAttrName();
+  if (auto module = getModule()) {
+    p << ' ' << moduleAttrName << '(';
+    p.printSymbolName(*module);
+    p << ')';
+  }
+  // Print optional function attribute.
+  StringRef functionAttrName = getFunctionAttrName();
+  if (auto function = getFunction()) {
+    p << ' ' << functionAttrName << '(';
+    p.printSymbolName(*function);
+    p << ')';
+  }
+
   printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributions());
   printAttributions(p, getPrivateKeyword(), getPrivateAttributions());
 
@@ -952,7 +986,8 @@ void LaunchOp::print(OpAsmPrinter &p) {
   p.printRegion(getBody(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
                               LaunchOp::getOperandSegmentSizeAttr(),
-                              getNumWorkgroupAttributionsAttrName()});
+                              getNumWorkgroupAttributionsAttrName(),
+                              moduleAttrName, functionAttrName});
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -990,6 +1025,9 @@ parseSizeAssignment(OpAsmParser &parser,
 ///       `clusters` `(` ssa-id-list `)` `in` ssa-reassignment (Optional)
 ///       `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
 ///       `threads` `(` ssa-id-list `)` `in` ssa-reassignment
+///       (`dynamic_shared_memory_size` ssa-use)?
+///       (`module(` symbol-ref-id `)`)?
+///       (`function(` symbol-ref-id `)`)?
 ///       memory-attribution
 ///       region attr-dict?
 /// ssa-reassignment ::= `(` ssa-id `=` ssa-use (`,` ssa-id `=` ssa-use)* `)`
@@ -1057,6 +1095,27 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
         parser.resolveOperand(dynamicSharedMemorySize,
                               parser.getBuilder().getI32Type(),
                               result.operands))
+      return failure();
+  }
+
+  // Parse optional module attribute.
+  StringRef moduleAttrName = getModuleAttrName(result.name);
+  if (succeeded(parser.parseOptionalKeyword(moduleAttrName))) {
+    FlatSymbolRefAttr moduleSymbol;
+    if (parser.parseLParen() ||
+        parser.parseAttribute(moduleSymbol, Type(), moduleAttrName,
+                              result.attributes) ||
+        parser.parseRParen())
+      return failure();
+  }
+  // Parse optional function attribute.
+  StringRef functionAttrName = getFunctionAttrName(result.name);
+  if (succeeded(parser.parseOptionalKeyword(functionAttrName))) {
+    FlatSymbolRefAttr funcSymbol;
+    if (parser.parseLParen() ||
+        parser.parseAttribute(funcSymbol, Type(), functionAttrName,
+                              result.attributes) ||
+        parser.parseRParen())
       return failure();
   }
 
@@ -1410,19 +1469,15 @@ LogicalResult RotateOp::verify() {
 // BarrierOp
 //===----------------------------------------------------------------------===//
 
-namespace {
-
 /// Remove gpu.barrier after gpu.barrier, the threads are already synchronized!
-LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
-                                          PatternRewriter &rewriter) {
+static LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
+                                                 PatternRewriter &rewriter) {
   if (isa_and_nonnull<BarrierOp>(op->getNextNode())) {
     rewriter.eraseOp(op);
     return success();
   }
   return failure();
 }
-
-} // end anonymous namespace
 
 void BarrierOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
@@ -1600,28 +1655,6 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   // (including those of attributions) from the entry block.
   auto *body = result.addRegion();
   return parser.parseRegion(*body, entryArgs);
-}
-
-static void printAttributions(OpAsmPrinter &p, StringRef keyword,
-                              ArrayRef<BlockArgument> values,
-                              ArrayAttr attributes) {
-  if (values.empty())
-    return;
-
-  p << ' ' << keyword << '(';
-  llvm::interleaveComma(
-      llvm::enumerate(values), p, [&p, attributes](auto pair) {
-        BlockArgument v = pair.value();
-        p << v << " : " << v.getType();
-
-        size_t attributionIndex = pair.index();
-        DictionaryAttr attrs;
-        if (attributes && attributionIndex < attributes.size())
-          attrs = llvm::cast<DictionaryAttr>(attributes[attributionIndex]);
-        if (attrs)
-          p.printOptionalAttrDict(attrs.getValue());
-      });
-  p << ')';
 }
 
 void GPUFuncOp::print(OpAsmPrinter &p) {
@@ -2139,9 +2172,9 @@ void WaitOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult AllocOp::verify() {
   auto memRefType = llvm::cast<MemRefType>(getMemref().getType());
 
-  if (getDynamicSizes().size() != memRefType.getNumDynamicDims())
-    return emitOpError("dimension operand count does not equal memref "
-                       "dynamic dimension count");
+  if (failed(verifyDynamicDimensionCount(getOperation(), memRefType,
+                                         getDynamicSizes())))
+    return failure();
 
   unsigned numSymbols = 0;
   if (!memRefType.getLayout().isIdentity())
@@ -2365,7 +2398,7 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
 void WarpExecuteOnLane0Op::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor(getResults()));
+    regions.push_back(RegionSuccessor::parent());
     return;
   }
 
@@ -2373,6 +2406,9 @@ void WarpExecuteOnLane0Op::getSuccessorRegions(
   regions.push_back(RegionSuccessor(&getWarpRegion()));
 }
 
+ValueRange WarpExecuteOnLane0Op::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+}
 void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
                                  TypeRange resultTypes, Value laneId,
                                  int64_t warpSize) {
@@ -2426,8 +2462,7 @@ static LogicalResult verifyDistributedType(Type expanded, Type distributed,
              << dDim << ")";
     scales[i] = eDim / dDim;
   }
-  if (std::accumulate(scales.begin(), scales.end(), 1,
-                      std::multiplies<int64_t>()) != warpSize)
+  if (llvm::product_of(scales) != warpSize)
     return op->emitOpError()
            << "incompatible distribution dimensions from " << expandedVecType
            << " to " << distributedVecType << " with warp size = " << warpSize;
@@ -2439,8 +2474,7 @@ LogicalResult WarpExecuteOnLane0Op::verify() {
   if (getArgs().size() != getWarpRegion().getNumArguments())
     return emitOpError(
         "expected same number op arguments and block arguments.");
-  auto yield =
-      cast<YieldOp>(getWarpRegion().getBlocks().begin()->getTerminator());
+  gpu::YieldOp yield = getTerminator();
   if (yield.getNumOperands() != getNumResults())
     return emitOpError(
         "expected same number of yield operands and return values.");
@@ -2462,6 +2496,54 @@ LogicalResult WarpExecuteOnLane0Op::verify() {
 bool WarpExecuteOnLane0Op::areTypesCompatible(Type lhs, Type rhs) {
   return succeeded(
       verifyDistributedType(lhs, rhs, getWarpSize(), getOperation()));
+}
+
+gpu::YieldOp WarpExecuteOnLane0Op::getTerminator() {
+  return cast<gpu::YieldOp>(getBody()->getTerminator());
+}
+
+//===----------------------------------------------------------------------===//
+// GPU_SubgroupBroadcastOp
+//===----------------------------------------------------------------------===//
+
+void gpu::SubgroupBroadcastOp::inferResultRanges(
+    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
+  setResultRange(getResult(), argRanges.front());
+}
+
+Speculation::Speculatability gpu::SubgroupBroadcastOp::getSpeculatability() {
+  switch (getBroadcastType()) {
+  case BroadcastType::first_active_lane:
+    // Cannot speculate first_lane broadcast, because speculating it across
+    // control flow can change the active lanes.
+    return Speculation::NotSpeculatable;
+  case BroadcastType::specific_lane:
+    // Speculation should be safe as long as we inside structured control flow.
+    return Speculation::Speculatable;
+  }
+}
+
+LogicalResult gpu::SubgroupBroadcastOp::verify() {
+  switch (getBroadcastType()) {
+  case BroadcastType::first_active_lane:
+    if (getLane())
+      return emitOpError()
+             << "lane can only be specified for `specific_lane` broadcast";
+    return success();
+  case BroadcastType::specific_lane:
+    if (!getLane())
+      return emitOpError()
+             << "lane must be specified for `specific_lane` broadcast";
+    return success();
+  }
+}
+
+OpFoldResult gpu::SubgroupBroadcastOp::fold(FoldAdaptor /*adaptor*/) {
+  // Broadcast result is always uniform.
+  if (auto prev = getSrc().getDefiningOp<SubgroupBroadcastOp>())
+    return prev.getResult();
+
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

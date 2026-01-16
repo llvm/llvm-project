@@ -242,6 +242,7 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__loongarch_simd_width", "256");
     Builder.defineMacro("__loongarch_sx", Twine(1));
     Builder.defineMacro("__loongarch_asx", Twine(1));
+    Builder.defineMacro("__loongarch_asx_sx_conv", Twine(1));
   } else if (HasFeatureLSX) {
     Builder.defineMacro("__loongarch_simd_width", "128");
     Builder.defineMacro("__loongarch_sx", Twine(1));
@@ -461,6 +462,8 @@ LoongArchTargetInfo::parseTargetAttr(StringRef Features) const {
 
     case AttrFeatureKind::Feature:
       Ret.Features.push_back("+" + Value.str());
+      if (Value == "lasx")
+        Ret.Features.push_back("+lsx");
       break;
     }
   }

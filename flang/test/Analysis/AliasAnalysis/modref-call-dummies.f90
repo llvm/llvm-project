@@ -20,7 +20,7 @@ subroutine test_dummy(test_var_x)
   use somemod, only : may_capture
   implicit none
   real :: test_var_x
-  ! Capture is invalid after the call because test_var_xsaved does not have the
+  ! Capture is invalid after the call because test_var_x does not have the
   ! target attribute.
   call may_capture(test_var_x)
   call test_effect_external()
@@ -50,4 +50,61 @@ subroutine test_dummy_pointer(p)
   end associate
 end subroutine
 ! CHECK-LABEL: Testing : "_QPtest_dummy_pointer"
-! CHECK: test_effect_external -> test_var_p_target#0: ModRef
+! CHECK-DAG: test_effect_external -> test_var_p_target#0: ModRef
+! CHECK-DAG: test_effect_external -> box_addr_0#0: ModRef
+
+subroutine test_dummy_allocatable(test_var_x)
+  use somemod, only : may_capture
+  implicit none
+  real, allocatable :: test_var_x
+  ! Capture is invalid after the call because test_var_x does not have the
+  ! target attribute.
+  call may_capture(test_var_x)
+  call test_effect_external()
+end subroutine
+! CHECK-LABEL: Testing : "_QPtest_dummy_allocatable"
+! CHECK-DAG: test_effect_external -> test_var_x#0: NoModRef
+! We used to report the next one as ModRef:
+! CHECK-DAG: test_effect_external -> box_addr_1#0: NoModRef
+
+subroutine test_target_dummy_allocatable(test_var_x)
+  use somemod, only : may_capture
+  implicit none
+  real, allocatable, target :: test_var_x
+  call may_capture(test_var_x)
+  call test_effect_external()
+end subroutine
+! CHECK-LABEL: Testing : "_QPtest_target_dummy_allocatable"
+! CHECK-DAG: test_effect_external -> test_var_x#0: ModRef
+! We used to report the next one as ModRef:
+! CHECK-DAG: test_effect_external -> box_addr_2#0: ModRef
+
+subroutine test_dummy_derived_with_allocatable(test_var_x)
+  use somemod, only : may_capture
+  implicit none
+  type t
+     real, allocatable :: member
+  end type t
+  type(t) test_var_x
+  call may_capture(test_var_x%member)
+  call test_effect_external()
+end subroutine
+! CHECK-LABEL: Testing : "_QPtest_dummy_derived_with_allocatable"
+! CHECK-DAG: test_effect_external -> test_var_x#0: NoModRef
+! We used to report the next one as ModRef:
+! CHECK-DAG: test_effect_external -> box_addr_3#0: NoModRef
+
+subroutine test_target_dummy_derived_with_allocatable(test_var_x)
+  use somemod, only : may_capture
+  implicit none
+  type t
+     real, allocatable :: member
+  end type t
+  type(t), target :: test_var_x
+  call may_capture(test_var_x%member)
+  call test_effect_external()
+end subroutine
+! CHECK-LABEL: Testing : "_QPtest_target_dummy_derived_with_allocatable"
+! CHECK-DAG: test_effect_external -> test_var_x#0: ModRef
+! We used to report the next one as ModRef:
+! CHECK-DAG: test_effect_external -> box_addr_4#0: ModRef

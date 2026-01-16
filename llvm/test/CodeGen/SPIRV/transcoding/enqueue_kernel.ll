@@ -121,269 +121,269 @@
 %opencl.queue_t = type opaque
 %struct.ndrange_t = type { i32 }
 %opencl.clk_event_t = type opaque
-%struct.__opencl_block_literal_generic = type { i32, i32, i8 addrspace(4)* }
+%struct.__opencl_block_literal_generic = type { i32, i32, ptr addrspace(4) }
 
-@__block_literal_global = internal addrspace(1) constant { i32, i32, i8 addrspace(4)* } { i32 12, i32 4, i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*, i8 addrspace(3)*)* @__device_side_enqueue_block_invoke_3 to i8*) to i8 addrspace(4)*) }, align 4
-@__block_literal_global.1 = internal addrspace(1) constant { i32, i32, i8 addrspace(4)* } { i32 12, i32 4, i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*, i8 addrspace(3)*, i8 addrspace(3)*, i8 addrspace(3)*)* @__device_side_enqueue_block_invoke_4 to i8*) to i8 addrspace(4)*) }, align 4
+@__block_literal_global = internal addrspace(1) constant { i32, i32, ptr addrspace(4) } { i32 12, i32 4, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_3 to ptr addrspace(4)) }, align 4
+@__block_literal_global.1 = internal addrspace(1) constant { i32, i32, ptr addrspace(4) } { i32 12, i32 4, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_4 to ptr addrspace(4)) }, align 4
 
-define dso_local spir_kernel void @device_side_enqueue(i32 addrspace(1)* noundef %a, i32 addrspace(1)* noundef %b, i32 noundef %i, i8 noundef signext %c0) {
+define dso_local spir_kernel void @device_side_enqueue(ptr addrspace(1) noundef %a, ptr addrspace(1) noundef %b, i32 noundef %i, i8 noundef signext %c0) {
 entry:
-  %a.addr = alloca i32 addrspace(1)*, align 4
-  %b.addr = alloca i32 addrspace(1)*, align 4
+  %a.addr = alloca ptr addrspace(1), align 4
+  %b.addr = alloca ptr addrspace(1), align 4
   %i.addr = alloca i32, align 4
   %c0.addr = alloca i8, align 1
-  %default_queue = alloca %opencl.queue_t*, align 4
+  %default_queue = alloca ptr, align 4
   %flags = alloca i32, align 4
   %ndrange = alloca %struct.ndrange_t, align 4
-  %clk_event = alloca %opencl.clk_event_t*, align 4
-  %event_wait_list = alloca %opencl.clk_event_t*, align 4
-  %event_wait_list2 = alloca [1 x %opencl.clk_event_t*], align 4
+  %clk_event = alloca ptr, align 4
+  %event_wait_list = alloca ptr, align 4
+  %event_wait_list2 = alloca [1 x ptr], align 4
   %tmp = alloca %struct.ndrange_t, align 4
-  %block = alloca <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>, align 4
+  %block = alloca <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, i8 }>, align 4
   %tmp3 = alloca %struct.ndrange_t, align 4
-  %block4 = alloca <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, align 4
+  %block4 = alloca <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, align 4
   %c = alloca i8, align 1
   %tmp11 = alloca %struct.ndrange_t, align 4
   %block_sizes = alloca [1 x i32], align 4
   %tmp12 = alloca %struct.ndrange_t, align 4
   %block_sizes13 = alloca [3 x i32], align 4
   %tmp14 = alloca %struct.ndrange_t, align 4
-  %block15 = alloca <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, align 4
-  store i32 addrspace(1)* %a, i32 addrspace(1)** %a.addr, align 4
-  store i32 addrspace(1)* %b, i32 addrspace(1)** %b.addr, align 4
-  store i32 %i, i32* %i.addr, align 4
-  store i8 %c0, i8* %c0.addr, align 1
-  store i32 0, i32* %flags, align 4
-  %arrayinit.begin = getelementptr inbounds [1 x %opencl.clk_event_t*], [1 x %opencl.clk_event_t*]* %event_wait_list2, i32 0, i32 0
-  %0 = load %opencl.clk_event_t*, %opencl.clk_event_t** %clk_event, align 4
-  store %opencl.clk_event_t* %0, %opencl.clk_event_t** %arrayinit.begin, align 4
-  %1 = load %opencl.queue_t*, %opencl.queue_t** %default_queue, align 4
-  %2 = load i32, i32* %flags, align 4
-  %3 = bitcast %struct.ndrange_t* %tmp to i8*
-  %4 = bitcast %struct.ndrange_t* %ndrange to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %3, i8* align 4 %4, i32 4, i1 false)
-  %block.size = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>* %block, i32 0, i32 0
-  store i32 21, i32* %block.size, align 4
-  %block.align = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>* %block, i32 0, i32 1
-  store i32 4, i32* %block.align, align 4
-  %block.invoke = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>* %block, i32 0, i32 2
-  store i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*)* @__device_side_enqueue_block_invoke to i8*) to i8 addrspace(4)*), i8 addrspace(4)** %block.invoke, align 4
-  %block.captured = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>* %block, i32 0, i32 3
-  %5 = load i32 addrspace(1)*, i32 addrspace(1)** %a.addr, align 4
-  store i32 addrspace(1)* %5, i32 addrspace(1)** %block.captured, align 4
-  %block.captured1 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>* %block, i32 0, i32 4
-  %6 = load i32, i32* %i.addr, align 4
-  store i32 %6, i32* %block.captured1, align 4
-  %block.captured2 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>* %block, i32 0, i32 5
-  %7 = load i8, i8* %c0.addr, align 1
-  store i8 %7, i8* %block.captured2, align 4
-  %8 = bitcast <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>* %block to %struct.__opencl_block_literal_generic*
-  %9 = addrspacecast %struct.__opencl_block_literal_generic* %8 to i8 addrspace(4)*
-  %10 = call spir_func i32 @__enqueue_kernel_basic(%opencl.queue_t* %1, i32 %2, %struct.ndrange_t* byval(%struct.ndrange_t) %tmp, i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*)* @__device_side_enqueue_block_invoke_kernel to i8*) to i8 addrspace(4)*), i8 addrspace(4)* %9)
-  %11 = load %opencl.queue_t*, %opencl.queue_t** %default_queue, align 4
-  %12 = load i32, i32* %flags, align 4
-  %13 = bitcast %struct.ndrange_t* %tmp3 to i8*
-  %14 = bitcast %struct.ndrange_t* %ndrange to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %13, i8* align 4 %14, i32 4, i1 false)
-  %15 = addrspacecast %opencl.clk_event_t** %event_wait_list to %opencl.clk_event_t* addrspace(4)*
-  %16 = addrspacecast %opencl.clk_event_t** %clk_event to %opencl.clk_event_t* addrspace(4)*
-  %block.size5 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block4, i32 0, i32 0
-  store i32 24, i32* %block.size5, align 4
-  %block.align6 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block4, i32 0, i32 1
-  store i32 4, i32* %block.align6, align 4
-  %block.invoke7 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block4, i32 0, i32 2
-  store i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*)* @__device_side_enqueue_block_invoke_2 to i8*) to i8 addrspace(4)*), i8 addrspace(4)** %block.invoke7, align 4
-  %block.captured8 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block4, i32 0, i32 3
-  %17 = load i32 addrspace(1)*, i32 addrspace(1)** %a.addr, align 4
-  store i32 addrspace(1)* %17, i32 addrspace(1)** %block.captured8, align 4
-  %block.captured9 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block4, i32 0, i32 4
-  %18 = load i32, i32* %i.addr, align 4
-  store i32 %18, i32* %block.captured9, align 4
-  %block.captured10 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block4, i32 0, i32 5
-  %19 = load i32 addrspace(1)*, i32 addrspace(1)** %b.addr, align 4
-  store i32 addrspace(1)* %19, i32 addrspace(1)** %block.captured10, align 4
-  %20 = bitcast <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block4 to %struct.__opencl_block_literal_generic*
-  %21 = addrspacecast %struct.__opencl_block_literal_generic* %20 to i8 addrspace(4)*
-  %22 = call spir_func i32 @__enqueue_kernel_basic_events(%opencl.queue_t* %11, i32 %12, %struct.ndrange_t* %tmp3, i32 2, %opencl.clk_event_t* addrspace(4)* %15, %opencl.clk_event_t* addrspace(4)* %16, i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*)* @__device_side_enqueue_block_invoke_2_kernel to i8*) to i8 addrspace(4)*), i8 addrspace(4)* %21)
-  %23 = load %opencl.queue_t*, %opencl.queue_t** %default_queue, align 4
-  %24 = load i32, i32* %flags, align 4
-  %25 = bitcast %struct.ndrange_t* %tmp11 to i8*
-  %26 = bitcast %struct.ndrange_t* %ndrange to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %25, i8* align 4 %26, i32 4, i1 false)
-  %arraydecay = getelementptr inbounds [1 x %opencl.clk_event_t*], [1 x %opencl.clk_event_t*]* %event_wait_list2, i32 0, i32 0
-  %27 = addrspacecast %opencl.clk_event_t** %arraydecay to %opencl.clk_event_t* addrspace(4)*
-  %28 = addrspacecast %opencl.clk_event_t** %clk_event to %opencl.clk_event_t* addrspace(4)*
-  %29 = getelementptr [1 x i32], [1 x i32]* %block_sizes, i32 0, i32 0
-  %30 = load i8, i8* %c, align 1
+  %block15 = alloca <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, align 4
+  store ptr addrspace(1) %a, ptr %a.addr, align 4
+  store ptr addrspace(1) %b, ptr %b.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
+  store i8 %c0, ptr %c0.addr, align 1
+  store i32 0, ptr %flags, align 4
+  %arrayinit.begin = getelementptr inbounds [1 x ptr], ptr %event_wait_list2, i32 0, i32 0
+  %0 = load ptr, ptr %clk_event, align 4
+  store ptr %0, ptr %arrayinit.begin, align 4
+  %1 = load ptr, ptr %default_queue, align 4
+  %2 = load i32, ptr %flags, align 4
+  %3 = bitcast ptr %tmp to ptr
+  %4 = bitcast ptr %ndrange to ptr
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %3, ptr align 4 %4, i32 4, i1 false)
+  %block.size = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, i8 }>, ptr %block, i32 0, i32 0
+  store i32 21, ptr %block.size, align 4
+  %block.align = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, i8 }>, ptr %block, i32 0, i32 1
+  store i32 4, ptr %block.align, align 4
+  %block.invoke = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, i8 }>, ptr %block, i32 0, i32 2
+  store ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke to ptr addrspace(4)), ptr %block.invoke, align 4
+  %block.captured = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, i8 }>, ptr %block, i32 0, i32 3
+  %5 = load ptr addrspace(1), ptr %a.addr, align 4
+  store ptr addrspace(1) %5, ptr %block.captured, align 4
+  %block.captured1 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, i8 }>, ptr %block, i32 0, i32 4
+  %6 = load i32, ptr %i.addr, align 4
+  store i32 %6, ptr %block.captured1, align 4
+  %block.captured2 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, i8 }>, ptr %block, i32 0, i32 5
+  %7 = load i8, ptr %c0.addr, align 1
+  store i8 %7, ptr %block.captured2, align 4
+  %8 = bitcast ptr %block to ptr
+  %9 = addrspacecast ptr %8 to ptr addrspace(4)
+  %10 = call spir_func i32 @__enqueue_kernel_basic(ptr %1, i32 %2, ptr byval(%struct.ndrange_t) %tmp, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) %9)
+  %11 = load ptr, ptr %default_queue, align 4
+  %12 = load i32, ptr %flags, align 4
+  %13 = bitcast ptr %tmp3 to ptr
+  %14 = bitcast ptr %ndrange to ptr
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %13, ptr align 4 %14, i32 4, i1 false)
+  %15 = addrspacecast ptr %event_wait_list to ptr addrspace(4)
+  %16 = addrspacecast ptr %clk_event to ptr addrspace(4)
+  %block.size5 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block4, i32 0, i32 0
+  store i32 24, ptr %block.size5, align 4
+  %block.align6 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block4, i32 0, i32 1
+  store i32 4, ptr %block.align6, align 4
+  %block.invoke7 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block4, i32 0, i32 2
+  store ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_2 to ptr addrspace(4)), ptr %block.invoke7, align 4
+  %block.captured8 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block4, i32 0, i32 3
+  %17 = load ptr addrspace(1), ptr %a.addr, align 4
+  store ptr addrspace(1) %17, ptr %block.captured8, align 4
+  %block.captured9 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block4, i32 0, i32 4
+  %18 = load i32, ptr %i.addr, align 4
+  store i32 %18, ptr %block.captured9, align 4
+  %block.captured10 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block4, i32 0, i32 5
+  %19 = load ptr addrspace(1), ptr %b.addr, align 4
+  store ptr addrspace(1) %19, ptr %block.captured10, align 4
+  %20 = bitcast ptr %block4 to ptr
+  %21 = addrspacecast ptr %20 to ptr addrspace(4)
+  %22 = call spir_func i32 @__enqueue_kernel_basic_events(ptr %11, i32 %12, ptr %tmp3, i32 2, ptr addrspace(4) %15, ptr addrspace(4) %16, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_2_kernel to ptr addrspace(4)), ptr addrspace(4) %21)
+  %23 = load ptr, ptr %default_queue, align 4
+  %24 = load i32, ptr %flags, align 4
+  %25 = bitcast ptr %tmp11 to ptr
+  %26 = bitcast ptr %ndrange to ptr
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %25, ptr align 4 %26, i32 4, i1 false)
+  %arraydecay = getelementptr inbounds [1 x ptr], ptr %event_wait_list2, i32 0, i32 0
+  %27 = addrspacecast ptr %arraydecay to ptr addrspace(4)
+  %28 = addrspacecast ptr %clk_event to ptr addrspace(4)
+  %29 = getelementptr [1 x i32], ptr %block_sizes, i32 0, i32 0
+  %30 = load i8, ptr %c, align 1
   %31 = zext i8 %30 to i32
-  store i32 %31, i32* %29, align 4
-  %32 = call spir_func i32 @__enqueue_kernel_events_varargs(%opencl.queue_t* %23, i32 %24, %struct.ndrange_t* %tmp11, i32 2, %opencl.clk_event_t* addrspace(4)* %27, %opencl.clk_event_t* addrspace(4)* %28, i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*, i8 addrspace(3)*)* @__device_side_enqueue_block_invoke_3_kernel to i8*) to i8 addrspace(4)*), i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32, i8 addrspace(4)* } addrspace(1)* @__block_literal_global to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32* %29)
-  %33 = load %opencl.queue_t*, %opencl.queue_t** %default_queue, align 4
-  %34 = load i32, i32* %flags, align 4
-  %35 = bitcast %struct.ndrange_t* %tmp12 to i8*
-  %36 = bitcast %struct.ndrange_t* %ndrange to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %35, i8* align 4 %36, i32 4, i1 false)
-  %37 = getelementptr [3 x i32], [3 x i32]* %block_sizes13, i32 0, i32 0
-  store i32 1, i32* %37, align 4
-  %38 = getelementptr [3 x i32], [3 x i32]* %block_sizes13, i32 0, i32 1
-  store i32 2, i32* %38, align 4
-  %39 = getelementptr [3 x i32], [3 x i32]* %block_sizes13, i32 0, i32 2
-  store i32 4, i32* %39, align 4
-  %40 = call spir_func i32 @__enqueue_kernel_varargs(%opencl.queue_t* %33, i32 %34, %struct.ndrange_t* %tmp12, i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*, i8 addrspace(3)*, i8 addrspace(3)*, i8 addrspace(3)*)* @__device_side_enqueue_block_invoke_4_kernel to i8*) to i8 addrspace(4)*), i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32, i8 addrspace(4)* } addrspace(1)* @__block_literal_global.1 to i8 addrspace(1)*) to i8 addrspace(4)*), i32 3, i32* %37)
-  %41 = load %opencl.queue_t*, %opencl.queue_t** %default_queue, align 4
-  %42 = load i32, i32* %flags, align 4
-  %43 = bitcast %struct.ndrange_t* %tmp14 to i8*
-  %44 = bitcast %struct.ndrange_t* %ndrange to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %43, i8* align 4 %44, i32 4, i1 false)
-  %45 = addrspacecast %opencl.clk_event_t** %clk_event to %opencl.clk_event_t* addrspace(4)*
-  %block.size16 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block15, i32 0, i32 0
-  store i32 24, i32* %block.size16, align 4
-  %block.align17 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block15, i32 0, i32 1
-  store i32 4, i32* %block.align17, align 4
-  %block.invoke18 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block15, i32 0, i32 2
-  store i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*)* @__device_side_enqueue_block_invoke_5 to i8*) to i8 addrspace(4)*), i8 addrspace(4)** %block.invoke18, align 4
-  %block.captured19 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block15, i32 0, i32 3
-  %46 = load i32 addrspace(1)*, i32 addrspace(1)** %a.addr, align 4
-  store i32 addrspace(1)* %46, i32 addrspace(1)** %block.captured19, align 4
-  %block.captured20 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block15, i32 0, i32 4
-  %47 = load i32, i32* %i.addr, align 4
-  store i32 %47, i32* %block.captured20, align 4
-  %block.captured21 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block15, i32 0, i32 5
-  %48 = load i32 addrspace(1)*, i32 addrspace(1)** %b.addr, align 4
-  store i32 addrspace(1)* %48, i32 addrspace(1)** %block.captured21, align 4
-  %49 = bitcast <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block15 to %struct.__opencl_block_literal_generic*
-  %50 = addrspacecast %struct.__opencl_block_literal_generic* %49 to i8 addrspace(4)*
-  %51 = call spir_func i32 @__enqueue_kernel_basic_events(%opencl.queue_t* %41, i32 %42, %struct.ndrange_t* %tmp14, i32 0, %opencl.clk_event_t* addrspace(4)* null, %opencl.clk_event_t* addrspace(4)* %45, i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*)* @__device_side_enqueue_block_invoke_5_kernel to i8*) to i8 addrspace(4)*), i8 addrspace(4)* %50)
+  store i32 %31, ptr %29, align 4
+  %32 = call spir_func i32 @__enqueue_kernel_events_varargs(ptr %23, i32 %24, ptr %tmp11, i32 2, ptr addrspace(4) %27, ptr addrspace(4) %28, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_3_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global to ptr addrspace(4)), i32 1, ptr %29)
+  %33 = load ptr, ptr %default_queue, align 4
+  %34 = load i32, ptr %flags, align 4
+  %35 = bitcast ptr %tmp12 to ptr
+  %36 = bitcast ptr %ndrange to ptr
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %35, ptr align 4 %36, i32 4, i1 false)
+  %37 = getelementptr [3 x i32], ptr %block_sizes13, i32 0, i32 0
+  store i32 1, ptr %37, align 4
+  %38 = getelementptr [3 x i32], ptr %block_sizes13, i32 0, i32 1
+  store i32 2, ptr %38, align 4
+  %39 = getelementptr [3 x i32], ptr %block_sizes13, i32 0, i32 2
+  store i32 4, ptr %39, align 4
+  %40 = call spir_func i32 @__enqueue_kernel_varargs(ptr %33, i32 %34, ptr %tmp12, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_4_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.1 to ptr addrspace(4)), i32 3, ptr %37)
+  %41 = load ptr, ptr %default_queue, align 4
+  %42 = load i32, ptr %flags, align 4
+  %43 = bitcast ptr %tmp14 to ptr
+  %44 = bitcast ptr %ndrange to ptr
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %43, ptr align 4 %44, i32 4, i1 false)
+  %45 = addrspacecast ptr %clk_event to ptr addrspace(4)
+  %block.size16 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block15, i32 0, i32 0
+  store i32 24, ptr %block.size16, align 4
+  %block.align17 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block15, i32 0, i32 1
+  store i32 4, ptr %block.align17, align 4
+  %block.invoke18 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block15, i32 0, i32 2
+  store ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_5 to ptr addrspace(4)), ptr %block.invoke18, align 4
+  %block.captured19 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block15, i32 0, i32 3
+  %46 = load ptr addrspace(1), ptr %a.addr, align 4
+  store ptr addrspace(1) %46, ptr %block.captured19, align 4
+  %block.captured20 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block15, i32 0, i32 4
+  %47 = load i32, ptr %i.addr, align 4
+  store i32 %47, ptr %block.captured20, align 4
+  %block.captured21 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr %block15, i32 0, i32 5
+  %48 = load ptr addrspace(1), ptr %b.addr, align 4
+  store ptr addrspace(1) %48, ptr %block.captured21, align 4
+  %49 = bitcast ptr %block15 to ptr
+  %50 = addrspacecast ptr %49 to ptr addrspace(4)
+  %51 = call spir_func i32 @__enqueue_kernel_basic_events(ptr %41, i32 %42, ptr %tmp14, i32 0, ptr addrspace(4) null, ptr addrspace(4) %45, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_5_kernel to ptr addrspace(4)), ptr addrspace(4) %50)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg)
+declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
 
-define internal spir_func void @__device_side_enqueue_block_invoke(i8 addrspace(4)* noundef %.block_descriptor) {
+define internal spir_func void @__device_side_enqueue_block_invoke(ptr addrspace(4) noundef %.block_descriptor) {
 entry:
-  %.block_descriptor.addr = alloca i8 addrspace(4)*, align 4
-  %block.addr = alloca <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }> addrspace(4)*, align 4
-  store i8 addrspace(4)* %.block_descriptor, i8 addrspace(4)** %.block_descriptor.addr, align 4
-  %block = bitcast i8 addrspace(4)* %.block_descriptor to <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }> addrspace(4)*
-  store <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }> addrspace(4)* %block, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }> addrspace(4)** %block.addr, align 4
-  %block.capture.addr = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }> addrspace(4)* %block, i32 0, i32 5
-  %0 = load i8, i8 addrspace(4)* %block.capture.addr, align 4
+  %.block_descriptor.addr = alloca ptr addrspace(4), align 4
+  %block.addr = alloca ptr addrspace(4), align 4
+  store ptr addrspace(4) %.block_descriptor, ptr %.block_descriptor.addr, align 4
+  %block = bitcast ptr addrspace(4) %.block_descriptor to ptr addrspace(4)
+  store ptr addrspace(4) %block, ptr %block.addr, align 4
+  %block.capture.addr = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, i8 }>, ptr addrspace(4) %block, i32 0, i32 5
+  %0 = load i8, ptr addrspace(4) %block.capture.addr, align 4
   %conv = sext i8 %0 to i32
-  %block.capture.addr1 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }> addrspace(4)* %block, i32 0, i32 3
-  %1 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %block.capture.addr1, align 4
-  %block.capture.addr2 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i8 }> addrspace(4)* %block, i32 0, i32 4
-  %2 = load i32, i32 addrspace(4)* %block.capture.addr2, align 4
-  %arrayidx = getelementptr inbounds i32, i32 addrspace(1)* %1, i32 %2
-  store i32 %conv, i32 addrspace(1)* %arrayidx, align 4
+  %block.capture.addr1 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, i8 }>, ptr addrspace(4) %block, i32 0, i32 3
+  %1 = load ptr addrspace(1), ptr addrspace(4) %block.capture.addr1, align 4
+  %block.capture.addr2 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, i8 }>, ptr addrspace(4) %block, i32 0, i32 4
+  %2 = load i32, ptr addrspace(4) %block.capture.addr2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %1, i32 %2
+  store i32 %conv, ptr addrspace(1) %arrayidx, align 4
   ret void
 }
 
-define spir_kernel void @__device_side_enqueue_block_invoke_kernel(i8 addrspace(4)* %0) {
+define spir_kernel void @__device_side_enqueue_block_invoke_kernel(ptr addrspace(4) %0) {
 entry:
-  call spir_func void @__device_side_enqueue_block_invoke(i8 addrspace(4)* %0)
+  call spir_func void @__device_side_enqueue_block_invoke(ptr addrspace(4) %0)
   ret void
 }
 
-declare spir_func i32 @__enqueue_kernel_basic(%opencl.queue_t*, i32, %struct.ndrange_t*, i8 addrspace(4)*, i8 addrspace(4)*)
+declare spir_func i32 @__enqueue_kernel_basic(ptr, i32, ptr, ptr addrspace(4), ptr addrspace(4))
 
-define internal spir_func void @__device_side_enqueue_block_invoke_2(i8 addrspace(4)* noundef %.block_descriptor) {
+define internal spir_func void @__device_side_enqueue_block_invoke_2(ptr addrspace(4) noundef %.block_descriptor) {
 entry:
-  %.block_descriptor.addr = alloca i8 addrspace(4)*, align 4
-  %block.addr = alloca <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)*, align 4
-  store i8 addrspace(4)* %.block_descriptor, i8 addrspace(4)** %.block_descriptor.addr, align 4
-  %block = bitcast i8 addrspace(4)* %.block_descriptor to <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)*
-  store <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)* %block, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)** %block.addr, align 4
-  %block.capture.addr = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)* %block, i32 0, i32 5
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %block.capture.addr, align 4
-  %block.capture.addr1 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)* %block, i32 0, i32 4
-  %1 = load i32, i32 addrspace(4)* %block.capture.addr1, align 4
-  %arrayidx = getelementptr inbounds i32, i32 addrspace(1)* %0, i32 %1
-  %2 = load i32, i32 addrspace(1)* %arrayidx, align 4
-  %block.capture.addr2 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)* %block, i32 0, i32 3
-  %3 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %block.capture.addr2, align 4
-  %block.capture.addr3 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)* %block, i32 0, i32 4
-  %4 = load i32, i32 addrspace(4)* %block.capture.addr3, align 4
-  %arrayidx4 = getelementptr inbounds i32, i32 addrspace(1)* %3, i32 %4
-  store i32 %2, i32 addrspace(1)* %arrayidx4, align 4
+  %.block_descriptor.addr = alloca ptr addrspace(4), align 4
+  %block.addr = alloca ptr addrspace(4), align 4
+  store ptr addrspace(4) %.block_descriptor, ptr %.block_descriptor.addr, align 4
+  %block = bitcast ptr addrspace(4) %.block_descriptor to ptr addrspace(4)
+  store ptr addrspace(4) %block, ptr %block.addr, align 4
+  %block.capture.addr = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) %block, i32 0, i32 5
+  %0 = load ptr addrspace(1), ptr addrspace(4) %block.capture.addr, align 4
+  %block.capture.addr1 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) %block, i32 0, i32 4
+  %1 = load i32, ptr addrspace(4) %block.capture.addr1, align 4
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %0, i32 %1
+  %2 = load i32, ptr addrspace(1) %arrayidx, align 4
+  %block.capture.addr2 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) %block, i32 0, i32 3
+  %3 = load ptr addrspace(1), ptr addrspace(4) %block.capture.addr2, align 4
+  %block.capture.addr3 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) %block, i32 0, i32 4
+  %4 = load i32, ptr addrspace(4) %block.capture.addr3, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr addrspace(1) %3, i32 %4
+  store i32 %2, ptr addrspace(1) %arrayidx4, align 4
   ret void
 }
 
-define spir_kernel void @__device_side_enqueue_block_invoke_2_kernel(i8 addrspace(4)* %0) {
+define spir_kernel void @__device_side_enqueue_block_invoke_2_kernel(ptr addrspace(4) %0) {
 entry:
-  call spir_func void @__device_side_enqueue_block_invoke_2(i8 addrspace(4)* %0)
+  call spir_func void @__device_side_enqueue_block_invoke_2(ptr addrspace(4) %0)
   ret void
 }
 
-declare spir_func i32 @__enqueue_kernel_basic_events(%opencl.queue_t*, i32, %struct.ndrange_t*, i32, %opencl.clk_event_t* addrspace(4)*, %opencl.clk_event_t* addrspace(4)*, i8 addrspace(4)*, i8 addrspace(4)*)
+declare spir_func i32 @__enqueue_kernel_basic_events(ptr, i32, ptr, i32, ptr addrspace(4), ptr addrspace(4), ptr addrspace(4), ptr addrspace(4))
 
-define internal spir_func void @__device_side_enqueue_block_invoke_3(i8 addrspace(4)* noundef %.block_descriptor, i8 addrspace(3)* noundef %p) {
+define internal spir_func void @__device_side_enqueue_block_invoke_3(ptr addrspace(4) noundef %.block_descriptor, ptr addrspace(3) noundef %p) {
 entry:
-  %.block_descriptor.addr = alloca i8 addrspace(4)*, align 4
-  %p.addr = alloca i8 addrspace(3)*, align 4
-  %block.addr = alloca <{ i32, i32, i8 addrspace(4)* }> addrspace(4)*, align 4
-  store i8 addrspace(4)* %.block_descriptor, i8 addrspace(4)** %.block_descriptor.addr, align 4
-  %block = bitcast i8 addrspace(4)* %.block_descriptor to <{ i32, i32, i8 addrspace(4)* }> addrspace(4)*
-  store i8 addrspace(3)* %p, i8 addrspace(3)** %p.addr, align 4
-  store <{ i32, i32, i8 addrspace(4)* }> addrspace(4)* %block, <{ i32, i32, i8 addrspace(4)* }> addrspace(4)** %block.addr, align 4
+  %.block_descriptor.addr = alloca ptr addrspace(4), align 4
+  %p.addr = alloca ptr addrspace(3), align 4
+  %block.addr = alloca ptr addrspace(4), align 4
+  store ptr addrspace(4) %.block_descriptor, ptr %.block_descriptor.addr, align 4
+  %block = bitcast ptr addrspace(4) %.block_descriptor to ptr addrspace(4)
+  store ptr addrspace(3) %p, ptr %p.addr, align 4
+  store ptr addrspace(4) %block, ptr %block.addr, align 4
   ret void
 }
 
-define spir_kernel void @__device_side_enqueue_block_invoke_3_kernel(i8 addrspace(4)* %0, i8 addrspace(3)* %1) {
+define spir_kernel void @__device_side_enqueue_block_invoke_3_kernel(ptr addrspace(4) %0, ptr addrspace(3) %1) {
 entry:
-  call spir_func void @__device_side_enqueue_block_invoke_3(i8 addrspace(4)* %0, i8 addrspace(3)* %1)
+  call spir_func void @__device_side_enqueue_block_invoke_3(ptr addrspace(4) %0, ptr addrspace(3) %1)
   ret void
 }
 
-declare spir_func i32 @__enqueue_kernel_events_varargs(%opencl.queue_t*, i32, %struct.ndrange_t*, i32, %opencl.clk_event_t* addrspace(4)*, %opencl.clk_event_t* addrspace(4)*, i8 addrspace(4)*, i8 addrspace(4)*, i32, i32*)
+declare spir_func i32 @__enqueue_kernel_events_varargs(ptr, i32, ptr, i32, ptr addrspace(4), ptr addrspace(4), ptr addrspace(4), ptr addrspace(4), i32, ptr)
 
-define internal spir_func void @__device_side_enqueue_block_invoke_4(i8 addrspace(4)* noundef %.block_descriptor, i8 addrspace(3)* noundef %p1, i8 addrspace(3)* noundef %p2, i8 addrspace(3)* noundef %p3) {
+define internal spir_func void @__device_side_enqueue_block_invoke_4(ptr addrspace(4) noundef %.block_descriptor, ptr addrspace(3) noundef %p1, ptr addrspace(3) noundef %p2, ptr addrspace(3) noundef %p3) {
 entry:
-  %.block_descriptor.addr = alloca i8 addrspace(4)*, align 4
-  %p1.addr = alloca i8 addrspace(3)*, align 4
-  %p2.addr = alloca i8 addrspace(3)*, align 4
-  %p3.addr = alloca i8 addrspace(3)*, align 4
-  %block.addr = alloca <{ i32, i32, i8 addrspace(4)* }> addrspace(4)*, align 4
-  store i8 addrspace(4)* %.block_descriptor, i8 addrspace(4)** %.block_descriptor.addr, align 4
-  %block = bitcast i8 addrspace(4)* %.block_descriptor to <{ i32, i32, i8 addrspace(4)* }> addrspace(4)*
-  store i8 addrspace(3)* %p1, i8 addrspace(3)** %p1.addr, align 4
-  store i8 addrspace(3)* %p2, i8 addrspace(3)** %p2.addr, align 4
-  store i8 addrspace(3)* %p3, i8 addrspace(3)** %p3.addr, align 4
-  store <{ i32, i32, i8 addrspace(4)* }> addrspace(4)* %block, <{ i32, i32, i8 addrspace(4)* }> addrspace(4)** %block.addr, align 4
+  %.block_descriptor.addr = alloca ptr addrspace(4), align 4
+  %p1.addr = alloca ptr addrspace(3), align 4
+  %p2.addr = alloca ptr addrspace(3), align 4
+  %p3.addr = alloca ptr addrspace(3), align 4
+  %block.addr = alloca ptr addrspace(4), align 4
+  store ptr addrspace(4) %.block_descriptor, ptr %.block_descriptor.addr, align 4
+  %block = bitcast ptr addrspace(4) %.block_descriptor to ptr addrspace(4)
+  store ptr addrspace(3) %p1, ptr %p1.addr, align 4
+  store ptr addrspace(3) %p2, ptr %p2.addr, align 4
+  store ptr addrspace(3) %p3, ptr %p3.addr, align 4
+  store ptr addrspace(4) %block, ptr %block.addr, align 4
   ret void
 }
 
-define spir_kernel void @__device_side_enqueue_block_invoke_4_kernel(i8 addrspace(4)* %0, i8 addrspace(3)* %1, i8 addrspace(3)* %2, i8 addrspace(3)* %3) {
+define spir_kernel void @__device_side_enqueue_block_invoke_4_kernel(ptr addrspace(4) %0, ptr addrspace(3) %1, ptr addrspace(3) %2, ptr addrspace(3) %3) {
 entry:
-  call spir_func void @__device_side_enqueue_block_invoke_4(i8 addrspace(4)* %0, i8 addrspace(3)* %1, i8 addrspace(3)* %2, i8 addrspace(3)* %3)
+  call spir_func void @__device_side_enqueue_block_invoke_4(ptr addrspace(4) %0, ptr addrspace(3) %1, ptr addrspace(3) %2, ptr addrspace(3) %3)
   ret void
 }
 
-declare spir_func i32 @__enqueue_kernel_varargs(%opencl.queue_t*, i32, %struct.ndrange_t*, i8 addrspace(4)*, i8 addrspace(4)*, i32, i32*)
+declare spir_func i32 @__enqueue_kernel_varargs(ptr, i32, ptr, ptr addrspace(4), ptr addrspace(4), i32, ptr)
 
-define internal spir_func void @__device_side_enqueue_block_invoke_5(i8 addrspace(4)* noundef %.block_descriptor) {
+define internal spir_func void @__device_side_enqueue_block_invoke_5(ptr addrspace(4) noundef %.block_descriptor) {
 entry:
-  %.block_descriptor.addr = alloca i8 addrspace(4)*, align 4
-  %block.addr = alloca <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)*, align 4
-  store i8 addrspace(4)* %.block_descriptor, i8 addrspace(4)** %.block_descriptor.addr, align 4
-  %block = bitcast i8 addrspace(4)* %.block_descriptor to <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)*
-  store <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)* %block, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)** %block.addr, align 4
-  %block.capture.addr = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)* %block, i32 0, i32 5
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %block.capture.addr, align 4
-  %block.capture.addr1 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)* %block, i32 0, i32 4
-  %1 = load i32, i32 addrspace(4)* %block.capture.addr1, align 4
-  %arrayidx = getelementptr inbounds i32, i32 addrspace(1)* %0, i32 %1
-  %2 = load i32, i32 addrspace(1)* %arrayidx, align 4
-  %block.capture.addr2 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)* %block, i32 0, i32 3
-  %3 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %block.capture.addr2, align 4
-  %block.capture.addr3 = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>, <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }> addrspace(4)* %block, i32 0, i32 4
-  %4 = load i32, i32 addrspace(4)* %block.capture.addr3, align 4
-  %arrayidx4 = getelementptr inbounds i32, i32 addrspace(1)* %3, i32 %4
-  store i32 %2, i32 addrspace(1)* %arrayidx4, align 4
+  %.block_descriptor.addr = alloca ptr addrspace(4), align 4
+  %block.addr = alloca ptr addrspace(4), align 4
+  store ptr addrspace(4) %.block_descriptor, ptr %.block_descriptor.addr, align 4
+  %block = bitcast ptr addrspace(4) %.block_descriptor to ptr addrspace(4)
+  store ptr addrspace(4) %block, ptr %block.addr, align 4
+  %block.capture.addr = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) %block, i32 0, i32 5
+  %0 = load ptr addrspace(1), ptr addrspace(4) %block.capture.addr, align 4
+  %block.capture.addr1 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) %block, i32 0, i32 4
+  %1 = load i32, ptr addrspace(4) %block.capture.addr1, align 4
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %0, i32 %1
+  %2 = load i32, ptr addrspace(1) %arrayidx, align 4
+  %block.capture.addr2 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) %block, i32 0, i32 3
+  %3 = load ptr addrspace(1), ptr addrspace(4) %block.capture.addr2, align 4
+  %block.capture.addr3 = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) %block, i32 0, i32 4
+  %4 = load i32, ptr addrspace(4) %block.capture.addr3, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr addrspace(1) %3, i32 %4
+  store i32 %2, ptr addrspace(1) %arrayidx4, align 4
   ret void
 }
 
-define spir_kernel void @__device_side_enqueue_block_invoke_5_kernel(i8 addrspace(4)* %0) {
+define spir_kernel void @__device_side_enqueue_block_invoke_5_kernel(ptr addrspace(4) %0) {
 entry:
-  call spir_func void @__device_side_enqueue_block_invoke_5(i8 addrspace(4)* %0)
+  call spir_func void @__device_side_enqueue_block_invoke_5(ptr addrspace(4) %0)
   ret void
 }

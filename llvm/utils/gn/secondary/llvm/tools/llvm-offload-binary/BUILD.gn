@@ -1,0 +1,8 @@
+executable("llvm-offload-binary") {
+  deps = [
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "llvm-offload-binary.cpp" ]
+}

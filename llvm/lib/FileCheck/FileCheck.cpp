@@ -1218,6 +1218,14 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
     StringRef MatchedValue = MatchInfo[CaptureParenGroup];
     ExpressionFormat Format = DefinedNumericVariable->getImplicitFormat();
     APInt Value = Format.valueFromStringRepr(MatchedValue, SM);
+    // Numeric variables are already inserted into GlobalNumericVariableTable
+    // during parsing, but clearLocalVars might remove them, so we must
+    // reinsert them. Numeric-variable resolution does not access
+    // GlobalNumericVariableTable; it directly uses a pointer to the variable.
+    // However, other functions (such as clearLocalVars) may require active
+    // variables to be in the table.
+    Context->GlobalNumericVariableTable.try_emplace(NumericVariableDef.getKey(),
+                                                    DefinedNumericVariable);
     DefinedNumericVariable->setValue(Value, MatchedValue);
   }
 
@@ -1991,13 +1999,9 @@ bool FileCheck::readCheckFile(
       (ImplicitNegativeChecks.empty() || !Req.IsDefaultCheckPrefix)) {
     errs() << "error: no check strings found with prefix"
            << (PrefixesNotFound.size() > 1 ? "es " : " ");
-    bool First = true;
-    for (StringRef MissingPrefix : PrefixesNotFound) {
-      if (!First)
-        errs() << ", ";
-      errs() << "\'" << MissingPrefix << ":'";
-      First = false;
-    }
+    ListSeparator LS;
+    for (StringRef MissingPrefix : PrefixesNotFound)
+      errs() << LS << "\'" << MissingPrefix << ":'";
     errs() << '\n';
     return true;
   }

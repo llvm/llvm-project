@@ -85,21 +85,9 @@ source files in format `<USR-Length>:<USR> <File-Path>`:
 
 .. code-block:: bash
 
-  $ clang-extdef-mapping -p . foo.cpp
-  9:c:@F@foo# /path/to/your/project/foo.cpp
-  $ clang-extdef-mapping -p . foo.cpp > externalDefMap.txt
-
-We have to modify `externalDefMap.txt` to contain the name of the `.ast` files instead of the source files:
-
-.. code-block:: bash
-
-  $ sed -i -e "s/.cpp/.cpp.ast/g" externalDefMap.txt
-
-We still have to further modify the `externalDefMap.txt` file to contain relative paths:
-
-.. code-block:: bash
-
-  $ sed -i -e "s|$(pwd)/||g" externalDefMap.txt
+  $ clang-extdef-mapping -p . foo.cpp.ast
+  9:c:@F@foo# /path/to/your/project/foo.cpp.ast
+  $ clang-extdef-mapping -p . foo.cpp.ast > externalDefMap.txt
 
 Now everything is available for the CTU analysis.
 We have to feed Clang with CTU specific extra arguments:
@@ -132,7 +120,7 @@ Once we have set up the `PATH` environment variable and we activated the python 
 
 .. code-block:: bash
 
-  $ CodeChecker analyze --ctu compile_commands.json -o reports
+  $ CodeChecker analyze --ctu --ctu-ast-mode load-from-pch compile_commands.json -o reports
   $ ls -F
   compile_commands.json  foo.cpp  foo.cpp.ast  main.cpp  reports/
   $ tree reports
@@ -318,7 +306,7 @@ Once we have set up the `PATH` environment variable and we activated the python 
 
 .. code-block:: bash
 
-  $ CodeChecker analyze --ctu --ctu-ast-loading-mode on-demand compile_commands.json -o reports
+  $ CodeChecker analyze --ctu compile_commands.json -o reports
   $ ls -F
   compile_commands.json  foo.cpp main.cpp  reports/
   $ tree reports

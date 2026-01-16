@@ -1,7 +1,6 @@
 ! This test checks lowering of OpenMP parallel Directive with
 ! `PRIVATE` clause present for strings
 
-! REQUIRES: shell
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - \
 ! RUN: | FileCheck %s
 
@@ -66,7 +65,7 @@ subroutine test_allocatable_string(n)
 end subroutine
 
 !CHECK:  func.func @_QPtest_allocatable_string_array(%[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
-!CHECK:    %{{.*}} = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_allocatable_string_arrayEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %{{.*}} = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_allocatable_string_arrayEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[C_BOX_REF:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {bindc_name = "c", uniq_name = "_QFtest_allocatable_string_arrayEc"}
 !CHECK:    %[[C_BOX:.*]] = fir.embox %{{.*}}(%{{.*}}) typeparams %{{.*}} : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
 !CHECK:    fir.store %[[C_BOX]] to %[[C_BOX_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
