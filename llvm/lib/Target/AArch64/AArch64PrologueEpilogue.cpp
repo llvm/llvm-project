@@ -641,7 +641,7 @@ void AArch64PrologueEmitter::emitPrologue() {
   // the epilogue. In this case, we still need to emit a SEH prologue sequence.
   // See `seh-minimal-prologue-epilogue.ll` test cases.
   if (AFI->getArgumentStackToRestore())
-    HasWinCFI = true;
+    HasWinCFI |= NeedsWinCFI;
 
   if (AFI->shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions
