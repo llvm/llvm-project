@@ -38,6 +38,9 @@ What's New in Libc++ 23.0.0?
 Implemented Papers
 ------------------
 
+- P3016R6: Resolve inconsistencies in begin/end for ``valarray`` and braced initializer lists
+  (`Github <https://llvm.org/PR171271>`__)
+
 Improvements and New Features
 -----------------------------
 
