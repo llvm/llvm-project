@@ -534,7 +534,7 @@ static const IntrinsicData IntrinsicsWithoutChain[] = {
     X86_INTRINSIC_DATA(avx10_mask_vcvttpd2qqs_round_512, INTR_TYPE_1OP_MASK,
                        X86ISD::CVTTP2SIS, X86ISD::CVTTP2SIS_SAE),
     X86_INTRINSIC_DATA(avx10_mask_vcvttpd2udqs_128, CVTPD2DQ_MASK,
-                       X86ISD::CVTTP2UIS, X86ISD::MCVTTP2SIS),
+                       X86ISD::CVTTP2UIS, X86ISD::MCVTTP2UIS),
     X86_INTRINSIC_DATA(avx10_mask_vcvttpd2udqs_256, INTR_TYPE_1OP_MASK,
                        X86ISD::CVTTP2UIS, 0),
     X86_INTRINSIC_DATA(avx10_mask_vcvttpd2udqs_round_512, INTR_TYPE_1OP_MASK,
@@ -1906,6 +1906,9 @@ static const IntrinsicData IntrinsicsWithoutChain[] = {
     X86_INTRINSIC_DATA(mmx_punpckldq, INTR_TYPE_CAST_MMX, 0, 0),
     X86_INTRINSIC_DATA(mmx_punpcklwd, INTR_TYPE_CAST_MMX, 0, 0),
     X86_INTRINSIC_DATA(mmx_pxor, INTR_TYPE_CAST_MMX, 0, 0),
+    X86_INTRINSIC_DATA(pclmulqdq, INTR_TYPE_3OP, X86ISD::PCLMULQDQ, 0),
+    X86_INTRINSIC_DATA(pclmulqdq_256, INTR_TYPE_3OP, X86ISD::PCLMULQDQ, 0),
+    X86_INTRINSIC_DATA(pclmulqdq_512, INTR_TYPE_3OP, X86ISD::PCLMULQDQ, 0),
 
     X86_INTRINSIC_DATA(sse_cmp_ps, INTR_TYPE_3OP, X86ISD::CMPP, 0),
     X86_INTRINSIC_DATA(sse_cmp_ss, INTR_TYPE_3OP, X86ISD::FSETCC, 0),

@@ -47,7 +47,7 @@ define <vscale x 4 x i32> @cast_alloca_to_svint32_t(<vscale x 4 x i32> %type.coe
 ; CHECK-LABEL: @cast_alloca_to_svint32_t(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[TYPE_COERCE:%.*]], i64 0)
 ; CHECK-NEXT:    [[TYPE_0_VEC_EXPAND:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TYPE_0_VECBLEND:%.*]] = select <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x i32> [[TYPE_0_VEC_EXPAND]], <16 x i32> undef
+; CHECK-NEXT:    [[TYPE_0_VECBLEND:%.*]] = shufflevector <16 x i32> [[TYPE_0_VEC_EXPAND]], <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TYPE_ADDR_0_VEC_EXTRACT:%.*]] = shufflevector <16 x i32> [[TYPE_0_VECBLEND]], <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> [[TYPE_ADDR_0_VEC_EXTRACT]], i64 0)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]

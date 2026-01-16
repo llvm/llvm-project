@@ -761,14 +761,14 @@ define <4 x bfloat> @fmul_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 define <8 x bfloat> @fmul_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; NOB16B16-LABEL: fmul_v8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    shll v2.4s, v1.4h, #16
-; NOB16B16-NEXT:    shll v3.4s, v0.4h, #16
-; NOB16B16-NEXT:    shll2 v1.4s, v1.8h, #16
-; NOB16B16-NEXT:    shll2 v0.4s, v0.8h, #16
-; NOB16B16-NEXT:    fmul v2.4s, v3.4s, v2.4s
-; NOB16B16-NEXT:    fmul v1.4s, v0.4s, v1.4s
-; NOB16B16-NEXT:    bfcvtn v0.4h, v2.4s
-; NOB16B16-NEXT:    bfcvtn2 v0.8h, v1.4s
+; NOB16B16-NEXT:    movi v2.4s, #128, lsl #24
+; NOB16B16-NEXT:    movi v3.4s, #128, lsl #24
+; NOB16B16-NEXT:    ptrue p0.s, vl4
+; NOB16B16-NEXT:    bfmlalb v2.4s, v0.8h, v1.8h
+; NOB16B16-NEXT:    bfmlalt v3.4s, v0.8h, v1.8h
+; NOB16B16-NEXT:    bfcvt z2.h, p0/m, z2.s
+; NOB16B16-NEXT:    bfcvtnt z2.h, p0/m, z3.s
+; NOB16B16-NEXT:    mov v0.16b, v2.16b
 ; NOB16B16-NEXT:    ret
 ;
 ; B16B16-LABEL: fmul_v8bf16:

@@ -132,17 +132,17 @@ bool tryToFindPtrOrigin(
         }
       }
 
-      if (call->isCallToStdMove() && call->getNumArgs() == 1) {
-        E = call->getArg(0)->IgnoreParenCasts();
-        continue;
-      }
-
       if (auto *callee = call->getDirectCallee()) {
         if (isCtorOfSafePtr(callee)) {
           if (StopAtFirstRefCountedObj)
             return callback(E, true);
 
           E = call->getArg(0);
+          continue;
+        }
+
+        if (isStdOrWTFMove(callee) && call->getNumArgs() == 1) {
+          E = call->getArg(0)->IgnoreParenCasts();
           continue;
         }
 
@@ -319,6 +319,51 @@ bool isExprToGetCheckedPtrCapableMember(const clang::Expr *E) {
     return false;
   auto result = isCheckedPtrCapable(CXXRD);
   return result && *result;
+}
+
+bool isAllocInit(const Expr *E, const Expr **InnerExpr) {
+  auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E);
+  if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
+    if (unsigned ExprCount = POE->getNumSemanticExprs()) {
+      auto *Expr = POE->getSemanticExpr(ExprCount - 1)->IgnoreParenCasts();
+      ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(Expr);
+      if (InnerExpr)
+        *InnerExpr = ObjCMsgExpr;
+    }
+  }
+  if (!ObjCMsgExpr)
+    return false;
+  auto Selector = ObjCMsgExpr->getSelector();
+  auto NameForFirstSlot = Selector.getNameForSlot(0);
+  if (NameForFirstSlot.starts_with("alloc") ||
+      NameForFirstSlot.starts_with("copy") ||
+      NameForFirstSlot.starts_with("mutableCopy"))
+    return true;
+  if (!NameForFirstSlot.starts_with("init") &&
+      !NameForFirstSlot.starts_with("_init"))
+    return false;
+  if (!ObjCMsgExpr->isInstanceMessage())
+    return false;
+  auto *Receiver = ObjCMsgExpr->getInstanceReceiver();
+  if (!Receiver)
+    return false;
+  Receiver = Receiver->IgnoreParenCasts();
+  if (auto *Inner = dyn_cast<ObjCMessageExpr>(Receiver)) {
+    if (InnerExpr)
+      *InnerExpr = Inner;
+    auto InnerSelector = Inner->getSelector();
+    return InnerSelector.getNameForSlot(0).starts_with("alloc");
+  } else if (auto *CE = dyn_cast<CallExpr>(Receiver)) {
+    if (InnerExpr)
+      *InnerExpr = CE;
+    if (auto *Callee = CE->getDirectCallee()) {
+      if (Callee->getDeclName().isIdentifier()) {
+        auto CalleeName = Callee->getName();
+        return CalleeName.starts_with("alloc");
+      }
+    }
+  }
+  return false;
 }
 
 class EnsureFunctionVisitor

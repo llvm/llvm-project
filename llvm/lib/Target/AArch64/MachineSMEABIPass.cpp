@@ -63,6 +63,7 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
@@ -303,6 +304,7 @@ struct MachineSMEABI : public MachineFunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<EdgeBundlesWrapperLegacy>();
+    AU.addRequired<MachineOptimizationRemarkEmitterPass>();
     AU.addPreservedID(MachineLoopInfoID);
     AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -391,6 +393,19 @@ struct MachineSMEABI : public MachineFunctionPass {
     return emitAllocateLazySaveBuffer(Context, MBB, MBBI);
   }
 
+  /// Collects the reachable calls from \p MBBI marked with \p Marker. This is
+  /// intended to be used to emit lazy save remarks. Note: This stops at the
+  /// first marked call along any path.
+  void collectReachableMarkedCalls(const MachineBasicBlock &MBB,
+                                   MachineBasicBlock::const_iterator MBBI,
+                                   SmallVectorImpl<const MachineInstr *> &Calls,
+                                   unsigned Marker) const;
+
+  void emitCallSaveRemarks(const MachineBasicBlock &MBB,
+                           MachineBasicBlock::const_iterator MBBI, DebugLoc DL,
+                           unsigned Marker, StringRef RemarkName,
+                           StringRef SaveName) const;
+
   /// Save live physical registers to virtual registers.
   PhysRegSave createPhysRegSave(LiveRegs PhysLiveRegs, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MBBI, DebugLoc DL);
@@ -406,6 +421,8 @@ private:
   const AArch64RegisterInfo *TRI = nullptr;
   const AArch64FunctionInfo *AFI = nullptr;
   const TargetInstrInfo *TII = nullptr;
+
+  MachineOptimizationRemarkEmitter *ORE = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   MachineLoopInfo *MLI = nullptr;
 };
@@ -632,8 +649,8 @@ MachineSMEABI::findStateChangeInsertionPoint(
     PhysLiveRegs = Block.PhysLiveRegsAtExit;
   }
 
-  if (!(PhysLiveRegs & LiveRegs::NZCV))
-    return {InsertPt, PhysLiveRegs}; // Nothing to do (no live flags).
+  if (PhysLiveRegs == LiveRegs::None)
+    return {InsertPt, PhysLiveRegs}; // Nothing to do (no live regs).
 
   // Find the previous state change. We can not move before this point.
   MachineBasicBlock::iterator PrevStateChangeI;
@@ -650,15 +667,21 @@ MachineSMEABI::findStateChangeInsertionPoint(
   // Note: LiveUnits will only accurately track X0 and NZCV.
   LiveRegUnits LiveUnits(*TRI);
   setPhysLiveRegs(LiveUnits, PhysLiveRegs);
+  auto BestCandidate = std::make_pair(InsertPt, PhysLiveRegs);
   for (MachineBasicBlock::iterator I = InsertPt; I != PrevStateChangeI; --I) {
     // Don't move before/into a call (which may have a state change before it).
     if (I->getOpcode() == TII->getCallFrameDestroyOpcode() || I->isCall())
       break;
     LiveUnits.stepBackward(*I);
-    if (LiveUnits.available(AArch64::NZCV))
-      return {I, getPhysLiveRegs(LiveUnits)};
+    LiveRegs CurrentPhysLiveRegs = getPhysLiveRegs(LiveUnits);
+    // Find places where NZCV is available, but keep looking for locations where
+    // both NZCV and X0 are available, which can avoid some copies.
+    if (!(CurrentPhysLiveRegs & LiveRegs::NZCV))
+      BestCandidate = {I, CurrentPhysLiveRegs};
+    if (CurrentPhysLiveRegs == LiveRegs::None)
+      break;
   }
-  return {InsertPt, PhysLiveRegs};
+  return BestCandidate;
 }
 
 void MachineSMEABI::insertStateChanges(EmitContext &Context,
@@ -700,15 +723,104 @@ void MachineSMEABI::insertStateChanges(EmitContext &Context,
 
 static DebugLoc getDebugLoc(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI) {
-  if (MBBI != MBB.end())
-    return MBBI->getDebugLoc();
-  return DebugLoc();
+  if (MBB.empty())
+    return DebugLoc();
+  return MBBI != MBB.end() ? MBBI->getDebugLoc() : MBB.back().getDebugLoc();
+}
+
+/// Finds the first call (as determined by MachineInstr::isCall()) starting from
+/// \p MBBI in \p MBB marked with \p Marker (which is a marker opcode such as
+/// RequiresZASavePseudo). If a marked call is found, it is pushed to \p Calls
+/// and the function returns true.
+static bool findMarkedCall(const MachineBasicBlock &MBB,
+                           MachineBasicBlock::const_iterator MBBI,
+                           SmallVectorImpl<const MachineInstr *> &Calls,
+                           unsigned Marker, unsigned CallDestroyOpcode) {
+  auto IsMarker = [&](auto &MI) { return MI.getOpcode() == Marker; };
+  auto MarkerInst = std::find_if(MBBI, MBB.end(), IsMarker);
+  if (MarkerInst == MBB.end())
+    return false;
+  MachineBasicBlock::const_iterator I = MarkerInst;
+  while (++I != MBB.end()) {
+    if (I->isCall() || I->getOpcode() == CallDestroyOpcode)
+      break;
+  }
+  if (I != MBB.end() && I->isCall())
+    Calls.push_back(&*I);
+  // Note: This function always returns true if a "Marker" was found.
+  return true;
+}
+
+void MachineSMEABI::collectReachableMarkedCalls(
+    const MachineBasicBlock &StartMBB,
+    MachineBasicBlock::const_iterator StartInst,
+    SmallVectorImpl<const MachineInstr *> &Calls, unsigned Marker) const {
+  assert(Marker == AArch64::InOutZAUsePseudo ||
+         Marker == AArch64::RequiresZASavePseudo ||
+         Marker == AArch64::RequiresZT0SavePseudo);
+  unsigned CallDestroyOpcode = TII->getCallFrameDestroyOpcode();
+  if (findMarkedCall(StartMBB, StartInst, Calls, Marker, CallDestroyOpcode))
+    return;
+
+  SmallPtrSet<const MachineBasicBlock *, 4> Visited;
+  SmallVector<const MachineBasicBlock *> Worklist(StartMBB.succ_rbegin(),
+                                                  StartMBB.succ_rend());
+  while (!Worklist.empty()) {
+    const MachineBasicBlock *MBB = Worklist.pop_back_val();
+    auto [_, Inserted] = Visited.insert(MBB);
+    if (!Inserted)
+      continue;
+
+    if (!findMarkedCall(*MBB, MBB->begin(), Calls, Marker, CallDestroyOpcode))
+      Worklist.append(MBB->succ_rbegin(), MBB->succ_rend());
+  }
+}
+
+static StringRef getCalleeName(const MachineInstr &CallInst) {
+  assert(CallInst.isCall() && "expected a call");
+  for (const MachineOperand &MO : CallInst.operands()) {
+    if (MO.isSymbol())
+      return MO.getSymbolName();
+    if (MO.isGlobal())
+      return MO.getGlobal()->getName();
+  }
+  return {};
+}
+
+void MachineSMEABI::emitCallSaveRemarks(const MachineBasicBlock &MBB,
+                                        MachineBasicBlock::const_iterator MBBI,
+                                        DebugLoc DL, unsigned Marker,
+                                        StringRef RemarkName,
+                                        StringRef SaveName) const {
+  auto SaveRemark = [&](DebugLoc DL, const MachineBasicBlock &MBB) {
+    return MachineOptimizationRemarkAnalysis("sme", RemarkName, DL, &MBB);
+  };
+  StringRef StateName = Marker == AArch64::RequiresZT0SavePseudo ? "ZT0" : "ZA";
+  ORE->emit([&] {
+    return SaveRemark(DL, MBB) << SaveName << " of " << StateName
+                               << " emitted in '" << MF->getName() << "'";
+  });
+  if (!ORE->allowExtraAnalysis("sme"))
+    return;
+  SmallVector<const MachineInstr *> CallsRequiringSaves;
+  collectReachableMarkedCalls(MBB, MBBI, CallsRequiringSaves, Marker);
+  for (const MachineInstr *CallInst : CallsRequiringSaves) {
+    auto R = SaveRemark(CallInst->getDebugLoc(), *CallInst->getParent());
+    R << "call";
+    if (StringRef CalleeName = getCalleeName(*CallInst); !CalleeName.empty())
+      R << " to '" << CalleeName << "'";
+    R << " requires " << StateName << " save";
+    ORE->emit(R);
+  }
 }
 
 void MachineSMEABI::emitSetupLazySave(EmitContext &Context,
                                       MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = getDebugLoc(MBB, MBBI);
+
+  emitCallSaveRemarks(MBB, MBBI, DL, AArch64::RequiresZASavePseudo,
+                      "SMELazySaveZA", "lazy save");
 
   // Get pointer to TPIDR2 block.
   Register TPIDR2 = MRI->createVirtualRegister(&AArch64::GPR64spRegClass);
@@ -920,12 +1032,17 @@ void MachineSMEABI::emitFullZASaveRestore(EmitContext &Context,
                                           MachineBasicBlock::iterator MBBI,
                                           LiveRegs PhysLiveRegs, bool IsSave) {
   auto *TLI = Subtarget->getTargetLowering();
+
   DebugLoc DL = getDebugLoc(MBB, MBBI);
-  Register BufferPtr = AArch64::X0;
+
+  if (IsSave)
+    emitCallSaveRemarks(MBB, MBBI, DL, AArch64::RequiresZASavePseudo,
+                        "SMEFullZASave", "full save");
 
   PhysRegSave RegSave = createPhysRegSave(PhysLiveRegs, MBB, MBBI, DL);
 
   // Copy the buffer pointer into X0.
+  Register BufferPtr = AArch64::X0;
   BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), BufferPtr)
       .addReg(Context.getAgnosticZABufferPtr(*MF));
 
@@ -946,6 +1063,14 @@ void MachineSMEABI::emitZT0SaveRestore(EmitContext &Context,
                                        MachineBasicBlock::iterator MBBI,
                                        bool IsSave) {
   DebugLoc DL = getDebugLoc(MBB, MBBI);
+
+  // Note: This will report calls that _only_ need ZT0 saved. Call that save
+  // both ZA and ZT0 will be under the SMELazySaveZA remark. This prevents
+  // reporting the same calls twice.
+  if (IsSave)
+    emitCallSaveRemarks(MBB, MBBI, DL, AArch64::RequiresZT0SavePseudo,
+                        "SMEZT0Save", "spill");
+
   Register ZT0Save = MRI->createVirtualRegister(&AArch64::GPR64spRegClass);
 
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), ZT0Save)
@@ -1133,6 +1258,7 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
 
   this->MF = &MF;
   Subtarget = &MF.getSubtarget<AArch64Subtarget>();
+  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
   MRI = &MF.getRegInfo();

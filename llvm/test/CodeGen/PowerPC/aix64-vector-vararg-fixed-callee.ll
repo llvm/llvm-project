@@ -15,7 +15,7 @@ define double @callee(i32 signext %count, <4 x i32> %vsi, double %next, ...) {
   ; CHECK:   [[COPY2:%[0-9]+]]:g8rc = COPY $x8
   ; CHECK:   STD [[COPY2]], 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0)
   ; CHECK:   STD [[COPY1]], 8, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 8)
-  ; CHECK:   STD [[COPY]], 16, %fixed-stack.0 :: (store (s64))
+  ; CHECK:   STD [[COPY]], 16, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 16)
   ; CHECK:   LIFETIME_START %stack.0.arg_list
   ; CHECK:   [[ADDI8_:%[0-9]+]]:g8rc = ADDI8 %fixed-stack.0, 0
   ; CHECK:   STD killed [[ADDI8_]], 0, %stack.0.arg_list :: (store (s64) into %ir.arg_list)

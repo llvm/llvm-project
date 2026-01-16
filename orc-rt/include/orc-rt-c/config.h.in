@@ -1,0 +1,19 @@
+/*===- orc-rt-c/config.h - ORC-RT build configuration -------------*- C -*-===*\
+|*                                                                            *|
+|* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
+|* Exceptions.                                                                *|
+|* See https://llvm.org/LICENSE.txt for license information.                  *|
+|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    *|
+|*                                                                            *|
+\*===----------------------------------------------------------------------===*/
+
+#ifndef ORC_RT_C_CONFIG_H
+#define ORC_RT_C_CONFIG_H
+
+/* Define to 1 if RTTI is enabled */
+#cmakedefine01 ORC_RT_ENABLE_RTTI
+
+/* Define to 1 if exceptions are enabled */
+#cmakedefine01 ORC_RT_ENABLE_EXCEPTIONS
+
+#endif /* ORC_RT_C_CONFIG_H */

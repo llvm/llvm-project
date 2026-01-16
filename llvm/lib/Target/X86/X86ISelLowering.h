@@ -804,6 +804,9 @@ namespace llvm {
     GF2P8AFFINEQB,
     GF2P8MULB,
 
+    // Carry-less multiplication
+    PCLMULQDQ,
+
     // LWP insert record.
     LWPINS,
 
@@ -1042,7 +1045,8 @@ namespace llvm {
     /// Check if Op is a load operation that could be folded into some other x86
     /// instruction as a memory operand. Example: vpaddd (%rdi), %xmm0, %xmm0.
     bool mayFoldLoad(SDValue Op, const X86Subtarget &Subtarget,
-                     bool AssumeSingleUse = false);
+                     bool AssumeSingleUse = false,
+                     bool IgnoreAlignment = false);
 
     /// Check if Op is a load operation that could be folded into a vector splat
     /// instruction as a memory operand. Example: vbroadcastss 16(%rdi), %xmm2.
@@ -1071,6 +1075,19 @@ namespace llvm {
   //===--------------------------------------------------------------------===//
   //  X86 Implementation of the TargetLowering interface
   class X86TargetLowering final : public TargetLowering {
+    // Copying needed for an outgoing byval argument.
+    enum ByValCopyKind {
+      // Argument is already in the correct location, no copy needed.
+      NoCopy,
+      // Argument value is currently in the local stack frame, needs copying to
+      // outgoing arguemnt area.
+      CopyOnce,
+      // Argument value is currently in the outgoing argument area, but not at
+      // the correct offset, so needs copying via a temporary in local stack
+      // space.
+      CopyViaTemp,
+    };
+
   public:
     explicit X86TargetLowering(const X86TargetMachine &TM,
                                const X86Subtarget &STI);
@@ -1482,7 +1499,7 @@ namespace llvm {
     /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
     /// true and stores the intrinsic information into the IntrinsicInfo that was
     /// passed to the function.
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                             MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
@@ -1613,8 +1630,6 @@ namespace llvm {
 
     /// Customize the preferred legalization strategy for certain types.
     LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
-
-    bool softPromoteHalfType() const override { return true; }
 
     MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                       EVT VT) const override;
@@ -1778,6 +1793,9 @@ namespace llvm {
     SDValue LowerADDROFRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAME_TO_ARGS_OFFSET(SDValue Op, SelectionDAG &DAG) const;
+    ByValCopyKind ByValNeedsCopyForTailCall(SelectionDAG &DAG, SDValue Src,
+                                            SDValue Dst,
+                                            ISD::ArgFlagsTy Flags) const;
     SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
@@ -1842,9 +1860,9 @@ namespace llvm {
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const;
+    shouldExpandLogicAtomicRMWInIR(const AtomicRMWInst *AI) const;
     void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
     void emitCmpArithAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
 

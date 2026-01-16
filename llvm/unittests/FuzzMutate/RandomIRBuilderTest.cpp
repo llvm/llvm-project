@@ -589,7 +589,8 @@ TEST(RandomIRBuilderTest, SrcAndSinkWOrphanBlock) {
   std::vector<Value *> Constants;
   for (Type *IntTy : IntTys) {
     for (size_t v : {1, 42}) {
-      Constants.push_back(ConstantInt::get(IntTy, v));
+      Constants.push_back(ConstantInt::get(IntTy, v, /*IsSigned=*/false,
+                                           /*ImplicitTrunc=*/true));
     }
   }
   for (int i = 0; i < 10; i++) {

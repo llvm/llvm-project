@@ -35,6 +35,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
 #include "clang/Driver/XRayArgs.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -1095,27 +1096,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "mcpu=" + CPU));
 
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    // The optimization level matches
-    // CompilerInvocation.cpp:getOptimizationLevel().
-    StringRef OOpt;
-    if (A->getOption().matches(options::OPT_O4) ||
-        A->getOption().matches(options::OPT_Ofast))
-      OOpt = "3";
-    else if (A->getOption().matches(options::OPT_O)) {
-      OOpt = A->getValue();
-      if (OOpt == "g")
-        OOpt = "1";
-      else if (OOpt == "s" || OOpt == "z")
-        OOpt = "2";
-    } else if (A->getOption().matches(options::OPT_O0))
-      OOpt = "0";
-    if (!OOpt.empty()) {
+  if (Args.getLastArg(options::OPT_O_Group)) {
+    unsigned OptimizationLevel =
+        getOptimizationLevel(Args, InputKind(), D.getDiags());
+    CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
+                                         "O" + Twine(OptimizationLevel)));
+    if (IsAMDGCN)
       CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "O" + OOpt));
-      if (IsAMDGCN)
-        CmdArgs.push_back(Args.MakeArgString(Twine("--lto-CGO") + OOpt));
-    }
+          Args.MakeArgString(Twine("--lto-CGO") + Twine(OptimizationLevel)));
   }
 
   if (Args.hasArg(options::OPT_gsplit_dwarf)) {
@@ -1251,6 +1239,15 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     if (A->getOption().matches(options::OPT_fsplit_machine_functions))
       CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                            "-split-machine-functions"));
+  }
+
+  if (auto *A =
+          Args.getLastArg(options::OPT_fpartition_static_data_sections,
+                          options::OPT_fno_partition_static_data_sections)) {
+    if (A->getOption().matches(options::OPT_fpartition_static_data_sections)) {
+      CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
+                                           "-partition-static-data-sections"));
+    }
   }
 
   if (Arg *A = getLastProfileSampleUseArg(Args)) {
@@ -3473,4 +3470,29 @@ void tools::setComplexRange(const Driver &D, StringRef NewOpt,
     emitComplexRangeDiag(D, LastOpt, Range, NewOpt, NewRange);
   LastOpt = NewOpt;
   Range = NewRange;
+}
+
+void tools::constructLLVMLinkCommand(Compilation &C, const Tool &T,
+                                     const JobAction &JA,
+                                     const InputInfoList &JobInputs,
+                                     const ArgStringList &LinkerInputs,
+                                     const InputInfo &Output,
+                                     const llvm::opt::ArgList &Args,
+                                     const char *OutputFilename) {
+  // Construct llvm-link command.
+  // The output from llvm-link is a bitcode file.
+
+  assert(!LinkerInputs.empty() && !JobInputs.empty() &&
+         "Must have at least one input.");
+
+  ArgStringList LlvmLinkArgs(
+      {"-o", OutputFilename ? OutputFilename : Output.getFilename()});
+
+  LlvmLinkArgs.append(LinkerInputs);
+
+  const ToolChain &TC = T.getToolChain();
+  const char *LlvmLink = Args.MakeArgString(TC.GetProgramPath("llvm-link"));
+  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
+                                         LlvmLink, LlvmLinkArgs, JobInputs,
+                                         Output));
 }

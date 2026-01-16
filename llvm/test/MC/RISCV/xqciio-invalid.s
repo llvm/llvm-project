@@ -1,7 +1,7 @@
 # Xqciio - Qualcomm uC External Input Output Extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqciio < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqciio < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqciio < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqciio < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
 # CHECK: :[[@LINE+1]]:18: error: expected register

@@ -27,6 +27,8 @@
 
 // REQUIRES: built-in-llvm-tree
 
+// UNSUPPORTED: armhf-linux
+
 #include <cstdio>
 #include <time.h>
 

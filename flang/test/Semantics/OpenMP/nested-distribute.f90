@@ -21,7 +21,7 @@ program main
 
   !$omp task
   !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
-  !$omp distribute 
+  !$omp distribute
   do i = 1, N
      a = 3.14d0
   enddo
@@ -51,7 +51,7 @@ program main
 
   !$omp parallel
   !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
-  !$omp distribute 
+  !$omp distribute
   do i = 1, N
      a = 3.14d0
   enddo
@@ -62,7 +62,7 @@ program main
    !ERROR: Only `DISTRIBUTE`, `PARALLEL`, or `LOOP` regions are allowed to be strictly nested inside `TEAMS` region.
    !$omp target
       !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
-      !$omp distribute 
+      !$omp distribute
       do i = 1, 10
          j = j + 1
       end do
@@ -70,7 +70,7 @@ program main
    !$omp end target
   !$omp end teams
 
-  !$omp teams 
+  !$omp teams
    !$omp parallel
    do k = 1,10
       print *, "hello"
@@ -90,7 +90,7 @@ program main
     !$omp end distribute
   !$omp end target teams
 
-  !$omp teams 
+  !$omp teams
       !ERROR: Only `DISTRIBUTE`, `PARALLEL`, or `LOOP` regions are allowed to be strictly nested inside `TEAMS` region.
       !$omp task
       do k = 1,10
@@ -104,7 +104,7 @@ program main
       !$omp end distribute
   !$omp end teams
 
-  !$omp task 
+  !$omp task
       !$omp parallel
       do k = 1,10
          print *, "hello"

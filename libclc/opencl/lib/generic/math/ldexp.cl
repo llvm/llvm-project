@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_ldexp.h>
-#include <clc/opencl/math/ldexp.h>
 
 #define __CLC_FUNCTION ldexp
 #define __CLC_IMPL_FUNCTION(x) __clc_ldexp
