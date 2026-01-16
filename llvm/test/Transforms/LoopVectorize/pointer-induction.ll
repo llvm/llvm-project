@@ -11,7 +11,7 @@ define void @a(ptr readnone %b) {
 ; CHECK-NEXT:    [[CMP_NOT4:%.*]] = icmp eq ptr [[B:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP_NOT4]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[B1]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -713,8 +713,8 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ; STRIDED-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; STRIDED:       vector.memcheck:
 ; STRIDED-NEXT:    [[TMP3:%.*]] = sub i64 [[POUT1]], [[PIN2]]
-; STRIDED-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP3]], 1
-; STRIDED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 15
+; STRIDED-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP3]], 1
+; STRIDED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], 15
 ; STRIDED-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
 ; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], 4

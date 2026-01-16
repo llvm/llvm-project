@@ -20,8 +20,8 @@ define internal fastcc void @d(ptr %c) unnamed_addr #0 {
 ; ALWAYS-NEXT:    br i1 false, label [[CONT:%.*]], label [[WHILE_END_LOOPEXIT:%.*]]
 ; ALWAYS:       cont:
 ; ALWAYS-NEXT:    switch i64 0, label [[WHILE_COND]] [
-; ALWAYS-NEXT:    i64 -1, label [[HANDLER_POINTER_OVERFLOW_I:%.*]]
-; ALWAYS-NEXT:    i64 0, label [[HANDLER_POINTER_OVERFLOW_I]]
+; ALWAYS-NEXT:      i64 -1, label [[HANDLER_POINTER_OVERFLOW_I:%.*]]
+; ALWAYS-NEXT:      i64 0, label [[HANDLER_POINTER_OVERFLOW_I]]
 ; ALWAYS-NEXT:    ]
 ; ALWAYS:       handler.pointer_overflow.i:
 ; ALWAYS-NEXT:    [[A_MUX_LCSSA4:%.*]] = phi ptr [ [[UMAX]], [[CONT]] ], [ [[UMAX]], [[CONT]] ]
@@ -42,8 +42,8 @@ define internal fastcc void @d(ptr %c) unnamed_addr #0 {
 ; NEVER:       cont:
 ; NEVER-NEXT:    [[A_MUX:%.*]] = select i1 [[CMP]], ptr @a, ptr [[C]]
 ; NEVER-NEXT:    switch i64 0, label [[WHILE_COND]] [
-; NEVER-NEXT:    i64 -1, label [[HANDLER_POINTER_OVERFLOW_I:%.*]]
-; NEVER-NEXT:    i64 0, label [[HANDLER_POINTER_OVERFLOW_I]]
+; NEVER-NEXT:      i64 -1, label [[HANDLER_POINTER_OVERFLOW_I:%.*]]
+; NEVER-NEXT:      i64 0, label [[HANDLER_POINTER_OVERFLOW_I]]
 ; NEVER-NEXT:    ]
 ; NEVER:       handler.pointer_overflow.i:
 ; NEVER-NEXT:    [[A_MUX_LCSSA4:%.*]] = phi ptr [ [[A_MUX]], [[CONT]] ], [ [[A_MUX]], [[CONT]] ]
@@ -64,8 +64,8 @@ define internal fastcc void @d(ptr %c) unnamed_addr #0 {
 ; CHEAP:       cont:
 ; CHEAP-NEXT:    [[A_MUX:%.*]] = select i1 [[CMP]], ptr @a, ptr [[C]]
 ; CHEAP-NEXT:    switch i64 0, label [[WHILE_COND]] [
-; CHEAP-NEXT:    i64 -1, label [[HANDLER_POINTER_OVERFLOW_I:%.*]]
-; CHEAP-NEXT:    i64 0, label [[HANDLER_POINTER_OVERFLOW_I]]
+; CHEAP-NEXT:      i64 -1, label [[HANDLER_POINTER_OVERFLOW_I:%.*]]
+; CHEAP-NEXT:      i64 0, label [[HANDLER_POINTER_OVERFLOW_I]]
 ; CHEAP-NEXT:    ]
 ; CHEAP:       handler.pointer_overflow.i:
 ; CHEAP-NEXT:    [[A_MUX_LCSSA4:%.*]] = phi ptr [ [[A_MUX]], [[CONT]] ], [ [[A_MUX]], [[CONT]] ]
