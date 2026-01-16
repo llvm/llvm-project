@@ -625,11 +625,8 @@ public:
 // `'std::__tree_node<std::__value_type<Key, int>, void *>' cannot be used in a constant expression`
 // during constant evaluation as part of P3372
 // on:
-// 1. AppleClang, which is not yet using clang >= 20.x, which has "fixed" this issue
-// FIXME: when AppleClang is based off of clang >= 20.x
-// FIXME: when Clang-based CI is using clang >= 20.x
-#if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 2000) ||                                                        \
-    (defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 2000)
+// 1. AppleClang
+#if defined(_LIBCPP_APPLE_CLANG_VER)
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~__tree_node() {}
 #else
   ~__tree_node()                             = delete;
