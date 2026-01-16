@@ -293,7 +293,6 @@ body: |
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
-    ; GCN-NEXT: S_WAITCNT_DEPCTR .AllOff
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
     S_WAITCNT_DEPCTR .VmVsrc_1_VaVdst_1

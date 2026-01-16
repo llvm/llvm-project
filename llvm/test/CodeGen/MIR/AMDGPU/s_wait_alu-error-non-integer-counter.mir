@@ -1,0 +1,9 @@
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none %s -o - 2>&1 | FileCheck %s
+
+---
+# CHECK: error: {{.*}} expected non-negative integer counter number
+name: NonIntegerCounter
+body: |
+  bb.0:
+    S_WAITCNT_DEPCTR .VmVdst_BadCnt
+...

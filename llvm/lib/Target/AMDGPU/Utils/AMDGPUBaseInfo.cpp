@@ -2078,7 +2078,13 @@ unsigned getVaSdstBitMask() { return (1 << getVaSdstBitWidth()) - 1; }
 
 unsigned getVaSsrcBitMask() { return (1 << getVaSsrcBitWidth()) - 1; }
 
-unsigned getHoldCntBitMask() { return (1 << getHoldCntWidth()) - 1; }
+unsigned getHoldCntBitMask(const MCSubtargetInfo &STI) {
+  // TODO: Currently HoldCnt is the only counter that has a different default
+  // value for different targets, but ideally all bitmasks should be computed in
+  // a similar way.
+  unsigned DefaultMask = getDefaultDepCtrEncoding(STI);
+  return (DefaultMask >> getHoldCntBitShift()) & ((1 << getHoldCntWidth()) - 1);
+}
 
 unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
 

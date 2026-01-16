@@ -1319,7 +1319,7 @@ unsigned getVaSdstBitMask();
 unsigned getVaSsrcBitMask();
 
 /// \returns Maximum HoldCnt value that can be encoded.
-unsigned getHoldCntBitMask();
+unsigned getHoldCntBitMask(const MCSubtargetInfo &STI);
 
 /// \returns Maximum VmVsrc value that can be encoded.
 unsigned getVmVsrcBitMask();

@@ -26,7 +26,7 @@ struct PerFunctionMIParsingState;
 
 class AMDGPUMIRFormatter final : public MIRFormatter {
 public:
-  AMDGPUMIRFormatter() = default;
+  explicit AMDGPUMIRFormatter(const MCSubtargetInfo &STI) : STI(STI) {}
   ~AMDGPUMIRFormatter() override = default;
 
   /// Implement target specific printing for machine operand immediate value, so
@@ -49,6 +49,7 @@ public:
                                ErrorCallbackType ErrorCallback) const override;
 
 private:
+  const MCSubtargetInfo &STI;
   /// Prints the string to represent s_wait_alu immediate value.
   void printSWaitAluImm(uint64_t Imm, llvm::raw_ostream &OS) const;
   /// Print the string to represent s_delay_alu immediate value
