@@ -107,17 +107,13 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
     auto *VPI = dyn_cast<VPInstruction>(VPV);
     if (VPI && VPI->getOpcode() == VPInstruction::Broadcast)
       VPV = VPI->getOperand(0);
-    auto *IRV = dyn_cast<VPIRValue>(VPV);
-    if (!IRV)
-      return false;
-    assert(!IRV->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(IRV->getValue());
+    auto *CI = dyn_cast<VPConstantInt>(VPV);
     if (!CI)
       return false;
 
     if (BitWidth != 0 && CI->getBitWidth() != BitWidth)
       return false;
-    return P.isValue(CI->getValue());
+    return P.isValue(CI->getAPInt());
   }
 };
 
@@ -181,14 +177,10 @@ struct bind_apint {
   bind_apint(const APInt *&Res) : Res(Res) {}
 
   bool match(VPValue *VPV) const {
-    auto *IRV = dyn_cast<VPIRValue>(VPV);
-    if (!IRV)
-      return false;
-    assert(!IRV->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(IRV->getValue());
+    auto *CI = dyn_cast<VPConstantInt>(VPV);
     if (!CI)
       return false;
-    Res = &CI->getValue();
+    Res = &CI->getAPInt();
     return true;
   }
 };
@@ -472,6 +464,28 @@ template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::LastActiveLane, Op0_t>
 m_LastActiveLane(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::LastActiveLane>(Op0);
+}
+
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::ComputeReductionResult, Op0_t>
+m_ComputeReductionResult(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ComputeReductionResult>(Op0);
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline VPInstruction_match<VPInstruction::ComputeAnyOfResult, Op0_t, Op1_t,
+                           Op2_t>
+m_ComputeAnyOfResult(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<VPInstruction::ComputeAnyOfResult>(Op0, Op1, Op2);
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t, typename Op3_t>
+inline VPInstruction_match<VPInstruction::ComputeFindIVResult, Op0_t, Op1_t,
+                           Op2_t, Op3_t>
+m_ComputeFindIVResult(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2,
+                      const Op3_t &Op3) {
+  return m_VPInstruction<VPInstruction::ComputeFindIVResult>(Op0, Op1, Op2,
+                                                             Op3);
 }
 
 template <typename Op0_t>

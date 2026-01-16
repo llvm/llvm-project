@@ -4276,8 +4276,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           }
           case VPInstruction::ActiveLaneMask: {
             unsigned Multiplier =
-                cast<ConstantInt>(VPI->getOperand(2)->getLiveInIRValue())
-                    ->getZExtValue();
+                cast<VPConstantInt>(VPI->getOperand(2))->getZExtValue();
             C += VPI->cost(VF * Multiplier, CostCtx);
             break;
           }

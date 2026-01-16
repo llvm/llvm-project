@@ -70,7 +70,7 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect(
             "frame var 'idx_1_ref[0]'",
             error=True,
-            substrs=["bitfield range 0-0 is not valid"],
+            substrs=["bitfield range 0:0 is not valid"],
         )
 
         # Base should be a "pointer to T" and index should be of an integral type.

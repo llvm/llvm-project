@@ -343,6 +343,9 @@ private:
   SCEVMonotonicity visitMulExpr(const SCEVMulExpr *Expr) {
     return invariantOrUnknown(Expr);
   }
+  SCEVMonotonicity visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
   SCEVMonotonicity visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
     return invariantOrUnknown(Expr);
   }
