@@ -23,6 +23,7 @@
 #include "CIRCXXABI.h"
 #include "LowerModule.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace cir {
@@ -67,6 +68,10 @@ public:
   mlir::Value lowerDataMemberCmp(cir::CmpOp op, mlir::Value loweredLhs,
                                  mlir::Value loweredRhs,
                                  mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerMethodCmp(cir::CmpOp op, mlir::Value loweredLhs,
+                             mlir::Value loweredRhs,
+                             mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -247,6 +252,53 @@ LowerItaniumCXXABI::lowerDataMemberCmp(cir::CmpOp op, mlir::Value loweredLhs,
                                        mlir::OpBuilder &builder) const {
   return cir::CmpOp::create(builder, op.getLoc(), op.getKind(), loweredLhs,
                             loweredRhs);
+}
+
+mlir::Value LowerItaniumCXXABI::lowerMethodCmp(cir::CmpOp op,
+                                               mlir::Value loweredLhs,
+                                               mlir::Value loweredRhs,
+                                               mlir::OpBuilder &builder) const {
+  assert(op.getKind() == cir::CmpOpKind::eq ||
+         op.getKind() == cir::CmpOpKind::ne);
+
+  mlir::ImplicitLocOpBuilder locBuilder(op.getLoc(), builder);
+  cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
+  mlir::Value ptrdiffZero =
+      cir::ConstantOp::create(locBuilder, cir::IntAttr::get(ptrdiffCIRTy, 0));
+
+  mlir::Value lhsPtrField =
+      cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredLhs, 0);
+  mlir::Value rhsPtrField =
+      cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredRhs, 0);
+  mlir::Value ptrCmp =
+      cir::CmpOp::create(locBuilder, op.getKind(), lhsPtrField, rhsPtrField);
+  mlir::Value ptrCmpToNull =
+      cir::CmpOp::create(locBuilder, op.getKind(), lhsPtrField, ptrdiffZero);
+
+  mlir::Value lhsAdjField =
+      cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredLhs, 1);
+  mlir::Value rhsAdjField =
+      cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredRhs, 1);
+  mlir::Value adjCmp =
+      cir::CmpOp::create(locBuilder, op.getKind(), lhsAdjField, rhsAdjField);
+
+  auto create_and = [&](mlir::Value lhs, mlir::Value rhs) {
+    return cir::BinOp::create(locBuilder, cir::BinOpKind::And, lhs, rhs);
+  };
+  auto create_or = [&](mlir::Value lhs, mlir::Value rhs) {
+    return cir::BinOp::create(locBuilder, cir::BinOpKind::Or, lhs, rhs);
+  };
+
+  mlir::Value result;
+  if (op.getKind() == cir::CmpOpKind::eq) {
+    // (lhs.ptr == null || lhs.adj == rhs.adj) && lhs.ptr == rhs.ptr
+    result = create_and(ptrCmp, create_or(ptrCmpToNull, adjCmp));
+  } else {
+    // (lhs.ptr != null && lhs.adj != rhs.adj) || lhs.ptr != rhs.ptr
+    result = create_or(ptrCmp, create_and(ptrCmpToNull, adjCmp));
+  }
+
+  return result;
 }
 
 } // namespace cir

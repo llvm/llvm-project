@@ -1,4 +1,4 @@
-//===-- Implementation of logbf16 function --------------------------------===//
+//===-- Shared logbf function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/logbf16.h"
-#include "src/__support/math/logbf16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_LOGBF_H
+#define LLVM_LIBC_SHARED_MATH_LOGBF_H
+
+#include "src/__support/math/logbf.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float16, logbf16, (float16 x)) { return math::logbf16(x); }
+using math::logbf;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_LOGBF_H

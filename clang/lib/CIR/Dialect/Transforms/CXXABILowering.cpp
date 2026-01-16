@@ -159,12 +159,16 @@ mlir::LogicalResult CIRCmpOpABILowering::matchAndRewrite(
     cir::CmpOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type type = op.getLhs().getType();
-  assert((mlir::isa<cir::DataMemberType>(type)) &&
-         "input to cmp in ABI lowering must be a data member");
+  assert((mlir::isa<cir::DataMemberType, cir::MethodType>(type)) &&
+         "input to cmp in ABI lowering must be a data member or method");
 
-  assert(!cir::MissingFeatures::methodType());
-  mlir::Value loweredResult = lowerModule->getCXXABI().lowerDataMemberCmp(
-      op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
+  mlir::Value loweredResult;
+  if (mlir::isa<cir::DataMemberType>(type))
+    loweredResult = lowerModule->getCXXABI().lowerDataMemberCmp(
+        op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
+  else
+    loweredResult = lowerModule->getCXXABI().lowerMethodCmp(
+        op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
 
   rewriter.replaceOp(op, loweredResult);
   return mlir::success();
