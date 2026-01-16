@@ -69,6 +69,9 @@ _Pragma("omp end declare target");
 _Pragma("omp begin declare target device_type(nohost)");
 _Pragma("omp begin declare variant match(device = {kind(gpu)})");
 
+// Attribute to declare a function as a kernel.
+#define __gpu_kernel __attribute__((device_kernel, visibility("protected")))
+
 #define __GPU_X_DIM 0
 #define __GPU_Y_DIM 1
 #define __GPU_Z_DIM 2

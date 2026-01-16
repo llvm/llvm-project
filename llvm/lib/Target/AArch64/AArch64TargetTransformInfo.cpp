@@ -647,7 +647,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // v2i64 types get converted to cmp+bif hence the cost of 2
     if (LT.second == MVT::v2i64)
       return LT.first * 2;
-    if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidMinMaxTys, equal_to(LT.second)))
       return LT.first;
     break;
   }
@@ -663,7 +663,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // need to extend the type, as it uses shr(qadd(shl, shl)).
     unsigned Instrs =
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits() ? 1 : 4;
-    if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidSatTys, equal_to(LT.second)))
       return LT.first * Instrs;
 
     TypeSize TS = getDataLayout().getTypeSizeInBits(RetTy);
@@ -679,7 +679,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                      MVT::v8i16, MVT::v2i32, MVT::v4i32,
                                      MVT::v2i64};
     auto LT = getTypeLegalizationCost(RetTy);
-    if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidAbsTys, equal_to(LT.second)))
       return LT.first;
     break;
   }
@@ -687,7 +687,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     static const auto ValidAbsTys = {MVT::v4i16, MVT::v8i16, MVT::v2i32,
                                      MVT::v4i32, MVT::v2i64};
     auto LT = getTypeLegalizationCost(RetTy);
-    if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }) &&
+    if (any_of(ValidAbsTys, equal_to(LT.second)) &&
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits())
       return LT.first;
     break;
@@ -4024,11 +4024,14 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // This is recognising a LD1 single-element structure to one lane of one
     // register instruction. I.e., if this is an `insertelement` instruction,
     // and its second operand is a load, then we will generate a LD1, which
-    // are expensive instructions.
-    if (I && dyn_cast<LoadInst>(I->getOperand(1)))
+    // are expensive instructions on some uArchs.
+    if (I && isa<LoadInst>(I->getOperand(1))) {
+      if (ST->hasFastLD1Single())
+        return 0;
       return CostKind == TTI::TCK_CodeSize
                  ? 0
                  : ST->getVectorInsertExtractBaseCost() + 1;
+    }
 
     // i1 inserts and extract will include an extra cset or cmp of the vector
     // value. Increase the cost by 1 to account.
@@ -4660,9 +4663,9 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
       static const auto ValidFP16MinMaxTys = {MVT::v4f16, MVT::v8f16};
 
       auto LT = getTypeLegalizationCost(ValTy);
-      if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }) ||
+      if (any_of(ValidMinMaxTys, equal_to(LT.second)) ||
           (ST->hasFullFP16() &&
-           any_of(ValidFP16MinMaxTys, [&LT](MVT M) { return M == LT.second; })))
+           any_of(ValidFP16MinMaxTys, equal_to(LT.second))))
         return LT.first;
     }
 
@@ -5544,6 +5547,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   case RecurKind::FMax:
   case RecurKind::FMulAdd:
   case RecurKind::AnyOf:
+  case RecurKind::FindLast:
     return true;
   default:
     return false;

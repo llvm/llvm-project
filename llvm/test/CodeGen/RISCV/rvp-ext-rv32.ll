@@ -2313,3 +2313,79 @@ define void @test_umax_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
   store <4 x i8> %max, ptr %ret_ptr
   ret void
 }
+
+; Test select operations
+define void @test_select_v2i16(ptr %ret_ptr, i1 %cond, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_select_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    bnez a1, .LBB[[BB:[0-9]+]]_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:  .LBB[[BB]]_2:
+; CHECK-NEXT:    lw a1, 0(a2)
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %b_ptr
+  %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_select_v4i8(ptr %ret_ptr, i1 %cond, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_select_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    bnez a1, .LBB[[BB:[0-9]+]]_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:  .LBB[[BB]]_2:
+; CHECK-NEXT:    lw a1, 0(a2)
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %b_ptr
+  %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test vselect operations
+define void @test_vselect_v2i16(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr, ptr %c_ptr) {
+; CHECK-LABEL: test_vselect_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    lw a3, 0(a3)
+; CHECK-NEXT:    pmslt.h a1, a2, a1
+; CHECK-NEXT:    merge a1, a2, a3
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %b_ptr
+  %c = load <2 x i16>, ptr %c_ptr
+  %mask = icmp sgt <2 x i16> %a, %b
+  %res = select <2 x i1> %mask, <2 x i16> %c, <2 x i16> %b
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_vselect_v4i8(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr, ptr %c_ptr) {
+; CHECK-LABEL: test_vselect_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    lw a3, 0(a3)
+; CHECK-NEXT:    pmseq.b a1, a1, a2
+; CHECK-NEXT:    merge a1, a2, a3
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %b_ptr
+  %c = load <4 x i8>, ptr %c_ptr
+  %mask = icmp eq <4 x i8> %a, %b
+  %res = select <4 x i1> %mask, <4 x i8> %c, <4 x i8> %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}

@@ -1065,10 +1065,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     A->render(Args, CmdArgs);
   }
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_D, options::OPT_U, options::OPT_I_Group,
-                   options::OPT_F, options::OPT_embed_dir_EQ});
-
   if (C.isOffloadingHostKind(Action::OFK_Cuda) ||
       JA.isDeviceOffloading(Action::OFK_Cuda)) {
     // Collect all enabled NVPTX architectures.
@@ -1090,6 +1086,10 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString("-D__CUDA_ARCH_LIST__=" + List));
     }
   }
+
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_D, options::OPT_U, options::OPT_I_Group,
+                   options::OPT_F, options::OPT_embed_dir_EQ});
 
   // Add -Wp, and -Xpreprocessor if using the preprocessor.
 
@@ -9304,18 +9304,23 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
   const auto &LinkCommand = C.getJobs().getJobs().back();
 
-  // Forward -Xoffload-linker<-triple> arguments to the device link job.
-  for (Arg *A : Args.filtered(options::OPT_Xoffload_linker)) {
+  // Forward -Xoffload-{compiler,linker}<-triple> arguments to the linker
+  // wrapper.
+  for (Arg *A :
+       Args.filtered(options::OPT_Xoffload_compiler, OPT_Xoffload_linker)) {
     StringRef Val = A->getValue(0);
+    bool IsLinkJob = A->getOption().getID() == OPT_Xoffload_linker;
+    auto WrapperOption =
+        IsLinkJob ? Twine("--device-linker=") : Twine("--device-compiler=");
     if (Val.empty())
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine("--device-linker=") + A->getValue(1)));
+      CmdArgs.push_back(Args.MakeArgString(WrapperOption + A->getValue(1)));
     else
       CmdArgs.push_back(Args.MakeArgString(
-          "--device-linker=" +
+          WrapperOption +
           ToolChain::getOpenMPTriple(Val.drop_front()).getTriple() + "=" +
           A->getValue(1)));
   }
+  Args.ClaimAllArgs(options::OPT_Xoffload_compiler);
   Args.ClaimAllArgs(options::OPT_Xoffload_linker);
 
   // Embed bitcode instead of an object in JIT mode.

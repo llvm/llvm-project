@@ -133,6 +133,10 @@ Miscellaneous Bug Fixes
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash when attempting to jump over initialization of a variable with variably modified type. (#GH175540)
+- Fixed a crash when using loop hint with a value dependent argument inside a
+  generic lambda. (#GH172289)
+
 OpenACC Specific Changes
 ------------------------
 
@@ -181,6 +185,9 @@ NetBSD Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
+  (#GH118233)
+
 AVR Support
 ^^^^^^^^^^^
 
@@ -209,17 +216,13 @@ Code Completion
 Static Analyzer
 ---------------
 
-New features
-^^^^^^^^^^^^
-
-Crash and bug fixes
-^^^^^^^^^^^^^^^^^^^
-
-Improvements
-^^^^^^^^^^^^
-
-Moved checkers
-^^^^^^^^^^^^^^
+.. comment:
+  This is for the Static Analyzer.
+  Using the caret `^^^` underlining for subsections:
+    - Crash and bug fixes
+    - New checkers and features
+    - Improvements
+    - Moved checkers
 
 .. _release-notes-sanitizers:
 
@@ -231,6 +234,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support for ``transparent`` clause in task and taskloop directives.
 
 Improvements
 ^^^^^^^^^^^^
