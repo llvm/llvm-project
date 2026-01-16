@@ -94,6 +94,11 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check by adding the function
+  ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
+  function is unsafe, useless, deprecated in C++17 and removed in C++20).
+
 New checks
 ^^^^^^^^^^
 
