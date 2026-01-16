@@ -1843,6 +1843,10 @@ llvm::Expected<bool> ModuleList::GetSharedModuleFromCAS(
   if (!loaded)
     return loaded.takeError();
 
+  // Don't try searching with an invalid ModuleSpec.
+  if (!*loaded)
+    return false;
+
   module_spec = std::move(*loaded);
 
   auto status = GetSharedModule(module_spec, module_sp, nullptr, nullptr,
