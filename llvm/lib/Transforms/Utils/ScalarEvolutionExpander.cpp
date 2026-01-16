@@ -457,6 +457,7 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
+  case scPtrToAddr:
   case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
@@ -1433,6 +1434,12 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   return expand(T);
 }
 
+Value *SCEVExpander::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S) {
+  Value *V = expand(S->getOperand());
+  return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToAddr,
+                           GetOptimalInsertionPointForCastOf(V));
+}
+
 Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
   Value *V = expand(S->getOperand());
   return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToInt,
@@ -1957,6 +1964,9 @@ template<typename T> static InstructionCost costAndCollectOperands(
   case scConstant:
   case scVScale:
     return 0;
+  case scPtrToAddr:
+    Cost = CastCost(Instruction::PtrToAddr);
+    break;
   case scPtrToInt:
     Cost = CastCost(Instruction::PtrToInt);
     break;
@@ -2080,6 +2090,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     return Cost > Budget;
   }
   case scTruncate:
+  case scPtrToAddr:
   case scPtrToInt:
   case scZeroExtend:
   case scSignExtend: {
