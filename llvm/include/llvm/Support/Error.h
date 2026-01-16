@@ -1341,7 +1341,8 @@ inline Error createStringError(std::errc EC, char const *Fmt,
 template <typename... Ts>
 inline Error createStringErrorV(std::error_code EC, char const *Fmt,
                                 Ts &&...Vals) {
-  return make_error<StringError>(formatv(Fmt, std::forward<Ts>(Vals)...).str(), EC, true);
+  return make_error<StringError>(formatv(Fmt, std::forward<Ts>(Vals)...).str(),
+                                 EC, true);
 }
 
 template <typename... Ts>
