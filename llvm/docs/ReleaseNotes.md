@@ -144,8 +144,17 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
+* RuntimeDyld now supports the `Large` code model for LoongArch64.
+* The `PreserveMost` calling convention is now supported.
+* An option named `loongarch-enable-merge-offset` is added to allow disabling the `MergeBaseOffset` pass.
+* A macro instruction named `ud` is added.
+* `la.abs` now generates `R_LARCH_MARK_LA` relocation.
+* LASX and LSX conversion intrinsics are added.
+* Tail calls for `sret` and `byval` functions are now supported.
+* Always emit symbol-based relocations regardless of relaxation.
 * DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
   to be used together when building for the LoongArch platform.
+* Assorted codegen improvements.
 
 Changes to the MIPS Backend
 ---------------------------
