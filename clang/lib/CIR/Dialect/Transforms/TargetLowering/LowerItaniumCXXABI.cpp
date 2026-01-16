@@ -263,8 +263,8 @@ mlir::Value LowerItaniumCXXABI::lowerMethodCmp(cir::CmpOp op,
 
   mlir::ImplicitLocOpBuilder locBuilder(op.getLoc(), builder);
   cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
-  mlir::Value ptrdiffZero = cir::ConstantOp::create(
-      locBuilder, cir::IntAttr::get(ptrdiffCIRTy, 0));
+  mlir::Value ptrdiffZero =
+      cir::ConstantOp::create(locBuilder, cir::IntAttr::get(ptrdiffCIRTy, 0));
 
   mlir::Value lhsPtrField =
       cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredLhs, 0);
