@@ -587,7 +587,7 @@ bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
   // dims.
   llvm::SmallDenseSet<int64_t> thisDims(
       flattenedThis.getDims().asArrayRef().begin(),
-      flattenedThis.getDims().asArrayRef().end()); 
+      flattenedThis.getDims().asArrayRef().end());
   return llvm::all_of(flattenedOther.getDims().asArrayRef(),
                       [&](int64_t dim) { return thisDims.contains(dim); });
 }
@@ -603,18 +603,22 @@ bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
           (flattenedThis.getDims() == flattenedOther.getDims()));
 }
 
-// Helper function to adjust unit dimensions from sliced space to parent space
+// Helper function to adjust dimensions from sliced space to parent space
 // say we have a parent shape of rank 4, and slice dims [1,3], so the sliced
-// shape is of rank 2, if we want to set unit dim [0] in sliced space, it maps to
-// dim [0] in parent space; if we want to set unit dim [1] in sliced space, it maps to
-// dim [2] in parent space.
+// shape is of rank 2, if we want to set unit dim [0] in sliced space, it maps
+// to dim [0] in parent space; if we want to set unit dim [1] in sliced space,
+// it maps to dim [2] in parent space.
 static SetVector<int64_t>
-adjustUnitDimsWithSliceDims(const SetVector<int64_t> &unitDims,
-                            ArrayRef<int64_t> sliceDims) {
+mapSlicedDimsToParentSpace(const SetVector<int64_t> &dimsToMap,
+                           ArrayRef<int64_t> sliceDims) {
   // get max number from sliceDims and unitDims to determine parent space rank
+  // the recovered parent space from sliceDims/unitDims is not necessary the
+  // actual parent rank. As long as the parent space rank covers both maximum
+  // number of sliceDims and unitDims, the algorithm works.
   int64_t maxDim = -1;
   maxDim = std::max(maxDim, *std::max_element(sliceDims.begin(), sliceDims.end()));
-  maxDim = std::max(maxDim, *std::max_element(unitDims.begin(), unitDims.end()));
+  maxDim =
+      std::max(maxDim, *std::max_element(dimsToMap.begin(), dimsToMap.end()));
   int64_t parentSpaceRank = maxDim + sliceDims.size() + 1;
 
   // get remaining dims in parent space after applying slicing with parent's slice Dims
@@ -628,9 +632,9 @@ adjustUnitDimsWithSliceDims(const SetVector<int64_t> &unitDims,
 
   // Map unit dims from sliced space to parent space
   SetVector<int64_t> adjustUnitDims;
-  for (auto dim : unitDims) {
-      int64_t mappedDim = remainingDims[dim];
-      adjustUnitDims.insert(mappedDim);
+  for (auto dim : dimsToMap) {
+    int64_t mappedDim = remainingDims[dim];
+    adjustUnitDims.insert(mappedDim);
   }
 
   return adjustUnitDims;
@@ -642,7 +646,8 @@ DistributeLayoutAttr SliceAttr::setUnitDimData(SetVector<int64_t> unitDims) cons
 
   ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
 
-  SetVector<int64_t> adjustUnitDims = adjustUnitDimsWithSliceDims(unitDims, sliceDims);
+  SetVector<int64_t> adjustUnitDims =
+      mapSlicedDimsToParentSpace(unitDims, sliceDims);
 
   return SliceAttr::get(getContext(), parentLayout.setUnitDimData(adjustUnitDims),
                         getDims());
@@ -654,7 +659,8 @@ DistributeLayoutAttr SliceAttr::setUnitDimLayout(SetVector<int64_t> unitDims) co
 
   ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
 
-  SetVector<int64_t> adjustUnitDims = adjustUnitDimsWithSliceDims(unitDims, sliceDims);
+  SetVector<int64_t> adjustUnitDims =
+      mapSlicedDimsToParentSpace(unitDims, sliceDims);
 
   return SliceAttr::get(getContext(), parentLayout.setUnitDimLayout(adjustUnitDims),
                         getDims());
