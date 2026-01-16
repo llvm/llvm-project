@@ -78,8 +78,7 @@ void ParamPackFunction(T... args);
 // JSON-NEXT:      },
 
 // HTML:        <pre><code class="language-cpp code-clang-doc">template &lt;class... T&gt;</code></pre>
-// HTML-NEXT:      <pre><code class="language-cpp code-clang-doc">void ParamPackFunction (T... args)</code></pre>
-// HTML-NEXT:  </div>
+// HTML-NEXT:   <pre><code class="language-cpp code-clang-doc">void ParamPackFunction (T... args)</code></pre>
 
 template <typename T, int U = 1>
 void function(T x) {}

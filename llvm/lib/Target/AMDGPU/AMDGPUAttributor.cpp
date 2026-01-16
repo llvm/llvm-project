@@ -42,6 +42,8 @@ enum ImplicitArgumentMask {
 #include "AMDGPUAttributes.def"
   ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1,
   NOT_IMPLICIT_INPUT
+  ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1,
+  NOT_IMPLICIT_INPUT
 };
 
 #define AMDGPU_ATTRIBUTE(Name, Str) {Name, Str},

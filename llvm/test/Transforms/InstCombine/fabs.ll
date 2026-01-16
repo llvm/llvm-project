@@ -92,7 +92,7 @@ define fp128 @square_fabs_intrinsic_f128(fp128 %x) {
   ret fp128 %fabsl
 }
 
-define float @square_nnan_fabs_intrinsic_f32(float %x) {
+define float @square_nnan_fabs_intrinsic_f32(float noundef %x) {
 ; CHECK-LABEL: @square_nnan_fabs_intrinsic_f32(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan float [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret float [[MUL]]
@@ -191,7 +191,7 @@ define float @fabs_select_var_constant_negative(i32 %c, float %x) {
 
 ; The fabs cannot be eliminated because %x may be a NaN
 
-define float @square_fma_fabs_intrinsic_f32(float %x) {
+define float @square_fma_fabs_intrinsic_f32(float noundef %x) {
 ; CHECK-LABEL: @square_fma_fabs_intrinsic_f32(
 ; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[X]], float 1.000000e+00)
 ; CHECK-NEXT:    [[FABSF:%.*]] = call float @llvm.fabs.f32(float [[FMA]])

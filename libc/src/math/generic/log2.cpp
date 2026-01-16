@@ -18,8 +18,8 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include "log_range_reduction.h"
 #include "src/__support/math/common_constants.h"
+#include "src/__support/math/log_range_reduction.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -31,6 +31,7 @@ using LIBC_NAMESPACE::operator""_u128;
 namespace {
 
 using namespace common_constants_internal;
+using namespace math::log_range_reduction_internal;
 
 constexpr fputil::DoubleDouble LOG2_E = {0x1.777d0ffda0d24p-56,
                                          0x1.71547652b82fep0};

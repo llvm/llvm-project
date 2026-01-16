@@ -91,6 +91,13 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
     cuf::KernelOp::attachInterface<OffloadRegionModel<cuf::KernelOp>>(*ctx);
   });
 
+  // Attach FIR dialect interfaces to OpenACC operations.
+  registry.addExtension(+[](mlir::MLIRContext *ctx,
+                            mlir::acc::OpenACCDialect *dialect) {
+    mlir::acc::LoopOp::attachInterface<OperationMoveModel<mlir::acc::LoopOp>>(
+        *ctx);
+  });
+
   registerAttrsExtensions(registry);
 }
 
