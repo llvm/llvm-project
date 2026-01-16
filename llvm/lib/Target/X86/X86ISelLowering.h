@@ -81,6 +81,10 @@ namespace llvm {
     // marker instruction.
     CALL_RVMARKER,
 
+    // Psuedo for a call to a global address that must be called via a memory
+    // address (i.e., not loaded into a register then called).
+    CALL_GLOBALADDR,
+
     /// The same as ISD::CopyFromReg except that this node makes it explicit
     /// that it may lower to an x87 FPU stack pop. Optimizations should be more
     /// cautious when handling this node than a normal CopyFromReg to avoid
@@ -335,6 +339,10 @@ namespace llvm {
     /// Tail call return. See X86TargetLowering::LowerCall for
     /// the list of operands.
     TC_RETURN,
+
+    // Psuedo for a tail call return to a global address that must be called via
+    // a memory address (i.e., not loaded into a register then called).
+    TC_RETURN_GLOBALADDR,
 
     // Vector move to low scalar and zero higher vector elements.
     VZEXT_MOVL,
@@ -1860,9 +1868,9 @@ namespace llvm {
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const;
+    shouldExpandLogicAtomicRMWInIR(const AtomicRMWInst *AI) const;
     void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
     void emitCmpArithAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
 

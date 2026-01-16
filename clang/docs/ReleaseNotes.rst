@@ -216,17 +216,13 @@ Code Completion
 Static Analyzer
 ---------------
 
-New features
-^^^^^^^^^^^^
-
-Crash and bug fixes
-^^^^^^^^^^^^^^^^^^^
-
-Improvements
-^^^^^^^^^^^^
-
-Moved checkers
-^^^^^^^^^^^^^^
+.. comment:
+  This is for the Static Analyzer.
+  Using the caret `^^^` underlining for subsections:
+    - Crash and bug fixes
+    - New checkers and features
+    - Improvements
+    - Moved checkers
 
 .. _release-notes-sanitizers:
 
