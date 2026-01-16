@@ -1162,7 +1162,7 @@ class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num> {
                         true : llvm_void_ty);
 }
 
-class NVVM_TCGEN05_MMA_BASE<string Space, bit Sp> {
+class NVVM_TCGEN05_MMA_BASE<string Space, bit Sp, string Kind = ""> {
   LLVMType a_operand_type = !if(!eq(Space, "tensor"),
                                   llvm_tmem_ptr_ty, llvm_i64_ty);
   list<LLVMType> common_args = !listconcat(
@@ -1176,14 +1176,18 @@ class NVVM_TCGEN05_MMA_BASE<string Space, bit Sp> {
                             [IntrArgMemOnly, WriteOnly<ArgIndex<0>>],
                             !if(!eq(Space, "tensor"), [ReadOnly<ArgIndex<1>>], [])
                           );
+
+  string Prefix = "llvm.nvvm.tcgen05.mma";
+  string SpSpaceKindStr = !if(Sp, ".sp", "")
+                          # "." # Space
+                          # !if(!ne(Kind, ""), "." # Kind, "");
 }
 
 class NVVM_TCGEN05_MMA<bit Sp, string Space,
                        bit AShift, bit ScaleInputD>:
         NVVM_TCGEN05_MMA_BASE<Space, Sp> {
-  string name = "llvm.nvvm.tcgen05.mma"
-                # !if(!eq(Sp, 1), ".sp", "")
-                # "." # Space
+  string name = Prefix
+                # SpSpaceKindStr
                 # !if(!eq(ScaleInputD, 1), ".scale_d", "")
                 # !if(!eq(AShift, 1), ".ashift", "");
   string intr_name = IntrinsicName<name>.intr_name;
@@ -1192,11 +1196,9 @@ class NVVM_TCGEN05_MMA<bit Sp, string Space,
 
 class NVVM_TCGEN05_MMA_BLOCKSCALE<bit Sp, string Space,
                                   string Kind, string ScaleVecSize>:
-        NVVM_TCGEN05_MMA_BASE<Space, Sp> {
-  string name = "llvm.nvvm.tcgen05.mma"
-                # !if(!eq(Sp, 1), ".sp", "")
-                # "." # Space
-                # "." # Kind
+        NVVM_TCGEN05_MMA_BASE<Space, Sp, Kind> {
+  string name = Prefix
+                # SpSpaceKindStr
                 # ".block_scale" # ScaleVecSize;
   string intr_name = IntrinsicName<name>.intr_name;
   string record_name = IntrinsicName<name>.record_name;
@@ -1204,9 +1206,9 @@ class NVVM_TCGEN05_MMA_BLOCKSCALE<bit Sp, string Space,
 
 class NVVM_TCGEN05_MMA_WS<bit Sp, string Space, bit ZeroColMask>:
         NVVM_TCGEN05_MMA_BASE<Space, Sp> {
-  string name = "llvm.nvvm.tcgen05.mma.ws"
-                # !if(!eq(Sp, 1), ".sp", "")
-                # "." # Space
+  string name = Prefix
+                # ".ws"
+                # SpSpaceKindStr
                 # !if(!eq(ZeroColMask, 1), ".zero_col_mask", "");
   string intr_name = IntrinsicName<name>.intr_name;
   string record_name = IntrinsicName<name>.record_name;
@@ -1216,9 +1218,8 @@ class NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE<bit Sp, string Space,
                                            int CtaGroup, bit AShift,
                                            bit ScaleInputD>:
         NVVM_TCGEN05_MMA_BASE<Space, Sp> {
-  string name = "llvm.nvvm.tcgen05.mma"
-                # !if(!eq(Sp, 1), ".sp", "")
-                # "." # Space
+  string name = Prefix
+                # SpSpaceKindStr
                 # !if(!eq(ScaleInputD, 1), ".scale_d", "")
                 # ".disable_output_lane.cg" # CtaGroup
                 # !if(!eq(AShift, 1), ".ashift", "");
