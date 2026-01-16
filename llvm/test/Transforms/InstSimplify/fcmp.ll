@@ -51,7 +51,7 @@ define i1 @bitcast_first() {
   ret i1 %cmp
 }
 
-define i1 @uge() {
+define i1 @direct_bitcast_uge() {
 ; CHECK-LABEL: @uge(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -60,7 +60,7 @@ define i1 @uge() {
 }
 
 @g = external global i8
-define i1 @cannot_be_folded() {
+define i1 @bitcast_cannot_be_folded() {
 ; CHECK-LABEL: @cannot_be_folded(
 ; CHECK-NEXT:    ret i1 false
 ;
