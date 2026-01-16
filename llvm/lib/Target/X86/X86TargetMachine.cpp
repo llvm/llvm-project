@@ -53,9 +53,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableMachineCombinerPass("x86-machine-combiner",
-                               cl::desc("Enable the machine combiner pass"),
-                               cl::init(true), cl::Hidden);
+cl::opt<bool>
+    X86EnableMachineCombinerPass("x86-machine-combiner",
+                                 cl::desc("Enable the machine combiner pass"),
+                                 cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableTileRAPass("x86-tile-ra",
@@ -94,7 +95,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86SpeculativeExecutionSideEffectSuppressionLegacyPass(PR);
   initializeX86FlagsCopyLoweringLegacyPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
-  initializeX86LoadValueInjectionRetHardeningPassPass(PR);
+  initializeX86LoadValueInjectionRetHardeningLegacyPass(PR);
   initializeX86OptimizeLEAsLegacyPass(PR);
   initializeX86PartialReductionLegacyPass(PR);
   initializePseudoProbeInserterPass(PR);
@@ -497,7 +498,7 @@ void X86PassConfig::addPreLegalizeMachineIR() {
 
 bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
-  if (EnableMachineCombinerPass)
+  if (X86EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
   addPass(createX86CmovConversionLegacyPass());
   return true;
@@ -610,7 +611,7 @@ void X86PassConfig::addPreEmitPass2() {
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsPass());
   }
-  addPass(createX86LoadValueInjectionRetHardeningPass());
+  addPass(createX86LoadValueInjectionRetHardeningLegacyPass());
 
   // Insert pseudo probe annotation for callsite profiling
   addPass(createPseudoProbeInserter());

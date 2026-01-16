@@ -433,6 +433,21 @@ ISD::NodeType ISD::getInverseMinMaxOpcode(unsigned MinMaxOpc) {
   }
 }
 
+ISD::NodeType ISD::getOppositeSignednessMinMaxOpcode(unsigned MinMaxOpc) {
+  switch (MinMaxOpc) {
+  default:
+    llvm_unreachable("unrecognized min/max opcode");
+  case ISD::SMIN:
+    return ISD::UMIN;
+  case ISD::SMAX:
+    return ISD::UMAX;
+  case ISD::UMIN:
+    return ISD::SMIN;
+  case ISD::UMAX:
+    return ISD::SMAX;
+  }
+}
+
 ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   switch (VecReduceOpcode) {
   default:
@@ -1368,6 +1383,7 @@ SelectionDAG::SelectionDAG(const TargetMachine &tm, CodeGenOptLevel OL)
 void SelectionDAG::init(MachineFunction &NewMF,
                         OptimizationRemarkEmitter &NewORE, Pass *PassPtr,
                         const TargetLibraryInfo *LibraryInfo,
+                        const LibcallLoweringInfo *LibcallsInfo,
                         UniformityInfo *NewUA, ProfileSummaryInfo *PSIin,
                         BlockFrequencyInfo *BFIin, MachineModuleInfo &MMIin,
                         FunctionVarLocs const *VarLocs) {
@@ -1377,6 +1393,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   TLI = getSubtarget().getTargetLowering();
   TSI = getSubtarget().getSelectionDAGInfo();
   LibInfo = LibraryInfo;
+  Libcalls = LibcallsInfo;
   Context = &MF->getFunction().getContext();
   UA = NewUA;
   PSI = PSIin;
@@ -2073,7 +2090,7 @@ SDValue SelectionDAG::getExternalSymbol(const char *Sym, EVT VT) {
 }
 
 SDValue SelectionDAG::getExternalSymbol(RTLIB::LibcallImpl Libcall, EVT VT) {
-  StringRef SymName = TLI->getLibcallImplName(Libcall);
+  StringRef SymName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Libcall);
   return getExternalSymbol(SymName.data(), VT);
 }
 
@@ -2098,7 +2115,7 @@ SDValue SelectionDAG::getTargetExternalSymbol(const char *Sym, EVT VT,
 
 SDValue SelectionDAG::getTargetExternalSymbol(RTLIB::LibcallImpl Libcall,
                                               EVT VT, unsigned TargetFlags) {
-  StringRef SymName = TLI->getLibcallImplName(Libcall);
+  StringRef SymName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Libcall);
   return getTargetExternalSymbol(SymName.data(), VT, TargetFlags);
 }
 
@@ -9189,7 +9206,7 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrstr(SDValue Chain,
 std::pair<SDValue, SDValue>
 SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
                         SDValue Mem1, SDValue Size, const CallInst *CI) {
-  RTLIB::LibcallImpl MemcmpImpl = TLI->getLibcallImpl(RTLIB::MEMCMP);
+  RTLIB::LibcallImpl MemcmpImpl = getLibcalls().getLibcallImpl(RTLIB::MEMCMP);
   if (MemcmpImpl == RTLIB::Unsupported)
     return {};
 
@@ -9206,7 +9223,7 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallImplCallingConv(MemcmpImpl),
+          getLibcalls().getLibcallImplCallingConv(MemcmpImpl),
           Type::getInt32Ty(*getContext()),
           getExternalSymbol(MemcmpImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
@@ -9245,7 +9262,7 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
                                                     const SDLoc &dl,
                                                     SDValue Src,
                                                     const CallInst *CI) {
-  RTLIB::LibcallImpl StrlenImpl = TLI->getLibcallImpl(RTLIB::STRLEN);
+  RTLIB::LibcallImpl StrlenImpl = getLibcalls().getLibcallImpl(RTLIB::STRLEN);
   if (StrlenImpl == RTLIB::Unsupported)
     return {};
 
@@ -9338,7 +9355,7 @@ SDValue SelectionDAG::getMemcpy(
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallImplCallingConv(MemCpyImpl),
+          getLibcalls().getLibcallImplCallingConv(MemCpyImpl),
           Dst.getValueType().getTypeForEVT(*getContext()),
           getExternalSymbol(MemCpyImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
@@ -9364,7 +9381,7 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(ElemSz);
-  RTLIB::LibcallImpl LibcallImpl = TLI->getLibcallImpl(LibraryCall);
+  RTLIB::LibcallImpl LibcallImpl = getLibcalls().getLibcallImpl(LibraryCall);
   if (LibcallImpl == RTLIB::Unsupported)
     report_fatal_error("Unsupported element size");
 
@@ -9372,7 +9389,7 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallImplCallingConv(LibcallImpl),
+          getLibcalls().getLibcallImplCallingConv(LibcallImpl),
           Type::getVoidTy(*getContext()),
           getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
@@ -9431,7 +9448,7 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // FIXME:  pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
 
-  RTLIB::LibcallImpl MemmoveImpl = TLI->getLibcallImpl(RTLIB::MEMMOVE);
+  RTLIB::LibcallImpl MemmoveImpl = getLibcalls().getLibcallImpl(RTLIB::MEMMOVE);
 
   bool IsTailCall = false;
   if (OverrideTailCall.has_value()) {
@@ -9444,7 +9461,7 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallImplCallingConv(MemmoveImpl),
+          getLibcalls().getLibcallImplCallingConv(MemmoveImpl),
           Dst.getValueType().getTypeForEVT(*getContext()),
           getExternalSymbol(MemmoveImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
@@ -9470,7 +9487,7 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(ElemSz);
-  RTLIB::LibcallImpl LibcallImpl = TLI->getLibcallImpl(LibraryCall);
+  RTLIB::LibcallImpl LibcallImpl = getLibcalls().getLibcallImpl(LibraryCall);
   if (LibcallImpl == RTLIB::Unsupported)
     report_fatal_error("Unsupported element size");
 
@@ -9478,7 +9495,7 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallImplCallingConv(LibcallImpl),
+          getLibcalls().getLibcallImplCallingConv(LibcallImpl),
           Type::getVoidTy(*getContext()),
           getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))

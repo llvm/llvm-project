@@ -27,7 +27,7 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> EnableMachineCombinerPass;
+extern cl::opt<bool> X86EnableMachineCombinerPass;
 
 namespace {
 
@@ -117,7 +117,7 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
 
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(EarlyIfConverterPass(), PMW);
-  if (EnableMachineCombinerPass) {
+  if (X86EnableMachineCombinerPass) {
     // TODO(boomanaiden154): Add the MachineCombinerPass here once it has been
     // ported to the new pass manager.
   }
@@ -158,8 +158,7 @@ void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
   // mitigation. This is to prevent slow downs due to
   // analyses needed by the LVIHardening pass when compiling at -O0.
   if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add X86LoadValueInjectionLoadHardeningPass here
-    // once it has been ported.
+    addMachineFunctionPass(X86LoadValueInjectionRetHardeningPass(), PMW);
   }
 }
 
@@ -205,8 +204,8 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // passes don't move the code around the LFENCEs in a way that will hurt the
   // correctness of this pass. This placement has been shown to work based on
   // hand inspection of the codegen output.
-  // TODO(boomanaiden154): Add X86SpeculativeExecutionSideEffectSuppresionPass
-  // here once it has been ported.
+  addMachineFunctionPass(X86SpeculativeExecutionSideEffectSuppressionPass(),
+                         PMW);
   // TODO(boomanaiden154): Add X86IndirectThunksPass here
   // once it has been ported.
   // TODO(boomanaiden154): Add X86ReturnThunksPass here
@@ -222,12 +221,15 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // instructions.
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
-       MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
-    addMachineFunctionPass(CFIInstrInserterPass(), PMW);
+       MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI)) {
+    // TODO(boomanaiden154): Add CFInstrInserterPass here when it has been
+    // ported.
+  }
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    addMachineFunctionPass(CFGuardLongjmpPass(), PMW);
+    // TODO(boomanaiden154): Add CFGuardLongjmpPass here when it has been
+    // ported.
     // Identify valid eh continuation targets for Windows EHCont Guard.
     // TODO(boomanaiden154): Add EHContGuardTargetsPass when it has been
     // ported.
