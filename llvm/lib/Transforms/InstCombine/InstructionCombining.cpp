@@ -2921,12 +2921,21 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   Indices.append(GEP.op_begin() + 2, GEP.op_end());
 
   // Don't create GEPs with more than one non-zero index.
-  unsigned NumNonZeroIndices = count_if(Indices, [](Value *Idx) {
-    auto *C = dyn_cast<Constant>(Idx);
-    return !C || !C->isNullValue();
-  });
-  if (NumNonZeroIndices > 1)
-    return nullptr;
+  // Exception: For AMDGPU, preserve multi-dimensional array structure for
+  // better backend optimization (memory coalescing, vectorization). Check if
+  // the source element type is a multi-dimensional array.
+  Type *GEPSrcElemTy = GEP.getSourceElementType();
+  bool IsMultiDimArray_Strip = GEPSrcElemTy->isArrayTy() &&
+                               GEPSrcElemTy->getArrayElementType()->isArrayTy();
+
+  if (!IsMultiDimArray_Strip) {
+    unsigned NumNonZeroIndices = count_if(Indices, [](Value *Idx) {
+      auto *C = dyn_cast<Constant>(Idx);
+      return !C || !C->isNullValue();
+    });
+    if (NumNonZeroIndices > 1)
+      return nullptr;
+  }
 
   return replaceInstUsesWith(
       GEP, Builder.CreateGEP(
@@ -3364,17 +3373,24 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                drop_end(Indices), "", GEP.getNoWrapFlags()));
   }
 
-  // Strip leading zero indices.
-  auto *FirstIdx = dyn_cast<Constant>(Indices.front());
-  if (FirstIdx && FirstIdx->isNullValue() &&
-      !FirstIdx->getType()->isVectorTy()) {
-    gep_type_iterator GTI = gep_type_begin(GEP);
-    ++GTI;
-    if (!GTI.isStruct())
-      return replaceInstUsesWith(GEP, Builder.CreateGEP(GTI.getIndexedType(),
-                                                        GEP.getPointerOperand(),
-                                                        drop_begin(Indices), "",
-                                                        GEP.getNoWrapFlags()));
+  // Strip leading zero indices (except for multi-dimensional arrays).
+  // Preserve structure for better backend optimization.
+  Type *GEPSrcElemTy = GEP.getSourceElementType();
+  bool IsMultiDimArray_Strip = GEPSrcElemTy->isArrayTy() &&
+                               GEPSrcElemTy->getArrayElementType()->isArrayTy();
+
+  if (!IsMultiDimArray_Strip) {
+    auto *FirstIdx = dyn_cast<Constant>(Indices.front());
+    if (FirstIdx && FirstIdx->isNullValue() &&
+        !FirstIdx->getType()->isVectorTy()) {
+      gep_type_iterator GTI = gep_type_begin(GEP);
+      ++GTI;
+      if (!GTI.isStruct())
+        return replaceInstUsesWith(GEP, Builder.CreateGEP(GTI.getIndexedType(),
+                                                          GEP.getPointerOperand(),
+                                                          drop_begin(Indices), "",
+                                                          GEP.getNoWrapFlags()));
+    }
   }
 
   // Scalarize vector operands; prefer splat-of-gep.as canonical form.
@@ -3403,29 +3419,33 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return replaceInstUsesWith(GEP, Res);
   }
 
-  bool SeenNonZeroIndex = false;
-  for (auto [IdxNum, Idx] : enumerate(Indices)) {
-    auto *C = dyn_cast<Constant>(Idx);
-    if (C && C->isNullValue())
-      continue;
+  // GEP has multiple non-zero indices: Split it (except for multi-dim arrays).
+  // Preserve structure for better backend optimization.
+  if (!IsMultiDimArray_Strip) {
+    bool SeenNonZeroIndex = false;
+    for (auto [IdxNum, Idx] : enumerate(Indices)) {
+      auto *C = dyn_cast<Constant>(Idx);
+      if (C && C->isNullValue())
+        continue;
 
-    if (!SeenNonZeroIndex) {
-      SeenNonZeroIndex = true;
-      continue;
+      if (!SeenNonZeroIndex) {
+        SeenNonZeroIndex = true;
+        continue;
+      }
+
+      // GEP has multiple non-zero indices: Split it.
+      ArrayRef<Value *> FrontIndices = ArrayRef(Indices).take_front(IdxNum);
+      Value *FrontGEP =
+          Builder.CreateGEP(GEPEltType, PtrOp, FrontIndices,
+                            GEP.getName() + ".split", GEP.getNoWrapFlags());
+
+      SmallVector<Value *> BackIndices;
+      BackIndices.push_back(Constant::getNullValue(NewScalarIndexTy));
+      append_range(BackIndices, drop_begin(Indices, IdxNum));
+      return GetElementPtrInst::Create(
+          GetElementPtrInst::getIndexedType(GEPEltType, FrontIndices), FrontGEP,
+          BackIndices, GEP.getNoWrapFlags());
     }
-
-    // GEP has multiple non-zero indices: Split it.
-    ArrayRef<Value *> FrontIndices = ArrayRef(Indices).take_front(IdxNum);
-    Value *FrontGEP =
-        Builder.CreateGEP(GEPEltType, PtrOp, FrontIndices,
-                          GEP.getName() + ".split", GEP.getNoWrapFlags());
-
-    SmallVector<Value *> BackIndices;
-    BackIndices.push_back(Constant::getNullValue(NewScalarIndexTy));
-    append_range(BackIndices, drop_begin(Indices, IdxNum));
-    return GetElementPtrInst::Create(
-        GetElementPtrInst::getIndexedType(GEPEltType, FrontIndices), FrontGEP,
-        BackIndices, GEP.getNoWrapFlags());
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
