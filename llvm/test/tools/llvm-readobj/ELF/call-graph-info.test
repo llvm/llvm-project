@@ -368,7 +368,7 @@ Sections:
     Flags:  [ SHF_LINK_ORDER ]
     Link:   .text
     ContentArray: [
-      ## --- Entry 1: foo (foo) ---
+      ## --- foo ---
       ## Offset 0x0
       0x00, ## Format Version
       0x01, ## Flags
@@ -376,7 +376,7 @@ Sections:
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Address of foo
       0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, ## TypeID of foo
 
-      ## --- Entry 2: bar (bar) ---
+      ## --- bar ---
       ## Offset 0x12
       0x00, ## Format Version
       0x01, ## Flags
@@ -384,7 +384,7 @@ Sections:
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Address of bar
       0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, ## TypeID of bar
 
-      ## --- Entry 3: baz (baz) ---
+      ## --- baz ---
       ## Offset 0x24
       0x00, ## Format Version
       0x01, ## Flags
@@ -392,7 +392,7 @@ Sections:
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Address of baz
       0x54, 0x86, 0xBC, 0x59, 0x81, 0x4B, 0x8E, 0x30, ## TypeID of baz
 
-      ## --- Entry 4: caller (caller) ---
+      ## --- caller ---
       ## Offset 0x36
       0x00, ## Format Version
       0x07, ## Flags (HasDirectCallees | IsIndirectTarget | ...)

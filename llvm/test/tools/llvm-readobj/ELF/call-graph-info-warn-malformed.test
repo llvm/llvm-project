@@ -39,7 +39,7 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- Entry 1: foo (foo) ---
+      ## --- foo ---
       0x01, ## Format Version - only supported value is 0x00
     ]
 Symbols:
@@ -67,7 +67,7 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- Entry 1: foo (foo) ---
+      ## --- foo ---
       0x00, ## Format Version
       ##<Missing flags
     ]
@@ -96,7 +96,7 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- Entry 1: foo (foo) ---
+      ## --- foo ---
       0x00, ## Format Version
       0x08, ## Flags - only valid values are 0x00 to 0x07
     ]
@@ -125,7 +125,7 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- Entry 1: foo (foo) ---
+      ## --- foo ---
       0x00, ## Format Version
       0x00, ## Flags
       ##<Missing function entry PC
@@ -155,7 +155,7 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- Entry 1: foo (foo) ---
+      ## --- foo ---
       0x00, ## Format Version
       0x00, ## Flags
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
@@ -186,7 +186,7 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- Entry 1: foo (foo) ---
+      ## --- foo ---
       0x00, ## Format Version
       0x02, ## Flags (HasDirectCallees)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
@@ -218,7 +218,7 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- Entry 1: foo (foo) ---
+      ## --- foo ---
       0x00, ## Format Version
       0x02, ## Flags (HasDirectCallees)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
@@ -251,7 +251,7 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- Entry 1: foo (foo) ---
+      ## --- foo ---
       0x00, ## Format Version
       0x04, ## Flags (HasIndirectCallees)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
@@ -283,7 +283,7 @@ Sections:
   - Name:  .llvm.callgraph
     Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
-      ## --- Entry 1: foo (foo) ---
+      ## --- foo ---
       0x00, ## Format Version
       0x04, ## Flags (HasIndirectCallees)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
@@ -318,7 +318,7 @@ FileHeader:
 Sections:
   - Name: .text
     Type: SHT_PROGBITS
-    Size: 12 # or whatever size is needed for all the data
+    Size: 12 ## or whatever size is needed for all the data
   - Name: .llvm.callgraph
     Type: SHT_LLVM_CALL_GRAPH
     ContentArray: [
@@ -341,24 +341,24 @@ Sections:
       ]
   - Type:   SHT_RELA
     Relocations:
-      # 1. Pointer to foo() definition
+      ## 1. Pointer to foo() definition
       - Offset: 0x2
         Symbol: foo
         Type:   R_X86_64_64
 
-      # 2. Pointer to the call site "callq foo" (offset 5 inside foo)
-      #    We relocate against 'foo' and add 5 to get the address of the instruction.
+      ## 2. Pointer to the call site "callq foo" (offset 5 inside foo)
+      ##    We relocate against 'foo' and add 5 to get the address of the instruction.
       - Offset: 0x13
         Symbol: foo
         Type:   R_X86_64_64
         Addend: 5
 
-      # 3. Pointer to bar() definition
+      ## 3. Pointer to bar() definition
       - Offset: 0x1D
         Symbol: bar
         Type:   R_X86_64_64
 
-      # 4. Pointer to baz() definition
+      ## 4. Pointer to baz() definition
       - Offset: 0x38
         Symbol: baz
         Type:   R_X86_64_64
