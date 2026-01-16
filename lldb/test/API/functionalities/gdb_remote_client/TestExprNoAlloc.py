@@ -30,10 +30,10 @@ class TestExprNoAlloc(GDBRemoteTestBase):
     @skipIfLLVMTargetMissing("AArch64")
     def test(self):
         """
-        Test that a simple expression can be evaluated when the server supports the '_M'
-        packet, but memory cannot be allocated, and it returns an error code response.
-        In this case, 'CanJIT' used to be set to 'eCanJITYes', so 'IRMemoryMap' tried to
-        allocated memory in the inferior process and failed.
+        We should be able to evaluate an expression that requires no allocations,
+        even if the server responds to '_M' with an error. 'CanJIT' should be set
+        to 'eCanJITNo' for this response; otherwise, 'IRMemoryMap' would attempt
+        to allocate memory in the inferior process and fail.
         """
 
         self.server.responder = MyResponder()
