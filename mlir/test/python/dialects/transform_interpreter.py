@@ -1,7 +1,13 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 from mlir import ir
-from mlir.dialects.transform import interpreter as interp
+from mlir.dialects.transform import (
+    interpreter as interp,
+    NamedSequenceOp,
+    any_op_t,
+    YieldOp,
+)
+from mlir.dialects import builtin as builtin_d
 
 
 def test_in_context(f):
@@ -173,6 +179,7 @@ def check_builtin():
             named_sequence = NamedSequenceOp("__transform_main", [any_op_t()], [])
             with ir.InsertionPoint(named_sequence.body):
                 YieldOp([])
+        transform_module.operation.verify()
         interp.apply_named_sequence(
             module,
             transform_module.body.operations[0],
