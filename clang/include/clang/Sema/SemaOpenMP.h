@@ -981,6 +981,11 @@ public:
                                         SourceLocation StartLoc,
                                         SourceLocation LParenLoc,
                                         SourceLocation EndLoc);
+  /// Called on well-formed 'transparent' clause.
+  OMPClause *ActOnOpenMPTransparentClause(Expr *Transparent,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation EndLoc);
   /// Called on well-formed 'proc_bind' clause.
   OMPClause *ActOnOpenMPProcBindClause(llvm::omp::ProcBindKind Kind,
                                        SourceLocation KindLoc,
@@ -1171,8 +1176,8 @@ public:
     SourceLocation RLoc;
     CXXScopeSpec ReductionOrMapperIdScopeSpec;
     DeclarationNameInfo ReductionOrMapperId;
-    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend or
-                            ///< lastprivate clause.
+    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend,
+                            ///< lastprivate, or use_device_ptr clause.
     int OriginalSharingModifier = 0; // Default is shared
     int NeedDevicePtrModifier = 0;
     SourceLocation NeedDevicePtrModifierLoc;
@@ -1477,6 +1482,13 @@ public:
   int getOpenMPDeviceNum() const;
 
   void setOpenMPDeviceNumID(StringRef ID);
+
+  enum class OpenMPImpexType {
+    OMP_NotImpex = 0,
+    OMP_Impex = 1,
+    OMP_Import = 2,
+    OMP_Export = 3
+  };
 
 private:
   void *VarDataSharingAttributesStack;

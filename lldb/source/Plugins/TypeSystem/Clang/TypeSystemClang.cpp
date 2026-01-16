@@ -81,8 +81,8 @@
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
+#include "Plugins/SymbolFile/NativePDB/PdbAstBuilderClang.h"
 #include "Plugins/SymbolFile/PDB/PDBASTParser.h"
-#include "Plugins/SymbolFile/NativePDB/PdbAstBuilder.h"
 
 #include <cstdio>
 
@@ -3290,17 +3290,18 @@ bool TypeSystemClang::IsIntegerType(lldb::opaque_compiler_type_t type,
     return false;
 
   clang::QualType qual_type(GetCanonicalQualType(type));
-  const clang::BuiltinType *builtin_type =
-      llvm::dyn_cast<clang::BuiltinType>(qual_type->getCanonicalTypeInternal());
+  if (qual_type.isNull())
+    return false;
 
-  if (builtin_type) {
-    if (builtin_type->isInteger()) {
-      is_signed = builtin_type->isSignedInteger();
-      return true;
-    }
-  }
+  // Note, using 'isIntegralType' as opposed to 'isIntegerType' because
+  // the latter treats unscoped enums as integer types (which is not true
+  // in C++). The former accounts for this.
+  if (!qual_type->isIntegralType(getASTContext()))
+    return false;
 
-  return false;
+  is_signed = qual_type->isSignedIntegerType();
+
+  return true;
 }
 
 bool TypeSystemClang::IsEnumerationType(lldb::opaque_compiler_type_t type,
@@ -3310,11 +3311,7 @@ bool TypeSystemClang::IsEnumerationType(lldb::opaque_compiler_type_t type,
         GetCanonicalQualType(type)->getCanonicalTypeInternal());
 
     if (enum_type) {
-      IsIntegerType(enum_type->getDecl()
-                        ->getDefinitionOrSelf()
-                        ->getIntegerType()
-                        .getAsOpaquePtr(),
-                    is_signed);
+      is_signed = enum_type->isSignedIntegerOrEnumerationType();
       return true;
     }
   }
@@ -5508,6 +5505,21 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
 }
 
 CompilerType TypeSystemClang::GetBuiltinTypeByName(ConstString name) {
+  StringRef name_ref = name.GetStringRef();
+  // We compile the regex only the type name fulfills certain
+  // necessary conditions. Otherwise we do not bother.
+  if (name_ref.consume_front("unsigned _BitInt(") ||
+      name_ref.consume_front("_BitInt(")) {
+    uint64_t bit_size;
+    if (name_ref.consumeInteger(/*Radix=*/10, bit_size))
+      return {};
+
+    if (!name_ref.consume_front(")"))
+      return {};
+
+    return GetType(getASTContext().getBitIntType(
+        name.GetStringRef().starts_with("unsigned"), bit_size));
+  }
   return GetBasicType(GetBasicTypeEnumeration(name));
 }
 
@@ -9159,7 +9171,8 @@ PDBASTParser *TypeSystemClang::GetPDBParser() {
 
 npdb::PdbAstBuilder *TypeSystemClang::GetNativePDBParser() {
   if (!m_native_pdb_ast_parser_up)
-    m_native_pdb_ast_parser_up = std::make_unique<npdb::PdbAstBuilder>(*this);
+    m_native_pdb_ast_parser_up =
+        std::make_unique<npdb::PdbAstBuilderClang>(*this);
   return m_native_pdb_ast_parser_up.get();
 }
 

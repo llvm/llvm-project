@@ -90,6 +90,12 @@ def push_dynamic_library_lookup_path(config, new_path):
     new_ld_library_path = os.path.pathsep.join(
         (new_path, config.environment.get(dynamic_library_lookup_var, ""))
     )
+
+    if platform.system() == "Darwin":
+        # Workaround an issue in LD which does not use the correct libLTO
+        # if the DYLD_LIBRARY_PATH is not normalized.
+        new_ld_library_path = os.path.normpath(new_ld_library_path)
+
     config.environment[dynamic_library_lookup_var] = new_ld_library_path
 
     if platform.system() == "FreeBSD":

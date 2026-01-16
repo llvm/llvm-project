@@ -22,6 +22,10 @@ void f1(int x, int *p, int *q) {
 #pragma omp target data map(x) use_device_ptr(fb_nullify, fb_preserve: p, q) // omp61-error {{missing ':' after fallback modifier}} omp61-error {{expected expression}} omp61-error {{use of undeclared identifier 'fb_preserve'}} omp60-error {{use of undeclared identifier 'fb_nullify'}} omp60-error {{use of undeclared identifier 'fb_preserve'}}
   {}
 
+  // Interspersed modifiers/list-items: should fail in both versions
+#pragma omp target data map(x) use_device_ptr(fb_nullify: p, fb_preserve: q) // omp61-error {{use of undeclared identifier 'fb_preserve'}} omp60-error {{use of undeclared identifier 'fb_nullify'}} omp60-error {{use of undeclared identifier 'fb_preserve'}}
+  {}
+
   // Test missing colon after modifier in OpenMP 6.1 - should error
 #pragma omp target data map(x) use_device_ptr(fb_preserve p) // omp61-error {{missing ':' after fallback modifier}} omp60-error {{use of undeclared identifier 'fb_preserve'}}
   {}

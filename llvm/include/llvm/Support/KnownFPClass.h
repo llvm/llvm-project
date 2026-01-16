@@ -20,6 +20,7 @@
 
 namespace llvm {
 class APFloat;
+struct fltSemantics;
 
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
@@ -31,7 +32,7 @@ struct KnownFPClass {
 
   KnownFPClass(FPClassTest Known = fcAllFlags, std::optional<bool> Sign = {})
       : KnownFPClasses(Known), SignBit(Sign) {}
-  KnownFPClass(const APFloat &C);
+  LLVM_ABI KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
     return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
@@ -136,9 +137,19 @@ struct KnownFPClass {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
   }
 
-  KnownFPClass intersectWith(const KnownFPClass &RHS) {
-    return KnownFPClass(~(~KnownFPClasses & ~RHS.KnownFPClasses),
+  KnownFPClass intersectWith(const KnownFPClass &RHS) const {
+    return KnownFPClass(KnownFPClasses | RHS.KnownFPClasses,
                         SignBit == RHS.SignBit ? SignBit : std::nullopt);
+  }
+
+  KnownFPClass unionWith(const KnownFPClass &RHS) const {
+    std::optional<bool> MergedSignBit;
+    if (SignBit && !RHS.SignBit)
+      MergedSignBit = SignBit;
+    else if (!SignBit && RHS.SignBit)
+      MergedSignBit = RHS.SignBit;
+
+    return KnownFPClass(KnownFPClasses & RHS.KnownFPClasses, MergedSignBit);
   }
 
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
@@ -181,6 +192,18 @@ struct KnownFPClass {
     signBitMustBeZero();
   }
 
+  static KnownFPClass fneg(const KnownFPClass &Src) {
+    KnownFPClass Known = Src;
+    Known.fneg();
+    return Known;
+  }
+
+  static KnownFPClass fabs(const KnownFPClass &Src) {
+    KnownFPClass Known = Src;
+    Known.fabs();
+    return Known;
+  }
+
   // Enum of min/max intrinsics to avoid dependency on IR.
   enum class MinMaxKind {
     minimum,
@@ -201,6 +224,16 @@ struct KnownFPClass {
   canonicalize(const KnownFPClass &Src,
                DenormalMode DenormMode = DenormalMode::getDynamic());
 
+  /// Report known values for fadd
+  LLVM_ABI static KnownFPClass
+  fadd(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fadd x, x
+  LLVM_ABI static KnownFPClass
+  fadd_self(const KnownFPClass &Src,
+            DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for fmul
   LLVM_ABI static KnownFPClass
   fmul(const KnownFPClass &LHS, const KnownFPClass &RHS,
@@ -213,6 +246,7 @@ struct KnownFPClass {
 
     // X * X is always non-negative or a NaN.
     Known.knownNot(fcNegative);
+    Known.propagateNaN(Src);
     return Known;
   }
 
@@ -288,6 +322,22 @@ struct KnownFPClass {
   /// Propagate known class for log/log2/log10
   static LLVM_ABI KnownFPClass
   log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for sqrt
+  static LLVM_ABI KnownFPClass
+  sqrt(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for fpext.
+  static LLVM_ABI KnownFPClass fpext(const KnownFPClass &KnownSrc,
+                                     const fltSemantics &DstTy,
+                                     const fltSemantics &SrcTy);
+
+  /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
+  /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
+  /// IsMultiUnitFPType if this is for a multi-unit floating-point type.
+  static LLVM_ABI KnownFPClass roundToIntegral(const KnownFPClass &Src,
+                                               bool IsTrunc,
+                                               bool IsMultiUnitFPType);
 
   void resetAll() { *this = KnownFPClass(); }
 };
