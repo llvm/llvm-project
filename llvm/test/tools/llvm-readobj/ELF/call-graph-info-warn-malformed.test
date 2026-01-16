@@ -5,11 +5,11 @@
 ## Tests that --call-graph-info warns if there is no section of type SHT_LLVM_CALL_GRAPH.
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t1 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=WARN_NO_SECTION
+# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=WARN-NO-SECTION
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t1 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=WARN_NO_SECTION
+# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=WARN-NO-SECTION
 
-# WARN_NO_SECTION: warning: '[[FILE]]': no SHT_LLVM_CALL_GRAPH section found
+# WARN-NO-SECTION: warning: '[[FILE]]': no SHT_LLVM_CALL_GRAPH section found
 
 --- !ELF
 FileHeader:
@@ -22,11 +22,11 @@ FileHeader:
 ## Check format version number.
 # RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t2 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t2 --check-prefix=WARN_FMT_VERSION
+# RUN:   FileCheck %s -DFILE=%t2 --check-prefix=WARN-FMT-VERSION
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t2 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t2 --check-prefix=WARN_FMT_VERSION
+# RUN:   FileCheck %s -DFILE=%t2 --check-prefix=WARN-FMT-VERSION
 
-# WARN_FMT_VERSION: warning: '[[FILE]]': unknown format version value [1] in SHT_LLVM_CALL_GRAPH type section
+# WARN-FMT-VERSION: warning: '[[FILE]]': unknown format version value [1] in SHT_LLVM_CALL_GRAPH type section
 
 --- !ELF
 FileHeader:
@@ -51,11 +51,11 @@ Symbols:
 ## Check missing flags.
 # RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t3 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t3 --check-prefix=WARN_MISSING_FLAG
+# RUN:   FileCheck %s -DFILE=%t3 --check-prefix=WARN-MISSING-FLAG
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t3 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t3 --check-prefix=WARN_MISSING_FLAG
+# RUN:   FileCheck %s -DFILE=%t3 --check-prefix=WARN-MISSING-FLAG
 
-# WARN_MISSING_FLAG: warning: '[[FILE]]': failed while reading call graph info's Flags unexpected end of data at offset 0x1 while reading [0x1, 0x2)
+# WARN-MISSING-FLAG: warning: '[[FILE]]': failed while reading call graph info's Flags unexpected end of data at offset 0x1 while reading [0x1, 0x2)
 
 --- !ELF
 FileHeader:
@@ -81,11 +81,11 @@ Symbols:
 ## Check Flags.
 # RUN: yaml2obj --docnum=4 %s -o %t4
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t4 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t4 --check-prefix=WARN_FLAG
+# RUN:   FileCheck %s -DFILE=%t4 --check-prefix=WARN-FLAG
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t4 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t4 --check-prefix=WARN_FLAG
+# RUN:   FileCheck %s -DFILE=%t4 --check-prefix=WARN-FLAG
 
-# WARN_FLAG: warning: '[[FILE]]': unexpected Flags value [8]
+# WARN-FLAG: warning: '[[FILE]]': unexpected Flags value [8]
 
 --- !ELF
 FileHeader:
@@ -111,11 +111,11 @@ Symbols:
 ## Check missing function entry PC.
 # RUN: yaml2obj --docnum=5 %s -o %t5
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t5 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t5 --check-prefix=WARN_MISSING_PC
+# RUN:   FileCheck %s -DFILE=%t5 --check-prefix=WARN-MISSING-PC
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t5 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t5 --check-prefix=WARN_MISSING_PC
+# RUN:   FileCheck %s -DFILE=%t5 --check-prefix=WARN-MISSING-PC
 
-# WARN_MISSING_PC: warning: '[[FILE]]': failed while reading call graph info function entry PC unexpected end of data at offset 0x2 while reading [0x2, 0xa)
+# WARN-MISSING-PC: warning: '[[FILE]]': failed while reading call graph info function entry PC unexpected end of data at offset 0x2 while reading [0x2, 0xa)
 
 --- !ELF
 FileHeader:
@@ -142,11 +142,11 @@ Symbols:
 ## Check missing function Type ID.
 # RUN: yaml2obj --docnum=6 %s -o %t6
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t6 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN_MISSING_TYPEID
+# RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN-MISSING-TYPEID
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t6 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN_MISSING_TYPEID
+# RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN-MISSING-TYPEID
 
-# WARN_MISSING_TYPEID: warning: '[[FILE]]': failed while reading function type ID unexpected end of data at offset 0xa while reading [0xa, 0x12)
+# WARN-MISSING-TYPEID: warning: '[[FILE]]': failed while reading function type ID unexpected end of data at offset 0xa while reading [0xa, 0x12)
 
 --- !ELF
 FileHeader:
@@ -174,11 +174,11 @@ Symbols:
 ## Check missing number of direct callees.
 # RUN: yaml2obj --docnum=7 %s -o %t7
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t7 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=WARN_MISSING_DIRECT
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=WARN-MISSING-DIRECT
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t7 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=WARN_MISSING_DIRECT
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=WARN-MISSING-DIRECT
 
-# WARN_MISSING_DIRECT: warning: '[[FILE]]': failed while reading number of direct callees unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
+# WARN-MISSING-DIRECT: warning: '[[FILE]]': failed while reading number of direct callees unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
 
 --- !ELF
 FileHeader:
@@ -207,11 +207,11 @@ Symbols:
 ## Check missing direct callee.
 # RUN: yaml2obj --docnum=8 %s -o %t8
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t8 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN_MISSING_CALLEE
+# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN-MISSING-CALLEE
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t8 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN_MISSING_CALLEE
+# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN-MISSING-CALLEE
 
-# WARN_MISSING_CALLEE: warning: '[[FILE]]': failed while reading direct callee unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
+# WARN-MISSING-CALLEE: warning: '[[FILE]]': failed while reading direct callee unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
 
 --- !ELF
 FileHeader:
@@ -241,11 +241,11 @@ Symbols:
 ## Check missing number of indirect target type IDs.
 # RUN: yaml2obj --docnum=9 %s -o %t9
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t9 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t9 --check-prefix=WARN_MISSING_NUM_INDIRECT
+# RUN:   FileCheck %s -DFILE=%t9 --check-prefix=WARN-MISSING-NUM-INDIRECT
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t9 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t9 --check-prefix=WARN_MISSING_NUM_INDIRECT
+# RUN:   FileCheck %s -DFILE=%t9 --check-prefix=WARN-MISSING-NUM-INDIRECT
 
-# WARN_MISSING_NUM_INDIRECT: warning: '[[FILE]]': failed while reading number of indirect target type IDs unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
+# WARN-MISSING-NUM-INDIRECT: warning: '[[FILE]]': failed while reading number of indirect target type IDs unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
 
 --- !ELF
 FileHeader:
@@ -274,11 +274,11 @@ Symbols:
 ## Check missing indirect target type ID.
 # RUN: yaml2obj --docnum=10 %s -o %t10
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t10 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t10 --check-prefix=WARN_MISSING_INDIRECT_TARGET_TYPE_ID
+# RUN:   FileCheck %s -DFILE=%t10 --check-prefix=WARN-MISSING-INDIRECT-TARGET-TYPE-ID
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t10 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t10 --check-prefix=WARN_MISSING_INDIRECT_TARGET_TYPE_ID
+# RUN:   FileCheck %s -DFILE=%t10 --check-prefix=WARN-MISSING-INDIRECT-TARGET-TYPE-ID
 
-# WARN_MISSING_INDIRECT_TARGET_TYPE_ID: warning: '[[FILE]]': failed while reading indirect target type ID unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
+# WARN-MISSING-INDIRECT-TARGET-TYPE-ID: warning: '[[FILE]]': failed while reading indirect target type ID unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
 
 --- !ELF
 FileHeader:
@@ -309,15 +309,15 @@ Symbols:
 # RUN: yaml2obj --docnum=11 %s -o %t11
 # RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t11 2>&1 | count 0
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t11 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t11 --check-prefix=WARN_NO_RELOC
+# RUN:   FileCheck %s -DFILE=%t11 --check-prefix=WARN-NO-RELOC
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t11 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t11 --check-prefix=WARN_NO_RELOC
+# RUN:   FileCheck %s -DFILE=%t11 --check-prefix=WARN-NO-RELOC
 
-# WARN_NO_RELOC: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type id for 2 indirect targets
-# WARN_NO_RELOC: warning: '[[FILE]]': unknown relocation at offset 2
-# WARN_NO_RELOC: warning: '[[FILE]]': unknown relocation at offset 19
-# WARN_NO_RELOC: warning: '[[FILE]]': unknown relocation at offset 29
-# WARN_NO_RELOC: warning: '[[FILE]]': unknown relocation at offset 56
+# WARN-NO-RELOC: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type id for 2 indirect targets
+# WARN-NO-RELOC: warning: '[[FILE]]': unknown relocation at offset 2
+# WARN-NO-RELOC: warning: '[[FILE]]': unknown relocation at offset 19
+# WARN-NO-RELOC: warning: '[[FILE]]': unknown relocation at offset 29
+# WARN-NO-RELOC: warning: '[[FILE]]': unknown relocation at offset 56
 
 --- !ELF
 FileHeader:

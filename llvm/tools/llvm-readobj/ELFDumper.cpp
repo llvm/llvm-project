@@ -5485,7 +5485,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
   if (UnknownCount)
     reportUniqueWarning(
         "SHT_LLVM_CALL_GRAPH type section has unknown type id for " +
-        std::to_string(UnknownCount) + " indirect targets");
+        Twine(UnknownCount) + " indirect targets");
   return true;
 }
 
