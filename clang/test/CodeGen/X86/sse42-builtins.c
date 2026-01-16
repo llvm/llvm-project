@@ -139,12 +139,29 @@ unsigned long long test_mm_crc32_u64(unsigned long long CRC, unsigned long long 
 }
 #endif
 
-#ifdef __cplusplus
-TEST_CONSTEXPR(_mm_crc32_u8(0, 42) == 0x4b5fa6e6);
-TEST_CONSTEXPR(_mm_crc32_u8(0x12345678, 42) == 0xb00c9e72);
-TEST_CONSTEXPR(_mm_crc32_u16(0, 42) == 0xc5da1054);
-TEST_CONSTEXPR(_mm_crc32_u32(0, 42) == 0x9e0654ec);
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_mm_crc32_u8(0x02a24bf8, 0xba) == 0xa042cf00);
+TEST_CONSTEXPR(_mm_crc32_u16(0x02a24bf8, 0xd4ba) == 0x14e9347b);
+TEST_CONSTEXPR(_mm_crc32_u16(0x02a24bf8, 0xf37dd4ba) == 0x14e9347b);
 #ifdef __x86_64__
-TEST_CONSTEXPR(_mm_crc32_u64(0, 42) == 0xdd439b0d);
+TEST_CONSTEXPR(_mm_crc32_u64(0x9f65239602a24bf8, 0x894a58bff37dd4ba) == 0x00000000c093154a);
+#endif
+TEST_CONSTEXPR(_mm_crc32_u8(0x0cd5e10f, 0xe7) == 0x69e52534);
+TEST_CONSTEXPR(_mm_crc32_u16(0x0cd5e10f, 0x42e7) == 0x575056c0);
+TEST_CONSTEXPR(_mm_crc32_u16(0x0cd5e10f, 0x832b42e7) == 0x575056c0);
+#ifdef __x86_64__
+TEST_CONSTEXPR(_mm_crc32_u64(0x06ef97970cd5e10f, 0x24334e2e832b42e7) == 0x00000000141ddf67);
+#endif
+TEST_CONSTEXPR(_mm_crc32_u8(0x50e739b8, 0x2e) == 0xb459fcc6);
+TEST_CONSTEXPR(_mm_crc32_u16(0x50e739b8, 0x382e) == 0x5fa289ae);
+TEST_CONSTEXPR(_mm_crc32_u16(0x50e739b8, 0xcefb382e) == 0x5fa289ae);
+#ifdef __x86_64__
+TEST_CONSTEXPR(_mm_crc32_u64(0x5024a45450e739b8, 0x289ee1b7cefb382e) == 0x000000002a710fcb);
+#endif
+TEST_CONSTEXPR(_mm_crc32_u8(0x3c2db116, 0x3d) == 0xb9080854);
+TEST_CONSTEXPR(_mm_crc32_u16(0x3c2db116, 0x7f3d) == 0xb98d2ded);
+TEST_CONSTEXPR(_mm_crc32_u16(0x3c2db116, 0xd3947f3d) == 0xb98d2ded);
+#ifdef __x86_64__
+TEST_CONSTEXPR(_mm_crc32_u64(0xcbc89e1c3c2db116, 0xa89143dad3947f3d) == 0x0000000052dd3aeb);
 #endif
 #endif

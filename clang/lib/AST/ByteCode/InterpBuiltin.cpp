@@ -735,41 +735,19 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_ia32_crc32(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
                                        const CallExpr *Call,
-                                       unsigned BuiltinID) {
-  APSInt Data = popToAPSInt(S, Call->getArg(1));
-  APSInt CRC = popToAPSInt(S, Call->getArg(0));
-
-  uint64_t CRCVal = CRC.getZExtValue();
-  uint64_t DataVal = Data.getZExtValue();
-
-  // Determine the data width based on the builtin
-  unsigned DataBytes;
-  switch (BuiltinID) {
-  case clang::X86::BI__builtin_ia32_crc32qi:
-    DataBytes = 1;
-    break;
-  case clang::X86::BI__builtin_ia32_crc32hi:
-    DataBytes = 2;
-    break;
-  case clang::X86::BI__builtin_ia32_crc32si:
-    DataBytes = 4;
-    break;
-  case clang::X86::BI__builtin_ia32_crc32di:
-    DataBytes = 8;
-    break;
-  default:
-    llvm_unreachable("Unknown CRC32 builtin");
-  }
+                                       unsigned DataBytes) {
+  uint64_t DataVal = popToUInt64(S, Call->getArg(1));
+  uint64_t CRCVal = popToUInt64(S, Call->getArg(0));
 
   // CRC32C polynomial (iSCSI polynomial, bit-reversed)
   static const uint32_t CRC32C_POLY = 0x82F63B78;
 
   // Process each byte
   uint32_t Result = static_cast<uint32_t>(CRCVal);
-  for (unsigned i = 0; i < DataBytes; ++i) {
-    uint8_t Byte = static_cast<uint8_t>((DataVal >> (i * 8)) & 0xFF);
+  for (unsigned I = 0; I != DataBytes; ++I) {
+    uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
     Result ^= Byte;
-    for (int j = 0; j < 8; ++j) {
+    for (int J = 0; J < 8; ++J) {
       Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
     }
   }
@@ -4443,10 +4421,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_assume_aligned(S, OpPC, Frame, Call);
 
   case clang::X86::BI__builtin_ia32_crc32qi:
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 1);
   case clang::X86::BI__builtin_ia32_crc32hi:
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 2);
   case clang::X86::BI__builtin_ia32_crc32si:
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 4);
   case clang::X86::BI__builtin_ia32_crc32di:
-    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, BuiltinID);
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 8);
 
   case clang::X86::BI__builtin_ia32_bextr_u32:
   case clang::X86::BI__builtin_ia32_bextr_u64:
