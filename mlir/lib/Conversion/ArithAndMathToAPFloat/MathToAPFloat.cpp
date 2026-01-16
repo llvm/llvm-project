@@ -102,7 +102,7 @@ struct IsOpToAPFloatConversion final : OpRewritePattern<OpTy> {
     Value repl = forEachScalarValue(
         rewriter, loc, op.getOperand(), /*operand2=*/Value(), op.getType(),
         [&](Value operand, Value, Type resultType) {
-          auto floatTy = dyn_cast<FloatType>(operand.getType());
+          auto floatTy = cast<FloatType>(operand.getType());
           auto intWType = rewriter.getIntegerType(floatTy.getWidth());
           Value operandBits = arith::ExtUIOp::create(
               rewriter, loc, i64Type,
@@ -110,7 +110,7 @@ struct IsOpToAPFloatConversion final : OpRewritePattern<OpTy> {
 
           // Call APFloat function.
           Value semValue = getAPFloatSemanticsValue(rewriter, loc, floatTy);
-          SmallVector<Value> params = {semValue, operandBits};
+          Value params[] = {semValue, operandBits};
           return func::CallOp::create(rewriter, loc, TypeRange(i1),
                                       SymbolRefAttr::get(*fn), params)
               .getResult(0);
@@ -136,8 +136,7 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
     mlir::Type resType = op.getResult().getType();
     auto floatTy = dyn_cast<FloatType>(resType);
     if (!floatTy) {
-      auto vecTy1 = dyn_cast<VectorType>(resType);
-      assert(vecTy1 && "expected VectorType");
+      auto vecTy1 = cast<VectorType>(resType);
       floatTy = llvm::cast<FloatType>(vecTy1.getElementType());
     }
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
@@ -177,7 +176,7 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
       return arith::BitcastOp::create(rewriter, loc, floatTy, trunc);
     };
 
-    if (VectorType vecTy1 = dyn_cast<VectorType>(op.getA().getType())) {
+    if (auto vecTy1 = dyn_cast<VectorType>(op.getA().getType())) {
       // Sanity check: Operand types must match.
       assert(vecTy1 == dyn_cast<VectorType>(op.getB().getType()) &&
              "expected same vector types");
