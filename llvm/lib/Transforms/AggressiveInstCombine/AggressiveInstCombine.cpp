@@ -659,7 +659,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
                                             ShAmt2)))))
     return false;
 
-  if (!foldLoadsRecursive(X, LOps, DL, AA, false) && LOps.FoundRoot)
+  if (!foldLoadsRecursive(X, LOps, DL, AA, /*IsRoot=*/false) && LOps.FoundRoot)
     // Avoid Partial chain merge.
     return false;
 
@@ -799,7 +799,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     return false;
 
   LoadOps LOps;
-  if (!foldLoadsRecursive(&I, LOps, DL, AA, true) || !LOps.FoundRoot)
+  if (!foldLoadsRecursive(&I, LOps, DL, AA, /*IsRoot=*/true) || !LOps.FoundRoot)
     return false;
 
   IRBuilder<> Builder(&I);
