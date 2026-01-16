@@ -241,25 +241,11 @@ Error UnifiedOnDiskActionCache::validate() const {
       return createStringError(
           llvm::errc::illegal_byte_sequence,
           "bad record at 0x" +
-              utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) +
-              " ref=0x" + utohexstr(ID.getOpaqueData(), /*LowerCase=*/true) +
-              ": " + Msg.str());
+              utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
+              Msg.str());
     };
-    if (ID.getOpaqueData() == 0)
-      return formatError("zero is not a valid ref");
-    // Check containsObject first, because other API assumes a valid ObjectID.
-    if (!UniDB->getGraphDB().containsObject(ID, /*CheckUpstream=*/false))
-      return formatError("ref is not in cas index");
-    auto Hash = UniDB->getGraphDB().getDigest(ID);
-    auto Ref =
-        UniDB->getGraphDB().getExistingReference(Hash, /*CheckUpstream=*/false);
-    assert(Ref && "missing object passed containsObject check?");
-    if (!Ref)
-      return formatError("ref is not in cas index after contains");
-    if (*Ref != ID)
-      return formatError("ref does not match indexed offset " +
-                         utohexstr(Ref->getOpaqueData(), /*LowerCase=*/true) +
-                         " for hash " + toHex(Hash));
+    if (Error E = UniDB->getGraphDB().validateObjectID(ID))
+      return formatError(llvm::toString(std::move(E)));
     return Error::success();
   };
   return UniDB->getKeyValueDB().validate(ValidateRef);

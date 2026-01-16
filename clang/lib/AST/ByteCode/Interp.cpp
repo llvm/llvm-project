@@ -458,7 +458,8 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       S.FFDiag(Src, diag::note_constexpr_access_deleted_object) << AK;
     } else if (!S.checkingPotentialConstantExpression()) {
       bool IsTemp = Ptr.isTemporary();
-      S.FFDiag(Src, diag::note_constexpr_lifetime_ended, 1) << AK << !IsTemp;
+      S.FFDiag(Src, diag::note_constexpr_access_uninit)
+          << AK << /*uninitialized=*/false << S.Current->getRange(OpPC);
 
       if (IsTemp)
         S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
@@ -1617,6 +1618,11 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
 }
 bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize) {
+
+  // C doesn't have constexpr functions.
+  if (!S.getLangOpts().CPlusPlus)
+    return Invalid(S, OpPC);
+
   assert(Func);
   auto cleanup = [&]() -> bool {
     cleanupAfterFunctionCall(S, OpPC, Func);

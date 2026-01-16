@@ -28,7 +28,6 @@
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/HLSLRuntime.h"
@@ -4471,35 +4470,6 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   return true;
 }
 
-/// Merge lifetimebound attribute on function type (implicit 'this')
-/// from Old to New method declaration.
-static void mergeLifetimeBoundAttrOnMethod(Sema &S, CXXMethodDecl *New,
-                                           const CXXMethodDecl *Old) {
-  const TypeSourceInfo *OldTSI = Old->getTypeSourceInfo();
-  const TypeSourceInfo *NewTSI = New->getTypeSourceInfo();
-
-  if (!OldTSI || !NewTSI)
-    return;
-
-  const LifetimeBoundAttr *OldLBAttr =
-      lifetimes::getLifetimeBoundAttrFromFunctionType(*OldTSI);
-  const LifetimeBoundAttr *NewLBAttr =
-      lifetimes::getLifetimeBoundAttrFromFunctionType(*NewTSI);
-
-  // If Old has lifetimebound but New doesn't, add it to New.
-  if (OldLBAttr && !NewLBAttr) {
-    QualType NewMethodType = New->getType();
-    QualType AttributedType =
-        S.Context.getAttributedType(OldLBAttr, NewMethodType, NewMethodType);
-    TypeLocBuilder TLB;
-    TLB.pushFullCopy(NewTSI->getTypeLoc());
-    AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
-    TyLoc.setAttr(OldLBAttr);
-    New->setType(AttributedType);
-    New->setTypeSourceInfo(TLB.getTypeSourceInfo(S.Context, AttributedType));
-  }
-}
-
 bool Sema::MergeCompatibleFunctionDecls(FunctionDecl *New, FunctionDecl *Old,
                                         Scope *S, bool MergeTypeWithOld) {
   // Merge the attributes
@@ -4516,16 +4486,12 @@ bool Sema::MergeCompatibleFunctionDecls(FunctionDecl *New, FunctionDecl *Old,
   // Merge attributes from the parameters.  These can mismatch with K&R
   // declarations.
   if (New->getNumParams() == Old->getNumParams())
-    for (unsigned i = 0, e = New->getNumParams(); i != e; ++i) {
-      ParmVarDecl *NewParam = New->getParamDecl(i);
-      ParmVarDecl *OldParam = Old->getParamDecl(i);
-      mergeParamDeclAttributes(NewParam, OldParam, *this);
-      mergeParamDeclTypes(NewParam, OldParam, *this);
-    }
-
-  // Merge function type attributes (e.g., lifetimebound on implicit 'this').
-  if (auto *NewMethod = dyn_cast<CXXMethodDecl>(New))
-    mergeLifetimeBoundAttrOnMethod(*this, NewMethod, cast<CXXMethodDecl>(Old));
+      for (unsigned i = 0, e = New->getNumParams(); i != e; ++i) {
+        ParmVarDecl *NewParam = New->getParamDecl(i);
+        ParmVarDecl *OldParam = Old->getParamDecl(i);
+        mergeParamDeclAttributes(NewParam, OldParam, *this);
+        mergeParamDeclTypes(NewParam, OldParam, *this);
+      }
 
   if (getLangOpts().CPlusPlus)
     return MergeCXXFunctionDecl(New, Old, S);
@@ -14156,7 +14122,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // C99 6.7.8p4: All the expressions in an initializer for an object that has
     // static storage duration shall be constant expressions or string literals.
     } else if (VDecl->getStorageClass() == SC_Static) {
-      CheckForConstantInitializer(Init);
+      // Avoid evaluating the initializer twice for constexpr variables. It will
+      // be evaluated later.
+      if (!VDecl->isConstexpr())
+        CheckForConstantInitializer(Init);
 
       // C89 is stricter than C99 for aggregate initializers.
       // C89 6.5.7p3: All the expressions [...] in an initializer list

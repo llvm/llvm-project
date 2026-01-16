@@ -539,7 +539,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     StrAttr:$name,
     UnitAttr:$init,
     UnitAttr:$constant,
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment,
+    ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
     OptionalAttr<ArrayAttr>:$annotations
   );
 

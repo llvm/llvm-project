@@ -3684,13 +3684,23 @@ SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
   case CodeModel::Small:
   case CodeModel::Medium:
     if (IsLocal) {
-      // This generates the pattern (PseudoLA_PCREL sym), which expands to
-      // (addi.w/d (pcalau12i %pc_hi20(sym)) %pc_lo12(sym)).
+      // This generates the pattern (PseudoLA_PCREL sym), which
+      //
+      // for la32r expands to:
+      //   (addi.w (pcaddu12i %pcadd_hi20(sym)) %pcadd_lo12(.Lpcadd_hi)).
+      //
+      // for la32s and la64 expands to:
+      //   (addi.w/d (pcalau12i %pc_hi20(sym)) %pc_lo12(sym)).
       Load = SDValue(
           DAG.getMachineNode(LoongArch::PseudoLA_PCREL, DL, Ty, Addr), 0);
     } else {
-      // This generates the pattern (PseudoLA_GOT sym), which expands to (ld.w/d
-      // (pcalau12i %got_pc_hi20(sym)) %got_pc_lo12(sym)).
+      // This generates the pattern (PseudoLA_GOT sym), which
+      //
+      // for la32r expands to:
+      //   (ld.w (pcaddu12i %got_pcadd_hi20(sym)) %pcadd_lo12(.Lpcadd_hi)).
+      //
+      // for la32s and la64 expands to:
+      //   (ld.w/d (pcalau12i %got_pc_hi20(sym)) %got_pc_lo12(sym)).
       Load =
           SDValue(DAG.getMachineNode(LoongArch::PseudoLA_GOT, DL, Ty, Addr), 0);
     }
@@ -9047,7 +9057,8 @@ void LoongArchTargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+LoongArchTargetLowering::shouldExpandAtomicRMWInIR(
+    const AtomicRMWInst *AI) const {
   // TODO: Add more AtomicRMWInst that needs to be extended.
 
   // Since floating-point operation requires a non-trivial set of data
@@ -9137,7 +9148,7 @@ getIntrinsicForMaskedAtomicRMWBinOp(unsigned GRLen,
 
 TargetLowering::AtomicExpansionKind
 LoongArchTargetLowering::shouldExpandAtomicCmpXchgInIR(
-    AtomicCmpXchgInst *CI) const {
+    const AtomicCmpXchgInst *CI) const {
 
   if (Subtarget.hasLAMCAS())
     return AtomicExpansionKind::None;
