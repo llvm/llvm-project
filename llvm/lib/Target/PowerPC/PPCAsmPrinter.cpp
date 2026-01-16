@@ -100,6 +100,13 @@ static cl::opt<bool> EnableSSPCanaryBitInTB(
     "aix-ssp-tb-bit", cl::init(false),
     cl::desc("Enable Passing SSP Canary info in Trackback on AIX"), cl::Hidden);
 
+static cl::list<std::string> IFuncLocal(
+    "ifunc-local",
+    llvm::cl::desc("a comma separated list of ifunc function names that are "
+                   "guaranteed to resolve to a module-local function. "
+                   "-ifunc-local=1 will apply to all ifuncs in the CU."),
+    cl::CommaSeparated, cl::Hidden);
+
 // Specialize DenseMapInfo to allow
 // std::pair<const MCSymbol *, PPCMCExpr::Specifier> in DenseMap.
 // This specialization is needed here because that type is used as keys in the
@@ -307,6 +314,8 @@ public:
   void emitModuleCommandLines(Module &M) override;
 
   void emitRefMetadata(const GlobalObject *);
+
+  void emitGlobalIFunc(Module &M, const GlobalIFunc &GI) override;
 };
 
 } // end anonymous namespace
@@ -771,6 +780,16 @@ static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
 }
 
 static PPCAsmPrinter::TOCEntryType
+getTOCEntryTypeForLinkage(GlobalValue::LinkageTypes Linkage) {
+  if (Linkage == GlobalValue::ExternalLinkage ||
+      Linkage == GlobalValue::AvailableExternallyLinkage ||
+      Linkage == GlobalValue::ExternalWeakLinkage)
+    return PPCAsmPrinter::TOCType_GlobalExternal;
+
+  return PPCAsmPrinter::TOCType_GlobalInternal;
+}
+
+static PPCAsmPrinter::TOCEntryType
 getTOCEntryTypeForMO(const MachineOperand &MO) {
   // Use the target flags to determine if this MO is Thread Local.
   // If we don't do this it comes out as Global.
@@ -780,13 +799,7 @@ getTOCEntryTypeForMO(const MachineOperand &MO) {
   switch (MO.getType()) {
   case MachineOperand::MO_GlobalAddress: {
     const GlobalValue *GlobalV = MO.getGlobal();
-    GlobalValue::LinkageTypes Linkage = GlobalV->getLinkage();
-    if (Linkage == GlobalValue::ExternalLinkage ||
-        Linkage == GlobalValue::AvailableExternallyLinkage ||
-        Linkage == GlobalValue::ExternalWeakLinkage)
-      return PPCAsmPrinter::TOCType_GlobalExternal;
-
-    return PPCAsmPrinter::TOCType_GlobalInternal;
+    return getTOCEntryTypeForLinkage(GlobalV->getLinkage());
   }
   case MachineOperand::MO_ConstantPoolIndex:
     return PPCAsmPrinter::TOCType_ConstantPool;
@@ -2875,8 +2888,10 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
       static_cast<MCSymbolXCOFF *>(CurrentFnDescSym)->getRepresentedCsect());
 
   // Emit aliasing label for function descriptor csect.
-  for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
-    OutStreamer->emitLabel(getSymbol(Alias));
+  if (MF) // TODO MF is unset when processing an ifunc, handle it better than
+          // this.
+    for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
+      OutStreamer->emitLabel(getSymbol(Alias));
 
   // Emit function entry point address.
   OutStreamer->emitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
@@ -2894,6 +2909,12 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
 }
 
 void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
+  if (!MF) { // TODO: MF is unset when processing an ifunc, handle it better.
+    if (!TM.getFunctionSections())
+      PPCAsmPrinter::emitFunctionEntryLabel();
+    return;
+  }
+
   // For functions without user defined section, it's not necessary to emit the
   // label when we have individual function in its own csect.
   if (!TM.getFunctionSections() || MF->getFunction().hasSection())
@@ -3390,6 +3411,194 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
     RSOS.write('\0');
   }
   OutStreamer->emitXCOFFCInfoSym(".GCC.command.line", RSOS.str());
+}
+
+static bool TOCRestoreNeeded(const GlobalIFunc &GI) {
+  auto IsLocalFunc = [&](const Value *V) {
+    if (!isa<Function>(V))
+      return false;
+    auto *F = cast<Function>(V);
+
+    // static functions are local
+    if (F->getLinkage() == GlobalValue::InternalLinkage)
+      return true;
+    // for now, declarations we treat as potentially non-local
+    if (F->isDeclarationForLinker())
+      return false;
+    // hidden visibility definitions cannot be preempted, so treat as local.
+    if (F->getVisibility() == GlobalValue::HiddenVisibility)
+      return true;
+
+    return false;
+  };
+
+  if (!IFuncLocal.empty()) {
+    ArrayRef<std::string> List = IFuncLocal;
+    // special case of -ifunc-local=1
+    if (List.size() == 1 && List[0].compare("1") == 0)
+      return false;
+    StringRef IFuncName = GI.getName();
+    if (any_of(List, [&](const std::string &Element) {
+          return Element.size() == IFuncName.size() &&
+                 Element.compare(IFuncName.data()) == 0;
+        }))
+      return false;
+  }
+
+  // if one of the return values of the resolver function is not a
+  // local function, then we have to conservatively do a TOC save/restore.
+  auto *Resolver = GI.getResolverFunction();
+  for (auto &BB : *Resolver) {
+    if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
+      Value *RV = Ret->getReturnValue();
+      assert(RV);
+      // return &foo_p9;
+      if (auto *F = dyn_cast<Function>(RV)) {
+        if (!IsLocalFunc(F))
+          return true;
+      } else if (auto *I = dyn_cast<Instruction>(RV)) {
+        // return isP9 ? foo_p9 : foo_default;
+        if (auto *SI = dyn_cast<SelectInst>(I)) {
+          if (!IsLocalFunc(SI->getTrueValue()) ||
+              !IsLocalFunc(SI->getFalseValue()))
+            return true;
+        } else if (auto *PN = dyn_cast<PHINode>(I)) {
+          for (unsigned i = 1, e = PN->getNumIncomingValues(); i != e; ++i)
+            if (!IsLocalFunc(PN->getIncomingValue(i)))
+              return true;
+        } else
+          return true;
+      } else
+        return true;
+    }
+  }
+  // all return values where local functions, so no TOC save/restore needed.
+  return false;
+}
+/*
+ *   .csect .foo[PR],5
+ *   .globl  foo[DS]
+ *   .globl  .foo[PR]
+ *   .lglobl ifunc_sec.foo[RW]
+ *   .align  4
+ *   .csect foo[DS],2
+ *   .vbyte  4, .foo[PR]
+ *   .vbyte  4, TOC[TC0]
+ *   .vbyte  4, 0
+ *   .csect .foo[PR],5
+ *   .ref ifunc_sec.foo[RW]
+ *   lwz 12, L..C3(2)
+ *   lwz 12, 0(12)
+ *   mtctr 12
+ *   bctr
+ *                                              # -- End function
+ */
+void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
+  // Set the Subtarget to that of the resolver.
+  const TargetSubtargetInfo *STI =
+      TM.getSubtargetImpl(*GI.getResolverFunction());
+  bool IsPPC64 = static_cast<const PPCSubtarget *>(STI)->isPPC64();
+
+  // Create syms and sections that are part of the ifunc implementation:
+  //  - Function descriptor symbol foo[RW]
+  //  - Function entry symbol .foo[PR]
+  //  - ifunc_sec variable (that registers the ifunc's descriptor and resolver)
+  MCSectionXCOFF *FnDescSec = static_cast<MCSectionXCOFF *>(
+      getObjFileLowering().getSectionForFunctionDescriptor(&GI, TM));
+  FnDescSec->setAlignment(Align(IsPPC64 ? 8 : 4));
+
+  CurrentFnDescSym = FnDescSec->getQualNameSymbol();
+
+  CurrentFnSym = getObjFileLowering().getFunctionEntryPointSymbol(&GI, TM);
+
+  MCSymbol *IFuncUpdateSym = nullptr;
+  if (MDNode *MD = GI.getMetadata(LLVMContext::MD_associated)) {
+    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
+    const GlobalVariable *IFuncUpdateGV = cast<GlobalVariable>(VAM->getValue());
+    IFuncUpdateSym = getSymbol(IFuncUpdateGV);
+  }
+
+  // Start codegen:
+  if (TM.getFunctionSections())
+    OutStreamer->switchSection(
+        static_cast<MCSymbolXCOFF *>(CurrentFnSym)->getRepresentedCsect());
+  else
+    OutStreamer->switchSection(getObjFileLowering().getTextSection());
+
+  // generate linkage for foo and .foo
+  emitLinkage(&GI, CurrentFnDescSym);
+  emitLinkage(&GI, CurrentFnSym);
+
+  // declare the "ifunc_sec.foo[RW]" as an internal symbol
+  if (IFuncUpdateSym)
+    OutStreamer->emitXCOFFSymbolLinkageWithVisibility(
+        IFuncUpdateSym, MCSA_LGlobal, MCSA_Invalid);
+
+  // .align 4
+  Align Alignment(STI->getTargetLowering()->getMinFunctionAlignment());
+  emitAlignment(Alignment, nullptr);
+
+  // generate foo's function descriptor
+  emitFunctionDescriptor();
+
+  emitFunctionEntryLabel();
+
+  // back to .foo[PR]
+  // .ref ifunc_sec.foo[RW]
+  if (IFuncUpdateSym)
+    OutStreamer->emitXCOFFRefDirective(IFuncUpdateSym);
+
+  // vvvvvv TEMPORARY: TO BE REMOVED AFTER upstream PR 151569 lands vvvvv
+  // .ref .__init_ifuncs[PR]
+  if (MDNode *MD = GI.getMetadata(LLVMContext::MD_associated)) {
+    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
+    const GlobalVariable *IFuncUpdateGV = cast<GlobalVariable>(VAM->getValue());
+    MD = IFuncUpdateGV->getMetadata(LLVMContext::MD_associated);
+    if (MD) {
+      const ValueAsMetadata *VAM =
+          cast<ValueAsMetadata>(MD->getOperand(0).get());
+      const Function *InitIFuncDecl = cast<Function>(VAM->getValue());
+      OutStreamer->emitXCOFFRefDirective(
+          getObjFileLowering().getFunctionEntryPointSymbol(InitIFuncDecl, TM));
+    }
+  }
+  // ^^^^^^ TEMPORARY ^^^^^
+
+  // generate the code for .foo now:
+  if (TOCRestoreNeeded(GI)) {
+    reportFatalUsageError(
+        "unimplmented: TOC register save/restore needed for function " +
+        Twine(GI.getName()) +
+        ", check if -mllvm -ifunc-local=... applies to your case");
+    return;
+  }
+
+  //  lwz 12, L..C3(2)
+  auto FnDescTOCEntryType = getTOCEntryTypeForLinkage(GI.getLinkage());
+  auto *FnDescTOCEntrySym =
+      lookUpOrCreateTOCEntry(CurrentFnDescSym, FnDescTOCEntryType);
+  auto *Exp = MCSymbolRefExpr::create(FnDescTOCEntrySym, OutContext);
+  // Exp = getTOCEntryLoadingExprForXCOFF(MOSymbol, Exp, VK);// TODO: need this?
+  // need this uncommented
+  OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::LD : PPC::LWZ)
+                                   .addReg(PPC::X12)
+                                   .addExpr(Exp)
+                                   .addReg(PPC::X2),
+                               *Subtarget);
+
+  //  lwz 12, 0(12)
+  OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::LD : PPC::LWZ)
+                                   .addReg(PPC::X12)
+                                   .addImm(0)
+                                   .addReg(PPC::X12),
+                               *Subtarget);
+  //  mtctr 12
+  OutStreamer->emitInstruction(
+      MCInstBuilder(IsPPC64 ? PPC::MTCTR8 : PPC::MTCTR).addReg(PPC::X12),
+      *Subtarget);
+  //  bctr
+  OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::BCTR8 : PPC::BCTR),
+                               *Subtarget);
 }
 
 char PPCAIXAsmPrinter::ID = 0;
