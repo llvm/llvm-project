@@ -841,8 +841,8 @@ LIBC_INLINE_VAR constexpr Float128 BIG_COEFFS[4]{
 
 // Reuse the output of the fast pass range reduction.
 // -2^-8 <= m_x < 2^-7
-LIBC_INLINE static constexpr double log2_accurate(
-    int e_x, int index, double m_x) {
+LIBC_INLINE static constexpr double log2_accurate(int e_x, int index,
+                                                  double m_x) {
 
   Float128 sum(static_cast<float>(e_x));
   sum = fputil::quick_add(sum, LOG2_TABLE.step_1[index]);
