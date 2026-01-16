@@ -632,7 +632,7 @@ void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
 struct TerminateTryScope final : EHScopeStack::Cleanup {
   TerminateTryScope() {}
 
-  // this is a noop scope that triggers the scope end emission in CGCleanup
+  // This is a noop scope that triggers the scope end emission in CGCleanup.
   void Emit(CodeGenFunction &CGF, Flags flags) override {}
 };
 
