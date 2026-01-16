@@ -151,7 +151,9 @@ private:
   MBBFrameObjsReachingDefsInfo MBBFrameObjsReachingDefs;
 
   /// Default values are 'nothing happened a long time ago'.
-  const int ReachingDefDefaultVal = -(1 << 21);
+  static constexpr int ReachingDefDefaultVal = -(1 << 21);
+  /// Special values for function live-ins.
+  static constexpr int FunctionLiveInMarker = -1;
 
   using InstSet = SmallPtrSetImpl<MachineInstr*>;
   using BlockSet = SmallPtrSetImpl<MachineBasicBlock*>;

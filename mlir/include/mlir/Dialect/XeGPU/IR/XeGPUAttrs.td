@@ -520,9 +520,9 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
-    
+
     /// Check if this is identical to some other layout.
-    bool isEqualTo(const xegpu::DistributeLayoutAttr &other); 
+    bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
 
   }];
 
@@ -698,9 +698,12 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
-    
+
+    /// Drop the slice dims to get the original layout.
+    SliceAttr dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop);
+
     /// Check if this is identical to some other layout.
-    bool isEqualTo(const xegpu::DistributeLayoutAttr &other); 
+    bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
   }];
 
   let assemblyFormat = "`<` qualified($parent) `,` `dims` `=` $dims `>`";
@@ -767,6 +770,32 @@ def XeGPU_MemLayoutAttr : XeGPUAttr<"MemLayout", "mem_layout"> {
     }
 
   }];
+
+}
+
+def AnchorLayoutInterface : OpInterface<"AnchorLayoutInterface"> {
+  let cppNamespace = "::mlir::xegpu";
+
+  let description = [{
+    An attribute interface for accessing anchor layout information.
+    This interface provides a method to set and retrieve the anchor layout
+    from operations that implement it.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/"Get the anchor layout attribute.",
+      /*retTy=*/"xegpu::DistributeLayoutAttr",
+      /*methodName=*/"getAnchorLayout",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/"Set the anchor layout attribute.",
+      /*retTy=*/"void",
+      /*methodName=*/"setAnchorLayout",
+      /*args=*/(ins "xegpu::DistributeLayoutAttr":$layout)
+    >,
+  ];
 
 }
 
