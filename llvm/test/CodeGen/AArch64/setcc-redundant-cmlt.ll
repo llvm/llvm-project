@@ -175,6 +175,27 @@ define <4 x i32> @setcc_ne0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x, <4 x i32> 
   ret <4 x i32> %sel
 }
 
+define <4 x i32> @setcc_ugt0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-SD-LABEL: setcc_ugt0:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: setcc_ugt0:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    cmhi v0.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %cmp = icmp slt <4 x i32> %a, %b
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %ugt0 = icmp ugt <4 x i32> %sext, zeroinitializer
+  %sel = select <4 x i1> %ugt0, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %sel
+}
+
 ; NEGATIVE TEST: Widening bitcast should NOT be optimized
 define <4 x i32> @bitcast_widen_negative(<16 x i8> %a, <16 x i8> %b, <4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: bitcast_widen_negative:
