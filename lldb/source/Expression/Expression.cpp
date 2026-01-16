@@ -53,7 +53,7 @@ lldb_private::FunctionCallLabel::fromString(llvm::StringRef label) {
   lldb::user_id_t module_id = 0;
   if (!llvm::to_integer(module_label, module_id))
     return llvm::createStringErrorV("failed to parse module ID from '{0}'.",
-                                   module_label);
+                                    module_label);
 
   lldb::user_id_t die_id;
   if (!llvm::to_integer(die_label, die_id))
