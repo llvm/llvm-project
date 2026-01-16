@@ -96,9 +96,9 @@ define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2f64(<vscale x 2 x double> %va, <vsc
 ; CHECK-LABEL: vfptosi_nxv2i1_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
-; CHECK-NEXT:    vmsne.vi v8, v10, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vfcvt.rtz.x.f.v v8, v8, v0.t
+; CHECK-NEXT:    vmsne.vi v10, v8, 0, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i1> @llvm.vp.fptosi.nxv2i1.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i1> %v

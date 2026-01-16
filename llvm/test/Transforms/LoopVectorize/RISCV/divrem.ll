@@ -674,9 +674,6 @@ define i32 @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP16]], 1
-; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP18]], 8
-; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP19]], 0
 ; CHECK-NEXT:    [[MERGE_LCSSA:%.*]] = extractelement <vscale x 8 x i32> [[PREDPHI]], i64 [[TMP17]]
 ; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:

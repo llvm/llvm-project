@@ -645,7 +645,7 @@ struct CompactUnwindTraits_MachO_arm64
     return (Encoding & EncodingModeMask) == DWARFMode;
   }
 
-  static bool encodingCannotBeMerged(uint32_t Encoding) { return false; }
+  static bool encodingCanBeMerged(uint32_t Encoding) { return true; }
 };
 
 void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
