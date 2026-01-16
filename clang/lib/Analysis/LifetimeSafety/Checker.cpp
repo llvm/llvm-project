@@ -205,10 +205,9 @@ public:
       FD = getDeclWithMergedLifetimeBoundAttrs(FD);
       ParmVarDecl *InferredPVD = const_cast<ParmVarDecl *>(
           FD->getParamDecl(PVD->getFunctionScopeIndex()));
-      if (!InferredPVD->hasAttr<LifetimeBoundAttr>()) {
+      if (!InferredPVD->hasAttr<LifetimeBoundAttr>())
         InferredPVD->addAttr(
             LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
-      }
     }
   }
 };
