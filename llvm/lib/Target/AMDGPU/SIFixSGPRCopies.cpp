@@ -100,6 +100,7 @@ public:
   unsigned NumReadfirstlanes = 0;
   // Current score state. To speedup selection V2SCopyInfos for processing
   bool NeedToBeConvertedToVALU = false;
+  bool HasMandatorySGPRUse = false;
   // Unique ID. Used as a key for mapping to keep permanent order.
   unsigned ID;
 
@@ -1003,8 +1004,18 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
     } else if (Inst->getNumExplicitDefs() != 0) {
       Register Reg = Inst->getOperand(0).getReg();
       if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) && !TII->isVALU(*Inst)) {
-        for (auto &U : MRI->use_instructions(Reg))
+        for (auto &U : MRI->use_instructions(Reg)) {
+          // Inline assembly operands with SGPR constraints must not be
+          // converted to VALU. Without this check, the SGPR could be converted
+          // to VGPR, violating the inline asm constraint.
+          // This is conservative: we cannot distinguish "s" (strict SGPR) from
+          // "r" (any register) at this stage, as the constraint string is lost
+          // after SelectionDAG. Therefore, we treat all inline asm as mandatory
+          // SGPR use.
+          if (U.isInlineAsm())
+              Info.HasMandatorySGPRUse = true;
           Users.push_back(&U);
+        }
       }
     }
     for (auto *U : Users) {
@@ -1019,6 +1030,8 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
 // The main function that computes the VGPR to SGPR copy score
 // and determines copy further lowering way: v_readfirstlane_b32 or moveToVALU
 bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
+  if (Info->HasMandatorySGPRUse)
+    return false;
   if (Info->SChain.empty()) {
     Info->Score = 0;
     return true;
