@@ -1976,6 +1976,16 @@ defm lifetime_safety_inference
                   BothFlags<[], [CC1Option],
                             " experimental lifetime safety inference for C++">>;
 
+defm lifetime_safety_tu_analysis
+    : BoolFOption<"experimental-lifetime-safety-tu-analysis",
+                  LangOpts<"EnableLifetimeSafetyTUAnalysis">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " run lifetime safety analysis at translation-unit "
+                            "end, analyzing functions in call graph post-order "
+                            "to best propagate inferred annotations">>;
+
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Emit">,

@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
 
 View definition_before_header(View a);
 
@@ -207,9 +207,8 @@ MyObj* return_pointer_by_func(MyObj* a) {         // expected-warning {{paramete
 namespace incorrect_order_inference_view {
 View return_view_callee(View a);
 
-// FIXME: No lifetime annotation suggestion when functions are not present in the callee-before-caller pattern
-View return_view_caller(View a) {
-  return return_view_callee(a);
+View return_view_caller(View a) {     // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+  return return_view_callee(a);       // expected-note {{param returned here}}
 }
 
 View return_view_callee(View a) {     // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
@@ -220,9 +219,8 @@ View return_view_callee(View a) {     // expected-warning {{parameter in intra-T
 namespace incorrect_order_inference_object {
 MyObj* return_object_callee(MyObj* a);
 
-// FIXME: No lifetime annotation suggestion warning when functions are not present in the callee-before-caller pattern
-MyObj* return_object_caller(MyObj* a) {
-  return return_object_callee(a);
+MyObj* return_object_caller(MyObj* a) {      // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+  return return_object_callee(a);            // expected-note {{param returned here}}
 }
 
 MyObj* return_object_callee(MyObj* a) {      // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
@@ -271,14 +269,14 @@ T* template_identity(T* a) {            // expected-warning {{parameter in intra
 }
 
 template<typename T>
-T* template_caller(T* a) {
-  return template_identity(a);          // expected-note {{in instantiation of function template specialization 'inference_with_templates::template_identity<MyObj>' requested here}}
+T* template_caller(T* a) {              // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+  return template_identity(a);          // expected-note {{param returned here}}
 }
 
-// FIXME: Fails to detect UAR as template instantiations are deferred to the end of the Translation Unit.
 MyObj* test_template_inference_with_stack() {
   MyObj local_stack;
-  return template_caller(&local_stack); // expected-note {{in instantiation of function template specialization 'inference_with_templates::template_caller<MyObj>' requested here}}                                              
+  return template_caller(&local_stack);   // expected-warning {{address of stack memory is returned later}}
+                                          // expected-note@-1 {{returned here}}                                       
 }
 } // namespace inference_with_templates
 

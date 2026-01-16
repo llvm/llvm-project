@@ -14,6 +14,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
 #include "clang/AST/Expr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
@@ -194,15 +195,18 @@ public:
   }
 
   void inferAnnotations() {
-    // FIXME: To maximise inference propagation, functions should be analyzed in
-    // post-order of the call graph, allowing inferred annotations to propagate
-    // through the call chain
-    // FIXME: Add the inferred attribute to all redeclarations of the function,
-    // not just the definition being analyzed.
     for (const auto &[ConstPVD, EscapeExpr] : AnnotationWarningsMap) {
       ParmVarDecl *PVD = const_cast<ParmVarDecl *>(ConstPVD);
-      if (!PVD->hasAttr<LifetimeBoundAttr>())
-        PVD->addAttr(
+      const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
+      if (!FD)
+        continue;
+      // Propagates inferred attributes via the most recent declaration to
+      // ensure visibility for callers in post-order analysis.
+      FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+      ParmVarDecl *InferredPVD = const_cast<ParmVarDecl *>(
+          FD->getParamDecl(PVD->getFunctionScopeIndex()));
+      if (!InferredPVD->hasAttr<LifetimeBoundAttr>())
+        InferredPVD->addAttr(
             LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
     }
   }

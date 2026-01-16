@@ -487,6 +487,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32, Sgpr32AExtBoolInReg}})
       .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32, Vcc}});
 
+  addRulesForGOpcs({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
+
   addRulesForGOpcs({G_MUL}, Standard).Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
   bool hasMulHi = ST->hasScalarMulHiInsts();
@@ -629,6 +637,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}})
       .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}});
 
+  bool Has16bitCmp = ST->has16BitInsts();
+
   // In global-isel G_TRUNC in-reg is treated as no-op, inst selected into COPY.
   // It is up to user to deal with truncated bits.
   addRulesForGOpcs({G_TRUNC})
@@ -642,7 +652,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniV2S16, V2S32}, {{SgprV2S16}, {SgprV2S32}}})
       .Any({{DivV2S16, V2S32}, {{VgprV2S16}, {VgprV2S32}}})
       // This is non-trivial. VgprToVccCopy is done using compare instruction.
-      .Any({{DivS1, DivS16}, {{Vcc}, {Vgpr16}, VgprToVccCopy}})
+      .Any({{DivS1, DivS16}, {{Vcc}, {Vgpr16}, VgprToVccCopy}}, Has16bitCmp)
+      .Any({{DivS1, DivS16}, {{Vcc}, {Vgpr32AExt}, VgprToVccCopy}},
+           !Has16bitCmp)
       .Any({{DivS1, DivS32}, {{Vcc}, {Vgpr32}, VgprToVccCopy}})
       .Any({{DivS1, DivS64}, {{Vcc}, {Vgpr64}, VgprToVccCopy}});
 

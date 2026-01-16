@@ -1659,3 +1659,71 @@ func.func @test_if_hoisting(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name =
   fir.store %11 to %2 : !fir.ref<i32>
   return
 }
+
+// -----
+// Check that fir.box_addr applied to the private box is not hoisted
+// out of acc.loop. This breaks the assumptions taken by OpenACC
+// transformations that the results of acc.private operations,
+// that are present as the private() operands of acc.loop,
+// are only used inside the acc.loop.
+// subroutine test_acc_loop_with_private(a,n)
+//   integer :: n,i
+//   real :: b(n)
+//   !$acc parallel private(b)
+//   !$acc loop private(b)
+//   do i = 1, n
+//      b(i) = 1.0
+//   enddo
+//   !$acc end parallel
+// end subroutine
+// CHECK-LABEL:   func.func @_QPtest_acc_loop_with_private(
+// CHECK-SAME:      %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<f32> {fir.bindc_name = "a"},
+// CHECK-SAME:      %[[ARG1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
+// CHECK:           acc.parallel private(%{{.*}} : !fir.box<!fir.array<?xf32>>) {
+// CHECK:             %[[PRIVATE_1:.*]] = acc.private var(%{{.*}} : !fir.box<!fir.array<?xf32>>) recipe(@{{.*}}) -> !fir.box<!fir.array<?xf32>> {name = "b"}
+// CHECK:             %[[PRIVATE_2:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@{{.*}}) -> !fir.ref<i32> {implicit = true, name = "i"}
+// CHECK-NOT:         fir.box_addr %[[PRIVATE_1]]
+// CHECK:             acc.loop private(%[[PRIVATE_1]], %[[PRIVATE_2]] : !fir.box<!fir.array<?xf32>>, !fir.ref<i32>) {{.*}} {
+// CHECK:               %[[BOX_ADDR_1:.*]] = fir.box_addr %[[PRIVATE_1]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+// CHECK:               %[[DECLARE_5:.*]] = fir.declare %[[BOX_ADDR_1]](%{{.*}}) {uniq_name = "_QFtest_acc_loop_with_privateEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+func.func @_QPtest_acc_loop_with_private(%arg0: !fir.ref<f32> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_acc_loop_with_privateEa"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %2 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtest_acc_loop_with_privateEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %3 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_acc_loop_with_privateEi"}
+  %4 = fir.declare %3 {uniq_name = "_QFtest_acc_loop_with_privateEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %5 = fir.load %2 : !fir.ref<i32>
+  %6 = fir.convert %5 : (i32) -> index
+  %7 = arith.cmpi sgt, %6, %c0 : index
+  %8 = arith.select %7, %6, %c0 : index
+  %9 = fir.alloca !fir.array<?xf32>, %8 {bindc_name = "b", uniq_name = "_QFtest_acc_loop_with_privateEb"}
+  %10 = fir.shape %8 : (index) -> !fir.shape<1>
+  %11 = fir.declare %9(%10) {uniq_name = "_QFtest_acc_loop_with_privateEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+  %12 = fir.embox %11(%10) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  %13 = acc.private var(%12 : !fir.box<!fir.array<?xf32>>) recipe(@privatization_box_Uxf32) -> !fir.box<!fir.array<?xf32>> {name = "b"}
+  acc.parallel private(%13 : !fir.box<!fir.array<?xf32>>) {
+    %14 = fir.box_addr %13 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+    %15 = fir.declare %14(%10) {uniq_name = "_QFtest_acc_loop_with_privateEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+    %16 = fir.embox %15(%10) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+    %17 = acc.private var(%16 : !fir.box<!fir.array<?xf32>>) recipe(@privatization_box_Uxf32) -> !fir.box<!fir.array<?xf32>> {name = "b"}
+    %18 = acc.private varPtr(%4 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+    acc.loop private(%17, %18 : !fir.box<!fir.array<?xf32>>, !fir.ref<i32>) control(%arg2 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %19 = fir.box_addr %17 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+      %20 = fir.declare %19(%10) {uniq_name = "_QFtest_acc_loop_with_privateEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+      %21 = fir.embox %20(%10) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+      %22 = fir.declare %18 {uniq_name = "_QFtest_acc_loop_with_privateEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+      fir.store %arg2 to %22 : !fir.ref<i32>
+      %23 = fir.load %22 : !fir.ref<i32>
+      %24 = fir.convert %23 : (i32) -> i64
+      %25 = fir.array_coor %20(%10) %24 : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
+      fir.store %cst to %25 : !fir.ref<f32>
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}

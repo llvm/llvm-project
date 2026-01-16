@@ -100,7 +100,7 @@ public:
   void *operator new(size_t s) { return User::operator new(s, AllocMarker); }
 
   // delete space for exactly one operand as created in the corresponding new operator
-  void operator delete(void *ptr) { User::operator delete(ptr); }
+  void operator delete(void *ptr) { User::operator delete(ptr, AllocMarker); }
 
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);

@@ -318,7 +318,7 @@ public:
 
   // allocate space for exactly one operand
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryUseVal;
@@ -383,7 +383,7 @@ public:
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryDefVal;
@@ -483,7 +483,7 @@ class MemoryPhi final : public MemoryAccess {
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(MemoryAccess);
