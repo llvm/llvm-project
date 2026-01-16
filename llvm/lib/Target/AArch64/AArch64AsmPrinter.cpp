@@ -2515,9 +2515,12 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   if (KeyID != AArch64PACKey::DA)
     return nullptr;
 
-  AArch64Subtarget STI(TT, TM.getTargetCPU(), TM.getTargetCPU(),
-                       TM.getTargetFeatureString(), TM, true);
-  this->STI = &STI;
+  // AArch64Subtarget is huge, so heap allocate it so we don't run out of stack
+  // space.
+  auto STI = std::make_unique<AArch64Subtarget>(
+      TT, TM.getTargetCPU(), TM.getTargetCPU(), TM.getTargetFeatureString(), TM,
+      true);
+  this->STI = STI.get();
 
   MCSymbol *Place = OutStreamer->getContext().createTempSymbol();
   OutStreamer->emitLabel(Place);
