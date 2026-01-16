@@ -212,8 +212,9 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallCallingConv(NewLC), Type::getVoidTy(*DAG.getContext()),
-          DAG.getExternalSymbol(TLI->getLibcallName(NewLC),
+          DAG.getLibcalls().getLibcallCallingConv(NewLC),
+          Type::getVoidTy(*DAG.getContext()),
+          DAG.getExternalSymbol(DAG.getLibcalls().getLibcallName(NewLC),
                                 TLI->getPointerTy(DAG.getDataLayout())),
           std::move(Args))
       .setDiscardResult();

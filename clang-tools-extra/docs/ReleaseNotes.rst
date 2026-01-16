@@ -107,6 +107,12 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check:
+
+  - Added support for analyzing function parameters with the `AnalyzeParameters`
+    option.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
