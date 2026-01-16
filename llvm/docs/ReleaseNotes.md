@@ -113,6 +113,9 @@ Changes to the WebAssembly Backend
 Changes to the Windows Target
 -----------------------------
 
+* The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
+  with a new `.seh_splitchained` instruction.
+
 Changes to the X86 Backend
 --------------------------
 
