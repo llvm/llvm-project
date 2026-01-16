@@ -200,7 +200,7 @@ public:
       if (!FD)
         continue;
       // Propagates inferred attributes via the most recent declaration to
-      // ensure visibility for callers in post-order analysis
+      // ensure visibility for callers in post-order analysis.
       const FunctionDecl *MostRecentFD = FD->getMostRecentDecl();
       ParmVarDecl *MostRecentPVD = const_cast<ParmVarDecl *>(
           MostRecentFD->getParamDecl(PVD->getFunctionScopeIndex()));
