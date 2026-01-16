@@ -195,9 +195,11 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     ```
   }];
   let arguments = (ins TensorOrMemRef<[AnyType]>:$source,
-      TensorOrMemRef<[AnyType]>:$dest, Optional<AnyType>:$padding_value,
+      TensorOrMemRef<[AnyType]>:$dest, 
+      Optional<AnyType>:$padding_value,
       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_dims_perm,
-      DenseI64ArrayAttr:$inner_dims_pos, Variadic<Index>:$inner_tiles,
+      DenseI64ArrayAttr:$inner_dims_pos, 
+      Variadic<Index>:$inner_tiles,
       DenseI64ArrayAttr:$static_inner_tiles);
   let results = (outs Optional<AnyRankedTensor>:$result);
 
@@ -209,7 +211,7 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
       CArg<"ArrayRef<int64_t>", "{}">:$outerDimsPerm)>
   ];
 
-  let extraClassDeclaration = commonExtraClassDeclaration#[{
+  let extraClassDeclaration = commonExtraClassDeclaration # [{
     // Method to get the shape of the result as `SmallVector<OpFoldResult>`.
     // This is a static method to allow getting the shape of the destination
     // expected while creating a `pack` op.

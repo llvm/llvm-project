@@ -5261,9 +5261,8 @@ commonPermutationOfPackAndUnPackOp(OpTy packOrUnPackOp,
 //===----------------------------------------------------------------------===//
 
 void PackOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
-  if (getNumResults() == 0)
-    return;
-  setNameFn(getResult(), "pack");
+  if (!getResults().empty())
+    setNameFn(getResult(), "pack");
 }
 
 ParseResult PackOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -6025,9 +6024,8 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
 
 void UnPackOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
-  if (getNumResults() == 0)
-    return;
-  setNameFn(getResult(), "unpack");
+  if (!getResults().empty())
+    setNameFn(getResult(), "unpack");
 }
 
 // Custom parser for UnPackOp that handles the memref/tensor case distinction
