@@ -1847,10 +1847,10 @@ public:
   bool isReversibleBranch(const MCInst &Inst) const override {
     if (isCompAndBranch(Inst)) {
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
-      if (needsImmDec(InvertedOpcode))
-        return Inst.getOperand(1).getImm() > 0;
-      if (needsImmInc(InvertedOpcode))
-        return Inst.getOperand(1).getImm() < 63;
+      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() <= 0)
+        return false;
+      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() >= 63)
+        return false;
     }
     return MCPlusBuilder::isReversibleBranch(Inst);
   }
