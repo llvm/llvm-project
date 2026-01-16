@@ -16,7 +16,6 @@ FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
   Type:     ET_DYN
-  Machine:  EM_X86_64
 ...
 
 ## Check format version number.
@@ -33,7 +32,6 @@ FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
   Type:     ET_DYN
-  Machine:  EM_X86_64
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
@@ -62,7 +60,6 @@ FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
   Type:     ET_DYN
-  Machine:  EM_X86_64
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
@@ -92,7 +89,6 @@ FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
   Type:     ET_DYN
-  Machine:  EM_X86_64
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
@@ -122,7 +118,6 @@ FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
   Type:     ET_DYN
-  Machine:  EM_X86_64
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
@@ -153,7 +148,6 @@ FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
   Type:     ET_DYN
-  Machine:  EM_X86_64
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
@@ -185,7 +179,6 @@ FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
   Type:     ET_DYN
-  Machine:  EM_X86_64
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
@@ -218,7 +211,6 @@ FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
   Type:     ET_DYN
-  Machine:  EM_X86_64
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
@@ -252,7 +244,6 @@ FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
   Type:     ET_DYN
-  Machine:  EM_X86_64
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
@@ -285,7 +276,6 @@ FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
   Type:     ET_REL
-  Machine:  EM_X86_64
 Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
