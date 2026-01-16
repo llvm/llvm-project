@@ -304,6 +304,8 @@ Changes to LLDB
   all the supported targets, along with the presence of (or lack of) optional
   features like XML parsing.
 * LLDB now includes formatters for many types from the MSVC STL.
+* DIL (the new `frame variable` implementation) now uses ':' as a bitfield
+  extraction range character. '-' is deprecated and will output an error when used.
 
 Changes to BOLT
 ---------------------------------
