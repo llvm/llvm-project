@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOGF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOGF16_H
 
+#include "include/llvm-libc-macros/float16-macros.h"
+
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
 #include "hdr/errno_macros.h"
@@ -76,7 +78,7 @@ static constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
 
 } // namespace logf16_internal
 
-LIBC_INLINE float16 logf16(float16 x) {
+LIBC_INLINE static float16 logf16(float16 x) {
   using namespace math::expxf16_internal;
   using namespace math::logf16_internal;
   using FPBits = fputil::FPBits<float16>;
