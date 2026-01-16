@@ -5349,16 +5349,19 @@ enum Flags : uint8_t {
 } // namespace callgraph
 
 template <class ELFT>
-bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {  
+bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
   ArrayRef<uint8_t> Contents =
-        unwrapOrError(FileName, Obj.getSectionContents(*CGSection));  
+      unwrapOrError(FileName, Obj.getSectionContents(*CGSection));
   DataExtractor Data(Contents, Obj.isLE(), ObjF.getBytesInAddress());
   DataExtractor::Cursor C(0);
   uint64_t UnknownCount = 0;
   while (C && C.tell() < CGSection->sh_size) {
     uint8_t FormatVersionNumber = Data.getU8(C);
-    assert(C && "always expect the one byte read to succeed when C.tell() < CGSection->sh_size is true.");
-    if(!C) consumeError(C.takeError()); // To satisfy builds with assertion disabled mode
+    assert(C && "always expect the one byte read to succeed when C.tell() < "
+                "CGSection->sh_size is true.");
+    if (!C)
+      consumeError(
+          C.takeError()); // To satisfy builds with assertion disabled mode
     if (FormatVersionNumber != 0) {
       reportWarning(createError("unknown format version value [" +
                                 std::to_string(FormatVersionNumber) +
