@@ -3416,15 +3416,13 @@ func.func @omp_declare_simd_linear(%a: f64, %b: f64, %iv: i32, %step: i32) -> ()
 
 // CHECK-LABEL: func.func @omp_declare_simd_uniform
 func.func @omp_declare_simd_uniform(%a: f64, %b: f64,
-                                    %p0: memref<i32>, %p1: memref<i32>) -> f64 {
+                                    %p0: memref<i32>, %p1: memref<i32>) -> () {
   // CHECK:      omp.declare_simd
   // CHECK-SAME: uniform(
   // CHECK-SAME: %{{.*}} : memref<i32>,
   // CHECK-SAME: %{{.*}} : memref<i32>)
   omp.declare_simd uniform(%p0 : memref<i32>, %p1 : memref<i32>)
-
-  %0 = arith.addf %a, %b : f64
-  return %0 : f64
+  return
 }
 
 // CHECK-LABEL: func.func @omp_declare_simd_all_clauses
