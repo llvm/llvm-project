@@ -15072,17 +15072,9 @@ element in the logical layout by overflowing:
 In all cases **except** when the accessed type is a 0-sized array**, indexing
 out of bounds yields `poison`. When the index value is unknown, optimizations
 can use the type bounds to determine the range of values the index can have.
-
 If the source pointer is poison, the instruction returns poison.
 The resulting pointer belongs to the same address space as ``source``.
-
-This instruction assumes the pointer ``source`` points to a valid memory
-location large enough to contain the physically laid out version ``basetype``.
-This instruction does not dereference any pointer, but requires the source
-operand to be a valid memory location. Meaning this instruction cannot be
-used as an ``offsetof`` by providing ``ptr 0`` as source.
-If the memory location pointed by source is not large enough, using the
-resulting pointer to access memory yields an undefined behavior.
+This instruction does not dereference the pointer.
 
 Example:
 """"""""
