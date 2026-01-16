@@ -9210,6 +9210,16 @@ getRuntimeCallSDValueHelper(SDValue Chain, const SDLoc &dl,
   return TLI->LowerCallTo(CLI);
 }
 
+std::pair<SDValue, SDValue> SelectionDAG::getStrcmp(SDValue Chain,
+                                                    const SDLoc &dl, SDValue S1,
+                                                    SDValue S2,
+                                                    const CallInst *CI) {
+  PointerType *PT = PointerType::getUnqual(*getContext());
+  TargetLowering::ArgListTy Args = {{S1, PT}, {S2, PT}};
+  return getRuntimeCallSDValueHelper(Chain, dl, std::move(Args), CI,
+                                     RTLIB::STRCMP, this, TLI);
+}
+
 std::pair<SDValue, SDValue> SelectionDAG::getStrstr(SDValue Chain,
                                                     const SDLoc &dl, SDValue S1,
                                                     SDValue S2,
