@@ -3,10 +3,6 @@
 ; RUN:   -verify-machineinstrs -target-abi=ilp32d | FileCheck %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zvfh \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
-; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+v,+zfhmin,+zvfh \
-; RUN:   -verify-machineinstrs -target-abi=ilp32d | FileCheck %s
-; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zfhmin,+zvfh \
-; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
 ; RUN: sed 's/iXLen/i32/g' %s | not --crash llc -mtriple=riscv32 -mattr=+v,+zvfhmin \
 ; RUN:   -target-abi=ilp32d 2>&1 | FileCheck %s --check-prefixes=ZVFMIN
 ; RUN: sed 's/iXLen/i64/g' %s | not --crash llc -mtriple=riscv64 -mattr=+v,+zvfhmin \

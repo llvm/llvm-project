@@ -530,8 +530,6 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   // values. Split vectors are passed via a mix of registers and indirectly, so
   // treat them as we would any other argument.
   if (ValVT.isScalarInteger() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
-    LocVT = XLenVT;
-    LocInfo = CCValAssign::Indirect;
     PendingLocs.push_back(
         CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
     PendingArgFlags.push_back(ArgFlags);
@@ -592,10 +590,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     for (auto &It : PendingLocs) {
       if (Reg)
-        It.convertToReg(Reg);
+        State.addLoc(CCValAssign::getReg(It.getValNo(), It.getValVT(), Reg,
+                                         XLenVT, CCValAssign::Indirect));
       else
-        It.convertToMem(StackOffset);
-      State.addLoc(It);
+        State.addLoc(CCValAssign::getMem(It.getValNo(), It.getValVT(),
+                                         StackOffset, XLenVT,
+                                         CCValAssign::Indirect));
     }
     PendingLocs.clear();
     PendingArgFlags.clear();
