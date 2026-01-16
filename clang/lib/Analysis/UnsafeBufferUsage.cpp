@@ -771,6 +771,14 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
       if (MD->getName() == "c_str" && RD->getName() == "basic_string")
         return true;
   }
+
+  // Functions known to return properly null terminated strings.
+  static const llvm::StringSet<> NullTermFunctions = {"strerror"};
+  if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
+    const FunctionDecl *F = CE->getDirectCallee();
+    if (F && F->getIdentifier() && NullTermFunctions.contains(F->getName()))
+      return true;
+  }
   return false;
 }
 
@@ -4267,7 +4275,7 @@ getNaiveStrategy(llvm::iterator_range<VarDeclIterTy> UnsafeVars) {
 
 //  Manages variable groups:
 class VariableGroupsManagerImpl : public VariableGroupsManager {
-  const std::vector<VarGrpTy> Groups;
+  const std::vector<VarGrpTy> &Groups;
   const std::map<const VarDecl *, unsigned> &VarGrpMap;
   const llvm::SetVector<const VarDecl *> &GrpsUnionForParms;
 
@@ -4586,6 +4594,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   SmallVector<Stmt *> Stmts;
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // Consteval functions are free of UB by the spec, so we don't need to
+    // visit them or produce diagnostics.
+    if (FD->isConsteval())
+      return;
     // We do not want to visit a Lambda expression defined inside a method
     // independently. Instead, it should be visited along with the outer method.
     // FIXME: do we want to do the same thing for `BlockDecl`s?

@@ -98,6 +98,11 @@ Module &Module::operator=(Module &&Other) {
 
   NamedMDList.clear();
   NamedMDList.splice(NamedMDList.begin(), Other.NamedMDList);
+  for (NamedMDNode &NMD : NamedMDList)
+    NMD.setParent(this);
+
+  NamedMDSymTab = std::move(Other.NamedMDSymTab);
+  ComdatSymTab = std::move(Other.ComdatSymTab);
   GlobalScopeAsm = std::move(Other.GlobalScopeAsm);
   OwnedMemoryBuffer = std::move(Other.OwnedMemoryBuffer);
   Materializer = std::move(Other.Materializer);
