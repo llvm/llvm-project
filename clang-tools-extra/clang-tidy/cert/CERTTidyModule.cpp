@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
 #include "../bugprone/CopyConstructorMutatesArgumentCheck.h"
@@ -31,7 +30,7 @@
 #include "../bugprone/UnsafeFunctionsCheck.h"
 #include "../bugprone/UnusedReturnValueCheck.h"
 #include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
-#include "../google/UnnamedNamespaceInHeaderCheck.h"
+#include "../misc/AnonymousNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/NonCopyableObjectsCheck.h"
 #include "../misc/PredictableRandCheck.h"
@@ -232,6 +231,7 @@ const llvm::StringRef CertErr33CCheckedFunctions = "^::aligned_alloc$;"
 
 namespace clang::tidy {
 namespace cert {
+namespace {
 
 class CERTModule : public ClangTidyModule {
 public:
@@ -253,7 +253,7 @@ public:
         "cert-dcl54-cpp");
     CheckFactories.registerCheck<bugprone::StdNamespaceModificationCheck>(
         "cert-dcl58-cpp");
-    CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
+    CheckFactories.registerCheck<misc::AnonymousNamespaceInHeaderCheck>(
         "cert-dcl59-cpp");
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
@@ -360,6 +360,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace cert
 
 // Register the MiscTidyModule using this statically initialized variable.

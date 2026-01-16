@@ -16,10 +16,10 @@ define float @baz() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @arr, align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr @arr1, align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[CONV]], 2.000000e+00
 ; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP4]], 2.000000e+00
-; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[TMP6]], [[CONV]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[OP_RDX1]], [[CONV]]
 ; CHECK-NEXT:    store float [[OP_RDX]], ptr @res, align 4
 ; CHECK-NEXT:    ret float [[OP_RDX]]
 ;
@@ -31,10 +31,10 @@ define float @baz() {
 ; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @arr, align 16
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr @arr1, align 16
 ; THRESHOLD-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP1]]
-; THRESHOLD-NEXT:    [[TMP8:%.*]] = fmul fast float [[CONV]], 2.000000e+00
 ; THRESHOLD-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; THRESHOLD-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP4]], 2.000000e+00
-; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP8]], [[TMP9]]
+; THRESHOLD-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[TMP9]], [[CONV]]
+; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[OP_RDX1]], [[CONV]]
 ; THRESHOLD-NEXT:    store float [[OP_RDX]], ptr @res, align 4
 ; THRESHOLD-NEXT:    ret float [[OP_RDX]]
 ;

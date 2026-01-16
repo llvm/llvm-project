@@ -45,7 +45,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/circular_raw_ostream.h"
+#include "llvm/Support/raw_ostream.h"
 
 /// 32-Bit field data attributes controlling information presented to the user.
 enum OpenMPInfoType : uint32_t {
@@ -142,7 +142,7 @@ inline uint32_t getInfoLevel() { return getInfoLevelInternal().load(); }
 #define INFO(_flags, _id, ...)                                                 \
   do {                                                                         \
     if (::llvm::offload::debug::isDebugEnabled()) {                            \
-      DP(__VA_ARGS__);                                                         \
+      INFO_DEBUG_INT(_flags, _id, __VA_ARGS__);                                \
     } else if (getInfoLevel() & _flags) {                                      \
       INFO_MESSAGE(_id, __VA_ARGS__);                                          \
     }                                                                          \
@@ -174,6 +174,14 @@ private:
   bool ShouldEmitNewLineOnDestruction;
   bool NeedEndNewLine = false;
 
+  /// Buffer to reduce interference between different threads
+  /// writing at the same time to the underlying stream.
+  static constexpr size_t BufferSize = 256;
+  llvm::SmallString<BufferSize> Buffer;
+
+  // Stream to write into Buffer. Its flushed to Os upon destruction.
+  llvm::raw_svector_ostream BufferStrm;
+
   /// If the stream is muted, writes to it are ignored
   bool Muted = false;
 
@@ -203,13 +211,13 @@ private:
       NeedEndNewLine = true;
     }
   }
-  void emitPrefix() { Os.write(Prefix.c_str(), Prefix.size()); }
+  void emitPrefix() { BufferStrm.write(Prefix.c_str(), Prefix.size()); }
   void writeWithPrefix(StringRef Str) {
     if (ShouldPrefixNextString) {
       emitPrefix();
       ShouldPrefixNextString = false;
     }
-    Os.write(Str.data(), Str.size());
+    BufferStrm.write(Str.data(), Str.size());
   }
 
 public:
@@ -218,26 +226,29 @@ public:
                         bool ShouldEmitNewLineOnDestruction = true)
       : Prefix(std::move(Prefix)), Os(Os), BaseLevel(BaseLevel),
         ShouldPrefixNextString(ShouldPrefixNextString),
-        ShouldEmitNewLineOnDestruction(ShouldEmitNewLineOnDestruction) {
+        ShouldEmitNewLineOnDestruction(ShouldEmitNewLineOnDestruction),
+        BufferStrm(Buffer) {
     SetUnbuffered();
   }
   ~odbg_ostream() final {
     if (ShouldEmitNewLineOnDestruction && NeedEndNewLine)
-      Os << '\n';
+      BufferStrm << '\n';
+    Os << BufferStrm.str();
   }
   odbg_ostream(const odbg_ostream &) = delete;
   odbg_ostream &operator=(const odbg_ostream &) = delete;
-  odbg_ostream(odbg_ostream &&other) : Os(other.Os) {
+  odbg_ostream(odbg_ostream &&other) : Os(other.Os), BufferStrm(Buffer) {
     Prefix = std::move(other.Prefix);
     BaseLevel = other.BaseLevel;
     ShouldPrefixNextString = other.ShouldPrefixNextString;
     ShouldEmitNewLineOnDestruction = other.ShouldEmitNewLineOnDestruction;
     NeedEndNewLine = other.NeedEndNewLine;
     Muted = other.Muted;
+    BufferStrm << other.BufferStrm.str();
   }
 
   /// Forward the current_pos method to the underlying stream.
-  uint64_t current_pos() const final { return Os.tell(); }
+  uint64_t current_pos() const final { return BufferStrm.tell(); }
 
   /// Some of the `<<` operators expect an lvalue, so we trick the type
   /// system.
@@ -247,17 +258,8 @@ public:
   void shouldMute(const OnlyLevel Filter) { Muted = BaseLevel != Filter; }
 };
 
-/// dbgs - Return a circular-buffered debug stream.
-[[maybe_unused]] static llvm::raw_ostream &dbgs() {
-  // Do one-time initialization in a thread-safe way.
-  static struct dbgstream {
-    llvm::circular_raw_ostream strm;
-
-    dbgstream() : strm(llvm::errs(), "*** Debug Log Output ***\n", 0) {}
-  } thestrm;
-
-  return thestrm.strm;
-}
+/// dbgs - Return the debug stream for offload debugging (just llvm::errs()).
+[[maybe_unused]] static llvm::raw_ostream &dbgs() { return llvm::errs(); }
 
 #ifdef OMPTARGET_DEBUG
 
@@ -535,6 +537,19 @@ inline bool isDebugEnabled() { return false; }
 
 #endif
 
+// Common debug types in offload.
+constexpr const char *OLDT_Init = "Init";
+constexpr const char *OLDT_Kernel = "Kernel";
+constexpr const char *OLDT_DataTransfer = "DataTransfer";
+constexpr const char *OLDT_Sync = "Sync";
+constexpr const char *OLDT_Deinit = "Deinit";
+constexpr const char *OLDT_Error = "Error";
+constexpr const char *OLDT_Device = "Device";
+constexpr const char *OLDT_Interface = "Interface";
+constexpr const char *OLDT_Alloc = "Alloc";
+constexpr const char *OLDT_Tool = "Tool";
+constexpr const char *OLDT_Module = "Module";
+
 } // namespace llvm::offload::debug
 
 namespace llvm::omp::target::debug {
@@ -550,23 +565,25 @@ enum OmpDebugLevel : uint32_t {
 };
 
 /* Debug types to use in libomptarget */
-constexpr const char *ODT_Init = "Init";
+constexpr const char *ODT_Init = OLDT_Init;
 constexpr const char *ODT_Mapping = "Mapping";
-constexpr const char *ODT_Kernel = "Kernel";
-constexpr const char *ODT_DataTransfer = "DataTransfer";
-constexpr const char *ODT_Sync = "Sync";
-constexpr const char *ODT_Deinit = "Deinit";
-constexpr const char *ODT_Error = "Error";
+constexpr const char *ODT_Kernel = OLDT_Kernel;
+constexpr const char *ODT_DataTransfer = OLDT_DataTransfer;
+constexpr const char *ODT_Sync = OLDT_Sync;
+constexpr const char *ODT_Deinit = OLDT_Deinit;
+constexpr const char *ODT_Error = OLDT_Error;
 constexpr const char *ODT_KernelArgs = "KernelArgs";
 constexpr const char *ODT_MappingExists = "MappingExists";
 constexpr const char *ODT_DumpTable = "DumpTable";
 constexpr const char *ODT_MappingChanged = "MappingChanged";
 constexpr const char *ODT_PluginKernel = "PluginKernel";
 constexpr const char *ODT_EmptyMapping = "EmptyMapping";
-constexpr const char *ODT_Device = "Device";
-constexpr const char *ODT_Interface = "Interface";
-constexpr const char *ODT_Alloc = "Alloc";
-constexpr const char *ODT_Tool = "Tool";
+constexpr const char *ODT_Device = OLDT_Device;
+constexpr const char *ODT_Interface = OLDT_Interface;
+constexpr const char *ODT_Alloc = OLDT_Alloc;
+constexpr const char *ODT_Tool = OLDT_Tool;
+constexpr const char *ODT_Module = OLDT_Module;
+constexpr const char *ODT_Interop = "Interop";
 
 static inline odbg_ostream reportErrorStream() {
 #ifdef OMPTARGET_DEBUG
@@ -605,16 +622,38 @@ static inline odbg_ostream reportErrorStream() {
 
 #define DP(...) ODBG() << FORMAT_TO_STR(__VA_ARGS__);
 
-#define REPORT_INT_OLD(...)                                                    \
-  do {                                                                         \
-    if (::llvm::offload::debug::isDebugEnabled()) {                            \
-      ODBG(::llvm::omp::target::debug::ODT_Error,                              \
-           ::llvm::omp::target::debug::ODL_Error)                              \
-          << FORMAT_TO_STR(__VA_ARGS__);                                       \
-    } else {                                                                   \
-      FAILURE_MESSAGE(__VA_ARGS__);                                            \
-    }                                                                          \
-  } while (false)
+template <uint32_t InfoId> static constexpr const char *InfoIdToODT() {
+  constexpr auto getId = []() {
+    switch (InfoId) {
+    case OMP_INFOTYPE_KERNEL_ARGS:
+      return "KernelArgs";
+    case OMP_INFOTYPE_MAPPING_EXISTS:
+      return "MappingExists";
+    case OMP_INFOTYPE_DUMP_TABLE:
+      return "DumpTable";
+    case OMP_INFOTYPE_MAPPING_CHANGED:
+      return "MappingChanged";
+    case OMP_INFOTYPE_PLUGIN_KERNEL:
+      return "PluginKernel";
+    case OMP_INFOTYPE_DATA_TRANSFER:
+      return "DataTransfer";
+    case OMP_INFOTYPE_EMPTY_MAPPING:
+      return "EmptyMapping";
+    case OMP_INFOTYPE_ALL:
+      return "Default";
+    }
+    return static_cast<const char *>(nullptr);
+  };
+
+  constexpr const char *result = getId();
+  static_assert(result != nullptr, "Unknown InfoId being used");
+  return result;
+}
+
+// Transform the INFO id to the corresponding debug type and print the message
+#define INFO_DEBUG_INT(_flags, _id, ...)                                       \
+  ODBG(::llvm::omp::target::debug::InfoIdToODT<_flags>())                      \
+      << FORMAT_TO_STR(__VA_ARGS__);
 
 // Define default format for pointers
 static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
@@ -626,14 +665,13 @@ static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
 #define DP(...)                                                                \
   {                                                                            \
   }
-#define REPORT_INT_OLD(...) FAILURE_MESSAGE(__VA_ARGS__);
+#define INFO_DEBUG_INT(_flags, _id, ...)                                       \
+  {                                                                            \
+  }
 #endif // OMPTARGET_DEBUG
 
-// This is used for the new style REPORT macro
-#define REPORT_INT() ::llvm::omp::target::debug::reportErrorStream()
-
-// Make REPORT compatible with old and new syntax
-#define REPORT(...) REPORT_INT##__VA_OPT__(_OLD)(__VA_ARGS__)
+// New REPORT macro in the same style as ODBG
+#define REPORT() ::llvm::omp::target::debug::reportErrorStream()
 
 } // namespace llvm::omp::target::debug
 

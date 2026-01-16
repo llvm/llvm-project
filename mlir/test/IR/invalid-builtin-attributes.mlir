@@ -580,6 +580,16 @@ func.func @duplicate_dictionary_attr_key() {
 
 // -----
 
+// expected-error@below {{expected i1 type for 'true' or 'false' values}}
+#attr = array<i8: true>
+
+// -----
+
+// expected-error@below {{expected 'true' or 'false' values for i1 type}}
+#attr = array<i1: 0>
+
+// -----
+
 // expected-error@below {{expected '[' after 'distinct'}}
 #attr = distinct<
 

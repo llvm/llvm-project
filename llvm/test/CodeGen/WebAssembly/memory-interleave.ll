@@ -15,6 +15,8 @@ target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20
 %struct.EightBytes = type { i8, i8, i8, i8, i8, i8, i8, i8 }
 %struct.TwoFloats = type { float, float }
 %struct.FourFloats = type { float, float, float, float }
+%struct.TwoLongLongs = type { i64, i64 }
+%struct.FourLongLongs = type { i64, i64, i64, i64 }
 
 ; CHECK-LABEL: two_ints_same_op:
 ; CHECK: loop
@@ -2696,4 +2698,291 @@ for.body:                                         ; preds = %entry, %for.body
   %inc = add nuw i32 %i.046, 1
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-NOT: v128.load
+define hidden void @mac_3d_i8(ptr dead_on_unwind noalias writable writeonly sret(%struct.ThreeBytes) align 1 captures(none) %0, ptr noundef readonly captures(none) %1, ptr noundef readonly captures(none) %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %12
+
+6:                                                ; preds = %12, %4
+  %7 = phi i8 [ 0, %4 ], [ %34, %12 ]
+  %8 = phi i8 [ 0, %4 ], [ %28, %12 ]
+  %9 = phi i8 [ 0, %4 ], [ %22, %12 ]
+  %10 = getelementptr inbounds nuw i8, ptr %0, i32 2
+  %11 = getelementptr inbounds nuw i8, ptr %0, i32 1
+  store i8 %9, ptr %0, align 1
+  store i8 %8, ptr %11, align 1
+  store i8 %7, ptr %10, align 1
+  ret void
+
+12:                                               ; preds = %4, %12
+  %13 = phi i32 [ %35, %12 ], [ 0, %4 ]
+  %14 = phi i8 [ %22, %12 ], [ 0, %4 ]
+  %15 = phi i8 [ %28, %12 ], [ 0, %4 ]
+  %16 = phi i8 [ %34, %12 ], [ 0, %4 ]
+  %17 = getelementptr inbounds nuw %struct.ThreeBytes, ptr %1, i32 %13
+  %18 = load i8, ptr %17, align 1
+  %19 = getelementptr inbounds nuw %struct.ThreeBytes, ptr %2, i32 %13
+  %20 = load i8, ptr %19, align 1
+  %21 = mul i8 %20, %18
+  %22 = add i8 %21, %14
+  %23 = getelementptr inbounds nuw i8, ptr %17, i32 1
+  %24 = load i8, ptr %23, align 1
+  %25 = getelementptr inbounds nuw i8, ptr %19, i32 1
+  %26 = load i8, ptr %25, align 1
+  %27 = mul i8 %26, %24
+  %28 = add i8 %27, %15
+  %29 = getelementptr inbounds nuw i8, ptr %17, i32 2
+  %30 = load i8, ptr %29, align 1
+  %31 = getelementptr inbounds nuw i8, ptr %19, i32 2
+  %32 = load i8, ptr %31, align 1
+  %33 = mul i8 %32, %30
+  %34 = add i8 %33, %16
+  %35 = add nuw i32 %13, 1
+  %36 = icmp eq i32 %35, %3
+  br i1 %36, label %6, label %12
+}
+
+; CHECK-LABEL: mac_4d_i8
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.add
+; CHECK: i8x16.shuffle	2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.add
+; CHECK: i8x16.shuffle	1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.add
+; CHECK: i8x16.shuffle	0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.add
+define hidden void @mac_4d_i8(ptr dead_on_unwind noalias writable writeonly sret(%struct.FourBytes) align 1 captures(none) initializes((0, 4)) %0, ptr noundef readonly captures(none) %1, ptr noundef readonly captures(none) %2, i32 noundef %3) {
+  store i32 0, ptr %0, align 1
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %11, label %6
+
+6:                                                ; preds = %4
+  %7 = getelementptr inbounds nuw i8, ptr %0, i32 1
+  %8 = getelementptr inbounds nuw i8, ptr %0, i32 2
+  %9 = getelementptr inbounds nuw i8, ptr %0, i32 3
+  br label %13
+
+10:                                               ; preds = %13
+  store i8 %30, ptr %7, align 1
+  store i8 %36, ptr %8, align 1
+  store i8 %42, ptr %9, align 1
+  br label %11
+
+11:                                               ; preds = %10, %4
+  %12 = phi i8 [ %24, %10 ], [ 0, %4 ]
+  store i8 %12, ptr %0, align 1
+  ret void
+
+13:                                               ; preds = %6, %13
+  %14 = phi i8 [ 0, %6 ], [ %42, %13 ]
+  %15 = phi i8 [ 0, %6 ], [ %36, %13 ]
+  %16 = phi i8 [ 0, %6 ], [ %30, %13 ]
+  %17 = phi i32 [ 0, %6 ], [ %43, %13 ]
+  %18 = phi i8 [ 0, %6 ], [ %24, %13 ]
+  %19 = getelementptr inbounds nuw %struct.FourBytes, ptr %1, i32 %17
+  %20 = load i8, ptr %19, align 1
+  %21 = getelementptr inbounds nuw %struct.FourBytes, ptr %2, i32 %17
+  %22 = load i8, ptr %21, align 1
+  %23 = mul i8 %22, %20
+  %24 = add i8 %23, %18
+  %25 = getelementptr inbounds nuw i8, ptr %19, i32 1
+  %26 = load i8, ptr %25, align 1
+  %27 = getelementptr inbounds nuw i8, ptr %21, i32 1
+  %28 = load i8, ptr %27, align 1
+  %29 = mul i8 %28, %26
+  %30 = add i8 %29, %16
+  %31 = getelementptr inbounds nuw i8, ptr %19, i32 2
+  %32 = load i8, ptr %31, align 1
+  %33 = getelementptr inbounds nuw i8, ptr %21, i32 2
+  %34 = load i8, ptr %33, align 1
+  %35 = mul i8 %34, %32
+  %36 = add i8 %35, %15
+  %37 = getelementptr inbounds nuw i8, ptr %19, i32 3
+  %38 = load i8, ptr %37, align 1
+  %39 = getelementptr inbounds nuw i8, ptr %21, i32 3
+  %40 = load i8, ptr %39, align 1
+  %41 = mul i8 %40, %38
+  %42 = add i8 %41, %14
+  %43 = add nuw i32 %17, 1
+  %44 = icmp eq i32 %43, %3
+  br i1 %44, label %10, label %13
+}
+
+; CHECK-LABEL: mac_2d_i64
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+define hidden void @mac_2d_i64(ptr dead_on_unwind noalias writable sret(%struct.TwoLongLongs) align 8 captures(none) %agg.result, ptr noundef readonly captures(none) %x, ptr noundef readonly captures(none) %y, i32 noundef %n) {
+entry:
+  %agg.result.promoted = load i64, ptr %agg.result, align 8
+  %cmp20.not = icmp eq i32 %n, 0
+  br i1 %cmp20.not, label %for.cond.cleanup, label %for.body.lr.ph
+
+for.body.lr.ph:                                   ; preds = %entry
+  %b11 = getelementptr inbounds nuw i8, ptr %agg.result, i32 8
+  %b11.promoted = load i64, ptr %b11, align 8
+  br label %for.body
+
+for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.body
+  store i64 %add12, ptr %b11, align 8
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.for.cond.cleanup_crit_edge, %entry
+  %.lcssa = phi i64 [ %add, %for.cond.for.cond.cleanup_crit_edge ], [ %agg.result.promoted, %entry ]
+  store i64 %.lcssa, ptr %agg.result, align 8
+  ret void
+
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %0 = phi i64 [ %b11.promoted, %for.body.lr.ph ], [ %add12, %for.body ]
+  %i.021 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
+  %1 = phi i64 [ %agg.result.promoted, %for.body.lr.ph ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoInts, ptr %x, i32 %i.021
+  %2 = load i32, ptr %arrayidx, align 4
+  %conv = sext i32 %2 to i64
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoInts, ptr %y, i32 %i.021
+  %3 = load i32, ptr %arrayidx1, align 4
+  %conv3 = zext i32 %3 to i64
+  %mul = mul nsw i64 %conv3, %conv
+  %add = add nsw i64 %mul, %1
+  %b = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %4 = load i32, ptr %b, align 4
+  %conv6 = sext i32 %4 to i64
+  %b8 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %5 = load i32, ptr %b8, align 4
+  %conv9 = zext i32 %5 to i64
+  %mul10 = mul nsw i64 %conv9, %conv6
+  %add12 = add nsw i64 %mul10, %0
+  %inc = add nuw i32 %i.021, 1
+  %exitcond.not = icmp eq i32 %inc, %n
+  br i1 %exitcond.not, label %for.cond.for.cond.cleanup_crit_edge, label %for.body
+}
+
+; CHECK-LABEL: mac_4d_i64
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+define hidden void @mac_4d_i64(ptr dead_on_unwind noalias writable sret(%struct.FourLongLongs) align 8 captures(none) %agg.result, ptr noundef readonly captures(none) %x, ptr noundef readonly captures(none) %y, i32 noundef %n) {
+entry:
+  %agg.result.promoted = load i64, ptr %agg.result, align 8
+  %cmp44.not = icmp eq i32 %n, 0
+  br i1 %cmp44.not, label %for.cond.cleanup, label %for.body.lr.ph
+
+for.body.lr.ph:                                   ; preds = %entry
+  %b11 = getelementptr inbounds nuw i8, ptr %agg.result, i32 8
+  %c19 = getelementptr inbounds nuw i8, ptr %agg.result, i32 16
+  %d27 = getelementptr inbounds nuw i8, ptr %agg.result, i32 24
+  %b11.promoted = load i64, ptr %b11, align 8
+  %c19.promoted = load i64, ptr %c19, align 8
+  %d27.promoted = load i64, ptr %d27, align 8
+  br label %for.body
+
+for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.body
+  store i64 %add12, ptr %b11, align 8
+  store i64 %add20, ptr %c19, align 8
+  store i64 %add28, ptr %d27, align 8
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.for.cond.cleanup_crit_edge, %entry
+  %.lcssa = phi i64 [ %add, %for.cond.for.cond.cleanup_crit_edge ], [ %agg.result.promoted, %entry ]
+  store i64 %.lcssa, ptr %agg.result, align 8
+  ret void
+
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %0 = phi i64 [ %d27.promoted, %for.body.lr.ph ], [ %add28, %for.body ]
+  %1 = phi i64 [ %c19.promoted, %for.body.lr.ph ], [ %add20, %for.body ]
+  %2 = phi i64 [ %b11.promoted, %for.body.lr.ph ], [ %add12, %for.body ]
+  %i.045 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
+  %3 = phi i64 [ %agg.result.promoted, %for.body.lr.ph ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourInts, ptr %x, i32 %i.045
+  %4 = load i32, ptr %arrayidx, align 4
+  %conv = sext i32 %4 to i64
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourInts, ptr %y, i32 %i.045
+  %5 = load i32, ptr %arrayidx1, align 4
+  %conv3 = zext i32 %5 to i64
+  %mul = mul nsw i64 %conv3, %conv
+  %add = add nsw i64 %mul, %3
+  %b = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %6 = load i32, ptr %b, align 4
+  %conv6 = sext i32 %6 to i64
+  %b8 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %7 = load i32, ptr %b8, align 4
+  %conv9 = zext i32 %7 to i64
+  %mul10 = mul nsw i64 %conv9, %conv6
+  %add12 = add nsw i64 %mul10, %2
+  %c = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %8 = load i32, ptr %c, align 4
+  %conv14 = sext i32 %8 to i64
+  %c16 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %9 = load i32, ptr %c16, align 4
+  %conv17 = zext i32 %9 to i64
+  %mul18 = mul nsw i64 %conv17, %conv14
+  %add20 = add nsw i64 %mul18, %1
+  %d = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %10 = load i32, ptr %d, align 4
+  %conv22 = sext i32 %10 to i64
+  %d24 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %11 = load i32, ptr %d24, align 4
+  %conv25 = zext i32 %11 to i64
+  %mul26 = mul nsw i64 %conv25, %conv22
+  %add28 = add nsw i64 %mul26, %0
+  %inc = add nuw i32 %i.045, 1
+  %exitcond.not = icmp eq i32 %inc, %n
+  br i1 %exitcond.not, label %for.cond.for.cond.cleanup_crit_edge, label %for.body
 }

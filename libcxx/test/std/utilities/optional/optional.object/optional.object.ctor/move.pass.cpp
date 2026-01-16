@@ -78,26 +78,34 @@ void test_reference_extension() {
   T::reset();
   {
     T t;
-    T::reset_constructors();
-    test_ref<T&>();
-    test_ref<T&>(t);
+    {
+      T::reset_constructors();
+      test_ref<T&>();
+      test_ref<T&>(t);
+      assert(T::alive == 1);
+      assert(T::constructed == 0);
+      assert(T::assigned == 0);
+      assert(T::destroyed == 0);
+    } // destroying the optional<T&> doesn't destroy the underlying T
     assert(T::alive == 1);
-    assert(T::constructed == 0);
-    assert(T::assigned == 0);
     assert(T::destroyed == 0);
   }
   assert(T::destroyed == 1);
   assert(T::alive == 0);
   {
     T t;
-    const T& ct = t;
-    T::reset_constructors();
-    test_ref<T const&>();
-    test_ref<T const&>(t);
-    test_ref<T const&>(ct);
+    {
+      const T& ct = t;
+      T::reset_constructors();
+      test_ref<T const&>();
+      test_ref<T const&>(t);
+      test_ref<T const&>(ct);
+      assert(T::alive == 1);
+      assert(T::constructed == 0);
+      assert(T::assigned == 0);
+      assert(T::destroyed == 0);
+    }
     assert(T::alive == 1);
-    assert(T::constructed == 0);
-    assert(T::assigned == 0);
     assert(T::destroyed == 0);
   }
   assert(T::alive == 0);

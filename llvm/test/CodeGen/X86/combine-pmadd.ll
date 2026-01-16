@@ -331,3 +331,32 @@ define i1 @pmaddwd_pcmpgt_infinite_loop() {
   %8 = icmp eq i4 %7, 0
   ret i1 %8
 }
+
+; If the shuffle matches, but there is no multiply, introduce a trivial multiply by 1.
+define <8 x i32> @sext_pairwise_add(<16 x i16> %x) {
+; SSE-LABEL: sext_pairwise_add:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmovsxbw {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
+; SSE-NEXT:    pmaddwd %xmm2, %xmm0
+; SSE-NEXT:    pmaddwd %xmm2, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: sext_pairwise_add:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: sext_pairwise_add:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX2-NEXT:    retq
+  %1 = sext <16 x i16> %x to <16 x i32>
+  %2 = shufflevector <16 x i32> %1, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %3 = shufflevector <16 x i32> %1, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %4 = add nsw <8 x i32> %2, %3
+  ret <8 x i32> %4
+}

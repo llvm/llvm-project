@@ -1381,12 +1381,17 @@ __m512i test_mm512_movm_epi32(__mmask16 __A) {
   return _mm512_movm_epi32(__A); 
 }
 
+TEST_CONSTEXPR(match_v16si(_mm512_movm_epi32(0x8005), -1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1));
+
 __m512i test_mm512_movm_epi64(__mmask8 __A) {
   // CHECK-LABEL: test_mm512_movm_epi64
   // CHECK: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: %vpmovm2.i = sext <8 x i1> %{{.*}} to <8 x i64>
   return _mm512_movm_epi64(__A); 
 }
+
+TEST_CONSTEXPR(match_v8di(_mm512_movm_epi64(0x85), -1, 0, -1, 0, 0, 0, 0, -1));
+
 
 __mmask8 test_mm512_movepi64_mask(__m512i __A) {
   // CHECK-LABEL: test_mm512_movepi64_mask

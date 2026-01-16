@@ -146,7 +146,6 @@ private:
   ConditionalLibrary WavefrontSize64;
   ConditionalLibrary FiniteOnly;
   ConditionalLibrary UnsafeMath;
-  ConditionalLibrary DenormalsAreZero;
   ConditionalLibrary CorrectlyRoundedSqrt;
 
   // Maps ABI version to library path. The version number is in the format of
@@ -161,8 +160,7 @@ private:
   bool allGenericLibsValid() const {
     return !OCML.empty() && !OCKL.empty() && !OpenCL.empty() &&
            WavefrontSize64.isValid() && FiniteOnly.isValid() &&
-           UnsafeMath.isValid() && DenormalsAreZero.isValid() &&
-           CorrectlyRoundedSqrt.isValid();
+           UnsafeMath.isValid() && CorrectlyRoundedSqrt.isValid();
   }
 
   void scanLibDevicePath(llvm::StringRef Path);
@@ -252,10 +250,6 @@ public:
 
   StringRef getUnsafeMathPath(bool Enabled) const {
     return UnsafeMath.get(Enabled);
-  }
-
-  StringRef getDenormalsAreZeroPath(bool Enabled) const {
-    return DenormalsAreZero.get(Enabled);
   }
 
   StringRef getCorrectlyRoundedSqrtPath(bool Enabled) const {

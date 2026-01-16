@@ -56,6 +56,12 @@ TEST_CONSTEXPR_CXX17 bool test() {
   test_iter<forward_iterator<int*> >();
   test_iter<bidirectional_iterator<int*> >();
   test_iter<random_access_iterator<int*> >();
+
+  { // Check that [nullptr, nullptr) is an accepted range
+    auto result = std::find_if(static_cast<int*>(nullptr), static_cast<int*>(nullptr), [](int i) { return i == 0; });
+    assert(result == nullptr);
+  }
+
   return true;
 }
 

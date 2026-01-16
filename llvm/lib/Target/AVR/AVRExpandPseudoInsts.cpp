@@ -873,7 +873,7 @@ bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsELPM) {
     auto MIBLO = buildMI(MBB, MBBI, Opc);
     buildMI(MBB, MBBI, AVR::MOVRdRr)
         .addReg(DstLoReg, RegState::Define)
-        .addReg(AVR::R0, RegState::Kill);
+        .addReg(STI.getTmpRegister(), RegState::Kill);
     MIBLO.setMemRefs(MI.memoperands());
     // Increase the Z register by 1.
     if (STI.hasADDSUBIW()) {
@@ -901,7 +901,7 @@ bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsELPM) {
     auto MIBHI = buildMI(MBB, MBBI, Opc);
     buildMI(MBB, MBBI, AVR::MOVRdRr)
         .addReg(DstHiReg, RegState::Define)
-        .addReg(AVR::R0, RegState::Kill);
+        .addReg(STI.getTmpRegister(), RegState::Kill);
     MIBHI.setMemRefs(MI.memoperands());
   }
 
@@ -972,7 +972,7 @@ bool AVRExpandPseudo::expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsELPM) {
     auto MILB = buildMI(MBB, MBBI, Opc);
     buildMI(MBB, MBBI, AVR::MOVRdRr)
         .addReg(DstReg, RegState::Define)
-        .addReg(AVR::R0, RegState::Kill);
+        .addReg(STI.getTmpRegister(), RegState::Kill);
     MILB.setMemRefs(MI.memoperands());
   }
 

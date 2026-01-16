@@ -590,7 +590,6 @@ Error objdump::getMachORelocationValueString(const MachOObjectFile *Obj,
   } else
     printRelocationTargetName(Obj, RE, Fmt);
 
-  Fmt.flush();
   Result.append(FmtBuf.begin(), FmtBuf.end());
   return Error::success();
 }
@@ -3606,7 +3605,7 @@ namespace {
 
 // These are structs in the Objective-C meta data and read to produce the
 // comments for disassembly.  While these are part of the ABI they are no
-// public defintions.  So the are here not in include/llvm/BinaryFormat/MachO.h
+// public definitions.  So the are here not in include/llvm/BinaryFormat/MachO.h
 // .
 
 // The cfstring object in a 64-bit Mach-O file.

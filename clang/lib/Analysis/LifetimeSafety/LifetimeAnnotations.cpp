@@ -71,6 +71,88 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return isNormalAssignmentOperator(FD);
 }
 
+bool isInStlNamespace(const Decl *D) {
+  const DeclContext *DC = D->getDeclContext();
+  if (!DC)
+    return false;
+  if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
+    if (const IdentifierInfo *II = ND->getIdentifier()) {
+      StringRef Name = II->getName();
+      if (Name.size() >= 2 && Name.front() == '_' &&
+          (Name[1] == '_' || isUppercase(Name[1])))
+        return true;
+    }
+  return DC->isStdNamespace();
+}
+
+bool isPointerLikeType(QualType QT) {
+  return isGslPointerType(QT) || QT->isPointerType() || QT->isNullPtrType();
+}
+
+bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
+  if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
+    if (isGslPointerType(Conv->getConversionType()) &&
+        Callee->getParent()->hasAttr<OwnerAttr>())
+      return true;
+  if (!isInStlNamespace(Callee->getParent()))
+    return false;
+  if (!isGslPointerType(Callee->getFunctionObjectParameterType()) &&
+      !isGslOwnerType(Callee->getFunctionObjectParameterType()))
+    return false;
+  if (isPointerLikeType(Callee->getReturnType())) {
+    if (!Callee->getIdentifier())
+      return false;
+    return llvm::StringSwitch<bool>(Callee->getName())
+        .Cases(
+            {// Begin and end iterators.
+             "begin", "end", "rbegin", "rend", "cbegin", "cend", "crbegin",
+             "crend",
+             // Inner pointer getters.
+             "c_str", "data", "get",
+             // Map and set types.
+             "find", "equal_range", "lower_bound", "upper_bound"},
+            true)
+        .Default(false);
+  }
+  if (Callee->getReturnType()->isReferenceType()) {
+    if (!Callee->getIdentifier()) {
+      auto OO = Callee->getOverloadedOperator();
+      if (!Callee->getParent()->hasAttr<OwnerAttr>())
+        return false;
+      return OO == OverloadedOperatorKind::OO_Subscript ||
+             OO == OverloadedOperatorKind::OO_Star;
+    }
+    return llvm::StringSwitch<bool>(Callee->getName())
+        .Cases({"front", "back", "at", "top", "value"}, true)
+        .Default(false);
+  }
+  return false;
+}
+
+bool shouldTrackFirstArgument(const FunctionDecl *FD) {
+  if (!FD->getIdentifier() || FD->getNumParams() != 1)
+    return false;
+  const auto *RD = FD->getParamDecl(0)->getType()->getPointeeCXXRecordDecl();
+  if (!FD->isInStdNamespace() || !RD || !RD->isInStdNamespace())
+    return false;
+  if (!RD->hasAttr<PointerAttr>() && !RD->hasAttr<OwnerAttr>())
+    return false;
+  if (FD->getReturnType()->isPointerType() ||
+      isGslPointerType(FD->getReturnType())) {
+    return llvm::StringSwitch<bool>(FD->getName())
+        .Cases({"begin", "rbegin", "cbegin", "crbegin"}, true)
+        .Cases({"end", "rend", "cend", "crend"}, true)
+        .Case("data", true)
+        .Default(false);
+  }
+  if (FD->getReturnType()->isReferenceType()) {
+    return llvm::StringSwitch<bool>(FD->getName())
+        .Cases({"get", "any_cast"}, true)
+        .Default(false);
+  }
+  return false;
+}
+
 template <typename T> static bool isRecordWithAttr(QualType Type) {
   auto *RD = Type->getAsCXXRecordDecl();
   if (!RD)

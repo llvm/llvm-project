@@ -1,5 +1,8 @@
+// clang-format off
 // RUN: %libomptarget-compilexx-generic -O3 && %libomptarget-run-generic
 // RUN: %libomptarget-compilexx-generic -O3 -ffast-math && %libomptarget-run-generic
+// XFAIL: intelgpu
+// clang-format on
 
 #include <complex>
 #include <iostream>

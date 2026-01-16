@@ -151,7 +151,8 @@ using MBErrPair = std::pair<std::unique_ptr<MemoryBuffer>, std::error_code>;
 
 // Create a std::future that opens and maps a file using the best strategy for
 // the host platform.
-static std::future<MBErrPair> createFutureForFile(std::string path) {
+static std::future<MBErrPair> createFutureForFile(std::string path,
+                                                  bool prefetchInputs) {
 #if _WIN64
   // On Windows, file I/O is relatively slow so it is best to do this
   // asynchronously.  But 32-bit has issues with potentially launching tons
@@ -165,6 +166,9 @@ static std::future<MBErrPair> createFutureForFile(std::string path) {
                                          /*RequiresNullTerminator=*/false);
     if (!mbOrErr)
       return MBErrPair{nullptr, mbOrErr.getError()};
+    // Prefetch memory pages in the background as we will need them soon enough.
+    if (prefetchInputs)
+      (*mbOrErr)->willNeedIfMmap();
     return MBErrPair{std::move(*mbOrErr), std::error_code()};
   });
 }
@@ -340,9 +344,28 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   }
 }
 
-void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
+void LinkerDriver::handleReproFile(StringRef path, InputOpt inputOpt) {
+  if (!reproFile)
+    return;
+
+  *reproFile << '"';
+  if (inputOpt == InputOpt::DefaultLib)
+    *reproFile << "/defaultlib:";
+  else if (inputOpt == InputOpt::WholeArchive)
+    *reproFile << "/wholearchive:";
+
+  SmallString<128> absPath = path;
+  std::error_code ec = sys::fs::make_absolute(absPath);
+  if (ec)
+    Err(ctx) << "cannot find absolute path for reproFile for " << absPath
+             << ": " << ec.message();
+  sys::path::remove_dots(absPath, true);
+  *reproFile << absPath << "\"\n";
+}
+
+void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
   auto future = std::make_shared<std::future<MBErrPair>>(
-      createFutureForFile(std::string(path)));
+      createFutureForFile(std::string(path), ctx.config.prefetchInputs));
   std::string pathStr = std::string(path);
   enqueueTask([=]() {
     llvm::TimeTraceScope timeScope("File: ", path);
@@ -359,8 +382,13 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
         auto retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
                                              /*RequiresNullTerminator=*/false);
         ec = retryMb.getError();
-        if (!ec)
+        if (!ec) {
           mb = std::move(*retryMb);
+          // Prefetch memory pages in the background as we will need them soon
+          // enough.
+          if (ctx.config.prefetchInputs)
+            mb->willNeedIfMmap();
+        }
       } else {
         // We've already handled this file.
         return;
@@ -378,8 +406,11 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
         Err(ctx) << msg;
       else
         Err(ctx) << msg << "; did you mean '" << nearest << "'";
-    } else
-      ctx.driver.addBuffer(std::move(mb), wholeArchive, lazy);
+    } else {
+      handleReproFile(pathStr, inputOpt);
+      ctx.driver.addBuffer(std::move(mb), inputOpt == InputOpt::WholeArchive,
+                           lazy);
+    }
   });
 }
 
@@ -428,10 +459,9 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         StringRef parentName) {
 
   auto reportBufferError = [=](Error &&e) {
-    StringRef childName =
-      CHECK(c.getName(),
-            "could not get child name for archive " + parentName +
-            " while loading symbol " + toCOFFString(ctx, sym));
+    StringRef childName = CHECK(
+        c.getName(), "could not get child name for archive " + parentName +
+                         " while loading symbol " + toCOFFString(ctx, sym));
     Fatal(ctx) << "could not get the buffer for the member defining symbol "
                << &sym << ": " << parentName << "(" << childName
                << "): " << std::move(e);
@@ -455,8 +485,8 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
       CHECK(c.getFullName(),
             "could not get the filename for the member defining symbol " +
                 toCOFFString(ctx, sym));
-  auto future =
-      std::make_shared<std::future<MBErrPair>>(createFutureForFile(childName));
+  auto future = std::make_shared<std::future<MBErrPair>>(
+      createFutureForFile(childName, ctx.config.prefetchInputs));
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
@@ -537,7 +567,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       break;
     case OPT_defaultlib:
       if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
-        enqueuePath(*path, false, false);
+        enqueuePath(*path, false, InputOpt::DefaultLib);
       break;
     case OPT_entry:
       if (!arg->getValue()[0])
@@ -1638,6 +1668,15 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       }
     }
   }
+  // Handle /linkreprofullpathrsp
+  if (auto *arg = args.getLastArg(OPT_linkreprofullpathrsp)) {
+    std::error_code ec;
+    reproFile = std::make_unique<raw_fd_ostream>(arg->getValue(), ec);
+    if (ec) {
+      Err(ctx) << "cannot open " << arg->getValue() << ": " << ec.message();
+      reproFile.reset();
+    }
+  }
 
   if (!args.hasArg(OPT_INPUT, OPT_wholearchive_file)) {
     if (args.hasArg(OPT_deffile))
@@ -2239,6 +2278,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->incremental = false;
   }
 
+  if (args.hasFlag(OPT_prefetch_inputs, OPT_prefetch_inputs_no, false))
+    config->prefetchInputs = true;
+
   if (errCount(ctx))
     return;
 
@@ -2280,11 +2322,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         break;
       case OPT_wholearchive_file:
         if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
-          enqueuePath(*path, true, inLib);
+          enqueuePath(*path, inLib, InputOpt::WholeArchive);
         break;
       case OPT_INPUT:
         if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
-          enqueuePath(*path, isWholeArchive(*path), inLib);
+          enqueuePath(*path, inLib,
+                      isWholeArchive(*path) ? InputOpt::WholeArchive
+                                            : InputOpt::None);
         break;
       default:
         // Ignore other options.
@@ -2324,7 +2368,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // addWinSysRootLibSearchPaths(), which is why they are in a separate loop.
   for (auto *arg : args.filtered(OPT_defaultlib))
     if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
-      enqueuePath(*path, false, false);
+      enqueuePath(*path, false, InputOpt::DefaultLib);
   run();
   if (errorCount())
     return;
@@ -2889,6 +2933,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   rootTimer.stop();
   if (config->showTiming)
     ctx.rootTimer.print();
+
+  // Clean up /linkreprofullpathrsp file
+  reproFile.reset();
 
   if (config->timeTraceEnabled) {
     // Manually stop the topmost "COFF link" scope, since we're shutting down.

@@ -3,3 +3,5 @@ Name: Templates
 Tags:
 - Name: Box
   SwiftImportAs: owned
+- Name: MoveOnly
+  SwiftCopyable: false

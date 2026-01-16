@@ -630,10 +630,6 @@ define float @v_fdiv_f32_dynamic_25ulp(float %x, float %y) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_ldexp_f32 v0, v2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_dynamic_25ulp:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv float %x, %y, !fpmath !0
   ret float %div
 }
@@ -2807,10 +2803,6 @@ define float @v_fdiv_f32_dynamic__nnan_ninf(float %x, float %y, float %z) #0 {
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_dynamic__nnan_ninf:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv nnan ninf float %x, %y
   ret float %div
 }
@@ -2924,10 +2916,6 @@ define float @v_fdiv_f32_dynamic_25ulp__nnan_ninf(float %x, float %y, float %z) 
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_ldexp_f32 v0, v2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_dynamic_25ulp__nnan_ninf:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv nnan ninf float %x, %y, !fpmath !0
   ret float %div
 }
@@ -3048,10 +3036,6 @@ define float @v_fdiv_f32_dynamic_25ulp__nnan_ninf_contractable_user(float %x, fl
 ; GFX11-NEXT:    v_ldexp_f32 v0, v3, v0
 ; GFX11-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_dynamic_25ulp__nnan_ninf_contractable_user:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv nnan ninf contract float %x, %y, !fpmath !0
   %add = fadd contract float %div, %z
   ret float %add
@@ -3334,10 +3318,6 @@ define float @v_fdiv_neglhs_f32_dynamic(float %x, float %y) #0 {
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v1, -v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_neglhs_f32_dynamic:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %neg.x = fneg float %x
   %div = fdiv float %neg.x, %y
   ret float %div
@@ -3452,10 +3432,6 @@ define float @v_fdiv_neglhs_f32_dynamic_25ulp(float %x, float %y) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_ldexp_f32 v0, v2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_neglhs_f32_dynamic_25ulp:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %neg.x = fneg float %x
   %div = fdiv float %neg.x, %y, !fpmath !0
   ret float %div
@@ -3738,10 +3714,6 @@ define float @v_fdiv_negrhs_f32_dynamic(float %x, float %y) #0 {
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, -v1, v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_negrhs_f32_dynamic:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %neg.y = fneg float %y
   %div = fdiv float %x, %neg.y
   ret float %div
@@ -4022,10 +3994,6 @@ define float @v_fdiv_f32_constrhs0_dynamic(float %x) #0 {
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, 0x4640e400, v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_constrhs0_dynamic:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv float %x, 12345.0
   ret float %div
 }
@@ -4117,10 +4085,6 @@ define float @v_fdiv_f32_constrhs0_dynamic_25ulp(float %x) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_ldexp_f32 v0, v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_constrhs0_dynamic_25ulp:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv float %x, 12345.0, !fpmath !0
   ret float %div
 }
@@ -4400,10 +4364,6 @@ define float @v_fdiv_f32_constlhs0_dynamic(float %x) #0 {
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, 0x4640e400
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_constlhs0_dynamic:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv float 12345.0, %x
   ret float %div
 }
@@ -4500,10 +4460,6 @@ define float @v_fdiv_f32_constlhs0_dynamic_25ulp(float %x) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_ldexp_f32 v0, v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_constlhs0_dynamic_25ulp:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv float 12345.0, %x, !fpmath !0
   ret float %div
 }
@@ -4773,10 +4729,6 @@ define float @v_fdiv_f32_dynamic_nodenorm_x(float nofpclass(sub) %x, float %y) #
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_dynamic_nodenorm_x:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv float %x, %y
   ret float %div
 }
@@ -4890,10 +4842,6 @@ define float @v_fdiv_f32_dynamic_25ulp_nodenorm_x(float nofpclass(sub) %x, float
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_ldexp_f32 v0, v2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_dynamic_25ulp_nodenorm_x:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv float %x, %y, !fpmath !0
   ret float %div
 }
@@ -5162,10 +5110,6 @@ define float @v_fdiv_f32_dynamic_nodenorm_y(float %x, float nofpclass(sub) %y) #
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_dynamic_nodenorm_y:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv float %x, %y
   ret float %div
 }
@@ -5279,10 +5223,6 @@ define float @v_fdiv_f32_dynamic_25ulp_nodenorm_y(float %x, float nofpclass(sub)
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_ldexp_f32 v0, v2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-; EG-LABEL: v_fdiv_f32_dynamic_25ulp_nodenorm_y:
-; EG:       ; %bb.0:
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
   %div = fdiv float %x, %y, !fpmath !0
   ret float %div
 }

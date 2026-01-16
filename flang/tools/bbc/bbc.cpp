@@ -418,7 +418,10 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   }
 
   if (pftDumpTest) {
-    if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext)) {
+    // Use default lowering options for PFT dump test
+    Fortran::lower::LoweringOptions loweringOptions{};
+    if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext,
+                                             loweringOptions)) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
       return mlir::success();
     }
@@ -635,11 +638,10 @@ int main(int argc, char **argv) {
         Fortran::common::LanguageFeature::CudaWarpMatchFunction, false);
   }
 
-  if (enableGPUMode == "managed") {
+  if (enableGPUMode == "managed")
     options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
-  } else if (enableGPUMode == "unified") {
+  else if (enableGPUMode == "unified")
     options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
-  }
 
   if (fixedForm) {
     options.isFixedForm = fixedForm;

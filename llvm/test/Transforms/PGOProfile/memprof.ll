@@ -400,10 +400,10 @@ for.end:                                          ; preds = %for.cond
 ;; with the full allocation context hash, type, and size in bytes.
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 8525406123785421946 and dominant alloc type cold: 10
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 11714230664165068698 and dominant alloc type cold: 10
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 5725971306423925017 and dominant alloc type cold: 10
+; TOTALSIZESTHRESH60: Total size for ignored non-cold full allocation context hash 5725971306423925017: 10
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 16342802530253093571 and dominant alloc type cold: 10
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 18254812774972004394 and dominant alloc type cold: 10
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 1093248920606587996 and dominant alloc type cold: 10
+; TOTALSIZESTHRESH60: Total size for ignored non-cold full allocation context hash 1093248920606587996: 10
 ; TOTALSIZESSINGLE: Total size for full allocation context hash 6792096022461663180 and single alloc type notcold: 10
 ; REMARKSINGLE: remark: memprof.cc:25:13: call in function main marked with memprof allocation attribute notcold
 ; TOTALSIZESSINGLE: Total size for full allocation context hash 15737101490731057601 and single alloc type cold: 10

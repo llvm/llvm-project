@@ -129,7 +129,7 @@ void transform::tune::AlternativesOp::getSuccessorRegions(
       for (Region &alternative : getAlternatives())
         regions.emplace_back(&alternative, Block::BlockArgListType());
   else
-    regions.emplace_back(getOperation(), getOperation()->getResults());
+    regions.push_back(RegionSuccessor::parent(getResults()));
 }
 
 void transform::tune::AlternativesOp::getRegionInvocationBounds(

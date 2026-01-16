@@ -16,12 +16,14 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstdint>
 #include <cstring>
 #include <mutex>
 #include <system_error>
@@ -128,7 +130,6 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   switch (thread.GetStopReason()) {
   case lldb::eStopReasonTrace:
   case lldb::eStopReasonPlanComplete:
-  case lldb::eStopReasonBreakpoint:
   case lldb::eStopReasonWatchpoint:
   case lldb::eStopReasonInstrumentation:
   case lldb::eStopReasonSignal:
@@ -141,6 +142,20 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonInterrupt:
   case lldb::eStopReasonHistoryBoundary:
     return true;
+  case lldb::eStopReasonBreakpoint: {
+    // Stop reason data for breakpoints consists of breakpoint ID and location
+    // ID pairs. Internal breakpoints (identified by their ID) are not
+    // considered valid stop reasons.
+    const uint64_t data_count = thread.GetStopReasonDataCount();
+    if (data_count == 0)
+      return true;
+    for (uint64_t i = 0; i < data_count; i += 2) {
+      const lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
+      if (!LLDB_BREAK_ID_IS_INTERNAL(bp_id))
+        return true;
+    }
+    return false;
+  }
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:
   case lldb::eStopReasonNone:
@@ -159,8 +174,8 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id) {
   return dap_frame_id & ((1u << THREAD_INDEX_SHIFT) - 1);
 }
 
-int64_t MakeDAPFrameID(lldb::SBFrame &frame) {
-  return ((int64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
+uint64_t MakeDAPFrameID(lldb::SBFrame &frame) {
+  return ((uint64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
          frame.GetFrameID();
 }
 

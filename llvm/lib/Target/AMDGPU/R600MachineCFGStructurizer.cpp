@@ -1401,7 +1401,7 @@ void R600MachineCFGStructurizer::mergeLoopbreakBlock(MachineBasicBlock *ExitingM
                     << LandMBB->getNumber() << "\n";);
   MachineInstr *BranchMI = getLoopendBlockBranchInstr(ExitingMBB);
   assert(BranchMI && isCondBranch(BranchMI));
-  DebugLoc DL = BranchMI->getDebugLoc();
+  const DebugLoc &DL = BranchMI->getDebugLoc();
   MachineBasicBlock *TrueBranch = getTrueBranch(BranchMI);
   MachineBasicBlock::iterator I = BranchMI;
   if (TrueBranch != LandMBB)
@@ -1427,7 +1427,7 @@ void R600MachineCFGStructurizer::settleLoopcontBlock(MachineBasicBlock *ContingM
     MachineBasicBlock::iterator I = MI;
     MachineBasicBlock *TrueBranch = getTrueBranch(MI);
     int OldOpcode = MI->getOpcode();
-    DebugLoc DL = MI->getDebugLoc();
+    const DebugLoc &DL = MI->getDebugLoc();
 
     bool UseContinueLogical = ((&*ContingMBB->rbegin()) == MI);
 

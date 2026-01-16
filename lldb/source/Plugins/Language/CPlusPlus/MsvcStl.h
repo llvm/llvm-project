@@ -19,6 +19,8 @@ namespace formatters {
 
 bool IsMsvcStlStringType(ValueObject &valobj);
 
+bool IsMsvcStlStringViewType(ValueObject &valobj);
+
 template <StringPrinter::StringElementType element_type>
 bool MsvcStlStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
@@ -118,6 +120,12 @@ bool IsMsvcStlDeque(ValueObject &valobj);
 SyntheticChildrenFrontEnd *
 MsvcStlDequeSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                      lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::span<>
+bool IsMsvcStlSpan(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                    lldb::ValueObjectSP valobj_sp);
 
 } // namespace formatters
 } // namespace lldb_private

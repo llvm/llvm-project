@@ -566,6 +566,10 @@ private:
   /// Contextual keywords for Microsoft extensions.
   IdentifierInfo *Ident__except;
 
+  // C++2a contextual keywords.
+  mutable IdentifierInfo *Ident_import;
+  mutable IdentifierInfo *Ident_module;
+
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
   /// Gets set to true after calling ProduceSignatureHelp, it is for a
@@ -1077,9 +1081,6 @@ private:
   bool ParseModuleName(SourceLocation UseLoc,
                        SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
-  void DiagnoseInvalidCXXModuleDecl(const Sema::ModuleImportState &ImportState);
-  void DiagnoseInvalidCXXModuleImport();
-
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through
   void CodeCompleteDirective(bool InConditional) override;
@@ -1090,8 +1091,6 @@ private:
                                  unsigned ArgumentIndex) override;
   void CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled) override;
   void CodeCompleteNaturalLanguage() override;
-  void CodeCompleteModuleImport(SourceLocation ImportLoc,
-                                ModuleIdPath Path) override;
 
   ///@}
 
@@ -2118,10 +2117,14 @@ private:
 
   ExprResult ParseUnevaluatedStringInAttribute(const IdentifierInfo &AttrName);
 
-  bool
-  ParseAttributeArgumentList(const clang::IdentifierInfo &AttrName,
-                             SmallVectorImpl<Expr *> &Exprs,
-                             ParsedAttributeArgumentsProperties ArgsProperties);
+  /// Parses a comma-delimited list of arguments of an attribute \p AttrName,
+  /// filling \p Exprs. \p ArgsProperties specifies which of the arguments
+  /// should be parsed as unevaluated string literals. \p Arg is the number
+  /// of arguments parsed before calling / this function (the index of the
+  /// argument to be parsed next).
+  bool ParseAttributeArgumentList(
+      const IdentifierInfo &AttrName, SmallVectorImpl<Expr *> &Exprs,
+      ParsedAttributeArgumentsProperties ArgsProperties, unsigned Arg);
 
   /// Parses syntax-generic attribute arguments for attributes which are
   /// known to the implementation, and adds them to the given ParsedAttributes
@@ -2835,7 +2838,6 @@ private:
   mutable IdentifierInfo *Ident_final;
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
-  mutable IdentifierInfo *Ident_trivially_relocatable_if_eligible;
 
   /// Representation of a class that has been parsed, including
   /// any member function declarations or definitions that need to be
@@ -3598,10 +3600,6 @@ private:
   ///         'public'
   /// \endverbatim
   AccessSpecifier getAccessSpecifierIfPresent() const;
-
-  bool isCXX2CTriviallyRelocatableKeyword(Token Tok) const;
-  bool isCXX2CTriviallyRelocatableKeyword() const;
-  void ParseCXX2CTriviallyRelocatableSpecifier(SourceLocation &TRS);
 
   /// 'final', a C++26 'trivially_relocatable_if_eligible',
   /// or Microsoft 'sealed' or 'abstract' contextual

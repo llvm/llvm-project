@@ -1401,7 +1401,8 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
 
   SmallPtrSet<ConstantInt *, 4> Cases;
   for (uint64_t I = 0; I < N; ++I) {
-    ConstantInt *CaseVal = ConstantInt::get(ByteTy, Str[I]);
+    ConstantInt *CaseVal =
+        ConstantInt::get(ByteTy, static_cast<unsigned char>(Str[I]));
     if (!Cases.insert(CaseVal).second)
       continue;
 

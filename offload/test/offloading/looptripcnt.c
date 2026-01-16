@@ -1,5 +1,8 @@
+// clang-format off
 // RUN: %libomptarget-compile-generic && env LIBOMPTARGET_DEBUG=1 %libomptarget-run-generic 2>&1 | %fcheck-generic -allow-empty -check-prefix=DEBUG
 // REQUIRES: libomptarget-debug
+// XFAIL: intelgpu
+// clang-format on
 
 /*
   Test for looptripcount being popped from runtime stack.

@@ -165,9 +165,7 @@ bool Message::SortBefore(const Message &that) const {
       location_, that.location_);
 }
 
-bool Message::IsFatal() const {
-  return severity() == Severity::Error || severity() == Severity::Todo;
-}
+bool Message::IsFatal() const { return IsFatalSeverity(severity()); }
 
 Severity Message::severity() const {
   return common::visit(
@@ -258,6 +256,7 @@ std::optional<ProvenanceRange> Message::GetProvenanceRange(
 static std::string Prefix(Severity severity) {
   switch (severity) {
   case Severity::Error:
+  case Severity::ErrorUnlessDeadCode:
     return "error: ";
   case Severity::Warning:
     return "warning: ";
@@ -276,18 +275,13 @@ static std::string Prefix(Severity severity) {
 }
 
 static llvm::raw_ostream::Colors PrefixColor(Severity severity) {
-  switch (severity) {
-  case Severity::Error:
-  case Severity::Todo:
+  if (IsFatalSeverity(severity)) {
     return llvm::raw_ostream::RED;
-  case Severity::Warning:
-  case Severity::Portability:
+  } else if (IsWarningSeverity(severity)) {
     return llvm::raw_ostream::MAGENTA;
-  default:
-    // TODO: Set the color.
-    break;
+  } else {
+    return llvm::raw_ostream::SAVEDCOLOR;
   }
-  return llvm::raw_ostream::SAVEDCOLOR;
 }
 
 static std::string HintLanguageControlFlag(

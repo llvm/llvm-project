@@ -159,7 +159,6 @@ public:
   /// \returns Returns true if any modules with that symbol found.
   virtual bool lookupMissingImports(StringRef Name,
                                     SourceLocation TriggerLoc) = 0;
-  static std::string getFlatNameFromPath(ModuleIdPath Path);
 
   bool HadFatalFailure = false;
 };

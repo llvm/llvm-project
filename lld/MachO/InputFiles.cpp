@@ -575,7 +575,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     int64_t embeddedAddend = target->getEmbeddedAddend(mb, sec.offset, relInfo);
     assert(!(embeddedAddend && pairedAddend));
     int64_t totalAddend = pairedAddend + embeddedAddend;
-    Reloc r;
+    Relocation r;
     r.type = relInfo.r_type;
     r.pcrel = relInfo.r_pcrel;
     r.length = relInfo.r_length;
@@ -633,7 +633,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       // attached to the same address.
       assert(target->hasAttr(minuendInfo.r_type, RelocAttrBits::UNSIGNED) &&
              relInfo.r_address == minuendInfo.r_address);
-      Reloc p;
+      Relocation p;
       p.type = minuendInfo.r_type;
       if (minuendInfo.r_extern) {
         p.referent = symbols[minuendInfo.r_symbolnum];
@@ -1161,7 +1161,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
 
     ConcatInputSection *referentIsec;
     for (auto it = isec->relocs.begin(); it != isec->relocs.end();) {
-      Reloc &r = *it;
+      Relocation &r = *it;
       // CUE::functionAddress is at offset 0. Skip personality & LSDA relocs.
       if (r.offset != 0) {
         ++it;
@@ -1337,9 +1337,9 @@ static CIE parseCIE(const InputSection *isec, const EhReader &reader,
 template <bool Invert = false>
 Defined *
 targetSymFromCanonicalSubtractor(const InputSection *isec,
-                                 std::vector<macho::Reloc>::iterator relocIt) {
-  macho::Reloc &subtrahend = *relocIt;
-  macho::Reloc &minuend = *std::next(relocIt);
+                                 std::vector<Relocation>::iterator relocIt) {
+  Relocation &subtrahend = *relocIt;
+  Relocation &minuend = *std::next(relocIt);
   assert(target->hasAttr(subtrahend.type, RelocAttrBits::SUBTRAHEND));
   assert(target->hasAttr(minuend.type, RelocAttrBits::UNSIGNED));
   // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
@@ -1364,7 +1364,7 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
     // `oldSym->value + oldOffset == newSym + newOffset`. However, we don't
     // have an easy way to access the offsets from this point in the code; some
     // refactoring is needed for that.
-    macho::Reloc &pcReloc = Invert ? minuend : subtrahend;
+    Relocation &pcReloc = Invert ? minuend : subtrahend;
     pcReloc.referent = isec->symbols[0];
     assert(isec->symbols[0]->value == 0);
     minuend.addend = pcReloc.offset * (Invert ? 1LL : -1LL);
@@ -1419,8 +1419,9 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
     const size_t cieOffOff = dataOff;
 
     EhRelocator ehRelocator(isec);
-    auto cieOffRelocIt = llvm::find_if(
-        isec->relocs, [=](const Reloc &r) { return r.offset == cieOffOff; });
+    auto cieOffRelocIt = llvm::find_if(isec->relocs, [=](const Relocation &r) {
+      return r.offset == cieOffOff;
+    });
     InputSection *cieIsec = nullptr;
     if (cieOffRelocIt != isec->relocs.end()) {
       // We already have an explicit relocation for the CIE offset.

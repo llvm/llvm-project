@@ -16554,6 +16554,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_holds:
     Res = ActOnOpenMPHoldsClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_transparent:
+    Res = ActOnOpenMPTransparentClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_dyn_groupprivate:
   case OMPC_grainsize:
   case OMPC_num_tasks:
@@ -17455,6 +17458,64 @@ OMPClause *SemaOpenMP::ActOnOpenMPThreadsetClause(OpenMPThreadsetKind Kind,
 
   return new (getASTContext())
       OMPThreadsetClause(Kind, KindLoc, StartLoc, LParenLoc, EndLoc);
+}
+
+static OMPClause *createTransparentClause(Sema &SemaRef, ASTContext &Ctx,
+                                          Expr *ImpexTypeArg,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation EndLoc) {
+  ExprResult ER = SemaRef.DefaultLvalueConversion(ImpexTypeArg);
+  if (ER.isInvalid())
+    return nullptr;
+
+  return new (Ctx) OMPTransparentClause(ER.get(), StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(Expr *ImpexTypeArg,
+                                                    SourceLocation StartLoc,
+                                                    SourceLocation LParenLoc,
+                                                    SourceLocation EndLoc) {
+  QualType Ty = ImpexTypeArg->getType();
+
+  if (const auto *TT = Ty->getAs<TypedefType>()) {
+    const TypedefNameDecl *TypedefDecl = TT->getDecl();
+    llvm::StringRef TypedefName = TypedefDecl->getName();
+    IdentifierInfo &II = SemaRef.PP.getIdentifierTable().get(TypedefName);
+    ParsedType ImpexTy =
+        SemaRef.getTypeName(II, StartLoc, SemaRef.getCurScope());
+    if (!ImpexTy.getAsOpaquePtr() || ImpexTy.get().isNull()) {
+      SemaRef.Diag(StartLoc, diag::err_omp_implied_type_not_found)
+          << TypedefName;
+      return nullptr;
+    }
+    return createTransparentClause(SemaRef, getASTContext(), ImpexTypeArg,
+                                   StartLoc, LParenLoc, EndLoc);
+  }
+
+  if (Ty->isEnumeralType())
+    return createTransparentClause(SemaRef, getASTContext(), ImpexTypeArg,
+                                   StartLoc, LParenLoc, EndLoc);
+
+  if (Ty->isIntegerType()) {
+    if (isNonNegativeIntegerValue(ImpexTypeArg, SemaRef, OMPC_transparent,
+                                  /*StrictlyPositive=*/false)) {
+      ExprResult Value =
+          SemaRef.OpenMP().PerformOpenMPImplicitIntegerConversion(StartLoc,
+                                                                  ImpexTypeArg);
+      if (std::optional<llvm::APSInt> Result =
+              Value.get()->getIntegerConstantExpr(SemaRef.Context)) {
+        if (Result->isNegative() ||
+            Result >
+                static_cast<int64_t>(SemaOpenMP::OpenMPImpexType::OMP_Export))
+          SemaRef.Diag(StartLoc, diag::err_omp_transparent_invalid_value);
+      }
+      return createTransparentClause(SemaRef, getASTContext(), ImpexTypeArg,
+                                     StartLoc, LParenLoc, EndLoc);
+    }
+  }
+  SemaRef.Diag(StartLoc, diag::err_omp_transparent_invalid_type) << Ty;
+  return nullptr;
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPProcBindClause(ProcBindKind Kind,

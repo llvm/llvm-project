@@ -1169,6 +1169,13 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
             "unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u);\n"
          << "  ~" << ClassName << "() override = default;\n"
          << "};\n";
+
+      // Declare RegClassByHwModeTables, so that other files can use this
+      // without having to indirect via MCInstInfo.
+      if (NumClassesByHwMode != 0) {
+        OS << "extern const int16_t " << TargetName << "RegClassByHwModeTables["
+           << NumModes << "][" << NumClassesByHwMode << "];\n";
+      }
     } // end llvm namespace.
 
     OS << "\n";
@@ -1204,11 +1211,6 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
        << "Descs;\n";
     OS << "extern const unsigned " << TargetName << "InstrNameIndices[];\n";
     OS << "extern const char " << TargetName << "InstrNameData[];\n";
-
-    if (NumClassesByHwMode != 0) {
-      OS << "extern const int16_t " << TargetName << "RegClassByHwModeTables["
-         << NumModes << "][" << NumClassesByHwMode << "];\n";
-    }
 
     if (HasDeprecationFeatures)
       OS << "extern const uint8_t " << TargetName

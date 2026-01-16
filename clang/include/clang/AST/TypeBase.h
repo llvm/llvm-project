@@ -2284,7 +2284,7 @@ protected:
     Last = PtrdiffT
   };
 
-  class PresefinedSugarTypeBitfields {
+  class PredefinedSugarTypeBitfields {
     friend class PredefinedSugarType;
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
@@ -2332,7 +2332,7 @@ protected:
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
     PackExpansionTypeBitfields PackExpansionTypeBits;
     CountAttributedTypeBitfields CountAttributedTypeBits;
-    PresefinedSugarTypeBitfields PredefinedSugarTypeBits;
+    PredefinedSugarTypeBitfields PredefinedSugarTypeBits;
   };
 
 private:
@@ -6797,9 +6797,8 @@ public:
   SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
       : Kind(Kind), ResultType(ResultType), Value(std::move(Value)) {}
 
-  SpirvOperand(const SpirvOperand &Other) { *this = Other; }
-  ~SpirvOperand() {}
-
+  SpirvOperand(const SpirvOperand &Other) = default;
+  ~SpirvOperand() = default;
   SpirvOperand &operator=(const SpirvOperand &Other) = default;
 
   bool operator==(const SpirvOperand &Other) const {

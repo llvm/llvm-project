@@ -862,12 +862,10 @@ define i9 @fshr_shift_undef(i9 %x, i9 %y) {
   ret i9 %r
 }
 
-; If one of operands is poison, the result is poison
-; TODO: these should be poison
+; If one of the operands is poison, the result is poison
 define i8 @fshl_ops_poison(i8 %b, i8 %shamt) {
 ; CHECK-LABEL: @fshl_ops_poison(
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 poison, i8 [[B:%.*]], i8 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.fshl.i8(i8 poison, i8 %b, i8 %shamt)
   ret i8 %r
@@ -875,7 +873,7 @@ define i8 @fshl_ops_poison(i8 %b, i8 %shamt) {
 
 define i8 @fshl_ops_poison2(i8 %shamt) {
 ; CHECK-LABEL: @fshl_ops_poison2(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.fshl.i8(i8 poison, i8 undef, i8 %shamt)
   ret i8 %r
@@ -883,8 +881,7 @@ define i8 @fshl_ops_poison2(i8 %shamt) {
 
 define i8 @fshl_ops_poison3(i8 %a, i8 %shamt) {
 ; CHECK-LABEL: @fshl_ops_poison3(
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 [[A:%.*]], i8 poison, i8 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.fshl.i8(i8 %a, i8 poison, i8 %shamt)
   ret i8 %r
@@ -892,7 +889,7 @@ define i8 @fshl_ops_poison3(i8 %a, i8 %shamt) {
 
 define i8 @fshl_ops_poison4(i8 %shamt) {
 ; CHECK-LABEL: @fshl_ops_poison4(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.fshl.i8(i8 undef, i8 poison, i8 %shamt)
   ret i8 %r
@@ -900,7 +897,7 @@ define i8 @fshl_ops_poison4(i8 %shamt) {
 
 define i8 @fshl_ops_poison5(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fshl_ops_poison5(
-; CHECK-NEXT:    ret i8 [[A:%.*]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.fshl.i8(i8 %a, i8 %b, i8 poison)
   ret i8 %r
@@ -908,7 +905,7 @@ define i8 @fshl_ops_poison5(i8 %a, i8 %b) {
 
 define i8 @fshl_ops_poison6() {
 ; CHECK-LABEL: @fshl_ops_poison6(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.fshl.i8(i8 undef, i8 undef, i8 poison)
   ret i8 %r
@@ -916,8 +913,7 @@ define i8 @fshl_ops_poison6() {
 
 define i9 @fshr_ops_poison(i9 %b, i9 %shamt) {
 ; CHECK-LABEL: @fshr_ops_poison(
-; CHECK-NEXT:    [[R:%.*]] = call i9 @llvm.fshr.i9(i9 poison, i9 [[B:%.*]], i9 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i9 [[R]]
+; CHECK-NEXT:    ret i9 poison
 ;
   %r = call i9 @llvm.fshr.i9(i9 poison, i9 %b, i9 %shamt)
   ret i9 %r
@@ -925,7 +921,7 @@ define i9 @fshr_ops_poison(i9 %b, i9 %shamt) {
 
 define i9 @fshr_ops_poison2(i9 %shamt) {
 ; CHECK-LABEL: @fshr_ops_poison2(
-; CHECK-NEXT:    ret i9 undef
+; CHECK-NEXT:    ret i9 poison
 ;
   %r = call i9 @llvm.fshr.i9(i9 poison, i9 undef, i9 %shamt)
   ret i9 %r
@@ -933,8 +929,7 @@ define i9 @fshr_ops_poison2(i9 %shamt) {
 
 define i9 @fshr_ops_poison3(i9 %a, i9 %shamt) {
 ; CHECK-LABEL: @fshr_ops_poison3(
-; CHECK-NEXT:    [[R:%.*]] = call i9 @llvm.fshr.i9(i9 [[A:%.*]], i9 poison, i9 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i9 [[R]]
+; CHECK-NEXT:    ret i9 poison
 ;
   %r = call i9 @llvm.fshr.i9(i9 %a, i9 poison, i9 %shamt)
   ret i9 %r
@@ -942,7 +937,7 @@ define i9 @fshr_ops_poison3(i9 %a, i9 %shamt) {
 
 define i9 @fshr_ops_poison4(i9 %shamt) {
 ; CHECK-LABEL: @fshr_ops_poison4(
-; CHECK-NEXT:    ret i9 undef
+; CHECK-NEXT:    ret i9 poison
 ;
   %r = call i9 @llvm.fshr.i9(i9 undef, i9 poison, i9 %shamt)
   ret i9 %r
@@ -950,7 +945,7 @@ define i9 @fshr_ops_poison4(i9 %shamt) {
 
 define i9 @fshr_ops_poison5(i9 %a, i9 %b) {
 ; CHECK-LABEL: @fshr_ops_poison5(
-; CHECK-NEXT:    ret i9 [[B:%.*]]
+; CHECK-NEXT:    ret i9 poison
 ;
   %r = call i9 @llvm.fshr.i9(i9 %a, i9 %b, i9 poison)
   ret i9 %r
@@ -958,7 +953,7 @@ define i9 @fshr_ops_poison5(i9 %a, i9 %b) {
 
 define i9 @fshr_ops_poison6() {
 ; CHECK-LABEL: @fshr_ops_poison6(
-; CHECK-NEXT:    ret i9 undef
+; CHECK-NEXT:    ret i9 poison
 ;
   %r = call i9 @llvm.fshr.i9(i9 undef, i9 undef, i9 poison)
   ret i9 %r
@@ -1379,7 +1374,7 @@ declare float @fmaxf(float, float)
 
 define float @nobuiltin_fmax() {
 ; CHECK-LABEL: @nobuiltin_fmax(
-; CHECK-NEXT:    [[M:%.*]] = call float @fmaxf(float 0.000000e+00, float 1.000000e+00) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[M:%.*]] = call float @fmaxf(float 0.000000e+00, float 1.000000e+00) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[M]])
 ; CHECK-NEXT:    ret float [[R]]
 ;

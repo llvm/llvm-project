@@ -19,10 +19,10 @@
 
 // Basic PTX check to make sure we are generating the right instructions.
 // CHECK-PTX: mbarrier.init.shared.b64
-// CHECK-PTX: mbarrier.arrive.expect_tx.shared.b64
-// CHECK-PTX: cp.async.bulk.tensor.2d.shared::cluster.global.tile.mbarrier::complete_tx::bytes
-// CHECK-PTX: cp.async.bulk.tensor.2d.shared::cluster.global.tile.mbarrier::complete_tx::bytes
-// CHECK-PTX: mbarrier.arrive.expect_tx.shared.b64
+// CHECK-PTX-DAG: mbarrier.arrive.expect_tx.shared.b64
+// CHECK-PTX-DAG: cp.async.bulk.tensor.2d.shared::cluster.global.tile.mbarrier::complete_tx::bytes
+// CHECK-PTX-DAG: cp.async.bulk.tensor.2d.shared::cluster.global.tile.mbarrier::complete_tx::bytes
+// CHECK-PTX-DAG: mbarrier.arrive.expect_tx.shared.b64
 // CHECK-PTX: mbarrier.try_wait.parity.shared.b64
 
 // RUN: mlir-opt %s \

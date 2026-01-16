@@ -14,7 +14,7 @@ EXIT_SUCCESS = 0
 
 class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
     def launch(self):
-        log_file_path = self.getBuildArtifact("dap.txt")
+        log_file_path = self.getBuildArtifact("dap.log")
         process, _ = dap_server.DebugAdapterServer.launch(
             executable=self.lldbDAPExec, log_file=log_file_path
         )

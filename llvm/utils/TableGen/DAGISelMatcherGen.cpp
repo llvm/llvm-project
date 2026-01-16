@@ -11,8 +11,8 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
-#include "Common/DAGISelMatcher.h"
 #include "Common/InfoByHwMode.h"
+#include "DAGISelMatcher.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TableGen/Error.h"
@@ -536,7 +536,7 @@ void MatcherGen::EmitMatchCode(const TreePatternNode &N,
   }
 
   for (unsigned I : ResultsToTypeCheck)
-    AddMatcher(new CheckTypeMatcher(N.getSimpleType(I), I));
+    AddMatcher(new CheckTypeMatcher(N.getType(I), I));
 }
 
 /// EmitMatcherCode - Generate the code that matches the predicate of this
@@ -660,7 +660,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
   assert(N.isLeaf() && "Must be a leaf");
 
   if (const IntInit *II = dyn_cast<IntInit>(N.getLeafValue())) {
-    AddMatcher(new EmitIntegerMatcher(II->getValue(), N.getSimpleType(0),
+    AddMatcher(new EmitIntegerMatcher(II->getValue(), N.getType(0),
                                       NextRecordedOperandNo));
     ResultOps.push_back(NextRecordedOperandNo++);
     return;
@@ -671,21 +671,21 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
     const Record *Def = DI->getDef();
     if (Def->isSubClassOf("Register")) {
       const CodeGenRegister *Reg = CGP.getTargetInfo().getRegBank().getReg(Def);
-      AddMatcher(new EmitRegisterMatcher(Reg, N.getSimpleType(0),
-                                         NextRecordedOperandNo));
+      AddMatcher(
+          new EmitRegisterMatcher(Reg, N.getType(0), NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
 
     if (Def->getName() == "zero_reg") {
-      AddMatcher(new EmitRegisterMatcher(nullptr, N.getSimpleType(0),
+      AddMatcher(new EmitRegisterMatcher(nullptr, N.getType(0),
                                          NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
 
     if (Def->getName() == "undef_tied_input") {
-      MVT ResultVT = N.getSimpleType(0);
+      ValueTypeByHwMode ResultVT = N.getType(0);
       auto IDOperandNo = NextRecordedOperandNo++;
       const Record *ImpDef = Def->getRecords().getDef("IMPLICIT_DEF");
       const CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(ImpDef);
@@ -705,14 +705,9 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
       // StringIntegerMatcher. In this case, fallback to using IntegerMatcher.
       const CodeGenRegisterClass &RC =
           CGP.getTargetInfo().getRegisterClass(Def);
-      if (RC.EnumValue <= 127) {
-        std::string Value = RC.getQualifiedIdName();
-        AddMatcher(new EmitStringIntegerMatcher(Value, MVT::i32,
-                                                NextRecordedOperandNo));
-      } else {
-        AddMatcher(new EmitIntegerMatcher(RC.EnumValue, MVT::i32,
-                                          NextRecordedOperandNo));
-      }
+      std::string Name = RC.getQualifiedIdName();
+      AddMatcher(new EmitIntegerMatcher(Name, RC.EnumValue, MVT::i32,
+                                        NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
@@ -720,20 +715,10 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
     // Handle a subregister index. This is used for INSERT_SUBREG etc.
     if (Def->isSubClassOf("SubRegIndex")) {
       const CodeGenRegBank &RB = CGP.getTargetInfo().getRegBank();
-      // If we have more than 127 subreg indices the encoding can overflow
-      // 7 bit and we cannot use StringInteger.
-      if (RB.getSubRegIndices().size() > 127) {
-        const CodeGenSubRegIndex *I = RB.findSubRegIdx(Def);
-        if (I->EnumValue > 127) {
-          AddMatcher(new EmitIntegerMatcher(I->EnumValue, MVT::i32,
-                                            NextRecordedOperandNo));
-          ResultOps.push_back(NextRecordedOperandNo++);
-          return;
-        }
-      }
-      std::string Value = getQualifiedName(Def);
-      AddMatcher(
-          new EmitStringIntegerMatcher(Value, MVT::i32, NextRecordedOperandNo));
+      const CodeGenSubRegIndex *I = RB.findSubRegIdx(Def);
+      std::string Name = getQualifiedName(Def);
+      AddMatcher(new EmitIntegerMatcher(Name, I->EnumValue, MVT::i32,
+                                        NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
@@ -894,9 +879,9 @@ void MatcherGen::EmitResultInstructionAsOperand(
   // Result order: node results, chain, glue
 
   // Determine the result types.
-  SmallVector<MVT, 4> ResultVTs;
+  SmallVector<ValueTypeByHwMode, 4> ResultVTs;
   for (unsigned i = 0, e = N.getNumTypes(); i != e; ++i)
-    ResultVTs.push_back(N.getSimpleType(i));
+    ResultVTs.push_back(N.getType(i));
 
   // If this is the root instruction of a pattern that has physical registers in
   // its result pattern, add output VTs for them.  For example, X86 has:
@@ -971,8 +956,9 @@ void MatcherGen::EmitResultInstructionAsOperand(
                                  NumFixedArityOperands, NextRecordedOperandNo));
 
   // The non-chain and non-glue results of the newly emitted node get recorded.
-  for (MVT ResultVT : ResultVTs) {
-    if (ResultVT == MVT::Other || ResultVT == MVT::Glue)
+  for (const ValueTypeByHwMode &ResultVT : ResultVTs) {
+    if (ResultVT.isSimple() && (ResultVT.getSimple() == MVT::Other ||
+                                ResultVT.getSimple() == MVT::Glue))
       break;
     OutputOps.push_back(NextRecordedOperandNo++);
   }

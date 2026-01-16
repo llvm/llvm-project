@@ -1680,6 +1680,9 @@ public:
   size_t ReadCStringFromMemory(lldb::addr_t vm_addr, std::string &out_str,
                                Status &error);
 
+  llvm::SmallVector<std::optional<std::string>>
+  ReadCStringsFromMemory(llvm::ArrayRef<lldb::addr_t> addresses);
+
   /// Reads an unsigned integer of the specified byte size from process
   /// memory.
   ///

@@ -2954,3 +2954,24 @@ func.func @select_with_cast(%arg1 : i8, %arg2 : i16, %arg3: i64, %arg4: index) -
 // CHECK:         ^bb5:
 // CHECK:           llvm.return
 // CHECK:         }
+
+// -----
+
+// Test `fir.select_case` with block arguments requiring type conversion.
+
+func.func @select_case_block_args(%arg0: !fir.ref<i32>, %arg1: !fir.ref<!fir.array<2xi32>>, %arg2: !fir.ref<!fir.array<2xi32>>) {
+  %0 = fir.load %arg0 : !fir.ref<i32>
+  %c1 = arith.constant 1 : i32
+  %c2 = arith.constant 2 : i32
+  fir.select_case %0 : i32 [#fir.point, %c1, ^bb1(%arg1 : !fir.ref<!fir.array<2xi32>>),
+                            #fir.point, %c2, ^bb1(%arg2 : !fir.ref<!fir.array<2xi32>>),
+                            unit, ^bb2]
+^bb1(%1: !fir.ref<!fir.array<2xi32>>):
+  cf.br ^bb2
+^bb2:
+  return
+}
+
+// CHECK-LABEL: llvm.func @select_case_block_args
+// CHECK: llvm.cond_br %{{.*}}, ^{{.*}}(%{{.*}} : !llvm.ptr), ^{{.*}}
+// CHECK: ^{{.*}}(%{{.*}}: !llvm.ptr):

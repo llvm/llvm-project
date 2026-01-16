@@ -61,7 +61,7 @@ SmallVector<std::unique_ptr<Region>> unwrapRegions(intptr_t nRegions,
   unwrappedRegions.reserve(nRegions);
   for (intptr_t i = 0; i < nRegions; ++i)
     unwrappedRegions.emplace_back(unwrap(*(regions + i)));
-  auto cleaner = llvm::make_scope_exit([&]() {
+  llvm::scope_exit cleaner([&]() {
     for (auto &region : unwrappedRegions)
       region.release();
   });

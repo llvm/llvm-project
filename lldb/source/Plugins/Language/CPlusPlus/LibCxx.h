@@ -38,8 +38,7 @@ lldb::ValueObjectSP GetSecondValueOfLibCXXCompressedPair(ValueObject &pair);
 ///
 /// If no child was found returns a nullptr.
 std::pair<lldb::ValueObjectSP, bool>
-GetValueOrOldCompressedPair(ValueObject &obj, size_t anon_struct_idx,
-                            llvm::StringRef child_name,
+GetValueOrOldCompressedPair(ValueObject &obj, llvm::StringRef child_name,
                             llvm::StringRef compressed_pair_name);
 bool isStdTemplate(ConstString type_name, llvm::StringRef type);
 

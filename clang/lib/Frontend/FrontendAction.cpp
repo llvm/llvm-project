@@ -836,7 +836,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // If we fail, reset state since the client will not end up calling the
   // matching EndSourceFile(). All paths that return true should release this.
-  auto FailureCleanup = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FailureCleanup([&]() {
     if (HasBegunSourceFile)
       CI.getDiagnosticClient().EndSourceFile();
     CI.setASTConsumer(nullptr);
@@ -1039,7 +1039,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                 Dir->path(), FileMgr, CI.getModuleCache(),
                 CI.getPCHContainerReader(), CI.getLangOpts(),
                 CI.getCodeGenOpts(), CI.getTargetOpts(),
-                CI.getPreprocessorOpts(), SpecificModuleCachePath,
+                CI.getPreprocessorOpts(), CI.getHeaderSearchOpts(),
+                SpecificModuleCachePath,
                 /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;
@@ -1316,7 +1317,7 @@ llvm::Error FrontendAction::Execute() {
   if (CI.shouldBuildGlobalModuleIndex() && CI.hasFileManager() &&
       CI.hasPreprocessor()) {
     StringRef Cache =
-        CI.getPreprocessor().getHeaderSearchInfo().getModuleCachePath();
+        CI.getPreprocessor().getHeaderSearchInfo().getSpecificModuleCachePath();
     if (!Cache.empty()) {
       if (llvm::Error Err = GlobalModuleIndex::writeIndex(
               CI.getFileManager(), CI.getPCHContainerReader(), Cache)) {

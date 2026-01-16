@@ -21,7 +21,15 @@
 // SEARCH-SUBDIRECTORIES-NOT: "-fno-modulemap-allow-subdirectory-search"
 
 //--- MacOSX15.0.sdk/SDKSettings.json
-{"Version":"15.0", "MaximumDeploymentTarget": "15.0.99"}
+{"Version":"15.0", "CanonicalName": "macosx15.0", "MaximumDeploymentTarget": "15.0.99",
+ "SupportedTargets": {
+   "macosx": {"Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "macos", "LLVMTargetTripleEnvironment": "", "SystemPrefix": ""},
+   "iosmac": {"Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "ios", "LLVMTargetTripleEnvironment": "macabi", "SystemPrefix": "\/System\/iOSSupport"}
+}}
 
 //--- MacOSX14.0.sdk/SDKSettings.json
-{"Version":"14.0", "MaximumDeploymentTarget": "14.0.99"}
+{"Version":"14.0", "CanonicalName": "macosx14.0", "MaximumDeploymentTarget": "14.0.99",
+ "SupportedTargets": {
+   "macosx": {"Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "macos", "LLVMTargetTripleEnvironment": "", "SystemPrefix": ""},
+   "iosmac": {"Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "ios", "LLVMTargetTripleEnvironment": "macabi", "SystemPrefix": "\/System\/iOSSupport"}
+}}

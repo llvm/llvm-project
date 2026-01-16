@@ -50,6 +50,8 @@ macro(test_fuzzer stdlib)
 
     set(LIBFUZZER_TEST_TARGET_ARCH ${arch})
     set(LIBFUZZER_TEST_APPLE_PLATFORM "osx")
+    set(LIBFUZZER_TEST_APPLE_TARGET_IS_HOST ON)
+    pythonize_bool(LIBFUZZER_TEST_APPLE_TARGET_IS_HOST)
     set(LIBFUZZER_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_osx_MIN_VER_FLAG}")
 
     set(LIBFUZZER_TEST_STDLIB ${stdlib})
@@ -111,6 +113,8 @@ if (APPLE)
       set(CONFIG_NAME "${PLATFORM_CAPITALIZED}${ARCH_UPPER_CASE}Config")
       set(LIBFUZZER_TEST_CONFIG_SUFFIX "-${arch}-${platform}")
       set(LIBFUZZER_TEST_APPLE_PLATFORM "${platform}")
+      set(LIBFUZZER_TEST_APPLE_TARGET_IS_HOST OFF)
+      pythonize_bool(LIBFUZZER_TEST_APPLE_TARGET_IS_HOST)
       set(LIBFUZZER_TEST_TARGET_ARCH "${arch}")
       set(LIBFUZZER_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_${platform}_MIN_VER_FLAG}")
       configure_lit_site_cfg(

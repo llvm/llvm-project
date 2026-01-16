@@ -246,7 +246,7 @@ TEST_CONSTEXPR(match_m128i(_mm256_castsi256_si128((__m256i)(__v4du){0xBFF0000000
 
 __m256d test_mm256_ceil_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_ceil_pd
-  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 2)
+  // CHECK: %{{.*}} = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 2)
   return _mm256_ceil_pd(x);
 }
 
@@ -1313,24 +1313,34 @@ __m256d test_mm256_max_pd(__m256d A, __m256d B) {
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.max.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_max_pd(A, B);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_max_pd((__m256d){+1.0, +2.0, +3.0, +4.0}, (__m256d){+4.0, +3.0, +2.0, +1.0}), +4.0, +3.0, +3.0, +4.0));
+TEST_CONSTEXPR(match_m256d(_mm256_max_pd((__m256d){+0.0, -0.0, +0.0, -0.0}, (__m256d){-0.0, +0.0, -0.0, +0.0}), -0.0, +0.0, -0.0, +0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_max_pd((__m256d){-1.0, -2.0, +3.0, -4.0}, (__m256d){+1.0, -3.0, +2.0, -5.0}), +1.0, -2.0, +3.0, -4.0));
 
 __m256 test_mm256_max_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_max_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.max.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_max_ps(A, B);
 }
+TEST_CONSTEXPR(match_m256(_mm256_max_ps((__m256){+1.0f, +2.0f, +3.0f, +4.0f, +5.0f, +6.0f, +7.0f, +8.0f}, (__m256){+8.0f, +7.0f, +6.0f, +5.0f, +4.0f, +3.0f, +2.0f, +1.0f}), +8.0f, +7.0f, +6.0f, +5.0f, +5.0f, +6.0f, +7.0f, +8.0f));
+TEST_CONSTEXPR(match_m256(_mm256_max_ps((__m256){+0.0f, -0.0f, +0.0f, -0.0f, +0.0f, -0.0f, +0.0f, -0.0f}, (__m256){-0.0f, +0.0f, -0.0f, +0.0f, -0.0f, +0.0f, -0.0f, +0.0f}), -0.0f, +0.0f, -0.0f, +0.0f, -0.0f, +0.0f, -0.0f, +0.0f));
 
 __m256d test_mm256_min_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_min_pd
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.min.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_min_pd(A, B);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_min_pd((__m256d){+1.0, +2.0, +3.0, +4.0}, (__m256d){+4.0, +3.0, +2.0, +1.0}), +1.0, +2.0, +2.0, +1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_min_pd((__m256d){+0.0, -0.0, +0.0, -0.0}, (__m256d){-0.0, +0.0, -0.0, +0.0}), -0.0, +0.0, -0.0, +0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_min_pd((__m256d){-1.0, -2.0, +3.0, -4.0}, (__m256d){+1.0, -3.0, +2.0, -5.0}), -1.0, -3.0, +2.0, -5.0));
 
 __m256 test_mm256_min_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_min_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.min.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_min_ps(A, B);
 }
+TEST_CONSTEXPR(match_m256(_mm256_min_ps((__m256){+1.0f, +2.0f, +3.0f, +4.0f, +5.0f, +6.0f, +7.0f, +8.0f}, (__m256){+8.0f, +7.0f, +6.0f, +5.0f, +4.0f, +3.0f, +2.0f, +1.0f}), +1.0f, +2.0f, +3.0f, +4.0f, +4.0f, +3.0f, +2.0f, +1.0f));
+TEST_CONSTEXPR(match_m256(_mm256_min_ps((__m256){+0.0f, -0.0f, +0.0f, -0.0f, +0.0f, -0.0f, +0.0f, -0.0f}, (__m256){-0.0f, +0.0f, -0.0f, +0.0f, -0.0f, +0.0f, -0.0f, +0.0f}), -0.0f, +0.0f, -0.0f, +0.0f, -0.0f, +0.0f, -0.0f, +0.0f));
 
 __m256d test_mm256_movedup_pd(__m256d A) {
   // CHECK-LABEL: test_mm256_movedup_pd
@@ -1526,14 +1536,38 @@ __m256 test_mm256_rcp_ps(__m256 A) {
 
 __m256d test_mm256_round_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_round_pd
-  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 4)
-  return _mm256_round_pd(x, 4);
+  // CHECK: %{{.*}} = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %{{.*}})
+  return _mm256_round_pd(x, 0b1000);
+}
+
+__m256d test_mm256_round_pd_mxcsr(__m256d x) {
+  // CHECK-LABEL: test_mm256_round_pd_mxcsr
+  // CHECK: %{{.*}} = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 12)
+  return _mm256_round_pd(x, 0b1100);
+}
+
+__m256d test_mm256_round_pd_fround_no_exc(__m256d x) {
+  // CHECK-LABEL: test_mm256_round_pd_fround_no_exc
+  // CHECK: %{{.*}} = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 0)
+  return _mm256_round_pd(x, 0b0000);
 }
 
 __m256 test_mm256_round_ps(__m256 x) {
   // CHECK-LABEL: test_mm256_round_ps
-  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 4)
-  return _mm256_round_ps(x, 4);
+  // CHECK: %{{.*}} = call <8 x float> @llvm.roundeven.v8f32(<8 x float> %{{.*}})
+  return _mm256_round_ps(x, 0b1000);
+}
+
+__m256 test_mm256_round_ps_mxcsr(__m256 x) {
+  // CHECK-LABEL: test_mm256_round_ps_mxcsr
+  // CHECK: %{{.*}} = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 12)
+  return _mm256_round_ps(x, 0b1100);
+}
+
+__m256 test_mm256_round_ps_fround_no_exc(__m256 x) {
+  // CHECK-LABEL: test_mm256_round_ps_fround_no_exc
+  // CHECK: %{{.*}} = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 0)
+  return _mm256_round_ps(x, 0b0000);
 }
 
 __m256 test_mm256_rsqrt_ps(__m256 A) {

@@ -18,6 +18,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -282,18 +283,160 @@ void mlirFrozenRewritePatternSetDestroy(MlirFrozenRewritePatternSet set) {
   set.ptr = nullptr;
 }
 
+//===----------------------------------------------------------------------===//
+/// GreedyRewriteDriverConfig API
+//===----------------------------------------------------------------------===//
+
+inline mlir::GreedyRewriteConfig *unwrap(MlirGreedyRewriteDriverConfig config) {
+  assert(config.ptr && "unexpected null config");
+  return static_cast<mlir::GreedyRewriteConfig *>(config.ptr);
+}
+
+inline MlirGreedyRewriteDriverConfig wrap(mlir::GreedyRewriteConfig *config) {
+  return {config};
+}
+
+MlirGreedyRewriteDriverConfig mlirGreedyRewriteDriverConfigCreate() {
+  return wrap(new mlir::GreedyRewriteConfig());
+}
+
+void mlirGreedyRewriteDriverConfigDestroy(
+    MlirGreedyRewriteDriverConfig config) {
+  delete unwrap(config);
+}
+
+void mlirGreedyRewriteDriverConfigSetMaxIterations(
+    MlirGreedyRewriteDriverConfig config, int64_t maxIterations) {
+  unwrap(config)->setMaxIterations(maxIterations);
+}
+
+void mlirGreedyRewriteDriverConfigSetMaxNumRewrites(
+    MlirGreedyRewriteDriverConfig config, int64_t maxNumRewrites) {
+  unwrap(config)->setMaxNumRewrites(maxNumRewrites);
+}
+
+void mlirGreedyRewriteDriverConfigSetUseTopDownTraversal(
+    MlirGreedyRewriteDriverConfig config, bool useTopDownTraversal) {
+  unwrap(config)->setUseTopDownTraversal(useTopDownTraversal);
+}
+
+void mlirGreedyRewriteDriverConfigEnableFolding(
+    MlirGreedyRewriteDriverConfig config, bool enable) {
+  unwrap(config)->enableFolding(enable);
+}
+
+void mlirGreedyRewriteDriverConfigSetStrictness(
+    MlirGreedyRewriteDriverConfig config,
+    MlirGreedyRewriteStrictness strictness) {
+  mlir::GreedyRewriteStrictness cppStrictness;
+  switch (strictness) {
+  case MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP:
+    cppStrictness = mlir::GreedyRewriteStrictness::AnyOp;
+    break;
+  case MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS:
+    cppStrictness = mlir::GreedyRewriteStrictness::ExistingAndNewOps;
+    break;
+  case MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS:
+    cppStrictness = mlir::GreedyRewriteStrictness::ExistingOps;
+    break;
+  }
+  unwrap(config)->setStrictness(cppStrictness);
+}
+
+void mlirGreedyRewriteDriverConfigSetRegionSimplificationLevel(
+    MlirGreedyRewriteDriverConfig config, MlirGreedySimplifyRegionLevel level) {
+  mlir::GreedySimplifyRegionLevel cppLevel;
+  switch (level) {
+  case MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED:
+    cppLevel = mlir::GreedySimplifyRegionLevel::Disabled;
+    break;
+  case MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL:
+    cppLevel = mlir::GreedySimplifyRegionLevel::Normal;
+    break;
+  case MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE:
+    cppLevel = mlir::GreedySimplifyRegionLevel::Aggressive;
+    break;
+  }
+  unwrap(config)->setRegionSimplificationLevel(cppLevel);
+}
+
+void mlirGreedyRewriteDriverConfigEnableConstantCSE(
+    MlirGreedyRewriteDriverConfig config, bool enable) {
+  unwrap(config)->enableConstantCSE(enable);
+}
+
+int64_t mlirGreedyRewriteDriverConfigGetMaxIterations(
+    MlirGreedyRewriteDriverConfig config) {
+  return unwrap(config)->getMaxIterations();
+}
+
+int64_t mlirGreedyRewriteDriverConfigGetMaxNumRewrites(
+    MlirGreedyRewriteDriverConfig config) {
+  return unwrap(config)->getMaxNumRewrites();
+}
+
+bool mlirGreedyRewriteDriverConfigGetUseTopDownTraversal(
+    MlirGreedyRewriteDriverConfig config) {
+  return unwrap(config)->getUseTopDownTraversal();
+}
+
+bool mlirGreedyRewriteDriverConfigIsFoldingEnabled(
+    MlirGreedyRewriteDriverConfig config) {
+  return unwrap(config)->isFoldingEnabled();
+}
+
+MlirGreedyRewriteStrictness mlirGreedyRewriteDriverConfigGetStrictness(
+    MlirGreedyRewriteDriverConfig config) {
+  mlir::GreedyRewriteStrictness cppStrictness = unwrap(config)->getStrictness();
+  switch (cppStrictness) {
+  case mlir::GreedyRewriteStrictness::AnyOp:
+    return MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP;
+  case mlir::GreedyRewriteStrictness::ExistingAndNewOps:
+    return MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS;
+  case mlir::GreedyRewriteStrictness::ExistingOps:
+    return MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS;
+  }
+}
+
+MlirGreedySimplifyRegionLevel
+mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(
+    MlirGreedyRewriteDriverConfig config) {
+  mlir::GreedySimplifyRegionLevel cppLevel =
+      unwrap(config)->getRegionSimplificationLevel();
+  switch (cppLevel) {
+  case mlir::GreedySimplifyRegionLevel::Disabled:
+    return MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED;
+  case mlir::GreedySimplifyRegionLevel::Normal:
+    return MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL;
+  case mlir::GreedySimplifyRegionLevel::Aggressive:
+    return MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE;
+  }
+}
+
+bool mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(
+    MlirGreedyRewriteDriverConfig config) {
+  return unwrap(config)->isConstantCSEEnabled();
+}
+
 MlirLogicalResult
 mlirApplyPatternsAndFoldGreedily(MlirModule op,
                                  MlirFrozenRewritePatternSet patterns,
-                                 MlirGreedyRewriteDriverConfig) {
-  return wrap(mlir::applyPatternsGreedily(unwrap(op), *unwrap(patterns)));
+                                 MlirGreedyRewriteDriverConfig config) {
+  return wrap(mlir::applyPatternsGreedily(unwrap(op), *unwrap(patterns),
+                                          *unwrap(config)));
 }
 
 MlirLogicalResult
 mlirApplyPatternsAndFoldGreedilyWithOp(MlirOperation op,
                                        MlirFrozenRewritePatternSet patterns,
-                                       MlirGreedyRewriteDriverConfig) {
-  return wrap(mlir::applyPatternsGreedily(unwrap(op), *unwrap(patterns)));
+                                       MlirGreedyRewriteDriverConfig config) {
+  return wrap(mlir::applyPatternsGreedily(unwrap(op), *unwrap(patterns),
+                                          *unwrap(config)));
+}
+
+void mlirWalkAndApplyPatterns(MlirOperation op,
+                              MlirFrozenRewritePatternSet patterns) {
+  mlir::walkAndApplyPatterns(unwrap(op), *unwrap(patterns));
 }
 
 //===----------------------------------------------------------------------===//

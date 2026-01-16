@@ -45,12 +45,10 @@ void func() {
 // CHECK-NEXT: %[[ARR_ALLOCA:.*]] = alloca [10 x i32], i64 1, align 16
 // CHECK-NEXT: %[[INIT:.*]] = alloca i32, i64 1, align 4
 // CHECK-NEXT: %[[INIT_2:.*]] = alloca i32, i64 1, align 4
-// CHECK-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
-// CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 0
+// CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr [10 x i32], ptr %[[ARR_ALLOCA]], i32 0, i64 0
 // CHECK-NEXT: %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 16
 // CHECK-NEXT: store i32 %[[TMP]], ptr %[[INIT]], align 4
-// CHECK-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
-// CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 1
+// CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr [10 x i32], ptr %[[ARR_ALLOCA]], i32 0, i64 1
 // CHECK-NEXT: %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
 // CHECK-NEXT: store i32 %[[TMP]], ptr %[[INIT_2]], align 4
 
@@ -78,10 +76,8 @@ void func4() {
 // CHECK:  %[[ARR_ALLOCA:.*]] = alloca [2 x [1 x i32]], i64 1, align 4
 // CHECK:  %[[INIT:.*]] = alloca i32, i64 1, align 4
 // CHECK:  store [2 x [1 x i32]] {{\[}}[1 x i32] [i32 5], [1 x i32] [i32 6]], ptr %[[ARR_ALLOCA]], align 4
-// CHECK:  %[[ARR_PTR:.*]] = getelementptr [1 x i32], ptr %[[ARR_ALLOCA]], i32 0
-// CHECK:  %[[ARR_1:.*]] = getelementptr [1 x i32], ptr %[[ARR_PTR]], i64 1
-// CHECK:  %[[ARR_1_0:.*]] = getelementptr i32, ptr %[[ARR_1]], i32 0
-// CHECK:  %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_1_0]], i64 0
+// CHECK:  %[[ARR_1:.*]] = getelementptr [2 x [1 x i32]], ptr %[[ARR_ALLOCA]], i32 0, i64 1
+// CHECK:  %[[ELE_PTR:.*]] = getelementptr [1 x i32], ptr %[[ARR_1]], i32 0, i64 0
 // CHECK:  %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
 // CHECK:  store i32 %[[TMP]], ptr %[[INIT]], align 4
 

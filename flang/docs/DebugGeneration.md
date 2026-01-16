@@ -19,7 +19,7 @@ availability of the Classic Flang compiler.
 By default, Flang will not generate any debug or linetable information.
 Debug information will be generated if the following flags are present.
 
--gline-tables-only, -g1 : Emit debug line number tables only  
+-gline-tables-only, -g1 : Emit debug line number tables only
 -g : Emit full debug info
 
 ## Line Table Generation
@@ -170,7 +170,7 @@ which gets translated to LLVM IR's `DILocalVariable`.
 Arguments work in similar way, but they present a difficulty that `DeclareOp`'s
 memref points to `BlockArgument`. Unlike the op in local variable case,
 the `BlockArgument` are not handled by the FIRToLLVMLowering. This can easily
-be handled by adding after conversion to LLVM dialect either in FIRToLLVMLowering 
+be handled by adding after conversion to LLVM dialect either in FIRToLLVMLowering
 or in a separate pass.
 
 ### Module
@@ -418,7 +418,7 @@ with fixed sizes arrays. It needs to also accept `DIExpressionAttr` or
 `rank`, `allocated` and `associated`.
 5. `DIStringTypeAttr`
 
-# Testing
+## Testing
 
 - LLVM LIT tests will be added to test:
   - the driver and ensure that it passes the line table and full debug
@@ -434,7 +434,7 @@ with fixed sizes arrays. It needs to also accept `DIExpressionAttr` or
   - print values and types (ptype) of various type of variables
 - Manually run `GDB`'s gdb.fortran testsuite with llvm-flang.
 
-# Resources
+## Resources
 - [1] https://dwarfstd.org/doc/DWARF5.pdf
 - [2] https://llvm.org/docs/LangRef.html#metadata
 - [3] https://archive.fosdem.org/2022/schedule/event/llvm_fortran_debug/

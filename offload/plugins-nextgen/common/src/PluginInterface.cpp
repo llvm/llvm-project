@@ -43,7 +43,7 @@ using namespace omp;
 using namespace target;
 using namespace plugin;
 using namespace error;
-using namespace debug;
+using namespace llvm::offload::debug;
 
 // TODO: Fix any thread safety issues for multi-threaded kernel recording.
 namespace llvm::omp::target::plugin {
@@ -100,8 +100,8 @@ private:
       VAddr = *VAddrOrErr;
     }
 
-    ODBG(ODT_Alloc) << "Request " << MaxMemoryAllocation
-                    << " bytes allocated at " << VAddr;
+    ODBG(OLDT_Alloc) << "Request " << MaxMemoryAllocation
+                     << " bytes allocated at " << VAddr;
 
     if (auto Err = Device->memoryVAMap(&MemoryStart, VAddr, &ASize))
       return Err;
@@ -339,7 +339,7 @@ public:
     Alloc = MemoryPtr;
     MemoryPtr = (char *)MemoryPtr + AlignedSize;
     MemorySize += AlignedSize;
-    ODBG(ODT_Alloc) << "Memory Allocator return " << Alloc;
+    ODBG(OLDT_Alloc) << "Memory Allocator return " << Alloc;
     return Alloc;
   }
 
@@ -413,8 +413,8 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
       return Err;
   } else {
     KernelEnvironment = KernelEnvironmentTy{};
-    ODBG(ODT_Kernel) << "Failed to read kernel environment for '" << getName()
-                     << "' Using default Bare (0) execution mode";
+    ODBG(OLDT_Kernel) << "Failed to read kernel environment for '" << getName()
+                      << "' Using default Bare (0) execution mode";
   }
 
   // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
@@ -725,8 +725,8 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
   if (ompt::Initialized && ompt::lookupCallbackByCode) {                       \
     ompt::lookupCallbackByCode((ompt_callbacks_t)(Code),                       \
                                ((ompt_callback_t *)&(Name##_fn)));             \
-    ODBG(ODT_Tool) << "OMPT: class bound " << #Name << "="                     \
-                   << ((void *)(uint64_t)Name##_fn);                           \
+    ODBG(OLDT_Tool) << "OMPT: class bound " << #Name << "="                    \
+                    << ((void *)(uint64_t)Name##_fn);                          \
   }
 
   FOREACH_OMPT_DEVICE_EVENT(bindOmptCallback);
@@ -849,7 +849,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 }
 Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                                                       StringRef InputTgtImage) {
-  ODBG(ODT_Init) << "Load data from image " << InputTgtImage.bytes_begin();
+  ODBG(OLDT_Init) << "Load data from image " << InputTgtImage.bytes_begin();
 
   std::unique_ptr<MemoryBuffer> Buffer;
   if (identify_magic(InputTgtImage) == file_magic::bitcode) {
@@ -920,7 +920,7 @@ Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
     return Err;
 
   RPCServer = &Server;
-  ODBG(ODT_Init) << "Running an RPC server on device " << getDeviceId();
+  ODBG(OLDT_Init) << "Running an RPC server on device " << getDeviceId();
   return Plugin::success();
 }
 
@@ -1656,9 +1656,9 @@ int32_t GenericPluginTy::is_initialized() const { return Initialized; }
 
 int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
-    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    ODBG(ODT_Init) << "Failure to check validity of image " << Image.data()
-                   << ": " << ErrStr;
+    std::string ErrStr = toString(std::move(Err));
+    ODBG(OLDT_Init) << "Failure to check validity of image " << Image.data()
+                    << ": " << ErrStr;
     return false;
   };
   switch (identify_magic(Image)) {
@@ -1685,9 +1685,9 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
 
 int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
-    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    ODBG(ODT_Init) << "Failure to check validity of image " << Image << ": "
-                   << ErrStr;
+    std::string ErrStr = toString(std::move(Err));
+    ODBG(OLDT_Init) << "Failure to check validity of image " << Image << ": "
+                    << ErrStr;
     return false;
   };
   switch (identify_magic(Image)) {
@@ -2069,8 +2069,8 @@ int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
 int32_t GenericPluginTy::is_accessible_ptr(int32_t DeviceId, const void *Ptr,
                                            size_t Size) {
   auto HandleError = [&](Error Err) -> bool {
-    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    ODBG(ODT_Mapping) << "Failure while checking accessibility of pointer "
+    std::string ErrStr = toString(std::move(Err));
+    ODBG(OLDT_Device) << "Failure while checking accessibility of pointer "
                       << Ptr << " for device " << DeviceId << ": " << ErrStr;
     return false;
   };

@@ -240,21 +240,14 @@ __contention_wait(__cxx_atomic_contention_t* __waiter_count, void const* __addre
   __cxx_atomic_fetch_sub(__waiter_count, __cxx_contention_t(1), memory_order_release);
 }
 
-#if defined(__APPLE__) && defined(__aarch64__)
-static constexpr size_t __cache_line_size = 128;
-#elif defined(__cpp_lib_hardware_interference_size)
-static constexpr size_t __cache_line_size = std::hardware_constructive_interference_size;
-#else
-static constexpr size_t __cache_line_size = 64;
-#endif
-
 static constexpr size_t __contention_table_size = (1 << 8); /* < there's no magic in this number */
 
 static constexpr hash<void const*> __contention_hasher;
 
 // Waiter count table for all atomics with the correct size that use itself as the wait/notify address.
 
-struct alignas(__cache_line_size) /*  aim to avoid false sharing */ __contention_state_native {
+struct alignas(
+    std::hardware_constructive_interference_size) /*  aim to avoid false sharing */ __contention_state_native {
   __cxx_atomic_contention_t __waiter_count;
   constexpr __contention_state_native() : __waiter_count(0) {}
 };
@@ -268,7 +261,8 @@ static __cxx_atomic_contention_t* __get_native_waiter_count(void const* p) {
 // Global contention table for all atomics with the wrong size that use the global table's atomic as wait/notify
 // address.
 
-struct alignas(__cache_line_size) /*  aim to avoid false sharing */ __contention_state_global {
+struct alignas(
+    std::hardware_constructive_interference_size) /*  aim to avoid false sharing */ __contention_state_global {
   __cxx_atomic_contention_t __waiter_count;
   __cxx_atomic_contention_t __platform_state;
   constexpr __contention_state_global() : __waiter_count(0), __platform_state(0) {}

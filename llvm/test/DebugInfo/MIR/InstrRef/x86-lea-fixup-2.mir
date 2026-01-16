@@ -1,4 +1,5 @@
-# RUN: llc -run-pass x86-fixup-LEAs -mtriple=i386 -verify-machineinstrs -mcpu=corei7-avx -o - %s | FileCheck %s
+# RUN: llc -run-pass x86-fixup-leas -mtriple=i386 -verify-machineinstrs -mcpu=corei7-avx -o - %s | FileCheck %s
+# RUN: llc -passes="require<profile-summary>,function(machine-function(x86-fixup-leas))" -mtriple=i386 -mcpu=corei7-avx -o - %s | FileCheck %s
 #
 # Test that several LEA => ADD transforms get substitutions applied to them,
 # for corner cases that we can only hit with -mtriple=i386.

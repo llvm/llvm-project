@@ -764,7 +764,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
         context_.Say(clauseSource,
             "A modifier may not be specified in a LINEAR clause on the %s directive"_err_en_US,
             ContextDirectiveAsFortran());
-        return;
+        // Don't return early - continue to check other restrictions
       }
 
       auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
@@ -808,6 +808,15 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 
   // OpenMP 5.2: Linear clause Restrictions
   for (auto &[symbol, source] : symbols) {
+    // Check that the list item is a scalar variable (rank 0)
+    // For declare simd with REF modifier, arrays are allowed
+    bool isArrayAllowed{dir == llvm::omp::Directive::OMPD_declare_simd &&
+        linearMod && linearMod->v == parser::OmpLinearModifier::Value::Ref};
+    if (symbol->Rank() != 0 && !isArrayAllowed) {
+      context_.Say(source,
+          "List item '%s' in LINEAR clause must be a scalar variable"_err_en_US,
+          symbol->name());
+    }
     if (!linearMod) {
       // Already checked this with the modifier present.
       CheckIntegerNoRef(symbol, source);

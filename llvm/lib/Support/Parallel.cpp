@@ -129,8 +129,6 @@ private:
     // first successful tryAcquire() in a process. This guarantees forward
     // progress without requiring a dedicated "always-on" thread here.
 
-    static thread_local std::unique_ptr<ExponentialBackoff> Backoff;
-
     while (true) {
       if (TheJobserver) {
         // Jobserver-mode scheduling:
@@ -152,7 +150,7 @@ private:
             break;
         } while (Backoff.waitForNextAttempt());
 
-        auto SlotReleaser = llvm::make_scope_exit(
+        llvm::scope_exit SlotReleaser(
             [&] { TheJobserver->release(std::move(Slot)); });
 
         while (true) {

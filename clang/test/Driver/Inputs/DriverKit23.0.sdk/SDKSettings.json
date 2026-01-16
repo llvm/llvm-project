@@ -1,1 +1,4 @@
-{"Version":"23.0", "CanonicalName": "driverkit23.0", "MaximumDeploymentTarget": "23.0.99"}
+{"Version":"23.0", "CanonicalName": "driverkit23.0", "MaximumDeploymentTarget": "23.0.99",
+ "SupportedTargets": {
+   "driverkit": {"Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "driverkit", "LLVMTargetTripleEnvironment": "", "SystemPrefix": "\/System\/DriverKit"}
+}}

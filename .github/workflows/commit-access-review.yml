@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   commit-access-review:
@@ -28,7 +29,15 @@ jobs:
           python3 .github/workflows/commit-access-review.py $GITHUB_TOKEN
 
       - name: Upload Triage List
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: triagers
           path: triagers.log
+
+      - name: Create the issue
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # There is a limit to the number of mentions you can have in one comment, so
+          # we need to limit the number of users we mention.
+          cat triagers.log | head -n 25 | python3 .github/workflows/commit-create-issue.py $GITHUB_TOKEN

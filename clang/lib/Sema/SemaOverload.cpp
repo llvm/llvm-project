@@ -449,7 +449,8 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
 
       Expr::EvalResult R;
       if ((Ctx.getLangOpts().C23 && Initializer->EvaluateAsRValue(R, Ctx)) ||
-          Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue)) {
+          ((Ctx.getLangOpts().CPlusPlus &&
+            Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue)))) {
         // Constant!
         if (Ctx.getLangOpts().C23)
           ConstantValue = R.Val;
@@ -12723,7 +12724,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   // We prefer adding such notes at the end of the deduction failure because
   // duplicate code snippets appearing in the diagnostic would likely become
   // noisy.
-  auto _ = llvm::make_scope_exit([&] { NoteImplicitDeductionGuide(S, Fn); });
+  llvm::scope_exit _([&] { NoteImplicitDeductionGuide(S, Fn); });
 
   switch (Cand->FailureKind) {
   case ovl_fail_too_many_arguments:

@@ -442,14 +442,14 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
         O << ".explicitcluster\n";
 
       if (ClusterDim[0] != 0) {
-        assert(llvm::all_of(ClusterDim, [](unsigned D) { return D != 0; }) &&
+        assert(llvm::all_of(ClusterDim, not_equal_to(0)) &&
                "cluster_dim_x != 0 implies cluster_dim_y and cluster_dim_z "
                "should be non-zero as well");
 
         O << formatv(".reqnctapercluster {0:$[, ]}\n",
                      make_range(ClusterDim.begin(), ClusterDim.end()));
       } else {
-        assert(llvm::all_of(ClusterDim, [](unsigned D) { return D == 0; }) &&
+        assert(llvm::all_of(ClusterDim, equal_to(0)) &&
                "cluster_dim_x == 0 implies cluster_dim_y and cluster_dim_z "
                "should be 0 as well");
       }

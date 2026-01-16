@@ -46,7 +46,7 @@ static void
 populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                          const T *D, bool &IsAnonymousNamespace);
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D);
+template <typename T> static void populateMemberTypeInfo(T &I, const Decl *D);
 static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
                                    const DeclaratorDecl *D,
                                    bool IsStatic = false);
@@ -697,10 +697,46 @@ static TemplateParamInfo convertTemplateArgToInfo(const clang::Decl *D,
   return TemplateParamInfo(Str);
 }
 
+// Check if the DeclKind is one for which we support contextual relationships.
+// There might be other ContextDecls, like blocks, that we currently don't
+// handle at all.
+static bool isSupportedContext(Decl::Kind DeclKind) {
+  switch (DeclKind) {
+  case Decl::Kind::Record:
+  case Decl::Kind::CXXRecord:
+  case Decl::Kind::ClassTemplateSpecialization:
+  case Decl::Kind::ClassTemplatePartialSpecialization:
+  case Decl::Kind::Namespace:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static void findParent(Info &I, const Decl *D) {
+  assert(D && "Invalid Decl");
+
+  // Only walk up contexts if D is a record or namespace.
+  if (!isSupportedContext(D->getKind()))
+    return;
+
+  const DeclContext *ParentCtx = dyn_cast<DeclContext>(D)->getLexicalParent();
+  while (ParentCtx) {
+    if (isSupportedContext(ParentCtx->getDeclKind())) {
+      // Break when we reach the first record or namespace.
+      I.ParentUSR = getUSRForDecl(dyn_cast<Decl>(ParentCtx));
+      break;
+    }
+    ParentCtx = ParentCtx->getParent();
+  }
+}
+
 template <typename T>
 static void populateInfo(Info &I, const T *D, const FullComment *C,
                          bool &IsInAnonymousNamespace) {
   I.USR = getUSRForDecl(D);
+  findParent(I, D);
+
   if (auto ConversionDecl = dyn_cast_or_null<CXXConversionDecl>(D);
       ConversionDecl && ConversionDecl->getConversionType()
                             .getTypePtr()
@@ -819,7 +855,9 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   }
 }
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D) {
+// TODO: Rename this, since this doesn't populate anything besides comments and
+// isn't exclusive to members
+template <typename T> static void populateMemberTypeInfo(T &I, const Decl *D) {
   assert(D && "Expect non-null FieldDecl in populateMemberTypeInfo");
 
   ASTContext &Context = D->getASTContext();
@@ -968,6 +1006,7 @@ static void parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
                   InfoType::IT_default, ActualDecl->getQualifiedNameAsString(),
                   getInfoRelativePath(ActualDecl));
 
+    populateMemberTypeInfo(F, ActualDecl);
     RI.Friends.push_back(std::move(F));
   }
 }
@@ -1114,6 +1153,9 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
   Info.DefLoc = Loc;
   auto &LO = D->getLangOpts();
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
+  populateTemplateParameters(Info.Template, D);
+  if (Info.Template)
+    populateConstraints(Info.Template.value(), D->getDescribedTemplate());
 
   if (Info.Underlying.Type.Name.empty()) {
     // Typedef for an unnamed type. This is like "typedef struct { } Foo;"
@@ -1144,6 +1186,9 @@ emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
   Info.TypeDeclaration = getTypeAlias(D);
   Info.IsUsing = true;
+  populateTemplateParameters(Info.Template, D);
+  if (Info.Template)
+    populateConstraints(Info.Template.value(), D->getDescribedAliasTemplate());
 
   extractCommentFromDecl(D, Info);
 

@@ -64,6 +64,9 @@ static const std::map<StringRef, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_GOOGLE_user_type},
         {"SPV_ALTERA_arbitrary_precision_integers",
          SPIRV::Extension::Extension::SPV_ALTERA_arbitrary_precision_integers},
+        {"SPV_ALTERA_arbitrary_precision_floating_point",
+         SPIRV::Extension::Extension::
+             SPV_ALTERA_arbitrary_precision_floating_point},
         {"SPV_INTEL_cache_controls",
          SPIRV::Extension::Extension::SPV_INTEL_cache_controls},
         {"SPV_INTEL_float_controls2",
@@ -190,7 +193,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
 
   auto M = partition(Tokens, [](auto &&T) { return T.starts_with('+'); });
 
-  if (std::any_of(M, Tokens.end(), [](auto &&T) { return T == "all"; }))
+  if (std::any_of(M, Tokens.end(), equal_to("all")))
     copy(make_second_range(SPIRVExtensionMap), std::inserter(Vals, Vals.end()));
 
   for (auto &&Token : make_range(Tokens.begin(), M)) {

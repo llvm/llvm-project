@@ -2333,6 +2333,8 @@ static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
                            Address paramAddr, SourceLocation loc) {
   CanQualType catchType =
       cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
+  mlir::Type cirCatchTy = cgf.convertTypeForMem(catchType);
+
   // If we're catching by reference, we can just cast the object
   // pointer to the appropriate pointer.
   if (isa<ReferenceType>(catchType)) {
@@ -2347,22 +2349,47 @@ static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
     // If the catch type is a pointer type, __cxa_begin_catch returns
     // the pointer by value.
     if (catchType->hasPointerRepresentation()) {
-      cgf.cgm.errorNYI(loc, "initCatchParam: hasPointerRepresentation");
-      return;
+      mlir::Value catchParam =
+          callBeginCatch(cgf, cirCatchTy, /*endMightThrow=*/false);
+      switch (catchType.getQualifiers().getObjCLifetime()) {
+      case Qualifiers::OCL_Strong:
+        cgf.cgm.errorNYI(loc,
+                         "initCatchParam: PointerRepresentation OCL_Strong");
+        return;
+
+      case Qualifiers::OCL_ExplicitNone:
+      case Qualifiers::OCL_Autoreleasing:
+        cgf.cgm.errorNYI(loc, "initCatchParam: PointerRepresentation "
+                              "OCL_ExplicitNone & OCL_Autoreleasing");
+        return;
+
+      case Qualifiers::OCL_None:
+        cgf.getBuilder().createStore(cgf.getLoc(loc), catchParam, paramAddr);
+        return;
+
+      case Qualifiers::OCL_Weak:
+        cgf.cgm.errorNYI(loc, "initCatchParam: PointerRepresentation OCL_Weak");
+        return;
+      }
+
+      llvm_unreachable("bad ownership qualifier!");
     }
 
+    // Otherwise, it returns a pointer into the exception object.
     mlir::Type cirCatchTy = cgf.convertTypeForMem(catchType);
     mlir::Value catchParam =
-        callBeginCatch(cgf, cgf.getBuilder().getPointerTo(cirCatchTy), false);
+        callBeginCatch(cgf, cgf.getBuilder().getPointerTo(cirCatchTy),
+                       /*endMightThrow=*/false);
     LValue srcLV = cgf.makeNaturalAlignAddrLValue(catchParam, catchType);
     LValue destLV = cgf.makeAddrLValue(paramAddr, catchType);
     switch (tek) {
     case cir::TEK_Complex: {
-      cgf.cgm.errorNYI(loc, "initCatchParam: cir::TEK_Complex");
+      mlir::Value load = cgf.emitLoadOfComplex(srcLV, loc);
+      cgf.emitStoreOfComplex(cgf.getLoc(loc), load, destLV, /*isInit=*/true);
       return;
     }
     case cir::TEK_Scalar: {
-      auto exnLoad = cgf.emitLoadOfScalar(srcLV, loc);
+      mlir::Value exnLoad = cgf.emitLoadOfScalar(srcLV, loc);
       cgf.emitStoreOfScalar(exnLoad, destLV, /*isInit=*/true);
       return;
     }
@@ -2370,7 +2397,6 @@ static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
       llvm_unreachable("evaluation kind filtered out!");
     }
 
-    // Otherwise, it returns a pointer into the exception object.
     llvm_unreachable("bad evaluation kind");
   }
 

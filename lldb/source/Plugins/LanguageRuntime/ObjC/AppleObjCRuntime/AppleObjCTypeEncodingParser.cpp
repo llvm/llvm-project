@@ -29,15 +29,6 @@ static char popChar(llvm::StringRef &str) {
   return c;
 }
 
-static bool consumeChar(llvm::StringRef &str, char c) {
-  if (!str.starts_with(c))
-    return false;
-
-  str = str.drop_front();
-
-  return true;
-}
-
 using namespace lldb_private;
 
 AppleObjCTypeEncodingParser::AppleObjCTypeEncodingParser(
@@ -93,7 +84,7 @@ AppleObjCTypeEncodingParser::ReadStructElement(TypeSystemClang &ast_ctx,
                                                llvm::StringRef &type,
                                                bool for_expression) {
   StructElement retval;
-  if (type.consume_front("\"")) {
+  if (type.consume_front('"')) {
     if (auto maybe_name = ReadQuotedString(type))
       retval.name = *maybe_name;
     else
@@ -120,7 +111,7 @@ clang::QualType AppleObjCTypeEncodingParser::BuildUnion(
 clang::QualType AppleObjCTypeEncodingParser::BuildAggregate(
     TypeSystemClang &ast_ctx, llvm::StringRef &type, bool for_expression,
     char opener, char closer, uint32_t kind) {
-  if (!consumeChar(type, opener))
+  if (!type.consume_front(opener))
     return clang::QualType();
 
   std::string name(ReadStructName(type));
@@ -131,12 +122,12 @@ clang::QualType AppleObjCTypeEncodingParser::BuildAggregate(
 
   const bool is_templated = name.find('<') != std::string::npos;
 
-  if (!type.consume_front("="))
+  if (!type.consume_front('='))
     return clang::QualType();
   bool in_union = true;
   std::vector<StructElement> elements;
   while (in_union && !type.empty()) {
-    if (consumeChar(type, closer)) {
+    if (type.consume_front(closer)) {
       in_union = false;
       break;
     } else {
@@ -178,12 +169,12 @@ clang::QualType AppleObjCTypeEncodingParser::BuildAggregate(
 
 clang::QualType AppleObjCTypeEncodingParser::BuildArray(
     TypeSystemClang &ast_ctx, llvm::StringRef &type, bool for_expression) {
-  if (!consumeChar(type, _C_ARY_B))
+  if (!type.consume_front(_C_ARY_B))
     return clang::QualType();
 
   uint32_t size = ReadNumber(type);
   clang::QualType element_type(BuildType(ast_ctx, type, for_expression));
-  if (!consumeChar(type, _C_ARY_E))
+  if (!type.consume_front(_C_ARY_E))
     return clang::QualType();
 
   CompilerType array_type(ast_ctx.CreateArrayType(
@@ -200,14 +191,14 @@ clang::QualType AppleObjCTypeEncodingParser::BuildArray(
 clang::QualType AppleObjCTypeEncodingParser::BuildObjCObjectPointerType(
     TypeSystemClang &clang_ast_ctx, llvm::StringRef &type,
     bool for_expression) {
-  if (!consumeChar(type, _C_ID))
+  if (!type.consume_front(_C_ID))
     return clang::QualType();
 
   clang::ASTContext &ast_ctx = clang_ast_ctx.getASTContext();
 
   std::string name;
 
-  if (type.consume_front("\"")) {
+  if (type.consume_front('"')) {
     // We have to be careful here.  We're used to seeing
     //   @"NSString"
     // but in records it is possible that the string following an @ is the name
@@ -372,7 +363,7 @@ clang::QualType AppleObjCTypeEncodingParser::BuildType(
       return ast_ctx.getConstType(target_type);
   }
   case _C_PTR: {
-    if (!for_expression && consumeChar(type, _C_UNDEF)) {
+    if (!for_expression && type.consume_front(_C_UNDEF)) {
       // if we are not supporting the concept of unknownAny, but what is being
       // created here is an unknownAny*, then we can just get away with a void*
       // this is theoretically wrong (in the same sense as 'theoretically

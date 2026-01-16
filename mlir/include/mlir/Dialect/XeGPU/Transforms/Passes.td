@@ -102,7 +102,7 @@ def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
                            "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
 }
 
-def XeGPUOptimizeBlockLoads : Pass<"xegpu-optimize-block-loads"> {
+def XeGPUPeepHoleOptimizer : Pass<"xegpu-optimize-peephole"> {
   let summary = "Optimize XeGPU block load operations";
   let description = [{
     This pass rewrites XeGPU loadNd operations into more optimal forms

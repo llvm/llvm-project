@@ -109,6 +109,7 @@ if lldb_dap_path is not None:
 if llvm_config.use_llvm_tool("llvm-ar"):
     config.available_features.add("llvm-ar")
 
+
 def configure_dexter_substitutions():
     """Configure substitutions for host platform and return list of dependencies"""
     # Produce dexter path, lldb path, and combine into the %dexter substitution
@@ -240,16 +241,6 @@ llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 lit.util.usePlatformSdkOnDarwin(config, lit_config)
 
-if platform.system() == "Darwin":
-    xcode_lldb_vers = subprocess.check_output(["xcrun", "lldb", "--version"]).decode(
-        "utf-8"
-    )
-    match = re.search(r"lldb-(\d+)", xcode_lldb_vers)
-    if match:
-        apple_lldb_vers = int(match.group(1))
-        if apple_lldb_vers < 1000:
-            config.available_features.add("apple-lldb-pre-1000")
-
 
 def get_gdb_version_string():
     """Return gdb's version string, or None if gdb cannot be found or the
@@ -289,6 +280,68 @@ def get_clang_default_dwarf_version_string(triple):
     return match.group(1)
 
 
+def get_lldb_version_string():
+    """Return LLDB's version string, or None if lldb cannot be found or the
+    --version output is formatted unexpectedly.
+    """
+    try:
+        cmd = ["lldb", "--version"]
+        if platform.system() == "Darwin":
+            cmd = ["xcrun"] + cmd
+
+        lldb_vers_lines = subprocess.check_output(cmd).decode().splitlines()
+    except:
+        return None
+    if len(lldb_vers_lines) < 1:
+        print("Unkown LLDB version format (too few lines)", file=sys.stderr)
+        return None
+    match = re.search(r"lldb.*[ -]((\d|\.)+)", lldb_vers_lines[0].strip())
+    if match is None:
+        print(f"Unkown LLDB version format: {lldb_vers_lines[0]}", file=sys.stderr)
+        return None
+    return match.group(1)
+
+
+def set_lldb_formatters_compatibility_feature():
+    current_lldb_version = get_lldb_version_string()
+    if not current_lldb_version:
+        return
+
+    if platform.system() == "Darwin":
+        # The Apple LLDB version doesn't follow the LLVM release versioning.
+        min_required_lldb_version = "1700"
+    else:
+        min_required_lldb_version = "1900"
+
+    try:
+        from packaging import version
+    except:
+        lit_config.fatal("Running lldb tests requires the packaging package")
+        return
+
+    if version.parse(current_lldb_version) < version.parse(min_required_lldb_version):
+        raise ValueError(
+            f"using version {current_lldb_version} whereas a version >= {min_required_lldb_version} is required"
+        )
+
+    config.available_features.add("lldb-formatters-compatibility")
+
+
+def set_apple_lldb_pre_1000_feature():
+    apple_lldb_vers = get_lldb_version_string()
+    if not apple_lldb_vers:
+        return
+
+    try:
+        from packaging import version
+    except:
+        lit_config.fatal("Running lldb tests requires the packaging package")
+        return
+
+    if version.parse(apple_lldb_vers) < version.parse("1000"):
+        config.available_features.add("apple-lldb-pre-1000")
+
+
 # Some cross-project-tests use gdb, but not all versions of gdb are compatible
 # with clang's dwarf. Add feature `gdb-clang-incompatibility` to signal that
 # there's an incompatibility between clang's default dwarf version for this
@@ -309,6 +362,17 @@ if dwarf_version_string and gdb_version_string:
                 "XFAIL some tests: use gdb version >= 10.1 to restore test coverage",
                 file=sys.stderr,
             )
+
+try:
+    set_lldb_formatters_compatibility_feature()
+except ValueError as e:
+    print(
+        f"Marking some LLDB LLVM data-formatter tests as unsupported: {e}",
+        file=sys.stderr,
+    )
+
+if platform.system() == "Darwin":
+    set_apple_lldb_pre_1000_feature()
 
 llvm_config.feature_config([("--build-mode", {"Debug|RelWithDebInfo": "debug-info"})])
 

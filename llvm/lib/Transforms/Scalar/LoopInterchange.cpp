@@ -263,7 +263,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
 
         // If all the elements of any direction vector have only '*', legality
         // can't be proven. Exit early to save compile time.
-        if (all_of(Dep, [](char C) { return C == '*'; })) {
+        if (all_of(Dep, equal_to('*'))) {
           ORE->emit([&]() {
             return OptimizationRemarkMissed(DEBUG_TYPE, "Dependence",
                                             L->getStartLoc(), L->getHeader())

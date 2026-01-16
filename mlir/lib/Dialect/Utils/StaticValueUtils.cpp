@@ -19,6 +19,19 @@ namespace mlir {
 
 bool isZeroInteger(OpFoldResult v) { return isConstantIntValue(v, 0); }
 
+bool isZeroFloat(OpFoldResult v) {
+  if (auto attr = dyn_cast<Attribute>(v)) {
+    if (auto floatAttr = dyn_cast<FloatAttr>(attr))
+      return floatAttr.getValue().isZero();
+    return false;
+  }
+  return matchPattern(cast<Value>(v), m_AnyZeroFloat());
+}
+
+bool isZeroIntegerOrFloat(OpFoldResult v) {
+  return isZeroInteger(v) || isZeroFloat(v);
+}
+
 bool isOneInteger(OpFoldResult v) { return isConstantIntValue(v, 1); }
 
 std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
@@ -338,8 +351,6 @@ std::optional<APInt> constantTripCount(
       return std::nullopt;
     APSInt lbCst(maybeLbCst->first, /*isUnsigned=*/!isSigned);
     APSInt ubCst(maybeUbCst->first, /*isUnsigned=*/!isSigned);
-    if (!maybeUbCst)
-      return std::nullopt;
     if (ubCst <= lbCst) {
       LDBG() << "constantTripCount is 0 because ub <= lb (" << lbCst << "("
              << lbCst.getBitWidth() << ") <= " << ubCst << "("
@@ -372,9 +383,9 @@ std::optional<APInt> constantTripCount(
     return std::nullopt;
   }
   auto &stepCst = maybeStepCst->first;
-  llvm::APInt tripCount = diff.sdiv(stepCst);
-  llvm::APInt r = diff.srem(stepCst);
-  if (!r.isZero())
+  llvm::APInt tripCount = isSigned ? diff.sdiv(stepCst) : diff.udiv(stepCst);
+  llvm::APInt remainder = isSigned ? diff.srem(stepCst) : diff.urem(stepCst);
+  if (!remainder.isZero())
     tripCount = tripCount + 1;
   LDBG() << "constantTripCount found: " << tripCount;
   return tripCount;

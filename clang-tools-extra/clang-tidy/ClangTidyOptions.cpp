@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangTidyOptions.h"
-#include "ClangTidyModuleRegistry.h"
+#include "ClangTidyModule.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
@@ -66,6 +66,8 @@ template <> struct MappingTraits<ClangTidyOptions::StringPair> {
   }
 };
 
+namespace {
+
 struct NOptionMap {
   NOptionMap(IO &) {}
   NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap) {
@@ -82,6 +84,8 @@ struct NOptionMap {
   }
   std::vector<ClangTidyOptions::StringPair> Options;
 };
+
+} // namespace
 
 template <>
 void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
@@ -153,7 +157,7 @@ template <> struct ScalarEnumerationTraits<clang::DiagnosticIDs::Level> {
 };
 template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckDiag> {
   // NOLINTNEXTLINE(readability-identifier-naming) Defined by YAMLTraits.h
-  static const bool flow = false;
+  static constexpr bool flow = false;
 };
 template <> struct MappingTraits<ClangTidyOptions::CustomCheckDiag> {
   static void mapping(IO &IO, ClangTidyOptions::CustomCheckDiag &D) {
@@ -165,7 +169,7 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckDiag> {
 };
 template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckValue> {
   // NOLINTNEXTLINE(readability-identifier-naming) Defined by YAMLTraits.h
-  static const bool flow = false;
+  static constexpr bool flow = false;
 };
 template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
   static void mapping(IO &IO, ClangTidyOptions::CustomCheckValue &V) {
@@ -176,10 +180,14 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
   }
 };
 
+namespace {
+
 struct GlobListVariant {
   std::optional<std::string> AsString;
   std::optional<std::vector<std::string>> AsVector;
 };
+
+} // namespace
 
 template <>
 void yamlize(IO &IO, GlobListVariant &Val, bool, EmptyContext &Ctx) {
@@ -315,14 +323,6 @@ ClangTidyOptions ClangTidyOptions::merge(const ClangTidyOptions &Other,
   Result.mergeWith(Other, Order);
   return Result;
 }
-
-const char ClangTidyOptionsProvider::OptionsSourceTypeDefaultBinary[] =
-    "clang-tidy binary";
-const char ClangTidyOptionsProvider::OptionsSourceTypeCheckCommandLineOption[] =
-    "command-line option '-checks'";
-const char
-    ClangTidyOptionsProvider::OptionsSourceTypeConfigCommandLineOption[] =
-        "command-line option '-config'";
 
 ClangTidyOptions
 ClangTidyOptionsProvider::getOptions(llvm::StringRef FileName) {
