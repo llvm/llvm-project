@@ -10,8 +10,13 @@ struct [[gsl::Owner]] MyObj {
   View getView() const [[clang::lifetimebound]];
 };
 
+struct [[gsl::Owner]] MyTrivialObj {
+  int id;
+};
+
 struct [[gsl::Pointer()]] View {
   View(const MyObj&); // Borrows from MyObj
+  View(const MyTrivialObj &); // Borrows from MyTrivialObj
   View();
   void use() const;
 };
@@ -19,6 +24,13 @@ struct [[gsl::Pointer()]] View {
 class TriviallyDestructedClass {
   View a, b;
 };
+
+MyObj non_trivially_destructed_temporary();
+MyTrivialObj trivially_destructed_temporary();
+View construct_view(const MyObj &obj [[clang::lifetimebound]]) {
+  return View(obj);
+}
+void use(View);
 
 //===----------------------------------------------------------------------===//
 // Basic Definite Use-After-Free (-W...permissive)
@@ -596,10 +608,10 @@ const int* return_pointer_to_parameter_via_reference(int a, int b, bool cond) {
     const int* d = &c;
     return d;                     // expected-note 2 {{returned here}}
 }
-// FIXME: Dereference of a pointer does not track the reference.
+
 const int& return_pointer_to_parameter_via_reference_1(int a) {
-    const int* d = &a;
-    return *d;
+    const int* d = &a; // expected-warning {{address of stack memory is returned later}}
+    return *d;    // expected-note {{returned here}}
 }
 
 const int& get_ref_to_local() {
@@ -1064,6 +1076,28 @@ void parentheses(bool cond) {
               : &(((cond ? c : d)))));  // expected-warning 2 {{object whose reference is captured does not live long enough}}.
   }  // expected-note 4 {{destroyed here}}
   (void)*p;  // expected-note 4 {{later used here}}
+
+}
+
+void use_temporary_after_destruction() {
+  View a;
+  a = non_trivially_destructed_temporary(); // expected-warning {{object whose reference is captured does not live long enough}} \
+                  expected-note {{destroyed here}}
+  use(a); // expected-note {{later used here}}
+}
+
+void passing_temporary_to_lifetime_bound_function() {
+  View a = construct_view(non_trivially_destructed_temporary()); // expected-warning {{object whose reference is captured does not live long enough}} \
+                expected-note {{destroyed here}}
+  use(a); // expected-note {{later used here}}
+}
+
+// FIXME: We expect to be warned of use-after-free at use(a), but this is not the
+// case as current analysis does not handle trivially destructed temporaries.
+void use_trivial_temporary_after_destruction() {
+  View a;
+  a = trivially_destructed_temporary();
+  use(a);
 }
 
 namespace GH162834 {
@@ -1119,24 +1153,24 @@ struct MyObjStorage {
   const MyObj *end() const { return objs + 1; }
 };
 
-// FIXME: Detect use-after-scope. Dereference pointer does not propagate the origins.
 void range_based_for_use_after_scope() {
   View v;
   {
     MyObjStorage s;
-    for (const MyObj &o : s) {
+    for (const MyObj &o : s) { // expected-warning {{object whose reference is captured does not live long enough}}
       v = o;
     }
-  }
-  v.use();
+  } // expected-note {{destroyed here}}
+  v.use(); // expected-note {{later used here}}
 }
-// FIXME: Detect use-after-return. Dereference pointer does not propagate the origins.
+
 View range_based_for_use_after_return() {
   MyObjStorage s;
-  for (const MyObj &o : s) {
-    return o;
+  for (const MyObj &o : s) { // expected-warning {{address of stack memory is returned later}}
+    return o;  // expected-note {{returned here}}
   }
-  return *s.begin();
+  return *s.begin();  // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
 }
 
 void range_based_for_not_reference() {
@@ -1160,6 +1194,66 @@ void range_based_for_no_error() {
 }
 
 } // namespace RangeBaseForLoop
+
+namespace UserDefinedDereference {
+// Test user-defined dereference operators with lifetimebound
+template<typename T>
+struct SmartPtr {
+  T* ptr;
+  SmartPtr() {}
+  SmartPtr(T* p) : ptr(p) {}
+  T& operator*() const [[clang::lifetimebound]] { return *ptr; }
+  T* operator->() const [[clang::lifetimebound]] { return ptr; }
+};
+
+void test_user_defined_deref_uaf() {
+  MyObj* p;
+  {
+    MyObj obj;
+    SmartPtr<MyObj> smart_ptr(&obj);
+    p = &(*smart_ptr);  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                     // expected-note {{destroyed here}}
+  (void)*p;             // expected-note {{later used here}}
+}
+
+MyObj& test_user_defined_deref_uar() {
+  MyObj obj;
+  SmartPtr<MyObj> smart_ptr(&obj);
+  return *smart_ptr;  // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
+}
+
+void test_user_defined_deref_with_view() {
+  View v;
+  {
+    MyObj obj;
+    SmartPtr<MyObj> smart_ptr(&obj);
+    v = *smart_ptr;  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  v.use();           // expected-note {{later used here}}
+}
+
+void test_user_defined_deref_arrow() {
+  MyObj* p;
+  {
+    MyObj obj;
+    SmartPtr<MyObj> smart_ptr(&obj);
+    p = smart_ptr.operator->();  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                              // expected-note {{destroyed here}}
+  (void)*p;                      // expected-note {{later used here}}
+}
+
+void test_user_defined_deref_chained() {
+  MyObj* p;
+  {
+    MyObj obj;
+    SmartPtr<SmartPtr<MyObj>> double_ptr;
+    p = &(**double_ptr);  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                       // expected-note {{destroyed here}}
+  (void)*p;               // expected-note {{later used here}}
+}
+
+} // namespace UserDefinedDereference
 
 namespace structured_binding {
 struct Pair {

@@ -481,19 +481,6 @@ func.func @pooling_nhwc_min_unsigned_integer(%input: tensor<?x?x?x?xi32>, %filte
 
 // -----
 
-func.func @pooling_nhwc_min_unsigned_float(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
-  %0 = linalg.pooling_nhwc_min_unsigned
-         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
-         ins (%input, %filter: tensor<?x?x?x?xf32>, tensor<?x?xf32>)
-         outs (%output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
-  return %0 : tensor<?x?x?x?xf32>
-}
-//      CHECK: @pooling_nhwc_min_unsigned_float
-//      CHECK:   linalg.pooling_nhwc_min
-// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
-
-// -----
-
 func.func @pooling_nchw_sum(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   %0 = linalg.pooling_nchw_sum
          {dilations = dense<2> : tensor<2xi64>, strides = dense<3> : tensor<2xi64>}

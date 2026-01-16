@@ -14,8 +14,10 @@
 ; For non-compute, error.
 ; CHECK-ERR: LLVM ERROR: Runtime arrays are not allowed in non-shader SPIR-V modules
 
+%struct.with_zero = type { i32, [0 x i32], i64 }
+
 define spir_func void @foo() {
 entry:
-  %i = alloca [0 x i32], align 4
+  %i = alloca %struct.with_zero, align 64
   ret void
 }

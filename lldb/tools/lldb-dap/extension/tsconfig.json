@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"moduleResolution": "node",
+		"module": "commonjs",
+		"outDir": "out",
+		"rootDir": ".",
+		"sourceMap": true,
+		"strict": true,
+		"target": "es6"
+	},
+	"include": ["src", "test"],
+  	"exclude": [".vscode-test", "node_modules", "src/webview"]
+}

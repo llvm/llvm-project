@@ -2421,6 +2421,14 @@ def fsanitize_EQ : CommaJoined<["-"], "fsanitize=">, Group<f_clang_Group>,
                             "or suspicious behavior. See user manual for available checks">;
 def fno_sanitize_EQ : CommaJoined<["-"], "fno-sanitize=">, Group<f_clang_Group>,
                       Visibility<[ClangOption, CLOption]>;
+def fsanitize_ignore_for_ubsan_feature_EQ
+    : CommaJoined<["-"], "fsanitize-ignore-for-ubsan-feature=">,
+      Group<f_clang_Group>,
+      MetaVarName<"<check>">,
+      HelpText<
+          "Prevents `__has_feature(undefined_behavior_sanitizer)` from "
+          "evaluating true for "
+          "these UBSan checks. See user manual for available UBSan checks">;
 
 def fsanitize_ignorelist_EQ : Joined<["-"], "fsanitize-ignorelist=">,
   Group<f_clang_Group>, HelpText<"Path to ignorelist file for sanitizers">;
@@ -3799,6 +3807,11 @@ defm objc_avoid_heapify_local_blocks : BoolFOption<"objc-avoid-heapify-local-blo
   PosFlag<SetTrue, [], [ClangOption], "Try">,
   NegFlag<SetFalse, [], [ClangOption], "Don't try">,
   BothFlags<[], [CC1Option], " to avoid heapifying local blocks">>;
+defm objc_direct_precondition_thunk : BoolFOption<"objc-direct-precondition-thunk",
+  CodeGenOpts<"ObjCDirectPreconditionThunk">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Move precondition checks for direct methods into thunks">,
+  NegFlag<SetFalse>>;
 defm disable_block_signature_string : BoolFOption<"disable-block-signature-string",
   CodeGenOpts<"DisableBlockSignatureString">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Disable">,
@@ -4666,6 +4679,12 @@ defm split_machine_functions: BoolFOption<"split-machine-functions",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [ClangOption], " late function splitting using profile information (x86 and aarch64 ELF)">>;
+
+defm partition_static_data_sections: BoolFOption<"partition-static-data-sections",
+  CodeGenOpts<"PartitionStaticDataSections">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " partition static data sections using PGO profile information and MemProf (x86 and aarch64 ELF). See LLVM MemProf doc for usage.">>;
 
 defm strict_return : BoolFOption<"strict-return",
   CodeGenOpts<"StrictReturn">, DefaultTrue,
@@ -5565,6 +5584,13 @@ defm amdgpu_ieee : BoolMOption<"amdgpu-ieee",
   "gathering quiet and propagate signaling NaN inputs per IEEE 754-2008. "
   "This option changes the ABI. (AMDGPU only)">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
+
+defm amdgpu_expand_waitcnt_profiling : BoolMOption<"amdgpu-expand-waitcnt-profiling",
+  CodeGenOpts<"AMDGPUExpandWaitcntProfiling">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Expand s_waitcnt instructions to help "
+  "PC-sampling profilers identify memory stalls. Instead of a single waitcnt(target), "
+  "emits waitcnt(N-1), waitcnt(N-2), ..., waitcnt(target). (AMDGPU only)">,
+  NegFlag<SetFalse, [], [ClangOption]>>;
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 6. (AMDGPU only)">,
@@ -7801,6 +7827,10 @@ let Visibility = [CC1Option, CC1AsOption] in {
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">,
   MarshallingInfoFlag<CodeGenOpts<"MacroDebugInfo">>;
+def debug_info_macro_expansion_loc
+    : Flag<["-"], "debug-info-macro-expansion-loc">,
+      HelpText<"Use expansion location for debug info for multi line macros">,
+      MarshallingInfoFlag<CodeGenOpts<"DebugInfoMacroExpansionLoc">>;
 def default_function_attr : Separate<["-"], "default-function-attr">,
   HelpText<"Apply given attribute to all functions">,
   MarshallingInfoStringVector<CodeGenOpts<"DefaultFunctionAttrs">>;
@@ -7829,6 +7859,11 @@ def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
 def crel : Flag<["--"], "crel">,
   HelpText<"Enable CREL relocation format (ELF only)">,
   MarshallingInfoFlag<CodeGenOpts<"Crel">>;
+// The leading 'g' is misleading. This is an unwind tables option, not
+// a debug option. But uses this name for gnu compatibility.
+def gsframe : Flag<["--"], "gsframe">,
+              HelpText<"Generate .sframe unwind sections (ELF only)">,
+              MarshallingInfoFlag<CodeGenOpts<"EmitSFrameUnwind">>;
 def mmapsyms_implicit : Flag<["-"], "mmapsyms=implicit">,
   HelpText<"Allow mapping symbol at section beginning to be implicit, "
     "lowering number of mapping symbols at the expense of some "
@@ -9612,6 +9647,13 @@ class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<dxc_Group>,
   Visibility<[DXCOption]>;
 
+def dxc_all_resources_bound : DXCFlag<"all-resources-bound">,
+  HelpText<"Enables agressive flattening">;
+def hlsl_all_resources_bound : Option<["/", "-"], "hlsl-all-resources-bound", KIND_FLAG>,
+                      Group<dxc_Group>,
+                      Visibility<[ClangOption, CC1Option]>,
+                      HelpText<"Enables agressive flattening">,
+                      MarshallingInfoFlag<CodeGenOpts<"AllResourcesBound">>;
 def dxc_col_major : DXCFlag<"Zpc">, HelpText<"Pack matrices in column-major order">;
 def dxc_row_major : DXCFlag<"Zpr">, HelpText<"Pack matrices in row-major order">;
 def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,

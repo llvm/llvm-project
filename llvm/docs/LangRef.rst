@@ -3115,6 +3115,7 @@ the behavior is undefined, unless one of the following exceptions applies:
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
   dereferenceable at the point of the assumption. The pointer may not be
   dereferenceable at later pointers, e.g., because it could have been freed.
+  Only ``n > 0`` implies that the pointer is dereferenceable.
 
 In addition to allowing operand bundles encoding function and parameter
 attributes, an assume operand bundle may also encode a ``separate_storage``
@@ -6394,8 +6395,8 @@ multiple metadata attachments with the same identifier.
 A transformation is required to drop any metadata attachment that it
 does not recognize or cannot preserve. Currently there is an
 exception for metadata attachment to globals for ``!func_sanitize``,
-``!type``, ``!absolute_symbol`` and ``!associated`` which can't be
-unconditionally dropped unless the global is itself deleted.
+``!type``, ``!absolute_symbol``, ``!implicit.ref`` and ``!associated`` which
+can't be unconditionally dropped unless the global is itself deleted.
 
 Metadata attached to a module using named metadata may not be dropped, with
 the exception of debug metadata (named metadata with the name ``!llvm.dbg.*``).
@@ -8693,6 +8694,36 @@ of requiring a stack protector.
    %a = alloca [1000 x i8], align 1, !stack-protector !0
 
   !0 = !{i32 0}
+
+'``implicit.ref``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``implicit.ref`` metadata may be attached to a function or global variable
+definition with a single argument that references a global object.
+This is typically used when there is some implicit dependence between the
+symbols that is otherwise opaque to the linker. One such example is metadata
+which is accessed by a runtime with associated ``__start_<section_name>`` and
+``__stop_<section_name>`` symbols.
+
+It does not have any effect on non-XCOFF targets.
+
+This metadata lowers to the .ref assembly directive which will add a relocation
+representing an implicit reference from the section the global belongs to, to
+the associated symbol. This link will keep the referenced symbol alive if the
+section is not garbage collected. More than one ref node can be attached
+to the same function or global variable.
+
+
+Example:
+
+.. code-block:: text
+
+    @a = global i32 1
+    @b = global i32 2
+    @c = global i32 3, section "abc", !implicit.ref !0, !implicit.ref !1
+    !0 = !{ptr @a}
+    !1 = !{ptr @b}
+
 
 Module Flags Metadata
 =====================
@@ -14642,6 +14673,37 @@ Semantics:
 
 Note this intrinsic is only verified on AArch64 and ARM.
 
+'``llvm.stackaddress``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptr @llvm.stackaddress.p0()
+
+Overview:
+"""""""""
+
+The '``llvm.stackaddress``' intrinsic returns the starting address of the
+stack region that may be used by called functions.
+
+Semantics:
+""""""""""
+
+This intrinsic returns the *logical* value of the stack pointer register, that
+is, the address separating the stack space of the current function from the
+stack space that may be modified by called functions. It corresponds to the
+address returned by '``llvm.sponentry``', offset by the size of the current
+function's stack frame.
+
+On certain targets (e.g. x86), the logical and actual (or physical) values of
+the stack pointer register are the same. However, on other architectures (e.g.
+SPARCv9), the logical value of the stack pointer register may differ from the
+physical value. '``llvm.stackaddress``' handles this discrepancy and returns
+the correct boundary address.
+
 '``llvm.frameaddress``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -18387,8 +18449,6 @@ then the result is the size in bits of the type of ``src`` if
 ``is_zero_poison == 0`` and ``poison`` otherwise. For example,
 ``llvm.cttz(2) = 1``.
 
-.. _int_overflow:
-
 .. _int_fshl:
 
 '``llvm.fshl.*``' Intrinsic
@@ -18484,6 +18544,57 @@ Example:
       %r = call i8 @llvm.fshr.i8(i8 255, i8 0, i8 15)  ; %r = i8: 254 (0b11111110)
       %r = call i8 @llvm.fshr.i8(i8 15, i8 15, i8 11)  ; %r = i8: 225 (0b11100001)
       %r = call i8 @llvm.fshr.i8(i8 0, i8 255, i8 8)   ; %r = i8: 255 (0b11111111)
+
+.. _int_clmul:
+
+'``llvm.clmul.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.clmul`` on any integer
+or vectors of integer elements.
+
+::
+
+      declare i16 @llvm.clmul.i16(i16 %a, i16 %b)
+      declare i32 @llvm.clmul.i32(i32 %a, i32 %b)
+      declare i64 @llvm.clmul.i64(i64 %a, i64 %b)
+      declare <4 x i32> @llvm.clmul.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.clmul``' family of intrinsic functions performs carry-less
+multiplication, or XOR multiplication, on the two arguments, and returns
+the low-bits.
+
+Arguments:
+""""""""""
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+Semantics:
+""""""""""
+
+The '``llvm.clmul``' intrinsic computes carry-less multiply of its arguments,
+which is the result of applying the standard multiplication algorithm, where
+all of the additions are replaced with XORs, and returns the low-bits.
+The vector variants operate lane-wise.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+      %r = call i4 @llvm.clmul.i4(i4 1, i4 2)    ; %r = 2
+      %r = call i4 @llvm.clmul.i4(i4 5, i4 6)    ; %r = 14
+      %r = call i4 @llvm.clmul.i4(i4 -4, i4 2)   ; %r = -8
+      %r = call i4 @llvm.clmul.i4(i4 -4, i4 -5)  ; %r = 4
+
+.. _int_overflow:
 
 Arithmetic with Overflow Intrinsics
 -----------------------------------
@@ -20764,8 +20875,8 @@ Arguments:
 All arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
-'``llvm.vector.splice``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.vector.splice.left``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -20773,21 +20884,15 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.vector.splice.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.left.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
+      declare <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
 
 Overview:
 """""""""
 
-The '``llvm.vector.splice.*``' intrinsics construct a vector by
-concatenating elements from the first input vector with elements of the second
-input vector, returning a vector of the same type as the input vectors. The
-signed immediate, modulo the number of elements in the vector, is the index
-into the first vector from which to extract the result value. This means
-conceptually that for a positive immediate, a vector is extracted from
-``concat(%vec1, %vec2)`` starting at index ``imm``, whereas for a negative
-immediate, it extracts ``-imm`` trailing elements from the first vector, and
-the remaining elements from ``%vec2``.
+The '``llvm.vector.splice.left.*``' intrinsics construct a vector by
+concatenating two vectors together, shifting the elements left by ``imm``, and
+extracting the lower half.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
@@ -20798,18 +20903,61 @@ For example:
 
 .. code-block:: text
 
- llvm.vector.splice(<A,B,C,D>, <E,F,G,H>, 1);  ==> <B, C, D, E> index
- llvm.vector.splice(<A,B,C,D>, <E,F,G,H>, -3); ==> <B, C, D, E> trailing elements
+ llvm.vector.splice.left(<A,B,C,D>, <E,F,G,H>, 1);
+                     ==> <A,B,C,D,E,F,G,H>
+                     ==> <B,C,D,E,F,G,H,_>
+                     ==> <B,C,D,E>
 
 
 Arguments:
 """"""""""
 
-The first two operands are vectors with the same type. The start index is imm
-modulo the runtime number of elements in the source vector. For a fixed-width
-vector <N x eltty>, imm is a signed integer constant in the range
--N <= imm < N. For a scalable vector <vscale x N x eltty>, imm is a signed
-integer constant in the range -X <= imm < X where X=vscale_range_min * N.
+The first two operands are vectors with the same type. For a fixed-width vector
+<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm < N. For
+a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
+the range 0 <= imm < X where X=vscale_range_min * N.
+
+'``llvm.vector.splice.right``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <2 x double> @llvm.vector.splice.right.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
+      declare <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.splice.right.*``' intrinsics construct a vector by
+concatenating two vectors together, shifting the elements right by ``imm``, and
+extracting the upper half.
+
+These intrinsics work for both fixed and scalable vectors. While this intrinsic
+supports all vector types the recommended way to express this operation for
+fixed-width vectors is still to use a shufflevector, as that may allow for more
+optimization opportunities.
+
+For example:
+
+.. code-block:: text
+
+ llvm.vector.splice.right(<A,B,C,D>, <E,F,G,H>, 1);
+                      ==> <A,B,C,D,E,F,G,H>
+                      ==> <_,A,B,C,D,E,F,G>
+                      ==>         <D,E,F,G>
+
+
+Arguments:
+""""""""""
+
+The first two operands are vectors with the same type. For a fixed-width vector
+<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm <= N. For
+a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
+the range 0 <= imm <= X where X=vscale_range_min * N.
 
 '``llvm.stepvector``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -21566,6 +21714,164 @@ This intrinsic is assumed to execute in the default :ref:`floating-point
 environment <floatenv>` *except* for the rounding mode.
 This intrinsic is not supported on all targets. Some targets may not support
 all rounding modes.
+
+'``llvm.convert.to.arbitrary.fp``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <iNxM> @llvm.convert.to.arbitrary.fp.<iNxM>.<fNxM>(
+          <fNxM> <value>, metadata <interpretation>,
+          metadata <rounding mode>, i1 <saturation>)
+
+Overview:
+"""""""""
+
+The ``llvm.convert.to.arbitrary.fp`` intrinsic converts a native LLVM
+floating-point value to an arbitrary FP format, returning the result as an integer
+containing the arbitrary FP bits. This intrinsic is overloaded on both its return
+type and first argument.
+
+Arguments:
+""""""""""
+
+``value``
+  The native LLVM floating-point value to convert (e.g., ``half``, ``float``, ``double``).
+
+``interpretation``
+  A metadata string describing the target arbitrary FP format. Supported format names include:
+
+  - FP8 formats: ``"Float8E5M2"``, ``"Float8E5M2FNUZ"``, ``"Float8E4M3"``,
+    ``"Float8E4M3FN"``, ``"Float8E4M3FNUZ"``, ``"Float8E4M3B11FNUZ"``, ``"Float8E3M4"``,
+    ``"Float8E8M0FNU"``
+  - FP6 formats: ``"Float6E3M2FN"``, ``"Float6E2M3FN"``
+  - FP4 formats: ``"Float4E2M1FN"``
+
+``rounding mode``
+  A metadata string specifying the rounding mode. The permitted strings match those
+  accepted by ``llvm.fptrunc.round`` (for example,
+  ``"round.tonearest"`` or ``"round.towardzero"``).
+
+  The rounding mode is only consulted when ``value`` is not exactly representable in the target format.
+  If the value is exactly representable, all rounding modes produce the same result.
+
+``saturation``
+  A compile-time constant boolean value (``i1``). This parameter controls how overflow is handled
+  when values exceed the representable finite range of the target format:
+
+  - When ``true``: overflowing values are clamped to the minimum or maximum representable finite value
+    (saturating to the largest negative finite value or largest positive finite value).
+  - When ``false``: overflowing values are converted to infinity (preserving sign of the original value) if the
+    target format supports infinity, or return a poison value if infinity is not supported
+    by the target format.
+
+  This parameter must be an immediate constant.
+
+Semantics:
+""""""""""
+
+The intrinsic converts the native LLVM floating-point value to the arbitrary FP
+format specified by ``interpretation``, applying the requested rounding mode and
+saturation behavior. The conversion is performed in two steps: first, the value is
+rounded according to the specified rounding mode to fit the target format's precision;
+then, if the rounded result exceeds the target format's representable range, saturation
+is applied according to the ``saturation`` parameter. The result is returned as an
+integer (e.g., ``i8`` for FP8, ``i6`` for FP6) containing the encoded arbitrary FP bits.
+
+**Handling of special values:**
+
+- **NaN**: NaN values follow LLVM's standard :ref:`NaN rules <floatnan>`. When the target
+  format supports NaN, the NaN representation is preserved (quiet NaNs remain quiet, signaling
+  NaNs remain signaling). The exact NaN payload may be truncated or extended to fit the target
+  format's payload size. If the target format does not support NaN, the intrinsic returns a
+  poison value.
+- **Infinity and Overflow**: If the input is +/-Inf or a finite value that exceeds the representable range:
+
+  - When ``saturation`` is ``false`` and the target format supports infinity, the result is +/-Inf (preserving the sign).
+  - When ``saturation`` is ``false`` and the target format does not support infinity (e.g., formats
+    with "FN" suffix), the intrinsic returns a poison value.
+  - When ``saturation`` is ``true``, the value is clamped to the maximum/minimum representable finite value.
+
+For FP6/FP4 interpretations, producers are expected to use ``saturation`` = ``true``; using ``saturation`` = ``false`` and generating NaN/Inf/overflowing values results in a poison value.
+
+Example:
+""""""""
+
+::
+
+      ; Convert half to FP8 E4M3 format
+      %fp8bits = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(
+          half %value, metadata !"Float8E4M3",
+          metadata !"round.tonearest", i1 false)
+
+      ; Convert vector of float to FP8 E5M2 with saturation
+      %vec_fp8 = call <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4f32(
+          <4 x float> %values, metadata !"Float8E5M2",
+          metadata !"round.towardzero", i1 true)
+
+'``llvm.convert.from.arbitrary.fp``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <fNxM> @llvm.convert.from.arbitrary.fp.<fNxM>.<iNxM>(
+          <iNxM> <value>, metadata <interpretation>)
+
+Overview:
+"""""""""
+
+The ``llvm.convert.from.arbitrary.fp`` intrinsic converts an integer containing
+arbitrary FP bits to a native LLVM floating-point value. This intrinsic is
+overloaded on both its return type and first argument.
+
+Arguments:
+""""""""""
+
+``value``
+  An integer value containing the arbitrary FP bits (e.g., ``i8`` for FP8, ``i6`` for FP6).
+
+``interpretation``
+  A metadata string describing the source arbitrary FP format. Supported format names include:
+
+  - FP8 formats: ``"Float8E5M2"``, ``"Float8E5M2FNUZ"``, ``"Float8E4M3"``,
+    ``"Float8E4M3FN"``, ``"Float8E4M3FNUZ"``, ``"Float8E4M3B11FNUZ"``, ``"Float8E3M4"``,
+    ``"Float8E8M0FNU"``
+  - FP6 formats: ``"Float6E3M2FN"``, ``"Float6E2M3FN"``
+  - FP4 formats: ``"Float4E2M1FN"``
+
+Semantics:
+""""""""""
+
+The intrinsic interprets the integer value as arbitrary FP bits according to
+``interpretation``, then converts to the native LLVM floating-point result type.
+
+Conversions from arbitrary FP formats to native LLVM floating-point types are
+widening conversions (e.g., FP8 to FP16 or FP32), which are exact and require no rounding.
+Normal finite values are converted exactly. NaN values follow LLVM's standard :ref:`NaN rules
+<floatnan>`; the NaN representation is preserved (quiet NaNs remain quiet, signaling NaNs
+remain signaling), and the NaN payload may be truncated or extended to fit the target format's
+payload size. Infinity values are preserved as infinity. If a value exceeds the representable
+range of the target type (for example, converting ``Float8E8M0FNU`` with large exponents to
+``half``), the result is converted to infinity with the appropriate sign.
+
+Example:
+""""""""
+
+::
+
+      ; Convert FP8 E4M3 bits to half
+      %half_val = call half @llvm.convert.from.arbitrary.fp.f16.i8(
+          i8 %fp8bits, metadata !"Float8E4M3")
+
+      ; Convert vector of FP8 E5M2 bits to float
+      %vec_float = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i8(
+          <4 x i8> %fp8_values, metadata !"Float8E5M2")
 
 Convergence Intrinsics
 ----------------------

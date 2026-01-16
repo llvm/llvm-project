@@ -81,3 +81,9 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPassign_nested_c_devptr
 ! CHECK-NOT: fir.call @_FortranAAssign
+
+subroutine host_c_devloc(a)
+  use __fortran_builtins, only: c_devloc => __builtin_c_devloc
+  complex, allocatable, device :: a(:)
+  print*, c_devloc(a(1))
+end subroutine

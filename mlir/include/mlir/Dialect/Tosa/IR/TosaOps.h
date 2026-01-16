@@ -124,15 +124,9 @@ public:
   }
 };
 
-LogicalResult verifyTosaShapeOperator(Operation *op);
 /// This class indicates that op operates on tosa shape types
 template <typename ConcreteType>
-class TosaShapeOperator : public TraitBase<ConcreteType, TosaShapeOperator> {
-public:
-  static LogicalResult verifyTrait(Operation *op) {
-    return verifyTosaShapeOperator(op);
-  }
-};
+class TosaShapeOperator : public TraitBase<ConcreteType, TosaShapeOperator> {};
 
 LogicalResult verifyTosaShapeOperatorWithSameRanks(Operation *op);
 /// This class indicates that op operates on tosa shape types
