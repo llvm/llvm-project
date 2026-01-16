@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SHARED_MATH_ILOGBF_H
 #define LLVM_LIBC_SHARED_MATH_ILOGBF_H
 
-#include "include/llvm-libc-macros/float-macros.h"
 
 #include "src/__support/math/ilogbf.h"
 

@@ -2860,7 +2860,6 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
-        ":llvm_libc_macros_float_macros",
     ],
 )
 

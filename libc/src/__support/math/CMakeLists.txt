@@ -649,8 +649,6 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
-    libc.src.errno.errno
-    libc.include.llvm-libc-macros.float_macros
 )
 
 add_header_library(
