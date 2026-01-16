@@ -8383,7 +8383,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
 
   auto PrintFunc = [&](uint64_t FuncPC) {
     uint64_t FuncEntryPC = FuncPC;
-    // Clear Thumb bit if it was set before symbol lookup.
+    // In ARM thumb mode the LSB of the function pointer is set to 1. Since this
+    // detail is unncessary in call graph reconstruction, we are clearing this
+    // bit to facilate tooling.
     if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
       FuncEntryPC = FuncPC & ~1;
     if (this->Obj.getHeader().e_type == ELF::ET_REL)
