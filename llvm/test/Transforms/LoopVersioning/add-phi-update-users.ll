@@ -4,7 +4,7 @@
 ; This test case used to end like this:
 ;
 ;    Instruction does not dominate all uses!
-;      %t2 = load i16, i16* @b, align 1, !tbaa !2, !alias.scope !6
+;      %t2 = load i16, ptr @b, align 1, !tbaa !2, !alias.scope !6
 ;      %tobool = icmp eq i16 %t2, 0
 ;    LLVM ERROR: Broken function found, compilation aborted!
 ;

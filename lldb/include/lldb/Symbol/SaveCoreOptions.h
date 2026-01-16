@@ -37,7 +37,7 @@ public:
   const std::optional<lldb_private::FileSpec> GetOutputFile() const;
 
   Status SetProcess(lldb::ProcessSP process_sp);
-  lldb::ProcessSP GetProcess() { return m_process_sp; }
+  lldb::ProcessSP GetProcess() const { return m_process_sp; }
 
   Status AddThread(lldb::ThreadSP thread_sp);
   bool RemoveThread(lldb::ThreadSP thread_sp);

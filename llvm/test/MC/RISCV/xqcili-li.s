@@ -1,5 +1,5 @@
 # Xqcili - Check aliases for li instruction
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcili -M no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcili -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv32 -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST-RISCV32 %s

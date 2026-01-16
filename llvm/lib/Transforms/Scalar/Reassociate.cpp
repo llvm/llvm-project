@@ -1513,8 +1513,11 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
       // Insert a new multiply.
       Type *Ty = TheOp->getType();
-      Constant *C = Ty->isIntOrIntVectorTy() ?
-        ConstantInt::get(Ty, NumFound) : ConstantFP::get(Ty, NumFound);
+      // Truncate if NumFound overflows the type.
+      Constant *C = Ty->isIntOrIntVectorTy()
+                        ? ConstantInt::get(Ty, NumFound, /*IsSigned=*/false,
+                                           /*ImplicitTrunc=*/true)
+                        : ConstantFP::get(Ty, NumFound);
       Instruction *Mul = CreateMul(TheOp, C, "factor", I->getIterator(), I);
       Mul->setDebugLoc(I->getDebugLoc());
 

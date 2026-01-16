@@ -915,6 +915,9 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
         Disc = llvm::ConstantInt::get(CGM.Int64Ty, FieldSignature);
         AddrDisc = llvm::ConstantPointerNull::get(CGM.VoidPtrTy);
       } else if (Emitter.isAbstract()) {
+        // isAbstract means that we don't know the global's address. Since we
+        // can only form a pointer without knowing the address if the fields are
+        // trivially copyable, we need to return false otherwise.
         return false;
       } else {
         Disc = llvm::ConstantInt::get(CGM.Int64Ty,
@@ -1687,8 +1690,8 @@ llvm::Constant *ConstantEmitter::tryEmitForInitializer(const VarDecl &D) {
   // initialized in .tdata because the initializer will be memcpy'd to the
   // thread's TLS. Instead the initialization must be done in code.
   if (!PlaceholderAddresses.empty() && D.getTLSKind() != VarDecl::TLS_None) {
-    for (auto &entry : PlaceholderAddresses)
-      entry.second->eraseFromParent();
+    for (auto [_, GV] : PlaceholderAddresses)
+      GV->eraseFromParent();
     PlaceholderAddresses.clear();
     Init = nullptr;
   }

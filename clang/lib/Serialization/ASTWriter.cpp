@@ -972,6 +972,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PP_ASSUME_NONNULL_LOC);
   RECORD(PP_UNSAFE_BUFFER_USAGE);
   RECORD(VTABLES_TO_EMIT);
+  RECORD(RISCV_VECTOR_INTRINSICS_PRAGMA);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -1714,7 +1715,9 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   Record.push_back(HSOpts.UseStandardCXXIncludes);
   Record.push_back(HSOpts.UseLibcxx);
   // Write out the specific module cache path that contains the module files.
-  AddString(PP.getHeaderSearchInfo().getModuleCachePath(), Record);
+  // FIXME: We already wrote out the normalized cache path. Just write the
+  // context hash (unless suppressed).
+  AddString(PP.getHeaderSearchInfo().getSpecificModuleCachePath(), Record);
   Stream.EmitRecord(HEADER_SEARCH_OPTIONS, Record);
 
   // Preprocessor options.
@@ -3515,7 +3518,7 @@ void ASTWriter::WriteFileDeclIDsMap() {
 
 void ASTWriter::WriteComments(ASTContext &Context) {
   Stream.EnterSubblock(COMMENTS_BLOCK_ID, 3);
-  auto _ = llvm::make_scope_exit([this] { Stream.ExitBlock(); });
+  llvm::scope_exit _([this] { Stream.ExitBlock(); });
   if (!PP->getPreprocessorOpts().WriteCommentListToPCH)
     return;
 
@@ -4623,7 +4626,7 @@ uint64_t ASTWriter::WriteSpecializationInfoLookupTable(
   return Offset;
 }
 
-/// Returns ture if all of the lookup result are either external, not emitted or
+/// Returns true if all of the lookup result are either external, not emitted or
 /// predefined. In such cases, the lookup result is not interesting and we don't
 /// need to record the result in the current being written module. Return false
 /// otherwise.
@@ -5230,6 +5233,16 @@ void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
 
   // Exit the extension block.
   Stream.ExitBlock();
+}
+
+void ASTWriter::WriteRISCVIntrinsicPragmas(Sema &SemaRef) {
+  RecordData Record;
+  // Need to update this when new intrinsic class is added.
+  Record.push_back(/*size*/ 3);
+  Record.push_back(SemaRef.RISCV().DeclareRVVBuiltins);
+  Record.push_back(SemaRef.RISCV().DeclareSiFiveVectorBuiltins);
+  Record.push_back(SemaRef.RISCV().DeclareAndesVectorBuiltins);
+  Stream.EmitRecord(RISCV_VECTOR_INTRINSICS_PRAGMA, Record);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6130,6 +6143,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     WriteFPPragmaOptions(SemaPtr->CurFPFeatureOverrides());
     WriteOpenCLExtensions(*SemaPtr);
     WriteCUDAPragmas(*SemaPtr);
+    WriteRISCVIntrinsicPragmas(*SemaPtr);
   }
 
   // If we're emitting a module, write out the submodule information.
@@ -7964,6 +7978,11 @@ void OMPClauseWriter::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getThreadsetKindLoc());
   Record.writeEnum(C->getThreadsetKind());
+}
+
+void OMPClauseWriter::VisitOMPTransparentClause(OMPTransparentClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddStmt(C->getImpexType());
 }
 
 void OMPClauseWriter::VisitOMPProcBindClause(OMPProcBindClause *C) {

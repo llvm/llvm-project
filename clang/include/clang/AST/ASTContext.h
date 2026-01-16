@@ -216,9 +216,8 @@ struct TypeInfoChars {
 };
 
 struct PFPField {
-  CharUnits offset;
-  FieldDecl *field;
-  bool isWithinUnion;
+  CharUnits Offset;
+  FieldDecl *Field;
 };
 
 /// Holds long-lived AST nodes (such as types and decls) that can be
@@ -687,7 +686,6 @@ private:
 public:
   struct CXXRecordDeclRelocationInfo {
     unsigned IsRelocatable;
-    unsigned IsReplaceable;
   };
   std::optional<CXXRecordDeclRelocationInfo>
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
@@ -3808,11 +3806,13 @@ public:
 
   StringRef getCUIDHash() const;
 
-  void findPFPFields(QualType Ty, CharUnits Offset,
-                     std::vector<PFPField> &Fields, bool IncludeVBases,
-                     bool IsWithinUnion = false) const;
-  bool hasPFPFields(QualType ty) const;
-  bool isPFPField(const FieldDecl *field) const;
+  /// Returns a list of PFP fields for the given type, including subfields in
+  /// bases or other fields, except for fields contained within fields of union
+  /// type.
+  std::vector<PFPField> findPFPFields(QualType Ty) const;
+
+  bool hasPFPFields(QualType Ty) const;
+  bool isPFPField(const FieldDecl *Field) const;
 
   /// Returns whether this record's PFP fields (if any) are trivially
   /// copyable (i.e. may be memcpy'd). This may also return true if the

@@ -18,9 +18,11 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+static constexpr char AutoPtrTokenId[] = "AutoPrTokenId";
+static constexpr char AutoPtrOwnershipTransferId[] =
+    "AutoPtrOwnershipTransferId";
+
 namespace {
-static const char AutoPtrTokenId[] = "AutoPrTokenId";
-static const char AutoPtrOwnershipTransferId[] = "AutoPtrOwnershipTransferId";
 
 /// Matches expressions that are lvalues.
 ///

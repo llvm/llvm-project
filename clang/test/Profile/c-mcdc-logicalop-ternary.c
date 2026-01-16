@@ -13,12 +13,14 @@ int test(int a, int b, int c, int d, int e, int f) {
 
 // ALLOCATE MCDC TEMP AND ZERO IT.
 // MCDC-LABEL: @test(
-// MCDC: %mcdc.addr = alloca i32, align 4
-// MCDC: store i32 0, ptr %mcdc.addr, align 4
+// MCDC: %[[ADDR0:mcdc.+]] = alloca i32, align 4
+// MCDC: %[[ADDR1:mcdc.+]] = alloca i32, align 4
+// MCDC: %[[ADDR2:mcdc.+]] = alloca i32, align 4
+// MCDC: store i32 0, ptr %[[ADDR0]], align 4
 
 // TERNARY TRUE SHOULD UPDATE THE BITMAP WITH RESULT AT ELEMENT 0.
 // MCDC-LABEL: cond.true:
-// MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %[[ADDR0]], align 4
 // MCDC:  %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 0
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
 // MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB1]]
@@ -30,12 +32,12 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC:  store i8 %[[LAB9]], ptr %[[LAB4]], align 1
 
 // CHECK FOR ZERO OF MCDC TEMP
-// MCDC: store i32 0, ptr %mcdc.addr, align 4
+// MCDC: store i32 0, ptr %[[ADDR1]], align 4
 
 // TERNARY TRUE YIELDS TERNARY LHS LOGICAL-AND.
 // TERNARY LHS LOGICAL-AND SHOULD UPDATE THE BITMAP WITH RESULT AT ELEMENT 1.
 // MCDC-LABEL: land.end:
-// MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %[[ADDR1]], align 4
 // MCDC:  %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 3
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
 // MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB1]]
@@ -48,7 +50,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 
 // TERNARY FALSE SHOULD UPDATE THE BITMAP WITH RESULT AT ELEMENT 0.
 // MCDC-LABEL: cond.false:
-// MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDC-DAG: %[[TEMP0:mcdc.+]] = load i32, ptr %[[ADDR0]], align 4
 // MCDC:  %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 0
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
 // MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB1]]
@@ -60,12 +62,12 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC:  store i8 %[[LAB9]], ptr %[[LAB4]], align 1
 
 // CHECK FOR ZERO OF MCDC TEMP
-// MCDC: store i32 0, ptr %mcdc.addr, align 4
+// MCDC: store i32 0, ptr %[[ADDR2]], align 4
 
 // TERNARY FALSE YIELDS TERNARY RHS LOGICAL-OR.
 // TERNARY RHS LOGICAL-OR SHOULD UPDATE THE BITMAP WITH RESULT AT ELEMENT 2.
 // MCDC-LABEL: lor.end:
-// MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %[[ADDR2]], align 4
 // MCDC:  %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 6
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
 // MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB1]]
