@@ -1413,30 +1413,6 @@ static bool overreadUndefContents(MemorySSA *MSSA, MemCpyInst *MemCpy,
   return false;
 }
 
-// If only the MemSrc instruction is known, a similar but slightly weaker
-// analysis can apply
-static bool allOverreadUndefContents(MemorySSA *MSSA, Instruction *Store,
-                                     BatchAAResults &BAA) {
-  MemoryLocation Loc;
-  Value *Ptr;
-  if (auto SI = dyn_cast<StoreInst>(Store)) {
-    Loc = MemoryLocation::get(SI);
-    Ptr = SI->getPointerOperand();
-  } else if (auto MI = dyn_cast<MemCpyInst>(Store)) {
-    Loc = MemoryLocation::getForDest(MI);
-    Ptr = MI->getDest();
-  } else {
-    llvm_unreachable("performStackMoveOptzn must have a known store kind");
-  }
-  MemoryUseOrDef *MemAccess = MSSA->getMemoryAccess(Store);
-  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
-      MemAccess->getDefiningAccess(), Loc, BAA);
-  if (auto *MD = dyn_cast<MemoryDef>(Clobber))
-    if (hasUndefContents(MSSA, BAA, Ptr, MD))
-      return true;
-  return false;
-}
-
 /// Transform memcpy to memset when its source was just memset.
 /// In other words, turn:
 /// \code
@@ -1566,14 +1542,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (*SrcSize != *DestSize)
     if (!SrcSize->isFixed() || !DestSize->isFixed())
       return false;
-  // Check that copy is full with dest size (from DestOffset to end),
-  // either because it wrote every byte, or the rest was undef.
-  if (Size != *DestSize || *DestOffset != 0) {
-    if (!allOverreadUndefContents(MSSA, Store, BAA)) {
-      LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
-      return false;
-    }
-  }
 
   // Check if it will be legal to combine allocas without breaking dominator.
   bool MoveSrc = !DT->dominates(SrcAlloca, DestAlloca);
@@ -1685,6 +1653,47 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (!CaptureTrackingWithModRef(DestAlloca, DestModRefCallback,
                                  DestAddressCaptured))
     return false;
+
+  // Check that copy is full with dest size (from DestOffset to end), either
+  // because it wrote every byte, or it was fresh. The store itself was ignored
+  // earlier, but might be in a loop, so it could (in rare cases) observe that
+  // earlier store which needs to be checked for now. For example, a source
+  // language might emit code matching that pattern for a simple array reverse
+  // with a struct element type:
+  //   for (i = 0; i < size; i++) dest[size - i - 1] = src[i];
+  if (*DestOffset != 0 || Size != *DestSize) {
+    // Similar analysis to overreadUndefContents
+    MemoryLocation Loc;
+    Value *Ptr;
+    if (auto SI = dyn_cast<StoreInst>(Store)) {
+      Loc = MemoryLocation::get(SI);
+      Ptr = SI->getPointerOperand();
+    } else if (auto MI = dyn_cast<MemCpyInst>(Store)) {
+      Loc = MemoryLocation::getForDest(MI);
+      Ptr = MI->getDest();
+    } else {
+      llvm_unreachable("performStackMoveOptzn must have a known store kind");
+    }
+    // If offset and size are constant, then this overwrote the same bytes
+    // every time anyways.
+    if (!Ptr->getPointerOffsetFrom(DestAlloca, DL)) {
+      // Otherwise, if the other bytes are not known-undef, then also need to
+      // consider whether they could have been defined by this same store in a
+      // loop.
+      MemoryUseOrDef *MemAccess = MSSA->getMemoryAccess(Store);
+      MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
+          MemAccess->getDefiningAccess(), Loc, BAA);
+      bool allOverreadUndefContents = false;
+      if (auto *MD = dyn_cast<MemoryDef>(Clobber))
+        if (hasUndefContents(MSSA, BAA, Ptr, MD))
+          allOverreadUndefContents = true;
+      if (!allOverreadUndefContents) {
+        BasicBlock *BB = Store->getParent();
+        ReachabilityWorklist.append(succ_begin(BB), succ_end(BB));
+      }
+    }
+  }
+
   // Bailout if Dest may have any ModRef before Store.
   if (!ReachabilityWorklist.empty() &&
       isPotentiallyReachableFromMany(ReachabilityWorklist, Store->getParent(),
