@@ -59,6 +59,14 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBTest) {
   ASSERT_TRUE(Obj2.has_value());
   EXPECT_EQ(toStringRef(DB->getObjectData(*Obj2)), "world");
 
+  ASSERT_THAT_ERROR(DB->validateObjectID(*ID1), Succeeded());
+  ASSERT_THAT_ERROR(DB->validateObjectID(ObjectID::fromOpaqueData(0)),
+                    Failed());
+  ASSERT_THAT_ERROR(DB->validateObjectID(ObjectID::fromOpaqueData(4)),
+                    Failed());
+  ASSERT_THAT_ERROR(DB->validateObjectID(ObjectID::fromOpaqueData(8)),
+                    Failed());
+
   size_t LargeDataSize = 256LL * 1024LL; // 256K.
   // The precise size number is not important, we mainly check that the large
   // object will be properly accounted for.

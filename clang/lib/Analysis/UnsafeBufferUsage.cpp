@@ -4594,6 +4594,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   SmallVector<Stmt *> Stmts;
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // Consteval functions are free of UB by the spec, so we don't need to
+    // visit them or produce diagnostics.
+    if (FD->isConsteval())
+      return;
     // We do not want to visit a Lambda expression defined inside a method
     // independently. Instead, it should be visited along with the outer method.
     // FIXME: do we want to do the same thing for `BlockDecl`s?
