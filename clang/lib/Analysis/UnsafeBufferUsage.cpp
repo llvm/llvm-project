@@ -667,7 +667,8 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
 }
 
 static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
-                                 const ASTContext &Ctx) {
+                                 const ASTContext &Ctx,
+                                 const bool IgnoreStaticSizedArrays) {
   // FIXME: Proper solution:
   //  - refactor Sema::CheckArrayAccess
   //    - split safe/OOB/unknown decision logic from diagnostics emitting code
@@ -687,6 +688,12 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
     limit = SLiteral->getLength() + 1;
   } else {
     return false;
+  }
+
+  if (IgnoreStaticSizedArrays) {
+    // If we made it here, it means a size was found for the var being
+    // accessed. If it's fixed size, we can ignore it.
+    return true;
   }
 
   Expr::EvalResult EVResult;
@@ -1568,6 +1575,7 @@ public:
   }
 
   static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
     const auto *ASE = dyn_cast<ArraySubscriptExpr>(S);
     if (!ASE)
@@ -1578,7 +1586,10 @@ public:
     const auto *Idx = dyn_cast<IntegerLiteral>(ASE->getIdx());
     bool IsSafeIndex = (Idx && Idx->getValue().isZero()) ||
                        isa<ArrayInitIndexExpr>(ASE->getIdx());
-    if (IsSafeIndex || isSafeArraySubscript(*ASE, Ctx))
+    if (IsSafeIndex ||
+        isSafeArraySubscript(
+            *ASE, Ctx,
+            Handler->ignoreUnsafeBufferInStaticSizedArray(S->getBeginLoc())))
       return false;
     Result.addNode(ArraySubscrTag, DynTypedNode::create(*ASE));
     return true;
@@ -2886,6 +2897,10 @@ std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
       return false;
     }
     bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInStaticSizedArray(
+        const SourceLocation &Loc) const override {
       return false;
     }
     std::string getUnsafeBufferUsageAttributeTextAt(
