@@ -4108,13 +4108,16 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   assert(CmpInst::isFPPredicate(Pred) && "Not an FP compare!");
 
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
-    if (Constant *CRHS = dyn_cast<Constant>(RHS))
-      return ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI,
-                                             Q.CxtI);
-
-    // If we have a constant, make sure it is on the RHS.
-    std::swap(LHS, RHS);
-    Pred = CmpInst::getSwappedPredicate(Pred);
+    if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
+      // if the folding isn't successfull, fall back to the rest of the logic
+      if (auto *Result = ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL,
+                                                         Q.TLI, Q.CxtI))
+        return Result;
+    } else {
+      // If we have a constant, make sure it is on the RHS.
+      std::swap(LHS, RHS);
+      Pred = CmpInst::getSwappedPredicate(Pred);
+    }
   }
 
   // Fold trivial predicates.
@@ -4517,15 +4520,31 @@ static Value *simplifyWithOpsReplaced(Value *V,
   // TODO: This may be unsound, because it only catches some forms of
   // refinement.
   if (!AllowRefinement) {
+    auto *II = dyn_cast<IntrinsicInst>(I);
     if (canCreatePoison(cast<Operator>(I), !DropFlags)) {
       // abs cannot create poison if the value is known to never be int_min.
-      if (auto *II = dyn_cast<IntrinsicInst>(I);
-          II && II->getIntrinsicID() == Intrinsic::abs) {
+      if (II && II->getIntrinsicID() == Intrinsic::abs) {
         if (!ConstOps[0]->isNotMinSignedValue())
           return nullptr;
       } else
         return nullptr;
     }
+
+    if (DropFlags && II) {
+      // If we're going to change the poison flag of abs/ctz to false, also
+      // perform constant folding that way, so we get an integer instead of a
+      // poison value here.
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::abs:
+      case Intrinsic::ctlz:
+      case Intrinsic::cttz:
+        ConstOps[1] = ConstantInt::getFalse(I->getContext());
+        break;
+      default:
+        break;
+      }
+    }
+
     Constant *Res = ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI,
                                              /*AllowNonDeterministic=*/false);
     if (DropFlags && Res && I->hasPoisonGeneratingAnnotations())
@@ -5610,7 +5629,7 @@ static Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
                                         ArrayRef<int> Mask, Type *RetTy,
                                         const SimplifyQuery &Q,
                                         unsigned MaxRecurse) {
-  if (all_of(Mask, [](int Elem) { return Elem == PoisonMaskElem; }))
+  if (all_of(Mask, equal_to(PoisonMaskElem)))
     return PoisonValue::get(RetTy);
 
   auto *InVecTy = cast<VectorType>(Op0->getType());
@@ -6571,10 +6590,21 @@ static Value *foldMinMaxSharedOp(Intrinsic::ID IID, Value *Op0, Value *Op1) {
 /// is expected to swap the operand arguments to handle commutation.
 static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
                                          Value *Op1) {
-  assert((IID == Intrinsic::maxnum || IID == Intrinsic::minnum ||
-          IID == Intrinsic::maximum || IID == Intrinsic::minimum ||
-          IID == Intrinsic::maximumnum || IID == Intrinsic::minimumnum) &&
-         "Unsupported intrinsic");
+  auto IsMinimumMaximumIntrinsic = [](Intrinsic::ID ID) {
+    switch (ID) {
+    case Intrinsic::maxnum:
+    case Intrinsic::minnum:
+    case Intrinsic::maximum:
+    case Intrinsic::minimum:
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  assert(IsMinimumMaximumIntrinsic(IID) && "Unsupported intrinsic");
 
   auto *M0 = dyn_cast<IntrinsicInst>(Op0);
   // If Op0 is not the same intrinsic as IID, do not process.
@@ -6594,7 +6624,7 @@ static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
     return M0;
 
   auto *M1 = dyn_cast<IntrinsicInst>(Op1);
-  if (!M1)
+  if (!M1 || !IsMinimumMaximumIntrinsic(M1->getIntrinsicID()))
     return nullptr;
   Value *X1 = M1->getOperand(0);
   Value *Y1 = M1->getOperand(1);

@@ -2668,6 +2668,8 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
     const APInt *DivisorC;
     if (!match(SRem->getOperand(1), m_APInt(DivisorC)))
       return nullptr;
+    if (DivisorC->isZero())
+      return nullptr;
 
     APInt NormalizedC = C;
     if (Pred == ICmpInst::ICMP_ULT) {
@@ -2677,8 +2679,6 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
     }
     if (C.isNegative())
       NormalizedC.flipAllBits();
-    assert(!DivisorC->isZero() &&
-           "srem X, 0 should have been simplified already.");
     if (!NormalizedC.uge(DivisorC->abs() - 1))
       return nullptr;
 
@@ -3878,7 +3878,10 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
 
   case Intrinsic::ssub_sat:
     // ssub.sat(a, b) == 0 -> a == b
-    if (C.isZero())
+    //
+    // Note this doesn't work for ssub.sat.i1 because ssub.sat.i1 0, -1 = 0
+    // (because 1 saturates to 0).  Just skip the optimization for i1.
+    if (C.isZero() && II->getType()->getScalarSizeInBits() > 1)
       return new ICmpInst(Pred, II->getArgOperand(0), II->getArgOperand(1));
     break;
   case Intrinsic::usub_sat: {
@@ -4269,7 +4272,10 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
   }
   case Intrinsic::ssub_sat:
     // ssub.sat(a, b) spred 0 -> a spred b
-    if (ICmpInst::isSigned(Pred)) {
+    //
+    // Note this doesn't work for ssub.sat.i1 because ssub.sat.i1 0, -1 = 0
+    // (because 1 saturates to 0).  Just skip the optimization for i1.
+    if (ICmpInst::isSigned(Pred) && C.getBitWidth() > 1) {
       if (C.isZero())
         return new ICmpInst(Pred, II->getArgOperand(0), II->getArgOperand(1));
       // X s<= 0 is cannonicalized to X s< 1

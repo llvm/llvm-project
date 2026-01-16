@@ -616,6 +616,7 @@ class VPIRFlags {
     GEPOp,
     FPMathOp,
     NonNegOp,
+    ReductionOp,
     Other
   };
 
@@ -665,6 +666,21 @@ private:
     CmpInst::Predicate Pred;
     FastMathFlagsTy FMFs;
   };
+  /// Holds reduction-specific flags: RecurKind, IsOrdered, IsInLoop, and FMFs.
+  struct ReductionFlagsTy {
+    // RecurKind has ~26 values, needs 5 bits but uses 6 bits to account for
+    // additional kinds.
+    unsigned char Kind : 6;
+    // TODO: Derive order/in-loop from plan and remove here.
+    unsigned char IsOrdered : 1;
+    unsigned char IsInLoop : 1;
+    FastMathFlagsTy FMFs;
+
+    ReductionFlagsTy(RecurKind Kind, bool IsOrdered, bool IsInLoop,
+                     FastMathFlags FMFs)
+        : Kind(static_cast<unsigned char>(Kind)), IsOrdered(IsOrdered),
+          IsInLoop(IsInLoop), FMFs(FMFs) {}
+  };
 
   OperationType OpType;
 
@@ -678,6 +694,7 @@ private:
     NonNegFlagsTy NonNegFlags;
     FastMathFlagsTy FMFs;
     FCmpFlagsTy FCmpFlags;
+    ReductionFlagsTy ReductionFlags;
     unsigned AllFlags;
   };
 
@@ -745,6 +762,10 @@ public:
   VPIRFlags(GEPNoWrapFlags GEPFlags)
       : OpType(OperationType::GEPOp), GEPFlags(GEPFlags) {}
 
+  VPIRFlags(RecurKind Kind, bool IsOrdered, bool IsInLoop, FastMathFlags FMFs)
+      : OpType(OperationType::ReductionOp),
+        ReductionFlags(Kind, IsOrdered, IsInLoop, FMFs) {}
+
   void transferFlags(VPIRFlags &Other) {
     OpType = Other.OpType;
     AllFlags = Other.AllFlags;
@@ -778,6 +799,7 @@ public:
       break;
     case OperationType::FPMathOp:
     case OperationType::FCmp:
+    case OperationType::ReductionOp:
       getFMFsRef().NoNaNs = false;
       getFMFsRef().NoInfs = false;
       break;
@@ -825,6 +847,9 @@ public:
     case OperationType::NonNegOp:
       I.setNonNeg(NonNegFlags.NonNeg);
       break;
+    case OperationType::ReductionOp:
+      llvm_unreachable("reduction ops should not use applyFlags");
+      [[fallthrough]];
     case OperationType::Cmp:
     case OperationType::Other:
       break;
@@ -855,7 +880,8 @@ public:
 
   /// Returns true if the recipe has fast-math flags.
   bool hasFastMathFlags() const {
-    return OpType == OperationType::FPMathOp || OpType == OperationType::FCmp;
+    return OpType == OperationType::FPMathOp || OpType == OperationType::FCmp ||
+           OpType == OperationType::ReductionOp;
   }
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlags() const;
@@ -897,13 +923,39 @@ public:
     return DisjointFlags.IsDisjoint;
   }
 
+  RecurKind getRecurKind() const {
+    assert(OpType == OperationType::ReductionOp &&
+           "recipe doesn't have reduction flags");
+    return static_cast<RecurKind>(ReductionFlags.Kind);
+  }
+
+  bool isReductionOrdered() const {
+    assert(OpType == OperationType::ReductionOp &&
+           "recipe doesn't have reduction flags");
+    return ReductionFlags.IsOrdered;
+  }
+
+  bool isReductionInLoop() const {
+    assert(OpType == OperationType::ReductionOp &&
+           "recipe doesn't have reduction flags");
+    return ReductionFlags.IsInLoop;
+  }
+
 private:
-  /// Get a reference to the fast-math flags for FPMathOp or FCmp.
+  /// Get a reference to the fast-math flags for FPMathOp, FCmp or ReductionOp.
   FastMathFlagsTy &getFMFsRef() {
-    return OpType == OperationType::FCmp ? FCmpFlags.FMFs : FMFs;
+    if (OpType == OperationType::FCmp)
+      return FCmpFlags.FMFs;
+    if (OpType == OperationType::ReductionOp)
+      return ReductionFlags.FMFs;
+    return FMFs;
   }
   const FastMathFlagsTy &getFMFsRef() const {
-    return OpType == OperationType::FCmp ? FCmpFlags.FMFs : FMFs;
+    if (OpType == OperationType::FCmp)
+      return FCmpFlags.FMFs;
+    if (OpType == OperationType::ReductionOp)
+      return ReductionFlags.FMFs;
+    return FMFs;
   }
 
 public:
@@ -1137,6 +1189,11 @@ public:
     /// Explicit user for the resume phi of the canonical induction in the main
     /// VPlan, used by the epilogue vector loop.
     ResumeForEpilogue,
+    /// Extracts the lane from the first operand corresponding to the last
+    /// active (non-zero) lane in the mask (second operand), or if no lanes
+    /// were active in the mask, returns the default value (third operand).
+    ExtractLastActive,
+
     /// Returns the value for vscale.
     VScale,
     OpsEnd = VScale,
@@ -1149,6 +1206,11 @@ public:
   /// identifies the (rare) cases of VPInstructions that do so as well, w/o an
   /// underlying ingredient.
   bool doesGeneratePerAllLanes() const;
+
+  /// Return the number of operands determined by the opcode of the
+  /// VPInstruction. Returns -1u if the number of operands cannot be determined
+  /// directly by the opcode.
+  static unsigned getNumOperandsForOpcode(unsigned Opcode);
 
 private:
   typedef unsigned char OpcodeTy;
@@ -1165,13 +1227,6 @@ private:
   /// the modeled instruction. \returns the generated value. . In some cases an
   /// existing value is returned rather than a generated one.
   Value *generate(VPTransformState &State);
-
-#if !defined(NDEBUG)
-  /// Return the number of operands determined by the opcode of the
-  /// VPInstruction. Returns -1u if the number of operands cannot be determined
-  /// directly by the opcode.
-  static unsigned getNumOperandsForOpcode(unsigned Opcode);
-#endif
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
@@ -2212,9 +2267,9 @@ public:
   /// Returns the start value of the induction.
   VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
 
-  VPValue *getSplatVFValue() {
-    // If the recipe has been unrolled return the VPValue for the induction
-    // increment.
+  /// If the recipe has been unrolled, return the VPValue for the induction
+  /// increment, otherwise return null.
+  VPValue *getSplatVFValue() const {
     return isUnrolled() ? getOperand(getNumOperands() - 2) : nullptr;
   }
 
@@ -2327,6 +2382,10 @@ public:
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenPHIRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2595,15 +2654,16 @@ protected:
     // TODO: extend the masked interleaved-group support to reversed access.
     assert((!Mask || !IG->isReverse()) &&
            "Reversed masked interleave-group not supported.");
-    for (unsigned I = 0; I < IG->getFactor(); ++I)
-      if (Instruction *Inst = IG->getMember(I)) {
-        if (Inst->getType()->isVoidTy())
-          continue;
-        new VPRecipeValue(this, Inst);
-      }
-
-    for (auto *SV : StoredValues)
-      addOperand(SV);
+    if (StoredValues.empty()) {
+      for (unsigned I = 0; I < IG->getFactor(); ++I)
+        if (Instruction *Inst = IG->getMember(I)) {
+          assert(!Inst->getType()->isVoidTy() && "must have result");
+          new VPRecipeValue(this, Inst);
+        }
+    } else {
+      for (auto *SV : StoredValues)
+        addOperand(SV);
+    }
     if (Mask) {
       HasMask = true;
       addOperand(Mask);
@@ -3103,8 +3163,8 @@ public:
     assert(Red->getRecurrenceKind() == RecurKind::Add &&
            "Expected an add reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
-    [[maybe_unused]] auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
-    assert(SubConst && SubConst->getValue() == 0 &&
+    [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
+    assert(SubConst && SubConst->isZero() &&
            Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
   }
 
@@ -4506,8 +4566,12 @@ public:
   VPIRValue *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPIRValue of a null Value");
     auto [It, Inserted] = LiveIns.try_emplace(V);
-    if (Inserted)
-      It->second = new VPIRValue(V);
+    if (Inserted) {
+      if (auto *CI = dyn_cast<ConstantInt>(V))
+        It->second = new VPConstantInt(CI);
+      else
+        It->second = new VPIRValue(V);
+    }
 
     assert(isa<VPIRValue>(It->second) &&
            "Only VPIRValues should be in mapping");

@@ -19,6 +19,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/CAS/OnDiskDataAllocator.h"
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
+#include <atomic>
 
 namespace llvm::cas::ondisk {
 
@@ -337,6 +338,10 @@ public:
   /// CAS database.
   /// \param Hasher is the hashing function used for objects inside CAS.
   Error validate(bool Deep, HashingFuncT Hasher) const;
+
+  /// Checks that \p ID exists in the index. It is allowed to not have data
+  /// associated with it.
+  LLVM_ABI_FOR_TEST Error validateObjectID(ObjectID ID);
 
   /// How to fault-in nodes if an upstream database is used.
   enum class FaultInPolicy {

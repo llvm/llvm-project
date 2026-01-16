@@ -675,3 +675,63 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:           ins(%[[TILEDARG0]]
 //  CHECK-SAME:           outs(%[[TILEDARG1]]
 //       CHECK:           tensor.insert_slice %[[RES:.*]]
+
+// -----
+
+// Tests that rank-reducing slices created during fusion are tracked in
+// generatedSlices (via SwapExtractSliceWithProducerPatterns.cpp).
+// This enables cleanup patterns to transform them during tile-and-fuse.
+//
+// Affected cleanup patterns:
+// - SwapExtractSliceWithFillPatterns: swaps extract_slice(fill) -> fill(extract_slice).
+
+#map2d = affine_map<(d0, d1) -> (d0, d1)>
+
+func.func @fuse_fill_through_rank_reducing_slice(%arg0: tensor<4x96xf32>) -> tensor<4x96xf32> {
+  %cst = arith.constant 1.0 : f32
+
+  %empty_3d = tensor.empty() : tensor<4x1x96xf32>
+  %fill_3d = linalg.fill ins(%cst : f32) outs(%empty_3d : tensor<4x1x96xf32>) -> tensor<4x1x96xf32>
+
+  %slice_2d = tensor.extract_slice %fill_3d[0, 0, 0] [4, 1, 96] [1, 1, 1]
+      : tensor<4x1x96xf32> to tensor<4x96xf32>
+
+  %result = linalg.generic {
+      indexing_maps = [#map2d, #map2d],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%slice_2d : tensor<4x96xf32>)
+      outs(%arg0 : tensor<4x96xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %sum = arith.addf %in, %out : f32
+      linalg.yield %sum : f32
+  } -> tensor<4x96xf32>
+
+  return %result : tensor<4x96xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %consumer = transform.structured.match ops{["linalg.generic"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %tiled, %loop = transform.structured.fuse %consumer tile_sizes [0, 32] {apply_cleanup}
+        : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func.func @fuse_fill_through_rank_reducing_slice
+// CHECK-SAME:      %[[ARG0:[a-zA-Z0-9_]+]]: tensor<4x96xf32>
+// CHECK-DAG: %[[EMPTY_3D:.+]] = tensor.empty() : tensor<4x1x96xf32>
+// CHECK: scf.for %[[IV:[a-zA-Z0-9_]+]] = {{.*}} iter_args(%[[ITERARG:.+]] = %[[ARG0]])
+
+// CHECK: %[[TILE_3D:.+]] = tensor.extract_slice %[[EMPTY_3D]][0, 0, %[[IV]]] [4, 1, 32] [1, 1, 1]
+// CHECK-SAME: tensor<4x1x96xf32> to tensor<4x1x32xf32>
+// CHECK: %[[FILL:.+]] = linalg.fill
+// CHECK-SAME: outs(%[[TILE_3D]] : tensor<4x1x32xf32>)
+// CHECK: %[[RANK_REDUCED:.+]] = tensor.extract_slice %[[FILL]][0, 0, 0] [4, 1, 32] [1, 1, 1]
+// CHECK-SAME: tensor<4x1x32xf32> to tensor<4x32xf32>
+
+// CHECK: %[[CONSUMER_OUT:.+]] = tensor.extract_slice %[[ITERARG]][0, %[[IV]]] [4, 32]
+// CHECK: linalg.generic
+// CHECK-SAME: ins(%[[RANK_REDUCED]] : tensor<4x32xf32>)
+// CHECK-SAME: outs(%[[CONSUMER_OUT]] : tensor<4x32xf32>)

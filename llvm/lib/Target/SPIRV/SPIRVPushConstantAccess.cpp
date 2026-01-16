@@ -44,6 +44,7 @@ static bool replacePushConstantAccesses(Module &M, SPIRVGlobalRegistry *GR) {
                            /* initializer= */ nullptr, GV.getName(),
                            /* InsertBefore= */ &GV, GV.getThreadLocalMode(),
                            GV.getAddressSpace(), GV.isExternallyInitialized());
+    NewGV->setVisibility(GV.getVisibility());
 
     for (User *U : make_early_inc_range(GV.users())) {
       Instruction *I = cast<Instruction>(U);
