@@ -231,7 +231,12 @@ TYPE_PARSER(first(construct<IoControlSpec>("UNIT =" >> ioUnit),
         construct<IoControlSpec::CharExpr>(
             pure(IoControlSpec::CharExpr::Kind::Sign), scalarDefaultCharExpr)),
     construct<IoControlSpec>(
-        "SIZE =" >> construct<IoControlSpec::Size>(scalarIntVariable))))
+        "SIZE =" >> construct<IoControlSpec::Size>(scalarIntVariable)),
+    lookAhead(keyword) >>
+        construct<IoControlSpec>(recovery(
+            fail<ErrorRecovery>(
+                "invalid or unknown I/O control specification"_err_en_US),
+            keyword >> "="_tok >> expr >> construct<ErrorRecovery>()))))
 
 // R1211 write-stmt -> WRITE ( io-control-spec-list ) [output-item-list]
 constexpr auto outputItemList{

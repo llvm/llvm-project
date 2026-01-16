@@ -6,6 +6,7 @@ config.tool_name = "@SANITIZER_COMMON_LIT_TEST_MODE@"
 config.target_cflags = "@SANITIZER_COMMON_TEST_TARGET_CFLAGS@"
 config.apple_platform = "@SANITIZER_COMMON_TEST_APPLE_PLATFORM@"
 config.apple_platform_min_deployment_target_flag = "@SANITIZER_COMMON_TEST_MIN_DEPLOYMENT_TARGET_FLAG@"
+config.apple_target_is_host = @SANITIZER_COMMON_TEST_APPLE_TARGET_IS_HOST_PYBOOL@
 config.target_arch = "@SANITIZER_COMMON_TEST_TARGET_ARCH@"
 
 config.arm_thumb = "@COMPILER_RT_ARM_THUMB@"

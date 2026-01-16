@@ -10,7 +10,7 @@ define i32 @gep_with_all_invariant_operands(ptr %src.0, ptr %src.1, i64 %n, i1 %
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP0]], [[TMP4]]

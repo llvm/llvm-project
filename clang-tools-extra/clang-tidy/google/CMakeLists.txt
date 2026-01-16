@@ -18,12 +18,12 @@ add_clang_library(clangTidyGoogleModule STATIC
   IntegerTypesCheck.cpp
   OverloadedUnaryAndCheck.cpp
   TodoCommentCheck.cpp
-  UnnamedNamespaceInHeaderCheck.cpp
   UpgradeGoogletestCaseCheck.cpp
   UsingNamespaceDirectiveCheck.cpp
 
   LINK_LIBS
   clangTidy
+  clangTidyMiscModule
   clangTidyModernizeModule
   clangTidyReadabilityModule
   clangTidyUtils

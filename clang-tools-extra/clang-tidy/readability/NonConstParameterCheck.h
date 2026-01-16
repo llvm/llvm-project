@@ -39,7 +39,7 @@ private:
   };
 
   /// Track all nonconst integer/float parameters.
-  std::map<const ParmVarDecl *, ParmInfo> Parameters;
+  llvm::DenseMap<const ParmVarDecl *, ParmInfo> Parameters;
 
   /// Add function parameter.
   void addParm(const ParmVarDecl *Parm);

@@ -8,7 +8,7 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
+#include "../misc/AnonymousNamespaceInHeaderCheck.h"
 #include "../modernize/AvoidCStyleCastCheck.h"
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
@@ -26,7 +26,6 @@
 #include "IntegerTypesCheck.h"
 #include "OverloadedUnaryAndCheck.h"
 #include "TodoCommentCheck.h"
-#include "UnnamedNamespaceInHeaderCheck.h"
 #include "UpgradeGoogletestCaseCheck.h"
 #include "UsingNamespaceDirectiveCheck.h"
 
@@ -34,13 +33,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace google {
+namespace {
 
 class GoogleModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<build::ExplicitMakePairCheck>(
         "google-build-explicit-make-pair");
-    CheckFactories.registerCheck<build::UnnamedNamespaceInHeaderCheck>(
+    CheckFactories.registerCheck<misc::AnonymousNamespaceInHeaderCheck>(
         "google-build-namespaces");
     CheckFactories.registerCheck<build::UsingNamespaceDirectiveCheck>(
         "google-build-using-namespace");
@@ -94,6 +94,8 @@ public:
     return Options;
   }
 };
+
+} // namespace
 
 // Register the GoogleTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<GoogleModule> X("google-module",

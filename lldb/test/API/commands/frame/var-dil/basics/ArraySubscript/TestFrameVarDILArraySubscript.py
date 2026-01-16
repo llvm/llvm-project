@@ -11,14 +11,6 @@ from lldbsuite.test import lldbutil
 class TestFrameVarDILArraySubscript(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def expect_var_path(self, expr, compare_to_framevar=False, value=None, type=None):
-        value_dil = super().expect_var_path(expr, value=value, type=type)
-        if compare_to_framevar:
-            self.runCmd("settings set target.experimental.use-DIL false")
-            value_frv = super().expect_var_path(expr, value=value, type=type)
-            self.runCmd("settings set target.experimental.use-DIL true")
-            self.assertEqual(value_dil.GetValue(), value_frv.GetValue())
-
     def test_subscript(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -28,45 +20,45 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.runCmd("settings set target.experimental.use-DIL true")
 
         # Test int[] and int*
-        self.expect_var_path("int_arr[0]", True, value="1")
-        self.expect_var_path("int_ptr[1]", True, value="2")
-        self.expect("frame var 'int_arr[enum_one]'", error=True)
+        self.expect_var_path("int_arr[0]", value="1")
+        self.expect_var_path("int_ptr[1]", value="2")
+        self.expect_var_path("int_ptr[enum_one]", value="2")
 
         # Test when base and index are references.
-        self.expect_var_path("int_arr[0]", True, value="1")
-        self.expect("frame var 'int_arr[idx_1_ref]'", error=True)
-        self.expect("frame var 'int_arr[enum_ref]'", error=True)
+        self.expect_var_path("int_arr[0]", value="1")
+        self.expect_var_path("int_arr[idx_1_ref]", value="2")
+        self.expect_var_path("int_arr[enum_ref]", value="2")
         self.expect_var_path("int_arr_ref[0]", value="1")
-        self.expect("frame var 'int_arr_ref[idx_1_ref]'", error=True)
-        self.expect("frame var 'int_arr_ref[enum_ref]'", error=True)
+        self.expect_var_path("int_arr_ref[idx_1_ref]", value="2")
+        self.expect_var_path("int_arr_ref[enum_ref]", value="2")
 
         # Test when base and index are typedefs.
-        self.expect_var_path("td_int_arr[0]", True, value="1")
-        self.expect("frame var 'td_int_arr[td_int_idx_1]'", error=True)
-        self.expect("frame var 'td_int_arr[td_td_int_idx_2]'", error=True)
-        self.expect_var_path("td_int_ptr[0]", True, value="1")
-        self.expect("frame var 'td_int_ptr[td_int_idx_1]'", error=True)
-        self.expect("frame var 'td_int_ptr[td_td_int_idx_2]'", error=True)
+        self.expect_var_path("td_int_arr[0]", value="1")
+        self.expect_var_path("td_int_arr[td_int_idx_1]", value="2")
+        self.expect_var_path("td_int_arr[td_td_int_idx_2]", value="3")
+        self.expect_var_path("td_int_ptr[0]", value="1")
+        self.expect_var_path("td_int_ptr[td_int_idx_1]", value="2")
+        self.expect_var_path("td_int_ptr[td_td_int_idx_2]", value="3")
 
         # Both typedefs and refs
-        self.expect("frame var 'td_int_arr_ref[td_int_idx_1_ref]'", error=True)
+        self.expect_var_path("td_int_arr_ref[td_int_idx_1_ref]", value="2")
 
         # Test for index out of bounds. 1 beyond the end.
-        self.expect_var_path("int_arr[3]", True, type="int")
+        self.expect_var_path("int_arr[3]", type="int")
         # Far beyond the end (but not far enough to be off the top of the stack).
-        self.expect_var_path("int_arr[10]", True, type="int")
+        self.expect_var_path("int_arr[10]", type="int")
 
         # Test address-of of the subscripted value.
         self.expect_var_path("*(&int_arr[1])", value="2")
 
         # Test for negative index.
-        self.expect_var_path("int_ptr_1[-1]", True, value="1")
+        self.expect_var_path("int_ptr_1[-1]", value="1")
 
         # Test for floating point index
         self.expect(
             "frame var 'int_arr[1.0]'",
             error=True,
-            substrs=["failed to parse integer constant: <'1.0' (float_constant)>"],
+            substrs=["array subscript is not an integer"],
         )
 
         # Test accessing bits in scalar types.
@@ -85,7 +77,7 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect(
             "frame var 'int_arr[int_ptr]'",
             error=True,
-            substrs=["failed to parse integer constant"],
+            substrs=["array subscript is not an integer"],
         )
 
         # Base should not be a pointer to void
