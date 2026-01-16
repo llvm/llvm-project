@@ -39,9 +39,6 @@ exit:
 ; for (unsigned long long i = begin; i < end; i++)
 ;   a[i] = 0;
 ;
-; FIXME: As monotonicity checker yields Unknown, DependenceAnalysis should also
-; bail out.
-;
 define void @single_loop_nuw(ptr %a, i64 %begin, i64 %end) {
 ; CHECK-LABEL: 'single_loop_nuw'
 ; CHECK-NEXT:  Monotonicity check:
@@ -55,7 +52,7 @@ define void @single_loop_nuw(ptr %a, i64 %begin, i64 %end) {
 ; CHECK-NEXT:      Reason: {%begin,+,1}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   %guard = icmp ult i64 %begin, %end

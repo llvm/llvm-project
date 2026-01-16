@@ -44,9 +44,6 @@ exit:
 ; for (int i = 0; i < 100; i++, offset += step)
 ;   a[sext(offset)] = 0;
 ;
-; FIXME: DependenceAnalysis currently missed the dependency. Enabling
-; monotonicity check will resolve it.
-;
 define void @sext_may_wrap(ptr %a, i8 %start, i8 %step) {
 ; CHECK-LABEL: 'sext_may_wrap'
 ; CHECK-NEXT:  Monotonicity check:
@@ -60,9 +57,7 @@ define void @sext_may_wrap(ptr %a, i8 %start, i8 %step) {
 ; CHECK-NEXT:      Reason: (sext i8 {%start,+,%step}<%loop> to i64)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
-; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Compare predicate: %step ne) 0
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   br label %loop
@@ -208,9 +203,6 @@ exit:
 ; for (i = 0; i < 100; i++)
 ;  a[i & 1] = 0;
 ;
-; FIXME: DependenceAnalysis currently missed the dependency. Enabling
-; monotonicity check will resolve it.
-;
 define void @offset_truncated_to_i1(ptr %a) {
 ; CHECK-LABEL: 'offset_truncated_to_i1'
 ; CHECK-NEXT:  Monotonicity check:
@@ -224,7 +216,7 @@ define void @offset_truncated_to_i1(ptr %a) {
 ; CHECK-NEXT:      Reason: (zext i1 {false,+,true}<%loop> to i64)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   br label %loop
