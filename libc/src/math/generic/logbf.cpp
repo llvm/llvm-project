@@ -8,6 +8,7 @@
 
 #include "src/math/logbf.h"
 #include "src/__support/math/logbf.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, logbf, (float x)) { return math::logbf(x); }
