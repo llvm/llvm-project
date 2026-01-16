@@ -2098,7 +2098,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
 
   // For each CopyForDef, increase the cost by the register size while
   // accounting for block frequency.
-  for (auto *DefMI : CopyForDef) {
+  for (MachineInstr *DefMI : CopyForDef) {
     auto DefReg = DefMI->getOperand(0).getReg();
     uint64_t DefFreq =
         EntryFreq
@@ -2206,7 +2206,7 @@ bool RewriteMFMAFormStage::rewrite(
       Register MappedReg = Src2->getReg();
       SmallVector<SlotIndex, 8> Src2ReachingDefs;
       findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
-      SmallVector<MachineInstr *, 8> Src2DefsReplace;
+      SmallSetVector<MachineInstr *, 8> Src2DefsReplace;
 
       for (SlotIndex RDIndex : Src2ReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
@@ -2214,8 +2214,7 @@ bool RewriteMFMAFormStage::rewrite(
           continue;
 
         // If there is a non mai reaching def, then we need a copy.
-        if (find(Src2DefsReplace, RD) == Src2DefsReplace.end())
-          Src2DefsReplace.push_back(RD);
+        Src2DefsReplace.insert(RD);
       }
 
       if (!Src2DefsReplace.empty()) {
