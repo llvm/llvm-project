@@ -443,6 +443,13 @@ public:
   LLVM_ABI static SmallVector<const char *>
   getRuntimeLibcallSymbols(const Triple &TT);
 
+protected:
+  // Finalise inputs before run().
+  virtual Error handleArchiveInputs() { return Error::success(); }
+
+  // Clean up after run().
+  virtual void cleanup() {}
+
 private:
   Config Conf;
 
@@ -620,10 +627,6 @@ public:
   addInput(std::unique_ptr<lto::InputFile> InputPtr) {
     return std::shared_ptr<lto::InputFile>(InputPtr.release());
   }
-
-  virtual llvm::Error handleArchiveInputs() { return llvm::Error::success(); }
-
-  virtual void cleanup() {}
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

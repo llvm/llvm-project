@@ -117,16 +117,6 @@ Expected<bool> lto::DTLTO::isThinArchive(const StringRef ArchivePath) {
   return IsThin;
 }
 
-// Removes any temporary regular archive member files that were created during
-// processing.
-void lto::DTLTO::removeTempFiles() {
-  TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
-  for (auto &Input : InputFiles) {
-    if (Input->isMemberOfArchive())
-      sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
-  }
-}
-
 // This function performs the following tasks:
 // 1. Adds the input file to the LTO object's list of input files.
 // 2. For thin archive members, generates a new module ID which is a path to a
@@ -215,8 +205,14 @@ llvm::Error lto::DTLTO::handleArchiveInputs() {
   return Error::success();
 }
 
-// Cleanup after LTO is complete.
+// Remove temporary archive member files created to enable distribution.
 void lto::DTLTO::cleanup() {
-  removeTempFiles();
-  LTO::cleanup();
+  {
+    TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
+    for (auto &Input : InputFiles)
+      if (Input->isMemberOfArchive())
+        sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
+  }
+  Base::cleanup();
 }
+
