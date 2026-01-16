@@ -147,7 +147,7 @@ std::pair<mlir::Value, mlir::Type>
 CIRGenFunction::emitAsmInput(const TargetInfo::ConstraintInfo &info,
                              const Expr *inputExpr,
                              std::string &constraintString) {
-  auto loc = getLoc(inputExpr->getExprLoc());
+  mlir::Location loc = getLoc(inputExpr->getExprLoc());
 
   // If this can't be a register or memory, i.e., has to be a constant
   // (immediate or symbolic), try to emit it as such.
@@ -290,8 +290,8 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
 
   // Keep track of input constraints.
   std::string inOutConstraints;
-  std::vector<mlir::Type> inOutArgTypes;
-  std::vector<mlir::Type> inOutArgElemTypes;
+  SmallVector<mlir::Type> inOutArgTypes;
+  SmallVector<mlir::Type> inOutArgElemTypes;
 
   // Keep track of out constraints for tied input operand.
   SmallVector<std::string> outputConstraints;
@@ -424,13 +424,14 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       inOutConstraints += ',';
       const Expr *inputExpr = s.getOutputExpr(i);
 
-      auto [arg, argElementType] =
+      // argValue: mlir::Value, argElementType: mlir::Type.
+      auto [argValue, argElementType] =
           emitAsmInputLValue(info, dest, inputExpr->getType(), inOutConstraints,
                              inputExpr->getExprLoc());
 
       if (mlir::Type adjTy = getTargetHooks().adjustInlineAsmType(
-              *this, outputConstraint, arg.getType()))
-        arg = builder.createBitcast(arg, adjTy);
+              *this, outputConstraint, argValue.getType()))
+        argValue = builder.createBitcast(argValue, adjTy);
 
       // Update largest vector width for any vector types.
       assert(!cir::MissingFeatures::asmVectorType());
@@ -441,9 +442,9 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       else
         inOutConstraints += outputConstraint;
 
-      inOutArgTypes.push_back(arg.getType());
+      inOutArgTypes.push_back(argValue.getType());
       inOutArgElemTypes.push_back(argElementType);
-      inOutArgs.push_back(arg);
+      inOutArgs.push_back(argValue);
     }
 
   } // iterate over output operands
@@ -470,7 +471,8 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
         });
 
     std::string replaceConstraint(inputConstraint);
-    auto [arg, argElemType] = emitAsmInput(info, inputExpr, constraints);
+    // argValue: mlir::Value, argElementType: mlir::Type.
+    auto [argValue, argElemType] = emitAsmInput(info, inputExpr, constraints);
 
     // If this input argument is tied to a larger output result, extend the
     // input to be the same size as the output.  The LLVM backend wants to see
@@ -485,15 +487,15 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       if (getContext().getTypeSize(outputType) >
           getContext().getTypeSize(inputTy)) {
         // Use ptrtoint as appropriate so that we can do our extension.
-        if (isa<cir::PointerType>(arg.getType()))
-          arg = builder.createPtrToInt(arg, uIntPtrTy);
+        if (isa<cir::PointerType>(argValue.getType()))
+          argValue = builder.createPtrToInt(argValue, uIntPtrTy);
         mlir::Type outputTy = convertType(outputType);
         if (isa<cir::IntType>(outputTy))
-          arg = builder.createIntCast(arg, outputTy);
+          argValue = builder.createIntCast(argValue, outputTy);
         else if (isa<cir::PointerType>(outputTy))
-          arg = builder.createIntCast(arg, uIntPtrTy);
+          argValue = builder.createIntCast(argValue, uIntPtrTy);
         else if (isa<cir::FPTypeInterface>(outputTy))
-          arg = builder.createFloatingCast(arg, outputTy);
+          argValue = builder.createFloatingCast(argValue, outputTy);
       }
 
       // Deal with the tied operands' constraint code in adjustInlineAsmType.
@@ -501,8 +503,8 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
     }
 
     if (mlir::Type adjTy = getTargetHooks().adjustInlineAsmType(
-            *this, replaceConstraint, arg.getType()))
-      arg = builder.createBitcast(arg, adjTy);
+            *this, replaceConstraint, argValue.getType()))
+      argValue = builder.createBitcast(argValue, adjTy);
     else
       cgm.getDiags().Report(s.getAsmLoc(), diag::err_asm_invalid_type_in_input)
           << inputExpr->getType() << inputConstraint;
@@ -510,10 +512,10 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
     // Update largest vector width for any vector types.
     assert(!cir::MissingFeatures::asmVectorType());
 
-    argTypes.push_back(arg.getType());
+    argTypes.push_back(argValue.getType());
     argElemTypes.push_back(argElemType);
-    inArgs.push_back(arg);
-    args.push_back(arg);
+    inArgs.push_back(argValue);
+    args.push_back(argValue);
     constraints += inputConstraint;
   } // iterate over input operands
 
