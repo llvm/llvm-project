@@ -15017,12 +15017,7 @@ Arguments:
 """"""""""
 
 ``ptr elementtype(<basetype>) <source>``:
-A pointer to a memory location assumed to hold a completely laid out value
-with the same type as ``basetype``. The physical layout of ``basetype`` is
-target dependent, and is not always known at compile time.
-The assumption this instruction makes on the memory location is only relevant
-to this particular call. A frontend could possibly emit multiple structured
-GEP with the same source pointer but a different ``basetype``.
+A pointer to the memory location used as base for the address computation.
 
 The ``source`` argument must be annotated with an :ref:`elementtype
 <attr_elementtype>` attribute at the call-site. This attribute specifies the
@@ -15031,9 +15026,13 @@ used along with the provided indices and source operand to compute a new
 pointer representing the result of a logical indexing into the basetype
 pointed by source.
 
+The ``basetype`` is only associated with ``<source>`` for this particular
+call. A frontend could possibly emit multiple structured
+GEP with the same source pointer but a different ``basetype``.
+
 ``[i32/i64] index, ...``:
-Indices used to traverse into the basetype and compute a pointer to the target
-element. Indices can be 32-bit or 64-bit unsigned integers. Indices being
+Indices used to traverse into the ``basetype`` and compute a pointer to the
+target element. Indices can be 32-bit or 64-bit unsigned integers. Indices being
 handled one by one, both sizes can be mixed in the same instruction. The
 precision used to compute the resulting pointer is target-dependent.
 When used to index into a struct, only integer constants are allowed.
