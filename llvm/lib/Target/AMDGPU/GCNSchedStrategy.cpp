@@ -93,8 +93,7 @@ static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
 
 static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
-    cl::desc("Disable rewrie mfma rewrite scheduling stage"),
-    cl::init(false));
+    cl::desc("Disable rewrie mfma rewrite scheduling stage"), cl::init(false));
 
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
@@ -2130,7 +2129,7 @@ bool RewriteMFMAFormStage::rewrite(
   DenseMap<MachineInstr *, unsigned> LastMIToRegion;
 
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
-   RegionBoundaries Entry = DAG.Regions[Region];
+    RegionBoundaries Entry = DAG.Regions[Region];
     if (Entry.first == Entry.second)
       continue;
 
