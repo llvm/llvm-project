@@ -647,7 +647,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // v2i64 types get converted to cmp+bif hence the cost of 2
     if (LT.second == MVT::v2i64)
       return LT.first * 2;
-    if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidMinMaxTys, equal_to(LT.second)))
       return LT.first;
     break;
   }
@@ -663,7 +663,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // need to extend the type, as it uses shr(qadd(shl, shl)).
     unsigned Instrs =
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits() ? 1 : 4;
-    if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidSatTys, equal_to(LT.second)))
       return LT.first * Instrs;
 
     TypeSize TS = getDataLayout().getTypeSizeInBits(RetTy);
@@ -679,7 +679,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                      MVT::v8i16, MVT::v2i32, MVT::v4i32,
                                      MVT::v2i64};
     auto LT = getTypeLegalizationCost(RetTy);
-    if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidAbsTys, equal_to(LT.second)))
       return LT.first;
     break;
   }
@@ -687,7 +687,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     static const auto ValidAbsTys = {MVT::v4i16, MVT::v8i16, MVT::v2i32,
                                      MVT::v4i32, MVT::v2i64};
     auto LT = getTypeLegalizationCost(RetTy);
-    if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }) &&
+    if (any_of(ValidAbsTys, equal_to(LT.second)) &&
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits())
       return LT.first;
     break;
@@ -4660,9 +4660,9 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
       static const auto ValidFP16MinMaxTys = {MVT::v4f16, MVT::v8f16};
 
       auto LT = getTypeLegalizationCost(ValTy);
-      if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }) ||
+      if (any_of(ValidMinMaxTys, equal_to(LT.second)) ||
           (ST->hasFullFP16() &&
-           any_of(ValidFP16MinMaxTys, [&LT](MVT M) { return M == LT.second; })))
+           any_of(ValidFP16MinMaxTys, equal_to(LT.second))))
         return LT.first;
     }
 
@@ -5544,6 +5544,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   case RecurKind::FMax:
   case RecurKind::FMulAdd:
   case RecurKind::AnyOf:
+  case RecurKind::FindLast:
     return true;
   default:
     return false;
@@ -5915,6 +5916,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i16)
       return Cost;
+    // i16 -> i32 is natively supported with SVE2p1
+    if (AccumLT.second.getScalarType() == MVT::i32 &&
+        InputLT.second.getScalarType() == MVT::i16 &&
+        (ST->hasSVE2p1() || ST->hasSME2()))
+      return Cost;
     // i8 -> i64 is supported with an extra level of extends
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i8)
@@ -6134,8 +6140,13 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   unsigned Unused;
   if (LT.second.isFixedLengthVector() &&
       LT.second.getVectorNumElements() == Mask.size() &&
-      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
+      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc ||
+       // Discrepancies between isTRNMask and ShuffleVectorInst::isTransposeMask
+       // mean that we can end up with shuffles that satisfy isTRNMask, but end
+       // up labelled as TTI::SK_InsertSubvector. (e.g. {2, 0}).
+       Kind == TTI::SK_InsertSubvector) &&
       (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
+       isTRNMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
        isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        isREVMask(Mask, LT.second.getScalarSizeInBits(),
                  LT.second.getVectorNumElements(), 16) ||
@@ -6583,6 +6594,8 @@ static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   return false;
 }
 
+static bool isFNeg(Value *Op) { return match(Op, m_FNeg(m_Value())); }
+
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
@@ -6606,6 +6619,12 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
           cast<VectorType>(I->getType())->getElementType()->isHalfTy() &&
           !ST->hasFullFP16())
         return false;
+
+      if (isFNeg(II->getOperand(0)))
+        Ops.push_back(&II->getOperandUse(0));
+      if (isFNeg(II->getOperand(1)))
+        Ops.push_back(&II->getOperandUse(1));
+
       [[fallthrough]];
     case Intrinsic::aarch64_neon_sqdmull:
     case Intrinsic::aarch64_neon_sqdmulh:
@@ -6742,12 +6761,23 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     Ops.push_back(&I->getOperandUse(0));
     return true;
   }
+  case Instruction::FMul:
+    // fmul with contract flag can be combined with fadd into fma.
+    // Sinking fneg into this block enables fmls pattern.
+    if (cast<FPMathOperator>(I)->hasAllowContract()) {
+      if (isFNeg(I->getOperand(0)))
+        Ops.push_back(&I->getOperandUse(0));
+      if (isFNeg(I->getOperand(1)))
+        Ops.push_back(&I->getOperandUse(1));
+    }
+    break;
+
   default:
     break;
   }
 
   if (!I->getType()->isVectorTy())
-    return false;
+    return !Ops.empty();
 
   switch (I->getOpcode()) {
   case Instruction::Sub:
@@ -6919,11 +6949,11 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
   case Instruction::FMul: {
     // For SVE the lane-indexing is within 128-bits, so we can't fold splats.
     if (I->getType()->isScalableTy())
-      return false;
+      return !Ops.empty();
 
     if (cast<VectorType>(I->getType())->getElementType()->isHalfTy() &&
         !ST->hasFullFP16())
-      return false;
+      return !Ops.empty();
 
     // Sink splats for index lane variants
     if (isSplatShuffle(I->getOperand(0)))

@@ -79,3 +79,17 @@ with pointer field protection by passing ``-stdlib=libc++
 -fexperimental-pointer-field-protection-abi`` at compile time
 and ``-Wl,-Bstatic -lc++ -lc++abi -Wl,-Bdynamic -lm -fuse-ld=lld
 -static-libstdc++`` at link time.
+
+Implementation
+==============
+
+TODO: Document everything else.
+
+The implementation uses deactivation symbols as a mechanism for
+globally disabling pointer field protection for a particular field. For
+more information, see the `deactivation symbol section of the LangRef
+<https://llvm.org/docs/LangRef.html#deactivation-symbol-operand-bundles>`_.
+These symbols are named as follows:
+
+``__pfp_ds_`` followed by the ABI encoding of the type's RTTI object
+symbol name followed by ``.`` followed by the name of the field.

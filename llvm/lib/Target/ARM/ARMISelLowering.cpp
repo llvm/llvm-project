@@ -845,7 +845,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FMUL,       MVT::f64, Expand);
     setOperationAction(ISD::FMA,        MVT::f64, Expand);
     setOperationAction(ISD::FDIV,       MVT::f64, Expand);
-    setOperationAction(ISD::FREM,       MVT::f64, Expand);
+    setOperationAction(ISD::FREM, MVT::f64, LibCall);
     setOperationAction(ISD::FCOPYSIGN,  MVT::f64, Expand);
     setOperationAction(ISD::FGETSIGN,   MVT::f64, Expand);
     setOperationAction(ISD::FNEG,       MVT::f64, Expand);
@@ -1216,8 +1216,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::FCOS,      MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS,   MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS,   MVT::f32, Expand);
-  setOperationAction(ISD::FREM,      MVT::f64, Expand);
-  setOperationAction(ISD::FREM,      MVT::f32, Expand);
+  setOperationAction(ISD::FREM, MVT::f64, LibCall);
+  setOperationAction(ISD::FREM, MVT::f32, LibCall);
   if (!Subtarget->useSoftFloat() && Subtarget->hasVFP2Base() &&
       !Subtarget->isThumb1Only()) {
     setOperationAction(ISD::FCOPYSIGN, MVT::f64, Custom);
@@ -9631,8 +9631,8 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   else
     LC = VT == MVT::i32 ? RTLIB::UDIVREM_I32 : RTLIB::UDIVREM_I64;
 
-  const char *Name = getLibcallName(LC);
-  SDValue ES = DAG.getExternalSymbol(Name, getPointerTy(DL));
+  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
+  SDValue ES = DAG.getExternalSymbol(LCImpl, getPointerTy(DL));
 
   ARMTargetLowering::ArgListTy Args;
 
@@ -9643,10 +9643,9 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   }
 
   CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl)
-    .setChain(Chain)
-    .setCallee(CallingConv::ARM_AAPCS_VFP, VT.getTypeForEVT(*DAG.getContext()),
-               ES, std::move(Args));
+  CLI.setDebugLoc(dl).setChain(Chain).setCallee(
+      getLibcallImplCallingConv(LCImpl), VT.getTypeForEVT(*DAG.getContext()),
+      ES, std::move(Args));
 
   return LowerCallTo(CLI).first;
 }
@@ -11488,6 +11487,11 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
   // -mcmodel=large, alleviating the need for the trampoline which may clobber
   // IP.
 
+  RTLIB::LibcallImpl ChkStkLibcall = getLibcallImpl(RTLIB::STACK_PROBE);
+  if (ChkStkLibcall == RTLIB::Unsupported)
+    reportFatalUsageError("no available implementation of __chkstk");
+
+  const char *ChkStk = getLibcallImplName(ChkStkLibcall).data();
   switch (TM.getCodeModel()) {
   case CodeModel::Tiny:
     llvm_unreachable("Tiny code model not available on ARM.");
@@ -11496,7 +11500,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
   case CodeModel::Kernel:
     BuildMI(*MBB, MI, DL, TII.get(ARM::tBL))
         .add(predOps(ARMCC::AL))
-        .addExternalSymbol("__chkstk")
+        .addExternalSymbol(ChkStk)
         .addReg(ARM::R4, RegState::Implicit | RegState::Kill)
         .addReg(ARM::R4, RegState::Implicit | RegState::Define)
         .addReg(ARM::R12,
@@ -11509,7 +11513,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
     Register Reg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
 
     BuildMI(*MBB, MI, DL, TII.get(ARM::t2MOVi32imm), Reg)
-      .addExternalSymbol("__chkstk");
+        .addExternalSymbol(ChkStk);
     BuildMI(*MBB, MI, DL, TII.get(gettBLXrOpcode(*MBB->getParent())))
         .add(predOps(ARMCC::AL))
         .addReg(Reg, RegState::Kill)
@@ -16925,10 +16929,12 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   auto ExtendIfNeeded = [&](SDValue A, unsigned ExtendCode) {
     EVT AVT = A.getValueType();
     if (!AVT.is128BitVector())
-      A = DAG.getNode(ExtendCode, dl,
-                      AVT.changeVectorElementType(MVT::getIntegerVT(
-                          128 / AVT.getVectorMinNumElements())),
-                      A);
+      A = DAG.getNode(
+          ExtendCode, dl,
+          AVT.changeVectorElementType(
+              *DAG.getContext(),
+              MVT::getIntegerVT(128 / AVT.getVectorMinNumElements())),
+          A);
     return A;
   };
   auto IsVADDV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes) {
@@ -20423,8 +20429,9 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
                                                     DAG.getContext(),
                                                     Subtarget);
 
-  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
-                                         getPointerTy(DAG.getDataLayout()));
+  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
+  SDValue Callee =
+      DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = StructType::get(Ty, Ty);
 
@@ -20432,9 +20439,13 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
     InChain = WinDBZCheckDenominator(DAG, Op.getNode(), InChain);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl).setChain(InChain)
-    .setCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
-    .setInRegister().setSExtResult(isSigned).setZExtResult(!isSigned);
+  CLI.setDebugLoc(dl)
+      .setChain(InChain)
+      .setCallee(getLibcallImplCallingConv(LCImpl), RetTy, Callee,
+                 std::move(Args))
+      .setInRegister()
+      .setSExtResult(isSigned)
+      .setZExtResult(!isSigned);
 
   std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
   return CallInfo.first;
@@ -20475,8 +20486,10 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
   TargetLowering::ArgListTy Args = getDivRemArgList(N, DAG.getContext(),
                                                     Subtarget);
   bool isSigned = N->getOpcode() == ISD::SREM;
-  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
-                                         getPointerTy(DAG.getDataLayout()));
+
+  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
+  SDValue Callee =
+      DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
   if (Subtarget->isTargetWindows())
     InChain = WinDBZCheckDenominator(DAG, N, InChain);
@@ -20484,8 +20497,11 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
   // Lower call
   CallLoweringInfo CLI(DAG);
   CLI.setChain(InChain)
-     .setCallee(CallingConv::ARM_AAPCS, RetTy, Callee, std::move(Args))
-     .setSExtResult(isSigned).setZExtResult(!isSigned).setDebugLoc(SDLoc(N));
+      .setCallee(getLibcallImplCallingConv(LCImpl), RetTy, Callee,
+                 std::move(Args))
+      .setSExtResult(isSigned)
+      .setZExtResult(!isSigned)
+      .setDebugLoc(SDLoc(N));
   std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
 
   // Return second (rem) result operand (first contains div)
@@ -21026,7 +21042,7 @@ ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 // For the real atomic operations, we have ldrex/strex up to 32 bits,
 // and up to 64 bits on the non-M profiles
 TargetLowering::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+ARMTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   if (AI->isFloatingPointOperation())
     return AtomicExpansionKind::CmpXChg;
 
@@ -21054,7 +21070,8 @@ ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 // Similar to shouldExpandAtomicRMWInIR, ldrex/strex can be used  up to 32
 // bits, and up to 64 bits on the non-M profiles.
 TargetLowering::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
+ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(
+    const AtomicCmpXchgInst *AI) const {
   // At -O0, fast-regalloc cannot cope with the live vregs necessary to
   // implement cmpxchg without spilling. If the address being exchanged is also
   // on the stack and close enough to the spill slot, this can lead to a

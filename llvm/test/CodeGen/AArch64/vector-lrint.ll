@@ -11,13 +11,13 @@
 ; RUN:   FileCheck %s --check-prefixes=CHECK-i64,CHECK-i64-GI
 
 define <1 x iXLen> @lrint_v1f16(<1 x half> %x) nounwind {
-; CHECK-i32-LABEL: lrint_v1f16:
-; CHECK-i32:       // %bb.0:
-; CHECK-i32-NEXT:    fcvt s0, h0
-; CHECK-i32-NEXT:    frintx s0, s0
-; CHECK-i32-NEXT:    fcvtzs w8, s0
-; CHECK-i32-NEXT:    fmov s0, w8
-; CHECK-i32-NEXT:    ret
+; CHECK-i32-SD-LABEL: lrint_v1f16:
+; CHECK-i32-SD:       // %bb.0:
+; CHECK-i32-SD-NEXT:    fcvt s0, h0
+; CHECK-i32-SD-NEXT:    frintx s0, s0
+; CHECK-i32-SD-NEXT:    fcvtzs w8, s0
+; CHECK-i32-SD-NEXT:    fmov s0, w8
+; CHECK-i32-SD-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v1f16:
 ; CHECK-i64:       // %bb.0:
@@ -26,6 +26,13 @@ define <1 x iXLen> @lrint_v1f16(<1 x half> %x) nounwind {
 ; CHECK-i64-NEXT:    fcvtzs x8, s0
 ; CHECK-i64-NEXT:    fmov d0, x8
 ; CHECK-i64-NEXT:    ret
+;
+; CHECK-i32-GI-LABEL: lrint_v1f16:
+; CHECK-i32-GI:       // %bb.0:
+; CHECK-i32-GI-NEXT:    fcvt s0, h0
+; CHECK-i32-GI-NEXT:    frintx s0, s0
+; CHECK-i32-GI-NEXT:    fcvtzs s0, s0
+; CHECK-i32-GI-NEXT:    ret
   %a = call <1 x iXLen> @llvm.lrint.v1iXLen.v1f16(<1 x half> %x)
   ret <1 x iXLen> %a
 }
@@ -985,8 +992,7 @@ define <1 x iXLen> @lrint_v1f32(<1 x float> %x) nounwind {
 ; CHECK-i32-GI-LABEL: lrint_v1f32:
 ; CHECK-i32-GI:       // %bb.0:
 ; CHECK-i32-GI-NEXT:    frintx s0, s0
-; CHECK-i32-GI-NEXT:    fcvtzs w8, s0
-; CHECK-i32-GI-NEXT:    fmov s0, w8
+; CHECK-i32-GI-NEXT:    fcvtzs s0, s0
 ; CHECK-i32-GI-NEXT:    ret
 ;
 ; CHECK-i64-GI-LABEL: lrint_v1f32:
@@ -1320,12 +1326,18 @@ define <1 x iXLen> @lrint_v1f64(<1 x double> %x) nounwind {
 ; CHECK-i32-NEXT:    fmov s0, w8
 ; CHECK-i32-NEXT:    ret
 ;
-; CHECK-i64-LABEL: lrint_v1f64:
-; CHECK-i64:       // %bb.0:
-; CHECK-i64-NEXT:    frintx d0, d0
-; CHECK-i64-NEXT:    fcvtzs x8, d0
-; CHECK-i64-NEXT:    fmov d0, x8
-; CHECK-i64-NEXT:    ret
+; CHECK-i64-SD-LABEL: lrint_v1f64:
+; CHECK-i64-SD:       // %bb.0:
+; CHECK-i64-SD-NEXT:    frintx d0, d0
+; CHECK-i64-SD-NEXT:    fcvtzs x8, d0
+; CHECK-i64-SD-NEXT:    fmov d0, x8
+; CHECK-i64-SD-NEXT:    ret
+;
+; CHECK-i64-GI-LABEL: lrint_v1f64:
+; CHECK-i64-GI:       // %bb.0:
+; CHECK-i64-GI-NEXT:    frintx d0, d0
+; CHECK-i64-GI-NEXT:    fcvtzs d0, d0
+; CHECK-i64-GI-NEXT:    ret
   %a = call <1 x iXLen> @llvm.lrint.v1iXLen.v1f64(<1 x double> %x)
   ret <1 x iXLen> %a
 }

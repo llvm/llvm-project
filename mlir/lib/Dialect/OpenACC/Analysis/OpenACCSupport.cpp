@@ -59,7 +59,7 @@ bool OpenACCSupport::isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
 bool OpenACCSupport::isValidValueUse(Value v, Region &region) {
   if (impl)
     return impl->isValidValueUse(v, region);
-  return false;
+  return acc::isValidValueUse(v, region);
 }
 
 } // namespace acc

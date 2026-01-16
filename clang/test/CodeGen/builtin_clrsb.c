@@ -6,7 +6,7 @@ int test__builtin_clrsb(int x) {
 // CHECK-NEXT: [[INV:%.*]] = xor i32 [[X]], -1
 // CHECK-NEXT: [[SEL:%.*]] = select i1 [[C]], i32 [[INV]], i32 [[X]]
 // CHECK-NEXT: [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[SEL]], i1 false)
-// CHECK-NEXT: [[SUB:%.*]] = sub i32 [[CTLZ]], 1
+// CHECK-NEXT: [[SUB:%.*]] = sub nuw i32 [[CTLZ]], 1
   return __builtin_clrsb(x);
 }
 
@@ -16,7 +16,7 @@ int test__builtin_clrsbll(long long x) {
 // CHECK-NEXT: [[INV:%.*]] = xor i64 [[X]], -1
 // CHECK-NEXT: [[SEL:%.*]] = select i1 [[C]], i64 [[INV]], i64 [[X]]
 // CHECK-NEXT: [[CTLZ:%.*]] = call i64 @llvm.ctlz.i64(i64 [[SEL]], i1 false)
-// CHECK-NEXT: [[SUB:%.*]] = sub i64 [[CTLZ]], 1
+// CHECK-NEXT: [[SUB:%.*]] = sub nuw i64 [[CTLZ]], 1
 // CHECK-NEXT: trunc i64 [[SUB]] to i32
   return __builtin_clrsbll(x);
 }

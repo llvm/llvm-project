@@ -4712,7 +4712,7 @@ QualType ASTContext::getConstantMatrixType(QualType ElementTy, unsigned NumRows,
   ConstantMatrixType::Profile(ID, ElementTy, NumRows, NumColumns,
                               Type::ConstantMatrix);
 
-  assert(MatrixType::isValidElementType(ElementTy) &&
+  assert(MatrixType::isValidElementType(ElementTy, getLangOpts()) &&
          "need a valid element type");
   assert(NumRows > 0 && NumRows <= LangOpts.MaxMatrixDimension &&
          NumColumns > 0 && NumColumns <= LangOpts.MaxMatrixDimension &&
@@ -15229,66 +15229,70 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
 }
 
 bool ASTContext::arePFPFieldsTriviallyCopyable(const RecordDecl *RD) const {
-  bool IsPAuthSupported =
-      getTargetInfo().getTriple().getArch() == llvm::Triple::aarch64;
-  if (!IsPAuthSupported)
-    return true;
+  // Check for trivially-destructible here because non-trivially-destructible
+  // types will always cause the type and any types derived from it to be
+  // considered non-trivially-copyable. The same cannot be said for
+  // trivially-copyable because deleting special members of a type derived from
+  // a non-trivially-copyable type can cause the derived type to be considered
+  // trivially copyable.
   if (getLangOpts().PointerFieldProtectionTagged)
     return !isa<CXXRecordDecl>(RD) ||
            cast<CXXRecordDecl>(RD)->hasTrivialDestructor();
   return true;
 }
 
-void ASTContext::findPFPFields(QualType Ty, CharUnits Offset,
-                               std::vector<PFPField> &Fields,
-                               bool IncludeVBases, bool IsWithinUnion) const {
-  if (auto *AT = getAsConstantArrayType(Ty)) {
+static void findPFPFields(const ASTContext &Ctx, QualType Ty, CharUnits Offset,
+                          std::vector<PFPField> &Fields, bool IncludeVBases) {
+  if (auto *AT = Ctx.getAsConstantArrayType(Ty)) {
     if (auto *ElemDecl = AT->getElementType()->getAsCXXRecordDecl()) {
-      const ASTRecordLayout &ElemRL = getASTRecordLayout(ElemDecl);
+      const ASTRecordLayout &ElemRL = Ctx.getASTRecordLayout(ElemDecl);
       for (unsigned i = 0; i != AT->getSize(); ++i)
-        findPFPFields(AT->getElementType(), Offset + i * ElemRL.getSize(),
+        findPFPFields(Ctx, AT->getElementType(), Offset + i * ElemRL.getSize(),
                       Fields, true);
     }
   }
   auto *Decl = Ty->getAsCXXRecordDecl();
   // isPFPType() is inherited from bases and members (including via arrays), so
-  // we can early exit if it is false.
-  if (!Decl || !Decl->isPFPType())
+  // we can early exit if it is false. Unions are excluded per the API
+  // documentation.
+  if (!Decl || !Decl->isPFPType() || Decl->isUnion())
     return;
-  IsWithinUnion |= Decl->isUnion();
-  const ASTRecordLayout &RL = getASTRecordLayout(Decl);
-  for (FieldDecl *field : Decl->fields()) {
-    CharUnits fieldOffset =
-        Offset + toCharUnitsFromBits(RL.getFieldOffset(field->getFieldIndex()));
-    if (isPFPField(field))
-      Fields.push_back({fieldOffset, field, IsWithinUnion});
-    findPFPFields(field->getType(), fieldOffset, Fields, /*IncludeVBases=*/true,
-                  IsWithinUnion);
+  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(Decl);
+  for (FieldDecl *Field : Decl->fields()) {
+    CharUnits FieldOffset =
+        Offset + Ctx.toCharUnitsFromBits(RL.getFieldOffset(Field->getFieldIndex()));
+    if (Ctx.isPFPField(Field))
+      Fields.push_back({FieldOffset, Field});
+    findPFPFields(Ctx, Field->getType(), FieldOffset, Fields, /*IncludeVBases=*/true);
   }
   // Pass false for IncludeVBases below because vbases are only included in
   // layout for top-level types, i.e. not bases or vbases.
-  for (auto &Base : Decl->bases()) {
+  for (CXXBaseSpecifier &Base : Decl->bases()) {
     if (Base.isVirtual())
       continue;
     CharUnits BaseOffset =
         Offset + RL.getBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
-    findPFPFields(Base.getType(), BaseOffset, Fields, /*IncludeVBases=*/false,
-                  IsWithinUnion);
+    findPFPFields(Ctx, Base.getType(), BaseOffset, Fields,
+                  /*IncludeVBases=*/false);
   }
   if (IncludeVBases) {
-    for (auto &Base : Decl->vbases()) {
+    for (CXXBaseSpecifier &Base : Decl->vbases()) {
       CharUnits BaseOffset =
           Offset + RL.getVBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
-      findPFPFields(Base.getType(), BaseOffset, Fields, /*IncludeVBases=*/false,
-                    IsWithinUnion);
+      findPFPFields(Ctx, Base.getType(), BaseOffset, Fields,
+                    /*IncludeVBases=*/false);
     }
   }
 }
 
-bool ASTContext::hasPFPFields(QualType Ty) const {
+std::vector<PFPField> ASTContext::findPFPFields(QualType Ty) const {
   std::vector<PFPField> PFPFields;
-  findPFPFields(Ty, CharUnits::Zero(), PFPFields, true);
-  return !PFPFields.empty();
+  ::findPFPFields(*this, Ty, CharUnits::Zero(), PFPFields, true);
+  return PFPFields;
+}
+
+bool ASTContext::hasPFPFields(QualType Ty) const {
+  return !findPFPFields(Ty).empty();
 }
 
 bool ASTContext::isPFPField(const FieldDecl *FD) const {

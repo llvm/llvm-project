@@ -697,6 +697,9 @@ static bool canCreateThunkFor(Function *F) {
   if (F->isVarArg())
     return false;
 
+  if (F->hasKernelCallingConv())
+    return false;
+
   // Don't merge tiny functions using a thunk, since it can just end up
   // making the function larger.
   if (F->size() == 1) {
@@ -1027,12 +1030,16 @@ bool MergeFunctions::insert(Function *NewFunction) {
     assert(OldF.getFunc() != F && "Must have swapped the functions.");
   }
 
-  LLVM_DEBUG(dbgs() << "  " << OldF.getFunc()->getName()
+  // Capture the Function pointer before mergeTwoFunctions, which may invalidate
+  // OldF by erasing it from FnTree via removeUsers().
+  Function *OldFunc = OldF.getFunc();
+
+  LLVM_DEBUG(dbgs() << "  " << OldFunc->getName()
                     << " == " << NewFunction->getName() << '\n');
 
   Function *DeleteF = NewFunction;
-  mergeTwoFunctions(OldF.getFunc(), DeleteF);
-  this->DelToNewMap.insert({DeleteF, OldF.getFunc()});
+  mergeTwoFunctions(OldFunc, DeleteF);
+  this->DelToNewMap.insert({DeleteF, OldFunc});
   return true;
 }
 

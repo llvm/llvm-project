@@ -39,11 +39,6 @@ using namespace mlir::sparse_tensor;
 // Helper methods for the actual rewriting rules.
 //===---------------------------------------------------------------------===//
 
-// Helper method to match any typed zero.
-static bool isZeroValue(Value val) {
-  return matchPattern(val, m_Zero()) || matchPattern(val, m_AnyZeroFloat());
-}
-
 // Helper to detect a sparse tensor type operand.
 static bool isSparseTensor(Value v) {
   auto enc = getSparseTensorEncoding(v.getType());
@@ -59,14 +54,14 @@ static bool isMaterializing(OpOperand *op, bool isZero) {
   if (auto alloc = val.getDefiningOp<AllocTensorOp>()) {
     Value copy = alloc.getCopy();
     if (isZero)
-      return copy && isZeroValue(copy);
+      return copy && isZeroIntegerOrFloat(copy);
     return !copy;
   }
   // Check for empty tensor materialization.
   if (auto empty = val.getDefiningOp<tensor::EmptyOp>())
     return !isZero;
   // Last resort for zero alloc: the whole value is zero.
-  return isZero && isZeroValue(val);
+  return isZero && isZeroIntegerOrFloat(val);
 }
 
 // Helper to detect sampling operation.
@@ -114,10 +109,10 @@ static bool isZeroYield(GenericOp op) {
   auto yieldOp = cast<linalg::YieldOp>(op.getRegion().front().getTerminator());
   if (auto arg = dyn_cast<BlockArgument>(yieldOp.getOperand(0))) {
     if (arg.getOwner()->getParentOp() == op) {
-      return isZeroValue(op->getOperand(arg.getArgNumber()));
+      return isZeroIntegerOrFloat(op->getOperand(arg.getArgNumber()));
     }
   }
-  return isZeroValue(yieldOp.getOperand(0));
+  return isZeroIntegerOrFloat(yieldOp.getOperand(0));
 }
 
 /// Populates given sizes array from type (for static sizes) and from

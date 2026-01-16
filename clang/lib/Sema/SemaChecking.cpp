@@ -2131,6 +2131,11 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   }
 }
 
+static bool isValidMathElementType(QualType T) {
+  return T->isDependentType() ||
+         (T->isRealType() && !T->isBooleanType() && !T->isEnumeralType());
+}
+
 // Check if \p Ty is a valid type for the elementwise math builtins. If it is
 // not a valid type, emit an error message and return true. Otherwise return
 // false.
@@ -2144,8 +2149,7 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
 
   switch (ArgTyRestr) {
   case Sema::EltwiseBuiltinArgTyRestriction::None:
-    if (!ArgTy->getAs<VectorType>() &&
-        !ConstantMatrixType::isValidElementType(ArgTy)) {
+    if (!ArgTy->getAs<VectorType>() && !isValidMathElementType(ArgTy)) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
              << ArgOrdinal << /* vector */ 2 << /* integer */ 1 << /* fp */ 1
              << ArgTy;
@@ -3578,6 +3582,30 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     // Check if the argument is a string literal.
     if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts())) {
       Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+          << Arg->getSourceRange();
+      return ExprError();
+    }
+    break;
+  }
+
+  case Builtin::BI__builtin_allow_sanitize_check: {
+    Expr *Arg = TheCall->getArg(0);
+    // Check if the argument is a string literal.
+    const StringLiteral *SanitizerName =
+        dyn_cast<StringLiteral>(Arg->IgnoreParenImpCasts());
+    if (!SanitizerName) {
+      Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+          << Arg->getSourceRange();
+      return ExprError();
+    }
+    // Validate the sanitizer name.
+    if (!llvm::StringSwitch<bool>(SanitizerName->getString())
+             .Cases({"address", "thread", "memory", "hwaddress",
+                     "kernel-address", "kernel-memory", "kernel-hwaddress"},
+                    true)
+             .Default(false)) {
+      Diag(TheCall->getBeginLoc(), diag::err_invalid_builtin_argument)
+          << SanitizerName->getString() << "__builtin_allow_sanitize_check"
           << Arg->getSourceRange();
       return ExprError();
     }
@@ -16552,7 +16580,7 @@ ExprResult Sema::BuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
   } else {
     ElementTy = PtrTy->getPointeeType().getUnqualifiedType();
 
-    if (!ConstantMatrixType::isValidElementType(ElementTy)) {
+    if (!ConstantMatrixType::isValidElementType(ElementTy, getLangOpts())) {
       Diag(PtrExpr->getBeginLoc(), diag::err_builtin_invalid_arg_type)
           << PtrArgIdx + 1 << 0 << /* pointer to element ty */ 5
           << /* no fp */ 0 << PtrExpr->getType();
