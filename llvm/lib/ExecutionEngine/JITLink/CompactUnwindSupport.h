@@ -483,10 +483,9 @@ private:
       auto &Next = NonUniqued[I];
       auto &Last = Records.back();
 
-      bool NextNeedsDWARF = CURecTraits::encodingSpecifiesDWARF(Next.Encoding);
       bool CanBeMerged = CURecTraits::encodingCanBeMerged(Next.Encoding);
-      if (NextNeedsDWARF || (Next.Encoding != Last.Encoding) || !CanBeMerged ||
-          Next.LSDA || Last.LSDA)
+      if (!CanBeMerged || (Next.Encoding != Last.Encoding) || Next.LSDA ||
+          Last.LSDA)
         Records.push_back(Next);
     }
 
