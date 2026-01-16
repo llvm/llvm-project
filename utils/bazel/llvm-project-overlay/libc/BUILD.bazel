@@ -3155,6 +3155,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_dfmal",
+    hdrs = ["src/__support/math/dfmal.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_range_reduction_double",
     hdrs = [
         "src/__support/math/range_reduction_double_common.h",
@@ -3754,7 +3764,7 @@ libc_math_function(name = "ddivf128")
 libc_math_function(
     name = "dfmal",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_dfmal",
     ],
 )
 

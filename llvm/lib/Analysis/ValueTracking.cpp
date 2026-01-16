@@ -834,12 +834,26 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
         continue;
       if (RetainedKnowledge RK = getKnowledgeFromBundle(
               *I, I->bundle_op_info_begin()[Elem.Index])) {
-        if (RK.WasOn == V &&
-            (RK.AttrKind == Attribute::NonNull ||
-             (RK.AttrKind == Attribute::Dereferenceable &&
-              !NullPointerIsDefined(Q.CxtI->getFunction(),
-                                    V->getType()->getPointerAddressSpace()))) &&
-            isValidAssumeForContext(I, Q.CxtI, Q.DT))
+        if (RK.WasOn != V)
+          continue;
+        bool AssumeImpliesNonNull = [&]() {
+          if (RK.AttrKind == Attribute::NonNull)
+            return true;
+
+          if (RK.AttrKind == Attribute::Dereferenceable) {
+            if (NullPointerIsDefined(Q.CxtI->getFunction(),
+                                     V->getType()->getPointerAddressSpace()))
+              return false;
+            assert(RK.IRArgValue &&
+                   "Dereferenceable attribute without IR argument?");
+
+            auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
+            return CI && !CI->isZero();
+          }
+
+          return false;
+        }();
+        if (AssumeImpliesNonNull && isValidAssumeForContext(I, Q.CxtI, Q.DT))
           return true;
       }
       continue;
@@ -4885,11 +4899,17 @@ void llvm::adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
                                           Value *Arm, bool Invert,
                                           const SimplifyQuery &SQ,
                                           unsigned Depth) {
+
+  KnownFPClass KnownSrc;
   computeKnownFPClassFromCond(Arm, Cond,
-                              /*CondIsTrue=*/!Invert, SQ.CxtI, Known,
+                              /*CondIsTrue=*/!Invert, SQ.CxtI, KnownSrc,
                               Depth + 1);
-  // TODO: Do we need to check isGuaranteedNotToBeUndef, like the KnownBits
-  // case?
+  KnownSrc = KnownSrc.unionWith(Known);
+  if (KnownSrc.isUnknown())
+    return;
+
+  if (isGuaranteedNotToBeUndef(Arm, SQ.AC, SQ.CxtI, SQ.DT, Depth + 1))
+    Known = KnownSrc;
 }
 
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
@@ -7553,9 +7573,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::ctlz:
       case Intrinsic::cttz:
       case Intrinsic::abs:
-        if (cast<ConstantInt>(II->getArgOperand(1))->isNullValue())
-          return false;
-        break;
+        // We're not considering flags so it is safe to just return false.
+        return false;
       case Intrinsic::sshl_sat:
       case Intrinsic::ushl_sat:
         if (!includesPoison(Kind) ||
