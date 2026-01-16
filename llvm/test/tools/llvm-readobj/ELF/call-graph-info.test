@@ -411,9 +411,7 @@ Sections:
       0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, ## Indirect TypeID 1 (matches foo/bar)
       0x54, 0x86, 0xBC, 0x59, 0x81, 0x4B, 0x8E, 0x30  ## Indirect TypeID 2 (matches baz)
     ]
-  - Name:   .rela.llvm.callgraph
-    Type:   SHT_RELA
-    Flags:  [ SHF_INFO_LINK ]
+  - Type:   SHT_RELA
     Info:   .llvm.callgraph
     Relocations:
       - Offset:  0x2
@@ -500,9 +498,7 @@ Sections:
       0x01, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1 (relative to foo)
       0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12 ## FunctionTypeID: 0x123456789ABCDEF0
     ]
-  - Name:   .rela.llvm.callgraph
-    Type:   SHT_RELA
-    Flags:  [ SHF_INFO_LINK ]
+  - Type:   SHT_RELA
     Info:   .llvm.callgraph
     Relocations:
       - Offset:  0x2 ## Offset to FunctionEntryPC

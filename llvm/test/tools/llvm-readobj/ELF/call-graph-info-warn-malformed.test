@@ -72,7 +72,7 @@ Sections:
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t4 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t4 --check-prefix=WARN-FLAG
 
-# WARN-FLAG: warning: '[[FILE]]': unexpected Flags value [8]
+# WARN-FLAG: warning: '[[FILE]]': unsupported Flags value [8]
 
 --- !ELF
 FileHeader:
@@ -273,8 +273,7 @@ FileHeader:
 Sections:
   - Name: .text
     Type: SHT_PROGBITS
-  - Name: .llvm.callgraph
-    Type: SHT_LLVM_CALL_GRAPH
+  - Type: SHT_LLVM_CALL_GRAPH
     ContentArray: [
         '0', ## Format version number
         '3', ## Flag IsIndirectTarget true, HasDirectCallees true

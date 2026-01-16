@@ -5394,7 +5394,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
                                             callgraph::HasIndirectCallees;
     constexpr uint8_t ValidMask = static_cast<uint8_t>(ValidFlags);
     if ((FlagsVal & ~ValidMask) != 0) {
-      reportWarning(createError("unexpected Flags value [" +
+      reportWarning(createError("unsupported Flags value [" +
                                 std::to_string(FlagsVal) + "] "),
                     FileName);
       return false;
