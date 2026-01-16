@@ -862,6 +862,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return State.VF.isScalar() ? Res : Builder.CreateOrReduce(Res);
   }
   case VPInstruction::ExtractLane: {
+    assert(getNumOperands() != 2 && "ExtractLane from single source should be "
+                                    "simplified to ExtractElement.");
     Value *LaneToExtract = State.get(getOperand(0), true);
     Type *IdxTy = State.TypeAnalysis.inferScalarType(getOperand(0));
     Value *Res = nullptr;
@@ -1866,7 +1868,12 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
                                              State.TTI)) {
     Type *RetTy = toVectorizedTy(getResultType(), State.VF);
-    append_range(TysForDecl, getContainedTypes(RetTy));
+    ArrayRef<Type *> ContainedTys = getContainedTypes(RetTy);
+    for (auto [Idx, Ty] : enumerate(ContainedTys)) {
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(VectorIntrinsicID,
+                                                           Idx, State.TTI))
+        TysForDecl.push_back(Ty);
+    }
   }
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {
