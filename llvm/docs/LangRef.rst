@@ -15127,8 +15127,8 @@ The frontend knows this struct has a particular physical layout:
 
 .. code-block:: llvm
 
-    %S = type { [4 x { <3 x i32>, i32 }, <3 x i32>, float }
-    ;                              `-> explicit padding
+    %S = type { [4 x { <3 x i32>, i32 }], <3 x i32>, float }
+    ;                               `-> explicit padding
     ; -> 4 byte padding between each array element, except
     ;    between the last vector and the float.
 
