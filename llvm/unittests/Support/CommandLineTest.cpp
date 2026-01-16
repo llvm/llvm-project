@@ -2355,6 +2355,7 @@ public:
 TEST(CommandLineTest, ResetOptionsToInitialValue) {
   // Option of scalar type.
   StackOption<int> O1("opt1", cl::init(12));
+  O1.setValue(13);
   O1.reset();
   EXPECT_EQ(O1.getValue(), 12)
       << "Option should be reset to its initial value.";
@@ -2362,12 +2363,14 @@ TEST(CommandLineTest, ResetOptionsToInitialValue) {
   // Option of copyable class type.
   CopyableClass InitialValue{42};
   StackOption<CopyableClass> O2("opt2", cl::init(InitialValue));
+  O2.setValue(CopyableClass{404});
   O2.reset();
   EXPECT_EQ(O2.getValue().Val, InitialValue.Val)
       << "Option should be reset to its initial value.";
 
   // Option of string type (most important case of copyable class).
   StackOption<std::string> O3("opt3", cl::init("hello"));
+  O3.setValue("goodbye");
   O3.reset();
   EXPECT_EQ(O3.getValue(), "hello")
       << "Option should be reset to its initial value.";
