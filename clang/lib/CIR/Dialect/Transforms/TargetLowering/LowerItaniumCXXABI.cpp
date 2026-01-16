@@ -335,16 +335,16 @@ void LowerItaniumCXXABI::lowerGetMethod(
     assert(!cir::MissingFeatures::emitCFICheck());
   };
 
-  callee =
-      cir::TernaryOp::create(
-          locBuilder, isVirtual, /*thenBuilder=*/buildVirtualCallee,
-          /*elseBuilder=*/
-          [&](mlir::OpBuilder &b, mlir::Location loc) {
-            auto fnPtr = cir::CastOp::create(
-                b, loc, calleePtrTy, cir::CastKind::int_to_ptr, methodPtrField);
-            cir::YieldOp::create(b, loc, fnPtr.getResult());
-          })
-          .getResult();
+  callee = cir::TernaryOp::create(
+               locBuilder, isVirtual, /*thenBuilder=*/buildVirtualCallee,
+               /*elseBuilder=*/
+               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                 auto fnPtr = cir::CastOp::create(b, loc, calleePtrTy,
+                                                  cir::CastKind::int_to_ptr,
+                                                  methodPtrField);
+                 cir::YieldOp::create(b, loc, fnPtr.getResult());
+               })
+               .getResult();
 }
 
 static mlir::Value lowerDataMemberCast(mlir::Operation *op,
