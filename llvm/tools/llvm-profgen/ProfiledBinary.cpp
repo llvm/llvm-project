@@ -249,30 +249,28 @@ void ProfiledBinary::load() {
   // If path of debug info binary is specified, use the debug info from it,
   // otherwise use the debug info from the executable binary.
   OwningBinary<Binary> DebugBinary;
+  ObjectFile *PseudoProbeObj = nullptr;
   if (!DebugBinaryPath.empty()) {
     DebugBinary = unwrapOrError(createBinary(DebugBinaryPath), DebugBinaryPath);
     ObjectFile *DebugObj = cast<ObjectFile>(DebugBinary.getBinary());
     loadSymbolsFromDWARF(*DebugObj);
-    checkPseudoProbe(DebugObj, DebugBinaryPath);
+    if (checkPseudoProbe(DebugObj, DebugBinaryPath))
+      PseudoProbeObj = DebugObj;
   } else {
     loadSymbolsFromDWARF(*Obj);
   }
 
-  // Try to load pseudo probe from debug binary if it exists, otherwise try to
-  // load it from binary.
-  bool IsPseudoProbeInDebugBin = usePseudoProbes();
-  if (!IsPseudoProbeInDebugBin)
-    checkPseudoProbe(Obj, Path);
+  // Prefer loading pseudo probe from binary.
+  if (checkPseudoProbe(Obj, Path))
+    PseudoProbeObj = Obj;
 
   DisassembleFunctionSet.insert_range(DisassembleFunctions);
 
   if (usePseudoProbes())
     populateSymbolAddressList(Obj);
 
-  if (ShowDisassemblyOnly)
-    decodePseudoProbe(IsPseudoProbeInDebugBin
-                          ? cast<ObjectFile>(DebugBinary.getBinary())
-                          : Obj);
+  if (ShowDisassemblyOnly && PseudoProbeObj)
+    decodePseudoProbe(PseudoProbeObj);
 
   if (LoadFunctionFromSymbol && usePseudoProbes())
     loadSymbolsFromSymtab(Obj);
@@ -435,10 +433,10 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ObjectFile *Obj) {
     llvm_unreachable("invalid object format");
 }
 
-void ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj,
+bool ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj,
                                       StringRef ObjPath) {
   if (UseDwarfCorrelation)
-    return;
+    return false;
 
   bool HasProbeDescSection = false;
   bool HasPseudoProbeSection = false;
@@ -455,8 +453,12 @@ void ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj,
     }
   }
 
-  if (HasProbeDescSection && HasPseudoProbeSection)
+  if (HasProbeDescSection && HasPseudoProbeSection) {
     PseudoProbeBinPath = ObjPath;
+    return true;
+  }
+
+  return false;
 }
 
 void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {

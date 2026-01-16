@@ -355,7 +355,8 @@ class ProfiledBinary {
   void setPreferredTextSegmentAddresses(const object::COFFObjectFile *Obj,
                                         StringRef FileName);
 
-  void checkPseudoProbe(const object::ObjectFile *Obj, StringRef ObjPath);
+  // Return true if pseudo probe in Obj is usable.
+  bool checkPseudoProbe(const object::ObjectFile *Obj, StringRef ObjPath);
 
   void decodePseudoProbe(const object::ObjectFile *Obj);
 
