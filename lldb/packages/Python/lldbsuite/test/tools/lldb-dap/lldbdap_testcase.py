@@ -208,25 +208,40 @@ class DAPTestCaseBase(TestBase):
                     return
         self.assertTrue(False, f"breakpoints not hit, stopped_events={stopped_events}")
 
-    def verify_stop_exception_info(self, expected_description):
+    def verify_stop_exception_info(
+        self, expected_description: str, expected_text: Optional[str] = None
+    ):
         """Wait for the process we are debugging to stop, and verify the stop
         reason is 'exception' and that the description matches
         'expected_description'
         """
         stopped_events = self.dap_server.wait_for_stopped()
+        self.assertIsNotNone(stopped_events, "No stopped events detected")
         for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" not in body:
-                    continue
-                if body["reason"] != "exception":
-                    continue
-                if "description" not in body:
-                    continue
-                description = body["description"]
-                if expected_description == description:
-                    return True
-        return False
+            if (
+                "body" not in stopped_event
+                or stopped_event["body"]["reason"] != "exception"
+            ):
+                continue
+            self.assertIn(
+                "description",
+                stopped_event["body"],
+                f"stopped event missing description {stopped_event}",
+            )
+            description = stopped_event["body"]["description"]
+            self.assertRegex(
+                description,
+                expected_description,
+                f"for 'stopped' event {stopped_event!r}",
+            )
+            if expected_text:
+                self.assertRegex(
+                    stopped_event["body"]["text"],
+                    expected_text,
+                    f"for stopped event {stopped_event!r}",
+                )
+            return
+        self.fail(f"No valid stop exception info detected in {stopped_events}")
 
     def verify_stop_on_entry(self) -> None:
         """Waits for the process to be stopped and then verifies at least one
@@ -437,12 +452,11 @@ class DAPTestCaseBase(TestBase):
         self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids)
 
-    def continue_to_exception_breakpoint(self, filter_label):
+    def continue_to_exception_breakpoint(
+        self, expected_description, expected_text=None
+    ):
         self.do_continue()
-        self.assertTrue(
-            self.verify_stop_exception_info(filter_label),
-            'verify we got "%s"' % (filter_label),
-        )
+        self.verify_stop_exception_info(expected_description, expected_text)
 
     def continue_to_exit(self, exitCode=0):
         self.do_continue()
