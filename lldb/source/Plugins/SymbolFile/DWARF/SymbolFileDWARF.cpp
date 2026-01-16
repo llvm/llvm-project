@@ -2635,8 +2635,7 @@ SymbolFileDWARF::ResolveFunctionCallLabel(FunctionCallLabel &label) {
 
   DWARFDIE die = GetDIE(label.symbol_id);
   if (!die.IsValid())
-    return llvm::createStringErrorV(
-        llvm::formatv("invalid DIE ID in {0}", label);
+    return llvm::createStringErrorV("invalid DIE ID in {0}", label);
 
   // Label was created using a declaration DIE. Need to fetch the definition
   // to resolve the function call.
