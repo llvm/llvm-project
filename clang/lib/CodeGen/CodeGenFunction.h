@@ -3425,13 +3425,13 @@ public:
 
   bool IsRestrictExperimentalSupportEnabled() const;
 
-  void ConstructMetodataForScope(RawAddress AllocaAddr, QualType Ty,
+  void ConstructMetadataForScope(RawAddress AllocaAddr, QualType Ty,
                                  llvm::StringRef CurScopeCode = "1");
 
-  void AddMetodataForRestrict(RawAddress AllocaAddr, QualType Ty,
+  void AddMetadataForRestrict(RawAddress AllocaAddr, QualType Ty,
                               llvm::StringRef FullName);
 
-  void AddPointerMetodataForRestrict(RawAddress AllocaAddr, QualType Ty,
+  void AddPointerMetadataForRestrict(RawAddress AllocaAddr, QualType Ty,
                                      llvm::StringRef FullName);
 
   class AutoVarEmission {

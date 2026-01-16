@@ -1510,7 +1510,7 @@ static bool shouldExtendLifetime(const ASTContext &Context,
 /// The unique codes allow distinguishing different restrict pointers at the
 /// same nesting level within the same function and scope.
 ///
-void CodeGenFunction::AddPointerMetodataForRestrict(RawAddress AllocaAddr,
+void CodeGenFunction::AddPointerMetadataForRestrict(RawAddress AllocaAddr,
                                                     QualType Ty,
                                                     llvm::StringRef FullName) {
   auto *AllocaInst = cast<llvm::AllocaInst>(AllocaAddr.getPointer());
@@ -1537,7 +1537,7 @@ void CodeGenFunction::AddPointerMetodataForRestrict(RawAddress AllocaAddr,
       Code = RestrictCodesElem;
     } else {
       if (PT->getPointeeType()->getAs<RecordType>())
-        AddMetodataForRestrict(AllocaAddr, PT->getPointeeType(), FullName);
+        AddMetadataForRestrict(AllocaAddr, PT->getPointeeType(), FullName);
       Code = 0;
     }
     llvm::Constant *C =
@@ -1562,7 +1562,7 @@ bool CodeGenFunction::IsRestrictExperimentalSupportEnabled() const {
 ///
 /// This function builds a unique name for each variable by combining the
 /// function name with the current scope encoding, then delegates to
-/// AddMetodataForRestrict to generate actual restrict metadata.
+/// AddMetadataForRestrict to generate actual restrict metadata.
 ///
 /// Example with nested scopes in function `foo`:
 ///   void foo() {           // Scope encoding: "1"
@@ -1587,7 +1587,7 @@ bool CodeGenFunction::IsRestrictExperimentalSupportEnabled() const {
 /// This ensures each variable gets a unique identifier even
 /// if they have the same name in different scopes.
 ///
-void CodeGenFunction::ConstructMetodataForScope(RawAddress AllocaAddr,
+void CodeGenFunction::ConstructMetadataForScope(RawAddress AllocaAddr,
                                                 QualType Ty,
                                                 llvm::StringRef CurScopeCode) {
   assert(CurFuncDecl != nullptr);
@@ -1595,14 +1595,14 @@ void CodeGenFunction::ConstructMetodataForScope(RawAddress AllocaAddr,
   llvm::SmallString<32> FullName(
       CurFuncDecl->getAsFunction()->getNameAsString().append("_"));
   FullName.append(CurScopeCode);
-  AddMetodataForRestrict(AllocaAddr, Ty, FullName.str());
+  AddMetadataForRestrict(AllocaAddr, Ty, FullName.str());
 }
 
-void CodeGenFunction::AddMetodataForRestrict(RawAddress AllocaAddr, QualType Ty,
+void CodeGenFunction::AddMetadataForRestrict(RawAddress AllocaAddr, QualType Ty,
                                              llvm::StringRef FullName) {
   if (!IsRestrictExperimentalSupportEnabled() || !Ty->getAs<PointerType>())
     return;
-  AddPointerMetodataForRestrict(AllocaAddr, Ty, FullName);
+  AddPointerMetadataForRestrict(AllocaAddr, Ty, FullName);
 }
 
 /// EmitAutoVarAlloca - Emit the alloca and debug information for a
@@ -1735,7 +1735,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
 
       if (IsRestrictExperimentalSupportEnabled()) {
         llvm::StringRef CurScopeCode = ScopeCodes.back().first;
-        ConstructMetodataForScope(AllocaAddr, Ty, CurScopeCode);
+        ConstructMetadataForScope(AllocaAddr, Ty, CurScopeCode);
       }
 
       // Don't emit lifetime markers for MSVC catch parameters. The lifetime of
@@ -2837,7 +2837,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     if (ArgInfo.isIndirect()) {
       UseIndirectDebugAddress = !ArgInfo.getIndirectByVal();
       if (IsRestrictExperimentalSupportEnabled())
-        ConstructMetodataForScope(AllocaPtr, Ty);
+        ConstructMetadataForScope(AllocaPtr, Ty);
     }
     if (UseIndirectDebugAddress) {
       auto PtrTy = getContext().getPointerType(Ty);
@@ -2888,7 +2888,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
                               D.getName() + ".addr", &AllocaPtr);
       if (IsRestrictExperimentalSupportEnabled())
-        ConstructMetodataForScope(AllocaPtr, Ty);
+        ConstructMetadataForScope(AllocaPtr, Ty);
     }
     DoStore = true;
   }

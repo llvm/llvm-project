@@ -605,7 +605,7 @@ Address CodeGenFunction::EmitCompoundStmt(const CompoundStmt &S, bool GetLast,
 ///   3. Stability: The encoding doesn't change if unrelated scopes are added
 ///
 /// The encoding is stored in ScopeCodes stack and used by
-/// ConstructMetodataForScope to generate unique names for restrict metadata.
+/// ConstructMetadataForScope to generate unique names for restrict metadata.
 /// This prevents conflicts when the same variable name appears in different
 /// scopes.
 ///
