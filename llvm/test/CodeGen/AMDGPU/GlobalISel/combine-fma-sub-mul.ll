@@ -543,14 +543,12 @@ define <4 x half> @test_v4f16_sub_mul(<4 x half> %x, <4 x half> %y, <4 x half> %
 ; GFX9-LABEL: test_v4f16_sub_mul:
 ; GFX9:       ; %bb.0: ; %.entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_mul_f16 v0, v0, v2
-; GFX9-NEXT:    v_pk_mul_f16 v1, v1, v3
-; GFX9-NEXT:    v_sub_f16_e32 v2, v0, v4
-; GFX9-NEXT:    v_sub_f16_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NEXT:    v_sub_f16_e32 v3, v1, v5
-; GFX9-NEXT:    v_sub_f16_sdwa v1, v1, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NEXT:    v_pack_b32_f16 v0, v2, v0
-; GFX9-NEXT:    v_pack_b32_f16 v1, v3, v1
+; GFX9-NEXT:    v_pk_mul_f16 v2, v0, v2
+; GFX9-NEXT:    v_pk_mul_f16 v3, v1, v3
+; GFX9-NEXT:    v_sub_f16_e32 v0, v2, v4
+; GFX9-NEXT:    v_sub_f16_e32 v1, v3, v5
+; GFX9-NEXT:    v_sub_f16_sdwa v0, v2, v4 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-NEXT:    v_sub_f16_sdwa v1, v3, v5 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-CONTRACT-LABEL: test_v4f16_sub_mul:
@@ -563,27 +561,23 @@ define <4 x half> @test_v4f16_sub_mul(<4 x half> %x, <4 x half> %y, <4 x half> %
 ; GFX9-DENORM-LABEL: test_v4f16_sub_mul:
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-DENORM-NEXT:    v_pk_mul_f16 v0, v0, v2
-; GFX9-DENORM-NEXT:    v_pk_mul_f16 v1, v1, v3
-; GFX9-DENORM-NEXT:    v_sub_f16_e32 v2, v0, v4
-; GFX9-DENORM-NEXT:    v_sub_f16_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-DENORM-NEXT:    v_sub_f16_e32 v3, v1, v5
-; GFX9-DENORM-NEXT:    v_sub_f16_sdwa v1, v1, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-DENORM-NEXT:    v_pack_b32_f16 v0, v2, v0
-; GFX9-DENORM-NEXT:    v_pack_b32_f16 v1, v3, v1
+; GFX9-DENORM-NEXT:    v_pk_mul_f16 v2, v0, v2
+; GFX9-DENORM-NEXT:    v_pk_mul_f16 v3, v1, v3
+; GFX9-DENORM-NEXT:    v_sub_f16_e32 v0, v2, v4
+; GFX9-DENORM-NEXT:    v_sub_f16_e32 v1, v3, v5
+; GFX9-DENORM-NEXT:    v_sub_f16_sdwa v0, v2, v4 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-DENORM-NEXT:    v_sub_f16_sdwa v1, v3, v5 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX9-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_v4f16_sub_mul:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_mul_f16 v0, v0, v2
-; GFX10-NEXT:    v_pk_mul_f16 v1, v1, v3
-; GFX10-NEXT:    v_sub_f16_e32 v2, v0, v4
-; GFX10-NEXT:    v_sub_f16_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-NEXT:    v_sub_f16_e32 v3, v1, v5
-; GFX10-NEXT:    v_sub_f16_sdwa v1, v1, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-NEXT:    v_pack_b32_f16 v0, v2, v0
-; GFX10-NEXT:    v_pack_b32_f16 v1, v3, v1
+; GFX10-NEXT:    v_pk_mul_f16 v2, v0, v2
+; GFX10-NEXT:    v_pk_mul_f16 v3, v1, v3
+; GFX10-NEXT:    v_sub_f16_e32 v0, v2, v4
+; GFX10-NEXT:    v_sub_f16_e32 v1, v3, v5
+; GFX10-NEXT:    v_sub_f16_sdwa v0, v2, v4 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
+; GFX10-NEXT:    v_sub_f16_sdwa v1, v3, v5 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-CONTRACT-LABEL: test_v4f16_sub_mul:
@@ -596,14 +590,12 @@ define <4 x half> @test_v4f16_sub_mul(<4 x half> %x, <4 x half> %y, <4 x half> %
 ; GFX10-DENORM-LABEL: test_v4f16_sub_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    v_pk_mul_f16 v0, v0, v2
-; GFX10-DENORM-NEXT:    v_pk_mul_f16 v1, v1, v3
-; GFX10-DENORM-NEXT:    v_sub_f16_e32 v2, v0, v4
-; GFX10-DENORM-NEXT:    v_sub_f16_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-DENORM-NEXT:    v_sub_f16_e32 v3, v1, v5
-; GFX10-DENORM-NEXT:    v_sub_f16_sdwa v1, v1, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-DENORM-NEXT:    v_pack_b32_f16 v0, v2, v0
-; GFX10-DENORM-NEXT:    v_pack_b32_f16 v1, v3, v1
+; GFX10-DENORM-NEXT:    v_pk_mul_f16 v2, v0, v2
+; GFX10-DENORM-NEXT:    v_pk_mul_f16 v3, v1, v3
+; GFX10-DENORM-NEXT:    v_sub_f16_e32 v0, v2, v4
+; GFX10-DENORM-NEXT:    v_sub_f16_e32 v1, v3, v5
+; GFX10-DENORM-NEXT:    v_sub_f16_sdwa v0, v2, v4 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
+; GFX10-DENORM-NEXT:    v_sub_f16_sdwa v1, v3, v5 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-CONTRACT-LABEL: test_v4f16_sub_mul:
@@ -642,14 +634,12 @@ define <4 x half> @test_v4f16_sub_mul_rhs(<4 x half> %x, <4 x half> %y, <4 x hal
 ; GFX9-LABEL: test_v4f16_sub_mul_rhs:
 ; GFX9:       ; %bb.0: ; %.entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_mul_f16 v0, v0, v2
-; GFX9-NEXT:    v_pk_mul_f16 v1, v1, v3
-; GFX9-NEXT:    v_sub_f16_e32 v2, v4, v0
-; GFX9-NEXT:    v_sub_f16_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NEXT:    v_sub_f16_e32 v3, v5, v1
-; GFX9-NEXT:    v_sub_f16_sdwa v1, v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NEXT:    v_pack_b32_f16 v0, v2, v0
-; GFX9-NEXT:    v_pack_b32_f16 v1, v3, v1
+; GFX9-NEXT:    v_pk_mul_f16 v2, v0, v2
+; GFX9-NEXT:    v_pk_mul_f16 v3, v1, v3
+; GFX9-NEXT:    v_sub_f16_e32 v0, v4, v2
+; GFX9-NEXT:    v_sub_f16_e32 v1, v5, v3
+; GFX9-NEXT:    v_sub_f16_sdwa v0, v4, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-NEXT:    v_sub_f16_sdwa v1, v5, v3 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-CONTRACT-LABEL: test_v4f16_sub_mul_rhs:
@@ -662,27 +652,23 @@ define <4 x half> @test_v4f16_sub_mul_rhs(<4 x half> %x, <4 x half> %y, <4 x hal
 ; GFX9-DENORM-LABEL: test_v4f16_sub_mul_rhs:
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-DENORM-NEXT:    v_pk_mul_f16 v0, v0, v2
-; GFX9-DENORM-NEXT:    v_pk_mul_f16 v1, v1, v3
-; GFX9-DENORM-NEXT:    v_sub_f16_e32 v2, v4, v0
-; GFX9-DENORM-NEXT:    v_sub_f16_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-DENORM-NEXT:    v_sub_f16_e32 v3, v5, v1
-; GFX9-DENORM-NEXT:    v_sub_f16_sdwa v1, v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-DENORM-NEXT:    v_pack_b32_f16 v0, v2, v0
-; GFX9-DENORM-NEXT:    v_pack_b32_f16 v1, v3, v1
+; GFX9-DENORM-NEXT:    v_pk_mul_f16 v2, v0, v2
+; GFX9-DENORM-NEXT:    v_pk_mul_f16 v3, v1, v3
+; GFX9-DENORM-NEXT:    v_sub_f16_e32 v0, v4, v2
+; GFX9-DENORM-NEXT:    v_sub_f16_e32 v1, v5, v3
+; GFX9-DENORM-NEXT:    v_sub_f16_sdwa v0, v4, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-DENORM-NEXT:    v_sub_f16_sdwa v1, v5, v3 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX9-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_v4f16_sub_mul_rhs:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_mul_f16 v0, v0, v2
-; GFX10-NEXT:    v_pk_mul_f16 v1, v1, v3
-; GFX10-NEXT:    v_sub_f16_e32 v2, v4, v0
-; GFX10-NEXT:    v_sub_f16_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-NEXT:    v_sub_f16_e32 v3, v5, v1
-; GFX10-NEXT:    v_sub_f16_sdwa v1, v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-NEXT:    v_pack_b32_f16 v0, v2, v0
-; GFX10-NEXT:    v_pack_b32_f16 v1, v3, v1
+; GFX10-NEXT:    v_pk_mul_f16 v2, v0, v2
+; GFX10-NEXT:    v_pk_mul_f16 v3, v1, v3
+; GFX10-NEXT:    v_sub_f16_e32 v0, v4, v2
+; GFX10-NEXT:    v_sub_f16_e32 v1, v5, v3
+; GFX10-NEXT:    v_sub_f16_sdwa v0, v4, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
+; GFX10-NEXT:    v_sub_f16_sdwa v1, v5, v3 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-CONTRACT-LABEL: test_v4f16_sub_mul_rhs:
@@ -695,14 +681,12 @@ define <4 x half> @test_v4f16_sub_mul_rhs(<4 x half> %x, <4 x half> %y, <4 x hal
 ; GFX10-DENORM-LABEL: test_v4f16_sub_mul_rhs:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    v_pk_mul_f16 v0, v0, v2
-; GFX10-DENORM-NEXT:    v_pk_mul_f16 v1, v1, v3
-; GFX10-DENORM-NEXT:    v_sub_f16_e32 v2, v4, v0
-; GFX10-DENORM-NEXT:    v_sub_f16_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-DENORM-NEXT:    v_sub_f16_e32 v3, v5, v1
-; GFX10-DENORM-NEXT:    v_sub_f16_sdwa v1, v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-DENORM-NEXT:    v_pack_b32_f16 v0, v2, v0
-; GFX10-DENORM-NEXT:    v_pack_b32_f16 v1, v3, v1
+; GFX10-DENORM-NEXT:    v_pk_mul_f16 v2, v0, v2
+; GFX10-DENORM-NEXT:    v_pk_mul_f16 v3, v1, v3
+; GFX10-DENORM-NEXT:    v_sub_f16_e32 v0, v4, v2
+; GFX10-DENORM-NEXT:    v_sub_f16_e32 v1, v5, v3
+; GFX10-DENORM-NEXT:    v_sub_f16_sdwa v0, v4, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
+; GFX10-DENORM-NEXT:    v_sub_f16_sdwa v1, v5, v3 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-CONTRACT-LABEL: test_v4f16_sub_mul_rhs:

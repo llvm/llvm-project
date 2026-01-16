@@ -199,9 +199,8 @@ define amdgpu_kernel void @rint_v2f16(
 ; GFX9-NEXT:    s_mov_b32 s5, s1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_rndne_f16_e32 v1, v0
-; GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-NEXT:    v_pack_b32_f16 v0, v1, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX9-NEXT:    v_rndne_f16_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX9-NEXT:    buffer_store_dword v1, off, s[4:7], 0
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX11-TRUE16-LABEL: rint_v2f16:

@@ -1701,8 +1701,8 @@ define <2 x half> @basic_fract_v2f16_nonan(<2 x half> nofpclass(nan) %x) {
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_fract_f16_e32 v1, v0
-; GFX8-NEXT:    v_fract_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX8-NEXT:    v_pack_b32_f16 v0, v1, v0
+; GFX8-NEXT:    v_fract_f16_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX8-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: basic_fract_v2f16_nonan:
@@ -2722,14 +2722,13 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) writeon
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_movk_i32 s6, 0x204
-; GFX8-NEXT:    v_floor_f16_sdwa v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX8-NEXT:    v_floor_f16_e32 v4, v0
 ; GFX8-NEXT:    v_fract_f16_sdwa v5, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX8-NEXT:    v_cmp_class_f16_sdwa s[4:5], v0, s6 src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-NEXT:    v_pack_b32_f16 v3, v4, v3
+; GFX8-NEXT:    v_floor_f16_e32 v3, v0
 ; GFX8-NEXT:    v_fract_f16_e32 v4, v0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v5, v5, 0, s[4:5]
 ; GFX8-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, s6
+; GFX8-NEXT:    v_floor_f16_sdwa v3, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v4, 0, s[4:5]
 ; GFX8-NEXT:    v_pack_b32_f16 v0, v0, v5
 ; GFX8-NEXT:    global_store_dword v[1:2], v3, off

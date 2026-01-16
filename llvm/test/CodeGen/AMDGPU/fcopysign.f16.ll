@@ -3136,10 +3136,9 @@ define <2 x half> @v_copysign_out_v2f16_mag_v2f32_sign_v2f16(<2 x float> %mag, <
 ; GFX9-LABEL: v_copysign_out_v2f16_mag_v2f32_sign_v2f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 ; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
-; GFX9-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3642,10 +3641,9 @@ define <2 x half> @v_copysign_out_v2f16_mag_v2f16_sign_v2f32(<2 x half> %mag, <2
 ; GFX9-LABEL: v_copysign_out_v2f16_mag_v2f16_sign_v2f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 ; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
-; GFX9-NEXT:    v_pack_b32_f16 v1, v1, v2
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3970,10 +3968,9 @@ define amdgpu_ps i32 @s_copysign_out_v2f16_mag_v2f32_sign_v2f16(<2 x float> inre
 ;
 ; GFX9-LABEL: s_copysign_out_v2f16_mag_v2f32_sign_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, s1
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, s0
+; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, s0
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v0, s1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 ; GFX9-NEXT:    s_mov_b32 s0, 0x7fff7fff
-; GFX9-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    v_bfi_b32 v0, s0, v0, v1
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
@@ -4428,10 +4425,9 @@ define amdgpu_ps i32 @s_copysign_out_v2f16_mag_v2f16_sign_v2f32(<2 x half> inreg
 ;
 ; GFX9-LABEL: s_copysign_out_v2f16_mag_v2f16_sign_v2f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, s2
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, s1
+; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, s1
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v0, s2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 ; GFX9-NEXT:    s_mov_b32 s1, 0x7fff7fff
-; GFX9-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    v_bfi_b32 v0, s1, v1, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
@@ -4762,12 +4758,11 @@ define <3 x half> @v_copysign_out_v3f16_mag_v3f32_sign_v3f16(<3 x float> %mag, <
 ; GFX9-LABEL: v_copysign_out_v3f16_mag_v3f32_sign_v3f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v5, v1
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; GFX9-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 ; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
-; GFX9-NEXT:    v_pack_b32_f16 v0, v0, v5
-; GFX9-NEXT:    v_bfi_b32 v1, s4, v1, v4
+; GFX9-NEXT:    v_bfi_b32 v1, s4, v2, v4
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5463,11 +5458,10 @@ define <3 x half> @v_copysign_out_v3f16_mag_v3f16_sign_v3f32(<3 x half> %mag, <3
 ; GFX9-LABEL: v_copysign_out_v3f16_mag_v3f16_sign_v3f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v4, v4
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v2, v3 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 ; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
-; GFX9-NEXT:    v_pack_b32_f16 v2, v2, v3
 ; GFX9-NEXT:    v_bfi_b32 v1, s4, v1, v4
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -5870,15 +5864,13 @@ define <4 x half> @v_copysign_out_v4f16_mag_v4f32_sign_v4f16(<4 x float> %mag, <
 ; GFX9-LABEL: v_copysign_out_v4f16_mag_v4f32_sign_v4f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v2, v3 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 ; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
-; GFX9-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v4
-; GFX9-NEXT:    v_pack_b32_f16 v1, v2, v3
-; GFX9-NEXT:    v_bfi_b32 v1, s4, v1, v5
+; GFX9-NEXT:    v_bfi_b32 v1, s4, v2, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: v_copysign_out_v4f16_mag_v4f32_sign_v4f16:
@@ -6780,15 +6772,13 @@ define <4 x half> @v_copysign_out_v4f16_mag_v4f16_sign_v4f32(<4 x half> %mag, <4
 ; GFX9-LABEL: v_copysign_out_v4f16_mag_v4f16_sign_v4f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v5, v5
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v4, v4
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v2, v3 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v4, v5 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 ; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
-; GFX9-NEXT:    v_pack_b32_f16 v2, v2, v3
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v2
-; GFX9-NEXT:    v_pack_b32_f16 v2, v4, v5
-; GFX9-NEXT:    v_bfi_b32 v1, s4, v1, v2
+; GFX9-NEXT:    v_bfi_b32 v1, s4, v1, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: v_copysign_out_v4f16_mag_v4f16_sign_v4f32:
@@ -7371,9 +7361,8 @@ define amdgpu_ps i32 @s_copysign_v2f16_0_v2f32(<2 x float> inreg %sign) {
 ;
 ; GFX9-LABEL: s_copysign_v2f16_0_v2f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, s1
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, s0
-; GFX9-NEXT:    v_pack_b32_f16 v0, v1, v0
+; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, s0
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v0, s1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
@@ -7428,9 +7417,8 @@ define <2 x half> @v_copysign_v2f16_0_v2bf32(<2 x float> %sign) {
 ; GFX9-LABEL: v_copysign_v2f16_0_v2bf32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX9-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

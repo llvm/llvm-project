@@ -187,26 +187,22 @@ define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 ; GFX10-LABEL: fmul_pow2_8xhalf:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_lshlrev_b16 v3, v3, 1 op_sel_hi:[1,0]
-; GFX10-NEXT:    v_pk_lshlrev_b16 v2, v2, 1 op_sel_hi:[1,0]
-; GFX10-NEXT:    v_pk_lshlrev_b16 v1, v1, 1 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v0, v0, 1 op_sel_hi:[1,0]
-; GFX10-NEXT:    v_cvt_f16_u16_e32 v4, v3
-; GFX10-NEXT:    v_cvt_f16_u16_e32 v5, v2
-; GFX10-NEXT:    v_cvt_f16_u16_e32 v6, v1
-; GFX10-NEXT:    v_cvt_f16_u16_e32 v7, v0
-; GFX10-NEXT:    v_cvt_f16_u16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_cvt_f16_u16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_cvt_f16_u16_sdwa v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_cvt_f16_u16_sdwa v3, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_pack_b32_f16 v0, v7, v0
-; GFX10-NEXT:    v_pack_b32_f16 v1, v6, v1
-; GFX10-NEXT:    v_pack_b32_f16 v2, v5, v2
-; GFX10-NEXT:    v_pack_b32_f16 v3, v4, v3
-; GFX10-NEXT:    v_pk_mul_f16 v0, 0x7000, v0 op_sel_hi:[0,1]
-; GFX10-NEXT:    v_pk_mul_f16 v1, 0x7000, v1 op_sel_hi:[0,1]
-; GFX10-NEXT:    v_pk_mul_f16 v2, 0x7000, v2 op_sel_hi:[0,1]
-; GFX10-NEXT:    v_pk_mul_f16 v3, 0x7000, v3 op_sel_hi:[0,1]
+; GFX10-NEXT:    v_pk_lshlrev_b16 v1, v1, 1 op_sel_hi:[1,0]
+; GFX10-NEXT:    v_pk_lshlrev_b16 v2, v2, 1 op_sel_hi:[1,0]
+; GFX10-NEXT:    v_pk_lshlrev_b16 v3, v3, 1 op_sel_hi:[1,0]
+; GFX10-NEXT:    v_cvt_f16_u16_e32 v4, v0
+; GFX10-NEXT:    v_cvt_f16_u16_e32 v5, v1
+; GFX10-NEXT:    v_cvt_f16_u16_e32 v6, v2
+; GFX10-NEXT:    v_cvt_f16_u16_e32 v7, v3
+; GFX10-NEXT:    v_cvt_f16_u16_sdwa v4, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX10-NEXT:    v_cvt_f16_u16_sdwa v5, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX10-NEXT:    v_cvt_f16_u16_sdwa v6, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX10-NEXT:    v_cvt_f16_u16_sdwa v7, v3 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX10-NEXT:    v_pk_mul_f16 v0, 0x7000, v4 op_sel_hi:[0,1]
+; GFX10-NEXT:    v_pk_mul_f16 v1, 0x7000, v5 op_sel_hi:[0,1]
+; GFX10-NEXT:    v_pk_mul_f16 v2, 0x7000, v6 op_sel_hi:[0,1]
+; GFX10-NEXT:    v_pk_mul_f16 v3, 0x7000, v7 op_sel_hi:[0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: fmul_pow2_8xhalf:
@@ -295,19 +291,19 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; GFX10-LABEL: fmul_pow2_ldexp_8xhalf:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0x7000
-; GFX10-NEXT:    v_ldexp_f16_e32 v5, 0x7000, v3
+; GFX10-NEXT:    v_mov_b32_e32 v8, 0x7000
+; GFX10-NEXT:    v_ldexp_f16_e32 v4, 0x7000, v0
+; GFX10-NEXT:    v_ldexp_f16_e32 v5, 0x7000, v1
 ; GFX10-NEXT:    v_ldexp_f16_e32 v6, 0x7000, v2
-; GFX10-NEXT:    v_ldexp_f16_e32 v7, 0x7000, v1
-; GFX10-NEXT:    v_ldexp_f16_e32 v8, 0x7000, v0
-; GFX10-NEXT:    v_ldexp_f16_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_ldexp_f16_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_ldexp_f16_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_ldexp_f16_sdwa v3, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_pack_b32_f16 v0, v8, v0
-; GFX10-NEXT:    v_pack_b32_f16 v1, v7, v1
-; GFX10-NEXT:    v_pack_b32_f16 v2, v6, v2
-; GFX10-NEXT:    v_pack_b32_f16 v3, v5, v3
+; GFX10-NEXT:    v_ldexp_f16_e32 v7, 0x7000, v3
+; GFX10-NEXT:    v_ldexp_f16_sdwa v4, v8, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_ldexp_f16_sdwa v5, v8, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_ldexp_f16_sdwa v6, v8, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_ldexp_f16_sdwa v7, v8, v3 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_mov_b32_e32 v0, v4
+; GFX10-NEXT:    v_mov_b32_e32 v1, v5
+; GFX10-NEXT:    v_mov_b32_e32 v2, v6
+; GFX10-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: fmul_pow2_ldexp_8xhalf:
@@ -1073,9 +1069,8 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v0, v0, 2 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_cvt_f16_u16_e32 v1, v0
-; GFX10-NEXT:    v_cvt_f16_u16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_pack_b32_f16 v0, v1, v0
-; GFX10-NEXT:    v_pk_mul_f16 v0, 0x4b80, v0 op_sel_hi:[0,1]
+; GFX10-NEXT:    v_cvt_f16_u16_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX10-NEXT:    v_pk_mul_f16 v0, 0x4b80, v1 op_sel_hi:[0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: fmul_pow_shl_cnt_vec_fail_to_large:

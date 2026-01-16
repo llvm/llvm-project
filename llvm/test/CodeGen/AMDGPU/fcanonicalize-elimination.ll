@@ -286,11 +286,10 @@ define amdgpu_kernel void @test_fold_canonicalize_fpround_value_f16_f32_flushf16
 ; GCN-DAG: v_cvt_f16_f32_e32 [[V0:v[0-9]+]], v{{[0-9]+}}
 ; VI-DAG: v_cvt_f16_f32_sdwa [[V1:v[0-9]+]], v{{[0-9]+}}
 ; VI: v_or_b32_e32 [[V:v[0-9]+]], [[V0]], [[V1]]
-; GFX9: v_cvt_f16_f32_e32 [[V1:v[0-9]+]], v{{[0-9]+}}
-; GFX9: v_pack_b32_f16 [[V:v[0-9]+]], [[V1]], [[V0]]
+; GFX9: v_cvt_f16_f32_sdwa [[V1:v[0-9]+]], v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 ; GCN-NOT: v_mul
 ; GCN-NOT: v_max
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[V]]
+; GCN: {{flat|global}}_store_dword v{{.+}}, [[V1]]
 define amdgpu_kernel void @test_fold_canonicalize_fpround_value_v2f16_v2f32(ptr addrspace(1) %arg, ptr addrspace(1) %out) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %arg, i32 %id
@@ -732,7 +731,7 @@ define amdgpu_ps float @test_fold_canonicalize_minnum_value_no_ieee_mode_nnan(fl
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_build_vector_v2f16:
 ; GFX9-DAG: v_add_f16_e32
-; GFX9-DAG: v_mul_f16_e32
+; GFX9-DAG: v_mul_f16_sdwa
 ; GFX9-NOT: v_max
 ; GFX9-NOT: v_pk_max
 define <2 x half> @v_test_canonicalize_build_vector_v2f16(<2 x half> %vec) {

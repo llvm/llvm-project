@@ -272,8 +272,7 @@ define <2 x half> @v_repeat_divisor_f16_x2_arcp(half %x, half %y, half %D) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_rcp_f16_e32 v2, v2
 ; GFX9-NEXT:    v_mul_f16_e32 v0, v0, v2
-; GFX9-NEXT:    v_mul_f16_e32 v1, v1, v2
-; GFX9-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX9-NEXT:    v_mul_f16_sdwa v0, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: v_repeat_divisor_f16_x2_arcp:
@@ -555,9 +554,9 @@ define <3 x half> @v_repeat_divisor_f16_x3_arcp(half %x, half %y, half %z, half 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_rcp_f16_e32 v3, v3
 ; GFX9-NEXT:    v_mul_f16_e32 v0, v0, v3
-; GFX9-NEXT:    v_mul_f16_e32 v4, v1, v3
-; GFX9-NEXT:    v_mul_f16_e32 v1, v2, v3
-; GFX9-NEXT:    v_pack_b32_f16 v0, v0, v4
+; GFX9-NEXT:    v_mul_f16_e32 v2, v2, v3
+; GFX9-NEXT:    v_mul_f16_sdwa v0, v1, v3 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
+; GFX9-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: v_repeat_divisor_f16_x3_arcp:
@@ -825,11 +824,10 @@ define <4 x half> @v_repeat_divisor_v2f16_x2(<2 x half> %x, <2 x half> %y, <2 x 
 ; GFX9-LABEL: v_repeat_divisor_v2f16_x2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_rcp_f16_sdwa v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX9-NEXT:    v_pack_b32_f16 v2, v2, v3
-; GFX9-NEXT:    v_pk_mul_f16 v0, v0, v2
-; GFX9-NEXT:    v_pk_mul_f16 v1, v1, v2
+; GFX9-NEXT:    v_rcp_f16_e32 v3, v2
+; GFX9-NEXT:    v_rcp_f16_sdwa v3, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX9-NEXT:    v_pk_mul_f16 v0, v0, v3
+; GFX9-NEXT:    v_pk_mul_f16 v1, v1, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: v_repeat_divisor_v2f16_x2:
@@ -926,16 +924,15 @@ define <6 x half> @v_repeat_divisor_v3f16_x2(<3 x half> %x, <3 x half> %y, <3 x 
 ; GFX9-LABEL: v_repeat_divisor_v3f16_x2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_rcp_f16_sdwa v6, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-NEXT:    v_rcp_f16_e32 v4, v4
-; GFX9-NEXT:    v_rcp_f16_e32 v5, v5
+; GFX9-NEXT:    v_rcp_f16_e32 v6, v4
+; GFX9-NEXT:    v_rcp_f16_sdwa v6, v4 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX9-NEXT:    v_rcp_f16_e32 v4, v5
 ; GFX9-NEXT:    s_movk_i32 s4, 0x7e00
-; GFX9-NEXT:    v_pack_b32_f16 v4, v4, v6
-; GFX9-NEXT:    v_pack_b32_f16 v5, v5, s4
-; GFX9-NEXT:    v_pk_mul_f16 v0, v0, v4
-; GFX9-NEXT:    v_pk_mul_f16 v1, v1, v5
-; GFX9-NEXT:    v_pk_mul_f16 v3, v3, v5
-; GFX9-NEXT:    v_pk_mul_f16 v4, v2, v4
+; GFX9-NEXT:    v_pk_mul_f16 v0, v0, v6
+; GFX9-NEXT:    v_pack_b32_f16 v4, v4, s4
+; GFX9-NEXT:    v_pk_mul_f16 v1, v1, v4
+; GFX9-NEXT:    v_pk_mul_f16 v3, v3, v4
+; GFX9-NEXT:    v_pk_mul_f16 v4, v2, v6
 ; GFX9-NEXT:    v_alignbit_b32 v2, v3, v4, 16
 ; GFX9-NEXT:    v_pack_b32_f16 v1, v1, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
