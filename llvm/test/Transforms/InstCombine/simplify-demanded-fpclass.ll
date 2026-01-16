@@ -710,7 +710,7 @@ define nofpclass(snan) float @fabs_nsz_src_known_positive_except_negzero_multipl
 ; CHECK-SAME: (float nofpclass(nan ninf nsub nnorm) [[ALWAYS_POSITIVE_OR_NZERO:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nsz float @llvm.fabs.f32(float [[ALWAYS_POSITIVE_OR_NZERO]])
 ; CHECK-NEXT:    store float [[FABS]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[FABS]]
+; CHECK-NEXT:    ret float [[ALWAYS_POSITIVE_OR_NZERO]]
 ;
   %fabs = call nsz float @llvm.fabs.f32(float %always.positive.or.nzero)
   store float %fabs, ptr %ptr
@@ -924,7 +924,7 @@ define nofpclass(snan) float @fneg_fabs_nsz_src_known_negative_or_poszero_multip
 ; CHECK-NEXT:    [[FABS:%.*]] = call nsz float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE_OR_PZERO]])
 ; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
 ; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[FNEG_FABS]]
+; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE_OR_PZERO]]
 ;
   %fabs = call nsz float @llvm.fabs.f32(float %always.negative.or.pzero)
   %fneg.fabs = fneg float %fabs
@@ -938,7 +938,7 @@ define nofpclass(snan) float @fneg_nsz_fabs_src_known_negative_or_poszero_multip
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE_OR_PZERO]])
 ; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg nsz float [[FABS]]
 ; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[FNEG_FABS]]
+; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE_OR_PZERO]]
 ;
   %fabs = call float @llvm.fabs.f32(float %always.negative.or.pzero)
   %fneg.fabs = fneg nsz float %fabs
