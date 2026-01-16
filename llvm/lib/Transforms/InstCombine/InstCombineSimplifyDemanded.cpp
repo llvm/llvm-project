@@ -2118,6 +2118,31 @@ static Value *simplifyDemandedFPClassResult(Instruction *FPOp,
   return nullptr;
 }
 
+/// Perform multiple-use aware simplfications for fneg(fabs(\p Src)). Returns a
+/// replacement value if it's simplified, otherwise nullptr. Updates \p Known
+/// with the known fpclass if not simplified.
+static Value *simplifyDemandedFPClassFnegFabs(KnownFPClass &Known, Value *Src,
+                                              FPClassTest DemandedMask,
+                                              KnownFPClass KnownSrc, bool NSZ) {
+  if ((DemandedMask & fcNan) == fcNone)
+    KnownSrc.knownNot(fcNan);
+  if ((DemandedMask & fcInf) == fcNone)
+    KnownSrc.knownNot(fcInf);
+
+  // If the source value is known negative, we can directly fold to it.
+  if (KnownSrc.SignBit == true)
+    return Src;
+
+  // If the only sign bit difference is for 0, ignore it with nsz.
+  if (NSZ &&
+      KnownSrc.isKnownNever(KnownFPClass::OrderedGreaterThanZeroMask | fcNan))
+    return Src;
+
+  Known = KnownFPClass::fneg(KnownFPClass::fabs(KnownSrc));
+  Known.knownNot(~DemandedMask);
+  return nullptr;
+}
+
 static Value *
 simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
                               const CallInst *CI, FPClassTest DemandedMask,
@@ -2258,6 +2283,44 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
   switch (I->getOpcode()) {
   case Instruction::FNeg: {
+    // Special case fneg(fabs(x))
+
+    Value *FNegSrc = I->getOperand(0);
+    Value *FNegFAbsSrc;
+    if (match(FNegSrc, m_FAbs(m_Value(FNegFAbsSrc)))) {
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(cast<Instruction>(FNegSrc), 0,
+                                  llvm::unknown_sign(DemandedMask), KnownSrc,
+                                  Depth + 1))
+        return I;
+
+      FastMathFlags FabsFMF = cast<FPMathOperator>(FNegSrc)->getFastMathFlags();
+      FPClassTest ThisDemandedMask =
+          adjustDemandedMaskFromFlags(DemandedMask, FabsFMF);
+
+      bool IsNSZ = FMF.noSignedZeros() ||
+                   (FabsFMF.noSignedZeros() && FNegSrc->hasOneUse());
+      if (Value *Simplified = simplifyDemandedFPClassFnegFabs(
+              Known, FNegFAbsSrc, ThisDemandedMask, KnownSrc, IsNSZ))
+        return Simplified;
+
+      if ((ThisDemandedMask & fcNan) == fcNone)
+        KnownSrc.knownNot(fcNan);
+      if ((ThisDemandedMask & fcInf) == fcNone)
+        KnownSrc.knownNot(fcInf);
+
+      // fneg(fabs(x)) => fneg(x)
+      if (KnownSrc.SignBit == false)
+        return replaceOperand(*I, 0, FNegFAbsSrc);
+
+      // fneg(fabs(x)) => fneg(x), ignoring -0 if nsz.
+      if (IsNSZ &&
+          KnownSrc.isKnownNever(KnownFPClass::OrderedLessThanZeroMask | fcNan))
+        return replaceOperand(*I, 0, FNegFAbsSrc);
+
+      break;
+    }
+
     if (SimplifyDemandedFPClass(I, 0, llvm::fneg(DemandedMask), Known,
                                 Depth + 1))
       return I;
@@ -3309,29 +3372,18 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       break;
     }
 
+    KnownFPClass KnownSrc =
+        computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
+
     FastMathFlags FabsFMF = cast<FPMathOperator>(FNegSrc)->getFastMathFlags();
     FPClassTest ThisDemandedMask =
         adjustDemandedMaskFromFlags(DemandedMask, FabsFMF);
 
-    KnownFPClass KnownSrc =
-        computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
-
-    if ((ThisDemandedMask & fcNan) == fcNone)
-      KnownSrc.knownNot(fcNan);
-    if ((ThisDemandedMask & fcInf) == fcNone)
-      KnownSrc.knownNot(fcInf);
-
-    // If the source value is known negative, we can directly fold to it.
-    if (KnownSrc.SignBit == true)
-      return Src;
-
-    // If the only sign bit difference is for 0, ignore it with nsz.
-    if ((FMF.noSignedZeros() || FabsFMF.noSignedZeros()) &&
-        KnownSrc.isKnownNever(KnownFPClass::OrderedGreaterThanZeroMask | fcNan))
-      return Src;
-
-    Known = KnownFPClass::fneg(KnownFPClass::fabs(KnownSrc));
-    Known.knownNot(~DemandedMask);
+    // We cannot apply the NSZ logic with multiple uses. We can apply it if the
+    // inner fabs has it and this is the only use.
+    if (Value *Simplified = simplifyDemandedFPClassFnegFabs(
+            Known, Src, ThisDemandedMask, KnownSrc, /*NSZ=*/false))
+      return Simplified;
     break;
   }
   case Instruction::Call: {
@@ -3343,9 +3395,11 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       KnownFPClass KnownSrc =
           computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
 
+      // NSZ cannot be applied in multiple use case (maybe it could if all uses
+      // were known nsz)
       if (Value *Simplified = simplifyDemandedFPClassFabs(
               Known, CI->getArgOperand(0), DemandedMask, KnownSrc,
-              FMF.noSignedZeros()))
+              /*NSZ=*/false))
         return Simplified;
       break;
     }
