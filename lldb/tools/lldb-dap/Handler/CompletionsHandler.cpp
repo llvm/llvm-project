@@ -21,9 +21,9 @@ using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 /// Gets the position in the UTF8 string where the specified line started.
-static size_t GetLineStartPos(llvm::StringRef text, uint32_t line) {
+static size_t GetLineStartPos(StringRef text, uint32_t line) {
   if (line == 0) // Invalid line.
-    return llvm::StringRef::npos;
+    return StringRef::npos;
 
   if (line == 1)
     return 0;
@@ -34,14 +34,13 @@ static size_t GetLineStartPos(llvm::StringRef text, uint32_t line) {
   while (cur_line < line) {
     const size_t new_line_pos = text.find('\n', pos);
 
-    if (new_line_pos == llvm::StringRef::npos) {
+    if (new_line_pos == StringRef::npos)
       return new_line_pos;
-    }
 
     pos = new_line_pos + 1;
     // text may end with a new line
     if (pos >= text.size())
-      return llvm::StringRef::npos;
+      return StringRef::npos;
 
     cur_line++;
   }
@@ -50,16 +49,16 @@ static size_t GetLineStartPos(llvm::StringRef text, uint32_t line) {
   return pos;
 }
 
-static std::optional<size_t> GetCursorPos(llvm::StringRef text, uint32_t line,
+static std::optional<size_t> GetCursorPos(StringRef text, uint32_t line,
                                           uint32_t utf16_codeunits) {
   if (text.empty())
     return std::nullopt;
 
   const size_t line_start_pos = GetLineStartPos(text, line);
-  if (line_start_pos == llvm::StringRef::npos)
+  if (line_start_pos == StringRef::npos)
     return std::nullopt;
 
-  const llvm::StringRef completion_line =
+  const StringRef completion_line =
       text.substr(line_start_pos, text.find('\n', line_start_pos));
   if (completion_line.empty())
     return std::nullopt;
@@ -98,7 +97,7 @@ CompletionsRequestHandler::Run(const CompletionsArguments &args) const {
     frame_thread.SetSelectedFrame(frame.GetFrameID());
   }
 
-  const llvm::StringRef escape_prefix = dap.configuration.commandEscapePrefix;
+  const StringRef escape_prefix = dap.configuration.commandEscapePrefix;
   const bool had_escape_prefix = StringRef(text).starts_with(escape_prefix);
   const ReplMode repl_mode = dap.DetectReplMode(frame, text, true);
   // Handle the cursor_pos change introduced by stripping out the
@@ -136,13 +135,13 @@ CompletionsRequestHandler::Run(const CompletionsArguments &args) const {
     // all the matches. The rest of the elements are the matches so ignore the
     // first result.
     for (uint32_t i = 1; i < matches.GetSize(); i++) {
-      const llvm::StringRef match = matches.GetStringAtIndex(i);
-      const llvm::StringRef description = descriptions.GetStringAtIndex(i);
+      const StringRef match = matches.GetStringAtIndex(i);
+      const StringRef description = descriptions.GetStringAtIndex(i);
 
       StringRef match_ref = match;
       for (const StringRef commit_point : {".", "->"}) {
         if (const size_t pos = match_ref.rfind(commit_point);
-            pos != llvm::StringRef::npos) {
+            pos != StringRef::npos) {
           match_ref = match_ref.substr(pos + commit_point.size());
         }
       }
