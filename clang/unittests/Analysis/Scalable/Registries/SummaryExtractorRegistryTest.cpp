@@ -10,6 +10,8 @@
 #include "clang/Analysis/Scalable/TUSummary/ExtractorRegistry.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -87,9 +89,13 @@ TEST(SummaryExtractorRegistryTest, InvokingExtractors) {
               "MockSummaryExtractor2 HandleTranslationUnit was invoked\n");
   }
 
-  EXPECT_EQ(FakeBuilder.consumeMessages(),
-            "MockSummaryExtractor2 destructor was invoked\n"
-            "MockSummaryExtractor1 destructor was invoked\n");
+  std::string OwnedMessages = FakeBuilder.consumeMessages();
+  StringRef View = OwnedMessages;
+  EXPECT_EQ(View.count('\n'), 2u);
+
+  // The destruction order is indeterminate.
+  EXPECT_TRUE(View.contains("MockSummaryExtractor1 destructor was invoked\n"));
+  EXPECT_TRUE(View.contains("MockSummaryExtractor2 destructor was invoked\n"));
 }
 
 } // namespace
