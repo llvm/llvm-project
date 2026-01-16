@@ -17937,6 +17937,18 @@ void        __ovld __conv intel_sub_group_block_write_ul8( __local ulong* p, ulo
 #endif // defined(cl_intel_subgroups_long)
 #endif // cl_intel_subgroup_local_block_io
 
+#ifdef cl_intel_split_work_group_barrier
+void __ovld __conv intel_work_group_barrier_arrive(cl_mem_fence_flags flags);
+void __ovld __conv intel_work_group_barrier_wait(cl_mem_fence_flags flags);
+
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+void __ovld __conv intel_work_group_barrier_arrive(cl_mem_fence_flags flags,
+                                                   memory_scope scope);
+void __ovld __conv intel_work_group_barrier_wait(cl_mem_fence_flags flags,
+                                                 memory_scope scope);
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+#endif // cl_intel_split_work_group_barrier
+
 #ifdef cl_intel_device_side_avc_motion_estimation
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : begin
 

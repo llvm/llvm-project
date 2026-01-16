@@ -53,6 +53,12 @@ public:
                           const mlir::DataLayout &layout,
                           const mlir::TypeConverter &typeConverter) const = 0;
 
+  /// Lower the given member function pointer constant to a constant of the ABI
+  /// type. The returned constant is represented as an attribute as well.
+  virtual mlir::TypedAttr
+  lowerMethodConstant(cir::MethodAttr attr, const mlir::DataLayout &layout,
+                      const mlir::TypeConverter &typeConverter) const = 0;
+
   /// Lower the given cir.get_runtime_member op to a sequence of more
   /// "primitive" CIR operations that act on the ABI types.
   virtual mlir::Operation *

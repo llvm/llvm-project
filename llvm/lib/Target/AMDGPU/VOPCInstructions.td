@@ -24,7 +24,7 @@ class VOPC_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAe <P> {
   bits<8> src1;
 
   let Inst{8-0}   = 0xf9; // sdwa
-  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = op;
   let Inst{31-25} = 0x3e; // encoding
 }
@@ -33,10 +33,10 @@ class VOPC_SDWA9e <bits<8> op, VOPProfile P> : VOP_SDWA9Be <P> {
   bits<9> src1;
 
   let Inst{8-0}   = 0xf9; // sdwa
-  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = op;
   let Inst{31-25} = 0x3e; // encoding
-  let Inst{63}    = !if(P.HasSrc1, src1{8}, 0); // src1_sgpr
+  let Inst{63}    = !if(P.HasSrc1, src1{8}, ?); // src1_sgpr
 }
 
 
@@ -422,7 +422,6 @@ multiclass VOPC_Pseudos <string opName,
 
 }
 
-let PostEncoderMethod = "postEncodeVOPCX" in
 multiclass VOPCX_Pseudos <string opName,
                           VOPC_Profile P, VOPC_Profile P_NoSDst,
                           SDPatternOperator cond = COND_NULL,
@@ -1120,7 +1119,6 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
   } // end SubtargetPredicate = isGFX11Plus
 }
 
-let PostEncoderMethod = "postEncodeVOPCX" in
 multiclass VOPCX_Class_Pseudos <string opName,
                                 VOPC_Profile P,
                                 VOPC_Profile P_NoSDst> :
@@ -1460,7 +1458,7 @@ class VOPC_DPP_Base<bits<8> op, string OpName, VOPProfile P>
 
   let Inst{8-0} = 0xfa;
 
-  let Inst{39-32} = !if (P.HasSrc0, src0{7-0}, 0);
+  let Inst{39-32} = !if (P.HasSrc0, src0{7-0}, ?);
   let Inst{48-40} = dpp_ctrl;
   let Inst{50} = fi;
   let Inst{51} = bound_ctrl;
@@ -1486,7 +1484,7 @@ class VOPC_DPP8_Base<bits<8> op, string OpName, VOPProfile P>
 
   let Inst{8-0} = fi;
 
-  let Inst{39-32} = !if (P.HasSrc0, src0{7-0}, 0);
+  let Inst{39-32} = !if (P.HasSrc0, src0{7-0}, ?);
   let Inst{63-40} = dpp8{23-0};
 
   let AsmMatchConverter = "cvtDPP8";
@@ -1536,7 +1534,8 @@ class VOPC64_DPP<VOP_DPP_Pseudo ps, string opName = ps.OpName>
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
   let Constraints = ps.Constraints;
-  let PostEncoderMethod = ps.PostEncoderMethod;
+
+  let PostEncoderMethod = !if(!empty(ps.Defs), "", "postEncodeVOPCX");
 }
 
 class VOPC64_DPP16_Dst<bits<10> op, VOP_DPP_Pseudo ps,
@@ -1577,7 +1576,8 @@ class VOPC64_DPP8<VOP_Pseudo ps, string opName = ps.OpName>
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
   let True16Predicate = ps.True16Predicate;
-  let PostEncoderMethod = ps.PostEncoderMethod;
+
+  let PostEncoderMethod = !if(!empty(ps.Defs), "", "postEncodeVOPCX");
 }
 
 class VOPC64_DPP8_Dst<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
@@ -1780,6 +1780,7 @@ multiclass VOPCX_Real<GFXGen Gen, bits<9> op> {
         let Inst{7-0} = ?; // sdst
         let AsmString = !subst("_nosdst", "", ps64.Mnemonic)
                         # "{_e64} " # ps64.AsmOperands;
+        let PostEncoderMethod = "postEncodeVOPCX";
     }
 
     defm : VOPCXInstAliases<NAME, !substr(Gen.Suffix, 1)>;
@@ -1841,6 +1842,7 @@ multiclass VOPCX_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
           let Inst{7-0} = ?; // sdst
           let Inst{14} = 0;
           let AsmString = asm_name # "{_e64} " # ps64.AsmOperands;
+          let PostEncoderMethod = "postEncodeVOPCX";
         }
       } else {
         def _e64#Gen.Suffix
@@ -1848,6 +1850,7 @@ multiclass VOPCX_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
               VOP3a_gfx11_gfx12<{0, op}, ps64.Pfl> {
           let Inst{7-0} = ?; // sdst
           let AsmString = asm_name # "{_e64} " # ps64.AsmOperands;
+          let PostEncoderMethod = "postEncodeVOPCX";
         }
       }
 
@@ -2189,6 +2192,7 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
         let Inst{7-0} = ?; // sdst
         let AsmString = !subst("_nosdst", "", !cast<VOP3_Pseudo>(NAME#"_nosdst_e64").Mnemonic)
                         # "{_e64} " # !cast<VOP3_Pseudo>(NAME#"_nosdst_e64").AsmOperands;
+        let PostEncoderMethod = "postEncodeVOPCX";
     }
 
     if !cast<VOPC_Pseudo>(NAME#"_nosdst_e32").Pfl.HasExtSDWA9 then

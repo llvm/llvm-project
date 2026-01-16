@@ -226,6 +226,12 @@ public:
   virtual llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
                                          const ObjCContainerDecl *CD) = 0;
 
+  /// Generates precondition checks for direct Objective-C Methods.
+  /// This includes [self self] for class methods and nil checks.
+  virtual void GenerateDirectMethodsPreconditionCheck(
+      CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+      const ObjCContainerDecl *CD) = 0;
+
   /// Generates prologue for direct Objective-C Methods.
   virtual void GenerateDirectMethodPrologue(CodeGenFunction &CGF,
                                             llvm::Function *Fn,
