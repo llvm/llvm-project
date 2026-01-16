@@ -354,7 +354,7 @@ void AssumingOp::getSuccessorRegions(
 }
 
 ValueRange AssumingOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
 }
 
 void AssumingOp::inlineRegionIntoParent(AssumingOp &op,

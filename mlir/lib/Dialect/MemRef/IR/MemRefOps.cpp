@@ -413,7 +413,7 @@ void AllocaScopeOp::getSuccessorRegions(
 }
 
 ValueRange AllocaScopeOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? getResults() : ValueRange();
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
 }
 
 /// Given an operation, return whether this op is guaranteed to

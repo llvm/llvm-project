@@ -1,13 +1,11 @@
-# XFAIL: system-aix
-
 ## Show that llvm-strings can handle stdin input properly.
 
 ## Case 1: output with single string.
-RUN: echo -n "abcdefg" | llvm-strings - | FileCheck %s --check-prefix=CASE1 --implicit-check-not={{.}}
+RUN: printf "abcdefg" | llvm-strings - | FileCheck %s --check-prefix=CASE1 --implicit-check-not={{.}}
 CASE1: abcdefg
 
 ## Case 2: output too short for string.
-RUN: echo -n "abc" | llvm-strings - | FileCheck %s --implicit-check-not={{.}} --allow-empty
+RUN: printf "abc" | llvm-strings - | FileCheck %s --implicit-check-not={{.}} --allow-empty
 
 ## Case 3: output with new line.
 RUN: printf "abcd\nefgh" | llvm-strings - | FileCheck %s --check-prefix=CASE3 --implicit-check-not={{.}}
@@ -21,4 +19,4 @@ CASE4-NEXT: ghij
 CASE4-NEXT: klmn
 
 ## Case 5: no file name specified is equivalent to explicitly requesting stdin.
-RUN: echo -n "abcdefg" | llvm-strings | FileCheck %s --check-prefix=CASE1 --implicit-check-not={{.}}
+RUN: printf "abcdefg" | llvm-strings | FileCheck %s --check-prefix=CASE1 --implicit-check-not={{.}}

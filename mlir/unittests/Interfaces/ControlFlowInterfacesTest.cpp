@@ -73,7 +73,8 @@ struct LoopRegionsOp
   }
 
   ValueRange getSuccessorInputs(RegionSuccessor successor) {
-    return successor.isParent() ? getOperation()->getResults() : ValueRange();
+    return successor.isParent() ? ValueRange(getOperation()->getResults())
+                                : ValueRange();
   }
 
   using RegionBranchOpInterface::Trait<LoopRegionsOp>::getSuccessorRegions;
@@ -101,7 +102,8 @@ struct DoubleLoopRegionsOp
   }
 
   ValueRange getSuccessorInputs(RegionSuccessor successor) {
-    return successor.isParent() ? getOperation()->getResults() : ValueRange();
+    return successor.isParent() ? ValueRange(getOperation()->getResults())
+                                : ValueRange();
   }
 
   using RegionBranchOpInterface::Trait<

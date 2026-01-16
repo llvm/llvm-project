@@ -1963,7 +1963,7 @@ unix.BlockInCriticalSection (C, C++)
 Check for calls to blocking functions inside a critical section.
 Blocking functions detected by this checker: ``sleep, getc, fgets, read, recv``.
 Critical section handling functions modeled by this checker:
-``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``.
+``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock, scoped_lock``.
 
 .. code-block:: c
 
