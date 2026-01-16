@@ -54,21 +54,21 @@ class HiddenFrameMarkerTest(TestBase):
     def test_hidden_frame_markers(self):
         """
         Test that hidden frame markers are not rendered in backtraces when
-        mark-skipped-frames is set to false
+        mark-hidden-frames is set to false
         """
         self.build()
-        self.runCmd("settings set mark-skipped-frames 0")
+        self.runCmd("settings set mark-hidden-frames 0")
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp")
         )
         self.expect(
             "bt",
             substrs=[
-                "   * frame #0:",
-                "     frame #1:",
-                "     frame #7:",
-                "     frame #8:",
-                "     frame #9:",
+                "  * frame #0:",
+                "    frame #1:",
+                "    frame #7:",
+                "    frame #8:",
+                "    frame #9:",
             ],
         )
 
@@ -76,11 +76,11 @@ class HiddenFrameMarkerTest(TestBase):
         self.expect(
             "bt",
             substrs=[
-                "     frame #0:",
-                "   * frame #1:",
-                "     frame #7:",
-                "     frame #8:",
-                "     frame #9:",
+                "    frame #0:",
+                "  * frame #1:",
+                "    frame #7:",
+                "    frame #8:",
+                "    frame #9:",
             ],
         )
 
@@ -88,10 +88,10 @@ class HiddenFrameMarkerTest(TestBase):
         self.expect(
             "bt",
             substrs=[
-                "     frame #0:",
-                "     frame #1:",
-                "   * frame #7:",
-                "     frame #8:",
-                "     frame #9:",
+                "    frame #0:",
+                "    frame #1:",
+                "  * frame #7:",
+                "    frame #8:",
+                "    frame #9:",
             ],
         )

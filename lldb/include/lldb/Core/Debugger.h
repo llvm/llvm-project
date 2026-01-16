@@ -340,7 +340,7 @@ public:
 
   bool SetUseSourceCache(bool use_source_cache);
 
-  bool GetMarkSkippedFrames() const;
+  bool GetMarkHiddenFrames() const;
 
   bool GetHighlightSource() const;
 

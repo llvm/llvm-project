@@ -585,8 +585,8 @@ bool Debugger::SetUseSourceCache(bool b) {
   return ret;
 }
 
-bool Debugger::GetMarkSkippedFrames() const {
-  const uint32_t idx = ePropertyMarkSkippedFrames;
+bool Debugger::GetMarkHiddenFrames() const {
+  const uint32_t idx = ePropertyMarkHiddenFrames;
   return GetPropertyAtIndexAs<bool>(
       idx, g_debugger_properties[idx].default_uint_value != 0);
 }
