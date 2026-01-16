@@ -264,6 +264,21 @@ public:
 
 } // end anonymous namespace
 
+/// Returns true if the type contains any pointer types, including nested
+/// within structs or arrays.
+static bool containsPointerType(Type *Ty) {
+  if (Ty->isPointerTy())
+    return true;
+  if (auto *ST = dyn_cast<StructType>(Ty)) {
+    for (Type *ElemTy : ST->elements())
+      if (containsPointerType(ElemTy))
+        return true;
+  }
+  if (auto *AT = dyn_cast<ArrayType>(Ty))
+    return containsPointerType(AT->getElementType());
+  return false;
+}
+
 char AMDGPUPreloadKernelArgumentsLegacy::ID = 0;
 
 INITIALIZE_PASS(AMDGPUPreloadKernelArgumentsLegacy, DEBUG_TYPE,
@@ -310,8 +325,9 @@ static bool markKernelArgsAsInreg(Module &M, const TargetMachine &TM) {
       if (NumPreloadsRequested == 0 && !Arg.hasInRegAttr())
         break;
 
-      // FIXME: Preload aggregates.
-      if (Arg.getType()->isAggregateType())
+      // Skip aggregates containing pointers.
+      if (Arg.getType()->isAggregateType() &&
+          containsPointerType(Arg.getType()))
         break;
 
       Type *ArgTy = Arg.getType();
