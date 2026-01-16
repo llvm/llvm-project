@@ -521,7 +521,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     if (RT->getAttrs().RawBuffer) {
       Value *Offset = Builder.getInt32(0);
-      // Offset is poison for ByteAddressBuffer
+      // The offset parameter needs to be poison for ByteAddressBuffer
       if (RT->getContainedType()->isChar8Type())
         Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
       Args.push_back(Offset);

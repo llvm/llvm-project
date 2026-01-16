@@ -166,6 +166,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load 'unsigned int (unsigned int, out unsigned int)
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
@@ -193,6 +194,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load2 'vector<unsigned int (unsigned int, out unsigned int), 2>'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
@@ -220,6 +222,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load3 'vector<unsigned int (unsigned int, out unsigned int), 3>'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
@@ -247,6 +250,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load4 'vector<unsigned int (unsigned int, out unsigned int), 4>'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
@@ -274,6 +278,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, out unsigned int)
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'

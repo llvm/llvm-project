@@ -3320,11 +3320,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                             SemaRef.getASTContext().UnsignedIntTy))
       return true;
 
+    // Figure out the return type of the intrinsic. For most resources it is the
+    // contained type. For ByteAddressBuffer it is determined by the type used
+    // on the FunctionDecl.
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ElementTy = ResourceTy->getContainedType();
-    // ByteAddressBuffer uses the FunctionDecl types instead of the contained
-    // type
     if (ResourceTy->getAttrs().RawBuffer && ElementTy->isChar8Type()) {
       // Load method uses return type
       FunctionDecl *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
@@ -3341,6 +3342,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         return SemaRef.Diag(FD->getPointOfInstantiation(),
                             diag::err_invalid_use_of_array_type);
     }
+
     auto ReturnType =
         SemaRef.Context.getAddrSpaceQualType(ElementTy, LangAS::hlsl_device);
     ReturnType = SemaRef.Context.getPointerType(ReturnType);
@@ -3359,11 +3361,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         CheckModifiableLValue(&SemaRef, TheCall, 2))
       return true;
 
+    // Figure out the return type of the intrinsic. For most resources it is the
+    // contained type. For ByteAddressBuffer it is determined by the return
+    // value type.
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ReturnType = ResourceTy->getContainedType();
-    // ByteAddressBuffer uses the FunctionDecl return type instead of the
-    // contained type
     if (ResourceTy->getAttrs().RawBuffer && ReturnType->isChar8Type()) {
       FunctionDecl *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
       ReturnType = FD->getReturnType();
@@ -3373,6 +3376,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         return SemaRef.Diag(FD->getPointOfInstantiation(),
                             diag::err_invalid_use_of_array_type);
     }
+
     TheCall->setType(ReturnType);
 
     break;

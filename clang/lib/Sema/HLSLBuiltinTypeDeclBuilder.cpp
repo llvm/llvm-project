@@ -1212,12 +1212,13 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
 
     // Load without status
     BuiltinTypeMethodBuilder MMB(*this, Load, ReturnType);
+    QualType ElemTy = ReturnType;
     if (ReturnType->isDependentType()) {
-      ReturnType = MMB.addTemplateTypeParam("element_type");
-      MMB.ReturnTy = ReturnType; // Update return type to template parameter
+      ElemTy = MMB.addTemplateTypeParam("element_type");
+      MMB.ReturnTy = ElemTy; // Update return type to template parameter
     }
     QualType AddrSpaceElemTy =
-        AST.getAddrSpaceQualType(ReturnType, LangAS::hlsl_device);
+        AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
 
     MMB.addParam("Index", AST.UnsignedIntTy)
         .callBuiltin("__builtin_hlsl_resource_getpointer",
@@ -1256,15 +1257,13 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
 
-  // Helper to add uint Store methods
   auto addStoreMethod = [&](StringRef MethodName, QualType ValueType) {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Store(&II);
 
     BuiltinTypeMethodBuilder MMB(*this, Store, AST.VoidTy);
-    if (ValueType->isDependentType()) {
+    if (ValueType->isDependentType())
       ValueType = MMB.addTemplateTypeParam("element_type");
-    }
     QualType AddrSpaceElemTy =
         AST.getAddrSpaceQualType(ValueType, LangAS::hlsl_device);
 
