@@ -14587,7 +14587,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BuildMI(*BB, MI, DL,
             MI.getOpcode() == PPC::LQX_PSEUDO ? TII->get(PPC::LQ)
                                               : TII->get(PPC::STQ))
-        .addReg(Val, MI.getOpcode() == PPC::LQX_PSEUDO ? RegState::Define : 0)
+        .addReg(Val, getDefRegState(MI.getOpcode() == PPC::LQX_PSEUDO))
         .addImm(0)
         .addReg(Ptr);
   } else if (MI.getOpcode() == PPC::LWAT_PSEUDO ||
