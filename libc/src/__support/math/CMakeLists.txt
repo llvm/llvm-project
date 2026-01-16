@@ -604,6 +604,24 @@ add_header_library(
 )
 
 add_header_library(
+  fsqrt
+  HDRS
+    fsqrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_header_library(
+  inv_trigf_utils
+  HDRS
+    inv_trigf_utils.h
+  DEPENDS
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
+)
+
+add_header_library(
   frexpf16
   HDRS
     frexpf16.h
