@@ -128,10 +128,10 @@ public:
   // descendants of a given node "n" except for the ones
   // belonging to a different callable of "n".
   MatchDescendantVisitor(ASTContext &Context, FastMatcher &Matcher,
-                         bool FindAll, bool ignoreUnevaluatedContext,
+                         bool FindAll, bool IgnoreUnevaluatedContext,
                          const UnsafeBufferUsageHandler &NewHandler)
       : Matcher(&Matcher), FindAll(FindAll), Matches(false),
-        ignoreUnevaluatedContext(ignoreUnevaluatedContext),
+        IgnoreUnevaluatedContext(IgnoreUnevaluatedContext),
         ActiveASTContext(&Context), Handler(&NewHandler) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false; // TODO: let's ignore implicit code for now
@@ -169,7 +169,7 @@ public:
 
   bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) override {
     // These are unevaluated, except the result expression.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return TraverseStmt(Node->getResultExpr());
     return DynamicRecursiveASTVisitor::TraverseGenericSelectionExpr(Node);
   }
@@ -177,7 +177,7 @@ public:
   bool
   TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
@@ -185,7 +185,7 @@ public:
   bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node,
                                  bool TraverseQualifier) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(
         Node, TraverseQualifier);
@@ -194,7 +194,7 @@ public:
   bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node,
                                bool TraverseQualifier) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(
         Node, TraverseQualifier);
@@ -202,14 +202,14 @@ public:
 
   bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseCXXNoexceptExpr(Node);
   }
 
   bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(Node);
   }
@@ -247,7 +247,7 @@ private:
   // When true, finds all matches. When false, finds the first match and stops.
   const bool FindAll;
   bool Matches;
-  bool ignoreUnevaluatedContext;
+  bool IgnoreUnevaluatedContext;
   ASTContext *ActiveASTContext;
   const UnsafeBufferUsageHandler *Handler;
 };
@@ -266,7 +266,7 @@ forEachDescendantEvaluatedStmt(const Stmt *S, ASTContext &Ctx,
                                const UnsafeBufferUsageHandler &Handler,
                                FastMatcher &Matcher) {
   MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
-                                 /*ignoreUnevaluatedContext=*/true, Handler);
+                                 /*IgnoreUnevaluatedContext=*/true, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
 
@@ -274,7 +274,7 @@ static void forEachDescendantStmt(const Stmt *S, ASTContext &Ctx,
                                   const UnsafeBufferUsageHandler &Handler,
                                   FastMatcher &Matcher) {
   MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
-                                 /*ignoreUnevaluatedContext=*/false, Handler);
+                                 /*IgnoreUnevaluatedContext=*/false, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
 

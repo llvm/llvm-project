@@ -2855,7 +2855,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
           BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), ScavengedVGPR)
               .addReg(MaterializedReg,
-                      MaterializedReg != FrameReg ? RegState::Kill : 0);
+                      getKillRegState(MaterializedReg != FrameReg));
           MaterializedReg = ScavengedVGPR;
         }
 
@@ -2868,7 +2868,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           AddI32.add(MI->getOperand(1));
 
         unsigned MaterializedRegFlags =
-            MaterializedReg != FrameReg ? RegState::Kill : 0;
+            getKillRegState(MaterializedReg != FrameReg);
 
         if (isVGPRClass(getPhysRegBaseClass(MaterializedReg))) {
           // If we know we have a VGPR already, it's more likely the other

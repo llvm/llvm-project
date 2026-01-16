@@ -12,6 +12,7 @@ add_llvm_component_library(LLVMCAS
   MappedFileRegionArena.cpp
   ObjectStore.cpp
   OnDiskCAS.cpp
+  OnDiskCASLogger.cpp
   OnDiskCommon.cpp
   OnDiskDataAllocator.cpp
   OnDiskGraphDB.cpp

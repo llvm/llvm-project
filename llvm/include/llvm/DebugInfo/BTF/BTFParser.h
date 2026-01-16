@@ -46,7 +46,7 @@ class BTFParser {
   // A copy of types table from the object file but using native byte
   // order. Should not be too big in practice, e.g. for ~250MiB vmlinux
   // image it is ~4MiB.
-  OwningArrayRef<uint8_t> TypesBuffer;
+  SmallVector<uint8_t, 0> TypesBuffer;
 
   // Maps ELF section number to instruction line number information.
   // Each BTFLinesVector is sorted by `InsnOffset` to allow fast lookups.

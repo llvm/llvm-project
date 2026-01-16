@@ -671,6 +671,27 @@ public:
     return {};
   }
 
+  // Helper function to skip over a matching pair of tokens (e.g., parentheses
+  // or braces). Returns an iterator to the matching closing token, or the end
+  // iterator if no matching pair is found.
+  template <typename Iterator>
+  Iterator skipTokenPair(Iterator Begin, Iterator End, tok::TokenKind StartKind,
+                         tok::TokenKind EndKind) {
+    int Count = 0;
+    for (auto It = Begin; It != End; ++It) {
+      if (It->kind() == StartKind) {
+        ++Count;
+      } else if (It->kind() == EndKind) {
+        if (--Count == 0)
+          return It;
+        if (Count < 0)
+          // We encountered a closing token without a matching opening token.
+          return End;
+      }
+    }
+    return End;
+  }
+
   // We don't know the actual start or end of the definition, only the position
   // of the name. Therefore, we heuristically try to locate the last token
   // before or in this function, respectively. Adapt as required by user code.
@@ -718,34 +739,41 @@ public:
       InsertBefore();
     } else {
       // Skip over one top-level pair of parentheses (for the parameter list)
-      // and one pair of curly braces (for the code block).
+      // and one pair of curly braces (for the code block), or `= default`.
       // If that fails, insert before the function instead.
       auto Tokens =
           syntax::tokenize(syntax::FileRange(SM.getMainFileID(), *StartOffset,
                                              Buffer.getBuffer().size()),
                            SM, AST->getLangOpts());
-      bool SkippedParams = false;
-      int OpenParens = 0;
-      int OpenBraces = 0;
       std::optional<syntax::Token> Tok;
-      for (const auto &T : Tokens) {
-        tok::TokenKind StartKind = SkippedParams ? tok::l_brace : tok::l_paren;
-        tok::TokenKind EndKind = SkippedParams ? tok::r_brace : tok::r_paren;
-        int &Count = SkippedParams ? OpenBraces : OpenParens;
-        if (T.kind() == StartKind) {
-          ++Count;
-        } else if (T.kind() == EndKind) {
-          if (--Count == 0) {
-            if (SkippedParams) {
-              Tok = T;
-              break;
+
+      // Skip parameter list (parentheses)
+      auto ClosingParen = skipTokenPair(Tokens.begin(), Tokens.end(),
+                                        tok::l_paren, tok::r_paren);
+      if (ClosingParen != Tokens.end()) {
+        // After the closing paren, check for `= default`
+        auto AfterParams = std::next(ClosingParen);
+        if (AfterParams != Tokens.end() && AfterParams->kind() == tok::equal) {
+          auto NextIt = std::next(AfterParams);
+          if (NextIt != Tokens.end() && NextIt->kind() == tok::kw_default) {
+            // Find the semicolon after `default`.
+            auto SemiIt = std::next(NextIt);
+            if (SemiIt != Tokens.end() && SemiIt->kind() == tok::semi) {
+              Tok = *SemiIt;
             }
-            SkippedParams = true;
-          } else if (Count < 0) {
-            break;
+          }
+        }
+
+        // If not `= default`, skip function body (braces)
+        if (!Tok && AfterParams != Tokens.end()) {
+          auto ClosingBrace = skipTokenPair(AfterParams, Tokens.end(),
+                                            tok::l_brace, tok::r_brace);
+          if (ClosingBrace != Tokens.end()) {
+            Tok = *ClosingBrace;
           }
         }
       }
+
       if (Tok)
         InsertionLoc = Tok->endLocation();
       else

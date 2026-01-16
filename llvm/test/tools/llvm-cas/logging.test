@@ -1,0 +1,41 @@
+REQUIRES: !system-windows, !system-cygwin
+
+RUN: rm -rf %t
+RUN: split-file %s %t
+RUN: %python -c "with open(r'%t/input/large', 'w') as file: file.truncate(100000)"
+RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --make-blob --data %t/input/a
+RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --make-blob --data %t/input/large
+RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --validate-if-needed -check-hash
+RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --validate-if-needed -force -allow-recovery
+RUN: FileCheck %s --input-file %t/cas/v1.log
+RUN: FileCheck %s --input-file %t/cas/v1.log --check-prefix=STANDALONE
+
+
+// CHECK: resize mapped file '{{.*}}index.v{{[0-9]+}}'
+// CHECK: mmap '{{.*}}index.v{{[0-9]+}}' [[INDEX:0x[0-9a-f]+]]
+// CHECK: resize mapped file '{{.*}}data.v{{[0-9]+}}'
+// CHECK: mmap '{{.*}}data.v{{[0-9]+}}' [[DATA:0x[0-9a-f]+]]
+// CHECK: resize mapped file '{{.*}}actions.v{{[0-9]+}}'
+// CHECK: mmap '{{.*}}actions.v{{[0-9]+}}' [[ACTIONS:0x[0-9a-f]+]]
+
+// store input/a contents into the datapool
+// CHECK: create record region=[[INDEX]] offset=[[INPUT_A_OFF:0x[0-9a-f]+]] hash=9b096cd140f119
+// CHECK: cmpxcgh subtrie region=[[INDEX]] offset={{.*}} slot={{.*}} expected=0x0 new=[[INPUT_A_OFF]] prev=0x0
+// CHECK: alloc [[DATA]]
+
+// CHECK: resize mapped file '{{.*}}actions.v{{[0-9]+}}'
+// CHECK: close mmap '{{.*}}actions.v{{[0-9]+}}'
+// CHECK: resize mapped file '{{.*}}data.v{{[0-9]+}}'
+// CHECK: close mmap '{{.*}}data.v{{[0-9]+}}'
+// CHECK: resize mapped file '{{.*}}index.v{{[0-9]+}}'
+// CHECK: close mmap '{{.*}}index.v{{[0-9]+}}'
+
+// CHECK: validate-if-needed '{{.*}}cas' boot=[[BOOT:[0-9]+]] last-valid=0 check-hash=1 allow-recovery=0 force=0 llvm-cas={{.*}}llvm-cas
+// CHECK: validate-if-needed '{{.*}}cas' boot=[[BOOT]] last-valid=[[BOOT]] check-hash=0 allow-recovery=1 force=1 llvm-cas={{.*}}llvm-cas
+
+// STANDALONE: standalone file create '[[PATH:.*leaf.[0-9a-f]*.v[0-9]+]].[[SUFFIX:[0-9a-f]*]]'
+// STANDALONE: standalone file rename '[[PATH]].[[SUFFIX]]' to '[[PATH]]'
+
+//--- input/a
+Input 1
+

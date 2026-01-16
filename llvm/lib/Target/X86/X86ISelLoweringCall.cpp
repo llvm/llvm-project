@@ -27,6 +27,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Transforms/CFGuard.h"
 
 #define DEBUG_TYPE "x86-isel"
 
@@ -2551,6 +2552,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   bool IsImpCall = false;
+  bool IsCFGuardCall = false;
   if (DAG.getTarget().getCodeModel() == CodeModel::Large) {
     assert(Is64Bit && "Large code model is only legal in 64-bit mode.");
     // In the 64-bit large code model, we have to make all calls
@@ -2568,6 +2570,21 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
              Callee.getValueType() == MVT::i32) {
     // Zero-extend the 32-bit Callee address into a 64-bit according to x32 ABI
     Callee = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Callee);
+  } else if (Is64Bit && CB && isCFGuardCall(CB)) {
+    // We'll use a specific psuedo instruction for tail calls to control flow
+    // guard functions to guarantee the instruction used for the call. To do
+    // this we need to unwrap the load now and use the CFG Func GV as the
+    // callee.
+    IsCFGuardCall = true;
+    auto *LoadNode = cast<LoadSDNode>(Callee);
+    GlobalAddressSDNode *GA =
+        cast<GlobalAddressSDNode>(unwrapAddress(LoadNode->getBasePtr()));
+    assert(isCFGuardFunction(GA->getGlobal()) &&
+           "CFG Call should be to a guard function");
+    assert(LoadNode->getOffset()->isUndef() &&
+           "CFG Function load should not have an offset");
+    Callee = DAG.getTargetGlobalAddress(
+        GA->getGlobal(), dl, GA->getValueType(0), 0, X86II::MO_NO_FLAG);
   }
 
   SmallVector<SDValue, 8> Ops;
@@ -2672,7 +2689,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // should be computed from returns not tail calls.  Consider a void
     // function making a tail call to a function returning int.
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, MVT::Other, Ops);
+    auto Opcode =
+        IsCFGuardCall ? X86ISD::TC_RETURN_GLOBALADDR : X86ISD::TC_RETURN;
+    SDValue Ret = DAG.getNode(Opcode, dl, MVT::Other, Ops);
 
     if (IsCFICall)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -2688,6 +2707,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = DAG.getNode(X86ISD::IMP_CALL, dl, NodeTys, Ops);
   } else if (IsNoTrackIndirectCall) {
     Chain = DAG.getNode(X86ISD::NT_CALL, dl, NodeTys, Ops);
+  } else if (IsCFGuardCall) {
+    Chain = DAG.getNode(X86ISD::CALL_GLOBALADDR, dl, NodeTys, Ops);
   } else if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
     // Calls with a "clang.arc.attachedcall" bundle are special. They should be
     // expanded to the call, directly followed by a special marker sequence and

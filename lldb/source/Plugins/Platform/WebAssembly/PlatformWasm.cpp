@@ -213,8 +213,8 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
     // failing to connect.
     if (*exit_code)
       error = Status::FromError(llvm::joinErrors(
-          llvm::createStringError(llvm::formatv(
-              "WebAssembly runtime exited with exit code {0}", **exit_code)),
+          llvm::createStringErrorV(
+              "WebAssembly runtime exited with exit code {0}", **exit_code),
           error.takeError()));
 
     return nullptr;
