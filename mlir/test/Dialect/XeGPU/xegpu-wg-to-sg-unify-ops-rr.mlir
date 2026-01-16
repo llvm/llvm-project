@@ -85,8 +85,10 @@ gpu.module @test_distribution {
     %load =  xegpu.load_nd %tdesc[0, 0] {layout = #xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>}
       : !xegpu.tensor_desc<256x64xf32, #xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>>
       -> vector<256x64xf32>
-    // CHECK-COUNT-2: vector.multi_reduction <add>, {{.*}}, %[[CST]] [1] : vector<16x64xf32> to vector<16xf32>
+    // CHECK-COUNT-2: vector.multi_reduction <add>, {{.*}}, %[[C0:.*]] [1] : vector<16x64xf32> to vector<16xf32>
     // CHECK-NOT: vector.multi_reduction
+    // CHECK-COUNT-2: arith.addf {{.*}}, {{.*}} : vector<16xf32>
+    // CHECK-NOT: arith.addf
     %reduce = vector.multi_reduction <add>, %load, %cst {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>, dims = [1]>} [1]
       : vector<256x64xf32> to vector<256xf32>
     gpu.return

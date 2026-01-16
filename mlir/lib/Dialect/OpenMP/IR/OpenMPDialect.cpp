@@ -4465,6 +4465,29 @@ LogicalResult WorkdistributeOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// Declare simd [7.7]
+//===----------------------------------------------------------------------===//
+
+LogicalResult DeclareSimdOp::verify() {
+  // Must be nested inside a function-like op
+  auto func =
+      dyn_cast_if_present<mlir::FunctionOpInterface>((*this)->getParentOp());
+  if (!func)
+    return emitOpError() << "must be nested inside a function";
+
+  return verifyAlignedClause(*this, getAlignments(), getAlignedVars());
+}
+
+void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                          const DeclareSimdOperands &clauses) {
+  MLIRContext *ctx = odsBuilder.getContext();
+  DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
+                       makeArrayAttr(ctx, clauses.alignments),
+                       clauses.linearVars, clauses.linearStepVars,
+                       clauses.linearVarTypes, clauses.simdlen);
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
 

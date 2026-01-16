@@ -14630,6 +14630,32 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     else
       BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
           .addReg(Result64);
+  } else if (MI.getOpcode() == PPC::LWAT_COND_PSEUDO ||
+             MI.getOpcode() == PPC::LDAT_COND_PSEUDO) {
+    DebugLoc DL = MI.getDebugLoc();
+    Register DstReg = MI.getOperand(0).getReg();
+    Register PtrReg = MI.getOperand(1).getReg();
+    unsigned FC = MI.getOperand(2).getImm();
+    bool IsLwat_Cond = MI.getOpcode() == PPC::LWAT_COND_PSEUDO;
+
+    Register Pair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Pair);
+
+    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(IsLwat_Cond ? PPC::LWAT : PPC::LDAT),
+            PairResult)
+        .addReg(Pair)
+        .addReg(PtrReg)
+        .addImm(FC);
+    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
+        .addReg(PairResult, 0, PPC::sub_gp8_x0);
+    if (IsLwat_Cond)
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64, 0, PPC::sub_32);
+    else
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64);
   } else {
     llvm_unreachable("Unexpected instr type to insert");
   }

@@ -1004,6 +1004,10 @@ def Xthinlto_distributor_EQ : CommaJoined<["-"], "Xthinlto-distributor=">,
            "multiple times or with comma-separated values.">,
   MetaVarName<"<arg>">,
   Group<Link_Group>;
+def Xoffload_compiler : JoinedAndSeparate<["-"], "Xoffload-compiler">,
+  Visibility<[ClangOption, FlangOption]>,
+  HelpText<"Pass <arg> to the offload compilers or the ones identified by -<triple>">,
+  MetaVarName<"<triple> <arg>">, Group<Link_Group>;
 def Xoffload_linker : JoinedAndSeparate<["-"], "Xoffload-linker">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Pass <arg> to the offload linkers or the ones identified by -<triple>">,
@@ -1971,6 +1975,16 @@ defm lifetime_safety_inference
                   NegFlag<SetFalse, [], [CC1Option], "Disable">,
                   BothFlags<[], [CC1Option],
                             " experimental lifetime safety inference for C++">>;
+
+defm lifetime_safety_tu_analysis
+    : BoolFOption<"experimental-lifetime-safety-tu-analysis",
+                  LangOpts<"EnableLifetimeSafetyTUAnalysis">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " run lifetime safety analysis at translation-unit "
+                            "end, analyzing functions in call graph post-order "
+                            "to best propagate inferred annotations">>;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
@@ -3449,7 +3463,7 @@ def fmodules_validate_once_per_build_session : Flag<["-"], "fmodules-validate-on
            "successfully validated or loaded during this build session">,
   MarshallingInfoFlag<HeaderSearchOpts<"ModulesValidateOncePerBuildSession">>;
 def fmodules_disable_diagnostic_validation : Flag<["-"], "fmodules-disable-diagnostic-validation">,
-  Group<i_Group>, Visibility<[ClangOption, CC1Option]>,
+  Group<i_Group>, Visibility<[ClangOption, CLOption, CC1Option]>,
   HelpText<"Disable validation of the diagnostic options when loading the module">,
   MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesValidateDiagnosticOptions">>;
 defm modules_force_validate_user_headers : BoolOption<"f", "modules-force-validate-user-headers",
