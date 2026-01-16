@@ -35845,6 +35845,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CVTTP2UIS)
   NODE_NAME_CASE(MCVTTP2UIS)
   NODE_NAME_CASE(POP_FROM_X87_REG)
+  NODE_NAME_CASE(TC_RETURN_GLOBALADDR)
+  NODE_NAME_CASE(CALL_GLOBALADDR)
   }
   return nullptr;
 #undef NODE_NAME_CASE
