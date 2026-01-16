@@ -30,9 +30,9 @@ define i32 @d(i32 %base) {
 ; CHECK-NEXT:    %load1 = load ptr, ptr @c, align 8
 ; CHECK-NEXT:    --> %load1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %sub.ptr.lhs.cast = ptrtoint ptr %load1 to i64
-; CHECK-NEXT:    --> (ptrtoint ptr %load1 to i64) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    --> (ptrtoaddr ptr %load1 to i64) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, ptrtoint (ptr @b to i64)
-; CHECK-NEXT:    --> ((-1 * (ptrtoint ptr @b to i64)) + (ptrtoint ptr %load1 to i64)) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    --> ((-1 * (ptrtoaddr ptr @b to i64)) + (ptrtoaddr ptr %load1 to i64)) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %sub.ptr.div = sdiv exact i64 %sub.ptr.sub, 4
 ; CHECK-NEXT:    --> %sub.ptr.div U: [-2305843009213693952,2305843009213693952) S: [-2305843009213693952,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds [1 x i8], ptr %arrayidx, i64 0, i64 %sub.ptr.div

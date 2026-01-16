@@ -5,8 +5,8 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT: ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT:  IR %start2 = ptrtoint ptr %start to i64
-; CHECK-NEXT:  IR %end1 = ptrtoint ptr %end to i64
+; CHECK-NEXT:  IR %start2 = ptrtoaddr ptr %start to i64
+; CHECK-NEXT:  IR %end1 = ptrtoaddr ptr %end to i64
 ; CHECK-NEXT:  IR %0 = sub i64 %end1, %start2
 ; CHECK-NEXT:  EMIT vp<%min.iters.check> = icmp ult ir<%0>, ir<2>
 ; CHECK-NEXT:  EMIT branch-on-cond vp<%min.iters.check>

@@ -10,8 +10,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define ptr @foo(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; CHECK-NEXT:    [[P_LAST1:%.*]] = ptrtoint ptr [[P_LAST:%.*]] to i64
+; CHECK-NEXT:    [[P3:%.*]] = ptrtoaddr ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[P_LAST1:%.*]] = ptrtoaddr ptr [[P_LAST:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P_LAST1]], -1024
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 10
@@ -70,8 +70,8 @@ exit:
 define ptr @bar(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; CHECK-NEXT:    [[P_LAST1:%.*]] = ptrtoint ptr [[P_LAST:%.*]] to i64
+; CHECK-NEXT:    [[P3:%.*]] = ptrtoaddr ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[P_LAST1:%.*]] = ptrtoaddr ptr [[P_LAST:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P_LAST1]], -1024
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 10

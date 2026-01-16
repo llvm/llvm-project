@@ -8,8 +8,8 @@ define void @induction_phi_and_branch_cost(ptr %end, ptr %start.1, ptr %start.2)
 ; CHECK-LABEL: define void @induction_phi_and_branch_cost(
 ; CHECK-SAME: ptr [[END:%.*]], ptr [[START_1:%.*]], ptr [[START_2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i32
-; CHECK-NEXT:    [[START_11:%.*]] = ptrtoint ptr [[START_1]] to i32
+; CHECK-NEXT:    [[END2:%.*]] = ptrtoaddr ptr [[END]] to i32
+; CHECK-NEXT:    [[START_11:%.*]] = ptrtoaddr ptr [[START_1]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[START_11]], [[END2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1

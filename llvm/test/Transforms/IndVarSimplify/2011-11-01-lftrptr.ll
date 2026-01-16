@@ -12,7 +12,7 @@
 
 define i8 @testnullptrptr(ptr %buf, ptr %end) nounwind {
 ; PTR64-LABEL: @testnullptrptr(
-; PTR64-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
+; PTR64-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
 ; PTR64-NEXT:    br label [[LOOPGUARD:%.*]]
 ; PTR64:       loopguard:
 ; PTR64-NEXT:    [[GUARD:%.*]] = icmp ult ptr null, [[END]]
@@ -34,7 +34,7 @@ define i8 @testnullptrptr(ptr %buf, ptr %end) nounwind {
 ; PTR64-NEXT:    ret i8 [[RET]]
 ;
 ; PTR32-LABEL: @testnullptrptr(
-; PTR32-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i32
+; PTR32-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i32
 ; PTR32-NEXT:    br label [[LOOPGUARD:%.*]]
 ; PTR32:       loopguard:
 ; PTR32-NEXT:    [[GUARD:%.*]] = icmp ult ptr null, [[END]]
@@ -79,8 +79,8 @@ exit:
 
 define i8 @testptrptr(ptr %buf, ptr %end) nounwind {
 ; PTR64-LABEL: @testptrptr(
-; PTR64-NEXT:    [[BUF2:%.*]] = ptrtoint ptr [[BUF:%.*]] to i64
-; PTR64-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
+; PTR64-NEXT:    [[BUF2:%.*]] = ptrtoaddr ptr [[BUF:%.*]] to i64
+; PTR64-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
 ; PTR64-NEXT:    br label [[LOOPGUARD:%.*]]
 ; PTR64:       loopguard:
 ; PTR64-NEXT:    [[GUARD:%.*]] = icmp ult ptr [[BUF]], [[END]]
@@ -103,8 +103,8 @@ define i8 @testptrptr(ptr %buf, ptr %end) nounwind {
 ; PTR64-NEXT:    ret i8 [[RET]]
 ;
 ; PTR32-LABEL: @testptrptr(
-; PTR32-NEXT:    [[BUF2:%.*]] = ptrtoint ptr [[BUF:%.*]] to i32
-; PTR32-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i32
+; PTR32-NEXT:    [[BUF2:%.*]] = ptrtoaddr ptr [[BUF:%.*]] to i32
+; PTR32-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i32
 ; PTR32-NEXT:    br label [[LOOPGUARD:%.*]]
 ; PTR32:       loopguard:
 ; PTR32-NEXT:    [[GUARD:%.*]] = icmp ult ptr [[BUF]], [[END]]

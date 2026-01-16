@@ -5,13 +5,13 @@ define ptr @pointer_align_down(ptr %obj) {
 ; CHECK-LABEL: 'pointer_align_down'
 ; CHECK-NEXT:  Classifying expressions for: @pointer_align_down
 ; CHECK-NEXT:    %i = ptrtoint ptr %obj to i64
-; CHECK-NEXT:    --> (ptrtoint ptr %obj to i64) U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr %obj to i64) U: full-set S: full-set
 ; CHECK-NEXT:    %i2 = and i64 %i, 15
-; CHECK-NEXT:    --> (zext i4 (trunc i64 (ptrtoint ptr %obj to i64) to i4) to i64) U: [0,16) S: [0,16)
+; CHECK-NEXT:    --> (zext i4 (trunc i64 (ptrtoaddr ptr %obj to i64) to i4) to i64) U: [0,16) S: [0,16)
 ; CHECK-NEXT:    %i3 = sub nsw i64 0, %i2
-; CHECK-NEXT:    --> (-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj to i64) to i4) to i64))<nsw> U: [-15,1) S: [-15,1)
+; CHECK-NEXT:    --> (-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj to i64) to i4) to i64))<nsw> U: [-15,1) S: [-15,1)
 ; CHECK-NEXT:    %i4 = getelementptr i8, ptr %obj, i64 %i3
-; CHECK-NEXT:    --> ((-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj to i64) to i4) to i64))<nsw> + %obj) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj to i64) to i4) to i64))<nsw> + %obj) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_align_down
 ;
   %i = ptrtoint ptr %obj to i64
@@ -25,13 +25,13 @@ define ptr @pointer_align_down_different_donor(ptr %obj_to_align, ptr %obj_donor
 ; CHECK-LABEL: 'pointer_align_down_different_donor'
 ; CHECK-NEXT:  Classifying expressions for: @pointer_align_down_different_donor
 ; CHECK-NEXT:    %i = ptrtoint ptr %obj_donor to i64
-; CHECK-NEXT:    --> (ptrtoint ptr %obj_donor to i64) U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr %obj_donor to i64) U: full-set S: full-set
 ; CHECK-NEXT:    %i2 = and i64 %i, 15
-; CHECK-NEXT:    --> (zext i4 (trunc i64 (ptrtoint ptr %obj_donor to i64) to i4) to i64) U: [0,16) S: [0,16)
+; CHECK-NEXT:    --> (zext i4 (trunc i64 (ptrtoaddr ptr %obj_donor to i64) to i4) to i64) U: [0,16) S: [0,16)
 ; CHECK-NEXT:    %i3 = sub nsw i64 0, %i2
-; CHECK-NEXT:    --> (-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj_donor to i64) to i4) to i64))<nsw> U: [-15,1) S: [-15,1)
+; CHECK-NEXT:    --> (-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj_donor to i64) to i4) to i64))<nsw> U: [-15,1) S: [-15,1)
 ; CHECK-NEXT:    %i4 = getelementptr i8, ptr %obj_to_align, i64 %i3
-; CHECK-NEXT:    --> ((-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj_donor to i64) to i4) to i64))<nsw> + %obj_to_align) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj_donor to i64) to i4) to i64))<nsw> + %obj_to_align) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_align_down_different_donor
 ;
   %i = ptrtoint ptr %obj_donor to i64
@@ -45,15 +45,15 @@ define ptr @pointer_align_up(ptr noundef %obj) {
 ; CHECK-LABEL: 'pointer_align_up'
 ; CHECK-NEXT:  Classifying expressions for: @pointer_align_up
 ; CHECK-NEXT:    %intptr = ptrtoint ptr %obj to i64
-; CHECK-NEXT:    --> (ptrtoint ptr %obj to i64) U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr %obj to i64) U: full-set S: full-set
 ; CHECK-NEXT:    %over_boundary = add i64 %intptr, 15
-; CHECK-NEXT:    --> (15 + (ptrtoint ptr %obj to i64)) U: full-set S: full-set
+; CHECK-NEXT:    --> (15 + (ptrtoaddr ptr %obj to i64)) U: full-set S: full-set
 ; CHECK-NEXT:    %aligned_intptr = and i64 %over_boundary, -16
-; CHECK-NEXT:    --> (16 * ((15 + (ptrtoint ptr %obj to i64)) /u 16))<nuw> U: [0,-15) S: [-9223372036854775808,9223372036854775793)
+; CHECK-NEXT:    --> (16 * ((15 + (ptrtoaddr ptr %obj to i64)) /u 16))<nuw> U: [0,-15) S: [-9223372036854775808,9223372036854775793)
 ; CHECK-NEXT:    %diff = sub i64 %aligned_intptr, %intptr
-; CHECK-NEXT:    --> ((16 * ((15 + (ptrtoint ptr %obj to i64)) /u 16))<nuw> + (-1 * (ptrtoint ptr %obj to i64))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((16 * ((15 + (ptrtoaddr ptr %obj to i64)) /u 16))<nuw> + (-1 * (ptrtoaddr ptr %obj to i64))) U: full-set S: full-set
 ; CHECK-NEXT:    %aligned_result = getelementptr i8, ptr %obj, i64 %diff
-; CHECK-NEXT:    --> ((16 * ((15 + (ptrtoint ptr %obj to i64)) /u 16))<nuw> + (-1 * (ptrtoint ptr %obj to i64)) + %obj) U: full-set S: full-set
+; CHECK-NEXT:    --> ((16 * ((15 + (ptrtoaddr ptr %obj to i64)) /u 16))<nuw> + (-1 * (ptrtoaddr ptr %obj to i64)) + %obj) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_align_up
 ;
   %intptr = ptrtoint ptr %obj to i64
@@ -68,15 +68,15 @@ define ptr @pointer_align_up_different_donor(ptr noundef %obj_to_align, ptr %obj
 ; CHECK-LABEL: 'pointer_align_up_different_donor'
 ; CHECK-NEXT:  Classifying expressions for: @pointer_align_up_different_donor
 ; CHECK-NEXT:    %intptr = ptrtoint ptr %obj_donor to i64
-; CHECK-NEXT:    --> (ptrtoint ptr %obj_donor to i64) U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr %obj_donor to i64) U: full-set S: full-set
 ; CHECK-NEXT:    %over_boundary = add i64 %intptr, 15
-; CHECK-NEXT:    --> (15 + (ptrtoint ptr %obj_donor to i64)) U: full-set S: full-set
+; CHECK-NEXT:    --> (15 + (ptrtoaddr ptr %obj_donor to i64)) U: full-set S: full-set
 ; CHECK-NEXT:    %aligned_intptr = and i64 %over_boundary, -16
-; CHECK-NEXT:    --> (16 * ((15 + (ptrtoint ptr %obj_donor to i64)) /u 16))<nuw> U: [0,-15) S: [-9223372036854775808,9223372036854775793)
+; CHECK-NEXT:    --> (16 * ((15 + (ptrtoaddr ptr %obj_donor to i64)) /u 16))<nuw> U: [0,-15) S: [-9223372036854775808,9223372036854775793)
 ; CHECK-NEXT:    %diff = sub i64 %aligned_intptr, %intptr
-; CHECK-NEXT:    --> ((16 * ((15 + (ptrtoint ptr %obj_donor to i64)) /u 16))<nuw> + (-1 * (ptrtoint ptr %obj_donor to i64))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((16 * ((15 + (ptrtoaddr ptr %obj_donor to i64)) /u 16))<nuw> + (-1 * (ptrtoaddr ptr %obj_donor to i64))) U: full-set S: full-set
 ; CHECK-NEXT:    %aligned_result = getelementptr i8, ptr %obj_to_align, i64 %diff
-; CHECK-NEXT:    --> ((16 * ((15 + (ptrtoint ptr %obj_donor to i64)) /u 16))<nuw> + (-1 * (ptrtoint ptr %obj_donor to i64)) + %obj_to_align) U: full-set S: full-set
+; CHECK-NEXT:    --> ((16 * ((15 + (ptrtoaddr ptr %obj_donor to i64)) /u 16))<nuw> + (-1 * (ptrtoaddr ptr %obj_donor to i64)) + %obj_to_align) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_align_up_different_donor
 ;
   %intptr = ptrtoint ptr %obj_donor to i64
@@ -91,15 +91,15 @@ define ptr @pointer_align_up_with_select(ptr %obj) {
 ; CHECK-LABEL: 'pointer_align_up_with_select'
 ; CHECK-NEXT:  Classifying expressions for: @pointer_align_up_with_select
 ; CHECK-NEXT:    %i = ptrtoint ptr %obj to i64
-; CHECK-NEXT:    --> (ptrtoint ptr %obj to i64) U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr %obj to i64) U: full-set S: full-set
 ; CHECK-NEXT:    %i2 = and i64 %i, 15
-; CHECK-NEXT:    --> (zext i4 (trunc i64 (ptrtoint ptr %obj to i64) to i4) to i64) U: [0,16) S: [0,16)
+; CHECK-NEXT:    --> (zext i4 (trunc i64 (ptrtoaddr ptr %obj to i64) to i4) to i64) U: [0,16) S: [0,16)
 ; CHECK-NEXT:    %i4 = sub nsw i64 0, %i2
-; CHECK-NEXT:    --> (-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj to i64) to i4) to i64))<nsw> U: [-15,1) S: [-15,1)
+; CHECK-NEXT:    --> (-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj to i64) to i4) to i64))<nsw> U: [-15,1) S: [-15,1)
 ; CHECK-NEXT:    %i5 = getelementptr i8, ptr %obj, i64 %i4
-; CHECK-NEXT:    --> ((-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj to i64) to i4) to i64))<nsw> + %obj) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj to i64) to i4) to i64))<nsw> + %obj) U: full-set S: full-set
 ; CHECK-NEXT:    %i6 = getelementptr i8, ptr %i5, i64 16
-; CHECK-NEXT:    --> (16 + (-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj to i64) to i4) to i64))<nsw> + %obj) U: full-set S: full-set
+; CHECK-NEXT:    --> (16 + (-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj to i64) to i4) to i64))<nsw> + %obj) U: full-set S: full-set
 ; CHECK-NEXT:    %i7 = select i1 %i3, ptr %obj, ptr %i6
 ; CHECK-NEXT:    --> %i7 U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_align_up_with_select
@@ -118,15 +118,15 @@ define ptr @pointer_align_up_with_select_different_donor(ptr %obj_to_align, ptr 
 ; CHECK-LABEL: 'pointer_align_up_with_select_different_donor'
 ; CHECK-NEXT:  Classifying expressions for: @pointer_align_up_with_select_different_donor
 ; CHECK-NEXT:    %i = ptrtoint ptr %obj_donor to i64
-; CHECK-NEXT:    --> (ptrtoint ptr %obj_donor to i64) U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr %obj_donor to i64) U: full-set S: full-set
 ; CHECK-NEXT:    %i2 = and i64 %i, 15
-; CHECK-NEXT:    --> (zext i4 (trunc i64 (ptrtoint ptr %obj_donor to i64) to i4) to i64) U: [0,16) S: [0,16)
+; CHECK-NEXT:    --> (zext i4 (trunc i64 (ptrtoaddr ptr %obj_donor to i64) to i4) to i64) U: [0,16) S: [0,16)
 ; CHECK-NEXT:    %i4 = sub nsw i64 0, %i2
-; CHECK-NEXT:    --> (-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj_donor to i64) to i4) to i64))<nsw> U: [-15,1) S: [-15,1)
+; CHECK-NEXT:    --> (-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj_donor to i64) to i4) to i64))<nsw> U: [-15,1) S: [-15,1)
 ; CHECK-NEXT:    %i5 = getelementptr i8, ptr %obj_to_align, i64 %i4
-; CHECK-NEXT:    --> ((-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj_donor to i64) to i4) to i64))<nsw> + %obj_to_align) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj_donor to i64) to i4) to i64))<nsw> + %obj_to_align) U: full-set S: full-set
 ; CHECK-NEXT:    %i6 = getelementptr i8, ptr %i5, i64 16
-; CHECK-NEXT:    --> (16 + (-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj_donor to i64) to i4) to i64))<nsw> + %obj_to_align) U: full-set S: full-set
+; CHECK-NEXT:    --> (16 + (-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj_donor to i64) to i4) to i64))<nsw> + %obj_to_align) U: full-set S: full-set
 ; CHECK-NEXT:    %i7 = select i1 %i3, ptr %obj_to_align, ptr %i6
 ; CHECK-NEXT:    --> %i7 U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_align_up_with_select_different_donor
@@ -145,15 +145,15 @@ define ptr @pointer_align_up_with_select_different_objects_bad(ptr %first_obj, p
 ; CHECK-LABEL: 'pointer_align_up_with_select_different_objects_bad'
 ; CHECK-NEXT:  Classifying expressions for: @pointer_align_up_with_select_different_objects_bad
 ; CHECK-NEXT:    %i = ptrtoint ptr %obj_donor to i64
-; CHECK-NEXT:    --> (ptrtoint ptr %obj_donor to i64) U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr %obj_donor to i64) U: full-set S: full-set
 ; CHECK-NEXT:    %i2 = and i64 %i, 15
-; CHECK-NEXT:    --> (zext i4 (trunc i64 (ptrtoint ptr %obj_donor to i64) to i4) to i64) U: [0,16) S: [0,16)
+; CHECK-NEXT:    --> (zext i4 (trunc i64 (ptrtoaddr ptr %obj_donor to i64) to i4) to i64) U: [0,16) S: [0,16)
 ; CHECK-NEXT:    %i4 = sub nsw i64 0, %i2
-; CHECK-NEXT:    --> (-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj_donor to i64) to i4) to i64))<nsw> U: [-15,1) S: [-15,1)
+; CHECK-NEXT:    --> (-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj_donor to i64) to i4) to i64))<nsw> U: [-15,1) S: [-15,1)
 ; CHECK-NEXT:    %i5 = getelementptr i8, ptr %second_obj, i64 %i4
-; CHECK-NEXT:    --> ((-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj_donor to i64) to i4) to i64))<nsw> + %second_obj) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj_donor to i64) to i4) to i64))<nsw> + %second_obj) U: full-set S: full-set
 ; CHECK-NEXT:    %i6 = getelementptr i8, ptr %i5, i64 16
-; CHECK-NEXT:    --> (16 + (-1 * (zext i4 (trunc i64 (ptrtoint ptr %obj_donor to i64) to i4) to i64))<nsw> + %second_obj) U: full-set S: full-set
+; CHECK-NEXT:    --> (16 + (-1 * (zext i4 (trunc i64 (ptrtoaddr ptr %obj_donor to i64) to i4) to i64))<nsw> + %second_obj) U: full-set S: full-set
 ; CHECK-NEXT:    %i7 = select i1 %i3, ptr %first_obj, ptr %i6
 ; CHECK-NEXT:    --> %i7 U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_align_up_with_select_different_objects_bad

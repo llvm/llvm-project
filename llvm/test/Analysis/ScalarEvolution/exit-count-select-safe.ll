@@ -507,9 +507,9 @@ define i64 @uminseq_vs_ptrtoint_complexity(i64 %n, i64 %m, ptr %ptr) {
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %ptr.int = ptrtoint ptr %ptr to i64
-; CHECK-NEXT:    --> (ptrtoint ptr %ptr to i64) U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr %ptr to i64) U: full-set S: full-set
 ; CHECK-NEXT:    %r = add i64 %i, %ptr.int
-; CHECK-NEXT:    --> {(ptrtoint ptr %ptr to i64),+,1}<%loop> U: full-set S: full-set --> ((%n umin_seq %m) + (ptrtoint ptr %ptr to i64)) U: full-set S: full-set
+; CHECK-NEXT:    --> {(ptrtoaddr ptr %ptr to i64),+,1}<%loop> U: full-set S: full-set --> ((%n umin_seq %m) + (ptrtoaddr ptr %ptr to i64)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @uminseq_vs_ptrtoint_complexity
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1

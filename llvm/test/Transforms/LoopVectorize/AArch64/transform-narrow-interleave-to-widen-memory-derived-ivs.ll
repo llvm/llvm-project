@@ -131,12 +131,10 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2-LABEL: define void @derived_pointer_ivs(
 ; VF2-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    [[A5:%.*]] = ptrtoint ptr [[A]] to i64
-; VF2-NEXT:    [[END4:%.*]] = ptrtoint ptr [[END]] to i64
-; VF2-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; VF2-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[END4]], -16
-; VF2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[A5]]
+; VF2-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -16
+; VF2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[A2]]
 ; VF2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; VF2-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; VF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -180,12 +178,10 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2IC2-LABEL: define void @derived_pointer_ivs(
 ; VF2IC2-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF2IC2-NEXT:  [[ENTRY:.*:]]
-; VF2IC2-NEXT:    [[A5:%.*]] = ptrtoint ptr [[A]] to i64
-; VF2IC2-NEXT:    [[END4:%.*]] = ptrtoint ptr [[END]] to i64
-; VF2IC2-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; VF2IC2-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; VF2IC2-NEXT:    [[TMP0:%.*]] = add i64 [[END4]], -16
-; VF2IC2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[A5]]
+; VF2IC2-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF2IC2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF2IC2-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -16
+; VF2IC2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[A2]]
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; VF2IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
@@ -235,12 +231,10 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF4-LABEL: define void @derived_pointer_ivs(
 ; VF4-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    [[A5:%.*]] = ptrtoint ptr [[A]] to i64
-; VF4-NEXT:    [[END4:%.*]] = ptrtoint ptr [[END]] to i64
-; VF4-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; VF4-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[END4]], -16
-; VF4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[A5]]
+; VF4-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF4-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -16
+; VF4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[A2]]
 ; VF4-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; VF4-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
