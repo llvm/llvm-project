@@ -229,7 +229,9 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
         ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
         ArrayRef<int64_t> outerDimsPerm = {});
 
-    // Returns the shape of the packed type. It is a shared helper helps type inference methods in a way that ensures  that they agree on which dimensions are dynamic.
+    // Returns the shape of the packed type. It is a shared helper that helps
+    // type inference methods in a way that ensures that they agree on which 
+    // dimensions are dynamic.
     static SmallVector<int64_t> inferPackedShape(ArrayRef<int64_t> inputShape,
         ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
         ArrayRef<int64_t> outerDimsPerm = {});

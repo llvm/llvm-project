@@ -572,7 +572,6 @@ public:
 
   LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref PackOp. Temporarily return failure.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -599,7 +598,6 @@ public:
 
   LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref PackOp. Temporarily return failure.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -772,7 +770,6 @@ static LogicalResult
 bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
                                    linalg::PackOp packOp,
                                    PatternRewriter &rewriter) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -881,7 +878,6 @@ static LogicalResult
 bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
                                  linalg::PackOp packOp,
                                  PatternRewriter &rewriter) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -968,7 +964,6 @@ public:
 
   LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref PackOp. Temporarily return failure.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -1022,7 +1017,6 @@ private:
 static LogicalResult pushDownUnPackOpThroughExpandShape(
     linalg::UnPackOp unPackOp, tensor::ExpandShapeOp expandOp,
     PatternRewriter &rewriter, ControlPropagationFn controlFn) {
-  // TODO: Support Memref UnpackOp. Temporarily return failure.
   if (!unPackOp.hasPureTensorSemantics())
     return failure();
 
@@ -1100,7 +1094,6 @@ public:
 
   LogicalResult matchAndRewrite(linalg::UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
     if (!unPackOp.hasPureTensorSemantics())
       return failure();
 
@@ -1303,7 +1296,6 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
     if (!unpackOp)
       return failure();
 
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
     if (!unpackOp.hasPureTensorSemantics())
       return failure();
 

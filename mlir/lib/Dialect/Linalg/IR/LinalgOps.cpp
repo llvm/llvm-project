@@ -5109,22 +5109,18 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
 
   // Verify that the source and destination are ranked types.
   if (!packOrUnPack.getSourceType().hasRank() ||
-      !packOrUnPack.getDestType().hasRank()) {
+      !packOrUnPack.getDestType().hasRank())
     return op->emitError("expected both source and destination to have rank");
-  }
 
   // Verify that the Operation does not have mixed tensor/buffer semantics.
   if (!packOrUnPack.hasPureBufferSemantics() &&
-      !packOrUnPack.hasPureTensorSemantics()) {
+      !packOrUnPack.hasPureTensorSemantics())
     return op->emitError("mixing tensor and buffer semantics is not allowed");
-  }
   const unsigned numResults = packOrUnPack.getNumResults();
-  if (packOrUnPack.hasPureTensorSemantics() && numResults != 1) {
+  if (packOrUnPack.hasPureTensorSemantics() && numResults != 1)
     return op->emitError("expected 1 result, got ") << numResults;
-  }
-  if (packOrUnPack.hasPureBufferSemantics() && numResults != 0) {
+  if (packOrUnPack.hasPureBufferSemantics() && numResults != 0)
     return op->emitError("expected 0 results, got ") << numResults;
-  }
 
   // Verify tiles. Do not allow zero tiles.
   SmallVector<OpFoldResult> mixedTiles = packOrUnPack.getMixedTiles();
@@ -5349,9 +5345,8 @@ ParseResult PackOp::parse(OpAsmParser &parser, OperationState &result) {
                             "pack/unpack requires '->' and destination type");
   }
 
-  if (!isMemRef) {
+  if (!isMemRef)
     resultType = destType;
-  }
 
   if (parser.resolveOperand(source, sourceType, result.operands) ||
       parser.resolveOperand(dest, destType, result.operands))
@@ -6105,9 +6100,8 @@ ParseResult UnPackOp::parse(OpAsmParser &parser, OperationState &result) {
                             "pack/unpack requires '->' and destination type");
   }
 
-  if (!isMemRef) {
+  if (!isMemRef)
     resultType = destType;
-  }
 
   if (parser.resolveOperand(source, sourceType, result.operands) ||
       parser.resolveOperand(dest, destType, result.operands))

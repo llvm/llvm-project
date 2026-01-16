@@ -675,7 +675,7 @@ linalg::packTranspose(RewriterBase &rewriter, linalg::PackOp packOp,
   linalg::PackOp transposedPackOp =
       packOp.createTransposedClone(rewriter, loc, innerPerm, outerPerm);
 
-  if (packOp.getNumResults() == 0 || !packOp.getResult().hasOneUse())
+  if (packOp.hasPureBufferSemantics() || !packOp.getResult().hasOneUse())
     return rewriter.notifyMatchFailure(linalgOp, "expect single pack use");
 
   OpOperand &packUse = *packOp->getUses().begin();
@@ -736,7 +736,7 @@ linalg::packTranspose(RewriterBase &rewriter, linalg::PackOp packOp,
   }
 
   // Step 4. Finally, replace packOp now that we don't need it anymore.
-  if (packOp.getNumResults() != 0)
+  if (packOp.hasPureTensorSemantics())
     rewriter.replaceOp(packOp, transposedPackOp->getResults());
   else
     rewriter.eraseOp(packOp);
