@@ -67,7 +67,7 @@ class AnonClass {};
 // HTML-ANON-INDEX:     <a href="../GlobalNamespace/index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 // HTML-ANON-INDEX: </div>
 // HTML-ANON-INDEX: <h2>@nonymous_namespace</h2>
-// HTML-ANON-INDEX:     <h2>Inner Classes</h2>
+// HTML-ANON-INDEX:     <h2>Records</h2>
 // HTML-ANON-INDEX:         <ul class="class-container">
 // HTML-ANON-INDEX:             <li id="{{([0-9A-F]{40})}}" style="max-height: 40px;">
 // HTML-ANON-INDEX:                 <a href="_ZTVN12_GLOBAL__N_19AnonClassE.html">
@@ -136,7 +136,7 @@ class ClassInNestedNamespace {};
 // HTML-NESTED-INDEX:     <a href="../index.html"><div class="navbar-breadcrumb-item">PrimaryNamespace</div></a>
 // HTML-NESTED-INDEX: </div>
 // HTML-NESTED-INDEX: <h2>NestedNamespace</h2>
-// HTML-NESTED-INDEX:     <h2>Inner Classes</h2>
+// HTML-NESTED-INDEX:     <h2>Records</h2>
 // HTML-NESTED-INDEX:     <ul class="class-container">
 // HTML-NESTED-INDEX:         <li id="{{([0-9A-F]{40})}}" style="max-height: 40px;">
 // HTML-NESTED-INDEX:             <a href="_ZTVN16PrimaryNamespace15NestedNamespace22ClassInNestedNamespaceE.html">
@@ -171,7 +171,7 @@ class ClassInNestedNamespace {};
 // HTML-PRIMARY-INDEX: <h2>PrimaryNamespace</h2>
 // HTML-PRIMARY-INDEX-NOT: <h2 id="Namespaces">Namespaces</h2>
 // HTML-PRIMARY-INDEX-NOT: <a href="NestedNamespace{{[\/]}}index.html">NestedNamespace</a>
-// HTML-PRIMARY-INDEX:      <h2>Inner Classes</h2>
+// HTML-PRIMARY-INDEX:      <h2>Records</h2>
 // HTML-PRIMARY-INDEX:          <ul class="class-container">
 // HTML-PRIMARY-INDEX:              <li id="{{([0-9A-F]{40})}}" style="max-height: 40px;">
 // HTML-PRIMARY-INDEX:                  <a href="_ZTVN16PrimaryNamespace23ClassInPrimaryNamespaceE.html">
@@ -223,7 +223,7 @@ class ClassInAnotherNamespace {};
 // HTML-ANOTHER-INDEX:     <a href="../GlobalNamespace/index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 // HTML-ANOTHER-INDEX: </div>
 // HTML-ANOTHER-INDEX: <h2>AnotherNamespace</h2>
-// HTML-ANOTHER-INDEX:     <h2>Inner Classes</h2>
+// HTML-ANOTHER-INDEX:     <h2>Records</h2>
 // HTML-ANOTHER-INDEX:     <ul class="class-container">
 // HTML-ANOTHER-INDEX:         <li id="{{([0-9A-F]{40})}}" style="max-height: 40px;">
 // HTML-ANOTHER-INDEX:             <a href="_ZTVN16AnotherNamespace23ClassInAnotherNamespaceE.html">

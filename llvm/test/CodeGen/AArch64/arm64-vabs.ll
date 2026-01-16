@@ -2019,6 +2019,97 @@ define <16 x i16> @uabd16b_i16(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i16> %absel
 }
 
+
+define <16 x i16> @uabd16b_i16_const_select(<16 x i8> %a) {
+; CHECK-SD-LABEL: uabd16b_i16_const_select:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    adrp x8, .LCPI106_0
+; CHECK-SD-NEXT:    ushll.8h v2, v0, #0
+; CHECK-SD-NEXT:    ushll2.8h v0, v0, #0
+; CHECK-SD-NEXT:    adrp x9, .LCPI106_1
+; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI106_0]
+; CHECK-SD-NEXT:    ldr q1, [x9, :lo12:.LCPI106_1]
+; CHECK-SD-NEXT:    uabd.8h v1, v0, v1
+; CHECK-SD-NEXT:    uabd.8h v0, v2, v3
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uabd16b_i16_const_select:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI106_1
+; CHECK-GI-NEXT:    mov d3, v0[1]
+; CHECK-GI-NEXT:    ushll.8h v4, v0, #0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI106_1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI106_0
+; CHECK-GI-NEXT:    ushll2.8h v6, v0, #0
+; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI106_0]
+; CHECK-GI-NEXT:    ushll.8h v5, v1, #0
+; CHECK-GI-NEXT:    usubl.8h v16, v0, v1
+; CHECK-GI-NEXT:    usubl.8h v1, v1, v0
+; CHECK-GI-NEXT:    ushll.8h v7, v2, #0
+; CHECK-GI-NEXT:    usubl.8h v2, v3, v2
+; CHECK-GI-NEXT:    cmhi.8h v3, v5, v4
+; CHECK-GI-NEXT:    cmhi.8h v4, v7, v6
+; CHECK-GI-NEXT:    usubw2.8h v5, v7, v0
+; CHECK-GI-NEXT:    mov.16b v0, v3
+; CHECK-GI-NEXT:    bsl.16b v0, v1, v16
+; CHECK-GI-NEXT:    mov.16b v1, v4
+; CHECK-GI-NEXT:    bsl.16b v1, v5, v2
+; CHECK-GI-NEXT:    ret
+  %aext = zext <16 x i8> %a to <16 x i16>
+  %bext = zext <16 x i8> <i8 39, i8 42, i8 51, i8 51, i8 0, i8 0, i8 54, i8 57, i8 66, i8 69, i8 75, i8 69, i8 75, i8 81, i8 255, i8 99> to <16 x i16>
+  %neg.bext = sub <16 x i16> splat (i16 0), %bext
+  %abdiff = add nsw <16 x i16> %aext, %neg.bext
+  %abcmp = icmp ult <16 x i16> %aext, %bext
+  %ababs = sub nsw <16 x i16> %bext, %aext
+  %absel = select <16 x i1> %abcmp, <16 x i16> %ababs, <16 x i16> %abdiff
+  ret <16 x i16> %absel
+}
+
+define <16 x i16> @sabd16b_i16_const_select(<16 x i8> %a) {
+; CHECK-SD-LABEL: sabd16b_i16_const_select:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    adrp x8, .LCPI107_0
+; CHECK-SD-NEXT:    sshll.8h v2, v0, #0
+; CHECK-SD-NEXT:    sshll2.8h v0, v0, #0
+; CHECK-SD-NEXT:    adrp x9, .LCPI107_1
+; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI107_0]
+; CHECK-SD-NEXT:    ldr q1, [x9, :lo12:.LCPI107_1]
+; CHECK-SD-NEXT:    sabd.8h v1, v0, v1
+; CHECK-SD-NEXT:    sabd.8h v0, v2, v3
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sabd16b_i16_const_select:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI107_1
+; CHECK-GI-NEXT:    mov d3, v0[1]
+; CHECK-GI-NEXT:    sshll.8h v4, v0, #0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI107_1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI107_0
+; CHECK-GI-NEXT:    sshll2.8h v6, v0, #0
+; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI107_0]
+; CHECK-GI-NEXT:    sshll.8h v5, v1, #0
+; CHECK-GI-NEXT:    ssubl.8h v16, v0, v1
+; CHECK-GI-NEXT:    ssubl.8h v1, v1, v0
+; CHECK-GI-NEXT:    sshll.8h v7, v2, #0
+; CHECK-GI-NEXT:    ssubl.8h v2, v3, v2
+; CHECK-GI-NEXT:    cmgt.8h v3, v5, v4
+; CHECK-GI-NEXT:    cmgt.8h v4, v7, v6
+; CHECK-GI-NEXT:    ssubw2.8h v5, v7, v0
+; CHECK-GI-NEXT:    mov.16b v0, v3
+; CHECK-GI-NEXT:    bsl.16b v0, v1, v16
+; CHECK-GI-NEXT:    mov.16b v1, v4
+; CHECK-GI-NEXT:    bsl.16b v1, v5, v2
+; CHECK-GI-NEXT:    ret
+  %aext = sext <16 x i8> %a to <16 x i16>
+  %bext = sext <16 x i8> <i8 -39, i8 42, i8 -51, i8 51, i8 0, i8 0, i8 -54, i8 57, i8 -66, i8 69, i8 75, i8 69, i8 75, i8 81, i8 -128, i8 99> to <16 x i16>
+  %neg.bext = sub <16 x i16> splat (i16 0), %bext
+  %abdiff = add nsw <16 x i16> %aext, %neg.bext
+  %abcmp = icmp slt <16 x i16> %aext, %bext
+  %ababs = sub nsw <16 x i16> %bext, %aext
+  %absel = select <16 x i1> %abcmp, <16 x i16> %ababs, <16 x i16> %abdiff
+  ret <16 x i16> %absel
+}
+
 define <16 x i16> @sabd16b_i16_ext(<16 x i16> %aext, <16 x i8> %b) {
 ; CHECK-SD-LABEL: sabd16b_i16_ext:
 ; CHECK-SD:       // %bb.0:
