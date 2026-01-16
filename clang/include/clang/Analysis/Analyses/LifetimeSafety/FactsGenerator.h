@@ -106,6 +106,15 @@ private:
   // corresponding to the left-hand side is updated to be a "write", thereby
   // exempting it from the check.
   llvm::DenseMap<const DeclRefExpr *, UseFact *> UseFacts;
+
+  // This is a flow-insensitive approximation: once a declaration is moved
+  // anywhere in the function, it's treated as moved everywhere. This can lead
+  // to false negatives on control flow paths where the value is not actually
+  // moved, but these are considered lower priority than the false positives
+  // this tracking prevents.
+  // TODO: The ideal solution would be flow-sensitive ownership tracking that
+  // records where values are moved from and to, but this is more complex.
+  llvm::DenseSet<const ValueDecl *> MovedDecls;
 };
 
 } // namespace clang::lifetimes::internal

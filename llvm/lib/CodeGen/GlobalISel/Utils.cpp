@@ -1877,6 +1877,7 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
     return true;
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_CTLS:
   case TargetOpcode::G_ABS:
   case TargetOpcode::G_CTPOP:
   case TargetOpcode::G_BSWAP:

@@ -501,6 +501,17 @@ undefined.
   %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
   %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
 
+G_CTLS
+^^^^^^
+
+Count leading redundant sign bits. If the value is positive then the result is
+the number of extra leading zeros. If the value is negative then the result is
+the number of extra leading ones.
+
+.. code-block:: none
+
+  %2:_(s32) = G_CTLS %1
+
 G_ABDS, G_ABDU
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

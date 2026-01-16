@@ -2630,6 +2630,12 @@ public:
     return S.Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc);
   }
 
+  bool ignoreUnsafeBufferInStaticSizedArray(
+      const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(
+        diag::warn_unsafe_buffer_usage_in_static_sized_array, Loc);
+  }
+
   // Returns the text representation of clang::unsafe_buffer_usage attribute.
   // `WSSuffix` holds customized "white-space"s, e.g., newline or whilespace
   // characters.

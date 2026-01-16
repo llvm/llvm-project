@@ -13,20 +13,22 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[V_ADDR]], align 16
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[INDEX_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIX_LOAD:%.*]] = load <16 x float>, ptr [[TMP1]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = add i32 12, [[TMP2]]
 // CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x float> [[MATRIX_LOAD]], float [[TMP4]], i32 [[TMP3]]
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 [[TMP3]]
+// CHECK-NEXT:    store float [[TMP4]], ptr [[TMP5]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = add i32 8, [[TMP2]]
 // CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-// CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x float> [[TMP5]], float [[TMP7]], i32 [[TMP6]]
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 [[TMP6]]
+// CHECK-NEXT:    store float [[TMP7]], ptr [[TMP8]], align 4
 // CHECK-NEXT:    [[TMP9:%.*]] = add i32 4, [[TMP2]]
 // CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-// CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x float> [[TMP8]], float [[TMP10]], i32 [[TMP9]]
+// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 [[TMP9]]
+// CHECK-NEXT:    store float [[TMP10]], ptr [[TMP11]], align 4
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 0, [[TMP2]]
 // CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-// CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x float> [[TMP11]], float [[TMP13]], i32 [[TMP12]]
-// CHECK-NEXT:    store <16 x float> [[TMP14]], ptr [[TMP1]], align 4
+// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 [[TMP12]]
+// CHECK-NEXT:    store float [[TMP13]], ptr [[TMP14]], align 4
 // CHECK-NEXT:    ret void
 //
 void setMatrix(out float4x4 M, int index, float4 V) {
@@ -131,17 +133,18 @@ int3 getMatrixSwizzle2x3(out int2x3 M, int index) {
 // CHECK-NEXT:    [[MATRIX_ROW_INS4:%.*]] = insertelement <3 x i32> [[MATRIX_ROW_INS2]], i32 [[MATRIX_ELEM3]], i32 2
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[INDEX_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIX_LOAD:%.*]] = load <6 x i32>, ptr [[TMP5]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = add i32 4, [[TMP6]]
 // CHECK-NEXT:    [[TMP8:%.*]] = extractelement <3 x i32> [[MATRIX_ROW_INS4]], i32 0
-// CHECK-NEXT:    [[TMP9:%.*]] = insertelement <6 x i32> [[MATRIX_LOAD]], i32 [[TMP8]], i32 [[TMP7]]
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <6 x i32>, ptr [[TMP5]], i32 0, i32 [[TMP7]]
+// CHECK-NEXT:    store i32 [[TMP8]], ptr [[TMP9]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = add i32 0, [[TMP6]]
 // CHECK-NEXT:    [[TMP11:%.*]] = extractelement <3 x i32> [[MATRIX_ROW_INS4]], i32 1
-// CHECK-NEXT:    [[TMP12:%.*]] = insertelement <6 x i32> [[TMP9]], i32 [[TMP11]], i32 [[TMP10]]
+// CHECK-NEXT:    [[TMP12:%.*]] = getelementptr <6 x i32>, ptr [[TMP5]], i32 0, i32 [[TMP10]]
+// CHECK-NEXT:    store i32 [[TMP11]], ptr [[TMP12]], align 4
 // CHECK-NEXT:    [[TMP13:%.*]] = add i32 2, [[TMP6]]
 // CHECK-NEXT:    [[TMP14:%.*]] = extractelement <3 x i32> [[MATRIX_ROW_INS4]], i32 2
-// CHECK-NEXT:    [[TMP15:%.*]] = insertelement <6 x i32> [[TMP12]], i32 [[TMP14]], i32 [[TMP13]]
-// CHECK-NEXT:    store <6 x i32> [[TMP15]], ptr [[TMP5]], align 4
+// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr <6 x i32>, ptr [[TMP5]], i32 0, i32 [[TMP13]]
+// CHECK-NEXT:    store i32 [[TMP14]], ptr [[TMP15]], align 4
 // CHECK-NEXT:    ret void
 //
 void setMatrixSwizzleFromMatrix(out int2x3 M, int2x3 N, int index) {

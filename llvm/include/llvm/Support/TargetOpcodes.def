@@ -839,6 +839,9 @@ HANDLE_TARGET_OPCODE(G_CTLZ)
 /// Same as above, undefined for zero inputs.
 HANDLE_TARGET_OPCODE(G_CTLZ_ZERO_UNDEF)
 
+/// Generic count extra sign bits.
+HANDLE_TARGET_OPCODE(G_CTLS)
+
 /// Generic count bits.
 HANDLE_TARGET_OPCODE(G_CTPOP)
 
