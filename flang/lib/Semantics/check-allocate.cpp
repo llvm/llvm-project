@@ -600,7 +600,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
       }
     } else {
       // explicit shape-spec-list
-      if (allocateShapeSpecRank_ != rank_) { printf("got to allocateShapeSpecRank_ %d != rank_ %d\n", allocateShapeSpecRank_, rank_); 
+      if (allocateShapeSpecRank_ != rank_) {
         context
             .Say(name_.source,
                 "The number of shape specifications, when they appear, must match the rank of allocatable object"_err_en_US)

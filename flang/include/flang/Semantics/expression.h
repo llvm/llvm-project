@@ -185,7 +185,7 @@ public:
   template <typename A> MaybeExpr Analyze(const parser::Scalar<A> &x) {
     auto result{Analyze(x.thing)};
     if (result) {
-      if (int rank{result->Rank()}; rank != 0 ) { //&& (rank != 1)) {
+      if (int rank{result->Rank()}; rank != 0) {
         SayAt(x, "Must be a scalar value, but is a rank-%d array"_err_en_US,
             rank);
         ResetExpr(x);
@@ -251,6 +251,7 @@ public:
   MaybeExpr Analyze(const parser::InitialDataTarget &);
   MaybeExpr Analyze(const parser::NullInit &);
   MaybeExpr Analyze(const parser::StmtFunctionStmt &);
+  MaybeExpr Analyze(const parser::Allocation &);
 
   void Analyze(const parser::CallStmt &);
   const Assignment *Analyze(const parser::AssignmentStmt &);
@@ -505,6 +506,10 @@ public:
   bool Pre(const parser::PointerObject &x) {
     AnalyzeAndNoteUses(x);
     return false;
+  }
+  bool Pre(const parser::Allocation &x) {
+    exprAnalyzer_.Analyze(x);
+    return true;
   }
   bool Pre(const parser::DataStmtObject &);
   void Post(const parser::DataStmtObject &);

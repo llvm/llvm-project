@@ -4364,6 +4364,59 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::PointerObject &x) {
   return ExprOrVariable(x, parser::FindSourceLocation(x));
 }
 
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::Allocation &x) {
+  auto &shapeSpecList{
+      std::get<std::list<parser::AllocateShapeSpec>>(
+          (std::get<parser::AllocateShapeSpecArrayList>(x.t)).u)};
+  
+  if (shapeSpecList.empty()) {
+    return std::nullopt;
+  }
+
+  const auto &shapeSpec{shapeSpecList.front()};
+  auto &expr = parser::UnwrapRef<parser::Expr>(std::get<1>(shapeSpec.t));
+  
+  if (const auto *arrayConstructor{
+      std::get_if<parser::ArrayConstructor>(&expr.u)}) {
+    
+    const auto &acSpec{arrayConstructor->v}; // AcSpec
+    std::list<parser::AllocateShapeSpec> newShapeSpecs;
+
+    // Iterate through array constructor values
+    for (const auto &acValue : acSpec.values) {
+      if (const auto *indirExpr = 
+          std::get_if<common::Indirection<parser::Expr>>(&acValue.u)) {
+        
+        // Create new BoundExpr wrapping a reference to the expression
+        // Don't copy - use the existing indirection
+      parser::BoundExpr newBoundExpr{
+          parser::Integer(std::move(const_cast<common::Indirection<parser::Expr>&>(*indirExpr)))};
+        
+        // Create new AllocateShapeSpec with optional lower bound and upper bound
+        parser::AllocateShapeSpec newSpec = 
+            std::make_tuple(
+              std::optional<parser::BoundExpr>{}, 
+              std::move(newBoundExpr));
+        
+        newShapeSpecs.push_back(std::move(newSpec));
+      }
+    }
+    
+    // Replace the original list with expanded specs
+    auto &mutableShapeSpecList{const_cast<std::list<parser::AllocateShapeSpec>&>(shapeSpecList)};
+    mutableShapeSpecList.clear();
+    mutableShapeSpecList.splice(mutableShapeSpecList.end(), newShapeSpecs);
+
+    // printf("printing tree from allocation_ node\n");
+
+    // std::string buf;
+    // llvm::raw_string_ostream dump{buf};
+    // Fortran::parser::DumpTree(dump, x);
+    // std::cout << buf << std::endl;
+  }
+  return std::nullopt;
+}
+
 Expr<SubscriptInteger> ExpressionAnalyzer::AnalyzeKindSelector(
     TypeCategory category,
     const std::optional<parser::KindSelector> &selector) {
