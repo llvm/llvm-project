@@ -49,16 +49,16 @@ static const Expr *getAcceptableCompoundsLHS(const BinaryOperator *BinOp) {
   return isa<DeclRefExpr, MemberExpr>(LHS) ? LHS : nullptr;
 }
 
-/// Checks if all leaf nodes in an expression satisfy a given condition. This
+/// Checks if all leaf nodes in an bitwise expression satisfy a given condition. This
 /// handles cases like `(a | b) & c` where we need to check that a, b, and c
 /// all satisfy the condition.
 ///
-/// \param Expr The expression to check.
-/// \param Condition A function that checks if an expression satisfies the
+/// \param Expr The bitwise expression to check.
+/// \param Condition A function that checks if an leaf node satisfies the
 ///                  desired condition.
 /// \returns true if all leaf nodes satisfy the condition, false otherwise.
 template <typename F>
-static bool allLeavesSatisfy(const clang::Expr *Expr, const F& Condition) {
+static bool allLeavesOfBitwiseSatisfy(const clang::Expr *Expr, const F& Condition) {
   // For leaf nodes, check if the condition is satisfied
   if (Condition(Expr))
     return true;
@@ -69,11 +69,24 @@ static bool allLeavesSatisfy(const clang::Expr *Expr, const F& Condition) {
   if (const auto *BinOp = dyn_cast<clang::BinaryOperator>(Expr)) {
     if (!isBitwiseOperation(BinOp->getOpcodeStr()))
       return false;
-    return allLeavesSatisfy(BinOp->getLHS(), Condition) &&
-            allLeavesSatisfy(BinOp->getRHS(), Condition);
+    return allLeavesOfBitwiseSatisfy(BinOp->getLHS(), Condition) &&
+            allLeavesOfBitwiseSatisfy(BinOp->getRHS(), Condition);
   }
 
   return false;
+}
+
+/// Custom matcher that checks if all leaf nodes in an bitwise expression satisfy
+/// the given inner matcher condition. This uses allLeavesOfBitwiseSatisfy to recursively
+///
+/// Example usage:
+///   expr(hasAllLeavesOfBitwiseSatisfying(hasType(booleanType())))
+AST_MATCHER_P(Expr, hasAllLeavesOfBitwiseSatisfying,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  auto Condition = [&](const clang::Expr *E) -> bool {
+    return InnerMatcher.matches(*E, Finder, Builder);
+  };
+  return allLeavesOfBitwiseSatisfy(&Node, Condition);
 }
 
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
@@ -89,16 +102,43 @@ void BoolBitwiseOperationCheck::storeOptions(
 }
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
-  const auto BinOpRoot = traverse(
+  // Matcher for checking if all leaves in an expression are boolean type
+  auto BooleanLeaves = hasAllLeavesOfBitwiseSatisfying(hasType(booleanType()));
+
+  auto BitwiseOps = hasAnyOperatorName("|", "&", "|=", "&=");
+  auto CompoundBitwiseOps = hasAnyOperatorName("|=", "&=");
+  auto NotNestedInBitwise = unless(hasParent(binaryOperator(BitwiseOps)));
+  auto OptionalParent = optionally(hasParent(binaryOperator().bind("p")));
+
+  // Conditions that make it a boolean bitwise operation without ICE context:
+  // 1. Both LHS and RHS have all boolean leaves
+  // 2. LHS has boolean leaves AND it's a compound assignment
+  auto BothBoolean = allOf(hasLHS(BooleanLeaves), hasRHS(BooleanLeaves));
+  auto CompoundWithBoolLHS = allOf(hasLHS(BooleanLeaves), CompoundBitwiseOps);
+  auto NoContextNeeded = anyOf(BothBoolean, CompoundWithBoolLHS);
+
+  // At least one boolean operand (needs ICE context to be considered boolean
+  // bitwise)
+  auto AtLeastOneBoolean = anyOf(hasLHS(BooleanLeaves), hasRHS(BooleanLeaves));
+
+  // Matcher for binop that doesn't need ICE context
+  auto BinOpNoContext = traverse(
       TK_IgnoreUnlessSpelledInSource,
-      binaryOperator(unless(hasParent(binaryOperator(hasAnyOperatorName(
-                         "|", "&", "|=", "&=")))), // ignoring parenExpr
-                     hasAnyOperatorName("|", "&", "|=", "&="),
-                     optionally(hasParent(binaryOperator().bind("p"))))
+      binaryOperator(NotNestedInBitwise, BitwiseOps, OptionalParent,
+                     NoContextNeeded)
           .bind("binOpRoot"));
-  const auto BooleanICE =
-      implicitCastExpr(hasType(booleanType()), has(BinOpRoot)).bind("ice");
-  Finder->addMatcher(expr(anyOf(BooleanICE, BinOpRoot)), this);
+
+  // Matcher for binop that needs ICE context (at least one boolean operand,
+  // but not already covered by NoContextNeeded)
+  auto BinOpNeedsContext = traverse(
+      TK_IgnoreUnlessSpelledInSource,
+      binaryOperator(NotNestedInBitwise, BitwiseOps, OptionalParent,
+                     AtLeastOneBoolean, unless(NoContextNeeded))
+          .bind("binOpRoot"));
+  auto BooleanICE =
+      implicitCastExpr(hasType(booleanType()), has(BinOpNeedsContext));
+
+  Finder->addMatcher(expr(anyOf(BooleanICE, BinOpNoContext)), this);
 }
 
 void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
@@ -258,57 +298,6 @@ public:
                         const clang::BinaryOperator *ParentRoot)
       : Check(Check), SM(SM), Ctx(Ctx), ParentRoot(ParentRoot) {}
 
-  /// Checks if a binary operator is a bitwise operation that should be treated
-  /// as a boolean operation (i.e., should use logical operators instead).
-  ///
-  /// This function determines whether a bitwise operation (|, &, |=, &=, etc.)
-  /// is being used in a boolean context, which typically indicates the case
-  /// where logical operators (||, &&) should have been used instead.
-  ///
-  /// \param BinOp The binary operator to check. Must not be null.
-  ///
-  /// \returns true if the operation is a bitwise operation used in a boolean
-  ///          context (both operands are boolean, or it assigns to boolean),
-  ///          false otherwise.
-  bool isBooleanBitwise(const clang::BinaryOperator *BinOp,
-                        bool AssignsToBoolean) {
-    if (!BinOp)
-      return false;
-
-    if (!isBitwiseOperation(BinOp->getOpcodeStr()))
-      return false;
-
-    auto IsBooleanType = [&](const clang::Expr *E) {
-      return E->IgnoreImpCasts()
-          ->getType()
-          .getDesugaredType(Ctx)
-          ->isBooleanType();
-    };
-    const bool IsBooleanLHS = allLeavesSatisfy(BinOp->getLHS(), IsBooleanType);
-    const bool IsBooleanRHS = allLeavesSatisfy(BinOp->getRHS(), IsBooleanType);
-
-    // If both operands are boolean, this is definitely a boolean bitwise
-    // operation. Preserve the existing RootAssignsToBoolean value if set,
-    // otherwise set it to false (no assignment context).
-    if (IsBooleanLHS && IsBooleanRHS)
-      return true;
-
-    // Check if this operation assigns to a boolean type. This includes:
-    // 1. Operations where at least one operand is boolean and the result is
-    //    assigned to boolean (e.g., `bool x = a | b` where a is int and b is
-    //    boolean)
-    // 2. Compound assignments where the LHS is boolean (e.g., `x |= y` where
-    // y is int and x is boolean)
-    const bool IsRelevantAssignmentToBoolean =
-        ((IsBooleanLHS || IsBooleanRHS) && AssignsToBoolean) ||
-        (IsBooleanLHS && BinOp->isCompoundAssignmentOp());
-
-    // If this operation assigns to boolean, then this is a boolean bitwise
-    // operation. Set RootAssignsToBoolean to true to propagate this
-    // information up the call stack.
-    return IsRelevantAssignmentToBoolean;
-  }
-
   bool TraverseBinaryOperator(clang::BinaryOperator *BinOp) override {
     if (!BinOp)
       return true;
@@ -346,18 +335,14 @@ public:
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOpRoot = Result.Nodes.getNodeAs<BinaryOperator>("binOpRoot");
   const auto *ParentRoot = Result.Nodes.getNodeAs<BinaryOperator>("p");
-  const bool AssignsToBoolean =
-      Result.Nodes.getMap().find("ice") != Result.Nodes.getMap().end();
   assert(BinOpRoot);
 
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
 
   BinaryOperatorVisitor Visitor(*this, SM, Ctx, ParentRoot);
-  if (Visitor.isBooleanBitwise(BinOpRoot, AssignsToBoolean)) {
-    // TraverseStmt requires non-const pointer, but we're only reading
-    Visitor.TraverseStmt(const_cast<BinaryOperator *>(BinOpRoot));
-  }
+  // TraverseStmt requires non-const pointer, but we're only reading
+  Visitor.TraverseStmt(const_cast<BinaryOperator *>(BinOpRoot));
 }
 
 } // namespace clang::tidy::misc
