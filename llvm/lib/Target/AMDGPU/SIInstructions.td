@@ -395,6 +395,10 @@ def V_SUB_U64_PSEUDO : VPseudoInstSI <
   (outs VReg_64_AlignTarget:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
   [(set VReg_64_AlignTarget:$vdst, (DivergentBinFrag<sub> i64:$src0, i64:$src1))]
 >;
+
+def V_SUB_F64_PSEUDO : VPseudoInstSI <
+  (outs VReg_64_AlignTarget:$vdst), (ins FP64InputMods:$src0_modifiers, VSrc_f64:$src0, FP64InputMods:$src1_modifiers, VSrc_f64:$src1, Clamp0:$clamp, omod0:$omod)
+>;
 } // End usesCustomInserter = 1, Defs = [VCC]
 
 let usesCustomInserter = 1, Defs = [SCC] in {

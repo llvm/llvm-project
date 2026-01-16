@@ -6227,6 +6227,32 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::V_SUB_F64_PSEUDO: {
+    bool IsGFX12Plus = AMDGPU::isGFX12Plus(ST);
+    unsigned Opc =
+        IsGFX12Plus ? AMDGPU::V_ADD_F64_e64_gfx12 : AMDGPU::V_ADD_F64_e64;
+
+    MachineOperand &Dest = MI.getOperand(0);
+    MachineOperand &Src0Mod = MI.getOperand(1);
+    MachineOperand &Src0 = MI.getOperand(2);
+    MachineOperand &Src1Mod = MI.getOperand(3);
+    MachineOperand &Src1 = MI.getOperand(4);
+    MachineOperand &ClampMod = MI.getOperand(5);
+    MachineOperand &OMod = MI.getOperand(6);
+
+    unsigned Modifier = Src1Mod.getImm() ^ SISrcMods::NEG;
+
+    BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
+        .add(Src0Mod) // src0 modifiers
+        .add(Src0)
+        .addImm(Modifier) // src1 modifiers
+        .add(Src1)
+        .add(ClampMod) // clamp
+        .add(OMod);    // omod
+
+    MI.eraseFromParent();
+    return BB;
+  }
   case AMDGPU::S_ADD_CO_PSEUDO:
   case AMDGPU::S_SUB_CO_PSEUDO: {
     // This pseudo has a chance to be selected
