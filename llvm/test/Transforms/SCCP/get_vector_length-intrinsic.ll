@@ -109,7 +109,7 @@ exit:
 
 ; Can't simplify because %iv isn't guaranteed <= max lanes.
 define i32 @count_le_max_lanes_scalable_unknown() {
-; CHECK-LABEL: define range(i32 0, -1) i32 @count_le_max_lanes_scalable_unknown() {
+; CHECK-LABEL: define i32 @count_le_max_lanes_scalable_unknown() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -152,7 +152,7 @@ define i1 @result_le_overflow() {
 ; incorrect result range of [4, 13) being calculated. The correct result range
 ; must contain [4, 4097).
 define i32 @incorrect_result_range(i32 %x) vscale_range(16, 1024) {
-; CHECK-LABEL: define range(i32 4, 13) i32 @incorrect_result_range(
+; CHECK-LABEL: define range(i32 0, 4097) i32 @incorrect_result_range(
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
