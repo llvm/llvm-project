@@ -5553,9 +5553,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const DebugLoc &DL = MI.getDebugLoc();
   const SIInstrInfo *TII = ST.getInstrInfo();
-  const SIMachineFunctionInfo *Info =
-      MI.getMF()->getInfo<SIMachineFunctionInfo>();
-  bool IsIEEEMode = Info->getMode().IEEE;
   bool IsGFX12Plus = AMDGPU::isGFX12Plus(ST);
 
   // Reduction operations depend on whether the input operand is SGPR or VGPR.
@@ -5955,7 +5952,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       }
       case AMDGPU::V_MIN_F64_e64:
       case AMDGPU::V_MAX_F64_e64: {
-        bool NeedsNANCanonicalization = IsIEEEMode || IsGFX12Plus;
         int SrcIdx =
             AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src);
         const TargetRegisterClass *VregRC =
@@ -5971,8 +5967,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_MOV_B64_PSEUDO),
                 AccumulatorVReg)
             .addReg(Accumulator->getOperand(0).getReg());
-        Register LaneValueReg = LaneValue->getOperand(0).getReg();
-        Register AccumulatorReg = AccumulatorVReg;
         if (IsGFX12Plus) {
           switch (Opc) {
           case AMDGPU::V_MIN_F64_e64:
@@ -5983,29 +5977,11 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             break;
           }
         }
-        if (NeedsNANCanonicalization) {
-          unsigned MaxOpc =
-              IsGFX12Plus ? AMDGPU::V_MAX_NUM_F64_e64 : AMDGPU::V_MAX_F64_e64;
-          auto CanonicalizeForNaN = [&](Register Src,
-                                        MachineBasicBlock *MBB) -> Register {
-            Register Dst = MRI.createVirtualRegister(VregRC);
-            BuildMI(*MBB, I, DL, TII->get(MaxOpc), Dst)
-                .addImm(0) // src0 modifiers
-                .addReg(Src)
-                .addImm(0) // src1 modifiers
-                .addReg(Src)
-                .addImm(0)  // clamp
-                .addImm(0); // omod
-            return Dst;
-          };
-          LaneValueReg = CanonicalizeForNaN(LaneValueReg, ComputeLoop);
-          AccumulatorReg = CanonicalizeForNaN(AccumulatorReg, ComputeLoop);
-        }
         auto DstVregInst = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstVreg)
                                .addImm(0) // src0 modifiers
-                               .addReg(LaneValueReg)
+                               .addReg(LaneValue->getOperand(0).getReg())
                                .addImm(0) // src1 modifiers
-                               .addReg(AccumulatorReg)
+                               .addReg(AccumulatorVReg)
                                .addImm(0)  // clamp
                                .addImm(0); // omod
         auto ReadLaneLo =
