@@ -549,18 +549,19 @@ void ReachingDefInfo::getGlobalReachingDefs(MachineInstr *MI, Register Reg,
                                             bool &HasLiveInPath) const {
   // If there's a local def before MI, return it.
   int DefInstrId = getReachingDef(MI, Reg);
-  if (DefInstrId == FunctionLiveInMarker) {
+  if (DefInstrId == FunctionLiveInMarker)
     HasLiveInPath = true;
-    return;
-  }
   if (DefInstrId >= 0) {
     MachineInstr *LocalDef = getInstFromId(MI->getParent(), DefInstrId);
     Defs.insert(LocalDef);
     return;
   }
 
-  for (auto *MBB : MI->getParent()->predecessors())
-    getLiveOuts(MBB, Reg, Defs, HasLiveInPath);
+  for (auto *MBB : MI->getParent()->predecessors()) {
+    bool HasLiveInPathToPred = false;
+    getLiveOuts(MBB, Reg, Defs, HasLiveInPathToPred);
+    HasLiveInPath |= HasLiveInPathToPred;
+  }
 }
 
 void ReachingDefInfo::getLiveOuts(MachineBasicBlock *MBB, Register Reg,
