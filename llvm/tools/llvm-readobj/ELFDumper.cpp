@@ -5349,29 +5349,16 @@ enum Flags : uint8_t {
 } // namespace callgraph
 
 template <class ELFT>
-bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
-  Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
-      Obj.getSectionContents(*CGSection);
-  if (!SectionBytesOrErr) {
-    reportWarning(
-        createError("unable to read the SHT_LLVM_CALL_GRAPH type section " +
-                    toString(SectionBytesOrErr.takeError())),
-        FileName);
-    return false;
-  }
-
-  DataExtractor Data(SectionBytesOrErr.get(), Obj.isLE(),
-                     ObjF.getBytesInAddress());
+bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {  
+  ArrayRef<uint8_t> Contents =
+        unwrapOrError(FileName, Obj.getSectionContents(*CGSection));  
+  DataExtractor Data(Contents, Obj.isLE(), ObjF.getBytesInAddress());
   DataExtractor::Cursor C(0);
   uint64_t UnknownCount = 0;
   while (C && C.tell() < CGSection->sh_size) {
     uint8_t FormatVersionNumber = Data.getU8(C);
-    if (!C) {
-      reportWarning(createError("failed while reading FormatVersionNumber " +
-                                toString(C.takeError())),
-                    FileName);
-      return false;
-    }
+    assert(C && "always expect the one byte read to succeed when C.tell() < CGSection->sh_size is true.");
+    if(!C) consumeError(C.takeError()); // To satisfy builds with assertion disabled mode
     if (FormatVersionNumber != 0) {
       reportWarning(createError("unknown format version value [" +
                                 std::to_string(FormatVersionNumber) +
@@ -5383,7 +5370,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     uint8_t FlagsVal = Data.getU8(C);
     if (!C) {
       reportWarning(
-          createError("failed while reading call graph info's Flags " +
+          createError("failed while reading call graph info's Flags: " +
                       toString(C.takeError())),
           FileName);
       return false;
@@ -5406,7 +5393,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     if (!C) {
       reportWarning(
           createError(
-              "failed while reading call graph info function entry PC " +
+              "failed while reading call graph info function entry PC: " +
               toString(C.takeError())),
           FileName);
       return false;
@@ -5422,7 +5409,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     CGInfo.IsIndirectTarget = IsIndirectTarget;
     uint64_t TypeId = Data.getU64(C);
     if (!C) {
-      reportWarning(createError("failed while reading function type ID " +
+      reportWarning(createError("failed while reading function type ID: " +
                                 toString(C.takeError())),
                     FileName);
       return false;
@@ -5436,7 +5423,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
       uint64_t NumDirectCallees = Data.getULEB128(C);
       if (!C) {
         reportWarning(
-            createError("failed while reading number of direct callees " +
+            createError("failed while reading number of direct callees: " +
                         toString(C.takeError())),
             FileName);
         return false;
@@ -5447,7 +5434,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
         uint64_t Callee = static_cast<uint64_t>(
             Data.getUnsigned(C, sizeof(typename ELFT::uint)));
         if (!C) {
-          reportWarning(createError("failed while reading direct callee " +
+          reportWarning(createError("failed while reading direct callee: " +
                                     toString(C.takeError())),
                         FileName);
           return false;
@@ -5461,7 +5448,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
       if (!C) {
         reportWarning(
             createError(
-                "failed while reading number of indirect target type IDs " +
+                "failed while reading number of indirect target type IDs: " +
                 toString(C.takeError())),
             FileName);
         return false;
@@ -5471,7 +5458,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
         uint64_t TargetType = Data.getU64(C);
         if (!C) {
           reportWarning(
-              createError("failed while reading indirect target type ID " +
+              createError("failed while reading indirect target type ID: " +
                           toString(C.takeError())),
               FileName);
           return false;
@@ -8329,7 +8316,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
       });
   if (!MapOrErr || MapOrErr->empty()) {
-    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found " +
+    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found: " +
                               toString(MapOrErr.takeError())),
                   this->FileName);
     return;
