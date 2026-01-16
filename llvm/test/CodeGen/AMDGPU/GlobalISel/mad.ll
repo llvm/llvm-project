@@ -21,15 +21,11 @@ define amdgpu_ps void @mad_i64_uniform(i64 inreg %a, i64 inreg %b, ptr addrspace
 ;
 ; GFX90A-LABEL: mad_i64_uniform:
 ; GFX90A:       ; %bb.0:
-; GFX90A-NEXT:    v_mov_b32_e32 v4, s2
-; GFX90A-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], s0, v4, 0
-; GFX90A-NEXT:    v_mov_b32_e32 v4, s3
-; GFX90A-NEXT:    v_readfirstlane_b32 s4, v2
-; GFX90A-NEXT:    v_readfirstlane_b32 s5, v3
-; GFX90A-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], s0, v4, 0
-; GFX90A-NEXT:    v_mov_b32_e32 v6, s1
-; GFX90A-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v6, s2, v[2:3]
-; GFX90A-NEXT:    v_readfirstlane_b32 s0, v4
+; GFX90A-NEXT:    s_mul_i32 s4, s0, s2
+; GFX90A-NEXT:    s_mul_hi_u32 s5, s0, s2
+; GFX90A-NEXT:    s_mul_i32 s0, s0, s3
+; GFX90A-NEXT:    s_mul_i32 s1, s1, s2
+; GFX90A-NEXT:    s_add_u32 s0, s1, s0
 ; GFX90A-NEXT:    s_add_i32 s5, s5, s0
 ; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[4:5], s[4:5] op_sel:[0,1]
 ; GFX90A-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
@@ -68,11 +64,9 @@ define amdgpu_ps void @mad_u64_u32_uniform_carry(i32 inreg %a, i32 inreg %b, i64
 ;
 ; GFX90A-LABEL: mad_u64_u32_uniform_carry:
 ; GFX90A:       ; %bb.0:
-; GFX90A-NEXT:    v_mov_b32_e32 v4, s1
-; GFX90A-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], s0, v4, 0
-; GFX90A-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX90A-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX90A-NEXT:    s_add_u32 s0, s0, s2
+; GFX90A-NEXT:    s_mul_i32 s4, s0, s1
+; GFX90A-NEXT:    s_mul_hi_u32 s1, s0, s1
+; GFX90A-NEXT:    s_add_u32 s0, s4, s2
 ; GFX90A-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off

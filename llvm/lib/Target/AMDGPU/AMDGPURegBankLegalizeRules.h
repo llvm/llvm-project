@@ -134,7 +134,6 @@ enum RegBankLLTMappingApplyID {
   Vcc,
 
   // sgpr scalars, pointers, vectors and B-types
-  SgprS1,
   Sgpr16,
   Sgpr32,
   Sgpr64,

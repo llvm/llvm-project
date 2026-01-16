@@ -724,22 +724,17 @@ bool RegBankLegalizeHelper::lowerUniMAD64(MachineInstr &MI) {
   Register Src1 = MI.getOperand(3).getReg();
   Register Src2 = MI.getOperand(4).getReg();
 
-  bool Accumulate = !mi_match(Src2, MRI, MIPatternMatch::m_ZeroInt());
-
-  // Keep the multiplication on the SALU.
-  Register DstHi;
-  Register DstLo = B.buildMul({SgprRB, S32}, Src0, Src1).getReg(0);
-
   const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
 
+  // Keep the multiplication on the SALU.
+  Register DstLo = B.buildMul(SgprRB_S32, Src0, Src1).getReg(0);
+  Register DstHi = MRI.createVirtualRegister(SgprRB_S32);
   if (ST.hasScalarMulHiInsts()) {
-    DstHi =
-        B.buildInstr(AMDGPU::G_UMULH, {{SgprRB, S32}}, {Src0, Src1}).getReg(0);
+    B.buildInstr(AMDGPU::G_UMULH, {{DstHi}}, {Src0, Src1});
   } else {
-    auto VSrc0 = B.buildCopy({VgprRB, S32}, Src0);
-    auto VSrc1 = B.buildCopy({VgprRB, S32}, Src1);
-    auto MulHi = B.buildInstr(AMDGPU::G_UMULH, {{VgprRB, S32}}, {VSrc0, VSrc1});
-    DstHi = MRI.createVirtualRegister({SgprRB, S32});
+    auto VSrc0 = B.buildCopy(VgprRB_S32, Src0);
+    auto VSrc1 = B.buildCopy(VgprRB_S32, Src1);
+    auto MulHi = B.buildInstr(AMDGPU::G_UMULH, {VgprRB_S32}, {VSrc0, VSrc1});
     buildReadAnyLane(B, DstHi, MulHi.getReg(0), RBI);
   }
 
@@ -748,27 +743,22 @@ bool RegBankLegalizeHelper::lowerUniMAD64(MachineInstr &MI) {
   // The "carry-out" is defined as bit 64 of the result when computed as a
   // big integer. For unsigned multiply-add, this matches the usual
   // definition of carry-out.
-  Register Carry;
-
-  if (Accumulate) {
-    Register Src2Lo = MRI.createVirtualRegister({SgprRB, S32});
-    Register Src2Hi = MRI.createVirtualRegister({SgprRB, S32});
+  if (mi_match(Src2, MRI, MIPatternMatch::m_ZeroInt())) {
+    // No accumulate: result is just the multiplication, carry is 0.
+    B.buildMergeLikeInstr(Dst0, {DstLo, DstHi});
+    B.buildConstant(Dst1, 0);
+  } else {
+    // Accumulate: add Src2 to the multiplication result with carry chain.
+    Register Src2Lo = MRI.createVirtualRegister(SgprRB_S32);
+    Register Src2Hi = MRI.createVirtualRegister(SgprRB_S32);
     B.buildUnmerge({Src2Lo, Src2Hi}, Src2);
 
-    auto AddLo = B.buildUAddo({SgprRB, S32}, {SgprRB, S32}, DstLo, Src2Lo);
-    auto AddHi = B.buildUAdde({SgprRB, S32}, {SgprRB, S32}, DstHi, Src2Hi,
-                              AddLo.getReg(1));
-    DstLo = AddLo.getReg(0);
-    DstHi = AddHi.getReg(0);
-    Carry = AddHi.getReg(1);
-  } else {
-    Carry = B.buildConstant({SgprRB, S32}, 0).getReg(0);
+    auto AddLo = B.buildUAddo(SgprRB_S32, SgprRB_S32, DstLo, Src2Lo);
+    auto AddHi =
+        B.buildUAdde(SgprRB_S32, SgprRB_S32, DstHi, Src2Hi, AddLo.getReg(1));
+    B.buildMergeLikeInstr(Dst0, {AddLo.getReg(0), AddHi.getReg(0)});
+    B.buildCopy(Dst1, AddHi.getReg(1));
   }
-
-  B.buildMergeLikeInstr(Dst0, {DstLo, DstHi});
-
-  if (!MRI.use_empty(Dst1))
-    B.buildTrunc(Dst1, Carry);
 
   MI.eraseFromParent();
   return true;
@@ -993,7 +983,6 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
 LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   switch (ID) {
-  case SgprS1:
   case Vcc:
   case UniInVcc:
     return LLT::scalar(1);
@@ -1119,7 +1108,6 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   switch (ID) {
   case Vcc:
     return VccRB;
-  case SgprS1:
   case Sgpr16:
   case Sgpr32:
   case Sgpr32_WF:
@@ -1208,7 +1196,6 @@ bool RegBankLegalizeHelper::applyMappingDst(
     switch (MethodIDs[OpIdx]) {
     // vcc, sgpr and vgpr scalars, pointers and vectors
     case Vcc:
-    case SgprS1:
     case Sgpr16:
     case Sgpr32:
     case Sgpr64:
