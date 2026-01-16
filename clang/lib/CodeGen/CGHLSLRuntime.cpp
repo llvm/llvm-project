@@ -1113,12 +1113,7 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
       /*ReturnType=*/HandleTy, IntrID, Args, nullptr,
       Twine(GV->getName()).concat("_h"));
 
-  llvm::Value *HandleRef =
-      CGM.getLangOpts().EmitStructuredGEP
-          ? Builder.CreateStructuredGEP(GV->getValueType(), GV,
-                                        llvm::ConstantInt::get(CGM.IntTy, 0))
-          : Builder.CreateStructGEP(GV->getValueType(), GV, 0);
-
+  llvm::Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, 0);
   Builder.CreateAlignedStore(CreateHandle, HandleRef,
                              HandleRef->getPointerAlignment(DL));
   Builder.CreateRetVoid();
@@ -1402,18 +1397,9 @@ std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
   Indices.push_back(Idx);
   Indices.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 0));
 
-  if (CGF.getLangOpts().EmitStructuredGEP) {
-    if (auto *AT = dyn_cast<llvm::ArrayType>(Addr.getElementType()))
-      LayoutTy = llvm::ArrayType::get(LayoutTy, AT->getNumElements());
-    auto *GEP = CGF.Builder.CreateStructuredGEP(
-        LayoutTy, Addr.emitRawPointer(CGF), Indices, "cbufferidx");
-    Addr =
-        Address(GEP, GEP->getResultElementType(), RowAlignedSize, KnownNonNull);
-  } else {
-    llvm::Value *GEP = CGF.Builder.CreateGEP(LayoutTy, Addr.emitRawPointer(CGF),
-                                             Indices, "cbufferidx");
-    Addr = Address(GEP, Addr.getElementType(), RowAlignedSize, KnownNonNull);
-  }
+  llvm::Value *GEP = CGF.Builder.CreateGEP(LayoutTy, Addr.emitRawPointer(CGF),
+                                           Indices, "cbufferidx");
+  Addr = Address(GEP, Addr.getElementType(), RowAlignedSize, KnownNonNull);
 
   return CGF.MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
 }
@@ -1593,14 +1579,9 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   llvm::Type *FieldLLVMTy = CGM.getTypes().ConvertTypeForMem(FieldType);
   CharUnits Align = CharUnits::fromQuantity(
       CGF.CGM.getDataLayout().getABITypeAlign(FieldLLVMTy));
-
-  Value *Ptr = CGF.getLangOpts().EmitStructuredGEP
-                   ? CGF.Builder.CreateStructuredGEP(
-                         LayoutTy, Base.getPointer(CGF),
-                         llvm::ConstantInt::get(CGM.IntTy, FieldIdx))
-                   : CGF.Builder.CreateStructGEP(LayoutTy, Base.getPointer(CGF),
-                                                 FieldIdx, Field->getName());
-  Address Addr(Ptr, FieldLLVMTy, Align, KnownNonNull);
+  Address Addr(CGF.Builder.CreateStructGEP(LayoutTy, Base.getPointer(CGF),
+                                           FieldIdx, Field->getName()),
+               FieldLLVMTy, Align, KnownNonNull);
 
   LValue LV = LValue::MakeAddr(Addr, FieldType, CGM.getContext(),
                                LValueBaseInfo(AlignmentSource::Type),
