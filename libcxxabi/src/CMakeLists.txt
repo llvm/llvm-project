@@ -161,63 +161,64 @@ endif()
 include(WarningFlags)
 
 # Build the shared library.
-add_library(cxxabi_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
-cxx_add_warning_flags(cxxabi_shared_objects ${LIBCXXABI_ENABLE_WERROR} ${LIBCXXABI_ENABLE_PEDANTIC})
-if (LIBCXXABI_USE_LLVM_UNWINDER)
-  if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY OR
-      (DEFINED LIBUNWIND_ENABLE_SHARED AND NOT LIBUNWIND_ENABLE_SHARED))
-    target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared_objects) # propagate usage requirements
-    target_sources(cxxabi_shared_objects PUBLIC $<TARGET_OBJECTS:unwind_shared_objects>)
-  else()
-    target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared)
+if(LIBCXXABI_ENABLE_SHARED)
+  add_library(cxxabi_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
+  cxx_add_warning_flags(cxxabi_shared_objects ${LIBCXXABI_ENABLE_WERROR} ${LIBCXXABI_ENABLE_PEDANTIC})
+  if (LIBCXXABI_USE_LLVM_UNWINDER)
+    if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY OR
+        (DEFINED LIBUNWIND_ENABLE_SHARED AND NOT LIBUNWIND_ENABLE_SHARED))
+      target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared_objects) # propagate usage requirements
+      target_sources(cxxabi_shared_objects PUBLIC $<TARGET_OBJECTS:unwind_shared_objects>)
+    else()
+      target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared)
+    endif()
   endif()
-endif()
-target_link_libraries(cxxabi_shared_objects
-  PUBLIC cxxabi-headers
-  PRIVATE cxx-headers runtimes-libc-headers ${LIBCXXABI_LIBRARIES})
-if (NOT CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-  target_link_libraries(cxxabi_shared_objects PRIVATE ${LIBCXXABI_BUILTINS_LIBRARY})
-endif()
-set_target_properties(cxxabi_shared_objects
-  PROPERTIES
-    CXX_EXTENSIONS OFF
-    CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
-    COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
-    DEFINE_SYMBOL ""
-)
-if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
-  set_target_properties(cxxabi_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
-endif()
-target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
-
-# Build with -fsized-deallocation, which is default in recent versions of Clang.
-# TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
-target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fsized-deallocation)
-
-add_library(cxxabi_shared SHARED)
-set_target_properties(cxxabi_shared
-  PROPERTIES
-    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXXABI_ENABLE_SHARED}>,FALSE,TRUE>"
-    LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-    OUTPUT_NAME "${LIBCXXABI_SHARED_OUTPUT_NAME}"
-    SOVERSION "1"
-    VERSION "${LIBCXXABI_LIBRARY_VERSION}"
-)
-
-if (ZOS)
-  add_custom_command(TARGET cxxabi_shared POST_BUILD
-    COMMAND
-      ${LIBCXXABI_LIBCXX_PATH}/utils/zos_rename_dll_side_deck.sh
-      $<TARGET_LINKER_FILE_NAME:cxxabi_shared> $<TARGET_FILE_NAME:cxxabi_shared> "${LIBCXXABI_DLL_NAME}"
-    COMMENT "Rename dll name inside the side deck file"
-    WORKING_DIRECTORY $<TARGET_FILE_DIR:cxxabi_shared>
+  target_link_libraries(cxxabi_shared_objects
+    PUBLIC cxxabi-headers
+    PRIVATE cxx-headers runtimes-libc-headers ${LIBCXXABI_LIBRARIES})
+  if (NOT CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+    target_link_libraries(cxxabi_shared_objects PRIVATE ${LIBCXXABI_BUILTINS_LIBRARY})
+  endif()
+  set_target_properties(cxxabi_shared_objects
+    PROPERTIES
+      CXX_EXTENSIONS OFF
+      CXX_STANDARD 23
+      CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
+      COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
+      DEFINE_SYMBOL ""
   )
-endif ()
+  if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
+    set_target_properties(cxxabi_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
+  endif()
+  target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
-target_link_libraries(cxxabi_shared
-  PUBLIC cxxabi_shared_objects runtimes-libc-shared
-  PRIVATE ${LIBCXXABI_LIBRARIES})
+  # Build with -fsized-deallocation, which is default in recent versions of Clang.
+  # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+  target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fsized-deallocation)
+
+  add_library(cxxabi_shared SHARED)
+  set_target_properties(cxxabi_shared
+    PROPERTIES
+      LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
+      OUTPUT_NAME "${LIBCXXABI_SHARED_OUTPUT_NAME}"
+      SOVERSION "1"
+      VERSION "${LIBCXXABI_LIBRARY_VERSION}"
+  )
+
+  if (ZOS)
+    add_custom_command(TARGET cxxabi_shared POST_BUILD
+      COMMAND
+        ${LIBCXXABI_LIBCXX_PATH}/utils/zos_rename_dll_side_deck.sh
+        $<TARGET_LINKER_FILE_NAME:cxxabi_shared> $<TARGET_FILE_NAME:cxxabi_shared> "${LIBCXXABI_DLL_NAME}"
+      COMMENT "Rename dll name inside the side deck file"
+      WORKING_DIRECTORY $<TARGET_FILE_DIR:cxxabi_shared>
+    )
+  endif ()
+
+  target_link_libraries(cxxabi_shared
+    PUBLIC cxxabi_shared_objects runtimes-libc-shared
+    PRIVATE ${LIBCXXABI_LIBRARIES})
+endif()
 
 # TODO: Move this to libc++'s HandleLibCXXABI.cmake since this is effectively trying to control
 #       what libc++ re-exports.
@@ -262,61 +263,62 @@ if (LIBCXXABI_ENABLE_EXCEPTIONS)
 endif()
 
 # Build the static library.
-add_library(cxxabi_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
-cxx_add_warning_flags(cxxabi_static_objects ${LIBCXXABI_ENABLE_WERROR} ${LIBCXXABI_ENABLE_PEDANTIC})
-if (LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
-  target_link_libraries(cxxabi_static_objects PUBLIC unwind_static_objects) # propagate usage requirements
-  target_sources(cxxabi_static_objects PUBLIC $<TARGET_OBJECTS:unwind_static_objects>)
-endif()
-target_link_libraries(cxxabi_static_objects
-  PUBLIC cxxabi-headers
-  PRIVATE cxx-headers runtimes-libc-headers ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
-set_target_properties(cxxabi_static_objects
-  PROPERTIES
-    CXX_EXTENSIONS OFF
-    CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
-    COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
-)
-target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
-
-# Build with -fsized-deallocation, which is default in recent versions of Clang.
-# TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
-target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fsized-deallocation)
-
-if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
-  target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
-  # If the hermetic library doesn't define the operator new/delete functions
-  # then its code shouldn't declare them with hidden visibility.  They might
-  # actually be provided by a shared library at link time.
-  if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-    target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete=force-hidden)
-    if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
-      target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
-    endif()
+if(LIBCXXABI_ENABLE_STATIC)
+  add_library(cxxabi_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
+  cxx_add_warning_flags(cxxabi_static_objects ${LIBCXXABI_ENABLE_WERROR} ${LIBCXXABI_ENABLE_PEDANTIC})
+  if (LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
+    target_link_libraries(cxxabi_static_objects PUBLIC unwind_static_objects) # propagate usage requirements
+    target_sources(cxxabi_static_objects PUBLIC $<TARGET_OBJECTS:unwind_static_objects>)
   endif()
-  # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in libcxx's
-  # __config_site too. Define it in the same way here, to avoid redefinition
-  # conflicts.
-  target_compile_definitions(cxxabi_static_objects
-    PRIVATE
-      _LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS
-      _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
-endif()
-
-add_library(cxxabi_static STATIC)
-if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
-  target_link_libraries(cxxabi_static PUBLIC unwind_static runtimes-libc-static)
-endif()
-set_target_properties(cxxabi_static
-  PROPERTIES
-    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXXABI_ENABLE_STATIC}>,FALSE,TRUE>"
-    LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-    OUTPUT_NAME "${LIBCXXABI_STATIC_OUTPUT_NAME}"
+  target_link_libraries(cxxabi_static_objects
+    PUBLIC cxxabi-headers
+    PRIVATE cxx-headers runtimes-libc-headers ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+  set_target_properties(cxxabi_static_objects
+    PROPERTIES
+      CXX_EXTENSIONS OFF
+      CXX_STANDARD 23
+      CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
+      COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
   )
-target_link_libraries(cxxabi_static
-  PUBLIC cxxabi_static_objects
-  PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+  target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
+
+  # Build with -fsized-deallocation, which is default in recent versions of Clang.
+  # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+  target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fsized-deallocation)
+
+  if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
+    target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
+    # If the hermetic library doesn't define the operator new/delete functions
+    # then its code shouldn't declare them with hidden visibility.  They might
+    # actually be provided by a shared library at link time.
+    if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
+      target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete=force-hidden)
+      if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
+        target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+      endif()
+    endif()
+    # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in libcxx's
+    # __config_site too. Define it in the same way here, to avoid redefinition
+    # conflicts.
+    target_compile_definitions(cxxabi_static_objects
+      PRIVATE
+        _LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS
+        _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
+  endif()
+
+  add_library(cxxabi_static STATIC)
+  if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
+    target_link_libraries(cxxabi_static PUBLIC unwind_static runtimes-libc-static)
+  endif()
+  set_target_properties(cxxabi_static
+    PROPERTIES
+      LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
+      OUTPUT_NAME "${LIBCXXABI_STATIC_OUTPUT_NAME}"
+    )
+  target_link_libraries(cxxabi_static
+    PUBLIC cxxabi_static_objects
+    PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxxabi)

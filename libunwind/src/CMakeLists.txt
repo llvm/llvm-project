@@ -125,78 +125,80 @@ set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
 include(WarningFlags)
 
 # Build the shared library.
-add_library(unwind_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
-cxx_add_warning_flags(unwind_shared_objects ${LIBUNWIND_ENABLE_WERROR} ${LIBUNWIND_ENABLE_PEDANTIC})
-if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
-  target_compile_options(unwind_shared_objects PRIVATE /GR-)
-else()
-  target_compile_options(unwind_shared_objects PRIVATE -fno-rtti)
-endif()
-target_compile_options(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
-target_link_libraries(unwind_shared_objects
-  PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
-  PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
-set_target_properties(unwind_shared_objects
-  PROPERTIES
-    CXX_EXTENSIONS OFF
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
-    COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}"
-)
-if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
-  set_target_properties(unwind_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
-endif()
+if(LIBUNWIND_ENABLE_SHARED)
+  add_library(unwind_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
+  cxx_add_warning_flags(unwind_shared_objects ${LIBUNWIND_ENABLE_WERROR} ${LIBUNWIND_ENABLE_PEDANTIC})
+  if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
+    target_compile_options(unwind_shared_objects PRIVATE /GR-)
+  else()
+    target_compile_options(unwind_shared_objects PRIVATE -fno-rtti)
+  endif()
+  target_compile_options(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
+  target_link_libraries(unwind_shared_objects
+    PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
+    PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
+  set_target_properties(unwind_shared_objects
+    PROPERTIES
+      CXX_EXTENSIONS OFF
+      CXX_STANDARD 17
+      CXX_STANDARD_REQUIRED ON
+      COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}"
+  )
+  if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
+    set_target_properties(unwind_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
+  endif()
 
-add_library(unwind_shared SHARED)
-target_link_libraries(unwind_shared PUBLIC unwind_shared_objects runtimes-libc-shared)
-set_target_properties(unwind_shared
-  PROPERTIES
-    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,FALSE,TRUE>"
-    LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-    LINKER_LANGUAGE C
-    OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
-    VERSION     "${LIBUNWIND_LIBRARY_VERSION}"
-    SOVERSION   "1"
-)
+  add_library(unwind_shared SHARED)
+  target_link_libraries(unwind_shared PUBLIC unwind_shared_objects runtimes-libc-shared)
+  set_target_properties(unwind_shared
+    PROPERTIES
+      LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
+      LINKER_LANGUAGE C
+      OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
+      VERSION     "${LIBUNWIND_LIBRARY_VERSION}"
+      SOVERSION   "1"
+  )
+endif()
 
 # Build the static library.
-add_library(unwind_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
-cxx_add_warning_flags(unwind_static_objects ${LIBUNWIND_ENABLE_WERROR} ${LIBUNWIND_ENABLE_PEDANTIC})
-if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
-  target_compile_options(unwind_static_objects PRIVATE /GR-)
-else()
-  target_compile_options(unwind_static_objects PRIVATE -fno-rtti)
-endif()
-target_compile_options(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
-target_link_libraries(unwind_static_objects
-  PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
-  PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
-set_target_properties(unwind_static_objects
-  PROPERTIES
-    CXX_EXTENSIONS OFF
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
-    COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}"
-)
-
-if(LIBUNWIND_HIDE_SYMBOLS)
-  target_add_compile_flags_if_supported(unwind_static_objects PRIVATE -fvisibility=hidden)
-  target_add_compile_flags_if_supported(unwind_static_objects PRIVATE -fvisibility-global-new-delete=force-hidden)
-  if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
-    target_add_compile_flags_if_supported(unwind_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+if(LIBUNWIND_ENABLE_STATIC)
+  add_library(unwind_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
+  cxx_add_warning_flags(unwind_static_objects ${LIBUNWIND_ENABLE_WERROR} ${LIBUNWIND_ENABLE_PEDANTIC})
+  if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
+    target_compile_options(unwind_static_objects PRIVATE /GR-)
+  else()
+    target_compile_options(unwind_static_objects PRIVATE -fno-rtti)
   endif()
-  target_compile_definitions(unwind_static_objects PRIVATE _LIBUNWIND_HIDE_SYMBOLS)
-endif()
+  target_compile_options(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
+  target_link_libraries(unwind_static_objects
+    PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
+    PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
+  set_target_properties(unwind_static_objects
+    PROPERTIES
+      CXX_EXTENSIONS OFF
+      CXX_STANDARD 17
+      CXX_STANDARD_REQUIRED ON
+      COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}"
+  )
 
-add_library(unwind_static STATIC)
-target_link_libraries(unwind_static PUBLIC unwind_static_objects runtimes-libc-static)
-set_target_properties(unwind_static
-  PROPERTIES
-    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_STATIC}>,FALSE,TRUE>"
-    LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-    LINKER_LANGUAGE C
-    OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
-)
+  if(LIBUNWIND_HIDE_SYMBOLS)
+    target_add_compile_flags_if_supported(unwind_static_objects PRIVATE -fvisibility=hidden)
+    target_add_compile_flags_if_supported(unwind_static_objects PRIVATE -fvisibility-global-new-delete=force-hidden)
+    if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
+      target_add_compile_flags_if_supported(unwind_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+    endif()
+    target_compile_definitions(unwind_static_objects PRIVATE _LIBUNWIND_HIDE_SYMBOLS)
+  endif()
+
+  add_library(unwind_static STATIC)
+  target_link_libraries(unwind_static PUBLIC unwind_static_objects runtimes-libc-static)
+  set_target_properties(unwind_static
+    PROPERTIES
+      LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
+      LINKER_LANGUAGE C
+      OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
+  )
+endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(unwind)
