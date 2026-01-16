@@ -1481,6 +1481,8 @@ GetSubSubSubSectionValue(const DataExtractor &data, lldb::offset_t offset,
 
 void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
                                          ArchSpec &arch_spec) {
+  Log *log = GetLog(LLDBLog::Modules);
+
   lldb::offset_t offset = 0;
 
   uint8_t format_version = data.GetU8(&offset);
@@ -1489,19 +1491,22 @@ void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
 
   auto subsection_or_opt =
       FindSubSectionOffsetByName(data, offset, length, "riscv");
-  if (!subsection_or_opt.has_value()) {
-    // In fact 'riscv' sub-section is mandatory, so we shouldn't be here.
+  if (!subsection_or_opt) {
+    LLDB_LOGF(log,
+              "ObjectFileELF::%s Ill-formed .riscv.attributes section: "
+              "mandatory 'riscv' sub-section was not preserved",
+              __FUNCTION__);
     return;
   }
 
   auto subsubsection_or_opt = FindSubSubSectionOffsetByTag(
       data, *subsection_or_opt, llvm::ELFAttrs::File);
-  if (!subsubsection_or_opt.has_value())
+  if (!subsubsection_or_opt)
     return;
 
   auto value_or_opt = GetSubSubSubSectionValue(data, *subsubsection_or_opt,
                                                llvm::RISCVAttrs::ARCH);
-  if (!value_or_opt.has_value())
+  if (!value_or_opt)
     return;
 
   auto isa_info = llvm::RISCVISAInfo::parseArchString(
@@ -1732,10 +1737,8 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
             ParseARMAttributes(data, section_size, arch_spec);
         }
 
-        if (arch_spec.GetMachine() == llvm::Triple::riscv32 ||
-            arch_spec.GetMachine() == llvm::Triple::riscv64) {
+        if (arch_spec.GetTriple().isRISCV()) {
           DataExtractor data;
-
           if (sheader.sh_type == llvm::ELF::SHT_RISCV_ATTRIBUTES &&
               section_size != 0 &&
               data.SetData(object_data, sheader.sh_offset, section_size) ==
