@@ -23,7 +23,6 @@
 #include "llvm/Support/Registry.h"
 
 namespace clang::ssaf {
-class TUSummaryBuilder;
 
 /// Check if a TUSummaryExtractor was registered with a given name.
 bool isTUSummaryExtractorRegistered(llvm::StringRef SummaryName);
