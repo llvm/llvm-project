@@ -276,7 +276,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
 
   const bool always_create = false;
   error = ModuleList::GetSharedModule(module_spec, module_sp, old_modules,
-                                      did_create_ptr, always_create);
+                                      did_create_ptr);
 
   if (module_sp)
     module_sp->SetPlatformFileSpec(platform_file);
