@@ -456,7 +456,12 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     unsigned getNumWorkgroupAttributions() {
       auto attr = (*this)->getAttrOfType<IntegerAttr>(
           getNumWorkgroupAttributionsAttrName());
-      return attr ? attr.getInt() : 0;
+      if (!attr)
+        return 0;
+      int64_t value = attr.getInt();
+      assert(value >= 0 && value < std::numeric_limits<uint32_t>::max() &&
+             "invalid workgroup attribution count");
+      return value;
     }
 
     /// Return the index of the first workgroup attribution in the block argument
@@ -1006,7 +1011,12 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     unsigned getNumWorkgroupAttributions() {
       auto attr = (*this)->getAttrOfType<IntegerAttr>(
           getNumWorkgroupAttributionsAttrName());
-      return attr ? attr.getInt() : 0;
+      if (!attr)
+        return 0;
+      int64_t value = attr.getInt();
+      assert(value >= 0 && value < std::numeric_limits<uint32_t>::max() &&
+             "invalid workgroup attribution count");
+      return value;
     }
 
     /// Returns a list of block arguments that correspond to buffers located in

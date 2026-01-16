@@ -16,6 +16,7 @@
 
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -188,6 +189,8 @@ LogicalResult verifyRegionBranchOpInterface(Operation *op);
 /// possible successors.) Operands that not forwarded at all are not present in
 /// the mapping.
 using RegionBranchSuccessorMapping = DenseMap<OpOperand *, SmallVector<Value>>;
+using RegionBranchInverseSuccessorMapping =
+    DenseMap<Value, SmallVector<OpOperand *>>;
 
 /// This class represents a successor of a region. A region successor can either
 /// be another region, or the parent operation. If the successor is a region,
@@ -210,19 +213,19 @@ public:
       : successor(region), inputs(regionInputs) {
     assert(region && "Region must not be null");
   }
+
   /// Initialize a successor that branches back to/out of the parent operation.
   /// The target must be one of the recursive parent operations.
-  RegionSuccessor(Operation *successorOp, Operation::result_range results)
-      : successor(successorOp), inputs(ValueRange(results)) {
-    assert(successorOp && "Successor op must not be null");
+  static RegionSuccessor parent(Operation::result_range results) {
+    return RegionSuccessor(results);
   }
 
   /// Return the given region successor. Returns nullptr if the successor is the
   /// parent operation.
-  Region *getSuccessor() const { return dyn_cast<Region *>(successor); }
+  Region *getSuccessor() const { return successor; }
 
   /// Return true if the successor is the parent operation.
-  bool isParent() const { return isa<Operation *>(successor); }
+  bool isParent() const { return successor == nullptr; }
 
   /// Return the inputs to the successor that are remapped by the exit values of
   /// the current region.
@@ -237,7 +240,11 @@ public:
   }
 
 private:
-  llvm::PointerUnion<Region *, Operation *> successor{nullptr};
+  /// Private constructor to encourage the use of `RegionSuccessor::parent`.
+  RegionSuccessor(Operation::result_range results)
+      : successor(nullptr), inputs(ValueRange(results)) {}
+
+  Region *successor = nullptr;
   ValueRange inputs;
 };
 
@@ -349,6 +356,12 @@ Region *getEnclosingRepetitiveRegion(Operation *op);
 /// repetitively as per RegionBranchOpInterface or `nullptr` if no such region
 /// exists.
 Region *getEnclosingRepetitiveRegion(Value value);
+
+/// Populate canonicalization patterns that simplify successor operands/inputs
+/// of region branch operations. Only operations with the given name are
+/// matched.
+void populateRegionBranchOpInterfaceCanonicalizationPatterns(
+    RewritePatternSet &patterns, StringRef opName, PatternBenefit benefit = 1);
 
 //===----------------------------------------------------------------------===//
 // ControlFlow Traits
