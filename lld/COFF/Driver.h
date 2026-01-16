@@ -88,11 +88,13 @@ public:
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
                             StringRef parentName);
 
-  void enqueuePDB(StringRef Path) { enqueuePath(Path, false, false); }
+  enum class InputOpt { None, DefaultLib, WholeArchive };
+  void enqueuePDB(StringRef Path) { enqueuePath(Path, false); }
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
-  void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
+  void enqueuePath(StringRef path, bool lazy,
+                   InputOpt inputOpt = InputOpt::None);
 
   // Returns a list of chunks of selected symbols.
   std::vector<Chunk *> getChunks() const;
@@ -138,6 +140,10 @@ private:
   //
   std::string getImportName(bool asLib);
 
+  // Write fullly resolved path to repro file if /linkreprofullpathrsp
+  // is specified.
+  void handleReproFile(StringRef path, InputOpt inputOpt);
+
   void createImportLibrary(bool asLib);
 
   // Used by the resolver to parse .drectve section contents.
@@ -173,6 +179,7 @@ private:
                  bool lazy);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
                         StringRef parentName, uint64_t offsetInArchive);
+  void addThinArchiveBuffer(MemoryBufferRef mbref, StringRef symName);
 
   void enqueueTask(std::function<void()> task);
   bool run();
@@ -191,6 +198,9 @@ private:
   llvm::SmallString<128> universalCRTLibPath;
   int sdkMajor = 0;
   llvm::SmallString<128> windowsSdkLibPath;
+
+  // For linkreprofullpathrsp
+  std::unique_ptr<llvm::raw_fd_ostream> reproFile;
 
   // Functions below this line are defined in DriverUtils.cpp.
 
@@ -212,6 +222,9 @@ private:
   void parseMerge(StringRef);
   void parsePDBPageSize(StringRef);
   void parseSection(StringRef);
+  void parseSectionLayout(StringRef);
+
+  void parseSameAddress(StringRef);
 
   // Parses a MS-DOS stub file
   void parseDosStub(StringRef path);

@@ -2,6 +2,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.assert
     libc.include.complex
     libc.include.ctype
+    libc.include.elf
     libc.include.errno
     libc.include.features
     libc.include.fenv
@@ -23,4 +24,5 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.time
     libc.include.uchar
     libc.include.wchar
+    libc.include.wctype
 )

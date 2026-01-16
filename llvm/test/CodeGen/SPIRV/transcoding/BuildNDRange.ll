@@ -10,8 +10,8 @@
 
 define spir_kernel void @test() {
   %ndrange = alloca %struct.ndrange_t, align 4
-  call spir_func void @_Z10ndrange_1Djj(%struct.ndrange_t* sret(%struct.ndrange_t*) %ndrange, i32 123, i32 456)
+  call spir_func void @_Z10ndrange_1Djj(ptr sret(ptr) %ndrange, i32 123, i32 456)
   ret void
 }
 
-declare spir_func void @_Z10ndrange_1Djj(%struct.ndrange_t* sret(%struct.ndrange_t*), i32, i32)
+declare spir_func void @_Z10ndrange_1Djj(ptr sret(ptr), i32, i32)

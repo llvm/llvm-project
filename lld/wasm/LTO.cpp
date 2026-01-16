@@ -10,33 +10,25 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
-#include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <string>
-#include <system_error>
 #include <vector>
 
 using namespace llvm;
@@ -59,14 +51,23 @@ static lto::Config createConfig() {
   c.DisableVerify = ctx.arg.disableVerify;
   c.DiagHandler = diagnosticHandler;
   c.OptLevel = ctx.arg.ltoo;
+  c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
   c.CGOptLevel = ctx.arg.ltoCgo;
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;
   c.AlwaysEmitRegularLTOObj = !ctx.arg.ltoObjPath.empty();
 
-  if (ctx.arg.relocatable)
+  if (auto relocModel = getRelocModelFromCMModel())
+    c.RelocModel = *relocModel;
+  else if (ctx.arg.relocatable)
     c.RelocModel = std::nullopt;
   else if (ctx.isPic)
+    c.RelocModel = Reloc::PIC_;
+  else if (ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic)
+    // With ImportDynamic we also need to use the PIC relocation model so that
+    // external symbols are references via the GOT.
+    // TODO(sbc): This should probably be Reloc::DynamicNoPIC, but the backend
+    // doesn't currently support that.
     c.RelocModel = Reloc::PIC_;
   else
     c.RelocModel = Reloc::Static;
@@ -183,10 +184,11 @@ static void thinLTOCreateEmptyIndexFiles() {
 
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
-std::vector<StringRef> BitcodeCompiler::compile() {
+SmallVector<InputFile *, 0> BitcodeCompiler::compile() {
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);
+  filenames.resize(maxTasks);
 
   // The --thinlto-cache-dir option specifies the path to a directory in which
   // to cache native object files for ThinLTO incremental builds. If a path was
@@ -233,14 +235,20 @@ std::vector<StringRef> BitcodeCompiler::compile() {
   if (!ctx.arg.thinLTOCacheDir.empty())
     pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files);
 
-  std::vector<StringRef> ret;
+  SmallVector<InputFile *, 0> ret;
   for (unsigned i = 0; i != maxTasks; ++i) {
     StringRef objBuf = buf[i].second;
     StringRef bitcodeFilePath = buf[i].first;
+    if (files[i]) {
+      // When files[i] is not null, we get the native relocatable file from the
+      // cache. filenames[i] contains the original BitcodeFile's identifier.
+      objBuf = files[i]->getBuffer();
+      bitcodeFilePath = filenames[i];
+    } else {
+      objBuf = buf[i].second;
+      bitcodeFilePath = buf[i].first;
+    }
     if (objBuf.empty())
-      continue;
-    ret.emplace_back(objBuf.data(), objBuf.size());
-    if (!ctx.arg.saveTemps)
       continue;
 
     // If the input bitcode file is path/to/x.o and -o specifies a.out, the
@@ -266,7 +274,9 @@ std::vector<StringRef> BitcodeCompiler::compile() {
       sys::path::remove_dots(path, true);
       ltoObjName = saver().save(path.str());
     }
-    saveBuffer(objBuf, ltoObjName);
+    if (ctx.arg.saveTemps)
+      saveBuffer(objBuf, ltoObjName);
+    ret.emplace_back(createObjectFile(MemoryBufferRef(objBuf, ltoObjName)));
   }
 
   if (!ctx.arg.ltoObjPath.empty()) {
@@ -274,10 +284,6 @@ std::vector<StringRef> BitcodeCompiler::compile() {
     for (unsigned i = 1; i != maxTasks; ++i)
       saveBuffer(buf[i].second, ctx.arg.ltoObjPath + Twine(i));
   }
-
-  for (std::unique_ptr<MemoryBuffer> &file : files)
-    if (file)
-      ret.push_back(file->getBuffer());
 
   return ret;
 }

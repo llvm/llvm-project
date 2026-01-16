@@ -13,10 +13,12 @@
 #include "SystemZRegisterInfo.h"
 #include "SystemZSubtarget.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -136,7 +138,7 @@ void SystemZELFFrameLowering::orderFrameObjects(
       return ADensityCmp < BDensityCmp;
     return A.DPairCount * B.ObjectSize < B.DPairCount * A.ObjectSize;
   };
-  std::stable_sort(SortingObjects.begin(), SortingObjects.end(), CmpD12);
+  llvm::stable_sort(SortingObjects, CmpD12);
 
   // Now modify the original list to represent the final order that
   // we want.
@@ -358,12 +360,12 @@ bool SystemZELFFrameLowering::spillCalleeSavedRegisters(
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::FP64BitRegClass, TRI, Register());
+                               &SystemZ::FP64BitRegClass, Register());
     }
     if (SystemZ::VR128BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::VR128BitRegClass, TRI, Register());
+                               &SystemZ::VR128BitRegClass, Register());
     }
   }
 
@@ -387,10 +389,10 @@ bool SystemZELFFrameLowering::restoreCalleeSavedRegisters(
     MCRegister Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::FP64BitRegClass, TRI, Register());
+                                &SystemZ::FP64BitRegClass, Register());
     if (SystemZ::VR128BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::VR128BitRegClass, TRI, Register());
+                                &SystemZ::VR128BitRegClass, Register());
   }
 
   // Restore call-saved GPRs (but not call-clobbered varargs, which at
@@ -530,7 +532,7 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
   const SystemZSubtarget &STI = MF.getSubtarget<SystemZSubtarget>();
   const SystemZTargetLowering &TLI = *STI.getTargetLowering();
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
-  auto *ZII = static_cast<const SystemZInstrInfo *>(STI.getInstrInfo());
+  auto *ZII = STI.getInstrInfo();
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.begin();
   const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
@@ -557,6 +559,34 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
   DebugLoc DL;
+  // Add mcount instrumentation if necessary.
+  if (MF.getFunction()
+          .getFnAttribute("systemz-instrument-function-entry")
+          .getValueAsString() == "mcount") {
+
+    // Store return address 8 bytes above stack pointer.
+    BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::STG))
+        .addReg(SystemZ::R14D)
+        .addReg(SystemZ::R15D)
+        .addImm(8)
+        .addReg(0);
+
+    // Call mcount (Regmask from CC AnyReg since mcount preserves all normal
+    // argument registers).
+    const uint32_t *Mask = MF.getSubtarget<SystemZSubtarget>()
+                               .getSpecialRegisters()
+                               ->getCallPreservedMask(MF, CallingConv::AnyReg);
+    BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::CallBRASL))
+        .addExternalSymbol("mcount")
+        .addRegMask(Mask);
+
+    // Reload return address from 8 bytes above stack pointer.
+    BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::LG))
+        .addReg(SystemZ::R14D, RegState::Define)
+        .addReg(SystemZ::R15D)
+        .addImm(8)
+        .addReg(0);
+  }
 
   // The current offset of the stack pointer from the CFA.
   int64_t SPOffsetFromCFA = -SystemZMC::ELFCFAOffsetFromInitialSP;
@@ -1127,12 +1157,12 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::FP64BitRegClass, TRI, Register());
+                               &SystemZ::FP64BitRegClass, Register());
     }
     if (SystemZ::VR128BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::VR128BitRegClass, TRI, Register());
+                               &SystemZ::VR128BitRegClass, Register());
     }
   }
 
@@ -1159,10 +1189,10 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
     MCRegister Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::FP64BitRegClass, TRI, Register());
+                                &SystemZ::FP64BitRegClass, Register());
     if (SystemZ::VR128BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::VR128BitRegClass, TRI, Register());
+                                &SystemZ::VR128BitRegClass, Register());
   }
 
   // Restore call-saved GPRs (but not call-clobbered varargs, which at
@@ -1206,7 +1236,7 @@ void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
   const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.begin();
-  auto *ZII = static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
+  auto *ZII = Subtarget.getInstrInfo();
   auto &Regs = Subtarget.getSpecialRegisters<SystemZXPLINK64Registers>();
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
   MachineInstr *StoreInstr = nullptr;
@@ -1321,7 +1351,7 @@ void SystemZXPLINKFrameLowering::emitEpilogue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
-  auto *ZII = static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
+  auto *ZII = Subtarget.getInstrInfo();
   auto &Regs = Subtarget.getSpecialRegisters<SystemZXPLINK64Registers>();
 
   // Skip the return instruction.

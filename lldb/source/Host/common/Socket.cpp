@@ -69,7 +69,7 @@ SharedSocket::SharedSocket(const Socket *socket, Status &error) {
   m_fd = kInvalidFD;
 
   // Create a pipe to transfer WSAPROTOCOL_INFO to the child process.
-  error = m_socket_pipe.CreateNew(true);
+  error = m_socket_pipe.CreateNew();
   if (error.Fail())
     return;
 
@@ -234,6 +234,23 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
   return socket_up;
 }
 
+llvm::Expected<Socket::Pair>
+Socket::CreatePair(std::optional<SocketProtocol> protocol) {
+  constexpr SocketProtocol kBestProtocol =
+      LLDB_ENABLE_POSIX ? ProtocolUnixDomain : ProtocolTcp;
+  switch (protocol.value_or(kBestProtocol)) {
+  case ProtocolTcp:
+    return TCPSocket::CreatePair();
+#if LLDB_ENABLE_POSIX
+  case ProtocolUnixDomain:
+  case ProtocolUnixAbstract:
+    return DomainSocket::CreatePair();
+#endif
+  default:
+    return llvm::createStringError("Unsupported protocol");
+  }
+}
+
 llvm::Expected<std::unique_ptr<Socket>>
 Socket::TcpConnect(llvm::StringRef host_and_port) {
   Log *log = GetLog(LLDBLog::Connection);
@@ -271,7 +288,8 @@ Socket::UdpConnect(llvm::StringRef host_and_port) {
   return UDPSocket::CreateConnected(host_and_port);
 }
 
-llvm::Expected<Socket::HostAndPort> Socket::DecodeHostAndPort(llvm::StringRef host_and_port) {
+llvm::Expected<Socket::HostAndPort>
+Socket::DecodeHostAndPort(llvm::StringRef host_and_port) {
   static llvm::Regex g_regex("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)");
   HostAndPort ret;
   llvm::SmallVector<llvm::StringRef, 3> matches;
@@ -295,8 +313,7 @@ llvm::Expected<Socket::HostAndPort> Socket::DecodeHostAndPort(llvm::StringRef ho
 }
 
 IOObject::WaitableHandle Socket::GetWaitableHandle() {
-  // TODO: On Windows, use WSAEventSelect
-  return m_socket;
+  return (IOObject::WaitableHandle)m_socket;
 }
 
 Status Socket::Read(void *buf, size_t &num_bytes) {
@@ -347,8 +364,8 @@ Status Socket::Write(const void *buf, size_t &num_bytes) {
               ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
               " (error = %s)",
               static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
-              static_cast<uint64_t>(src_len),
-              static_cast<int64_t>(bytes_sent), error.AsCString());
+              static_cast<uint64_t>(src_len), static_cast<int64_t>(bytes_sent),
+              error.AsCString());
   }
 
   return error;
@@ -475,4 +492,29 @@ NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
 llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &OS,
                                             const Socket::HostAndPort &HP) {
   return OS << '[' << HP.hostname << ']' << ':' << HP.port;
+}
+
+std::optional<Socket::ProtocolModePair>
+Socket::GetProtocolAndMode(llvm::StringRef scheme) {
+  // Keep in sync with ConnectionFileDescriptor::Connect.
+  return llvm::StringSwitch<std::optional<ProtocolModePair>>(scheme)
+      .Case("listen", ProtocolModePair{SocketProtocol::ProtocolTcp,
+                                       SocketMode::ModeAccept})
+      .Cases({"accept", "unix-accept"},
+             ProtocolModePair{SocketProtocol::ProtocolUnixDomain,
+                              SocketMode::ModeAccept})
+      .Case("unix-abstract-accept",
+            ProtocolModePair{SocketProtocol::ProtocolUnixAbstract,
+                             SocketMode::ModeAccept})
+      .Cases({"connect", "tcp-connect", "connection"},
+             ProtocolModePair{SocketProtocol::ProtocolTcp,
+                              SocketMode::ModeConnect})
+      .Case("udp", ProtocolModePair{SocketProtocol::ProtocolTcp,
+                                    SocketMode::ModeConnect})
+      .Case("unix-connect", ProtocolModePair{SocketProtocol::ProtocolUnixDomain,
+                                             SocketMode::ModeConnect})
+      .Case("unix-abstract-connect",
+            ProtocolModePair{SocketProtocol::ProtocolUnixAbstract,
+                             SocketMode::ModeConnect})
+      .Default(std::nullopt);
 }

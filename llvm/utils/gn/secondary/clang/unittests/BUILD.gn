@@ -9,6 +9,7 @@ group("unittests") {
     "Basic:BasicTests",
     "CodeGen:ClangCodeGenTests",
     "CrossTU:CrossTUTests",
+    "DependencyScanning:ClangDependencyScanningTests",
     "Driver:ClangDriverTests",
     "Format:FormatTests",
     "Frontend:FrontendTests",
@@ -28,6 +29,7 @@ group("unittests") {
     deps += [
       "Analysis:ClangAnalysisTests",
       "Analysis/FlowSensitive:ClangAnalysisFlowSensitiveTests",
+      "Analysis/Scalable:ClangScalableAnalysisTests",
       "StaticAnalyzer:StaticAnalysisTests",
     ]
   }
@@ -45,4 +47,11 @@ group("unittests") {
     ]
   }
   testonly = true
+}
+
+# CMake puts most tests into an AllClangUnitTests target. The GN build
+# doesn't do this. This keeps the sync script happy.
+group("dummy_sources") {
+  sources = [ "AllClangUnitTests.cpp" ]
+  not_needed(sources)
 }

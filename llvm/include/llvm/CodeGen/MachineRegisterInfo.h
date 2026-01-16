@@ -23,12 +23,14 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -50,7 +52,7 @@ using RegClassOrRegBank =
 /// etc.
 class MachineRegisterInfo {
 public:
-  class Delegate {
+  class LLVM_ABI Delegate {
     virtual void anchor();
 
   public:
@@ -150,7 +152,7 @@ private:
   std::vector<std::pair<MCRegister, Register>> LiveIns;
 
 public:
-  explicit MachineRegisterInfo(MachineFunction *MF);
+  LLVM_ABI explicit MachineRegisterInfo(MachineFunction *MF);
   MachineRegisterInfo(const MachineRegisterInfo &) = delete;
   MachineRegisterInfo &operator=(const MachineRegisterInfo &) = delete;
 
@@ -197,21 +199,15 @@ public:
   // The TwoAddressInstructionPass and PHIElimination passes take the machine
   // function out of SSA form when they introduce multiple defs per virtual
   // register.
-  bool isSSA() const {
-    return MF->getProperties().hasProperty(
-        MachineFunctionProperties::Property::IsSSA);
-  }
+  bool isSSA() const { return MF->getProperties().hasIsSSA(); }
 
   // leaveSSA - Indicates that the machine function is no longer in SSA form.
-  void leaveSSA() {
-    MF->getProperties().reset(MachineFunctionProperties::Property::IsSSA);
-  }
+  void leaveSSA() { MF->getProperties().resetIsSSA(); }
 
   /// tracksLiveness - Returns true when tracking register liveness accurately.
   /// (see MachineFUnctionProperties::Property description for details)
   bool tracksLiveness() const {
-    return MF->getProperties().hasProperty(
-        MachineFunctionProperties::Property::TracksLiveness);
+    return MF->getProperties().hasTracksLiveness();
   }
 
   /// invalidateLiveness - Indicates that register liveness is no longer being
@@ -219,10 +215,7 @@ public:
   ///
   /// This should be called by late passes that invalidate the liveness
   /// information.
-  void invalidateLiveness() {
-    MF->getProperties().reset(
-        MachineFunctionProperties::Property::TracksLiveness);
-  }
+  void invalidateLiveness() { MF->getProperties().resetTracksLiveness(); }
 
   /// Returns true if liveness for register class @p RC should be tracked at
   /// the subregister level.
@@ -248,31 +241,32 @@ public:
   /// Disables the register from the list of CSRs.
   /// I.e. the register will not appear as part of the CSR mask.
   /// \see UpdatedCalleeSavedRegs.
-  void disableCalleeSavedRegister(MCRegister Reg);
+  LLVM_ABI void disableCalleeSavedRegister(MCRegister Reg);
 
   /// Returns list of callee saved registers.
   /// The function returns the updated CSR list (after taking into account
   /// registers that are disabled from the CSR list).
-  const MCPhysReg *getCalleeSavedRegs() const;
+  LLVM_ABI const MCPhysReg *getCalleeSavedRegs() const;
 
   /// Sets the updated Callee Saved Registers list.
   /// Notice that it will override ant previously disabled/saved CSRs.
-  void setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs);
+  LLVM_ABI void setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs);
 
   // Strictly for use by MachineInstr.cpp.
-  void addRegOperandToUseList(MachineOperand *MO);
+  LLVM_ABI void addRegOperandToUseList(MachineOperand *MO);
 
   // Strictly for use by MachineInstr.cpp.
-  void removeRegOperandFromUseList(MachineOperand *MO);
+  LLVM_ABI void removeRegOperandFromUseList(MachineOperand *MO);
 
   // Strictly for use by MachineInstr.cpp.
-  void moveOperands(MachineOperand *Dst, MachineOperand *Src, unsigned NumOps);
+  LLVM_ABI void moveOperands(MachineOperand *Dst, MachineOperand *Src,
+                             unsigned NumOps);
 
   /// Verify the sanity of the use list for Reg.
-  void verifyUseList(Register Reg) const;
+  LLVM_ABI void verifyUseList(Register Reg) const;
 
   /// Verify the use list of all registers.
-  void verifyUseLists() const;
+  LLVM_ABI void verifyUseLists() const;
 
   /// reg_begin/reg_end - Provide iteration support to walk over all definitions
   /// and uses of a register within the MachineFunction that corresponds to this
@@ -578,17 +572,24 @@ public:
 
   /// hasOneNonDBGUse - Return true if there is exactly one non-Debug
   /// use of the specified register.
-  bool hasOneNonDBGUse(Register RegNo) const;
+  LLVM_ABI bool hasOneNonDBGUse(Register RegNo) const;
 
   /// hasOneNonDBGUse - Return true if there is exactly one non-Debug
   /// instruction using the specified register. Said instruction may have
   /// multiple uses.
-  bool hasOneNonDBGUser(Register RegNo) const;
+  LLVM_ABI bool hasOneNonDBGUser(Register RegNo) const;
 
+  /// If the register has a single non-Debug use, returns it; otherwise returns
+  /// nullptr.
+  LLVM_ABI MachineOperand *getOneNonDBGUse(Register RegNo) const;
+
+  /// If the register has a single non-Debug instruction using the specified
+  /// register, returns it; otherwise returns nullptr.
+  LLVM_ABI MachineInstr *getOneNonDBGUser(Register RegNo) const;
 
   /// hasAtMostUses - Return true if the given register has at most \p MaxUsers
   /// non-debug user instructions.
-  bool hasAtMostUserInstrs(Register Reg, unsigned MaxUsers) const;
+  LLVM_ABI bool hasAtMostUserInstrs(Register Reg, unsigned MaxUsers) const;
 
   /// replaceRegWith - Replace all instances of FromReg with ToReg in the
   /// machine function.  This is like llvm-level X->replaceAllUsesWith(Y),
@@ -609,34 +610,33 @@ public:
   /// Note that if ToReg is a physical register the function will replace and
   /// apply sub registers to ToReg in order to obtain a final/proper physical
   /// register.
-  void replaceRegWith(Register FromReg, Register ToReg);
+  LLVM_ABI void replaceRegWith(Register FromReg, Register ToReg);
 
   /// getVRegDef - Return the machine instr that defines the specified virtual
   /// register or null if none is found.  This assumes that the code is in SSA
   /// form, so there should only be one definition.
-  MachineInstr *getVRegDef(Register Reg) const;
+  LLVM_ABI MachineInstr *getVRegDef(Register Reg) const;
 
   /// getUniqueVRegDef - Return the unique machine instr that defines the
   /// specified virtual register or null if none is found.  If there are
   /// multiple definitions or no definition, return null.
-  MachineInstr *getUniqueVRegDef(Register Reg) const;
+  LLVM_ABI MachineInstr *getUniqueVRegDef(Register Reg) const;
 
   /// clearKillFlags - Iterate over all the uses of the given register and
   /// clear the kill flag from the MachineOperand. This function is used by
   /// optimization passes which extend register lifetimes and need only
   /// preserve conservative kill flag information.
-  void clearKillFlags(Register Reg) const;
+  LLVM_ABI void clearKillFlags(Register Reg) const;
 
-  void dumpUses(Register RegNo) const;
+  LLVM_ABI void dumpUses(Register RegNo) const;
 
   /// Returns true if PhysReg is unallocatable and constant throughout the
   /// function. Writing to a constant register has no effect.
-  bool isConstantPhysReg(MCRegister PhysReg) const;
+  LLVM_ABI bool isConstantPhysReg(MCRegister PhysReg) const;
 
-  /// Get an iterator over the pressure sets affected by the given physical or
-  /// virtual register. If RegUnit is physical, it must be a register unit (from
-  /// MCRegUnitIterator).
-  PSetIterator getPressureSets(Register RegUnit) const;
+  /// Get an iterator over the pressure sets affected by the virtual register
+  /// or register unit.
+  PSetIterator getPressureSets(VirtRegOrUnit VRegOrUnit) const;
 
   //===--------------------------------------------------------------------===//
   // Virtual Register Info
@@ -690,10 +690,10 @@ public:
   }
 
   /// setRegClass - Set the register class of the specified virtual register.
-  void setRegClass(Register Reg, const TargetRegisterClass *RC);
+  LLVM_ABI void setRegClass(Register Reg, const TargetRegisterClass *RC);
 
   /// Set the register bank to \p RegBank for \p Reg.
-  void setRegBank(Register Reg, const RegisterBank &RegBank);
+  LLVM_ABI void setRegBank(Register Reg, const RegisterBank &RegBank);
 
   void setRegClassOrRegBank(Register Reg,
                             const RegClassOrRegBank &RCOrRB){
@@ -711,9 +711,9 @@ public:
   /// Use RegisterBankInfo::constrainGenericRegister in GlobalISel's
   /// InstructionSelect pass and constrainRegAttrs in every other pass,
   /// including non-select passes of GlobalISel, instead.
-  const TargetRegisterClass *constrainRegClass(Register Reg,
-                                               const TargetRegisterClass *RC,
-                                               unsigned MinNumRegs = 0);
+  LLVM_ABI const TargetRegisterClass *
+  constrainRegClass(Register Reg, const TargetRegisterClass *RC,
+                    unsigned MinNumRegs = 0);
 
   /// Constrain the register class or the register bank of the virtual register
   /// \p Reg (and low-level type) to be a common subclass or a common bank of
@@ -726,8 +726,8 @@ public:
   /// \note Use this method instead of constrainRegClass and
   /// RegisterBankInfo::constrainGenericRegister everywhere but SelectionDAG
   /// ISel / FastISel and GlobalISel's InstructionSelect pass respectively.
-  bool constrainRegAttrs(Register Reg, Register ConstrainingReg,
-                         unsigned MinNumRegs = 0);
+  LLVM_ABI bool constrainRegAttrs(Register Reg, Register ConstrainingReg,
+                                  unsigned MinNumRegs = 0);
 
   /// recomputeRegClass - Try to find a legal super-class of Reg's register
   /// class that still satisfies the constraints from the instructions using
@@ -736,12 +736,12 @@ public:
   /// This method can be used after constraints have been removed from a
   /// virtual register, for example after removing instructions or splitting
   /// the live range.
-  bool recomputeRegClass(Register Reg);
+  LLVM_ABI bool recomputeRegClass(Register Reg);
 
   /// createVirtualRegister - Create and return a new virtual register in the
   /// function with the specified register class.
-  Register createVirtualRegister(const TargetRegisterClass *RegClass,
-                                 StringRef Name = "");
+  LLVM_ABI Register createVirtualRegister(const TargetRegisterClass *RegClass,
+                                          StringRef Name = "");
 
   /// All attributes(register class or bank and low-level type) a virtual
   /// register can have.
@@ -759,11 +759,12 @@ public:
 
   /// Create and return a new virtual register in the function with the
   /// specified register attributes(register class or bank and low level type).
-  Register createVirtualRegister(VRegAttrs RegAttr, StringRef Name = "");
+  LLVM_ABI Register createVirtualRegister(VRegAttrs RegAttr,
+                                          StringRef Name = "");
 
   /// Create and return a new virtual register in the function with the same
   /// attributes as the given register.
-  Register cloneVirtualRegister(Register VReg, StringRef Name = "");
+  LLVM_ABI Register cloneVirtualRegister(Register VReg, StringRef Name = "");
 
   /// Get the low-level type of \p Reg or LLT{} if Reg is not a generic
   /// (target independent) virtual register.
@@ -774,28 +775,28 @@ public:
   }
 
   /// Set the low-level type of \p VReg to \p Ty.
-  void setType(Register VReg, LLT Ty);
+  LLVM_ABI void setType(Register VReg, LLT Ty);
 
   /// Create and return a new generic virtual register with low-level
   /// type \p Ty.
-  Register createGenericVirtualRegister(LLT Ty, StringRef Name = "");
+  LLVM_ABI Register createGenericVirtualRegister(LLT Ty, StringRef Name = "");
 
   /// Remove all types associated to virtual registers (after instruction
   /// selection and constraining of all generic virtual registers).
-  void clearVirtRegTypes();
+  LLVM_ABI void clearVirtRegTypes();
 
   /// Creates a new virtual register that has no register class, register bank
   /// or size assigned yet. This is only allowed to be used
   /// temporarily while constructing machine instructions. Most operations are
   /// undefined on an incomplete register until one of setRegClass(),
   /// setRegBank() or setSize() has been called on it.
-  Register createIncompleteVirtualRegister(StringRef Name = "");
+  LLVM_ABI Register createIncompleteVirtualRegister(StringRef Name = "");
 
   /// getNumVirtRegs - Return the number of virtual registers created.
   unsigned getNumVirtRegs() const { return VRegInfo.size(); }
 
   /// clearVirtRegs - Remove all virtual registers (after physreg assignment).
-  void clearVirtRegs();
+  LLVM_ABI void clearVirtRegs();
 
   /// setRegAllocationHint - Specify a register allocation hint for the
   /// specified virtual register. This is typically used by target, and in case
@@ -861,7 +862,7 @@ public:
   /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
   /// specified register as undefined which causes the DBG_VALUE to be
   /// deleted during LiveDebugVariables analysis.
-  void markUsesInDebugValueAsUndef(Register Reg) const;
+  LLVM_ABI void markUsesInDebugValueAsUndef(Register Reg) const;
 
   /// updateDbgUsersToReg - Update a collection of debug instructions
   /// to refer to the designated register.
@@ -897,13 +898,15 @@ public:
   /// ignored, to consider them pass 'true' for optional parameter
   /// SkipNoReturnDef. The register is also considered modified when it is set
   /// in the UsedPhysRegMask.
-  bool isPhysRegModified(MCRegister PhysReg, bool SkipNoReturnDef = false) const;
+  LLVM_ABI bool isPhysRegModified(MCRegister PhysReg,
+                                  bool SkipNoReturnDef = false) const;
 
   /// Return true if the specified register is modified or read in this
   /// function. This checks that no machine operands exist for the register or
   /// any of its aliases. If SkipRegMaskTest is false, the register is
   /// considered used when it is set in the UsedPhysRegMask.
-  bool isPhysRegUsed(MCRegister PhysReg, bool SkipRegMaskTest = false) const;
+  LLVM_ABI bool isPhysRegUsed(MCRegister PhysReg,
+                              bool SkipRegMaskTest = false) const;
 
   /// addPhysRegsUsedFromRegMask - Mark any registers not in RegMask as used.
   /// This corresponds to the bit mask attached to register mask operands.
@@ -927,7 +930,7 @@ public:
 
   /// freezeReservedRegs - Called by the register allocator to freeze the set
   /// of reserved registers before allocation begins.
-  void freezeReservedRegs();
+  LLVM_ABI void freezeReservedRegs();
 
   /// reserveReg -- Mark a register as reserved so checks like isAllocatable
   /// will not suggest using it. This should not be used during the middle
@@ -978,7 +981,7 @@ public:
   /// root registers, the root register and all super registers are reserved.
   /// This currently iterates the register hierarchy and may be slower than
   /// expected.
-  bool isReservedRegUnit(unsigned Unit) const;
+  LLVM_ABI bool isReservedRegUnit(MCRegUnit Unit) const;
 
   /// isAllocatable - Returns true when PhysReg belongs to an allocatable
   /// register class and it hasn't been reserved.
@@ -1013,25 +1016,25 @@ public:
     return LiveIns;
   }
 
-  bool isLiveIn(Register Reg) const;
+  LLVM_ABI bool isLiveIn(Register Reg) const;
 
   /// getLiveInPhysReg - If VReg is a live-in virtual register, return the
   /// corresponding live-in physical register.
-  MCRegister getLiveInPhysReg(Register VReg) const;
+  LLVM_ABI MCRegister getLiveInPhysReg(Register VReg) const;
 
   /// getLiveInVirtReg - If PReg is a live-in physical register, return the
   /// corresponding live-in virtual register.
-  Register getLiveInVirtReg(MCRegister PReg) const;
+  LLVM_ABI Register getLiveInVirtReg(MCRegister PReg) const;
 
   /// EmitLiveInCopies - Emit copies to initialize livein virtual registers
   /// into the given entry block.
-  void EmitLiveInCopies(MachineBasicBlock *EntryMBB,
-                        const TargetRegisterInfo &TRI,
-                        const TargetInstrInfo &TII);
+  LLVM_ABI void EmitLiveInCopies(MachineBasicBlock *EntryMBB,
+                                 const TargetRegisterInfo &TRI,
+                                 const TargetInstrInfo &TII);
 
   /// Returns a mask covering all bits that can appear in lane masks of
   /// subregisters of the virtual register @p Reg.
-  LaneBitmask getMaxLaneMaskForVReg(Register Reg) const;
+  LLVM_ABI LaneBitmask getMaxLaneMaskForVReg(Register Reg) const;
 
   /// defusechain_iterator - This class provides iterator support for machine
   /// operands in the function that use or define a specific register.  If
@@ -1245,15 +1248,16 @@ class PSetIterator {
 public:
   PSetIterator() = default;
 
-  PSetIterator(Register RegUnit, const MachineRegisterInfo *MRI) {
+  PSetIterator(VirtRegOrUnit VRegOrUnit, const MachineRegisterInfo *MRI) {
     const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
-    if (RegUnit.isVirtual()) {
-      const TargetRegisterClass *RC = MRI->getRegClass(RegUnit);
+    if (VRegOrUnit.isVirtualReg()) {
+      const TargetRegisterClass *RC =
+          MRI->getRegClass(VRegOrUnit.asVirtualReg());
       PSet = TRI->getRegClassPressureSets(RC);
       Weight = TRI->getRegClassWeight(RC).RegWeight;
     } else {
-      PSet = TRI->getRegUnitPressureSets(RegUnit);
-      Weight = TRI->getRegUnitWeight(RegUnit);
+      PSet = TRI->getRegUnitPressureSets(VRegOrUnit.asMCRegUnit());
+      Weight = TRI->getRegUnitWeight(VRegOrUnit.asMCRegUnit());
     }
     if (*PSet == -1)
       PSet = nullptr;
@@ -1274,8 +1278,8 @@ public:
 };
 
 inline PSetIterator
-MachineRegisterInfo::getPressureSets(Register RegUnit) const {
-  return PSetIterator(RegUnit, this);
+MachineRegisterInfo::getPressureSets(VirtRegOrUnit VRegOrUnit) const {
+  return PSetIterator(VRegOrUnit, this);
 }
 
 } // end namespace llvm

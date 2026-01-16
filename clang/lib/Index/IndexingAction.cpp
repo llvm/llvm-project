@@ -8,14 +8,13 @@
 
 #include "clang/Index/IndexingAction.h"
 #include "IndexingContext.h"
+#include "clang/AST/DeclGroup.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
-#include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
-#include "llvm/ADT/STLExtras.h"
 #include <memory>
 
 using namespace clang;
@@ -103,6 +102,7 @@ class IndexASTConsumer final : public ASTConsumer {
   std::shared_ptr<IndexingContext> IndexCtx;
   std::shared_ptr<Preprocessor> PP;
   std::function<bool(const Decl *)> ShouldSkipFunctionBody;
+  bool DeferIndexingToEndOfTranslationUnit;
 
 public:
   IndexASTConsumer(std::shared_ptr<IndexDataConsumer> DataConsumer,
@@ -112,7 +112,9 @@ public:
       : DataConsumer(std::move(DataConsumer)),
         IndexCtx(new IndexingContext(Opts, *this->DataConsumer)),
         PP(std::move(PP)),
-        ShouldSkipFunctionBody(std::move(ShouldSkipFunctionBody)) {
+        ShouldSkipFunctionBody(std::move(ShouldSkipFunctionBody)),
+        DeferIndexingToEndOfTranslationUnit(
+            Opts.DeferIndexingToEndOfTranslationUnit) {
     assert(this->DataConsumer != nullptr);
     assert(this->PP != nullptr);
   }
@@ -126,7 +128,9 @@ protected:
   }
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
-    return IndexCtx->indexDeclGroupRef(DG);
+    if (!DeferIndexingToEndOfTranslationUnit)
+      return IndexCtx->indexDeclGroupRef(DG);
+    return true;
   }
 
   void HandleInterestingDecl(DeclGroupRef DG) override {
@@ -134,10 +138,14 @@ protected:
   }
 
   void HandleTopLevelDeclInObjCContainer(DeclGroupRef DG) override {
-    IndexCtx->indexDeclGroupRef(DG);
+    if (!DeferIndexingToEndOfTranslationUnit)
+      IndexCtx->indexDeclGroupRef(DG);
   }
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
+    if (DeferIndexingToEndOfTranslationUnit)
+      for (auto *DG : Ctx.getTranslationUnitDecl()->decls())
+        IndexCtx->indexTopLevelDecl(DG);
     DataConsumer->finish();
   }
 

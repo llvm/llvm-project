@@ -1,4 +1,4 @@
-// REQUIRES: !system-windows
+// REQUIRES: !system-windows, !system-cygwin
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t

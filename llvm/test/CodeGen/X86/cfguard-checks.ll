@@ -1,7 +1,9 @@
 ; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X86
-; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC
+; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC,X64_SELDAG
+; RUN: llc < %s --fast-isel -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC,X64_FISEL
 ; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefixes=X86,X86_MINGW
-; RUN: llc < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW
+; RUN: llc < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW,X64_SELDAG
+; RUN: llc < %s --fast-isel -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW,X64_FISEL
 ; Control Flow Guard is currently only available on Windows
 
 ; Test that Control Flow Guard checks are correctly added when required.
@@ -27,7 +29,8 @@ entry:
   ; X64-LABEL: func_guard_nocf
   ; X64:       leaq	target_func(%rip), %rax
   ; X64-NOT: __guard_dispatch_icall_fptr
-  ; X64:       callq	*%rax
+  ; X64_SELDAG: callq	*%rax
+  ; X64_FISEL: callq	*32(%rsp)
 }
 attributes #0 = { "guard_nocf" }
 

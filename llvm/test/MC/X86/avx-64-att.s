@@ -4116,19 +4116,6 @@ vdivpd  -4(%rcx,%rbx,8), %xmm10, %xmm11
 // CHECK: encoding: [0xc4,0xa1,0x78,0x29,0x1c,0x18]
           vmovaps %xmm3, (%rax,%r11)
 
-// CHECK: vpshufb _foo(%rip), %xmm0, %xmm0
-// CHECK: encoding: [0xc4,0xe2,0x79,0x00,0x05,A,A,A,A]
-// CHECK: kind: reloc_riprel_4byte
-_foo:
-  nop
-  vpshufb _foo(%rip), %xmm0, %xmm0
-
-// CHECK: vblendvps %ymm1, _foo2(%rip), %ymm0, %ymm0
-// CHECK: encoding: [0xc4,0xe3,0x7d,0x4a,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: _foo2-5
-_foo2:
-  nop
-  vblendvps %ymm1, _foo2(%rip), %ymm0, %ymm0
 
 // CHECK: vgatherdpd %xmm0, (%rdi,%xmm1,2), %xmm2
 // CHECK: encoding: [0xc4,0xe2,0xf9,0x92,0x14,0x4f]

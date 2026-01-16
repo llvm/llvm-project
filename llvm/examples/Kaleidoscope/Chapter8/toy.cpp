@@ -1228,7 +1228,8 @@ int main() {
   TheModule->setTargetTriple(Triple(TargetTriple));
 
   std::string Error;
-  auto Target = TargetRegistry::lookupTarget(TargetTriple, Error);
+  auto Target =
+      TargetRegistry::lookupTarget(TheModule->getTargetTriple(), Error);
 
   // Print an error and exit if we couldn't find the requested target.
   // This generally occurs if we've forgotten to initialise the

@@ -1,3 +1,8 @@
+set(LIBC_INCLUDE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(LIBC_INCLUDE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+include(LLVMLibCHeaderRules)
+
 function(add_proxy_header_library target_name)
   cmake_parse_arguments(
     "ADD_PROXY_HEADER"
@@ -73,6 +78,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  pthread_macros
+  HDRS
+    pthread_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.pthread_macros
+    libc.include.pthread
+)
+
+add_proxy_header_library(
   sched_macros
   HDRS
     sched_macros.h
@@ -124,6 +138,15 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.sys_epoll
     libc.include.llvm-libc-macros.sys_epoll_macros
+)
+
+add_proxy_header_library(
+  sys_ioctl_macros
+  HDRS
+    sys_ioctl_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_ioctl
+    libc.include.llvm-libc-macros.sys_ioctl_macros
 )
 
 add_proxy_header_library(
@@ -212,6 +235,8 @@ add_proxy_header_library(
 
 add_header_library(wchar_overlay HDRS wchar_overlay.h)
 
+add_header_library(uchar_overlay HDRS uchar_overlay.h)
+
 add_proxy_header_library(
   wchar_macros
   HDRS
@@ -221,6 +246,35 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.wchar_macros
     libc.include.wchar
+)
+
+# offsetof is a macro inside compiler resource header stddef.h
+add_proxy_header_library(
+  offsetof_macros
+  HDRS
+    offsetof_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.offsetof_macro
+)
+
+# stdint.h header.
+add_proxy_header_library(
+  stdint_proxy
+  HDRS
+    stdint_proxy.h
+  FULL_BUILD_DEPENDS
+    libc.include.stdint
+)
+
+add_gen_header(
+  elf_proxy
+  YAML_FILE
+    ../libc/include/elf.yaml
+  GEN_HDR
+    elf_proxy.h
+  DEPENDS
+    libc.include.llvm_libc_common_h
+  PROXY
 )
 
 add_subdirectory(types)

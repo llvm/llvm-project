@@ -8,6 +8,7 @@
 subroutine linear_clause_01(arg)
     integer, intent(in) :: arg(:)
     !ERROR: A modifier may not be specified in a LINEAR clause on the DO directive
+    !ERROR: List item 'arg' in LINEAR clause must be a scalar variable
     !$omp do linear(uval(arg))
     do i = 1, 5
         print *, arg(i)
@@ -17,21 +18,18 @@ end subroutine linear_clause_01
 ! Case 2
 subroutine linear_clause_02(arg_01, arg_02)
     !ERROR: The list item 'arg_01' specified without the REF 'linear-modifier' must be of INTEGER type
+    !ERROR: List item 'arg_01' in LINEAR clause must be a scalar variable
     !$omp declare simd linear(val(arg_01))
     real, intent(in) :: arg_01(:)
 
-    !ERROR: The list item 'arg_02' specified without the REF 'linear-modifier' must be of INTEGER type
     !ERROR: If the `linear-modifier` is REF or UVAL, the list item 'arg_02' must be a dummy argument without the VALUE attribute
     !$omp declare simd linear(uval(arg_02))
-    !ERROR: The type of 'arg_02' has already been implicitly declared
     integer, value, intent(in) :: arg_02
 
-    !ERROR: The list item 'var' specified without the REF 'linear-modifier' must be of INTEGER type
     !ERROR: If the `linear-modifier` is REF or UVAL, the list item 'var' must be a dummy argument without the VALUE attribute
     !ERROR: The list item `var` must be a dummy argument
     !ERROR: The list item `var` in a LINEAR clause must not be Cray Pointer or a variable with POINTER attribute
     !$omp declare simd linear(uval(var))
-    !ERROR: The type of 'var' has already been implicitly declared
     integer, pointer :: var
 end subroutine linear_clause_02
 

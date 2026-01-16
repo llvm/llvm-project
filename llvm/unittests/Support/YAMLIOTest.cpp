@@ -25,7 +25,6 @@ using llvm::yaml::Hex8;
 using llvm::yaml::Input;
 using llvm::yaml::isNumeric;
 using llvm::yaml::MappingNormalization;
-using llvm::yaml::MappingTraits;
 using llvm::yaml::Output;
 using llvm::yaml::ScalarTraits;
 using ::testing::StartsWith;
@@ -3222,12 +3221,12 @@ template <> struct TaggedScalarTraits<Scalar> {
 
 template <> struct CustomMappingTraits<Map> {
   static void inputOne(IO &IO, StringRef Key, Map &M) {
-    IO.mapRequired(Key.str().c_str(), M[Key]);
+    IO.mapRequired(Key, M[Key]);
   }
 
   static void output(IO &IO, Map &M) {
     for (auto &N : M)
-      IO.mapRequired(N.getKey().str().c_str(), N.getValue());
+      IO.mapRequired(N.getKey(), N.getValue());
   }
 };
 

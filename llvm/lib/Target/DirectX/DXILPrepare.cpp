@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file This file contains pases and utilities to convert a modern LLVM
+/// \file This file contains passes and utilities to convert a modern LLVM
 /// module into a module compatible with the LLVM 3.7-based DirectX Intermediate
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
 
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
@@ -26,7 +26,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 
 #define DEBUG_TYPE "dxil-prepare"
@@ -115,31 +114,6 @@ static void removeStringFunctionAttributes(Function &F,
   F.removeRetAttrs(DeadAttrs);
 }
 
-static void cleanModuleFlags(Module &M) {
-  NamedMDNode *MDFlags = M.getModuleFlagsMetadata();
-  if (!MDFlags)
-    return;
-
-  SmallVector<llvm::Module::ModuleFlagEntry> FlagEntries;
-  M.getModuleFlagsMetadata(FlagEntries);
-  bool Updated = false;
-  for (auto &Flag : FlagEntries) {
-    // llvm 3.7 only supports behavior up to AppendUnique.
-    if (Flag.Behavior <= Module::ModFlagBehavior::AppendUnique)
-      continue;
-    Flag.Behavior = Module::ModFlagBehavior::Warning;
-    Updated = true;
-  }
-
-  if (!Updated)
-    return;
-
-  MDFlags->eraseFromParent();
-
-  for (auto &Flag : FlagEntries)
-    M.addModuleFlag(Flag.Behavior, Flag.Key->getString(), Flag.Val);
-}
-
 class DXILPrepareModule : public ModulePass {
 
   static Value *maybeGenerateBitcast(IRBuilder<> &Builder,
@@ -148,9 +122,49 @@ class DXILPrepareModule : public ModulePass {
                                      Type *Ty) {
     // Omit bitcasts if the incoming value matches the instruction type.
     auto It = PointerTypes.find(Operand);
-    if (It != PointerTypes.end())
-      if (cast<TypedPointerType>(It->second)->getElementType() == Ty)
+    if (It != PointerTypes.end()) {
+      auto *OpTy = cast<TypedPointerType>(It->second)->getElementType();
+      if (OpTy == Ty)
         return nullptr;
+    }
+
+    Type *ValTy = Operand->getType();
+    // Also omit the bitcast for matching global array types
+    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Operand))
+      ValTy = GlobalVar->getValueType();
+
+    if (auto *AI = dyn_cast<AllocaInst>(Operand))
+      ValTy = AI->getAllocatedType();
+
+    if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+      Type *ElTy = ArrTy->getElementType();
+      if (ElTy == Ty)
+        return nullptr;
+    }
+
+    // finally, drill down GEP instructions until we get the array
+    // that is being accessed, and compare element types
+    if (ConstantExpr *GEPInstr = dyn_cast<ConstantExpr>(Operand)) {
+      while (GEPInstr->getOpcode() == Instruction::GetElementPtr) {
+        Value *OpArg = GEPInstr->getOperand(0);
+        if (ConstantExpr *NewGEPInstr = dyn_cast<ConstantExpr>(OpArg)) {
+          GEPInstr = NewGEPInstr;
+          continue;
+        }
+
+        if (auto *GlobalVar = dyn_cast<GlobalVariable>(OpArg))
+          ValTy = GlobalVar->getValueType();
+        if (auto *AI = dyn_cast<AllocaInst>(Operand))
+          ValTy = AI->getAllocatedType();
+        if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+          Type *ElTy = ArrTy->getElementType();
+          if (ElTy == Ty)
+            return nullptr;
+        }
+        break;
+      }
+    }
+
     // Insert bitcasts where we are removing the instruction.
     Builder.SetInsertPoint(&Inst);
     // This code only gets hit in opaque-pointer mode, so the type of the
@@ -174,7 +188,7 @@ public:
     const dxil::ModuleMetadataInfo MetadataInfo =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
     VersionTuple ValVer = MetadataInfo.ValidatorVersion;
-    bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
+    bool AllowExperimental = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
 
     for (auto &F : M.functions()) {
       F.removeFnAttrs(AttrMask);
@@ -182,25 +196,25 @@ public:
       // Only remove string attributes if we are not skipping validation.
       // This will reserve the experimental attributes when validation version
       // is 0.0 for experiment mode.
-      removeStringFunctionAttributes(F, SkipValidation);
+      removeStringFunctionAttributes(F, AllowExperimental);
       for (size_t Idx = 0, End = F.arg_size(); Idx < End; ++Idx)
         F.removeParamAttrs(Idx, AttrMask);
 
       for (auto &BB : F) {
         IRBuilder<> Builder(&BB);
         for (auto &I : make_early_inc_range(BB)) {
-          if (I.getOpcode() == Instruction::FNeg) {
-            Builder.SetInsertPoint(&I);
-            Value *In = I.getOperand(0);
-            Value *Zero = ConstantFP::get(In->getType(), -0.0);
-            I.replaceAllUsesWith(Builder.CreateFSub(Zero, In));
-            I.eraseFromParent();
+
+          if (auto *CB = dyn_cast<CallBase>(&I)) {
+            CB->removeFnAttrs(AttrMask);
+            CB->removeRetAttrs(AttrMask);
+            for (size_t Idx = 0, End = CB->arg_size(); Idx < End; ++Idx)
+              CB->removeParamAttrs(Idx, AttrMask);
             continue;
           }
 
           // Emtting NoOp bitcast instructions allows the ValueEnumerator to be
           // unmodified as it reserves instruction IDs during contruction.
-          if (auto LI = dyn_cast<LoadInst>(&I)) {
+          if (auto *LI = dyn_cast<LoadInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, LI->getPointerOperand(),
                     LI->getType())) {
@@ -210,7 +224,7 @@ public:
             }
             continue;
           }
-          if (auto SI = dyn_cast<StoreInst>(&I)) {
+          if (auto *SI = dyn_cast<StoreInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, SI->getPointerOperand(),
                     SI->getValueOperand()->getType())) {
@@ -221,34 +235,28 @@ public:
             }
             continue;
           }
-          if (auto GEP = dyn_cast<GetElementPtrInst>(&I)) {
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, GEP->getPointerOperand(),
                     GEP->getSourceElementType()))
               GEP->setOperand(0, NoOpBitcast);
             continue;
           }
-          if (auto *CB = dyn_cast<CallBase>(&I)) {
-            CB->removeFnAttrs(AttrMask);
-            CB->removeRetAttrs(AttrMask);
-            for (size_t Idx = 0, End = CB->arg_size(); Idx < End; ++Idx)
-              CB->removeParamAttrs(Idx, AttrMask);
-            continue;
-          }
         }
       }
     }
-    // Remove flags not for DXIL.
-    cleanModuleFlags(M);
+
     return true;
   }
 
   DXILPrepareModule() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
-    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
+    AU.addPreserved<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
   static char ID; // Pass identification.
 };

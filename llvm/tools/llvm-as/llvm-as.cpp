@@ -57,16 +57,10 @@ static cl::opt<bool>
                   cl::desc("Do not run verifier on input LLVM (dangerous!)"),
                   cl::cat(AsCat));
 
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden, cl::cat(AsCat));
-
 static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::desc("data layout string to use"),
                                          cl::value_desc("layout-string"),
                                          cl::init(""), cl::cat(AsCat));
-extern cl::opt<bool> UseNewDbgInfoFormat;
 
 static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
   // Infer the output filename if needed.
@@ -101,7 +95,7 @@ static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
       // any non-null Index along with it as a per-module Index.
       // If both are empty, this will give an empty module block, which is
       // the expected behavior.
-      WriteBitcodeToFile(*M, Out->os(), PreserveBitcodeUseListOrder,
+      WriteBitcodeToFile(*M, Out->os(), /* ShouldPreserveUseListOrder */ true,
                          IndexToWrite, EmitModuleHash);
     else
       // Otherwise, with an empty Module but non-empty Index, we write a
@@ -140,10 +134,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Convert to new debug format if requested.
-  M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
-  if (M->IsNewDbgInfoFormat)
-    M->removeDebugIntrinsicDeclarations();
+  M->removeDebugIntrinsicDeclarations();
 
   std::unique_ptr<ModuleSummaryIndex> Index = std::move(ModuleAndIndex.Index);
 

@@ -102,13 +102,21 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
     UnsafeFPMath = mathOpts.getAssociativeMath() &&
         mathOpts.getReciprocalMath() && NoSignedZerosFPMath &&
         ApproxFuncFPMath && mathOpts.getFPContractEnabled();
+    Reciprocals = opts.Reciprocals;
+    PreferVectorWidth = opts.PreferVectorWidth;
+    if (opts.InstrumentFunctions) {
+      InstrumentFunctionEntry = "__cyg_profile_func_enter";
+      InstrumentFunctionExit = "__cyg_profile_func_exit";
+    }
+    DwarfVersion = opts.DwarfVersion;
+    SplitDwarfFile = opts.SplitDwarfFile;
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
   bool StackArrays = false; ///< convert memory allocations to alloca.
   bool Underscoring = true; ///< add underscores to function names.
   bool LoopVersioning = false; ///< Run the version loop pass.
-  bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR
+  bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR.
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
   llvm::FramePointerKind FramePointerKind =
@@ -117,13 +125,29 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   unsigned VScaleMax = 0; ///< SVE vector range maximum.
   bool NoInfsFPMath = false; ///< Set no-infs-fp-math attribute for functions.
   bool NoNaNsFPMath = false; ///< Set no-nans-fp-math attribute for functions.
-  bool ApproxFuncFPMath =
-      false; ///< Set approx-func-fp-math attribute for functions.
+  bool ApproxFuncFPMath = false; ///< Set afn flag for instructions.
   bool NoSignedZerosFPMath =
       false; ///< Set no-signed-zeros-fp-math attribute for functions.
-  bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
+  bool UnsafeFPMath = false; ///< Set all fast-math flags for instructions.
+  std::string Reciprocals = ""; ///< Set reciprocal-estimate attribute for
+                                ///< functions.
+  std::string PreferVectorWidth = ""; ///< Set prefer-vector-width attribute for
+                                      ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
+  bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.
+  bool SkipConvertComplexPow = false; ///< Do not run complex pow conversion.
+  std::string InstrumentFunctionEntry =
+      ""; ///< Name of the instrument-function that is called on each
+          ///< function-entry
+  std::string InstrumentFunctionExit =
+      ""; ///< Name of the instrument-function that is called on each
+          ///< function-exit
+  Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =
+      Fortran::frontend::CodeGenOptions::ComplexRangeKind::
+          CX_Full; ///< Method for calculating complex number division
+  int32_t DwarfVersion = 0; ///< Version of DWARF debug info to generate
+  std::string SplitDwarfFile = ""; ///< File name for the split debug info
 };
 
 struct OffloadModuleOpts {

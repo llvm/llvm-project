@@ -1,9 +1,9 @@
 // RUN: %clang++ -std=gnu++11 -O2 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t --debugger 'lldb' -- %s
+// RUN:     --binary %t %dexter_lldb_args -- %s
 // RUN: %clang++ -std=gnu++11 -O0 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t --debugger 'lldb' -- %s
+// RUN:     --binary %t %dexter_lldb_args -- %s
 
 // REQUIRES: lldb, D136396
 // Currently getting intermittent failures on darwin.

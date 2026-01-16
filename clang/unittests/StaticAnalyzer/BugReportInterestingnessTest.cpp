@@ -120,7 +120,7 @@ public:
             std::move(ExpectedDiags), Compiler.getSourceManager()));
     AnalysisConsumer->AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
       Registry.addChecker<InterestingnessTestChecker>("test.Interestingness",
-                                                      "Description", "");
+                                                      "MockDescription");
     });
     Compiler.getAnalyzerOpts().CheckersAndPackages = {
         {"test.Interestingness", true}};

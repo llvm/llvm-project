@@ -179,7 +179,6 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
                                   F->getName());
   NF->copyAttributesFrom(F);
   NF->copyMetadata(F, 0);
-  NF->setIsNewDbgInfoFormat(F->IsNewDbgInfoFormat);
 
   // The new function will have the !dbg metadata copied from the original
   // function. The original function may not be deleted, and dbg metadata need
@@ -337,7 +336,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 
     // There potentially are metadata uses for things like llvm.dbg.value.
     // Replace them with poison, after handling the other regular uses.
-    auto RauwPoisonMetadata = make_scope_exit(
+    llvm::scope_exit RauwPoisonMetadata(
         [&]() { Arg.replaceAllUsesWith(PoisonValue::get(Arg.getType())); });
 
     if (Arg.use_empty())

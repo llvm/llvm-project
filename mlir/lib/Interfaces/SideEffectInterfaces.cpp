@@ -9,7 +9,6 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/IR/SymbolTable.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include <utility>
 
 using namespace mlir;
@@ -304,6 +303,11 @@ mlir::hasEffect<BlockArgument, MemoryEffects::Write>(Operation *,
 template bool
 mlir::hasEffect<BlockArgument, MemoryEffects::Write, MemoryEffects::Free>(
     Operation *, BlockArgument);
+
+bool mlir::hasUnknownEffects(Operation *op) {
+  return !isa<MemoryEffectOpInterface>(op) &&
+         !op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+}
 
 bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   if (op->mightHaveTrait<OpTrait::IsTerminator>())

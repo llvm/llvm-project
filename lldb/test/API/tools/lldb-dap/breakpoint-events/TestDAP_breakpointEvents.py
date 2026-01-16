@@ -2,7 +2,7 @@
 Test lldb-dap setBreakpoints request
 """
 
-import dap_server
+from dap_server import Source
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -52,15 +52,15 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         # breakpoint events for these breakpoints but not for ones that are not
         # set via the command interpreter.
         bp_command = "breakpoint set --file foo.cpp --line %u" % (foo_bp2_line)
-        self.build_and_launch(program, stopOnEntry=True, preRunCommands=[bp_command])
+        self.build_and_launch(program, preRunCommands=[bp_command])
         main_bp_id = 0
         foo_bp_id = 0
         # Set breakpoints and verify that they got set correctly
         dap_breakpoint_ids = []
         response = self.dap_server.request_setBreakpoints(
-            main_source_path, [main_bp_line]
+            Source.build(path=main_source_path), [main_bp_line]
         )
-        self.assertTrue(response)
+        self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
         for breakpoint in breakpoints:
             main_bp_id = breakpoint["id"]
@@ -70,9 +70,9 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
             )
 
         response = self.dap_server.request_setBreakpoints(
-            foo_source_path, [foo_bp1_line]
+            Source.build(path=foo_source_path), [foo_bp1_line]
         )
-        self.assertTrue(response)
+        self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
         for breakpoint in breakpoints:
             foo_bp_id = breakpoint["id"]
@@ -81,52 +81,24 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
                 breakpoint["verified"], "expect foo breakpoint to not be verified"
             )
 
-        # Get the stop at the entry point
-        self.continue_to_next_stop()
-
-        # We are now stopped at the entry point to the program. Shared
-        # libraries are not loaded yet (at least on macOS they aren't) and only
-        # the breakpoint in the main executable should be resolved.
-        self.assertEqual(len(self.dap_server.breakpoint_events), 1)
-        event = self.dap_server.breakpoint_events[0]
-        body = event["body"]
-        self.assertEqual(
-            body["reason"], "changed", "breakpoint event should say changed"
-        )
-        breakpoint = body["breakpoint"]
-        self.assertEqual(breakpoint["id"], main_bp_id)
-        self.assertTrue(breakpoint["verified"], "main breakpoint should be resolved")
-
-        # Clear the list of breakpoint events so we don't see this one again.
-        self.dap_server.breakpoint_events.clear()
+        # Flush the breakpoint events.
+        self.dap_server.wait_for_breakpoint_events()
 
         # Continue to the breakpoint
         self.continue_to_breakpoints(dap_breakpoint_ids)
 
-        # When the process launches, we first expect to see both the main and
-        # foo breakpoint as unresolved.
-        for event in self.dap_server.breakpoint_events[:2]:
-            body = event["body"]
-            self.assertEqual(
-                body["reason"], "changed", "breakpoint event should say changed"
-            )
-            breakpoint = body["breakpoint"]
-            self.assertIn(str(breakpoint["id"]), dap_breakpoint_ids)
-            self.assertFalse(breakpoint["verified"], "breakpoint should be unresolved")
+        verified_breakpoint_ids = []
+        unverified_breakpoint_ids = []
+        for breakpoint_event in self.dap_server.wait_for_breakpoint_events():
+            breakpoint = breakpoint_event["body"]["breakpoint"]
+            id = breakpoint["id"]
+            if breakpoint["verified"]:
+                verified_breakpoint_ids.append(id)
+            else:
+                unverified_breakpoint_ids.append(id)
 
-        # Then, once the dynamic loader has given us a load address, they
-        # should show up as resolved again.
-        for event in self.dap_server.breakpoint_events[3:]:
-            body = event["body"]
-            self.assertEqual(
-                body["reason"], "changed", "breakpoint event should say changed"
-            )
-            breakpoint = body["breakpoint"]
-            self.assertIn(str(breakpoint["id"]), dap_breakpoint_ids)
-            self.assertTrue(breakpoint["verified"], "breakpoint should be resolved")
-            self.assertNotIn(
-                "source",
-                breakpoint,
-                "breakpoint event should not return a source object",
-            )
-            self.assertIn("line", breakpoint, "breakpoint event should have line")
+        self.assertIn(main_bp_id, unverified_breakpoint_ids)
+        self.assertIn(foo_bp_id, unverified_breakpoint_ids)
+
+        self.assertIn(main_bp_id, verified_breakpoint_ids)
+        self.assertIn(foo_bp_id, verified_breakpoint_ids)

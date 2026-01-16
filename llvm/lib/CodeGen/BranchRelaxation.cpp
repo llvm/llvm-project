@@ -491,6 +491,20 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
       return true;
     }
     if (FBB) {
+      // If we get here with a MBB which ends like this:
+      //
+      // bb.1:
+      // successors: %bb.2;
+      // ...
+      // BNE $x1, $x0, %bb.2
+      // PseudoBR %bb.2
+      //
+      // Just remove conditional branch.
+      if (TBB == FBB) {
+        removeBranch(MBB);
+        insertUncondBranch(MBB, TBB);
+        return true;
+      }
       // We need to split the basic block here to obtain two long-range
       // unconditional branches.
       NewBB = createNewBlockAfter(*MBB);
@@ -559,7 +573,6 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
 
 bool BranchRelaxation::fixupUnconditionalBranch(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
-  SmallVector<MachineOperand, 4> Cond;
   unsigned OldBrSize = TII->getInstSizeInBytes(MI);
   MachineBasicBlock *DestBB = TII->getBranchDestBlock(MI);
 

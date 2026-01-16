@@ -146,6 +146,23 @@ Language Selection and Mode Options
 
    ISO C 2017 with GNU extensions
 
+  | ``c23``
+  | ``iso9899:2024``
+
+   ISO C 2023
+
+  | ``gnu23``
+
+   ISO C 2023 with GNU extensions
+
+  | ``c2y``
+
+   ISO C 202y
+
+  | ``gnu2y``
+
+   ISO C 202y with GNU extensions
+
  The default C language standard is ``gnu17``, except on PS4, where it is
  ``gnu99``.
 
@@ -443,8 +460,11 @@ Code Generation Options
     :option:`-Oz` Like :option:`-Os` (and thus :option:`-O2`), but reduces code
     size further.
 
-    :option:`-Og` Like :option:`-O1`. In future versions, this option might
-    disable different optimizations in order to improve debuggability.
+    :option:`-Og` Similar to :option:`-O1`, but with slightly reduced
+    optimization and better variable visibility. The same optimizations are run
+    as at :option:`-O1`, but the ``-fextend-variable-liveness`` flag is
+    also set, which tries to prevent optimizations from reducing the liveness of
+    user variables, improving their availability when debugging.
 
     :option:`-O` Equivalent to :option:`-O1`.
 
@@ -625,7 +645,7 @@ Driver Options
 
   Save internal code generation (LLVM) statistics to a file in the current
   directory (:option:`-save-stats`/"-save-stats=cwd") or the directory
-  of the output file ("-save-state=obj").
+  of the output file ("-save-stats=obj").
 
   You can also use environment variables to control the statistics reporting.
   Setting ``CC_PRINT_INTERNAL_STAT`` to ``1`` enables the feature, the report

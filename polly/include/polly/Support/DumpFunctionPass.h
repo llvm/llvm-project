@@ -16,13 +16,7 @@
 #include "llvm/IR/PassManager.h"
 #include <string>
 
-namespace llvm {
-class FunctionPass;
-class ModulePass;
-} // namespace llvm
-
 namespace polly {
-llvm::FunctionPass *createDumpFunctionWrapperPass(std::string Suffix);
 
 /// A pass that isolates a function into a new Module and writes it into a file.
 struct DumpFunctionPass final : llvm::PassInfoMixin<DumpFunctionPass> {
@@ -33,12 +27,6 @@ struct DumpFunctionPass final : llvm::PassInfoMixin<DumpFunctionPass> {
   llvm::PreservedAnalyses run(llvm::Function &F,
                               llvm::FunctionAnalysisManager &AM);
 };
-
 } // namespace polly
-
-namespace llvm {
-class PassRegistry;
-void initializeDumpFunctionWrapperPassPass(llvm::PassRegistry &);
-} // namespace llvm
 
 #endif /* POLLY_SUPPORT_DUMPFUNCTIONPASS_H */

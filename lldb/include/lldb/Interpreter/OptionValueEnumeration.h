@@ -41,7 +41,7 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) override;
+  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const override;
 
   Status
   SetValueFromString(llvm::StringRef value,
@@ -72,6 +72,7 @@ public:
 
 protected:
   void SetEnumerations(const OptionEnumValues &enumerators);
+  void DumpEnum(Stream &strm, enum_type value);
 
   enum_type m_current_value;
   enum_type m_default_value;

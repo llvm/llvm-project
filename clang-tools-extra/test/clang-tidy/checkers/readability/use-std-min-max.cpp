@@ -273,3 +273,99 @@ void useRight() {
 }
 
 } // namespace gh121676
+
+void testComments() {
+  int box_depth = 10;
+  int max_depth = 5;
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  if (box_depth > max_depth) // here
+  {
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here */
+  if (box_depth > max_depth) /* here */
+  {
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  if (box_depth > max_depth)
+  // here
+  {
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here */
+  if (box_depth > max_depth)
+  /* here */
+  {
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+4]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here
+  // CHECK-FIXES-NEXT: and here
+  // CHECK-FIXES-NEXT: */
+  if (box_depth > max_depth) /* here
+  and here
+  */
+  {
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here */
+  if (box_depth > max_depth) { /* here */
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  if (box_depth > max_depth) { // here
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here */
+  if (box_depth > max_depth) {
+    box_depth = max_depth; /* here */
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  if (box_depth > max_depth) {
+    box_depth = max_depth; // here
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here */
+  if (box_depth > max_depth) {
+    box_depth = max_depth;
+    /* here */
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  if (box_depth > max_depth) {
+    box_depth = max_depth;
+    // here
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+5]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  // CHECK-FIXES-NEXT: // and
+  // CHECK-FIXES-NEXT: /* there
+  // CHECK-FIXES-NEXT: again*/
+  if (box_depth > max_depth) {
+    // here
+    box_depth = max_depth; // and
+    /* there
+     again*/
+  }
+}

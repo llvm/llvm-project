@@ -66,6 +66,12 @@ void initializeDXILLegalizeLegacyPass(PassRegistry &);
 /// elements
 FunctionPass *createDXILLegalizeLegacyPass();
 
+/// Initializer for DXIL Mem Intrinsics.
+void initializeDXILMemIntrinsicsLegacyPass(PassRegistry &);
+
+/// Pass to transform all llvm memory intrinsics to explicit loads and stores.
+ModulePass *createDXILMemIntrinsicsLegacyPass();
+
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 
@@ -78,6 +84,12 @@ void initializeDXILResourceAccessLegacyPass(PassRegistry &);
 /// Pass to update resource accesses to use load/store directly.
 FunctionPass *createDXILResourceAccessLegacyPass();
 
+/// Initializer for DXILResourceImplicitBindingLegacyPass
+void initializeDXILResourceImplicitBindingLegacyPass(PassRegistry &);
+
+/// Pass to assign register slots to resources without binding.
+ModulePass *createDXILResourceImplicitBindingLegacyPass();
+
 /// Initializer for DXILTranslateMetadata.
 void initializeDXILTranslateMetadataLegacyPass(PassRegistry &);
 
@@ -89,6 +101,12 @@ ModulePass *createDXILPrettyPrinterLegacyPass(raw_ostream &OS);
 
 /// Initializer for DXILPrettyPrinter.
 void initializeDXILPrettyPrinterLegacyPass(PassRegistry &);
+
+/// Initializer for DXILPostOptimizationValidation.
+void initializeDXILPostOptimizationValidationLegacyPass(PassRegistry &);
+
+/// Pass to lowering LLVM intrinsic call to DXIL op function call.
+ModulePass *createDXILPostOptimizationValidationLegacyPass();
 
 /// Initializer for dxil::ShaderFlagsAnalysisWrapper pass.
 void initializeShaderFlagsAnalysisWrapperPass(PassRegistry &);

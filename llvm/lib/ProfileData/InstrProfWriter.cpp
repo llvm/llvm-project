@@ -13,15 +13,13 @@
 
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -152,9 +150,7 @@ void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
   InfoObj->ValueProfDataEndianness = Endianness;
 }
 
-void InstrProfWriter::setOutputSparse(bool Sparse) {
-  this->Sparse = Sparse;
-}
+void InstrProfWriter::setOutputSparse(bool Sparse) { this->Sparse = Sparse; }
 
 void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn) {
@@ -180,10 +176,7 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
     return;
   }
   auto &ProfileDataMap = It->second;
-  bool NewFunc;
-  ProfilingData::iterator Where;
-  std::tie(Where, NewFunc) =
-      ProfileDataMap.insert(std::make_pair(Hash, InstrProfRecord()));
+  auto [Where, NewFunc] = ProfileDataMap.try_emplace(Hash);
   if (NewFunc) {
     Overlap.addOneMismatch(FuncLevelOverlap.Test);
     return;
@@ -202,10 +195,7 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 function_ref<void(Error)> Warn) {
   auto &ProfileDataMap = FunctionData[Name];
 
-  bool NewFunc;
-  ProfilingData::iterator Where;
-  std::tie(Where, NewFunc) =
-      ProfileDataMap.insert(std::make_pair(Hash, InstrProfRecord()));
+  auto [Where, NewFunc] = ProfileDataMap.try_emplace(Hash);
   InstrProfRecord &Dest = Where->second;
 
   auto MapWarn = [&](instrprof_error E) {
@@ -248,6 +238,7 @@ void InstrProfWriter::addMemProfRecord(
       Alloc.Info.setTotalLifetime(NewTL);
     }
   }
+  MemProfSumBuilder.addRecord(NewRecord);
   auto [Iter, Inserted] = MemProfData.Records.insert({Id, NewRecord});
   // If we inserted a new record then we are done.
   if (Inserted) {
@@ -316,11 +307,16 @@ bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
         return false;
 
   // Add one record at a time if randomization is requested.
-  if (MemProfData.Records.empty() && !MemprofGenerateRandomHotness)
+  if (MemProfData.Records.empty() && !MemprofGenerateRandomHotness) {
+    // Need to manually add each record to the builder, which is otherwise done
+    // in addMemProfRecord.
+    for (const auto &[GUID, Record] : Incoming.Records)
+      MemProfSumBuilder.addRecord(Record);
     MemProfData.Records = std::move(Incoming.Records);
-  else
+  } else {
     for (const auto &[GUID, Record] : Incoming.Records)
       addMemProfRecord(GUID, Record);
+  }
 
   return true;
 }
@@ -329,61 +325,39 @@ void InstrProfWriter::addBinaryIds(ArrayRef<llvm::object::BuildID> BIs) {
   llvm::append_range(BinaryIds, BIs);
 }
 
-void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
-  assert(Trace.FunctionNameRefs.size() <= MaxTemporalProfTraceLength);
-  assert(!Trace.FunctionNameRefs.empty());
-  if (TemporalProfTraceStreamSize < TemporalProfTraceReservoirSize) {
-    // Simply append the trace if we have not yet hit our reservoir size limit.
-    TemporalProfTraces.push_back(std::move(Trace));
-  } else {
-    // Otherwise, replace a random trace in the stream.
-    std::uniform_int_distribution<uint64_t> Distribution(
-        0, TemporalProfTraceStreamSize);
-    uint64_t RandomIndex = Distribution(RNG);
-    if (RandomIndex < TemporalProfTraces.size())
-      TemporalProfTraces[RandomIndex] = std::move(Trace);
-  }
-  ++TemporalProfTraceStreamSize;
+void InstrProfWriter::addDataAccessProfData(
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfDataIn) {
+  DataAccessProfileData = std::move(DataAccessProfDataIn);
 }
 
 void InstrProfWriter::addTemporalProfileTraces(
     SmallVectorImpl<TemporalProfTraceTy> &SrcTraces, uint64_t SrcStreamSize) {
+  if (TemporalProfTraces.size() > TemporalProfTraceReservoirSize)
+    TemporalProfTraces.truncate(TemporalProfTraceReservoirSize);
   for (auto &Trace : SrcTraces)
     if (Trace.FunctionNameRefs.size() > MaxTemporalProfTraceLength)
       Trace.FunctionNameRefs.resize(MaxTemporalProfTraceLength);
   llvm::erase_if(SrcTraces, [](auto &T) { return T.FunctionNameRefs.empty(); });
-  // Assume that the source has the same reservoir size as the destination to
-  // avoid needing to record it in the indexed profile format.
-  bool IsDestSampled =
-      (TemporalProfTraceStreamSize > TemporalProfTraceReservoirSize);
-  bool IsSrcSampled = (SrcStreamSize > TemporalProfTraceReservoirSize);
-  if (!IsDestSampled && IsSrcSampled) {
-    // If one of the traces are sampled, ensure that it belongs to Dest.
-    std::swap(TemporalProfTraces, SrcTraces);
-    std::swap(TemporalProfTraceStreamSize, SrcStreamSize);
-    std::swap(IsDestSampled, IsSrcSampled);
-  }
-  if (!IsSrcSampled) {
-    // If the source stream is not sampled, we add each source trace normally.
-    for (auto &Trace : SrcTraces)
-      addTemporalProfileTrace(std::move(Trace));
+  // If there are no source traces, it is probably because
+  // --temporal-profile-max-trace-length=0 was set to deliberately remove all
+  // traces. In that case, we do not want to increase the stream size
+  if (SrcTraces.empty())
     return;
-  }
-  // Otherwise, we find the traces that would have been removed if we added
-  // the whole source stream.
-  SmallSetVector<uint64_t, 8> IndicesToReplace;
-  for (uint64_t I = 0; I < SrcStreamSize; I++) {
-    std::uniform_int_distribution<uint64_t> Distribution(
-        0, TemporalProfTraceStreamSize);
+  // Add traces until our reservoir is full or we run out of source traces
+  auto SrcTraceIt = SrcTraces.begin();
+  while (TemporalProfTraces.size() < TemporalProfTraceReservoirSize &&
+         SrcTraceIt < SrcTraces.end())
+    TemporalProfTraces.push_back(*SrcTraceIt++);
+  // Our reservoir is full, we need to sample the source stream
+  llvm::shuffle(SrcTraceIt, SrcTraces.end(), RNG);
+  for (uint64_t I = TemporalProfTraces.size();
+       I < SrcStreamSize && SrcTraceIt < SrcTraces.end(); I++) {
+    std::uniform_int_distribution<uint64_t> Distribution(0, I);
     uint64_t RandomIndex = Distribution(RNG);
     if (RandomIndex < TemporalProfTraces.size())
-      IndicesToReplace.insert(RandomIndex);
-    ++TemporalProfTraceStreamSize;
+      TemporalProfTraces[RandomIndex] = *SrcTraceIt++;
   }
-  // Then we insert a random sample of the source traces.
-  llvm::shuffle(SrcTraces.begin(), SrcTraces.end(), RNG);
-  for (const auto &[Index, Trace] : llvm::zip(IndicesToReplace, SrcTraces))
-    TemporalProfTraces[Index] = std::move(Trace);
+  TemporalProfTraceStreamSize += SrcStreamSize;
 }
 
 void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
@@ -568,7 +542,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // The WritePrevVersion handling will either need to be removed or updated
   // if the version is advanced beyond 12.
   static_assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
-                IndexedInstrProf::ProfVersion::Version12);
+                IndexedInstrProf::ProfVersion::Version13);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))
@@ -614,8 +588,10 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
-    if (auto E = writeMemProf(OS, MemProfData, MemProfVersionRequested,
-                              MemProfFullSchema))
+
+    if (auto E = writeMemProf(
+            OS, MemProfData, MemProfVersionRequested, MemProfFullSchema,
+            std::move(DataAccessProfileData), MemProfSumBuilder.getSummary()))
       return E;
   }
 

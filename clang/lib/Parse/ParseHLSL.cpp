@@ -48,7 +48,8 @@ static bool validateDeclsInsideHLSLBuffer(Parser::DeclGroupPtrTy DG,
   return IsValid;
 }
 
-Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
+Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd,
+                              ParsedAttributes &Attrs) {
   assert((Tok.is(tok::kw_cbuffer) || Tok.is(tok::kw_tbuffer)) &&
          "Not a cbuffer or tbuffer!");
   bool IsCBuffer = Tok.is(tok::kw_cbuffer);
@@ -62,7 +63,6 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   IdentifierInfo *Identifier = Tok.getIdentifierInfo();
   SourceLocation IdentifierLoc = ConsumeToken();
 
-  ParsedAttributes Attrs(AttrFactory);
   MaybeParseHLSLAnnotations(Attrs, nullptr);
 
   ParseScope BufferScope(this, Scope::DeclScope);
@@ -118,6 +118,40 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
   Slot = new (Ctx) IdentifierLoc(ArgLoc, PP.getIdentifierInfo(FixedArg));
 }
 
+Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
+  assert(Tok.is(tok::identifier) && "Not a HLSL Annotation");
+
+  // Semantic pattern: [A-Za-z_]([A-Za-z_0-9]*[A-Za-z_])?[0-9]*
+  // The first part is the semantic name, the second is the optional
+  // semantic index. The semantic index is the number at the end of
+  // the semantic, including leading zeroes. Digits located before
+  // the last letter are part of the semantic name.
+  SmallString<256> Buffer;
+  Buffer.resize(Tok.getLength() + 1);
+  StringRef Identifier = PP.getSpelling(Tok, Buffer);
+  assert(Identifier.size() > 0);
+  // Determine the start of the semantic index.
+  unsigned IndexIndex = Identifier.find_last_not_of("0123456789") + 1;
+
+  // ParseHLSLSemantic being called on an indentifier, the first
+  // character cannot be a digit. This error should be handled by
+  // the caller. We can assert here.
+  StringRef SemanticName = Identifier.take_front(IndexIndex);
+  assert(SemanticName.size() > 0);
+
+  unsigned Index = 0;
+  bool Explicit = false;
+  if (IndexIndex != Identifier.size()) {
+    Explicit = true;
+    [[maybe_unused]] bool Failure =
+        Identifier.substr(IndexIndex).getAsInteger(10, Index);
+    // Given the logic above, this should never fail.
+    assert(!Failure);
+  }
+
+  return {SemanticName, Index, Explicit};
+}
+
 void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
                                   SourceLocation *EndLoc,
                                   bool CouldBeBitField) {
@@ -141,11 +175,15 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     return;
   }
 
+  ParsedAttr::Kind AttrKind =
+      ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLAnnotation);
+  Parser::ParsedSemantic Semantic;
+  if (AttrKind == ParsedAttr::AT_HLSLUnparsedSemantic)
+    Semantic = ParseHLSLSemantic();
+
   SourceLocation Loc = ConsumeToken();
   if (EndLoc)
     *EndLoc = Tok.getLocation();
-  ParsedAttr::Kind AttrKind =
-      ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLAnnotation);
 
   ArgsVector ArgExprs;
   switch (AttrKind) {
@@ -163,11 +201,16 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     SourceLocation SlotLoc = Tok.getLocation();
     ArgExprs.push_back(ParseIdentifierLoc());
 
-    // Add numeric_constant for fix-it.
-    if (SlotStr.size() == 1 && Tok.is(tok::numeric_constant))
+    if (SlotStr.size() == 1) {
+      if (!Tok.is(tok::numeric_constant)) {
+        Diag(Tok.getLocation(), diag::err_expected) << tok::numeric_constant;
+        SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+        return;
+      }
+      // Add numeric_constant for fix-it.
       fixSeparateAttrArgAndNumber(SlotStr, SlotLoc, Tok, ArgExprs, *this,
                                   Actions.Context, PP);
-
+    }
     if (Tok.is(tok::comma)) {
       ConsumeToken(); // consume comma
       if (!Tok.is(tok::identifier)) {
@@ -277,19 +320,23 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
       return;
     }
   } break;
-  case ParsedAttr::UnknownAttribute:
-    Diag(Loc, diag::err_unknown_hlsl_semantic) << II;
-    return;
-  case ParsedAttr::AT_HLSLSV_GroupThreadID:
-  case ParsedAttr::AT_HLSLSV_GroupID:
-  case ParsedAttr::AT_HLSLSV_GroupIndex:
-  case ParsedAttr::AT_HLSLSV_DispatchThreadID:
+  case ParsedAttr::AT_HLSLUnparsedSemantic: {
+    ASTContext &Ctx = Actions.getASTContext();
+    ArgExprs.push_back(IntegerLiteral::Create(
+        Ctx, llvm::APInt(Ctx.getTypeSize(Ctx.IntTy), Semantic.Index), Ctx.IntTy,
+        SourceLocation()));
+    ArgExprs.push_back(IntegerLiteral::Create(
+        Ctx, llvm::APInt(1, Semantic.Explicit), Ctx.BoolTy, SourceLocation()));
+    II = PP.getIdentifierInfo(Semantic.Name);
+    break;
+  }
+  case ParsedAttr::UnknownAttribute: // FIXME: maybe this is obsolete?
     break;
   default:
     llvm_unreachable("invalid HLSL Annotation");
     break;
   }
 
-  Attrs.addNew(II, Loc, nullptr, SourceLocation(), ArgExprs.data(),
-               ArgExprs.size(), ParsedAttr::Form::HLSLAnnotation());
+  Attrs.addNew(II, Loc, AttributeScopeInfo(), ArgExprs.data(), ArgExprs.size(),
+               ParsedAttr::Form::HLSLAnnotation());
 }

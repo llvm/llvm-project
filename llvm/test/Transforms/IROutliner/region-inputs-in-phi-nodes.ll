@@ -53,10 +53,10 @@ next:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[C]], [[C]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DOTCE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DOTCE_LOC]])
 ; CHECK-NEXT:    [[TARGETBLOCK:%.*]] = call i1 @outlined_ir_func_0(ptr [[TMP0]], i32 [[C]], ptr [[DOTCE_LOC]])
 ; CHECK-NEXT:    [[DOTCE_RELOAD:%.*]] = load i32, ptr [[DOTCE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DOTCE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DOTCE_LOC]])
 ; CHECK-NEXT:    br i1 [[TARGETBLOCK]], label [[FIRST:%.*]], label [[NEXT:%.*]]
 ; CHECK: dummy:
 ; CHECK-NEXT:  ret void
@@ -73,10 +73,10 @@ next:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[Z:%.*]] = mul i32 [[C]], [[C]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DOTCE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DOTCE_LOC]])
 ; CHECK-NEXT:    [[TARGETBLOCK:%.*]] = call i1 @outlined_ir_func_0(ptr [[TMP0]], i32 [[C]], ptr [[DOTCE_LOC]])
 ; CHECK-NEXT:    [[DOTCE_RELOAD:%.*]] = load i32, ptr [[DOTCE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DOTCE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DOTCE_LOC]])
 ; CHECK-NEXT:    br i1 [[TARGETBLOCK]], label [[FIRST:%.*]], label [[NEXT:%.*]]
 ; CHECK: dummy:
 ; CHECK-NEXT:  ret void

@@ -8,7 +8,6 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
@@ -26,14 +25,14 @@ static cl::opt<bool>
                           "emit new instructions (*very* expensive)."));
 #endif // NDEBUG
 
-static constexpr const unsigned long StopAtDisabled =
+static constexpr unsigned long StopAtDisabled =
     std::numeric_limits<unsigned long>::max();
 static cl::opt<unsigned long>
     StopAt("sbvec-stop-at", cl::init(StopAtDisabled), cl::Hidden,
            cl::desc("Vectorize if the invocation count is < than this. 0 "
                     "disables vectorization."));
 
-static constexpr const unsigned long StopBundleDisabled =
+static constexpr unsigned long StopBundleDisabled =
     std::numeric_limits<unsigned long>::max();
 static cl::opt<unsigned long>
     StopBundle("sbvec-stop-bndl", cl::init(StopBundleDisabled), cl::Hidden,
@@ -279,13 +278,14 @@ void BottomUpVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
 }
 
 Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
-                                  ArrayRef<Value *> UserBndl, unsigned Depth) {
+                                  ArrayRef<Value *> UserBndl, unsigned Depth,
+                                  LegalityAnalysis &Legality) {
   bool StopForDebug =
       DebugBndlCnt++ >= StopBundle && StopBundle != StopBundleDisabled;
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
              VecUtils::dump(Bndl));
-  const auto &LegalityRes = StopForDebug ? Legality->getForcedPackForDebugging()
-                                         : Legality->canVectorize(Bndl);
+  const auto &LegalityRes = StopForDebug ? Legality.getForcedPackForDebugging()
+                                         : Legality.canVectorize(Bndl);
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Legality: " << LegalityRes << "\n");
   auto ActionPtr =
       std::make_unique<Action>(&LegalityRes, Bndl, UserBndl, Depth);
@@ -298,14 +298,16 @@ Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
       break;
     case Instruction::Opcode::Store: {
       // Don't recurse towards the pointer operand.
-      Action *OpA = vectorizeRec(getOperand(Bndl, 0), Bndl, Depth + 1);
+      Action *OpA =
+          vectorizeRec(getOperand(Bndl, 0), Bndl, Depth + 1, Legality);
       Operands.push_back(OpA);
       break;
     }
     default:
       // Visit all operands.
       for (auto OpIdx : seq<unsigned>(I->getNumOperands())) {
-        Action *OpA = vectorizeRec(getOperand(Bndl, OpIdx), Bndl, Depth + 1);
+        Action *OpA =
+            vectorizeRec(getOperand(Bndl, OpIdx), Bndl, Depth + 1, Legality);
         Operands.push_back(OpA);
       }
       break;
@@ -477,16 +479,17 @@ Value *BottomUpVec::emitVectors() {
   return NewVec;
 }
 
-bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
+bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl,
+                               LegalityAnalysis &Legality) {
   Change = false;
   if (LLVM_UNLIKELY(BottomUpInvocationCnt++ >= StopAt &&
                     StopAt != StopAtDisabled))
     return false;
   DeadInstrCandidates.clear();
-  Legality->clear();
+  Legality.clear();
   Actions.clear();
   DebugBndlCnt = 0;
-  vectorizeRec(Bndl, {}, /*Depth=*/0);
+  vectorizeRec(Bndl, {}, /*Depth=*/0, Legality);
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "BottomUpVec: Vectorization Actions:\n";
              Actions.dump());
   emitVectors();
@@ -499,16 +502,16 @@ bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
   assert(SeedSlice.size() >= 2 && "Bad slice!");
   Function &F = *SeedSlice[0]->getParent()->getParent();
   IMaps = std::make_unique<InstrMaps>();
-  Legality = std::make_unique<LegalityAnalysis>(
-      A.getAA(), A.getScalarEvolution(), F.getParent()->getDataLayout(),
-      F.getContext(), *IMaps);
+  LegalityAnalysis Legality(A.getAA(), A.getScalarEvolution(),
+                            F.getParent()->getDataLayout(), F.getContext(),
+                            *IMaps);
 
   // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
   SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());
   // Try to vectorize starting from the seed slice. The returned value
   // is true if we found vectorizable code and generated some vector
   // code for it. It does not mean that the code is profitable.
-  return tryVectorize(SeedSliceVals);
+  return tryVectorize(SeedSliceVals, Legality);
 }
 
 } // namespace sandboxir

@@ -8,6 +8,7 @@
 
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -52,13 +53,16 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
   for (const MachineBasicBlock &block : F) {
     for (const MachineInstr &instr : block) {
       auto uniformity = InstrInfo.getInstructionUniformity(instr);
-      if (uniformity == InstructionUniformity::AlwaysUniform) {
-        addUniformOverride(instr);
-        continue;
-      }
 
-      if (uniformity == InstructionUniformity::NeverUniform) {
+      switch (uniformity) {
+      case InstructionUniformity::AlwaysUniform:
+        addUniformOverride(instr);
+        break;
+      case InstructionUniformity::NeverUniform:
         markDivergent(instr);
+        break;
+      case InstructionUniformity::Default:
+        break;
       }
     }
   }
@@ -177,6 +181,32 @@ public:
 
 } // namespace
 
+AnalysisKey MachineUniformityAnalysis::Key;
+
+MachineUniformityAnalysis::Result
+MachineUniformityAnalysis::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  auto &DomTree = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  auto &CI = MFAM.getResult<MachineCycleAnalysis>(MF);
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  auto &F = MF.getFunction();
+  auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  return computeMachineUniformityInfo(MF, CI, DomTree,
+                                      TTI.hasBranchDivergence(&F));
+}
+
+PreservedAnalyses
+MachineUniformityPrinterPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  auto &MUI = MFAM.getResult<MachineUniformityAnalysis>(MF);
+  OS << "MachineUniformityInfo for function: ";
+  MF.getFunction().printAsOperand(OS, /*PrintType=*/false);
+  OS << '\n';
+  MUI.print(OS);
+  return PreservedAnalyses::all();
+}
+
 char MachineUniformityAnalysisPass::ID = 0;
 
 MachineUniformityAnalysisPass::MachineUniformityAnalysisPass()
@@ -209,8 +239,9 @@ bool MachineUniformityAnalysisPass::runOnMachineFunction(MachineFunction &MF) {
 
 void MachineUniformityAnalysisPass::print(raw_ostream &OS,
                                           const Module *) const {
-  OS << "MachineUniformityInfo for function: " << UI.getFunction().getName()
-     << "\n";
+  OS << "MachineUniformityInfo for function: ";
+  UI.getFunction().getFunction().printAsOperand(OS, /*PrintType=*/false);
+  OS << '\n';
   UI.print(OS);
 }
 

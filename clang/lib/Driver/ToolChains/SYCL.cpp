@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
-#include "CommonArgs.h"
-#include "llvm/Support/Path.h"
+#include "clang/Driver/CommonArgs.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -21,7 +20,7 @@ SYCLInstallationDetector::SYCLInstallationDetector(
 
 void SYCLInstallationDetector::addSYCLIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nobuiltininc))
+  if (DriverArgs.hasArg(options::OPT_nobuiltininc))
     return;
 
   // Add the SYCL header search locations in the specified order.

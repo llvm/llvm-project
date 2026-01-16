@@ -14,14 +14,17 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64SELECTIONDAGINFO_H
 
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
+#include "llvm/IR/RuntimeLibcalls.h"
+
+#define GET_SDNODE_ENUM
+#include "AArch64GenSDNodeInfo.inc"
+#undef GET_SDNODE_ENUM
 
 namespace llvm {
 
-class AArch64SelectionDAGInfo : public SelectionDAGTargetInfo {
+class AArch64SelectionDAGInfo : public SelectionDAGGenTargetInfo {
 public:
-  bool isTargetMemoryOpcode(unsigned Opcode) const override;
-
-  bool isTargetStrictFPOpcode(unsigned Opcode) const override;
+  AArch64SelectionDAGInfo();
 
   void verifyTargetNode(const SelectionDAG &DAG,
                         const SDNode *N) const override;
@@ -50,16 +53,21 @@ public:
                            MachinePointerInfo DstPtrInfo,
                            MachinePointerInfo SrcPtrInfo) const override;
 
+  std::pair<SDValue, SDValue>
+  EmitTargetCodeForMemchr(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                          SDValue Src, SDValue Char, SDValue Length,
+                          MachinePointerInfo SrcPtrInfo) const override;
+
   SDValue EmitTargetCodeForSetTag(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Op1, SDValue Op2,
                                   MachinePointerInfo DstPtrInfo,
                                   bool ZeroData) const override;
 
   SDValue EmitStreamingCompatibleMemLibCall(SelectionDAG &DAG, const SDLoc &DL,
-                                            SDValue Chain, SDValue Dst,
-                                            SDValue Src, SDValue Size,
+                                            SDValue Chain, SDValue Op0,
+                                            SDValue Op1, SDValue Size,
                                             RTLIB::Libcall LC) const;
 };
-}
+} // namespace llvm
 
 #endif

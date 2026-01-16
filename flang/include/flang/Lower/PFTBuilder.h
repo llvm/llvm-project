@@ -185,6 +185,11 @@ static constexpr bool isExecutableDirective{common::HasMember<
                   parser::OpenMPConstruct, parser::CUFKernelDoConstruct>>};
 
 template <typename A>
+static constexpr bool isOpenMPDirective{
+    common::HasMember<A, std::tuple<parser::OpenMPConstruct,
+                                    parser::OpenMPDeclarativeConstruct>>};
+
+template <typename A>
 static constexpr bool isFunctionLike{common::HasMember<
     A, std::tuple<parser::MainProgram, parser::FunctionSubprogram,
                   parser::SubroutineSubprogram,
@@ -265,6 +270,11 @@ struct Evaluation : EvaluationVariant {
   constexpr bool isExecutableDirective() const {
     return visit(common::visitors{[](auto &r) {
       return pft::isExecutableDirective<std::decay_t<decltype(r)>>;
+    }});
+  }
+  constexpr bool isOpenMPDirective() const {
+    return visit(common::visitors{[](auto &r) {
+      return pft::isOpenMPDirective<std::decay_t<decltype(r)>>;
     }});
   }
 
@@ -727,6 +737,8 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   HostAssociations hostAssociations;
+  /// Preserved USE statements for debug info generation
+  std::list<Fortran::semantics::PreservedUseStmt> preservedUseStmts;
 };
 
 /// Module-like units contain a list of function-like units.
@@ -856,6 +868,8 @@ void visitAllSymbols(const Evaluation &eval,
 } // namespace Fortran::lower::pft
 
 namespace Fortran::lower {
+class LoweringOptions;
+
 /// Create a PFT (Pre-FIR Tree) from the parse tree.
 ///
 /// A PFT is a light weight tree over the parse tree that is used to create FIR.
@@ -866,7 +880,8 @@ namespace Fortran::lower {
 /// either a statement, or a construct with a nested list of evaluations.
 std::unique_ptr<pft::Program>
 createPFT(const parser::Program &root,
-          const Fortran::semantics::SemanticsContext &semanticsContext);
+          const Fortran::semantics::SemanticsContext &semanticsContext,
+          const LoweringOptions &loweringOptions);
 
 /// Dumper for displaying a PFT.
 void dumpPFT(llvm::raw_ostream &outputStream, const pft::Program &pft);

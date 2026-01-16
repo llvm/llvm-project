@@ -1,4 +1,4 @@
-//===--- LambdaFunctionNameCheck.cpp - clang-tidy--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,32 +30,28 @@ static constexpr bool DefaultIgnoreMacros = false;
 // either a function body or a lambda body.
 class MacroExpansionsWithFileAndLine : public PPCallbacks {
 public:
-  explicit MacroExpansionsWithFileAndLine(
-      LambdaFunctionNameCheck::SourceRangeSet *SME)
+  explicit MacroExpansionsWithFileAndLine(llvm::DenseSet<SourceRange> *SME)
       : SuppressMacroExpansions(SME) {}
 
-  void MacroExpands(const Token &MacroNameTok,
-                    const MacroDefinition &MD, SourceRange Range,
-                    const MacroArgs *Args) override {
+  void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
+                    SourceRange Range, const MacroArgs *Args) override {
     bool HasFile = false;
     bool HasLine = false;
-    for (const auto& T : MD.getMacroInfo()->tokens()) {
+    for (const Token &T : MD.getMacroInfo()->tokens()) {
       if (T.is(tok::identifier)) {
-        StringRef IdentName = T.getIdentifierInfo()->getName();
-        if (IdentName == "__FILE__") {
+        const StringRef IdentName = T.getIdentifierInfo()->getName();
+        if (IdentName == "__FILE__")
           HasFile = true;
-        } else if (IdentName == "__LINE__") {
+        else if (IdentName == "__LINE__")
           HasLine = true;
-        }
       }
     }
-    if (HasFile && HasLine) {
+    if (HasFile && HasLine)
       SuppressMacroExpansions->insert(Range);
-    }
   }
 
 private:
-  LambdaFunctionNameCheck::SourceRangeSet* SuppressMacroExpansions;
+  llvm::DenseSet<SourceRange> *SuppressMacroExpansions;
 };
 
 AST_MATCHER(CXXMethodDecl, isInLambda) { return Node.getParent()->isLambda(); }
@@ -65,8 +61,7 @@ AST_MATCHER(CXXMethodDecl, isInLambda) { return Node.getParent()->isLambda(); }
 LambdaFunctionNameCheck::LambdaFunctionNameCheck(StringRef Name,
                                                  ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(
-          Options.getLocalOrGlobal("IgnoreMacros", DefaultIgnoreMacros)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", DefaultIgnoreMacros)) {}
 
 void LambdaFunctionNameCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
@@ -101,8 +96,7 @@ void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
 
     auto ER =
         Result.SourceManager->getImmediateExpansionRange(E->getLocation());
-    if (SuppressMacroExpansions.find(ER.getAsRange()) !=
-        SuppressMacroExpansions.end()) {
+    if (SuppressMacroExpansions.contains(ER.getAsRange())) {
       // This is a macro expansion for which we should not warn.
       return;
     }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
 
 typedef vector<float, 3> float3;
 typedef vector<double, 2> double2;
@@ -14,12 +14,12 @@ RWBuffer<> BufferErr2;
 // test implicit RWBuffer concept
 RWBuffer<int> r1;
 RWBuffer<float> r2;
-RWBuffer<float3> Buffer;
+RWBuffer<float3> Buff;
 RWBuffer<double2> r4;
 
 // expected-error@+4 {{constraints not satisfied for class template 'RWBuffer'}}
 // expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class RWBuffer}}
-// expected-note@*:* {{because 'hlsl::RWBuffer<int>' does not satisfy '__is_typed_resource_element_compatible'}}
+// expected-note@*:* {{because 'RWBuffer<int>' does not satisfy '__is_typed_resource_element_compatible'}}
 // expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(hlsl::RWBuffer<int>)' evaluated to false}}
 RWBuffer<RWBuffer<int> > r5;
 
@@ -65,7 +65,7 @@ RWBuffer<half[4]> r10;
 
 typedef vector<int, 8> int8;
 // expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
-// expected-note@*:* {{because 'vector<int, 8>' (vector of 8 'int' values) does not satisfy '__is_typed_resource_element_compatible'}}
+// expected-note@*:* {{because 'int8' (aka 'vector<int, 8>') does not satisfy '__is_typed_resource_element_compatible'}}
 // expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(vector<int, 8>)' evaluated to false}}
 RWBuffer<int8> r11;
 
@@ -90,7 +90,7 @@ enum numbers { one, two, three };
 RWBuffer<numbers> r15;
 
 // expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
-// expected-note@*:* {{because 'vector<double, 3>' (vector of 3 'double' values) does not satisfy '__is_typed_resource_element_compatible'}}
+// expected-note@*:* {{because 'double3' (aka 'vector<double, 3>') does not satisfy '__is_typed_resource_element_compatible'}}
 // expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(vector<double, 3>)' evaluated to false}}
 RWBuffer<double3> r16;
 
@@ -109,6 +109,6 @@ RWBuffer<threeDoubles> BufferErr3;
 
 [numthreads(1,1,1)]
 void main() {
-  (void)Buffer.__handle; // expected-error {{'__handle' is a private member of 'hlsl::RWBuffer<vector<float, 3>>'}}
+  (void)Buff.__handle; // expected-error {{'__handle' is a private member of 'hlsl::RWBuffer<vector<float, 3>>'}}
   // expected-note@* {{implicitly declared private here}}
 }

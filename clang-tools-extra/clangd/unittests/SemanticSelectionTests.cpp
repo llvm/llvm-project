@@ -196,76 +196,6 @@ TEST(SemanticSelection, RunViaClangdServer) {
               ElementsAre(SourceAnnotations.range("empty")));
 }
 
-TEST(FoldingRanges, ASTAll) {
-  const char *Tests[] = {
-      R"cpp(
-        #define FOO int foo() {\
-          int Variable = 42; \
-          return 0; \
-        }
-
-        // Do not generate folding range for braces within macro expansion.
-        FOO
-
-        // Do not generate folding range within macro arguments.
-        #define FUNCTOR(functor) functor
-        void func() {[[
-          FUNCTOR([](){});
-        ]]}
-
-        // Do not generate folding range with a brace coming from macro.
-        #define LBRACE {
-        void bar() LBRACE
-          int X = 42;
-        }
-      )cpp",
-      R"cpp(
-        void func() {[[
-          int Variable = 100;
-
-          if (Variable > 5) {[[
-            Variable += 42;
-          ]]} else if (Variable++)
-            ++Variable;
-          else {[[
-            Variable--;
-          ]]}
-
-          // Do not generate FoldingRange for empty CompoundStmts.
-          for (;;) {}
-
-          // If there are newlines between {}, we should generate one.
-          for (;;) {[[
-
-          ]]}
-        ]]}
-      )cpp",
-      R"cpp(
-        class Foo {
-        public:
-          Foo() {[[
-            int X = 1;
-          ]]}
-
-        private:
-          int getBar() {[[
-            return 42;
-          ]]}
-
-          // Braces are located at the same line: no folding range here.
-          void getFooBar() { }
-        };
-      )cpp",
-  };
-  for (const char *Test : Tests) {
-    auto T = Annotations(Test);
-    auto AST = TestTU::withCode(T.code()).build();
-    EXPECT_THAT(gatherFoldingRanges(llvm::cantFail(getFoldingRanges(AST))),
-                UnorderedElementsAreArray(T.ranges()))
-        << Test;
-  }
-}
-
 TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
   const char *Tests[] = {
       R"cpp(
@@ -371,6 +301,61 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
         //[[ foo
         /* bar */]]
       )cpp",
+      R"cpp(
+        //Ignore non-conditional directives
+        #define A 1
+
+        void func() {[[
+          int Variable = 100;
+
+          #ifdef FOO[[
+            Variable = 1;
+            #if 1[[
+                Variable = 4;
+            ]]#endif
+          ]]#else[[
+            Variable = 2;
+            //handle nested directives
+            #if 1[[
+              Variable = 3;
+            ]]#endif
+          ]]#endif
+
+
+          ]]}
+      )cpp",
+      R"cpp(
+        int Variable = 0;
+        #if defined(WALDO)
+            Variable = 1;
+        #
+      )cpp",
+      R"cpp(
+        int Variable = 0;
+        #if defined(WALDO)[[
+            Variable = 1;
+        ]]#elif 1[[
+            Variable = 2;
+        ]]#else
+            Variable = 3;
+        #
+      )cpp",
+      R"cpp(
+        #pragma region R1[[
+        
+        #pragma region R2[[
+         constexpr int a = 2;
+        ]]#pragma endregion
+        
+        ]]#pragma endregion
+      )cpp",
+      R"cpp(
+        #pragma region[[
+        ]]#pragma endregion
+
+        #pragma /*comment1*/ region /*comment2*/name[[
+        ]]#pragma endregion
+      )cpp",
   };
   for (const char *Test : Tests) {
     auto T = Annotations(Test);
@@ -430,6 +415,12 @@ TEST(FoldingRanges, PseudoParserLineFoldingsOnly) {
 
         //[[ foo
         /* bar */]]
+      )cpp",
+      R"cpp(
+        #pragma region abc[[
+        constexpr int a = 2;
+        ]]
+        #pragma endregion
       )cpp",
       // FIXME: Support folding template arguments.
       // R"cpp(

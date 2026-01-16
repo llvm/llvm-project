@@ -127,12 +127,12 @@ define double @foo(double %a, double %b) nounwind readnone {
 ;
 ; MIPS64R6-LABEL: foo:
 ; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    mov.d $f0, $f12
 ; MIPS64R6-NEXT:    dmtc1 $zero, $f1
 ; MIPS64R6-NEXT:    cmp.lt.d $f1, $f1, $f12
 ; MIPS64R6-NEXT:    mfc1 $1, $f1
 ; MIPS64R6-NEXT:    andi $1, $1, 1
-; MIPS64R6-NEXT:    bnez $1, .LBB0_2
-; MIPS64R6-NEXT:    mov.d	$f0, $f12
+; MIPS64R6-NEXT:    bnezc $1, .LBB0_2
 ; MIPS64R6-NEXT:  # %bb.1: # %if.else
 ; MIPS64R6-NEXT:    dmtc1 $zero, $f0
 ; MIPS64R6-NEXT:    cmp.ule.d $f1, $f13, $f0

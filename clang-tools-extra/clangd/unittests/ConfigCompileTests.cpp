@@ -298,7 +298,8 @@ TEST_F(ConfigCompileTests, DiagnosticSuppression) {
                                    "unreachable-code", "unused-variable",
                                    "typecheck_bool_condition",
                                    "unexpected_friend", "warn_alloca"));
-  clang::DiagnosticsEngine DiagEngine(new DiagnosticIDs, nullptr,
+  clang::DiagnosticOptions DiagOpts;
+  clang::DiagnosticsEngine DiagEngine(DiagnosticIDs::create(), DiagOpts,
                                       new clang::IgnoringDiagConsumer);
 
   using Diag = clang::Diagnostic;
@@ -346,14 +347,10 @@ TEST_F(ConfigCompileTests, Tidy) {
   Tidy.Add.emplace_back("llvm-*");
   Tidy.Remove.emplace_back("llvm-include-order");
   Tidy.Remove.emplace_back("readability-*");
-  Tidy.CheckOptions.emplace_back(
-      std::make_pair(std::string("StrictMode"), std::string("true")));
   Tidy.CheckOptions.emplace_back(std::make_pair(
       std::string("example-check.ExampleOption"), std::string("0")));
   EXPECT_TRUE(compileAndApply());
-  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.size(), 2U);
-  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.lookup("StrictMode"),
-            "true");
+  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.size(), 1U);
   EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.lookup(
                 "example-check.ExampleOption"),
             "0");

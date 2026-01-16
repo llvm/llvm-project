@@ -109,11 +109,12 @@ public:
   }
 
   const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
-    return getDesc(Function::getGUID(FProfileName));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(FProfileName));
   }
 
   const PseudoProbeDescriptor *getDesc(const Function &F) const {
-    return getDesc(Function::getGUID(FunctionSamples::getCanonicalFnName(F)));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(
+        FunctionSamples::getCanonicalFnName(F)));
   }
 
   bool profileIsHashMismatched(const PseudoProbeDescriptor &FuncDesc,
@@ -1087,7 +1088,6 @@ void SampleProfileLoaderBaseImpl<BT>::finalizeWeightPropagation(
   // Samples->getHeadSamples() + 1 to avoid functions with zero count.
   if (SampleProfileUseProfi) {
     const BasicBlockT *EntryBB = getEntryBB(&F);
-    ErrorOr<uint64_t> EntryWeight = getBlockWeight(EntryBB);
     if (BlockWeights[EntryBB] > 0) {
       getFunction(F).setEntryCount(
           ProfileCount(BlockWeights[EntryBB], Function::PCT_Real),

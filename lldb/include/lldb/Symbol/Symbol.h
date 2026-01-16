@@ -15,6 +15,7 @@
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/JSON.h"
 
@@ -167,7 +168,7 @@ public:
 
   lldb::SymbolType GetType() const { return (lldb::SymbolType)m_type; }
 
-  void SetType(lldb::SymbolType type) { m_type = (lldb::SymbolType)type; }
+  void SetType(lldb::SymbolType type) { m_type = type; }
 
   const char *GetTypeAsString() const;
 
@@ -258,7 +259,7 @@ public:
   bool ContainsFileAddress(lldb::addr_t file_addr) const;
 
   static llvm::StringRef GetSyntheticSymbolPrefix() {
-    return "___lldb_unnamed_symbol";
+    return "___lldb_unnamed_symbol_";
   }
 
   /// Decode a serialized version of this object from data.
@@ -301,6 +302,10 @@ public:
 
   bool operator==(const Symbol &rhs) const;
 
+  static const char *GetTypeAsString(lldb::SymbolType symbol_type);
+
+  static lldb::SymbolType GetTypeFromString(const char *str);
+
 protected:
   // This is the internal guts of ResolveReExportedSymbol, it assumes
   // reexport_name is not null, and that module_spec is valid.  We track the
@@ -313,8 +318,8 @@ protected:
 
   void SynthesizeNameIfNeeded() const;
 
-  uint32_t m_uid =
-      UINT32_MAX;           // User ID (usually the original symbol table index)
+  uint32_t m_uid = LLDB_INVALID_SYMBOL_ID; // User ID (usually the original
+                                           // symbol table index)
   uint16_t m_type_data = 0; // data specific to m_type
   uint16_t m_type_data_resolved : 1, // True if the data in m_type_data has
                                      // already been calculated

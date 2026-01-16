@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
@@ -28,9 +29,9 @@
 namespace llvm {
 namespace orc {
 
-class SimpleRemoteEPC : public ExecutorProcessControl,
-                        public SimpleRemoteEPCTransportClient,
-                        private DylibManager {
+class LLVM_ABI SimpleRemoteEPC : public ExecutorProcessControl,
+                                 public SimpleRemoteEPCTransportClient,
+                                 private DylibManager {
 public:
   /// A setup object containing callbacks to construct a memory manager and
   /// memory access object. Both are optional. If not specified,
@@ -68,7 +69,7 @@ public:
   SimpleRemoteEPC &operator=(const SimpleRemoteEPC &) = delete;
   SimpleRemoteEPC(SimpleRemoteEPC &&) = delete;
   SimpleRemoteEPC &operator=(SimpleRemoteEPC &&) = delete;
-  ~SimpleRemoteEPC();
+  ~SimpleRemoteEPC() override;
 
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
@@ -85,7 +86,7 @@ public:
 
   Expected<HandleMessageAction>
   handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo, ExecutorAddr TagAddr,
-                SimpleRemoteEPCArgBytesVector ArgBytes) override;
+                shared::WrapperFunctionBuffer ArgBytes) override;
 
   void handleDisconnect(Error Err) override;
 
@@ -105,14 +106,14 @@ private:
                     ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
 
   Error handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
-                    SimpleRemoteEPCArgBytesVector ArgBytes);
+                    shared::WrapperFunctionBuffer ArgBytes);
   Error setup(Setup S);
 
   Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
-                     SimpleRemoteEPCArgBytesVector ArgBytes);
+                     shared::WrapperFunctionBuffer ArgBytes);
   void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
-                         SimpleRemoteEPCArgBytesVector ArgBytes);
-  Error handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes);
+                         shared::WrapperFunctionBuffer ArgBytes);
+  Error handleHangup(shared::WrapperFunctionBuffer ArgBytes);
 
   uint64_t getNextSeqNo() { return NextSeqNo++; }
   void releaseSeqNo(uint64_t SeqNo) {}

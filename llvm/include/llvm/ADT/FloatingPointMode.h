@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -152,10 +153,32 @@ struct DenormalMode {
            Input == DenormalModeKind::PositiveZero;
   }
 
+  /// Return true if input denormals may be implicitly treated as 0.
+  constexpr bool inputsMayBeZero() const {
+    return inputsAreZero() || Input == DenormalMode::Dynamic;
+  }
+
   /// Return true if output denormals should be flushed to 0.
   constexpr bool outputsAreZero() const {
     return Output == DenormalModeKind::PreserveSign ||
            Output == DenormalModeKind::PositiveZero;
+  }
+
+  /// Return true if output denormals may be implicitly treated as 0.
+  constexpr bool outputsMayBeZero() const {
+    return outputsAreZero() || Output == DenormalMode::Dynamic;
+  }
+
+  /// Return true if input denormals could be flushed to +0.
+  constexpr bool inputsMayBePositiveZero() const {
+    return Input == DenormalMode::PositiveZero ||
+           Input == DenormalMode::Dynamic;
+  }
+
+  /// Return true if output denormals could be flushed to +0.
+  constexpr bool outputsMayBePositiveZero() const {
+    return Output == DenormalMode::PositiveZero ||
+           Output == DenormalMode::Dynamic;
   }
 
   /// Get the effective denormal mode if the mode if this caller calls into a
@@ -190,7 +213,7 @@ inline DenormalMode::DenormalModeKind
 parseDenormalFPAttributeComponent(StringRef Str) {
   // Assume ieee on unspecified attribute.
   return StringSwitch<DenormalMode::DenormalModeKind>(Str)
-      .Cases("", "ieee", DenormalMode::IEEE)
+      .Cases({"", "ieee"}, DenormalMode::IEEE)
       .Case("preserve-sign", DenormalMode::PreserveSign)
       .Case("positive-zero", DenormalMode::PositiveZero)
       .Case("dynamic", DenormalMode::Dynamic)
@@ -267,17 +290,51 @@ enum FPClassTest : unsigned {
 LLVM_DECLARE_ENUM_AS_BITMASK(FPClassTest, /* LargestValue */ fcPosInf);
 
 /// Return the test mask which returns true if the value's sign bit is flipped.
-FPClassTest fneg(FPClassTest Mask);
+LLVM_ABI FPClassTest fneg(FPClassTest Mask);
 
 /// Return the test mask which returns true after fabs is applied to the value.
-FPClassTest inverse_fabs(FPClassTest Mask);
+LLVM_ABI FPClassTest inverse_fabs(FPClassTest Mask);
 
 /// Return the test mask which returns true if the value could have the same set
 /// of classes, but with a different sign.
-FPClassTest unknown_sign(FPClassTest Mask);
+LLVM_ABI FPClassTest unknown_sign(FPClassTest Mask);
 
 /// Write a human readable form of \p Mask to \p OS
-raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
+
+/// Returns true if all values in \p LHS must be less than or equal to those in
+/// \p RHS. That is, the comparison `fcmp ogt LHS, RHS` will always return
+/// false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyGreater(FPClassTest LHS, FPClassTest RHS,
+                                         bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be less than those in \p RHS. That
+/// is, the comparison `fcmp oge LHS, RHS` will always return false.
+//
+// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyGreaterEq(FPClassTest LHS, FPClassTest RHS,
+                                           bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be greater than or equal to those
+/// in \p RHS. That is, the comparison `fcmp olt LHS, RHS` will always return
+/// false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyLess(FPClassTest LHS, FPClassTest RHS,
+                                      bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be greater than to those in \p
+/// RHS. That is, the comparison `fcmp ole LHS, RHS` will always return false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyLessEq(FPClassTest LHS, FPClassTest RHS,
+                                        bool OrderedZeroSign = false);
 
 } // namespace llvm
 

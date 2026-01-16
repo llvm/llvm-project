@@ -130,9 +130,11 @@ def err_attribute_not_type_attr : Error<
   "%0%select{ attribute|}1 cannot be applied to types">;
 def err_enum_template : Error<"enumeration cannot be a template">;
 
-def warn_cxx20_compat_consteval : Warning<
-  "'consteval' specifier is incompatible with C++ standards before C++20">,
-  InGroup<CXX20Compat>, DefaultIgnore;
+def warn_cxx20_compat_consteval
+    : Warning<"'consteval' specifier is incompatible with C++ standards before "
+              "C++20">,
+      InGroup<CXXPre20Compat>,
+      DefaultIgnore;
 def warn_missing_type_specifier : Warning<
   "type specifier missing, defaults to 'int'">,
   InGroup<ImplicitInt>, DefaultIgnore;
@@ -179,6 +181,8 @@ def err_opencl_unknown_type_specifier : Error<
 
 def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
+def warn_unknown_attribute_ignored_suggestion : Warning<
+  "unknown attribute %0 ignored; did you mean '%1'?">, InGroup<UnknownAttributes>;
 def warn_attribute_ignored : Warning<"%0 attribute ignored">,
   InGroup<IgnoredAttributes>;
 def err_keyword_not_supported_on_target : Error<
@@ -429,6 +433,12 @@ def err_omp_more_one_clause : Error<
   "directive '#pragma omp %0' cannot contain more than one '%1' clause%select{| with '%3' name modifier| with 'source' dependence}2">;
 def err_omp_required_clause : Error<
   "directive '#pragma omp %0' requires the '%1' clause">;
+def warn_omp_gpu_unsupported_clause: Warning<
+  "clause '%0' is currently not supported on a GPU; clause ignored">,
+  InGroup<OpenMPClauses>;
+def warn_omp_gpu_unsupported_modifier_for_clause: Warning<
+  "modifier '%0' is currently not supported on a GPU for the '%1' clause; modifier ignored">,
+  InGroup<OpenMPClauses>;
 
 // Static Analyzer Core
 def err_unknown_analyzer_checker_or_package : Error<

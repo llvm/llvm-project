@@ -11,48 +11,34 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "BPFAsmPrinter.h"
 #include "BPF.h"
 #include "BPFInstrInfo.h"
 #include "BPFMCInstLower.h"
 #include "BTFDebug.h"
 #include "MCTargetDesc/BPFInstPrinter.h"
 #include "TargetInfo/BPFTargetInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
-
-namespace {
-class BPFAsmPrinter : public AsmPrinter {
-public:
-  explicit BPFAsmPrinter(TargetMachine &TM,
-                         std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), BTF(nullptr) {}
-
-  StringRef getPassName() const override { return "BPF Assembly Printer"; }
-  bool doInitialization(Module &M) override;
-  void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) override;
-  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
-                             const char *ExtraCode, raw_ostream &O) override;
-
-  void emitInstruction(const MachineInstr *MI) override;
-
-private:
-  BTFDebug *BTF;
-};
-} // namespace
 
 bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
@@ -64,6 +50,55 @@ bool BPFAsmPrinter::doInitialization(Module &M) {
   }
 
   return false;
+}
+
+const BPFTargetMachine &BPFAsmPrinter::getBTM() const {
+  return static_cast<const BPFTargetMachine &>(TM);
+}
+
+bool BPFAsmPrinter::doFinalization(Module &M) {
+  // Remove unused globals which are previously used for jump table.
+  const BPFSubtarget *Subtarget = getBTM().getSubtargetImpl();
+  if (Subtarget->hasGotox()) {
+    std::vector<GlobalVariable *> Targets;
+    for (GlobalVariable &Global : M.globals()) {
+      if (Global.getLinkage() != GlobalValue::PrivateLinkage)
+        continue;
+      if (!Global.isConstant() || !Global.hasInitializer())
+        continue;
+
+      Constant *CV = dyn_cast<Constant>(Global.getInitializer());
+      if (!CV)
+        continue;
+      ConstantArray *CA = dyn_cast<ConstantArray>(CV);
+      if (!CA)
+        continue;
+
+      for (unsigned i = 1, e = CA->getNumOperands(); i != e; ++i) {
+        if (!dyn_cast<BlockAddress>(CA->getOperand(i)))
+          continue;
+      }
+      Targets.push_back(&Global);
+    }
+
+    for (GlobalVariable *GV : Targets) {
+      GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
+      GV->dropAllReferences();
+      GV->eraseFromParent();
+    }
+  }
+
+  for (GlobalObject &GO : M.global_objects()) {
+    if (!GO.hasExternalWeakLinkage())
+      continue;
+
+    if (!SawTrapCall && GO.getName() == BPF_TRAP) {
+      GO.eraseFromParent();
+      break;
+    }
+  }
+
+  return AsmPrinter::doFinalization(M);
 }
 
 void BPFAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
@@ -135,6 +170,16 @@ bool BPFAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  if (MI->isCall()) {
+    for (const MachineOperand &Op : MI->operands()) {
+      if (Op.isGlobal()) {
+        if (const GlobalValue *GV = Op.getGlobal())
+          if (GV->getName() == BPF_TRAP)
+            SawTrapCall = true;
+      }
+    }
+  }
+
   BPF_MC::verifyInstructionPredicates(MI->getOpcode(),
                                       getSubtargetInfo().getFeatureBits());
 
@@ -147,8 +192,64 @@ void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
+MCSymbol *BPFAsmPrinter::getJTPublicSymbol(unsigned JTI) {
+  SmallString<60> Name;
+  raw_svector_ostream(Name)
+      << "BPF.JT." << MF->getFunctionNumber() << '.' << JTI;
+  MCSymbol *S = OutContext.getOrCreateSymbol(Name);
+  if (auto *ES = static_cast<MCSymbolELF *>(S)) {
+    ES->setBinding(ELF::STB_GLOBAL);
+    ES->setType(ELF::STT_OBJECT);
+  }
+  return S;
+}
+
+void BPFAsmPrinter::emitJumpTableInfo() {
+  const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
+  if (!MJTI)
+    return;
+
+  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
+  if (JT.empty())
+    return;
+
+  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
+  const Function &F = MF->getFunction();
+
+  MCSection *Sec = OutStreamer->getCurrentSectionOnly();
+  MCSymbol *SecStart = Sec->getBeginSymbol();
+
+  MCSection *JTS = TLOF.getSectionForJumpTable(F, TM);
+  assert(MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress);
+  unsigned EntrySize = MJTI->getEntrySize(getDataLayout());
+  OutStreamer->switchSection(JTS);
+  for (unsigned JTI = 0; JTI < JT.size(); JTI++) {
+    ArrayRef<MachineBasicBlock *> JTBBs = JT[JTI].MBBs;
+    if (JTBBs.empty())
+      continue;
+
+    MCSymbol *JTStart = getJTPublicSymbol(JTI);
+    OutStreamer->emitLabel(JTStart);
+    for (const MachineBasicBlock *MBB : JTBBs) {
+      const MCExpr *Diff = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(MBB->getSymbol(), OutContext),
+          MCSymbolRefExpr::create(SecStart, OutContext), OutContext);
+      OutStreamer->emitValue(Diff, EntrySize);
+    }
+    const MCExpr *JTSize =
+        MCConstantExpr::create(JTBBs.size() * EntrySize, OutContext);
+    OutStreamer->emitELFSize(JTStart, JTSize);
+  }
+}
+
+char BPFAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(BPFAsmPrinter, "bpf-asm-printer", "BPF Assembly Printer", false,
+                false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeBPFAsmPrinter() {
   RegisterAsmPrinter<BPFAsmPrinter> X(getTheBPFleTarget());
   RegisterAsmPrinter<BPFAsmPrinter> Y(getTheBPFbeTarget());
   RegisterAsmPrinter<BPFAsmPrinter> Z(getTheBPFTarget());

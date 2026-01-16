@@ -37,6 +37,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -59,13 +60,11 @@ using ProfileCount = Function::ProfileCount;
 
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file...
-template class llvm::SymbolTableListTraits<BasicBlock>;
+template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<BasicBlock>;
 
 static cl::opt<int> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
 
 void Function::renumberBlocks() {
   validateBlockNumbers();
@@ -89,30 +88,15 @@ void Function::validateBlockNumbers() const {
 }
 
 void Function::convertToNewDbgValues() {
-  IsNewDbgInfoFormat = true;
   for (auto &BB : *this) {
     BB.convertToNewDbgValues();
   }
 }
 
 void Function::convertFromNewDbgValues() {
-  IsNewDbgInfoFormat = false;
   for (auto &BB : *this) {
     BB.convertFromNewDbgValues();
   }
-}
-
-void Function::setIsNewDbgInfoFormat(bool NewFlag) {
-  if (NewFlag && !IsNewDbgInfoFormat)
-    convertToNewDbgValues();
-  else if (!NewFlag && IsNewDbgInfoFormat)
-    convertFromNewDbgValues();
-}
-void Function::setNewDbgInfoFormatFlag(bool NewFlag) {
-  for (auto &BB : *this) {
-    BB.setNewDbgInfoFormatFlag(NewFlag);
-  }
-  IsNewDbgInfoFormat = NewFlag;
 }
 
 //===----------------------------------------------------------------------===//
@@ -144,6 +128,12 @@ bool Argument::hasNonNullAttr(bool AllowUndefOrPoison) const {
 bool Argument::hasByValAttr() const {
   if (!getType()->isPointerTy()) return false;
   return hasAttribute(Attribute::ByVal);
+}
+
+bool Argument::hasDeadOnReturnAttr() const {
+  if (!getType()->isPointerTy())
+    return false;
+  return hasAttribute(Attribute::DeadOnReturn);
 }
 
 bool Argument::hasByRefAttr() const {
@@ -406,6 +396,9 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   case FramePointerKind::NonLeaf:
     B.addAttribute("frame-pointer", "non-leaf");
     break;
+  case FramePointerKind::NonLeafNoReserve:
+    B.addAttribute("frame-pointer", "non-leaf-no-reserve");
+    break;
   case FramePointerKind::All:
     B.addAttribute("frame-pointer", "all");
     break;
@@ -492,7 +485,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
                    const Twine &name, Module *ParentModule)
     : GlobalObject(Ty, Value::FunctionVal, AllocMarker, Linkage, name,
                    computeAddrSpace(AddrSpace, ParentModule)),
-      NumArgs(Ty->getNumParams()), IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
+      NumArgs(Ty->getNumParams()) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");
   setGlobalObjectSubClassData(0);
@@ -507,7 +500,6 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
 
   if (ParentModule) {
     ParentModule->getFunctionList().push_back(this);
-    IsNewDbgInfoFormat = ParentModule->IsNewDbgInfoFormat;
   }
 
   HasLLVMReservedName = getName().starts_with("llvm.");
@@ -966,9 +958,6 @@ bool Function::hasAddressTaken(const User **PutOffender,
                                bool IgnoreCastedDirectCall) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
-    if (isa<BlockAddress>(FU))
-      continue;
-
     if (IgnoreCallbackUses) {
       AbstractCallSite ACS(&U);
       if (ACS && ACS.isCallbackCall())
@@ -1033,12 +1022,7 @@ bool Function::isDefTriviallyDead() const {
       !hasAvailableExternallyLinkage())
     return false;
 
-  // Check if the function is used by anything other than a blockaddress.
-  for (const User *U : users())
-    if (!isa<BlockAddress>(U))
-      return false;
-
-  return true;
+  return use_empty();
 }
 
 /// callsFunctionThatReturnsTwice - Return true if the function has a call to
@@ -1141,7 +1125,7 @@ std::optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
-      if (MDS->getString() == "function_entry_count") {
+      if (MDS->getString() == MDProfLabels::FunctionEntryCount) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
         // A value of -1 is used for SamplePGO when there were no samples.
@@ -1150,7 +1134,8 @@ std::optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
           return std::nullopt;
         return ProfileCount(Count, PCT_Real);
       } else if (AllowSynthetic &&
-                 MDS->getString() == "synthetic_function_entry_count") {
+                 MDS->getString() ==
+                     MDProfLabels::SyntheticFunctionEntryCount) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
         return ProfileCount(Count, PCT_Synthetic);
@@ -1163,7 +1148,7 @@ DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {
   DenseSet<GlobalValue::GUID> R;
   if (MDNode *MD = getMetadata(LLVMContext::MD_prof))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0)))
-      if (MDS->getString() == "function_entry_count")
+      if (MDS->getString() == MDProfLabels::FunctionEntryCount)
         for (unsigned i = 2; i < MD->getNumOperands(); i++)
           R.insert(mdconst::extract<ConstantInt>(MD->getOperand(i))
                        ->getValue()
@@ -1175,6 +1160,18 @@ bool Function::nullPointerIsDefined() const {
   return hasFnAttribute(Attribute::NullPointerIsValid);
 }
 
+unsigned Function::getVScaleValue() const {
+  Attribute Attr = getFnAttribute(Attribute::VScaleRange);
+  if (!Attr.isValid())
+    return 0;
+
+  unsigned VScale = Attr.getVScaleRangeMin();
+  if (VScale && VScale == Attr.getVScaleRangeMax())
+    return VScale;
+
+  return 0;
+}
+
 bool llvm::NullPointerIsDefined(const Function *F, unsigned AS) {
   if (F && F->nullPointerIsDefined())
     return true;
@@ -1183,4 +1180,87 @@ bool llvm::NullPointerIsDefined(const Function *F, unsigned AS) {
     return true;
 
   return false;
+}
+
+bool llvm::CallingConv::supportsNonVoidReturnType(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::Fast:
+  case CallingConv::Cold:
+  case CallingConv::GHC:
+  case CallingConv::HiPE:
+  case CallingConv::AnyReg:
+  case CallingConv::PreserveMost:
+  case CallingConv::PreserveAll:
+  case CallingConv::Swift:
+  case CallingConv::CXX_FAST_TLS:
+  case CallingConv::Tail:
+  case CallingConv::CFGuard_Check:
+  case CallingConv::SwiftTail:
+  case CallingConv::PreserveNone:
+  case CallingConv::X86_StdCall:
+  case CallingConv::X86_FastCall:
+  case CallingConv::ARM_APCS:
+  case CallingConv::ARM_AAPCS:
+  case CallingConv::ARM_AAPCS_VFP:
+  case CallingConv::MSP430_INTR:
+  case CallingConv::X86_ThisCall:
+  case CallingConv::PTX_Device:
+  case CallingConv::SPIR_FUNC:
+  case CallingConv::Intel_OCL_BI:
+  case CallingConv::X86_64_SysV:
+  case CallingConv::Win64:
+  case CallingConv::X86_VectorCall:
+  case CallingConv::DUMMY_HHVM:
+  case CallingConv::DUMMY_HHVM_C:
+  case CallingConv::X86_INTR:
+  case CallingConv::AVR_INTR:
+  case CallingConv::AVR_SIGNAL:
+  case CallingConv::AVR_BUILTIN:
+    return true;
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+    return false;
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::MSP430_BUILTIN:
+  case CallingConv::AArch64_VectorCall:
+  case CallingConv::AArch64_SVE_VectorCall:
+  case CallingConv::WASM_EmscriptenInvoke:
+  case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
+  case CallingConv::M68k_INTR:
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
+  case CallingConv::M68k_RTD:
+  case CallingConv::GRAAL:
+  case CallingConv::ARM64EC_Thunk_X64:
+  case CallingConv::ARM64EC_Thunk_Native:
+  case CallingConv::RISCV_VectorCall:
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
+  case CallingConv::RISCV_VLSCall_32:
+  case CallingConv::RISCV_VLSCall_64:
+  case CallingConv::RISCV_VLSCall_128:
+  case CallingConv::RISCV_VLSCall_256:
+  case CallingConv::RISCV_VLSCall_512:
+  case CallingConv::RISCV_VLSCall_1024:
+  case CallingConv::RISCV_VLSCall_2048:
+  case CallingConv::RISCV_VLSCall_4096:
+  case CallingConv::RISCV_VLSCall_8192:
+  case CallingConv::RISCV_VLSCall_16384:
+  case CallingConv::RISCV_VLSCall_32768:
+  case CallingConv::RISCV_VLSCall_65536:
+    return true;
+  default:
+    return false;
+  }
+
+  llvm_unreachable("covered callingconv switch");
 }

@@ -115,7 +115,7 @@ static RT_API_ATTRS void DefaultInitialize(
           "not yet implemented: CHARACTER(KIND=%d) in EOSHIFT intrinsic", kind);
     }
   } else {
-    std::memset(result.raw().base_addr, 0, bytes);
+    runtime::memset(result.raw().base_addr, 0, bytes);
   }
 }
 
@@ -132,7 +132,7 @@ static inline RT_API_ATTRS std::size_t AllocateResult(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, extent[j]);
   }
-  if (int stat{result.Allocate(kNoAsyncId)}) {
+  if (int stat{result.Allocate(kNoAsyncObject)}) {
     terminator.Crash(
         "%s: Could not allocate memory for result (stat=%d)", function, stat);
   }
@@ -157,7 +157,7 @@ static inline RT_API_ATTRS std::size_t AllocateBesselResult(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, extent[j]);
   }
-  if (int stat{result.Allocate(kNoAsyncId)}) {
+  if (int stat{result.Allocate(kNoAsyncObject)}) {
     terminator.Crash(
         "%s: Could not allocate memory for result (stat=%d)", function, stat);
   }

@@ -140,8 +140,7 @@ public:
   bool runOnMachineFunction(MachineFunction &F) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -216,7 +215,8 @@ static unsigned getInstSizeInBytes(const MachineInstr &MI,
           // These do not have a size:
           MI.isDebugOrPseudoInstr() || MI.isPosition() || MI.isKill() ||
           MI.isImplicitDef() || MI.getOpcode() == TargetOpcode::MEMBARRIER ||
-          MI.getOpcode() == TargetOpcode::INIT_UNDEF ||
+          MI.getOpcode() == TargetOpcode::INIT_UNDEF || MI.isFakeUse() ||
+          MI.getOpcode() == TargetOpcode::RELOC_NONE ||
           // These have a size that may be zero:
           MI.isInlineAsm() || MI.getOpcode() == SystemZ::STACKMAP ||
           MI.getOpcode() == SystemZ::PATCHPOINT ||

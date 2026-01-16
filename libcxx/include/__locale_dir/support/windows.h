@@ -186,27 +186,9 @@ inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr
   return ::_strtod_l(__nptr, __endptr, __loc);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long long __strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return ::_strtoi64_l(__nptr, __endptr, __base, __loc);
-}
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-__strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return ::_strtoui64_l(__nptr, __endptr, __base, __loc);
-}
-
 //
 // Character manipulation functions
 //
-#if defined(_LIBCPP_BUILDING_LIBRARY)
-inline _LIBCPP_HIDE_FROM_ABI int __islower(int __c, __locale_t __loc) { return _islower_l(__c, __loc); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __isupper(int __c, __locale_t __loc) { return _isupper_l(__c, __loc); }
-#endif
-
-inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __c, __locale_t __loc) { return _isdigit_l(__c, __loc); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __c, __locale_t __loc) { return _isxdigit_l(__c, __loc); }
-
 #if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __c, __locale_t __loc) { return ::_toupper_l(__c, __loc); }
 
@@ -285,23 +267,6 @@ _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __snpri
 
 _LIBCPP_EXPORTED_FROM_ABI
 _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(char** __ret, __locale_t __loc, const char* __format, ...);
-
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")
-_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral") // GCC doesn't support [[gnu::format]] on variadic templates
-#ifdef _LIBCPP_COMPILER_CLANG_BASED
-#  define _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(...) _LIBCPP_ATTRIBUTE_FORMAT(__VA_ARGS__)
-#else
-#  define _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(...) /* nothing */
-#endif
-
-template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
-    const char* __dest, __locale_t __loc, const char* __format, _Args&&... __args) {
-  return ::_sscanf_l(__dest, __format, __loc, std::forward<_Args>(__args)...);
-}
-_LIBCPP_DIAGNOSTIC_POP
-#undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
 
 #if defined(_LIBCPP_BUILDING_LIBRARY)
 struct __locale_guard {

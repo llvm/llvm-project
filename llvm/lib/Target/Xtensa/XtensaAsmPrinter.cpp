@@ -13,7 +13,7 @@
 
 #include "XtensaAsmPrinter.h"
 #include "MCTargetDesc/XtensaInstPrinter.h"
-#include "MCTargetDesc/XtensaMCExpr.h"
+#include "MCTargetDesc/XtensaMCAsmInfo.h"
 #include "MCTargetDesc/XtensaTargetStreamer.h"
 #include "TargetInfo/XtensaTargetInfo.h"
 #include "XtensaConstantPoolValue.h"
@@ -32,13 +32,13 @@
 
 using namespace llvm;
 
-static XtensaMCExpr::Specifier
+static Xtensa::Specifier
 getModifierSpecifier(XtensaCP::XtensaCPModifier Modifier) {
   switch (Modifier) {
   case XtensaCP::no_modifier:
-    return XtensaMCExpr::VK_None;
+    return Xtensa::S_None;
   case XtensaCP::TPOFF:
-    return XtensaMCExpr::VK_TPOFF;
+    return Xtensa::S_TPOFF;
   }
   report_fatal_error("Invalid XtensaCPModifier!");
 }
@@ -62,22 +62,25 @@ void XtensaAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 void XtensaAsmPrinter::emitMachineConstantPoolValue(
     MachineConstantPoolValue *MCPV) {
-  XtensaConstantPoolValue *ACPV = static_cast<XtensaConstantPoolValue *>(MCPV);
+  XtensaConstantPoolValue *XtensaCPV =
+      static_cast<XtensaConstantPoolValue *>(MCPV);
   MCSymbol *MCSym;
 
-  if (ACPV->isBlockAddress()) {
+  if (XtensaCPV->isBlockAddress()) {
     const BlockAddress *BA =
-        cast<XtensaConstantPoolConstant>(ACPV)->getBlockAddress();
+        cast<XtensaConstantPoolConstant>(XtensaCPV)->getBlockAddress();
     MCSym = GetBlockAddressSymbol(BA);
-  } else if (ACPV->isMachineBasicBlock()) {
-    const MachineBasicBlock *MBB = cast<XtensaConstantPoolMBB>(ACPV)->getMBB();
+  } else if (XtensaCPV->isMachineBasicBlock()) {
+    const MachineBasicBlock *MBB =
+        cast<XtensaConstantPoolMBB>(XtensaCPV)->getMBB();
     MCSym = MBB->getSymbol();
-  } else if (ACPV->isJumpTable()) {
-    unsigned Idx = cast<XtensaConstantPoolJumpTable>(ACPV)->getIndex();
+  } else if (XtensaCPV->isJumpTable()) {
+    unsigned Idx = cast<XtensaConstantPoolJumpTable>(XtensaCPV)->getIndex();
     MCSym = this->GetJTISymbol(Idx, false);
   } else {
-    assert(ACPV->isExtSymbol() && "unrecognized constant pool value");
-    XtensaConstantPoolSymbol *XtensaSym = cast<XtensaConstantPoolSymbol>(ACPV);
+    assert(XtensaCPV->isExtSymbol() && "unrecognized constant pool value");
+    XtensaConstantPoolSymbol *XtensaSym =
+        cast<XtensaConstantPoolSymbol>(XtensaCPV);
     const char *SymName = XtensaSym->getSymbol();
 
     if (XtensaSym->isPrivateLinkage()) {
@@ -89,28 +92,28 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
     }
   }
 
-  MCSymbol *LblSym = GetCPISymbol(ACPV->getLabelId());
+  MCSymbol *LblSym = GetCPISymbol(XtensaCPV->getLabelId());
   auto *TS =
       static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
-  XtensaMCExpr::Specifier VK = getModifierSpecifier(ACPV->getModifier());
+  auto Spec = getModifierSpecifier(XtensaCPV->getModifier());
 
-  if (ACPV->getModifier() != XtensaCP::no_modifier) {
+  if (XtensaCPV->getModifier() != XtensaCP::no_modifier) {
     std::string SymName(MCSym->getName());
-    StringRef Modifier = ACPV->getModifierText();
+    StringRef Modifier = XtensaCPV->getModifierText();
     SymName += Modifier;
     MCSym = OutContext.getOrCreateSymbol(SymName);
   }
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, VK, OutContext);
+  const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, Spec, OutContext);
   TS->emitLiteral(LblSym, Expr, false);
 }
 
 void XtensaAsmPrinter::emitMachineConstantPoolEntry(
     const MachineConstantPoolEntry &CPE, int i) {
   if (CPE.isMachineConstantPoolEntry()) {
-    XtensaConstantPoolValue *ACPV =
+    XtensaConstantPoolValue *XtensaCPV =
         static_cast<XtensaConstantPoolValue *>(CPE.Val.MachineCPVal);
-    ACPV->setLabelId(i);
+    XtensaCPV->setLabelId(i);
     emitMachineConstantPoolValue(CPE.Val.MachineCPVal);
   } else {
     MCSymbol *LblSym = GetCPISymbol(i);
@@ -227,8 +230,6 @@ XtensaAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
                                      MachineOperand::MachineOperandType MOTy,
                                      unsigned Offset) const {
   const MCSymbol *Symbol;
-  XtensaMCExpr::Specifier Kind = XtensaMCExpr::VK_None;
-
   switch (MOTy) {
   case MachineOperand::MO_GlobalAddress:
     Symbol = getSymbol(MO.getGlobal());
@@ -257,8 +258,6 @@ XtensaAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
   }
 
   const MCExpr *ME = MCSymbolRefExpr::create(Symbol, OutContext);
-  ME = XtensaMCExpr::create(ME, Kind, OutContext);
-
   if (Offset) {
     // Assume offset is never negative.
     assert(Offset > 0);
@@ -311,6 +310,11 @@ void XtensaAsmPrinter::lowerToMCInst(const MachineInstr *MI,
       OutMI.addOperand(MCOp);
   }
 }
+
+char XtensaAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(XtensaAsmPrinter, "xtensa-asm-printer",
+                "Xtensa Assembly Printer", false, false)
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaAsmPrinter() {
   RegisterAsmPrinter<XtensaAsmPrinter> A(getTheXtensaTarget());

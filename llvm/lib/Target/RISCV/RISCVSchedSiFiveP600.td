@@ -48,7 +48,7 @@ class SiFiveP600GetVLMAX<string mx, int sew> {
 }
 
 class SiFiveP600StridedLdStLatency<string mx, int sew> {
-  defvar VL = SiFiveP400GetVLMAX<mx, sew>.val;
+  defvar VL = SiFiveP600GetVLMAX<mx, sew>.val;
   int val = !cond(
     !eq(VL, 2):  13,
     !eq(VL, 4):  18,
@@ -1487,11 +1487,12 @@ defm "" : LMULReadAdvance<"ReadVSM3MEV", 0>;
 
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
+defm : UnsupportedSchedQ;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedZfa;
-defm : UnsupportedSchedXsfvcp;
+defm : UnsupportedSchedXsf;
 }

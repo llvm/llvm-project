@@ -96,11 +96,14 @@ add_object_library(
     do_start.h
   DEPENDS
     libc.config.app_h
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
     libc.include.sys_mman
     libc.include.sys_syscall
-    libc.include.llvm-libc-macros.link_macros
-    libc.src.__support.threads.thread
+    libc.src.__support.OSUtil.linux.auxv
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.threads.thread
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
     libc.src.unistd.environ

@@ -14,7 +14,7 @@ entry:
     #dbg_assign(i1 undef, !13, !DIExpression(), !16, ptr %A.addr, !DIExpression(), !17)
   store ptr %A, ptr %A.addr, align 8, !tbaa !18
     #dbg_declare(ptr %A.addr, !13, !DIExpression(), !17)
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #2, !dbg !22
+  call void @llvm.lifetime.start.p0(ptr %i) #2, !dbg !22
     #dbg_declare(ptr %i, !14, !DIExpression(), !23)
   store i32 0, ptr %i, align 4, !dbg !23, !tbaa !24
   br label %for.cond, !dbg !22
@@ -27,7 +27,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !31, !prof !32
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #2, !dbg !33
+  call void @llvm.lifetime.end.p0(ptr %i) #2, !dbg !33
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -49,10 +49,10 @@ for.end:                                          ; preds = %for.cond.cleanup
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define dso_local void @bar(ptr %A) #0 !dbg !41 {
@@ -61,7 +61,7 @@ entry:
   %i = alloca i32, align 4
   store ptr %A, ptr %A.addr, align 8, !tbaa !18
     #dbg_declare(ptr %A.addr, !43, !DIExpression(), !46)
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #2, !dbg !47
+  call void @llvm.lifetime.start.p0(ptr %i) #2, !dbg !47
     #dbg_declare(ptr %i, !44, !DIExpression(), !48)
   store i32 0, ptr %i, align 4, !dbg !48, !tbaa !24
   br label %for.cond, !dbg !47
@@ -74,7 +74,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !54
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #2, !dbg !55
+  call void @llvm.lifetime.end.p0(ptr %i) #2, !dbg !55
   br label %for.end
 
 for.body:                                         ; preds = %for.cond

@@ -64,10 +64,10 @@ static bool usesFrameIndex(const MachineInstr &MI) {
   return false;
 }
 
-// Instructions that lose their 'read' operation for a subesquent fence acquire
+// Instructions that lose their 'read' operation for a subsequent fence acquire
 // (DMB LD) once the zero register is used.
 //
-// WARNING: The aquire variants of the instructions are also affected, but they
+// WARNING: The acquire variants of the instructions are also affected, but they
 // are split out into `atomicBarrierDroppedOnZero()` to support annotations on
 // assembly.
 static bool atomicReadDroppedOnZero(unsigned Opcode) {
@@ -115,7 +115,6 @@ static bool atomicReadDroppedOnZero(unsigned Opcode) {
 
 void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
     MachineBasicBlock &MBB) {
-  const MachineFunction &MF = *MBB.getParent();
   for (MachineInstr &MI : MBB) {
     if (usesFrameIndex(MI)) {
       // We need to skip this instruction because while it appears to have a
@@ -157,7 +156,7 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
         LLVM_DEBUG(dbgs() << "    Ignoring, def is tied operand.\n");
         continue;
       }
-      const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI, MF);
+      const TargetRegisterClass *RC = TII->getRegClass(Desc, I);
       unsigned NewReg;
       if (RC == nullptr) {
         LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");

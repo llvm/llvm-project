@@ -9,8 +9,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
-#include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
+#include "llvm/ExecutionEngine/JITLink/x86.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/Support/Memory.h"
@@ -96,19 +96,19 @@ TEST(StubsTest, StubsGeneration_aarch64) {
             ArrayRef<char>(PointerJumpStubContent));
 }
 
-TEST(StubsTest, StubsGeneration_i386) {
+TEST(StubsTest, StubsGeneration_x86) {
   const char PointerJumpStubContent[6] = {
       static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
               Triple("i386-unknown-linux-gnu"), SubtargetFeatures(),
               getGenericEdgeKindName);
-  auto [PointerSym, StubSym] = GenerateStub(G, 4U, i386::Pointer32);
+  auto [PointerSym, StubSym] = GenerateStub(G, 4U, x86::Pointer32);
 
   EXPECT_EQ(std::distance(StubSym.getBlock().edges().begin(),
                           StubSym.getBlock().edges().end()),
             1U);
   auto &JumpEdge = *StubSym.getBlock().edges().begin();
-  EXPECT_EQ(JumpEdge.getKind(), i386::Pointer32);
+  EXPECT_EQ(JumpEdge.getKind(), x86::Pointer32);
   EXPECT_EQ(&JumpEdge.getTarget(), &PointerSym);
   EXPECT_EQ(StubSym.getBlock().getContent(),
             ArrayRef<char>(PointerJumpStubContent));
@@ -119,11 +119,11 @@ TEST(StubsTest, StubsGeneration_loongarch32) {
       0x14,
       0x00,
       0x00,
-      0x1a, // pcalau12i $t8, %page20(imm)
+      0x1c, // pcaddu12i $t8, %pcadd20(imm)
       static_cast<char>(0x94),
       0x02,
       static_cast<char>(0x80),
-      0x28, // ld.d $t8, $t8, %pageoff12(imm)
+      0x28, // ld.w $t8, $t8, %pcadd12(.Lpcadd_hi)
       static_cast<char>(0x80),
       0x02,
       0x00,
@@ -137,12 +137,12 @@ TEST(StubsTest, StubsGeneration_loongarch32) {
   EXPECT_EQ(std::distance(StubSym.getBlock().edges().begin(),
                           StubSym.getBlock().edges().end()),
             2U);
-  auto &PageHighEdge = *StubSym.getBlock().edges().begin();
-  auto &PageLowEdge = *++StubSym.getBlock().edges().begin();
-  EXPECT_EQ(PageHighEdge.getKind(), loongarch::Page20);
-  EXPECT_EQ(&PageHighEdge.getTarget(), &PointerSym);
-  EXPECT_EQ(PageLowEdge.getKind(), loongarch::PageOffset12);
-  EXPECT_EQ(&PageLowEdge.getTarget(), &PointerSym);
+  auto &HighEdge = *StubSym.getBlock().edges().begin();
+  auto &LowEdge = *++StubSym.getBlock().edges().begin();
+  EXPECT_EQ(HighEdge.getKind(), loongarch::PCAddHi20);
+  EXPECT_EQ(&HighEdge.getTarget(), &PointerSym);
+  EXPECT_EQ(LowEdge.getKind(), loongarch::PCAddLo12);
+  EXPECT_EQ(&LowEdge.getTarget(), &StubSym);
   EXPECT_EQ(StubSym.getBlock().getContent(),
             ArrayRef<char>(PointerJumpStubContent));
 }

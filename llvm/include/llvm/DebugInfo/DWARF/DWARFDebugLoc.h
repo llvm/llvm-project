@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include <cstdint>
 
@@ -64,12 +65,13 @@ public:
   /// iff it has successfully reched the end of the list. This means that one
   /// can attempt to parse another list after the current one (\p Offset will be
   /// updated to point past the end of the current list).
-  bool dumpLocationList(uint64_t *Offset, raw_ostream &OS,
-                        std::optional<object::SectionedAddress> BaseAddr,
-                        const DWARFObject &Obj, DWARFUnit *U,
-                        DIDumpOptions DumpOpts, unsigned Indent) const;
+  LLVM_ABI bool
+  dumpLocationList(uint64_t *Offset, raw_ostream &OS,
+                   std::optional<object::SectionedAddress> BaseAddr,
+                   const DWARFObject &Obj, DWARFUnit *U, DIDumpOptions DumpOpts,
+                   unsigned Indent) const;
 
-  Error visitAbsoluteLocationList(
+  LLVM_ABI Error visitAbsoluteLocationList(
       uint64_t Offset, std::optional<object::SectionedAddress> BaseAddr,
       std::function<std::optional<object::SectionedAddress>(uint32_t)>
           LookupAddr,
@@ -85,7 +87,7 @@ protected:
                             const DWARFObject &Obj) const = 0;
 };
 
-class DWARFDebugLoc final : public DWARFLocationTable {
+class LLVM_ABI DWARFDebugLoc final : public DWARFLocationTable {
 public:
   /// A list of locations that contain one variable.
   struct LocationList {
@@ -121,7 +123,7 @@ protected:
                     const DWARFObject &Obj) const override;
 };
 
-class DWARFDebugLoclists final : public DWARFLocationTable {
+class LLVM_ABI DWARFDebugLoclists final : public DWARFLocationTable {
 public:
   DWARFDebugLoclists(DWARFDataExtractor Data, uint16_t Version)
       : DWARFLocationTable(std::move(Data)), Version(Version) {}
@@ -143,7 +145,7 @@ private:
   uint16_t Version;
 };
 
-class ResolverError : public ErrorInfo<ResolverError> {
+class LLVM_ABI ResolverError : public ErrorInfo<ResolverError> {
 public:
   static char ID;
 

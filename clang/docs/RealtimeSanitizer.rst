@@ -187,7 +187,7 @@ A **partial** list of flags RealtimeSanitizer respects:
    * - ``abort_on_error``
      - OS dependent
      - boolean
-     - If true, the tool calls ``abort()`` instead of ``_exit()`` after printing the error report. On some OSes (MacOS, for exmple) this is beneficial because a better stack trace is emitted on crash.
+     - If true, the tool calls ``abort()`` instead of ``_exit()`` after printing the error report. On some OSes (macOS, for example) this is beneficial because a better stack trace is emitted on crash.
    * - ``symbolize``
      - ``true``
      - boolean
@@ -279,7 +279,7 @@ In general, ``ScopedDisabler`` should be preferred, as it is the most performant
      - Run-time
      - Stack
      - High
-     - Suppresses any stack trace contaning the specified pattern.
+     - Suppresses any stack trace containing the specified pattern.
     
 
 ``ScopedDisabler``

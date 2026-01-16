@@ -68,8 +68,8 @@ llvm::Error clang::tooling::validateRange(const CharSourceRange &Range,
                                            "Range is in system header");
   }
 
-  std::pair<FileID, unsigned> BeginInfo = SM.getDecomposedLoc(Range.getBegin());
-  std::pair<FileID, unsigned> EndInfo = SM.getDecomposedLoc(Range.getEnd());
+  FileIDAndOffset BeginInfo = SM.getDecomposedLoc(Range.getBegin());
+  FileIDAndOffset EndInfo = SM.getDecomposedLoc(Range.getEnd());
   if (BeginInfo.first != EndInfo.first)
     return llvm::make_error<StringError>(
         errc::invalid_argument, "Range begins and ends in different files");
@@ -86,19 +86,38 @@ llvm::Error clang::tooling::validateEditRange(const CharSourceRange &Range,
   return validateRange(Range, SM, /*AllowSystemHeaders=*/false);
 }
 
-static bool spelledInMacroDefinition(SourceLocation Loc,
-                                     const SourceManager &SM) {
+// Returns the full set of expansion locations of `Loc` from bottom to top-most
+// macro, if `Loc` is spelled in a macro argument. If `Loc` is spelled in the
+// macro definition, returns an empty vector.
+static llvm::SmallVector<SourceLocation, 2>
+getMacroArgumentExpansionLocs(SourceLocation Loc, const SourceManager &SM) {
+  assert(Loc.isMacroID() && "Location must be in a macro");
+  llvm::SmallVector<SourceLocation, 2> ArgLocs;
   while (Loc.isMacroID()) {
     const auto &Expansion = SM.getSLocEntry(SM.getFileID(Loc)).getExpansion();
     if (Expansion.isMacroArgExpansion()) {
       // Check the spelling location of the macro arg, in case the arg itself is
       // in a macro expansion.
       Loc = Expansion.getSpellingLoc();
+      ArgLocs.push_back(Expansion.getExpansionLocStart());
     } else {
-      return true;
+      return {};
     }
   }
-  return false;
+  return ArgLocs;
+}
+
+static bool spelledInMacroDefinition(CharSourceRange Range,
+                                     const SourceManager &SM) {
+  if (Range.getBegin().isMacroID() && Range.getEnd().isMacroID()) {
+    // Check whether the range is entirely within a single macro argument by
+    // checking if they are in the same macro argument at every level.
+    auto B = getMacroArgumentExpansionLocs(Range.getBegin(), SM);
+    auto E = getMacroArgumentExpansionLocs(Range.getEnd(), SM);
+    return B.empty() || B != E;
+  }
+
+  return Range.getBegin().isMacroID() || Range.getEnd().isMacroID();
 }
 
 // Returns the expansion char-range of `Loc` if `Loc` is a split token. For
@@ -158,8 +177,7 @@ static CharSourceRange getRange(const CharSourceRange &EditRange,
     Range = Lexer::makeFileCharRange(EditRange, SM, LangOpts);
   } else {
     auto AdjustedRange = getRangeForSplitTokens(EditRange, SM, LangOpts);
-    if (spelledInMacroDefinition(AdjustedRange.getBegin(), SM) ||
-        spelledInMacroDefinition(AdjustedRange.getEnd(), SM))
+    if (spelledInMacroDefinition(AdjustedRange, SM))
       return {};
 
     auto B = SM.getSpellingLoc(AdjustedRange.getBegin());

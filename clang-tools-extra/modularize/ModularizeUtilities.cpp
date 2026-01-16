@@ -12,17 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ModularizeUtilities.h"
+#include "CoverageChecker.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "CoverageChecker.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "ModularizeUtilities.h"
 
 using namespace clang;
 using namespace llvm;
@@ -47,13 +47,11 @@ ModularizeUtilities::ModularizeUtilities(std::vector<std::string> &InputPaths,
       ProblemFilesPath(ProblemFilesListPath), HasModuleMap(false),
       MissingHeaderCount(0),
       // Init clang stuff needed for loading the module map and preprocessing.
-      LangOpts(new LangOptions()), DiagIDs(new DiagnosticIDs()),
-      DiagnosticOpts(new DiagnosticOptions()),
-      DC(llvm::errs(), DiagnosticOpts.get()),
-      Diagnostics(
-          new DiagnosticsEngine(DiagIDs, DiagnosticOpts.get(), &DC, false)),
+      LangOpts(new LangOptions()), DiagIDs(DiagnosticIDs::create()),
+      DC(llvm::errs(), DiagnosticOpts),
+      Diagnostics(new DiagnosticsEngine(DiagIDs, DiagnosticOpts, &DC, false)),
       TargetOpts(new ModuleMapTargetOptions()),
-      Target(TargetInfo::CreateTargetInfo(*Diagnostics, TargetOpts)),
+      Target(TargetInfo::CreateTargetInfo(*Diagnostics, *TargetOpts)),
       FileMgr(new FileManager(FileSystemOpts)),
       SourceMgr(new SourceManager(*Diagnostics, *FileMgr, false)), HSOpts(),
       HeaderInfo(new HeaderSearch(HSOpts, *SourceMgr, *Diagnostics, *LangOpts,
@@ -71,8 +69,7 @@ ModularizeUtilities *ModularizeUtilities::createModularizeUtilities(
 // Load all header lists and dependencies.
 std::error_code ModularizeUtilities::loadAllHeaderListsAndDependencies() {
   // For each input file.
-  for (auto I = InputFilePaths.begin(), E = InputFilePaths.end(); I != E; ++I) {
-    llvm::StringRef InputPath = *I;
+  for (llvm::StringRef InputPath : InputFilePaths) {
     // If it's a module map.
     if (InputPath.ends_with(".modulemap")) {
       // Load the module map.
@@ -290,7 +287,7 @@ std::error_code ModularizeUtilities::loadModuleMap(
     Target.get(), *HeaderInfo));
 
   // Parse module.modulemap file into module map.
-  if (ModMap->loadModuleMapFile(ModuleMapEntry, false, Dir)) {
+  if (ModMap->parseAndLoadModuleMapFile(ModuleMapEntry, false, Dir)) {
     return std::error_code(1, std::generic_category());
   }
 
@@ -443,7 +440,7 @@ static std::string replaceDotDot(StringRef Path) {
 // \returns The file path in canonical form.
 std::string ModularizeUtilities::getCanonicalPath(StringRef FilePath) {
   std::string Tmp(replaceDotDot(FilePath));
-  std::replace(Tmp.begin(), Tmp.end(), '\\', '/');
+  llvm::replace(Tmp, '\\', '/');
   StringRef Tmp2(Tmp);
   if (Tmp2.starts_with("./"))
     Tmp = std::string(Tmp2.substr(2));

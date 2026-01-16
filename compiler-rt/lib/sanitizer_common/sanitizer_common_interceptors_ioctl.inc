@@ -79,7 +79,9 @@ static void ioctl_table_fill() {
   _(TIOCMSET, READ, sizeof(int));
   _(TIOCNXCL, NONE, 0);
   _(TIOCOUTQ, WRITE, sizeof(int));
+#  if !SANITIZER_AIX
   _(TIOCSCTTY, NONE, 0);
+#  endif
   _(TIOCSPGRP, READ, pid_t_sz);
   _(TIOCSWINSZ, READ, struct_winsize_sz);
 
@@ -342,20 +344,16 @@ static void ioctl_table_fill() {
   _(SOUND_PCM_WRITE_CHANNELS, WRITE, sizeof(int));
   _(SOUND_PCM_WRITE_FILTER, WRITE, sizeof(int));
   _(TCFLSH, NONE, 0);
-#if SANITIZER_GLIBC
-  _(TCGETA, WRITE, struct_termio_sz);
-#endif
+#    if SANITIZER_TERMIOS_IOCTL_CONSTANTS
   _(TCGETS, WRITE, struct_termios_sz);
+#    endif
   _(TCSBRK, NONE, 0);
   _(TCSBRKP, NONE, 0);
-#if SANITIZER_GLIBC
-  _(TCSETA, READ, struct_termio_sz);
-  _(TCSETAF, READ, struct_termio_sz);
-  _(TCSETAW, READ, struct_termio_sz);
-#endif
+#    if SANITIZER_TERMIOS_IOCTL_CONSTANTS
   _(TCSETS, READ, struct_termios_sz);
   _(TCSETSF, READ, struct_termios_sz);
   _(TCSETSW, READ, struct_termios_sz);
+#    endif
   _(TCXONC, NONE, 0);
   _(TIOCGLCKTRMIOS, WRITE, struct_termios_sz);
   _(TIOCGSOFTCAR, WRITE, sizeof(int));

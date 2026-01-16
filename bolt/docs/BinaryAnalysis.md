@@ -1,7 +1,7 @@
 # BOLT-based binary analysis
 
 As part of post-link-time optimizing, BOLT needs to perform a range of analyses
-on binaries such as recontructing control flow graphs, and more.
+on binaries such as reconstructing control flow graphs, and more.
 
 The `llvm-bolt-binary-analysis` tool enables running requested binary analyses
 on binaries, and generating reports. It does this by building on top of the
@@ -179,12 +179,6 @@ The following are current known cases of false negatives:
    plan is to implement support for this, picking up the implementation from the
    [prototype branch](
    https://github.com/llvm/llvm-project/compare/main...kbeyls:llvm-project:bolt-gadget-scanner-prototype).
-
-BOLT cannot currently handle functions with `cfi_negate_ra_state` correctly,
-i.e. any binaries built with `-mbranch-protection=pac-ret`. The scanner is meant
-to be used on specifically such binaries, so this is a major limitation! Work is
-going on in PR [#120064](https://github.com/llvm/llvm-project/pull/120064) to
-fix this.
 
 ## How to add your own binary analysis
 

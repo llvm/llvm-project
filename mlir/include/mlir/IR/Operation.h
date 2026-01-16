@@ -30,7 +30,7 @@ enum class OpProperties : char {};
 
 /// Operation is the basic unit of execution within MLIR.
 ///
-/// The following documentation are recommended to understand this class:
+/// The following documentations are recommended to understand this class:
 /// - https://mlir.llvm.org/docs/LangRef/#operations
 /// - https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/
 ///
@@ -66,14 +66,14 @@ enum class OpProperties : char {};
 /// tail allocated with the operation class itself, but can be dynamically moved
 /// out-of-line in a dynamic allocation as needed.
 ///
-/// An Operation may contain optionally one or multiple Regions, stored in a
+/// An Operation may optionally contain one or multiple Regions, stored in a
 /// tail allocated array. Each `Region` is a list of Blocks. Each `Block` is
 /// itself a list of Operations. This structure is effectively forming a tree.
 ///
 /// Some operations like branches also refer to other Block, in which case they
 /// would have an array of `BlockOperand`.
 ///
-/// An Operation may contain optionally a "Properties" object: this is a
+/// An Operation may optionally contain a "Properties" object: this is a
 /// pre-defined C++ object with a fixed size. This object is owned by the
 /// operation and deleted with the operation. It can be converted to an
 /// Attribute on demand, or loaded from an Attribute.
@@ -286,7 +286,7 @@ public:
   void destroy();
 
   /// This drops all operand uses from this operation, which is an essential
-  /// step in breaking cyclic dependences between references when they are to
+  /// step in breaking cyclic dependencies between references when they are to
   /// be deleted.
   void dropAllReferences();
 
@@ -318,7 +318,7 @@ public:
   /// take O(N) where N is the number of operations within the parent block.
   bool isBeforeInBlock(Operation *other);
 
-  void print(raw_ostream &os, const OpPrintingFlags &flags = std::nullopt);
+  void print(raw_ostream &os, const OpPrintingFlags &flags = {});
   void print(raw_ostream &os, AsmState &state);
   void dump();
 
@@ -448,11 +448,11 @@ public:
   /// to use Properties instead.
   void setInherentAttr(StringAttr name, Attribute value);
 
-  /// Access a discardable attribute by name, returns an null Attribute if the
+  /// Access a discardable attribute by name, returns a null Attribute if the
   /// discardable attribute does not exist.
   Attribute getDiscardableAttr(StringRef name) { return attrs.get(name); }
 
-  /// Access a discardable attribute by name, returns an null Attribute if the
+  /// Access a discardable attribute by name, returns a null Attribute if the
   /// discardable attribute does not exist.
   Attribute getDiscardableAttr(StringAttr name) { return attrs.get(name); }
 
@@ -515,7 +515,7 @@ public:
   DictionaryAttr getAttrDictionary();
 
   /// Set the attributes from a dictionary on this operation.
-  /// These methods are expensive: if the dictionnary only contains discardable
+  /// These methods are expensive: if the dictionary only contains discardable
   /// attributes, `setDiscardableAttrs` is more efficient.
   void setAttrs(DictionaryAttr newAttrs);
   void setAttrs(ArrayRef<NamedAttribute> newAttrs);
@@ -529,7 +529,7 @@ public:
   }
 
   /// Return the specified attribute if present, null otherwise.
-  /// These methods are expensive: if the dictionnary only contains discardable
+  /// These methods are expensive: if the dictionary only contains discardable
   /// attributes, `getDiscardableAttr` is more efficient.
   Attribute getAttr(StringAttr name) {
     if (getPropertiesStorageSize()) {
@@ -679,8 +679,7 @@ public:
     if (numRegions == 0)
       return MutableArrayRef<Region>();
 
-    auto *regions = getTrailingObjects<Region>();
-    return {regions, numRegions};
+    return getTrailingObjects<Region>(numRegions);
   }
 
   /// Returns the region held by this operation at position 'index'.
@@ -694,7 +693,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   MutableArrayRef<BlockOperand> getBlockOperands() {
-    return {getTrailingObjects<BlockOperand>(), numSuccs};
+    return getTrailingObjects<BlockOperand>(numSuccs);
   }
 
   // Successor iteration.
@@ -951,7 +950,7 @@ private:
   /// operation.
   static constexpr unsigned kOrderStride = 5;
 
-  /// Update the order index of this operation of this operation if necessary,
+  /// Update the order index of this operation if necessary,
   /// potentially recomputing the order of the parent block.
   void updateOrderIfNecessary();
 
@@ -1100,6 +1099,52 @@ private:
 
 inline raw_ostream &operator<<(raw_ostream &os, const Operation &op) {
   const_cast<Operation &>(op).print(os, OpPrintingFlags().useLocalScope());
+  return os;
+}
+
+/// A wrapper class that allows for printing an operation with a set of flags,
+/// useful to act as a "stream modifier" to customize printing an operation
+/// with a stream using the operator<< overload, e.g.:
+///   llvm::dbgs() << OpWithFlags(op, OpPrintingFlags().skipRegions());
+/// This always prints the operation with the local scope, to avoid introducing
+/// spurious newlines in the stream.
+class OpWithFlags {
+public:
+  OpWithFlags(Operation *op, OpPrintingFlags flags = {})
+      : op(op), theFlags(flags) {}
+  OpPrintingFlags &flags() { return theFlags; }
+  const OpPrintingFlags &flags() const { return theFlags; }
+  Operation *getOperation() const { return op; }
+
+private:
+  Operation *op;
+  OpPrintingFlags theFlags;
+  friend raw_ostream &operator<<(raw_ostream &os, OpWithFlags op);
+};
+
+inline raw_ostream &operator<<(raw_ostream &os, OpWithFlags opWithFlags) {
+  opWithFlags.flags().useLocalScope();
+  opWithFlags.op->print(os, opWithFlags.flags());
+  return os;
+}
+
+/// A wrapper class that allows for printing an operation with a custom
+/// AsmState, useful to act as a "stream modifier" to customize printing an
+/// operation with a stream using the operator<< overload, e.g.:
+///   llvm::dbgs() << OpWithState(op, OpPrintingFlags().skipRegions());
+class OpWithState {
+public:
+  OpWithState(Operation *op, AsmState &state) : op(op), theState(state) {}
+
+private:
+  Operation *op;
+  AsmState &theState;
+  friend raw_ostream &operator<<(raw_ostream &os, const OpWithState &op);
+};
+
+inline raw_ostream &operator<<(raw_ostream &os,
+                               const OpWithState &opWithState) {
+  opWithState.op->print(os, const_cast<OpWithState &>(opWithState).theState);
   return os;
 }
 

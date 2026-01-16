@@ -19,6 +19,8 @@ tablegen(LLVM X86GenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM X86GenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM X86GenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM X86GenFoldTables.inc -gen-x86-fold-tables -asmwriternum=1)
+tablegen(LLVM X86GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="X86PreLegalizerCombiner")
 
 add_public_tablegen_target(X86CommonTableGen)
 
@@ -31,7 +33,6 @@ set(sources
   X86CmovConversion.cpp
   X86CodeGenPassBuilder.cpp
   X86DomainReassignment.cpp
-  X86DiscriminateMemOps.cpp
   X86LowerTileCopy.cpp
   X86LowerAMXType.cpp
   X86LowerAMXIntrinsics.cpp
@@ -57,7 +58,6 @@ set(sources
   X86IndirectBranchTracking.cpp
   X86IndirectThunks.cpp
   X86InterleavedAccess.cpp
-  X86InsertPrefetch.cpp
   X86InstCombineIntrinsic.cpp
   X86InstrFMA3Info.cpp
   X86InstrFoldTables.cpp
@@ -78,16 +78,18 @@ set(sources
   X86SpeculativeLoadHardening.cpp
   X86SpeculativeExecutionSideEffectSuppression.cpp
   X86Subtarget.cpp
+  X86SuppressAPXForReloc.cpp
   X86TargetMachine.cpp
   X86TargetObjectFile.cpp
   X86TargetTransformInfo.cpp
   X86VZeroUpper.cpp
   X86WinEHState.cpp
-  X86WinFixupBufferSecurityCheck.cpp
+  X86WinEHUnwindV2.cpp
   X86InsertWait.cpp
   GISel/X86CallLowering.cpp
   GISel/X86InstructionSelector.cpp
   GISel/X86LegalizerInfo.cpp
+  GISel/X86PreLegalizerCombiner.cpp
   GISel/X86RegisterBankInfo.cpp
   )
 
@@ -103,6 +105,7 @@ add_llvm_target(X86CodeGen ${sources}
   IRPrinter
   Instrumentation
   MC
+  ObjCARC
   ProfileData
   Scalar
   SelectionDAG

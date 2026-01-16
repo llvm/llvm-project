@@ -15,11 +15,11 @@
 #ifndef LLVM_SUPPORT_CACHING_H
 #define LLVM_SUPPORT_CACHING_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
-
-class MemoryBuffer;
 
 /// This class wraps an output stream for a file. Most clients should just be
 /// able to return an instance of this base class from the stream callback, but
@@ -113,7 +113,7 @@ using AddBufferFn = std::function<void(unsigned Task, const Twine &ModuleName,
 /// done lazily the first time a file is added.  The cache name appears in error
 /// messages for errors during caching. The temporary file prefix is used in the
 /// temporary file naming scheme used when writing files atomically.
-Expected<FileCache> localCache(
+LLVM_ABI Expected<FileCache> localCache(
     const Twine &CacheNameRef, const Twine &TempFilePrefixRef,
     const Twine &CacheDirectoryPathRef,
     AddBufferFn AddBuffer = [](size_t Task, const Twine &ModuleName,

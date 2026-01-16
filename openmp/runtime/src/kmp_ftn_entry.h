@@ -572,16 +572,14 @@ static void __kmp_fortran_strncpy_truncate(char *buffer, size_t buf_size,
 // Convert a Fortran string to a C string by adding null byte
 class ConvertedString {
   char *buf;
-  kmp_info_t *th;
 
 public:
   ConvertedString(char const *fortran_str, size_t size) {
-    th = __kmp_get_thread();
-    buf = (char *)__kmp_thread_malloc(th, size + 1);
+    buf = (char *)KMP_INTERNAL_MALLOC(size + 1);
     KMP_STRNCPY_S(buf, size + 1, fortran_str, size);
     buf[size] = '\0';
   }
-  ~ConvertedString() { __kmp_thread_free(th, buf); }
+  ~ConvertedString() { KMP_INTERNAL_FREE(buf); }
   const char *get() const { return buf; }
 };
 #endif // KMP_STUB
@@ -1495,10 +1493,18 @@ void FTN_STDCALL FTN_SET_DEFAULTS(char const *str
 #endif
 ) {
 #ifndef KMP_STUB
+  size_t sz;
+  char const *defaults = str;
+
 #ifdef PASS_ARGS_BY_VALUE
-  int len = (int)KMP_STRLEN(str);
+  sz = KMP_STRLEN(str);
+#else
+  sz = (size_t)len;
+  ConvertedString cstr(str, sz);
+  defaults = cstr.get();
 #endif
-  __kmp_aux_set_defaults(str, len);
+
+  __kmp_aux_set_defaults(defaults, sz);
 #endif
 }
 
@@ -1537,12 +1543,39 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_MAX_TASK_PRIORITY)(void) {
 #endif
 }
 
-// This function will be defined in libomptarget. When libomptarget is not
-// loaded, we assume we are on the host and return KMP_HOST_DEVICE.
+// These functions will be defined in libomptarget. When libomptarget is not
+// loaded, we assume we are on the host.
 // Compiler/libomptarget will handle this if called inside target.
 int FTN_STDCALL FTN_GET_DEVICE_NUM(void) KMP_WEAK_ATTRIBUTE_EXTERNAL;
 int FTN_STDCALL FTN_GET_DEVICE_NUM(void) {
   return KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)();
+}
+const char *FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_UID_FROM_DEVICE)(int device_num)
+    KMP_WEAK_ATTRIBUTE_EXTERNAL;
+const char *FTN_STDCALL
+KMP_EXPAND_NAME(FTN_GET_UID_FROM_DEVICE)(int device_num) {
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
+  return nullptr;
+#else
+  const char *(*fptr)(int);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_uid_from_device")))
+    return (*fptr)(device_num);
+  // Returns the same string as used by libomptarget
+  return "HOST";
+#endif
+}
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_DEVICE_FROM_UID)(const char *device_uid)
+    KMP_WEAK_ATTRIBUTE_EXTERNAL;
+int FTN_STDCALL
+KMP_EXPAND_NAME(FTN_GET_DEVICE_FROM_UID)(const char *device_uid) {
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
+  return -2; // omp_invalid_device, see definition in omp.h
+#else
+  int (*fptr)(const char *);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_device_from_uid")))
+    return (*fptr)(device_uid);
+  return KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)();
+#endif
 }
 
 // Compiler will ensure that this is only called from host in sequential region
@@ -1899,6 +1932,10 @@ KMP_VERSION_SYMBOL(FTN_SET_AFFINITY_FORMAT, 50, "OMP_5.0");
 #endif
 // KMP_VERSION_SYMBOL(FTN_GET_SUPPORTED_ACTIVE_LEVELS, 50, "OMP_5.0");
 // KMP_VERSION_SYMBOL(FTN_FULFILL_EVENT, 50, "OMP_5.0");
+
+// OMP_6.0 versioned symbols
+KMP_VERSION_SYMBOL(FTN_GET_UID_FROM_DEVICE, 60, "OMP_6.0");
+KMP_VERSION_SYMBOL(FTN_GET_DEVICE_FROM_UID, 60, "OMP_6.0");
 
 #endif // KMP_USE_VERSION_SYMBOLS
 

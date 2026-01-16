@@ -340,41 +340,16 @@ class _LIBCPP_TEMPLATE_VIS enable_shared_from_this;
 // http://eel.is/c++draft/util.sharedptr#util.smartptr.shared.general-6
 // A pointer type Y* is said to be compatible with a pointer type T*
 // when either Y* is convertible to T* or Y is U[N] and T is cv U[].
-#if _LIBCPP_STD_VER >= 17
-template <class _Yp, class _Tp>
-struct __bounded_convertible_to_unbounded : false_type {};
-
-template <class _Up, std::size_t _Np, class _Tp>
-struct __bounded_convertible_to_unbounded<_Up[_Np], _Tp> : is_same<__remove_cv_t<_Tp>, _Up[]> {};
-
-template <class _Yp, class _Tp>
-struct __compatible_with : _Or< is_convertible<_Yp*, _Tp*>, __bounded_convertible_to_unbounded<_Yp, _Tp> > {};
-#else
 template <class _Yp, class _Tp>
 struct __compatible_with : is_convertible<_Yp*, _Tp*> {};
-#endif // _LIBCPP_STD_VER >= 17
 
 // Constructors that take raw pointers have a different set of "compatible" constraints
 // http://eel.is/c++draft/util.sharedptr#util.smartptr.shared.const-9.1
 // - If T is an array type, then either T is U[N] and Y(*)[N] is convertible to T*,
 //   or T is U[] and Y(*)[] is convertible to T*.
 // - If T is not an array type, then Y* is convertible to T*.
-#if _LIBCPP_STD_VER >= 17
-template <class _Yp, class _Tp, class = void>
-struct __raw_pointer_compatible_with : _And< _Not<is_array<_Tp>>, is_convertible<_Yp*, _Tp*> > {};
-
-template <class _Yp, class _Up, std::size_t _Np>
-struct __raw_pointer_compatible_with<_Yp, _Up[_Np], __enable_if_t< is_convertible<_Yp (*)[_Np], _Up (*)[_Np]>::value> >
-    : true_type {};
-
-template <class _Yp, class _Up>
-struct __raw_pointer_compatible_with<_Yp, _Up[], __enable_if_t< is_convertible<_Yp (*)[], _Up (*)[]>::value> >
-    : true_type {};
-
-#else
 template <class _Yp, class _Tp>
 struct __raw_pointer_compatible_with : is_convertible<_Yp*, _Tp*> {};
-#endif // _LIBCPP_STD_VER >= 17
 
 template <class _Ptr, class = void>
 struct __is_deletable : false_type {};
@@ -415,12 +390,7 @@ class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS shared_ptr {
   struct __nullptr_sfinae_tag {};
 
 public:
-#if _LIBCPP_STD_VER >= 17
-  typedef weak_ptr<_Tp> weak_type;
-  typedef remove_extent_t<_Tp> element_type;
-#else
   typedef _Tp element_type;
-#endif
 
   // A shared_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
   // any bookkeeping, so it's always trivially relocatable.
@@ -431,21 +401,11 @@ private:
   __shared_weak_count* __cntrl_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR shared_ptr() _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI shared_ptr() _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR shared_ptr(nullptr_t) _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI shared_ptr(nullptr_t) _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
 
-  template <class _Yp,
-            __enable_if_t< _And< __raw_pointer_compatible_with<_Yp, _Tp>
-  // In C++03 we get errors when trying to do SFINAE with the
-  // delete operator, so we always pretend that it's deletable.
-  // The same happens on GCC.
-#if !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_COMPILER_GCC)
-                                 ,
-                                 _If<is_array<_Tp>::value, __is_array_deletable<_Yp*>, __is_deletable<_Yp*> >
-#endif
-                                 >::value,
-                           int> = 0>
+  template <class _Yp, __enable_if_t< _And< __raw_pointer_compatible_with<_Yp, _Tp> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit shared_ptr(_Yp* __p) : __ptr_(__p) {
     unique_ptr<_Yp> __hold(__p);
     typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
@@ -462,11 +422,7 @@ public:
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
       typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
       typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT> _CntrlBlk;
-#ifndef _LIBCPP_CXX03_LANG
-      __cntrl_ = new _CntrlBlk(__p, std::move(__d), _AllocT());
-#else
-    __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
-#endif // not _LIBCPP_CXX03_LANG
+      __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
       __enable_weak_this(__p, __p);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     } catch (...) {
@@ -489,12 +445,7 @@ public:
       typedef __allocator_destructor<_A2> _D2;
       _A2 __a2(__a);
       unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-      ::new ((void*)std::addressof(*__hold2.get()))
-#ifndef _LIBCPP_CXX03_LANG
-          _CntrlBlk(__p, std::move(__d), __a);
-#else
-        _CntrlBlk(__p, __d, __a);
-#endif // not _LIBCPP_CXX03_LANG
+      ::new ((void*)std::addressof(*__hold2.get())) _CntrlBlk(__p, __d, __a);
       __cntrl_ = std::addressof(*__hold2.release());
       __enable_weak_this(__p, __p);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -516,11 +467,7 @@ public:
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
       typedef typename __shared_ptr_default_allocator<_Tp>::type _AllocT;
       typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT> _CntrlBlk;
-#ifndef _LIBCPP_CXX03_LANG
-      __cntrl_ = new _CntrlBlk(__p, std::move(__d), _AllocT());
-#else
-    __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
-#endif // not _LIBCPP_CXX03_LANG
+      __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     } catch (...) {
       __d(__p);
@@ -544,12 +491,7 @@ public:
       typedef __allocator_destructor<_A2> _D2;
       _A2 __a2(__a);
       unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-      ::new ((void*)std::addressof(*__hold2.get()))
-#ifndef _LIBCPP_CXX03_LANG
-          _CntrlBlk(__p, std::move(__d), __a);
-#else
-        _CntrlBlk(__p, __d, __a);
-#endif // not _LIBCPP_CXX03_LANG
+      ::new ((void*)std::addressof(*__hold2.get())) _CntrlBlk(__p, __d, __a);
       __cntrl_ = std::addressof(*__hold2.release());
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     } catch (...) {
@@ -566,17 +508,6 @@ public:
     if (__cntrl_)
       __cntrl_->__add_shared();
   }
-
-// LWG-2996
-// We don't backport because it is an evolutionary change.
-#if _LIBCPP_STD_VER >= 20
-  template <class _Yp>
-  _LIBCPP_HIDE_FROM_ABI shared_ptr(shared_ptr<_Yp>&& __r, element_type* __p) noexcept
-      : __ptr_(__p), __cntrl_(__r.__cntrl_) {
-    __r.__ptr_   = nullptr;
-    __r.__cntrl_ = nullptr;
-  }
-#endif
 
   _LIBCPP_HIDE_FROM_ABI shared_ptr(const shared_ptr& __r) _NOEXCEPT : __ptr_(__r.__ptr_), __cntrl_(__r.__cntrl_) {
     if (__cntrl_)
@@ -607,7 +538,6 @@ public:
       __throw_bad_weak_ptr();
   }
 
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
   template <class _Yp, __enable_if_t<is_convertible<_Yp*, element_type*>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI shared_ptr(auto_ptr<_Yp>&& __r) : __ptr_(__r.get()) {
     typedef __shared_ptr_pointer<_Yp*, default_delete<_Yp>, allocator<__remove_cv_t<_Yp> > > _CntrlBlk;
@@ -615,7 +545,6 @@ public:
     __enable_weak_this(__r.get(), __r.get());
     __r.release();
   }
-#endif
 
   template <class _Yp,
             class _Dp,
@@ -623,11 +552,6 @@ public:
                               is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI shared_ptr(unique_ptr<_Yp, _Dp>&& __r) : __ptr_(__r.get()) {
-#if _LIBCPP_STD_VER >= 14
-    if (__ptr_ == nullptr)
-      __cntrl_ = nullptr;
-    else
-#endif
     {
       typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
       typedef __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer, _Dp, _AllocT> _CntrlBlk;
@@ -644,11 +568,6 @@ public:
                               is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI shared_ptr(unique_ptr<_Yp, _Dp>&& __r) : __ptr_(__r.get()) {
-#if _LIBCPP_STD_VER >= 14
-    if (__ptr_ == nullptr)
-      __cntrl_ = nullptr;
-    else
-#endif
     {
       typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
       typedef __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer,
@@ -688,7 +607,6 @@ public:
     return *this;
   }
 
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
   template <class _Yp,
             __enable_if_t<!is_array<_Yp>::value && is_convertible<_Yp*, typename shared_ptr<_Tp>::element_type*>::value,
                           int> = 0>
@@ -696,7 +614,6 @@ public:
     shared_ptr(std::move(__r)).swap(*this);
     return *this;
   }
-#endif
 
   template <class _Yp,
             class _Dp,
@@ -744,9 +661,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI long use_count() const _NOEXCEPT { return __cntrl_ ? __cntrl_->use_count() : 0; }
 
-#if _LIBCPP_STD_VER < 20 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE)
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI bool unique() const _NOEXCEPT { return use_count() == 1; }
-#endif
+  _LIBCPP_HIDE_FROM_ABI bool unique() const _NOEXCEPT { return use_count() == 1; }
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return get() != nullptr; }
 
@@ -761,13 +676,6 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI bool __owner_equivalent(const shared_ptr& __p) const { return __cntrl_ == __p.__cntrl_; }
-
-#if _LIBCPP_STD_VER >= 17
-  _LIBCPP_HIDE_FROM_ABI __add_lvalue_reference_t<element_type> operator[](ptrdiff_t __i) const {
-    static_assert(is_array<_Tp>::value, "std::shared_ptr<T>::operator[] is only valid when T is an array type.");
-    return __ptr_[__i];
-  }
-#endif
 
 #ifndef _LIBCPP_HAS_NO_RTTI
   template <class _Dp>
@@ -823,13 +731,6 @@ private:
   friend class _LIBCPP_TEMPLATE_VIS weak_ptr;
 };
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-shared_ptr(weak_ptr<_Tp>) -> shared_ptr<_Tp>;
-template <class _Tp, class _Dp>
-shared_ptr(unique_ptr<_Tp, _Dp>) -> shared_ptr<_Tp>;
-#endif
-
 //
 // std::allocate_shared and std::make_shared
 //
@@ -849,280 +750,10 @@ _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(_Args&&... __args) {
   return std::allocate_shared<_Tp>(allocator<__remove_cv_t<_Tp> >(), std::forward<_Args>(__args)...);
 }
 
-#if _LIBCPP_STD_VER >= 20
-
-template <class _Tp, class _Alloc, __enable_if_t<!is_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc& __a) {
-  using _ForOverwriteAllocator = __allocator_traits_rebind_t<_Alloc, __for_overwrite_tag>;
-  _ForOverwriteAllocator __alloc(__a);
-  return std::allocate_shared<_Tp>(__alloc);
-}
-
-template <class _Tp, __enable_if_t<!is_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared_for_overwrite() {
-  return std::allocate_shared_for_overwrite<_Tp>(allocator<__remove_cv_t<_Tp>>());
-}
-
-#endif // _LIBCPP_STD_VER >= 20
-
-#if _LIBCPP_STD_VER >= 17
-
-template <size_t _Alignment>
-struct __sp_aligned_storage {
-  alignas(_Alignment) char __storage[_Alignment];
-};
-
-template <class _Tp, class _Alloc>
-struct __unbounded_array_control_block;
-
-template <class _Tp, class _Alloc>
-struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count {
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* __get_data() noexcept { return __data_; }
-
-  _LIBCPP_HIDE_FROM_ABI explicit __unbounded_array_control_block(
-      _Alloc const& __alloc, size_t __count, _Tp const& __arg)
-      : __alloc_(__alloc), __count_(__count) {
-    std::__uninitialized_allocator_fill_n_multidimensional(__alloc_, std::begin(__data_), __count_, __arg);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI explicit __unbounded_array_control_block(_Alloc const& __alloc, size_t __count)
-      : __alloc_(__alloc), __count_(__count) {
-#  if _LIBCPP_STD_VER >= 20
-    if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
-      // We are purposefully not using an allocator-aware default construction because the spec says so.
-      // There's currently no way of expressing default initialization in an allocator-aware manner anyway.
-      std::uninitialized_default_construct_n(std::begin(__data_), __count_);
-    } else {
-      std::__uninitialized_allocator_value_construct_n_multidimensional(__alloc_, std::begin(__data_), __count_);
-    }
-#  else
-    std::__uninitialized_allocator_value_construct_n_multidimensional(__alloc_, std::begin(__data_), __count_);
-#  endif
-  }
-
-  // Returns the number of bytes required to store a control block followed by the given number
-  // of elements of _Tp, with the whole storage being aligned to a multiple of _Tp's alignment.
-  _LIBCPP_HIDE_FROM_ABI static constexpr size_t __bytes_for(size_t __elements) {
-    // When there's 0 elements, the control block alone is enough since it holds one element.
-    // Otherwise, we allocate one fewer element than requested because the control block already
-    // holds one. Also, we use the bitwise formula below to ensure that we allocate enough bytes
-    // for the whole allocation to be a multiple of _Tp's alignment. That formula is taken from [1].
-    //
-    // [1]: https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding
-    size_t __bytes           = __elements == 0 ? sizeof(__unbounded_array_control_block)
-                                               : (__elements - 1) * sizeof(_Tp) + sizeof(__unbounded_array_control_block);
-    constexpr size_t __align = alignof(_Tp);
-    return (__bytes + __align - 1) & ~(__align - 1);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL
-  ~__unbounded_array_control_block() override {
-  } // can't be `= default` because of the sometimes-non-trivial union member __data_
-
-private:
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
-#  if _LIBCPP_STD_VER >= 20
-    if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
-      std::__reverse_destroy(__data_, __data_ + __count_);
-    } else {
-      __allocator_traits_rebind_t<_Alloc, _Tp> __value_alloc(__alloc_);
-      std::__allocator_destroy_multidimensional(__value_alloc, __data_, __data_ + __count_);
-    }
-#  else
-    __allocator_traits_rebind_t<_Alloc, _Tp> __value_alloc(__alloc_);
-    std::__allocator_destroy_multidimensional(__value_alloc, __data_, __data_ + __count_);
-#  endif
-  }
-
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
-    using _AlignedStorage = __sp_aligned_storage<alignof(__unbounded_array_control_block)>;
-    using _StorageAlloc   = __allocator_traits_rebind_t<_Alloc, _AlignedStorage>;
-    using _PointerTraits  = pointer_traits<typename allocator_traits<_StorageAlloc>::pointer>;
-
-    _StorageAlloc __tmp(__alloc_);
-    __alloc_.~_Alloc();
-    size_t __size              = __unbounded_array_control_block::__bytes_for(__count_);
-    _AlignedStorage* __storage = reinterpret_cast<_AlignedStorage*>(this);
-    allocator_traits<_StorageAlloc>::deallocate(
-        __tmp, _PointerTraits::pointer_to(*__storage), __size / sizeof(_AlignedStorage));
-  }
-
-  _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
-  size_t __count_;
-  union {
-    _Tp __data_[1];
-  };
-};
-
-template <class _Array, class _Alloc, class... _Arg>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Array>
-__allocate_shared_unbounded_array(const _Alloc& __a, size_t __n, _Arg&&... __arg) {
-  static_assert(__libcpp_is_unbounded_array<_Array>::value);
-  // We compute the number of bytes necessary to hold the control block and the
-  // array elements. Then, we allocate an array of properly-aligned dummy structs
-  // large enough to hold the control block and array. This allows shifting the
-  // burden of aligning memory properly from us to the allocator.
-  using _ControlBlock   = __unbounded_array_control_block<_Array, _Alloc>;
-  using _AlignedStorage = __sp_aligned_storage<alignof(_ControlBlock)>;
-  using _StorageAlloc   = __allocator_traits_rebind_t<_Alloc, _AlignedStorage>;
-  __allocation_guard<_StorageAlloc> __guard(__a, _ControlBlock::__bytes_for(__n) / sizeof(_AlignedStorage));
-  _ControlBlock* __control_block = reinterpret_cast<_ControlBlock*>(std::addressof(*__guard.__get()));
-  std::__construct_at(__control_block, __a, __n, std::forward<_Arg>(__arg)...);
-  __guard.__release_ptr();
-  return shared_ptr<_Array>::__create_with_control_block(__control_block->__get_data(), __control_block);
-}
-
-template <class _Tp, class _Alloc>
-struct __bounded_array_control_block;
-
-template <class _Tp, size_t _Count, class _Alloc>
-struct __bounded_array_control_block<_Tp[_Count], _Alloc> : __shared_weak_count {
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* __get_data() noexcept { return __data_; }
-
-  _LIBCPP_HIDE_FROM_ABI explicit __bounded_array_control_block(_Alloc const& __alloc, _Tp const& __arg)
-      : __alloc_(__alloc) {
-    std::__uninitialized_allocator_fill_n_multidimensional(__alloc_, std::addressof(__data_[0]), _Count, __arg);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI explicit __bounded_array_control_block(_Alloc const& __alloc) : __alloc_(__alloc) {
-#  if _LIBCPP_STD_VER >= 20
-    if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
-      // We are purposefully not using an allocator-aware default construction because the spec says so.
-      // There's currently no way of expressing default initialization in an allocator-aware manner anyway.
-      std::uninitialized_default_construct_n(std::addressof(__data_[0]), _Count);
-    } else {
-      std::__uninitialized_allocator_value_construct_n_multidimensional(__alloc_, std::addressof(__data_[0]), _Count);
-    }
-#  else
-    std::__uninitialized_allocator_value_construct_n_multidimensional(__alloc_, std::addressof(__data_[0]), _Count);
-#  endif
-  }
-
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL
-  ~__bounded_array_control_block() override {
-  } // can't be `= default` because of the sometimes-non-trivial union member __data_
-
-private:
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
-#  if _LIBCPP_STD_VER >= 20
-    if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
-      std::__reverse_destroy(__data_, __data_ + _Count);
-    } else {
-      __allocator_traits_rebind_t<_Alloc, _Tp> __value_alloc(__alloc_);
-      std::__allocator_destroy_multidimensional(__value_alloc, __data_, __data_ + _Count);
-    }
-#  else
-    __allocator_traits_rebind_t<_Alloc, _Tp> __value_alloc(__alloc_);
-    std::__allocator_destroy_multidimensional(__value_alloc, __data_, __data_ + _Count);
-#  endif
-  }
-
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
-    using _ControlBlockAlloc = __allocator_traits_rebind_t<_Alloc, __bounded_array_control_block>;
-    using _PointerTraits     = pointer_traits<typename allocator_traits<_ControlBlockAlloc>::pointer>;
-
-    _ControlBlockAlloc __tmp(__alloc_);
-    __alloc_.~_Alloc();
-    allocator_traits<_ControlBlockAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*this), 1);
-  }
-
-  _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
-  union {
-    _Tp __data_[_Count];
-  };
-};
-
-template <class _Array, class _Alloc, class... _Arg>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Array> __allocate_shared_bounded_array(const _Alloc& __a, _Arg&&... __arg) {
-  static_assert(__libcpp_is_bounded_array<_Array>::value);
-  using _ControlBlock      = __bounded_array_control_block<_Array, _Alloc>;
-  using _ControlBlockAlloc = __allocator_traits_rebind_t<_Alloc, _ControlBlock>;
-
-  __allocation_guard<_ControlBlockAlloc> __guard(__a, 1);
-  _ControlBlock* __control_block = reinterpret_cast<_ControlBlock*>(std::addressof(*__guard.__get()));
-  std::__construct_at(__control_block, __a, std::forward<_Arg>(__arg)...);
-  __guard.__release_ptr();
-  return shared_ptr<_Array>::__create_with_control_block(__control_block->__get_data(), __control_block);
-}
-
-#endif // _LIBCPP_STD_VER >= 17
-
-#if _LIBCPP_STD_VER >= 20
-
-// bounded array variants
-template <class _Tp, class _Alloc, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared(const _Alloc& __a) {
-  return std::__allocate_shared_bounded_array<_Tp>(__a);
-}
-
-template <class _Tp, class _Alloc, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared(const _Alloc& __a, const remove_extent_t<_Tp>& __u) {
-  return std::__allocate_shared_bounded_array<_Tp>(__a, __u);
-}
-
-template <class _Tp, class _Alloc, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc& __a) {
-  using _ForOverwriteAllocator = __allocator_traits_rebind_t<_Alloc, __for_overwrite_tag>;
-  _ForOverwriteAllocator __alloc(__a);
-  return std::__allocate_shared_bounded_array<_Tp>(__alloc);
-}
-
-template <class _Tp, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared() {
-  return std::__allocate_shared_bounded_array<_Tp>(allocator<_Tp>());
-}
-
-template <class _Tp, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(const remove_extent_t<_Tp>& __u) {
-  return std::__allocate_shared_bounded_array<_Tp>(allocator<_Tp>(), __u);
-}
-
-template <class _Tp, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared_for_overwrite() {
-  return std::__allocate_shared_bounded_array<_Tp>(allocator<__for_overwrite_tag>());
-}
-
-// unbounded array variants
-template <class _Tp, class _Alloc, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared(const _Alloc& __a, size_t __n) {
-  return std::__allocate_shared_unbounded_array<_Tp>(__a, __n);
-}
-
-template <class _Tp, class _Alloc, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared(const _Alloc& __a, size_t __n, const remove_extent_t<_Tp>& __u) {
-  return std::__allocate_shared_unbounded_array<_Tp>(__a, __n, __u);
-}
-
-template <class _Tp, class _Alloc, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc& __a, size_t __n) {
-  using _ForOverwriteAllocator = __allocator_traits_rebind_t<_Alloc, __for_overwrite_tag>;
-  _ForOverwriteAllocator __alloc(__a);
-  return std::__allocate_shared_unbounded_array<_Tp>(__alloc, __n);
-}
-
-template <class _Tp, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(size_t __n) {
-  return std::__allocate_shared_unbounded_array<_Tp>(allocator<_Tp>(), __n);
-}
-
-template <class _Tp, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(size_t __n, const remove_extent_t<_Tp>& __u) {
-  return std::__allocate_shared_unbounded_array<_Tp>(allocator<_Tp>(), __n, __u);
-}
-
-template <class _Tp, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared_for_overwrite(size_t __n) {
-  return std::__allocate_shared_unbounded_array<_Tp>(allocator<__for_overwrite_tag>(), __n);
-}
-
-#endif // _LIBCPP_STD_VER >= 20
-
 template <class _Tp, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI bool operator==(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT {
   return __x.get() == __y.get();
 }
-
-#if _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT {
@@ -1131,12 +762,8 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const shared_ptr<_Tp>& __x, const s
 
 template <class _Tp, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT {
-#  if _LIBCPP_STD_VER <= 11
   typedef typename common_type<_Tp*, _Up*>::type _Vp;
   return less<_Vp>()(__x.get(), __y.get());
-#  else
-  return less<>()(__x.get(), __y.get());
-#  endif
 }
 
 template <class _Tp, class _Up>
@@ -1154,21 +781,10 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator>=(const shared_ptr<_Tp>& __x, const s
   return !(__x < __y);
 }
 
-#endif // _LIBCPP_STD_VER <= 17
-
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp, class _Up>
-_LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(shared_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) noexcept {
-  return compare_three_way()(__x.get(), __y.get());
-}
-#endif
-
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool operator==(const shared_ptr<_Tp>& __x, nullptr_t) _NOEXCEPT {
   return !__x;
 }
-
-#if _LIBCPP_STD_VER <= 17
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool operator==(nullptr_t, const shared_ptr<_Tp>& __x) _NOEXCEPT {
@@ -1225,15 +841,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator>=(nullptr_t, const shared_ptr<_Tp>& _
   return !(nullptr < __x);
 }
 
-#endif // _LIBCPP_STD_VER <= 17
-
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(shared_ptr<_Tp> const& __x, nullptr_t) noexcept {
-  return compare_three_way()(__x.get(), static_cast<typename shared_ptr<_Tp>::element_type*>(nullptr));
-}
-#endif
-
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI void swap(shared_ptr<_Tp>& __x, shared_ptr<_Tp>& __y) _NOEXCEPT {
   __x.swap(__y);
@@ -1244,15 +851,6 @@ inline _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> static_pointer_cast(const shared_pt
   return shared_ptr<_Tp>(__r, static_cast< typename shared_ptr<_Tp>::element_type*>(__r.get()));
 }
 
-// LWG-2996
-// We don't backport because it is an evolutionary change.
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp, class _Up>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> static_pointer_cast(shared_ptr<_Up>&& __r) noexcept {
-  return shared_ptr<_Tp>(std::move(__r), static_cast<typename shared_ptr<_Tp>::element_type*>(__r.get()));
-}
-#endif
-
 template <class _Tp, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> dynamic_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT {
   typedef typename shared_ptr<_Tp>::element_type _ET;
@@ -1260,44 +858,16 @@ inline _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> dynamic_pointer_cast(const shared_p
   return __p ? shared_ptr<_Tp>(__r, __p) : shared_ptr<_Tp>();
 }
 
-// LWG-2996
-// We don't backport because it is an evolutionary change.
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp, class _Up>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> dynamic_pointer_cast(shared_ptr<_Up>&& __r) noexcept {
-  auto* __p = dynamic_cast<typename shared_ptr<_Tp>::element_type*>(__r.get());
-  return __p ? shared_ptr<_Tp>(std::move(__r), __p) : shared_ptr<_Tp>();
-}
-#endif
-
 template <class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> const_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT {
   typedef typename shared_ptr<_Tp>::element_type _RTp;
   return shared_ptr<_Tp>(__r, const_cast<_RTp*>(__r.get()));
 }
 
-// LWG-2996
-// We don't backport because it is an evolutionary change.
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp, class _Up>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> const_pointer_cast(shared_ptr<_Up>&& __r) noexcept {
-  return shared_ptr<_Tp>(std::move(__r), const_cast<typename shared_ptr<_Tp>::element_type*>(__r.get()));
-}
-#endif
-
 template <class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> reinterpret_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT {
   return shared_ptr<_Tp>(__r, reinterpret_cast< typename shared_ptr<_Tp>::element_type*>(__r.get()));
 }
-
-// LWG-2996
-// We don't backport because it is an evolutionary change.
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp, class _Up>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> reinterpret_pointer_cast(shared_ptr<_Up>&& __r) noexcept {
-  return shared_ptr<_Tp>(std::move(__r), reinterpret_cast<typename shared_ptr<_Tp>::element_type*>(__r.get()));
-}
-#endif
 
 #ifndef _LIBCPP_HAS_NO_RTTI
 
@@ -1311,11 +881,7 @@ inline _LIBCPP_HIDE_FROM_ABI _Dp* get_deleter(const shared_ptr<_Tp>& __p) _NOEXC
 template <class _Tp>
 class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS weak_ptr {
 public:
-#if _LIBCPP_STD_VER >= 17
-  typedef remove_extent_t<_Tp> element_type;
-#else
   typedef _Tp element_type;
-#endif
 
   // A weak_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
   // any bookkeeping, so it's always trivially relocatable.
@@ -1326,7 +892,7 @@ private:
   __shared_weak_count* __cntrl_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR weak_ptr() _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI weak_ptr() _NOEXCEPT;
 
   template <class _Yp, __enable_if_t<__compatible_with<_Yp, _Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI weak_ptr(shared_ptr<_Yp> const& __r) _NOEXCEPT;
@@ -1375,13 +941,8 @@ public:
   friend class _LIBCPP_TEMPLATE_VIS shared_ptr;
 };
 
-#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-weak_ptr(shared_ptr<_Tp>) -> weak_ptr<_Tp>;
-#endif
-
-template <class _Tp>
-inline _LIBCPP_CONSTEXPR weak_ptr<_Tp>::weak_ptr() _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
+inline weak_ptr<_Tp>::weak_ptr() _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
 
 template <class _Tp>
 inline weak_ptr<_Tp>::weak_ptr(weak_ptr const& __r) _NOEXCEPT : __ptr_(__r.__ptr_), __cntrl_(__r.__cntrl_) {
@@ -1481,13 +1042,8 @@ shared_ptr<_Tp> weak_ptr<_Tp>::lock() const _NOEXCEPT {
   return __r;
 }
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp = void>
-struct owner_less;
-#else
 template <class _Tp>
 struct owner_less;
-#endif
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS owner_less<shared_ptr<_Tp> > : __binary_function<shared_ptr<_Tp>, shared_ptr<_Tp>, bool> {
@@ -1515,35 +1071,12 @@ struct _LIBCPP_TEMPLATE_VIS owner_less<weak_ptr<_Tp> > : __binary_function<weak_
   }
 };
 
-#if _LIBCPP_STD_VER >= 17
-template <>
-struct _LIBCPP_TEMPLATE_VIS owner_less<void> {
-  template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(shared_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const _NOEXCEPT {
-    return __x.owner_before(__y);
-  }
-  template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(shared_ptr<_Tp> const& __x, weak_ptr<_Up> const& __y) const _NOEXCEPT {
-    return __x.owner_before(__y);
-  }
-  template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(weak_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const _NOEXCEPT {
-    return __x.owner_before(__y);
-  }
-  template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(weak_ptr<_Tp> const& __x, weak_ptr<_Up> const& __y) const _NOEXCEPT {
-    return __x.owner_before(__y);
-  }
-  typedef void is_transparent;
-};
-#endif
-
 template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS enable_shared_from_this {
   mutable weak_ptr<_Tp> __weak_this_;
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR enable_shared_from_this() _NOEXCEPT {}
+  _LIBCPP_HIDE_FROM_ABI enable_shared_from_this() _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI enable_shared_from_this(enable_shared_from_this const&) _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI enable_shared_from_this& operator=(enable_shared_from_this const&) _NOEXCEPT { return *this; }
   _LIBCPP_HIDE_FROM_ABI ~enable_shared_from_this() {}
@@ -1551,12 +1084,6 @@ protected:
 public:
   _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> shared_from_this() { return shared_ptr<_Tp>(__weak_this_); }
   _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp const> shared_from_this() const { return shared_ptr<const _Tp>(__weak_this_); }
-
-#if _LIBCPP_STD_VER >= 17
-  _LIBCPP_HIDE_FROM_ABI weak_ptr<_Tp> weak_from_this() _NOEXCEPT { return __weak_this_; }
-
-  _LIBCPP_HIDE_FROM_ABI weak_ptr<const _Tp> weak_from_this() const _NOEXCEPT { return __weak_this_; }
-#endif // _LIBCPP_STD_VER >= 17
 
   template <class _Up>
   friend class shared_ptr;
@@ -1567,10 +1094,8 @@ struct _LIBCPP_TEMPLATE_VIS hash;
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS hash<shared_ptr<_Tp> > {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef shared_ptr<_Tp> argument_type;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-#endif
+  typedef shared_ptr<_Tp> argument_type;
+  typedef size_t result_type;
 
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const shared_ptr<_Tp>& __ptr) const _NOEXCEPT {
     return hash<typename shared_ptr<_Tp>::element_type*>()(__ptr.get());
@@ -1591,7 +1116,7 @@ public:
   void unlock() _NOEXCEPT;
 
 private:
-  _LIBCPP_CONSTEXPR __sp_mut(void*) _NOEXCEPT;
+  __sp_mut(void*) _NOEXCEPT;
   __sp_mut(const __sp_mut&);
   __sp_mut& operator=(const __sp_mut&);
 

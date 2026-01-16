@@ -49,13 +49,18 @@ public:
     HasFeatureLD_SEQ_SA = false;
     HasFeatureDiv32 = false;
     HasFeatureSCQ = false;
+    BFloat16Width = 16;
+    BFloat16Align = 16;
+    BFloat16Format = &llvm::APFloat::BFloat();
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
     MCountName = "_mcount";
+    HasFloat16 = true;
     SuitableAlign = 128;
     WCharType = SignedInt;
     WIntType = UnsignedInt;
+    BitIntMaxAlign = 128;
   }
 
   bool setCPU(const std::string &Name) override {
@@ -98,8 +103,15 @@ public:
 
   bool hasBitIntType() const override { return true; }
 
+  bool hasBFloat16Type() const override { return true; }
+
+  bool useFP16ConversionIntrinsics() const override { return false; }
+
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
+
+  ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
+  bool supportsTargetAttributeTune() const override { return true; }
 
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
@@ -110,6 +122,7 @@ public:
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+  bool isValidFeatureName(StringRef Name) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY LoongArch32TargetInfo
@@ -120,9 +133,9 @@ public:
     IntPtrType = SignedInt;
     PtrDiffType = SignedInt;
     SizeType = UnsignedInt;
-    resetDataLayout("e-m:e-p:32:32-i64:64-n32-S128");
     // TODO: select appropriate ABI.
     setABI("ilp32d");
+    resetDataLayout();
   }
 
   bool setABI(const std::string &Name) override {
@@ -145,9 +158,9 @@ public:
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
     IntMaxType = Int64Type = SignedLong;
     HasUnalignedAccess = true;
-    resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
     // TODO: select appropriate ABI.
     setABI("lp64d");
+    resetDataLayout();
   }
 
   bool setABI(const std::string &Name) override {

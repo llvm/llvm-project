@@ -156,113 +156,64 @@ define i64 @i64_nopoison(i64 %x) nounwind {
 ; SPARC-LABEL: i64_nopoison:
 ; SPARC:       ! %bb.0:
 ; SPARC-NEXT:    save %sp, -96, %sp
+; SPARC-NEXT:    orcc %i1, %i0, %g0
+; SPARC-NEXT:    be .LBB2_4
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.1: ! %cond.false
+; SPARC-NEXT:    call __clzsi2
+; SPARC-NEXT:    mov %i1, %o0
+; SPARC-NEXT:    mov %o0, %i2
 ; SPARC-NEXT:    call __clzsi2
 ; SPARC-NEXT:    mov %i0, %o0
 ; SPARC-NEXT:    cmp %i0, 0
-; SPARC-NEXT:    bne .LBB2_2
-; SPARC-NEXT:    nop
-; SPARC-NEXT:  ! %bb.1:
-; SPARC-NEXT:    srl %i1, 1, %i0
-; SPARC-NEXT:    or %i1, %i0, %i0
-; SPARC-NEXT:    srl %i0, 2, %i1
-; SPARC-NEXT:    or %i0, %i1, %i0
-; SPARC-NEXT:    srl %i0, 4, %i1
-; SPARC-NEXT:    or %i0, %i1, %i0
-; SPARC-NEXT:    srl %i0, 8, %i1
-; SPARC-NEXT:    or %i0, %i1, %i0
-; SPARC-NEXT:    srl %i0, 16, %i1
-; SPARC-NEXT:    or %i0, %i1, %i0
-; SPARC-NEXT:    xor %i0, -1, %i0
-; SPARC-NEXT:    srl %i0, 1, %i1
-; SPARC-NEXT:    sethi 1398101, %i2
-; SPARC-NEXT:    or %i2, 341, %i2
-; SPARC-NEXT:    and %i1, %i2, %i1
-; SPARC-NEXT:    sub %i0, %i1, %i0
-; SPARC-NEXT:    sethi 838860, %i1
-; SPARC-NEXT:    or %i1, 819, %i1
-; SPARC-NEXT:    and %i0, %i1, %i2
-; SPARC-NEXT:    srl %i0, 2, %i0
-; SPARC-NEXT:    and %i0, %i1, %i0
-; SPARC-NEXT:    add %i2, %i0, %i0
-; SPARC-NEXT:    srl %i0, 4, %i1
-; SPARC-NEXT:    add %i0, %i1, %i0
-; SPARC-NEXT:    sethi 246723, %i1
-; SPARC-NEXT:    or %i1, 783, %i1
-; SPARC-NEXT:    and %i0, %i1, %i0
-; SPARC-NEXT:    sll %i0, 8, %i1
-; SPARC-NEXT:    add %i0, %i1, %i0
-; SPARC-NEXT:    sll %i0, 16, %i1
-; SPARC-NEXT:    add %i0, %i1, %i0
-; SPARC-NEXT:    srl %i0, 24, %i0
-; SPARC-NEXT:    add %i0, 32, %o0
-; SPARC-NEXT:  .LBB2_2:
+; SPARC-NEXT:    bne .LBB2_3
+; SPARC-NEXT:    mov %o0, %i1
+; SPARC-NEXT:  ! %bb.2: ! %cond.false
+; SPARC-NEXT:    add %i2, 32, %i1
+; SPARC-NEXT:  .LBB2_3: ! %cond.false
+; SPARC-NEXT:    ret
+; SPARC-NEXT:    restore %g0, %g0, %o0
+; SPARC-NEXT:  .LBB2_4:
 ; SPARC-NEXT:    mov %g0, %i0
 ; SPARC-NEXT:    ret
-; SPARC-NEXT:    restore %g0, %o0, %o1
+; SPARC-NEXT:    restore %g0, 64, %o1
 ;
 ; SPARC-POPC-LABEL: i64_nopoison:
 ; SPARC-POPC:       ! %bb.0:
 ; SPARC-POPC-NEXT:    save %sp, -96, %sp
+; SPARC-POPC-NEXT:    orcc %i1, %i0, %g0
+; SPARC-POPC-NEXT:    be .LBB2_4
+; SPARC-POPC-NEXT:    nop
+; SPARC-POPC-NEXT:  ! %bb.1: ! %cond.false
+; SPARC-POPC-NEXT:    call __clzsi2
+; SPARC-POPC-NEXT:    mov %i1, %o0
+; SPARC-POPC-NEXT:    mov %o0, %i2
 ; SPARC-POPC-NEXT:    call __clzsi2
 ; SPARC-POPC-NEXT:    mov %i0, %o0
 ; SPARC-POPC-NEXT:    cmp %i0, 0
-; SPARC-POPC-NEXT:    bne .LBB2_2
-; SPARC-POPC-NEXT:    nop
-; SPARC-POPC-NEXT:  ! %bb.1:
-; SPARC-POPC-NEXT:    srl %i1, 1, %i0
-; SPARC-POPC-NEXT:    or %i1, %i0, %i0
-; SPARC-POPC-NEXT:    srl %i0, 2, %i1
-; SPARC-POPC-NEXT:    or %i0, %i1, %i0
-; SPARC-POPC-NEXT:    srl %i0, 4, %i1
-; SPARC-POPC-NEXT:    or %i0, %i1, %i0
-; SPARC-POPC-NEXT:    srl %i0, 8, %i1
-; SPARC-POPC-NEXT:    or %i0, %i1, %i0
-; SPARC-POPC-NEXT:    srl %i0, 16, %i1
-; SPARC-POPC-NEXT:    or %i0, %i1, %i0
-; SPARC-POPC-NEXT:    xor %i0, -1, %i0
-; SPARC-POPC-NEXT:    srl %i0, 1, %i1
-; SPARC-POPC-NEXT:    sethi 1398101, %i2
-; SPARC-POPC-NEXT:    or %i2, 341, %i2
-; SPARC-POPC-NEXT:    and %i1, %i2, %i1
-; SPARC-POPC-NEXT:    sub %i0, %i1, %i0
-; SPARC-POPC-NEXT:    sethi 838860, %i1
-; SPARC-POPC-NEXT:    or %i1, 819, %i1
-; SPARC-POPC-NEXT:    and %i0, %i1, %i2
-; SPARC-POPC-NEXT:    srl %i0, 2, %i0
-; SPARC-POPC-NEXT:    and %i0, %i1, %i0
-; SPARC-POPC-NEXT:    add %i2, %i0, %i0
-; SPARC-POPC-NEXT:    srl %i0, 4, %i1
-; SPARC-POPC-NEXT:    add %i0, %i1, %i0
-; SPARC-POPC-NEXT:    sethi 246723, %i1
-; SPARC-POPC-NEXT:    or %i1, 783, %i1
-; SPARC-POPC-NEXT:    and %i0, %i1, %i0
-; SPARC-POPC-NEXT:    sll %i0, 8, %i1
-; SPARC-POPC-NEXT:    add %i0, %i1, %i0
-; SPARC-POPC-NEXT:    sll %i0, 16, %i1
-; SPARC-POPC-NEXT:    add %i0, %i1, %i0
-; SPARC-POPC-NEXT:    srl %i0, 24, %i0
-; SPARC-POPC-NEXT:    add %i0, 32, %o0
-; SPARC-POPC-NEXT:  .LBB2_2:
+; SPARC-POPC-NEXT:    bne .LBB2_3
+; SPARC-POPC-NEXT:    mov %o0, %i1
+; SPARC-POPC-NEXT:  ! %bb.2: ! %cond.false
+; SPARC-POPC-NEXT:    add %i2, 32, %i1
+; SPARC-POPC-NEXT:  .LBB2_3: ! %cond.false
+; SPARC-POPC-NEXT:    ret
+; SPARC-POPC-NEXT:    restore %g0, %g0, %o0
+; SPARC-POPC-NEXT:  .LBB2_4:
 ; SPARC-POPC-NEXT:    mov %g0, %i0
 ; SPARC-POPC-NEXT:    ret
-; SPARC-POPC-NEXT:    restore %g0, %o0, %o1
+; SPARC-POPC-NEXT:    restore %g0, 64, %o1
 ;
 ; SPARC-VIS3-LABEL: i64_nopoison:
 ; SPARC-VIS3:       ! %bb.0:
+; SPARC-VIS3-NEXT:    srl %o0, 0, %o2
+; SPARC-VIS3-NEXT:    lzcnt %o2, %o2
+; SPARC-VIS3-NEXT:    add %o2, -32, %o2
+; SPARC-VIS3-NEXT:    srl %o1, 0, %o1
+; SPARC-VIS3-NEXT:    lzcnt %o1, %o1
+; SPARC-VIS3-NEXT:    add %o1, -32, %o1
+; SPARC-VIS3-NEXT:    add %o1, 32, %o1
 ; SPARC-VIS3-NEXT:    cmp %o0, 0
-; SPARC-VIS3-NEXT:    bne .LBB2_2
-; SPARC-VIS3-NEXT:    nop
-; SPARC-VIS3-NEXT:  ! %bb.1:
-; SPARC-VIS3-NEXT:    srl %o1, 0, %o0
-; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
-; SPARC-VIS3-NEXT:    add %o0, -32, %o0
-; SPARC-VIS3-NEXT:    add %o0, 32, %o1
-; SPARC-VIS3-NEXT:    retl
-; SPARC-VIS3-NEXT:    mov %g0, %o0
-; SPARC-VIS3-NEXT:  .LBB2_2:
-; SPARC-VIS3-NEXT:    srl %o0, 0, %o0
-; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
-; SPARC-VIS3-NEXT:    add %o0, -32, %o1
+; SPARC-VIS3-NEXT:    movne %icc, %o2, %o1
 ; SPARC-VIS3-NEXT:    retl
 ; SPARC-VIS3-NEXT:    mov %g0, %o0
 ;
@@ -353,20 +304,15 @@ define i64 @i64_poison(i64 %x) nounwind {
 ;
 ; SPARC-VIS3-LABEL: i64_poison:
 ; SPARC-VIS3:       ! %bb.0:
+; SPARC-VIS3-NEXT:    srl %o0, 0, %o2
+; SPARC-VIS3-NEXT:    lzcnt %o2, %o2
+; SPARC-VIS3-NEXT:    add %o2, -32, %o2
+; SPARC-VIS3-NEXT:    srl %o1, 0, %o1
+; SPARC-VIS3-NEXT:    lzcnt %o1, %o1
+; SPARC-VIS3-NEXT:    add %o1, -32, %o1
+; SPARC-VIS3-NEXT:    add %o1, 32, %o1
 ; SPARC-VIS3-NEXT:    cmp %o0, 0
-; SPARC-VIS3-NEXT:    bne .LBB3_2
-; SPARC-VIS3-NEXT:    nop
-; SPARC-VIS3-NEXT:  ! %bb.1:
-; SPARC-VIS3-NEXT:    srl %o1, 0, %o0
-; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
-; SPARC-VIS3-NEXT:    add %o0, -32, %o0
-; SPARC-VIS3-NEXT:    add %o0, 32, %o1
-; SPARC-VIS3-NEXT:    retl
-; SPARC-VIS3-NEXT:    mov %g0, %o0
-; SPARC-VIS3-NEXT:  .LBB3_2:
-; SPARC-VIS3-NEXT:    srl %o0, 0, %o0
-; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
-; SPARC-VIS3-NEXT:    add %o0, -32, %o1
+; SPARC-VIS3-NEXT:    movne %icc, %o2, %o1
 ; SPARC-VIS3-NEXT:    retl
 ; SPARC-VIS3-NEXT:    mov %g0, %o0
 ;

@@ -16,6 +16,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Unix.h"
+
+#include "llvm/Support/IOSandbox.h"
+
 #include <limits.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -69,7 +72,8 @@ extern char **environ;
 
 #include <sys/types.h>
 #if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__) &&   \
-    !defined(__linux__) && !defined(__FreeBSD_kernel__) && !defined(_AIX)
+    !defined(__linux__) && !defined(__FreeBSD_kernel__) && !defined(_AIX) &&   \
+    !defined(__managarm__)
 #include <sys/statvfs.h>
 #define STATVFS statvfs
 #define FSTATVFS fstatvfs
@@ -78,7 +82,7 @@ extern char **environ;
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <sys/mount.h>
 #include <sys/param.h>
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__managarm__)
 #if defined(HAVE_LINUX_MAGIC_H)
 #include <linux/magic.h>
 #else
@@ -121,10 +125,12 @@ namespace fs {
 
 const file_t kInvalidFile = -1;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||      \
-    defined(__FreeBSD_kernel__) || defined(__linux__) || defined(__CYGWIN__) || \
-    defined(__DragonFly__) || defined(_AIX) || defined(__GNU__) ||              \
-    (defined(__sun__) && defined(__svr4__) || defined(__HAIKU__))
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
+    defined(__FreeBSD_kernel__) || defined(__linux__) ||                       \
+    defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) ||          \
+    defined(__GNU__) ||                                                        \
+    (defined(__sun__) && defined(__svr4__) || defined(__HAIKU__)) ||           \
+    defined(__managarm__)
 static int test_dir(char ret[PATH_MAX], const char *dir, const char *bin) {
   struct stat sb;
   char fullpath[PATH_MAX];
@@ -186,6 +192,8 @@ static char *getprogpath(char ret[PATH_MAX], const char *bin) {
 /// GetMainExecutable - Return the path to the main executable, given the
 /// value of argv[0] from program startup.
 std::string getMainExecutable(const char *argv0, void *MainAddr) {
+  auto BypassSandbox = sandbox::scopedDisable();
+
 #if defined(__APPLE__)
   // On OS X the executable path is saved to the stack by dyld. Reading it
   // from there is much faster than calling dladdr, especially for large
@@ -245,7 +253,8 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // If we don't have procfs mounted, fall back to argv[0]
   if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
-#elif defined(__linux__) || defined(__CYGWIN__) || defined(__gnu_hurd__)
+#elif defined(__linux__) || defined(__CYGWIN__) || defined(__gnu_hurd__) ||    \
+    defined(__managarm__)
   char exe_path[PATH_MAX];
   const char *aPath = "/proc/self/exe";
   if (sys::fs::exists(aPath)) {
@@ -362,6 +371,8 @@ ErrorOr<space_info> disk_space(const Twine &Path) {
 }
 
 std::error_code current_path(SmallVectorImpl<char> &result) {
+  sandbox::violationIfEnabled();
+
   result.clear();
 
   const char *pwd = ::getenv("PWD");
@@ -385,8 +396,9 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
       }
       // Otherwise there just wasn't enough space.
       result.resize_for_overwrite(result.capacity() * 2);
-    } else
+    } else {
       break;
+    }
   }
 
   result.truncate(strlen(result.data()));
@@ -394,6 +406,8 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
 }
 
 std::error_code set_current_path(const Twine &path) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> path_storage;
   StringRef p = path.toNullTerminatedStringRef(path_storage);
 
@@ -472,7 +486,7 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
 }
 
 static bool is_local_impl(struct STATVFS &Vfs) {
-#if defined(__linux__) || defined(__GNU__)
+#if defined(__linux__) || defined(__GNU__) || defined(__managarm__)
 #ifndef NFS_SUPER_MAGIC
 #define NFS_SUPER_MAGIC 0x6969
 #endif
@@ -556,6 +570,8 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 }
 
 std::error_code is_local(const Twine &Path, bool &Result) {
+  sandbox::violationIfEnabled();
+
   struct STATVFS Vfs;
   if (::STATVFS(const_cast<char *>(Path.str().c_str()), &Vfs))
     return errnoAsErrorCode();
@@ -565,6 +581,8 @@ std::error_code is_local(const Twine &Path, bool &Result) {
 }
 
 std::error_code is_local(int FD, bool &Result) {
+  sandbox::violationIfEnabled();
+
   struct STATVFS Vfs;
   if (::FSTATVFS(FD, &Vfs))
     return errnoAsErrorCode();
@@ -595,6 +613,11 @@ std::error_code resize_file(int FD, uint64_t Size) {
   return std::error_code();
 }
 
+std::error_code resize_file_sparse(int FD, uint64_t Size) {
+  // On Unix, this is the same as `resize_file`.
+  return resize_file(FD, Size);
+}
+
 static int convertAccessMode(AccessMode Mode) {
   switch (Mode) {
   case AccessMode::Exist:
@@ -608,6 +631,8 @@ static int convertAccessMode(AccessMode Mode) {
 }
 
 std::error_code access(const Twine &Path, AccessMode Mode) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
@@ -627,6 +652,8 @@ std::error_code access(const Twine &Path, AccessMode Mode) {
 }
 
 bool can_execute(const Twine &Path) {
+  sandbox::violationIfEnabled();
+
   return !access(Path, AccessMode::Execute);
 }
 
@@ -636,6 +663,8 @@ bool equivalent(file_status A, file_status B) {
 }
 
 std::error_code equivalent(const Twine &A, const Twine &B, bool &result) {
+  sandbox::violationIfEnabled();
+
   file_status fsA, fsB;
   if (std::error_code ec = status(A, fsA))
     return ec;
@@ -750,6 +779,8 @@ static std::error_code fillStatus(int StatRet, const struct stat &Status,
 }
 
 std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
@@ -759,6 +790,8 @@ std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
 }
 
 std::error_code status(int FD, file_status &Result) {
+  sandbox::violationIfEnabled();
+
   struct stat Status;
   int StatRet = ::fstat(FD, &Status);
   return fillStatus(StatRet, Status, Result);
@@ -860,6 +893,8 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
                                        uint64_t offset, std::error_code &ec)
     : Size(length), Mode(mode) {
+  sandbox::violationIfEnabled();
+
   (void)Mode;
   ec = init(fd, offset, mode);
   if (ec)
@@ -869,6 +904,12 @@ mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
 void mapped_file_region::unmapImpl() {
   if (Mapping)
     ::munmap(Mapping, Size);
+}
+
+std::error_code mapped_file_region::sync() const {
+  if (int Res = ::msync(Mapping, Size, MS_SYNC))
+    return std::error_code(Res, std::generic_category());
+  return std::error_code();
 }
 
 void mapped_file_region::dontNeedImpl() {
@@ -884,11 +925,26 @@ void mapped_file_region::dontNeedImpl() {
 #endif
 }
 
+void mapped_file_region::willNeedImpl() {
+  assert(Mode == mapped_file_region::readonly);
+  if (!Mapping)
+    return;
+#if defined(__MVS__) || defined(_AIX)
+  // If we don't have madvise, or it isn't beneficial, treat this as a no-op.
+#elif defined(POSIX_MADV_WILLNEED)
+  ::posix_madvise(Mapping, Size, POSIX_MADV_WILLNEED);
+#else
+  ::madvise(Mapping, Size, MADV_WILLNEED);
+#endif
+}
+
 int mapped_file_region::alignment() { return Process::getPageSizeEstimate(); }
 
 std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
                                                      StringRef path,
                                                      bool follow_symlinks) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> path_null(path);
   DIR *directory = ::opendir(path_null.c_str());
   if (!directory)
@@ -924,6 +980,8 @@ static file_type direntType(dirent *Entry) {
 }
 
 std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
+  sandbox::violationIfEnabled();
+
   errno = 0;
   dirent *CurDir = ::readdir(reinterpret_cast<DIR *>(It.IterationHandle));
   if (CurDir == nullptr && errno != 0) {
@@ -934,13 +992,16 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
         (Name.size() == 2 && Name[0] == '.' && Name[1] == '.'))
       return directory_iterator_increment(It);
     It.CurrentEntry.replace_filename(Name, direntType(CurDir));
-  } else
+  } else {
     return directory_iterator_destruct(It);
+  }
 
   return std::error_code();
 }
 
 ErrorOr<basic_file_status> directory_entry::status() const {
+  sandbox::violationIfEnabled();
+
   file_status s;
   if (auto EC = fs::status(Path, s, FollowSymlinks))
     return EC;
@@ -1010,6 +1071,8 @@ static int nativeOpenFlags(CreationDisposition Disp, OpenFlags Flags,
 std::error_code openFile(const Twine &Name, int &ResultFD,
                          CreationDisposition Disp, FileAccess Access,
                          OpenFlags Flags, unsigned Mode) {
+  sandbox::violationIfEnabled();
+
   int OpenFlags = nativeOpenFlags(Disp, Flags, Access);
 
   SmallString<128> Storage;
@@ -1091,14 +1154,14 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     !Stat.st_tag.ft_txtflag && !Stat.st_tag.ft_ccsid &&
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
-      if (auto EC = llvm::enablezOSAutoConversion(ResultFD))
+      if (auto EC = llvm::enableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
         if (auto EC = llvm::setzOSFileTag(ResultFD, CCSID_IBM_1047, true))
           return EC;
       }
     } else {
-      if (auto EC = llvm::disablezOSAutoConversion(ResultFD))
+      if (auto EC = llvm::disableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
         if (auto EC = llvm::setzOSFileTag(ResultFD, FT_BINARY, false))
@@ -1114,6 +1177,7 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
 Expected<int> openNativeFile(const Twine &Name, CreationDisposition Disp,
                              FileAccess Access, OpenFlags Flags,
                              unsigned Mode) {
+  sandbox::violationIfEnabled();
 
   int FD;
   std::error_code EC = openFile(Name, FD, Disp, Access, Flags, Mode);
@@ -1125,6 +1189,8 @@ Expected<int> openNativeFile(const Twine &Name, CreationDisposition Disp,
 std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 OpenFlags Flags,
                                 SmallVectorImpl<char> *RealPath) {
+  sandbox::violationIfEnabled();
+
   std::error_code EC =
       openFile(Name, ResultFD, CD_OpenExisting, FA_Read, Flags, 0666);
   if (EC)
@@ -1166,6 +1232,8 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
 
 Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
                                        SmallVectorImpl<char> *RealPath) {
+  sandbox::violationIfEnabled();
+
   file_t ResultFD;
   std::error_code EC = openFileForRead(Name, ResultFD, Flags, RealPath);
   if (EC)
@@ -1178,13 +1246,15 @@ file_t getStdoutHandle() { return 1; }
 file_t getStderrHandle() { return 2; }
 
 Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
+  sandbox::violationIfEnabled();
+
 #if defined(__APPLE__)
   size_t Size = std::min<size_t>(Buf.size(), INT32_MAX);
 #else
   size_t Size = Buf.size();
 #endif
   ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
-  if (ssize_t(NumRead) == -1)
+  if (NumRead == -1)
     return errorCodeToError(errnoAsErrorCode());
 // The underlying operation on these platforms allow opening directories
 // for reading in more cases than other platforms.
@@ -1200,6 +1270,8 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
 
 Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
                                      uint64_t Offset) {
+  sandbox::violationIfEnabled();
+
 #if defined(__APPLE__)
   size_t Size = std::min<size_t>(Buf.size(), INT32_MAX);
 #else
@@ -1218,13 +1290,21 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
   return NumRead;
 }
 
-std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
+std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
+                            LockKind Kind) {
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
     struct flock Lock;
     memset(&Lock, 0, sizeof(Lock));
-    Lock.l_type = F_WRLCK;
+    switch (Kind) {
+    case LockKind::Exclusive:
+      Lock.l_type = F_WRLCK;
+      break;
+    case LockKind::Shared:
+      Lock.l_type = F_RDLCK;
+      break;
+    }
     Lock.l_whence = SEEK_SET;
     Lock.l_start = 0;
     Lock.l_len = 0;
@@ -1233,15 +1313,24 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
     int Error = errno;
     if (Error != EACCES && Error != EAGAIN)
       return std::error_code(Error, std::generic_category());
+    if (Timeout.count() == 0)
+      break;
     usleep(1000);
   } while (std::chrono::steady_clock::now() < End);
   return make_error_code(errc::no_lock_available);
 }
 
-std::error_code lockFile(int FD) {
+std::error_code lockFile(int FD, LockKind Kind) {
   struct flock Lock;
   memset(&Lock, 0, sizeof(Lock));
-  Lock.l_type = F_WRLCK;
+  switch (Kind) {
+  case LockKind::Exclusive:
+    Lock.l_type = F_WRLCK;
+    break;
+  case LockKind::Shared:
+    Lock.l_type = F_RDLCK;
+    break;
+  }
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
@@ -1262,6 +1351,8 @@ std::error_code unlockFile(int FD) {
 }
 
 std::error_code closeFile(file_t &F) {
+  sandbox::violationIfEnabled();
+
   file_t TmpF = F;
   F = kInvalidFile;
   return Process::SafelyCloseFileDescriptor(TmpF);
@@ -1309,6 +1400,8 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
 
 std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
                           bool expand_tilde) {
+  sandbox::violationIfEnabled();
+
   dest.clear();
   if (path.isTriviallyEmpty())
     return std::error_code();

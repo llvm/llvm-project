@@ -1,4 +1,5 @@
 // RUN: mlir-opt -expand-strided-metadata -finalize-memref-to-llvm -lower-affine -convert-arith-to-llvm -cse %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -expand-strided-metadata -finalize-memref-to-llvm='index-bitwidth=32' -lower-affine -convert-arith-to-llvm='index-bitwidth=32' -cse %s -split-input-file | FileCheck %s --check-prefix=CHECK32
 //
 // This test demonstrates a full "memref to llvm" pipeline where
 // we first expand some of the memref operations (using affine,
@@ -441,10 +442,31 @@ func.func @collapse_shape_dynamic_with_non_identity_layout(
 // CHECK:           %[[RES:.*]] = builtin.unrealized_conversion_cast %[[DESC6]] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> to memref<4x?xf32, strided<[?, ?], offset: ?>>
 // CHECK:           return %[[RES]] : memref<4x?xf32, strided<[?, ?], offset: ?>>
 // CHECK:         }
-// CHECK32-LABEL: func @collapse_shape_dynamic_with_non_identity_layout(
-//       CHECK32:      llvm.mlir.constant(1 : index) : i32
-//       CHECK32:      llvm.mlir.constant(4 : index) : i32
-//       CHECK32:      llvm.mlir.constant(1 : index) : i32
+// CHECK32-LABEL:   func.func @collapse_shape_dynamic_with_non_identity_layout(
+// CHECK32-SAME:                                                               %[[ARG:.*]]: memref<4x?x?xf32, strided<[?, 4, 1], offset: ?>>) -> memref<4x?xf32, strided<[?, ?], offset: ?>> {
+// CHECK32:           %[[MEM:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : memref<4x?x?xf32, strided<[?, 4, 1], offset: ?>> to !llvm.struct<(ptr, ptr, i32, array<3 x i32>, array<3 x i32>)>
+// CHECK32:           %[[BASE_BUFFER:.*]] = llvm.extractvalue %[[MEM]][0] : !llvm.struct<(ptr, ptr, i32,
+// CHECK32:           %[[ALIGNED_BUFFER:.*]] = llvm.extractvalue %[[MEM]][1] : !llvm.struct<(ptr, ptr, i32,
+// CHECK32:           %[[OFFSET:.*]] = llvm.extractvalue %[[MEM]][2] : !llvm.struct<(ptr, ptr, i32, array<3 x i32>, array<3 x i32>)>
+// CHECK32:           %[[SIZE1:.*]] = llvm.extractvalue %[[MEM]][3, 1] : !llvm.struct<(ptr, ptr, i32, array<3 x i32>, array<3 x i32>)>
+// CHECK32:           %[[SIZE2:.*]] = llvm.extractvalue %[[MEM]][3, 2] : !llvm.struct<(ptr, ptr, i32, array<3 x i32>, array<3 x i32>)>
+// CHECK32:           %[[STRIDE0:.*]] = llvm.extractvalue %[[MEM]][4, 0] : !llvm.struct<(ptr, ptr, i32, array<3 x i32>, array<3 x i32>)>
+// CHECK32:           %[[FINAL_SIZE1_I32:.*]] = llvm.mul %[[SIZE1]], %[[SIZE2]] overflow<nsw> : i32
+// CHECK32:           %[[SIZE1_TO_IDX:.*]] = builtin.unrealized_conversion_cast %[[FINAL_SIZE1_I32]] : i32 to index
+// CHECK32:           %[[FINAL_SIZE1_CAST:.*]] = builtin.unrealized_conversion_cast %[[SIZE1_TO_IDX]] : index to i32
+// CHECK32:           %[[DESC:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)>
+// CHECK32:           %[[DESC0:.*]] = llvm.insertvalue %[[BASE_BUFFER]], %[[DESC]][0] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)>
+// CHECK32:           %[[DESC1:.*]] = llvm.insertvalue %[[ALIGNED_BUFFER]], %[[DESC0]][1] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)>
+// CHECK32:           %[[DESC2:.*]] = llvm.insertvalue %[[OFFSET]], %[[DESC1]][2] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)>
+// CHECK32:           %[[C4_I32:.*]] = llvm.mlir.constant(4 : index) : i32
+// CHECK32:           %[[DESC3:.*]] = llvm.insertvalue %[[C4_I32]], %[[DESC2]][3, 0] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)>
+// CHECK32:           %[[DESC4:.*]] = llvm.insertvalue %[[STRIDE0]], %[[DESC3]][4, 0] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)>
+// CHECK32:           %[[DESC5:.*]] = llvm.insertvalue %[[FINAL_SIZE1_CAST]], %[[DESC4]][3, 1] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)>
+// CHECK32:           %[[C1_I32:.*]] = llvm.mlir.constant(1 : index) : i32
+// CHECK32:           %[[DESC6:.*]] = llvm.insertvalue %[[C1_I32]], %[[DESC5]][4, 1] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)>
+// CHECK32:           %[[RES:.*]] = builtin.unrealized_conversion_cast %[[DESC6]] : !llvm.struct<(ptr, ptr, i32, array<2 x i32>, array<2 x i32>)> to memref<4x?xf32, strided<[?, ?], offset: ?>>
+// CHECK32:           return %[[RES]] : memref<4x?xf32, strided<[?, ?], offset: ?>>
+// CHECK32:         }
 
 // -----
 
@@ -676,14 +698,14 @@ func.func @collapse_static_shape_with_non_identity_layout(%arg: memref<1x1x8x8xf
 // CHECK: %[[OFFSET:.*]] = llvm.extractvalue %[[DESC]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[BUFF_ADDR:.*]] = llvm.getelementptr %[[ALIGNED_PTR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.intr.assume %{{.*}} ["align"(%[[BUFF_ADDR]], %{{.*}} : !llvm.ptr, i64)] : i1
-// CHECK: %[[LD_ADDR:.*]] = llvm.getelementptr %[[BUFF_ADDR]][%{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[LD_ADDR:.*]] = llvm.getelementptr inbounds|nuw %[[BUFF_ADDR]][%{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: %[[VAL:.*]] = llvm.load %[[LD_ADDR]] : !llvm.ptr -> f32
 // CHECK: return %[[VAL]] : f32
 func.func @load_and_assume(
     %arg0: memref<?x?xf32, strided<[?, ?], offset: ?>>,
     %i0: index, %i1: index)
     -> f32 {
-  memref.assume_alignment %arg0, 16 : memref<?x?xf32, strided<[?, ?], offset: ?>>
-  %2 = memref.load %arg0[%i0, %i1] : memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %arg0_align = memref.assume_alignment %arg0, 16 : memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %2 = memref.load %arg0_align[%i0, %i1] : memref<?x?xf32, strided<[?, ?], offset: ?>>
   func.return %2 : f32
 }

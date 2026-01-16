@@ -21,25 +21,6 @@ using namespace mlir::bufferization;
 
 #include "mlir/Dialect/Bufferization/IR/BufferizationOpsDialect.cpp.inc"
 
-/// Attribute name used to mark function arguments who's buffers can be written
-/// to during One-Shot Module Bufferize.
-constexpr const ::llvm::StringLiteral BufferizationDialect::kWritableAttrName;
-
-/// Attribute name used to mark the bufferization layout for region arguments
-/// during One-Shot Module Bufferize.
-constexpr const ::llvm::StringLiteral
-    BufferizationDialect::kBufferLayoutAttrName;
-
-/// An attribute that can be attached to ops with an allocation and/or
-/// deallocation side effect. It indicates that the op is under a "manual
-/// deallocation" scheme. In the case of an allocation op, the returned
-/// value is *not* an automatically managed allocation and assigned an
-/// ownership of "false". Furthermore, only deallocation ops that are
-/// guaranteed to deallocate a buffer under "manual deallocation" are
-/// allowed to have this attribute. (Deallocation ops without this
-/// attribute are rejected by the ownership-based buffer deallocation pass.)
-constexpr const ::llvm::StringLiteral BufferizationDialect::kManualDeallocation;
-
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect Interfaces
 //===----------------------------------------------------------------------===//
@@ -57,7 +38,34 @@ struct BufferizationInlinerInterface : public DialectInlinerInterface {
 template <typename Tensor>
 struct BuiltinTensorExternalModel
     : TensorLikeType::ExternalModel<BuiltinTensorExternalModel<Tensor>,
-                                    Tensor> {};
+                                    Tensor> {
+  llvm::FailureOr<BufferLikeType> getBufferType(
+      mlir::Type tensor, const BufferizationOptions &options,
+      llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    auto tensorType = cast<TensorType>(tensor);
+    auto memSpace = options.defaultMemorySpaceFn(tensorType);
+    if (!memSpace.has_value())
+      return emitError() << "could not infer memory space";
+
+    return cast<BufferLikeType>(
+        getMemRefType(tensorType, options, /*layout=*/{}, *memSpace));
+  }
+
+  mlir::LogicalResult verifyCompatibleBufferType(
+      mlir::Type tensor, BufferLikeType bufferType,
+      llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    auto tensorType = cast<ShapedType>(tensor);
+    auto memrefType = cast<ShapedType>(bufferType);
+
+    if (tensorType.getShape() != memrefType.getShape())
+      return emitError() << "shapes do not match";
+
+    if (tensorType.getElementType() != memrefType.getElementType())
+      return emitError() << "element types do not match";
+
+    return mlir::success();
+  }
+};
 
 template <typename MemRef>
 struct BuiltinMemRefExternalModel
@@ -122,9 +130,9 @@ LogicalResult BufferizationDialect::verifyRegionArgAttribute(
     return success();
   }
   if (attr.getName() == kBufferLayoutAttrName) {
-    if (!llvm::isa<AffineMapAttr>(attr.getValue())) {
+    if (!llvm::isa<MemRefLayoutAttrInterface>(attr.getValue())) {
       return op->emitError() << "'" << kBufferLayoutAttrName
-                             << "' is expected to be a affine map attribute";
+                             << "' is expected to be a memref layout attribute";
     }
     if (!isa<FunctionOpInterface>(op))
       return op->emitError() << "expected '" << kBufferLayoutAttrName

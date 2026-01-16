@@ -18,6 +18,8 @@
 namespace lldb_private {
 namespace formatters {
 
+bool IsLibCxxAtomic(ValueObject &valobj);
+
 lldb::ValueObjectSP GetLibCxxAtomicValue(ValueObject &valobj);
 
 bool LibCxxAtomicSummaryProvider(ValueObject &valobj, Stream &stream,

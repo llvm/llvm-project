@@ -1,7 +1,9 @@
 // RUN: %libomptarget-compile-run-and-check-generic
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <stdio.h>
+#include <assert.h>
 
 int main() {
   const int N = 64;
@@ -24,4 +26,9 @@ int main() {
     printf("PASS\n");
 
   omp_free(device_ptr, llvm_omp_target_device_mem_alloc);
+
+  // Make sure this interface works.
+  void *ptr = omp_alloc(0, llvm_omp_target_device_mem_alloc);
+  assert(!ptr && "Ptr not (nullptr)");
+  omp_free(ptr, llvm_omp_target_device_mem_alloc);
 }

@@ -26,12 +26,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
-#include <sys/stat.h>
-#include <sys/resource.h>
-#include <signal.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -516,7 +515,7 @@ std::error_code llvm::sys::ChangeStdoutMode(fs::OpenFlags Flags) {
 
 std::error_code llvm::sys::ChangeStdinToBinary() {
 #ifdef __MVS__
-  return disablezOSAutoConversion(STDIN_FILENO);
+  return disableAutoConversion(STDIN_FILENO);
 #else
   // Do nothing, as Unix doesn't differentiate between text and binary.
   return std::error_code();

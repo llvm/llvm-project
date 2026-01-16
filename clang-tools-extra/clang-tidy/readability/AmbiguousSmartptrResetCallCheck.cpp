@@ -1,4 +1,4 @@
-//===--- AmbiguousSmartptrResetCallCheck.cpp - clang-tidy -----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,12 +20,9 @@ namespace clang::tidy::readability {
 namespace {
 
 AST_MATCHER(CXXMethodDecl, hasOnlyDefaultParameters) {
-  for (const auto *Param : Node.parameters()) {
-    if (!Param->hasDefaultArg())
-      return false;
-  }
-
-  return true;
+  return llvm::all_of(Node.parameters(), [](const ParmVarDecl *Param) {
+    return Param->hasDefaultArg();
+  });
 }
 
 const auto DefaultSmartPointers = "::std::shared_ptr;::std::unique_ptr;"

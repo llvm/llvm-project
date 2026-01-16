@@ -38,13 +38,13 @@ define <4 x i32> @mul_4i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: mul_4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pmulld %xmm1, %xmm0
-; X86-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [4,6,6,4]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_4i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pmulld %xmm1, %xmm0
-; X64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4,6,6,4]
 ; X64-NEXT:    retq
   %1 = mul <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 4>
   %2 = mul <4 x i32> %a1, <i32 4, i32 3, i32 2, i32 1>
@@ -56,13 +56,13 @@ define <4 x i32> @mul_4i32_commute(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: mul_4i32_commute:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pmulld %xmm1, %xmm0
-; X86-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [4,6,6,4]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_4i32_commute:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pmulld %xmm1, %xmm0
-; X64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4,6,6,4]
 ; X64-NEXT:    retq
   %1 = mul <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %a0
   %2 = mul <4 x i32> <i32 4, i32 3, i32 2, i32 1>, %a1

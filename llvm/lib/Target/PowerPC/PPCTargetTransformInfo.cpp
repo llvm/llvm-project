@@ -24,6 +24,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppctti"
 
+static cl::opt<bool> Pwr9EVL("ppc-pwr9-evl",
+                             cl::desc("Allow vp.load and vp.store for pwr9"),
+                             cl::init(false), cl::Hidden);
+
 static cl::opt<bool> VecMaskCost("ppc-vec-mask-cost",
 cl::desc("add masking cost for i1 vectors"), cl::init(true), cl::Hidden);
 
@@ -344,6 +348,10 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   TargetSchedModel SchedModel;
   SchedModel.init(ST);
 
+  // FIXME: Sure there is no other way to get TTI? This should be cheap though.
+  TargetTransformInfo TTI =
+      TM.getTargetTransformInfo(*L->getHeader()->getParent());
+
   // Do not convert small short loops to CTR loop.
   unsigned ConstTripCount = SE.getSmallConstantTripCount(L);
   if (ConstTripCount && ConstTripCount < SmallCTRLoopThreshold) {
@@ -351,7 +359,7 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
     CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
     CodeMetrics Metrics;
     for (BasicBlock *BB : L->blocks())
-      Metrics.analyzeBasicBlock(BB, *this, EphValues);
+      Metrics.analyzeBasicBlock(BB, TTI, EphValues);
     // 6 is an approximate latency for the mtctr instruction.
     if (Metrics.NumInsts <= (6 * SchedModel.getIssueWidth()))
       return false;
@@ -435,7 +443,11 @@ bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) const {
 PPCTTIImpl::TTI::MemCmpExpansionOptions
 PPCTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
-  Options.LoadSizes = {8, 4, 2, 1};
+  if (getST()->hasAltivec())
+    Options.LoadSizes = {16, 8, 4, 2, 1};
+  else
+    Options.LoadSizes = {8, 4, 2, 1};
+
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   return Options;
 }
@@ -600,19 +612,20 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
 }
 
 InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *Tp, ArrayRef<int> Mask,
+                                           VectorType *DstTy, VectorType *SrcTy,
+                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
 
   InstructionCost CostFactor =
-      vectorCostAdjustmentFactor(Instruction::ShuffleVector, Tp, nullptr);
+      vectorCostAdjustmentFactor(Instruction::ShuffleVector, SrcTy, nullptr);
   if (!CostFactor.isValid())
     return InstructionCost::getMax();
 
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
   // PPC, for both Altivec/VSX, support cheap arbitrary permutations
   // (at least in the sense that there need only be one non-loop-invariant
@@ -670,8 +683,8 @@ InstructionCost PPCTTIImpl::getCmpSelInstrCost(
 
 InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, Value *Op0,
-                                               Value *Op1) const {
+                                               unsigned Index, const Value *Op0,
+                                               const Value *Op1) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -907,7 +920,7 @@ bool PPCTTIImpl::areInlineCompatible(const Function *Caller,
 
 bool PPCTTIImpl::areTypesABICompatible(const Function *Caller,
                                        const Function *Callee,
-                                       const ArrayRef<Type *> &Types) const {
+                                       ArrayRef<Type *> Types) const {
 
   // We need to ensure that argument promotion does not
   // attempt to promote pointers to MMA types (__vector_pair
@@ -1023,88 +1036,45 @@ bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   return false;
 }
 
-bool PPCTTIImpl::hasActiveVectorLength(unsigned Opcode, Type *DataType,
-                                       Align Alignment) const {
-  // Only load and stores instructions can have variable vector length on Power.
-  if (Opcode != Instruction::Load && Opcode != Instruction::Store)
-    return false;
-  // Loads/stores with length instructions use bits 0-7 of the GPR operand and
-  // therefore cannot be used in 32-bit mode.
-  if ((!ST->hasP9Vector() && !ST->hasP10Vector()) || !ST->isPPC64())
-    return false;
-  if (isa<FixedVectorType>(DataType)) {
-    unsigned VecWidth = DataType->getPrimitiveSizeInBits();
-    return VecWidth == 128;
-  }
-  Type *ScalarTy = DataType->getScalarType();
-
-  if (ScalarTy->isPointerTy())
-    return true;
-
-  if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
-    return true;
-
-  if (!ScalarTy->isIntegerTy())
-    return false;
-
-  unsigned IntWidth = ScalarTy->getIntegerBitWidth();
-  return IntWidth == 8 || IntWidth == 16 || IntWidth == 32 || IntWidth == 64;
-}
-
-InstructionCost PPCTTIImpl::getVPMemoryOpCost(unsigned Opcode, Type *Src,
-                                              Align Alignment,
-                                              unsigned AddressSpace,
-                                              TTI::TargetCostKind CostKind,
-                                              const Instruction *I) const {
-  InstructionCost Cost = BaseT::getVPMemoryOpCost(Opcode, Src, Alignment,
-                                                  AddressSpace, CostKind, I);
-  if (TLI->getValueType(DL, Src, true) == MVT::Other)
-    return Cost;
-  // TODO: Handle other cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return Cost;
-
-  assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
-         "Invalid Opcode");
-
-  auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
-  assert(SrcVTy && "Expected a vector type for VP memory operations");
-
-  if (hasActiveVectorLength(Opcode, Src, Alignment)) {
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcVTy);
-
-    InstructionCost CostFactor =
-        vectorCostAdjustmentFactor(Opcode, Src, nullptr);
-    if (!CostFactor.isValid())
-      return InstructionCost::getMax();
-
-    InstructionCost Cost = LT.first * CostFactor;
-    assert(Cost.isValid() && "Expected valid cost");
-
-    // On P9 but not on P10, if the op is misaligned then it will cause a
-    // pipeline flush. Otherwise the VSX masked memops cost the same as unmasked
-    // ones.
-    const Align DesiredAlignment(16);
-    if (Alignment >= DesiredAlignment || ST->getCPUDirective() != PPC::DIR_PWR9)
-      return Cost;
-
-    // Since alignment may be under estimated, we try to compute the probability
-    // that the actual address is aligned to the desired boundary. For example
-    // an 8-byte aligned load is assumed to be actually 16-byte aligned half the
-    // time, while a 4-byte aligned load has a 25% chance of being 16-byte
-    // aligned.
-    float AlignmentProb = ((float)Alignment.value()) / DesiredAlignment.value();
-    float MisalignmentProb = 1.0 - AlignmentProb;
-    return (MisalignmentProb * P9PipelineFlushEstimate) +
-           (AlignmentProb * Cost.getValue());
-  }
-
-  // Usually we should not get to this point, but the following is an attempt to
-  // model the cost of legalization. Currently we can only lower intrinsics with
-  // evl but no mask, on Power 9/10. Otherwise, we must scalarize.
-  return getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
-}
-
 bool PPCTTIImpl::supportsTailCallFor(const CallBase *CB) const {
   return TLI->supportsTailCallFor(CB);
+}
+
+// Target hook used by CodeGen to decide whether to expand vector predication
+// intrinsics into scalar operations or to use special ISD nodes to represent
+// them. The Target will not see the intrinsics.
+TargetTransformInfo::VPLegalization
+PPCTTIImpl::getVPLegalizationStrategy(const VPIntrinsic &PI) const {
+  using VPLegalization = TargetTransformInfo::VPLegalization;
+  unsigned Directive = ST->getCPUDirective();
+  VPLegalization DefaultLegalization = BaseT::getVPLegalizationStrategy(PI);
+  if (Directive != PPC::DIR_PWR10 && Directive != PPC::DIR_PWR_FUTURE &&
+      (!Pwr9EVL || Directive != PPC::DIR_PWR9))
+    return DefaultLegalization;
+
+  if (!ST->isPPC64())
+    return DefaultLegalization;
+
+  unsigned IID = PI.getIntrinsicID();
+  if (IID != Intrinsic::vp_load && IID != Intrinsic::vp_store)
+    return DefaultLegalization;
+
+  bool IsLoad = IID == Intrinsic::vp_load;
+  Type *VecTy = IsLoad ? PI.getType() : PI.getOperand(0)->getType();
+  EVT VT = TLI->getValueType(DL, VecTy, true);
+  if (VT != MVT::v2i64 && VT != MVT::v4i32 && VT != MVT::v8i16 &&
+      VT != MVT::v16i8)
+    return DefaultLegalization;
+
+  auto IsAllTrueMask = [](Value *MaskVal) {
+    if (Value *SplattedVal = getSplatValue(MaskVal))
+      if (auto *ConstValue = dyn_cast<Constant>(SplattedVal))
+        return ConstValue->isAllOnesValue();
+    return false;
+  };
+  unsigned MaskIx = IsLoad ? 1 : 2;
+  if (!IsAllTrueMask(PI.getOperand(MaskIx)))
+    return DefaultLegalization;
+
+  return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
 }

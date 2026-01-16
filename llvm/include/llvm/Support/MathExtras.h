@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_MATHEXTRAS_H
 #define LLVM_SUPPORT_MATHEXTRAS_H
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -42,44 +43,38 @@ using common_sint =
 
 /// Mathematical constants.
 namespace numbers {
-// TODO: Track C++20 std::numbers.
 // clang-format off
-constexpr double e          = 0x1.5bf0a8b145769P+1, // (2.7182818284590452354) https://oeis.org/A001113
-                 egamma     = 0x1.2788cfc6fb619P-1, // (.57721566490153286061) https://oeis.org/A001620
-                 ln2        = 0x1.62e42fefa39efP-1, // (.69314718055994530942) https://oeis.org/A002162
-                 ln10       = 0x1.26bb1bbb55516P+1, // (2.3025850929940456840) https://oeis.org/A002392
-                 log2e      = 0x1.71547652b82feP+0, // (1.4426950408889634074)
-                 log10e     = 0x1.bcb7b1526e50eP-2, // (.43429448190325182765)
-                 pi         = 0x1.921fb54442d18P+1, // (3.1415926535897932385) https://oeis.org/A000796
-                 inv_pi     = 0x1.45f306dc9c883P-2, // (.31830988618379067154) https://oeis.org/A049541
-                 sqrtpi     = 0x1.c5bf891b4ef6bP+0, // (1.7724538509055160273) https://oeis.org/A002161
-                 inv_sqrtpi = 0x1.20dd750429b6dP-1, // (.56418958354775628695) https://oeis.org/A087197
-                 sqrt2      = 0x1.6a09e667f3bcdP+0, // (1.4142135623730950488) https://oeis.org/A00219
-                 inv_sqrt2  = 0x1.6a09e667f3bcdP-1, // (.70710678118654752440)
-                 sqrt3      = 0x1.bb67ae8584caaP+0, // (1.7320508075688772935) https://oeis.org/A002194
-                 inv_sqrt3  = 0x1.279a74590331cP-1, // (.57735026918962576451)
-                 phi        = 0x1.9e3779b97f4a8P+0; // (1.6180339887498948482) https://oeis.org/A001622
-constexpr float ef          = 0x1.5bf0a8P+1F, // (2.71828183) https://oeis.org/A001113
-                egammaf     = 0x1.2788d0P-1F, // (.577215665) https://oeis.org/A001620
-                ln2f        = 0x1.62e430P-1F, // (.693147181) https://oeis.org/A002162
-                ln10f       = 0x1.26bb1cP+1F, // (2.30258509) https://oeis.org/A002392
-                log2ef      = 0x1.715476P+0F, // (1.44269504)
-                log10ef     = 0x1.bcb7b2P-2F, // (.434294482)
-                pif         = 0x1.921fb6P+1F, // (3.14159265) https://oeis.org/A000796
-                inv_pif     = 0x1.45f306P-2F, // (.318309886) https://oeis.org/A049541
-                sqrtpif     = 0x1.c5bf8aP+0F, // (1.77245385) https://oeis.org/A002161
-                inv_sqrtpif = 0x1.20dd76P-1F, // (.564189584) https://oeis.org/A087197
-                sqrt2f      = 0x1.6a09e6P+0F, // (1.41421356) https://oeis.org/A002193
-                inv_sqrt2f  = 0x1.6a09e6P-1F, // (.707106781)
-                sqrt3f      = 0x1.bb67aeP+0F, // (1.73205081) https://oeis.org/A002194
-                inv_sqrt3f  = 0x1.279a74P-1F, // (.577350269)
-                phif        = 0x1.9e377aP+0F; // (1.61803399) https://oeis.org/A001622
+inline constexpr float ef          = e_v<float>;
+inline constexpr float egammaf     = egamma_v<float>;
+inline constexpr float ln2f        = ln2_v<float>;
+inline constexpr float ln10f       = ln10_v<float>;
+inline constexpr float log2ef      = log2e_v<float>;
+inline constexpr float log10ef     = log10e_v<float>;
+inline constexpr float pif         = pi_v<float>;
+inline constexpr float inv_pif     = inv_pi_v<float>;
+inline constexpr float inv_sqrtpif = inv_sqrtpi_v<float>;
+inline constexpr float sqrt2f      = sqrt2_v<float>;
+inline constexpr float inv_sqrt2f  = inv_sqrt2_v<float>;
+inline constexpr float sqrt3f      = sqrt3_v<float>;
+inline constexpr float inv_sqrt3f  = inv_sqrt3_v<float>;
+inline constexpr float phif        = phi_v<float>;
+
+// sqrtpi is not in C++20 std::numbers.
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T sqrtpi_v = T(0x1.c5bf891b4ef6bP+0); // (1.7724538509055160273) https://oeis.org/A002161
+inline constexpr double sqrtpi  = sqrtpi_v<double>;
+inline constexpr float  sqrtpif = sqrtpi_v<float>;
+
+// These string literals are taken from below:
+// https://github.com/bminor/glibc/blob/8543577b04ded6d979ffcc5a818930e4d74d0645/math/math.h#L1215-L1229
+constexpr const char *pis     = "3.141592653589793238462643383279502884",
+                     *inv_pis = "0.318309886183790671537767526745028724";
 // clang-format on
 } // namespace numbers
 
 /// Create a bitmask with the N right-most bits set to 1, and all other
 /// bits set to 0.  Only unsigned types are allowed.
-template <typename T> T maskTrailingOnes(unsigned N) {
+template <typename T> constexpr T maskTrailingOnes(unsigned N) {
   static_assert(std::is_unsigned_v<T>, "Invalid type!");
   const unsigned Bits = CHAR_BIT * sizeof(T);
   assert(N <= Bits && "Invalid bit index");
@@ -90,19 +85,19 @@ template <typename T> T maskTrailingOnes(unsigned N) {
 
 /// Create a bitmask with the N left-most bits set to 1, and all other
 /// bits set to 0.  Only unsigned types are allowed.
-template <typename T> T maskLeadingOnes(unsigned N) {
+template <typename T> constexpr T maskLeadingOnes(unsigned N) {
   return ~maskTrailingOnes<T>(CHAR_BIT * sizeof(T) - N);
 }
 
 /// Create a bitmask with the N right-most bits set to 0, and all other
 /// bits set to 1.  Only unsigned types are allowed.
-template <typename T> T maskTrailingZeros(unsigned N) {
+template <typename T> constexpr T maskTrailingZeros(unsigned N) {
   return maskLeadingOnes<T>(CHAR_BIT * sizeof(T) - N);
 }
 
 /// Create a bitmask with the N left-most bits set to 0, and all other
 /// bits set to 1.  Only unsigned types are allowed.
-template <typename T> T maskLeadingZeros(unsigned N) {
+template <typename T> constexpr T maskLeadingZeros(unsigned N) {
   return maskTrailingOnes<T>(CHAR_BIT * sizeof(T) - N);
 }
 
@@ -120,7 +115,7 @@ static const unsigned char BitReverseTable256[256] = {
 };
 
 /// Reverse the bits in \p Val.
-template <typename T> T reverseBits(T Val) {
+template <typename T> constexpr T reverseBits(T Val) {
 #if __has_builtin(__builtin_bitreverse8)
   if constexpr (std::is_same_v<T, uint8_t>)
     return __builtin_bitreverse8(Val);
@@ -192,16 +187,8 @@ constexpr bool isShiftedInt(int64_t x) {
 
 /// Checks if an unsigned integer fits into the given bit width.
 template <unsigned N> constexpr bool isUInt(uint64_t x) {
-  if constexpr (N == 0)
-    return 0 == x;
-  if constexpr (N == 8)
-    return static_cast<uint8_t>(x) == x;
-  if constexpr (N == 16)
-    return static_cast<uint16_t>(x) == x;
-  if constexpr (N == 32)
-    return static_cast<uint32_t>(x) == x;
   if constexpr (N < 64)
-    return x < (UINT64_C(1) << (N));
+    return (x >> N) == 0;
   (void)x; // MSVC v19.25 warns that x is unused.
   return true;
 }
@@ -217,7 +204,7 @@ constexpr bool isShiftedUInt(uint64_t x) {
 }
 
 /// Gets the maximum value for a N-bit unsigned integer.
-inline uint64_t maxUIntN(uint64_t N) {
+inline constexpr uint64_t maxUIntN(uint64_t N) {
   assert(N <= 64 && "integer width out of range");
 
   // uint64_t(1) << 64 is undefined behavior, so we can't do
@@ -233,16 +220,16 @@ inline uint64_t maxUIntN(uint64_t N) {
 }
 
 /// Gets the minimum value for a N-bit signed integer.
-inline int64_t minIntN(int64_t N) {
+inline constexpr int64_t minIntN(int64_t N) {
   assert(N <= 64 && "integer width out of range");
 
   if (N == 0)
     return 0;
-  return UINT64_C(1) + ~(UINT64_C(1) << (N - 1));
+  return UINT64_MAX << (N - 1);
 }
 
 /// Gets the maximum value for a N-bit signed integer.
-inline int64_t maxIntN(int64_t N) {
+inline constexpr int64_t maxIntN(int64_t N) {
   assert(N <= 64 && "integer width out of range");
 
   // This relies on two's complement wraparound when N == 64, so we convert to
@@ -253,12 +240,12 @@ inline int64_t maxIntN(int64_t N) {
 }
 
 /// Checks if an unsigned integer fits into the given (dynamic) bit width.
-inline bool isUIntN(unsigned N, uint64_t x) {
-  return N >= 64 || x <= maxUIntN(N);
+inline constexpr bool isUIntN(unsigned N, uint64_t x) {
+  return N >= 64 || (x >> N) == 0;
 }
 
 /// Checks if an signed integer fits into the given (dynamic) bit width.
-inline bool isIntN(unsigned N, int64_t x) {
+inline constexpr bool isIntN(unsigned N, int64_t x) {
   return N >= 64 || (minIntN(N) <= x && x <= maxIntN(N));
 }
 
@@ -327,13 +314,16 @@ inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
 
 /// Compile time Log2.
 /// Valid only for positive powers of two.
-template <size_t kValue> constexpr size_t CTLog2() {
-  static_assert(kValue > 0 && llvm::isPowerOf2_64(kValue),
-                "Value is not a valid power of 2");
-  return 1 + CTLog2<kValue / 2>();
+template <size_t kValue> constexpr size_t ConstantLog2() {
+  static_assert(llvm::isPowerOf2_64(kValue), "Value is not a valid power of 2");
+  return llvm::countr_zero_constexpr(kValue);
 }
 
-template <> constexpr size_t CTLog2<1>() { return 0; }
+template <size_t kValue>
+LLVM_DEPRECATED("Use ConstantLog2 instead", "ConstantLog2")
+constexpr size_t CTLog2() {
+  return ConstantLog2<kValue>();
+}
 
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)
@@ -703,7 +693,7 @@ SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
 }
 
 /// Use this rather than HUGE_VALF; the latter causes warnings on MSVC.
-extern const float huge_valf;
+LLVM_ABI extern const float huge_valf;
 
 /// Add two signed integers, computing the two's complement truncated result,
 /// returning true if overflow occurred.

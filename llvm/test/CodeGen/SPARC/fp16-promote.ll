@@ -268,19 +268,20 @@ define void @test_fptrunc_double(double %d, ptr %p) nounwind {
 define void @test_fptrunc_fp128(ptr %dp, ptr %p) nounwind {
 ; V8-OPT-LABEL: test_fptrunc_fp128:
 ; V8-OPT:       ! %bb.0:
-; V8-OPT-NEXT:    save %sp, -104, %sp
+; V8-OPT-NEXT:    save %sp, -112, %sp
 ; V8-OPT-NEXT:    ldd [%i0], %f0
 ; V8-OPT-NEXT:    ldd [%i0+8], %f4
-; V8-OPT-NEXT:    std %f4, [%sp+100]
+; V8-OPT-NEXT:    std %f4, [%fp+-8]
+; V8-OPT-NEXT:    add %fp, -16, %o0
 ; V8-OPT-NEXT:    call __trunctfhf2
-; V8-OPT-NEXT:    std %f0, [%sp+92]
+; V8-OPT-NEXT:    std %f0, [%fp+-16]
 ; V8-OPT-NEXT:    sth %o0, [%i1]
 ; V8-OPT-NEXT:    ret
 ; V8-OPT-NEXT:    restore
 ;
 ; V8-UNOPT-LABEL: test_fptrunc_fp128:
 ; V8-UNOPT:       ! %bb.0:
-; V8-UNOPT-NEXT:    save %sp, -104, %sp
+; V8-UNOPT-NEXT:    save %sp, -112, %sp
 ; V8-UNOPT-NEXT:    ldd [%i0], %f4
 ; V8-UNOPT-NEXT:    ! implicit-def: $q0
 ; V8-UNOPT-NEXT:    fmovs %f4, %f0
@@ -290,22 +291,24 @@ define void @test_fptrunc_fp128(ptr %dp, ptr %p) nounwind {
 ; V8-UNOPT-NEXT:    fmovs %f5, %f3
 ; V8-UNOPT-NEXT:    fmovs %f2, %f4
 ; V8-UNOPT-NEXT:    fmovs %f3, %f5
-; V8-UNOPT-NEXT:    std %f4, [%sp+100]
+; V8-UNOPT-NEXT:    std %f4, [%fp+-8]
 ; V8-UNOPT-NEXT:    ! kill: def $d0 killed $d0 killed $q0
+; V8-UNOPT-NEXT:    std %f0, [%fp+-16]
 ; V8-UNOPT-NEXT:    call __trunctfhf2
-; V8-UNOPT-NEXT:    std %f0, [%sp+92]
+; V8-UNOPT-NEXT:    add %fp, -16, %o0
 ; V8-UNOPT-NEXT:    sth %o0, [%i1]
 ; V8-UNOPT-NEXT:    ret
 ; V8-UNOPT-NEXT:    restore
 ;
 ; V9-LABEL: test_fptrunc_fp128:
 ; V9:       ! %bb.0:
-; V9-NEXT:    save %sp, -104, %sp
+; V9-NEXT:    save %sp, -112, %sp
 ; V9-NEXT:    ldd [%i0], %f0
 ; V9-NEXT:    ldd [%i0+8], %f4
-; V9-NEXT:    std %f4, [%sp+100]
+; V9-NEXT:    std %f4, [%fp+-8]
+; V9-NEXT:    add %fp, -16, %o0
 ; V9-NEXT:    call __trunctfhf2
-; V9-NEXT:    std %f0, [%sp+92]
+; V9-NEXT:    std %f0, [%fp+-16]
 ; V9-NEXT:    sth %o0, [%i1]
 ; V9-NEXT:    ret
 ; V9-NEXT:    restore
@@ -329,13 +332,14 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; V8-OPT-LABEL: test_fadd:
 ; V8-OPT:       ! %bb.0:
 ; V8-OPT-NEXT:    save %sp, -104, %sp
-; V8-OPT-NEXT:    call __extendhfsf2
-; V8-OPT-NEXT:    lduh [%i0], %o0
-; V8-OPT-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V8-OPT-NEXT:    lduh [%i0], %i2
 ; V8-OPT-NEXT:    call __extendhfsf2
 ; V8-OPT-NEXT:    lduh [%i1], %o0
+; V8-OPT-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V8-OPT-NEXT:    call __extendhfsf2
+; V8-OPT-NEXT:    mov %i2, %o0
 ; V8-OPT-NEXT:    ld [%fp+-8], %f1 ! 4-byte Folded Reload
-; V8-OPT-NEXT:    fadds %f1, %f0, %f0
+; V8-OPT-NEXT:    fadds %f0, %f1, %f0
 ; V8-OPT-NEXT:    st %f0, [%fp+-4]
 ; V8-OPT-NEXT:    call __truncsfhf2
 ; V8-OPT-NEXT:    ld [%fp+-4], %o0
@@ -346,13 +350,14 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; V8-UNOPT-LABEL: test_fadd:
 ; V8-UNOPT:       ! %bb.0:
 ; V8-UNOPT-NEXT:    save %sp, -104, %sp
-; V8-UNOPT-NEXT:    call __extendhfsf2
-; V8-UNOPT-NEXT:    lduh [%i0], %o0
-; V8-UNOPT-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V8-UNOPT-NEXT:    lduh [%i0], %i2
+; V8-UNOPT-NEXT:    st %i2, [%fp+-12] ! 4-byte Folded Spill
 ; V8-UNOPT-NEXT:    call __extendhfsf2
 ; V8-UNOPT-NEXT:    lduh [%i1], %o0
-; V8-UNOPT-NEXT:    fmovs %f0, %f1
-; V8-UNOPT-NEXT:    ld [%fp+-8], %f0 ! 4-byte Folded Reload
+; V8-UNOPT-NEXT:    ld [%fp+-12], %o0 ! 4-byte Folded Reload
+; V8-UNOPT-NEXT:    call __extendhfsf2
+; V8-UNOPT-NEXT:    st %f0, [%fp+-8]
+; V8-UNOPT-NEXT:    ld [%fp+-8], %f1 ! 4-byte Folded Reload
 ; V8-UNOPT-NEXT:    fadds %f0, %f1, %f0
 ; V8-UNOPT-NEXT:    st %f0, [%fp+-4]
 ; V8-UNOPT-NEXT:    call __truncsfhf2
@@ -364,13 +369,14 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; V9-LABEL: test_fadd:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    save %sp, -104, %sp
-; V9-NEXT:    call __extendhfsf2
-; V9-NEXT:    lduh [%i0], %o0
-; V9-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V9-NEXT:    lduh [%i0], %i2
 ; V9-NEXT:    call __extendhfsf2
 ; V9-NEXT:    lduh [%i1], %o0
+; V9-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V9-NEXT:    call __extendhfsf2
+; V9-NEXT:    mov %i2, %o0
 ; V9-NEXT:    ld [%fp+-8], %f1 ! 4-byte Folded Reload
-; V9-NEXT:    fadds %f1, %f0, %f0
+; V9-NEXT:    fadds %f0, %f1, %f0
 ; V9-NEXT:    st %f0, [%fp+-4]
 ; V9-NEXT:    call __truncsfhf2
 ; V9-NEXT:    ld [%fp+-4], %o0
@@ -381,14 +387,15 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; SPARC64-LABEL: test_fadd:
 ; SPARC64:       ! %bb.0:
 ; SPARC64-NEXT:    save %sp, -192, %sp
-; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    lduh [%i0], %o0
-; SPARC64-NEXT:    st %f0, [%fp+2043] ! 4-byte Folded Spill
+; SPARC64-NEXT:    lduh [%i0], %i2
 ; SPARC64-NEXT:    call __extendhfsf2
 ; SPARC64-NEXT:    lduh [%i1], %o0
+; SPARC64-NEXT:    st %f0, [%fp+2043] ! 4-byte Folded Spill
+; SPARC64-NEXT:    call __extendhfsf2
+; SPARC64-NEXT:    mov %i2, %o0
 ; SPARC64-NEXT:    ld [%fp+2043], %f1 ! 4-byte Folded Reload
 ; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    fadds %f1, %f0, %f1
+; SPARC64-NEXT:    fadds %f0, %f1, %f1
 ; SPARC64-NEXT:    sth %o0, [%i0]
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
@@ -403,13 +410,14 @@ define void @test_fmul(ptr %p, ptr %q) nounwind {
 ; V8-OPT-LABEL: test_fmul:
 ; V8-OPT:       ! %bb.0:
 ; V8-OPT-NEXT:    save %sp, -104, %sp
-; V8-OPT-NEXT:    call __extendhfsf2
-; V8-OPT-NEXT:    lduh [%i0], %o0
-; V8-OPT-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V8-OPT-NEXT:    lduh [%i0], %i2
 ; V8-OPT-NEXT:    call __extendhfsf2
 ; V8-OPT-NEXT:    lduh [%i1], %o0
+; V8-OPT-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V8-OPT-NEXT:    call __extendhfsf2
+; V8-OPT-NEXT:    mov %i2, %o0
 ; V8-OPT-NEXT:    ld [%fp+-8], %f1 ! 4-byte Folded Reload
-; V8-OPT-NEXT:    fmuls %f1, %f0, %f0
+; V8-OPT-NEXT:    fmuls %f0, %f1, %f0
 ; V8-OPT-NEXT:    st %f0, [%fp+-4]
 ; V8-OPT-NEXT:    call __truncsfhf2
 ; V8-OPT-NEXT:    ld [%fp+-4], %o0
@@ -420,13 +428,14 @@ define void @test_fmul(ptr %p, ptr %q) nounwind {
 ; V8-UNOPT-LABEL: test_fmul:
 ; V8-UNOPT:       ! %bb.0:
 ; V8-UNOPT-NEXT:    save %sp, -104, %sp
-; V8-UNOPT-NEXT:    call __extendhfsf2
-; V8-UNOPT-NEXT:    lduh [%i0], %o0
-; V8-UNOPT-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V8-UNOPT-NEXT:    lduh [%i0], %i2
+; V8-UNOPT-NEXT:    st %i2, [%fp+-12] ! 4-byte Folded Spill
 ; V8-UNOPT-NEXT:    call __extendhfsf2
 ; V8-UNOPT-NEXT:    lduh [%i1], %o0
-; V8-UNOPT-NEXT:    fmovs %f0, %f1
-; V8-UNOPT-NEXT:    ld [%fp+-8], %f0 ! 4-byte Folded Reload
+; V8-UNOPT-NEXT:    ld [%fp+-12], %o0 ! 4-byte Folded Reload
+; V8-UNOPT-NEXT:    call __extendhfsf2
+; V8-UNOPT-NEXT:    st %f0, [%fp+-8]
+; V8-UNOPT-NEXT:    ld [%fp+-8], %f1 ! 4-byte Folded Reload
 ; V8-UNOPT-NEXT:    fmuls %f0, %f1, %f0
 ; V8-UNOPT-NEXT:    st %f0, [%fp+-4]
 ; V8-UNOPT-NEXT:    call __truncsfhf2
@@ -438,13 +447,14 @@ define void @test_fmul(ptr %p, ptr %q) nounwind {
 ; V9-LABEL: test_fmul:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    save %sp, -104, %sp
-; V9-NEXT:    call __extendhfsf2
-; V9-NEXT:    lduh [%i0], %o0
-; V9-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V9-NEXT:    lduh [%i0], %i2
 ; V9-NEXT:    call __extendhfsf2
 ; V9-NEXT:    lduh [%i1], %o0
+; V9-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V9-NEXT:    call __extendhfsf2
+; V9-NEXT:    mov %i2, %o0
 ; V9-NEXT:    ld [%fp+-8], %f1 ! 4-byte Folded Reload
-; V9-NEXT:    fmuls %f1, %f0, %f0
+; V9-NEXT:    fmuls %f0, %f1, %f0
 ; V9-NEXT:    st %f0, [%fp+-4]
 ; V9-NEXT:    call __truncsfhf2
 ; V9-NEXT:    ld [%fp+-4], %o0
@@ -455,14 +465,15 @@ define void @test_fmul(ptr %p, ptr %q) nounwind {
 ; SPARC64-LABEL: test_fmul:
 ; SPARC64:       ! %bb.0:
 ; SPARC64-NEXT:    save %sp, -192, %sp
-; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    lduh [%i0], %o0
-; SPARC64-NEXT:    st %f0, [%fp+2043] ! 4-byte Folded Spill
+; SPARC64-NEXT:    lduh [%i0], %i2
 ; SPARC64-NEXT:    call __extendhfsf2
 ; SPARC64-NEXT:    lduh [%i1], %o0
+; SPARC64-NEXT:    st %f0, [%fp+2043] ! 4-byte Folded Spill
+; SPARC64-NEXT:    call __extendhfsf2
+; SPARC64-NEXT:    mov %i2, %o0
 ; SPARC64-NEXT:    ld [%fp+2043], %f1 ! 4-byte Folded Reload
 ; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    fmuls %f1, %f0, %f1
+; SPARC64-NEXT:    fmuls %f0, %f1, %f1
 ; SPARC64-NEXT:    sth %o0, [%i0]
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore

@@ -4,10 +4,10 @@
 target triple = "nvptx64-nvidia-cuda"
 
 ; CHECK-LABEL: test1
-; CHECK: ld.global.v2.f32
-; CHECK: ld.global.v2.f32
-; CHECK: st.global.v2.f32
-; CHECK: st.global.v2.f32
+; CHECK: ld.global.v2.b32
+; CHECK: ld.global.v2.b32
+; CHECK: st.global.v2.b32
+; CHECK: st.global.v2.b32
 define void @test1(ptr addrspace(1) noalias align 8 %in, ptr addrspace(1) noalias align 8 %out) {
   %in.1 = getelementptr float, ptr addrspace(1) %in, i32 1
   %in.2 = getelementptr float, ptr addrspace(1) %in, i32 2

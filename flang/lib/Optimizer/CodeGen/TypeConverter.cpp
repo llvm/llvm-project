@@ -128,8 +128,8 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
                                                   /*isPacked=*/false);
   });
   addConversion([&](mlir::NoneType none) {
-    return mlir::LLVM::LLVMStructType::getLiteral(
-        none.getContext(), std::nullopt, /*isPacked=*/false);
+    return mlir::LLVM::LLVMStructType::getLiteral(none.getContext(), {},
+                                                  /*isPacked=*/false);
   });
   addConversion([&](fir::DummyScopeType dscope) {
     // DummyScopeType values must not have any uses after PreCGRewrite.
@@ -163,8 +163,8 @@ LLVMTypeConverter::convertRecordType(fir::RecordType derived,
     return mlir::success();
   }
   callStack.push_back(derived);
-  auto popConversionCallStack =
-      llvm::make_scope_exit([&callStack]() { callStack.pop_back(); });
+  llvm::scope_exit popConversionCallStack(
+      [&callStack]() { callStack.pop_back(); });
 
   llvm::SmallVector<mlir::Type> members;
   for (auto mem : derived.getTypeList()) {

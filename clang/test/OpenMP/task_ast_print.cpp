@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -verify -Wno-vla -fopenmp -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -Wno-vla -fopenmp -fopenmp-version=60 -DOMP60 -ast-print %s | FileCheck %s --check-prefix=CHECK60
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -Wno-vla -fopenmp-simd -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -Wno-vla -fopenmp-simd -fopenmp-version=60 -DOMP60 -ast-print %s | FileCheck %s --check-prefix=CHECK60
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump  %s | FileCheck %s --check-prefix=DUMP
@@ -13,6 +15,12 @@
 
 typedef void *omp_depend_t;
 typedef unsigned long omp_event_handle_t;
+
+typedef void **omp_impex_t;
+extern const omp_impex_t omp_not_impex;
+extern const omp_impex_t omp_import;
+extern const omp_impex_t omp_export;
+extern const omp_impex_t omp_impex;
 
 void foo() {}
 
@@ -101,8 +109,8 @@ T tmain(T argc, T *argv) {
   a = 2;
 #pragma omp task default(none), private(argc, b) firstprivate(argv) shared(d) if (argc > 0) final(S<T>::TS > 0) priority(argc) affinity(argc, argv[b:argc], arr[:], ([argc][sizeof(T)])argv)
   foo();
-#pragma omp taskgroup task_reduction(-: argc)
-#pragma omp task if (C) mergeable priority(C) in_reduction(-: argc)
+#pragma omp taskgroup task_reduction(+: argc)
+#pragma omp task if (C) mergeable priority(C) in_reduction(+: argc)
   foo();
   return 0;
 }
@@ -119,8 +127,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<T>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(T)])argv)
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp taskgroup task_reduction(-: argc)
-// CHECK-NEXT: #pragma omp task if(C) mergeable priority(C) in_reduction(-: argc)
+// CHECK-NEXT: #pragma omp taskgroup task_reduction(+: argc)
+// CHECK-NEXT: #pragma omp task if(C) mergeable priority(C) in_reduction(+: argc)
 // CHECK-NEXT: foo()
 // CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
 // CHECK-NEXT: int b = argc, c, d, e, f, g;
@@ -134,8 +142,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<int>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(int)])argv)
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp taskgroup task_reduction(-: argc)
-// CHECK-NEXT: #pragma omp task if(5) mergeable priority(5) in_reduction(-: argc)
+// CHECK-NEXT: #pragma omp taskgroup task_reduction(+: argc)
+// CHECK-NEXT: #pragma omp task if(5) mergeable priority(5) in_reduction(+: argc)
 // CHECK-NEXT: foo()
 // CHECK: template<> long tmain<long, 1>(long argc, long *argv) {
 // CHECK-NEXT: long b = argc, c, d, e, f, g;
@@ -149,11 +157,46 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<long>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(long)])argv)
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp taskgroup task_reduction(-: argc)
-// CHECK-NEXT: #pragma omp task if(1) mergeable priority(1) in_reduction(-: argc)
+// CHECK-NEXT: #pragma omp taskgroup task_reduction(+: argc)
+// CHECK-NEXT: #pragma omp task if(1) mergeable priority(1) in_reduction(+: argc)
 // CHECK-NEXT: foo()
 
 enum Enum {};
+
+#ifdef OMP60
+typedef void **omp_impex_t;
+extern const omp_impex_t omp_not_impex;
+extern const omp_impex_t omp_import;
+extern const omp_impex_t omp_export;
+extern const omp_impex_t omp_impex;
+
+template <int C>
+void TestTaskLoopImpex() {
+#pragma omp taskloop transparent(C)
+  for (int i = 0; i < 10; ++i) {}
+}
+
+enum class TaskType {
+  TypeA,
+  TypeB,
+  TypeC
+};
+
+template <typename T>
+class TransparentTemplate {
+public:
+  void TestTaskImport() {
+    #pragma omp task transparent(omp_import)
+    {
+      T temp;
+    }
+  }
+  void TestTaskLoopImpex() {
+    #pragma omp taskloop transparent(omp_impex)
+    for (int i = 0; i < 10; ++i) {}
+  }
+};
+#endif
 
 int main(int argc, char **argv) {
   long x;
@@ -162,6 +205,9 @@ int main(int argc, char **argv) {
   int arr[10], arr1[argc];
   omp_depend_t y;
   omp_event_handle_t evt;
+#ifdef OMP60
+  omp_impex_t v = omp_import;
+#endif
 #pragma omp threadprivate(a)
   Enum ee;
 // CHECK: Enum ee;
@@ -199,8 +245,60 @@ int main(int argc, char **argv) {
 #pragma omp task depend(inout: omp_all_memory)
   foo();
   // CHECK-NEXT: foo();
+#ifdef OMP60
+#pragma omp task threadset(omp_pool)
+#pragma omp task threadset(omp_team)
+  foo();
+
+#pragma omp task transparent(omp_not_impex)
+#pragma omp task transparent(omp_import)
+#pragma omp task transparent(omp_export)
+#pragma omp task transparent(omp_impex)
+#pragma omp task transparent(omp_import)
+#pragma omp task transparent(v)
+#pragma omp task transparent(v ? omp_import : omp_export)
+#pragma omp task transparent(omp_import + 0)
+#pragma omp task transparent((v))
+  foo();
+
+  TestTaskLoopImpex<1>();
+
+  TaskType task = TaskType::TypeA;
+#pragma omp task transparent(task)
+  foo();
+#endif
+
+  // CHECK60: #pragma omp taskloop transparent(C)
+  // CHECK60: #pragma omp taskloop transparent(1)
+  // CHECK60: #pragma omp task transparent(omp_import)
+  // CHECK60: #pragma omp taskloop transparent(omp_impex)
+  // CHECK60: #pragma omp task transparent(omp_import)
+  // CHECK60: #pragma omp task threadset(omp_pool)
+  // CHECK60: #pragma omp task threadset(omp_team)
+  // CHECK60-NEXT: foo();
+  // CHECK60: #pragma omp task transparent(omp_not_impex)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_import)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_export)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_impex)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_import)
+  // CHECK60-NEXT: #pragma omp task transparent(v)
+  // CHECK60-NEXT: #pragma omp task transparent(v ? omp_import : omp_export)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_import + 0)
+  // CHECK60-NEXT: #pragma omp task transparent((v))
+  // CHECK60-NEXT: foo();
+  // CHECK60: #pragma omp task transparent(task)
+  // CHECK60-NEXT: foo();
+
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);
 }
+
+#ifdef OMP60
+void TestTaskTransparent() {
+  TransparentTemplate<int> obj;
+  obj.TestTaskImport();
+  obj.TestTaskLoopImpex();
+}
+#endif
 
 extern template int S<int>::TS;
 extern template long S<long>::TS;

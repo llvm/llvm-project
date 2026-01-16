@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
+// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s -filetype=null 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
 
 //==============================================================================
 // cache policy is not supported for SMRD instructions
@@ -44,3 +44,16 @@ s_load_dword s5, s[2:3], glc
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: cache policy is not supported for SMRD instructions
 // CHECK-NEXT:{{^}}s_load_dword s5, s[2:3], glc
 // CHECK-NEXT:{{^}}                         ^
+
+//==============================================================================
+// not a valid operand
+
+v_alignbit_b32 v5, v1, v2, v3 op_sel:[1,1,1,1]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// CHECK-NEXT:{{^}}v_alignbit_b32 v5, v1, v2, v3 op_sel:[1,1,1,1]
+// CHECK-NEXT:{{^}}                              ^
+
+v_alignbyte_b32 v5, v1, v2, v3 op_sel:[1,1,1,1]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// CHECK-NEXT:{{^}}v_alignbyte_b32 v5, v1, v2, v3 op_sel:[1,1,1,1]
+// CHECK-NEXT:{{^}}                               ^
