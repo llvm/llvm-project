@@ -924,62 +924,61 @@ TEST(KnownBitsTest, TruncateSatExhaustive) {
   for (unsigned FromBits : {4, 8}) {
     for (unsigned ToBits = 1; ToBits < FromBits; ++ToBits) {
       ForeachKnownBits(FromBits, [&](const KnownBits &Known) {
-        KnownBits Computed = Known.truncSSat(ToBits);
-        KnownBits Exact(ToBits);
-        Exact.Zero.setAllBits();
-        Exact.One.setAllBits();
+        // Test truncSSat
+        {
+          KnownBits Computed = Known.truncSSat(ToBits);
+          KnownBits Exact(ToBits);
+          Exact.Zero.setAllBits();
+          Exact.One.setAllBits();
 
-        ForeachNumInKnownBits(Known, [&](const APInt &N) {
-          APInt Res = N.truncSSat(ToBits);
-          Exact.One &= Res;
-          Exact.Zero &= ~Res;
-        });
+          ForeachNumInKnownBits(Known, [&](const APInt &N) {
+            APInt Res = N.truncSSat(ToBits);
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
 
-        if (!Exact.hasConflict()) {
-          EXPECT_TRUE(checkResult("truncSSat", Exact, Computed, {Known}, true));
+          if (!Exact.hasConflict()) {
+            EXPECT_TRUE(
+                checkResult("truncSSat", Exact, Computed, {Known}, true));
+          }
         }
-      });
-    }
-  }
 
-  for (unsigned FromBits : {4, 8}) {
-    for (unsigned ToBits = 1; ToBits < FromBits; ++ToBits) {
-      ForeachKnownBits(FromBits, [&](const KnownBits &Known) {
-        KnownBits Computed = Known.truncSSatU(ToBits);
-        KnownBits Exact(ToBits);
-        Exact.Zero.setAllBits();
-        Exact.One.setAllBits();
+        // Test truncSSatU
+        {
+          KnownBits Computed = Known.truncSSatU(ToBits);
+          KnownBits Exact(ToBits);
+          Exact.Zero.setAllBits();
+          Exact.One.setAllBits();
 
-        ForeachNumInKnownBits(Known, [&](const APInt &N) {
-          APInt Res = N.truncSSatU(ToBits);
-          Exact.One &= Res;
-          Exact.Zero &= ~Res;
-        });
+          ForeachNumInKnownBits(Known, [&](const APInt &N) {
+            APInt Res = N.truncSSatU(ToBits);
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
 
-        if (!Exact.hasConflict()) {
-          EXPECT_TRUE(
-              checkResult("truncSSatU", Exact, Computed, {Known}, true));
+          if (!Exact.hasConflict()) {
+            EXPECT_TRUE(
+                checkResult("truncSSatU", Exact, Computed, {Known}, true));
+          }
         }
-      });
-    }
-  }
 
-  for (unsigned FromBits : {4, 8}) {
-    for (unsigned ToBits = 1; ToBits < FromBits; ++ToBits) {
-      ForeachKnownBits(FromBits, [&](const KnownBits &Known) {
-        KnownBits Computed = Known.truncUSat(ToBits);
-        KnownBits Exact(ToBits);
-        Exact.Zero.setAllBits();
-        Exact.One.setAllBits();
+        // Test truncUSat
+        {
+          KnownBits Computed = Known.truncUSat(ToBits);
+          KnownBits Exact(ToBits);
+          Exact.Zero.setAllBits();
+          Exact.One.setAllBits();
 
-        ForeachNumInKnownBits(Known, [&](const APInt &N) {
-          APInt Res = N.truncUSat(ToBits);
-          Exact.One &= Res;
-          Exact.Zero &= ~Res;
-        });
+          ForeachNumInKnownBits(Known, [&](const APInt &N) {
+            APInt Res = N.truncUSat(ToBits);
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
 
-        if (!Exact.hasConflict()) {
-          EXPECT_TRUE(checkResult("truncUSat", Exact, Computed, {Known}, true));
+          if (!Exact.hasConflict()) {
+            EXPECT_TRUE(
+                checkResult("truncUSat", Exact, Computed, {Known}, true));
+          }
         }
       });
     }
