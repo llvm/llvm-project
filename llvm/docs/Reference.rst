@@ -9,6 +9,7 @@ LLVM and API reference documentation.
 .. toctree::
    :hidden:
 
+   AIToolPolicy
    Atomics
    BitCodeFormat
    BlockFrequencyTerminology

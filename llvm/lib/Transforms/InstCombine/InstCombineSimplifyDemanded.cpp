@@ -3057,21 +3057,10 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       KnownFPClass KnownSrc =
           computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
 
-      if ((DemandedMask & fcNan) == fcNone)
-        KnownSrc.knownNot(fcNan);
-      if ((DemandedMask & fcInf) == fcNone)
-        KnownSrc.knownNot(fcInf);
-
-      if (KnownSrc.SignBit == false || ((DemandedMask & fcNan) == fcNone &&
-                                        KnownSrc.isKnownNever(fcNegative)))
-        return Src;
-
-      // If the only sign bit difference is due to -0, ignore it with nsz
-      if (FMF.noSignedZeros() &&
-          KnownSrc.isKnownNever(KnownFPClass::OrderedLessThanZeroMask | fcNan))
-        return Src;
-
-      Known = KnownFPClass::fabs(KnownSrc);
+      if (Value *Simplified = simplifyDemandedFPClassFabs(
+              Known, CI->getArgOperand(0), DemandedMask, KnownSrc,
+              FMF.noSignedZeros()))
+        return Simplified;
       break;
     }
     case Intrinsic::maximum:

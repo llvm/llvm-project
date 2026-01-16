@@ -749,13 +749,23 @@ void MCStreamer::emitWinCFIEndProc(SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
-  if (CurFrame->ChainedParent)
-    getContext().reportError(Loc, "Not all chained regions terminated!");
+  CurrentWinFrameInfo = nullptr;
 
   MCSymbol *Label = emitCFILabel();
   CurFrame->End = Label;
-  if (!CurFrame->FuncletOrFuncEnd)
-    CurFrame->FuncletOrFuncEnd = CurFrame->End;
+  const MCSymbol **FuncletOrFuncEndPtr =
+      CurFrame->ChainedParent ? &CurFrame->ChainedParent->FuncletOrFuncEnd
+                              : &CurFrame->FuncletOrFuncEnd;
+  if (!*FuncletOrFuncEndPtr)
+    *FuncletOrFuncEndPtr = CurFrame->End;
+
+  if (CurrentWinEpilog) {
+    // Set End to... something... to prevent crashes later.
+    CurrentWinEpilog->End = emitCFILabel();
+    CurrentWinEpilog = nullptr;
+    getContext().reportError(Loc, "Missing .seh_endepilogue in " +
+                                      CurFrame->Function->getName());
+  }
 
   for (size_t I = CurrentProcWinFrameInfoStartIndex, E = WinFrameInfos.size();
        I != E; ++I)
@@ -767,38 +777,38 @@ void MCStreamer::emitWinCFIFuncletOrFuncEnd(SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
-  if (CurFrame->ChainedParent)
-    getContext().reportError(Loc, "Not all chained regions terminated!");
 
   MCSymbol *Label = emitCFILabel();
-  CurFrame->FuncletOrFuncEnd = Label;
+  const MCSymbol **FuncletOrFuncEndPtr =
+      CurFrame->ChainedParent ? &CurFrame->ChainedParent->FuncletOrFuncEnd
+                              : &CurFrame->FuncletOrFuncEnd;
+  *FuncletOrFuncEndPtr = Label;
 }
 
-void MCStreamer::emitWinCFIStartChained(SMLoc Loc) {
+void MCStreamer::emitWinCFISplitChained(SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
 
-  MCSymbol *StartProc = emitCFILabel();
+  if (!CurFrame->PrologEnd)
+    return getContext().reportError(
+        Loc, "can't split into a new chained region (.seh_splitchained) in the "
+             "middle of a prolog in " +
+                 CurFrame->Function->getName());
+
+  MCSymbol *Label = emitCFILabel();
+
+  // Complete the current frame before starting a new, chained one.
+  CurFrame->End = Label;
+
+  // All chained frames point to the same parent.
+  WinEH::FrameInfo *ChainedParent =
+      CurFrame->ChainedParent ? CurFrame->ChainedParent : CurFrame;
 
   WinFrameInfos.emplace_back(std::make_unique<WinEH::FrameInfo>(
-      CurFrame->Function, StartProc, CurFrame));
+      CurFrame->Function, Label, ChainedParent));
   CurrentWinFrameInfo = WinFrameInfos.back().get();
   CurrentWinFrameInfo->TextSection = getCurrentSectionOnly();
-}
-
-void MCStreamer::emitWinCFIEndChained(SMLoc Loc) {
-  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
-  if (!CurFrame)
-    return;
-  if (!CurFrame->ChainedParent)
-    return getContext().reportError(
-        Loc, "End of a chained region outside a chained region!");
-
-  MCSymbol *Label = emitCFILabel();
-
-  CurFrame->End = Label;
-  CurrentWinFrameInfo = const_cast<WinEH::FrameInfo *>(CurFrame->ChainedParent);
 }
 
 void MCStreamer::emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
@@ -806,9 +816,10 @@ void MCStreamer::emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
-  if (CurFrame->ChainedParent)
-    return getContext().reportError(
-        Loc, "Chained unwind areas can't have handlers!");
+
+  // Handlers are always associated with the parent frame.
+  CurFrame = CurFrame->ChainedParent ? CurFrame->ChainedParent : CurFrame;
+
   CurFrame->ExceptionHandler = Sym;
   if (!Except && !Unwind)
     getContext().reportError(Loc, "Don't know what kind of handler this is!");
@@ -822,8 +833,6 @@ void MCStreamer::emitWinEHHandlerData(SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
-  if (CurFrame->ChainedParent)
-    getContext().reportError(Loc, "Chained unwind areas can't have handlers!");
 }
 
 void MCStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
@@ -994,13 +1003,15 @@ void MCStreamer::emitWinCFIBeginEpilogue(SMLoc Loc) {
   if (!CurFrame)
     return;
 
-  if (!CurFrame->PrologEnd)
-    return getContext().reportError(
+  MCSymbol *Label = emitCFILabel();
+
+  if (!CurFrame->PrologEnd) {
+    CurFrame->PrologEnd = Label;
+    getContext().reportError(
         Loc, "starting epilogue (.seh_startepilogue) before prologue has ended "
              "(.seh_endprologue) in " +
                  CurFrame->Function->getName());
-
-  MCSymbol *Label = emitCFILabel();
+  }
   CurrentWinEpilog =
       &CurFrame->EpilogMap.insert_or_assign(Label, WinEH::FrameInfo::Epilog())
            .first->second;
@@ -1017,9 +1028,12 @@ void MCStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
     return getContext().reportError(Loc, "Stray .seh_endepilogue in " +
                                              CurFrame->Function->getName());
 
-  if ((CurFrame->Version >= 2) && !CurrentWinEpilog->UnwindV2Start)
-    return getContext().reportError(Loc, "Missing .seh_unwindv2start in " +
-                                             CurFrame->Function->getName());
+  if ((CurFrame->Version >= 2) && !CurrentWinEpilog->UnwindV2Start) {
+    // Set UnwindV2Start to... something... to prevent crashes later.
+    CurrentWinEpilog->UnwindV2Start = CurrentWinEpilog->Start;
+    getContext().reportError(Loc, "Missing .seh_unwindv2start in " +
+                                      CurFrame->Function->getName());
+  }
 
   CurrentWinEpilog->End = emitCFILabel();
   CurrentWinEpilog = nullptr;

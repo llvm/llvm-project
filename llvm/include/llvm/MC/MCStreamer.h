@@ -1024,8 +1024,7 @@ public:
   /// for the frame.  We cannot use the End marker, as it is not set at the
   /// point of emitting .xdata, in order to indicate that the frame is active.
   virtual void emitWinCFIFuncletOrFuncEnd(SMLoc Loc = SMLoc());
-  virtual void emitWinCFIStartChained(SMLoc Loc = SMLoc());
-  virtual void emitWinCFIEndChained(SMLoc Loc = SMLoc());
+  virtual void emitWinCFISplitChained(SMLoc Loc = SMLoc());
   virtual void emitWinCFIPushReg(MCRegister Register, SMLoc Loc = SMLoc());
   virtual void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                                   SMLoc Loc = SMLoc());
