@@ -1,0 +1,61 @@
+REQUIRES: x86
+
+## Test that a DTLTO link can use FatLTO objects as inputs, even if they're in archives.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: sed 's/@t1/@t2/g' t1.ll > t2.ll
+RUN: sed 's/@t1/@t3/g' t1.ll > t3.ll
+
+## Taken from lld/test/ELF/fatlto/fatlto.test
+RUN: llc t1.ll --filetype=obj -o t1.o --relocation-model=pic
+RUN: opt < t1.ll --module-summary -o t1.bc
+RUN: llvm-objcopy --add-section=.llvm.lto=t1.bc --set-section-flags=.llvm.lto=exclude --set-section-type=.llvm.lto=0x6fff4c0c t1.o
+
+RUN: llc t2.ll --filetype=obj -o t2.o --relocation-model=pic
+RUN: opt < t2.ll --module-summary -o t2.bc
+RUN: llvm-objcopy --add-section=.llvm.lto=t2.bc --set-section-flags=.llvm.lto=exclude --set-section-type=.llvm.lto=0x6fff4c0c t2.o
+
+RUN: llc t3.ll --filetype=obj -o t3.o --relocation-model=pic
+RUN: opt < t3.ll --module-summary -o t3.bc
+RUN: llvm-objcopy --add-section=.llvm.lto=t3.bc --set-section-flags=.llvm.lto=exclude --set-section-type=.llvm.lto=0x6fff4c0c t3.o
+
+## Create thin and regular archives containing FatLTO objects to test that we
+## can combine these weird file types.
+RUN: llvm-ar rcsT t1.a t1.o
+RUN: llvm-ar rcs t2.a t2.o
+
+RUN: echo "t1.a t2.a t3.o \
+RUN:   --thinlto-distributor=\"%python\" \
+RUN:   --thinlto-distributor-arg=\"%llvm_src_root/utils/dtlto/validate.py\"" > args
+
+## Link thin archives using -u/--undefined.
+RUN: not ld.lld --fat-lto-objects @args -u t1 -u t2 2>&1
+
+## Link thin archives using --whole-archive.
+RUN: not ld.lld --fat-lto-objects --whole-archive @args 2>&1
+
+## Check the module IDs in the JSON jobs description.
+CHECK: "jobs": [
+CHECK: "inputs": [
+CHECK-NEXT: "{{([a-zA-Z]:)|/}}
+CHECK-SAME: t1.bc"
+
+CHECK: "inputs": [
+CHECK-NEXT: "{{([a-zA-Z]\:)|/}}
+CHECK-SAME: t2.bc"
+
+CHECK: "inputs": [
+CHECK-NEXT: "{{([a-zA-Z]:)|/}}
+CHECK-SAME: t3.bc"
+
+## Ensure backend compilation fails as expected (due to validate.py dummy behavior).
+CHECK: error: DTLTO backend compilation: cannot open native object file:
+
+#--- t1.ll
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @t1() {
+  ret void
+}

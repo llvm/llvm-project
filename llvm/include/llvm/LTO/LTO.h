@@ -131,7 +131,8 @@ private:
   std::vector<std::pair<StringRef, Comdat::SelectionKind>> ComdatTable;
 
   MemoryBufferRef MbRef;
-  bool IsMemberOfArchive = false;
+  bool IsFatLTOObject = false;
+  bool IsEntireFile = true;
   bool IsThinLTO = false;
   StringRef ArchivePath;
   StringRef MemberName;
@@ -198,10 +199,15 @@ public:
   LLVM_ABI BitcodeModule &getPrimaryBitcodeModule();
   // Returns the memory buffer reference for this input file.
   MemoryBufferRef getFileBuffer() const { return MbRef; }
-  // Returns true if this input file is a member of an archive.
-  bool isMemberOfArchive() const { return IsMemberOfArchive; }
-  // Mark this input file as a member of archive.
-  void memberOfArchive(bool MA) { IsMemberOfArchive = MA; }
+  // Returns false if this input file is a member of an archive or of a FatLTO
+  // object.
+  bool isEntireFile() const { return IsEntireFile; }
+  // Mark this input file as being an entire file on disk.
+  void entireFile(bool EF) { IsEntireFile = EF; }
+  // Returns true if this bitcode came from a FatLTO object.
+  bool isFatLTOObject() const { return IsFatLTOObject; }
+  // Mark this bitcode as coming from a FatLTO object.
+  void fatLTOObject(bool FO) { IsFatLTOObject = FO; }
 
   // Returns true if bitcode is ThinLTO.
   bool isThinLTO() const { return IsThinLTO; }
