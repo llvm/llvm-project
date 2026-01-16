@@ -887,6 +887,30 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
   modBuilder.setInsertionPointAfter(declareGlobalOp);
 }
 
+static fir::GlobalOp
+lookupGlobalBySymbolOrEquivalence(Fortran::lower::AbstractConverter &converter,
+                                  fir::FirOpBuilder &builder,
+                                  const Fortran::semantics::Symbol &sym) {
+  const Fortran::semantics::Symbol *commonBlock =
+      Fortran::semantics::FindCommonBlockContaining(sym);
+  std::string globalName = commonBlock ? converter.mangleName(*commonBlock)
+                                       : converter.mangleName(sym);
+  if (fir::GlobalOp g = builder.getNamedGlobal(globalName))
+    return g;
+  // Not found: if not a COMMON member, try equivalence members
+  if (!commonBlock) {
+    if (const Fortran::semantics::EquivalenceSet *eqSet =
+            Fortran::semantics::FindEquivalenceSet(sym)) {
+      for (const Fortran::semantics::EquivalenceObject &eqObj : *eqSet) {
+        std::string eqName = converter.mangleName(eqObj.symbol);
+        if (fir::GlobalOp g = builder.getNamedGlobal(eqName))
+          return g;
+      }
+    }
+  }
+  return {};
+}
+
 template <typename EntryOp, typename ExitOp>
 static void
 emitCtorDtorPair(mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder,
@@ -907,6 +931,25 @@ emitCtorDtorPair(mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder,
                                 /*implicit=*/false, asFortran);
 }
 
+/// Return true iff this OpenACC clause is valid for lowering a global/COMMON
+/// symbol via module-level global ctor/dtor.
+///
+/// OpenACC 3.4:
+/// - 3000: In a Fortran module declaration section, only create, copyin,
+///         device_resident clauses are allowed.
+/// - 3001: link is also allowed.
+static bool isValidClauseForGlobalDeclare(mlir::acc::DataClause clause) {
+  switch (clause) {
+  case mlir::acc::DataClause::acc_create:
+  case mlir::acc::DataClause::acc_copyin:
+  case mlir::acc::DataClause::acc_declare_device_resident:
+  case mlir::acc::DataClause::acc_declare_link:
+    return true;
+  default:
+    return false;
+  }
+}
+
 template <typename EntryOp, typename ExitOp>
 static void genDeclareDataOperandOperations(
     const Fortran::parser::AccObjectList &objectList,
@@ -922,37 +965,37 @@ static void genDeclareDataOperandOperations(
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
-    // Handle COMMON/global symbols via module-level ctor/dtor path.
+    // OpenACC `declare` lowering for COMMON/global symbols has two paths:
+    // - Module-level global ctor/dtor: used only for clauses allowed in a
+    //   module declaration section (OpenACC 3.0 3000/3001: create/copyin/
+    //   device_resident/link). This materializes the mapping at program
+    //   start/end via module-level ctor/dtor ops.
+    // - Structured declare: used for all other clauses (e.g.
+    // present/deviceptr),
+    //   whose semantics are scope-dependent and are represented via a
+    //   structured `acc.declare` region.
     if (symbol.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
         Fortran::semantics::FindCommonBlockContaining(symbol)) {
-      emitCommonGlobal(
-          converter, builder, accObject, dataClause,
-          [&](mlir::OpBuilder &modBuilder, [[maybe_unused]] mlir::Location loc,
-              [[maybe_unused]] fir::GlobalOp globalOp,
-              [[maybe_unused]] mlir::acc::DataClause clause,
-              std::stringstream &asFortranStr, const std::string &ctorName) {
-            if constexpr (std::is_same_v<EntryOp, mlir::acc::DeclareLinkOp>) {
-              createDeclareGlobalOp<
-                  mlir::acc::GlobalConstructorOp, mlir::acc::DeclareLinkOp,
-                  mlir::acc::DeclareEnterOp, mlir::acc::DeclareLinkOp>(
-                  modBuilder, builder, loc, globalOp, clause, ctorName,
-                  /*implicit=*/false, asFortranStr);
-            } else if constexpr (std::is_same_v<EntryOp, mlir::acc::CreateOp> ||
-                                 std::is_same_v<EntryOp, mlir::acc::CopyinOp> ||
-                                 std::is_same_v<
-                                     EntryOp,
-                                     mlir::acc::DeclareDeviceResidentOp> ||
-                                 std::is_same_v<ExitOp, mlir::acc::CopyoutOp>) {
-              emitCtorDtorPair<EntryOp, ExitOp>(modBuilder, builder, loc,
-                                                globalOp, clause, asFortranStr,
-                                                ctorName);
-            } else {
-              // No module-level ctor/dtor for this clause (e.g., deviceptr,
-              // present). Handled via structured declare region only.
-              return;
-            }
-          });
-      continue;
+      if (isValidClauseForGlobalDeclare(dataClause)) {
+        emitCommonGlobal(
+            converter, builder, accObject, dataClause,
+            [&](mlir::OpBuilder &modBuilder,
+                [[maybe_unused]] mlir::Location loc,
+                [[maybe_unused]] fir::GlobalOp globalOp,
+                [[maybe_unused]] mlir::acc::DataClause clause,
+                std::stringstream &asFortranStr, const std::string &ctorName) {
+              if constexpr (std::is_same_v<EntryOp, mlir::acc::DeclareLinkOp> ||
+                            std::is_same_v<EntryOp, mlir::acc::CreateOp> ||
+                            std::is_same_v<EntryOp, mlir::acc::CopyinOp> ||
+                            std::is_same_v<
+                                EntryOp, mlir::acc::DeclareDeviceResidentOp>) {
+                emitCtorDtorPair<EntryOp, ExitOp>(modBuilder, builder, loc,
+                                                  globalOp, clause,
+                                                  asFortranStr, ctorName);
+              }
+            });
+        continue;
+      }
     }
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
@@ -4018,31 +4061,6 @@ genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
                                   dataClause);
 }
 
-static fir::GlobalOp
-lookupGlobalBySymbolOrEquivalence(Fortran::lower::AbstractConverter &converter,
-                                  fir::FirOpBuilder &builder,
-                                  const Fortran::semantics::Symbol &sym) {
-  const Fortran::semantics::Symbol *commonBlock =
-      Fortran::semantics::FindCommonBlockContaining(sym);
-  std::string globalName = commonBlock ? converter.mangleName(*commonBlock)
-                                       : converter.mangleName(sym);
-  if (fir::GlobalOp g = builder.getNamedGlobal(globalName)) {
-    return g;
-  }
-  // Not found: if not a COMMON member, try equivalence members
-  if (!commonBlock) {
-    if (const Fortran::semantics::EquivalenceSet *eqSet =
-            Fortran::semantics::FindEquivalenceSet(sym)) {
-      for (const Fortran::semantics::EquivalenceObject &eqObj : *eqSet) {
-        std::string eqName = converter.mangleName(eqObj.symbol);
-        if (fir::GlobalOp g = builder.getNamedGlobal(eqName))
-          return g;
-      }
-    }
-  }
-  return {};
-}
-
 template <typename EmitterFn>
 static void emitCommonGlobal(Fortran::lower::AbstractConverter &converter,
                              fir::FirOpBuilder &builder,
@@ -4066,7 +4084,8 @@ static void emitCommonGlobal(Fortran::lower::AbstractConverter &converter,
     return;
 
   mlir::Location operandLocation = genOperandLocation(converter, obj);
-  addDeclareAttr(builder, globalOp.getOperation(), clause);
+  if (clause != mlir::acc::DataClause::acc_present)
+    addDeclareAttr(builder, globalOp.getOperation(), clause);
   mlir::OpBuilder modBuilder(builder.getModule().getBodyRegion());
   modBuilder.setInsertionPointAfter(globalOp);
   std::stringstream asFortran;

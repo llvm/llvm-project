@@ -134,8 +134,7 @@ AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     visitRegionSuccessors(getProgramPointAfter(branch), branch,
-                          RegionSuccessor::parent(branch->getResults()),
-                          resultLattices);
+                          RegionSuccessor::parent(), resultLattices);
     return success();
   }
 
@@ -187,9 +186,9 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
     }
 
     // Otherwise, we can't reason about the data-flow.
-    return visitNonControlFlowArgumentsImpl(block->getParentOp(),
-                                            RegionSuccessor(block->getParent()),
-                                            argLattices, /*firstIndex=*/0);
+    return visitNonControlFlowArgumentsImpl(
+        block->getParentOp(), RegionSuccessor(block->getParent()), ValueRange(),
+        argLattices, /*firstIndex=*/0);
   }
 
   // Iterate over the predecessors of the non-entry block.
@@ -316,19 +315,17 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
         if (!inputs.empty())
           firstIndex = cast<OpResult>(inputs.front()).getResultNumber();
         visitNonControlFlowArgumentsImpl(
-            branch,
-            RegionSuccessor::parent(
-                branch->getResults().slice(firstIndex, inputs.size())),
-            lattices, firstIndex);
+            branch, RegionSuccessor::parent(),
+            branch->getResults().slice(firstIndex, inputs.size()), lattices,
+            firstIndex);
       } else {
         if (!inputs.empty())
           firstIndex = cast<BlockArgument>(inputs.front()).getArgNumber();
         Region *region = point->getBlock()->getParent();
         visitNonControlFlowArgumentsImpl(
-            branch,
-            RegionSuccessor(region, region->getArguments().slice(
-                                        firstIndex, inputs.size())),
-            lattices, firstIndex);
+            branch, RegionSuccessor(region),
+            region->getArguments().slice(firstIndex, inputs.size()), lattices,
+            firstIndex);
       }
     }
 
@@ -620,7 +617,7 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
     SmallVector<BlockArgument> noControlFlowArguments;
     MutableArrayRef<BlockArgument> arguments =
         successor.getSuccessor()->getArguments();
-    ValueRange inputs = successor.getSuccessorInputs();
+    ValueRange inputs = branch.getSuccessorInputs(successor);
     for (BlockArgument argument : arguments) {
       // Visit blockArgument of RegionBranchOp which isn't "control
       // flow block arguments". For example, the IV of a loop.
