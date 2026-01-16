@@ -1718,6 +1718,14 @@ void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
   R->removeOperand(Position);
 }
 
+VPValue *
+VPPhiAccessors::getIncomingValueForBlock(const VPBasicBlock *VPBB) const {
+  for (unsigned Idx = 0; Idx != getNumIncoming(); ++Idx)
+    if (getIncomingBlock(Idx) == VPBB)
+      return getIncomingValue(Idx);
+  llvm_unreachable("VPBB is not an incoming block");
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPPhiAccessors::printPhiOperands(raw_ostream &O,
                                       VPSlotTracker &SlotTracker) const {

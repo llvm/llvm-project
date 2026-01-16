@@ -57,65 +57,6 @@ loop.end:
 }
 
 
-; We don't currently support multiple early exits.
-define i64 @multiple_uncountable_exits() {
-; CHECK-LABEL: define i64 @multiple_uncountable_exits() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
-; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
-; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
-; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
-; CHECK-NEXT:    br label [[SEARCH1:%.*]]
-; CHECK:       search1:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
-; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
-; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[LD1]], [[LD2]]
-; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP_END:%.*]], label [[SEARCH2:%.*]]
-; CHECK:       search2:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[LD1]], 34
-; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP_END]], label [[LOOP_INC]]
-; CHECK:       loop.inc:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[SEARCH1]], label [[LOOP_END]]
-; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[SEARCH1]] ], [ 100, [[SEARCH2]] ], [ 43, [[LOOP_INC]] ]
-; CHECK-NEXT:    ret i64 [[RETVAL]]
-;
-entry:
-  %p1 = alloca [1024 x i8]
-  %p2 = alloca [1024 x i8]
-  call void @init_mem(ptr %p1, i64 1024)
-  call void @init_mem(ptr %p2, i64 1024)
-  br label %search1
-
-search1:
-  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
-  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
-  %ld1 = load i8, ptr %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
-  %ld2 = load i8, ptr %arrayidx1, align 1
-  %cmp1 = icmp eq i8 %ld1, %ld2
-  br i1 %cmp1, label %loop.end, label %search2
-
-search2:
-  %cmp2 = icmp ult i8 %ld1, 34
-  br i1 %cmp2, label %loop.end, label %loop.inc
-
-loop.inc:
-  %index.next = add i64 %index, 1
-  %exitcond = icmp ne i64 %index.next, 67
-  br i1 %exitcond, label %search1, label %loop.end
-
-loop.end:
-  %retval = phi i64 [ %index, %search1 ], [ 100, %search2 ], [ 43, %loop.inc ]
-  ret i64 %retval
-}
-
-
 define i64 @uncountable_exit_infinite_loop() {
 ; CHECK-LABEL: define i64 @uncountable_exit_infinite_loop() {
 ; CHECK-NEXT:  entry:
@@ -179,7 +120,7 @@ define i64 @loop_contains_unsafe_call() {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[BAD_CALL:%.*]] = call i32 @foo(i32 [[LD1]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[BAD_CALL:%.*]] = call i32 @foo(i32 [[LD1]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[BAD_CALL]], 34
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_INC]], label [[LOOP_END:%.*]]
 ; CHECK:       loop.inc:
