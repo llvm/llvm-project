@@ -1231,7 +1231,7 @@ Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr) {
   return Device->Device->dataUnlock(Ptr);
 }
 
-Error olQueryAsync_impl(ol_queue_handle_t Queue) {
+Error olQueryQueue_impl(ol_queue_handle_t Queue) {
   if (Queue->AsyncInfo->Queue) {
     if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo))
       return Err;

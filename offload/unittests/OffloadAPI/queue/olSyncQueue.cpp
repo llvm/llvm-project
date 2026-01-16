@@ -18,5 +18,5 @@ TEST_P(olSyncQueueTest, SuccessEmptyQueue) {
 }
 
 TEST_P(olSyncQueueTest, SuccessEmptyAsyncQueue) {
-  ASSERT_SUCCESS(olSyncQueue(Queue));
+  ASSERT_SUCCESS(olQueryQueue(Queue));
 }
