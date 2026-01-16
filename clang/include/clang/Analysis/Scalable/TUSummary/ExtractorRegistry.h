@@ -19,20 +19,20 @@
 
 #include "clang/Analysis/Scalable/TUSummary/TUSummaryExtractor.h"
 #include "clang/Support/Compiler.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Registry.h"
 
 namespace clang::ssaf {
-class SummaryName;
 class TUSummaryBuilder;
 
 /// Check if a TUSummaryExtractor was registered with a given name.
-bool isTUSummaryExtractorRegistered(const SummaryName &Name);
+bool isTUSummaryExtractorRegistered(llvm::StringRef SummaryName);
 
 /// Try to instantiate a TUSummaryExtractor with a given name.
 /// This might return null if the construction of the desired TUSummaryExtractor
 /// failed.
 /// It's a fatal error if there is no extractor registered with the name.
-std::unique_ptr<ASTConsumer> makeTUSummaryExtractor(const SummaryName &Name,
+std::unique_ptr<ASTConsumer> makeTUSummaryExtractor(llvm::StringRef SummaryName,
                                                     TUSummaryBuilder &Builder);
 
 // Registry for adding new TUSummaryExtractor implementations.

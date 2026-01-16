@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MockTUSummaryBuilder.h"
-#include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/TUSummary/ExtractorRegistry.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Tooling/Tooling.h"
@@ -21,12 +20,9 @@ using namespace ssaf;
 namespace {
 
 TEST(SummaryExtractorRegistryTest, isTUSummaryExtractorRegistered) {
-  EXPECT_FALSE(
-      isTUSummaryExtractorRegistered(SummaryName("Non-existent-extractor")));
-  EXPECT_TRUE(
-      isTUSummaryExtractorRegistered(SummaryName("MockSummaryExtractor1")));
-  EXPECT_TRUE(
-      isTUSummaryExtractorRegistered(SummaryName("MockSummaryExtractor2")));
+  EXPECT_FALSE(isTUSummaryExtractorRegistered("Non-existent-extractor"));
+  EXPECT_TRUE(isTUSummaryExtractorRegistered("MockSummaryExtractor1"));
+  EXPECT_TRUE(isTUSummaryExtractorRegistered("MockSummaryExtractor2"));
 }
 
 TEST(SummaryExtractorRegistryTest, EnumeratingRegistryEntries) {
@@ -45,8 +41,8 @@ TEST(SummaryExtractorRegistryTest, EnumeratingRegistryEntries) {
 TEST(SummaryExtractorRegistryTest, InstantiatingExtractor1) {
   MockTUSummaryBuilder FakeBuilder;
   {
-    auto Consumer = makeTUSummaryExtractor(SummaryName{"MockSummaryExtractor1"},
-                                           FakeBuilder);
+    auto Consumer =
+        makeTUSummaryExtractor("MockSummaryExtractor1", FakeBuilder);
     EXPECT_TRUE(Consumer);
     EXPECT_EQ(FakeBuilder.consumeMessages(),
               "MockSummaryExtractor1 constructor was invoked\n");
@@ -58,8 +54,8 @@ TEST(SummaryExtractorRegistryTest, InstantiatingExtractor1) {
 TEST(SummaryExtractorRegistryTest, InstantiatingExtractor2) {
   MockTUSummaryBuilder FakeBuilder;
   {
-    auto Consumer = makeTUSummaryExtractor(SummaryName{"MockSummaryExtractor2"},
-                                           FakeBuilder);
+    auto Consumer =
+        makeTUSummaryExtractor("MockSummaryExtractor2", FakeBuilder);
     EXPECT_TRUE(Consumer);
     EXPECT_EQ(FakeBuilder.consumeMessages(),
               "MockSummaryExtractor2 constructor was invoked\n");
@@ -72,7 +68,7 @@ TEST(SummaryExtractorRegistryTest, InvokingExtractors) {
   MockTUSummaryBuilder FakeBuilder;
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   for (std::string Name : {"MockSummaryExtractor1", "MockSummaryExtractor2"}) {
-    auto Consumer = makeTUSummaryExtractor(SummaryName{Name}, FakeBuilder);
+    auto Consumer = makeTUSummaryExtractor(Name, FakeBuilder);
     ASSERT_TRUE(Consumer);
     Consumers.push_back(std::move(Consumer));
   }

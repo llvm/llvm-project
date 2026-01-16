@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/TUSummary/ExtractorRegistry.h"
-#include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include <memory>
 
 using namespace clang;
@@ -15,9 +14,9 @@ using namespace ssaf;
 
 LLVM_INSTANTIATE_REGISTRY(TUSummaryExtractorRegistry)
 
-bool ssaf::isTUSummaryExtractorRegistered(const SummaryName &Name) {
+bool ssaf::isTUSummaryExtractorRegistered(llvm::StringRef SummaryName) {
   for (const auto &Entry : TUSummaryExtractorRegistry::entries()) {
-    if (Entry.getName() == Name.str()) {
+    if (Entry.getName() == SummaryName) {
       return true;
     }
   }
@@ -25,10 +24,10 @@ bool ssaf::isTUSummaryExtractorRegistered(const SummaryName &Name) {
 }
 
 std::unique_ptr<ASTConsumer>
-ssaf::makeTUSummaryExtractor(const SummaryName &Name,
+ssaf::makeTUSummaryExtractor(llvm::StringRef SummaryName,
                              TUSummaryBuilder &Builder) {
   for (const auto &Entry : TUSummaryExtractorRegistry::entries()) {
-    if (Entry.getName() == Name.str()) {
+    if (Entry.getName() == SummaryName) {
       return Entry.instantiate(Builder);
     }
   }
