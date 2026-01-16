@@ -79,6 +79,12 @@ cmake ../llvm -G Ninja                                           \
     -DRUNTIMES_arch64-linux-gnu_CMAKE_CXX_FLAGS="-march=armv8-a"
 ```
 
+Note that this requires having an `aarch64-linux-gnu` cross-compilation
+toolchain to be available on the host system. While Clang is able to
+cross-compile this triple when `LLVM_TARGETS_TO_BUILD` includes `AArch64` (which
+it does by default), a linker and certain libraries such as pthread are required
+as well.
+
 If [`CMAKE_INSTALL_PREFIX`][CMAKE_INSTALL_PREFIX] is omitted, CMake defaults to
 `/usr/local` to install the libraries globally. This is not recommended since it
 may be in interfere with the system's OpenMP installation, such as `omp.h` from
@@ -149,8 +155,9 @@ that in addition to `LLVM_BINARY_DIR`, `CMAKE_C_COMPILER` and
 `AMDGPU` and `NVPTX` is enabled in its ``LLVM_TARGETS_TO_BUILD`` configuration
 (which is by default).
 
-A more complete build which for instance supports the libc++ on the device
-requires more options. Using CMake's
+In practice the setup above will probably missing requirements such as linker
+that supports LLVM-IR for LTO, and the device-side toolchain libraries. A more
+complete build on the device requires more options. Using CMake's
 [`-C`](https://cmake.org/cmake/help/latest/manual/cmake.1.html#cmdoption-cmake-C)
 option allows to conveniently use pre-defined set from a file.
 
