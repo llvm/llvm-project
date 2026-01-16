@@ -1098,21 +1098,21 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerFiniSections(
 
     // Same type - sort by priority
     if (LType == 0) {
-      // .dtors: ascending priority (lower runs first)
+      // .dtors: no-priority first, then ascending priority (lower runs first)
       if (LHasPrio && RHasPrio)
         return LPrio < RPrio;
       if (LHasPrio)
-        return true;
-      if (RHasPrio)
         return false;
+      if (RHasPrio)
+        return true;
     } else if (LType == 2) {
-      // .fini_array: descending priority (higher priority number runs first)
+      // .fini_array: no-priority first, then descending priority (higher runs first)
       if (LHasPrio && RHasPrio)
         return LPrio > RPrio;
       if (LHasPrio)
-        return true;
-      if (RHasPrio)
         return false;
+      if (RHasPrio)
+        return true;
     }
     return LHS->getName() < RHS->getName();
   });
