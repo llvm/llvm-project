@@ -2147,6 +2147,16 @@ inferFastMathValueFlagsBinOp(FastMathFlags FMF, FPClassTest ValidResults,
   return FMF;
 }
 
+static FPClassTest adjustDemandedMaskFromFlags(FPClassTest DemandedMask,
+                                               FastMathFlags FMF) {
+  if (FMF.noNaNs())
+    DemandedMask &= ~fcNan;
+
+  if (FMF.noInfs())
+    DemandedMask &= ~fcInf;
+  return DemandedMask;
+}
+
 Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                                     FPClassTest DemandedMask,
                                                     KnownFPClass &Known,
@@ -2161,11 +2171,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
   FastMathFlags FMF;
   if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
     FMF = FPOp->getFastMathFlags();
-    if (FMF.noNaNs())
-      DemandedMask &= ~fcNan;
-
-    if (FMF.noInfs())
-      DemandedMask &= ~fcInf;
+    DemandedMask = adjustDemandedMaskFromFlags(DemandedMask, FMF);
   }
 
   switch (I->getOpcode()) {
@@ -2958,11 +2964,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
   FastMathFlags FMF;
   if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
     FMF = FPOp->getFastMathFlags();
-    if (FMF.noNaNs())
-      DemandedMask &= ~fcNan;
-
-    if (FMF.noInfs())
-      DemandedMask &= ~fcInf;
+    DemandedMask = adjustDemandedMaskFromFlags(DemandedMask, FMF);
   }
 
   switch (I->getOpcode()) {
@@ -2985,6 +2987,37 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     adjustKnownFPClassForSelectArm(KnownRHS, I->getOperand(0), I->getOperand(2),
                                    /*Invert=*/true, SQ, Depth);
     Known = KnownLHS.intersectWith(KnownRHS);
+    break;
+  }
+  case Instruction::FNeg: {
+    // Special case fneg(fabs(x))
+    Value *Src;
+
+    Value *FNegSrc = I->getOperand(0);
+    if (!match(FNegSrc, m_FAbs(m_Value(Src)))) {
+      Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
+      break;
+    }
+
+    FastMathFlags FabsFMF = cast<FPMathOperator>(FNegSrc)->getFastMathFlags();
+    FPClassTest ThisDemandedMask =
+        adjustDemandedMaskFromFlags(DemandedMask, FabsFMF);
+
+    KnownFPClass KnownSrc =
+        computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
+
+    if ((ThisDemandedMask & fcNan) == fcNone)
+      KnownSrc.knownNot(fcNan);
+    if ((ThisDemandedMask & fcInf) == fcNone)
+      KnownSrc.knownNot(fcInf);
+
+    // If the source value is known negative, we can directly fold to it.
+
+    // TODO: If the only sign bit difference is for 0, ignore it for nsz.
+    if (KnownSrc.SignBit == true)
+      return Src;
+
+    Known = KnownFPClass::fneg(KnownFPClass::fabs(KnownSrc));
     break;
   }
   case Instruction::Call: {
