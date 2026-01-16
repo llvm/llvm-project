@@ -776,7 +776,7 @@ void printMBB(raw_ostream &OS, MFPrintState &State,
     OS.indent(2) << "prefetch-targets: ";
     ListSeparator LS;
     for (unsigned I : MBB.getPrefetchTargetCallsiteIndexes()) {
-        OS << LS << I;
+      OS << LS << I;
     }
     OS << "\n";
     HasLineAttributes = true;
