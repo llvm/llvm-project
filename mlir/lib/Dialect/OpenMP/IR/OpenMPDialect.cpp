@@ -4464,10 +4464,10 @@ LogicalResult WorkdistributeOp::verify() {
 
 LogicalResult DeclareSimdOp::verify() {
   // Must be nested inside a function-like op
-  auto func = (*this)->getParentOfType<mlir::FunctionOpInterface>();
+  auto func =
+      dyn_cast_if_present<mlir::FunctionOpInterface>((*this)->getParentOp());
   if (!func)
-    return emitOpError()
-           << "'omp.declare_simd' must be nested inside a function";
+    return emitOpError() << "must be nested inside a function";
 
   return verifyAlignedClause(*this, getAlignments(), getAlignedVars());
 }

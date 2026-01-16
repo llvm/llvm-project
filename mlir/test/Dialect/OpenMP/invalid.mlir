@@ -3141,5 +3141,5 @@ func.func @invalid_workdistribute() -> () {
 }
 
 // -----
-// expected-error @+1 {{'omp.declare_simd' must be nested inside a function}}
+// expected-error @+1 {{'omp.declare_simd' op must be nested inside a function}}
 omp.declare_simd
