@@ -502,11 +502,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
 
   SDValue SignBit = DAG->getConstant(0x80000000u, DL, Int32VT);
   SDValue LSB = DAG->getConstant(0x00000001u, DL, Int32VT);
-  // ~SignBit
-  SDValue NotSignBit = DAG->getNode(
-      ISD::XOR, DL, Int32VT, SignBit,
-      DAG->getConstant(APInt(Int32VT.getScalarSizeInBits(), -1, true), DL,
-                       Int32VT));
+  SDValue NotSignBit = DAG->getNOT(DL, SignBit, Int32VT);
 
   // Clear sign bit of Op0
   SDValue NonNegativeValue =
