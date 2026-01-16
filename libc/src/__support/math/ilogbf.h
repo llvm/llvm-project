@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ILOGBF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ILOGBF_H
 
-
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
