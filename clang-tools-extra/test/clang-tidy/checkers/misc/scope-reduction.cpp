@@ -312,3 +312,23 @@ void test_multiple_switches(int v1, int v2) {
       break;
   }
 }
+
+// Range-based for loop declared variable - should NOT warn
+void test_range_for_declared() {
+  int vec[] = {1, 2, 3};
+  for (auto item : vec) {
+    // use item
+  }
+}
+
+// Variable used in range-based for loop - should warn
+void test_range_for_usage() {
+  int sum = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'sum' can be declared in a smaller scope
+  if (true) {
+    int vec[] = {1, 2, 3};
+    for (auto item : vec) {
+      sum += item;
+    }
+  }
+}
