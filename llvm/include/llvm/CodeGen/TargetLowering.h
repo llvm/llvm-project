@@ -3630,6 +3630,8 @@ public:
     return RuntimeLibcallInfo;
   }
 
+  const LibcallLoweringInfo &getLibcallLoweringInfo() const { return Libcalls; }
+
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     Libcalls.setLibcallImpl(Call, Impl);
   }
@@ -3863,6 +3865,7 @@ private:
   const RTLIB::RuntimeLibcallsInfo RuntimeLibcallInfo;
 
   /// The list of libcalls that the target will use.
+  /// FIXME: This should not live here; it should come from an analysis.
   LibcallLoweringInfo Libcalls;
 
   /// The bits of IndexedModeActions used to store the legalisation actions

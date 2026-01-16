@@ -38,8 +38,10 @@ SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     Args.emplace_back(Src, ArgTy);
     Args.emplace_back(Size, ArgTy);
 
-    const char *MemcpyAlign4Name = TLI.getLibcallName(RTLIB::MEMCPY_ALIGN_4);
-    CallingConv::ID CC = TLI.getLibcallCallingConv(RTLIB::MEMCPY_ALIGN_4);
+    const char *MemcpyAlign4Name =
+        DAG.getLibcalls().getLibcallName(RTLIB::MEMCPY_ALIGN_4);
+    CallingConv::ID CC =
+        DAG.getLibcalls().getLibcallCallingConv(RTLIB::MEMCPY_ALIGN_4);
 
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(dl)

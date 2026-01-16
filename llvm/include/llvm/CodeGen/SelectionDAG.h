@@ -231,6 +231,9 @@ class SelectionDAG {
   const SelectionDAGTargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const RTLIB::RuntimeLibcallsInfo *RuntimeLibcallInfo = nullptr;
+  const LibcallLoweringInfo *Libcalls = nullptr;
+
   const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
   MachineFunctionAnalysisManager *MFAM = nullptr;
@@ -469,16 +472,19 @@ public:
   /// Prepare this SelectionDAG to process code in the given MachineFunction.
   LLVM_ABI void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
                      Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
+                     const LibcallLoweringInfo *LibcallsInfo,
                      UniformityInfo *UA, ProfileSummaryInfo *PSIin,
                      BlockFrequencyInfo *BFIin, MachineModuleInfo &MMI,
                      FunctionVarLocs const *FnVarLocs);
 
   void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
             MachineFunctionAnalysisManager &AM,
-            const TargetLibraryInfo *LibraryInfo, UniformityInfo *UA,
+            const TargetLibraryInfo *LibraryInfo,
+            const LibcallLoweringInfo *LibcallsInfo, UniformityInfo *UA,
             ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
             MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs) {
-    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs);
+    init(NewMF, NewORE, nullptr, LibraryInfo, LibcallsInfo, UA, PSIin, BFIin,
+         MMI, FnVarLocs);
     MFAM = &AM;
   }
 
@@ -503,6 +509,13 @@ public:
   }
   const TargetLowering &getTargetLoweringInfo() const { return *TLI; }
   const TargetLibraryInfo &getLibInfo() const { return *LibInfo; }
+
+  const LibcallLoweringInfo &getLibcalls() const { return *Libcalls; }
+
+  const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallInfo() const {
+    return *RuntimeLibcallInfo;
+  }
+
   const SelectionDAGTargetInfo &getSelectionDAGInfo() const { return *TSI; }
   const UniformityInfo *getUniformityInfo() const { return UA; }
   /// Returns the result of the AssignmentTrackingAnalysis pass if it's
