@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -796,6 +797,21 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
 
   // Check if this module has the cfguard flag and read its value.
   CFGuardModuleFlag = M->getControlFlowGuardMode();
+
+  // Warn if the module flag requests an unsupported CFGuard mechanism.
+  if (CFGuardModuleFlag == ControlFlowGuardMode::Enabled) {
+    if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(
+            Mod.getModuleFlag("cfguard-mechanism"))) {
+      auto MechanismOverride =
+          static_cast<ControlFlowGuardMechanism>(CI->getZExtValue());
+      if (MechanismOverride != ControlFlowGuardMechanism::Automatic &&
+          MechanismOverride != ControlFlowGuardMechanism::Check)
+        Mod.getContext().diagnose(
+            DiagnosticInfoGeneric("only the Check Control Flow Guard mechanism "
+                                  "is supported for Arm64EC",
+                                  DS_Warning));
+    }
+  }
 
   PtrTy = PointerType::getUnqual(M->getContext());
   I64Ty = Type::getInt64Ty(M->getContext());

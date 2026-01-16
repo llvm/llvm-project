@@ -2271,6 +2271,14 @@ def winx64_eh_unwindv2
       NormalizedValues<["Disabled", "BestEffort", "Required"]>,
       NormalizedValuesScope<"llvm::WinX64EHUnwindV2Mode">,
       MarshallingInfoEnum<CodeGenOpts<"WinX64EHUnwindV2">, "Disabled">;
+def win_cfg_mechanism
+    : Joined<["-"], "fwin-cfg-mechanism=">, Group<f_Group>,
+    Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Sets the mechanism to use for Control Flow Guard on Windows">,
+      Values<"automatic,dispatch,check">,
+      NormalizedValues<["Automatic", "Dispatch", "Check"]>,
+      NormalizedValuesScope<"llvm::ControlFlowGuardMechanism">,
+      MarshallingInfoEnum<CodeGenOpts<"WinControlFlowGuardMechanism">, "Automatic">;
 def fexcess_precision_EQ : Joined<["-"], "fexcess-precision=">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Allows control over excess precision on targets where native "
@@ -9411,6 +9419,10 @@ def _SLASH_d2epilogunwind : CLFlag<"d2epilogunwind">,
   HelpText<"Best effort generate unwind v2 (epilog) information for x64 Windows">;
 def _SLASH_d2epilogunwindrequirev2 : CLFlag<"d2epilogunwindrequirev2">,
   HelpText<"Require generation of unwind v2 (epilog) information for x64 Windows">;
+def _SLASH_d2guardcfgdispatch : CLFlag<"d2guardcfgdispatch">,
+  HelpText<"Use the dispatch mechanism to call the Control Flow Guard checker">;
+def _SLASH_d2guardcfgdispatch_ : CLFlag<"d2guardcfgdispatch-">,
+  HelpText<"Use the check mechanism to call the Control Flow Guard checker">;
 def _SLASH_EH : CLJoined<"EH">, HelpText<"Set exception handling model">;
 def _SLASH_EP : CLFlag<"EP">,
   HelpText<"Disable linemarker output and preprocess to stdout">;

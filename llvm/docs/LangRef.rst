@@ -9011,6 +9011,36 @@ For example:
 
 This will change the stack alignment to 8B.
 
+Windows Control Flow Guard Metadata
+-----------------------------------
+
+Controls what Control Flow Guard (CFG) checks are performed, how they are
+performed, and what metadata is emitted. There are multiple flags that can be
+used to control different aspects of CFG. Using two different values for the
+same flag will raise a warning when linking.
+
+To pass this information to the backend, these options are encoded in module
+flags metadata, using the following key-value pairs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Key
+     - Value
+
+   * - cfguard
+     - * 0 --- CFG is completely disabled.
+       * 1 --- The CFG table is emitted, but no checks are performed.
+       * 2 --- The CFG table is emitted and checks are performed.
+
+   * - cfguard-mechanism
+     - * 0 --- CFG uses the default mechanism for the architecture.
+       * 1 --- CFG uses the "check" mechanism. This will result in a separate
+         call to the checker function and then one to the target.
+       * 2 --- CFG uses the "dispatch" mechanism. This calls a dispatcher
+         function which both checks and then calls the target.
+
 Embedded Objects Names Metadata
 ===============================
 
