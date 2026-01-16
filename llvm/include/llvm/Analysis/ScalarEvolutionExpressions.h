@@ -52,8 +52,8 @@ enum SCEVTypes : unsigned short {
   scUMinExpr,
   scSMinExpr,
   scSequentialUMinExpr,
-  scPtrToInt,
   scPtrToAddr,
+  scPtrToInt,
   scUnknown,
   scCouldNotCompute
 };
