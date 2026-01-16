@@ -94,6 +94,10 @@ function (add_flangrt_library name)
     set(build_object ON)
   elseif (build_static AND build_shared)
     set(build_object ON)
+  elseif (NOT build_static AND NOT build_shared)
+    # If not building a library, still build the object files
+    # Needed to generate the .mod files as byproduct
+    set(build_object ON)
   endif ()
 
   # srctargets: targets that contain source files
@@ -168,14 +172,18 @@ function (add_flangrt_library name)
     if (BUILD_SHARED_LIBS)
       if (build_shared)
         set(default_target "${name_shared}")
-      else ()
+      elseif (build_static)
         set(default_target "${name_static}")
+      else ()
+        set(default_target "${name_object}")
       endif ()
     else ()
       if (build_static)
         set(default_target "${name_static}")
-      else ()
+      elseif (build_shared)
         set(default_target "${name_shared}")
+      else ()
+        set(default_target "${name_object}")
       endif ()
     endif ()
     add_library(${name}.default ALIAS "${default_target}")
@@ -188,6 +196,12 @@ function (add_flangrt_library name)
       add_custom_target(${name})
       add_dependencies(${name} ${libtargets})
     endif ()
+  endif ()
+
+  if (build_object)
+    add_library(${name}.compile ALIAS "${name_object}")
+  else ()
+    add_library(${name}.compile ALIAS "${default_target}")
   endif ()
 
   foreach (tgtname IN LISTS libtargets)
@@ -219,11 +233,23 @@ function (add_flangrt_library name)
     # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
     target_compile_features(${tgtname} PRIVATE cxx_std_17)
 
+    target_compile_options(${tgtname} PRIVATE
+      # Always enable preprocessor regardless of file extension
+      "$<$<COMPILE_LANGUAGE:Fortran>:-cpp>"
+
+      # Missing type descriptors are expected for intrinsic modules
+      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-mmlir;SHELL:-ignore-missing-type-desc>"
+    )
+
     # When building the flang runtime if LTO is enabled the archive file
     # contains LLVM IR rather than object code. Currently flang is not
     # LTO aware so cannot link this file to compiled Fortran code.
     if (FLANG_RT_HAS_FNO_LTO_FLAG)
       target_compile_options(${tgtname} PRIVATE -fno-lto)
+    endif ()
+
+    if (FORTRAN_SUPPORTS_REAL16)
+      target_compile_definitions(${tgtname} PRIVATE FLANG_SUPPORT_R16=1)
     endif ()
 
     # Use compiler-specific options to disable exceptions and RTTI.
@@ -342,6 +368,20 @@ function (add_flangrt_library name)
     # directory. Otherwise it is part of testing and is not installed at all.
     # TODO: Consider multi-configuration builds (MSVC_IDE, "Ninja Multi-Config")
     if (ARG_INSTALL_WITH_TOOLCHAIN)
+      # FIXME: RUNTIMES_OUTPUT_RESOURCE_LIB_DIR is not a good location for
+      #        shared libraries because it is not a ld.so default search path.
+      #        Also, the machine where the executable is eventually executed may
+      #        not be one where the compiler is installed, so even RPATH/RUNPATH
+      #        will not help. The most appropriate location for shared libraries
+      #        is /usr/lib/<triple>/lib<name>.so, like e.g. libgcc_s.so.
+      #        Flang-RT also would require a library versioning scheme so
+      #        executables compiled with different versions of Flang either use
+      #        matching versions of Flang-RT, or use a newer backward-compatble
+      #        versions. Currently, Flang-RT has no ABI backwards-compatibility
+      #        policy.
+      #        Currently, we just emit it into RUNTIMES_OUTPUT_RESOURCE_LIB_DIR
+      #        like the static library, which is already in the driver's and
+      #        linker's search path.
       set_target_properties(${tgtname}
         PROPERTIES
           ARCHIVE_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"

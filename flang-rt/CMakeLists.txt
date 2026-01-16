@@ -30,8 +30,11 @@ list(APPEND CMAKE_MODULE_PATH
 include(AddFlangRT)
 include(GetToolchainDirs)
 include(FlangCommon)
+include(FlangRTIntrospection)
 include(HandleCompilerRT)
 include(ExtendPath)
+include(CheckFortranSourceCompiles)
+include(CMakePushCheckState)
 
 
 ############################
@@ -49,8 +52,6 @@ set(LLVM_TOOLS_DIR "${LLVM_BINARY_DIR}/bin")
 # Important: flang-rt user options must be prefixed with "FLANG_RT_". Variables
 # with this prefix will be forwarded in bootstrap builds.
 
-option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
-
 # Provide an interface to link against the LLVM libc/libc++ projects directly.
 set(FLANG_RT_SUPPORTED_PROVIDERS system llvm)
 set(FLANG_RT_LIBC_PROVIDER "system" CACHE STRING "Specify C library to use. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
@@ -63,7 +64,14 @@ if (NOT "${FLANG_RT_LIBCXX_PROVIDER}" IN_LIST FLANG_RT_SUPPORTED_PROVIDERS)
   message(FATAL_ERROR "Unsupported library: '${FLANG_RT_LIBCXX_PROVIDER}'. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
 endif ()
 
-option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." ON)
+if (LLVM_RUNTIMES_TARGET MATCHES "^amdgcn|^nvptx")
+  # Compiling libraries for offload targets is currently experimental;
+  # Only build the builtin modules by default.
+  set(FLANG_RT_ENABLE_STATIC_default OFF)
+else ()
+  set(FLANG_RT_ENABLE_STATIC_default ON)
+endif ()
+option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." "${FLANG_RT_ENABLE_STATIC_default}")
 if (WIN32)
   # Windows DLL currently not implemented.
   set(FLANG_RT_ENABLE_SHARED OFF)
@@ -76,11 +84,14 @@ else ()
   #       breaking change unless the driver is changed.
   option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." OFF)
 endif ()
-if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
-  message(FATAL_ERROR "
-      Must build at least one type of library
-      (FLANG_RT_ENABLE_STATIC=ON, FLANG_RT_ENABLE_SHARED=ON, or both)
-    ")
+
+
+if (FLANG_RT_ENABLE_STATIC OR FLANG_RT_ENABLE_SHARED)
+  option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
+else ()
+  # Tests require at least one of the libraries
+  message(STATUS "Flang-RT testing disabled without either FLANG_RT_ENABLE_STATIC OR FLANG_RT_ENABLE_SHARED")
+  set(FLANG_RT_INCLUDE_TESTS OFF)
 endif ()
 
 
@@ -145,6 +156,10 @@ check_cxx_source_compiles(
    }
   "
   HAVE_DECL_STRERROR_S)
+
+# Look for support of REAL(16), if not already defined via command
+# line via -DFORTRAN_SUPPORTS_REAL16=YES/NO
+check_fortran_quadmath_support()
 
 # Search for clang_rt.builtins library. Need in addition to msvcrt.
 if (WIN32)
