@@ -228,6 +228,13 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__loongarch_arch",
                           Twine('"') + ArchName + Twine('"'));
     }
+  } else if (ArchName == "loongarch32") {
+    if (HasFeature32S)
+      Builder.defineMacro("__loongarch_arch",
+                          Twine('"') + "la32v1.0" + Twine('"'));
+    else
+      Builder.defineMacro("__loongarch_arch",
+                          Twine('"') + "la32rv1.0" + Twine('"'));
   } else {
     Builder.defineMacro("__loongarch_arch", Twine('"') + ArchName + Twine('"'));
   }
@@ -268,6 +275,8 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
     Builder.defineMacro("__loongarch_lp64");
+  else if (ABI == "ilp32d" || ABI == "ilp32f" || ABI == "ilp32s")
+    Builder.defineMacro("__loongarch_ilp32");
 
   if (ABI == "lp64d" || ABI == "ilp32d") {
     Builder.defineMacro("__loongarch_hard_float");
@@ -356,6 +365,7 @@ bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
       .Case("loongarch64", Is64Bit)
       .Case("32bit", !Is64Bit)
       .Case("64bit", Is64Bit)
+      .Case("32s", HasFeature32S)
       .Case("lsx", HasFeatureLSX)
       .Case("lasx", HasFeatureLASX)
       .Default(false);
@@ -373,7 +383,9 @@ LoongArchTargetInfo::getTargetBuiltins() const {
 bool LoongArchTargetInfo::handleTargetFeatures(
     std::vector<std::string> &Features, DiagnosticsEngine &Diags) {
   for (const auto &Feature : Features) {
-    if (Feature == "+d" || Feature == "+f") {
+    if (Feature == "+32s") {
+      HasFeature32S = true;
+    } else if (Feature == "+d" || Feature == "+f") {
       // "d" implies "f".
       HasFeatureF = true;
       if (Feature == "+d") {
@@ -430,7 +442,7 @@ LoongArchTargetInfo::parseTargetAttr(StringRef Features) const {
     switch (Kind) {
     case AttrFeatureKind::Arch: {
       if (llvm::LoongArch::isValidArchName(Value) || Value == "la64v1.0" ||
-          Value == "la64v1.1") {
+          Value == "la64v1.1" || Value == "la32v1.0" || Value == "la32rv1.0") {
         std::vector<llvm::StringRef> ArchFeatures;
         if (llvm::LoongArch::getArchFeatures(Value, ArchFeatures)) {
           Ret.Features.insert(Ret.Features.end(), ArchFeatures.begin(),
@@ -441,6 +453,8 @@ LoongArchTargetInfo::parseTargetAttr(StringRef Features) const {
           Ret.Duplicate = "arch=";
         else if (Value == "la64v1.0" || Value == "la64v1.1")
           Ret.CPU = "loongarch64";
+        else if (Value == "la32v1.0" || Value == "la32rv1.0")
+          Ret.CPU = "loongarch32";
         else
           Ret.CPU = Value;
       } else {
