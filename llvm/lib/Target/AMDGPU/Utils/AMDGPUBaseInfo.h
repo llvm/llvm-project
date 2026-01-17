@@ -1147,8 +1147,7 @@ struct HardwareLimits {
   HardwareLimits() = default;
 
   /// Initializes hardware limits from ISA version.
-  /// \p HasExtendedWaitCounts should be true for gfx12+.
-  HardwareLimits(const IsaVersion &IV, bool HasExtendedWaitCounts);
+  HardwareLimits(const IsaVersion &IV);
 };
 
 // The following methods are only meaningful on targets that support
