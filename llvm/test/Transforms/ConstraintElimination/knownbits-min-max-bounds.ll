@@ -8,10 +8,9 @@ define i1 @masked_value_bounds(i32 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[MASKED]], 20
 ; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp ult i32 [[MASKED]], 16
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %masked = and i32 %x, 15
@@ -34,8 +33,7 @@ define i1 @and_power_of_two_bounds(i32 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[AND]], -1
 ; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp slt i32 [[AND]], 128
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    [[RES:%.*]] = icmp slt i32 [[AND]], 64
 ; CHECK-NEXT:    ret i1 [[RES]]
@@ -62,10 +60,9 @@ define i1 @shift_bounds(i8 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[SHL]], 40
 ; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp ult i8 [[SHL]], 32
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %bounded = and i8 %x, 7
@@ -89,8 +86,7 @@ define i1 @or_minimum_bounds(i16 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i16 [[OR]], 40
 ; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp ugt i16 [[OR]], 47
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -116,8 +112,7 @@ define i1 @nested_and_operations(i32 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[MASK2]], 70
 ; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp ult i32 [[MASK2]], 64
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -144,8 +139,7 @@ define i1 @right_shift_bounds(i16 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i16 [[SHR]], 50
 ; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp ugt i16 [[SHR]], 63
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -172,8 +166,7 @@ define i1 @multiply_bounds(i8 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[MUL]], 20
 ; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp ult i8 [[MUL]], 16
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -201,8 +194,7 @@ define i1 @select_bounded_values(i32 %x, i1 %cond) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SEL]], 20
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp ult i32 [[SEL]], 16
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -237,8 +229,7 @@ define i1 @phi_bounded_values(i32 %x, i1 %cond) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[PHI]], 20
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp ult i32 [[PHI]], 16
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -317,8 +308,7 @@ define i1 @zext_bounds_i8_to_i32(i8 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[EXTENDED]], 40
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp ult i32 [[EXTENDED]], 32
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -398,8 +388,7 @@ define i1 @trunc_bounds_i32_to_i8(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TRUNCATED]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp ult i8 [[TRUNCATED]], 64
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -426,8 +415,7 @@ define i1 @trunc_nsw_bounds(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[TRUNC]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp sgt i8 [[TRUNC]], -1
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -455,8 +443,7 @@ define i1 @trunc_combined_with_operations(i16 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TRUNC]], 40
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_REDUNDANT:%.*]] = icmp ult i8 [[TRUNC]], 31
-; CHECK-NEXT:    ret i1 [[CMP_REDUNDANT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
 ;
