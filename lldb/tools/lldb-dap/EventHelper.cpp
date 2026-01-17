@@ -183,6 +183,8 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry) {
     switch (thread.GetStopReason()) {
     case lldb::eStopReasonTrace:
     case lldb::eStopReasonPlanComplete:
+    case lldb::eStopReasonProcessorTrace:
+    case lldb::eStopReasonHistoryBoundary:
       body.reason = protocol::eStopReasonStep;
       break;
     case lldb::eStopReasonBreakpoint: {
@@ -212,12 +214,6 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry) {
       body.hitBreakpointIds.push_back(bp_id);
       body.text = llvm::formatv("data breakpoint {0}", bp_id).str();
     } break;
-    case lldb::eStopReasonProcessorTrace:
-      body.reason = protocol::eStopReasonStep; // fallback reason
-      break;
-    case lldb::eStopReasonHistoryBoundary:
-      body.reason = protocol::eStopReasonStep; // fallback reason
-      break;
     case lldb::eStopReasonSignal:
     case lldb::eStopReasonException:
     case lldb::eStopReasonInstrumentation:
