@@ -74,6 +74,8 @@ jobs:
       RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
 
   release-lit:
+    permissions:
+      id-token: write # Requred for pypi publishing
     name: Release Lit
     needs: validate-tag
     uses: ./.github/workflows/release-lit.yml
