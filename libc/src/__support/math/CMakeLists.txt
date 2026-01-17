@@ -1348,6 +1348,19 @@ add_header_library(
 )
 
 add_header_library(
+  log10f
+  HDRS
+    log10f.h
+  DEPENDS
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.math.common_constants
+)
+
+add_header_library(
   log1p
   HDRS
     log1p.h
@@ -1610,3 +1623,4 @@ add_header_library(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
 )
+
