@@ -14,7 +14,7 @@ class TestCase(TestBase):
 
         self.expect(
             "expr -O -- bad",
-            substrs=["`po` was unsuccessful, running `p` instead", "(Bad *) 0x"],
+            substrs=["`po` was unsuccessful, running `p` instead\n", "(Bad *) 0x"],
         )
         self.filecheck(
             f"platform shell cat {log}", __file__, f"-check-prefix=CHECK-EXPR"
@@ -23,7 +23,7 @@ class TestCase(TestBase):
 
         self.expect(
             "dwim-print -O -- bad",
-            substrs=["`po` was unsuccessful, running `p` instead", "_lookHere = NO"],
+            substrs=["`po` was unsuccessful, running `p` instead\n", "_lookHere = NO"],
         )
         self.filecheck(
             f"platform shell cat {log}", __file__, f"-check-prefix=CHECK-DWIM-PRINT"

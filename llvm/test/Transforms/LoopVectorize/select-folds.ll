@@ -17,7 +17,7 @@ define i32 @select_not_cond_true_false(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i8> [[WIDE_LOAD]] to <4 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> zeroinitializer, <4 x i1> splat (i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP5]] = zext <4 x i1> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i32> [[TMP4]], splat (i32 1)

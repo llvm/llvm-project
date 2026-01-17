@@ -22542,11 +22542,17 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
       Entry.IsZExt = true;
       Args.push_back(Entry);
 
-      SDValue Callee = DAG.getExternalSymbol(
-          getLibcallName(RTLIB::FPEXT_F16_F32),
-          getPointerTy(DAG.getDataLayout()));
+      RTLIB::LibcallImpl FPExtImpl =
+          DAG.getLibcalls().getLibcallImpl(RTLIB::FPEXT_F16_F32);
+      if (FPExtImpl == RTLIB::Unsupported)
+        return SDValue();
+      CallingConv::ID CC =
+          DAG.getLibcalls().getLibcallImplCallingConv(FPExtImpl);
+
+      SDValue Callee =
+          DAG.getExternalSymbol(FPExtImpl, getPointerTy(DAG.getDataLayout()));
       CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-          CallingConv::C, EVT(VT).getTypeForEVT(*DAG.getContext()), Callee,
+          CC, EVT(VT).getTypeForEVT(*DAG.getContext()), Callee,
           std::move(Args));
 
       SDValue Res;
@@ -22640,12 +22646,18 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     Entry.IsZExt = true;
     Args.push_back(Entry);
 
-    SDValue Callee = DAG.getExternalSymbol(
-        getLibcallName(SVT == MVT::f64 ? RTLIB::FPROUND_F64_F16
-                                       : RTLIB::FPROUND_F32_F16),
-        getPointerTy(DAG.getDataLayout()));
+    RTLIB::LibcallImpl FPRoundImpl = DAG.getLibcalls().getLibcallImpl(
+        SVT == MVT::f64 ? RTLIB::FPROUND_F64_F16 : RTLIB::FPROUND_F32_F16);
+    if (FPRoundImpl == RTLIB::Unsupported)
+      return SDValue();
+
+    CallingConv::ID CC =
+        DAG.getLibcalls().getLibcallImplCallingConv(FPRoundImpl);
+
+    SDValue Callee =
+        DAG.getExternalSymbol(FPRoundImpl, getPointerTy(DAG.getDataLayout()));
     CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-        CallingConv::C, EVT(MVT::i16).getTypeForEVT(*DAG.getContext()), Callee,
+        CC, EVT(MVT::i16).getTypeForEVT(*DAG.getContext()), Callee,
         std::move(Args));
 
     SDValue Res;
@@ -30371,14 +30383,18 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
     Args.emplace_back(StackPtr, PointerType::get(*DAG.getContext(), 0));
   }
 
-  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
-                                         getPointerTy(DAG.getDataLayout()));
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SDValue();
+
+  SDValue Callee =
+      DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
       .setLibCallee(
-          getLibcallCallingConv(LC),
+          DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
           static_cast<EVT>(MVT::v2i64).getTypeForEVT(*DAG.getContext()), Callee,
           std::move(Args))
       .setInRegister()
@@ -32106,7 +32122,8 @@ enum BitTestKind : unsigned {
   NotShiftBit
 };
 
-static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
+static std::pair<const Value *, BitTestKind>
+FindSingleBitChange(const Value *V) {
   using namespace llvm::PatternMatch;
   BitTestKind BTK = UndefBit;
   if (auto *C = dyn_cast<ConstantInt>(V)) {
@@ -32169,7 +32186,8 @@ static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
 }
 
 TargetLowering::AtomicExpansionKind
-X86TargetLowering::shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const {
+X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
+    const AtomicRMWInst *AI) const {
   using namespace llvm::PatternMatch;
   // If the atomicrmw's result isn't actually used, we can just add a "lock"
   // prefix to a normal instruction for these operations.
@@ -32189,7 +32207,7 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const {
   // SETCC(And(AtomicRMW(P, power_of_2), power_of_2)) with LShr and Xor
   // (depending on CC). This pattern can only use bts/btr/btc but we don't
   // detect it.
-  Instruction *I = AI->user_back();
+  const Instruction *I = AI->user_back();
   auto BitChange = FindSingleBitChange(AI->getValOperand());
   if (BitChange.second == UndefBit || !AI->hasOneUse() ||
       I->getOpcode() != Instruction::And ||
@@ -32282,7 +32300,7 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   } else {
     assert(BitTested.second == ShiftBit || BitTested.second == NotShiftBit);
 
-    Value *SI = BitTested.first;
+    Value *SI = const_cast<Value *>(BitTested.first);
     assert(SI != nullptr);
 
     // BT{S|R|C} on memory operand don't modulo bit position so we need to
@@ -32323,14 +32341,14 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   AI->eraseFromParent();
 }
 
-static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
+static bool shouldExpandCmpArithRMWInIR(const AtomicRMWInst *AI) {
   using namespace llvm::PatternMatch;
   if (!AI->hasOneUse())
     return false;
 
   Value *Op = AI->getOperand(1);
   CmpPredicate Pred;
-  Instruction *I = AI->user_back();
+  const Instruction *I = AI->user_back();
   AtomicRMWInst::BinOp Opc = AI->getOperation();
   if (Opc == AtomicRMWInst::Add) {
     if (match(I, m_c_ICmp(Pred, m_Sub(m_ZeroInt(), m_Specific(Op)), m_Value())))
@@ -32451,7 +32469,7 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
 }
 
 TargetLowering::AtomicExpansionKind
-X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+X86TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   unsigned NativeWidth = Subtarget.is64Bit() ? 64 : 32;
   Type *MemType = AI->getType();
 
@@ -35827,6 +35845,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CVTTP2UIS)
   NODE_NAME_CASE(MCVTTP2UIS)
   NODE_NAME_CASE(POP_FROM_X87_REG)
+  NODE_NAME_CASE(TC_RETURN_GLOBALADDR)
+  NODE_NAME_CASE(CALL_GLOBALADDR)
   }
   return nullptr;
 #undef NODE_NAME_CASE
@@ -43892,6 +43912,44 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     if (SimplifyDemandedVectorElts(RHS, DemandedRHSElts, RHSUndef, RHSZero, TLO,
                                    Depth + 1))
       return true;
+    break;
+  }
+  case X86ISD::PCLMULQDQ: {
+    APInt LHSUndef, LHSZero;
+    APInt RHSUndef, RHSZero;
+    SDValue LHS = Op.getOperand(0);
+    SDValue RHS = Op.getOperand(1);
+    uint64_t Imm = Op.getConstantOperandVal(2);
+    assert(VT.getScalarType() == MVT::i64 && LHS.getValueType() == VT &&
+           LHS.getValueType() == RHS.getValueType() &&
+           "Unexpected PCLMULQDQ types");
+
+    // TODO: Modify demanded masks based off DemandedElts as well, check if each
+    // 128-bit lane is demanded at all.
+    APInt DemandedLHS =
+        APInt::getSplat(NumElts, APInt(2, (Imm & 0x01) ? 2 : 1));
+    APInt DemandedRHS =
+        APInt::getSplat(NumElts, APInt(2, (Imm & 0x10) ? 2 : 1));
+
+    if (SimplifyDemandedVectorElts(LHS, DemandedLHS, LHSUndef, LHSZero, TLO,
+                                   Depth + 1))
+      return true;
+    if (SimplifyDemandedVectorElts(RHS, DemandedRHS, RHSUndef, RHSZero, TLO,
+                                   Depth + 1))
+      return true;
+
+    // TODO: Multiply by zero.
+
+    SDValue NewLHS = SimplifyMultipleUseDemandedVectorElts(LHS, DemandedLHS,
+                                                           TLO.DAG, Depth + 1);
+    SDValue NewRHS = SimplifyMultipleUseDemandedVectorElts(RHS, DemandedRHS,
+                                                           TLO.DAG, Depth + 1);
+    if (NewLHS || NewRHS) {
+      NewLHS = NewLHS ? NewLHS : LHS;
+      NewRHS = NewRHS ? NewRHS : RHS;
+      return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewLHS,
+                                               NewRHS, Op.getOperand(2)));
+    }
     break;
   }
   case X86ISD::PSADBW: {
@@ -61631,6 +61689,17 @@ static SDValue combinePDEP(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combinePCLMULQDQ(SDNode *N, SelectionDAG &DAG,
+                                TargetLowering::DAGCombinerInfo &DCI) {
+  unsigned NumElts = N->getSimpleValueType(0).getVectorNumElements();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedVectorElts(SDValue(N, 0), APInt::getAllOnes(NumElts),
+                                     DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 // Fixup the MMX intrinsics' types: in IR they are expressed with <1 x i64>,
 // and so SelectionDAGBuilder creates them with v1i64 types, but they need to
 // use x86mmx instead.
@@ -61908,6 +61977,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SUBV_BROADCAST_LOAD: return combineBROADCAST_LOAD(N, DAG, DCI);
   case X86ISD::MOVDQ2Q:     return combineMOVDQ2Q(N, DAG);
   case X86ISD::PDEP:        return combinePDEP(N, DAG, DCI);
+  case X86ISD::PCLMULQDQ:   return combinePCLMULQDQ(N, DAG, DCI);
   case ISD::INTRINSIC_WO_CHAIN:  return combineINTRINSIC_WO_CHAIN(N, DAG, DCI);
   case ISD::INTRINSIC_W_CHAIN:  return combineINTRINSIC_W_CHAIN(N, DAG, DCI);
   case ISD::INTRINSIC_VOID:  return combineINTRINSIC_VOID(N, DAG, DCI);
@@ -62680,7 +62750,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                         ? &X86::GR32RegClass
                                         : &X86::GR32_NOREX2RegClass);
-        if (VT != MVT::f80 && !VT.isVector())
+        if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
           return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                         ? &X86::GR64RegClass
                                         : &X86::GR64_NOREX2RegClass);
@@ -62696,7 +62766,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
         return std::make_pair(0U, &X86::GR32_ABCDRegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64_ABCDRegClass);
       break;
     case 'r':   // GENERAL_REGS
@@ -62714,7 +62784,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                       ? &X86::GR32RegClass
                                       : &X86::GR32_NOREX2RegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                       ? &X86::GR64RegClass
                                       : &X86::GR64_NOREX2RegClass);
@@ -62727,7 +62797,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
         return std::make_pair(0U, &X86::GR32_NOREXRegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64_NOREXRegClass);
       break;
     case 'f':  // FP Stack registers.
@@ -62955,7 +63025,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
       if (VT == MVT::i32 || VT == MVT::f32)
         return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
       break;
     case 'R':
@@ -62965,7 +63035,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::GR16RegClass);
       if (VT == MVT::i32 || VT == MVT::f32)
         return std::make_pair(0U, &X86::GR32RegClass);
-      if (VT != MVT::f80 && !VT.isVector())
+      if (VT != MVT::f80 && !VT.isVector() && VT != MVT::Other)
         return std::make_pair(0U, &X86::GR64RegClass);
       break;
     }
