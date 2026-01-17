@@ -1060,6 +1060,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
 
+  addRulesForGOpcs({G_AMDGPU_SMED3}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForGOpcs({G_AMDGPU_CVT_PK_I16_I32}, Standard)
+      .Uni(V2S16, {{UniInVgprV2S16}, {Vgpr32, Vgpr32}})
+      .Div(V2S16, {{VgprV2S16}, {Vgpr32, Vgpr32}});
+
   // FNEG and FABS are either folded as source modifiers or can be selected as
   // bitwise XOR and AND with Mask. XOR and AND are available on SALU but for
   // targets without SALU float we still select them as VGPR since there would
