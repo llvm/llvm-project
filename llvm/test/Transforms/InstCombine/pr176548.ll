@@ -7,8 +7,13 @@ define { <4 x i32>, <4 x i1> } @sadd_ov_shuffle_ops(<4 x i32> %x) {
 ; CHECK-LABEL: define { <4 x i32>, <4 x i1> } @sadd_ov_shuffle_ops(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[OV:%.*]] = call { <4 x i32>, <4 x i1> } @llvm.sadd.with.overflow.v4i32(<4 x i32> [[SPLAT]], <4 x i32> splat (i32 1))
+; CHECK-NEXT:    [[TMP0:%.*]] = call { <4 x i32>, <4 x i1> } @llvm.sadd.with.overflow.v4i32(<4 x i32> [[X]], <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>)
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <4 x i32>, <4 x i1> } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <4 x i32>, <4 x i1> } poison, <4 x i32> [[TMP2]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i1> } [[TMP0]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP4]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[OV:%.*]] = insertvalue { <4 x i32>, <4 x i1> } [[TMP3]], <4 x i1> [[TMP5]], 1
 ; CHECK-NEXT:    ret { <4 x i32>, <4 x i1> } [[OV]]
 ;
 entry:
@@ -21,8 +26,13 @@ define { <4 x float>, <4 x i32> } @frexp_ov_shuffle_ops(<4 x float> %x) {
 ; CHECK-LABEL: define { <4 x float>, <4 x i32> } @frexp_ov_shuffle_ops(
 ; CHECK-SAME: <4 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[OV:%.*]] = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> [[SPLAT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <4 x float>, <4 x i32> } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <4 x float>, <4 x i32> } poison, <4 x float> [[TMP2]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x float>, <4 x i32> } [[TMP0]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[OV:%.*]] = insertvalue { <4 x float>, <4 x i32> } [[TMP3]], <4 x i32> [[TMP5]], 1
 ; CHECK-NEXT:    ret { <4 x float>, <4 x i32> } [[OV]]
 ;
 entry:

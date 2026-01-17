@@ -1486,8 +1486,7 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
 /// try to shuffle after the intrinsic.
 Instruction *
 InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
-  if (!II->getType()->isVectorTy() ||
-      !isTriviallyVectorizable(II->getIntrinsicID()) ||
+  if (!isTriviallyVectorizable(II->getIntrinsicID()) ||
       !II->getCalledFunction()->isSpeculatable())
     return nullptr;
 
@@ -1534,11 +1533,30 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
   Instruction *FPI = isa<FPMathOperator>(II) ? II : nullptr;
   // Result type might be a different vector width.
   // TODO: Check that the result type isn't widened?
-  VectorType *ResTy =
-      VectorType::get(II->getType()->getScalarType(), cast<VectorType>(SrcTy));
-  Value *NewIntrinsic =
-      Builder.CreateIntrinsic(ResTy, II->getIntrinsicID(), NewArgs, FPI);
-  return new ShuffleVectorInst(NewIntrinsic, Mask);
+  if (auto *ST = dyn_cast<StructType>(II->getType())) {
+    // Handle intrinsics that return structs.
+    SmallVector<Type *, 4> ResTys;
+    for (unsigned I = 0, E = ST->getNumElements(); I != E; ++I) {
+      ResTys.push_back(VectorType::get(ST->getElementType(I)->getScalarType(),
+                                       cast<VectorType>(SrcTy)));
+    }
+    StructType *ResTy = StructType::get(II->getContext(), ResTys);
+    Value *NewIntrinsic =
+        Builder.CreateIntrinsic(ResTy, II->getIntrinsicID(), NewArgs, FPI);
+    Value *RetVal = PoisonValue::get(ResTy);
+    for (unsigned I = 0, E = ST->getNumElements(); I != E; ++I) {
+      Value *Elem = Builder.CreateExtractValue(NewIntrinsic, I);
+      Value *Shuffled = Builder.CreateShuffleVector(Elem, Mask);
+      RetVal = Builder.CreateInsertValue(RetVal, Shuffled, I);
+    }
+    return replaceInstUsesWith(*II, RetVal);
+  } else {
+    VectorType *ResTy = VectorType::get(II->getType()->getScalarType(),
+                                        cast<VectorType>(SrcTy));
+    Value *NewIntrinsic =
+        Builder.CreateIntrinsic(ResTy, II->getIntrinsicID(), NewArgs, FPI);
+    return new ShuffleVectorInst(NewIntrinsic, Mask);
+  }
 }
 
 /// If all arguments of the intrinsic are reverses, try to pull the reverse
