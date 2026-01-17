@@ -21,7 +21,7 @@ LLVM IR.
    This document assumes a basic familiarity with CUDA and the PTX
    assembly language. Information about the CUDA Driver API and the PTX assembly
    language can be found in the `CUDA documentation
-   <http://docs.nvidia.com/cuda/index.html>`_.
+   <http://docs.nvidia.com/cuda/index.html>`__.
 
 
 
@@ -432,7 +432,7 @@ actions are performed ``atomically``:
 * The pending arrival count is reinitialized to the expected arrival count.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier>`__.
 
 '``llvm.nvvm.mbarrier.init``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -851,7 +851,7 @@ value is set to ``True`` for the leader thread and ``False`` for all
 the other threads. Election of a leader thread happens deterministically,
 i.e. the same leader thread is elected for the same ``membermask``
 every time. For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync>`__.
 
 Membar/Fences
 -------------
@@ -879,7 +879,7 @@ to operations performed on objects in `shared_cta` space. Likewise, when
 `acquire` and the effect of the fence operation only applies to operations
 performed on objects in `shared_cluster` memory space. The scope for both
 operations is `cluster`. For more details, please refer the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__.
 
 '``llvm.nvvm.fence.mbarrier_init.release.cluster``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1009,7 +1009,7 @@ memory accesses across the proxies is to be provided. The only supported value
 for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing
 is used unconditionally, and the address specified by the operand addr must fall
 within the ``.global`` state space. Otherwise, the behavior is undefined. For
-more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
+more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`__.
 
 Address Space Intrinsics
 ------------------------
@@ -1518,7 +1518,7 @@ the amount of memory to be copied and it must be a multiple of 16.
   with the ``.multicast::cluster`` modifier.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
 
 '``llvm.nvvm.cp.async.bulk.global.to.shared.cta``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1543,7 +1543,7 @@ cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint`` variant of the
 PTX instruction.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
 
 '``llvm.nvvm.cp.async.bulk.shared.cta.to.global``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1573,7 +1573,7 @@ chunk of source data is copied to the destination.
   ``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
 
 '``llvm.nvvm.cp.async.bulk.shared.cta.to.cluster``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1596,7 +1596,7 @@ the cluster. The 32-bit operand ``%size`` specifies the amount of memory to be
 copied and it must be a multiple of 16.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
 
 '``llvm.nvvm.cp.async.bulk.prefetch.L2``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1623,7 +1623,7 @@ prefetched in terms of bytes and it must be a multiple of 16.
   ``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`__.
 
 '``llvm.nvvm.prefetch.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1671,7 +1671,7 @@ by the '``.level::eviction_priority``' modifier.
   occurs if the address maps to a const, local, or shared memory location.
 
 For more information, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`__.
 
 '``llvm.nvvm.applypriority.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1697,7 +1697,7 @@ in the specified cache level on which the priority is to be applied. The only
 supported value for the size operand is 128.
 
 For more information, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-applypriority>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-applypriority>`__.
 
 ``llvm.nvvm.discard.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1772,7 +1772,7 @@ destination tensor. The first coordinate ``i32 %x0`` denotes the column index
 followed by four coordinates indicating the four row-indices. So, this mode
 takes a total of 5 coordinates as input arguments. For more information on
 ``gather4`` mode, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
 * The last three arguments to these intrinsics are flags indicating support for
   multicast, cache_hint and cta_group::1/2 modifiers. These flag arguments must
@@ -1795,7 +1795,7 @@ takes a total of 5 coordinates as input arguments. For more information on
   respectively.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1833,13 +1833,13 @@ of the tensor operation. For the ``im2col.w`` and ``im2col.w.128`` mode, the
 number of offsets is always 2, denoted by ``i16 %wHalo`` and ``i16 %wOffset``
 arguments. For more information on ``im2col.w`` and ``im2col.w.128`` modes,
 refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`__.
 
 The last three arguments to these intrinsics are flags, with the same
 functionality as described in the ``tile`` mode intrinsics above.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1872,7 +1872,7 @@ destination tensor. The first coordinate ``i32 %x0`` denotes the column index
 followed by four coordinates indicating the four row-indices. So, this mode
 takes a total of 5 coordinates as input arguments. For more information on
 ``gather4`` mode, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
 * The last argument to these intrinsics is a boolean flag indicating support for
   cache_hint. This flag argument must be a compile-time constant. When set, it
@@ -1880,7 +1880,7 @@ takes a total of 5 coordinates as input arguments. For more information on
   ``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1917,7 +1917,7 @@ mode, the number of offsets is two less than the number of dimensions of the
 tensor operation. For the ``im2col.w`` and ``im2col.w.128`` mode, the number of
 offsets is always 2, denoted by ``i16 %wHalo`` and ``i16 %wOffset`` arguments.
 For more information on ``im2col.w`` and ``im2col.w.128`` modes, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`__.
 
 * The last argument to these intrinsics is a boolean flag  indicating support
   for cache_hint. This flag argument must be a compile-time constant. When set,
@@ -1925,7 +1925,7 @@ For more information on ``im2col.w`` and ``im2col.w.128`` modes, refer `PTX ISA
   ``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.s2g.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1956,7 +1956,7 @@ tensor is divided into four rows in the 2D destination tensor. The first
 coordinate ``i32 %x0`` denotes the column index followed by four coordinates
 indicating the four row-indices. So, this mode takes a total of 5 coordinates as
 input arguments. For more information on ``scatter4`` mode, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
 * The last argument to these intrinsics is a boolean flag indicating support for
   cache_hint. This flag argument must be a compile-time constant. When set, it
@@ -1964,7 +1964,7 @@ input arguments. For more information on ``scatter4`` mode, refer `PTX ISA
   ``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1991,7 +1991,7 @@ argument to these intrinsics is a boolean flag, with the same functionality as
 described in the ``s2g.tile`` mode intrinsics above.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2025,7 +2025,7 @@ fetched to the L2 cache. The first coordinate ``i32 %x0`` denotes the column
 index followed by four coordinates indicating the four row-indices. So, this
 mode takes a total of 5 coordinates as input arguments. For more information
 on ``gather4`` mode, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
 * The last argument to these intrinsics is a boolean flag indicating support
   for cache_hint. This flag argument must be a compile-time constant. When set,
@@ -2033,7 +2033,7 @@ on ``gather4`` mode, refer `PTX ISA
   ``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2070,14 +2070,14 @@ two less than the number of dimensions of the tensor operation. For the
 ``im2col.w`` and ``im2col.w.128`` modes, the number of offsets is always 2,
 denoted by ``i16 %wHalo`` and ``i16 %wOffset`` arguments. For more information
 on ``im2col.w`` and ``im2col.w.128`` modes, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`__.
 
 
 The last argument to these intrinsics is a boolean flag, with the same
 functionality as described in the ``tile`` mode intrinsics above.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.reduce.[red_op].tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2119,7 +2119,7 @@ the ``tile.1d`` intrinsics.
   ``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.reduce.[red_op].im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2146,7 +2146,7 @@ tile mode. The last argument to these intrinsics is a boolean flag, with the
 same functionality as described in the ``tile`` mode intrinsics above.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`__.
 
 Warp Group Intrinsics
 ---------------------
@@ -2180,7 +2180,7 @@ the following locations:
   provided by default.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-fence>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-fence>`__.
 
 '``llvm.nvvm.wgmma.commit_group.sync.aligned``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2207,7 +2207,7 @@ An executing thread can wait for the completion of all ``wgmma.mma_async``
 operations in a wgmma-group by using ``wgmma.wait_group``.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group>`__.
 
 '``llvm.nvvm.wgmma.wait_group.sync.aligned``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2236,7 +2236,7 @@ performing a ``wgmma.wait_group`` instruction that waits on a wgmma-group
 including that ``wgmma.mma_async`` instruction is undefined behavior.
 
 For more information, refer `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group>`__.
 
 '``llvm.nvvm.griddepcontrol.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2564,14 +2564,14 @@ exposed by PTX. These intrinsics use 'Tensor Memory' (henceforth ``tmem``).
 NVPTX represents this memory using ``addrspace(6)`` and is always 32-bits.
 
 For more information, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory>`__.
 
 The tensor-memory pointers may only be used with the tcgen05 intrinsics.
 There are specialized load/store instructions provided (tcgen05.ld/st) to
 work with tensor-memory.
 
 For more information on tensor-memory load/store instructions, refer to `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-and-register-load-store-instructions>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-and-register-load-store-instructions>`__.
 
 '``llvm.nvvm.tcgen05.alloc``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2601,7 +2601,7 @@ explicitly uses shared memory address space for the ``%dst`` operand. The
 variants of the instruction respectively.
 
 For more information, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`__.
 
 '``llvm.nvvm.tcgen05.dealloc``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2626,7 +2626,7 @@ of columns to be de-allocated. The ``.cg1`` and ``.cg2`` variants generate
 ``cta_group::1`` and ``cta_group::2`` variants of the instruction respectively.
 
 For more information, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`__.
 
 '``llvm.nvvm.tcgen05.relinq.alloc.permit``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2651,7 +2651,7 @@ after any of its constituent threads execute
 ``cta_group::1`` and ``cta_group::2`` flavors of the instruction respectively.
 
 For more information, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`__.
 
 '``llvm.nvvm.tcgen05.commit``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2679,7 +2679,7 @@ variants generate ```cta_group::1`` and ``cta_group::2`` flavors of the
 instruction respectively.
 
 For more information, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit>`__.
 
 '``llvm.nvvm.tcgen05.wait``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2703,7 +2703,7 @@ The '``@llvm.nvvm.tcgen05.wait.ld/st``' intrinsics correspond to the
 ``tcgen05.st`` operations issued by the executing thread have completed.
 
 For more information, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait>`__.
 
 '``llvm.nvvm.tcgen05.fence``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2724,7 +2724,7 @@ The '``@llvm.nvvm.tcgen05.fence.*``' intrinsics correspond to the
 instructions act as code motion fences for asynchronous tcgen05 operations.
 
 For more information, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence>`__.
 
 '``llvm.nvvm.tcgen05.shift``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2748,7 +2748,7 @@ downwards across all the rows, except the last, by one row. The address operand
 whose rows must be down shifted.
 
 For more information, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-shift>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-shift>`__.
 
 '``llvm.nvvm.tcgen05.cp``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2810,10 +2810,10 @@ When the source format is ``.b4x16_p64``, a contiguous set of 16 elements of
 decompressed into 16 elements of 8-bits (``.b8x16``) each in the Tensor Memory.
 
 For more information on the decompression schemes, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#optional-decompression>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#optional-decompression>`__.
 
 For more information on the tcgen05.cp instruction, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-cp>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-cp>`__.
 
 '``llvm.nvvm.tcgen05.ld.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3599,7 +3599,7 @@ monitor events. Each bit in the 16-bit immediate operand `%mask_val`` controls
 an event.
 
 For more information on the pmevent instructions, refer to the `PTX ISA
-<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent>`_.
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent>`__.
 
 Other Intrinsics
 ----------------
@@ -3620,7 +3620,7 @@ The library can be found under ``nvvm/libdevice/`` in the CUDA Toolkit and
 there is a separate version for each compute architecture.
 
 For a list of all math functions implemented in libdevice, see
-`libdevice Users Guide <http://docs.nvidia.com/cuda/libdevice-users-guide/index.html>`_.
+`libdevice Users Guide <http://docs.nvidia.com/cuda/libdevice-users-guide/index.html>`__.
 
 To accommodate various math-related compiler flags that can affect code
 generation of libdevice code, the library code depends on a special LLVM IR
