@@ -81,7 +81,7 @@ def testMyInt():
         print(add1.rhs.owner)
         # CHECK: 2 : i32
         print(two.value)
-        # CHECK: Value(%0
+        # CHECK: OpResult(%0
         print(two.cst)
         # CHECK: (self, /, res, lhs, rhs, *, loc=None, ip=None)
         print(AddOp.__init__.__signature__)
@@ -285,15 +285,15 @@ def testExtDialect():
         print(module)
         assert module.operation.verify()
 
-        # CHECK: Value(%c1_i32
+        # CHECK: OpResult(%c1_i32
         print(c1.a)
         # CHECK: 2 : i32
         print(c1.x)
-        # CHECK: Value(%c1_i32
+        # CHECK: OpResult(%c1_i32
         print(o1.a)
         # CHECK: None
         print(o1.b)
-        # CHECK: Value(%c1_i32
+        # CHECK: OpResult(%c1_i32
         print(o2.b)
         # CHECK: 0
         print(o1.out1.result_number)
@@ -305,11 +305,11 @@ def testExtDialect():
         print(o2.out2.result_number)
         # CHECK: None
         print(o3.a)
-        # CHECK: Value(%c1_i32
+        # CHECK: OpResult(%c1_i32
         print(o5.a)
-        # CHECK: ['Value(%c1_i32 = arith.constant 1 : i32)', 'Value(%c1_i32 = arith.constant 1 : i32)']
+        # CHECK: ['OpResult(%c1_i32 = arith.constant 1 : i32)', 'OpResult(%c1_i32 = arith.constant 1 : i32)']
         print([str(i) for i in v1.c])
-        # CHECK: ['Value(%c1_i32 = arith.constant 1 : i32)']
+        # CHECK: ['OpResult(%c1_i32 = arith.constant 1 : i32)']
         print([str(i) for i in v2.c])
         # CHECK: []
         print([str(i) for i in v3.c])
