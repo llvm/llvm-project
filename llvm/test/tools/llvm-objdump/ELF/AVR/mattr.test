@@ -1,4 +1,4 @@
-# REQUIRES: x86-registered-target
+# REQUIRES: avr-registered-target
 
 ## When --mattr and --mcpu are both empty, disassemble elf with EFlag-derived feature.
 # RUN: yaml2obj -DARCHVERSION=AVR1 %s -o %t.avr1
