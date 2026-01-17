@@ -3758,6 +3758,23 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     MachineOperand *Src1 = getNamedOperand(UseMI, AMDGPU::OpName::src1);
     MachineOperand *Src2 = getNamedOperand(UseMI, AMDGPU::OpName::src2);
 
+    auto CopyRegOperandToNarrowerRC =
+        [MRI, this](MachineInstr &MI, unsigned OpNo,
+                    const TargetRegisterClass *NewRC) -> void {
+      if (!MI.getOperand(OpNo).isReg())
+        return;
+      Register Reg = MI.getOperand(OpNo).getReg();
+      const TargetRegisterClass *RC = RI.getRegClassForReg(*MRI, Reg);
+      if (RI.getCommonSubClass(RC, NewRC) != NewRC)
+        return;
+      Register Tmp = MRI->createVirtualRegister(NewRC);
+      BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),
+              get(AMDGPU::COPY), Tmp)
+          .addReg(Reg);
+      MI.getOperand(OpNo).setReg(Tmp);
+      MI.getOperand(OpNo).setIsKill();
+    };
+
     // Multiplied part is the constant: Use v_madmk_{f16, f32}.
     if ((Src0->isReg() && Src0->getReg() == Reg) ||
         (Src1->isReg() && Src1->getReg() == Reg)) {
@@ -3816,30 +3833,14 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (NewOpc == AMDGPU::V_FMAMK_F16_t16 ||
           NewOpc == AMDGPU::V_FMAMK_F16_fake16) {
         const TargetRegisterClass *NewRC = getRegClass(get(NewOpc), 0);
-        auto Tmp = MRI->createVirtualRegister(NewRC);
+        Register Tmp = MRI->createVirtualRegister(NewRC);
         BuildMI(*UseMI.getParent(), std::next(UseMI.getIterator()),
                 UseMI.getDebugLoc(), get(AMDGPU::COPY),
                 UseMI.getOperand(0).getReg())
             .addReg(Tmp, RegState::Kill);
         UseMI.getOperand(0).setReg(Tmp);
-        if (UseMI.getOperand(1).isReg() &&
-            RI.isVGPR(*MRI, UseMI.getOperand(1).getReg())) {
-          auto Tmp = MRI->createVirtualRegister(NewRC);
-          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
-                  get(AMDGPU::COPY), Tmp)
-              .addReg(UseMI.getOperand(1).getReg());
-          UseMI.getOperand(1).setReg(Tmp);
-          UseMI.getOperand(1).setIsKill();
-        }
-        if (UseMI.getOperand(3).isReg() &&
-            RI.isVGPR(*MRI, UseMI.getOperand(3).getReg())) {
-          auto Tmp = MRI->createVirtualRegister(NewRC);
-          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
-                  get(AMDGPU::COPY), Tmp)
-              .addReg(UseMI.getOperand(3).getReg());
-          UseMI.getOperand(3).setReg(Tmp);
-          UseMI.getOperand(3).setIsKill();
-        }
+        CopyRegOperandToNarrowerRC(UseMI, 1, NewRC);
+        CopyRegOperandToNarrowerRC(UseMI, 3, NewRC);
       }
 
       bool DeleteDef = MRI->use_nodbg_empty(Reg);
@@ -3912,30 +3913,14 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (NewOpc == AMDGPU::V_FMAAK_F16_t16 ||
           NewOpc == AMDGPU::V_FMAAK_F16_fake16) {
         const TargetRegisterClass *NewRC = getRegClass(get(NewOpc), 0);
-        auto Tmp = MRI->createVirtualRegister(NewRC);
+        Register Tmp = MRI->createVirtualRegister(NewRC);
         BuildMI(*UseMI.getParent(), std::next(UseMI.getIterator()),
                 UseMI.getDebugLoc(), get(AMDGPU::COPY),
                 UseMI.getOperand(0).getReg())
             .addReg(Tmp, RegState::Kill);
         UseMI.getOperand(0).setReg(Tmp);
-        if (UseMI.getOperand(1).isReg() &&
-            RI.isVGPR(*MRI, UseMI.getOperand(1).getReg())) {
-          auto Tmp = MRI->createVirtualRegister(NewRC);
-          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
-                  get(AMDGPU::COPY), Tmp)
-              .addReg(UseMI.getOperand(1).getReg());
-          UseMI.getOperand(1).setReg(Tmp);
-          UseMI.getOperand(1).setIsKill();
-        }
-        if (UseMI.getOperand(2).isReg() &&
-            RI.isVGPR(*MRI, UseMI.getOperand(2).getReg())) {
-          auto Tmp = MRI->createVirtualRegister(NewRC);
-          BuildMI(*UseMI.getParent(), UseMI.getIterator(), UseMI.getDebugLoc(),
-                  get(AMDGPU::COPY), Tmp)
-              .addReg(UseMI.getOperand(2).getReg());
-          UseMI.getOperand(2).setReg(Tmp);
-          UseMI.getOperand(2).setIsKill();
-        }
+        CopyRegOperandToNarrowerRC(UseMI, 1, NewRC);
+        CopyRegOperandToNarrowerRC(UseMI, 2, NewRC);
       }
 
       // It might happen that UseMI was commuted
