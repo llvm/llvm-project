@@ -679,6 +679,16 @@ add_header_library(
 )
 
 add_header_library(
+  llogbf
+  HDRS
+    llogbf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   exp_constants
   HDRS
     exp_constants.h
