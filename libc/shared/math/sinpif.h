@@ -1,4 +1,4 @@
-//===-- Shared sin function -------------------------------------*- C++ -*-===//
+//===-- Shared sinpif function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,6 +11,7 @@
 
 #include "shared/libc_common.h"
 #include "src/__support/math/sinpif.h"
+
 namespace LIBC_NAMESPACE_DECL {
 namespace shared {
 

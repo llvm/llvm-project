@@ -8,6 +8,7 @@
 
 #include "src/math/sinpif.h"
 #include "src/__support/math/sinpif.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
