@@ -246,7 +246,7 @@ int useRootDeclOnly(RootDeclOnly *r) {
 
 // Verify thunk is generated for external direct method
 // CHECK: declare{{.*}} i32 @"-[RootDeclOnly intProperty]"(ptr)
-// CHECK-LABEL: define linkonce_odr hidden i32 @"-[RootDeclOnly intProperty]_thunk"(ptr %self)
+// CHECK-LABEL: define linkonce_odr hidden i32 @"-[RootDeclOnly intProperty]_thunk"(ptr noundef %self)
 // CHECK: entry:
 // CHECK:   %[[IS_NIL:.*]] = icmp eq ptr {{.*}}, null
 // CHECK:   br i1 %[[IS_NIL]], label %objc_direct_method.self_is_nil, label %objc_direct_method.cont
@@ -275,7 +275,7 @@ int useSRet(Root *r) {
 }
 
 // CHECK-LABEL: define linkonce_odr hidden i64 @"-[Root getComplex]_thunk"
-// CHECK-LABEL: define linkonce_odr hidden void @"-[Root getAggregate]_thunk"(ptr dead_on_unwind noalias writable sret(%struct.my_aggregate_struct) {{.*}} %agg.result, ptr noundef %self)
+// CHECK-LABEL: define linkonce_odr hidden void @"-[Root getAggregate]_thunk"(ptr dead_on_unwind writable sret(%struct.my_aggregate_struct) {{.*}} %agg.result, ptr noundef %self)
 // CHECK: entry:
 // CHECK:   %[[IS_NIL:.*]] = icmp eq ptr {{.*}}, null
 // CHECK:   br i1 %[[IS_NIL]], label %objc_direct_method.self_is_nil, label %objc_direct_method.cont
