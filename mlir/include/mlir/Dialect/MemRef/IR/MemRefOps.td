@@ -2459,6 +2459,9 @@ def MemRef_ViewOp : MemRef_Op<"view", [
     /// The result of a view is always a memref.
     MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
 
+    // Return both static and dynamic sizes as a list of `OpFoldResult`.
+    SmallVector<OpFoldResult> getMixedSizes();
+
     /// Returns the dynamic sizes for this view operation. This is redundant
     /// with `sizes` but needed in template implementations. More specifically:
     /// ```
