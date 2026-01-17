@@ -2115,8 +2115,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // be a tail call that doesn't require heroics like moving the return
     // address or swapping byval arguments. We treat some musttail calls as
     // sibling calls to avoid unnecessary argument copies.
-    IsSibcall =
-        isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs);
+    IsSibcall = isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs);
     isTailCall = IsSibcall || IsMustTail;
   }
 
