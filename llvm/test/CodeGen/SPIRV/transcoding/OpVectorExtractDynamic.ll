@@ -11,9 +11,9 @@
 
 ; CHECK-SPIRV: %[[#res:]] = OpVectorExtractDynamic %[[#float]] %[[#vec]] %[[#index]]
 
-define spir_kernel void @test(float addrspace(1)* nocapture %out, <2 x float> %vec, i32 %index) {
+define spir_kernel void @test(ptr addrspace(1) nocapture %out, <2 x float> %vec, i32 %index) {
 entry:
   %res = extractelement <2 x float> %vec, i32 %index
-  store float %res, float addrspace(1)* %out, align 4
+  store float %res, ptr addrspace(1) %out, align 4
   ret void
 }

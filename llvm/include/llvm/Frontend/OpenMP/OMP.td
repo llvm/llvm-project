@@ -581,6 +581,7 @@ def OMPC_To : Clause<[Spelling<"to">]> {
   let flangClass = "OmpToClause";
 }
 def OMPC_Transparent : Clause<[Spelling<"transparent">]> {
+  let clangClass = "OMPTransparentClause";
   let flangClass = "OmpTransparentClause";
   let isValueOptional = true;
 }
@@ -853,6 +854,7 @@ def OMP_Depobj : Directive<[Spelling<"depobj">]> {
     // OMPKinds.def.
     VersionedClause<OMPC_Depobj, 50>,
     VersionedClause<OMPC_Destroy, 50>,
+    VersionedClause<OMPC_Init, 60>,
     VersionedClause<OMPC_Update, 50>,
   ];
   let association = AS_None;

@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/ExecutionEngine.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
-using namespace mlir;
-using namespace mlir::python;
 
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+namespace execution_engine {
 
 /// Owning Wrapper around an ExecutionEngine.
 class PyExecutionEngine {
@@ -61,26 +63,31 @@ private:
   std::vector<nb::object> referencedObjects;
 };
 
-} // namespace
+} // namespace execution_engine
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 /// Create the `mlir.execution_engine` module here.
 NB_MODULE(_mlirExecutionEngine, m) {
   m.doc() = "MLIR Execution Engine";
 
+  using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
+  using namespace execution_engine;
   //----------------------------------------------------------------------------
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
   nb::class_<PyExecutionEngine>(m, "ExecutionEngine")
       .def(
           "__init__",
-          [](PyExecutionEngine &self, MlirModule module, int optLevel,
+          [](PyExecutionEngine &self, PyModule &module, int optLevel,
              const std::vector<std::string> &sharedLibPaths,
              bool enableObjectDump, bool enablePIC) {
             llvm::SmallVector<MlirStringRef, 4> libPaths;
             for (const std::string &path : sharedLibPaths)
               libPaths.push_back({path.c_str(), path.length()});
             MlirExecutionEngine executionEngine = mlirExecutionEngineCreate(
-                module, optLevel, libPaths.size(), libPaths.data(),
+                module.get(), optLevel, libPaths.size(), libPaths.data(),
                 enableObjectDump, enablePIC);
             if (mlirExecutionEngineIsNull(executionEngine))
               throw std::runtime_error(

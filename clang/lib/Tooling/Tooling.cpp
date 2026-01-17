@@ -108,13 +108,14 @@ static bool ignoreExtraCC1Commands(const driver::Compilation *Compilation) {
         // tooling will consider host-compilation only. For tooling on device
         // compilation, device compilation only option, such as
         // `--cuda-device-only`, needs specifying.
-        assert(Actions.size() > 1);
-        assert(
-            isa<driver::CompileJobAction>(Actions.front()) ||
-            // On MacOSX real actions may end up being wrapped in
-            // BindArchAction.
-            (isa<driver::BindArchAction>(Actions.front()) &&
-             isa<driver::CompileJobAction>(*Actions.front()->input_begin())));
+        if (Actions.size() > 1) {
+          assert(
+              isa<driver::CompileJobAction>(Actions.front()) ||
+              // On MacOSX real actions may end up being wrapped in
+              // BindArchAction.
+              (isa<driver::BindArchAction>(Actions.front()) &&
+               isa<driver::CompileJobAction>(*Actions.front()->input_begin())));
+        }
         OffloadCompilation = true;
         break;
       }

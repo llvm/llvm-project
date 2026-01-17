@@ -29053,7 +29053,12 @@ TEST_F(FormatTest, KeywordedFunctionLikeMacros) {
                Style);
 }
 
-TEST_F(FormatTest, UnbalancedAngleBrackets) { verifyFormat("template <"); }
+TEST_F(FormatTest, UnbalancedAngleBrackets) {
+  verifyFormat("template <");
+
+  verifyNoCrash("typename foo<bar>::value, const String &>::type f();",
+                getLLVMStyleWithColumns(50));
+}
 
 } // namespace
 } // namespace test
