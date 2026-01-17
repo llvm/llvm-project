@@ -1001,6 +1001,11 @@ LLVM_ABI bool matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
                                                    PHINode *&P, Value *&Init,
                                                    Value *&OtherOp);
 
+LLVM_ABI bool matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                    PHINode *&P, Value *&Init,
+                                                    Value *&OtherOp0,
+                                                    Value *&OtherOp1);
+
 /// Return true if RHS is known to be implied true by LHS.  Return false if
 /// RHS is known to be implied false by LHS.  Otherwise, return std::nullopt if
 /// no implication can be made. A & B must be i1 (boolean) values or a vector of
@@ -1011,10 +1016,6 @@ LLVM_ABI bool matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
 ///  T | T | F
 ///  F | T | T
 /// (A)
-LLVM_ABI bool matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
-                                                    PHINode *&P, Value *&Init,
-                                                    Value *&OtherOp0,
-                                                    Value *&OtherOp1);
 LLVM_ABI std::optional<bool>
 isImpliedCondition(const Value *LHS, const Value *RHS, const DataLayout &DL,
                    bool LHSIsTrue = true, unsigned Depth = 0);

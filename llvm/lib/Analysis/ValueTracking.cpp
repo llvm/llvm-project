@@ -1785,7 +1785,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     const PHINode *P = cast<PHINode>(I);
     BinaryOperator *BO = nullptr;
     Value *R = nullptr, *L = nullptr;
-    if (llvm::matchSimpleRecurrence(P, BO, R, L)) {
+    if (matchSimpleRecurrence(P, BO, R, L)) {
       // Handle the case of a simple two-predecessor recurrence PHI.
       // There's a lot more that could theoretically be done here, but
       // this is sufficient to catch some interesting cases.
@@ -5884,32 +5884,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Unreachable blocks may have zero-operand PHI nodes.
     if (P->getNumIncomingValues() == 0)
       break;
-    // Look for the case of a for loop which has a positive
-    // initial value and is incremented by a squared value.
-    // This will propagate sign information out of such loops.
-    if (P->getNumIncomingValues() == 2) {
-      Value *RecurValue = P->getIncomingValue(1);
-      IntrinsicInst* I = dyn_cast<IntrinsicInst>(RecurValue);
-      if (!I)
-        break;
-      Value *R, *L;
-      Value *Init;
-      PHINode *PN;
-      if (matchSimpleTernaryIntrinsicRecurrence(I, PN, Init, L, R)) {
-        switch(I->getIntrinsicID()) {
-        case Intrinsic::fmuladd: {
-          KnownFPClass KnownStart;
-          computeKnownFPClass(Init, DemandedElts, 
-                              KnownFPClass::OrderedGreaterThanZeroMask, KnownStart,
-                              Q, Depth + 1 );
-          if (KnownStart.cannotBeOrderedLessThanZero() && R == L) {
-            Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-          }
-          break;
-        }
-        }
-      }
-    }
     // Otherwise take the unions of the known bit sets of the operands,
     // taking conservative care to avoid excessive recursion.
     const unsigned PhiRecursionLimit = MaxAnalysisRecursionDepth - 2;
@@ -5949,6 +5923,31 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       }
     }
 
+    // Look for the case of a for loop which has a positive
+    // initial value and is incremented by a squared value.
+    // This will propagate sign information out of such loops.
+    if (P->getNumIncomingValues() == 2) {
+      Value *RecurValue = P->getIncomingValue(1);
+      IntrinsicInst *I = dyn_cast<IntrinsicInst>(RecurValue);
+      if (!I)
+        break;
+      Value *R, *L;
+      Value *Init;
+      PHINode *PN;
+      if (matchSimpleTernaryIntrinsicRecurrence(I, PN, Init, L, R)) {
+        switch (I->getIntrinsicID()) {
+        case Intrinsic::fmuladd: {
+          KnownFPClass KnownStart;
+          computeKnownFPClass(Init, DemandedElts,
+                              KnownFPClass::OrderedGreaterThanZeroMask,
+                              KnownStart, Q, Depth + 1);
+          if (KnownStart.cannotBeOrderedLessThanZero() && L == R)
+            Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+          break;
+        }
+        }
+      }
+    }
     break;
   }
   case Instruction::BitCast: {
