@@ -73,27 +73,29 @@ template <class NodeT> class DomTreeNodeBase {
   DomTreeNodeBase(const DomTreeNodeBase &) = delete;
   DomTreeNodeBase &operator=(const DomTreeNodeBase &) = delete;
 
-  class iterator
-      : public iterator_facade_base<iterator, std::forward_iterator_tag,
+  class const_iterator
+      : public iterator_facade_base<const_iterator, std::forward_iterator_tag,
                                     DomTreeNodeBase *> {
     DomTreeNodeBase *node;
 
   public:
-    iterator(DomTreeNodeBase *node = nullptr) : node(node) {}
-    bool operator==(const iterator &other) const { return other.node == node; }
+    const_iterator(DomTreeNodeBase *node = nullptr) : node(node) {}
+    bool operator==(const const_iterator &other) const {
+      return other.node == node;
+    }
     DomTreeNodeBase *operator*() const { return node; }
-    iterator &operator++() {
+    const_iterator &operator++() {
       node = node->Sibling;
       return *this;
     }
-    iterator operator++(int) {
-      iterator cp = *this;
+    const_iterator operator++(int) {
+      const_iterator cp = *this;
       ++*this;
       return cp;
     }
   };
   // We don't permit modifications through the iterator.
-  using const_iterator = iterator;
+  using iterator = const_iterator;
 
   iterator begin() const { return iterator{FirstChild}; }
   iterator end() const { return iterator{}; }
