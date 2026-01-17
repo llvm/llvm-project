@@ -1454,7 +1454,7 @@ private:
     for (Instruction *I : reverse(SinkInsts)) {
       assert(I->getParent() == FC1.Preheader);
       if (isa<PHINode>(I)) {
-	// The Phis to be sunk should have only one incoming value, as is
+        // The Phis to be sunk should have only one incoming value, as is
         // assured by the condition that the second loop is dominated by the
         // first one which is enforced by isStrictlyAdjacent().
         // Replace the phi uses with the corresponding incoming value to clean
@@ -1465,7 +1465,7 @@ private:
         I->replaceAllUsesWith(I->getOperand(0));
         I->eraseFromParent();
       } else
-	I->moveBefore(*FC1.ExitBlock, FC1.ExitBlock->getFirstInsertionPt());
+        I->moveBefore(*FC1.ExitBlock, FC1.ExitBlock->getFirstInsertionPt());
     }
     // PHI nodes in SinkInsts need to be updated to receive values from the
     // fused loop.
