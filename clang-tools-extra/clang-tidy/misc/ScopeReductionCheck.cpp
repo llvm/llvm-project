@@ -323,13 +323,8 @@ void ScopeReductionCheck::check(
 void ScopeReductionCheck::emitUsageNotes(
     const llvm::SmallVector<const DeclRefExpr *, 8> &Uses) {
   const size_t MaxUsageNotes = 3;
-  size_t NotesShown = 0;
-  for (const auto *Use : Uses) {
-    if (NotesShown >= MaxUsageNotes)
-      break;
+  for (const auto *Use : take(Uses, MaxUsageNotes))
     diag(Use->getLocation(), "used here", DiagnosticIDs::Note);
-    NotesShown++;
-  }
   if (Uses.size() > MaxUsageNotes) {
     diag(Uses[MaxUsageNotes]->getLocation(), "and %0 more uses...",
          DiagnosticIDs::Note)

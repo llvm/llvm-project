@@ -22,6 +22,12 @@ public:
 
 private:
   void emitUsageNotes(const llvm::SmallVector<const DeclRefExpr *, 8> &Uses);
+
+  template <typename Container>
+  auto take(const Container &container, size_t n) {
+    return llvm::make_range(container.begin(),
+                            container.begin() + std::min(n, container.size()));
+  }
 };
 
 } // namespace clang::tidy::misc
