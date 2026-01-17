@@ -20,6 +20,7 @@
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -213,8 +214,8 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
     // failing to connect.
     if (*exit_code)
       error = Status::FromError(llvm::joinErrors(
-          llvm::createStringError(llvm::formatv(
-              "WebAssembly runtime exited with exit code {0}", **exit_code)),
+          llvm::createStringErrorV(
+              "WebAssembly runtime exited with exit code {0}", **exit_code),
           error.takeError()));
 
     return nullptr;

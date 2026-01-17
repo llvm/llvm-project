@@ -1,4 +1,4 @@
-//===- llvm-ir2vec.h - IR2Vec/MIR2Vec Tool Classes ----------------------===//
+//===- utils.h - IR2Vec/MIR2Vec Tool Classes ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_IR2VEC_LLVM_IR2VEC_H
-#define LLVM_TOOLS_LLVM_IR2VEC_LLVM_IR2VEC_H
+#ifndef LLVM_TOOLS_LLVM_IR2VEC_UTILS_UTILS_H
+#define LLVM_TOOLS_LLVM_IR2VEC_UTILS_UTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/IR2Vec.h"
@@ -198,4 +198,4 @@ struct MIRContext {
 
 } // namespace llvm
 
-#endif // LLVM_TOOLS_LLVM_IR2VEC_LLVM_IR2VEC_H
+#endif // LLVM_TOOLS_LLVM_IR2VEC_UTILS_UTILS_H
