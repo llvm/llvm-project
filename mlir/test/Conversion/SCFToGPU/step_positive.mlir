@@ -18,10 +18,10 @@ func.func @step_var(%A : memref<?x?xf32>, %B : memref<?x?xf32>) {
       // CHECK-NEXT: %[[prod_j:.*]] = arith.muli %{{.*}}, %{{.*}} : index
       // CHECK-NEXT: %[[j:.*]] = arith.addi %{{.*}}, %[[prod_j]] : index
 
-      // CHECK:     {{.*}} = memref.load %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32>
-      %0 = memref.load %A[%i, %j] : memref<?x?xf32>
-      // CHECK:     memref.store {{.*}}, %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32>
-      memref.store %0, %B[%i, %j] : memref<?x?xf32>
+      // CHECK:     {{.*}} = affine.load %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32>
+      %0 = affine.load %A[%i, %j] : memref<?x?xf32>
+      // CHECK:     affine.store {{.*}}, %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32>
+      affine.store %0, %B[%i, %j] : memref<?x?xf32>
     }
   }
   return
