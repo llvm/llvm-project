@@ -2878,6 +2878,7 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
+    ],
 )
 
 libc_support_library(
