@@ -3159,6 +3159,20 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_log1pf",
+    hdrs = ["src/__support/math/log1pf.h"],
+    deps = [
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fma",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
+        ":__support_math_common_constants",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_log2",
     hdrs = ["src/__support/math/log2.h"],
     deps = [
@@ -4873,12 +4887,7 @@ libc_math_function(
 libc_math_function(
     name = "log1pf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_math_common_constants",
+        ":__support_math_log1pf",
     ],
 )
 

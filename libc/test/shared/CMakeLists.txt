@@ -79,6 +79,7 @@ add_fp_unittest(
     libc.src.__support.math.log
     libc.src.__support.math.log10
     libc.src.__support.math.log1p
+    libc.src.__support.math.log1pf
     libc.src.__support.math.log2
     libc.src.__support.math.logbf
     libc.src.__support.math.logbf128
