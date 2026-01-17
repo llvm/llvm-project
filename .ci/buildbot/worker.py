@@ -117,7 +117,7 @@ def report_platform():
 def run_command(cmd, shell=False, env=None, add_env=None, **kwargs):
     """
     Report which command is being run, then execute it using
-    subprocess.check_call. Any arguments are forwarded to
+    subprocess.check_call. Any arguments are forwarded to check_call.
 
     Additional Parameters
     ----------
