@@ -72,7 +72,7 @@ enum FeatureKind : uint32_t {
   FK_SCQ = 1 << 14,
 
   // 32-bit standard variant is available.
-  FK_32S = 1 << 5,
+  FK_32S = 1 << 15,
 };
 
 struct FeatureInfo {
