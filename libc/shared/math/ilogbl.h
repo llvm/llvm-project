@@ -1,4 +1,4 @@
-//===-- Implementation of ilogbl function ---------------------------------===//
+//===-- Shared ilogbl function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/ilogbl.h"
+#ifndef LLVM_LIBC_SHARED_MATH_ILOGBL_H
+#define LLVM_LIBC_SHARED_MATH_ILOGBL_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/ilogbl.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(int, ilogbl, (long double x)) { return math::ilogbl(x); }
+using math::ilogbl;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_ILOGBL_H
