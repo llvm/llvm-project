@@ -135,12 +135,17 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val, uin
     std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
     _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAIT, *reinterpret_cast<__cxx_contention_t*>(&buffer), nullptr, nullptr);
   } else {
-    // TODO the doc says it supports timeout but does not say how to use it
-    // https://man.freebsd.org/cgi/man.cgi?query=_umtx_op
-    __libcpp_thread_poll_with_backoff(
-        [=]() -> bool { return std::memcmp(const_cast<const void*>(__ptr), __val, _Size) != 0; },
-        __libcpp_timed_backoff_policy(),
-        std::chrono::nanoseconds(__timeout_ns));
+    _umtx_time ut;
+    ut._timeout.tv_sec  = __timeout_ns / 1'000'000'000;
+    ut._timeout.tv_nsec = __timeout_ns % 1'000'000'000;
+    ut._flags           = 0;               // Relative time (not absolute)
+    ut._clockid         = CLOCK_MONOTONIC; // Use monotonic clock
+
+    _umtx_op(const_cast<void*>(__ptr),
+             UMTX_OP_WAIT,
+             *reinterpret_cast<__cxx_contention_t*>(&buffer),
+             reinterpret_cast<void*>(sizeof(ut)), // Pass size as uaddr
+             &ut);                                // Pass _umtx_time structure as uaddr2
   }
 }
 
