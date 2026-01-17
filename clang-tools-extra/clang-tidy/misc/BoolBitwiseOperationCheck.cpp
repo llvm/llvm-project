@@ -11,6 +11,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include <array>
+#include <functional>
 #include <utility>
 #include <vector>
 
@@ -47,17 +48,17 @@ static const Expr *getAcceptableCompoundsLHS(const BinaryOperator *BinOp) {
   return isa<DeclRefExpr, MemberExpr>(LHS) ? LHS : nullptr;
 }
 
-/// Checks if all leaf nodes in an bitwise expression satisfy a given condition.
-/// This handles cases like `(a | b) & c` where we need to check that a, b, and
-/// c all satisfy the condition.
+/// Checks if leaf nodes in a bitwise expression satisfy a given condition.
 ///
 /// \param Expr The bitwise expression to check.
-/// \param Condition A function that checks if an leaf node satisfies the
+/// \param Condition A function that checks if a leaf node satisfies the
 ///                  desired condition.
-/// \returns true if all leaf nodes satisfy the condition, false otherwise.
-template <typename F>
-static bool allLeavesOfBitwiseSatisfy(const clang::Expr *Expr,
-                                      const F &Condition) {
+/// \param Combine A function that combines results from LHS and RHS (e.g., &&
+/// for "all", || for "any").
+/// \returns true if the condition is satisfied according to the combiner logic.
+template <typename F, typename Combiner>
+static bool leavesOfBitwiseSatisfy(const clang::Expr *Expr, const F &Condition,
+                                   const Combiner &Combine) {
   // For leaf nodes, check if the condition is satisfied
   if (Condition(Expr))
     return true;
@@ -68,8 +69,8 @@ static bool allLeavesOfBitwiseSatisfy(const clang::Expr *Expr,
   if (const auto *BinOp = dyn_cast<clang::BinaryOperator>(Expr)) {
     if (!isBitwiseOperation(BinOp->getOpcodeStr()))
       return false;
-    return allLeavesOfBitwiseSatisfy(BinOp->getLHS(), Condition) &&
-           allLeavesOfBitwiseSatisfy(BinOp->getRHS(), Condition);
+    return Combine(leavesOfBitwiseSatisfy(BinOp->getLHS(), Condition, Combine),
+                   leavesOfBitwiseSatisfy(BinOp->getRHS(), Condition, Combine));
   }
 
   return false;
@@ -78,7 +79,7 @@ static bool allLeavesOfBitwiseSatisfy(const clang::Expr *Expr,
 namespace {
 /// Custom matcher that checks if all leaf nodes in an bitwise expression
 /// satisfy the given inner matcher condition. This uses
-/// allLeavesOfBitwiseSatisfy to recursively
+/// leavesOfBitwiseSatisfy to recursively check.
 ///
 /// Example usage:
 ///   expr(hasAllLeavesOfBitwiseSatisfying(hasType(booleanType())))
@@ -87,7 +88,21 @@ AST_MATCHER_P(Expr, hasAllLeavesOfBitwiseSatisfying,
   auto Condition = [&](const clang::Expr *E) -> bool {
     return InnerMatcher.matches(*E, Finder, Builder);
   };
-  return allLeavesOfBitwiseSatisfy(&Node, Condition);
+  return leavesOfBitwiseSatisfy(&Node, Condition, std::logical_and<bool>());
+}
+
+/// Custom matcher that checks if any leaf node in a bitwise expression
+/// satisfies the given inner matcher condition. This uses
+/// leavesOfBitwiseSatisfy to recursively check.
+///
+/// Example usage:
+///   expr(hasAnyLeafOfBitwiseSatisfying(hasType(booleanType())))
+AST_MATCHER_P(Expr, hasAnyLeafOfBitwiseSatisfying,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  auto Condition = [&](const clang::Expr *E) -> bool {
+    return InnerMatcher.matches(*E, Finder, Builder);
+  };
+  return leavesOfBitwiseSatisfy(&Node, Condition, std::logical_or<bool>());
 }
 } // namespace
 
@@ -106,8 +121,12 @@ void BoolBitwiseOperationCheck::storeOptions(
 }
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
-  // Matcher for checking if all leaves in an expression are boolean type
+  // Matcher for checking if all leaves in an bitwise expression are boolean
+  // type
   auto BooleanLeaves = hasAllLeavesOfBitwiseSatisfying(hasType(booleanType()));
+  // Matcher for checking if at least one leaf in an bitwise expression is
+  // boolean type
+  auto BooleanAnyLeaf = hasAnyLeafOfBitwiseSatisfying(hasType(booleanType()));
 
   auto BitwiseOps = hasAnyOperatorName("|", "&", "|=", "&=");
   auto CompoundBitwiseOps = hasAnyOperatorName("|=", "&=");
@@ -123,9 +142,10 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   auto CompoundWithBoolLHS = allOf(hasLHS(BooleanLeaves), CompoundBitwiseOps);
   auto NoContextNeeded = anyOf(BothBoolean, CompoundWithBoolLHS);
 
-  // At least one boolean operand (needs ICE context to be considered boolean
-  // bitwise)
-  auto AtLeastOneBoolean = anyOf(hasLHS(BooleanLeaves), hasRHS(BooleanLeaves));
+  // Check if any leaf in LHS or RHS is boolean (needs ICE context to be
+  // considered boolean bitwise)
+  auto AtLeastOneBoolean =
+      anyOf(hasLHS(BooleanAnyLeaf), hasRHS(BooleanAnyLeaf));
 
   // Matcher for binop that doesn't need ICE context
   auto BinOpNoContext = traverse(TK_IgnoreUnlessSpelledInSource,
