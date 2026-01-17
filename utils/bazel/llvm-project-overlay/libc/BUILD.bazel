@@ -3267,6 +3267,11 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_sinpif",
+    hdrs = ["src/__support/math/sinpif.h"],
+    deps = [":__support_sincosf_utils",],
+)
 ############################### complex targets ################################
 
 libc_function(
@@ -4886,7 +4891,7 @@ libc_math_function(
 libc_math_function(
     name = "sinpif",
     additional_deps = [
-        ":__support_sincosf_utils",
+        ":__support_math_sinpif",
     ],
 )
 
