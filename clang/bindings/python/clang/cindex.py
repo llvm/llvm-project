@@ -3187,14 +3187,15 @@ class CompletionString(ClangObject):
             + str(self.briefComment)
         )
 
-
-# AvailabilityKindCompat is an exact copy of AvailabilityKind, except for __str__
+# AvailabilityKindCompat is an exact copy of AvailabilityKind, except for __str__.
 # This is a temporary measure to keep the string representation the same
-# until we unify the return of CompletionString.availability to be AvailabilityKind
-# Note that deriving from AvailabilityKind directly is not possible
+# until we change CompletionString.availability to return AvailabilityKind,
+# like Cursor.availability does.
+# Note that deriving from AvailabilityKind directly is not possible.
 class AvailabilityKindCompat(BaseEnumeration):
     """
     Describes the availability of an entity.
+    It is deprecated in favor of AvailabilityKind.
     """
 
     # Ensure AvailabilityKindCompat is comparable with AvailabilityKind
@@ -3206,17 +3207,17 @@ class AvailabilityKindCompat(BaseEnumeration):
 
     def __str__(self) -> str:
         """
-        Returns the common enum names (full upper-case, underscore separated)
-        to the old format (separated by capitalization), e.g. NOT_ACCESSIBLE -> NotAccessible
-        This is a temporary measure and will be changed in a future release
-        to return the same format (full upper-case, underscore separated) like other Kinds
+        Converts enum value to string in the old camelCase format.
+        This is a temporary measure that will be changed in the future release
+        to return string in ALL_CAPS format, like for other enums.
         """
 
         warnings.warn(
-            "The CompletionString.availability's return value will be changed in "
-            "a future release to be unified with other kinds. As a result, its string "
-            "representations will change to full upper-case, prefixed with the class name "
-            "(e.g. NotAvailable -> AvailabilityKind.NOT_AVAILABLE).",
+            "String representation of 'CompletionString.availability' will be "
+            "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
+            "match other enums. 'CompletionString.availability' can be "
+            "compared to 'AvailabilityKind' directly, "
+            "without conversion to string.",
             DeprecationWarning,
         )
         # Remove underscores
