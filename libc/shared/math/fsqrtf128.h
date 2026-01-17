@@ -1,4 +1,4 @@
-//===-- Implementation of fsqrt128 function -------------------------------===//
+//===-- Shared fsqrtf128 function -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fsqrtf128.h"
+#ifndef LLVM_LIBC_SHARED_MATH_FSQRTF128_H
+#define LLVM_LIBC_SHARED_MATH_FSQRTF128_H
+
+#include "include/llvm-libc-types/float128.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
+
 #include "src/__support/math/fsqrtf128.h"
+
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, fsqrtf128, (float128 x)) {
-  return math::fsqrtf128(x);
-}
+using math::fsqrtf128;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT128
+       //
+#endif // LLVM_LIBC_SHARED_MATH_FSQRTF128_H
