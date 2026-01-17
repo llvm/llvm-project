@@ -3768,7 +3768,7 @@ SmallVector<OpFoldResult> ViewOp::getMixedSizes() {
   Builder b(getContext());
   MemRefType resultType = getType();
   auto resultShape = resultType.getShape();
-  for (int64_t i = 0; i < resultType.getRank(); ++i) {
+  for (int64_t i = 0, e = resultType.getRank(); i < e; ++i) {
     if (resultType.isDynamicDim(i)) {
       result.push_back(getSizes()[ctr++]);
     } else {
