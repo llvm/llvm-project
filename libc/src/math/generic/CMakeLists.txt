@@ -1782,7 +1782,8 @@ add_entrypoint_object(
   HDRS
     ../ilogbl.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.ilogbl
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1837,7 +1838,8 @@ add_entrypoint_object(
   HDRS
     ../llogbf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.llogbf
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -3270,12 +3272,8 @@ add_entrypoint_object(
   HDRS
     ../hypotf.h
   DEPENDS
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.sqrt
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.hypotf
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -5245,8 +5243,8 @@ add_entrypoint_object(
   HDRS
     ../fsqrtf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.math.fsqrtf128
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

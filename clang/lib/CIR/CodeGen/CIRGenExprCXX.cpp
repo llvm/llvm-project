@@ -75,6 +75,50 @@ static MemberCallInfo commonBuildCXXMemberOrOperatorCall(
   return {required, prefixSize};
 }
 
+RValue
+CIRGenFunction::emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
+                                             ReturnValueSlot returnValue) {
+  const BinaryOperator *bo =
+      cast<BinaryOperator>(ce->getCallee()->IgnoreParens());
+  const Expr *baseExpr = bo->getLHS();
+  const Expr *memFnExpr = bo->getRHS();
+
+  const auto *mpt = memFnExpr->getType()->castAs<MemberPointerType>();
+  const auto *fpt = mpt->getPointeeType()->castAs<FunctionProtoType>();
+
+  // Emit the 'this' pointer.
+  Address thisAddr = Address::invalid();
+  if (bo->getOpcode() == BO_PtrMemI)
+    thisAddr = emitPointerWithAlignment(baseExpr);
+  else
+    thisAddr = emitLValue(baseExpr).getAddress();
+
+  assert(!cir::MissingFeatures::emitTypeCheck());
+
+  // Get the member function pointer.
+  mlir::Value memFnPtr = emitScalarExpr(memFnExpr);
+
+  // Resolve the member function pointer to the actual callee and adjust the
+  // "this" pointer for call.
+  mlir::Location loc = getLoc(ce->getExprLoc());
+  auto [/*mlir::Value*/ calleePtr, /*mlir::Value*/ adjustedThis] =
+      builder.createGetMethod(loc, memFnPtr, thisAddr.getPointer());
+
+  // Prepare the call arguments.
+  CallArgList argsList;
+  argsList.add(RValue::get(adjustedThis), getContext().VoidPtrTy);
+  emitCallArgs(argsList, fpt, ce->arguments());
+
+  RequiredArgs required = RequiredArgs::getFromProtoWithExtraSlots(fpt, 1);
+
+  // Build the call.
+  CIRGenCallee callee(fpt, calleePtr.getDefiningOp());
+  assert(!cir::MissingFeatures::opCallMustTail());
+  return emitCall(cgm.getTypes().arrangeCXXMethodCall(argsList, fpt, required,
+                                                      /*PrefixSize=*/0),
+                  callee, returnValue, argsList, nullptr, loc);
+}
+
 RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     const CallExpr *ce, const CXXMethodDecl *md, ReturnValueSlot returnValue,
     bool hasQualifier, NestedNameSpecifier qualifier, bool isArrow,

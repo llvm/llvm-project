@@ -20,6 +20,7 @@
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;

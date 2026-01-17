@@ -2822,6 +2822,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fsqrtf128",
+    hdrs = ["src/__support/math/fsqrtf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_inv_trigf_utils",
     hdrs = ["src/__support/math/inv_trigf_utils.h"],
     deps = [
@@ -2862,6 +2872,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ilogbl",
+    hdrs = ["src/__support/math/ilogbl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ldexpf128",
     hdrs = ["src/__support/math/ldexpf128.h"],
     deps = [
@@ -2884,6 +2902,14 @@ libc_support_library(
 libc_support_library(
     name = "__support_math_ldexpf",
     hdrs = ["src/__support/math/ldexpf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llogbf",
+    hdrs = ["src/__support/math/llogbf.h"],
     deps = [
         ":__support_fputil_manipulation_functions",
     ],
@@ -3281,6 +3307,21 @@ libc_support_library(
     deps = [
         ":__support_fputil_multiply_add",
         ":__support_math_exp10f_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_hypotf",
+    hdrs = ["src/__support/math/hypotf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_double_double",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
     ],
 )
 
@@ -4335,7 +4376,8 @@ libc_math_function(
 libc_math_function(
     name = "fsqrtf128",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_fsqrtf128",
+        ":errno",
     ],
 )
 
@@ -4360,8 +4402,8 @@ libc_math_function(name = "hypot")
 libc_math_function(
     name = "hypotf",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_sqrt",
+        ":__support_math_hypotf",
+        ":errno",
     ],
 )
 
@@ -4377,7 +4419,10 @@ libc_math_function(name = "ilogb")
 
 libc_math_function(name = "ilogbf")
 
-libc_math_function(name = "ilogbl")
+libc_math_function(
+    name = "ilogbl",
+    additional_deps = ["__support_math_ilogbl"],
+)
 
 libc_math_function(name = "ilogbf128")
 
@@ -4415,7 +4460,10 @@ libc_math_function(
 
 libc_math_function(name = "llogb")
 
-libc_math_function(name = "llogbf")
+libc_math_function(
+    name = "llogbf",
+    additional_deps = [":__support_math_llogbf"],
+)
 
 libc_math_function(name = "llogbl")
 
