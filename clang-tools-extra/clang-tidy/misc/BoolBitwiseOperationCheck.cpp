@@ -29,10 +29,9 @@ static constexpr std::array<std::pair<StringRef, StringRef>, 8U>
                              {"or_eq", "or"}}};
 
 static StringRef translate(StringRef Value) {
-  for (const auto &[Bitwise, Logical] : OperatorsTransformation) {
+  for (const auto &[Bitwise, Logical] : OperatorsTransformation)
     if (Value == Bitwise)
       return Logical;
-  }
 
   return {};
 }
