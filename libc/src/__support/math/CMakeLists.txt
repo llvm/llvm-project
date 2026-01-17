@@ -954,6 +954,15 @@ add_header_library(
 )
 
 add_header_library(
+  fsqrtf128
+  HDRS
+    fsqrtf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
   hypotf
   HDRS
     hypotf.h
