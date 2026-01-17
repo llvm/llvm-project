@@ -843,9 +843,12 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
 
   const Triple &TT = TM.getTargetTriple();
   assert(TT.isOSBinFormatELF());
-  AArch64Subtarget STI(TT, TM.getTargetCPU(), TM.getTargetCPU(),
-                       TM.getTargetFeatureString(), TM, true);
-  this->STI = &STI;
+  // AArch64Subtarget is huge, so heap allocate it so we don't run out of stack
+  // space.
+  auto STI = std::make_unique<AArch64Subtarget>(
+      TT, TM.getTargetCPU(), TM.getTargetCPU(), TM.getTargetFeatureString(), TM,
+      true);
+  this->STI = STI.get();
 
   MCSymbol *HwasanTagMismatchV1Sym =
       OutContext.getOrCreateSymbol("__hwasan_tag_mismatch");
@@ -2579,9 +2582,12 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   if (KeyID != AArch64PACKey::DA)
     return nullptr;
 
-  AArch64Subtarget STI(TT, TM.getTargetCPU(), TM.getTargetCPU(),
-                       TM.getTargetFeatureString(), TM, true);
-  this->STI = &STI;
+  // AArch64Subtarget is huge, so heap allocate it so we don't run out of stack
+  // space.
+  auto STI = std::make_unique<AArch64Subtarget>(
+      TT, TM.getTargetCPU(), TM.getTargetCPU(), TM.getTargetFeatureString(), TM,
+      true);
+  this->STI = STI.get();
 
   MCSymbol *Place = OutStreamer->getContext().createTempSymbol();
   OutStreamer->emitLabel(Place);
@@ -2605,9 +2611,9 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
                                      .addReg(AArch64::X0)
                                      .addExpr(Target)
                                      .addImm(0),
-                                 STI);
+                                 *STI);
   } else {
-    emitAddress(AArch64::X0, Target, AArch64::X16, IsDSOLocal, STI);
+    emitAddress(AArch64::X0, Target, AArch64::X16, IsDSOLocal, *STI);
   }
   if (HasAddressDiversity) {
     auto *PlacePlusDisc = MCBinaryExpr::createAdd(
@@ -2615,7 +2621,7 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
         MCConstantExpr::create(Disc, OutStreamer->getContext()),
         OutStreamer->getContext());
     emitAddress(AArch64::X1, PlacePlusDisc, AArch64::X16, /*IsDSOLocal=*/true,
-                STI);
+                *STI);
   } else {
     if (!isUInt<16>(Disc)) {
       OutContext.reportError(SMLoc(), "AArch64 PAC Discriminator '" +
@@ -2644,13 +2650,13 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   const MCSymbolRefExpr *EmuPACRef =
       MCSymbolRefExpr::create(EmuPAC, OutStreamer->getContext());
   OutStreamer->emitInstruction(MCInstBuilder(AArch64::B).addExpr(EmuPACRef),
-                               STI);
+                               *STI);
 
   // We need a RET despite the above tail call because the deactivation symbol
   // may replace the tail call with a NOP.
   if (DSExpr)
     OutStreamer->emitInstruction(
-        MCInstBuilder(AArch64::RET).addReg(AArch64::LR), STI);
+        MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
   OutStreamer->popSection();
 
   return MCSymbolRefExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
