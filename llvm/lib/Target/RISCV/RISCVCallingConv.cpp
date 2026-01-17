@@ -557,8 +557,6 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     } else {
       // For return values, the vector must be passed fully via registers or
       // via the stack.
-      // FIXME: The proposed vector ABI only mandates v8-v15 for return values,
-      // but we're using all of them.
       if (IsRet)
         return true;
       // Try using a GPR to pass the address

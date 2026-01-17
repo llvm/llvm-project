@@ -62,7 +62,8 @@ FunctionPass *llvm::createCFGuardLongjmpPass() { return new CFGuardLongjmp(); }
 bool CFGuardLongjmp::runOnMachineFunction(MachineFunction &MF) {
 
   // Skip modules for which the cfguard flag is not set.
-  if (!MF.getFunction().getParent()->getModuleFlag("cfguard"))
+  if (MF.getFunction().getParent()->getControlFlowGuardMode() ==
+      ControlFlowGuardMode::Disabled)
     return false;
 
   // Skip functions that do not have calls to _setjmp.
