@@ -5515,9 +5515,10 @@ defm FADD   : TwoOperandFPData<0b0010, "fadd", any_fadd>;
 let SchedRW = [WriteFDiv] in {
 defm FDIV   : TwoOperandFPData<0b0001, "fdiv", any_fdiv>;
 }
-defm FMAXNM : TwoOperandFPData<0b0110, "fmaxnm", any_fmaxnum>;
+// No pattern - expanded to fcmp+select for SNAN correctness.
+defm FMAXNM : TwoOperandFPData<0b0110, "fmaxnm">;
 defm FMAX   : TwoOperandFPData<0b0100, "fmax", any_fmaximum>;
-defm FMINNM : TwoOperandFPData<0b0111, "fminnm", any_fminnum>;
+defm FMINNM : TwoOperandFPData<0b0111, "fminnm">;
 defm FMIN   : TwoOperandFPData<0b0101, "fmin", any_fminimum>;
 let SchedRW = [WriteFMul] in {
 defm FMUL   : TwoOperandFPData<0b0000, "fmul", any_fmul>;
@@ -5565,29 +5566,13 @@ def : Pat<(v1f64 (fmaximum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMAXDrr FPR64:$Rn, FPR64:$Rm)>;
 def : Pat<(v1f64 (fminimum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMINDrr FPR64:$Rn, FPR64:$Rm)>;
-def : Pat<(v1f64 (fmaxnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
-          (FMAXNMDrr FPR64:$Rn, FPR64:$Rm)>;
-def : Pat<(v1f64 (fminnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
-          (FMINNMDrr FPR64:$Rn, FPR64:$Rm)>;
 
-def : Pat<(fminnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
-          (FMINNMDrr FPR64:$a, FPR64:$b)>;
-def : Pat<(fmaxnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
-          (FMAXNMDrr FPR64:$a, FPR64:$b)>;
 def : Pat<(f64 (fcanonicalize f64:$a)),
           (FMINNMDrr   f64:$a, f64:$a)>;
-def : Pat<(fminnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
-          (FMINNMSrr FPR32:$a, FPR32:$b)>;
-def : Pat<(fmaxnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
-          (FMAXNMSrr FPR32:$a, FPR32:$b)>;
 def : Pat<(f32 (fcanonicalize f32:$a)),
           (FMINNMSrr   f32:$a, f32:$a)>;
 
 let Predicates = [HasFullFP16] in {
-def : Pat<(fminnum_ieee (f16 FPR16:$a), (f16 FPR16:$b)),
-          (FMINNMHrr FPR16:$a, FPR16:$b)>;
-def : Pat<(fmaxnum_ieee (f16 FPR16:$a), (f16 FPR16:$b)),
-          (FMAXNMHrr FPR16:$a, FPR16:$b)>;
 def : Pat<(f16 (fcanonicalize f16:$a)),
           (FMINNMHrr   f16:$a, f16:$a)>;
 }

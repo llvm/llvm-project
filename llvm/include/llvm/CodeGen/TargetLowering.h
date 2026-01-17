@@ -2522,7 +2522,12 @@ public:
       Action != TypeSplitVector;
   }
 
-  virtual bool isProfitableToCombineMinNumMaxNum(EVT VT) const { return true; }
+  virtual bool isProfitableToCombineMinNumMaxNum(EVT VT, SDValue LHS,
+                                                  SDValue RHS,
+                                                  const SDNodeFlags &Flags,
+                                                  SelectionDAG &DAG) const {
+    return true;
+  }
 
   /// Return true if a select of constants (select Cond, C1, C2) should be
   /// transformed into simple math ops with the condition value. For example:

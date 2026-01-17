@@ -12015,8 +12015,13 @@ static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
   if (!VT.isFloatingPoint())
     return false;
 
-  return Flags.hasNoSignedZeros() &&
-         TLI.isProfitableToCombineMinNumMaxNum(VT) &&
+  const TargetOptions &Options = DAG.getTarget().Options;
+
+  // The target can decide whether to combine based on value types, operands,
+  // flags, and NaN analysis. This allows targets like Aarch64 to implement
+  // specific logic for handling NaN semantics of their min/max instructions.
+  return (Flags.hasNoSignedZeros() || Options.NoSignedZerosFPMath) &&
+         TLI.isProfitableToCombineMinNumMaxNum(VT, LHS, RHS, Flags, DAG) &&
          (Flags.hasNoNaNs() ||
           (DAG.isKnownNeverNaN(RHS) && DAG.isKnownNeverNaN(LHS)));
 }

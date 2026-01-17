@@ -949,6 +949,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(Op, MVT::f16, Legal);
   }
 
+  // fmaxnm/fminnm convert SNAN to QNAN, unlike fcmp+select.
+  // Expand scalar types to preserve SNAN semantics.
+  setOperationAction(ISD::FMINNUM, MVT::f32, Expand);
+  setOperationAction(ISD::FMAXNUM, MVT::f32, Expand);
+  setOperationAction(ISD::FMINNUM, MVT::f64, Expand);
+  setOperationAction(ISD::FMAXNUM, MVT::f64, Expand);
+  setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Expand);
+  setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Expand);
+  setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Expand);
+  setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Expand);
+
   setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
   setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
@@ -17697,6 +17708,25 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
            isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
            (Options.AllowFPOpFusion == FPOpFusion::Fast ||
             I->getFastMathFlags().allowContract()));
+}
+
+bool AArch64TargetLowering::isProfitableToCombineMinNumMaxNum(
+    EVT VT, SDValue LHS, SDValue RHS, const SDNodeFlags &Flags,
+    SelectionDAG &DAG) const {
+  // Vector types: always allow combination (vectors use different instructions)
+  if (VT.isVector())
+    return true;
+
+  // Explicit nnan flag: safe to optimize
+  if (Flags.hasNoNaNs())
+    return true;
+
+  // fmaxnm/fminnm convert SNAN to QNAN, unlike fcmp+select.
+  // Only combine if we can prove no SNAN is present.
+  if (DAG.isKnownNeverSNaN(LHS) && DAG.isKnownNeverSNaN(RHS))
+    return true;
+
+  return false;
 }
 
 // All 32-bit GPR operations implicitly zero the high-half of the corresponding

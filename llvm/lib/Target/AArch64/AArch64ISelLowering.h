@@ -220,6 +220,10 @@ public:
 
   bool isProfitableToHoist(Instruction *I) const override;
 
+  bool isProfitableToCombineMinNumMaxNum(EVT VT, SDValue LHS, SDValue RHS,
+                                          const SDNodeFlags &Flags,
+                                          SelectionDAG &DAG) const override;
+
   bool isZExtFree(Type *Ty1, Type *Ty2) const override;
   bool isZExtFree(EVT VT1, EVT VT2) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
