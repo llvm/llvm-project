@@ -274,6 +274,7 @@ add_gen_header(
     elf_proxy.h
   DEPENDS
     libc.include.llvm_libc_common_h
+    libc.include.elf
   PROXY
 )
 
