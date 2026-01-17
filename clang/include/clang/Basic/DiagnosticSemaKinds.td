@@ -14442,6 +14442,9 @@ def warn_unsafe_single_pointer_assignment : Warning<
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking">,
   InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
+def warn_unsafe_buffer_usage_in_static_sized_array : Warning<"direct access on T[N] is unsafe due to the lack of bounds checking">,
+  InGroup<UnsafeBufferUsageInStaticSizedArray>, DefaultIgnore;
+
 def warn_assign_to_count_attributed_must_be_simple_stmt : Warning<
   "assignment to %select{count-attributed pointer|dependent count}0 '%1' "
   "must be a simple statement '%1 = ...'">,
@@ -14465,6 +14468,7 @@ def warn_assigned_and_used_in_bounds_attributed_group : Warning<
 def warn_unsafe_count_attributed_pointer_assignment : Warning<
   "unsafe assignment to count-attributed pointer">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).
