@@ -11,7 +11,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include <array>
-#include <optional>
 #include <utility>
 #include <vector>
 
@@ -153,6 +152,17 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
            << translate(BinOp->getOpcodeStr()) << BinOp->getOpcodeStr();
   };
 
+  // Helper lambda to check if location is valid and not in a macro
+  auto IsValidLocation = [&](SourceLocation Loc) -> bool {
+    if (Loc.isInvalid() || Loc.isMacroID()) {
+      if (!IgnoreMacros)
+        DiagEmitter();
+      return false;
+    }
+    return true;
+  };
+
+  // Early validation: check for volatile operands
   const bool HasVolatileOperand = llvm::any_of(
       std::array{BinOp->getLHS(), BinOp->getRHS()}, [&](const Expr *E) {
         return E->IgnoreImpCasts()
@@ -164,108 +174,105 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     return;
   }
 
+  // Early validation: check for side effects
   const bool HasSideEffects = BinOp->getRHS()->HasSideEffects(
-      Ctx, /*IncludePossibleEffects=*/!UnsafeMode);
+    Ctx, /*IncludePossibleEffects=*/!UnsafeMode);
   if (HasSideEffects) {
     DiagEmitter();
     return;
   }
 
-  SourceLocation Loc = BinOp->getOperatorLoc();
-
-  if (Loc.isInvalid() || Loc.isMacroID()) {
-    IgnoreMacros || DiagEmitter();
+  // Get and validate operator location
+  SourceLocation OpLoc = BinOp->getOperatorLoc();
+  if (!IsValidLocation(OpLoc))
     return;
-  }
 
-  Loc = SM.getSpellingLoc(Loc);
-  if (Loc.isInvalid() || Loc.isMacroID()) {
-    IgnoreMacros || DiagEmitter();
+  OpLoc = SM.getSpellingLoc(OpLoc);
+  if (!IsValidLocation(OpLoc))
     return;
-  }
 
-  const CharSourceRange TokenRange = CharSourceRange::getTokenRange(Loc);
+  // Generate fix-it hint for operator replacement
+  const CharSourceRange TokenRange = CharSourceRange::getTokenRange(OpLoc);
   if (TokenRange.isInvalid()) {
-    IgnoreMacros || DiagEmitter();
+    if (!IgnoreMacros)
+      DiagEmitter();
     return;
   }
 
   const StringRef FixSpelling =
       translate(Lexer::getSourceText(TokenRange, SM, Ctx.getLangOpts()));
-
   if (FixSpelling.empty()) {
     DiagEmitter();
     return;
   }
 
-  FixItHint InsertEqual;
+  FixItHint ReplaceOpHint = FixItHint::CreateReplacement(TokenRange, FixSpelling);
+
+  // Generate fix-it hint for compound assignment (if applicable)
+  FixItHint InsertEqualHint;
   if (BinOp->isCompoundAssignmentOp()) {
     const auto *LHS = getAcceptableCompoundsLHS(BinOp);
     if (!LHS) {
       DiagEmitter();
       return;
     }
+
     const SourceLocation LocLHS = LHS->getEndLoc();
-    if (LocLHS.isInvalid() || LocLHS.isMacroID()) {
-      IgnoreMacros || DiagEmitter();
+    if (!IsValidLocation(LocLHS))
       return;
-    }
+
     const SourceLocation InsertLoc =
         clang::Lexer::getLocForEndOfToken(LocLHS, 0, SM, Ctx.getLangOpts());
-    if (InsertLoc.isInvalid() || InsertLoc.isMacroID()) {
-      IgnoreMacros || DiagEmitter();
+    if (!IsValidLocation(InsertLoc))
       return;
-    }
+
     auto SourceText = static_cast<std::string>(Lexer::getSourceText(
         CharSourceRange::getTokenRange(LHS->getSourceRange()), SM,
         Ctx.getLangOpts()));
     llvm::erase_if(SourceText,
                    [](unsigned char Ch) { return std::isspace(Ch); });
-    InsertEqual = FixItHint::CreateInsertion(InsertLoc, " = " + SourceText);
+    InsertEqualHint = FixItHint::CreateInsertion(InsertLoc, " = " + SourceText);
   }
 
-  auto ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
-
-  std::optional<BinaryOperatorKind> ParentOpcode;
-  if (ParentBinOp)
-    ParentOpcode = ParentBinOp->getOpcode();
-
-  const auto *RHS = dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts());
-  std::optional<BinaryOperatorKind> RHSOpcode;
-  if (RHS)
-    RHSOpcode = RHS->getOpcode();
-
+  // Determine if parentheses are needed based on operator precedence
   const Expr *SurroundedExpr = nullptr;
-  if ((BinOp->getOpcode() == BO_Or && ParentOpcode == BO_LAnd) ||
-      (BinOp->getOpcode() == BO_And &&
-       llvm::is_contained({BO_Xor, BO_Or}, ParentOpcode))) {
-    const Expr *Side = ParentBinOp->getLHS()->IgnoreParenImpCasts() == BinOp
-                           ? ParentBinOp->getLHS()
-                           : ParentBinOp->getRHS();
-    SurroundedExpr = Side->IgnoreImpCasts();
-    assert(SurroundedExpr->IgnoreParens() == BinOp);
-  } else if (BinOp->getOpcode() == BO_AndAssign && RHSOpcode == BO_LOr)
-    SurroundedExpr = RHS;
+  if (ParentBinOp) {
+    const BinaryOperatorKind ParentOpcode = ParentBinOp->getOpcode();
+    if ((BinOp->getOpcode() == BO_Or && ParentOpcode == BO_LAnd) ||
+        (BinOp->getOpcode() == BO_And &&
+         llvm::is_contained({BO_Xor, BO_Or}, ParentOpcode))) {
+      const Expr *Side = ParentBinOp->getLHS()->IgnoreParenImpCasts() == BinOp
+                             ? ParentBinOp->getLHS()
+                             : ParentBinOp->getRHS();
+      SurroundedExpr = Side->IgnoreImpCasts();
+      assert(SurroundedExpr->IgnoreParens() == BinOp);
+    }
+  }
+
+  if (!SurroundedExpr) {
+    const auto *RHS = dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts());
+    if (RHS && BinOp->getOpcode() == BO_AndAssign && RHS->getOpcode() == BO_LOr)
+      SurroundedExpr = RHS;
+  }
 
   if (isa_and_nonnull<ParenExpr>(SurroundedExpr))
     SurroundedExpr = nullptr;
 
+  // Generate fix-it hints for parentheses (if needed)
   FixItHint InsertBrace1;
   FixItHint InsertBrace2;
   if (SurroundedExpr) {
     const SourceLocation InsertFirstLoc = SurroundedExpr->getBeginLoc();
     const SourceLocation InsertSecondLoc = clang::Lexer::getLocForEndOfToken(
         SurroundedExpr->getEndLoc(), 0, SM, Ctx.getLangOpts());
-    if (InsertFirstLoc.isInvalid() || InsertFirstLoc.isMacroID() ||
-        InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID()) {
-      IgnoreMacros || DiagEmitter();
+    if (!IsValidLocation(InsertFirstLoc) || !IsValidLocation(InsertSecondLoc))
       return;
-    }
+
     InsertBrace1 = FixItHint::CreateInsertion(InsertFirstLoc, "(");
     InsertBrace2 = FixItHint::CreateInsertion(InsertSecondLoc, ")");
   }
 
-  DiagEmitter() << InsertEqual << ReplaceOperator << InsertBrace1
+  DiagEmitter() << InsertEqualHint << ReplaceOpHint << InsertBrace1
                 << InsertBrace2;
 }
 
