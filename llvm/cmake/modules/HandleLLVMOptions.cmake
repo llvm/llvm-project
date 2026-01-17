@@ -1304,6 +1304,13 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
 endif()
 
+if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  # CMake weirdly marks all PCH as system headers. This undocumented variable
+  # can be used to suppress the "#pragma clang system_header".
+  # See: https://gitlab.kitware.com/cmake/cmake/-/issues/21219
+  set(CMAKE_PCH_PROLOGUE "")
+endif()
+
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")
 
 if(LLVM_ENABLE_LTO AND WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)

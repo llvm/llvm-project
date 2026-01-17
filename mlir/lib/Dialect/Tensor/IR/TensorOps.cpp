@@ -1107,12 +1107,12 @@ Value EmptyOp::getDynamicSize(unsigned idx) {
 SmallVector<OpFoldResult> EmptyOp::getMixedSizes() {
   SmallVector<OpFoldResult> result;
   unsigned ctr = 0;
-  OpBuilder b(getContext());
-  for (int64_t i = 0; i < getType().getRank(); ++i) {
-    if (getType().isDynamicDim(i)) {
+  Builder b(getContext());
+  for (int64_t dim : getType().getShape()) {
+    if (ShapedType::isDynamic(dim)) {
       result.push_back(getDynamicSizes()[ctr++]);
     } else {
-      result.push_back(b.getIndexAttr(getType().getShape()[i]));
+      result.push_back(b.getIndexAttr(dim));
     }
   }
   return result;

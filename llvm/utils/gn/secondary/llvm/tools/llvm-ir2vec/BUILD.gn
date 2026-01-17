@@ -1,5 +1,6 @@
 executable("llvm-ir2vec") {
   deps = [
+    "utils",
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
     "//llvm/lib/CodeGen/MIRParser",
@@ -12,5 +13,6 @@ executable("llvm-ir2vec") {
     "//llvm/lib/Target:AllTargetsInfos",
     "//llvm/lib/TargetParser",
   ]
+  include_dirs = [ "utils" ]
   sources = [ "llvm-ir2vec.cpp" ]
 }
