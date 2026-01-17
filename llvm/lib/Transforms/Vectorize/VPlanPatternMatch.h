@@ -482,10 +482,8 @@ m_ComputeAnyOfResult(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline VPInstruction_match<VPInstruction::ComputeFindIVResult, Op0_t, Op1_t,
                            Op2_t>
-m_ComputeFindIVResult(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2
-                      ) {
-  return m_VPInstruction<VPInstruction::ComputeFindIVResult>(Op0, Op1, Op2
-                                                             );
+m_ComputeFindIVResult(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<VPInstruction::ComputeFindIVResult>(Op0, Op1, Op2);
 }
 
 template <typename Op0_t>
