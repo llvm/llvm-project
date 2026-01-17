@@ -75,6 +75,7 @@ static bool allLeavesOfBitwiseSatisfy(const clang::Expr *Expr,
   return false;
 }
 
+namespace {
 /// Custom matcher that checks if all leaf nodes in an bitwise expression
 /// satisfy the given inner matcher condition. This uses
 /// allLeavesOfBitwiseSatisfy to recursively
@@ -88,6 +89,7 @@ AST_MATCHER_P(Expr, hasAllLeavesOfBitwiseSatisfying,
   };
   return allLeavesOfBitwiseSatisfy(&Node, Condition);
 }
+} // namespace
 
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
                                                      ClangTidyContext *Context)
@@ -211,7 +213,7 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     return;
   }
 
-  FixItHint ReplaceOpHint =
+  const FixItHint ReplaceOpHint =
       FixItHint::CreateReplacement(TokenRange, FixSpelling);
 
   // Generate fix-it hint for compound assignment (if applicable)
