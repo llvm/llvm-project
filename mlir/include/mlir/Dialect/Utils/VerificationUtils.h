@@ -27,6 +27,11 @@ namespace mlir {
 LogicalResult verifyDynamicDimensionCount(Operation *op, ShapedType type,
                                           ValueRange dynamicSizes);
 
+/// Verify that two shaped types have matching ranks. Returns failure and emits
+/// an error if ranks don't match. Unranked types are considered compatible.
+LogicalResult verifyRanksMatch(Operation *op, ShapedType lhs, ShapedType rhs,
+                               StringRef lhsName, StringRef rhsName);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_VERIFICATIONUTILS_H
