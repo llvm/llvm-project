@@ -110,9 +110,11 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   auto NotNestedInBitwise = unless(hasParent(binaryOperator(BitwiseOps)));
   auto OptionalParent = optionally(hasParent(binaryOperator().bind("p")));
 
-  // Conditions that make it a boolean bitwise operation without ICE context:
+  // Conditions that make it a boolean bitwise operation without ICE(*) context:
   // 1. Both LHS and RHS have all boolean leaves
   // 2. LHS has boolean leaves AND it's a compound assignment
+  //
+  // * ICE - Implicit cast expression
   auto BothBoolean = allOf(hasLHS(BooleanLeaves), hasRHS(BooleanLeaves));
   auto CompoundWithBoolLHS = allOf(hasLHS(BooleanLeaves), CompoundBitwiseOps);
   auto NoContextNeeded = anyOf(BothBoolean, CompoundWithBoolLHS);
