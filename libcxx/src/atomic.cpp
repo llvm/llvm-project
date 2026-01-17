@@ -130,9 +130,9 @@ static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
 template <std::size_t _Size>
 static void __platform_wait_on_address(void const* __ptr, void const* __val, uint64_t __timeout_ns) {
   static_assert(_Size == 8, "Can only wait on 8 bytes value");
+  char buffer[_Size];
+  std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
   if (__timeout_ns == 0) {
-    char buffer[_Size];
-    std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
     _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAIT, *reinterpret_cast<__cxx_contention_t*>(&buffer), nullptr, nullptr);
   } else {
     _umtx_time ut;
