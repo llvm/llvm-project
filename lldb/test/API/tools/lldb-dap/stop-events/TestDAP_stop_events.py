@@ -17,14 +17,24 @@ class TestDAP_stop_events(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(result["success"])
         return result["body"]["result"]
 
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="llvm.org/pr15824 thread states not properly maintained",
+    )
+    @expectedFailureAll(
+        oslist=["freebsd"],
+        bugnumber="llvm.org/pr18190 thread states not properly maintained",
+    )
+    @expectedFailureNetBSD
+    @skipIfWindows  # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373
     def test_multiple_threads_sample_breakpoint(self):
         """
         Test that multiple threads being stopped on the same breakpoint only produces a single 'stopped' event.
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
-        line_1 = line_number("main.cpp", "breakpoint 1")
-        [bp1] = self.set_source_breakpoints("main.cpp", [line_1])
+        line = line_number("main.cpp", "breakpoint")
+        [bp] = self.set_source_breakpoints("main.cpp", [line])
 
         events = self.continue_to_next_stop()
         self.assertEqual(len(events), 1, "Expected a single stopped event")
@@ -32,7 +42,7 @@ class TestDAP_stop_events(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(body["reason"], "breakpoint")
         self.assertEqual(body["text"], "breakpoint 1.1")
         self.assertEqual(body["description"], "breakpoint 1.1")
-        self.assertEqual(body["hitBreakpointIds"], [int(bp1)])
+        self.assertEqual(body["hitBreakpointIds"], [int(bp)])
         self.assertEqual(body["allThreadsStopped"], True)
         self.assertNotIn("preserveFocusHint", body)
         self.assertIsNotNone(body["threadId"])
@@ -55,13 +65,23 @@ class TestDAP_stop_events(lldbdap_testcase.DAPTestCaseBase):
 
         self.continue_to_exit()
 
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="llvm.org/pr15824 thread states not properly maintained",
+    )
+    @expectedFailureAll(
+        oslist=["freebsd"],
+        bugnumber="llvm.org/pr18190 thread states not properly maintained",
+    )
+    @expectedFailureNetBSD
+    @skipIfWindows  # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373
     def test_multiple_breakpoints_same_location(self):
         """
         Test stopping at a location that reports multiple overlapping breakpoints.
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
-        line_1 = line_number("main.cpp", "breakpoint 1")
+        line_1 = line_number("main.cpp", "breakpoint")
         [bp1] = self.set_source_breakpoints("main.cpp", [line_1])
         [bp2] = self.set_function_breakpoints(["my_add"])
 

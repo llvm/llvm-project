@@ -66,7 +66,7 @@ llvm::json::Value toJSON(const MemoryEventBody &MEB) {
       {"count", MEB.count}};
 }
 
-[[maybe_unused]] static llvm::json::Value toJSON(const StopReason &SR) {
+static llvm::json::Value toJSON(const StopReason &SR) {
   switch (SR) {
   case eStopReasonEmpty:
     return "";
