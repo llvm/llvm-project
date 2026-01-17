@@ -3,11 +3,11 @@
 misc-bool-bitwise-operation
 ===========================
 
-Finds potentially inefficient use of bitwise operators such as ``&``,  ``|`` 
-and their compound analogues on Boolean values where logical operators like 
+Finds potentially inefficient use of bitwise operators such as ``&``,  ``|``
+and their compound analogues on Boolean values where logical operators like
 ``&&`` and ``||`` would be more appropriate.
 
-Bitwise operations on Booleans can incur unnecessary performance overhead due 
+Bitwise operations on Booleans can incur unnecessary performance overhead due
 to implicit integer conversions and missed short-circuit evaluation.
 
 .. code-block:: c++
@@ -29,7 +29,7 @@ to implicit integer conversions and missed short-circuit evaluation.
     // error handling
   }
 
-These 3 warnings suggest assigning the result of a logical ``||`` operation 
+These 3 warnings suggest assigning the result of a logical ``||`` operation
 instead of using the ``|=`` operator:
 
 .. code-block:: c++
