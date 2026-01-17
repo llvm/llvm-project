@@ -15,7 +15,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 
 using namespace clang::ast_matchers;
 
@@ -166,39 +165,36 @@ void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
 
 void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("inconsistent")) {
-    llvm::SmallVector<StringRef, 4> UninitializedNames;
-    for (const EnumConstantDecl *ECD : Enum->enumerators())
-      if (ECD->getInitExpr() == nullptr && ECD->getDeclName())
-        UninitializedNames.push_back(ECD->getName());
+    // Emit warning first (DiagnosticBuilder emits on destruction), then notes.
+    // Notes must follow the primary diagnostic or they may be dropped.
+    {
+      DiagnosticBuilder Diag =
+          diag(Enum->getBeginLoc(), "initial values in enum '%0' are not "
+                                    "consistent, consider explicit "
+                                    "initialization of all, none or only the "
+                                    "first enumerator")
+          << getName(Enum);
 
-    llvm::SmallString<256> Message;
-    Message = "initial values in enum '%0' are not consistent, "
-              "consider explicit initialization of all, none or "
-              "only the first enumerator";
-    if (!UninitializedNames.empty()) {
-      Message += " (uninitialized enumerators: ";
-      for (size_t I = 0; I < UninitializedNames.size(); ++I) {
-        if (I > 0)
-          Message += (I < UninitializedNames.size() - 1) ? ", " : " and ";
-        Message += "'";
-        Message += UninitializedNames[I];
-        Message += "'";
+      for (const EnumConstantDecl *ECD : Enum->enumerators()) {
+        if (ECD->getInitExpr() == nullptr) {
+          const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+              ECD->getLocation(), 0, *Result.SourceManager, getLangOpts());
+          if (EndLoc.isMacroID())
+            continue;
+          llvm::SmallString<8> Str{" = "};
+          ECD->getInitVal().toString(Str);
+          Diag << FixItHint::CreateInsertion(EndLoc, Str);
+        }
       }
-      Message += ")";
     }
 
-    const DiagnosticBuilder Diag = diag(Enum->getBeginLoc(), Message)
-                                   << getName(Enum);
-    for (const EnumConstantDecl *ECD : Enum->enumerators())
-      if (ECD->getInitExpr() == nullptr) {
-        const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-            ECD->getLocation(), 0, *Result.SourceManager, getLangOpts());
-        if (EndLoc.isMacroID())
-          continue;
-        llvm::SmallString<8> Str{" = "};
-        ECD->getInitVal().toString(Str);
-        Diag << FixItHint::CreateInsertion(EndLoc, Str);
+    for (const EnumConstantDecl *ECD : Enum->enumerators()) {
+      if (ECD->getInitExpr() == nullptr && ECD->getDeclName()) {
+        diag(ECD->getLocation(), "uninitialized enumerator '%0' defined here",
+             DiagnosticIDs::Note)
+            << ECD->getName();
       }
+    }
     return;
   }
 
