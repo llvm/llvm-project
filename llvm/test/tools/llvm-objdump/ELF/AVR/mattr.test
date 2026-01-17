@@ -1,0 +1,50 @@
+# REQUIRES: x86-registered-target
+
+## When --mattr and --mcpu are both empty, disassemble elf with EFlag-derived feature.
+# RUN: yaml2obj -DARCHVERSION=AVR1 %s -o %t.avr1
+# RUN: llvm-objdump -d %t.avr1 | FileCheck %s --check-prefixes=UNKNOWN
+# RUN: yaml2obj -DARCHVERSION=AVR3 %s -o %t.avr3
+# RUN: llvm-objdump -d %t.avr3 | FileCheck %s --check-prefixes=ALL
+
+## If --mattr or --mcpu is specified, don't default to the file's EFlag-derived feature.
+# RUN: llvm-objdump -d --mattr=+avr3 %t.avr1 | FileCheck %s --check-prefixes=ALL
+# RUN: llvm-objdump -d --mcpu=avr3 %t.avr1 | FileCheck %s --check-prefixes=ALL
+
+# UNKNOWN:         <_start>:
+# UNKNOWN-COUNT-2:   <unknown>
+# UNKNOWN:           rjmp    .-2
+
+# ALL:      <_start>:
+# ALL-NEXT:   call    0x0
+# ALL-NEXT:   jmp     0x0
+# ALL-NEXT:   rjmp    .-2
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_AVR
+  Flags:           [ EF_AVR_ARCH_[[ARCHVERSION]] ]
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:         0E9400000C940000FFCF
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Relocations:
+      - Symbol:          foo
+        Type:            0x12
+      - Offset:          0x4
+        Symbol:          foo
+        Type:            0x12
+      - Offset:          0x8
+        Symbol:          foo
+        Type:            0x3
+Symbols:
+  - Name:            _start
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            foo
+    Binding:         STB_GLOBAL
