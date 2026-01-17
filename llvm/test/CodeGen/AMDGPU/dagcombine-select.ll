@@ -738,7 +738,7 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
   ret void
 }
 
-define <2 x i32> @pr176559(i32 %arg, i1 %cond, i1 %tobool.not) #0 {
+define i32 @pr176559(i32 %arg, i1 %cond, i1 %tobool.not) #0 {
 ; GFX9-LABEL: pr176559:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -769,7 +769,6 @@ define <2 x i32> @pr176559(i32 %arg, i1 %cond, i1 %tobool.not) #0 {
 ; GFX9-NEXT:  .LBB27_3: ; %Flow1
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: pr176559:
@@ -803,15 +802,13 @@ define <2 x i32> @pr176559(i32 %arg, i1 %cond, i1 %tobool.not) #0 {
 ; GFX942-NEXT:  .LBB27_3: ; %Flow1
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %perm = call i32 @llvm.amdgcn.perm(i32 %arg, i32 0, i32 0)
   br i1 %cond, label %for.cond.cleanup, label %for.inc
 
 for.cond.cleanup:
-  %vecins = insertelement <2 x i32> splat (i32 1), i32 0, i32 %perm
-  ret <2 x i32> %vecins
+  ret i32 %perm
 
 for.inc:
   %ext = zext i32 %perm to i128
