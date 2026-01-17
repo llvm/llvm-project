@@ -149,8 +149,6 @@ struct MissingFeatures {
   static bool zeroSizeRecordMembers() { return false; }
 
   // Coroutines
-  static bool coroEndBuiltinCall() { return false; }
-  static bool emitBodyAndFallthrough() { return false; }
   static bool coroOutsideFrameMD() { return false; }
   static bool coroutineExceptions() { return false; };
 
