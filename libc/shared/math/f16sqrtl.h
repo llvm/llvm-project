@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SHARED_MATH_F16SQRTL_H
 #define LLVM_LIBC_SHARED_MATH_F16SQRTL_H
 
-#include "include/llvm-libc-types/float_t.h"
-
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
 #include "src/__support/math/f16sqrtl.h"

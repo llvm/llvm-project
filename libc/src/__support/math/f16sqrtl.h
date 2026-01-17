@@ -9,6 +9,7 @@
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_F16SQRTL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_F16SQRTL_H
+#include "include/llvm-libc-macros/float16-macros.h"
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 

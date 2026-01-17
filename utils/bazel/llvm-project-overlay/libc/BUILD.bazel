@@ -175,11 +175,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "llvm_libc_types_float_t",
-    hdrs = ["include/llvm-libc-types/float_t.h"],
-)
-
-libc_support_library(
     name = "llvm_libc_types_cfloat128",
     hdrs = ["include/llvm-libc-types/cfloat128.h"],
     deps = [
@@ -1151,7 +1146,6 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_sqrt",
         ":__support_macros_config",
-        ":llvm_libc_types_float_t",
     ],
 )
 
