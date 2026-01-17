@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CmpInstAnalysis.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
@@ -164,9 +165,16 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
 
     // Try to convert (trunc X) eq/ne C into (X & Mask) eq/ne C
     if (LookThroughTrunc && isa<TruncInst>(LHS)) {
-      Result.Pred = Pred;
-      Result.Mask = APInt::getAllOnes(C.getBitWidth());
-      Result.C = C;
+      auto *TI = dyn_cast<TruncInst>(LHS);
+      unsigned SrcBW = TI->getSrcTy()->getScalarSizeInBits(),
+               DstBW = TI->getDestTy()->getScalarSizeInBits();
+      APInt DesiredMask = APInt::getLowBitsSet(SrcBW, DstBW);
+      APInt Mask = APInt::getAllOnes(C.getBitWidth()).zext(SrcBW);
+      if (Mask == DesiredMask) {
+        Result.Pred = Pred;
+        Result.Mask = Mask;
+        Result.C = C;
+      }
       break;
     }
 
