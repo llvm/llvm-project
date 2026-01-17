@@ -3,64 +3,11 @@
 //
 // RUN: rm -rf %t && mkdir -p %t
 
-//--- TestClass.h
-#import <Foundation/Foundation.h>
-#include <functional>
-#include <memory>
-
-struct Request {
-  const char* queryLabel;
-};
-
-@interface TestClass : NSObject
-
-// Method returning std::function - uses sret, triggers thunk generation
-- (std::function<bool(const std::shared_ptr<Request>&)>)shouldScheduleResponse __attribute__((objc_direct));
-
-// Method returning std::shared_ptr - also uses sret
-- (std::shared_ptr<Request>)getRequest __attribute__((objc_direct));
-
-@end
-
-//--- TestClass.mm
-#include <functional>
-#include <memory>
-#import "TestClass.h"
-
-@implementation TestClass
-
-- (std::function<bool(const std::shared_ptr<Request>&)>)shouldScheduleResponse {
-  return [](const std::shared_ptr<Request>& request) {
-    return (request != nullptr);
-  };
-}
-
-- (std::shared_ptr<Request>)getRequest {
-  return std::make_shared<Request>();
-}
-
-@end
-
-//--- main.mm
-#import "TestClass.h"
-
-// This function calls the direct methods, triggering thunk generation
-// in this translation unit. During LTO, the thunk's sret type may differ
-// from the implementation's sret type due to type renaming.
-void useTestClass(TestClass *obj) {
-
-}
-
-int main() {
-  @autoreleasepool {
-    TestClass *obj;
-    auto callback = [obj shouldScheduleResponse];
-    auto request = [obj getRequest];
-    (void)callback;
-    (void)request;
-  }
-  return 0;
-}
+// This test is a regression test for a bug in the LTO.
+// When trying to call a direct method from another translation unit,
+// the compiler generates a thunk to call the method. But the attribute of
+// the arguments may not be set correctly, causing the compiler to generate
+// a call that can't be `musttail`-ed, which will later cause a link error.
 
 // ============================================================================
 // Split the file into individual source files
@@ -75,7 +22,7 @@ int main() {
 // RUN: %clang++ -fobjc-direct-precondition-thunk      \
 // RUN:   -target arm64-apple-macos11.0 -fobjc-arc     \
 // RUN:   -std=c++17 -O0 -flto=thin                    \
-// RUN:   -c %t/TestClass.mm -I%t -o %t/TestClass.bc
+// RUN:   -c %t/Foo.mm -I%t -o %t/Foo.bc
 
 // Compile main (with thunk generation) to bitcode
 // RUN: %clang++ -fobjc-direct-precondition-thunk      \
@@ -91,5 +38,64 @@ int main() {
 // RUN:   -target arm64-apple-macos11.0 -fobjc-arc     \
 // RUN:   -std=c++17 -O0 -flto=thin                    \
 // RUN:   -fuse-ld=lld                                 \
-// RUN:   %t/TestClass.bc %t/main.bc                   \
+// RUN:   %t/Foo.bc %t/main.bc                   \
 // RUN:   -framework Foundation -o %t/test_lto
+
+//--- Foo.h
+#import <Foundation/Foundation.h>
+#include <functional>
+#include <memory>
+
+struct Request {
+  const char* queryLabel;
+};
+
+@interface Foo : NSObject
+
+// Method returning std::function - uses sret, triggers thunk generation
+- (std::function<bool(const std::shared_ptr<Request>&)>)shouldScheduleResponse __attribute__((objc_direct));
+
+// Method returning std::shared_ptr - also uses sret
+- (std::shared_ptr<Request>)getRequest __attribute__((objc_direct));
+
+@end
+
+//--- Foo.mm
+#include <functional>
+#include <memory>
+#import "Foo.h"
+
+@implementation Foo
+
+- (std::function<bool(const std::shared_ptr<Request>&)>)shouldScheduleResponse {
+  return [](const std::shared_ptr<Request>& request) {
+    return (request != nullptr);
+  };
+}
+
+- (std::shared_ptr<Request>)getRequest {
+  return std::make_shared<Request>();
+}
+
+@end
+
+//--- main.mm
+#import "Foo.h"
+
+// This function calls the direct methods, triggering thunk generation
+// in this translation unit. During LTO, the thunk's sret type may differ
+// from the implementation's sret type due to type renaming.
+void useFoo(Foo *foo) {
+
+}
+
+int main() {
+  @autoreleasepool {
+    Foo *foo;
+    auto callback = [foo shouldScheduleResponse];
+    auto request = [foo getRequest];
+    (void)callback;
+    (void)request;
+  }
+  return 0;
+}
