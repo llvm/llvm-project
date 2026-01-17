@@ -175,39 +175,7 @@ void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
-// Send a thread stopped event for all threads as long as the process
-// is stopped.
-llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
-  lldb::SBMutex lock = dap.GetAPIMutex();
-  std::lock_guard<lldb::SBMutex> guard(lock);
-
-  lldb::SBProcess process = dap.target.GetProcess();
-  if (!process.IsValid())
-    return make_error<DAPError>("invalid process");
-
-  lldb::StateType state = process.GetState();
-  if (!lldb::SBDebugger::StateIsStoppedState(state))
-    return make_error<NotStoppedError>();
-
-  llvm::DenseSet<lldb::tid_t> old_thread_ids;
-  old_thread_ids.swap(dap.thread_ids);
-  const uint32_t num_threads = process.GetNumThreads();
-
-  lldb::tid_t stopped_thread_idx = 0;
-  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-    lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-    dap.thread_ids.insert(thread.GetThreadID());
-
-    if (stopped_thread_idx || !ThreadHasStopReason(thread))
-      continue;
-
-    // Stop at the first thread with a stop reason.
-    stopped_thread_idx = thread_idx;
-  }
-
-  lldb::SBThread thread = process.GetThreadAtIndex(stopped_thread_idx);
-  assert(thread.IsValid() && "no valid thread found, process not stopped");
-
+static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry) {
   protocol::StoppedEventBody body;
   if (on_entry) {
     body.reason = protocol::eStopReasonEntry;
@@ -267,8 +235,7 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
     case lldb::eStopReasonThreadExiting:
     case lldb::eStopReasonInvalid:
     case lldb::eStopReasonNone:
-      llvm_unreachable("invalid stop reason, thread is not stopped");
-      break;
+      return;
     }
   }
   lldb::tid_t tid = thread.GetThreadID();
@@ -279,10 +246,48 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
   body.preserveFocusHint = tid == dap.focus_tid;
   body.allThreadsStopped = true;
 
-  // Update focused thread.
-  dap.focus_tid = tid;
-
   dap.Send(protocol::Event{"stopped", std::move(body)});
+}
+
+// Send a thread stopped event for the first stopped thread as the process is
+// stopped.
+llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
+  lldb::SBMutex lock = dap.GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
+  lldb::SBProcess process = dap.target.GetProcess();
+  if (!process.IsValid())
+    return make_error<DAPError>("invalid process");
+
+  lldb::StateType state = process.GetState();
+  if (!lldb::SBDebugger::StateIsStoppedState(state))
+    return make_error<NotStoppedError>();
+
+  llvm::DenseSet<lldb::tid_t> old_thread_ids;
+  old_thread_ids.swap(dap.thread_ids);
+  const uint32_t num_threads = process.GetNumThreads();
+
+  lldb::SBThread stopped_thread;
+  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+    lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
+    // Collect all known thread ids for sending thread events.
+    dap.thread_ids.insert(thread.GetThreadID());
+
+    if (stopped_thread || !ThreadHasStopReason(thread))
+      continue;
+
+    // Stop at the first thread with a stop reason.
+    stopped_thread = thread;
+  }
+
+  if (!stopped_thread)
+    return make_error<DAPError>(
+        "no valid thread found, cannot determine why the process is stopped");
+
+  SendStoppedEvent(dap, stopped_thread, on_entry);
+
+  // Update focused thread.
+  dap.focus_tid = stopped_thread.GetThreadID();
 
   for (const auto &tid : old_thread_ids) {
     auto end = dap.thread_ids.end();
