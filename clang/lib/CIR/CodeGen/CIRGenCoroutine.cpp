@@ -422,10 +422,17 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         } else {
           awaitRes.rv =
               cgf.emitAnyExpr(s.getResumeExpr(), aggSlot, ignoreResult);
-          if (!awaitRes.rv.isIgnored())
+          if (!awaitRes.rv.isIgnored()) {
             // Create the alloca in the block before the scope wrapping
             // cir.await.
-            assert(!cir::MissingFeatures::coroCoReturn());
+            tmpResumeRValAddr = cgf.emitAlloca(
+                "__coawait_resume_rval", awaitRes.rv.getValue().getType(), loc,
+                CharUnits::One(),
+                builder.getBestAllocaInsertPoint(scopeParentBlock));
+            // Store the rvalue so we can reload it before the promise call.
+            builder.CIRBaseBuilderTy::createStore(loc, awaitRes.rv.getValue(),
+                                                  tmpResumeRValAddr);
+          }
         }
 
         if (tryStmt)
