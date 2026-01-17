@@ -73,6 +73,8 @@ jobs:
     secrets:
       RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
 
+  # The pypi trusted publishing does not support called workflows, so we
+  # can't use them here.
   release-lit:
     name: Release Lit
     runs-on: ubuntu-24.04
