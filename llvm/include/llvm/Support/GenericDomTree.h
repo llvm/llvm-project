@@ -302,7 +302,14 @@ protected:
   DomTreeNodeBase<NodeT> *RootNode = nullptr;
   ParentPtr Parent = nullptr;
 
-  SpecificBumpPtrAllocator<DomTreeNodeBase<NodeT>> NodeAllocator;
+  // Use small slab size to reduce memory waste for modules with many small
+  // functions. Compensate with a short GrowthDelay. This is relevant for
+  // ThinLTO on modules with many functions (not uncommon in C++), where all
+  // dominator trees are live at the same time.
+  static constexpr size_t SlabSize = 8 * sizeof(DomTreeNodeBase<NodeT>);
+  BumpPtrAllocatorImpl<MallocAllocator, SlabSize, /*SizeThreshold=*/SlabSize,
+                       /*GrowthDelay=*/2>
+      NodeAllocator;
 
   mutable bool DFSInfoValid = false;
   mutable unsigned int SlowQueries = 0;
@@ -922,7 +929,7 @@ public:
     RootNode = nullptr;
     Parent = nullptr;
     DFSInfoValid = false;
-    NodeAllocator.DestroyAll();
+    NodeAllocator.Reset();
     SlowQueries = 0;
   }
 
@@ -931,8 +938,8 @@ protected:
 
   DomTreeNodeBase<NodeT> *createNode(NodeT *BB,
                                      DomTreeNodeBase<NodeT> *IDom = nullptr) {
-    auto *Node =
-        new (NodeAllocator.Allocate()) DomTreeNodeBase<NodeT>(BB, IDom);
+    static_assert(std::is_trivially_destructible_v<DomTreeNodeBase<NodeT>>);
+    auto *Node = new (NodeAllocator) DomTreeNodeBase<NodeT>(BB, IDom);
     unsigned NodeIdx = getNodeIndexForInsert(BB);
     DomTreeNodes[NodeIdx] = Node;
     if (IDom)
