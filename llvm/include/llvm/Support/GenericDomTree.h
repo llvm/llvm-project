@@ -76,16 +76,16 @@ template <class NodeT> class DomTreeNodeBase {
   class const_iterator
       : public iterator_facade_base<const_iterator, std::forward_iterator_tag,
                                     DomTreeNodeBase *> {
-    DomTreeNodeBase *node;
+    DomTreeNodeBase *Node;
 
   public:
-    const_iterator(DomTreeNodeBase *node = nullptr) : node(node) {}
-    bool operator==(const const_iterator &other) const {
-      return other.node == node;
+    const_iterator(DomTreeNodeBase *Node = nullptr) : Node(Node) {}
+    bool operator==(const const_iterator &Other) const {
+      return Other.Node == Node;
     }
-    DomTreeNodeBase *operator*() const { return node; }
+    DomTreeNodeBase *operator*() const { return Node; }
     const_iterator &operator++() {
-      node = node->Sibling;
+      Node = Node->Sibling;
       return *this;
     }
     const_iterator operator++(int) {
