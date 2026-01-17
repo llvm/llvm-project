@@ -19,6 +19,9 @@ public:
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  void emitUsageNotes(const llvm::SmallVector<const DeclRefExpr *, 8> &Uses);
 };
 
 } // namespace clang::tidy::misc

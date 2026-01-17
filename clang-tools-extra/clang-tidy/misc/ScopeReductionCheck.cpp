@@ -250,6 +250,11 @@ void ScopeReductionCheck::check(
         diag(Var->getLocation(),
              "variable '%0' can be declared in a smaller scope")
             << Var->getName();
+
+        emitUsageNotes(Uses);
+
+        diag(InnermostScope->getBeginLoc(), "can be declared in this scope",
+             DiagnosticIDs::Note);
         return;
       }
     }
@@ -307,7 +312,28 @@ void ScopeReductionCheck::check(
     diag(Var->getLocation(),
          "variable '%0' can be declared in for-loop initialization")
         << Var->getName();
-    return;
+
+    // Skip "used here" notes for for-loops, they're too noisy
+    //
+    diag(CommonForLoop->getBeginLoc(), "can be declared in this for-loop",
+         DiagnosticIDs::Note);
+  }
+}
+
+void ScopeReductionCheck::emitUsageNotes(
+    const llvm::SmallVector<const DeclRefExpr *, 8> &Uses) {
+  const size_t MaxUsageNotes = 3;
+  size_t NotesShown = 0;
+  for (const auto *Use : Uses) {
+    if (NotesShown >= MaxUsageNotes)
+      break;
+    diag(Use->getLocation(), "used here", DiagnosticIDs::Note);
+    NotesShown++;
+  }
+  if (Uses.size() > MaxUsageNotes) {
+    diag(Uses[MaxUsageNotes]->getLocation(), "and %0 more uses...",
+         DiagnosticIDs::Note)
+        << (Uses.size() - MaxUsageNotes);
   }
 }
 

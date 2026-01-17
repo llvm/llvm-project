@@ -3,7 +3,9 @@
 // Variable can be moved to smaller scope (if-block)
 void test_if_scope() {
   int x = 42;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'x' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'x' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:13: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
   if (true) {
     int y = x + 1;
   }
@@ -21,7 +23,9 @@ int test_multiple_scopes(int v) {
 // Variable can be moved to nested if-block
 void test_nested_if() {
   int a = 5;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'a' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'a' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:15: note: used here
+  // CHECK-NOTES: :[[@LINE+2]]:15: note: can be declared in this scope
   if (true) {
     if (true) {
       int b = a * 2;
@@ -40,7 +44,10 @@ void test_same_scope() {
 //        loop semantic comprehension and var lifetime analysis.
 void test_while_loop() {
   int counter = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'counter' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'counter' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+4]]:9: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:16: note: can be declared in this scope
   while (true) {
     counter++;
     if (counter > 10) break;
@@ -60,16 +67,19 @@ void test_if_branches(bool condition) {
 // Variable can be moved to for-loop body
 void test_for_loop_body() {
   int temp = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'temp' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'temp' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:32: note: can be declared in this scope
   for (int i = 0; i < 10; i++) {
     temp = i * i;
   }
 }
 
-// Variable used in for-loop expressions - should NOT warn (current limitation)
+// Variable used in for-loop expressions
 void test_for_loop_expressions() {
   int i;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'i' can be declared in for-loop initialization
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'i' can be declared in for-loop initialization
+  // CHECK-NOTES: :[[@LINE+1]]:3: note: can be declared in this for-loop
   for (i = 0; i < 5; i++) {
     // loop body
   }
@@ -78,7 +88,9 @@ void test_for_loop_expressions() {
 // Variable can be moved to switch case
 void test_switch_case(int value) {
   int result = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'result' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'result' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:7: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:18: note: can be declared in this scope
   switch (value) {
     case 1:
       result = 10;
@@ -104,7 +116,9 @@ void test_switch_multiple_cases(int value) {
 // Variable with complex initialization can be moved
 void test_complex_init() {
   int cmplx_expr = (5 + 3) * 2;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'cmplx_expr' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'cmplx_expr' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:19: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
   if (true) {
     int doubled = cmplx_expr * 2;
   }
@@ -113,7 +127,9 @@ void test_complex_init() {
 // Multiple variables, some can be moved, some cannot
 int test_mixed_variables(bool flag) {
   int movable = 10;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'movable' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'movable' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+5]]:17: note: used here
+  // CHECK-NOTES: :[[@LINE+3]]:13: note: can be declared in this scope
   int unmovable = 20; // Should NOT warn - used across scopes
 
   if (flag) {
@@ -127,7 +143,9 @@ int test_mixed_variables(bool flag) {
 // Variable in try-catch block
 void test_try_catch() {
   int error_code = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'error_code' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'error_code' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:7: note: can be declared in this scope
   try {
     error_code = 404;
   } catch (...) {
@@ -148,7 +166,9 @@ void test_try_catch_shared() {
 // Deeply nested scopes
 void test_deep_nesting() {
   int deep = 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'deep' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'deep' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+6]]:24: note: used here
+  // CHECK-NOTES: :[[@LINE+4]]:19: note: can be declared in this scope
   if (true) {
     if (true) {
       if (true) {
@@ -174,7 +194,9 @@ namespace GlobalTestNamespace {
   // Function using global variables - should NOT warn
   void test_global_usage() {
     int local = global_var + namespaced_global;
-    // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: variable 'local' can be declared in a smaller scope
+    // CHECK-NOTES: :[[@LINE-1]]:9: warning: variable 'local' can be declared in a smaller scope
+    // CHECK-NOTES: :[[@LINE+3]]:7: note: used here
+    // CHECK-NOTES: :[[@LINE+1]]:15: note: can be declared in this scope
     if (true) {
       local *= 2;
     }
@@ -230,7 +252,9 @@ void test_function_call() {
 //        Requires more sophisticated analysis.
 void test_for_loop_reuse() {
   int temp = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'temp' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'temp' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:30: note: can be declared in this scope
   for (int i = 0; i<10; i++) {
     temp += i;
   }
@@ -239,7 +263,10 @@ void test_for_loop_reuse() {
 // Variable can be moved closer to lambda usage
 void test_lambda_movable() {
   int local = 5;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'local' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'local' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+5]]:20: note: used here
+  // CHECK-NOTES: :[[@LINE+5]]:14: note: used here
+  // CHECK-NOTES: :[[@LINE+2]]:13: note: can be declared in this scope
 
   if (true) {
     auto lambda = [local]() {
@@ -259,7 +286,10 @@ void test_unused_empty_scope() {
 // Variable used in switch and other scope - should warn if common scope allows
 void test_switch_mixed_usage(int value) {
   int mixed = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'mixed' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'mixed' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+6]]:9: note: used here
+  // CHECK-NOTES: :[[@LINE+8]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
   if (true) {
     switch (value) {
       case 1:
@@ -273,7 +303,9 @@ void test_switch_mixed_usage(int value) {
 // Variable in nested switch - should warn for single case
 void test_nested_switch(int outer, int inner) {
   int nested = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'nested' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'nested' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+6]]:11: note: used here
+  // CHECK-NOTES: :[[@LINE+3]]:22: note: can be declared in this scope
   switch (outer) {
     case 1:
       switch (inner) {
@@ -288,7 +320,9 @@ void test_nested_switch(int outer, int inner) {
 // Variable used in switch default only - should warn
 void test_switch_default_only(int value) {
   int def = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'def' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'def' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+6]]:7: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:18: note: can be declared in this scope
   switch (value) {
     case 1:
       break;
@@ -324,11 +358,68 @@ void test_range_for_declared() {
 // Variable used in range-based for loop - should warn
 void test_range_for_usage() {
   int sum = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'sum' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'sum' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+5]]:7: note: used here
+  // CHECK-NOTES: :[[@LINE+3]]:27: note: can be declared in this scope
   if (true) {
     int vec[] = {1, 2, 3};
     for (auto item : vec) {
       sum += item;
     }
+  }
+}
+
+// Many variable uses - test diagnostic note limiting
+void test_diagnostic_limiting() {
+  int x = 42;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'x' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+6]]:13: note: used here
+  // CHECK-NOTES: :[[@LINE+6]]:13: note: used here
+  // CHECK-NOTES: :[[@LINE+6]]:13: note: used here
+  // CHECK-NOTES: :[[@LINE+6]]:13: note: and 3 more uses...
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int a = x + 1;  // First use
+    int b = x + 2;  // Second use
+    int c = x + 3;  // Third use
+    int d = x + 4;  // Fourth use - should show in overflow note
+    int e = x + 5;  // Fifth use
+    int f = x + 6;  // Sixth use
+  }
+}
+
+// Exactly 3 uses - no overflow message
+void test_exactly_three_uses() {
+  int x = 1;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'x' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+5]]:13: note: used here
+  // CHECK-NOTES: :[[@LINE+5]]:13: note: used here
+  // CHECK-NOTES: :[[@LINE+5]]:13: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int a = x + 1;  // First use
+    int b = x + 2;  // Second use
+    int c = x + 3;  // Third use
+  }
+}
+
+// Fewer than 3 uses - show all
+void test_few_uses() {
+  int x = 1;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'x' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:13: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int a = x + 1;  // First use
+  }
+}
+
+// For-loop case with many uses - test limiting for for-loop diagnostics
+void test_for_loop_limiting() {
+  int i;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'i' can be declared in for-loop initialization
+  // CHECK-NOTES: :[[@LINE+1]]:3: note: can be declared in this for-loop
+  for (i = 0; i < 5; i++) {
+    int temp = i; // Fourth use of i
   }
 }
