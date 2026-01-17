@@ -950,6 +950,37 @@ inline void Foo::neighbor() {}
 )cpp",
           {}},
 
+      // Adjacent definition with `= default`
+      {
+          R"cpp(
+struct Foo {
+  void ignored1();
+  Foo();
+  void fun^c() {}
+  void ignored2();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+Foo::Foo() = default;
+void Foo::ignored2() {}
+)cpp",
+          R"cpp(
+struct Foo {
+  void ignored1();
+  Foo();
+  void func() ;
+  void ignored2();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+Foo::Foo() = default;void Foo::func() {}
+
+void Foo::ignored2() {}
+)cpp"},
   };
 
   for (const auto &Case : Cases) {
