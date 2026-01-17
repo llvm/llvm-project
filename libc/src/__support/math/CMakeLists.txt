@@ -1133,7 +1133,6 @@ add_header_library(
     libc.src.__support.math.range_reduction_double
     libc.src.__support.math.sincos_eval
     libc.src.__support.macros.optimization
-
 )
 
 add_header_library(

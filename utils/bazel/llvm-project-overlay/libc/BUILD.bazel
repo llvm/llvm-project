@@ -2690,16 +2690,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_fsqrtf128",
-    hdrs = ["src/__support/math/fsqrtf128.h"],
-    deps = [
-        ":__support_common",
-        ":__support_fputil_sqrt",
-        ":__support_macros_config",
-    ],
-)
-
-libc_support_library(
     name = "__support_math_exp10m1f",
     hdrs = ["src/__support/math/exp10m1f.h"],
     deps = [
@@ -2828,6 +2818,16 @@ libc_support_library(
     hdrs = ["src/__support/math/fsqrt.h"],
     deps = [
         ":__support_fputil_sqrt",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fsqrtf128",
+    hdrs = ["src/__support/math/fsqrtf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
     ],
 )
 
