@@ -9084,8 +9084,83 @@ bool CodeGenPrepare::makeBitReverse(Instruction &I) {
 // In this pass we look for GEP and cast instructions that are used
 // across basic blocks and rewrite them to improve basic-block-at-a-time
 // selection.
+// Converts switch(ucmp(x,y)) into direct branches to avoid materializing the
+// -1/0/1 value.
+static bool optimizeSwitchOnCompare(SwitchInst *SI, Function &F,
+                                    const TargetTransformInfo &TTI) {
+  Value *Cond = SI->getCondition();
+  auto *II = dyn_cast<IntrinsicInst>(Cond);
+  if (!II || (II->getIntrinsicID() != Intrinsic::ucmp &&
+              II->getIntrinsicID() != Intrinsic::scmp))
+    return false;
+
+  bool IsSigned = II->getIntrinsicID() == Intrinsic::scmp;
+  Value *LHS = II->getOperand(0);
+  Value *RHS = II->getOperand(1);
+
+  // 1. Map Targets (-1 -> Less, 0 -> Equal, 1 -> Greater)
+  BasicBlock *DestLess = SI->getDefaultDest();
+  BasicBlock *DestEqual = SI->getDefaultDest();
+  BasicBlock *DestGreater = SI->getDefaultDest();
+
+  for (auto Case : SI->cases()) {
+    int64_t Val = Case.getCaseValue()->getSExtValue();
+    if (Val == -1)
+      DestLess = Case.getCaseSuccessor();
+    else if (Val == 0)
+      DestEqual = Case.getCaseSuccessor();
+    else if (Val == 1)
+      DestGreater = Case.getCaseSuccessor();
+  }
+  BasicBlock *HeadBB = SI->getParent();
+  LLVMContext &Ctx = F.getContext();
+
+  // Create the intermediate block
+  BasicBlock *CheckEqBB = BasicBlock::Create(Ctx, "check.eq", &F);
+  // Insert it after HeadBB for readability
+  CheckEqBB->moveAfter(HeadBB);
+
+  // Compare Less
+  IRBuilder<> Builder(SI);
+  CmpInst::Predicate PredLess =
+      IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+  Value *CmpLess = Builder.CreateICmp(PredLess, LHS, RHS, "cmp.less");
+
+  // Replace Switch with Branch
+  BranchInst::Create(DestLess, CheckEqBB, CmpLess, HeadBB);
+  SI->eraseFromParent();
+
+  // Compare Equal
+  Builder.SetInsertPoint(CheckEqBB);
+  Value *CmpEq = Builder.CreateICmp(ICmpInst::ICMP_EQ, LHS, RHS, "cmp.eq");
+  BranchInst::Create(DestEqual, DestGreater, CmpEq, CheckEqBB);
+
+  auto UpdatePhis = [&](BasicBlock *Dest) {
+    if (Dest == DestLess)
+      return; 
+    for (PHINode &PN : Dest->phis()) {
+      int Idx = PN.getBasicBlockIndex(HeadBB);
+      if (Idx != -1)
+        PN.setIncomingBlock(Idx, CheckEqBB);
+    }
+  };
+
+  UpdatePhis(DestEqual);
+  UpdatePhis(DestGreater);
+
+  return true;
+}
+
 bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, ModifyDT &ModifiedDT) {
   SunkAddrs.clear();
+  
+  if (auto *SI = dyn_cast<SwitchInst>(BB.getTerminator())) {
+    if (optimizeSwitchOnCompare(SI, *BB.getParent(), *TTI)) {
+      ModifiedDT = ModifyDT::ModifyInstDT;
+      return true;
+    }
+  }
+
   bool MadeChange = false;
 
   do {
