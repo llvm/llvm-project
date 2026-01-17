@@ -92,12 +92,14 @@ BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       UnsafeMode(Options.get("UnsafeMode", false)),
-      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", false)),
+      StrictMode(Options.get("StrictMode", true)) {}
 
 void BoolBitwiseOperationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "UnsafeMode", UnsafeMode);
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+  Options.store(Opts, "StrictMode", StrictMode);
 }
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
@@ -152,11 +154,16 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
            << translate(BinOp->getOpcodeStr()) << BinOp->getOpcodeStr();
   };
 
+  auto DiagEmitterForStrictMode = [&] {
+    if (StrictMode)
+      DiagEmitter();
+  };
+
   // Helper lambda to check if location is valid and not in a macro
   auto IsValidLocation = [&](SourceLocation Loc) -> bool {
     if (Loc.isInvalid() || Loc.isMacroID()) {
       if (!IgnoreMacros)
-        DiagEmitter();
+        DiagEmitterForStrictMode();
       return false;
     }
     return true;
@@ -170,7 +177,7 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
             .isVolatileQualified();
       });
   if (HasVolatileOperand) {
-    DiagEmitter();
+    DiagEmitterForStrictMode();
     return;
   }
 
@@ -178,7 +185,7 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
   const bool HasSideEffects = BinOp->getRHS()->HasSideEffects(
     Ctx, /*IncludePossibleEffects=*/!UnsafeMode);
   if (HasSideEffects) {
-    DiagEmitter();
+    DiagEmitterForStrictMode();
     return;
   }
 
@@ -195,14 +202,14 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
   const CharSourceRange TokenRange = CharSourceRange::getTokenRange(OpLoc);
   if (TokenRange.isInvalid()) {
     if (!IgnoreMacros)
-      DiagEmitter();
+      DiagEmitterForStrictMode();
     return;
   }
 
   const StringRef FixSpelling =
       translate(Lexer::getSourceText(TokenRange, SM, Ctx.getLangOpts()));
   if (FixSpelling.empty()) {
-    DiagEmitter();
+    DiagEmitterForStrictMode();
     return;
   }
 
@@ -213,7 +220,7 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
   if (BinOp->isCompoundAssignmentOp()) {
     const auto *LHS = getAcceptableCompoundsLHS(BinOp);
     if (!LHS) {
-      DiagEmitter();
+      DiagEmitterForStrictMode();
       return;
     }
 

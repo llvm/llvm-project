@@ -36,6 +36,7 @@ public:
 private:
   bool UnsafeMode;
   bool IgnoreMacros;
+  bool StrictMode;
 };
 
 } // namespace clang::tidy::misc

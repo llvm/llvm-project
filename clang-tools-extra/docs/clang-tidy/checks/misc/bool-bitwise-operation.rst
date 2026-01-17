@@ -74,3 +74,10 @@ Options
 
     Don't warn if a macro inside the expression body prevents replacing a
     bitwise operator with a logical one. Default value is `false`.
+
+.. option:: StrictMode
+
+    When enabled, show warnings even when fix-it hints cannot be generated
+    (e.g., for volatile operands or expressions with side effects). When
+    disabled, only show warnings when fix-it hints are available. Default
+    value is `true`.
