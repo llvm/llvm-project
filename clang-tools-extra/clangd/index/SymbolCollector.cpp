@@ -603,6 +603,12 @@ bool SymbolCollector::handleDeclOccurrence(
   assert(ASTCtx && PP && HeaderFileURIs);
   assert(CompletionAllocator && CompletionTUInfo);
   assert(ASTNode.OrigD);
+  const NamedDecl *NOD = dyn_cast<NamedDecl>(ASTNode.OrigD);
+  std::string NameOD = "";
+  if (NOD){
+    NameOD = printName(*ASTCtx, *NOD);
+    NameOD += printTemplateSpecializationArgs(*NOD);
+  }
   // Indexing API puts canonical decl into D, which might not have a valid
   // source location for implicit/built-in decls. Fallback to original decl in
   // such cases.
@@ -896,9 +902,12 @@ void SymbolCollector::processRelations(
     //       in the index and find nothing, but that's a situation they
     //       probably need to handle for other reasons anyways.
     // We currently do (B) because it's simpler.
-    if (*RKind == RelationKind::BaseOf)
+    if (*RKind == RelationKind::BaseOf) {
+      std::string SubjectName = printName(*ASTCtx, ND) + printTemplateSpecializationArgs(ND);
+      const auto *Sym = Symbols.find(ObjectID);
+      std::string ObjectName = (Sym->Scope + Sym->Name + Sym->TemplateSpecializationArgs).str();
       this->Relations.insert({ID, *RKind, ObjectID});
-    else if (*RKind == RelationKind::OverriddenBy)
+    } else if (*RKind == RelationKind::OverriddenBy)
       this->Relations.insert({ObjectID, *RKind, ID});
   }
 }

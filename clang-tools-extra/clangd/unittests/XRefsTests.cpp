@@ -1958,6 +1958,26 @@ TEST(FindImplementations, InheritanceObjC) {
                                        Code.range("protocolDef"))));
 }
 
+TEST(FindImplementations, InheritanceRecursive) {
+  Annotations Main(R"cpp(
+    template <typename... T>
+    struct Inherit : T... {};
+
+    struct Al$Alpha^pha {};
+
+    struct $Impl1[[impl]]: Inherit<Alpha> {};
+  )cpp");
+
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  EXPECT_THAT(
+      findImplementations(AST, Main.point("Alpha"), Index.get()),
+      ElementsAre(sym("impl", Main.range("Impl1"), Main.range("Impl1"))));
+}
+
 TEST(FindImplementations, CaptureDefinition) {
   llvm::StringRef Test = R"cpp(
     struct Base {

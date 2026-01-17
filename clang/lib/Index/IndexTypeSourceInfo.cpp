@@ -10,6 +10,7 @@
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -192,6 +193,14 @@ public:
 
     return true;
   }
+
+  // bool TraverseSubstTemplateTypeParmTypeLoc(SubstTemplateTypeParmTypeLoc TL,
+  //                                           bool TraverseQualifier) {
+  //   auto Type = TL.getAs<TemplateSpecializationTypeLoc>();
+  //   if (!Type.isNull())
+  //     TraverseTemplateSpecializationTypeLoc(Type, TraverseQualifier);
+  //   return true;
+  // }
 
   bool VisitDeducedTemplateSpecializationTypeLoc(DeducedTemplateSpecializationTypeLoc TL) {
     auto *T = TL.getTypePtr();

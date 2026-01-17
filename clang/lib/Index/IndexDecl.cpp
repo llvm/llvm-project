@@ -14,6 +14,7 @@
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
+#include "llvm/Support/Casting.h"
 
 using namespace clang;
 using namespace index;
@@ -734,7 +735,37 @@ public:
       indexTemplateParameters(Params, Parent);
     }
 
-    return Visit(Parent);
+    bool shouldContinue = Visit(Parent);
+    if (!shouldContinue)
+      return false;
+
+    // TODO: cleanup maybe, so far copy paste from
+    // RecursiveASTVisitor::TraverseTemplateInstantiation, we have technically
+    // `shouldIndexImplicitInstantiation()` available here, but the logic is
+    // different and I am confused.
+    if (const auto *CTD = llvm::dyn_cast<ClassTemplateDecl>(D))
+      for (auto *SD : CTD->specializations())
+        for (auto *RD : SD->redecls()) {
+          assert(!cast<CXXRecordDecl>(RD)->isInjectedClassName());
+          switch (cast<ClassTemplateSpecializationDecl>(RD)
+                      ->getSpecializationKind()) {
+          // Visit the implicit instantiations with the requested pattern.
+          case TSK_Undeclared:
+          case TSK_ImplicitInstantiation:
+            Visit(RD);
+            break;
+
+          // We don't need to do anything on an explicit instantiation
+          // or explicit specialization because there will be an explicit
+          // node for it elsewhere.
+          case TSK_ExplicitInstantiationDeclaration:
+          case TSK_ExplicitInstantiationDefinition:
+          case TSK_ExplicitSpecialization:
+            break;
+          }
+        }
+
+    return true;
   }
 
   bool VisitConceptDecl(const ConceptDecl *D) {
