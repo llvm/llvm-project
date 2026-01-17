@@ -10,12 +10,8 @@
 CONSTATTR half
 MATH_MANGLE(pred)(half x)
 {
-    short ix = AS_SHORT(x);
-    short mx = (short)SIGNBIT_HP16 - ix;
-    mx = ix < (short)0 ? mx : ix;
-    short t = mx - (short)(x != NINF_F16 && !BUILTIN_ISNAN_F16(x));
-    short r = (short)SIGNBIT_HP16 - t;
-    r = t < (short)0 ? r : t;
-    return AS_HALF(r);
+    short ix = AS_SHORT(x) + (x > 0.0h ? (short)-1 : (short)1);
+    half y = x == 0.0h ? -0x1p-24h : AS_HALF(ix);
+    return BUILTIN_ISNAN_F16(x) || x == NINF_F16 ? x : y;
 }
 

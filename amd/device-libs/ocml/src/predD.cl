@@ -10,12 +10,8 @@
 CONSTATTR double
 MATH_MANGLE(pred)(double x)
 {
-    long ix = AS_LONG(x);
-    long mx = SIGNBIT_DP64 - ix;
-    mx = ix < 0 ? mx : ix;
-    long t = mx - (x != NINF_F64 && !BUILTIN_ISNAN_F64(x));
-    long r = SIGNBIT_DP64 - t;
-    r = t < 0 ? r : t;
-    return AS_DOUBLE(r);
+    long ix = AS_LONG(x) + (x > 0.0 ? -1L : 1L);
+    double y = x == 0.0 ? -0x1p-1074 : AS_DOUBLE(ix);
+    return BUILTIN_ISNAN_F64(x) || x == NINF_F64 ? x : y;
 }
 
