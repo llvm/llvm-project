@@ -94,7 +94,7 @@
 ; GCN-O0-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O0-NEXT:      DummyCGSCCPass
 ; GCN-O0-NEXT:      FunctionPass Manager
-; GCN-O0-NEXT:        Convert inline asm "rm" insts for fast register allocation
+; GCN-O0-NEXT:        Prepare inline asm insts for fast register allocation
 ; GCN-O0-NEXT:        Prepare callbr
 ; GCN-O0-NEXT:        Safe Stack instrumentation pass
 ; GCN-O0-NEXT:        Insert stack protectors

@@ -44,7 +44,7 @@
 ; SPIRV-O0-NEXT:    SPIRV emit intrinsics
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIRV legalize bitcast pass
-; SPIRV-O0-NEXT:      Convert inline asm "rm" insts for fast register allocation
+; SPIRV-O0-NEXT:      Prepare inline asm insts for fast register allocation
 ; SPIRV-O0-NEXT:      Prepare callbr
 ; SPIRV-O0-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-O0-NEXT:      Insert stack protectors

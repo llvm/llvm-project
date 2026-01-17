@@ -33,7 +33,7 @@
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       AArch64 Stack Tagging
 ; CHECK-NEXT:       Exception handling preparation
-; CHECK-NEXT:       Convert inline asm "rm" insts for fast register allocation
+; CHECK-NEXT:       Prepare inline asm insts for fast register allocation
 ; CHECK-NEXT:       Prepare callbr
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
