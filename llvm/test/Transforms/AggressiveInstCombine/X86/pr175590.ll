@@ -22,7 +22,7 @@ entry:
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
-  %RMSD.0 = phi double [ 0.000000e+00, %entry ], [ %0, %for.body ]
+  %RMSD.0 = phi double [ 0.000000e+00, %entry ], [ %fmacall, %for.body ]
   %cmp = phi i1 [ true, %entry ], [ false, %for.body ]
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
@@ -32,7 +32,7 @@ for.cond.cleanup:                                 ; preds = %for.cond
 
 for.body:                                         ; preds = %for.cond
   %sub = fsub double %distmat1_, %distmat2_
-  %0 = call double @llvm.fmuladd.f64(double %sub, double %sub, double %RMSD.0)
+  %fmacall = call double @llvm.fmuladd.f64(double %sub, double %sub, double %RMSD.0)
   br label %for.cond
 }
 
@@ -62,7 +62,7 @@ entry:
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
-  %RMSD.0 = phi double [ 0.000000e+00, %entry ], [ %0, %for.body ]
+  %RMSD.0 = phi double [ 0.000000e+00, %entry ], [ %fmacall, %for.body ]
   %cmp = phi i1 [ true, %entry ], [ false, %for.body ]
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
@@ -73,6 +73,6 @@ for.cond.cleanup:                                 ; preds = %for.cond
 for.body:                                         ; preds = %for.cond
   %sub = fsub double %distmat1_, %distmat2_
   %add = fadd double %distmat1_, %distmat2_
-  %0 = call double @llvm.fmuladd.f64(double %sub, double %add, double %RMSD.0)
+  %fmacall = call double @llvm.fmuladd.f64(double %sub, double %add, double %RMSD.0)
   br label %for.cond
 }
