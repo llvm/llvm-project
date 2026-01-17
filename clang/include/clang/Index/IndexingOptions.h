@@ -27,7 +27,7 @@ struct IndexingOptions {
   SystemSymbolFilterKind SystemSymbolFilter =
       SystemSymbolFilterKind::DeclarationsOnly;
   bool IndexFunctionLocals = false;
-  bool IndexImplicitInstantiation = false;
+  bool IndexImplicitInstantiation = true;
   bool IndexMacros = true;
   // Whether to index macro definitions in the Preprocessor when preprocessor
   // callback is not available (e.g. after parsing has finished). Note that
