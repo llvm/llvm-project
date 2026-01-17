@@ -111,7 +111,7 @@ define i1 @trunc1_ptrtoint(ptr %ptr) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[PTR]], align 2
 ; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[INT]] to i1
-; CHECK-NEXT:    ret i1 [[TRUNC]]
+; CHECK-NEXT:    ret i1 false
 ;
   %load = load i16, ptr %ptr, align 2
   %int = ptrtoint ptr %ptr to i64
@@ -139,7 +139,7 @@ define i4 @trunc4_ptrtoint(ptr %ptr) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PTR]], align 16
 ; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[INT]] to i4
-; CHECK-NEXT:    ret i4 [[TRUNC]]
+; CHECK-NEXT:    ret i4 0
 ;
   %load = load i32, ptr %ptr, align 16
   %int = ptrtoint ptr %ptr to i64
@@ -153,7 +153,7 @@ define i1 @trunc1_ptrtoaddr(ptr %ptr) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[PTR]], align 2
 ; CHECK-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[INT]] to i1
-; CHECK-NEXT:    ret i1 [[TRUNC]]
+; CHECK-NEXT:    ret i1 false
 ;
   %load = load i16, ptr %ptr, align 2
   %int = ptrtoaddr ptr %ptr to i64
