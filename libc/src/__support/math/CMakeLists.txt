@@ -944,6 +944,19 @@ add_header_library(
 )
 
 add_header_library(
+  hypotf
+  HDRS
+    hypotf.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   range_reduction_double
   HDRS
     range_reduction_double_common.h
