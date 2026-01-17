@@ -1083,21 +1083,21 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
   if (Op == BO_Add) {
     if (!this->emitAddOffset(OffsetType, E))
       return false;
-
-    if (classifyPrim(E) != PT_Ptr)
-      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
-    return true;
-  }
-  if (Op == BO_Sub) {
+  } else if (Op == BO_Sub) {
     if (!this->emitSubOffset(OffsetType, E))
       return false;
-
-    if (classifyPrim(E) != PT_Ptr)
-      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
-    return true;
+  } else {
+    return false;
   }
 
-  return false;
+  if (classifyPrim(E) != PT_Ptr) {
+    if (!this->emitDecayPtr(PT_Ptr, classifyPrim(E), E))
+      return false;
+  }
+
+  if (DiscardResult)
+    return this->emitPop(classifyPrim(E), E);
+  return true;
 }
 
 template <class Emitter>
