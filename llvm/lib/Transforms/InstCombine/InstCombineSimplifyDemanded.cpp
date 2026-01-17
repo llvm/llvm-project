@@ -3075,9 +3075,10 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       KnownFPClass KnownLHS = computeKnownFPClass(
           CI->getArgOperand(0), DemandedMask, CxtI, Depth + 1);
 
-      return simplifyDemandedFPClassMinMax(
-          Known, IID, CI, DemandedMask, KnownLHS, KnownRHS, F,
-          cast<FPMathOperator>(CI)->hasNoSignedZeros());
+      // Cannot use NSZ in the multiple use case.
+      return simplifyDemandedFPClassMinMax(Known, IID, CI, DemandedMask,
+                                           KnownLHS, KnownRHS, F,
+                                           /*NSZ=*/false);
     }
     default:
       break;
