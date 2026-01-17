@@ -1304,6 +1304,16 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
 endif()
 
+if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Clang requires this flag in order for precompiled headers to work with ccache
+    append("-Xclang -fno-pch-timestamp" CMAKE_CXX_FLAGS)
+  elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # GCC requires this flag in order for precompiled headers to work with ccache
+    append("-fpch-preprocess" CMAKE_CXX_FLAGS)
+  endif()
+endif()
+
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")
 
 if(LLVM_ENABLE_LTO AND WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)

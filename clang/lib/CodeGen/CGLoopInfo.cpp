@@ -18,8 +18,10 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include <optional>
-using namespace clang::CodeGen;
 using namespace llvm;
+
+// No using namespace to avoid collision with llvm::LoopInfo.
+namespace clang::CodeGen {
 
 MDNode *
 LoopInfo::createFollowupMetadata(const char *FollowupName,
@@ -863,3 +865,4 @@ void LoopInfoStack::InsertHelper(Instruction *I) const {
     return;
   }
 }
+} // end namespace clang::CodeGen
