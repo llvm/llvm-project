@@ -75,8 +75,9 @@ define i32 @test5(i32 %A) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    suba.l #12, %sp
+; CHECK-NEXT:    move.l (16,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    move.l #1577682821, (4,%sp)
-; CHECK-NEXT:    move.l (16,%sp), (%sp)
 ; CHECK-NEXT:    jsr __udivsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
@@ -112,8 +113,9 @@ define i32 @test7(i32 %x) nounwind {
 ; CHECK-LABEL: test7:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    suba.l #12, %sp
+; CHECK-NEXT:    move.l (16,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    move.l #28, (4,%sp)
-; CHECK-NEXT:    move.l (16,%sp), (%sp)
 ; CHECK-NEXT:    jsr __udivsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
@@ -176,8 +178,9 @@ define i32 @testsize2(i32 %x) minsize nounwind {
 ; CHECK-LABEL: testsize2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #12, %sp
+; CHECK-NEXT:    move.l (16,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    move.l #33, (4,%sp)
-; CHECK-NEXT:    move.l (16,%sp), (%sp)
 ; CHECK-NEXT:    jsr __divsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
@@ -201,8 +204,9 @@ define i32 @testsize4(i32 %x) minsize nounwind {
 ; CHECK-LABEL: testsize4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #12, %sp
+; CHECK-NEXT:    move.l (16,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    move.l #33, (4,%sp)
-; CHECK-NEXT:    move.l (16,%sp), (%sp)
 ; CHECK-NEXT:    jsr __udivsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts

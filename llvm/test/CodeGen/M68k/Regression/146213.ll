@@ -3,10 +3,10 @@
 
 ; In this bug, we can see that a chain was generated that started from an ADJCALLSTACKUP
 ; (lowered callseq_end for fmul) and crossed over to join the unrelated chain going through
-; the ADJCALLSTACKUP/DOWN for @double_arg. This resulted in an assertion firing during 
+; the ADJCALLSTACKUP/DOWN for @double_arg. This resulted in an assertion firing during
 ; scheduling, as the ADJCALLSTACKDOWN nodes do not depend on each other. This meant that
 ; two ADJCALLSTACKUP (lowered callseq_end) nodes were encountered for the chain branch for
-; @double_arg, but only one ADJCALLSTACKDOWN would be present as they did not depend on 
+; @double_arg, but only one ADJCALLSTACKDOWN would be present as they did not depend on
 ; each other.
 
 declare float @float_arg(float)
@@ -21,7 +21,8 @@ define float @float_arg_test(ptr %inout) nounwind {
 ; CHECK-NEXT:    move.l #0, (%sp)
 ; CHECK-NEXT:    jsr float_arg
 ; CHECK-NEXT:    move.l (16,%sp), %a2
-; CHECK-NEXT:    move.l (%a2), (%sp)
+; CHECK-NEXT:    move.l (%a2), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    move.l #0, (4,%sp)
 ; CHECK-NEXT:    jsr __mulsf3
 ; CHECK-NEXT:    move.l %d0, (%a2)
@@ -47,7 +48,8 @@ define float @double_arg_test(ptr %inout) nounwind {
 ; CHECK-NEXT:    move.l #0, (%sp)
 ; CHECK-NEXT:    jsr double_arg
 ; CHECK-NEXT:    move.l (16,%sp), %a2
-; CHECK-NEXT:    move.l (%a2), (%sp)
+; CHECK-NEXT:    move.l (%a2), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    move.l #0, (4,%sp)
 ; CHECK-NEXT:    jsr __mulsf3
 ; CHECK-NEXT:    move.l %d0, (%a2)
