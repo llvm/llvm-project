@@ -122,6 +122,22 @@ void bad_side_effects() {
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 }
 
+void bad_pointers() {
+    bool pointee = false;
+    bool* a = &pointee;
+    bool* b = &pointee;
+    *a bitor *b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: *a or *b;
+    *a bitand *b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: *a and *b;
+
+    // FIXME: implement fixit for these 2 cases
+    // *a or_eq *b;
+    // *a and_eq *b;
+}
+
 void bad_side_effects_volatile() {
     bool a = true;
     volatile bool b = false;
@@ -150,6 +166,71 @@ void bad_side_effects_volatile() {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES: :[[@LINE-2]]:15: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a or c bitor b;
+}
+
+void bad_side_effects_volatile_typedef() {
+    using volatile_bool_t = volatile bool;
+    bool a = true;
+    volatile_bool_t b = false;
+    bool c = true;
+
+    a bitor b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    a bitand b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    a or_eq b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    a and_eq b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    (a bitor c) bitor b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:17: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: (a or c) bitor b;
+
+    a bitor c bitor b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:15: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: a or c bitor b;
+}
+
+void bad_side_effects_volatile_typedef_pointers() {
+    using volatile_bool_t = volatile bool;
+    bool pointee = false;
+    volatile_bool_t* a = &pointee;
+    volatile_bool_t* b = &pointee;
+    *a bitor *b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    *a bitand *b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    // FIXME: implement fixit for these 2 cases
+    // *a or_eq *b;
+    // *a and_eq *b;
+}
+
+void bad_side_effects_volatile_typedef_pointers_2() {
+    using volatile_bool_t = volatile bool*;
+    bool pointee = false;
+    volatile_bool_t a = &pointee;
+    volatile_bool_t b = &pointee;
+    *a bitor *b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    *a bitand *b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    // FIXME: implement fixit for these 2 cases
+    // *a or_eq *b;
+    // *a and_eq *b;
 }
 
 void bad_with_priors() {

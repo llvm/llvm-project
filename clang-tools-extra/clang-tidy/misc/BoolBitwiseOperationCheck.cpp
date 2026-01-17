@@ -157,7 +157,6 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
       std::array{BinOp->getLHS(), BinOp->getRHS()}, [&](const Expr *E) {
         return E->IgnoreImpCasts()
             ->getType()
-            .getDesugaredType(Ctx)
             .isVolatileQualified();
       });
   if (HasVolatileOperand) {
