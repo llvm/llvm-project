@@ -10,8 +10,6 @@
 #include "clang/Analysis/Scalable/TUSummary/ExtractorRegistry.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
 #include <memory>
