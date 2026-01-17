@@ -48,16 +48,17 @@ static const Expr *getAcceptableCompoundsLHS(const BinaryOperator *BinOp) {
   return isa<DeclRefExpr, MemberExpr>(LHS) ? LHS : nullptr;
 }
 
-/// Checks if all leaf nodes in an bitwise expression satisfy a given condition. This
-/// handles cases like `(a | b) & c` where we need to check that a, b, and c
-/// all satisfy the condition.
+/// Checks if all leaf nodes in an bitwise expression satisfy a given condition.
+/// This handles cases like `(a | b) & c` where we need to check that a, b, and
+/// c all satisfy the condition.
 ///
 /// \param Expr The bitwise expression to check.
 /// \param Condition A function that checks if an leaf node satisfies the
 ///                  desired condition.
 /// \returns true if all leaf nodes satisfy the condition, false otherwise.
 template <typename F>
-static bool allLeavesOfBitwiseSatisfy(const clang::Expr *Expr, const F& Condition) {
+static bool allLeavesOfBitwiseSatisfy(const clang::Expr *Expr,
+                                      const F &Condition) {
   // For leaf nodes, check if the condition is satisfied
   if (Condition(Expr))
     return true;
@@ -69,14 +70,15 @@ static bool allLeavesOfBitwiseSatisfy(const clang::Expr *Expr, const F& Conditio
     if (!isBitwiseOperation(BinOp->getOpcodeStr()))
       return false;
     return allLeavesOfBitwiseSatisfy(BinOp->getLHS(), Condition) &&
-            allLeavesOfBitwiseSatisfy(BinOp->getRHS(), Condition);
+           allLeavesOfBitwiseSatisfy(BinOp->getRHS(), Condition);
   }
 
   return false;
 }
 
-/// Custom matcher that checks if all leaf nodes in an bitwise expression satisfy
-/// the given inner matcher condition. This uses allLeavesOfBitwiseSatisfy to recursively
+/// Custom matcher that checks if all leaf nodes in an bitwise expression
+/// satisfy the given inner matcher condition. This uses
+/// allLeavesOfBitwiseSatisfy to recursively
 ///
 /// Example usage:
 ///   expr(hasAllLeavesOfBitwiseSatisfying(hasType(booleanType())))
@@ -125,19 +127,18 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   auto AtLeastOneBoolean = anyOf(hasLHS(BooleanLeaves), hasRHS(BooleanLeaves));
 
   // Matcher for binop that doesn't need ICE context
-  auto BinOpNoContext = traverse(
-      TK_IgnoreUnlessSpelledInSource,
-      binaryOperator(NotNestedInBitwise, BitwiseOps, OptionalParent,
-                     NoContextNeeded)
-          .bind("binOpRoot"));
+  auto BinOpNoContext = traverse(TK_IgnoreUnlessSpelledInSource,
+                                 binaryOperator(NotNestedInBitwise, BitwiseOps,
+                                                OptionalParent, NoContextNeeded)
+                                     .bind("binOpRoot"));
 
   // Matcher for binop that needs ICE context (at least one boolean operand,
   // but not already covered by NoContextNeeded)
-  auto BinOpNeedsContext = traverse(
-      TK_IgnoreUnlessSpelledInSource,
-      binaryOperator(NotNestedInBitwise, BitwiseOps, OptionalParent,
-                     AtLeastOneBoolean, unless(NoContextNeeded))
-          .bind("binOpRoot"));
+  auto BinOpNeedsContext =
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               binaryOperator(NotNestedInBitwise, BitwiseOps, OptionalParent,
+                              AtLeastOneBoolean, unless(NoContextNeeded))
+                   .bind("binOpRoot"));
   auto BooleanICE =
       implicitCastExpr(hasType(booleanType()), has(BinOpNeedsContext));
 
@@ -172,9 +173,7 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
   // Early validation: check for volatile operands
   const bool HasVolatileOperand = llvm::any_of(
       std::array{BinOp->getLHS(), BinOp->getRHS()}, [&](const Expr *E) {
-        return E->IgnoreImpCasts()
-            ->getType()
-            .isVolatileQualified();
+        return E->IgnoreImpCasts()->getType().isVolatileQualified();
       });
   if (HasVolatileOperand) {
     DiagEmitterForStrictMode();
@@ -183,7 +182,7 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 
   // Early validation: check for side effects
   const bool HasSideEffects = BinOp->getRHS()->HasSideEffects(
-    Ctx, /*IncludePossibleEffects=*/!UnsafeMode);
+      Ctx, /*IncludePossibleEffects=*/!UnsafeMode);
   if (HasSideEffects) {
     DiagEmitterForStrictMode();
     return;
@@ -213,7 +212,8 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     return;
   }
 
-  FixItHint ReplaceOpHint = FixItHint::CreateReplacement(TokenRange, FixSpelling);
+  FixItHint ReplaceOpHint =
+      FixItHint::CreateReplacement(TokenRange, FixSpelling);
 
   // Generate fix-it hint for compound assignment (if applicable)
   FixItHint InsertEqualHint;
@@ -257,7 +257,8 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
   }
 
   if (!SurroundedExpr) {
-    const auto *RHS = dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts());
+    const auto *RHS =
+        dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts());
     if (RHS && BinOp->getOpcode() == BO_AndAssign && RHS->getOpcode() == BO_LOr)
       SurroundedExpr = RHS;
   }
