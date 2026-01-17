@@ -3144,6 +3144,51 @@ completionChunkKindMap = {
 
 
 class CompletionString(ClangObject):
+    # AvailabilityKindCompat is an exact copy of AvailabilityKind, except for __str__.
+    # This is a temporary measure to keep the string representation the same
+    # until we change CompletionString.availability to return AvailabilityKind,
+    # like Cursor.availability does.
+    # Note that deriving from AvailabilityKind directly is not possible.
+    class AvailabilityKindCompat(BaseEnumeration):
+        """
+        Describes the availability of an entity.
+        It is deprecated in favor of AvailabilityKind.
+        """
+
+        # Ensure AvailabilityKindCompat is comparable with AvailabilityKind
+        def __eq__(self, other: object) -> bool:
+            if isinstance(other, (AvailabilityKind, CompletionString.AvailabilityKindCompat)):
+                return self.value == other.value
+            else:
+                return NotImplemented
+
+        def __str__(self) -> str:
+            """
+            Converts enum value to string in the old camelCase format.
+            This is a temporary measure that will be changed in the future release
+            to return string in ALL_CAPS format, like for other enums.
+            """
+
+            warnings.warn(
+                "String representation of 'CompletionString.availability' will be "
+                "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
+                "match other enums. 'CompletionString.availability' can be "
+                "compared to 'AvailabilityKind' directly, "
+                "without conversion to string.",
+                DeprecationWarning,
+            )
+            # Remove underscores
+            components = self.name.split("_")
+            # Upper-camel case each split component
+            components = [component.lower().capitalize() for component in components]
+            return "".join(components)
+
+        AVAILABLE = 0
+        DEPRECATED = 1
+        NOT_AVAILABLE = 2
+        NOT_ACCESSIBLE = 3
+
+
     def __len__(self) -> int:
         return self.num_chunks
 
@@ -3170,7 +3215,7 @@ class CompletionString(ClangObject):
     @property
     def availability(self) -> AvailabilityKindCompat:
         res = conf.lib.clang_getCompletionAvailability(self.obj)
-        return AvailabilityKindCompat.from_id(res)
+        return CompletionString.AvailabilityKindCompat.from_id(res)
 
     @property
     def briefComment(self) -> str:
@@ -3186,50 +3231,6 @@ class CompletionString(ClangObject):
             + " || Brief comment: "
             + str(self.briefComment)
         )
-
-# AvailabilityKindCompat is an exact copy of AvailabilityKind, except for __str__.
-# This is a temporary measure to keep the string representation the same
-# until we change CompletionString.availability to return AvailabilityKind,
-# like Cursor.availability does.
-# Note that deriving from AvailabilityKind directly is not possible.
-class AvailabilityKindCompat(BaseEnumeration):
-    """
-    Describes the availability of an entity.
-    It is deprecated in favor of AvailabilityKind.
-    """
-
-    # Ensure AvailabilityKindCompat is comparable with AvailabilityKind
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, (AvailabilityKind, AvailabilityKindCompat)):
-            return self.value == other.value
-        else:
-            return NotImplemented
-
-    def __str__(self) -> str:
-        """
-        Converts enum value to string in the old camelCase format.
-        This is a temporary measure that will be changed in the future release
-        to return string in ALL_CAPS format, like for other enums.
-        """
-
-        warnings.warn(
-            "String representation of 'CompletionString.availability' will be "
-            "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
-            "match other enums. 'CompletionString.availability' can be "
-            "compared to 'AvailabilityKind' directly, "
-            "without conversion to string.",
-            DeprecationWarning,
-        )
-        # Remove underscores
-        components = self.name.split("_")
-        # Upper-camel case each split component
-        components = [component.lower().capitalize() for component in components]
-        return "".join(components)
-
-    AVAILABLE = 0
-    DEPRECATED = 1
-    NOT_AVAILABLE = 2
-    NOT_ACCESSIBLE = 3
 
 
 class CodeCompletionResult(Structure):
