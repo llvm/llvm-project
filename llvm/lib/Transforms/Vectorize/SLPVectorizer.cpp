@@ -190,14 +190,20 @@ static cl::opt<int> RootLookAheadMaxDepth(
     "slp-max-root-look-ahead-depth", cl::init(2), cl::Hidden,
     cl::desc("The maximum look-ahead depth for searching best rooting option"));
 
-static cl::opt<unsigned> MinProfitableStridedLoads(
+static cl::opt<unsigned> MinProfitableStridedMemOps(
     "slp-min-strided-loads", cl::init(2), cl::Hidden,
     cl::desc("The minimum number of loads, which should be considered strided, "
              "if the stride is > 1 or is runtime value"));
 
-static cl::opt<unsigned> MaxProfitableLoadStride(
+static cl::opt<unsigned> MaxProfitableStride(
     "slp-max-stride", cl::init(8), cl::Hidden,
     cl::desc("The maximum stride, considered to be profitable."));
+
+static cl::opt<bool>
+    EnableStridedStores("slp-enable-strided-stores", cl::init(false),
+                        cl::Hidden,
+                        cl::desc("Enable SLP trees to be built from strided "
+                                 "store chains."));
 
 static cl::opt<bool>
     DisableTreeReorder("slp-disable-tree-reorder", cl::init(false), cl::Hidden,
@@ -7035,8 +7041,8 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// Checks if strided loads can be generated out of \p VL loads with pointers \p
 /// PointerOps:
 /// 1. Target with strided load support is detected.
-/// 2. The number of loads is greater than MinProfitableStridedLoads, or the
-/// potential stride <= MaxProfitableLoadStride and the potential stride is
+/// 2. The number of loads is greater than MinProfitableStridedMemOps, or the
+/// potential stride <= MaxProfitableStride and the potential stride is
 /// power-of-2 (to avoid perf regressions for the very small number of loads)
 /// and max distance > number of loads, or potential stride is -1.
 /// 3. The loads are ordered, or number of unordered loads <=
@@ -7062,9 +7068,9 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
   auto *VecTy = getWidenedType(ScalarTy, Sz);
   if (IsAnyPointerUsedOutGraph ||
       (AbsoluteDiff > Sz &&
-       (Sz > MinProfitableStridedLoads ||
-        (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
-         AbsoluteDiff % Sz == 0 && has_single_bit(AbsoluteDiff / Sz)))) ||
+       (Sz > MinProfitableStridedMemOps ||
+        (AbsoluteDiff <= MaxProfitableStride * Sz && AbsoluteDiff % Sz == 0 &&
+         has_single_bit(AbsoluteDiff / Sz)))) ||
       Diff == -(static_cast<int64_t>(Sz) - 1)) {
     int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
     if (Diff != Stride * static_cast<int64_t>(Sz - 1))
@@ -7137,7 +7143,9 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
     NewScalarTy = Type::getIntNTy(
         SE->getContext(),
         DL->getTypeSizeInBits(ScalarTy).getFixedValue() * GroupSize);
-  }
+  } else if (StrideWithinGroup == 1)
+    // This is just a vectorized memory operation
+    return false;
 
   if (!isStridedLoad(PointerOps, NewScalarTy, Alignment, Diff, VecSz))
     return false;
@@ -7221,7 +7229,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
         DL->getTypeSizeInBits(ScalarTy).getFixedValue() * NumOffsets);
   }
   FixedVectorType *StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
-  if (Sz <= MinProfitableStridedLoads || !TTI->isTypeLegal(StridedLoadTy) ||
+  if (Sz <= MinProfitableStridedMemOps || !TTI->isTypeLegal(StridedLoadTy) ||
       !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
     return false;
 
@@ -8751,8 +8759,9 @@ void BoUpSLP::buildReorderableOperands(
         continue;
       if (UserTE->getOpcode() == Instruction::InsertElement && I == 0)
         continue;
-      if (UserTE->getOpcode() == Instruction::Store &&
-          UserTE->State == TreeEntry::Vectorize && I == 1)
+      if (UserTE->getOpcode() == Instruction::Store && I == 1 &&
+          (UserTE->State == TreeEntry::Vectorize ||
+           UserTE->State == TreeEntry::StridedVectorize))
         continue;
       if (UserTE->getOpcode() == Instruction::Load &&
           (UserTE->State == TreeEntry::Vectorize ||
@@ -9166,7 +9175,6 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         Data.first->reorderOperands(Mask);
       if (!isa<InsertElementInst, StoreInst>(Data.first->getMainOp()) ||
           IsNotProfitableAltCodeNode(*Data.first) ||
-          Data.first->State == TreeEntry::StridedVectorize ||
           Data.first->State == TreeEntry::CompressVectorize) {
         reorderScalars(Data.first->Scalars, Mask);
         reorderOrder(Data.first->ReorderIndices, MaskOrder,
@@ -10656,8 +10664,14 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         Ptr0 = PointerOps[CurrentOrder.front()];
         PtrN = PointerOps[CurrentOrder.back()];
       }
+      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL0);
+
       std::optional<int64_t> Dist =
           getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
+      if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                         CurrentOrder, *Dist, Ptr0, PtrN,
+                                         SPtrInfo))
+        return TreeEntry::StridedVectorize;
       // Check that the sorted pointer operands are consecutive.
       if (static_cast<uint64_t>(*Dist) == VL.size() - 1)
         return TreeEntry::Vectorize;
@@ -12302,6 +12316,19 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       return;
     }
     case Instruction::Store: {
+      if (State == TreeEntry::StridedVectorize) {
+        TreeEntry *TE =
+            newTreeEntry(VL, TreeEntry::StridedVectorize, Bundle, S,
+                         UserTreeIdx, ReuseShuffleIndices, CurrentOrder);
+        TreeEntryToStridedPtrInfoMap[TE] = SPtrInfo;
+        LLVM_DEBUG(
+            dbgs() << "SLP: added a new TreeEntry (strided StoreInst).\n";
+            TE->dump());
+        TE->setOperands(Operands);
+        buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
+        return;
+      }
+
       bool Consecutive = CurrentOrder.empty();
       if (!Consecutive)
         fixupOrderingIndices(CurrentOrder);
@@ -15437,7 +15464,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       case TreeEntry::StridedVectorize: {
         const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
         FixedVectorType *StridedLoadTy = SPtrInfo.Ty;
-        assert(StridedLoadTy && "Missing StridedPoinerInfo for tree entry.");
+        assert(StridedLoadTy && "Missing StridedPointerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         VecLdCost = TTI->getMemIntrinsicInstrCost(
@@ -20569,12 +20596,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
         Align CommonAlignment = computeCommonAlignment<StoreInst>(E->Scalars);
         Type *StrideTy = DL->getIndexType(SI->getPointerOperandType());
+        Value *NewStride;
+        if (TreeEntryToStridedPtrInfoMap.contains(E)) {
+          Value *Stride = TreeEntryToStridedPtrInfoMap[E].StrideVal;
+          NewStride =
+              Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
+        } else
+          NewStride = ConstantInt::getSigned(StrideTy, -1);
+        Value *StrideVal = Builder.CreateMul(
+            NewStride,
+            ConstantInt::getSigned(
+                StrideTy, static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
         auto *Inst = Builder.CreateIntrinsic(
             Intrinsic::experimental_vp_strided_store,
             {VecTy, Ptr->getType(), StrideTy},
-            {VecValue, Ptr,
-             ConstantInt::getSigned(
-                 StrideTy, -static_cast<int>(DL->getTypeAllocSize(ScalarTy))),
+            {VecValue, Ptr, StrideVal,
              Builder.getAllOnesMask(VecTy->getElementCount()),
              Builder.getInt32(E->Scalars.size())});
         Inst->addParamAttr(
@@ -23885,24 +23921,90 @@ bool SLPVectorizerPass::vectorizeStores(
   bool Changed = false;
 
   auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
-    int64_t PrevDist = -1;
-    BoUpSLP::ValueList Operands;
-    // Collect the chain into a list.
+    struct OperandsT {
+      BoUpSLP::ValueList Ops;
+      unsigned Stride;
+      OperandsT(std::initializer_list<Value *> Ops, unsigned Stride)
+          : Ops(Ops), Stride(Stride) {};
+
+      bool operator>(const OperandsT &Other) const {
+        auto GetScore = [](const OperandsT &Ops) -> unsigned {
+          return Ops.Ops.size() / ((Ops.Stride == 1) ? 1 : 2);
+        };
+        return GetScore(*this) > GetScore(Other);
+      }
+    };
+    SmallVector<OperandsT> AllOperands;
+    // All chains that we're still building
+    // - bool: Has been added to AllOperands, if just single operand, don't add
+    // yet
+    // - unsigned: Idx into either AllOperands or Stores depending on if added
+    // already
+    // - unsigned: Stride size
+    SmallVector<SmallVector<std::tuple<bool, unsigned, unsigned>, 1>> Chains(
+        MaxProfitableStride + 2);
+    auto GetChainsKey = [&](int64_t Query) -> unsigned {
+      // Just modulo function, get the index into Chains for a given query
+      int64_t Rem = (Query % (int64_t)Chains.size());
+      if (Rem < 0)
+        Rem += (int64_t)Chains.size();
+      return (unsigned)Rem;
+    };
+    int64_t LastDist;
     for (auto [Idx, Data] : enumerate(StoreSeq)) {
       auto &[Dist, InstIdx] = Data;
-      if (Operands.empty() || Dist - PrevDist == 1) {
-        Operands.push_back(Stores[InstIdx]);
-        PrevDist = Dist;
-        if (Idx != StoreSeq.size() - 1)
-          continue;
-      }
-      llvm::scope_exit E([&, &Dist = Dist, &InstIdx = InstIdx]() {
-        Operands.clear();
-        Operands.push_back(Stores[InstIdx]);
-        PrevDist = Dist;
-      });
+      // Clean up chains that can't be continued
+      if (Idx > 0)
+        for (int64_t D = LastDist; D < Dist; ++D) {
+          Chains[GetChainsKey(D)].clear();
+        }
+      LastDist = Dist;
 
+      // Track which stride lengths we found existing chains for
+      // Don't have to add new entries for these
+      SmallVector<bool> FoundStrides(MaxProfitableStride + 1, false);
+      for (auto [IsAllOpsIdx, OpIdx, Stride] : Chains[GetChainsKey(Dist)]) {
+        if (IsAllOpsIdx) {
+          // Chain already in AllOperands()
+          AllOperands[OpIdx].Ops.push_back(Stores[InstIdx]);
+        } else {
+          // Chain just a single element, not yet in AllOperands()
+          AllOperands.emplace_back(
+              std::initializer_list<Value *>{Stores[OpIdx], Stores[InstIdx]},
+              Stride);
+          OpIdx = AllOperands.size() - 1;
+        }
+        unsigned Key = GetChainsKey(Stride + Dist);
+        Chains[Key].push_back({true, OpIdx, Stride});
+        FoundStrides[Stride] = true;
+      }
+
+      // For any stride lengths that we didn't append to a chain for,
+      // instead start a new chain
+      for (auto Stride : seq<unsigned>(
+               1, (EnableStridedStores ? MaxProfitableStride : 1) + 1)) {
+        if (FoundStrides[Stride])
+          continue;
+        unsigned Key = GetChainsKey(Dist + Stride);
+        Chains[Key].push_back({false, InstIdx, Stride});
+      }
+    }
+
+    // Try longer chains first
+    std::sort(AllOperands.begin(), AllOperands.end(),
+              std::greater<OperandsT>());
+    for (auto &[RawOperands, Stride] : AllOperands) {
+      bool Strided = Stride != 1;
+
+      unsigned FirstAlive = RawOperands.size();
+      for (unsigned Idx : seq<unsigned>(RawOperands.size()))
+        if (!R.isDeleted(cast<Instruction>(RawOperands[Idx]))) {
+          FirstAlive = Idx;
+          break;
+        }
+      auto Operands = ArrayRef(RawOperands).slice(FirstAlive);
       if (Operands.size() <= 1 ||
+          (Operands.size() < MinProfitableStridedMemOps && Strided) ||
           !Visited
                .insert({Operands.front(),
                         cast<StoreInst>(Operands.front())->getValueOperand(),
@@ -23910,7 +24012,7 @@ bool SLPVectorizerPass::vectorizeStores(
                         cast<StoreInst>(Operands.back())->getValueOperand(),
                         Operands.size()})
                .second)
-        continue;
+        return;
 
       unsigned MaxVecRegSize = R.getMaxVecRegSize();
       unsigned EltSize = R.getVectorElementSize(Operands[0]);
@@ -23935,12 +24037,14 @@ bool SLPVectorizerPass::vectorizeStores(
           ValueTy->getScalarType()));
       MinVF /= getNumElements(StoreTy);
       MinVF = std::max<unsigned>(2, MinVF);
+      if (Strided)
+        MinVF = std::max<unsigned>(MinVF, MinProfitableStridedMemOps);
 
       if (MaxVF < MinVF) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
                           << ") < "
                           << "MinVF (" << MinVF << ")\n");
-        continue;
+        return;
       }
 
       unsigned NonPowerOf2VF = 0;
@@ -23966,7 +24070,7 @@ bool SLPVectorizerPass::vectorizeStores(
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
                           << ") < "
                           << "MinVF (" << MinVF << ")\n");
-        continue;
+        return;
       }
 
       SmallVector<unsigned> CandidateVFs;
@@ -23978,8 +24082,14 @@ bool SLPVectorizerPass::vectorizeStores(
       unsigned Repeat = 0;
       constexpr unsigned MaxAttempts = 4;
       OwningArrayRef<std::pair<unsigned, unsigned>> RangeSizes(Operands.size());
-      for (std::pair<unsigned, unsigned> &P : RangeSizes)
-        P.first = P.second = 1;
+      for (auto Idx : seq<unsigned>(RangeSizes.size())) {
+        std::pair<unsigned, unsigned> &P = RangeSizes[Idx];
+        if (R.isDeleted(cast<Instruction>(Operands[Idx])))
+          P.first = P.second = 0;
+        else
+          P.first = P.second = 1;
+      }
+
       DenseMap<Value *, std::pair<unsigned, unsigned>> NonSchedulable;
       auto IsNotVectorized = [](bool First,
                                 const std::pair<unsigned, unsigned> &P) {
