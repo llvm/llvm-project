@@ -1315,10 +1315,10 @@ endif()
 if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
   message(STATUS "Precompiled headers enabled.")
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # Clang requires this flag in order for precompiled headers to work with ccache
+    # Clang requires this flag in order for precompiled headers to work with ccache.
     append("-Xclang -fno-pch-timestamp" CMAKE_CXX_FLAGS)
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    # GCC requires this flag in order for precompiled headers to work with ccache
+    # GCC requires this flag in order for precompiled headers to work with ccache.
     append("-fpch-preprocess" CMAKE_CXX_FLAGS)
   endif()
 else()

@@ -13,5 +13,6 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_example(OrcV2CBindingsVeryLazy
   OrcV2CBindingsVeryLazy.c
 
-  DISABLE_PCH_REUSE # no C++ files, prevent CMake error.
+  # No C++ files, prevent CMake error.
+  DISABLE_PCH_REUSE
   )

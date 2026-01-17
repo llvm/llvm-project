@@ -6,7 +6,8 @@ add_clang_executable(c-index-test
   c-index-test.c
   core_main.cpp
 
-  DISABLE_PCH_REUSE # Prevent CMake error with C source files.
+  # Prevent CMake error with C source files.
+  DISABLE_PCH_REUSE
   )
 
 if(NOT MSVC)

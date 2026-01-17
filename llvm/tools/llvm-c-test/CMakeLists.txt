@@ -54,7 +54,8 @@ add_llvm_tool(llvm-c-test
   object.c
   targets.c
 
-  DISABLE_PCH_REUSE # no C++ files, prevent CMake error.
+  # No C++ files, prevent CMake error.
+  DISABLE_PCH_REUSE
   )
 
 if(USE_LLVM_DYLIB)
