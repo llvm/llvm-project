@@ -16732,8 +16732,7 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
       if (CT != CF) {
         if ((CF == CRHSVal && CC == ISD::SETEQ) ||
             (CT == CRHSVal && CC == ISD::SETNE))
-          return DAG.getNode(ISD::XOR, SL, MVT::i1, LHS.getOperand(0),
-                             DAG.getAllOnesConstant(SL, MVT::i1));
+          return DAG.getNOT(SL, LHS.getOperand(0), MVT::i1);
         if ((CF == CRHSVal && CC == ISD::SETNE) ||
             (CT == CRHSVal && CC == ISD::SETEQ))
           return LHS.getOperand(0);
