@@ -4081,9 +4081,12 @@ CGObjCCommonMac::GenerateObjCDirectThunk(const ObjCMethodDecl *OMD,
   CodeGenFunction CGF(CGM);
   CGF.StartObjCDirectThunk(OMD, Thunk, FI);
 
-  // Copy function-level attributes from implementation to make musttail happy
-  llvm::AttributeList ImplAttrs = Implementation->getAttributes();
-  Thunk->setAttributes(ImplAttrs);
+  // Set function attributes from CGFunctionInfo to ensure the thunk has
+  // matching parameter attributes (especially sret) for musttail correctness.
+  // We use SetLLVMFunctionAttributes rather than copying from Implementation
+  // because Implementation may not have its attributes set yet at this point.
+  CGM.SetLLVMFunctionAttributes(GlobalDecl(OMD), FI, Thunk, /*IsThunk=*/false);
+  CGM.SetLLVMFunctionAttributesForDefinition(OMD, Thunk);
 
   // - [self self] for class methods (class realization)
   // - if (self == nil) branch to nil block with zero return

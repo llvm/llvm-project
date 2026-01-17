@@ -1,8 +1,7 @@
 // REQUIRES: system-darwin
 //
 // This test validates that compile units with and without
-// -fobjc-direct-precondition-thunk cannot                                             \
-// RUN: be linked together due t   o
+// -fobjc-direct-precondition-thunk cannot be linked together due to
 // symbol name mismatches.
 //
 // When compiled WITH the flag:
