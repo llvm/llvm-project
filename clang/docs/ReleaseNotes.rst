@@ -58,7 +58,7 @@ Clang Python Bindings Potentially Breaking Changes
 - ``CompletionString.availability`` now returns instances of ``CompletionString.AvailabilityKindCompat``.
 
   Instances of ``AvailabilityKindCompat`` have the same ``__str__`` representation
-  as the previous ``CompletionString.Kind``s and are equality-comparable with
+  as the previous ``CompletionChunk.Kind``s and are equality-comparable with
   the existing ``AvailabilityKind`` enum. It will be replaced by ``AvailabilityKind``
   in a future release. When this happens, the return type of ``CompletionString.availability``
   will change to ``AvailabilityKind``, so it is recommended to use ``AvailabilityKind``
