@@ -31,11 +31,6 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-/// Get integer from a mlir::Value that is an int constant or a constant op.
-static int64_t getIntValueFromConstOp(mlir::Value val) {
-  return val.getDefiningOp<cir::ConstantOp>().getIntValue().getSExtValue();
-}
-
 template <typename... Operands>
 static mlir::Value emitIntrinsicCallOp(CIRGenBuilderTy &builder,
                                        mlir::Location loc, const StringRef str,
@@ -164,9 +159,9 @@ computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
   outIndices.resize(numElts);
 }
 
-static mlir::Value emitPrefetch(CIRGenFunction &cgf, unsigned builtinID,
-                                const CallExpr *e,
-                                const SmallVector<mlir::Value> &ops) {
+static void emitPrefetch(CIRGenFunction &cgf, unsigned builtinID,
+                         const CallExpr *e,
+                         const SmallVector<mlir::Value> &ops) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location location = cgf.getLoc(e->getExprLoc());
   mlir::Type voidTy = builder.getVoidTy();
@@ -178,7 +173,7 @@ static mlir::Value emitPrefetch(CIRGenFunction &cgf, unsigned builtinID,
          builtinID == X86::BI_m_prefetch && "Expected prefetch builtin");
 
   if (builtinID == X86::BI_mm_prefetch) {
-    int hint = getIntValueFromConstOp(ops[1]);
+    int hint = cgf.getSExtIntValueFromConstOp(ops[1]);
     isWrite = (hint >> 2) & 0x1;
     locality = hint & 0x3;
   } else {
@@ -187,7 +182,6 @@ static mlir::Value emitPrefetch(CIRGenFunction &cgf, unsigned builtinID,
   }
 
   cir::PrefetchOp::create(builder, location, address, locality, isWrite);
-  return {};
 }
 
 static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
@@ -592,7 +586,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI_mm_prefetch:
   case X86::BI_m_prefetch:
   case X86::BI_m_prefetchw:
-    return emitPrefetch(*this, builtinID, expr, ops);
+    emitPrefetch(*this, builtinID, expr, ops);
+    return {};
   case X86::BI__rdtsc:
   case X86::BI__builtin_ia32_rdtscp: {
     cgm.errorNYI(expr->getSourceRange(),
