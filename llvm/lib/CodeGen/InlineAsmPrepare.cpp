@@ -56,14 +56,14 @@ FunctionPass *llvm::createInlineAsmPass() { return new InlineAsmPrepare(); }
 static SmallVector<CallBase *, 4> findInlineAsms(Function &F) {
   SmallVector<CallBase *, 4> InlineAsms;
 
-  for_each(F, [&](BasicBlock &BB) {
-    for_each(BB, [&](Instruction &I) {
+  for (auto &BB : F) {
+    for (auto &I : BB) {
       CallBase *CB = dyn_cast<CallBase>(&I);
       if (!CB || !CB->isInlineAsm())
-        return;
+        continue;
       InlineAsms.push_back(CB);
-    });
-  });
+    }
+  }
 
   return InlineAsms;
 }
