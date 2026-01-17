@@ -9112,12 +9112,17 @@ static bool optimizeSwitchOnCompare(SwitchInst *SI, Function &F,
     else if (Val == 1)
       DestGreater = Case.getCaseSuccessor();
   }
+  
+  if (DestLess == DestEqual || DestLess == DestGreater || 
+      DestEqual == DestGreater)
+    return false;
+  
   BasicBlock *HeadBB = SI->getParent();
   LLVMContext &Ctx = F.getContext();
 
   // Create the intermediate block
   BasicBlock *CheckEqBB = BasicBlock::Create(Ctx, "check.eq", &F);
-  // Insert it after HeadBB for readability
+
   CheckEqBB->moveAfter(HeadBB);
 
   // Compare Less
@@ -9134,20 +9139,14 @@ static bool optimizeSwitchOnCompare(SwitchInst *SI, Function &F,
   Builder.SetInsertPoint(CheckEqBB);
   Value *CmpEq = Builder.CreateICmp(ICmpInst::ICMP_EQ, LHS, RHS, "cmp.eq");
   BranchInst::Create(DestEqual, DestGreater, CmpEq, CheckEqBB);
-
-  auto UpdatePhis = [&](BasicBlock *Dest) {
-    if (Dest == DestLess)
-      return; 
+  
+  for (BasicBlock *Dest : {DestEqual, DestGreater}) {
     for (PHINode &PN : Dest->phis()) {
       int Idx = PN.getBasicBlockIndex(HeadBB);
       if (Idx != -1)
         PN.setIncomingBlock(Idx, CheckEqBB);
     }
-  };
-
-  UpdatePhis(DestEqual);
-  UpdatePhis(DestGreater);
-
+  }
   return true;
 }
 
