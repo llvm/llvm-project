@@ -91,6 +91,10 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_amo_ldat:
   case PPC::BI__builtin_amo_lwat_s:
   case PPC::BI__builtin_amo_ldat_s:
+  case PPC::BI__builtin_amo_lwat_cond:
+  case PPC::BI__builtin_amo_ldat_cond:
+  case PPC::BI__builtin_amo_lwat_cond_s:
+  case PPC::BI__builtin_amo_ldat_cond_s:
     return true;
   }
   return false;
@@ -280,6 +284,21 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
            << toString(Result, 10) << (IsUnsigned ? "0-4, 6" : "0, 5, 7") << "8"
            << Arg->getSourceRange();
+  }
+  case PPC::BI__builtin_amo_lwat_cond:
+  case PPC::BI__builtin_amo_ldat_cond:
+  case PPC::BI__builtin_amo_lwat_cond_s:
+  case PPC::BI__builtin_amo_ldat_cond_s: {
+    llvm::APSInt Result;
+    if (SemaRef.BuiltinConstantArg(TheCall, 1, Result))
+      return true;
+    unsigned Val = Result.getZExtValue();
+    if (llvm::is_contained({24u, 25u, 28u}, Val))
+      return false;
+
+    Expr *Arg = TheCall->getArg(1);
+    return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
+           << toString(Result, 10) << "24, 25" << "28" << Arg->getSourceRange();
   }
   }
   llvm_unreachable("must return from switch");

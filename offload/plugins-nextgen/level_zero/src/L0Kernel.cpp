@@ -203,12 +203,13 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
 
   if (ThreadLimit > 0) {
     // use thread_limit clause value default.
-    DP("Max team size is set to %" PRId32 " (thread_limit clause)\n",
-       ThreadLimit);
+    ODBG(OLDT_Kernel) << "Max team size is set to " << ThreadLimit
+                      << " (thread_limit clause)";
   } else if (ThreadLimitICV > 0) {
     // else use thread-limit-var ICV.
     ThreadLimit = ThreadLimitICV;
-    DP("Max team size is set to %" PRId32 " (thread-limit-icv)\n", ThreadLimit);
+    ODBG(OLDT_Kernel) << "Max team size is set to " << ThreadLimit
+                      << " (thread-limit-icv)";
   }
 
   size_t MaxThreadLimit = Device.getMaxGroupSize();
@@ -218,29 +219,28 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
 
   if (KernelPR.MaxThreadGroupSize < MaxThreadLimit) {
     MaxThreadLimit = KernelPR.MaxThreadGroupSize;
-    DP("Capping maximum team size to %zu due to kernel constraints.\n",
-       MaxThreadLimit);
+    ODBG(OLDT_Kernel) << "Capping maximum team size to " << MaxThreadLimit
+                      << " due to kernel constraints.";
   }
 
   if (ThreadLimit > static_cast<int32_t>(MaxThreadLimit)) {
     ThreadLimit = MaxThreadLimit;
-    DP("Max team size execceds current maximum %zu. Adjusted\n",
-       MaxThreadLimit);
+    ODBG(OLDT_Kernel) << "Max team size exceeds current maximum "
+                      << MaxThreadLimit << ". Adjusted";
   }
   // scope code to ease integration with downstream custom code.
   {
     if (NumTeams > 0) {
-      DP("Number of teams is set to %" PRId32
-         "(num_teams clause or no teams construct)\n",
-         NumTeams);
+      ODBG(OLDT_Kernel) << "Number of teams is set to " << NumTeams
+                        << " (num_teams clause or no teams construct)";
     } else if (NumTeamsICV > 0) {
       // OMP_NUM_TEAMS only matters, if num_teams() clause is absent.
       INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
            "OMP_NUM_TEAMS(%" PRId32 ") is ignored\n", NumTeamsICV);
 
       NumTeams = NumTeamsICV;
-      DP("Max number of teams is set to %" PRId32 " (OMP_NUM_TEAMS)\n",
-         NumTeams);
+      ODBG(OLDT_Kernel) << "Max number of teams is set to " << NumTeams
+                        << " (OMP_NUM_TEAMS)";
     }
 
     decideKernelGroupArguments(Device, (uint32_t)NumTeams,
@@ -403,7 +403,8 @@ Error L0KernelTy::setIndirectFlags(L0DeviceTy &l0Device,
     // Combine with common access flags.
     const auto FinalFlags = l0Device.getIndirectFlags() | Flags;
     CALL_ZE_RET_ERROR(zeKernelSetIndirectAccess, zeKernel, FinalFlags);
-    DP("Setting indirect access flags " DPxMOD "\n", DPxPTR(FinalFlags));
+    ODBG(OLDT_Kernel) << "Setting indirect access flags "
+                      << reinterpret_cast<void *>(FinalFlags);
     KEnv.KernelPR.IndirectAccessFlags = Flags;
   }
 

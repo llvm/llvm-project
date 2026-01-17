@@ -1256,6 +1256,10 @@ void TargetLoweringBase::initActions() {
   // This one by default will call __clear_cache unless the target
   // wants something different.
   setOperationAction(ISD::CLEAR_CACHE, MVT::Other, LibCall);
+
+  // By default, STACKADDRESS nodes are expanded like STACKSAVE nodes.
+  // On SPARC targets, custom lowering is required.
+  setOperationAction(ISD::STACKADDRESS, MVT::Other, Expand);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
@@ -2298,9 +2302,9 @@ TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   auto *PtrTy = PointerType::getUnqual(M->getContext());
 
-  const char *SafestackPointerAddressName =
-      getLibcallName(RTLIB::SAFESTACK_POINTER_ADDRESS);
-  if (!SafestackPointerAddressName) {
+  RTLIB::LibcallImpl SafestackPointerAddressImpl =
+      getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
+  if (SafestackPointerAddressImpl == RTLIB::Unsupported) {
     M->getContext().emitError(
         "no libcall available for safestack pointer address");
     return PoisonValue::get(PtrTy);
@@ -2308,8 +2312,8 @@ TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
 
   // Android provides a libc function to retrieve the address of the current
   // thread's unsafe stack pointer.
-  FunctionCallee Fn =
-      M->getOrInsertFunction(SafestackPointerAddressName, PtrTy);
+  FunctionCallee Fn = M->getOrInsertFunction(
+      getLibcallImplName(SafestackPointerAddressImpl), PtrTy);
   return IRB.CreateCall(Fn);
 }
 

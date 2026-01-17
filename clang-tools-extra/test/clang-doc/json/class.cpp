@@ -170,10 +170,10 @@ private:
 // CHECK-NEXT:    "HasEnums": true,
 // CHECK-NEXT:    "HasFriends": true,
 // CHECK-NEXT:    "HasPrivateMembers": true,
-// CHECK-NEXT:    "HasProtectedFunctions": true,
 // CHECK-NEXT:    "HasProtectedMembers": true,
-// CHECK-NEXT:    "HasPublicFunctions": true,
+// CHECK-NEXT:    "HasProtectedMethods": true,
 // CHECK-NEXT:    "HasPublicMembers": true,
+// CHECK-NEXT:    "HasPublicMethods": true,
 // CHECK-NEXT:    "HasRecords": true,
 // CHECK-NEXT:    "HasTypedefs": true,
 // CHECK-NEXT:    "InfoType": "record",
@@ -195,7 +195,14 @@ private:
 // CHECK-NEXT:       "Type": "int"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
-// CHECK-NEXT:   "ProtectedFunctions": [
+// CHECK-NEXT:    "ProtectedMembers": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "IsStatic": false,
+// CHECK-NEXT:        "Name": "ProtectedField",
+// CHECK-NEXT:        "Type": "int"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ],
+// CHECK-NEXT:   "ProtectedMethods": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "InfoType": "function",
 // CHECK-NEXT:       "IsStatic": false,
@@ -214,14 +221,14 @@ private:
 // CHECK-NEXT:       "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
-// CHECK-NEXT:    "ProtectedMembers": [
+// CHECK:         "PublicMembers": [
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "IsStatic": false,
-// CHECK-NEXT:        "Name": "ProtectedField",
+// CHECK-NEXT:        "Name": "PublicField",
 // CHECK-NEXT:        "Type": "int"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
-// CHECK-NEXT:    "PublicFunctions": [
+// CHECK-NEXT:    "PublicMethods": [
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "InfoType": "function",
 // CHECK-NEXT:        "IsStatic": false,
@@ -259,14 +266,7 @@ private:
 // CHECK-NEXT:          "QualName": "const int &",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
-// CHECK:         "PublicMembers": [
-// CHECK-NEXT:      {
-// CHECK-NEXT:        "IsStatic": false,
-// CHECK-NEXT:        "Name": "PublicField",
-// CHECK-NEXT:        "Type": "int"
-// CHECK-NEXT:      }
-// CHECK-NEXT:    ],
-// CHECK-NEXT:    "Records": [
+// CHECK:         "Records": [
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "DocumentationFileName": "_ZTVN7MyClass11NestedClassE",
 // CHECK-NEXT:        "End": true,
@@ -303,7 +303,7 @@ private:
 // CHECK:         "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:  }
 
-// HTML:              <a class="sidebar-item" href="#Classes">Inner Classes</a>
+// HTML:              <a class="sidebar-item" href="#Records">Records</a>
 // HTML-NEXT:     </summary>
 // HTML-NEXT:     <ul>
 // HTML-NEXT:         <li class="sidebar-item-container">
@@ -338,8 +338,8 @@ private:
 // HTML-NEXT:         </div>
 // HTML-NEXT:     </div>
 // HTML-NEXT: </section>
-// HTML:      <section id="Classes" class="section-container">
-// HTML-NEXT:     <h2>Inner Classes</h2>
+// HTML:      <section id="Records" class="section-container">
+// HTML-NEXT:     <h2>Records</h2>
 // HTML-NEXT:     <ul class="class-container">
 // HTML-NEXT:         <li id="{{([0-9A-F]{40})}}" style="max-height: 40px;">
 // HTML-NEXT:             <a href="MyClass/_ZTVN7MyClass11NestedClassE.html">
@@ -353,14 +353,8 @@ private:
 // HTML-NEXT:     <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-NEXT:         <pre><code class="language-cpp code-clang-doc">template &lt;typename T&gt;</code></pre>
 // HTML-NEXT:         <pre><code class="language-cpp code-clang-doc">void MyClass (int )</code></pre>
-// HTML-NEXT:         <div class="nested-delimiter-container">
-// HTML-NEXT:             <p> This is a function template friend.</p>
-// HTML-NEXT:         </div>
 // HTML-NEXT:     </div>
 // HTML-NEXT:     <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-NEXT:         <pre><code class="language-cpp code-clang-doc">class Foo</code></pre>
-// HTML-NEXT:         <div class="nested-delimiter-container">
-// HTML-NEXT:             <p> This is a struct friend.</p>
-// HTML-NEXT:         </div>
 // HTML-NEXT:     </div>
 // HTML-NEXT: </section>
