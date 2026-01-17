@@ -163,6 +163,8 @@ class SinkStoreInfo {
 
     auto VFs = B->getParent()->getPlan()->vectorFactors();
     ElementCount MaxVF = *max_element(VFs, ElementCount::isKnownLT);
+    if (MaxVF.isScalable())
+      return false;
     return Distance->abs().uge(
         MaxVF.multiplyCoefficientBy(MaxStoreSize).getFixedValue());
   }
@@ -1513,12 +1515,18 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (!Plan->isUnrolled())
     return;
 
-  // Simplify extract-lane(%lane_num, %scalar_val) -> %scalar_val.
   // After unrolling, extract-lane may be used to extract values from multiple
   // scalar sources. Only simplify when extracting from a single scalar source.
-  if (match(Def, m_ExtractLane(m_VPValue(), m_VPValue(A))) &&
-      vputils::isSingleScalar(A)) {
-    return Def->replaceAllUsesWith(A);
+  VPValue *LaneToExtract;
+  if (match(Def, m_ExtractLane(m_VPValue(LaneToExtract), m_VPValue(A)))) {
+    // Simplify extract-lane(%lane_num, %scalar_val) -> %scalar_val.
+    if (vputils::isSingleScalar(A))
+      return Def->replaceAllUsesWith(A);
+
+    // Simplify extract-lane with single source to extract-element.
+    Def->replaceAllUsesWith(Builder.createNaryOp(
+        Instruction::ExtractElement, {A, LaneToExtract}, Def->getDebugLoc()));
+    return;
   }
 
   // Hoist an invariant increment Y of a phi X, by having X start at Y.
