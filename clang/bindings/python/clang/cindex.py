@@ -3157,7 +3157,9 @@ class CompletionString(ClangObject):
 
         # Ensure AvailabilityKindCompat is comparable with AvailabilityKind
         def __eq__(self, other: object) -> bool:
-            if isinstance(other, (AvailabilityKind, CompletionString.AvailabilityKindCompat)):
+            if isinstance(
+                other, (AvailabilityKind, CompletionString.AvailabilityKindCompat)
+            ):
                 return self.value == other.value
             else:
                 return NotImplemented
@@ -3187,7 +3189,6 @@ class CompletionString(ClangObject):
         DEPRECATED = 1
         NOT_AVAILABLE = 2
         NOT_ACCESSIBLE = 3
-
 
     def __len__(self) -> int:
         return self.num_chunks

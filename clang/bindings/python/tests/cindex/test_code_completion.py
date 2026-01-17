@@ -152,9 +152,13 @@ void f(P x, Q y) {
 
         # Compare two compat kinds
         for compatKind in CompletionString.AvailabilityKindCompat:
-            compatKind2 = CompletionString.AvailabilityKindCompat.from_id(compatKind.value)
+            compatKind2 = CompletionString.AvailabilityKindCompat.from_id(
+                compatKind.value
+            )
             nextKindId = (compatKind.value + 1) % numKinds
-            compatKind2Unequal = CompletionString.AvailabilityKindCompat.from_id(nextKindId)
+            compatKind2Unequal = CompletionString.AvailabilityKindCompat.from_id(
+                nextKindId
+            )
             self.assertEqual(compatKind, compatKind2)
             self.assertEqual(compatKind2, compatKind)
             self.assertNotEqual(compatKind2Unequal, compatKind)
