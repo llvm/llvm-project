@@ -3388,6 +3388,7 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FTRUNC:
   case ISD::FTAN:
   case ISD::FTANH:
+  case ISD::FCANONICALIZE:
   case ISD::STRICT_FSQRT:
   case ISD::STRICT_FRINT:
   case ISD::STRICT_FNEARBYINT:
@@ -3422,7 +3423,6 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FATAN2:
   case ISD::FREM:
   case ISD::FSUB:
-  case ISD::FCANONICALIZE:
   case ISD::STRICT_FADD:
   case ISD::STRICT_FDIV:
   case ISD::STRICT_FMUL:
