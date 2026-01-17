@@ -110,7 +110,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
 
   EXPECT_EQ(long(0), LIBC_NAMESPACE::shared::llogbf(1.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::log1pf(0.0f));
-  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::log10f(0.0f));
+  EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::log10f(10.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::logbf(1.0f));
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::rsqrtf(1.0f));
 

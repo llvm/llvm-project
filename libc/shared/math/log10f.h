@@ -8,6 +8,7 @@
 
 #ifndef LLVM_LIBC_SHARED_MATH_LOG10F_H
 #define LLVM_LIBC_SHARED_MATH_LOG10F_H
+
 #include "shared/libc_common.h"
 #include "src/__support/math/log10f.h"
 

@@ -11,8 +11,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
-  return math::log10f(x);
-}
+LLVM_LIBC_FUNCTION(float, log10f, (float x)) { return math::log10f(x); }
 
 } // namespace LIBC_NAMESPACE_DECL
