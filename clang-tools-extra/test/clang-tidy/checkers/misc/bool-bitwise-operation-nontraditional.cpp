@@ -260,11 +260,9 @@ void bad_with_priors() {
 
 void bad_with_priors2() {
     bool a = false, b = true, c = true;
-    bool r;
     a xor b bitand c;
     // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a xor (b and c);
-
     // braces added in the first change
     a bitor b bitand c;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|' [misc-bool-bitwise-operation]
