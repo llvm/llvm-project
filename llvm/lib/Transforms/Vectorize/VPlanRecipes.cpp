@@ -726,28 +726,31 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // The recipe's operands are the start value, the sentinel value, followed
     // by one operand for each part of the reduction.
     unsigned UF = getNumOperands() - 2;
-    Value *ReducedPartRdx = State.get(getOperand(2));
+    Value *ReducedResult = State.get(getOperand(2));
     RecurKind MinMaxKind = getRecurKind();
+    assert((MinMaxKind == RecurKind::SMin || MinMaxKind == RecurKind::SMax ||
+            MinMaxKind == RecurKind::UMin || MinMaxKind == RecurKind::UMax) &&
+           "unexpected recurrence kind for ComputeFindIVResult");
     for (unsigned Part = 1; Part < UF; ++Part)
-      ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
-                                      State.get(getOperand(2 + Part)));
-
-    Value *Start = State.get(getOperand(0), true);
-    Value *Sentinel = getOperand(1)->getLiveInIRValue();
+      ReducedResult = createMinMaxOp(Builder, MinMaxKind, ReducedResult,
+                                     State.get(getOperand(2 + Part)));
 
     // Reduce the vector to a scalar.
     bool IsMaxRdx =
         MinMaxKind == RecurKind::SMax || MinMaxKind == RecurKind::UMax;
-    bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(MinMaxKind);
-    Value *ReducedIV =
-        ReducedPartRdx->getType()->isVectorTy()
-            ? (IsMaxRdx ? Builder.CreateIntMaxReduce(ReducedPartRdx, IsSigned)
-                        : Builder.CreateIntMinReduce(ReducedPartRdx, IsSigned))
-            : ReducedPartRdx;
+    bool IsSigned =
+        MinMaxKind == RecurKind::SMin || MinMaxKind == RecurKind::SMax;
+    if (ReducedResult->getType()->isVectorTy())
+      ReducedResult = IsMaxRdx
+                          ? Builder.CreateIntMaxReduce(ReducedResult, IsSigned)
+                          : Builder.CreateIntMinReduce(ReducedResult, IsSigned);
     // Correct the final reduction result back to the start value if the
     // reduction result is the sentinel value.
-    Value *Cmp = Builder.CreateICmpNE(ReducedIV, Sentinel, "rdx.select.cmp");
-    return Builder.CreateSelect(Cmp, ReducedIV, Start, "rdx.select");
+    Value *Start = State.get(getOperand(0), true);
+    Value *Sentinel = getOperand(1)->getLiveInIRValue();
+    Value *Cmp =
+        Builder.CreateICmpNE(ReducedResult, Sentinel, "rdx.select.cmp");
+    return Builder.CreateSelect(Cmp, ReducedResult, Start, "rdx.select");
   }
   case VPInstruction::ComputeReductionResult: {
     RecurKind RK = getRecurKind();
