@@ -1304,13 +1304,32 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
-  # Pre-compiled headers with GCC (tested versions 14+15) provide very little
-  # compile-time improvements, but substantially increase the build dir size.
-  # Therefore, disable PCH with GCC by default.
-  message(NOTICE "Precompiled headers are disabled by default with GCC. "
-    "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
-  set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Pre-compiled headers with GCC (tested versions 14+15) provide very little
+    # compile-time improvements, but substantially increase the build dir size.
+    # Therefore, disable PCH with GCC by default.
+    message(NOTICE "Precompiled headers are disabled by default with GCC. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+
+  # Warn on possibly unintended interactions with ccache/sccache if the user
+  # sets this via CMAKE_CXX_COMPILER_LAUNCHER (and not using LLVM_CCACHE_BUILD).
+  if(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "sccache")
+    # It is unclear to what extent sccache supports PCH.
+    # https://github.com/mozilla/sccache/issues/615
+    message(WARNING "Using sccache with precompiled headers is unsupported. "
+      "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
+  elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # ccache with PCH can lead to false-positives when only a macro
+    # definition changes with non-Clang compilers, because macro definitions
+    # are not compared in preprocessed mode.
+    # See: https://github.com/ccache/ccache/issues/1668
+    message(WARNING "Using ccache with precompiled headers with non-Clang "
+      "compilers is not supported and may lead to false positives. "
+      "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
+  endif()
 endif()
 if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
   message(STATUS "Precompiled headers enabled.")
