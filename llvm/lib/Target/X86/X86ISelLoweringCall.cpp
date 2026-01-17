@@ -27,6 +27,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Transforms/CFGuard.h"
 
 #define DEBUG_TYPE "x86-isel"
 
@@ -2084,6 +2085,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // If the indirect call target has the nocf_check attribute, the call needs
   // the NOTRACK prefix. For simplicity just disable tail calls as there are
   // so many variants.
+  // FIXME: This will cause backend errors if the user forces the issue.
   bool IsNoTrackIndirectCall = IsIndirectCall && CB->doesNoCfCheck() &&
                                M->getModuleFlag("cf-protection-branch");
   if (IsNoTrackIndirectCall)
@@ -2120,36 +2122,27 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
-  if (Subtarget.isPICStyleGOT() && !ShouldGuaranteeTCO && !IsMustTail) {
-    // If we are using a GOT, disable tail calls to external symbols with
-    // default visibility. Tail calling such a symbol requires using a GOT
-    // relocation, which forces early binding of the symbol. This breaks code
-    // that require lazy function symbol resolution. Using musttail or
-    // GuaranteedTailCallOpt will override this.
-    GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
-    if (!G || (!G->getGlobal()->hasLocalLinkage() &&
-               G->getGlobal()->hasDefaultVisibility()))
-      isTailCall = false;
-  }
-
-  // Check if this tail call is a "sibling" call, which is loosely defined to
-  // be a tail call that doesn't require heroics like moving the return address
-  // or swapping byval arguments.
   bool IsSibcall = false;
-  if (isTailCall) {
-    // We believe that this should be a tail call, now check if that is really
-    // possible.
-    IsSibcall = IsEligibleForTailCallOptimization(CLI, CCInfo, ArgLocs,
-                                                  IsCalleePopSRet);
-
-    if (!IsMustTail) {
-      isTailCall = IsSibcall;
-      IsSibcall = IsSibcall && !ShouldGuaranteeTCO;
-    }
-
-    if (isTailCall)
-      ++NumTailCalls;
+  if (isTailCall && ShouldGuaranteeTCO) {
+    // If we need to guarantee TCO for a non-musttail call, we just need to make
+    // sure the conventions match. If a tail call uses one of the supported TCO
+    // conventions and the caller and callee match, we can tail call any
+    // function prototype.
+    CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
+    isTailCall = (CallConv == CallerCC);
+    IsSibcall = IsMustTail;
+  } else if (isTailCall) {
+    // Check if this tail call is a "sibling" call, which is loosely defined to
+    // be a tail call that doesn't require heroics like moving the return
+    // address or swapping byval arguments. We treat some musttail calls as
+    // sibling calls to avoid unnecessary argument copies.
+    IsSibcall =
+        isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs, IsCalleePopSRet);
+    isTailCall = IsSibcall || IsMustTail;
   }
+
+  if (isTailCall)
+    ++NumTailCalls;
 
   if (IsMustTail && !isTailCall)
     report_fatal_error("failed to perform tail call elimination on a call "
@@ -2551,6 +2544,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   bool IsImpCall = false;
+  bool IsCFGuardCall = false;
   if (DAG.getTarget().getCodeModel() == CodeModel::Large) {
     assert(Is64Bit && "Large code model is only legal in 64-bit mode.");
     // In the 64-bit large code model, we have to make all calls
@@ -2568,6 +2562,21 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
              Callee.getValueType() == MVT::i32) {
     // Zero-extend the 32-bit Callee address into a 64-bit according to x32 ABI
     Callee = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Callee);
+  } else if (Is64Bit && CB && isCFGuardCall(CB)) {
+    // We'll use a specific psuedo instruction for tail calls to control flow
+    // guard functions to guarantee the instruction used for the call. To do
+    // this we need to unwrap the load now and use the CFG Func GV as the
+    // callee.
+    IsCFGuardCall = true;
+    auto *LoadNode = cast<LoadSDNode>(Callee);
+    GlobalAddressSDNode *GA =
+        cast<GlobalAddressSDNode>(unwrapAddress(LoadNode->getBasePtr()));
+    assert(isCFGuardFunction(GA->getGlobal()) &&
+           "CFG Call should be to a guard function");
+    assert(LoadNode->getOffset()->isUndef() &&
+           "CFG Function load should not have an offset");
+    Callee = DAG.getTargetGlobalAddress(
+        GA->getGlobal(), dl, GA->getValueType(0), 0, X86II::MO_NO_FLAG);
   }
 
   SmallVector<SDValue, 8> Ops;
@@ -2672,7 +2681,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // should be computed from returns not tail calls.  Consider a void
     // function making a tail call to a function returning int.
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, MVT::Other, Ops);
+    auto Opcode =
+        IsCFGuardCall ? X86ISD::TC_RETURN_GLOBALADDR : X86ISD::TC_RETURN;
+    SDValue Ret = DAG.getNode(Opcode, dl, MVT::Other, Ops);
 
     if (IsCFICall)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -2688,6 +2699,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = DAG.getNode(X86ISD::IMP_CALL, dl, NodeTys, Ops);
   } else if (IsNoTrackIndirectCall) {
     Chain = DAG.getNode(X86ISD::NT_CALL, dl, NodeTys, Ops);
+  } else if (IsCFGuardCall) {
+    Chain = DAG.getNode(X86ISD::CALL_GLOBALADDR, dl, NodeTys, Ops);
   } else if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
     // Calls with a "clang.arc.attachedcall" bundle are special. They should be
     // expanded to the call, directly followed by a special marker sequence and
@@ -2923,12 +2936,16 @@ mayBeSRetTailCallCompatible(const TargetLowering::CallLoweringInfo &CLI,
   return false;
 }
 
-/// Check whether the call is eligible for tail call optimization. Targets
-/// that want to do tail call optimization should implement this function.
-/// Note that the x86 backend does not check musttail calls for eligibility! The
-/// rest of x86 tail call lowering must be prepared to forward arguments of any
-/// type.
-bool X86TargetLowering::IsEligibleForTailCallOptimization(
+/// Check whether the call is eligible for sibling call optimization. Sibling
+/// calls are loosely defined to be simple, profitable tail calls that only
+/// require adjusting register parameters. We do not speculatively to optimize
+/// complex calls that require lots of argument memory operations that may
+/// alias.
+///
+/// Note that LLVM supports multiple ways, such as musttail, to force tail call
+/// emission. Returning false from this function will not prevent tail call
+/// emission in all cases.
+bool X86TargetLowering::isEligibleForSiblingCallOpt(
     TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
     SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const {
   SelectionDAG &DAG = CLI.DAG;
@@ -2953,23 +2970,25 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   if (CallerF.getReturnType()->isX86_FP80Ty() && !CLI.RetTy->isX86_FP80Ty())
     return false;
 
-  CallingConv::ID CallerCC = CallerF.getCallingConv();
-  bool CCMatch = CallerCC == CalleeCC;
-  bool IsCalleeWin64 = Subtarget.isCallingConvWin64(CalleeCC);
-  bool IsCallerWin64 = Subtarget.isCallingConvWin64(CallerCC);
-  bool ShouldGuaranteeTCO = shouldGuaranteeTCO(
-      CalleeCC, MF.getTarget().Options.GuaranteedTailCallOpt);
-
   // Win64 functions have extra shadow space for argument homing. Don't do the
   // sibcall if the caller and callee have mismatched expectations for this
   // space.
+  CallingConv::ID CallerCC = CallerF.getCallingConv();
+  bool IsCalleeWin64 = Subtarget.isCallingConvWin64(CalleeCC);
+  bool IsCallerWin64 = Subtarget.isCallingConvWin64(CallerCC);
   if (IsCalleeWin64 != IsCallerWin64)
     return false;
 
-  if (ShouldGuaranteeTCO) {
-    if (canGuaranteeTCO(CalleeCC) && CCMatch)
-      return true;
-    return false;
+  // If we are using a GOT, don't generate sibling calls to non-local,
+  // default-visibility symbols. Tail calling such a symbol requires using a GOT
+  // relocation, which forces early binding of the symbol. This breaks code that
+  // require lazy function symbol resolution. Using musttail or
+  // GuaranteedTailCallOpt will override this.
+  if (Subtarget.isPICStyleGOT()) {
+    GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
+    if (!G || (!G->getGlobal()->hasLocalLinkage() &&
+               G->getGlobal()->hasDefaultVisibility()))
+      return false;
   }
 
   // Look for obvious safe cases to perform tail call optimization that do not
@@ -3036,7 +3055,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   // The callee has to preserve all registers the caller needs to preserve.
   const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
   const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
-  if (!CCMatch) {
+  if (CallerCC != CalleeCC) {
     const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
     if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
       return false;
