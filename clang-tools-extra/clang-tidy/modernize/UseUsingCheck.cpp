@@ -144,7 +144,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       SourceLocation EndLoc = MatchedDecl->getLocation();
 
       while (true) {
-        Token Prev = utils::lexer::getPreviousToken(StartLoc, SM, LO);
+        const Token Prev = utils::lexer::getPreviousToken(StartLoc, SM, LO);
         const std::optional<Token> Next =
             utils::lexer::findNextTokenSkippingComments(EndLoc, SM, LO);
         if (Prev.isNot(tok::l_paren) || !Next || Next->isNot(tok::r_paren))
