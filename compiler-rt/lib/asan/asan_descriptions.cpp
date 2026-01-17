@@ -67,7 +67,7 @@ void DescribeThread(AsanThreadContext *context) {
     Printf("%s", str.data());
     StackDepotGet(context->stack_id).Print();
 
-    // Recursively described parent thread if needed.
+    // Describe parent thread if requested
     if (flags()->print_full_thread_history)
       context = parent_context;
     else
