@@ -3534,6 +3534,11 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
  *                          # returns to the caller of .foo
  *                          # -- End function
  */
+
+cl::opt<bool> UseImplicitRef(
+    "use-implicit-ref", cl::init(false),
+    cl::desc("Use implicit.ref metadata"), cl::Hidden);
+
 void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   // Set the Subtarget to that of the resolver.
   const TargetSubtargetInfo *STI =
@@ -3543,7 +3548,6 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   // Create syms and sections that are part of the ifunc implementation:
   //  - Function descriptor symbol foo[RW]
   //  - Function entry symbol .foo[PR]
-  //  - ifunc_sec variable (that registers the ifunc's descriptor and resolver)
   MCSectionXCOFF *FnDescSec = static_cast<MCSectionXCOFF *>(
       getObjFileLowering().getSectionForFunctionDescriptor(&GI, TM));
   FnDescSec->setAlignment(Align(IsPPC64 ? 8 : 4));
@@ -3553,11 +3557,6 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   CurrentFnSym = getObjFileLowering().getFunctionEntryPointSymbol(&GI, TM);
 
   MCSymbol *IFuncUpdateSym = nullptr;
-  if (MDNode *MD = GI.getMetadata(LLVMContext::MD_associated)) {
-    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
-    const GlobalVariable *IFuncUpdateGV = cast<GlobalVariable>(VAM->getValue());
-    IFuncUpdateSym = getSymbol(IFuncUpdateGV);
-  }
 
   // Start codegen:
   if (TM.getFunctionSections())
@@ -3565,6 +3564,14 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
         static_cast<MCSymbolXCOFF *>(CurrentFnSym)->getRepresentedCsect());
   else
     OutStreamer->switchSection(getObjFileLowering().getTextSection());
+
+  if (MDNode *MD = GI.getMetadata(LLVMContext::MD_associated)) {
+    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
+    const GlobalVariable *IFuncUpdateGV = cast<GlobalVariable>(VAM->getValue());
+    IFuncUpdateSym = getSymbol(IFuncUpdateGV);
+  }
+  else if (GI.hasMetadata(LLVMContext::MD_implicit_ref))
+    emitRefMetadata(&GI);
 
   // generate linkage for foo and .foo
   emitLinkage(&GI, CurrentFnDescSym);
