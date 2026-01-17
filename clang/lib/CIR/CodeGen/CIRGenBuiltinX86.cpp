@@ -159,7 +159,7 @@ computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
   outIndices.resize(numElts);
 }
 
-static void emitPrefetch(CIRGenFunction &cgf, unsigned builtinID,
+static mlir::Value emitPrefetch(CIRGenFunction &cgf, unsigned builtinID,
                          const CallExpr *e,
                          const SmallVector<mlir::Value> &ops) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
@@ -182,6 +182,7 @@ static void emitPrefetch(CIRGenFunction &cgf, unsigned builtinID,
   }
 
   cir::PrefetchOp::create(builder, location, address, locality, isWrite);
+  return {};
 }
 
 static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
@@ -586,8 +587,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI_mm_prefetch:
   case X86::BI_m_prefetch:
   case X86::BI_m_prefetchw:
-    emitPrefetch(*this, builtinID, expr, ops);
-    return {};
+    return emitPrefetch(*this, builtinID, expr, ops);
   case X86::BI__rdtsc:
   case X86::BI__builtin_ia32_rdtscp: {
     cgm.errorNYI(expr->getSourceRange(),
