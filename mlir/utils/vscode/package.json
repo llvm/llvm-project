@@ -34,6 +34,7 @@
     "format": "clang-format -i --glob=\"{src,test}/*.ts\"",
     "package": "vsce package",
     "publish": "vsce publish",
+    "publish-openvsx": "ovsx publish --baseImagesUrl https://raw.githubusercontent.com/llvm/vscode-mlir/main/",
     "git-clang-format": "git-clang-format"
   },
   "dependencies": {
@@ -49,6 +50,7 @@
     "@types/vscode": "~1.67.0",
     "@vscode/vsce": "^2.19.0",
     "clang-format": "^1.8.0",
+    "ovsx": "^0.10.7",
     "typescript": "^4.9.5",
     "vscode-test": "^1.3.0"
   },
