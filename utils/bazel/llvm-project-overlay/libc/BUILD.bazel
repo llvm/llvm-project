@@ -2915,6 +2915,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_logbf16",
+    hdrs = ["src/__support/math/logbf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_exp_constants",
     hdrs = ["src/__support/math/exp_constants.h"],
     deps = [
@@ -4559,7 +4567,12 @@ libc_math_function(
     additional_deps = [":__support_math_logbf128"],
 )
 
-libc_math_function(name = "logbf16")
+libc_math_function(
+    name = "logbf16",
+    additional_deps = [
+        ":__support_math_logbf16",
+    ],
+)
 
 libc_math_function(name = "lrint")
 
