@@ -90,6 +90,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
