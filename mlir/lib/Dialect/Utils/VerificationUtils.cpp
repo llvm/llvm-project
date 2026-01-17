@@ -21,17 +21,17 @@ LogicalResult mlir::verifyDynamicDimensionCount(Operation *op, ShapedType type,
   return success();
 }
 
-LogicalResult mlir::verifyRanksMatch(Operation *op, ShapedType type1,
-                                     ShapedType type2, StringRef name1,
-                                     StringRef name2) {
-  if (!type1.hasRank() || !type2.hasRank())
+LogicalResult mlir::verifyRanksMatch(Operation *op, ShapedType lhs,
+                                     ShapedType rhs, StringRef lhsName,
+                                     StringRef rhsName) {
+  if (!lhs.hasRank() || !rhs.hasRank())
     return success(); // Unranked types are considered compatible
 
-  int64_t rank1 = type1.getRank();
-  int64_t rank2 = type2.getRank();
+  int64_t rank1 = lhs.getRank();
+  int64_t rank2 = rhs.getRank();
   if (rank1 != rank2) {
     return op->emitOpError()
-           << name1 << " rank (" << rank1 << ") does not match " << name2
+           << lhsName << " rank (" << rank1 << ") does not match " << rhsName
            << " rank (" << rank2 << ")";
   }
   return success();
