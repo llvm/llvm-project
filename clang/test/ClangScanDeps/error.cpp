@@ -7,7 +7,7 @@
 // RUN: not clang-scan-deps -- %clang -c %t/missing_tu.c 2>%t/missing_tu.errs
 // RUN: echo EOF >> %t/missing_tu.errs
 // RUN: cat %t/missing_tu.errs | sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-MISSING-TU -DPREFIX=%/t
-// CHECK-MISSING-TU: Error while scanning dependencies for [[PREFIX]]/missing_tu.c
+// CHECK-MISSING-TU: Diagnostics while scanning dependencies for '[[PREFIX]]/missing_tu.c':
 // CHECK-MISSING-TU-NEXT: error: no such file or directory: '[[PREFIX]]/missing_tu.c'
 // CHECK-MISSING-TU-NEXT: error: no input files
 // CHECK-MISSING-TU-NEXT: error:
@@ -16,6 +16,6 @@
 // RUN: not clang-scan-deps -- %clang -c %t/missing_header.c 2>%t/missing_header.errs
 // RUN: echo EOF >> %t/missing_header.errs
 // RUN: cat %t/missing_header.errs | sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-MISSING-HEADER -DPREFIX=%/t
-// CHECK-MISSING-HEADER: Error while scanning dependencies for [[PREFIX]]/missing_header.c
-// CHECK-MISSING-HEADER-NEXT: fatal error: 'missing.h' file not found
+// CHECK-MISSING-HEADER: Diagnostics while scanning dependencies for '[[PREFIX]]/missing_header.c':
+// CHECK-MISSING-HEADER-NEXT: [[PREFIX]]/missing_header.c:1:10: fatal error: 'missing.h' file not found
 // CHECK-MISSING-HEADER-NEXT: EOF

@@ -480,6 +480,7 @@ def STACK_SMASH_HANDLER : RuntimeLibcall;
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall;
 
+def STACK_PROBE : RuntimeLibcall;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall;
 
 // Deoptimization
@@ -1840,6 +1841,13 @@ def __stack_smash_handler : RuntimeLibcallImpl<STACK_SMASH_HANDLER>;
 
 def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 
+def _chkstk : RuntimeLibcallImpl<STACK_PROBE>;
+def _alloca : RuntimeLibcallImpl<STACK_PROBE>;
+
+def __chkstk : RuntimeLibcallImpl<STACK_PROBE>;
+def ___chkstk_ms : RuntimeLibcallImpl<STACK_PROBE>;
+def __chkstk_arm64ec : RuntimeLibcallImpl<STACK_PROBE, "#__chkstk_arm64ec">;
+
 def __security_check_cookie : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE>;
 def __security_check_cookie_arm64ec : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE,
   "#__security_check_cookie_arm64ec">;
@@ -2150,6 +2158,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        DefaultLibmExp10,
        DefaultStackProtector,
        SecurityCheckCookieIfWinMSVC,
+       LibcallImpls<(add __chkstk), isOSWindows>,
        SMEABI_LibCalls_PreserveMost_From_X0,
        SMEABI_LibCalls_PreserveMost_From_X1,
        SMEABI_LibCalls_PreserveMost_From_X2)
@@ -2197,6 +2206,7 @@ def WindowsARM64ECSystemLibrary
                                 LibcallImpls<(add __security_check_cookie_arm64ec,
                                                   __security_cookie),
                                               isWindowsMSVCEnvironment>,
+                                __chkstk_arm64ec,
                                 ExceptionModelCallsArm64EC)>;
 
 //===----------------------------------------------------------------------===//
@@ -2614,6 +2624,7 @@ def ARMSystemLibrary
            WindowARMDivRemCalls,
            WindowARMFPIntCasts,
            SecurityCheckCookieIfWinMSVC,
+           LibcallImpls<(add __chkstk), isOSWindows>,
            AEABIDivRemCalls,
            DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
@@ -3114,7 +3125,9 @@ defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
   def ___memmove64 : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
+  def ___strcpy64 : RuntimeLibcallImpl<STRCPY>;
   def ___strlen64 : RuntimeLibcallImpl<STRLEN>;
+  def ___strstr64 : RuntimeLibcallImpl<STRSTR>;
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
@@ -3122,7 +3135,9 @@ defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
   def ___bzero : RuntimeLibcallImpl<BZERO>;
+  def ___strcpy : RuntimeLibcallImpl<STRCPY>;
   def ___strlen : RuntimeLibcallImpl<STRLEN>;
+  def ___strstr : RuntimeLibcallImpl<STRSTR>;
 }
 
 defvar PPCOverrides = !foreach(entry, PPCRuntimeLibcalls, entry.Provides);
@@ -3288,6 +3303,19 @@ def isX86_32 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86">;
 def isX86_64 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86_64">;
 def isX86 : RuntimeLibcallPredicate<"TT.isX86()">;
 
+def isCygwinMinGW64 : RuntimeLibcallPredicate<
+  [{TT.isOSCygMing() && TT.getArch() == Triple::x86_64}]>;
+def isCygwinMinGW32 : RuntimeLibcallPredicate<
+  [{TT.isOSCygMing() && TT.getArch() == Triple::x86}]>;
+
+def isWin32NotCygMing : RuntimeLibcallPredicate<
+  [{TT.getArch() == Triple::x86 &&
+     (TT.isOSWindows() || TT.isUEFI()) && !TT.isOSCygMing()}]>;
+def isWin64NotCygMing : RuntimeLibcallPredicate<
+  [{TT.getArch() == Triple::x86_64 &&
+    (TT.isOSWindows() || TT.isUEFI()) && !TT.isOSCygMing()}]>;
+
+
 // Some darwins have an optimized __bzero/bzero function.
 def darwinHas__bzero : RuntimeLibcallPredicate<"TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6)">;
 
@@ -3320,8 +3348,12 @@ defvar X86CommonLibcalls =
        // hack for one test relying on it.
        __powitf2_f128,
        DefaultStackProtector,
-       LibcallImpls<(add MemChkLibcalls), isNotPS>
-     );
+       LibcallImpls<(add MemChkLibcalls), isNotPS>,
+       LibcallImpls<(add ___chkstk_ms), isCygwinMinGW64>,
+       LibcallImpls<(add __chkstk), isWin64NotCygMing>,
+       LibcallImpls<(add _alloca), isCygwinMinGW32>,
+       LibcallImpls<(add _chkstk), isWin32NotCygMing>
+);
 
 defvar Windows32DivRemMulCalls =
   LibcallsWithCC<(add WindowsDivRemMulLibcalls), X86_STDCALL,

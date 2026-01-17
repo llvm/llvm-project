@@ -5,7 +5,7 @@
 ; RUN:   FileCheck %s --check-prefixes=ZBB,RV32ZBB
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+zbb | \
 ; RUN:   FileCheck %s --check-prefixes=ZBB,RV64ZBB
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s | \
+; RUN: llc -mtriple=riscv32 -mattr=+xqcicm,+xqcics,+xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s | \
 ; RUN:   FileCheck %s --check-prefixes=XQCI
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+short-forward-branch-ialu | \
 ; RUN:   FileCheck %s --check-prefixes=RV32I-SFB

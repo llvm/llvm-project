@@ -234,56 +234,6 @@ void FillResponse(const llvm::json::Object &request,
 ///     definition outlined by Microsoft.
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 
-/// Create a "StackFrame" object for a LLDB frame object.
-///
-/// This function will fill in the following keys in the returned
-/// object:
-///   "id" - the stack frame ID as an integer
-///   "name" - the function name as a string
-///   "source" - source file information as a "Source" DAP object
-///   "line" - the source file line number as an integer
-///   "column" - the source file column number as an integer
-///
-/// \param[in] dap
-///     The DAP session associated with the stopped thread.
-///
-/// \param[in] frame
-///     The LLDB stack frame to use when populating out the "StackFrame"
-///     object.
-///
-/// \param[in] format
-///     The LLDB format to use when populating out the "StackFrame"
-///     object.
-///
-/// \return
-///     A "StackFrame" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
-                                   lldb::SBFormat &format);
-
-/// Create a "StackFrame" label object for a LLDB thread.
-///
-/// This function will fill in the following keys in the returned
-/// object:
-///   "id" - the thread ID as an integer
-///   "name" - the thread name as a string which combines the LLDB
-///            thread index ID along with the string name of the thread
-///            from the OS if it has a name.
-///   "presentationHint" - "label"
-///
-/// \param[in] thread
-///     The LLDB thread to use when populating out the "Thread"
-///     object.
-///
-/// \param[in] format
-///     The configured formatter for the DAP session.
-///
-/// \return
-///     A "StackFrame" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
-                                                lldb::SBFormat &format);
-
 /// Create a "StoppedEvent" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned
@@ -316,7 +266,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
 
 /// \return
 ///     The variable name of \a value or a default placeholder.
-const char *GetNonNullVariableName(lldb::SBValue &value);
+llvm::StringRef GetNonNullVariableName(lldb::SBValue &value);
 
 /// VSCode can't display two variables with the same name, so we need to
 /// distinguish them by using a suffix.
@@ -338,21 +288,21 @@ struct VariableDescription {
   // The variable path for this variable.
   std::string evaluate_name;
   // The output of SBValue.GetValue() if it doesn't fail. It might be empty.
-  std::string value;
+  llvm::StringRef value;
   // The summary string of this variable. It might be empty.
-  std::string summary;
+  llvm::StringRef summary;
   // The auto summary if using `enableAutoVariableSummaries`.
   std::optional<std::string> auto_summary;
   // The type of this variable.
   lldb::SBType type_obj;
   // The display type name of this variable.
-  std::string display_type_name;
+  llvm::StringRef display_type_name;
   /// The SBValue for this variable.
-  lldb::SBValue v;
+  lldb::SBValue val;
 
   VariableDescription(lldb::SBValue v, bool auto_variable_summaries,
                       bool format_hex = false, bool is_name_duplicated = false,
-                      std::optional<std::string> custom_name = {});
+                      std::optional<llvm::StringRef> custom_name = {});
 
   /// Returns a description of the value appropriate for the specified context.
   std::string GetResult(protocol::EvaluateContext context);
@@ -367,8 +317,6 @@ int64_t PackLocation(int64_t var_ref, bool is_value_location);
 
 /// Reverse of `PackLocation`
 std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
-
-llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 
 /// Create a runInTerminal reverse request object
 ///

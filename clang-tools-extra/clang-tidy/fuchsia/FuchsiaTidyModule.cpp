@@ -8,8 +8,7 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
-#include "../google/UnnamedNamespaceInHeaderCheck.h"
+#include "../misc/AnonymousNamespaceInHeaderCheck.h"
 #include "../misc/MultipleInheritanceCheck.h"
 #include "DefaultArgumentsCallsCheck.h"
 #include "DefaultArgumentsDeclarationsCheck.h"
@@ -23,6 +22,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace fuchsia {
+namespace {
 
 /// This module is for Fuchsia-specific checks.
 class FuchsiaModule : public ClangTidyModule {
@@ -32,7 +32,7 @@ public:
         "fuchsia-default-arguments-calls");
     CheckFactories.registerCheck<DefaultArgumentsDeclarationsCheck>(
         "fuchsia-default-arguments-declarations");
-    CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
+    CheckFactories.registerCheck<misc::AnonymousNamespaceInHeaderCheck>(
         "fuchsia-header-anon-namespaces");
     CheckFactories.registerCheck<misc::MultipleInheritanceCheck>(
         "fuchsia-multiple-inheritance");
@@ -48,6 +48,9 @@ public:
         "fuchsia-virtual-inheritance");
   }
 };
+
+} // namespace
+
 // Register the FuchsiaTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<FuchsiaModule>
     X("fuchsia-module", "Adds Fuchsia platform checks.");

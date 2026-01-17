@@ -305,6 +305,13 @@ class ParsedCommandTestCase(TestBase):
         matches.AppendList(["answer ", "correct_answer"], 2)
         self.handle_completion(cmd_str, 1, matches, descriptions, False)
 
+        # Test completion for a command with arguments but NO options:
+        cmd_str = "one-arg-no-opt nonexistent_file_xyz"
+        matches.Clear()
+        descriptions.Clear()
+        matches.AppendString("")
+        self.handle_completion(cmd_str, 0, matches, descriptions, False)
+
         # Now make sure get_repeat_command works properly:
 
         # no-args turns off auto-repeat
