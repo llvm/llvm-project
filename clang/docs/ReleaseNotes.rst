@@ -105,6 +105,7 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Improved `-Wassign-enum` performance by caching enum enumerator values. (#GH176454)
 
 Improvements to Clang's time-trace
 ----------------------------------
