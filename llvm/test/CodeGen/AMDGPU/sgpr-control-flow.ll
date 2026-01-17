@@ -18,7 +18,9 @@ define amdgpu_kernel void @sgpr_if_else_salu_br(ptr addrspace(1) %out, i32 %a, i
 ; SI-NEXT:    s_cbranch_scc0 .LBB0_4
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_add_i32 s3, s3, s6
-; SI-NEXT:    s_cbranch_execnz .LBB0_3
+; SI-NEXT:    s_mov_b64 s[6:7], 0
+; SI-NEXT:    s_bitcmp0_b32 s6, 0
+; SI-NEXT:    s_cbranch_scc1 .LBB0_3
 ; SI-NEXT:  .LBB0_2: ; %if
 ; SI-NEXT:    s_sub_i32 s3, s1, s2
 ; SI-NEXT:  .LBB0_3: ; %endif
@@ -31,8 +33,11 @@ define amdgpu_kernel void @sgpr_if_else_salu_br(ptr addrspace(1) %out, i32 %a, i
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB0_4:
+; SI-NEXT:    s_mov_b64 s[6:7], -1
 ; SI-NEXT:    ; implicit-def: $sgpr3
-; SI-NEXT:    s_branch .LBB0_2
+; SI-NEXT:    s_bitcmp0_b32 s6, 0
+; SI-NEXT:    s_cbranch_scc0 .LBB0_2
+; SI-NEXT:    s_branch .LBB0_3
 
 entry:
   %0 = icmp eq i32 %a, 0
@@ -65,7 +70,9 @@ define amdgpu_kernel void @sgpr_if_else_salu_br_opt(ptr addrspace(1) %out, [8 x 
 ; SI-NEXT:    s_load_dword s1, s[4:5], 0x37
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_add_i32 s3, s0, s1
-; SI-NEXT:    s_cbranch_execnz .LBB1_3
+; SI-NEXT:    s_mov_b64 s[0:1], 0
+; SI-NEXT:    s_bitcmp0_b32 s0, 0
+; SI-NEXT:    s_cbranch_scc1 .LBB1_3
 ; SI-NEXT:  .LBB1_2: ; %if
 ; SI-NEXT:    s_load_dword s0, s[4:5], 0x1c
 ; SI-NEXT:    s_load_dword s1, s[4:5], 0x25
@@ -81,8 +88,11 @@ define amdgpu_kernel void @sgpr_if_else_salu_br_opt(ptr addrspace(1) %out, [8 x 
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB1_4:
+; SI-NEXT:    s_mov_b64 s[0:1], -1
 ; SI-NEXT:    ; implicit-def: $sgpr3
-; SI-NEXT:    s_branch .LBB1_2
+; SI-NEXT:    s_bitcmp0_b32 s0, 0
+; SI-NEXT:    s_cbranch_scc0 .LBB1_2
+; SI-NEXT:    s_branch .LBB1_3
 
 entry:
   %cmp0 = icmp eq i32 %a, 0

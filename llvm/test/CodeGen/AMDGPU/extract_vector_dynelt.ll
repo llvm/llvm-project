@@ -1948,9 +1948,8 @@ define amdgpu_kernel void @bit128_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s2, 1
 ; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GCN-NEXT:    s_and_b32 s3, s4, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s2, 2
-; GCN-NEXT:    v_readfirstlane_b32 s3, v0
 ; GCN-NEXT:    s_cselect_b32 s3, s3, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s2, 3
 ; GCN-NEXT:    s_cselect_b32 s3, s3, 0

@@ -24,7 +24,7 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX7CHECK-NEXT:    s_and_b32 s4, s6, 0x7fff
 ; GFX7CHECK-NEXT:    s_cmpk_gt_i32 s4, 0x7f80
 ; GFX7CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[4:5]
+; GFX7CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7CHECK-NEXT:    s_endpgm
 ;
@@ -37,8 +37,8 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX8CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX8CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX8CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, -1, s[2:3]
 ; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8CHECK-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8CHECK-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8CHECK-NEXT:    s_endpgm
 ;
@@ -51,7 +51,7 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX9CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX9CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX9CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[2:3]
+; GFX9CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9CHECK-NEXT:    s_endpgm
 ;
@@ -65,7 +65,7 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX10CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX10CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX10CHECK-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10CHECK-NEXT:    s_endpgm
 ;
@@ -74,12 +74,11 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX11CHECK-NEXT:    s_clause 0x1
 ; GFX11CHECK-NEXT:    s_load_b32 s2, s[4:5], 0x2c
 ; GFX11CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX11CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX11CHECK-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; GFX11CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11CHECK-NEXT:    s_endpgm
   %result = call i1 @llvm.is.fpclass.bf16(bfloat %x, i32 3)

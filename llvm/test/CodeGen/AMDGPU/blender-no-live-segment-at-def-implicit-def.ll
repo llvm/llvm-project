@@ -41,11 +41,11 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_mov_b32 s17, 0x7fc00000
 ; CHECK-NEXT:  .LBB0_6: ; %Flow
 ; CHECK-NEXT:    s_mov_b32 s48, 1.0
-; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s12
+; CHECK-NEXT:    s_bitcmp0_b32 s12, 0
 ; CHECK-NEXT:    s_mov_b32 s49, s48
 ; CHECK-NEXT:    s_mov_b32 s50, s48
 ; CHECK-NEXT:    s_mov_b32 s51, s48
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_8
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_8
 ; CHECK-NEXT:  ; %bb.7: ; %if.end273.i.i
 ; CHECK-NEXT:    s_add_u32 s12, s8, 40
 ; CHECK-NEXT:    s_addc_u32 s13, s9, 0

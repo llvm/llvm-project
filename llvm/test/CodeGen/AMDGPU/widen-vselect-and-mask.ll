@@ -67,10 +67,11 @@ define amdgpu_kernel void @widen_vselect_and_mask_v4i64(<4 x i64> %arg) #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v6, v5
 ; GCN-NEXT:    v_cmp_lt_i64_e32 vcc, -1, v[5:6]
 ; GCN-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GCN-NEXT:    s_and_b32 s0, s0, 1
 ; GCN-NEXT:    buffer_store_dwordx4 v[1:4], off, s[8:11], 0
 ; GCN-NEXT:    s_mov_b32 s6, s10
 ; GCN-NEXT:    s_mov_b32 s7, s11
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 bb:

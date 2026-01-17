@@ -112,7 +112,8 @@ define i1 @class_f64() noinline optnone {
 ; GCN-SDAG-NEXT:    s_mov_b32 s2, 1
 ; GCN-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
 ; GCN-SDAG-NEXT:    v_cmp_class_f64_e64 s0, s[0:1], s2
-; GCN-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GCN-SDAG-NEXT:    s_and_b32 s0, s0, 1
+; GCN-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GCN-GISEL-LABEL: class_f64:
