@@ -194,13 +194,21 @@ public:
     return true;
   }
 
-  // bool TraverseSubstTemplateTypeParmTypeLoc(SubstTemplateTypeParmTypeLoc TL,
-  //                                           bool TraverseQualifier) {
-  //   auto Type = TL.getAs<TemplateSpecializationTypeLoc>();
-  //   if (!Type.isNull())
-  //     TraverseTemplateSpecializationTypeLoc(Type, TraverseQualifier);
-  //   return true;
-  // }
+  bool VisitSubstTemplateTypeParmTypeLoc(SubstTemplateTypeParmTypeLoc TL) {
+    auto QT = TL.getTypePtr()->getReplacementType();
+    auto *T = QT->getAsNonAliasTemplateSpecializationType();
+    if (!T)
+      return true;
+    HandleTemplateSpecializationTypeLoc(
+        T->getTemplateName(), TL.getTemplateNameLoc(), T->getAsCXXRecordDecl(),
+        T->isTypeAlias());
+    return true;
+  }
+
+  bool TraverseSubstTemplateTypeParmTypeLoc(SubstTemplateTypeParmTypeLoc TL,
+                                            bool TraverseQualifier) {
+    return true;
+  }
 
   bool VisitDeducedTemplateSpecializationTypeLoc(DeducedTemplateSpecializationTypeLoc TL) {
     auto *T = TL.getTypePtr();
