@@ -107,9 +107,8 @@ public:
     if (__rel_time == chrono::duration<_Rep, _Period>::zero())
       return try_acquire();
 
-    return std::__atomic_wait_unless_with_timeout(__a_, memory_order_relaxed, [this](ptrdiff_t& __old) {
-      return __try_acquire_impl(__old);
-    }, __rel_time);
+    return std::__atomic_wait_unless_with_timeout(
+        __a_, memory_order_relaxed, [this](ptrdiff_t& __old) { return __try_acquire_impl(__old); }, __rel_time);
   }
   _LIBCPP_HIDE_FROM_ABI bool try_acquire() {
     auto __old = __a_.load(memory_order_relaxed);

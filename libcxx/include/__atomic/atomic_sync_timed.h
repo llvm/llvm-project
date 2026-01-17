@@ -38,7 +38,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #  if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
 _LIBCPP_AVAILABILITY_NEW_SYNC
-    _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __atomic_monitor_global(void const* __address) _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __atomic_monitor_global(void const* __address) _NOEXCEPT;
 
 // wait on the global contention state to be changed from the given value for the address
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_global_table_with_timeout(
