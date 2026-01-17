@@ -2950,13 +2950,25 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   const auto *SD = FD ? FD->getAttr<CPUSpecificAttr>() : nullptr;
   const auto *TC = FD ? FD->getAttr<TargetClonesAttr>() : nullptr;
   bool AddedAttr = false;
+  auto HandleAMDGPUFeatureDelta = [&](llvm::StringMap<bool> &FeatureMap) {
+    // Get the default feature map for the (possibly overridden) target CPU.
+    llvm::StringMap<bool> DefaultFeatureMap;
+    getTarget().initFeatureMap(DefaultFeatureMap, getContext().getDiagnostics(),
+                               TargetCPU, {});
+
+    // Only emit features that differ from the defaults.
+    for (const auto &Entry : FeatureMap) {
+      auto DefaultIt = DefaultFeatureMap.find(Entry.getKey());
+      // Emit if the feature is not in defaults or has a different value.
+      if (DefaultIt == DefaultFeatureMap.end() ||
+          DefaultIt->getValue() != Entry.getValue())
+        Features.push_back((Entry.getValue() ? "+" : "-") +
+                           Entry.getKey().str());
+    }
+  };
   if (TD || TV || SD || TC) {
     llvm::StringMap<bool> FeatureMap;
     getContext().getFunctionFeatureMap(FeatureMap, GD);
-
-    // Produce the canonical string for this set of features.
-    for (const llvm::StringMap<bool>::value_type &Entry : FeatureMap)
-      Features.push_back((Entry.getValue() ? "+" : "-") + Entry.getKey().str());
 
     // Now add the target-cpu and target-features to the function.
     // While we populated the feature map above, we still need to
@@ -2980,10 +2992,36 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       // favor this processor.
       TuneCPU = SD->getCPUName(GD.getMultiVersionIndex())->getName();
     }
+
+    // For AMDGPU, by default only emit delta features (features that differ
+    // from the target CPU's defaults). Use -famdgpu-emit-full-target-features
+    // to emit all features.
+    if (getTarget().getTriple().isAMDGPU() &&
+        !CodeGenOpts.AMDGPUEmitFullTargetFeatures) {
+      HandleAMDGPUFeatureDelta(FeatureMap);
+    } else {
+      // Produce the canonical string for this set of features.
+      for (const llvm::StringMap<bool>::value_type &Entry : FeatureMap)
+        Features.push_back((Entry.getValue() ? "+" : "-") +
+                           Entry.getKey().str());
+    }
   } else {
     // Otherwise just add the existing target cpu and target features to the
     // function.
-    Features = getTarget().getTargetOpts().Features;
+    if (SetTargetFeatures && getTarget().getTriple().isAMDGPU() &&
+        !CodeGenOpts.AMDGPUEmitFullTargetFeatures) {
+      llvm::StringMap<bool> FeatureMap;
+      if (FD) {
+        getContext().getFunctionFeatureMap(FeatureMap, GD);
+      } else {
+        getTarget().initFeatureMap(FeatureMap, getContext().getDiagnostics(),
+                                   TargetCPU,
+                                   getTarget().getTargetOpts().Features);
+      }
+      HandleAMDGPUFeatureDelta(FeatureMap);
+    } else {
+      Features = getTarget().getTargetOpts().Features;
+    }
   }
 
   if (!TargetCPU.empty()) {

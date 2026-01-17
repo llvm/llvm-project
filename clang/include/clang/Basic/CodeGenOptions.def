@@ -470,6 +470,10 @@ CODEGENOPT(EmitIEEENaNCompliantInsts, 1, 1, Benign)
 /// Expands s_waitcnt instructions to help PC-sampling profilers identify stalls.
 CODEGENOPT(AMDGPUExpandWaitcntProfiling, 1, 0, Benign)
 
+/// Emit full target-features attribute for AMDGPU (for testing). (AMDGPU Only)
+/// By default, only features that differ from the target CPU's defaults are emitted.
+CODEGENOPT(AMDGPUEmitFullTargetFeatures, 1, 0, Benign)
+
 // Whether to emit Swift Async function extended frame information: auto,
 // never, always.
 ENUM_CODEGENOPT(SwiftAsyncFramePointer, SwiftAsyncFramePointerKind, 2,
