@@ -1352,6 +1352,15 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     // Add select for mask.
     Builder.setInsertPoint(SelectR);
+
+    if (Op1 == PhiR) {
+      // Normalize to selecting the data operand when the condition is true by
+      // swapping operands and negating the condition.
+      std::swap(Op1, Op2);
+      Cond = Builder.createNot(Cond);
+    }
+    assert(Op2 == PhiR && "data value must be selected if Cond is true");
+
     VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
     MaskPHI->addOperand(MaskSelect);
