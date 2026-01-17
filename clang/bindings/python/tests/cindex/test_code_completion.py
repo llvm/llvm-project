@@ -154,7 +154,7 @@ void f(P x, Q y) {
         for compatKind in AvailabilityKindCompat:
             compatKind2 = AvailabilityKindCompat.from_id(compatKind.value)
             nextKindId = (compatKind.value + 1) % numKinds
-            compatKind2Unequal = AvailabilityKind.from_id(nextKindId)
+            compatKind2Unequal = AvailabilityKindCompat.from_id(nextKindId)
             self.assertEqual(compatKind, compatKind2)
             self.assertEqual(compatKind2, compatKind)
             self.assertNotEqual(compatKind2Unequal, compatKind)
