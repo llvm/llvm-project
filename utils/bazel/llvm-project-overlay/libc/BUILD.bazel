@@ -3176,6 +3176,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_log10f16",
+    hdrs = ["src/__support/math/log10f16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
+        ":__support_math_expxf16_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_logbf",
     hdrs = ["src/__support/math/logbf.h"],
     deps = [
@@ -4862,7 +4877,9 @@ libc_math_function(
 
 libc_math_function(
     name = "log10f16",
-    additional_deps = [":__support_math_expxf16_utils"],
+    additional_deps = [
+        ":__support_math_log10f16",
+    ],
 )
 
 libc_math_function(
