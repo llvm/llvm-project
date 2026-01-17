@@ -3762,6 +3762,22 @@ OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+SmallVector<OpFoldResult> ViewOp::getMixedSizes() {
+  SmallVector<OpFoldResult> result;
+  unsigned ctr = 0;
+  OpBuilder b(getContext());
+  MemRefType resultType = getType();
+  auto resultShape = resultType.getShape();
+  for (int64_t i = 0; i < resultType.getRank(); ++i) {
+    if (resultType.isDynamicDim(i)) {
+      result.push_back(getSizes()[ctr++]);
+    } else {
+      result.push_back(b.getIndexAttr(resultShape[i]));
+    }
+  }
+  return result;
+}
+
 namespace {
 
 struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
