@@ -160,8 +160,8 @@ computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
 }
 
 static mlir::Value emitPrefetch(CIRGenFunction &cgf, unsigned builtinID,
-                         const CallExpr *e,
-                         const SmallVector<mlir::Value> &ops) {
+                                const CallExpr *e,
+                                const SmallVector<mlir::Value> &ops) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location location = cgf.getLoc(e->getExprLoc());
   mlir::Type voidTy = builder.getVoidTy();
