@@ -122,6 +122,7 @@
 // CHECK-NEXT: region-store-small-struct-limit = 2
 // CHECK-NEXT: report-in-main-source-file = false
 // CHECK-NEXT: security.cert.env.InvalidPtr:InvalidatingGetEnv = false
+// CHECK-NEXT: security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode = c11-only
 // CHECK-NEXT: serialize-stats = false
 // CHECK-NEXT: silence-checkers = ""
 // CHECK-NEXT: stable-report-filename = false

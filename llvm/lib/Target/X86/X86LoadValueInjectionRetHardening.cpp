@@ -56,7 +56,7 @@ public:
 
 char X86LoadValueInjectionRetHardeningLegacy::ID = 0;
 
-bool runX86LoadValueInjectionRetHardening(MachineFunction &MF) {
+static bool runX86LoadValueInjectionRetHardening(MachineFunction &MF) {
   const X86Subtarget *Subtarget = &MF.getSubtarget<X86Subtarget>();
   if (!Subtarget->useLVIControlFlowIntegrity() || !Subtarget->is64Bit())
     return false; // FIXME: support 32-bit
@@ -119,10 +119,10 @@ bool X86LoadValueInjectionRetHardeningLegacy::runOnMachineFunction(
 
 PreservedAnalyses X86LoadValueInjectionRetHardeningPass::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
-  const bool Modified = runX86LoadValueInjectionRetHardening(MF);
-  return Modified ? getMachineFunctionPassPreservedAnalyses()
-                        .preserveSet<CFGAnalyses>()
-                  : PreservedAnalyses::all();
+  return runX86LoadValueInjectionRetHardening(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }
 
 INITIALIZE_PASS(X86LoadValueInjectionRetHardeningLegacy, PASS_KEY,
