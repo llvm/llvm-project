@@ -68,6 +68,8 @@ llvm::json::Value toJSON(const MemoryEventBody &MEB) {
 
 [[maybe_unused]] static llvm::json::Value toJSON(const StopReason &SR) {
   switch (SR) {
+  case eStopReasonEmpty:
+    return "";
   case eStopReasonStep:
     return "step";
   case eStopReasonBreakpoint:
@@ -86,8 +88,6 @@ llvm::json::Value toJSON(const MemoryEventBody &MEB) {
     return "data breakpoint";
   case eStopReasonInstructionBreakpoint:
     return "instruction breakpoint";
-  case eStopReasonInvalid:
-    return "";
   }
 }
 
