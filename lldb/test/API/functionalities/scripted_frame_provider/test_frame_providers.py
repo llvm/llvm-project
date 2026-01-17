@@ -380,3 +380,81 @@ class ValidPCNoModuleFrameProvider(ScriptedFrameProvider):
             # Pass through original frames
             return index - 2
         return None
+
+
+class AddFooFrameProvider(ScriptedFrameProvider):
+    """Add a single 'foo' frame at the beginning."""
+
+    def __init__(self, input_frames, args):
+        super().__init__(input_frames, args)
+
+    @staticmethod
+    def get_description():
+        """Return a description of this provider."""
+        return "Add 'foo' frame at beginning"
+
+    @staticmethod
+    def get_priority():
+        """Return priority 10 (runs first in chain)."""
+        return 10
+
+    def get_frame_at_index(self, index):
+        if index == 0:
+            # Return synthetic "foo" frame
+            return CustomScriptedFrame(self.thread, 0, 0xF00, "foo")
+        elif index - 1 < len(self.input_frames):
+            # Pass through input frames (shifted by 1)
+            return index - 1
+        return None
+
+
+class AddBarFrameProvider(ScriptedFrameProvider):
+    """Add a single 'bar' frame at the beginning."""
+
+    def __init__(self, input_frames, args):
+        super().__init__(input_frames, args)
+
+    @staticmethod
+    def get_description():
+        """Return a description of this provider."""
+        return "Add 'bar' frame at beginning"
+
+    @staticmethod
+    def get_priority():
+        """Return priority 20 (runs second in chain)."""
+        return 20
+
+    def get_frame_at_index(self, index):
+        if index == 0:
+            # Return synthetic "bar" frame
+            return CustomScriptedFrame(self.thread, 0, 0xBAB, "bar")
+        elif index - 1 < len(self.input_frames):
+            # Pass through input frames (shifted by 1)
+            return index - 1
+        return None
+
+
+class AddBazFrameProvider(ScriptedFrameProvider):
+    """Add a single 'baz' frame at the beginning."""
+
+    def __init__(self, input_frames, args):
+        super().__init__(input_frames, args)
+
+    @staticmethod
+    def get_description():
+        """Return a description of this provider."""
+        return "Add 'baz' frame at beginning"
+
+    @staticmethod
+    def get_priority():
+        """Return priority 30 (runs last in chain)."""
+        return 30
+
+    def get_frame_at_index(self, index):
+        if index == 0:
+            # Return synthetic "baz" frame
+            return CustomScriptedFrame(self.thread, 0, 0xBAD, "baz")
+        elif index - 1 < len(self.input_frames):
+            # Pass through input frames (shifted by 1)
+            return index - 1
+        return None
