@@ -8061,6 +8061,13 @@ class OMPUseDevicePtrClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
+  /// Fallback modifier for the clause.
+  OpenMPUseDevicePtrFallbackModifier FallbackModifier =
+      OMPC_USE_DEVICE_PTR_FALLBACK_unknown;
+
+  /// Location of the fallback modifier.
+  SourceLocation FallbackModifierLoc;
+
   /// Build clause with number of variables \a NumVars.
   ///
   /// \param Locs Locations needed to build a mappable clause. It includes 1)
@@ -8071,10 +8078,15 @@ class OMPUseDevicePtrClause final
   /// NumUniqueDeclarations: number of unique base declarations in this clause;
   /// 3) NumComponentLists: number of component lists in this clause; and 4)
   /// NumComponents: total number of expression components in the clause.
-  explicit OMPUseDevicePtrClause(const OMPVarListLocTy &Locs,
-                                 const OMPMappableExprListSizeTy &Sizes)
-      : OMPMappableExprListClause(llvm::omp::OMPC_use_device_ptr, Locs, Sizes) {
-  }
+  /// \param FallbackModifier The fallback modifier for the clause.
+  /// \param FallbackModifierLoc Location of the fallback modifier.
+  explicit OMPUseDevicePtrClause(
+      const OMPVarListLocTy &Locs, const OMPMappableExprListSizeTy &Sizes,
+      OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+      SourceLocation FallbackModifierLoc)
+      : OMPMappableExprListClause(llvm::omp::OMPC_use_device_ptr, Locs, Sizes),
+        FallbackModifier(FallbackModifier),
+        FallbackModifierLoc(FallbackModifierLoc) {}
 
   /// Build an empty clause.
   ///
@@ -8127,6 +8139,14 @@ class OMPUseDevicePtrClause final
     return {getPrivateCopies().end(), varlist_size()};
   }
 
+  /// Set the fallback modifier for the clause.
+  void setFallbackModifier(OpenMPUseDevicePtrFallbackModifier M) {
+    FallbackModifier = M;
+  }
+
+  /// Set the location of the fallback modifier.
+  void setFallbackModifierLoc(SourceLocation Loc) { FallbackModifierLoc = Loc; }
+
 public:
   /// Creates clause with a list of variables \a Vars.
   ///
@@ -8139,11 +8159,15 @@ public:
   /// \param Inits Expressions referring to private copy initializers.
   /// \param Declarations Declarations used in the clause.
   /// \param ComponentLists Component lists used in the clause.
+  /// \param FallbackModifier The fallback modifier for the clause.
+  /// \param FallbackModifierLoc Location of the fallback modifier.
   static OMPUseDevicePtrClause *
   Create(const ASTContext &C, const OMPVarListLocTy &Locs,
          ArrayRef<Expr *> Vars, ArrayRef<Expr *> PrivateVars,
          ArrayRef<Expr *> Inits, ArrayRef<ValueDecl *> Declarations,
-         MappableExprComponentListsRef ComponentLists);
+         MappableExprComponentListsRef ComponentLists,
+         OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+         SourceLocation FallbackModifierLoc);
 
   /// Creates an empty clause with the place for \a NumVars variables.
   ///
@@ -8155,6 +8179,14 @@ public:
   /// NumComponents: total number of expression components in the clause.
   static OMPUseDevicePtrClause *
   CreateEmpty(const ASTContext &C, const OMPMappableExprListSizeTy &Sizes);
+
+  /// Get the fallback modifier for the clause.
+  OpenMPUseDevicePtrFallbackModifier getFallbackModifier() const {
+    return FallbackModifier;
+  }
+
+  /// Get the location of the fallback modifier.
+  SourceLocation getFallbackModifierLoc() const { return FallbackModifierLoc; }
 
   using private_copies_iterator = MutableArrayRef<Expr *>::iterator;
   using private_copies_const_iterator = ArrayRef<const Expr *>::iterator;
