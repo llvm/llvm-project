@@ -11,7 +11,5 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
-  return math::sinpif(x);
-}
+LLVM_LIBC_FUNCTION(float, sinpif, (float x)) { return math::sinpif(x); }
 } // namespace LIBC_NAMESPACE_DECL
