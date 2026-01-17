@@ -376,7 +376,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         op.getTaskReductionSyms())
       result = todo("task_reduction");
   };
-  auto checkNumTeamsMultiDim = [&todo](auto op, LogicalResult &result) {
+  auto checkNumTeams = [&todo](auto op, LogicalResult &result) {
     if (op.hasNumTeamsMultiDim())
       result = todo("num_teams with multi-dimensional values");
   };
@@ -404,7 +404,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TeamsOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
-        checkNumTeamsMultiDim(op, result);
+        checkNumTeams(op, result);
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);

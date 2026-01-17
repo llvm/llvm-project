@@ -1020,10 +1020,10 @@ class OpenMP_NumTeamsClauseSkip<
 
     /// Returns the value for a specific dimension index (multi-dim format)
     /// Index must be less than getNumTeamsVals().size()
-    ::mlir::Value getNumTeamsVal(unsigned index) {
-      assert(index < getNumTeamsVals().size() &&
+    ::mlir::Value getNumTeams(unsigned dim = 0) {
+      assert(dim < getNumTeamsDimsCount() &&
              "Num teams dims index out of bounds");
-      return getNumTeamsVals()[index];
+      return getNumTeamsVals()[dim];
     }
   }];
 }
