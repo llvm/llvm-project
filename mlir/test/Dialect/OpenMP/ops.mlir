@@ -3369,50 +3369,64 @@ func.func @omp_target_map_clause_type_test(%arg0 : memref<?xi32>) -> () {
     return
 }
 
-// CHECK-LABEL: func.func @omp_target_allocmem(
-// CHECK-SAME: %[[DEVICE:.*]]: i32, %[[X:.*]]: index, %[[Y:.*]]: index, %[[Z:.*]]: i32) {
-func.func @omp_target_allocmem(%device: i32, %x: index, %y: index, %z: i32) {
-  // CHECK: %{{.*}} = omp.target_allocmem %[[DEVICE]] : i32, i64
-  %0 = omp.target_allocmem %device : i32, i64
-  // CHECK: %{{.*}} = omp.target_allocmem %[[DEVICE]] : i32, vector<16x16xf32> {bindc_name = "bindc", uniq_name = "uniq"}
-  %1 = omp.target_allocmem %device : i32, vector<16x16xf32> {uniq_name="uniq", bindc_name="bindc"}
-  // CHECK: %{{.*}} = omp.target_allocmem %[[DEVICE]] : i32, !llvm.ptr(%[[X]], %[[Y]], %[[Z]] : index, index, i32)
-  %2 = omp.target_allocmem %device : i32, !llvm.ptr(%x, %y, %z : index, index, i32)
-  // CHECK: %{{.*}} = omp.target_allocmem %[[DEVICE]] : i32, !llvm.ptr, %[[X]], %[[Y]]
-  %3 = omp.target_allocmem %device : i32, !llvm.ptr, %x, %y
-  // CHECK: %{{.*}} = omp.target_allocmem %[[DEVICE]] : i32, !llvm.ptr(%[[X]], %[[Y]], %[[Z]] : index, index, i32), %[[X]], %[[Y]]
-  %4 = omp.target_allocmem %device : i32, !llvm.ptr(%x, %y, %z : index, index, i32), %x, %y
+// CHECK-LABEL: func.func @omp_declare_simd
+func.func @omp_declare_simd() -> () {
+  // CHECK: omp.declare_simd
+  omp.declare_simd
   return
 }
 
-// CHECK-LABEL: func.func @omp_target_freemem(
-// CHECK-SAME: %[[DEVICE:.*]]: i32) {
-func.func @omp_target_freemem(%device : i32) {
-  // CHECK: %[[PTR:.*]] = omp.target_allocmem
-  %ptr = omp.target_allocmem %device : i32, i64
-  // CHECK: omp.target_freemem %[[DEVICE]], %[[PTR]] : i32, i64
-  omp.target_freemem %device, %ptr : i32, i64
+// CHECK-LABEL: func.func @omp_declare_simd_simdlen
+func.func @omp_declare_simd_simdlen() -> () {
+  // CHECK: omp.declare_simd
+  // CHECK-SAME: simdlen(8)
+  omp.declare_simd simdlen(8)
   return
 }
 
-// CHECK-LABEL: func.func @omp_alloc_shared_mem(
-// CHECK-SAME: %[[N:.*]]: i32) {
-func.func @omp_alloc_shared_mem(%n: i32) {
-  // CHECK: %{{.*}} = omp.alloc_shared_mem %[[N]] x i64 : (i32) -> !llvm.ptr
-  %0 = omp.alloc_shared_mem %n x i64 : (i32) -> !llvm.ptr
-  // CHECK: %{{.*}} = omp.alloc_shared_mem %[[N]] x vector<16x16xf32> : (i32) -> !llvm.ptr
-  %1 = omp.alloc_shared_mem %n x vector<16x16xf32> : (i32) -> !llvm.ptr
-  // CHECK: %{{.*}} = omp.alloc_shared_mem %[[N]] x !llvm.ptr {alignment = 16 : i64} : (i32) -> !llvm.ptr
-  %2 = omp.alloc_shared_mem %n x !llvm.ptr {alignment = 16} : (i32) -> !llvm.ptr
+// CHECK-LABEL: func.func @omp_declare_simd_aligned
+func.func @omp_declare_simd_aligned(%a: f64, %b: f64,
+                                         %p0: memref<i32>, %p1: memref<i32>) -> () {
+  // CHECK:      omp.declare_simd
+  // CHECK-SAME: aligned(
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
+  omp.declare_simd aligned(%p0 : memref<i32> -> 32 : i64,
+                           %p1 : memref<i32> -> 128 : i64)
+
   return
 }
 
-// CHECK-LABEL: func.func @omp_free_shared_mem(
-// CHECK-SAME: %[[N:.*]]: i64) {
-func.func @omp_free_shared_mem(%n: i64) {
-  // CHECK: %[[PTR:.*]] = omp.alloc_shared_mem %[[N]] x f32 : (i64) -> !llvm.ptr
-  %0 = omp.alloc_shared_mem %n x f32 : (i64) -> !llvm.ptr
-  // CHECK: omp.free_shared_mem %[[PTR]] : !llvm.ptr
-  omp.free_shared_mem %0 : !llvm.ptr
+// CHECK-LABEL: func.func @omp_declare_simd_aligned_list_generic
+func.func @omp_declare_simd_aligned_list_generic(%arg0: f64, %arg1: f64,
+                                                 %arg2: memref<i32>, %arg3: memref<i32>) -> () {
+  // CHECK:      omp.declare_simd
+  // CHECK-SAME: aligned(%{{.*}} : memref<i32> -> 32 : i64, %{{.*}} : memref<i32> -> 128 : i64)
+  omp.declare_simd aligned(%arg2 : memref<i32> -> 32 : i64, %arg3 : memref<i32> -> 128 : i64)
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_linear
+func.func @omp_declare_simd_linear(%a: f64, %b: f64, %iv: i32, %step: i32) -> () {
+  // CHECK: omp.declare_simd
+  // CHECK-SAME: linear(%{{.*}} = %{{.*}} : i32)
+  omp.declare_simd linear(%iv = %step : i32)
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_all_clauses
+func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
+                                        %p0: memref<i32>, %p1: memref<i32>,
+                                        %iv: i32, %step: i32) -> () {
+  // CHECK:      omp.declare_simd
+  // CHECK-SAME: aligned(
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
+  // CHECK-SAME: linear(%{{.*}} = %{{.*}} : i32)
+  // CHECK-SAME: simdlen(8)
+  omp.declare_simd simdlen(8)
+    aligned(%p0 : memref<i32> -> 32 : i64,
+            %p1 : memref<i32> -> 128 : i64)
+    linear(%iv = %step : i32)
   return
 }
