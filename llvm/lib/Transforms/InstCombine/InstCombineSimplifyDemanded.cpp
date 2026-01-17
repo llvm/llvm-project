@@ -2033,6 +2033,30 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask,
   }
 }
 
+/// Perform multiple-use aware simplfications for fabs(\p Src). Returns a
+/// replacement value if it's simplified, otherwise nullptr. Updates \p Known
+/// with the known fpclass if not simplified.
+static Value *simplifyDemandedFPClassFabs(KnownFPClass &Known, Value *Src,
+                                          FPClassTest DemandedMask,
+                                          KnownFPClass KnownSrc, bool NSZ) {
+  if ((DemandedMask & fcNan) == fcNone)
+    KnownSrc.knownNot(fcNan);
+  if ((DemandedMask & fcInf) == fcNone)
+    KnownSrc.knownNot(fcInf);
+
+  if (KnownSrc.SignBit == false ||
+      ((DemandedMask & fcNan) == fcNone && KnownSrc.isKnownNever(fcNegative)))
+    return Src;
+
+  // If the only sign bit difference is due to -0, ignore it with nsz
+  if (NSZ &&
+      KnownSrc.isKnownNever(KnownFPClass::OrderedLessThanZeroMask | fcNan))
+    return Src;
+
+  Known = KnownFPClass::fabs(KnownSrc);
+  return nullptr;
+}
+
 static Value *
 simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
                               const CallInst *CI, FPClassTest DemandedMask,
@@ -2147,6 +2171,16 @@ inferFastMathValueFlagsBinOp(FastMathFlags FMF, FPClassTest ValidResults,
   return FMF;
 }
 
+static FPClassTest adjustDemandedMaskFromFlags(FPClassTest DemandedMask,
+                                               FastMathFlags FMF) {
+  if (FMF.noNaNs())
+    DemandedMask &= ~fcNan;
+
+  if (FMF.noInfs())
+    DemandedMask &= ~fcInf;
+  return DemandedMask;
+}
+
 Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                                     FPClassTest DemandedMask,
                                                     KnownFPClass &Known,
@@ -2161,11 +2195,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
   FastMathFlags FMF;
   if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
     FMF = FPOp->getFastMathFlags();
-    if (FMF.noNaNs())
-      DemandedMask &= ~fcNan;
-
-    if (FMF.noInfs())
-      DemandedMask &= ~fcInf;
+    DemandedMask = adjustDemandedMaskFromFlags(DemandedMask, FMF);
   }
 
   switch (I->getOpcode()) {
@@ -2463,17 +2493,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     CallInst *CI = cast<CallInst>(I);
     const Intrinsic::ID IID = CI->getIntrinsicID();
     switch (IID) {
-    case Intrinsic::fabs:
-      if (SimplifyDemandedFPClass(I, 0, llvm::inverse_fabs(DemandedMask), Known,
-                                  Depth + 1))
+    case Intrinsic::fabs: {
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(I, 0, llvm::inverse_fabs(DemandedMask),
+                                  KnownSrc, Depth + 1))
         return I;
 
-      if (Known.SignBit == false ||
-          ((DemandedMask & fcNan) == fcNone && Known.isKnownNever(fcNegative)))
-        return CI->getArgOperand(0);
-
-      Known.fabs();
+      if (Value *Simplified = simplifyDemandedFPClassFabs(
+              Known, CI->getArgOperand(0), DemandedMask, KnownSrc,
+              FMF.noSignedZeros()))
+        return Simplified;
       break;
+    }
     case Intrinsic::arithmetic_fence:
       if (SimplifyDemandedFPClass(I, 0, DemandedMask, Known, Depth + 1))
         return I;
@@ -2958,11 +2989,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
   FastMathFlags FMF;
   if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
     FMF = FPOp->getFastMathFlags();
-    if (FMF.noNaNs())
-      DemandedMask &= ~fcNan;
-
-    if (FMF.noInfs())
-      DemandedMask &= ~fcInf;
+    DemandedMask = adjustDemandedMaskFromFlags(DemandedMask, FMF);
   }
 
   switch (I->getOpcode()) {
@@ -2987,6 +3014,40 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     Known = KnownLHS.intersectWith(KnownRHS);
     break;
   }
+  case Instruction::FNeg: {
+    // Special case fneg(fabs(x))
+    Value *Src;
+
+    Value *FNegSrc = I->getOperand(0);
+    if (!match(FNegSrc, m_FAbs(m_Value(Src)))) {
+      Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
+      break;
+    }
+
+    FastMathFlags FabsFMF = cast<FPMathOperator>(FNegSrc)->getFastMathFlags();
+    FPClassTest ThisDemandedMask =
+        adjustDemandedMaskFromFlags(DemandedMask, FabsFMF);
+
+    KnownFPClass KnownSrc =
+        computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
+
+    if ((ThisDemandedMask & fcNan) == fcNone)
+      KnownSrc.knownNot(fcNan);
+    if ((ThisDemandedMask & fcInf) == fcNone)
+      KnownSrc.knownNot(fcInf);
+
+    // If the source value is known negative, we can directly fold to it.
+    if (KnownSrc.SignBit == true)
+      return Src;
+
+    // If the only sign bit difference is for 0, ignore it with nsz.
+    if ((FMF.noSignedZeros() || FabsFMF.noSignedZeros()) &&
+        KnownSrc.isKnownNever(KnownFPClass::OrderedGreaterThanZeroMask | fcNan))
+      return Src;
+
+    Known = KnownFPClass::fneg(KnownFPClass::fabs(KnownSrc));
+    break;
+  }
   case Instruction::Call: {
     const CallInst *CI = cast<CallInst>(I);
     const Intrinsic::ID IID = CI->getIntrinsicID();
@@ -2996,17 +3057,10 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       KnownFPClass KnownSrc =
           computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
 
-      if ((DemandedMask & fcNan) == fcNone)
-        KnownSrc.knownNot(fcNan);
-      if ((DemandedMask & fcInf) == fcNone)
-        KnownSrc.knownNot(fcInf);
-
-      // TODO: If the only sign bit difference is due to -0, look at source if
-      // nsz.
-      if (KnownSrc.SignBit == false || ((DemandedMask & fcNan) == fcNone &&
-                                        KnownSrc.isKnownNever(fcNegative)))
-        return Src;
-      Known = KnownFPClass::fabs(KnownSrc);
+      if (Value *Simplified = simplifyDemandedFPClassFabs(
+              Known, CI->getArgOperand(0), DemandedMask, KnownSrc,
+              FMF.noSignedZeros()))
+        return Simplified;
       break;
     }
     case Intrinsic::maximum:

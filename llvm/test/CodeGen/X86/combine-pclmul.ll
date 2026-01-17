@@ -78,8 +78,6 @@ define <8 x i64> @test_concat_pclmulqdq_v8i64_v4i64(<8 x i64> %a0, <8 x i64> %a1
 define <2 x i64> @test_demanded_elts_pclmulqdq_0(<2 x i64> %a0, <2 x i64> %a1, i64 %s0, i64 %s1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm1
 ; CHECK-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = insertelement <2 x i64> %a0, i64 %s0, i64 1
@@ -92,7 +90,6 @@ define <2 x i64> @test_demanded_elts_pclmulqdq_1(<2 x i64> %a0, <2 x i64> %a1, i
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm1
 ; CHECK-NEXT:    vpclmulqdq $1, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = insertelement <2 x i64> %a0, i64 %s0, i64 1
@@ -104,8 +101,7 @@ define <2 x i64> @test_demanded_elts_pclmulqdq_1(<2 x i64> %a0, <2 x i64> %a1, i
 define <2 x i64> @test_demanded_elts_pclmulqdq_16(<2 x i64> %a0, <2 x i64> %a1, i64 %s0, i64 %s1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm1
 ; CHECK-NEXT:    vpclmulqdq $16, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = insertelement <2 x i64> %a0, i64 %s0, i64 1
@@ -118,7 +114,7 @@ define <2 x i64> @test_demanded_elts_pclmulqdq_17(<2 x i64> %a0, <2 x i64> %a1, 
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_17:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm1
 ; CHECK-NEXT:    vpclmulqdq $17, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = insertelement <2 x i64> %a0, i64 %s0, i64 1
@@ -130,14 +126,6 @@ define <2 x i64> @test_demanded_elts_pclmulqdq_17(<2 x i64> %a0, <2 x i64> %a1, 
 define <4 x i64> @test_demanded_elts_pclmulqdq_256_0(<4 x i64> %a0, <4 x i64> %a1, i64 %s0, i64 %s1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_256_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
-; CHECK-NEXT:    vpbroadcastq %rdi, %ymm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm2[6,7]
-; CHECK-NEXT:    vpbroadcastq %rsi, %ymm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]
 ; CHECK-NEXT:    vpclmulqdq $0, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %1 = insertelement <4 x i64> %a0, i64 %s0, i64 1
@@ -151,14 +139,9 @@ define <4 x i64> @test_demanded_elts_pclmulqdq_256_0(<4 x i64> %a0, <4 x i64> %a
 define <4 x i64> @test_demanded_elts_pclmulqdq_256_1(<4 x i64> %a0, <4 x i64> %a1, i64 %s0, i64 %s1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_256_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0
 ; CHECK-NEXT:    vpbroadcastq %rdi, %ymm2
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm2[6,7]
-; CHECK-NEXT:    vpbroadcastq %rsi, %ymm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]
 ; CHECK-NEXT:    vpclmulqdq $1, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %1 = insertelement <4 x i64> %a0, i64 %s0, i64 1
@@ -172,12 +155,7 @@ define <4 x i64> @test_demanded_elts_pclmulqdq_256_1(<4 x i64> %a0, <4 x i64> %a
 define <4 x i64> @test_demanded_elts_pclmulqdq_256_16(<4 x i64> %a0, <4 x i64> %a1, i64 %s0, i64 %s1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_256_16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
-; CHECK-NEXT:    vpbroadcastq %rdi, %ymm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm2[6,7]
+; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm1
 ; CHECK-NEXT:    vpbroadcastq %rsi, %ymm2
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]
 ; CHECK-NEXT:    vpclmulqdq $16, %ymm1, %ymm0, %ymm0
@@ -193,10 +171,8 @@ define <4 x i64> @test_demanded_elts_pclmulqdq_256_16(<4 x i64> %a0, <4 x i64> %
 define <4 x i64> @test_demanded_elts_pclmulqdq_256_17(<4 x i64> %a0, <4 x i64> %a1, i64 %s0, i64 %s1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_256_17:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %ymm2
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm2[6,7]
 ; CHECK-NEXT:    vpbroadcastq %rsi, %ymm2
@@ -214,15 +190,6 @@ define <4 x i64> @test_demanded_elts_pclmulqdq_256_17(<4 x i64> %a0, <4 x i64> %
 define <8 x i64> @test_demanded_elts_pclmulqdq_512_0(<8 x i64> %a0, <8 x i64> %a1, i64 %s0, i64 %s1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_512_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm2
-; CHECK-NEXT:    vinserti32x4 $0, %xmm2, %zmm0, %zmm0
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm2
-; CHECK-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vpbroadcastq %rdi, %zmm2
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,2,11,4,13,6,15]
-; CHECK-NEXT:    vpermt2q %zmm2, %zmm3, %zmm0
-; CHECK-NEXT:    vpbroadcastq %rsi, %zmm2
-; CHECK-NEXT:    vpermt2q %zmm2, %zmm3, %zmm1
 ; CHECK-NEXT:    vpclmulqdq $0, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = insertelement <8 x i64> %a0, i64 %s0, i64 1
@@ -240,16 +207,11 @@ define <8 x i64> @test_demanded_elts_pclmulqdq_512_0(<8 x i64> %a0, <8 x i64> %a
 define <8 x i64> @test_demanded_elts_pclmulqdq_512_1(<8 x i64> %a0, <8 x i64> %a1, i64 %s0, i64 %s1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_512_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm2
-; CHECK-NEXT:    vinserti32x4 $0, %xmm2, %zmm0, %zmm0
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm2
-; CHECK-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0
 ; CHECK-NEXT:    vpbroadcastq %rdi, %zmm2
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,2,11,4,13,6,15]
-; CHECK-NEXT:    vpermt2q %zmm2, %zmm3, %zmm0
-; CHECK-NEXT:    vpbroadcastq %rsi, %zmm2
-; CHECK-NEXT:    vpermt2q %zmm2, %zmm3, %zmm1
-; CHECK-NEXT:    vpclmulqdq $1, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [u,1,u,11,u,13,u,15]
+; CHECK-NEXT:    vpermi2q %zmm2, %zmm0, %zmm3
+; CHECK-NEXT:    vpclmulqdq $1, %zmm1, %zmm3, %zmm0
 ; CHECK-NEXT:    retq
   %1 = insertelement <8 x i64> %a0, i64 %s0, i64 1
   %2 = insertelement <8 x i64> %a1, i64 %s1, i64 1
@@ -266,16 +228,11 @@ define <8 x i64> @test_demanded_elts_pclmulqdq_512_1(<8 x i64> %a0, <8 x i64> %a
 define <8 x i64> @test_demanded_elts_pclmulqdq_512_16(<8 x i64> %a0, <8 x i64> %a1, i64 %s0, i64 %s1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_512_16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm2
-; CHECK-NEXT:    vinserti32x4 $0, %xmm2, %zmm0, %zmm0
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm2
-; CHECK-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vpbroadcastq %rdi, %zmm2
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,2,11,4,13,6,15]
-; CHECK-NEXT:    vpermt2q %zmm2, %zmm3, %zmm0
+; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm1
 ; CHECK-NEXT:    vpbroadcastq %rsi, %zmm2
-; CHECK-NEXT:    vpermt2q %zmm2, %zmm3, %zmm1
-; CHECK-NEXT:    vpclmulqdq $16, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [u,1,u,11,u,13,u,15]
+; CHECK-NEXT:    vpermi2q %zmm2, %zmm1, %zmm3
+; CHECK-NEXT:    vpclmulqdq $16, %zmm3, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = insertelement <8 x i64> %a0, i64 %s0, i64 1
   %2 = insertelement <8 x i64> %a1, i64 %s1, i64 1
@@ -292,10 +249,8 @@ define <8 x i64> @test_demanded_elts_pclmulqdq_512_16(<8 x i64> %a0, <8 x i64> %
 define <8 x i64> @test_demanded_elts_pclmulqdq_512_17(<8 x i64> %a0, <8 x i64> %a1, i64 %s0, i64 %s1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_512_17:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm2
-; CHECK-NEXT:    vinserti32x4 $0, %xmm2, %zmm0, %zmm0
-; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm1, %xmm2
-; CHECK-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %zmm2
 ; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,2,11,4,13,6,15]
 ; CHECK-NEXT:    vpermt2q %zmm2, %zmm3, %zmm0
