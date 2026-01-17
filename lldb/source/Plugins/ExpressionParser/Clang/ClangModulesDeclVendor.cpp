@@ -20,6 +20,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 

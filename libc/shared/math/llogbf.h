@@ -1,4 +1,4 @@
-//===-- Implementation of fsqrt128 function -------------------------------===//
+//===-- Shared llogbf function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fsqrtf128.h"
-#include "src/__support/math/fsqrtf128.h"
+#ifndef LLVM_LIBC_SHARED_MATH_LLOGBF_H
+#define LLVM_LIBC_SHARED_MATH_LLOGBF_H
+
+#include "shared/libc_common.h"
+#include "src/__support/math/llogbf.h"
+
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, fsqrtf128, (float128 x)) {
-  return math::fsqrtf128(x);
-}
+using math::llogbf;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_LLOGBF_H

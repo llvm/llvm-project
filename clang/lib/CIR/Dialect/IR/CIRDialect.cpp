@@ -2704,6 +2704,53 @@ LogicalResult cir::GetRuntimeMemberOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// GetMethodOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::GetMethodOp::verify() {
+  cir::MethodType methodTy = getMethod().getType();
+
+  // Assume objectTy is !cir.ptr<!T>
+  cir::PointerType objectPtrTy = getObject().getType();
+  mlir::Type objectTy = objectPtrTy.getPointee();
+
+  if (methodTy.getClassTy() != objectTy)
+    return emitError() << "method class type and object type do not match";
+
+  // Assume methodFuncTy is !cir.func<!Ret (!Args)>
+  auto calleeTy = mlir::cast<cir::FuncType>(getCallee().getType().getPointee());
+  cir::FuncType methodFuncTy = methodTy.getMemberFuncTy();
+
+  // We verify at here that calleeTy is !cir.func<!Ret (!cir.ptr<!void>, !Args)>
+  // Note that the first parameter type of the callee is !cir.ptr<!void> instead
+  // of !cir.ptr<!T> because the "this" pointer may be adjusted before calling
+  // the callee.
+
+  if (methodFuncTy.getReturnType() != calleeTy.getReturnType())
+    return emitError()
+           << "method return type and callee return type do not match";
+
+  llvm::ArrayRef<mlir::Type> calleeArgsTy = calleeTy.getInputs();
+  llvm::ArrayRef<mlir::Type> methodFuncArgsTy = methodFuncTy.getInputs();
+
+  if (calleeArgsTy.empty())
+    return emitError() << "callee parameter list lacks receiver object ptr";
+
+  auto calleeThisArgPtrTy = mlir::dyn_cast<cir::PointerType>(calleeArgsTy[0]);
+  if (!calleeThisArgPtrTy ||
+      !mlir::isa<cir::VoidType>(calleeThisArgPtrTy.getPointee())) {
+    return emitError()
+           << "the first parameter of callee must be a void pointer";
+  }
+
+  if (calleeArgsTy.slice(1) != methodFuncArgsTy)
+    return emitError()
+           << "callee parameters and method parameters do not match";
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // GetMemberOp Definitions
 //===----------------------------------------------------------------------===//
 

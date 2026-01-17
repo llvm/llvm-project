@@ -8,6 +8,7 @@
 
 #include "llvm/Support/Error.h"
 #include "llvm-c/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
