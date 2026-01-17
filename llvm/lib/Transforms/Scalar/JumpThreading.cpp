@@ -411,6 +411,13 @@ static bool replaceFoldableUses(Instruction *Cond, Value *ToVal,
     // of BB, where we know Cond is ToVal.
     if (!isGuaranteedToTransferExecutionToSuccessor(&I))
       break;
+    // Do not replace assume instruction's condition because other basic blocks
+    // dominated by this one may need to analyze the original constraint on the
+    // condition variable.
+    if (auto *II = llvm::dyn_cast<llvm::IntrinsicInst>(&I)) {
+      if (II->getIntrinsicID() == llvm::Intrinsic::assume)
+        break;
+    }
     Changed |= I.replaceUsesOfWith(Cond, ToVal);
   }
   if (Cond->use_empty() && !Cond->mayHaveSideEffects()) {
