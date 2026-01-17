@@ -311,8 +311,13 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
           return Pred == ICmpInst::ICMP_EQ ? CR : CR.inverse();
         }
       }
-      // Fallback: Match icmp X, C
+      // Fallback: Match br (icmp X, C), %then, %else
       // E.g., if X ∈ [0, 4], this can simplify icmp uge X, 4 to icmp eq X, 4
+      const Use *SingleUse = ICmp->getSingleUndroppableUse();
+      if (!SingleUse || !isa<BranchInst>(SingleUse->getUser()))
+        return std::nullopt;
+      assert(cast<BranchInst>(SingleUse->getUser())->isConditional() &&
+             "Expected a conditional branch");
       X = LHS;
       return ConstantRange::makeExactICmpRegion(Pred, *RHSC);
     };
