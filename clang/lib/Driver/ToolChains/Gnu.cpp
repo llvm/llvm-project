@@ -751,7 +751,12 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
 
     break;
   }
-  // TODO: handle loongarch32.
+  case llvm::Triple::loongarch32: {
+    StringRef ABIName =
+        loongarch::getLoongArchABI(D, Args, getToolChain().getTriple());
+    CmdArgs.push_back(Args.MakeArgString("-mabi=" + ABIName));
+    break;
+  }
   case llvm::Triple::loongarch64: {
     StringRef ABIName =
         loongarch::getLoongArchABI(D, Args, getToolChain().getTriple());
@@ -2369,6 +2374,12 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "i586-suse-linux",     "i686-montavista-linux",
   };
 
+  static const char *const LoongArch32LibDirs[] = {"/lib32", "/lib"};
+  static const char *const LoongArch32Triples[] = {
+      "loongarch32-linux-gnu",    "loongarch32-unknown-linux-gnu",
+      "loongarch32-linux-gnuf32", "loongarch32-unknown-linux-gnuf32",
+      "loongarch32-linux-gnusf",  "loongarch32-unknown-linux-gnusf"};
+
   static const char *const LoongArch64LibDirs[] = {"/lib64", "/lib"};
   static const char *const LoongArch64Triples[] = {
       "loongarch64-linux-gnu", "loongarch64-unknown-linux-gnu"};
@@ -2639,7 +2650,10 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       BiarchTripleAliases.append(begin(X32Triples), end(X32Triples));
     }
     break;
-  // TODO: Handle loongarch32.
+  case llvm::Triple::loongarch32:
+    LibDirs.append(begin(LoongArch32LibDirs), end(LoongArch32LibDirs));
+    TripleAliases.append(begin(LoongArch32Triples), end(LoongArch32Triples));
+    break;
   case llvm::Triple::loongarch64:
     LibDirs.append(begin(LoongArch64LibDirs), end(LoongArch64LibDirs));
     TripleAliases.append(begin(LoongArch64Triples), end(LoongArch64Triples));

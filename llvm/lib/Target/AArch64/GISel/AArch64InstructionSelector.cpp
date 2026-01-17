@@ -2384,7 +2384,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     if (Ty.getSizeInBits() == 64) {
       I.getOperand(1).ChangeToRegister(AArch64::XZR, false);
       RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass, MRI);
-    } else if (Ty.getSizeInBits() == 32) {
+    } else if (Ty.getSizeInBits() <= 32) {
       I.getOperand(1).ChangeToRegister(AArch64::WZR, false);
       RBI.constrainGenericRegister(DefReg, AArch64::GPR32RegClass, MRI);
     } else
