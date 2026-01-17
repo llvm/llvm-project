@@ -1969,13 +1969,8 @@ add_entrypoint_object(
   HDRS
     ../log2f.h
   DEPENDS
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fma
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.common_constants
+    libc.src.__support.math.log2f
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
