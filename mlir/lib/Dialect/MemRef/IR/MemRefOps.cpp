@@ -3765,7 +3765,7 @@ OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
 SmallVector<OpFoldResult> ViewOp::getMixedSizes() {
   SmallVector<OpFoldResult> result;
   unsigned ctr = 0;
-  OpBuilder b(getContext());
+  Builder b(getContext());
   MemRefType resultType = getType();
   auto resultShape = resultType.getShape();
   for (int64_t i = 0; i < resultType.getRank(); ++i) {
