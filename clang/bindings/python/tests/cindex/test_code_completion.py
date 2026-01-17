@@ -1,5 +1,4 @@
-from clang.cindex import TranslationUnit
-
+from clang.cindex import AvailabilityKind, CompletionString, TranslationUnit
 
 import unittest
 from pathlib import Path
@@ -137,3 +136,41 @@ void f(P x, Q y) {
             "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
+
+    def test_availability_kind_compat_(self):
+        numKinds = len(CompletionString.AvailabilityKindCompat)
+
+        # Compare with regular kind
+        for compatKind in CompletionString.AvailabilityKindCompat:
+            commonKind = AvailabilityKind.from_id(compatKind.value)
+            nextKindId = (compatKind.value + 1) % numKinds
+            commonKindUnequal = AvailabilityKind.from_id(nextKindId)
+            self.assertEqual(commonKind, compatKind)
+            self.assertEqual(compatKind, commonKind)
+            self.assertNotEqual(commonKindUnequal, compatKind)
+            self.assertNotEqual(compatKind, commonKindUnequal)
+
+        # Compare two compat kinds
+        for compatKind in CompletionString.AvailabilityKindCompat:
+            compatKind2 = CompletionString.AvailabilityKindCompat.from_id(
+                compatKind.value
+            )
+            nextKindId = (compatKind.value + 1) % numKinds
+            compatKind2Unequal = CompletionString.AvailabilityKindCompat.from_id(
+                nextKindId
+            )
+            self.assertEqual(compatKind, compatKind2)
+            self.assertEqual(compatKind2, compatKind)
+            self.assertNotEqual(compatKind2Unequal, compatKind)
+            self.assertNotEqual(compatKind, compatKind2Unequal)
+
+    def test_compat_str(self):
+        kindStringMap = {
+            0: "Available",
+            1: "Deprecated",
+            2: "NotAvailable",
+            3: "NotAccessible",
+        }
+        for id, string in kindStringMap.items():
+            kind = CompletionString.AvailabilityKindCompat.from_id(id)
+            self.assertEqual(str(kind), string)
