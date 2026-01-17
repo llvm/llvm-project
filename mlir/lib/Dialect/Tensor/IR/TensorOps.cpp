@@ -1108,13 +1108,11 @@ SmallVector<OpFoldResult> EmptyOp::getMixedSizes() {
   SmallVector<OpFoldResult> result;
   unsigned ctr = 0;
   Builder b(getContext());
-  RankedTensorType type = getType();
-  auto shape = type.getShape();
-  for (int64_t i = 0, e = type.getRank(); i < e; ++i) {
-    if (type.isDynamicDim(i)) {
+  for (int64_t dim : getType().getShape()) {
+    if (ShapedType::isDynamic(dim)) {
       result.push_back(getDynamicSizes()[ctr++]);
     } else {
-      result.push_back(b.getIndexAttr(shape[i]));
+      result.push_back(b.getIndexAttr(dim));
     }
   }
   return result;

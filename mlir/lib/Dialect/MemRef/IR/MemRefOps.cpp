@@ -3766,13 +3766,11 @@ SmallVector<OpFoldResult> ViewOp::getMixedSizes() {
   SmallVector<OpFoldResult> result;
   unsigned ctr = 0;
   Builder b(getContext());
-  MemRefType resultType = getType();
-  auto resultShape = resultType.getShape();
-  for (int64_t i = 0, e = resultType.getRank(); i < e; ++i) {
-    if (resultType.isDynamicDim(i)) {
+  for (int64_t dim : getType().getShape()) {
+    if (ShapedType::isDynamic(dim)) {
       result.push_back(getSizes()[ctr++]);
     } else {
-      result.push_back(b.getIndexAttr(resultShape[i]));
+      result.push_back(b.getIndexAttr(dim));
     }
   }
   return result;
