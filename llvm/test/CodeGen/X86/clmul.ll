@@ -3028,3 +3028,50 @@ define i8 @clmul_i8_noimplicitfloat(i8 %a, i8 %b) nounwind noimplicitfloat {
   %res = call i8 @llvm.clmul.i8(i8 %a, i8 %b)
   ret i8 %res
 }
+
+declare void @use(i8)
+
+define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+  %xy = call i8 @llvm.clmul.i8(i8 %x, i8 %y)
+  %yx = call i8 @llvm.clmul.i8(i8 %y, i8 %x)
+  store i8 %xy, ptr %p0
+  store i8 %yx, ptr %p1
+  ret void
+}
+
+define void @commutative_clmulh_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+  %x.ext = zext i8 %x to i16
+  %y.ext = zext i8 %y to i16
+  %clmul_xy = call i16 @llvm.clmul.i16(i16 %x.ext, i16 %y.ext)
+  %clmul_yx = call i16 @llvm.clmul.i16(i16 %y.ext, i16 %x.ext)
+  %clmul_xy_lshr = lshr i16 %clmul_xy, 8
+  %clmul_yx_lshr = lshr i16 %clmul_yx, 8
+  %clmulh_xy = trunc i16 %clmul_xy_lshr to i8
+  %clmulh_yx = trunc i16 %clmul_yx_lshr to i8
+  store i8 %clmulh_xy, ptr %p0
+  store i8 %clmulh_yx, ptr %p1
+  ret void
+}
+
+define void @commutative_clmulr_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+  %x.ext = zext i8 %x to i16
+  %y.ext = zext i8 %y to i16
+  %clmul_xy = call i16 @llvm.clmul.i16(i16 %x.ext, i16 %y.ext)
+  %clmul_yx = call i16 @llvm.clmul.i16(i16 %y.ext, i16 %x.ext)
+  %clmul_xy_lshr = lshr i16 %clmul_xy, 7
+  %clmul_yx_lshr = lshr i16 %clmul_yx, 7
+  %clmulh_xy = trunc i16 %clmul_xy_lshr to i8
+  %clmulh_yx = trunc i16 %clmul_yx_lshr to i8
+  store i8 %clmulh_xy, ptr %p0
+  store i8 %clmulh_yx, ptr %p1
+  ret void
+}
+
+define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+  %xy = call i8 @llvm.clmul.i8(i8 %x, i8 %y)
+  %yx = call i8 @llvm.clmul.i8(i8 %y, i8 %x)
+  store i8 %xy, ptr %p0
+  call void @use(i8 %xy)
+  store i8 %yx, ptr %p1
+  ret void
+}

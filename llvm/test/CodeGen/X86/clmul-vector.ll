@@ -7638,3 +7638,50 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
   %res = trunc <2 x i128> %res.ext to <2 x i64>
   ret <2 x i64> %res
 }
+
+declare void @use(<2 x i64>)
+
+define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+  %xy = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %x, <2 x i64> %y)
+  %yx = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %y, <2 x i64> %x)
+  store <2 x i64> %xy, ptr %p0
+  store <2 x i64> %yx, ptr %p1
+  ret void
+}
+
+define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+  %x.ext = zext <2 x i64> %x to <2 x i128>
+  %y.ext = zext <2 x i64> %y to <2 x i128>
+  %clmul_xy = call <2 x i128> @llvm.clmul.v2i128(<2 x i128> %x.ext, <2 x i128> %y.ext)
+  %clmul_yx = call <2 x i128> @llvm.clmul.v2i128(<2 x i128> %y.ext, <2 x i128> %x.ext)
+  %clmul_xy_lshr = lshr <2 x i128> %clmul_xy, splat (i128 64)
+  %clmul_yx_lshr = lshr <2 x i128> %clmul_yx, splat (i128 64)
+  %clmulh_xy = trunc <2 x i128> %clmul_xy_lshr to <2 x i64>
+  %clmulh_yx = trunc <2 x i128> %clmul_yx_lshr to <2 x i64>
+  store <2 x i64> %clmulh_xy, ptr %p0
+  store <2 x i64> %clmulh_yx, ptr %p1
+  ret void
+}
+
+define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+  %x.ext = zext <2 x i64> %x to <2 x i128>
+  %y.ext = zext <2 x i64> %y to <2 x i128>
+  %clmul_xy = call <2 x i128> @llvm.clmul.v2i128(<2 x i128> %x.ext, <2 x i128> %y.ext)
+  %clmul_yx = call <2 x i128> @llvm.clmul.v2i128(<2 x i128> %y.ext, <2 x i128> %x.ext)
+  %clmul_xy_lshr = lshr <2 x i128> %clmul_xy, splat (i128 63)
+  %clmul_yx_lshr = lshr <2 x i128> %clmul_yx, splat (i128 63)
+  %clmulh_xy = trunc <2 x i128> %clmul_xy_lshr to <2 x i64>
+  %clmulh_yx = trunc <2 x i128> %clmul_yx_lshr to <2 x i64>
+  store <2 x i64> %clmulh_xy, ptr %p0
+  store <2 x i64> %clmulh_yx, ptr %p1
+  ret void
+}
+
+define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+  %xy = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %x, <2 x i64> %y)
+  %yx = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %y, <2 x i64> %x)
+  store <2 x i64> %xy, ptr %p0
+  call void @use(<2 x i64> %xy)
+  store <2 x i64> %yx, ptr %p1
+  ret void
+}
