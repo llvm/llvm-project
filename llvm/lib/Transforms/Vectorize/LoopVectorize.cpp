@@ -7313,7 +7313,7 @@ static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
   using namespace VPlanPatternMatch;
   assert(RdxResult->getOpcode() == VPInstruction::ComputeFindIVResult &&
          "RdxResult must be ComputeFindIVResult");
-  VPValue *StartVPV = RdxResult->getOperand(1);
+  VPValue *StartVPV = RdxResult->getOperand(0);
   match(StartVPV, m_Freeze(m_VPValue(StartVPV)));
   return StartVPV->getLiveInIRValue();
 }
@@ -7371,7 +7371,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     MainResumeValue = Cmp->getOperand(0);
   } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
     Value *StartV = getStartValueFromReductionResult(EpiRedResult);
-    Value *SentinelV = EpiRedResult->getOperand(2)->getLiveInIRValue();
+    Value *SentinelV = EpiRedResult->getOperand(1)->getLiveInIRValue();
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
     [[maybe_unused]] bool IsExpectedPattern =
@@ -8765,9 +8765,18 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind)) {
       VPValue *Start = PhiR->getStartValue();
       VPValue *Sentinel = Plan->getOrAddLiveIn(RdxDesc.getSentinelValue());
+      RecurKind MinMaxKind;
+      bool IsSigned =
+          RecurrenceDescriptor::isSignedRecurrenceKind(RecurrenceKind);
+      if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RecurrenceKind))
+        MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
+      else
+        MinMaxKind = IsSigned ? RecurKind::SMin : RecurKind::UMin;
+      VPIRFlags Flags(MinMaxKind, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                      FastMathFlags());
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeFindIVResult,
-                               {PhiR, Start, Sentinel, NewExitingVPV}, ExitDL);
+                               {Start, Sentinel, NewExitingVPV}, Flags, ExitDL);
     } else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
       VPValue *Start = PhiR->getStartValue();
       FinalReductionResult =
@@ -9314,12 +9323,12 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       auto *VPI = dyn_cast<VPInstruction>(&R);
       if (!VPI || VPI->getOpcode() != VPInstruction::ComputeFindIVResult)
         continue;
-      VPValue *OrigStart = VPI->getOperand(1);
+      VPValue *OrigStart = VPI->getOperand(0);
       if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
         continue;
       VPInstruction *Freeze =
           Builder.createNaryOp(Instruction::Freeze, {OrigStart}, {}, "fr");
-      VPI->setOperand(1, Freeze);
+      VPI->setOperand(0, Freeze);
       if (UpdateResumePhis)
         OrigStart->replaceUsesWithIf(Freeze, [Freeze](VPUser &U, unsigned) {
           return Freeze != &U && isa<VPPhi>(&U);
@@ -9476,7 +9485,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
         if (auto *I = dyn_cast<Instruction>(Cmp))
           InstsToMove.push_back(I);
-        Value *Sentinel = RdxResult->getOperand(2)->getLiveInIRValue();
+        Value *Sentinel = RdxResult->getOperand(1)->getLiveInIRValue();
         ResumeV = Builder.CreateSelect(Cmp, Sentinel, ResumeV);
         if (auto *I = dyn_cast<Instruction>(ResumeV))
           InstsToMove.push_back(I);

@@ -1156,10 +1156,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::XOR, MVT::i128, Custom);
 
     if (Subtarget.hasPCLMUL()) {
-      if (Subtarget.is64Bit()) {
-        setOperationAction(ISD::CLMUL, MVT::i64, Custom);
-        setOperationAction(ISD::CLMULH, MVT::i64, Custom);
-      }
+      setOperationAction(ISD::CLMUL, MVT::i64, Custom);
+      setOperationAction(ISD::CLMULH, MVT::i64, Custom);
       setOperationAction(ISD::CLMUL, MVT::i32, Custom);
       setOperationAction(ISD::CLMUL, MVT::i16, Custom);
       setOperationAction(ISD::CLMUL, MVT::i8, Custom);
@@ -34121,6 +34119,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                            SelectionDAG &DAG) const {
   SDLoc dl(N);
   unsigned Opc = N->getOpcode();
+  bool NoImplicitFloatOps =
+      DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat);
+
   switch (Opc) {
   default:
 #ifndef NDEBUG
@@ -34194,9 +34196,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
     // Use a v2i64 if possible.
-    bool NoImplicitFloatOps =
-        DAG.getMachineFunction().getFunction().hasFnAttribute(
-            Attribute::NoImplicitFloat);
     if (isTypeLegal(MVT::v2i64) && !NoImplicitFloatOps) {
       SDValue Wide =
           DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, N->getOperand(0));
@@ -34345,6 +34344,24 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue InVec1 = DAG.getNode(ISD::CONCAT_VECTORS, dl, InWideVT, Ops);
 
     SDValue Res = DAG.getNode(Opc, dl, WideVT, InVec0, InVec1);
+    Results.push_back(Res);
+    return;
+  }
+  case ISD::CLMUL:
+  case ISD::CLMULH: {
+    assert(Subtarget.hasPCLMUL() && "PCLMUL required for CLMUL lowering");
+    assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
+    if (NoImplicitFloatOps)
+      return;
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    bool IsHigh = Opc == ISD::CLMULH;
+    SDValue Res =
+        DAG.getNode(X86ISD::PCLMULQDQ, dl, MVT::v2i64,
+                    DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, LHS),
+                    DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, RHS),
+                    DAG.getTargetConstant(0, dl, MVT::i8));
+    Res = DAG.getExtractVectorElt(dl, MVT::i64, Res, IsHigh ? 1 : 0);
     Results.push_back(Res);
     return;
   }
@@ -35148,9 +35165,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     assert(
         (N->getValueType(0) == MVT::i64 || N->getValueType(0) == MVT::i128) &&
         "Unexpected VT!");
-    bool NoImplicitFloatOps =
-        DAG.getMachineFunction().getFunction().hasFnAttribute(
-            Attribute::NoImplicitFloat);
     if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps) {
       auto *Node = cast<AtomicSDNode>(N);
 
