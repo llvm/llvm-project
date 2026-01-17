@@ -64,7 +64,7 @@ Clang Python Bindings Potentially Breaking Changes
   will change to ``AvailabilityKind``, so it is recommended to use ``AvailabilityKind``
   to compare with the return values of ``CompletionString.availability``.
 - Remove ``availabilityKinds``. In this release, uses of ``availabilityKinds``
-  need to be replaced by ``CompletionString.AvailabilityKindCompat``.
+  need to be replaced by ``CompletionString.AvailabilityKind``.
 
 What's New in Clang |release|?
 ==============================
