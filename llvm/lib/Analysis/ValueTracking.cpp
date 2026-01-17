@@ -9278,7 +9278,7 @@ static bool matchThreeInputRecurrence(const PHINode *PN, InstTy *&Inst,
                                       Value *&OtherOp1) {
   if (PN->getNumIncomingValues() != 2)
     return false;
-  
+
   for (unsigned I = 0; I != 3; ++I) {
     if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
         Operation) {
@@ -9343,8 +9343,9 @@ bool llvm::matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
 }
 
 bool llvm::matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
-                                                  PHINode *&P, Value *&Init,
-                                                  Value *&OtherOp0, Value*&OtherOp1) {
+                                                 PHINode *&P, Value *&Init,
+                                                 Value *&OtherOp0,
+                                                 Value *&OtherOp1) {
   if (I->arg_size() != 3 || I->getType() != I->getArgOperand(0)->getType() ||
       I->getType() != I->getArgOperand(1)->getType() ||
       I->getType() != I->getArgOperand(2)->getType())
@@ -9356,7 +9357,8 @@ bool llvm::matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
     if (!P)
       P = dyn_cast<PHINode>(I->getArgOperand(2));
   }
-  return P && matchThreeInputRecurrence(P, II, Init, OtherOp0, OtherOp1) && II == I;
+  return P && matchThreeInputRecurrence(P, II, Init, OtherOp0, OtherOp1) &&
+         II == I;
 }
 
 /// Return true if "icmp Pred LHS RHS" is always true.
