@@ -3159,13 +3159,14 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
       return replaceInstUsesWith(Cmp, Cond);
   }
 
-  // icmp ult (add nuw X, (lshr A, ShAmtC)), C --> icmp ult A, C
+  // icmp ult (add nuw A, (lshr A, ShAmtC)), C --> icmp ult A, C
   // when C <= (1 << ShAmtC).
   const APInt *ShAmtC;
   Value *A;
   unsigned BitWidth = C.getBitWidth();
-  if (Pred == ICmpInst::ICMP_ULT && Add->hasNoUnsignedWrap() &&
-      match(Add, m_c_Add(m_Value(A), m_LShr(m_Deferred(A), m_APInt(ShAmtC)))) &&
+  if (Pred == ICmpInst::ICMP_ULT &&
+      match(Add,
+            m_c_NUWAdd(m_Value(A), m_LShr(m_Deferred(A), m_APInt(ShAmtC)))) &&
       ShAmtC->ult(BitWidth) &&
       C.ule(APInt::getOneBitSet(BitWidth, ShAmtC->getZExtValue())))
     return new ICmpInst(Pred, A, ConstantInt::get(A->getType(), C));
