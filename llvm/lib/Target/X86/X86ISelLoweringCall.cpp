@@ -2985,10 +2985,13 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
   // require lazy function symbol resolution. Using musttail or
   // GuaranteedTailCallOpt will override this.
   if (Subtarget.isPICStyleGOT()) {
-    GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
-    if (!G || (!G->getGlobal()->hasLocalLinkage() &&
-               G->getGlobal()->hasDefaultVisibility()))
+    if (isa<ExternalSymbolSDNode>(Callee))
       return false;
+    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+      if (!G->getGlobal()->hasLocalLinkage() &&
+          G->getGlobal()->hasDefaultVisibility())
+        return false;
+    }
   }
 
   // Look for obvious safe cases to perform tail call optimization that do not
