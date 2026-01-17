@@ -1692,9 +1692,9 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   // The EmitWaitcnt callback emits a single waitcnt.
   auto EmitExpandedWaitcnt = [&](unsigned Outstanding, unsigned Target,
                                  auto EmitWaitcnt) {
-    for (unsigned I = Outstanding - 1; I > Target && I != ~0u; --I)
-      EmitWaitcnt(I);
-    EmitWaitcnt(Target);
+    do {
+      EmitWaitcnt(--Outstanding);
+    } while (Outstanding > Target);
     Modified = true;
   };
 
