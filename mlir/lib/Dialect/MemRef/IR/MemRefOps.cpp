@@ -3768,27 +3768,27 @@ namespace {
 /// static dimension sizes.
 static MemRefType
 foldDynamicToStaticDimSizes(MemRefType type, ValueRange dynamicSizes,
-                            SmallVector<Value> &foldedDynamicSizes) {
+                            SmallVectorImpl<Value> &foldedDynamicSizes) {
   SmallVector<int64_t> staticShape(type.getShape());
   assert(type.getNumDynamicDims() == dynamicSizes.size() &&
          "incorrect number of dynamic sizes");
 
   // Compute new static and dynamic sizes.
   unsigned ctr = 0;
-  for (int64_t i = 0, e = type.getRank(); i < e; ++i) {
-    if (type.isDynamicDim(i)) {
-      Value dynamicSize = dynamicSizes[ctr++];
-      std::optional<int64_t> cst = getConstantIntValue(dynamicSize);
-      if (cst.has_value()) {
-        // Dynamic size must be non-negative.
-        if (cst.value() < 0) {
-          foldedDynamicSizes.push_back(dynamicSize);
-          continue;
-        }
-        staticShape[i] = *cst;
-      } else {
+  for (auto [dim, dimSize] : llvm::enumerate(type.getShape())) {
+    if (ShapedType::isStatic(dimSize))
+      continue;
+
+    Value dynamicSize = dynamicSizes[ctr++];
+    if (auto cst = getConstantIntValue(dynamicSize)) {
+      // Dynamic size must be non-negative.
+      if (cst.value() < 0) {
         foldedDynamicSizes.push_back(dynamicSize);
+        continue;
       }
+      staticShape[dim] = cst.value();
+    } else {
+      foldedDynamicSizes.push_back(dynamicSize);
     }
   }
 
