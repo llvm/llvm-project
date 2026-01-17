@@ -2143,6 +2143,32 @@ static Value *simplifyDemandedFPClassFnegFabs(KnownFPClass &Known, Value *Src,
   return nullptr;
 }
 
+static Value *simplifyDemandedFPClassCopysignMag(Value *MagSrc,
+                                                 FPClassTest DemandedMask,
+                                                 KnownFPClass KnownSrc,
+                                                 bool NSZ) {
+  if (NSZ) {
+    constexpr FPClassTest NegOrZero = fcNegative | fcPosZero;
+    constexpr FPClassTest PosOrZero = fcPositive | fcNegZero;
+
+    if ((DemandedMask & ~NegOrZero) == fcNone &&
+        KnownSrc.isKnownNever(KnownFPClass::OrderedGreaterThanZeroMask | fcNan))
+      return MagSrc;
+
+    if ((DemandedMask & ~PosOrZero) == fcNone &&
+        KnownSrc.isKnownNever(KnownFPClass::OrderedLessThanZeroMask | fcNan))
+      return MagSrc;
+  } else {
+    if ((DemandedMask & ~fcNegative) == fcNone && KnownSrc.SignBit == true)
+      return MagSrc;
+
+    if ((DemandedMask & ~fcPositive) == fcNone && KnownSrc.SignBit == false)
+      return MagSrc;
+  }
+
+  return nullptr;
+}
+
 static Value *
 simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
                               const CallInst *CI, FPClassTest DemandedMask,
@@ -2749,7 +2775,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::copysign: {
       // Flip on more potentially demanded classes
       const FPClassTest DemandedMaskAnySign = llvm::unknown_sign(DemandedMask);
-      if (SimplifyDemandedFPClass(I, 0, DemandedMaskAnySign, Known, Depth + 1))
+      if (SimplifyDemandedFPClass(CI, 0, DemandedMaskAnySign, Known, Depth + 1))
         return I;
 
       if ((DemandedMask & fcNegative) == DemandedMask) {
@@ -2763,6 +2789,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
       }
+
+      if (Value *Simplified = simplifyDemandedFPClassCopysignMag(
+              CI->getArgOperand(0), DemandedMask, Known, FMF.noSignedZeros()))
+        return Simplified;
 
       KnownFPClass KnownSign = computeKnownFPClass(CI->getArgOperand(1),
                                                    fcAllFlags, CxtI, Depth + 1);
