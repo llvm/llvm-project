@@ -190,6 +190,26 @@ TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagPresent) {
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-temp-file")));
 }
 
+TEST_F(CommandLineTest, MSAnonymousStructsFlagPresent) {
+  const char *Args[] = {"-cc1", "-fms-anonymous-structs"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+
+  EXPECT_TRUE(Invocation.getLangOpts().MSAnonymousStructs);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fms-anonymous-structs")));
+}
+
+TEST_F(CommandLineTest, MSAnonymousStructsEnabledByMSExtensions) {
+  const char *Args[] = {"clang", "-fms-extensions"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+
+  EXPECT_TRUE(Invocation.getLangOpts().MSAnonymousStructs);
+}
+
 TEST_F(CommandLineTest, CC1FlagPresentWhenDoingRoundTrip) {
   const char *Args[] = {"-cc1", "-round-trip-args"};
 
