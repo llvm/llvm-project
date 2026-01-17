@@ -702,8 +702,9 @@ LogicalResult MaterializeInDestinationOp::verify() {
   if (srcType.hasRank() != destType.hasRank())
     return emitOpError("source/destination shapes are incompatible");
   if (srcType.hasRank()) {
-    if (srcType.getRank() != destType.getRank())
-      return emitOpError("rank mismatch between source and destination shape");
+    if (failed(verifyRanksMatch(getOperation(), srcType, destType, "source",
+                                "destination")))
+      return failure();
     for (auto [src, dest] :
          llvm::zip(srcType.getShape(), destType.getShape())) {
       if (src == ShapedType::kDynamic || dest == ShapedType::kDynamic) {

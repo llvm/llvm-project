@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -2043,9 +2044,9 @@ LogicalResult TransposeOp::verify() {
 
   int64_t rank = inputType.getRank();
 
-  if (rank != initType.getRank())
-    return emitOpError() << "input rank " << rank
-                         << " does not match init rank " << initType.getRank();
+  if (failed(verifyRanksMatch(getOperation(), inputType, initType, "input",
+                              "init")))
+    return failure();
 
   if (rank != static_cast<int64_t>(permutationRef.size()))
     return emitOpError() << "size of permutation " << permutationRef.size()
