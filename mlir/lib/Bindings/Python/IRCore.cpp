@@ -10,6 +10,7 @@
 #include "mlir/Bindings/Python/Globals.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 // clang-format on
 #include "mlir-c/BuiltinAttributes.h"
@@ -17,10 +18,6 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
-#include "nanobind/nanobind.h"
-#include "nanobind/typing.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -194,13 +191,15 @@ nb::object PyBlock::getCapsule() {
 // Collections.
 //------------------------------------------------------------------------------
 
-PyRegion PyRegionIterator::dunderNext() {
+nb::typed<nb::object, PyRegion> PyRegionIterator::dunderNext() {
   operation->checkValid();
   if (nextIndex >= mlirOperationGetNumRegions(operation->get())) {
-    throw nb::stop_iteration();
+    PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
+    return nb::object();
   }
   MlirRegion region = mlirOperationGetRegion(operation->get(), nextIndex++);
-  return PyRegion(operation, region);
+  return nb::cast(PyRegion(operation, region));
 }
 
 void PyRegionIterator::bind(nb::module_ &m) {
@@ -244,15 +243,17 @@ PyRegionList PyRegionList::slice(intptr_t startIndex, intptr_t length,
   return PyRegionList(operation, startIndex, length, step);
 }
 
-PyBlock PyBlockIterator::dunderNext() {
+nb::typed<nb::object, PyBlock> PyBlockIterator::dunderNext() {
   operation->checkValid();
   if (mlirBlockIsNull(next)) {
-    throw nb::stop_iteration();
+    PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
+    return nb::object();
   }
 
   PyBlock returnBlock(operation, next);
   next = mlirBlockGetNextInRegion(next);
-  return returnBlock;
+  return nb::cast(returnBlock);
 }
 
 void PyBlockIterator::bind(nb::module_ &m) {
@@ -327,7 +328,9 @@ void PyBlockList::bind(nb::module_ &m) {
 nb::typed<nb::object, PyOpView> PyOperationIterator::dunderNext() {
   parentOperation->checkValid();
   if (mlirOperationIsNull(next)) {
-    throw nb::stop_iteration();
+    PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
+    return nb::object();
   }
 
   PyOperationRef returnOperation =
@@ -410,13 +413,16 @@ void PyOpOperand::bind(nb::module_ &m) {
                    "Returns the operand number in the owning operation.");
 }
 
-PyOpOperand PyOpOperandIterator::dunderNext() {
-  if (mlirOpOperandIsNull(opOperand))
-    throw nb::stop_iteration();
+nb::typed<nb::object, PyOpOperand> PyOpOperandIterator::dunderNext() {
+  if (mlirOpOperandIsNull(opOperand)) {
+    PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
+    return nb::object();
+  }
 
   PyOpOperand returnOpOperand(opOperand);
   opOperand = mlirOpOperandGetNextUse(opOperand);
-  return returnOpOperand;
+  return nb::cast(returnOpOperand);
 }
 
 void PyOpOperandIterator::bind(nb::module_ &m) {
@@ -2003,7 +2009,22 @@ nb::object PyValue::getCapsule() {
   return nb::steal<nb::object>(mlirPythonValueToCapsule(get()));
 }
 
-nb::typed<nb::object, PyValue> PyValue::maybeDownCast() {
+static PyOperationRef getValueOwnerRef(MlirValue value) {
+  MlirOperation owner;
+  if (mlirValueIsAOpResult(value))
+    owner = mlirOpResultGetOwner(value);
+  else if (mlirValueIsABlockArgument(value))
+    owner = mlirBlockGetParentOperation(mlirBlockArgumentGetOwner(value));
+  else
+    assert(false && "Value must be an block arg or op result.");
+  if (mlirOperationIsNull(owner))
+    throw nb::python_error();
+  MlirContext ctx = mlirOperationGetContext(owner);
+  return PyOperation::forOperation(PyMlirContext::forContext(ctx), owner);
+}
+
+nb::typed<nb::object, std::variant<PyBlockArgument, PyOpResult, PyValue>>
+PyValue::maybeDownCast() {
   MlirType type = mlirValueGetType(get());
   MlirTypeID mlirTypeID = mlirTypeGetTypeID(type);
   assert(!mlirTypeIDIsNull(mlirTypeID) &&
@@ -2012,26 +2033,23 @@ nb::typed<nb::object, PyValue> PyValue::maybeDownCast() {
       PyGlobals::get().lookupValueCaster(mlirTypeID, mlirTypeGetDialect(type));
   // nb::rv_policy::move means use std::move to move the return value
   // contents into a new instance that will be owned by Python.
-  nb::object thisObj = nb::cast(this, nb::rv_policy::move);
-  if (!valueCaster)
-    return thisObj;
-  return valueCaster.value()(thisObj);
+  nb::object thisObj;
+  if (mlirValueIsAOpResult(value))
+    thisObj = nb::cast<PyOpResult>(*this, nb::rv_policy::move);
+  else if (mlirValueIsABlockArgument(value))
+    thisObj = nb::cast<PyBlockArgument>(*this, nb::rv_policy::move);
+  else
+    assert(false && "Value must be an block arg or op result.");
+  if (valueCaster)
+    return valueCaster.value()(thisObj);
+  return thisObj;
 }
 
 PyValue PyValue::createFromCapsule(nb::object capsule) {
   MlirValue value = mlirPythonCapsuleToValue(capsule.ptr());
   if (mlirValueIsNull(value))
     throw nb::python_error();
-  MlirOperation owner;
-  if (mlirValueIsAOpResult(value))
-    owner = mlirOpResultGetOwner(value);
-  if (mlirValueIsABlockArgument(value))
-    owner = mlirBlockGetParentOperation(mlirBlockArgumentGetOwner(value));
-  if (mlirOperationIsNull(owner))
-    throw nb::python_error();
-  MlirContext ctx = mlirOperationGetContext(owner);
-  PyOperationRef ownerRef =
-      PyOperation::forOperation(PyMlirContext::forContext(ctx), owner);
+  PyOperationRef ownerRef = getValueOwnerRef(value);
   return PyValue(ownerRef, value);
 }
 
@@ -2279,15 +2297,7 @@ intptr_t PyOpOperandList::getRawNumElements() {
 
 PyValue PyOpOperandList::getRawElement(intptr_t pos) {
   MlirValue operand = mlirOperationGetOperand(operation->get(), pos);
-  MlirOperation owner;
-  if (mlirValueIsAOpResult(operand))
-    owner = mlirOpResultGetOwner(operand);
-  else if (mlirValueIsABlockArgument(operand))
-    owner = mlirBlockGetParentOperation(mlirBlockArgumentGetOwner(operand));
-  else
-    assert(false && "Value must be an block arg or op result.");
-  PyOperationRef pyOwner =
-      PyOperation::forOperation(operation->getContext(), owner);
+  PyOperationRef pyOwner = getValueOwnerRef(operand);
   return PyValue(pyOwner, operand);
 }
 
@@ -2388,6 +2398,15 @@ PyOpAttributeMap::dunderGetItemNamed(const std::string &name) {
   return PyAttribute(operation->getContext(), attr).maybeDownCast();
 }
 
+nb::typed<nb::object, std::optional<PyAttribute>>
+PyOpAttributeMap::get(const std::string &key, nb::object defaultValue) {
+  MlirAttribute attr =
+      mlirOperationGetAttributeByName(operation->get(), toMlirStringRef(key));
+  if (mlirAttributeIsNull(attr))
+    return defaultValue;
+  return PyAttribute(operation->getContext(), attr).maybeDownCast();
+}
+
 PyNamedAttribute PyOpAttributeMap::dunderGetItemIndexed(intptr_t index) {
   if (index < 0) {
     index += dunderLen();
@@ -2450,6 +2469,10 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
            "Sets an attribute with the given name.")
       .def("__delitem__", &PyOpAttributeMap::dunderDelItem, "name"_a,
            "Deletes an attribute with the given name.")
+      .def("get", &PyOpAttributeMap::get, nb::arg("key"),
+           nb::arg("default") = nb::none(),
+           "Gets an attribute by name or the default value, if it does not "
+           "exist.")
       .def(
           "__iter__",
           [](PyOpAttributeMap &self) {
@@ -2753,7 +2776,7 @@ void populateRoot(nb::module_ &m) {
       "a dialect");
   m.def(
       MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR,
-      [](MlirTypeID mlirTypeID, bool replace) -> nb::object {
+      [](PyTypeID mlirTypeID, bool replace) -> nb::object {
         return nb::cpp_function([mlirTypeID, replace](
                                     nb::callable typeCaster) -> nb::object {
           PyGlobals::get().registerTypeCaster(mlirTypeID, typeCaster, replace);
@@ -2768,7 +2791,7 @@ void populateRoot(nb::module_ &m) {
       "Register a type caster for casting MLIR types to custom user types.");
   m.def(
       MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR,
-      [](MlirTypeID mlirTypeID, bool replace) -> nb::object {
+      [](PyTypeID mlirTypeID, bool replace) -> nb::object {
         return nb::cpp_function(
             [mlirTypeID, replace](nb::callable valueCaster) -> nb::object {
               PyGlobals::get().registerValueCaster(mlirTypeID, valueCaster,
@@ -3218,7 +3241,7 @@ void populateIRCore(nb::module_ &m) {
            "Returns True if this location is a FileLineColLoc.")
       .def_prop_ro(
           "filename",
-          [](MlirLocation loc) {
+          [](PyLocation loc) {
             return mlirIdentifierStr(
                 mlirLocationFileLineColRangeGetFilename(loc));
           },
@@ -3282,7 +3305,7 @@ void populateIRCore(nb::module_ &m) {
            "Returns True if this location is a `NameLoc`.")
       .def_prop_ro(
           "name_str",
-          [](MlirLocation loc) {
+          [](PyLocation loc) {
             return mlirIdentifierStr(mlirLocationNameGetName(loc));
           },
           "Gets the name string from a `NameLoc`.")
@@ -4679,13 +4702,11 @@ void populateIRCore(nb::module_ &m) {
           "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
       .def(
           MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
-          [](PyValue &self) -> nb::typed<nb::object, PyValue> {
-            return self.maybeDownCast();
-          },
+          [](PyValue &self) { return self.maybeDownCast(); },
           "Downcasts the `Value` to a more specific kind if possible.")
       .def_prop_ro(
           "location",
-          [](MlirValue self) {
+          [](PyValue self) {
             return PyLocation(
                 PyMlirContext::forContext(mlirValueGetContext(self)),
                 mlirValueGetLocation(self));

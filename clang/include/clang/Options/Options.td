@@ -1004,6 +1004,10 @@ def Xthinlto_distributor_EQ : CommaJoined<["-"], "Xthinlto-distributor=">,
            "multiple times or with comma-separated values.">,
   MetaVarName<"<arg>">,
   Group<Link_Group>;
+def Xoffload_compiler : JoinedAndSeparate<["-"], "Xoffload-compiler">,
+  Visibility<[ClangOption, FlangOption]>,
+  HelpText<"Pass <arg> to the offload compilers or the ones identified by -<triple>">,
+  MetaVarName<"<triple> <arg>">, Group<Link_Group>;
 def Xoffload_linker : JoinedAndSeparate<["-"], "Xoffload-linker">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Pass <arg> to the offload linkers or the ones identified by -<triple>">,
@@ -1972,6 +1976,16 @@ defm lifetime_safety_inference
                   BothFlags<[], [CC1Option],
                             " experimental lifetime safety inference for C++">>;
 
+defm lifetime_safety_tu_analysis
+    : BoolFOption<"experimental-lifetime-safety-tu-analysis",
+                  LangOpts<"EnableLifetimeSafetyTUAnalysis">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " run lifetime safety analysis at translation-unit "
+                            "end, analyzing functions in call graph post-order "
+                            "to best propagate inferred annotations">>;
+
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Emit">,
@@ -2421,6 +2435,14 @@ def fsanitize_EQ : CommaJoined<["-"], "fsanitize=">, Group<f_clang_Group>,
                             "or suspicious behavior. See user manual for available checks">;
 def fno_sanitize_EQ : CommaJoined<["-"], "fno-sanitize=">, Group<f_clang_Group>,
                       Visibility<[ClangOption, CLOption]>;
+def fsanitize_ignore_for_ubsan_feature_EQ
+    : CommaJoined<["-"], "fsanitize-ignore-for-ubsan-feature=">,
+      Group<f_clang_Group>,
+      MetaVarName<"<check>">,
+      HelpText<
+          "Prevents `__has_feature(undefined_behavior_sanitizer)` from "
+          "evaluating true for "
+          "these UBSan checks. See user manual for available UBSan checks">;
 
 def fsanitize_ignorelist_EQ : Joined<["-"], "fsanitize-ignorelist=">,
   Group<f_clang_Group>, HelpText<"Path to ignorelist file for sanitizers">;
@@ -3441,7 +3463,7 @@ def fmodules_validate_once_per_build_session : Flag<["-"], "fmodules-validate-on
            "successfully validated or loaded during this build session">,
   MarshallingInfoFlag<HeaderSearchOpts<"ModulesValidateOncePerBuildSession">>;
 def fmodules_disable_diagnostic_validation : Flag<["-"], "fmodules-disable-diagnostic-validation">,
-  Group<i_Group>, Visibility<[ClangOption, CC1Option]>,
+  Group<i_Group>, Visibility<[ClangOption, CLOption, CC1Option]>,
   HelpText<"Disable validation of the diagnostic options when loading the module">,
   MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesValidateDiagnosticOptions">>;
 defm modules_force_validate_user_headers : BoolOption<"f", "modules-force-validate-user-headers",
@@ -4676,7 +4698,7 @@ defm partition_static_data_sections: BoolFOption<"partition-static-data-sections
   CodeGenOpts<"PartitionStaticDataSections">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " partition static data sections using profile information (x86 and aarch64 ELF)">>;
+  BothFlags<[], [ClangOption], " partition static data sections using PGO profile information and MemProf (x86 and aarch64 ELF). See LLVM MemProf doc for usage.">>;
 
 defm strict_return : BoolFOption<"strict-return",
   CodeGenOpts<"StrictReturn">, DefaultTrue,
@@ -5576,6 +5598,13 @@ defm amdgpu_ieee : BoolMOption<"amdgpu-ieee",
   "gathering quiet and propagate signaling NaN inputs per IEEE 754-2008. "
   "This option changes the ABI. (AMDGPU only)">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
+
+defm amdgpu_expand_waitcnt_profiling : BoolMOption<"amdgpu-expand-waitcnt-profiling",
+  CodeGenOpts<"AMDGPUExpandWaitcntProfiling">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Expand s_waitcnt instructions to help "
+  "PC-sampling profilers identify memory stalls. Instead of a single waitcnt(target), "
+  "emits waitcnt(N-1), waitcnt(N-2), ..., waitcnt(target). (AMDGPU only)">,
+  NegFlag<SetFalse, [], [ClangOption]>>;
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 6. (AMDGPU only)">,

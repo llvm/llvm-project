@@ -29,7 +29,8 @@ add_offload_unittest("memory"
     memory/olMemFree.cpp
     memory/olMemcpy.cpp
     memory/olGetMemInfo.cpp
-    memory/olGetMemInfoSize.cpp)
+    memory/olGetMemInfoSize.cpp
+    memory/olMemRegister.cpp)
 
 add_offload_unittest("platform"
     platform/olGetPlatformInfo.cpp

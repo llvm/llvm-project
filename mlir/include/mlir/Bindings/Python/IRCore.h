@@ -1171,6 +1171,8 @@ public:
 /// value. For block argument values, this is the operation that contains the
 /// block to which the value is an argument (blocks cannot be detached in Python
 /// bindings so such operation always exists).
+class PyBlockArgument;
+class PyOpResult;
 class MLIR_PYTHON_API_EXPORTED PyValue {
 public:
   // The virtual here is "load bearing" in that it enables RTTI
@@ -1189,7 +1191,9 @@ public:
   /// Gets a capsule wrapping the void* within the MlirValue.
   nanobind::object getCapsule();
 
-  nanobind::typed<nanobind::object, PyValue> maybeDownCast();
+  nanobind::typed<nanobind::object,
+                  std::variant<PyBlockArgument, PyOpResult, PyValue>>
+  maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.
@@ -1375,7 +1379,7 @@ public:
 
   PyRegionIterator &dunderIter() { return *this; }
 
-  PyRegion dunderNext();
+  nanobind::typed<nanobind::object, PyRegion> dunderNext();
 
   static void bind(nanobind::module_ &m);
 
@@ -1418,7 +1422,7 @@ public:
 
   PyBlockIterator &dunderIter() { return *this; }
 
-  PyBlock dunderNext();
+  nanobind::typed<nanobind::object, PyBlock> dunderNext();
 
   static void bind(nanobind::module_ &m);
 
@@ -1509,7 +1513,7 @@ public:
 
   PyOpOperandIterator &dunderIter() { return *this; }
 
-  PyOpOperand dunderNext();
+  nanobind::typed<nanobind::object, PyOpOperand> dunderNext();
 
   static void bind(nanobind::module_ &m);
 
@@ -1568,6 +1572,14 @@ public:
         [](DerivedTy &self) -> nanobind::typed<nanobind::object, DerivedTy> {
           return self.maybeDownCast();
         });
+    cls.def("__str__", [](PyValue &self) {
+      PyPrintAccumulator printAccum;
+      printAccum.parts.append(std::string(DerivedTy::pyClassName) + "(");
+      mlirValuePrint(self.get(), printAccum.getCallback(),
+                     printAccum.getUserData());
+      printAccum.parts.append(")");
+      return printAccum.join();
+    });
 
     if (DerivedTy::getTypeIdFunction) {
       PyGlobals::get().registerValueCaster(
@@ -1801,6 +1813,9 @@ public:
   dunderGetItemNamed(const std::string &name);
 
   PyNamedAttribute dunderGetItemIndexed(intptr_t index);
+
+  nanobind::typed<nanobind::object, std::optional<PyAttribute>>
+  get(const std::string &key, nanobind::object defaultValue);
 
   void dunderSetItem(const std::string &name, const PyAttribute &attr);
 

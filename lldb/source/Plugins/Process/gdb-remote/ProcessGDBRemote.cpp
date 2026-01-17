@@ -90,6 +90,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2871,16 +2872,16 @@ ProcessGDBRemote::SendMultiMemReadPacket(
       m_gdb_comm.SendPacketAndWaitForResponse(packet_str.data(), response,
                                               GetInterruptTimeout());
   if (packet_result != GDBRemoteCommunication::PacketResult::Success)
-    return llvm::createStringError(
-        llvm::formatv("MultiMemRead failed to send packet: '{0}'", packet_str));
+    return llvm::createStringErrorV("MultiMemRead failed to send packet: '{0}'",
+                                    packet_str);
 
   if (response.IsErrorResponse())
-    return llvm::createStringError(
-        llvm::formatv("MultiMemRead failed: '{0}'", response.GetStringRef()));
+    return llvm::createStringErrorV("MultiMemRead failed: '{0}'",
+                                    response.GetStringRef());
 
   if (!response.IsNormalResponse())
-    return llvm::createStringError(llvm::formatv(
-        "MultiMemRead unexpected response: '{0}'", response.GetStringRef()));
+    return llvm::createStringErrorV("MultiMemRead unexpected response: '{0}'",
+                                    response.GetStringRef());
 
   return response;
 }
@@ -2892,22 +2893,21 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
   // The sizes and the data are separated by a `;`.
   auto [sizes_str, memory_data] = response_str.split(';');
   if (sizes_str.size() == response_str.size())
-    return llvm::createStringError(llvm::formatv(
+    return llvm::createStringErrorV(
         "MultiMemRead response missing field separator ';' in: '{0}'",
-        response_str));
+        response_str);
 
   // Sizes are separated by a `,`.
   for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
     uint64_t read_size;
     if (size_str.getAsInteger(16, read_size))
-      return llvm::createStringError(llvm::formatv(
-          "MultiMemRead response has invalid size string: {0}", size_str));
+      return llvm::createStringErrorV(
+          "MultiMemRead response has invalid size string: {0}", size_str);
 
     if (memory_data.size() < read_size)
-      return llvm::createStringError(
-          llvm::formatv("MultiMemRead response did not have enough data, "
-                        "requested sizes: {0}",
-                        sizes_str));
+      return llvm::createStringErrorV("MultiMemRead response did not have "
+                                      "enough data, requested sizes: {0}",
+                                      sizes_str);
 
     llvm::StringRef region_to_read = memory_data.take_front(read_size);
     memory_data = memory_data.drop_front(read_size);
@@ -4513,7 +4513,7 @@ static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
   Log *log(GetLog(GDBRLog::Process));
   // We will use the last instance of each value. Also we preserve the order
   // of declaration in the XML, as it may not be numerical.
-  // For example, hardware may intially release with two states that softwware
+  // For example, hardware may initially release with two states that software
   // can read from a register field:
   // 0 = startup, 1 = running
   // If in a future hardware release, the designers added a pre-startup state:
@@ -5674,9 +5674,8 @@ llvm::Expected<bool> ProcessGDBRemote::SaveCore(llvm::StringRef outfile) {
     // TODO: grab error message from the packet?  StringExtractor seems to
     // be missing a method for that
     if (response.IsErrorResponse())
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          llvm::formatv("qSaveCore returned an error"));
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "qSaveCore returned an error");
 
     std::string path;
 
