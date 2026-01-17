@@ -88,7 +88,7 @@ AST_MATCHER_P(Expr, hasAllLeavesOfBitwiseSatisfying,
   auto Condition = [&](const clang::Expr *E) -> bool {
     return InnerMatcher.matches(*E, Finder, Builder);
   };
-  return leavesOfBitwiseSatisfy(&Node, Condition, std::logical_and{});
+  return leavesOfBitwiseSatisfy(&Node, Condition, std::logical_and<>{});
 }
 
 /// Custom matcher that checks if any leaf node in a bitwise expression
@@ -102,7 +102,7 @@ AST_MATCHER_P(Expr, hasAnyLeafOfBitwiseSatisfying,
   auto Condition = [&](const clang::Expr *E) -> bool {
     return InnerMatcher.matches(*E, Finder, Builder);
   };
-  return leavesOfBitwiseSatisfy(&Node, Condition, std::logical_or{});
+  return leavesOfBitwiseSatisfy(&Node, Condition, std::logical_or<>{});
 }
 } // namespace
 
