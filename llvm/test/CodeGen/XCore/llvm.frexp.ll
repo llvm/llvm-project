@@ -4,8 +4,8 @@ define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 ; CHECK-LABEL: test_frexp_f16_i32:
 ; CHECK: bl __extendhfsf2
 ; CHECK: bl frexpf
-; CHECK: ldw r{{[0-9]+}}, sp[1]
 ; CHECK: bl __truncsfhf2
+; CHECK: ldw r{{[0-9]+}}, sp[1]
 %result = call { half, i32 } @llvm.frexp.f16.i32(half %a)
   ret { half, i32 } %result
 }

@@ -178,6 +178,11 @@ public:
   virtual bool
   ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const = 0;
 
+  /// \return true iff array subscript accesses on fixed size arrays should NOT
+  /// be reported at `Loc`
+  virtual bool
+  ignoreUnsafeBufferInStaticSizedArray(const SourceLocation &Loc) const = 0;
+
   virtual std::string
   getUnsafeBufferUsageAttributeTextAt(SourceLocation Loc,
                                       StringRef WSSuffix = "") const = 0;

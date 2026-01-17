@@ -37,11 +37,315 @@ public:
   ELFJITLinker_loongarch(std::unique_ptr<JITLinkContext> Ctx,
                          std::unique_ptr<LinkGraph> G,
                          PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
+      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
+    JITLinkerBase::getPassConfig().PostAllocationPasses.push_back(
+        [this](LinkGraph &G) { return gatherLoongArchPCAddHi20(G); });
+  }
 
 private:
+  DenseMap<std::pair<const Block *, orc::ExecutorAddrDiff>, const Edge *>
+      RelPCAddHi20Map;
+
+  Error gatherLoongArchPCAddHi20(LinkGraph &G) {
+    for (Block *B : G.blocks())
+      for (Edge &E : B->edges())
+        if (E.getKind() == PCAddHi20)
+          RelPCAddHi20Map[{B, E.getOffset()}] = &E;
+
+    return Error::success();
+  }
+
+  Expected<const Edge &> getLoongArchPCAddHi20(const Edge &E) const {
+    using namespace loongarch;
+    assert((E.getKind() == PCAddLo12) &&
+           "Can only have high relocation for PCAddLo12");
+
+    const Symbol &Sym = E.getTarget();
+    const Block &B = Sym.getBlock();
+    orc::ExecutorAddrDiff Offset = Sym.getOffset() + E.getAddend();
+
+    auto It = RelPCAddHi20Map.find({&B, Offset});
+    if (It != RelPCAddHi20Map.end())
+      return *It->second;
+
+    return make_error<JITLinkError>("No PCAddHi20 relocation type be found "
+                                    "for PCAddLo12 relocation type");
+  }
+
+  /// Apply fixup expression for edge to block content.
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    return loongarch::applyFixup(G, B, E);
+    using namespace support;
+
+    char *BlockWorkingMem = B.getAlreadyMutableContent().data();
+    char *FixupPtr = BlockWorkingMem + E.getOffset();
+    uint64_t FixupAddress = (B.getAddress() + E.getOffset()).getValue();
+    uint64_t TargetAddress = E.getTarget().getAddress().getValue();
+    int64_t Addend = E.getAddend();
+
+    switch (E.getKind()) {
+    case Pointer64:
+      *(ulittle64_t *)FixupPtr = TargetAddress + Addend;
+      break;
+    case Pointer32: {
+      uint64_t Value = TargetAddress + Addend;
+      if (Value > std::numeric_limits<uint32_t>::max())
+        return makeTargetOutOfRangeError(G, B, E);
+      *(ulittle32_t *)FixupPtr = Value;
+      break;
+    }
+    case Branch16PCRel: {
+      int64_t Value = TargetAddress - FixupAddress + Addend;
+
+      if (!isInt<18>(Value))
+        return makeTargetOutOfRangeError(G, B, E);
+
+      if (!isShiftedInt<16, 2>(Value))
+        return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
+
+      uint32_t RawInstr = *(little32_t *)FixupPtr;
+      uint32_t Imm = static_cast<uint32_t>(Value >> 2);
+      uint32_t Imm15_0 = extractBits(Imm, /*Hi=*/15, /*Lo=*/0) << 10;
+      *(little32_t *)FixupPtr = RawInstr | Imm15_0;
+      break;
+    }
+    case Branch21PCRel: {
+      int64_t Value = TargetAddress - FixupAddress + Addend;
+
+      if (!isInt<23>(Value))
+        return makeTargetOutOfRangeError(G, B, E);
+
+      if (!isShiftedInt<21, 2>(Value))
+        return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
+
+      uint32_t RawInstr = *(little32_t *)FixupPtr;
+      uint32_t Imm = static_cast<uint32_t>(Value >> 2);
+      uint32_t Imm15_0 = extractBits(Imm, /*Hi=*/15, /*Lo=*/0) << 10;
+      uint32_t Imm20_16 = extractBits(Imm, /*Hi=*/20, /*Lo=*/16);
+      *(little32_t *)FixupPtr = RawInstr | Imm15_0 | Imm20_16;
+      break;
+    }
+    case Branch26PCRel: {
+      int64_t Value = TargetAddress - FixupAddress + Addend;
+
+      if (!isInt<28>(Value))
+        return makeTargetOutOfRangeError(G, B, E);
+
+      if (!isShiftedInt<26, 2>(Value))
+        return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
+
+      uint32_t RawInstr = *(little32_t *)FixupPtr;
+      uint32_t Imm = static_cast<uint32_t>(Value >> 2);
+      uint32_t Imm15_0 = extractBits(Imm, /*Hi=*/15, /*Lo=*/0) << 10;
+      uint32_t Imm25_16 = extractBits(Imm, /*Hi=*/25, /*Lo=*/16);
+      *(little32_t *)FixupPtr = RawInstr | Imm15_0 | Imm25_16;
+      break;
+    }
+    case Delta32: {
+      int64_t Value = TargetAddress - FixupAddress + Addend;
+
+      if (!isInt<32>(Value))
+        return makeTargetOutOfRangeError(G, B, E);
+      *(little32_t *)FixupPtr = Value;
+      break;
+    }
+    case NegDelta32: {
+      int64_t Value = FixupAddress - TargetAddress + Addend;
+      if (!isInt<32>(Value))
+        return makeTargetOutOfRangeError(G, B, E);
+      *(little32_t *)FixupPtr = Value;
+      break;
+    }
+    case Delta64:
+      *(little64_t *)FixupPtr = TargetAddress - FixupAddress + Addend;
+      break;
+    case Page20: {
+      uint64_t Target = TargetAddress + Addend;
+      uint64_t TargetPage =
+          (Target + (Target & 0x800)) & ~static_cast<uint64_t>(0xfff);
+      uint64_t PCPage = FixupAddress & ~static_cast<uint64_t>(0xfff);
+
+      int64_t PageDelta = TargetPage - PCPage;
+      if (!isInt<32>(PageDelta))
+        return makeTargetOutOfRangeError(G, B, E);
+
+      uint32_t RawInstr = *(little32_t *)FixupPtr;
+      uint32_t Imm31_12 = extractBits(PageDelta, /*Hi=*/31, /*Lo=*/12) << 5;
+      *(little32_t *)FixupPtr = RawInstr | Imm31_12;
+      break;
+    }
+    case PageOffset12: {
+      uint64_t TargetOffset = (TargetAddress + Addend) & 0xfff;
+
+      uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
+      uint32_t Imm11_0 = TargetOffset << 10;
+      *(ulittle32_t *)FixupPtr = RawInstr | Imm11_0;
+      break;
+    }
+    case PCAddHi20: {
+      uint64_t Target = TargetAddress + Addend;
+      int64_t Delta = Target - FixupAddress + 0x800;
+
+      if (!isInt<32>(Delta))
+        return makeTargetOutOfRangeError(G, B, E);
+
+      uint32_t RawInstr = *(little32_t *)FixupPtr;
+      uint32_t Imm31_12 = extractBits(Delta, /*Hi=*/31, /*Lo=*/12) << 5;
+      *(little32_t *)FixupPtr = RawInstr | Imm31_12;
+      break;
+    }
+    case PCAddLo12: {
+      auto RelPCAddHi20 = getLoongArchPCAddHi20(E);
+      if (!RelPCAddHi20)
+        return RelPCAddHi20.takeError();
+      int64_t Delta =
+          (RelPCAddHi20->getTarget().getAddress() + RelPCAddHi20->getAddend()) -
+          (E.getTarget().getAddress() + E.getAddend());
+
+      uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
+      uint32_t Imm11_0 = extractBits(Delta, /*Hi=*/11, /*Lo=*/0) << 10;
+      *(ulittle32_t *)FixupPtr = RawInstr | Imm11_0;
+      break;
+    }
+    case Call30PCRel: {
+      int64_t Value = TargetAddress - FixupAddress + Addend;
+
+      if (Value != llvm::SignExtend64(Value, 32))
+        return makeTargetOutOfRangeError(G, B, E);
+
+      if (!isShiftedInt<30, 2>(Value))
+        return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
+
+      uint32_t Pcaddu12i = *(little32_t *)FixupPtr;
+      uint32_t Hi20 = extractBits(Value, /*Hi=*/31, /*Lo=*/12) << 5;
+      *(little32_t *)FixupPtr = Pcaddu12i | Hi20;
+      uint32_t Jirl = *(little32_t *)(FixupPtr + 4);
+      uint32_t Lo10 = extractBits(Value, /*Hi=*/11, /*Lo=*/2) << 10;
+      *(little32_t *)(FixupPtr + 4) = Jirl | Lo10;
+      break;
+    }
+    case Call36PCRel: {
+      int64_t Value = TargetAddress - FixupAddress + Addend;
+
+      if ((Value + 0x20000) != llvm::SignExtend64(Value + 0x20000, 38))
+        return makeTargetOutOfRangeError(G, B, E);
+
+      if (!isShiftedInt<36, 2>(Value))
+        return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
+
+      uint32_t Pcaddu18i = *(little32_t *)FixupPtr;
+      uint32_t Hi20 = extractBits(Value + (1 << 17), /*Hi=*/37, /*Lo=*/18) << 5;
+      *(little32_t *)FixupPtr = Pcaddu18i | Hi20;
+      uint32_t Jirl = *(little32_t *)(FixupPtr + 4);
+      uint32_t Lo16 = extractBits(Value, /*Hi=*/17, /*Lo=*/2) << 10;
+      *(little32_t *)(FixupPtr + 4) = Jirl | Lo16;
+      break;
+    }
+    case Add6: {
+      int64_t Value = *(reinterpret_cast<const int8_t *>(FixupPtr));
+      Value += ((TargetAddress + Addend) & 0x3f);
+      *FixupPtr = (*FixupPtr & 0xc0) | (static_cast<int8_t>(Value) & 0x3f);
+      break;
+    }
+    case Add8: {
+      int64_t Value = TargetAddress +
+                      *(reinterpret_cast<const int8_t *>(FixupPtr)) + Addend;
+      *FixupPtr = static_cast<int8_t>(Value);
+      break;
+    }
+    case Add16: {
+      int64_t Value =
+          TargetAddress + support::endian::read16le(FixupPtr) + Addend;
+      *(little16_t *)FixupPtr = static_cast<int16_t>(Value);
+      break;
+    }
+    case Add32: {
+      int64_t Value =
+          TargetAddress + support::endian::read32le(FixupPtr) + Addend;
+      *(little32_t *)FixupPtr = static_cast<int32_t>(Value);
+      break;
+    }
+    case Add64: {
+      int64_t Value =
+          TargetAddress + support::endian::read64le(FixupPtr) + Addend;
+      *(little64_t *)FixupPtr = static_cast<int64_t>(Value);
+      break;
+    }
+    case AddUleb128: {
+      const uint32_t Maxcount = 1 + 64 / 7;
+      uint32_t Count;
+      const char *Error = nullptr;
+      uint64_t Orig =
+          decodeULEB128((reinterpret_cast<const uint8_t *>(FixupPtr)), &Count,
+                        nullptr, &Error);
+
+      if (Count > Maxcount || (Count == Maxcount && Error))
+        return make_error<JITLinkError>(
+            "0x" + llvm::utohexstr(orc::ExecutorAddr(FixupAddress).getValue()) +
+            ": extra space for uleb128");
+
+      uint64_t Mask = Count < Maxcount ? (1ULL << 7 * Count) - 1 : -1ULL;
+      encodeULEB128((Orig + TargetAddress + Addend) & Mask,
+                    (reinterpret_cast<uint8_t *>(FixupPtr)), Count);
+      break;
+    }
+    case Sub6: {
+      int64_t Value = *(reinterpret_cast<const int8_t *>(FixupPtr));
+      Value -= ((TargetAddress + Addend) & 0x3f);
+      *FixupPtr = (*FixupPtr & 0xc0) | (static_cast<int8_t>(Value) & 0x3f);
+      break;
+    }
+    case Sub8: {
+      int64_t Value = *(reinterpret_cast<const int8_t *>(FixupPtr)) -
+                      TargetAddress - Addend;
+      *FixupPtr = static_cast<int8_t>(Value);
+      break;
+    }
+    case Sub16: {
+      int64_t Value =
+          support::endian::read16le(FixupPtr) - TargetAddress - Addend;
+      *(little16_t *)FixupPtr = static_cast<int16_t>(Value);
+      break;
+    }
+    case Sub32: {
+      int64_t Value =
+          support::endian::read32le(FixupPtr) - TargetAddress - Addend;
+      *(little32_t *)FixupPtr = static_cast<int32_t>(Value);
+      break;
+    }
+    case Sub64: {
+      int64_t Value =
+          support::endian::read64le(FixupPtr) - TargetAddress - Addend;
+      *(little64_t *)FixupPtr = static_cast<int64_t>(Value);
+      break;
+    }
+    case SubUleb128: {
+      const uint32_t Maxcount = 1 + 64 / 7;
+      uint32_t Count;
+      const char *Error = nullptr;
+      uint64_t Orig =
+          decodeULEB128((reinterpret_cast<const uint8_t *>(FixupPtr)), &Count,
+                        nullptr, &Error);
+
+      if (Count > Maxcount || (Count == Maxcount && Error))
+        return make_error<JITLinkError>(
+            "0x" + llvm::utohexstr(orc::ExecutorAddr(FixupAddress).getValue()) +
+            ": extra space for uleb128");
+
+      uint64_t Mask = Count < Maxcount ? (1ULL << 7 * Count) - 1 : -1ULL;
+      encodeULEB128((Orig - TargetAddress - Addend) & Mask,
+                    (reinterpret_cast<uint8_t *>(FixupPtr)), Count);
+      break;
+    }
+    case AlignRelaxable:
+      // Ignore when the relaxation pass did not run
+      break;
+    default:
+      return make_error<JITLinkError>(
+          "In graph " + G.getName() + ", section " + B.getSection().getName() +
+          " unsupported edge kind " + getEdgeKindName(E.getKind()));
+    }
+
+    return Error::success();
   }
 };
 
@@ -304,6 +608,8 @@ private:
       return RequestGOTAndTransformToPage20;
     case ELF::R_LARCH_GOT_PC_LO12:
       return RequestGOTAndTransformToPageOffset12;
+    case ELF::R_LARCH_CALL30:
+      return Call30PCRel;
     case ELF::R_LARCH_CALL36:
       return Call36PCRel;
     case ELF::R_LARCH_ADD6:
@@ -332,6 +638,13 @@ private:
       return SubUleb128;
     case ELF::R_LARCH_ALIGN:
       return AlignRelaxable;
+    case ELF::R_LARCH_PCADD_HI20:
+      return PCAddHi20;
+    case ELF::R_LARCH_PCADD_LO12:
+    case ELF::R_LARCH_GOT_PCADD_LO12:
+      return PCAddLo12;
+    case ELF::R_LARCH_GOT_PCADD_HI20:
+      return RequestGOTAndTransformToPCAddHi20;
     }
 
     return make_error<JITLinkError>(

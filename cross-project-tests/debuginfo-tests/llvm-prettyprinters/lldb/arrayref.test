@@ -8,15 +8,13 @@ p ArrayRef
 p MutableArrayRef
 
 #--- checks
-# CHECK:      (lldb) p ArrayRef
-# CHECK-NEXT: (llvm::ArrayRef<int>) size=3 {
+# CHECK:      (llvm::ArrayRef<int>) size=3 {
 # CHECK-NEXT:  [0] = 1
 # CHECK-NEXT:  [1] = 2
 # CHECK-NEXT:  [2] = 3
 # CHECK-NEXT: }
 
-# CHECK:      (lldb) p MutableArrayRef
-# CHECK-NEXT: (llvm::MutableArrayRef<int>) {
+# CHECK:      (llvm::MutableArrayRef<int>) {
 # CHECK-NEXT:   llvm::ArrayRef<int> = size=3 {
 # CHECK-NEXT:    [0] = 1
 # CHECK-NEXT:    [1] = 2

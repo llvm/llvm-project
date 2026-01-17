@@ -165,9 +165,9 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write # For updating the release message.
+    if: '!cancelled()'
     needs:
       - validate-tag
-      - release-create
       - release-binaries
 
     steps:
