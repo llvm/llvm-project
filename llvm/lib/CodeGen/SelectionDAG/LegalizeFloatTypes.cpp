@@ -3388,22 +3388,7 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FTRUNC:
   case ISD::FTAN:
   case ISD::FTANH:
-  case ISD::FCANONICALIZE:
   case ISD::STRICT_FSQRT:
-  case ISD::STRICT_FSIN:
-  case ISD::STRICT_FCOS:
-  case ISD::STRICT_FTAN:
-  case ISD::STRICT_FASIN:
-  case ISD::STRICT_FACOS:
-  case ISD::STRICT_FATAN:
-  case ISD::STRICT_FSINH:
-  case ISD::STRICT_FCOSH:
-  case ISD::STRICT_FTANH:
-  case ISD::STRICT_FEXP:
-  case ISD::STRICT_FEXP2:
-  case ISD::STRICT_FLOG:
-  case ISD::STRICT_FLOG2:
-  case ISD::STRICT_FLOG10:
   case ISD::STRICT_FRINT:
   case ISD::STRICT_FNEARBYINT:
   case ISD::STRICT_FCEIL:
@@ -3437,17 +3422,45 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FATAN2:
   case ISD::FREM:
   case ISD::FSUB:
+  case ISD::FCANONICALIZE:
   case ISD::STRICT_FADD:
   case ISD::STRICT_FDIV:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FSUB:
   case ISD::STRICT_FMAXIMUM:
   case ISD::STRICT_FMINIMUM:
-  case ISD::STRICT_FMAXNUM:
-  case ISD::STRICT_FMINNUM:
-  case ISD::STRICT_FMUL:
+    R = SoftPromoteHalfRes_BinOp(N);
+    break;
+    
+  // FIXME: we can't produce correct lowering for some strict f16
+  // operations, as promotion would violate the strict FP model
+  // and also there are no libcalls for them at the moment.
   case ISD::STRICT_FPOW:
   case ISD::STRICT_FATAN2:
-  case ISD::STRICT_FSUB:
-  case ISD::STRICT_FREM: R = SoftPromoteHalfRes_BinOp(N); break;
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FREM:
+  case ISD::STRICT_FSIN:
+  case ISD::STRICT_FCOS:
+  case ISD::STRICT_FTAN:
+  case ISD::STRICT_FASIN:
+  case ISD::STRICT_FACOS:
+  case ISD::STRICT_FATAN:
+  case ISD::STRICT_FSINH:
+  case ISD::STRICT_FCOSH:
+  case ISD::STRICT_FTANH:
+  case ISD::STRICT_FEXP:
+  case ISD::STRICT_FEXP2:
+  case ISD::STRICT_FLOG:
+  case ISD::STRICT_FLOG2:
+  case ISD::STRICT_FLOG10:
+  case ISD::STRICT_FPOWI:
+#ifndef NDEBUG
+    dbgs() << "SoftPromoteHalfResult #" << ResNo << ": ";
+    N->dump(&DAG); dbgs() << "\n";
+#endif
+    report_fatal_error("Cannot produce a correct result for this strict"
+                       "fp16 operation!");
 
   case ISD::FMA:         // FMA is same as FMAD
   case ISD::FMAD:
@@ -3455,7 +3468,6 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
 
   case ISD::FPOWI:
   case ISD::FLDEXP:
-  case ISD::STRICT_FPOWI:
   case ISD::STRICT_FLDEXP: 
                          R = SoftPromoteHalfRes_ExpOp(N); break;
 

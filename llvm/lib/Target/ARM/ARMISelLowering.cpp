@@ -1283,7 +1283,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   }
 
   // FP16 often need to be promoted to call lib functions
-  // clang-format off
   setOperationAction(ISD::LRINT, MVT::f16, Expand);
   setOperationAction(ISD::LROUND, MVT::f16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
@@ -1318,7 +1317,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                     ISD::STRICT_FFLOOR,  ISD::STRICT_FCEIL}) {
       setOperationAction(Op, MVT::f16, Legal);
     }
-    // clang-format on
 
     setOperationAction(ISD::STRICT_FSETCC,  MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f16, Custom);
