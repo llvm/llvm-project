@@ -5942,7 +5942,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           computeKnownFPClass(Init, DemandedElts,
                               KnownFPClass::OrderedGreaterThanZeroMask,
                               KnownStart, Q, Depth + 1);
-          if (KnownStart.cannotBeOrderedLessThanZero() && L == R)
+          if (KnownStart.cannotBeOrderedLessThanZero() && L == R && isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
             Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
           break;
         }
