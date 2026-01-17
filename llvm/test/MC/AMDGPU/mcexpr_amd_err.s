@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa %s 2>&1 | FileCheck --check-prefix=ASM %s
+// RUN: not llvm-mc -triple amdgcn-amd-amdhsa %s -filetype=null 2>&1 | FileCheck --check-prefix=ASM %s
 
 .set one, 1
 .set two, 2

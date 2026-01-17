@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1251 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1251-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1251 -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX1251-ERR --implicit-check-not=error: --strict-whitespace %s
 
 v_mov_b64_e64_dpp v[4:5], v[2:3] dpp8:[7,6,5,4,3,2,1,0]
 // GFX1251-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.

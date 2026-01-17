@@ -311,7 +311,7 @@ target triple = "x86_64-pc-linux-gnu"
 define ptr @test() {
 entry:
   %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
-  ret i32* %call
+  ret ptr %call
 }
 declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
@@ -474,7 +474,7 @@ TEST_F(MemoryProfileInfoTest, KeepUnneededNotColdContexts) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
   %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
   ret ptr %call

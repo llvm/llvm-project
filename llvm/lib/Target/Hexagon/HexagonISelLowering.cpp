@@ -77,31 +77,6 @@ static cl::opt<int> MinimumJumpTables("minimum-jump-tables", cl::Hidden,
                                       cl::init(5),
                                       cl::desc("Set minimum jump tables"));
 
-static cl::opt<int>
-    MaxStoresPerMemcpyCL("max-store-memcpy", cl::Hidden, cl::init(6),
-                         cl::desc("Max #stores to inline memcpy"));
-
-static cl::opt<int>
-    MaxStoresPerMemcpyOptSizeCL("max-store-memcpy-Os", cl::Hidden, cl::init(4),
-                                cl::desc("Max #stores to inline memcpy"));
-
-static cl::opt<int>
-    MaxStoresPerMemmoveCL("max-store-memmove", cl::Hidden, cl::init(6),
-                          cl::desc("Max #stores to inline memmove"));
-
-static cl::opt<int>
-    MaxStoresPerMemmoveOptSizeCL("max-store-memmove-Os", cl::Hidden,
-                                 cl::init(4),
-                                 cl::desc("Max #stores to inline memmove"));
-
-static cl::opt<int>
-    MaxStoresPerMemsetCL("max-store-memset", cl::Hidden, cl::init(8),
-                         cl::desc("Max #stores to inline memset"));
-
-static cl::opt<int>
-    MaxStoresPerMemsetOptSizeCL("max-store-memset-Os", cl::Hidden, cl::init(4),
-                                cl::desc("Max #stores to inline memset"));
-
 static cl::opt<bool>
     ConstantLoadsToImm("constant-loads-to-imm", cl::Hidden, cl::init(true),
                        cl::desc("Convert constant loads to immediate values."));
@@ -1524,12 +1499,12 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setSchedulingPreference(Sched::Source);
 
   // Limits for inline expansion of memcpy/memmove
-  MaxStoresPerMemcpy = MaxStoresPerMemcpyCL;
-  MaxStoresPerMemcpyOptSize = MaxStoresPerMemcpyOptSizeCL;
-  MaxStoresPerMemmove = MaxStoresPerMemmoveCL;
-  MaxStoresPerMemmoveOptSize = MaxStoresPerMemmoveOptSizeCL;
-  MaxStoresPerMemset = MaxStoresPerMemsetCL;
-  MaxStoresPerMemsetOptSize = MaxStoresPerMemsetOptSizeCL;
+  MaxStoresPerMemcpy = 6;
+  MaxStoresPerMemcpyOptSize = 4;
+  MaxStoresPerMemmove = 6;
+  MaxStoresPerMemmoveOptSize = 4;
+  MaxStoresPerMemset = 8;
+  MaxStoresPerMemsetOptSize = 4;
 
   //
   // Set up register classes.
@@ -3891,7 +3866,7 @@ HexagonTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 
 TargetLowering::AtomicExpansionKind
 HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
-    AtomicCmpXchgInst *AI) const {
+    const AtomicCmpXchgInst *AI) const {
   return AtomicExpansionKind::LLSC;
 }
 

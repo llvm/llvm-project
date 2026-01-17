@@ -66,7 +66,7 @@ void test() {
   }
 
   {
-    std::hash< std::variant<int, float>> hash;
+    std::hash<std::variant<int, float>> hash;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     hash(std::variant<int, float>{});

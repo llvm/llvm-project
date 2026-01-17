@@ -6,6 +6,7 @@
 // clang-format on
 
 // REQUIRES: gpu
+// XFAIL: intelgpu
 
 #include <stdio.h>
 

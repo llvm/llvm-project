@@ -1652,7 +1652,7 @@ static Instruction *getInstructionByName(Function &F, StringRef Name) {
 TEST_F(MemorySSATest, TestVisitedBlocks) {
   SMDiagnostic E;
   auto M = parseAssemblyString(
-      "define void @test(i64* noalias %P, i64 %N) {\n"
+      "define void @test(ptr noalias %P, i64 %N) {\n"
       "preheader.n:\n"
       "  br label %header.n\n"
       "header.n:\n"
@@ -1665,8 +1665,8 @@ TEST_F(MemorySSATest, TestVisitedBlocks) {
       "  br label %header.i\n"
       "header.i:\n"
       "  %i = phi i64 [ 0, %preheader.i ], [ %inc.i, %header.i ]\n"
-      "  %v1 = load i64, i64* %P, align 8\n"
-      "  %v2 = load i64, i64* %P, align 8\n"
+      "  %v1 = load i64, ptr %P, align 8\n"
+      "  %v2 = load i64, ptr %P, align 8\n"
       "  %inc.i = add nsw i64 %i, 1\n"
       "  %cmp.i = icmp slt i64 %inc.i, %N\n"
       "  br i1 %cmp.i, label %header.i, label %exit.i\n"

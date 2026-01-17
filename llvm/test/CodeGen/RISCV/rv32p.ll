@@ -234,6 +234,88 @@ define i64 @cls_i64_2(i64 %x) {
   ret i64 %e
 }
 
+; The result is in the range [1-31], so we don't need an andi after the cls.
+define i32 @cls_i32_knownbits(i32 %x) {
+; CHECK-LABEL: cls_i32_knownbits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    ret
+  %a = ashr i32 %x, 31
+  %b = xor i32 %x, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  %e = and i32 %d, 31
+  ret i32 %e
+}
+
+; There are at least 16 redundant sign bits so we don't need an ori after the clsw.
+define i32 @cls_i32_knownbits_2(i16 signext %x) {
+; CHECK-LABEL: cls_i32_knownbits_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    ret
+  %sext = sext i16 %x to i32
+  %a = ashr i32 %sext, 31
+  %b = xor i32 %sext, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  %e = or i32 %d, 16
+  ret i32 %e
+}
+
+; There are at least 24 redundant sign bits so we don't need an ori after the clsw.
+define i32 @cls_i32_knownbits_3(i8 signext %x) {
+; CHECK-LABEL: cls_i32_knownbits_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    ret
+  %sext = sext i8 %x to i32
+  %a = ashr i32 %sext, 31
+  %b = xor i32 %sext, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  %e = or i32 %d, 24
+  ret i32 %e
+}
+
+; Negative test. We only know there is at least 1 redundant sign bit. We can't
+; remove the ori.
+define i32 @cls_i32_knownbits_4(i32 signext %x) {
+; CHECK-LABEL: cls_i32_knownbits_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    srai a0, a0, 1
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    ori a0, a0, 1
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 1
+  %ashr = ashr i32 %shl, 1
+  %a = ashr i32 %ashr, 31
+  %b = xor i32 %ashr, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  %e = or i32 %d, 1
+  ret i32 %e
+ }
+
+; Negative test. Check that the number of sign bits is not
+; overestimated. If it is, the orr disappears.
+define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
+; CHECK-LABEL: cls_i32_knownbits_no_overestimate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a0, 15
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    ori a0, a0, 16
+; CHECK-NEXT:    ret
+  %ashr = ashr i32 %x, 15
+  %a = ashr i32 %ashr, 31
+  %b = xor i32 %ashr, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  %e = or i32 %d, 16
+  ret i32 %e
+ }
+
 define i64 @slx_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: slx_i64:
 ; CHECK:       # %bb.0:
@@ -314,4 +396,137 @@ define i32 @shlsat_i32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    ret
  %sshlsat = tail call i32 @llvm.sshl.sat.i32(i32 %a,i32 %b)
  ret i32 %sshlsat
+}
+
+define i8 @sadd_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: sadd_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 24
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    sadd a0, a0, a1
+; CHECK-NEXT:    srai a0, a0, 24
+; CHECK-NEXT:    ret
+  %a = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %y)
+  ret i8 %a
+}
+
+define i16 @sadd_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: sadd_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 16
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    sadd a0, a0, a1
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    ret
+  %a = call i16 @llvm.sadd.sat.i16(i16 %x, i16 %y)
+  ret i16 %a
+}
+
+define i32 @sadd_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: sadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y)
+  ret i32 %a
+}
+
+define i8 @ssub_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: ssub_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 24
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    ssub a0, a0, a1
+; CHECK-NEXT:    srai a0, a0, 24
+; CHECK-NEXT:    ret
+  %a = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y)
+  ret i8 %a
+}
+
+define i16 @ssub_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: ssub_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 16
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    ssub a0, a0, a1
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    ret
+  %a = call i16 @llvm.ssub.sat.i16(i16 %x, i16 %y)
+  ret i16 %a
+}
+
+define i32 @ssub_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: ssub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ssub a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i32 @llvm.ssub.sat.i32(i32 %x, i32 %y)
+  ret i32 %a
+}
+
+define i8 @uadd_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: uadd_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.b a1, a1
+; CHECK-NEXT:    zext.b a0, a0
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    li a1, 255
+; CHECK-NEXT:    minu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  ret i8 %a
+}
+
+define i16 @uadd_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: uadd_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.h a1, a1
+; CHECK-NEXT:    zext.h a0, a0
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    lui a1, 16
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    minu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i16 @llvm.uadd.sat.i16(i16 %x, i16 %y)
+  ret i16 %a
+}
+
+define i32 @uadd_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: uadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    saddu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %y)
+  ret i32 %a
+}
+
+define i8 @usub_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: usub_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.b a1, a1
+; CHECK-NEXT:    zext.b a0, a0
+; CHECK-NEXT:    ssubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i8 @llvm.usub.sat.i8(i8 %x, i8 %y)
+  ret i8 %a
+}
+
+define i16 @usub_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: usub_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.h a1, a1
+; CHECK-NEXT:    zext.h a0, a0
+; CHECK-NEXT:    ssubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i16 @llvm.usub.sat.i16(i16 %x, i16 %y)
+  ret i16 %a
+}
+
+define i32 @usub_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: usub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ssubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i32 @llvm.usub.sat.i32(i32 %x, i32 %y)
+  ret i32 %a
 }
