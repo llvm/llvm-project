@@ -7,11 +7,11 @@ define i16 @mustRetOne() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    ret i16 1
 ;
-; IPSCCP-LABEL: define i16 @mustRetOne() {
+; IPSCCP-LABEL: define range(i16 1, 2) i16 @mustRetOne() {
 ; IPSCCP-NEXT:  [[ENTRY:.*:]]
 ; IPSCCP-NEXT:    ret i16 1
 ;
-; SCCP-LABEL: define i16 @mustRetOne() {
+; SCCP-LABEL: define range(i16 1, 2) i16 @mustRetOne() {
 ; SCCP-NEXT:  [[ENTRY:.*:]]
 ; SCCP-NEXT:    ret i16 1
 ;
@@ -32,9 +32,8 @@ define void @test() {
 ; SCCP-LABEL: define void @test() {
 ; SCCP-NEXT:  [[ENTRY:.*:]]
 ; SCCP-NEXT:    [[CALL:%.*]] = call i16 @mustRetOne()
-; SCCP-NEXT:    [[COND:%.*]] = trunc i16 [[CALL]] to i1
-; SCCP-NEXT:    br i1 [[COND]], label %[[IF_END:.*]], label %[[RET:.*]]
-; SCCP:       [[RET]]:
+; SCCP-NEXT:    br label %[[IF_END:.*]]
+; SCCP:       [[RET:.*]]:
 ; SCCP-NEXT:    ret void
 ; SCCP:       [[IF_END]]:
 ; SCCP-NEXT:    br label %[[RET]]
