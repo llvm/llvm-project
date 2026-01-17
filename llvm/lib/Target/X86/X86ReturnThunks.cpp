@@ -57,7 +57,7 @@ struct X86ReturnThunksLegacy final : public MachineFunctionPass {
 
 char X86ReturnThunksLegacy::ID = 0;
 
-bool runX86ReturnThunks(MachineFunction &MF) {
+static bool runX86ReturnThunks(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << X86ReturnThunksPassName << "\n");
 
   bool Modified = false;
@@ -103,10 +103,9 @@ bool X86ReturnThunksLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 X86ReturnThunksPass::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
-  const bool Modified = runX86ReturnThunks(MF);
-  return Modified ? getMachineFunctionPassPreservedAnalyses()
-                        .preserveSet<CFGAnalyses>()
-                  : PreservedAnalyses::all();
+  return runX86ReturnThunks(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                      .preserveSet<CFGAnalyses>()
+                                : PreservedAnalyses::all();
 }
 
 INITIALIZE_PASS(X86ReturnThunksLegacy, PASS_KEY, "X86 Return Thunks", false,
