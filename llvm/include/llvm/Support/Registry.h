@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_REGISTRY_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
@@ -22,27 +23,30 @@
 
 namespace llvm {
 /// A simple registry entry which provides only a name, description, and
-/// no-argument constructor.
-template <typename T> class SimpleRegistryEntry {
+/// an `CtorParamTypes&&` variadic parameterized constructor.
+template <typename T, typename... CtorParamTypes> class SimpleRegistryEntry {
+  using FactoryFnRef = function_ref<std::unique_ptr<T>(CtorParamTypes &&...)>;
   StringRef Name, Desc;
-  std::unique_ptr<T> (*Ctor)();
+  FactoryFnRef Ctor;
 
 public:
-  SimpleRegistryEntry(StringRef N, StringRef D, std::unique_ptr<T> (*C)())
+  SimpleRegistryEntry(StringRef N, StringRef D, FactoryFnRef C)
       : Name(N), Desc(D), Ctor(C) {}
 
   StringRef getName() const { return Name; }
   StringRef getDesc() const { return Desc; }
-  std::unique_ptr<T> instantiate() const { return Ctor(); }
+  std::unique_ptr<T> instantiate(CtorParamTypes &&...Params) const {
+    return Ctor(std::forward<CtorParamTypes>(Params)...);
+  }
 };
 
 /// A global registry used in conjunction with static constructors to make
 /// pluggable components (like targets or garbage collectors) "just work" when
 /// linked with an executable.
-template <typename T> class Registry {
+template <typename T, typename... CtorParamTypes> class Registry {
 public:
   using type = T;
-  using entry = SimpleRegistryEntry<T>;
+  using entry = SimpleRegistryEntry<T, CtorParamTypes...>;
 
   class node;
   class iterator;
@@ -64,7 +68,7 @@ public:
   ///
   class node {
     friend class iterator;
-    friend Registry<T>;
+    friend Registry<T, CtorParamTypes...>;
 
     node *Next;
     const entry &Val;
@@ -120,14 +124,13 @@ public:
   ///   Registry<Collector>::Add<FancyGC>
   ///   X("fancy-gc", "Newfangled garbage collector.");
   ///
-  /// Use of this template requires that:
-  ///
-  ///  1. The registered subclass has a default constructor.
   template <typename V> class Add {
     entry Entry;
     node Node;
 
-    static std::unique_ptr<T> CtorFn() { return std::make_unique<V>(); }
+    static std::unique_ptr<T> CtorFn(CtorParamTypes &&...Params) {
+      return std::make_unique<V>(std::forward<CtorParamTypes>(Params)...);
+    }
 
   public:
     Add(StringRef Name, StringRef Desc)
