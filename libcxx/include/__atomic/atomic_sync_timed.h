@@ -17,6 +17,7 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__thread/poll_with_backoff.h>
+#include <__thread/timed_backoff_policy.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/has_unique_object_representation.h>
