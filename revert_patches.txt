@@ -1,3 +1,5 @@
 ---
-vacancy
+rocwmma needs changes
+[AMDGPU] Programmatically port old `.def` clang builtins to `.td` (#175873)
+[AMDGPU][NFC] Change AMDGPU builtins to use ExtVector (#176033)
 ---
