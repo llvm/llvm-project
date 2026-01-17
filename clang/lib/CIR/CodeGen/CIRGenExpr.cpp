@@ -2350,11 +2350,8 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
                                              ReturnValueSlot returnValue) {
   const Expr *callee = ce->getCallee()->IgnoreParens();
 
-  if (isa<BinaryOperator>(callee)) {
-    cgm.errorNYI(ce->getSourceRange(),
-                 "emitCXXMemberCallExpr: C++ binary operator");
-    return RValue::get(nullptr);
-  }
+  if (isa<BinaryOperator>(callee))
+    return emitCXXMemberPointerCallExpr(ce, returnValue);
 
   const auto *me = cast<MemberExpr>(callee);
   const auto *md = cast<CXXMethodDecl>(me->getMemberDecl());
