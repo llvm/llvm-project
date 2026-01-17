@@ -63,7 +63,8 @@ int main(int, char**) {
     std::optional<int> o{1};
     auto i = o.end();
 
-    TEST_LIBCPP_ASSERT_FAILURE(i.operator->(), "__bounded_iter::operator->: Attempt to dereference an iterator at the end");
+    TEST_LIBCPP_ASSERT_FAILURE(
+        i.operator->(), "__bounded_iter::operator->: Attempt to dereference an iterator at the end");
   }
 
   { // operator+=
@@ -78,7 +79,7 @@ int main(int, char**) {
     std::optional<int> o{1};
     auto i = o.begin();
 
-    TEST_LIBCPP_ASSERT_FAILURE(i -= 1,  "__bounded_iter::operator-=: Attempt to rewind an iterator past the start");
+    TEST_LIBCPP_ASSERT_FAILURE(i -= 1, "__bounded_iter::operator-=: Attempt to rewind an iterator past the start");
     TEST_LIBCPP_ASSERT_FAILURE(i -= -2, "__bounded_iter::operator-=: Attempt to advance an iterator past the end");
   }
 
