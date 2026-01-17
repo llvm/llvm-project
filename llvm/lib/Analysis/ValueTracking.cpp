@@ -5884,6 +5884,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Unreachable blocks may have zero-operand PHI nodes.
     if (P->getNumIncomingValues() == 0)
       break;
+
     // Otherwise take the unions of the known bit sets of the operands,
     // taking conservative care to avoid excessive recursion.
     const unsigned PhiRecursionLimit = MaxAnalysisRecursionDepth - 2;
