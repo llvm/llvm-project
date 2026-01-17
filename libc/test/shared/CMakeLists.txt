@@ -60,6 +60,7 @@ add_fp_unittest(
     libc.src.__support.math.fsqrt
     libc.src.__support.math.ilogbf16
     libc.src.__support.math.log
+    libc.src.__support.math.logbf
     libc.src.__support.math.logbf128
     libc.src.__support.math.logbf16
     libc.src.__support.math.ldexpf
