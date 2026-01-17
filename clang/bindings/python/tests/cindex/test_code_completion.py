@@ -1,4 +1,4 @@
-from clang.cindex import TranslationUnit, AvailabilityKind, AvailabilityKindCompat
+from clang.cindex import AvailabilityKind, AvailabilityKindCompat, TranslationUnit
 
 import unittest
 from pathlib import Path
