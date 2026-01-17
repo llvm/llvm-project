@@ -194,6 +194,11 @@ struct MissingFeatures {
   static bool lowerModuleLangOpts() { return false; }
   static bool targetLoweringInfo() { return false; }
 
+  // Extra checks for lowerGetMethod in ItaniumCXXABI
+  static bool emitCFICheck() { return false; }
+  static bool emitVFEInfo() { return false; }
+  static bool emitWPDInfo() { return false; }
+
   // Misc
   static bool aarch64SIMDIntrinsics() { return false; }
   static bool aarch64SMEIntrinsics() { return false; }
@@ -211,6 +216,7 @@ struct MissingFeatures {
   static bool aggValueSlotVolatile() { return false; }
   static bool alignCXXRecordDecl() { return false; }
   static bool allocToken() { return false; }
+  static bool appleArm64CXXABI() { return false; }
   static bool appleKext() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
   static bool asmGoto() { return false; }
