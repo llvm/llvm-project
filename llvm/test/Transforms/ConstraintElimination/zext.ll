@@ -264,10 +264,8 @@ define i1 @test_pr58009_const_zext() {
 ; CHECK-NEXT:    [[EXT_F_2:%.*]] = zext i1 false to i16
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], true
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], false
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ult i16 [[EXT_F_1]], [[EXT_T_2]]
-; CHECK-NEXT:    [[F_3:%.*]] = icmp ugt i16 [[EXT_F_1]], [[EXT_T_2]]
-; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[T_3]]
-; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[F_3]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], true
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], false
 ; CHECK-NEXT:    ret i1 [[RES_5]]
 ;
 entry:

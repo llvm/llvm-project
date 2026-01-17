@@ -454,8 +454,7 @@ define i1 @add_nuw_neg_pr54224_i64(i64 %a) {
 ; CHECK-LABEL: @add_nuw_neg_pr54224_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NEG2:%.*]] = add nuw i64 [[A:%.*]], -305
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i64 0, [[NEG2]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit.2:

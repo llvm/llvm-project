@@ -39,6 +39,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -1499,10 +1500,15 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
                                           ConstraintInfo &Info) {
   LLVM_DEBUG(dbgs() << "Checking " << *CheckInst << "\n");
 
+  // Compute known bits for ICmpInst::compare.
+  const DataLayout &DL = CheckInst->getDataLayout();
+  KnownBits KnownA = computeKnownBits(A, DL);
+  KnownBits KnownB = computeKnownBits(B, DL);
+
   auto R = Info.getConstraintForSolving(Pred, A, B);
   if (R.empty() || !R.isValid(Info)) {
     LLVM_DEBUG(dbgs() << "   failed to decompose condition\n");
-    return std::nullopt;
+    return ICmpInst::compare(KnownA, KnownB, Pred);
   }
 
   auto &CSToUse = Info.getCS(R.IsSigned);
@@ -1512,6 +1518,7 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   // about the constraint.
   for (auto &Row : R.ExtraInfo)
     CSToUse.addVariableRow(Row);
+
   llvm::scope_exit InfoRestorer([&]() {
     for (unsigned I = 0; I < R.ExtraInfo.size(); ++I)
       CSToUse.popLastConstraint();
@@ -1532,7 +1539,7 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
     return ImpliedCondition;
   }
 
-  return std::nullopt;
+  return ICmpInst::compare(KnownA, KnownB, Pred);
 }
 
 static bool checkAndReplaceCondition(

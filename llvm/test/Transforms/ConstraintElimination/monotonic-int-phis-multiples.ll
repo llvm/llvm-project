@@ -183,8 +183,7 @@ define void @multiple_pow2_start_offset_dynamic(i64 %count) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[COUNT]], 2
 ; CHECK-NEXT:    [[END:%.*]] = add i64 [[SHL]], 1
-; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ne i64 [[END]], 0
-; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4

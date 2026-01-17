@@ -1240,8 +1240,7 @@ define i1 @shl_overflow_2() {
 ; CHECK-LABEL: @shl_overflow_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 0, 64
-; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 0
-; CHECK-NEXT:    ret i1 [[SHL_CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %shl.ub = shl nuw nsw i256 0, 64
@@ -1253,8 +1252,7 @@ define i1 @shl_overflow_3() {
 ; CHECK-LABEL: @shl_overflow_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 0, 65
-; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 0
-; CHECK-NEXT:    ret i1 [[SHL_CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %shl.ub = shl nuw nsw i256 0, 65
@@ -1266,8 +1264,7 @@ define i1 @shl_55() {
 ; CHECK-LABEL: @shl_55(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 1, 55
-; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 1
-; CHECK-NEXT:    ret i1 [[SHL_CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %shl.ub = shl nuw nsw i256 1, 55

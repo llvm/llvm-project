@@ -539,8 +539,7 @@ define i1 @sgt_known_neg(i8 %idx) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i8 [[IDX]], 1
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[T_2]]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[IDX]], -1
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ;
 entry:
@@ -641,8 +640,7 @@ define i1 @sgt_to_ugt_neg(i8 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[A]], -1
-; CHECK-NEXT:    ret i1 [[C_1]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp sgt i8 %a, -1

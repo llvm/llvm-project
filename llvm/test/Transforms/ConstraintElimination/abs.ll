@@ -153,8 +153,7 @@ define i1 @abs_plus_one_unsigned_greater_or_equal_cannot_be_simplified(i32 nound
 define i1 @abs_constant_negative_arg() {
 ; CHECK-LABEL: define i1 @abs_constant_negative_arg() {
 ; CHECK-NEXT:    [[ABS:%.*]] = tail call i32 @llvm.abs.i32(i32 -3, i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[ABS]], 3
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %abs = tail call i32 @llvm.abs.i32(i32 -3, i1 false)
   %cmp = icmp sge i32 %abs, 3
