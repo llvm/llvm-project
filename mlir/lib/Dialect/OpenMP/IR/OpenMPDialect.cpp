@@ -2629,13 +2629,8 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-<<<<<<< HEAD
                  clauses.ifExpr, clauses.numTeamsVals, clauses.numTeamsLower,
                  clauses.numTeamsUpper,
-=======
-                 clauses.ifExpr, clauses.numTeamsLower, clauses.numTeamsUpper,
-                 clauses.numTeamsDims, clauses.numTeamsValues,
->>>>>>> [OpenMP][MLIR] Add num_teams clause with dims modifier support
                  /*private_vars=*/{}, /*private_syms=*/nullptr,
                  /*private_needs_barrier=*/nullptr, clauses.reductionMod,
                  clauses.reductionVars,
@@ -4625,30 +4620,6 @@ static void printNumTeamsClause(OpAsmPrinter &p, Operation *op,
       p << " : " << upperBoundType;
     }
   }
-}
-
-//===----------------------------------------------------------------------===//
-// Parser and printer for num_threads clause
-//===----------------------------------------------------------------------===//
-static ParseResult
-parseNumThreadsClause(OpAsmParser &parser,
-                      SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-                      SmallVectorImpl<Type> &types) {
-  // Parse comma-separated list of values with their types
-  // Format: %v1, %v2, ... : type1, type2, ...
-  if (parser.parseOperandList(values) || parser.parseColon() ||
-      parser.parseTypeList(types)) {
-    return failure();
-  }
-  return success();
-}
-
-static void printNumThreadsClause(OpAsmPrinter &p, Operation *op,
-                                  OperandRange values, TypeRange types) {
-  // Print values with their types
-  llvm::interleaveComma(values, p, [&](Value v) { p << v; });
-  p << " : ";
-  llvm::interleaveComma(types, p, [&](Type t) { p << t; });
 }
 
 #define GET_ATTRDEF_CLASSES

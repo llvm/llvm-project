@@ -380,7 +380,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.hasNumTeamsMultiDim())
       result = todo("num_teams with multi-dimensional values");
   };
-  auto checkNumThreadsMultiDim = [&todo](auto op, LogicalResult &result) {
+  auto checkNumThreads = [&todo](auto op, LogicalResult &result) {
     if (op.hasNumThreadsMultiDim())
       result = todo("num_threads with multi-dimensional values");
   };
@@ -435,7 +435,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::ParallelOp op) {
         checkAllocate(op, result);
         checkReduction(op, result);
-        checkNumThreadsMultiDim(op, result);
+        checkNumThreads(op, result);
       })
       .Case([&](omp::SimdOp op) { checkReduction(op, result); })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
@@ -3274,7 +3274,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     ifCond = moduleTranslation.lookupValue(ifVar);
   llvm::Value *numThreads = nullptr;
   if (!opInst.getNumThreadsVals().empty())
-    numThreads = moduleTranslation.lookupValue(opInst.getNumThreadsVal(0));
+    numThreads = moduleTranslation.lookupValue(opInst.getNumThreads(0));
   auto pbKind = llvm::omp::OMP_PROC_BIND_default;
   if (auto bind = opInst.getProcBindKind())
     pbKind = getProcBindKind(*bind);
@@ -6056,7 +6056,7 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
           })
           .Case([&](omp::ParallelOp parallelOp) {
             if (!parallelOp.getNumThreadsVals().empty() &&
-                parallelOp.getNumThreadsVal(0) == blockArg)
+                parallelOp.getNumThreads(0) == blockArg)
               numThreads = hostEvalVar;
             else
               llvm_unreachable("unsupported host_eval use");
@@ -6175,7 +6175,7 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
 
     if (auto parallelOp = castOrGetParentOfType<omp::ParallelOp>(capturedOp)) {
       if (!parallelOp.getNumThreadsVals().empty())
-        numThreads = parallelOp.getNumThreadsVal(0);
+        numThreads = parallelOp.getNumThreads(0);
     }
   }
 
