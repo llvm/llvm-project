@@ -700,6 +700,17 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S64, {{Sgpr64}, {Sgpr64, Imm}})
       .Div(S64, {{Vgpr64}, {Vgpr64, Imm}});
 
+  // Atomic read-modify-write operations: result and value are always VGPR,
+  // pointer varies by address space.
+  addRulesForGOpcs({G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_XCHG,
+                    G_ATOMICRMW_AND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR})
+      .Any({{S32, P0}, {{Vgpr32}, {VgprP0, Vgpr32}}})
+      .Any({{S64, P0}, {{Vgpr64}, {VgprP0, Vgpr64}}})
+      .Any({{S32, P1}, {{Vgpr32}, {VgprP1, Vgpr32}}})
+      .Any({{S64, P1}, {{Vgpr64}, {VgprP1, Vgpr64}}})
+      .Any({{S32, P3}, {{Vgpr32}, {VgprP3, Vgpr32}}})
+      .Any({{S64, P3}, {{Vgpr64}, {VgprP3, Vgpr64}}});
+
   bool hasSMRDx3 = ST->hasScalarDwordx3Loads();
   bool hasSMRDSmall = ST->hasScalarSubwordLoads();
   bool usesTrue16 = ST->useRealTrue16Insts();
