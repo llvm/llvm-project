@@ -2192,6 +2192,9 @@ public:
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
       return Cost;
     }
+    case Intrinsic::clmul: {
+      return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
+    }
     }
 
     // Assume that we need to scalarize this intrinsic.)
@@ -2682,6 +2685,19 @@ public:
     case Intrinsic::scmp:
       ISD = ISD::SCMP;
       break;
+    case Intrinsic::clmul: {
+      EVT ETy = getTLI()->getValueType(DL, RetTy);
+      if (ETy.isSimple()) {
+        MVT VT = ETy.getSimpleVT();
+        if (getTLI()->isOperationLegalOrCustom(ISD::CLMUL, VT))
+          return TTI::TCC_Basic;
+      }
+      InstructionCost PerBitCost =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
+          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind) +
+          thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      return RetTy->getScalarSizeInBits() * PerBitCost;
+    }
     }
 
     auto *ST = dyn_cast<StructType>(RetTy);
