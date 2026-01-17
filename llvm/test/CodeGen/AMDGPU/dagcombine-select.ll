@@ -738,7 +738,7 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
   ret void
 }
 
-define i32 @pr176559(i32 %arg, i1 %cond, i1 %tobool.not) #0 {
+define i32 @pr176559(i32 %arg, i1 %cond, i1 %tobool.not) {
 ; GFX9-LABEL: pr176559:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
