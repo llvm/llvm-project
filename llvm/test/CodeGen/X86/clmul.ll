@@ -1362,128 +1362,35 @@ define i64 @clmulr_i64(i64 %a, i64 %b) nounwind {
 ; SCALAR-NEXT:    popq %rbp
 ; SCALAR-NEXT:    retq
 ;
-; SSE-PCLMUL-LABEL: clmulr_i64:
-; SSE-PCLMUL:       # %bb.0:
-; SSE-PCLMUL-NEXT:    bswapq %rsi
-; SSE-PCLMUL-NEXT:    movq %rsi, %rax
-; SSE-PCLMUL-NEXT:    shrq $4, %rax
-; SSE-PCLMUL-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
-; SSE-PCLMUL-NEXT:    andq %rcx, %rax
-; SSE-PCLMUL-NEXT:    andq %rcx, %rsi
-; SSE-PCLMUL-NEXT:    shlq $4, %rsi
-; SSE-PCLMUL-NEXT:    orq %rax, %rsi
-; SSE-PCLMUL-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
-; SSE-PCLMUL-NEXT:    movq %rsi, %rdx
-; SSE-PCLMUL-NEXT:    andq %rax, %rdx
-; SSE-PCLMUL-NEXT:    shrq $2, %rsi
-; SSE-PCLMUL-NEXT:    andq %rax, %rsi
-; SSE-PCLMUL-NEXT:    leaq (%rsi,%rdx,4), %rsi
-; SSE-PCLMUL-NEXT:    movabsq $6148914691236517205, %rdx # imm = 0x5555555555555555
-; SSE-PCLMUL-NEXT:    movq %rsi, %r8
-; SSE-PCLMUL-NEXT:    andq %rdx, %r8
-; SSE-PCLMUL-NEXT:    shrq %rsi
-; SSE-PCLMUL-NEXT:    andq %rdx, %rsi
-; SSE-PCLMUL-NEXT:    leaq (%rsi,%r8,2), %rsi
-; SSE-PCLMUL-NEXT:    movq %rsi, %xmm0
-; SSE-PCLMUL-NEXT:    bswapq %rdi
-; SSE-PCLMUL-NEXT:    movq %rdi, %rsi
-; SSE-PCLMUL-NEXT:    shrq $4, %rsi
-; SSE-PCLMUL-NEXT:    andq %rcx, %rsi
-; SSE-PCLMUL-NEXT:    andq %rcx, %rdi
-; SSE-PCLMUL-NEXT:    shlq $4, %rdi
-; SSE-PCLMUL-NEXT:    orq %rsi, %rdi
-; SSE-PCLMUL-NEXT:    movq %rdi, %rsi
-; SSE-PCLMUL-NEXT:    andq %rax, %rsi
-; SSE-PCLMUL-NEXT:    shrq $2, %rdi
-; SSE-PCLMUL-NEXT:    andq %rax, %rdi
-; SSE-PCLMUL-NEXT:    leaq (%rdi,%rsi,4), %rsi
-; SSE-PCLMUL-NEXT:    movq %rsi, %rdi
-; SSE-PCLMUL-NEXT:    andq %rdx, %rdi
-; SSE-PCLMUL-NEXT:    shrq %rsi
-; SSE-PCLMUL-NEXT:    andq %rdx, %rsi
-; SSE-PCLMUL-NEXT:    leaq (%rsi,%rdi,2), %rsi
-; SSE-PCLMUL-NEXT:    movq %rsi, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rsi
-; SSE-PCLMUL-NEXT:    bswapq %rsi
-; SSE-PCLMUL-NEXT:    movq %rsi, %rdi
-; SSE-PCLMUL-NEXT:    shrq $4, %rdi
-; SSE-PCLMUL-NEXT:    andq %rcx, %rdi
-; SSE-PCLMUL-NEXT:    andq %rcx, %rsi
-; SSE-PCLMUL-NEXT:    shlq $4, %rsi
-; SSE-PCLMUL-NEXT:    orq %rdi, %rsi
-; SSE-PCLMUL-NEXT:    movq %rsi, %rcx
-; SSE-PCLMUL-NEXT:    andq %rax, %rcx
-; SSE-PCLMUL-NEXT:    shrq $2, %rsi
-; SSE-PCLMUL-NEXT:    andq %rax, %rsi
-; SSE-PCLMUL-NEXT:    leaq (%rsi,%rcx,4), %rax
-; SSE-PCLMUL-NEXT:    movq %rax, %rcx
-; SSE-PCLMUL-NEXT:    andq %rdx, %rcx
-; SSE-PCLMUL-NEXT:    shrq %rax
-; SSE-PCLMUL-NEXT:    andq %rdx, %rax
-; SSE-PCLMUL-NEXT:    leaq (%rax,%rcx,2), %rax
-; SSE-PCLMUL-NEXT:    retq
+; SSE2-PCLMUL-LABEL: clmulr_i64:
+; SSE2-PCLMUL:       # %bb.0:
+; SSE2-PCLMUL-NEXT:    movq %rsi, %xmm0
+; SSE2-PCLMUL-NEXT:    movq %rdi, %xmm1
+; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE2-PCLMUL-NEXT:    movq %xmm1, %rcx
+; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE2-PCLMUL-NEXT:    movq %xmm0, %rax
+; SSE2-PCLMUL-NEXT:    shldq $1, %rcx, %rax
+; SSE2-PCLMUL-NEXT:    retq
+;
+; SSE42-PCLMUL-LABEL: clmulr_i64:
+; SSE42-PCLMUL:       # %bb.0:
+; SSE42-PCLMUL-NEXT:    movq %rsi, %xmm0
+; SSE42-PCLMUL-NEXT:    movq %rdi, %xmm1
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE42-PCLMUL-NEXT:    movq %xmm1, %rcx
+; SSE42-PCLMUL-NEXT:    pextrq $1, %xmm1, %rax
+; SSE42-PCLMUL-NEXT:    shldq $1, %rcx, %rax
+; SSE42-PCLMUL-NEXT:    retq
 ;
 ; AVX-LABEL: clmulr_i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    bswapq %rsi
-; AVX-NEXT:    movq %rsi, %rax
-; AVX-NEXT:    shrq $4, %rax
-; AVX-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
-; AVX-NEXT:    andq %rcx, %rax
-; AVX-NEXT:    andq %rcx, %rsi
-; AVX-NEXT:    shlq $4, %rsi
-; AVX-NEXT:    orq %rax, %rsi
-; AVX-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
-; AVX-NEXT:    movq %rsi, %rdx
-; AVX-NEXT:    andq %rax, %rdx
-; AVX-NEXT:    shrq $2, %rsi
-; AVX-NEXT:    andq %rax, %rsi
-; AVX-NEXT:    leaq (%rsi,%rdx,4), %rsi
-; AVX-NEXT:    movabsq $6148914691236517205, %rdx # imm = 0x5555555555555555
-; AVX-NEXT:    movq %rsi, %r8
-; AVX-NEXT:    andq %rdx, %r8
-; AVX-NEXT:    shrq %rsi
-; AVX-NEXT:    andq %rdx, %rsi
-; AVX-NEXT:    leaq (%rsi,%r8,2), %rsi
 ; AVX-NEXT:    vmovq %rsi, %xmm0
-; AVX-NEXT:    bswapq %rdi
-; AVX-NEXT:    movq %rdi, %rsi
-; AVX-NEXT:    shrq $4, %rsi
-; AVX-NEXT:    andq %rcx, %rsi
-; AVX-NEXT:    andq %rcx, %rdi
-; AVX-NEXT:    shlq $4, %rdi
-; AVX-NEXT:    orq %rsi, %rdi
-; AVX-NEXT:    movq %rdi, %rsi
-; AVX-NEXT:    andq %rax, %rsi
-; AVX-NEXT:    shrq $2, %rdi
-; AVX-NEXT:    andq %rax, %rdi
-; AVX-NEXT:    leaq (%rdi,%rsi,4), %rsi
-; AVX-NEXT:    movq %rsi, %rdi
-; AVX-NEXT:    andq %rdx, %rdi
-; AVX-NEXT:    shrq %rsi
-; AVX-NEXT:    andq %rdx, %rsi
-; AVX-NEXT:    leaq (%rsi,%rdi,2), %rsi
-; AVX-NEXT:    vmovq %rsi, %xmm1
+; AVX-NEXT:    vmovq %rdi, %xmm1
 ; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rsi
-; AVX-NEXT:    bswapq %rsi
-; AVX-NEXT:    movq %rsi, %rdi
-; AVX-NEXT:    shrq $4, %rdi
-; AVX-NEXT:    andq %rcx, %rdi
-; AVX-NEXT:    andq %rcx, %rsi
-; AVX-NEXT:    shlq $4, %rsi
-; AVX-NEXT:    orq %rdi, %rsi
-; AVX-NEXT:    movq %rsi, %rcx
-; AVX-NEXT:    andq %rax, %rcx
-; AVX-NEXT:    shrq $2, %rsi
-; AVX-NEXT:    andq %rax, %rsi
-; AVX-NEXT:    leaq (%rsi,%rcx,4), %rax
-; AVX-NEXT:    movq %rax, %rcx
-; AVX-NEXT:    andq %rdx, %rcx
-; AVX-NEXT:    shrq %rax
-; AVX-NEXT:    andq %rdx, %rax
-; AVX-NEXT:    leaq (%rax,%rcx,2), %rax
+; AVX-NEXT:    vmovq %xmm0, %rcx
+; AVX-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX-NEXT:    shldq $1, %rcx, %rax
 ; AVX-NEXT:    retq
   %a.ext = zext i64 %a to i128
   %b.ext = zext i64 %b to i128
