@@ -1,5 +1,6 @@
 // RUN: %libomptarget-compile-generic && %libomptarget-run-generic
 // RUN: %libomptarget-compileopt-generic && %libomptarget-run-generic
+// XFAIL: intelgpu
 
 // Verify we do not read bits in the image that are not there (nobits section).
 

@@ -160,6 +160,7 @@ clang_tidy_library(
     name = "google",
     deps = [
         ":lib",
+        ":misc",
         ":modernize",
         ":readability",
         ":utils",

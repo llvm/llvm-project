@@ -111,6 +111,42 @@ const char *getEdgeKindName(Edge::Kind R) {
   }
 }
 
+Error optimizeGOTAndStubAccesses(LinkGraph &G) {
+  LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
+
+  for (auto *B : G.blocks())
+    for (auto &E : B->edges()) {
+      if (E.getKind() == systemz::DeltaPLT32dbl) {
+        auto &StubBlock = E.getTarget().getBlock();
+        if (StubBlock.getSize() == sizeof(Pointer64JumpStubContent) &&
+            StubBlock.edges_size() == 1) {
+          auto &GOTBlock = StubBlock.edges().begin()->getTarget().getBlock();
+          assert(GOTBlock.getSize() == G.getPointerSize() &&
+                 "GOT block should be pointer sized");
+          assert(GOTBlock.edges_size() == 1 &&
+                 "GOT block should only have one outgoing edge");
+
+          auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
+          orc::ExecutorAddr EdgeAddr = B->getAddress() + E.getOffset();
+          orc::ExecutorAddr TargetAddr = GOTTarget.getAddress();
+
+          int64_t Displacement = TargetAddr + E.getAddend() - EdgeAddr;
+          if (isInt<33>(Displacement)) {
+            E.setKind(systemz::Delta32dbl);
+            E.setTarget(GOTTarget);
+            LLVM_DEBUG({
+              dbgs() << "  Replaced stub branch with direct branch:\n    ";
+              printEdge(dbgs(), *B, E, getEdgeKindName(E.getKind()));
+              dbgs() << "\n";
+            });
+          }
+        }
+      }
+    }
+
+  return Error::success();
+}
+
 } // namespace systemz
 } // namespace jitlink
 } // namespace llvm

@@ -7,11 +7,13 @@
 @lds_3 = external addrspace(3) global [3 x i8], align 4
 @lds_4 = external addrspace(3) global [4 x i8], align 8
 
+; @llvm.amdgcn.sw.lds.base.table = internal addrspace(1) constant [1 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.sw.lds.k0], no_sanitize_address
+; @llvm.amdgcn.sw.lds.offset.table = internal addrspace(1) constant [1 x [2 x ptr addrspace(1)]] {{\[}}[2 x ptr addrspace(1)] [ptr addrspace(1) getelementptr inbounds (%llvm.amdgcn.sw.lds.k0.md.type, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 3, i32 0), ptr addrspace(1) getelementptr inbounds (%llvm.amdgcn.sw.lds.k0.md.type, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 4, i32 0)]], no_sanitize_address
 ;.
 ; CHECK: @llvm.amdgcn.sw.lds.k0 = internal addrspace(3) global ptr poison, no_sanitize_address, align 8, !absolute_symbol [[META0:![0-9]+]]
 ; CHECK: @llvm.amdgcn.sw.lds.k0.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.k0.md.type { %llvm.amdgcn.sw.lds.k0.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.k0.md.item { i32 32, i32 1, i32 32 }, %llvm.amdgcn.sw.lds.k0.md.item { i32 64, i32 4, i32 32 }, %llvm.amdgcn.sw.lds.k0.md.item { i32 96, i32 3, i32 32 }, %llvm.amdgcn.sw.lds.k0.md.item { i32 128, i32 4, i32 32 } }, no_sanitize_address
-; @llvm.amdgcn.sw.lds.base.table = internal addrspace(1) constant [1 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.sw.lds.k0], no_sanitize_address
-; @llvm.amdgcn.sw.lds.offset.table = internal addrspace(1) constant [1 x [2 x ptr addrspace(1)]] [[2 x ptr addrspace(1)] [ptr addrspace(1) getelementptr inbounds (%llvm.amdgcn.sw.lds.k0.md.type, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 3, i32 0), ptr addrspace(1) getelementptr inbounds (%llvm.amdgcn.sw.lds.k0.md.type, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 4, i32 0)]], no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.base.table = internal addrspace(1) constant [1 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.sw.lds.k0], no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.offset.table = internal addrspace(1) constant [1 x [2 x ptr addrspace(1)]] {{\[}}[2 x ptr addrspace(1)] [ptr addrspace(1) getelementptr inbounds (%llvm.amdgcn.sw.lds.k0.md.type, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 3, i32 0), ptr addrspace(1) getelementptr inbounds (%llvm.amdgcn.sw.lds.k0.md.type, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 4, i32 0)]], no_sanitize_address
 ;.
 define void @use_variables() sanitize_address {
 ; CHECK-LABEL: define void @use_variables(
@@ -217,7 +219,7 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { convergent nocallback nofree nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { convergent nocallback nocreateundeforpoison nofree nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR6:[0-9]+]] = { convergent nocallback nofree nounwind }
 ; CHECK: attributes #[[ATTR7]] = { nomerge }
 ;.

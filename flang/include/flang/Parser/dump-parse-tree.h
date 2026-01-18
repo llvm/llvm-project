@@ -64,6 +64,7 @@ public:
   NODE(std, uint64_t)
   NODE_ENUM(common, CUDADataAttr)
   NODE_ENUM(common, CUDASubprogramAttrs)
+  NODE_ENUM(common, ImportKind)
   NODE_ENUM(common, OmpDependenceKind)
   NODE_ENUM(common, OmpMemoryOrderType)
   NODE_ENUM(common, OpenACCDeviceType)

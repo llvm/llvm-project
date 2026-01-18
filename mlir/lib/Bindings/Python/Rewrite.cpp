@@ -8,10 +8,10 @@
 
 #include "Rewrite.h"
 
-#include "IRModule.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Rewrite.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/IRCore.h"
 // clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
@@ -22,9 +22,11 @@
 namespace nb = nanobind;
 using namespace mlir;
 using namespace nb::literals;
-using namespace mlir::python;
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 class PyPatternRewriter {
 public:
@@ -53,12 +55,14 @@ public:
     mlirRewriterBaseReplaceOpWithValues(base, op, values.size(), values.data());
   }
 
-  void eraseOp(MlirOperation op) { mlirRewriterBaseEraseOp(base, op); }
+  void eraseOp(const PyOperation &op) { mlirRewriterBaseEraseOp(base, op); }
 
 private:
   MlirRewriterBase base;
   PyMlirContextRef ctx;
 };
+
+struct PyMlirPDLResultList : MlirPDLResultList {};
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 static nb::object objectFromPDLValue(MlirPDLValue value) {
@@ -118,7 +122,7 @@ public:
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           return logicalResultFromObject(
-              f(PyPatternRewriter(rewriter), results,
+              f(PyPatternRewriter(rewriter), PyMlirPDLResultList{results.ptr},
                 objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
@@ -133,7 +137,7 @@ public:
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           return logicalResultFromObject(
-              f(PyPatternRewriter(rewriter), results,
+              f(PyPatternRewriter(rewriter), PyMlirPDLResultList{results.ptr},
                 objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
@@ -223,45 +227,142 @@ private:
   MlirContext ctx;
 };
 
-} // namespace
+enum class PyGreedyRewriteStrictness : std::underlying_type_t<
+    MlirGreedyRewriteStrictness> {
+  ANY_OP = MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP,
+  EXISTING_AND_NEW_OPS = MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS,
+  EXISTING_OPS = MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS,
+};
+
+enum class PyGreedySimplifyRegionLevel : std::underlying_type_t<
+    MlirGreedySimplifyRegionLevel> {
+  DISABLED = MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED,
+  NORMAL = MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL,
+  AGGRESSIVE = MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE
+};
+
+/// Owning Wrapper around a GreedyRewriteDriverConfig.
+class PyGreedyRewriteConfig {
+public:
+  PyGreedyRewriteConfig()
+      : config(mlirGreedyRewriteDriverConfigCreate().ptr,
+               PyGreedyRewriteConfig::customDeleter) {}
+  PyGreedyRewriteConfig(PyGreedyRewriteConfig &&other) noexcept
+      : config(std::move(other.config)) {}
+  PyGreedyRewriteConfig(const PyGreedyRewriteConfig &other) noexcept
+      : config(other.config) {}
+
+  MlirGreedyRewriteDriverConfig get() {
+    return MlirGreedyRewriteDriverConfig{config.get()};
+  }
+
+  void setMaxIterations(int64_t maxIterations) {
+    mlirGreedyRewriteDriverConfigSetMaxIterations(get(), maxIterations);
+  }
+
+  void setMaxNumRewrites(int64_t maxNumRewrites) {
+    mlirGreedyRewriteDriverConfigSetMaxNumRewrites(get(), maxNumRewrites);
+  }
+
+  void setUseTopDownTraversal(bool useTopDownTraversal) {
+    mlirGreedyRewriteDriverConfigSetUseTopDownTraversal(get(),
+                                                        useTopDownTraversal);
+  }
+
+  void enableFolding(bool enable) {
+    mlirGreedyRewriteDriverConfigEnableFolding(get(), enable);
+  }
+
+  void setStrictness(PyGreedyRewriteStrictness strictness) {
+    mlirGreedyRewriteDriverConfigSetStrictness(
+        get(), static_cast<MlirGreedyRewriteStrictness>(strictness));
+  }
+
+  void setRegionSimplificationLevel(PyGreedySimplifyRegionLevel level) {
+    mlirGreedyRewriteDriverConfigSetRegionSimplificationLevel(
+        get(), static_cast<MlirGreedySimplifyRegionLevel>(level));
+  }
+
+  void enableConstantCSE(bool enable) {
+    mlirGreedyRewriteDriverConfigEnableConstantCSE(get(), enable);
+  }
+
+  int64_t getMaxIterations() {
+    return mlirGreedyRewriteDriverConfigGetMaxIterations(get());
+  }
+
+  int64_t getMaxNumRewrites() {
+    return mlirGreedyRewriteDriverConfigGetMaxNumRewrites(get());
+  }
+
+  bool getUseTopDownTraversal() {
+    return mlirGreedyRewriteDriverConfigGetUseTopDownTraversal(get());
+  }
+
+  bool isFoldingEnabled() {
+    return mlirGreedyRewriteDriverConfigIsFoldingEnabled(get());
+  }
+
+  PyGreedyRewriteStrictness getStrictness() {
+    return static_cast<PyGreedyRewriteStrictness>(
+        mlirGreedyRewriteDriverConfigGetStrictness(get()));
+  }
+
+  PyGreedySimplifyRegionLevel getRegionSimplificationLevel() {
+    return static_cast<PyGreedySimplifyRegionLevel>(
+        mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(get()));
+  }
+
+  bool isConstantCSEEnabled() {
+    return mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(get());
+  }
+
+private:
+  std::shared_ptr<void> config;
+  static void customDeleter(void *c) {
+    mlirGreedyRewriteDriverConfigDestroy(MlirGreedyRewriteDriverConfig{c});
+  }
+};
 
 /// Create the `mlir.rewrite` here.
-void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
+void populateRewriteSubmodule(nb::module_ &m) {
+  // Enum definitions
+  nb::enum_<PyGreedyRewriteStrictness>(m, "GreedyRewriteStrictness")
+      .value("ANY_OP", PyGreedyRewriteStrictness::ANY_OP)
+      .value("EXISTING_AND_NEW_OPS",
+             PyGreedyRewriteStrictness::EXISTING_AND_NEW_OPS)
+      .value("EXISTING_OPS", PyGreedyRewriteStrictness::EXISTING_OPS);
+
+  nb::enum_<PyGreedySimplifyRegionLevel>(m, "GreedySimplifyRegionLevel")
+      .value("DISABLED", PyGreedySimplifyRegionLevel::DISABLED)
+      .value("NORMAL", PyGreedySimplifyRegionLevel::NORMAL)
+      .value("AGGRESSIVE", PyGreedySimplifyRegionLevel::AGGRESSIVE);
   //----------------------------------------------------------------------------
   // Mapping of the PatternRewriter
   //----------------------------------------------------------------------------
-  nb::
-      class_<PyPatternRewriter>(m, "PatternRewriter")
-          .def_prop_ro("ip", &PyPatternRewriter::getInsertionPoint,
-                       "The current insertion point of the PatternRewriter.")
-          .def(
-              "replace_op",
-              [](PyPatternRewriter &self, MlirOperation op,
-                 MlirOperation newOp) { self.replaceOp(op, newOp); },
-              "Replace an operation with a new operation.", nb::arg("op"),
-              nb::arg("new_op"),
-              // clang-format off
-              nb::sig("def replace_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", new_op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None")
-              // clang-format on
-              )
-          .def(
-              "replace_op",
-              [](PyPatternRewriter &self, MlirOperation op,
-                 const std::vector<MlirValue> &values) {
-                self.replaceOp(op, values);
-              },
-              "Replace an operation with a list of values.", nb::arg("op"),
-              nb::arg("values"),
-              // clang-format off
-              nb::sig("def replace_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", values: list[" MAKE_MLIR_PYTHON_QUALNAME("ir.Value") "]) -> None")
-              // clang-format on
-              )
-          .def("erase_op", &PyPatternRewriter::eraseOp, "Erase an operation.",
-               nb::arg("op"),
-               // clang-format off
-                nb::sig("def erase_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None")
-               // clang-format on
-          );
+  nb::class_<PyPatternRewriter>(m, "PatternRewriter")
+      .def_prop_ro("ip", &PyPatternRewriter::getInsertionPoint,
+                   "The current insertion point of the PatternRewriter.")
+      .def(
+          "replace_op",
+          [](PyPatternRewriter &self, PyOperationBase &op,
+             PyOperationBase &newOp) {
+            self.replaceOp(op.getOperation(), newOp.getOperation());
+          },
+          "Replace an operation with a new operation.", nb::arg("op"),
+          nb::arg("new_op"))
+      .def(
+          "replace_op",
+          [](PyPatternRewriter &self, PyOperationBase &op,
+             const std::vector<PyValue> &values) {
+            std::vector<MlirValue> values_(values.size());
+            std::copy(values.begin(), values.end(), values_.begin());
+            self.replaceOp(op.getOperation(), values_);
+          },
+          "Replace an operation with a list of values.", nb::arg("op"),
+          nb::arg("values"))
+      .def("erase_op", &PyPatternRewriter::eraseOp, "Erase an operation.",
+           nb::arg("op"));
 
   //----------------------------------------------------------------------------
   // Mapping of the RewritePatternSet
@@ -315,53 +416,29 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
   // Mapping of the PDLResultList and PDLModule
   //----------------------------------------------------------------------------
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-  nb::class_<MlirPDLResultList>(m, "PDLResultList")
-      .def(
-          "append",
-          [](MlirPDLResultList results, const PyValue &value) {
-            mlirPDLResultListPushBackValue(results, value);
-          },
-          // clang-format off
-          nb::sig("def append(self, value: " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ")")
-          // clang-format on
-          )
-      .def(
-          "append",
-          [](MlirPDLResultList results, const PyOperation &op) {
-            mlirPDLResultListPushBackOperation(results, op);
-          },
-          // clang-format off
-          nb::sig("def append(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ")")
-          // clang-format on
-          )
-      .def(
-          "append",
-          [](MlirPDLResultList results, const PyType &type) {
-            mlirPDLResultListPushBackType(results, type);
-          },
-          // clang-format off
-          nb::sig("def append(self, type: " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ")")
-          // clang-format on
-          )
-      .def(
-          "append",
-          [](MlirPDLResultList results, const PyAttribute &attr) {
-            mlirPDLResultListPushBackAttribute(results, attr);
-          },
-          // clang-format off
-          nb::sig("def append(self, attr: " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") ")")
-          // clang-format on
-      );
+  nb::class_<PyMlirPDLResultList>(m, "PDLResultList")
+      .def("append",
+           [](PyMlirPDLResultList results, const PyValue &value) {
+             mlirPDLResultListPushBackValue(results, value);
+           })
+      .def("append",
+           [](PyMlirPDLResultList results, const PyOperation &op) {
+             mlirPDLResultListPushBackOperation(results, op);
+           })
+      .def("append",
+           [](PyMlirPDLResultList results, const PyType &type) {
+             mlirPDLResultListPushBackType(results, type);
+           })
+      .def("append", [](PyMlirPDLResultList results, const PyAttribute &attr) {
+        mlirPDLResultListPushBackAttribute(results, attr);
+      });
   nb::class_<PyPDLPatternModule>(m, "PDLModule")
       .def(
           "__init__",
-          [](PyPDLPatternModule &self, MlirModule module) {
-            new (&self)
-                PyPDLPatternModule(mlirPDLPatternModuleFromModule(module));
+          [](PyPDLPatternModule &self, PyModule &module) {
+            new (&self) PyPDLPatternModule(
+                mlirPDLPatternModuleFromModule(module.get()));
           },
-          // clang-format off
-          nb::sig("def __init__(self, module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ") -> None"),
-          // clang-format on
           "module"_a, "Create a PDL module from the given module.")
       .def(
           "__init__",
@@ -369,9 +446,6 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
             new (&self) PyPDLPatternModule(
                 mlirPDLPatternModuleFromModule(module.get()));
           },
-          // clang-format off
-          nb::sig("def __init__(self, module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ") -> None"),
-          // clang-format on
           "module"_a, "Create a PDL module from the given module.")
       .def(
           "freeze",
@@ -395,6 +469,35 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           },
           nb::keep_alive<1, 3>());
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
+
+  nb::class_<PyGreedyRewriteConfig>(m, "GreedyRewriteConfig")
+      .def(nb::init<>(), "Create a greedy rewrite driver config with defaults")
+      .def_prop_rw("max_iterations", &PyGreedyRewriteConfig::getMaxIterations,
+                   &PyGreedyRewriteConfig::setMaxIterations,
+                   "Maximum number of iterations")
+      .def_prop_rw("max_num_rewrites",
+                   &PyGreedyRewriteConfig::getMaxNumRewrites,
+                   &PyGreedyRewriteConfig::setMaxNumRewrites,
+                   "Maximum number of rewrites per iteration")
+      .def_prop_rw("use_top_down_traversal",
+                   &PyGreedyRewriteConfig::getUseTopDownTraversal,
+                   &PyGreedyRewriteConfig::setUseTopDownTraversal,
+                   "Whether to use top-down traversal")
+      .def_prop_rw("enable_folding", &PyGreedyRewriteConfig::isFoldingEnabled,
+                   &PyGreedyRewriteConfig::enableFolding,
+                   "Enable or disable folding")
+      .def_prop_rw("strictness", &PyGreedyRewriteConfig::getStrictness,
+                   &PyGreedyRewriteConfig::setStrictness,
+                   "Rewrite strictness level")
+      .def_prop_rw("region_simplification_level",
+                   &PyGreedyRewriteConfig::getRegionSimplificationLevel,
+                   &PyGreedyRewriteConfig::setRegionSimplificationLevel,
+                   "Region simplification level")
+      .def_prop_rw("enable_constant_cse",
+                   &PyGreedyRewriteConfig::isConstantCSEEnabled,
+                   &PyGreedyRewriteConfig::enableConstantCSE,
+                   "Enable or disable constant CSE");
+
   nb::class_<PyFrozenRewritePatternSet>(m, "FrozenRewritePatternSet")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR,
                    &PyFrozenRewritePatternSet::getCapsule)
@@ -402,62 +505,31 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
            &PyFrozenRewritePatternSet::createFromCapsule);
   m.def(
        "apply_patterns_and_fold_greedily",
-       [](PyModule &module, PyFrozenRewritePatternSet &set) {
-         auto status =
-             mlirApplyPatternsAndFoldGreedily(module.get(), set.get(), {});
+       [](PyModule &module, PyFrozenRewritePatternSet &set,
+          std::optional<PyGreedyRewriteConfig> config) {
+         MlirLogicalResult status = mlirApplyPatternsAndFoldGreedily(
+             module.get(), set.get(),
+             config.has_value() ? config->get()
+                                : mlirGreedyRewriteDriverConfigCreate());
          if (mlirLogicalResultIsFailure(status))
            throw std::runtime_error("pattern application failed to converge");
        },
-       "module"_a, "set"_a,
-       // clang-format off
-       nb::sig("def apply_patterns_and_fold_greedily(module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ", set: FrozenRewritePatternSet) -> None"),
-       // clang-format on
+       "module"_a, "set"_a, "config"_a = nb::none(),
        "Applys the given patterns to the given module greedily while folding "
        "results.")
       .def(
           "apply_patterns_and_fold_greedily",
-          [](PyModule &module, MlirFrozenRewritePatternSet set) {
-            auto status =
-                mlirApplyPatternsAndFoldGreedily(module.get(), set, {});
+          [](PyOperationBase &op, PyFrozenRewritePatternSet &set,
+             std::optional<PyGreedyRewriteConfig> config) {
+            MlirLogicalResult status = mlirApplyPatternsAndFoldGreedilyWithOp(
+                op.getOperation(), set.get(),
+                config.has_value() ? config->get()
+                                   : mlirGreedyRewriteDriverConfigCreate());
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error(
                   "pattern application failed to converge");
           },
-          "module"_a, "set"_a,
-          // clang-format off
-          nb::sig("def apply_patterns_and_fold_greedily(module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ", set: FrozenRewritePatternSet) -> None"),
-          // clang-format on
-          "Applys the given patterns to the given module greedily while "
-          "folding "
-          "results.")
-      .def(
-          "apply_patterns_and_fold_greedily",
-          [](PyOperationBase &op, PyFrozenRewritePatternSet &set) {
-            auto status = mlirApplyPatternsAndFoldGreedilyWithOp(
-                op.getOperation(), set.get(), {});
-            if (mlirLogicalResultIsFailure(status))
-              throw std::runtime_error(
-                  "pattern application failed to converge");
-          },
-          "op"_a, "set"_a,
-          // clang-format off
-          nb::sig("def apply_patterns_and_fold_greedily(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet) -> None"),
-          // clang-format on
-          "Applys the given patterns to the given op greedily while folding "
-          "results.")
-      .def(
-          "apply_patterns_and_fold_greedily",
-          [](PyOperationBase &op, MlirFrozenRewritePatternSet set) {
-            auto status = mlirApplyPatternsAndFoldGreedilyWithOp(
-                op.getOperation(), set, {});
-            if (mlirLogicalResultIsFailure(status))
-              throw std::runtime_error(
-                  "pattern application failed to converge");
-          },
-          "op"_a, "set"_a,
-          // clang-format off
-          nb::sig("def apply_patterns_and_fold_greedily(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet) -> None"),
-          // clang-format on
+          "op"_a, "set"_a, "config"_a = nb::none(),
           "Applys the given patterns to the given op greedily while folding "
           "results.")
       .def(
@@ -466,9 +538,9 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
             mlirWalkAndApplyPatterns(op.getOperation(), set.get());
           },
           "op"_a, "set"_a,
-          // clang-format off
-          nb::sig("def walk_and_apply_patterns(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet) -> None"),
-          // clang-format on
           "Applies the given patterns to the given op by a fast walk-based "
           "driver.");
 }
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir

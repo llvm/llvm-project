@@ -1396,9 +1396,6 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   // sizeof in bits of 'Count'.
   unsigned SizeOfInBits = Count->getType()->getScalarSizeInBits();
   if (match(ValueOnZero, m_SpecificInt(SizeOfInBits))) {
-    // Explicitly clear the 'is_zero_poison' flag. It's always valid to go from
-    // true to false on this flag, so we can replace it for all users.
-    II->setArgOperand(1, ConstantInt::getFalse(II->getContext()));
     // A range annotation on the intrinsic may no longer be valid.
     II->dropPoisonGeneratingAnnotations();
     IC.addToWorklist(II);
@@ -3885,8 +3882,6 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
 
   // Drop range attributes and re-infer them in the next iteration.
   cast<Instruction>(Ctlz)->dropPoisonGeneratingAnnotations();
-  // Set is_zero_poison to false and re-infer them in the next iteration.
-  cast<Instruction>(Ctlz)->setOperand(1, Builder.getFalse());
   IC.addToWorklist(cast<Instruction>(Ctlz));
   Value *Neg = Builder.CreateNeg(Ctlz);
   Value *Masked =
@@ -4799,13 +4794,13 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // select (trunc nsw X to i1), X, Y --> select (trunc nsw X to i1), -1, Y
   // select (trunc nsw X to i1), Y, X --> select (trunc nsw X to i1), Y, 0
   Value *Trunc;
-  if (match(CondVal, m_NUWTrunc(m_Value(Trunc)))) {
+  if (match(CondVal, m_NUWTrunc(m_Value(Trunc))) && !isa<Constant>(Trunc)) {
     if (TrueVal == Trunc)
       return replaceOperand(SI, 1, ConstantInt::get(TrueVal->getType(), 1));
     if (FalseVal == Trunc)
       return replaceOperand(SI, 2, ConstantInt::get(FalseVal->getType(), 0));
   }
-  if (match(CondVal, m_NSWTrunc(m_Value(Trunc)))) {
+  if (match(CondVal, m_NSWTrunc(m_Value(Trunc))) && !isa<Constant>(Trunc)) {
     if (TrueVal == Trunc)
       return replaceOperand(SI, 1,
                             Constant::getAllOnesValue(TrueVal->getType()));

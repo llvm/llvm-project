@@ -606,6 +606,8 @@ BitcodeModule &InputFile::getSingleBitcodeModule() {
   return Mods[0];
 }
 
+BitcodeModule &InputFile::getPrimaryBitcodeModule() { return Mods[0]; }
+
 LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       const Config &Conf)
     : ParallelCodeGenParallelismLevel(ParallelCodeGenParallelismLevel),
@@ -804,7 +806,7 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
   // If any of the modules inside of a input bitcode file was compiled with
   // ThinLTO, we assume that the whole input file also was compiled with
   // ThinLTO.
-  Input.IsThinLTO = IsThinLTO;
+  Input.IsThinLTO |= IsThinLTO;
 
   auto ModSyms = Input.module_symbols(ModI);
   addModuleToGlobalRes(ModSyms, Res,
@@ -1915,7 +1917,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   ThinLTO.CombinedIndex.releaseTemporaryMemory();
   timeTraceProfilerBegin("ThinLink", StringRef(""));
-  auto TimeTraceScopeExit = llvm::make_scope_exit([]() {
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (llvm::timeTraceProfilerEnabled())
       llvm::timeTraceProfilerEnd();
   });
@@ -2548,7 +2550,7 @@ public:
     if (Err)
       return std::move(*Err);
 
-    auto CleanPerJobFiles = llvm::make_scope_exit([&] {
+    llvm::scope_exit CleanPerJobFiles([&] {
       llvm::TimeTraceScope TimeScope("Remove DTLTO temporary files");
       if (!SaveTemps)
         for (auto &Job : Jobs) {
@@ -2575,7 +2577,7 @@ public:
             BCError + "failed to generate distributor JSON script: " + JsonFile,
             inconvertibleErrorCode());
     }
-    auto CleanJson = llvm::make_scope_exit([&] {
+    llvm::scope_exit CleanJson([&] {
       if (!SaveTemps)
         removeFile(JsonFile);
     });

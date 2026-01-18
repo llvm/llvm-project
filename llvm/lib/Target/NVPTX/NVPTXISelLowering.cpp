@@ -2746,6 +2746,57 @@ lowerTcgen05Ld(SDNode *N, SelectionDAG &DAG, bool HasOffset = false) {
   return {{BuildVector, Chain}};
 }
 
+static SDValue reportInvalidTensormapReplaceUsage(SDValue Op, SelectionDAG &DAG,
+                                                  unsigned Val) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+
+  unsigned AS = 0;
+  if (auto *MemN = dyn_cast<MemIntrinsicSDNode>(N))
+    AS = MemN->getAddressSpace();
+  Type *PtrTy = PointerType::get(*DAG.getContext(), AS);
+  Module *M = DAG.getMachineFunction().getFunction().getParent();
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn,
+      "Intrinsic " +
+          Intrinsic::getName(N->getConstantOperandVal(1), {PtrTy}, M) +
+          " with value " + Twine(Val) +
+          " is not supported on the given target.",
+      DL.getDebugLoc()));
+  return Op.getOperand(0);
+}
+
+static SDValue lowerTensormapReplaceElemtype(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  // immediate argument representing elemtype
+  unsigned Val = N->getConstantOperandVal(3);
+
+  if (!DAG.getSubtarget<NVPTXSubtarget>().hasTensormapReplaceElemtypeSupport(
+          Val))
+    return reportInvalidTensormapReplaceUsage(Op, DAG, Val);
+
+  return Op;
+}
+
+static SDValue lowerTensormapReplaceSwizzleMode(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  // immediate argument representing swizzle mode
+  unsigned Val = N->getConstantOperandVal(3);
+
+  if (!DAG.getSubtarget<NVPTXSubtarget>().hasTensormapReplaceSwizzleModeSupport(
+          Val))
+    return reportInvalidTensormapReplaceUsage(Op, DAG, Val);
+
+  return Op;
+}
+
 static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDValue Intrin = N->getOperand(1);
@@ -2822,6 +2873,10 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
     return LowerTcgen05MMADisableOutputLane(Op, DAG);
+  case Intrinsic::nvvm_tensormap_replace_elemtype:
+    return lowerTensormapReplaceElemtype(Op, DAG);
+  case Intrinsic::nvvm_tensormap_replace_swizzle_mode:
+    return lowerTensormapReplaceSwizzleMode(Op, DAG);
   }
   return Op;
 }
@@ -4526,6 +4581,35 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return true;
   }
 
+  case Intrinsic::nvvm_tensormap_replace_global_address:
+  case Intrinsic::nvvm_tensormap_replace_global_stride: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tensormap_replace_rank:
+  case Intrinsic::nvvm_tensormap_replace_box_dim:
+  case Intrinsic::nvvm_tensormap_replace_global_dim:
+  case Intrinsic::nvvm_tensormap_replace_element_stride:
+  case Intrinsic::nvvm_tensormap_replace_elemtype:
+  case Intrinsic::nvvm_tensormap_replace_interleave_layout:
+  case Intrinsic::nvvm_tensormap_replace_swizzle_mode:
+  case Intrinsic::nvvm_tensormap_replace_swizzle_atomicity:
+  case Intrinsic::nvvm_tensormap_replace_fill_mode: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_f:
   case Intrinsic::nvvm_ldu_global_p: {
@@ -5896,8 +5980,8 @@ static SDValue combineMulWide(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SDValue RHS = Op.getOperand(1);
   if (Op.getOpcode() == ISD::SHL) {
     const auto ShiftAmt = Op.getConstantOperandVal(1);
-    const auto MulVal = APInt(ToVT.getSizeInBits(), 1) << ShiftAmt;
-    RHS = DCI.DAG.getConstant(MulVal, DL, ToVT);
+    const auto MulVal = APInt(FromVT.getSizeInBits(), 1) << ShiftAmt;
+    RHS = DCI.DAG.getConstant(MulVal, DL, FromVT);
   }
   return DCI.DAG.getNode(Opcode, DL, ToVT, Op.getOperand(0), RHS);
 }
@@ -6893,7 +6977,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
 }
 
 NVPTXTargetLowering::AtomicExpansionKind
-NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();
 
   if (AI->isFloatingPointOperation()) {

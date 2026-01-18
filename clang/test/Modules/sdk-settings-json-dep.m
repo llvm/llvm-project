@@ -9,7 +9,15 @@
   "Version": "15.0",
   "CanonicalName": "appletvos15.0",
   "MaximumDeploymentTarget": "15.0.99",
-  "PropertyConditionFallbackNames": []
+  "PropertyConditionFallbackNames": [],
+  "SupportedTargets": {
+    "appletvos": {
+      "Archs": ["arm64e", "arm64"],
+      "LLVMTargetTripleVendor": "apple",
+      "LLVMTargetTripleSys": "tvos",
+      "LLVMTargetTripleEnvironment": ""
+    }
+  },
 }
 //--- AppleTVOS15.0.sdk/SDKSettings-new.json
 {
@@ -18,6 +26,14 @@
   "CanonicalName": "appletvos15.0",
   "MaximumDeploymentTarget": "15.0.99",
   "PropertyConditionFallbackNames": [],
+  "SupportedTargets": {
+    "appletvos": {
+      "Archs": ["arm64e", "arm64"],
+      "LLVMTargetTripleVendor": "apple",
+      "LLVMTargetTripleSys": "tvos",
+      "LLVMTargetTripleEnvironment": ""
+    }
+  },
   "VersionMap": {
     "iOS_tvOS": {
       "13.2": "13.1"

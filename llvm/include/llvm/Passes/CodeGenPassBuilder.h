@@ -1040,6 +1040,11 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
     addModulePass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>(),
                   PMW);
     addMachineFunctionPass(RegUsageInfoCollectorPass(), PMW);
+    // If -print-regusage is specified, print the collected register usage info.
+    if (Opt.PrintRegUsage) {
+      flushFPMsToMPM(PMW);
+      addModulePass(PhysicalRegisterUsageInfoPrinterPass(errs()), PMW);
+    }
   }
 
   addMachineFunctionPass(FuncletLayoutPass(), PMW);
@@ -1253,6 +1258,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
     // addRegAssignmentOptimized did not add a reg alloc pass, so do nothing.
     return;
   }
+
+  addMachineFunctionPass(StackSlotColoringPass(), PMW);
+
   // Allow targets to expand pseudo instructions depending on the choice of
   // registers before MachineCopyPropagation.
   derived().addPostRewrite(PMW);
@@ -1275,6 +1283,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
     PassManagerWrapper &PMW) const {
+  // Cleanup of redundant (identical) address/immediate loads.
+  addMachineFunctionPass(MachineLateInstrsCleanupPass(), PMW);
+
   // Branch folding must be run after regalloc and prolog/epilog insertion.
   addMachineFunctionPass(BranchFolderPass(Opt.EnableTailMerge), PMW);
 
@@ -1284,9 +1295,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
   // In addition it can also make CFG irreducible. Thus we disable it.
   if (!TM.requiresStructuredCFG())
     addMachineFunctionPass(TailDuplicatePass(), PMW);
-
-  // Cleanup of redundant (identical) address/immediate loads.
-  addMachineFunctionPass(MachineLateInstrsCleanupPass(), PMW);
 
   // Copy propagation.
   addMachineFunctionPass(MachineCopyPropagationPass(), PMW);
