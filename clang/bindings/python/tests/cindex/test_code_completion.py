@@ -1,4 +1,4 @@
-from clang.cindex import AvailabilityKind, CompletionString, TranslationUnit
+from clang.cindex import AvailabilityKind, CompletionChunkKind, completionChunkKindMap, CompletionString, TranslationUnit
 
 import unittest
 from pathlib import Path
@@ -174,3 +174,14 @@ void f(P x, Q y) {
         for id, string in kindStringMap.items():
             kind = CompletionString.AvailabilityKindCompat.from_id(id)
             self.assertEqual(str(kind), string)
+
+    def test_completion_chunk_kind_compatibility(self):
+        # Check that all new kinds correspond to an old kind
+        for new_kind in CompletionChunkKind:
+            old_kind = completionChunkKindMap[new_kind.value]
+            self.assertEqual(str(old_kind), str(new_kind))
+
+        # Check that all old kinds correspond to a new kind
+        for value, old_kind in completionChunkKindMap.items():
+            new_kind = CompletionChunkKind.from_id(value)
+            self.assertEqual(str(old_kind), str(new_kind))
