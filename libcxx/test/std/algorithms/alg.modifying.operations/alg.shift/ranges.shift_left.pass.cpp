@@ -9,6 +9,7 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=9000000
 
 // template<permutable I, sentinel_for<I> S>
 //   constexpr subrange<I> ranges::shift_left(I first, S last, iter_difference_t<I> n);
