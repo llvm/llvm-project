@@ -623,6 +623,8 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
         printImmediateFP16(static_cast<uint16_t>(Imm), STI, O))
       return;
     break;
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
+    llvm_unreachable("OPERAND_REG_IMM_V2FP16_SPLAT is not supported");
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     if (isUInt<16>(Imm) &&
@@ -873,6 +875,8 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
       printImmediateV216(Op.getImm(), OpTy, STI, O);
       break;
+    case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
+      llvm_unreachable("OPERAND_REG_IMM_V2FP16_SPLAT is not supported");
     case MCOI::OPERAND_UNKNOWN:
     case MCOI::OPERAND_PCREL:
       O << formatDec(Op.getImm());

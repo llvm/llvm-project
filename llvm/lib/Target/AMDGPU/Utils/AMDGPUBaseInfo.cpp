@@ -2807,6 +2807,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
@@ -3168,6 +3169,34 @@ std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal) {
   return getInlineEncodingV216(true, Literal);
 }
 
+// Encoding of the literal as an inline constant for V_PK_FMAC_F16 instruction
+// or nullopt. This accounts for different inline constant behavior:
+// - Pre-GFX11: fp16 inline constants have the value in low 16 bits, 0 in high
+// - GFX11+: fp16 inline constants are duplicated into both halves
+std::optional<unsigned> getPKFMACF16InlineEncoding(uint32_t Literal,
+                                                   bool IsGFX11Plus) {
+  // Pre-GFX11 behavior: f16 in low bits, 0 in high bits
+  if (!IsGFX11Plus)
+    return getInlineEncodingV216(/*IsFloat=*/true, Literal);
+
+  // GFX11+ behavior: f16 duplicated in both halves
+  // First, check for sign-extended integer inline constants (-16 to 64)
+  // These work the same across all generations
+  int32_t Signed = static_cast<int32_t>(Literal);
+  if (Signed >= 0 && Signed <= 64)
+    return 128 + Signed;
+
+  if (Signed >= -16 && Signed <= -1)
+    return 192 + std::abs(Signed);
+
+  // For float inline constants on GFX11+, both halves must be equal
+  uint16_t Lo = static_cast<uint16_t>(Literal);
+  uint16_t Hi = static_cast<uint16_t>(Literal >> 16);
+  if (Lo != Hi)
+    return std::nullopt;
+  return getInlineEncodingV216(/*IsFloat=*/true, Lo);
+}
+
 // Whether the given literal can be inlined for a V_PK_* instruction.
 bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   switch (OpType) {
@@ -3177,6 +3206,8 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     return getInlineEncodingV216(true, Literal).has_value();
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
+    llvm_unreachable("OPERAND_REG_IMM_V2FP16_SPLAT is not supported");
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return isInlinableLiteralV2BF16(Literal);
@@ -3200,6 +3231,11 @@ bool isInlinableLiteralV2BF16(uint32_t Literal) {
 // Whether the given literal can be inlined for a V_PK_*_F16 instruction.
 bool isInlinableLiteralV2F16(uint32_t Literal) {
   return getInlineEncodingV2F16(Literal).has_value();
+}
+
+// Whether the given literal can be inlined for V_PK_FMAC_F16 instruction.
+bool isPKFMACF16InlineConstant(uint32_t Literal, bool IsGFX11Plus) {
+  return getPKFMACF16InlineEncoding(Literal, IsGFX11Plus).has_value();
 }
 
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
@@ -3233,6 +3269,8 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
     return Lo_32(Imm);
   case OPERAND_REG_IMM_FP64:
     return IsLit ? Imm : Hi_32(Imm);
+  case OPERAND_REG_IMM_V2FP16_SPLAT:
+    llvm_unreachable("OPERAND_REG_IMM_V2FP16_SPLAT is not supported");
   }
   return Imm;
 }
@@ -3656,6 +3694,29 @@ bool isPackedFP32Inst(unsigned Opc) {
   case AMDGPU::V_PK_MUL_F32_gfx12:
   case AMDGPU::V_PK_FMA_F32:
   case AMDGPU::V_PK_FMA_F32_gfx12:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isPKFMACF16(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_PK_FMAC_F16_dpp:
+  case AMDGPU::V_PK_FMAC_F16_e32:
+  case AMDGPU::V_PK_FMAC_F16_e64:
+  case AMDGPU::V_PK_FMAC_F16_e64_dpp:
+  case AMDGPU::V_PK_FMAC_F16_sdwa:
+  case AMDGPU::V_PK_FMAC_F16_dpp8_gfx10:
+  case AMDGPU::V_PK_FMAC_F16_dpp_gfx10:
+  case AMDGPU::V_PK_FMAC_F16_dpp_gfx9:
+  case AMDGPU::V_PK_FMAC_F16_e32_gfx10:
+  case AMDGPU::V_PK_FMAC_F16_e32_gfx11:
+  case AMDGPU::V_PK_FMAC_F16_e32_gfx12:
+  case AMDGPU::V_PK_FMAC_F16_e32_gfx9:
+  case AMDGPU::V_PK_FMAC_F16_e32_vi:
+  case AMDGPU::V_PK_FMAC_F16_e64_gfx9:
+  case AMDGPU::V_PK_FMAC_F16_sdwa_gfx9:
     return true;
   default:
     return false;
