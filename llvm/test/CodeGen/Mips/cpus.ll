@@ -61,6 +61,7 @@
 ; RUN: llc -mtriple=mips64el -mcpu=r5900 -filetype=obj < %s \
 ; RUN:   | llvm-readelf -A - | FileCheck %s --check-prefix=R5900
 ; R5900: ISA: MIPS3
+; R5900: ISA Extension: Toshiba R5900
 
 ; Check that we reject CPUs that are not implemented.
 
