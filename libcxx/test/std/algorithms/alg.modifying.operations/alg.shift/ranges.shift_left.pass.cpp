@@ -54,6 +54,95 @@ static_assert(!HasShiftLeftR<ForwardRangeNotDerivedFrom>);
 static_assert(!HasShiftLeftR<PermutableRangeNotForwardIterator>);
 static_assert(!HasShiftLeftR<PermutableRangeNotSwappable>);
 
+// An iterator whose iterator_traits::difference_type is not the same as
+// std::iter_difference_t<It>.
+struct DiffTypeIter {
+  int* it_;
+
+  using difference_type   = InvalidDifferenceT;
+  using value_type        = int;
+  using reference         = int&;
+  using pointer           = int*;
+  using iterator_category = std::random_access_iterator_tag;
+
+  constexpr DiffTypeIter() : it_() {}
+  constexpr explicit DiffTypeIter(int* it) : it_(it) {}
+
+  constexpr reference operator*() const { return *it_; }
+  constexpr reference operator[](int n) const { return it_[n]; }
+
+  constexpr DiffTypeIter& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr DiffTypeIter& operator--() {
+    --it_;
+    return *this;
+  }
+  constexpr DiffTypeIter operator++(int) { return DiffTypeIter(it_++); }
+  constexpr DiffTypeIter operator--(int) { return DiffTypeIter(it_--); }
+
+  constexpr DiffTypeIter& operator+=(int n) {
+    it_ += n;
+    return *this;
+  }
+  constexpr DiffTypeIter& operator-=(int n) {
+    it_ -= n;
+    return *this;
+  }
+  friend constexpr DiffTypeIter operator+(DiffTypeIter x, int n) {
+    x += n;
+    return x;
+  }
+  friend constexpr DiffTypeIter operator+(int n, DiffTypeIter x) {
+    x += n;
+    return x;
+  }
+  friend constexpr DiffTypeIter operator-(DiffTypeIter x, int n) {
+    x -= n;
+    return x;
+  }
+  friend constexpr int operator-(DiffTypeIter x, DiffTypeIter y) { return x.it_ - y.it_; }
+
+  friend constexpr bool operator==(const DiffTypeIter& x, const DiffTypeIter& y) { return x.it_ == y.it_; }
+  friend constexpr bool operator!=(const DiffTypeIter& x, const DiffTypeIter& y) { return x.it_ != y.it_; }
+  friend constexpr bool operator<(const DiffTypeIter& x, const DiffTypeIter& y) { return x.it_ < y.it_; }
+  friend constexpr bool operator<=(const DiffTypeIter& x, const DiffTypeIter& y) { return x.it_ <= y.it_; }
+  friend constexpr bool operator>(const DiffTypeIter& x, const DiffTypeIter& y) { return x.it_ > y.it_; }
+  friend constexpr bool operator>=(const DiffTypeIter& x, const DiffTypeIter& y) { return x.it_ >= y.it_; }
+};
+
+template <>
+struct std::incrementable_traits<DiffTypeIter> {
+  using difference_type = std::ptrdiff_t;
+};
+
+struct TrackCopyMove {
+  mutable int copy_count = 0;
+  int move_count         = 0;
+
+  constexpr TrackCopyMove() = default;
+  constexpr TrackCopyMove(const TrackCopyMove& other) : copy_count(other.copy_count), move_count(other.move_count) {
+    ++copy_count;
+    ++other.copy_count;
+  }
+
+  constexpr TrackCopyMove(TrackCopyMove&& other) noexcept : copy_count(other.copy_count), move_count(other.move_count) {
+    ++move_count;
+    ++other.move_count;
+  }
+  constexpr TrackCopyMove& operator=(const TrackCopyMove& other) {
+    ++copy_count;
+    ++other.copy_count;
+    return *this;
+  }
+  constexpr TrackCopyMove& operator=(TrackCopyMove&& other) noexcept {
+    ++move_count;
+    ++other.move_count;
+    return *this;
+  }
+};
+
 template <class Iter, class Sent>
 constexpr void test_iter_sent() {
   {
@@ -220,6 +309,58 @@ constexpr bool test() {
     test_iter_sent<Iter, sentinel_wrapper<Iter>>();
     test_iter_sent<Iter, sized_sentinel<Iter>>();
   });
+  test_iter_sent<DiffTypeIter, DiffTypeIter>();
+
+  // Complexity: At most (last - first) - n assignments
+  {
+    constexpr int length = 100;
+    constexpr int n      = length / 2;
+    auto make_vec        = []() {
+      std::vector<TrackCopyMove> vec;
+      vec.reserve(length);
+      for (int i = 0; i < length; ++i) {
+        vec.emplace_back();
+      }
+      return vec;
+    };
+
+    { // (iterator, sentinel) overload
+      auto input  = make_vec();
+      auto result = std::ranges::shift_left(input.begin(), input.end(), n);
+      assert(result.begin() == input.begin());
+      assert(result.end() == input.begin() + (length - n));
+
+      auto total_copies = 0;
+      auto total_moves  = 0;
+      for (auto it = result.begin(); it != result.end(); ++it) {
+        const auto& item = *it;
+        total_copies += item.copy_count;
+        total_moves += item.move_count;
+      }
+
+      assert(total_copies == 0);
+      assert(total_moves <= length - n);
+    }
+
+    { // (range) overload
+      auto input  = make_vec();
+      auto result = std::ranges::shift_left(input, n);
+      assert(result.begin() == input.begin());
+      assert(result.end() == input.begin() + (length - n));
+
+      auto total_copies = 0;
+      auto total_moves  = 0;
+      for (auto it = result.begin(); it != result.end(); ++it) {
+        const auto& item = *it;
+        total_copies += item.copy_count;
+        total_moves += item.move_count;
+      }
+
+      assert(total_copies == 0);
+      assert(total_moves <= length - n);
+    }
+  }
+
   return true;
 }
 
