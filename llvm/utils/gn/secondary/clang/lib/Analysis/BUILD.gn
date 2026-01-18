@@ -12,7 +12,6 @@ static_library("Analysis") {
   ]
   sources = [
     "AnalysisDeclContext.cpp",
-    "AnnexKDetection.cpp",
     "BodyFarm.cpp",
     "CFG.cpp",
     "CFGReachabilityAnalysis.cpp",
