@@ -544,23 +544,12 @@ define <4 x i64> @blend_splat1_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x 
   ret <4 x i64> %r
 }
 
-; FIXME: use PSLLD(Z,31) like blend_splat1_mask_cond_v4i32
 define <4 x float> @blend_splat1_mask_cond_v4f32(<4 x i32> %x, <4 x float> %y, <4 x float> %z) {
-; AVX1-LABEL: blend_splat1_mask_cond_v4f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1,1,1,1]
-; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: blend_splat1_mask_cond_v4f32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1,1,1,1]
-; AVX2-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
-; AVX2-NEXT:    retq
+; AVX12-LABEL: blend_splat1_mask_cond_v4f32:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX12-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: blend_splat1_mask_cond_v4f32:
 ; AVX512F:       # %bb.0:
@@ -583,8 +572,8 @@ define <4 x float> @blend_splat1_mask_cond_v4f32(<4 x i32> %x, <4 x float> %y, <
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; XOP-NEXT:    vpcomeqd %xmm3, %xmm0, %xmm0
-; XOP-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; XOP-NEXT:    vpcomneqd %xmm3, %xmm0, %xmm0
+; XOP-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; XOP-NEXT:    retq
   %a = and <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %c = icmp eq <4 x i32> %a, zeroinitializer

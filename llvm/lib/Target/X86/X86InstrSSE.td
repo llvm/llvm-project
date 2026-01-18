@@ -5707,6 +5707,31 @@ let Predicates = [UseSSE41, OptForSize] in {
             (ROUNDSDmi addr:$src1, timm:$src2)>;
 }
 
+multiclass scalar_unary_math_patterns_with_immediate<
+    SDPatternOperator OpNode, string OpcPrefix, SDNode Move, ValueType VT> {
+  let Predicates = [UseSSE41] in {
+    def : Pat<(VT(Move VT:$dst, (scalar_to_vector(OpNode
+                                    (extractelt VT:$src, (i64 0)),
+                                    i32:$imm)))),
+              (!cast<Instruction>(OpcPrefix#ri_Int) VT:$dst, VT:$src,
+                  i32:$imm)>;
+  }
+
+  // Repeat for AVX versions of the instructions.
+  let Predicates = [UseAVX] in {
+    def : Pat<(VT(Move VT:$dst, (scalar_to_vector(OpNode
+                                    (extractelt VT:$src, (i64 0)),
+                                    i32:$imm)))),
+              (!cast<Instruction>("V"#OpcPrefix#ri_Int) VT:$dst, VT:$src,
+                  i32:$imm)>;
+  }
+}
+
+defm : scalar_unary_math_patterns_with_immediate<X86any_VRndScale, "ROUNDSS",
+                                                 X86Movss, v4f32>;
+defm : scalar_unary_math_patterns_with_immediate<X86any_VRndScale, "ROUNDSD",
+                                                 X86Movsd, v2f64>;
+
 //===----------------------------------------------------------------------===//
 // SSE4.1 - Packed Bit Test
 //===----------------------------------------------------------------------===//
@@ -6940,20 +6965,20 @@ let Predicates = [NoAVX, HasPCLMUL] in {
               (ins VR128:$src1, VR128:$src2, u8imm:$src3),
               "pclmulqdq\t{$src3, $src2, $dst|$dst, $src2, $src3}",
               [(set VR128:$dst,
-                (int_x86_pclmulqdq VR128:$src1, VR128:$src2, timm:$src3))]>,
+                (v2i64 (X86pclmulqdq VR128:$src1, VR128:$src2, timm:$src3)))]>,
                 Sched<[WriteCLMul]>;
 
     def PCLMULQDQrmi : PCLMULIi8<0x44, MRMSrcMem, (outs VR128:$dst),
               (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
               "pclmulqdq\t{$src3, $src2, $dst|$dst, $src2, $src3}",
               [(set VR128:$dst,
-                 (int_x86_pclmulqdq VR128:$src1, (memop addr:$src2),
-                  timm:$src3))]>,
+                 (v2i64 (X86pclmulqdq VR128:$src1, (memop addr:$src2),
+                  timm:$src3)))]>,
               Sched<[WriteCLMul.Folded, WriteCLMul.ReadAfterFold]>;
   } // Constraints = "$src1 = $dst"
 
-  def : Pat<(int_x86_pclmulqdq (memop addr:$src2), VR128:$src1,
-                                (i8 timm:$src3)),
+  def : Pat<(v2i64 (X86pclmulqdq (memop addr:$src2), VR128:$src1,
+                                (i8 timm:$src3))),
             (PCLMULQDQrmi VR128:$src1, addr:$src2,
                           (PCLMULCommuteImm timm:$src3))>;
 } // Predicates = [NoAVX, HasPCLMUL]
@@ -6971,36 +6996,34 @@ foreach LO = ["hq","lq"] in {
 
 // AVX carry-less Multiplication instructions
 multiclass vpclmulqdq<RegisterClass RC, X86MemOperand MemOp,
-                      PatFrag LdFrag, Intrinsic IntId> {
+                      PatFrag LdFrag, ValueType OpVT> {
   let isCommutable = 1 in
   def rri : PCLMULIi8<0x44, MRMSrcReg, (outs RC:$dst),
              (ins RC:$src1, RC:$src2, u8imm:$src3),
              "vpclmulqdq\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
              [(set RC:$dst,
-               (IntId RC:$src1, RC:$src2, timm:$src3))]>,
+               (OpVT (X86pclmulqdq RC:$src1, RC:$src2, timm:$src3)))]>,
              Sched<[WriteCLMul]>;
 
   def rmi : PCLMULIi8<0x44, MRMSrcMem, (outs RC:$dst),
              (ins RC:$src1, MemOp:$src2, u8imm:$src3),
              "vpclmulqdq\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
              [(set RC:$dst,
-                (IntId RC:$src1, (LdFrag addr:$src2), timm:$src3))]>,
+                (OpVT (X86pclmulqdq RC:$src1, (LdFrag addr:$src2), timm:$src3)))]>,
              Sched<[WriteCLMul.Folded, WriteCLMul.ReadAfterFold]>;
 
   // We can commute a load in the first operand by swapping the sources and
   // rotating the immediate.
-  def : Pat<(IntId (LdFrag addr:$src2), RC:$src1, (i8 timm:$src3)),
+  def : Pat<(OpVT (X86pclmulqdq (LdFrag addr:$src2), RC:$src1, (i8 timm:$src3))),
             (!cast<Instruction>(NAME#"rmi") RC:$src1, addr:$src2,
                                             (PCLMULCommuteImm timm:$src3))>;
 }
 
 let Predicates = [HasAVX, NoVLX_Or_NoVPCLMULQDQ, HasPCLMUL] in
-defm VPCLMULQDQ : vpclmulqdq<VR128, i128mem, load,
-                             int_x86_pclmulqdq>, VEX, VVVV, WIG;
+defm VPCLMULQDQ : vpclmulqdq<VR128, i128mem, load, v2i64>, VEX, VVVV, WIG;
 
 let Predicates = [NoVLX, HasVPCLMULQDQ] in
-defm VPCLMULQDQY : vpclmulqdq<VR256, i256mem, load,
-                              int_x86_pclmulqdq_256>, VEX, VVVV, VEX_L, WIG;
+defm VPCLMULQDQY : vpclmulqdq<VR256, i256mem, load, v4i64>, VEX, VVVV, VEX_L, WIG;
 
 multiclass vpclmulqdq_aliases_impl<string InstStr, RegisterClass RC,
                                    X86MemOperand MemOp, string Hi, string Lo> {

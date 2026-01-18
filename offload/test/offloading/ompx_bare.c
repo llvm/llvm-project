@@ -3,6 +3,7 @@
 // RUN:   %fcheck-generic
 //
 // REQUIRES: gpu
+// XFAIL: intelgpu
 
 #include <assert.h>
 #include <ompx.h>

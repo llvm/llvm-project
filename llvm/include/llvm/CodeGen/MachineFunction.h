@@ -1264,6 +1264,8 @@ public:
   /// Notes the global and target flags for a call site.
   void addCalledGlobal(const MachineInstr *MI, CalledGlobalInfo Details) {
     assert(MI && "MI must not be null");
+    assert(MI->isCandidateForAdditionalCallInfo() &&
+           "Cannot store called global info for this instruction");
     assert(Details.Callee && "Global must not be null");
     CalledGlobalsInfo.insert({MI, Details});
   }

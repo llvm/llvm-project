@@ -75,6 +75,20 @@ void SPIRV::constructAssembleCommand(Compilation &C, const Tool &T,
                                          Exec, CmdArgs, Input, Output));
 }
 
+void SPIRV::constructLLVMLinkCommand(Compilation &C, const Tool &T,
+                                     const JobAction &JA,
+                                     const InputInfo &Output,
+                                     const InputInfoList &Inputs,
+                                     const llvm::opt::ArgList &Args) {
+
+  ArgStringList LlvmLinkArgs;
+
+  for (auto Input : Inputs)
+    LlvmLinkArgs.push_back(Input.getFilename());
+
+  tools::constructLLVMLinkCommand(C, T, JA, Inputs, LlvmLinkArgs, Output, Args);
+}
+
 void SPIRV::Translator::ConstructJob(Compilation &C, const JobAction &JA,
                                      const InputInfo &Output,
                                      const InputInfoList &Inputs,
@@ -126,6 +140,10 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                  const InputInfoList &Inputs,
                                  const ArgList &Args,
                                  const char *LinkingOutput) const {
+  if (JA.getType() == types::TY_LLVM_BC) {
+    constructLLVMLinkCommand(C, *this, JA, Output, Inputs, Args);
+    return;
+  }
   const ToolChain &ToolChain = getToolChain();
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;

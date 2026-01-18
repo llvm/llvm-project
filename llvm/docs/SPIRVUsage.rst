@@ -251,6 +251,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Add instructions for fixed point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
    * - ``SPV_EXT_image_raw10_raw12``
      - Adds Image Channel Data Type definitions for RAW10 and RAW12 image formats.
+   * - ``SPV_ALTERA_arbitrary_precision_floating_point``
+     - Adds instructions for arbitrary precision floating-point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
 
 
 SPIR-V representation in LLVM IR

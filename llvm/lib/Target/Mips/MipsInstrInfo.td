@@ -1815,7 +1815,7 @@ class ExtBase<string opstr, RegisterOperand RO, Operand PosOpnd,
          [(set RO:$rt, (Op RO:$rs, PosImm:$pos, SizeImm:$size))], II_EXT,
          FrmR, opstr>;
 
-// 'ins' and its' 64 bit variants are matched by C++ code.
+// 'ins' and its 64 bit variants are matched by C++ code.
 class InsBase<string opstr, RegisterOperand RO, Operand PosOpnd,
               Operand SizeOpnd, PatFrag PosImm, PatFrag SizeImm>:
   InstSE<(outs RO:$rt), (ins RO:$rs, PosOpnd:$pos, SizeOpnd:$size, RO:$src),

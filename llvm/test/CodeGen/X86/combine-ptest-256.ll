@@ -203,25 +203,13 @@ define i32 @ptestz_256_allones1(<4 x i64> %c, i32 %a, i32 %b) {
 ;
 
 define i32 @ptestz_v8i32_signbits(<8 x i32> %c, i32 %a, i32 %b) {
-; AVX1-LABEL: ptestz_v8i32_signbits:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    movl %edi, %eax
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vptest %ymm0, %ymm0
-; AVX1-NEXT:    cmovnel %esi, %eax
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: ptestz_v8i32_signbits:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    vtestps %ymm0, %ymm0
-; AVX2-NEXT:    cmovnel %esi, %eax
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; CHECK-LABEL: ptestz_v8i32_signbits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vtestps %ymm0, %ymm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %t1 = ashr <8 x i32> %c, <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
   %t2 = bitcast <8 x i32> %t1 to <4 x i64>
   %t3 = call i32 @llvm.x86.avx.ptestz.256(<4 x i64> %t2, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>)

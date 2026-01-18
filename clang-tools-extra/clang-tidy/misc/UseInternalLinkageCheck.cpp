@@ -96,6 +96,12 @@ AST_MATCHER(FunctionDecl, isAllocationOrDeallocationOverloadedFunction) {
   return OverloadedOperators.contains(Node.getOverloadedOperator());
 }
 
+AST_POLYMORPHIC_MATCHER(isExplicitlyExternC,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
+                                                        VarDecl)) {
+  return Finder->getASTContext().getLangOpts().CPlusPlus && Node.isExternC();
+}
+
 AST_MATCHER(TagDecl, hasNameForLinkage) { return Node.hasNameForLinkage(); }
 
 AST_MATCHER(CXXRecordDecl, isExplicitTemplateInstantiation) {
@@ -109,10 +115,22 @@ UseInternalLinkageCheck::UseInternalLinkageCheck(StringRef Name,
                                                  ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       HeaderFileExtensions(Context->getHeaderFileExtensions()),
-      FixMode(Options.get("FixMode", FixModeKind::UseStatic)) {}
+      FixMode(Options.get("FixMode", FixModeKind::UseStatic)),
+      AnalyzeFunctions(Options.get("AnalyzeFunctions", true)),
+      AnalyzeVariables(Options.get("AnalyzeVariables", true)),
+      AnalyzeTypes(Options.get("AnalyzeTypes", true)) {
+  if (!AnalyzeFunctions && !AnalyzeVariables && !AnalyzeTypes)
+    configurationDiag(
+        "the 'misc-use-internal-linkage' check will not perform any "
+        "analysis because its 'AnalyzeFunctions', 'AnalyzeVariables', "
+        "and 'AnalyzeTypes' options have all been set to false");
+}
 
 void UseInternalLinkageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "FixMode", FixMode);
+  Options.store(Opts, "AnalyzeFunctions", AnalyzeFunctions);
+  Options.store(Opts, "AnalyzeVariables", AnalyzeVariables);
+  Options.store(Opts, "AnalyzeTypes", AnalyzeTypes);
 }
 
 void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
@@ -125,24 +143,27 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                                               friendDecl(),
                                               // 3. module export decl
                                               exportDecl()))))));
-  Finder->addMatcher(
-      functionDecl(Common, hasBody(),
-                   unless(anyOf(isExternC(), isStaticStorageClass(),
-                                isExternStorageClass(),
-                                isExplicitTemplateSpecialization(),
-                                cxxMethodDecl(), isConsteval(),
-                                isAllocationOrDeallocationOverloadedFunction(),
-                                isMain())))
-          .bind("fn"),
-      this);
-  Finder->addMatcher(varDecl(Common, hasGlobalStorage(),
-                             unless(anyOf(isExternC(), isStaticStorageClass(),
-                                          isExternStorageClass(),
-                                          isExplicitTemplateSpecialization(),
-                                          hasThreadStorageDuration())))
-                         .bind("var"),
-                     this);
-  if (getLangOpts().CPlusPlus)
+  if (AnalyzeFunctions)
+    Finder->addMatcher(
+        functionDecl(
+            Common, hasBody(),
+            unless(anyOf(
+                isExplicitlyExternC(), isStaticStorageClass(),
+                isExternStorageClass(), isExplicitTemplateSpecialization(),
+                cxxMethodDecl(), isConsteval(),
+                isAllocationOrDeallocationOverloadedFunction(), isMain())))
+            .bind("fn"),
+        this);
+  if (AnalyzeVariables)
+    Finder->addMatcher(
+        varDecl(Common, hasGlobalStorage(),
+                unless(anyOf(isExplicitlyExternC(), isStaticStorageClass(),
+                             isExternStorageClass(),
+                             isExplicitTemplateSpecialization(),
+                             hasThreadStorageDuration())))
+            .bind("var"),
+        this);
+  if (getLangOpts().CPlusPlus && AnalyzeTypes)
     Finder->addMatcher(
         tagDecl(Common, isDefinition(), hasNameForLinkage(),
                 hasDeclContext(anyOf(translationUnitDecl(), namespaceDecl())),
@@ -155,13 +176,13 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static constexpr StringRef Message =
-    "%0 %1 can be made static or moved into an anonymous namespace "
+    "%0 %1 can be made static %select{|or moved into an anonymous namespace }2"
     "to enforce internal linkage";
 
 void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("fn")) {
     const DiagnosticBuilder DB = diag(FD->getLocation(), Message)
-                                 << "function" << FD;
+                                 << "function" << FD << getLangOpts().CPlusPlus;
     const SourceLocation FixLoc = FD->getInnerLocStart();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;
@@ -177,7 +198,7 @@ void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     const DiagnosticBuilder DB = diag(VD->getLocation(), Message)
-                                 << "variable" << VD;
+                                 << "variable" << VD << getLangOpts().CPlusPlus;
     const SourceLocation FixLoc = VD->getInnerLocStart();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;

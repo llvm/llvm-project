@@ -41,7 +41,7 @@ def AMDGPU_Dialect : Dialect {
     have chipset-specific differences that can be abstracted over in a useful way.
 
     To give some concrete examples:
- 
+
     - `amdgpu.mfma` and `amdgpu.wmma` exist in order to make a large set of
       intrinsics more compatible with the MLIR type system (such as by allowing
       8-bit float vectors to be passed as `vector<N x f8E4M3FN>` or
@@ -105,7 +105,7 @@ def AMDGPU_Dialect : Dialect {
     what it does and have found the keywords they'll need for more detail.
 
     Operation documentation should include usage examples.
-    
+
     Note that this dialect uses LLVM's gfx numbers to refer to individual
     architectures/chipsets and not product names or codenames.
   }];
@@ -974,6 +974,7 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
     breakpoints set on variables) when debugging.
   }];
   let assemblyFormat = "attr-dict";
+  let hasCanonicalizer = 1;
 }
 
 def AMDGPU_SchedBarrierOpOpt : I32BitEnumAttr<"sched_barrier_opt_enum",
@@ -1285,7 +1286,7 @@ def AMDGPU_SparseMFMAOp :
     `vector<2xi16>` (two 16-bit indices).
 
     The `cbsz` and `abid` parameters are repurposed to select the index set.
-    If `cbsz == 0`, then `abid[1:0]` selects which index set to use. 
+    If `cbsz == 0`, then `abid[1:0]` selects which index set to use.
     If `cbsz != 0`, then the very first is selected.
 
     Example:
@@ -1473,7 +1474,7 @@ def AMDGPU_ScaledWMMAOp
     number of scales required for each matrix is determined by:
       num_scales_A = (M × K) / block_size
       num_scales_B = (N × K) / block_size
-      
+
     The index attributes (`a_first_scale_lane`, `b_first_scale_lane`) select
     which lane to start reading scale values from (0 or 16):
     - For block size 32, 32 lanes across a single wave are used for the scale
