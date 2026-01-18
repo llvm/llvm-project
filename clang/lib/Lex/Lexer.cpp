@@ -1930,13 +1930,11 @@ static const char *fastParseASCIIIdentifierScalar(const char *CurPtr) {
 
 // Fast path for lexing ASCII identifiers using SSE4.2 instructions.
 // Only enabled on x86/x86_64 when building with __SSE4_2__ enabled, or with a
-// compiler that supports the 'target' attribute, used for runtime dispatch.
-// Otherwise, we fall back to the scalar implementation.
-// We avoid runtime check on Windows because it is not yet well-supported.
-#if LLVM_SUPPORTS_RUNTIME_SSE42_CHECK
+// compiler and platform that support runtime dispatch.
+#if __SSE4_2__ || LLVM_SUPPORTS_RUNTIME_SSE42_CHECK
 // LLVM_ATTRIBUTE_USED is a hack to suppress a false-positive warning due to a
 // bug in clang-18 and less. See PR175452.
-LLVM_ATTRIBUTE_USED __attribute__((target("sse4.2"))) static const char *
+LLVM_ATTRIBUTE_USED LLVM_TARGET_SSE42 static const char *
 fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
       '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
@@ -1960,13 +1958,14 @@ fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
 
   return fastParseASCIIIdentifierScalar(CurPtr);
 }
-
-LLVM_UNLESS_SSE42(__attribute__((target("default"))))
 #endif
-LLVM_UNLESS_SSE42(static const char *fastParseASCIIIdentifier(
-    const char *CurPtr, const char *) {
+
+#ifndef __SSE4_2__
+LLVM_TARGET_DEFAULT static const char *
+fastParseASCIIIdentifier(const char *CurPtr, const char *) {
   return fastParseASCIIIdentifierScalar(CurPtr);
-})
+}
+#endif
 
 bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
   // Match [_A-Za-z0-9]*, we have already matched an identifier start.
