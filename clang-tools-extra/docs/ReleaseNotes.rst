@@ -94,10 +94,6 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
-- Improved :doc:`performance-move-const-arg
-  <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
-  positives on trivially copyable types with a non-public copy constructor.
-
 New checks
 ^^^^^^^^^^
 
@@ -112,6 +108,10 @@ Changes in existing checks
 
   - Added support for analyzing function parameters with the `AnalyzeParameters`
     option.
+
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
+  positives on trivially copyable types with a non-public copy constructor.
 
 Removed checks
 ^^^^^^^^^^^^^^

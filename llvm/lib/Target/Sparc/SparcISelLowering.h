@@ -138,8 +138,7 @@ namespace llvm {
 
     SDValue LowerF128_LibCallArg(SDValue Chain, ArgListTy &Args, SDValue Arg,
                                  const SDLoc &DL, SelectionDAG &DAG) const;
-    SDValue LowerF128Op(SDValue Op, SelectionDAG &DAG,
-                        const char *LibFuncName,
+    SDValue LowerF128Op(SDValue Op, SelectionDAG &DAG, RTLIB::Libcall LibFunc,
                         unsigned numArgs) const;
     SDValue LowerF128Compare(SDValue LHS, SDValue RHS, unsigned &SPCC,
                              const SDLoc &DL, SelectionDAG &DAG) const;
