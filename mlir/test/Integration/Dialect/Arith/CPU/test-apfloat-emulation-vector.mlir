@@ -1,6 +1,4 @@
 // REQUIRES: system-linux || system-darwin
-// TODO: Run only on Linux until we figure out how to build
-// mlir_apfloat_wrappers in a platform-independent way.
 
 // All floating-point arithmetics is lowered through APFloat.
 // RUN: mlir-opt %s --convert-arith-to-apfloat --convert-vector-to-scf \
