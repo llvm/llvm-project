@@ -14,8 +14,8 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <map>
 #include <string>
+#include <utility>
 
 using namespace clang::ast_matchers;
 
@@ -70,12 +70,13 @@ static FixItHint getCallFixItHint(const ObjCMessageExpr *Expr,
   StringRef Receiver =
       getReceiverString(Expr->getReceiverRange(), SM, LangOpts);
   // Some classes should use standard factory methods instead of alloc/init.
-  std::map<StringRef, StringRef> ClassToFactoryMethodMap = {{"NSDate", "date"},
-                                                            {"NSNull", "null"}};
-  auto FoundClassFactory = ClassToFactoryMethodMap.find(Receiver);
-  if (FoundClassFactory != ClassToFactoryMethodMap.end()) {
-    StringRef ClassName = FoundClassFactory->first;
-    StringRef FactorySelector = FoundClassFactory->second;
+  static constexpr std::pair<StringRef, StringRef> ClassToFactoryMethodMap[] = {
+      {"NSDate", "date"}, {"NSNull", "null"}};
+  const auto *FoundClassFactory =
+      llvm::find_if(ClassToFactoryMethodMap,
+                    [&](const auto &Entry) { return Entry.first == Receiver; });
+  if (FoundClassFactory != std::end(ClassToFactoryMethodMap)) {
+    const auto &[ClassName, FactorySelector] = *FoundClassFactory;
     const std::string NewCall =
         std::string(llvm::formatv("[{0} {1}]", ClassName, FactorySelector));
     return FixItHint::CreateReplacement(Expr->getSourceRange(), NewCall);

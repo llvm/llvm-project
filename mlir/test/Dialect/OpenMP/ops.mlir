@@ -448,8 +448,8 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,0>, schedule_kind = #omp<schedulekind static>} :
-    (memref<i32>, i32) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,0>, schedule_kind = #omp<schedulekind static>,
+     linear_var_types = [i32]} : (memref<i32>, i32) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>, %{{.*}} = %{{.*}} : memref<i32>) schedule(static) {
   // CHECK-NEXT: omp.loop_nest
@@ -457,7 +457,8 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0,0,2,2,0,0,0>, schedule_kind = #omp<schedulekind static>} :
+  }) {operandSegmentSizes = array<i32: 0,0,2,2,0,0,0>, schedule_kind = #omp<schedulekind static>,
+     linear_var_types = [i32,i32]} :
     (memref<i32>, memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) ordered(2) schedule(dynamic = %{{.*}}) {
@@ -466,8 +467,8 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,1>, schedule_kind = #omp<schedulekind dynamic>, ordered = 2} :
-    (memref<i32>, i32, i32) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,1>, schedule_kind = #omp<schedulekind dynamic>, ordered = 2,
+     linear_var_types = [i32]} : (memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop nowait schedule(auto) {
   // CHECK-NEXT: omp.loop_nest
@@ -509,7 +510,7 @@ func.func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index, %data_var 
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }
+  } { linear_var_types = [i32] }
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) ordered(2) schedule(static = %{{.*}} : i32) {
   // CHECK-NEXT: omp.loop_nest
@@ -517,7 +518,7 @@ func.func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index, %data_var 
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }
+  } { linear_var_types = [i32] }
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) ordered(2) schedule(dynamic = %{{.*}} : i32, nonmonotonic) {
   // CHECK-NEXT: omp.loop_nest
@@ -525,7 +526,7 @@ func.func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index, %data_var 
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step)  {
       omp.yield
     }
-  }
+  } { linear_var_types = [i32] }
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) ordered(2) schedule(dynamic = %{{.*}} : i16, monotonic) {
   // CHECK-NEXT: omp.loop_nest
@@ -533,7 +534,7 @@ func.func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index, %data_var 
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }
+  } { linear_var_types = [i32] }
 
   // CHECK: omp.wsloop {
   // CHECK-NEXT: omp.loop_nest
@@ -3366,4 +3367,66 @@ func.func @omp_target_map_clause_type_test(%arg0 : memref<?xi32>) -> () {
     %mapv19 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ref_ptr_ptee) capture(ByRef) -> memref<?xi32> {name = ""}
 
     return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd
+func.func @omp_declare_simd() -> () {
+  // CHECK: omp.declare_simd
+  omp.declare_simd
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_simdlen
+func.func @omp_declare_simd_simdlen() -> () {
+  // CHECK: omp.declare_simd
+  // CHECK-SAME: simdlen(8)
+  omp.declare_simd simdlen(8)
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_aligned
+func.func @omp_declare_simd_aligned(%a: f64, %b: f64,
+                                         %p0: memref<i32>, %p1: memref<i32>) -> () {
+  // CHECK:      omp.declare_simd
+  // CHECK-SAME: aligned(
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
+  omp.declare_simd aligned(%p0 : memref<i32> -> 32 : i64,
+                           %p1 : memref<i32> -> 128 : i64)
+
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_aligned_list_generic
+func.func @omp_declare_simd_aligned_list_generic(%arg0: f64, %arg1: f64,
+                                                 %arg2: memref<i32>, %arg3: memref<i32>) -> () {
+  // CHECK:      omp.declare_simd
+  // CHECK-SAME: aligned(%{{.*}} : memref<i32> -> 32 : i64, %{{.*}} : memref<i32> -> 128 : i64)
+  omp.declare_simd aligned(%arg2 : memref<i32> -> 32 : i64, %arg3 : memref<i32> -> 128 : i64)
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_linear
+func.func @omp_declare_simd_linear(%a: f64, %b: f64, %iv: i32, %step: i32) -> () {
+  // CHECK: omp.declare_simd
+  // CHECK-SAME: linear(%{{.*}} = %{{.*}} : i32)
+  omp.declare_simd linear(%iv = %step : i32)
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_all_clauses
+func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
+                                        %p0: memref<i32>, %p1: memref<i32>,
+                                        %iv: i32, %step: i32) -> () {
+  // CHECK:      omp.declare_simd
+  // CHECK-SAME: aligned(
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
+  // CHECK-SAME: linear(%{{.*}} = %{{.*}} : i32)
+  // CHECK-SAME: simdlen(8)
+  omp.declare_simd simdlen(8)
+    aligned(%p0 : memref<i32> -> 32 : i64,
+            %p1 : memref<i32> -> 128 : i64)
+    linear(%iv = %step : i32)
+  return
 }

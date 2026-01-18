@@ -96,35 +96,19 @@ function(link_bc)
     ${ARGN}
   )
 
-  if( ARG_INTERNALIZE )
-    set( inputs_with_flag ${ARG_INPUTS} )
-  else()
-    # Add the --override flag for non-generic bitcode files so that their
-    # symbols can override definitions in generic bitcode files.
-    set( inputs_with_flag )
-    foreach( file IN LISTS ARG_INPUTS )
-      string( FIND ${file} "/generic/" is_generic )
-      if( is_generic LESS 0 )
-        list( APPEND inputs_with_flag "--override" )
-      endif()
-      list( APPEND inputs_with_flag ${file} )
-    endforeach()
-  endif()
-
+  set( LINK_INPUT_ARG ${ARG_INPUTS} )
   if( WIN32 OR CYGWIN )
     # Create a response file in case the number of inputs exceeds command-line
     # character limits on certain platforms.
     file( TO_CMAKE_PATH ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.rsp RSP_FILE )
     # Turn it into a space-separate list of input files
-    list( JOIN inputs_with_flag " " RSP_INPUT )
+    list( JOIN ARG_INPUTS " " RSP_INPUT )
     file( GENERATE OUTPUT ${RSP_FILE} CONTENT ${RSP_INPUT} )
     # Ensure that if this file is removed, we re-run CMake
     set_property( DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
       ${RSP_FILE}
     )
     set( LINK_INPUT_ARG "@${RSP_FILE}" )
-  else()
-    set( LINK_INPUT_ARG ${inputs_with_flag} )
   endif()
 
   if( ARG_INTERNALIZE )
@@ -435,8 +419,6 @@ function(add_libclc_builtin_set)
     endif()
   else()
     # Non-SPIR-V targets add an extra step to optimize the bytecode
-    set( builtins_opt_lib_tgt builtins.opt.${ARG_ARCH_SUFFIX} )
-
     set( obj_suffix ${ARG_ARCH_SUFFIX}.bc )
     set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${obj_suffix} )
 

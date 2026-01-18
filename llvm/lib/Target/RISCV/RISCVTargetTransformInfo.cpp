@@ -402,14 +402,34 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   llvm_unreachable("Unsupported register kind");
 }
 
+InstructionCost RISCVTTIImpl::getStaticDataAddrGenerationCost(
+    const TTI::TargetCostKind CostKind) const {
+  switch (CostKind) {
+  case TTI::TCK_CodeSize:
+  case TTI::TCK_SizeAndLatency:
+    // Always 2 instructions
+    return 2;
+  case TTI::TCK_Latency:
+  case TTI::TCK_RecipThroughput:
+    // Depending on the memory model the address generation will
+    // require AUIPC + ADDI (medany) or LUI + ADDI (medlow). Don't
+    // have a way of getting this information here, so conservatively
+    // require both.
+    // In practice, these are generally implemented together.
+    return (ST->hasAUIPCADDIFusion() && ST->hasLUIADDIFusion()) ? 1 : 2;
+  }
+  llvm_unreachable("Unsupported cost kind");
+}
+
 InstructionCost
 RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,
                                       TTI::TargetCostKind CostKind) const {
   // Add a cost of address generation + the cost of the load. The address
   // is expected to be a PC relative offset to a constant pool entry
   // using auipc/addi.
-  return 2 + getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
-                             /*AddressSpace=*/0, CostKind);
+  return getStaticDataAddrGenerationCost(CostKind) +
+         getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
+                         /*AddressSpace=*/0, CostKind);
 }
 
 static bool isRepeatedConcatMask(ArrayRef<int> Mask, int &SubVectorSize) {

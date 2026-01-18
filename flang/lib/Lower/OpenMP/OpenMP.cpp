@@ -1639,6 +1639,62 @@ static void genSimdClauses(
   cp.processLinear(clauseOps);
 }
 
+// SIMD construct may have implicit
+// linear semantics on IV. Process the same here.
+static void
+genSimdImplicitLinear(lower::AbstractConverter &converter,
+                      mlir::omp::SimdOperands &clauseOps,
+                      mlir::omp::LoopNestOperands loopNestClauseOps,
+                      llvm::SmallVector<const semantics::Symbol *> iv) {
+
+  // If the (standalone/composite) SIMD is enclosed within TARGET,
+  // implicit linearization will cause invalid FIR due to
+  // target operation `host_eval` argument's illegal use in omp.simd.
+  // Hence skip implicit linearization if TARGET encloses the current
+  // SIMD.
+  auto *currentOp =
+      converter.getFirOpBuilder().getInsertionBlock()->getParentOp();
+  while (currentOp) {
+    if (auto targetOp = mlir::dyn_cast<mlir::omp::TargetOp>(currentOp))
+      return;
+    currentOp = currentOp->getParentOp();
+  }
+
+  std::vector<mlir::Attribute> typeAttrs;
+  // If attributes from explicit `linear(...)` clause are present,
+  // carry them forward.
+  if (clauseOps.linearVarTypes && !clauseOps.linearVarTypes.empty())
+    typeAttrs.assign(clauseOps.linearVarTypes.begin(),
+                     clauseOps.linearVarTypes.end());
+
+  for (auto [loopVar, loopStep] : llvm::zip(iv, loopNestClauseOps.loopSteps)) {
+    const mlir::Value variable = converter.getSymbolAddress(*loopVar);
+
+    // If the loop variable is already linearized (through an explicit
+    // `linear()` clause, skip.
+    if (std::find(clauseOps.linearVars.begin(), clauseOps.linearVars.end(),
+                  variable) != clauseOps.linearVars.end())
+      continue;
+
+    // TODO: Implicit linearization is skipped if iv is a pointer
+    // or an allocatable, due to potential mismatch between the linear
+    // variable type (example !fir.ref<!fir.box<!fir.heap<i32>>>)
+    // and the linear step size (example: i64). Handle this type mismatch
+    // gracefully.
+    if (loopVar->test(Fortran::semantics::Symbol::Flag::OmpLinear) &&
+        !(Fortran::semantics::IsAllocatableOrPointer(*loopVar) ||
+          Fortran::semantics::IsAllocatableOrPointer(loopVar->GetUltimate()))) {
+      mlir::Type ty = converter.genType(*loopVar);
+      typeAttrs.push_back(mlir::TypeAttr::get(ty));
+      clauseOps.linearVars.push_back(variable);
+      clauseOps.linearStepVars.push_back(loopStep);
+    }
+  }
+  if (!typeAttrs.empty())
+    clauseOps.linearVarTypes =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
+}
+
 static void genSingleClauses(lower::AbstractConverter &converter,
                              semantics::SemanticsContext &semaCtx,
                              const List<Clause> &clauses, mlir::Location loc,
@@ -3019,48 +3075,13 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
                      loopNestClauseOps, iv);
+  genSimdImplicitLinear(converter, simdClauseOps, loopNestClauseOps, iv);
 
   EntryBlockArgs simdArgs;
   simdArgs.priv.syms = dsp.getDelayedPrivSymbols();
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.syms = simdReductionSyms;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
-
-  std::vector<mlir::Attribute> typeAttrs;
-  // If attributes from explicit `linear(...)` clause are present,
-  // carry them forward.
-  if (simdClauseOps.linearVarTypes && !simdClauseOps.linearVarTypes.empty())
-    typeAttrs.assign(simdClauseOps.linearVarTypes.begin(),
-                     simdClauseOps.linearVarTypes.end());
-
-  for (auto [loopVar, loopStep] : llvm::zip(iv, loopNestClauseOps.loopSteps)) {
-    const mlir::Value variable = converter.getSymbolAddress(*loopVar);
-
-    // If the loop variable is already linearized (through an explicit
-    // `linear()` clause, skip.
-    if (std::find(simdClauseOps.linearVars.begin(),
-                  simdClauseOps.linearVars.end(),
-                  variable) != simdClauseOps.linearVars.end())
-      continue;
-
-    // TODO: Implicit linearization is skipped if iv is a pointer
-    // or an allocatable, due to potential mismatch between the linear
-    // variable type (example !fir.ref<!fir.box<!fir.heap<i32>>>)
-    // and the linear step size (example: i64). Handle this type mismatch
-    // gracefully.
-    if (loopVar->test(Fortran::semantics::Symbol::Flag::OmpLinear) &&
-        !(Fortran::semantics::IsAllocatableOrPointer(*loopVar) ||
-          Fortran::semantics::IsAllocatableOrPointer(loopVar->GetUltimate()))) {
-      mlir::Type ty = converter.genType(*loopVar);
-      typeAttrs.push_back(mlir::TypeAttr::get(ty));
-      simdClauseOps.linearVars.push_back(variable);
-      simdClauseOps.linearStepVars.push_back(loopStep);
-    }
-  }
-  if (!typeAttrs.empty())
-    simdClauseOps.linearVarTypes =
-        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
-
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
@@ -3233,6 +3254,7 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
                      loopNestClauseOps, iv);
+  genSimdImplicitLinear(converter, simdClauseOps, loopNestClauseOps, iv);
 
   // Operation creation.
   EntryBlockArgs distributeArgs;
@@ -3304,6 +3326,7 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
                      loopNestClauseOps, iv);
+  genSimdImplicitLinear(converter, simdClauseOps, loopNestClauseOps, iv);
 
   // Operation creation.
   EntryBlockArgs distributeArgs;
@@ -3366,6 +3389,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
                      loopNestClauseOps, iv);
+  genSimdImplicitLinear(converter, simdClauseOps, loopNestClauseOps, iv);
 
   // Operation creation.
   EntryBlockArgs wsloopArgs;
@@ -3815,8 +3839,18 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareSimdConstruct &declareSimdConstruct) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
+  mlir::Location loc = converter.getCurrentLocation();
+  const parser::OmpDirectiveSpecification &beginSpec = declareSimdConstruct.v;
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+
+  mlir::omp::DeclareSimdOperands clauseOps;
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAligned(clauseOps);
+  cp.processLinear(clauseOps);
+  cp.processSimdlen(clauseOps);
+  cp.processTODO<clause::Uniform>(loc, llvm::omp::Directive::OMPD_declare_simd);
+
+  mlir::omp::DeclareSimdOp::create(converter.getFirOpBuilder(), loc, clauseOps);
 }
 
 static void genOpenMPDeclareMapperImpl(

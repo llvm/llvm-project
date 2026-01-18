@@ -322,13 +322,15 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
   if (Args.hasArg(OPT_verbose))
     AssemblerArgs.push_back("-v");
   if (Args.hasArg(OPT_g)) {
-    if (Args.hasArg(OPT_O))
+    if (Args.getLastArgValue(OPT_O, "3") != "0")
       WithColor::warning(errs(), Executable)
           << "Optimized debugging not supported, overriding to '-O0'\n";
     AssemblerArgs.push_back("-O0");
-  } else
+    AssemblerArgs.push_back("-g");
+  } else {
     AssemblerArgs.push_back(
         Args.MakeArgString("-O" + Args.getLastArgValue(OPT_O, "3")));
+  }
   AssemblerArgs.append({"-arch", Args.getLastArgValue(OPT_arch)});
   AssemblerArgs.append({"-o", *TempFileOrErr});
 

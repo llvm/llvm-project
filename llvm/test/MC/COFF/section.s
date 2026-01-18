@@ -240,7 +240,7 @@
 .quad 4
 
 // Notice the different section flags here.
-// This shouldn't overwrite the intial section flags.
+// This shouldn't overwrite the initial section flags.
 .pushsection .data4,"dr"; .quad 1
 .popsection
 

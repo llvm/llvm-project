@@ -11,6 +11,7 @@
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <cstddef>
@@ -248,11 +249,30 @@ private:
 
   bool FormatFunctionNameForLanguage(Stream &s);
 
+  /// Returns \c true if \a Format has been called for an \a Entry
+  /// with the specified \c type recusrively. Some types are permitted
+  /// to be formatted recursively, in which case this function returns
+  /// \c false.
+  bool IsInvalidRecursiveFormat(Entry::Type type);
+
+  /// While the returned \a llvm::scope_exit is alive, the specified \c type
+  /// is tracked by this \c Formatter object for recursion. Once the returned
+  /// scope guard is destructed, the entry stops being tracked.
+  auto PushEntryType(Entry::Type type) {
+    m_entry_type_stack.push_back(type);
+    return llvm::scope_exit([this] {
+      assert(!m_entry_type_stack.empty());
+      m_entry_type_stack.pop_back();
+    });
+  }
+
   const SymbolContext *const m_sc = nullptr;
   const ExecutionContext *const m_exe_ctx = nullptr;
   const Address *const m_addr = nullptr;
   const bool m_function_changed = false;
   const bool m_initial_function = false;
+
+  llvm::SmallVector<Entry::Type, 1> m_entry_type_stack;
 };
 
 Status Parse(const llvm::StringRef &format, Entry &entry);
