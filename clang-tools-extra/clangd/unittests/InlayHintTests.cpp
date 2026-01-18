@@ -1955,6 +1955,32 @@ TEST(ParameterHints, DoesntExpandAllArgs) {
       ExpectedHint{"c: ", "param3"});
 }
 
+TEST(ParameterHints, CXX20AggregateParenInitNoCtor) {
+  assertParameterHints(
+      R"cpp(
+    namespace std { 
+      // This prototype of std::forward is sufficient for clang to recognize it
+      template <typename T> T&& forward(T&);
+    }
+      
+    template<typename T, typename ...Args>
+    T* make_unique(Args&&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+
+    struct Point {
+      int& x;
+      int y;
+    };
+
+    int foo() {
+      int t = 42;
+      make_unique<Point>($px[[t]], $py[[2]]);
+    }
+  )cpp",
+      ExpectedHint{"&.x: ", "px"}, ExpectedHint{".y: ", "py"});
+}
+
 TEST(BlockEndHints, Functions) {
   assertBlockEndHints(R"cpp(
     int foo() {

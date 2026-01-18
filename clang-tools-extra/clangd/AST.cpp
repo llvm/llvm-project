@@ -38,6 +38,7 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -824,6 +825,14 @@ public:
     return !Info.has_value();
   }
 
+  bool VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+    auto *const Record = E->getType()->getAsCXXRecordDecl();
+    if (Record)
+      handleAggregateInit(Record, E->getInitExprs());
+
+    return true;
+  }
+
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
     auto *Callee = E->getConstructor();
     if (Callee) {
@@ -854,6 +863,8 @@ public:
     // is it.
     std::optional<FunctionDecl *> PackTarget;
   };
+
+  SmallVector<const FieldDecl *> AggregateInitFields {};
 
   // The output of this visitor
   std::optional<ForwardingInfo> Info;
@@ -894,6 +905,16 @@ private:
     ForwardingInfo FI;
     FI.Head = MatchingParams;
     Info = FI;
+  }
+
+  void handleAggregateInit(const CXXRecordDecl *Record,
+                           const ArrayRef<Expr *> InitExprs) {
+    // FIXME: Handle base classes
+    if (Record->getNumFields() == InitExprs.size()) {
+      for (const auto *Field : Record->fields()) {
+        AggregateInitFields.emplace_back(Field);
+      }
+    }
   }
 
   // Returns the beginning of the expanded pack represented by Parameters
@@ -977,7 +998,7 @@ private:
 
 } // namespace
 
-SmallVector<const ParmVarDecl *>
+std::variant<SmallVector<const ParmVarDecl *>, SmallVector<const FieldDecl *>>
 resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
   auto Parameters = D->parameters();
   // If the function has a template parameter pack
@@ -1006,9 +1027,16 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
       // Find call expressions involving the pack
       ForwardingCallVisitor V{Pack};
       V.TraverseStmt(CurrentFunction->getBody());
+
+      // if fields are direct-initialized, then no more forwarding
+      if (!V.AggregateInitFields.empty()) {
+        return V.AggregateInitFields;
+      }
+
       if (!V.Info) {
         break;
       }
+
       // If we found something: Fill in non-pack parameters
       auto Info = *V.Info;
       HeadIt = std::copy(Info.Head.begin(), Info.Head.end(), HeadIt);
@@ -1022,7 +1050,8 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
         if (const auto *Template = CurrentFunction->getPrimaryTemplate()) {
           bool NewFunction = SeenTemplates.insert(Template).second;
           if (!NewFunction) {
-            return {Parameters.begin(), Parameters.end()};
+            return SmallVector<const ParmVarDecl *>{Parameters.begin(),
+                                                    Parameters.end()};
           }
         }
       }
@@ -1032,7 +1061,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
     assert(TailIt.base() == HeadIt);
     return Result;
   }
-  return {Parameters.begin(), Parameters.end()};
+  return SmallVector<const ParmVarDecl *>{Parameters.begin(), Parameters.end()};
 }
 
 bool isExpandedFromParameterPack(const ParmVarDecl *D) {

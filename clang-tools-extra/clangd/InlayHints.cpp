@@ -773,11 +773,26 @@ private:
     bool HasNonDefaultArgs = false;
 
     ArrayRef<const ParmVarDecl *> Params, ForwardedParams;
+
     // Resolve parameter packs to their forwarded parameter
     SmallVector<const ParmVarDecl *> ForwardedParamsStorage;
+    // If args are direct-initialized
+    SmallVector<const FieldDecl *> CXXRecordDeclFields{};
+
     if (Callee.Decl) {
       Params = maybeDropCxxExplicitObjectParameters(Callee.Decl->parameters());
-      ForwardedParamsStorage = resolveForwardingParameters(Callee.Decl);
+
+      [&]() {
+        auto Params = resolveForwardingParameters(Callee.Decl);
+        if (std::holds_alternative<decltype(ForwardedParamsStorage)>(Params)) {
+          ForwardedParamsStorage =
+              std::get<decltype(ForwardedParamsStorage)>(Params);
+        }
+        if (std::holds_alternative<decltype(CXXRecordDeclFields)>(Params)) {
+          CXXRecordDeclFields = std::get<decltype(CXXRecordDeclFields)>(Params);
+        }
+      }();
+
       ForwardedParams =
           maybeDropCxxExplicitObjectParameters(ForwardedParamsStorage);
     } else {
@@ -786,6 +801,19 @@ private:
     }
 
     NameVec ParameterNames = chooseParameterNames(ForwardedParams);
+
+    if (!CXXRecordDeclFields.empty()) {
+      ParameterNames.clear();
+      for (size_t I = 0; I < Args.size(); ++I) {
+        const auto &Field = CXXRecordDeclFields[I];
+
+        addInlayHint(Args[I]->getSourceRange(), HintSide::Left,
+                     InlayHintKind::Parameter,
+                     Field->getType()->isReferenceType() ? "&." : ".",
+                     Field->getName(), ": ");
+      }
+      return;
+    }
 
     // Exclude setters (i.e. functions with one argument whose name begins with
     // "set"), and builtins like std::move/forward/... as their parameter name

@@ -244,7 +244,7 @@ bool isDeeplyNested(const Decl *D, unsigned MaxDepth = 10);
 /// parameters to another function via variadic template parameters. This can
 /// for example be used to retrieve the constructor parameter ParmVarDecl for a
 /// make_unique or emplace_back call.
-llvm::SmallVector<const ParmVarDecl *>
+std::variant<SmallVector<const ParmVarDecl *>, SmallVector<const FieldDecl *>>
 resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
 
 /// Checks whether D is instantiated from a function parameter pack

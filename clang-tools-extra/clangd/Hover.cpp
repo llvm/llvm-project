@@ -63,6 +63,7 @@
 #include <algorithm>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace clang {
@@ -1062,7 +1063,14 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
 
   HoverInfo::PassType PassType;
 
-  auto Parameters = resolveForwardingParameters(FD);
+  const auto Params = resolveForwardingParameters(FD);
+
+  auto Parameters = [&]() -> SmallVector<const ParmVarDecl *> {
+    if (std::holds_alternative<SmallVector<const ParmVarDecl *>>(Params)) {
+      return std::get<SmallVector<const ParmVarDecl *>>(Params);
+    }
+    return {};
+  }();
 
   // Find argument index for N.
   for (unsigned I = 0; I < Args.size() && I < Parameters.size(); ++I) {
