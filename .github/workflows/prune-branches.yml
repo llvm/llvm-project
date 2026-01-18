@@ -1,4 +1,4 @@
-name: Prune Branches
+name: Prune Unused Branches
 
 permissions:
   contents: read
@@ -8,7 +8,7 @@ on:
     paths:
      - .github/workflows/prune-branches.yml
   schedule:
-    - cron: '0 8 * * *'
+    - cron: '0 8 * * *' # Runs daily at 08:00 UTC.
 
 jobs:
   prune-branches:
