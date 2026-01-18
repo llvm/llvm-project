@@ -1,7 +1,7 @@
 ; RUN: llc -O0 -mtriple=aarch64-linux-gnu -filetype=obj < %s \
-; RUN: | llvm-objdump -r - | FileCheck %s
+; RUN:     | llvm-objdump -r - | FileCheck %s
 
-; CHECK: R_AARCH64_TLS_DTPREL64
+; CHECK: R_AARCH64_TLS_DTPREL64   var
 
 @var = thread_local global i32 0, align 4, !dbg !0
 
