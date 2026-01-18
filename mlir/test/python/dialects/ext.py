@@ -1,7 +1,8 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 
 from mlir.ir import *
-from mlir.dialects import ext, arith
+from mlir.dialects import arith
+from mlir.dialects.ext import *
 from typing import Any, Optional, Sequence, TypeVar, Union
 import sys
 
@@ -14,19 +15,19 @@ def run(f):
 # CHECK: TEST: testMyInt
 @run
 def testMyInt():
-    class MyInt(ext.Dialect, name="myint"):
+    class MyInt(Dialect, name="myint"):
         pass
 
     i32 = IntegerType[32]
 
     class ConstantOp(MyInt.Operation, name="constant"):
         value: IntegerAttr
-        cst: OpResult[i32]
+        cst: Result[i32]
 
     class AddOp(MyInt.Operation, name="add"):
-        lhs: OpOperand[i32]
-        rhs: OpOperand[i32]
-        res: OpResult[i32]
+        lhs: Operand[i32]
+        rhs: Operand[i32]
+        res: Result[i32]
 
     # CHECK: irdl.dialect @myint {
     # CHECK:   irdl.operation @constant {
@@ -92,63 +93,63 @@ def testMyInt():
 # CHECK: TEST: testExtDialect
 @run
 def testExtDialect():
-    class Test(ext.Dialect, name="ext_test"):
+    class Test(Dialect, name="ext_test"):
         pass
 
     i32 = IntegerType[32]
 
     class ConstraintOp(Test.Operation, name="constraint"):
-        a: OpOperand[i32 | IntegerType[64]]
-        b: OpOperand[Any]
-        c: OpOperand[F32Type[()] | i32]
-        d: OpOperand[Any]
+        a: Operand[i32 | IntegerType[64]]
+        b: Operand[Any]
+        c: Operand[F32Type[()] | i32]
+        d: Operand[Any]
         x: IntegerAttr
         y: FloatAttr
 
     class OptionalOp(Test.Operation, name="optional"):
-        a: OpOperand[i32]
-        b: Optional[OpOperand[i32]]
-        out1: OpResult[i32]
-        out2: OpResult[i32] | None
-        out3: OpResult[i32]
+        a: Operand[i32]
+        b: Optional[Operand[i32]]
+        out1: Result[i32]
+        out2: Result[i32] | None
+        out3: Result[i32]
 
     class Optional2Op(Test.Operation, name="optional2"):
-        a: Optional[OpOperand[i32]]
-        b: Optional[OpResult[i32]]
+        a: Optional[Operand[i32]]
+        b: Optional[Result[i32]]
 
     class VariadicOp(Test.Operation, name="variadic"):
-        a: OpOperand[i32]
-        b: Optional[OpOperand[i32]]
-        c: Sequence[OpOperand[i32]]
-        out1: Sequence[OpResult[i32]]
-        out2: Sequence[OpResult[i32]]
-        out3: Optional[OpResult[i32]]
-        out4: OpResult[i32]
+        a: Operand[i32]
+        b: Optional[Operand[i32]]
+        c: Sequence[Operand[i32]]
+        out1: Sequence[Result[i32]]
+        out2: Sequence[Result[i32]]
+        out3: Optional[Result[i32]]
+        out4: Result[i32]
 
     class Variadic2Op(Test.Operation, name="variadic2"):
-        a: Sequence[OpOperand[i32]]
-        b: Sequence[OpResult[i32]]
+        a: Sequence[Operand[i32]]
+        b: Sequence[Result[i32]]
 
     class MixedOpBase(Test.Operation):
-        out: OpResult[i32]
-        in1: OpOperand[i32]
+        out: Result[i32]
+        in1: Operand[i32]
 
     class MixedOp(MixedOpBase, name="mixed"):
         in2: IntegerAttr
-        in3: Optional[OpOperand[i32]]
+        in3: Optional[Operand[i32]]
         in4: IntegerAttr
-        in5: OpOperand[i32]
+        in5: Operand[i32]
 
     T = TypeVar("T")
     U = TypeVar("U", bound=IntegerType[32] | IntegerType[64])
     V = TypeVar("V", bound=Union[IntegerType[8], IntegerType[16]])
 
     class TypeVarOp(Test.Operation, name="type_var"):
-        in1: OpOperand[T]
-        in2: OpOperand[T]
-        in3: OpOperand[U]
-        in4: OpOperand[U | V]
-        in5: OpOperand[V]
+        in1: Operand[T]
+        in2: Operand[T]
+        in3: Operand[U]
+        in4: Operand[U | V]
+        in5: Operand[V]
 
     # CHECK: irdl.dialect @ext_test {
     # CHECK:   irdl.operation @constraint {

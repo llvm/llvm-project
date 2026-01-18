@@ -406,7 +406,7 @@ size_t PyOpOperand::getOperandNumber() const {
 }
 
 void PyOpOperand::bind(nb::module_ &m) {
-  nb::class_<PyOpOperand>(m, "OpOperand", nb::is_generic())
+  nb::class_<PyOpOperand>(m, "OpOperand")
       .def_prop_ro("owner", &PyOpOperand::getOwner,
                    "Returns the operation that owns this operand.")
       .def_prop_ro("operand_number", &PyOpOperand::getOperandNumber,

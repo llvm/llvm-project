@@ -25,7 +25,12 @@ ir = _cext.ir
 
 __all__ = [
     "Dialect",
+    "Operand",
+    "Result",
 ]
+
+Operand = ir.Value
+Result = ir.OpResult
 
 
 class ConstraintLoweringContext:
@@ -135,10 +140,10 @@ class Operation(ir.OpView):
             type_ = get_args(type_)[0]
 
         origin = get_origin(type_)
-        if origin is ir.OpOperand:
-            return OperandDef(get_args(type_)[0], variadicity)
-        elif origin is ir.OpResult:
+        if origin is ir.OpResult:
             return ResultDef(get_args(type_)[0], variadicity)
+        elif origin is ir.Value:
+            return OperandDef(get_args(type_)[0], variadicity)
         elif issubclass(origin or type_, ir.Attribute):
             return AttributeDef(type_, variadicity)
         raise TypeError(f"unsupported type in operation definition: {type_}")
