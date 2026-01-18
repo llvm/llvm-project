@@ -475,6 +475,9 @@ mlir:python:
   - changed-files:
     - any-glob-to-any-file:
       - mlir/python/**/*
+      - mlir/include/mlir/Bindings/Python/**
+      - mlir/lib/Bindings/Python/**
+      - mlir/tools/mlir-tblgen/*Python*
 
 mlir:vectorops:
   - changed-files:

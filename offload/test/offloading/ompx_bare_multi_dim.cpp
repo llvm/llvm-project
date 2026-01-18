@@ -1,6 +1,9 @@
+// clang-format off
 // RUN: %libomptarget-compilexx-generic
 // RUN: env LIBOMPTARGET_INFO=63 %libomptarget-run-generic 2>&1 | %fcheck-generic
 // REQUIRES: gpu
+// XFAIL: intelgpu
+// clang-format on
 
 #include <ompx.h>
 

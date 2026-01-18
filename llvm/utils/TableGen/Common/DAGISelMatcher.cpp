@@ -248,11 +248,6 @@ void EmitIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "EmitInteger " << Val << " VT=" << getEnumName(VT) << '\n';
 }
 
-void EmitStringIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
-  OS << Indent << "EmitStringInteger " << Val << " VT=" << getEnumName(VT)
-     << '\n';
-}
-
 void EmitRegisterMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "EmitRegister ";
   if (Reg)

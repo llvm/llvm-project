@@ -681,3 +681,12 @@ func.func @bitcast_index_1(%arg0 : tensor<?xindex>) -> tensor<?xi64> {
   %0 = tensor.bitcast %arg0 : tensor<?xindex> to tensor<?xi64>
   return %0 : tensor<?xi64>
 }
+
+// -----
+
+func.func @test_empty_reassociation(%arg0: tensor<1x?xf32>) -> tensor<?x10xf32> {
+  // expected-error@below {{'tensor.collapse_shape' op reassociation indices must not be empty}}
+  %0 = tensor.collapse_shape %arg0 [[0, 1], []] : tensor<1x?xf32> into tensor<?x10xf32>
+  return %0 : tensor<?x10xf32>
+}
+

@@ -208,6 +208,12 @@ david.spickett@arm.com (email), [DavidSpickett](https://github.com/DavidSpickett
 Omair Javaid
 omair.javaid@linaro.org (email), [omjavaid](https://github.com/omjavaid) (GitHub), [omjavaid](https://discourse.llvm.org/u/omjavaid) (Discourse), omjavaid#9902 (Discord)
 
+Charles Zablit
+c_zablit@apple.com (email), [charles-zablit](https://github.com/charles-zablit) (GitHub), [charles-zablit](https://discourse.llvm.org/u/charles-zablit/) (Discourse)
+
+Nerixyz
+nerixdev@outlook.de (email), [Nerixyz](https://github.com/Nerixyz) (GitHub), [Nerixyz](https://discourse.llvm.org/u/Nerixyz/) (Discourse)
+
 ### Tools
 
 The following people are responsible for decisions involving specific tools.

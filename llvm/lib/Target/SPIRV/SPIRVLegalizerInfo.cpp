@@ -14,6 +14,7 @@
 #include "SPIRV.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVSubtarget.h"
+#include "SPIRVUtils.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -243,10 +244,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // Illegal G_UNMERGE_VALUES instructions should be handled
   // during the combine phase.
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
-      .legalIf(vectorElementCountIsLessThanOrEqualTo(0, MaxVectorSize))
-      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
-                       LegalizeMutations::changeElementCountTo(
-                           0, ElementCount::getFixed(MaxVectorSize)));
+      .legalIf(vectorElementCountIsLessThanOrEqualTo(0, MaxVectorSize));
 
   // When entering the legalizer, there should be no G_BITCAST instructions.
   // They should all be calls to the `spv_bitcast` intrinsic. The call to
@@ -307,9 +305,14 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                   all(typeIsNot(0, p9), typeIs(1, p9))))
       .legalForCartesianProduct(allPtrs, allPtrs);
 
+  // Should we be legalizing bad scalar sizes like s5 here instead
+  // of handling them in the instruction selector?
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
       .unsupportedIf(typeIs(1, p9))
-      .legalIf(typeInSet(1, allPtrs));
+      .legalForCartesianProduct(allowedVectorTypes, allPtrs)
+      .legalForCartesianProduct(allPtrs, allPtrs)
+      .legalIf(isScalar(0))
+      .custom();
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS,
                                G_BITREVERSE, G_SADDSAT, G_UADDSAT, G_SSUBSAT,
@@ -532,6 +535,54 @@ static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpvType,
   return ConvReg;
 }
 
+static bool legalizeStore(LegalizerHelper &Helper, MachineInstr &MI,
+                          SPIRVGlobalRegistry *GR) {
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  Register ValReg = MI.getOperand(0).getReg();
+  Register PtrReg = MI.getOperand(1).getReg();
+  LLT ValTy = MRI.getType(ValReg);
+
+  assert(ValTy.isVector() && "Expected vector store");
+
+  SmallVector<Register, 8> SplitRegs;
+  LLT EltTy = ValTy.getElementType();
+  unsigned NumElts = ValTy.getNumElements();
+
+  for (unsigned i = 0; i < NumElts; ++i)
+    SplitRegs.push_back(MRI.createGenericVirtualRegister(EltTy));
+
+  MIRBuilder.buildUnmerge(SplitRegs, ValReg);
+
+  LLT PtrTy = MRI.getType(PtrReg);
+  auto Zero = MIRBuilder.buildConstant(LLT::scalar(32), 0);
+
+  for (unsigned i = 0; i < NumElts; ++i) {
+    auto Idx = MIRBuilder.buildConstant(LLT::scalar(32), i);
+    Register EltPtr = MRI.createGenericVirtualRegister(PtrTy);
+
+    MIRBuilder.buildIntrinsic(Intrinsic::spv_gep, ArrayRef<Register>{EltPtr})
+        .addImm(1) // InBounds
+        .addUse(PtrReg)
+        .addUse(Zero.getReg(0))
+        .addUse(Idx.getReg(0));
+
+    MachinePointerInfo EltPtrInfo;
+    Align EltAlign = Align(1);
+    if (!MI.memoperands_empty()) {
+      MachineMemOperand *MMO = *MI.memoperands_begin();
+      EltPtrInfo =
+          MMO->getPointerInfo().getWithOffset(i * EltTy.getSizeInBytes());
+      EltAlign = commonAlignment(MMO->getAlign(), i * EltTy.getSizeInBytes());
+    }
+
+    MIRBuilder.buildStore(SplitRegs[i], EltPtr, EltPtrInfo, EltAlign);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool SPIRVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
@@ -572,6 +623,8 @@ bool SPIRVLegalizerInfo::legalizeCustom(
     }
     return true;
   }
+  case TargetOpcode::G_STORE:
+    return legalizeStore(Helper, MI, GR);
   }
 }
 
@@ -584,54 +637,187 @@ static bool needsVectorLegalization(const LLT &Ty, const SPIRVSubtarget &ST) {
          NumElements > MaxVectorSize;
 }
 
-bool SPIRVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
-                                           MachineInstr &MI) const {
-  LLVM_DEBUG(dbgs() << "legalizeIntrinsic: " << MI);
-
+static bool legalizeSpvBitcast(LegalizerHelper &Helper, MachineInstr &MI,
+                               SPIRVGlobalRegistry *GR) {
+  LLVM_DEBUG(dbgs() << "Found a bitcast instruction\n");
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
 
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  // If an spv_bitcast needs to be legalized, we convert it to G_BITCAST to
+  // allow using the generic legalization rules.
+  if (needsVectorLegalization(DstTy, ST) ||
+      needsVectorLegalization(SrcTy, ST)) {
+    LLVM_DEBUG(dbgs() << "Replacing with a G_BITCAST\n");
+    MIRBuilder.buildBitcast(DstReg, SrcReg);
+    MI.eraseFromParent();
+  }
+  return true;
+}
+
+static bool legalizeSpvInsertElt(LegalizerHelper &Helper, MachineInstr &MI,
+                                 SPIRVGlobalRegistry *GR) {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  if (needsVectorLegalization(DstTy, ST)) {
+    Register SrcReg = MI.getOperand(2).getReg();
+    Register ValReg = MI.getOperand(3).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    MachineOperand &IdxOperand = MI.getOperand(4);
+
+    if (getImm(IdxOperand, &MRI)) {
+      uint64_t IdxVal = foldImm(IdxOperand, &MRI);
+      if (IdxVal < SrcTy.getNumElements()) {
+        SmallVector<Register, 8> Regs;
+        SPIRVType *ElementType =
+            GR->getScalarOrVectorComponentType(GR->getSPIRVTypeForVReg(DstReg));
+        LLT ElementLLTTy = GR->getRegType(ElementType);
+        for (unsigned I = 0, E = SrcTy.getNumElements(); I < E; ++I) {
+          Register Reg = MRI.createGenericVirtualRegister(ElementLLTTy);
+          MRI.setRegClass(Reg, GR->getRegClass(ElementType));
+          GR->assignSPIRVTypeToVReg(ElementType, Reg, *MI.getMF());
+          Regs.push_back(Reg);
+        }
+        MIRBuilder.buildUnmerge(Regs, SrcReg);
+        Regs[IdxVal] = ValReg;
+        MIRBuilder.buildBuildVector(DstReg, Regs);
+        MI.eraseFromParent();
+        return true;
+      }
+    }
+
+    LLT EltTy = SrcTy.getElementType();
+    Align VecAlign = Helper.getStackTemporaryAlignment(SrcTy);
+
+    MachinePointerInfo PtrInfo;
+    auto StackTemp = Helper.createStackTemporary(
+        TypeSize::getFixed(SrcTy.getSizeInBytes()), VecAlign, PtrInfo);
+
+    MIRBuilder.buildStore(SrcReg, StackTemp, PtrInfo, VecAlign);
+
+    Register IdxReg = IdxOperand.getReg();
+    LLT PtrTy = MRI.getType(StackTemp.getReg(0));
+    Register EltPtr = MRI.createGenericVirtualRegister(PtrTy);
+    auto Zero = MIRBuilder.buildConstant(LLT::scalar(32), 0);
+
+    MIRBuilder.buildIntrinsic(Intrinsic::spv_gep, ArrayRef<Register>{EltPtr})
+        .addImm(1) // InBounds
+        .addUse(StackTemp.getReg(0))
+        .addUse(Zero.getReg(0))
+        .addUse(IdxReg);
+
+    MachinePointerInfo EltPtrInfo = MachinePointerInfo(PtrTy.getAddressSpace());
+    Align EltAlign = Helper.getStackTemporaryAlignment(EltTy);
+    MIRBuilder.buildStore(ValReg, EltPtr, EltPtrInfo, EltAlign);
+
+    MIRBuilder.buildLoad(DstReg, StackTemp, PtrInfo, VecAlign);
+    MI.eraseFromParent();
+    return true;
+  }
+  return true;
+}
+
+static bool legalizeSpvExtractElt(LegalizerHelper &Helper, MachineInstr &MI,
+                                  SPIRVGlobalRegistry *GR) {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
+
+  Register SrcReg = MI.getOperand(2).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  if (needsVectorLegalization(SrcTy, ST)) {
+    Register DstReg = MI.getOperand(0).getReg();
+    MachineOperand &IdxOperand = MI.getOperand(3);
+
+    if (getImm(IdxOperand, &MRI)) {
+      uint64_t IdxVal = foldImm(IdxOperand, &MRI);
+      if (IdxVal < SrcTy.getNumElements()) {
+        LLT DstTy = MRI.getType(DstReg);
+        SmallVector<Register, 8> Regs;
+        SPIRVType *DstSpvTy = GR->getSPIRVTypeForVReg(DstReg);
+        for (unsigned I = 0, E = SrcTy.getNumElements(); I < E; ++I) {
+          if (I == IdxVal) {
+            Regs.push_back(DstReg);
+          } else {
+            Register Reg = MRI.createGenericVirtualRegister(DstTy);
+            MRI.setRegClass(Reg, GR->getRegClass(DstSpvTy));
+            GR->assignSPIRVTypeToVReg(DstSpvTy, Reg, *MI.getMF());
+            Regs.push_back(Reg);
+          }
+        }
+        MIRBuilder.buildUnmerge(Regs, SrcReg);
+        MI.eraseFromParent();
+        return true;
+      }
+    }
+
+    LLT EltTy = SrcTy.getElementType();
+    Align VecAlign = Helper.getStackTemporaryAlignment(SrcTy);
+
+    MachinePointerInfo PtrInfo;
+    auto StackTemp = Helper.createStackTemporary(
+        TypeSize::getFixed(SrcTy.getSizeInBytes()), VecAlign, PtrInfo);
+
+    // Set the type of StackTemp to a pointer to an array of the element type.
+    SPIRVType *SpvSrcTy = GR->getSPIRVTypeForVReg(SrcReg);
+    SPIRVType *EltSpvTy = GR->getScalarOrVectorComponentType(SpvSrcTy);
+    const Type *LLVMEltTy = GR->getTypeForSPIRVType(EltSpvTy);
+    const Type *LLVMArrTy =
+        ArrayType::get(const_cast<Type *>(LLVMEltTy), SrcTy.getNumElements());
+    SPIRVType *ArrSpvTy = GR->getOrCreateSPIRVType(
+        LLVMArrTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+    SPIRVType *PtrToArrSpvTy = GR->getOrCreateSPIRVPointerType(
+        ArrSpvTy, MIRBuilder, SPIRV::StorageClass::Function);
+
+    Register StackReg = StackTemp.getReg(0);
+    MRI.setRegClass(StackReg, GR->getRegClass(PtrToArrSpvTy));
+    GR->assignSPIRVTypeToVReg(PtrToArrSpvTy, StackReg, *MI.getMF());
+
+    MIRBuilder.buildStore(SrcReg, StackTemp, PtrInfo, VecAlign);
+
+    Register IdxReg = IdxOperand.getReg();
+    LLT PtrTy = MRI.getType(StackTemp.getReg(0));
+    Register EltPtr = MRI.createGenericVirtualRegister(PtrTy);
+    auto Zero = MIRBuilder.buildConstant(LLT::scalar(32), 0);
+
+    MIRBuilder.buildIntrinsic(Intrinsic::spv_gep, ArrayRef<Register>{EltPtr})
+        .addImm(1) // InBounds
+        .addUse(StackTemp.getReg(0))
+        .addUse(Zero.getReg(0))
+        .addUse(IdxReg);
+
+    MachinePointerInfo EltPtrInfo = MachinePointerInfo(PtrTy.getAddressSpace());
+    Align EltAlign = Helper.getStackTemporaryAlignment(EltTy);
+    MIRBuilder.buildLoad(DstReg, EltPtr, EltPtrInfo, EltAlign);
+
+    MI.eraseFromParent();
+    return true;
+  }
+  return true;
+}
+
+bool SPIRVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
+                                           MachineInstr &MI) const {
+  LLVM_DEBUG(dbgs() << "legalizeIntrinsic: " << MI);
   auto IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
-  if (IntrinsicID == Intrinsic::spv_bitcast) {
-    LLVM_DEBUG(dbgs() << "Found a bitcast instruction\n");
-    Register DstReg = MI.getOperand(0).getReg();
-    Register SrcReg = MI.getOperand(2).getReg();
-    LLT DstTy = MRI.getType(DstReg);
-    LLT SrcTy = MRI.getType(SrcReg);
-
-    // If an spv_bitcast needs to be legalized, we convert it to G_BITCAST to
-    // allow using the generic legalization rules.
-    if (needsVectorLegalization(DstTy, ST) ||
-        needsVectorLegalization(SrcTy, ST)) {
-      LLVM_DEBUG(dbgs() << "Replacing with a G_BITCAST\n");
-      MIRBuilder.buildBitcast(DstReg, SrcReg);
-      MI.eraseFromParent();
-    }
-    return true;
-  } else if (IntrinsicID == Intrinsic::spv_insertelt) {
-    Register DstReg = MI.getOperand(0).getReg();
-    LLT DstTy = MRI.getType(DstReg);
-
-    if (needsVectorLegalization(DstTy, ST)) {
-      Register SrcReg = MI.getOperand(2).getReg();
-      Register ValReg = MI.getOperand(3).getReg();
-      Register IdxReg = MI.getOperand(4).getReg();
-      MIRBuilder.buildInsertVectorElement(DstReg, SrcReg, ValReg, IdxReg);
-      MI.eraseFromParent();
-    }
-    return true;
-  } else if (IntrinsicID == Intrinsic::spv_extractelt) {
-    Register SrcReg = MI.getOperand(2).getReg();
-    LLT SrcTy = MRI.getType(SrcReg);
-
-    if (needsVectorLegalization(SrcTy, ST)) {
-      Register DstReg = MI.getOperand(0).getReg();
-      Register IdxReg = MI.getOperand(3).getReg();
-      MIRBuilder.buildExtractVectorElement(DstReg, SrcReg, IdxReg);
-      MI.eraseFromParent();
-    }
-    return true;
+  switch (IntrinsicID) {
+  case Intrinsic::spv_bitcast:
+    return legalizeSpvBitcast(Helper, MI, GR);
+  case Intrinsic::spv_insertelt:
+    return legalizeSpvInsertElt(Helper, MI, GR);
+  case Intrinsic::spv_extractelt:
+    return legalizeSpvExtractElt(Helper, MI, GR);
   }
   return true;
 }

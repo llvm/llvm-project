@@ -71,16 +71,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_get_fpenv:
   case AMDGPU::BI__builtin_amdgcn_set_fpenv:
     return false;
-  case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8:
-    // Legacy form omitted the optional clamp operand
-    if (SemaRef.checkArgCountRange(TheCall, 7, 8))
-      return true;
-    if (TheCall->getNumArgs() == 8) {
-      llvm::APSInt Result;
-      if (SemaRef.BuiltinConstantArg(TheCall, 7, Result))
-        return true;
-    }
-    return false;
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
@@ -264,6 +254,40 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     return (SemaRef.BuiltinConstantArg(TheCall, 1, Result)) ||
            (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
            (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
+  }
+  case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8:
+  case AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x128_iu8: {
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8) {
+      if (SemaRef.checkArgCountRange(TheCall, 7, 8))
+        return true;
+      if (TheCall->getNumArgs() == 7)
+        return false;
+    } else if (BuiltinID ==
+               AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x128_iu8) {
+      if (SemaRef.checkArgCountRange(TheCall, 8, 9))
+        return true;
+      if (TheCall->getNumArgs() == 8)
+        return false;
+    }
+    // Check if the last argument (clamp operand) is a constant and is
+    // convertible to bool.
+    Expr *ClampArg = TheCall->getArg(TheCall->getNumArgs() - 1);
+    // 1) Ensure clamp argument is a constant expression
+    llvm::APSInt ClampValue;
+    if (!SemaRef.VerifyIntegerConstantExpression(ClampArg, &ClampValue)
+             .isUsable())
+      return true;
+    // 2) Check if the argument can be converted to bool type
+    if (!SemaRef.Context.hasSameType(ClampArg->getType(),
+                                     SemaRef.Context.BoolTy)) {
+      // Try to convert to bool
+      QualType BoolTy = SemaRef.Context.BoolTy;
+      ExprResult ClampExpr(ClampArg);
+      SemaRef.CheckSingleAssignmentConstraints(BoolTy, ClampExpr);
+      if (ClampExpr.isInvalid())
+        return true;
+    }
+    return false;
   }
   default:
     return false;

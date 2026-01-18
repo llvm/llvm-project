@@ -149,7 +149,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA57:
-    MaxInterleaveFactor = 4;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
@@ -203,7 +202,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     CacheLineSize = 256;
     PrefFunctionAlignment = Align(8);
     PrefLoopAlignment = Align(4);
-    MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
@@ -227,17 +225,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
-    if (isAppleMLike())
-      MaxInterleaveFactor = 4;
     break;
   case ExynosM3:
-    MaxInterleaveFactor = 4;
     MaxJumpTableSize = 20;
     PrefFunctionAlignment = Align(32);
     PrefLoopAlignment = Align(16);
     break;
   case Falkor:
-    MaxInterleaveFactor = 4;
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     CacheLineSize = 128;
@@ -246,7 +240,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxPrefetchIterationsAhead = 8;
     break;
   case Kryo:
-    MaxInterleaveFactor = 4;
     VectorInsertExtractBaseCost = 2;
     CacheLineSize = 128;
     PrefetchDistance = 740;
@@ -267,7 +260,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case NeoverseV3:
     CacheLineSize = 64;
     EpilogueVectorizationMinVF = 8;
-    MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
     [[fallthrough]];
   case NeoverseN2:
@@ -287,10 +279,8 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case Neoverse512TVB:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
-    MaxInterleaveFactor = 4;
     break;
   case Saphira:
-    MaxInterleaveFactor = 4;
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     break;
@@ -298,7 +288,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     CacheLineSize = 64;
     PrefFunctionAlignment = Align(8);
     PrefLoopAlignment = Align(4);
-    MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
@@ -324,7 +313,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     CacheLineSize = 64;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(4);
-    MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
@@ -337,18 +325,15 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     CacheLineSize = 64;
     PrefFunctionAlignment = Align(64);
     PrefLoopAlignment = Align(64);
-    MaxInterleaveFactor = 4;
     break;
   case Oryon:
     CacheLineSize = 64;
     PrefFunctionAlignment = Align(16);
-    MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     break;
   case Olympus:
     EpilogueVectorizationMinVF = 8;
-    MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);

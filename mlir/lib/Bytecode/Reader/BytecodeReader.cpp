@@ -1355,8 +1355,7 @@ T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries,
                                uint64_t depth) {
   bool oldResolving = resolving;
   resolving = true;
-  auto restoreResolving =
-      llvm::make_scope_exit([&]() { resolving = oldResolving; });
+  llvm::scope_exit restoreResolving([&]() { resolving = oldResolving; });
 
   if (index >= entries.size()) {
     emitError(fileLoc) << "invalid " << entryType << " index: " << index;
@@ -1578,8 +1577,8 @@ public:
   materialize(Operation *op,
               llvm::function_ref<bool(Operation *)> lazyOpsCallback) {
     this->lazyOpsCallback = lazyOpsCallback;
-    auto resetlazyOpsCallback =
-        llvm::make_scope_exit([&] { this->lazyOpsCallback = nullptr; });
+    llvm::scope_exit resetlazyOpsCallback(
+        [&] { this->lazyOpsCallback = nullptr; });
     auto it = lazyLoadableOpsMap.find(op);
     assert(it != lazyLoadableOpsMap.end() &&
            "materialize called on non-materializable op");
@@ -1890,8 +1889,8 @@ LogicalResult BytecodeReader::Impl::read(
     Block *block, llvm::function_ref<bool(Operation *)> lazyOpsCallback) {
   EncodingReader reader(buffer.getBuffer(), fileLoc);
   this->lazyOpsCallback = lazyOpsCallback;
-  auto resetlazyOpsCallback =
-      llvm::make_scope_exit([&] { this->lazyOpsCallback = nullptr; });
+  llvm::scope_exit resetlazyOpsCallback(
+      [&] { this->lazyOpsCallback = nullptr; });
 
   // Skip over the bytecode header, this should have already been checked.
   if (failed(reader.skipBytes(StringRef("ML\xefR").size())))

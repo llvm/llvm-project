@@ -666,73 +666,6 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
   return !Subscripts.empty();
 }
 
-/// Compare to see if S is less than Size, using
-///
-///    isKnownNegative(S - Size)
-///
-/// with some extra checking if S is an AddRec and we can prove less-than using
-/// the loop bounds.
-static bool isKnownLessThan(ScalarEvolution *SE, const SCEV *S,
-                            const SCEV *Size) {
-  // First unify to the same type
-  auto *SType = dyn_cast<IntegerType>(S->getType());
-  auto *SizeType = dyn_cast<IntegerType>(Size->getType());
-  if (!SType || !SizeType)
-    return false;
-  Type *MaxType =
-      (SType->getBitWidth() >= SizeType->getBitWidth()) ? SType : SizeType;
-  S = SE->getTruncateOrZeroExtend(S, MaxType);
-  Size = SE->getTruncateOrZeroExtend(Size, MaxType);
-
-  auto CollectUpperBound = [&](const Loop *L, Type *T) -> const SCEV * {
-    if (SE->hasLoopInvariantBackedgeTakenCount(L)) {
-      const SCEV *UB = SE->getBackedgeTakenCount(L);
-      return SE->getTruncateOrZeroExtend(UB, T);
-    }
-    return nullptr;
-  };
-
-  auto CheckAddRecBECount = [&]() {
-    const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S);
-    if (!AddRec || !AddRec->isAffine() || !AddRec->hasNoSignedWrap())
-      return false;
-    const SCEV *BECount = CollectUpperBound(AddRec->getLoop(), MaxType);
-    // If the BTC cannot be computed, check the base case for S.
-    if (!BECount || isa<SCEVCouldNotCompute>(BECount))
-      return false;
-    const SCEV *Start = AddRec->getStart();
-    const SCEV *Step = AddRec->getStepRecurrence(*SE);
-    const SCEV *End = AddRec->evaluateAtIteration(BECount, *SE);
-    const SCEV *Diff0 = SE->getMinusSCEV(Start, Size);
-    const SCEV *Diff1 = SE->getMinusSCEV(End, Size);
-
-    // If the value of Step is non-negative and the AddRec is non-wrap, it
-    // reaches its maximum at the last iteration. So it's enouth to check
-    // whether End - Size is negative.
-    if (SE->isKnownNonNegative(Step) && SE->isKnownNegative(Diff1))
-      return true;
-
-    // If the value of Step is non-positive and the AddRec is non-wrap, the
-    // initial value is its maximum.
-    if (SE->isKnownNonPositive(Step) && SE->isKnownNegative(Diff0))
-      return true;
-
-    // Even if we don't know the sign of Step, either Start or End must be
-    // the maximum value of the AddRec since it is non-wrap.
-    if (SE->isKnownNegative(Diff0) && SE->isKnownNegative(Diff1))
-      return true;
-
-    return false;
-  };
-
-  if (CheckAddRecBECount())
-    return true;
-
-  // Check using normal isKnownNegative
-  const SCEV *LimitedBound = SE->getMinusSCEV(S, Size);
-  return SE->isKnownNegative(LimitedBound);
-}
-
 bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
                                          ArrayRef<const SCEV *> Sizes,
                                          ArrayRef<const SCEV *> Subscripts) {
@@ -761,8 +694,17 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
     const SCEV *Subscript = Subscripts[I];
     if (!SE.isKnownNonNegative(Subscript))
       return false;
-    if (!isKnownLessThan(&SE, Subscript, Size))
+
+    // TODO: It may be better that delinearization itself unifies the types of
+    // all elements in Sizes and Subscripts.
+    Type *WiderTy = SE.getWiderType(Subscript->getType(), Size->getType());
+    Subscript = SE.getNoopOrSignExtend(Subscript, WiderTy);
+    Size = SE.getNoopOrSignExtend(Size, WiderTy);
+    if (!SE.isKnownPredicate(ICmpInst::ICMP_SLT, Subscript, Size)) {
+      LLVM_DEBUG(dbgs() << "Range check failed: " << *Subscript << " <s "
+                        << *Size << "\n");
       return false;
+    }
   }
 
   // The offset computation is as follows:

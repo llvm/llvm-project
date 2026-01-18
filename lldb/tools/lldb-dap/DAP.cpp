@@ -831,7 +831,7 @@ bool DAP::HandleObject(const Message &M) {
         debugger.CancelInterruptRequest();
     }
 
-    auto cleanup = llvm::make_scope_exit([&]() {
+    llvm::scope_exit cleanup([&]() {
       std::scoped_lock<std::mutex> active_request_lock(m_active_request_mutex);
       m_active_request = nullptr;
     });
@@ -1034,7 +1034,7 @@ void DAP::TerminateLoop(bool failed) {
 }
 
 void DAP::TransportHandler() {
-  auto scope_guard = llvm::make_scope_exit([this] {
+  llvm::scope_exit scope_guard([this] {
     std::lock_guard<std::mutex> guard(m_queue_mutex);
     // Ensure we're marked as disconnecting when the reader exits.
     m_disconnecting = true;
@@ -1067,7 +1067,7 @@ llvm::Error DAP::Loop() {
 
   auto thread = std::thread(std::bind(&DAP::TransportHandler, this));
 
-  auto cleanup = llvm::make_scope_exit([this]() {
+  llvm::scope_exit cleanup([this]() {
     // FIXME: Merge these into the MainLoop handler.
     out.Stop();
     err.Stop();

@@ -705,14 +705,9 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
       // StringIntegerMatcher. In this case, fallback to using IntegerMatcher.
       const CodeGenRegisterClass &RC =
           CGP.getTargetInfo().getRegisterClass(Def);
-      if (RC.EnumValue <= 127) {
-        std::string Value = RC.getQualifiedIdName();
-        AddMatcher(new EmitStringIntegerMatcher(Value, MVT::i32,
-                                                NextRecordedOperandNo));
-      } else {
-        AddMatcher(new EmitIntegerMatcher(RC.EnumValue, MVT::i32,
-                                          NextRecordedOperandNo));
-      }
+      std::string Name = RC.getQualifiedIdName();
+      AddMatcher(new EmitIntegerMatcher(Name, RC.EnumValue, MVT::i32,
+                                        NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
@@ -720,20 +715,10 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
     // Handle a subregister index. This is used for INSERT_SUBREG etc.
     if (Def->isSubClassOf("SubRegIndex")) {
       const CodeGenRegBank &RB = CGP.getTargetInfo().getRegBank();
-      // If we have more than 127 subreg indices the encoding can overflow
-      // 7 bit and we cannot use StringInteger.
-      if (RB.getSubRegIndices().size() > 127) {
-        const CodeGenSubRegIndex *I = RB.findSubRegIdx(Def);
-        if (I->EnumValue > 127) {
-          AddMatcher(new EmitIntegerMatcher(I->EnumValue, MVT::i32,
-                                            NextRecordedOperandNo));
-          ResultOps.push_back(NextRecordedOperandNo++);
-          return;
-        }
-      }
-      std::string Value = getQualifiedName(Def);
-      AddMatcher(
-          new EmitStringIntegerMatcher(Value, MVT::i32, NextRecordedOperandNo));
+      const CodeGenSubRegIndex *I = RB.findSubRegIdx(Def);
+      std::string Name = getQualifiedName(Def);
+      AddMatcher(new EmitIntegerMatcher(Name, I->EnumValue, MVT::i32,
+                                        NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }

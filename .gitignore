@@ -59,6 +59,8 @@ autoconf/autom4te.cache
 .gemini/
 AGENTS.md
 .codex/
+# Cursor specific files
+.cursor
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
@@ -73,6 +75,7 @@ pythonenv*
 # clangd index. (".clangd" is a config file now, thus trailing slash)
 .clangd/
 .cache
+.clangd
 # static analyzer regression testing project files
 /clang/utils/analyzer/projects/*/CachedSource
 /clang/utils/analyzer/projects/*/PatchedSource

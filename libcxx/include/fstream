@@ -254,7 +254,7 @@ public:
   void swap(basic_filebuf& __rhs);
 
   // 27.9.1.4 Members:
-  _LIBCPP_HIDE_FROM_ABI bool is_open() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   basic_filebuf* open(const char* __s, ios_base::openmode __mode);
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
   basic_filebuf* open(const wchar_t* __s, ios_base::openmode __mode);
@@ -269,7 +269,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI basic_filebuf* __open(int __fd, ios_base::openmode __mode);
   basic_filebuf* close();
 #    if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
     _LIBCPP_ASSERT_UNCATEGORIZED(this->is_open(), "File must be opened");
 #      if defined(_LIBCPP_WIN32API)
     return std::__filebuf_windows_native_handle(__file_);
@@ -1163,11 +1163,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI basic_ifstream& operator=(basic_ifstream&& __rhs);
   _LIBCPP_HIDE_FROM_ABI void swap(basic_ifstream& __rhs);
 
-  _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
 #    if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept { return rdbuf()->native_handle(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
+    return rdbuf()->native_handle();
+  }
 #    endif
-  _LIBCPP_HIDE_FROM_ABI bool is_open() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   void open(const char* __s, ios_base::openmode __mode = ios_base::in);
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
   void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::in);
@@ -1319,11 +1321,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI basic_ofstream& operator=(basic_ofstream&& __rhs);
   _LIBCPP_HIDE_FROM_ABI void swap(basic_ofstream& __rhs);
 
-  _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
 #    if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept { return rdbuf()->native_handle(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
+    return rdbuf()->native_handle();
+  }
 #    endif
-  _LIBCPP_HIDE_FROM_ABI bool is_open() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   void open(const char* __s, ios_base::openmode __mode = ios_base::out);
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
   void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::out);
@@ -1481,11 +1485,13 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void swap(basic_fstream& __rhs);
 
-  _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
 #    if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept { return rdbuf()->native_handle(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
+    return rdbuf()->native_handle();
+  }
 #    endif
-  _LIBCPP_HIDE_FROM_ABI bool is_open() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   _LIBCPP_HIDE_FROM_ABI void open(const char* __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
   void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::in | ios_base::out);

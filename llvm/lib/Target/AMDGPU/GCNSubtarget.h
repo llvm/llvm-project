@@ -244,6 +244,7 @@ protected:
   bool HasRestrictedSOffset = false;
   bool Has64BitLiterals = false;
   bool Has1024AddressableVGPRs = false;
+  bool HasSetregVGPRMSBFixup = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasTensorCvtLutInsts = false;
@@ -1445,11 +1446,18 @@ public:
 
   bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
 
+  bool hasSetregVGPRMSBFixup() const { return HasSetregVGPRMSBFixup; }
+
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
 
   bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
+
+  /// \returns true if the target supports expert scheduling mode 2 which relies
+  /// on the compiler to insert waits to avoid hazards between VMEM and VALU
+  /// instructions in some instances.
+  bool hasExpertSchedulingMode() const { return getGeneration() >= GFX12; }
 
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1250.
@@ -1882,6 +1890,16 @@ public:
 
   bool requiresWaitsBeforeSystemScopeStores() const {
     return RequiresWaitsBeforeSystemScopeStores;
+  }
+
+  bool supportsBPermute() const {
+    return getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS;
+  }
+
+  bool supportsWaveWideBPermute() const {
+    return (getGeneration() <= AMDGPUSubtarget::GFX9 ||
+            getGeneration() == AMDGPUSubtarget::GFX12) ||
+           isWave32();
   }
 };
 

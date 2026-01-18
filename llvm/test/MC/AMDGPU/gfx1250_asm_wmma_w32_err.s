@@ -327,9 +327,6 @@ v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], s[32:33]
 v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], 1, v[32:33]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v[32:33] clamp
-// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
 v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:2
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 

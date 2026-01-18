@@ -98,8 +98,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
 
-  auto AllowedTypeDecl = namedDecl(
-      anyOf(matchers::matchesAnyListedName(AllowedTypes), usingShadowDecl()));
+  auto AllowedTypeDecl = namedDecl(anyOf(
+      matchers::matchesAnyListedRegexName(AllowedTypes), usingShadowDecl()));
 
   const auto AllowedType = hasType(qualType(
       anyOf(hasDeclaration(AllowedTypeDecl), references(AllowedTypeDecl),

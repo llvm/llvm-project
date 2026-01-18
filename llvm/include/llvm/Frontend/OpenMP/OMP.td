@@ -853,6 +853,7 @@ def OMP_Depobj : Directive<[Spelling<"depobj">]> {
     // OMPKinds.def.
     VersionedClause<OMPC_Depobj, 50>,
     VersionedClause<OMPC_Destroy, 50>,
+    VersionedClause<OMPC_Init, 60>,
     VersionedClause<OMPC_Update, 50>,
   ];
   let association = AS_None;

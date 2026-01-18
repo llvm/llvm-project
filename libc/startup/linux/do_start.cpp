@@ -63,9 +63,6 @@ static void call_fini_array_callbacks() {
 
 static ThreadAttributes main_thread_attrib;
 static TLSDescriptor tls;
-// We separate teardown_main_tls from callbacks as callback function themselves
-// may require TLS.
-void teardown_main_tls() { cleanup_tls(tls.addr, tls.size); }
 
 [[noreturn]] void do_start() {
   auto tid = syscall_impl<long>(SYS_gettid);

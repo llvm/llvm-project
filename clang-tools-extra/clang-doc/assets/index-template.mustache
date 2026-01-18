@@ -8,17 +8,19 @@
             <div class="sidebar">
                 <h2>{{ProjectName}}</h2>
                 <ul>
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Namespaces">Namespaces</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#Index}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
-                            </li>
-                            {{/Index}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Namespaces">Namespaces</a>
+                            </summary>
+                            <ul>
+                                {{#Index}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                                </li>
+                                {{/Index}}
+                            </ul>
+                        </details>
                     </li>
                 </ul>
             </div>

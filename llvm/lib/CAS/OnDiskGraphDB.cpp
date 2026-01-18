@@ -1233,7 +1233,7 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
   if (!File)
     return createFileError(Path, File.takeError());
 
-  auto CloseFile = make_scope_exit([&]() { sys::fs::closeFile(*File); });
+  llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(*File); });
 
   sys::fs::file_status Status;
   if (std::error_code EC = sys::fs::status(*File, Status))

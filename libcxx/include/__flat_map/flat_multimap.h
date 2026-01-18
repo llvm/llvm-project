@@ -854,7 +854,7 @@ private:
       auto __zv                  = ranges::views::zip(__containers_.keys, __containers_.values);
       auto __append_start_offset = __containers_.keys.size() - __num_appended;
       auto __end                 = __zv.end();
-      auto __compare_key         = [this](const auto& __p1, const auto& __p2) {
+      auto __compare_key         = [this](const auto& __p1, const auto& __p2) -> bool {
         return __compare_(std::get<0>(__p1), std::get<0>(__p2));
       };
       if constexpr (!_WasSorted) {

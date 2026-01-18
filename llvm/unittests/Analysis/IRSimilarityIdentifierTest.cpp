@@ -373,10 +373,10 @@ TEST(IRInstructionMapper, SextTypeDifference) {
 // integer.
 TEST(IRInstructionMapper, LoadSimilarType) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %0 = load i32, i32* %a
-                             %1 = load i32, i32* %b
+                             %0 = load i32, ptr %a
+                             %1 = load i32, ptr %b
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -399,10 +399,10 @@ TEST(IRInstructionMapper, LoadSimilarType) {
 // different unsigned integers.
 TEST(IRInstructionMapper, LoadDifferentType) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i64* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %0 = load i32, i32* %a
-                             %1 = load i64, i64* %b
+                             %0 = load i32, ptr %a
+                             %1 = load i64, ptr %b
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -425,10 +425,10 @@ TEST(IRInstructionMapper, LoadDifferentType) {
 // unsigned integers.
 TEST(IRInstructionMapper, LoadDifferentAlign) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %0 = load i32, i32* %a, align 4
-                             %1 = load i32, i32* %b, align 8
+                             %0 = load i32, ptr %a, align 4
+                             %1 = load i32, ptr %b, align 8
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -451,10 +451,10 @@ TEST(IRInstructionMapper, LoadDifferentAlign) {
 // different unsigned integers.
 TEST(IRInstructionMapper, LoadDifferentVolatile) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %0 = load volatile i32, i32* %a
-                             %1 = load i32, i32* %b
+                             %0 = load volatile i32, ptr %a
+                             %1 = load i32, ptr %b
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -477,10 +477,10 @@ TEST(IRInstructionMapper, LoadDifferentVolatile) {
 // different unsigned integers.
 TEST(IRInstructionMapper, LoadSameVolatile) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %0 = load volatile i32, i32* %a
-                             %1 = load volatile i32, i32* %b
+                             %0 = load volatile i32, ptr %a
+                             %1 = load volatile i32, ptr %b
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -503,10 +503,10 @@ TEST(IRInstructionMapper, LoadSameVolatile) {
 // different unsigned integers.
 TEST(IRInstructionMapper, LoadDifferentAtomic) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %0 = load atomic i32, i32* %a unordered, align 4
-                             %1 = load atomic i32, i32* %b monotonic, align 4
+                             %0 = load atomic i32, ptr %a unordered, align 4
+                             %1 = load atomic i32, ptr %b monotonic, align 4
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -529,10 +529,10 @@ TEST(IRInstructionMapper, LoadDifferentAtomic) {
 // different unsigned integers.
 TEST(IRInstructionMapper, LoadSameAtomic) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %0 = load atomic i32, i32* %a unordered, align 4
-                             %1 = load atomic i32, i32* %b unordered, align 4
+                             %0 = load atomic i32, ptr %a unordered, align 4
+                             %1 = load atomic i32, ptr %b unordered, align 4
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -555,10 +555,10 @@ TEST(IRInstructionMapper, LoadSameAtomic) {
 // integer.
 TEST(IRInstructionMapper, StoreSimilarType) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             store i32 1, i32* %a
-                             store i32 2, i32* %a
+                             store i32 1, ptr %a
+                             store i32 2, ptr %a
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -581,10 +581,10 @@ TEST(IRInstructionMapper, StoreSimilarType) {
 // different unsigned integers.
 TEST(IRInstructionMapper, StoreDifferentType) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i64* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             store i32 1, i32* %a
-                             store i64 1, i64* %b
+                             store i32 1, ptr %a
+                             store i64 1, ptr %b
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -607,10 +607,10 @@ TEST(IRInstructionMapper, StoreDifferentType) {
 // unsigned integers.
 TEST(IRInstructionMapper, StoreDifferentAlign) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             store i32 1, i32* %a, align 4
-                             store i32 1, i32* %b, align 8
+                             store i32 1, ptr %a, align 4
+                             store i32 1, ptr %b, align 8
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -633,10 +633,10 @@ TEST(IRInstructionMapper, StoreDifferentAlign) {
 // different unsigned integers.
 TEST(IRInstructionMapper, StoreDifferentVolatile) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             store volatile i32 1, i32* %a
-                             store i32 1, i32* %b
+                             store volatile i32 1, ptr %a
+                             store i32 1, ptr %b
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -659,10 +659,10 @@ TEST(IRInstructionMapper, StoreDifferentVolatile) {
 // different unsigned integers.
 TEST(IRInstructionMapper, StoreSameVolatile) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             store volatile i32 1, i32* %a
-                             store volatile i32 1, i32* %b
+                             store volatile i32 1, ptr %a
+                             store volatile i32 1, ptr %b
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -685,10 +685,10 @@ TEST(IRInstructionMapper, StoreSameVolatile) {
 // different unsigned integers.
 TEST(IRInstructionMapper, StoreSameAtomic) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             store atomic i32 1, i32* %a unordered, align 4
-                             store atomic i32 1, i32* %b unordered, align 4
+                             store atomic i32 1, ptr %a unordered, align 4
+                             store atomic i32 1, ptr %b unordered, align 4
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -711,10 +711,10 @@ TEST(IRInstructionMapper, StoreSameAtomic) {
 // different unsigned integers.
 TEST(IRInstructionMapper, StoreDifferentAtomic) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             store atomic i32 1, i32* %a unordered, align 4
-                             store atomic i32 1, i32* %b monotonic, align 4
+                             store atomic i32 1, ptr %a unordered, align 4
+                             store atomic i32 1, ptr %b monotonic, align 4
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -1248,17 +1248,17 @@ TEST(IRInstructionMapper, CallsDifferentCallingConventions) {
 // control flow that is currently not recognized.
 TEST(IRInstructionMapper, InvokeIllegal) {
   StringRef ModuleString = R"(
-                          define i32 @f(i8 *%gep1, i32 %b) {
-                          then:                       
-                            invoke i32 undef(i8* undef)
+                          define i32 @f(ptr %gep1, i32 %b) {
+                          then:
+                            invoke i32 undef(ptr undef)
                                to label %invoke unwind label %lpad
 
                           invoke:
                             unreachable
 
                           lpad:
-                            landingpad { i8*, i32 }
-                               catch i8* null
+                            landingpad { ptr, i32 }
+                               catch ptr null
                             unreachable
                           })";
   LLVMContext Context;
@@ -1289,7 +1289,7 @@ TEST(IRInstructionMapper, CallBrInstIllegal) {
 
   define i32 @f(i32 %a, i32 %b) {
       bb0:
-        callbr void asm "xorl $0, $0; jmp ${1:l}", "r,X,~{dirflag},~{fpsr},~{flags}"(i32 %a, i8* blockaddress(@test, %fail)) to label %normal [label %fail]
+        callbr void asm "xorl $0, $0; jmp ${1:l}", "r,X,~{dirflag},~{fpsr},~{flags}"(i32 %a, ptr blockaddress(@test, %fail)) to label %normal [label %fail]
       fail:
         ret i32 0
       normal:
@@ -1345,14 +1345,14 @@ TEST(IRInstructionMapper, DebugInfoInvisible) {
 // Checks that an eh.typeid.for intrinsic is mapped to be illegal.
 TEST(IRInstructionMapper, ExceptionHandlingTypeIdIllegal) {
   StringRef ModuleString = R"(
-    @_ZTIi = external constant i8*
+    @_ZTIi = external constant ptr
     define i32 @f() {
     then:
-      %0 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
+      %0 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
       ret i32 0
     }
 
-    declare i32 @llvm.eh.typeid.for(i8*))";
+    declare i32 @llvm.eh.typeid.for(ptr))";
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
 
@@ -1377,7 +1377,7 @@ TEST(IRInstructionMapper, ExceptionHandlingExceptionCodeIllegal) {
       %0 = catchswitch within none [label %__except] unwind to caller
 
     __except:
-      %1 = catchpad within %0 [i8* null]
+      %1 = catchpad within %0 [ptr null]
       catchret from %1 to label %__except
 
     then:
@@ -1433,11 +1433,11 @@ TEST(IRInstructionMapper, ExceptionHandlingExceptionPointerIllegal) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
                           entry:
-                            %0 = call i8* @llvm.eh.exceptionpointer.p0i8(i32 0)
+                            %0 = call ptr @llvm.eh.exceptionpointer.p0i8(i32 0)
                             ret i32 0
                           }
 
-                          declare i8* @llvm.eh.exceptionpointer.p0i8(i32))";
+                          declare ptr @llvm.eh.exceptionpointer.p0i8(i32))";
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
 
@@ -1526,13 +1526,13 @@ TEST(IRInstructionMapper, CleanuppadIllegal) {
 // specified.
 TEST(IRInstructionMapper, MemSetIllegal) {
   StringRef ModuleString = R"(
-  declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
+  declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i32, i1)
 
   define i64 @function(i64 %x, i64 %z, i64 %n) {
   entry:
     %pool = alloca [59 x i64], align 4
-    %tmp = bitcast [59 x i64]* %pool to i8*
-    call void @llvm.memset.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    %tmp = bitcast ptr %pool to ptr
+    call void @llvm.memset.p0i8.i64(ptr nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
     %cmp3 = icmp eq i64 %n, 0
     %a = add i64 %x, %z
     %c = add i64 %x, %z
@@ -1559,13 +1559,13 @@ TEST(IRInstructionMapper, MemSetIllegal) {
 // specified.
 TEST(IRInstructionMapper, MemCpyIllegal) {
   StringRef ModuleString = R"(
-  declare void @llvm.memcpy.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
+  declare void @llvm.memcpy.p0i8.i64(ptr nocapture writeonly, i8, i64, i32, i1)
 
   define i64 @function(i64 %x, i64 %z, i64 %n) {
   entry:
     %pool = alloca [59 x i64], align 4
-    %tmp = bitcast [59 x i64]* %pool to i8*
-    call void @llvm.memcpy.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    %tmp = bitcast ptr %pool to ptr
+    call void @llvm.memcpy.p0i8.i64(ptr nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
     %cmp3 = icmp eq i64 %n, 0
     %a = add i64 %x, %z
     %c = add i64 %x, %z
@@ -1593,13 +1593,13 @@ TEST(IRInstructionMapper, MemCpyIllegal) {
 // specified.
 TEST(IRInstructionMapper, MemMoveIllegal) {
   StringRef ModuleString = R"(
-  declare void @llvm.memmove.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
+  declare void @llvm.memmove.p0i8.i64(ptr nocapture writeonly, i8, i64, i32, i1)
 
   define i64 @function(i64 %x, i64 %z, i64 %n) {
   entry:
     %pool = alloca [59 x i64], align 4
-    %tmp = bitcast [59 x i64]* %pool to i8*
-    call void @llvm.memmove.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    %tmp = bitcast ptr  %pool to ptr
+    call void @llvm.memmove.p0i8.i64(ptr nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
     %cmp3 = icmp eq i64 %n, 0
     %a = add i64 %x, %z
     %c = add i64 %x, %z
@@ -1626,17 +1626,17 @@ TEST(IRInstructionMapper, MemMoveIllegal) {
 // specified, and that all the intrinsics are marked differently.
 TEST(IRInstructionMapper, MemOpsLegal) {
   StringRef ModuleString = R"(
-  declare void @llvm.memmove.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
-  declare void @llvm.memcpy.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
-  declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
+  declare void @llvm.memmove.p0i8.i64(ptr nocapture writeonly, i8, i64, i32, i1)
+  declare void @llvm.memcpy.p0i8.i64(ptr nocapture writeonly, i8, i64, i32, i1)
+  declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i32, i1)
 
   define i64 @function(i64 %x, i64 %z, i64 %n) {
   entry:
     %pool = alloca [59 x i64], align 4
-    %tmp = bitcast [59 x i64]* %pool to i8*
-    call void @llvm.memmove.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
-    call void @llvm.memcpy.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
-    call void @llvm.memset.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    %tmp = bitcast ptr %pool to ptr
+    call void @llvm.memmove.p0i8.i64(ptr nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    call void @llvm.memcpy.p0i8.i64(ptr nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    call void @llvm.memset.p0i8.i64(ptr nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
     %cmp3 = icmp eq i64 %n, 0
     %a = add i64 %x, %z
     %c = add i64 %x, %z
@@ -1666,31 +1666,31 @@ TEST(IRInstructionMapper, MemOpsLegal) {
 // requires extra checking of the argument list.
 TEST(IRInstructionMapper, VarArgsIllegal) {
   StringRef ModuleString = R"(
-  declare void @llvm.va_start(i8*)
-  declare void @llvm.va_copy(i8*, i8*)
-  declare void @llvm.va_end(i8*)
+  declare void @llvm.va_start(ptr)
+  declare void @llvm.va_copy(ptr, ptr)
+  declare void @llvm.va_end(ptr)
 
-  define i32 @func1(i32 %a, double %b, i8* %v, ...) nounwind {
+  define i32 @func1(i32 %a, double %b, ptr %v, ...) nounwind {
   entry:
     %a.addr = alloca i32, align 4
     %b.addr = alloca double, align 8
-    %ap = alloca i8*, align 4
+    %ap = alloca ptr, align 4
     %c = alloca i32, align 4
-    store i32 %a, i32* %a.addr, align 4
-    store double %b, double* %b.addr, align 8
-    %ap1 = bitcast i8** %ap to i8*
-    call void @llvm.va_start(i8* %ap1)
-    store double %b, double* %b.addr, align 8
-    store double %b, double* %b.addr, align 8
-    %0 = va_arg i8** %ap, i32
-    store double %b, double* %b.addr, align 8
-    store double %b, double* %b.addr, align 8
-    call void @llvm.va_copy(i8* %v, i8* %ap1)
-    store double %b, double* %b.addr, align 8
-    store double %b, double* %b.addr, align 8
-    call void @llvm.va_end(i8* %ap1)
-    store i32 %0, i32* %c, align 4
-    %tmp = load i32, i32* %c, align 4
+    store i32 %a, ptr %a.addr, align 4
+    store double %b, ptr %b.addr, align 8
+    %ap1 = bitcast ptr %ap to ptr
+    call void @llvm.va_start(ptr %ap1)
+    store double %b, ptr %b.addr, align 8
+    store double %b, ptr %b.addr, align 8
+    %0 = va_arg ptr %ap, i32
+    store double %b, ptr %b.addr, align 8
+    store double %b, ptr %b.addr, align 8
+    call void @llvm.va_copy(ptr %v, ptr %ap1)
+    store double %b, ptr %b.addr, align 8
+    store double %b, ptr %b.addr, align 8
+    call void @llvm.va_end(ptr %ap1)
+    store i32 %0, ptr %c, align 4
+    %tmp = load i32, ptr %c, align 4
     ret i32 %tmp
   })";
   LLVMContext Context;

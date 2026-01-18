@@ -43,9 +43,12 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include <atomic>
@@ -66,10 +69,10 @@ namespace {
 #define GET_X86_COMPRESS_EVEX_TABLE
 #include "X86GenInstrMapping.inc"
 
-class CompressEVEXPass : public MachineFunctionPass {
+class CompressEVEXLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  CompressEVEXPass() : MachineFunctionPass(ID) {}
+  CompressEVEXLegacy() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return COMP_EVEX_DESC; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -82,7 +85,7 @@ public:
 
 } // end anonymous namespace
 
-char CompressEVEXPass::ID = 0;
+char CompressEVEXLegacy::ID = 0;
 
 static bool usesExtendedRegister(const MachineInstr &MI) {
   auto isHiRegIdx = [](MCRegister Reg) {
@@ -329,7 +332,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   return true;
 }
 
-bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
+static bool runOnMF(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Start X86CompressEVEXPass\n";);
 #ifndef NDEBUG
   // Make sure the tables are sorted.
@@ -355,8 +358,24 @@ bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-INITIALIZE_PASS(CompressEVEXPass, COMP_EVEX_NAME, COMP_EVEX_DESC, false, false)
+INITIALIZE_PASS(CompressEVEXLegacy, COMP_EVEX_NAME, COMP_EVEX_DESC, false,
+                false)
 
-FunctionPass *llvm::createX86CompressEVEXPass() {
-  return new CompressEVEXPass();
+FunctionPass *llvm::createX86CompressEVEXLegacyPass() {
+  return new CompressEVEXLegacy();
+}
+
+bool CompressEVEXLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runOnMF(MF);
+}
+
+PreservedAnalyses
+X86CompressEVEXPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runOnMF(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
