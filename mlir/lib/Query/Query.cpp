@@ -65,6 +65,7 @@ LogicalResult MatchQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   if (!functionName.empty()) {
     std::vector<Operation *> flattenedMatches =
         finder.flattenMatchedOps(matches);
+    rootOp->getContext()->loadDialect<func::FuncDialect>();
     func::FuncOp function = func::extractOperationsIntoFunction(
         flattenedMatches, rootOp->getContext(), functionName);
     if (failed(verify(function)))

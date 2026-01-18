@@ -322,7 +322,6 @@ func::lookupOrCreateFnDecl(OpBuilder &b, SymbolOpInterface symTable,
 func::FuncOp func::extractOperationsIntoFunction(ArrayRef<Operation *> ops,
                                                  MLIRContext *context,
                                                  StringRef functionName) {
-  context->loadDialect<func::FuncDialect>();
   OpBuilder builder(context);
 
   // Collect data for function creation.
