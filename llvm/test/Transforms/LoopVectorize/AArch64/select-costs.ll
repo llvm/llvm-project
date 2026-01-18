@@ -155,7 +155,7 @@ define void @logical_and_select_inverted(i1 %cmp, ptr %start, ptr %end) {
 ; CHECK: Cost of 1 for VF 4: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
 ; CHECK: Cost of 1 for VF 8: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
 ; CHECK: Cost of 1 for VF 16: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
-; CHECK: LV: Selecting VF: 1.
+; CHECK: LV: Selecting VF: 16.
 
 entry:
   br label %loop
@@ -187,7 +187,7 @@ define void @logical_or_select_inverted(i1 %cmp, ptr %start, ptr %end) {
 ; CHECK: Cost of 1 for VF 4: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
 ; CHECK: Cost of 1 for VF 8: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
 ; CHECK: Cost of 1 for VF 16: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
-; CHECK: LV: Selecting VF: 1.
+; CHECK: LV: Selecting VF: 16.
 
 entry:
   br label %loop

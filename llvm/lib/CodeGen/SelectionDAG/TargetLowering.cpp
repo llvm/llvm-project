@@ -8426,6 +8426,18 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     return Res;
   }
   case ISD::CLMULR:
+    // If we have CLMUL/CLMULH, merge the shifted results to form CLMULR.
+    if (isOperationLegalOrCustom(ISD::CLMUL, VT) &&
+        isOperationLegalOrCustom(ISD::CLMULH, VT)) {
+      SDValue Lo = DAG.getNode(ISD::CLMUL, DL, VT, X, Y);
+      SDValue Hi = DAG.getNode(ISD::CLMULH, DL, VT, X, Y);
+      Lo = DAG.getNode(ISD::SRL, DL, VT, Lo,
+                       DAG.getShiftAmountConstant(BW - 1, VT, DL));
+      Hi = DAG.getNode(ISD::SHL, DL, VT, Hi,
+                       DAG.getShiftAmountConstant(1, VT, DL));
+      return DAG.getNode(ISD::OR, DL, VT, Lo, Hi);
+    }
+    [[fallthrough]];
   case ISD::CLMULH: {
     EVT ExtVT = VT.changeElementType(
         *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), 2 * BW));
