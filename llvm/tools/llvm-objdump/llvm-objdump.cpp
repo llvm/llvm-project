@@ -2692,10 +2692,10 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
     Features.AddFeature("+all");
   } else if (MCPU.empty() && Obj->makeTriple().isAVR()) {
     // Assign attributes based on the AVR architecture version
-    if (const auto *ELFFile = dyn_cast<ELFObjectFileBase>(Obj)) {
-      unsigned AVRVersion = ELFFile->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK;
-      Features.AddFeature('+' + AVR::getFeatureSetForEFlag(AVRVersion));
-    }
+    const auto Elf = dyn_cast<ELFObjectFileBase>(Obj);
+    assert(Elf && "AVR object should be an ELF file");
+    unsigned AVRVersion = Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK;
+    Features.AddFeature('+' + AVR::getFeatureSetForEFlag(AVRVersion));
   }
 
   if (MCPU.empty())

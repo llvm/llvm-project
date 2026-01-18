@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a target parser to recognise AVR hardware features
+// This file implements a target parser to recognise AVR hardware features.
 //
 //===----------------------------------------------------------------------===//
 

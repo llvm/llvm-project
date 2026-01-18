@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a target parser to recognise AVR hardware features
+// This file implements a target parser to recognise AVR hardware features.
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/TargetParser/AVRTargetParser.h"
@@ -16,7 +16,7 @@
 using namespace llvm;
 
 std::string AVR::getFeatureSetForEFlag(unsigned EFlag) {
-  static std::map<unsigned, StringRef> EFlagToFeatureSet = {
+  static const std::map<unsigned, StringRef> EFlagToFeatureSet = {
       {ELF::EF_AVR_ARCH_AVR1, "avr1"},
       {ELF::EF_AVR_ARCH_AVR2, "avr2"},
       {ELF::EF_AVR_ARCH_AVR25, "avr25"},
@@ -32,14 +32,14 @@ std::string AVR::getFeatureSetForEFlag(unsigned EFlag) {
       {ELF::EF_AVR_ARCH_XMEGA2, "xmega2"},
       {ELF::EF_AVR_ARCH_XMEGA3, "xmega3"},
       {ELF::EF_AVR_ARCH_XMEGA4, "xmega4"},
-      {ELF::EF_AVR_ARCH_XMEGA5, "xmegau"},
-      {ELF::EF_AVR_ARCH_XMEGA6, "xmegau"},
-      {ELF::EF_AVR_ARCH_XMEGA7, "xmegau"},
+      {ELF::EF_AVR_ARCH_XMEGA5, "xmega"},
+      {ELF::EF_AVR_ARCH_XMEGA6, "xmega"},
+      {ELF::EF_AVR_ARCH_XMEGA7, "xmega"},
   };
 
   auto It = EFlagToFeatureSet.find(EFlag);
   if (It != EFlagToFeatureSet.end())
     return It->second.str();
 
-  return "special";
+  return "avr0";
 }
