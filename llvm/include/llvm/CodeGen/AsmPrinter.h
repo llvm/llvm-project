@@ -957,6 +957,13 @@ private:
   unsigned addInlineAsmDiagBuffer(StringRef AsmStr,
                                   const MDNode *LocMDNode) const;
 
+
+
+  /// Emit a symbol for the prefetch target associated with the given
+  /// callsite index in the given MBB.
+  void EmitPrefetchTargetSymbol(const MachineBasicBlock &MBB,
+                                     unsigned CallsiteIndex);
+
   //===------------------------------------------------------------------===//
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
