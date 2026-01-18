@@ -4484,26 +4484,24 @@ MCSymbol *AsmPrinter::GetExternalSymbolSymbol(const Twine &Sym) const {
   return OutContext.getOrCreateSymbol(NameStr);
 }
 
-/// EmitPrefetchTargetSymbol - Emit a symbol for the prefetch target associated with the given
-/// callsite index in the given MBB.
+/// EmitPrefetchTargetSymbol - Emit a symbol for the prefetch target associated
+/// with the given callsite index in the given MBB.
 void AsmPrinter::EmitPrefetchTargetSymbol(const MachineBasicBlock &MBB,
-                                     unsigned CallsiteIndex) {
+                                          unsigned CallsiteIndex) {
   const Function &F = MBB.getParent()->getFunction();
   SmallString<128> FunctionName;
   getNameWithPrefix(FunctionName, &F);
 
   MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
-          Twine("__llvm_prefetch_target_") + FunctionName + Twine("_") +
-          Twine(MBB.getBBID()->BaseID) + Twine("_") +
-          Twine(static_cast<unsigned>(CallsiteIndex)));
-      // If the function is weak-linkage it may be replaced by a strong
-      // version, in which case the prefetch targets should also be replaced.
-      OutStreamer->emitSymbolAttribute(
-          PrefetchTargetSymbol,
-          F.isWeakForLinker() ? MCSA_Weak : MCSA_Global);
-      OutStreamer->emitLabel(PrefetchTargetSymbol);
+      Twine("__llvm_prefetch_target_") + FunctionName + Twine("_") +
+      Twine(MBB.getBBID()->BaseID) + Twine("_") +
+      Twine(static_cast<unsigned>(CallsiteIndex)));
+  // If the function is weak-linkage it may be replaced by a strong
+  // version, in which case the prefetch targets should also be replaced.
+  OutStreamer->emitSymbolAttribute(
+      PrefetchTargetSymbol, F.isWeakForLinker() ? MCSA_Weak : MCSA_Global);
+  OutStreamer->emitLabel(PrefetchTargetSymbol);
 }
-
 
 /// PrintParentLoopComment - Print comments about parent loops of this one.
 static void PrintParentLoopComment(raw_ostream &OS, const MachineLoop *Loop,
