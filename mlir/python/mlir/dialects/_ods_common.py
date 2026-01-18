@@ -305,3 +305,9 @@ def _get_int_array_array_attr(
 
     # Turn the outer list into an ArrayAttr.
     return ArrayAttr.get(values)
+
+
+class OpAdaptor:
+    def __init__(self, operands, attributes) -> None:
+        self.operands = operands
+        self.attributes = attributes
