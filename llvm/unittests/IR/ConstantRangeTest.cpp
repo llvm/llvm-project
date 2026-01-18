@@ -1728,6 +1728,46 @@ TEST(ConstantRange, MakeAllowedICmpRegionEdgeCases) {
                   .isSingleElement());
   EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_UGE, UMin)
                   .isFullSet());
+
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
+                CmpPredicate(ICmpInst::ICMP_UGE, /*HasSameSign=*/true), UMin),
+            ConstantRange::getNonEmpty(APInt::getMinValue(8),
+                                       APInt::getSignedMinValue(8)));
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
+                CmpPredicate(ICmpInst::ICMP_UGT, /*HasSameSign=*/true), UMin),
+            ConstantRange::getNonEmpty(APInt::getMinValue(8) + 1,
+                                       APInt::getSignedMinValue(8)));
+}
+
+TEST(ConstantRange, MakeAllowedICmpRegionBoolean) {
+  ConstantRange One(APInt(1, 1));
+  ConstantRange Zero(APInt(1, 0));
+
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
+                  CmpPredicate(ICmpInst::ICMP_UGE, /*HasSameSign=*/false), Zero)
+                  .isFullSet());
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
+                CmpPredicate(ICmpInst::ICMP_UGE, /*HasSameSign=*/false), One),
+            One);
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
+                CmpPredicate(ICmpInst::ICMP_UGE, /*HasSameSign=*/true), Zero),
+            Zero);
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
+                CmpPredicate(ICmpInst::ICMP_UGE, /*HasSameSign=*/true), One),
+            One);
+
+  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
+                CmpPredicate(ICmpInst::ICMP_UGT, /*HasSameSign=*/false), Zero),
+            One);
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
+                  CmpPredicate(ICmpInst::ICMP_UGT, /*HasSameSign=*/false), One)
+                  .isEmptySet());
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
+                  CmpPredicate(ICmpInst::ICMP_UGT, /*HasSameSign=*/true), Zero)
+                  .isEmptySet());
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
+                  CmpPredicate(ICmpInst::ICMP_UGT, /*HasSameSign=*/true), One)
+                  .isEmptySet());
 }
 
 TEST(ConstantRange, MakeExactICmpRegion) {

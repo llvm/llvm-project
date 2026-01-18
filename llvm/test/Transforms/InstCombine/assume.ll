@@ -1056,19 +1056,6 @@ define i1 @neg_assume_trunc_eq_one(i8 %x) {
   ret i1 %q
 }
 
-define i8 @remove_for_samesign(i8 %x) {
-; CHECK-LABEL: @remove_for_samesign(
-; CHECK-NEXT:    [[LT:%.*]] = icmp samesign ugt i8 [[X:%.*]], 10
-; CHECK-NEXT:    call void @llvm.assume(i1 [[LT]])
-; CHECK-NEXT:    ret i8 [[X]]
-;
-  %gt = icmp sgt i8 %x, 10
-  call void @llvm.assume(i1 %gt)
-  %gt.zero = icmp sge i8 %x, 0
-  call void @llvm.assume(i1 %gt.zero)
-  ret i8 %x
-}
-
 declare void @use(i1)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

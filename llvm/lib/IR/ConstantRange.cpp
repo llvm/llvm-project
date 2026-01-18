@@ -142,8 +142,11 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
     APInt UMin(CR.getUnsignedMin());
     if (UMin.isMaxValue())
       return getEmpty(W);
-    if (Pred.hasSameSign() && CR.isAllNonNegative())
+    if (Pred.hasSameSign() && CR.isAllNonNegative()) {
+      if (W == 1)
+        return ConstantRange::getEmpty(W);
       return ConstantRange(std::move(UMin) + 1, APInt::getSignedMinValue(W));
+    }
     return ConstantRange(std::move(UMin) + 1, APInt::getZero(W));
   }
   case CmpInst::ICMP_SGT: {
