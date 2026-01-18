@@ -186,6 +186,10 @@ def FeatureCnMipsP : SubtargetFeature<"cnmipsp", "HasCnMipsP",
                                       "true", "Octeon+ cnMIPS Support",
                                       [FeatureCnMips]>;
 
+def FeatureR5900 : SubtargetFeature<"r5900", "IsR5900", "true",
+                                    "R5900 (PS2 Emotion Engine) Support",
+                                    [FeatureMips3, FeatureSoftFloat]>;
+
 def FeatureUseTCCInDIV : SubtargetFeature<
                                "use-tcc-in-div",
                                "UseTCCInDIV", "false",
@@ -296,6 +300,7 @@ def : Proc<"mips64r6", [FeatureMips64r6]>;
 def : Proc<"octeon", [FeatureMips64r2, FeatureCnMips]>;
 def : Proc<"octeon+", [FeatureMips64r2, FeatureCnMips, FeatureCnMipsP]>;
 def : ProcessorModel<"p5600", MipsP5600Model, [ImplP5600]>;
+def : Proc<"r5900", [FeatureR5900]>;
 def : ProcessorModel<"i6400", MipsI6400Model, [ImplI6400]>;
 def : ProcessorModel<"i6500", MipsI6400Model, [ImplI6500]>;
 
