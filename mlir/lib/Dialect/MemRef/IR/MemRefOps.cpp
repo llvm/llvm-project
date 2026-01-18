@@ -1716,16 +1716,13 @@ OpFoldResult LoadOp::fold(FoldAdaptor adaptor) {
       getGlobalOp, getGlobalOp.getNameAttr());
   if (!global)
     return {};
-  // Check if the global memref is a constant.
-  auto cstAttr =
-      dyn_cast_or_null<DenseElementsAttr>(global.getConstantInitValue());
-  if (!cstAttr)
-    return {};
   // If it's a splat constant, we can fold irrespective of indices.
-  if (auto splatAttr = dyn_cast<SplatElementsAttr>(cstAttr))
-    return splatAttr.getSplatValue<Attribute>();
+  auto splatAttr =
+      dyn_cast_or_null<SplatElementsAttr>(global.getConstantInitValue());
+  if (!splatAttr)
+    return {};
 
-  return OpFoldResult();
+  return splatAttr.getSplatValue<Attribute>();
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
