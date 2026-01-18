@@ -189,7 +189,7 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     for (const EnumConstantDecl *ECD : Enum->enumerators()) {
-      if (ECD->getInitExpr() == nullptr && ECD->getDeclName()) {
+      if (ECD->getInitExpr() == nullptr) {
         diag(ECD->getLocation(), "uninitialized enumerator '%0' defined here",
              DiagnosticIDs::Note)
             << ECD->getName();
