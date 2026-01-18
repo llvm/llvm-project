@@ -1,0 +1,227 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_ARM
+  Flags:           [ EF_ARM_EABI_VER5 ]
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            __llvm_covfun
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        _Z4funcii
+        FuncHash:        0x83C88F515FCF34F8
+        FilenamesRef:    0x433778095298742
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 9 } ]
+          - [ { Ref: 9 }, { Ref: 10 } ]
+          - [ { Ref: 7 }, { Ref: 8 } ]
+          - [ { Ref: 5 }, { Ref: 6 } ]
+          - [ { Ref: 3 }, { Ref: 4 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+          - [ { Ref: 0 }, { Ref: 19 } ]
+          - [ { Ref: 19 }, { Ref: 20 } ]
+          - [ { Ref: 17 }, { Ref: 18 } ]
+          - [ { Ref: 15 }, { Ref: 16 } ]
+          - [ { Ref: 13 }, { Ref: 14 } ]
+          - [ { Ref: 11 }, { Ref: 12 } ]
+          - [ { Ref: 0 }, { Ref: 31 } ]
+          - [ { Ref: 31 }, { Ref: 32 } ]
+          - [ { Ref: 29 }, { Ref: 33 } ]
+          - [ { Ref: 33 }, { Ref: 34 } ]
+          - [ { Ref: 27 }, { Ref: 35 } ]
+          - [ { Ref: 35 }, { Ref: 36 } ]
+          - [ { Ref: 25 }, { Ref: 37 } ]
+          - [ { Ref: 37 }, { Ref: 38 } ]
+          - [ { Ref: 23 }, { Ref: 39 } ]
+          - [ { Ref: 39 }, { Ref: 40 } ]
+          - [ { Ref: 21 }, { Ref: 41 } ]
+          - [ { Ref: 41 }, { Ref: 42 } ]
+          - [ { Ref: 0 }, { Ref: 53 } ]
+          - [ { Ref: 53 }, { Ref: 54 } ]
+          - [ { Ref: 51 }, { Ref: 55 } ]
+          - [ { Ref: 55 }, { Ref: 56 } ]
+          - [ { Ref: 49 }, { Ref: 57 } ]
+          - [ { Ref: 57 }, { Ref: 58 } ]
+          - [ { Ref: 47 }, { Ref: 59 } ]
+          - [ { Ref: 59 }, { Ref: 60 } ]
+          - [ { Ref: 45 }, { Ref: 61 } ]
+          - [ { Ref: 61 }, { Ref: 62 } ]
+          - [ { Ref: 43 }, { Ref: 63 } ]
+          - [ { Ref: 63 }, { Ref: 64 } ]
+          - [ { Ref: 0 }, { Ref: 65 } ]
+          - [ { Ref: 0 }, { Ref: 65 } ]
+          - [ { Ref: 0 }, { Ref: 65 } ]
+          - [ { Ref: 0 }, { Ref: 66 } ]
+          - [ { Ref: 0 }, { Ref: 66 } ]
+          - [ { Ref: 0 }, { Ref: 66 } ]
+          - [ { Ref: 0 }, { Ref: 67 } ]
+          - [ { Ref: 0 }, { Ref: 67 } ]
+          - [ { Ref: 0 }, { Ref: 67 } ]
+          - [ { Ref: 0 }, { Ref: 68 } ]
+          - [ { Ref: 0 }, { Ref: 68 } ]
+          - [ { Ref: 0 }, { Ref: 68 } ]
+        Files:
+          - Index:           0
+            Filename:        '/tmp/branch-logical-mixed.cpp'
+            Regions:
+              - { dLoc: [ 8, 25, 67, 2 ], Ref: 0 }
+              - { dLoc: [ 8, 12, 0, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 1, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 2, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 3, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 4, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Ref: 9 }, { Sub: 0 } ] }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 9 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Ref: 10 }, { Sub: 1 } ] }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 7 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Ref: 8 }, { Sub: 2 } ] }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 5 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Ref: 6 }, { Sub: 3 } ] }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 3 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Ref: 4 }, { Sub: 4 } ] }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 1 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Ref: 2 }, { Sub: 5 } ] }
+              - { dLoc: [ 2, 12, 0, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 1, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 2, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 3, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 4, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Sub: 6 }, { Ref: 19 } ] }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 19 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Sub: 7 }, { Ref: 20 } ] }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 17 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Sub: 8 }, { Ref: 18 } ] }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 15 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Sub: 9 }, { Ref: 16 } ] }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 13 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Sub: 10 }, { Ref: 14 } ] }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 11 }
+              - { dLoc: [ 0, 12, 0, 14 ], Branch: [ { Sub: 11 }, { Ref: 12 } ] }
+              - { dLoc: [ 2, 12, 1, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 3, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 5, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 7, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 9, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 0 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 31 }, { Sub: 12 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 31 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 32 }, { Sub: 13 } ] }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 29 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 29 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 33 }, { Sub: 14 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 33 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 34 }, { Sub: 15 } ] }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 27 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 27 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 35 }, { Sub: 16 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 35 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 36 }, { Sub: 17 } ] }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 25 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 25 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 37 }, { Sub: 18 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 37 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 38 }, { Sub: 19 } ] }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 23 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 23 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 39 }, { Sub: 20 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 39 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 40 }, { Sub: 21 } ] }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 21 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 21 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 41 }, { Sub: 22 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 41 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Ref: 42 }, { Sub: 23 } ] }
+              - { dLoc: [ 2, 12, 1, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 3, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 5, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 7, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 9, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 0 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 24 }, { Ref: 53 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 53 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 25 }, { Ref: 54 } ] }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 51 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 51 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 26 }, { Ref: 55 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 55 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 27 }, { Ref: 56 } ] }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 49 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 49 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 28 }, { Ref: 57 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 57 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 29 }, { Ref: 58 } ] }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 47 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 47 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 30 }, { Ref: 59 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 59 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 31 }, { Ref: 60 } ] }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 45 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 45 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 32 }, { Ref: 61 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 61 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 33 }, { Ref: 62 } ] }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 43 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 43 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 34 }, { Ref: 63 } ] }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 63 }
+              - { dLoc: [ 0, 13, 0, 15 ], Branch: [ { Sub: 35 }, { Ref: 64 } ] }
+              - { dLoc: [ 2, 7, 0, 8 ], Ref: 0 }
+              - { dLoc: [ 0, 7, 0, 8 ], Branch: [ { Ref: 65 }, { Sub: 38 } ] }
+              - { dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 65 }
+              - { dLoc: [ 1, 5, 0, 22 ], Ref: 65 }
+              - { dLoc: [ 0, 23, 2, 5 ], isGap: true, Sub: 38 }
+              - { dLoc: [ 2, 5, 0, 22 ], Sub: 38 }
+              - { dLoc: [ 2, 7, 0, 8 ], Ref: 0 }
+              - { dLoc: [ 0, 7, 0, 8 ], Branch: [ { Ref: 66 }, { Sub: 41 } ] }
+              - { dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 66 }
+              - { dLoc: [ 1, 5, 0, 22 ], Ref: 66 }
+              - { dLoc: [ 0, 23, 2, 5 ], isGap: true, Sub: 41 }
+              - { dLoc: [ 2, 5, 0, 22 ], Sub: 41 }
+              - { dLoc: [ 2, 7, 0, 8 ], Ref: 0 }
+              - { dLoc: [ 0, 7, 0, 8 ], Branch: [ { Ref: 67 }, { Sub: 44 } ] }
+              - { dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 67 }
+              - { dLoc: [ 1, 5, 0, 22 ], Ref: 67 }
+              - { dLoc: [ 0, 23, 2, 5 ], isGap: true, Sub: 44 }
+              - { dLoc: [ 2, 5, 0, 22 ], Sub: 44 }
+              - { dLoc: [ 2, 7, 0, 8 ], Ref: 0 }
+              - { dLoc: [ 0, 7, 0, 8 ], Branch: [ { Ref: 68 }, { Sub: 47 } ] }
+              - { dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 68 }
+              - { dLoc: [ 1, 5, 0, 22 ], Ref: 68 }
+              - { dLoc: [ 0, 23, 2, 5 ], isGap: true, Sub: 47 }
+              - { dLoc: [ 2, 5, 0, 22 ], Sub: 47 }
+  - Name:            '__llvm_covfun (1)'
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        main
+        FuncHash:        0x18
+        FilenamesRef:    0x433778095298742
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        '/tmp/branch-logical-mixed.cpp'
+            Regions:
+              - { dLoc: [ 79, 1, 4, 2 ], Ref: 0 }
+  - Name:            __llvm_covmap
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x8
+    CovMap:
+      - FilenamesRef:    0x433778095298742
+        Version:         3
+  - Name:            __llvm_prf_names
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    PrfNames:
+      - - _Z4funcii
+        - main
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            __llvm_covfun
+      - Name:            '__llvm_covfun (1)'
+      - Name:            __llvm_covmap
+      - Name:            __llvm_prf_names
+...
