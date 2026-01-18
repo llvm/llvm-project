@@ -1958,11 +1958,12 @@ fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
 
   return fastParseASCIIIdentifierScalar(CurPtr);
 }
-
 #endif
 
 #ifndef __SSE4_2__
+#if LLVM_SUPPORTS_RUNTIME_SSE42_CHECK
 LLVM_TARGET_DEFAULT
+#endif
 static const char *fastParseASCIIIdentifier(const char *CurPtr, const char *) {
   return fastParseASCIIIdentifierScalar(CurPtr);
 }
