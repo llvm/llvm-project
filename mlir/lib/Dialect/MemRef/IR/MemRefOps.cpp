@@ -1705,6 +1705,26 @@ OpFoldResult LoadOp::fold(FoldAdaptor adaptor) {
   /// load(memrefcast) -> load
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
+
+  // Fold load from a global constant memref.
+  auto getGlobalOp = getMemref().getDefiningOp<memref::GetGlobalOp>();
+  if (!getGlobalOp)
+    return {};
+
+  // Get to the memref.global defining the symbol.
+  auto global = SymbolTable::lookupNearestSymbolFrom<memref::GlobalOp>(
+      getGlobalOp, getGlobalOp.getNameAttr());
+  if (!global)
+    return {};
+  // Check if the global memref is a constant.
+  auto cstAttr =
+      dyn_cast_or_null<DenseElementsAttr>(global.getConstantInitValue());
+  if (!cstAttr)
+    return {};
+  // If it's a splat constant, we can fold irrespective of indices.
+  if (auto splatAttr = dyn_cast<SplatElementsAttr>(cstAttr))
+    return splatAttr.getSplatValue<Attribute>();
+
   return OpFoldResult();
 }
 
