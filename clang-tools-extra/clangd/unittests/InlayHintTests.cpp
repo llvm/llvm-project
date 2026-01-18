@@ -1971,11 +1971,46 @@ TEST(ParameterHints, CXX20AggregateParenInitNoCtor) {
     struct Point {
       int& x;
       int y;
+      int z;
     };
 
     int foo() {
       int t = 42;
       make_unique<Point>($px[[t]], $py[[2]]);
+    }
+  )cpp",
+      ExpectedHint{"&.x: ", "px"}, ExpectedHint{".y: ", "py"});
+}
+
+TEST(ParameterHints, CXX20AggregateParenInitNoCtorDerived) {
+  assertParameterHints(
+      R"cpp(
+    namespace std { 
+      // This prototype of std::forward is sufficient for clang to recognize it
+      template <typename T> T&& forward(T&);
+    }
+      
+    template<typename T, typename ...Args>
+    T* make_unique(Args&&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+
+    struct Col {
+      uint8_t r {};
+      uint8_t g {};
+      uint8_t b {};
+    };
+
+    struct Point : public Col {
+      int& x;
+      int y;
+      int z;
+    };
+
+    int foo() {
+      Col c {};
+      int t = 42;
+      make_unique<Point>(c, $px[[t]], $py[[2]]);
     }
   )cpp",
       ExpectedHint{"&.x: ", "px"}, ExpectedHint{".y: ", "py"});

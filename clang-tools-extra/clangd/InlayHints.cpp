@@ -777,7 +777,7 @@ private:
     // Resolve parameter packs to their forwarded parameter
     SmallVector<const ParmVarDecl *> ForwardedParamsStorage;
     // If args are direct-initialized
-    SmallVector<const FieldDecl *> CXXRecordDeclFields{};
+    const CXXRecordDecl *CxxRecord{};
 
     if (Callee.Decl) {
       Params = maybeDropCxxExplicitObjectParameters(Callee.Decl->parameters());
@@ -788,8 +788,8 @@ private:
           ForwardedParamsStorage =
               std::get<decltype(ForwardedParamsStorage)>(Params);
         }
-        if (std::holds_alternative<decltype(CXXRecordDeclFields)>(Params)) {
-          CXXRecordDeclFields = std::get<decltype(CXXRecordDeclFields)>(Params);
+        if (std::holds_alternative<decltype(CxxRecord)>(Params)) {
+          CxxRecord = std::get<decltype(CxxRecord)>(Params);
         }
       }();
 
@@ -802,16 +802,17 @@ private:
 
     NameVec ParameterNames = chooseParameterNames(ForwardedParams);
 
-    if (!CXXRecordDeclFields.empty()) {
-      ParameterNames.clear();
-      for (size_t I = 0; I < Args.size(); ++I) {
-        const auto &Field = CXXRecordDeclFields[I];
+    if (CxxRecord) {
+      const auto ParamArgs = Args.drop_front(CxxRecord->getNumBases());
+      const auto Iter = llvm::zip(ParamArgs, CxxRecord->fields());
 
-        addInlayHint(Args[I]->getSourceRange(), HintSide::Left,
+      for (const auto &[ParamArg, Field] : Iter) {
+        addInlayHint(ParamArg->getSourceRange(), HintSide::Left,
                      InlayHintKind::Parameter,
                      Field->getType()->isReferenceType() ? "&." : ".",
                      Field->getName(), ": ");
       }
+
       return;
     }
 

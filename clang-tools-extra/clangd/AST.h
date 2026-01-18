@@ -17,6 +17,7 @@
 #include "index/Symbol.h"
 #include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
@@ -244,7 +245,7 @@ bool isDeeplyNested(const Decl *D, unsigned MaxDepth = 10);
 /// parameters to another function via variadic template parameters. This can
 /// for example be used to retrieve the constructor parameter ParmVarDecl for a
 /// make_unique or emplace_back call.
-std::variant<SmallVector<const ParmVarDecl *>, SmallVector<const FieldDecl *>>
+std::variant<SmallVector<const ParmVarDecl *>, const CXXRecordDecl *>
 resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
 
 /// Checks whether D is instantiated from a function parameter pack

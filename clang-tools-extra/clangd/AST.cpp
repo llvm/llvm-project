@@ -826,10 +826,7 @@ public:
   }
 
   bool VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
-    auto *const Record = E->getType()->getAsCXXRecordDecl();
-    if (Record)
-      handleAggregateInit(Record, E->getInitExprs());
-
+    RecordInfo = E->getType()->getAsCXXRecordDecl();
     return true;
   }
 
@@ -864,10 +861,9 @@ public:
     std::optional<FunctionDecl *> PackTarget;
   };
 
-  SmallVector<const FieldDecl *> AggregateInitFields {};
-
   // The output of this visitor
   std::optional<ForwardingInfo> Info;
+  const CXXRecordDecl *RecordInfo{};
 
 private:
   // inspects the given callee with the given args to check whether it
@@ -905,16 +901,6 @@ private:
     ForwardingInfo FI;
     FI.Head = MatchingParams;
     Info = FI;
-  }
-
-  void handleAggregateInit(const CXXRecordDecl *Record,
-                           const ArrayRef<Expr *> InitExprs) {
-    // FIXME: Handle base classes
-    if (Record->getNumFields() == InitExprs.size()) {
-      for (const auto *Field : Record->fields()) {
-        AggregateInitFields.emplace_back(Field);
-      }
-    }
   }
 
   // Returns the beginning of the expanded pack represented by Parameters
@@ -998,7 +984,7 @@ private:
 
 } // namespace
 
-std::variant<SmallVector<const ParmVarDecl *>, SmallVector<const FieldDecl *>>
+std::variant<SmallVector<const ParmVarDecl *>, const CXXRecordDecl *>
 resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
   auto Parameters = D->parameters();
   // If the function has a template parameter pack
@@ -1029,9 +1015,8 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
       V.TraverseStmt(CurrentFunction->getBody());
 
       // if fields are direct-initialized, then no more forwarding
-      if (!V.AggregateInitFields.empty()) {
-        return V.AggregateInitFields;
-      }
+      if (V.RecordInfo)
+        return V.RecordInfo;
 
       if (!V.Info) {
         break;
