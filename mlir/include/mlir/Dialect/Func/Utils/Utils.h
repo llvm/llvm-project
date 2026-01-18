@@ -90,8 +90,11 @@ lookupOrCreateFnDecl(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
 /// the operations become function return values. Unused function arguments
 /// are automatically removed.
 ///
-/// Note: Operations with regions containing compute payloads are cloned but
-/// the region contents may not be properly handled in all cases.
+/// Note: When cloning operations with regions, values captured from outside
+/// the slice and used within region bodies are not remapped to the
+/// corresponding function arguments. This function works correctly only when
+/// operations with regions don't capture external values, or when the entire
+/// defining operation is also included in the slice.
 FuncOp extractOperationsIntoFunction(ArrayRef<Operation *> ops,
                                      MLIRContext *context,
                                      StringRef functionName);
