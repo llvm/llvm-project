@@ -8362,9 +8362,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
-    VPlanTransforms::createPartialReductions(*Plan, Range, &TTI, CM.CostKind);
     VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
                           OrigLoop);
+    VPlanTransforms::runPass(VPlanTransforms::createPartialReductions, *Plan,
+                             CostCtx, Range);
     VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
                              CostCtx, Range);
   }
