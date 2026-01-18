@@ -29,6 +29,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CFGDiff.h"
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/raw_ostream.h"
@@ -36,6 +37,7 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
+#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -290,8 +292,7 @@ protected:
   // Dominators always have a single root, postdominators can have more.
   SmallVector<NodeT *, IsPostDom ? 4 : 1> Roots;
 
-  using DomTreeNodeStorageTy =
-      SmallVector<std::unique_ptr<DomTreeNodeBase<NodeT>>>;
+  using DomTreeNodeStorageTy = SmallVector<DomTreeNodeBase<NodeT> *>;
   DomTreeNodeStorageTy DomTreeNodes;
   // For graphs where blocks don't have numbers, create a numbering here.
   // TODO: use an empty struct with [[no_unique_address]] in C++20.
@@ -300,6 +301,15 @@ protected:
       NodeNumberMap;
   DomTreeNodeBase<NodeT> *RootNode = nullptr;
   ParentPtr Parent = nullptr;
+
+  // Use small slab size to reduce memory waste for modules with many small
+  // functions. Compensate with a short GrowthDelay. This is relevant for
+  // ThinLTO on modules with many functions (not uncommon in C++), where all
+  // dominator trees are live at the same time.
+  static constexpr size_t SlabSize = 8 * sizeof(DomTreeNodeBase<NodeT>);
+  BumpPtrAllocatorImpl<MallocAllocator, SlabSize, /*SizeThreshold=*/SlabSize,
+                       /*GrowthDelay=*/2>
+      NodeAllocator;
 
   mutable bool DFSInfoValid = false;
   mutable unsigned int SlowQueries = 0;
@@ -414,7 +424,7 @@ public:
     assert((!BB || Parent == NodeTrait::getParent(const_cast<NodeT *>(BB))) &&
            "cannot get DomTreeNode of block with different parent");
     if (auto Idx = getNodeIndex(BB); Idx && *Idx < DomTreeNodes.size())
-      return DomTreeNodes[*Idx].get();
+      return DomTreeNodes[*Idx];
     return nullptr;
   }
 
@@ -750,7 +760,7 @@ public:
     std::optional<unsigned> IdxOpt = getNodeIndex(BB);
     assert(IdxOpt && DomTreeNodes[*IdxOpt] &&
            "Removing node that isn't in dominator tree.");
-    DomTreeNodeBase<NodeT> *Node = DomTreeNodes[*IdxOpt].get();
+    DomTreeNodeBase<NodeT> *Node = DomTreeNodes[*IdxOpt];
     assert(Node->isLeaf() && "Node is not a leaf node.");
 
     DFSInfoValid = false;
@@ -919,6 +929,7 @@ public:
     RootNode = nullptr;
     Parent = nullptr;
     DFSInfoValid = false;
+    NodeAllocator.Reset();
     SlowQueries = 0;
   }
 
@@ -927,13 +938,13 @@ protected:
 
   DomTreeNodeBase<NodeT> *createNode(NodeT *BB,
                                      DomTreeNodeBase<NodeT> *IDom = nullptr) {
-    auto Node = std::make_unique<DomTreeNodeBase<NodeT>>(BB, IDom);
-    auto *NodePtr = Node.get();
+    static_assert(std::is_trivially_destructible_v<DomTreeNodeBase<NodeT>>);
+    auto *Node = new (NodeAllocator) DomTreeNodeBase<NodeT>(BB, IDom);
     unsigned NodeIdx = getNodeIndexForInsert(BB);
-    DomTreeNodes[NodeIdx] = std::move(Node);
+    DomTreeNodes[NodeIdx] = Node;
     if (IDom)
-      IDom->addChild(NodePtr);
-    return NodePtr;
+      IDom->addChild(Node);
+    return Node;
   }
 
   // NewBB is split and now it has one successor. Update dominator tree to
