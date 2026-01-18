@@ -5012,10 +5012,18 @@ the configuration (without a prefix: ``Auto``).
 .. _KeepFormFeed:
 
 **KeepFormFeed** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <KeepFormFeed>`
-  Keep the form feed character if it's immediately preceded and followed by
-  a newline. Multiple form feeds and newlines within a whitespace range are
-  replaced with a single newline and form feed followed by the remaining
-  newlines.
+  Keep the form feed character (``\f``) if it's immediately preceded and
+  followed by a newline. Multiple form feeds and newlines within a
+  whitespace range are replaced with a single newline and form feed
+  followed by the remaining newlines.
+
+  .. code-block:: c++
+
+    false:          true:
+
+    "int i;\n"      "int i;\n"
+    "\n"            "\f\n"
+    "void f();"     "void f();"
 
 .. _LambdaBodyIndentation:
 
