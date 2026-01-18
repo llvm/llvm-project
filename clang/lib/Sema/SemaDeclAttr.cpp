@@ -2979,6 +2979,10 @@ static void handleSentinelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                                    : Ty->castAs<BlockPointerType>()
                                          ->getPointeeType()
                                          ->castAs<FunctionType>();
+      if (isa<FunctionNoProtoType>(FT)) {
+        S.Diag(AL.getLoc(), diag::warn_attribute_sentinel_named_arguments);
+        return;
+      }
       if (!cast<FunctionProtoType>(FT)->isVariadic()) {
         int m = Ty->isFunctionPointerType() ? 0 : 1;
         S.Diag(AL.getLoc(), diag::warn_attribute_sentinel_not_variadic) << m;

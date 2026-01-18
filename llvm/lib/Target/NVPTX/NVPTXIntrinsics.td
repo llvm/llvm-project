@@ -340,7 +340,7 @@ multiclass REDUX_SYNC_F<string BinOp, string abs, string NaN> {
                   (ins B32:$src, B32:$mask),
                   "redux.sync." # BinOp # abs # NaN # ".f32",
                   [(set f32:$dst, (!cast<Intrinsic>(intr_name) f32:$src, B32:$mask))]>,
-                  Requires<[hasPTX<86>, hasSM100a]>; 
+                  Requires<[callSubtarget<"hasReduxSyncF32">]>;
 }
 
 defm REDUX_SYNC_FMIN : REDUX_SYNC_F<"min", "", "">;
@@ -2072,7 +2072,7 @@ let Predicates = [hasPTX<81>, hasSM<80>] in {
   def : Pat<(int_nvvm_ff2bf16x2_rz_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRZ)>;
   def : Pat<(int_nvvm_ff2bf16x2_rz_relu_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRZ_RELU)>;
 }
-let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
+let Predicates = [callSubtarget<"hasConvertWithStochasticRounding">] in {
 def : Pat<(int_nvvm_ff2bf16x2_rs f32:$a, f32:$b, i32:$c),
           (CVT_bf16x2_f32_rs $a, $b, $c, CvtRS)>;
 def : Pat<(int_nvvm_ff2bf16x2_rs_relu f32:$a, f32:$b, i32:$c),
@@ -2094,7 +2094,7 @@ let Predicates = [hasPTX<81>, hasSM<80>] in {
   def : Pat<(int_nvvm_ff2f16x2_rz_relu_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRZ_RELU)>;
 }
 
-let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
+let Predicates = [callSubtarget<"hasConvertWithStochasticRounding">] in {
 def : Pat<(int_nvvm_ff2f16x2_rs f32:$a, f32:$b, i32:$c),
           (CVT_f16x2_f32_rs $a, $b, $c, CvtRS)>;
 def : Pat<(int_nvvm_ff2f16x2_rs_relu f32:$a, f32:$b, i32:$c),
@@ -2291,7 +2291,7 @@ multiclass CVT_F32X4_TO_FPX4_RS_SF_VEC<string FPName, VTVec RetTy> {
 }
 
 // RS rounding mode conversions
-let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
+let Predicates = [callSubtarget<"hasConvertWithStochasticRounding">] in {
 // FP8x4 conversions
 defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e4m3", v4i8>;
 defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e5m2", v4i8>;
@@ -4856,13 +4856,17 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "
   // longer the case, we can concat all per-fragment predicates to enforce that
   // all fragments of the instruction are viable.
   list<Predicate> Predicates = !cond(
+    !and(!eq(op, "mma.sp.block_scale"),
+        !eq(kind, "mxf4nvf4"),
+        !eq(kind, "mxf4")) : [callSubtarget<"hasMMASparseBlockScaleF4">],
+
     !or(!eq(op, "mma.block_scale"),
-        !eq(op, "mma.sp.block_scale")) : [hasSM120a, hasPTX<88>],
+        !eq(op, "mma.sp.block_scale")) : [callSubtarget<"hasMMABlockScale">],
 
     !or(!eq(ptx_elt_type, "e3m2"),
         !eq(ptx_elt_type, "e2m3"),
         !eq(ptx_elt_type, "e2m1"),
-        !ne(kind, "")) : [hasSM120a, hasPTX<87>],
+        !ne(kind, "")) : [callSubtarget<"hasMMABlockScale">],
 
     !and(!or(!eq(ptx_elt_type,"e4m3"),
              !eq(ptx_elt_type,"e5m2")),
@@ -4949,30 +4953,30 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "
 
     !and(!eq(op, "ldmatrix"),
          !eq(ptx_elt_type, "b8"),
-         !eq(geom, "m16n16")) : [hasSM<100>, hasArchAccelFeatures, hasPTX<86>],
+         !eq(geom, "m16n16")) : [callSubtarget<"hasLdStmatrixBlackwellSupport">],
 
     !and(!eq(op, "ldmatrix"),
          !eq(ptx_elt_type, "b8x16.b6x16_p32"),
-         !eq(geom, "m16n16")) : [hasSM<100>, hasArchAccelFeatures, hasPTX<86>],
+         !eq(geom, "m16n16")) : [callSubtarget<"hasLdStmatrixBlackwellSupport">],
 
     !and(!eq(op, "ldmatrix"),
          !eq(ptx_elt_type, "b8x16.b4x16_p64"),
-         !eq(geom, "m16n16")) : [hasSM<100>, hasArchAccelFeatures, hasPTX<86>],
+         !eq(geom, "m16n16")) : [callSubtarget<"hasLdStmatrixBlackwellSupport">],
 
     !and(!eq(op, "ldmatrix"),
          !eq(ptx_elt_type, "b8x16.b6x16_p32"),
-         !eq(geom, "m8n16")) : [hasSM<100>, hasArchAccelFeatures, hasPTX<86>],
+         !eq(geom, "m8n16")) : [callSubtarget<"hasLdStmatrixBlackwellSupport">],
 
     !and(!eq(op, "ldmatrix"),
          !eq(ptx_elt_type, "b8x16.b4x16_p64"),
-         !eq(geom, "m8n16")) : [hasSM<100>, hasArchAccelFeatures, hasPTX<86>],
+         !eq(geom, "m8n16")) : [callSubtarget<"hasLdStmatrixBlackwellSupport">],
 
     !and(!eq(op, "stmatrix"),!eq(ptx_elt_type, "b16"),
          !eq(geom, "m8n8")) : [hasSM<90>, hasPTX<78>],
 
     !and(!eq(op, "stmatrix"),
          !eq(ptx_elt_type, "b8"),
-         !eq(geom, "m16n8")) : [hasSM<100>, hasArchAccelFeatures, hasPTX<86>]);
+         !eq(geom, "m16n8")) : [callSubtarget<"hasLdStmatrixBlackwellSupport">]);
 
   // template DAGs for instruction inputs/output.
   dag Outs = !dag(outs, ptx_regs, reg_names);
@@ -5537,7 +5541,7 @@ multiclass SET_MAXNREG<string Action, Intrinsic Intr> {
   def : BasicNVPTXInst<(outs), (ins i32imm:$reg_count),
           "setmaxnreg." # Action # ".sync.aligned.u32",
           [(Intr timm:$reg_count)]>,
-    Requires<[hasArchAccelFeatures, hasSM<90>, hasPTX<80>]>;
+    Requires<[callSubtarget<"hasSetMaxNRegSupport">]>;
 }
 
 defm INT_SET_MAXNREG_INC : SET_MAXNREG<"inc", int_nvvm_setmaxnreg_inc_sync_aligned_u32>;
@@ -5742,7 +5746,7 @@ class TCGEN05_ST_INST<string Shape, int Num, bit Unpack> :
                   # ";";
 }
 
-let isConvergent = true in {
+let isConvergent = true, Predicates = [callSubtarget<"hasTcgen05InstSupport">] in {
 
 foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
   foreach num = !range(0, 8) in {
@@ -5789,7 +5793,7 @@ def CLUSTERLAUNCHCONTRL_TRY_CANCEL_MULTICAST:
                 "clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes" #
                 ".multicast::cluster::all.b128",
                 [(int_nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared addr:$addr, addr:$mbar)]>,
-      Requires<[hasSM<100>, hasArchAccelFeatures, hasPTX<86>]>;
+      Requires<[callSubtarget<"hasClusterLaunchControlTryCancelMulticastSupport">]>;
 
 def SDTClusterLaunchControlQueryCancelIsCanceled: SDTypeProfile<1, 2, []>;
 def clusterlaunchcontrol_query_cancel_is_canceled:
@@ -5834,10 +5838,14 @@ foreach dim = ["x", "y", "z"] in {
 
 class Tcgen05MMAInst<bit Sp, string KindStr, string ASpace,
                      int CtaGroup, string CollectorUsage,
-                     bit ScaleInputD, bit AShift,
-                     list<Predicate> PTXPredicates> :
-         NVPTXInst<(outs), (ins), "?", []>,
-         Requires<PTXPredicates> {
+                     bit ScaleInputD, bit AShift> :
+         NVPTXInst<(outs), (ins), "?", []>, Requires<[]> {
+
+  let Predicates = !cond(
+    !eq(ScaleInputD, 1) : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
+    !eq(KindStr, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
+    true : [callSubtarget<"hasTcgen05InstSupport">]
+  );
 
   Intrinsic Intrin = !cast<Intrinsic>(
                         NVVM_TCGEN05_MMA<Sp, ASpace, AShift, ScaleInputD>.record_name
@@ -5914,10 +5922,7 @@ foreach sp = [0, 1] in {
             foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
 
               def : Tcgen05MMAInst<sp, kind, space, cta_group, collector_usage,
-                                    scale_input_d, ashift,
-                                    !if(!eq(scale_input_d, 1),
-                                            [hasTcgen05MMAScaleInputDImm],
-                                            [hasTcgen05Instructions])>;
+                                    scale_input_d, ashift>;
             }
           }
         }
@@ -5957,10 +5962,15 @@ class Tcgen05MMADisableOutputLaneSDNode<bit Sp, string ASpace,
 
 class Tcgen05MMADisableOutputLaneInst<bit Sp, string ASpace,
                      string Kind, int CtaGroup, string CollectorUsageStr,
-                     bit ScaleInputD, bit AShift,
-                     list<Predicate> PTXPredicates> :
+                     bit ScaleInputD, bit AShift> :
          NVPTXInst<(outs), (ins), "?", []>,
-         Requires<PTXPredicates> {
+         Requires<[]> {
+
+  let Predicates = !cond(
+    !eq(ScaleInputD, 1) : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
+    !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
+    true : [callSubtarget<"hasTcgen05InstSupport">]
+  );
 
   SDNode Opcode = Tcgen05MMADisableOutputLaneSDNode<Sp, ASpace, CtaGroup,
                                                     ScaleInputD, AShift>;
@@ -6063,10 +6073,7 @@ foreach sp = [0, 1] in {
               def :
                 Tcgen05MMADisableOutputLaneInst<sp, space, kind, cta_group,
                                                collector_usage, scale_input_d,
-                                               ashift,
-                                               !if(!eq(scale_input_d, 1),
-                                                    [hasTcgen05MMAScaleInputDImm],
-                                                    [hasTcgen05Instructions])>;
+                                               ashift>;
             }
           }
         }
@@ -6076,10 +6083,17 @@ foreach sp = [0, 1] in {
 }
 
 class Tcgen05MMABlockScaleInst<bit Sp, string ASpace, string KindStr,
-                     int CtaGroup, string ScaleVecSize, string CollectorUsageStr,
-                     Predicate PTXPredicate>:
-         NVPTXInst<(outs), (ins), "?", []>,
-         Requires<[hasTcgen05Instructions, PTXPredicate]> {
+                     int CtaGroup, string ScaleVecSize, string CollectorUsageStr>:
+         NVPTXInst<(outs), (ins), "?", []>, Requires<[]> {
+
+  let Predicates = !cond(
+    !and(!eq(Sp, 1),
+         !eq(KindStr, "mxf4")) : [callSubtarget<"hasTcgen05MMASparseMxf4">],
+    !and(!eq(Sp, 1),
+         !eq(KindStr, "mxf4nvf4")) : [callSubtarget<"hasTcgen05MMASparseMxf4nvf4">],
+    !ne(ScaleVecSize, "") : [callSubtarget<"hasTcgen05InstSupport">, hasPTX<88>],
+    true : [callSubtarget<"hasTcgen05InstSupport">]
+  );
 
   Intrinsic Intrin = !cast<Intrinsic>(
                              NVVM_TCGEN05_MMA_BLOCKSCALE<Sp, ASpace, KindStr, ScaleVecSize>.record_name);
@@ -6144,9 +6158,7 @@ foreach sp = [0, 1] in {
           foreach collector_usage = ["fill", "use", "lastuse", "discard"] in {
             if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
               def : Tcgen05MMABlockScaleInst<sp, space, kind, cta_group, scale_vec_size,
-                                             collector_usage,
-                                             !if(!ne(scale_vec_size, ""),
-                                                  hasPTX<88>, hasPTX<86>)>;
+                                             collector_usage>;
             }
           }
         }
@@ -6162,8 +6174,12 @@ foreach sp = [0, 1] in {
 class Tcgen05MMAWSInst<bit Sp, string ASpace, string KindStr,
                        int CollectorBufferB, string CollectorUsageOpStr,
                        bit HasZeroColMask> :
-         NVPTXInst<(outs), (ins), "?", []>,
-         Requires<[hasTcgen05Instructions]> {
+         NVPTXInst<(outs), (ins), "?", []>, Requires<[]> {
+
+  let Predicates = !cond(
+    !eq(KindStr, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
+    true : [callSubtarget<"hasTcgen05InstSupport">]
+  );
 
   Intrinsic Intrin = !cast<Intrinsic>(
                             NVVM_TCGEN05_MMA_WS<Sp, ASpace, HasZeroColMask>.record_name);

@@ -248,6 +248,34 @@ void test_reentrant(void) {
   r_ = 1; // expected-warning{{writing variable 'r_' requires holding mutex 'rmu' exclusively}}
 }
 
+// In C code, object construction may want to initialize guarded members
+// alongside a capability (initialization implies exclusive access); to do so,
+// we can assert a capability as part of its initialization. To permit immediate
+// use of the capability, it is necessarily to "promote" the type to a reentrant
+// capability for the rest of the scope. While this avoids the false positive
+// warning on member initialization and immediate use, it does pose the danger
+// of false negatives (no warning on actual double-lock in the same function).
+void mutex_init(struct Mutex *mu) ASSERT_EXCLUSIVE_LOCK((struct ReentrantMutex *)mu);
+
+struct TestInit {
+  struct Mutex mu;
+  int a GUARDED_BY(&mu);
+};
+
+struct TestInit test_init(void) {
+  struct TestInit foo;
+
+  mutex_init(&foo.mu); // initialize capability before guarded members
+  foo.a = 0;           // initialize guarded members normally
+
+  // It should be allowed to immediately use the capability in the same
+  // function, such as after spawning a thread.
+  mutex_exclusive_lock(&foo.mu);
+  mutex_exclusive_unlock(&foo.mu);
+
+  return foo;
+}
+
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}

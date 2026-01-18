@@ -1,8 +1,8 @@
 // UNSUPPORTED:  target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=ref,ref20,all,all20 %s
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=ref,ref23,all,all23 %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=expected20,all,all20 %s -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=expected23,all,all23 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=expected,expected20,all,all20 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=expected,expected23,all,all23 %s -fexperimental-new-constant-interpreter
 
 
 #define assert_active(F)   if (!__builtin_is_within_lifetime(&F)) (1/0);
@@ -259,6 +259,15 @@ namespace ExplicitLambdaInstancePointer {
       constexpr int (*fp)(C) = b;
       static_assert(fp(1) == 1, "");
   }
+
+  /// Failure case. The instance pointer is of type int.
+  struct S2 {
+      constexpr K(auto) { } // all-error {{a type specifier is required for all declarations}}
+  };
+  constexpr auto b = [](this K) { return 1; }; // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}} \
+                                               // all-error {{unknown type name 'K'}}
+  constexpr int (*fp)(K) = b; // all-error {{unknown type name 'K'}}
+  static_assert(fp(1) == 1, ""); // expected-error {{not an integral constant expression}}
 }
 
 namespace TwosComplementShifts {
@@ -520,3 +529,20 @@ namespace InactiveLocalsInConditionalOp {
 
 }
 #endif
+
+namespace UnknownParams {
+  class X {
+  public:
+    constexpr operator bool(){ return true; }
+  };
+  int foo(X x) {
+    static_assert(x);
+    return 1;
+  }
+
+  int foo2(X &x) { // all20-note {{declared here}}
+    static_assert(x); // all20-error {{not an integral constant expression}} \
+                      // all20-note {{function parameter 'x' with unknown value cannot be used in a constant expression}}
+    return 1;
+  }
+}
