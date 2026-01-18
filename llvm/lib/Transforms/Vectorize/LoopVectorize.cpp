@@ -8784,7 +8784,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
                       FastMathFlags());
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeFindIVResult,
-                               {Start, Sentinel, NewExitingVPV}, ExitDL);
+                               {Start, Sentinel, NewExitingVPV}, Flags, ExitDL);
     } else if (AnyOfSelect) {
       VPValue *Start = PhiR->getStartValue();
       // NewVal is the non-phi operand of the select.

@@ -1405,8 +1405,6 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ComputeAnyOfResult:
     return Op == getOperand(0) || Op == getOperand(1);
   case VPInstruction::ComputeFindIVResult:
-    return Op == getOperand(1);
-  case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(0);
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
