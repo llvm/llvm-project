@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=aarch64-non-linux-gnu -filetype=obj < %s \
-; RUN:  | llvm-dwarfdump - | FileCheck %s
+; RUN:     | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
