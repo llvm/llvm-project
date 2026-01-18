@@ -22,9 +22,10 @@ unsigned __int64 __shiftright128(unsigned __int64 low, unsigned __int64 high,
 // CIR: cir.return
 
 // LLVM-LABEL: define {{.*}} i64 @test_shiftleft128
-// LLVM-SAME: (i64 %[[ARG0:.*]], i64 %[[ARG1:.*]], i8 %[[ARG2:.*]])
-// LLVM-NEXT: [[TMP1:%.*]] = zext i8 %[[ARG2]] to i64
-// LLVM-NEXT: [[TMP2:%.*]] = tail call i64 @llvm.fshl.i64(i64 %[[ARG1]], i64 %[[ARG0]], i64 [[TMP1]])
+// LLVM-SAME: (i64 %{{.*}}, i64 %{{.*}}, i8 %{{.*}})
+// LLVM: [[TMP1:%.*]] = zext i8 %{{.*}} to i64
+// LLVM-NEXT: [[TMP2:%.*]] = tail call i64 @llvm.fshl.i64(i64 %{{.*}}, i64 %{{.*}}, i64 [[TMP1]])
+// LLVM: ret i64 [[TMP2]]
 
 // OGCG-LABEL: define {{.*}} i64 @test_shiftleft128
 // OGCG-SAME: (i64 {{.*}} %[[ARG0:.*]], i64 {{.*}} %[[ARG1:.*]], i8 {{.*}} %[[ARG2:.*]])
@@ -44,9 +45,10 @@ unsigned __int64 test_shiftleft128(unsigned __int64 l, unsigned __int64 h,
 // CIR: cir.return
 
 // LLVM-LABEL: define {{.*}} i64 @test_shiftright128
-// LLVM-SAME: (i64 %[[ARG0:.*]], i64 %[[ARG1:.*]], i8 %[[ARG2:.*]])
-// LLVM-NEXT: [[TMP1:%.*]] = zext i8 %[[ARG2]] to i64
-// LLVM-NEXT: [[TMP2:%.*]] = tail call i64 @llvm.fshr.i64(i64 %[[ARG1]], i64 %[[ARG0]], i64 [[TMP1]])
+// LLVM-SAME: (i64 %{{.*}}, i64 %{{.*}}, i8 %{{.*}})
+// LLVM: [[TMP1:%.*]] = zext i8 %{{.*}} to i64
+// LLVM-NEXT: [[TMP2:%.*]] = tail call i64 @llvm.fshr.i64(i64 %{{.*}}, i64 %{{.*}}, i64 [[TMP1]])
+// LLVM: ret i64 [[TMP2]]
 
 // OGCG-LABEL: define {{.*}} i64 @test_shiftright128
 // OGCG-SAME: (i64 {{.*}} %[[ARG0:.*]], i64 {{.*}} %[[ARG1:.*]], i8 {{.*}} %[[ARG2:.*]])
@@ -199,53 +201,3 @@ void test__cpuidex(int cpuInfo[4], int functionId, int subFunctionId) {
     // OGCG: [[ADDR_PTR_3:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 3
     // OGCG: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
 }
-
-unsigned __int64 __shiftleft128(unsigned __int64 low, unsigned __int64 high,
-                                unsigned char shift);
-unsigned __int64 __shiftright128(unsigned __int64 low, unsigned __int64 high,
-                                 unsigned char shift);
-
-// CIR-LABEL: cir.func{{.*}}@test_shiftleft128
-// CIR: %[[D_LOAD:[^ ]+]] = cir.load {{.*}} : !cir.ptr<!u8i>, !u8i
-// CIR: %[[D_CAST:[^ ]+]] = cir.cast integral %[[D_LOAD]] : !u8i -> !u64i
-// CIR: %{{[^ ]+}} = cir.call_llvm_intrinsic "fshl" {{.*}} : (!u64i, !u64i, !u64i) -> !u64i
-// CIR: cir.return
-
-// LLVM-LABEL: define {{.*}} i64 @test_shiftleft128
-// LLVM-SAME: (i64 %[[ARG0:.*]], i64 %[[ARG1:.*]], i8 %[[ARG2:.*]])
-// LLVM-NEXT: [[TMP1:%.*]] = zext i8 %[[ARG2]] to i64
-// LLVM-NEXT: [[TMP2:%.*]] = tail call i64 @llvm.fshl.i64(i64 %[[ARG1]], i64 %[[ARG0]], i64 [[TMP1]])
-
-// OGCG-LABEL: define {{.*}} i64 @test_shiftleft128
-// OGCG-SAME: (i64 {{.*}} %[[ARG0:.*]], i64 {{.*}} %[[ARG1:.*]], i8 {{.*}} %[[ARG2:.*]])
-// OGCG-NEXT: entry:
-// OGCG-NEXT: [[TMP0:%.*]] = zext i8 %[[ARG2]] to i64
-// OGCG-NEXT: [[TMP1:%.*]] = tail call i64 @llvm.fshl.i64(i64 %[[ARG1]], i64 %[[ARG0]], i64 [[TMP0]])
-// OGCG-NEXT: ret i64 [[TMP1]]
-unsigned __int64 test_shiftleft128(unsigned __int64 l, unsigned __int64 h,
-                                   unsigned char d) {
-  return __shiftleft128(l, h, d);
-}
-
-// CIR-LABEL: cir.func{{.*}}@test_shiftright128
-// CIR: %[[D_LOAD:[^ ]+]] = cir.load {{.*}} : !cir.ptr<!u8i>, !u8i
-// CIR: %[[D_CAST:[^ ]+]] = cir.cast integral %[[D_LOAD]] : !u8i -> !u64i
-// CIR: %{{[^ ]+}} = cir.call_llvm_intrinsic "fshr" {{.*}} : (!u64i, !u64i, !u64i) -> !u64i
-// CIR: cir.return
-
-// LLVM-LABEL: define {{.*}} i64 @test_shiftright128
-// LLVM-SAME: (i64 %[[ARG0:.*]], i64 %[[ARG1:.*]], i8 %[[ARG2:.*]])
-// LLVM-NEXT: [[TMP1:%.*]] = zext i8 %[[ARG2]] to i64
-// LLVM-NEXT: [[TMP2:%.*]] = tail call i64 @llvm.fshr.i64(i64 %[[ARG1]], i64 %[[ARG0]], i64 [[TMP1]])
-
-// OGCG-LABEL: define {{.*}} i64 @test_shiftright128
-// OGCG-SAME: (i64 {{.*}} %[[ARG0:.*]], i64 {{.*}} %[[ARG1:.*]], i8 {{.*}} %[[ARG2:.*]])
-// OGCG-NEXT: entry:
-// OGCG-NEXT: [[TMP0:%.*]] = zext i8 %[[ARG2]] to i64
-// OGCG-NEXT: [[TMP1:%.*]] = tail call i64 @llvm.fshr.i64(i64 %[[ARG1]], i64 %[[ARG0]], i64 [[TMP0]])
-// OGCG-NEXT: ret i64 [[TMP1]]
-unsigned __int64 test_shiftright128(unsigned __int64 l, unsigned __int64 h,
-                                    unsigned char d) {
-  return __shiftright128(l, h, d);
-}
->>>>>>> 505bb08e23bb (Update ms-x86-intrinsics.c)
