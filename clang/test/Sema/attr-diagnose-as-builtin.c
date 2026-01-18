@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -Wfortify-source -triple x86_64-apple-macosx10.14.0 %s -verify
+// RUN: %clang_cc1 -Wfortify-source -triple x86_64-apple-macosx10.14.0 -fexperimental-new-constant-interpreter %s -verify
 // RUN: %clang_cc1 -Wfortify-source -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify
+// RUN: %clang_cc1 -Wfortify-source -xc++ -triple x86_64-apple-macosx10.14.0 -fexperimental-new-constant-interpreter %s -verify
 
 typedef unsigned long size_t;
 

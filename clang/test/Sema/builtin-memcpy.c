@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux -fsyntax-only -verify=c
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux -fsyntax-only -fexperimental-new-constant-interpreter -verify=c
 // RUN: %clang_cc1 -x c++ %s -triple x86_64-unknown-linux -fsyntax-only -verify=cxx
+// RUN: %clang_cc1 -x c++ %s -triple x86_64-unknown-linux -fsyntax-only -fexperimental-new-constant-interpreter -verify=cxx
 
 // cxx-no-diagnostics
 

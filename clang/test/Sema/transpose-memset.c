@@ -1,6 +1,9 @@
 // RUN: %clang_cc1       -Wmemset-transposed-args -verify %s
 // RUN: %clang_cc1 -xc++ -Wmemset-transposed-args -verify %s
 
+// RUN: %clang_cc1       -Wmemset-transposed-args -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -xc++ -Wmemset-transposed-args -fexperimental-new-constant-interpreter -verify %s
+
 #define memset(...) __builtin_memset(__VA_ARGS__)
 #define bzero(x,y) __builtin_memset(x, 0, y)
 #define real_bzero(x,y) __builtin_bzero(x,y)

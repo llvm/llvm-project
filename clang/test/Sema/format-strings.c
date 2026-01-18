@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
 
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -fexperimental-new-constant-interpreter -isystem %S/Inputs %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -fexperimental-new-constant-interpreter -isystem %S/Inputs -fno-signed-char %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -fexperimental-new-constant-interpreter -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -fexperimental-new-constant-interpreter -isystem %S/Inputs -triple=x86_64-linux-android %s
+
 #include <stdarg.h>
 #include <stddef.h>
 #define __need_wint_t

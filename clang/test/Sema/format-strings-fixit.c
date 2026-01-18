@@ -3,6 +3,10 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Werror %t
 // RUN: %clang_cc1 -E -o - %t | FileCheck %s
 
+// RUN: %clang_cc1 -pedantic -Wall -fexperimental-new-constant-interpreter -fixit %t
+// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Werror -fexperimental-new-constant-interpreter %t
+// RUN: %clang_cc1  -fexperimental-new-constant-interpreter -E -o - %t | FileCheck %s
+
 /* This is a test of the various code modification hints that are
    provided as part of warning or extension diagnostics. All of the
    warnings will be fixed by -fixit, and the resulting file should
