@@ -9,7 +9,7 @@ define double @test_direct(float %in) {
 ; CHECK-NEXT:    fcvt d0, s0
 ; CHECK-NEXT:    ret
   %cmp = fcmp nnan olt float %in, 0.000000e+00
-  %val = select i1 %cmp, float 0.000000e+00, float %in
+  %val = select nsz i1 %cmp, float 0.000000e+00, float %in
   %longer = fpext float %val to double
   ret double %longer
 }
@@ -22,7 +22,7 @@ define double @test_cross(float %in) {
 ; CHECK-NEXT:    fcvt d0, s0
 ; CHECK-NEXT:    ret
   %cmp = fcmp nnan ult float %in, 0.000000e+00
-  %val = select i1 %cmp, float %in, float 0.000000e+00
+  %val = select nsz i1 %cmp, float %in, float 0.000000e+00
   %longer = fpext float %val to double
   ret double %longer
 }
@@ -37,7 +37,7 @@ define double @test_cross_fail_nan(float %in) {
 ; CHECK-NEXT:    fcvt d0, s0
 ; CHECK-NEXT:    ret
   %cmp = fcmp nnan olt float %in, 0.000000e+00
-  %val = select i1 %cmp, float %in, float 0.000000e+00
+  %val = select nsz i1 %cmp, float %in, float 0.000000e+00
   %longer = fpext float %val to double
   ret double %longer
 }

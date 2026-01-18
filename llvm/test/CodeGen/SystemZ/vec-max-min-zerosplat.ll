@@ -11,7 +11,7 @@ define <2 x double> @f1(<2 x double> %val) {
 ; CHECK-NEXT:    vfmaxdb %v24, %v24, %v0, 4
 ; CHECK-NEXT:    br %r14
   %cmp = fcmp ogt <2 x double> %val,  zeroinitializer
-  %ret = select <2 x i1> %cmp, <2 x double> %val, <2 x double> zeroinitializer
+  %ret = select nnan nsz <2 x i1> %cmp, <2 x double> %val, <2 x double> zeroinitializer
   ret <2 x double> %ret
 }
 
@@ -22,7 +22,7 @@ define <2 x double> @f2(<2 x double> %val) {
 ; CHECK-NEXT:    vfmindb %v24, %v24, %v0, 4
 ; CHECK-NEXT:    br %r14
   %cmp = fcmp olt <2 x double> %val,  zeroinitializer
-  %ret = select <2 x i1> %cmp, <2 x double> %val, <2 x double> zeroinitializer
+  %ret = select nnan nsz <2 x i1> %cmp, <2 x double> %val, <2 x double> zeroinitializer
   ret <2 x double> %ret
 }
 
@@ -33,7 +33,7 @@ define <4 x float> @f3(<4 x float> %val) {
 ; CHECK-NEXT:    vfmaxsb %v24, %v24, %v0, 4
 ; CHECK-NEXT:    br %r14
   %cmp = fcmp ogt <4 x float> %val,  zeroinitializer
-  %ret = select <4 x i1> %cmp, <4 x float> %val, <4 x float> zeroinitializer
+  %ret = select nnan nsz <4 x i1> %cmp, <4 x float> %val, <4 x float> zeroinitializer
   ret <4 x float> %ret
 }
 
@@ -44,7 +44,7 @@ define <4 x float> @f4(<4 x float> %val) {
 ; CHECK-NEXT:    vfminsb %v24, %v24, %v0, 4
 ; CHECK-NEXT:    br %r14
   %cmp = fcmp olt <4 x float> %val,  zeroinitializer
-  %ret = select <4 x i1> %cmp, <4 x float> %val, <4 x float> zeroinitializer
+  %ret = select nnan nsz <4 x i1> %cmp, <4 x float> %val, <4 x float> zeroinitializer
   ret <4 x float> %ret
 }
 

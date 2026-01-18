@@ -660,7 +660,7 @@ define <vscale x 4 x float> @fcmp_fast_olt_v4f32(<vscale x 4 x float> %z, <vscal
 entry:
   %c = fcmp oeq <vscale x 4 x float> %z, zeroinitializer
   %a1 = fcmp fast olt <vscale x 4 x float> %x, %y
-  %a = select <vscale x 4 x i1> %a1, <vscale x 4 x float> %x, <vscale x 4 x float> %y
+  %a = select nnan nsz <vscale x 4 x i1> %a1, <vscale x 4 x float> %x, <vscale x 4 x float> %y
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %z
   ret <vscale x 4 x float> %b
 }
@@ -676,7 +676,7 @@ define <vscale x 8 x half> @fcmp_fast_olt_v8f16(<vscale x 8 x half> %z, <vscale 
 entry:
   %c = fcmp oeq <vscale x 8 x half> %z, zeroinitializer
   %a1 = fcmp fast olt <vscale x 8 x half> %x, %y
-  %a = select <vscale x 8 x i1> %a1, <vscale x 8 x half> %x, <vscale x 8 x half> %y
+  %a = select nnan nsz <vscale x 8 x i1> %a1, <vscale x 8 x half> %x, <vscale x 8 x half> %y
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %z
   ret <vscale x 8 x half> %b
 }
@@ -692,7 +692,7 @@ define <vscale x 4 x float> @fcmp_fast_ogt_v4f32(<vscale x 4 x float> %z, <vscal
 entry:
   %c = fcmp oeq <vscale x 4 x float> %z, zeroinitializer
   %a1 = fcmp fast ogt <vscale x 4 x float> %x, %y
-  %a = select <vscale x 4 x i1> %a1, <vscale x 4 x float> %x, <vscale x 4 x float> %y
+  %a = select nnan nsz <vscale x 4 x i1> %a1, <vscale x 4 x float> %x, <vscale x 4 x float> %y
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %z
   ret <vscale x 4 x float> %b
 }
@@ -708,7 +708,7 @@ define <vscale x 8 x half> @fcmp_fast_ogt_v8f16(<vscale x 8 x half> %z, <vscale 
 entry:
   %c = fcmp oeq <vscale x 8 x half> %z, zeroinitializer
   %a1 = fcmp fast ogt <vscale x 8 x half> %x, %y
-  %a = select <vscale x 8 x i1> %a1, <vscale x 8 x half> %x, <vscale x 8 x half> %y
+  %a = select nnan nsz <vscale x 8 x i1> %a1, <vscale x 8 x half> %x, <vscale x 8 x half> %y
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %z
   ret <vscale x 8 x half> %b
 }
