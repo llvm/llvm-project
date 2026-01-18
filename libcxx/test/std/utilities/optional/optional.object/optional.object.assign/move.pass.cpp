@@ -20,6 +20,9 @@
 
 #include "test_macros.h"
 #include "archetypes.h"
+#if TEST_STD_VER >= 26
+#  include "copy_move_types.h"
+#endif
 
 using std::optional;
 
@@ -65,6 +68,23 @@ constexpr bool assign_value(optional<Tp>&& lhs) {
     lhs = std::move(rhs);
     return lhs.has_value() && rhs.has_value() && *lhs == Tp{101};
 }
+
+#if TEST_STD_VER >= 26
+constexpr bool test_ref() {
+  using T = TracedAssignment;
+  {
+    T t{};
+    std::optional<T&> o1{t};
+    std::optional<T&> o2 = std::move(o1);
+
+    assert(&(*o2) == &t);
+    assert(o1.has_value());
+    assert(o2.has_value());
+    assert(t.moveAssign == 0);
+  }
+  return true;
+}
+#endif
 
 int main(int, char**)
 {

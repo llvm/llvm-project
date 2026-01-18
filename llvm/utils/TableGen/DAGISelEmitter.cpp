@@ -13,7 +13,7 @@
 #include "Common/CodeGenDAGPatterns.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenTarget.h"
-#include "Common/DAGISelMatcher.h"
+#include "DAGISelMatcher.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
@@ -30,7 +30,7 @@ class DAGISelEmitter {
   const CodeGenDAGPatterns CGP;
 
 public:
-  explicit DAGISelEmitter(const RecordKeeper &R) : Records(R), CGP(R) {}
+  explicit DAGISelEmitter(const RecordKeeper &R) : Records(R), CGP(R, false) {}
   void run(raw_ostream &OS);
 };
 } // End anonymous namespace
@@ -89,13 +89,30 @@ struct PatternSortingPredicate {
     const TreePatternNode &LT = LHS->getSrcPattern();
     const TreePatternNode &RT = RHS->getSrcPattern();
 
-    MVT LHSVT = LT.getNumTypes() != 0 ? LT.getSimpleType(0) : MVT::Other;
-    MVT RHSVT = RT.getNumTypes() != 0 ? RT.getSimpleType(0) : MVT::Other;
-    if (LHSVT.isVector() != RHSVT.isVector())
-      return RHSVT.isVector();
+    bool LHSIsVector = false;
+    bool RHSIsVector = false;
+    bool LHSIsFP = false;
+    bool RHSIsFP = false;
 
-    if (LHSVT.isFloatingPoint() != RHSVT.isFloatingPoint())
-      return RHSVT.isFloatingPoint();
+    if (LT.getNumTypes() != 0) {
+      for (auto [_, VT] : LT.getType(0)) {
+        LHSIsVector |= VT.isVector();
+        LHSIsFP |= VT.isFloatingPoint();
+      }
+    }
+
+    if (RT.getNumTypes() != 0) {
+      for (auto [_, VT] : RT.getType(0)) {
+        RHSIsVector |= VT.isVector();
+        RHSIsFP |= VT.isFloatingPoint();
+      }
+    }
+
+    if (LHSIsVector != RHSIsVector)
+      return RHSIsVector;
+
+    if (LHSIsFP != RHSIsFP)
+      return RHSIsFP;
 
     // Otherwise, if the patterns might both match, sort based on complexity,
     // which means that we prefer to match patterns that cover more nodes in the

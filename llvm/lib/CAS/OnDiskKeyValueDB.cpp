@@ -68,7 +68,8 @@ OnDiskKeyValueDB::get(ArrayRef<uint8_t> Key) {
 Expected<std::unique_ptr<OnDiskKeyValueDB>>
 OnDiskKeyValueDB::open(StringRef Path, StringRef HashName, unsigned KeySize,
                        StringRef ValueName, size_t ValueSize,
-                       UnifiedOnDiskCache *Cache) {
+                       UnifiedOnDiskCache *Cache,
+                       std::shared_ptr<OnDiskCASLogger> Logger) {
   if (std::error_code EC = sys::fs::create_directories(Path))
     return createFileError(Path, EC);
 
@@ -89,7 +90,8 @@ OnDiskKeyValueDB::open(StringRef Path, StringRef HashName, unsigned KeySize,
                     CachePath,
                     "llvm.actioncache[" + HashName + "->" + ValueName + "]",
                     KeySize * 8,
-                    /*DataSize=*/ValueSize, MaxFileSize, /*MinFileSize=*/MB)
+                    /*DataSize=*/ValueSize, MaxFileSize, /*MinFileSize=*/MB,
+                    std::move(Logger))
                     .moveInto(ActionCache))
     return std::move(E);
 

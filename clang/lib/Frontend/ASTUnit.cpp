@@ -763,7 +763,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       AST->getHeaderSearchOpts(), AST->getSourceManager(),
       AST->getDiagnostics(), AST->getLangOpts(),
       /*Target=*/nullptr);
-  AST->HeaderInfo->setModuleCachePath(SpecificModuleCachePath);
+  AST->HeaderInfo->setSpecificModuleCachePath(SpecificModuleCachePath);
 
   AST->PP = std::make_shared<Preprocessor>(
       *AST->PPOpts, AST->getDiagnostics(), *AST->LangOpts,
@@ -1431,6 +1431,7 @@ void ASTUnit::transferASTDataFromCompilerInstance(CompilerInstance &CI) {
   if (CI.hasTarget())
     Target = CI.getTargetPtr();
   Reader = CI.getASTReader();
+  ModCache = CI.getModuleCachePtr();
   HadModuleLoaderFatalFailure = CI.hadModuleLoaderFatalFailure();
   if (Invocation != CI.getInvocationPtr()) {
     // This happens when Parse creates a copy of \c Invocation to modify.
@@ -2218,7 +2219,7 @@ bool ASTUnit::serialize(raw_ostream &OS) {
 
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
+  std::shared_ptr<ModuleCache> ModCache = createCrossProcessModuleCache();
   ASTWriter Writer(Stream, Buffer, *ModCache, *CodeGenOpts, {});
   return serializeUnit(Writer, Buffer, getSema(), OS);
 }

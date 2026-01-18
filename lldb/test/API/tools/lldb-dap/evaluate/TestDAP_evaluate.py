@@ -81,6 +81,9 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
     def isResultExpandedDescription(self):
         return self.context == "repl"
 
+    def isResultShortDescription(self):
+        return self.context == "clipboard"
+
     def isExpressionParsedExpected(self):
         return self.context != "hover"
 
@@ -165,6 +168,25 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
                 want_type="my_struct *",
                 want_varref=True,
             )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "struct1",
+                "(foo = 15)",
+                want_type="my_struct",
+                want_varref=True,
+            )
+            self.assertEvaluate(
+                "struct2",
+                r"0x.*",
+                want_type="my_struct *",
+                want_varref=True,
+            )
+            self.assertEvaluate(
+                "struct3",
+                "nullptr",
+                want_type="my_struct *",
+                want_varref=True,
+            )
         else:
             self.assertEvaluate(
                 "struct1",
@@ -236,6 +258,13 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
                 want_type="my_struct",
                 want_varref=True,
             )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "struct1",
+                "(foo = 15)",
+                want_type="my_struct",
+                want_varref=True,
+            )
         else:
             self.assertEvaluate(
                 "struct1",
@@ -304,17 +333,78 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
 
         # Now we check that values are updated after stepping
         self.continue_to_breakpoint(breakpoint_4)
-        self.assertEvaluate("my_vec", "size=2", want_varref=True)
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_vec",
+                r"\(std::vector<int>\) \$\d+ = size=2 {\n  \[0\] = 1\n  \[1\] = 2\n}",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_vec", r"size=2 {\n  \[0\] = 1\n  \[1\] = 2\n}", want_varref=True
+            )
+        else:
+            self.assertEvaluate("my_vec", "size=2", want_varref=True)
         self.continue_to_breakpoint(breakpoint_5)
-        self.assertEvaluate("my_vec", "size=3", want_varref=True)
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_vec",
+                r"\(std::vector<int>\) \$\d+ = size=3 {\n  \[0\] = 1\n  \[1\] = 2\n  \[2\] = 3\n}",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_vec",
+                r"size=3 {\n  \[0\] = 1\n  \[1\] = 2\n  \[2\] = 3\n}",
+                want_varref=True,
+            )
+        else:
+            self.assertEvaluate("my_vec", "size=3", want_varref=True)
 
-        self.assertEvaluate("my_map", "size=2", want_varref=True)
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_map",
+                r"\(std::map<int, int>\) \$\d+ = size=2 {\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n}",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_map",
+                r"size=2 {\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n}",
+                want_varref=True,
+            )
+        else:
+            self.assertEvaluate("my_map", "size=2", want_varref=True)
         self.continue_to_breakpoint(breakpoint_6)
         self.assertEvaluate("my_map", "size=3", want_varref=True)
 
-        self.assertEvaluate("my_bool_vec", "size=1", want_varref=True)
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_bool_vec",
+                r"\(std::vector<bool>\) \$\d+ = size=1 {\n  \[0\] = true\n}",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_bool_vec", r"size=1 {\n  \[0\] = true\n}", want_varref=True
+            )
+        else:
+            self.assertEvaluate("my_bool_vec", "size=1", want_varref=True)
         self.continue_to_breakpoint(breakpoint_7)
-        self.assertEvaluate("my_bool_vec", "size=2", want_varref=True)
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_bool_vec",
+                r"\(std::vector<bool>\) \$\d+ = size=2 {\n  \[0\] = true\n  \[1\] = false\n}",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_bool_vec",
+                r"size=2 {\n  \[0\] = true\n  \[1\] = false\n}",
+                want_varref=True,
+            )
+        else:
+            self.assertEvaluate("my_bool_vec", "size=2", want_varref=True)
 
         self.continue_to_breakpoint(breakpoint_8)
         # Test memory read, especially with 'empty' repeat commands.
@@ -326,6 +416,25 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluate("", ".* 0f .*\n", want_memref=False)
             self.assertEvaluate("", ".* 14 .*\n", want_memref=False)
             self.assertEvaluate("", ".* 19 .*\n", want_memref=False)
+
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_longs",
+                r"\(long\[3\]\) \$\d+ = \(\[0\] = 5, \[1\] = 6, \[2\] = 7\)",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_longs",
+                r"\(\[0\] = 5, \[1\] = 6, \[2\] = 7\)",
+                want_varref=True,
+            )
+        else:
+            self.assertEvaluate(
+                "my_longs",
+                "{5, 6, 7}" if enableAutoVariableSummaries else r"long\[3\]",
+                want_varref=True,
+            )
 
         self.continue_to_exit()
 
@@ -354,4 +463,11 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         # Tests expression evaluations that are triggered in the variable explorer
         self.run_test_evaluate_expressions(
             "variables", enableAutoVariableSummaries=True
+        )
+
+    @skipIfWindows
+    def test_clipboard_evaluate_expressions(self):
+        # Tests expression evaluations that are triggered when value copied in editor
+        self.run_test_evaluate_expressions(
+            "clipboard", enableAutoVariableSummaries=False
         )

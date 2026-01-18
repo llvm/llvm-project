@@ -11,11 +11,7 @@ define <4 x i32> @smin_v4i32_as_umin_v4i8(<4 x i32> %a0, <4 x i32> %a1) nounwind
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrld $30, %xmm0
 ; SSE2-NEXT:    psrld $29, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pandn %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    pminub %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: smin_v4i32_as_umin_v4i8:
@@ -42,11 +38,7 @@ define <4 x i32> @smin_v4i32_as_smin_v4i16(<4 x i32> %a0, <4 x i32> %a1) nounwin
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrad $16, %xmm0
 ; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pandn %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    pminsw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: smin_v4i32_as_smin_v4i16:
