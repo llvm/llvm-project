@@ -4386,11 +4386,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Allocation &x) {
     for (const auto &acValue : acSpec.values) {
       if (const auto *indirExpr = 
           std::get_if<common::Indirection<parser::Expr>>(&acValue.u)) {
-        
-        // Create new BoundExpr wrapping a reference to the expression
-        // Don't copy - use the existing indirection
-      parser::BoundExpr newBoundExpr{
-          parser::Integer(std::move(const_cast<common::Indirection<parser::Expr>&>(*indirExpr)))};
+        parser::BoundExpr newBoundExpr{parser::Integer(
+          std::move(const_cast<common::Indirection<parser::Expr>&>(*indirExpr)))};
         
         // Create new AllocateShapeSpec with optional lower bound and upper bound
         parser::AllocateShapeSpec newSpec = 
@@ -4406,13 +4403,90 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Allocation &x) {
     auto &mutableShapeSpecList{const_cast<std::list<parser::AllocateShapeSpec>&>(shapeSpecList)};
     mutableShapeSpecList.clear();
     mutableShapeSpecList.splice(mutableShapeSpecList.end(), newShapeSpecs);
+  }
+  else if(const auto *designator{
+      std::get_if<common::Indirection<parser::Designator>>(&expr.u)}) {    
+    // Handle Designator case: allocate(array(dims)) where dims is a variable
+    if (const auto *dataRef{std::get_if<parser::DataRef>(&designator->value().u)}) {
+      if (const auto *name{std::get_if<parser::Name>(&dataRef->u)}) {
+        // It's a simple name reference like 'dims'
+        if (const Symbol *symbol{name->symbol}) {
+          int varRank{symbol->Rank()};
+          // Only expand if it's a 1D array (dims is rank-1)
+          if (varRank == 1) {
+            std::list<parser::AllocateShapeSpec> newShapeSpecs;
+            // Get the size of the dims array from its type
+            if (const auto shape{GetShape(foldingContext_, *symbol)}) {
+              if (auto dimSize{ToInt64(shape->at(0))}) {
+                for (std::int64_t i = 0; i < *dimSize; ++i) {
+                  // Get lower bound of dims array (dimension 0)
+                  auto lowerBound{GetLBOUND(foldingContext_, NamedEntity{*symbol}, 0)};
+                  auto lb{ToInt64(lowerBound)};
+                  std::int64_t subscriptIndex = (lb ? *lb : 1) + i;
+                  
+                  // Create static string representations of subscript indices
+                  static const char* subscriptStrings[] = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
+                  const char* subscriptStr = (subscriptIndex <= 9) ? subscriptStrings[subscriptIndex-1] : "?";
+                  
+                  // Create the integer subscript expression: dims(i)
+                  auto literalInt = parser::IntLiteralConstant{
+                      parser::CharBlock{subscriptStr, 1},
+                      std::optional<parser::KindParam>{}
+                  };
+                  
+                  auto subscriptExpr = common::Indirection<parser::Expr>{
+                      parser::Expr{
+                          parser::LiteralConstant{std::move(literalInt)}
+                      }
+                  };
+                  
+                  // Create subscript list: [dims(i)]
+                  std::list<parser::SectionSubscript> subscripts;
+                  subscripts.emplace_back(parser::IntExpr{std::move(subscriptExpr)});
+                  
+                  // Create PartRef with the name and subscripts - move the Name
+                  std::list<parser::PartRef> partRefs;
+                  partRefs.emplace_back(
+                      std::move(const_cast<parser::Name&>(*name)),
+                      std::move(subscripts),
+                      std::optional<parser::ImageSelector>{}
+                  );
+                  
+                  // Create DataRef from the PartRef
+                  parser::DataRef dataRef{std::move(partRefs)};
+                  
+                  // Create the full designator: dims(i)
+                  auto dimDesignator = parser::Designator{std::move(dataRef)};
+                  auto dimExpr = common::Indirection<parser::Expr>{
+                      parser::Expr{std::move(dimDesignator)}
+                  };
+                  
+                  // Create BoundExpr wrapping the subscripted reference
+                  parser::BoundExpr newBoundExpr{parser::Integer{std::move(dimExpr)}};
+                  
+                  // Create AllocateShapeSpec
+                  parser::AllocateShapeSpec newSpec = 
+                      std::make_tuple(std::optional<parser::BoundExpr>{}, std::move(newBoundExpr));
+                  
+                  newShapeSpecs.push_back(std::move(newSpec));
+                }
 
-    // printf("printing tree from allocation_ node\n");
-
-    // std::string buf;
-    // llvm::raw_string_ostream dump{buf};
-    // Fortran::parser::DumpTree(dump, x);
-    // std::cout << buf << std::endl;
+                // Replace the original list with expanded specs
+                auto &mutableShapeSpecList{const_cast<std::list<parser::AllocateShapeSpec>&>(shapeSpecList)};
+                mutableShapeSpecList.clear();
+                mutableShapeSpecList.splice(mutableShapeSpecList.end(), newShapeSpecs);
+                
+                // printf("printing tree from allocation_ node after dims expansion\n");
+                // std::string buf;
+                // llvm::raw_string_ostream dump{buf};
+                // Fortran::parser::DumpTree(dump, x);
+                // std::cout << buf << std::endl;
+              }
+            }
+          }
+        }
+      }
+    }
   }
   return std::nullopt;
 }
