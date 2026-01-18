@@ -54,6 +54,11 @@ void StringViewConversionsCheck::registerMatchers(MatchFinder *Finder) {
   const auto HasStringMethodCall =
       hasDescendant(cxxMemberCallExpr(on(hasType(IsStdString))));
 
+  const auto IsCallReturningString = callExpr(hasType(IsStdString));
+  const auto IsImplicitStringViewFromCall =
+      cxxConstructExpr(hasType(IsStdStringView),
+                       hasArgument(0, ignoringImplicit(IsCallReturningString)));
+
   // Main matcher: finds function calls where:
   // 1. A parameter has type string_view
   // 2. The corresponding argument contains a redundant std::string construction
@@ -64,6 +69,8 @@ void StringViewConversionsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(forEachArgumentWithParam(
           expr(hasType(IsStdStringView),
+               // Ignore cases where the argument is a function call
+               unless(ignoringParenImpCasts(IsImplicitStringViewFromCall)),
                // Match either syntax for std::string construction
                hasDescendant(expr(anyOf(RedundantFunctionalCast,
                                         RedundantStringConstruction))

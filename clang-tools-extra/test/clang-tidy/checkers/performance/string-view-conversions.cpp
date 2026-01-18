@@ -34,9 +34,12 @@ constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
 
 void foo_sv(int p1, std::string_view p2, double p3);
 void foo_wsv(int p1, std::wstring_view p2, double p3);
+void foo_wsv(std::wstring_view p2);
 void foo_str(int p1, const std::string& p2, double p3);
 void foo_wstr(int p1, const std::wstring& p2, double p3);
+
 std::string foo_str(int p1);
+std::wstring foo_wstr(int, const std::string&);
 std::string_view foo_sv(int p1);
 
 void positive(std::string_view sv, std::wstring_view wsv) {
@@ -124,4 +127,8 @@ void negative(std::string_view sv, std::wstring_view wsv) {
   // Move semantics ignored
   std::string s;
   foo_sv(42, std::move(s), 3.14);
+
+  // Inner calls are ignored
+  foo_wsv(foo_wstr(142, "Hello, world"));
+  foo_wsv(foo_wstr(1, std::string("Hello, world")));
 }
