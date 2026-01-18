@@ -48,8 +48,6 @@ public:
   // Initialize the coroutine ABI
   virtual void init() = 0;
 
-  virtual void preProcess() {};
-
   // Allocate the coroutine frame and do spill/reload as needed.
   virtual void buildCoroutineFrame(bool OptimizeFrame);
 
@@ -73,8 +71,6 @@ public:
       : BaseABI(F, S, std::move(IsMaterializable)) {}
 
   void init() override;
-
-  void preProcess() override;
 
   void splitCoroutine(Function &F, coro::Shape &Shape,
                       SmallVectorImpl<Function *> &Clones,

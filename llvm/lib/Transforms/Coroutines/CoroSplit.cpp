@@ -2092,19 +2092,16 @@ static void enforceDominationByCoroBegin(Function &F,
   }
 }
 
-void coro::SwitchABI::preProcess() {
-  enforceDominationByCoroBegin(this->F, this->Shape);
-}
-
 static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
                              coro::BaseABI &ABI, TargetTransformInfo &TTI,
                              bool OptimizeFrame) {
   PrettyStackTraceFunction prettyStackTrace(F);
 
-  ABI.preProcess();
-
   auto &Shape = ABI.Shape;
   assert(Shape.CoroBegin);
+
+  if (Shape.ABI == coro::ABI::Switch)
+    enforceDominationByCoroBegin(F, Shape);
 
   lowerAwaitSuspends(F, Shape);
 
