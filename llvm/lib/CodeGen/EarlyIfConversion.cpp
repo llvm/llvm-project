@@ -868,9 +868,9 @@ void updateDomTree(MachineDominatorTree *DomTree, const SSAIfConv &IfConv,
   for (auto *B : Removed) {
     MachineDomTreeNode *Node = DomTree->getNode(B);
     assert(Node != HeadNode && "Cannot erase the head node");
-    while (Node->getNumChildren()) {
+    while (!Node->isLeaf()) {
       assert(Node->getBlock() == IfConv.Tail && "Unexpected children");
-      DomTree->changeImmediateDominator(Node->back(), HeadNode);
+      DomTree->changeImmediateDominator(*Node->begin(), HeadNode);
     }
     DomTree->eraseNode(B);
   }
