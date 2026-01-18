@@ -71,13 +71,11 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <4 x i1> [[TMP25]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[BIN_RDX]])
-; CHECK-NEXT:    [[TMP28:%.*]] = freeze i1 [[TMP27]]
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP28]], i32 0, i32 0
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[RDX_SELECT]], %[[SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 97, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
 ; CHECK:       [[THEN]]:

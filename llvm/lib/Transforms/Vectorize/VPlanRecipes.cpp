@@ -501,7 +501,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
   case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
@@ -727,22 +726,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
     auto *Iden = Builder.CreateVectorSplat(VF, State.get(getOperand(1), true));
     return Builder.CreateInsertElement(Iden, State.get(getOperand(0), true),
                                        Builder.getInt32(0));
-  }
-  case VPInstruction::ComputeAnyOfResult: {
-    Value *Start = State.get(getOperand(0), VPLane(0));
-    Value *NewVal = State.get(getOperand(1), VPLane(0));
-    Value *ReducedResult = State.get(getOperand(2));
-    for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
-      ReducedResult =
-          Builder.CreateBinOp(Instruction::Or, State.get(getOperand(Idx)),
-                              ReducedResult, "bin.rdx");
-    // If any predicate is true it means that we want to select the new value.
-    if (ReducedResult->getType()->isVectorTy())
-      ReducedResult = Builder.CreateOrReduce(ReducedResult);
-    // The compares in the loop may yield poison, which propagates through the
-    // bitwise ORs. Freeze it here before the condition is used.
-    ReducedResult = Builder.CreateFreeze(ReducedResult);
-    return Builder.CreateSelect(ReducedResult, NewVal, Start, "rdx.select");
   }
   case VPInstruction::ComputeReductionResult: {
     RecurKind RK = getRecurKind();
@@ -1277,7 +1260,6 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::ExtractLane ||
          getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::LastActiveLane ||
-         getOpcode() == VPInstruction::ComputeAnyOfResult ||
          getOpcode() == VPInstruction::ExtractLastActive ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
@@ -1419,8 +1401,6 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::WidePtrAdd:
     // WidePtrAdd supports scalar and vector base addresses.
     return false;
-  case VPInstruction::ComputeAnyOfResult:
-    return Op == getOperand(0) || Op == getOperand(1);
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
@@ -1524,9 +1504,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
-    break;
-  case VPInstruction::ComputeAnyOfResult:
-    O << "compute-anyof-result";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";

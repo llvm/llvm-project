@@ -1267,9 +1267,6 @@ public:
     /// scalars extracted from a vector, to be replaced by VF ExtractElement
     /// VPInstructions.
     Unpack,
-    /// Compute the final result of a AnyOf reduction with select(cmp(),x,y),
-    /// where one of (x,y) is loop invariant, and both x and y are integer type.
-    ComputeAnyOfResult,
     ComputeReductionResult,
     // Extracts the last part of its operand. Removed during unrolling.
     ExtractLastPart,

@@ -5840,9 +5840,14 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, AnyOfCond);
       AnyOfPhi->setOperand(1, OrVal);
 
+      VPIRFlags OrFlags(RecurKind::Or, /*IsOrdered=*/false,
+                        /*IsInLoop=*/false, FastMathFlags());
+      auto *OrReduce = MiddleBuilder.createNaryOp(
+          VPInstruction::ComputeReductionResult, {OrVal}, OrFlags, ExitDL);
+      auto *Freeze =
+          MiddleBuilder.createNaryOp(Instruction::Freeze, {OrReduce});
       NewRdxResult =
-          MiddleBuilder.createNaryOp(VPInstruction::ComputeAnyOfResult,
-                                     {StartVPV, ReducedIV, OrVal}, {}, ExitDL);
+          MiddleBuilder.createSelect(Freeze, ReducedIV, StartVPV, ExitDL);
 
       // Initialize the IV reduction phi with the neutral element, not the
       // original start value, to ensure correct min/max reduction results.

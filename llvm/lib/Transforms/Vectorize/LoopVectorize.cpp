@@ -8297,10 +8297,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
           Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", *PhiR);
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
         using namespace VPlanPatternMatch;
-        return match(
-            &U, m_CombineOr(
-                    m_VPInstruction<VPInstruction::ComputeAnyOfResult>(),
-                    m_VPInstruction<VPInstruction::ComputeReductionResult>()));
+        return match(&U,
+                     m_VPInstruction<VPInstruction::ComputeReductionResult>());
       });
 
       if (CM.usePredicatedReductionSelect(RecurrenceKind))
@@ -8324,7 +8322,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
     // For AnyOf reductions, find the select among PhiR's users. This is used
-    // both to find NewVal for ComputeAnyOfResult and to adjust the reduction.
+    // both to find NewVal for the final result and to adjust the reduction.
     VPRecipeBase *AnyOfSelect = nullptr;
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
       AnyOfSelect = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
@@ -8337,9 +8335,14 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       VPValue *NewVal = AnyOfSelect->getOperand(1) == PhiR
                             ? AnyOfSelect->getOperand(2)
                             : AnyOfSelect->getOperand(1);
+      VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                      FastMathFlags());
+      auto *OrReduce =
+          Builder.createNaryOp(VPInstruction::ComputeReductionResult,
+                               {NewExitingVPV}, Flags, ExitDL);
+      auto *Freeze = Builder.createNaryOp(Instruction::Freeze, {OrReduce});
       FinalReductionResult =
-          Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
-                               {Start, NewVal, NewExitingVPV}, ExitDL);
+          Builder.createSelect(Freeze, NewVal, Start, {}, "rdx.select");
     } else {
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlags());
@@ -8385,11 +8388,9 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
       if (FinalReductionResult == U || Parent->getParent())
         continue;
-      // Skip FindIV reduction chain recipes (ComputeReductionResult, icmp).
-      if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind) &&
-          match(U, m_CombineOr(
-                       m_VPInstruction<VPInstruction::ComputeReductionResult>(),
-                       m_VPInstruction<Instruction::ICmp>())))
+      // Skip ComputeReductionResult when it is not the final result (e.g.
+      // for AnyOf or FindIV reductions).
+      if (match(U, m_VPInstruction<VPInstruction::ComputeReductionResult>()))
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
 
@@ -8966,10 +8967,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       // value.
       auto IsReductionResult = [](VPRecipeBase *R) {
         auto *VPI = dyn_cast<VPInstruction>(R);
-        if (!VPI)
-          return false;
-        return VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
-               VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+        return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
       };
       auto *RdxResult = cast<VPInstruction>(
           vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
@@ -8977,6 +8975,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
 
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
+      RecurKind RK = ReductionPhi->getRecurrenceKind();
 
       // Check for FindIV pattern by looking for icmp user of RdxResult.
       // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
@@ -8988,8 +8987,9 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
                             m_VPValue(SentinelVPV)));
       });
 
-      if (RdxResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
-        Value *StartV = RdxResult->getOperand(0)->getLiveInIRValue();
+      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
+        Value *StartV = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
+            EPI.MainLoopIterationCountCheck);
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
         // to the start value.
