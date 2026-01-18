@@ -342,14 +342,14 @@ namespace UnionMemberAccess {
   // Union with pointer member returning non-const reference
   struct UnionWithPointer {
     union { int* resource; };
-    int& get() { return *resource; }  // Should NOT trigger warning
+    int& get() { return *resource; }
     const int& get() const { return *resource; }
   };
 
   // Union with pointer - single method variant
   struct UnionWithPointerSingle {
     union { int* resource; };
-    int& get() { return *resource; }  // Should NOT trigger warning
+    int& get() { return *resource; }
   };
   
   // Union with value type - should still suggest const where appropriate
@@ -366,8 +366,8 @@ namespace UnionMemberAccess {
       int* int_ptr;
       double* double_ptr;
     };
-    int& getInt() { return *int_ptr; }  // Should NOT trigger warning
-    double& getDouble() { return *double_ptr; }  // Should NOT trigger warning
+    int& getInt() { return *int_ptr; }
+    double& getDouble() { return *double_ptr; }
   };
   
   // Named union member access
@@ -375,14 +375,14 @@ namespace UnionMemberAccess {
     union Inner {
       int* resource;
     } inner;
-    int& get() { return *inner.resource; }  // Should NOT trigger warning
+    int& get() { return *inner.resource; }
   };
-  
+
   // Regular struct for comparison - this SHOULD work as before
   struct RegularStruct {
   private:
     int* ptr;
   public:
-    int& get() { return *ptr; }  // Should NOT trigger warning (private non-const access)
+    int& get() { return *ptr; }
   };
 } // namespace UnionMemberAccess
