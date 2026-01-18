@@ -339,7 +339,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
-  getActionDefinitionsBuilder(G_CTLZ)
+  getActionDefinitionsBuilder({G_CTLZ, G_CTLS})
       .legalFor({{s32, s32},
                  {s64, s64},
                  {v8s8, v8s8},
