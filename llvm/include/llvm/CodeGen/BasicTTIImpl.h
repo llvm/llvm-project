@@ -2046,11 +2046,11 @@ public:
           thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
       Cost +=
           thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(
-          BinaryOperator::Shl, RetTy, CostKind, OpInfoX,
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Shl, RetTy,
+                                              CostKind, OpInfoX,
                                               {OpInfoZ.Kind, TTI::OP_None});
-      Cost += thisT()->getArithmeticInstrCost(
-          BinaryOperator::LShr, RetTy, CostKind, OpInfoY,
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::LShr, RetTy,
+                                              CostKind, OpInfoY,
                                               {OpInfoZ.Kind, TTI::OP_None});
       // Non-constant shift amounts requires a modulo. If the typesize is a
       // power-2 then this will be converted to an and, otherwise it will use a
@@ -2064,8 +2064,7 @@ public:
       // For non-rotates (X != Y) we must add shift-by-zero handling costs.
       if (X != Y) {
         Type *CondTy = RetTy->getWithNewBitWidth(1);
-        Cost +=
-            thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+        Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
                                             CmpInst::ICMP_EQ, CostKind);
         Cost +=
             thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
