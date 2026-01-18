@@ -43,13 +43,13 @@ __shift_left(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templat
   if constexpr (sized_sentinel_for<_Sent, _Iter>) {
     auto __size = _IterOps<_AlgPolicy>::distance(__first, __last);
     if (__n >= __size) {
-      return {std::move(__first), std::move(__first)};
+      return {__first, std::move(__first)};
     }
     _IterOps<_AlgPolicy>::advance(__m, __n);
   } else {
     for (; __n > 0; --__n) {
       if (__m == __last) {
-        return {std::move(__first), std::move(__first)};
+        return {__first, std::move(__first)};
       }
       ++__m;
     }
