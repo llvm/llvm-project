@@ -116,7 +116,7 @@ _LIBCPP_HIDE_FROM_ABI bool __atomic_wait_unless_with_timeout(
   return __poll_result == __poll_with_backoff_results::__poll_success;
 }
 
-#  else // _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
+#  elif // _LIBCPP_HAS_THREADS
 
 template <class _AtomicWaitable, class _Poll, class _Rep, class _Period>
 _LIBCPP_HIDE_FROM_ABI bool __atomic_wait_unless_with_timeout(
