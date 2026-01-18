@@ -926,13 +926,10 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OpBytes = emitValueTypeByHwMode(VTBH, OS) + 1;
       OS << ' ';
     }
-    if (Reg) {
+    if (Reg)
       OS << getQualifiedName(Reg->TheDef);
-    } else {
-      OS << "0 ";
-      if (!OmitComments)
-        OS << "/*zero_reg*/";
-    }
+    else
+      OS << "MCRegister::NoRegister";
 
     OS << ',';
     if (!OmitComments)
