@@ -3777,71 +3777,69 @@ SmallVector<OpFoldResult> ViewOp::getMixedSizes() {
 }
 
 namespace {
+/// Given a memref type and a range of values that defines its dynamic
+/// dimension sizes, turn all dynamic sizes that have a constant value into
+/// static dimension sizes.
+static MemRefType
+foldDynamicToStaticDimSizes(MemRefType type, ValueRange dynamicSizes,
+                            SmallVectorImpl<Value> &foldedDynamicSizes) {
+  SmallVector<int64_t> staticShape(type.getShape());
+  assert(type.getNumDynamicDims() == dynamicSizes.size() &&
+         "incorrect number of dynamic sizes");
 
+  // Compute new static and dynamic sizes.
+  unsigned ctr = 0;
+  for (auto [dim, dimSize] : llvm::enumerate(type.getShape())) {
+    if (ShapedType::isStatic(dimSize))
+      continue;
+
+    Value dynamicSize = dynamicSizes[ctr++];
+    if (auto cst = getConstantIntValue(dynamicSize)) {
+      // Dynamic size must be non-negative.
+      if (cst.value() < 0) {
+        foldedDynamicSizes.push_back(dynamicSize);
+        continue;
+      }
+      staticShape[dim] = cst.value();
+    } else {
+      foldedDynamicSizes.push_back(dynamicSize);
+    }
+  }
+
+  return MemRefType::Builder(type).setShape(staticShape);
+}
+
+/// Change the result type of a `memref.view` by making originally dynamic
+/// dimensions static when their sizes come from `constant` ops.
+/// Example:
+///  ```
+///  %c5 = arith.constant 5: index
+///  %0 = memref.view %src[%offset][%c5] : memref<?xi8> to memref<?x4xf32>
+///  ```
+///  to
+///  ```
+///  %0 = memref.view %src[%offset][] : memref<?xi8> to memref<5x4xf32>
+///  ```
 struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
   using Base::Base;
 
   LogicalResult matchAndRewrite(ViewOp viewOp,
                                 PatternRewriter &rewriter) const override {
-    // Return if none of the operands are constants.
-    if (llvm::none_of(viewOp.getOperands(), [](Value operand) {
-          return matchPattern(operand, matchConstantIndex());
-        }))
-      return failure();
+    SmallVector<Value> foldedDynamicSizes;
+    MemRefType resultType = viewOp.getType();
+    MemRefType foldedMemRefType = foldDynamicToStaticDimSizes(
+        resultType, viewOp.getSizes(), foldedDynamicSizes);
 
-    // Get result memref type.
-    auto memrefType = viewOp.getType();
-
-    // Get offset from old memref view type 'memRefType'.
-    int64_t oldOffset;
-    SmallVector<int64_t, 4> oldStrides;
-    if (failed(memrefType.getStridesAndOffset(oldStrides, oldOffset)))
-      return failure();
-    assert(oldOffset == 0 && "Expected 0 offset");
-
-    SmallVector<Value, 4> newOperands;
-
-    // Offset cannot be folded into result type.
-
-    // Fold any dynamic dim operands which are produced by a constant.
-    SmallVector<int64_t, 4> newShapeConstants;
-    newShapeConstants.reserve(memrefType.getRank());
-
-    unsigned dynamicDimPos = 0;
-    unsigned rank = memrefType.getRank();
-    for (unsigned dim = 0, e = rank; dim < e; ++dim) {
-      int64_t dimSize = memrefType.getDimSize(dim);
-      // If this is already static dimension, keep it.
-      if (ShapedType::isStatic(dimSize)) {
-        newShapeConstants.push_back(dimSize);
-        continue;
-      }
-      auto *defOp = viewOp.getSizes()[dynamicDimPos].getDefiningOp();
-      if (auto constantIndexOp =
-              dyn_cast_or_null<arith::ConstantIndexOp>(defOp)) {
-        // Dynamic shape dimension will be folded.
-        newShapeConstants.push_back(constantIndexOp.value());
-      } else {
-        // Dynamic shape dimension not folded; copy operand from old memref.
-        newShapeConstants.push_back(dimSize);
-        newOperands.push_back(viewOp.getSizes()[dynamicDimPos]);
-      }
-      dynamicDimPos++;
-    }
-
-    // Create new memref type with constant folded dims.
-    MemRefType newMemRefType =
-        MemRefType::Builder(memrefType).setShape(newShapeConstants);
-    // Nothing new, don't fold.
-    if (newMemRefType == memrefType)
+    // Stop here if no dynamic size was promoted to static.
+    if (foldedMemRefType == resultType)
       return failure();
 
     // Create new ViewOp.
-    auto newViewOp = ViewOp::create(rewriter, viewOp.getLoc(), newMemRefType,
-                                    viewOp.getOperand(0), viewOp.getByteShift(),
-                                    newOperands);
+    auto newViewOp = ViewOp::create(rewriter, viewOp.getLoc(), foldedMemRefType,
+                                    viewOp.getSource(), viewOp.getByteShift(),
+                                    foldedDynamicSizes);
     // Insert a cast so we have the same type as the old memref type.
-    rewriter.replaceOpWithNewOp<CastOp>(viewOp, viewOp.getType(), newViewOp);
+    rewriter.replaceOpWithNewOp<CastOp>(viewOp, resultType, newViewOp);
     return success();
   }
 };
