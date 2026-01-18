@@ -189,13 +189,14 @@ constexpr const char *opVariadicEqualVariadicTemplate = R"Py(
 ///   {3} is a return suffix (expected [0] for single-element, empty for
 ///       variadic, and opVariadicSegmentOptionalTrailingTemplate for optional);
 ///   {4} is the type hint;
-///   {5} is the instance variable name in python.
+///   {5} is the instance variable name in python;
+///   {6} is the instance variable name for attributes in python.
 constexpr const char *opVariadicSegmentTemplate = R"Py(
   @builtins.property
   def {0}(self) -> {4}:
     {1}_range = _ods_segmented_accessor(
          self.{5}s,
-         self.attributes["{1}SegmentSizes"], {2})
+         self.{6}["{1}SegmentSizes"], {2})
     return {1}_range{3}
 )Py";
 
@@ -504,7 +505,8 @@ static void emitElementAccessors(
       }
 
       os << formatv(opVariadicSegmentTemplate, sanitizeName(element.name), kind,
-                    i, trailing, type, pyAttrName);
+                    i, trailing, type, pyAttrName,
+                    isAdaptor ? "attributes" : "operation.attributes");
     }
     return;
   }
