@@ -146,6 +146,10 @@ static cl::opt<unsigned> IntAssociationUpperLimit(
         "Set upper limit for the number of transformations performed "
         "during a single round of hoisting the reassociated expressions."));
 
+static cl::opt<bool>
+    AllowSpeculationOpt("licm-allow-speculation", cl::Hidden, cl::init(true),
+                        cl::desc("Allow speculation in LICM pass"));
+
 // Experimental option to allow imprecision in LICM in pathological cases, in
 // exchange for faster compile. This is to be removed if MemorySSA starts to
 // address the same issue. LICM calls MemorySSAWalker's
@@ -1732,7 +1736,7 @@ static bool isSafeToExecuteUnconditionally(
     const Loop *CurLoop, const LoopSafetyInfo *SafetyInfo,
     OptimizationRemarkEmitter *ORE, const Instruction *CtxI,
     AssumptionCache *AC, bool AllowSpeculation) {
-  if (AllowSpeculation &&
+  if (AllowSpeculationOpt && AllowSpeculation &&
       isSafeToSpeculativelyExecute(&Inst, CtxI, AC, DT, TLI))
     return true;
 
