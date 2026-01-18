@@ -29,8 +29,7 @@ namespace llvm {
   class Twine;
   class VersionTuple;
   template<typename T> class ArrayRef;
-  template<typename T> class MutableArrayRef;
-  template<typename T> class OwningArrayRef;
+  template <typename T> class MutableArrayRef;
   template<unsigned InternalLen> class SmallString;
   template<typename T, unsigned N> class SmallVector;
   template<typename T> class SmallVectorImpl;
@@ -73,7 +72,6 @@ namespace clang {
   // ADT's.
   using llvm::ArrayRef;
   using llvm::MutableArrayRef;
-  using llvm::OwningArrayRef;
   using llvm::SaveAndRestore;
   using llvm::SmallString;
   using llvm::SmallVector;
