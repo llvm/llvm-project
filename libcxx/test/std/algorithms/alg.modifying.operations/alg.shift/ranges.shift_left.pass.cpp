@@ -22,6 +22,7 @@
 #include <cassert>
 #include <ranges>
 #include <iterator>
+#include <vector>
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
@@ -36,6 +37,7 @@ static_assert(HasShiftLeftIt<int*>);
 static_assert(HasShiftLeftIt<int*, sentinel_wrapper<int*>>);
 static_assert(HasShiftLeftIt<int*, sized_sentinel<int*>>);
 static_assert(!HasShiftLeftIt<int*, int*, InvalidDifferenceT>);
+static_assert(!HasShiftLeftIt<int*, int, int>);
 
 static_assert(!HasShiftLeftIt<ForwardIteratorNotDerivedFrom>);
 static_assert(!HasShiftLeftIt<PermutableNotForwardIterator>);
@@ -55,15 +57,15 @@ template <class Iter, class Sent>
 constexpr void test_iter_sent() {
   {
     const std::array<int, 8> original = {3, 1, 4, 1, 5, 9, 2, 6};
-    std::array<int, 8> scratch;
 
     // (iterator, sentinel) overload
     for (size_t n = 0; n <= original.size(); ++n) {
       for (size_t k = 0; k <= n + 2; ++k) {
+        std::array<int, 8> scratch;
         auto begin = Iter(scratch.data());
         auto end   = Sent(Iter(scratch.data() + n));
         std::ranges::copy(original.begin(), original.begin() + n, begin);
-        auto result = std::ranges::shift_left(begin, end, k);
+        std::same_as<std::ranges::subrange<Iter>> decltype(auto) result = std::ranges::shift_left(begin, end, k);
 
         assert(result.begin() == begin);
         if (k < n) {
@@ -79,11 +81,12 @@ constexpr void test_iter_sent() {
     // (range) overload
     for (size_t n = 0; n <= original.size(); ++n) {
       for (size_t k = 0; k <= n + 2; ++k) {
+        std::array<int, 8> scratch;
         auto begin = Iter(scratch.data());
         auto end   = Sent(Iter(scratch.data() + n));
         std::ranges::copy(original.begin(), original.begin() + n, begin);
-        auto range  = std::ranges::subrange(begin, end);
-        auto result = std::ranges::shift_left(range, k);
+        auto range                                                      = std::ranges::subrange(begin, end);
+        std::same_as<std::ranges::subrange<Iter>> decltype(auto) result = std::ranges::shift_left(range, k);
 
         assert(result.begin() == begin);
         if (k < n) {
@@ -103,21 +106,21 @@ constexpr void test_iter_sent() {
     const std::array<int, 3> expected = {0, 1, 2};
 
     { // (iterator, sentinel) overload
-      auto in     = input;
-      auto begin  = Iter(in.data());
-      auto end    = Sent(Iter(in.data() + in.size()));
-      auto result = std::ranges::shift_left(begin, end, 0);
+      auto in                                                         = input;
+      auto begin                                                      = Iter(in.data());
+      auto end                                                        = Sent(Iter(in.data() + in.size()));
+      std::same_as<std::ranges::subrange<Iter>> decltype(auto) result = std::ranges::shift_left(begin, end, 0);
       assert(std::ranges::equal(expected, result));
       assert(result.begin() == begin);
       assert(result.end() == end);
     }
 
     { // (range) overload
-      auto in     = input;
-      auto begin  = Iter(in.data());
-      auto end    = Sent(Iter(in.data() + in.size()));
-      auto range  = std::ranges::subrange(begin, end);
-      auto result = std::ranges::shift_left(range, 0);
+      auto in                                                         = input;
+      auto begin                                                      = Iter(in.data());
+      auto end                                                        = Sent(Iter(in.data() + in.size()));
+      auto range                                                      = std::ranges::subrange(begin, end);
+      std::same_as<std::ranges::subrange<Iter>> decltype(auto) result = std::ranges::shift_left(range, 0);
       assert(std::ranges::equal(expected, result));
       assert(result.begin() == begin);
       assert(result.end() == end);
@@ -130,21 +133,22 @@ constexpr void test_iter_sent() {
     const std::array<int, 3> expected = {0, 1, 2};
 
     { // (iterator, sentinel) overload
-      auto in     = input;
-      auto begin  = Iter(in.data());
-      auto end    = Sent(Iter(in.data() + in.size()));
-      auto result = std::ranges::shift_left(begin, end, input.size());
+      auto in    = input;
+      auto begin = Iter(in.data());
+      auto end   = Sent(Iter(in.data() + in.size()));
+      std::same_as<std::ranges::subrange<Iter>> decltype(auto) result =
+          std::ranges::shift_left(begin, end, input.size());
       assert(std::ranges::equal(expected, input));
       assert(result.begin() == begin);
       assert(result.end() == begin);
     }
 
     { // (range) overload
-      auto in     = input;
-      auto begin  = Iter(in.data());
-      auto end    = Sent(Iter(in.data() + in.size()));
-      auto range  = std::ranges::subrange(begin, end);
-      auto result = std::ranges::shift_left(range, input.size());
+      auto in                                                         = input;
+      auto begin                                                      = Iter(in.data());
+      auto end                                                        = Sent(Iter(in.data() + in.size()));
+      auto range                                                      = std::ranges::subrange(begin, end);
+      std::same_as<std::ranges::subrange<Iter>> decltype(auto) result = std::ranges::shift_left(range, input.size());
       assert(std::ranges::equal(expected, input));
       assert(result.begin() == begin);
       assert(result.end() == begin);
@@ -157,21 +161,51 @@ constexpr void test_iter_sent() {
     const std::array<int, 3> expected = {0, 1, 2};
 
     { // (iterator, sentinel) overload
-      auto in     = input;
-      auto begin  = Iter(in.data());
-      auto end    = Sent(Iter(in.data() + in.size()));
-      auto result = std::ranges::shift_left(begin, end, input.size() + 1);
+      auto in    = input;
+      auto begin = Iter(in.data());
+      auto end   = Sent(Iter(in.data() + in.size()));
+      std::same_as<std::ranges::subrange<Iter>> decltype(auto) result =
+          std::ranges::shift_left(begin, end, input.size() + 1);
       assert(std::ranges::equal(expected, input));
       assert(result.begin() == begin);
       assert(result.end() == begin);
     }
 
     { // (range) overload
-      auto in     = input;
-      auto begin  = Iter(in.data());
-      auto end    = Sent(Iter(in.data() + in.size()));
-      auto range  = std::ranges::subrange(begin, end);
-      auto result = std::ranges::shift_left(range, input.size() + 1);
+      auto in    = input;
+      auto begin = Iter(in.data());
+      auto end   = Sent(Iter(in.data() + in.size()));
+      auto range = std::ranges::subrange(begin, end);
+      std::same_as<std::ranges::subrange<Iter>> decltype(auto) result =
+          std::ranges::shift_left(range, input.size() + 1);
+      assert(std::ranges::equal(expected, input));
+      assert(result.begin() == begin);
+      assert(result.end() == begin);
+    }
+  }
+
+  // empty range
+  {
+    std::vector<int> input          = {};
+    const std::vector<int> expected = {};
+    { // (iterator, sentinel) overload
+      auto in    = input;
+      auto begin = Iter(in.data());
+      auto end   = Sent(Iter(in.data() + in.size()));
+      std::same_as<std::ranges::subrange<Iter>> decltype(auto) result =
+          std::ranges::shift_left(begin, end, input.size() + 1);
+      assert(std::ranges::equal(expected, input));
+      assert(result.begin() == begin);
+      assert(result.end() == begin);
+    }
+
+    { // (range) overload
+      auto in    = input;
+      auto begin = Iter(in.data());
+      auto end   = Sent(Iter(in.data() + in.size()));
+      auto range = std::ranges::subrange(begin, end);
+      std::same_as<std::ranges::subrange<Iter>> decltype(auto) result =
+          std::ranges::shift_left(range, input.size() + 1);
       assert(std::ranges::equal(expected, input));
       assert(result.begin() == begin);
       assert(result.end() == begin);
