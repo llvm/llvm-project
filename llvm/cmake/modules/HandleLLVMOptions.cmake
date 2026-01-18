@@ -1333,6 +1333,10 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
 endif()
 if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
   message(STATUS "Precompiled headers enabled.")
+  # CMake weirdly marks all PCH as system headers. This undocumented variable
+  # can be used to suppress the "#pragma clang system_header".
+  # See: https://gitlab.kitware.com/cmake/cmake/-/issues/21219
+  set(CMAKE_PCH_PROLOGUE "")
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Clang requires this flag in order for precompiled headers to work with ccache.
     append("-Xclang -fno-pch-timestamp" CMAKE_CXX_FLAGS)

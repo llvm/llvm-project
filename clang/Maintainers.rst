@@ -210,6 +210,12 @@ Code Coverage
 | a-phipps\@ti.com (email), evodius96 (GitHub), evodius96 (Discourse)
 
 
+Python Bindings
+~~~~~~~~~~~~~~~
+| Vlad Serebrennikov
+| serebrennikov.vladislav\@gmail.com (email), Endilll (GitHub), Endill (Discord), Endill (Discourse)
+
+
 Tools
 -----
 These maintainers are responsible for user-facing tools under the Clang

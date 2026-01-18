@@ -914,7 +914,7 @@ class BlockAddress final : public Constant {
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Return a BlockAddress for the specified function and basic block.
   LLVM_ABI static BlockAddress *get(Function *F, BasicBlock *BB);
@@ -967,7 +967,7 @@ class DSOLocalEquivalent final : public Constant {
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Return a DSOLocalEquivalent for the specified global value.
   LLVM_ABI static DSOLocalEquivalent *get(GlobalValue *GV);
