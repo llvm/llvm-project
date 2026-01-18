@@ -445,29 +445,6 @@ namespace llvm {
     }
   };
 
-  /// This is a MutableArrayRef that owns its array.
-  template <typename T> class OwningArrayRef : public MutableArrayRef<T> {
-  public:
-    OwningArrayRef() = default;
-    OwningArrayRef(size_t Size) : MutableArrayRef<T>(new T[Size], Size) {}
-
-    OwningArrayRef(ArrayRef<T> Data)
-        : MutableArrayRef<T>(new T[Data.size()], Data.size()) {
-      std::copy(Data.begin(), Data.end(), this->begin());
-    }
-
-    OwningArrayRef(OwningArrayRef &&Other) { *this = std::move(Other); }
-
-    OwningArrayRef &operator=(OwningArrayRef &&Other) {
-      delete[] this->data();
-      this->MutableArrayRef<T>::operator=(Other);
-      Other.MutableArrayRef<T>::operator=(MutableArrayRef<T>());
-      return *this;
-    }
-
-    ~OwningArrayRef() { delete[] this->data(); }
-  };
-
   /// @name ArrayRef Deduction guides
   /// @{
   /// Deduction guide to construct an ArrayRef from a single element.
