@@ -65,4 +65,129 @@ define void @build_vector_no_stride_v4i64(ptr %a) #0 {
   ret void
 }
 
+; Sequence with trailing poison elements.
+define void @build_vector_trailing_poison_v8i32(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_trailing_poison_v8i32:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    index z0.s, #0, #3
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 poison, i32 poison>, ptr %a, align 4
+  ret void
+}
+
+; Sequence with leading poison elements.
+define void @build_vector_leading_poison_v8i32(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_leading_poison_v8i32:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    index z0.s, #0, #3
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <8 x i32> <i32 poison, i32 poison, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>, ptr %a, align 4
+  ret void
+}
+
+; Sequence with poison elements in the middle.
+define void @build_vector_middle_poison_v8i32(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_middle_poison_v8i32:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    index z0.s, #0, #3
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <8 x i32> <i32 0, i32 3, i32 poison, i32 poison, i32 12, i32 15, i32 18, i32 21>, ptr %a, align 4
+  ret void
+}
+
+; Sequence with poison elements scattered throughout.
+define void @build_vector_scattered_poison_v8i32(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_scattered_poison_v8i32:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    index z0.s, #0, #3
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <8 x i32> <i32 poison, i32 3, i32 poison, i32 9, i32 poison, i32 15, i32 poison, i32 21>, ptr %a, align 4
+  ret void
+}
+
+; Sequence with only two defined elements (minimum required).
+define void @build_vector_two_defined_v4i64(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_two_defined_v4i64:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    index z0.d, #5, #7
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <4 x i64> <i64 poison, i64 12, i64 poison, i64 26>, ptr %a, align 8
+  ret void
+}
+
+; Sequence with negative stride and poison elements.
+define void @build_vector_neg_stride_poison_v8i32(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_neg_stride_poison_v8i32:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    index z0.s, #0, #-2
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <8 x i32> <i32 poison, i32 -2, i32 -4, i32 poison, i32 -8, i32 -10, i32 poison, i32 -14>, ptr %a, align 4
+  ret void
+}
+
+; Only one defined element - cannot determine stride, so no index instruction.
+define void @build_vector_single_defined_v8i32(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_single_defined_v8i32:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    mov z0.s, #42 // =0x2a
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <8 x i32> <i32 poison, i32 poison, i32 poison, i32 42, i32 poison, i32 poison, i32 poison, i32 poison>, ptr %a, align 4
+  ret void
+}
+
+; Fractional stride: elements at indices 1 and 3 differ by 3, so stride would be 3/2.
+define void @build_vector_fractional_stride_v8i32(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_fractional_stride_v8i32:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI12_0
+; VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI12_0
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <8 x i32> <i32 poison, i32 0, i32 poison, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>, ptr %a, align 4
+  ret void
+}
+
+; zip1 pattern: constant <0, 1, 2, 3> is expanded to <0, 1, 2, 3, poison, poison, poison, poison>
+; to match the shuffle result width. isConstantSequence recognizes this as a sequence.
+define <8 x i8> @zip_const_seq_with_variable(i8 %x) #0 {
+; VBITS_GE_256-LABEL: zip_const_seq_with_variable:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    index z0.b, #0, #1
+; VBITS_GE_256-NEXT:    dup v1.8b, w0
+; VBITS_GE_256-NEXT:    zip1 v0.8b, v0.8b, v1.8b
+; VBITS_GE_256-NEXT:    ret
+  %ins = insertelement <4 x i8> poison, i8 %x, i32 0
+  %splat = shufflevector <4 x i8> %ins, <4 x i8> poison, <4 x i32> zeroinitializer
+  %interleave = shufflevector <4 x i8> <i8 0, i8 1, i8 2, i8 3>, <4 x i8> %splat, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  ret <8 x i8> %interleave
+}
+
+; zip2 pattern: constant <0, 1, 2, 3, 4, 5, 6, 7> is transformed by the DAG combiner to
+; <poison, poison, poison, poison, 4, 5, 6, 7> since zip2 only uses elements 4-7.
+define <8 x i8> @zip2_const_seq_with_variable(<8 x i8> %x) #0 {
+; VBITS_GE_256-LABEL: zip2_const_seq_with_variable:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    index z1.b, #0, #1
+; VBITS_GE_256-NEXT:    zip2 v0.8b, v1.8b, v0.8b
+; VBITS_GE_256-NEXT:    ret
+  %interleave = shufflevector <8 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>, <8 x i8> %x, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  ret <8 x i8> %interleave
+}
+
 attributes #0 = { "target-features"="+sve" }
