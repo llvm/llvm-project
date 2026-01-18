@@ -8091,6 +8091,21 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
   }
 
+  // If all bits except the LSB are known to be zero, 'Op0 != 0' is equivalent
+  // to truncating Op0 to i1. This fold is placed at the very end of the
+  // function because replacing an 'icmp' with a 'trunc' obscures comparison
+  // information that might be necessary for other icmp-based combines.
+  if (I.getPredicate() == ICmpInst::ICMP_NE && match(Op1, m_Zero())) {
+    if (Op0->getType()->isIntOrIntVectorTy()) {
+      unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+      if (BitWidth > 1) {
+        KnownBits Known = computeKnownBits(Op0, &I);
+        if (Known.countMinLeadingZeros() >= BitWidth - 1)
+          return new TruncInst(Op0, I.getType());
+      }
+    }
+  }
+
   return Changed ? &I : nullptr;
 }
 

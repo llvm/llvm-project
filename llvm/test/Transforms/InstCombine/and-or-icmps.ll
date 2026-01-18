@@ -3460,9 +3460,8 @@ define i1 @and_ugt_to_mask_off_by_one(i8 %x) {
 ; TODO: shall fold to trunc nuw i8 (and %x, %y) to i1.
 define i1 @and_icmp_ne_with_binary_range_operands(i8 range(i8 0, 2) %x, i8 range(i8 0, 2) %y) {
 ; CHECK-LABEL: @and_icmp_ne_with_binary_range_operands(
-; CHECK-NEXT:    [[ICMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i8 [[Y:%.*]], 0
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc nuw i8 [[TMP1]] to i1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %icmp1 = icmp ne i8 %x, 0
@@ -3474,9 +3473,8 @@ define i1 @and_icmp_ne_with_binary_range_operands(i8 range(i8 0, 2) %x, i8 range
 ; TODO: shall fold to trunc nuw i8 (and %x, %y) to i1.
 define i1 @and_icmp_eq_with_binary_range_operands(i8 range(i8 0, 2) %x, i8 range(i8 0, 2) %y) {
 ; CHECK-LABEL: @and_icmp_eq_with_binary_range_operands(
-; CHECK-NEXT:    [[ICMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i8 [[Y:%.*]], 0
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc nuw i8 [[TMP1]] to i1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %icmp1 = icmp eq i8 %x, 1

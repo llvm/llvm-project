@@ -57,7 +57,7 @@ define i1 @t3_const_after_fold_lshr_shl_ne(i32 %x, i32 %y, i32 %len) {
 ; CHECK-LABEL: @t3_const_after_fold_lshr_shl_ne(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[Y:%.*]]
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[T5:%.*]] = trunc nuw i32 [[TMP2]] to i1
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
@@ -72,7 +72,7 @@ define i1 @t4_const_after_fold_lshr_shl_ne(i32 %x, i32 %y, i32 %len) {
 ; CHECK-LABEL: @t4_const_after_fold_lshr_shl_ne(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[T5:%.*]] = trunc nuw i32 [[TMP2]] to i1
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len

@@ -205,8 +205,8 @@ define <2 x i1> @n6_vec(<2 x i64> %y, <2 x i32> %len) {
 ; New shift amount would be 16, minimal count of leading zeros in %x is 47. Ok.
 define <2 x i1> @t7_vec(<2 x i32> %x, <2 x i32> %len) {
 ; CHECK-LABEL: @t7_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 1, i32 0>
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[T5:%.*]] = and <2 x i1> [[TMP1]], <i1 true, i1 false>
 ; CHECK-NEXT:    ret <2 x i1> [[T5]]
 ;
   %t0 = sub <2 x i32> <i32 32, i32 32>, %len
@@ -251,7 +251,7 @@ define i1 @t9_highest_bit(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[Y:%.*]], 63
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[T5:%.*]] = trunc nuw i64 [[TMP3]] to i1
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 64, %len
@@ -412,10 +412,10 @@ define i1 @t14_x_is_one(i32 %x, i32 %len) {
 
 define <2 x i1> @t15_vec_x_is_one_or_zero(<2 x i64> %y, <2 x i32> %len) {
 ; CHECK-LABEL: @t15_vec_x_is_one_or_zero(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[Y:%.*]], splat (i64 48)
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[TMP1]], <i64 1, i64 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[Y:%.*]], splat (i64 281474976710656)
 ; CHECK-NEXT:    [[T5:%.*]] = icmp ne <2 x i64> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[T5]]
+; CHECK-NEXT:    [[T6:%.*]] = and <2 x i1> [[T5]], <i1 true, i1 false>
+; CHECK-NEXT:    ret <2 x i1> [[T6]]
 ;
   %t0 = sub <2 x i32> <i32 64, i32 64>, %len
   %t1 = shl <2 x i32> <i32 1, i32 0>, %t0
