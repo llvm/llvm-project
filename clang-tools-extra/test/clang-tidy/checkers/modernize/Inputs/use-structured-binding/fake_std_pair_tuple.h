@@ -1,4 +1,14 @@
 namespace std {
+  struct _Swallow_assign
+  {
+    template<class _Tp>
+       const _Swallow_assign&
+      operator=(const _Tp&) const
+      { return *this; }
+  };
+
+  constexpr _Swallow_assign ignore{};
+
   template<typename T1, typename T2>
   struct pair {
     T1 first;
@@ -42,3 +52,11 @@ namespace std {
 
 template<typename T1, typename T2>
 std::pair<T1, T2> getPair();
+
+template<typename T1, typename T2>
+constexpr std::pair<T1, T2> getConstexprPair() {
+  return std::pair<T1, T2>();
+}
+
+template<typename T1, typename T2, typename T3>
+std::tuple<T1, T2, T3> getTuple();

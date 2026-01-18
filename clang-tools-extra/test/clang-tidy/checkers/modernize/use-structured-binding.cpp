@@ -675,3 +675,209 @@ void StdMapTestCases() {
   }
 }
 
+void SpecialCases1() {
+  {
+    auto P = getPair<int, int>();                                                                                                                                                          
+    int y = P.second;  // second first                                                                                                                                                  
+    int x = P.first;
+  }
+
+  {
+    auto P = getPair<int, int>();                                                                                                                                                          
+    int x = P.first;                                                                                                                                                                       
+    // P.second never assigned
+  }
+
+  {
+    auto P = getPair<int, int>();                                                                                                                                                          
+    int x = P.first + 1;                                                                                                                                             
+    int y = P.second;  
+  }                                                                                                                                                                                                                                                                                                                                                                                                 
+  {
+    auto P = getPair<int, int>();                                                                                                                                                          
+    float x = P.first;  // int -> float                                                                                                                                                      
+    float y = P.second;   
+  }                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                                                           
+  {
+    auto P = getPair<int, int>();                                                                                                                                                          
+    int x = P.first;                                                                                                                                                                       
+    int dummy = 42;                                                                                                                                         
+    int y = P.second;     
+  }
+  
+  {
+    for (auto P : std::unordered_map<int, int>()) {
+      int x = P.first;                                                                                                                                                                     
+      int dummy = 42;                                                                                                                                              
+      int y = P.second;     
+    }
+  }
+                                                                                                                                                                                          
+  {
+    std::pair<int, int> somePair;
+    std::pair<int, int>* P = &somePair;                                                                                                                                                    
+    int x = P->first;                                                                                                                                                                      
+    int y = P->second;
+  }
+
+  {
+    std::pair<int, int> somePair;
+    std::pair<int, int>& P = somePair;                                        
+    int x = P.first;                                                                                                                                                                      
+    int y = P.second;
+  }
+
+  {
+    std::pair<int, int> somePair;
+    const std::pair<int, int>& P = somePair;                                        
+    int x = P.first;                                                                                                                                                                      
+    int y = P.second;
+  }
+}
+
+// Partial and full templates
+// Currently not supported because we can't get type from CXXDependentScopeMemberExpr, needs some extra work to do that.
+template<typename T>
+void templateFuncTest() {
+  auto P = getPair<T, int>();
+  T x = P.first;
+  int y = P.second;
+}
+
+template<typename T1, typename T2>
+void templateFuncTest() {
+  auto P = getPair<T1, T2>();
+  T1 x = P.first;
+  T2 y = P.second;
+}
+
+void SpecialCases2() {
+  // nested pairs
+  {
+    auto P = getPair<std::pair<int, int>, int>();
+    int val = P.second;
+    std::pair<int, int> inner = P.first;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES: auto [a_in, b_in] = P.first;
+    // CHECK-NEXT: // REMOVE
+    int a_in = inner.first;
+    int b_in = inner.second; // REMOVE
+    // CHECK-FIXES: // REMOVE
+  }
+
+  // shadow
+  {
+    int x = 10;
+    {
+      auto P = getPair<int, int>();
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+      // CHECK-FIXES: auto [x, y] = getPair<int, int>();
+      // CHECK-NEXT: // REMOVE
+      int x = P.first;
+      int y = P.second; // REMOVE
+      // CHECK-FIXES: // REMOVE
+    }
+  }
+
+  // only use first
+  {
+    auto P = getPair<int, int>();
+    int x = P.first;
+    int y = P.first;
+  }
+
+  // std::ignore in std::tie
+  {
+    int a = 0;
+    std::tie(a, std::ignore) = getPair<int, int>();
+  }
+
+  // tuple pair mixup
+  {
+    int a = 0, b = 0, c = 0;
+    std::tie(a, b, c) = getTuple<int, int, int>();
+    std::tie(a, a) = getPair<int, int>();
+  }
+
+  // volatile specifier
+  {
+    volatile std::pair<int, int> P = getPair<int, int>();
+    int x = P.first;
+    int y = P.second;
+  }
+
+  // decltype usage (there are invisible DeclRefExpr in decltype)
+  {
+    auto P = getPair<int, int>();
+    decltype(P.first) x = P.first;
+    decltype(P.second) y = P.second;
+  }
+
+  // constexpr pair
+  {
+    constexpr auto P = getConstexprPair<int, int>();
+    constexpr int x = P.first;
+    constexpr int y = P.second;
+  }
+
+  // initializer list
+  {
+    struct AggregatePair {
+      int first;
+      int second;
+    };
+    auto P = AggregatePair{.first = 1, .second = 2};
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES: auto [x, y] = AggregatePair{.first = 1, .second = 2};
+    // CHECK-NEXT: // REMOVE
+    int x = P.first;
+    int y = P.second; // REMOVE
+    // CHECK-FIXES: // REMOVE
+  }
+
+  // reference to original pair
+  {
+    std::pair<int, int> original = getPair<int, int>();
+    const auto& P = original;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES: const auto& [x, y] = original;
+    // CHECK-NEXT: // REMOVE
+    const int& x = P.first;
+    const int& y = P.second; // REMOVE
+    // CHECK-FIXES: // REMOVE
+  }
+
+  // typedef pair
+  {
+    using IntPair = std::pair<int, int>;
+    IntPair P = getPair<int, int>();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES: auto [x, y] = getPair<int, int>();
+    // CHECK-NEXT: // REMOVE
+    int x = P.first;
+    int y = P.second; // REMOVE
+    // CHECK-FIXES: // REMOVE
+  }
+
+  // assign to existing vars
+  {
+    int x, y;
+    auto P = getPair<int, int>();
+    x = P.first;  
+    y = P.second;
+  }
+
+  // conditional operator
+  {
+    bool cond;
+    std::pair<int, int> p1{1, 2}, p2{3, 4};
+    auto P = cond ? p1 : p2;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES: auto [x, y] = cond ? p1 : p2;
+    // CHECK-NEXT: // REMOVE
+    int x = P.first;
+    int y = P.second; // REMOVE
+    // CHECK-FIXES: // REMOVE
+  }
+}
