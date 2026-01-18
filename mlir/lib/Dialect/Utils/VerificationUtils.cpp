@@ -43,10 +43,9 @@ LogicalResult mlir::verifyElementTypesMatch(Operation *op, ShapedType lhs,
   Type lhsElementType = lhs.getElementType();
   Type rhsElementType = rhs.getElementType();
   if (lhsElementType != rhsElementType) {
-    return op->emitOpError()
-           << lhsName << " element type (" << lhsElementType
-           << ") does not match " << rhsName << " element type ("
-           << rhsElementType << ")";
+    return op->emitOpError() << lhsName << " element type (" << lhsElementType
+                             << ") does not match " << rhsName
+                             << " element type (" << rhsElementType << ")";
   }
   return success();
 }

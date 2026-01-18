@@ -5930,8 +5930,8 @@ LogicalResult MaskedLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (failed(verifyElementTypesMatch(*this, memType, resVType, "base",
-                                     "result")))
+  if (failed(
+          verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
     return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
@@ -6051,8 +6051,8 @@ LogicalResult GatherOp::verify() {
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
 
-  if (failed(verifyElementTypesMatch(*this, baseType, resVType, "base",
-                                     "result")))
+  if (failed(
+          verifyElementTypesMatch(*this, baseType, resVType, "base", "result")))
     return failure();
   if (llvm::size(getOffsets()) != baseType.getRank())
     return emitOpError("requires ") << baseType.getRank() << " indices";
@@ -6245,8 +6245,8 @@ LogicalResult ExpandLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (failed(verifyElementTypesMatch(*this, memType, resVType, "base",
-                                     "result")))
+  if (failed(
+          verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
     return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
