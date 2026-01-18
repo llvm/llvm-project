@@ -13,6 +13,19 @@
 
 using namespace llvm;
 
+// Returns true if MBB contains an INLINEASM_BR instruction that may
+// branch to SuccMBB, requiring specialized copy placement.
+static bool hasInlineAsmBrToSuccessor(MachineBasicBlock *MBB,
+                                      MachineBasicBlock *SuccMBB) {
+  if (!SuccMBB->isInlineAsmBrIndirectTarget())
+    return false;
+
+  for (const MachineInstr &MI : reverse(*MBB))
+    if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
+      return true;
+  return false;
+}
+
 // findCopyInsertPoint - Find a safe place in MBB to insert a copy from SrcReg
 // when following the CFG edge to SuccMBB. This needs to be after any def of
 // SrcReg, but before any subsequent point where control flow might jump out of
@@ -31,8 +44,11 @@ llvm::findPHICopyInsertPoint(MachineBasicBlock* MBB, MachineBasicBlock* SuccMBB,
   // computeLastInsertPoint, and similarly assumes that there cannot be multiple
   // instructions that are Calls with EHPad successors or INLINEASM_BR in a
   // block.
+  // Note that, if the successor basic block happens to be an indirect target,
+  // and the current block, which may be the successor itself, does not contain
+  // any INLINEASM_BR, we may not need any specialized handling.
   bool EHPadSuccessor = SuccMBB->isEHPad();
-  if (!EHPadSuccessor && !SuccMBB->isInlineAsmBrIndirectTarget())
+  if (!EHPadSuccessor && !hasInlineAsmBrToSuccessor(MBB, SuccMBB))
     return MBB->getFirstTerminator();
 
   // Discover any defs in this basic block.

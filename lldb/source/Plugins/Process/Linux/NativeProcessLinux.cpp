@@ -1366,7 +1366,7 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
   WritableDataBufferSP registers_sp;
   if (llvm::Error Err = reg_ctx.ReadAllRegisterValues(registers_sp).ToError())
     return std::move(Err);
-  auto restore_regs = llvm::make_scope_exit(
+  llvm::scope_exit restore_regs(
       [&] { reg_ctx.WriteAllRegisterValues(registers_sp); });
 
   llvm::SmallVector<uint8_t, 8> memory(syscall_data.Insn.size());
@@ -1377,7 +1377,7 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
     return std::move(Err);
   }
 
-  auto restore_mem = llvm::make_scope_exit(
+  llvm::scope_exit restore_mem(
       [&] { WriteMemory(exe_addr, memory.data(), memory.size(), bytes_read); });
 
   if (llvm::Error Err = reg_ctx.SetPC(exe_addr).ToError())

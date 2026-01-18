@@ -18,6 +18,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaInternal.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
@@ -1123,6 +1124,7 @@ public:
 private:
   llvm::DenseSet<const NamedDecl *> ExposureSet;
   llvm::DenseSet<const NamedDecl *> KnownNonExposureSet;
+  llvm::DenseSet<const NamedDecl *> CheckingDecls;
 };
 
 bool ExposureChecker::isTULocal(QualType Ty) {
@@ -1208,6 +1210,12 @@ bool ExposureChecker::isTULocal(const NamedDecl *D) {
       break;
     }
   }
+
+  // Avoid recursions.
+  if (CheckingDecls.count(D))
+    return false;
+  CheckingDecls.insert(D);
+  llvm::scope_exit RemoveCheckingDecls([&] { CheckingDecls.erase(D); });
 
   // [basic.link]p15.5
   // - a specialization of a template whose (possibly instantiated) declaration

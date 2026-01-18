@@ -27,6 +27,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Transforms/CFGuard.h"
 
 #define DEBUG_TYPE "x86-isel"
 
@@ -127,7 +128,7 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   if (isTypeLegal(MVT::f16)) {
     if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
       return getRegisterTypeForCallingConv(
-          Context, CC, VT.changeVectorElementType(MVT::f16));
+          Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
     if (VT == MVT::bf16)
       return MVT::f16;
@@ -166,8 +167,8 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
       isTypeLegal(MVT::f16))
-    return getNumRegistersForCallingConv(Context, CC,
-                                         VT.changeVectorElementType(MVT::f16));
+    return getNumRegistersForCallingConv(
+        Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
 }
@@ -199,7 +200,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   // Split vNbf16 vectors according to vNf16.
   if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
       isTypeLegal(MVT::f16))
-    VT = VT.changeVectorElementType(MVT::f16);
+    VT = VT.changeVectorElementType(Context, MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
                                               NumIntermediates, RegisterVT);
@@ -2009,6 +2010,49 @@ SDValue X86TargetLowering::getMOVL(SelectionDAG &DAG, const SDLoc &dl, MVT VT,
   return DAG.getVectorShuffle(VT, dl, V1, V2, Mask);
 }
 
+// Returns the type of copying which is required to set up a byval argument to
+// a tail-called function. This isn't needed for non-tail calls, because they
+// always need the equivalent of CopyOnce, but tail-calls sometimes need two to
+// avoid clobbering another argument (CopyViaTemp), and sometimes can be
+// optimised to zero copies when forwarding an argument from the caller's
+// caller (NoCopy).
+X86TargetLowering::ByValCopyKind X86TargetLowering::ByValNeedsCopyForTailCall(
+    SelectionDAG &DAG, SDValue Src, SDValue Dst, ISD::ArgFlagsTy Flags) const {
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+
+  // Globals are always safe to copy from.
+  if (isa<GlobalAddressSDNode>(Src) || isa<ExternalSymbolSDNode>(Src))
+    return CopyOnce;
+
+  // Can only analyse frame index nodes, conservatively assume we need a
+  // temporary.
+  auto *SrcFrameIdxNode = dyn_cast<FrameIndexSDNode>(Src);
+  auto *DstFrameIdxNode = dyn_cast<FrameIndexSDNode>(Dst);
+  if (!SrcFrameIdxNode || !DstFrameIdxNode)
+    return CopyViaTemp;
+
+  int SrcFI = SrcFrameIdxNode->getIndex();
+  int DstFI = DstFrameIdxNode->getIndex();
+  assert(MFI.isFixedObjectIndex(DstFI) &&
+         "byval passed in non-fixed stack slot");
+
+  int64_t SrcOffset = MFI.getObjectOffset(SrcFI);
+  int64_t DstOffset = MFI.getObjectOffset(DstFI);
+
+  // If the source is in the local frame, then the copy to the argument
+  // memory is always valid.
+  bool FixedSrc = MFI.isFixedObjectIndex(SrcFI);
+  if (!FixedSrc || (FixedSrc && SrcOffset < 0))
+    return CopyOnce;
+
+  // If the value is already in the correct location, then no copying is
+  // needed. If not, then we need to copy via a temporary.
+  if (SrcOffset == DstOffset)
+    return NoCopy;
+  else
+    return CopyViaTemp;
+}
+
 SDValue
 X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                              SmallVectorImpl<SDValue> &InVals) const {
@@ -2026,11 +2070,11 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   MachineFunction &MF = DAG.getMachineFunction();
   bool Is64Bit        = Subtarget.is64Bit();
-  bool IsWin64        = Subtarget.isCallingConvWin64(CallConv);
-  bool IsSibcall      = false;
-  bool IsGuaranteeTCO = MF.getTarget().Options.GuaranteedTailCallOpt ||
-      CallConv == CallingConv::Tail || CallConv == CallingConv::SwiftTail;
-  bool IsCalleePopSRet = !IsGuaranteeTCO && hasCalleePopSRet(Outs, Subtarget);
+  bool IsWin64 = Subtarget.isCallingConvWin64(CallConv);
+  bool ShouldGuaranteeTCO = shouldGuaranteeTCO(
+      CallConv, MF.getTarget().Options.GuaranteedTailCallOpt);
+  bool IsCalleePopSRet =
+      !ShouldGuaranteeTCO && hasCalleePopSRet(Outs, Subtarget);
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
   bool HasNCSR = (CB && isa<CallInst>(CB) &&
                   CB->hasFnAttr("no_caller_saved_registers"));
@@ -2041,6 +2085,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // If the indirect call target has the nocf_check attribute, the call needs
   // the NOTRACK prefix. For simplicity just disable tail calls as there are
   // so many variants.
+  // FIXME: This will cause backend errors if the user forces the issue.
   bool IsNoTrackIndirectCall = IsIndirectCall && CB->doesNoCfCheck() &&
                                M->getModuleFlag("cf-protection-branch");
   if (IsNoTrackIndirectCall)
@@ -2077,31 +2122,27 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
-  if (Subtarget.isPICStyleGOT() && !IsGuaranteeTCO && !IsMustTail) {
-    // If we are using a GOT, disable tail calls to external symbols with
-    // default visibility. Tail calling such a symbol requires using a GOT
-    // relocation, which forces early binding of the symbol. This breaks code
-    // that require lazy function symbol resolution. Using musttail or
-    // GuaranteedTailCallOpt will override this.
-    GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
-    if (!G || (!G->getGlobal()->hasLocalLinkage() &&
-               G->getGlobal()->hasDefaultVisibility()))
-      isTailCall = false;
+  bool IsSibcall = false;
+  if (isTailCall && ShouldGuaranteeTCO) {
+    // If we need to guarantee TCO for a non-musttail call, we just need to make
+    // sure the conventions match. If a tail call uses one of the supported TCO
+    // conventions and the caller and callee match, we can tail call any
+    // function prototype.
+    CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
+    isTailCall = (CallConv == CallerCC);
+    IsSibcall = IsMustTail;
+  } else if (isTailCall) {
+    // Check if this tail call is a "sibling" call, which is loosely defined to
+    // be a tail call that doesn't require heroics like moving the return
+    // address or swapping byval arguments. We treat some musttail calls as
+    // sibling calls to avoid unnecessary argument copies.
+    IsSibcall =
+        isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs, IsCalleePopSRet);
+    isTailCall = IsSibcall || IsMustTail;
   }
 
-  if (isTailCall && !IsMustTail) {
-    // Check if it's really possible to do a tail call.
-    isTailCall = IsEligibleForTailCallOptimization(CLI, CCInfo, ArgLocs,
-                                                   IsCalleePopSRet);
-
-    // Sibcalls are automatically detected tailcalls which do not require
-    // ABI changes.
-    if (!IsGuaranteeTCO && isTailCall)
-      IsSibcall = true;
-
-    if (isTailCall)
-      ++NumTailCalls;
-  }
+  if (isTailCall)
+    ++NumTailCalls;
 
   if (IsMustTail && !isTailCall)
     report_fatal_error("failed to perform tail call elimination on a call "
@@ -2116,13 +2157,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // This is a sibcall. The memory operands are available in caller's
     // own caller's stack.
     NumBytes = 0;
-  else if (IsGuaranteeTCO && canGuaranteeTCO(CallConv))
+  else if (ShouldGuaranteeTCO && canGuaranteeTCO(CallConv))
     NumBytes = GetAlignedArgumentStackSize(NumBytes, DAG);
 
+  // A sibcall is ABI-compatible and does not need to adjust the stack pointer.
   int FPDiff = 0;
-  if (isTailCall &&
-      shouldGuaranteeTCO(CallConv,
-                         MF.getTarget().Options.GuaranteedTailCallOpt)) {
+  if (isTailCall && ShouldGuaranteeTCO && !IsSibcall) {
     // Lower arguments at fp - stackoffset + fpdiff.
     unsigned NumBytesCallerPushed = X86Info->getBytesToPopOnReturn();
 
@@ -2136,6 +2176,80 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   unsigned NumBytesToPush = NumBytes;
   unsigned NumBytesToPop = NumBytes;
+
+  SDValue StackPtr;
+  const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+
+  // If we are doing a tail-call, any byval arguments will be written to stack
+  // space which was used for incoming arguments. If any the values being used
+  // are incoming byval arguments to this function, then they might be
+  // overwritten by the stores of the outgoing arguments. To avoid this, we
+  // need to make a temporary copy of them in local stack space, then copy back
+  // to the argument area.
+  // FIXME: There's potential to improve the code by using virtual registers for
+  // temporary storage, and letting the register allocator spill if needed.
+  SmallVector<SDValue, 8> ByValTemporaries;
+  SDValue ByValTempChain;
+  if (isTailCall) {
+    // Use null SDValue to mean "no temporary recorded for this arg index".
+    ByValTemporaries.assign(OutVals.size(), SDValue());
+
+    SmallVector<SDValue, 8> ByValCopyChains;
+    for (const CCValAssign &VA : ArgLocs) {
+      unsigned ArgIdx = VA.getValNo();
+      SDValue Src = OutVals[ArgIdx];
+      ISD::ArgFlagsTy Flags = Outs[ArgIdx].Flags;
+
+      if (!Flags.isByVal())
+        continue;
+
+      auto PtrVT = getPointerTy(DAG.getDataLayout());
+
+      if (!StackPtr.getNode())
+        StackPtr =
+            DAG.getCopyFromReg(Chain, dl, RegInfo->getStackRegister(), PtrVT);
+
+      // Destination: where this byval should live in the callee’s frame
+      // after the tail call.
+      int64_t Offset = VA.getLocMemOffset() + FPDiff;
+      uint64_t Size = VA.getLocVT().getFixedSizeInBits() / 8;
+      int FI = MF.getFrameInfo().CreateFixedObject(Size, Offset,
+                                                   /*IsImmutable=*/true);
+      SDValue Dst = DAG.getFrameIndex(FI, PtrVT);
+
+      ByValCopyKind Copy = ByValNeedsCopyForTailCall(DAG, Src, Dst, Flags);
+
+      if (Copy == NoCopy) {
+        // If the argument is already at the correct offset on the stack
+        // (because we are forwarding a byval argument from our caller), we
+        // don't need any copying.
+        continue;
+      } else if (Copy == CopyOnce) {
+        // If the argument is in our local stack frame, no other argument
+        // preparation can clobber it, so we can copy it to the final location
+        // later.
+        ByValTemporaries[ArgIdx] = Src;
+      } else {
+        assert(Copy == CopyViaTemp && "unexpected enum value");
+        // If we might be copying this argument from the outgoing argument
+        // stack area, we need to copy via a temporary in the local stack
+        // frame.
+        MachineFrameInfo &MFI = MF.getFrameInfo();
+        int TempFrameIdx = MFI.CreateStackObject(Flags.getByValSize(),
+                                                 Flags.getNonZeroByValAlign(),
+                                                 /*isSS=*/false);
+        SDValue Temp =
+            DAG.getFrameIndex(TempFrameIdx, getPointerTy(DAG.getDataLayout()));
+
+        SDValue CopyChain =
+            CreateCopyOfByValArgument(Src, Temp, Chain, Flags, DAG, dl);
+        ByValCopyChains.push_back(CopyChain);
+      }
+    }
+    if (!ByValCopyChains.empty())
+      ByValTempChain =
+          DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ByValCopyChains);
+  }
 
   // If we have an inalloca argument, all stack space has already been allocated
   // for us and be right at the top of the stack.  We don't support multiple
@@ -2177,7 +2291,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SmallVector<std::pair<Register, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
-  SDValue StackPtr;
 
   // The next loop assumes that the locations are in the same order of the
   // input arguments.
@@ -2186,7 +2299,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Walk the register/memloc assignments, inserting copies/loads.  In the case
   // of tail call optimization arguments are handle later.
-  const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   for (unsigned I = 0, OutIndex = 0, E = ArgLocs.size(); I != E;
        ++I, ++OutIndex) {
     assert(OutIndex < Outs.size() && "Invalid Out index");
@@ -2276,7 +2388,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         if (ShadowReg)
           RegsToPass.push_back(std::make_pair(ShadowReg, Arg));
       }
-    } else if (!IsSibcall && (!isTailCall || isByVal)) {
+    } else if (!IsSibcall && (!isTailCall || (isByVal && !IsMustTail))) {
       assert(VA.isMemLoc());
       if (!StackPtr.getNode())
         StackPtr = DAG.getCopyFromReg(Chain, dl, RegInfo->getStackRegister(),
@@ -2353,7 +2465,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // For tail calls lower the arguments to the 'real' stack slots.  Sibcalls
   // don't need this because the eligibility check rejects calls that require
   // shuffling arguments passed in memory.
-  if (!IsSibcall && isTailCall) {
+  if (isTailCall && !IsSibcall) {
     // Force all the incoming stack arguments to be loaded from the stack
     // before any new outgoing arguments or the return address are stored to the
     // stack, because the outgoing stack slots may alias the incoming argument
@@ -2362,6 +2474,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // effectively depends on every argument instead of just those arguments it
     // would clobber.
     Chain = DAG.getStackArgumentTokenFactor(Chain);
+
+    if (ByValTempChain)
+      Chain =
+          DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chain, ByValTempChain);
 
     SmallVector<SDValue, 8> MemOpChains2;
     SDValue FIN;
@@ -2395,16 +2511,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
 
       if (Flags.isByVal()) {
-        // Copy relative to framepointer.
-        SDValue Source = DAG.getIntPtrConstant(VA.getLocMemOffset(), dl);
-        if (!StackPtr.getNode())
-          StackPtr = DAG.getCopyFromReg(Chain, dl, RegInfo->getStackRegister(),
-                                        getPointerTy(DAG.getDataLayout()));
-        Source = DAG.getNode(ISD::ADD, dl, getPointerTy(DAG.getDataLayout()),
-                             StackPtr, Source);
+        if (SDValue ByValSrc = ByValTemporaries[OutsIndex]) {
+          auto PtrVT = getPointerTy(DAG.getDataLayout());
+          SDValue DstAddr = DAG.getFrameIndex(FI, PtrVT);
 
-        MemOpChains2.push_back(
-            CreateCopyOfByValArgument(Source, FIN, Chain, Flags, DAG, dl));
+          MemOpChains2.push_back(CreateCopyOfByValArgument(
+              ByValSrc, DstAddr, Chain, Flags, DAG, dl));
+        }
       } else {
         // Store relative to framepointer.
         MemOpChains2.push_back(DAG.getStore(
@@ -2431,6 +2544,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   bool IsImpCall = false;
+  bool IsCFGuardCall = false;
   if (DAG.getTarget().getCodeModel() == CodeModel::Large) {
     assert(Is64Bit && "Large code model is only legal in 64-bit mode.");
     // In the 64-bit large code model, we have to make all calls
@@ -2448,6 +2562,21 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
              Callee.getValueType() == MVT::i32) {
     // Zero-extend the 32-bit Callee address into a 64-bit according to x32 ABI
     Callee = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Callee);
+  } else if (Is64Bit && CB && isCFGuardCall(CB)) {
+    // We'll use a specific psuedo instruction for tail calls to control flow
+    // guard functions to guarantee the instruction used for the call. To do
+    // this we need to unwrap the load now and use the CFG Func GV as the
+    // callee.
+    IsCFGuardCall = true;
+    auto *LoadNode = cast<LoadSDNode>(Callee);
+    GlobalAddressSDNode *GA =
+        cast<GlobalAddressSDNode>(unwrapAddress(LoadNode->getBasePtr()));
+    assert(isCFGuardFunction(GA->getGlobal()) &&
+           "CFG Call should be to a guard function");
+    assert(LoadNode->getOffset()->isUndef() &&
+           "CFG Function load should not have an offset");
+    Callee = DAG.getTargetGlobalAddress(
+        GA->getGlobal(), dl, GA->getValueType(0), 0, X86II::MO_NO_FLAG);
   }
 
   SmallVector<SDValue, 8> Ops;
@@ -2552,7 +2681,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // should be computed from returns not tail calls.  Consider a void
     // function making a tail call to a function returning int.
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, MVT::Other, Ops);
+    auto Opcode =
+        IsCFGuardCall ? X86ISD::TC_RETURN_GLOBALADDR : X86ISD::TC_RETURN;
+    SDValue Ret = DAG.getNode(Opcode, dl, MVT::Other, Ops);
 
     if (IsCFICall)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -2568,6 +2699,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = DAG.getNode(X86ISD::IMP_CALL, dl, NodeTys, Ops);
   } else if (IsNoTrackIndirectCall) {
     Chain = DAG.getNode(X86ISD::NT_CALL, dl, NodeTys, Ops);
+  } else if (IsCFGuardCall) {
+    Chain = DAG.getNode(X86ISD::CALL_GLOBALADDR, dl, NodeTys, Ops);
   } else if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
     // Calls with a "clang.arc.attachedcall" bundle are special. They should be
     // expanded to the call, directly followed by a special marker sequence and
@@ -2803,12 +2936,16 @@ mayBeSRetTailCallCompatible(const TargetLowering::CallLoweringInfo &CLI,
   return false;
 }
 
-/// Check whether the call is eligible for tail call optimization. Targets
-/// that want to do tail call optimization should implement this function.
-/// Note that the x86 backend does not check musttail calls for eligibility! The
-/// rest of x86 tail call lowering must be prepared to forward arguments of any
-/// type.
-bool X86TargetLowering::IsEligibleForTailCallOptimization(
+/// Check whether the call is eligible for sibling call optimization. Sibling
+/// calls are loosely defined to be simple, profitable tail calls that only
+/// require adjusting register parameters. We do not speculatively to optimize
+/// complex calls that require lots of argument memory operations that may
+/// alias.
+///
+/// Note that LLVM supports multiple ways, such as musttail, to force tail call
+/// emission. Returning false from this function will not prevent tail call
+/// emission in all cases.
+bool X86TargetLowering::isEligibleForSiblingCallOpt(
     TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
     SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const {
   SelectionDAG &DAG = CLI.DAG;
@@ -2833,23 +2970,28 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   if (CallerF.getReturnType()->isX86_FP80Ty() && !CLI.RetTy->isX86_FP80Ty())
     return false;
 
-  CallingConv::ID CallerCC = CallerF.getCallingConv();
-  bool CCMatch = CallerCC == CalleeCC;
-  bool IsCalleeWin64 = Subtarget.isCallingConvWin64(CalleeCC);
-  bool IsCallerWin64 = Subtarget.isCallingConvWin64(CallerCC);
-  bool IsGuaranteeTCO = DAG.getTarget().Options.GuaranteedTailCallOpt ||
-      CalleeCC == CallingConv::Tail || CalleeCC == CallingConv::SwiftTail;
-
   // Win64 functions have extra shadow space for argument homing. Don't do the
   // sibcall if the caller and callee have mismatched expectations for this
   // space.
+  CallingConv::ID CallerCC = CallerF.getCallingConv();
+  bool IsCalleeWin64 = Subtarget.isCallingConvWin64(CalleeCC);
+  bool IsCallerWin64 = Subtarget.isCallingConvWin64(CallerCC);
   if (IsCalleeWin64 != IsCallerWin64)
     return false;
 
-  if (IsGuaranteeTCO) {
-    if (canGuaranteeTCO(CalleeCC) && CCMatch)
-      return true;
-    return false;
+  // If we are using a GOT, don't generate sibling calls to non-local,
+  // default-visibility symbols. Tail calling such a symbol requires using a GOT
+  // relocation, which forces early binding of the symbol. This breaks code that
+  // require lazy function symbol resolution. Using musttail or
+  // GuaranteedTailCallOpt will override this.
+  if (Subtarget.isPICStyleGOT()) {
+    if (isa<ExternalSymbolSDNode>(Callee))
+      return false;
+    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+      if (!G->getGlobal()->hasLocalLinkage() &&
+          G->getGlobal()->hasDefaultVisibility())
+        return false;
+    }
   }
 
   // Look for obvious safe cases to perform tail call optimization that do not
@@ -2916,7 +3058,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   // The callee has to preserve all registers the caller needs to preserve.
   const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
   const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
-  if (!CCMatch) {
+  if (CallerCC != CalleeCC) {
     const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
     if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
       return false;
