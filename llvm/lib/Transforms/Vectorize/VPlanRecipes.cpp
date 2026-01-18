@@ -710,22 +710,20 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                        Builder.getInt32(0));
   }
   case VPInstruction::ComputeAnyOfResult: {
-    // Operands: Start, NewVal, followed by reduction parts.
-    Value *InitVal = State.get(getOperand(0), VPLane(0));
+    Value *Start = State.get(getOperand(0), VPLane(0));
     Value *NewVal = State.get(getOperand(1), VPLane(0));
-    Value *ReducedPartRdx = State.get(getOperand(2));
+    Value *ReducedResult = State.get(getOperand(2));
     for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
-      ReducedPartRdx =
+      ReducedResult =
           Builder.CreateBinOp(Instruction::Or, State.get(getOperand(Idx)),
-                              ReducedPartRdx, "bin.rdx");
+                              ReducedResult, "bin.rdx");
     // If any predicate is true it means that we want to select the new value.
-    Value *AnyOf = ReducedPartRdx->getType()->isVectorTy()
-                       ? Builder.CreateOrReduce(ReducedPartRdx)
-                       : ReducedPartRdx;
+    if (ReducedResult->getType()->isVectorTy())
+      ReducedResult = Builder.CreateOrReduce(ReducedResult);
     // The compares in the loop may yield poison, which propagates through the
     // bitwise ORs. Freeze it here before the condition is used.
-    AnyOf = Builder.CreateFreeze(AnyOf);
-    return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
+    ReducedResult = Builder.CreateFreeze(ReducedResult);
+    return Builder.CreateSelect(ReducedResult, NewVal, Start, "rdx.select");
   }
   case VPInstruction::ComputeFindIVResult: {
     // The recipe's operands are the start value, the sentinel value, followed
