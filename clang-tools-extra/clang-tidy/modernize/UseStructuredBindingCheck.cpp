@@ -153,7 +153,7 @@ AST_MATCHER(VarDecl, hasAnySpecifiersShouldBeIgnored) {
 }
 
 // Ignore nodes inside macros.
-AST_POLYMORPHIC_MATCHER(isInMarco,
+AST_POLYMORPHIC_MATCHER(isInMacro,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Stmt, Decl)) {
   return Node.getBeginLoc().isMacroID() || Node.getEndLoc().isMacroID();
 }
@@ -209,7 +209,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                                hasDeclaration(cxxRecordDecl(isPairType())))));
 
   auto UnlessShouldBeIgnored =
-      unless(anyOf(hasAnySpecifiersShouldBeIgnored(), isInMarco()));
+      unless(anyOf(hasAnySpecifiersShouldBeIgnored(), isInMacro()));
 
   auto VarInitWithFirstMember =
       getVarInitWithMemberMatcher(PairDeclName, "first", FirstTypeName,
@@ -241,7 +241,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
   // std::tie(x, y) = ...;
   Finder->addMatcher(
       exprWithCleanups(
-          unless(isInMarco()),
+          unless(isInMacro()),
           has(cxxOperatorCallExpr(
                   hasOverloadedOperatorName("="),
                   hasLHS(ignoringImplicit(
@@ -265,7 +265,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
   // Y y = p.second;
   Finder->addMatcher(
       declStmt(
-          unless(isInMarco()),
+          unless(isInMacro()),
           hasSingleDecl(varDecl(UnlessShouldBeIgnored,
                                 unless(isDirectInitialization()),
                                 hasType(typeOrLValueReferenceTo(PairType).bind(
@@ -286,7 +286,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
   // }
   Finder->addMatcher(
       cxxForRangeStmt(
-          unless(isInMarco()),
+          unless(isInMacro()),
           hasLoopVariable(
               varDecl(hasType(typeOrLValueReferenceTo(PairType).bind(
                           PairVarTypeName)),
