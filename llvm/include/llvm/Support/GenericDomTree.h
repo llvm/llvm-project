@@ -60,7 +60,9 @@ template <class NodeT> class DomTreeNodeBase {
   NodeT *TheBB;
   DomTreeNodeBase *IDom;
   unsigned Level;
-  SmallVector<DomTreeNodeBase *, 4> Children;
+  DomTreeNodeBase *FirstChild = nullptr;
+  DomTreeNodeBase *Sibling = nullptr;
+  DomTreeNodeBase **AppendPtr = &FirstChild;
   mutable unsigned DFSNumIn = ~0;
   mutable unsigned DFSNumOut = ~0;
 
@@ -68,17 +70,35 @@ template <class NodeT> class DomTreeNodeBase {
   DomTreeNodeBase(NodeT *BB, DomTreeNodeBase *iDom)
       : TheBB(BB), IDom(iDom), Level(IDom ? IDom->Level + 1 : 0) {}
 
-  using iterator = typename SmallVector<DomTreeNodeBase *, 4>::iterator;
-  using const_iterator =
-      typename SmallVector<DomTreeNodeBase *, 4>::const_iterator;
+  DomTreeNodeBase(const DomTreeNodeBase &) = delete;
+  DomTreeNodeBase &operator=(const DomTreeNodeBase &) = delete;
 
-  iterator begin() { return Children.begin(); }
-  iterator end() { return Children.end(); }
-  const_iterator begin() const { return Children.begin(); }
-  const_iterator end() const { return Children.end(); }
+  class const_iterator
+      : public iterator_facade_base<const_iterator, std::forward_iterator_tag,
+                                    DomTreeNodeBase *> {
+    DomTreeNodeBase *Node;
 
-  DomTreeNodeBase *const &back() const { return Children.back(); }
-  DomTreeNodeBase *&back() { return Children.back(); }
+  public:
+    const_iterator(DomTreeNodeBase *Node = nullptr) : Node(Node) {}
+    bool operator==(const const_iterator &Other) const {
+      return Other.Node == Node;
+    }
+    DomTreeNodeBase *operator*() const { return Node; }
+    const_iterator &operator++() {
+      Node = Node->Sibling;
+      return *this;
+    }
+    const_iterator operator++(int) {
+      const_iterator cp = *this;
+      ++*this;
+      return cp;
+    }
+  };
+  // We don't permit modifications through the iterator.
+  using iterator = const_iterator;
+
+  iterator begin() const { return iterator{FirstChild}; }
+  iterator end() const { return iterator{}; }
 
   iterator_range<iterator> children() { return make_range(begin(), end()); }
   iterator_range<const_iterator> children() const {
@@ -89,17 +109,33 @@ template <class NodeT> class DomTreeNodeBase {
   DomTreeNodeBase *getIDom() const { return IDom; }
   unsigned getLevel() const { return Level; }
 
-  void addChild(DomTreeNodeBase *C) { Children.push_back(C); }
+  // TODO: make these private once NewGVN doesn't require these anymore.
+  void addChild(DomTreeNodeBase *C) {
+    assert(!C->Sibling && "cannot add child that already has siblings");
+    assert(!*AppendPtr && "sibling of last child must be nullptr");
+    *AppendPtr = C;
+    AppendPtr = &C->Sibling;
+  }
 
-  bool isLeaf() const { return Children.empty(); }
-  size_t getNumChildren() const { return Children.size(); }
+  // TODO: make these private once NewGVN doesn't require these anymore.
+  void removeChild(DomTreeNodeBase *C) {
+    DomTreeNodeBase **It = &FirstChild;
+    while (*It != C) {
+      assert(*It != nullptr && "Not in immediate dominator children list!");
+      It = &(*It)->Sibling;
+    }
+    assert(!*AppendPtr && "sibling of last child must be nullptr");
+    assert(C->Sibling || AppendPtr == &C->Sibling);
+    *It = C->Sibling;
+    if (C->Sibling)
+      C->Sibling = nullptr;
+    else
+      AppendPtr = It;
+  }
 
-  void clearAllChildren() { Children.clear(); }
+  bool isLeaf() const { return FirstChild == nullptr; }
 
   bool compare(const DomTreeNodeBase *Other) const {
-    if (getNumChildren() != Other->getNumChildren())
-      return true;
-
     if (Level != Other->Level) return true;
 
     SmallPtrSet<const NodeT *, 4> OtherChildren;
@@ -108,27 +144,24 @@ template <class NodeT> class DomTreeNodeBase {
       OtherChildren.insert(Nd);
     }
 
+    size_t OwnCount = 0;
     for (const DomTreeNodeBase *I : *this) {
       const NodeT *N = I->getBlock();
       if (OtherChildren.count(N) == 0)
         return true;
+      ++OwnCount;
     }
-    return false;
+    return OwnCount != OtherChildren.size();
   }
 
   void setIDom(DomTreeNodeBase *NewIDom) {
     assert(IDom && "No immediate dominator?");
     if (IDom == NewIDom) return;
-
-    auto I = find(IDom->Children, this);
-    assert(I != IDom->Children.end() &&
-           "Not in immediate dominator children set!");
-    // I am no longer your child...
-    IDom->Children.erase(I);
+    IDom->removeChild(this);
 
     // Switch to new dominator
     IDom = NewIDom;
-    IDom->Children.push_back(this);
+    IDom->addChild(this);
 
     UpdateLevel();
   }
@@ -723,15 +756,8 @@ public:
     DFSInfoValid = false;
 
     // Remove node from immediate dominator's children list.
-    DomTreeNodeBase<NodeT> *IDom = Node->getIDom();
-    if (IDom) {
-      const auto I = find(IDom->Children, Node);
-      assert(I != IDom->Children.end() &&
-             "Not in immediate dominator children set!");
-      // I am no longer your child...
-      std::swap(*I, IDom->Children.back());
-      IDom->Children.pop_back();
-    }
+    if (DomTreeNodeBase<NodeT> *IDom = Node->getIDom())
+      IDom->removeChild(Node);
 
     DomTreeNodes[*IdxOpt] = nullptr;
     if constexpr (!GraphHasNodeNumbers<NodeT *>)
