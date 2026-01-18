@@ -1747,10 +1747,10 @@ namespace llvm {
     // Call lowering helpers.
 
     /// Check whether the call is eligible for sibling call optimization.
-    bool isEligibleForSiblingCallOpt(TargetLowering::CallLoweringInfo &CLI,
-                                     CCState &CCInfo,
-                                     SmallVectorImpl<CCValAssign> &ArgLocs,
-                                     bool IsCalleePopSRet) const;
+    bool
+    isEligibleForSiblingCallOpt(TargetLowering::CallLoweringInfo &CLI,
+                                CCState &CCInfo,
+                                SmallVectorImpl<CCValAssign> &ArgLocs) const;
     SDValue EmitTailCallLoadRetAddr(SelectionDAG &DAG, SDValue &OutRetAddr,
                                     SDValue Chain, bool IsTailCall,
                                     bool Is64Bit, int FPDiff,
