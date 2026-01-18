@@ -168,7 +168,7 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
     // Emit warning first (DiagnosticBuilder emits on destruction), then notes.
     // Notes must follow the primary diagnostic or they may be dropped.
     {
-      DiagnosticBuilder Diag =
+      const DiagnosticBuilder Diag =
           diag(Enum->getBeginLoc(), "initial values in enum '%0' are not "
                                     "consistent, consider explicit "
                                     "initialization of all, none or only the "
