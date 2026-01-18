@@ -4,7 +4,7 @@
 
 declare i8 @use(i8, i1)
 
-define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; CHECK-LABEL: commutative_clmul_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a4, a1, 2
@@ -84,7 +84,7 @@ define void @commutative_clmulh_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
   ret void
 }
 
-define void @commutative_clmulr_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+define void @commutative_clmulr_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; CHECK-LABEL: commutative_clmulr_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    zext.b a1, a1
@@ -128,17 +128,13 @@ define void @commutative_clmulr_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
   ret void
 }
 
-define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; RV32IM-LABEL: mul_use_commutative_clmul_i8:
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    addi sp, sp, -16
-; RV32IM-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IM-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32IM-NEXT:    .cfi_offset ra, -4
-; RV32IM-NEXT:    .cfi_offset s0, -8
-; RV32IM-NEXT:    .cfi_offset s1, -12
 ; RV32IM-NEXT:    mv s0, a3
 ; RV32IM-NEXT:    andi a3, a1, 2
 ; RV32IM-NEXT:    andi a4, a1, 1
@@ -170,23 +166,15 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
 ; RV32IM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32IM-NEXT:    .cfi_restore ra
-; RV32IM-NEXT:    .cfi_restore s0
-; RV32IM-NEXT:    .cfi_restore s1
 ; RV32IM-NEXT:    addi sp, sp, 16
-; RV32IM-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: mul_use_commutative_clmul_i8:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    addi sp, sp, -32
-; RV64IM-NEXT:    .cfi_def_cfa_offset 32
 ; RV64IM-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    .cfi_offset ra, -8
-; RV64IM-NEXT:    .cfi_offset s0, -16
-; RV64IM-NEXT:    .cfi_offset s1, -24
 ; RV64IM-NEXT:    mv s0, a3
 ; RV64IM-NEXT:    andi a3, a1, 2
 ; RV64IM-NEXT:    andi a4, a1, 1
@@ -218,11 +206,7 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
 ; RV64IM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    .cfi_restore ra
-; RV64IM-NEXT:    .cfi_restore s0
-; RV64IM-NEXT:    .cfi_restore s1
 ; RV64IM-NEXT:    addi sp, sp, 32
-; RV64IM-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IM-NEXT:    ret
   %xy = call i8 @llvm.clmul.i8(i8 %x, i8 %y)
   %yx = call i8 @llvm.clmul.i8(i8 %y, i8 %x)
@@ -232,7 +216,7 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
   ret void
 }
 
-define void @neg_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+define void @neg_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; CHECK-LABEL: neg_commutative_clmul_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a4, a1, 2
@@ -269,11 +253,10 @@ define void @neg_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
 
 declare void @vector_use(<2 x i64>)
 
-define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) nounwind {
 ; RV32IM-LABEL: commutative_clmul_v2i64:
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    addi sp, sp, -784
-; RV32IM-NEXT:    .cfi_def_cfa_offset 784
 ; RV32IM-NEXT:    sw ra, 780(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s0, 776(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s1, 772(sp) # 4-byte Folded Spill
@@ -287,19 +270,6 @@ define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p
 ; RV32IM-NEXT:    sw s9, 740(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s10, 736(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s11, 732(sp) # 4-byte Folded Spill
-; RV32IM-NEXT:    .cfi_offset ra, -4
-; RV32IM-NEXT:    .cfi_offset s0, -8
-; RV32IM-NEXT:    .cfi_offset s1, -12
-; RV32IM-NEXT:    .cfi_offset s2, -16
-; RV32IM-NEXT:    .cfi_offset s3, -20
-; RV32IM-NEXT:    .cfi_offset s4, -24
-; RV32IM-NEXT:    .cfi_offset s5, -28
-; RV32IM-NEXT:    .cfi_offset s6, -32
-; RV32IM-NEXT:    .cfi_offset s7, -36
-; RV32IM-NEXT:    .cfi_offset s8, -40
-; RV32IM-NEXT:    .cfi_offset s9, -44
-; RV32IM-NEXT:    .cfi_offset s10, -48
-; RV32IM-NEXT:    .cfi_offset s11, -52
 ; RV32IM-NEXT:    sw a3, 684(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw a2, 680(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    lw a4, 0(a1)
@@ -2151,27 +2121,12 @@ define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p
 ; RV32IM-NEXT:    lw s9, 740(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s10, 736(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s11, 732(sp) # 4-byte Folded Reload
-; RV32IM-NEXT:    .cfi_restore ra
-; RV32IM-NEXT:    .cfi_restore s0
-; RV32IM-NEXT:    .cfi_restore s1
-; RV32IM-NEXT:    .cfi_restore s2
-; RV32IM-NEXT:    .cfi_restore s3
-; RV32IM-NEXT:    .cfi_restore s4
-; RV32IM-NEXT:    .cfi_restore s5
-; RV32IM-NEXT:    .cfi_restore s6
-; RV32IM-NEXT:    .cfi_restore s7
-; RV32IM-NEXT:    .cfi_restore s8
-; RV32IM-NEXT:    .cfi_restore s9
-; RV32IM-NEXT:    .cfi_restore s10
-; RV32IM-NEXT:    .cfi_restore s11
 ; RV32IM-NEXT:    addi sp, sp, 784
-; RV32IM-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: commutative_clmul_v2i64:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    addi sp, sp, -960
-; RV64IM-NEXT:    .cfi_def_cfa_offset 960
 ; RV64IM-NEXT:    sd ra, 952(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s0, 944(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s1, 936(sp) # 8-byte Folded Spill
@@ -2185,19 +2140,6 @@ define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p
 ; RV64IM-NEXT:    sd s9, 872(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s10, 864(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s11, 856(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    .cfi_offset ra, -8
-; RV64IM-NEXT:    .cfi_offset s0, -16
-; RV64IM-NEXT:    .cfi_offset s1, -24
-; RV64IM-NEXT:    .cfi_offset s2, -32
-; RV64IM-NEXT:    .cfi_offset s3, -40
-; RV64IM-NEXT:    .cfi_offset s4, -48
-; RV64IM-NEXT:    .cfi_offset s5, -56
-; RV64IM-NEXT:    .cfi_offset s6, -64
-; RV64IM-NEXT:    .cfi_offset s7, -72
-; RV64IM-NEXT:    .cfi_offset s8, -80
-; RV64IM-NEXT:    .cfi_offset s9, -88
-; RV64IM-NEXT:    .cfi_offset s10, -96
-; RV64IM-NEXT:    .cfi_offset s11, -104
 ; RV64IM-NEXT:    sd a5, 744(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd a4, 736(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    mv t2, a3
@@ -3020,21 +2962,7 @@ define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p
 ; RV64IM-NEXT:    ld s9, 872(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s10, 864(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s11, 856(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    .cfi_restore ra
-; RV64IM-NEXT:    .cfi_restore s0
-; RV64IM-NEXT:    .cfi_restore s1
-; RV64IM-NEXT:    .cfi_restore s2
-; RV64IM-NEXT:    .cfi_restore s3
-; RV64IM-NEXT:    .cfi_restore s4
-; RV64IM-NEXT:    .cfi_restore s5
-; RV64IM-NEXT:    .cfi_restore s6
-; RV64IM-NEXT:    .cfi_restore s7
-; RV64IM-NEXT:    .cfi_restore s8
-; RV64IM-NEXT:    .cfi_restore s9
-; RV64IM-NEXT:    .cfi_restore s10
-; RV64IM-NEXT:    .cfi_restore s11
 ; RV64IM-NEXT:    addi sp, sp, 960
-; RV64IM-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IM-NEXT:    ret
   %xy = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %x, <2 x i64> %y)
   %yx = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %y, <2 x i64> %x)
@@ -3043,11 +2971,10 @@ define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p
   ret void
 }
 
-define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) nounwind {
 ; RV32IM-LABEL: commutative_clmulh_v2i64:
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    addi sp, sp, -752
-; RV32IM-NEXT:    .cfi_def_cfa_offset 752
 ; RV32IM-NEXT:    sw ra, 748(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s0, 744(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s1, 740(sp) # 4-byte Folded Spill
@@ -3061,19 +2988,6 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV32IM-NEXT:    sw s9, 708(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s10, 704(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s11, 700(sp) # 4-byte Folded Spill
-; RV32IM-NEXT:    .cfi_offset ra, -4
-; RV32IM-NEXT:    .cfi_offset s0, -8
-; RV32IM-NEXT:    .cfi_offset s1, -12
-; RV32IM-NEXT:    .cfi_offset s2, -16
-; RV32IM-NEXT:    .cfi_offset s3, -20
-; RV32IM-NEXT:    .cfi_offset s4, -24
-; RV32IM-NEXT:    .cfi_offset s5, -28
-; RV32IM-NEXT:    .cfi_offset s6, -32
-; RV32IM-NEXT:    .cfi_offset s7, -36
-; RV32IM-NEXT:    .cfi_offset s8, -40
-; RV32IM-NEXT:    .cfi_offset s9, -44
-; RV32IM-NEXT:    .cfi_offset s10, -48
-; RV32IM-NEXT:    .cfi_offset s11, -52
 ; RV32IM-NEXT:    sw a3, 644(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw a2, 640(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    lw a2, 0(a0)
@@ -5215,27 +5129,12 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV32IM-NEXT:    lw s9, 708(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s10, 704(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s11, 700(sp) # 4-byte Folded Reload
-; RV32IM-NEXT:    .cfi_restore ra
-; RV32IM-NEXT:    .cfi_restore s0
-; RV32IM-NEXT:    .cfi_restore s1
-; RV32IM-NEXT:    .cfi_restore s2
-; RV32IM-NEXT:    .cfi_restore s3
-; RV32IM-NEXT:    .cfi_restore s4
-; RV32IM-NEXT:    .cfi_restore s5
-; RV32IM-NEXT:    .cfi_restore s6
-; RV32IM-NEXT:    .cfi_restore s7
-; RV32IM-NEXT:    .cfi_restore s8
-; RV32IM-NEXT:    .cfi_restore s9
-; RV32IM-NEXT:    .cfi_restore s10
-; RV32IM-NEXT:    .cfi_restore s11
 ; RV32IM-NEXT:    addi sp, sp, 752
-; RV32IM-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: commutative_clmulh_v2i64:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    addi sp, sp, -1200
-; RV64IM-NEXT:    .cfi_def_cfa_offset 1200
 ; RV64IM-NEXT:    sd ra, 1192(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s0, 1184(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s1, 1176(sp) # 8-byte Folded Spill
@@ -5249,19 +5148,6 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV64IM-NEXT:    sd s9, 1112(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s10, 1104(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s11, 1096(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    .cfi_offset ra, -8
-; RV64IM-NEXT:    .cfi_offset s0, -16
-; RV64IM-NEXT:    .cfi_offset s1, -24
-; RV64IM-NEXT:    .cfi_offset s2, -32
-; RV64IM-NEXT:    .cfi_offset s3, -40
-; RV64IM-NEXT:    .cfi_offset s4, -48
-; RV64IM-NEXT:    .cfi_offset s5, -56
-; RV64IM-NEXT:    .cfi_offset s6, -64
-; RV64IM-NEXT:    .cfi_offset s7, -72
-; RV64IM-NEXT:    .cfi_offset s8, -80
-; RV64IM-NEXT:    .cfi_offset s9, -88
-; RV64IM-NEXT:    .cfi_offset s10, -96
-; RV64IM-NEXT:    .cfi_offset s11, -104
 ; RV64IM-NEXT:    sd a5, 984(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd a4, 976(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    srli a7, a2, 24
@@ -6492,21 +6378,7 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV64IM-NEXT:    ld s9, 1112(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s10, 1104(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s11, 1096(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    .cfi_restore ra
-; RV64IM-NEXT:    .cfi_restore s0
-; RV64IM-NEXT:    .cfi_restore s1
-; RV64IM-NEXT:    .cfi_restore s2
-; RV64IM-NEXT:    .cfi_restore s3
-; RV64IM-NEXT:    .cfi_restore s4
-; RV64IM-NEXT:    .cfi_restore s5
-; RV64IM-NEXT:    .cfi_restore s6
-; RV64IM-NEXT:    .cfi_restore s7
-; RV64IM-NEXT:    .cfi_restore s8
-; RV64IM-NEXT:    .cfi_restore s9
-; RV64IM-NEXT:    .cfi_restore s10
-; RV64IM-NEXT:    .cfi_restore s11
 ; RV64IM-NEXT:    addi sp, sp, 1200
-; RV64IM-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IM-NEXT:    ret
   %x.ext = zext <2 x i64> %x to <2 x i128>
   %y.ext = zext <2 x i64> %y to <2 x i128>
@@ -6521,11 +6393,10 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
   ret void
 }
 
-define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) nounwind {
 ; RV32IM-LABEL: commutative_clmulr_v2i64:
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    addi sp, sp, -800
-; RV32IM-NEXT:    .cfi_def_cfa_offset 800
 ; RV32IM-NEXT:    sw ra, 796(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s0, 792(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s1, 788(sp) # 4-byte Folded Spill
@@ -6539,19 +6410,6 @@ define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV32IM-NEXT:    sw s9, 756(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s10, 752(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s11, 748(sp) # 4-byte Folded Spill
-; RV32IM-NEXT:    .cfi_offset ra, -4
-; RV32IM-NEXT:    .cfi_offset s0, -8
-; RV32IM-NEXT:    .cfi_offset s1, -12
-; RV32IM-NEXT:    .cfi_offset s2, -16
-; RV32IM-NEXT:    .cfi_offset s3, -20
-; RV32IM-NEXT:    .cfi_offset s4, -24
-; RV32IM-NEXT:    .cfi_offset s5, -28
-; RV32IM-NEXT:    .cfi_offset s6, -32
-; RV32IM-NEXT:    .cfi_offset s7, -36
-; RV32IM-NEXT:    .cfi_offset s8, -40
-; RV32IM-NEXT:    .cfi_offset s9, -44
-; RV32IM-NEXT:    .cfi_offset s10, -48
-; RV32IM-NEXT:    .cfi_offset s11, -52
 ; RV32IM-NEXT:    sw a3, 680(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw a2, 676(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    lw a5, 0(a0)
@@ -8701,27 +8559,12 @@ define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV32IM-NEXT:    lw s9, 756(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s10, 752(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s11, 748(sp) # 4-byte Folded Reload
-; RV32IM-NEXT:    .cfi_restore ra
-; RV32IM-NEXT:    .cfi_restore s0
-; RV32IM-NEXT:    .cfi_restore s1
-; RV32IM-NEXT:    .cfi_restore s2
-; RV32IM-NEXT:    .cfi_restore s3
-; RV32IM-NEXT:    .cfi_restore s4
-; RV32IM-NEXT:    .cfi_restore s5
-; RV32IM-NEXT:    .cfi_restore s6
-; RV32IM-NEXT:    .cfi_restore s7
-; RV32IM-NEXT:    .cfi_restore s8
-; RV32IM-NEXT:    .cfi_restore s9
-; RV32IM-NEXT:    .cfi_restore s10
-; RV32IM-NEXT:    .cfi_restore s11
 ; RV32IM-NEXT:    addi sp, sp, 800
-; RV32IM-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: commutative_clmulr_v2i64:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    addi sp, sp, -1200
-; RV64IM-NEXT:    .cfi_def_cfa_offset 1200
 ; RV64IM-NEXT:    sd ra, 1192(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s0, 1184(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s1, 1176(sp) # 8-byte Folded Spill
@@ -8735,19 +8578,6 @@ define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV64IM-NEXT:    sd s9, 1112(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s10, 1104(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s11, 1096(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    .cfi_offset ra, -8
-; RV64IM-NEXT:    .cfi_offset s0, -16
-; RV64IM-NEXT:    .cfi_offset s1, -24
-; RV64IM-NEXT:    .cfi_offset s2, -32
-; RV64IM-NEXT:    .cfi_offset s3, -40
-; RV64IM-NEXT:    .cfi_offset s4, -48
-; RV64IM-NEXT:    .cfi_offset s5, -56
-; RV64IM-NEXT:    .cfi_offset s6, -64
-; RV64IM-NEXT:    .cfi_offset s7, -72
-; RV64IM-NEXT:    .cfi_offset s8, -80
-; RV64IM-NEXT:    .cfi_offset s9, -88
-; RV64IM-NEXT:    .cfi_offset s10, -96
-; RV64IM-NEXT:    .cfi_offset s11, -104
 ; RV64IM-NEXT:    sd a5, 984(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd a4, 976(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    mv s3, a0
@@ -9975,21 +9805,7 @@ define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV64IM-NEXT:    ld s9, 1112(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s10, 1104(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s11, 1096(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    .cfi_restore ra
-; RV64IM-NEXT:    .cfi_restore s0
-; RV64IM-NEXT:    .cfi_restore s1
-; RV64IM-NEXT:    .cfi_restore s2
-; RV64IM-NEXT:    .cfi_restore s3
-; RV64IM-NEXT:    .cfi_restore s4
-; RV64IM-NEXT:    .cfi_restore s5
-; RV64IM-NEXT:    .cfi_restore s6
-; RV64IM-NEXT:    .cfi_restore s7
-; RV64IM-NEXT:    .cfi_restore s8
-; RV64IM-NEXT:    .cfi_restore s9
-; RV64IM-NEXT:    .cfi_restore s10
-; RV64IM-NEXT:    .cfi_restore s11
 ; RV64IM-NEXT:    addi sp, sp, 1200
-; RV64IM-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IM-NEXT:    ret
   %x.ext = zext <2 x i64> %x to <2 x i128>
   %y.ext = zext <2 x i64> %y to <2 x i128>
@@ -10004,11 +9820,10 @@ define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
   ret void
 }
 
-define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) nounwind {
 ; RV32IM-LABEL: mul_use_commutative_clmul_v2i64:
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    addi sp, sp, -816
-; RV32IM-NEXT:    .cfi_def_cfa_offset 816
 ; RV32IM-NEXT:    sw ra, 812(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s0, 808(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s1, 804(sp) # 4-byte Folded Spill
@@ -10022,19 +9837,6 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
 ; RV32IM-NEXT:    sw s9, 772(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s10, 768(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s11, 764(sp) # 4-byte Folded Spill
-; RV32IM-NEXT:    .cfi_offset ra, -4
-; RV32IM-NEXT:    .cfi_offset s0, -8
-; RV32IM-NEXT:    .cfi_offset s1, -12
-; RV32IM-NEXT:    .cfi_offset s2, -16
-; RV32IM-NEXT:    .cfi_offset s3, -20
-; RV32IM-NEXT:    .cfi_offset s4, -24
-; RV32IM-NEXT:    .cfi_offset s5, -28
-; RV32IM-NEXT:    .cfi_offset s6, -32
-; RV32IM-NEXT:    .cfi_offset s7, -36
-; RV32IM-NEXT:    .cfi_offset s8, -40
-; RV32IM-NEXT:    .cfi_offset s9, -44
-; RV32IM-NEXT:    .cfi_offset s10, -48
-; RV32IM-NEXT:    .cfi_offset s11, -52
 ; RV32IM-NEXT:    sw a3, 688(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw a2, 684(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    lw a4, 0(a1)
@@ -11892,27 +11694,12 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
 ; RV32IM-NEXT:    lw s9, 772(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s10, 768(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s11, 764(sp) # 4-byte Folded Reload
-; RV32IM-NEXT:    .cfi_restore ra
-; RV32IM-NEXT:    .cfi_restore s0
-; RV32IM-NEXT:    .cfi_restore s1
-; RV32IM-NEXT:    .cfi_restore s2
-; RV32IM-NEXT:    .cfi_restore s3
-; RV32IM-NEXT:    .cfi_restore s4
-; RV32IM-NEXT:    .cfi_restore s5
-; RV32IM-NEXT:    .cfi_restore s6
-; RV32IM-NEXT:    .cfi_restore s7
-; RV32IM-NEXT:    .cfi_restore s8
-; RV32IM-NEXT:    .cfi_restore s9
-; RV32IM-NEXT:    .cfi_restore s10
-; RV32IM-NEXT:    .cfi_restore s11
 ; RV32IM-NEXT:    addi sp, sp, 816
-; RV32IM-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: mul_use_commutative_clmul_v2i64:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    addi sp, sp, -960
-; RV64IM-NEXT:    .cfi_def_cfa_offset 960
 ; RV64IM-NEXT:    sd ra, 952(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s0, 944(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s1, 936(sp) # 8-byte Folded Spill
@@ -11926,19 +11713,6 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
 ; RV64IM-NEXT:    sd s9, 872(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s10, 864(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s11, 856(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    .cfi_offset ra, -8
-; RV64IM-NEXT:    .cfi_offset s0, -16
-; RV64IM-NEXT:    .cfi_offset s1, -24
-; RV64IM-NEXT:    .cfi_offset s2, -32
-; RV64IM-NEXT:    .cfi_offset s3, -40
-; RV64IM-NEXT:    .cfi_offset s4, -48
-; RV64IM-NEXT:    .cfi_offset s5, -56
-; RV64IM-NEXT:    .cfi_offset s6, -64
-; RV64IM-NEXT:    .cfi_offset s7, -72
-; RV64IM-NEXT:    .cfi_offset s8, -80
-; RV64IM-NEXT:    .cfi_offset s9, -88
-; RV64IM-NEXT:    .cfi_offset s10, -96
-; RV64IM-NEXT:    .cfi_offset s11, -104
 ; RV64IM-NEXT:    sd a5, 744(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd a4, 736(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    mv t2, a3
@@ -12764,21 +12538,7 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
 ; RV64IM-NEXT:    ld s9, 872(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s10, 864(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s11, 856(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    .cfi_restore ra
-; RV64IM-NEXT:    .cfi_restore s0
-; RV64IM-NEXT:    .cfi_restore s1
-; RV64IM-NEXT:    .cfi_restore s2
-; RV64IM-NEXT:    .cfi_restore s3
-; RV64IM-NEXT:    .cfi_restore s4
-; RV64IM-NEXT:    .cfi_restore s5
-; RV64IM-NEXT:    .cfi_restore s6
-; RV64IM-NEXT:    .cfi_restore s7
-; RV64IM-NEXT:    .cfi_restore s8
-; RV64IM-NEXT:    .cfi_restore s9
-; RV64IM-NEXT:    .cfi_restore s10
-; RV64IM-NEXT:    .cfi_restore s11
 ; RV64IM-NEXT:    addi sp, sp, 960
-; RV64IM-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IM-NEXT:    ret
   %xy = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %x, <2 x i64> %y)
   %yx = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %y, <2 x i64> %x)

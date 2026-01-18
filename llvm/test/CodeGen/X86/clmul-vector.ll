@@ -7641,11 +7641,10 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 
 declare void @use(<2 x i64>)
 
-define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) nounwind {
 ; SSE2-LABEL: commutative_clmul_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    subq $312, %rsp # imm = 0x138
-; SSE2-NEXT:    .cfi_def_cfa_offset 320
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
@@ -8204,13 +8203,11 @@ define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p
 ; SSE2-NEXT:    movdqa %xmm1, (%rdi)
 ; SSE2-NEXT:    movdqa %xmm1, (%rsi)
 ; SSE2-NEXT:    addq $312, %rsp # imm = 0x138
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: commutative_clmul_v2i64:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    subq $312, %rsp # imm = 0x138
-; SSE42-NEXT:    .cfi_def_cfa_offset 320
 ; SSE42-NEXT:    movdqa %xmm0, %xmm3
 ; SSE42-NEXT:    movdqa %xmm1, %xmm2
 ; SSE42-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
@@ -8769,7 +8766,6 @@ define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p
 ; SSE42-NEXT:    movdqa %xmm1, (%rdi)
 ; SSE42-NEXT:    movdqa %xmm1, (%rsi)
 ; SSE42-NEXT:    addq $312, %rsp # imm = 0x138
-; SSE42-NEXT:    .cfi_def_cfa_offset 8
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: commutative_clmul_v2i64:
@@ -9422,11 +9418,10 @@ define void @commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p
   ret void
 }
 
-define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) nounwind {
 ; SSE2-LABEL: commutative_clmulh_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    subq $360, %rsp # imm = 0x168
-; SSE2-NEXT:    .cfi_def_cfa_offset 368
 ; SSE2-NEXT:    movdqa %xmm1, %xmm10
 ; SSE2-NEXT:    movdqa %xmm1, %xmm3
 ; SSE2-NEXT:    psrlq $24, %xmm3
@@ -10107,13 +10102,11 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; SSE2-NEXT:    movdqa %xmm14, (%rdi)
 ; SSE2-NEXT:    movdqa %xmm14, (%rsi)
 ; SSE2-NEXT:    addq $360, %rsp # imm = 0x168
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: commutative_clmulh_v2i64:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    subq $312, %rsp # imm = 0x138
-; SSE42-NEXT:    .cfi_def_cfa_offset 320
 ; SSE42-NEXT:    movdqa %xmm1, %xmm2
 ; SSE42-NEXT:    pshufb {{.*#+}} xmm2 = xmm2[7,6,5,4,u,u,u,u,15,14,13,12,u,u,u,u]
 ; SSE42-NEXT:    movdqa %xmm1, %xmm3
@@ -10702,7 +10695,6 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; SSE42-NEXT:    movdqa %xmm0, (%rdi)
 ; SSE42-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE42-NEXT:    addq $312, %rsp # imm = 0x138
-; SSE42-NEXT:    .cfi_def_cfa_offset 8
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: commutative_clmulh_v2i64:
@@ -11432,11 +11424,10 @@ define void @commutative_clmulh_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
   ret void
 }
 
-define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) nounwind {
 ; SSE2-LABEL: commutative_clmulr_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    subq $360, %rsp # imm = 0x168
-; SSE2-NEXT:    .cfi_def_cfa_offset 368
 ; SSE2-NEXT:    movdqa %xmm1, %xmm10
 ; SSE2-NEXT:    movdqa %xmm1, %xmm3
 ; SSE2-NEXT:    psrlq $24, %xmm3
@@ -12116,13 +12107,11 @@ define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; SSE2-NEXT:    movdqa %xmm14, (%rdi)
 ; SSE2-NEXT:    movdqa %xmm14, (%rsi)
 ; SSE2-NEXT:    addq $360, %rsp # imm = 0x168
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: commutative_clmulr_v2i64:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    subq $312, %rsp # imm = 0x138
-; SSE42-NEXT:    .cfi_def_cfa_offset 320
 ; SSE42-NEXT:    movdqa %xmm1, %xmm2
 ; SSE42-NEXT:    pshufb {{.*#+}} xmm2 = xmm2[7,6,5,4,u,u,u,u,15,14,13,12,u,u,u,u]
 ; SSE42-NEXT:    movdqa %xmm1, %xmm3
@@ -12710,7 +12699,6 @@ define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; SSE42-NEXT:    movdqa %xmm0, (%rdi)
 ; SSE42-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE42-NEXT:    addq $312, %rsp # imm = 0x138
-; SSE42-NEXT:    .cfi_def_cfa_offset 8
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: commutative_clmulr_v2i64:
@@ -13438,14 +13426,11 @@ define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
   ret void
 }
 
-define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) {
+define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %p1) nounwind {
 ; SSE2-LABEL: mul_use_commutative_clmul_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    subq $400, %rsp # imm = 0x190
-; SSE2-NEXT:    .cfi_def_cfa_offset 416
-; SSE2-NEXT:    .cfi_offset %rbx, -16
 ; SSE2-NEXT:    movq %rsi, %rbx
 ; SSE2-NEXT:    movdqa %xmm1, %xmm7
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -14003,18 +13988,13 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
 ; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE2-NEXT:    movaps %xmm0, (%rbx)
 ; SSE2-NEXT:    addq $400, %rsp # imm = 0x190
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    popq %rbx
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: mul_use_commutative_clmul_v2i64:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pushq %rbx
-; SSE42-NEXT:    .cfi_def_cfa_offset 16
 ; SSE42-NEXT:    subq $400, %rsp # imm = 0x190
-; SSE42-NEXT:    .cfi_def_cfa_offset 416
-; SSE42-NEXT:    .cfi_offset %rbx, -16
 ; SSE42-NEXT:    movq %rsi, %rbx
 ; SSE42-NEXT:    movdqa %xmm1, %xmm7
 ; SSE42-NEXT:    movdqa %xmm0, %xmm2
@@ -14572,18 +14552,13 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
 ; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE42-NEXT:    movaps %xmm0, (%rbx)
 ; SSE42-NEXT:    addq $400, %rsp # imm = 0x190
-; SSE42-NEXT:    .cfi_def_cfa_offset 16
 ; SSE42-NEXT:    popq %rbx
-; SSE42-NEXT:    .cfi_def_cfa_offset 8
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: mul_use_commutative_clmul_v2i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rbx
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    subq $16, %rsp
-; AVX2-NEXT:    .cfi_def_cfa_offset 32
-; AVX2-NEXT:    .cfi_offset %rbx, -16
 ; AVX2-NEXT:    movq %rsi, %rbx
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2
 ; AVX2-NEXT:    vpmuludq %xmm2, %xmm0, %xmm3
@@ -14922,18 +14897,13 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    vmovaps %xmm0, (%rbx)
 ; AVX2-NEXT:    addq $16, %rsp
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    popq %rbx
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: mul_use_commutative_clmul_v2i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512-NEXT:    subq $16, %rsp
-; AVX512-NEXT:    .cfi_def_cfa_offset 32
-; AVX512-NEXT:    .cfi_offset %rbx, -16
 ; AVX512-NEXT:    movq %rsi, %rbx
 ; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm2
 ; AVX512-NEXT:    vpmuludq %xmm2, %xmm0, %xmm3
@@ -15242,9 +15212,7 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    vmovaps %xmm0, (%rbx)
 ; AVX512-NEXT:    addq $16, %rsp
-; AVX512-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512-NEXT:    popq %rbx
-; AVX512-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512-NEXT:    retq
   %xy = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %x, <2 x i64> %y)
   %yx = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %y, <2 x i64> %x)

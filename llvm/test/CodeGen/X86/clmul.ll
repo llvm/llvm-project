@@ -3031,15 +3031,11 @@ define i8 @clmul_i8_noimplicitfloat(i8 %a, i8 %b) nounwind noimplicitfloat {
 
 declare void @use(i8)
 
-define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; SCALAR-LABEL: commutative_clmul_i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbp
-; SCALAR-NEXT:    .cfi_def_cfa_offset 16
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    .cfi_def_cfa_offset 24
-; SCALAR-NEXT:    .cfi_offset %rbx, -24
-; SCALAR-NEXT:    .cfi_offset %rbp, -16
 ; SCALAR-NEXT:    movl %esi, %r8d
 ; SCALAR-NEXT:    andb $1, %r8b
 ; SCALAR-NEXT:    movl %esi, %r9d
@@ -3088,9 +3084,7 @@ define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
 ; SCALAR-NEXT:    movb %al, (%rdx)
 ; SCALAR-NEXT:    movb %al, (%rcx)
 ; SCALAR-NEXT:    popq %rbx
-; SCALAR-NEXT:    .cfi_def_cfa_offset 16
 ; SCALAR-NEXT:    popq %rbp
-; SCALAR-NEXT:    .cfi_def_cfa_offset 8
 ; SCALAR-NEXT:    retq
 ;
 ; SSE-PCLMUL-LABEL: commutative_clmul_i8:
@@ -3119,7 +3113,7 @@ define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
   ret void
 }
 
-define void @commutative_clmulh_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+define void @commutative_clmulh_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; SCALAR-LABEL: commutative_clmulh_i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movl %edi, %r8d
@@ -3196,7 +3190,7 @@ define void @commutative_clmulh_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
   ret void
 }
 
-define void @commutative_clmulr_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+define void @commutative_clmulr_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; SCALAR-LABEL: commutative_clmulr_i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movl %edi, %r8d
@@ -3273,17 +3267,12 @@ define void @commutative_clmulr_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
   ret void
 }
 
-define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
+define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; SCALAR-LABEL: mul_use_commutative_clmul_i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbp
-; SCALAR-NEXT:    .cfi_def_cfa_offset 16
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    .cfi_def_cfa_offset 24
 ; SCALAR-NEXT:    pushq %rax
-; SCALAR-NEXT:    .cfi_def_cfa_offset 32
-; SCALAR-NEXT:    .cfi_offset %rbx, -24
-; SCALAR-NEXT:    .cfi_offset %rbp, -16
 ; SCALAR-NEXT:    movq %rcx, %rbx
 ; SCALAR-NEXT:    movl %esi, %ecx
 ; SCALAR-NEXT:    andb $1, %cl
@@ -3336,23 +3325,15 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
 ; SCALAR-NEXT:    callq use@PLT
 ; SCALAR-NEXT:    movb %bpl, (%rbx)
 ; SCALAR-NEXT:    addq $8, %rsp
-; SCALAR-NEXT:    .cfi_def_cfa_offset 24
 ; SCALAR-NEXT:    popq %rbx
-; SCALAR-NEXT:    .cfi_def_cfa_offset 16
 ; SCALAR-NEXT:    popq %rbp
-; SCALAR-NEXT:    .cfi_def_cfa_offset 8
 ; SCALAR-NEXT:    retq
 ;
 ; SSE-PCLMUL-LABEL: mul_use_commutative_clmul_i8:
 ; SSE-PCLMUL:       # %bb.0:
 ; SSE-PCLMUL-NEXT:    pushq %r14
-; SSE-PCLMUL-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-PCLMUL-NEXT:    pushq %rbx
-; SSE-PCLMUL-NEXT:    .cfi_def_cfa_offset 24
 ; SSE-PCLMUL-NEXT:    pushq %rax
-; SSE-PCLMUL-NEXT:    .cfi_def_cfa_offset 32
-; SSE-PCLMUL-NEXT:    .cfi_offset %rbx, -24
-; SSE-PCLMUL-NEXT:    .cfi_offset %r14, -16
 ; SSE-PCLMUL-NEXT:    movq %rcx, %rbx
 ; SSE-PCLMUL-NEXT:    movd %esi, %xmm0
 ; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
@@ -3363,23 +3344,15 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
 ; SSE-PCLMUL-NEXT:    callq use@PLT
 ; SSE-PCLMUL-NEXT:    movb %r14b, (%rbx)
 ; SSE-PCLMUL-NEXT:    addq $8, %rsp
-; SSE-PCLMUL-NEXT:    .cfi_def_cfa_offset 24
 ; SSE-PCLMUL-NEXT:    popq %rbx
-; SSE-PCLMUL-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-PCLMUL-NEXT:    popq %r14
-; SSE-PCLMUL-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-PCLMUL-NEXT:    retq
 ;
 ; AVX-LABEL: mul_use_commutative_clmul_i8:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    pushq %r14
-; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 24
 ; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    .cfi_offset %rbx, -24
-; AVX-NEXT:    .cfi_offset %r14, -16
 ; AVX-NEXT:    movq %rcx, %rbx
 ; AVX-NEXT:    vmovd %esi, %xmm0
 ; AVX-NEXT:    vmovd %edi, %xmm1
@@ -3390,11 +3363,8 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
 ; AVX-NEXT:    callq use@PLT
 ; AVX-NEXT:    movb %r14b, (%rbx)
 ; AVX-NEXT:    addq $8, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 24
 ; AVX-NEXT:    popq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    popq %r14
-; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
   %xy = call i8 @llvm.clmul.i8(i8 %x, i8 %y)
   %yx = call i8 @llvm.clmul.i8(i8 %y, i8 %x)
