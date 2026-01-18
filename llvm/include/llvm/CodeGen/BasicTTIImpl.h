@@ -3003,6 +3003,8 @@ public:
       break;
     }
     case Intrinsic::clmul: {
+      // This cost model must match the expansion in
+      // TargetLowering::expandCLMUL.
       InstructionCost PerBitCost =
           thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
           thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind) +
