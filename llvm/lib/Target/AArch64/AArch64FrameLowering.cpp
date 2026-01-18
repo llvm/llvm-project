@@ -259,6 +259,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -460,9 +461,14 @@ static const unsigned DefaultSafeSPDisplacement = 255;
 /// size limit beyond which some of these instructions will require a scratch
 /// register during their expansion later.
 static unsigned estimateRSStackSizeLimit(MachineFunction &MF) {
-  // FIXME: For now, just conservatively guesstimate based on unscaled indexing
-  // range. We'll end up allocating an unnecessary spill slot a lot, but
-  // realistically that's not a big deal at this stage of the game.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Be conservative for functions that may need extra scratch registers for
+  // frame operations (VLAs, stack protectors, etc.).
+  if (MFI.hasVarSizedObjects() || MFI.hasStackProtectorIndex())
+    return DefaultSafeSPDisplacement;
+
+  unsigned Limit = std::numeric_limits<unsigned>::max();
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (MI.isDebugInstr() || MI.isPseudo() ||
@@ -478,10 +484,33 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF) {
         if (isAArch64FrameOffsetLegal(MI, Offset, nullptr, nullptr, nullptr) ==
             AArch64FrameOffsetCannotUpdate)
           return 0;
+
+        TypeSize Scale(0U, false), Width(0U, false);
+        int64_t MinOff, MaxOff;
+        if (AArch64InstrInfo::getMemOpInfo(MI.getOpcode(), Scale, Width, MinOff,
+                                           MaxOff)) {
+          // MaxOff is the maximum positive offset the instruction can encode.
+          // For unscaled instructions this is typically 255, for scaled it
+          // depends on the scale factor.
+          Limit = std::min(Limit, unsigned(MaxOff * Scale.getKnownMinValue()));
+        } else {
+          // Unknown instruction with frame index - be conservative.
+          Limit = std::min(Limit, DefaultSafeSPDisplacement);
+        }
       }
     }
   }
-  return DefaultSafeSPDisplacement;
+  // Cap the limit to avoid being too optimistic. Large addressing ranges
+  // (like STRXui with 32KB range) don't mean we won't need scavenging for
+  // other reasons (e.g., frame setup, stack guard operations, VLAs). Use a
+  // limit that's large enough to avoid unnecessary spills for common cases
+  // (like 128-bit vector loads with ~4KB range) but small enough to be
+  // conservative. We use 2048 as a balance between avoiding unnecessary
+  // spills and ensuring we have scratch registers when needed.
+  const unsigned MaxReasonableLimit = 2048;
+  if (Limit == std::numeric_limits<unsigned>::max())
+    return DefaultSafeSPDisplacement;
+  return std::min(Limit, MaxReasonableLimit);
 }
 
 TargetStackID::Value

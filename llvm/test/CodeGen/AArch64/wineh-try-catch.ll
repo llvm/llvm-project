@@ -11,24 +11,23 @@
 ;    and the parent function.
 
 ; The following checks that the unwind help object has -2 stored into it at
-; fp + 16, which is on-entry sp - 16.
+; fp + 24, which is on-entry sp - 16.
 ; We check this offset in the table later on.
 
 ; CHECK-LABEL: "?func@@YAHXZ":
 ; CHECK:       stp     x19, x20, [sp, #-64]!
 ; CHECK:       str     x21, [sp, #16]
-; CHECK:       str     x28, [sp, #24]
-; CHECK:       stp     x29, x30, [sp, #32]
-; CHECK:       add     x29, sp, #32
+; CHECK:       stp     x29, x30, [sp, #24]
+; CHECK:       add     x29, sp, #24
 ; CHECK:       sub     sp, sp, #608
 ; CHECK:       mov     x19, sp
 ; CHECK:       mov     x0, #-2
-; CHECK:       stur    x0, [x29, #16]
+; CHECK:       stur    x0, [x29, #24]
 
-; Now check that x is stored at fp - 20.  We check that this is the same
+; Now check that x is stored at fp + 32.  We check that this is the same
 ; location accessed from the funclet to retrieve x.
 ; CHECK:       mov     w8, #1
-; CHECK:       stur    w8, [x29, [[X_OFFSET:#-[1-9][0-9]+]]
+; CHECK:       str     w8, [x29, [[X_OFFSET:#[1-9][0-9]+]]]
 
 ; Check the offset off the frame pointer at which B is located.
 ; Check the same offset is used to pass the address of B to init2 in the
@@ -49,9 +48,8 @@
 ; Check that the stack space is allocated only for the callee saved registers.
 ; CHECK:       stp     x19, x20, [sp, #-48]!
 ; CHECK:       str     x21, [sp, #16]
-; CHECK:       str     x28, [sp, #24]
-; CHECK:       stp     x29, x30, [sp, #32]
-; CHECK:       add     x20, x19, #0
+; CHECK:       stp     x29, x30, [sp, #24]
+; CHECK:       add     x20, x19,
 
 ; Check that there are no further stack updates.
 ; CHECK-NOT:   sub     sp, sp
@@ -63,7 +61,7 @@
 
 ; Check that are storing x back to the same location off the frame pointer as in
 ; the parent function.
-; CHECK:       stur    w8, [x29, [[X_OFFSET]]]
+; CHECK:       str     w8, [x29, [[X_OFFSET]]]
 
 ; Check that the funclet branches back to the catchret destination
 ; CHECK:       adrp    x0, .LBB0_2
@@ -85,16 +83,14 @@
 
 ; UNWIND: Function: ?func@@YAHXZ (0x0)
 ; UNWIND: Prologue [
-; UNWIND-NEXT: ; add fp, sp, #32
-; UNWIND-NEXT: ; stp x29, x30, [sp, #32]
-; UNWIND-NEXT: ; str x28, [sp, #24]
+; UNWIND-NEXT: ; add fp, sp, #24
+; UNWIND-NEXT: ; stp x29, x30, [sp, #24]
 ; UNWIND-NEXT: ; str x21, [sp, #16]
 ; UNWIND-NEXT: ; stp x19, x20, [sp, #-64]!
 ; UNWIND-NEXT: ; end
 ; UNWIND: Function: ?catch$4@?0??func@@YAHXZ@4HA
 ; UNWIND: Prologue [
-; UNWIND-NEXT: ; stp x29, x30, [sp, #32]
-; UNWIND-NEXT: ; str x28, [sp, #24]
+; UNWIND-NEXT: ; stp x29, x30, [sp, #24]
 ; UNWIND-NEXT: ; str x21, [sp, #16]
 ; UNWIND-NEXT: ; stp x19, x20, [sp, #-48]!
 ; UNWIND-NEXT: ; end

@@ -9,11 +9,10 @@ declare void @fn(ptr, ptr)
 define void @consecutive() {
 ; CHECK-MOPS-LABEL: consecutive:
 ; CHECK-MOPS:       // %bb.0: // %entry
-; CHECK-MOPS-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-MOPS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-MOPS-NEXT:    sub sp, sp, #2016
 ; CHECK-MOPS-NEXT:    .cfi_def_cfa_offset 2032
-; CHECK-MOPS-NEXT:    .cfi_offset w30, -8
-; CHECK-MOPS-NEXT:    .cfi_offset w29, -16
+; CHECK-MOPS-NEXT:    .cfi_offset w30, -16
 ; CHECK-MOPS-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-MOPS-NEXT:    add x9, sp, #8
 ; CHECK-MOPS-NEXT:    adrp x10, .LCPI0_0
@@ -36,7 +35,7 @@ define void @consecutive() {
 ; CHECK-MOPS-NEXT:    strb w8, [sp, #1038]
 ; CHECK-MOPS-NEXT:    bl fn
 ; CHECK-MOPS-NEXT:    add sp, sp, #2016
-; CHECK-MOPS-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-MOPS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-MOPS-NEXT:    ret
 entry:
   %buf_from = alloca [1000 x i8], align 16

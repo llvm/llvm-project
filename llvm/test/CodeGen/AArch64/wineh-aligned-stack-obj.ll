@@ -36,10 +36,10 @@
 ; CHECK:        sub x[[SPTMP:[0-9]+]], sp, #336
 ; CHECK:        and sp, x[[SPTMP]], #0xffffffffffffff80
 ; CHECK:        mov x[[FP:[0-9]+]], sp
-; CHECK:        str wzr, [x[[FP]], #332]
+; CHECK:        str wzr, [x29, #20]
 
 ; CHECK-LABEL:  "?catch$3@?0?main@4HA":
-; CHECK:        str	w8, [x[[FP]], #332]
+; CHECK:        stp	w9, w8, [x29, #16]
 ; CHECK-NEXT:   .seh_startepilogue
 ; CHECK:        ret
 

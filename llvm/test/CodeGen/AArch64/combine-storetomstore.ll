@@ -554,20 +554,17 @@ define void @test_masked_store_success_v32i16(<32 x i16> %x, ptr %ptr, <32 x i1>
 define void @test_masked_store_success_v64i8(<64 x i8> %x, ptr %ptr, <64 x i1> %mask) {
 ; SVE-LABEL: test_masked_store_success_v64i8:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SVE-NEXT:    .cfi_def_cfa_offset 16
-; SVE-NEXT:    .cfi_offset w29, -16
-; SVE-NEXT:    ldr w8, [sp, #216]
-; SVE-NEXT:    ldr w9, [sp, #344]
+; SVE-NEXT:    ldr w8, [sp, #200]
+; SVE-NEXT:    ldr w9, [sp, #328]
 ; SVE-NEXT:    fmov s6, w1
-; SVE-NEXT:    ldr w11, [sp, #88]
-; SVE-NEXT:    ldr w10, [sp, #224]
+; SVE-NEXT:    ldr w11, [sp, #72]
+; SVE-NEXT:    ldr w10, [sp, #208]
 ; SVE-NEXT:    ptrue p0.b, vl16
 ; SVE-NEXT:    fmov s5, w8
 ; SVE-NEXT:    fmov s4, w9
-; SVE-NEXT:    ldr w8, [sp, #352]
+; SVE-NEXT:    ldr w8, [sp, #336]
 ; SVE-NEXT:    fmov s7, w11
-; SVE-NEXT:    ldr w9, [sp, #96]
+; SVE-NEXT:    ldr w9, [sp, #80]
 ; SVE-NEXT:    mov v6.b[1], w2
 ; SVE-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; SVE-NEXT:    // kill: def $q3 killed $q3 def $z3
@@ -575,111 +572,111 @@ define void @test_masked_store_success_v64i8(<64 x i8> %x, ptr %ptr, <64 x i1> %
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE-NEXT:    mov v5.b[1], w10
 ; SVE-NEXT:    mov v4.b[1], w8
-; SVE-NEXT:    ldr w8, [sp, #232]
+; SVE-NEXT:    ldr w8, [sp, #216]
 ; SVE-NEXT:    mov v7.b[1], w9
-; SVE-NEXT:    ldr w9, [sp, #360]
-; SVE-NEXT:    ldr w10, [sp, #112]
+; SVE-NEXT:    ldr w9, [sp, #344]
+; SVE-NEXT:    ldr w10, [sp, #96]
 ; SVE-NEXT:    mov v6.b[2], w3
 ; SVE-NEXT:    mov v5.b[2], w8
-; SVE-NEXT:    ldr w8, [sp, #104]
+; SVE-NEXT:    ldr w8, [sp, #88]
 ; SVE-NEXT:    mov v4.b[2], w9
-; SVE-NEXT:    ldr w9, [sp, #368]
+; SVE-NEXT:    ldr w9, [sp, #352]
 ; SVE-NEXT:    mov v7.b[2], w8
-; SVE-NEXT:    ldr w8, [sp, #240]
+; SVE-NEXT:    ldr w8, [sp, #224]
 ; SVE-NEXT:    mov v6.b[3], w4
 ; SVE-NEXT:    mov v5.b[3], w8
 ; SVE-NEXT:    mov v4.b[3], w9
-; SVE-NEXT:    ldr w8, [sp, #248]
-; SVE-NEXT:    ldr w9, [sp, #376]
+; SVE-NEXT:    ldr w8, [sp, #232]
+; SVE-NEXT:    ldr w9, [sp, #360]
 ; SVE-NEXT:    mov v7.b[3], w10
-; SVE-NEXT:    ldr w10, [sp, #120]
+; SVE-NEXT:    ldr w10, [sp, #104]
 ; SVE-NEXT:    mov v6.b[4], w5
 ; SVE-NEXT:    mov v5.b[4], w8
 ; SVE-NEXT:    mov v4.b[4], w9
-; SVE-NEXT:    ldr w8, [sp, #256]
-; SVE-NEXT:    ldr w9, [sp, #384]
+; SVE-NEXT:    ldr w8, [sp, #240]
+; SVE-NEXT:    ldr w9, [sp, #368]
 ; SVE-NEXT:    mov v7.b[4], w10
-; SVE-NEXT:    ldr w10, [sp, #128]
+; SVE-NEXT:    ldr w10, [sp, #112]
 ; SVE-NEXT:    mov v6.b[5], w6
 ; SVE-NEXT:    mov v5.b[5], w8
 ; SVE-NEXT:    mov v4.b[5], w9
-; SVE-NEXT:    ldr w8, [sp, #264]
-; SVE-NEXT:    ldr w9, [sp, #392]
+; SVE-NEXT:    ldr w8, [sp, #248]
+; SVE-NEXT:    ldr w9, [sp, #376]
 ; SVE-NEXT:    mov v7.b[5], w10
-; SVE-NEXT:    ldr w10, [sp, #136]
+; SVE-NEXT:    ldr w10, [sp, #120]
 ; SVE-NEXT:    mov v6.b[6], w7
 ; SVE-NEXT:    mov v5.b[6], w8
 ; SVE-NEXT:    mov v4.b[6], w9
-; SVE-NEXT:    ldr w8, [sp, #272]
-; SVE-NEXT:    ldr w9, [sp, #400]
+; SVE-NEXT:    ldr w8, [sp, #256]
+; SVE-NEXT:    ldr w9, [sp, #384]
 ; SVE-NEXT:    mov v7.b[6], w10
-; SVE-NEXT:    ldr w10, [sp, #144]
+; SVE-NEXT:    ldr w10, [sp, #128]
 ; SVE-NEXT:    mov v5.b[7], w8
-; SVE-NEXT:    ldr w8, [sp, #16]
+; SVE-NEXT:    ldr w8, [sp]
 ; SVE-NEXT:    mov v4.b[7], w9
-; SVE-NEXT:    ldr w9, [sp, #280]
+; SVE-NEXT:    ldr w9, [sp, #264]
 ; SVE-NEXT:    mov v7.b[7], w10
 ; SVE-NEXT:    mov v6.b[7], w8
-; SVE-NEXT:    ldr w10, [sp, #408]
-; SVE-NEXT:    ldr w8, [sp, #152]
+; SVE-NEXT:    ldr w10, [sp, #392]
+; SVE-NEXT:    ldr w8, [sp, #136]
 ; SVE-NEXT:    mov v5.b[8], w9
-; SVE-NEXT:    ldr w9, [sp, #24]
+; SVE-NEXT:    ldr w9, [sp, #8]
 ; SVE-NEXT:    mov v4.b[8], w10
-; SVE-NEXT:    ldr w10, [sp, #288]
+; SVE-NEXT:    ldr w10, [sp, #272]
 ; SVE-NEXT:    mov v7.b[8], w8
 ; SVE-NEXT:    mov v6.b[8], w9
-; SVE-NEXT:    ldr w8, [sp, #416]
-; SVE-NEXT:    ldr w9, [sp, #160]
+; SVE-NEXT:    ldr w8, [sp, #400]
+; SVE-NEXT:    ldr w9, [sp, #144]
 ; SVE-NEXT:    mov v5.b[9], w10
-; SVE-NEXT:    ldr w10, [sp, #32]
+; SVE-NEXT:    ldr w10, [sp, #16]
 ; SVE-NEXT:    mov v4.b[9], w8
-; SVE-NEXT:    ldr w8, [sp, #296]
+; SVE-NEXT:    ldr w8, [sp, #280]
 ; SVE-NEXT:    mov v7.b[9], w9
 ; SVE-NEXT:    mov v6.b[9], w10
-; SVE-NEXT:    ldr w9, [sp, #424]
-; SVE-NEXT:    ldr w10, [sp, #168]
+; SVE-NEXT:    ldr w9, [sp, #408]
+; SVE-NEXT:    ldr w10, [sp, #152]
 ; SVE-NEXT:    mov v5.b[10], w8
-; SVE-NEXT:    ldr w8, [sp, #40]
+; SVE-NEXT:    ldr w8, [sp, #24]
 ; SVE-NEXT:    mov v4.b[10], w9
-; SVE-NEXT:    ldr w9, [sp, #304]
+; SVE-NEXT:    ldr w9, [sp, #288]
 ; SVE-NEXT:    mov v7.b[10], w10
 ; SVE-NEXT:    mov v6.b[10], w8
-; SVE-NEXT:    ldr w10, [sp, #432]
-; SVE-NEXT:    ldr w8, [sp, #176]
+; SVE-NEXT:    ldr w10, [sp, #416]
+; SVE-NEXT:    ldr w8, [sp, #160]
 ; SVE-NEXT:    mov v5.b[11], w9
-; SVE-NEXT:    ldr w9, [sp, #48]
+; SVE-NEXT:    ldr w9, [sp, #32]
 ; SVE-NEXT:    mov v4.b[11], w10
-; SVE-NEXT:    ldr w10, [sp, #312]
+; SVE-NEXT:    ldr w10, [sp, #296]
 ; SVE-NEXT:    mov v7.b[11], w8
 ; SVE-NEXT:    mov v6.b[11], w9
-; SVE-NEXT:    ldr w8, [sp, #440]
-; SVE-NEXT:    ldr w9, [sp, #184]
+; SVE-NEXT:    ldr w8, [sp, #424]
+; SVE-NEXT:    ldr w9, [sp, #168]
 ; SVE-NEXT:    mov v5.b[12], w10
-; SVE-NEXT:    ldr w10, [sp, #56]
+; SVE-NEXT:    ldr w10, [sp, #40]
 ; SVE-NEXT:    mov v4.b[12], w8
-; SVE-NEXT:    ldr w8, [sp, #320]
+; SVE-NEXT:    ldr w8, [sp, #304]
 ; SVE-NEXT:    mov v7.b[12], w9
 ; SVE-NEXT:    mov v6.b[12], w10
-; SVE-NEXT:    ldr w9, [sp, #448]
-; SVE-NEXT:    ldr w10, [sp, #192]
+; SVE-NEXT:    ldr w9, [sp, #432]
+; SVE-NEXT:    ldr w10, [sp, #176]
 ; SVE-NEXT:    mov v5.b[13], w8
-; SVE-NEXT:    ldr w8, [sp, #64]
+; SVE-NEXT:    ldr w8, [sp, #48]
 ; SVE-NEXT:    mov v4.b[13], w9
-; SVE-NEXT:    ldr w9, [sp, #328]
+; SVE-NEXT:    ldr w9, [sp, #312]
 ; SVE-NEXT:    mov v7.b[13], w10
 ; SVE-NEXT:    mov v6.b[13], w8
-; SVE-NEXT:    ldr w10, [sp, #456]
-; SVE-NEXT:    ldr w8, [sp, #200]
+; SVE-NEXT:    ldr w10, [sp, #440]
+; SVE-NEXT:    ldr w8, [sp, #184]
 ; SVE-NEXT:    mov v5.b[14], w9
-; SVE-NEXT:    ldr w9, [sp, #72]
+; SVE-NEXT:    ldr w9, [sp, #56]
 ; SVE-NEXT:    mov v4.b[14], w10
-; SVE-NEXT:    ldr w10, [sp, #336]
+; SVE-NEXT:    ldr w10, [sp, #320]
 ; SVE-NEXT:    mov v7.b[14], w8
 ; SVE-NEXT:    mov v6.b[14], w9
-; SVE-NEXT:    ldr w8, [sp, #464]
-; SVE-NEXT:    ldr w9, [sp, #208]
+; SVE-NEXT:    ldr w8, [sp, #448]
+; SVE-NEXT:    ldr w9, [sp, #192]
 ; SVE-NEXT:    mov v5.b[15], w10
-; SVE-NEXT:    ldr w10, [sp, #80]
+; SVE-NEXT:    ldr w10, [sp, #64]
 ; SVE-NEXT:    mov v4.b[15], w8
 ; SVE-NEXT:    mov w8, #32 // =0x20
 ; SVE-NEXT:    mov v7.b[15], w9
@@ -698,7 +695,6 @@ define void @test_masked_store_success_v64i8(<64 x i8> %x, ptr %ptr, <64 x i1> %
 ; SVE-NEXT:    st1b { z3.b }, p2, [x0, x9]
 ; SVE-NEXT:    st1b { z1.b }, p3, [x0, x8]
 ; SVE-NEXT:    st1b { z0.b }, p0, [x0]
-; SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SVE-NEXT:    ret
   %load = load <64 x i8>, ptr %ptr, align 32
   %sel = select <64 x i1> %mask, <64 x i8> %x, <64 x i8> %load

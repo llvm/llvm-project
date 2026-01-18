@@ -33,9 +33,9 @@ define dso_local void @foo(ptr) {
 }
 
 ; CHECK: foo:
-; CHECK: sub     sp, sp, #448
-; CHECK: add     x29, sp, #424
-; CHECK: add     x1, x29, #24
+; CHECK: sub     sp, sp, #432
+; CHECK: add     x29, sp, #416
+; CHECK: add     x1, x29, #16
 ; CHECK: bl      _setjmpex
 
 ; NOFP: sub     sp, sp, #432

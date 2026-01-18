@@ -56,7 +56,8 @@ entry:
   ret float %i
 }
 
-; In this case, addition of stack hazard padding triggers x29 (fp) spill, so we hazard occurs between FPR argument and GPR spill.
+; In this case, hazard is detected when stack hazard size is larger due to
+; GPR callee-saved spill being close to incoming stack args.
 define float @csr_d8_stackargs(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, float %i) #2 {
 ; CHECK-NOT: remark: <unknown>:0:0: stack hazard in 'csr_d8_stackargs':
 ; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'csr_d8_stackargs': GPR stack object at [SP-8] is too close to FPR stack object at [SP+0]

@@ -10,11 +10,10 @@ declare void @llvm.aarch64.settag.zero(ptr %p, i64 %a)
 define void @stg128_128_gap_128_128() {
 ; CHECK-LABEL: stg128_128_gap_128_128:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #544
 ; CHECK-NEXT:    .cfi_def_cfa_offset 560
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    add x0, sp, #512
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    mov x8, #512 // =0x200
@@ -25,7 +24,7 @@ define void @stg128_128_gap_128_128() {
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %a = alloca i8, i32 128, align 16
@@ -44,13 +43,11 @@ entry:
 define void @stg2(i1 %flag) {
 ; CHECK-LABEL: stg2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #608
-; CHECK-NEXT:    .cfi_def_cfa_offset 640
+; CHECK-NEXT:    .cfi_def_cfa_offset 624
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    .cfi_offset w29, -32
 ; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    add x0, sp, #576
 ; CHECK-NEXT:    bl use
@@ -83,8 +80,7 @@ define void @stg2(i1 %flag) {
 ; CHECK-NEXT:    b.ne .LBB1_8
 ; CHECK-NEXT:  // %bb.9: // %if.end
 ; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %a = alloca i8, i32 160, align 16

@@ -334,9 +334,8 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; CHECK-NEXT:    stp q13, q12, [sp, #192] // 32-byte Folded Spill
 ; CHECK-NEXT:    stp q11, q10, [sp, #224] // 32-byte Folded Spill
 ; CHECK-NEXT:    stp q9, q8, [sp, #256] // 32-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #288] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    str x30, [sp, #288] // 8-byte Spill
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    .cfi_offset b8, -32
 ; CHECK-NEXT:    .cfi_offset b9, -48
 ; CHECK-NEXT:    .cfi_offset b10, -64
@@ -362,7 +361,7 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; CHECK-NEXT:    b .LBB1_1
 ; CHECK-NEXT:  .LBB1_1: // %.Lcontinue
 ; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #288] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #288] // 8-byte Reload
 ; CHECK-NEXT:    ldp q9, q8, [sp, #256] // 32-byte Folded Reload
 ; CHECK-NEXT:    ldp q11, q10, [sp, #224] // 32-byte Folded Reload
 ; CHECK-NEXT:    ldp q13, q12, [sp, #192] // 32-byte Folded Reload
@@ -374,7 +373,6 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; CHECK-NEXT:    add sp, sp, #304
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w30
-; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    .cfi_restore b8
 ; CHECK-NEXT:    .cfi_restore b9
 ; CHECK-NEXT:    .cfi_restore b10
@@ -396,7 +394,7 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:  .Ltmp5: // EH_LABEL
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #288] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #288] // 8-byte Reload
 ; CHECK-NEXT:    ldp q9, q8, [sp, #256] // 32-byte Folded Reload
 ; CHECK-NEXT:    ldp q11, q10, [sp, #224] // 32-byte Folded Reload
 ; CHECK-NEXT:    ldp q13, q12, [sp, #192] // 32-byte Folded Reload
@@ -408,7 +406,6 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; CHECK-NEXT:    add sp, sp, #304
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w30
-; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    .cfi_restore b8
 ; CHECK-NEXT:    .cfi_restore b9
 ; CHECK-NEXT:    .cfi_restore b10
@@ -441,9 +438,8 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; GISEL-NEXT:    stp q13, q12, [sp, #192] // 32-byte Folded Spill
 ; GISEL-NEXT:    stp q11, q10, [sp, #224] // 32-byte Folded Spill
 ; GISEL-NEXT:    stp q9, q8, [sp, #256] // 32-byte Folded Spill
-; GISEL-NEXT:    stp x29, x30, [sp, #288] // 16-byte Folded Spill
-; GISEL-NEXT:    .cfi_offset w30, -8
-; GISEL-NEXT:    .cfi_offset w29, -16
+; GISEL-NEXT:    str x30, [sp, #288] // 8-byte Spill
+; GISEL-NEXT:    .cfi_offset w30, -16
 ; GISEL-NEXT:    .cfi_offset b8, -32
 ; GISEL-NEXT:    .cfi_offset b9, -48
 ; GISEL-NEXT:    .cfi_offset b10, -64
@@ -469,7 +465,7 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; GISEL-NEXT:    b .LBB1_1
 ; GISEL-NEXT:  .LBB1_1: // %.Lcontinue
 ; GISEL-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
-; GISEL-NEXT:    ldp x29, x30, [sp, #288] // 16-byte Folded Reload
+; GISEL-NEXT:    ldr x30, [sp, #288] // 8-byte Reload
 ; GISEL-NEXT:    ldp q9, q8, [sp, #256] // 32-byte Folded Reload
 ; GISEL-NEXT:    ldp q11, q10, [sp, #224] // 32-byte Folded Reload
 ; GISEL-NEXT:    ldp q13, q12, [sp, #192] // 32-byte Folded Reload
@@ -481,7 +477,6 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; GISEL-NEXT:    add sp, sp, #304
 ; GISEL-NEXT:    .cfi_def_cfa_offset 0
 ; GISEL-NEXT:    .cfi_restore w30
-; GISEL-NEXT:    .cfi_restore w29
 ; GISEL-NEXT:    .cfi_restore b8
 ; GISEL-NEXT:    .cfi_restore b9
 ; GISEL-NEXT:    .cfi_restore b10
@@ -503,7 +498,7 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; GISEL-NEXT:    .cfi_restore_state
 ; GISEL-NEXT:  .Ltmp5: // EH_LABEL
 ; GISEL-NEXT:    ldr q0, [sp] // 16-byte Reload
-; GISEL-NEXT:    ldp x29, x30, [sp, #288] // 16-byte Folded Reload
+; GISEL-NEXT:    ldr x30, [sp, #288] // 8-byte Reload
 ; GISEL-NEXT:    ldp q9, q8, [sp, #256] // 32-byte Folded Reload
 ; GISEL-NEXT:    ldp q11, q10, [sp, #224] // 32-byte Folded Reload
 ; GISEL-NEXT:    ldp q13, q12, [sp, #192] // 32-byte Folded Reload
@@ -515,7 +510,6 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; GISEL-NEXT:    add sp, sp, #304
 ; GISEL-NEXT:    .cfi_def_cfa_offset 0
 ; GISEL-NEXT:    .cfi_restore w30
-; GISEL-NEXT:    .cfi_restore w29
 ; GISEL-NEXT:    .cfi_restore b8
 ; GISEL-NEXT:    .cfi_restore b9
 ; GISEL-NEXT:    .cfi_restore b10

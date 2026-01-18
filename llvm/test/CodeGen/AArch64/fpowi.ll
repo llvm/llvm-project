@@ -1246,25 +1246,23 @@ define <16 x half> @powi_v16f16(<16 x half> %a, i32 %b) {
 ;
 ; CHECK-GI-LABEL: powi_v16f16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub sp, sp, #336
+; CHECK-GI-NEXT:    sub sp, sp, #320
 ; CHECK-GI-NEXT:    stp d15, d14, [sp, #240] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    stp d13, d12, [sp, #256] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    stp d11, d10, [sp, #272] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #288] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x29, [sp, #304] // 8-byte Spill
-; CHECK-GI-NEXT:    stp x30, x19, [sp, #320] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 336
+; CHECK-GI-NEXT:    stp x30, x19, [sp, #304] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 320
 ; CHECK-GI-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    .cfi_offset w29, -32
-; CHECK-GI-NEXT:    .cfi_offset b8, -40
-; CHECK-GI-NEXT:    .cfi_offset b9, -48
-; CHECK-GI-NEXT:    .cfi_offset b10, -56
-; CHECK-GI-NEXT:    .cfi_offset b11, -64
-; CHECK-GI-NEXT:    .cfi_offset b12, -72
-; CHECK-GI-NEXT:    .cfi_offset b13, -80
-; CHECK-GI-NEXT:    .cfi_offset b14, -88
-; CHECK-GI-NEXT:    .cfi_offset b15, -96
+; CHECK-GI-NEXT:    .cfi_offset b8, -24
+; CHECK-GI-NEXT:    .cfi_offset b9, -32
+; CHECK-GI-NEXT:    .cfi_offset b10, -40
+; CHECK-GI-NEXT:    .cfi_offset b11, -48
+; CHECK-GI-NEXT:    .cfi_offset b12, -56
+; CHECK-GI-NEXT:    .cfi_offset b13, -64
+; CHECK-GI-NEXT:    .cfi_offset b14, -72
+; CHECK-GI-NEXT:    .cfi_offset b15, -80
 ; CHECK-GI-NEXT:    mov v2.16b, v1.16b
 ; CHECK-GI-NEXT:    str q1, [sp, #64] // 16-byte Spill
 ; CHECK-GI-NEXT:    mov h14, v1.h[1]
@@ -1389,8 +1387,7 @@ define <16 x half> @powi_v16f16(<16 x half> %a, i32 %b) {
 ; CHECK-GI-NEXT:    bl __powisf2
 ; CHECK-GI-NEXT:    ldr q3, [sp, #192] // 16-byte Reload
 ; CHECK-GI-NEXT:    ldr q2, [sp, #144] // 16-byte Reload
-; CHECK-GI-NEXT:    ldr x29, [sp, #304] // 8-byte Reload
-; CHECK-GI-NEXT:    ldp x30, x19, [sp, #320] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x30, x19, [sp, #304] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v3.h[1], v2.h[0]
 ; CHECK-GI-NEXT:    ldp q1, q2, [sp] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #288] // 16-byte Folded Reload
@@ -1422,7 +1419,7 @@ define <16 x half> @powi_v16f16(<16 x half> %a, i32 %b) {
 ; CHECK-GI-NEXT:    mov v3.h[7], v0.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[7], v2.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v3.16b
-; CHECK-GI-NEXT:    add sp, sp, #336
+; CHECK-GI-NEXT:    add sp, sp, #320
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <16 x half> @llvm.powi.v16f16.i32(<16 x half> %a, i32 %b)

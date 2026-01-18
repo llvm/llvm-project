@@ -1708,14 +1708,13 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-O0-AARCH64-LABEL: params_and_return_in_reg:
 ; CHECK-O0-AARCH64:       ; %bb.0:
 ; CHECK-O0-AARCH64-NEXT:    sub sp, sp, #272
-; CHECK-O0-AARCH64-NEXT:    stp x28, x20, [sp, #240] ; 16-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x20, [sp, #240] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    stp x29, x30, [sp, #256] ; 16-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    add x29, sp, #256
 ; CHECK-O0-AARCH64-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w30, -8
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
-; CHECK-O0-AARCH64-NEXT:    .cfi_offset w20, -24
-; CHECK-O0-AARCH64-NEXT:    .cfi_offset w28, -32
+; CHECK-O0-AARCH64-NEXT:    .cfi_offset w20, -32
 ; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #72] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    str x20, [sp] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    str x7, [sp, #64] ; 8-byte Spill
@@ -1808,19 +1807,17 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-O0-AARCH64-NEXT:    mov x8, x21
 ; CHECK-O0-AARCH64-NEXT:    ldur x21, [x29, #-32] ; 8-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #256] ; 16-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldp x28, x20, [sp, #240] ; 16-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x20, [sp, #240] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    add sp, sp, #272
 ; CHECK-O0-AARCH64-NEXT:    ret
 ;
 ; CHECK-O0-ARM64_32-LABEL: params_and_return_in_reg:
 ; CHECK-O0-ARM64_32:       ; %bb.0:
-; CHECK-O0-ARM64_32-NEXT:    sub sp, sp, #272
-; CHECK-O0-ARM64_32-NEXT:    str x28, [sp, #240] ; 8-byte Spill
-; CHECK-O0-ARM64_32-NEXT:    stp x20, x30, [sp, #256] ; 16-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 272
+; CHECK-O0-ARM64_32-NEXT:    sub sp, sp, #256
+; CHECK-O0-ARM64_32-NEXT:    stp x20, x30, [sp, #240] ; 16-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 256
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -8
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w20, -16
-; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w28, -32
 ; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #72] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    str x20, [sp] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    str x7, [sp, #64] ; 8-byte Spill
@@ -1912,9 +1909,8 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-O0-ARM64_32-NEXT:    ldr x7, [sp, #216] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x21
 ; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #224] ; 8-byte Reload
-; CHECK-O0-ARM64_32-NEXT:    ldp x20, x30, [sp, #256] ; 16-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x28, [sp, #240] ; 8-byte Reload
-; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #272
+; CHECK-O0-ARM64_32-NEXT:    ldp x20, x30, [sp, #240] ; 16-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #256
 ; CHECK-O0-ARM64_32-NEXT:    ret
   %error_ptr_ref = alloca swifterror ptr, align 8
   store ptr null, ptr %error_ptr_ref

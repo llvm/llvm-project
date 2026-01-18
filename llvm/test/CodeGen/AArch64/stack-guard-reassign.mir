@@ -15,8 +15,7 @@ frameInfo:
   stackProtector:  '%stack.0.StackGuardSlot'
 stack:
   - { id: 0, name: StackGuardSlot, size: 8, alignment: 8, stack-id: default }
-# Verify that the offset assigned to the stack protector is at the top of the
-# frame, covering the locals.
+# Verify that the offset assigned to the stack protector covers the locals.
 # CHECK:       - { id: 0, name: StackGuardSlot, type: default, offset: -24, size: 8,
 # CHECK-NEXT:      alignment: 8, stack-id: default, callee-saved-register: '', callee-saved-restored: true,
 # CHECK-NEXT:      local-offset: -8, debug-info-variable: '', debug-info-expression: '',

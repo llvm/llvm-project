@@ -2434,12 +2434,9 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ;
 ; NONEON-NOSVE-LABEL: scvtf_v16i32_v16f64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #272
-; NONEON-NOSVE-NEXT:    str x29, [sp, #256] // 8-byte Spill
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 272
-; NONEON-NOSVE-NEXT:    .cfi_offset w29, -16
+; NONEON-NOSVE-NEXT:    sub sp, sp, #256
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 256
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [x0]
-; NONEON-NOSVE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    ldp q3, q2, [x0, #32]
 ; NONEON-NOSVE-NEXT:    str q1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    stp q0, q2, [sp]
@@ -2448,41 +2445,39 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #48]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #104]
+; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #64]
-; NONEON-NOSVE-NEXT:    str d0, [sp, #264]
-; NONEON-NOSVE-NEXT:    ldp d0, d2, [sp, #16]
-; NONEON-NOSVE-NEXT:    stp d2, d0, [sp, #88]
+; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #112]
+; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #16]
+; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #80]
+; NONEON-NOSVE-NEXT:    scvtf d1, w9
 ; NONEON-NOSVE-NEXT:    scvtf d0, w8
-; NONEON-NOSVE-NEXT:    scvtf d2, w9
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #56]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #120]
-; NONEON-NOSVE-NEXT:    scvtf d0, w9
-; NONEON-NOSVE-NEXT:    str d0, [sp, #152]
-; NONEON-NOSVE-NEXT:    scvtf d0, w8
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #104]
-; NONEON-NOSVE-NEXT:    stp d2, d0, [sp, #136]
-; NONEON-NOSVE-NEXT:    scvtf d1, w9
-; NONEON-NOSVE-NEXT:    scvtf d0, w8
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #112]
-; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #192]
-; NONEON-NOSVE-NEXT:    scvtf d1, w9
-; NONEON-NOSVE-NEXT:    scvtf d0, w8
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #120]
-; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #208]
-; NONEON-NOSVE-NEXT:    scvtf d1, w9
-; NONEON-NOSVE-NEXT:    scvtf d0, w8
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #268]
-; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #224]
-; NONEON-NOSVE-NEXT:    scvtf d1, w8
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #264]
-; NONEON-NOSVE-NEXT:    ldp q4, q6, [sp, #208]
-; NONEON-NOSVE-NEXT:    scvtf d0, w8
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #88]
-; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #240]
+; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #128]
 ; NONEON-NOSVE-NEXT:    scvtf d1, w9
 ; NONEON-NOSVE-NEXT:    scvtf d0, w8
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #96]
+; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #144]
+; NONEON-NOSVE-NEXT:    scvtf d1, w9
+; NONEON-NOSVE-NEXT:    scvtf d0, w8
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #104]
+; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #192]
+; NONEON-NOSVE-NEXT:    scvtf d1, w9
+; NONEON-NOSVE-NEXT:    scvtf d0, w8
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #112]
+; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #208]
+; NONEON-NOSVE-NEXT:    scvtf d1, w9
+; NONEON-NOSVE-NEXT:    scvtf d0, w8
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #120]
+; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #224]
+; NONEON-NOSVE-NEXT:    scvtf d1, w9
+; NONEON-NOSVE-NEXT:    scvtf d0, w8
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #80]
+; NONEON-NOSVE-NEXT:    ldp q4, q6, [sp, #208]
+; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #240]
+; NONEON-NOSVE-NEXT:    scvtf d1, w9
+; NONEON-NOSVE-NEXT:    scvtf d0, w8
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldr q7, [sp, #240]
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #160]
 ; NONEON-NOSVE-NEXT:    scvtf d1, w9
@@ -2495,7 +2490,7 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1]
 ; NONEON-NOSVE-NEXT:    stp q4, q3, [x1, #32]
 ; NONEON-NOSVE-NEXT:    stp q2, q5, [x1, #96]
-; NONEON-NOSVE-NEXT:    add sp, sp, #272
+; NONEON-NOSVE-NEXT:    add sp, sp, #256
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i32>, ptr %a
   %res = sitofp <16 x i32> %op1 to <16 x double>
