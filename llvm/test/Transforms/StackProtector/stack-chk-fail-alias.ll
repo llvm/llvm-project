@@ -1,6 +1,6 @@
 ;; __stack_chk_fail should have the noreturn attr even if it is an alias
 ; REQUIRES: x86-registered-target
-; RUN: opt -mtriple=x86_64-pc-linux-gnu %s -passes=stack-protector -S | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-linux-gnu %s -passes='require<libcall-lowering-info>,stack-protector' -S | FileCheck %s
 
 define hidden void @__stack_chk_fail_impl() {
   unreachable
