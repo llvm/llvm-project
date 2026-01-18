@@ -195,16 +195,16 @@ private:
 
   static ISD::MemIndexedMode getISDIndexedMode(TTI::MemIndexedMode M) {
     switch (M) {
-    case TTI::MIM_Unindexed:
-      return ISD::UNINDEXED;
-    case TTI::MIM_PreInc:
-      return ISD::PRE_INC;
-    case TTI::MIM_PreDec:
-      return ISD::PRE_DEC;
-    case TTI::MIM_PostInc:
-      return ISD::POST_INC;
-    case TTI::MIM_PostDec:
-      return ISD::POST_DEC;
+      case TTI::MIM_Unindexed:
+        return ISD::UNINDEXED;
+      case TTI::MIM_PreInc:
+        return ISD::PRE_INC;
+      case TTI::MIM_PreDec:
+        return ISD::PRE_DEC;
+      case TTI::MIM_PostInc:
+        return ISD::POST_INC;
+      case TTI::MIM_PostDec:
+        return ISD::POST_DEC;
     }
     llvm_unreachable("Unexpected MemIndexedMode");
   }
@@ -1251,7 +1251,7 @@ public:
         EVT ExtVT = EVT::getEVT(Dst);
         EVT LoadVT = EVT::getEVT(Src);
         unsigned LType =
-            ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
+          ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
         if (DstLT.first == SrcLT.first &&
             TLI->isLoadExtLegal(LType, ExtVT, LoadVT))
           return 0;
@@ -2046,12 +2046,12 @@ public:
           thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
       Cost +=
           thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Shl, RetTy,
-                                              CostKind, OpInfoX,
-                                              {OpInfoZ.Kind, TTI::OP_None});
-      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::LShr, RetTy,
-                                              CostKind, OpInfoY,
-                                              {OpInfoZ.Kind, TTI::OP_None});
+      Cost += thisT()->getArithmeticInstrCost(
+          BinaryOperator::Shl, RetTy, CostKind, OpInfoX,
+          {OpInfoZ.Kind, TTI::OP_None});
+      Cost += thisT()->getArithmeticInstrCost(
+          BinaryOperator::LShr, RetTy, CostKind, OpInfoY,
+          {OpInfoZ.Kind, TTI::OP_None});
       // Non-constant shift amounts requires a modulo. If the typesize is a
       // power-2 then this will be converted to an and, otherwise it will use a
       // urem.
@@ -2064,8 +2064,9 @@ public:
       // For non-rotates (X != Y) we must add shift-by-zero handling costs.
       if (X != Y) {
         Type *CondTy = RetTy->getWithNewBitWidth(1);
-        Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                            CmpInst::ICMP_EQ, CostKind);
+        Cost +=
+            thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                        CmpInst::ICMP_EQ, CostKind);
         Cost +=
             thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
                                         CmpInst::ICMP_EQ, CostKind);
@@ -2727,9 +2728,9 @@ public:
     }
     case Intrinsic::experimental_constrained_fmuladd: {
       IntrinsicCostAttributes FMulAttrs(
-          Intrinsic::experimental_constrained_fmul, RetTy, Tys);
+        Intrinsic::experimental_constrained_fmul, RetTy, Tys);
       IntrinsicCostAttributes FAddAttrs(
-          Intrinsic::experimental_constrained_fadd, RetTy, Tys);
+        Intrinsic::experimental_constrained_fadd, RetTy, Tys);
       return thisT()->getIntrinsicInstrCost(FMulAttrs, CostKind) +
              thisT()->getIntrinsicInstrCost(FAddAttrs, CostKind);
     }
@@ -3003,7 +3004,7 @@ public:
       break;
     }
     case Intrinsic::clmul: {
-      // This cost model must match the expansion in
+      // This cost model should match the expansion in
       // TargetLowering::expandCLMUL.
       InstructionCost PerBitCost =
           thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
