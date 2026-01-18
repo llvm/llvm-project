@@ -55,7 +55,7 @@ Limitations
 -----------
 
 The check currently ignores variables defined with attributes or qualifiers
-except const and & since it's not very common:
+except ``const`` and ``&`` since it's not very common:
 
 .. code-block:: c++
 
