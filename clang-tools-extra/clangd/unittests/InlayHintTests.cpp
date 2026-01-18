@@ -1996,9 +1996,9 @@ TEST(ParameterHints, CXX20AggregateParenInitNoCtorDerived) {
     }
 
     struct Col {
-      uint8_t r {};
-      uint8_t g {};
-      uint8_t b {};
+      unsigned short r {};
+      unsigned short g {};
+      unsigned short b {};
     };
 
     struct Point : public Col {
