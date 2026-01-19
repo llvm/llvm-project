@@ -3,3 +3,6 @@ rocwmma needs changes
 [AMDGPU] Programmatically port old `.def` clang builtins to `.td` (#175873)
 [AMDGPU][NFC] Change AMDGPU builtins to use ExtVector (#176033)
 ---
+opencl KHR PR break: get_image_width
+[OpenCL] Set KHR extensions minimum version to OpenCL 1.0 (2nd try) (#176681)
+---
