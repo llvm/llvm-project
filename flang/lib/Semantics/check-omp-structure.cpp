@@ -4849,7 +4849,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
   semantics::UnorderedSymbolSet listVars;
-  unsigned version{context_.langOptions().OpenMPVersion};
 
   for (auto [_, clause] :
       FindClauses(llvm::omp::Clause::OMPC_use_device_addr)) {
