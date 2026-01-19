@@ -3852,14 +3852,6 @@ void IntrinsicLibrary::genExit(llvm::ArrayRef<fir::ExtendedValue> args) {
           : fir::getBase(args[0]);
 
   mlir::Type defaultIntTy = builder.getDefaultIntegerType();
-
-  // Warn about non-default integer kinds with -pedantic
-  if (status.getType() != defaultIntTy) {
-    mlir::emitWarning(
-        loc,
-        "EXIT intrinsic with non-default INTEGER kind is a language extension");
-  }
-
   // Convert INTEGER(any kind) → default INTEGER
   if (status.getType() != defaultIntTy) {
     status = builder.createConvert(loc, defaultIntTy, status);
