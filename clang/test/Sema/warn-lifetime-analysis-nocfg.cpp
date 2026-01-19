@@ -919,10 +919,13 @@ struct MySpan {
   MySpan(const std::vector<T>& v);
   ~MySpan();
   using iterator = std::iterator<T>;
-  iterator begin() const [[clang::lifetimebound]];
+  // FIXME: It is not possible to annotate accessor methods of non-owning view types.
+  // Clang should provide another annotation to mark such functions as 'transparent'.
+  iterator begin() const;
 };
+// FIXME: Same as above.
 template <typename T>
-typename MySpan<T>::iterator ReturnFirstIt(const MySpan<T>& v [[clang::lifetimebound]]);
+typename MySpan<T>::iterator ReturnFirstIt(const MySpan<T>& v);
 
 void test4() {
   std::vector<int> v{1};
@@ -934,14 +937,59 @@ void test4() {
   // Ideally, we would diagnose the following case, but due to implementation
   // constraints, we do not.
   const int& t4 = *MySpan<int>(std::vector<int>{}).begin();
+  use(t1, t2, t4);
 
-  // FIXME: Detect this using the CFG-based lifetime analysis (constructor of a pointer).
-  auto it1 = MySpan<int>(v).begin(); // expected-warning {{temporary whose address is use}}
-  auto it2 = ReturnFirstIt(MySpan<int>(v)); // expected-warning {{temporary whose address is used}}
+  auto it1 = MySpan<int>(v).begin();
+  auto it2 = ReturnFirstIt(MySpan<int>(v));
   use(it1, it2);
 }
 
 } // namespace LifetimeboundInterleave
+
+namespace range_based_for_loop_variables {
+std::string_view test_view_loop_var(std::vector<std::string> strings) {
+  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s; //cfg-note {{returned here}}
+  }
+  return "";
+}
+
+const char* test_view_loop_var_with_data(std::vector<std::string> strings) {
+  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s.data(); //cfg-note {{returned here}}
+  }
+  return "";
+}
+
+std::string_view test_no_error_for_views(std::vector<std::string_view> views) {
+  for (std::string_view s : views) {
+    return s;
+  }
+  return "";
+}
+
+std::string_view test_string_ref_var(std::vector<std::string> strings) {
+  for (const std::string& s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s; //cfg-note {{returned here}}
+  }
+  return "";
+}
+
+std::string_view test_opt_strings(std::optional<std::vector<std::string>> strings_or) {
+  for (const std::string& s : *strings_or) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s; //cfg-note {{returned here}}
+  }
+  return "";
+}
+} // namespace range_based_for_loop_variables
+
+namespace iterator_arrow {
+std::string_view test() {
+  std::vector<std::string> strings;
+  // FIXME: Track operator-> of iterators.
+  return strings.begin()->data();
+}
+} // namespace iterator_arrow
 
 namespace GH120206 {
 struct S {
