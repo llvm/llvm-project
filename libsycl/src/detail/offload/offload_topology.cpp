@@ -27,6 +27,8 @@ void discoverOffloadDevices() {
   PerBackendDataType Mapping;
   // olIterateDevices() calls the lambda for each device. Devices that fail
   // probes or that report unknown backends are silently ignored.
+  // TODO for debug purposes env variable can be added to report error at the
+  // first failure and interrupt iteration.
   callNoCheck(
       olIterateDevices,
       [](ol_device_handle_t Dev, void *User) -> bool {

@@ -26,6 +26,7 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
+// int is used as the underlying type for consistency with std::error_code.
 enum class errc : int {
   success = 0,
   runtime = 1,

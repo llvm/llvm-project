@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains helper functions for tranformation between implementation
-/// and SYCL's interface objects.
+/// This file contains helper functions used to navigate between SYCL interface
+/// objects and their corresponding implementation objects.
 ///
 //===----------------------------------------------------------------------===//
 

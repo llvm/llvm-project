@@ -44,7 +44,8 @@ extern "C" _LIBSYCL_EXPORT BOOL WINAPI DllMain(HINSTANCE hinstDLL,
     try {
       shutdown();
     } catch (std::exception &e) {
-      // report
+      // TODO: Investigate how to handle and report errors that occur during
+      // shutdown.
     }
 
     break;
