@@ -37,7 +37,6 @@ private:
   BumpPtrAllocator PtrAlloc;
   StringSaver Saver{PtrAlloc};
 
-
   // Determines if a file at the given path is a thin archive file.
   Expected<bool> isThinArchive(const StringRef ArchivePath);
 
@@ -53,7 +52,6 @@ private:
 
   // A cache to avoid repeatedly reading the same archive file.
   StringMap<bool> ArchiveFiles;
-
 };
 
 } // namespace lto
