@@ -42,8 +42,6 @@ enum ImplicitArgumentMask {
 #include "AMDGPUAttributes.def"
   ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1,
   NOT_IMPLICIT_INPUT
-  ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1,
-  NOT_IMPLICIT_INPUT
 };
 
 #define AMDGPU_ATTRIBUTE(Name, Str) {Name, Str},
@@ -518,6 +516,17 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     // The current assumed state used to determine a change.
     auto OrigAssumed = getAssumed();
 
+    SmallPtrSet<const Function *, 4> TrapHandlers;
+    for (Instruction &I : instructions(F)) {
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB || !CB->hasFnAttr("trap-func-name"))
+        continue;
+
+      if (const Function *CalledFunc = CB->getCalledFunction())
+        if (isTrapLikeLeafIntrinsic(*CalledFunc))
+          TrapHandlers.insert(CalledFunc);
+    }
+
     // Check for Intrinsics and propagate attributes.
     const AACallEdges *AAEdges = A.getAAFor<AACallEdges>(
         *this, this->getIRPosition(), DepClassTy::REQUIRED);
@@ -549,6 +558,12 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
           intrinsicToAttrMask(IID, NonKernelOnly, NeedsImplicit,
                               HasApertureRegs, SupportsGetDoorbellID, COV);
 
+      if (TrapHandlers.contains(Callee)) {
+        if (!Callee->hasFnAttribute(Attribute::NoCallback))
+          return indicatePessimisticFixpoint();
+        continue;
+      }
+
       if (AttrMask == UNKNOWN_INTRINSIC) {
         // Assume not-nocallback intrinsics may invoke a function which accesses
         // implicit arguments.
@@ -558,7 +573,8 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
         // of whether it's internal to the module or not.
         //
         // TODO: Ignoring callsite attributes.
-        if (!isTrapLikeLeafIntrinsic(*Callee) &&
+        const bool IsTrapLikeTrapIntrinsic = isTrapLikeLeafIntrinsic(*Callee);
+        if (!IsTrapLikeTrapIntrinsic &&
             !Callee->hasFnAttribute(Attribute::NoCallback))
           return indicatePessimisticFixpoint();
         continue;
@@ -1367,6 +1383,14 @@ struct AAAMDGPUMinAGPRAlloc
         return true;
       }
 
+      if (const Function *CalledFunc = CB.getCalledFunction()) {
+        if (isTrapLikeLeafIntrinsic(*CalledFunc)) {
+          if (CB.hasFnAttr("trap-func-name"))
+            return CB.hasFnAttr(Attribute::NoCallback);
+          return true;
+        }
+      }
+
       switch (CB.getIntrinsicID()) {
       case Intrinsic::not_intrinsic:
         break;
@@ -1384,18 +1408,9 @@ struct AAAMDGPUMinAGPRAlloc
 
         return true;
       }
-      case Intrinsic::debugtrap:
-        // llvm.debugtrap currently lacks the attributes required for
-        // isTrapLikeLeafIntrinsic, so kept explicitly whitelisted.
-        return true;
       default: {
         // Some intrinsics may use AGPRs, but if we have a choice, we are not
         // required to use AGPRs.
-
-        if (const Function *CalledFunc = CB.getCalledFunction())
-          if (isTrapLikeLeafIntrinsic(*CalledFunc))
-            return true;
-
         // Assume !nocallback intrinsics may call a function which requires
         // AGPRs.
         return CB.hasFnAttr(Attribute::NoCallback);
