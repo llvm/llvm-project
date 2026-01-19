@@ -4462,7 +4462,8 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
         // with previous assignments to global resources
         const DeclBindingInfo *LHSBinding = LocalResourceBindings[VD];
         if (!LHSBinding) {
-          // LHSBinding is a nullptr when the local resource is instantiated without an expression.
+          // LHSBinding is a nullptr when the local resource is instantiated
+          // without an expression.
           LocalResourceBindings[VD] = *RHSBinding;
         } else if (LHSBinding != *RHSBinding) {
           SemaRef.Diag(Loc,
