@@ -73,8 +73,3 @@ define internal ptr @foo.resolver() {
 entry:
   ret ptr @my_foo
 }
-
-!llvm.module.flags = !{!0, !1}
-
-!0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{i32 8, !"PIC Level", i32 2}

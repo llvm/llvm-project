@@ -37,9 +37,3 @@ entry:
   %switch.select4 = select i1 %switch.selectcmp3, ptr @foo_protected, ptr %switch.select
   ret ptr %switch.select4
 }
-
-!llvm.module.flags = !{!0, !1, !2}
-
-!0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{i32 8, !"PIC Level", i32 2}
-!2 = !{i32 7, !"frame-pointer", i32 2}
