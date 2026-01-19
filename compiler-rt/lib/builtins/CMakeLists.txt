@@ -470,10 +470,10 @@ set(arm_EABI_RT_SOURCES
   arm/aeabi_ldivmod.S
   arm/aeabi_uidivmod.S
   arm/aeabi_uldivmod.S
-  arm/aeabi_uread4.c
-  arm/aeabi_uread8.c
-  arm/aeabi_uwrite4.c
-  arm/aeabi_uwrite8.c
+  arm/aeabi_uread4.S
+  arm/aeabi_uread8.S
+  arm/aeabi_uwrite4.S
+  arm/aeabi_uwrite8.S
 )
 
 set(arm_EABI_CLIB_SOURCES
