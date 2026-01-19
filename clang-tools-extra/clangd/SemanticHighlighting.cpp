@@ -1061,22 +1061,30 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
           if (auto Mod = scopeModifier(Decl))
             Tok.addModifier(*Mod);
 
-          const auto SymbolTags = computeSymbolTags(*Decl, R.IsDecl);
+          const auto SymbolTags = computeSymbolTags(*Decl);
 
-          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Deprecated))
-            Tok.addModifier(HighlightingModifier::Deprecated);
+          static const llvm::DenseMap<SymbolTag, HighlightingModifier>
+              TagModifierMap = {
+                  {SymbolTag::Deprecated, HighlightingModifier::Deprecated},
+                  {SymbolTag::ReadOnly, HighlightingModifier::Readonly},
+                  {SymbolTag::Static, HighlightingModifier::Static},
+                  {SymbolTag::Virtual, HighlightingModifier::Virtual},
+                  {SymbolTag::Abstract, HighlightingModifier::Abstract},
+                  // Declaration and Definition are handled separately below.
+              };
 
-          if (SymbolTags & toSymbolTagBitmask(SymbolTag::ReadOnly))
-            Tok.addModifier(HighlightingModifier::Readonly);
+          for (const auto &[Tag, Modifier] : TagModifierMap) {
+            if (SymbolTags & toSymbolTagBitmask(Tag))
+              Tok.addModifier(Modifier);
+          }
 
-          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Static))
-            Tok.addModifier(HighlightingModifier::Static);
+          if (R.IsDecl &&
+              (SymbolTags & toSymbolTagBitmask(SymbolTag::Declaration))) {
+            Tok.addModifier(HighlightingModifier::Declaration);
 
-          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Virtual))
-            Tok.addModifier(HighlightingModifier::Virtual);
-
-          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Abstract))
-            Tok.addModifier(HighlightingModifier::Abstract);
+            if (SymbolTags & toSymbolTagBitmask(SymbolTag::Definition))
+              Tok.addModifier(HighlightingModifier::Definition);
+          }
 
           if (isDependent(Decl))
             Tok.addModifier(HighlightingModifier::DependentName);
@@ -1086,12 +1094,6 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
 
           if (isa<CXXConstructorDecl>(Decl))
             Tok.addModifier(HighlightingModifier::ConstructorOrDestructor);
-
-          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Declaration))
-            Tok.addModifier(HighlightingModifier::Declaration);
-
-          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Definition))
-            Tok.addModifier(HighlightingModifier::Definition);
         }
       },
       AST.getHeuristicResolver());

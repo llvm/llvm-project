@@ -158,13 +158,7 @@ bool isUniqueDefinition(const NamedDecl *Decl) {
 }
 } // namespace
 
-// Backwards-compatible default behavior: determine whether this NamedDecl is
-// definition based on `isUniqueDefinition`, assuming that ND is a declaration.
 SymbolTags computeSymbolTags(const NamedDecl &ND) {
-  return computeSymbolTags(ND, true);
-}
-
-SymbolTags computeSymbolTags(const NamedDecl &ND, bool IsDecl) {
   SymbolTags Result = 0;
   const auto IsDef = isUniqueDefinition(&ND);
 
@@ -186,7 +180,7 @@ SymbolTags computeSymbolTags(const NamedDecl &ND, bool IsDecl) {
   if (isFinal(&ND))
     Result |= toSymbolTagBitmask(SymbolTag::Final);
 
-  if (IsDecl && not isa<UnresolvedUsingValueDecl>(ND)) {
+  if (not isa<UnresolvedUsingValueDecl>(ND)) {
     // Do not treat an UnresolvedUsingValueDecl as a declaration.
     // It's more common to think of it as a reference to the
     // underlying declaration.
