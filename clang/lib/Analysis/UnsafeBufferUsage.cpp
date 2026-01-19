@@ -2109,6 +2109,7 @@ public:
                  // guarantee null-termination
     VA_LIST = 4, // one of the `-printf`s function that take va_list, which is
                  // considered unsafe as it is not compile-time check
+    FORMAT_ATTR = 8, // flag: the callee has the format attribute
   } WarnedFunKind = OTHERS;
 
   UnsafeLibcFunctionCallGadget(const MatchResult &Result)
@@ -2293,11 +2294,16 @@ public:
                              ASTContext &Ctx) const override {
     if (UnsafeArg)
       Handler.handleUnsafeLibcCall(
-          Call, UnsafeLibcFunctionCallGadget::UnsafeKind::STRING, Ctx,
-          UnsafeArg);
+          Call,
+          UnsafeLibcFunctionCallGadget::UnsafeKind::STRING |
+              UnsafeLibcFunctionCallGadget::UnsafeKind::FORMAT_ATTR,
+          Ctx, UnsafeArg);
     else
       Handler.handleUnsafeLibcCall(
-          Call, UnsafeLibcFunctionCallGadget::UnsafeKind::OTHERS, Ctx);
+          Call,
+          UnsafeLibcFunctionCallGadget::UnsafeKind::OTHERS |
+              UnsafeLibcFunctionCallGadget::UnsafeKind::FORMAT_ATTR,
+          Ctx);
   }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
