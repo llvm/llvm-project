@@ -5811,10 +5811,10 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                                     DstVreg)
                                 .addImm(srcMod) // src0 modifier
                                 .addReg(SrcReg)
-                                .addImm(0) // src1 modifier
+                                .addImm(SISrcMods::NONE) // src1 modifier
                                 .addReg(ActiveLanesVreg)
-                                .addImm(0)  // clamp
-                                .addImm(0); // output-mod
+                                .addImm(SISrcMods::NONE)  // clamp
+                                .addImm(SISrcMods::NONE); // output-mod
         if (is32BitOpc) {
           BuildMI(BB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
               .addReg(DstVreg);
