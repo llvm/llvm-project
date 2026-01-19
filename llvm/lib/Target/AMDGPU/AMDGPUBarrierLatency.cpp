@@ -35,13 +35,8 @@ static cl::opt<unsigned> BarrierSignalWaitLatencyOpt(
     cl::init(16), cl::Hidden);
 
 static cl::opt<bool> NoAddedLatencyBeforeAtomicFence(
-    "no-added-latency-before-atomic-fence",
+    "amdgpu-no-added-latency-before-atomic-fence",
     cl::desc("Disable adding latency before ATOMIC_FENCE"), cl::init(false),
-    cl::Hidden);
-
-static cl::opt<bool> NoAddedLatencyBeforeBarrierWait(
-    "no-added-latency-before-barrier-wait",
-    cl::desc("Disable adding latency before S_BARRIER_WAIT"), cl::init(false),
     cl::Hidden);
 
 namespace {
@@ -106,7 +101,7 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         addLatencyToEdge(PredDep, SU, FenceLatency);
       }
     } else if (Op == AMDGPU::S_BARRIER_WAIT) {
-      if (NoAddedLatencyBeforeBarrierWait)
+      if (BarrierSignalWaitLatency == 0)
         continue;
       for (SDep &PredDep : SU.Preds) {
         SUnit *PredSU = PredDep.getSUnit();
