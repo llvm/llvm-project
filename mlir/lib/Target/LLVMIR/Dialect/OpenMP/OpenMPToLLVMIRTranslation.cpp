@@ -2792,19 +2792,35 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::Value *ubVal = builder.getInt32(1);
   Operation::operand_range lowerBounds = loopOp.getLoopLowerBounds();
   Operation::operand_range upperBounds = loopOp.getLoopUpperBounds();
+  llvm::Value *lbVal = nullptr;
   if (loopOp.getCollapseNumLoops() > 1) {
     // In cases where Collapse is used with Taskloop, the upper bound of the
     // iteration space needs to be recalculated to cater for the collapsed loop.
     // The Collapsed Loop UpperBound is the product of all collapsed
     // loop's tripcount.
+    // The LowerBound for collapsed loops is always 1. When the loops are
+    // collapsed, it will reset the bounds and add processing in to ensure the
+    // index's are presented as expected. As this happens after creating
+    // Taskloop, these bounds need predicting. Example:
+    // !$omp taskloop collapse(2)
+    //   do i = 1, 10
+    //     do j = 1, 5
+    //       ..
+    //     end do
+    //   end do
+    // This loop above has a total of 50 iterations, so the lb will be 1, and
+    // the ub will be 50. collapseLoops then handles ensuring that i and j are
+    // properly presented when used in the loop.
     for (uint64_t i = 0; i < loopOp.getCollapseNumLoops(); i++) {
       llvm::Value *lowerBoundMinusOne = builder.CreateSub(
           moduleTranslation.lookupValue(lowerBounds[i]), builder.getInt32(1));
       llvm::Value *loopTripCount = builder.CreateSub(
           moduleTranslation.lookupValue(upperBounds[i]), lowerBoundMinusOne);
+      lbVal = builder.getInt32(1);
       ubVal = builder.CreateMul(ubVal, loopTripCount);
     }
   } else {
+    lbVal = moduleTranslation.lookupValue(lowerBounds[0]);
     ubVal = moduleTranslation.lookupValue(upperBounds[0]);
   }
 
@@ -2840,8 +2856,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTaskloop(
-          ompLoc, allocaIP, bodyCB, loopInfo,
-          moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[0]), ubVal,
+          ompLoc, allocaIP, bodyCB, loopInfo, lbVal, ubVal,
           moduleTranslation.lookupValue(loopOp.getLoopSteps()[0]),
           taskloopOp.getUntied(), ifCond, grainsize, taskloopOp.getNogroup(),
           sched, moduleTranslation.lookupValue(taskloopOp.getFinal()),
