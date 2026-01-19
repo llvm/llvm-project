@@ -20,6 +20,7 @@
 #include "CGValue.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/IdentifierTable.h" // Selector
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/UniqueVector.h"
 
 namespace llvm {
@@ -60,12 +61,21 @@ class CGBlockInfo;
 
 // FIXME: Several methods should be pure virtual but aren't to avoid the
 // partially-implemented subclass breaking.
+typedef llvm::DenseSet<const ObjCInterfaceDecl *> RealizedClassSet;
 
 /// Implements runtime-specific code generation functions.
 class CGObjCRuntime {
 protected:
   CodeGen::CodeGenModule &CGM;
   CGObjCRuntime(CodeGen::CodeGenModule &CGM) : CGM(CGM) {}
+
+  /// Cache of classes that are guaranteed to be realized because they or one
+  /// of their subclasses has a +load method. Lazily populated on first query.
+  mutable std::optional<RealizedClassSet> RealizedClasses;
+
+  /// Populate the RealizedClasses cache by scanning all ObjCInterfaceDecls
+  /// in the translation unit for +load methods.
+  const RealizedClassSet &getOrPopulateRealizedClasses() const;
 
   // Utility functions for unified ivar access. These need to
   // eventually be folded into other places (the structure layout
@@ -330,10 +340,23 @@ public:
                                      QualType resultType,
                                      CallArgList &callArgs);
 
-  bool canMessageReceiverBeNull(CodeGenFunction &CGF,
-                                const ObjCMethodDecl *method, bool isSuper,
-                                const ObjCInterfaceDecl *classReceiver,
-                                llvm::Value *receiver);
+  /// Check if the receiver of an ObjC message send can be null.
+  /// Returns true if the receiver may be null, false if provably non-null.
+  ///
+  /// This can be overridden by subclasses to add runtime-specific heuristics.
+  /// Base implementation checks:
+  /// - Super dispatch (always non-null)
+  /// - Self in const-qualified methods (ARC)
+  /// - Weak-linked classes
+  ///
+  /// Future enhancements in CGObjCCommonMac override:
+  /// - _Nonnull attributes
+  /// - Results of alloc, new, ObjC literals
+  virtual bool canMessageReceiverBeNull(CodeGenFunction &CGF,
+                                        const ObjCMethodDecl *method,
+                                        bool isSuper,
+                                        const ObjCInterfaceDecl *classReceiver,
+                                        llvm::Value *receiver);
 
   /// Check if a class object can be unrealized (not yet initialized).
   /// Returns true if the class may be unrealized, false if provably realized.

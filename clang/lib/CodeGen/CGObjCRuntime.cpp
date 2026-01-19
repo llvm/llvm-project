@@ -397,10 +397,12 @@ bool CGObjCRuntime::canMessageReceiverBeNull(
 
   // If we're emitting a method, and self is const (meaning just ARC, for now),
   // and the receiver is a load of self, then self is a valid object.
-  if (auto curMethod = dyn_cast_or_null<ObjCMethodDecl>(CGF.CurCodeDecl)) {
-    auto self = curMethod->getSelfDecl();
+  if (const auto *curMethod =
+          dyn_cast_or_null<ObjCMethodDecl>(CGF.CurCodeDecl)) {
+    const auto *self = curMethod->getSelfDecl();
     if (self->getType().isConstQualified()) {
-      if (auto LI = dyn_cast<llvm::LoadInst>(receiver->stripPointerCasts())) {
+      if (const auto *LI =
+              dyn_cast<llvm::LoadInst>(receiver->stripPointerCasts())) {
         llvm::Value *selfAddr = CGF.GetAddrOfLocalVar(self).emitRawPointer(CGF);
         if (selfAddr == LI->getPointerOperand()) {
           return false;
@@ -415,9 +417,85 @@ bool CGObjCRuntime::canMessageReceiverBeNull(
 
 bool CGObjCRuntime::canClassObjectBeUnrealized(
     const ObjCInterfaceDecl *CalleeClassDecl, CodeGenFunction &CGF) const {
-  // TODO
+  if (!CalleeClassDecl || isWeakLinkedClass(CalleeClassDecl))
+    return true;
+
+  // Heuristic 1: +load method on this class or any subclass
+  // If the class or any of its subclasses has a +load method, it's realized
+  // when the binary is loaded. We cache this information to avoid repeatedly
+  // scanning the translation unit.
+  if (getOrPopulateRealizedClasses().contains(CalleeClassDecl))
+    return false;
+
+  // Heuristic 2: using Self / Super
+  // If we're currently executing a method of ClassDecl (or a subclass),
+  // then ClassDecl must already be realized.
+  if (const auto *CurMethod =
+          dyn_cast_or_null<ObjCMethodDecl>(CGF.CurCodeDecl)) {
+    const ObjCInterfaceDecl *CallerCalssDecl = CurMethod->getClassInterface();
+    if (CallerCalssDecl && CalleeClassDecl->isSuperClassOf(CallerCalssDecl))
+      return false;
+  }
+
+  // Heuristic 3: previously realized classes
+  // If we've already emitted a class method call for this class (or a subclass)
+  // earlier, then the class must be realized.
+  //
+  // TODO: Iter over all dominating blocks instead of just looking at the
+  // current block. While we can construct a DT using CFG.CurFn, it is expensive
+  // to do so repeatly when CGF is still emitting blocks.
+  if (auto *CurBB = CGF.Builder.GetInsertBlock()) {
+    auto It = CGF.ObjCRealizedClasses.find(CurBB);
+    if (It != CGF.ObjCRealizedClasses.end()) {
+      // Check if CalleeClassDecl is the same as or a superclass of any
+      // realized class in the cache. A realized subclass implies the parent
+      // is realized.
+      for (const auto *RealizedClass : It->second) {
+        if (CalleeClassDecl == RealizedClass)
+          return false;
+        if (CalleeClassDecl->isSuperClassOf(RealizedClass)) {
+          // Also cache this class to reduce future `isSuperClassOf` calls
+          It->second.insert(CalleeClassDecl);
+          return false;
+        }
+      }
+    }
+  }
+
   // Otherwise, assume it can be unrealized.
   return true;
+}
+
+const RealizedClassSet &CGObjCRuntime::getOrPopulateRealizedClasses() const {
+  if (RealizedClasses)
+    return *RealizedClasses;
+  RealizedClasses = llvm::DenseSet<const ObjCInterfaceDecl *>();
+
+  ASTContext &Ctx = CGM.getContext();
+  const IdentifierInfo *LoadII = &Ctx.Idents.get("load");
+  Selector LoadSel = Ctx.Selectors.getSelector(0, &LoadII);
+
+  TranslationUnitDecl *TUDecl = Ctx.getTranslationUnitDecl();
+  llvm::DenseSet<const ObjCInterfaceDecl *> VisitedClasses;
+  for (const auto *D : TUDecl->decls()) {
+    if (const auto *OID = dyn_cast<ObjCInterfaceDecl>(D)) {
+      if (VisitedClasses.contains(OID))
+        continue;
+      // Check if this class has a +load method
+      if (OID->lookupMethod(LoadSel, /*isInstance=*/false,
+                            /*shallowCategoryLookup=*/false,
+                            /*followSuper=*/false)) {
+        // Add this class and all its superclasses to the realized set
+        const ObjCInterfaceDecl *Cls = OID;
+        while (Cls) {
+          RealizedClasses->insert(Cls);
+          VisitedClasses.insert(Cls);
+          Cls = Cls->getSuperClass();
+        }
+      }
+    }
+  }
+  return *RealizedClasses;
 }
 
 bool CGObjCRuntime::isWeakLinkedClass(const ObjCInterfaceDecl *ID) {
