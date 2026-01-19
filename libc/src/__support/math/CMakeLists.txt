@@ -607,10 +607,12 @@ add_header_library(
   HDRS
     ilogbf128.h
   DEPENDS
-    libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
     libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
   fsqrt
   HDRS
     fsqrt.h
