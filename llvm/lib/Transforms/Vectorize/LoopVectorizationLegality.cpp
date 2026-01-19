@@ -1436,11 +1436,11 @@ bool LoopVectorizationLegality::blockNeedsPredication(
     const BasicBlock *BB) const {
   // When vectorizing early exits, create predicates for the latch block only.
   // For a single early exit, it must be a direct predecessor of the latch.
-  // For multiple early exits, they form a chain leading to the latch.
+  // For multiple early exits, they form a chain where each exiting block
+  // dominates all subsequent blocks up to the latch.
   BasicBlock *Latch = TheLoop->getLoopLatch();
-  if (hasUncountableEarlyExit()) {
+  if (hasUncountableEarlyExit())
     return BB == Latch;
-  }
   return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
 }
 
@@ -1766,9 +1766,10 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   BasicBlock *LatchPredBB = LatchBB->getUniquePredecessor();
   if (LatchPredBB != UncountableExitingBlocks.back()) {
-    reportVectorizationFailure("Early exit is not the latch predecessor",
-                               "Cannot vectorize early exit loop",
-                               "EarlyExitNotLatchPredecessor", ORE, TheLoop);
+    reportVectorizationFailure(
+        "Last early exiting block in the chain is not the latch predecessor",
+        "Cannot vectorize early exit loop", "EarlyExitNotLatchPredecessor", ORE,
+        TheLoop);
     return false;
   }
 
