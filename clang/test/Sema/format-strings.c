@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs %s
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -fno-signed-char %s
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -Wno-array-bounds -isystem %S/Inputs %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -Wno-array-bounds -isystem %S/Inputs -fno-signed-char %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -Wno-array-bounds -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -Wno-array-bounds -isystem %S/Inputs -triple=x86_64-linux-android %s
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -626,7 +626,7 @@ void pr9314(void) {
   printf(__func__); // no-warning
 }
 
-int printf(const char * restrict, ...) __attribute__((__format__ (__printf__, 1, 2)));
+int printf(const char * restrict, ...) __attribute__((__format__ (__printf__, 1, 2))); // expected-note{{passing argument to parameter here}}
 
 void rdar9612060(void) {
   printf("%s", 2); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
@@ -982,4 +982,68 @@ void test_promotion(void) {
   
   // pointers
   printf("%s", i); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+}
+
+void test_deref_subscript(void) {
+  const char *const follow = "%g"; // expected-note{{format string is defined here}}
+  const char *const formats[] = {"%d", "%s", follow};
+  printf(formats[0], 123); // no-warning
+  printf(0[formats], 123); // no-warning
+  printf(formats[0], "hello"); // expected-warning{{format specifies type 'int' but the argument has type 'char *'}}
+  printf(0[formats], "hello"); // expected-warning{{format specifies type 'int' but the argument has type 'char *'}}
+
+  printf(formats[1], 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+  printf(1[formats], 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+  printf(formats[1], "hello"); // no-warning
+  printf(1[formats], "hello"); // no-warning
+
+  printf(formats[2], 1.25); // no-warning
+  printf(2[formats], 1.25); // no-warning
+  printf(2[formats], 125); // expected-warning{{format specifies type 'double' but the argument has type 'int'}}
+
+  const char *const formats2[] = { "%s", [3] = "%d" };
+  printf(formats2[0], "hello"); // no-warning
+  printf(formats2[1], "hello"); // expected-warning{{format string is not a string literal}} \
+                                   expected-warning{{null passed to a callee that requires a non-null argument}}
+  printf(formats2[2], "hello"); // expected-warning{{format string is not a string literal}} \
+                                   expected-warning{{null passed to a callee that requires a non-null argument}}
+  printf(formats2[3], "hello"); // expected-warning{{format specifies type 'int' but the argument has type 'char *'}}
+  printf(formats2[4], "hello"); // expected-warning{{format string is not a string literal}}
+
+  const char formats3[][10] = { "%s", [3] = "%d" };
+  printf(formats3[0], "hello"); // no-warning
+  printf(formats3[1], "hello"); // expected-warning{{format string is not a string literal}}
+  printf(formats3[2], "hello"); // expected-warning{{format string is not a string literal}}
+  printf(formats3[3], "hello"); // expected-warning{{format specifies type 'int' but the argument has type 'char *'}}
+  printf(formats3[4], "hello"); // expected-warning{{format string is not a string literal}}
+
+  const char format4[][2] = {
+    "%s", // expected-warning{{format string is not null-terminated}}
+    " %s" // expected-warning{{format string is not null-terminated}} \
+             expected-warning{{initializer-string for char array is too long}}
+  };
+  printf(format4[0], "hello"); // no-warning (we bail out entirely when the format string is not NUL-terminated)
+  printf(format4[1], "hello"); // no-warning
+
+  const char *formats_nonconst[] = {"%d", "%s"};
+  printf(formats_nonconst[0], 123); // expected-warning{{format string is not a string literal}}
+  printf(formats_nonconst[0], "hello"); // expected-warning{{format string is not a string literal}}
+
+  char *formats_nonconst2[] = {"%d", "%s"};
+  printf(formats_nonconst2[0], 123); // expected-warning{{format string is not a string literal}}
+  printf(formats_nonconst2[0], "hello"); // expected-warning{{format string is not a string literal}}
+
+  char formats_nonconst3[][3] = {"%d", "%s"};
+  printf(formats_nonconst3[0], 123); // expected-warning{{format string is not a string literal}}
+  printf(formats_nonconst3[0], "hello"); // expected-warning{{format string is not a string literal}}
+
+  int not_a_string[2] = {};
+  printf(not_a_string[0], 123); // \
+      expected-warning{{format string is not a string literal}} \
+      expected-error{{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
+
+  printf(((const char (*const)[2])not_a_string)[0], 123); // expected-warning{{format string is not a string literal}}
+
+  int not_an_array;
+  printf(not_an_array[0], 123); // expected-error{{subscripted value is not an array, pointer, or vector}}
 }
