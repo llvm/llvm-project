@@ -43,7 +43,8 @@ public:
   StmtResult CreateRippleParallelComputeStmt(
       SourceRange PragmaLoc, SourceRange PELoc, SourceRange DimsLoc,
       ValueDecl *BlockShape, ArrayRef<uint64_t> Dims, Stmt *AssociatedStatement,
-      bool NoRemainder, bool MaskPostlude);
+      bool NoRemainder, bool MaskPostlude, bool IsThread,
+      ValueDecl *ThreadChunk, std::optional<uint64_t> ThreadChunkVal);
 
   // Checks that dimension indices are uniq
   void ActOnDuplicateDimensionIndex(const RippleComputeConstruct &S);
@@ -62,6 +63,10 @@ public:
     bool IgnoreNullStatements = false;
     bool NoRemainder = false;
     bool MaskPostlude = true;
+    bool IsThread = false;
+    SourceRange ThreadChunkIDRange;
+    IdentifierInfo *ThreadChunkID = nullptr;
+    std::optional<uint64_t> ThreadChunkVal = std::nullopt;
   };
 
 private:

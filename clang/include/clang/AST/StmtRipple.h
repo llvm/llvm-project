@@ -48,9 +48,12 @@ class RippleComputeConstruct final
   SourceRange DimsRange;
 
   ValueDecl *BlockShape;
+  ValueDecl *ThreadChunkDecl;
+  std::optional<uint64_t> ThreadChunkVal;
   size_t NumDimensionIds;
   bool NoRemainder = false;
   bool MaskPostlude = false;
+  bool GenForThread = false;
 
   /// Children of this AST node.
   enum {
@@ -59,6 +62,7 @@ class RippleComputeConstruct final
     LB_INIT_ORIGIN,
     PARALLEL_BLOCK_SIZE,
     DISTANCE_EXPR,
+    THREAD_CHUNK_SIZE,
     DISTANCE_RIPPLE_FULL_BLOCK,
     LB_INIT_RIPPLE,
     STEP_RIPPLE,
@@ -83,14 +87,21 @@ class RippleComputeConstruct final
   RippleComputeConstruct(SourceRange PragmaRange, SourceRange PERange,
                          SourceRange DimsRange, ValueDecl *BlockShape,
                          ArrayRef<uint64_t> Dims, ForStmt *AssociatedLoop,
-                         bool NoRemainder, bool MaskPostlude)
+                         bool NoRemainder, bool MaskPostlude, bool IsThread,
+                         ValueDecl *ThreadChunk = nullptr,
+                         std::optional<uint64_t> ThreadChunkVal = std::nullopt)
       : Stmt(RippleComputeConstructClass), Range(PragmaRange), PERange(PERange),
         DimsRange(DimsRange), BlockShape(BlockShape),
+        ThreadChunkDecl(ThreadChunk), ThreadChunkVal(ThreadChunkVal),
         NumDimensionIds(Dims.size()), NoRemainder(NoRemainder),
-        MaskPostlude(MaskPostlude) {
+        MaskPostlude(MaskPostlude), GenForThread(IsThread) {
     setAssociatedForStmt(AssociatedLoop);
     std::uninitialized_copy(Dims.begin(), Dims.end(),
                             getTrailingObjectsNonStrict<uint64_t>());
+    if (GenForThread) {
+      this->NoRemainder = true;
+      this->MaskPostlude = false;
+    }
   }
 
 public:
@@ -104,7 +115,9 @@ public:
   static RippleComputeConstruct *
   Create(const ASTContext &C, SourceRange PragmaLoc, SourceRange PELoc,
          SourceRange DimsLoc, ValueDecl *BlockShape, ArrayRef<uint64_t> Dims,
-         ForStmt *AssociatedLoop, bool NoRemainder, bool MaskPostlude);
+         ForStmt *AssociatedLoop, bool NoRemainder, bool MaskPostlude,
+         bool IsThread, ValueDecl *ThreadChunk = nullptr,
+         std::optional<uint64_t> ThreadChunkVal = std::nullopt);
   static RippleComputeConstruct *CreateEmpty(const ASTContext &C,
                                              uint64_t NumDims);
 
@@ -168,10 +181,10 @@ public:
   }
 
   /// The number of full block iterations of the Ripple loop
-  Expr *getRippleFullBlockIters() const {
+  Expr *getRippleParallelBlocks() const {
     return cast_if_present<Expr>(SubStmts[DISTANCE_RIPPLE_FULL_BLOCK]);
   }
-  void setRippleFullBlockIters(Expr *E) {
+  void setRippleParallelBlocks(Expr *E) {
     SubStmts[DISTANCE_RIPPLE_FULL_BLOCK] = cast_if_present<Stmt>(E);
   }
 
@@ -264,6 +277,19 @@ public:
   }
   void setScalarLoopPostlude(Stmt *ForLoop) {
     SubStmts[SCALAR_LOOP_POSTLUDE] = ForLoop;
+  }
+
+  /// Thread specific queries
+  bool threadCodegen() const { return GenForThread; }
+  ValueDecl *getChunkDecl() const { return ThreadChunkDecl; }
+  std::optional<uint64_t> getChunkVal() const { return ThreadChunkVal; }
+
+  // The thread block size
+  Expr *getThreadChunkSize() const {
+    return cast_if_present<Expr>(SubStmts[THREAD_CHUNK_SIZE]);
+  }
+  void setThreadChunkSize(Expr *ThreadBlockSize) {
+    SubStmts[THREAD_CHUNK_SIZE] = ThreadBlockSize;
   }
 };
 

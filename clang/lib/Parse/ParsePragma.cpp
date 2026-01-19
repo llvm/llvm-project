@@ -4324,17 +4324,19 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
     Actions.RISCV().DeclareAndesVectorBuiltins = true;
 }
 
-// '#pragma ripple Block(<BlockRef>) DIMS(<index>[, <index>]*)
-// [IgnoreEmptyStmts]? [NoRemainder]? [MaskPostlude]?'
+// '#pragma ripple parallel [IgnoreEmptyStmts]? [NoRemainder]?
+// [BlockIndependent]?  [Thread]? [ThreadChunk(<ChunkRef> | integer_literal)]?'
 void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
                                        PragmaIntroducer Introducer,
                                        Token &FirstToken) {
   Token Tok;
-  auto parseCstInt = [&](uint64_t &ParsedVal, StringRef S) -> bool {
+  auto parseCstInt = [&](uint64_t &ParsedVal, StringRef S,
+                         bool Diagnose = true) -> bool {
     if (Tok.isNot(tok::numeric_constant) ||
         !PP.parseSimpleIntegerLiteral(Tok, ParsedVal)) {
-      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_integer)
-          << 0 << 2048 << S;
+      if (Diagnose)
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_integer)
+            << 0 << 2048 << S;
       return true;
     }
     return false;
@@ -4406,6 +4408,55 @@ void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
     return false;
   };
 
+  auto ParseThreadChunk = [&](SemaRipple::AnnotationData &AnnotData) -> bool {
+    constexpr StringRef RippleThreadChunk("ripple parallel ThreadChunk()");
+    SourceLocation ThreadChunkBegin = Tok.getLocation();
+    auto LastToKLoc = Tok.getLocation();
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      auto WarnLoc = PP.getLocForEndOfToken(LastToKLoc, 0);
+      PP.Diag(WarnLoc, diag::warn_pragma_expected_lparen)
+          << RippleThreadChunk << FixItHint::CreateInsertion(WarnLoc, "(");
+      return true;
+    }
+    PP.Lex(Tok);
+    LastToKLoc = Tok.getLocation();
+    AnnotData.ThreadChunkID =
+        Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
+    AnnotData.ThreadChunkIDRange =
+        SourceRange(ThreadChunkBegin, Tok.getLocation());
+    if (AnnotData.ThreadChunkID)
+      PP.Lex(Tok);
+    else {
+      uint64_t ChunkVal;
+      if (parseCstInt(ChunkVal, StringRef(), false)) {
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
+            << Lexer::getSourceText(CharSourceRange::getTokenRange(
+                                        Tok.getLocation(), Tok.getEndLoc()),
+                                    PP.getSourceManager(), PP.getLangOpts())
+            << RippleThreadChunk << /*Expected=*/true
+            << "either one integer literal or an identifier";
+        return true;
+      }
+      AnnotData.ThreadChunkVal = ChunkVal;
+    }
+
+    if (Tok.isNot(tok::r_paren)) {
+      llvm::SmallString<128> ErrObject;
+      if (AnnotData.ThreadChunkID) {
+        ErrObject = AnnotData.ThreadChunkID->getName();
+      } else {
+        assert(AnnotData.ThreadChunkVal.has_value());
+        ErrObject = std::to_string(AnnotData.ThreadChunkVal.value());
+      }
+      auto WarnLoc = PP.getLocForEndOfToken(LastToKLoc, 0);
+      PP.Diag(WarnLoc, diag::err_expected_rparen_after)
+          << ErrObject << FixItHint::CreateInsertion(WarnLoc, ")");
+      return true;
+    }
+    return false;
+  };
+
   PP.Lex(Tok);
   const IdentifierInfo *Arg = Tok.getIdentifierInfo();
   if (!Arg || (Arg && !Arg->isStr("parallel"))) {
@@ -4419,6 +4470,7 @@ void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
     return;
   bool ParsedBlock = false;
   bool ParsedDims = false;
+  bool HasVectorOptions = false;
   // We expect Block, Dims, NoRemainder or IgnoreNullStmts
   do {
     PP.Lex(Tok);
@@ -4451,8 +4503,16 @@ void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
       AnnotData->IgnoreNullStatements = true;
     } else if (Arg && Arg->isStr("NoRemainder")) {
       AnnotData->NoRemainder = true;
+      HasVectorOptions = true;
     } else if (Arg && Arg->isStr("BlockIndependent")) {
       AnnotData->MaskPostlude = false;
+      HasVectorOptions = true;
+    } else if (Arg && Arg->isStr("Thread")) {
+      AnnotData->IsThread = true;
+    } else if (Arg && Arg->isStr("ThreadChunk")) {
+      if (ParseThreadChunk(*AnnotData))
+        return;
+      AnnotData->IsThread = true;
     } else if (Arg) {
       // IgnoreNullStmts is only for backward compatibility w/ the
       // ripple_parallel(); interface so don't advertise it!
@@ -4477,6 +4537,11 @@ void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
         << "ripple parallel" << /*Expected=*/true << MissingClauses
         << Tok.getLocation();
   }
+
+  if (AnnotData->IsThread && HasVectorOptions)
+    PP.Diag(FirstToken.getLocation(),
+            diag::err_pragma_ripple_mixed_thread_vector)
+        << Tok.getLocation();
 
   Token AnnotTok;
   AnnotTok.startToken();

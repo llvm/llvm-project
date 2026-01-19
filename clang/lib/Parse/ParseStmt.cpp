@@ -502,10 +502,31 @@ Retry:
           << PragmaVals->BlockShape;
       return StmtError();
     }
+    ValueDecl *ThreadChunkDecl = nullptr;
+    if (PragmaVals->ThreadChunkID) {
+      LookupResult TCR(Actions, PragmaVals->ThreadChunkID,
+                       PragmaVals->ThreadChunkIDRange.getBegin(),
+                       Sema::LookupOrdinaryName);
+      if (!Actions.LookupName(TCR, Actions.getCurScope(),
+                              /*CreateBuiltins*/ false)) {
+        PP.Diag(PragmaVals->ThreadChunkIDRange.getBegin(),
+                diag::err_undeclared_var_use)
+            << PragmaVals->ThreadChunkID;
+        return StmtError();
+      }
+      ThreadChunkDecl = TCR.getAsSingle<ValueDecl>();
+      if (!ThreadChunkDecl) {
+        PP.Diag(PragmaVals->ThreadChunkIDRange.getBegin(),
+                diag::err_ambiguous_reference)
+            << PragmaVals->ThreadChunkID;
+        return StmtError();
+      }
+    }
     return Actions.Ripple().CreateRippleParallelComputeStmt(
         AnnotRange, PragmaVals->BlockShapeRange, PragmaVals->DimsRange,
         BlockShape, PragmaVals->Dims, Stmt.get(), PragmaVals->NoRemainder,
-        PragmaVals->MaskPostlude);
+        PragmaVals->MaskPostlude, PragmaVals->IsThread, ThreadChunkDecl,
+        PragmaVals->ThreadChunkVal);
   }
 
   case tok::annot_pragma_ms_pointers_to_members:

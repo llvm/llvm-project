@@ -1900,5 +1900,7 @@ def warn_pragma_ripple_ignored
     : Warning<"unexpected '#pragma ripple ...' in program">,
       InGroup<SourceUsesRipple>,
       DefaultIgnore;
+def err_pragma_ripple_mixed_thread_vector
+    : Error<"unexpected combination of thread and vector arguments to '#pragma ripple parallel ...'">;
 
 } // end of Parser diagnostics

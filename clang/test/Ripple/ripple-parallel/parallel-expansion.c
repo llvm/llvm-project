@@ -82,10 +82,8 @@ void test1(size_t n, float * C, float * A, float * B) {
   //   hence we compute the UB as-if we executed the loop sequentially (to get the real UB and not the next multiple of the parallel step),
   //   i.e., IV = LB + Step * NumIter
   // CHECK: [[ORIGIN_LB:%.*]] = load i{{[0-9]+}}, ptr %ripple.par.origin.LB
-  // CHECK: %[[NParam:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %n
-  // CHECK-NEXT: %[[NPlusOne:[A-Za-z0-9_]+]] = sub i{{[0-9]+}} %[[NParam]], -1
-  // CHECK-NEXT: %[[NumLoopIters:[A-Za-z0-9_]+]] = udiv i{{[0-9]+}} %[[NPlusOne]], 1
-  // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} %[[NumLoopIters]], 1
+  // CHECK-NEXT: [[NumLoopIters:%.*]] = load i{{[0-9]+}}, ptr %ripple.loop.iters
+  // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} [[NumLoopIters]], 1
   // CHECK-NEXT: %[[UpperBound:[A-Za-z0-9_]+]] = add i{{[0-9]+}} [[ORIGIN_LB]], %[[TotalStride]]
   // CHECK-NEXT: store i{{[0-9]+}} %[[UpperBound]], ptr %i
   // CHECK-NEXT: br label %ripple.par.for.end
@@ -160,10 +158,8 @@ void test2(size_t n, float * C, float * A, float * B) {
   // CHECK: for.end:
   // Update IV to the UB
   // CHECK: [[ORIGIN_LB:%.*]] = load i{{[0-9]+}}, ptr %ripple.par.origin.LB
-  // CHECK: %[[NParam:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %n
-  // CHECK-NEXT: %[[NPlusOne:[A-Za-z0-9_]+]] = sub i{{[0-9]+}} %[[NParam]], -1
-  // CHECK-NEXT: %[[NumLoopIters:[A-Za-z0-9_]+]] = udiv i{{[0-9]+}} %[[NPlusOne]], 2
-  // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} %[[NumLoopIters]], 2
+  // CHECK: [[NumLoopIters:%.*]] = load i{{[0-9]+}}, ptr %ripple.loop.iters
+  // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} [[NumLoopIters]], 2
   // CHECK-NEXT: %[[UpperBound:[A-Za-z0-9_]+]] = add i{{[0-9]+}} [[ORIGIN_LB]], %[[TotalStride]]
   // CHECK-NEXT: store i{{[0-9]+}} %[[UpperBound]], ptr %i
   // CHECK-NEXT: br label %ripple.par.for.end
@@ -201,10 +197,8 @@ void test3(size_t n, float * C, float * A, float * B) {
   // CHECK: for.end:
   // Update IV to the UB
   // CHECK: [[ORIGIN_LB:%.*]] = load i{{[0-9]+}}, ptr %ripple.par.origin.LB
-  // CHECK: %[[NParam:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %n
-  // CHECK-NEXT: %[[NPlusOne:[A-Za-z0-9_]+]] = sub i{{[0-9]+}} %[[NParam]], 0
-  // CHECK-NEXT: %[[NumLoopIters:[A-Za-z0-9_]+]] = udiv i{{[0-9]+}} %[[NPlusOne]], 1
-  // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} %[[NumLoopIters]], 1
+  // CHECK: [[NumLoopIters:%.*]] = load i{{[0-9]+}}, ptr %ripple.loop.iters
+  // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} [[NumLoopIters]], 1
   // CHECK-NEXT: %[[UpperBound:[A-Za-z0-9_]+]] = add i{{[0-9]+}} [[ORIGIN_LB]], %[[TotalStride]]
   // CHECK-NEXT: store i{{[0-9]+}} %[[UpperBound]], ptr %i
   // CHECK-NEXT: br label %ripple.par.for.end

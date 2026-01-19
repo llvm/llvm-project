@@ -57,6 +57,23 @@ typedef struct ripple_block_shape *ripple_block_t;
       __VA_ARGS__) IgnoreNullStmts BlockIndependent))
 
 /**
+ * A descriptive loop annotation to split a loop across the specified
+ * thread dimension(s) work-items.
+ */
+#define ripple_parallel_thread(BlockShape, ...)                                \
+  _Pragma(RIPPLE_PARALLEL_STRINGIFY(ripple parallel Block(BlockShape) Dims(    \
+      __VA_ARGS__) IgnoreNullStmts Thread))
+
+/**
+ * A descriptive loop annotation to split a loop across the specified
+ * thread dimension(s) work-items. The minimum amount of work to distribute to
+ * each thread is specified using Chunk (integer literal or variable).
+ */
+#define ripple_parallel_thread_chunk(BlockShape, Chunk, ...)                   \
+  _Pragma(RIPPLE_PARALLEL_STRINGIFY(ripple parallel Block(BlockShape) Dims(    \
+      __VA_ARGS__) IgnoreNullStmts ThreadChunk(Chunk)))
+
+/**
  * Request the index of the block being processed by an enclosing ripple
  * parallel loop. The index is an integer value between 0 and the number of
  * iterations of the loop divided by the parallel block size.

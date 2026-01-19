@@ -13127,12 +13127,21 @@ StmtResult TreeTransform<Derived>::TransformRippleComputeConstruct(
           OldBlockShapeValue->getLocation(), OldBlockShapeValue));
   if (!NewBlockShape)
     return StmtError();
+  ValueDecl *OldThreadChunk = C->getChunkDecl();
+  ValueDecl *NewThreadChunk = nullptr;
+  if (OldThreadChunk) {
+    NewThreadChunk = cast_if_present<ValueDecl>(getDerived().TransformDecl(
+        OldThreadChunk->getLocation(), OldThreadChunk));
+    if (!NewThreadChunk)
+      return StmtError();
+  }
   if (ForLoop.get() != C->getAssociatedForStmt() ||
       OldBlockShapeValue != NewBlockShape)
     return getSema().Ripple().CreateRippleParallelComputeStmt(
         C->getPragmaRange(), C->getProcessingElementRange(), C->getDimsRange(),
         NewBlockShape, C->getDimensionIds(), ForLoop.get(),
-        !C->generateRemainder(), C->generateMaskedPostlude());
+        !C->generateRemainder(), C->generateMaskedPostlude(),
+        C->threadCodegen(), NewThreadChunk, C->getChunkVal());
   else
     return C;
 }

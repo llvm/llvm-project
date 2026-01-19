@@ -23,12 +23,13 @@ using namespace clang;
 RippleComputeConstruct *RippleComputeConstruct::Create(
     const ASTContext &C, SourceRange PragmaLoc, SourceRange BlockShapeLoc,
     SourceRange DimsLoc, ValueDecl *BlockShape, ArrayRef<uint64_t> Dims,
-    ForStmt *AssociatedLoop, bool NoRemainder, bool MaskPostlude) {
+    ForStmt *AssociatedLoop, bool NoRemainder, bool MaskPostlude, bool IsThread,
+    ValueDecl *ThreadChunk, std::optional<uint64_t> ThreadChunkVal) {
   void *Mem = C.Allocate(
       RippleComputeConstruct::totalSizeToAlloc<uint64_t>(Dims.size()));
-  auto *Inst = new (Mem)
-      RippleComputeConstruct(PragmaLoc, BlockShapeLoc, DimsLoc, BlockShape,
-                             Dims, AssociatedLoop, NoRemainder, MaskPostlude);
+  auto *Inst = new (Mem) RippleComputeConstruct(
+      PragmaLoc, BlockShapeLoc, DimsLoc, BlockShape, Dims, AssociatedLoop,
+      NoRemainder, MaskPostlude, IsThread, ThreadChunk, ThreadChunkVal);
   return Inst;
 }
 
@@ -52,8 +53,14 @@ RippleComputeConstruct::getRippleVarDecls() const {
       if (VarDecl *VD = cast<VarDecl>(DRE->getDecl()))
         Decls.push_back(VD);
 
-  // LOOP_IV_ORIGIN may be nullptr
-  assert(Decls.size() == NumVarDecls || Decls.size() == NumVarDecls - 1);
+  if (threadCodegen())
+    // LOOP_IV_ORIGIN may be nullptr and STEP_RIPPLE, LOOP_INIT_RIPPLE aren't
+    // used in thread mode
+    assert(Decls.size() == NumVarDecls - 2 || Decls.size() == NumVarDecls - 3);
+  else
+    // LOOP_IV_ORIGIN may be nullptr and THREAD_CHUNK_SIZE isn't used in vector
+    // mode
+    assert(Decls.size() == NumVarDecls - 1 || Decls.size() == NumVarDecls - 2);
 
   return Decls;
 }
