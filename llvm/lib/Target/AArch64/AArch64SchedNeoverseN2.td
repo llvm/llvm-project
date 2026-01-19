@@ -1801,7 +1801,7 @@ def : InstRW<[N2Write_2c_1V], (instregex "^[SU]ABD_ZPmZ_[BHSD]",
 def : InstRW<[N2Wr_ZA, N2Rd_ZA], (instregex "^[SU]ABA_ZZZ_[BHSD]$")>;
 
 // Arithmetic, absolute diff accum long
-def : InstRW<[N2Wr_ZA, N2Rd_ZA], (instregex "^[SU]ABAL[TB]_ZZZ_[HSD]")>;
+def : InstRW<[N2Wr_ZA, N2Rd_ZA], (instregex "^[SU]ABAL[TB]_ZZZ_[HSD]$")>;
 
 // Arithmetic, absolute diff long
 def : InstRW<[N2Write_2c_1V], (instregex "^[SU]ABDL[TB]_ZZZ_[HSD]$")>;
@@ -2231,7 +2231,7 @@ def : InstRW<[N2Write_3c_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
 // Floating point multiply accumulate
 def : InstRW<[N2Wr_ZFMA, ReadDefault, N2Rd_ZFMA], (instregex "^FN?ML[AS]_ZPmZZ_[HSD]",
                                                              "^FN?(MAD|MSB)_ZPmZZ_[HSD]")>;
-def : InstRW<[N2Wr_ZFMA, N2Rd_ZFMA], (instregex "^FML[AS]_ZZZI_[HSD]",
+def : InstRW<[N2Wr_ZFMA, N2Rd_ZFMA], (instregex "^FML[AS]_ZZZI_[HSD]$",
                                                 "^FN?ML[AS]_ZPZZZ_[HSD]")>;
 
 // Floating point multiply add/sub accumulate long
