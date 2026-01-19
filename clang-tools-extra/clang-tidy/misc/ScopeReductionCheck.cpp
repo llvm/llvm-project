@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This checker uses a 7-step algorithm to accomplish scope analysis of a
-// variable and determine if it can be declared in a smaller scope. Note that the
-// clang-tidy framework is aimed mainly at supporting text-manipulation,
+// This checker uses an 8-step algorithm to accomplish scope analysis of a
+// variable and determine if it can be declared in a smaller scope. Note that
+// the clang-tidy framework is aimed mainly at supporting text-manipulation,
 // diagnostics, or common AST patterns. Scope reduction analysis is
 // quite specialized, and there's not much support specifically for
 // those steps. Perhaps someone else knows better and can help simplify
 // this code in a more concrete way other than simply suggesting it can
 // be simpler.
 //
-// The 7-step algorithm used by this checker for scope reduction analysis is:
+// The 8-step algorithm used by this checker for scope reduction analysis is:
 // 1) AST Matcher Filtering
 //    - Only match variables within functions (hasAncestor(functionDecl())
 //    - Exclude for-loop declared variables
@@ -31,22 +31,26 @@
 //      innermost to outermost)
 // 4) Find the innermost compound statement that contains all uses
 //    - This is the smallest scope where the variable could be declared
-// 5) Switch case analysis
+// 5) Check for accumulator patterns
+//    - Detect compound assignments (+=, -=, etc.) and self-referencing
+//    assignments
+//    - Skip analysis for accumulator variables to avoid false positives
+// 6) Switch case analysis
 //    - Check if variable uses span multiple case labels in the same switch
 //    - Skip analysis if so, as variables cannot be declared in switch body
-// 6) Verify scope nesting and report
+// 7) Verify scope nesting and report
 //    - Find the compound statement containing the variable declaration
 //    - Only report if the usage scope is nested within the declaration scope
 //    - This ensures we only suggest moving variables to smaller scopes
-// 7) Alternative analysis - check for for-loop initialization opportunity
+// 8) Alternative analysis - check for for-loop initialization opportunity
 //    - Only runs if compound statement analysis didn't find a smaller scope
 //    - Only check local variables, not parameters
 //    - Determine if all uses are within the same for-loop and suggest
 //      for-loop initialization, but only if for-loop is in smaller scope
 //
-// The algorithm works by finding the smallest scope that could contain the variable
-// declaration while still encompassing all its uses, but only reports when that
-// scope is smaller than the current declaration scope.
+// The algorithm works by finding the smallest scope that could contain the
+// variable declaration while still encompassing all its uses, but only reports
+// when that scope is smaller than the current declaration scope.
 
 #include "ScopeReductionCheck.h"
 #include "../utils/DeclRefExprUtils.h"
@@ -172,7 +176,141 @@ void ScopeReductionCheck::check(
     }
   }
 
-  // Step 5: Check if current variable declaration can be moved to a smaller scope
+  // Step 5: Check for accumulator patterns - skip if variable is used in
+  // accumulator pattern
+  for (const auto *Use : Uses) {
+    auto Parents = Result.Context->getParentMapContext().getParents(*Use);
+    if (!Parents.empty()) {
+      if (const auto *BinOp = Parents[0].get<BinaryOperator>()) {
+        // Check for compound assignments (+=, -=, *=, etc.)
+        if (BinOp->isCompoundAssignmentOp() && BinOp->getLHS() == Use) {
+          // Only consider it an accumulator if it's inside a loop
+          const Stmt *Current = BinOp;
+          bool InLoop = false;
+          while (Current) {
+            auto CurrentParents =
+                Result.Context->getParentMapContext().getParents(*Current);
+            if (CurrentParents.empty())
+              break;
+
+            const Stmt *Parent = CurrentParents[0].get<Stmt>();
+            if (!Parent)
+              break;
+
+            if (isa<ForStmt>(Parent) || isa<WhileStmt>(Parent) ||
+                isa<DoStmt>(Parent) || isa<CXXForRangeStmt>(Parent)) {
+              InLoop = true;
+              break;
+            }
+            Current = Parent;
+          }
+
+          if (InLoop)
+            return; // Skip compound assignment patterns in loops
+        }
+        // Check for self-referencing assignments (var = var + something)
+        if (BinOp->isAssignmentOp() && BinOp->getLHS() == Use) {
+          if (const auto *RHS = BinOp->getRHS()) {
+            // Look for the variable on the right side
+            if (const auto *RHSRef =
+                    dyn_cast<DeclRefExpr>(RHS->IgnoreParenImpCasts())) {
+              if (RHSRef->getDecl() == Var) {
+                // Only consider it an accumulator if it's inside a loop
+                const Stmt *Current = BinOp;
+                bool InLoop = false;
+                while (Current) {
+                  auto CurrentParents =
+                      Result.Context->getParentMapContext().getParents(
+                          *Current);
+                  if (CurrentParents.empty())
+                    break;
+
+                  const Stmt *Parent = CurrentParents[0].get<Stmt>();
+                  if (!Parent)
+                    break;
+
+                  if (isa<ForStmt>(Parent) || isa<WhileStmt>(Parent) ||
+                      isa<DoStmt>(Parent) || isa<CXXForRangeStmt>(Parent)) {
+                    InLoop = true;
+                    break;
+                  }
+                  Current = Parent;
+                }
+
+                if (InLoop)
+                  return; // Skip self-referencing assignment in loops
+              }
+            }
+            // Check binary operations on RHS (var = var op something)
+            if (const auto *RHSBinOp =
+                    dyn_cast<BinaryOperator>(RHS->IgnoreParenImpCasts())) {
+              if (const auto *LHSRef = dyn_cast<DeclRefExpr>(
+                      RHSBinOp->getLHS()->IgnoreParenImpCasts())) {
+                if (LHSRef->getDecl() == Var) {
+                  // Only consider it an accumulator if it's inside a loop
+                  const Stmt *Current = BinOp;
+                  bool InLoop = false;
+                  while (Current) {
+                    auto CurrentParents =
+                        Result.Context->getParentMapContext().getParents(
+                            *Current);
+                    if (CurrentParents.empty())
+                      break;
+
+                    const Stmt *Parent = CurrentParents[0].get<Stmt>();
+                    if (!Parent)
+                      break;
+
+                    if (isa<ForStmt>(Parent) || isa<WhileStmt>(Parent) ||
+                        isa<DoStmt>(Parent) || isa<CXXForRangeStmt>(Parent)) {
+                      InLoop = true;
+                      break;
+                    }
+                    Current = Parent;
+                  }
+
+                  if (InLoop)
+                    return; // Skip accumulator pattern in loops
+                }
+              }
+              if (const auto *RHSRef = dyn_cast<DeclRefExpr>(
+                      RHSBinOp->getRHS()->IgnoreParenImpCasts())) {
+                if (RHSRef->getDecl() == Var) {
+                  // Only consider it an accumulator if it's inside a loop
+                  const Stmt *Current = BinOp;
+                  bool InLoop = false;
+                  while (Current) {
+                    auto CurrentParents =
+                        Result.Context->getParentMapContext().getParents(
+                            *Current);
+                    if (CurrentParents.empty())
+                      break;
+
+                    const Stmt *Parent = CurrentParents[0].get<Stmt>();
+                    if (!Parent)
+                      break;
+
+                    if (isa<ForStmt>(Parent) || isa<WhileStmt>(Parent) ||
+                        isa<DoStmt>(Parent) || isa<CXXForRangeStmt>(Parent)) {
+                      InLoop = true;
+                      break;
+                    }
+                    Current = Parent;
+                  }
+
+                  if (InLoop)
+                    return; // Skip accumulator pattern in loops
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Step 6: Check if current variable declaration can be moved to a smaller
+  // scope
   if (InnermostScope) {
     // Check if variable uses span multiple case labels in the same switch
     // If so, the only common scope would be the switch body, which is invalid
@@ -229,7 +367,7 @@ void ScopeReductionCheck::check(
       ParentNodes = Parents.getParents(*Parent);
     }
 
-    // Step 6: Verify that usage scope is nested within declaration scope
+    // Step 7: Verify that usage scope is nested within declaration scope
     // Only report if we can move the variable to a smaller scope
     if (VarScope && VarScope != InnermostScope) {
       // Walk up from innermost usage scope to see if declaration scope is reached
@@ -264,9 +402,9 @@ void ScopeReductionCheck::check(
     }
   }
 
-  // Step 7: Alternative analysis - check for for-loop initialization opportunity
-  // This only runs if the compound statement analysis didn't find a smaller scope
-  // Only check local variables, not parameters
+  // Step 8: Alternative analysis - check for for-loop initialization
+  // opportunity This only runs if the compound statement analysis didn't find a
+  // smaller scope Only check local variables, not parameters
   const ForStmt *CommonForLoop = nullptr;
   bool AllUsesInSameForLoop = true;
 

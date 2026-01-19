@@ -248,13 +248,8 @@ void test_function_call() {
 
 // Variable used inside a loop.
 // Should NOT warn.
-// FIXME: temp needs to persist across loop iterations, therefore cannot move
-//        Requires more sophisticated analysis.
 void test_for_loop_reuse() {
   int temp = 0;
-  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'temp' can be declared in a smaller scope
-  // CHECK-NOTES: :[[@LINE+3]]:5: note: used here
-  // CHECK-NOTES: :[[@LINE+1]]:30: note: can be declared in this scope
   for (int i = 0; i<10; i++) {
     temp += i;
   }
@@ -355,12 +350,9 @@ void test_range_for_declared() {
   }
 }
 
-// Variable used in range-based for loop - should warn
+// Variable used in range-based for loop - should NOT warn
 void test_range_for_usage() {
   int sum = 0;
-  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'sum' can be declared in a smaller scope
-  // CHECK-NOTES: :[[@LINE+5]]:7: note: used here
-  // CHECK-NOTES: :[[@LINE+3]]:27: note: can be declared in this scope
   if (true) {
     int vec[] = {1, 2, 3};
     for (auto item : vec) {
@@ -443,5 +435,159 @@ void testBroaderScope() {
   if (true) {
     value = 42;
     value += 1;
+  }
+}
+// Test cases for accumulator pattern detection
+
+// Positive cases - should still warn (compound assignments outside loops)
+
+// Compound assignment outside loop - should warn
+void test_compound_assignment_no_loop() {
+  int value = 10;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'value' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    value *= 2;  // Not in loop, should still warn
+  }
+}
+
+// Self-referencing assignment outside loop - should warn
+void test_self_reference_no_loop() {
+  int x = 5;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'x' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+3]]:9: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    x = x + 10;  // Not in loop, should still warn
+  }
+}
+
+// Binary operation self-reference outside loop - should warn
+void test_binary_self_reference_no_loop() {
+  int result = 0;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'result' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+3]]:14: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    result = result + 42;  // Not in loop, should still warn
+  }
+}
+
+// Negative cases - should NOT warn (accumulator patterns in loops)
+
+// Compound assignment in while loop - should NOT warn
+void test_compound_assignment_while() {
+  int sum = 0;  // Should NOT warn - accumulator in while loop
+  while (sum < 100) {
+    sum += 10;
+  }
+}
+
+// Compound assignment in for loop - should NOT warn
+void test_compound_assignment_for() {
+  int total = 0;  // Should NOT warn - accumulator in for loop
+  for (int i = 0; i < 10; ++i) {
+    total += i;
+  }
+}
+
+// Self-referencing in for loop - should NOT warn
+void test_self_reference_for() {
+  bool found = false;  // Should NOT warn - accumulator pattern
+  for (int i = 0; i < 10; ++i) {
+    found = found || (i > 5);
+  }
+}
+
+// Binary operation self-reference in loop - should NOT warn
+void test_binary_self_reference_for() {
+  int product = 1;  // Should NOT warn - accumulator pattern
+  for (int i = 1; i <= 5; ++i) {
+    product = product * i;
+  }
+}
+
+// Multiple accumulator operations - should NOT warn
+void test_multiple_accumulator() {
+  int count = 0;  // Should NOT warn
+  for (int i = 0; i < 10; ++i) {
+    count += i;
+    count *= 2;  // Multiple compound assignments in same loop
+  }
+}
+
+// Range-based for loop accumulator - should NOT warn
+void test_range_for_accumulator() {
+  int sum = 0;  // Should NOT warn - accumulator in range-based for
+  int arr[] = {1, 2, 3, 4, 5};
+  for (auto item : arr) {
+    sum += item;
+  }
+}
+
+// Do-while loop accumulator - should NOT warn
+void test_do_while_accumulator() {
+  int counter = 0;  // Should NOT warn - accumulator in do-while
+  do {
+    counter++;
+  } while (counter < 5);
+}
+
+// Edge cases
+
+// Nested loops with accumulator - should NOT warn
+void test_nested_loop_accumulator() {
+  int total = 0;  // Should NOT warn
+  for (int i = 0; i < 5; ++i) {
+    for (int j = 0; j < 5; ++j) {
+      total += i * j;  // Accumulator in nested loop
+    }
+  }
+}
+
+// Accumulator in inner loop only - should NOT warn
+void test_inner_loop_accumulator() {
+  int sum = 0;  // Should NOT warn - used as accumulator in inner loop
+  if (true) {
+    for (int i = 0; i < 10; ++i) {
+      sum += i;
+    }
+  }
+}
+
+// Mixed usage - accumulator + other usage - complex case
+void test_mixed_accumulator_usage() {
+  int value = 0;  // Complex case - used as accumulator AND in other scope
+  for (int i = 0; i < 5; ++i) {
+    value += i;  // Accumulator usage
+  }
+  if (true) {
+    value = 100;  // Non-accumulator usage - this makes it complex
+  }
+}
+
+// Variable used in loop but not as accumulator - should warn
+void test_non_accumulator_in_loop() {
+  int temp = 42;  // Used in loop but not modified - should warn
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'temp' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+3]]:18: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:32: note: can be declared in this scope
+  for (int i = 0; i < 10; ++i) {
+    int result = temp * 2;  // Just reading temp, not modifying it
+  }
+}
+
+// Compound assignment with different variable - should warn
+void test_compound_different_var() {
+  int x = 10;
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'x' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:10: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    int y = 5;
+    y += x;  // x is not the accumulator, y is
   }
 }
