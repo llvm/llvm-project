@@ -463,7 +463,8 @@ define void @test_1652048214(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr <8 x i32>, ptr [[SRC]], i32 1
 ; CHECK-NEXT:    [[L1:%.*]] = load <8 x i32>, ptr [[G1]], align 32
 ; CHECK-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[L1]], <8 x i32> [[L0]], <4 x i32> <i32 6, i32 2, i32 14, i32 6>
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[L0]], <8 x i32> [[L0]], <4 x i32> <i32 9, i32 5, i32 1, i32 0>
+; CHECK-NEXT:    [[V_BASE_BUFFER:%.*]] = shufflevector <8 x i32> [[L0]], <8 x i32> poison, <4 x i32> <i32 1, i32 5, i32 1, i32 0>
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V_BASE_BUFFER]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[S1]], [[S1]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i32> [[S0]], [[S1]]
 ; CHECK-NEXT:    [[T0:%.*]] = shufflevector <4 x i32> [[SUB]], <4 x i32> [[ADD]], <4 x i32> <i32 1, i32 5, i32 7, i32 3>

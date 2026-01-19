@@ -140,6 +140,7 @@ private:
   bool foldShuffleOfSelects(Instruction &I);
   bool foldShuffleOfCastops(Instruction &I);
   bool foldShuffleOfShuffles(Instruction &I);
+  bool foldShuffleOfFragmentedLoads(Instruction &I);
   bool foldPermuteOfIntrinsic(Instruction &I);
   bool foldShufflesOfLengthChangingShuffles(Instruction &I);
   bool foldShuffleOfIntrinsics(Instruction &I);
@@ -5069,6 +5070,345 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   return true;
 }
 
+/// Returns the index of the element within the given load \p L that corresponds
+/// to the \p TargetBit offset. Returns -1 if the data is out of the load's
+/// range or if it is not aligned with the element boundaries.
+static int getIdxInLoad(LoadInst *L, int64_t TargetBit, unsigned ElementSize,
+                        const DataLayout &DL) {
+  if (!L)
+    return -1;
+
+  int64_t LOffBytes;
+  GetPointerBaseWithConstantOffset(L->getPointerOperand(), LOffBytes, DL);
+  int64_t LOffBits = LOffBytes * 8; // Convert to bit-level offset.
+  uint64_t LSizeBits = DL.getTypeStoreSizeInBits(L->getType());
+  // Check if the target range is fully contained within the load.
+  if (TargetBit >= LOffBits &&
+      (TargetBit + ElementSize) <= (LOffBits + (int64_t)LSizeBits)) {
+    // The target must start at a valid element boundary to be addressable.
+    if ((TargetBit - LOffBits) % ElementSize == 0)
+      return (int)((TargetBit - LOffBits) / ElementSize);
+  }
+
+  return -1;
+}
+
+/// Estimate the cost of a shuffle by mapping the mask to a \c ShuffleKind.
+/// Queries \p TTI using the identified pattern and provided operands.
+static InstructionCost getShuffleCost(ArrayRef<int> Mask, VectorType *RetTy,
+                                      VectorType *SrcTy, TTI::TargetCostKind CK,
+                                      const TargetTransformInfo &TTI,
+                                      Value *Op0 = nullptr,
+                                      Value *Op1 = nullptr,
+                                      const Instruction *I = nullptr) {
+  unsigned SrcNum = cast<FixedVectorType>(SrcTy)->getNumElements();
+  TargetTransformInfo::ShuffleKind Kind = TargetTransformInfo::SK_PermuteTwoSrc;
+  if (ShuffleVectorInst::isSingleSourceMask(Mask, SrcNum)) {
+    if (ShuffleVectorInst::isZeroEltSplatMask(Mask, SrcNum))
+      Kind = TargetTransformInfo::SK_Broadcast;
+    else if (ShuffleVectorInst::isReverseMask(Mask, SrcNum))
+      Kind = TargetTransformInfo::SK_Reverse;
+    else
+      Kind = TargetTransformInfo::SK_PermuteSingleSrc;
+  } else {
+    if (ShuffleVectorInst::isSelectMask(Mask, SrcNum))
+      Kind = TargetTransformInfo::SK_Select;
+    else if (ShuffleVectorInst::isTransposeMask(Mask, SrcNum))
+      Kind = TargetTransformInfo::SK_Transpose;
+  }
+
+  SmallVector<const Value *> Args = {};
+  if (Op0 && Op1) {
+    Args.push_back(Op0);
+    Args.push_back(Op1);
+  }
+  InstructionCost Cost =
+      TTI.getShuffleCost(Kind, RetTy, SrcTy, Mask, CK, 0, nullptr, Args, I);
+  return Cost;
+}
+
+struct LaneOrigin {
+  LoadInst *LI = nullptr;
+  int64_t OffsetInBits = 0;
+  Value *BasePtr = nullptr;
+  unsigned IndexInLI = 0;
+};
+
+struct ShufflePlan {
+  LoadInst *A = nullptr;
+  LoadInst *B = nullptr;
+  SmallVector<int, 16> ConcatMask;
+  bool NeedsPromotion = false;
+  FixedVectorType *PromotionTargetTy = nullptr;
+  Value *ResultV = nullptr;
+};
+
+/// Consolidate a tree of shuffles fed by fragmented narrow loads from adjacent
+/// memory addresses into a structured two-level shuffle hierarchy.
+///
+/// This transformation flattens deep "incremental build" shuffle trees by
+/// grouping lane origins by their base pointers. It constructs intermediate
+/// buffers for each base, where each lane is pre-positioned to match its
+/// final destination in the result vector.
+///
+/// Example Source (Incremental Build):
+///   %0 = load <2 x d>, ptr %x      ; Mem: [x+0, x+8]
+///   %1 = load <2 x d>, ptr %y      ; Mem: [y+0, y+8]
+///   %v1 = shuffle %0, %1, <1, 2>   ; Reg: [x[1], y[0]] (Lanes 0, 1)
+///   %2 = load <2 x d>, ptr %x+16   ; Mem: [x+16, x+24]
+///   %v2 = shuffle %v1, %2, <0, 1, 3> ; Reg: [x[1], y[0], x[3]] (Lanes 0, 1, 2)
+///   %3 = load <2 x d>, ptr %y+16   ; Mem: [y+16, y+24]
+///   %res = shuffle %v2, %3, <0, 1, 2, 4> ; Result: [x[1], y[0], x[3], y[2]]
+///
+/// Memory View of Final Result:
+///   Lane 0: BaseX + 8B  (x[1])
+///   Lane 1: BaseY + 0B  (y[0])
+///   Lane 2: BaseX + 24B (x[3])
+///   Lane 3: BaseY + 16B (y[2])
+///
+/// Transformed Structure (Mapping-Sync Buffers):
+///   ; Each buffer lane i matches result lane i if the base pointer matches.
+///   %buf_x = shuffle %0, %2, <1, u, 3, u>    ; Reg: [x[1], undef, x[3], undef]
+///   %buf_y = shuffle %1, %3, <u, 0, u, 2>    ; Reg: [undef, y[0], undef, y[2]]
+///   %res   = shuffle %buf_x, %buf_y, <0, 5, 2, 7> ; Final Selection
+///
+/// This avoids unsafe speculative load widening by utilizing existing narrow
+/// loads while significantly reducing shuffle latency and tree depth.
+bool VectorCombine::foldShuffleOfFragmentedLoads(Instruction &I) {
+  auto *VT = dyn_cast<FixedVectorType>(I.getType());
+  if (!VT || I.use_empty())
+    return false;
+
+  unsigned NumElts = VT->getNumElements();
+  Type *EltTy = VT->getElementType();
+  unsigned ElementSize = DL->getTypeSizeInBits(EltTy);
+  SmallVector<LaneOrigin, 4> Origins(NumElts);
+  SmallVector<Value *, 2> Bases;
+  SmallPtrSet<Instruction *, 8> VisitedShuffles;
+  for (unsigned Lane = 0; Lane < NumElts; ++Lane) {
+    Value *V = &I;
+    unsigned CurrLane = Lane;
+    while (auto *SVI = dyn_cast<ShuffleVectorInst>(V)) {
+      // Collect unique shuffle instructions in the original tree to accurately
+      // estimate the original cost without double-counting.
+      VisitedShuffles.insert(SVI);
+      int M = SVI->getMaskValue(CurrLane);
+      if (M < 0) {
+        V = nullptr;
+        break;
+      }
+      unsigned NumOp0 = cast<FixedVectorType>(SVI->getOperand(0)->getType())
+                            ->getNumElements();
+      if ((unsigned)M < NumOp0) {
+        V = SVI->getOperand(0);
+        CurrLane = M;
+      } else {
+        V = SVI->getOperand(1);
+        CurrLane = M - NumOp0;
+      }
+    }
+    if (!V)
+      continue;
+
+    auto *LI = dyn_cast<LoadInst>(V);
+    if (!LI || LI->getType()->getScalarType() != EltTy)
+      return false;
+
+    int64_t ConstOff = 0;
+    Value *Base = GetPointerBaseWithConstantOffset(LI->getPointerOperand(),
+                                                   ConstOff, *DL);
+    if (!Base)
+      return false;
+
+    int64_t OffsetInBits = (ConstOff * 8) + (int64_t)(CurrLane * ElementSize);
+    Origins[Lane] = {LI, OffsetInBits, Base, (unsigned)CurrLane};
+    if (!is_contained(Bases, Base)) {
+      if (Bases.size() >= 2)
+        return false;
+      Bases.push_back(Base);
+    }
+  }
+
+  auto CanWidenSafety = [&](LoadInst *L, FixedVectorType *TargetTy, int BIdx) {
+    if (cast<FixedVectorType>(L->getType()) == TargetTy)
+      return true;
+
+    // Determinism Guard: Abort if any lane associated with this base is
+    // indeterminate (poison/undef). This ensures that we do not widen
+    // memory accesses for uncertain references.
+    for (unsigned I = 0; I < NumElts; ++I)
+      if (Origins[I].BasePtr == Bases[BIdx] && !Origins[I].LI)
+        return false;
+
+    // Verify that all elements actually utilized by the final shuffle result
+    // are deterministic. Widening is disallowed if the root shuffle mask
+    // references a lane that originates from a poison value in the source tree.
+    auto *SVI = cast<ShuffleVectorInst>(&I);
+    for (unsigned I = 0; I < NumElts; ++I) {
+      int M = SVI->getMaskValue(I);
+      if (M < 0)
+        continue;
+
+      // Determine if the mask index points to the current base being processed.
+      unsigned TargetBaseIdx = (unsigned)M < NumElts ? 0 : 1;
+      if (TargetBaseIdx == (unsigned)BIdx)
+        if (!Origins[I].LI)
+          return false;
+    }
+
+    return canWidenLoad(L, TTI);
+  };
+
+  SmallVector<ShufflePlan, 2> BasePlans;
+  for (unsigned BIdx = 0; BIdx < Bases.size(); ++BIdx) {
+    Value *Base = Bases[BIdx];
+    // Collect required offsets and candidate loads for this base.
+    SmallVector<LoadInst *, 8> Candidates;
+    SmallVector<int64_t, 8> NeededOffsets;
+    for (const auto &O : Origins) {
+      if (O.BasePtr == Base && O.LI) {
+        if (!is_contained(Candidates, O.LI))
+          Candidates.push_back(O.LI);
+        if (!is_contained(NeededOffsets, O.OffsetInBits))
+          NeededOffsets.push_back(O.OffsetInBits);
+      }
+    }
+
+    // Find a pair of loads that collectively cover all required lanes.
+    LoadInst *LI_A = nullptr, *LI_B = nullptr;
+    for (unsigned I = 0; I < Candidates.size(); ++I) {
+      for (unsigned J = I; J < Candidates.size(); ++J) {
+        auto *L1 = Candidates[I], *L2 = Candidates[J];
+        auto IsCovered = [&](int64_t Off) {
+          return getIdxInLoad(L1, Off, ElementSize, *DL) != -1 ||
+                 getIdxInLoad(L2, Off, ElementSize, *DL) != -1;
+        };
+        if (all_of(NeededOffsets, IsCovered)) {
+          LI_A = L1;
+          LI_B = L2;
+          break;
+        }
+      }
+      if (LI_A)
+        break;
+    }
+    if (!LI_A)
+      return false;
+
+    ShufflePlan Plan;
+    Plan.A = LI_A;
+    Plan.B = (LI_B != LI_A) ? LI_B : nullptr;
+    // Check if the types of the chosen loads match. If not, determine if we
+    // can safely widen the narrower load to the larger target type to
+    // consolidate the memory layout.
+    auto *TyA = cast<FixedVectorType>(Plan.A->getType());
+    if (Plan.B) {
+      auto *TyB = cast<FixedVectorType>(Plan.B->getType());
+      if (TyA != TyB) {
+        auto *TargetTy =
+            (DL->getTypeSizeInBits(TyA) > DL->getTypeSizeInBits(TyB)) ? TyA
+                                                                      : TyB;
+        if (!CanWidenSafety(Plan.A, TargetTy, BIdx) ||
+            !CanWidenSafety(Plan.B, TargetTy, BIdx))
+          return false;
+        Plan.NeedsPromotion = true;
+        Plan.PromotionTargetTy = TargetTy;
+      }
+    }
+
+    // Create the buffer mask where lane i matches final result lane i.
+    Plan.ConcatMask.assign(NumElts, -1);
+    unsigned CommonNum = Plan.PromotionTargetTy
+                             ? Plan.PromotionTargetTy->getNumElements()
+                             : TyA->getNumElements();
+    for (unsigned I = 0; I < NumElts; ++I) {
+      if (Origins[I].BasePtr != Base)
+        continue;
+      int Idx = getIdxInLoad(Plan.A, Origins[I].OffsetInBits, ElementSize, *DL);
+      if (Idx == -1 && Plan.B) {
+        int IdxInB =
+            getIdxInLoad(Plan.B, Origins[I].OffsetInBits, ElementSize, *DL);
+        if (IdxInB != -1)
+          Idx = IdxInB + CommonNum;
+      }
+      Plan.ConcatMask[I] = Idx;
+    }
+    BasePlans.push_back(Plan);
+  }
+
+  InstructionCost OldCost = 0, NewCost = 0;
+  // Calculate the total cost of existing shuffles in the tree.
+  for (Instruction *OldI : VisitedShuffles) {
+    auto *SVI = cast<ShuffleVectorInst>(OldI);
+    OldCost += getShuffleCost(
+        SVI->getShuffleMask(), cast<VectorType>(SVI->getType()),
+        cast<VectorType>(SVI->getOperand(0)->getType()), CostKind, TTI,
+        SVI->getOperand(0), SVI->getOperand(1), SVI);
+  }
+
+  // Pre-calculate the final selection mask from intermediate buffers.
+  SmallVector<int, 16> FinalMask(NumElts, -1);
+  for (unsigned I = 0; I < NumElts; ++I) {
+    if (Origins[I].LI) {
+      unsigned BIdx = (Origins[I].BasePtr == Bases[0]) ? 0 : 1;
+      FinalMask[I] = I + (BIdx * NumElts);
+    }
+  }
+
+  // Aggregate costs for the proposed plan: load widening and buffer shuffles.
+  for (unsigned BIdx = 0; BIdx < BasePlans.size(); ++BIdx) {
+    const auto &P = BasePlans[BIdx];
+    auto *SrcVTy = P.PromotionTargetTy ? cast<VectorType>(P.PromotionTargetTy)
+                                       : cast<VectorType>(P.A->getType());
+    // Add cost of memory access if widening is required.
+    if (P.NeedsPromotion)
+      NewCost += TTI.getMemoryOpCost(Instruction::Load, P.PromotionTargetTy,
+                                     P.A->getAlign(),
+                                     P.A->getPointerAddressSpace(), CostKind);
+
+    // Estimate the cost of intermediate buffer assembly.
+    NewCost +=
+        getShuffleCost(P.ConcatMask, VT, SrcVTy, CostKind, TTI, P.A, P.B);
+  }
+
+  // Add the cost of the final selection shuffle.
+  NewCost += getShuffleCost(FinalMask, VT, VT, CostKind, TTI, nullptr, nullptr);
+  LLVM_DEBUG(dbgs() << "Found a shuffle tree of fragmented loads: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  if (NewCost >= OldCost)
+    return false;
+
+  for (auto &P : BasePlans) {
+    Value *OpA = P.A, *OpB = P.B;
+    // Helper to widen a narrow load by creating a new load at the same pointer.
+    auto Widen = [&](LoadInst *OldL) {
+      auto *NewL = Builder.CreateAlignedLoad(
+          P.PromotionTargetTy, OldL->getPointerOperand(), OldL->getAlign());
+      NewL->takeName(OldL);
+      return NewL;
+    };
+    // If planned, perform memory widening to match the common buffer type.
+    if (P.NeedsPromotion) {
+      if (cast<FixedVectorType>(OpA->getType()) != P.PromotionTargetTy)
+        OpA = Widen(cast<LoadInst>(OpA));
+      if (OpB && cast<FixedVectorType>(OpB->getType()) != P.PromotionTargetTy)
+        OpB = Widen(cast<LoadInst>(OpB));
+    }
+    // Create the intermediate buffer for this base pointer.
+    P.ResultV = Builder.CreateShuffleVector(
+        OpA, OpB ? OpB : PoisonValue::get(OpA->getType()), P.ConcatMask);
+  }
+
+  // Combine the base-specific buffers into the final result.
+  Value *V0 = BasePlans[0].ResultV, *V1 = (BasePlans.size() > 1)
+                                              ? BasePlans[1].ResultV
+                                              : PoisonValue::get(VT);
+  Value *FinalResult = Builder.CreateShuffleVector(V0, V1, FinalMask);
+  replaceValue(I, *FinalResult);
+  return true;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -5165,6 +5505,8 @@ bool VectorCombine::run() {
         if (foldSelectShuffle(I))
           return true;
         if (foldShuffleToIdentity(I))
+          return true;
+        if (foldShuffleOfFragmentedLoads(I))
           return true;
         break;
       case Instruction::Load:

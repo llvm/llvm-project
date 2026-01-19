@@ -79,18 +79,31 @@ define <4 x float> @test_single_load(ptr %p) {
 ; ====================================================================================
 
 define <4 x double> @test_double_4_to_2(ptr %x, ptr %y) {
-; CHECK-LABEL: define <4 x double> @test_double_4_to_2(
-; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[X0:%.*]] = load <2 x double>, ptr [[X]], align 16
-; CHECK-NEXT:    [[X_OFF:%.*]] = getelementptr i8, ptr [[X]], i64 16
-; CHECK-NEXT:    [[X1:%.*]] = load <2 x double>, ptr [[X_OFF]], align 16
-; CHECK-NEXT:    [[Y0:%.*]] = load <2 x double>, ptr [[Y]], align 16
-; CHECK-NEXT:    [[Y_OFF:%.*]] = getelementptr i8, ptr [[Y]], i64 16
-; CHECK-NEXT:    [[Y1:%.*]] = load <2 x double>, ptr [[Y_OFF]], align 16
-; CHECK-NEXT:    [[V1:%.*]] = shufflevector <2 x double> [[X0]], <2 x double> [[X1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[V2:%.*]] = shufflevector <2 x double> [[Y0]], <2 x double> [[Y1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x double> [[V1]], <4 x double> [[V2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    ret <4 x double> [[RES]]
+; SSE-LABEL: define <4 x double> @test_double_4_to_2(
+; SSE-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[X0:%.*]] = load <2 x double>, ptr [[X]], align 16
+; SSE-NEXT:    [[X_OFF:%.*]] = getelementptr i8, ptr [[X]], i64 16
+; SSE-NEXT:    [[X1:%.*]] = load <2 x double>, ptr [[X_OFF]], align 16
+; SSE-NEXT:    [[Y0:%.*]] = load <2 x double>, ptr [[Y]], align 16
+; SSE-NEXT:    [[Y_OFF:%.*]] = getelementptr i8, ptr [[Y]], i64 16
+; SSE-NEXT:    [[Y1:%.*]] = load <2 x double>, ptr [[Y_OFF]], align 16
+; SSE-NEXT:    [[V1:%.*]] = shufflevector <2 x double> [[X0]], <2 x double> [[X1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    [[V2:%.*]] = shufflevector <2 x double> [[Y0]], <2 x double> [[Y1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <4 x double> [[V1]], <4 x double> [[V2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; SSE-NEXT:    ret <4 x double> [[RES]]
+;
+; AVX-LABEL: define <4 x double> @test_double_4_to_2(
+; AVX-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[X0:%.*]] = load <2 x double>, ptr [[X]], align 16
+; AVX-NEXT:    [[X_OFF:%.*]] = getelementptr i8, ptr [[X]], i64 16
+; AVX-NEXT:    [[X1:%.*]] = load <2 x double>, ptr [[X_OFF]], align 16
+; AVX-NEXT:    [[Y0:%.*]] = load <2 x double>, ptr [[Y]], align 16
+; AVX-NEXT:    [[Y_OFF:%.*]] = getelementptr i8, ptr [[Y]], i64 16
+; AVX-NEXT:    [[Y1:%.*]] = load <2 x double>, ptr [[Y_OFF]], align 16
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[X0]], <2 x double> [[X1]], <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[Y0]], <2 x double> [[Y1]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 2>
+; AVX-NEXT:    [[RES:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; AVX-NEXT:    ret <4 x double> [[RES]]
 ;
   %x0 = load <2 x double>, ptr %x
   %x_off = getelementptr i8, ptr %x, i64 16
@@ -156,16 +169,24 @@ define <8 x float> @test_float_4_to_2(ptr %x, ptr %y) {
 }
 
 define <4 x float> @test_float_3_to_1(ptr %p) {
-; CHECK-LABEL: define <4 x float> @test_float_3_to_1(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[L0:%.*]] = load <2 x float>, ptr [[P]], align 8
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[L1:%.*]] = load <2 x float>, ptr [[P1]], align 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 8
-; CHECK-NEXT:    [[L2:%.*]] = load <2 x float>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = shufflevector <2 x float> [[L0]], <2 x float> [[L1]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x float> [[V1]], <2 x float> [[L2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x float> [[RES]]
+; SSE-LABEL: define <4 x float> @test_float_3_to_1(
+; SSE-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[L0:%.*]] = load <2 x float>, ptr [[P]], align 8
+; SSE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; SSE-NEXT:    [[L2:%.*]] = load <2 x float>, ptr [[P2]], align 4
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <2 x float> [[L0]], <2 x float> [[L2]], <4 x i32> <i32 0, i32 2, i32 2, i32 3>
+; SSE-NEXT:    ret <4 x float> [[RES]]
+;
+; AVX-LABEL: define <4 x float> @test_float_3_to_1(
+; AVX-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[L0:%.*]] = load <2 x float>, ptr [[P]], align 8
+; AVX-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; AVX-NEXT:    [[L1:%.*]] = load <2 x float>, ptr [[P1]], align 4
+; AVX-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; AVX-NEXT:    [[L2:%.*]] = load <2 x float>, ptr [[P2]], align 4
+; AVX-NEXT:    [[V1:%.*]] = shufflevector <2 x float> [[L0]], <2 x float> [[L1]], <2 x i32> <i32 0, i32 3>
+; AVX-NEXT:    [[RES:%.*]] = shufflevector <2 x float> [[V1]], <2 x float> [[L2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; AVX-NEXT:    ret <4 x float> [[RES]]
 ;
   %L0 = load <2 x float>, ptr %p, align 8
   %p1 = getelementptr i8, ptr %p, i64 4
@@ -187,9 +208,9 @@ define <4 x i64> @test_i64_4_to_2(ptr %x, ptr %y) {
 ; CHECK-NEXT:    [[Y0:%.*]] = load <2 x i64>, ptr [[Y]], align 16
 ; CHECK-NEXT:    [[YA:%.*]] = getelementptr i8, ptr [[Y]], i64 16
 ; CHECK-NEXT:    [[Y1:%.*]] = load <2 x i64>, ptr [[YA]], align 16
-; CHECK-NEXT:    [[VX:%.*]] = shufflevector <2 x i64> [[X0]], <2 x i64> [[X1]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-; CHECK-NEXT:    [[VY:%.*]] = shufflevector <2 x i64> [[Y0]], <2 x i64> [[Y1]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i64> [[VX]], <4 x i64> [[VY]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[X0]], <2 x i64> [[X1]], <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[Y0]], <2 x i64> [[Y1]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 2>
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x i64> [[RES]]
 ;
   %x0 = load <2 x i64>, ptr %x, align 16
@@ -205,16 +226,25 @@ define <4 x i64> @test_i64_4_to_2(ptr %x, ptr %y) {
 }
 
 define <4 x i64> @test_i64_3_to_1_success(ptr %p) {
-; CHECK-LABEL: define <4 x i64> @test_i64_3_to_1_success(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[L0:%.*]] = load <2 x i64>, ptr [[P]], align 16
-; CHECK-NEXT:    [[PA:%.*]] = getelementptr i8, ptr [[P]], i64 8
-; CHECK-NEXT:    [[L1:%.*]] = load <2 x i64>, ptr [[PA]], align 8
-; CHECK-NEXT:    [[PB:%.*]] = getelementptr i8, ptr [[P]], i64 16
-; CHECK-NEXT:    [[L2:%.*]] = load <2 x i64>, ptr [[PB]], align 16
-; CHECK-NEXT:    [[V1:%.*]] = shufflevector <2 x i64> [[L0]], <2 x i64> [[L1]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i64> [[V1]], <2 x i64> [[L2]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-; CHECK-NEXT:    ret <4 x i64> [[RES]]
+; SSE-LABEL: define <4 x i64> @test_i64_3_to_1_success(
+; SSE-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[PA:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; SSE-NEXT:    [[L1:%.*]] = load <2 x i64>, ptr [[PA]], align 8
+; SSE-NEXT:    [[PB:%.*]] = getelementptr i8, ptr [[P]], i64 16
+; SSE-NEXT:    [[L2:%.*]] = load <2 x i64>, ptr [[PB]], align 16
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <2 x i64> [[L1]], <2 x i64> [[L2]], <4 x i32> <i32 0, i32 0, i32 3, i32 1>
+; SSE-NEXT:    ret <4 x i64> [[RES]]
+;
+; AVX-LABEL: define <4 x i64> @test_i64_3_to_1_success(
+; AVX-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[L0:%.*]] = load <2 x i64>, ptr [[P]], align 16
+; AVX-NEXT:    [[PA:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; AVX-NEXT:    [[L1:%.*]] = load <2 x i64>, ptr [[PA]], align 8
+; AVX-NEXT:    [[PB:%.*]] = getelementptr i8, ptr [[P]], i64 16
+; AVX-NEXT:    [[L2:%.*]] = load <2 x i64>, ptr [[PB]], align 16
+; AVX-NEXT:    [[V1:%.*]] = shufflevector <2 x i64> [[L0]], <2 x i64> [[L1]], <2 x i32> <i32 1, i32 2>
+; AVX-NEXT:    [[RES:%.*]] = shufflevector <2 x i64> [[V1]], <2 x i64> [[L2]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; AVX-NEXT:    ret <4 x i64> [[RES]]
 ;
   %L0 = load <2 x i64>, ptr %p, align 16
   %pa = getelementptr i8, ptr %p, i64 8
@@ -228,18 +258,31 @@ define <4 x i64> @test_i64_3_to_1_success(ptr %p) {
 
 ; i32
 define <4 x i32> @test_i32_4_to_2_success(ptr %x, ptr %y) {
-; CHECK-LABEL: define <4 x i32> @test_i32_4_to_2_success(
-; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[X0:%.*]] = load <2 x i32>, ptr [[X]], align 8
-; CHECK-NEXT:    [[XA:%.*]] = getelementptr i8, ptr [[X]], i64 8
-; CHECK-NEXT:    [[X1:%.*]] = load <2 x i32>, ptr [[XA]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = load <2 x i32>, ptr [[Y]], align 8
-; CHECK-NEXT:    [[YA:%.*]] = getelementptr i8, ptr [[Y]], i64 8
-; CHECK-NEXT:    [[Y1:%.*]] = load <2 x i32>, ptr [[YA]], align 8
-; CHECK-NEXT:    [[VX:%.*]] = shufflevector <2 x i32> [[X0]], <2 x i32> [[X1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[VY:%.*]] = shufflevector <2 x i32> [[Y0]], <2 x i32> [[Y1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[VX]], <4 x i32> [[VY]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; SSE-LABEL: define <4 x i32> @test_i32_4_to_2_success(
+; SSE-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[X0:%.*]] = load <2 x i32>, ptr [[X]], align 8
+; SSE-NEXT:    [[XA:%.*]] = getelementptr i8, ptr [[X]], i64 8
+; SSE-NEXT:    [[X1:%.*]] = load <2 x i32>, ptr [[XA]], align 8
+; SSE-NEXT:    [[Y0:%.*]] = load <2 x i32>, ptr [[Y]], align 8
+; SSE-NEXT:    [[YA:%.*]] = getelementptr i8, ptr [[Y]], i64 8
+; SSE-NEXT:    [[Y1:%.*]] = load <2 x i32>, ptr [[YA]], align 8
+; SSE-NEXT:    [[VX:%.*]] = shufflevector <2 x i32> [[X0]], <2 x i32> [[X1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    [[VY:%.*]] = shufflevector <2 x i32> [[Y0]], <2 x i32> [[Y1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[VX]], <4 x i32> [[VY]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; SSE-NEXT:    ret <4 x i32> [[RES]]
+;
+; AVX-LABEL: define <4 x i32> @test_i32_4_to_2_success(
+; AVX-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[X0:%.*]] = load <2 x i32>, ptr [[X]], align 8
+; AVX-NEXT:    [[XA:%.*]] = getelementptr i8, ptr [[X]], i64 8
+; AVX-NEXT:    [[X1:%.*]] = load <2 x i32>, ptr [[XA]], align 8
+; AVX-NEXT:    [[Y0:%.*]] = load <2 x i32>, ptr [[Y]], align 8
+; AVX-NEXT:    [[YA:%.*]] = getelementptr i8, ptr [[Y]], i64 8
+; AVX-NEXT:    [[Y1:%.*]] = load <2 x i32>, ptr [[YA]], align 8
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[X0]], <2 x i32> [[X1]], <4 x i32> <i32 1, i32 3, i32 poison, i32 poison>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[Y0]], <2 x i32> [[Y1]], <4 x i32> <i32 poison, i32 poison, i32 1, i32 3>
+; AVX-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; AVX-NEXT:    ret <4 x i32> [[RES]]
 ;
   %x0 = load <2 x i32>, ptr %x, align 8
   %xa = getelementptr i8, ptr %x, i64 8
@@ -254,16 +297,24 @@ define <4 x i32> @test_i32_4_to_2_success(ptr %x, ptr %y) {
 }
 
 define <4 x i32> @test_i32_3_to_1(ptr %p) {
-; CHECK-LABEL: define <4 x i32> @test_i32_3_to_1(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[L0:%.*]] = load <2 x i32>, ptr [[P]], align 8
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[L1:%.*]] = load <2 x i32>, ptr [[P1]], align 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 8
-; CHECK-NEXT:    [[L2:%.*]] = load <2 x i32>, ptr [[P2]], align 8
-; CHECK-NEXT:    [[V1:%.*]] = shufflevector <2 x i32> [[L0]], <2 x i32> [[L1]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i32> [[V1]], <2 x i32> [[L2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; SSE-LABEL: define <4 x i32> @test_i32_3_to_1(
+; SSE-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[L0:%.*]] = load <2 x i32>, ptr [[P]], align 8
+; SSE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; SSE-NEXT:    [[L2:%.*]] = load <2 x i32>, ptr [[P2]], align 8
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <2 x i32> [[L0]], <2 x i32> [[L2]], <4 x i32> <i32 0, i32 2, i32 2, i32 3>
+; SSE-NEXT:    ret <4 x i32> [[RES]]
+;
+; AVX-LABEL: define <4 x i32> @test_i32_3_to_1(
+; AVX-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[L0:%.*]] = load <2 x i32>, ptr [[P]], align 8
+; AVX-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; AVX-NEXT:    [[L1:%.*]] = load <2 x i32>, ptr [[P1]], align 4
+; AVX-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; AVX-NEXT:    [[L2:%.*]] = load <2 x i32>, ptr [[P2]], align 8
+; AVX-NEXT:    [[V1:%.*]] = shufflevector <2 x i32> [[L0]], <2 x i32> [[L1]], <2 x i32> <i32 0, i32 3>
+; AVX-NEXT:    [[RES:%.*]] = shufflevector <2 x i32> [[V1]], <2 x i32> [[L2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; AVX-NEXT:    ret <4 x i32> [[RES]]
 ;
   %L0 = load <2 x i32>, ptr %p, align 8
   %p1 = getelementptr i8, ptr %p, i64 4
@@ -277,18 +328,31 @@ define <4 x i32> @test_i32_3_to_1(ptr %p) {
 
 ; i16
 define <8 x i16> @test_i16_4_to_2(ptr %x, ptr %y) {
-; CHECK-LABEL: define <8 x i16> @test_i16_4_to_2(
-; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[X0:%.*]] = load <2 x i16>, ptr [[X]], align 4
-; CHECK-NEXT:    [[XA:%.*]] = getelementptr i8, ptr [[X]], i64 4
-; CHECK-NEXT:    [[X1:%.*]] = load <2 x i16>, ptr [[XA]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = load <2 x i16>, ptr [[Y]], align 4
-; CHECK-NEXT:    [[YA:%.*]] = getelementptr i8, ptr [[Y]], i64 4
-; CHECK-NEXT:    [[Y1:%.*]] = load <2 x i16>, ptr [[YA]], align 4
-; CHECK-NEXT:    [[VX:%.*]] = shufflevector <2 x i16> [[X0]], <2 x i16> [[X1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[VY:%.*]] = shufflevector <2 x i16> [[Y0]], <2 x i16> [[Y1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i16> [[VX]], <4 x i16> [[VY]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; CHECK-NEXT:    ret <8 x i16> [[RES]]
+; SSE-LABEL: define <8 x i16> @test_i16_4_to_2(
+; SSE-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[X0:%.*]] = load <2 x i16>, ptr [[X]], align 4
+; SSE-NEXT:    [[XA:%.*]] = getelementptr i8, ptr [[X]], i64 4
+; SSE-NEXT:    [[X1:%.*]] = load <2 x i16>, ptr [[XA]], align 4
+; SSE-NEXT:    [[Y0:%.*]] = load <2 x i16>, ptr [[Y]], align 4
+; SSE-NEXT:    [[YA:%.*]] = getelementptr i8, ptr [[Y]], i64 4
+; SSE-NEXT:    [[Y1:%.*]] = load <2 x i16>, ptr [[YA]], align 4
+; SSE-NEXT:    [[VX:%.*]] = shufflevector <2 x i16> [[X0]], <2 x i16> [[X1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    [[VY:%.*]] = shufflevector <2 x i16> [[Y0]], <2 x i16> [[Y1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <4 x i16> [[VX]], <4 x i16> [[VY]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; SSE-NEXT:    ret <8 x i16> [[RES]]
+;
+; AVX-LABEL: define <8 x i16> @test_i16_4_to_2(
+; AVX-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[X0:%.*]] = load <2 x i16>, ptr [[X]], align 4
+; AVX-NEXT:    [[XA:%.*]] = getelementptr i8, ptr [[X]], i64 4
+; AVX-NEXT:    [[X1:%.*]] = load <2 x i16>, ptr [[XA]], align 4
+; AVX-NEXT:    [[Y0:%.*]] = load <2 x i16>, ptr [[Y]], align 4
+; AVX-NEXT:    [[YA:%.*]] = getelementptr i8, ptr [[Y]], i64 4
+; AVX-NEXT:    [[Y1:%.*]] = load <2 x i16>, ptr [[YA]], align 4
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[X0]], <2 x i16> [[X1]], <8 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[Y0]], <2 x i16> [[Y1]], <8 x i32> <i32 poison, i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3>
+; AVX-NEXT:    [[RES:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+; AVX-NEXT:    ret <8 x i16> [[RES]]
 ;
   %x0 = load <2 x i16>, ptr %x, align 4
   %xa = getelementptr i8, ptr %x, i64 4
@@ -369,19 +433,33 @@ define <4 x i32> @test_neg_trunc_mismatch(ptr %p) {
 
 ; Multi-use (hasOneUse() == false)
 define <4 x i32> @test_neg_multi_use(ptr %x, ptr %y) {
-; CHECK-LABEL: define <4 x i32> @test_neg_multi_use(
-; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[X0:%.*]] = load <2 x i32>, ptr [[X]], align 8
-; CHECK-NEXT:    call void @use(<2 x i32> [[X0]])
-; CHECK-NEXT:    [[XA:%.*]] = getelementptr i8, ptr [[X]], i64 8
-; CHECK-NEXT:    [[X1:%.*]] = load <2 x i32>, ptr [[XA]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = load <2 x i32>, ptr [[Y]], align 8
-; CHECK-NEXT:    [[YA:%.*]] = getelementptr i8, ptr [[Y]], i64 8
-; CHECK-NEXT:    [[Y1:%.*]] = load <2 x i32>, ptr [[YA]], align 8
-; CHECK-NEXT:    [[VX:%.*]] = shufflevector <2 x i32> [[X0]], <2 x i32> [[X1]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    [[VY:%.*]] = shufflevector <2 x i32> [[Y0]], <2 x i32> [[Y1]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[VX]], <4 x i32> [[VY]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; SSE-LABEL: define <4 x i32> @test_neg_multi_use(
+; SSE-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[X0:%.*]] = load <2 x i32>, ptr [[X]], align 8
+; SSE-NEXT:    call void @use(<2 x i32> [[X0]])
+; SSE-NEXT:    [[XA:%.*]] = getelementptr i8, ptr [[X]], i64 8
+; SSE-NEXT:    [[X1:%.*]] = load <2 x i32>, ptr [[XA]], align 8
+; SSE-NEXT:    [[Y0:%.*]] = load <2 x i32>, ptr [[Y]], align 8
+; SSE-NEXT:    [[YA:%.*]] = getelementptr i8, ptr [[Y]], i64 8
+; SSE-NEXT:    [[Y1:%.*]] = load <2 x i32>, ptr [[YA]], align 8
+; SSE-NEXT:    [[VX:%.*]] = shufflevector <2 x i32> [[X0]], <2 x i32> [[X1]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; SSE-NEXT:    [[VY:%.*]] = shufflevector <2 x i32> [[Y0]], <2 x i32> [[Y1]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[VX]], <4 x i32> [[VY]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; SSE-NEXT:    ret <4 x i32> [[RES]]
+;
+; AVX-LABEL: define <4 x i32> @test_neg_multi_use(
+; AVX-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[X0:%.*]] = load <2 x i32>, ptr [[X]], align 8
+; AVX-NEXT:    call void @use(<2 x i32> [[X0]])
+; AVX-NEXT:    [[XA:%.*]] = getelementptr i8, ptr [[X]], i64 8
+; AVX-NEXT:    [[X1:%.*]] = load <2 x i32>, ptr [[XA]], align 8
+; AVX-NEXT:    [[Y0:%.*]] = load <2 x i32>, ptr [[Y]], align 8
+; AVX-NEXT:    [[YA:%.*]] = getelementptr i8, ptr [[Y]], i64 8
+; AVX-NEXT:    [[Y1:%.*]] = load <2 x i32>, ptr [[YA]], align 8
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[X0]], <2 x i32> [[X1]], <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[Y0]], <2 x i32> [[Y1]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 2>
+; AVX-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; AVX-NEXT:    ret <4 x i32> [[RES]]
 ;
   %x0 = load <2 x i32>, ptr %x, align 8
   call void @use(<2 x i32> %x0)
@@ -472,14 +550,22 @@ define <8 x double> @test_widen_2xf64_with_poison(ptr %p) {
 }
 
 define <32 x i8> @test_widen_8xi8_with_poison(ptr %p) {
-; CHECK-LABEL: define <32 x i8> @test_widen_8xi8_with_poison(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[L_SMALL:%.*]] = load <8 x i8>, ptr [[P]], align 8
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
-; CHECK-NEXT:    [[L_BIG:%.*]] = load <16 x i8>, ptr [[GEP]], align 16
-; CHECK-NEXT:    [[L_SMALL_PAD:%.*]] = shufflevector <8 x i8> [[L_SMALL]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <16 x i8> [[L_SMALL_PAD]], <16 x i8> [[L_BIG]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <32 x i8> [[RES]]
+; SSE-LABEL: define <32 x i8> @test_widen_8xi8_with_poison(
+; SSE-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+; SSE-NEXT:    [[L_BIG:%.*]] = load <16 x i8>, ptr [[GEP]], align 16
+; SSE-NEXT:    [[L_SMALL:%.*]] = load <16 x i8>, ptr [[P]], align 8
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <16 x i8> [[L_SMALL]], <16 x i8> [[L_BIG]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE-NEXT:    ret <32 x i8> [[RES]]
+;
+; AVX-LABEL: define <32 x i8> @test_widen_8xi8_with_poison(
+; AVX-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[L_SMALL:%.*]] = load <8 x i8>, ptr [[P]], align 8
+; AVX-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+; AVX-NEXT:    [[L_BIG:%.*]] = load <16 x i8>, ptr [[GEP]], align 16
+; AVX-NEXT:    [[L_SMALL_PAD:%.*]] = shufflevector <8 x i8> [[L_SMALL]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX-NEXT:    [[RES:%.*]] = shufflevector <16 x i8> [[L_SMALL_PAD]], <16 x i8> [[L_BIG]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX-NEXT:    ret <32 x i8> [[RES]]
 ;
   %l_small = load <8 x i8>, ptr %p, align 8
   %gep = getelementptr inbounds i8, ptr %p, i64 16
@@ -489,6 +575,3 @@ define <32 x i8> @test_widen_8xi8_with_poison(ptr %p) {
   ret <32 x i8> %res
 }
 
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX: {{.*}}
-; SSE: {{.*}}
