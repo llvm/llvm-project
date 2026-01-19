@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CBindingWrapping.h"
@@ -50,7 +51,6 @@ class ModuleSlotTracker;
 class raw_ostream;
 template<typename ValueTy> class StringMapEntry;
 class Twine;
-class Type;
 class User;
 
 using ValueName = StringMapEntry<Value *>;
@@ -256,7 +256,7 @@ public:
   Type *getType() const { return VTy; }
 
   /// All values hold a context through their type.
-  LLVM_ABI LLVMContext &getContext() const;
+  LLVMContext &getContext() const { return VTy->getContext(); }
 
   // All values can potentially be named.
   bool hasName() const { return HasName; }
@@ -484,8 +484,8 @@ public:
   /// Remove every uses that can safely be removed.
   ///
   /// This will remove for example uses in llvm.assume.
-  /// This should be used when performing want to perform a tranformation but
-  /// some Droppable uses pervent it.
+  /// This should be used when performing want to perform a transformation but
+  /// some Droppable uses prevent it.
   /// This function optionally takes a filter to only remove some droppable
   /// uses.
   LLVM_ABI void

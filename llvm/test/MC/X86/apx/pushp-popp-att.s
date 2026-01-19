@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
 # RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-# ERROR-COUNT-8: error:
+# ERROR-COUNT-10: error:
 # ERROR-NOT: error:
 
 # CHECK: pushp	%rax
@@ -16,6 +16,9 @@
 # CHECK: pushp	%r16
 # CHECK: encoding: [0xd5,0x18,0x50]
          pushp	%r16
+# CHECK: pushq	%r16
+# CHECK: encoding: [0xd5,0x10,0x50]
+         pushq	%r16
 
 # CHECK: popp	%rax
 # CHECK: encoding: [0xd5,0x08,0x58]
@@ -29,3 +32,6 @@
 # CHECK: popp	%r16
 # CHECK: encoding: [0xd5,0x18,0x58]
          popp	%r16
+# CHECK: popq	%r16
+# CHECK: encoding: [0xd5,0x10,0x58]
+         popq	%r16

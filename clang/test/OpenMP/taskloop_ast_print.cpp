@@ -1,14 +1,22 @@
 // RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -DOMP60 -ast-print %s | FileCheck %s --check-prefix=CHECK60
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=60 -DOMP60 -ast-print %s | FileCheck %s --check-prefix=CHECK60
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER
 #define HEADER
+
+typedef void **omp_impex_t;
+extern const omp_impex_t omp_not_impex;
+extern const omp_impex_t omp_import;
+extern const omp_impex_t omp_export;
+extern const omp_impex_t omp_impex;
 
 void foo() {}
 
@@ -87,6 +95,42 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: #pragma omp cancel taskgroup
   // CHECK-NEXT: #pragma omp cancellation point taskgroup
   // CHECK-NEXT: foo();
+#ifdef OMP60
+#pragma omp taskloop threadset(omp_team)
+  for (int i = 0; i < 10; ++i) {
+#pragma omp taskloop threadset(omp_pool)
+  for (int j = 0; j < 10; ++j) {
+    foo();
+  }
+}
+
+#pragma omp taskloop transparent(omp_not_impex)
+  for (int i = 0; i < 10; ++i) {
+#pragma omp task transparent(omp_import)
+    for (int i = 0; i < 10; ++i) {
+#pragma omp task transparent(omp_export)
+      for (int i = 0; i < 10; ++i) {
+#pragma omp task transparent(omp_impex)
+	foo();
+      }
+    }
+  }
+#endif
+ // CHECK60: #pragma omp taskloop threadset(omp_team)
+ // CHECK60-NEXT: for (int i = 0; i < 10; ++i) {
+ // CHECK60: #pragma omp taskloop threadset(omp_pool)
+ // CHECK60-NEXT: for (int j = 0; j < 10; ++j) {
+ // CHECK60-NEXT: foo();
+
+// CHECK60: #pragma omp taskloop transparent(omp_not_impex)
+// CHECK60-NEXT: for (int i = 0; i < 10; ++i) {
+// CHECK60-NEXT: #pragma omp task transparent(omp_import)
+// CHECK60-NEXT: for (int i = 0; i < 10; ++i) {
+// CHECK60-NEXT: #pragma omp task transparent(omp_export)
+// CHECK60-NEXT: for (int i = 0; i < 10; ++i) {
+// CHECK60-NEXT: #pragma omp task transparent(omp_impex)
+// CHECK60-NEXT: foo();
+
   return (tmain<int, 5>(argc) + tmain<char, 1>(argv[0][0]));
 }
 

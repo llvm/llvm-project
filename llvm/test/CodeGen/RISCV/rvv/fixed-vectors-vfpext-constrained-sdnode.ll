@@ -4,7 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfh,+v,+zvfbfmin -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-declare <2 x float> @llvm.experimental.constrained.fpext.v2f32.v2f16(<2 x half>, metadata)
 define <2 x float> @vfpext_v2f16_v2f32(<2 x half> %va) strictfp {
 ; CHECK-LABEL: vfpext_v2f16_v2f32:
 ; CHECK:       # %bb.0:
@@ -16,7 +15,6 @@ define <2 x float> @vfpext_v2f16_v2f32(<2 x half> %va) strictfp {
   ret <2 x float> %evec
 }
 
-declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f16(<2 x half>, metadata)
 define <2 x double> @vfpext_v2f16_v2f64(<2 x half> %va) strictfp {
 ; CHECK-LABEL: vfpext_v2f16_v2f64:
 ; CHECK:       # %bb.0:
@@ -29,7 +27,6 @@ define <2 x double> @vfpext_v2f16_v2f64(<2 x half> %va) strictfp {
   ret <2 x double> %evec
 }
 
-declare <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half>, metadata)
 define <4 x float> @vfpext_v4f16_v4f32(<4 x half> %va) strictfp {
 ; CHECK-LABEL: vfpext_v4f16_v4f32:
 ; CHECK:       # %bb.0:
@@ -41,7 +38,6 @@ define <4 x float> @vfpext_v4f16_v4f32(<4 x half> %va) strictfp {
   ret <4 x float> %evec
 }
 
-declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f16(<4 x half>, metadata)
 define <4 x double> @vfpext_v4f16_v4f64(<4 x half> %va) strictfp {
 ; CHECK-LABEL: vfpext_v4f16_v4f64:
 ; CHECK:       # %bb.0:
@@ -54,7 +50,6 @@ define <4 x double> @vfpext_v4f16_v4f64(<4 x half> %va) strictfp {
   ret <4 x double> %evec
 }
 
-declare <8 x float> @llvm.experimental.constrained.fpext.v8f32.v8f16(<8 x half>, metadata)
 define <8 x float> @vfpext_v8f16_v8f32(<8 x half> %va) strictfp {
 ; CHECK-LABEL: vfpext_v8f16_v8f32:
 ; CHECK:       # %bb.0:
@@ -66,7 +61,6 @@ define <8 x float> @vfpext_v8f16_v8f32(<8 x half> %va) strictfp {
   ret <8 x float> %evec
 }
 
-declare <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8f16(<8 x half>, metadata)
 define <8 x double> @vfpext_v8f16_v8f64(<8 x half> %va) strictfp {
 ; CHECK-LABEL: vfpext_v8f16_v8f64:
 ; CHECK:       # %bb.0:
@@ -79,7 +73,6 @@ define <8 x double> @vfpext_v8f16_v8f64(<8 x half> %va) strictfp {
   ret <8 x double> %evec
 }
 
-declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float>, metadata)
 define <2 x double> @vfpext_v2f32_v2f64(<2 x float> %va) strictfp {
 ; CHECK-LABEL: vfpext_v2f32_v2f64:
 ; CHECK:       # %bb.0:
@@ -91,7 +84,6 @@ define <2 x double> @vfpext_v2f32_v2f64(<2 x float> %va) strictfp {
   ret <2 x double> %evec
 }
 
-declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
 define <4 x double> @vfpext_v4f32_v4f64(<4 x float> %va) strictfp {
 ; CHECK-LABEL: vfpext_v4f32_v4f64:
 ; CHECK:       # %bb.0:
@@ -103,7 +95,6 @@ define <4 x double> @vfpext_v4f32_v4f64(<4 x float> %va) strictfp {
   ret <4 x double> %evec
 }
 
-declare <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8f32(<8 x float>, metadata)
 define <8 x double> @vfpext_v8f32_v8f64(<8 x float> %va) strictfp {
 ; CHECK-LABEL: vfpext_v8f32_v8f64:
 ; CHECK:       # %bb.0:
@@ -115,7 +106,6 @@ define <8 x double> @vfpext_v8f32_v8f64(<8 x float> %va) strictfp {
   ret <8 x double> %evec
 }
 
-declare <2 x float> @llvm.experimental.constrained.fpext.v2f32.v2bf16(<2 x bfloat>, metadata)
 define <2 x float> @vfpext_v2bf16_v2f32(<2 x bfloat> %va) strictfp {
 ; CHECK-LABEL: vfpext_v2bf16_v2f32:
 ; CHECK:       # %bb.0:
@@ -127,7 +117,6 @@ define <2 x float> @vfpext_v2bf16_v2f32(<2 x bfloat> %va) strictfp {
   ret <2 x float> %evec
 }
 
-declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2bf16(<2 x bfloat>, metadata)
 define <2 x double> @vfpext_v2bf16_v2f64(<2 x bfloat> %va) strictfp {
 ; CHECK-LABEL: vfpext_v2bf16_v2f64:
 ; CHECK:       # %bb.0:
@@ -140,7 +129,6 @@ define <2 x double> @vfpext_v2bf16_v2f64(<2 x bfloat> %va) strictfp {
   ret <2 x double> %evec
 }
 
-declare <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4bf16(<4 x bfloat>, metadata)
 define <4 x float> @vfpext_v4bf16_v4f32(<4 x bfloat> %va) strictfp {
 ; CHECK-LABEL: vfpext_v4bf16_v4f32:
 ; CHECK:       # %bb.0:
@@ -152,7 +140,6 @@ define <4 x float> @vfpext_v4bf16_v4f32(<4 x bfloat> %va) strictfp {
   ret <4 x float> %evec
 }
 
-declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4bf16(<4 x bfloat>, metadata)
 define <4 x double> @vfpext_v4bf16_v4f64(<4 x bfloat> %va) strictfp {
 ; CHECK-LABEL: vfpext_v4bf16_v4f64:
 ; CHECK:       # %bb.0:
@@ -165,7 +152,6 @@ define <4 x double> @vfpext_v4bf16_v4f64(<4 x bfloat> %va) strictfp {
   ret <4 x double> %evec
 }
 
-declare <8 x float> @llvm.experimental.constrained.fpext.v8f32.v8bf16(<8 x bfloat>, metadata)
 define <8 x float> @vfpext_v8bf16_v8f32(<8 x bfloat> %va) strictfp {
 ; CHECK-LABEL: vfpext_v8bf16_v8f32:
 ; CHECK:       # %bb.0:
@@ -177,7 +163,6 @@ define <8 x float> @vfpext_v8bf16_v8f32(<8 x bfloat> %va) strictfp {
   ret <8 x float> %evec
 }
 
-declare <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8bf16(<8 x bfloat>, metadata)
 define <8 x double> @vfpext_v8bf16_v8f64(<8 x bfloat> %va) strictfp {
 ; CHECK-LABEL: vfpext_v8bf16_v8f64:
 ; CHECK:       # %bb.0:

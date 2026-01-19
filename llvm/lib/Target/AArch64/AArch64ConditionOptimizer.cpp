@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass tries to make consecutive compares of values use same operands to
-// allow CSE pass to remove duplicated instructions.  For this it analyzes
-// branches and adjusts comparisons with immediate values by converting:
-//  * GE -> GT
-//  * GT -> GE
-//  * LT -> LE
-//  * LE -> LT
-// and adjusting immediate values appropriately.  It basically corrects two
-// immediate values towards each other to make them equal.
+//
+// This pass tries to make consecutive comparisons of values use the same
+// operands to allow the CSE pass to remove duplicate instructions. It adjusts
+// comparisons with immediate values by converting between inclusive and
+// exclusive forms (GE <-> GT, LE <-> LT) and correcting immediate values to
+// make them equal.
+//
+// The pass handles:
+//  * Cross-block: SUBS/ADDS followed by conditional branches
+//  * Intra-block: CSINC conditional instructions
+//
 //
 // Consider the following example in C:
 //
@@ -49,11 +51,16 @@
 //     b.le     .LBB0_6
 //     ...
 //
-// Currently only SUBS and ADDS followed by b.?? are supported.
+// See optimizeCrossBlock() and optimizeIntraBlock() for implementation details.
 //
 // TODO: maybe handle TBNZ/TBZ the same way as CMP when used instead for "a < 0"
-// TODO: handle other conditional instructions (e.g. CSET)
-// TODO: allow second branching to be anything if it doesn't require adjusting
+// TODO: For cross-block:
+//   - handle other conditional instructions (e.g. CSET)
+//   - allow second branching to be anything if it doesn't require adjusting
+// TODO: For intra-block:
+//   - handle CINC and CSET (CSINC aliases) as their conditions are inverted
+//   compared to CSINC.
+//   - handle other non-CSINC conditional instructions
 //
 //===----------------------------------------------------------------------===//
 
@@ -111,6 +118,9 @@ public:
   void modifyCmp(MachineInstr *CmpMI, const CmpInfo &Info);
   bool adjustTo(MachineInstr *CmpMI, AArch64CC::CondCode Cmp, MachineInstr *To,
                 int ToImm);
+  bool isPureCmp(MachineInstr &CmpMI);
+  bool optimizeIntraBlock(MachineBasicBlock &MBB);
+  bool optimizeCrossBlock(MachineBasicBlock &HBB);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -323,6 +333,274 @@ bool AArch64ConditionOptimizer::adjustTo(MachineInstr *CmpMI,
   return false;
 }
 
+bool AArch64ConditionOptimizer::isPureCmp(MachineInstr &CmpMI) {
+  unsigned ShiftAmt = AArch64_AM::getShiftValue(CmpMI.getOperand(3).getImm());
+  if (!CmpMI.getOperand(2).isImm()) {
+    LLVM_DEBUG(dbgs() << "Immediate of cmp is symbolic, " << CmpMI << '\n');
+    return false;
+  } else if (CmpMI.getOperand(2).getImm() << ShiftAmt >= 0xfff) {
+    LLVM_DEBUG(dbgs() << "Immediate of cmp may be out of range, " << CmpMI
+                      << '\n');
+    return false;
+  } else if (!MRI->use_nodbg_empty(CmpMI.getOperand(0).getReg())) {
+    LLVM_DEBUG(dbgs() << "Destination of cmp is not dead, " << CmpMI << '\n');
+    return false;
+  }
+
+  return true;
+}
+
+// This function transforms two CMP+CSINC pairs within the same basic block
+// when both conditions are the same (GT/GT or LT/LT) and immediates differ
+// by 1.
+//
+// Example transformation:
+//   cmp  w8, #10
+//   csinc w9, w0, w1, gt     ; w9 = (w8 > 10) ? w0 : w1+1
+//   cmp  w8, #9
+//   csinc w10, w0, w1, gt    ; w10 = (w8 > 9) ? w0 : w1+1
+//
+// Into:
+//   cmp  w8, #10
+//   csinc w9, w0, w1, gt     ; w9 = (w8 > 10) ? w0 : w1+1
+//   csinc w10, w0, w1, ge    ; w10 = (w8 >= 10) ? w0 : w1+1
+//
+// The second CMP is eliminated, enabling CSE to remove the redundant
+// comparison.
+bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
+  MachineInstr *FirstCmp = nullptr;
+  MachineInstr *FirstCSINC = nullptr;
+  MachineInstr *SecondCmp = nullptr;
+  MachineInstr *SecondCSINC = nullptr;
+
+  // Find two CMP + CSINC pairs
+  for (MachineInstr &MI : MBB) {
+    switch (MI.getOpcode()) {
+    // cmp is an alias for subs with a dead destination register.
+    case AArch64::SUBSWri:
+    case AArch64::SUBSXri:
+    // cmn is an alias for adds with a dead destination register.
+    case AArch64::ADDSWri:
+    case AArch64::ADDSXri: {
+      if (!FirstCmp) {
+        FirstCmp = &MI;
+      } else if (FirstCSINC && !SecondCmp) {
+        SecondCmp = &MI;
+      }
+      break;
+    }
+
+    case AArch64::CSINCWr:
+    case AArch64::CSINCXr: {
+      // Found a CSINC, ensure it comes after the corresponding comparison
+      if (FirstCmp && !FirstCSINC) {
+        FirstCSINC = &MI;
+      } else if (SecondCmp && !SecondCSINC) {
+        SecondCSINC = &MI;
+      }
+      break;
+    }
+    }
+
+    if (SecondCSINC)
+      break;
+  }
+
+  if (!SecondCmp || !SecondCSINC) {
+    LLVM_DEBUG(dbgs() << "Didn't find two CMP+CSINC pairs\n");
+    return false;
+  }
+
+  if (FirstCmp->getOperand(1).getReg() != SecondCmp->getOperand(1).getReg()) {
+    LLVM_DEBUG(dbgs() << "CMPs compare different registers\n");
+    return false;
+  }
+
+  if (!isPureCmp(*FirstCmp) || !isPureCmp(*SecondCmp)) {
+    LLVM_DEBUG(dbgs() << "One or both CMPs are not pure\n");
+    return false;
+  }
+
+  // Check that nothing else modifies the flags between the first CMP and second
+  // conditional
+  for (auto It = std::next(MachineBasicBlock::iterator(FirstCmp));
+       It != std::next(MachineBasicBlock::iterator(SecondCSINC)); ++It) {
+    if (&*It != SecondCmp &&
+        It->modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
+      LLVM_DEBUG(dbgs() << "Flags modified between CMPs by: " << *It << '\n');
+      return false;
+    }
+  }
+
+  // Check flags aren't read after second conditional within the same block
+  for (auto It = std::next(MachineBasicBlock::iterator(SecondCSINC));
+       It != MBB.end(); ++It) {
+    if (It->readsRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
+      LLVM_DEBUG(dbgs() << "Flags read after second CSINC by: " << *It << '\n');
+      return false;
+    }
+  }
+
+  // Since we may modify a cmp in this MBB, make sure NZCV does not live out.
+  for (auto *SuccBB : MBB.successors())
+    if (SuccBB->isLiveIn(AArch64::NZCV))
+      return false;
+
+  // Extract condition codes from both CSINCs (operand 3)
+  AArch64CC::CondCode FirstCond =
+      (AArch64CC::CondCode)(int)FirstCSINC->getOperand(3).getImm();
+  AArch64CC::CondCode SecondCond =
+      (AArch64CC::CondCode)(int)SecondCSINC->getOperand(3).getImm();
+
+  const int FirstImm = (int)FirstCmp->getOperand(2).getImm();
+  const int SecondImm = (int)SecondCmp->getOperand(2).getImm();
+
+  LLVM_DEBUG(dbgs() << "Comparing intra-block CSINCs: "
+                    << AArch64CC::getCondCodeName(FirstCond) << " #" << FirstImm
+                    << " and " << AArch64CC::getCondCodeName(SecondCond) << " #"
+                    << SecondImm << '\n');
+
+  // Check if both conditions are the same and immediates differ by 1
+  if (((FirstCond == AArch64CC::GT && SecondCond == AArch64CC::GT) ||
+       (FirstCond == AArch64CC::LT && SecondCond == AArch64CC::LT)) &&
+      std::abs(SecondImm - FirstImm) == 1) {
+    // Pick which comparison to adjust to match the other
+    // For GT: adjust the one with smaller immediate
+    // For LT: adjust the one with larger immediate
+    bool adjustFirst = (FirstImm < SecondImm);
+    if (FirstCond == AArch64CC::LT) {
+      adjustFirst = !adjustFirst;
+    }
+
+    MachineInstr *CmpToAdjust = adjustFirst ? FirstCmp : SecondCmp;
+    MachineInstr *CSINCToAdjust = adjustFirst ? FirstCSINC : SecondCSINC;
+    AArch64CC::CondCode CondToAdjust = adjustFirst ? FirstCond : SecondCond;
+    int TargetImm = adjustFirst ? SecondImm : FirstImm;
+
+    CmpInfo AdjustedInfo = adjustCmp(CmpToAdjust, CondToAdjust);
+
+    if (std::get<0>(AdjustedInfo) == TargetImm &&
+        std::get<1>(AdjustedInfo) ==
+            (adjustFirst ? SecondCmp : FirstCmp)->getOpcode()) {
+      LLVM_DEBUG(dbgs() << "Successfully optimizing intra-block CSINC pair\n");
+
+      // Modify the selected CMP and CSINC
+      CmpToAdjust->getOperand(2).setImm(std::get<0>(AdjustedInfo));
+      CmpToAdjust->setDesc(TII->get(std::get<1>(AdjustedInfo)));
+      CSINCToAdjust->getOperand(3).setImm(std::get<2>(AdjustedInfo));
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Optimize across blocks
+bool AArch64ConditionOptimizer::optimizeCrossBlock(MachineBasicBlock &HBB) {
+  SmallVector<MachineOperand, 4> HeadCond;
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  if (TII->analyzeBranch(HBB, TBB, FBB, HeadCond)) {
+    return false;
+  }
+
+  // Equivalence check is to skip loops.
+  if (!TBB || TBB == &HBB) {
+    return false;
+  }
+
+  SmallVector<MachineOperand, 4> TrueCond;
+  MachineBasicBlock *TBB_TBB = nullptr, *TBB_FBB = nullptr;
+  if (TII->analyzeBranch(*TBB, TBB_TBB, TBB_FBB, TrueCond)) {
+    return false;
+  }
+
+  MachineInstr *HeadCmpMI = findSuitableCompare(&HBB);
+  if (!HeadCmpMI) {
+    return false;
+  }
+
+  MachineInstr *TrueCmpMI = findSuitableCompare(TBB);
+  if (!TrueCmpMI) {
+    return false;
+  }
+
+  AArch64CC::CondCode HeadCmp;
+  if (HeadCond.empty() || !parseCond(HeadCond, HeadCmp)) {
+    return false;
+  }
+
+  AArch64CC::CondCode TrueCmp;
+  if (TrueCond.empty() || !parseCond(TrueCond, TrueCmp)) {
+    return false;
+  }
+
+  const int HeadImm = (int)HeadCmpMI->getOperand(2).getImm();
+  const int TrueImm = (int)TrueCmpMI->getOperand(2).getImm();
+
+  LLVM_DEBUG(dbgs() << "Head branch:\n");
+  LLVM_DEBUG(dbgs() << "\tcondition: " << AArch64CC::getCondCodeName(HeadCmp)
+                    << '\n');
+  LLVM_DEBUG(dbgs() << "\timmediate: " << HeadImm << '\n');
+
+  LLVM_DEBUG(dbgs() << "True branch:\n");
+  LLVM_DEBUG(dbgs() << "\tcondition: " << AArch64CC::getCondCodeName(TrueCmp)
+                    << '\n');
+  LLVM_DEBUG(dbgs() << "\timmediate: " << TrueImm << '\n');
+
+  if (((HeadCmp == AArch64CC::GT && TrueCmp == AArch64CC::LT) ||
+       (HeadCmp == AArch64CC::LT && TrueCmp == AArch64CC::GT)) &&
+      std::abs(TrueImm - HeadImm) == 2) {
+    // This branch transforms machine instructions that correspond to
+    //
+    // 1) (a > {TrueImm} && ...) || (a < {HeadImm} && ...)
+    // 2) (a < {TrueImm} && ...) || (a > {HeadImm} && ...)
+    //
+    // into
+    //
+    // 1) (a >= {NewImm} && ...) || (a <= {NewImm} && ...)
+    // 2) (a <= {NewImm} && ...) || (a >= {NewImm} && ...)
+
+    CmpInfo HeadCmpInfo = adjustCmp(HeadCmpMI, HeadCmp);
+    CmpInfo TrueCmpInfo = adjustCmp(TrueCmpMI, TrueCmp);
+    if (std::get<0>(HeadCmpInfo) == std::get<0>(TrueCmpInfo) &&
+        std::get<1>(HeadCmpInfo) == std::get<1>(TrueCmpInfo)) {
+      modifyCmp(HeadCmpMI, HeadCmpInfo);
+      modifyCmp(TrueCmpMI, TrueCmpInfo);
+      return true;
+    }
+  } else if (((HeadCmp == AArch64CC::GT && TrueCmp == AArch64CC::GT) ||
+              (HeadCmp == AArch64CC::LT && TrueCmp == AArch64CC::LT)) &&
+             std::abs(TrueImm - HeadImm) == 1) {
+    // This branch transforms machine instructions that correspond to
+    //
+    // 1) (a > {TrueImm} && ...) || (a > {HeadImm} && ...)
+    // 2) (a < {TrueImm} && ...) || (a < {HeadImm} && ...)
+    //
+    // into
+    //
+    // 1) (a <= {NewImm} && ...) || (a >  {NewImm} && ...)
+    // 2) (a <  {NewImm} && ...) || (a >= {NewImm} && ...)
+
+    // GT -> GE transformation increases immediate value, so picking the
+    // smaller one; LT -> LE decreases immediate value so invert the choice.
+    bool adjustHeadCond = (HeadImm < TrueImm);
+    if (HeadCmp == AArch64CC::LT) {
+      adjustHeadCond = !adjustHeadCond;
+    }
+
+    if (adjustHeadCond) {
+      return adjustTo(HeadCmpMI, HeadCmp, TrueCmpMI, TrueImm);
+    } else {
+      return adjustTo(TrueCmpMI, TrueCmp, HeadCmpMI, HeadImm);
+    }
+  }
+  // Other transformation cases almost never occur due to generation of < or >
+  // comparisons instead of <= and >=.
+
+  return false;
+}
+
 bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
                     << "********** Function: " << MF.getName() << '\n');
@@ -342,106 +620,8 @@ bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
   // child_begin() / child_end() until after a node has been visited.
   for (MachineDomTreeNode *I : depth_first(DomTree)) {
     MachineBasicBlock *HBB = I->getBlock();
-
-    SmallVector<MachineOperand, 4> HeadCond;
-    MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
-    if (TII->analyzeBranch(*HBB, TBB, FBB, HeadCond)) {
-      continue;
-    }
-
-    // Equivalence check is to skip loops.
-    if (!TBB || TBB == HBB) {
-      continue;
-    }
-
-    SmallVector<MachineOperand, 4> TrueCond;
-    MachineBasicBlock *TBB_TBB = nullptr, *TBB_FBB = nullptr;
-    if (TII->analyzeBranch(*TBB, TBB_TBB, TBB_FBB, TrueCond)) {
-      continue;
-    }
-
-    MachineInstr *HeadCmpMI = findSuitableCompare(HBB);
-    if (!HeadCmpMI) {
-      continue;
-    }
-
-    MachineInstr *TrueCmpMI = findSuitableCompare(TBB);
-    if (!TrueCmpMI) {
-      continue;
-    }
-
-    AArch64CC::CondCode HeadCmp;
-    if (HeadCond.empty() || !parseCond(HeadCond, HeadCmp)) {
-      continue;
-    }
-
-    AArch64CC::CondCode TrueCmp;
-    if (TrueCond.empty() || !parseCond(TrueCond, TrueCmp)) {
-      continue;
-    }
-
-    const int HeadImm = (int)HeadCmpMI->getOperand(2).getImm();
-    const int TrueImm = (int)TrueCmpMI->getOperand(2).getImm();
-
-    LLVM_DEBUG(dbgs() << "Head branch:\n");
-    LLVM_DEBUG(dbgs() << "\tcondition: " << AArch64CC::getCondCodeName(HeadCmp)
-                      << '\n');
-    LLVM_DEBUG(dbgs() << "\timmediate: " << HeadImm << '\n');
-
-    LLVM_DEBUG(dbgs() << "True branch:\n");
-    LLVM_DEBUG(dbgs() << "\tcondition: " << AArch64CC::getCondCodeName(TrueCmp)
-                      << '\n');
-    LLVM_DEBUG(dbgs() << "\timmediate: " << TrueImm << '\n');
-
-    if (((HeadCmp == AArch64CC::GT && TrueCmp == AArch64CC::LT) ||
-         (HeadCmp == AArch64CC::LT && TrueCmp == AArch64CC::GT)) &&
-        std::abs(TrueImm - HeadImm) == 2) {
-      // This branch transforms machine instructions that correspond to
-      //
-      // 1) (a > {TrueImm} && ...) || (a < {HeadImm} && ...)
-      // 2) (a < {TrueImm} && ...) || (a > {HeadImm} && ...)
-      //
-      // into
-      //
-      // 1) (a >= {NewImm} && ...) || (a <= {NewImm} && ...)
-      // 2) (a <= {NewImm} && ...) || (a >= {NewImm} && ...)
-
-      CmpInfo HeadCmpInfo = adjustCmp(HeadCmpMI, HeadCmp);
-      CmpInfo TrueCmpInfo = adjustCmp(TrueCmpMI, TrueCmp);
-      if (std::get<0>(HeadCmpInfo) == std::get<0>(TrueCmpInfo) &&
-          std::get<1>(HeadCmpInfo) == std::get<1>(TrueCmpInfo)) {
-        modifyCmp(HeadCmpMI, HeadCmpInfo);
-        modifyCmp(TrueCmpMI, TrueCmpInfo);
-        Changed = true;
-      }
-    } else if (((HeadCmp == AArch64CC::GT && TrueCmp == AArch64CC::GT) ||
-                (HeadCmp == AArch64CC::LT && TrueCmp == AArch64CC::LT)) &&
-                std::abs(TrueImm - HeadImm) == 1) {
-      // This branch transforms machine instructions that correspond to
-      //
-      // 1) (a > {TrueImm} && ...) || (a > {HeadImm} && ...)
-      // 2) (a < {TrueImm} && ...) || (a < {HeadImm} && ...)
-      //
-      // into
-      //
-      // 1) (a <= {NewImm} && ...) || (a >  {NewImm} && ...)
-      // 2) (a <  {NewImm} && ...) || (a >= {NewImm} && ...)
-
-      // GT -> GE transformation increases immediate value, so picking the
-      // smaller one; LT -> LE decreases immediate value so invert the choice.
-      bool adjustHeadCond = (HeadImm < TrueImm);
-      if (HeadCmp == AArch64CC::LT) {
-          adjustHeadCond = !adjustHeadCond;
-      }
-
-      if (adjustHeadCond) {
-        Changed |= adjustTo(HeadCmpMI, HeadCmp, TrueCmpMI, TrueImm);
-      } else {
-        Changed |= adjustTo(TrueCmpMI, TrueCmp, HeadCmpMI, HeadImm);
-      }
-    }
-    // Other transformation cases almost never occur due to generation of < or >
-    // comparisons instead of <= and >=.
+    Changed |= optimizeIntraBlock(*HBB);
+    Changed |= optimizeCrossBlock(*HBB);
   }
 
   return Changed;

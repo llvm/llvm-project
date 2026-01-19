@@ -5,16 +5,16 @@ define <4 x float> @f(ptr  %0) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    ldr q1, [x0, #56]!
 ; CHECK-NEXT:    ldr d0, [x0, #16]
 ; CHECK-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %2 = getelementptr inbounds nuw i8, ptr %0, i64 56

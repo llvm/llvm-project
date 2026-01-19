@@ -312,6 +312,9 @@ struct OpOrInterfaceRewritePatternBase : public RewritePattern {
 template <typename SourceOp>
 struct OpRewritePattern
     : public mlir::detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpRewritePattern;
 
   /// Patterns must specify the root operation name they match against, and can
   /// also specify the benefit of the pattern matching and a list of generated
@@ -328,6 +331,9 @@ struct OpRewritePattern
 template <typename SourceOp>
 struct OpInterfaceRewritePattern
     : public mlir::detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpInterfaceRewritePattern;
 
   OpInterfaceRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
       : mlir::detail::OpOrInterfaceRewritePatternBase<SourceOp>(
@@ -341,6 +347,10 @@ struct OpInterfaceRewritePattern
 template <template <typename> class TraitType>
 class OpTraitRewritePattern : public RewritePattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpTraitRewritePattern;
+
   OpTraitRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
       : RewritePattern(Pattern::MatchTraitOpTypeTag(), TypeID::get<TraitType>(),
                        benefit, context) {}
@@ -535,6 +545,12 @@ public:
   /// This method erases all operations in a block.
   virtual void eraseBlock(Block *block);
 
+  /// Erase the specified results of the given operation. Results cannot be
+  /// erased directly, so the implementation creates a new replacement
+  /// operation and erases the original operation. The new operation is
+  /// returned.
+  Operation *eraseOpResults(Operation *op, const BitVector &eraseIndices);
+
   /// Inline the operations of block 'source' into block 'dest' before the given
   /// position. The source block will be deleted and must have no uses.
   /// 'argValues' is used to replace the block arguments of 'source'.
@@ -633,7 +649,7 @@ public:
 
   /// Find uses of `from` and replace them with `to`. Also notify the listener
   /// about every in-place op modification (for every use that was replaced).
-  void replaceAllUsesWith(Value from, Value to) {
+  virtual void replaceAllUsesWith(Value from, Value to) {
     for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
       Operation *op = operand.getOwner();
       modifyOpInPlace(op, [&]() { operand.set(to); });
@@ -665,9 +681,9 @@ public:
   /// true. Also notify the listener about every in-place op modification (for
   /// every use that was replaced). The optional `allUsesReplaced` flag is set
   /// to "true" if all uses were replaced.
-  void replaceUsesWithIf(Value from, Value to,
-                         function_ref<bool(OpOperand &)> functor,
-                         bool *allUsesReplaced = nullptr);
+  virtual void replaceUsesWithIf(Value from, Value to,
+                                 function_ref<bool(OpOperand &)> functor,
+                                 bool *allUsesReplaced = nullptr);
   void replaceUsesWithIf(ValueRange from, ValueRange to,
                          function_ref<bool(OpOperand &)> functor,
                          bool *allUsesReplaced = nullptr);
@@ -862,7 +878,9 @@ public:
                                   ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(debugLabels, arg, args...), ...);
+    (addImpl<Ts>(debugLabels, std::forward<ConstructorArg>(arg),
+                 std::forward<ConstructorArgs>(args)...),
+     ...);
     return *this;
   }
 
@@ -928,7 +946,9 @@ public:
   RewritePatternSet &insert(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/{}, arg, args...), ...);
+    (addImpl<Ts>(/*debugLabels=*/{}, std::forward<ConstructorArg>(arg),
+                 std::forward<ConstructorArgs>(args)...),
+     ...);
     return *this;
   }
 

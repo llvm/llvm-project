@@ -100,7 +100,7 @@ public:
   void *operator new(size_t s) { return User::operator new(s, AllocMarker); }
 
   // delete space for exactly one operand as created in the corresponding new operator
-  void operator delete(void *ptr) { User::operator delete(ptr); }
+  void operator delete(void *ptr) { User::operator delete(ptr, AllocMarker); }
 
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -217,6 +217,11 @@ public:
   /// Add attribute to this global.
   void addAttribute(StringRef Kind, StringRef Val = StringRef()) {
     Attrs = Attrs.addAttribute(getContext(), Kind, Val);
+  }
+
+  /// Add attributes to this global.
+  void addAttributes(const AttrBuilder &AttrBuilder) {
+    Attrs = Attrs.addAttributes(getContext(), AttrBuilder);
   }
 
   /// Return true if the attribute exists.

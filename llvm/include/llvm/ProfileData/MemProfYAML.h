@@ -141,7 +141,7 @@ template <> struct CustomMappingTraits<memprof::PortableMemInfoBlock> {
 #define MIBEntryDef(NameTag, Name, Type)                                       \
   if (KeyStr == #Name) {                                                       \
     uint64_t Value;                                                            \
-    Io.mapRequired(KeyStr.str().c_str(), Value);                               \
+    Io.mapRequired(KeyStr, Value);                                             \
     MIB.Name = static_cast<Type>(Value);                                       \
     MIB.Schema.set(llvm::to_underlying(memprof::Meta::Name));                  \
     return;                                                                    \
@@ -217,8 +217,8 @@ template <> struct MappingTraits<memprof::CallSiteInfo> {
 template <> struct MappingTraits<memprof::GUIDMemProfRecordPair> {
   static void mapping(IO &Io, memprof::GUIDMemProfRecordPair &Pair) {
     Io.mapRequired("GUID", Pair.GUID);
-    Io.mapRequired("AllocSites", Pair.Record.AllocSites);
-    Io.mapRequired("CallSites", Pair.Record.CallSites);
+    Io.mapOptional("AllocSites", Pair.Record.AllocSites);
+    Io.mapOptional("CallSites", Pair.Record.CallSites);
   }
 };
 

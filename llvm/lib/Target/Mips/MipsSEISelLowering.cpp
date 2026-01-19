@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
@@ -209,6 +210,22 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
       else
         addRegisterClass(MVT::f64, &Mips::AFGR64RegClass);
     }
+
+    for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                    ISD::STRICT_FDIV, ISD::STRICT_FSQRT}) {
+      setOperationAction(Op, MVT::f32, Legal);
+      setOperationAction(Op, MVT::f64, Legal);
+    }
+  }
+
+  // Targets with 64bits integer registers, but no 64bit floating point register
+  // do not support conversion between them
+  if (Subtarget.isGP64bit() && Subtarget.isSingleFloat() &&
+      !Subtarget.useSoftFloat()) {
+    setOperationAction(ISD::FP_TO_SINT, MVT::i64, Expand);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i64, Expand);
+    setOperationAction(ISD::SINT_TO_FP, MVT::i64, Expand);
+    setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
   }
 
   setOperationAction(ISD::SMUL_LOHI,          MVT::i32, Custom);
@@ -290,7 +307,7 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
 
     assert(Subtarget.isFP64bit() && "FR=1 is required for MIPS32r6");
     setOperationAction(ISD::SETCC, MVT::f64, Legal);
-    setOperationAction(ISD::SELECT, MVT::f64, Custom);
+    setOperationAction(ISD::SELECT, MVT::f64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
 
     setOperationAction(ISD::BRCOND, MVT::Other, Legal);
@@ -300,11 +317,19 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
     setCondCodeAction(ISD::SETUGE, MVT::f32, Expand);
     setCondCodeAction(ISD::SETUGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f32, Expand);
 
     setCondCodeAction(ISD::SETOGE, MVT::f64, Expand);
     setCondCodeAction(ISD::SETOGT, MVT::f64, Expand);
     setCondCodeAction(ISD::SETUGE, MVT::f64, Expand);
     setCondCodeAction(ISD::SETUGT, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f64, Expand);
   }
 
   if (Subtarget.hasMips64r6()) {

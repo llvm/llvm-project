@@ -23,7 +23,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -69,6 +68,7 @@ namespace cl {
 LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
                                       StringRef Overview = "",
                                       raw_ostream *Errs = nullptr,
+                                      vfs::FileSystem *VFS = nullptr,
                                       const char *EnvVar = nullptr,
                                       bool LongOptionsUseDoubleDash = false);
 
@@ -232,7 +232,7 @@ public:
 
   SmallVector<Option *, 4> PositionalOpts;
   SmallVector<Option *, 4> SinkOpts;
-  StringMap<Option *> OptionsMap;
+  DenseMap<StringRef, Option *> OptionsMap;
 
   Option *ConsumeAfterOpt = nullptr; // The ConsumeAfter option if it exists.
 };
@@ -548,7 +548,7 @@ template <class DataType> struct OptionValue;
 // The default value safely does nothing. Option value printing is only
 // best-effort.
 template <class DataType, bool isClass>
-struct OptionValueBase : public GenericOptionValue {
+struct OptionValueBase : GenericOptionValue {
   // Temporary storage for argument passing.
   using WrapperType = OptionValue<DataType>;
 
@@ -1192,6 +1192,31 @@ public:
 
 //--------------------------------------------------
 
+template <>
+class LLVM_ABI parser<std::optional<std::string>>
+    : public basic_parser<std::optional<std::string>> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // Return true on error.
+  bool parse(Option &, StringRef, StringRef Arg,
+             std::optional<std::string> &Value) {
+    Value = Arg.str();
+    return false;
+  }
+
+  // Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "optional string"; }
+
+  void printOptionDiff(const Option &O, std::optional<StringRef> V,
+                       const OptVal &Default, size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+//--------------------------------------------------
+
 extern template class LLVM_TEMPLATE_ABI basic_parser<char>;
 
 template <> class LLVM_ABI parser<char> : public basic_parser<char> {
@@ -1437,7 +1462,8 @@ class opt
       return true; // Parse error!
     this->setValue(Val);
     this->setPosition(pos);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return false;
   }
 
@@ -1492,13 +1518,15 @@ public:
 
   template <class T> DataType &operator=(const T &Val) {
     this->setValue(Val);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return this->getValue();
   }
 
   template <class T> DataType &operator=(T &&Val) {
     this->getValue() = std::forward<T>(Val);
-    Callback(this->getValue());
+    if (Callback)
+      Callback(this->getValue());
     return this->getValue();
   }
 
@@ -1514,8 +1542,7 @@ public:
     Callback = CB;
   }
 
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback;
 };
 
 #if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
@@ -1692,7 +1719,8 @@ class list : public Option, public list_storage<DataType, StorageClass> {
     list_storage<DataType, StorageClass>::addValue(Val);
     setPosition(pos);
     Positions.push_back(pos);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return false;
   }
 
@@ -1761,8 +1789,7 @@ public:
     Callback = CB;
   }
 
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback;
 };
 
 // Modifier to set the number of additional values.
@@ -1869,7 +1896,8 @@ class bits : public Option, public bits_storage<DataType, Storage> {
     this->addValue(Val);
     setPosition(pos);
     Positions.push_back(pos);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return false;
   }
 
@@ -1917,8 +1945,7 @@ public:
     Callback = CB;
   }
 
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback;
 };
 
 //===----------------------------------------------------------------------===//
@@ -2024,10 +2051,10 @@ LLVM_ABI void printBuildConfig(raw_ostream &OS);
 // Public interface for accessing registered options.
 //
 
-/// Use this to get a StringMap to all registered named options
+/// Use this to get a map of all registered named options
 /// (e.g. -help).
 ///
-/// \return A reference to the StringMap used by the cl APIs to parse options.
+/// \return A reference to the map used by the cl APIs to parse options.
 ///
 /// Access to unnamed arguments (i.e. positional) are not provided because
 /// it is expected that the client already has access to these.
@@ -2035,7 +2062,8 @@ LLVM_ABI void printBuildConfig(raw_ostream &OS);
 /// Typical usage:
 /// \code
 /// main(int argc,char* argv[]) {
-/// StringMap<llvm::cl::Option*> &opts = llvm::cl::getRegisteredOptions();
+/// DenseMap<llvm::StringRef, llvm::cl::Option*> &opts =
+///     llvm::cl::getRegisteredOptions();
 /// assert(opts.count("help") == 1)
 /// opts["help"]->setDescription("Show alphabetical help information")
 /// // More code
@@ -2051,7 +2079,7 @@ LLVM_ABI void printBuildConfig(raw_ostream &OS);
 /// Hopefully this API can be deprecated soon. Any situation where options need
 /// to be modified by tools or libraries should be handled by sane APIs rather
 /// than just handing around a global list.
-LLVM_ABI StringMap<Option *> &
+LLVM_ABI DenseMap<StringRef, Option *> &
 getRegisteredOptions(SubCommand &Sub = SubCommand::getTopLevel());
 
 /// Use this to get all registered SubCommands from the provided parser.
@@ -2073,7 +2101,7 @@ getRegisteredOptions(SubCommand &Sub = SubCommand::getTopLevel());
 ///
 /// This interface is useful for defining subcommands in libraries and
 /// the dispatch from a single point (like in the main function).
-LLVM_ABI iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+LLVM_ABI iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
 getRegisteredSubcommands();
 
 //===----------------------------------------------------------------------===//
@@ -2192,7 +2220,8 @@ class ExpansionContext {
                                  SmallVectorImpl<const char *> &NewArgv);
 
 public:
-  LLVM_ABI ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T);
+  LLVM_ABI ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T,
+                            vfs::FileSystem *FS = nullptr);
 
   ExpansionContext &setMarkEOLs(bool X) {
     MarkEOLs = X;

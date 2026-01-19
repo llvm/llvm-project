@@ -299,9 +299,9 @@ define amdgpu_kernel void @multi_vcond_loop(ptr addrspace(1) noalias nocapture %
 ; SI-LABEL: multi_vcond_loop:
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xf
-; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    v_mov_b32_e32 v7, 0
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
+; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v6, 2, v0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_dword v0, v[6:7], s[8:11], 0 addr64

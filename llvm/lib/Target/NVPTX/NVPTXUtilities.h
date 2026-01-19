@@ -25,9 +25,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdarg>
-#include <set>
 #include <string>
-#include <vector>
 
 namespace llvm {
 
@@ -99,14 +97,14 @@ namespace NVPTX {
 // register. NOTE: This must be kept in sync with the register classes
 // defined in NVPTXRegisterInfo.td.
 inline auto packed_types() {
-  static const auto PackedTypes = {MVT::v4i8, MVT::v2f16, MVT::v2bf16,
-                                   MVT::v2i16, MVT::v2f32};
+  static const auto PackedTypes = {MVT::v4i8,  MVT::v2f16, MVT::v2bf16,
+                                   MVT::v2i16, MVT::v2f32, MVT::v2i32};
   return PackedTypes;
 }
 
 // Checks if the type VT can fit into a single register.
 inline bool isPackedVectorTy(EVT VT) {
-  return any_of(packed_types(), [VT](EVT OVT) { return OVT == VT; });
+  return any_of(packed_types(), equal_to(VT));
 }
 
 // Checks if two or more of the type ET can fit into a single register.

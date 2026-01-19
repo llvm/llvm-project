@@ -484,9 +484,9 @@ exit:
 TEST(BasicBlockUtils, SplitIndirectBrCriticalEdgesIgnorePHIs) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
-define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
+define void @crit_edge(ptr %tgt, i1 %cond0, i1 %cond1) {
 entry:
-  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
+  indirectbr ptr %tgt, [label %bb0, label %bb1, label %bb2]
 bb0:
   br i1 %cond0, label %bb1, label %bb2
 bb1:
@@ -526,9 +526,9 @@ bb4:
 TEST(BasicBlockUtils, SplitIndirectBrCriticalEdges) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
-define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
+define void @crit_edge(ptr %tgt, i1 %cond0, i1 %cond1) {
 entry:
-  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
+  indirectbr ptr %tgt, [label %bb0, label %bb1, label %bb2]
 bb0:
   br i1 %cond0, label %bb1, label %bb2
 bb1:
@@ -672,7 +672,7 @@ resume:
 destroy:
   ret void
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
@@ -689,13 +689,13 @@ resume:
 destroy:
   ret void
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 attributes #0 = { presplitcoroutine }
 )IR");
@@ -715,4 +715,33 @@ attributes #0 = { presplitcoroutine }
   const auto &ExitN = *FindExit(*N);
   EXPECT_FALSE(llvm::isPresplitCoroSuspendExitEdge(
       *ExitN.getSinglePredecessor(), ExitN));
+}
+
+TEST(BasicBlockUtils, BasicBlockPrintable) {
+  std::string S;
+  std::string SCheck;
+  llvm::raw_string_ostream OS{S};
+  llvm::raw_string_ostream OSCheck{SCheck};
+
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @foo() {
+  br label %bb0
+bb0:
+  br label %.exit
+.exit:
+  ret void
+}
+)IR");
+
+  Function *F = M->getFunction("foo");
+  for (const BasicBlock &BB : *F) {
+    OS << printBasicBlock(&BB);
+    BB.printAsOperand(OSCheck);
+    EXPECT_EQ(OS.str(), OSCheck.str());
+    S.clear();
+    SCheck.clear();
+  }
+  OS << printBasicBlock(nullptr);
+  EXPECT_EQ(OS.str(), "<nullptr>");
 }

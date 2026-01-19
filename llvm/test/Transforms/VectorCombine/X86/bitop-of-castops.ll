@@ -260,3 +260,287 @@ define <4 x i32> @or_zext_nneg(<4 x i16> %a, <4 x i16> %b) {
   %or = or <4 x i32> %z1, %z2
   ret <4 x i32> %or
 }
+
+; Test bitwise operations with integer-to-integer bitcast with one constant
+define <2 x i32> @or_bitcast_v4i16_to_v2i32_constant(<4 x i16> %a) {
+; CHECK-LABEL: @or_bitcast_v4i16_to_v2i32_constant(
+; CHECK-NEXT:    [[A:%.*]] = or <4 x i16> [[A1:%.*]], <i16 16960, i16 15, i16 -31616, i16 30>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i16> [[A]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC1]]
+;
+  %bc1 = bitcast <4 x i16> %a to <2 x i32>
+  %or = or <2 x i32> %bc1, <i32 1000000, i32 2000000>
+  ret <2 x i32> %or
+}
+
+define <2 x i32> @or_bitcast_v4i16_to_v2i32_constant_commuted(<4 x i16> %a) {
+; CHECK-LABEL: @or_bitcast_v4i16_to_v2i32_constant_commuted(
+; CHECK-NEXT:    [[A:%.*]] = or <4 x i16> [[A1:%.*]], <i16 16960, i16 15, i16 -31616, i16 30>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i16> [[A]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC1]]
+;
+  %bc1 = bitcast <4 x i16> %a to <2 x i32>
+  %or = or <2 x i32> <i32 1000000, i32 2000000>, %bc1
+  ret <2 x i32> %or
+}
+
+; Test bitwise operations with truncate and one constant
+define <4 x i16> @or_trunc_v4i32_to_v4i16_constant(<4 x i32> %a) {
+; CHECK-LABEL: @or_trunc_v4i32_to_v4i16_constant(
+; CHECK-NEXT:    [[A:%.*]] = or <4 x i32> [[A1:%.*]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[T1:%.*]] = trunc <4 x i32> [[A]] to <4 x i16>
+; CHECK-NEXT:    ret <4 x i16> [[T1]]
+;
+  %t1 = trunc <4 x i32> %a to <4 x i16>
+  %or = or <4 x i16> %t1, <i16 1, i16 2, i16 3, i16 4>
+  ret <4 x i16> %or
+}
+
+; Test bitwise operations with zero extend and one constant
+define <4 x i32> @or_zext_v4i16_to_v4i32_constant(<4 x i16> %a) {
+; CHECK-LABEL: @or_zext_v4i16_to_v4i32_constant(
+; CHECK-NEXT:    [[A:%.*]] = or <4 x i16> [[A1:%.*]], <i16 1, i16 2, i16 3, i16 4>
+; CHECK-NEXT:    [[Z1:%.*]] = zext <4 x i16> [[A]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[Z1]]
+;
+  %z1 = zext <4 x i16> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 1, i32 2, i32 3, i32 4>
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @or_zext_v4i8_to_v4i32_constant_with_loss(<4 x i8> %a) {
+; CHECK-LABEL: @or_zext_v4i8_to_v4i32_constant_with_loss(
+; CHECK-NEXT:    [[Z1:%.*]] = zext <4 x i8> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[Z1]], <i32 1024, i32 129, i32 3, i32 4>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %z1 = zext <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 1024, i32 129, i32 3, i32 4>
+  ret <4 x i32> %or
+}
+
+; Test bitwise operations with sign extend and one constant
+define <4 x i32> @or_sext_v4i8_to_v4i32_positive_constant(<4 x i8> %a) {
+; CHECK-LABEL: @or_sext_v4i8_to_v4i32_positive_constant(
+; CHECK-NEXT:    [[A:%.*]] = or <4 x i8> [[A1:%.*]], <i8 1, i8 2, i8 3, i8 4>
+; CHECK-NEXT:    [[S1:%.*]] = sext <4 x i8> [[A]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[S1]]
+;
+  %s1 = sext <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %s1, <i32 1, i32 2, i32 3, i32 4>
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @or_sext_v4i8_to_v4i32_minus_constant(<4 x i8> %a) {
+; CHECK-LABEL: @or_sext_v4i8_to_v4i32_minus_constant(
+; CHECK-NEXT:    [[A:%.*]] = or <4 x i8> [[A1:%.*]], <i8 -1, i8 -2, i8 -3, i8 -4>
+; CHECK-NEXT:    [[S1:%.*]] = sext <4 x i8> [[A]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[S1]]
+;
+  %s1 = sext <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %s1, <i32 -1, i32 -2, i32 -3, i32 -4>
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @or_sext_v4i8_to_v4i32_constant_with_loss(<4 x i8> %a) {
+; CHECK-LABEL: @or_sext_v4i8_to_v4i32_constant_with_loss(
+; CHECK-NEXT:    [[Z1:%.*]] = sext <4 x i8> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[Z1]], <i32 -10000, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %z1 = sext <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 -10000, i32 2, i32 3, i32 4>
+  ret <4 x i32> %or
+}
+
+; Test truncate with flag preservation and one constant
+define <4 x i16> @and_trunc_nuw_nsw_constant(<4 x i32> %a) {
+; CHECK-LABEL: @and_trunc_nuw_nsw_constant(
+; CHECK-NEXT:    [[AND_INNER:%.*]] = and <4 x i32> [[A:%.*]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[AND:%.*]] = trunc nuw nsw <4 x i32> [[AND_INNER]] to <4 x i16>
+; CHECK-NEXT:    ret <4 x i16> [[AND]]
+;
+  %t1 = trunc nuw nsw <4 x i32> %a to <4 x i16>
+  %and = and <4 x i16> %t1, <i16 1, i16 2, i16 3, i16 4>
+  ret <4 x i16> %and
+}
+
+define <4 x i8> @and_trunc_nuw_nsw_minus_constant(<4 x i32> %a) {
+; CHECK-LABEL: @and_trunc_nuw_nsw_minus_constant(
+; CHECK-NEXT:    [[AND_INNER:%.*]] = and <4 x i32> [[A:%.*]], <i32 240, i32 241, i32 242, i32 243>
+; CHECK-NEXT:    [[AND:%.*]] = trunc nuw <4 x i32> [[AND_INNER]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[AND]]
+;
+  %t1 = trunc nuw nsw <4 x i32> %a to <4 x i8>
+  %and = and <4 x i8> %t1, <i8 240, i8 241, i8 242, i8 243>
+  ret <4 x i8> %and
+}
+
+define <4 x i8> @and_trunc_nuw_nsw_multiconstant(<4 x i32> %a) {
+; CHECK-LABEL: @and_trunc_nuw_nsw_multiconstant(
+; CHECK-NEXT:    [[AND_INNER:%.*]] = and <4 x i32> [[A:%.*]], <i32 240, i32 1, i32 242, i32 3>
+; CHECK-NEXT:    [[AND:%.*]] = trunc nuw <4 x i32> [[AND_INNER]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[AND]]
+;
+  %t1 = trunc nuw nsw <4 x i32> %a to <4 x i8>
+  %and = and <4 x i8> %t1, <i8 240, i8 1, i8 242, i8 3>
+  ret <4 x i8> %and
+}
+
+; Test sign extend with nneg flag and one constant
+define <4 x i32> @or_zext_nneg_constant(<4 x i16> %a) {
+; CHECK-LABEL: @or_zext_nneg_constant(
+; CHECK-NEXT:    [[OR_INNER:%.*]] = or <4 x i16> [[A:%.*]], <i16 1, i16 2, i16 3, i16 4>
+; CHECK-NEXT:    [[OR:%.*]] = zext nneg <4 x i16> [[OR_INNER]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %z1 = zext nneg <4 x i16> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 1, i32 2, i32 3, i32 4>
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @or_zext_nneg_minus_constant(<4 x i8> %a) {
+; CHECK-LABEL: @or_zext_nneg_minus_constant(
+; CHECK-NEXT:    [[OR_INNER:%.*]] = or <4 x i8> [[A:%.*]], <i8 -16, i8 -15, i8 -14, i8 -13>
+; CHECK-NEXT:    [[OR:%.*]] = zext <4 x i8> [[OR_INNER]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %z1 = zext nneg <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 240, i32 241, i32 242, i32 243>
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @or_zext_nneg_multiconstant(<4 x i8> %a) {
+; CHECK-LABEL: @or_zext_nneg_multiconstant(
+; CHECK-NEXT:    [[OR_INNER:%.*]] = or <4 x i8> [[A:%.*]], <i8 -16, i8 1, i8 -14, i8 3>
+; CHECK-NEXT:    [[OR:%.*]] = zext <4 x i8> [[OR_INNER]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %z1 = zext nneg <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 240, i32 1, i32 242, i32 3>
+  ret <4 x i32> %or
+}
+
+; Negative test: bitcast from scalar float to vector int (optimization should not apply)
+define <2 x i16> @and_bitcast_f32_to_v2i16_constant(float %a) {
+; CHECK-LABEL: @and_bitcast_f32_to_v2i16_constant(
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast float [[B:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i16> <i16 0, i16 1>, [[BC2]]
+; CHECK-NEXT:    ret <2 x i16> [[AND]]
+;
+  %bc = bitcast float %a to <2 x i16>
+  %and = and <2 x i16> <i16 0, i16 1>, %bc
+  ret <2 x i16> %and
+}
+
+define <2 x i16> @and_bitcast_f32_to_v2i16(float %a, float %b) {
+; CHECK-LABEL: @and_bitcast_f32_to_v2i16(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast float [[A:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast float [[B:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i16> [[BC1]], [[BC2]]
+; CHECK-NEXT:    ret <2 x i16> [[AND]]
+;
+  %bc1 = bitcast float %a to <2 x i16>
+  %bc2 = bitcast float %b to <2 x i16>
+  %and = and <2 x i16> %bc1, %bc2
+  ret <2 x i16> %and
+}
+
+; Negative test: bitcast from vector float to scalar int (optimization should not apply)
+define i64 @and_bitcast_v2f32_to_i64_constant(<2 x float> %a) {
+; CHECK-LABEL: @and_bitcast_v2f32_to_i64_constant(
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x float> [[B:%.*]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 123, [[BC2]]
+; CHECK-NEXT:    ret i64 [[AND]]
+;
+  %bc = bitcast <2 x float> %a to i64
+  %and = and i64 123, %bc
+  ret i64 %and
+}
+
+define i64 @and_bitcast_v2f32_to_i64(<2 x float> %a, <2 x float> %b) {
+; CHECK-LABEL: @and_bitcast_v2f32_to_i64(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x float> [[A:%.*]] to i64
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x float> [[B:%.*]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[BC1]], [[BC2]]
+; CHECK-NEXT:    ret i64 [[AND]]
+;
+  %bc1 = bitcast <2 x float> %a to i64
+  %bc2 = bitcast <2 x float> %b to i64
+  %and = and i64 %bc1, %bc2
+  ret i64 %and
+}
+
+; Test no-op bitcast
+define i16 @xor_bitcast_i16_to_i16_constant(i16 %a) {
+; CHECK-LABEL: @xor_bitcast_i16_to_i16_constant(
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast i16 [[B:%.*]] to i16
+; CHECK-NEXT:    [[OR:%.*]] = xor i16 123, [[BC2]]
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %bc = bitcast i16 %a to i16
+  %or = xor i16 123, %bc
+  ret i16 %or
+}
+
+define i16 @xor_bitcast_i16_to_i16(i16 %a, i16 %b) {
+; CHECK-LABEL: @xor_bitcast_i16_to_i16(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast i16 [[A:%.*]] to i16
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast i16 [[B:%.*]] to i16
+; CHECK-NEXT:    [[OR:%.*]] = xor i16 [[BC1]], [[BC2]]
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %bc1 = bitcast i16 %a to i16
+  %bc2 = bitcast i16 %b to i16
+  %or = xor i16 %bc1, %bc2
+  ret i16 %or
+}
+
+; Test bitwise operations with integer vector to integer bitcast
+define <16 x i1> @xor_bitcast_i16_to_v16i1_constant(i16 %a) {
+; CHECK-LABEL: @xor_bitcast_i16_to_v16i1_constant(
+; CHECK-NEXT:    [[B:%.*]] = xor i16 [[A:%.*]], -1
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast i16 [[B]] to <16 x i1>
+; CHECK-NEXT:    ret <16 x i1> [[BC2]]
+;
+  %bc = bitcast i16 %a to <16 x i1>
+  %or = xor <16 x i1> %bc, splat (i1 true)
+  ret <16 x i1> %or
+}
+
+define <16 x i1> @xor_bitcast_i16_to_v16i1(i16 %a, i16 %b) {
+; CHECK-LABEL: @xor_bitcast_i16_to_v16i1(
+; CHECK-NEXT:    [[B1:%.*]] = xor i16 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[BC3:%.*]] = bitcast i16 [[B1]] to <16 x i1>
+; CHECK-NEXT:    ret <16 x i1> [[BC3]]
+;
+  %bc1 = bitcast i16 %a to <16 x i1>
+  %bc2 = bitcast i16 %b to <16 x i1>
+  %or = xor <16 x i1> %bc1, %bc2
+  ret <16 x i1> %or
+}
+
+; Test bitwise operations with integer vector to integer bitcast
+define i16 @or_bitcast_v16i1_to_i16_constant(<16 x i1> %a) {
+; CHECK-LABEL: @or_bitcast_v16i1_to_i16_constant(
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <16 x i1> [[B:%.*]] to i16
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[BC2]], 3
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %bc = bitcast <16 x i1> %a to i16
+  %or = or i16 %bc, 3
+  ret i16 %or
+}
+
+define i16 @or_bitcast_v16i1_to_i16(<16 x i1> %a, <16 x i1> %b) {
+; CHECK-LABEL: @or_bitcast_v16i1_to_i16(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <16 x i1> [[A:%.*]] to i16
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <16 x i1> [[B:%.*]] to i16
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[BC1]], [[BC2]]
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %bc1 = bitcast <16 x i1> %a to i16
+  %bc2 = bitcast <16 x i1> %b to i16
+  %or = or i16 %bc1, %bc2
+  ret i16 %or
+}

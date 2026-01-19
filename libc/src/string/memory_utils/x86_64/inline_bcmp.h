@@ -27,7 +27,7 @@ inline_bcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
 [[maybe_unused]] LIBC_INLINE BcmpReturnType
 inline_bcmp_x86_sse41_gt16(CPtr p1, CPtr p2, size_t count) {
   if (count <= 32)
-    return generic::branchless_head_tail_neq<__m128i>(p1, p2, count);
+    return generic::Bcmp<__m128i>::head_tail(p1, p2, count);
   return generic::Bcmp<__m128i>::loop_and_tail_align_above(256, p1, p2, count);
 }
 #endif // __SSE4_1__
@@ -36,9 +36,9 @@ inline_bcmp_x86_sse41_gt16(CPtr p1, CPtr p2, size_t count) {
 [[maybe_unused]] LIBC_INLINE BcmpReturnType
 inline_bcmp_x86_avx_gt16(CPtr p1, CPtr p2, size_t count) {
   if (count <= 32)
-    return generic::branchless_head_tail_neq<__m128i>(p1, p2, count);
+    return generic::Bcmp<__m128i>::head_tail(p1, p2, count);
   if (count <= 64)
-    return generic::branchless_head_tail_neq<__m256i>(p1, p2, count);
+    return generic::Bcmp<__m256i>::head_tail(p1, p2, count);
   return generic::Bcmp<__m256i>::loop_and_tail_align_above(256, p1, p2, count);
 }
 #endif // __AVX__
@@ -47,11 +47,11 @@ inline_bcmp_x86_avx_gt16(CPtr p1, CPtr p2, size_t count) {
 [[maybe_unused]] LIBC_INLINE BcmpReturnType
 inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
   if (count <= 32)
-    return generic::branchless_head_tail_neq<__m128i>(p1, p2, count);
+    return generic::Bcmp<__m128i>::head_tail(p1, p2, count);
   if (count <= 64)
-    return generic::branchless_head_tail_neq<__m256i>(p1, p2, count);
+    return generic::Bcmp<__m256i>::head_tail(p1, p2, count);
   if (count <= 128)
-    return generic::branchless_head_tail_neq<__m512i>(p1, p2, count);
+    return generic::Bcmp<__m512i>::head_tail(p1, p2, count);
   return generic::Bcmp<__m512i>::loop_and_tail_align_above(256, p1, p2, count);
 }
 #endif // __AVX512BW__
@@ -62,12 +62,22 @@ inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
     return BcmpReturnType::zero();
   if (count == 1)
     return generic::Bcmp<uint8_t>::block(p1, p2);
-  if (count <= 4)
-    return generic::branchless_head_tail_neq<uint16_t>(p1, p2, count);
-  if (count <= 8)
-    return generic::branchless_head_tail_neq<uint32_t>(p1, p2, count);
+  if (count == 2)
+    return generic::Bcmp<uint16_t>::block(p1, p2);
+  if (count == 3)
+    return generic::BcmpSequence<uint16_t, uint8_t>::block(p1, p2);
+  if (count == 4)
+    return generic::Bcmp<uint32_t>::block(p1, p2);
+  if (count == 5)
+    return generic::BcmpSequence<uint32_t, uint8_t>::block(p1, p2);
+  if (count == 6)
+    return generic::BcmpSequence<uint32_t, uint16_t>::block(p1, p2);
+  if (count == 7)
+    return generic::BcmpSequence<uint32_t, uint16_t, uint8_t>::block(p1, p2);
+  if (count == 8)
+    return generic::Bcmp<uint64_t>::block(p1, p2);
   if (count <= 16)
-    return generic::branchless_head_tail_neq<uint64_t>(p1, p2, count);
+    return generic::Bcmp<uint64_t>::head_tail(p1, p2, count);
 #if defined(__AVX512BW__)
   return inline_bcmp_x86_avx512bw_gt16(p1, p2, count);
 #elif defined(__AVX__)

@@ -6,68 +6,75 @@
     This file defines templates for generating comments
 }}
 {{#BriefComments}}
-    <div>
+<div class="nested-delimiter-container">
     {{#.}}
-        <p>{{TextComment}}</p>
+    <p>{{TextComment}}</p>
     {{/.}}
-    </div>
+</div>
 {{/BriefComments}}
 {{#ParagraphComments}}
-    <div>
+<div class="nested-delimiter-container">
     {{#.}}
-        <p>{{TextComment}}</p>
+    <p>{{TextComment}}</p>
     {{/.}}
-    </div>
+</div>
 {{/ParagraphComments}}
 {{#ParagraphComment}}
-    {{#Children}}
-    {{>Comments}}
-    {{/Children}}
+{{#Children}}
+{{TextComment}}
+{{/Children}}
 {{/ParagraphComment}}
 {{#HasParamComments}}
+<div class="nested-delimiter-container">
     <h3>Parameters</h3>
     {{#ParamComments}}
     <div>
-        <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} {{#Children}}{{>Comments}}{{/Children}}
+        <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} {{#Children}}{{TextComment}}{{/Children}}
     </div> 
     {{/ParamComments}}
+</div>
 {{/HasParamComments}}
+{{#HasTParamComments}}
+<h3>Template Parameters</h3>
+{{#TParamComments}}
+<div class="nested-delimiter-container">
+    <div>
+        <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} {{#Children}}{{TextComment}}{{/Children}}
+    </div>
+</div>
+{{/TParamComments}}
+{{/HasTParamComments}}
 {{#HasReturnComments}}
+<div class="nested-delimiter-container">
     <h3>Returns</h3>
     {{#ReturnComments}}
         {{#.}}
         <p>{{TextComment}}</p>
         {{/.}}
     {{/ReturnComments}}
+</div>
 {{/HasReturnComments}}
 {{#HasCodeComments}}
-    <h3>Code</h3> 
-    {{#CodeComments}}
-    <div>
-        <pre class="code-block">
-            <code>
-            {{#.}}
+<h3>Code</h3> 
+{{#CodeComments}}
+<div>
+    <pre class="code-block">
+        <code>
+        {{#.}}
             {{.}}
-            {{/.}}
-            </code>
-        </pre>
-    </div>
-    {{/CodeComments}}
+        {{/.}}
+        </code>
+    </pre>
+</div>
+{{/CodeComments}}
 {{/HasCodeComments}}
-{{#BlockCommandComment}}
-    <div class="block-command-comment__command">
-        <div class="block-command-command">
-            {{Command}}
-        </div>
-        <div>
-            {{#Children}}
-                {{>Comments}}
-            {{/Children}}
-        </div>
-    </div>
-{{/BlockCommandComment}}
-{{#TextComment}}
+{{#HasThrowsComments}}
+<div class="nested-delimiter-container">
+    <h3>Throws</h3>
+    {{#ThrowsComments}}
     <div>
-        <p>{{TextComment}}</p>
+      <b>{{Exception}}</b> {{#Children}}{{TextComment}}{{/Children}}
     </div>
-{{/TextComment}}
+    {{/ThrowsComments}}
+</div>
+{{/HasThrowsComments}}

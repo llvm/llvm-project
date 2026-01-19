@@ -3,12 +3,8 @@
 
 define void @test() {
 ; CHECK-LABEL: define void @test() {
-; CHECK-NEXT:    [[XOR108_I_I_I:%.*]] = xor i64 0, 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <12 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0>, i64 [[XOR108_I_I_I]], i32 10
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <12 x i64> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i64> poison, i64 [[XOR108_I_I_I]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <12 x i64> [[TMP2]], <12 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i64> [[TMP5]], <16 x i64> [[TMP3]], <16 x i32> <i32 0, i32 1, i32 2, i32 19, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i64> poison, i64 1, i32 3
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 1, i64 0, i64 undef, i64 undef, i64 undef, i64 undef>, <16 x i64> [[TMP1]], <16 x i32> <i32 0, i32 1, i32 2, i32 19, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i64> [[TMP6]], <16 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 3, i32 7, i32 8, i32 9, i32 3, i32 10, i32 11, i32 12, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <16 x i64> [[TMP7]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <16 x i1> [[TMP8]], zeroinitializer

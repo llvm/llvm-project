@@ -43,6 +43,7 @@ def N2UnitL2  : ProcResource<1>;  // Load 2
 def N2UnitD   : ProcResource<2>;  // Store data 0/1
 def N2UnitV0  : ProcResource<1>;  // FP/ASIMD 0
 def N2UnitV1  : ProcResource<1>;  // FP/ASIMD 1
+def N2UnitFlg : ProcResource<3>;  // Flags
 
 def N2UnitV : ProcResGroup<[N2UnitV0, N2UnitV1]>;  // FP/ASIMD 0/1
 def N2UnitM : ProcResGroup<[N2UnitM0, N2UnitM1]>;  // Integer single/multicycle 0/1
@@ -72,14 +73,20 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 // Define customized scheduler read/write types specific to the Neoverse N2.
 
 //===----------------------------------------------------------------------===//
+
+// Define generic 0 micro-op types
+def N2Write_0c : SchedWriteRes<[]> { let Latency = 0; }
+
 // Define generic 1 micro-op types
 
 def N2Write_1c_1B   : SchedWriteRes<[N2UnitB]>   { let Latency = 1; }
 def N2Write_1c_1I   : SchedWriteRes<[N2UnitI]>   { let Latency = 1; }
+def N2Write_1c_1I_1Flg : SchedWriteRes<[N2UnitI, N2UnitFlg]>   { let Latency = 1; }
 def N2Write_1c_1M   : SchedWriteRes<[N2UnitM]>   { let Latency = 1; }
 def N2Write_1c_1M0  : SchedWriteRes<[N2UnitM0]>  { let Latency = 1; }
 def N2Write_1c_1L01 : SchedWriteRes<[N2UnitL01]> { let Latency = 1; }
 def N2Write_2c_1M   : SchedWriteRes<[N2UnitM]>   { let Latency = 2; }
+def N2Write_2c_1M_1Flg : SchedWriteRes<[N2UnitM, N2UnitFlg]>   { let Latency = 2; }
 def N2Write_3c_1M   : SchedWriteRes<[N2UnitM]>   { let Latency = 3; }
 def N2Write_2c_1M0  : SchedWriteRes<[N2UnitM0]>  { let Latency = 2;
                                                    let ReleaseAtCycles = [2]; }
@@ -216,6 +223,11 @@ def N2Write_4c_2V : SchedWriteRes<[N2UnitV, N2UnitV]> {
 
 def N2Write_6c_2V : SchedWriteRes<[N2UnitV, N2UnitV]> {
   let Latency     = 6;
+  let NumMicroOps = 2;
+}
+
+def N2Write_4c_2L : SchedWriteRes<[N2UnitL, N2UnitL]> {
+  let Latency     = 4;
   let NumMicroOps = 2;
 }
 
@@ -646,14 +658,37 @@ def N2Write_11c_9L01_9S_9V : SchedWriteRes<[N2UnitL01, N2UnitL01, N2UnitL01,
 }
 
 //===----------------------------------------------------------------------===//
+// Define predicate-controlled types
+
+def N2Write_0or1c_1I : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N2Write_0c]>,
+                      SchedVar<NoSchedPred,      [N2Write_1c_1I]>]>;
+
+def N2Write_0or2c_1V : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N2Write_0c]>,
+                      SchedVar<NoSchedPred,      [N2Write_2c_1V]>]>;
+
+def N2Write_0or3c_1M0 : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N2Write_0c]>,
+                      SchedVar<NoSchedPred,      [N2Write_3c_1M0]>]>;
+
+def N2Write_Extr : SchedWriteVariant<[
+                      SchedVar<IsRORImmIdiomPred, [N2Write_1c_1I]>,
+                      SchedVar<NoSchedPred,       [N2Write_3c_1I_1M]>]>;
+
+//===----------------------------------------------------------------------===//
 // Define types for arithmetic and logical ops with short shifts
 def N2Write_Arith : SchedWriteVariant<[
                       SchedVar<IsCheapLSL,  [N2Write_1c_1I]>,
                       SchedVar<NoSchedPred, [N2Write_2c_1M]>]>;
 
+def N2Write_ArithI : SchedWriteVariant<[
+                      SchedVar<IsCheapLSL,  [N2Write_1c_1I_1Flg]>,
+                      SchedVar<NoSchedPred, [N2Write_2c_1M_1Flg]>]>;
+
 def N2Write_Logical: SchedWriteVariant<[
-                       SchedVar<NeoverseNoLSL, [N2Write_1c_1I]>,
-                       SchedVar<NoSchedPred,   [N2Write_2c_1M]>]>;
+                      SchedVar<NeoverseNoLSL, [N2Write_1c_1I_1Flg]>,
+                      SchedVar<NoSchedPred,   [N2Write_2c_1M_1Flg]>]>;
 
 // Miscellaneous
 // -----------------------------------------------------------------------------
@@ -678,8 +713,15 @@ def : InstRW<[N2Write_1c_1B_1S], (instrs BL, BLR)>;
 // -----------------------------------------------------------------------------
 
 // ALU, basic
-// ALU, basic, flagset
 def : SchedAlias<WriteI,     N2Write_1c_1I>;
+def : InstRW<[N2Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
+
+// ALU, basic, flagset
+def : InstRW<[N2Write_1c_1I_1Flg],
+             (instregex "^(ADD|SUB)S[WX]r[ir]$",
+                        "^(ADC|SBC)S[WX]r$",
+                        "^ANDS[WX]ri$",
+                        "^(AND|BIC)S[WX]rr$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, N2Write_2c_1M>;
@@ -688,16 +730,26 @@ def : SchedAlias<WriteIEReg, N2Write_2c_1M>;
 // Arithmetic, flagset, LSL shift, shift <= 4
 // Arithmetic, LSR/ASR/ROR shift or LSL shift > 4
 def : SchedAlias<WriteISReg, N2Write_Arith>;
+def : InstRW<[N2Write_ArithI],
+             (instregex "^(ADD|SUB)S[WX]rs$")>;
+
+// Arithmetic, flagset, extend
+def : InstRW<[N2Write_2c_1M_1Flg],
+             (instregex "^(ADD|SUB)S[WX]rx(64)?$")>;
 
 // Logical, shift, no flagset
 def : InstRW<[N2Write_1c_1I],
-             (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
+             (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
+def : InstRW<[N2Write_0or1c_1I], (instregex "^ORR[WX]rs$")>;
 
 // Logical, shift, flagset
 def : InstRW<[N2Write_Logical], (instregex "^(AND|BIC)S[WX]rs$")>;
 
 // Arithmetic, immediate to logical address tag
 def : InstRW<[N2Write_2c_1M], (instrs ADDG, SUBG)>;
+
+// Conditional compare
+def : InstRW<[N2Write_1c_1I_1Flg], (instregex "^CCM[NP][WX][ir]")>;
 
 // Convert floating-point condition flags
 // Flag manipulation instructions
@@ -709,7 +761,8 @@ def : InstRW<[N2Write_2c_1M], (instrs IRG, IRGstack)>;
 // Insert Tag Mask
 // Subtract Pointer
 // Subtract Pointer, flagset
-def : InstRW<[N2Write_1c_1I], (instrs GMI, SUBP, SUBPS)>;
+def : InstRW<[N2Write_1c_1I], (instrs GMI, SUBP)>;
+def : InstRW<[N2Write_1c_1I_1Flg], (instrs SUBPS)>;
 
 // Move and shift instructions
 // -----------------------------------------------------------------------------
@@ -758,10 +811,7 @@ def : InstRW<[N2Write_2c_1M0], (instrs XPACD, XPACI, XPACLRI)>;
 
 // Bitfield extract, one reg
 // Bitfield extract, two regs
-// NOTE: We don't model the difference between EXTR where both operands are the
-// same (one reg).
-def : SchedAlias<WriteExtr, N2Write_3c_1I_1M>;
-def : InstRW<[N2Write_3c_1I_1M], (instrs EXTRWrri, EXTRXrri)>;
+def : SchedAlias<WriteExtr, N2Write_Extr>;
 
 // Bitfield move, basic
 def : SchedAlias<WriteIS, N2Write_1c_1I>;
@@ -774,6 +824,15 @@ def : InstRW<[N2Write_2c_1M], (instregex "^BFM[WX]ri$")>;
 
 def : SchedAlias<WriteLD,    N2Write_4c_1L>;
 def : SchedAlias<WriteLDIdx, N2Write_4c_1I_1L>;
+
+// Load pair, signed immed offset, normal, X-form
+def : InstRW<[N2Write_4c_2L, WriteLDHi],
+             (instrs LDPXi, LDNPXi)>;
+
+// Load pair, immed post-index, normal, X-form
+// Load pair, immed pre-index, normal, X-form
+def : InstRW<[WriteAdr, N2Write_4c_2L, WriteLDHi],
+             (instregex "^LDPX(post|pre)$")>;
 
 // Load pair, signed immed offset, signed words
 def : InstRW<[N2Write_5c_1M0, WriteLDHi], (instrs LDPSWi)>;
@@ -882,8 +941,7 @@ def : SchedAlias<WriteFImm, N2Write_2c_1V>;
 def : InstRW<[N2Write_2c_1V], (instrs FMOVHr, FMOVSr, FMOVDr)>;
 
 // FP transfer, from gen to low half of vec reg
-def : InstRW<[N2Write_3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr,
-                                        FMOVHWr, FMOVHXr, FMOVSWr, FMOVDXr)>;
+def : InstRW<[N2Write_0or3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
 
 // FP transfer, from gen to high half of vec reg
 def : InstRW<[N2Write_5c_1M0_1V], (instrs FMOVXDHighr)>;
@@ -1224,6 +1282,8 @@ def : InstRW<[N2Write_3c_1V0], (instrs BFCVT)>;
 // ASIMD transpose
 // ASIMD unzip/zip
 // Handled by SchedAlias<WriteV[dq], ...>
+
+def : InstRW<[N2Write_0or2c_1V], (instrs MOVID, MOVIv2d_ns)>;
 
 // ASIMD duplicate, gen reg
 def : InstRW<[N2Write_3c_1M0], (instregex "^DUPv.+gpr")>;
@@ -1603,7 +1663,7 @@ def : InstRW<[N2Write_3c_1M], (instregex "^PTRUES_[BHSD]$")>;
 def : InstRW<[N2Write_3c_1M], (instregex "^PFIRST_B$", "^PNEXT_[BHSD]$")>;
 
 // Predicate test
-def : InstRW<[N2Write_1c_1M], (instrs PTEST_PP)>;
+def : InstRW<[N2Write_1c_1M], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[N2Write_2c_1M], (instregex "^TRN[12]_PPP_[BHSDQ]$")>;
@@ -1640,7 +1700,7 @@ def : InstRW<[N2Write_2c_1V],
                         "^ADR_LSL_ZZZ_[SD]_[0123]",
                         "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
                         "^SADDLBT_ZZZ_[HSD]",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^[SU]H(ADD|SUB|SUBR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex
@@ -1764,13 +1824,13 @@ def : InstRW<[N2Write_20c_1V0], (instregex "^[SU]DIVR?_ZPmZ_D",
                                            "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[N2Write_3c_1V], (instregex "^[SU]DOT_ZZZI?_S$")>;
+def : InstRW<[N2Write_3c_1V], (instregex "^[SU]DOT_ZZZI?_BtoS$")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
 def : InstRW<[N2Write_3c_1V], (instrs SUDOT_ZZZI, USDOT_ZZZI, USDOT_ZZZ)>;
 
 // Dot product, 16 bit
-def : InstRW<[N2Write_4c_1V0], (instregex "^[SU]DOT_ZZZI?_D$")>;
+def : InstRW<[N2Write_4c_1V0], (instregex "^[SU]DOT_ZZZI?_HtoD$")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[N2Write_2c_1V], (instregex "^DUP_ZI_[BHSD]$",
@@ -2118,7 +2178,7 @@ def : InstRW<[N2Write_3c_1V0], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
 def : InstRW<[N2Write_4c_1V], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[N2Write_5c_1V], (instrs BFMMLA_ZZZ)>;
+def : InstRW<[N2Write_5c_1V], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
 def : InstRW<[N2Write_4c_1V], (instregex "^BFMLAL[BT]_ZZZ(I)?$")>;

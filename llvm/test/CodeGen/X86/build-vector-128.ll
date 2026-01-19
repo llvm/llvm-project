@@ -410,6 +410,234 @@ define <16 x i8> @test_buildvector_v16i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
   ret <16 x i8> %ins15
 }
 
+; build vectors where integers operands are split (typically via legalization)
+
+define <4 x i32> @test_buildvector_v2i64_split_v4i32(i64 %a0, i64 %a1) nounwind {
+; SSE-32-LABEL: test_buildvector_v2i64_split_v4i32:
+; SSE-32:       # %bb.0:
+; SSE-32-NEXT:    movups {{[0-9]+}}(%esp), %xmm0
+; SSE-32-NEXT:    retl
+;
+; SSE-64-LABEL: test_buildvector_v2i64_split_v4i32:
+; SSE-64:       # %bb.0:
+; SSE-64-NEXT:    movq %rsi, %xmm1
+; SSE-64-NEXT:    movq %rdi, %xmm0
+; SSE-64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-64-NEXT:    retq
+;
+; AVX-32-LABEL: test_buildvector_v2i64_split_v4i32:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm0
+; AVX-32-NEXT:    retl
+;
+; AVX-64-LABEL: test_buildvector_v2i64_split_v4i32:
+; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vmovq %rsi, %xmm0
+; AVX-64-NEXT:    vmovq %rdi, %xmm1
+; AVX-64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX-64-NEXT:    retq
+  %a0.lo = trunc i64 %a0 to i32
+  %a1.lo = trunc i64 %a1 to i32
+  %a0.shr = lshr i64 %a0, 32
+  %a1.shr = lshr i64 %a1, 32
+  %a0.hi = trunc i64 %a0.shr to i32
+  %a1.hi = trunc i64 %a1.shr to i32
+  %v0 = insertelement <4 x i32> poison, i32 %a0.lo, i64 0
+  %v1 = insertelement <4 x i32> %v0, i32 %a0.hi, i64 1
+  %v2 = insertelement <4 x i32> %v1, i32 %a1.lo, i64 2
+  %v3 = insertelement <4 x i32> %v2, i32 %a1.hi, i64 3
+  ret <4 x i32> %v3
+}
+
+define <8 x i16> @test_buildvector_v4i32_split_v8i16(i32 %a0, i32 %a1, i32 %a2, i32 %a3) nounwind {
+; SSE-32-LABEL: test_buildvector_v4i32_split_v8i16:
+; SSE-32:       # %bb.0:
+; SSE-32-NEXT:    movups {{[0-9]+}}(%esp), %xmm0
+; SSE-32-NEXT:    retl
+;
+; SSE2-64-LABEL: test_buildvector_v4i32_split_v8i16:
+; SSE2-64:       # %bb.0:
+; SSE2-64-NEXT:    movd %ecx, %xmm0
+; SSE2-64-NEXT:    movd %edx, %xmm1
+; SSE2-64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-64-NEXT:    movd %esi, %xmm2
+; SSE2-64-NEXT:    movd %edi, %xmm0
+; SSE2-64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-64-NEXT:    retq
+;
+; SSE41-64-LABEL: test_buildvector_v4i32_split_v8i16:
+; SSE41-64:       # %bb.0:
+; SSE41-64-NEXT:    movd %edi, %xmm0
+; SSE41-64-NEXT:    pinsrd $1, %esi, %xmm0
+; SSE41-64-NEXT:    pinsrd $2, %edx, %xmm0
+; SSE41-64-NEXT:    pinsrd $3, %ecx, %xmm0
+; SSE41-64-NEXT:    retq
+;
+; AVX-32-LABEL: test_buildvector_v4i32_split_v8i16:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm0
+; AVX-32-NEXT:    retl
+;
+; AVX-64-LABEL: test_buildvector_v4i32_split_v8i16:
+; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vmovd %edi, %xmm0
+; AVX-64-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
+; AVX-64-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; AVX-64-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
+; AVX-64-NEXT:    retq
+  %a0.lo = trunc i32 %a0 to i16
+  %a1.lo = trunc i32 %a1 to i16
+  %a2.lo = trunc i32 %a2 to i16
+  %a3.lo = trunc i32 %a3 to i16
+  %a0.shr = lshr i32 %a0, 16
+  %a1.shr = lshr i32 %a1, 16
+  %a2.shr = lshr i32 %a2, 16
+  %a3.shr = lshr i32 %a3, 16
+  %a0.hi = trunc i32 %a0.shr to i16
+  %a1.hi = trunc i32 %a1.shr to i16
+  %a2.hi = trunc i32 %a2.shr to i16
+  %a3.hi = trunc i32 %a3.shr to i16
+  %v0 = insertelement <8 x i16> poison, i16 %a0.lo, i64 0
+  %v1 = insertelement <8 x i16> %v0, i16 %a0.hi, i64 1
+  %v2 = insertelement <8 x i16> %v1, i16 %a1.lo, i64 2
+  %v3 = insertelement <8 x i16> %v2, i16 %a1.hi, i64 3
+  %v4 = insertelement <8 x i16> %v3, i16 %a2.lo, i64 4
+  %v5 = insertelement <8 x i16> %v4, i16 %a2.hi, i64 5
+  %v6 = insertelement <8 x i16> %v5, i16 %a3.lo, i64 6
+  %v7 = insertelement <8 x i16> %v6, i16 %a3.hi, i64 7
+  ret <8 x i16> %v7
+}
+
+define <16 x i8> @test_buildvector_v8i16_split_v16i8(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4, i16 %a5, i16 %a6, i16 %a7) nounwind {
+; SSE2-32-LABEL: test_buildvector_v8i16_split_v16i8:
+; SSE2-32:       # %bb.0:
+; SSE2-32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-32-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-32-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSE2-32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-32-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SSE2-32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; SSE2-32-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-32-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSE2-32-NEXT:    retl
+;
+; SSE2-64-LABEL: test_buildvector_v8i16_split_v16i8:
+; SSE2-64:       # %bb.0:
+; SSE2-64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-64-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-64-NEXT:    movd %r9d, %xmm0
+; SSE2-64-NEXT:    movd %r8d, %xmm2
+; SSE2-64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSE2-64-NEXT:    movd %ecx, %xmm0
+; SSE2-64-NEXT:    movd %edx, %xmm1
+; SSE2-64-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-64-NEXT:    movd %esi, %xmm3
+; SSE2-64-NEXT:    movd %edi, %xmm0
+; SSE2-64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; SSE2-64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSE2-64-NEXT:    retq
+;
+; SSE41-32-LABEL: test_buildvector_v8i16_split_v16i8:
+; SSE41-32:       # %bb.0:
+; SSE41-32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-32-NEXT:    pinsrw $1, {{[0-9]+}}(%esp), %xmm0
+; SSE41-32-NEXT:    pinsrw $2, {{[0-9]+}}(%esp), %xmm0
+; SSE41-32-NEXT:    pinsrw $3, {{[0-9]+}}(%esp), %xmm0
+; SSE41-32-NEXT:    pinsrw $4, {{[0-9]+}}(%esp), %xmm0
+; SSE41-32-NEXT:    pinsrw $5, {{[0-9]+}}(%esp), %xmm0
+; SSE41-32-NEXT:    pinsrw $6, {{[0-9]+}}(%esp), %xmm0
+; SSE41-32-NEXT:    pinsrw $7, {{[0-9]+}}(%esp), %xmm0
+; SSE41-32-NEXT:    retl
+;
+; SSE41-64-LABEL: test_buildvector_v8i16_split_v16i8:
+; SSE41-64:       # %bb.0:
+; SSE41-64-NEXT:    movd %edi, %xmm0
+; SSE41-64-NEXT:    pinsrw $1, %esi, %xmm0
+; SSE41-64-NEXT:    pinsrw $2, %edx, %xmm0
+; SSE41-64-NEXT:    pinsrw $3, %ecx, %xmm0
+; SSE41-64-NEXT:    pinsrw $4, %r8d, %xmm0
+; SSE41-64-NEXT:    pinsrw $5, %r9d, %xmm0
+; SSE41-64-NEXT:    pinsrw $6, {{[0-9]+}}(%rsp), %xmm0
+; SSE41-64-NEXT:    pinsrw $7, {{[0-9]+}}(%rsp), %xmm0
+; SSE41-64-NEXT:    retq
+;
+; AVX-32-LABEL: test_buildvector_v8i16_split_v16i8:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vpinsrw $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $4, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $5, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $6, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $7, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX-32-NEXT:    retl
+;
+; AVX-64-LABEL: test_buildvector_v8i16_split_v16i8:
+; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vmovd %edi, %xmm0
+; AVX-64-NEXT:    vpinsrw $1, %esi, %xmm0, %xmm0
+; AVX-64-NEXT:    vpinsrw $2, %edx, %xmm0, %xmm0
+; AVX-64-NEXT:    vpinsrw $3, %ecx, %xmm0, %xmm0
+; AVX-64-NEXT:    vpinsrw $4, %r8d, %xmm0, %xmm0
+; AVX-64-NEXT:    vpinsrw $5, %r9d, %xmm0, %xmm0
+; AVX-64-NEXT:    vpinsrw $6, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX-64-NEXT:    vpinsrw $7, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX-64-NEXT:    retq
+  %a0.lo = trunc i16 %a0 to i8
+  %a1.lo = trunc i16 %a1 to i8
+  %a2.lo = trunc i16 %a2 to i8
+  %a3.lo = trunc i16 %a3 to i8
+  %a4.lo = trunc i16 %a4 to i8
+  %a5.lo = trunc i16 %a5 to i8
+  %a6.lo = trunc i16 %a6 to i8
+  %a7.lo = trunc i16 %a7 to i8
+  %a0.shr = lshr i16 %a0, 8
+  %a1.shr = lshr i16 %a1, 8
+  %a2.shr = lshr i16 %a2, 8
+  %a3.shr = lshr i16 %a3, 8
+  %a4.shr = lshr i16 %a4, 8
+  %a5.shr = lshr i16 %a5, 8
+  %a6.shr = lshr i16 %a6, 8
+  %a7.shr = lshr i16 %a7, 8
+  %a0.hi = trunc i16 %a0.shr to i8
+  %a1.hi = trunc i16 %a1.shr to i8
+  %a2.hi = trunc i16 %a2.shr to i8
+  %a3.hi = trunc i16 %a3.shr to i8
+  %a4.hi = trunc i16 %a4.shr to i8
+  %a5.hi = trunc i16 %a5.shr to i8
+  %a6.hi = trunc i16 %a6.shr to i8
+  %a7.hi = trunc i16 %a7.shr to i8
+  %v0 = insertelement <16 x i8> poison, i8 %a0.lo, i64 0
+  %v1 = insertelement <16 x i8> %v0, i8 %a0.hi, i64 1
+  %v2 = insertelement <16 x i8> %v1, i8 %a1.lo, i64 2
+  %v3 = insertelement <16 x i8> %v2, i8 %a1.hi, i64 3
+  %v4 = insertelement <16 x i8> %v3, i8 %a2.lo, i64 4
+  %v5 = insertelement <16 x i8> %v4, i8 %a2.hi, i64 5
+  %v6 = insertelement <16 x i8> %v5, i8 %a3.lo, i64 6
+  %v7 = insertelement <16 x i8> %v6, i8 %a3.hi, i64 7
+  %v8 = insertelement <16 x i8> %v7, i8 %a4.lo, i64 8
+  %v9 = insertelement <16 x i8> %v8, i8 %a4.hi, i64 9
+  %v10 = insertelement <16 x i8> %v9, i8 %a5.lo, i64 10
+  %v11 = insertelement <16 x i8> %v10, i8 %a5.hi, i64 11
+  %v12 = insertelement <16 x i8> %v11, i8 %a6.lo, i64 12
+  %v13 = insertelement <16 x i8> %v12, i8 %a6.hi, i64 13
+  %v14 = insertelement <16 x i8> %v13, i8 %a7.lo, i64 14
+  %v15 = insertelement <16 x i8> %v14, i8 %a7.hi, i64 15
+  ret <16 x i8> %v15
+}
+
 ; build vectors of repeated elements
 
 define <4 x float> @test_buildvector_4f32_2_var(float %a0, float %a1) {

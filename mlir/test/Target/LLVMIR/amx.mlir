@@ -23,6 +23,19 @@ func.func @amx_tile_load_store(%base: memref<?x?xi8>, %out: memref<?x?xi8>,
   return
 }
 
+// CHECK-LABEL: define void @amx_tile_load_store_strided
+func.func @amx_tile_load_store_strided(%base: memref<?xi8>, %out: memref<?xi8>,
+    %idx: index, %stride: index)
+{
+  // CHECK: call x86_amx @llvm.x86.tileloadd64.internal
+  // CHECK: call void @llvm.x86.tilestored64.internal
+  %val = amx.tile_load %base[%idx], %stride
+    : memref<?xi8> into !amx.tile<16x64xi8>
+  amx.tile_store %out[%idx], %val, %stride
+    : memref<?xi8>, !amx.tile<16x64xi8>
+  return
+}
+
 // CHECK-LABEL: define void @amx_tile_mulf_bf16
 func.func @amx_tile_mulf_bf16(
     %matA: memref<?x?xbf16>, %matB: memref<?x?xbf16>, %idx: index,

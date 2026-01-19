@@ -47,7 +47,7 @@ struct C {
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-5]]:3)'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed at {{.*}}:[[@LINE-5]]:3)'
 
   union {
     // CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+5]]:3> line:[[@LINE-1]]:3 union definition
@@ -128,7 +128,7 @@ union G {
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-5]]:3)'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed at {{.*}}:[[@LINE-5]]:3)'
 
   union {
     // CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+5]]:3> line:[[@LINE-1]]:3 union definition

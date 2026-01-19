@@ -1,4 +1,4 @@
-//===--- UnnecessaryValueParamCheck.cpp - clang-tidy-----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,11 +51,11 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl = parmVarDecl(
-      hasType(qualType(
-          hasCanonicalType(matchers::isExpensiveToCopy()),
-          unless(anyOf(hasCanonicalType(referenceType()),
-                       hasDeclaration(namedDecl(
-                           matchers::matchesAnyListedName(AllowedTypes))))))),
+      hasType(qualType(hasCanonicalType(matchers::isExpensiveToCopy()),
+                       unless(anyOf(hasCanonicalType(referenceType()),
+                                    hasDeclaration(namedDecl(
+                                        matchers::matchesAnyListedRegexName(
+                                            AllowedTypes))))))),
       decl().bind("param"));
   Finder->addMatcher(
       traverse(TK_AsIs,
@@ -73,7 +73,7 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Param = Result.Nodes.getNodeAs<ParmVarDecl>("param");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("functionDecl");
 
-  TraversalKindScope RAII(*Result.Context, TK_AsIs);
+  const TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
   FunctionParmMutationAnalyzer *Analyzer =
       FunctionParmMutationAnalyzer::getFunctionParmMutationAnalyzer(

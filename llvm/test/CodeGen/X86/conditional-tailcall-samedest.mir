@@ -35,12 +35,12 @@
     ]
 
   sw.bb:                                            ; preds = %entry, %entry
-    %tmp = load atomic i8, i8* bitcast (i64* @static_local_guard to i8*) acquire, align 8
+    %tmp = load atomic i8, ptr @static_local_guard acquire, align 8
     %guard.uninitialized.i = icmp eq i8 %tmp, 0
     br i1 %guard.uninitialized.i, label %init.check.i, label %return, !prof !0
 
   init.check.i:                                     ; preds = %sw.bb
-    tail call void @initialize_static_local(i64* nonnull @static_local_guard)
+    tail call void @initialize_static_local(ptr nonnull @static_local_guard)
     ret void
 
   sw.bb2:                                           ; preds = %entry
@@ -57,10 +57,10 @@
 
   declare void @mergeable_conditional_tailcall()
 
-  declare void @initialize_static_local(i64*)
+  declare void @initialize_static_local(ptr)
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { optsize }
   attributes #1 = { nounwind }
@@ -118,7 +118,7 @@ body:             |
   bb.2.sw.bb:
     successors: %bb.3(0x00000800), %bb.6(0x7ffff800)
 
-    $al = MOV8rm $rip, 1, $noreg, @static_local_guard, $noreg :: (volatile load acquire (s8) from `i8* bitcast (i64* @static_local_guard to i8*)`, align 8)
+    $al = MOV8rm $rip, 1, $noreg, @static_local_guard, $noreg :: (volatile load acquire (s8) from `ptr bitcast (ptr @static_local_guard to ptr)`, align 8)
     TEST8rr killed $al, $al, implicit-def $eflags
     JCC_1 %bb.6, 5, implicit killed $eflags
     JMP_1 %bb.3

@@ -8,7 +8,7 @@ define void @no_outer_loop(ptr nocapture noundef %a, ptr nocapture noundef reado
 ; CHECK:      Calculating cost of runtime checks:
 ; CHECK-NOT:  We expect runtime memory checks to be hoisted out of the outer loop.
 ; CHECK:      Total cost of runtime checks: 4
-; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:16
+; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   br label %inner.loop
 
@@ -34,7 +34,7 @@ define void @outer_no_tc(ptr nocapture noundef %a, ptr nocapture noundef readonl
 ; CHECK:      Calculating cost of runtime checks:
 ; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 6 to 3
 ; CHECK:      Total cost of runtime checks: 3
-; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:16
+; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   br label %outer.loop
 
@@ -71,7 +71,7 @@ define void @outer_known_tc3(ptr nocapture noundef %a, ptr nocapture noundef rea
 ; CHECK:      Calculating cost of runtime checks:
 ; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 6 to 2
 ; CHECK:      Total cost of runtime checks: 2
-; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:16
+; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   br label %outer.loop
 
@@ -108,7 +108,7 @@ define void @outer_known_tc64(ptr nocapture noundef %a, ptr nocapture noundef re
 ; CHECK:      Calculating cost of runtime checks:
 ; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 6 to 1
 ; CHECK:      Total cost of runtime checks: 1
-; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:16
+; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   br label %outer.loop
 
@@ -145,7 +145,7 @@ define void @outer_pgo_3(ptr nocapture noundef %a, ptr nocapture noundef readonl
 ; CHECK:      Calculating cost of runtime checks:
 ; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 6 to 2
 ; CHECK:      Total cost of runtime checks: 2
-; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:16
+; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   br label %outer.loop
 
@@ -182,7 +182,7 @@ define void @outer_pgo_minus1(ptr nocapture noundef %a, ptr nocapture noundef re
 ; CHECK:      Calculating cost of runtime checks:
 ; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 6 to 1
 ; CHECK:      Total cost of runtime checks: 1
-; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:16
+; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   br label %outer.loop
 
@@ -219,7 +219,7 @@ define void @outer_known_tc3_full_range_checks(ptr nocapture noundef %dst, ptr n
 ; CHECK:      Calculating cost of runtime checks:
 ; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 6 to 2
 ; CHECK:      Total cost of runtime checks: 2
-; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:4
+; CHECK:      LV: Minimum required TC for runtime checks to be profitable:4
 entry:
   br label %outer.loop
 

@@ -91,6 +91,10 @@ public:
     /// or vector.
     EK_VectorElement,
 
+    /// The entity being initialized is an element of a matrix.
+    /// or matrix.
+    EK_MatrixElement,
+
     /// The entity being initialized is a field of block descriptor for
     /// the copied-in c++ object.
     EK_BlockElement,
@@ -205,8 +209,8 @@ private:
     /// virtual base.
     llvm::PointerIntPair<const CXXBaseSpecifier *, 1> Base;
 
-    /// When Kind == EK_ArrayElement, EK_VectorElement, or
-    /// EK_ComplexElement, the index of the array or vector element being
+    /// When Kind == EK_ArrayElement, EK_VectorElement, EK_MatrixElement,
+    /// or EK_ComplexElement, the index of the array or vector element being
     /// initialized.
     unsigned Index;
 
@@ -536,7 +540,7 @@ public:
   /// element's index.
   unsigned getElementIndex() const {
     assert(getKind() == EK_ArrayElement || getKind() == EK_VectorElement ||
-           getKind() == EK_ComplexElement);
+           getKind() == EK_MatrixElement || getKind() == EK_ComplexElement);
     return Index;
   }
 
@@ -544,7 +548,7 @@ public:
   /// element, sets the element index.
   void setElementIndex(unsigned Index) {
     assert(getKind() == EK_ArrayElement || getKind() == EK_VectorElement ||
-           getKind() == EK_ComplexElement);
+           getKind() == EK_MatrixElement || getKind() == EK_ComplexElement);
     this->Index = Index;
   }
 
@@ -1126,6 +1130,9 @@ public:
 
     // A designated initializer was provided for a non-aggregate type.
     FK_DesignatedInitForNonAggregate,
+
+    /// HLSL intialization list flattening failed.
+    FK_HLSLInitListFlatteningFailed,
   };
 
 private:

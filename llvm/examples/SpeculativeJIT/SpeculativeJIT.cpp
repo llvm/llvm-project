@@ -20,7 +20,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
 
-#include <list>
 #include <string>
 
 using namespace llvm;
@@ -185,6 +184,4 @@ int main(int argc, char *argv[]) {
   auto Main = MainSym.getAddress().toPtr<int (*)(int, char *[])>();
 
   return runAsMain(Main, InputArgv, StringRef(InputFiles.front()));
-
-  return 0;
 }
