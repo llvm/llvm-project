@@ -4145,12 +4145,12 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     R << "unable to lower function: "
       << ore::NV("Prototype", F.getFunctionType());
 
-    // Create a block if this would have been the first block
-    // to avoid MachineDominatorTree hitting a sentinel assertion
-    if (MF->empty()) {
-      MachineBasicBlock *EntryBB = MF->CreateMachineBasicBlock();
-      MF->push_back(EntryBB);
-    }
+    // // Create a block if this would have been the first block
+    // // to avoid MachineDominatorTree hitting a sentinel assertion
+    // if (MF->empty()) {
+    //   MachineBasicBlock *EntryBB = MF->CreateMachineBasicBlock();
+    //   MF->push_back(EntryBB);
+    // }
 
     reportTranslationError(*MF, *ORE, R);
     return false;
