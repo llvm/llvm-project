@@ -125,6 +125,11 @@ public:
       unsigned SubIdx, const TargetRegisterClass *SubRC) const;
 
 private:
+  bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
+                   bool NeedInversion) const;
+
+  bool invertSCCUse(MachineInstr *SCCDef) const;
+
   void swapOperands(MachineInstr &Inst) const;
 
   std::pair<bool, MachineBasicBlock *>
@@ -456,12 +461,6 @@ public:
 
   bool isSALU(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SALU;
-  }
-
-  static bool isProgramStateSALU(const MachineInstr &MI) {
-    return MI.getOpcode() == AMDGPU::S_DELAY_ALU ||
-           MI.getOpcode() == AMDGPU::S_SET_VGPR_MSB ||
-           MI.getOpcode() == AMDGPU::ATOMIC_FENCE;
   }
 
   static bool isVALU(const MachineInstr &MI) {

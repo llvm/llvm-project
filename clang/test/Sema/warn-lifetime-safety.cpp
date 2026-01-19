@@ -1,9 +1,14 @@
 // RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
 
+#include "Inputs/lifetime-analysis.h"
+
 struct View;
 
 struct [[gsl::Owner]] MyObj {
   int id;
+  MyObj();
+  MyObj(int);
+  MyObj(const MyObj&);
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
   
@@ -1393,26 +1398,36 @@ void add(int c, MyObj* node) {
 }
 } // namespace CppCoverage
 
-// Implicit this annotations with redecls.
-namespace GH172013 {
-// https://github.com/llvm/llvm-project/issues/62072
-// https://github.com/llvm/llvm-project/issues/172013
-struct S {
-    View x() const [[clang::lifetimebound]];
-    MyObj i;
-};
-
-View S::x() const { return i; }
-
-void bar() {
-    View x;
-    {
-        S s;
-        x = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
-        View y = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} \
-          expected-note {{destroyed here}}
-        (void)y; // expected-note {{later used here}}
-    } // expected-note {{destroyed here}}
-    (void)x; // expected-note {{used here}}
+namespace do_not_warn_on_std_move {
+void silenced() {
+  MyObj b;
+  View v;
+  {
+    MyObj a;
+    v = a;
+    b = std::move(a); // No warning for 'a' being moved.
+  }
+  (void)v;
 }
+
+void silenced_flow_insensitive(bool c) {
+  MyObj a;
+  View v = a;
+  if (c) {
+    MyObj b = std::move(a);
+  }
+  (void)v;
 }
+
+// FIXME: Silence when move arg is not a declref.
+void take(MyObj&&);
+void not_silenced_via_conditional(bool cond) {
+  View v;
+  {
+    MyObj a, b;
+    v = cond ? a : b; // expected-warning 2 {{object whose reference }}
+    take(std::move(cond ? a : b));
+  }         // expected-note 2 {{destroyed here}}
+  (void)v;  // expected-note 2 {{later used here}}
+}
+} // namespace do_not_warn_on_std_move

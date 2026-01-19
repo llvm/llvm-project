@@ -140,7 +140,7 @@ Exception handling
 Clang static analyzer
 ~~~~~~~~~~~~~~~~~~~~~
 | Artem Dergachev
-| adergachev\@apple.com (email), NoQ (Phabricator), haoNoQ (GitHub)
+| artem.dergachev\@gmail.com (email), NoQ (Phabricator), haoNoQ (GitHub)
 
 | Gábor Horváth
 | xazax.hun\@gmail.com (email), xazax.hun (Phabricator), Xazax-hun (GitHub)
@@ -208,6 +208,12 @@ Code Coverage
 
 | Alan Phipps
 | a-phipps\@ti.com (email), evodius96 (GitHub), evodius96 (Discourse)
+
+
+Python Bindings
+~~~~~~~~~~~~~~~
+| Vlad Serebrennikov
+| serebrennikov.vladislav\@gmail.com (email), Endilll (GitHub), Endill (Discord), Endill (Discourse)
 
 
 Tools
