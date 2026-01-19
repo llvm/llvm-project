@@ -1450,25 +1450,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareSimdConstruct &x) {
   const Scope &progUnitScope = GetProgramUnitContaining(containingScope);
 
   for (const parser::OmpClause &clause : x.v.Clauses().v) {
-    llvm::omp::Clause id{clause.Id()};
-    if (id != llvm::omp::Clause::OMPC_uniform) {
-      continue;
-    }
     const auto *u = std::get_if<parser::OmpClause::Uniform>(&clause.u);
     if (!u) {
       continue;
     }
+    assert(clause.Id() == llvm::omp::Clause::OMPC_uniform);
+
     for (const parser::Name &name : u->v) {
       const Symbol *sym{name.symbol};
-      if (!sym) {
-        context_.Say(name.source,
-            "Variable '%s' in UNIFORM clause must be a dummy argument of the "
-            "enclosing procedure"_err_en_US,
-            name.ToString());
-        continue;
-      }
-
-      if (!IsDummy(*sym) ||
+      if (!sym || !IsDummy(*sym) ||
           &GetProgramUnitContaining(sym->owner()) != &progUnitScope) {
         context_.Say(name.source,
             "Variable '%s' in UNIFORM clause must be a dummy argument of the "
