@@ -14,9 +14,9 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-    namespace math {
+namespace math {
 
-LIBC_INLINCE static constexpr (long double, logbl, (long double x)) {
+LIBC_INLINCE static constexpr(long double, logbl, (long double x)) {
   return fputil::logb(x);
 }
 
