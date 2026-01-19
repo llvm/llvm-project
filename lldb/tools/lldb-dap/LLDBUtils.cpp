@@ -19,6 +19,7 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
@@ -275,6 +276,40 @@ lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
   lldb::SBSymbolContext sc = target.ResolveSymbolContextForAddress(
       address, lldb::eSymbolContextLineEntry);
   return sc.GetLineEntry();
+}
+
+std::optional<size_t> UTF16CodeunitToBytes(llvm::StringRef line,
+                                           uint32_t utf16_codeunits) {
+  size_t bytes_count = 0;
+  size_t utf16_seen_cu = 0;
+  size_t idx = 0;
+  const size_t line_size = line.size();
+
+  while (idx < line_size && utf16_seen_cu < utf16_codeunits) {
+    const char first_char = line[idx];
+    const auto num_bytes = llvm::getNumBytesForUTF8(first_char);
+
+    if (num_bytes == 4) {
+      utf16_seen_cu += 2;
+    } else if (num_bytes < 4) {
+      utf16_seen_cu += 1;
+    } else {
+      // getNumBytesForUTF8 may return bytes greater than 4 this is not valid
+      // UTF8
+      return std::nullopt;
+    }
+
+    idx += num_bytes;
+    if (utf16_seen_cu <= utf16_codeunits) {
+      bytes_count = idx;
+    } else {
+      // We are in the middle of a codepoint or the utf16_codeunits ends in the
+      // middle of a codepoint.
+      return std::nullopt;
+    }
+  }
+
+  return bytes_count;
 }
 
 } // namespace lldb_dap
