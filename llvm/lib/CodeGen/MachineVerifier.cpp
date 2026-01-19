@@ -955,8 +955,8 @@ void MachineVerifier::verifyInlineAsm(const MachineInstr *MI) {
     report("Asm flags must be an immediate", MI);
   // Allowed flags are Extra_HasSideEffects = 1, Extra_IsAlignStack = 2,
   // Extra_AsmDialect = 4, Extra_MayLoad = 8, and Extra_MayStore = 16,
-  // and Extra_IsConvergent = 32.
-  if (!isUInt<6>(MI->getOperand(1).getImm()))
+  // and Extra_IsConvergent = 32, Extra_MayUnwind = 64.
+  if (!isUInt<7>(MI->getOperand(1).getImm()))
     report("Unknown asm flags", &MI->getOperand(1), 1);
 
   static_assert(InlineAsm::MIOp_FirstOperand == 2, "Asm format changed");
