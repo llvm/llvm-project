@@ -920,7 +920,7 @@ static DenseElementsAttr binaryFolder(DenseElementsAttr lhs,
 
   return {};
 }
-struct AddFoldAdaptor {
+struct FoldAddAdaptor {
   static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
                                const bool isUnsigned) {
     bool overflow;
@@ -936,7 +936,7 @@ struct AddFoldAdaptor {
   }
 };
 
-struct SubFoldAdaptor {
+struct FoldSubAdaptor {
   static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
                                const bool isUnsigned) {
     bool overflow;
@@ -1031,7 +1031,7 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<AddFoldAdaptor>(lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<FoldAddAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult ArgMaxOp::fold(FoldAdaptor adaptor) {
@@ -1212,7 +1212,7 @@ OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<SubFoldAdaptor>(lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<FoldSubAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult GreaterOp::fold(FoldAdaptor adaptor) {
