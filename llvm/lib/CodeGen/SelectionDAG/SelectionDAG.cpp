@@ -14056,15 +14056,26 @@ BuildVectorSDNode::isConstantSequence() const {
       Start = Val;
     } else if (SecondIdx < 0) {
       SecondIdx = I;
-      // Compute stride based on the difference between the two elements.
+      // Compute stride using modular arithmetic. Simple division would handle
+      // common strides (1, 2, -1, etc.), but modular inverse maximizes matches.
+      // Example: <0, poison, poison, 0xFF> has stride 0x55 since 3*0x55 = 0xFF
+      // Note that modular arithmetic is agnostic to signed/unsigned.
       unsigned IdxDiff = I - FirstIdx;
       APInt ValDiff = Val - Start;
-      if (ValDiff.srem(IdxDiff) != 0)
-        return std::nullopt;
-      Stride = ValDiff.sdiv(IdxDiff);
+
+      // Step 1: Factor out common powers of 2 from IdxDiff and ValDiff.
+      unsigned CommonPow2Bits = llvm::countr_zero(IdxDiff);
+      if (ValDiff.countr_zero() < CommonPow2Bits)
+        return std::nullopt; // ValDiff not divisible by 2^CommonPow2Bits
+      IdxDiff >>= CommonPow2Bits;
+      ValDiff.lshrInPlace(CommonPow2Bits);
+
+      // Step 2: IdxDiff is now odd, so its inverse mod 2^EltSize exists.
+      Stride = ValDiff * APInt(EltSize, IdxDiff).multiplicativeInverse();
       if (Stride.isZero())
         return std::nullopt;
-      // Adjust Start based on the first defined element's index.
+
+      // Step 3: Adjust Start based on the first defined element's index.
       Start -= Stride * FirstIdx;
     } else {
       // Verify this element matches the sequence.

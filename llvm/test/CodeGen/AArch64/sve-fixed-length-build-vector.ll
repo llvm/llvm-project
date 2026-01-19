@@ -190,4 +190,92 @@ define <8 x i8> @zip2_const_seq_with_variable(<8 x i8> %x) #0 {
   ret <8 x i8> %interleave
 }
 
+; Modular arithmetic: <0, poison, poison, 0xFF> has IdxDiff=3, ValDiff=0xFF.
+; Stride = ValDiff * inverse(IdxDiff) mod 2^8 = 0xFF * 0xAB = 0x55.
+; Verify: 0 + 3*85 = 255 mod 256.
+define void @build_vector_mod_inverse_v4i8(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_mod_inverse_v4i8:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    mov w8, #85 // =0x55
+; VBITS_GE_256-NEXT:    ptrue p0.h, vl4
+; VBITS_GE_256-NEXT:    index z0.h, #0, w8
+; VBITS_GE_256-NEXT:    st1b { z0.h }, p0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <4 x i8> <i8 0, i8 poison, i8 poison, i8 255>, ptr %a
+  ret void
+}
+
+; Modular arithmetic: <poison, 0, poison, poison, 0xFE, ...> has IdxDiff=3, ValDiff=0xFE.
+; Stride = ValDiff * inverse(IdxDiff) mod 2^8 = 0xFE * 0xAB = 0xAA.
+; Verify: 86 + 3*170 = 596 = 254 mod 256.
+define void @build_vector_mod_inverse_v8i8_0xAA(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_mod_inverse_v8i8_0xAA:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    mov w8, #170 // =0xaa
+; VBITS_GE_256-NEXT:    index z0.b, #0, w8
+; VBITS_GE_256-NEXT:    add z0.b, z0.b, #86 // =0x56
+; VBITS_GE_256-NEXT:    str d0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <8 x i8> <i8 poison, i8 0, i8 poison, i8 poison, i8 254, i8 poison, i8 poison, i8 poison>, ptr %a
+  ret void
+}
+
+; Modular arithmetic: <poison, poison, 0, poison, poison, 0xFD, ...> has IdxDiff=3, ValDiff=0xFD.
+; Stride = ValDiff * inverse(IdxDiff) mod 2^8 = 0xFD * 0xAB = 0xFF.
+; Verify: 2 + 3*255 = 767 = 253 mod 256.
+define void @build_vector_mod_inverse_v8i8_neg1(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_mod_inverse_v8i8_neg1:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    index z0.b, #2, #-1
+; VBITS_GE_256-NEXT:    str d0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <8 x i8> <i8 poison, i8 poison, i8 0, i8 poison, i8 poison, i8 253, i8 poison, i8 poison>, ptr %a
+  ret void
+}
+
+; Modular arithmetic: <poison, 0xAA, poison, 0x54, poison, 0xFE, poison> has IdxDiff=2, ValDiff=0xAA.
+; Stride = (ValDiff/2) * inverse(IdxDiff/2) mod 2^8 = 0x55 * 0x01 = 0x55.
+; Verify: 85 + 1*85 = 170, 85 + 3*85 = 340 = 84, 85 + 5*85 = 510 = 254 mod 256.
+define void @build_vector_mod_inverse_v7i8(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_mod_inverse_v7i8:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    mov w8, #85 // =0x55
+; VBITS_GE_256-NEXT:    index z0.b, #0, w8
+; VBITS_GE_256-NEXT:    add z0.b, z0.b, #85 // =0x55
+; VBITS_GE_256-NEXT:    mov h1, v0.h[2]
+; VBITS_GE_256-NEXT:    str s0, [x0]
+; VBITS_GE_256-NEXT:    str h1, [x0, #4]
+; VBITS_GE_256-NEXT:    ret
+  store <7 x i8> <i8 poison, i8 170, i8 poison, i8 84, i8 poison, i8 254, i8 poison>, ptr %a
+  ret void
+}
+
+; Modular arithmetic: <0, poison, poison, 0xFFFF> has IdxDiff=3, ValDiff=0xFFFF.
+; Stride = ValDiff * inverse(IdxDiff) mod 2^16 = 0xFFFF * 0xAAAB = 0x5555.
+; Verify: 0 + 3*21845 = 65535 mod 65536.
+define void @build_vector_mod_inverse_i16(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_mod_inverse_i16:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    mov w8, #21845 // =0x5555
+; VBITS_GE_256-NEXT:    index z0.h, #0, w8
+; VBITS_GE_256-NEXT:    str d0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <4 x i16> <i16 0, i16 poison, i16 poison, i16 -1>, ptr %a
+  ret void
+}
+
+; Modular arithmetic: <1, poison, poison, 0> has IdxDiff=3, ValDiff=0xFFFFFFFF.
+; Stride = ValDiff * inverse(IdxDiff) mod 2^32 = 0xFFFFFFFF * 0xAAAAAAAB = 0x55555555.
+; Verify: 1 + 3*1431655765 = 4294967296 = 0 mod 2^32.
+define void @build_vector_mod_inverse_i32(ptr %a) #0 {
+; VBITS_GE_256-LABEL: build_vector_mod_inverse_i32:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    mov w8, #1431655765 // =0x55555555
+; VBITS_GE_256-NEXT:    index z0.s, #1, w8
+; VBITS_GE_256-NEXT:    str q0, [x0]
+; VBITS_GE_256-NEXT:    ret
+  store <4 x i32> <i32 1, i32 poison, i32 poison, i32 0>, ptr %a
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
