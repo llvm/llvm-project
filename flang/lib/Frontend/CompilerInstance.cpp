@@ -28,6 +28,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -318,8 +319,67 @@ getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
   return llvm::join(featuresVec, ",");
 }
 
+enum ppcCPU { prePwr8, prePwr10 };
+static std::optional<ppcCPU> ppcType(std::string &cpu) {
+  return llvm::StringSwitch<std::optional<ppcCPU>>(cpu)
+      .Case("future", std::nullopt)
+      .Case("pwr11", std::nullopt)
+      .Case("pwr10", std::nullopt)
+      .Case("pwr9", prePwr10)
+      .Case("pwr8", prePwr10)
+      .Default(prePwr8);
+}
+
+static std::string
+getExplicitAndImplicitPPCTargetFeatures(clang::DiagnosticsEngine &diags,
+                                        TargetOptions &targetOpts,
+                                        const llvm::Triple triple) {
+  std::vector<std::string> featuresVec;
+  std::optional<llvm::StringMap<bool>> FeaturesOpt =
+      llvm::PPC::getPPCDefaultTargetFeatures(triple, targetOpts.cpu);
+  if (FeaturesOpt) {
+    for (auto &I : FeaturesOpt.value()) {
+      featuresVec.push_back(
+          (llvm::Twine(I.second ? "+" : "-") + I.first().str()).str());
+    }
+  }
+  // Check if the feature already exists.
+  for (auto v : targetOpts.featuresAsWritten) {
+    if (std::find(featuresVec.begin(), featuresVec.end(), v) ==
+        featuresVec.end()) {
+      featuresVec.push_back(v);
+    }
+  }
+
+  // Some features are not supported in earlier CPUs.
+  std::map<std::string_view, std::vector<ppcCPU>> unsupportedFeatures{
+      {"+mma", {prePwr8, prePwr10}},
+      {"+paired-vector-memops", {prePwr8, prePwr10}},
+      {"+pcrelative-memops", {prePwr8, prePwr10}},
+      {"+prefix-instrs", {prePwr8, prePwr10}},
+      {"+privileged", {prePwr8}},
+      {"+rop-protect", {prePwr8}}};
+  // Check if there are any unsupported features specified.
+  if (auto cpuType = ppcType(targetOpts.cpu)) {
+    for (auto f : unsupportedFeatures) {
+      for (auto g : f.second) {
+        if (cpuType.value() == g) {
+          if (llvm::is_contained(featuresVec, f.first)) {
+            diags.Report(clang::diag::err_opt_not_valid_on_target) << f.first;
+            return std::string();
+          }
+        }
+      }
+    }
+  }
+
+  llvm::sort(featuresVec);
+  targetOpts.targetFeatureStr = llvm::join(featuresVec, ",");
+  return targetOpts.targetFeatureStr;
+}
+
 std::string CompilerInstance::getTargetFeatures() {
-  const TargetOptions &targetOpts = getInvocation().getTargetOpts();
+  TargetOptions &targetOpts = getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
 
   // Clang does not append all target features to the clang -cc1 invocation.
@@ -334,13 +394,16 @@ std::string CompilerInstance::getTargetFeatures() {
   } else if (triple.isNVPTX()) {
     return getExplicitAndImplicitNVPTXTargetFeatures(getDiagnostics(),
                                                      targetOpts, triple);
+  } else if (triple.isPPC()) {
+    return getExplicitAndImplicitPPCTargetFeatures(getDiagnostics(), targetOpts,
+                                                   triple);
   }
   return llvm::join(targetOpts.featuresAsWritten.begin(),
                     targetOpts.featuresAsWritten.end(), ",");
 }
 
 bool CompilerInstance::setUpTargetMachine() {
-  const TargetOptions &targetOpts = getInvocation().getTargetOpts();
+  TargetOptions &targetOpts = getInvocation().getTargetOpts();
   const std::string &theTriple = targetOpts.triple;
 
   // Create `Target`
@@ -372,6 +435,11 @@ bool CompilerInstance::setUpTargetMachine() {
       /*Reloc::Model=*/CGOpts.getRelocationModel(),
       /*CodeModel::Model=*/cm, OptLevel));
   assert(targetMachine && "Failed to create TargetMachine");
+
+  if (!triple.isPPC()) {
+    targetOpts.targetFeatureStr = targetMachine->getTargetFeatureString();
+  }
+
   if (cm.has_value()) {
     if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
         triple.getArch() == llvm::Triple::x86_64) {

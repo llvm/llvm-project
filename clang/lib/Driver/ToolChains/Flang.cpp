@@ -553,6 +553,7 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddPPCTargetArgs(Args, CmdArgs);
     break;
   case llvm::Triple::loongarch64:

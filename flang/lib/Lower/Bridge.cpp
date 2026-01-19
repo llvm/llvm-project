@@ -7332,7 +7332,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
                                    targetOpts.atomicIgnoreDenormalMode);
   fir::setAtomicFineGrainedMemory(*module, targetOpts.atomicFineGrainedMemory);
   fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
-  fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
+  fir::setTargetFeatures(*module, targetOpts.targetFeatureStr);
   fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   if (cgOpts.RecordCommandLine)
