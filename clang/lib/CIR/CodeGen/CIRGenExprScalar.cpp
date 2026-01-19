@@ -181,10 +181,11 @@ public:
   mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
     return cgf.emitCoawaitExpr(*s).getValue();
   }
+
   mlir::Value VisitCoyieldExpr(CoyieldExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: coyield");
-    return {};
+    return cgf.emitCoyieldExpr(*e).getValue();
   }
+
   mlir::Value VisitUnaryCoawait(const UnaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: unary coawait");
     return {};

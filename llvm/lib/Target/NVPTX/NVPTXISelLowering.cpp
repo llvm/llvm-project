@@ -1092,7 +1092,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Custom lowering for tcgen05.ld vector operands
   setOperationAction(ISD::INTRINSIC_W_CHAIN,
                      {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
-                      MVT::v32i32, MVT::v64i32, MVT::v128i32},
+                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::v2f32,
+                      MVT::v4f32, MVT::v8f32, MVT::v16f32, MVT::v32f32,
+                      MVT::v64f32, MVT::v128f32},
                      Custom);
 
   // Custom lowering for tcgen05.st vector operands
@@ -3005,6 +3007,121 @@ static SDValue lowerPrmtIntrinsic(SDValue Op, SelectionDAG &DAG) {
   return getPRMT(A, B, Selector, DL, DAG, Mode);
 }
 
+#define TCGEN05_LD_RED_INTR(SHAPE, NUM, TYPE)                                  \
+  Intrinsic::nvvm_tcgen05_ld_red_##SHAPE##_x##NUM##_##TYPE
+
+#define TCGEN05_LD_RED_INST(SHAPE, NUM, TYPE)                                  \
+  NVPTXISD::TCGEN05_LD_RED_##SHAPE##_X##NUM##_##TYPE
+
+static unsigned getTcgen05LdRedID(Intrinsic::ID IID) {
+  switch (IID) {
+  case TCGEN05_LD_RED_INTR(32x32b, 2, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 2, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 4, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 4, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 8, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 8, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 16, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 16, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 32, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 32, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 64, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 64, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 128, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 128, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 2, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 2, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 4, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 4, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 8, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 8, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 16, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 16, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 32, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 32, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 64, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 64, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 128, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 128, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 2, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 2, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 4, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 4, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 8, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 8, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 16, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 16, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 32, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 32, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 64, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 64, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 128, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 128, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 2, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 2, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 4, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 4, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 8, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 8, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 16, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 16, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 32, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 32, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 64, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 64, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 128, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 128, I32);
+  default:
+    llvm_unreachable("Invalid tcgen05.ld.red intrinsic ID");
+  }
+}
+
+// Lower vector return type of tcgen05.ld intrinsics
+static std::optional<std::tuple<SDValue, SDValue, SDValue>>
+lowerTcgen05LdRed(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+  if (!ResVT.isVector())
+    return {}; // already legalized.
+
+  const unsigned NumElts = ResVT.getVectorNumElements();
+
+  // Create the return type of the instructions
+  // +1 represents the reduction value
+  SmallVector<EVT, 132> ListVTs{
+      NumElts + 1,
+      ResVT.getVectorElementType().isFloatingPoint() ? MVT::f32 : MVT::i32};
+
+  ListVTs.push_back(MVT::Other); // Chain
+
+  SDVTList ResVTs = DAG.getVTList(ListVTs);
+
+  // Prepare the Operands
+  SmallVector<SDValue, 8> Ops{N->getOperand(0)}; // Chain
+
+  // skip IID at index 1
+  for (unsigned i = 2; i < N->getNumOperands(); i++)
+    Ops.push_back(N->getOperand(i));
+
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  MemIntrinsicSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+  SDValue NewNode =
+      DAG.getMemIntrinsicNode(getTcgen05LdRedID(IID), DL, ResVTs, Ops,
+                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  // Split vector result
+  SmallVector<SDValue, 132> ScalarRes;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Res = NewNode.getValue(i);
+    ScalarRes.push_back(Res);
+  }
+
+  SDValue BuildVector = DAG.getNode(ISD::BUILD_VECTOR, DL, ResVT, ScalarRes);
+  SDValue RedResult = NewNode.getValue(NumElts);
+  SDValue Chain = NewNode.getValue(NumElts + 1);
+  return {{BuildVector, RedResult, Chain}};
+}
+
 static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(1)) {
   default:
@@ -3022,6 +3139,15 @@ static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
     if (auto Res = lowerTcgen05Ld(Op.getNode(), DAG, /*HasOffset=*/true))
       return DAG.getMergeValues({Res->first, Res->second}, SDLoc(Op));
+    return SDValue();
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x2_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x2_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x2_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x2_i32:
+    if (auto Res = lowerTcgen05LdRed(Op.getNode(), DAG))
+      return DAG.getMergeValues(
+          {std::get<0>(*Res), std::get<1>(*Res), std::get<2>(*Res)}, SDLoc(Op));
     return SDValue();
   }
 }
@@ -5024,9 +5150,22 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x2_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x2_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x2_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x2_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v2f32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
@@ -5038,9 +5177,22 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x4_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x4_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x4_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x4_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v4f32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
@@ -5052,9 +5204,22 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x8_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x8_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v8i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x8_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x8_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v8f32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
@@ -5066,9 +5231,22 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x16_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x16_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v16i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x16_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x16_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v16f32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
@@ -5080,9 +5258,22 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x32_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x32_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v32i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x32_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x32_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v32f32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
@@ -5094,9 +5285,22 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x64_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x64_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v64i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x64_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x64_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v64f32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
@@ -5108,9 +5312,22 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x128:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x128_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x128_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v128i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x128_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x128_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v128f32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
@@ -6862,6 +7079,37 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
       Results.push_back(Res->second);
     }
     return;
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x8_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x8_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x64_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x64_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x4_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x4_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x32_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x32_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x16_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x16_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x128_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x128_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x8_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x8_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x64_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x64_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x4_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x4_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x32_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x32_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x16_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x16_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x128_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x128_f32:
+    if (auto Res = lowerTcgen05LdRed(N, DAG)) {
+      Results.push_back(std::get<0>(*Res));
+      Results.push_back(std::get<1>(*Res));
+      Results.push_back(std::get<2>(*Res));
+    }
+    return;
   }
 }
 
@@ -6977,7 +7225,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
 }
 
 NVPTXTargetLowering::AtomicExpansionKind
-NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();
 
   if (AI->isFloatingPointOperation()) {
