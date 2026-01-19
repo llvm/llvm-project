@@ -2603,19 +2603,19 @@ static void licm(VPlan &Plan) {
           }))
         continue;
 
-      VPBasicBlock *SinkBB = nullptr;
       // TODO: Support sinking when users are in multiple blocks.
-      if (UserBBs.size() == 1) {
-        SinkBB = *UserBBs.begin();
-        // Only sink to dedicated exit blocks.
-        if (!DedicatedExits.contains(SinkBB))
-          continue;
-        // Skip if the defining block does not dominate the sink block.
-        if (!VPDT.properlyDominates(VPBB, SinkBB))
-          continue;
+      if (UserBBs.size() != 1)
+        continue;
 
-        Def->moveBefore(*SinkBB, SinkBB->getFirstNonPhi());
-      }
+      VPBasicBlock *SinkBB = *UserBBs.begin();
+      // Only sink to dedicated exit blocks.
+      if (!DedicatedExits.contains(SinkBB))
+        continue;
+      // Skip if the defining block does not dominate the sink block.
+      if (!VPDT.properlyDominates(VPBB, SinkBB))
+        continue;
+
+      Def->moveBefore(*SinkBB, SinkBB->getFirstNonPhi());
     }
   }
 }
