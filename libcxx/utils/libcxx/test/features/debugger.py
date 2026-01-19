@@ -11,6 +11,9 @@ import shutil
 import subprocess
 
 
+features = []
+
+
 # Detect whether dbx debugger (available on AIX and others) is on the system.
 def check_dbx(cfg):
     dbx_path = shutil.which("dbx")
@@ -20,7 +23,7 @@ def check_dbx(cfg):
     return True
 
 
-DEFAULT_FEATURES += [
+features += [
     Feature(
         name="host-has-dbx",
         when=check_dbx,
@@ -38,7 +41,7 @@ def check_lldb(cfg):
     return True
 
 
-DEFAULT_FEATURES += [
+features += [
     Feature(
         name="host-has-lldb",
         when=check_lldb,
@@ -78,7 +81,7 @@ gdb.execute(\"quit\")"""
     return not "Python scripting is not supported" in stdout
 
 
-features = [
+features += [
     Feature(
         name="host-has-gdb-with-python",
         when=check_gdb,
