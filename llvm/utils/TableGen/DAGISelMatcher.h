@@ -222,14 +222,7 @@ public:
     return Res;
   }
 
-  void setNumChildren(unsigned NC) {
-    if (NC < Children.size()) {
-      // delete any children we're about to lose pointers to.
-      for (unsigned i = NC, e = Children.size(); i != e; ++i)
-        delete Children[i];
-    }
-    Children.resize(NC);
-  }
+  SmallVectorImpl<Matcher *> &getChildren() { return Children; }
 
   static bool classof(const Matcher *N) { return N->getKind() == Scope; }
 

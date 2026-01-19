@@ -20,6 +20,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 
@@ -366,9 +367,9 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
     lldb_private::StreamString error_stream;
     diagnostic_consumer->DumpDiagnostics(error_stream);
 
-    return llvm::createStringError(llvm::formatv(
-        "couldn't load top-level module {0}:\n{1}",
-        module.path.front().GetStringRef(), error_stream.GetString()));
+    return llvm::createStringErrorV("couldn't load top-level module {0}:\n{1}",
+                                    module.path.front().GetStringRef(),
+                                    error_stream.GetString());
   }
 
   clang::Module *submodule = top_level_module;
@@ -379,10 +380,10 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
       lldb_private::StreamString error_stream;
       diagnostic_consumer->DumpDiagnostics(error_stream);
 
-      return llvm::createStringError(llvm::formatv(
+      return llvm::createStringErrorV(
           "couldn't load submodule '{0}' of module '{1}':\n{2}",
           component.GetStringRef(), submodule->getFullModuleName(),
-          error_stream.GetString()));
+          error_stream.GetString());
     }
 
     submodule = found;
@@ -408,9 +409,8 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
     return llvm::Error::success();
   }
 
-  return llvm::createStringError(
-      llvm::formatv("unknown error while loading module {0}\n",
-                    module.path.front().GetStringRef()));
+  return llvm::createStringErrorV("unknown error while loading module {0}\n",
+                                  module.path.front().GetStringRef());
 }
 
 bool ClangModulesDeclVendor::LanguageSupportsClangModules(
