@@ -31,16 +31,13 @@ extern "C" {
   for (size_t I = 0; I < count; ++I)
     dstc[I] = C;
 }
-#if !defined(__SPIRV__)
 [[gnu::weak]] int printf(const char *Format, ...) {
   __builtin_va_list vlist;
   __builtin_va_start(vlist, Format);
   return ::vprintf(Format, vlist);
 }
-#endif
 }
 
-#if !defined(__SPIRV__)
 namespace ompx {
 [[clang::no_builtin("printf")]] int printf(const char *Format, ...) {
   __builtin_va_list vlist;
@@ -48,4 +45,4 @@ namespace ompx {
   return ::vprintf(Format, vlist);
 }
 } // namespace ompx
-#endif
+
