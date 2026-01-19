@@ -193,7 +193,7 @@ count_t ConvertTimeSpecToCount(int kind, const struct timespec &tspec) {
 #ifndef _AIX
 // More accurate version with nanosecond accuracy
 template <typename Unused = void>
-staitic count_t GetSystemClockCount(int kind, fallback_implementation) {
+static count_t GetSystemClockCount(int kind, fallback_implementation) {
   struct timespec tspec;
 
   if (timespec_get(&tspec, TIME_UTC) < 0) {
