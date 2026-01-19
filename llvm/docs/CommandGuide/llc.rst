@@ -194,16 +194,15 @@ Tuning/Configuration Options
 
 .. option:: --regalloc-npm=<pipeline>
 
- Specify a register allocator pipeline for the new pass manager. This option
- requires ``-enable-new-pm``. The ``<pipeline>`` is a comma-separated list of
- register allocator passes that must match the number of allocation phases
- expected by the target. Cannot be used together with ``--passes``.
+ Specify a custom pipeline for register allocation phases when using the new
+ pass manager. The ``<pipeline>`` is a comma-separated list of machine function
+ passes. Cannot be used together with ``--passes``.
 
- Valid passes are:
+ Common passes:
 
  *regallocfast*
 
-  Fast register allocator. Only valid at ``-O0``.
+  Fast register allocator.
 
  *greedy<filter>*
 
@@ -213,13 +212,13 @@ Tuning/Configuration Options
 
  *default*
 
-  Use the target's default allocator for this phase.
+  Use the target's or opt level's default allocator for this phase.
 
  The number of passes should match the target's allocation phases. Most targets
  use single-phase allocation. X86 with AMX uses two phases (tile, then general).
  AMDGPU uses three phases (SGPR, WWM, VGPR). Specifying more passes than the
  target expects results in an error. Specifying fewer is allowed; remaining
- phases use target defaults.
+ phases use target or opt level defaults.
 
  .. code-block:: none
 
