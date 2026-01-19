@@ -106,33 +106,14 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
   return true;
 }
 
-static bool DecodeAArch64HostFeatures(llvm::AArch64::ExtensionSet &Extensions) {
-  llvm::StringMap<bool> HostFeatures = llvm::sys::getHostCPUFeatures();
-
-  for (auto &[Feature, Enabled] : HostFeatures) {
-    std::string F = ("+" + Feature).str();
-    if (auto AE = llvm::AArch64::targetFeatureToExtension(F)) {
-      if (Enabled)
-        Extensions.enable(AE->ID);
-      else
-        Extensions.disable(AE->ID);
-      continue;
-    }
-    return false;
-  }
-
-  return true;
-}
-
 // Check if the CPU name and feature modifiers in -mcpu are legal. If yes,
 // decode CPU and feature.
-static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu,
+static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
                               llvm::AArch64::ExtensionSet &Extensions) {
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
-  StringRef CPU = Split.first;
-  const bool IsNative = CPU == "native";
+  CPU = Split.first;
 
-  if (IsNative)
+  if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();
 
   const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
@@ -141,9 +122,6 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu,
     return false;
 
   Extensions.addCPUDefaults(*CpuInfo);
-
-  if (IsNative && !DecodeAArch64HostFeatures(Extensions))
-    return false;
 
   if (Split.second.size() &&
       !DecodeAArch64Features(D, Split.second, Extensions))
@@ -175,26 +153,40 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   return true;
 }
 
-static bool
-getAArch64ArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
-                               const ArgList &Args,
-                               llvm::AArch64::ExtensionSet &Extensions) {
+static bool getAArch64ArchFeaturesFromMcpu(
+    const Driver &D, StringRef Mcpu, const ArgList &Args,
+    llvm::AArch64::ExtensionSet &Extensions, std::vector<StringRef> &Features) {
+  StringRef CPU;
   std::string McpuLowerCase = Mcpu.lower();
-  return DecodeAArch64Mcpu(D, McpuLowerCase, Extensions);
+  if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, Extensions))
+    return false;
+
+  if (Mcpu == "native") {
+    llvm::StringMap<bool> HostFeatures = llvm::sys::getHostCPUFeatures();
+    for (auto &[Feature, Enabled] : HostFeatures) {
+      Features.push_back(Args.MakeArgString((Enabled ? "+" : "-") + Feature));
+    }
+  }
+
+  return true;
 }
 
-static bool getAArch64MicroArchFeaturesFromMtune(const Driver &D,
-                                                 StringRef Mtune,
-                                                 const ArgList &Args) {
+static bool
+getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
+                                     const ArgList &Args,
+                                     std::vector<StringRef> &Features) {
   // Check CPU name is valid, but ignore any extensions on it.
   std::string MtuneLowerCase = Mtune.lower();
   llvm::AArch64::ExtensionSet Extensions;
-  return DecodeAArch64Mcpu(D, MtuneLowerCase, Extensions);
+  StringRef Tune;
+  return DecodeAArch64Mcpu(D, MtuneLowerCase, Tune, Extensions);
 }
 
-static bool getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
-                                                const ArgList &Args) {
-  return getAArch64MicroArchFeaturesFromMtune(D, Mcpu, Args);
+static bool
+getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
+                                    const ArgList &Args,
+                                    std::vector<StringRef> &Features) {
+  return getAArch64MicroArchFeaturesFromMtune(D, Mcpu, Args, Features);
 }
 
 void aarch64::getAArch64TargetFeatures(const Driver &D,
@@ -221,22 +213,24 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success =
         getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Extensions);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
-    success =
-        getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions);
+    success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions,
+                                             Features);
   else if (isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions);
+        D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions, Features);
   else
     // Default to 'A' profile if the architecture is not specified.
     success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
 
   if (success && (A = Args.getLastArg(options::OPT_mtune_EQ)))
-    success = getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args);
+    success =
+        getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args, Features);
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
-    success = getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args);
+    success =
+        getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
   else if (success && isCPUDeterminedByTriple(Triple))
     success = getAArch64MicroArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, Triple, A), Args);
+        D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
 
   if (!success) {
     auto Diag = D.Diag(diag::err_drv_unsupported_option_argument);
