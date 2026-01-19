@@ -32,6 +32,7 @@
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
+#include <type_traits>
 #include <utility>
 
 #define DEBUG_TYPE "linalg-transforms"
@@ -1406,13 +1407,21 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
 
 template <typename Conv2DOp, typename Conv1DOp>
 FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
-    returningMatchAndRewrite(Conv2DOp convOp, PatternRewriter &rewriter) const {
+    returningMatchAndRewrite(LinalgOp convOp, PatternRewriter &rewriter) const {
+  // Check if this LinalgOp is of the expected Conv2DOp type (named or generic).
+  std::optional<DilationsAndStrides> convParams =
+      matchConvolutionOpOfType<Conv2DOp>(convOp);
+  if (!convParams)
+    return failure();
+  SmallVector<int64_t> dilations = std::move(convParams->dilations);
+  SmallVector<int64_t> strides = std::move(convParams->strides);
+
   if (convOp.hasPureBufferSemantics())
     return failure(); // To be implemented.
 
-  Value input = convOp.getInputs().front();
-  Value kernel = convOp.getInputs().back();
-  Value output = convOp.getOutputs().front();
+  Value input = convOp.getDpsInputs().front();
+  Value kernel = convOp.getDpsInputs().back();
+  Value output = convOp.getDpsInits().front();
 
   auto inputType = dyn_cast<RankedTensorType>(input.getType());
   auto kernelType = dyn_cast<RankedTensorType>(kernel.getType());
@@ -1421,38 +1430,33 @@ FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
   auto kernelShape = kernelType.getShape();
   auto outputShape = outputType.getShape();
 
-  // Get domain indices based on conv2D layout.
-  auto [khIndex, kwIndex, ohIndex, owIndex] =
-      TypeSwitch<Operation *, std::tuple<int64_t, int64_t, int64_t, int64_t>>(
-          convOp)
-          .Case([&](linalg::Conv2DNhwcHwcfOp op) {
-            return std::make_tuple(0, 1, 1, 2);
-          })
-          .Case([&](linalg::Conv2DNchwFchwOp op) {
-            return std::make_tuple(2, 3, 2, 3);
-          })
-          .Case([&](linalg::PoolingNhwcSumOp op) {
-            return std::make_tuple(0, 1, 1, 2);
-          })
-          .Case([&](linalg::PoolingNchwSumOp op) {
-            return std::make_tuple(0, 1, 2, 3);
-          })
-          .Case([&](linalg::PoolingNhwcMaxOp op) {
-            return std::make_tuple(0, 1, 1, 2);
-          })
-          .Case([&](linalg::PoolingNhwcMaxUnsignedOp op) {
-            return std::make_tuple(0, 1, 1, 2);
-          })
-          .Case([&](linalg::PoolingNhwcMinOp op) {
-            return std::make_tuple(0, 1, 1, 2);
-          })
-          .Case([&](linalg::PoolingNhwcMinUnsignedOp op) {
-            return std::make_tuple(0, 1, 1, 2);
-          })
-          .Case([&](linalg::PoolingNchwMaxOp op) {
-            return std::make_tuple(0, 1, 2, 3);
-          })
-          .DefaultUnreachable("unexpected conv2d/pool2d operation.");
+  // Get domain indices based on Conv2DOp type. These are known at compile time.
+  int64_t khIndex, kwIndex, ohIndex, owIndex;
+  if constexpr (std::is_same_v<Conv2DOp, linalg::Conv2DNhwcHwcfOp> ||
+                std::is_same_v<Conv2DOp, linalg::PoolingNhwcSumOp> ||
+                std::is_same_v<Conv2DOp, linalg::PoolingNhwcMaxOp> ||
+                std::is_same_v<Conv2DOp, linalg::PoolingNhwcMaxUnsignedOp> ||
+                std::is_same_v<Conv2DOp, linalg::PoolingNhwcMinOp> ||
+                std::is_same_v<Conv2DOp, linalg::PoolingNhwcMinUnsignedOp>) {
+    // NHWC layout: kernel [H, W, ...], output [N, H, W, C]
+    khIndex = 0;
+    kwIndex = 1;
+    ohIndex = 1;
+    owIndex = 2;
+  } else if constexpr (std::is_same_v<Conv2DOp, linalg::Conv2DNchwFchwOp>) {
+    // NCHW_FCHW layout: kernel [..., H, W], output [N, C, H, W]
+    khIndex = 2;
+    kwIndex = 3;
+    ohIndex = 2;
+    owIndex = 3;
+  } else if constexpr (std::is_same_v<Conv2DOp, linalg::PoolingNchwSumOp> ||
+                       std::is_same_v<Conv2DOp, linalg::PoolingNchwMaxOp>) {
+    // NCHW pooling layout: kernel [H, W], output [N, C, H, W]
+    khIndex = 0;
+    kwIndex = 1;
+    ohIndex = 2;
+    owIndex = 3;
+  }
 
   // Only handle the case where at least one of the window dimensions is
   // of size 1. Other cases can rely on tiling to reduce to such cases.
@@ -1484,13 +1488,9 @@ FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
 
   // Rank-reduce strides and dilations too.
   // TODO: dropDim 1-liner helper.
-  auto strides =
-      llvm::to_vector<4>(convOp.getStrides().template getValues<int64_t>());
   strides.erase(strides.begin() + (removeH ? 0 : 1));
   auto stridesAttr = rewriter.getI64VectorAttr(strides);
 
-  auto dilations =
-      llvm::to_vector<4>(convOp.getDilations().template getValues<int64_t>());
   dilations.erase(dilations.begin() + (removeH ? 0 : 1));
   auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
 
@@ -1527,13 +1527,21 @@ template struct linalg::DownscaleSizeOneWindowed2DConvolution<PoolingNchwMaxOp,
 
 FailureOr<DepthwiseConv1DNwcWcOp>
 DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
-    DepthwiseConv2DNhwcHwcOp convOp, PatternRewriter &rewriter) const {
+    LinalgOp convOp, PatternRewriter &rewriter) const {
+  // Check if this LinalgOp is a DepthwiseConv2DNhwcHwcOp (named or generic).
+  std::optional<DilationsAndStrides> convParams =
+      matchConvolutionOpOfType<DepthwiseConv2DNhwcHwcOp>(convOp);
+  if (!convParams)
+    return failure();
+  SmallVector<int64_t> dilations = std::move(convParams->dilations);
+  SmallVector<int64_t> strides = std::move(convParams->strides);
+
   if (convOp.hasPureBufferSemantics())
     return failure(); // To be implemented.
 
-  Value input = convOp.getInputs().front();
-  Value kernel = convOp.getInputs().back();
-  Value output = convOp.getOutputs().front();
+  Value input = convOp.getDpsInputs().front();
+  Value kernel = convOp.getDpsInputs().back();
+  Value output = convOp.getDpsInits().front();
 
   auto inputType = dyn_cast<RankedTensorType>(input.getType());
   auto kernelType = dyn_cast<RankedTensorType>(kernel.getType());
@@ -1572,12 +1580,9 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
 
   // Rank-reduce strides and dilations too.
   // TODO: dropDim 1-liner helper.
-  auto strides = llvm::to_vector<4>(convOp.getStrides().getValues<int64_t>());
   strides.erase(strides.begin() + (removeH ? 0 : 1));
   auto stridesAttr = rewriter.getI64VectorAttr(strides);
 
-  auto dilations =
-      llvm::to_vector<4>(convOp.getDilations().getValues<int64_t>());
   dilations.erase(dilations.begin() + (removeH ? 0 : 1));
   auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
 
@@ -1594,14 +1599,20 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
 }
 
 FailureOr<Conv1DOp>
-DownscaleConv2DOp::returningMatchAndRewrite(Conv2DOp convOp,
+DownscaleConv2DOp::returningMatchAndRewrite(LinalgOp convOp,
                                             PatternRewriter &rewriter) const {
+  // Check if this LinalgOp is a Conv2DOp (named or generic).
+  std::optional<DilationsAndStrides> convParams =
+      matchConvolutionOpOfType<Conv2DOp>(convOp);
+  if (!convParams)
+    return failure();
+
   if (convOp.hasPureBufferSemantics())
     return failure(); // To be implemented.
 
-  Value input = convOp.getInputs().front();
-  Value kernel = convOp.getInputs().back();
-  Value output = convOp.getOutputs().front();
+  Value input = convOp.getDpsInputs().front();
+  Value kernel = convOp.getDpsInputs().back();
+  Value output = convOp.getDpsInits().front();
 
   auto inputType = dyn_cast<RankedTensorType>(input.getType());
   auto kernelType = dyn_cast<RankedTensorType>(kernel.getType());

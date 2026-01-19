@@ -410,8 +410,7 @@ define nofpclass(nzero) float @source_is_known_ninf(float nofpclass(pinf nan nor
 define nofpclass(nzero) float @source_is_known_nan(float nofpclass(inf norm sub zero) %must.be.nan) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_nan(
 ; CHECK-SAME: float nofpclass(inf zero sub norm) [[MUST_BE_NAN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd float [[MUST_BE_NAN]], 1.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    ret float [[MUST_BE_NAN]]
 ;
   %exp = call float @llvm.exp2.f32(float %must.be.nan)
   ret float %exp
@@ -420,8 +419,7 @@ define nofpclass(nzero) float @source_is_known_nan(float nofpclass(inf norm sub 
 define nofpclass(nzero) float @source_is_known_nan_preserve_flags(float nofpclass(inf norm sub zero) %must.be.nan) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_nan_preserve_flags(
 ; CHECK-SAME: float nofpclass(inf zero sub norm) [[MUST_BE_NAN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd nsz contract float [[MUST_BE_NAN]], 1.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    ret float [[MUST_BE_NAN]]
 ;
   %exp = call contract nsz float @llvm.exp2.f32(float %must.be.nan)
   ret float %exp
@@ -483,8 +481,7 @@ define nofpclass(pzero) <2 x float> @source_is_known_zero_or_nan_vec(<2 x float>
 define nofpclass(nzero) float @source_is_known_snan(float nofpclass(inf norm sub zero qnan) %must.be.snan) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_snan(
 ; CHECK-SAME: float nofpclass(qnan inf zero sub norm) [[MUST_BE_SNAN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd float [[MUST_BE_SNAN]], 1.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    ret float [[MUST_BE_SNAN]]
 ;
   %exp = call float @llvm.exp2.f32(float %must.be.snan)
   ret float %exp
@@ -493,8 +490,7 @@ define nofpclass(nzero) float @source_is_known_snan(float nofpclass(inf norm sub
 define nofpclass(nzero) float @source_is_known_qnan(float nofpclass(inf norm sub zero snan) %must.be.qnan) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_qnan(
 ; CHECK-SAME: float nofpclass(snan inf zero sub norm) [[MUST_BE_QNAN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd float [[MUST_BE_QNAN]], 1.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    ret float [[MUST_BE_QNAN]]
 ;
   %exp = call float @llvm.exp2.f32(float %must.be.qnan)
   ret float %exp
@@ -520,6 +516,51 @@ define nofpclass(nan inf nnorm sub zero) float @posnormal_result_demands_negnorm
   %select = select i1 %cond, float %unknown, float %neg.normal
   %exp = call float @llvm.exp2.f32(float %select)
   ret float %exp
+}
+
+define nofpclass(inf zero sub norm) float @ret_only_nan__exp2(float %x) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_only_nan__exp2(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    ret float 0x7FF8000000000000
+;
+  %exp = call float @llvm.exp2.f32(float %x)
+  ret float %exp
+}
+
+define nofpclass(qnan inf zero sub norm) float @ret_only_snan__exp2(float %x) {
+; CHECK-LABEL: define nofpclass(qnan inf zero sub norm) float @ret_only_snan__exp2(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    ret float poison
+;
+  %exp = call float @llvm.exp2.f32(float %x)
+  ret float %exp
+}
+
+define nofpclass(snan inf zero sub norm) float @ret_only_qnan__exp2(float %x) {
+; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_only_qnan__exp2(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    ret float 0x7FF8000000000000
+;
+  %exp = call float @llvm.exp2.f32(float %x)
+  ret float %exp
+}
+
+define nofpclass(inf zero sub norm) <2 x float> @ret_only_nan__exp2_vec(<2 x float> %x) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) <2 x float> @ret_only_nan__exp2_vec(
+; CHECK-SAME: <2 x float> [[X:%.*]]) {
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF8000000000000)
+;
+  %exp = call <2 x float> @llvm.exp2.v2f32(<2 x float> %x)
+  ret <2 x float> %exp
+}
+
+define nofpclass(inf zero sub norm) <2 x float> @ret_only_nan__exp2_vec_partially_defined(<2 x float> %x) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) <2 x float> @ret_only_nan__exp2_vec_partially_defined(
+; CHECK-SAME: <2 x float> [[X:%.*]]) {
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF8000000000000)
+;
+  %exp = call <2 x float> @llvm.exp2.v2f32(<2 x float> <float 0x7ff8000000000000, float poison>)
+  ret <2 x float> %exp
 }
 
 !0 = !{!"function_entry_count", i64 1000}

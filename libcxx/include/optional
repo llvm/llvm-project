@@ -477,14 +477,21 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
     }
   }
 
-  template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val) {
-    this->__get() = std::forward<_Up>(__val);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_storage_base& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+  __swap(__optional_storage_base& __rhs) noexcept(is_nothrow_move_constructible_v<_Tp> && is_nothrow_swappable_v<_Tp>) {
     using std::swap;
-    swap(this->__get(), __rhs.__get());
+    if (this->has_value() == __rhs.has_value()) {
+      if (this->has_value())
+        swap(this->__get(), __rhs.__get());
+    } else {
+      if (this->has_value()) {
+        __rhs.__construct(std::move(this->__get()));
+        this->reset();
+      } else {
+        this->__construct(std::move(__rhs.__get()));
+        __rhs.reset();
+      }
+    }
   }
 };
 
@@ -496,21 +503,25 @@ struct __optional_storage_base<_Tp, true> {
 
   _LIBCPP_HIDE_FROM_ABI constexpr __optional_storage_base() noexcept : __value_(nullptr) {}
 
+  template <class _Up>
+  _LIBCPP_HIDE_FROM_ABI constexpr void __convert_init_ref_val(_Up&& __val) noexcept {
+    _Tp& __r(std::forward<_Up>(__val));
+    __value_ = std::addressof(__r);
+  }
+
   template <class _UArg>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_storage_base(in_place_t, _UArg&& __uarg)
-      : __value_(std::addressof(__uarg)) {
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_storage_base(in_place_t, _UArg&& __uarg) {
     static_assert(!__reference_constructs_from_temporary_v<_Tp, _UArg>,
                   "Attempted to construct a reference element in optional from a "
                   "possible temporary");
+    __convert_init_ref_val(std::forward<_UArg>(__uarg));
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void reset() noexcept { __value_ = nullptr; }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return __value_ != nullptr; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr value_type& __get() const& noexcept { return *__value_; }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr value_type&& __get() const&& noexcept { return std::forward<value_type>(*__value_); }
+  _LIBCPP_HIDE_FROM_ABI constexpr value_type& __get() const noexcept { return *__value_; }
 
   template <class _UArg>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_UArg&& __val) {
@@ -518,7 +529,7 @@ struct __optional_storage_base<_Tp, true> {
     static_assert(!__reference_constructs_from_temporary_v<_Tp, _UArg>,
                   "Attempted to construct a reference element in tuple from a "
                   "possible temporary");
-    __value_ = std::addressof(__val);
+    __convert_init_ref_val(std::forward<_UArg>(__val));
   }
 
   template <class _That>
@@ -538,11 +549,6 @@ struct __optional_storage_base<_Tp, true> {
       else
         __construct(std::forward<_That>(__opt).__get());
     }
-  }
-
-  template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val) noexcept {
-    __value_ = std::addressof(__val);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_storage_base& __rhs) noexcept {
@@ -655,7 +661,7 @@ using __optional_sfinae_assign_base_t _LIBCPP_NODEBUG =
 template <class _Tp>
 class optional;
 
-#    if _LIBCPP_STD_VER >= 26
+#    if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 template <class _Tp>
 constexpr bool ranges::enable_view<optional<_Tp>> = true;
 
@@ -703,10 +709,10 @@ inline constexpr bool __is_constructible_for_optional_initializer_list_v<_Tp&, _
 template <class _Tp, class = void>
 struct __optional_iterator {};
 
-#    if _LIBCPP_STD_VER >= 26
+#    if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 
 template <class _Tp>
-struct __optional_iterator<_Tp, enable_if_t<!is_lvalue_reference_v<_Tp>>> {
+struct __optional_iterator<_Tp, enable_if_t<is_object_v<_Tp>>> {
 private:
   using __pointer _LIBCPP_NODEBUG       = add_pointer_t<_Tp>;
   using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
@@ -790,7 +796,7 @@ public:
   }
 };
 
-#    endif // _LIBCPP_STD_VER >= 26
+#    endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 
 template <class _Tp>
 class _LIBCPP_DECLSPEC_EMPTY_BASES optional
@@ -909,38 +915,61 @@ public:
       : __base(in_place, __il, std::forward<_Args>(__args)...) {}
 
   template <class _Up = _Tp, enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_implicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI constexpr optional(_Up&& __v) : __base(in_place, std::forward<_Up>(__v)) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr optional(_Up&& __v)
+#    if _LIBCPP_STD_VER >= 26
+      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up>)
+#    endif
+      : __base(in_place, std::forward<_Up>(__v)) {
+  }
 
   template <class _Up                                                                        = remove_cv_t<_Tp>,
             enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_explicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(_Up&& __v) : __base(in_place, std::forward<_Up>(__v)) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(_Up&& __v)
+#    if _LIBCPP_STD_VER >= 26
+      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up>)
+#    endif
+      : __base(in_place, std::forward<_Up>(__v)) {
+  }
 
   // LWG2756: conditionally explicit conversion from const optional<_Up>&
   template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_implicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(const optional<_Up>& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(const optional<_Up>& __v)
+#    if _LIBCPP_STD_VER >= 26
+      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up&>)
+#    endif
+  {
     this->__construct_from(__v);
   }
   template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_explicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit optional(const optional<_Up>& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit optional(const optional<_Up>& __v)
+#    if _LIBCPP_STD_VER >= 26
+      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up&>)
+#    endif
+  {
     this->__construct_from(__v);
   }
 
   // LWG2756: conditionally explicit conversion from optional<_Up>&&
   template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_implicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(optional<_Up>&& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(optional<_Up>&& __v)
+#    if _LIBCPP_STD_VER >= 26
+      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up>)
+#    endif
+  {
     this->__construct_from(std::move(__v));
   }
   template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_explicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit optional(optional<_Up>&& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit optional(optional<_Up>&& __v)
+#    if _LIBCPP_STD_VER >= 26
+      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up>)
+#    endif
+  {
     this->__construct_from(std::move(__v));
   }
 
-  // deleted optional<T&> constructors
+  // deleted optional<T&> constructors and additional optional<T&> constructors
 #    if _LIBCPP_STD_VER >= 26
-  template <class _Up, class... _Args, enable_if_t<is_constructible_v<_Tp, initializer_list<_Up>&, _Args...>, int> = 0>
-    requires __libcpp_opt_ref_ctor_deleted<_Up>
-  explicit optional(in_place_t, initializer_list<_Up>, _Args&&...) = delete;
-
+  // optional(U&&)
   template <class _Up = _Tp, enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_implicit<_Up>(), int> = 0>
     requires __libcpp_opt_ref_ctor_deleted<_Up>
   optional(_Up&&) = delete;
@@ -950,6 +979,21 @@ public:
     requires __libcpp_opt_ref_ctor_deleted<_Up>
   explicit optional(_Up&&) = delete;
 
+  // optional(optional<U>& rhs)
+  template <class _Up>
+    requires(!__libcpp_opt_ref_ctor_deleted<_Up>) && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
+            (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up&>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up&, _Tp&>)
+      optional(optional<_Up>& __rhs) noexcept(is_nothrow_constructible_v<_Tp&, _Up&>) {
+    this->__construct_from(__rhs);
+  }
+
+  template <class _Up>
+    requires __libcpp_opt_ref_ctor_deleted<_Up> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
+                 (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up&>
+  constexpr explicit optional(optional<_Up>& __rhs) noexcept = delete;
+
+  // optional(const optional<U>&)
   template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_implicit<_Up>(), int> = 0>
     requires __libcpp_opt_ref_ctor_deleted<_Up>
   optional(const optional<_Up>&) = delete;
@@ -958,6 +1002,7 @@ public:
     requires __libcpp_opt_ref_ctor_deleted<_Up>
   explicit optional(const optional<_Up>&) = delete;
 
+  // optional(optional<U>&&)
   template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_implicit<_Up>(), int> = 0>
     requires __libcpp_opt_ref_ctor_deleted<_Up>
   optional(optional<_Up>&&) = delete;
@@ -965,6 +1010,20 @@ public:
   template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_explicit<_Up>(), int> = 0>
     requires __libcpp_opt_ref_ctor_deleted<_Up>
   explicit optional(optional<_Up>&&) = delete;
+
+  // optional(const optional<U>&&)
+  template <class _Up>
+    requires(!__libcpp_opt_ref_ctor_deleted<_Up>) && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
+            (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!is_convertible_v<const _Up, _Tp&>)
+      optional(const optional<_Up>&& __v) noexcept(is_nothrow_constructible_v<_Tp&, const _Up>) {
+    this->__construct_from(std::move(__v));
+  }
+
+  template <class _Up>
+    requires __libcpp_opt_ref_ctor_deleted<_Up> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
+                 (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(const optional<_Up>&& __v) noexcept = delete;
 #    endif
 
 #    if _LIBCPP_STD_VER >= 23
@@ -989,11 +1048,12 @@ public:
             enable_if_t<_And<_IsNotSame<__remove_cvref_t<_Up>, optional>,
                              _Or<_IsNotSame<__remove_cvref_t<_Up>, _Tp>, _Not<is_scalar<_Tp>>>,
                              is_constructible<_Tp, _Up>,
-                             is_assignable<_Tp&, _Up>>::value,
+                             is_assignable<_Tp&, _Up>,
+                             is_object<_Tp>>::value,
                         int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional& operator=(_Up&& __v) {
     if (this->has_value())
-      this->__assign_from_val(std::forward<_Up>(__v));
+      this->__get() = std::forward<_Up>(__v);
     else
       this->__construct(std::forward<_Up>(__v));
     return *this;
@@ -1013,8 +1073,12 @@ public:
     return *this;
   }
 
-  template <class... _Args, enable_if_t<is_constructible_v<_Tp, _Args...>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(_Args&&... __args) {
+  template <class... _Args, enable_if_t<__is_constructible_for_optional_v<_Tp, _Args...>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(_Args&&... __args)
+#    if _LIBCPP_STD_VER >= 26
+      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp, _Args...>)
+#    endif
+  {
     reset();
     this->__construct(std::forward<_Args>(__args)...);
     return this->__get();
@@ -1022,60 +1086,72 @@ public:
 
   template <class _Up,
             class... _Args,
-            enable_if_t<is_constructible_v<_Tp, initializer_list<_Up>&, _Args...>
-#    if _LIBCPP_STD_VER >= 26
-                            && !reference_constructs_from_temporary_v<_Tp&, _Up>
-#    endif
-                        ,
-                        int> = 0>
+            enable_if_t<__is_constructible_for_optional_initializer_list_v<_Tp, _Up, _Args...>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) {
     reset();
     this->__construct(__il, std::forward<_Args>(__args)...);
     return this->__get();
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-  swap(optional& __opt) noexcept(is_nothrow_move_constructible_v<_Tp> && is_nothrow_swappable_v<_Tp>) {
-    if (this->has_value() == __opt.has_value()) {
-      if (this->has_value())
-        this->__swap(__opt);
-    } else {
-      if (this->has_value()) {
-        __opt.__construct(std::move(this->__get()));
-        reset();
-      } else {
-        this->__construct(std::move(__opt.__get()));
-        __opt.reset();
-      }
-    }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(optional& __opt) noexcept(
+      (is_nothrow_move_constructible_v<_Tp> && is_nothrow_swappable_v<_Tp>)
+#    if _LIBCPP_STD_VER >= 26
+      || is_lvalue_reference_v<_Tp>
+#    endif
+  ) {
+    this->__swap(__opt);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp const> operator->() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp const> operator->() const noexcept
+#    if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#    endif
+  {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
     return std::addressof(this->__get());
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp> operator->() noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp> operator->() noexcept
+#    if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#    endif
+  {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
     return std::addressof(this->__get());
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const& noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const& noexcept
+#    if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#    endif
+  {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
     return this->__get();
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() & noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() & noexcept
+#    if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#    endif
+  {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
     return this->__get();
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator*() && noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator*() && noexcept
+#    if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#    endif
+  {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
     return std::move(this->__get());
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& operator*() const&& noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& operator*() const&& noexcept
+#    if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#    endif
+  {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
     return std::move(this->__get());
   }
@@ -1085,25 +1161,41 @@ public:
   using __base::__get;
   using __base::has_value;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& value() const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& value() const&
+#    if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#    endif
+  {
     if (!this->has_value())
       std::__throw_bad_optional_access();
     return this->__get();
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() & {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() &
+#    if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#    endif
+  {
     if (!this->has_value())
       std::__throw_bad_optional_access();
     return this->__get();
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& value() && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& value() &&
+#    if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#    endif
+  {
     if (!this->has_value())
       std::__throw_bad_optional_access();
     return std::move(this->__get());
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp const&& value() const&& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp const&& value() const&&
+#    if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#    endif
+  {
     if (!this->has_value())
       std::__throw_bad_optional_access();
     return std::move(this->__get());
@@ -1111,8 +1203,7 @@ public:
 
   template <class _Up = remove_cv_t<_Tp>>
 #    if _LIBCPP_STD_VER >= 26
-    requires(!(is_lvalue_reference_v<_Tp> && is_function_v<__libcpp_remove_reference_t<_Tp>>) &&
-             !(is_lvalue_reference_v<_Tp> && is_array_v<__libcpp_remove_reference_t<_Tp>>))
+    requires(is_object_v<_Tp>)
 #    endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) const& {
     static_assert(is_copy_constructible_v<_Tp>, "optional<T>::value_or: T must be copy constructible");
@@ -1122,7 +1213,7 @@ public:
 
   template <class _Up = remove_cv_t<_Tp>>
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) && {
     static_assert(is_move_constructible_v<_Tp>, "optional<T>::value_or: T must be move constructible");
@@ -1130,19 +1221,11 @@ public:
     return this->has_value() ? std::move(this->__get()) : static_cast<_Tp>(std::forward<_Up>(__v));
   }
 
-#    if _LIBCPP_STD_VER >= 26
-  template <class _Up = remove_cv_t<_Tp>>
-    requires(is_lvalue_reference_v<_Tp> &&
-             !(is_function_v<__libcpp_remove_reference_t<_Tp>> || is_array_v<__libcpp_remove_reference_t<_Tp>>))
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) && {
-    static_assert(is_move_constructible_v<_Tp>, "optional<T>::value_or: T must be move constructible");
-    static_assert(is_convertible_v<_Up, _Tp>, "optional<T>::value_or: U must be convertible to T");
-    return this->has_value() ? this->__get() : static_cast<_Tp>(std::forward<_Up>(__v));
-  }
-#    endif
-
 #    if _LIBCPP_STD_VER >= 23
   template <class _Func>
+#      if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) & {
     using _Up = invoke_result_t<_Func, _Tp&>;
     static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
@@ -1153,6 +1236,9 @@ public:
   }
 
   template <class _Func>
+#      if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const& {
     using _Up = invoke_result_t<_Func, const _Tp&>;
     static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
@@ -1163,6 +1249,9 @@ public:
   }
 
   template <class _Func>
+#      if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) && {
     using _Up = invoke_result_t<_Func, _Tp&&>;
     static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
@@ -1173,6 +1262,9 @@ public:
   }
 
   template <class _Func>
+#      if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const&& {
     using _Up = invoke_result_t<_Func, const _Tp&&>;
     static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
@@ -1183,6 +1275,9 @@ public:
   }
 
   template <class _Func>
+#      if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) & {
     using _Up = remove_cv_t<invoke_result_t<_Func, _Tp&>>;
     static_assert(!is_array_v<_Up>, "Result of f(value()) should not be an Array");
@@ -1195,6 +1290,9 @@ public:
   }
 
   template <class _Func>
+#      if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const& {
     using _Up = remove_cv_t<invoke_result_t<_Func, const _Tp&>>;
     static_assert(!is_array_v<_Up>, "Result of f(value()) should not be an Array");
@@ -1207,6 +1305,9 @@ public:
   }
 
   template <class _Func>
+#      if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) && {
     using _Up = remove_cv_t<invoke_result_t<_Func, _Tp&&>>;
     static_assert(!is_array_v<_Up>, "Result of f(std::move(value())) should not be an Array");
@@ -1219,8 +1320,11 @@ public:
   }
 
   template <class _Func>
+#      if _LIBCPP_STD_VER >= 26
+    requires(is_object_v<_Tp>)
+#      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const&& {
-    using _Up = remove_cvref_t<invoke_result_t<_Func, const _Tp&&>>;
+    using _Up = remove_cv_t<invoke_result_t<_Func, const _Tp&&>>;
     static_assert(!is_array_v<_Up>, "Result of f(std::move(value())) should not be an Array");
     static_assert(!is_same_v<_Up, in_place_t>, "Result of f(std::move(value())) should not be std::in_place_t");
     static_assert(!is_same_v<_Up, nullopt_t>, "Result of f(std::move(value())) should not be std::nullopt_t");
@@ -1233,6 +1337,9 @@ public:
   template <invocable _Func>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional or_else(_Func&& __f) const&
     requires is_copy_constructible_v<_Tp>
+#      if _LIBCPP_STD_VER >= 26
+             && (is_object_v<_Tp>)
+#      endif
   {
     static_assert(is_same_v<remove_cvref_t<invoke_result_t<_Func>>, optional>,
                   "Result of f() should be the same type as this optional");
@@ -1244,6 +1351,9 @@ public:
   template <invocable _Func>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional or_else(_Func&& __f) &&
     requires is_move_constructible_v<_Tp>
+#      if _LIBCPP_STD_VER >= 26
+             && (is_object_v<_Tp>)
+#      endif
   {
     static_assert(is_same_v<remove_cvref_t<invoke_result_t<_Func>>, optional>,
                   "Result of f() should be the same type as this optional");
@@ -1254,6 +1364,78 @@ public:
 #    endif // _LIBCPP_STD_VER >= 23
 
   using __base::reset;
+
+// optional<T&> overloads
+#    if _LIBCPP_STD_VER >= 26
+
+  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp> operator->() const noexcept
+    requires(is_lvalue_reference_v<_Tp>)
+  {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
+    return std::addressof(this->__get());
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() const noexcept
+    requires(is_lvalue_reference_v<_Tp>)
+  {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
+    return this->__get();
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() const
+    requires(is_lvalue_reference_v<_Tp>)
+  {
+    if (!this->has_value())
+      std::__throw_bad_optional_access();
+    return this->__get();
+  }
+
+  template <class _Up = remove_cvref_t<_Tp>>
+    requires(is_lvalue_reference_v<_Tp> && is_object_v<__libcpp_remove_reference_t<_Tp>> &&
+             !is_array_v<__libcpp_remove_reference_t<_Tp>>)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decay_t<_Tp> value_or(_Up&& __v) const {
+    static_assert(
+        is_constructible_v<remove_cvref_t<_Tp>, _Tp&>, "optional<T&>::value_or: remove_cv_t<T> must be constructible");
+    static_assert(
+        is_convertible_v<_Up, remove_cvref_t<_Tp>>, "optional<T&>::value_or: U must be convertible to remove_cv_t<T>");
+    return this->has_value() ? this->__get() : static_cast<remove_cvref_t<_Tp>>(std::forward<_Up>(__v));
+  }
+
+  template <class _Func>
+    requires(is_lvalue_reference_v<_Tp>)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const {
+    using _Up = invoke_result_t<_Func, _Tp&>;
+    static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
+                  "Result of f(value()) must be a specialization of std::optional");
+    if (*this)
+      return std::invoke(std::forward<_Func>(__f), value());
+    return remove_cvref_t<_Up>();
+  }
+
+  template <class _Func>
+    requires(is_lvalue_reference_v<_Tp>)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional<remove_cv_t<invoke_result_t<_Func, _Tp&>>>
+  transform(_Func&& __f) const {
+    using _Up = remove_cvref_t<invoke_result_t<_Func, _Tp&>>;
+    static_assert(!is_array_v<_Up>, "Result of f(value()) should not be an Array");
+    static_assert(!is_same_v<_Up, in_place_t>, "Result of f(value()) should not be std::in_place_t");
+    static_assert(!is_same_v<_Up, nullopt_t>, "Result of f(value()) should not be std::nullopt_t");
+    static_assert(is_object_v<_Up>, "Result of f(value()) should be an object type");
+    if (*this)
+      return optional<_Up>(__optional_construct_from_invoke_tag{}, std::forward<_Func>(__f), value());
+    return optional<_Up>();
+  }
+
+  template <invocable _Func>
+    requires(is_lvalue_reference_v<_Tp>)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional or_else(_Func&& __f) const {
+    static_assert(is_same_v<remove_cvref_t<invoke_result_t<_Func>>, optional>,
+                  "Result of f() should be the same type as this optional");
+    if (*this)
+      return *this;
+    return std::forward<_Func>(__f)();
+  }
+#    endif
 };
 
 template <class _Tp>

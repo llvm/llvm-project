@@ -81,6 +81,10 @@ namespace llvm {
     // marker instruction.
     CALL_RVMARKER,
 
+    // Psuedo for a call to a global address that must be called via a memory
+    // address (i.e., not loaded into a register then called).
+    CALL_GLOBALADDR,
+
     /// The same as ISD::CopyFromReg except that this node makes it explicit
     /// that it may lower to an x87 FPU stack pop. Optimizations should be more
     /// cautious when handling this node than a normal CopyFromReg to avoid
@@ -335,6 +339,10 @@ namespace llvm {
     /// Tail call return. See X86TargetLowering::LowerCall for
     /// the list of operands.
     TC_RETURN,
+
+    // Psuedo for a tail call return to a global address that must be called via
+    // a memory address (i.e., not loaded into a register then called).
+    TC_RETURN_GLOBALADDR,
 
     // Vector move to low scalar and zero higher vector elements.
     VZEXT_MOVL,
@@ -804,6 +812,9 @@ namespace llvm {
     GF2P8AFFINEQB,
     GF2P8MULB,
 
+    // Carry-less multiplication
+    PCLMULQDQ,
+
     // LWP insert record.
     LWPINS,
 
@@ -1072,6 +1083,19 @@ namespace llvm {
   //===--------------------------------------------------------------------===//
   //  X86 Implementation of the TargetLowering interface
   class X86TargetLowering final : public TargetLowering {
+    // Copying needed for an outgoing byval argument.
+    enum ByValCopyKind {
+      // Argument is already in the correct location, no copy needed.
+      NoCopy,
+      // Argument value is currently in the local stack frame, needs copying to
+      // outgoing arguemnt area.
+      CopyOnce,
+      // Argument value is currently in the outgoing argument area, but not at
+      // the correct offset, so needs copying via a temporary in local stack
+      // space.
+      CopyViaTemp,
+    };
+
   public:
     explicit X86TargetLowering(const X86TargetMachine &TM,
                                const X86Subtarget &STI);
@@ -1615,8 +1639,6 @@ namespace llvm {
     /// Customize the preferred legalization strategy for certain types.
     LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
-    bool softPromoteHalfType() const override { return true; }
-
     MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                       EVT VT) const override;
 
@@ -1724,11 +1746,11 @@ namespace llvm {
 
     // Call lowering helpers.
 
-    /// Check whether the call is eligible for tail call optimization. Targets
-    /// that want to do tail call optimization should implement this function.
-    bool IsEligibleForTailCallOptimization(
-        TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
-        SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const;
+    /// Check whether the call is eligible for sibling call optimization.
+    bool
+    isEligibleForSiblingCallOpt(TargetLowering::CallLoweringInfo &CLI,
+                                CCState &CCInfo,
+                                SmallVectorImpl<CCValAssign> &ArgLocs) const;
     SDValue EmitTailCallLoadRetAddr(SelectionDAG &DAG, SDValue &OutRetAddr,
                                     SDValue Chain, bool IsTailCall,
                                     bool Is64Bit, int FPDiff,
@@ -1779,6 +1801,9 @@ namespace llvm {
     SDValue LowerADDROFRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAME_TO_ARGS_OFFSET(SDValue Op, SelectionDAG &DAG) const;
+    ByValCopyKind ByValNeedsCopyForTailCall(SelectionDAG &DAG, SDValue Src,
+                                            SDValue Dst,
+                                            ISD::ArgFlagsTy Flags) const;
     SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
@@ -1843,9 +1868,9 @@ namespace llvm {
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const;
+    shouldExpandLogicAtomicRMWInIR(const AtomicRMWInst *AI) const;
     void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
     void emitCmpArithAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
 

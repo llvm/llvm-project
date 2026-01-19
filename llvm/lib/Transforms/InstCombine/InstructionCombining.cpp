@@ -1783,7 +1783,7 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
                                                 bool FoldWithMultiUse,
                                                 bool SimplifyBothArms) {
   // Don't modify shared select instructions unless set FoldWithMultiUse
-  if (!SI->hasOneUse() && !FoldWithMultiUse)
+  if (!SI->hasOneUser() && !FoldWithMultiUse)
     return nullptr;
 
   Value *TV = SI->getTrueValue();
@@ -2846,6 +2846,49 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
 
   if (Src->getResultElementType() != GEP.getSourceElementType())
     return nullptr;
+
+  // Fold chained GEP with constant base into single GEP:
+  // gep i8, (gep i8, %base, C1), (select Cond, C2, C3)
+  // -> gep i8, %base, (select Cond, C1+C2, C1+C3)
+  if (Src->hasOneUse() && GEP.getNumIndices() == 1 &&
+      Src->getNumIndices() == 1) {
+    Value *SrcIdx = *Src->idx_begin();
+    Value *GEPIdx = *GEP.idx_begin();
+    const APInt *ConstOffset, *TrueVal, *FalseVal;
+    Value *Cond;
+
+    if ((match(SrcIdx, m_APInt(ConstOffset)) &&
+         match(GEPIdx,
+               m_Select(m_Value(Cond), m_APInt(TrueVal), m_APInt(FalseVal)))) ||
+        (match(GEPIdx, m_APInt(ConstOffset)) &&
+         match(SrcIdx,
+               m_Select(m_Value(Cond), m_APInt(TrueVal), m_APInt(FalseVal))))) {
+      auto *Select = isa<SelectInst>(GEPIdx) ? cast<SelectInst>(GEPIdx)
+                                             : cast<SelectInst>(SrcIdx);
+
+      // Make sure the select has only one use.
+      if (!Select->hasOneUse())
+        return nullptr;
+
+      if (TrueVal->getBitWidth() != ConstOffset->getBitWidth() ||
+          FalseVal->getBitWidth() != ConstOffset->getBitWidth())
+        return nullptr;
+
+      APInt NewTrueVal = *ConstOffset + *TrueVal;
+      APInt NewFalseVal = *ConstOffset + *FalseVal;
+      Constant *NewTrue = ConstantInt::get(Select->getType(), NewTrueVal);
+      Constant *NewFalse = ConstantInt::get(Select->getType(), NewFalseVal);
+      Value *NewSelect = Builder.CreateSelect(
+          Cond, NewTrue, NewFalse, /*Name=*/"",
+          /*MDFrom=*/(ProfcheckDisableMetadataFixes ? nullptr : Select));
+      GEPNoWrapFlags Flags =
+          getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
+      return replaceInstUsesWith(GEP,
+                                 Builder.CreateGEP(GEP.getResultElementType(),
+                                                   Src->getPointerOperand(),
+                                                   NewSelect, "", Flags));
+    }
+  }
 
   // Find out whether the last index in the source GEP is a sequential idx.
   bool EndsWithSequential = false;
@@ -4070,12 +4113,10 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
     return nullptr;
 
   KnownFPClass KnownClass;
-  Value *Simplified =
-      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, &RI);
-  if (!Simplified)
-    return nullptr;
+  if (SimplifyDemandedFPClass(&RI, 0, ~ReturnClass, KnownClass))
+    return &RI;
 
-  return ReturnInst::Create(RI.getContext(), Simplified);
+  return nullptr;
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!
@@ -4328,26 +4369,33 @@ static Value *simplifySwitchOnSelectUsingRanges(SwitchInst &SI,
 Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
   Value *Cond = SI.getCondition();
   Value *Op0;
-  ConstantInt *AddRHS;
-  if (match(Cond, m_Add(m_Value(Op0), m_ConstantInt(AddRHS)))) {
-    // Change 'switch (X+4) case 1:' into 'switch (X) case -3'.
-    for (auto Case : SI.cases()) {
-      Constant *NewCase = ConstantExpr::getSub(Case.getCaseValue(), AddRHS);
-      assert(isa<ConstantInt>(NewCase) &&
-             "Result of expression should be constant");
-      Case.setValue(cast<ConstantInt>(NewCase));
-    }
-    return replaceOperand(SI, 0, Op0);
-  }
+  const APInt *CondOpC;
+  using InvertFn = std::function<APInt(const APInt &Case, const APInt &C)>;
 
-  ConstantInt *SubLHS;
-  if (match(Cond, m_Sub(m_ConstantInt(SubLHS), m_Value(Op0)))) {
-    // Change 'switch (1-X) case 1:' into 'switch (X) case 0'.
-    for (auto Case : SI.cases()) {
-      Constant *NewCase = ConstantExpr::getSub(SubLHS, Case.getCaseValue());
-      assert(isa<ConstantInt>(NewCase) &&
-             "Result of expression should be constant");
-      Case.setValue(cast<ConstantInt>(NewCase));
+  auto MaybeInvertible = [&](Value *Cond) -> InvertFn {
+    if (match(Cond, m_Add(m_Value(Op0), m_APInt(CondOpC))))
+      // Change 'switch (X+C) case Case:' into 'switch (X) case Case-C'.
+      return [](const APInt &Case, const APInt &C) { return Case - C; };
+
+    if (match(Cond, m_Sub(m_APInt(CondOpC), m_Value(Op0))))
+      // Change 'switch (C-X) case Case:' into 'switch (X) case C-Case'.
+      return [](const APInt &Case, const APInt &C) { return C - Case; };
+
+    if (match(Cond, m_Xor(m_Value(Op0), m_APInt(CondOpC))) &&
+        !CondOpC->isMinSignedValue() && !CondOpC->isMaxSignedValue())
+      // Change 'switch (X^C) case Case:' into 'switch (X) case Case^C'.
+      // Prevent creation of large case values by excluding extremes.
+      return [](const APInt &Case, const APInt &C) { return Case ^ C; };
+
+    return nullptr;
+  };
+
+  // Attempt to invert and simplify the switch condition, as long as the
+  // condition is not used further, as it may not be profitable otherwise.
+  if (auto InvertFn = MaybeInvertible(Cond); InvertFn && Cond->hasOneUse()) {
+    for (auto &Case : SI.cases()) {
+      const APInt &New = InvertFn(Case.getCaseValue()->getValue(), *CondOpC);
+      Case.setValue(ConstantInt::get(SI.getContext(), New));
     }
     return replaceOperand(SI, 0, Op0);
   }

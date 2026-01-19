@@ -94,7 +94,7 @@ bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
                        const Pointer &Ptr);
 
 bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                 AccessKinds AK);
+                 AccessKinds AK, bool WillActivate = false);
 
 /// Sets the given integral value to the pointer, which is of
 /// a std::{weak,partial,strong}_ordering type.
@@ -2017,7 +2017,7 @@ bool StoreActivate(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2032,7 +2032,7 @@ bool StoreActivatePop(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2047,7 +2047,7 @@ bool StoreBitField(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr))
     return false;
   if (Ptr.canBeInitialized())
     Ptr.initialize();
@@ -2078,7 +2078,7 @@ bool StoreBitFieldActivate(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -3197,6 +3197,9 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
   const auto &DestPtr = S.Stk.peek<Pointer>();
 
   if (SrcPtr.isDummy() || DestPtr.isDummy())
+    return false;
+
+  if (!SrcPtr.isBlockPointer() || !DestPtr.isBlockPointer())
     return false;
 
   for (uint32_t I = 0; I != Size; ++I) {

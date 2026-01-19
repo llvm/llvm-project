@@ -50,3 +50,18 @@ class TestStringPrinter(TestBase):
         )
 
         # FIXME: make "b.data" and "c.data" work sanely
+
+        self.expect("frame variable ref", substrs=['(&ref = "Hello")'])
+        self.expect_var_path(
+            "ref",
+            summary=None,
+            children=[ValueCheck(name="&ref", summary='"Hello"')],
+        )
+
+        # FIXME: should LLDB use "&&refref" for the name here?
+        self.expect("frame variable refref", substrs=['(&refref = "Hi")'])
+        self.expect_var_path(
+            "refref",
+            summary=None,
+            children=[ValueCheck(name="&refref", summary='"Hi"')],
+        )
