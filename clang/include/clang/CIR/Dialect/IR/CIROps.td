@@ -702,12 +702,20 @@ def CIR_ReturnOp : CIR_Op<"return", [
     The "return" operation represents a return operation within a function.
     The operation takes an optional operand and produces no results.
     The operand type must match the signature of the function that contains
-    the operation.
+    the operation. 
+
+    The operation also accepts a UnitProp `is_implicit` to indicate if the return 
+    is implicitly created by CIR or not to match C/C++ semantics. The return op 
+    being implicit can occur whether the first operand is present or not.
 
     ```mlir
       func @foo() -> i32 {
         ...
         cir.return %0 : i32
+      }
+      func @bar() -> i32 {
+        ...
+        cir.return %2 : i32 implicit 
       }
     ```
   }];
