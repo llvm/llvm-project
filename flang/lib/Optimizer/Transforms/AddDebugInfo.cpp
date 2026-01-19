@@ -98,6 +98,10 @@ private:
       mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
       mlir::SymbolTable *symbolTable,
       llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities);
+  std::optional<mlir::LLVM::DIImportedEntityAttr> createImportedDeclForGlobal(
+      llvm::StringRef symbolName, mlir::LLVM::DISubprogramAttr spAttr,
+      mlir::LLVM::DIFileAttr fileAttr, mlir::StringAttr localNameAttr,
+      mlir::SymbolTable *symbolTable);
   bool createCommonBlockGlobal(fir::cg::XDeclareOp declOp,
                                const std::string &name,
                                mlir::LLVM::DIFileAttr fileAttr,
@@ -150,15 +154,17 @@ mlir::StringAttr getTargetFunctionName(mlir::MLIRContext *context,
                                 deviceId, fileId, parentName, line)));
 }
 
-/// Check if a global represents a module variable
-bool isModuleVariable(fir::GlobalOp globalOp) {
+} // namespace
+
+// Check if a global represents a module variable
+static bool isModuleVariable(fir::GlobalOp globalOp) {
   std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
   return result.first == fir::NameUniquer::NameKind::VARIABLE &&
          result.second.procs.empty() && !result.second.modules.empty();
 }
 
 // Look up DIGlobalVariable from a global symbol
-std::optional<mlir::LLVM::DIGlobalVariableAttr>
+static std::optional<mlir::LLVM::DIGlobalVariableAttr>
 lookupDIGlobalVariable(llvm::StringRef symbolName,
                        mlir::SymbolTable *symbolTable) {
   if (auto globalOp = symbolTable->lookup<fir::GlobalOp>(symbolName)) {
@@ -177,8 +183,6 @@ lookupDIGlobalVariable(llvm::StringRef symbolName,
   }
   return std::nullopt;
 }
-
-} // namespace
 
 bool AddDebugInfoPass::createCommonBlockGlobal(
     fir::cg::XDeclareOp declOp, const std::string &name,
@@ -700,28 +704,37 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   commonBlockMap.clear();
 }
 
+// Helper function to create a DIImportedEntityAttr for an imported declaration.
+// Looks up the DIGlobalVariable for the given symbol and creates an imported
+// declaration with the optional local name (for renames).
+// Returns std::nullopt if the symbol's DIGlobalVariable is not found.
+std::optional<mlir::LLVM::DIImportedEntityAttr>
+AddDebugInfoPass::createImportedDeclForGlobal(
+    llvm::StringRef symbolName, mlir::LLVM::DISubprogramAttr spAttr,
+    mlir::LLVM::DIFileAttr fileAttr, mlir::StringAttr localNameAttr,
+    mlir::SymbolTable *symbolTable) {
+  mlir::MLIRContext *context = &getContext();
+  if (auto gvAttr = lookupDIGlobalVariable(symbolName, symbolTable)) {
+    return mlir::LLVM::DIImportedEntityAttr::get(
+        context, llvm::dwarf::DW_TAG_imported_declaration, spAttr, *gvAttr,
+        fileAttr, /*line=*/1, /*name=*/localNameAttr, /*elements*/ {});
+  }
+  return std::nullopt;
+}
+
 // Process USE with ONLY clause
 void AddDebugInfoPass::handleOnlyClause(
     fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIFileAttr fileAttr, mlir::SymbolTable *symbolTable,
     llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
-  mlir::MLIRContext *context = &getContext();
-
-  auto createImportedDecl = [&](llvm::StringRef symbolName,
-                                mlir::StringAttr localNameAttr) {
-    if (auto gvAttr = lookupDIGlobalVariable(symbolName, symbolTable)) {
-      auto importedDecl = mlir::LLVM::DIImportedEntityAttr::get(
-          context, llvm::dwarf::DW_TAG_imported_declaration, spAttr, *gvAttr,
-          fileAttr, /*line=*/1, /*name=*/localNameAttr, /*elements*/ {});
-      importedModules.insert(importedDecl);
-    }
-  };
-
   // Process ONLY symbols (without renames)
   if (auto onlySymbols = useOp.getOnlySymbols()) {
     for (mlir::Attribute attr : *onlySymbols) {
       auto symbolRef = mlir::cast<mlir::FlatSymbolRefAttr>(attr);
-      createImportedDecl(symbolRef.getValue(), mlir::StringAttr());
+      if (auto importedDecl = createImportedDeclForGlobal(
+              symbolRef.getValue(), spAttr, fileAttr, mlir::StringAttr(),
+              symbolTable))
+        importedModules.insert(*importedDecl);
     }
   }
 
@@ -729,8 +742,10 @@ void AddDebugInfoPass::handleOnlyClause(
   if (auto renames = useOp.getRenames()) {
     for (auto attr : *renames) {
       auto renameAttr = mlir::cast<fir::UseRenameAttr>(attr);
-      createImportedDecl(renameAttr.getSymbol().getValue(),
-                         renameAttr.getLocalName());
+      if (auto importedDecl = createImportedDeclForGlobal(
+              renameAttr.getSymbol().getValue(), spAttr, fileAttr,
+              renameAttr.getLocalName(), symbolTable))
+        importedModules.insert(*importedDecl);
     }
   }
 }
@@ -747,15 +762,10 @@ void AddDebugInfoPass::handleRenamesWithoutOnly(
   if (auto renames = useOp.getRenames()) {
     for (auto attr : *renames) {
       auto renameAttr = mlir::cast<fir::UseRenameAttr>(attr);
-      llvm::StringRef symbolName = renameAttr.getSymbol().getValue();
-      mlir::StringAttr localNameAttr = renameAttr.getLocalName();
-
-      if (auto gvAttr = lookupDIGlobalVariable(symbolName, symbolTable)) {
-        auto importedDecl = mlir::LLVM::DIImportedEntityAttr::get(
-            context, llvm::dwarf::DW_TAG_imported_declaration, spAttr, *gvAttr,
-            fileAttr, /*line=*/1, /*name=*/localNameAttr, /*elements*/ {});
-        childDeclarations.push_back(importedDecl);
-      }
+      if (auto importedDecl = createImportedDeclForGlobal(
+              renameAttr.getSymbol().getValue(), spAttr, fileAttr,
+              renameAttr.getLocalName(), symbolTable))
+        childDeclarations.push_back(*importedDecl);
     }
   }
 
