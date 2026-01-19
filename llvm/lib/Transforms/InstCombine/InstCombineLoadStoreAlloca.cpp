@@ -1137,59 +1137,36 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
     // but it would not be valid if we transformed it to load from null
     // unconditionally.
     //
-    // Check if both arms of a select are safe to load unconditionally.
-    auto CanSpeculateThroughSelect = [&](SelectInst *SI) {
-      Align Alignment = LI.getAlign();
-      return isSafeToLoadUnconditionally(SI->getTrueValue(), LI.getType(),
-                                         Alignment, DL, SI) &&
-             isSafeToLoadUnconditionally(SI->getFalseValue(), LI.getType(),
-                                         Alignment, DL, SI);
-    };
 
-    // Fold:
-    //   load(addrspacecast(select(Cond, &V1, &V2)))
-    // into:
-    //   load(select(Cond, addrspacecast(&V1), addrspacecast(&V2)))
-    // Then the transformation load(select) -> select(load) below will complete
-    // the fold:
-    //   select(Cond, load(addrspacecast(&V1)), load(addrspacecast(&V2)))
-    //
-    // We only fold if the subsequent load(select) transformation will succeed.
-    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(Op)) {
-      unsigned TargetAddressSpace = ASC->getDestAddressSpace();
-      if (auto *SI = dyn_cast<SelectInst>(ASC->getOperand(0))) {
-        if (CanSpeculateThroughSelect(SI)) {
-          if (Instruction *NewSel = FoldOpIntoSelect(
-                  *ASC, SI, /*FoldWithMultiUse=*/false,
-                  /*SimplifyBothArms=*/false, /*FoldWithoutSimplify=*/true)) {
-            unsigned LHSTargetAddressSpace =
-                NewSel->getOperand(1)->getType()->getPointerAddressSpace();
-            unsigned RHSTargetAddressSpace =
-                NewSel->getOperand(2)->getType()->getPointerAddressSpace();
-            assert(LHSTargetAddressSpace == TargetAddressSpace &&
-                   RHSTargetAddressSpace == TargetAddressSpace &&
-                   "Expected same target address space for both arms");
-            NewSel->insertBefore(LI.getIterator());
-            // Replace the load's operand and continue processing with the new
-            // select. The load(select) transformation below will complete the
-            // fold.
-            return replaceOperand(LI, 0, NewSel);
-          }
-        }
-      }
-    }
-    if (SelectInst *SI = dyn_cast<SelectInst>(Op)) {
+    AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(Op);
+    Value *SelectOp = Op;
+    if (ASC && ASC->getOperand(0)->hasOneUse())
+      SelectOp = ASC->getOperand(0);
+    if (SelectInst *SI = dyn_cast<SelectInst>(SelectOp)) {
       // load (select (Cond, &V1, &V2))  --> select(Cond, load &V1, load &V2).
-      if (CanSpeculateThroughSelect(SI)) {
-        Align Alignment = LI.getAlign();
-        LoadInst *V1 =
-            Builder.CreateLoad(LI.getType(), SI->getOperand(1),
-                               SI->getOperand(1)->getName() + ".val");
-        LoadInst *V2 =
-            Builder.CreateLoad(LI.getType(), SI->getOperand(2),
-                               SI->getOperand(2)->getName() + ".val");
-        assert(LI.isUnordered() && "implied by above");
+      // or
+      // load (select (Cond, addrspacecast(&V1), addrspacecast(&V2))) -->
+      //  select(Cond, load (addrspacecast(&V1)), load (addrspacecast(&V2))).
+      Align Alignment = LI.getAlign();
+      if (isSafeToLoadUnconditionally(SI->getOperand(1), LI.getType(),
+                                      Alignment, DL, SI) &&
+          isSafeToLoadUnconditionally(SI->getOperand(2), LI.getType(),
+                                      Alignment, DL, SI)) {
 
+        auto MaybeCastedLoadOperant = [&](Value *Op) {
+          if (ASC)
+            return Builder.CreateAddrSpaceCast(Op, ASC->getType(),
+                                               Op->getName() + ".cast");
+          return Op;
+        };
+        Value *LoadOp1 = MaybeCastedLoadOperant(SI->getOperand(1));
+        LoadInst *V1 = Builder.CreateLoad(LI.getType(), LoadOp1,
+                                          LoadOp1->getName() + ".val");
+
+        Value *LoadOp2 = MaybeCastedLoadOperant(SI->getOperand(2));
+        LoadInst *V2 = Builder.CreateLoad(LI.getType(), LoadOp2,
+                                          LoadOp2->getName() + ".val");
+        assert(LI.isUnordered() && "implied by above");
         V1->setAlignment(Alignment);
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         V2->setAlignment(Alignment);
