@@ -1,50 +1,44 @@
-# REQUIRES: avr-registered-target
-
-## When --mattr and --mcpu are both empty, disassemble elf with EFlag-derived feature.
-# RUN: yaml2obj -DARCHVERSION=AVR1 %s -o %t.avr1
-# RUN: llvm-objdump -d %t.avr1 | FileCheck %s --check-prefixes=UNKNOWN
-# RUN: yaml2obj -DARCHVERSION=AVR3 %s -o %t.avr3
+## When --mattr and --mcpu are both empty, disassemble ELF with e_flags derived feature.
+# RUN: yaml2obj -DARCH_ARCHVERSION=ARCH_AVR1 %s -o %t.avr1
+# RUN: llvm-objdump -d %t.avr1 | FileCheck %s --check-prefixes=AVR1
+# RUN: yaml2obj -DARCH_ARCHVERSION=ARCH_AVR3 %s -o %t.avr3
 # RUN: llvm-objdump -d %t.avr3 | FileCheck %s --check-prefixes=ALL
 
-## If --mattr or --mcpu is specified, don't default to the file's EFlag-derived feature.
+## If --mattr or --mcpu is specified, don't default to the file's e_flags derived feature.
 # RUN: llvm-objdump -d --mattr=+avr3 %t.avr1 | FileCheck %s --check-prefixes=ALL
 # RUN: llvm-objdump -d --mcpu=avr3 %t.avr1 | FileCheck %s --check-prefixes=ALL
 
-# UNKNOWN:         <_start>:
-# UNKNOWN-COUNT-2:   <unknown>
-# UNKNOWN:           rjmp    .-2
+## If file's e_flags is not specified, default to "avr0".
+# RUN: yaml2obj -DARCH_ARCHVERSION=LINKRELAX_PREPARED %s -o %t.noarchversion
+# RUN: llvm-objdump -d %t.noarchversion | FileCheck %s --check-prefixes=AVR0
+
+# AVR1:         <_start>:
+# AVR1-COUNT-2:  <unknown>
+# AVR1-NEXT:     lpm
+# AVR1-NEXT:     rjmp    .-2
 
 # ALL:      <_start>:
 # ALL-NEXT:   call    0x0
 # ALL-NEXT:   jmp     0x0
+# ALL-NEXT:   lpm
 # ALL-NEXT:   rjmp    .-2
+
+# AVR0:         <_start>:
+# AVR0-COUNT-3:   <unknown>
 
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS32
-  Data:            ELFDATA2LSB
-  Type:            ET_REL
-  Machine:         EM_AVR
-  Flags:           [ EF_AVR_ARCH_[[ARCHVERSION]] ]
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AVR
+  Flags:   [ EF_AVR_[[ARCH_ARCHVERSION]] ]
 Sections:
-  - Name:            .text
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    Content:         0E9400000C940000FFCF
-  - Name:            .rela.text
-    Type:            SHT_RELA
-    Relocations:
-      - Symbol:          foo
-        Type:            0x12
-      - Offset:          0x4
-        Symbol:          foo
-        Type:            0x12
-      - Offset:          0x8
-        Symbol:          foo
-        Type:            0x3
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: 0E9400000C940000C895FFCF
 Symbols:
-  - Name:            _start
-    Section:         .text
-    Binding:         STB_GLOBAL
-  - Name:            foo
-    Binding:         STB_GLOBAL
+  - Name:    _start
+    Section: .text
+    Binding: STB_GLOBAL

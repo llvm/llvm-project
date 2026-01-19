@@ -2691,11 +2691,11 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
   } else if (MCPU.empty() && Obj->makeTriple().isAArch64()) {
     Features.AddFeature("+all");
   } else if (MCPU.empty() && Obj->makeTriple().isAVR()) {
-    // Assign attributes based on the AVR architecture version
-    const auto Elf = dyn_cast<ELFObjectFileBase>(Obj);
-    assert(Elf && "AVR object should be an ELF file");
-    unsigned AVRVersion = Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK;
-    Features.AddFeature('+' + AVR::getFeatureSetForEFlag(AVRVersion));
+    // Assign attributes based on the AVR architecture version.
+    if (const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj)) {
+      unsigned AVRVersion = Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK;
+      Features.AddFeature('+' + AVR::getFeatureSetForEFlag(AVRVersion));
+    }
   }
 
   if (MCPU.empty())

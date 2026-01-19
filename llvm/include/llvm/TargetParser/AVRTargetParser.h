@@ -17,7 +17,6 @@
 #include <string>
 
 namespace llvm {
-
 namespace AVR {
 
 LLVM_ABI std::string getFeatureSetForEFlag(unsigned EFlag);
