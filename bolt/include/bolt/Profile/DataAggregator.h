@@ -157,7 +157,7 @@ private:
   enum PerfProcessType {
     BUILDIDS = 0,
     MAIN_EVENTS,
-    MEN_EVENTS,
+    MEM_EVENTS,
     MMAP_EVENTS,
     TASK_EVENTS
   };
@@ -173,17 +173,17 @@ private:
 
     enum PerfProcessType Type;
     bool IsFinished{false};
-    sys::ProcessInfo PI;
-    SmallVector<char, 256> StdoutPath;
-    SmallVector<char, 256> StderrPath;
+    sys::ProcessInfo PI{};
+    SmallVector<char, 256> StdoutPath{};
+    SmallVector<char, 256> StderrPath{};
   };
 
   /// Process info for spawned processes
-  PerfProcessInfo BuildIDProcessInfo;
-  PerfProcessInfo MainEventsPPI;
-  PerfProcessInfo MemEventsPPI;
-  PerfProcessInfo MMapEventsPPI;
-  PerfProcessInfo TaskEventsPPI;
+  PerfProcessInfo BuildIDProcessInfo = {PerfProcessType::BUILDIDS};
+  PerfProcessInfo MainEventsPPI = {PerfProcessType::MAIN_EVENTS};
+  PerfProcessInfo MemEventsPPI = {PerfProcessType::MEM_EVENTS};
+  PerfProcessInfo MMapEventsPPI = {PerfProcessType::MMAP_EVENTS};
+  PerfProcessInfo TaskEventsPPI = {PerfProcessType::TASK_EVENTS};
 
   /// Kernel VM starts at fixed based address
   /// https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt
@@ -472,29 +472,41 @@ private:
   /// Dump pre-parsed perf profile data into a single file.
   /// The generator relies on the aggregator work to spawn the required
   /// perf-script jobs based on the the aggregation type, and merges
-  /// the results of the pref-script jobs into a single file.
+  /// their results into a single file.
   /// This hybrid profile contains all required events such as BuildID,
-  /// MMAP, TASK, Branch/BrStack, or Memory for the aggregation.
+  /// MMAP, TASK, MAIN (brstack or basic samples), or MEM for the aggregation.
   /// The generator also creates a file header, where these events
   /// are listed along with the length information of their contents.
+  /// The given length numbers in the header are in bytes, they are used
+  /// as an offset int the pre-parsed profile.
+  /// Some of these events are essential to be presented in the file.
+  /// Please see a short summary below:
+  /// MEM: Optional. Parsing memory profile is enabled by default, unless
+  /// '--itrace' aggregation is set (like Arm SPE). In the latter case
+  /// MEM profile won't be added into the pre-parsed profile.
+  /// MMAP: Compulsory, the mmap data is required to be in the file.
+  /// BUILDID: Ignored (you should use --ignore-build-id),
+  /// if buildid information doesn't exist in the input profile.
+  /// TASK: When task related data exists in the input profile,
+  /// Perf2bolt will always parse it.
+  /// MAIN: Compulsory; the MAIN events always have to be represented in the
+  /// file. Main events could be either 'brstack' or 'basic' sample data
+  /// based on how it was collected by Linux Perf.
+  ///
+  /// Example how you can generate pre-parsed profile for 'basic' aggregation:
+  /// perf2bolt -p perf.data BINARY -o perf.text --ba --generate-perf-text-data
+  ///
   /// This is how a pre-parsed profile data looks like for Basic Aggregation:
-  ///
-  /// perf2bolt -p perf.data -o perf.text --ba --generate-perf-text-data
-  ///
-  /// PERFTEXT BUILDIDS=55;MMAP=2523121;MAIN=6426;TASK=352203;
-  /// 68c3da33ca43d5a74d501b5ea0012f782e04096e /example/bin1
-  /// c3a8496f2347b468a54a21072dc6cde7f0d88c6c /example/bin2
+  /// PERFTEXT;BUILDIDS=50;MMAP=3000000;MAIN=5000;TASK=350000;
+  /// abcd1234 /example/bin1
   /// ...
-  /// bin1   20470 ... PERF_RECORD_MMAP2 20470/20470: ... r-xp /example/bin1
-  /// bin1   20470 ... PERF_RECORD_MMAP2 20470/20470: ... r-xp [vdso]
+  /// bin1   1234 ... PERF_RECORD_MMAP2 1234/1234: ... r-xp /example/bin1
   /// ...
-  /// bin1   20470 ... PERF_RECORD_COMM exec: bin1:20470/20470
-  /// bin1   20470 ... PERF_RECORD_EXIT(20470:20470):(20469:20469)
+  /// bin1   1234 ... PERF_RECORD_COMM exec: bin1:1234/1234
+  /// bin1   1234 ... PERF_RECORD_EXIT(1234:1234):(20469:20469)
   /// ...
-  /// 20470 branch: ffffffd1a4764d04 ffffffd1a4764cfc
-  /// 20470 branch: ffffffd1a44777f4 ffffffd1a4fc8af0
-  /// 20470 branch: ffffffd1a477cd14 ffffffd1a477cd00
-  /// 20470 branch: ffffffd1a4400f58 ffffffd1a4400f7c
+  /// 1234 branch: ffffffd1a4764d04 ffffffd1a4764cfc
+  /// 1234 branch: ffffffd1a44777f4 ffffffd1a4fc8af0
   /// ...
   void generatePerfTextData();
 
@@ -658,7 +670,7 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   case DataAggregator::PerfProcessType::MAIN_EVENTS:
     OS << DataAggregator::PerfProcessInfo::MainEventStr;
     break;
-  case DataAggregator::PerfProcessType::MEN_EVENTS:
+  case DataAggregator::PerfProcessType::MEM_EVENTS:
     OS << DataAggregator::PerfProcessInfo::MemEventStr;
     break;
   case DataAggregator::PerfProcessType::MMAP_EVENTS:
