@@ -346,6 +346,15 @@ public:
   LLVM_ABI ConstantRange unionWith(const ConstantRange &CR,
                                    PreferredRangeType Type = Smallest) const;
 
+  /// Return the range that results from the union of @param Ranges.
+  /// The resultant range is guaranteed to include the elements of all sets, but
+  /// may contain more. For example, [3, 9) union [12,15) is [3, 15), which
+  /// includes 9, 10, and 11, which were not included in either set before.
+  /// In fact, this function return the complement of the maximal gap among the
+  /// input intervals.
+  LLVM_ABI static ConstantRange unionOf(ArrayRef<ConstantRange> Ranges,
+                                        PreferredRangeType Type = Smallest);
+
   /// Intersect the two ranges and return the result if it can be represented
   /// exactly, otherwise return std::nullopt.
   LLVM_ABI std::optional<ConstantRange>

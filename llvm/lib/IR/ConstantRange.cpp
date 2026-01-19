@@ -22,6 +22,7 @@
 
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -1097,6 +1098,149 @@ ConstantRange ConstantRange::intrinsic(Intrinsic::ID IntrinsicID,
     assert(!isIntrinsicSupported(IntrinsicID) && "Shouldn't be supported");
     llvm_unreachable("Unsupported intrinsic");
   }
+}
+
+ConstantRange ConstantRange::unionOf(ArrayRef<ConstantRange> Ranges,
+                                     PreferredRangeType Type) {
+  assert(!Ranges.empty() && "Cannot union an empty set of ranges");
+  // ------ Quick path for simple cases --------------
+  if (Ranges.size() == 1)
+    return Ranges[0];
+  if (Ranges.size() == 2)
+    return Ranges[0].unionWith(Ranges[1], Type);
+
+  const ConstantRange Rng0 = Ranges[0];
+  const unsigned BitWidth = Rng0.getBitWidth();
+  const APInt Zero = APInt::getZero(BitWidth);
+
+  // ------ Quick analysis of the given Ranges ------
+  unsigned NumWrapped = 0, NumEmpty = 0;
+  // The left end and the right end of the unioned range.
+  APInt LL, RR = /* Inited as 1 (the 'leftest' end) */ Zero + 1;
+  for (const ConstantRange &CR : Ranges) {
+    assert(CR.getBitWidth() == BitWidth &&
+           "All ranges must have the same bitwidth");
+    if (CR.isFullSet())
+      return CR;
+    if (CR.isEmptySet()) {
+      NumEmpty++;
+    } else if (CR.isWrappedSet()) {
+      NumWrapped++;
+      /* Fixed as 0 (the 'rightest' end) */
+      RR = Zero;
+    } else {
+      const APInt &Upper = CR.getUpper();
+      // Update the right end of the unioned range.
+      if (!RR.isZero() && (Upper.ugt(RR) || Upper.isZero()))
+        RR = Upper; // RR cannot be easily obtained from sorted ranges.
+    }
+  }
+
+  const auto NonEmptyRanges = make_filter_range(
+      Ranges, [](const ConstantRange &CR) { return !CR.isEmptySet(); });
+  // If any range is empty, we should quickly check if the NumNonEmpty <= 2.
+  if (NumEmpty) {
+    assert(Ranges.size() >= NumEmpty && "Size of ranges must be >= NumEmpty");
+    // ------ Quick path for simple cases --------------
+    if (Ranges.size() == NumEmpty)
+      return getEmpty(BitWidth);
+    if (Ranges.size() == NumEmpty + 1)
+      return *NonEmptyRanges.begin();
+    if (Ranges.size() == NumEmpty + 2) {
+      auto It = NonEmptyRanges.begin();
+      return (*It).unionWith(*(++It), Type);
+    }
+  }
+
+  const auto Comparator = [](const ConstantRange &A, const ConstantRange &B) {
+    APInt LA = A.getLower(), LB = B.getLower();
+    return LA.ult(LB) || (LA == LB && (A.getUpper() - 1).ult(B.getUpper() - 1));
+  };
+
+  // Should we sort the ranges?
+  const bool NeedSorting = NumWrapped ? true /* We need to split the wrapped CR
+                                                 and resort the whole ranges */
+                                      : !llvm::is_sorted(Ranges, Comparator);
+
+  SmallVector<ConstantRange, 8> Segs;
+  if (NeedSorting) {
+    // If we need sorting the Ranges, we should operate an local vector as copy
+    // of Ranges, and sort it.
+    Segs.reserve(Ranges.size() + NumWrapped - NumEmpty);
+
+    for (const ConstantRange &CR : NonEmptyRanges) {
+      assert(!CR.isFullSet() && "Full set should have been filtered out");
+      APInt Upper = CR.getUpper();
+      if (CR.isWrappedSet()) {
+        // We need to split the wrapped set into two parts: [0, R) and [L, 0)
+        const APInt Lower = CR.getLower();
+        Segs.push_back(ConstantRange(Zero, Upper));
+        Segs.push_back(ConstantRange(Lower, Zero));
+      } else {
+        Segs.push_back(CR);
+      }
+    }
+
+    llvm::sort(Segs, Comparator);
+
+    // After sorting Segs, we change the Ranges as a view of it.
+    Ranges = Segs;
+  } else if (NumEmpty) {
+    // If we don't need sorting and there are empty ranges, the empty ranges
+    // must be the frontest ones in Ranges, as empty range is represented as
+    // [0, 0).
+    // Therefore, NonEmptyRanges = Ranges[NumEmpty:]
+    assert(Ranges[NumEmpty - 1].isEmptySet() &&
+           "Empty range must be in the front");
+    Ranges = Ranges.slice(NumEmpty);
+  }
+
+  assert(Ranges.size() > 2 &&
+         "Ranges with size <= 2 should be handled earlier");
+
+  // LL must be Ranges[0].L if Ranges is sorted.
+  LL = Ranges[0].getLower();
+
+  // If RR is zero, just return [LL, 0) is meaningless for
+  // PreferredRangeType::Unsigned
+  if (!RR.isZero() && Type == PreferredRangeType::Unsigned) {
+    // We prefer wrapped gap, i.e., non-wrapped range here.
+    return ConstantRange(LL, RR);
+  }
+
+  // Init the MaxGap as the gap wrapping around the unsigned domain
+  ConstantRange MaxGap(RR, LL);
+
+  // ------- Find the maximal gap among sorted Ranges ------------------
+  APInt GapL = Ranges[0].getUpper();
+  for (const ConstantRange &Cur : Ranges) {
+    assert(!Cur.isWrappedSet() && "Wrapped set should have been filtered out");
+    assert(!Cur.isEmptySet() && !Cur.isFullSet() &&
+           "Empty/full set should have been filtered out");
+
+    const APInt L = Cur.getLower(), R = Cur.getUpper();
+    // Fond a new gap if Cur.L > GapL (i.e., Last.R).
+    if (L.ugt(GapL)) {
+      // If Cur.L > Last.R && Cur.L s< Last.R, we found a signed wrapped gap.
+      if (Type == PreferredRangeType::Signed && L.slt(GapL)) {
+        // We prefer signed wrapped gap, i.e., signed non-wrapped range here.
+        return ConstantRange(L, GapL);
+      }
+      ConstantRange Gap(GapL, L);
+      if (MaxGap.isSizeStrictlySmallerThan(Gap))
+        MaxGap = Gap;
+      GapL = R;
+    } else if (R.ugt(GapL)) {
+      GapL = R;
+    }
+
+    // We reach the end of the unioned ranges.
+    if (R == RR)
+      break;
+  }
+
+  // Smallest union <--> Maximal gap.
+  return MaxGap.inverse();
 }
 
 ConstantRange
