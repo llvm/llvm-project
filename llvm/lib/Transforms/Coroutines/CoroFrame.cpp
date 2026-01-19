@@ -994,52 +994,6 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   return FrameTy;
 }
 
-/// Returns a GEP into the coroutine frame at the offset where Orig is located.
-static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
-                                      IRBuilder<> &Builder, coro::Shape &Shape,
-                                      Value *Orig) {
-  LLVMContext &Ctx = Shape.CoroBegin->getContext();
-  FieldIDType Index = FrameData.getFieldIndex(Orig);
-  SmallVector<Value *, 3> Indices = {
-      ConstantInt::get(Type::getInt32Ty(Ctx), 0),
-      ConstantInt::get(Type::getInt32Ty(Ctx), Index),
-  };
-
-  // If Orig is an array alloca, preserve the original type by adding an extra
-  // zero offset.
-  if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(AI->getArraySize())) {
-      auto Count = CI->getValue().getZExtValue();
-      if (Count > 1)
-        Indices.push_back(ConstantInt::get(Type::getInt32Ty(Ctx), 0));
-    } else {
-      report_fatal_error("Coroutines cannot handle non static allocas yet");
-    }
-  }
-
-  auto *GEP = Builder.CreateInBoundsGEP(Shape.FrameTy, Shape.FramePtr, Indices);
-  if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
-    if (FrameData.getDynamicAlign(Orig) != 0) {
-      assert(FrameData.getDynamicAlign(Orig) == AI->getAlign().value());
-      auto *M = AI->getModule();
-      auto *IntPtrTy = M->getDataLayout().getIntPtrType(AI->getType());
-      auto *PtrValue = Builder.CreatePtrToInt(GEP, IntPtrTy);
-      auto *AlignMask = ConstantInt::get(IntPtrTy, AI->getAlign().value() - 1);
-      PtrValue = Builder.CreateAdd(PtrValue, AlignMask);
-      PtrValue = Builder.CreateAnd(PtrValue, Builder.CreateNot(AlignMask));
-      return Builder.CreateIntToPtr(PtrValue, AI->getType());
-    }
-    // If the type of GEP is not equal to the type of AllocaInst, it implies
-    // that the AllocaInst may be reused in the Frame slot of other AllocaInst.
-    // Note: If the strategy dealing with alignment changes, this cast must be
-    // refined
-    if (GEP->getType() != Orig->getType())
-      GEP = Builder.CreateAddrSpaceCast(GEP, Orig->getType(),
-                                        Orig->getName() + Twine(".cast"));
-  }
-  return GEP;
-}
-
 // Replace all alloca and SSA values that are accessed across suspend points
 // with GetElementPointer from coroutine frame + loads and stores. Create an
 // AllocaSpillBB that will become the new entry block for the resume parts of
@@ -1069,6 +1023,55 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   Value *FramePtr = Shape.FramePtr;
   DominatorTree DT(*F);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
+
+  // Create a GEP with the given index into the coroutine frame for the original
+  // value Orig. Appends an extra 0 index for array-allocas, preserving the
+  // original type.
+  auto GetFramePointer = [&](Value *Orig) -> Value * {
+    FieldIDType Index = FrameData.getFieldIndex(Orig);
+    SmallVector<Value *, 3> Indices = {
+        ConstantInt::get(Type::getInt32Ty(C), 0),
+        ConstantInt::get(Type::getInt32Ty(C), Index),
+    };
+
+    if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
+      if (auto *CI = dyn_cast<ConstantInt>(AI->getArraySize())) {
+        auto Count = CI->getValue().getZExtValue();
+        if (Count > 1) {
+          Indices.push_back(ConstantInt::get(Type::getInt32Ty(C), 0));
+        }
+      } else {
+        report_fatal_error("Coroutines cannot handle non static allocas yet");
+      }
+    }
+
+    auto GEP = cast<GetElementPtrInst>(
+        Builder.CreateInBoundsGEP(FrameTy, FramePtr, Indices));
+    if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
+      if (FrameData.getDynamicAlign(Orig) != 0) {
+        assert(FrameData.getDynamicAlign(Orig) == AI->getAlign().value());
+        auto *M = AI->getModule();
+        auto *IntPtrTy = M->getDataLayout().getIntPtrType(AI->getType());
+        auto *PtrValue = Builder.CreatePtrToInt(GEP, IntPtrTy);
+        auto *AlignMask =
+            ConstantInt::get(IntPtrTy, AI->getAlign().value() - 1);
+        PtrValue = Builder.CreateAdd(PtrValue, AlignMask);
+        PtrValue = Builder.CreateAnd(PtrValue, Builder.CreateNot(AlignMask));
+        return Builder.CreateIntToPtr(PtrValue, AI->getType());
+      }
+      // If the type of GEP is not equal to the type of AllocaInst, it implies
+      // that the AllocaInst may be reused in the Frame slot of other
+      // AllocaInst. So We cast GEP to the AllocaInst here to re-use
+      // the Frame storage.
+      //
+      // Note: If we change the strategy dealing with alignment, we need to refine
+      // this casting.
+      if (GEP->getType() != Orig->getType())
+        return Builder.CreateAddrSpaceCast(GEP, Orig->getType(),
+                                           Orig->getName() + Twine(".cast"));
+    }
+    return GEP;
+  };
 
   for (auto const &E : FrameData.Spills) {
     Value *Def = E.first;
@@ -1111,7 +1114,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         Builder.SetInsertPoint(CurrentBlock,
                                CurrentBlock->getFirstInsertionPt());
 
-        auto *GEP = createGEPToFramePointer(FrameData, Builder, Shape, E.first);
+        auto *GEP = GetFramePointer(E.first);
         GEP->setName(E.first->getName() + Twine(".reload.addr"));
         if (ByValTy)
           CurrentReload = GEP;
@@ -1233,7 +1236,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     Builder.SetInsertPoint(SpillBlock, SpillBlock->begin());
     for (const auto &P : FrameData.Allocas) {
       AllocaInst *Alloca = P.Alloca;
-      auto *G = createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
+      auto *G = GetFramePointer(Alloca);
 
       // Remove any lifetime intrinsics, now that these are no longer allocas.
       for (User *U : make_early_inc_range(Alloca->users())) {
@@ -1275,7 +1278,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
     if (UsersToUpdate.empty())
       continue;
-    auto *G = createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
+    auto *G = GetFramePointer(Alloca);
     G->setName(Alloca->getName() + Twine(".reload.addr"));
 
     SmallVector<DbgVariableRecord *> DbgVariableRecords;
@@ -1295,7 +1298,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         report_fatal_error(
             "Coroutines cannot handle copying of array allocas yet");
 
-      auto *G = createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
+      auto *G = GetFramePointer(Alloca);
       auto *Value = Builder.CreateLoad(Alloca->getAllocatedType(), Alloca);
       Builder.CreateStore(Value, G);
     }
@@ -1303,8 +1306,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     // CoroBegin, we recreate them after CoroBegin by applying the offset
     // to the pointer in the frame.
     for (const auto &Alias : A.Aliases) {
-      auto *FramePtr =
-          createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
+      auto *FramePtr = GetFramePointer(Alloca);
       auto &Value = *Alias.second;
       auto ITy = IntegerType::get(C, Value.getBitWidth());
       auto *AliasPtr =
@@ -1349,7 +1351,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     });
     if (HasAccessingPromiseBeforeCB) {
       Builder.SetInsertPoint(&*Shape.getInsertPtAfterFramePtr());
-      auto *G = createGEPToFramePointer(FrameData, Builder, Shape, PA);
+      auto *G = GetFramePointer(PA);
       auto *Value = Builder.CreateLoad(PA->getAllocatedType(), PA);
       Builder.CreateStore(Value, G);
     }
