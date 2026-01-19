@@ -27,7 +27,7 @@ private:
       std::unique_ptr<DirectResultSender>(
           reinterpret_cast<DirectResultSender *>(
               static_cast<uintptr_t>(CallId)))
-          ->send(S, ResultBytes);
+          ->send(S, orc_rt::WrapperFunctionBuffer(ResultBytes));
     }
   };
 

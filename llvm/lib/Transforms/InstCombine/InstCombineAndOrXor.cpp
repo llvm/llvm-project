@@ -189,8 +189,9 @@ static unsigned conjugateICmpMask(unsigned Mask) {
 // Adapts the external decomposeBitTest for local use.
 static bool decomposeBitTest(Value *Cond, CmpInst::Predicate &Pred, Value *&X,
                              Value *&Y, Value *&Z) {
-  auto Res = llvm::decomposeBitTest(Cond, /*LookThroughTrunc=*/true,
-                                    /*AllowNonZeroC=*/true);
+  auto Res =
+      llvm::decomposeBitTest(Cond, /*LookThroughTrunc=*/true,
+                             /*AllowNonZeroC=*/true, /*DecomposeAnd=*/true);
   if (!Res)
     return false;
 
@@ -1671,8 +1672,8 @@ Instruction *InstCombinerImpl::canonicalizeConditionalNegationViaMathToSelect(
       !Cond->getType()->isIntOrIntVectorTy(1) ||
       !match(I.getOperand(0), m_c_Add(m_SExt(m_Specific(Cond)), m_Value(X))))
     return nullptr;
-  return SelectInst::Create(Cond, Builder.CreateNeg(X, X->getName() + ".neg"),
-                            X);
+  return createSelectInstWithUnknownProfile(
+      Cond, Builder.CreateNeg(X, X->getName() + ".neg"), X);
 }
 
 /// This a limited reassociation for a special case (see above) where we are
@@ -2467,7 +2468,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
             m_c_And(m_Value(Neg, m_OneUse(m_Neg(m_And(m_Value(), m_One())))),
                     m_Value(Y)))) {
     Value *Cmp = Builder.CreateIsNull(Neg);
-    return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), Y);
+    return createSelectInstWithUnknownProfile(Cmp,
+                                              ConstantInt::getNullValue(Ty), Y);
   }
 
   // Canonicalize:
@@ -2627,8 +2629,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       int BitNum = IsShiftLeft ? Log2C - Log2ShiftC : Log2ShiftC - Log2C;
       assert(BitNum >= 0 && "Expected demanded bits to handle impossible mask");
       Value *Cmp = Builder.CreateICmpEQ(X, ConstantInt::get(Ty, BitNum));
-      return SelectInst::Create(Cmp, ConstantInt::get(Ty, *C),
-                                ConstantInt::getNullValue(Ty));
+      return createSelectInstWithUnknownProfile(Cmp, ConstantInt::get(Ty, *C),
+                                                ConstantInt::getNullValue(Ty));
     }
 
     Constant *C1, *C2;
@@ -2647,8 +2649,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
           // ((C1 << X) >> C2) & C3 -> X == (cttz(C3)+C2-cttz(C1)) ? C3 : 0
           Constant *CmpC = ConstantExpr::getSub(LshrC, Log2C1);
           Value *Cmp = Builder.CreateICmpEQ(X, CmpC);
-          return SelectInst::Create(Cmp, ConstantInt::get(Ty, *C3),
-                                    ConstantInt::getNullValue(Ty));
+          return createSelectInstWithUnknownProfile(
+              Cmp, ConstantInt::get(Ty, *C3), ConstantInt::getNullValue(Ty));
         }
       }
 
@@ -2664,8 +2666,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
           Constant *ShlC = ConstantExpr::getAdd(C2, Log2C1);
           Constant *CmpC = ConstantExpr::getSub(ShlC, Log2C3);
           Value *Cmp = Builder.CreateICmpEQ(X, CmpC);
-          return SelectInst::Create(Cmp, ConstantInt::get(Ty, *C3),
-                                    ConstantInt::getNullValue(Ty));
+          return createSelectInstWithUnknownProfile(
+              Cmp, ConstantInt::get(Ty, *C3), ConstantInt::getNullValue(Ty));
         }
       }
     }
@@ -2823,27 +2825,29 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   Value *A, *B;
   if (match(&I, m_c_And(m_SExt(m_Value(A)), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, B, Constant::getNullValue(Ty));
+    return createSelectInstWithUnknownProfile(A, B, Constant::getNullValue(Ty));
 
   // Similarly, a 'not' of the bool translates to a swap of the select arms:
   // ~sext(A) & B / B & ~sext(A) --> A ? 0 : B
   if (match(&I, m_c_And(m_Not(m_SExt(m_Value(A))), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, Constant::getNullValue(Ty), B);
+    return createSelectInstWithUnknownProfile(A, Constant::getNullValue(Ty), B);
 
   // and(zext(A), B) -> A ? (B & 1) : 0
   if (match(&I, m_c_And(m_OneUse(m_ZExt(m_Value(A))), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, Builder.CreateAnd(B, ConstantInt::get(Ty, 1)),
-                              Constant::getNullValue(Ty));
+    return createSelectInstWithUnknownProfile(
+        A, Builder.CreateAnd(B, ConstantInt::get(Ty, 1)),
+        Constant::getNullValue(Ty));
 
   // (-1 + A) & B --> A ? 0 : B where A is 0/1.
   if (match(&I, m_c_And(m_OneUse(m_Add(m_ZExtOrSelf(m_Value(A)), m_AllOnes())),
                         m_Value(B)))) {
     if (A->getType()->isIntOrIntVectorTy(1))
-      return SelectInst::Create(A, Constant::getNullValue(Ty), B);
+      return createSelectInstWithUnknownProfile(A, Constant::getNullValue(Ty),
+                                                B);
     if (computeKnownBits(A, &I).countMaxActiveBits() <= 1) {
-      return SelectInst::Create(
+      return createSelectInstWithUnknownProfile(
           Builder.CreateICmpEQ(A, Constant::getNullValue(A->getType())), B,
           Constant::getNullValue(Ty));
     }
@@ -2855,7 +2859,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
                         m_Value(Y))) &&
       *C == X->getType()->getScalarSizeInBits() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
-    return SelectInst::Create(IsNeg, Y, ConstantInt::getNullValue(Ty));
+    return createSelectInstWithUnknownProfile(IsNeg, Y,
+                                              ConstantInt::getNullValue(Ty));
   }
   // If there's a 'not' of the shifted value, swap the select operands:
   // ~(iN X s>> (N-1)) & Y --> (X s< 0) ? 0 : Y -- with optional sext
@@ -2864,7 +2869,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
                         m_Value(Y))) &&
       *C == X->getType()->getScalarSizeInBits() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
-    return SelectInst::Create(IsNeg, ConstantInt::getNullValue(Ty), Y);
+    return createSelectInstWithUnknownProfile(IsNeg,
+                                              ConstantInt::getNullValue(Ty), Y);
   }
 
   // (~x) & y  -->  ~(x | (~y))  iff that gets rid of inversions
@@ -4325,7 +4331,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   //       canonicalization?
   if (match(&I, m_c_Or(m_OneUse(m_SExt(m_Value(A))), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, ConstantInt::getAllOnesValue(Ty), B);
+    return createSelectInstWithUnknownProfile(
+        A, ConstantInt::getAllOnesValue(Ty), B);
 
   // Note: If we've gotten to the point of visiting the outer OR, then the
   // inner one couldn't be simplified.  If it was a constant, then it won't
@@ -4374,7 +4381,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                          m_Deferred(X)))) {
       Value *NewICmpInst = Builder.CreateICmpSGT(X, Y);
       Value *AllOnes = ConstantInt::getAllOnesValue(Ty);
-      return SelectInst::Create(NewICmpInst, AllOnes, X);
+      return createSelectInstWithUnknownProfile(NewICmpInst, AllOnes, X);
     }
   }
 
@@ -5284,7 +5291,8 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
         !match(C1, m_AllOnes())) {
       assert(!C1->isZeroValue() && "Unexpected xor with 0");
       Value *IsNotNeg = Builder.CreateIsNotNeg(X);
-      return SelectInst::Create(IsNotNeg, Op1, Builder.CreateNot(Op1));
+      return createSelectInstWithUnknownProfile(IsNotNeg, Op1,
+                                                Builder.CreateNot(Op1));
     }
   }
 
@@ -5471,15 +5479,20 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       match(&I, m_c_Xor(m_OneUse(m_LogicalAnd(m_Value(A), m_Value(B))),
                         m_OneUse(m_LogicalOr(m_Value(C), m_Value(D)))))) {
     bool NeedFreeze = isa<SelectInst>(Op0) && isa<SelectInst>(Op1) && B == D;
-    if (B == C || B == D)
+    Instruction *MDFrom = cast<Instruction>(Op0);
+    if (B == C || B == D) {
       std::swap(A, B);
+      MDFrom = B == C ? cast<Instruction>(Op1) : nullptr;
+    }
     if (A == C)
       std::swap(C, D);
     if (A == D) {
       if (NeedFreeze)
         A = Builder.CreateFreeze(A);
       Value *NotB = Builder.CreateNot(B);
-      return SelectInst::Create(A, NotB, C);
+      return MDFrom == nullptr || ProfcheckDisableMetadataFixes
+                 ? createSelectInstWithUnknownProfile(A, NotB, C)
+                 : SelectInst::Create(A, NotB, C, "", nullptr, MDFrom);
     }
   }
 

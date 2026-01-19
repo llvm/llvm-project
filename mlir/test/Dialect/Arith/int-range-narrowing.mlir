@@ -314,21 +314,28 @@ func.func @i32_overflows_to_i64(%arg0: i32) -> i64 {
 // Motivating example for negative number support, added as a test case
 // and simplified
 // CHECK-LABEL: func.func @clamp_to_loop_bound_and_id()
+// CHECK-DAG: %[[C64_I8:.+]] = arith.constant 64 : i8
+// CHECK-DAG: %[[C64_I16:.+]] = arith.constant 64 : i16
+// CHECK-DAG: %[[C16_I16:.+]] = arith.constant 16 : i16
+// CHECK-DAG: %[[C0_I16:.+]] = arith.constant 0 : i16
 // CHECK: %[[TID:.+]] = test.with_bounds
 // CHECK-SAME: umax = 63
 // CHECK: %[[BOUND:.+]] = test.with_bounds
 // CHECK-SAME: umax = 112
-// CHECK: scf.for %[[ARG0:.+]] = %{{.*}} to %[[BOUND]] step %{{.*}}
-// CHECK-DAG:   %[[BOUND_I8:.+]] = arith.index_castui %[[BOUND]] : index to i8
-// CHECK-DAG:   %[[ARG0_I8:.+]] = arith.index_castui %[[ARG0]] : index to i8
-//     CHECK:   %[[V0_I8:.+]] = arith.subi %[[BOUND_I8]], %[[ARG0_I8]] : i8
-//     CHECK:   %[[V1_I8:.+]] = arith.minsi %[[V0_I8]], %{{.*}} : i8
-//     CHECK:   %[[V1_INDEX:.+]] = arith.index_cast %[[V1_I8]] : i8 to index
-//     CHECK:   %[[V1_I16:.+]] = arith.index_cast %[[V1_INDEX]] : index to i16
-//     CHECK:   %[[TID_I16:.+]] = arith.index_castui %[[TID]] : index to i16
-//     CHECK:   %[[V2_I16:.+]] = arith.subi %[[V1_I16]], %[[TID_I16]] : i16
-//     CHECK:   %[[V3:.+]] = arith.cmpi slt, %[[V2_I16]], %{{.*}} : i16
-//     CHECK:   scf.if %[[V3]]
+// Loop narrows to i16 (not i8) because indVar+step=[80,144] doesn't fit in signed i8.
+// CHECK: %[[BOUND_I16:.+]] = arith.index_castui %[[BOUND]] : index to i16
+// CHECK: scf.for %[[ARG0:.+]] = %[[C16_I16]] to %[[BOUND_I16]] step %[[C64_I16]]  : i16 {
+// CHECK:   %[[ARG0_INDEX:.+]] = arith.index_castui %[[ARG0]] : i16 to index
+// CHECK:   %[[BOUND_I8:.+]] = arith.index_castui %[[BOUND]] : index to i8
+// CHECK:   %[[ARG0_I8:.+]] = arith.index_castui %[[ARG0_INDEX]] : index to i8
+// CHECK:   %[[V0_I8:.+]] = arith.subi %[[BOUND_I8]], %[[ARG0_I8]] : i8
+// CHECK:   %[[V1_I8:.+]] = arith.minsi %[[V0_I8]], %[[C64_I8]] : i8
+// CHECK:   %[[V1_INDEX:.+]] = arith.index_cast %[[V1_I8]] : i8 to index
+// CHECK:   %[[V1_I16:.+]] = arith.index_cast %[[V1_INDEX]] : index to i16
+// CHECK:   %[[TID_I16:.+]] = arith.index_castui %[[TID]] : index to i16
+// CHECK:   %[[V2_I16:.+]] = arith.subi %[[V1_I16]], %[[TID_I16]] : i16
+// CHECK:   %[[V3:.+]] = arith.cmpi slt, %[[V2_I16]], %[[C0_I16]] : i16
+// CHECK:   scf.if %[[V3]]
 func.func @clamp_to_loop_bound_and_id() {
   %c0 = arith.constant 0 : index
   %c16 = arith.constant 16 : index
@@ -349,6 +356,7 @@ func.func @clamp_to_loop_bound_and_id() {
 }
 
 func.func private @use(index)
+func.func private @use_i64(i64)
 
 // CHECK-LABEL: func.func @loop_with_iter_arg
 func.func @loop_with_iter_arg() {
@@ -374,6 +382,38 @@ func.func @loop_with_iter_arg() {
     %2 = arith.addi %0, %1 : index
     func.call @use(%2) : (index) -> ()
     scf.yield %arg1 : vector<4xf32>
+  }
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// Loop bounds narrowing
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @narrow_loop_bounds
+func.func @narrow_loop_bounds() {
+  %c0_i64 = arith.constant 0 : i64
+  %c10_i64 = arith.constant 10 : i64
+  %c1_i64 = arith.constant 1 : i64
+
+  // CHECK-DAG: %[[C1_I8:.*]] = arith.constant 1 : i8
+  // CHECK-DAG: %[[LB:.*]] = test.with_bounds {smax = 0 : i64, smin = 0 : i64, umax = 0 : i64, umin = 0 : i64} : i64
+  // CHECK-DAG: %[[UB:.*]] = test.with_bounds {smax = 10 : i64, smin = 10 : i64, umax = 10 : i64, umin = 10 : i64} : i64
+  // CHECK-DAG: %[[STEP:.*]] = test.with_bounds {smax = 1 : i64, smin = 1 : i64, umax = 1 : i64, umin = 1 : i64} : i64
+  %lb = test.with_bounds {smin = 0 : i64, smax = 0 : i64, umin = 0 : i64, umax = 0 : i64} : i64
+  %ub = test.with_bounds {smin = 10 : i64, smax = 10 : i64, umin = 10 : i64, umax = 10 : i64} : i64
+  %step = test.with_bounds {smin = 1 : i64, smax = 1 : i64, umin = 1 : i64, umax = 1 : i64} : i64
+
+  // CHECK-DAG: %[[LB_I8:.*]] = arith.trunci %[[LB]] : i64 to i8
+  // CHECK-DAG: %[[UB_I8:.*]] = arith.trunci %[[UB]] : i64 to i8
+  // CHECK-DAG: %[[STEP_I8:.*]] = arith.trunci %[[STEP]] : i64 to i8
+  // CHECK: scf.for %[[IV:.*]] = %[[LB_I8]] to %[[UB_I8]] step %[[STEP_I8]] : i8 {
+  // CHECK:   %[[ADD_I8:.*]] = arith.addi %[[IV]], %[[C1_I8]] : i8
+  // CHECK:   %[[ADD_I64:.*]] = arith.extui %[[ADD_I8]] : i8 to i64
+  // CHECK:   call @use_i64(%[[ADD_I64]])
+  scf.for %iv = %lb to %ub step %step : i64 {
+    %add = arith.addi %iv, %c1_i64 : i64
+    func.call @use_i64(%add) : (i64) -> ()
   }
   return
 }

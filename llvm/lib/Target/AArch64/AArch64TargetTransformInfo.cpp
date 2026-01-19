@@ -647,7 +647,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // v2i64 types get converted to cmp+bif hence the cost of 2
     if (LT.second == MVT::v2i64)
       return LT.first * 2;
-    if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidMinMaxTys, equal_to(LT.second)))
       return LT.first;
     break;
   }
@@ -663,7 +663,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // need to extend the type, as it uses shr(qadd(shl, shl)).
     unsigned Instrs =
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits() ? 1 : 4;
-    if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidSatTys, equal_to(LT.second)))
       return LT.first * Instrs;
 
     TypeSize TS = getDataLayout().getTypeSizeInBits(RetTy);
@@ -679,7 +679,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                      MVT::v8i16, MVT::v2i32, MVT::v4i32,
                                      MVT::v2i64};
     auto LT = getTypeLegalizationCost(RetTy);
-    if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidAbsTys, equal_to(LT.second)))
       return LT.first;
     break;
   }
@@ -687,7 +687,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     static const auto ValidAbsTys = {MVT::v4i16, MVT::v8i16, MVT::v2i32,
                                      MVT::v4i32, MVT::v2i64};
     auto LT = getTypeLegalizationCost(RetTy);
-    if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }) &&
+    if (any_of(ValidAbsTys, equal_to(LT.second)) &&
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits())
       return LT.first;
     break;
@@ -3309,19 +3309,11 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       return 0;
   }
 
-  // TODO: Allow non-throughput costs that aren't binary.
-  auto AdjustCost = [&CostKind](InstructionCost Cost) -> InstructionCost {
-    if (CostKind != TTI::TCK_RecipThroughput)
-      return Cost == 0 ? 0 : 1;
-    return Cost;
-  };
-
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
 
   if (!SrcTy.isSimple() || !DstTy.isSimple())
-    return AdjustCost(
-        BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
   // For the moment we do not have lowering for SVE1-only fptrunc f64->bf16 as
   // we use fcvtx under SVE2. Give them invalid costs.
@@ -3349,7 +3341,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (ST->hasBF16())
     if (const auto *Entry = ConvertCostTableLookup(
             BF16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
-      return AdjustCost(Entry->Cost);
+      return Entry->Cost;
 
   // Symbolic constants for the SVE sitofp/uitofp entries in the table below
   // The cost of unpacking twice is artificially increased for now in order
@@ -3836,17 +3828,17 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
     unsigned NumElements =
         AArch64::SVEBitsPerBlock / LT.second.getScalarSizeInBits();
-    return AdjustCost(
-        LT.first *
-        getCastInstrCost(
-            Opcode, ScalableVectorType::get(Dst->getScalarType(), NumElements),
-            ScalableVectorType::get(Src->getScalarType(), NumElements), CCH,
-            CostKind, I));
+    return LT.first *
+           getCastInstrCost(
+               Opcode,
+               ScalableVectorType::get(Dst->getScalarType(), NumElements),
+               ScalableVectorType::get(Src->getScalarType(), NumElements), CCH,
+               CostKind, I);
   }
 
   if (const auto *Entry = ConvertCostTableLookup(
           ConversionTbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
-    return AdjustCost(Entry->Cost);
+    return Entry->Cost;
 
   static const TypeConversionCostTblEntry FP16Tbl[] = {
       {ISD::FP_TO_SINT, MVT::v4i8, MVT::v4f16, 1}, // fcvtzs
@@ -3876,21 +3868,20 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (ST->hasFullFP16())
     if (const auto *Entry = ConvertCostTableLookup(
             FP16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
-      return AdjustCost(Entry->Cost);
+      return Entry->Cost;
 
   // INT_TO_FP of i64->f32 will scalarize, which is required to avoid
   // double-rounding issues.
   if ((ISD == ISD::SINT_TO_FP || ISD == ISD::UINT_TO_FP) &&
       DstTy.getScalarType() == MVT::f32 && SrcTy.getScalarSizeInBits() > 32 &&
       isa<FixedVectorType>(Dst) && isa<FixedVectorType>(Src))
-    return AdjustCost(
-        cast<FixedVectorType>(Dst)->getNumElements() *
-            getCastInstrCost(Opcode, Dst->getScalarType(), Src->getScalarType(),
-                             CCH, CostKind) +
-        BaseT::getScalarizationOverhead(cast<FixedVectorType>(Src), false, true,
-                                        CostKind) +
-        BaseT::getScalarizationOverhead(cast<FixedVectorType>(Dst), true, false,
-                                        CostKind));
+    return cast<FixedVectorType>(Dst)->getNumElements() *
+               getCastInstrCost(Opcode, Dst->getScalarType(),
+                                Src->getScalarType(), CCH, CostKind) +
+           BaseT::getScalarizationOverhead(cast<FixedVectorType>(Src), false,
+                                           true, CostKind) +
+           BaseT::getScalarizationOverhead(cast<FixedVectorType>(Dst), true,
+                                           false, CostKind);
 
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
       CCH == TTI::CastContextHint::Masked &&
@@ -3919,8 +3910,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       ST->isSVEorStreamingSVEAvailable() && TLI->isTypeLegal(DstTy))
     CCH = TTI::CastContextHint::Normal;
 
-  return AdjustCost(
-      BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 }
 
 InstructionCost
@@ -4024,11 +4014,14 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // This is recognising a LD1 single-element structure to one lane of one
     // register instruction. I.e., if this is an `insertelement` instruction,
     // and its second operand is a load, then we will generate a LD1, which
-    // are expensive instructions.
-    if (I && dyn_cast<LoadInst>(I->getOperand(1)))
+    // are expensive instructions on some uArchs.
+    if (I && isa<LoadInst>(I->getOperand(1))) {
+      if (ST->hasFastLD1Single())
+        return 0;
       return CostKind == TTI::TCK_CodeSize
                  ? 0
                  : ST->getVectorInsertExtractBaseCost() + 1;
+    }
 
     // i1 inserts and extract will include an extra cset or cmp of the vector
     // value. Increase the cost by 1 to account.
@@ -4660,9 +4653,9 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
       static const auto ValidFP16MinMaxTys = {MVT::v4f16, MVT::v8f16};
 
       auto LT = getTypeLegalizationCost(ValTy);
-      if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }) ||
+      if (any_of(ValidMinMaxTys, equal_to(LT.second)) ||
           (ST->hasFullFP16() &&
-           any_of(ValidFP16MinMaxTys, [&LT](MVT M) { return M == LT.second; })))
+           any_of(ValidFP16MinMaxTys, equal_to(LT.second))))
         return LT.first;
     }
 
@@ -5544,6 +5537,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   case RecurKind::FMax:
   case RecurKind::FMulAdd:
   case RecurKind::AnyOf:
+  case RecurKind::FindLast:
     return true;
   default:
     return false;
@@ -5914,6 +5908,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     // i16 -> i64 is natively supported for udot/sdot
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i16)
+      return Cost;
+    // i16 -> i32 is natively supported with SVE2p1
+    if (AccumLT.second.getScalarType() == MVT::i32 &&
+        InputLT.second.getScalarType() == MVT::i16 &&
+        (ST->hasSVE2p1() || ST->hasSME2()))
       return Cost;
     // i8 -> i64 is supported with an extra level of extends
     if (AccumLT.second.getScalarType() == MVT::i64 &&

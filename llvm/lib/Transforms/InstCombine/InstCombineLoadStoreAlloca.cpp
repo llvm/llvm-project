@@ -872,20 +872,9 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
     // If we know how big this object is, and it is less than MaxSize, continue
     // searching. Otherwise, return false.
     if (AllocaInst *AI = dyn_cast<AllocaInst>(P)) {
-      if (!AI->getAllocatedType()->isSized())
-        return false;
-
-      ConstantInt *CS = dyn_cast<ConstantInt>(AI->getArraySize());
-      if (!CS)
-        return false;
-
-      TypeSize TS = DL.getTypeAllocSize(AI->getAllocatedType());
-      if (TS.isScalable())
-        return false;
-      // Make sure that, even if the multiplication below would wrap as an
-      // uint64_t, we still do the right thing.
-      if ((CS->getValue().zext(128) * APInt(128, TS.getFixedValue()))
-              .ugt(MaxSize))
+      std::optional<TypeSize> AllocSize = AI->getAllocationSize(DL);
+      if (!AllocSize || AllocSize->isScalable() ||
+          AllocSize->getFixedValue() > MaxSize)
         return false;
       continue;
     }

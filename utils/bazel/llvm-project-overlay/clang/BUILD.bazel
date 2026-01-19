@@ -291,6 +291,14 @@ td_library(
 )
 
 gentbl_cc_library(
+    name = "basic_builtins_amdgpu_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsAMDGPU.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsAMDGPU.td",
+    deps = [":BuiltinsBaseTdFiles"],
+)
+
+gentbl_cc_library(
     name = "basic_builtins_bpf_gen",
     tbl_outs = {"include/clang/Basic/BuiltinsBPF.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
@@ -697,6 +705,7 @@ cc_library(
         ":basic_arm_sve_typeflags_gen",
         ":basic_attr_gen",
         ":basic_builtin_templates_gen",
+        ":basic_builtins_amdgpu_gen",
         ":basic_builtins_bpf_gen",
         ":basic_builtins_directx_gen",
         ":basic_builtins_gen",
@@ -1799,6 +1808,7 @@ cc_library(
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
+        "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Option",
         "//llvm:OrcDebugging",

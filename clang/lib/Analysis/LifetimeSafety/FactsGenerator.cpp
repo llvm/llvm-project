@@ -71,6 +71,26 @@ static const PathLoan *createLoan(FactManager &FactMgr,
   return nullptr;
 }
 
+/// Creates a loan for the storage location of a temporary object.
+/// \param MTE The MaterializeTemporaryExpr that represents the temporary
+/// binding. \return The new Loan.
+static const PathLoan *createLoan(FactManager &FactMgr,
+                                  const MaterializeTemporaryExpr *MTE) {
+  AccessPath Path(MTE);
+  return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, MTE);
+}
+
+/// Try to find a CXXBindTemporaryExpr that descends from MTE, stripping away
+/// any implicit casts.
+/// \param MTE MaterializeTemporaryExpr whose descendants we are interested in.
+/// \return Pointer to descendant CXXBindTemporaryExpr or nullptr when not
+/// found.
+static const CXXBindTemporaryExpr *
+getChildBinding(const MaterializeTemporaryExpr *MTE) {
+  const Expr *Child = MTE->getSubExpr()->IgnoreImpCasts();
+  return dyn_cast<CXXBindTemporaryExpr>(Child);
+}
+
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
@@ -90,6 +110,9 @@ void FactsGenerator::run() {
       else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
                    Element.getAs<CFGLifetimeEnds>())
         handleLifetimeEnds(*LifetimeEnds);
+      else if (std::optional<CFGTemporaryDtor> TemporaryDtor =
+                   Element.getAs<CFGTemporaryDtor>())
+        handleTemporaryDtor(*TemporaryDtor);
     }
     CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
                              EscapesInCurrentBlock.end());
@@ -180,9 +203,23 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   }
 }
 
+static bool isStdMove(const FunctionDecl *FD) {
+  return FD && FD->isInStdNamespace() && FD->getIdentifier() &&
+         FD->getName() == "move";
+}
+
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
   handleFunctionCall(CE, CE->getDirectCallee(),
                      {CE->getArgs(), CE->getNumArgs()});
+  // Track declarations that are moved via std::move.
+  // This is a flow-insensitive approximation: once a declaration is moved
+  // anywhere in the function, it's treated as moved everywhere. We do not
+  // generate expire facts for moved decls to avoid false alarms.
+  if (isStdMove(CE->getDirectCallee()))
+    if (CE->getNumArgs() == 1)
+      if (auto *DRE =
+              dyn_cast<DeclRefExpr>(CE->getArg(0)->IgnoreParenImpCasts()))
+        MovedDecls.insert(DRE->getDecl());
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -196,20 +233,21 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
   OriginList *Dest = getOriginsList(*ICE);
   if (!Dest)
     return;
-  OriginList *SrcList = getOriginsList(*ICE->getSubExpr());
+  const Expr *SubExpr = ICE->getSubExpr();
+  OriginList *Src = getOriginsList(*SubExpr);
 
   switch (ICE->getCastKind()) {
   case CK_LValueToRValue:
     // TODO: Decide what to do for x-values here.
-    if (!ICE->getSubExpr()->isLValue())
+    if (!SubExpr->isLValue())
       return;
 
-    assert(SrcList && "LValue being cast to RValue has no origin list");
+    assert(Src && "LValue being cast to RValue has no origin list");
     // The result of an LValue-to-RValue cast on a pointer lvalue (like `q` in
     // `int *p, *q; p = q;`) should propagate the inner origin (what the pointer
     // points to), not the outer origin (the pointer's storage location). Strip
     // the outer lvalue origin.
-    flow(getOriginsList(*ICE), getRValueOrigins(ICE->getSubExpr(), SrcList),
+    flow(getOriginsList(*ICE), getRValueOrigins(SubExpr, Src),
          /*Kill=*/true);
     return;
   case CK_NullToPointer:
@@ -219,7 +257,14 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
   case CK_NoOp:
   case CK_ConstructorConversion:
   case CK_UserDefinedConversion:
-    flow(Dest, SrcList, /*Kill=*/true);
+    flow(Dest, Src, /*Kill=*/true);
+    return;
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase:
+    // It is possible that the derived class and base class have different
+    // gsl::Pointer annotations. Skip if their origin shape differ.
+    if (Dest && Src && Dest->getLength() == Src->getLength())
+      flow(Dest, Src, /*Kill=*/true);
     return;
   case CK_FunctionToPointerDecay:
   case CK_BuiltinFnToFnPtr:
@@ -334,21 +379,26 @@ void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
 
 void FactsGenerator::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *MTE) {
+  assert(MTE->isGLValue());
+  // We defer from handling lifetime extended materializations.
+  if (MTE->getStorageDuration() != SD_FullExpression)
+    return;
   OriginList *MTEList = getOriginsList(*MTE);
   if (!MTEList)
     return;
   OriginList *SubExprList = getOriginsList(*MTE->getSubExpr());
-  if (MTE->isGLValue()) {
-    assert(!SubExprList ||
-           MTEList->getLength() == SubExprList->getLength() + 1 &&
-               "MTE top level origin should contain a loan to the MTE itself");
-    MTEList = getRValueOrigins(MTE, MTEList);
-    // TODO: Issue a loan to the MTE.
-    flow(MTEList, SubExprList, /*Kill=*/true);
-  } else {
-    assert(MTE->isXValue());
-    flow(MTEList, SubExprList, /*Kill=*/true);
+  assert(!SubExprList ||
+         MTEList->getLength() == SubExprList->getLength() + 1 &&
+             "MTE top level origin should contain a loan to the MTE itself");
+  MTEList = getRValueOrigins(MTE, MTEList);
+  if (getChildBinding(MTE)) {
+    // Issue a loan to MTE for the storage location represented by MTE.
+    const Loan *L = createLoan(FactMgr, MTE);
+    OriginList *List = getOriginsList(*MTE);
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }
+  flow(MTEList, SubExprList, /*Kill=*/true);
 }
 
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
@@ -359,11 +409,41 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   // Iterate through all loans to see if any expire.
   for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
     if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
+      // Skip loans for declarations that have been moved. When a value is
+      // moved, the original owner no longer has ownership and its destruction
+      // should not cause the loan to expire, preventing false positives.
+      if (MovedDecls.contains(BL->getAccessPath().getAsValueDecl()))
+        continue;
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
-      if (BL->getAccessPath().D == LifetimeEndsVD)
+      const AccessPath AP = BL->getAccessPath();
+      const ValueDecl *Path = AP.getAsValueDecl();
+      if (Path == LifetimeEndsVD)
         CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
             BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc()));
+    }
+  }
+}
+
+void FactsGenerator::handleTemporaryDtor(
+    const CFGTemporaryDtor &TemporaryDtor) {
+  const CXXBindTemporaryExpr *ExpiringBTE =
+      TemporaryDtor.getBindTemporaryExpr();
+  if (!ExpiringBTE)
+    return;
+  // Iterate through all loans to see if any expire.
+  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
+    if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
+      // Check if the loan is for a temporary materialization and if that
+      // storage location is the one being destructed.
+      const AccessPath &AP = PL->getAccessPath();
+      const MaterializeTemporaryExpr *Path = AP.getAsMaterializeTemporaryExpr();
+      if (!Path)
+        continue;
+      if (ExpiringBTE == getChildBinding(Path)) {
+        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+            PL->getID(), TemporaryDtor.getBindTemporaryExpr()->getEndLoc()));
+      }
     }
   }
 }
@@ -383,6 +463,15 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
     //  View(const View &v);
     ArgList = getRValueOrigins(Arg, ArgList);
     flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
+  } else if (Arg->getType()->isPointerType()) {
+    // GSL pointer is constructed from a raw pointer. Flow only the outermost
+    // raw pointer. Example:
+    //  View(const char*);
+    //  Span<int*>(const in**);
+    OriginList *ArgList = getOriginsList(*Arg);
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        getOriginsList(*CCE)->getOuterOriginID(), ArgList->getOuterOriginID(),
+        /*Kill=*/true));
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
@@ -402,6 +491,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         bool IsGslConstruction) {
   OriginList *CallList = getOriginsList(*Call);
   // Ignore functions returning values with no origin.
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD || !CallList)
     return;
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
@@ -411,7 +501,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
         return implicitObjectParamIsLifetimeBound(Method) ||
-               shouldTrackImplicitObjectArg(Method);
+               shouldTrackImplicitObjectArg(
+                   Method, /*RunningUnderLifetimeSafety=*/true);
       if ((I - 1) < Method->getNumParams())
         // For explicit arguments, find the corresponding parameter
         // declaration.
@@ -423,6 +514,15 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       PVD = FD->getParamDecl(I);
     }
     return PVD ? PVD->hasAttr<clang::LifetimeBoundAttr>() : false;
+  };
+  auto shouldTrackPointerImplicitObjectArg = [FD](unsigned I) -> bool {
+    const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+    if (!Method || !Method->isInstance())
+      return false;
+    return I == 0 &&
+           isGslPointerType(Method->getFunctionObjectParameterType()) &&
+           shouldTrackImplicitObjectArg(Method,
+                                        /*RunningUnderLifetimeSafety=*/true);
   };
   if (Args.empty())
     return;
@@ -444,6 +544,14 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         flow(CallList, ArgList, KillSrc);
         KillSrc = false;
       }
+    } else if (shouldTrackPointerImplicitObjectArg(I)) {
+      assert(ArgList->getLength() >= 2 &&
+             "Object arg of pointer type should have atleast two origins");
+      // See through the GSLPointer reference to see the pointer's value.
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          CallList->getOuterOriginID(),
+          ArgList->peelOuterOrigin()->getOuterOriginID(), KillSrc));
+      KillSrc = false;
     } else if (IsArgLifetimeBound(I)) {
       // Lifetimebound on a non-GSL-ctor function means the returned
       // pointer/reference itself must not outlive the arguments. This
@@ -483,9 +591,10 @@ void FactsGenerator::handleUse(const DeclRefExpr *DRE) {
   OriginList *List = getOriginsList(*DRE);
   if (!List)
     return;
-  // Remove the outer layer of origin which borrows from the decl directly. This
-  // is a use of the underlying decl.
-  List = getRValueOrigins(DRE, List);
+  // Remove the outer layer of origin which borrows from the decl directly
+  // (e.g., when this is not a reference). This is a use of the underlying decl.
+  if (!DRE->getDecl()->getType()->isReferenceType())
+    List = getRValueOrigins(DRE, List);
   // Skip if there is no inner origin (e.g., when it is not a pointer type).
   if (!List)
     return;

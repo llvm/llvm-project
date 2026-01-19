@@ -117,29 +117,46 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
 
 def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
   let description = [{
-    This interface provides information for region-holding operations that exhibit
-    branching behavior between held regions. I.e., this interface allows for
-    expressing control flow information for region holding operations.
+    This interface provides information for region-holding operations that
+    exhibit branching behavior between held regions. I.e., this interface allows
+    for expressing control flow information for region holding operations.
 
     This interface is meant to model well-defined cases of control-flow and
     value propagation, where what occurs along control-flow edges is assumed to
     be side-effect free.
 
     A "region branch point" indicates a point from which a branch originates. It
-    can indicate either a terminator in any of the immediately nested region of
-    this op or `RegionBranchPoint::parent()`. In the latter case, the branch
-    originates from outside of the op, i.e., when first executing this op.
+    can indicate:
+    1. A `RegionBranchTerminatorOpInterface` terminator in any of the
+       immediately nested regions of this op.
+    2. `RegionBranchPoint::parent()`: the branch originates from outside of the
+       op, i.e., when first executing this op.
 
-    A "region successor" indicates the target of a branch. It can indicate
-    either a region of this op or this op itself. In the former case, the region
-    successor is a region pointer and a range of block arguments to which the
-    "successor operands" are forwarded to. In the latter case, the control flow
-    leaves this op and the region successor is a range of results of this op to
-    which the successor operands are forwarded to.
+    When branching from a region branch point to a region successor, the
+    "successor operands" to be forwarded from the region branch point can be
+    specified with `getEntrySuccessorOperands` /
+    `RegionBranchTerminatorOpInterface::getSuccessorOperands`.
+
+    A "region successor" indicates the target of a branch. It can indicate:
+    1. A region of this op.
+    2. `RegionSuccessor::parent()`, i.e., the control flow leaves this op.
+
+    The SSA values to which successor operands are forwarded are called
+    "successor inputs".
 
     By default, successor operands and successor block arguments/successor
     results must have the same type. `areTypesCompatible` can be implemented to
     allow non-equal types.
+
+
+    Note: This interface works in conjunction with
+    `RegionBranchTerminatorOpInterface`. All immediately nested block
+    terminators that model branching between regions must implement the
+    `RegionBranchTerminatorOpInterface`. Otherwise, analyses/transformations
+    may miss control flow edges and produce incorrect results. Not every block
+    terminator is necessarily a region branch terminator: e.g., in the presence
+    of unstructured control flow, a block terminator could indicate a branch to
+    a different block within the same region.
 
     Example:
 
@@ -151,19 +168,22 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     }
     ```
 
-    `scf.for` has one region. The `scf.yield` has two region successors: the
-    region body itself and the `scf.for` op. `%b` is an entry successor
-    operand. `%c` is a successor operand. `%a` is a successor block argument.
-    `%r` is a successor result.
+    `scf.for` has one region. There are two region branch points with two
+    identical region successors:
+    * parent => parent(%r), region0(%a)
+    * `scf.yield` => parent(%r), region0(%a)
+
+    `%a` and %r are successor inputs. `%b` is an entry successor operand. `%c`
+    is a successor operand.
   }];
   let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<[{
-        Returns the operands of this operation that are forwarded to the region
-        successor's block arguments or this operation's results when branching
-        to `successor`. `successor` is guaranteed to be among the successors that are
-        returned by `getEntrySuccessorRegions`/`getSuccessorRegions(parent())`.
+        Returns the operands of this operation that are forwarded to the
+        successor inputs when branching to `successor`. `successor` is
+        guaranteed to be among the successors that are returned by
+        `getEntrySuccessorRegions`/`getSuccessorRegions(parent())`.
 
         Example: In the above example, this method returns the operand %b of the
         `scf.for` op, regardless of the value of `successor`. I.e., this op always
@@ -206,7 +226,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Returns the potential region successors when branching from `point`.
+        Returns all potential region successors when branching from `point`.
         These are the regions that may be selected during the flow of control.
 
         When `point = RegionBranchPoint::parent()`, this method returns the
@@ -215,10 +235,10 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         by `point`.
 
         Example: In the above example, this method returns the region of the
-        `scf.for` and this operation for either region branch point (`parent`
-        and the region of the `scf.for`). An implementation may choose to filter
-        out region successors when it is statically known (e.g., by examining
-        the operands of this op) that those successors are not branched to.
+        `scf.for` and `parent` for either region branch point. An implementation
+        may choose to filter out region successors when it is statically known
+        (e.g., by examining the operands of this op) that those successors are
+        not branched to.
       }],
       "void", "getSuccessorRegions",
       (ins "::mlir::RegionBranchPoint":$point,
@@ -227,7 +247,6 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     InterfaceMethod<[{
         Returns the potential region successors when branching from any
         terminator in `region`.
-        These are the regions that may be selected during the flow of control.
       }],
       "void", "getSuccessorRegions",
       (ins "::mlir::Region&":$region,
@@ -244,7 +263,21 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         }
       }]>,
     InterfaceMethod<[{
-        Returns the potential branching point (predecessors) for a given successor.
+        Return all successor inputs for the given region successor. If the
+        given region successor is a region, then the returned values are block
+        arguments. Otherwise, if the given region successor is the "parent",
+        the returned values are op results.
+      }],
+      "::mlir::ValueRange", "getSuccessorInputs",
+      (ins "::mlir::RegionSuccessor":$successor),
+      [{}],
+      /*defaultImplementation=*/[{
+        // Default implementation: No successor inputs.
+        return ::mlir::ValueRange();
+      }]>,
+    InterfaceMethod<[{
+        Returns the potential branching points (predecessors) for a given
+        region successor.
       }],
       "void", "getPredecessors",
       (ins "::mlir::RegionSuccessor":$successor,
@@ -280,7 +313,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
             predecessorValues.push_back($_op.getEntrySuccessorOperands(successor)[index]);
             continue;
           }
-          auto terminator = cast<RegionBranchTerminatorOpInterface>(predecessor.getTerminatorPredecessorOrNull());
+          auto terminator = predecessor.getTerminatorPredecessorOrNull();
           predecessorValues.push_back(terminator.getSuccessorOperands(successor)[index]);
         }
       }]>,
@@ -355,6 +388,11 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         ::mlir::RegionBranchSuccessorMapping &mapping,
         std::optional<::mlir::RegionBranchPoint> src = std::nullopt);
 
+    /// Build a mapping from successor inputs to successor operands. This is
+    /// the same as "getSuccessorOperandInputMapping", but inverted.
+    void getSuccessorInputOperandMapping(
+        ::mlir::RegionBranchInverseSuccessorMapping &mapping);
+
     /// Return all possible region branch points: the region branch op itself
     /// and all region branch terminators.
     ::llvm::SmallVector<::mlir::RegionBranchPoint> getAllRegionBranchPoints();
@@ -370,7 +408,14 @@ def RegionBranchTerminatorOpInterface :
   let description = [{
     This interface provides information for branching terminator operations
     in the presence of a parent `RegionBranchOpInterface` implementation. It
-    specifies which operands are passed to which successor region.
+    acts as a marker for valid region branch points and specifies which
+    operands are passed to which region successor.
+
+    Note: If an operation does not implement the
+    `RegionBranchTerminatorOpInterface`, then that op has no region successors.
+    (However, there may be other block terminators in the same region that
+    implement the `RegionBranchTerminatorOpInterface`, so the enclosing region
+    may have region successors.)
   }];
   let cppNamespace = "::mlir";
 

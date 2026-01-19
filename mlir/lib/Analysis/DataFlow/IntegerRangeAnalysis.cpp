@@ -138,7 +138,7 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
 }
 
 void IntegerRangeAnalysis::visitNonControlFlowArguments(
-    Operation *op, const RegionSuccessor &successor,
+    Operation *op, const RegionSuccessor &successor, ValueRange successorInputs,
     ArrayRef<IntegerValueRangeLattice *> argLattices, unsigned firstIndex) {
   if (auto inferrable = dyn_cast<InferIntRangeInterface>(op)) {
     LDBG() << "Inferring ranges for "
@@ -208,7 +208,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
         loop.getLoopInductionVars();
     if (!maybeIvs) {
       return SparseForwardDataFlowAnalysis ::visitNonControlFlowArguments(
-          op, successor, argLattices, firstIndex);
+          op, successor, successorInputs, argLattices, firstIndex);
     }
     // This shouldn't be returning nullopt if there are indunction variables.
     SmallVector<OpFoldResult> lowerBounds = *loop.getLoopLowerBounds();
@@ -246,5 +246,5 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
   }
 
   return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
-      op, successor, argLattices, firstIndex);
+      op, successor, successorInputs, argLattices, firstIndex);
 }
