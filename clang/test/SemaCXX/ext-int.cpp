@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -Wimplicit-int-conversion -Wno-unused -Wunevaluated-expression -triple aarch64-unknown-unknown
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wimplicit-int-conversion -Wno-unused -Wunevaluated-expression -triple aarch64-unknown-unknown -fexperimental-new-constant-interpreter
 
 template<int Bounds>
 struct HasExtInt {
@@ -33,15 +34,15 @@ _BitInt(33) Declarations(_BitInt(48) &Param) { // Useable in params and returns.
   unsigned _BitInt(0xFFFFFFFFFF) q; // expected-error {{unsigned _BitInt of bit sizes greater than 128 not supported}}
 
 // Ensure template params are instantiated correctly.
-  // expected-error@5{{signed _BitInt of bit sizes greater than 128 not supported}}
-  // expected-error@6{{unsigned _BitInt of bit sizes greater than 128 not supported}}
+  // expected-error@6{{signed _BitInt of bit sizes greater than 128 not supported}}
+  // expected-error@7{{unsigned _BitInt of bit sizes greater than 128 not supported}}
   // expected-note@+1{{in instantiation of template class }}
   HasExtInt<-1> r;
-  // expected-error@5{{signed _BitInt must have a bit size of at least 2}}
-  // expected-error@6{{unsigned _BitInt must have a bit size of at least 1}}
+  // expected-error@6{{signed _BitInt must have a bit size of at least 2}}
+  // expected-error@7{{unsigned _BitInt must have a bit size of at least 1}}
   // expected-note@+1{{in instantiation of template class }}
   HasExtInt<0> s;
-  // expected-error@5{{signed _BitInt must have a bit size of at least 2}}
+  // expected-error@6{{signed _BitInt must have a bit size of at least 2}}
   // expected-note@+1{{in instantiation of template class }}
   HasExtInt<1> t;
   HasExtInt<2> u;

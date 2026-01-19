@@ -35,9 +35,8 @@ using namespace clang::interp;
 //    bytes to/from the buffer.
 
 /// Used to iterate over pointer fields.
-using DataFunc =
-    llvm::function_ref<bool(const Pointer &P, PrimType Ty, Bits BitOffset,
-                            Bits FullBitWidth, bool PackedBools)>;
+using DataFunc = llvm::function_ref<bool(const Pointer &P, PrimType Ty,
+                                         Bits BitOffset, Bits FullBitWidth)>;
 
 #define BITCAST_TYPE_SWITCH(Expr, B)                                           \
   do {                                                                         \
@@ -79,30 +78,32 @@ using DataFunc =
 /// and extract relevant data for a bitcast.
 static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
                           Bits BitsToRead, DataFunc F) {
+  auto &ASTCtx = Ctx.getASTContext();
+
   const Descriptor *FieldDesc = P.getFieldDesc();
   assert(FieldDesc);
 
   // Primitives.
   if (FieldDesc->isPrimitive()) {
-    Bits FullBitWidth =
-        Bits(Ctx.getASTContext().getTypeSize(FieldDesc->getType()));
-    return F(P, FieldDesc->getPrimType(), Offset, FullBitWidth,
-             /*PackedBools=*/false);
+    Bits FullBitWidth = Bits(ASTCtx.getTypeSize(FieldDesc->getType()));
+    return F(P, FieldDesc->getPrimType(), Offset, FullBitWidth);
   }
 
   // Primitive arrays.
   if (FieldDesc->isPrimitiveArray()) {
+    QualType FieldType = FieldDesc->getType();
     QualType ElemType = FieldDesc->getElemQualType();
-    Bits ElemSize = Bits(Ctx.getASTContext().getTypeSize(ElemType));
+    Bits ElemSize = Bits(ASTCtx.getTypeSize(ElemType));
+    if (FieldType->isPackedVectorBoolType(ASTCtx) ||
+        FieldType->isPackedBitIntVectorType(ASTCtx))
+      ElemSize =
+          Bits(ASTCtx.getVectorElementSize(FieldType->castAs<VectorType>()));
     PrimType ElemT = *Ctx.classify(ElemType);
-    // Special case, since the bools here are packed.
-    bool PackedBools =
-        FieldDesc->getType()->isPackedVectorBoolType(Ctx.getASTContext());
     unsigned NumElems = FieldDesc->getNumElems();
     bool Ok = true;
     for (unsigned I = P.getIndex(); I != NumElems; ++I) {
-      Ok = Ok && F(P.atIndex(I), ElemT, Offset, ElemSize, PackedBools);
-      Offset += PackedBools ? Bits(1) : ElemSize;
+      Ok = Ok && F(P.atIndex(I), ElemT, Offset, ElemSize);
+      Offset += ElemSize;
       if (Offset >= BitsToRead)
         break;
     }
@@ -229,8 +230,7 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
     const ASTContext &ASTCtx = S.getASTContext();
     QualType EltTy = VT->getElementType();
     unsigned NElts = VT->getNumElements();
-    unsigned EltSize =
-        VT->isPackedVectorBoolType(ASTCtx) ? 1 : ASTCtx.getTypeSize(EltTy);
+    unsigned EltSize = ASTCtx.getVectorElementSize(VT);
 
     if ((NElts * EltSize) % ASTCtx.getCharWidth() != 0) {
       // The vector's size in bits is not a multiple of the target's byte size,
@@ -267,15 +267,13 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
 
   return enumeratePointerFields(
       FromPtr, Ctx, Buffer.size(),
-      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
-          bool PackedBools) -> bool {
-        Bits BitWidth = FullBitWidth;
+      [&](const Pointer &P, PrimType T, Bits BitOffset,
+          Bits BitWidth) -> bool {
+        Bits FullBitWidth = Bits(((BitWidth.getQuantity() + 7) / 8) * 8);
 
         if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
           BitWidth = Bits(std::min(FD->getBitWidthValue(),
                                    (unsigned)FullBitWidth.getQuantity()));
-        else if (T == PT_Bool && PackedBools)
-          BitWidth = Bits(1);
 
         if (BitWidth.isZero())
           return true;
@@ -389,15 +387,14 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;
   bool Success = enumeratePointerFields(
       ToPtr, S.getContext(), Buffer.size(),
-      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
-          bool PackedBools) -> bool {
+      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits BitWidth) -> bool {
         QualType PtrType = P.getType();
         if (T == PT_Float) {
           const auto &Semantics = ASTCtx.getFloatTypeSemantics(PtrType);
           Bits NumBits = Bits(llvm::APFloatBase::getSizeInBits(Semantics));
           assert(NumBits.isFullByte());
-          assert(NumBits.getQuantity() <= FullBitWidth.getQuantity());
-          auto M = Buffer.copyBits(BitOffset, NumBits, FullBitWidth,
+          assert(NumBits.getQuantity() <= BitWidth.getQuantity());
+          auto M = Buffer.copyBits(BitOffset, NumBits, BitWidth,
                                    TargetEndianness);
 
           if (llvm::sys::IsBigEndianHost)
@@ -410,14 +407,10 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
           return true;
         }
 
-        Bits BitWidth;
         if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
           BitWidth = Bits(std::min(FD->getBitWidthValue(),
-                                   (unsigned)FullBitWidth.getQuantity()));
-        else if (T == PT_Bool && PackedBools)
-          BitWidth = Bits(1);
-        else
-          BitWidth = FullBitWidth;
+                                   (unsigned)BitWidth.getQuantity()));
+        Bits FullBitWidth = Bits(((BitWidth.getQuantity() + 7) / 8) * 8);
 
         // If any of the bits are uninitialized, we need to abort unless the
         // target type is std::byte or unsigned char.
@@ -491,7 +484,7 @@ bool clang::interp::DoMemcpy(InterpState &S, CodePtr OpPC,
   llvm::SmallVector<PrimTypeVariant> Values;
   enumeratePointerFields(SrcPtr, S.getContext(), Size,
                          [&](const Pointer &P, PrimType T, Bits BitOffset,
-                             Bits FullBitWidth, bool PackedBools) -> bool {
+                             Bits FullBitWidth) -> bool {
                            TYPE_SWITCH(T, { Values.push_back(P.deref<T>()); });
                            return true;
                          });
@@ -499,7 +492,7 @@ bool clang::interp::DoMemcpy(InterpState &S, CodePtr OpPC,
   unsigned ValueIndex = 0;
   enumeratePointerFields(DestPtr, S.getContext(), Size,
                          [&](const Pointer &P, PrimType T, Bits BitOffset,
-                             Bits FullBitWidth, bool PackedBools) -> bool {
+                             Bits FullBitWidth) -> bool {
                            TYPE_SWITCH(T, {
                              P.deref<T>() = std::get<T>(Values[ValueIndex]);
                              P.initialize();
