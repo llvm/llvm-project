@@ -20,7 +20,7 @@ llvm.func @tensormap_replace_missing_ordinal_2(%addr : !llvm.ptr<1>, %new_val : 
 
 llvm.func @tensormap_replace_invalid_ordinal(%addr : !llvm.ptr<1>, %new_val : i32) {
   // expected-error @+1 {{ordinal is not supported for rank field}}
-  nvvm.tensormap.replace field = rank, new_value = %new_val in %addr, ordinal = 1 : !llvm.ptr<1>, i32
+  nvvm.tensormap.replace field = rank[1], new_value = %new_val in %addr : !llvm.ptr<1>, i32
   llvm.return
 }
 
@@ -44,7 +44,7 @@ llvm.func @tensormap_replace_invalid_new_val_1(%addr : !llvm.ptr<1>, %new_val : 
 
 llvm.func @tensormap_replace_invalid_new_val_2(%addr : !llvm.ptr<1>, %new_val : i64) {
   // expected-error @+1 {{new_value must be specified and must be an i32 for box_dim field}}
-  nvvm.tensormap.replace field = box_dim, new_value = %new_val in %addr, ordinal = 0 : !llvm.ptr<1>, i64
+  nvvm.tensormap.replace field = box_dim[0], new_value = %new_val in %addr : !llvm.ptr<1>, i64
   llvm.return
 }
 
@@ -76,7 +76,7 @@ llvm.func @tensormap_replace_invalid_global_address(%addr : !llvm.ptr<1>, %new_v
 
 llvm.func @tensormap_replace_invalid_global_stride(%addr : !llvm.ptr<1>, %new_val : i32) {
   // expected-error @+1 {{new_value must be specified and must be an i64 for global_stride field}}
-  nvvm.tensormap.replace field = global_stride, new_value = %new_val in %addr, ordinal = 0 : !llvm.ptr<1>, i32
+  nvvm.tensormap.replace field = global_stride[0], new_value = %new_val in %addr : !llvm.ptr<1>, i32
   llvm.return
 }
 

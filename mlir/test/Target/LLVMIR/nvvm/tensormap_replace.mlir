@@ -23,7 +23,7 @@ llvm.func @tensormap_replace_rank(%addr : !llvm.ptr<1>, %new_val : i32) {
 // CHECK-LABEL: define void @tensormap_replace_box_dim(ptr addrspace(1) %0, i32 %1) {
 llvm.func @tensormap_replace_box_dim(%addr : !llvm.ptr<1>, %new_val : i32) {
   // CHECK-NEXT: call void @llvm.nvvm.tensormap.replace.box.dim.p1(ptr addrspace(1) %0, i32 0, i32 %1)
-  nvvm.tensormap.replace field = box_dim, new_value = %new_val in %addr, ordinal = 0 : !llvm.ptr<1>, i32
+  nvvm.tensormap.replace field = box_dim[0], new_value = %new_val in %addr : !llvm.ptr<1>, i32
 
   // CHECK-NEXT: ret void
   llvm.return
@@ -33,7 +33,7 @@ llvm.func @tensormap_replace_box_dim(%addr : !llvm.ptr<1>, %new_val : i32) {
 // CHECK-LABEL: define void @tensormap_replace_global_dim(ptr addrspace(1) %0, i32 %1) {
 llvm.func @tensormap_replace_global_dim(%addr : !llvm.ptr<1>, %new_val : i32) {
   // CHECK-NEXT: call void @llvm.nvvm.tensormap.replace.global.dim.p1(ptr addrspace(1) %0, i32 0, i32 %1)
-  nvvm.tensormap.replace field = global_dim, new_value = %new_val in %addr, ordinal = 0 : !llvm.ptr<1>, i32
+  nvvm.tensormap.replace field = global_dim[0], new_value = %new_val in %addr : !llvm.ptr<1>, i32
   
   // CHECK-NEXT: ret void
   llvm.return
@@ -43,7 +43,7 @@ llvm.func @tensormap_replace_global_dim(%addr : !llvm.ptr<1>, %new_val : i32) {
 // CHECK-LABEL: define void @tensormap_replace_global_stride(ptr addrspace(1) %0, i64 %1) {
 llvm.func @tensormap_replace_global_stride(%addr : !llvm.ptr<1>, %new_val : i64) {
   // CHECK-NEXT: call void @llvm.nvvm.tensormap.replace.global.stride.p1(ptr addrspace(1) %0, i32 0, i64 %1)
-  nvvm.tensormap.replace field = global_stride, new_value = %new_val in %addr, ordinal = 0 : !llvm.ptr<1>, i64
+  nvvm.tensormap.replace field = global_stride[0], new_value = %new_val in %addr : !llvm.ptr<1>, i64
 
   // CHECK-NEXT: ret void
   llvm.return
@@ -53,7 +53,7 @@ llvm.func @tensormap_replace_global_stride(%addr : !llvm.ptr<1>, %new_val : i64)
 // CHECK-LABEL: define void @tensormap_replace_element_stride(ptr addrspace(1) %0, i32 %1) {
 llvm.func @tensormap_replace_element_stride(%addr : !llvm.ptr<1>, %new_val : i32) {
   // CHECK-NEXT: call void @llvm.nvvm.tensormap.replace.element.stride.p1(ptr addrspace(1) %0, i32 0, i32 %1)
-  nvvm.tensormap.replace field = element_stride, new_value = %new_val in %addr, ordinal = 0 : !llvm.ptr<1>, i32
+  nvvm.tensormap.replace field = element_stride[0], new_value = %new_val in %addr : !llvm.ptr<1>, i32
 
   // CHECK-NEXT: ret void
   llvm.return

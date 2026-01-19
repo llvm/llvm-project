@@ -3010,6 +3010,7 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
   auto ord = getOrd();
   Value newVal = getNewValue();
   auto newValAttr = getNewValueAttr();
+  auto fieldName = stringifyEnum(getField());
 
   if (ord && !llvm::is_contained({NVVM::TensormapField::BOX_DIM,
                                   NVVM::TensormapField::GLOBAL_DIM,
@@ -3017,25 +3018,35 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
                                   NVVM::TensormapField::ELEMENT_STRIDE},
                                  getField()))
     return emitOpError("ordinal is not supported for ")
-           << stringifyEnum(getField()) << " field";
+           << fieldName << " field";
+
+  auto invalidNewVal = [&](llvm::Twine type) -> std::string {
+    return llvm::Twine("new_value must be specified and must be an " + type +
+                       " for " + llvm::Twine(fieldName) + " field")
+        .str();
+  };
+
+  auto invalidNewValAttr = [&]() -> std::string {
+    return (llvm::Twine(
+                "new_value_attr must be specified and must be a valid ") +
+            llvm::Twine(fieldName) + " attribute for " + fieldName + " field")
+        .str();
+  };
 
   switch (getField()) {
   case NVVM::TensormapField::GLOBAL_ADDRESS:
     if (!(newVal && newVal.getType().isInteger(64)))
-      return emitOpError("new_value must be specified and must be an i64 for "
-                         "global_address field");
+      return emitOpError(invalidNewVal("i64"));
     break;
   case NVVM::TensormapField::RANK:
     if (!(newVal && newVal.getType().isInteger(32)))
-      return emitOpError(
-          "new_value must be specified and must be an i32 for rank field");
+      return emitOpError(invalidNewVal("i32"));
     break;
   case NVVM::TensormapField::GLOBAL_STRIDE:
     if (!ord)
       return emitOpError("ordinal is required for global_stride field");
     if (!(newVal && newVal.getType().isInteger(64)))
-      return emitOpError("new_value must be specified and must be an i64 for "
-                         "global_stride field");
+      return emitOpError(invalidNewVal("i64"));
     break;
   case NVVM::TensormapField::BOX_DIM:
   case NVVM::TensormapField::GLOBAL_DIM:
@@ -3044,35 +3055,27 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
       return emitOpError("ordinal is required for ")
              << stringifyEnum(getField()) << " field";
     if (!(newVal && newVal.getType().isInteger(32)))
-      return emitOpError("new_value must be specified and must be an i32 for ")
-             << stringifyEnum(getField()) << " field";
+      return emitOpError(invalidNewVal("i32"));
     break;
   case NVVM::TensormapField::ELEMTYPE:
     if (!(newValAttr && llvm::isa<TensormapElemtypeAttr>(*newValAttr)))
-      return emitOpError("new_value_attr must be specified and must be a valid "
-                         "elemtype attribute for elemtype field");
+      return emitOpError(invalidNewValAttr());
     break;
   case NVVM::TensormapField::INTERLEAVE_LAYOUT:
     if (!(newValAttr && llvm::isa<TensormapInterleaveLayoutAttr>(*newValAttr)))
-      return emitOpError(
-          "new_value_attr must be specified and must be a valid "
-          "interleave_layout attribute for interleave_layout field");
+      return emitOpError(invalidNewValAttr());
     break;
   case NVVM::TensormapField::SWIZZLE_MODE:
     if (!(newValAttr && llvm::isa<TensormapSwizzleModeAttr>(*newValAttr)))
-      return emitOpError("new_value_attr must be specified and must be a valid "
-                         "swizzle_mode attribute for swizzle_mode field");
+      return emitOpError(invalidNewValAttr());
     break;
   case NVVM::TensormapField::SWIZZLE_ATOMICITY:
     if (!(newValAttr && llvm::isa<TensormapSwizzleAtomicityAttr>(*newValAttr)))
-      return emitOpError(
-          "new_value_attr must be specified and must be a valid "
-          "swizzle_atomicity attribute for swizzle_atomicity field");
+      return emitOpError(invalidNewValAttr());
     break;
   case NVVM::TensormapField::FILL_MODE:
     if (!(newValAttr && llvm::isa<TensormapFillModeAttr>(*newValAttr)))
-      return emitOpError("new_value_attr must be specified and must be a valid "
-                         "fill_mode attribute for fill_mode field");
+      return emitOpError(invalidNewValAttr());
     break;
   }
 

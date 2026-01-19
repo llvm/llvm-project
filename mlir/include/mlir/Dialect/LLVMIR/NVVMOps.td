@@ -6222,10 +6222,8 @@ def TensormapElemtypeAttr : EnumAttr<NVVM_Dialect, TensormapElemtype, "tensormap
 // Tensormap Interleave Layout Enum
 def TensormapInterleaveLayoutNoInterleave : 
   I32EnumCase<"NO_INTERLEAVE", 0, "no_interleave">;
-def TensormapInterleaveLayoutB16 : 
-  I32EnumCase<"B16", 1, "b16">;
-def TensormapInterleaveLayoutB32 : 
-  I32EnumCase<"B32", 2, "b32">;
+def TensormapInterleaveLayoutB16 : I32EnumCase<"B16", 1, "b16">;
+def TensormapInterleaveLayoutB32 : I32EnumCase<"B32", 2, "b32">;
 
 def TensormapInterleaveLayout : 
   I32Enum<"TensormapInterleaveLayout", "NVVM Tensormap Interleave Layout",
@@ -6336,13 +6334,13 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace"> {
   let arguments = (ins
     TensormapFieldAttr:$field,
     AnyTypeOf<[LLVM_PointerGlobal, LLVM_PointerShared]>:$addr,
-    OptionalAttr<I32Attr>:$ord,
     Optional<AnyTypeOf<[I64, I32]>>:$new_value,
+    OptionalAttr<I32Attr>:$ord,
     OptionalAttr<TensormapFieldValueAttr>:$new_value_attr
   );
 
   let assemblyFormat = [{
-    `field` `=` $field `,` `new_value` `=` ($new_value_attr^):($new_value)? `in` $addr (`,` `ordinal` `=` $ord^)? attr-dict `:` type(operands)
+    `field` `=` $field (`[` $ord^ `]`)? `,` `new_value` `=` ($new_value_attr^):($new_value)? `in` $addr attr-dict `:` type(operands)
   }];
 }
 
