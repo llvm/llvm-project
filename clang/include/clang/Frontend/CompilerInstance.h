@@ -246,6 +246,11 @@ public:
   /// Load the list of plugins requested in the \c FrontendOptions.
   void LoadRequestedPlugins();
 
+  /// Parse and apply LLVM command line arguments from FrontendOptions.
+  /// This processes the LLVMArgs option that comes from -mllvm flags.
+  /// This should be called after plugins are loaded and before ExecuteAction.
+  void parseLLVMArgs();
+
   /// @}
   /// @name Compiler Invocation and Options
   /// @{
