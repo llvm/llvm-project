@@ -1,7 +1,4 @@
 # RUN: llc %s -mtriple=riscv64 --passes='print<reaching-def>'  -o - 2>&1 | FileCheck %s
-# XFAIL: *
-
-#TODO: Currently RDA incorrectly prints that `$x10` defs reaching instruction `0` are `{ 0  }` but it should be `{ 1 }`.
 ---
 name:            entry_bb_is_a_loop
 tracksRegLiveness: true

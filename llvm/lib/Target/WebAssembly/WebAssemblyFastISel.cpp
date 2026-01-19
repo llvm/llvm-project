@@ -194,8 +194,10 @@ private:
 public:
   // Backend specific FastISel code.
   WebAssemblyFastISel(FunctionLoweringInfo &FuncInfo,
-                      const TargetLibraryInfo *LibInfo)
-      : FastISel(FuncInfo, LibInfo, /*SkipTargetIndependentISel=*/true) {
+                      const TargetLibraryInfo *LibInfo,
+                      const LibcallLoweringInfo *LibcallLowering)
+      : FastISel(FuncInfo, LibInfo, LibcallLowering,
+                 /*SkipTargetIndependentISel=*/true) {
     Subtarget = &FuncInfo.MF->getSubtarget<WebAssemblySubtarget>();
     Context = &FuncInfo.Fn->getContext();
   }
@@ -1464,7 +1466,9 @@ bool WebAssemblyFastISel::fastSelectInstruction(const Instruction *I) {
   return selectOperator(I, I->getOpcode());
 }
 
-FastISel *WebAssembly::createFastISel(FunctionLoweringInfo &FuncInfo,
-                                      const TargetLibraryInfo *LibInfo) {
-  return new WebAssemblyFastISel(FuncInfo, LibInfo);
+FastISel *
+WebAssembly::createFastISel(FunctionLoweringInfo &FuncInfo,
+                            const TargetLibraryInfo *LibInfo,
+                            const LibcallLoweringInfo *LibcallLowering) {
+  return new WebAssemblyFastISel(FuncInfo, LibInfo, LibcallLowering);
 }

@@ -2813,10 +2813,10 @@ X86TargetLowering::getPreferredVectorAction(MVT VT) const {
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
 
-FastISel *
-X86TargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
-                                  const TargetLibraryInfo *libInfo) const {
-  return X86::createFastISel(funcInfo, libInfo);
+FastISel *X86TargetLowering::createFastISel(
+    FunctionLoweringInfo &funcInfo, const TargetLibraryInfo *libInfo,
+    const LibcallLoweringInfo *libcallLowering) const {
+  return X86::createFastISel(funcInfo, libInfo, libcallLowering);
 }
 
 //===----------------------------------------------------------------------===//

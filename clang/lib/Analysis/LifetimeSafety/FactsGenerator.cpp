@@ -501,7 +501,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
         return implicitObjectParamIsLifetimeBound(Method) ||
-               shouldTrackImplicitObjectArg(Method);
+               shouldTrackImplicitObjectArg(
+                   Method, /*RunningUnderLifetimeSafety=*/true);
       if ((I - 1) < Method->getNumParams())
         // For explicit arguments, find the corresponding parameter
         // declaration.
@@ -520,7 +521,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       return false;
     return I == 0 &&
            isGslPointerType(Method->getFunctionObjectParameterType()) &&
-           shouldTrackImplicitObjectArg(Method);
+           shouldTrackImplicitObjectArg(Method,
+                                        /*RunningUnderLifetimeSafety=*/true);
   };
   if (Args.empty())
     return;
