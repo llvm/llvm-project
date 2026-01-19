@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -35,6 +36,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -135,13 +137,20 @@ PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
         "ProfileSummaryAnalysis is required for BranchFoldingPass", false);
 
   auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+  auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
   MBFIWrapper MBBFreqInfo(MBFI);
   BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo, MBPI,
                       PSI);
-  if (!Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
-                               MF.getSubtarget().getRegisterInfo()))
-    return PreservedAnalyses::all();
-  return getMachineFunctionPassPreservedAnalyses();
+  if (Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
+                              MF.getSubtarget().getRegisterInfo()))
+    return getMachineFunctionPassPreservedAnalyses();
+
+  if (MDT)
+    MDT->updateBlockNumbers();
+  if (MPDT)
+    MPDT->updateBlockNumbers();
+  return PreservedAnalyses::all();
 }
 
 bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {

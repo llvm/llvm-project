@@ -23,7 +23,6 @@
 #include "gtest/gtest.h"
 #include <optional>
 
-using namespace llvm;
 using namespace mlir;
 using namespace testing;
 namespace {
@@ -35,9 +34,9 @@ TEST(Remark, TestOutputOptimizationRemark) {
   std::string categoryInliner("Inliner");
   std::string categoryReroller("Reroller");
   std::string myPassname1("myPass1");
-  SmallString<64> tmpPathStorage;
-  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
-                            /*MakeAbsolute=*/true);
+  llvm::SmallString<64> tmpPathStorage;
+  llvm::sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
+                                  /*MakeAbsolute=*/true);
   std::string yamlFile =
       std::string(tmpPathStorage.data(), tmpPathStorage.size());
   ASSERT_FALSE(yamlFile.empty());
@@ -96,7 +95,7 @@ TEST(Remark, TestOutputOptimizationRemark) {
   }
 
   // Read the file
-  auto bufferOrErr = MemoryBuffer::getFile(yamlFile);
+  auto bufferOrErr = llvm::MemoryBuffer::getFile(yamlFile);
   ASSERT_TRUE(static_cast<bool>(bufferOrErr)) << "Failed to open remarks file";
   std::string content = bufferOrErr.get()->getBuffer().str();
 
@@ -154,8 +153,8 @@ TEST(Remark, TestNoOutputOptimizationRemark) {
   std::string categoryFailName("myImportantCategory");
   std::string myPassname1("myPass1");
   SmallString<64> tmpPathStorage;
-  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
-                            /*MakeAbsolute=*/true);
+  llvm::sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
+                                  /*MakeAbsolute=*/true);
   std::string yamlFile =
       std::string(tmpPathStorage.data(), tmpPathStorage.size());
   ASSERT_FALSE(yamlFile.empty());
@@ -383,7 +382,7 @@ TEST(Remark, TestRemarkFinal) {
 TEST(Remark, TestArgWithAttribute) {
   MLIRContext context;
 
-  SmallVector<Attribute> elements;
+  llvm::SmallVector<Attribute> elements;
   elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 1));
   elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 2));
   elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 3));
