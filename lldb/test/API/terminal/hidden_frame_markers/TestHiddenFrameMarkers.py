@@ -9,6 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 class HiddenFrameMarkerTest(TestBase):
+    @skipIfWindows
     @unicode_test
     def test_hidden_frame_markers(self):
         """Test that hidden frame markers are rendered in backtraces"""
@@ -51,7 +52,8 @@ class HiddenFrameMarkerTest(TestBase):
             ],
         )
 
-    def test_hidden_frame_markers(self):
+    @skipIfWindows
+    def test_hidden_frame_markers_setting_deactivation(self):
         """
         Test that hidden frame markers are not rendered in backtraces when
         mark-hidden-frames is set to false
