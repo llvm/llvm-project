@@ -13,9 +13,7 @@ set(CLANG_LINK_CLANG_DYLIB "@CLANG_LINK_CLANG_DYLIB@")
 set(CLANG_DEFAULT_LINKER "@CLANG_DEFAULT_LINKER@")
 
 # Provide all our library targets to users.
-if(NOT LLVM_CONFIG_NO_EXPORTS)
-  @CLANG_CONFIG_INCLUDE_EXPORTS@
-endif()
+@CLANG_CONFIG_INCLUDE_EXPORTS@
 
 # By creating clang-tablegen-targets here, subprojects that depend on Clang's
 # tablegen-generated headers can always depend on this target whether building
