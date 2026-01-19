@@ -501,7 +501,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
         return implicitObjectParamIsLifetimeBound(Method) ||
-               shouldTrackImplicitObjectArg(Method);
+               shouldTrackImplicitObjectArg(
+                   Method, /*RunningUnderLifetimeSafety=*/true);
       if ((I - 1) < Method->getNumParams())
         // For explicit arguments, find the corresponding parameter
         // declaration.
@@ -520,7 +521,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       return false;
     return I == 0 &&
            isGslPointerType(Method->getFunctionObjectParameterType()) &&
-           shouldTrackImplicitObjectArg(Method);
+           shouldTrackImplicitObjectArg(Method,
+                                        /*RunningUnderLifetimeSafety=*/true);
   };
   if (Args.empty())
     return;
@@ -589,9 +591,10 @@ void FactsGenerator::handleUse(const DeclRefExpr *DRE) {
   OriginList *List = getOriginsList(*DRE);
   if (!List)
     return;
-  // Remove the outer layer of origin which borrows from the decl directly. This
-  // is a use of the underlying decl.
-  List = getRValueOrigins(DRE, List);
+  // Remove the outer layer of origin which borrows from the decl directly
+  // (e.g., when this is not a reference). This is a use of the underlying decl.
+  if (!DRE->getDecl()->getType()->isReferenceType())
+    List = getRValueOrigins(DRE, List);
   // Skip if there is no inner origin (e.g., when it is not a pointer type).
   if (!List)
     return;
