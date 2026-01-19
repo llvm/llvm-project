@@ -13,8 +13,9 @@ set( HIPCC "hipcc" )
 set( HIPCC_NVIDIA "hipcc-nvidia")
 set( COMP_TYPE "AMD" )
 set( COMP_TYPE_NVIDIA "NVIDIA" )
-set( BUILD_ENABLE_LINTIAN_OVERRIDES ON CACHE BOOL "Enable/Disable Lintian Overrides" )
-set( BUILD_DEBIAN_PKGING_FLAG ON CACHE BOOL "Internal Status Flag to indicate Debian Packaging Build" )
+set( BUILD_ENABLE_LINTIAN_OVERRIDES OFF CACHE BOOL "Enable/Disable Lintian Overrides" )
+set( BUILD_DEBIAN_PKGING_FLAG OFF CACHE BOOL "Internal Status Flag to indicate Debian Packaging Build" )
+option(DISABLE_LINTIAN "disable lintian" ON) 
 
 # Generate static package, when BUILD_SHARED_LIBS is set to OFF.
 # Default to ON
@@ -184,7 +185,9 @@ install(TARGETS ${HIPCONFIG_BIN}
         COMPONENT AMD
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-configure_pkg( ${HIPCC} ${COMP_TYPE} ${CPACK_PACKAGE_VERSION} ${PKG_MAINTAINER_NM} ${PKG_MAINTAINER_EMAIL} )
+if(NOT DISABLE_LINTIAN)
+    configure_pkg( ${HIPCC} ${COMP_TYPE} ${CPACK_PACKAGE_VERSION} ${PKG_MAINTAINER_NM} ${PKG_MAINTAINER_EMAIL} )
+endif()
 
 # NVIDIA specific.
 install(FILES
