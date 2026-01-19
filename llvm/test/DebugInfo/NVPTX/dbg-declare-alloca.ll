@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_30 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_30 | %ptxas-verify %}
 
 ; CHECK: .target sm_30, debug
 

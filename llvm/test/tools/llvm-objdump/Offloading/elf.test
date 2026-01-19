@@ -40,12 +40,12 @@ Sections:
 # CHECK-EMPTY:
 # CHECK-NEXT:OFFLOADING IMAGE [2]:
 # CHECK-NEXT:kind            cubin
-# CHECK-NEXT:arch            sm_52
+# CHECK-NEXT:arch            sm_75
 # CHECK-NEXT:triple          nvptx64-nvidia-cuda
 # CHECK-NEXT:producer        openmp
 # CHECK-EMPTY:
 # CHECK-NEXT:OFFLOADING IMAGE [3]:
 # CHECK-NEXT:kind            <none>
-# CHECK-NEXT:arch            sm_70
+# CHECK-NEXT:arch            sm_75
 # CHECK-NEXT:triple          nvptx64-nvidia-cuda
 # CHECK-NEXT:producer        none

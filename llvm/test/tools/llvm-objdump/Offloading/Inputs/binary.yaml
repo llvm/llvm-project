@@ -20,11 +20,11 @@ Members:
     - Key:            "triple"
       Value:          "nvptx64-nvidia-cuda"
     - Key:            "arch"
-      Value:          "sm_52"
+      Value:          "sm_75"
   - ImageKind:      IMG_None
     OffloadKind:    OFK_None
     String:
     - Key:            "triple"
       Value:          "nvptx64-nvidia-cuda"
     - Key:            "arch"
-      Value:          "sm_70"
+      Value:          "sm_75"

@@ -6184,8 +6184,8 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target",
   let parameters = (ins
     DefaultValuedParameter<"int", "2", "Optimization level to apply.">:$O,
     StringRefParameter<"Target triple.", "\"nvptx64-nvidia-cuda\"">:$triple,
-    StringRefParameter<"Target chip.", "\"sm_50\"">:$chip,
-    StringRefParameter<"Target chip features.", "\"+ptx60\"">:$features,
+    StringRefParameter<"Target chip.", "\"sm_75\"">:$chip,
+    StringRefParameter<"Target chip features.", "\"+ptx63\"">:$features,
     OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
     OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link,
     DefaultValuedParameter<"bool", "true", "Perform SM version check on Ops.">:$verifyTarget
@@ -6196,8 +6196,8 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target",
   let builders = [
     AttrBuilder<(ins CArg<"int", "2">:$optLevel,
                      CArg<"StringRef", "\"nvptx64-nvidia-cuda\"">:$triple,
-                     CArg<"StringRef", "\"sm_50\"">:$chip,
-                     CArg<"StringRef", "\"+ptx60\"">:$features,
+                     CArg<"StringRef", "\"sm_75\"">:$chip,
+                     CArg<"StringRef", "\"+ptx63\"">:$features,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
                      CArg<"ArrayAttr", "nullptr">:$linkFiles,
                      CArg<"bool", "true">:$verifyTarget), [{

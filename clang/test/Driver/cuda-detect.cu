@@ -60,7 +60,7 @@
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_50 \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE30
+// RUN:     -check-prefixes PTX63,LIBDEVICE,LIBDEVICE10
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_60 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
@@ -96,14 +96,14 @@
 
 
 // Verify that -nocudainc prevents adding include path to CUDA headers.
-// RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
+// RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_75 \
 // RUN:   -nocudainc --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOCUDAINC \
-// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE35
-// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_35 \
+// RUN:     -check-prefixes PTX63,LIBDEVICE,LIBDEVICE10
+// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_75 \
 // RUN:   -nocudainc --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOCUDAINC \
-// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE35
+// RUN:     -check-prefixes PTX63,LIBDEVICE,LIBDEVICE10
 
 // We should not add any CUDA include paths if there's no valid CUDA installation
 // RUN: not %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
@@ -123,10 +123,10 @@
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix MISSINGLIBDEVICE
 
 // Verify that  -nocudalib prevents linking libdevice bitcode in.
-// RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
+// RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_75 \
 // RUN:   -nocudalib --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON
-// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_35 \
+// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_75 \
 // RUN:   -nocudalib --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON
 
@@ -152,10 +152,10 @@
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix CUDA80
 
-// Verify that if no version file is found, we report the default of 7.0.
+// Verify that if no version file is found, we report the default of 10.0.
 // RUN: %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=sm_50 \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
-// RUN:   | FileCheck %s -check-prefix CUDA70
+// RUN:   | FileCheck %s -check-prefix CUDA100
 
 // CHECK: Found CUDA installation: {{.*}}/Inputs/CUDA/usr/local/cuda
 // NO-LIBDEVICE: Found CUDA installation: {{.*}}/Inputs/CUDA-nolibdevice/usr/local/cuda
@@ -174,6 +174,7 @@
 // LIBDEVICE50-SAME: libdevice.compute_50.10.bc
 // PTX42-SAME: "-target-feature" "+ptx42"
 // PTX60-SAME: "-target-feature" "+ptx60"
+// PTX63-SAME: "-target-feature" "+ptx63"
 // CUDAINC-SAME: "-include" "__clang_cuda_runtime_wrapper.h"
 // NOCUDAINC-NOT: "-include" "__clang_cuda_runtime_wrapper.h"
 // CUDAINC-SAME: "-internal-isystem" "{{.*}}/Inputs/CUDA{{[_0-9]+}}/usr/local/cuda/include"
@@ -188,14 +189,20 @@
 // CHECK-CXXINCLUDE-SAME: {{.*}}"-internal-isystem" "{{.+}}/include/c++/4.8"
 // CHECK-CXXINCLUDE: ld{{.*}}"
 
+// CUDA70: "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// CUDA70-SAME: -target-sdk-version=7.0
+// CUDA70: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
+// CUDA70-SAME: -target-sdk-version=7.0
+// CUDA70: ld{{.*}}"
+
 // CUDA80: "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // CUDA80-SAME: -target-sdk-version=8.0
 // CUDA80: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CUDA80-SAME: -target-sdk-version=8.0
 // CUDA80: ld{{.*}}"
 
-// CUDA70: "-cc1" "-triple" "nvptx64-nvidia-cuda"
-// CUDA70-SAME: -target-sdk-version=7.0
-// CUDA70: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
-// CUDA70-SAME: -target-sdk-version=7.0
-// CUDA70: ld{{.*}}"
+// CUDA100: "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// CUDA100-SAME: -target-sdk-version=10.0
+// CUDA100: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
+// CUDA100-SAME: -target-sdk-version=10.0
+// CUDA100: ld{{.*}}"
