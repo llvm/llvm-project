@@ -562,7 +562,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_flat_set",
-            "values": {"c++23": 202207},
+            "values": {"c++23": 202511},
             "headers": ["flat_set"],
         },
         {
