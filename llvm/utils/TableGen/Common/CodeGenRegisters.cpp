@@ -1948,7 +1948,7 @@ void CodeGenRegBank::enforceRegUnitIntervals() {
 
   // RegUnits that have been renumbered from X -> Y. Y is what is marked so that
   // it doesn't create a chain of swaps.
-  SparseBitVector DontRenumberUnits;
+  SparseBitVector<> DontRenumberUnits;
 
   auto GetRenumberedUnit = [&](unsigned RegUnit) -> unsigned {
     if (RegUnitRenumbering[RegUnit] != ~0u)
@@ -1972,7 +1972,7 @@ void CodeGenRegBank::enforceRegUnitIntervals() {
     const auto &Units = Reg.getNativeRegUnits();
     if (Units.empty())
       continue;
-    SparseBitVector RenumberedUnits;
+    SparseBitVector<> RenumberedUnits;
     // First renumber all the units for this register according to previous
     // renumbering.
     LLVM_DEBUG(dbgs() << "  Original (Renumbered) units:");
