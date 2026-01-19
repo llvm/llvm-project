@@ -402,9 +402,9 @@ hlfir::Entity hlfir::genVariableBox(mlir::Location loc,
       fir::BoxType::get(var.getElementOrSequenceType(), isVolatile);
   if (forceBoxType) {
     boxType = forceBoxType;
-    mlir::Type baseType =
-        fir::ReferenceType::get(fir::unwrapRefType(forceBoxType.getEleTy()));
-    addr = builder.createConvert(loc, baseType, addr);
+    mlir::Type baseType = fir::ReferenceType::get(
+        fir::unwrapRefType(forceBoxType.getEleTy()), forceBoxType.isVolatile());
+    addr = builder.createConvertWithVolatileCast(loc, baseType, addr);
   }
   auto embox = fir::EmboxOp::create(builder, loc, boxType, addr, shape,
                                     /*slice=*/mlir::Value{}, typeParams);
@@ -1417,13 +1417,14 @@ void hlfir::genNoAliasArrayAssignment(
   rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
   lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
   mlir::Value lhsShape = hlfir::genShape(loc, builder, lhs);
-  llvm::SmallVector<mlir::Value> lhsExtents =
-      hlfir::getIndexExtents(loc, builder, lhsShape);
-  mlir::Value rhsShape = hlfir::genShape(loc, builder, rhs);
-  llvm::SmallVector<mlir::Value> rhsExtents =
-      hlfir::getIndexExtents(loc, builder, rhsShape);
   llvm::SmallVector<mlir::Value> extents =
-      fir::factory::deduceOptimalExtents(lhsExtents, rhsExtents);
+      hlfir::getIndexExtents(loc, builder, lhsShape);
+  if (rhs.isArray()) {
+    mlir::Value rhsShape = hlfir::genShape(loc, builder, rhs);
+    llvm::SmallVector<mlir::Value> rhsExtents =
+        hlfir::getIndexExtents(loc, builder, rhsShape);
+    extents = fir::factory::deduceOptimalExtents(extents, rhsExtents);
+  }
   hlfir::LoopNest loopNest =
       hlfir::genLoopNest(loc, builder, extents,
                          /*isUnordered=*/true, emitWorkshareLoop);

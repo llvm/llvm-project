@@ -171,12 +171,15 @@ public:
       Primary.Options.set(OptionBit::DeallocTypeMismatch);
     if (getFlags()->delete_size_mismatch)
       Primary.Options.set(OptionBit::DeleteSizeMismatch);
-    if (allocatorSupportsMemoryTagging<AllocatorConfig>() &&
-        systemSupportsMemoryTagging())
+    if (systemSupportsMemoryTagging())
       Primary.Options.set(OptionBit::UseMemoryTagging);
 
     QuarantineMaxChunkSize =
         static_cast<u32>(getFlags()->quarantine_max_chunk_size);
+#if SCUDO_FUCHSIA
+    ZeroOnDeallocMaxSize =
+        static_cast<u32>(getFlags()->zero_on_dealloc_max_size);
+#endif
 
     Stats.init();
     // TODO(chiahungduan): Given that we support setting the default value in
@@ -689,16 +692,15 @@ public:
       Base = untagPointer(Base);
     const uptr From = Base;
     const uptr To = Base + Size;
-    bool MayHaveTaggedPrimary =
-        allocatorSupportsMemoryTagging<AllocatorConfig>() &&
-        systemSupportsMemoryTagging();
+    const Options Options = Primary.Options.load();
+    bool MayHaveTaggedPrimary = useMemoryTagging<AllocatorConfig>(Options);
     auto Lambda = [this, From, To, MayHaveTaggedPrimary, Callback,
                    Arg](uptr Block) {
       if (Block < From || Block >= To)
         return;
       uptr Chunk;
       Chunk::UnpackedHeader Header;
-      if (MayHaveTaggedPrimary) {
+      if (UNLIKELY(MayHaveTaggedPrimary)) {
         // A chunk header can either have a zero tag (tagged primary) or the
         // header tag (secondary, or untagged primary). We don't know which so
         // try both.
@@ -1035,6 +1037,9 @@ private:
 
   u32 Cookie = 0;
   u32 QuarantineMaxChunkSize = 0;
+#if SCUDO_FUCHSIA
+  u32 ZeroOnDeallocMaxSize = 0;
+#endif
 
   GlobalStats Stats;
   PrimaryT Primary;
@@ -1344,6 +1349,18 @@ private:
       } else {
         BlockBegin = retagBlock(Options, TaggedPtr, Ptr, Header, Size, true);
       }
+
+#if SCUDO_FUCHSIA
+      if (AllocatorConfig::getEnableZeroOnDealloc()) {
+        // Clearing the header is incompatible with quarantine and tagging.
+        // Hence, it is fine to implement it only when quarantine is bypassed.
+        DCHECK(!useMemoryTagging<AllocatorConfig>(Options));
+        uptr length = reinterpret_cast<uptr>(Ptr) + Size -
+                      reinterpret_cast<uptr>(BlockBegin);
+        if (length <= ZeroOnDeallocMaxSize)
+          memset(BlockBegin, 0, length);
+      }
+#endif // SCUDO_FUCHSIA
 
       const uptr ClassId = Header->ClassId;
       if (LIKELY(ClassId)) {

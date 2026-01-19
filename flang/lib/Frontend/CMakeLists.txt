@@ -46,6 +46,7 @@ add_flang_library(flangFrontend
 
   LINK_COMPONENTS
   Passes
+  Plugins
   Analysis
   BitReader
   Extensions
@@ -75,7 +76,6 @@ add_flang_library(flangFrontend
 
   CLANG_LIBS
   clangBasic
-  clangDriver
   clangOptions
 )
 

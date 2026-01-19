@@ -60,7 +60,6 @@ Error objdump::getWasmRelocationValueString(const WasmObjectFile *Obj,
     Result.append(SymName.begin(), SymName.end());
   }
   Fmt << (Rel.Addend < 0 ? "" : "+") << Rel.Addend;
-  Fmt.flush();
   Result.append(FmtBuf.begin(), FmtBuf.end());
   return Error::success();
 }

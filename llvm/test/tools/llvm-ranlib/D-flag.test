@@ -5,7 +5,7 @@
 # RUN: env TZ=UTC touch -t 200001020304 %t.o
 # RUN: rm -f %t.a %t-no-index.a && llvm-ar cqSU %t-no-index.a %t.o
 
-## Check that the intial listing has real values:
+## Check that the initial listing has real values:
 # RUN: env TZ=UTC llvm-ar tv %t-no-index.a | FileCheck %s --check-prefix=REAL-VALUES
 
 ## Check that the -D flag clears the timestamps:

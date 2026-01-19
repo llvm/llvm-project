@@ -22,7 +22,8 @@ namespace Fortran::parser {
 
 // R867
 ImportStmt::ImportStmt(common::ImportKind &&k, std::list<Name> &&n)
-    : kind{k}, names(std::move(n)) {
+    : t(k, std::move(n)) {
+  const auto &[kind, names]{t};
   CHECK(kind == common::ImportKind::Default ||
       kind == common::ImportKind::Only || names.empty());
 }
@@ -30,8 +31,8 @@ ImportStmt::ImportStmt(common::ImportKind &&k, std::list<Name> &&n)
 // R873
 CommonStmt::CommonStmt(std::optional<Name> &&name,
     std::list<CommonBlockObject> &&objects, std::list<Block> &&others) {
-  blocks.emplace_front(std::move(name), std::move(objects));
-  blocks.splice(blocks.end(), std::move(others));
+  v.emplace_front(std::move(name), std::move(objects));
+  v.splice(v.end(), std::move(others));
 }
 
 // R901 designator
@@ -435,17 +436,36 @@ const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
 }
 
 const DoConstruct *OpenMPLoopConstruct::GetNestedLoop() const {
-  if (auto &body{std::get<Block>(t)}; !body.empty()) {
-    return Unwrap<DoConstruct>(body.front());
-  }
-  return nullptr;
+  auto getFromBlock{[](const Block &body, auto self) -> const DoConstruct * {
+    for (auto &stmt : body) {
+      if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+        return self(std::get<Block>(block->t), self);
+      }
+      if (auto *loop{Unwrap<DoConstruct>(&stmt)}) {
+        return loop;
+      }
+    }
+    return nullptr;
+  }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
 }
 
 const OpenMPLoopConstruct *OpenMPLoopConstruct::GetNestedConstruct() const {
-  if (auto &body{std::get<Block>(t)}; !body.empty()) {
-    return Unwrap<OpenMPLoopConstruct>(body.front());
-  }
-  return nullptr;
+  auto getFromBlock{
+      [](const Block &body, auto self) -> const OpenMPLoopConstruct * {
+        for (auto &stmt : body) {
+          if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+            return self(std::get<Block>(block->t), self);
+          }
+          if (auto *omp{Unwrap<OpenMPLoopConstruct>(&stmt)}) {
+            return omp;
+          }
+        }
+        return nullptr;
+      }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
 }
 
 static bool InitCharBlocksFromStrings(llvm::MutableArrayRef<CharBlock> blocks,

@@ -318,6 +318,32 @@ define i64 @test_steadycounter() {
   ret i64 %ret
 }
 
+define i32 @test_total_smem_size() {
+; CHECK-LABEL: test_total_smem_size(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.u32 %r1, %total_smem_size;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
+  %a = tail call i32 @llvm.nvvm.read.ptx.sreg.total_smem_size()
+  ret i32 %a
+}
+
+define i32 @test_dynamic_smem_size() {
+; CHECK-LABEL: test_dynamic_smem_size(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.u32 %r1, %dynamic_smem_size;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
+  %a = tail call i32 @llvm.nvvm.read.ptx.sreg.dynamic_smem_size()
+  ret i32 %a
+}
+
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare float @llvm.nvvm.sqrt.f(float)
@@ -335,3 +361,5 @@ declare void @llvm.nvvm.exit()
 declare i64 @llvm.nvvm.read.ptx.sreg.globaltimer()
 declare i64 @llvm.readcyclecounter()
 declare i64 @llvm.readsteadycounter()
+declare i32 @llvm.nvvm.read.ptx.sreg.total_smem_size()
+declare i32 @llvm.nvvm.read.ptx.sreg.dynamic_smem_size()
