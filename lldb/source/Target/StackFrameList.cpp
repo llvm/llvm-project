@@ -27,6 +27,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/ConvertUTF.h"
 
 #include <memory>
 
@@ -58,23 +59,24 @@ StackFrameList::~StackFrameList() {
 
 SyntheticStackFrameList::SyntheticStackFrameList(
     Thread &thread, lldb::StackFrameListSP input_frames,
-    const lldb::StackFrameListSP &prev_frames_sp, bool show_inline_frames)
+    const lldb::StackFrameListSP &prev_frames_sp, bool show_inline_frames,
+    lldb::SyntheticFrameProviderSP provider_sp)
     : StackFrameList(thread, prev_frames_sp, show_inline_frames),
-      m_input_frames(std::move(input_frames)) {}
+      m_input_frames(std::move(input_frames)),
+      m_provider(std::move(provider_sp)) {}
 
 bool SyntheticStackFrameList::FetchFramesUpTo(
     uint32_t end_idx, InterruptionControl allow_interrupt) {
 
   size_t num_synthetic_frames = 0;
-  // Check if the thread has a synthetic frame provider.
-  if (auto provider_sp = m_thread.GetFrameProvider()) {
-    // Use the synthetic frame provider to generate frames lazily.
+  // Use the provider to generate frames lazily.
+  if (m_provider) {
     // Keep fetching until we reach end_idx or the provider returns an error.
     for (uint32_t idx = m_frames.size(); idx <= end_idx; idx++) {
       if (allow_interrupt &&
           m_thread.GetProcess()->GetTarget().GetDebugger().InterruptRequested())
         return true;
-      auto frame_or_err = provider_sp->GetFrameAtIndex(idx);
+      auto frame_or_err = m_provider->GetFrameAtIndex(idx);
       if (!frame_or_err) {
         // Provider returned error - we've reached the end.
         LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), frame_or_err.takeError(),
@@ -928,11 +930,43 @@ StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
   return ret_sp;
 }
 
+bool StackFrameList::IsNextFrameHidden(lldb_private::StackFrame &frame) {
+  uint32_t frame_idx = frame.GetFrameIndex();
+  StackFrameSP frame_sp = GetFrameAtIndex(frame_idx + 1);
+  if (!frame_sp)
+    return false;
+  return frame_sp->IsHidden();
+}
+
+bool StackFrameList::IsPreviousFrameHidden(lldb_private::StackFrame &frame) {
+  uint32_t frame_idx = frame.GetFrameIndex();
+  if (frame_idx == 0)
+    return false;
+  StackFrameSP frame_sp = GetFrameAtIndex(frame_idx - 1);
+  if (!frame_sp)
+    return false;
+  return frame_sp->IsHidden();
+}
+
+std::string StackFrameList::FrameMarker(lldb::StackFrameSP frame_sp,
+                                        lldb::StackFrameSP selected_frame_sp) {
+  if (frame_sp == selected_frame_sp)
+    return Terminal::SupportsUnicode() ? u8" * " : u8"* ";
+  else if (!Terminal::SupportsUnicode())
+    return u8"  ";
+  else if (IsPreviousFrameHidden(*frame_sp))
+    return u8"﹉ ";
+  else if (IsNextFrameHidden(*frame_sp))
+    return u8"﹍ ";
+  return u8"   ";
+}
+
 size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
                                  uint32_t num_frames, bool show_frame_info,
                                  uint32_t num_frames_with_source,
                                  bool show_unique, bool show_hidden,
-                                 const char *selected_frame_marker) {
+                                 bool show_hidden_marker,
+                                 bool show_selected_frame) {
   size_t num_frames_displayed = 0;
 
   if (num_frames == 0)
@@ -950,25 +984,17 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
 
   StackFrameSP selected_frame_sp =
       m_thread.GetSelectedFrame(DoNoSelectMostRelevantFrame);
-  const char *unselected_marker = nullptr;
   std::string buffer;
-  if (selected_frame_marker) {
-    size_t len = strlen(selected_frame_marker);
-    buffer.insert(buffer.begin(), len, ' ');
-    unselected_marker = buffer.c_str();
-  }
-  const char *marker = nullptr;
+  std::string marker;
   for (frame_idx = first_frame; frame_idx < last_frame; ++frame_idx) {
     frame_sp = GetFrameAtIndex(frame_idx);
     if (!frame_sp)
       break;
 
-    if (selected_frame_marker != nullptr) {
-      if (frame_sp == selected_frame_sp)
-        marker = selected_frame_marker;
-      else
-        marker = unselected_marker;
-    }
+    if (show_selected_frame)
+      marker = FrameMarker(frame_sp, selected_frame_sp);
+    else
+      marker = FrameMarker(frame_sp, nullptr);
 
     // Hide uninteresting frames unless it's the selected frame.
     if (!show_hidden && frame_sp != selected_frame_sp && frame_sp->IsHidden())
@@ -981,7 +1007,6 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
             dbg, "Interrupted dumping stack for thread {0:x} with {1} shown.",
             m_thread.GetID(), num_frames_displayed))
       break;
-
 
     if (!frame_sp->GetStatus(strm, show_frame_info,
                              num_frames_with_source > (first_frame - frame_idx),

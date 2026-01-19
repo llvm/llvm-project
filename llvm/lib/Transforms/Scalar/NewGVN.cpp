@@ -3473,12 +3473,22 @@ bool NewGVN::runGVN() {
     RPOOrdering[Node] = ++Counter;
   }
   // Sort dominator tree children arrays into RPO.
+  // TODO: this code shouldn't rely on domtree internals. It also most probably
+  // shouldn't rely on the order of nodes in the tree...
   for (auto &B : RPOT) {
     auto *Node = DT->getNode(B);
-    if (Node->getNumChildren() > 1)
-      llvm::sort(*Node, [&](const DomTreeNode *A, const DomTreeNode *B) {
-        return RPOOrdering[A] < RPOOrdering[B];
-      });
+    if (Node->isLeaf())
+      continue;
+    SmallVector<DomTreeNode *> Children;
+    while (!Node->isLeaf()) {
+      Children.push_back(*Node->begin());
+      Node->removeChild(*Node->begin());
+    }
+    llvm::sort(Children, [&](const DomTreeNode *A, const DomTreeNode *B) {
+      return RPOOrdering[A] < RPOOrdering[B];
+    });
+    for (DomTreeNode *Child : Children)
+      Node->addChild(Child);
   }
 
   // Now a standard depth first ordering of the domtree is equivalent to RPO.
