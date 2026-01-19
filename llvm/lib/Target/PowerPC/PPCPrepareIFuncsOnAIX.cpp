@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include <cassert>
 
 using namespace llvm;
@@ -27,8 +26,6 @@ using namespace llvm;
 #define DEBUG_TYPE "ppc-prep-ifunc-aix"
 
 STATISTIC(NumIFuncs, "Number of IFuncs prepared");
-
-extern cl::opt<bool> UseImplicitRef;
 
 namespace {
 class PPCPrepareIFuncsOnAIX : public ModulePass {
@@ -102,25 +99,15 @@ bool PPCPrepareIFuncsOnAIX::runOnModule(Module &M) {
     GV->setInitializer(ConstantStruct::get(IFuncPairType, InitVals));
 
     // Liveness of __update_foo is dependent on liveness of ifunc foo.
-    IFunc.setMetadata(UseImplicitRef ? LLVMContext::MD_implicit_ref
-                                     : LLVMContext::MD_associated,
+    IFunc.setMetadata(LLVMContext::MD_implicit_ref,
                       MDNode::get(Ctx, ValueAsMetadata::get(GV)));
 
     // An implicit.ref creates linkage dependency, so make function foo require
     // the constructor that calls each ifunc's resolver and saves the result in
     // the ifunc's function descriptor.
-    if (UseImplicitRef)
-      IFunc.addMetadata(
-          LLVMContext::MD_implicit_ref,
-          *MDNode::get(Ctx, ValueAsMetadata::get(IFuncConstructorDecl)));
-    else
-      // Note: technically, we can associate both the update_foo variable and
-      // the constructor function to function foo, but only one MD_associated
-      // is allowed on an llvm::Value, so associate the constructor to
-      // update_foo here.
-      GV->setMetadata(
-          LLVMContext::MD_associated,
-          MDNode::get(Ctx, ValueAsMetadata::get(IFuncConstructorDecl)));
+    IFunc.addMetadata(
+        LLVMContext::MD_implicit_ref,
+        *MDNode::get(Ctx, ValueAsMetadata::get(IFuncConstructorDecl)));
   }
 
   return true;

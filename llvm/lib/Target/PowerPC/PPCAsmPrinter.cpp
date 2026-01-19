@@ -3537,10 +3537,6 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
  *                          # returns to the caller of .foo
  *                          # -- End function
  */
-
-cl::opt<bool> UseImplicitRef("use-implicit-ref", cl::init(true),
-                             cl::desc("Use implicit.ref metadata"), cl::Hidden);
-
 void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   // Set the Subtarget to that of the resolver.
   const TargetSubtargetInfo *STI =
@@ -3558,8 +3554,6 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
 
   CurrentFnSym = getObjFileLowering().getFunctionEntryPointSymbol(&GI, TM);
 
-  MCSymbol *IFuncUpdateSym = nullptr;
-
   // Start codegen:
   if (TM.getFunctionSections())
     OutStreamer->switchSection(
@@ -3567,21 +3561,12 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   else
     OutStreamer->switchSection(getObjFileLowering().getTextSection());
 
-  if (MDNode *MD = GI.getMetadata(LLVMContext::MD_associated)) {
-    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
-    const GlobalVariable *IFuncUpdateGV = cast<GlobalVariable>(VAM->getValue());
-    IFuncUpdateSym = getSymbol(IFuncUpdateGV);
-  } else if (GI.hasMetadata(LLVMContext::MD_implicit_ref))
+  if (GI.hasMetadata(LLVMContext::MD_implicit_ref))
     emitRefMetadata(&GI);
 
   // generate linkage for foo and .foo
   emitLinkage(&GI, CurrentFnDescSym);
   emitLinkage(&GI, CurrentFnSym);
-
-  // declare the "ifunc_sec.foo[RW]" as an internal symbol
-  if (IFuncUpdateSym)
-    OutStreamer->emitXCOFFSymbolLinkageWithVisibility(
-        IFuncUpdateSym, MCSA_LGlobal, MCSA_Invalid);
 
   // .align 4
   Align Alignment(STI->getTargetLowering()->getMinFunctionAlignment());
@@ -3591,27 +3576,6 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   emitFunctionDescriptor();
 
   emitFunctionEntryLabel();
-
-  // back to .foo[PR]
-  // .ref ifunc_sec.foo[RW]
-  if (IFuncUpdateSym)
-    OutStreamer->emitXCOFFRefDirective(IFuncUpdateSym);
-
-  // vvvvvv TEMPORARY: TO BE REMOVED AFTER upstream PR 151569 lands vvvvv
-  // .ref .__init_ifuncs[PR]
-  if (MDNode *MD = GI.getMetadata(LLVMContext::MD_associated)) {
-    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
-    const GlobalVariable *IFuncUpdateGV = cast<GlobalVariable>(VAM->getValue());
-    MD = IFuncUpdateGV->getMetadata(LLVMContext::MD_associated);
-    if (MD) {
-      const ValueAsMetadata *VAM =
-          cast<ValueAsMetadata>(MD->getOperand(0).get());
-      const Function *InitIFuncDecl = cast<Function>(VAM->getValue());
-      OutStreamer->emitXCOFFRefDirective(
-          getObjFileLowering().getFunctionEntryPointSymbol(InitIFuncDecl, TM));
-    }
-  }
-  // ^^^^^^ TEMPORARY ^^^^^
 
   // generate the code for .foo now:
   if (TOCRestoreNeededForCallToImplementation(GI)) {
