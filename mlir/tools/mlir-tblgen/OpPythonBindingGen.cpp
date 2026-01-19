@@ -228,6 +228,28 @@ constexpr const char *optionalAttributeGetterTemplate = R"Py(
     return self.operation.attributes["{1}"]
 )Py";
 
+/// Template for an operation attribute getter for adaptors:
+///   {0} is the name of the attribute sanitized for Python;
+///   {1} is the original name of the attribute.
+///   {2} is the type hint.
+constexpr const char *adaptorAttributeGetterTemplate = R"Py(
+  @builtins.property
+  def {0}(self) -> {2}:
+    return self.attributes["{1}"]
+)Py";
+
+/// Template for an optional operation attribute getter for adaptors:
+///   {0} is the name of the attribute sanitized for Python;
+///   {1} is the original name of the attribute.
+///   {2} is the type hint.
+constexpr const char *adaptorOptionalAttributeGetterTemplate = R"Py(
+  @builtins.property
+  def {0}(self) -> _Optional[{2}]:
+    if "{1}" not in self.attributes:
+      return None
+    return self.attributes["{1}"]
+)Py";
+
 /// Template for a getter of a unit operation attribute, returns True of the
 /// unit attribute is present, False otherwise (unit attributes have meaning
 /// by mere presence):
@@ -237,6 +259,17 @@ constexpr const char *unitAttributeGetterTemplate = R"Py(
   @builtins.property
   def {0}(self) -> bool:
     return "{1}" in self.operation.attributes
+)Py";
+
+/// Template for a getter of a unit operation attribute for adaptors, returns
+/// True of the unit attribute is present, False otherwise (unit attributes have
+/// meaning by mere presence):
+///    {0} is the name of the attribute sanitized for Python,
+///    {1} is the original name of the attribute.
+constexpr const char *adaptorUnitAttributeGetterTemplate = R"Py(
+  @builtins.property
+  def {0}(self) -> bool:
+    return "{1}" in self.attributes
 )Py";
 
 /// Template for an operation attribute setter:
@@ -637,6 +670,34 @@ static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
                     type);
       // Non-optional attributes cannot be deleted.
     }
+  }
+}
+
+/// Emits accessors to Op attributes for adaptors.
+static void emitAdaptorAttributeAccessors(const Operator &op, raw_ostream &os) {
+  for (const auto &namedAttr : op.getAttributes()) {
+    // Skip "derived" attributes because they are just C++ functions that we
+    // don't currently expose.
+    if (namedAttr.attr.isDerivedAttr())
+      continue;
+
+    if (namedAttr.name.empty())
+      continue;
+
+    std::string sanitizedName = sanitizeName(namedAttr.name);
+
+    // Unit attributes are handled specially.
+    if (namedAttr.attr.getStorageType().trim() == "::mlir::UnitAttr") {
+      os << formatv(adaptorUnitAttributeGetterTemplate, sanitizedName,
+                    namedAttr.name);
+      continue;
+    }
+
+    std::string type = "_ods_ir." + getPythonAttrName(namedAttr.attr);
+    os << formatv(namedAttr.attr.isOptional()
+                      ? adaptorOptionalAttributeGetterTemplate
+                      : adaptorAttributeGetterTemplate,
+                  sanitizedName, namedAttr.name, type);
   }
 }
 
@@ -1219,6 +1280,7 @@ static void emitOpBindings(const Operator &op, raw_ostream &os) {
   os << formatv(opAdaptorClassTemplate, op.getCppClassName(),
                 op.getOperationName());
   emitAdaptorOperandAccessors(op, os);
+  emitAdaptorAttributeAccessors(op, os);
 
   os << formatv(opClassTemplate, op.getCppClassName(), op.getOperationName(),
                 makeDocStringForOp(op));
