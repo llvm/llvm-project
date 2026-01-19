@@ -1460,6 +1460,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     }
   }
 
+  // CUDA / HIP offloading only supports OpenMP's CPU support, but both
+  // compilations must define these macros to compile.
+  if (LangOpts.OpenMPMacros)
+    Builder.defineMacro("_OPENMP", "0");
+
   // CUDA device path compilaton
   if (LangOpts.CUDAIsDevice && !LangOpts.HIP) {
     // The CUDA_ARCH value is set for the GPU target specified in the NVPTX

@@ -6743,6 +6743,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       // semantic analysis, etc.
       break;
     }
+  }
+  if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                   options::OPT_fno_openmp, false) &&
+      (JA.isDeviceOffloading(Action::OFK_Cuda) ||
+       JA.isDeviceOffloading(Action::OFK_HIP))) {
+    // We need to define only the OpenMP macros on the device so two-pass
+    // compilation can succeed when they are used on the host.
+    CmdArgs.push_back("-fopenmp-macros");
   } else {
     Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
                     options::OPT_fno_openmp_simd);
