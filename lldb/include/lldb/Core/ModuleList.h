@@ -545,8 +545,7 @@ public:
   static Status
   GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr, bool always_create = false,
-                  bool invoke_locate_callback = true);
+                  bool *did_create_ptr, bool invoke_locate_callback = true);
 
   // START CAS
 
