@@ -161,11 +161,9 @@ struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed.
-  LLVM_ABI_FOR_TEST static bool tryToConvertVPInstructionsToVPRecipes(
-      VPlan &Plan,
-      function_ref<const InductionDescriptor *(PHINode *)>
-          GetIntOrFpInductionDescriptor,
-      const TargetLibraryInfo &TLI);
+  LLVM_ABI_FOR_TEST static bool
+  tryToConvertVPInstructionsToVPRecipes(VPlan &Plan,
+                                        const TargetLibraryInfo &TLI);
 
   /// Try to legalize reductions with multiple in-loop uses. Currently only
   /// min/max reductions used by FindLastIV reductions are supported. Otherwise
@@ -187,6 +185,13 @@ struct VPlanTransforms {
   /// executing in the scalar loop to handle the NaNs there. Return false if
   /// this attempt was unsuccessful.
   static bool handleMaxMinNumReductions(VPlan &Plan);
+
+  /// Check if \p Plan contains any FindLast reductions. If it does, try to
+  /// update the vector loop to save the appropriate state using selects
+  /// for entire vectors for both the latest mask containing at least one active
+  /// element and the corresponding data vector. Return false if this attempt
+  /// was unsuccessful.
+  static bool handleFindLastReductions(VPlan &Plan);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
@@ -265,6 +270,15 @@ struct VPlanTransforms {
   static void
   addExplicitVectorLength(VPlan &Plan,
                           const std::optional<unsigned> &MaxEVLSafeElements);
+
+  /// Optimize recipes which use an EVL-based header mask to VP intrinsics, for
+  /// example:
+  ///
+  /// %mask = icmp ult step-vector, EVL
+  /// %load = load %ptr, %mask
+  /// -->
+  /// %load = vp.load %ptr, EVL
+  static void optimizeEVLMasks(VPlan &Plan);
 
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its

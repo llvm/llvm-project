@@ -11,7 +11,8 @@ stack:
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
-  ; CHECK-LABEL: RDA results for test0
+  ; CHECK-LABEL: Reaching definitions for for machine function: test0
+  ; CHECK-NEXT: %bb.0:
   ; CHECK-NEXT: %stack.1:{ }
   ; CHECK-NEXT: %stack.0:{ }
   ; CHECK-NEXT: 0: MVC %stack.1, 0, 4, %stack.0, 0 :: (store (s32) into %stack.1), (load (s32) from %stack.0)

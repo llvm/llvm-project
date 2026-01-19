@@ -669,8 +669,8 @@ static LogicalResult convertRsqrtOp(math::RsqrtOp op,
 static LogicalResult convertClampfOp(math::ClampFOp op,
                                      PatternRewriter &rewriter) {
   auto minOp = arith::MinimumFOp::create(rewriter, op.getLoc(), op.getValue(),
-                                         op.getMin(), op.getFastmath());
-  rewriter.replaceOpWithNewOp<arith::MaximumFOp>(op, minOp, op.getMax(),
+                                         op.getMax(), op.getFastmath());
+  rewriter.replaceOpWithNewOp<arith::MaximumFOp>(op, minOp, op.getMin(),
                                                  op.getFastmath());
   return success();
 }

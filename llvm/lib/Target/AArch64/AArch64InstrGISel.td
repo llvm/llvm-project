@@ -192,6 +192,12 @@ def G_AARCH64_PREFETCH : AArch64GenericInstruction {
   let hasSideEffects = 1;
 }
 
+def G_AARCH64_RANGE_PREFETCH : AArch64GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$imm, ptype0:$src1, type1:$src2);
+  let hasSideEffects = 1;
+}
+
 def G_UMULL : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
@@ -339,6 +345,7 @@ def : GINodeEquiv<G_SRI, AArch64vsri>;
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
 def : GINodeEquiv<G_AARCH64_PREFETCH, AArch64Prefetch>;
+def : GINodeEquiv<G_AARCH64_RANGE_PREFETCH, AArch64RangePrefetch>;
 
 def : GINodeEquiv<G_FPTRUNC_ODD, AArch64fcvtxn_n>;
 
