@@ -300,7 +300,7 @@ getResultLengthFromElementalOp(fir::FirOpBuilder &builder,
 
 // Go through the args. Any descriptor args that have ignore_tkr(c) cause
 // function type modification to avoid changing the descriptor args.
-static mlir::FunctionType
+static std::optional<mlir::FunctionType>
 getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
                       Fortran::lower::CallerInterface &caller,
                       mlir::MLIRContext *context) {
@@ -336,11 +336,10 @@ getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
   if (typeChanged) {
     // At least one of the arguments had its type changed, so need to
     // create a new function type to be used in a cast.
-    funcType =
-        mlir::FunctionType::get(context, newInputs, funcType.getResults());
+    return mlir::FunctionType::get(context, newInputs, funcType.getResults());
   }
 
-  return funcType;
+  return std::nullopt;
 }
 
 std::pair<Fortran::lower::LoweredResult, bool>
@@ -543,25 +542,25 @@ Fortran::lower::genCallOpAndResult(
 
   // If we have any ignore_tkr(c) dummy args, adjust the function type to
   // have these args match the caller.
-  mlir::FunctionType modifiedFuncType =
-      getTypeWithIgnoreTkrC(funcType, caller, builder.getContext());
-
-  // Note: funcPointer would only be non-null in this case, if we are already
-  // processing indirect function call. In such case we can re-use the same
-  // funcPointer and we'll cast it below the the modified funcType.
-  if (!funcPointer && modifiedFuncType != funcType) {
-    // We want to cast the function to a different type, in order to avoid
-    // changing/casting some of the args. The cast will generate a new
-    // function pointer, so that we would make a function call not through
-    // the original function symbol, but through the new function pointer
-    // (an indirect function call).
-    mlir::SymbolRefAttr symbolAttr =
-        builder.getSymbolRefAttr(caller.getMangledName());
-    // Create pointer to original function. This pointer will be cast later.
-    funcPointer = fir::AddrOfOp::create(builder, loc, funcType, symbolAttr);
-    funcSymbolAttr = {}; // This marks it as indirect call
+  if (auto modifiedFuncType =
+      getTypeWithIgnoreTkrC(funcType, caller, builder.getContext())) {
+    // Note: funcPointer would only be non-null here, if we are already
+    // processing indirect function call. In such case we can re-use the same
+    // funcPointer and we'll cast it below the the modified funcType.
+    if (!funcPointer) {
+      // We want to cast the function to a different type, in order to avoid
+      // changing/casting some of the args. The cast will generate a new
+      // function pointer, so that we would make a function call not through
+      // the original function symbol, but through the new function pointer
+      // (an indirect function call).
+      mlir::SymbolRefAttr symbolAttr =
+          builder.getSymbolRefAttr(caller.getMangledName());
+      // Create pointer to original function. This pointer will be cast later.
+      funcPointer = fir::AddrOfOp::create(builder, loc, funcType, symbolAttr);
+      funcSymbolAttr = {}; // This marks it as indirect call
+    }
+    funcType = *modifiedFuncType;
   }
-  funcType = modifiedFuncType;
 
   llvm::SmallVector<mlir::Value> operands;
   // First operand of indirect call is the function pointer. Cast it to
