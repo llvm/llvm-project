@@ -87,10 +87,10 @@ include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(GetToolchainDirs)
 include(ExtendPath)
-include(HandleFortran)
 
 # Handle Fortran code. Sets RUNTIMES_FLANG_MODULES_ENABLED when a Fortran
-# toolchain is available and required by one or more of the LLVM_ENABLED_RUNTIMES.
+# toolchain is available and required by one or more of the
+# runtimes.
 include(config-runtimes-Fortran)
 
 # Determine whether we are in the runtimes/runtimes-bins directory of a
