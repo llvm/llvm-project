@@ -279,6 +279,7 @@ private:
 
   void updateBaseAndOffset(MachineInstr &I, Register NewBase,
                            int32_t NewOffset) const;
+  void updateAsyncLDSAddress(MachineInstr &MI, int32_t OffsetDiff) const;
   Register computeBase(MachineInstr &MI, const MemAddress &Addr) const;
   MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI) const;
   std::optional<int32_t> extractConstOffset(const MachineOperand &Op) const;
@@ -2311,6 +2312,27 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   Addr.Offset = (*Offset0P & 0x00000000ffffffff) | (Offset1 << 32);
 }
 
+// Maintain the correct LDS address for async loads.
+// It becomes incorrect when promoteConstantOffsetToImm
+// adds an offset only meant for the src operand.
+void SILoadStoreOptimizer::updateAsyncLDSAddress(MachineInstr &MI,
+                                                 int32_t OffsetDiff) const {
+  if (!TII->usesASYNC_CNT(MI) || OffsetDiff == 0)
+    return;
+
+  Register OldVDst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)->getReg();
+  Register NewVDst =
+      MRI->createVirtualRegister(TRI->getRegClassForReg(*MRI, OldVDst));
+  MachineBasicBlock &MBB = *MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+  BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e64), NewVDst)
+      .addReg(OldVDst)
+      .addImm(-OffsetDiff)
+      .addImm(0);
+
+  MI.getOperand(0).setReg(NewVDst);
+}
+
 bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     MachineInstr &MI,
     MemInfoMap &Visited,
@@ -2440,7 +2462,9 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     // Instead of moving up, just re-compute anchor-instruction's base address.
     Register Base = computeBase(MI, AnchorAddr);
 
-    updateBaseAndOffset(MI, Base, MAddr.Offset - AnchorAddr.Offset);
+    int32_t OffsetDiff = MAddr.Offset - AnchorAddr.Offset;
+    updateBaseAndOffset(MI, Base, OffsetDiff);
+    updateAsyncLDSAddress(MI, OffsetDiff);
     LLVM_DEBUG(dbgs() << "  After promotion: "; MI.dump(););
 
     for (auto [OtherMI, OtherOffset] : InstsWCommonBase) {
@@ -2451,7 +2475,9 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
       if (TLI->isLegalFlatAddressingMode(AM, AS)) {
         LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset; dbgs() << ")";
                    OtherMI->dump());
-        updateBaseAndOffset(*OtherMI, Base, OtherOffset - AnchorAddr.Offset);
+        int32_t OtherOffsetDiff = OtherOffset - AnchorAddr.Offset;
+        updateBaseAndOffset(*OtherMI, Base, OtherOffsetDiff);
+        updateAsyncLDSAddress(*OtherMI, OtherOffsetDiff);
         LLVM_DEBUG(dbgs() << "     After promotion: "; OtherMI->dump());
       }
     }
