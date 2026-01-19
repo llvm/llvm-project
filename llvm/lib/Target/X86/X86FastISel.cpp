@@ -51,8 +51,9 @@ class X86FastISel final : public FastISel {
 
 public:
   explicit X86FastISel(FunctionLoweringInfo &funcInfo,
-                       const TargetLibraryInfo *libInfo)
-      : FastISel(funcInfo, libInfo) {
+                       const TargetLibraryInfo *libInfo,
+                       const LibcallLoweringInfo *libcallLowering)
+      : FastISel(funcInfo, libInfo, libcallLowering) {
     Subtarget = &funcInfo.MF->getSubtarget<X86Subtarget>();
   }
 
@@ -4100,8 +4101,9 @@ Register X86FastISel::fastEmitInst_rrrr(unsigned MachineInstOpcode,
 }
 
 namespace llvm {
-  FastISel *X86::createFastISel(FunctionLoweringInfo &funcInfo,
-                                const TargetLibraryInfo *libInfo) {
-    return new X86FastISel(funcInfo, libInfo);
-  }
+FastISel *X86::createFastISel(FunctionLoweringInfo &funcInfo,
+                              const TargetLibraryInfo *libInfo,
+                              const LibcallLoweringInfo *libcallLowering) {
+  return new X86FastISel(funcInfo, libInfo, libcallLowering);
+}
 }

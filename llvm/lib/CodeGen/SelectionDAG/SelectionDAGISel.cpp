@@ -1658,7 +1658,10 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   FastISel *FastIS = nullptr;
   if (TM.Options.EnableFastISel) {
     LLVM_DEBUG(dbgs() << "Enabling fast-isel\n");
-    FastIS = TLI->createFastISel(*FuncInfo, LibInfo);
+    FastIS = TLI->createFastISel(
+        *FuncInfo, LibInfo,
+        &TLI->getLibcallLoweringInfo() // FIXME: Take from analysis
+    );
   }
 
   ReversePostOrderTraversal<const Function*> RPOT(&Fn);
