@@ -47,8 +47,7 @@ target triple = "nvptx64-nvidia-cuda"
 @arr = internal addrspace(1) global ptr null, align 8
 @llvm.used = appending global [3 x ptr] [ptr @_Z6kerneli, ptr addrspacecast (ptr addrspace(1) @arr to ptr), ptr addrspacecast (ptr addrspace(1) @gg to ptr)], section "llvm.metadata"
 
-; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: read, inaccessiblemem: none)
-define void @_Z6kerneli(i32 noundef %n) #0 !dbg !4 {
+define void @_Z6kerneli(i32 noundef %n) !dbg !4 {
 entry:
   %tmp3.i1 = load i32, ptr addrspace(1) @gg, align 4, !dbg !6
   %cmp.i2 = icmp sgt i32 %tmp3.i1, 0, !dbg !6
@@ -277,8 +276,6 @@ if.then:                                          ; preds = %for.end.i
 if.end:                                           ; preds = %if.then, %for.end.i
   ret void, !dbg !19
 }
-
-attributes #0 = { alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: read, inaccessiblemem: none) "target-cpu"="sm_75" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}

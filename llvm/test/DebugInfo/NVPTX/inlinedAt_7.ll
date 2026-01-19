@@ -53,8 +53,7 @@ target triple = "nvptx64-nvidia-cuda"
 @gg = internal addrspace(1) global i32 0, align 4
 @llvm.used = appending global [2 x ptr] [ptr @_Z6kernelv, ptr addrspacecast (ptr addrspace(1) @gg to ptr)], section "llvm.metadata"
 
-; Function Attrs: mustprogress willreturn
-define internal fastcc void @_Z3foov() unnamed_addr #0 !dbg !4 {
+define internal fastcc void @_Z3foov() unnamed_addr !dbg !4 {
 entry:
   %tmp = load i32, ptr addrspace(1) @gg, align 4, !dbg !6
   %cmp = icmp sgt i32 %tmp, 7, !dbg !6
@@ -77,18 +76,13 @@ if.end:                                           ; preds = %_Z3barv.exit, %entr
   ret void, !dbg !18
 }
 
-declare void @_Z9calculatev() local_unnamed_addr #1
+declare void @_Z9calculatev() local_unnamed_addr
 
-; Function Attrs: alwaysinline mustprogress willreturn
-define void @_Z6kernelv() #2 !dbg !19 {
+define void @_Z6kernelv() !dbg !19 {
 entry:
   tail call fastcc void @_Z3foov(), !dbg !20
   ret void, !dbg !22
 }
-
-attributes #0 = { mustprogress willreturn "target-cpu"="sm_75" }
-attributes #1 = { "target-cpu"="sm_75" }
-attributes #2 = { alwaysinline mustprogress willreturn "target-cpu"="sm_75" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}

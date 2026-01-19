@@ -36,6 +36,51 @@ static cl::opt<bool> LineInfoWithInlinedAt(
 NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {}
 
 // NVPTX-specific source line recording with inlined_at support.
+//
+// Why this exists:
+// NVPTX supports an "enhanced lineinfo" mode where inlining context is carried
+// via line-table directives, rather than full DWARF DIEs. This is conceptually
+// similar to proposals[1] for richer DWARF line tables that carry inline call
+// context and callee identity in the line table. NVPTX implements this via
+// target-specific `.loc` extensions in the PTX ISA[3].
+//
+// How it impacts PTX assembly generation:
+// - When enabled (PTX ISA >= 7.2 + line-tables-only / debug-directives-only),
+//   we emit multiple consecutive `.loc` directives for a single inlined
+//   instruction: the instruction's own location and its `inlined_at` parent
+//   chain.
+// - During emission we use `MCStreamer::emitDwarfLocDirectiveWithInlinedAt` to
+//   emit an enhanced `.loc` directive[3] that carries the extra `function_name`
+//   and `inlined_at` operands in the PTX assembly stream.
+//
+// Example (conceptual PTX `.loc` sequence for an inlined callsite):
+//   .loc 1 16 3                            // caller location
+//   .loc 1  5 3, function_name $L__info_stringN, inlined_at 1 16 3
+//                                         // inlined callee location
+//   Here, $L__info_stringN is a label (or label+immediate) referring into
+//   `.debug_str`.
+//
+// How this impacts DWARF :
+// DWARF generation tools that consume this PTX(e.g. ptxas assembler) can use
+// the `inlined_at` and `function_name` operands to extend the DWARF v2
+// line table information.
+// This adds:
+// - a `context` column[2]: the `inlined_at <file> <line> <col>` information
+//   populates an inlining "context" (a reference to the parent/callsite row)
+//   enabling reconstruction of inline call chains from the line table.
+// - a `function_name` column[2]: the `.loc ... function_name <sym>` identifies
+//   the inlined callee associated with a non-zero context.
+//   The `<sym>` is typically a label (or label+immediate) referring into
+//   `.debug_str`.
+//
+// References:
+// - [1] DWARF line tables / Two-Level Line Tables:
+//   https://wiki.dwarfstd.org/TwoLevelLineTables.md
+// - [2] DWARF issue tracking for Two-Level Line Tables:
+//   https://dwarfstd.org/issues/140906.1.html
+// - [3] NVIDIA PTX ISA `.loc` (debugging directives; PTX ISA 7.2+):
+//   https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#debugging-directives-loc
+
 void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
                                                    unsigned Flags) {
   const DebugLoc &DL = MI.getDebugLoc();
@@ -45,6 +90,9 @@ void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
   SmallVector<const DILocation *, 8> WorkList;
   SmallDenseSet<const DILocation *, 8> WorkListSet;
   const DILocation *EmitLoc = DL.get();
+
+  if (!EmitLoc)
+    return;
 
   const DISubprogram *SP = MI.getMF()->getFunction().getSubprogram();
   const NVPTXSubtarget &STI = MI.getMF()->getSubtarget<NVPTXSubtarget>();
@@ -76,7 +124,7 @@ void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
     // re-emit the parent chain.
     if (IA && !EmittedInlinedAtLocs.contains(IA))
       EmitLoc = IA;
-    else // We are done
+    else // We are done.
       break;
   }
 

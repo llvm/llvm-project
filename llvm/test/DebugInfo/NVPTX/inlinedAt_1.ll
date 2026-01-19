@@ -76,8 +76,7 @@ if.end:                                           ; preds = %if.then, %entry
 
 declare void @_Z9calculatev() local_unnamed_addr
 
-; Function Attrs: alwaysinline
-define void @_Z6kernelv() #1 !dbg !19 {
+define void @_Z6kernelv() !dbg !19 {
 entry:
   %tmp.i = load i32, ptr addrspace(1) @gg, align 4, !dbg !20
   %cmp.i = icmp sgt i32 %tmp.i, 7, !dbg !20
@@ -101,8 +100,6 @@ _Z3foov.exit:                                     ; preds = %entry, %_Z3barv.exi
   tail call void @_Z9calculatev(), !dbg !33
   ret void, !dbg !34
 }
-
-attributes #1 = { alwaysinline }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}

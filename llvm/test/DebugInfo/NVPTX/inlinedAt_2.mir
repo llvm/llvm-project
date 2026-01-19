@@ -50,8 +50,7 @@
   @gg = internal addrspace(1) global i32 0, align 4
   @llvm.used = appending global [2 x ptr] [ptr @_Z6kernelv, ptr addrspacecast (ptr addrspace(1) @gg to ptr)], section "llvm.metadata"
 
-  ; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none)
-  define ptx_kernel void @_Z6kernelv() #0 !dbg !3 {
+  define ptx_kernel void @_Z6kernelv() !dbg !3 {
   entry:
     %tmp.i = load i32, ptr addrspace(1) @gg, align 4, !dbg !6
     %cmp.i = icmp sgt i32 %tmp.i, 7, !dbg !6
@@ -65,8 +64,6 @@
   _Z3foov.exit:                                     ; preds = %if.then.i, %entry
     ret void, !dbg !17
   }
-
-  attributes #0 = { alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none) "target-cpu"="sm_75" "target-features"="+ptx72" }
 
   !llvm.dbg.cu = !{!0}
   !nvvm.annotations = !{}
@@ -100,57 +97,17 @@
 ---
 name:            _Z6kernelv
 alignment:       1
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-failedISel:      false
 tracksRegLiveness: true
-hasWinCFI:       false
 noPhis:          true
 isSSA:           false
 noVRegs:         false
 hasFakeUses:     false
-callsEHReturn:   false
-callsUnwindInit: false
-hasEHContTarget: false
-hasEHScopes:     false
-hasEHFunclets:   false
-isOutlined:      false
-debugInstrRef:   false
-failsVerification: false
-tracksDebugUserValues: false
 registers:
-  - { id: 0, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 1, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 2, class: b1, preferred-register: '', flags: [  ] }
-liveins:         []
+  - { id: 0, class: b32 }
+  - { id: 1, class: b32 }
+  - { id: 2, class: b1 }
 frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
   maxAlignment:    1
-  adjustsStack:    false
-  hasCalls:        false
-  stackProtector:  ''
-  functionContext: ''
-  maxCallFrameSize: 4294967295
-  cvBytesOfCalleeSavedRegisters: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  hasTailCall:     false
-  isCalleeSavedInfoValid: false
-  localFrameSize:  0
-fixedStack:      []
-stack:           []
-entry_values:    []
-callSites:       []
-debugValueSubstitutions: []
-constants:       []
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:

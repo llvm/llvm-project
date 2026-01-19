@@ -70,12 +70,12 @@ class MCAsmStreamer final : public MCStreamer {
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
 
-  /// Helper to emit common .loc directive flags, isa, and discriminator
+  /// Helper to emit common .loc directive flags, isa, and discriminator.
   void emitDwarfLocDirectiveFlags(unsigned Flags, unsigned Isa,
                                   unsigned Discriminator);
 
   /// Helper to emit the common suffix of .loc directives (flags, comment, EOL,
-  /// parent call)
+  /// parent call).
   void emitDwarfLocDirectiveSuffix(unsigned FileNo, unsigned Line,
                                    unsigned Column, unsigned Flags,
                                    unsigned Isa, unsigned Discriminator,
@@ -1699,7 +1699,7 @@ void MCAsmStreamer::emitDwarfFile0Directive(
     emitRawText(OS1.str());
 }
 
-/// Helper to emit common .loc directive flags, isa, and discriminator
+/// Helper to emit common .loc directive flags, isa, and discriminator.
 void MCAsmStreamer::emitDwarfLocDirectiveFlags(unsigned Flags, unsigned Isa,
                                                unsigned Discriminator) {
   if (!MAI->supportsExtendedDwarfLocDirective())
@@ -1724,17 +1724,17 @@ void MCAsmStreamer::emitDwarfLocDirectiveFlags(unsigned Flags, unsigned Isa,
     OS << " discriminator " << Discriminator;
 }
 
-/// Helper to emit the common suffix of .loc directives
+/// Helper to emit the common suffix of .loc directives.
 void MCAsmStreamer::emitDwarfLocDirectiveSuffix(unsigned FileNo, unsigned Line,
                                                 unsigned Column, unsigned Flags,
                                                 unsigned Isa,
                                                 unsigned Discriminator,
                                                 StringRef FileName,
                                                 StringRef Comment) {
-  // Emit flags, isa, and discriminator
+  // Emit flags, isa, and discriminator.
   emitDwarfLocDirectiveFlags(Flags, Isa, Discriminator);
 
-  // Emit verbose comment if enabled
+  // Emit verbose comment if enabled.
   if (IsVerboseAsm) {
     OS.PadToColumn(MAI->getCommentColumn());
     OS << MAI->getCommentString() << ' ';
@@ -1744,7 +1744,7 @@ void MCAsmStreamer::emitDwarfLocDirectiveSuffix(unsigned FileNo, unsigned Line,
       OS << Comment;
   }
 
-  // Emit end of line and update the baseclass state
+  // Emit end of line and update the baseclass state.
   EmitEOL();
   MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
                                     Discriminator, FileName, Comment);
@@ -1766,10 +1766,10 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
     return;
   }
 
-  // Emit the basic .loc directive
+  // Emit the basic .loc directive.
   OS << "\t.loc\t" << FileNo << " " << Line << " " << Column;
 
-  // Emit common suffix (flags, comment, EOL, parent call)
+  // Emit common suffix (flags, comment, EOL, parent call).
   emitDwarfLocDirectiveSuffix(FileNo, Line, Column, Flags, Isa, Discriminator,
                               FileName, Comment);
 }
@@ -1781,12 +1781,12 @@ void MCAsmStreamer::emitDwarfLocDirectiveWithInlinedAt(
     unsigned LineIA, unsigned ColIA, const MCSymbol *Sym, unsigned Flags,
     unsigned Isa, unsigned Discriminator, StringRef FileName,
     StringRef Comment) {
-  // Emit the basic .loc directive with NVPTX-specific extensions
+  // Emit the basic .loc directive with NVPTX-specific extensions.
   OS << "\t.loc\t" << FileNo << " " << Line << " " << Column;
   OS << ", function_name " << *Sym;
   OS << ", inlined_at " << FileIA << " " << LineIA << " " << ColIA;
 
-  // Emit common suffix (flags, comment, EOL, parent call)
+  // Emit common suffix (flags, comment, EOL, parent call).
   emitDwarfLocDirectiveSuffix(FileNo, Line, Column, Flags, Isa, Discriminator,
                               FileName, Comment);
 }

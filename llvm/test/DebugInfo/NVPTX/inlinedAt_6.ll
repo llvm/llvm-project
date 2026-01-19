@@ -139,8 +139,7 @@ target triple = "nvptx64-nvidia-cuda"
 @loopOpt = internal addrspace(1) global %struct.GridOpt zeroinitializer, align 8
 @llvm.used = appending global [2 x ptr] [ptr @_Z13cnpWideLaunch7GridOptyyPiS0_, ptr addrspacecast (ptr addrspace(1) @loopOpt to ptr)], section "llvm.metadata"
 
-; Function Attrs: alwaysinline convergent mustprogress norecurse nounwind willreturn
-define void @_Z13cnpWideLaunch7GridOptyyPiS0_(%struct.GridOpt noundef %opt, i64 noundef %maxLaunches, i64 noundef %randomSeed, ptr noundef captures(none) %status, ptr noundef captures(none) %launchCounts) #0 !dbg !4 {
+define void @_Z13cnpWideLaunch7GridOptyyPiS0_(%struct.GridOpt noundef %opt, i64 noundef %maxLaunches, i64 noundef %randomSeed, ptr noundef captures(none) %status, ptr noundef captures(none) %launchCounts) !dbg !4 {
 entry:
   %0 = addrspacecast ptr %status to ptr addrspace(1)
   %1 = addrspacecast ptr %launchCounts to ptr addrspace(1)
@@ -267,21 +266,13 @@ return:                                           ; preds = %if.end83, %if.end26
   ret void, !dbg !54
 }
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef range(i32 0, 2147483647) i32 @llvm.nvvm.read.ptx.sreg.ctaid.x() #1
+declare noundef range(i32 0, 2147483647) i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef range(i32 1, -2147483648) i32 @llvm.nvvm.read.ptx.sreg.nctaid.x() #1
+declare noundef range(i32 1, -2147483648) i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #1
+declare noundef range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 
-; Function Attrs: convergent nocallback nounwind
-declare void @llvm.nvvm.barrier0() #2
-
-attributes #0 = { alwaysinline convergent mustprogress norecurse nounwind willreturn "target-cpu"="sm_75" }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #2 = { convergent nocallback nounwind }
+declare void @llvm.nvvm.barrier0()
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}

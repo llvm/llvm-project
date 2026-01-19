@@ -94,8 +94,7 @@ target triple = "nvptx64-nvidia-cuda"
 @g = internal addrspace(1) global i32 0, align 4
 @llvm.used = appending global [2 x ptr] [ptr @_Z6kernelii, ptr addrspacecast (ptr addrspace(1) @g to ptr)], section "llvm.metadata"
 
-; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
-define void @_Z6kernelii(i32 noundef %a, i32 noundef %b) #0 !dbg !5 {
+define void @_Z6kernelii(i32 noundef %a, i32 noundef %b) !dbg !5 {
 entry:
   %mul.i = shl nsw i32 %a, 1, !dbg !7
   %mul2.i = mul nsw i32 %mul.i, %b, !dbg !7
@@ -140,8 +139,6 @@ _Z5foo10ii.exit:                                  ; preds = %if.then.i.i.i.i.i.i
   store i32 %retval.0.i.i.i.i.i.i.i.i.i.i.i, ptr addrspace(1) @g, align 4, !dbg !57
   ret void, !dbg !58
 }
-
-attributes #0 = { alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none) "target-cpu"="sm_75" }
 
 !llvm.dbg.cu = !{!0}
 !nvvm.annotations = !{!3}
