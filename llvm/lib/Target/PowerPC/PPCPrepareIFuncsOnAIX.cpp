@@ -80,9 +80,9 @@ bool PPCPrepareIFuncsOnAIX::runOnModule(Module &M) {
   StringRef IFuncConstructorName = "__init_ifuncs";
   auto *IFuncConstructorFnType =
       FunctionType::get(Type::getVoidTy(Ctx), {}, /*isVarArg=*/false);
-  auto *IFuncConstructorDecl =
-      Function::Create(IFuncConstructorFnType, GlobalValue::ExternalLinkage,
-                       IFuncConstructorName, M);
+  auto *IFuncConstructorDecl = cast<Function>(
+      M.getOrInsertFunction(IFuncConstructorName, IFuncConstructorFnType)
+          .getCallee());
 
   for (GlobalIFunc &IFunc : M.ifuncs()) {
     NumIFuncs++;
@@ -102,15 +102,17 @@ bool PPCPrepareIFuncsOnAIX::runOnModule(Module &M) {
     GV->setInitializer(ConstantStruct::get(IFuncPairType, InitVals));
 
     // Liveness of __update_foo is dependent on liveness of ifunc foo.
-    IFunc.setMetadata(UseImplicitRef ? LLVMContext::MD_implicit_ref : LLVMContext::MD_associated,
+    IFunc.setMetadata(UseImplicitRef ? LLVMContext::MD_implicit_ref
+                                     : LLVMContext::MD_associated,
                       MDNode::get(Ctx, ValueAsMetadata::get(GV)));
 
     // An implicit.ref creates linkage dependency, so make function foo require
     // the constructor that calls each ifunc's resolver and saves the result in
     // the ifunc's function descriptor.
     if (UseImplicitRef)
-      IFunc.addMetadata(LLVMContext::MD_implicit_ref,
-         *MDNode::get(Ctx, ValueAsMetadata::get(IFuncConstructorDecl)));
+      IFunc.addMetadata(
+          LLVMContext::MD_implicit_ref,
+          *MDNode::get(Ctx, ValueAsMetadata::get(IFuncConstructorDecl)));
     else
       // Note: technically, we can associate both the update_foo variable and
       // the constructor function to function foo, but only one MD_associated
