@@ -839,8 +839,52 @@ exit:
   ret i32 %select.next
 }
 
+; Test case for https://github.com/llvm/llvm-project/issues/176720.
+define void @replicating_sdiv_operand_profitable_to_scalarize(i32 %x) #3 {
+; CHECK-LABEL: define void @replicating_sdiv_operand_profitable_to_scalarize(
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[DIV1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[DIV1]] = sdiv i32 2, [[X]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[DIV1]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[SUB]], [[IV]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[DIV1]], 3
+; CHECK-NEXT:    [[DIV2:%.*]] = sdiv i32 [[DIV1]], [[OR2]]
+; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[OR1]], [[DIV2]]
+; CHECK-NEXT:    [[NEXT]] = add i32 [[ACCUM]], 3
+; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[ACCUM]], 35
+; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ [[OR3]], %[[LOOP]] ]
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %div1, %loop ]
+  %accum = phi i32 [ 0, %entry ], [ %next, %loop ]
+  %div1 = sdiv i32 2, %x
+  %sub = sub i32 %x, %div1
+  %or1 = or i32 %sub, %iv
+  %or2 = or i32 %div1, 3
+  %div2 = sdiv i32 %div1, %or2
+  %or3 = or i32 %or1, %div2
+  %next = add i32 %accum, 3
+  %cond = icmp ugt i32 %accum, 35
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  %result = phi i32 [ %or3, %loop ]
+  ret void
+}
+
 declare void @llvm.assume(i1 noundef) #0
 
 attributes #0 = { "target-cpu"="penryn" }
 attributes #1 = { "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }
 attributes #2 = { "target-cpu"="znver3" }
+attributes #3 = { "target-cpu"="skylake-avx512" }

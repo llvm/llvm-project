@@ -581,6 +581,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
                 /*Force=*/true);
   addModulePass(RequireAnalysisPass<RuntimeLibraryAnalysis, Module>(), PMW,
                 /*Force=*/true);
+  addModulePass(RequireAnalysisPass<LibcallLoweringModuleAnalysis, Module>(),
+                PMW,
+                /*Force=*/true);
   addISelPasses(PMW);
   flushFPMsToMPM(PMW);
 
