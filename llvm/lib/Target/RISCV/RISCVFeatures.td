@@ -1729,6 +1729,12 @@ def HasVendorXSMTVDot
       AssemblerPredicate<(all_of FeatureVendorXSMTVDot),
                          "'XSMTVDot' (SpacemiT Vector Dot Product Extension)">;
 
+def FeatureVendorXAIFET
+    : RISCVExtension<1, 0, "AI Foundry ET Extension", [FeatureStdExtF]>;
+def HasXAIFET : Predicate<"Subtarget->hasXAIFET()">,
+                          AssemblerPredicate<(all_of FeatureVendorXAIFET),
+                          "'XAIFET' (AI Foundry ET Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
