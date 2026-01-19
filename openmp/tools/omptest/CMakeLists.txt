@@ -79,7 +79,6 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
   # Merging of GTest is desired, such that omptest is self-contained and
   # independent of external GTest installations.
   target_sources(omptest PRIVATE
-    ./include/OmptTesterGoogleTest.h
     $<TARGET_OBJECTS:default_gtest>
   )
 
@@ -107,7 +106,6 @@ else()
 
   # Add 'standalone' source files
   target_sources(omptest PRIVATE
-    ./include/OmptTesterStandalone.h
     ./src/OmptTesterStandalone.cpp)
 endif()
 
