@@ -235,6 +235,30 @@ void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
   const Register Reg64 = MI->getOperand(0).getReg();
   const Register Reg32 = RI.getSubReg(Reg64, SystemZ::subreg_l32);
 
+  if (STI.isTargetzOS()) {
+    // Offsets can be found in the z/OS Language Environment Vendor Interfaces
+    // book and the z/OS MVS Data Areas Volume 3 (ITK - RQE) book
+    // https://www.ibm.com/docs/en/zos/3.2.0?topic=documentation-pdf-files-zos-320-library
+    enum { OFFSET_CEELAA_STACK_GUARD = 0x98 };
+    enum { OFFSET_PSALAA = 0x4B8 };
+
+    // Load LAA
+    // LLGT <reg>,1208
+    BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::LLGT), Reg64)
+      .addReg(0)
+      .addImm(OFFSET_PSALAA)
+      .addReg(0);
+
+    // LG <reg>, 152(<reg>)
+    MI->setDesc(get(SystemZ::LG));
+    MachineInstrBuilder(MF, MI)
+      .addReg(Reg64)
+      .addImm(OFFSET_CEELAA_STACK_GUARD)
+      .addReg(0);
+
+    return;
+  }
+
   // EAR can only load the low subregister so us a shift for %a0 to produce
   // the GR containing %a0 and %a1.
 
