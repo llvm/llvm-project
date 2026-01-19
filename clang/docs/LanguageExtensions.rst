@@ -2876,12 +2876,12 @@ a kernel-allocated local buffer to those functions via an implicit argument.
   kernel void kernel2(...)
   {
     {
-      local float a; // error - non-kernel function variable cannot be declared in local address space.
+      local float a; // error - variables in the local address space can only be declared in the outermost scope of a kernel function
     }
   }
   void bar()
   {
-    local float c; // error - non-kernel function variable cannot be declared in local address space.
+    local float c; // error - non-kernel function variable cannot be declared in local address space
   }
 
 Remove address space builtin function
