@@ -5978,12 +5978,12 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
           }
         }
         auto DstVregInst = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstVreg)
-                               .addImm(0) // src0 modifiers
+                               .addImm(SISrcMods::NONE) // src0 modifiers
                                .addReg(LaneValue->getOperand(0).getReg())
-                               .addImm(0) // src1 modifiers
+                               .addImm(SISrcMods::NONE) // src1 modifiers
                                .addReg(AccumulatorVReg)
-                               .addImm(0)  // clamp
-                               .addImm(0); // omod
+                               .addImm(SISrcMods::NONE)  // clamp
+                               .addImm(SISrcMods::NONE); // omod
         auto ReadLaneLo =
             BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                     LaneValLo);
