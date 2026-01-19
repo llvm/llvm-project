@@ -7,9 +7,6 @@
 // test_explicit_attr has only the delta (+gfx11-insts).
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx90a -emit-llvm -o - %s | FileCheck --check-prefix=GFX90A %s
 
-// With -famdgpu-emit-full-target-features, all features are emitted for both functions.
-// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx90a -famdgpu-emit-full-target-features -emit-llvm -o - %s | FileCheck --check-prefix=FULL %s
-
 // With -target-feature, both functions get the delta feature.
 // gfx1030 defaults to wavefrontsize32, so +wavefrontsize64 is a delta.
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1030 -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck --check-prefix=CMDLINE %s
@@ -30,22 +27,6 @@
 // GFX90A-SAME: "target-cpu"="gfx90a"
 // GFX90A-SAME: "target-features"="+gfx11-insts"
 // GFX90A-SAME: }
-
-// With -famdgpu-emit-full-target-features, both functions get full features.
-// FULL-LABEL: define {{.*}} @test_default()
-// FULL-SAME: #[[ATTR_DEFAULT:[0-9]+]]
-// FULL-LABEL: define {{.*}} @test_explicit_attr()
-// FULL-SAME: #[[ATTR_EXPLICIT:[0-9]+]]
-//
-// FULL: attributes #[[ATTR_DEFAULT]] = {
-// FULL-SAME: "target-cpu"="gfx90a"
-// FULL-SAME: "target-features"="{{[^"]+}}"
-// FULL-SAME: }
-//
-// FULL: attributes #[[ATTR_EXPLICIT]] = {
-// FULL-SAME: "target-cpu"="gfx90a"
-// FULL-SAME: "target-features"="{{[^"]+}}"
-// FULL-SAME: }
 
 // With -target-feature +wavefrontsize64, test_default gets just that delta,
 // test_explicit_attr gets both +gfx11-insts and +wavefrontsize64.

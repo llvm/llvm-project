@@ -5606,12 +5606,6 @@ defm amdgpu_expand_waitcnt_profiling : BoolMOption<"amdgpu-expand-waitcnt-profil
   "emits waitcnt(N-1), waitcnt(N-2), ..., waitcnt(target). (AMDGPU only)">,
   NegFlag<SetFalse, [], [ClangOption]>>;
 
-def famdgpu_emit_full_target_features : Flag<["-"], "famdgpu-emit-full-target-features">,
-  Visibility<[CC1Option]>,
-  HelpText<"Emit full target-features attribute for AMDGPU functions instead of "
-  "only the delta from the target CPU's defaults. (AMDGPU only)">,
-  MarshallingInfoFlag<CodeGenOpts<"AMDGPUEmitFullTargetFeatures">>;
-
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 6. (AMDGPU only)">,
   Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,
