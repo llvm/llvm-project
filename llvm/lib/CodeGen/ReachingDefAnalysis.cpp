@@ -128,7 +128,7 @@ void ReachingDefInfo::enterBasicBlock(MachineBasicBlock *MBB) {
     LiveRegs.assign(NumRegUnits, ReachingDefDefaultVal);
 
   // This is the entry block.
-  if (MBB->pred_empty()) {
+  if (MBB == &MBB->getParent()->front()) {
     for (const auto &LI : MBB->liveins()) {
       for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
         // Treat function live-ins as if they were defined just before the first
