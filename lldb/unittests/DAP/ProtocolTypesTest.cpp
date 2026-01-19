@@ -1264,7 +1264,7 @@ TEST(ProtocolTypesTest, StackFrame) {
 }
 
 TEST(ProtocolTypesTest, DAPSession) {
-  const DAPSession session{/*targetId*/ 1000, /*debuggerId*/ 300};
+  const DAPSession session{/*targetId=*/1000, /*debuggerId=*/300};
 
   auto expected = parse<DAPSession>(R"({"targetId": 1000, "debuggerId": 300})");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());

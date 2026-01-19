@@ -1039,3 +1039,141 @@ const char* foo() {
 }
 
 } // namespace GH127195
+
+// Lifetimebound on definition vs declaration on implicit this param.
+namespace GH175391 {
+// Version A: Attribute on declaration only
+class StringA {
+public:
+    const char* data() const [[clang::lifetimebound]];  // Declaration with attribute
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringA::data() const {  // Definition WITHOUT attribute
+    return buffer;
+}
+
+// Version B: Attribute on definition only
+class StringB {
+public:
+    const char* data() const;  // No attribute
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringB::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+// Version C: Attribute on BOTH declaration and definition
+class StringC {
+public:
+    const char* data() const [[clang::lifetimebound]];
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringC::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+// TEMPLATED VERSIONS
+
+// Template Version A: Attribute on declaration only
+template<typename T>
+class StringTemplateA {
+public:
+    const T* data() const [[clang::lifetimebound]];  // Declaration with attribute
+private:
+    T buffer[32];
+};
+template<typename T>
+inline const T* StringTemplateA<T>::data() const {  // Definition WITHOUT attribute
+    return buffer;
+}
+
+// Template Version B: Attribute on definition only
+template<typename T>
+class StringTemplateB {
+public:
+    const T* data() const;  // No attribute
+private:
+    T buffer[32];
+};
+template<typename T>
+inline const T* StringTemplateB<T>::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+// Template Version C: Attribute on BOTH declaration and definition
+template<typename T>
+class StringTemplateC {
+public:
+    const T* data() const [[clang::lifetimebound]];
+private:
+    T buffer[32];
+};
+template<typename T>
+inline const T* StringTemplateC<T>::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+// TEMPLATE SPECIALIZATION VERSIONS
+
+// Template predeclarations for specializations
+template<typename T> class StringTemplateSpecA;
+template<typename T> class StringTemplateSpecB;
+template<typename T> class StringTemplateSpecC;
+
+// Template Specialization Version A: Attribute on declaration only - <char> specialization
+template<>
+class StringTemplateSpecA<char> {
+public:
+    const char* data() const [[clang::lifetimebound]];  // Declaration with attribute
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringTemplateSpecA<char>::data() const {  // Definition WITHOUT attribute
+    return buffer;
+}
+
+// Template Specialization Version B: Attribute on definition only - <char> specialization
+template<>
+class StringTemplateSpecB<char> {
+public:
+    const char* data() const;  // No attribute
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringTemplateSpecB<char>::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+// Template Specialization Version C: Attribute on BOTH declaration and definition - <char> specialization
+template<>
+class StringTemplateSpecC<char> {
+public:
+    const char* data() const [[clang::lifetimebound]];
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringTemplateSpecC<char>::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+void test() {
+    // Non-templated tests
+    const auto ptrA = StringA().data();  // Declaration-only attribute  // expected-warning {{temporary whose address is used}}
+    const auto ptrB = StringB().data();  // Definition-only attribute   // expected-warning {{temporary whose address is used}}
+    const auto ptrC = StringC().data();  // Both have attribute         // expected-warning {{temporary whose address is used}}
+
+    // Templated tests (generic templates)
+    const auto ptrTA = StringTemplateA<char>().data();  // Declaration-only attribute // expected-warning {{temporary whose address is used}}
+    // FIXME: Definition is not instantiated until the end of TU. The attribute is not merged when this call is processed.
+    const auto ptrTB = StringTemplateB<char>().data();  // Definition-only attribute
+    const auto ptrTC = StringTemplateC<char>().data();  // Both have attribute        // expected-warning {{temporary whose address is used}}
+
+    // Template specialization tests
+    const auto ptrTSA = StringTemplateSpecA<char>().data();  // Declaration-only attribute  // expected-warning {{temporary whose address is used}}
+    const auto ptrTSB = StringTemplateSpecB<char>().data();  // Definition-only attribute   // expected-warning {{temporary whose address is used}}
+    const auto ptrTSC = StringTemplateSpecC<char>().data();  // Both have attribute         // expected-warning {{temporary whose address is used}}
+}
+} // namespace GH175391
