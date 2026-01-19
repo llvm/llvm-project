@@ -114,14 +114,22 @@ def report_platform():
     report_prog_version("LLD", ["ld.lld", "--version"])
 
 
-def run_command(cmd, shell=False, **kwargs):
+def run_command(cmd, shell=False, env=None, add_env=None, **kwargs):
     """
     Report which command is being run, then execute it using
-    subprocess.check_call.
+    subprocess.check_call. Any arguments are forwarded to check_call.
+
+    Additional Parameters
+    ----------
+    add_env : dict
+        Like env, but adds to the original environment instead of replacing it
     """
     report(f"Running: {cmd if shell else shjoin(cmd)}")
     sys.stderr.flush()
-    subprocess.check_call(cmd, shell=shell, **kwargs)
+    if add_env:
+        env = dict(os.environ) if env is None else dict(env)
+        env.update(add_env)
+    subprocess.check_call(cmd, shell=shell, env=env, **kwargs)
 
 
 def _remove_readonly(func, path, _):

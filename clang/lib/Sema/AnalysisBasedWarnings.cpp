@@ -2527,7 +2527,15 @@ public:
   void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
                             ASTContext &Ctx,
                             const Expr *UnsafeArg = nullptr) override {
-    S.Diag(Call->getBeginLoc(), diag::warn_unsafe_buffer_libc_call)
+    unsigned DiagID = diag::warn_unsafe_buffer_libc_call;
+    if (PrintfInfo & 0x8) {
+      // The callee is a function with the format attribute. See the
+      // documentation of PrintfInfo in UnsafeBufferUsageHandler, and
+      // UnsafeLibcFunctionCallGadget::UnsafeKind.
+      DiagID = diag::warn_unsafe_buffer_format_attr_call;
+      PrintfInfo ^= 0x8;
+    }
+    S.Diag(Call->getBeginLoc(), DiagID)
         << Call->getDirectCallee() // We've checked there is a direct callee
         << Call->getSourceRange();
     if (PrintfInfo > 0) {
@@ -2628,6 +2636,12 @@ public:
 
   bool ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const override {
     return S.Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc);
+  }
+
+  bool ignoreUnsafeBufferInStaticSizedArray(
+      const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(
+        diag::warn_unsafe_buffer_usage_in_static_sized_array, Loc);
   }
 
   // Returns the text representation of clang::unsafe_buffer_usage attribute.

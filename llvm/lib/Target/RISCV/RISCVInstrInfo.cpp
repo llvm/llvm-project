@@ -3340,8 +3340,7 @@ MachineInstr *RISCVInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
          "Addressing mode not supported for folding");
 
   return BuildMI(MBB, MemI, DL, get(MemI.getOpcode()))
-      .addReg(MemI.getOperand(0).getReg(),
-              MemI.mayLoad() ? RegState::Define : 0)
+      .addReg(MemI.getOperand(0).getReg(), getDefRegState(MemI.mayLoad()))
       .addReg(AM.BaseReg)
       .addImm(AM.Displacement)
       .setMemRefs(MemI.memoperands())
