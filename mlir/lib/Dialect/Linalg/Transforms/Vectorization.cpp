@@ -2437,11 +2437,8 @@ static LogicalResult vectorizeLinalgOpPrecondition(
   if (isElementwise(linalgOp))
     return success();
 
-  // Check for convolution ops - both named ops implementing
-  // ConvolutionOpInterface and generic ops that semantically match convolution
-  // patterns.
-  if (isa<ConvolutionOpInterface>(linalgOp.getOperation()) ||
-      isaConvolutionOpInterface(linalgOp))
+  // Check for both named as well as generic convolution ops.
+  if (isaConvolutionOpInterface(linalgOp))
     return vectorizeConvOpPrecondition(linalgOp);
 
   // TODO: the common vector shape is equal to the static loop sizes only when
@@ -2744,11 +2741,8 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
   auto vectorizeResult =
       TypeSwitch<Operation *, LogicalResult>(op)
           .Case<linalg::LinalgOp>([&](auto linalgOp) {
-            // TODO: isaConvolutionOpInterface that can also infer from
-            // generic features. Will require stride/dilation attributes
-            // inference.
-            if (isa<ConvolutionOpInterface>(linalgOp.getOperation()) ||
-                isaConvolutionOpInterface(linalgOp)) {
+            // Check for both named as well as generic convolution ops.
+            if (isaConvolutionOpInterface(linalgOp)) {
               FailureOr<Operation *> convOr = vectorizeConvolution(
                   rewriter, linalgOp, inputVectorSizes, inputScalableVecDims,
                   flatten1DDepthwiseConv);
@@ -3494,40 +3488,35 @@ static void bindShapeDims(ShapedType shapedType, IntTy &...vals) {
   bindShapeDims<0>(shapedType, vals...);
 }
 
-/// Helper to extract strides and dilations for 1D convolution/pooling ops.
-/// Returns true if the op is a recognized 1D conv/pool op and extracts the
-/// stride and dilation values. For unrecognized ops, returns false.
-static bool extract1DConvPoolStrideDilation(LinalgOp op, int &strideW,
-                                            int &dilationW) {
-#define EXTRACT_1D_CONV_POOL_STRIDE_DILATION(ConvOpTy)                         \
-  if (std::optional<DilationsAndStrides> convParams =                          \
-          matchConvolutionOpOfType<ConvOpTy>(op)) {                            \
-    strideW = static_cast<int>(convParams->strides.front());                   \
-    dilationW = static_cast<int>(convParams->dilations.front());               \
-    return true;                                                               \
-  }
+/// Match 1D convolution or pooling operations and return their dilations and
+/// strides. Returns std::nullopt for unrecognized ops.
+static std::optional<DilationsAndStrides> match1DConvPoolOp(LinalgOp op) {
+#define MATCH_1D_CONV_POOL_OP(ConvOpTy)                                        \
+  if (auto convParams = matchConvolutionOpOfType<ConvOpTy>(op))                \
+    return convParams;
 
-  // 1D Convolution ops
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::Conv1DOp);
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::Conv1DNwcWcfOp);
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::Conv1DNcwFcwOp);
-  // Depthwise 1D Convolution ops
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::DepthwiseConv1DNwcWcOp);
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::DepthwiseConv1DNcwCwOp);
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::DepthwiseConv1DNwcWcmOp);
-  // 1D Pooling ops (NWC layout)
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNwcSumOp);
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNwcMaxOp);
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNwcMaxUnsignedOp);
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNwcMinOp);
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNwcMinUnsignedOp);
-  // 1D Pooling ops (NCW layout)
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNcwSumOp);
-  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNcwMaxOp);
+  // 1D Convolution ops.
+  MATCH_1D_CONV_POOL_OP(linalg::Conv1DOp);
+  MATCH_1D_CONV_POOL_OP(linalg::Conv1DNwcWcfOp);
+  MATCH_1D_CONV_POOL_OP(linalg::Conv1DNcwFcwOp);
+  // Depthwise 1D Convolution ops.
+  // Note: Only NWC layout without channel multiplier is supported.
+  // DepthwiseConv1DNcwCwOp (NCW) and DepthwiseConv1DNwcWcmOp (with multiplier)
+  // are not supported.
+  MATCH_1D_CONV_POOL_OP(linalg::DepthwiseConv1DNwcWcOp);
+  // 1D Pooling ops (NWC layout).
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcSumOp);
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMaxOp);
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMaxUnsignedOp);
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMinOp);
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNwcMinUnsignedOp);
+  // 1D Pooling ops (NCW layout).
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNcwSumOp);
+  MATCH_1D_CONV_POOL_OP(linalg::PoolingNcwMaxOp);
 
-#undef EXTRACT_1D_CONV_POOL_STRIDE_DILATION
+#undef MATCH_1D_CONV_POOL_OP
 
-  return false;
+  return std::nullopt;
 }
 
 namespace {
@@ -3567,8 +3556,26 @@ namespace {
 /// kw is unrolled, w is unrolled iff dilationW > 1.
 struct Conv1DGenerator
     : public StructuredGenerator<LinalgOp, utils::IteratorType> {
-  Conv1DGenerator(RewriterBase &rewriter, LinalgOp linalgOp)
-      : StructuredGenerator<LinalgOp, utils::IteratorType>(rewriter, linalgOp) {
+  /// Factory method to create a Conv1DGenerator. Returns failure if the
+  /// operation doesn't have valid strides/dilations.
+  static FailureOr<Conv1DGenerator> create(RewriterBase &rewriter,
+                                           LinalgOp linalgOp) {
+    // Try to match a 1D conv/pool op using matchConvolutionOpOfType. This
+    // works for both named ops and generic ops that match their semantics.
+    std::optional<DilationsAndStrides> convParams = match1DConvPoolOp(linalgOp);
+    if (!convParams)
+      return failure();
+
+    int strideW = static_cast<int>(convParams->strides.front());
+    int dilationW = static_cast<int>(convParams->dilations.front());
+    return Conv1DGenerator(rewriter, linalgOp, strideW, dilationW);
+  }
+
+private:
+  Conv1DGenerator(RewriterBase &rewriter, LinalgOp linalgOp, int strideW,
+                  int dilationW)
+      : StructuredGenerator<LinalgOp, utils::IteratorType>(rewriter, linalgOp),
+        strideW(strideW), dilationW(dilationW) {
 
     lhsShaped = linalgOp.getDpsInputOperand(0)->get();
     rhsShaped = linalgOp.getDpsInputOperand(1)->get();
@@ -3584,22 +3591,9 @@ struct Conv1DGenerator
 
     auto maybeKind = getCombinerOpKind(reduceOp);
     reductionKind = maybeKind.value();
-
-    // Try to extract strides/dilations from named 1D conv/pool ops using
-    // matchConvolutionOpOfType. This works for both named ops and generic ops
-    // that match their semantics. For unrecognized generic ops, fall back to
-    // checking attributes directly (which may not exist for generic ops).
-    if (!extract1DConvPoolStrideDilation(linalgOp, strideW, dilationW)) {
-      // Fallback: check for stride/dilation attributes directly.
-      // For generic ops without these attributes, default to 1.
-      auto strides = linalgOp->getAttrOfType<DenseIntElementsAttr>("strides");
-      auto dilations =
-          linalgOp->getAttrOfType<DenseIntElementsAttr>("dilations");
-      strideW = strides ? *strides.getValues<uint64_t>().begin() : 1;
-      dilationW = dilations ? *dilations.getValues<uint64_t>().begin() : 1;
-    }
   }
 
+public:
   /// Generate a vector implementation for:
   /// ```
   ///   Op def: (     w,     kw  )
@@ -4295,20 +4289,22 @@ private:
 static FailureOr<Operation *> vectorizeConvolution(
     RewriterBase &rewriter, LinalgOp op, ArrayRef<int64_t> inputVecSizes,
     ArrayRef<bool> inputScalableVecDims, bool flatten1DDepthwiseConv) {
-  Conv1DGenerator conv1dGen(rewriter, op);
-  auto res = conv1dGen.generateNonChanneledConv();
+  FailureOr<Conv1DGenerator> conv1dGen = Conv1DGenerator::create(rewriter, op);
+  if (failed(conv1dGen))
+    return failure();
+  auto res = conv1dGen->generateNonChanneledConv();
   if (succeeded(res))
     return res;
-  res = conv1dGen.generateNwcConv();
+  res = conv1dGen->generateNwcConv();
   if (succeeded(res))
     return res;
-  res = conv1dGen.generateNcwConv();
+  res = conv1dGen->generateNcwConv();
   if (succeeded(res))
     return res;
-  res = conv1dGen.generateNwcPooling();
+  res = conv1dGen->generateNwcPooling();
   if (succeeded(res))
     return res;
-  res = conv1dGen.generateNcwPooling();
+  res = conv1dGen->generateNcwPooling();
   if (succeeded(res))
     return res;
 
@@ -4332,8 +4328,8 @@ static FailureOr<Operation *> vectorizeConvolution(
     vecChDimSize = inputVecSizes[chDimIdx];
     vecChDimScalableFlag = inputScalableVecDims[chDimIdx];
   }
-  return conv1dGen.generateDilatedConv(vecChDimSize, vecChDimScalableFlag,
-                                       flatten1DDepthwiseConv);
+  return conv1dGen->generateDilatedConv(vecChDimSize, vecChDimScalableFlag,
+                                        flatten1DDepthwiseConv);
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {
