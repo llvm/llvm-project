@@ -24,7 +24,7 @@
 // This test doesn't work as such on Windows.
 // UNSUPPORTED: windows
 
-// RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
+// RUN: %{cxx} %{common_flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.
 // RUN: env LANG=en_US.UTF-8 %{gdb} -nx -batch -iex "set autoload off" -ex "source %S/../../../utils/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %S/gdb_pretty_printer_test.py" %t.exe
 

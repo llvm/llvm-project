@@ -12,7 +12,7 @@
 # REQUIRES: target=powerpc-ibm-aix{{.*}}
 # UNSUPPORTED: no-exceptions
 
-# RUN: %{cxx} %{flags} %s %{link_flags} \
+# RUN: %{cxx} %{common_flags} %s %{link_flags} \
 # RUN:   -o %t_32.exe
 # RUN: %{exec} %t_32.exe
 

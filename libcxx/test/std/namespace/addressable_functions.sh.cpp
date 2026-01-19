@@ -12,9 +12,9 @@
 // in C++20, we test it in all standard modes because it's basic QOI to provide
 // a consistent behavior for that across standard modes.
 
-// RUN: %{cxx} %{flags} %{compile_flags} -c %s -o %t.tu1.o -DTU1
-// RUN: %{cxx} %{flags} %{compile_flags} -c %s -o %t.tu2.o -DTU2
-// RUN: %{cxx} %t.tu1.o %t.tu2.o %{flags} %{link_flags} -o %t.exe
+// RUN: %{cxx} %{common_flags} %{compile_flags} -c %s -o %t.tu1.o -DTU1
+// RUN: %{cxx} %{common_flags} %{compile_flags} -c %s -o %t.tu2.o -DTU2
+// RUN: %{cxx} %t.tu1.o %t.tu2.o %{common_flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
 // The functions checked below come from <iostream> & friends

@@ -2,7 +2,7 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 libc_linker_script = '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'
 
-config.substitutions.append(('%{flags}', '--sysroot=@CMAKE_INSTALL_PREFIX@'))
+config.substitutions.append(('%{common_flags}', '--sysroot=@CMAKE_INSTALL_PREFIX@'))
 
 config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{include}'

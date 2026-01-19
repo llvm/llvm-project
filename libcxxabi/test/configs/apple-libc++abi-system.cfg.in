@@ -9,7 +9,7 @@ import libcxx.test.params, libcxx.test.config, libcxx.test.dsl
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
-config.substitutions.append(('%{flags}',
+config.substitutions.append(('%{common_flags}',
     '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
 ))
 config.substitutions.append(('%{compile_flags}',

@@ -41,7 +41,7 @@ LIBSTDCXX_PARAMETERS = [
 ]
 
 # Configure the compiler and flags
-config.substitutions.append(('%{flags}',
+config.substitutions.append(('%{common_flags}',
     '-pthread' + (' -isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else '')
 ))
 config.substitutions.append(('%{compile_flags}',

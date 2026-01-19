@@ -9,8 +9,8 @@
 // Test that _LIBCPP_FREESTANDING is not defined when -ffreestanding is not passed
 // to the compiler but defined when -ffreestanding is passed to the compiler.
 
-// RUN: %{cxx} %{flags} %{compile_flags} -fsyntax-only %s
-// RUN: %{cxx} %{flags} %{compile_flags} -fsyntax-only -ffreestanding -DFREESTANDING %s
+// RUN: %{cxx} %{common_flags} %{compile_flags} -fsyntax-only %s
+// RUN: %{cxx} %{common_flags} %{compile_flags} -fsyntax-only -ffreestanding -DFREESTANDING %s
 
 #include <__config>
 

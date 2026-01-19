@@ -12,10 +12,10 @@
 // Test that we encode whether exceptions are supported in an ABI tag to avoid
 // ODR violations when linking TUs that have different values for it.
 
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU1  -fno-exceptions -o %t.tu1.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU2  -fexceptions    -o %t.tu2.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DMAIN                 -o %t.main.o
-// RUN: %{cxx} %t.tu1.o %t.tu2.o %t.main.o %{flags} %{link_flags} -o %t.exe
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -DTU1  -fno-exceptions -o %t.tu1.o
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -DTU2  -fexceptions    -o %t.tu2.o
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -DMAIN                 -o %t.main.o
+// RUN: %{cxx} %t.tu1.o %t.tu2.o %t.main.o %{common_flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
 #include "test_macros.h"

@@ -11,10 +11,10 @@
 // In MSVC mode, the two anonymous types have identical type index in both object files.
 // XFAIL: msvc
 
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.tu1.o -DTU1 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=1
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.tu2.o -DTU2 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=1
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.main.o -DMAIN -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=1
-// RUN: %{cxx} %t.tu1.o %t.tu2.o %t.main.o %{flags} %{link_flags} -o %t.exe
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -o %t.tu1.o -DTU1 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=1
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -o %t.tu2.o -DTU2 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=1
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -o %t.main.o -DMAIN -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=1
+// RUN: %{cxx} %t.tu1.o %t.tu2.o %t.main.o %{common_flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
 #include <cassert>

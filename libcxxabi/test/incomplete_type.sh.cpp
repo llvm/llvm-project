@@ -16,9 +16,9 @@
 // UNSUPPORTED: no-exceptions
 // UNSUPPORTED: no-rtti
 
-// RUN: %{cxx} %{flags} %{compile_flags} -Wno-unreachable-code -c %s -o %t.one.o
-// RUN: %{cxx} %{flags} %{compile_flags} -Wno-unreachable-code -c %s -o %t.two.o -DTU_ONE
-// RUN: %{cxx} %{flags} %t.one.o %t.two.o %{link_flags} -o %t.exe
+// RUN: %{cxx} %{common_flags} %{compile_flags} -Wno-unreachable-code -c %s -o %t.one.o
+// RUN: %{cxx} %{common_flags} %{compile_flags} -Wno-unreachable-code -c %s -o %t.two.o -DTU_ONE
+// RUN: %{cxx} %{common_flags} %t.one.o %t.two.o %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
 #include <stdio.h>

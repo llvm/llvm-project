@@ -11,9 +11,9 @@
 // a regression test for the bug that was reported at https://stackoverflow.com/q/69520633/627587
 // and https://seedcentral.apple.com/sm/feedback_collector/radar/85053279.
 
-// RUN: %{cxx} %{flags} %{compile_flags} %s %{link_flags} -DTU1 -c -o %t.tu1.o
-// RUN: %{cxx} %{flags} %{compile_flags} %s %{link_flags} -DTU2 -c -o %t.tu2.o
-// RUN: %{cxx} %{flags} %t.tu1.o %t.tu2.o %{link_flags} -o %t.exe
+// RUN: %{cxx} %{common_flags} %{compile_flags} %s %{link_flags} -DTU1 -c -o %t.tu1.o
+// RUN: %{cxx} %{common_flags} %{compile_flags} %s %{link_flags} -DTU2 -c -o %t.tu2.o
+// RUN: %{cxx} %{common_flags} %t.tu1.o %t.tu2.o %{link_flags} -o %t.exe
 
 // UNSUPPORTED: no-localization
 

@@ -13,14 +13,14 @@
 // REQUIRES: target={{.+}}-aix{{.*}}
 
 // Test when the function raising the signal does not save the link register
-// RUN: %{cxx} -x c++ %s -o %t.exe -DCXX_CODE %{flags} %{compile_flags}
+// RUN: %{cxx} -x c++ %s -o %t.exe -DCXX_CODE %{common_flags} %{compile_flags}
 // RUN: %{exec} %t.exe
 
 // Test when the function raising the signal does not store stack back chain.
-// RUN: %{cxx} -x c++ -c %s -o %t1.o -DCXX_CODE -DNOBACKCHAIN %{flags} \
+// RUN: %{cxx} -x c++ -c %s -o %t1.o -DCXX_CODE -DNOBACKCHAIN %{common_flags} \
 // RUN:   %{compile_flags}
-// RUN: %{cxx} -c %s -o %t2.o %{flags} %{compile_flags}
-// RUN: %{cxx} -o %t1.exe %t1.o %t2.o %{flags} %{link_flags}
+// RUN: %{cxx} -c %s -o %t2.o %{common_flags} %{compile_flags}
+// RUN: %{cxx} -o %t1.exe %t1.o %t2.o %{common_flags} %{link_flags}
 // RUN: %{exec} %t1.exe
 
 #ifdef CXX_CODE

@@ -28,7 +28,7 @@ ADDITIONAL_PARAMETERS = [
         """),
 ]
 
-config.substitutions.append(('%{flags}',
+config.substitutions.append(('%{common_flags}',
     '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
 ))
 config.substitutions.append(('%{compile_flags}',

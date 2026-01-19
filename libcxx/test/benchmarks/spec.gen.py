@@ -11,7 +11,7 @@
 # RUN: mkdir -p %{temp}
 # RUN: echo "%{cxx}" > %{temp}/cxx.subs
 # RUN: echo "%{compile_flags}" > %{temp}/compile_flags.subs
-# RUN: echo "%{flags}" > %{temp}/flags.subs
+# RUN: echo "%{common_flags}" > %{temp}/common_flags.subs
 # RUN: echo "%{link_flags}" > %{temp}/link_flags.subs
 # RUN: echo "%{spec_dir}" > %{temp}/spec_dir.subs
 # RUN: %{python} %s %{temp}
@@ -24,7 +24,7 @@ import sys
 test_dir = pathlib.Path(sys.argv[1])
 cxx = (test_dir / 'cxx.subs').open().read().strip()
 compile_flags = (test_dir / 'compile_flags.subs').open().read().strip()
-flags = (test_dir / 'flags.subs').open().read().strip()
+common_flags = (test_dir / 'common_flags.subs').open().read().strip()
 link_flags = (test_dir / 'link_flags.subs').open().read().strip()
 spec_dir = pathlib.Path((test_dir / 'spec_dir.subs').open().read().strip())
 
@@ -46,7 +46,7 @@ default:
     copies               = 1
     threads              = 1
     CC                   = cc -O3 -std=c18 -Wno-implicit-function-declaration
-    CXX                  = {cxx} {compile_flags} {flags} {link_flags} -Wno-error
+    CXX                  = {cxx} {compile_flags} {common_flags} {link_flags} -Wno-error
     CC_VERSION_OPTION    = --version
     CXX_VERSION_OPTION   = --version
     EXTRA_PORTABILITY    = -DSPEC_NO_CXX17_SPECIAL_MATH_FUNCTIONS # because libc++ doesn't implement the special math functions yet
