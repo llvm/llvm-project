@@ -98,9 +98,9 @@ static StringRef getRationaleFor(StringRef FunctionName) {
       .Cases({"rewind", "setbuf"}, "has no error detection")
       .Case("vfork", "is insecure as it can lead to denial of service "
                      "situations in the parent process")
-      .Case("get_temporary_buffer",
-            "is bugprone, has no performance advantage, was deprecated in "
-            "C++17 and removed in C++20")
+      .Case("get_temporary_buffer", "returns uninitialized memory without "
+                                    "performance advantages, was deprecated in "
+                                    "C++17 and removed in C++20")
       .Default("is not bounds-checking");
 }
 
