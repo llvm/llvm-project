@@ -23,6 +23,16 @@ define i32 @weighted_select1(i32 %a, i32 %b, i1 %cmp) {
   ret i32 %sel
 }
 
+; But don't do anything for optnone functions.
+define i32 @weighted_select1_optnone(i32 %a, i32 %b, i1 %cmp) optnone noinline {
+; CHECK-LABEL: @weighted_select1_optnone(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], !prof [[PROF16]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !15
+  ret i32 %sel
+}
+
 ; If a select is obviously predictable (reversed profile weights),
 ; turn it into a branch.
 define i32 @weighted_select2(i32 %a, i32 %b, i1 %cmp) {

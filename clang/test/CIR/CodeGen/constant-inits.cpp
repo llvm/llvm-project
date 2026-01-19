@@ -159,7 +159,7 @@ void function() {
 // CIR-DAG-SAME:   #cir.int<125> : !u8i
 // CIR-DAG-SAME: }> : !rec_mixed_partial_bitfields
 
-// CIR-LABEL: cir.func dso_local @_Z8functionv()
+// CIR-LABEL: cir.func {{.*}} @_Z8functionv()
 // CIR:   cir.return
 
 

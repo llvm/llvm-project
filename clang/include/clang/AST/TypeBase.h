@@ -2284,7 +2284,7 @@ protected:
     Last = PtrdiffT
   };
 
-  class PresefinedSugarTypeBitfields {
+  class PredefinedSugarTypeBitfields {
     friend class PredefinedSugarType;
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
@@ -2332,7 +2332,7 @@ protected:
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
     PackExpansionTypeBitfields PackExpansionTypeBits;
     CountAttributedTypeBitfields CountAttributedTypeBits;
-    PresefinedSugarTypeBitfields PredefinedSugarTypeBits;
+    PredefinedSugarTypeBitfields PredefinedSugarTypeBits;
   };
 
 private:
@@ -2607,7 +2607,7 @@ public:
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
   bool isCFIUncheckedCalleeFunctionType() const;
-  bool hasPointeeToToCFIUncheckedCalleeFunctionType() const;
+  bool hasPointeeToCFIUncheckedCalleeFunctionType() const;
   bool isBlockPointerType() const;
   bool isVoidPointerType() const;
   bool isReferenceType() const;
@@ -2637,11 +2637,12 @@ public:
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
   bool isExtVectorBoolType() const;             // Extended vector type with bool element.
+  bool isConstantMatrixBoolType() const; // Matrix type with bool element.
   // Extended vector type with bool element that is packed. HLSL doesn't pack
   // its bool vectors.
   bool isPackedVectorBoolType(const ASTContext &ctx) const;
   // Vector type with packed _BitInt elements.
-  bool isBitIntVectorType() const;
+  bool isPackedBitIntVectorType(const ASTContext &ctx) const;
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
@@ -4354,12 +4355,26 @@ public:
 
   /// Valid elements types are the following:
   /// * an integer type (as in C23 6.2.5p22), but excluding enumerated types
-  ///   and _Bool
+  ///   and _Bool (except that in HLSL, bool is allowed)
   /// * the standard floating types float or double
   /// * a half-precision floating point type, if one is supported on the target
-  static bool isValidElementType(QualType T) {
-    return T->isDependentType() ||
-           (T->isRealType() && !T->isBooleanType() && !T->isEnumeralType());
+  static bool isValidElementType(QualType T, const LangOptions &LangOpts) {
+    // Dependent is always okay
+    if (T->isDependentType())
+      return true;
+
+    // Enums are never okay
+    if (T->isEnumeralType())
+      return false;
+
+    // In HLSL, bool is allowed as a matrix element type.
+    // Note: isRealType includes bool so don't need to check
+    if (LangOpts.HLSL)
+      return T->isRealType();
+
+    // In non-HLSL modes, follow the existing rule:
+    // real type, but not _Bool.
+    return T->isRealType() && !T->isBooleanType();
   }
 
   bool isSugared() const { return false; }
@@ -6784,9 +6799,8 @@ public:
   SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
       : Kind(Kind), ResultType(ResultType), Value(std::move(Value)) {}
 
-  SpirvOperand(const SpirvOperand &Other) { *this = Other; }
-  ~SpirvOperand() {}
-
+  SpirvOperand(const SpirvOperand &Other) = default;
+  ~SpirvOperand() = default;
   SpirvOperand &operator=(const SpirvOperand &Other) = default;
 
   bool operator==(const SpirvOperand &Other) const {
@@ -8566,7 +8580,7 @@ inline bool Type::isCFIUncheckedCalleeFunctionType() const {
   return false;
 }
 
-inline bool Type::hasPointeeToToCFIUncheckedCalleeFunctionType() const {
+inline bool Type::hasPointeeToCFIUncheckedCalleeFunctionType() const {
   QualType Pointee;
   if (const auto *PT = getAs<PointerType>())
     Pointee = PT->getPointeeType();
@@ -8667,9 +8681,10 @@ inline bool Type::isExtVectorBoolType() const {
   return cast<ExtVectorType>(CanonicalType)->getElementType()->isBooleanType();
 }
 
-inline bool Type::isBitIntVectorType() const {
-  return isVectorType() &&
-         cast<VectorType>(CanonicalType)->getElementType()->isBitIntType();
+inline bool Type::isConstantMatrixBoolType() const {
+  if (auto *CMT = dyn_cast<ConstantMatrixType>(CanonicalType))
+    return CMT->getElementType()->isBooleanType();
+  return false;
 }
 
 inline bool Type::isSubscriptableVectorType() const {

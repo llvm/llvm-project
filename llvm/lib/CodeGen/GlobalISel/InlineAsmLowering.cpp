@@ -368,9 +368,9 @@ bool InlineAsmLowering::lowerInlineAsm(
         Inst.addImm(Flag);
 
         for (Register Reg : OpInfo.Regs) {
-          Inst.addReg(Reg,
-                      RegState::Define | getImplRegState(Reg.isPhysical()) |
-                          (OpInfo.isEarlyClobber ? RegState::EarlyClobber : 0));
+          Inst.addReg(Reg, RegState::Define |
+                               getImplRegState(Reg.isPhysical()) |
+                               getEarlyClobberRegState(OpInfo.isEarlyClobber));
         }
 
         // Remember this output operand for later processing
@@ -657,7 +657,18 @@ bool InlineAsmLowering::lowerAsmOperandForConstraint(
   switch (ConstraintLetter) {
   default:
     return false;
+  case 's': // Integer immediate not known at compile time
+    if (const auto *GV = dyn_cast<GlobalValue>(Val)) {
+      Ops.push_back(MachineOperand::CreateGA(GV, /*Offset=*/0));
+      return true;
+    }
+    return false;
   case 'i': // Simple Integer or Relocatable Constant
+    if (const auto *GV = dyn_cast<GlobalValue>(Val)) {
+      Ops.push_back(MachineOperand::CreateGA(GV, /*Offset=*/0));
+      return true;
+    }
+    [[fallthrough]];
   case 'n': // immediate integer with a known value.
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
       assert(CI->getBitWidth() <= 64 &&

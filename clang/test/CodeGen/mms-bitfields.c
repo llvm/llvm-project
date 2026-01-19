@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -mms-bitfields -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-apple-darwin10 -fms-layout-compatibility=microsoft -emit-llvm %s -o - | FileCheck %s
 
 struct s1 {
   int       f32;

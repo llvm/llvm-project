@@ -153,19 +153,6 @@ libomp_get_asmflags(LIBOMP_CONFIGURED_ASMFLAGS)
 set_source_files_properties(${LIBOMP_CXXFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
 set_source_files_properties(${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
 
-# Remove any cmake-automatic linking of the standard C++ library.
-# We neither need (nor want) the standard C++ library dependency even though we compile c++ files.
-if(NOT ${LIBOMP_USE_STDCPPLIB})
-  set(LIBOMP_LINKER_LANGUAGE C)
-  set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
-else()
-  set(LIBOMP_LINKER_LANGUAGE CXX)
-endif()
-
-if(UNIX)
-  set(LIBOMP_DL_LIBS ${CMAKE_DL_LIBS})
-endif()
-
 # Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
 # avoid an unwanted dependency on libstdc++.so.
 add_compile_definitions(_GLIBCXX_NO_ASSERTIONS)
@@ -174,17 +161,26 @@ if(NOT WIN32)
 endif()
 
 # Add the OpenMP library
-libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
 
+# First, create an OBJECT library with all the runtime sources.
+# This allows the unittests later to access internal symbols which don't export
+# in libomp.
+add_library(obj.omp OBJECT ${LIBOMP_SOURCE_FILES})
+set_property(TARGET obj.omp PROPERTY FOLDER "OpenMP/Libraries")
+set_property(TARGET obj.omp PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
 libomp_get_libflags(LIBOMP_CONFIGURED_LIBFLAGS)
-# Build libomp library. Add LLVMSupport dependency if building in-tree with libomptarget profiling enabled.
+
+# Build libomp library. Add LLVMSupport dependency if building in-tree with
+# libomptarget profiling enabled.
 if(OPENMP_STANDALONE_BUILD OR (NOT OPENMP_ENABLE_LIBOMP_PROFILING))
-  add_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES})
+  add_library(omp ${LIBOMP_LIBRARY_KIND} $<TARGET_OBJECTS:obj.omp>)
   set_property(TARGET omp PROPERTY FOLDER "OpenMP/Libraries")
   # Linking command will include libraries in LIBOMP_CONFIGURED_LIBFLAGS
   target_link_libraries(omp ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS})
 else()
-  add_llvm_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES} PARTIAL_SOURCES_INTENDED
+  add_llvm_library(omp ${LIBOMP_LIBRARY_KIND} $<TARGET_OBJECTS:obj.omp> PARTIAL_SOURCES_INTENDED
     LINK_LIBS ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS}
     LINK_COMPONENTS Support
     BUILDTREE_ONLY
@@ -296,7 +292,7 @@ set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
 # objects depend on : .inc files
 add_custom_target(libomp-needed-headers DEPENDS kmp_i18n_id.inc kmp_i18n_default.inc)
 set_target_properties(libomp-needed-headers PROPERTIES FOLDER "OpenMP/Sourcegenning")
-add_dependencies(omp libomp-needed-headers)
+add_dependencies(obj.omp libomp-needed-headers)
 
 # Windows specific build rules
 if(WIN32)
@@ -377,11 +373,6 @@ if(WIN32)
   endif()
 endif()
 
-# Building the Fortran module files
-# One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
-configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
-configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
-
 # Move files to exports/ directory if requested
 if(${LIBOMP_COPY_EXPORTS})
   include(LibompExports)
@@ -461,33 +452,4 @@ if(${LIBOMP_OMPT_SUPPORT})
   # install under legacy name ompt.h
   install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
   set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
-endif()
-
-
-# Build the modules files if a Fortran compiler is available.
-# Only LLVM_ENABLE_RUNTIMES=openmp is supported, LLVM_ENABLE_PROJECTS=openmp
-# has been deprecated.
-if(LIBOMP_FORTRAN_MODULES)
-  add_library(libomp-mod OBJECT
-    omp_lib.F90
-  )
-  set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Fortran Modules")
-
-  if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-   target_compile_options(libomp-mod PRIVATE -fno-range-check)
-  endif()
-
-  flang_module_target(libomp-mod PUBLIC)
-  if (FORTRAN_MODULE_DEPS)
-    add_dependencies(libomp-mod ${FORTRAN_MODULE_DEPS})
-  endif ()
-
-  set (destination ${LIBOMP_HEADERS_INSTALL_PATH})
-  if (NOT ${LIBOMP_MODULES_INSTALL_PATH} STREQUAL "")
-    set (destination ${LIBOMP_MODULES_INSTALL_PATH})
-  endif()
-  install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
-    DESTINATION ${destination}
-  )
 endif()

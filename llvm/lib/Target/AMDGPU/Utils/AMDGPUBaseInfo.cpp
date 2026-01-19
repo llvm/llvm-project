@@ -424,6 +424,8 @@ struct FP4FP8DstByteSelInfo {
   bool HasFP4DstByteSel;
 };
 
+#define GET_DPMACCInstructionTable_DECL
+#define GET_DPMACCInstructionTable_IMPL
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -729,6 +731,8 @@ bool isGenericAtomic(unsigned Opc) {
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB_CLAMP_U32 ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32 ||
          Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
 }
 
@@ -778,6 +782,11 @@ FPType getFPDstSelType(unsigned Opc) {
     return FPType::FP4;
 
   return FPType::None;
+}
+
+bool isDPMACCInstruction(unsigned Opc) {
+  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
+  return Info && Info->IsDPMACCInstruction;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -1710,6 +1719,30 @@ bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
   return false;
 }
 
+raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait) {
+  ListSeparator LS;
+  if (Wait.LoadCnt != ~0u)
+    OS << LS << "LoadCnt: " << Wait.LoadCnt;
+  if (Wait.ExpCnt != ~0u)
+    OS << LS << "ExpCnt: " << Wait.ExpCnt;
+  if (Wait.DsCnt != ~0u)
+    OS << LS << "DsCnt: " << Wait.DsCnt;
+  if (Wait.StoreCnt != ~0u)
+    OS << LS << "StoreCnt: " << Wait.StoreCnt;
+  if (Wait.SampleCnt != ~0u)
+    OS << LS << "SampleCnt: " << Wait.SampleCnt;
+  if (Wait.BvhCnt != ~0u)
+    OS << LS << "BvhCnt: " << Wait.BvhCnt;
+  if (Wait.KmCnt != ~0u)
+    OS << LS << "KmCnt: " << Wait.KmCnt;
+  if (Wait.XCnt != ~0u)
+    OS << LS << "XCnt: " << Wait.XCnt;
+  if (LS.unused())
+    OS << "none";
+  OS << '\n';
+  return OS;
+}
+
 unsigned getVmcntBitMask(const IsaVersion &Version) {
   return (1 << (getVmcntBitWidthLo(Version.Major) +
                 getVmcntBitWidthHi(Version.Major))) -
@@ -1750,6 +1783,25 @@ unsigned getXcntBitMask(const IsaVersion &Version) {
 
 unsigned getStorecntBitMask(const IsaVersion &Version) {
   return (1 << getStorecntBitWidth(Version.Major)) - 1;
+}
+
+HardwareLimits::HardwareLimits(const IsaVersion &IV) {
+  bool HasExtendedWaitCounts = IV.Major >= 12;
+  if (HasExtendedWaitCounts) {
+    LoadcntMax = getLoadcntBitMask(IV);
+    DscntMax = getDscntBitMask(IV);
+  } else {
+    LoadcntMax = getVmcntBitMask(IV);
+    DscntMax = getLgkmcntBitMask(IV);
+  }
+  ExpcntMax = getExpcntBitMask(IV);
+  StorecntMax = getStorecntBitMask(IV);
+  SamplecntMax = getSamplecntBitMask(IV);
+  BvhcntMax = getBvhcntBitMask(IV);
+  KmcntMax = getKmcntBitMask(IV);
+  XcntMax = getXcntBitMask(IV);
+  VaVdstMax = DepCtr::getVaVdstBitMask();
+  VmVsrcMax = DepCtr::getVmVsrcBitMask();
 }
 
 unsigned getWaitcntBitMask(const IsaVersion &Version) {
@@ -2020,6 +2072,10 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
                              STI);
 }
 
+unsigned getVaVdstBitMask() { return (1 << getVaVdstBitWidth()) - 1; }
+
+unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
+
 unsigned decodeFieldVmVsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
 }
@@ -2052,56 +2108,63 @@ unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
   return packBits(VmVsrc, Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
 }
 
-unsigned encodeFieldVmVsrc(unsigned VmVsrc) {
-  return encodeFieldVmVsrc(0xffff, VmVsrc);
+unsigned encodeFieldVmVsrc(unsigned VmVsrc, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVmVsrc(Encoded, VmVsrc);
 }
 
 unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst) {
   return packBits(VaVdst, Encoded, getVaVdstBitShift(), getVaVdstBitWidth());
 }
 
-unsigned encodeFieldVaVdst(unsigned VaVdst) {
-  return encodeFieldVaVdst(0xffff, VaVdst);
+unsigned encodeFieldVaVdst(unsigned VaVdst, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaVdst(Encoded, VaVdst);
 }
 
 unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst) {
   return packBits(SaSdst, Encoded, getSaSdstBitShift(), getSaSdstBitWidth());
 }
 
-unsigned encodeFieldSaSdst(unsigned SaSdst) {
-  return encodeFieldSaSdst(0xffff, SaSdst);
+unsigned encodeFieldSaSdst(unsigned SaSdst, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldSaSdst(Encoded, SaSdst);
 }
 
 unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst) {
   return packBits(VaSdst, Encoded, getVaSdstBitShift(), getVaSdstBitWidth());
 }
 
-unsigned encodeFieldVaSdst(unsigned VaSdst) {
-  return encodeFieldVaSdst(0xffff, VaSdst);
+unsigned encodeFieldVaSdst(unsigned VaSdst, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaSdst(Encoded, VaSdst);
 }
 
 unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc) {
   return packBits(VaVcc, Encoded, getVaVccBitShift(), getVaVccBitWidth());
 }
 
-unsigned encodeFieldVaVcc(unsigned VaVcc) {
-  return encodeFieldVaVcc(0xffff, VaVcc);
+unsigned encodeFieldVaVcc(unsigned VaVcc, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaVcc(Encoded, VaVcc);
 }
 
 unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc) {
   return packBits(VaSsrc, Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
 }
 
-unsigned encodeFieldVaSsrc(unsigned VaSsrc) {
-  return encodeFieldVaSsrc(0xffff, VaSsrc);
+unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaSsrc(Encoded, VaSsrc);
 }
 
 unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt) {
   return packBits(HoldCnt, Encoded, getHoldCntBitShift(), getHoldCntWidth());
 }
 
-unsigned encodeFieldHoldCnt(unsigned HoldCnt) {
-  return encodeFieldHoldCnt(0xffff, HoldCnt);
+unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldHoldCnt(Encoded, HoldCnt);
 }
 
 } // namespace DepCtr
@@ -3443,6 +3506,12 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
   static const AMDGPU::OpName VOP2MADMKOps[4] = {
       AMDGPU::OpName::src0, AMDGPU::OpName::NUM_OPERAND_NAMES,
       AMDGPU::OpName::src1, AMDGPU::OpName::vdst};
+  static const AMDGPU::OpName VOPDFMAMKOpsX[4] = {
+      AMDGPU::OpName::src0X, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::vsrc1X, AMDGPU::OpName::vdstX};
+  static const AMDGPU::OpName VOPDFMAMKOpsY[4] = {
+      AMDGPU::OpName::src0Y, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vdstY};
 
   unsigned TSFlags = Desc.TSFlags;
 
@@ -3484,8 +3553,11 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
   if (TSFlags & SIInstrFlags::VIMAGE)
     return {VIMGOps, nullptr};
 
-  if (AMDGPU::isVOPD(Desc.getOpcode()))
-    return {VOPDOpsX, VOPDOpsY};
+  if (AMDGPU::isVOPD(Desc.getOpcode())) {
+    auto [OpX, OpY] = getVOPDComponents(Desc.getOpcode());
+    return {(OpX == AMDGPU::V_FMAMK_F32) ? VOPDFMAMKOpsX : VOPDOpsX,
+            (OpY == AMDGPU::V_FMAMK_F32) ? VOPDFMAMKOpsY : VOPDOpsY};
+  }
 
   assert(!(TSFlags & SIInstrFlags::MIMG));
 
@@ -3626,9 +3698,9 @@ ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
 
   if (!Attr.has_value())
     AttrKind = Kind::Unknown;
-  else if (all_of(*Attr, [](unsigned V) { return V == EncoNoCluster; }))
+  else if (all_of(*Attr, equal_to(EncoNoCluster)))
     AttrKind = Kind::NoCluster;
-  else if (all_of(*Attr, [](unsigned V) { return V == EncoVariableDims; }))
+  else if (all_of(*Attr, equal_to(EncoVariableDims)))
     AttrKind = Kind::VariableDims;
 
   ClusterDimsAttr A(AttrKind);

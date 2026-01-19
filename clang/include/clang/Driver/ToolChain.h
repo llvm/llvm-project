@@ -538,10 +538,6 @@ public:
   // Returns Triple without the OSs version.
   llvm::Triple getTripleWithoutOSVersion() const;
 
-  /// Returns the target-specific path for Flang's intrinsic modules in the
-  /// resource directory if it exists.
-  std::optional<std::string> getDefaultIntrinsicModuleDir() const;
-
   // Returns the target specific runtime path if it exists.
   std::optional<std::string> getRuntimePath() const;
 

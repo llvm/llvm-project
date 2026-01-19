@@ -599,7 +599,7 @@ def FeatureMPAMv2: ExtensionWithMArch<"mpamv2", "MPAMv2", "FEAT_MPAMv2",
   "Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions">;
 
 def FeatureMTETC: ExtensionWithMArch<"mtetc", "MTETC", "FEAT_MTETC",
-  "Enable Virtual Memory Tagging Extension">;
+  "Enable Virtual Memory Tagging Extension", [FeatureMTE]>;
 
 def FeatureGCIE: ExtensionWithMArch<"gcie", "GCIE", "FEAT_GCIE",
   "Enable GICv5 (Generic Interrupt Controller) CPU Interface Extension">;
@@ -627,7 +627,7 @@ def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM"
 //===----------------------------------------------------------------------===//
 
 def FeatureMOPS_GO: ExtensionWithMArch<"mops-go", "MOPS_GO", "FEAT_MOPS_GO",
-  "Enable memset acceleration granule only">;
+  "Enable memset acceleration granule only", [FeatureMOPS, FeatureMTE]>;
 
 def FeatureBTIE: ExtensionWithMArch<"btie", "BTIE", "FEAT_BTIE",
   "Enable Enhanced Branch Target Identification extension">;
@@ -853,6 +853,10 @@ def FeatureALULSLFast : SubtargetFeature<
     "alu-lsl-fast", "HasALULSLFast", "true",
     "Add/Sub operations with lsl shift <= 4 are cheap">;
 
+def FeatureFastLD1Single : SubtargetFeature<
+    "fast-ld1-single", "HasFastLD1Single", "true",
+    "Single-element LD1 to vector lane has same performance as regular load">;
+
 def FeatureAggressiveFMA :
   SubtargetFeature<"aggressive-fma",
                    "HasAggressiveFMA",
@@ -894,6 +898,11 @@ def FeatureUseFixedOverScalableIfEqualCost : SubtargetFeature<"use-fixed-over-sc
   "UseFixedOverScalableIfEqualCost", "true",
   "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
 
+def FeatureDisableMaximizeScalableBandwidth : SubtargetFeature< "disable-maximize-scalable-bandwidth",
+    "DisableMaximizeScalableBandwidth", "true",
+    "Determine the maximum scalable vector length for a loop by the "
+    "largest scalar type rather than the smallest">;
+
 // For performance reasons we prefer to use ldapr to ldapur on certain cores.
 def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",
   "Prefer add+ldapr to offset ldapur">;
@@ -909,6 +918,18 @@ def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
 def FeatureUseWzrToVecMove : SubtargetFeature<"use-wzr-to-vec-move",
                                               "UseWzrToVecMove", "true",
                                               "Move from WZR to insert 0 into vector registers">;
+
+def FeatureDisableUnpredicatedLdStLower : SubtargetFeature<
+    "disable-unpredicated-ld-st-lower", "DisableUnpredicatedLdStLower",
+    "true", "Disable lowering unpredicated loads/stores as LDR/STR">;
+
+def FeatureAggressiveInterleaving : SubtargetFeature<"aggressive-interleaving",
+                                                     "AggressiveInterleaving", "true",
+                                                     "Make use of aggressive interleaving during vectorization">;
+
+def FeatureMaxInterleaveFactor4 : SubtargetFeature<
+    "max-interleave-factor-4", "MaxInterleaveFactor", "4",
+    "Set the MaxInterleaveFactor to 4 (from the default 2)">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.

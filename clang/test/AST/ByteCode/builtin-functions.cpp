@@ -1545,6 +1545,13 @@ namespace Memcmp {
 
   int unknown;
   void foo(void) { unknown *= __builtin_memcmp(0, 0, 2); }
+
+  constexpr int onepasttheend(char a) {
+    __builtin_memcmp(&a, &a + 1, 1); // both-note {{read of dereferenced one-past-the-end pointer}}
+    return 1;
+  }
+  static_assert(onepasttheend(10)); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
 }
 
 namespace Memchr {
@@ -1642,6 +1649,10 @@ namespace Memchr {
     return __builtin_char_memchr(c + 1, 'f', 1) == nullptr;
   }
   static_assert(f());
+
+
+  extern const char char_memchr_arg[0l];
+  char *memchr_result = __builtin_char_memchr(char_memchr_arg, 123, 32);
 }
 
 namespace Strchr {

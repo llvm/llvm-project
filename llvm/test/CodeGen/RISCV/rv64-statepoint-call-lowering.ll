@@ -267,17 +267,3 @@ entry:
   ret void
 }
 
-declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
-declare i1 @llvm.experimental.gc.result.i1(token)
-
-declare i32 @llvm.experimental.gc.result.i32(token)
-
-declare ptr @llvm.experimental.gc.result.p0(token)
-
-declare float @llvm.experimental.gc.result.f32(token)
-
-declare %struct @llvm.experimental.gc.result.struct(token)
-
-
-
-declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)

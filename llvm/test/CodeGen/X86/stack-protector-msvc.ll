@@ -75,11 +75,10 @@ define void @test(ptr %a) nounwind ssp {
 ; MSVC-X86-O0-NEXT:    movl ___security_cookie, %eax
 ; MSVC-X86-O0-NEXT:    xorl %esp, %eax
 ; MSVC-X86-O0-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; MSVC-X86-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; MSVC-X86-O0-NEXT:    movl %esp, %eax
-; MSVC-X86-O0-NEXT:    movl %ecx, 4(%eax)
+; MSVC-X86-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; MSVC-X86-O0-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; MSVC-X86-O0-NEXT:    movl %ecx, (%eax)
+; MSVC-X86-O0-NEXT:    movl %ecx, (%esp)
+; MSVC-X86-O0-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; MSVC-X86-O0-NEXT:    calll _strcpy
 ; MSVC-X86-O0-NEXT:    leal LC, %ecx
 ; MSVC-X86-O0-NEXT:    leal {{[0-9]+}}(%esp), %eax

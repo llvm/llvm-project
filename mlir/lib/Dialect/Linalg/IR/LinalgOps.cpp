@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -579,13 +580,23 @@ public:
       return arith::MinSIOp::create(builder, arg0.getLoc(), arg0, arg1);
     case BinaryFn::max_unsigned:
       assert(!allComplex);
-      if (allFloatingPoint)
-        return arith::MaximumFOp::create(builder, arg0.getLoc(), arg0, arg1);
+      if (!allInteger || allBool) {
+        if (emitError) {
+          emitError() << "unsupported operation: unsigned max not on uint";
+          return nullptr;
+        }
+        llvm_unreachable("unsupported operation: unsigned max not on uint");
+      }
       return arith::MaxUIOp::create(builder, arg0.getLoc(), arg0, arg1);
     case BinaryFn::min_unsigned:
       assert(!allComplex);
-      if (allFloatingPoint)
-        return arith::MinimumFOp::create(builder, arg0.getLoc(), arg0, arg1);
+      if (!allInteger || allBool) {
+        if (emitError) {
+          emitError() << "unsupported operation: unsigned min not on uint";
+          return nullptr;
+        }
+        llvm_unreachable("unsupported operation: unsigned min not on uint");
+      }
       return arith::MinUIOp::create(builder, arg0.getLoc(), arg0, arg1);
     case BinaryFn::powf:
       assert(allFloatingPoint);
@@ -2033,9 +2044,9 @@ LogicalResult TransposeOp::verify() {
 
   int64_t rank = inputType.getRank();
 
-  if (rank != initType.getRank())
-    return emitOpError() << "input rank " << rank
-                         << " does not match init rank " << initType.getRank();
+  if (failed(verifyRanksMatch(getOperation(), inputType, initType, "input",
+                              "init")))
+    return failure();
 
   if (rank != static_cast<int64_t>(permutationRef.size()))
     return emitOpError() << "size of permutation " << permutationRef.size()

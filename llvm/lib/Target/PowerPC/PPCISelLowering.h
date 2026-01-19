@@ -352,10 +352,10 @@ namespace llvm {
     bool shouldInlineQuadwordAtomics() const;
 
     TargetLowering::AtomicExpansionKind
-    shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
     TargetLowering::AtomicExpansionKind
-    shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+    shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
     Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder,
                                         AtomicRMWInst *AI, Value *AlignedAddr,
@@ -492,8 +492,7 @@ namespace llvm {
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info,
-                            const CallInst &I,
+    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                             MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
