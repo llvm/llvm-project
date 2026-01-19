@@ -1575,6 +1575,15 @@ void Materializer::Dematerializer::Dematerialize(Status &error,
   if (!exe_scope)
     exe_scope = m_map->GetBestExecutionContextScope();
 
+  // If we couldn't get the frame from the stored weak pointer/stack ID,
+  // try to get it from the best execution context scope as a fallback.
+  // This handles cases where the expression evaluation is triggered from
+  // Python scripts where the stored thread reference may have expired
+  // but the execution context is still valid.
+  if (!frame_sp && exe_scope) {
+    frame_sp = exe_scope->CalculateStackFrame();
+  }
+
   if (!IsValid()) {
     error = Status::FromErrorString(
         "Couldn't dematerialize: invalid dematerializer");
