@@ -64,30 +64,30 @@ public:
   /// Get the function at the requested location range.
   /// If no single function occupies the queried range, or the record is
   /// missing, a nullptr is returned.
-  Function *getFunctionAtLocation(const FileLocRange &) const;
+  LLVM_ABI Function *getFunctionAtLocation(const FileLocRange &) const;
   /// Get the function at the requested location.
   /// If no function occupies the queried location, or the record is missing, a
   /// nullptr is returned.
-  Function *getFunctionAtLocation(const FileLoc &) const;
+  LLVM_ABI Function *getFunctionAtLocation(const FileLoc &) const;
   /// Get the block at the requested location range.
   /// If no single block occupies the queried range, or the record is missing, a
   /// nullptr is returned.
-  BasicBlock *getBlockAtLocation(const FileLocRange &) const;
+  LLVM_ABI BasicBlock *getBlockAtLocation(const FileLocRange &) const;
   /// Get the block at the requested location.
   /// If no block occupies the queried location, or the record is missing, a
   /// nullptr is returned.
-  BasicBlock *getBlockAtLocation(const FileLoc &) const;
+  LLVM_ABI BasicBlock *getBlockAtLocation(const FileLoc &) const;
   /// Get the instruction at the requested location range.
   /// If no single instruction occupies the queried range, or the record is
   /// missing, a nullptr is returned.
-  Instruction *getInstructionAtLocation(const FileLocRange &) const;
+  LLVM_ABI Instruction *getInstructionAtLocation(const FileLocRange &) const;
   /// Get the instruction at the requested location.
   /// If no instruction occupies the queried location, or the record is missing,
   /// a nullptr is returned.
-  Instruction *getInstructionAtLocation(const FileLoc &) const;
-  bool addFunctionLocation(Function *, const FileLocRange &);
-  bool addBlockLocation(BasicBlock *, const FileLocRange &);
-  bool addInstructionLocation(Instruction *, const FileLocRange &);
+  LLVM_ABI Instruction *getInstructionAtLocation(const FileLoc &) const;
+  LLVM_ABI bool addFunctionLocation(Function *, const FileLocRange &);
+  LLVM_ABI bool addBlockLocation(BasicBlock *, const FileLocRange &);
+  LLVM_ABI bool addInstructionLocation(Instruction *, const FileLocRange &);
 };
 } // namespace llvm
 

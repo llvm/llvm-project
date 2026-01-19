@@ -137,8 +137,10 @@ public:
 
   /// This method returns a target specific FastISel object, or null if the
   /// target does not support "fast" ISel.
-  FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                           const TargetLibraryInfo *libInfo) const override;
+  FastISel *
+  createFastISel(FunctionLoweringInfo &funcInfo,
+                 const TargetLibraryInfo *libInfo,
+                 const LibcallLoweringInfo *libcallLowering) const override;
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
@@ -931,7 +933,8 @@ private:
 
 namespace AArch64 {
 FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                         const TargetLibraryInfo *libInfo);
+                         const TargetLibraryInfo *libInfo,
+                         const LibcallLoweringInfo *libcallLowering);
 } // end namespace AArch64
 
 } // end namespace llvm

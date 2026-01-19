@@ -293,29 +293,29 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
       }
     }
 
-  // If we have a Record node followed by a CheckOpcode, invert the two nodes.
-  // We prefer to do structural checks before type checks, as this opens
-  // opportunities for factoring on targets like X86 where many operations are
-  // valid on multiple types.
-  if (isa<RecordMatcher>(N) && isa<CheckOpcodeMatcher>(N->getNext())) {
-    // Unlink the two nodes from the list.
-    Matcher *CheckType = MatcherPtr->release();
-    Matcher *CheckOpcode = CheckType->takeNext();
-    Matcher *Tail = CheckOpcode->takeNext();
+    // If we have a Record node followed by a CheckOpcode, invert the two nodes.
+    // We prefer to do structural checks before type checks, as this opens
+    // opportunities for factoring on targets like X86 where many operations are
+    // valid on multiple types.
+    if (isa<RecordMatcher>(N) && isa<CheckOpcodeMatcher>(N->getNext())) {
+      // Unlink the two nodes from the list.
+      Matcher *CheckType = MatcherPtr->release();
+      Matcher *CheckOpcode = CheckType->takeNext();
+      Matcher *Tail = CheckOpcode->takeNext();
 
-    // Relink them.
-    MatcherPtr->reset(CheckOpcode);
-    CheckOpcode->setNext(CheckType);
-    CheckType->setNext(Tail);
-    continue;
-  }
+      // Relink them.
+      MatcherPtr->reset(CheckOpcode);
+      CheckOpcode->setNext(CheckType);
+      CheckType->setNext(Tail);
+      continue;
+    }
 
-  // No contractions were performed, go to next node.
-  MatcherPtr = &(MatcherPtr->get()->getNextPtr());
+    // No contractions were performed, go to next node.
+    MatcherPtr = &(MatcherPtr->get()->getNextPtr());
 
-  // If we reached the end of the chain, we're done.
-  if (!*MatcherPtr)
-    return;
+    // If we reached the end of the chain, we're done.
+    if (!*MatcherPtr)
+      return;
   }
 }
 
