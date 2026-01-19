@@ -2556,24 +2556,13 @@ static void licm(VPlan &Plan) {
     }
   }
 
-  // Collect dedicated exit blocks, which have only the loop region as
-  // predecessor.
+  VPDominatorTree VPDT(Plan);
+  // Sink recipes with no users inside the vector loop region into a dedicated
+  // exit block.
   // TODO: Sinking to non-dedicated exits is not supported yet, as it would
   // require splitting the edge to create a dedicated exit block. Without this,
   // the sunk instruction would incorrectly execute on paths entering the exit
   // block from other predecessors.
-  SmallPtrSet<VPBasicBlock *, 2> DedicatedExits;
-  for (VPBlockBase *Succ : LoopRegion->getSuccessors()) {
-    auto *ExitBB = cast<VPBasicBlock>(Succ);
-    if (ExitBB->getSinglePredecessor() == LoopRegion)
-      DedicatedExits.insert(ExitBB);
-  }
-  if (DedicatedExits.empty())
-    return;
-
-  VPDominatorTree VPDT(Plan);
-  // Sink recipes with no users inside the vector loop region into a dedicated
-  // exit block.
   // TODO: Extend to sink recipes from inner loops.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_post_order_shallow(LoopRegion->getEntry()))) {
@@ -2609,7 +2598,7 @@ static void licm(VPlan &Plan) {
 
       VPBasicBlock *SinkBB = *UserBBs.begin();
       // Only sink to dedicated exit blocks.
-      if (!DedicatedExits.contains(SinkBB))
+      if (SinkBB->getSinglePredecessor() != LoopRegion)
         continue;
       // Skip if the defining block does not dominate the sink block.
       if (!VPDT.properlyDominates(VPBB, SinkBB))
