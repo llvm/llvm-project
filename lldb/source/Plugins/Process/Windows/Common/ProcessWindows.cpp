@@ -1003,8 +1003,7 @@ public:
           while (true) {
             INPUT_RECORD inputRecord;
             DWORD numRead = 0;
-            if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead) ||
-                numRead == 0)
+            if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead))
               goto exit_loop;
 
             // We only care about text input. Consume all non text input events
