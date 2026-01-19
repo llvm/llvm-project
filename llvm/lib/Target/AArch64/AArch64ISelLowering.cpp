@@ -7245,6 +7245,9 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
     // 256 bit non-temporal stores can be lowered to STNP. Do this as part of
     // the custom lowering, as there are no un-paired non-temporal stores and
     // legalization will break up 256 bit inputs.
+    //
+    // Currently, STNP lowering can only either keep or increase code size, thus
+    // we predicate it to not apply when optimizing for code size.
     ElementCount EC = MemVT.getVectorElementCount();
     if (StoreNode->isNonTemporal() && MemVT.getSizeInBits() == 256u &&
         EC.isKnownEven() && DAG.getDataLayout().isLittleEndian() &&
