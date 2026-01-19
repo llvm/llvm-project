@@ -95,6 +95,8 @@ __attribute__((noinline)) void test_nested_member_plain_deref_ptr(struct Contain
 
 // ============================================================================
 // TYPE VARIANT: atomic (C only)
+// NOTE: Atomic struct operations use atomic load/store instructions and do not
+// go through EmitAggregateCopy, so UBSAN null/alignment checks are not emitted.
 // ============================================================================
 
 #ifndef __cplusplus
@@ -102,42 +104,43 @@ __attribute__((noinline)) void test_nested_member_plain_deref_ptr(struct Contain
 // --- OPERAND FORM: arr[idx] ---
 
 // C-LABEL: define {{[^@]*}}@test_assign_atomic_arr_idx
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_assign_atomic_arr_idx(struct Small *dest, _Atomic(struct Small) arr[]) {
   *dest = arr[0];
 }
 
 // C-LABEL: define {{[^@]*}}@test_init_atomic_arr_idx
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_init_atomic_arr_idx(_Atomic(struct Small) arr[]) {
   struct Small a = arr[0];
 }
 
 // C-LABEL: define {{[^@]*}}@test_init_list_atomic_arr_idx
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_init_list_atomic_arr_idx(_Atomic(struct Small) arr[]) {
   struct Small a[] = {arr[0]};
 }
 
 // C-LABEL: define {{[^@]*}}@test_init_list_designate_atomic_arr_idx
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_init_list_designate_atomic_arr_idx(_Atomic(struct Small) arr[]) {
   struct Small a[] = {[0] = arr[0]};
 }
 
 // C-LABEL: define {{[^@]*}}@test_variadic_atomic_arr_idx
+// C: load atomic i32
 __attribute__((noinline)) void test_variadic_atomic_arr_idx(_Atomic(struct Small) arr[]) {
   variadic_func(0, arr[0]);
 }
 
 // C-LABEL: define {{[^@]*}}@test_nested_member_atomic_arr_idx
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_nested_member_atomic_arr_idx(struct Container *c, _Atomic(struct Small) arr[]) {
   c->inner = arr[0];
 }
 
 // C-LABEL: define {{[^@]*}}@test_lvalue_to_rvalue_atomic_arr_idx
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_lvalue_to_rvalue_atomic_arr_idx(_Atomic(struct Small) arr[]) {
   (void)arr[0];
 }
@@ -145,42 +148,43 @@ __attribute__((noinline)) void test_lvalue_to_rvalue_atomic_arr_idx(_Atomic(stru
 // --- OPERAND FORM: *ap ---
 
 // C-LABEL: define {{[^@]*}}@test_assign_atomic_deref_ptr
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_assign_atomic_deref_ptr(struct Small *dest, _Atomic(struct Small) *ap) {
   *dest = *ap;
 }
 
 // C-LABEL: define {{[^@]*}}@test_init_atomic_deref_ptr
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_init_atomic_deref_ptr(_Atomic(struct Small) *ap) {
   struct Small a = *ap;
 }
 
 // C-LABEL: define {{[^@]*}}@test_init_list_atomic_deref_ptr
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_init_list_atomic_deref_ptr(_Atomic(struct Small) *ap) {
   struct Small a[] = {*ap};
 }
 
 // C-LABEL: define {{[^@]*}}@test_init_list_designate_atomic_deref_ptr
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_init_list_designate_atomic_deref_ptr(_Atomic(struct Small) *ap) {
   struct Small a[] = {[0] = *ap};
 }
 
 // C-LABEL: define {{[^@]*}}@test_variadic_atomic_deref_ptr
+// C: load atomic i32
 __attribute__((noinline)) void test_variadic_atomic_deref_ptr(_Atomic(struct Small) *ap) {
   variadic_func(0, *ap);
 }
 
 // C-LABEL: define {{[^@]*}}@test_nested_member_atomic_deref_ptr
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_nested_member_atomic_deref_ptr(struct Container *c, _Atomic(struct Small) *ap) {
   c->inner = *ap;
 }
 
 // C-LABEL: define {{[^@]*}}@test_lvalue_to_rvalue_atomic_deref_ptr
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: load atomic i32
 __attribute__((noinline)) void test_lvalue_to_rvalue_atomic_deref_ptr(_Atomic(struct Small) *ap) {
   (void)*ap;
 }
