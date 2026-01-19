@@ -3520,9 +3520,10 @@ struct FormatStyle {
   /// Keep the form feed character (``\f``) if it's immediately preceded and
   /// followed by a newline. Multiple form feeds and newlines within a
   /// whitespace range are replaced with a single newline and form feed followed
-  /// by the remaining newlines. (See
-  /// https://www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed
-  /// for more information.)
+  /// by the remaining newlines. See
+  /// `GNU formfeed coding standard
+  /// <https://www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed>`_
+  ///  for more information.
   /// \version 20
   bool KeepFormFeed;
 
