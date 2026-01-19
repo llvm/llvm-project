@@ -3371,7 +3371,7 @@ void PPCAIXAsmPrinter::emitRefMetadata(const GlobalObject *GO) {
   for (const MDNode *MD : MDs) {
     const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
     const GlobalValue *GV = cast<GlobalValue>(VAM->getValue());
-    MCSymbol *Referenced = TM.getSymbol(GV);
+    MCSymbol *Referenced = isa<Function>(GV) ? getObjFileLowering().getFunctionEntryPointSymbol(GV, TM) : TM.getSymbol(GV);
     OutStreamer->emitXCOFFRefDirective(Referenced);
   }
 }
