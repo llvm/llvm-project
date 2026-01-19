@@ -162,6 +162,11 @@ public:
            hasPTXWithAccelSMs(86, {100, 101, 103});
   }
 
+  bool hasTcgen05LdRedSupport() const {
+    return hasPTXWithFamilySMs(90, {110, 103}) ||
+           hasPTXWithFamilySMs(88, {101, 103});
+  }
+
   bool hasReduxSyncF32() const {
     return hasPTXWithFamilySMs(88, {100}) || hasPTXWithAccelSMs(86, {100});
   }
