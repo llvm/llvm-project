@@ -1156,8 +1156,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::XOR, MVT::i128, Custom);
 
     if (Subtarget.hasPCLMUL()) {
-      setOperationAction(ISD::CLMUL, MVT::i64, Custom);
-      setOperationAction(ISD::CLMULH, MVT::i64, Custom);
+      for (auto VT : {MVT::i64, MVT::v4i32, MVT::v2i64}) {
+        setOperationAction(ISD::CLMUL, VT, Custom);
+        setOperationAction(ISD::CLMULH, VT, Custom);
+      }
       setOperationAction(ISD::CLMUL, MVT::i32, Custom);
       setOperationAction(ISD::CLMUL, MVT::i16, Custom);
       setOperationAction(ISD::CLMUL, MVT::i8, Custom);
@@ -33184,6 +33186,11 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
   MVT VT = Op.getSimpleValueType();
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
+
+  // Just scalarize vXi32/vXi64 vector cases and rely on shuffle combining to
+  // clean it up.
+  if (VT.isVector())
+    return DAG.UnrollVectorOp(Op.getNode());
 
   // On 64-bit, use i64/v2i64. On 32-bit, i64 is not legal, use i32/v4i32.
   MVT ScalarVT = Subtarget.is64Bit() ? MVT::i64 : MVT::i32;

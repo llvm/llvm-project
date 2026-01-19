@@ -2882,6 +2882,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ilogbf",
+    hdrs = ["src/__support/math/ilogbf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ilogbl",
     hdrs = ["src/__support/math/ilogbl.h"],
     deps = [
@@ -4427,7 +4437,12 @@ libc_math_function(
 
 libc_math_function(name = "ilogb")
 
-libc_math_function(name = "ilogbf")
+libc_math_function(
+    name = "ilogbf",
+    additional_deps = [
+        ":__support_math_ilogbf",
+    ],
+)
 
 libc_math_function(
     name = "ilogbl",
