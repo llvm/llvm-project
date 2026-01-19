@@ -37,6 +37,12 @@
 # CHECK:   %[[V0:.*]] = standalone.foo %[[C2]] : i32
 # CHECK: }
 
+# CHECK: !standalone.custom<"foo">
+
+# CHECK: this is a fp16 type
+# CHECK: this is a fp32 type
+# CHECK: this is a fp64 type
+
 # CHECK: Testing mlir package
 
 # CHECK-NOT: RuntimeWarning: nanobind: type '{{.*}}' was already registered!

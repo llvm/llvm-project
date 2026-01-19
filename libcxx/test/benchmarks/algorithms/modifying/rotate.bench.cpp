@@ -50,33 +50,18 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::rotate(vector<int>) (by 1/4)", std_rotate, 0.25);
     bm.operator()<std::deque<int>>("std::rotate(deque<int>) (by 1/4)", std_rotate, 0.25);
     bm.operator()<std::list<int>>("std::rotate(list<int>) (by 1/4)", std_rotate, 0.25);
-    bm.operator()<std::vector<int>>("rng::rotate(vector<int>) (by 1/4)", std::ranges::rotate, 0.25);
-    bm.operator()<std::deque<int>>("rng::rotate(deque<int>) (by 1/4)", std::ranges::rotate, 0.25);
-    bm.operator()<std::list<int>>("rng::rotate(list<int>) (by 1/4)", std::ranges::rotate, 0.25);
 
     bm.operator()<std::vector<int>>("std::rotate(vector<int>) (by 1/3)", std_rotate, 0.33);
     bm.operator()<std::deque<int>>("std::rotate(deque<int>) (by 1/3)", std_rotate, 0.33);
     bm.operator()<std::list<int>>("std::rotate(list<int>) (by 1/3)", std_rotate, 0.33);
-    bm.operator()<std::vector<int>>("rng::rotate(vector<int>) (by 1/3)", std::ranges::rotate, 0.33);
-    bm.operator()<std::deque<int>>("rng::rotate(deque<int>) (by 1/3)", std::ranges::rotate, 0.33);
-    bm.operator()<std::list<int>>("rng::rotate(list<int>) (by 1/3)", std::ranges::rotate, 0.33);
 
     bm.operator()<std::vector<int>>("std::rotate(vector<int>) (by 1/2)", std_rotate, 0.50);
     bm.operator()<std::deque<int>>("std::rotate(deque<int>) (by 1/2)", std_rotate, 0.50);
     bm.operator()<std::list<int>>("std::rotate(list<int>) (by 1/2)", std_rotate, 0.50);
-    bm.operator()<std::vector<int>>("rng::rotate(vector<int>) (by 1/2)", std::ranges::rotate, 0.50);
-    bm.operator()<std::deque<int>>("rng::rotate(deque<int>) (by 1/2)", std::ranges::rotate, 0.50);
-    bm.operator()<std::list<int>>("rng::rotate(list<int>) (by 1/2)", std::ranges::rotate, 0.50);
 
     bm.operator()<std::vector<bool>>("std::rotate(vector<bool>) (by 1/4)", std_rotate, 0.25);
     bm.operator()<std::vector<bool>>("std::rotate(vector<bool>) (by 1/3)", std_rotate, 0.33);
     bm.operator()<std::vector<bool>>("std::rotate(vector<bool>) (by 1/2)", std_rotate, 0.50);
-
-#if TEST_STD_VER >= 23 // vector<bool>::iterator is not std::permutable before C++23
-    bm.operator()<std::vector<bool>>("rng::rotate(vector<bool>) (by 1/4)", std::ranges::rotate, 0.25);
-    bm.operator()<std::vector<bool>>("rng::rotate(vector<bool>) (by 1/3)", std::ranges::rotate, 0.33);
-    bm.operator()<std::vector<bool>>("rng::rotate(vector<bool>) (by 1/2)", std::ranges::rotate, 0.50);
-#endif
   }
 
   // Benchmark {std,ranges}::rotate where we rotate a single element from the beginning to the end of the range.
@@ -105,14 +90,8 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::rotate(vector<int>) (1 element forward)", std_rotate);
     bm.operator()<std::deque<int>>("std::rotate(deque<int>) (1 element forward)", std_rotate);
     bm.operator()<std::list<int>>("std::rotate(list<int>) (1 element forward)", std_rotate);
-    bm.operator()<std::vector<int>>("rng::rotate(vector<int>) (1 element forward)", std::ranges::rotate);
-    bm.operator()<std::deque<int>>("rng::rotate(deque<int>) (1 element forward)", std::ranges::rotate);
-    bm.operator()<std::list<int>>("rng::rotate(list<int>) (1 element forward)", std::ranges::rotate);
 
     bm.operator()<std::vector<bool>>("std::rotate(vector<bool>) (1 element forward)", std_rotate);
-#if TEST_STD_VER >= 23 // vector<bool>::iterator is not std::permutable before C++23
-    bm.operator()<std::vector<bool>>("rng::rotate(vector<bool>) (1 element forward)", std::ranges::rotate);
-#endif
   }
 
   // Benchmark {std,ranges}::rotate where we rotate a single element from the end to the beginning of the range.
@@ -141,14 +120,8 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::rotate(vector<int>) (1 element backward)", std_rotate);
     bm.operator()<std::deque<int>>("std::rotate(deque<int>) (1 element backward)", std_rotate);
     bm.operator()<std::list<int>>("std::rotate(list<int>) (1 element backward)", std_rotate);
-    bm.operator()<std::vector<int>>("rng::rotate(vector<int>) (1 element backward)", std::ranges::rotate);
-    bm.operator()<std::deque<int>>("rng::rotate(deque<int>) (1 element backward)", std::ranges::rotate);
-    bm.operator()<std::list<int>>("rng::rotate(list<int>) (1 element backward)", std::ranges::rotate);
 
     bm.operator()<std::vector<bool>>("std::rotate(vector<bool>) (1 element backward)", std_rotate);
-#if TEST_STD_VER >= 23 // vector<bool>::iterator is not std::permutable before C++23
-    bm.operator()<std::vector<bool>>("rng::rotate(vector<bool>) (1 element backward)", std::ranges::rotate);
-#endif
   }
 
   benchmark::Initialize(&argc, argv);

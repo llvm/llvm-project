@@ -263,9 +263,7 @@ function(runtime_default_target)
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES "@${LLVM_BINARY_DIR}/runtimes/runtimes-bins/lit.tests")
     list(APPEND test_targets runtimes-test-depends check-runtimes check-builtins)
-
-    # The default runtimes target can run tests the default builtins target
-    list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_BUILTINS_DIR=${LLVM_BINARY_DIR}/runtimes/builtins-bins/")
+    list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_EXTERNAL_BUILTINS=ON")
   endif()
 
   set_enable_per_target_runtime_dir()
@@ -376,7 +374,7 @@ function(runtime_register_target name)
     # If a builtins-${name} target exists, we'll test those builtins
     # with this runtimes build
     if(TARGET builtins-${name})
-      list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_BUILTINS_DIR=${LLVM_BINARY_DIR}/runtimes/builtins-${name}-bins/")
+      list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_EXTERNAL_BUILTINS=ON")
       set(check-builtins-${name} check-builtins)
       list(APPEND ${name}_test_targets check-builtins-${name})
       list(APPEND test_targets check-builtins-${name})

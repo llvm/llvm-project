@@ -12,11 +12,11 @@
 #include <utility>
 #include <vector>
 
-#include "IRModule.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Interfaces.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,7 +25,7 @@ namespace nb = nanobind;
 
 namespace mlir {
 namespace python {
-
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 constexpr static const char *constructorDoc =
     R"(Creates an interface from a given operation/opview object or from a
 subclass of OpView. Raises ValueError if the operation does not implement the
@@ -469,6 +469,6 @@ void populateIRInterfaces(nb::module_ &m) {
   PyShapedTypeComponents::bind(m);
   PyInferShapedTypeOpInterface::bind(m);
 }
-
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
