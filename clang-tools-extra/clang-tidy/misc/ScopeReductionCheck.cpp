@@ -69,13 +69,12 @@ collectVariableUses(const clang::Stmt *S, const clang::VarDecl *Var,
 
 void ScopeReductionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      varDecl(hasLocalStorage(),
-              unless(hasGlobalStorage()),
-              hasAncestor(functionDecl()),
-              unless(parmVarDecl()),
+      varDecl(hasLocalStorage(), unless(hasGlobalStorage()),
+              hasAncestor(functionDecl()), unless(parmVarDecl()),
               unless(hasParent(declStmt(hasParent(forStmt())))),
               unless(hasParent(declStmt(hasParent(cxxForRangeStmt())))),
-              unless(hasInitializer(anyOf(callExpr(), cxxMemberCallExpr(), cxxOperatorCallExpr()))))
+              unless(hasInitializer(anyOf(callExpr(), cxxMemberCallExpr(),
+                                          cxxOperatorCallExpr()))))
           .bind("var"),
       this);
 }
