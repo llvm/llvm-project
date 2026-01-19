@@ -207,14 +207,17 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
       {RTLIB::AEABI_MEMCLR, RTLIB::AEABI_MEMCLR4, RTLIB::AEABI_MEMCLR8}};
 
   RTLIB::Libcall NewLC = FunctionImpls[AEABILibcall][AlignVariant];
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(NewLC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SDValue();
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallCallingConv(NewLC), Type::getVoidTy(*DAG.getContext()),
-          DAG.getExternalSymbol(TLI->getLibcallName(NewLC),
-                                TLI->getPointerTy(DAG.getDataLayout())),
+          DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
+          Type::getVoidTy(*DAG.getContext()),
+          DAG.getExternalSymbol(LCImpl, TLI->getPointerTy(DAG.getDataLayout())),
           std::move(Args))
       .setDiscardResult();
   std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
