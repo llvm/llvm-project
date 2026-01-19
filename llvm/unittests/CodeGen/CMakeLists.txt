@@ -37,7 +37,9 @@ add_llvm_unittest(CodeGenTests
   MachineInstrBundleIteratorTest.cpp
   MachineInstrTest.cpp
   MachineOperandTest.cpp
+  MIR2VecTest.cpp
   RegAllocScoreTest.cpp
+  RegisterTest.cpp
   PassManagerTest.cpp
   ScalableVectorMVTsTest.cpp
   SchedBoundary.cpp
@@ -47,7 +49,6 @@ add_llvm_unittest(CodeGenTests
   TypeTraitsTest.cpp
   TargetOptionsTest.cpp
   TestAsmPrinter.cpp
-  MLRegAllocDevelopmentFeatures.cpp
   X86MCInstLowerTest.cpp
   )
 

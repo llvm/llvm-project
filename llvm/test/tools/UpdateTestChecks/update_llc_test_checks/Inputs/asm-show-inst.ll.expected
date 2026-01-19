@@ -7,16 +7,16 @@ define i8 @add_i8(i8 %a) nounwind {
 ; VERBOSE-LABEL: add_i8:
 ; VERBOSE:       # %bb.0:
 ; VERBOSE-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # <MCInst #[[#MCINST1:]] MOVZX32rm8
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG1:]]>
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>
+; VERBOSE-NEXT:    # <MCOperand Reg:EAX>
+; VERBOSE-NEXT:    # <MCOperand Reg:ESP>
 ; VERBOSE-NEXT:    # <MCOperand Imm:1>
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>
+; VERBOSE-NEXT:    # <MCOperand Reg:>
 ; VERBOSE-NEXT:    # <MCOperand Imm:4>
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG3]]>>
+; VERBOSE-NEXT:    # <MCOperand Reg:>>
 ; VERBOSE-NEXT:    addb $2, %al # <MCInst #[[#MCINST2:]] ADD8i8
 ; VERBOSE-NEXT:    # <MCOperand Imm:2>>
 ; VERBOSE-NEXT:    retl # <MCInst #[[#MCINST3:]] RET32
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>>
+; VERBOSE-NEXT:    # <MCOperand Reg:AL>>
 ;
 ; CHECK-LABEL: add_i8:
 ; CHECK:       # %bb.0:
@@ -31,18 +31,18 @@ define i32 @add_i32(i32 %a) nounwind {
 ; VERBOSE-LABEL: add_i32:
 ; VERBOSE:       # %bb.0:
 ; VERBOSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # <MCInst #[[#MCINST4:]] MOV32rm
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG2]]>
+; VERBOSE-NEXT:    # <MCOperand Reg:EAX>
+; VERBOSE-NEXT:    # <MCOperand Reg:ESP>
 ; VERBOSE-NEXT:    # <MCOperand Imm:1>
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
+; VERBOSE-NEXT:    # <MCOperand Reg:>
 ; VERBOSE-NEXT:    # <MCOperand Imm:4>
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG3]]>>
+; VERBOSE-NEXT:    # <MCOperand Reg:>>
 ; VERBOSE-NEXT:    addl $2, %eax # <MCInst #[[#MCINST5:]] ADD32ri8
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
+; VERBOSE-NEXT:    # <MCOperand Reg:EAX>
+; VERBOSE-NEXT:    # <MCOperand Reg:EAX>
 ; VERBOSE-NEXT:    # <MCOperand Imm:2>>
 ; VERBOSE-NEXT:    retl # <MCInst #[[#MCINST3]] RET32
-; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG1]]>>
+; VERBOSE-NEXT:    # <MCOperand Reg:EAX>>
 ;
 ; CHECK-LABEL: add_i32:
 ; CHECK:       # %bb.0:

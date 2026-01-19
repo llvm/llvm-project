@@ -99,3 +99,23 @@ defm : LMULWriteRes<"WriteSF_VFWMACC_QQQ", []>;
 defm : LMULReadAdvance<"ReadSF_VFWMACC_QQQ", 0>;
 } // Unsupported = true
 }
+
+defm "" : LMULSEWSchedWritesF<"WriteSF_VFExp">;
+defm "" : LMULSEWSchedReadsF<"ReadSF_VFExp">;
+
+multiclass UnsupportedSchedXSfvfexp {
+let Unsupported = true in {
+defm : LMULSEWWriteResF<"WriteSF_VFExp", []>;
+defm : LMULSEWReadAdvanceF<"ReadSF_VFExp", 0>;
+} // Unsupported = true
+}
+
+defm "" : LMULSEWSchedWritesF<"WriteSF_VFExpa">;
+defm "" : LMULSEWSchedReadsF<"ReadSF_VFExpa">;
+
+multiclass UnsupportedSchedXSfvfexpa {
+let Unsupported = true in {
+defm : LMULSEWWriteResF<"WriteSF_VFExpa", []>;
+defm : LMULSEWReadAdvanceF<"ReadSF_VFExpa", 0>;
+} // Unsupported = true
+}

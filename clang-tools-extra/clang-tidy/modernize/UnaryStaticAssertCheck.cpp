@@ -1,4 +1,4 @@
-//===--- UnaryStaticAssertCheck.cpp - clang-tidy---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,7 @@ void UnaryStaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *AssertMessage =
       dyn_cast_if_present<StringLiteral>(MatchedDecl->getMessage());
 
-  SourceLocation Loc = MatchedDecl->getLocation();
+  const SourceLocation Loc = MatchedDecl->getLocation();
 
   if (!AssertMessage || AssertMessage->getLength() ||
       AssertMessage->getBeginLoc().isMacroID() || Loc.isMacroID())

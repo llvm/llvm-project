@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SEMAOPENACC_H
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenACCKinds.h"
@@ -36,8 +37,16 @@ class Scope;
 class SemaOpenACC : public SemaBase {
 public:
   using DeclGroupPtrTy = OpaquePtr<DeclGroupRef>;
+  using RoutineRefListTy = std::pair<FunctionDecl *, OpenACCRoutineDecl *>;
 
 private:
+  // We save a list of routine clauses that refer to a different function(that
+  // is, routine-with-a-name) so that we can do the emission at the 'end'.  We
+  // have to do this, since functions can be emitted before they are referenced,
+  // and the OpenACCRoutineDecl isn't necessarily emitted, as it might be in a
+  // function/etc. So we do these emits at the end of the TU.
+  llvm::SmallVector<RoutineRefListTy> RoutineRefList;
+
   struct ComputeConstructInfo {
     /// Which type of compute construct we are inside of, which we can use to
     /// determine whether we should add loops to the above collection.  We can
@@ -227,6 +236,11 @@ private:
 
   bool DiagnoseAllowedClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                               SourceLocation ClauseLoc);
+  bool CreateReductionCombinerRecipe(
+      SourceLocation loc, OpenACCReductionOperator ReductionOperator,
+      QualType VarTy,
+      llvm::SmallVectorImpl<OpenACCReductionRecipe::CombinerRecipe>
+          &CombinerRecipes);
 
 public:
   // Needed from the visitor, so should be public.
@@ -237,14 +251,11 @@ public:
                                 SourceLocation ClauseLoc,
                                 ArrayRef<const OpenACCClause *> Clauses);
 
-  // Creates a VarDecl with a proper default init for the purposes of a
-  // `private`/'firstprivate'/'reduction' clause, so it can be used to generate
-  // a recipe later.
-  //  The first entry is the recipe itself, the second is any required
-  //  'temporary' created for the init (in the case of a copy), such as with
-  //  firstprivate.
-  std::pair<VarDecl *, VarDecl *> CreateInitRecipe(OpenACCClauseKind CK,
-                                                   const Expr *VarExpr);
+  OpenACCPrivateRecipe CreatePrivateInitRecipe(const Expr *VarExpr);
+  OpenACCFirstPrivateRecipe CreateFirstPrivateInitRecipe(const Expr *VarExpr);
+  OpenACCReductionRecipeWithStorage
+  CreateReductionInitRecipe(OpenACCReductionOperator ReductionOperator,
+                            const Expr *VarExpr);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -749,6 +760,7 @@ public:
   };
 
   SemaOpenACC(Sema &S);
+  void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
 
   // Called when we encounter a 'while' statement, before looking at its 'body'.
   void ActOnWhileStmt(SourceLocation WhileLoc);
@@ -913,6 +925,7 @@ public:
   ExprResult CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
                                OpenACCReductionOperator ReductionOp,
                                Expr *VarExpr);
+  bool CheckReductionVarType(Expr *VarExpr);
 
   /// Called to check the 'var' type is a variable of pointer type, necessary
   /// for 'deviceptr' and 'attach' clauses. Returns true on success.
@@ -947,12 +960,14 @@ public:
                   ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
   // Does the checking for a 'reduction ' clause that needs to be done in
   // dependent and not dependent cases.
-  OpenACCClause *CheckReductionClause(
-      ArrayRef<const OpenACCClause *> ExistingClauses,
-      OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
-      SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
-      ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipe> Recipes,
-      SourceLocation EndLoc);
+  OpenACCClause *
+  CheckReductionClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                       OpenACCDirectiveKind DirectiveKind,
+                       SourceLocation BeginLoc, SourceLocation LParenLoc,
+                       OpenACCReductionOperator ReductionOp,
+                       ArrayRef<Expr *> Vars,
+                       ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
+                       SourceLocation EndLoc);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);

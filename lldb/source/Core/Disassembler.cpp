@@ -208,7 +208,7 @@ Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
     return {};
 
   LineEntry prologue_end_line = sc.line_entry;
-  SupportFileSP func_decl_file_sp;
+  SupportFileNSP func_decl_file_sp = std::make_shared<SupportFile>();
   uint32_t func_decl_line;
   sc.function->GetStartLineSourceInfo(func_decl_file_sp, func_decl_line);
 
@@ -284,6 +284,175 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
   }
   // don't skip this source line
   return false;
+}
+
+static constexpr const llvm::StringLiteral kUndefLocation = "undef";
+static constexpr const llvm::StringLiteral kUndefLocationFormatted = "<undef>";
+static void
+AddVariableAnnotationToVector(std::vector<VariableAnnotation> &annotations,
+                              VariableAnnotation annotation_entity,
+                              const bool is_live) {
+  annotation_entity.is_live = is_live;
+  if (!is_live)
+    annotation_entity.location_description = kUndefLocation;
+  annotations.push_back(std::move(annotation_entity));
+}
+
+// For each instruction, this block attempts to resolve in-scope variables
+// and determine if the current PC falls within their
+// DWARF location entry. If so, it prints a simplified annotation using the
+// variable name and its resolved location (e.g., "var = reg; " ).
+//
+// Annotations are only included if the variable has a valid DWARF location
+// entry, and the location string is non-empty after filtering. Decoding
+// errors and DWARF opcodes are intentionally omitted to keep the output
+// concise and user-friendly.
+//
+// The goal is to give users helpful live variable hints alongside the
+// disassembled instruction stream, similar to how debug information
+// enhances source-level debugging.
+std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst) {
+  std::vector<VariableAnnotation> structured_annotations =
+      AnnotateStructured(inst);
+
+  std::vector<std::string> events;
+  events.reserve(structured_annotations.size());
+
+  for (const VariableAnnotation &annotation : structured_annotations) {
+    const llvm::StringRef location =
+        (annotation.location_description == kUndefLocation
+             ? llvm::StringRef(kUndefLocationFormatted)
+             : llvm::StringRef(annotation.location_description));
+
+    events.push_back(
+        llvm::formatv("{0} = {1}", annotation.variable_name, location).str());
+  }
+
+  return events;
+}
+
+std::vector<VariableAnnotation>
+VariableAnnotator::AnnotateStructured(Instruction &inst) {
+  std::vector<VariableAnnotation> annotations;
+
+  auto module_sp = inst.GetAddress().GetModule();
+
+  // If we lost module context, mark all live variables as UndefLocation.
+  if (!module_sp) {
+    for (const auto &KV : m_live_vars)
+      AddVariableAnnotationToVector(annotations, KV.second, false);
+    m_live_vars.clear();
+    return annotations;
+  }
+
+  // Resolve function/block at this *file* address.
+  SymbolContext sc;
+  const Address &iaddr = inst.GetAddress();
+  const auto mask = eSymbolContextFunction | eSymbolContextBlock;
+  if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
+      !sc.function) {
+    // No function context: everything dies here.
+    for (const auto &KV : m_live_vars)
+      AddVariableAnnotationToVector(annotations, KV.second, false);
+    m_live_vars.clear();
+    return annotations;
+  }
+
+  // Collect in-scope variables for this instruction into current_vars.
+  VariableList var_list;
+  // Innermost block containing iaddr.
+  if (Block *B = sc.block) {
+    auto filter = [](Variable *v) -> bool { return v && !v->IsArtificial(); };
+    B->AppendVariables(/*can_create*/ true,
+                       /*get_parent_variables*/ true,
+                       /*stop_if_block_is_inlined_function*/ false,
+                       /*filter*/ filter,
+                       /*variable_list*/ &var_list);
+  }
+
+  const lldb::addr_t pc_file = iaddr.GetFileAddress();
+  const lldb::addr_t func_file = sc.function->GetAddress().GetFileAddress();
+
+  // ABI from Target (pretty reg names if plugin exists). Safe to be null.
+  lldb::ABISP abi_sp = ABI::FindPlugin(nullptr, module_sp->GetArchitecture());
+  ABI *abi = abi_sp.get();
+
+  llvm::DIDumpOptions opts;
+  opts.ShowAddresses = false;
+  // Prefer "register-only" output when we have an ABI.
+  opts.PrintRegisterOnly = static_cast<bool>(abi_sp);
+
+  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> current_vars;
+
+  for (size_t i = 0, e = var_list.GetSize(); i != e; ++i) {
+    lldb::VariableSP v = var_list.GetVariableAtIndex(i);
+    if (!v || v->IsArtificial())
+      continue;
+
+    const char *nm = v->GetName().AsCString();
+    llvm::StringRef name = nm ? nm : "<anon>";
+
+    DWARFExpressionList &exprs = v->LocationExpressionList();
+    if (!exprs.IsValid())
+      continue;
+
+    auto entry_or_err = exprs.GetExpressionEntryAtAddress(func_file, pc_file);
+    if (!entry_or_err)
+      continue;
+
+    auto entry = *entry_or_err;
+
+    StreamString loc_ss;
+    entry.expr->DumpLocation(&loc_ss, eDescriptionLevelBrief, abi, opts);
+
+    llvm::StringRef loc = llvm::StringRef(loc_ss.GetString()).trim();
+    if (loc.empty())
+      continue;
+
+    std::optional<std::string> decl_file;
+    std::optional<uint32_t> decl_line;
+    std::optional<std::string> type_name;
+
+    const Declaration &decl = v->GetDeclaration();
+    if (decl.GetFile()) {
+      decl_file = decl.GetFile().GetFilename().AsCString();
+      if (decl.GetLine() > 0)
+        decl_line = decl.GetLine();
+    }
+
+    if (Type *type = v->GetType())
+      if (const char *type_str = type->GetName().AsCString())
+        type_name = type_str;
+
+    current_vars.try_emplace(
+        v->GetID(),
+        VariableAnnotation{std::string(name), std::string(loc), true,
+                           entry.expr->GetRegisterKind(), entry.file_range,
+                           decl_file, decl_line, type_name});
+  }
+
+  // Diff m_live_vars → current_vars.
+
+  // 1) Starts/changes: iterate current_vars and compare with m_live_vars.
+  for (const auto &KV : current_vars) {
+    auto it = m_live_vars.find(KV.first);
+    if (it == m_live_vars.end())
+      // Newly live.
+      AddVariableAnnotationToVector(annotations, KV.second, true);
+    else if (it->second.location_description != KV.second.location_description)
+      // Location changed.
+      AddVariableAnnotationToVector(annotations, KV.second, true);
+  }
+
+  // 2) Ends: anything that was live but is not in current_vars becomes
+  // UndefLocation.
+  for (const auto &KV : m_live_vars)
+    if (!current_vars.count(KV.first))
+      AddVariableAnnotationToVector(annotations, KV.second, false);
+
+  // Commit new state.
+  m_live_vars = std::move(current_vars);
+  return annotations;
 }
 
 void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
@@ -382,147 +551,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     }
   }
 
-  // Add variable location annotations to the disassembly output.
-  //
-  // For each instruction, this block attempts to resolve in-scope variables
-  // and determine if the current PC falls within their
-  // DWARF location entry. If so, it prints a simplified annotation using the
-  // variable name and its resolved location (e.g., "var = reg; " ).
-  //
-  // Annotations are only included if the variable has a valid DWARF location
-  // entry, and the location string is non-empty after filtering. Decoding
-  // errors and DWARF opcodes are intentionally omitted to keep the output
-  // concise and user-friendly.
-  //
-  // The goal is to give users helpful live variable hints alongside the
-  // disassembled instruction stream, similar to how debug information
-  // enhances source-level debugging.
-
-  struct VarState {
-    std::string name;     ///< Display name.
-    std::string last_loc; ///< Last printed location (empty means <undef>).
-    bool seen_this_inst = false;
-  };
-
-  // Track live variables across instructions.
-  llvm::DenseMap<lldb::user_id_t, VarState> live_vars;
-
-  // Stateful annotator: updates live_vars and returns only what should be
-  // printed for THIS instruction.
-  auto annotate_static = [&](Instruction &inst, Target &target,
-                             ModuleSP module_sp) -> std::vector<std::string> {
-    std::vector<std::string> events;
-
-    // Reset per-instruction seen flags.
-    for (auto &kv : live_vars)
-      kv.second.seen_this_inst = false;
-
-    const Address &iaddr = inst.GetAddress();
-    if (!module_sp) {
-      // Everything previously live becomes <undef>.
-      for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
-        auto Cur = I++;
-        events.push_back(
-            llvm::formatv("{0} = <undef>", Cur->second.name).str());
-        live_vars.erase(Cur);
-      }
-      return events;
-    }
-
-    // Resolve innermost block at this *file* address.
-    SymbolContext sc;
-    const lldb::SymbolContextItem mask =
-        eSymbolContextFunction | eSymbolContextBlock;
-    if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
-        !sc.function) {
-      // No function context: everything dies here.
-      for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
-        auto Cur = I++;
-        events.push_back(
-            llvm::formatv("{0} = <undef>", Cur->second.name).str());
-        live_vars.erase(Cur);
-      }
-      return events;
-    }
-
-    Block *B = sc.block; ///< Innermost block containing iaddr.
-    VariableList var_list;
-    if (B) {
-      auto filter = [](Variable *v) -> bool { return v && !v->IsArtificial(); };
-
-      B->AppendVariables(/*can_create*/ true,
-                         /*get_parent_variables*/ true,
-                         /*stop_if_block_is_inlined_function*/ false,
-                         /*filter*/ filter,
-                         /*variable_list*/ &var_list);
-    }
-
-    const lldb::addr_t pc_file = iaddr.GetFileAddress();
-    const lldb::addr_t func_file = sc.function->GetAddress().GetFileAddress();
-
-    // ABI from Target (pretty reg names if plugin exists). Safe to be null.
-    lldb::ProcessSP no_process;
-    lldb::ABISP abi_sp = ABI::FindPlugin(no_process, target.GetArchitecture());
-    ABI *abi = abi_sp.get();
-
-    llvm::DIDumpOptions opts;
-    opts.ShowAddresses = false;
-    if (abi)
-      opts.PrintRegisterOnly = true;
-
-    for (size_t i = 0, e = var_list.GetSize(); i != e; ++i) {
-      lldb::VariableSP v = var_list.GetVariableAtIndex(i);
-      if (!v || v->IsArtificial())
-        continue;
-
-      const char *nm = v->GetName().AsCString();
-      llvm::StringRef name = nm ? nm : "<anon>";
-
-      lldb_private::DWARFExpressionList &exprs = v->LocationExpressionList();
-      if (!exprs.IsValid())
-        continue;
-
-      auto entry_or_err = exprs.GetExpressionEntryAtAddress(func_file, pc_file);
-      if (!entry_or_err)
-        continue;
-
-      auto entry = *entry_or_err;
-
-      StreamString loc_ss;
-      entry.expr->DumpLocation(&loc_ss, eDescriptionLevelBrief, abi, opts);
-      llvm::StringRef loc = llvm::StringRef(loc_ss.GetString()).trim();
-      if (loc.empty())
-        continue;
-
-      auto ins = live_vars.insert(
-          {v->GetID(), VarState{name.str(), loc.str(), /*seen*/ true}});
-      if (ins.second) {
-        // Newly live.
-        events.push_back(llvm::formatv("{0} = {1}", name, loc).str());
-      } else {
-        VarState &vs = ins.first->second;
-        vs.seen_this_inst = true;
-        if (vs.last_loc != loc) {
-          vs.last_loc = loc.str();
-          events.push_back(llvm::formatv("{0} = {1}", vs.name, loc).str());
-        }
-      }
-    }
-
-    // Anything previously live that we didn't see a location for at this inst
-    // is now <undef>.
-    for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
-      auto Cur = I++;
-      if (!Cur->second.seen_this_inst) {
-        events.push_back(
-            llvm::formatv("{0} = <undef>", Cur->second.name).str());
-        live_vars.erase(Cur);
-      }
-    }
-
-    return events;
-  };
-
+  VariableAnnotator annot;
   previous_symbol = nullptr;
   SourceLine previous_line;
   for (size_t i = 0; i < num_instructions_found; ++i) {
@@ -558,7 +587,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                 LineEntry prologue_end_line = sc.line_entry;
                 if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc,
                                                         prologue_end_line)) {
-                  SupportFileSP func_decl_file_sp;
+                  SupportFileNSP func_decl_file_sp =
+                      std::make_shared<SupportFile>();
                   uint32_t func_decl_line;
                   sc.function->GetStartLineSourceInfo(func_decl_file_sp,
                                                       func_decl_line);
@@ -695,7 +725,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                  address_text_size);
 
       if ((options & eOptionVariableAnnotations) && target_sp) {
-        auto annotations = annotate_static(*inst, *target_sp, module_sp);
+        auto annotations = annot.Annotate(*inst);
         if (!annotations.empty()) {
           const size_t annotation_column = 100;
           inst_line.FillLastLineToColumn(annotation_column, ' ');
@@ -1355,6 +1385,11 @@ PseudoInstruction::PseudoInstruction()
 PseudoInstruction::~PseudoInstruction() = default;
 
 bool PseudoInstruction::DoesBranch() {
+  // This is NOT a valid question for a pseudo instruction.
+  return false;
+}
+
+bool PseudoInstruction::IsBarrier() {
   // This is NOT a valid question for a pseudo instruction.
   return false;
 }

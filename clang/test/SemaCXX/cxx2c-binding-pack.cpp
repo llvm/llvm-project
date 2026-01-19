@@ -82,7 +82,7 @@ void decompose_array() {
   static_assert(sizeof...(b) == 0);
   auto [...c] = arr1;
   static_assert(sizeof...(c) == 1);
-  auto [a1, ...b1, c1] = arr1; // expected-error{{decomposes into 1 element, but 3 names were provided}}
+  auto [a1, ...b1, c1] = arr1; // expected-error{{binds to 1 element, but 3 names were provided}}
 }
 
 // Test case by Younan Zhang.
@@ -160,7 +160,7 @@ void now_i_know_my() {
   static_assert(sizeof...(e) == 2);
   auto [h, i, j, ...k] = C(); // OK, the pack k is empty
   static_assert(sizeof...(e) == 0);
-  auto [l, m, n, o, ...p] = C(); // expected-error{{{decomposes into 3 elements, but 5 names were provided}}}
+  auto [l, m, n, o, ...p] = C(); // expected-error{{{binds to 3 elements, but 5 names were provided}}}
 }
 }  // namespace
 
@@ -225,7 +225,7 @@ namespace GH125165 {
 template <typename = void>
 auto f(auto t) {
     const auto& [...pack] = t;
-    // expected-error@-1 {{cannot decompose non-class, non-array type 'char const'}}
+    // expected-error@-1 {{cannot bind non-class, non-array type 'char const'}}
     (pack, ...);
 };
 

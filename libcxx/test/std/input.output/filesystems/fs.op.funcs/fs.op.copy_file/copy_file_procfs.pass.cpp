@@ -10,7 +10,6 @@
 // REQUIRES: linux
 // UNSUPPORTED: no-filesystem
 // XFAIL: no-localization
-// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 

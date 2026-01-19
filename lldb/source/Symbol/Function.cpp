@@ -22,6 +22,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -272,10 +273,10 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
 
 Function::~Function() = default;
 
-void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
+void Function::GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
                                       uint32_t &line_no) {
   line_no = 0;
-  source_file_sp.reset();
+  source_file_sp = std::make_shared<SupportFile>();
 
   if (m_comp_unit == nullptr)
     return;
@@ -300,15 +301,15 @@ void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
   }
 }
 
-llvm::Expected<std::pair<SupportFileSP, Function::SourceRange>>
+llvm::Expected<std::pair<SupportFileNSP, Function::SourceRange>>
 Function::GetSourceInfo() {
-  SupportFileSP source_file_sp;
+  SupportFileNSP source_file_sp = std::make_shared<SupportFile>();
   uint32_t start_line;
   GetStartLineSourceInfo(source_file_sp, start_line);
   LineTable *line_table = m_comp_unit->GetLineTable();
   if (start_line == 0 || !line_table) {
-    return llvm::createStringError(llvm::formatv(
-        "Could not find line information for function \"{0}\".", GetName()));
+    return llvm::createStringErrorV(
+        "Could not find line information for function \"{0}\".", GetName());
   }
 
   uint32_t end_line = start_line;

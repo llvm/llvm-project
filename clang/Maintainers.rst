@@ -46,7 +46,7 @@ Clang LLVM IR generation
 | rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
 
 | Eli Friedman
-| efriedma\@quicinc.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
+| efriedma\@qti.qualcomm.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
 
 | Anton Korobeynikov
 | anton\@korobeynikov.info (email), asl (Phabricator), asl (GitHub)
@@ -140,14 +140,13 @@ Exception handling
 Clang static analyzer
 ~~~~~~~~~~~~~~~~~~~~~
 | Artem Dergachev
-| adergachev\@apple.com (email), NoQ (Phabricator), haoNoQ (GitHub)
+| artem.dergachev\@gmail.com (email), NoQ (Phabricator), haoNoQ (GitHub)
 
 | Gábor Horváth
 | xazax.hun\@gmail.com (email), xazax.hun (Phabricator), Xazax-hun (GitHub)
 
 | Balázs Benics
 | benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
-| balazs.benics\@sonarsource.com (email), balazs-benics-sonarsource (GitHub)
 
 Compiler options
 ~~~~~~~~~~~~~~~~
@@ -202,6 +201,21 @@ Function Effect Analysis
 | aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 
+Code Coverage
+~~~~~~~~~~~~~
+| Takumi Nakamura
+| geek4civic\@gmail.com (email), chapuni(GitHub), chapuni (Discord), chapuni (Discourse)
+
+| Alan Phipps
+| a-phipps\@ti.com (email), evodius96 (GitHub), evodius96 (Discourse)
+
+
+Python Bindings
+~~~~~~~~~~~~~~~
+| Vlad Serebrennikov
+| serebrennikov.vladislav\@gmail.com (email), Endilll (GitHub), Endill (Discord), Endill (Discourse)
+
+
 Tools
 -----
 These maintainers are responsible for user-facing tools under the Clang
@@ -242,7 +256,7 @@ ARM EABI
 Compiler-Wide Topics
 --------------------
 The following people are responsible for functionality that does not fit into
-a single part of the compiler, but instead span multiple components within the
+a single part of the compiler, but instead spans multiple components within the
 compiler.
 
 Attributes

@@ -3,6 +3,47 @@
 // device.  This behavior is proposed for OpenMP 5.2 in OpenMP spec github
 // issue 2669.
 
+// AMD Tests
+// RUN: %libomptarget-compile-amdgcn-amd-amdhsa -DDIR=target
+// RUN: env OMP_TARGET_OFFLOAD=mandatory ROCR_VISIBLE_DEVICES= \
+// RUN:   %libomptarget-run-fail-amdgcn-amd-amdhsa 2>&1 | \
+// RUN:   %fcheck-amdgcn-amd-amdhsa
+
+// RUN: %libomptarget-compile-amdgcn-amd-amdhsa -DDIR='target teams'
+// RUN: env OMP_TARGET_OFFLOAD=mandatory ROCR_VISIBLE_DEVICES= \
+// RUN:   %libomptarget-run-fail-amdgcn-amd-amdhsa 2>&1 | \
+// RUN:   %fcheck-amdgcn-amd-amdhsa
+
+// RUN: %libomptarget-compile-amdgcn-amd-amdhsa -DDIR='target data map(X)'
+// RUN: env OMP_TARGET_OFFLOAD=mandatory ROCR_VISIBLE_DEVICES= \
+// RUN:   %libomptarget-run-fail-amdgcn-amd-amdhsa 2>&1 | \
+// RUN:   %fcheck-amdgcn-amd-amdhsa
+
+// RUN: %libomptarget-compile-amdgcn-amd-amdhsa \
+// RUN:   -DDIR='target enter data map(to:X)'
+// RUN: env OMP_TARGET_OFFLOAD=mandatory ROCR_VISIBLE_DEVICES= \
+// RUN:   %libomptarget-run-fail-amdgcn-amd-amdhsa 2>&1 | \
+// RUN:   %fcheck-amdgcn-amd-amdhsa
+
+// RUN: %libomptarget-compile-amdgcn-amd-amdhsa \
+// RUN:   -DDIR='target exit data map(from:X)'
+// RUN: env OMP_TARGET_OFFLOAD=mandatory ROCR_VISIBLE_DEVICES= \
+// RUN:   %libomptarget-run-fail-amdgcn-amd-amdhsa 2>&1 | \
+// RUN:   %fcheck-amdgcn-amd-amdhsa
+
+// RUN: %libomptarget-compile-amdgcn-amd-amdhsa \
+// RUN:   -DDIR='target update to(X)'
+// RUN: env OMP_TARGET_OFFLOAD=mandatory ROCR_VISIBLE_DEVICES= \
+// RUN:   %libomptarget-run-fail-amdgcn-amd-amdhsa 2>&1 | \
+// RUN:   %fcheck-amdgcn-amd-amdhsa
+
+// RUN: %libomptarget-compile-amdgcn-amd-amdhsa \
+// RUN:   -DDIR='target update from(X)'
+// RUN: env OMP_TARGET_OFFLOAD=mandatory ROCR_VISIBLE_DEVICES= \
+// RUN:   %libomptarget-run-fail-amdgcn-amd-amdhsa 2>&1 | \
+// RUN:   %fcheck-amdgcn-amd-amdhsa
+
+// Nvidia Tests
 // RUN: %libomptarget-compile-nvptx64-nvidia-cuda -DDIR=target
 // RUN: env OMP_TARGET_OFFLOAD=mandatory CUDA_VISIBLE_DEVICES= \
 // RUN:   %libomptarget-run-fail-nvptx64-nvidia-cuda 2>&1 | \
@@ -41,8 +82,6 @@
 // RUN: env OMP_TARGET_OFFLOAD=mandatory CUDA_VISIBLE_DEVICES= \
 // RUN:   %libomptarget-run-fail-nvptx64-nvidia-cuda 2>&1 | \
 // RUN:   %fcheck-nvptx64-nvidia-cuda
-
-// REQUIRES: nvptx64-nvidia-cuda
 
 #include <omp.h>
 #include <stdio.h>

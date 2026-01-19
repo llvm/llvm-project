@@ -22,6 +22,11 @@
 // RUN:   -fopenmp-is-target-device -triple amdgcn -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=OPENMP
 //
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include -DSYCL \
+// RUN:   -internal-isystem %S/../../lib/Headers/ -fsycl-is-device \
+// RUN:   -x c++ -triple spirv64 -emit-llvm %s -o - \
+// RUN: | FileCheck %s --check-prefix=SYCL
+//
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -std=c89 -internal-isystem %S/../../lib/Headers/ \
 // RUN:   -triple amdgcn-amd-amdhsa -emit-llvm %s -o - \
@@ -32,11 +37,13 @@
 
 #ifdef __device__
 __device__ int foo() { return __gpu_thread_id_x(); }
+#elif defined(SYCL)
+extern "C" [[clang::sycl_external]] int foo() { return __gpu_thread_id_x(); }
 #else
 // CUDA-LABEL: define dso_local i32 @foo(
 // CUDA-SAME: ) #[[ATTR0:[0-9]+]] {
 // CUDA-NEXT:  [[ENTRY:.*:]]
-// CUDA-NEXT:    [[TMP0:%.*]] = call {{.*}}i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CUDA-NEXT:    [[TMP0:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 // CUDA-NEXT:    ret i32 [[TMP0]]
 //
 // HIP-LABEL: define dso_local i32 @foo(
@@ -60,6 +67,17 @@ __device__ int foo() { return __gpu_thread_id_x(); }
 // OPENMP-NEXT:  [[ENTRY:.*:]]
 // OPENMP-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 // OPENMP-NEXT:    ret i32 [[TMP0]]
+//
+// SYCL-LABEL: define spir_func i32 @foo(
+// SYCL-SAME: ) #[[ATTR0:[0-9]+]] {
+// SYCL-NEXT:  [[ENTRY:.*:]]
+// SYCL-NEXT:    [[RETVAL_I:%.*]] = alloca i32, align 4
+// SYCL-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SYCL-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SYCL-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr [[RETVAL_I]] to ptr addrspace(4)
+// SYCL-NEXT:    [[SPV_THREAD_ID_IN_GROUP_I:%.*]] = call i64 @llvm.spv.thread.id.in.group.i64(i32 0)
+// SYCL-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPV_THREAD_ID_IN_GROUP_I]] to i32
+// SYCL-NEXT:    ret i32 [[CONV_I]]
 //
 // C89-LABEL: define dso_local i32 @foo(
 // C89-SAME: ) #[[ATTR0:[0-9]+]] {

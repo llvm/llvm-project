@@ -14,21 +14,17 @@ import os
 import logging
 import multiprocessing.pool
 import pathlib
-import platform
 import glob
 
 from google.cloud import storage
+from google.api_core import exceptions
 
 GCS_PARALLELISM = 100
 
 
-def _get_blob_prefix():
-    return f"lit_timing_{platform.system().lower()}"
-
-
 def _maybe_upload_timing_file(bucket, timing_file_path):
     if os.path.exists(timing_file_path):
-        timing_file_blob = bucket.blob(_get_blob_prefix() + "/" + timing_file_path)
+        timing_file_blob = bucket.blob("lit_timing/" + timing_file_path)
         timing_file_blob.upload_from_filename(timing_file_path)
 
 
@@ -48,14 +44,21 @@ def upload_timing_files(storage_client, bucket_name: str):
 
 
 def _maybe_download_timing_file(blob):
-    file_name = blob.name.removeprefix(_get_blob_prefix() + "/")
+    file_name = blob.name.removeprefix("lit_timing/")
     pathlib.Path(os.path.dirname(file_name)).mkdir(parents=True, exist_ok=True)
     blob.download_to_filename(file_name)
 
 
 def download_timing_files(storage_client, bucket_name: str):
     bucket = storage_client.bucket(bucket_name)
-    blobs = bucket.list_blobs(prefix=_get_blob_prefix())
+    try:
+        blobs = bucket.list_blobs(prefix="lit_timing")
+    except exceptions.ClientError as client_error:
+        print(
+            "::warning file=cache_lit_timing_files.py::Failed to list blobs "
+            "in bucket."
+        )
+        sys.exit(0)
     with multiprocessing.pool.ThreadPool(GCS_PARALLELISM) as thread_pool:
         futures = []
         for timing_file_blob in blobs:
@@ -65,7 +68,13 @@ def download_timing_files(storage_client, bucket_name: str):
                 )
             )
         for future in futures:
-            future.get()
+            future.wait()
+            if not future.successful():
+                print(
+                    "::warning file=cache_lit_timing_files.py::Failed to "
+                    "download lit timing file."
+                )
+                continue
     print("Done downloading")
 
 

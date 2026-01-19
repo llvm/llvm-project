@@ -907,7 +907,7 @@ func.func @emitc_switch_ui64() {
 func.func @emitc_switch_expression() {
   %x = "emitc.constant"(){value = 42 : i64} : () -> i64
 
-  %0 = emitc.expression : i64 {
+  %0 = emitc.expression %x : (i64) -> i64 {
     %a = emitc.unary_minus %x : (i64) -> i64
     emitc.yield %a : i64
   }

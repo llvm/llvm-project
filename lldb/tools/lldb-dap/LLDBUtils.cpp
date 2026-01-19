@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBUtils.h"
+#include "DAPError.h"
 #include "JSONUtils.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -15,11 +16,15 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstdint>
 #include <cstring>
 #include <mutex>
 #include <system_error>
@@ -126,7 +131,6 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   switch (thread.GetStopReason()) {
   case lldb::eStopReasonTrace:
   case lldb::eStopReasonPlanComplete:
-  case lldb::eStopReasonBreakpoint:
   case lldb::eStopReasonWatchpoint:
   case lldb::eStopReasonInstrumentation:
   case lldb::eStopReasonSignal:
@@ -139,6 +143,20 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonInterrupt:
   case lldb::eStopReasonHistoryBoundary:
     return true;
+  case lldb::eStopReasonBreakpoint: {
+    // Stop reason data for breakpoints consists of breakpoint ID and location
+    // ID pairs. Internal breakpoints (identified by their ID) are not
+    // considered valid stop reasons.
+    const uint64_t data_count = thread.GetStopReasonDataCount();
+    if (data_count == 0)
+      return true;
+    for (uint64_t i = 0; i < data_count; i += 2) {
+      const lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
+      if (!LLDB_BREAK_ID_IS_INTERNAL(bp_id))
+        return true;
+    }
+    return false;
+  }
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:
   case lldb::eStopReasonNone:
@@ -157,8 +175,8 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id) {
   return dap_frame_id & ((1u << THREAD_INDEX_SHIFT) - 1);
 }
 
-int64_t MakeDAPFrameID(lldb::SBFrame &frame) {
-  return ((int64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
+uint64_t MakeDAPFrameID(lldb::SBFrame &frame) {
+  return ((uint64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
          frame.GetFrameID();
 }
 
@@ -214,13 +232,14 @@ GetStopDisassemblyDisplay(lldb::SBDebugger &debugger) {
   return result;
 }
 
-llvm::Error ToError(const lldb::SBError &error) {
+llvm::Error ToError(const lldb::SBError &error, bool show_user) {
   if (error.Success())
     return llvm::Error::success();
 
-  return llvm::createStringError(
-      std::error_code(error.GetError(), std::generic_category()),
-      error.GetCString());
+  return llvm::make_error<DAPError>(
+      /*message=*/error.GetCString(),
+      /*EC=*/std::error_code(error.GetError(), std::generic_category()),
+      /*show_user=*/show_user);
 }
 
 std::string GetStringValue(const lldb::SBStructuredData &data) {
@@ -257,6 +276,40 @@ lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
   lldb::SBSymbolContext sc = target.ResolveSymbolContextForAddress(
       address, lldb::eSymbolContextLineEntry);
   return sc.GetLineEntry();
+}
+
+std::optional<size_t> UTF16CodeunitToBytes(llvm::StringRef line,
+                                           uint32_t utf16_codeunits) {
+  size_t bytes_count = 0;
+  size_t utf16_seen_cu = 0;
+  size_t idx = 0;
+  const size_t line_size = line.size();
+
+  while (idx < line_size && utf16_seen_cu < utf16_codeunits) {
+    const char first_char = line[idx];
+    const auto num_bytes = llvm::getNumBytesForUTF8(first_char);
+
+    if (num_bytes == 4) {
+      utf16_seen_cu += 2;
+    } else if (num_bytes < 4) {
+      utf16_seen_cu += 1;
+    } else {
+      // getNumBytesForUTF8 may return bytes greater than 4 this is not valid
+      // UTF8
+      return std::nullopt;
+    }
+
+    idx += num_bytes;
+    if (utf16_seen_cu <= utf16_codeunits) {
+      bytes_count = idx;
+    } else {
+      // We are in the middle of a codepoint or the utf16_codeunits ends in the
+      // middle of a codepoint.
+      return std::nullopt;
+    }
+  }
+
+  return bytes_count;
 }
 
 } // namespace lldb_dap

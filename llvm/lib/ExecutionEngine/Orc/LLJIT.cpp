@@ -617,14 +617,11 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       [](const JITDylibSearchOrder &SO) { return SO; });
   StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
   bool dlupdate = false;
-  const Triple &TT = ES.getTargetTriple();
-  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatELF()) {
-    if (InitializedDylib.contains(&JD)) {
-      WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
-      dlupdate = true;
-    } else
-      InitializedDylib.insert(&JD);
-  }
+  if (InitializedDylib.contains(&JD)) {
+    WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
+    dlupdate = true;
+  } else
+    InitializedDylib.insert(&JD);
 
   if (auto WrapperAddr =
           ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {

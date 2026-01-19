@@ -296,19 +296,13 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
 // Detail methods
 //===----------------------------------------------------------------------===//
 
-void LLVM::detail::setNativeProperties(Operation *op,
-                                       IntegerOverflowFlags overflowFlags) {
-  if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op))
-    iface.setOverflowFlags(overflowFlags);
-}
-
 /// Replaces the given operation "op" with a new operation of type "targetOp"
 /// and given operands.
 LogicalResult LLVM::detail::oneToOneRewrite(
     Operation *op, StringRef targetOp, ValueRange operands,
-    ArrayRef<NamedAttribute> targetAttrs,
-    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
-    IntegerOverflowFlags overflowFlags) {
+    ArrayRef<NamedAttribute> targetAttrs, Attribute propertiesAttr,
+    const LLVMTypeConverter &typeConverter,
+    ConversionPatternRewriter &rewriter) {
   unsigned numResults = op->getNumResults();
 
   SmallVector<Type> resultTypes;
@@ -320,11 +314,10 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   }
 
   // Create the operation through state since we don't know its C++ type.
-  Operation *newOp =
-      rewriter.create(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
-                      resultTypes, targetAttrs);
-
-  setNativeProperties(newOp, overflowFlags);
+  OperationState state(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
+                       resultTypes, targetAttrs);
+  state.propertiesAttr = propertiesAttr;
+  Operation *newOp = rewriter.create(state);
 
   // If the operation produced 0 or 1 result, return them immediately.
   if (numResults == 0)
@@ -522,4 +515,35 @@ Value mlir::LLVM::getStridedElementPtr(OpBuilder &builder, Location loc,
                                    converter.convertType(type.getElementType()),
                                    base, index, noWrapFlags)
              : base;
+}
+
+/// Return the given type if it's a floating point type. If the given type is
+/// a vector type, return its element type if it's a floating point type.
+static FloatType getFloatingPointType(Type type) {
+  if (auto floatType = dyn_cast<FloatType>(type))
+    return floatType;
+  if (auto vecType = dyn_cast<VectorType>(type))
+    return dyn_cast<FloatType>(vecType.getElementType());
+  return nullptr;
+}
+
+bool LLVM::detail::isUnsupportedFloatingPointType(
+    const TypeConverter &typeConverter, Type type) {
+  FloatType floatType = getFloatingPointType(type);
+  if (!floatType)
+    return false;
+  Type convertedType = typeConverter.convertType(floatType);
+  if (!convertedType)
+    return true;
+  return !isa<FloatType>(convertedType);
+}
+
+bool LLVM::detail::opHasUnsupportedFloatingPointTypes(
+    Operation *op, const TypeConverter &typeConverter) {
+  for (Value operand : op->getOperands())
+    if (isUnsupportedFloatingPointType(typeConverter, operand.getType()))
+      return true;
+  return llvm::any_of(op->getResults(), [&typeConverter](OpResult r) {
+    return isUnsupportedFloatingPointType(typeConverter, r.getType());
+  });
 }

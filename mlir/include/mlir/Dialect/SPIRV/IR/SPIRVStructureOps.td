@@ -187,7 +187,7 @@ def SPIRV_EntryPointOp : SPIRV_Op<"EntryPoint", [InModuleScope]> {
     Execution Model is the execution model for the entry point and its
     static call tree. See Execution Model.
 
-    Entry Point must be the Result <id> of an OpFunction instruction.
+    Entry Point must be the Result `<id>` of an OpFunction instruction.
 
     Name is a name string for the entry point. A module cannot have two
     OpEntryPoint instructions with the same Execution Model and the same
@@ -244,14 +244,14 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
   let summary = "Declare an execution mode for an entry point.";
 
   let description = [{
-    Entry Point must be the Entry Point <id> operand of an OpEntryPoint
+    Entry Point must be the Entry Point `<id>` operand of an OpEntryPoint
     instruction.
 
     Mode is the execution mode. See Execution Mode.
 
     This instruction is only valid when the Mode operand is an execution
     mode that takes no Extra Operands, or takes Extra Operands that are not
-    <id> operands.
+    `<id>` operands.
 
     <!-- End of AutoGen section -->
 

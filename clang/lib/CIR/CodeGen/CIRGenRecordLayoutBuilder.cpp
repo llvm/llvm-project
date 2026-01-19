@@ -108,6 +108,16 @@ struct CIRRecordLowering final {
   // not the primary vbase of some base class.
   bool hasOwnStorage(const CXXRecordDecl *decl, const CXXRecordDecl *query);
 
+  /// The Microsoft bitfield layout rule allocates discrete storage
+  /// units of the field's formal type and only combines adjacent
+  /// fields of the same formal type.  We want to emit a layout with
+  /// these discrete storage units instead of combining them into a
+  /// continuous run.
+  bool isDiscreteBitFieldABI() {
+    return astContext.getTargetInfo().getCXXABI().isMicrosoft() ||
+           recordDecl->isMsStruct(astContext);
+  }
+
   CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
   }
@@ -286,9 +296,8 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   }
 
   llvm::stable_sort(members);
-  // TODO: implement clipTailPadding once bitfields are implemented
-  assert(!cir::MissingFeatures::bitfields());
-  assert(!cir::MissingFeatures::recordZeroInit());
+  // TODO: Verify bitfield clipping
+  assert(!cir::MissingFeatures::checkBitfieldClipping());
 
   members.push_back(makeStorageInfo(size, getUIntNType(8)));
   determinePacked(nonVirtualBaseType);
@@ -309,9 +318,11 @@ void CIRRecordLowering::fillOutputFields() {
         fieldIdxMap[member.fieldDecl->getCanonicalDecl()] =
             fieldTypes.size() - 1;
       // A field without storage must be a bitfield.
-      assert(!cir::MissingFeatures::bitfields());
-      if (!member.data)
+      if (!member.data) {
+        assert(member.fieldDecl &&
+               "member.data is a nullptr so member.fieldDecl should not be");
         setBitFieldInfo(member.fieldDecl, member.offset, fieldTypes.back());
+      }
     } else if (member.kind == MemberInfo::InfoKind::Base) {
       nonVirtualBases[member.cxxRecordDecl] = fieldTypes.size() - 1;
     } else if (member.kind == MemberInfo::InfoKind::VBase) {
@@ -323,7 +334,45 @@ void CIRRecordLowering::fillOutputFields() {
 RecordDecl::field_iterator
 CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
                                        RecordDecl::field_iterator fieldEnd) {
-  assert(!cir::MissingFeatures::isDiscreteBitFieldABI());
+  if (isDiscreteBitFieldABI()) {
+    // run stores the first element of the current run of bitfields. fieldEnd is
+    // used as a special value to note that we don't have a current run. A
+    // bitfield run is a contiguous collection of bitfields that can be stored
+    // in the same storage block. Zero-sized bitfields and bitfields that would
+    // cross an alignment boundary break a run and start a new one.
+    RecordDecl::field_iterator run = fieldEnd;
+    // tail is the offset of the first bit off the end of the current run. It's
+    // used to determine if the ASTRecordLayout is treating these two bitfields
+    // as contiguous. StartBitOffset is offset of the beginning of the Run.
+    uint64_t startBitOffset, tail = 0;
+    for (; field != fieldEnd && field->isBitField(); ++field) {
+      // Zero-width bitfields end runs.
+      if (field->isZeroLengthBitField()) {
+        run = fieldEnd;
+        continue;
+      }
+      uint64_t bitOffset = getFieldBitOffset(*field);
+      mlir::Type type = cirGenTypes.convertTypeForMem(field->getType());
+      // If we don't have a run yet, or don't live within the previous run's
+      // allocated storage then we allocate some storage and start a new run.
+      if (run == fieldEnd || bitOffset >= tail) {
+        run = field;
+        startBitOffset = bitOffset;
+        tail = startBitOffset + dataLayout.getTypeAllocSizeInBits(type);
+        // Add the storage member to the record.  This must be added to the
+        // record before the bitfield members so that it gets laid out before
+        // the bitfields it contains get laid out.
+        members.push_back(
+            makeStorageInfo(bitsToCharUnits(startBitOffset), type));
+      }
+      // Bitfields get the offset of their storage but come afterward and remain
+      // there after a stable sort.
+      members.push_back(MemberInfo(bitsToCharUnits(startBitOffset),
+                                   MemberInfo::InfoKind::Field, nullptr,
+                                   *field));
+    }
+    return field;
+  }
 
   CharUnits regSize =
       bitsToCharUnits(astContext.getTargetInfo().getRegisterWidth());
@@ -567,7 +616,7 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
       continue;
     // If any member falls at an offset that it not a multiple of its alignment,
     // then the entire record must be packed.
-    if (member.offset % getAlignment(member.data))
+    if (!member.offset.isMultipleOf(getAlignment(member.data)))
       packed = true;
     if (member.offset < nvSize)
       nvAlignment = std::max(nvAlignment, getAlignment(member.data));
@@ -575,12 +624,12 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
   }
   // If the size of the record (the capstone's offset) is not a multiple of the
   // record's alignment, it must be packed.
-  if (members.back().offset % alignment)
+  if (!members.back().offset.isMultipleOf(alignment))
     packed = true;
   // If the non-virtual sub-object is not a multiple of the non-virtual
   // sub-object's alignment, it must be packed.  We cannot have a packed
   // non-virtual sub-object and an unpacked complete object or vise versa.
-  if (nvSize % nvAlignment)
+  if (!nvSize.isMultipleOf(nvAlignment))
     packed = true;
   // Update the alignment of the sentinel.
   if (!packed)
@@ -627,9 +676,9 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       CIRRecordLowering baseLowering(*this, rd, /*Packed=*/lowering.packed);
       baseLowering.lower(/*NonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
-      baseTy =
-          builder.getCompleteRecordTy(baseLowering.fieldTypes, baseIdentifier,
-                                      baseLowering.packed, baseLowering.padded);
+      baseTy = builder.getCompleteNamedRecordType(
+          baseLowering.fieldTypes, baseLowering.packed, baseLowering.padded,
+          baseIdentifier);
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
@@ -649,12 +698,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       ty ? *ty : cir::RecordType{}, baseTy ? baseTy : cir::RecordType{},
       (bool)lowering.zeroInitializable, (bool)lowering.zeroInitializableAsBase);
 
-  assert(!cir::MissingFeatures::recordZeroInit());
-
   rl->nonVirtualBases.swap(lowering.nonVirtualBases);
   rl->completeObjectVirtualBases.swap(lowering.virtualBases);
-
-  assert(!cir::MissingFeatures::bitfields());
 
   // Add all the field numbers.
   rl->fieldIdxMap.swap(lowering.fieldIdxMap);
@@ -766,9 +811,10 @@ void CIRRecordLowering::lowerUnion() {
     fieldTypes.push_back(fieldType);
   }
 
-  if (!storageType)
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "No-storage Union NYI");
+  if (!storageType) {
+    appendPaddingBytes(layoutSize);
+    return;
+  }
 
   if (layoutSize < getSize(storageType))
     storageType = getByteArrayType(layoutSize);
@@ -776,7 +822,7 @@ void CIRRecordLowering::lowerUnion() {
     appendPaddingBytes(layoutSize - getSize(storageType));
 
   // Set packed if we need it.
-  if (layoutSize % getAlignment(storageType))
+  if (!layoutSize.isMultipleOf(getAlignment(storageType)))
     packed = true;
 }
 
@@ -913,8 +959,9 @@ void CIRRecordLowering::computeVolatileBitfields() {
 void CIRRecordLowering::accumulateBases() {
   // If we've got a primary virtual base, we need to add it with the bases.
   if (astRecordLayout.isPrimaryBaseVirtual()) {
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "accumulateBases: primary virtual base");
+    const CXXRecordDecl *baseDecl = astRecordLayout.getPrimaryBase();
+    members.push_back(MemberInfo(CharUnits::Zero(), MemberInfo::InfoKind::Base,
+                                 getStorageType(baseDecl), baseDecl));
   }
 
   // Accumulate the non-virtual bases.

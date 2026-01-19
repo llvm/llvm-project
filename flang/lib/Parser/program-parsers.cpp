@@ -67,14 +67,17 @@ static constexpr auto programUnit{
     lookAhead(maybe(label) >> validFunctionStmt) >>
         construct<ProgramUnit>(indirect(functionSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<MainProgram>{}))};
-static constexpr auto normalProgramUnit{StartNewSubprogram{} >> programUnit /
-        skipMany(";"_tok) / space / recovery(endOfLine, SkipPast<'\n'>{})};
+
+static constexpr auto normalProgramUnit{
+    !consumedAllInput >> StartNewSubprogram{} >> programUnit /
+        skipMany(";"_tok) / space / recovery(endOfLine, skipToNextLineIfAny)};
+
 static constexpr auto globalCompilerDirective{
     construct<ProgramUnit>(indirect(compilerDirective))};
 
 static constexpr auto globalOpenACCCompilerDirective{
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
-        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{}))};
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
@@ -86,7 +89,7 @@ static constexpr auto globalOpenACCCompilerDirective{
 TYPE_PARSER(
     construct<Program>(extension<LanguageFeature::EmptySourceFile>(
                            "nonstandard usage: empty source file"_port_en_US,
-                           skipStuffBeforeStatement >> !nextCh >>
+                           skipStuffBeforeStatement >> consumedAllInput >>
                                pure<std::list<ProgramUnit>>()) ||
         some(globalCompilerDirective || globalOpenACCCompilerDirective ||
             normalProgramUnit) /
@@ -107,7 +110,7 @@ constexpr auto actionStmtLookAhead{first(actionStmt >> ok,
     // first in the execution part
     "ALLOCATE ("_tok, "CALL" >> name >> "("_tok, "GO TO"_tok, "OPEN ("_tok,
     "PRINT"_tok / space / !"("_tok, "READ ("_tok, "WRITE ("_tok)};
-constexpr auto execPartLookAhead{first(actionStmtLookAhead >> ok,
+constexpr auto execPartLookAhead{first(actionStmtLookAhead,
     openaccConstruct >> ok, openmpExecDirective >> ok, "ASSOCIATE ("_tok,
     "BLOCK"_tok, "SELECT"_tok, "CHANGE TEAM"_sptok, "CRITICAL"_tok, "DO"_tok,
     "IF ("_tok, "WHERE ("_tok, "FORALL ("_tok, "!$CUF"_tok)};
@@ -198,6 +201,9 @@ TYPE_CONTEXT_PARSER("specification construct"_en_US,
         construct<SpecificationConstruct>(
             indirect(openaccDeclarativeConstruct)),
         construct<SpecificationConstruct>(indirect(openmpDeclarativeConstruct)),
+        construct<SpecificationConstruct>(
+            indirect(openmpMisplacedEndDirective)),
+        construct<SpecificationConstruct>(indirect(openmpInvalidDirective)),
         construct<SpecificationConstruct>(indirect(compilerDirective))))
 
 // R513 other-specification-stmt ->
@@ -481,7 +487,7 @@ constexpr auto starOrExpr{
         applyFunction(presentOptional<ScalarExpr>, scalarExpr))};
 TYPE_PARSER(extension<LanguageFeature::CUDA>(
     "<<<" >> construct<CallStmt::Chevrons>(starOrExpr, ", " >> scalarExpr,
-                 maybe("," >> scalarIntExpr), maybe("," >> scalarIntExpr)) /
+                 maybe("," >> scalarExpr), maybe("," >> scalarIntExpr)) /
         ">>>"))
 constexpr auto actualArgSpecList{optionalList(actualArgSpec)};
 TYPE_CONTEXT_PARSER("CALL statement"_en_US,
@@ -527,10 +533,12 @@ TYPE_PARSER(construct<AltReturnSpec>(star >> label))
 //         NON_RECURSIVE | PURE | RECURSIVE |
 // (CUDA)  ATTRIBUTES ( (DEVICE | GLOBAL | GRID_GLOBAL | HOST)... ) |
 //         LAUNCH_BOUNDS(expr-list) | CLUSTER_DIMS(expr-list)
-TYPE_PARSER(first("DEVICE" >> pure(common::CUDASubprogramAttrs::Device),
-    "GLOBAL" >> pure(common::CUDASubprogramAttrs::Global),
-    "GRID_GLOBAL" >> pure(common::CUDASubprogramAttrs::Grid_Global),
-    "HOST" >> pure(common::CUDASubprogramAttrs::Host)))
+TYPE_PARSER(withMessage(
+    "expected DEVICE, GLOBAL, GRID_GLOBAL, or HOST attribute"_err_en_US,
+    first("DEVICE" >> pure(common::CUDASubprogramAttrs::Device),
+        "GLOBAL" >> pure(common::CUDASubprogramAttrs::Global),
+        "GRID_GLOBAL" >> pure(common::CUDASubprogramAttrs::Grid_Global),
+        "HOST" >> pure(common::CUDASubprogramAttrs::Host))))
 TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
     construct<PrefixSpec>(construct<PrefixSpec::Elemental>("ELEMENTAL"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Impure>("IMPURE"_tok)),
@@ -540,9 +548,12 @@ TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
     construct<PrefixSpec>(construct<PrefixSpec::Pure>("PURE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Recursive>("RECURSIVE"_tok)),
     extension<LanguageFeature::CUDA>(
-        construct<PrefixSpec>(construct<PrefixSpec::Attributes>("ATTRIBUTES" >>
-            parenthesized(
-                optionalList(Parser<common::CUDASubprogramAttrs>{}))))),
+        construct<PrefixSpec>(construct<PrefixSpec::Attributes>(
+            localRecovery("expected valid ATTRIBUTES specification"_err_en_US,
+                "ATTRIBUTES" >> parenthesized(nonemptyList(
+                                    Parser<common::CUDASubprogramAttrs>{})),
+                "ATTRIBUTES" >> SkipTo<')'>{} >> ")"_ch >>
+                    pure<std::list<common::CUDASubprogramAttrs>>())))),
     extension<LanguageFeature::CUDA>(construct<PrefixSpec>(
         construct<PrefixSpec::Launch_Bounds>("LAUNCH_BOUNDS" >>
             parenthesized(nonemptyList(

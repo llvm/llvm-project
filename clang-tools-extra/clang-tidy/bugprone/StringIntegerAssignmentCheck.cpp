@@ -1,4 +1,4 @@
-//===--- StringIntegerAssignmentCheck.cpp - clang-tidy---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,6 +39,8 @@ void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
           unless(isInTemplateInstantiation())),
       this);
 }
+
+namespace {
 
 class CharExpressionDetector {
 public:
@@ -124,12 +126,14 @@ private:
   const ASTContext &Ctx;
 };
 
+} // namespace
+
 void StringIntegerAssignmentCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Argument = Result.Nodes.getNodeAs<Expr>("expr");
   const auto CharType =
       Result.Nodes.getNodeAs<QualType>("type")->getCanonicalType();
-  SourceLocation Loc = Argument->getBeginLoc();
+  const SourceLocation Loc = Argument->getBeginLoc();
 
   // Try to detect a few common expressions to reduce false positives.
   if (CharExpressionDetector(CharType, *Result.Context)
@@ -145,7 +149,7 @@ void StringIntegerAssignmentCheck::check(
   if (Loc.isMacroID())
     return;
 
-  bool IsWideCharType = CharType->isWideCharType();
+  const bool IsWideCharType = CharType->isWideCharType();
   if (!CharType->isCharType() && !IsWideCharType)
     return;
   bool IsOneDigit = false;
@@ -155,7 +159,7 @@ void StringIntegerAssignmentCheck::check(
     IsLiteral = true;
   }
 
-  SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+  const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
       Argument->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
   if (IsOneDigit) {
     Diag << FixItHint::CreateInsertion(Loc, IsWideCharType ? "L'" : "'")

@@ -12,7 +12,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib-dir} -Wl,-rpath,%{lib-dir} -lc++ -lm'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T -- '
+    '%{executor} --execdir %{temp} -- '
 ))
 
 import os, site

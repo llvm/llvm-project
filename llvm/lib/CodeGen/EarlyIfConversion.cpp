@@ -134,7 +134,7 @@ private:
   BitVector ClobberedRegUnits;
 
   // Scratch pad for findInsertionPoint.
-  SparseSet<unsigned> LiveRegUnits;
+  SparseSet<MCRegUnit, MCRegUnit, MCRegUnitToIndex> LiveRegUnits;
 
   /// Insertion point in Head for speculatively executed instructions form TBB
   /// and FBB.
@@ -271,7 +271,7 @@ bool SSAIfConv::InstrDependenciesAllowIfConv(MachineInstr *I) {
     // Remember clobbered regunits.
     if (MO.isDef() && Reg.isPhysical())
       for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-        ClobberedRegUnits.set(Unit);
+        ClobberedRegUnits.set(static_cast<unsigned>(Unit));
 
     if (!MO.readsReg() || !Reg.isVirtual())
       continue;
@@ -409,7 +409,7 @@ bool SSAIfConv::findInsertionPoint() {
     // Anything read by I is live before I.
     while (!Reads.empty())
       for (MCRegUnit Unit : TRI->regunits(Reads.pop_back_val()))
-        if (ClobberedRegUnits.test(Unit))
+        if (ClobberedRegUnits.test(static_cast<unsigned>(Unit)))
           LiveRegUnits.insert(Unit);
 
     // We can't insert before a terminator.
@@ -421,7 +421,7 @@ bool SSAIfConv::findInsertionPoint() {
     if (!LiveRegUnits.empty()) {
       LLVM_DEBUG({
         dbgs() << "Would clobber";
-        for (unsigned LRU : LiveRegUnits)
+        for (MCRegUnit LRU : LiveRegUnits)
           dbgs() << ' ' << printRegUnit(LRU, TRI);
         dbgs() << " live before " << *I;
       });
@@ -868,9 +868,9 @@ void updateDomTree(MachineDominatorTree *DomTree, const SSAIfConv &IfConv,
   for (auto *B : Removed) {
     MachineDomTreeNode *Node = DomTree->getNode(B);
     assert(Node != HeadNode && "Cannot erase the head node");
-    while (Node->getNumChildren()) {
+    while (!Node->isLeaf()) {
       assert(Node->getBlock() == IfConv.Tail && "Unexpected children");
-      DomTree->changeImmediateDominator(Node->back(), HeadNode);
+      DomTree->changeImmediateDominator(*Node->begin(), HeadNode);
     }
     DomTree->eraseNode(B);
   }
@@ -942,9 +942,9 @@ bool EarlyIfConverter::shouldConvertIf() {
                all_of(Def->operands(), [&](MachineOperand &Op) {
                  if (Op.isImm())
                    return true;
-                 if (!MO.isReg() || !MO.isUse())
-                   return false;
-                 Register Reg = MO.getReg();
+                 if (!Op.isReg() || !Op.isUse())
+                   return true;
+                 Register Reg = Op.getReg();
                  if (Reg.isPhysical())
                    return false;
 

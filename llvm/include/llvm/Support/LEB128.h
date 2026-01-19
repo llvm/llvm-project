@@ -29,8 +29,7 @@ inline unsigned encodeSLEB128(int64_t Value, raw_ostream &OS,
     uint8_t Byte = Value & 0x7f;
     // NOTE: this assumes that this signed shift is an arithmetic right shift.
     Value >>= 7;
-    More = !((((Value == 0 ) && ((Byte & 0x40) == 0)) ||
-              ((Value == -1) && ((Byte & 0x40) != 0))));
+    More = Value != ((Byte & 0x40) ? -1 : 0);
     Count++;
     if (More || Count < PadTo)
       Byte |= 0x80; // Mark this byte to show that more bytes will follow.
@@ -58,8 +57,7 @@ inline unsigned encodeSLEB128(int64_t Value, uint8_t *p, unsigned PadTo = 0) {
     uint8_t Byte = Value & 0x7f;
     // NOTE: this assumes that this signed shift is an arithmetic right shift.
     Value >>= 7;
-    More = !((((Value == 0 ) && ((Byte & 0x40) == 0)) ||
-              ((Value == -1) && ((Byte & 0x40) != 0))));
+    More = Value != ((Byte & 0x40) ? -1 : 0);
     Count++;
     if (More || Count < PadTo)
       Byte |= 0x80; // Mark this byte to show that more bytes will follow.
@@ -128,7 +126,7 @@ inline unsigned encodeULEB128(uint64_t Value, uint8_t *p,
 /// Utility function to decode a ULEB128 value.
 ///
 /// If \p error is non-null, it will point to a static error message,
-/// if an error occured. It will not be modified on success.
+/// if an error occurred. It will not be modified on success.
 inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
                               const uint8_t *end = nullptr,
                               const char **error = nullptr) {
@@ -162,7 +160,7 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
 /// Utility function to decode a SLEB128 value.
 ///
 /// If \p error is non-null, it will point to a static error message,
-/// if an error occured. It will not be modified on success.
+/// if an error occurred. It will not be modified on success.
 inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
                              const uint8_t *end = nullptr,
                              const char **error = nullptr) {
@@ -219,6 +217,16 @@ inline int64_t decodeSLEB128AndInc(const uint8_t *&p, const uint8_t *end,
 
 inline uint64_t decodeULEB128AndIncUnsafe(const uint8_t *&p) {
   return decodeULEB128AndInc(p, nullptr);
+}
+
+/// Overwrite a ULEB128 value and keep the original length.
+inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
+  while (*bufLoc & 0x80) {
+    *bufLoc++ = 0x80 | (val & 0x7f);
+    val >>= 7;
+  }
+  *bufLoc = val;
+  return val;
 }
 
 enum class LEB128Sign { Unsigned, Signed };

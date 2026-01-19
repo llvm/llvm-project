@@ -12,6 +12,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/DenseSet.h"
@@ -35,32 +36,37 @@ void ObjectFileJSON::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ObjectFile *
-ObjectFileJSON::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
-                               offset_t data_offset, const FileSpec *file,
-                               offset_t file_offset, offset_t length) {
-  if (!data_sp) {
-    data_sp = MapFileData(*file, length, file_offset);
+ObjectFile *ObjectFileJSON::CreateInstance(const ModuleSP &module_sp,
+                                           DataExtractorSP extractor_sp,
+                                           offset_t data_offset,
+                                           const FileSpec *file,
+                                           offset_t file_offset,
+                                           offset_t length) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
     data_offset = 0;
   }
 
-  if (!MagicBytesMatch(data_sp, 0, data_sp->GetByteSize()))
+  if (!MagicBytesMatch(extractor_sp->GetSharedDataBuffer(), 0,
+                       extractor_sp->GetByteSize()))
     return nullptr;
 
   // Update the data to contain the entire file if it doesn't already.
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
+    extractor_sp->SetData(data_sp);
     data_offset = 0;
   }
 
   Log *log = GetLog(LLDBLog::Symbols);
 
-  auto text =
-      llvm::StringRef(reinterpret_cast<const char *>(data_sp->GetBytes()));
+  auto text = llvm::StringRef(reinterpret_cast<const char *>(
+      extractor_sp->GetSharedDataBuffer()->GetBytes()));
 
   Expected<json::Value> json = json::parse(text);
   if (!json) {
@@ -89,9 +95,10 @@ ObjectFileJSON::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
     return nullptr;
   }
 
-  return new ObjectFileJSON(module_sp, data_sp, data_offset, file, file_offset,
-                            length, std::move(arch), std::move(uuid), type,
-                            std::move(body.symbols), std::move(body.sections));
+  return new ObjectFileJSON(module_sp, extractor_sp, data_offset, file,
+                            file_offset, length, std::move(arch),
+                            std::move(uuid), type, std::move(body.symbols),
+                            std::move(body.sections));
 }
 
 ObjectFile *ObjectFileJSON::CreateMemoryInstance(const ModuleSP &module_sp,
@@ -145,13 +152,14 @@ size_t ObjectFileJSON::GetModuleSpecifications(
   return 1;
 }
 
-ObjectFileJSON::ObjectFileJSON(const ModuleSP &module_sp, DataBufferSP &data_sp,
+ObjectFileJSON::ObjectFileJSON(const ModuleSP &module_sp,
+                               DataExtractorSP extractor_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t offset, offset_t length, ArchSpec arch,
                                UUID uuid, Type type,
                                std::vector<JSONSymbol> symbols,
                                std::vector<JSONSection> sections)
-    : ObjectFile(module_sp, file, offset, length, data_sp, data_offset),
+    : ObjectFile(module_sp, file, offset, length, extractor_sp, data_offset),
       m_arch(std::move(arch)), m_uuid(std::move(uuid)), m_type(type),
       m_symbols(std::move(symbols)), m_sections(std::move(sections)) {}
 
@@ -231,6 +239,40 @@ void ObjectFileJSON::CreateSections(SectionList &unified_section_list) {
     m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
   }
+}
+
+bool ObjectFileJSON::SetLoadAddress(Target &target, lldb::addr_t value,
+                                    bool value_is_offset) {
+  Log *log(GetLog(LLDBLog::DynamicLoader));
+  if (!m_sections_up)
+    return true;
+
+  addr_t slide = value;
+  if (!value_is_offset) {
+    addr_t lowest_addr = LLDB_INVALID_ADDRESS;
+    for (const SectionSP &section_sp : *m_sections_up) {
+      addr_t section_load_addr = section_sp->GetFileAddress();
+      lowest_addr = std::min(lowest_addr, section_load_addr);
+    }
+    if (lowest_addr == LLDB_INVALID_ADDRESS)
+      return false;
+    slide = value - lowest_addr;
+  }
+
+  // Apply slide to each section's file address.
+  for (const SectionSP &section_sp : *m_sections_up) {
+    addr_t section_load_addr = section_sp->GetFileAddress();
+    if (section_load_addr != LLDB_INVALID_ADDRESS) {
+      LLDB_LOGF(
+          log,
+          "ObjectFileJSON::SetLoadAddress section %s to load addr 0x%" PRIx64,
+          section_sp->GetName().AsCString(), section_load_addr + slide);
+      target.SetSectionLoadAddress(section_sp, section_load_addr + slide,
+                                   /*warn_multiple=*/true);
+    }
+  }
+
+  return true;
 }
 
 bool ObjectFileJSON::MagicBytesMatch(DataBufferSP data_sp,

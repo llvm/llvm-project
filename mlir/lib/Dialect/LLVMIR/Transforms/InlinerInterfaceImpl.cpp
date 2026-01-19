@@ -295,7 +295,7 @@ static void createNewAliasScopesFromNoAliasParameter(
 
   // Scope exit block to make it impossible to forget to get rid of the
   // intrinsics.
-  auto exit = llvm::make_scope_exit([&] {
+  llvm::scope_exit exit([&] {
     for (LLVM::SSACopyOp ssaCopyOp : ssaCopies) {
       ssaCopyOp.replaceAllUsesWith(ssaCopyOp.getOperand());
       ssaCopyOp->erase();
@@ -755,10 +755,8 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
 
   bool allowSingleBlockOptimization(
       iterator_range<Region::iterator> inlinedBlocks) const final {
-    if (!inlinedBlocks.empty() &&
-        isa<LLVM::UnreachableOp>(inlinedBlocks.begin()->getTerminator()))
-      return false;
-    return true;
+    return !(!inlinedBlocks.empty() &&
+             isa<LLVM::UnreachableOp>(inlinedBlocks.begin()->getTerminator()));
   }
 
   /// Handle the given inlined return by replacing the uses of the call with the

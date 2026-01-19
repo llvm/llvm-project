@@ -79,27 +79,27 @@ absl::Cleanup<cleanup_internal::Tag, Callback> MakeCleanup(Callback callback) {
 void test() {
   auto a = absl::MakeCleanup([] {});
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: prefer absl::Cleanup's class template argument deduction pattern in C++17 and higher
-  // CHECK-FIXES: {{^}}  absl::Cleanup a = [] {};{{$}}
+  // CHECK-FIXES: absl::Cleanup a = [] {};
 
   auto b = absl::MakeCleanup(std::function<void()>([] {}));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  absl::Cleanup b = std::function<void()>([] {});{{$}}
+  // CHECK-FIXES: absl::Cleanup b = std::function<void()>([] {});
 
   const auto c = absl::MakeCleanup([] {});
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  const absl::Cleanup c = [] {};{{$}}
+  // CHECK-FIXES: const absl::Cleanup c = [] {};
 
   const auto d = absl::MakeCleanup(std::function<void()>([] {}));
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  const absl::Cleanup d = std::function<void()>([] {});{{$}}
+  // CHECK-FIXES: const absl::Cleanup d = std::function<void()>([] {});
 
   // Preserves extra parens
   auto e = absl::MakeCleanup(([] {}));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  absl::Cleanup e = ([] {});{{$}}
+  // CHECK-FIXES: absl::Cleanup e = ([] {});
 
   // Preserves comments
   auto f = /* a */ absl::MakeCleanup(/* b */ [] { /* c */ } /* d */) /* e */;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  absl::Cleanup f = /* a */ /* b */ [] { /* c */ } /* d */ /* e */;{{$}}
+  // CHECK-FIXES: absl::Cleanup f = /* a */ /* b */ [] { /* c */ } /* d */ /* e */;
 }

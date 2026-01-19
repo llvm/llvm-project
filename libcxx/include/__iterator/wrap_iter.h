@@ -49,12 +49,12 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT : __i_() {}
-  template <
-      class _OtherIter,
-      __enable_if_t< _And< is_convertible<const _OtherIter&, _Iter>,
-                           _Or<is_same<reference, __iter_reference<_OtherIter> >,
-                               is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIter> > > > >::value,
-                     int> = 0>
+  template <class _OtherIter,
+            __enable_if_t<
+                _And<is_convertible<const _OtherIter&, _Iter>,
+                     _Or<is_same<reference, __iterator_reference<_OtherIter> >,
+                         is_same<reference, __make_const_lvalue_ref<__iterator_reference<_OtherIter> > > > >::value,
+                int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_OtherIter>& __u) _NOEXCEPT
       : __i_(__u.__i_) {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT { return *__i_; }
@@ -117,8 +117,8 @@ private:
   friend class span;
   template <class _Tp, size_t _Size>
   friend struct array;
-  template <class _Tp>
-  friend class optional;
+  template <class _Tp, class>
+  friend struct __optional_iterator;
 };
 
 template <class _Iter1>

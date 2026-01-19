@@ -44,6 +44,12 @@
 class DWARFASTParserClang;
 class PDBASTParser;
 
+namespace lldb_private {
+namespace npdb {
+class PdbAstBuilderClang;
+} // namespace npdb
+} // namespace lldb_private
+
 namespace clang {
 class FileManager;
 class HeaderSearch;
@@ -651,7 +657,7 @@ public:
 
   bool IsDefined(lldb::opaque_compiler_type_t type) override;
 
-  bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
+  bool IsFloatingPointType(lldb::opaque_compiler_type_t type,
                            bool &is_complex) override;
 
   unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
@@ -837,8 +843,7 @@ public:
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
 
-  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
-                             uint64_t &count) override;
+  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) override;
 
   lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
 
@@ -938,6 +943,14 @@ public:
                               bool expand_pack) override;
 
   CompilerType GetTypeForFormatters(void *type) override;
+
+  // DIL
+
+  bool IsPromotableIntegerType(lldb::opaque_compiler_type_t type) override;
+
+  llvm::Expected<CompilerType>
+  DoIntegralPromotion(CompilerType from,
+                      ExecutionContextScope *exe_scope) override;
 
 #define LLDB_INVALID_DECL_LEVEL UINT32_MAX
   // LLDB_INVALID_DECL_LEVEL is returned by CountDeclLevels if child_decl_ctx
@@ -1074,7 +1087,8 @@ public:
 #endif
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+            bool show_color) override;
 
   /// Dump clang AST types from the symbol file.
   ///
@@ -1214,7 +1228,7 @@ private:
   std::unique_ptr<clang::ModuleMap> m_module_map_up;
   std::unique_ptr<DWARFASTParserClang> m_dwarf_ast_parser_up;
   std::unique_ptr<PDBASTParser> m_pdb_ast_parser_up;
-  std::unique_ptr<npdb::PdbAstBuilder> m_native_pdb_ast_parser_up;
+  std::unique_ptr<npdb::PdbAstBuilderClang> m_native_pdb_ast_parser_up;
   std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;
   uint32_t m_pointer_byte_size = 0;
   bool m_ast_owned = false;
@@ -1318,7 +1332,8 @@ public:
   }
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+            bool show_color) override;
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,

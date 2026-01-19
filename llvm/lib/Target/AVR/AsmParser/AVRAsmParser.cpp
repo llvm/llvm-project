@@ -38,7 +38,6 @@ using namespace llvm;
 namespace {
 /// Parses AVR assembly from a stream.
 class AVRAsmParser : public MCTargetAsmParser {
-  const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
   const std::string GENERATE_STUBS = "gs";
@@ -93,7 +92,7 @@ class AVRAsmParser : public MCTargetAsmParser {
 public:
   AVRAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
+      : MCTargetAsmParser(Options, STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -253,7 +252,7 @@ public:
       O << "Token: \"" << getToken() << "\"";
       break;
     case k_Register:
-      O << "Register: " << getReg();
+      O << "Register: " << getReg().id();
       break;
     case k_Immediate:
       O << "Immediate: \"";
@@ -263,7 +262,7 @@ public:
     case k_Memri: {
       // only manually print the size for non-negative values,
       // as the sign is inserted automatically.
-      O << "Memri: \"" << getReg() << '+';
+      O << "Memri: \"" << getReg().id() << '+';
       MAI.printExpr(O, *getImm());
       O << "\"";
       break;
@@ -318,7 +317,7 @@ bool AVRAsmParser::missingFeature(llvm::SMLoc const &Loc,
 
 bool AVRAsmParser::emit(MCInst &Inst, SMLoc const &Loc, MCStreamer &Out) const {
   Inst.setLoc(Loc);
-  Out.emitInstruction(Inst, STI);
+  Out.emitInstruction(Inst, *STI);
 
   return false;
 }
@@ -411,7 +410,7 @@ bool AVRAsmParser::tryParseRegisterOperand(OperandVector &Operands) {
 
   // Reject R0~R15 on avrtiny.
   if (AVR::R0 <= Reg && Reg <= AVR::R15 &&
-      STI.hasFeature(AVR::FeatureTinyEncoding))
+      STI->hasFeature(AVR::FeatureTinyEncoding))
     return Error(Parser.getTok().getLoc(), "invalid register on avrtiny");
 
   AsmToken const &T = Parser.getTok();
@@ -758,14 +757,14 @@ unsigned AVRAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
       // Reject R0~R15 on avrtiny.
       if (0 <= RegNum && RegNum <= 15 &&
-          STI.hasFeature(AVR::FeatureTinyEncoding))
+          STI->hasFeature(AVR::FeatureTinyEncoding))
         return Match_InvalidRegisterOnTiny;
 
       std::ostringstream RegName;
       RegName << "r" << RegNum;
       if (MCRegister Reg = MatchRegisterName(RegName.str())) {
         Op.makeReg(Reg);
-        if (validateOperandClass(Op, Expected) == Match_Success) {
+        if (validateOperandClass(Op, Expected, *STI) == Match_Success) {
           return Match_Success;
         }
       }
@@ -781,7 +780,7 @@ unsigned AVRAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
       if (correspondingDREG) {
         Op.makeReg(correspondingDREG);
-        return validateOperandClass(Op, Expected);
+        return validateOperandClass(Op, Expected, *STI);
       }
     }
   }

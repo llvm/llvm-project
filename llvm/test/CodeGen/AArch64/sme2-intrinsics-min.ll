@@ -114,8 +114,6 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @multi_vec_min_single_x2_u64(<
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @multi_vec_min_single_x2_bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zm) {
 ; CHECK-LABEL: multi_vec_min_single_x2_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    bfmin { z0.h, z1.h }, { z0.h, z1.h }, z2.h
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fmin.single.x2.nxv8bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zm)
@@ -316,10 +314,6 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>  } @multi_vec_min_single_x4_bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zdn3, <vscale x 8 x bfloat> %zdn4, <vscale x 8 x bfloat> %zm) {
 ; CHECK-LABEL: multi_vec_min_single_x4_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    bfmin { z0.h - z3.h }, { z0.h - z3.h }, z4.h
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>  } @llvm.aarch64.sve.fmin.single.x4.nxv8bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zdn3, <vscale x 8 x bfloat> %zdn4, <vscale x 8 x bfloat> %zm)
@@ -511,10 +505,6 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @multi_vec_min_multi_x2_u64(<v
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @multi_vec_min_x2_bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zm1, <vscale x 8 x bfloat> %zm2) {
 ; CHECK-LABEL: multi_vec_min_x2_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    bfmin { z0.h, z1.h }, { z0.h, z1.h }, { z2.h, z3.h }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fmin.x2.nxv8bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zm1, <vscale x 8 x bfloat> %zm2)
@@ -573,19 +563,19 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @multi_vec_min_multi_x2_
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @multi_vec_min_multi_x4_s8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zdn1, <vscale x 16 x i8> %zdn2, <vscale x 16 x i8> %zdn3, <vscale x 16 x i8> %zdn4,
 ; CHECK-LABEL: multi_vec_min_multi_x4_s8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    smin { z24.b - z27.b }, { z24.b - z27.b }, { z28.b - z31.b }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    smin { z4.b - z7.b }, { z4.b - z7.b }, { z24.b - z27.b }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                            <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2, <vscale x 16 x i8> %zm3, <vscale x 16 x i8> %zm4) {
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }
@@ -597,19 +587,19 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @multi_vec_min_multi_x4_s16(<vscale x 8 x i16> %unused, <vscale x 8 x i16> %zdn1, <vscale x 8 x i16> %zdn2, <vscale x 8 x i16> %zdn3, <vscale x 8 x i16> %zdn4,
 ; CHECK-LABEL: multi_vec_min_multi_x4_s16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    smin { z24.h - z27.h }, { z24.h - z27.h }, { z28.h - z31.h }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    smin { z4.h - z7.h }, { z4.h - z7.h }, { z24.h - z27.h }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                             <vscale x 8 x i16> %zm1, <vscale x 8 x i16> %zm2, <vscale x 8 x i16> %zm3, <vscale x 8 x i16> %zm4) {
   %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }
@@ -621,19 +611,19 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @multi_vec_min_multi_x4_s32(<vscale x 4 x i32> %unused, <vscale x 4 x i32> %zdn1, <vscale x 4 x i32> %zdn2, <vscale x 4 x i32> %zdn3, <vscale x 4 x i32> %zdn4,
 ; CHECK-LABEL: multi_vec_min_multi_x4_s32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    smin { z24.s - z27.s }, { z24.s - z27.s }, { z28.s - z31.s }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    smin { z4.s - z7.s }, { z4.s - z7.s }, { z24.s - z27.s }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                             <vscale x 4 x i32> %zm1, <vscale x 4 x i32> %zm2, <vscale x 4 x i32> %zm3, <vscale x 4 x i32> %zm4) {
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }
@@ -645,19 +635,19 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @multi_vec_min_multi_x4_s64(<vscale x 2 x i64> %unused, <vscale x 2 x i64> %zdn1, <vscale x 2 x i64> %zdn2, <vscale x 2 x i64> %zdn3, <vscale x 2 x i64> %zdn4,
 ; CHECK-LABEL: multi_vec_min_multi_x4_s64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    smin { z24.d - z27.d }, { z24.d - z27.d }, { z28.d - z31.d }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    smin { z4.d - z7.d }, { z4.d - z7.d }, { z24.d - z27.d }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                             <vscale x 2 x i64> %zm1, <vscale x 2 x i64> %zm2, <vscale x 2 x i64> %zm3, <vscale x 2 x i64> %zm4) {
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }
@@ -671,19 +661,19 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @multi_vec_min_multi_x4_u8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zdn1, <vscale x 16 x i8> %zdn2, <vscale x 16 x i8> %zdn3, <vscale x 16 x i8> %zdn4,
 ; CHECK-LABEL: multi_vec_min_multi_x4_u8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    umin { z24.b - z27.b }, { z24.b - z27.b }, { z28.b - z31.b }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    umin { z4.b - z7.b }, { z4.b - z7.b }, { z24.b - z27.b }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                            <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2, <vscale x 16 x i8> %zm3, <vscale x 16 x i8> %zm4) {
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }
@@ -695,19 +685,19 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @multi_vec_min_multi_x4_u16(<vscale x 8 x i16> %unused, <vscale x 8 x i16> %zdn1, <vscale x 8 x i16> %zdn2, <vscale x 8 x i16> %zdn3, <vscale x 8 x i16> %zdn4,
 ; CHECK-LABEL: multi_vec_min_multi_x4_u16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    umin { z24.h - z27.h }, { z24.h - z27.h }, { z28.h - z31.h }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    umin { z4.h - z7.h }, { z4.h - z7.h }, { z24.h - z27.h }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                             <vscale x 8 x i16> %zm1, <vscale x 8 x i16> %zm2, <vscale x 8 x i16> %zm3, <vscale x 8 x i16> %zm4) {
   %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }
@@ -719,19 +709,19 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @multi_vec_min_multi_x4_u32(<vscale x 4 x i32> %unused, <vscale x 4 x i32> %zdn1, <vscale x 4 x i32> %zdn2, <vscale x 4 x i32> %zdn3, <vscale x 4 x i32> %zdn4,
 ; CHECK-LABEL: multi_vec_min_multi_x4_u32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    umin { z24.s - z27.s }, { z24.s - z27.s }, { z28.s - z31.s }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    umin { z4.s - z7.s }, { z4.s - z7.s }, { z24.s - z27.s }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                             <vscale x 4 x i32> %zm1, <vscale x 4 x i32> %zm2, <vscale x 4 x i32> %zm3, <vscale x 4 x i32> %zm4) {
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }
@@ -743,19 +733,19 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @multi_vec_min_multi_x4_u64(<vscale x 2 x i64> %unused, <vscale x 2 x i64> %zdn1, <vscale x 2 x i64> %zdn2, <vscale x 2 x i64> %zdn3, <vscale x 2 x i64> %zdn4,
 ; CHECK-LABEL: multi_vec_min_multi_x4_u64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    umin { z24.d - z27.d }, { z24.d - z27.d }, { z28.d - z31.d }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    umin { z4.d - z7.d }, { z4.d - z7.d }, { z24.d - z27.d }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                             <vscale x 2 x i64> %zm1, <vscale x 2 x i64> %zm2, <vscale x 2 x i64> %zm3, <vscale x 2 x i64> %zm4) {
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }
@@ -770,14 +760,6 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>  } @multi_vec_min_x4_bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zdn3, <vscale x 8 x bfloat> %zdn4, <vscale x 8 x bfloat> %zm1, <vscale x 8 x bfloat> %zm2, <vscale x 8 x bfloat> %zm3, <vscale x 8 x bfloat> %zm4) {
 ; CHECK-LABEL: multi_vec_min_x4_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z7 killed $z7 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z6 killed $z6 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z5 killed $z5 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z4 killed $z4 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
 ; CHECK-NEXT:    bfmin { z0.h - z3.h }, { z0.h - z3.h }, { z4.h - z7.h }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>  } @llvm.aarch64.sve.fmin.x4.nxv8bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zdn3, <vscale x 8 x bfloat> %zdn4, <vscale x 8 x bfloat> %zm1, <vscale x 8 x bfloat> %zm2, <vscale x 8 x bfloat> %zm3, <vscale x 8 x bfloat> %zm4)
@@ -789,19 +771,19 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <v
 define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @multi_vec_min_multi_x4_f16(<vscale x 8 x half> %unused, <vscale x 8 x half> %zdn1, <vscale x 8 x half> %zdn2, <vscale x 8 x half> %zdn3, <vscale x 8 x half> %zdn4,
 ; CHECK-LABEL: multi_vec_min_multi_x4_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    fmin { z24.h - z27.h }, { z24.h - z27.h }, { z28.h - z31.h }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    fmin { z4.h - z7.h }, { z4.h - z7.h }, { z24.h - z27.h }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                             <vscale x 8 x half> %zm1, <vscale x 8 x half> %zm2, <vscale x 8 x half> %zm3, <vscale x 8 x half> %zm4) {
   %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }
@@ -813,19 +795,19 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @multi_vec_min_multi_x4_f32(<vscale x 4 x float> %unused, <vscale x 4 x float> %zdn1, <vscale x 4 x float> %zdn2, <vscale x 4 x float> %zdn3, <vscale x 4 x float> %zdn4,
 ; CHECK-LABEL: multi_vec_min_multi_x4_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    fmin { z24.s - z27.s }, { z24.s - z27.s }, { z28.s - z31.s }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    fmin { z4.s - z7.s }, { z4.s - z7.s }, { z24.s - z27.s }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                             <vscale x 4 x float> %zm1, <vscale x 4 x float> %zm2, <vscale x 4 x float> %zm3, <vscale x 4 x float> %zm4) {
   %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }
@@ -837,19 +819,19 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @multi_vec_min_multi_x4_f64(<vscale x 2 x double> %unused, <vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zdn3, <vscale x 2 x double> %zdn4,
 ; CHECK-LABEL: multi_vec_min_multi_x4_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    fmin { z24.d - z27.d }, { z24.d - z27.d }, { z28.d - z31.d }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    fmin { z4.d - z7.d }, { z4.d - z7.d }, { z24.d - z27.d }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                             <vscale x 2 x double> %zm1, <vscale x 2 x double> %zm2, <vscale x 2 x double> %zm3, <vscale x 2 x double> %zm4) {
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }
@@ -863,8 +845,6 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @multi_vec_minnm_single_x2_bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zm) {
 ; CHECK-LABEL: multi_vec_minnm_single_x2_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    bfminnm { z0.h, z1.h }, { z0.h, z1.h }, z2.h
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fminnm.single.x2.nxv8bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zm)
@@ -917,10 +897,6 @@ define { <vscale x 2 x double>, <vscale x 2 x double> }  @multi_vec_minnm_single
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>  } @multi_vec_minnm_single_x4_bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zdn3, <vscale x 8 x bfloat> %zdn4, <vscale x 8 x bfloat> %zm) {
 ; CHECK-LABEL: multi_vec_minnm_single_x4_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    bfminnm { z0.h - z3.h }, { z0.h - z3.h }, z4.h
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>  } @llvm.aarch64.sve.fminnm.single.x4.nxv8bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zdn3, <vscale x 8 x bfloat> %zdn4, <vscale x 8 x bfloat> %zm)
@@ -988,10 +964,6 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @multi_vec_minnm_x2_bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zm1, <vscale x 8 x bfloat> %zm2) {
 ; CHECK-LABEL: multi_vec_minnm_x2_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    bfminnm { z0.h, z1.h }, { z0.h, z1.h }, { z2.h, z3.h }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fminnm.x2.nxv8bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zm1, <vscale x 8 x bfloat> %zm2)
@@ -1050,14 +1022,6 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @multi_vec_minnm_x2_f64(
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>  } @multi_vec_minnm_x4_bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zdn3, <vscale x 8 x bfloat> %zdn4, <vscale x 8 x bfloat> %zm1, <vscale x 8 x bfloat> %zm2, <vscale x 8 x bfloat> %zm3, <vscale x 8 x bfloat> %zm4) {
 ; CHECK-LABEL: multi_vec_minnm_x4_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z7 killed $z7 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z6 killed $z6 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z5 killed $z5 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z4 killed $z4 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
 ; CHECK-NEXT:    bfminnm { z0.h - z3.h }, { z0.h - z3.h }, { z4.h - z7.h }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>  } @llvm.aarch64.sve.fminnm.x4.nxv8bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zdn3, <vscale x 8 x bfloat> %zdn4, <vscale x 8 x bfloat> %zm1, <vscale x 8 x bfloat> %zm2, <vscale x 8 x bfloat> %zm3, <vscale x 8 x bfloat> %zm4)
@@ -1069,19 +1033,19 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <v
 define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @multi_vec_minnm_x4_f16(<vscale x 8 x half> %dummy, <vscale x 8 x half> %zdn1, <vscale x 8 x half> %zdn2, <vscale x 8 x half> %zdn3, <vscale x 8 x half> %zdn4, <vscale x 8 x half> %zm1, <vscale x 8 x half> %zm2, <vscale x 8 x half> %zm3, <vscale x 8 x half> %zm4) {
 ; CHECK-LABEL: multi_vec_minnm_x4_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    fminnm { z24.h - z27.h }, { z24.h - z27.h }, { z28.h - z31.h }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    fminnm { z4.h - z7.h }, { z4.h - z7.h }, { z24.h - z27.h }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }
               @llvm.aarch64.sve.fminnm.x4.nxv8f16(<vscale x 8 x half> %zdn1, <vscale x 8 x half> %zdn2, <vscale x 8 x half> %zdn3, <vscale x 8 x half> %zdn4,
@@ -1092,19 +1056,19 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @multi_vec_minnm_x4_f32(<vscale x 8 x half> %dummy, <vscale x 4 x float> %zdn1, <vscale x 4 x float> %zdn2, <vscale x 4 x float> %zdn3, <vscale x 4 x float> %zdn4, <vscale x 4 x float> %zm1, <vscale x 4 x float> %zm2, <vscale x 4 x float> %zm3, <vscale x 4 x float> %zm4) {
 ; CHECK-LABEL: multi_vec_minnm_x4_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    fminnm { z24.s - z27.s }, { z24.s - z27.s }, { z28.s - z31.s }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    fminnm { z4.s - z7.s }, { z4.s - z7.s }, { z24.s - z27.s }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }
               @llvm.aarch64.sve.fminnm.x4.nxv4f32(<vscale x 4 x float> %zdn1, <vscale x 4 x float> %zdn2, <vscale x 4 x float> %zdn3, <vscale x 4 x float> %zdn4,
@@ -1115,19 +1079,19 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @multi_vec_minnm_x4_f64(<vscale x 8 x half> %dummy, <vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zdn3, <vscale x 2 x double> %zdn4, <vscale x 2 x double> %zm1, <vscale x 2 x double> %zm2, <vscale x 2 x double> %zm3, <vscale x 2 x double> %zm4) {
 ; CHECK-LABEL: multi_vec_minnm_x4_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    fminnm { z24.d - z27.d }, { z24.d - z27.d }, { z28.d - z31.d }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    fminnm { z4.d - z7.d }, { z4.d - z7.d }, { z24.d - z27.d }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }
               @llvm.aarch64.sve.fminnm.x4.nxv2f64(<vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zdn3, <vscale x 2 x double> %zdn4,
