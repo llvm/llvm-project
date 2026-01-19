@@ -375,7 +375,7 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
   // Enumerate the functions.
   for (const Function &F : M) {
     EnumerateValue(&F);
-    EnumerateType(F.getValueType());
+    EnumerateType(F.getFunctionType());
     EnumerateType(
         TypedPointerType::get(F.getFunctionType(), F.getAddressSpace()));
     EnumerateAttributes(F.getAttributes());

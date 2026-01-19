@@ -3864,7 +3864,7 @@ void Verifier::visitCallBase(CallBase &Call) {
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
   bool IsIntrinsic = Callee && Callee->isIntrinsic();
   if (IsIntrinsic)
-    Check(Callee->getValueType() == FTy,
+    Check(Callee->getFunctionType() == FTy,
           "Intrinsic called with incompatible signature", Call);
 
   // Verify if the calling convention of the callee is callable.
