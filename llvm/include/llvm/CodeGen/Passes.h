@@ -612,10 +612,6 @@ LLVM_ABI ModulePass *createCheckDebugMachineModulePass();
 /// caller saved registers with stack slots.
 LLVM_ABI extern char &FixupStatepointCallerSavedID;
 
-/// When learning an eviction policy, extract score(reward) information,
-/// otherwise this does nothing
-LLVM_ABI FunctionPass *createRegAllocScoringPass();
-
 /// JMC instrument pass.
 LLVM_ABI ModulePass *createJMCInstrumenterPass();
 

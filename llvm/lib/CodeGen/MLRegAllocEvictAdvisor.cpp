@@ -72,7 +72,6 @@ static cl::opt<unsigned> MaxEvictionCount(
 
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TFLITE
-#include "RegAllocScore.h"
 #include "llvm/Analysis/Utils/TFUtils.h"
 
 static cl::opt<std::string> TrainingLog(
@@ -91,43 +90,6 @@ static cl::opt<std::string> ModelUnderTraining(
 namespace llvm {
 extern cl::opt<unsigned> EvictInterferenceCutoff;
 } // namespace llvm
-
-namespace {
-class RegAllocScoring : public MachineFunctionPass {
-public:
-  static char ID;
-
-  RegAllocScoring() : MachineFunctionPass(ID) {
-    initializeRegAllocScoringPass(*PassRegistry::getPassRegistry());
-  }
-
-  ~RegAllocScoring() override = default;
-
-  StringRef getPassName() const override {
-    return "Register Allocation Pass Scoring";
-  }
-
-  /// RegAllocReward analysis usage.
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<RegAllocEvictionAdvisorAnalysisLegacy>();
-    AU.addRequired<RegAllocPriorityAdvisorAnalysisLegacy>();
-    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  /// Performs this pass
-  bool runOnMachineFunction(MachineFunction &) override;
-};
-} // namespace
-
-char RegAllocScoring::ID = 0;
-FunctionPass *llvm::createRegAllocScoringPass() {
-  return new RegAllocScoring();
-}
-
-INITIALIZE_PASS(RegAllocScoring, "regallocscoringpass",
-                "Register Allocation Scoring Pass", false, false)
 
 // ===================================
 // Common ML Advisor declarations
@@ -1001,24 +963,6 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
   Log->endObservation();
   return Ret;
 }
-
-bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
-  std::optional<float> CachedReward;
-  auto GetReward = [&]() {
-    if (!CachedReward)
-      CachedReward = static_cast<float>(
-          calculateRegAllocScore(
-              MF, getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI())
-              .getScore());
-    return *CachedReward;
-  };
-
-  getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().logRewardIfNeeded(
-      MF, GetReward);
-  getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>().logRewardIfNeeded(
-      MF, GetReward);
-  return false;
-}
 #endif // #ifdef LLVM_HAVE_TFLITE
 
 RegAllocEvictionAdvisorProvider *
@@ -1042,7 +986,3 @@ llvm::createReleaseModeAdvisorAnalysisLegacy() {
              : nullptr;
 }
 
-// In all cases except development mode, we don't need scoring.
-#if !defined(LLVM_HAVE_TFLITE)
-bool RegAllocScoring::runOnMachineFunction(MachineFunction &) { return false; }
-#endif
