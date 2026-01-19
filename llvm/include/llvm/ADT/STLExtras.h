@@ -2682,17 +2682,6 @@ template <typename T> using has_sizeof = decltype(sizeof(T));
 template <typename T>
 constexpr bool is_incomplete_v = !is_detected<detail::has_sizeof, T>::value;
 
-// Detect types with equality comparison operators.
-namespace detail {
-template <typename T, typename U>
-using has_equality_comparison =
-    decltype(std::declval<const T &>() == std::declval<const U &>());
-} // namespace detail
-
-/// Detects when type `const T` can be compared for equality with `const U`.
-template <typename T, typename U = T>
-constexpr bool has_equality_comparison_v =
-    is_detected<detail::has_equality_comparison, T, U>::value;
 } // end namespace llvm
 
 namespace std {

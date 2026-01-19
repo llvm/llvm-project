@@ -124,6 +124,9 @@ public:
   };
   virtual VAArgSlotInfo slotInfo(const DataLayout &DL, Type *Parameter) = 0;
 
+  // Per-target overrides of special symbols.
+  virtual bool ignoreFunction(Function *F) { return false; }
+
   // Targets implemented so far all have the same trivial lowering for these
   bool vaEndIsNop() { return true; }
   bool vaCopyIsMemcpy() { return true; }
@@ -152,6 +155,11 @@ public:
   StringRef getPassName() const override { return "Expand variadic functions"; }
 
   bool rewriteABI() { return Mode == ExpandVariadicsMode::Lowering; }
+
+  template <typename T> bool isValidCallingConv(T *F) {
+    return F->getCallingConv() == CallingConv::C ||
+           F->getCallingConv() == CallingConv::SPIR_FUNC;
+  }
 
   bool runOnModule(Module &M) override;
 
@@ -230,7 +238,10 @@ public:
         F->hasFnAttribute(Attribute::Naked))
       return false;
 
-    if (F->getCallingConv() != CallingConv::C)
+    if (ABI->ignoreFunction(F))
+      return false;
+
+    if (!isValidCallingConv(F))
       return false;
 
     if (rewriteABI())
@@ -249,7 +260,7 @@ public:
         return false;
       }
 
-      if (CI->getCallingConv() != CallingConv::C)
+      if (!isValidCallingConv(CI))
         return false;
 
       return true;
@@ -609,6 +620,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
+  if (ABI->ignoreFunction(CB->getCalledFunction()))
+    return Changed;
+
   if (!expansionApplicableToFunctionCall(CB)) {
     if (rewriteABI())
       report_fatal_error("Cannot lower callbase instruction");
@@ -940,6 +954,39 @@ struct NVPTX final : public VariadicABIInfo {
   }
 };
 
+struct SPIRV final : public VariadicABIInfo {
+
+  bool enableForTarget() override { return true; }
+
+  bool vaListPassedInSSARegister() override { return true; }
+
+  Type *vaListType(LLVMContext &Ctx) override {
+    return PointerType::getUnqual(Ctx);
+  }
+
+  Type *vaListParameterType(Module &M) override {
+    return PointerType::getUnqual(M.getContext());
+  }
+
+  Value *initializeVaList(Module &M, LLVMContext &Ctx, IRBuilder<> &Builder,
+                          AllocaInst *, Value *Buffer) override {
+    return Builder.CreateAddrSpaceCast(Buffer, vaListParameterType(M));
+  }
+
+  VAArgSlotInfo slotInfo(const DataLayout &DL, Type *Parameter) override {
+    // Expects natural alignment in all cases. The variadic call ABI will handle
+    // promoting types to their appropriate size and alignment.
+    Align A = DL.getABITypeAlign(Parameter);
+    return {A, false};
+  }
+
+  // The SPIR-V backend has special handling for SPIR-V mangled printf
+  // functions.
+  bool ignoreFunction(Function *F) override {
+    return F->getName().starts_with('_') && F->getName().contains("printf");
+  }
+};
+
 struct Wasm final : public VariadicABIInfo {
 
   bool enableForTarget() override {
@@ -993,6 +1040,11 @@ std::unique_ptr<VariadicABIInfo> VariadicABIInfo::create(const Triple &T) {
   case Triple::nvptx:
   case Triple::nvptx64: {
     return std::make_unique<NVPTX>();
+  }
+
+  case Triple::spirv:
+  case Triple::spirv64: {
+    return std::make_unique<SPIRV>();
   }
 
   default:
