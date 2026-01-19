@@ -1507,7 +1507,9 @@ PdbAstBuilderClang::ToCompilerDeclContext(clang::DeclContext *context) {
 }
 
 clang::Decl *PdbAstBuilderClang::FromCompilerDecl(CompilerDecl decl) {
-  return ClangUtil::GetDecl(decl);
+  if (decl.GetTypeSystem() != nullptr)
+    return ClangUtil::GetDecl(decl);
+  return nullptr;
 }
 
 clang::DeclContext *
