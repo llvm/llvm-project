@@ -869,16 +869,12 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   if (!srcAlloca)
     return false;
 
-  ConstantInt *srcArraySize = dyn_cast<ConstantInt>(srcAlloca->getArraySize());
-  if (!srcArraySize)
-    return false;
-
   const DataLayout &DL = cpyLoad->getDataLayout();
-  TypeSize SrcAllocaSize = DL.getTypeAllocSize(srcAlloca->getAllocatedType());
-  // We can't optimize scalable types.
-  if (SrcAllocaSize.isScalable())
+  // We can't optimize scalable types or variable-length allocas.
+  std::optional<TypeSize> SrcAllocaSize = srcAlloca->getAllocationSize(DL);
+  if (!SrcAllocaSize || SrcAllocaSize->isScalable())
     return false;
-  uint64_t srcSize = SrcAllocaSize * srcArraySize->getZExtValue();
+  uint64_t srcSize = SrcAllocaSize->getFixedValue();
 
   if (cpySize < srcSize)
     return false;
