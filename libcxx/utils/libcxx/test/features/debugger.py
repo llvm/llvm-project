@@ -10,6 +10,41 @@ from libcxx.test.dsl import Feature, AddSubstitution
 import shutil
 import subprocess
 
+# Detect whether dbx debugger (available on AIX and others) is on the system.
+def check_dbx(cfg):
+    dbx_path = shutil.which("dbx")
+    if dbx_path is None:
+        return False
+
+    return True
+
+
+DEFAULT_FEATURES += [
+    Feature(
+        name="host-has-dbx",
+        when=check_dbx,
+        actions=[AddSubstitution("%{dbx}", lambda cfg: shutil.which("dbx"))],
+    )
+]
+
+
+# Detect whether LLDB debugger is on the system.
+def check_lldb(cfg):
+    lldb_path = shutil.which("lldb")
+    if lldb_path is None:
+        return False
+
+    return True
+
+
+DEFAULT_FEATURES += [
+    Feature(
+        name="host-has-lldb",
+        when=check_lldb,
+        actions=[AddSubstitution("%{lldb}", lambda cfg: shutil.which("lldb"))],
+    )
+]
+
 # Detect whether GDB is on the system, has Python scripting and supports
 # adding breakpoint commands. If so add a substitution to access it.
 def check_gdb(cfg):

@@ -38,8 +38,6 @@ What's New in Libc++ 22.0.0?
 Implemented Papers
 ------------------
 
-- P2546R5: Debugging support (`Github <https://llvm.org/PR105392>`__)
-- P2810R4: ``is_debugger_present`` is_replaceable(`Github <https://llvm.org/PR105422>`__)
 - P2592R3: Hashing support for ``std::chrono`` value classes (`Github <https://llvm.org/PR105358>`__)
 - P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``,
   ``adjacent_view``, and ``adjacent_transform_view`` are implemented in this release)

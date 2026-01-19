@@ -185,7 +185,7 @@ lit_header_restrictions = {
     "coroutine": "// UNSUPPORTED: c++03, c++11, c++14, c++17",
     "cwchar": "// UNSUPPORTED: no-wide-characters",
     "cwctype": "// UNSUPPORTED: no-wide-characters",
-    "debugging": "// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23",
+    "debugging": "// REQUIRES: std-at-least-c++26",
     "experimental/iterator": "// UNSUPPORTED: c++03",
     "experimental/propagate_const": "// UNSUPPORTED: c++03",
     "experimental/simd": "// UNSUPPORTED: c++03",
