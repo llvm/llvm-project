@@ -13,7 +13,7 @@
 #include "src/__support/math/logf.h"
 
 namespace LIBC_NAMESPACE_DECL {
-    
+
 namespace shared {
 using math::logf;
 } // namespace shared
