@@ -139,7 +139,6 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log1p(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log2(1.0));
 =======
-  EXPECT_EQ(0, LIBC_NAMESPACE::shared::llogbl(1.0L));
 >>>>>>> 238d90f8ed77 (fix: [libc][math] Refactor llogbl implementation to header-only in src/__support/math folder)
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::sin(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::sqrt(0.0));
@@ -180,3 +179,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
+
+TEST(LlvmLibcSharedMathTest, AllLongDouble) {
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::llogbl(1.0L));
+}
