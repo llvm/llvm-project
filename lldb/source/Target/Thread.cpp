@@ -1888,9 +1888,9 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
                          uint32_t num_frames, uint32_t num_frames_with_source,
                          bool stop_format, bool show_hidden, bool only_stacks) {
 
-  ExecutionContext exe_ctx(shared_from_this());
-  Target *target = exe_ctx.GetTargetPtr();
   if (!only_stacks) {
+    ExecutionContext exe_ctx(shared_from_this());
+    Target *target = exe_ctx.GetTargetPtr();
     Process *process = exe_ctx.GetProcessPtr();
     strm.Indent();
     bool is_selected = false;
@@ -1924,19 +1924,16 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
 
     const bool show_frame_info = true;
     const bool show_frame_unique = only_stacks;
-    bool show_selected_frame = false;
+    const char *selected_frame_marker = nullptr;
     if (num_frames == 1 || only_stacks ||
         (GetID() != GetProcess()->GetThreadList().GetSelectedThread()->GetID()))
       strm.IndentMore();
     else
-      show_selected_frame = true;
+      selected_frame_marker = "* ";
 
-    bool show_hidden_marker =
-        target && target->GetDebugger().GetMarkHiddenFrames();
     num_frames_shown = GetStackFrameList()->GetStatus(
         strm, start_frame, num_frames, show_frame_info, num_frames_with_source,
-        show_frame_unique, show_hidden, show_hidden_marker,
-        show_selected_frame);
+        show_frame_unique, show_hidden, selected_frame_marker);
     if (num_frames == 1)
       strm.IndentLess();
     strm.IndentLess();
@@ -2036,13 +2033,9 @@ size_t Thread::GetStackFrameStatus(Stream &strm, uint32_t first_frame,
                                    uint32_t num_frames, bool show_frame_info,
                                    uint32_t num_frames_with_source,
                                    bool show_hidden) {
-  ExecutionContext exe_ctx(shared_from_this());
-  Target *target = exe_ctx.GetTargetPtr();
-  bool show_hidden_marker =
-      target && target->GetDebugger().GetMarkHiddenFrames();
-  return GetStackFrameList()->GetStatus(
-      strm, first_frame, num_frames, show_frame_info, num_frames_with_source,
-      /*show_unique*/ false, show_hidden, show_hidden_marker);
+  return GetStackFrameList()->GetStatus(strm, first_frame, num_frames,
+                                        show_frame_info, num_frames_with_source,
+                                        /*show_unique*/ false, show_hidden);
 }
 
 Unwind &Thread::GetUnwinder() {

@@ -1431,3 +1431,25 @@ void not_silenced_via_conditional(bool cond) {
   (void)v;  // expected-note 2 {{later used here}}
 }
 } // namespace do_not_warn_on_std_move
+
+// Implicit this annotations with redecls.
+namespace GH172013 {
+// https://github.com/llvm/llvm-project/issues/62072
+// https://github.com/llvm/llvm-project/issues/172013
+struct S {
+    View x() const [[clang::lifetimebound]];
+    MyObj i;
+};
+
+View S::x() const { return i; }
+
+void bar() {
+    View x;
+    {
+        S s;
+        x = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
+        View y = S().x(); // FIXME: Handle temporaries.
+    } // expected-note {{destroyed here}}
+    (void)x; // expected-note {{used here}}
+}
+}
