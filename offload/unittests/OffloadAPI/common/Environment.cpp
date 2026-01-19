@@ -116,7 +116,9 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
             ol_platform_backend_t Backend;
             olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
                               sizeof(Backend), &Backend);
-            if (Backend != OL_PLATFORM_BACKEND_HOST) {
+            ol_device_handle_t Host;
+            olGetHostDevice(&Host);
+            if (D != Host) {
               auto *OutDevices = static_cast<decltype(Devices) *>(Data);
               std::string Name;
               raw_string_ostream NameStr(Name);
@@ -139,23 +141,7 @@ ol_device_handle_t TestEnvironment::getHostDevice() {
   static ol_device_handle_t HostDevice = nullptr;
 
   if (!HostDevice) {
-    olIterateDevices(
-        [](ol_device_handle_t D, void *Data) {
-          ol_platform_handle_t Platform;
-          olGetDeviceInfo(D, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
-                          &Platform);
-          ol_platform_backend_t Backend;
-          olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
-                            &Backend);
-
-          if (Backend == OL_PLATFORM_BACKEND_HOST) {
-            *(static_cast<ol_device_handle_t *>(Data)) = D;
-            return false;
-          }
-
-          return true;
-        },
-        &HostDevice);
+    olGetHostDevice(&HostDevice);
   }
 
   return HostDevice;

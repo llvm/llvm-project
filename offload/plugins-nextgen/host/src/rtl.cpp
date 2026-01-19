@@ -299,10 +299,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    // This function should never be called because the function
-    // GenELF64PluginTy::isDataExchangable() returns false.
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "dataExchangeImpl not supported");
+    std::memcpy(DstPtr, SrcPtr, Size);
+    return Plugin::success();
   }
 
   /// Insert a data fence between previous data operations and the following
@@ -342,8 +340,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// This plugin does not support interoperability
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "initAsyncInfoImpl not supported");
+    return Plugin::success();
   }
 
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
@@ -379,6 +376,22 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Expected<InfoTreeNode> obtainInfoImpl() override {
     InfoTreeNode Info;
     Info.add("Device Type", "Generic-elf-64bit");
+    Info.add("Product Name", "Host", "", DeviceInfo::PRODUCT_NAME);
+    Info.add("Device Name", " Host Device", "", DeviceInfo::NAME);
+    Info.add("Max Group size", 1, "", DeviceInfo::MAX_WORK_GROUP_SIZE);
+    auto &MaxGroupSize =
+      *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
+                DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
+    MaxGroupSize.add("x", 1);
+    MaxGroupSize.add("y", 1);
+    MaxGroupSize.add("z", 1);
+    Info.add("Maximum Grid Dimensions", 1,
+           "", DeviceInfo::MAX_WORK_SIZE);
+    auto &MaxSize = *Info.add("Grid Size per Dimension", std::monostate{}, "",
+                            DeviceInfo::MAX_WORK_SIZE_PER_DIMENSION);
+    MaxSize.add("x", 1);
+    MaxSize.add("y", 1);
+    MaxSize.add("z", 1);
     return Info;
   }
 
@@ -472,7 +485,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 
   /// This plugin does not support exchanging data between two devices.
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
-    return false;
+    return true;
   }
 
   /// All images (ELF-compatible) should be compatible with this plugin.
