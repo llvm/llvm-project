@@ -2249,7 +2249,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   }
 
   // Call target-specific source line recording.
-  recordTargetSourceLine(*MI, DL, Flags);
+  recordTargetSourceLine(DL, Flags);
 
   // If we're not at line 0, remember this location.
   if (DL.getLine())
@@ -2257,8 +2257,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
 }
 
 // Default implementation of target-specific source line recording.
-void DwarfDebug::recordTargetSourceLine(const MachineInstr &MI,
-                                        const DebugLoc &DL, unsigned Flags) {
+void DwarfDebug::recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) {
   SmallString<128> LocationString;
   if (Asm->OutStreamer->isVerboseAsm()) {
     raw_svector_ostream OS(LocationString);

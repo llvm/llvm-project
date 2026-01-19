@@ -70,8 +70,6 @@ NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {}
 //   enabling reconstruction of inline call chains from the line table.
 // - a `function_name` column[2]: the `.loc ... function_name <sym>` identifies
 //   the inlined callee associated with a non-zero context.
-//   The `<sym>` is typically a label (or label+immediate) referring into
-//   `.debug_str`.
 //
 // References:
 // - [1] DWARF line tables / Two-Level Line Tables:
@@ -80,10 +78,8 @@ NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {}
 //   https://dwarfstd.org/issues/140906.1.html
 // - [3] NVIDIA PTX ISA `.loc` (debugging directives; PTX ISA 7.2+):
 //   https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#debugging-directives-loc
-
-void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
-                                                   unsigned Flags) {
-  const DebugLoc &DL = MI.getDebugLoc();
+void NVPTXDwarfDebug::recordTargetSourceLine(const DebugLoc &DL,
+                                             unsigned Flags) {
   // Maintain a work list of .loc to be emitted. If we are emitting the
   // inlined_at directive, we might need to emit additional .loc prior
   // to it for the location contained in the inlined_at.
@@ -94,8 +90,12 @@ void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
   if (!EmitLoc)
     return;
 
-  const DISubprogram *SP = MI.getMF()->getFunction().getSubprogram();
-  const NVPTXSubtarget &STI = MI.getMF()->getSubtarget<NVPTXSubtarget>();
+  const MachineFunction *MF = Asm->MF;
+  if (!MF)
+    return;
+
+  const DISubprogram *SP = MF->getFunction().getSubprogram();
+  const NVPTXSubtarget &STI = MF->getSubtarget<NVPTXSubtarget>();
   const bool EnhancedLineinfo =
       LineInfoWithInlinedAt && (STI.getPTXVersion() >= 72) && SP &&
       (SP->getUnit()->isDebugDirectivesOnly() ||
@@ -174,12 +174,4 @@ void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
 void NVPTXDwarfDebug::initializeTargetDebugInfo(const MachineFunction &MF) {
   // Clear the set of emitted inlined_at locations for each new function.
   EmittedInlinedAtLocs.clear();
-}
-
-// NVPTX-specific source line recording with inlined_at support.
-void NVPTXDwarfDebug::recordTargetSourceLine(const MachineInstr &MI,
-                                             const DebugLoc &DL,
-                                             unsigned Flags) {
-  // Call NVPTX-specific implementation that handles inlined_at.
-  recordSourceLineAndInlinedAt(MI, Flags);
 }

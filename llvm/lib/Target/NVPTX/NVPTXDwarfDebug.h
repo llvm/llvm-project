@@ -37,12 +37,7 @@ protected:
   /// Override to collect inlined_at locations.
   void initializeTargetDebugInfo(const MachineFunction &MF) override;
   /// Override to record source line information with inlined_at support.
-  void recordTargetSourceLine(const MachineInstr &MI, const DebugLoc &DL,
-                              unsigned Flags) override;
-
-private:
-  /// NVPTX-specific source line recording with inlined_at support.
-  void recordSourceLineAndInlinedAt(const MachineInstr &MI, unsigned Flags);
+  void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) override;
 };
 
 } // end namespace llvm
