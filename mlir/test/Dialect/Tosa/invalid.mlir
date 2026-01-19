@@ -292,7 +292,7 @@ func.func @test_pad_const_non_const(%arg0: tensor<13x21x3xi8>, %arg1: tensor<1xi
 func.func @test_pad_io_rank_mismatch(%arg0: tensor<13x21xf32>) {
   %0 = tosa.const_shape {values = dense<1> : tensor<4xindex>} : () -> !tosa.shape<4>
   %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
-  // expected-error@+1 {{'tosa.pad' op expect same input and output tensor rank}}
+  // expected-error@+1 {{'tosa.pad' op input rank (2) does not match output rank (3)}}
   %1 = tosa.pad %arg0, %0, %pad_const : (tensor<13x21xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<13x21x3xf32>
 }
 
@@ -663,7 +663,7 @@ func.func @test_tile_invalid_multiples_value() {
 func.func @test_tile_io_rank_mismatch() {
   %0 = tensor.empty() : tensor<4x31xf32>
   %multiples = tosa.const_shape { values = dense<[2, 2]> : tensor<2xindex> } : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.tile' op expect same input and output tensor rank.}}
+  // expected-error@+1 {{'tosa.tile' op input rank (2) does not match output rank (3)}}
   %1 = tosa.tile %0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<4x31x31xf32>
   return
 }
@@ -682,7 +682,7 @@ func.func @test_table_rank0_table(%arg0: tensor<64xi16>, %arg1: tensor<i16>) {
 
 // CHECK-LABEL: test_table_io_rank_mismatch
 func.func @test_table_io_rank_mismatch(%arg0: tensor<64xi16>, %arg1: tensor<6xi16>) {
-  // expected-error@+1 {{'tosa.table' op expected input tensor rank to equal result tensor rank}}
+  // expected-error@+1 {{'tosa.table' op input rank (1) does not match result rank (2)}}
   %0 = tosa.table %arg0, %arg1 : (tensor<64xi16>, tensor<6xi16>) -> tensor<64x?xi16>
   return
 }
