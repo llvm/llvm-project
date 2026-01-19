@@ -323,6 +323,7 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
   };
 
+  // Extract buildid information from the input profile in the start() function.
   if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
     return;
 
@@ -414,35 +415,47 @@ void DataAggregator::generatePerfTextData() {
   if (opts::ParseMemProfile)
     ProcessInfos.push_back(&MemEventsPPI);
 
-  // Create a file header as a table of the contents
-  // PERFTEXT;EVENT1={$SIZE};EVENT2={$SIZE}...
-  OutFile << PerfTextMagicStr << ";";
+  // Create a file header as a table of the contents.
+  // Initially pre-allocate enough space for the header at the beginning of
+  // the file.
+  // The header can be maximum 132 character, this number is pre-calculated,
+  // the sum of the length of the magic strings, event names, their sizes,
+  // and the field separators.
+  // PERFTEXT;EVENT1={0x$SIZE};EVENT2={0x$SIZE}...
+  // The size of the events are printed in hex format (16 width) in order to be
+  // predictable fixed length.
+  OutFile << std::string(132, ' ') << "\n";
+  std::string Header;
+  raw_string_ostream SS(Header);
+  SS << PerfTextMagicStr << ";";
   for (const auto PPI : ProcessInfos) {
     std::string Error;
+    auto PathData = PPI->StdoutPath.data();
     sys::Wait(PPI->PI, std::nullopt, &Error);
     if (!Error.empty()) {
       errs() << "PERF-ERROR: " << PerfPath << ": " << Error << "\n";
       deleteTempFiles();
       exit(1);
     }
-    uint64_t FS = getFileSize(PPI->StdoutPath.data());
-    OutFile << PPI->Type << "=" << FS << ";";
-  }
-  OutFile << "\n";
 
-  // Merge all perf-scripts jobs' output into the single OutputFile
-  for (const auto PPI : ProcessInfos) {
+    SS << PPI->Type << formatv("={0:x16};", getFileSize(PathData));
+
+    // Merge all perf-scripts jobs' output into the single OutputFile
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-        MemoryBuffer::getFileOrSTDIN(PPI->StdoutPath.data());
+        MemoryBuffer::getFileOrSTDIN(PathData);
     if (std::error_code EC = MB.getError()) {
-      errs() << "Cannot open " << PPI->StdoutPath.data() << ": " << EC.message()
-             << "\n";
+      errs() << "Cannot open " << PathData << ": " << EC.message() << "\n";
       deleteTempFiles();
       exit(1);
     }
     OutFile << (*MB)->getBuffer();
   }
+
+  OutFile.seek(0);
+  OutFile << Header;
   OutFile.close();
+  outs() << "PERF2BOLT: Profile is saved to file " << opts::OutputFilename
+         << "\n";
   deleteTempFiles();
   exit(0);
 }
