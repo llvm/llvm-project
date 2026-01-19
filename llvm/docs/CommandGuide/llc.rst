@@ -192,6 +192,41 @@ Tuning/Configuration Options
 
   Register allocator based on 'Partitioned Boolean Quadratic Programming'.
 
+.. option:: --regalloc-npm=<pipeline>
+
+ Specify a register allocator pipeline for the new pass manager. This option
+ requires ``-enable-new-pm``. The ``<pipeline>`` is a comma-separated list of
+ register allocator passes that must match the number of allocation phases
+ expected by the target. Cannot be used together with ``--passes``.
+
+ Valid passes are:
+
+ *regallocfast*
+
+  Fast register allocator. Only valid at ``-O0``.
+
+ *greedy<filter>*
+
+  Greedy register allocator. The optional ``<filter>`` restricts allocation
+  to specific register classes. Valid filters are target-dependent:
+  ``all`` (default), ``sgpr``/``vgpr``/``wwm`` (AMDGPU), ``tile-reg`` (X86).
+
+ *default*
+
+  Use the target's default allocator for this phase.
+
+ The number of passes should match the target's allocation phases. Most targets
+ use single-phase allocation. X86 with AMX uses two phases (tile, then general).
+ AMDGPU uses three phases (SGPR, WWM, VGPR). Specifying more passes than the
+ target expects results in an error. Specifying fewer is allowed; remaining
+ phases use target defaults.
+
+ .. code-block:: none
+
+   llc -enable-new-pm -regalloc-npm=greedy input.ll
+   llc -enable-new-pm -mtriple=x86_64 -regalloc-npm='greedy<tile-reg>,default' input.ll
+   llc -enable-new-pm -mtriple=amdgcn -regalloc-npm='greedy<sgpr>,greedy<wwm>,greedy<vgpr>' input.ll
+
 .. option:: --spiller=<spiller>
 
  Specify the spiller to use for register allocators that support it.  Currently
