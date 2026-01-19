@@ -49,16 +49,14 @@ Sections:
 
   ModuleSP first_module;
   bool first_did_create = false;
-  Status error_first =
-      ModuleList::GetSharedModule(ExpectedFile->moduleSpec(), first_module,
-                                  nullptr, &first_did_create, false);
+  Status error_first = ModuleList::GetSharedModule(
+      ExpectedFile->moduleSpec(), first_module, nullptr, &first_did_create);
 
   // Second call with the same spec
   ModuleSP second_module;
   bool second_did_create = false;
-  Status error_second =
-      ModuleList::GetSharedModule(ExpectedFile->moduleSpec(), second_module,
-                                  nullptr, &second_did_create, false);
+  Status error_second = ModuleList::GetSharedModule(
+      ExpectedFile->moduleSpec(), second_module, nullptr, &second_did_create);
 
   if (error_first.Success() && error_second.Success()) {
     // If both succeeded, verify they're the same module
@@ -94,7 +92,7 @@ Sections:
   ModuleSP created_module;
   bool did_create = false;
   Status error = ModuleList::GetSharedModule(
-      ExpectedFile->moduleSpec(), created_module, nullptr, &did_create, false);
+      ExpectedFile->moduleSpec(), created_module, nullptr, &did_create);
 
   if (error.Success() && created_module) {
     // Get the UUID of the created module
@@ -138,9 +136,8 @@ Sections:
   // Create and add a module to the shared module list
   ModuleSP first_module;
   bool first_did_create = false;
-  Status first_error =
-      ModuleList::GetSharedModule(ExpectedFile->moduleSpec(), first_module,
-                                  nullptr, &first_did_create, false);
+  Status first_error = ModuleList::GetSharedModule(
+      ExpectedFile->moduleSpec(), first_module, nullptr, &first_did_create);
 
   if (first_error.Success() && first_module) {
     UUID module_uuid = first_module->GetUUID();
@@ -155,7 +152,7 @@ Sections:
       ModuleSP second_module;
       bool second_did_create = false;
       Status second_error = ModuleList::GetSharedModule(
-          second_spec, second_module, nullptr, &second_did_create, false);
+          second_spec, second_module, nullptr, &second_did_create);
 
       if (second_error.Success() && second_module) {
         // If we got a module back, check if it's the same one
