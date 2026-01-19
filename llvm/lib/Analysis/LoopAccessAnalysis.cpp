@@ -1042,6 +1042,8 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
           if (getLoadStorePointerOperand(U) != GEP)
             return false;
           BasicBlock *UserBB = cast<Instruction>(U)->getParent();
+          if (!L->contains(UserBB))
+            return false;
           return !LoopAccessInfo::blockNeedsPredication(UserBB, L, &DT);
         }))
       return true;
