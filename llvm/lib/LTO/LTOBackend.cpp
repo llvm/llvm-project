@@ -74,6 +74,12 @@ static cl::opt<bool> ThinLTOAssumeMerged(
     cl::desc("Assume the input has already undergone ThinLTO function "
              "importing and the other pre-optimization pipeline changes."));
 
+static cl::list<std::string>
+    SaveModulesList("filter-save-modules", cl::value_desc("module names"),
+                    cl::desc("Only save bitcode for module whose name without "
+                             "path matches this for -save-temps options"),
+                    cl::CommaSeparated, cl::Hidden);
+
 namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
 }
@@ -102,7 +108,17 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
   auto setHook = [&](std::string PathSuffix, ModuleHookFn &Hook) {
     // Keep track of the hook provided by the linker, which also needs to run.
     ModuleHookFn LinkerHook = Hook;
-    Hook = [=](unsigned Task, const Module &M) {
+    Hook = [=, SaveModNames = llvm::SmallVector<std::string, 1>(
+                   SaveModulesList.begin(), SaveModulesList.end())](
+               unsigned Task, const Module &M) {
+      // If SaveModulesList is not empty, only do save-temps if the module's
+      // filename (without path) matches a name in the list.
+      if (!SaveModNames.empty() &&
+          !llvm::is_contained(
+              SaveModNames,
+              std::string(llvm::sys::path::filename(M.getName()))))
+        return false;
+
       // If the linker's hook returned false, we need to pass that result
       // through.
       if (LinkerHook && !LinkerHook(Task, M))
