@@ -69,11 +69,10 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
       "128:48-p9:192:256:256:32");
 
   // Check that SystemZ adds -S64 if needed.
-  EXPECT_EQ(
-      UpgradeDataLayoutString(
-          "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64",
-          "systemz"),
-          "E-S64-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64");
+  EXPECT_EQ(UpgradeDataLayoutString(
+                "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64",
+                "systemz"),
+            "E-S64-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64");
 
   // Check that RISCV64 upgrades -n64 to -n32:64.
   EXPECT_EQ(UpgradeDataLayoutString("e-m:e-p:64:64-i64:64-i128:128-n64-S128",
