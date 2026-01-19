@@ -137,6 +137,12 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     return It->second;
 
   QualType Type = E->getType();
+  // Special handling for 'this' expressions to share origins with the method's
+  // implicit object parameter.
+  if (isa<CXXThisExpr>(E)) {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(CurrentDecl))
+      return getOrCreateList(MD);
+  }
 
   // Special handling for DeclRefExpr to share origins with the underlying decl.
   if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
@@ -167,6 +173,13 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
   if (E->isGLValue() && !Type->isReferenceType())
     Type = AST.getLValueReferenceType(Type);
   return ExprToList[E] = buildListForType(Type, E);
+}
+
+OriginList *OriginManager::getOrCreateList(const CXXMethodDecl *MD) {
+  auto It = DeclToList.find(MD);
+  if (It != DeclToList.end())
+    return It->second;
+  return DeclToList[MD] = buildListForType(MD->getThisType(), MD);
 }
 
 void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {

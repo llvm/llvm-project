@@ -610,10 +610,18 @@ void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
 // parameter at the function's entry.
 llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   const auto *FD = dyn_cast<FunctionDecl>(AC.getDecl());
-  if (!FD)
+  if (!FD || FD->isImplicit())
     return {};
 
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
+  const Decl *D = AC.getDecl();
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(D); MD && MD->isInstance()) {
+    OriginList *List = FactMgr.getOriginMgr().getOrCreateList(MD);
+    const PlaceholderLoan *L =
+        FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(MD);
+    PlaceholderLoanFacts.push_back(
+        FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
+  }
   for (const ParmVarDecl *PVD : FD->parameters()) {
     OriginList *List = getOriginsList(*PVD);
     if (!List)

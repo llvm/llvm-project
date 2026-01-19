@@ -60,6 +60,10 @@ public:
   virtual void suggestAnnotation(SuggestionScope Scope,
                                  const ParmVarDecl *ParmToAnnotate,
                                  const Expr *EscapeExpr) {}
+
+  // Suggests lifetime bound annotations for implicit this
+  virtual void suggestAnnotation(SuggestionScope Scope, const CXXMethodDecl *MD,
+                                 const Expr *EscapeExpr) {}
 };
 
 /// The main entry point for the analysis.

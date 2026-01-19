@@ -2919,6 +2919,30 @@ public:
         << EscapeExpr->getSourceRange();
   }
 
+  void suggestAnnotation(SuggestionScope Scope, const CXXMethodDecl *MD,
+                         const Expr *EscapeExpr) override {
+    unsigned DiagID = (Scope == SuggestionScope::CrossTU)
+                          ? diag::warn_lifetime_safety_this_cross_tu_suggestion
+                          : diag::warn_lifetime_safety_this_intra_tu_suggestion;
+
+    SourceLocation InsertionPoint;
+    if (auto *TSI = MD->getTypeSourceInfo())
+      InsertionPoint =
+          Lexer::getLocForEndOfToken(TSI->getTypeLoc().getEndLoc(), 0,
+                                     S.getSourceManager(), S.getLangOpts());
+    else
+      InsertionPoint = MD->getLocation();
+
+    S.Diag(InsertionPoint, DiagID)
+        << MD->getNameInfo().getSourceRange()
+        << FixItHint::CreateInsertion(InsertionPoint,
+                                      " [[clang::lifetimebound]]");
+
+    S.Diag(EscapeExpr->getBeginLoc(),
+           diag::note_lifetime_safety_suggestion_returned_here)
+        << EscapeExpr->getSourceRange();
+  }
+
 private:
   Sema &S;
 };

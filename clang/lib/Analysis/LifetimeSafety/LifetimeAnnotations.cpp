@@ -54,6 +54,8 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
 
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+  if (FD->hasAttr<LifetimeBoundAttr>())
+    return true;
   const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
   if (!TSI)
     return false;

@@ -161,16 +161,21 @@ static View return_view_static(View a) {  // expected-warning {{parameter in int
   return a;                               // expected-note {{param returned here}} 
 }
 
-//===----------------------------------------------------------------------===//
-// FIXME Test Cases
-//===----------------------------------------------------------------------===//
-
-struct ReturnsSelf {
-  const ReturnsSelf& get() const {
-    return *this;
+struct ReturnThis {
+  const ReturnThis& get() {      // expected-warning {{implict this in intra-TU function should be marked [[clang::lifetimebound]]}}.
+    return *this;                // expected-note {{param returned here}}
   }
 };
 
+struct ReturnsSelf {
+  const ReturnsSelf& get() const { // expected-warning {{implict this in intra-TU function should be marked [[clang::lifetimebound]]}}.
+    return *this;                  // expected-note {{param returned here}}
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// FIXME Test Cases
+//===----------------------------------------------------------------------===//
 struct ViewProvider {
   MyObj data;
   View getView() const {

@@ -10832,6 +10832,18 @@ def warn_lifetime_safety_cross_tu_suggestion
       InGroup<LifetimeSafetyCrossTUSuggestions>,
       DefaultIgnore;
 
+def warn_lifetime_safety_this_intra_tu_suggestion
+    : Warning<"implict this in intra-TU function should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyIntraTUSuggestions>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_this_cross_tu_suggestion
+    : Warning<"implicit this in cross-TU function should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyCrossTUSuggestions>,
+      DefaultIgnore;
+
 def note_lifetime_safety_suggestion_returned_here : Note<"param returned here">;
 
 // For non-floating point, expressions of the form x == x or x != x

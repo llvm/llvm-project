@@ -49,10 +49,13 @@ struct PendingWarning {
   Confidence ConfidenceLevel;
 };
 
+using AnnotationTarget =
+    llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
+
 class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
-  llvm::DenseMap<const ParmVarDecl *, const Expr *> AnnotationWarningsMap;
+  llvm::DenseMap<AnnotationTarget, const Expr *> AnnotationWarningsMap;
   const LoanPropagationAnalysis &LoanPropagation;
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
@@ -88,10 +91,14 @@ public:
     for (LoanID LID : EscapedLoans) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
       if (const auto *PL = dyn_cast<PlaceholderLoan>(L)) {
-        const ParmVarDecl *PVD = PL->getParmVarDecl();
-        if (PVD->hasAttr<LifetimeBoundAttr>())
-          continue;
-        AnnotationWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
+        if (const auto *PVD = PL->getParmVarDecl()) {
+          if (PVD->hasAttr<LifetimeBoundAttr>())
+            continue;
+          AnnotationWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
+        } else if (const auto *MD = PL->getMethodDecl()) {
+          if (!implicitObjectParamIsLifetimeBound(MD))
+            AnnotationWarningsMap.try_emplace(MD, OEF->getEscapeExpr());
+        }
       }
     }
   }
@@ -164,18 +171,22 @@ public:
 
   /// Returns the declaration of a function that is visible across translation
   /// units, if such a declaration exists and is different from the definition.
-  static const FunctionDecl *getCrossTUDecl(const ParmVarDecl &PVD,
+  static const FunctionDecl *getCrossTUDecl(const FunctionDecl &FD,
                                             SourceManager &SM) {
-    const auto *FD = dyn_cast<FunctionDecl>(PVD.getDeclContext());
-    if (!FD)
+    if (!FD.isExternallyVisible())
       return nullptr;
-    if (!FD->isExternallyVisible())
-      return nullptr;
-    const FileID DefinitionFile = SM.getFileID(FD->getLocation());
-    for (const FunctionDecl *Redecl : FD->redecls())
+    const FileID DefinitionFile = SM.getFileID(FD.getLocation());
+    for (const FunctionDecl *Redecl : FD.redecls())
       if (SM.getFileID(Redecl->getLocation()) != DefinitionFile)
         return Redecl;
 
+    return nullptr;
+  }
+
+  static const FunctionDecl *getCrossTUDecl(const ParmVarDecl &PVD,
+                                            SourceManager &SM) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(PVD.getDeclContext()))
+      return getCrossTUDecl(*FD, SM);
     return nullptr;
   }
 
@@ -183,31 +194,47 @@ public:
     if (!Reporter)
       return;
     SourceManager &SM = AST.getSourceManager();
-    for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap) {
-      if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
-        Reporter->suggestAnnotation(
-            SuggestionScope::CrossTU,
-            CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
-            EscapeExpr);
-      else
-        Reporter->suggestAnnotation(SuggestionScope::IntraTU, PVD, EscapeExpr);
+    for (const auto &[Target, EscapeExpr] : AnnotationWarningsMap) {
+      if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>()) {
+        if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
+          Reporter->suggestAnnotation(
+              SuggestionScope::CrossTU,
+              CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
+              EscapeExpr);
+        else
+          Reporter->suggestAnnotation(SuggestionScope::IntraTU, PVD,
+                                      EscapeExpr);
+      } else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
+        if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
+          Reporter->suggestAnnotation(SuggestionScope::CrossTU,
+                                      cast<const CXXMethodDecl>(CrossTUDecl),
+                                      EscapeExpr);
+        else
+          Reporter->suggestAnnotation(SuggestionScope::IntraTU, MD, EscapeExpr);
+      }
     }
   }
 
   void inferAnnotations() {
-    for (const auto &[ConstPVD, EscapeExpr] : AnnotationWarningsMap) {
-      ParmVarDecl *PVD = const_cast<ParmVarDecl *>(ConstPVD);
-      const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
-      if (!FD)
-        continue;
-      // Propagates inferred attributes via the most recent declaration to
-      // ensure visibility for callers in post-order analysis.
-      FD = getDeclWithMergedLifetimeBoundAttrs(FD);
-      ParmVarDecl *InferredPVD = const_cast<ParmVarDecl *>(
-          FD->getParamDecl(PVD->getFunctionScopeIndex()));
-      if (!InferredPVD->hasAttr<LifetimeBoundAttr>())
-        InferredPVD->addAttr(
-            LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
+    for (const auto &[Target, EscapeExpr] : AnnotationWarningsMap) {
+      if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
+        CXXMethodDecl *MutableMD = const_cast<CXXMethodDecl *>(MD);
+        if (!MutableMD->hasAttr<LifetimeBoundAttr>())
+          MutableMD->addAttr(
+              LifetimeBoundAttr::CreateImplicit(AST, MutableMD->getLocation()));
+      } else if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>()) {
+        const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
+        if (!FD)
+          continue;
+        // Propagates inferred attributes via the most recent declaration to
+        // ensure visibility for callers in post-order analysis.
+        FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+        ParmVarDecl *InferredPVD = const_cast<ParmVarDecl *>(
+            FD->getParamDecl(PVD->getFunctionScopeIndex()));
+        if (!InferredPVD->hasAttr<LifetimeBoundAttr>())
+          InferredPVD->addAttr(
+              LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
+      }
     }
   }
 };
