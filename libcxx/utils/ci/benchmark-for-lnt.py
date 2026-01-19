@@ -88,6 +88,8 @@ def main(argv):
                         build_dir / 'spec/libcxx/test',
                         '--filter', 'benchmarks/spec.gen.py'])
 
+        # TODO: For now, we run only a subset of the benchmarks because running the whole test suite is too slow.
+        #       Run the whole test suite once https://github.com/llvm/llvm-project/issues/173032 is resolved.
         step(f'Running microbenchmarks from {args.test_suite_commit} against libc++ {args.benchmark_commit}')
         run([args.git_repo / 'libcxx/utils/test-at-commit',
                         '--git-repo', args.git_repo,
