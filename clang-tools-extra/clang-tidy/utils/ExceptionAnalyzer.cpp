@@ -487,17 +487,14 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     CallStack.erase(Func);
     // Optionally treat unannotated functions as potentially throwing if they
     // are not explicitly non-throwing and no throw was discovered.
-    if (AssumeUnannotatedThrowing &&
+    if (AssumeUnannotatedFunctionsAsThrowing &&
         Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
       Result.registerUnknownException();
-      return Result;
     }
     return Result;
   }
 
   auto Result = ExceptionInfo::createUnknown();
-  if (MissingDefinitionsAreThrowing)
-    Result.registerUnknownException();
 
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
     for (const QualType &Ex : FPT->exceptions()) {
@@ -508,6 +505,11 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       CallStack.erase(Func);
     }
   }
+
+  if (AssumeMissingDefinitionsFunctionsAsThrowing &&
+      Result.getBehaviour() == State::Unknown)
+    Result.registerUnknownException();
+
   return Result;
 }
 

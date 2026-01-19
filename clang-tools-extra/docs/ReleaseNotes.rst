@@ -104,10 +104,12 @@ Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Improved :doc:`bugprone-exception-escape
-  <clang-tidy/checks/bugprone/exception-escape>` check by adding
-  `TreatFunctionsWithoutSpecificationAsThrowing` to support reporting for
-  unannotated functions, enabling reporting when no explicit ``throw`` is
-  seen and allowing separate tuning for known and unknown implementations.
+  <clang-tidy/checks/bugprone/exception-escape>` check:
+
+  - Added `TreatFunctionsWithoutSpecificationAsThrowing` option to support
+    reporting for unannotated functions, enabling reporting when no explicit
+    ``throw`` is seen and allowing separate tuning for known and unknown
+    implementations.
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:

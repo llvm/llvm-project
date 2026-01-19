@@ -48,10 +48,22 @@ void calls_nothrow() noexcept {
   definitely_nothrow();
 }
 
+void nothrow_nobody() throw();
+
+void call() noexcept {
+  nothrow_nobody();
+}
+
 void explicit_throw() { throw 1; }
 void calls_explicit_throw() noexcept {
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'calls_explicit_throw' which should not throw exceptions
-  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-2]]:6: warning: an exception may be thrown in function 'calls_explicit_throw' which should not throw exceptions
-  // CHECK-MESSAGES-NONE: :[[@LINE-3]]:6: warning: an exception may be thrown in function 'calls_explicit_throw' which should not throw exceptions
+  // CHECK-MESSAGES-ALL: :[[@LINE-3]]:25: note: frame #0: unhandled exception of type 'int' may be thrown in function 'explicit_throw' here
+  // CHECK-MESSAGES-ALL: :[[@LINE+7]]:3: note: frame #1: function 'calls_explicit_throw' calls function 'explicit_throw' here
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-4]]:6: warning: an exception may be thrown in function 'calls_explicit_throw' which should not throw exceptions
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-6]]:25: note: frame #0: unhandled exception of type 'int' may be thrown in function 'explicit_throw' here
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE+4]]:3: note: frame #1: function 'calls_explicit_throw' calls function 'explicit_throw' here
+  // CHECK-MESSAGES-NONE: :[[@LINE-7]]:6: warning: an exception may be thrown in function 'calls_explicit_throw' which should not throw exceptions
+  // CHECK-MESSAGES-NONE: :[[@LINE-9]]:25: note: frame #0: unhandled exception of type 'int' may be thrown in function 'explicit_throw' here
+  // CHECK-MESSAGES-NONE: :[[@LINE+1]]:3: note: frame #1: function 'calls_explicit_throw' calls function 'explicit_throw' here
   explicit_throw();
 }

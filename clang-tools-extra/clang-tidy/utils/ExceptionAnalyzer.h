@@ -144,11 +144,11 @@ public:
   enum class UnknownHandlingBehavior { Ignore, TreatAsThrowing };
 
   void setUnannotatedFunctionsBehavior(UnknownHandlingBehavior Behavior) {
-    AssumeUnannotatedThrowing =
+    AssumeUnannotatedFunctionsAsThrowing =
         Behavior == UnknownHandlingBehavior::TreatAsThrowing;
   }
   void setMissingDefinitionsBehavior(UnknownHandlingBehavior Behavior) {
-    MissingDefinitionsAreThrowing =
+    AssumeMissingDefinitionsFunctionsAsThrowing =
         Behavior == UnknownHandlingBehavior::TreatAsThrowing;
   }
 
@@ -175,8 +175,8 @@ private:
   bool IgnoreBadAlloc = true;
   llvm::StringSet<> IgnoredExceptions;
   llvm::DenseMap<const FunctionDecl *, ExceptionInfo> FunctionCache{32U};
-  bool AssumeUnannotatedThrowing = false;
-  bool MissingDefinitionsAreThrowing = false;
+  bool AssumeUnannotatedFunctionsAsThrowing = false;
+  bool AssumeMissingDefinitionsFunctionsAsThrowing = false;
 };
 
 } // namespace clang::tidy::utils
