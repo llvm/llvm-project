@@ -839,27 +839,26 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
     if (I->getParent() != BB || !isValidAssumeForContext(I, BBI))
       continue;
 
-    if (I->hasOperandBundles()) {
-      for (auto Info : I->bundle_op_infos()) {
-        if (RetainedKnowledge RK = getKnowledgeFromBundle(*I, Info)) {
-          if (RK.WasOn != Val)
-            continue;
-          switch (RK.AttrKind) {
-          case Attribute::NonNull:
+    if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
+      if (RetainedKnowledge RK = getKnowledgeFromBundle(
+              *I, I->bundle_op_info_begin()[AssumeVH.Index])) {
+        if (RK.WasOn != Val)
+          continue;
+        switch (RK.AttrKind) {
+        case Attribute::NonNull:
+          BBLV = BBLV.intersect(ValueLatticeElement::getNot(
+              Constant::getNullValue(RK.WasOn->getType())));
+          break;
+
+        case Attribute::Dereferenceable:
+          if (auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
+              CI && !CI->isZero())
             BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-                Constant::getNullValue(RK.WasOn->getType())));
-            break;
+                Constant::getNullValue(RK.IRArgValue->getType())));
+          break;
 
-          case Attribute::Dereferenceable:
-            if (auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
-                CI && !CI->isZero())
-              BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-                  Constant::getNullValue(RK.IRArgValue->getType())));
-            break;
-
-          default:
-            break;
-          }
+        default:
+          break;
         }
       }
     } else {
