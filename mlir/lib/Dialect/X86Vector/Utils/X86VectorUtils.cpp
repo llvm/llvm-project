@@ -234,12 +234,12 @@ Operation *traceToVectorWriteLikeUserOperation(Value v) {
   return nullptr;
 }
 
-static void rewriteUses(mlir::Value oldVal, mlir::Value newVal,
-                        mlir::Operation *targetContract,
-                        mlir::PatternRewriter &rewriter) {
+// TODO: replace all use with the packed value along with contration
+// and for op.
+static void rewriteUses(mlir::Value oldVal, mlir::Value newVal) {
   for (mlir::OpOperand &use : llvm::make_early_inc_range(oldVal.getUses())) {
-
     mlir::Operation *user = use.getOwner();
+
     if (mlir::isa<mlir::vector::ContractionOp>(user) ||
         mlir::isa<mlir::scf::ForOp>(user)) {
       use.set(newVal);
@@ -280,11 +280,11 @@ void shuffleAfterReadLikeOp(mlir::PatternRewriter &rewriter,
   auto newAccB =
       mlir::vector::ShapeCastOp::create(rewriter, loc, accTy, shuffleHi);
 
-  rewriteUses(opA->getResult(0), newAccA.getResult(), contractA, rewriter);
-  rewriteUses(opB->getResult(0), newAccB.getResult(), contractB, rewriter);
+  rewriteUses(opA->getResult(0), newAccA.getResult());
+  rewriteUses(opB->getResult(0), newAccB.getResult());
 }
 
-// This function shuffles the vectors written by vector.ocntract operation
+// This function shuffles the vectors written by vector.contract operation
 // as a flat layout structure before they are stored.
 void shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
                               mlir::Operation *opA, mlir::Operation *opB,
