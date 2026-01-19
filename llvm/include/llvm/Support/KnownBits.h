@@ -214,6 +214,16 @@ public:
     return *this;
   }
 
+  /// Truncate with signed saturation (signed input -> signed output)
+  LLVM_ABI KnownBits truncSSat(unsigned BitWidth) const;
+
+  /// Truncate with signed saturation to unsigned (signed input -> unsigned
+  /// output)
+  LLVM_ABI KnownBits truncSSatU(unsigned BitWidth) const;
+
+  /// Truncate with unsigned saturation (unsigned input -> unsigned output)
+  LLVM_ABI KnownBits truncUSat(unsigned BitWidth) const;
+
   /// Return known bits for a in-register sign extension of the value we're
   /// tracking.
   LLVM_ABI KnownBits sextInReg(unsigned SrcBitWidth) const;
