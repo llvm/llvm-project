@@ -1206,8 +1206,7 @@ class NVVM_TCGEN05_MMA_BLOCKSCALE<bit IsSparse, string Space,
 
 class NVVM_TCGEN05_MMA_WS<bit IsSparse, string Space, bit IsZeroColMask>:
         NVVM_TCGEN05_MMA_BASE<Space, IsSparse> {
-  string name = Prefix
-                # ".ws"
+  string name = Prefix # ".ws"
                 # SpSpaceKindStr
                 # !if(IsZeroColMask, ".zero_col_mask", "");
   string intr_name = IntrinsicName<name>.intr_name;

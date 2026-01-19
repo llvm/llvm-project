@@ -5907,8 +5907,7 @@ class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
   string ScaleInpStr = !if(IsScaleInputD, ", $scale_input_d", "");
   dag ScaleInpIntr = !if(IsScaleInputD, (Intrin i64:$scale_input_d), (Intrin));
 
-  let InOperandList = !con(BaseInOperandList,
-                           ScaleInpIns);
+  let InOperandList = !con(BaseInOperandList, ScaleInpIns);
 
   let AsmString = Prefix
                   # SpCtaKindStr
@@ -6193,7 +6192,7 @@ foreach sparse = [0, 1] in {
           } // zero_col_mask
         } // collector_usage_op
       } // collector_buffer_b
-    } //kind
+    } // kind
   } // space
 } // sparse
 
