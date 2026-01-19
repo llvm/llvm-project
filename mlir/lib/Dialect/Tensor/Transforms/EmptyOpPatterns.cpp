@@ -41,9 +41,9 @@ struct FoldEmptyTensorWithReshapeOp : public OpRewritePattern<ReshapeOp> {
       return failure();
 
     Attribute encoding;
-    if (auto tensorTy = dyn_cast<RankedTensorType>(reshapeOp.getResultType())) {
+    if (auto tensorTy = dyn_cast<RankedTensorType>(reshapeOp.getResultType()))
       encoding = tensorTy.getEncoding();
-    }
+
     // Create new tensor.empty op.
     Value emptyTensor =
         EmptyOp::create(rewriter, loc, resultShapes[0],
