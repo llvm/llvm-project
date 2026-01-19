@@ -265,12 +265,9 @@ LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg, llvm::StringRef comm_file,
 #endif
 
   lldb_private::FileSystem::Initialize();
-  if (!stdio.empty()) {
-    constexpr size_t num_of_stdio = 3;
-    llvm::SmallVector<llvm::StringRef, num_of_stdio> stdio_files;
-    stdio.split(stdio_files, ':');
-    stdio_files.resize(std::max(num_of_stdio, stdio_files.size()));
-    if (llvm::Error err = SetupIORedirection(stdio_files))
+  if (!stdin_path.empty() || !stdout_path.empty() || !stderr_path.empty()) {
+    if (llvm::Error err =
+            SetupIORedirection(stdin_path, stdout_path, stderr_path))
       return err;
   } else if ((isatty(STDIN_FILENO) != 0) &&
              llvm::StringRef(getenv("TERM")).starts_with_insensitive("xterm")) {
