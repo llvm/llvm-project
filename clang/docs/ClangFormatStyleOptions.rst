@@ -5016,7 +5016,7 @@ the configuration (without a prefix: ``Auto``).
   followed by a newline. Multiple form feeds and newlines within a
   whitespace range are replaced with a single newline and form feed
   followed by the remaining newlines. See
-  `GNU coding standards <https://www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed>`_
+  `GNU formfeed coding standard <https://www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed>`_
   for more information.
 
 .. _LambdaBodyIndentation:
