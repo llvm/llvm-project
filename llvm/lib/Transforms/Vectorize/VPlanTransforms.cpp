@@ -7435,8 +7435,8 @@ void VPlanTransforms::optimizeConditionalVPBB(VPlan &Plan) {
 
   for (const auto &List : Tries) {
     VPRecipeBase *SR = List.front();
-    VPValue *M = cast<VPWidenMemoryRecipe>(SR)->getMask();
-    assert(M && "Mask VPValue must exist at this point");
+    VPValue *Mask = cast<VPWidenMemoryRecipe>(SR)->getMask();
+    assert(Mask && "Mask VPValue must exist at this point");
     auto Recipes = reverse(List.getArrayRef());
 
     // Split the current basic block at the store recipe point so that
@@ -7455,7 +7455,13 @@ void VPlanTransforms::optimizeConditionalVPBB(VPlan &Plan) {
       R->moveBefore(*IfBB, IfBB->end());
 
     // Add the condition and branch in the parent block.
-    auto *ActiveLane = new VPInstruction(VPInstruction::AnyOf, {M}, {}, {},
+    if (HeaderMask) {
+      Mask =
+          new VPInstruction(VPInstruction::LogicalAnd, {Mask, Plan.getTrue()},
+                            {}, {}, DebugLoc::getUnknown());
+      ParentBB->appendRecipe(cast<VPInstruction>(Mask));
+    }
+    auto *ActiveLane = new VPInstruction(VPInstruction::AnyOf, {Mask}, {}, {},
                                          DebugLoc::getUnknown(), "any.of.mask");
 
     auto *BranchOnCond =
