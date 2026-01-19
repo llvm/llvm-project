@@ -4210,12 +4210,144 @@ AArch64TTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
              : ST->getVectorInsertExtractBaseCost() + 1;
 }
 
+/// Given a GEP instruction, try to determine the size of the memory region
+/// being indexed into. This traces through GEP chains to find struct fields
+/// or array types that define the bounds.
+/// Returns the size in bytes, or 0 if it cannot be determined.
+static uint64_t getIndexedRegionSize(GetElementPtrInst *GEP,
+                                     const DataLayout &DL) {
+  // The immediate GEP should be indexing with a variable (the lookup index)
+  // Look at the source pointer to find the actual table/field being accessed
+  Value *SourcePtr = GEP->getPointerOperand();
+
+  // If the source is another GEP with constant indices, we can determine
+  // the type of the field being accessed
+  if (auto *SourceGEP = dyn_cast<GetElementPtrInst>(SourcePtr)) {
+    if (SourceGEP->hasAllConstantIndices()) {
+      // Get the result type of this GEP - this is the field we're indexing into
+      Type *SourceType = SourceGEP->getSourceElementType();
+
+      // Walk through the indices to find the final field type
+      Type *CurrentType = SourceType;
+      for (auto Idx = SourceGEP->idx_begin() + 1; Idx != SourceGEP->idx_end();
+           ++Idx) {
+        if (auto *STy = dyn_cast<StructType>(CurrentType)) {
+          auto *CI = dyn_cast<ConstantInt>(*Idx);
+          if (!CI)
+            return 0;
+          unsigned FieldIdx = CI->getZExtValue();
+          if (FieldIdx >= STy->getNumElements())
+            return 0;
+          CurrentType = STy->getElementType(FieldIdx);
+        } else if (auto *ATy = dyn_cast<ArrayType>(CurrentType)) {
+          CurrentType = ATy->getElementType();
+        } else {
+          return 0;
+        }
+      }
+
+      // CurrentType is now the type of the field being indexed
+      // For TBL, we need it to be an array of i8
+      if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+        if (AT->getElementType()->isIntegerTy(8))
+          return AT->getNumElements();
+      }
+      return DL.getTypeAllocSize(CurrentType);
+    }
+  }
+
+  // If the source is a global variable, check its type
+  Value *BasePtr = SourcePtr;
+  while (auto *BaseGEP = dyn_cast<GetElementPtrInst>(BasePtr)) {
+    if (!BaseGEP->hasAllConstantIndices())
+      break;
+    BasePtr = BaseGEP->getPointerOperand();
+  }
+
+  if (auto *GV = dyn_cast<GlobalVariable>(BasePtr)) {
+    Type *GVType = GV->getValueType();
+    if (auto *AT = dyn_cast<ArrayType>(GVType)) {
+      if (AT->getElementType()->isIntegerTy(8))
+        return AT->getNumElements();
+      return AT->getNumElements() *
+             DL.getTypeAllocSize(AT->getElementType());
+    }
+    return DL.getTypeAllocSize(GVType);
+  }
+
+  return 0;
+}
+
+/// Check if the given values form a pattern that can be lowered to TBL:
+/// - All values are byte loads from GEPs with the same base
+/// - The accessed memory region is small enough for TBL (<=64 bytes)
+/// Returns the table size if the pattern matches, 0 otherwise.
+static unsigned canUseTBLForGather(ArrayRef<Value *> VL) {
+  if (VL.empty() || VL.size() < 2)
+    return 0;
+
+  Value *CommonSourcePtr = nullptr;
+  uint64_t TableSize = 0;
+
+  for (Value *V : VL) {
+    auto *LI = dyn_cast_or_null<LoadInst>(V);
+    if (!LI || !LI->getType()->isIntegerTy(8))
+      return 0;
+
+    auto *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
+    if (!GEP)
+      return 0;
+
+    // The GEP should have a variable index (the lookup index)
+    // and its source pointer should be the table/field base
+    Value *SourcePtr = GEP->getPointerOperand();
+
+    // Check that all loads use the same source pointer
+    if (!CommonSourcePtr)
+      CommonSourcePtr = SourcePtr;
+    else if (CommonSourcePtr != SourcePtr)
+      return 0;
+
+    // Get the size of the indexed region
+    const DataLayout &DL = LI->getDataLayout();
+    uint64_t Size = getIndexedRegionSize(GEP, DL);
+    if (Size == 0)
+      return 0;
+
+    // All loads should agree on the table size
+    if (TableSize == 0)
+      TableSize = Size;
+    else if (TableSize != Size)
+      return 0;
+  }
+
+  // TBL supports tables of 16, 32, 48, or 64 bytes
+  if (TableSize > 0 && TableSize <= 64)
+    return TableSize;
+
+  return 0;
+}
+
 InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
     TTI::TargetCostKind CostKind, bool ForPoisonSrc,
     ArrayRef<Value *> VL) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
+
+  // Check if this gather can be lowered to a TBL instruction
+  // TBL avoids the need for individual insert/extract operations
+  if (Insert && !Extract && !VL.empty()) {
+    if (unsigned TableSize = canUseTBLForGather(VL)) {
+      // TBL cost: index narrowing (2 insns) + table loads (1-4) + TBL (1)
+      // This is much cheaper than individual inserts with cross-domain moves
+      unsigned NumTableRegs = (TableSize + 15) / 16;
+      // Return a low cost to encourage vectorization
+      // The actual cost is approximately: 2 (narrow) + NumTableRegs (loads) + 1 (tbl)
+      return NumTableRegs + 3;
+    }
+  }
+
   if (Ty->getElementType()->isFloatingPointTy())
     return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
                                            CostKind);

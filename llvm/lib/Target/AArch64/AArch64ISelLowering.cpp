@@ -13606,6 +13606,431 @@ static unsigned getExtFactor(SDValue &V) {
   return EltType.getSizeInBits() / 8;
 }
 
+// Try to convert BUILD_VECTOR of indexed scalar loads into a TBL instruction.
+// Pattern:
+//   BUILD_VECTOR (load (base + sext(extractelement indices, 0))),
+//                (load (base + sext(extractelement indices, 1))),
+//                ...
+// Where base points to a small constant array (<=64 bytes for TBL1-4).
+//
+// This avoids expensive FPR->GPR cross-domain moves when extracting indices.
+static SDValue tryConvertScalarLoadsToTBL(SDValue Op, SelectionDAG &DAG,
+                                          const AArch64Subtarget &Subtarget) {
+  assert(Op.getOpcode() == ISD::BUILD_VECTOR && "Expected BUILD_VECTOR");
+
+  // Only handle NEON-compatible vectors
+  if (!Subtarget.isNeonAvailable())
+    return SDValue();
+
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+
+  // We need a fixed-length vector
+  if (VT.isScalableVector())
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  EVT EltVT = VT.getVectorElementType();
+
+  // For now, only handle v4i8, v8i8, v16i8 result types
+  // (or types that after processing become i8 loads)
+  // Also handle v4i32, v4f32 when the source is i8 loads
+  if (NumElts != 4 && NumElts != 8 && NumElts != 16)
+    return SDValue();
+
+  LLVM_DEBUG(dbgs() << "TBL: Checking BUILD_VECTOR with " << NumElts
+                    << " elements of type " << EltVT << "\n");
+
+  // Collect info about all elements
+  SDValue BasePtr;
+  SDValue IndexVec;
+  SmallVector<int64_t, 16> ConstantIndices; // If indices are constants
+  SmallVector<SDValue, 16> ScalarIndices;   // For scalar index pattern
+  bool AllConstantIndices = true;
+  bool HasScalarIndices = false;
+  SmallVector<SDValue, 16> Loads;
+
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Elt = Op.getOperand(i);
+
+    // Skip through uitofp/sitofp if present (common pattern)
+    SDValue LoadVal = Elt;
+    bool HasUIToFP = false;
+    bool HasSIToFP = false;
+    bool HasZExt = false;
+    bool HasAnyExt = false;
+
+    while (LoadVal.getOpcode() == ISD::UINT_TO_FP ||
+           LoadVal.getOpcode() == ISD::SINT_TO_FP ||
+           LoadVal.getOpcode() == ISD::ZERO_EXTEND ||
+           LoadVal.getOpcode() == ISD::ANY_EXTEND) {
+      if (LoadVal.getOpcode() == ISD::UINT_TO_FP)
+        HasUIToFP = true;
+      else if (LoadVal.getOpcode() == ISD::SINT_TO_FP)
+        HasSIToFP = true;
+      else if (LoadVal.getOpcode() == ISD::ZERO_EXTEND)
+        HasZExt = true;
+      else if (LoadVal.getOpcode() == ISD::ANY_EXTEND)
+        HasAnyExt = true;
+      LoadVal = LoadVal.getOperand(0);
+    }
+
+    // Must be a load
+    if (LoadVal.getOpcode() != ISD::LOAD) {
+      LLVM_DEBUG(dbgs() << "TBL: Element " << i << " is not a load, opcode: "
+                        << LoadVal.getOpcode() << "\n");
+      return SDValue();
+    }
+
+    LoadSDNode *Load = cast<LoadSDNode>(LoadVal.getNode());
+
+    // Must be a simple byte load
+    if (!Load->isSimple()) {
+      LLVM_DEBUG(dbgs() << "TBL: Load " << i << " is not simple\n");
+      return SDValue();
+    }
+    if (Load->getMemoryVT() != MVT::i8) {
+      LLVM_DEBUG(dbgs() << "TBL: Load " << i << " is not i8, got "
+                        << Load->getMemoryVT() << "\n");
+      return SDValue();
+    }
+
+    Loads.push_back(LoadVal);
+
+    // Analyze the address: should be base + (sext/zext (extractelement vec, i))
+    SDValue Addr = Load->getBasePtr();
+
+    // Address should be: ADD base, extended_index
+    if (Addr.getOpcode() != ISD::ADD) {
+      LLVM_DEBUG(dbgs() << "TBL: Load " << i << " address is not ADD, opcode: "
+                        << Addr.getOpcode() << "\n");
+      return SDValue();
+    }
+
+    SDValue AddrBase = Addr.getOperand(0);
+    SDValue AddrOffset = Addr.getOperand(1);
+
+    // Check if base is consistent across all elements
+    if (i == 0) {
+      BasePtr = AddrBase;
+    } else if (BasePtr != AddrBase) {
+      LLVM_DEBUG(dbgs() << "TBL: Different base pointers for element " << i << "\n");
+      return SDValue(); // Different base pointers
+    }
+
+    // The offset should be sign_extend(extractelement(index_vec, i))
+    SDValue ExtractedIdx = AddrOffset;
+
+    // Skip sign/zero extend
+    if (ExtractedIdx.getOpcode() == ISD::SIGN_EXTEND ||
+        ExtractedIdx.getOpcode() == ISD::ZERO_EXTEND)
+      ExtractedIdx = ExtractedIdx.getOperand(0);
+
+    // Check for constant index case
+    if (auto *C = dyn_cast<ConstantSDNode>(AddrOffset)) {
+      ConstantIndices.push_back(C->getSExtValue());
+      // For constant indices, we don't need extractelement from same vector
+      continue;
+    }
+
+    AllConstantIndices = false;
+
+    // Case 1: extractelement from a vector (original pattern)
+    if (ExtractedIdx.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+      SDValue IdxVec = ExtractedIdx.getOperand(0);
+      SDValue IdxPos = ExtractedIdx.getOperand(1);
+
+      // Check that we're extracting from same index vector
+      if (i == 0) {
+        IndexVec = IdxVec;
+      } else if (IndexVec.getNode() && IndexVec != IdxVec) {
+        LLVM_DEBUG(dbgs() << "TBL: Different index vectors for element " << i
+                          << "\n");
+        return SDValue(); // Different index vectors
+      }
+
+      // Check that the extraction position matches element position
+      auto *IdxConst = dyn_cast<ConstantSDNode>(IdxPos);
+      if (!IdxConst || IdxConst->getZExtValue() != i) {
+        LLVM_DEBUG(dbgs() << "TBL: Non-sequential extraction for element " << i
+                          << "\n");
+        return SDValue(); // Non-sequential or non-constant extraction
+      }
+      continue;
+    }
+
+    // Case 2: Scalar index value - we'll build an index vector later
+    // This handles patterns like hexdigest where indices are computed from
+    // shift/and of loaded bytes: ZERO_EXTEND(SRL(byte, 4)) or
+    // ZERO_EXTEND(AND(byte, 15))
+    LLVM_DEBUG(dbgs() << "TBL: Element " << i
+                      << " has scalar index, opcode: " << AddrOffset.getOpcode()
+                      << "\n");
+
+    // Collect the scalar index value (before extension)
+    HasScalarIndices = true;
+    ScalarIndices.push_back(ExtractedIdx);
+  }
+
+  LLVM_DEBUG(dbgs() << "TBL: Found pattern with base pointer: ");
+  LLVM_DEBUG(BasePtr->dump());
+
+  // Now check if base pointer refers to a small enough constant global
+  // that we can use TBL
+
+  // Try to find GlobalAddress node in the base pointer chain
+  SDValue GlobalNode = BasePtr;
+  int64_t GlobalOffset = 0;
+
+  // Walk through potential address computation
+  while (GlobalNode.getOpcode() == ISD::ADD) {
+    if (auto *C = dyn_cast<ConstantSDNode>(GlobalNode.getOperand(1))) {
+      GlobalOffset += C->getSExtValue();
+      GlobalNode = GlobalNode.getOperand(0);
+    } else {
+      break;
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "TBL: GlobalNode opcode: " << GlobalNode.getOpcode()
+                    << " (GlobalAddress=" << ISD::GlobalAddress << ")\n");
+
+  // Check if we have a GlobalAddress
+  const GlobalVariable *GV = nullptr;
+  if (GlobalNode.getOpcode() == ISD::GlobalAddress) {
+    const GlobalValue *GVal =
+        cast<GlobalAddressSDNode>(GlobalNode)->getGlobal();
+    GV = dyn_cast<GlobalVariable>(GVal);
+    LLVM_DEBUG(dbgs() << "TBL: Found GlobalVariable: "
+                      << (GV ? GV->getName() : "null") << "\n");
+  }
+
+  // For TBL to work, we need to know the table size
+  uint64_t TableSize = 0;
+  const DataLayout &Layout = DAG.getDataLayout();
+
+  if (GV) {
+    Type *GVTy = GV->getValueType();
+    LLVM_DEBUG(dbgs() << "TBL: GV type: " << *GVTy << "\n");
+    LLVM_DEBUG(dbgs() << "TBL: GlobalOffset: " << GlobalOffset << "\n");
+
+    // Case 1: Direct access to a small i8 array
+    if (auto *ArrTy = dyn_cast<ArrayType>(GVTy)) {
+      if (ArrTy->getElementType()->isIntegerTy(8)) {
+        TableSize = ArrTy->getNumElements();
+        LLVM_DEBUG(dbgs() << "TBL: Direct array access, size: " << TableSize << "\n");
+      }
+    }
+
+    // Case 2: Access to a field within a struct (possibly in an array of structs)
+    // Use GlobalOffset to find which field we're accessing
+    if (TableSize == 0 && GlobalOffset >= 0) {
+      Type *CurrentTy = GVTy;
+      int64_t RemainingOffset = GlobalOffset;
+
+      // Walk through array types
+      while (auto *ArrTy = dyn_cast<ArrayType>(CurrentTy)) {
+        Type *ElemTy = ArrTy->getElementType();
+        uint64_t ElemSize = Layout.getTypeAllocSize(ElemTy);
+        if (ElemSize == 0)
+          break;
+        // Move past array indexing
+        RemainingOffset = RemainingOffset % ElemSize;
+        CurrentTy = ElemTy;
+      }
+
+      // Now walk through struct types to find the field
+      while (auto *StructTy = dyn_cast<StructType>(CurrentTy)) {
+        const StructLayout *SL = Layout.getStructLayout(StructTy);
+        unsigned FieldIdx = SL->getElementContainingOffset(RemainingOffset);
+        uint64_t FieldOffset = SL->getElementOffset(FieldIdx);
+        RemainingOffset -= FieldOffset;
+        CurrentTy = StructTy->getElementType(FieldIdx);
+
+        // If remaining offset is 0 and we found an i8 array, we have our answer
+        if (RemainingOffset == 0) {
+          if (auto *FieldArrTy = dyn_cast<ArrayType>(CurrentTy)) {
+            if (FieldArrTy->getElementType()->isIntegerTy(8)) {
+              TableSize = FieldArrTy->getNumElements();
+              LLVM_DEBUG(dbgs() << "TBL: Struct field array, size: " << TableSize << "\n");
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // TBL1: 16 bytes, TBL2: 32 bytes, TBL3: 48 bytes, TBL4: 64 bytes
+  if (TableSize == 0 || TableSize > 64) {
+    LLVM_DEBUG(dbgs() << "TBL: Table size " << TableSize << " not suitable\n");
+    return SDValue();
+  }
+
+  LLVM_DEBUG(dbgs() << "TBL: Generating TBL for table size " << TableSize << "\n");
+
+  // Determine which TBL variant to use
+  unsigned NumTableRegs = (TableSize + 15) / 16;
+  Intrinsic::ID TblIntrinsic;
+  switch (NumTableRegs) {
+  case 1:
+    TblIntrinsic = Intrinsic::aarch64_neon_tbl1;
+    break;
+  case 2:
+    TblIntrinsic = Intrinsic::aarch64_neon_tbl2;
+    break;
+  case 3:
+    TblIntrinsic = Intrinsic::aarch64_neon_tbl3;
+    break;
+  case 4:
+    TblIntrinsic = Intrinsic::aarch64_neon_tbl4;
+    break;
+  default:
+    return SDValue();
+  }
+
+  // Load the table into vector registers
+  // For simplicity, we load full 16-byte chunks
+  SmallVector<SDValue, 4> TableRegs;
+  SDValue Chain = DAG.getEntryNode();
+
+  for (unsigned r = 0; r < NumTableRegs; ++r) {
+    SDValue TableAddr = DAG.getNode(
+        ISD::ADD, DL, BasePtr.getValueType(), BasePtr,
+        DAG.getConstant(r * 16, DL, BasePtr.getValueType()));
+
+    SDValue TableLoad = DAG.getLoad(
+        MVT::v16i8, DL, Chain, TableAddr,
+        MachinePointerInfo::getGOT(DAG.getMachineFunction()), Align(1));
+    TableRegs.push_back(TableLoad);
+    Chain = TableLoad.getValue(1);
+  }
+
+  // Prepare indices vector
+  // If we have an IndexVec from extractelement, narrow it to v16i8
+  // If we have constant indices, build a constant vector
+  SDValue IndicesV16i8;
+
+  if (AllConstantIndices) {
+    // Build constant indices vector
+    SmallVector<SDValue, 16> IdxElts;
+    for (unsigned i = 0; i < 16; ++i) {
+      uint8_t Idx = (i < NumElts) ? (uint8_t)ConstantIndices[i] : 0;
+      IdxElts.push_back(DAG.getConstant(Idx, DL, MVT::i8));
+    }
+    IndicesV16i8 = DAG.getBuildVector(MVT::v16i8, DL, IdxElts);
+  } else if (HasScalarIndices) {
+    // Build index vector from scalar values
+    // This handles patterns like hexdigest where indices are computed scalars
+    LLVM_DEBUG(dbgs() << "TBL: Building index vector from "
+                      << ScalarIndices.size() << " scalar indices\n");
+
+    // For v16i8 result with scalar indices, build a BUILD_VECTOR of the indices
+    // Each scalar index should be truncated to i8
+    SmallVector<SDValue, 16> IdxElts;
+    for (unsigned i = 0; i < 16; ++i) {
+      if (i < ScalarIndices.size()) {
+        SDValue Idx = ScalarIndices[i];
+        // Truncate to i8 if needed
+        if (Idx.getValueType() != MVT::i8) {
+          Idx = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Idx);
+        }
+        IdxElts.push_back(Idx);
+      } else {
+        IdxElts.push_back(DAG.getConstant(0, DL, MVT::i8));
+      }
+    }
+    IndicesV16i8 = DAG.getBuildVector(MVT::v16i8, DL, IdxElts);
+  } else {
+    // Narrow IndexVec to v16i8 for TBL
+    // The key is to use legal types throughout
+
+    EVT IndexVT = IndexVec.getValueType();
+    if (IndexVT == MVT::v4i32) {
+      // For v4i32, we need to narrow to bytes while keeping it in vector form
+      // Use XTN pattern: truncate v4i32 -> v4i16 -> pack to v8i8
+
+      // First truncate to v4i16 (this becomes XTN)
+      SDValue Trunc16 =
+          DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, IndexVec);
+
+      // Convert v4i16 to v8i8 using bitcast + uzp1
+      // v4i16 is 64 bits, v8i8 is 64 bits - we can bitcast
+      SDValue As8 = DAG.getBitcast(MVT::v8i8, Trunc16);
+
+      // Now we need to extract just the low bytes of each i16
+      // Use UZP1 to extract even bytes: uzp1 v0.8b, v0.8b, v0.8b
+      // This gives us: [b0, b2, b4, b6, b0, b2, b4, b6]
+      // where b0, b2, b4, b6 are the low bytes of the 4 i16s
+
+      // Actually, the byte layout of v4i16 on little-endian is:
+      // [lo0, hi0, lo1, hi1, lo2, hi2, lo3, hi3]
+      // We want [lo0, lo1, lo2, lo3, 0, 0, 0, 0, ...]
+      // UZP1 with itself gives: [lo0, lo2, lo1, lo3, ...] - not quite right
+
+      // Better approach: use TRN1/UZP1 pattern or just accept the scalar codegen
+      // for now and revisit later
+
+      // Simpler: concat with zeros to get v16i8, the TBL will ignore high bytes
+      SDValue Zero8 = DAG.getConstant(0, DL, MVT::v8i8);
+      IndicesV16i8 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, As8, Zero8);
+
+      // Note: This isn't quite right because v4i16 bytes are interleaved
+      // For proper narrowing, we'd need uzp1 to extract just the low bytes
+      // For now, let's use the AArch64-specific UZP1 to fix the byte order
+
+      // Create UZP1 to extract even bytes (which are the low bytes of each i16)
+      SDValue Uzp = DAG.getNode(AArch64ISD::UZP1, DL, MVT::v8i8, As8, Zero8);
+      IndicesV16i8 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Uzp, Zero8);
+    } else {
+      // Unsupported index vector type
+      return SDValue();
+    }
+  }
+
+  // Build the TBL intrinsic call
+  SDValue TblResult;
+  SmallVector<SDValue, 6> TblOps;
+  TblOps.push_back(DAG.getTargetConstant(TblIntrinsic, DL, MVT::i32));
+  for (SDValue &TR : TableRegs)
+    TblOps.push_back(TR);
+  TblOps.push_back(IndicesV16i8);
+
+  TblResult = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::v16i8, TblOps);
+
+  // Extract the result elements we need
+  // If NumElts == 4, extract first 4 bytes and potentially convert
+  SDValue Result;
+  if (NumElts == 4) {
+    // Extract v4i8 from v16i8
+    SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i8,
+                                   TblResult, DAG.getConstant(0, DL, MVT::i64));
+
+    // Check if we need to convert to float
+    if (EltVT == MVT::f32) {
+      // zext v4i8 -> v4i32
+      SDValue Ext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v4i32, Extract);
+      // uitofp v4i32 -> v4f32
+      Result = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::v4f32, Ext);
+    } else if (EltVT == MVT::i8) {
+      Result = Extract;
+    } else if (EltVT == MVT::i32) {
+      Result = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v4i32, Extract);
+    } else {
+      return SDValue(); // Unsupported element type
+    }
+  } else if (NumElts == 8 && EltVT == MVT::i8) {
+    Result = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, TblResult,
+                         DAG.getConstant(0, DL, MVT::i64));
+  } else if (NumElts == 16 && EltVT == MVT::i8) {
+    Result = TblResult;
+  } else {
+    return SDValue(); // Unsupported configuration
+  }
+
+  return Result;
+}
+
 // Check if a vector is built from one vector via extracted elements of
 // another together with an AND mask, ensuring that all elements fit
 // within range. This can be reconstructed using AND and NEON's TBL1.
@@ -21925,8 +22350,13 @@ static SDValue performBuildVectorCombine(SDNode *N,
                                          SelectionDAG &DAG) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+  const AArch64Subtarget &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
 
-  if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
+  // Try to convert scalar indexed loads to TBL instruction
+  if (SDValue TBL = tryConvertScalarLoadsToTBL(SDValue(N, 0), DAG, Subtarget))
+    return TBL;
+
+  if (Subtarget.isNeonAvailable() &&
       (VT == MVT::v4f16 || VT == MVT::v4bf16)) {
     SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1),
             Elt2 = N->getOperand(2), Elt3 = N->getOperand(3);
