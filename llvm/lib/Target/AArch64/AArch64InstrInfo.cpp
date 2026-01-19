@@ -5853,7 +5853,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::FPR8RegClass.contains(SrcReg)) {
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR64() && Subtarget.isNeonAvailable() &&
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
         !mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::bsub,
                                                    &AArch64::FPR128RegClass);

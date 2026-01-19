@@ -7,33 +7,25 @@
 define float @load_sitofp_f32(ptr %src) nounwind {
 ; LA32F-LABEL: load_sitofp_f32:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    ld.w $a0, $a0, 0
-; LA32F-NEXT:    movgr2fr.w $fa0, $a0
+; LA32F-NEXT:    fld.s $fa0, $a0, 0
 ; LA32F-NEXT:    ffint.s.w $fa0, $fa0
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: load_sitofp_f32:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    ld.w $a0, $a0, 0
-; LA32D-NEXT:    movgr2fr.w $fa0, $a0
+; LA32D-NEXT:    fld.s $fa0, $a0, 0
 ; LA32D-NEXT:    ffint.s.w $fa0, $fa0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: load_sitofp_f32:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -16
-; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64F-NEXT:    ld.w $a0, $a0, 0
-; LA64F-NEXT:    pcaddu18i $ra, %call36(__floatdisf)
-; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 16
+; LA64F-NEXT:    fld.s $fa0, $a0, 0
+; LA64F-NEXT:    ffint.s.w $fa0, $fa0
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: load_sitofp_f32:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    ld.w $a0, $a0, 0
-; LA64D-NEXT:    movgr2fr.w $fa0, $a0
+; LA64D-NEXT:    fld.s $fa0, $a0, 0
 ; LA64D-NEXT:    ffint.s.w $fa0, $fa0
 ; LA64D-NEXT:    ret
   %1 = load i32, ptr %src
@@ -56,14 +48,8 @@ define double @load_sitofp_f64(ptr %src) nounwind {
 ;
 ; LA32D-LABEL: load_sitofp_f64:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    addi.w $sp, $sp, -16
-; LA32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-NEXT:    ld.w $a2, $a0, 0
-; LA32D-NEXT:    ld.w $a1, $a0, 4
-; LA32D-NEXT:    move $a0, $a2
-; LA32D-NEXT:    bl __floatdidf
-; LA32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32D-NEXT:    addi.w $sp, $sp, 16
+; LA32D-NEXT:    fld.d $fa0, $a0, 0
+; LA32D-NEXT:    ffint.d.l $fa0, $fa0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: load_sitofp_f64:
@@ -79,8 +65,7 @@ define double @load_sitofp_f64(ptr %src) nounwind {
 ;
 ; LA64D-LABEL: load_sitofp_f64:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    ld.d $a0, $a0, 0
-; LA64D-NEXT:    movgr2fr.d $fa0, $a0
+; LA64D-NEXT:    fld.d $fa0, $a0, 0
 ; LA64D-NEXT:    ffint.d.l $fa0, $fa0
 ; LA64D-NEXT:    ret
   %1 = load i64, ptr %src
