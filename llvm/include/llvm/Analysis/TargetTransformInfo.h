@@ -1427,13 +1427,18 @@ public:
 
   /// \return The cost of a partial reduction, which is a reduction from a
   /// vector to another vector with fewer elements of larger size. They are
-  /// represented by the llvm.vector.partial.reduce.add intrinsic, which
-  /// takes an accumulator of type \p AccumType and a second vector operand to
-  /// be accumulated, whose element count is specified by \p VF. The type of
-  /// reduction is specified by \p Opcode. The second operand passed to the
-  /// intrinsic could be the result of an extend, such as sext or zext. In
-  /// this case \p BinOp is nullopt, \p InputTypeA represents the type being
-  /// extended and \p OpAExtend the operation, i.e. sign- or zero-extend.
+  /// represented by the llvm.vector.partial.reduce.add and
+  /// llvm.vector.partial.reduce.fadd intrinsics, which take an accumulator of
+  /// type \p AccumType and a second vector operand to be accumulated, whose
+  /// element count is specified by \p VF. The type of reduction is specified by
+  /// \p Opcode. The second operand passed to the intrinsic could be the result
+  /// of an extend, such as sext or zext. In this case \p BinOp is nullopt,
+  /// \p InputTypeA represents the type being extended and \p OpAExtend the
+  /// operation, i.e. sign- or zero-extend.
+  /// For floating-point partial reductions, any fast math flags (FMF) should be
+  /// provided to govern which reductions are valid to perform (depending on
+  /// reassoc or contract, for example), whereas this must be nullopt for
+  /// integer partial reductions.
   /// Also, \p InputTypeB should be nullptr and OpBExtend should be None.
   /// Alternatively, the second operand could be the result of a binary
   /// operation performed on two extends, i.e.

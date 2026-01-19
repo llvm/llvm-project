@@ -4167,9 +4167,11 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   // Try to match reduce.fadd(fmul(...)).
   if (match(VecOp, m_FMul(m_VPValue(A), m_VPValue(B)))) {
-    assert(Opcode == Instruction::FAdd);
-    auto *RecipeA = dyn_cast_if_present<VPWidenCastRecipe>(A);
-    auto *RecipeB = dyn_cast_if_present<VPWidenCastRecipe>(B);
+    assert(Opcode == Instruction::FAdd &&
+           "MulAccumulateReduction from an FMul must accumulate into an FAdd "
+           "instruction");
+    auto *RecipeA = dyn_cast<VPWidenCastRecipe>(A);
+    auto *RecipeB = dyn_cast<VPWidenCastRecipe>(B);
     auto *FMul = dyn_cast<VPWidenRecipe>(VecOp);
 
     // Match reduce.fadd(fmul(ext, ext)).

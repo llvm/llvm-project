@@ -2801,10 +2801,8 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
       CondCost = Ctx.TTI.getCmpSelInstrCost(Instruction::Select, VectorTy,
                                             CondTy, Pred, Ctx.CostKind);
     }
-    auto *PhiType = Ctx.Types.inferScalarType(getChainOp());
-    auto *InputType = Ctx.Types.inferScalarType(getVecOp());
     return CondCost + Ctx.TTI.getPartialReductionCost(
-                          Opcode, InputType, InputType, PhiType, VF,
+                          Opcode, ElementTy, ElementTy, ElementTy, VF,
                           TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind,
                           OptionalFMF);
   }

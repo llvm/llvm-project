@@ -5859,6 +5859,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     assert(FMF && "Missing FastMathFlags for floating-point partial reduction");
     if (!FMF->allowReassoc() || !FMF->allowContract())
       return Invalid;
+  } else {
+    assert(!FMF &&
+           "FastMathFlags only apply to floating-point partial reductions");
   }
 
   assert((BinOp || (OpBExtend == TTI::PR_None && !InputTypeB)) &&
