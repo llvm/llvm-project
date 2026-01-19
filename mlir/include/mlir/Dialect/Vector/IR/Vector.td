@@ -23,7 +23,8 @@ def Vector_Dialect : Dialect {
   let hasConstantMaterializer = 1;
   let dependentDialects = [
     "arith::ArithDialect",
-    "ub::UBDialect"
+    "ub::UBDialect",
+    "memref::MemRefDialect"
   ];
 }
 
