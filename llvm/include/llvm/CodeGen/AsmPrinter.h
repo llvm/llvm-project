@@ -910,7 +910,8 @@ public:
   /// \p EndInfo   - the final subtarget info after parsing the inline asm,
   ///                or NULL if the value is unknown.
   virtual void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                                const MCSubtargetInfo *EndInfo) const;
+                                const MCSubtargetInfo *EndInfo,
+                                const MachineInstr *MI);
 
   /// This emits visibility information about symbol, if this is supported by
   /// the target.
@@ -944,15 +945,15 @@ private:
   void emitFunctionPrefix(ArrayRef<const Constant *> Prefix);
 
   /// Emit a blob of inline asm to the output streamer.
-  void
-  emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
-                const MCTargetOptions &MCOptions,
-                const MDNode *LocMDNode = nullptr,
-                InlineAsm::AsmDialect AsmDialect = InlineAsm::AD_ATT) const;
+  void emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+                     const MCTargetOptions &MCOptions,
+                     const MDNode *LocMDNode = nullptr,
+                     InlineAsm::AsmDialect AsmDialect = InlineAsm::AD_ATT,
+                     const MachineInstr *MI = nullptr);
 
   /// This method formats and emits the specified machine instruction that is an
   /// inline asm.
-  void emitInlineAsm(const MachineInstr *MI) const;
+  void emitInlineAsm(const MachineInstr *MI);
 
   /// Add inline assembly info to the diagnostics machinery, so we can
   /// emit file and position info. Returns SrcMgr memory buffer position.

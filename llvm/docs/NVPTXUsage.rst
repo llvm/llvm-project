@@ -2818,7 +2818,15 @@ Syntax:
 
   declare <n x i32> @llvm.nvvm.tcgen05.ld.<shape>.<num>(ptr addrspace(6) %tmem_addr, i1 %pack)
 
+  declare <n x i32> @llvm.nvvm.tcgen05.ld.red.32x32b.<num>.i32(ptr addrspace(6) %tmem_addr, i32 %redOp)
+
+  declare <n x i32> @llvm.nvvm.tcgen05.ld.red.32x32b.<num>.f32(ptr addrspace(6) %tmem_addr, i32 %redOp, i1 %abs, i1 %nan)
+
   declare <n x i32> @llvm.nvvm.tcgen05.ld.16x32bx2.<num>(ptr addrspace(6) %tmem_addr, i64 %offset, i1 %pack)
+
+  declare <n x i32> @llvm.nvvm.tcgen05.ld.red.16x32bx2.<num>.i32(ptr addrspace(6) %tmem_addr, i64 %offset, i32 %redOp)
+
+  declare <n x i32> @llvm.nvvm.tcgen05.ld.red.16x32bx2.<num>.f32(ptr addrspace(6) %tmem_addr, i64 %offset, i32 %redOp, i1 %abs, i1 %nan)
 
 Overview:
 """""""""
@@ -2837,7 +2845,8 @@ qualifier indicates the base dimension of data. The `num` qualifier indicates
 the repeat factor on the base dimension resulting in the total dimension of the
 data that is accessed.
 
-Allowed values for the 'num' are `x1, x2, x4, x8, x16, x32, x64, x128`.
+Allowed values for the `num` are `x1, x2, x4, x8, x16, x32, x64, x128` except
+for `tcgen05.ld.red` which does not support `x1`
 
 Allowed values for the 'shape' in the first intrinsic are
 `16x64b, 16x128b, 16x256b, 32x32b`.
@@ -2862,7 +2871,20 @@ registers derived from `shape` and `num` as shown below.
 
 The last argument `i1 %pack` is a compile-time constant which when set,
 indicates that the adjacent columns are packed into a single 32-bit element
-during the load.
+during the load
+
+`tcgen05.ld.red` contains `%redOp` flag to specify the load reduction operation
+and the f32 variant supports `%abs` and `%nan` bit flags for abs and nan
+respectively
+
+`%redOp` flag:
+
+=========== =============
+   value      operation
+=========== =============
+    0           min
+    1           max
+=========== =============
 
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld>`__.

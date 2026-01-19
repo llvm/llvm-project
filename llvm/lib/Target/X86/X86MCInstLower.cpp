@@ -2627,6 +2627,18 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitAndCountInstruction(TmpInst);
 }
 
+void X86AsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
+                                     const MCSubtargetInfo *EndInfo,
+                                     const MachineInstr *MI) {
+  if (MI) {
+    // If unwinding inline asm ends on a call, wineh may require insertion of
+    // a nop.
+    unsigned ExtraInfo = MI->getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+    if (ExtraInfo & InlineAsm::Extra_MayUnwind)
+      maybeEmitNopAfterCallForWindowsEH(MI);
+  }
+}
+
 void X86AsmPrinter::emitCallInstruction(const llvm::MCInst &MCI) {
   // Stackmap shadows cannot include branch targets, so we can count the bytes
   // in a call towards the shadow, but must ensure that the no thread returns

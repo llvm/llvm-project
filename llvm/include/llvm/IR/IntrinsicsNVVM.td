@@ -1143,7 +1143,7 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
     [OpType, llvm_i32_ty, llvm_i32_ty]);
 }
 
-class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num> {
+class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num, string ElemType = "i32"> {
   int shift = !cond(!eq(Shape, "16x128b"): 1,
                     !eq(Shape, "16x256b"): 2,
                     true : 0);
@@ -1151,14 +1151,14 @@ class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num> {
   int veclen = !shl(1, !add(Num, shift));
 
   int valid = !le(veclen, 128);
-  LLVMType type = !cond(!eq(veclen,   1): llvm_i32_ty,
-                        !eq(veclen,   2): llvm_v2i32_ty,
-                        !eq(veclen,   4): llvm_v4i32_ty,
-                        !eq(veclen,   8): llvm_v8i32_ty,
-                        !eq(veclen,  16): llvm_v16i32_ty,
-                        !eq(veclen,  32): llvm_v32i32_ty,
-                        !eq(veclen,  64): llvm_v64i32_ty,
-                        !eq(veclen, 128): llvm_v128i32_ty,
+  LLVMType type = !cond(!eq(veclen,   1): LLVMType<!cast<ValueType>(ElemType)>,
+                        !eq(veclen,   2): LLVMType<!cast<ValueType>("v"#2#ElemType)>,
+                        !eq(veclen,   4): LLVMType<!cast<ValueType>("v"#4#ElemType)>,
+                        !eq(veclen,   8): LLVMType<!cast<ValueType>("v"#8#ElemType)>,
+                        !eq(veclen,  16): LLVMType<!cast<ValueType>("v"#16#ElemType)>,
+                        !eq(veclen,  32): LLVMType<!cast<ValueType>("v"#32#ElemType)>,
+                        !eq(veclen,  64): LLVMType<!cast<ValueType>("v"#64#ElemType)>,
+                        !eq(veclen, 128): LLVMType<!cast<ValueType>("v"#128#ElemType)>,
                         true : llvm_void_ty);
 }
 
@@ -3109,6 +3109,16 @@ class NVVM_TCGEN05_LD<string Shape, int Num> :
                                 [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>],
                                 [ImmArg<ArgIndex<1>>]))>;
 
+// Tcgen05 ld.red intrinsics
+class NVVM_TCGEN05_LD_RED<string Shape, int Num, string RedValTy> :
+        DefaultAttrsIntrinsicFlags<
+          [NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num, RedValTy>.type, LLVMType<!cast<ValueType>(RedValTy)>],
+                  [llvm_tmem_ptr_ty],
+                  !listconcat(!if(!eq(Shape, "16x32bx2"), [llvm_i64_ty], []),
+                              [llvm_i32_ty], // RedOp
+                              !if(!eq(RedValTy, "f32"), [llvm_i1_ty, llvm_i1_ty], [])), // abs, nan
+                  [IntrConvergent, IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+
 // Tcgen05 st intrinsics
 class NVVM_TCGEN05_ST<string Shape, int Num> :
         Intrinsic<[],
@@ -3121,6 +3131,7 @@ class NVVM_TCGEN05_ST<string Shape, int Num> :
                                 [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>],
                                 [ImmArg<ArgIndex<2>>]))>;
 
+// tcgen05 ld/st intrinsics
 foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
   foreach num = 0...8 in {
     if NVVM_TCGEN05_LDST_ACCESS_SIZE<shape, num>.valid then {
@@ -3131,6 +3142,21 @@ foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
     }
   }
 }
+
+// tcgen05.ld.red intrinsics
+foreach shape = ["32x32b", "16x32bx2"] in {
+  // num starts with x2 (1 << 1) as tcgen05.ld.red does not support x1
+  foreach num = 1...8 in {
+    foreach ty = ["f32", "i32"] in {
+      if NVVM_TCGEN05_LDST_ACCESS_SIZE<shape, num>.valid then {
+
+        def IntrinsicName<"llvm.nvvm.tcgen05.ld.red." # shape
+                          # ".x" # !shl(1, num) # "." # ty>.record_name:
+              NVVM_TCGEN05_LD_RED<shape, num, ty>;
+      } // valid
+    } // ty
+  } // num
+} // shape
 
 //
 // Bulk store intrinsics
