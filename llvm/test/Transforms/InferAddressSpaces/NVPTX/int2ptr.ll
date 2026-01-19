@@ -151,6 +151,44 @@ entry:
   ret void
 }
 
+define void @test_phi(i1 %c, ptr addrspace(3) %sp1, ptr addrspace(3) %sp2) {
+; CHECK-LABEL: define void @test_phi(
+; CHECK-SAME: i1 [[C:%.*]], ptr addrspace(3) [[SP1:%.*]], ptr addrspace(3) [[SP2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[OR_IN_IN_IN:%.*]] = phi ptr addrspace(3) [ [[SP1]], %[[IF]] ], [ [[SP2]], %[[ELSE]] ]
+; CHECK-NEXT:    [[OR_IN_IN:%.*]] = addrspacecast ptr addrspace(3) [[OR_IN_IN_IN]] to ptr
+; CHECK-NEXT:    [[OR_IN:%.*]] = ptrtoint ptr [[OR_IN_IN]] to i64
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[OR_IN]], 16
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[OR]] to ptr
+; CHECK-NEXT:    store i16 0, ptr [[GP2]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if, label %else
+
+if:
+  %a1 = addrspacecast ptr addrspace(3) %sp1 to ptr
+  %t1 = ptrtoint ptr %a1 to i64
+  %or1 = or i64 %t1, 16
+  br label %exit
+else:
+  %a2 = addrspacecast ptr addrspace(3) %sp2 to ptr
+  %t2 = ptrtoint ptr %a2 to i64
+  %or2 = or i64 %t2, 16
+  br label %exit
+exit:
+  %or = phi i64 [%or1, %if], [%or2, %else]
+  %gp2 = inttoptr i64 %or to ptr
+  store i16 0, ptr %gp2, align 2
+  ret void
+}
+
 @g = addrspace(1) global i32 0, align 4
 
 define void @test_ce() {
