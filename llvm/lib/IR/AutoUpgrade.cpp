@@ -2490,7 +2490,7 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
     else if (VecWidth == 512)
       IID = Intrinsic::x86_avx512_packssdw_512;
     else
-      llvm_unreachable("Unexpected intrinsic");
+      return false;
   } else if (Name.starts_with("packuswb.")) {
     if (VecWidth == 128)
       IID = Intrinsic::x86_sse2_packuswb_128;
@@ -4906,6 +4906,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
+
+    // If we could not upgrade and the call has uses, leave it alone.
+    if (!Rep && !CI->use_empty())
+      return;
 
     if (Rep)
       CI->replaceAllUsesWith(Rep);
