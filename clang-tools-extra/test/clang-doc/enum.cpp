@@ -148,6 +148,11 @@ public:
 // HTML-ANIMAL-NEXT:                 </tr>
 // HTML-ANIMAL-NEXT:             </tbody>
 // HTML-ANIMAL-NEXT:         </table>
+// HTML-ANIMAL-NEXT:         <div class="doc-card">
+// HTML-ANIMAL-NEXT:             <div class="nested-delimiter-container">
+// HTML-ANIMAL-NEXT:                 <p> specify what animal the class is</p>
+// HTML-ANIMAL-NEXT:             </div>
+// HTML-ANIMAL-NEXT:         </div>
 // HTML-ANIMAL-NEXT:         <p>Defined at line 116 of file {{.*}}enum.cpp</p>
 // HTML-ANIMAL-NEXT:     </div>
 // HTML-ANIMAL-NEXT: </section>

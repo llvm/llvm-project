@@ -1,17 +1,27 @@
 // RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
 
+#include "Inputs/lifetime-analysis.h"
+
 struct View;
 
 struct [[gsl::Owner]] MyObj {
   int id;
+  MyObj();
+  MyObj(int);
+  MyObj(const MyObj&);
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
   
   View getView() const [[clang::lifetimebound]];
 };
 
+struct [[gsl::Owner]] MyTrivialObj {
+  int id;
+};
+
 struct [[gsl::Pointer()]] View {
   View(const MyObj&); // Borrows from MyObj
+  View(const MyTrivialObj &); // Borrows from MyTrivialObj
   View();
   void use() const;
 };
@@ -19,6 +29,13 @@ struct [[gsl::Pointer()]] View {
 class TriviallyDestructedClass {
   View a, b;
 };
+
+MyObj non_trivially_destructed_temporary();
+MyTrivialObj trivially_destructed_temporary();
+View construct_view(const MyObj &obj [[clang::lifetimebound]]) {
+  return View(obj);
+}
+void use(View);
 
 //===----------------------------------------------------------------------===//
 // Basic Definite Use-After-Free (-W...permissive)
@@ -1064,6 +1081,28 @@ void parentheses(bool cond) {
               : &(((cond ? c : d)))));  // expected-warning 2 {{object whose reference is captured does not live long enough}}.
   }  // expected-note 4 {{destroyed here}}
   (void)*p;  // expected-note 4 {{later used here}}
+
+}
+
+void use_temporary_after_destruction() {
+  View a;
+  a = non_trivially_destructed_temporary(); // expected-warning {{object whose reference is captured does not live long enough}} \
+                  expected-note {{destroyed here}}
+  use(a); // expected-note {{later used here}}
+}
+
+void passing_temporary_to_lifetime_bound_function() {
+  View a = construct_view(non_trivially_destructed_temporary()); // expected-warning {{object whose reference is captured does not live long enough}} \
+                expected-note {{destroyed here}}
+  use(a); // expected-note {{later used here}}
+}
+
+// FIXME: We expect to be warned of use-after-free at use(a), but this is not the
+// case as current analysis does not handle trivially destructed temporaries.
+void use_trivial_temporary_after_destruction() {
+  View a;
+  a = trivially_destructed_temporary();
+  use(a);
 }
 
 namespace GH162834 {
@@ -1358,3 +1397,98 @@ void add(int c, MyObj* node) {
   arr[4] = node;
 }
 } // namespace CppCoverage
+
+namespace do_not_warn_on_std_move {
+void silenced() {
+  MyObj b;
+  View v;
+  {
+    MyObj a;
+    v = a;
+    b = std::move(a); // No warning for 'a' being moved.
+  }
+  (void)v;
+}
+
+void silenced_flow_insensitive(bool c) {
+  MyObj a;
+  View v = a;
+  if (c) {
+    MyObj b = std::move(a);
+  }
+  (void)v;
+}
+
+// FIXME: Silence when move arg is not a declref.
+void take(MyObj&&);
+void not_silenced_via_conditional(bool cond) {
+  View v;
+  {
+    MyObj a, b;
+    v = cond ? a : b; // expected-warning 2 {{object whose reference }}
+    take(std::move(cond ? a : b));
+  }         // expected-note 2 {{destroyed here}}
+  (void)v;  // expected-note 2 {{later used here}}
+}
+} // namespace do_not_warn_on_std_move
+
+// Implicit this annotations with redecls.
+namespace GH172013 {
+// https://github.com/llvm/llvm-project/issues/62072
+// https://github.com/llvm/llvm-project/issues/172013
+struct S {
+    View x() const [[clang::lifetimebound]];
+    MyObj i;
+};
+
+View S::x() const { return i; }
+
+void bar() {
+    View x;
+    {
+        S s;
+        x = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
+        View y = S().x(); // FIXME: Handle temporaries.
+    } // expected-note {{destroyed here}}
+    (void)x; // expected-note {{used here}}
+}
+}
+
+namespace reference_type_decl_ref_expr {
+struct S {
+  S();
+  ~S();
+  const std::string& x() const [[clang::lifetimebound]];
+};
+
+const std::string& identity(const std::string& in [[clang::lifetimebound]]);
+const S& identity(const S& in [[clang::lifetimebound]]);
+
+void test_temporary() {
+  const std::string& x = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)x; // expected-note {{later used here}}
+
+  const std::string& y = identity(S().x()); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)y; // expected-note {{later used here}}
+
+  std::string_view z;
+  {
+    S s;
+    const std::string& zz = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
+    z = zz;
+  } // expected-note {{destroyed here}}
+  (void)z; // expected-note {{later used here}}
+}
+
+void test_lifetime_extension_ok() {
+  const S& x = S();
+  (void)x;
+  const S& y = identity(S()); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)y; // expected-note {{later used here}}
+}
+
+const std::string& test_return() {
+  const std::string& x = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  return x; // expected-note {{later used here}}
+}
+} // namespace reference_type_decl_ref_expr

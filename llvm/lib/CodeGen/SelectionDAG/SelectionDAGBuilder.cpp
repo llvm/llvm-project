@@ -4161,8 +4161,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   EVT SrcVT = Src1.getValueType();
 
-  if (all_of(Mask, [](int Elem) { return Elem == 0; }) &&
-      VT.isScalableVector()) {
+  if (all_of(Mask, equal_to(0)) && VT.isScalableVector()) {
     // Canonical splat form of first element of first input vector.
     SDValue FirstElt =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SrcVT.getScalarType(), Src1,
@@ -9512,6 +9511,24 @@ bool SelectionDAGBuilder::visitStrNLenCall(const CallInst &I) {
   return false;
 }
 
+/// See if we can lower a Strstr call into an optimized form.  If so, return
+/// true and lower it, otherwise return false and it will be lowered like a
+/// normal call.
+/// The caller already checked that \p I calls the appropriate LibFunc with a
+/// correct prototype.
+bool SelectionDAGBuilder::visitStrstrCall(const CallInst &I) {
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
+  const Value *Arg0 = I.getArgOperand(0), *Arg1 = I.getArgOperand(1);
+  std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForStrstr(
+      DAG, getCurSDLoc(), DAG.getRoot(), getValue(Arg0), getValue(Arg1), &I);
+  if (Res.first) {
+    processIntegerCallValue(I, Res.first, false);
+    PendingLoads.push_back(Res.second);
+    return true;
+  }
+  return false;
+}
+
 /// See if we can lower a unary floating-point operation into an SDNode with
 /// the specified Opcode.  If so, return true and lower it, otherwise return
 /// false and it will be lowered like a normal call.
@@ -9700,6 +9717,10 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_ldexpf:
       case LibFunc_ldexpl:
         if (visitBinaryFloatCall(I, ISD::FLDEXP))
+          return;
+        break;
+      case LibFunc_strstr:
+        if (visitStrstrCall(I))
           return;
         break;
       case LibFunc_memcmp:
@@ -10057,6 +10078,8 @@ public:
       Flags |= InlineAsm::Extra_HasSideEffects;
     if (IA->isAlignStack())
       Flags |= InlineAsm::Extra_IsAlignStack;
+    if (IA->canThrow())
+      Flags |= InlineAsm::Extra_MayUnwind;
     if (Call.isConvergent())
       Flags |= InlineAsm::Extra_IsConvergent;
     Flags |= IA->getDialect() * InlineAsm::Extra_AsmDialect;
@@ -11680,10 +11703,10 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
     // Don't elide copies from the same argument twice.
     const Value *Val = SI->getValueOperand()->stripPointerCasts();
     const auto *Arg = dyn_cast<Argument>(Val);
+    std::optional<TypeSize> AllocaSize = AI->getAllocationSize(DL);
     if (!Arg || Arg->hasPassPointeeByValueCopyAttr() ||
-        Arg->getType()->isEmptyTy() ||
-        DL.getTypeStoreSize(Arg->getType()) !=
-            DL.getTypeAllocSize(AI->getAllocatedType()) ||
+        Arg->getType()->isEmptyTy() || !AllocaSize ||
+        DL.getTypeStoreSize(Arg->getType()) != *AllocaSize ||
         !DL.typeSizeEqualsStoreSize(Arg->getType()) ||
         ArgCopyElisionCandidates.count(Arg)) {
       *Info = StaticAllocaInfo::Clobbered;
