@@ -2120,6 +2120,7 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.math.common_constants
+    libc.src.__support.math.logf
 )
 
 add_entrypoint_object(

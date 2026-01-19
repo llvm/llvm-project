@@ -6,8 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOGF_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_LOGF_H
+
 #include "src/math/logf.h"
-#include "src/__support/math/logf.h" // Lookup table for (1/f) and log(f)
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/except_value_utils.h"
+#include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/common_constants.h" // Lookup table for (1/f) and log(f)
 
 // This is an algorithm for log(x) in single precision which is correctly
 // rounded for all rounding modes, based on the implementation of log(x) from
@@ -43,7 +55,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, logf, (float x)) {
+namespace math {
+
+static constexpr float logf(float x) {
   using namespace common_constants_internal;
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
   using FPBits = typename fputil::FPBits<float>;
@@ -152,7 +166,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   xbits.set_biased_exponent(0x7F);
 
   float u = xbits.get_val();
-  double v;
+  double v = 0.0;
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
   v = static_cast<double>(fputil::multiply_add(u, R[index], -1.0f)); // Exact.
 #else
@@ -172,4 +186,8 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   return static_cast<float>(r);
 }
 
+} // namespace math
+
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_LOGF_H
