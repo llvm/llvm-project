@@ -15,5 +15,6 @@ static_library("Scalable") {
     "Model/BuildNamespace.cpp",
     "Model/EntityIdTable.cpp",
     "Model/EntityName.cpp",
+    "TUSummary/ExtractorRegistry.cpp",
   ]
 }

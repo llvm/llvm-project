@@ -940,3 +940,10 @@ WinX64EHUnwindV2Mode Module::getWinX64EHUnwindV2Mode() const {
     return static_cast<WinX64EHUnwindV2Mode>(CI->getZExtValue());
   return WinX64EHUnwindV2Mode::Disabled;
 }
+
+ControlFlowGuardMode Module::getControlFlowGuardMode() const {
+  Metadata *MD = getModuleFlag("cfguard");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return static_cast<ControlFlowGuardMode>(CI->getZExtValue());
+  return ControlFlowGuardMode::Disabled;
+}
