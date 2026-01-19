@@ -31,6 +31,7 @@ extern "C" {
   for (size_t I = 0; I < count; ++I)
     dstc[I] = C;
 }
+
 [[gnu::weak]] int printf(const char *Format, ...) {
   __builtin_va_list vlist;
   __builtin_va_start(vlist, Format);
@@ -45,4 +46,3 @@ namespace ompx {
   return ::vprintf(Format, vlist);
 }
 } // namespace ompx
-
