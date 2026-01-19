@@ -33,6 +33,11 @@ de34@live.cn (email), [frederick-vs-ja](https://github.com/frederick-vs-ja) (Git
 Hristo Hristov
 hghristov.rmm@gmail.com (email), [H-G-Hristov](https://github.com/H-G-Hristov) (GitHub)
 
+### `<algorithm>`
+
+Nikolas Klauser
+nikolasklauser@berlin.de (email), [philnik777](https://github.com/philnik777) (GitHub)
+
 ### Hardening
 
 Konstantin Varlamov
