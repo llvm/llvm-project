@@ -1416,6 +1416,25 @@ func.func @load_store_nontemporal(%input : memref<32xf32, affine_map<(d0) -> (d0
 
 // -----
 
+memref.global "private" constant @__constant_32xf32 : memref<32xf32> = dense<1.000000e+00>
+// CHECK-LABEL: func @fold_const_splat_global
+func.func @fold_const_splat_global() -> memref<32xf32> {
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+  %0 = memref.get_global @__constant_32xf32 : memref<32xf32>
+  %alloc = memref.alloc() : memref<32xf32>
+  %c32 = arith.constant 32 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.for %arg0 = %c0 to %c32 step %c1 {
+    %1 = memref.load %0[%arg0] : memref<32xf32>
+    // CHECK: memref.store %[[CST]], %{{.*}}
+    memref.store %1, %alloc[%arg0] : memref<32xf32>
+  }
+  return %alloc : memref<32xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_trivial_memory_space_cast(
 //  CHECK-SAME:     %[[arg:.*]]: memref<?xf32>
 //       CHECK:   return %[[arg]]
@@ -1576,4 +1595,32 @@ func.func @non_fold_view_same_source_dynamic_size(%0: memref<?xi8>, %arg0 : inde
   // CHECK: return %[[RES]]
   %res = memref.view %0[%c0][%arg0] : memref<?xi8> to memref<?xi8>
   return %res : memref<?xi8>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @replace_view_static_dims(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<?xi8>, %[[ARG1:.*]]: index) -> memref<?x4xi32> {
+// CHECK:           %[[VIEW_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[ARG1]]][] : memref<?xi8> to memref<5x4xi32>
+// CHECK:           %[[CAST_0:.*]] = memref.cast %[[VIEW_0]] : memref<5x4xi32> to memref<?x4xi32>
+// CHECK:           return %[[CAST_0]] : memref<?x4xi32>
+// CHECK:         }
+func.func @replace_view_static_dims(%src: memref<?xi8>, %offset : index) -> memref<?x4xi32> {
+  %c5 = arith.constant 5: index
+  %res = memref.view %src[%offset][%c5] : memref<?xi8> to memref<?x4xi32>
+  return %res : memref<?x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @non_replace_view_negative_static_dims(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<?xi8>, %[[ARG1:.*]]: index) -> memref<?x4xi32> {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant -1 : index
+// CHECK:           %[[VIEW_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[ARG1]]]{{\[}}%[[CONSTANT_0]]] : memref<?xi8> to memref<?x4xi32>
+// CHECK:           return %[[VIEW_0]] : memref<?x4xi32>
+// CHECK:         }
+func.func @non_replace_view_negative_static_dims(%src: memref<?xi8>, %offset : index) -> memref<?x4xi32> {
+  %c-1 = arith.constant -1: index
+  %res = memref.view %src[%offset][%c-1] : memref<?xi8> to memref<?x4xi32>
+  return %res : memref<?x4xi32>
 }
