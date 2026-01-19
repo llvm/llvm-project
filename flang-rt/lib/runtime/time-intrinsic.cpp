@@ -130,7 +130,6 @@ using unsigned_count_t = std::uint64_t;
 //  - nanoseconds for kinds 8, 16
 constexpr unsigned_count_t DS_PER_SEC{10u};
 constexpr unsigned_count_t MS_PER_SEC{1'000u};
-[[maybe_unused]] constexpr unsigned_count_t US_PER_SEC{1'000'000u};
 constexpr unsigned_count_t NS_PER_SEC{1'000'000'000u};
 
 // Computes HUGE(INT(0,kind)) as an unsigned integer value.
