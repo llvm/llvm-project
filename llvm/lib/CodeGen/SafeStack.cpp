@@ -69,14 +69,11 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::safestack;
 
 #define DEBUG_TYPE "safe-stack"
-
-namespace llvm {
 
 STATISTIC(NumFunctions, "Total number of functions");
 STATISTIC(NumUnsafeStackFunctions, "Number of functions with unsafe stack");
@@ -88,8 +85,6 @@ STATISTIC(NumUnsafeStaticAllocas, "Number of unsafe static allocas");
 STATISTIC(NumUnsafeDynamicAllocas, "Number of unsafe dynamic allocas");
 STATISTIC(NumUnsafeByValArguments, "Number of unsafe byval arguments");
 STATISTIC(NumUnsafeStackRestorePoints, "Number of setjmps and landingpads");
-
-} // namespace llvm
 
 /// Use __safestack_pointer_address even if the platform has a faster way of
 /// access safe stack pointer.
@@ -111,6 +106,7 @@ namespace {
 class SafeStack {
   Function &F;
   const TargetLoweringBase &TL;
+  const LibcallLoweringInfo &Libcalls;
   const DataLayout &DL;
   DomTreeUpdater *DTU;
   ScalarEvolution &SE;
@@ -188,9 +184,10 @@ class SafeStack {
   void TryInlinePointerAddress();
 
 public:
-  SafeStack(Function &F, const TargetLoweringBase &TL, const DataLayout &DL,
+  SafeStack(Function &F, const TargetLoweringBase &TL,
+            const LibcallLoweringInfo &Libcalls, const DataLayout &DL,
             DomTreeUpdater *DTU, ScalarEvolution &SE)
-      : F(F), TL(TL), DL(DL), DTU(DTU), SE(SE),
+      : F(F), TL(TL), Libcalls(Libcalls), DL(DL), DTU(DTU), SE(SE),
         StackPtrTy(DL.getAllocaPtrType(F.getContext())),
         IntPtrTy(DL.getIntPtrType(F.getContext())),
         Int32Ty(Type::getInt32Ty(F.getContext())) {}
@@ -199,8 +196,6 @@ public:
   // Returns whether the function was changed.
   bool run();
 };
-
-constexpr Align SafeStack::StackAlignment;
 
 uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
   uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
@@ -475,13 +470,16 @@ void SafeStack::checkStackGuard(IRBuilder<> &IRB, Function &F, Instruction &RI,
       SplitBlockAndInsertIfThen(Cmp, &RI, /* Unreachable */ true, Weights, DTU);
   IRBuilder<> IRBFail(CheckTerm);
   // FIXME: respect -fsanitize-trap / -ftrap-function here?
-  const char *StackChkFailName =
-      TL.getLibcallName(RTLIB::STACKPROTECTOR_CHECK_FAIL);
-  if (!StackChkFailName) {
+  RTLIB::LibcallImpl StackChkFailImpl =
+      Libcalls.getLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL);
+  if (StackChkFailImpl == RTLIB::Unsupported) {
     F.getContext().emitError(
         "no libcall available for stackprotector check fail");
     return;
   }
+
+  StringRef StackChkFailName =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(StackChkFailImpl);
 
   FunctionCallee StackChkFail =
       F.getParent()->getOrInsertFunction(StackChkFailName, IRB.getVoidTy());
@@ -692,8 +690,8 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
                           StackAlignment);
 
     Value *NewTop = IRB.CreateIntToPtr(
-        IRB.CreateAnd(SP,
-                      ConstantInt::get(IntPtrTy, ~uint64_t(Align.value() - 1))),
+        IRB.CreateAnd(
+            SP, ConstantInt::getSigned(IntPtrTy, ~uint64_t(Align.value() - 1))),
         StackPtrTy);
 
     // Save the stack pointer.
@@ -806,13 +804,17 @@ bool SafeStack::run() {
     IRB.SetCurrentDebugLocation(
         DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
   if (SafeStackUsePointerAddress) {
-    const char *SafestackPointerAddressName =
-        TL.getLibcallName(RTLIB::SAFESTACK_POINTER_ADDRESS);
-    if (!SafestackPointerAddressName) {
+    RTLIB::LibcallImpl SafestackPointerAddressImpl =
+        Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
+    if (SafestackPointerAddressImpl == RTLIB::Unsupported) {
       F.getContext().emitError(
           "no libcall available for safestack pointer address");
       return false;
     }
+
+    StringRef SafestackPointerAddressName =
+        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+            SafestackPointerAddressImpl);
 
     FunctionCallee Fn = F.getParent()->getOrInsertFunction(
         SafestackPointerAddressName, IRB.getPtrTy(0));
@@ -883,6 +885,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LibcallLoweringInfoWrapper>();
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
@@ -905,9 +908,14 @@ public:
     }
 
     TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-    auto *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+    const TargetSubtargetInfo *Subtarget = TM->getSubtargetImpl(F);
+    auto *TL = Subtarget->getTargetLowering();
     if (!TL)
       report_fatal_error("TargetLowering instance is required");
+
+    const LibcallLoweringInfo &Libcalls =
+        getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+            *F.getParent(), *Subtarget);
 
     auto *DL = &F.getDataLayout();
     auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
@@ -941,8 +949,8 @@ public:
 
     ScalarEvolution SE(F, TLI, ACT, *DT, LI);
 
-    return SafeStack(F, *TL, *DL, ShouldPreserveDominatorTree ? &DTU : nullptr,
-                     SE)
+    return SafeStack(F, *TL, Libcalls, *DL,
+                     ShouldPreserveDominatorTree ? &DTU : nullptr, SE)
         .run();
   }
 };
@@ -965,18 +973,31 @@ PreservedAnalyses SafeStackPass::run(Function &F,
     return PreservedAnalyses::all();
   }
 
-  auto *TL = TM->getSubtargetImpl(F)->getTargetLowering();
-  if (!TL)
-    report_fatal_error("TargetLowering instance is required");
+  const TargetSubtargetInfo *Subtarget = TM->getSubtargetImpl(F);
+  auto *TL = Subtarget->getTargetLowering();
 
   auto &DL = F.getDataLayout();
 
   // preserve DominatorTree
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
+      MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
+
+  if (!LibcallLowering) {
+    F.getContext().emitError("'" + LibcallLoweringModuleAnalysis::name() +
+                             "' analysis required");
+    return PreservedAnalyses::all();
+  }
+
+  const LibcallLoweringInfo &Libcalls =
+      LibcallLowering->getLibcallLowering(*Subtarget);
+
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
-  bool Changed = SafeStack(F, *TL, DL, &DTU, SE).run();
+  bool Changed = SafeStack(F, *TL, Libcalls, DL, &DTU, SE).run();
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -989,6 +1010,7 @@ char SafeStackLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SafeStackLegacyPass, DEBUG_TYPE,
                       "Safe Stack instrumentation pass", false, false)
+INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SafeStackLegacyPass, DEBUG_TYPE,

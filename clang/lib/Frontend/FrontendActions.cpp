@@ -9,13 +9,13 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
@@ -798,7 +798,7 @@ namespace {
     /// \returns true to continue receiving the next input file, false to stop.
     bool visitInputFileAsRequested(StringRef FilenameAsRequested,
                                    StringRef Filename, bool isSystem,
-                                   bool isOverridden,
+                                   bool isOverridden, time_t StoredTime,
                                    bool isExplicitModule) override {
 
       Out.indent(2) << "Input file: " << FilenameAsRequested;
@@ -822,6 +822,9 @@ namespace {
       }
 
       Out << "\n";
+
+      if (StoredTime > 0)
+        Out.indent(4) << "MTime: " << llvm::itostr(StoredTime) << "\n";
 
       return true;
     }
@@ -971,14 +974,17 @@ void DumpModuleInfoAction::ExecuteAction() {
     // Emit the macro definitions in the module file so that we can know how
     // much definitions in the module file quickly.
     // TODO: Emit the macro definition bodies completely.
-    if (auto FilteredMacros = llvm::make_filter_range(
-            R->getPreprocessor().macros(),
-            [](const auto &Macro) { return Macro.first->isFromAST(); });
-        !FilteredMacros.empty()) {
-      Out << "   Macro Definitions:\n";
-      for (/*<IdentifierInfo *, MacroState> pair*/ const auto &Macro :
-           FilteredMacros)
-        Out << "     " << Macro.first->getName() << "\n";
+    {
+      std::vector<StringRef> MacroNames;
+      for (const auto &M : R->getPreprocessor().macros()) {
+        if (M.first->isFromAST())
+          MacroNames.push_back(M.first->getName());
+      }
+      llvm::sort(MacroNames);
+      if (!MacroNames.empty())
+        Out << "   Macro Definitions:\n";
+      for (StringRef Name : MacroNames)
+        Out << "     " << Name << "\n";
     }
 
     // Now let's print out any modules we did not see as part of the Primary.
@@ -1228,20 +1234,6 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
   }
   printDependencyDirectivesAsSource(FromFile.getBuffer(), Directives,
                                     llvm::outs());
-}
-
-void GetDependenciesByModuleNameAction::ExecuteAction() {
-  CompilerInstance &CI = getCompilerInstance();
-  Preprocessor &PP = CI.getPreprocessor();
-  SourceManager &SM = PP.getSourceManager();
-  FileID MainFileID = SM.getMainFileID();
-  SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<IdentifierLoc, 2> Path;
-  IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.emplace_back(FileStart, ModuleID);
-  auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
-  PPCallbacks *CB = PP.getPPCallbacks();
-  CB->moduleImport(SourceLocation(), Path, ModResult);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! C736 If EXTENDS appears and the type being defined has a coarray ultimate 
+! C736 If EXTENDS appears and the type being defined has a coarray ultimate
 ! component, its parent type shall have a coarray ultimate component.
 !
 subroutine s()

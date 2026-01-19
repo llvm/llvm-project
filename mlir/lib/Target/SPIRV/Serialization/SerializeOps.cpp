@@ -311,6 +311,14 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
     op.addEntryBlock();
     if (failed(processFuncParameter(op)))
       return failure();
+
+    // Erasing the body of the function destroys arguments, so we need to remove
+    // them from the map to avoid problems when processing invalid values used
+    // as keys. We have already serialized function arguments so we probably can
+    // remove them from the map as external function will not have any uses.
+    for (Value arg : op.getArguments())
+      valueIDMap.erase(arg);
+
     // Don't need to process the added block, there is nothing to process,
     // the fake body was added just to get the arguments, remove the body,
     // since it's use is done.
@@ -767,6 +775,27 @@ LogicalResult Serializer::processBranchOp(spirv::BranchOp branchOp) {
   return success();
 }
 
+LogicalResult Serializer::processSwitchOp(spirv::SwitchOp switchOp) {
+  uint32_t selectorID = getValueID(switchOp.getSelector());
+  uint32_t defaultLabelID = getOrCreateBlockID(switchOp.getDefaultTarget());
+  SmallVector<uint32_t> arguments{selectorID, defaultLabelID};
+
+  std::optional<mlir::DenseIntElementsAttr> literals = switchOp.getLiterals();
+  BlockRange targets = switchOp.getTargets();
+  if (literals) {
+    for (auto [literal, target] : llvm::zip_equal(*literals, targets)) {
+      arguments.push_back(literal.getLimitedValue());
+      uint32_t targetLabelID = getOrCreateBlockID(target);
+      arguments.push_back(targetLabelID);
+    }
+  }
+
+  if (failed(emitDebugLine(functionBody, switchOp.getLoc())))
+    return failure();
+  encodeInstructionInto(functionBody, spirv::Opcode::OpSwitch, arguments);
+  return success();
+}
+
 LogicalResult Serializer::processAddressOfOp(spirv::AddressOfOp addressOfOp) {
   auto varName = addressOfOp.getVariable();
   auto variableID = getVariableID(varName);
@@ -847,7 +876,7 @@ Serializer::processOp<spirv::ExecutionModeOp>(spirv::ExecutionModeOp op) {
   if (values) {
     for (auto &intVal : values.getValue()) {
       operands.push_back(static_cast<uint32_t>(
-          llvm::cast<IntegerAttr>(intVal).getValue().getZExtValue()));
+          cast<IntegerAttr>(intVal).getValue().getZExtValue()));
     }
   }
   encodeInstructionInto(executionModes, spirv::Opcode::OpExecutionMode,

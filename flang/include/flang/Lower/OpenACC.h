@@ -77,7 +77,8 @@ static constexpr llvm::StringRef privatizationRecipePrefix = "privatization";
 mlir::Value genOpenACCConstruct(AbstractConverter &,
                                 Fortran::semantics::SemanticsContext &,
                                 pft::Evaluation &,
-                                const parser::OpenACCConstruct &);
+                                const parser::OpenACCConstruct &,
+                                Fortran::lower::SymMap &localSymbols);
 void genOpenACCDeclarativeConstruct(
     AbstractConverter &, Fortran::semantics::SemanticsContext &,
     StatementContext &, const parser::OpenACCDeclarativeConstruct &);
@@ -87,23 +88,23 @@ void genOpenACCRoutineConstruct(
 
 /// Get a acc.private.recipe op for the given type or create it if it does not
 /// exist yet.
-mlir::acc::PrivateRecipeOp createOrGetPrivateRecipe(fir::FirOpBuilder &,
-                                                    llvm::StringRef,
-                                                    mlir::Location, mlir::Type);
+mlir::acc::PrivateRecipeOp
+createOrGetPrivateRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
+                         mlir::Type,
+                         llvm::SmallVector<mlir::Value> &dataOperationBounds);
 
 /// Get a acc.reduction.recipe op for the given type or create it if it does not
 /// exist yet.
 mlir::acc::ReductionRecipeOp
 createOrGetReductionRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
                            mlir::Type, mlir::acc::ReductionOperator,
-                           llvm::SmallVector<mlir::Value> &);
+                           llvm::SmallVector<mlir::Value> &dataOperationBounds);
 
 /// Get a acc.firstprivate.recipe op for the given type or create it if it does
 /// not exist yet.
-mlir::acc::FirstprivateRecipeOp
-createOrGetFirstprivateRecipe(fir::FirOpBuilder &, llvm::StringRef,
-                              mlir::Location, mlir::Type,
-                              llvm::SmallVector<mlir::Value> &);
+mlir::acc::FirstprivateRecipeOp createOrGetFirstprivateRecipe(
+    fir::FirOpBuilder &, llvm::StringRef, mlir::Location, mlir::Type,
+    llvm::SmallVector<mlir::Value> &dataOperationBounds);
 
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);
@@ -120,6 +121,11 @@ void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
 /// since this is dependent on number of tile operands and collapse
 /// clause.
 uint64_t getLoopCountForCollapseAndTile(const Fortran::parser::AccClauseList &);
+
+/// Parse collapse clause and return {size, force}. If absent, returns
+/// {1,false}.
+std::pair<uint64_t, bool>
+getCollapseSizeAndForce(const Fortran::parser::AccClauseList &);
 
 /// Checks whether the current insertion point is inside OpenACC loop.
 bool isInOpenACCLoop(fir::FirOpBuilder &);

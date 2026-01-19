@@ -89,6 +89,22 @@ static bool isZeroValue(Attribute attr) {
   return false;
 }
 
+/// Move all functions declaration before functions definitions. In SPIR-V
+/// "declarations" are functions without a body and "definitions" functions
+/// with a body. This is stronger than necessary. It should be sufficient to
+/// ensure any declarations precede their uses and not all definitions, however
+/// this allows to avoid analysing every function in the module this way.
+static void moveFuncDeclarationsToTop(spirv::ModuleOp moduleOp) {
+  Block::OpListType &ops = moduleOp.getBody()->getOperations();
+  if (ops.empty())
+    return;
+  Operation &firstOp = ops.front();
+  for (Operation &op : llvm::drop_begin(ops))
+    if (auto funcOp = dyn_cast<spirv::FuncOp>(op))
+      if (funcOp.getBody().empty())
+        funcOp->moveBefore(&firstOp);
+}
+
 namespace mlir {
 namespace spirv {
 
@@ -118,6 +134,8 @@ LogicalResult Serializer::serialize() {
   }
   processMemoryModel();
   processDebugInfo();
+
+  moveFuncDeclarationsToTop(module);
 
   // Iterate over the module body to serialize it. Assumptions are that there is
   // only one basic block in the moduleOp
@@ -260,9 +278,9 @@ static std::string getDecorationName(StringRef attrName) {
 }
 
 template <typename AttrTy, typename EmitF>
-LogicalResult processDecorationList(Location loc, Decoration decoration,
-                                    Attribute attrList, StringRef attrName,
-                                    EmitF emitter) {
+static LogicalResult processDecorationList(Location loc, Decoration decoration,
+                                           Attribute attrList,
+                                           StringRef attrName, EmitF emitter) {
   auto arrayAttr = dyn_cast<ArrayAttr>(attrList);
   if (!arrayAttr) {
     return emitError(loc, "expecting array attribute of ")
@@ -294,7 +312,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::LinkageAttributes: {
     // Get the value of the Linkage Attributes
     // e.g., LinkageAttributes=["linkageName", linkageType].
-    auto linkageAttr = llvm::dyn_cast<spirv::LinkageAttributesAttr>(attr);
+    auto linkageAttr = dyn_cast<spirv::LinkageAttributesAttr>(attr);
     auto linkageName = linkageAttr.getLinkageName();
     auto linkageType = linkageAttr.getLinkageType().getValue();
     // Encode the Linkage Name (string literal to uint32_t).
@@ -320,6 +338,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
+  case spirv::Decoration::Index:
     if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
       args.push_back(intAttr.getValue().getZExtValue());
       break;
@@ -355,6 +374,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::Block:
   case spirv::Decoration::Invariant:
   case spirv::Decoration::Patch:
+  case spirv::Decoration::Coherent:
     // For unit attributes and decoration attributes, the args list
     // has no values so we do nothing.
     if (isa<UnitAttr, DecorationAttr>(attr))
@@ -803,7 +823,7 @@ LogicalResult Serializer::prepareBasicType(
     return success();
   }
 
-  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(type)) {
+  if (auto tensorArmType = dyn_cast<TensorArmType>(type)) {
     uint32_t elementTypeID = 0;
     uint32_t rank = 0;
     uint32_t shapeID = 0;
@@ -1425,7 +1445,20 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
         assert(branchCondOp.getFalseTarget() == block);
         blockOperands = branchCondOp.getFalseTargetOperands();
       }
-
+      assert(!blockOperands->empty() &&
+             "expected non-empty block operand range");
+      predecessors.emplace_back(spirvPredecessor, *blockOperands);
+    } else if (auto switchOp = dyn_cast<spirv::SwitchOp>(terminator)) {
+      std::optional<OperandRange> blockOperands;
+      if (block == switchOp.getDefaultTarget()) {
+        blockOperands = switchOp.getDefaultOperands();
+      } else {
+        SuccessorRange targets = switchOp.getTargets();
+        auto it = llvm::find(targets, block);
+        assert(it != targets.end());
+        size_t index = std::distance(targets.begin(), it);
+        blockOperands = switchOp.getTargetOperands(index);
+      }
       assert(!blockOperands->empty() &&
              "expected non-empty block operand range");
       predecessors.emplace_back(spirvPredecessor, *blockOperands);
@@ -1561,6 +1594,7 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
       .Case([&](spirv::SpecConstantOperationOp op) {
         return processSpecConstantOperationOp(op);
       })
+      .Case([&](spirv::SwitchOp op) { return processSwitchOp(op); })
       .Case([&](spirv::UndefOp op) { return processUndefOp(op); })
       .Case([&](spirv::VariableOp op) { return processVariableOp(op); })
 

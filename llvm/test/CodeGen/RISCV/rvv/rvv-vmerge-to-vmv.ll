@@ -99,3 +99,26 @@ define <vscale x 2 x i32> @preserve_false_avl_known_le(ptr %p, <vscale x 2 x i32
   %res = call <vscale x 2 x i32> @llvm.riscv.vmerge(<vscale x 2 x i32> %pt, <vscale x 2 x i32> %false, <vscale x 2 x i32> %true, <vscale x 2 x i1> %mask, i64 1)
   ret <vscale x 2 x i32> %res
 }
+
+define <4 x i16> @pr173141(i1 %0, <2 x i16> %conv33) {
+; CHECK-LABEL: pr173141:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    ret
+entry:
+  %1 = tail call i32 @llvm.riscv.orc.b.i32(i32 1)
+  %sub.i = add i32 %1, 1
+  %2 = and i32 %sub.i, 1
+  %and.i = zext i32 %2 to i64
+  %3 = select i1 %0, i64 0, i64 %and.i
+  %tobool.not128 = icmp sgt i64 %3, -1
+  %4 = insertelement <4 x i1> zeroinitializer, i1 %tobool.not128, i64 0
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <4 x i32> zeroinitializer
+  %6 = shufflevector <2 x i16> %conv33, <2 x i16> zeroinitializer, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %7 = select <4 x i1> %5, <4 x i16> %6, <4 x i16> zeroinitializer
+  ret <4 x i16> %7
+}

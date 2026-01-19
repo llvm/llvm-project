@@ -83,11 +83,10 @@ static const Decl *findRVRefOverload(const FunctionDecl &FD,
   // FIXME:
   // 1. overload in anonymous namespace
   // 2. forward reference
-  DeclContext::lookup_result LookupResult =
+  const DeclContext::lookup_result LookupResult =
       FD.getParent()->lookup(FD.getNameInfo().getName());
-  if (LookupResult.isSingleResult()) {
+  if (LookupResult.isSingleResult())
     return nullptr;
-  }
   for (const Decl *Overload : LookupResult) {
     if (Overload == &FD)
       continue;

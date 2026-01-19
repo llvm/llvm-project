@@ -1,7 +1,6 @@
 import os
 
 from clang.cindex import (
-    Config,
     Cursor,
     CursorKind,
     File,
@@ -13,8 +12,6 @@ from clang.cindex import (
     TranslationUnitSaveError,
 )
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import gc
 import tempfile

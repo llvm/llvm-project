@@ -49,7 +49,6 @@ static const StringRef ToolName = "llvm-lipo";
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   reportError(Buf);
 }
 
@@ -58,7 +57,6 @@ static const StringRef ToolName = "llvm-lipo";
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   WithColor::error(errs(), ToolName) << "'" << File << "': " << Buf;
   exit(EXIT_FAILURE);
 }
@@ -460,8 +458,8 @@ printInfo(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries) {
   for (auto &IB : InputBinaries) {
     const Binary *Binary = IB.getBinary();
     if (!Binary->isMachOUniversalBinary()) {
-      assert(Binary->isMachO() ||
-             Binary->isArchive() && "expected MachO binary");
+      assert((Binary->isMachO() || Binary->isArchive()) &&
+             "expected MachO binary");
       outs() << "Non-fat file: " << Binary->getFileName()
              << " is architecture: ";
       printBinaryArchs(LLVMCtx, Binary, outs());

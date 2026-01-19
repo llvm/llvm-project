@@ -111,9 +111,9 @@ Language *Language::FindPlugin(llvm::StringRef file_path) {
   ForEach([&result, file_path](Language *language) {
     if (language->IsSourceFile(file_path)) {
       result = language;
-      return false;
+      return IterationAction::Stop;
     }
-    return true;
+    return IterationAction::Continue;
   });
   return result;
 }
@@ -128,7 +128,8 @@ Language *Language::FindPlugin(LanguageType language,
   return result;
 }
 
-void Language::ForEach(std::function<bool(Language *)> callback) {
+void Language::ForEach(
+    llvm::function_ref<IterationAction(Language *)> callback) {
   // If we want to iterate over all languages, we first have to complete the
   // LanguagesMap.
   static llvm::once_flag g_initialize;
@@ -153,9 +154,51 @@ void Language::ForEach(std::function<bool(Language *)> callback) {
   }
 
   for (auto *lang : loaded_plugins) {
-    if (!callback(lang))
+    if (callback(lang) == IterationAction::Stop)
       break;
   }
+}
+
+llvm::Expected<LanguageType>
+Language::GetExceptionLanguageForLanguage(llvm::StringRef lang_name) {
+  LanguageType language = Language::GetLanguageTypeFromString(lang_name);
+  LanguageType exception_language = eLanguageTypeUnknown;
+
+  llvm::StringRef error_context;
+  switch (language) {
+  case eLanguageTypeC89:
+  case eLanguageTypeC:
+  case eLanguageTypeC99:
+  case eLanguageTypeC11:
+    exception_language = eLanguageTypeC;
+    break;
+  case eLanguageTypeC_plus_plus:
+  case eLanguageTypeC_plus_plus_03:
+  case eLanguageTypeC_plus_plus_11:
+  case eLanguageTypeC_plus_plus_14:
+    exception_language = eLanguageTypeC_plus_plus;
+    break;
+  case eLanguageTypeObjC_plus_plus:
+    error_context =
+        "Set exception breakpoints separately for c++ and objective-c";
+    break;
+  case eLanguageTypeUnknown:
+    error_context = "Unknown language type for exception breakpoint";
+    break;
+  default:
+    if (Language *languagePlugin = Language::FindPlugin(language)) {
+      if (languagePlugin->SupportsExceptionBreakpointsOnThrow() ||
+          languagePlugin->SupportsExceptionBreakpointsOnCatch()) {
+        exception_language = language;
+        break;
+      }
+    }
+    error_context = "Unsupported language type for exception breakpoint";
+  }
+  if (!error_context.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   error_context);
+  return exception_language;
 }
 
 bool Language::IsTopLevelFunction(Function &function) { return false; }
@@ -270,6 +313,10 @@ const char *Language::GetNameForLanguageType(LanguageType language) {
     return language_names[eLanguageTypeUnknown].name;
 }
 
+llvm::StringRef Language::GetDisplayNameForLanguageType(LanguageType language) {
+  return SourceLanguage(language).GetDescription();
+}
+
 void Language::PrintSupportedLanguagesForExpressions(Stream &s,
                                                      llvm::StringRef prefix,
                                                      llvm::StringRef suffix) {
@@ -289,9 +336,9 @@ void Language::PrintAllLanguages(Stream &s, const char *prefix,
 }
 
 void Language::ForAllLanguages(
-    std::function<bool(lldb::LanguageType)> callback) {
+    llvm::function_ref<IterationAction(lldb::LanguageType)> callback) {
   for (uint32_t i = 1; i < num_languages; i++) {
-    if (!callback(language_names[i].type))
+    if (callback(language_names[i].type) == IterationAction::Stop)
       break;
   }
 }
@@ -416,7 +463,7 @@ std::set<lldb::LanguageType> Language::GetSupportedLanguages() {
   std::set<lldb::LanguageType> supported_languages;
   ForEach([&](Language *lang) {
     supported_languages.emplace(lang->GetLanguageType());
-    return true;
+    return IterationAction::Continue;
   });
   return supported_languages;
 }
@@ -542,9 +589,26 @@ Language::Language() = default;
 // Destructor
 Language::~Language() = default;
 
+static std::optional<llvm::dwarf::SourceLanguage>
+ToDwarfSourceLanguage(lldb::LanguageType language_type) {
+  if (language_type <= lldb::eLanguageTypeLastStandardLanguage)
+    return static_cast<llvm::dwarf::SourceLanguage>(language_type);
+
+  switch (language_type) {
+  case eLanguageTypeMipsAssembler:
+    return llvm::dwarf::DW_LANG_Mips_Assembler;
+  default:
+    return std::nullopt;
+  }
+}
+
 SourceLanguage::SourceLanguage(lldb::LanguageType language_type) {
-  auto lname =
-      llvm::dwarf::toDW_LNAME((llvm::dwarf::SourceLanguage)language_type);
+  std::optional<llvm::dwarf::SourceLanguage> dwarf_lang =
+      ToDwarfSourceLanguage(language_type);
+  if (!dwarf_lang)
+    return;
+
+  auto lname = llvm::dwarf::toDW_LNAME(*dwarf_lang);
   if (!lname)
     return;
   name = lname->first;
@@ -559,11 +623,8 @@ lldb::LanguageType SourceLanguage::AsLanguageType() const {
 }
 
 llvm::StringRef SourceLanguage::GetDescription() const {
-  LanguageType type = AsLanguageType();
-  if (type)
-    return Language::GetNameForLanguageType(type);
   return llvm::dwarf::LanguageDescription(
-      (llvm::dwarf::SourceLanguageName)name);
+      static_cast<llvm::dwarf::SourceLanguageName>(name), version);
 }
 bool SourceLanguage::IsC() const { return name == llvm::dwarf::DW_LNAME_C; }
 

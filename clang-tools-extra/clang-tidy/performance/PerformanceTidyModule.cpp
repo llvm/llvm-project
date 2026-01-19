@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AvoidEndlCheck.h"
 #include "EnumSizeCheck.h"
 #include "FasterStringFindCheck.h"
@@ -26,11 +25,12 @@
 #include "NoexceptSwapCheck.h"
 #include "TriviallyDestructibleCheck.h"
 #include "TypePromotionInMathFnCheck.h"
-#include "UnnecessaryCopyInitialization.h"
+#include "UnnecessaryCopyInitializationCheck.h"
 #include "UnnecessaryValueParamCheck.h"
 
 namespace clang::tidy {
 namespace performance {
+namespace {
 
 class PerformanceModule : public ClangTidyModule {
 public:
@@ -66,12 +66,14 @@ public:
         "performance-trivially-destructible");
     CheckFactories.registerCheck<TypePromotionInMathFnCheck>(
         "performance-type-promotion-in-math-fn");
-    CheckFactories.registerCheck<UnnecessaryCopyInitialization>(
+    CheckFactories.registerCheck<UnnecessaryCopyInitializationCheck>(
         "performance-unnecessary-copy-initialization");
     CheckFactories.registerCheck<UnnecessaryValueParamCheck>(
         "performance-unnecessary-value-param");
   }
 };
+
+} // namespace
 
 // Register the PerformanceModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<PerformanceModule>

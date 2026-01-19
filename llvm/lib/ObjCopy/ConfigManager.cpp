@@ -28,9 +28,8 @@ Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
       !Common.SymbolsToLocalize.empty() || !Common.SymbolsToWeaken.empty() ||
       !Common.SymbolsToKeepGlobal.empty() || !Common.SectionsToRename.empty() ||
       !Common.SetSectionAlignment.empty() || !Common.SetSectionType.empty() ||
-      Common.ExtractDWO || Common.PreserveDates || Common.StripDWO ||
-      Common.StripNonAlloc || Common.StripSections || Common.Weaken ||
-      Common.DecompressDebugSections ||
+      Common.ExtractDWO || Common.StripDWO || Common.StripNonAlloc ||
+      Common.StripSections || Common.Weaken || Common.DecompressDebugSections ||
       Common.DiscardMode == DiscardType::Locals ||
       !Common.SymbolsToAdd.empty() || Common.GapFill != 0 ||
       Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
@@ -122,14 +121,14 @@ ConfigManager::getDXContainerConfig() const {
   if (!Common.AddGnuDebugLink.empty() || !Common.SplitDWO.empty() ||
       !Common.AllocSectionsPrefix.empty() ||
       Common.DiscardMode != DiscardType::None || !Common.AddSection.empty() ||
-      !Common.DumpSection.empty() || !Common.KeepSection.empty() ||
-      !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
-      !Common.SetSectionFlags.empty() || !Common.SetSectionType.empty() ||
-      Common.ExtractDWO || Common.OnlyKeepDebug || Common.StripAllGNU ||
-      Common.StripDWO || Common.StripDebug || Common.StripNonAlloc ||
-      Common.StripSections || Common.StripUnneeded ||
-      Common.DecompressDebugSections || Common.GapFill != 0 ||
-      Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
+      !Common.KeepSection.empty() || !Common.SectionsToRename.empty() ||
+      !Common.SetSectionAlignment.empty() || !Common.SetSectionFlags.empty() ||
+      !Common.SetSectionType.empty() || Common.ExtractDWO ||
+      Common.OnlyKeepDebug || Common.StripAllGNU || Common.StripDWO ||
+      Common.StripDebug || Common.StripNonAlloc || Common.StripSections ||
+      Common.StripUnneeded || Common.DecompressDebugSections ||
+      Common.GapFill != 0 || Common.PadTo != 0 ||
+      Common.ChangeSectionLMAValAll != 0 ||
       !Common.ChangeSectionAddress.empty()) {
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for DXContainer");

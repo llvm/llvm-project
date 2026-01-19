@@ -138,28 +138,25 @@ public:
 
   /// Meet (intersect) the information contained in the 'rhs' value with this
   /// lattice. Returns if the state of the current lattice changed.  If the
-  /// lattice elements don't have a `meet` method, this is a no-op (see below.)
-  template <typename VT,
-            std::enable_if_t<lattice_has_meet<VT>::value> * = nullptr>
+  /// lattice elements don't have a `meet` method, this is a no-op.
+  template <typename VT>
   ChangeResult meet(const VT &rhs) {
-    ValueT newValue = ValueT::meet(value, rhs);
-    assert(ValueT::meet(newValue, value) == newValue &&
-           "expected `meet` to be monotonic");
-    assert(ValueT::meet(newValue, rhs) == newValue &&
-           "expected `meet` to be monotonic");
-
-    // Update the current optimistic value if something changed.
-    if (newValue == value)
+    if constexpr (!lattice_has_meet<VT>::value) {
       return ChangeResult::NoChange;
+    } else {
+      ValueT newValue = ValueT::meet(value, rhs);
+      assert(ValueT::meet(newValue, value) == newValue &&
+             "expected `meet` to be monotonic");
+      assert(ValueT::meet(newValue, rhs) == newValue &&
+             "expected `meet` to be monotonic");
 
-    value = newValue;
-    return ChangeResult::Change;
-  }
+      // Update the current optimistic value if something changed.
+      if (newValue == value)
+        return ChangeResult::NoChange;
 
-  template <typename VT,
-            std::enable_if_t<!lattice_has_meet<VT>::value> * = nullptr>
-  ChangeResult meet(const VT &rhs) {
-    return ChangeResult::NoChange;
+      value = newValue;
+      return ChangeResult::Change;
+    }
   }
 
   /// Print the lattice element.
@@ -218,7 +215,8 @@ protected:
   /// of loops).
   virtual void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
-      ArrayRef<AbstractSparseLattice *> argLattices, unsigned firstIndex) = 0;
+      ValueRange successorInputs, ArrayRef<AbstractSparseLattice *> argLattices,
+      unsigned firstIndex) = 0;
 
   /// Get the lattice element of a value.
   virtual AbstractSparseLattice *getLatticeElement(Value value) = 0;
@@ -286,7 +284,7 @@ private:
   /// and propagating therefrom.
   virtual void
   visitRegionSuccessors(ProgramPoint *point, RegionBranchOpInterface branch,
-                        RegionBranchPoint successor,
+                        RegionSuccessor successor,
                         ArrayRef<AbstractSparseLattice *> lattices);
 };
 
@@ -331,11 +329,12 @@ public:
   /// index of the first element of `argLattices` that is set by control-flow.
   virtual void visitNonControlFlowArguments(Operation *op,
                                             const RegionSuccessor &successor,
+                                            ValueRange successorInputs,
                                             ArrayRef<StateT *> argLattices,
                                             unsigned firstIndex) {
     setAllToEntryStates(argLattices.take_front(firstIndex));
-    setAllToEntryStates(argLattices.drop_front(
-        firstIndex + successor.getSuccessorInputs().size()));
+    setAllToEntryStates(
+        argLattices.drop_front(firstIndex + successorInputs.size()));
   }
 
 protected:
@@ -386,10 +385,10 @@ private:
   }
   void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
-      ArrayRef<AbstractSparseLattice *> argLattices,
+      ValueRange successorInputs, ArrayRef<AbstractSparseLattice *> argLattices,
       unsigned firstIndex) override {
     visitNonControlFlowArguments(
-        op, successor,
+        op, successor, successorInputs,
         {reinterpret_cast<StateT *const *>(argLattices.begin()),
          argLattices.size()},
         firstIndex);
@@ -433,6 +432,12 @@ protected:
 
   // Visit operands on branch instructions that are not forwarded.
   virtual void visitBranchOperand(OpOperand &operand) = 0;
+
+  // Visit the non-forwarded arguments of a region, such as the
+  // induction variables of a loop.
+  virtual void
+  visitNonControlFlowArguments(RegionSuccessor &successor,
+                               ArrayRef<BlockArgument> arguments) = 0;
 
   // Visit operands on call instructions that are not forwarded.
   virtual void visitCallOperand(OpOperand &operand) = 0;
@@ -518,6 +523,10 @@ private:
 template <typename StateT>
 class SparseBackwardDataFlowAnalysis
     : public AbstractSparseBackwardDataFlowAnalysis {
+  static_assert(
+      std::is_base_of<AbstractSparseLattice, StateT>::value,
+      "analysis state class expected to subclass AbstractSparseLattice");
+
 public:
   explicit SparseBackwardDataFlowAnalysis(DataFlowSolver &solver,
                                           SymbolTableCollection &symbolTable)

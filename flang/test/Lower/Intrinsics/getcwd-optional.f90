@@ -15,8 +15,8 @@ subroutine test(cwd, status)
   ! CHECK-NEXT:        %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
   ! CHECK-NEXT:        %[[cwdUnbox:.*]]:2 = fir.unboxchar %[[cwdArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   ! CHECK-NEXT:        %[[cwdCast:.*]] = fir.convert %[[cwdUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,255>>
-  ! CHECK-NEXT:        %[[cwdDeclare:.*]] = fir.declare %[[cwdCast]] typeparams %[[c255]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtestEcwd"} : (!fir.ref<!fir.char<1,255>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,255>>
-  ! CHECK-NEXT:        %[[statusAddr:.*]] = fir.declare %[[statusArg]] dummy_scope %[[DSCOPE]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtestEstatus"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  ! CHECK-NEXT:        %[[cwdDeclare:.*]] = fir.declare %[[cwdCast]] typeparams %[[c255]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFtestEcwd"} : (!fir.ref<!fir.char<1,255>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,255>>
+  ! CHECK-NEXT:        %[[statusAddr:.*]] = fir.declare %[[statusArg]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtestEstatus"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   ! CHECK-NEXT:       %[[cwdBox:.*]] = fir.embox %[[cwdDeclare]] : (!fir.ref<!fir.char<1,255>>) -> !fir.box<!fir.char<1,255>>
   ! CHECK:            %[[cwd:.*]] = fir.convert %[[cwdBox]] : (!fir.box<!fir.char<1,255>>) -> !fir.box<none>
   ! CHECK:            %[[statusValue:.*]] = fir.call @_FortranAGetCwd(%[[cwd]], %[[VAL_8:.*]], %[[c11]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> i32

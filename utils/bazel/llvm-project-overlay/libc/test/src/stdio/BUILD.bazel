@@ -48,6 +48,16 @@ libc_test(
 )
 
 libc_test(
+    name = "asprintf_test",
+    srcs = ["asprintf_test.cpp"],
+    deps = [
+        "//libc:asprintf",
+        "//libc:memset",
+        "//libc:sprintf",
+    ],
+)
+
+libc_test(
     name = "sprintf_test",
     srcs = ["sprintf_test.cpp"],
     deps = [
@@ -77,7 +87,18 @@ libc_test(
     name = "fprintf_test",
     srcs = ["fprintf_test.cpp"],
     deps = [
+        "//libc:__support_cpp_limits",
+        "//libc:__support_macros_properties_architectures",
         "//libc:fprintf",
+    ],
+)
+
+libc_test(
+    name = "vasprintf_test",
+    srcs = ["vasprintf_test.cpp"],
+    deps = [
+        "//libc:memset",
+        "//libc:vasprintf",
     ],
 )
 

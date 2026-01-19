@@ -22,7 +22,10 @@ atomic/atomic_fetch_min.cl
 atomic/atomic_fetch_or.cl
 atomic/atomic_fetch_sub.cl
 atomic/atomic_fetch_xor.cl
+atomic/atomic_flag_clear.cl
+atomic/atomic_flag_test_and_set.cl
 atomic/atomic_inc.cl
+atomic/atomic_init.cl
 atomic/atomic_load.cl
 atomic/atomic_max.cl
 atomic/atomic_min.cl
@@ -44,6 +47,10 @@ common/radians.cl
 common/sign.cl
 common/smoothstep.cl
 common/step.cl
+conversion/convert_float2float.cl
+conversion/convert_float2int.cl
+conversion/convert_int2float.cl
+conversion/convert_integer.cl
 geometric/cross.cl
 geometric/distance.cl
 geometric/dot.cl

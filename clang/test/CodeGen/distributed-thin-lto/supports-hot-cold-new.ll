@@ -22,7 +22,7 @@
 
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t1.o -x ir %t.o -c -fthinlto-index=%t.o.thinlto.bc -save-temps=obj
 
-; RUN: llvm-dis %t.s.3.import.bc -o - | FileCheck %s --check-prefix=CHECK-IR
+; RUN: llvm-dis %t.s.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 ; CHECK-IR: !memprof {{.*}} !callsite
 ; CHECK-IR: "memprof"="cold"
 
@@ -42,9 +42,14 @@
 
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t1.o -x ir %t.o -c -fthinlto-index=%t.o.thinlto.bc -save-temps=obj
 
-; RUN: llvm-dis %t.s.3.import.bc -o - | FileCheck %s \
+; RUN: llvm-dis %t.s.4.opt.bc -o - | FileCheck %s \
 ; RUN: --implicit-check-not "!memprof" --implicit-check-not "!callsite" \
 ; RUN: --implicit-check-not "memprof"="cold"
+
+;; Ensure the attributes and metadata are stripped when running a non-LTO pipeline.
+; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -x ir %t.o -S -emit-llvm -o - | FileCheck %s \
+; RUN: 	--implicit-check-not "!memprof" --implicit-check-not "!callsite" \
+; RUN: 	--implicit-check-not "memprof"="cold"
 
 source_filename = "thinlto-distributed-supports-hot-cold-new.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

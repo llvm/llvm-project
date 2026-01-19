@@ -488,6 +488,228 @@ loop.end:
 }
 
 
+; Two uncountable early exits in a diamond pattern - they don't dominate each
+; other, so we can't determine a clear program order for checking them.
+define i64 @uncountable_exits_in_diamond_pattern() {
+; CHECK-LABEL: define i64 @uncountable_exits_in_diamond_pattern() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[GEP1]], align 1
+; CHECK-NEXT:    [[BRANCH_COND:%.*]] = icmp slt i8 [[LD1]], 0
+; CHECK-NEXT:    br i1 [[BRANCH_COND]], label [[BLOCK_A:%.*]], label [[BLOCK_B:%.*]]
+; CHECK:       block.a:
+; CHECK-NEXT:    [[GEP2A:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2A:%.*]] = load i8, ptr [[GEP2A]], align 1
+; CHECK-NEXT:    [[CMP_A:%.*]] = icmp eq i8 [[LD1]], [[LD2A]]
+; CHECK-NEXT:    br i1 [[CMP_A]], label [[LOOP_END:%.*]], label [[LOOP_LATCH]]
+; CHECK:       block.b:
+; CHECK-NEXT:    [[GEP2B:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2B:%.*]] = load i8, ptr [[GEP2B]], align 1
+; CHECK-NEXT:    [[CMP_B:%.*]] = icmp eq i8 [[LD1]], [[LD2B]]
+; CHECK-NEXT:    br i1 [[CMP_B]], label [[LOOP_END]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 64
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_HEADER]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 1, [[BLOCK_A]] ], [ 2, [[BLOCK_B]] ], [ 0, [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8], align 1
+  %p2 = alloca [1024 x i8], align 1
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop.header
+
+loop.header:
+  %index = phi i64 [ %index.next, %loop.latch ], [ 0, %entry ]
+  %gep1 = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %gep1, align 1
+  %branch.cond = icmp slt i8 %ld1, 0
+  br i1 %branch.cond, label %block.a, label %block.b
+
+block.a:
+  %gep2a = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2a = load i8, ptr %gep2a, align 1
+  %cmp.a = icmp eq i8 %ld1, %ld2a
+  br i1 %cmp.a, label %loop.end, label %loop.latch
+
+block.b:
+  %gep2b = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2b = load i8, ptr %gep2b, align 1
+  %cmp.b = icmp eq i8 %ld1, %ld2b
+  br i1 %cmp.b, label %loop.end, label %loop.latch
+
+loop.latch:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 64
+  br i1 %exitcond, label %loop.header, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ 1, %block.a ], [ 2, %block.b ], [ 0, %loop.latch ]
+  ret i64 %retval
+}
+
+
+; Two early exits with udiv in a non-exiting middle block between them.
+; The udiv is only executed if the first early exit is not taken, so it
+; needs predication. This should not be vectorized.
+define i64 @multi_exit_udiv_in_nonexiting_block() {
+; CHECK-LABEL: define i64 @multi_exit_udiv_in_nonexiting_block() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[GEP1]], align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[LD1]], 42
+; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP_END:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[LD1_EXT:%.*]] = zext i8 [[LD1]] to i32
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 20000, [[LD1_EXT]]
+; CHECK-NEXT:    br label [[EARLY_EXIT_2:%.*]]
+; CHECK:       early.exit.2:
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[GEP2]], align 1
+; CHECK-NEXT:    [[LD2_EXT:%.*]] = zext i8 [[LD2]] to i32
+; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[DIV]], [[LD2_EXT]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[SUM]], 100
+; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP_END]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_HEADER]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP_HEADER]] ], [ [[INDEX]], [[EARLY_EXIT_2]] ], [ 67, [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop.header
+
+loop.header:
+  %index = phi i64 [ %index.next, %loop.latch ], [ 0, %entry ]
+  %gep1 = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %gep1, align 1
+  %cmp1 = icmp eq i8 %ld1, 42
+  br i1 %cmp1, label %loop.end, label %middle.block
+
+middle.block:
+  ; NOT an exiting block - unconditional branch to second early exit check
+  ; udiv here needs predication (only executed if cmp1 is false)
+  %ld1.ext = zext i8 %ld1 to i32
+  %div = udiv i32 20000, %ld1.ext
+  br label %early.exit.2
+
+early.exit.2:
+  ; Second early exit block
+  %gep2 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %gep2, align 1
+  %ld2.ext = zext i8 %ld2 to i32
+  %sum = add i32 %div, %ld2.ext
+  %cmp2 = icmp eq i32 %sum, 100
+  br i1 %cmp2, label %loop.end, label %loop.latch
+
+loop.latch:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop.header, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop.header ], [ %index, %early.exit.2 ], [ 67, %loop.latch ]
+  ret i64 %retval
+}
+
+
+; Two early exits with store in a non-exiting middle block between them.
+; The store is only executed if the first early exit is not taken, so it
+; needs predication. This should not be vectorized.
+define i64 @multi_exit_store_in_nonexiting_block(ptr %dest) {
+; CHECK-LABEL: define i64 @multi_exit_store_in_nonexiting_block(
+; CHECK-SAME: ptr [[DEST:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[GEP1]], align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[LD1]], 42
+; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP_END:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[GEP_DEST:%.*]] = getelementptr inbounds i8, ptr [[DEST]], i64 [[INDEX]]
+; CHECK-NEXT:    store i8 [[LD1]], ptr [[GEP_DEST]], align 1
+; CHECK-NEXT:    br label [[EARLY_EXIT_2:%.*]]
+; CHECK:       early.exit.2:
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[GEP2]], align 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[LD1]], [[LD2]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP_END]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_HEADER]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP_HEADER]] ], [ [[INDEX]], [[EARLY_EXIT_2]] ], [ 67, [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop.header
+
+loop.header:
+  %index = phi i64 [ %index.next, %loop.latch ], [ 0, %entry ]
+  %gep1 = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %gep1, align 1
+  %cmp1 = icmp eq i8 %ld1, 42
+  br i1 %cmp1, label %loop.end, label %middle.block
+
+middle.block:
+  ; NOT an exiting block - unconditional branch to second early exit check
+  ; store here needs predication (only executed if cmp1 is false)
+  %gep.dest = getelementptr inbounds i8, ptr %dest, i64 %index
+  store i8 %ld1, ptr %gep.dest, align 1
+  br label %early.exit.2
+
+early.exit.2:
+  ; Second early exit block
+  %gep2 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %gep2, align 1
+  %cmp2 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp2, label %loop.end, label %loop.latch
+
+loop.latch:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop.header, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop.header ], [ %index, %early.exit.2 ], [ 67, %loop.latch ]
+  ret i64 %retval
+}
+
+
 declare i32 @foo(i32) readonly
 declare <vscale x 4 x i32> @foo_vec(<vscale x 4 x i32>)
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NONDETERMINISTIC_POINTER_ITERATION_ORDER_CHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NONDETERMINISTIC_POINTER_ITERATION_ORDER_CHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NONDETERMINISTICPOINTERITERATIONORDERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NONDETERMINISTICPOINTERITERATIONORDERCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// pointers.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/nondeterministic-pointer-iteration-order.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/nondeterministic-pointer-iteration-order.html
 class NondeterministicPointerIterationOrderCheck : public ClangTidyCheck {
 public:
   NondeterministicPointerIterationOrderCheck(StringRef Name,
@@ -36,4 +36,4 @@ public:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NONDETERMINISTIC_POINTER_ITERATION_ORDER_CHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NONDETERMINISTICPOINTERITERATIONORDERCHECK_H

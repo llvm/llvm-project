@@ -44,6 +44,7 @@
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
+#include <__utility/scope_guard.h>
 #include <__utility/swap.h>
 #include <__utility/try_key_extraction.h>
 #include <limits>
@@ -81,18 +82,6 @@ struct __hash_node_base {
   typedef __rebind_pointer_t<_NodePtr, __first_node> __node_base_pointer;
   typedef _NodePtr __node_pointer;
   typedef __node_base_pointer __next_pointer;
-
-// TODO(LLVM 22): Remove this check
-#ifndef _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
-  static_assert(sizeof(__node_base_pointer) == sizeof(__node_pointer) && _LIBCPP_ALIGNOF(__node_base_pointer) ==
-                    _LIBCPP_ALIGNOF(__node_pointer),
-                "It looks like you are using std::__hash_table (an implementation detail for the unordered containers) "
-                "with a fancy pointer type that thas a different representation depending on whether it points to a "
-                "__hash_table base pointer or a __hash_table node pointer (both of which are implementation details of "
-                "the standard library). This means that your ABI is being broken between LLVM 19 and LLVM 20. If you "
-                "don't care about your ABI being broken, define the _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB macro to "
-                "silence this diagnostic.");
-#endif
 
   __next_pointer __next_;
 
@@ -807,7 +796,7 @@ public:
           }
           {
             __node_holder __h = __construct_node_hash(__hash, std::forward<_Args>(__args2)...);
-            if (size() + 1 > __bc * max_load_factor() || __bc == 0) {
+            if (size() + 1 > __bc * max_load_factor()) {
               __rehash_unique(std::max<size_type>(2 * __bc + !std::__is_hash_power2(__bc),
                                                   size_type(__math::ceil(float(size() + 1) / max_load_factor()))));
               __bc    = bucket_count();
@@ -1318,23 +1307,14 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(__hash_table& __u, 
     max_load_factor() = __u.max_load_factor();
     if (bucket_count() != 0) {
       __next_pointer __cache = __detach();
-#if _LIBCPP_HAS_EXCEPTIONS
-      try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-        const_iterator __i = __u.begin();
-        while (__cache != nullptr && __u.size() != 0) {
-          __assign_value(__cache->__upcast()->__get_value(), std::move(__u.remove(__i++)->__get_value()));
-          __next_pointer __next = __cache->__next_;
-          __node_insert_multi(__cache->__upcast());
-          __cache = __next;
-        }
-#if _LIBCPP_HAS_EXCEPTIONS
-      } catch (...) {
-        __deallocate_node_list(__cache);
-        throw;
+      auto __guard           = std::__make_scope_guard([&] { __deallocate_node_list(__cache); });
+      const_iterator __i     = __u.begin();
+      while (__cache != nullptr && __u.size() != 0) {
+        __assign_value(__cache->__upcast()->__get_value(), std::move(__u.remove(__i++)->__get_value()));
+        __next_pointer __next = __cache->__next_;
+        __node_insert_multi(__cache->__upcast());
+        __cache = __next;
       }
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      __deallocate_node_list(__cache);
     }
     const_iterator __i = __u.begin();
     while (__u.size() != 0)
@@ -1362,22 +1342,13 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __
 
   if (bucket_count() != 0) {
     __next_pointer __cache = __detach();
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      for (; __cache != nullptr && __first != __last; ++__first) {
-        __assign_value(__cache->__upcast()->__get_value(), *__first);
-        __next_pointer __next = __cache->__next_;
-        __node_insert_unique(__cache->__upcast());
-        __cache = __next;
-      }
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      __deallocate_node_list(__cache);
-      throw;
+    auto __guard           = std::__make_scope_guard([&] { __deallocate_node_list(__cache); });
+    for (; __cache != nullptr && __first != __last; ++__first) {
+      __assign_value(__cache->__upcast()->__get_value(), *__first);
+      __next_pointer __next = __cache->__next_;
+      __node_insert_unique(__cache->__upcast());
+      __cache = __next;
     }
-#endif // _LIBCPP_HAS_EXCEPTIONS
-    __deallocate_node_list(__cache);
   }
   for (; __first != __last; ++__first)
     __emplace_unique(*__first);
@@ -1392,22 +1363,13 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __f
                 "__assign_multi may only be called with the containers value type or the nodes value type");
   if (bucket_count() != 0) {
     __next_pointer __cache = __detach();
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      for (; __cache != nullptr && __first != __last; ++__first) {
-        __assign_value(__cache->__upcast()->__get_value(), *__first);
-        __next_pointer __next              = __cache->__next_;
-        __node_insert_multi(__cache->__upcast());
-        __cache = __next;
-      }
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      __deallocate_node_list(__cache);
-      throw;
+    auto __guard           = std::__make_scope_guard([&] { __deallocate_node_list(__cache); });
+    for (; __cache != nullptr && __first != __last; ++__first) {
+      __assign_value(__cache->__upcast()->__get_value(), *__first);
+      __next_pointer __next = __cache->__next_;
+      __node_insert_multi(__cache->__upcast());
+      __cache = __next;
     }
-#endif // _LIBCPP_HAS_EXCEPTIONS
-    __deallocate_node_list(__cache);
   }
   for (; __first != __last; ++__first)
     __emplace_multi(*__first);
@@ -1919,14 +1881,18 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __first, const_it
   if (__before_first != __first_node_.__ptr() &&
       std::__constrain_hash(__before_first->__hash(), __bucket_count) == __chash) {
     while (__current != __last_node) {
-      if (auto __next_chash = std::__constrain_hash(__current->__hash(), __bucket_count); __next_chash != __chash) {
-        __chash = __next_chash;
-        break;
-      }
       auto __next = __current->__next_;
       __deallocate_node(__current->__upcast());
       __current = __next;
       --__size_;
+
+      if (__next) {
+        if (auto __next_chash = std::__constrain_hash(__next->__hash(), __bucket_count); __next_chash != __chash) {
+          __bucket_list_[__next_chash] = __before_first;
+          __chash                      = __next_chash;
+          break;
+        }
+      }
     }
   }
 
@@ -1940,10 +1906,12 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __first, const_it
     // before-first element
     if (__next) {
       if (auto __next_chash = std::__constrain_hash(__next->__hash(), __bucket_count); __next_chash != __chash) {
-        __bucket_list_[__chash] = nullptr;
-        __chash                 = __next_chash;
-        __bucket_list_[__chash] = __before_first;
+        __bucket_list_[__chash]      = nullptr;
+        __bucket_list_[__next_chash] = __before_first;
+        __chash                      = __next_chash;
       }
+    } else { // When __next is a nullptr we've fully erased the last bucket. Update the bucket list accordingly.
+      __bucket_list_[__chash] = nullptr;
     }
   }
 

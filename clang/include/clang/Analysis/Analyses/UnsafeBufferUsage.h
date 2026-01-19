@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_H
 
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
@@ -139,6 +140,12 @@ public:
                             FixItList &&Fixes, const Decl *D,
                             const FixitStrategy &VarTargetTypes) = 0;
 
+  // Invoked when an array subscript operator[] is used on a
+  // std::unique_ptr<T[]>.
+  virtual void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
+                                                bool IsRelatedToDecl,
+                                                ASTContext &Ctx) = 0;
+
 #ifndef NDEBUG
 public:
   bool areDebugNotesRequested() {
@@ -170,6 +177,11 @@ public:
   /// \return true iff unsafe libc call should NOT be reported at `Loc`
   virtual bool
   ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const = 0;
+
+  /// \return true iff array subscript accesses on fixed size arrays should NOT
+  /// be reported at `Loc`
+  virtual bool
+  ignoreUnsafeBufferInStaticSizedArray(const SourceLocation &Loc) const = 0;
 
   virtual std::string
   getUnsafeBufferUsageAttributeTextAt(SourceLocation Loc,

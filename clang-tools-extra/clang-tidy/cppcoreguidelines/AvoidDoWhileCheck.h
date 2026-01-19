@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// subtle bugs.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-do-while.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-do-while.html
 class AvoidDoWhileCheck : public ClangTidyCheck {
 public:
   AvoidDoWhileCheck(StringRef Name, ClangTidyContext *Context);

@@ -1,0 +1,87 @@
+# This YAML file will create a .dwp file that has a DWARF32 compile unit whose
+# .debug_str_offsets.dwo is in DWARF64 format. This test verifies that
+# llvm-dwarfdump can read the strings correctly and dump the
+# .debug_str_offsets.dwo info correctly. This paves the way for llvm-dwp to
+# promote some .debug_str_offsets tables for .dwo files to be DWARF64 and will
+# allow the .debug_str section to be larger than UINT32_MAX size in bytes
+# without losing data.
+
+# RUN: yaml2obj %s -o %t.dwp
+# RUN: llvm-dwarfdump --debug-str-offsets --debug-info %t.dwp | FileCheck %s
+
+# CHECK:      0x00000000: Compile Unit: length = 0x0000002a, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = 0x1158980a3c2f811b (next unit at 0x0000002e)
+
+# CHECK:      0x00000014: DW_TAG_compile_unit
+# CHECK-NEXT:               DW_AT_producer    ("Apple clang version 17.0.0 (clang-1700.4.4.1)")
+# CHECK-NEXT:               DW_AT_language    (DW_LANG_C_plus_plus_14)
+# CHECK-NEXT:               DW_AT_name        ("main.minimal.cpp")
+# CHECK-NEXT:               DW_AT_dwo_name    ("main.minimal.dwo")
+
+# CHECK:      0x0000001a:   DW_TAG_subprogram
+# CHECK-NEXT:                 DW_AT_low_pc    (indexed (00000000) address = <unresolved>)
+# CHECK-NEXT:                 DW_AT_high_pc   (0x0000000f)
+# CHECK:                      DW_AT_name      ("main")
+# CHECK-NEXT:                 DW_AT_decl_file (0x00)
+# CHECK-NEXT:                 DW_AT_decl_line (1)
+# CHECK-NEXT:                 DW_AT_type      (0x00000029 "int")
+# CHECK-NEXT:                 DW_AT_external  (true)
+
+# CHECK:      0x00000029:   DW_TAG_base_type
+# CHECK-NEXT:                 DW_AT_name      ("int")
+# CHECK-NEXT:                 DW_AT_encoding  (DW_ATE_signed)
+# CHECK-NEXT:                 DW_AT_byte_size (0x04)
+
+# CHECK:      0x0000002d:   NULL
+
+# CHECK:      .debug_str_offsets.dwo contents:
+# CHECK-NEXT: 0x00000000: Contribution size = 44, Format = DWARF64, Version = 5
+# CHECK-NEXT: 0x00000010: 0000000000000000 "main"
+# CHECK-NEXT: 0x00000018: 0000000000000005 "int"
+# CHECK-NEXT: 0x00000020: 0000000000000009 "Apple clang version 17.0.0 (clang-1700.4.4.1)"
+# CHECK-NEXT: 0x00000028: 0000000000000037 "main.minimal.cpp"
+# CHECK-NEXT: 0x00000030: 0000000000000048 "main.minimal.dwo"
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .debug_abbrev.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         01110125251305032576250000022E00111B1206401803253A0B3B0B49133F19000003240003253E0B0B0B000000
+  - Name:            .debug_str.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE, SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         6D61696E00696E74004170706C6520636C616E672076657273696F6E2031372E302E302028636C616E672D313730302E342E342E3129006D61696E2E6D696E696D616C2E637070006D61696E2E6D696E696D616C2E64776F00
+  - Name:            .debug_str_offsets.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         'FFFFFFFF2C000000000000000500000000000000000000000500000000000000090000000000000037000000000000004800000000000000'
+  - Name:            .debug_info.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         2A00000005000508000000001B812F3C0A98581101022100030402000F0000000156000001290000000301050400
+  - Name:            .debug_cu_index
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0500000003000000010000000200000000000000000000001B812F3C0A98581100000000010000000100000003000000060000000000000000000000000000002E0000002E0000001C000000
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .debug_abbrev.dwo
+      - Name:            .debug_str.dwo
+      - Name:            .debug_str_offsets.dwo
+      - Name:            .debug_info.dwo
+      - Name:            .debug_cu_index
+      - Name:            .symtab
+Symbols:         []
+...

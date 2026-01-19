@@ -35,7 +35,7 @@ config.substitutions.append(('%{link_flags}',
     '-L %{{lib}} -Wl,-rpath,%{{lib}} -lc++ {}'.format(' '.join(link_flags))
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T -- '
+    '%{executor} --execdir %{temp} -- '
 ))
 
 import os, site

@@ -315,6 +315,8 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.Fat64 = Args.hasArg(OPT_fat64);
   Options.LinkOpts.KeepFunctionForStatic =
       Args.hasArg(OPT_keep_func_for_static);
+  Options.LinkOpts.AllowSectionHeaderOffsetOverflow =
+      Args.hasArg(OPT_allow_section_header_offset_overflow);
 
   if (opt::Arg *ReproducerPath = Args.getLastArg(OPT_use_reproducer)) {
     Options.ReproMode = ReproducerMode::Use;
@@ -390,6 +392,9 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
 
   Options.LinkOpts.RemarksKeepAll =
       !Args.hasArg(OPT_remarks_drop_without_debug);
+
+  Options.LinkOpts.IncludeSwiftModulesFromInterface =
+      Args.hasArg(OPT_include_swiftmodules_from_interface);
 
   if (opt::Arg *BuildVariantSuffix = Args.getLastArg(OPT_build_variant_suffix))
     Options.LinkOpts.BuildVariantSuffix = BuildVariantSuffix->getValue();
@@ -870,7 +875,6 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
                 "-fat64 flag to force a 64-bit header and silence this "
                 "warning.",
                 FileOffset);
-            return EXIT_FAILURE;
           }
           FileOffset += stat->getSize();
         }

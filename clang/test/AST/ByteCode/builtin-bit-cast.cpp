@@ -527,7 +527,7 @@ constexpr unsigned short bad_bool9_to_short = __builtin_bit_cast(unsigned short,
 constexpr const intptr_t &returns_local() { return 0L; }
 
 // both-error@+2 {{constexpr variable 'test_nullptr_bad' must be initialized by a constant expression}}
-// both-note@+1 {{read of temporary whose lifetime has ended}}
+// both-note@+1 {{read of object outside its lifetime}}
 constexpr nullptr_t test_nullptr_bad = __builtin_bit_cast(nullptr_t, returns_local());
 
 #ifdef __SIZEOF_INT128__
@@ -556,6 +556,8 @@ namespace VectorCast {
   }
   static_assert(test2() == 0);
 
+  /// On s390x, S is only 8 bytes.
+#if !defined(__s390x__)
   struct S {
     unsigned __int128 a : 3;
   };
@@ -568,6 +570,7 @@ namespace VectorCast {
 #else
   static_assert(s.a == 0); // ref-error {{not an integral constant expression}} \
                            // ref-note {{initializer of 's' is not a constant expression}}
+#endif
 #endif
 }
 #endif

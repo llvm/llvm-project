@@ -52,7 +52,7 @@ private:
   ValueObject *m_tree = nullptr;
   size_t m_num_elements = 0;
   ValueObject *m_next_element = nullptr;
-  std::vector<std::pair<ValueObject *, uint64_t>> m_elements_cache;
+  std::vector<ValueObject *> m_elements_cache;
 };
 
 class LibCxxUnorderedMapIteratorSyntheticFrontEnd
@@ -135,8 +135,8 @@ CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
   if (!table_sp)
     return {};
 
-  auto [node_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      *table_sp, /*anon_struct_idx=*/1, "__first_node_", "__p1_");
+  auto [node_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*table_sp, "__first_node_", "__p1_");
   if (is_compressed_pair)
     node_sp = GetFirstValueOfLibCXXCompressedPair(*node_sp);
 
@@ -192,26 +192,25 @@ lldb::ValueObjectSP lldb_private::formatters::
           return nullptr;
       }
     }
-    m_elements_cache.push_back(
-        {value_sp.get(), hash_sp->GetValueAsUnsigned(0)});
+    m_elements_cache.push_back(value_sp.get());
     m_next_element = node_sp->GetChildMemberWithName("__next_").get();
     if (!m_next_element || m_next_element->GetValueAsUnsigned(0) == 0)
       m_next_element = nullptr;
   }
 
-  std::pair<ValueObject *, uint64_t> val_hash = m_elements_cache[idx];
-  if (!val_hash.first)
+  ValueObject *val_hash = m_elements_cache[idx];
+  if (!val_hash)
     return lldb::ValueObjectSP();
   StreamString stream;
   stream.Printf("[%" PRIu64 "]", (uint64_t)idx);
   DataExtractor data;
   Status error;
-  val_hash.first->GetData(data, error);
+  val_hash->GetData(data, error);
   if (error.Fail())
     return lldb::ValueObjectSP();
   const bool thread_and_frame_only_if_stopped = true;
-  ExecutionContext exe_ctx = val_hash.first->GetExecutionContextRef().Lock(
-      thread_and_frame_only_if_stopped);
+  ExecutionContext exe_ctx =
+      val_hash->GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped);
   return CreateValueObjectFromData(stream.GetString(), data, exe_ctx,
                                    m_element_type);
 }
@@ -219,8 +218,8 @@ lldb::ValueObjectSP lldb_private::formatters::
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     CalculateNumChildrenImpl(ValueObject &table) {
-  auto [size_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      table, /*anon_struct_idx=*/2, "__size_", "__p2_");
+  auto [size_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(table, "__size_", "__p2_");
   if (!is_compressed_pair && size_sp)
     return size_sp->GetValueAsUnsigned(0);
 
@@ -238,8 +237,8 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
 }
 
 static ValueObjectSP GetTreePointer(ValueObject &table) {
-  auto [tree_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      table, /*anon_struct_idx=*/1, "__first_node_", "__p1_");
+  auto [tree_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(table, "__first_node_", "__p1_");
   if (is_compressed_pair)
     tree_sp = GetFirstValueOfLibCXXCompressedPair(*tree_sp);
 

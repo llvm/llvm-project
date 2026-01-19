@@ -986,7 +986,7 @@ public:
   explicit regex_error(regex_constants::error_type __ecode);
   _LIBCPP_HIDE_FROM_ABI regex_error(const regex_error&) _NOEXCEPT = default;
   ~regex_error() _NOEXCEPT override;
-  _LIBCPP_HIDE_FROM_ABI regex_constants::error_type code() const { return __code_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI regex_constants::error_type code() const { return __code_; }
 };
 
 template <regex_constants::error_type _Ev>
@@ -1004,7 +1004,7 @@ public:
   typedef _CharT char_type;
   typedef basic_string<char_type> string_type;
   typedef locale locale_type;
-#    if defined(__BIONIC__) || defined(_NEWLIB_VERSION)
+#    if defined(__BIONIC__) || _LIBCPP_LIBC_NEWLIB
   // Originally bionic's ctype_base used its own ctype masks because the
   // builtin ctype implementation wasn't in libc++ yet. Bionic's ctype mask
   // was only 8 bits wide and already saturated, so it used a wider type here
@@ -1013,9 +1013,7 @@ public:
   // implementation, but this was not updated to match. Since then Android has
   // needed to maintain a stable libc++ ABI, and this can't be changed without
   // an ABI break.
-  // We also need this workaround for newlib since _NEWLIB_VERSION is not
-  // defined yet inside __config, so we can't set the
-  // _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE macro. Additionally, newlib is
+  // We also need this workaround for newlib since newlib is
   // often used for space constrained environments, so it makes sense not to
   // duplicate the ctype table.
   typedef uint16_t char_class_type;
@@ -2414,8 +2412,8 @@ public:
 #    endif // _LIBCPP_CXX03_LANG
 
   // const operations:
-  _LIBCPP_HIDE_FROM_ABI unsigned mark_count() const { return __marked_count_; }
-  _LIBCPP_HIDE_FROM_ABI flag_type flags() const { return __flags_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unsigned mark_count() const { return __marked_count_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI flag_type flags() const { return __flags_; }
 
   // locale:
   _LIBCPP_HIDE_FROM_ABI locale_type imbue(locale_type __loc) {
@@ -2423,7 +2421,7 @@ public:
     __start_.reset();
     return __traits_.imbue(__loc);
   }
-  _LIBCPP_HIDE_FROM_ABI locale_type getloc() const { return __traits_.getloc(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI locale_type getloc() const { return __traits_.getloc(); }
 
   // swap:
   void swap(basic_regex& __r);
@@ -4208,17 +4206,17 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR sub_match() : matched() {}
 
-  _LIBCPP_HIDE_FROM_ABI difference_type length() const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI difference_type length() const {
     return matched ? std::distance(this->first, this->second) : 0;
   }
-  _LIBCPP_HIDE_FROM_ABI string_type str() const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type str() const {
     return matched ? string_type(this->first, this->second) : string_type();
   }
   _LIBCPP_HIDE_FROM_ABI operator string_type() const { return str(); }
 
-  _LIBCPP_HIDE_FROM_ABI int compare(const sub_match& __s) const { return str().compare(__s.str()); }
-  _LIBCPP_HIDE_FROM_ABI int compare(const string_type& __s) const { return str().compare(__s); }
-  _LIBCPP_HIDE_FROM_ABI int compare(const value_type* __s) const { return str().compare(__s); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int compare(const sub_match& __s) const { return str().compare(__s.str()); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int compare(const string_type& __s) const { return str().compare(__s); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int compare(const value_type* __s) const { return str().compare(__s); }
 
   _LIBCPP_HIDE_FROM_ABI void swap(sub_match& __s) _NOEXCEPT_(__is_nothrow_swappable_v<_BidirectionalIterator>) {
     this->pair<_BidirectionalIterator, _BidirectionalIterator>::swap(__s);
@@ -4583,49 +4581,53 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool ready() const { return __ready_; }
 
   // size:
-  _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __matches_.size(); }
-  _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT { return __matches_.max_size(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __matches_.size(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT { return __matches_.max_size(); }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return size() == 0; }
 
   // element access:
-  _LIBCPP_HIDE_FROM_ABI difference_type length(size_type __sub = 0) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI difference_type length(size_type __sub = 0) const {
     // If the match results are not ready, this will return `0`.
     _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::length() called when not ready");
     return (*this)[__sub].length();
   }
-  _LIBCPP_HIDE_FROM_ABI difference_type position(size_type __sub = 0) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI difference_type position(size_type __sub = 0) const {
     // If the match results are not ready, this will return the result of subtracting two default-constructed iterators
     // (which is typically a well-defined operation).
     _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::position() called when not ready");
     return std::distance(__position_start_, (*this)[__sub].first);
   }
-  _LIBCPP_HIDE_FROM_ABI string_type str(size_type __sub = 0) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type str(size_type __sub = 0) const {
     // If the match results are not ready, this will return an empty string.
     _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::str() called when not ready");
     return (*this)[__sub].str();
   }
-  _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __n) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __n) const {
     // If the match results are not ready, this call will be equivalent to calling this function with `__n >= size()`,
     // returning an empty subrange.
     _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::operator[]() called when not ready");
     return __n < __matches_.size() ? __matches_[__n] : __unmatched_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI const_reference prefix() const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_reference prefix() const {
     // If the match results are not ready, this will return a default-constructed empty `__suffix_`.
     _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::prefix() called when not ready");
     return __prefix_;
   }
-  _LIBCPP_HIDE_FROM_ABI const_reference suffix() const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_reference suffix() const {
     // If the match results are not ready, this will return a default-constructed empty `__suffix_`.
     _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::suffix() called when not ready");
     return __suffix_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const { return empty() ? __matches_.end() : __matches_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator end() const { return __matches_.end(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const { return empty() ? __matches_.end() : __matches_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator cend() const { return __matches_.end(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const {
+    return empty() ? __matches_.end() : __matches_.begin();
+  }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator end() const { return __matches_.end(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const {
+    return empty() ? __matches_.end() : __matches_.begin();
+  }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator cend() const { return __matches_.end(); }
 
   // format:
   template <class _OutputIter>
@@ -4641,14 +4643,14 @@ public:
     return format(__output_iter, __fmt.data(), __fmt.data() + __fmt.size(), __flags);
   }
   template <class _ST, class _SA>
-  _LIBCPP_HIDE_FROM_ABI basic_string<char_type, _ST, _SA>
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI basic_string<char_type, _ST, _SA>
   format(const basic_string<char_type, _ST, _SA>& __fmt,
          regex_constants::match_flag_type __flags = regex_constants::format_default) const {
     basic_string<char_type, _ST, _SA> __r;
     format(std::back_inserter(__r), __fmt.data(), __fmt.data() + __fmt.size(), __flags);
     return __r;
   }
-  _LIBCPP_HIDE_FROM_ABI string_type
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type
   format(const char_type* __fmt, regex_constants::match_flag_type __flags = regex_constants::format_default) const {
     string_type __r;
     format(std::back_inserter(__r), __fmt, __fmt + char_traits<char_type>::length(__fmt), __flags);
@@ -4656,7 +4658,7 @@ public:
   }
 
   // allocator:
-  _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const { return __matches_.get_allocator(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const { return __matches_.get_allocator(); }
 
   // swap:
   void swap(match_results& __m);
@@ -5377,7 +5379,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const regex_iterator& __x) const { return !(*this == __x); }
 #    endif
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __match_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __match_; }
   _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return std::addressof(__match_); }
 
   regex_iterator& operator++();
@@ -5558,7 +5560,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const regex_token_iterator& __x) const { return !(*this == __x); }
 #    endif
 
-  _LIBCPP_HIDE_FROM_ABI const value_type& operator*() const { return *__result_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const value_type& operator*() const { return *__result_; }
   _LIBCPP_HIDE_FROM_ABI const value_type* operator->() const { return __result_; }
 
   regex_token_iterator& operator++();

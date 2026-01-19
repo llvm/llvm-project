@@ -474,6 +474,41 @@ func.func @warp_scf_for_use_from_above(%arg0: index) {
 }
 
 // -----
+// CHECK-PROP-LABEL:  func.func @warp_scf_for_local_loop_bounds
+// CHECK-PROP:          (%{{.*}}: index, %[[ARG1:[a-zA-Z0-9]+]]: index) {
+// CHECK-PROP:          %[[W:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] args(%[[ARG1]] : index) -> (vector<4xf32>) {
+// CHECK-PROP:          ^bb0(%{{.*}}: index):
+// CHECK-PROP:            %[[T2:.*]] = "some_def"() : () -> vector<128xf32>
+// CHECK-PROP:            gpu.yield %[[T2]] : vector<128xf32>
+// CHECK-PROP:          }
+// CHECK-PROP:          %[[FOR:.*]] = scf.for %{{.*}} to %[[ARG1]] step %{{.*}} iter_args(%{{.*}}) -> (vector<4xf32>) {
+// CHECK-PROP:            %[[W2:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32]
+// CHECK-PROP-SAME:          args(%{{.*}} : vector<4xf32>) -> (vector<4xf32>) {
+// CHECK-PROP:            ^bb0(%{{.*}}: vector<128xf32>):
+// CHECK-PROP:              gpu.yield %{{.*}} : vector<128xf32>
+// CHECK-PROP:            }
+// CHECK-PROP:            scf.yield %[[W2]] : vector<4xf32>
+// CHECK-PROP:          }
+// CHECK-PROP:          "some_use"(%[[FOR]]) : (vector<4xf32>) -> ()
+// CHECK-PROP:          return
+func.func @warp_scf_for_local_loop_bounds(%arg0: index, %bound: index) {
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %0 = gpu.warp_execute_on_lane_0(%arg0)[32]
+    args(%bound : index) -> (vector<4xf32>) {
+    ^bb0(%arg1: index):
+    %ini = "some_def"() : () -> (vector<128xf32>)
+    %3 = scf.for %arg3 = %c0 to %arg1 step %c1 iter_args(%arg4 = %ini) -> (vector<128xf32>) {
+      %acc = "some_def"(%arg4) : (vector<128xf32>) -> (vector<128xf32>)
+      scf.yield %acc : vector<128xf32>
+    }
+    gpu.yield %3 : vector<128xf32>
+  }
+  "some_use"(%0) : (vector<4xf32>) -> ()
+  return
+}
+
+// -----
 
 // CHECK-PROP-LABEL:   func @warp_scf_for_swap(
 // CHECK-PROP: %[[INI:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<4xf32>, vector<4xf32>) {
@@ -1744,6 +1779,21 @@ func.func @warp_propagate_unconnected_read_write(%laneid: index, %buffer: memref
 //       CHECK-DIST-AND-PROP:   %[[CST:.+]] = arith.constant dense<2.000000e+00> : vector<4xf32>
 //       CHECK-DIST-AND-PROP:   vector.transfer_read {{.*}} : memref<128xf32>, vector<4xf32>
 //       CHECK-DIST-AND-PROP:   vector.transfer_write %[[CST]], {{.*}} : vector<4xf32>, memref<128xf32>
+// -----
+
+func.func @warp_propagate_constant_mask(%laneid: index) -> vector<1xi1> {
+  %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xi1>) {
+    %1 = vector.constant_mask [1] : vector<32xi1>
+    gpu.yield %1 : vector<32xi1>
+  }
+  return %r : vector<1xi1>
+}
+
+//   CHECK-PROP-DAG: #[[$SUB:.*]] = affine_map<()[s0] -> (-s0 + 1)>
+// CHECK-PROP-LABEL: func @warp_propagate_constant_mask
+//  CHECK-PROP-SAME: %[[LANEID:.+]]: index
+//       CHECK-PROP:   %[[MDIST:.+]] = affine.apply #[[$SUB]]()[%[[LANEID]]]
+//       CHECK-PROP:   vector.create_mask %[[MDIST]] : vector<1xi1>
 
 // -----
 
@@ -1778,6 +1828,24 @@ func.func @warp_propagate_multi_dim_create_mask(%laneid: index, %m0: index, %m1:
 //       CHECK-PROP:   %[[DISTM0:.+]] = affine.apply #[[$SUBM0]]()[%[[M0]], %[[LANEID]]]
 //       CHECK-PROP:   %[[DISTM1:.+]] = affine.apply #[[$SUBM1]]()[%[[M1]], %[[LANEID]]]
 //       CHECK-PROP:   vector.create_mask %[[DISTM0]], %[[DISTM1]], %[[M2]] : vector<1x2x4xi1>
+// -----
+
+func.func @warp_propagate_multi_dim_constant_mask(%laneid: index) -> vector<1x2x4xi1> {
+  %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x2x4xi1>) {
+    %1 = vector.constant_mask [1, 1, 2]: vector<16x4x4xi1>
+    gpu.yield %1 : vector<16x4x4xi1>
+  }
+  return %r : vector<1x2x4xi1>
+}
+
+//   CHECK-PROP-DAG: #[[$SUBM0:.*]] = affine_map<()[s0] -> (-(s0 floordiv 2) + 1)>
+//   CHECK-PROP-DAG: #[[$SUBM1:.*]] = affine_map<()[s0] -> (s0 * -2 + (s0 floordiv 2) * 4 + 1)>
+// CHECK-PROP-LABEL: func @warp_propagate_multi_dim_constant_mask
+//  CHECK-PROP-SAME: %[[LANEID:.+]]: index
+//       CHECK-PROP:   %[[CST2:.+]] = arith.constant 2 : index
+//       CHECK-PROP:   %[[DISTM0:.+]] = affine.apply #[[$SUBM0]]()[%[[LANEID]]]
+//       CHECK-PROP:   %[[DISTM1:.+]] = affine.apply #[[$SUBM1]]()[%[[LANEID]]]
+//       CHECK-PROP:   vector.create_mask %[[DISTM0]], %[[DISTM1]], %[[CST2]] : vector<1x2x4xi1>
 
 // -----
 
@@ -1925,3 +1993,22 @@ func.func @warp_scf_if_distribute(%pred : i1)  {
 //       CHECK-PROP:    "some_use"(%[[IF_YIELD_DIST]]) : (vector<1xf32>) -> ()
 //       CHECK-PROP:    return
 //       CHECK-PROP:  }
+
+// -----
+func.func @dedup_unused_result(%laneid : index) -> (vector<1xf32>) {
+  %r:3 = gpu.warp_execute_on_lane_0(%laneid)[32] ->
+    (vector<1xf32>, vector<2xf32>, vector<1xf32>) {
+    %2 = "some_def"() : () -> (vector<32xf32>)
+    %3 = "some_def"() : () -> (vector<64xf32>)
+    gpu.yield %2, %3, %2 : vector<32xf32>, vector<64xf32>, vector<32xf32>
+  }
+  %r0 = "some_use"(%r#2, %r#2) : (vector<1xf32>, vector<1xf32>) -> (vector<1xf32>)
+  return %r0 : vector<1xf32>
+}
+
+// CHECK-PROP: func @dedup_unused_result
+// CHECK-PROP: %[[R:.*]] = gpu.warp_execute_on_lane_0(%arg0)[32] -> (vector<1xf32>)
+// CHECK-PROP:   %[[Y0:.*]] = "some_def"() : () -> vector<32xf32>
+// CHECK-PROP:   %[[Y1:.*]] = "some_def"() : () -> vector<64xf32>
+// CHECK-PROP:   gpu.yield %[[Y0]] : vector<32xf32>
+// CHECK-PROP: "some_use"(%[[R]], %[[R]]) : (vector<1xf32>, vector<1xf32>) -> vector<1xf32>

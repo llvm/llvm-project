@@ -24,6 +24,8 @@
 #include "thread_annotations.h"
 #include "tracing.h"
 
+#include <inttypes.h>
+
 namespace scudo {
 
 // SizeClassAllocator64 is an allocator tuned for 64-bit address space.
@@ -1150,13 +1152,25 @@ void SizeClassAllocator64<Config>::getStats(ScopedString *Str, uptr ClassId,
       "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
       "inuse: %6zu total: %6zu releases attempted: %6zu last "
       "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
-      "(0x%zx)\n",
+      "(0x%zx)",
       Region->Exhausted ? "E" : " ", ClassId, getSizeByClassId(ClassId),
       Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
       Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
       Region->ReleaseInfo.NumReleasesAttempted,
       Region->ReleaseInfo.LastReleasedBytes >> 10, RegionPushedBytesDelta >> 10,
       Region->RegionBeg, getRegionBaseByClassId(ClassId));
+  const u64 CurTimeNs = getMonotonicTimeFast();
+  const u64 LastReleaseAtNs = Region->ReleaseInfo.LastReleaseAtNs;
+  if (LastReleaseAtNs != 0 && CurTimeNs != LastReleaseAtNs) {
+    const u64 DiffSinceLastReleaseNs =
+        CurTimeNs - Region->ReleaseInfo.LastReleaseAtNs;
+    const u64 LastReleaseSecAgo = DiffSinceLastReleaseNs / 1000000000;
+    const u64 LastReleaseMsAgo =
+        (DiffSinceLastReleaseNs % 1000000000) / 1000000;
+    Str->append("Latest release: %" PRIu64 ":%" PRIu64 " seconds ago",
+                LastReleaseSecAgo, LastReleaseMsAgo);
+  }
+  Str->append("\n");
 }
 
 template <typename Config>
@@ -1379,8 +1393,6 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
                                                     uptr ClassId,
                                                     ReleaseToOS ReleaseType)
     REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
-  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
-
   const uptr BlockSize = getSizeByClassId(ClassId);
   uptr BytesInFreeList;
   const uptr AllocatedUserEnd =
@@ -1396,7 +1408,7 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
                                             Region->FreeListInfo.PushedBlocks) *
                                                BlockSize;
     if (UNLIKELY(BytesInFreeList == 0))
-      return false;
+      return 0;
 
     // ==================================================================== //
     // 1. Check if we have enough free blocks and if it's worth doing a page
@@ -1444,6 +1456,12 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
   //    Then we can tell which pages are in-use by querying
   //    `PageReleaseContext`.
   // ==================================================================== //
+
+  // Only add trace point after the quick returns have occurred to avoid
+  // incurring performance penalties. Most of the time in this function
+  // will be the mark free blocks call and the actual release to OS call.
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
+
   PageReleaseContext Context =
       markFreeBlocks(Region, BlockSize, AllocatedUserEnd,
                      getCompactPtrBaseByClassId(ClassId), GroupsToRelease);
@@ -1561,6 +1579,13 @@ bool SizeClassAllocator64<Config>::hasChanceToReleasePages(
       if (DiffSinceLastReleaseNs < 2 * IntervalNs)
         return false;
     } else if (DiffSinceLastReleaseNs < IntervalNs) {
+      // `TryReleaseThreshold` is capped by (1UL << GroupSizeLog) / 2). If
+      // RegionPushedBytesDelta grows to twice the threshold, it implies some
+      // huge deallocations have happened so we better try to release some
+      // pages. Note this tends to happen for larger block sizes.
+      if (RegionPushedBytesDelta > (1ULL << GroupSizeLog))
+        return true;
+
       // In this case, we are over the threshold but we just did some page
       // release in the same release interval. This is a hint that we may want
       // a higher threshold so that we can release more memory at once.
@@ -1659,7 +1684,7 @@ SizeClassAllocator64<Config>::collectGroupsToRelease(
 
       if (!HighDensity) {
         DCHECK_LE(BytesInBG, ReleaseThreshold);
-        // The following is the usage of a memroy group,
+        // The following is the usage of a memory group,
         //
         //     BytesInBG             ReleaseThreshold
         //  /             \                 v
