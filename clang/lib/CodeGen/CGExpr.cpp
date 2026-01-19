@@ -6876,19 +6876,15 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       StaticOperator = true;
   }
 
-  // Emit __llvm_omp_emissary_rpc for stubs of emissary APIs.
+  // Replace calls to _emissary_exec found in emissary device stubs with calls
+  // to either __llvm_emissary_rpc or __llvm_emissary_rpc_dm. Before the call
+  // EmitEmissaryExec generates code to allocate an arg buffer and to fill the
+  // arg buffer.
   if ((CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()) && FnType &&
       dyn_cast<FunctionProtoType>(FnType) &&
       dyn_cast<FunctionProtoType>(FnType)->isVariadic()) {
-    // This is a variadic function in a device compile
-    // if (emissary_exec || (openmp && (fprintf || printf))
-    if ((E->getDirectCallee()->getNameAsString() == "_emissary_exec") ||
-        // FIXME: do not call for fprintf or printf if device libc is active
-        (CGM.getLangOpts().OpenMP && 
-         ((E->getDirectCallee()->getNameAsString() == "fprintf") ||
-          (E->getDirectCallee()->getNameAsString() == "printf")))) {
+    if (E->getDirectCallee()->getNameAsString() == "_emissary_exec")
       return EmitEmissaryExec(E);
-    }
   }
 
   auto Arguments = E->arguments();

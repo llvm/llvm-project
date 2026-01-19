@@ -13,56 +13,71 @@
 
 #include "PluginInterface.h"
 
+#include "Emissary.h"
+#include "EmissaryIds.h"
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
+#include <unordered_map>
 
-#include "Emissary.h"
+extern "C" EmissaryReturn_t
+EmissaryTop(char *data, emisArgBuf_t *ab,
+            std::unordered_map<void *, void *> *D2HAddrList) {
+  EmissaryReturn_t result = 0;
+  emis_argptr_t **args = (emis_argptr_t **)aligned_alloc(
+      sizeof(emis_argptr_t), ab->NumArgs * sizeof(emis_argptr_t *));
 
-extern "C" emis_return_t Emissary(char *data) {
-  emisArgBuf_t ab;
-  emisExtractArgBuf(data, &ab);
-  emis_return_t result = 0;
-  emis_argptr_t *args[MAXVARGS]; // FIXME use malloc here
-
-  switch (ab.emisid) {
+  switch (ab->emisid) {
   case EMIS_ID_INVALID: {
-    fprintf(stderr, "emisExecute got invalid EMIS_ID\n");
+    fprintf(stderr, "Emissary (host execution) got invalid EMIS_ID\n");
     result = 0;
     break;
   }
   case EMIS_ID_FORTRT: {
-    result = EmissaryFortrt(data, &ab);
+#ifdef EMISSARY_FLANGRT_SUPPORT
+    if (EmissaryBuildVargs(ab->NumArgs, ab->keyptr, ab->argptr, ab->strptr,
+                           &(ab->data_not_used), &args[0],
+                           D2HAddrList) != _ERC_SUCCESS)
+      return (EmissaryReturn_t)0;
+    result = EmissaryFortrt(data, ab, args);
+#else
+    result = 0;
+#endif
     break;
   }
   case EMIS_ID_PRINT: {
-    result = EmissaryPrint(data, &ab);
+    result = EmissaryPrint(data, ab);
     break;
   }
   case EMIS_ID_MPI: {
-    if (EmissaryBuildVargs(ab.NumArgs, ab.keyptr, ab.argptr, ab.strptr,
-                           &ab.data_not_used, &args[0]) != _RC_SUCCESS)
-      return (emis_return_t)0;
-    result = EmissaryMPI(data, &ab, args);
+    if (EmissaryBuildVargs(ab->NumArgs, ab->keyptr, ab->argptr, ab->strptr,
+                           &(ab->data_not_used), &args[0],
+                           D2HAddrList) != _ERC_SUCCESS)
+      return (EmissaryReturn_t)0;
+    result = EmissaryMPI(data, ab, args);
     break;
   }
   case EMIS_ID_HDF5: {
-    if (EmissaryBuildVargs(ab.NumArgs, ab.keyptr, ab.argptr, ab.strptr,
-                           &ab.data_not_used, &args[0]) != _RC_SUCCESS)
-      return (emis_return_t)0;
-    result = EmissaryHDF5(data, &ab, args);
+    if (EmissaryBuildVargs(ab->NumArgs, ab->keyptr, ab->argptr, ab->strptr,
+                           &(ab->data_not_used), &args[0],
+                           D2HAddrList) != _ERC_SUCCESS)
+      return (EmissaryReturn_t)0;
+    result = EmissaryHDF5(data, ab, args);
     break;
   }
   case EMIS_ID_RESERVE: {
-    if (EmissaryBuildVargs(ab.NumArgs, ab.keyptr, ab.argptr, ab.strptr,
-                           &ab.data_not_used, &args[0]) != _RC_SUCCESS)
-      return (emis_return_t)0;
-    result = EmissaryReserve(data, &ab, args);
+    if (EmissaryBuildVargs(ab->NumArgs, ab->keyptr, ab->argptr, ab->strptr,
+                           &(ab->data_not_used), &args[0],
+                           D2HAddrList) != _ERC_SUCCESS)
+      return (EmissaryReturn_t)0;
+    result = EmissaryReserve(data, ab, args);
     break;
   }
   default:
-    fprintf(stderr, "EMIS_ID:%d fnid:%d not supported\n", ab.emisid,
-            ab.emisfnid);
+    fprintf(stderr,
+            "Emissary (host execution) EMIS_ID:%d fnid:%d not supported\n",
+            ab->emisid, ab->emisfnid);
   }
+  free(args);
   return result;
 }
 
@@ -86,10 +101,14 @@ extern "C" void emisExtractArgBuf(char *data, emisArgBuf_t *ab) {
     alignfill = 4;
   }
 
-  // Extract the two emissary identifiers from 1st 64bit arg
-  uint64_t emisIds = *(uint64_t *)ab->argptr;
-  ab->emisid = (offload_emis_id_t)((uint)(emisIds >> 32));
-  ab->emisfnid = (uint32_t)((uint)((emisIds << 32) >> 32));
+  // Extract the two emissary identifiers and number of send
+  // and recv device data transfers. These are 4 16 bit values
+  // packed into a single 64-bit field.
+  uint64_t arg1 = *(uint64_t *)ab->argptr;
+  ab->emisid = (unsigned int)((arg1 >> 48) & 0xFFFF);
+  ab->emisfnid = (unsigned int)((arg1 >> 32) & 0xFFFF);
+  ab->NumSendXfers = (unsigned int)((arg1 >> 16) & 0xFFFF);
+  ab->NumRecvXfers = (unsigned int)((arg1) & 0xFFFF);
 
   // skip the uint64_t emissary id arg which is first arg in _emissary_exec.
   ab->keyptr += sizeof(int);
@@ -124,10 +143,10 @@ extern "C" void *getfnptr(char *val) {
 }
 
 // build argument array
-extern "C" uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
-                                       char *strptr,
-                                       unsigned long long *data_not_used,
-                                       emis_argptr_t *a[MAXVARGS]) {
+extern "C" uint32_t
+EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr, char *strptr,
+                   unsigned long long *data_not_used, emis_argptr_t *a[],
+                   std::unordered_map<void *, void *> *D2HAddrList) {
   size_t num_bytes;
   size_t bytes_consumed;
   size_t strsz;
@@ -154,13 +173,12 @@ extern "C" uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
         bytes_consumed += fillerNeeded;
       }
       if ((*data_not_used) < bytes_consumed)
-        return _RC_DATA_USED_ERROR;
+        return _ERC_DATA_USED_ERROR;
 
       if (num_bytes == 4)
         a[argcount] = (emis_argptr_t *)getuint32(dataptr);
       else
         a[argcount] = (emis_argptr_t *)getuint64(dataptr);
-
       break;
 
     case IntegerTyID: ///< 11: Arbitrary bit width integers
@@ -172,24 +190,22 @@ extern "C" uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
         bytes_consumed += fillerNeeded;
       }
       if ((*data_not_used) < bytes_consumed)
-        return _RC_DATA_USED_ERROR;
+        return _ERC_DATA_USED_ERROR;
 
       if (num_bytes == 4)
         a[argcount] = (emis_argptr_t *)getuint32(dataptr);
       else
         a[argcount] = (emis_argptr_t *)getuint64(dataptr);
-
       break;
 
-    case PointerTyID:     ///< 15: Pointers
+    case PointerTyID: {   ///< 15: Pointers
       if (numbits == 1) { // This is a pointer to string
         num_bytes = 4;
         bytes_consumed = num_bytes;
         strsz = (size_t)*(unsigned int *)dataptr;
         if ((*data_not_used) < bytes_consumed)
-          return _RC_DATA_USED_ERROR;
+          return _ERC_DATA_USED_ERROR;
         a[argcount] = (emis_argptr_t *)((char *)strptr);
-
       } else {
         num_bytes = 8;
         bytes_consumed = num_bytes;
@@ -199,11 +215,15 @@ extern "C" uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
           bytes_consumed += fillerNeeded;
         }
         if ((*data_not_used) < bytes_consumed)
-          return _RC_DATA_USED_ERROR;
-
+          return _ERC_DATA_USED_ERROR;
         a[argcount] = (emis_argptr_t *)getuint64(dataptr);
       }
-      break;
+      if (D2HAddrList) {
+        auto found = D2HAddrList->find((void *)a[argcount]);
+        if (found != D2HAddrList->end())
+          a[argcount] = (emis_argptr_t *)found->second;
+      }
+    } break;
 
     case HalfTyID:           ///<  1: 16-bit floating point type
     case ArrayTyID:          ///< 14: Arrays
@@ -220,12 +240,11 @@ extern "C" uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
     case TypedPointerTyID:   ///< Typed pointer used by some GPU targets
     case TargetExtTyID:      ///< Target extension type
     case VoidTyID:
-      return _RC_UNSUPPORTED_ID_ERROR;
+      return _ERC_UNSUPPORTED_ID_ERROR;
       break;
     default:
-      return _RC_INVALID_ID_ERROR;
+      return _ERC_INVALID_ID_ERROR;
     }
-
     // Move to next argument
     dataptr += num_bytes;
     strptr += strsz;
@@ -233,22 +252,13 @@ extern "C" uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
     keyptr += 4;
     argcount++;
   }
-  return _RC_SUCCESS;
+  return _ERC_SUCCESS;
 }
 
-// Host defines for f90print functions needed just for linking
-// and fallback when used in a target region
-extern "C" void f90print_(char *s) { printf("%s\n", s); }
-extern "C" void f90printi_(char *s, int *i) { printf("%s %d\n", s, *i); }
-extern "C" void f90printl_(char *s, long *i) { printf("%s %ld\n", s, *i); }
-extern "C" void f90printf_(char *s, float *f) { printf("%s %f\n", s, *f); }
-extern "C" void f90printd_(char *s, double *d) { printf("%s %g\n", s, *d); }
-
-extern "C" void *rpc_allocate(uint64_t sz) {
-  printf("HOST rpc_allocate\n");
-  return nullptr;
-}
-extern "C" void rpc_free(void *ptr) {
-  printf("HOST rpc_free\n");
-  return;
+extern "C" void emisSkipXferArgSet(emisArgBuf_t *ab) {
+  // Skip the ptr and size of the Xfer
+  ab->NumArgs -= 2;
+  ab->keyptr += 2 * sizeof(uint32_t);
+  ab->argptr += 2 * sizeof(void *);
+  ab->data_not_used -= 2 * sizeof(void *);
 }

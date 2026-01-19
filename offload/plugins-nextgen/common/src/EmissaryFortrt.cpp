@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Host support for Fortran runtime Emissary API 
+// Host support for Fortran runtime Emissary API
 //
 //===----------------------------------------------------------------------===//
 #include "PluginInterface.h"
@@ -15,6 +15,8 @@
 #include "Shared/RPCOpcodes.h"
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
+#include <Emissary.h>
+#include <EmissaryIds.h>
 #include <assert.h>
 #include <cstring>
 #include <ctype.h>
@@ -28,8 +30,6 @@
 #include <string.h>
 #include <tuple>
 #include <vector>
-
-#include "Emissary.h"
 
 // Headers for Host Fortran Runtime API as built in llvm/flang/runtime
 extern "C" {
@@ -245,27 +245,22 @@ typedef struct {
   uint64_t num_threads;
   uint64_t team_num;
   uint64_t num_teams;
-  emis_return_t return_value;
+  EmissaryReturn_t return_value;
 } deferred_entry_t;
 
 static std::vector<deferred_entry_t *> *_deferred_fns_ptr;
 // static std::list<deferred_entry_t *> _deferred_fns;
 //
 
-extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
-  emis_return_t return_value = (emis_return_t)0;
-
+extern "C" EmissaryReturn_t EmissaryFortrt(char *data, emisArgBuf_t *ab,
+                                           emis_argptr_t *a[]) {
+  EmissaryReturn_t return_value = (EmissaryReturn_t)0;
   if (ab->DataLen == 0)
-    return _RC_SUCCESS;
+    return _ERC_SUCCESS;
 
   void *fnptr;
   if (ab->NumArgs <= 0)
-    return _RC_ERROR_INVALID_REQUEST;
-
-  emis_argptr_t *a[MAXVARGS];
-  if (EmissaryBuildVargs(ab->NumArgs, ab->keyptr, ab->argptr, ab->strptr,
-                         &ab->data_not_used, a) != _RC_SUCCESS)
-    return _RC_ERROR_INVALID_REQUEST;
+    return _ERC_ERROR_INVALID_REQUEST;
 
   // std::list<deferred_entry_t *> _deferred_fns;
   if (!_deferred_fns_ptr)
@@ -416,14 +411,14 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
       arg_array[i] = val;
     }
     q->arg_array = arg_array;
-    q->return_value = (emis_return_t)0;
+    q->return_value = (EmissaryReturn_t)0;
     q->c_ptr = c_ptr;
     q->c_ptr2 = c_ptr2;
     _deferred_fns_ptr->push_back(q);
   } else {
     // execute a non deferred function
-    return_value = EmissaryCallFnptr<emis_return_t, emisfn_t>(ab->NumArgs - 4,
-                                                              fnptr, &a[4]);
+    return_value = EmissaryCallFnptr<EmissaryReturn_t, emisfn_t>(
+        ab->NumArgs - 4, fnptr, &a[4]);
   }
 
   if (run_deferred_functions) {
@@ -436,7 +431,7 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
           if ((thread_num == q->thread_num) && (team_num == q->team_num)) {
             for (uint32_t i = 0; i < q->NumArgs; i++)
               a[i] = (emis_argptr_t *)q->arg_array[i];
-            q->return_value = EmissaryCallFnptr<emis_return_t, emisfn_t>(
+            q->return_value = EmissaryCallFnptr<EmissaryReturn_t, emisfn_t>(
                 q->NumArgs, q->fnptr, a);
           }
           // Only the return value for the last end statement is returned.

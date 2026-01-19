@@ -8016,6 +8016,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // To opt-out of emissary printf/fprint set -fno-use-emissary-print. This
+  // will use the slower device libc for printf/fprintf. In the default mode
+  // (use-emissary-print), all other device libc functions are still active.
+  if (!IsWindowsMSVC && IsOpenMPDevice &&
+      Args.hasFlag(options::OPT_fuse_emissary_print,
+                   options::OPT_fno_use_emissary_print, true))
+    CmdArgs.push_back("-DOFFLOAD_ENABLE_EMISSARY_PRINT");
+
   if (Triple.isAMDGPU()) {
     handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs);
 

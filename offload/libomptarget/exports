@@ -105,10 +105,13 @@ VERS1.0 {
     __llvmPushCallConfiguration;
     __llvmPopCallConfiguration;
     llvmLaunchKernel;
+    Emissary;
     EmissaryBuildVargs;
     EmissaryHDF5;
     EmissaryReserve;
     EmissaryMPI;
+    emisExtractArgBuf;
+    emisSkipXferArgSet;
   local:
     *;
 };

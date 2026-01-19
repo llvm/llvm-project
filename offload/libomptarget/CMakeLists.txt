@@ -82,6 +82,9 @@ target_compile_definitions(omptarget PRIVATE
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
   target_link_libraries(omptarget PRIVATE omptarget.rtl.${plugin})
 endforeach()
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  target_link_libraries(omptarget PRIVATE flang_rt.runtime)
+endif()
 
 target_compile_options(omptarget PRIVATE ${offload_compile_flags})
 target_link_options(omptarget PRIVATE ${offload_link_flags})

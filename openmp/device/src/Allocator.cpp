@@ -16,7 +16,6 @@
 #include "DeviceUtils.h"
 #include "Mapping.h"
 #include "Synchronization.h"
-#include "Platform.h"
 
 using namespace ompx;
 using namespace allocator;
@@ -24,26 +23,6 @@ using namespace allocator;
 // Provide a default implementation of malloc / free for AMDGPU platforms built
 // without 'libc' support.
 extern "C" {
-
-[[gnu::noinline]] uint64_t __asan_malloc_impl(uint64_t bufsz, uint64_t pc);
-[[gnu::noinline]] void __asan_free_impl(uint64_t ptr, uint64_t pc);
-[[gnu::noinline]] uint64_t __ockl_dm_alloc(uint64_t bufsz);
-[[gnu::noinline]] void __ockl_dm_dealloc(uint64_t ptr);
-
-#ifdef __AMDGPU__
-[[gnu::noinline]] void *__alt_libc_malloc(size_t sz);
-[[gnu::noinline]] void __alt_libc_free(void *ptr);
-
-[[gnu::noinline]] uint64_t __ockl_devmem_request(uint64_t addr, uint64_t size) {
-  if (size) { // allocation request
-    [[clang::noinline]] return (uint64_t)__alt_libc_malloc((size_t)size);
-  } else { // free request
-    [[clang::noinline]] __alt_libc_free((void *)addr);
-    return 0;
-  }
-}
-#endif
-
 #if defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
 [[gnu::weak]] void *malloc(size_t Size) { return allocator::alloc(Size); }
 [[gnu::weak]] void free(void *Ptr) { allocator::free(Ptr); }
@@ -80,11 +59,35 @@ BumpAllocatorTy BumpAllocator;
 ///
 ///{
 
-void *allocator::alloc(uint64_t Size) {
+#ifdef __AMDGPU__
+[[gnu::noinline]] uint64_t __ockl_dm_alloc(uint64_t bufsz);
+[[gnu::noinline]] void __ockl_dm_dealloc(uint64_t ptr);
+[[gnu::noinline]] uint64_t __asan_malloc_impl(uint64_t bufsz, uint64_t pc);
+
+[[gnu::noinline]] uint64_t __ockl_devmem_request(uint64_t addr, uint64_t size) {
+  if (size) { // allocation request
+    [[clang::noinline]] return (uint64_t)::malloc((size_t)size);
+  } else { // free request
+    ::free((void *)addr);
+    return 0;
+  }
+}
+#endif // __AMDGPU__
 #if defined(__AMDGPU__) && defined(SANITIZER_AMDGPU)
+void *allocator::alloc(uint64_t Size) {
+#warning using __asan_malloc_impl
   return reinterpret_cast<void *>(
       __asan_malloc_impl(Size, uint64_t(__builtin_return_address(0))));
-#elif defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
+}
+void allocator::free(void *Ptr) {
+#warning using __asan_free_impl
+  [[gnu::noinline]] void __asan_free_impl(uint64_t ptr, uint64_t pc);
+  __asan_free_impl(reinterpret_cast<uint64_t>(Ptr),
+                   uint64_t(__builtin_return_address(0)));
+}
+#else // endif defined(__AMDGPU__) && defined(SANITIZER_AMDGPU)
+void *allocator::alloc(uint64_t Size) {
+#if defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
   return reinterpret_cast<void *>(__ockl_dm_alloc(Size));
 #else
   return ::malloc(Size);
@@ -92,10 +95,7 @@ void *allocator::alloc(uint64_t Size) {
 }
 
 void allocator::free(void *Ptr) {
-#if defined(__AMDGPU__) && defined(SANITIZER_AMDGPU)
-  __asan_free_impl(reinterpret_cast<uint64_t>(Ptr),
-                   uint64_t(__builtin_return_address(0)));
-#elif defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
+#if defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
   __ockl_dm_dealloc(reinterpret_cast<uint64_t>(Ptr));
 #else
   ::free(Ptr);
@@ -103,3 +103,4 @@ void allocator::free(void *Ptr) {
 }
 
 ///}
+#endif // end ELSE if defined(__AMDGPU__) && defined(SANITIZER_AMDGPU)

@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  Host support for misc emissary API. 
+//  Host support for misc emissary API.
 //
 //===----------------------------------------------------------------------===//
+#include <Emissary.h>
+#include <EmissaryIds.h>
 #include <assert.h>
 #include <cstring>
 #include <ctype.h>
@@ -21,12 +23,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "Emissary.h"
-
 static service_rc emissary_printf(uint *rc, emisArgBuf_t *ab);
 static service_rc emissary_fprintf(uint *rc, emisArgBuf_t *ab);
 
-extern "C" emis_return_t EmissaryPrint(char *data, emisArgBuf_t *ab) {
+extern "C" EmissaryReturn_t EmissaryPrint(char *data, emisArgBuf_t *ab) {
   uint32_t return_value;
   service_rc rc;
   switch (ab->emisfnid) {
@@ -41,7 +41,7 @@ extern "C" emis_return_t EmissaryPrint(char *data, emisArgBuf_t *ab) {
   case _ockl_asan_report_idx: {
     fprintf(stderr, " asan_report not yet implemented\n");
     return_value = 0;
-    rc = _RC_STATUS_ERROR;
+    rc = _ERC_STATUS_ERROR;
     break;
   }
   case _print_INVALID:
@@ -49,14 +49,14 @@ extern "C" emis_return_t EmissaryPrint(char *data, emisArgBuf_t *ab) {
     fprintf(stderr, " INVALID emissary function id (%d) for PRINT API \n",
             ab->emisfnid);
     return_value = 0;
-    rc = _RC_STATUS_ERROR;
+    rc = _ERC_STATUS_ERROR;
     break;
   }
   }
-  if (rc != _RC_SUCCESS)
-    fprintf(stderr, "HOST failure in _emissary_execute_print\n");
+  if (rc != _ERC_SUCCESS)
+    fprintf(stderr, "HOST failure in _emissary_execute_print rc:%d\n", rc);
 
-  return (emis_return_t)return_value;
+  return (EmissaryReturn_t)return_value;
 }
 
 // NUMFPREGS and FPREGSZ are part of x86 vargs ABI that
@@ -90,7 +90,7 @@ typedef struct emissary_ValistExt emissary_ValistExt_t;
 static service_rc emissary_pfGetOverflow(emissary_ValistExt_t *valist,
                                          size_t needsize) {
   if (needsize < valist->overflow_size)
-    return _RC_SUCCESS;
+    return _ERC_SUCCESS;
 
   // Make the overflow area bigger
   size_t stacksize;
@@ -105,7 +105,7 @@ static service_rc emissary_pfGetOverflow(emissary_ValistExt_t *valist,
     stacksize = valist->overflow_size * 2;
   }
   if (!(newstack = malloc(stacksize))) {
-    return _RC_STATUS_ERROR;
+    return _ERC_STATUS_ERROR;
   }
   memset(newstack, 0, stacksize);
   if (valist->overflow_size) {
@@ -114,7 +114,7 @@ static service_rc emissary_pfGetOverflow(emissary_ValistExt_t *valist,
   }
   valist->overflow_arg_area = newstack;
   valist->overflow_size = stacksize;
-  return _RC_SUCCESS;
+  return _ERC_SUCCESS;
 }
 
 // Add an integer to the va_list for vprintf
@@ -135,7 +135,7 @@ static service_rc emissary_pfAddInteger(emissary_ValistExt_t *valist, char *val,
     ival = *(uint64_t *)val;
     break;
   default: {
-    return _RC_STATUS_ERROR;
+    return _ERC_STATUS_ERROR;
   }
   }
   //  Always copy 8 bytes, sizeof(ival)
@@ -143,18 +143,18 @@ static service_rc emissary_pfAddInteger(emissary_ValistExt_t *valist, char *val,
     memcpy(((char *)valist->reg_save_area + valist->gp_offset), &ival,
            sizeof(ival));
     valist->gp_offset += sizeof(ival);
-    return _RC_SUCCESS;
+    return _ERC_SUCCESS;
   }
   // Ensure valist overflow area is big enough
   size_t needsize = (size_t)*stacksize + sizeof(ival);
-  if (emissary_pfGetOverflow(valist, needsize) != _RC_SUCCESS)
-    return _RC_STATUS_ERROR;
+  if (emissary_pfGetOverflow(valist, needsize) != _ERC_SUCCESS)
+    return _ERC_STATUS_ERROR;
   // Copy to overflow
   memcpy((char *)(valist->overflow_arg_area) + (size_t)*stacksize, &ival,
          sizeof(ival));
 
   *stacksize += sizeof(ival);
-  return _RC_SUCCESS;
+  return _ERC_SUCCESS;
 }
 
 // Add a String argument when building va_list for vprintf
@@ -165,15 +165,15 @@ static service_rc emissary_pfAddString(emissary_ValistExt_t *valist, char *val,
   if ((valist->gp_offset + valsize) <= sizeof(emissary_pfIntRegs_t)) {
     memcpy(((char *)valist->reg_save_area + valist->gp_offset), val, valsize);
     valist->gp_offset += valsize;
-    return _RC_SUCCESS;
+    return _ERC_SUCCESS;
   }
   size_t needsize = (size_t)*stacksize + valsize;
-  if (emissary_pfGetOverflow(valist, needsize) != _RC_SUCCESS)
-    return _RC_STATUS_ERROR;
+  if (emissary_pfGetOverflow(valist, needsize) != _ERC_SUCCESS)
+    return _ERC_STATUS_ERROR;
   memcpy((char *)(valist->overflow_arg_area) + (size_t)*stacksize, val,
          valsize);
   *stacksize += valsize;
-  return _RC_SUCCESS;
+  return _ERC_SUCCESS;
 }
 
 // Add a floating point value when building va_list for vprintf
@@ -189,22 +189,22 @@ static service_rc emissary_pfAddFloat(emissary_ValistExt_t *valist,
   } else if (valsize == 8) {
     memcpy(&dval, numdata, 8);
   } else {
-    return _RC_STATUS_ERROR;
+    return _ERC_STATUS_ERROR;
   }
   if ((valist->fp_offset + FPREGSZ) <= sizeof(emissary_pfRegSaveArea_t)) {
     memcpy(((char *)valist->reg_save_area + (size_t)(valist->fp_offset)), &dval,
            sizeof(double));
     valist->fp_offset += FPREGSZ;
-    return _RC_SUCCESS;
+    return _ERC_SUCCESS;
   }
   size_t needsize = (size_t)*stacksize + sizeof(double);
-  if (emissary_pfGetOverflow(valist, needsize) != _RC_SUCCESS)
-    return _RC_STATUS_ERROR;
+  if (emissary_pfGetOverflow(valist, needsize) != _ERC_SUCCESS)
+    return _ERC_STATUS_ERROR;
   memcpy((char *)(valist->overflow_arg_area) + (size_t)*stacksize, &dval,
          sizeof(double));
   // move only by the size of the double (8 bytes)
   *stacksize += sizeof(double);
-  return _RC_SUCCESS;
+  return _ERC_SUCCESS;
 }
 
 // Build an extended va_list for vprintf by unpacking the buffer
@@ -216,7 +216,7 @@ static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
   size_t regs_size = sizeof(*regs);
   regs = (emissary_pfRegSaveArea_t *)malloc(regs_size);
   if (!regs)
-    return _RC_STATUS_ERROR;
+    return _ERC_STATUS_ERROR;
   memset(regs, 0, regs_size);
   *valist = (emissary_ValistExt_t){
       .gp_offset = 0,
@@ -251,11 +251,11 @@ static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
         bytes_consumed += fillerNeeded;
       }
       if ((*data_not_used) < bytes_consumed)
-        return _RC_DATA_USED_ERROR;
+        return _ERC_DATA_USED_ERROR;
       if (valist->fp_offset == 0)
         valist->fp_offset = sizeof(emissary_pfIntRegs_t);
       if (emissary_pfAddFloat(valist, dataptr, num_bytes, &stacksize))
-        return _RC_ADDFLOAT_ERROR;
+        return _ERC_ADDFLOAT_ERROR;
       break;
 
     case IntegerTyID: ///< 11: Arbitrary bit width integers
@@ -267,9 +267,9 @@ static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
         bytes_consumed += fillerNeeded;
       }
       if ((*data_not_used) < bytes_consumed)
-        return _RC_DATA_USED_ERROR;
+        return _ERC_DATA_USED_ERROR;
       if (emissary_pfAddInteger(valist, dataptr, num_bytes, &stacksize))
-        return _RC_ADDINT_ERROR;
+        return _ERC_ADDINT_ERROR;
       break;
 
     case PointerTyID:     ///< 15: Pointers
@@ -278,9 +278,9 @@ static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
         bytes_consumed = num_bytes;
         strsz = (size_t)*(unsigned int *)dataptr;
         if ((*data_not_used) < bytes_consumed)
-          return _RC_DATA_USED_ERROR;
+          return _ERC_DATA_USED_ERROR;
         if (emissary_pfAddString(valist, (char *)&strptr, strsz, &stacksize))
-          return _RC_ADDSTRING_ERROR;
+          return _ERC_ADDSTRING_ERROR;
       } else {
         num_bytes = 8;
         bytes_consumed = num_bytes;
@@ -290,9 +290,9 @@ static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
           bytes_consumed += fillerNeeded;
         }
         if ((*data_not_used) < bytes_consumed)
-          return _RC_DATA_USED_ERROR;
+          return _ERC_DATA_USED_ERROR;
         if (emissary_pfAddInteger(valist, dataptr, num_bytes, &stacksize))
-          return _RC_ADDINT_ERROR;
+          return _ERC_ADDINT_ERROR;
       }
       break;
 
@@ -311,10 +311,10 @@ static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
     case TypedPointerTyID:   ///< Typed pointer used by some GPU targets
     case TargetExtTyID:      ///< Target extension type
     case VoidTyID:
-      return _RC_UNSUPPORTED_ID_ERROR;
+      return _ERC_UNSUPPORTED_ID_ERROR;
       break;
     default:
-      return _RC_INVALID_ID_ERROR;
+      return _ERC_INVALID_ID_ERROR;
     }
 
     dataptr += num_bytes;
@@ -322,7 +322,7 @@ static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
     *data_not_used -= bytes_consumed;
     keyptr += 4;
   }
-  return _RC_SUCCESS;
+  return _ERC_SUCCESS;
 } // end emissary_pfBuildValist
 
 /*
@@ -341,7 +341,7 @@ static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
 static service_rc emissary_fprintf(uint *rc, emisArgBuf_t *ab) {
 
   if (ab->DataLen == 0)
-    return _RC_SUCCESS;
+    return _ERC_SUCCESS;
 
   char *fmtstr = ab->strptr;
   FILE *fileptr = (FILE *)*((size_t *)ab->argptr);
@@ -365,27 +365,24 @@ static service_rc emissary_fprintf(uint *rc, emisArgBuf_t *ab) {
   real_va_list = (va_list *)&valist;
 
   if (emissary_pfBuildValist(&valist, ab->NumArgs, ab->keyptr, ab->argptr,
-                             ab->strptr, &ab->data_not_used) != _RC_SUCCESS)
-    return _RC_ERROR_INVALID_REQUEST;
+                             ab->strptr, &ab->data_not_used) != _ERC_SUCCESS)
+    return _ERC_ERROR_INVALID_REQUEST;
 
   // Roll back offsets and save stack pointer
   valist.gp_offset = 0;
   valist.fp_offset = sizeof(emissary_pfIntRegs_t);
   void *save_stack = valist.overflow_arg_area;
-
   *rc = vfprintf(fileptr, fmtstr, *real_va_list);
-
   if (valist.reg_save_area)
     free(valist.reg_save_area);
   if (save_stack)
     free(save_stack);
-
-  return _RC_SUCCESS;
+  return _ERC_SUCCESS;
 }
 
 static service_rc emissary_printf(uint *rc, emisArgBuf_t *ab) {
   if (ab->DataLen == 0)
-    return _RC_SUCCESS;
+    return _ERC_SUCCESS;
 
   char *fmtstr = ab->strptr;
 
@@ -402,22 +399,19 @@ static service_rc emissary_printf(uint *rc, emisArgBuf_t *ab) {
   real_va_list = (va_list *)&valist;
 
   if (emissary_pfBuildValist(&valist, ab->NumArgs, ab->keyptr, ab->argptr,
-                             ab->strptr, &ab->data_not_used) != _RC_SUCCESS)
-    return _RC_ERROR_INVALID_REQUEST;
+                             ab->strptr, &ab->data_not_used) != _ERC_SUCCESS)
+    return _ERC_ERROR_INVALID_REQUEST;
 
   // Roll back offsets and save stack pointer for
   valist.gp_offset = 0;
   valist.fp_offset = sizeof(emissary_pfIntRegs_t);
   void *save_stack = valist.overflow_arg_area;
-
   *rc = vprintf(fmtstr, *real_va_list);
-
   if (valist.reg_save_area)
     free(valist.reg_save_area);
   if (save_stack)
     free(save_stack);
-
-  return _RC_SUCCESS;
+  return _ERC_SUCCESS;
 }
 
 extern "C" void *global_allocate(uint32_t bufsz) {

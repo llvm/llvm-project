@@ -41,7 +41,7 @@ int main(void) {
 // CHECK-NOPE-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NOPE-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-NOPE:       user_code.entry:
-// CHECK-NOPE-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_omp_emissary_premalloc(i32 39)
+// CHECK-NOPE-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_emissary_premalloc(i32 39)
 // CHECK-NOPE-NEXT:    [[VARFN_ARGS_STORE_CASTED:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(1)
 // CHECK-NOPE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE:%.*]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 0
 // CHECK-NOPE-NEXT:    store i32 28, ptr addrspace(1) [[TMP2]], align 4
@@ -58,7 +58,7 @@ int main(void) {
 // CHECK-NOPE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i64 28
 // CHECK-NOPE-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP8]], ptr align 1 addrspacecast (ptr addrspace(4) @.str to ptr), i64 11, i1 false)
 // CHECK-NOPE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP8]], i64 11
-// CHECK-NOPE-NEXT:    [[TMP10:%.*]] = call i64 @__llvm_omp_emissary_rpc(i64 8589934593, ptr [[TMP1]])
+// CHECK-NOPE-NEXT:    [[TMP10:%.*]] = call i64 @__llvm_emissary_rpc(i64 8589934593, ptr [[TMP1]])
 // CHECK-NOPE-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NOPE-NEXT:    ret void
 // CHECK-NOPE:       worker.exit:
@@ -75,7 +75,7 @@ int main(void) {
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
-// CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_omp_emissary_premalloc(i32 39)
+// CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_emissary_premalloc(i32 39)
 // CHECK-NEXT:    [[VARFN_ARGS_STORE_CASTED:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(1)
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE:%.*]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 0
 // CHECK-NEXT:    store i32 28, ptr addrspace(1) [[TMP2]], align 4
@@ -92,7 +92,7 @@ int main(void) {
 // CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i64 28
 // CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP8]], ptr align 1 addrspacecast (ptr addrspace(4) @.str to ptr), i64 11, i1 false)
 // CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP8]], i64 11
-// CHECK-NEXT:    [[TMP10:%.*]] = call i64 @__llvm_omp_emissary_rpc(i64 8589934593, ptr [[TMP1]])
+// CHECK-NEXT:    [[TMP10:%.*]] = call i64 @__llvm_emissary_rpc(i64 8589934593, ptr [[TMP1]])
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:

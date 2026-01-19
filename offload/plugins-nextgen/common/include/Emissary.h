@@ -14,36 +14,49 @@
 #ifndef OFFLOAD_EMISSARY_H
 #define OFFLOAD_EMISSARY_H
 
-#include "../../../../openmp/device/include/EmissaryIds.h"
+#include "EmissaryIds.h"
+#include "RPC.h"
+// #include "shared/rpc.h"
+#include "shared/rpc_server.h"
 
 extern "C" {
 
 /// Called by rpc after receiving emissary argument buffer
-emis_return_t Emissary(char *data);
+EmissaryReturn_t EmissaryTop(char *data, emisArgBuf_t *ab,
+                             std::unordered_map<void *, void *> *D2HAddrList);
 
+#ifdef EMISSARY_FLANGRT_SUPPORT
 /// Called by Emissary for all Fortrt emissary functions
-emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab);
+EmissaryReturn_t EmissaryFortrt(char *data, emisArgBuf_t *ab,
+                                emis_argptr_t *arg[]);
+#endif
 
 /// Called by Emissary for all misc print functions
-emis_return_t EmissaryPrint(char *data, emisArgBuf_t *ab);
+EmissaryReturn_t EmissaryPrint(char *data, emisArgBuf_t *ab);
 
 /// Called by Emissary for all MPI emissary API functions
-__attribute((weak)) emis_return_t EmissaryMPI(char *data, emisArgBuf_t *ab,
-                                              emis_argptr_t *arg[MAXVARGS]);
+__attribute((weak)) EmissaryReturn_t EmissaryMPI(char *data, emisArgBuf_t *ab,
+                                                 emis_argptr_t *arg[]);
 
 /// Called by Emissary for all HDF5 Emissary API functions
-__attribute((weak)) emis_return_t EmissaryHDF5(char *data, emisArgBuf_t *ab,
-                                               emis_argptr_t *arg[MAXVARGS]);
+__attribute((weak)) EmissaryReturn_t EmissaryHDF5(char *data, emisArgBuf_t *ab,
+                                                  emis_argptr_t *arg[]);
 
-/// Support externally supplied emissary API
-__attribute((weak)) emis_return_t EmissaryReserve(char *data, emisArgBuf_t *ab,
-                                                  emis_argptr_t *arg[MAXVARGS]);
+/// Called by Emissary to support user-defined emissary API
+__attribute((weak)) EmissaryReturn_t EmissaryReserve(char *data,
+                                                     emisArgBuf_t *ab,
+                                                     emis_argptr_t *arg[]);
 
-/// Called by Emissary to build the emisArgBuf_t structure from the emissary
-/// data buffer sent to the CPU by rpc. This buffer is created by clang CodeGen
-/// when variadic function _emissary_exec(...) is encountered when compiling
-// /the device stub for each emissary function.
+/// emisExtractArgBuf is called within the "case OFFLOAD_EMISSARY:" stanza
+/// in offload/plugins-nextgen/common/src/RPC.cpp to build the emisArgBuf_t
+/// structure from the emissary data buffer sent to the CPU by rpc.
+/// This buffer is created by clang CodeGen when variadic function
+/// _emissary_exec(...) is encountered when compiling any emissary device
+/// stub to define the device function.
 void emisExtractArgBuf(char *buf, emisArgBuf_t *ab);
+
+/// Move the ArgBuf tracker past a set of XferSrgs
+void emisSkipXferArgSet(emisArgBuf_t *ab);
 
 /// Get uint32 value extended to uint64_t value from a char ptr
 uint64_t getuint32(char *val);
@@ -55,43 +68,14 @@ void *getfnptr(char *val);
 /// Builds the array of pointers passed to V_ functions
 uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
                             char *strptr, unsigned long long *data_not_used,
-                            emis_argptr_t *a[MAXVARGS]);
+                            emis_argptr_t *a[],
+                            std::unordered_map<void *, void *> *D2HAddrList);
 
 } // end extern "C"
 
 /// Call the associated V_ function
 template <typename T, typename FT>
-extern T EmissaryCallFnptr(uint32_t NumArgs, void *fnptr,
-                           emis_argptr_t *a[MAXVARGS]);
-
-// Error return codes (deprecated)
-typedef enum service_rc {
-  _RC_SUCCESS = 0,
-  _RC_STATUS_UNKNOWN = 1,
-  _RC_STATUS_ERROR = 2,
-  _RC_STATUS_TERMINATE = 3,
-  _RC_DATA_USED_ERROR = 4,
-  _RC_ADDINT_ERROR = 5,
-  _RC_ADDFLOAT_ERROR = 6,
-  _RC_ADDSTRING_ERROR = 7,
-  _RC_UNSUPPORTED_ID_ERROR = 8,
-  _RC_INVALID_ID_ERROR = 9,
-  _RC_ERROR_INVALID_REQUEST = 10,
-  _RC_EXCEED_MAXVARGS_ERROR = 11,
-  _RC_INVALIDSERVICE_ERROR = 12,
-  _RC_ERROR_MEMFREE = 13,
-  _RC_ERROR_CONSUMER_ACTIVE = 14,
-  _RC_ERROR_CONSUMER_INACTIVE = 15,
-  _RC_ERROR_CONSUMER_LAUNCH_FAILED = 16,
-  _RC_ERROR_SERVICE_UNKNOWN = 17,
-  _RC_ERROR_INCORRECT_ALIGNMENT = 18,
-  _RC_ERROR_NULLPTR = 19,
-  _RC_ERROR_WRONGVERSION = 20,
-  _RC_ERROR_OLDHOSTVERSIONMOD = 21,
-  _RC_ERROR_HSAFAIL = 22,
-  _RC_ERROR_ZEROPACKETS = 23,
-  _RC_ERROR_ALIGNMENT = 24,
-} service_rc;
+extern T EmissaryCallFnptr(uint32_t NumArgs, void *fnptr, emis_argptr_t *a[]);
 
 // We would like to get llvm typeID enum from Type.h. e.g.
 // #include ".../llvm/include/llvm/IR/Type.h"
@@ -127,8 +111,7 @@ enum TypeID {
 };
 
 template <typename T, typename FT>
-extern T EmissaryCallFnptr(uint32_t NumArgs, void *fnptr,
-                           emis_argptr_t *a[MAXVARGS]) {
+extern T EmissaryCallFnptr(uint32_t NumArgs, void *fnptr, emis_argptr_t *a[]) {
   T rv;
   FT *vfnptr = (FT *)fnptr;
   switch (NumArgs) {

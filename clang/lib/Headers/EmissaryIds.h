@@ -1,4 +1,4 @@
-//===- offload/DeviceRTL/include/EmissaryIds.h enum & headers ----- C++ ---===//
+//===- openmp/device/include/EmissaryIds.h enum & headers ----- C++ -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines Emissary API identifiers. This header is used by both host 
-// and device compilations. 
+// Defines Emissary API identifiers. This header is used by both host
+// and device compilations.
 //
 //===----------------------------------------------------------------------===//
 
@@ -33,8 +33,12 @@ typedef enum {
 /// The vargs function used by emissary API device stubs
 unsigned long long _emissary_exec(unsigned long long, ...);
 
-#define _PACK_EMIS_IDS(x, y)                                                   \
-  ((unsigned long long)x << 32) | ((unsigned long long)y)
+// #define _PACK_EMIS_IDS(x, y) \
+//   ((unsigned long long)x << 32) | ((unsigned long long)y)
+
+#define _PACK_EMIS_IDS(a, b, c, d)                                             \
+  ((unsigned long long)a << 48) | ((unsigned long long)b << 32) |              \
+      ((unsigned long long)c << 16) | ((unsigned long long)d)
 
 typedef enum {
   _FortranAio_INVALID,
@@ -56,23 +60,35 @@ typedef enum {
   _FortranAStopStatement_idx,
 } offload_emis_fortrt_idx;
 
-/// This structure is created by emisExtractArgBuf to make it easier
-/// to get values from the data buffer passed by rpc.
+/// This structure is created by emisExtractArgBuf to get information
+/// from the data buffer passed by rpc.
 typedef struct {
   unsigned int DataLen;
   unsigned int NumArgs;
   unsigned int emisid;
   unsigned int emisfnid;
+  unsigned int NumSendXfers;
+  unsigned int NumRecvXfers;
   unsigned long long data_not_used;
   char *keyptr;
   char *argptr;
   char *strptr;
 } emisArgBuf_t;
 
-typedef unsigned long long emis_return_t;
+typedef unsigned long long EmissaryReturn_t;
 typedef unsigned long long emis_argptr_t;
-typedef emis_return_t emisfn_t(void *, ...);
+typedef EmissaryReturn_t emisfn_t(void *, ...);
 
-#define MAXVARGS 32
+typedef enum service_rc {
+  _ERC_SUCCESS = 0,
+  _ERC_STATUS_ERROR = 1,
+  _ERC_DATA_USED_ERROR = 2,
+  _ERC_ADDINT_ERROR = 3,
+  _ERC_ADDFLOAT_ERROR = 4,
+  _ERC_ADDSTRING_ERROR = 5,
+  _ERC_UNSUPPORTED_ID_ERROR = 6,
+  _ERC_INVALID_ID_ERROR = 7,
+  _ERC_ERROR_INVALID_REQUEST = 8
+} service_rc;
 
 #endif // OFFLOAD_EMISSARY_IDS_H

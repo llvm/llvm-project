@@ -7,13 +7,8 @@ if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
                       " is not 'Clang ${req_ver}'.")
 endif()
 
-option(OFFLOAD_ENABLE_EMISSARY_APIS "Enable build of GPU Emissary APIs" ON)
-if(OFFLOAD_ENABLE_EMISSARY_APIS)
-  add_definitions(-DOFFLOAD_ENABLE_EMISSARY_APIS)
-  set(emissary_sources
-    src/EmissaryFortrt.cpp
-    src/EmissaryPrint.cpp
-  )
+if (EXISTS "${OPENMP_TEST_Fortran_COMPILER}")
+   set(emissary_fortrt ${CMAKE_CURRENT_SOURCE_DIR}/src/EmissaryFortrt.cpp)
 endif()
 
 set(src_files
@@ -37,9 +32,10 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Memory.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Xteams.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/DeviceMemInit.cpp
-  ${emissary_sources}
-
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/EmissaryPrint.cpp
+  ${emissary_fortrt}
 )
+
 if(NOT LLVM_TARGETS_TO_BUILD OR "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
   find_package(AMDDeviceLibs REQUIRED CONFIG
                HINTS ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs

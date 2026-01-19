@@ -13,17 +13,15 @@
 
 #include "PluginInterface.h"
 
+#include "Emissary.h"
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
 #include "shared/rpc_server.h"
+#include <unordered_map>
 
 using namespace llvm;
 using namespace omp;
 using namespace target;
-
-#ifdef OFFLOAD_ENABLE_EMISSARY_APIS
-#include "Emissary.h"
-#endif
 
 template <uint32_t NumLanes>
 rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
@@ -67,63 +65,156 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
     });
     break;
   }
-#ifdef OFFLOAD_ENABLE_EMISSARY_APIS
-  case ALT_LIBC_MALLOC: {
-    Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
-      auto PtrOrErr =
-          Device.allocate(Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE);
-      void *Ptr = nullptr;
-      if (!PtrOrErr)
-        consumeError(PtrOrErr.takeError());
-      else
-        Ptr = *PtrOrErr;
-      Buffer->data[0] = reinterpret_cast<uintptr_t>(Ptr);
-    });
-    break;
-  }
-  case ALT_LIBC_FREE: {
-    Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
-      if (auto Error = Device.free(reinterpret_cast<void *>(Buffer->data[0]),
-                                   TARGET_ALLOC_DEVICE)) {
-        consumeError(std::move(Error));
-      }
-    });
-    break;
-  }
-  case EMISSARY_PREMALLOC: {
-    Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
-      size_t sz = (size_t)Buffer->data[0];
-      Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.getFree_ArgBuf(sz));
-    });
-    break;
-  }
-  case EMISSARY_FREE: {
-    void *Args[NumLanes] = {nullptr};
-    Port.recv([&](rpc::Buffer *buffer, uint32_t ID) {
-      Args[ID] = reinterpret_cast<void *>(buffer->data[0]);
-      Device.moveBusyToFree_ArgBuf(Args[ID]);
-    });
-    break;
-  }
+
+  // This case handles the device function __llvm_emissary_rpc for emissary
+  // APIs that require no d2h or h2d memory transfer.
   case OFFLOAD_EMISSARY: {
-    // uint64_t Sizes[NumLanes] = {0};
+    uint64_t Sizes[NumLanes] = {0};
     unsigned long long Results[NumLanes] = {0};
-    void *Args[NumLanes] = {nullptr};
-    Port.recv([&](rpc::Buffer *buffer, uint32_t ID) {
-      Args[ID] = reinterpret_cast<void *>(buffer->data[0]);
-      Results[ID] = Emissary((char *)Args[ID]);
-    });
+    void *buf_ptrs[NumLanes] = {nullptr};
+    Port.recv_n(buf_ptrs, Sizes, [&](uint64_t Size) { return new char[Size]; });
+    uint32_t id = 0;
+    for (void *buffer_ptr : buf_ptrs) {
+      if (buffer_ptr) {
+        emisArgBuf_t ab;
+        emisExtractArgBuf((char *)buffer_ptr, &ab);
+        Results[id++] = EmissaryTop((char *)buffer_ptr, &ab, nullptr);
+      }
+    }
     Port.send([&](rpc::Buffer *Buffer, uint32_t ID) {
-      Device.moveBusyToFree_ArgBuf(Args[ID]);
       Buffer->data[0] = static_cast<uint64_t>(Results[ID]);
+      delete[] reinterpret_cast<char *>(buf_ptrs[ID]);
     });
     break;
   }
-#else
-  case EMISSARY_PREMALLOC:
-  case EMISSARY_FREE:
-  case OFFLOAD_EMISSARY:
-#endif
+
+  // This case handles the device function __llvm_emissary_rpc_dm for emissary
+  // APIs require D2H or H2D transfer vectors to be processed through the Port.
+  // FIXME: test with multiple transfer vectors of the same type.
+  case OFFLOAD_EMISSARY_DM: {
+    uint64_t Sizes[NumLanes] = {0};
+    unsigned long long Results[NumLanes] = {0};
+    void *buf_ptrs[NumLanes] = {nullptr};
+    Port.recv_n(buf_ptrs, Sizes, [&](uint64_t Size) { return new char[Size]; });
+
+    uint32_t id = 0;
+    emisArgBuf_t AB[NumLanes];
+    std::unordered_map<void *, void *> D2HAddrList;
+    void *Xfers[NumLanes] = {nullptr};
+    void *devXfers[NumLanes] = {nullptr};
+    uint64_t XferSzs[NumLanes] = {0};
+    uint32_t numSendXfers = 0;
+    id = 0;
+    for (void *buffer_ptr : buf_ptrs) {
+      if (buffer_ptr) {
+        emisArgBuf_t *ab = &AB[id];
+        emisExtractArgBuf((char *)buffer_ptr, ab);
+        for (uint32_t idx = 0; idx < ab->NumSendXfers; idx++) {
+          numSendXfers++;
+          devXfers[id] = (void *)*((uint64_t *)ab->argptr);
+          XferSzs[id] = (size_t)*((size_t *)(ab->argptr + sizeof(void *)));
+          emisSkipXferArgSet(ab);
+        }
+        // Allocate the host space for the receive Xfers
+        for (uint32_t idx = 0; idx < ab->NumRecvXfers; idx++) {
+          void *devAddr = (void *)*((uint64_t *)ab->argptr);
+          size_t devSz = (size_t)*((size_t *)(ab->argptr + sizeof(void *)));
+          void *hostAddr = new char[devSz];
+          D2HAddrList.insert(std::pair<void *, void *>(devAddr, hostAddr));
+          emisSkipXferArgSet(ab);
+        }
+        id++;
+      }
+    }
+    // recv_n for device send_n into new host-allocated Xfers
+    if (numSendXfers)
+      Port.recv_n(Xfers, XferSzs,
+                  [&](uint64_t Size) { return new char[Size]; });
+
+    // Xfers now contains just allocated host addrs for sends and
+    // devXfers contains corresponding devAddr for those sends
+    // Build map to pass to Emissary
+    id = 0;
+    for (void *Xfer : Xfers) {
+      if (Xfer) {
+        D2HAddrList.insert(std::pair<void *, void *>(devXfers[id], Xfer));
+        id++;
+      }
+    }
+
+    // Call Emissary for each active lane
+    id = 0;
+    for (void *buffer_ptr : buf_ptrs) {
+      if (buffer_ptr) {
+        emisArgBuf_t *ab = &AB[id];
+        emisExtractArgBuf((char *)buffer_ptr, ab);
+        for (uint32_t idx = 0; idx < ab->NumSendXfers; idx++)
+          emisSkipXferArgSet(ab);
+        for (uint32_t idx = 0; idx < ab->NumRecvXfers; idx++)
+          emisSkipXferArgSet(ab);
+        Results[id] = EmissaryTop((char *)buffer_ptr, ab, &D2HAddrList);
+        id++;
+      }
+    }
+
+    // Process send_n for the H2D Xfers.
+    void *recvXfers[NumLanes] = {nullptr};
+    uint64_t recvXferSzs[NumLanes] = {0};
+    id = 0;
+    uint32_t numRecvXfers = 0;
+    for (void *buffer_ptr : buf_ptrs) {
+      if (buffer_ptr) {
+        emisArgBuf_t *ab = &AB[id];
+        // Reset ArgBuf tracker
+        emisExtractArgBuf((char *)buffer_ptr, ab);
+        for (uint32_t idx = 0; idx < ab->NumSendXfers; idx++)
+          emisSkipXferArgSet(ab);
+        for (uint32_t idx = 0; idx < ab->NumRecvXfers; idx++) {
+          numRecvXfers++;
+          void *devAddr = (void *)*((uint64_t *)ab->argptr);
+          recvXfers[id] = D2HAddrList[devAddr];
+          recvXferSzs[id] =
+              (uint64_t)*((size_t *)(ab->argptr + sizeof(void *)));
+          emisSkipXferArgSet(ab);
+        }
+        id++;
+      }
+    }
+    if (numRecvXfers)
+      Port.send_n(recvXfers, recvXferSzs);
+    // Cleanup all host allocated transfer buffers
+    id = 0;
+    for (void *buffer_ptr : buf_ptrs) {
+      if (buffer_ptr) {
+        emisArgBuf_t *ab = &AB[id];
+        // Reset the ArgBuf tracker ab
+        emisExtractArgBuf((char *)buffer_ptr, ab);
+        // Cleanup host allocated send Xfers
+        for (uint32_t idx = 0; idx < ab->NumSendXfers; idx++) {
+          void *devAddr = (void *)*((uint64_t *)ab->argptr);
+          void *hostAddr = D2HAddrList[devAddr];
+          delete[] reinterpret_cast<char *>(hostAddr);
+          emisSkipXferArgSet(ab);
+        }
+        // Cleanup host allocated bufs
+        for (uint32_t idx = 0; idx < ab->NumRecvXfers; idx++) {
+          void *devAddr = (void *)*((uint64_t *)ab->argptr);
+          void *hostAddr = D2HAddrList[devAddr];
+          delete[] reinterpret_cast<char *>(hostAddr);
+          emisSkipXferArgSet(ab);
+        }
+        id++;
+      }
+    }
+
+    Port.send([&](rpc::Buffer *Buffer, uint32_t ID) {
+      Buffer->data[0] = static_cast<uint64_t>(Results[ID]);
+      delete[] reinterpret_cast<char *>(buf_ptrs[ID]);
+    });
+
+    break;
+  } // END CASE OFFLOAD_EMISSARY_DM
+
   default:
     return rpc::RPC_UNHANDLED_OPCODE;
     break;

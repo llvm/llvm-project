@@ -459,18 +459,6 @@ if(SANITIZER_AMDGPU)
   find_package(amd_comgr QUIET 2.4.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
 endif()
 
-# An Emissary API is a subset of Host APIs that are executed from Offload devices
-# using the offload RPC mechanism such as FORTRAN IO runtime and MPI.
-option(OFFLOAD_ENABLE_EMISSARY_APIS "Enable build of GPU Emissary APIs" ON)
-if(OFFLOAD_ENABLE_EMISSARY_APIS)
-  # Header install location
-  add_definitions(-DOFFLOAD_ENABLE_EMISSARY_APIS)
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../openmp/device/include/EmissaryIds.h
-    DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../openmp/device/include/EmissaryMPI.h
-    DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
-endif()
-
 add_subdirectory(tools/offload-tblgen)
 
 # Build offloading plugins and device RTLs if they are available.
