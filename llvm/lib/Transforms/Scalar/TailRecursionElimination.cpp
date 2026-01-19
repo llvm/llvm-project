@@ -87,7 +87,7 @@ using namespace llvm;
 #define DEBUG_TYPE "tailcallelim"
 
 STATISTIC(NumEliminated, "Number of tail calls removed");
-STATISTIC(NumRetDuped,   "Number of return duplicated");
+STATISTIC(NumRetDuped, "Number of return duplicated");
 STATISTIC(NumAccumAdded, "Number of accumulators introduced");
 
 static cl::opt<bool> ForceDisableBFI(
@@ -110,17 +110,35 @@ static bool canTRE(Function &F) {
 
 namespace {
 struct AllocaDerivedValueTracker {
+  explicit AllocaDerivedValueTracker(DominatorTree &DT) : DT(DT) {}
+
   // Start at a root value and walk its use-def chain to mark calls that use the
   // value or a derived value in AllocaUsers, and places where it may escape in
   // EscapePoints.
   void walk(Value *Root) {
     SmallVector<Use *, 32> Worklist;
     SmallPtrSet<Use *, 32> Visited;
+    SmallPtrSet<Value *, 16> LocationsWithAllocaAddresses;
 
-    auto AddUsesToWorklist = [&](Value *V) {
-      for (auto &U : V->uses()) {
+    // Populate the worklist with the uses of the given value.
+    // 'StartInst' when provided allows for path-sensitive tracking via
+    // DominatorTree. That is, we only consider uses that are dominated by
+    // 'StartInst'.
+    auto AddUsesToWorklist = [&](Value *Root,
+                                 std::optional<Instruction *> StartInst =
+                                     std::nullopt) {
+      for (auto &U : Root->uses()) {
+        Instruction *UserInst = cast<Instruction>(U.getUser());
+
+        if (StartInst.has_value()) {
+          Instruction *SI = StartInst.value();
+          if (!DT.dominates(SI, UserInst))
+            continue;
+        }
+
         if (!Visited.insert(&U).second)
           continue;
+
         Worklist.push_back(&U);
       }
     };
@@ -152,14 +170,53 @@ struct AllocaDerivedValueTracker {
         break;
       }
       case Instruction::Load: {
-        // The result of a load is not alloca-derived (unless an alloca has
-        // otherwise escaped, but this is a local analysis).
+        auto *LI = cast<LoadInst>(I);
+        Value *LoadPtr = LI->getPointerOperand()->stripPointerCasts();
+        // Only track the loaded value if:
+        // 1. The load is from a location we know contains an alloca address
+        // 2. The loaded value is a pointer type (could be an alloca address)
+        if (LocationsWithAllocaAddresses.count(LoadPtr) &&
+            I->getType()->isPointerTy()) {
+          // The loaded value might be the address of a local alloca.
+          // Continue tracking its uses.
+          break;
+        }
+        // Otherwise, the result of a load is not alloca-derived.
         continue;
       }
       case Instruction::Store: {
-        if (U->getOperandNo() == 0)
-          EscapePoints.insert(I);
-        continue;  // Stores have no users to analyze.
+        // If the pointer we are tracking is being stored as a Value
+        // (Operand 0), its address is being leaked into another memory
+        // location.
+        if (U->getOperandNo() == 0) {
+          auto *SI = cast<StoreInst>(I);
+          // If the destination is an alloca, we can propagate the
+          // tracking to it.
+          //
+          // We only collect "forward" uses (those dominated by this
+          // store).
+          // Rationale: Any access to 'Dest' that happens
+          // chronologically before this instruction cannot possibly
+          // contain the address of our tracked pointer.
+          //
+          // By filtering for forward uses, we provide a degree of
+          // flow-sensitivity that avoids false-positive escapes from
+          // previous, unrelated life-cycles of the memory.
+          if (Value *Dest = SI->getPointerOperand()->stripPointerCasts();
+              isa<AllocaInst>(Dest)) {
+            // Mark this location as containing an alloca address.
+            LocationsWithAllocaAddresses.insert(Dest);
+            AddUsesToWorklist(Dest, SI);
+          } else {
+            // If the destination is a Global, a Heap allocation, or a
+            // pointer passed as an argument, we assume the address has
+            // escaped the function's control.
+            EscapePoints.insert(I);
+          }
+        }
+        // Stores have no users to analyze because they don't produce a
+        // value.
+        continue;
       }
       case Instruction::BitCast:
       case Instruction::GetElementPtr:
@@ -191,15 +248,17 @@ struct AllocaDerivedValueTracker {
 
   SmallPtrSet<Instruction *, 32> AllocaUsers;
   SmallPtrSet<Instruction *, 32> EscapePoints;
+  DominatorTree &DT;
 };
 } // namespace
 
-static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
+static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
+                      DominatorTree &DT) {
   if (F.callsFunctionThatReturnsTwice())
     return false;
 
   // The local stack holds all alloca instructions and all byval arguments.
-  AllocaDerivedValueTracker Tracker;
+  AllocaDerivedValueTracker Tracker(DT);
   for (Argument &Arg : F.args()) {
     if (Arg.hasByValAttr())
       Tracker.walk(&Arg);
@@ -215,11 +274,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
   // Track whether a block is reachable after an alloca has escaped. Blocks that
   // contain the escaping instruction will be marked as being visited without an
   // escaped alloca, since that is how the block began.
-  enum VisitType {
-    UNVISITED,
-    UNESCAPED,
-    ESCAPED
-  };
+  enum VisitType { UNVISITED, UNESCAPED, ESCAPED };
   DenseMap<BasicBlock *, VisitType> Visited;
 
   // We propagate the fact that an alloca has escaped from block to successor.
@@ -348,7 +403,7 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
 
   // FIXME: We can move load/store/call/free instructions above the call if the
   // call does not mod/ref the memory location being processed.
-  if (I->mayHaveSideEffects())  // This also handles volatile loads.
+  if (I->mayHaveSideEffects()) // This also handles volatile loads.
     return false;
 
   if (LoadInst *L = dyn_cast<LoadInst>(I)) {
@@ -491,7 +546,7 @@ CallInst *TailRecursionEliminator::findTRECandidate(BasicBlock *BB) {
       break;
 
     if (BBI == BB->begin())
-      return nullptr;          // Didn't find a potential tail call.
+      return nullptr; // Didn't find a potential tail call.
     --BBI;
   }
 
@@ -512,7 +567,8 @@ CallInst *TailRecursionEliminator::findTRECandidate(BasicBlock *BB) {
     auto I = CI->arg_begin(), E = CI->arg_end();
     Function::arg_iterator FI = F.arg_begin(), FE = F.arg_end();
     for (; I != E && FI != FE; ++I, ++FI)
-      if (*I != &*FI) break;
+      if (*I != &*FI)
+        break;
     if (I == E && FI == FE)
       return nullptr;
   }
@@ -752,8 +808,8 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   BranchInst *NewBI = BranchInst::Create(HeaderBB, Ret->getIterator());
   NewBI->setDebugLoc(CI->getDebugLoc());
 
-  Ret->eraseFromParent();  // Remove return.
-  CI->eraseFromParent();   // Remove call.
+  Ret->eraseFromParent(); // Remove return.
+  CI->eraseFromParent();  // Remove call.
   DTU.applyUpdates({{DominatorTree::Insert, BB, HeaderBB}});
   ++NumEliminated;
   if (OrigEntryBBFreq) {
@@ -910,7 +966,7 @@ bool TailRecursionEliminator::eliminate(Function &F,
     return false;
 
   bool MadeChange = false;
-  MadeChange |= markTails(F, ORE);
+  MadeChange |= markTails(F, ORE, DTU.getDomTree());
 
   // If this function is a varargs function, we won't be able to PHI the args
   // right, so don't even try to convert it...
