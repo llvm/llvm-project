@@ -1070,14 +1070,13 @@ void MachineSMEABI::emitFullZASaveRestore(EmitContext &Context,
       IsSave ? RTLIB::SMEABI_SME_SAVE : RTLIB::SMEABI_SME_RESTORE);
   StringRef FuncName =
       RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
+  CallingConv::ID CC = Libcalls->getLibcallImplCallingConv(LibcallImpl);
 
   // Call __arm_sme_save/__arm_sme_restore.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
       .addReg(BufferPtr, RegState::Implicit)
       .addExternalSymbol(FuncName.data())
-      .addRegMask(TRI->getCallPreservedMask(
-          *MF,
-          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1));
+      .addRegMask(TRI->getCallPreservedMask(*MF, CC));
 
   restorePhyRegSave(RegSave, MBB, MBBI, DL);
 }
