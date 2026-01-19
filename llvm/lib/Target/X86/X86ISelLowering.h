@@ -81,6 +81,10 @@ namespace llvm {
     // marker instruction.
     CALL_RVMARKER,
 
+    // Psuedo for a call to a global address that must be called via a memory
+    // address (i.e., not loaded into a register then called).
+    CALL_GLOBALADDR,
+
     /// The same as ISD::CopyFromReg except that this node makes it explicit
     /// that it may lower to an x87 FPU stack pop. Optimizations should be more
     /// cautious when handling this node than a normal CopyFromReg to avoid
@@ -335,6 +339,10 @@ namespace llvm {
     /// Tail call return. See X86TargetLowering::LowerCall for
     /// the list of operands.
     TC_RETURN,
+
+    // Psuedo for a tail call return to a global address that must be called via
+    // a memory address (i.e., not loaded into a register then called).
+    TC_RETURN_GLOBALADDR,
 
     // Vector move to low scalar and zero higher vector elements.
     VZEXT_MOVL,
@@ -1738,11 +1746,11 @@ namespace llvm {
 
     // Call lowering helpers.
 
-    /// Check whether the call is eligible for tail call optimization. Targets
-    /// that want to do tail call optimization should implement this function.
-    bool IsEligibleForTailCallOptimization(
-        TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
-        SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const;
+    /// Check whether the call is eligible for sibling call optimization.
+    bool
+    isEligibleForSiblingCallOpt(TargetLowering::CallLoweringInfo &CLI,
+                                CCState &CCInfo,
+                                SmallVectorImpl<CCValAssign> &ArgLocs) const;
     SDValue EmitTailCallLoadRetAddr(SelectionDAG &DAG, SDValue &OutRetAddr,
                                     SDValue Chain, bool IsTailCall,
                                     bool Is64Bit, int FPDiff,

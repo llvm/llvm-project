@@ -189,8 +189,9 @@ static unsigned conjugateICmpMask(unsigned Mask) {
 // Adapts the external decomposeBitTest for local use.
 static bool decomposeBitTest(Value *Cond, CmpInst::Predicate &Pred, Value *&X,
                              Value *&Y, Value *&Z) {
-  auto Res = llvm::decomposeBitTest(Cond, /*LookThroughTrunc=*/true,
-                                    /*AllowNonZeroC=*/true);
+  auto Res =
+      llvm::decomposeBitTest(Cond, /*LookThroughTrunc=*/true,
+                             /*AllowNonZeroC=*/true, /*DecomposeAnd=*/true);
   if (!Res)
     return false;
 

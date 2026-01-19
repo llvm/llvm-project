@@ -13,7 +13,6 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 
-#include "clang/AST/StmtVisitor.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/SaveAndRestore.h"
 
