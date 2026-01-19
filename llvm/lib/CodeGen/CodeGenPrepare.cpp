@@ -1468,6 +1468,16 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
       return false;
   }
 
+  // If the cast is between identical types, just replace it with its operand.
+  // This avoids infinite loops with optimizePhiType which may reintroduce such
+  // casts.
+  if (CI->getOperand(0)->getType() == CI->getType() &&
+      !CI->getType()->isPointerTy()) {
+    CI->replaceAllUsesWith(CI->getOperand(0));
+    CI->eraseFromParent();
+    return true;
+  }
+
   // If this is a noop copy,
   EVT SrcVT = TLI.getValueType(DL, CI->getOperand(0)->getType());
   EVT DstVT = TLI.getValueType(DL, CI->getType());
