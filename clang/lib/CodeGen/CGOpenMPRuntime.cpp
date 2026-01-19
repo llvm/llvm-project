@@ -492,11 +492,11 @@ enum OpenMPLocationFlags : unsigned {
 ///                                  member  */
 ///    kmp_int32 reserved_2;   /**<  not really used in Fortran any more;
 ///                                  see above */
-/// #if USE_ITT_BUILD
+///#if USE_ITT_BUILD
 ///                            /*  but currently used for storing
 ///                                region-specific ITT */
 ///                            /*  contextual information. */
-/// #endif /* USE_ITT_BUILD */
+///#endif /* USE_ITT_BUILD */
 ///    kmp_int32 reserved_3;   /**< source[4] in Fortran, do not use for
 ///                                 C++  */
 ///    char const *psource;    /**< String describing the source location.
@@ -716,16 +716,16 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
 
   if (DRD) {
     // Shift the address forward by one element.
-    llvm::Value *SrcElementNext =
-        CGF.Builder.CreateConstGEP1_32(SrcAddr.getElementType(), SrcElementPHI,
-                                       /*Idx0=*/1, "omp.arraycpy.dest.element");
+    llvm::Value *SrcElementNext = CGF.Builder.CreateConstGEP1_32(
+        SrcAddr.getElementType(), SrcElementPHI, /*Idx0=*/1,
+        "omp.arraycpy.dest.element");
     SrcElementPHI->addIncoming(SrcElementNext, CGF.Builder.GetInsertBlock());
   }
 
   // Shift the address forward by one element.
-  llvm::Value *DestElementNext =
-      CGF.Builder.CreateConstGEP1_32(DestAddr.getElementType(), DestElementPHI,
-                                     /*Idx0=*/1, "omp.arraycpy.dest.element");
+  llvm::Value *DestElementNext = CGF.Builder.CreateConstGEP1_32(
+      DestAddr.getElementType(), DestElementPHI, /*Idx0=*/1,
+      "omp.arraycpy.dest.element");
   // Check whether we've reached the end.
   llvm::Value *Done =
       CGF.Builder.CreateICmpEQ(DestElementNext, DestEnd, "omp.arraycpy.done");
@@ -975,8 +975,8 @@ Address ReductionCodeGen::adjustPrivateAddress(CodeGenFunction &CGF, unsigned N,
     llvm::Value *PrivatePointer =
         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
             PrivateAddr.emitRawPointer(CGF), SharedAddr.getType());
-    llvm::Value *Ptr = CGF.Builder.CreateGEP(SharedAddr.getElementType(),
-                                             PrivatePointer, Adjustment);
+    llvm::Value *Ptr = CGF.Builder.CreateGEP(
+        SharedAddr.getElementType(), PrivatePointer, Adjustment);
     return castToBase(CGF, OrigVD->getType(),
                       SharedAddresses[N].first.getType(),
                       OriginalBaseLValue.getAddress(), Ptr);
@@ -1605,11 +1605,12 @@ Address CGOpenMPRuntime::getAddrOfThreadPrivate(CodeGenFunction &CGF,
       CGF.Builder.CreatePointerCast(VDAddr.emitRawPointer(CGF), CGM.Int8PtrTy),
       CGM.getSize(CGM.GetTargetTypeStoreSize(VarTy)),
       getOrCreateThreadPrivateCache(VD)};
-  return Address(CGF.EmitRuntimeCall(
-                     OMPBuilder.getOrCreateRuntimeFunction(
-                         CGM.getModule(), OMPRTL___kmpc_threadprivate_cached),
-                     Args),
-                 CGF.Int8Ty, VDAddr.getAlignment());
+  return Address(
+      CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(
+              CGM.getModule(), OMPRTL___kmpc_threadprivate_cached),
+          Args),
+      CGF.Int8Ty, VDAddr.getAlignment());
 }
 
 void CGOpenMPRuntime::emitThreadPrivateVarInit(
@@ -1634,8 +1635,8 @@ void CGOpenMPRuntime::emitThreadPrivateVarInit(
 }
 
 llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
-    const VarDecl *VD, Address VDAddr, SourceLocation Loc, bool PerformInit,
-    CodeGenFunction *CGF) {
+    const VarDecl *VD, Address VDAddr, SourceLocation Loc,
+    bool PerformInit, CodeGenFunction *CGF) {
   if (CGM.getLangOpts().OpenMPUseTLS &&
       CGM.getContext().getTargetInfo().isTLSSupported())
     return nullptr;
@@ -1697,8 +1698,7 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
       auto NL = ApplyDebugLocation::CreateEmpty(DtorCGF);
       DtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, Fn, FI, Args,
                             Loc, Loc);
-      // Create a scope with an artificial location for the body of this
-      // function.
+      // Create a scope with an artificial location for the body of this function.
       auto AL = ApplyDebugLocation::CreateArtificial(DtorCGF);
       llvm::Value *ArgVal = DtorCGF.EmitLoadOfScalar(
           DtorCGF.GetAddrOfLocalVar(&Dst),
@@ -1776,10 +1776,124 @@ void CGOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *FD,
     Addr->setVisibility(llvm::GlobalValue::ProtectedVisibility);
   }
 
+  // Register the indirect Vtable:
+  // This is similar to OMPTargetGlobalVarEntryIndirect, except that the
+  // size field refers to the size of memory pointed to, not the size of
+  // the pointer symbol itself (which is implicitly the size of a pointer).
   OMPBuilder.OffloadInfoManager.registerDeviceGlobalVarEntryInfo(
       Name, Addr, CGM.GetTargetTypeStoreSize(CGM.VoidPtrTy).getQuantity(),
       llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect,
       llvm::GlobalValue::WeakODRLinkage);
+}
+
+void CGOpenMPRuntime::registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
+                                                 const VarDecl *VD) {
+  // TODO: add logic to avoid duplicate vtable registrations per
+  // translation unit; though for external linkage, this should no
+  // longer be an issue - or at least we can avoid the issue by
+  // checking for an existing offloading entry.  But, perhaps the
+  // better approach is to defer emission of the vtables and offload
+  // entries until later (by tracking a list of items that need to be
+  // emitted).
+
+  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+
+  // Generate a new externally visible global to point to the
+  // internally visible vtable. Doing this allows us to keep the
+  // visibility and linkage of the associated vtable unchanged while
+  // allowing the runtime to access its value.  The externally
+  // visible global var needs to be emitted with a unique mangled
+  // name that won't conflict with similarly named (internal)
+  // vtables in other translation units.
+
+  // Register vtable with source location of dynamic object in map
+  // clause.
+  llvm::TargetRegionEntryInfo EntryInfo = getEntryInfoFromPresumedLoc(
+      CGM, OMPBuilder, VD->getCanonicalDecl()->getBeginLoc(),
+      VTable->getName());
+
+  llvm::GlobalVariable *Addr = VTable;
+  SmallString<128> AddrName;
+  OMPBuilder.OffloadInfoManager.getTargetRegionEntryFnName(AddrName, EntryInfo);
+  AddrName.append("addr");
+
+  if (CGM.getLangOpts().OpenMPIsTargetDevice) {
+    Addr = new llvm::GlobalVariable(
+        CGM.getModule(), VTable->getType(),
+        /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, VTable,
+        AddrName,
+        /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+        CGM.getModule().getDataLayout().getDefaultGlobalsAddressSpace());
+    Addr->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+  }
+  OMPBuilder.OffloadInfoManager.registerDeviceGlobalVarEntryInfo(
+      AddrName, VTable,
+      CGM.getDataLayout().getTypeAllocSize(VTable->getInitializer()->getType()),
+      llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable,
+      llvm::GlobalValue::WeakODRLinkage);
+}
+
+void CGOpenMPRuntime::emitAndRegisterVTable(CodeGenModule &CGM,
+                                            CXXRecordDecl *CXXRecord,
+                                            const VarDecl *VD) {
+  // Register C++ VTable to OpenMP Offload Entry if it's a new
+  // CXXRecordDecl.
+  if (CXXRecord && CXXRecord->isDynamicClass() &&
+      !CGM.getOpenMPRuntime().VTableDeclMap.contains(CXXRecord)) {
+    auto Res = CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD);
+    if (Res.second) {
+      CGM.EmitVTable(CXXRecord);
+      CodeGenVTables VTables = CGM.getVTables();
+      llvm::GlobalVariable *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
+      assert(VTablesAddr && "Expected non-null VTable address");
+      CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
+      // Emit VTable for all the fields containing dynamic CXXRecord
+      for (const FieldDecl *Field : CXXRecord->fields()) {
+        if (CXXRecordDecl *RecordDecl = Field->getType()->getAsCXXRecordDecl())
+          emitAndRegisterVTable(CGM, RecordDecl, VD);
+      }
+      // Emit VTable for all dynamic parent class
+      for (CXXBaseSpecifier &Base : CXXRecord->bases()) {
+        if (CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl())
+          emitAndRegisterVTable(CGM, BaseDecl, VD);
+      }
+    }
+  }
+}
+
+void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
+  // Register VTable by scanning through the map clause of OpenMP target region.
+  // Get CXXRecordDecl and VarDecl from Expr.
+  auto GetVTableDecl = [](const Expr *E) {
+    QualType VDTy = E->getType();
+    CXXRecordDecl *CXXRecord = nullptr;
+    if (const auto *RefType = VDTy->getAs<LValueReferenceType>())
+      VDTy = RefType->getPointeeType();
+    if (VDTy->isPointerType())
+      CXXRecord = VDTy->getPointeeType()->getAsCXXRecordDecl();
+    else
+      CXXRecord = VDTy->getAsCXXRecordDecl();
+
+    const VarDecl *VD = nullptr;
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      VD = cast<VarDecl>(DRE->getDecl());
+    } else if (auto *MRE = dyn_cast<MemberExpr>(E)) {
+      if (auto *BaseDRE = dyn_cast<DeclRefExpr>(MRE->getBase())) {
+        if (auto *BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl()))
+          VD = BaseVD;
+      }
+    }
+    return std::pair<CXXRecordDecl *, const VarDecl *>(CXXRecord, VD);
+  };
+  // Collect VTable from OpenMP map clause.
+  for (const auto *C : D.getClausesOfKind<OMPMapClause>()) {
+    for (const auto *E : C->varlist()) {
+      auto DeclPair = GetVTableDecl(E);
+      // Ensure VD is not null
+      if (DeclPair.second)
+        emitAndRegisterVTable(CGM, DeclPair.first, DeclPair.second);
+    }
+  }
 }
 
 Address CGOpenMPRuntime::getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
@@ -1942,7 +2056,8 @@ Address CGOpenMPRuntime::emitThreadIDAddress(CodeGenFunction &CGF,
   QualType Int32Ty =
       CGF.getContext().getIntTypeForBitwidth(/*DestWidth*/ 32, /*Signed*/ true);
   Address ThreadIDTemp = CGF.CreateMemTemp(Int32Ty, /*Name*/ ".threadid_temp.");
-  CGF.EmitStoreOfScalar(ThreadID, CGF.MakeAddrLValue(ThreadIDTemp, Int32Ty));
+  CGF.EmitStoreOfScalar(ThreadID,
+                        CGF.MakeAddrLValue(ThreadIDTemp, Int32Ty));
 
   return ThreadIDTemp;
 }
@@ -2449,8 +2564,8 @@ bool CGOpenMPRuntime::isStaticChunked(OpenMPScheduleClauseKind ScheduleKind,
   return Schedule == OMP_sch_static_chunked;
 }
 
-bool CGOpenMPRuntime::isStaticChunked(OpenMPDistScheduleClauseKind ScheduleKind,
-                                      bool Chunked) const {
+bool CGOpenMPRuntime::isStaticChunked(
+    OpenMPDistScheduleClauseKind ScheduleKind, bool Chunked) const {
   OpenMPSchedType Schedule = getRuntimeSchedule(ScheduleKind, Chunked);
   return Schedule == OMP_dist_sch_static_chunked;
 }
@@ -2614,10 +2729,10 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
       ScheduleKind.Schedule, Values.Chunk != nullptr, Values.Ordered);
   assert((isOpenMPWorksharingDirective(DKind) || (DKind == OMPD_loop)) &&
          "Expected loop-based or sections-based directive.");
-  llvm::Value *UpdatedLocation = emitUpdateLocation(
-      CGF, Loc,
-      isOpenMPLoopDirective(DKind) ? OMP_IDENT_WORK_LOOP
-                                   : OMP_IDENT_WORK_SECTIONS);
+  llvm::Value *UpdatedLocation = emitUpdateLocation(CGF, Loc,
+                                             isOpenMPLoopDirective(DKind)
+                                                 ? OMP_IDENT_WORK_LOOP
+                                                 : OMP_IDENT_WORK_SECTIONS);
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
   llvm::FunctionCallee StaticInitFunction =
       OMPBuilder.createForStaticInitFunction(Values.IVSize, Values.IVSigned,
@@ -2692,8 +2807,9 @@ void CGOpenMPRuntime::emitForOrderedIterationEnd(CodeGenFunction &CGF,
 
 llvm::Value *CGOpenMPRuntime::emitForNext(CodeGenFunction &CGF,
                                           SourceLocation Loc, unsigned IVSize,
-                                          bool IVSigned, Address IL, Address LB,
-                                          Address UB, Address ST) {
+                                          bool IVSigned, Address IL,
+                                          Address LB, Address UB,
+                                          Address ST) {
   // Call __kmpc_dispatch_next(
   //          ident_t *loc, kmp_int32 tid, kmp_int32 *p_lastiter,
   //          kmp_int[32|64] *p_lower, kmp_int[32|64] *p_upper,
@@ -2843,6 +2959,13 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
     case llvm::OpenMPIRBuilder::EMIT_MD_GLOBAL_VAR_LINK_ERROR: {
       CGM.getDiags().Report(diag::err_target_var_offloading_entry_incorrect);
     } break;
+    case llvm::OpenMPIRBuilder::EMIT_MD_GLOBAL_VAR_INDIRECT_ERROR: {
+      unsigned DiagID = CGM.getDiags().getCustomDiagID(
+          DiagnosticsEngine::Error, "Offloading entry for indirect declare "
+                                    "target variable is incorrect: the "
+                                    "address is invalid.");
+      CGM.getDiags().Report(DiagID);
+    } break;
     }
   };
 
@@ -2889,8 +3012,8 @@ static bool isAllocatableDecl(const VarDecl *VD) {
            !AA->getAllocator());
 }
 
-static RecordDecl *createPrivatesRecordDecl(CodeGenModule &CGM,
-                                            ArrayRef<PrivateDataTy> Privates) {
+static RecordDecl *
+createPrivatesRecordDecl(CodeGenModule &CGM, ArrayRef<PrivateDataTy> Privates) {
   if (!Privates.empty()) {
     ASTContext &C = CGM.getContext();
     // Build struct .kmp_privates_t. {
@@ -3394,6 +3517,7 @@ static bool checkInitIsRequired(CodeGenFunction &CGF,
   return InitRequired;
 }
 
+
 /// Emit task_dup function (for initialization of
 /// private/firstprivate/lastprivate vars and last_iter flag)
 /// \code
@@ -3731,6 +3855,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     PriorityFlag = 0x20,
     DetachableFlag = 0x40,
     FreeAgentFlag = 0x80,
+    TransparentFlag = 0x100,
   };
   unsigned Flags = Data.Tied ? TiedFlag : 0;
   bool NeedsCleanup = false;
@@ -3745,6 +3870,9 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     if (Kind == OMPC_THREADSET_omp_pool)
       Flags = Flags | FreeAgentFlag;
   }
+  if (D.getSingleClause<OMPTransparentClause>())
+    Flags |= TransparentFlag;
+
   if (Data.Priority.getInt())
     Flags = Flags | PriorityFlag;
   if (D.hasClausesOfKind<OMPDetachClause>())
@@ -3757,14 +3885,10 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
           : CGF.Builder.getInt32(Data.Final.getInt() ? FinalFlag : 0);
   TaskFlags = CGF.Builder.CreateOr(TaskFlags, CGF.Builder.getInt32(Flags));
   llvm::Value *SharedsSize = CGM.getSize(C.getTypeSizeInChars(SharedsTy));
-  SmallVector<llvm::Value *, 8> AllocArgs = {
-      emitUpdateLocation(CGF, Loc),
-      getThreadID(CGF, Loc),
-      TaskFlags,
-      KmpTaskTWithPrivatesTySize,
-      SharedsSize,
-      CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(TaskEntry,
-                                                      KmpRoutineEntryPtrTy)};
+  SmallVector<llvm::Value *, 8> AllocArgs = {emitUpdateLocation(CGF, Loc),
+      getThreadID(CGF, Loc), TaskFlags, KmpTaskTWithPrivatesTySize,
+      SharedsSize, CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          TaskEntry, KmpRoutineEntryPtrTy)};
   llvm::Value *NewTask;
   if (D.hasClausesOfKind<OMPNowaitClause>()) {
     // Check if we have any device clause associated with the directive.
@@ -3955,13 +4079,13 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Copy shareds if there are any.
   Address KmpTaskSharedsPtr = Address::invalid();
   if (!SharedsTy->castAsRecordDecl()->field_empty()) {
-    KmpTaskSharedsPtr =
-        Address(CGF.EmitLoadOfScalar(
-                    CGF.EmitLValueForField(
-                        TDBase, *std::next(KmpTaskTQTyRD->field_begin(),
-                                           KmpTaskTShareds)),
-                    Loc),
-                CGF.Int8Ty, CGM.getNaturalTypeAlignment(SharedsTy));
+    KmpTaskSharedsPtr = Address(
+        CGF.EmitLoadOfScalar(
+            CGF.EmitLValueForField(
+                TDBase,
+                *std::next(KmpTaskTQTyRD->field_begin(), KmpTaskTShareds)),
+            Loc),
+        CGF.Int8Ty, CGM.getNaturalTypeAlignment(SharedsTy));
     LValue Dest = CGF.MakeAddrLValue(KmpTaskSharedsPtr, SharedsTy);
     LValue Src = CGF.MakeAddrLValue(Shareds, SharedsTy);
     CGF.EmitAggregateCopy(Dest, Src, SharedsTy, AggValueSlot::DoesNotOverlap);
@@ -4544,7 +4668,7 @@ void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
   // list is not empty
   llvm::Value *ThreadID = getThreadID(CGF, Loc);
   llvm::Value *UpLoc = emitUpdateLocation(CGF, Loc);
-  llvm::Value *TaskArgs[] = {UpLoc, ThreadID, NewTask};
+  llvm::Value *TaskArgs[] = { UpLoc, ThreadID, NewTask };
   llvm::Value *DepTaskArgs[7];
   if (!Data.Dependences.empty()) {
     DepTaskArgs[0] = UpLoc;
@@ -4789,12 +4913,12 @@ static void EmitOMPAggregateReduction(
   Scope.ForceCleanup();
 
   // Shift the address forward by one element.
-  llvm::Value *LHSElementNext =
-      CGF.Builder.CreateConstGEP1_32(LHSAddr.getElementType(), LHSElementPHI,
-                                     /*Idx0=*/1, "omp.arraycpy.dest.element");
-  llvm::Value *RHSElementNext =
-      CGF.Builder.CreateConstGEP1_32(RHSAddr.getElementType(), RHSElementPHI,
-                                     /*Idx0=*/1, "omp.arraycpy.src.element");
+  llvm::Value *LHSElementNext = CGF.Builder.CreateConstGEP1_32(
+      LHSAddr.getElementType(), LHSElementPHI, /*Idx0=*/1,
+      "omp.arraycpy.dest.element");
+  llvm::Value *RHSElementNext = CGF.Builder.CreateConstGEP1_32(
+      RHSAddr.getElementType(), RHSElementPHI, /*Idx0=*/1,
+      "omp.arraycpy.src.element");
   // Check whether we've reached the end.
   llvm::Value *Done =
       CGF.Builder.CreateICmpEQ(LHSElementNext, LHSEnd, "omp.arraycpy.done");
@@ -5744,7 +5868,7 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
   const FieldDecl *SharedFD = addFieldToRecordDecl(C, RD, C.VoidPtrTy);
   const FieldDecl *OrigFD = addFieldToRecordDecl(C, RD, C.VoidPtrTy);
   const FieldDecl *SizeFD = addFieldToRecordDecl(C, RD, C.getSizeType());
-  const FieldDecl *InitFD = addFieldToRecordDecl(C, RD, C.VoidPtrTy);
+  const FieldDecl *InitFD  = addFieldToRecordDecl(C, RD, C.VoidPtrTy);
   const FieldDecl *FiniFD = addFieldToRecordDecl(C, RD, C.VoidPtrTy);
   const FieldDecl *CombFD = addFieldToRecordDecl(C, RD, C.VoidPtrTy);
   const FieldDecl *FlagsFD = addFieldToRecordDecl(
@@ -6250,11 +6374,12 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         CGM.handleAMDGPUWavesPerEUAttr(OutlinedFn, Attr);
     }
   }
+  registerVTable(D);
 }
 
 /// Checks if the expression is constant or does not have non-trivial function
 /// calls.
-static bool isTrivial(ASTContext &Ctx, const Expr *E) {
+static bool isTrivial(ASTContext &Ctx, const Expr * E) {
   // We can skip constant expressions.
   // We can skip expressions with trivial calls or simple expressions.
   return (E->isEvaluatable(Ctx, Expr::SE_AllowUndefinedBehavior) ||
@@ -6449,11 +6574,10 @@ llvm::Value *CGOpenMPRuntime::emitNumTeamsForTargetDirective(
       const auto *CS = D.getInnermostCapturedStmt();
       CGOpenMPInnerExprInfo CGInfo(CGF, *CS);
       CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-      llvm::Value *NumTeamsVal =
-          CGF.EmitScalarExpr(NumTeams,
-                             /*IgnoreResultAssign*/ true);
+      llvm::Value *NumTeamsVal = CGF.EmitScalarExpr(NumTeams,
+                                                  /*IgnoreResultAssign*/ true);
       return Bld.CreateIntCast(NumTeamsVal, CGF.Int32Ty,
-                               /*isSigned=*/true);
+                             /*isSigned=*/true);
     }
     case OMPD_target_teams:
     case OMPD_target_teams_distribute:
@@ -6461,11 +6585,10 @@ llvm::Value *CGOpenMPRuntime::emitNumTeamsForTargetDirective(
     case OMPD_target_teams_distribute_parallel_for:
     case OMPD_target_teams_distribute_parallel_for_simd: {
       CodeGenFunction::RunCleanupsScope NumTeamsScope(CGF);
-      llvm::Value *NumTeamsVal =
-          CGF.EmitScalarExpr(NumTeams,
-                             /*IgnoreResultAssign*/ true);
+      llvm::Value *NumTeamsVal = CGF.EmitScalarExpr(NumTeams,
+                                                  /*IgnoreResultAssign*/ true);
       return Bld.CreateIntCast(NumTeamsVal, CGF.Int32Ty,
-                               /*isSigned=*/true);
+                             /*isSigned=*/true);
     }
     default:
       break;
@@ -8132,8 +8255,8 @@ private:
                   LowestElem, CGF.VoidPtrTy, CGF.Int8Ty),
               TypeSize.getQuantity() - 1);
           PartialStruct.HighestElem = {
-              std::numeric_limits<
-                  decltype(PartialStruct.HighestElem.first)>::max(),
+              std::numeric_limits<decltype(
+                  PartialStruct.HighestElem.first)>::max(),
               HB};
           PartialStruct.Base = BP;
           PartialStruct.LB = LB;
@@ -10922,6 +11045,17 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   if (!S)
     return;
 
+  // Register vtable from device for target data and target directives.
+  // Add this block here since scanForTargetRegionsFunctions ignores
+  // target data by checking if S is a executable directive (target).
+  if (auto *E = dyn_cast<OMPExecutableDirective>(S);
+      E && isOpenMPTargetDataManagementDirective(E->getDirectiveKind())) {
+    // Don't need to check if it's device compile
+    // since scanForTargetRegionsFunctions currently only called
+    // in device compilation.
+    registerVTable(*E);
+  }
+
   // Codegen OMP target directives that offload compute to the device.
   bool RequiresDeviceCodegen =
       isa<OMPExecutableDirective>(S) &&
@@ -11267,7 +11401,7 @@ bool CGOpenMPRuntime::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
   if (!VD || !VD->hasAttr<OMPAllocateDeclAttr>())
     return false;
   const auto *A = VD->getAttr<OMPAllocateDeclAttr>();
-  switch (A->getAllocatorType()) {
+  switch(A->getAllocatorType()) {
   case OMPAllocateDeclAttr::OMPNullMemAlloc:
   case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
   // Not supported, fallback to the default mem space.
@@ -11371,8 +11505,7 @@ void CGOpenMPRuntime::emitNumTeamsClause(CodeGenFunction &CGF,
                                       CGF.CGM.Int32Ty, /* isSigned = */ true)
           : CGF.Builder.getInt32(0);
 
-  // Build call __kmpc_push_num_teamss(&loc, global_tid, num_teams,
-  // thread_limit)
+  // Build call __kmpc_push_num_teamss(&loc, global_tid, num_teams, thread_limit)
   llvm::Value *PushNumTeamsArgs[] = {RTLoc, getThreadID(CGF, Loc), NumTeamsVal,
                                      ThreadLimitVal};
   CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
@@ -11681,7 +11814,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
 }
 
 namespace {
-/// Kind of parameter in a function with 'declare simd' directive.
+  /// Kind of parameter in a function with 'declare simd' directive.
 enum ParamKindTy {
   Linear,
   LinearRef,
@@ -11807,10 +11940,18 @@ emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
     unsigned VecRegSize;
   };
   ISADataTy ISAData[] = {
-      {'b', 128}, // SSE
-      {'c', 256}, // AVX
-      {'d', 256}, // AVX2
-      {'e', 512}, // AVX512
+      {
+          'b', 128
+      }, // SSE
+      {
+          'c', 256
+      }, // AVX
+      {
+          'd', 256
+      }, // AVX2
+      {
+          'e', 512
+      }, // AVX512
   };
   llvm::SmallVector<char, 2> Masked;
   switch (State) {
@@ -12791,8 +12932,7 @@ Address CGOpenMPRuntime::emitLastprivateConditionalInit(CodeGenFunction &CGF,
     FiredField = addFieldToRecordDecl(C, RD, C.CharTy);
     RD->completeDefinition();
     NewType = C.getCanonicalTagType(RD);
-    Address Addr =
-        CGF.CreateMemTemp(NewType, C.getDeclAlign(VD), VD->getName());
+    Address Addr = CGF.CreateMemTemp(NewType, C.getDeclAlign(VD), VD->getName());
     BaseLVal = CGF.MakeAddrLValue(Addr, NewType, AlignmentSource::Decl);
     I->getSecond().try_emplace(VD, NewType, VDField, FiredField, BaseLVal);
   } else {
@@ -12801,7 +12941,8 @@ Address CGOpenMPRuntime::emitLastprivateConditionalInit(CodeGenFunction &CGF,
     FiredField = std::get<2>(VI->getSecond());
     BaseLVal = std::get<3>(VI->getSecond());
   }
-  LValue FiredLVal = CGF.EmitLValueForField(BaseLVal, FiredField);
+  LValue FiredLVal =
+      CGF.EmitLValueForField(BaseLVal, FiredField);
   CGF.EmitStoreOfScalar(
       llvm::ConstantInt::getNullValue(CGF.ConvertTypeForMem(C.CharTy)),
       FiredLVal);
@@ -12988,7 +13129,7 @@ void CGOpenMPRuntime::checkAndEmitLastprivateConditional(CodeGenFunction &CGF,
     assert(It != LastprivateConditionalToTypes[FoundFn].end() &&
            "Lastprivate conditional is not found in outer region.");
     QualType StructTy = std::get<0>(It->getSecond());
-    const FieldDecl *FiredDecl = std::get<2>(It->getSecond());
+    const FieldDecl* FiredDecl = std::get<2>(It->getSecond());
     LValue PrivLVal = CGF.EmitLValue(FoundE);
     Address StructAddr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
         PrivLVal.getAddress(),
@@ -13342,7 +13483,9 @@ bool CGOpenMPSIMDRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
-bool CGOpenMPSIMDRuntime::emitTargetGlobal(GlobalDecl GD) { return false; }
+bool CGOpenMPSIMDRuntime::emitTargetGlobal(GlobalDecl GD) {
+  return false;
+}
 
 void CGOpenMPSIMDRuntime::emitTeamsCall(CodeGenFunction &CGF,
                                         const OMPExecutableDirective &D,
