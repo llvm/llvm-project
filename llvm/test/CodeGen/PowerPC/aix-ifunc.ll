@@ -19,15 +19,17 @@
 
 ;;;; declare foo[DS] and .foo[PR]
 ; FUNCSECT-NEXT:       .csect .foo[PR],5
+; FUNCSECT-NEXT:       .ref L..__update_foo
+; FUNCSECT-NEXT:       .ref .__init_ifuncs[PR]
 ; FUNCSECT-NEXT:       .globl  foo[DS]
 ; FUNCSECT-NEXT:       .globl  .foo[PR]
-; FUNCSECT-NEXT:       .lglobl L..__update_foo
 ; FUNCSECT-NEXT:       .align  2
 
 ; NO-FUNCSECT-NEXT:    .csect ..text..[PR],5
+; NO-FUNCSECT-NEXT:    .ref L..__update_foo
+; NO-FUNCSECT-NEXT:    .ref .__init_ifuncs[PR]
 ; NO-FUNCSECT-NEXT:    .globl  foo[DS]
 ; NO-FUNCSECT-NEXT:    .globl  .foo
-; NO-FUNCSECT-NEXT:    .lglobl L..__update_foo
 ; NO-FUNCSECT-NEXT:    .align  2
 
 ;;;; define foo's descriptor
@@ -41,8 +43,6 @@
 ; FUNCSECT-NEXT:       .csect .foo[PR],5
 ; NO-FUNCSECT-NEXT:    .csect ..text..[PR],5
 ; NO-FUNCSECT-NEXT: .foo:
-; COMMON-NEXT:         .ref L..__update_foo
-; COMMON-NEXT:         .ref .__init_ifuncs[PR]
 ; COMMON-NEXT:         [[LOAD]] 12, [[FOO_TOC:.*]](2)
 ; COMMON-NEXT:         [[LOAD]] 11, [[OFF]](12)
 ; COMMON-NEXT:         [[LOAD]] 12, 0(12)

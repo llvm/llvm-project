@@ -3371,7 +3371,10 @@ void PPCAIXAsmPrinter::emitRefMetadata(const GlobalObject *GO) {
   for (const MDNode *MD : MDs) {
     const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
     const GlobalValue *GV = cast<GlobalValue>(VAM->getValue());
-    MCSymbol *Referenced = isa<Function>(GV) ? getObjFileLowering().getFunctionEntryPointSymbol(GV, TM) : TM.getSymbol(GV);
+    MCSymbol *Referenced =
+        isa<Function>(GV)
+            ? getObjFileLowering().getFunctionEntryPointSymbol(GV, TM)
+            : TM.getSymbol(GV);
     OutStreamer->emitXCOFFRefDirective(Referenced);
   }
 }
@@ -3535,9 +3538,8 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
  *                          # -- End function
  */
 
-cl::opt<bool> UseImplicitRef(
-    "use-implicit-ref", cl::init(false),
-    cl::desc("Use implicit.ref metadata"), cl::Hidden);
+cl::opt<bool> UseImplicitRef("use-implicit-ref", cl::init(true),
+                             cl::desc("Use implicit.ref metadata"), cl::Hidden);
 
 void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   // Set the Subtarget to that of the resolver.
@@ -3569,8 +3571,7 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
     const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
     const GlobalVariable *IFuncUpdateGV = cast<GlobalVariable>(VAM->getValue());
     IFuncUpdateSym = getSymbol(IFuncUpdateGV);
-  }
-  else if (GI.hasMetadata(LLVMContext::MD_implicit_ref))
+  } else if (GI.hasMetadata(LLVMContext::MD_implicit_ref))
     emitRefMetadata(&GI);
 
   // generate linkage for foo and .foo
