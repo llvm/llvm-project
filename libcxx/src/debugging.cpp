@@ -46,6 +46,9 @@
 #  include <cstring>
 #endif
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes")
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // `breakpoint()` implementation
@@ -180,3 +183,5 @@ OVERRIDABLE_FUNCTION _LIBCPP_EXPORTED_FROM_ABI bool is_debugger_present() noexce
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_DIAGNOSTIC_POP
