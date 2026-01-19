@@ -1416,6 +1416,25 @@ func.func @load_store_nontemporal(%input : memref<32xf32, affine_map<(d0) -> (d0
 
 // -----
 
+memref.global "private" constant @__constant_32xf32 : memref<32xf32> = dense<1.000000e+00>
+// CHECK-LABEL: func @fold_const_splat_global
+func.func @fold_const_splat_global() -> memref<32xf32> {
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+  %0 = memref.get_global @__constant_32xf32 : memref<32xf32>
+  %alloc = memref.alloc() : memref<32xf32>
+  %c32 = arith.constant 32 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.for %arg0 = %c0 to %c32 step %c1 {
+    %1 = memref.load %0[%arg0] : memref<32xf32>
+    // CHECK: memref.store %[[CST]], %{{.*}}
+    memref.store %1, %alloc[%arg0] : memref<32xf32>
+  }
+  return %alloc : memref<32xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_trivial_memory_space_cast(
 //  CHECK-SAME:     %[[arg:.*]]: memref<?xf32>
 //       CHECK:   return %[[arg]]
