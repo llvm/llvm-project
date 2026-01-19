@@ -29,7 +29,7 @@ namespace exegesis {
 
 // This needs to be updated anytime a test is added or removed from the test
 // suite.
-static constexpr const size_t TestCount = 4;
+static constexpr size_t TestCount = 4;
 
 class SubprocessMemoryTest : public X86TestBase {
 protected:

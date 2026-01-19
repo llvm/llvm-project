@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_inc.h>
-#include <clc/opencl/atomic/atomic_inc.h>
 
 #define __CLC_FUNCTION atomic_inc
 #define __CLC_IMPL_FUNCTION __clc_atomic_inc

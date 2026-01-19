@@ -16,9 +16,6 @@
 ; RUN: llc -O3 -disable-lsr -mtriple=spirv64-unknown-unknown %s -o - | FileCheck --check-prefix=NOLSR %s
 ; RUN: %if spirv-tools %{ llc -O3 -disable-lsr -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-DAG: OpName %[[PhiRes:.*]] "lsr.iv"
-; CHECK-DAG: OpName %[[IsOver:.*]] "fl"
-; CHECK-DAG: OpName %[[Val:.*]] "lsr.iv.next"
 ; CHECK-DAG: %[[Int:.*]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[Char:.*]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[PtrChar:.*]] = OpTypePointer Generic %[[Char]]
@@ -33,8 +30,8 @@
 ; CHECK: %[[APlusOne:.*]] = OpIAdd %[[Int]] %[[A]] %[[Const1]]
 ;	CHECK: OpBranch %[[#]]
 ;	CHECK: [[#]] = OpLabel
-;	CHECK: %[[PhiRes]] = OpPhi %[[Int]] %[[Val]] %[[#]] %[[APlusOne]] %[[#]]
-;	CHECK: %[[IsOver]] = OpIEqual %[[Bool]] %[[#]] %[[#]]
+;	CHECK: %[[PhiRes:.*]] = OpPhi %[[Int]] %[[Val:.*]] %[[#]] %[[APlusOne]] %[[#]]
+;	CHECK: %[[IsOver:.*]] = OpIEqual %[[Bool]] %[[#]] %[[#]]
 ;	CHECK: OpBranchConditional %[[IsOver]] %[[#]] %[[#]]
 ;	CHECK: [[#]] = OpLabel
 ;	CHECK: OpStore %[[Ptr]] %[[Const42]] Aligned 1
@@ -43,8 +40,6 @@
 ;	CHECK: [[#]] = OpLabel
 ;	OpReturnValue %[[PhiRes]]
 
-; NOLSR-DAG: OpName %[[Val:.*]] "math"
-; NOLSR-DAG: OpName %[[IsOver:.*]] "ov"
 ; NOLSR-DAG: %[[Int:.*]] = OpTypeInt 32 0
 ; NOLSR-DAG: %[[Char:.*]] = OpTypeInt 8 0
 ; NOLSR-DAG: %[[PtrChar:.*]] = OpTypePointer Generic %[[Char]]
@@ -60,11 +55,11 @@
 ; NOLSR: %[[#]] = OpLabel
 ; NOLSR: OpBranch %[[#]]
 ; NOLSR: %[[#]] = OpLabel
-; NOLSR: %[[PhiRes:.*]] = OpPhi %[[Int]] %[[A]] %[[#]] %[[Val]] %[[#]]
+; NOLSR: %[[PhiRes:.*]] = OpPhi %[[Int]] %[[A]] %[[#]] %[[Val:.*]] %[[#]]
 ; NOLSR: %[[AggRes:.*]] = OpIAddCarry %[[Struct]] %[[PhiRes]] %[[Const1]]
 ; NOLSR: %[[Val]] = OpCompositeExtract %[[Int]] %[[AggRes]] 0
 ; NOLSR: %[[Over:.*]] = OpCompositeExtract %[[Int]] %[[AggRes]] 1
-; NOLSR: %[[IsOver]] = OpINotEqual %[[Bool:.*]] %[[Over]] %[[Zero]]
+; NOLSR: %[[IsOver:.*]] = OpINotEqual %[[Bool:.*]] %[[Over]] %[[Zero]]
 ; NOLSR: OpBranchConditional %[[IsOver]] %[[#]] %[[#]]
 ; NOLSR: OpStore %[[Ptr]] %[[Const42]] Aligned 1
 ; NOLSR: OpBranch %[[#]]

@@ -91,10 +91,8 @@ func.func @test_need_to_save_rhs(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrap
 // CHECK:             %[[VAL_21:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_20]])  : (!fir.box<!fir.array<?x!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>>, i64) -> !fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>
 // CHECK:             %[[VAL_22:.*]] = hlfir.designate %[[VAL_21]]{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
 // CHECK:             %[[VAL_23:.*]] = fir.load %[[VAL_22]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
-// CHECK:             %[[VAL_24:.*]] = fir.box_addr %[[VAL_23]] : (!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>) -> !fir.ptr<!fir.type<t{i:i64}>>
-// CHECK:             %[[VAL_25:.*]] = fir.embox %[[VAL_24]] : (!fir.ptr<!fir.type<t{i:i64}>>) -> !fir.box<!fir.type<t{i:i64}>>
-// CHECK:             %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (!fir.box<!fir.type<t{i:i64}>>) -> !fir.box<none>
-// CHECK:             fir.call @_FortranAPushDescriptor(%[[VAL_16]], %[[VAL_26]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
+// CHECK:             %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>) -> !fir.box<none>
+// CHECK:             fir.call @_FortranAPushDescriptor(%[[VAL_16]], %[[VAL_24]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 // CHECK:           }
 // CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_4]] : (i64) -> index
 // CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_0]] : (i64) -> index

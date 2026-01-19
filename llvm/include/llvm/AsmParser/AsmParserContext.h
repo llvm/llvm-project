@@ -10,11 +10,13 @@
 #define LLVM_ASMPARSER_ASMPARSERCONTEXT_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/AsmParser/FileLoc.h"
 #include "llvm/IR/Value.h"
 #include <optional>
 
 namespace llvm {
+class BasicBlock;
 
 /// Registry of file location information for LLVM IR constructs.
 ///
@@ -29,14 +31,36 @@ namespace llvm {
 /// This information is optionally emitted by the LLParser while
 /// it reads LLVM textual IR.
 class AsmParserContext {
+  using FMap =
+      IntervalMap<FileLoc, Function *,
+                  IntervalMapImpl::NodeSizer<FileLoc, Function *>::LeafSize,
+                  IntervalMapHalfOpenInfo<FileLoc>>;
+
   DenseMap<Function *, FileLocRange> Functions;
+  FMap::Allocator FAllocator;
+  FMap FunctionsInverse = FMap(FAllocator);
   DenseMap<BasicBlock *, FileLocRange> Blocks;
+  using BBMap =
+      IntervalMap<FileLoc, BasicBlock *,
+                  IntervalMapImpl::NodeSizer<FileLoc, BasicBlock *>::LeafSize,
+                  IntervalMapHalfOpenInfo<FileLoc>>;
+  BBMap::Allocator BBAllocator;
+  BBMap BlocksInverse = BBMap(BBAllocator);
   DenseMap<Instruction *, FileLocRange> Instructions;
+  using IMap =
+      IntervalMap<FileLoc, Instruction *,
+                  IntervalMapImpl::NodeSizer<FileLoc, Instruction *>::LeafSize,
+                  IntervalMapHalfOpenInfo<FileLoc>>;
+  IMap::Allocator IAllocator;
+  IMap InstructionsInverse = IMap(IAllocator);
 
 public:
-  std::optional<FileLocRange> getFunctionLocation(const Function *) const;
-  std::optional<FileLocRange> getBlockLocation(const BasicBlock *) const;
-  std::optional<FileLocRange> getInstructionLocation(const Instruction *) const;
+  LLVM_ABI std::optional<FileLocRange>
+  getFunctionLocation(const Function *) const;
+  LLVM_ABI std::optional<FileLocRange>
+  getBlockLocation(const BasicBlock *) const;
+  LLVM_ABI std::optional<FileLocRange>
+  getInstructionLocation(const Instruction *) const;
   /// Get the function at the requested location range.
   /// If no single function occupies the queried range, or the record is
   /// missing, a nullptr is returned.

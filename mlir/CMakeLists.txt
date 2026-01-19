@@ -124,10 +124,13 @@ set_target_properties(mlir-doc PROPERTIES FOLDER "MLIR/Docs")
 
 # Only enable execution engine if the native target is available.
 if(${LLVM_NATIVE_ARCH} IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(MLIR_ENABLE_EXECUTION_ENGINE 1)
+  set(MLIR_ENABLE_EXECUTION_ENGINE_default 1)
 else()
-  set(MLIR_ENABLE_EXECUTION_ENGINE 0)
+  set(MLIR_ENABLE_EXECUTION_ENGINE_default 0)
 endif()
+option(MLIR_ENABLE_EXECUTION_ENGINE
+       "Enable building the MLIR Execution Engine."
+       ${MLIR_ENABLE_EXECUTION_ENGINE_default})
 
 # Build the ROCm conversions and run according tests if the AMDGPU backend
 # is available.
@@ -209,6 +212,19 @@ set(MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES 0 CACHE BOOL
        must perform an appropriate find_package of Python3 with \
        'Development.Module' and ensure that find_package(pybind11) is \
        satisfied (and keep up to date as requirements evolve).")
+
+set(_mlir_python_stubgen_enabled ON)
+# Stubgen doesn't work when cross-compiling (stubgen will run in the host interpreter and then fail
+# to find the extension module for the host arch).
+# Note: Stubgen requires some extra handling to work properly when sanitizers are enabled,
+# so we skip running it in that case now.
+if(CMAKE_CROSSCOMPILING OR (NOT LLVM_USE_SANITIZER STREQUAL ""))
+  set(_mlir_python_stubgen_enabled OFF)
+endif()
+
+option(MLIR_PYTHON_STUBGEN_ENABLED
+       "Generate Python type stubs for the MLIR Python bindings."
+       ${_mlir_python_stubgen_enabled})
 
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)

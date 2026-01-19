@@ -11,7 +11,7 @@ import shlex
 from pathlib import Path
 
 from libcxx.test.dsl import *
-from libcxx.test.features import _isClang, _isAppleClang, _isGCC, _isMSVC
+from libcxx.test.features.compiler import _isClang, _isAppleClang, _isGCC, _isMSVC
 
 
 _warningFlags = [
@@ -362,6 +362,7 @@ DEFAULT_PARAMETERS = [
         if experimental
         else [
             AddFeature("libcpp-has-no-incomplete-pstl"),
+            AddFeature("libcpp-has-no-experimental-optional-iterator"),
             AddFeature("libcpp-has-no-experimental-tzdb"),
             AddFeature("libcpp-has-no-experimental-syncstream"),
             AddFeature("libcpp-has-no-experimental-hardening-observe-semantic"),

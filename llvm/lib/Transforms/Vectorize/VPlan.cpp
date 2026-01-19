@@ -52,10 +52,6 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> EnableVPlanNativePath;
-}
-
 /// @{
 /// Metadata attribute names
 const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
@@ -95,28 +91,16 @@ Value *VPLane::getAsRuntimeExpr(IRBuilderBase &Builder,
   llvm_unreachable("Unknown lane kind");
 }
 
-VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
-    : SubclassID(SC), UnderlyingVal(UV), Def(Def) {
-  if (Def)
-    Def->addDefinedValue(this);
-}
-
-VPValue::~VPValue() {
-  assert(Users.empty() && "trying to delete a VPValue with remaining users");
-  if (Def)
-    Def->removeDefinedValue(this);
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
-  if (const VPRecipeBase *R = dyn_cast_or_null<VPRecipeBase>(Def))
+  if (const VPRecipeBase *R = getDefiningRecipe())
     R->print(OS, "", SlotTracker);
   else
     printAsOperand(OS, SlotTracker);
 }
 
 void VPValue::dump() const {
-  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this->Def);
+  const VPRecipeBase *Instr = getDefiningRecipe();
   VPSlotTracker SlotTracker(
       (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
   print(dbgs(), SlotTracker);
@@ -133,11 +117,35 @@ void VPDef::dump() const {
 #endif
 
 VPRecipeBase *VPValue::getDefiningRecipe() {
-  return cast_or_null<VPRecipeBase>(Def);
+  auto *DefValue = dyn_cast<VPRecipeValue>(this);
+  if (!DefValue)
+    return nullptr;
+  return cast<VPRecipeBase>(DefValue->Def);
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
-  return cast_or_null<VPRecipeBase>(Def);
+  auto *DefValue = dyn_cast<VPRecipeValue>(this);
+  if (!DefValue)
+    return nullptr;
+  return cast<VPRecipeBase>(DefValue->Def);
+}
+
+Value *VPValue::getLiveInIRValue() const {
+  return cast<VPIRValue>(this)->getValue();
+}
+
+Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
+
+VPRecipeValue::VPRecipeValue(VPDef *Def, Value *UV)
+    : VPValue(VPVRecipeValueSC, UV), Def(Def) {
+  assert(Def && "VPRecipeValue requires a defining recipe");
+  Def->addDefinedValue(this);
+}
+
+VPRecipeValue::~VPRecipeValue() {
+  assert(Users.empty() &&
+         "trying to delete a VPRecipeValue with remaining users");
+  Def->removeDefinedValue(this);
 }
 
 // Get the top-most entry block of \p Start. This is the entry block of the
@@ -233,8 +241,8 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
       CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
-  if (Def->isLiveIn())
-    return Def->getLiveInIRValue();
+  if (isa<VPIRValue, VPSymbolicValue>(Def))
+    return Def->getUnderlyingValue();
 
   if (hasScalarValue(Def, Lane))
     return Data.VPV2Scalars[Def][Lane.mapToCacheIndex(VF)];
@@ -266,8 +274,8 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 
 Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   if (NeedsScalar) {
-    assert((VF.isScalar() || Def->isLiveIn() || hasVectorValue(Def) ||
-            !vputils::onlyFirstLaneUsed(Def) ||
+    assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
+            hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||
             (hasScalarValue(Def, VPLane(0)) &&
              Data.VPV2Scalars[Def].size() == 1)) &&
            "Trying to access a single scalar per part but has multiple scalars "
@@ -288,7 +296,6 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   };
 
   if (!hasScalarValue(Def, {0})) {
-    assert(Def->isLiveIn() && "expected a live-in");
     Value *IRV = Def->getLiveInIRValue();
     Value *B = GetBroadcastInstrs(IRV);
     set(Def, B);
@@ -304,18 +311,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   }
 
   bool IsSingleScalar = vputils::isSingleScalar(Def);
-
   VPLane LastLane(IsSingleScalar ? 0 : VF.getFixedValue() - 1);
-  // Check if there is a scalar value for the selected lane.
-  if (!hasScalarValue(Def, LastLane)) {
-    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
-    // VPExpandSCEVRecipes can also be a single scalar.
-    assert((isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe,
-                VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
-           "unexpected recipe found to be invariant");
-    IsSingleScalar = true;
-    LastLane = 0;
-  }
 
   // We need to construct the vector value for a single-scalar value by
   // broadcasting the scalar to all lanes.
@@ -607,16 +603,16 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   const VPRecipeBase *R = &VPBB->back();
-  bool IsSwitch = isa<VPInstruction>(R) &&
-                  cast<VPInstruction>(R)->getOpcode() == Instruction::Switch;
-  bool IsCondBranch =
+  [[maybe_unused]] bool IsSwitch =
+      isa<VPInstruction>(R) &&
+      cast<VPInstruction>(R)->getOpcode() == Instruction::Switch;
+  [[maybe_unused]] bool IsBranchOnTwoConds = match(R, m_BranchOnTwoConds());
+  [[maybe_unused]] bool IsCondBranch =
       isa<VPBranchOnMaskRecipe>(R) ||
       match(R, m_CombineOr(m_BranchOnCond(), m_BranchOnCount()));
-  (void)IsCondBranch;
-  (void)IsSwitch;
   if (VPBB->getNumSuccessors() == 2 ||
       (VPBB->isExiting() && !VPBB->getParent()->isReplicator())) {
-    assert((IsCondBranch || IsSwitch) &&
+    assert((IsCondBranch || IsSwitch || IsBranchOnTwoConds) &&
            "block with multiple successors not terminated by "
            "conditional branch nor switch recipe");
 
@@ -624,13 +620,14 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   if (VPBB->getNumSuccessors() > 2) {
-    assert(IsSwitch && "block with more than 2 successors not terminated by "
-                       "a switch recipe");
+    assert((IsSwitch || IsBranchOnTwoConds) &&
+           "block with more than 2 successors not terminated by a switch or "
+           "branch-on-two-conds recipe");
     return true;
   }
 
   assert(
-      !IsCondBranch &&
+      !IsCondBranch && !IsBranchOnTwoConds &&
       "block with 0 or 1 successors terminated by conditional branch recipe");
   return false;
 }
@@ -858,15 +855,14 @@ void VPRegionBlock::dissolveToCFGLoop() {
 
   VPBlockBase *Preheader = getSinglePredecessor();
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
-  VPBlockBase *Middle = getSingleSuccessor();
+
   VPBlockUtils::disconnectBlocks(Preheader, this);
-  VPBlockUtils::disconnectBlocks(this, Middle);
 
   for (VPBlockBase *VPB : vp_depth_first_shallow(Entry))
     VPB->setParent(getParent());
 
   VPBlockUtils::connectBlocks(Preheader, Header);
-  VPBlockUtils::connectBlocks(ExitingLatch, Middle);
+  VPBlockUtils::transferSuccessors(this, ExitingLatch);
   VPBlockUtils::connectBlocks(ExitingLatch, Header);
 }
 
@@ -881,7 +877,7 @@ VPlan::VPlan(Loop *L) {
 }
 
 VPlan::~VPlan() {
-  VPValue DummyValue;
+  VPSymbolicValue DummyValue;
 
   for (auto *VPB : CreatedBlocks) {
     if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
@@ -899,8 +895,7 @@ VPlan::~VPlan() {
   }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
-  if (BackedgeTakenCount)
-    delete BackedgeTakenCount;
+  delete BackedgeTakenCount;
 }
 
 VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
@@ -1069,7 +1064,7 @@ void VPlan::printLiveIns(raw_ostream &O) const {
 
   O << "\n";
   if (TripCount) {
-    if (TripCount->isLiveIn())
+    if (isa<VPIRValue>(TripCount))
       O << "Live-in ";
     TripCount->printAsOperand(O, SlotTracker);
     O << " = original trip-count";
@@ -1185,20 +1180,17 @@ VPlan *VPlan::duplicate() {
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
-  for (VPValue *OldLiveIn : getLiveIns()) {
-    Old2NewVPValues[OldLiveIn] =
-        NewPlan->getOrAddLiveIn(OldLiveIn->getLiveInIRValue());
-  }
+  for (VPIRValue *OldLiveIn : getLiveIns())
+    Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VF] = &NewPlan->VF;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
   if (BackedgeTakenCount) {
-    NewPlan->BackedgeTakenCount = new VPValue();
+    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
   }
-  if (TripCount && TripCount->isLiveIn())
-    Old2NewVPValues[TripCount] =
-        NewPlan->getOrAddLiveIn(TripCount->getLiveInIRValue());
+  if (auto *TripCountIRV = dyn_cast_or_null<VPIRValue>(TripCount))
+    Old2NewVPValues[TripCountIRV] = NewPlan->getOrAddLiveIn(TripCountIRV);
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
@@ -1443,7 +1435,7 @@ void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
 void VPSlotTracker::assignName(const VPValue *V) {
   assert(!VPValue2Name.contains(V) && "VPValue already has a name!");
   auto *UV = V->getUnderlyingValue();
-  auto *VPI = dyn_cast_or_null<VPInstruction>(V->getDefiningRecipe());
+  auto *VPI = dyn_cast_or_null<VPInstruction>(V);
   if (!UV && !(VPI && !VPI->getName().empty())) {
     VPValue2Name[V] = (Twine("vp<%") + Twine(NextSlot) + ">").str();
     NextSlot++;
@@ -1464,9 +1456,9 @@ void VPSlotTracker::assignName(const VPValue *V) {
 
   // First assign the base name for V.
   const auto &[A, _] = VPValue2Name.try_emplace(V, BaseName);
-  // Integer or FP constants with different types will result in he same string
+  // Integer or FP constants with different types will result in the same string
   // due to stripping types.
-  if (V->isLiveIn() && isa<ConstantInt, ConstantFP>(UV))
+  if (isa<VPIRValue>(V) && isa<ConstantInt, ConstantFP>(UV))
     return;
 
   // If it is already used by C > 0 other VPValues, increase the version counter
@@ -1743,10 +1735,10 @@ bool llvm::canConstantBeExtended(const APInt *C, Type *NarrowType,
 
 TargetTransformInfo::OperandValueInfo
 VPCostContext::getOperandInfo(VPValue *V) const {
-  if (!V->isLiveIn())
-    return {};
+  if (auto *IRV = dyn_cast<VPIRValue>(V))
+    return TTI::getOperandInfo(IRV->getValue());
 
-  return TTI::getOperandInfo(V->getLiveInIRValue());
+  return {};
 }
 
 InstructionCost VPCostContext::getScalarizationOverhead(
@@ -1774,7 +1766,7 @@ InstructionCost VPCostContext::getScalarizationOverhead(
   SmallPtrSet<const VPValue *, 4> UniqueOperands;
   SmallVector<Type *> Tys;
   for (auto *Op : Operands) {
-    if (Op->isLiveIn() ||
+    if (isa<VPIRValue>(Op) ||
         (!AlwaysIncludeReplicatingR &&
          isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op)) ||
         (isa<VPReplicateRecipe>(Op) &&

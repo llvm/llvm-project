@@ -697,9 +697,6 @@ Function *VPIntrinsic::getOrInsertDeclarationForParams(
     VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {Params[0]->getType(), Params[1]->getType()});
     break;
-  case Intrinsic::experimental_vp_splat:
-    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, ReturnType);
-    break;
   }
   assert(VPFunc && "Could not declare VP intrinsic");
   return VPFunc;

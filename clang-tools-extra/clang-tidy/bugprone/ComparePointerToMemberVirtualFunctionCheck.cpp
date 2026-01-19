@@ -25,7 +25,7 @@ namespace {
 
 AST_MATCHER(CXXMethodDecl, isVirtual) { return Node.isVirtual(); }
 
-static constexpr llvm::StringLiteral ErrorMsg =
+static constexpr StringRef ErrorMsg =
     "comparing a pointer to member virtual function with other pointer is "
     "unspecified behavior, only compare it with a null-pointer constant for "
     "equality.";
@@ -34,7 +34,6 @@ static constexpr llvm::StringLiteral ErrorMsg =
 
 void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
     MatchFinder *Finder) {
-
   auto DirectMemberVirtualFunctionPointer = unaryOperator(
       allOf(hasOperatorName("&"),
             hasUnaryOperand(declRefExpr(to(cxxMethodDecl(isVirtual()))))));
@@ -86,9 +85,8 @@ void ComparePointerToMemberVirtualFunctionCheck::check(
     return Ret;
   };
 
-  if (StopVisit != VisitSameSignatureVirtualMethods(RD)) {
+  if (StopVisit != VisitSameSignatureVirtualMethods(RD))
     RD->forallBases(VisitSameSignatureVirtualMethods);
-  }
 
   if (!SameSignatureVirtualMethods.empty()) {
     diag(BO->getOperatorLoc(), ErrorMsg);

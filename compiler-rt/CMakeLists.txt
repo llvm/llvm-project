@@ -290,6 +290,9 @@ option(SANITIZER_USE_STATIC_TEST_CXX
   "Use static libc++ for tests." ${DEFAULT_SANITIZER_USE_STATIC_TEST_CXX})
 pythonize_bool(SANITIZER_USE_STATIC_TEST_CXX)
 
+option(SANITIZER_AARCH64_39BIT_VA
+  "Configure sanitizers for 39-bit VA kernel." OFF)
+
 set(COMPILER_RT_SUPPORTED_CXX_LIBRARIES none default libcxx)
 set(COMPILER_RT_CXX_LIBRARY "default" CACHE STRING "Specify C++ library to use. Supported values are ${COMPILER_RT_SUPPORTED_CXX_LIBRARIES}.")
 if (NOT "${COMPILER_RT_CXX_LIBRARY}" IN_LIST COMPILER_RT_SUPPORTED_CXX_LIBRARIES)
@@ -308,6 +311,8 @@ option(COMPILER_RT_USE_BUILTINS_LIBRARY
   "Use compiler-rt builtins instead of libgcc" ${DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY})
 
 option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
+
+option(COMPILER_RT_PROFILE_BAREMETAL "Build minimal baremetal profile library" OFF)
 
 include(config-ix)
 
@@ -605,6 +610,10 @@ string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}
 list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})
 list(APPEND COMPILER_RT_COMMON_LINK_FLAGS ${stdlib_flag})
 
+# Add assembler flags for execute-only code generation. C and C++ flags should have already
+# been added to CMAKE_C_FLAGS and CMAKE_CXX_FLAGS.
+append_string_if(RUNTIMES_EXECUTE_ONLY_CODE -DCOMPILER_RT_EXECUTE_ONLY_CODE CMAKE_ASM_FLAGS)
+
 # TODO: There's a lot of duplication across lib/*/tests/CMakeLists.txt files,
 # move some of the common flags to COMPILER_RT_UNITTEST_CFLAGS.
 
@@ -841,6 +850,10 @@ mark_as_advanced(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
 
 if (SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
   add_compile_definitions(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+endif()
+
+if (SANITIZER_AARCH64_39BIT_VA)
+  add_compile_definitions(SANITIZER_AARCH64_39BIT_VA)
 endif()
 
 add_subdirectory(lib)

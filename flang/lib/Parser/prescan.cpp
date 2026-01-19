@@ -443,21 +443,31 @@ void Prescanner::LabelField(TokenSequence &token) {
     ++column_;
   }
   if (badColumn && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
-    if ((prescannerNesting_ > 0 && *badColumn == 6 &&
-            cooked_.BufferedBytes() == firstCookedCharacterOffset_) ||
-        afterPreprocessingDirective_) {
-      // This is the first source line in #include'd text or conditional
-      // code under #if, or the first source line after such.
-      // If it turns out that the preprocessed text begins with a
-      // fixed form continuation line, the newline at the end
-      // of the latest source line beforehand will be deleted in
-      // CookedSource::Marshal().
-      cooked_.MarkPossibleFixedFormContinuation();
-    } else if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
-      Say(common::UsageWarning::Scanning, GetProvenance(start + *badColumn - 1),
-          *badColumn == 6
-              ? "Statement should not begin with a continuation line"_warn_en_US
-              : "Character in fixed-form label field must be a digit"_warn_en_US);
+    if (*badColumn == 6) {
+      if ((prescannerNesting_ > 0 &&
+              cooked_.BufferedBytes() == firstCookedCharacterOffset_) ||
+          afterPreprocessingDirective_) {
+        // This is the first source line in #include'd text or conditional
+        // code under #if, or the first source line after such.
+        // If it turns out that the preprocessed text begins with a
+        // fixed form continuation line, the newline at the end
+        // of the latest source line beforehand will be deleted in
+        // CookedSource::Marshal().
+        cooked_.MarkPossibleFixedFormContinuation();
+      } else if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
+        Say(common::UsageWarning::Scanning,
+            GetProvenance(start + *badColumn - 1),
+            "Statement should not begin with a continuation line"_warn_en_US);
+      }
+    } else if (preprocessingOnly_) {
+      if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
+        Say(common::UsageWarning::Scanning,
+            GetProvenance(start + *badColumn - 1),
+            "Character in fixed-form label field should be a digit"_warn_en_US);
+      }
+    } else {
+      Say(GetProvenance(start + *badColumn - 1),
+          "Character in fixed-form label field must be a digit"_err_en_US);
     }
     token.clear();
     if (*badColumn < 6) {
@@ -467,7 +477,7 @@ void Prescanner::LabelField(TokenSequence &token) {
     }
     outCol = 1;
   }
-  if (outCol == 1) { // empty label field
+  if (outCol == 1) { // empty or ignored label field
     // Emit a space so that, if the line is rescanned after preprocessing,
     // a leading 'C' or 'D' won't be left-justified and then accidentally
     // misinterpreted as a comment card.
@@ -557,7 +567,7 @@ bool Prescanner::MustSkipToEndOfLine() const {
     return true; // skip over ignored columns in right margin (73:80)
   } else if (*at_ == '!' && !inCharLiteral_ &&
       (!inFixedForm_ || tabInCurrentLine_ || column_ != 6)) {
-    return !IsCompilerDirectiveSentinel(at_);
+    return InCompilerDirective() || !IsCompilerDirectiveSentinel(at_ + 1);
   } else {
     return false;
   }
@@ -843,6 +853,9 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       }
     }
     if (InFixedFormSource()) {
+      SkipSpaces();
+    }
+    if (inFixedForm_ && (IsOpenMPDirective() && parenthesisNesting_ > 0)) {
       SkipSpaces();
     }
     if ((*at_ == '\'' || *at_ == '"') &&
@@ -1642,6 +1655,17 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
       // This is a Continuation line, not an initial directive line.
       return std::nullopt;
     }
+    ++column, ++p;
+  }
+  if (isOpenMPConditional) {
+    for (; column <= fixedFormColumnLimit_; ++column, ++p) {
+      if (IsSpaceOrTab(p)) {
+      } else if (*p == '!') {
+        return std::nullopt; // !$    ! is a comment, not a directive
+      } else {
+        break;
+      }
+    }
   }
   if (const char *ss{IsCompilerDirectiveSentinel(
           sentinel, static_cast<std::size_t>(sp - sentinel))}) {
@@ -1657,8 +1681,17 @@ Prescanner::IsFreeFormCompilerDirectiveLine(const char *start) const {
       p && *p++ == '!') {
     if (auto maybePair{IsCompilerDirectiveSentinel(p)}) {
       auto offset{static_cast<std::size_t>(p - start - 1)};
-      return {LineClassification{LineClassification::Kind::CompilerDirective,
-          offset, maybePair->first}};
+      const char *sentinel{maybePair->first};
+      if ((sentinel[0] == '$' && sentinel[1] == '\0') || sentinel[1] == '@') {
+        if (const char *comment{IsFreeFormComment(maybePair->second)}) {
+          if (*comment == '!') {
+            // Conditional line comment - treat as comment
+            return std::nullopt;
+          }
+        }
+      }
+      return {LineClassification{
+          LineClassification::Kind::CompilerDirective, offset, sentinel}};
     }
   }
   return std::nullopt;

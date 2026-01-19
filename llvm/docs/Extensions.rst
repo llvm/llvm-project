@@ -274,13 +274,13 @@ This would be equivalent to the following raw assembly:
 
 The following directives are specified:
 
-  - lib
+  - ``lib``
 
     The parameter identifies a library to be linked against.  The library will
     be looked up in the default and any specified library search paths
     (specified to this point).
 
-  - libpath
+  - ``libpath``
 
     The parameter identifies an additional library search path to be considered
     when looking up libraries after the inclusion of this option.
@@ -327,13 +327,13 @@ The contents of the section shall be a sequence of ``Elf_CGProfile`` entries.
     Elf_Xword cgp_weight;
   } Elf_CGProfile;
 
-cgp_from
+``cgp_from``
   The symbol index of the source of the edge.
 
-cgp_to
+``cgp_to``
   The symbol index of the destination of the edge.
 
-cgp_weight
+``cgp_weight``
   The weight of the edge.
 
 This is represented in assembly as:
@@ -352,7 +352,7 @@ table.
 ``SHT_LLVM_ADDRSIG`` Section (address-significance table)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This section is used to mark symbols as address-significant, i.e. the address
+This section is used to mark symbols as address-significant, i.e., the address
 of the symbol is used in a comparison or leaks outside the translation unit. It
 has the same meaning as the absence of the LLVM attributes ``unnamed_addr``
 and ``local_unnamed_addr``.
@@ -416,7 +416,13 @@ as offsets relative to prior addresses.
 The following versioning schemes are currently supported (newer versions support
 features of the older versions).
 
-Version 4 (newest): Capable of encoding basic block hashes. This feature is
+Version 5 (newest): Capable of encoding Post-Link CFG information, which
+provides basic block and edge frequencies obtained from a post-link tool like
+Propeller, reflecting the final binary layout. This feature is enabled by the 8th
+bit of the feature entry.
+The feature data will be two bytes long to accommodate future extensions.
+
+Version 4: Capable of encoding basic block hashes. This feature is
 enabled by the 7th bit of the feature byte.
 
 Example:
@@ -519,12 +525,19 @@ those bits are:
 #. Basic Block Frequencies - Encoded as raw block frequency value taken from
    MBFI analysis. This value is an integer that encodes the relative frequency
    compared to the entry block. More information can be found in
-   'llvm/Support/BlockFrequency.h'.
+   ``llvm/Support/BlockFrequency.h``.
 
 #. Branch Probabilities - Encoded as raw numerator for branch probability
    taken from MBPI analysis. This value is the numerator for a fixed point ratio
-   defined in 'llvm/Support/BranchProbability.h'. It indicates the probability
+   defined in ``llvm/Support/BranchProbability.h``. It indicates the probability
    that the block is followed by a given successor block during execution.
+
+#. Post-Link CFG - When enabled, the PGO Analysis Map will include CFG
+   information obtained from a post-link tool, such as Propeller. This feature
+   is enabled with the ``-pgo-analysis-map-emit-bb-sections-cfg`` flag. When
+   this option is active, the map will contain basic block and edge frequencies
+   from the basic block sections profile. This provides more accurate profiling
+   information that reflects the final binary layout.
 
 This extra data requires version 2 or above. This is necessary since successors
 of basic blocks won't know their index but will know their BB ID.
@@ -726,7 +739,7 @@ Syntax:
 Syntax:
   ``.cv_fpo_data`` *procsym*
 
-Target Specific Behaviour
+Target-Specific Behaviour
 =========================
 
 X86
@@ -792,7 +805,7 @@ emission of Variable Length Arrays (VLAs).
 The Windows ARM Itanium ABI extends the base ABI by adding support for emitting
 a dynamic stack allocation.  When emitting a variable stack allocation, a call
 to ``__chkstk`` is emitted unconditionally to ensure that guard pages are setup
-properly.  The emission of this stack probe emission is handled similar to the
+properly.  The emission of this stack probe emission is handled similarly to the
 standard stack probe emission.
 
 The MSVC environment does not emit code for VLAs currently.
@@ -813,7 +826,7 @@ in the following fashion:
   sub sp, sp, x15, lsl #4
 
 However, this has the limitation of 256 MiB (±128MiB).  In order to accommodate
-larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow a 8GiB
+larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow an 8GiB
 (±4GiB) range via a slight deviation.  It will generate an indirect jump as
 follows:
 

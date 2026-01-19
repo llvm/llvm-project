@@ -921,6 +921,15 @@ def merge_of_x_and_zero : GICombineRule <
          [{ return Helper.matchMergeXAndZero(*${MI}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${MI}, ${matchinfo}); }])>;
 
+// Transform build_vector(unmerge(src, 0), ... unmerge(src, n), undef, ..., undef)
+// => concat_vectors(src, undef)
+def combine_build_unmerge : GICombineRule<
+  (defs root:$root, register_matchinfo:$unmergeSrc),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+         [{ return Helper.matchCombineBuildUnmerge(*${root}, MRI, ${unmergeSrc}); }]),
+  (apply [{ Helper.applyCombineBuildUnmerge(*${root}, MRI, B, ${unmergeSrc}); }])
+>;
+
 def merge_combines: GICombineGroup<[
   unmerge_anyext_build_vector,
   unmerge_merge,
@@ -930,7 +939,8 @@ def merge_combines: GICombineGroup<[
   unmerge_dead_to_trunc,
   unmerge_zext_to_zext,
   merge_of_x_and_undef,
-  merge_of_x_and_zero
+  merge_of_x_and_zero,
+  combine_build_unmerge
 ]>;
 
 // Under certain conditions, transform:
@@ -1013,9 +1023,17 @@ def extract_vec_elt_combines : GICombineGroup<[
 def funnel_shift_from_or_shift : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_OR):$root,
-    [{ return Helper.matchOrShiftToFunnelShift(*${root}, ${info}); }]),
+    [{ return Helper.matchOrShiftToFunnelShift(*${root}, false, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
 >;
+
+def funnel_shift_from_or_shift_constants_are_legal : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_OR):$root,
+    [{ return Helper.matchOrShiftToFunnelShift(*${root}, true, ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
+>;
+
 
 def funnel_shift_to_rotate : GICombineRule<
   (defs root:$root),
@@ -1986,6 +2004,22 @@ class narrow_binop_opcode<Instruction binopOpcode> : GICombineRule <
          [{ return Helper.matchNarrowBinop(*${Trunc}, *${Binop}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${Trunc}, ${matchinfo}); }])>;
 
+// Fold (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1).
+// Fold (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
+class ctlz_to_ctls_op<Instruction ctlzOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (ctlzOpcode $dst, $src):$root,
+         [{ return Helper.matchCtls(*${root}, ${matchinfo}); }]),
+  (apply [{Helper.applyBuildFn(*${root}, ${matchinfo});}])>;
+
+def ctlz_to_ctls : ctlz_to_ctls_op<G_CTLZ>;
+def ctlz_zero_undef_to_ctls : ctlz_to_ctls_op<G_CTLZ_ZERO_UNDEF>;
+
+def ctls_combines : GICombineGroup<[
+  ctlz_to_ctls,
+  ctlz_zero_undef_to_ctls,
+]>;
+
 def narrow_binop_add : narrow_binop_opcode<G_ADD>;
 def narrow_binop_sub : narrow_binop_opcode<G_SUB>;
 def narrow_binop_mul : narrow_binop_opcode<G_MUL>;
@@ -2148,7 +2182,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines, 
-    truncsat_combines, lshr_of_trunc_of_lshr]>;
+    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

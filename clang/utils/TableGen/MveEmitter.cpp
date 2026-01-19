@@ -757,6 +757,26 @@ public:
   }
 };
 
+// Result subclass that generates
+// Builder.getIsFPConstrained() ? <Standard> : <StrictFp>
+class StrictFpAltResult : public Result {
+public:
+  Ptr Standard;
+  Ptr StrictFp;
+  StrictFpAltResult(Ptr Standard, Ptr StrictFp)
+      : Standard(Standard), StrictFp(StrictFp) {}
+  void genCode(raw_ostream &OS,
+               CodeGenParamAllocator &ParamAlloc) const override {
+    OS << "!Builder.getIsFPConstrained() ? ";
+    Standard->genCode(OS, ParamAlloc);
+    OS << " : ";
+    StrictFp->genCode(OS, ParamAlloc);
+  }
+  void morePrerequisites(std::vector<Ptr> &output) const override {
+    Standard->morePrerequisites(output);
+  }
+};
+
 // Result subclass that specifies a type, for use in IRBuilder operations such
 // as CreateBitCast that take a type argument.
 class TypeResult : public Result {
@@ -1239,7 +1259,10 @@ Result::Ptr EmitterBase::getCodeForDag(const DagInit *D,
     std::vector<Result::Ptr> Args;
     for (unsigned i = 0, e = D->getNumArgs(); i < e; ++i)
       Args.push_back(getCodeForDagArg(D, i, Scope, Param));
-    if (Op->isSubClassOf("IRBuilderBase")) {
+
+    auto GenIRBuilderBase = [&](const Record *Op) -> Result::Ptr {
+      assert(Op->isSubClassOf("IRBuilderBase") &&
+             "Expected IRBuilderBase in GenIRBuilderBase\n");
       std::set<unsigned> AddressArgs;
       std::map<unsigned, std::string> IntegerArgs;
       for (const Record *sp : Op->getValueAsListOfDefs("special_params")) {
@@ -1252,7 +1275,10 @@ Result::Ptr EmitterBase::getCodeForDag(const DagInit *D,
       }
       return std::make_shared<IRBuilderResult>(Op->getValueAsString("prefix"),
                                                Args, AddressArgs, IntegerArgs);
-    } else if (Op->isSubClassOf("IRIntBase")) {
+    };
+    auto GenIRIntBase = [&](const Record *Op) -> Result::Ptr {
+      assert(Op->isSubClassOf("IRIntBase") &&
+             "Expected IRIntBase in GenIRIntBase\n");
       std::vector<const Type *> ParamTypes;
       for (const Record *RParam : Op->getValueAsListOfDefs("params"))
         ParamTypes.push_back(getType(RParam, Param));
@@ -1260,6 +1286,22 @@ Result::Ptr EmitterBase::getCodeForDag(const DagInit *D,
       if (Op->getValueAsBit("appendKind"))
         IntName += "_" + toLetter(cast<ScalarType>(Param)->kind());
       return std::make_shared<IRIntrinsicResult>(IntName, ParamTypes, Args);
+    };
+
+    if (Op->isSubClassOf("IRBuilderBase")) {
+      return GenIRBuilderBase(Op);
+    } else if (Op->isSubClassOf("IRIntBase")) {
+      return GenIRIntBase(Op);
+    } else if (Op->isSubClassOf("strictFPAlt")) {
+      auto StardardBuilder = Op->getValueAsDef("standard");
+      Result::Ptr Standard = StardardBuilder->isSubClassOf("IRBuilderBase")
+                                 ? GenIRBuilderBase(StardardBuilder)
+                                 : GenIRIntBase(StardardBuilder);
+      auto StrictBuilder = Op->getValueAsDef("strictfp");
+      Result::Ptr StrictFp = StrictBuilder->isSubClassOf("IRBuilderBase")
+                                 ? GenIRBuilderBase(StrictBuilder)
+                                 : GenIRIntBase(StrictBuilder);
+      return std::make_shared<StrictFpAltResult>(Standard, StrictFp);
     } else {
       PrintFatalError("Unsupported dag node " + Op->getName());
     }

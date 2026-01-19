@@ -9,7 +9,7 @@
 #include "AArch64.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/Host.h"
@@ -222,7 +222,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     // Default to 'A' profile if the architecture is not specified.
     success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
 
-  if (success && (A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)))
+  if (success && (A = Args.getLastArg(options::OPT_mtune_EQ)))
     success =
         getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args, Features);
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
@@ -453,13 +453,18 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
       Features.push_back("+fix-cortex-a53-835769");
     else
       Features.push_back("-fix-cortex-a53-835769");
-  } else if (Triple.isAndroid() || Triple.isOHOSFamily()) {
-    // Enabled A53 errata (835769) workaround by default on android
-    Features.push_back("+fix-cortex-a53-835769");
-  } else if (Triple.isOSFuchsia()) {
-    std::string CPU = getCPUName(D, Args, Triple);
-    if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
+  } else if (Extensions.BaseArch &&
+             Extensions.BaseArch->Version.getMajor() == 8 &&
+             Extensions.BaseArch->Version.getMinor() == 0) {
+    if (Triple.isAndroid() || Triple.isOHOSFamily()) {
+      // Enabled A53 errata (835769) workaround by default on android, providing
+      // that the architecture allows running on a cortex-a53.
       Features.push_back("+fix-cortex-a53-835769");
+    } else if (Triple.isOSFuchsia()) {
+      std::string CPU = getCPUName(D, Args, Triple);
+      if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
+        Features.push_back("+fix-cortex-a53-835769");
+    }
   }
 
   if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))

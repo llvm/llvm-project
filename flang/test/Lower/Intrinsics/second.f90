@@ -8,7 +8,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_subroutine(
 ! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<f32> {fir.bindc_name = "time"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFtest_subroutineEtime"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFtest_subroutineEtime"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_3:.*]] = fir.call @_FortranACpuTime() fastmath<contract> : () -> f64
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (f64) -> f32
 ! CHECK:           fir.store %[[VAL_4]] to %[[VAL_2]]#0 : !fir.ref<f32>
@@ -24,7 +24,7 @@ end subroutine
 ! CHECK-SAME:                                %[[VAL_0:.*]]: !fir.ref<f32> {fir.bindc_name = "time"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca f32
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] {uniq_name = "_QFtest_functionEtime"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFtest_functionEtime"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_4:.*]] = fir.call @_FortranACpuTime() fastmath<contract> : () -> f64
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (f64) -> f32
 ! CHECK:           fir.store %[[VAL_5]] to %[[VAL_1]] : !fir.ref<f32>
@@ -42,8 +42,8 @@ end subroutine
 ! CHECK-SAME:                                        %[[VAL_1:.*]]: !fir.ref<f32> {fir.bindc_name = "t2"}) {
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca f32
 ! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] {uniq_name = "_QFtest_function_subexprEt1"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_3]] {uniq_name = "_QFtest_function_subexprEt2"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFtest_function_subexprEt1"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFtest_function_subexprEt2"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_6:.*]] = fir.call @_FortranACpuTime() fastmath<contract> : () -> f64
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (f64) -> f32
 ! CHECK:           fir.store %[[VAL_7]] to %[[VAL_2]] : !fir.ref<f32>

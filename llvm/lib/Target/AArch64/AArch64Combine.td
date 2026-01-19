@@ -366,6 +366,7 @@ def AArch64PostLegalizerCombiner
                         select_to_minmax, or_to_bsp, combine_concat_vector,
                         commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
-                        combine_mul_cmlt, combine_use_vector_truncate, 
-                        extmultomull, truncsat_combines, lshr_of_trunc_of_lshr]> {
+                        combine_mul_cmlt, combine_use_vector_truncate,
+                        extmultomull, truncsat_combines, lshr_of_trunc_of_lshr,
+                        funnel_shift_from_or_shift_constants_are_legal]> {
 }
