@@ -32,6 +32,11 @@ LogicalResult verifyDynamicDimensionCount(Operation *op, ShapedType type,
 LogicalResult verifyRanksMatch(Operation *op, ShapedType lhs, ShapedType rhs,
                                StringRef lhsName, StringRef rhsName);
 
+/// Verify that the number of indices matches the rank of a shaped type.
+/// Returns failure and emits an error if the counts don't match.
+LogicalResult verifyIndexCount(Operation *op, ShapedType type,
+                               size_t indexCount);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_VERIFICATIONUTILS_H

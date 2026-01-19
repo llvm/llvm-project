@@ -348,7 +348,7 @@ func.func @test_vector.transfer_read(%arg0: memref<4x3xf32>) {
 func.func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
   %c3 = arith.constant 3 : index
   %cst = arith.constant 3.0 : f32
-  // expected-error@+1 {{requires 2 indices}}
+  // expected-error@+1 {{incorrect number of indices, expected 2 but got 3}}
   %0 = vector.transfer_read %arg0[%c3, %c3, %c3], %cst { permutation_map = affine_map<()->(0)> } : memref<?x?xf32>, vector<128xf32>
 }
 
@@ -357,7 +357,7 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
 func.func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
   %c3 = arith.constant 3 : index
   %cst = arith.constant 3.0 : f32
-  // expected-error@+1 {{requires 2 indices}}
+  // expected-error@+1 {{incorrect number of indices, expected 2 but got 1}}
   %0 = vector.transfer_read %arg0[%c3], %cst { permutation_map = affine_map<()->(0)> } : memref<?x?xf32>, vector<128xf32>
 }
 
@@ -529,7 +529,7 @@ func.func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
 func.func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
   %c3 = arith.constant 3 : index
   %cst = arith.constant dense<3.0> : vector<128 x f32>
-  // expected-error@+1 {{requires 2 indices}}
+  // expected-error@+1 {{incorrect number of indices, expected 2 but got 3}}
   vector.transfer_write %cst, %arg0[%c3, %c3, %c3] {permutation_map = affine_map<()->(0)>} : vector<128xf32>, memref<?x?xf32>
 }
 
@@ -538,7 +538,7 @@ func.func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
 func.func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
   %c3 = arith.constant 3 : index
   %cst = arith.constant dense<3.0> : vector<128 x f32>
-  // expected-error@+1 {{requires 2 indices}}
+  // expected-error@+1 {{incorrect number of indices, expected 2 but got 1}}
   vector.transfer_write %cst, %arg0[%c3] {permutation_map = affine_map<()->(0)>} : vector<128xf32>, memref<?x?xf32>
 }
 
@@ -1328,7 +1328,7 @@ func.func @store_base_type_mismatch(%base : memref<?xf64>, %value : vector<16xf3
 // -----
 
 func.func @store_memref_index_mismatch(%base : memref<?xf32>, %value : vector<16xf32>) {
-  // expected-error@+1 {{'vector.store' op requires 1 indices}}
+  // expected-error@+1 {{'vector.store' op incorrect number of indices, expected 1 but got 0}}
   vector.store %value, %base[] : memref<?xf32>, vector<16xf32>
 }
 
@@ -1379,7 +1379,7 @@ func.func @maskedload_pass_thru_type_mask_mismatch(%base: memref<?xf32>, %mask: 
 // -----
 
 func.func @maskedload_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pass: vector<16xf32>) {
-  // expected-error@+1 {{'vector.maskedload' op requires 1 indices}}
+  // expected-error@+1 {{'vector.maskedload' op incorrect number of indices, expected 1 but got 0}}
   %0 = vector.maskedload %base[], %mask, %pass : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
 
@@ -1423,7 +1423,7 @@ func.func @maskedstore_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15x
 
 func.func @maskedstore_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedstore' op requires 1 indices}}
+  // expected-error@+1 {{'vector.maskedstore' op incorrect number of indices, expected 1 but got 2}}
   vector.maskedstore %base[%c0, %c0], %mask, %value : memref<?xf32>, vector<16xi1>, vector<16xf32>
 }
 
@@ -1452,7 +1452,7 @@ func.func @gather_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi
 func.func @gather_memref_mismatch(%base: memref<?x?xf64>, %indices: vector<16xi32>,
                              %mask: vector<16xi1>, %pass_thru: vector<16xf64>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.gather' op requires 2 indices}}
+  // expected-error@+1 {{'vector.gather' op incorrect number of indices, expected 2 but got 1}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : memref<?x?xf64>, vector<16xi32>, vector<16xi1>, vector<16xf64> into vector<16xf64>
 }
@@ -1541,7 +1541,7 @@ func.func @scatter_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16x
 func.func @scatter_memref_mismatch(%base: memref<?x?xf64>, %indices: vector<16xi32>,
                               %mask: vector<16xi1>, %value: vector<16xf64>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.scatter' op requires 2 indices}}
+  // expected-error@+1 {{'vector.scatter' op incorrect number of indices, expected 2 but got 1}}
   vector.scatter %base[%c0][%indices], %mask, %value
     : memref<?x?xf64>, vector<16xi32>, vector<16xi1>, vector<16xf64>
 }
@@ -1630,7 +1630,7 @@ func.func @expand_pass_thru_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>,
 
 func.func @expand_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.expandload' op requires 2 indices}}
+  // expected-error@+1 {{'vector.expandload' op incorrect number of indices, expected 2 but got 1}}
   %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
 
@@ -1676,7 +1676,7 @@ func.func @compress_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>
 
 func.func @compress_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.compressstore' op requires 2 indices}}
+  // expected-error@+1 {{'vector.compressstore' op incorrect number of indices, expected 2 but got 3}}
   vector.compressstore %base[%c0, %c0, %c0], %mask, %value : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
 }
 

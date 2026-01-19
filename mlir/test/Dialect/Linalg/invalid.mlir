@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 func.func @load_number_of_indices(%v : memref<f32>) {
-  // expected-error @+2 {{incorrect number of indices for load}}
+  // expected-error @+2 {{incorrect number of indices, expected 0 but got 1}}
   %c0 = arith.constant 0 : index
   memref.load %v[%c0] : memref<f32>
 }
