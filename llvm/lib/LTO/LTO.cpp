@@ -1217,6 +1217,8 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
+  llvm::scope_exit CleanUp([this]() { cleanup(); });
+
   if (Error EC = handleArchiveInputs())
     return EC;
 
