@@ -5763,6 +5763,108 @@ foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
 
 } // isConvergent
 
+//
+// tcgen05.ld.red
+//
+
+class Tcgen05LdRedTypeProfile<int Num, bit hasOffset, ValueType RedValTy>:
+        SDTypeProfile<0, 0, []> {
+
+  list<ValueType> Results = !listsplat(RedValTy, !add(Num, 1)); // ret_type, red_val
+  list<ValueType> VTs = !listconcat(
+    Results,
+    [i32],                                // ptr
+    !if(!eq(hasOffset, 1), [i64], []),    // offset
+    [i32],                                // redOp
+    !if(!eq(RedValTy, f32), [i1, i1], []) // abs, nan
+  );
+  let Constraints = !foreach(x, !range(!size(VTs)), SDTCisVT<x, VTs[x]>);
+  let NumResults = !size(Results);
+  let NumOperands = !sub(!size(VTs), NumResults);
+}
+
+class Tcgen05LdRedSDNode<string Shape, int Num, string Type>:
+        SDNode<"NVPTXISD::TCGEN05_LD_RED_" # Shape # "_X" # Num # "_" # !toupper(Type),
+        Tcgen05LdRedTypeProfile<Num, !eq(Shape, "16x32bx2"), !cast<ValueType>(Type)>,
+                    [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
+
+class Tcgen05LdRedInst<string Shape, int Num, string RedOp, string Type,
+                       bit Abs = 0, bit Nan = 0>:
+         NVPTXInst<(outs), (ins), "?", []>,
+         Requires<[callSubtarget<"hasTcgen05LdRedSupport">]> {
+
+  bit IsFloat = !eq(Type, "f32");
+  string TypeStr = !if(IsFloat, "f32", "u32");
+
+  SDNode Opcode = Tcgen05LdRedSDNode<Shape, Num, Type>;
+
+  TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<Num>;
+
+  let InOperandList = !con((ins B32:$addr),
+                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset),
+                                                       (ins)));
+
+  let OutOperandList = !con(Info.Outs, (outs B32:$redVal));
+
+  string AbsStr = !if(!and(!eq(IsFloat, 1), !eq(Abs, 1)), ".abs", "");
+  string NanStr = !if(!and(!eq(IsFloat, 1), !eq(Nan, 1)), ".NaN", "");
+
+  let AsmString = "tcgen05.ld.red.sync.aligned"
+                  # "." # Shape
+                  # ".x" # Num
+                  # "." # RedOp
+                  # AbsStr # NanStr
+                  # "." # TypeStr # " "
+                  # Info.regstring # ", $redVal, [$addr]"
+                  # !if(!eq(Shape, "16x32bx2"), ", $offset", "")
+                  # ";";
+
+  int RedOpVal = !cond(
+    !eq(RedOp, "min") : 0,
+    !eq(RedOp, "max") : 1,
+  );
+
+  int AbsVal = !if(!eq(Abs, 1), -1, 0);
+  int NanVal = !if(!eq(Nan, 1), -1, 0);
+
+  dag IntrinsicPattern = !con((Opcode i32:$addr),
+                              !if(!eq(Shape, "16x32bx2"), (Opcode i64:$offset),
+                                                          (Opcode)));
+
+  dag FlagOperands = !con((Opcode (i32 RedOpVal)),
+                          !if(!eq(IsFloat, 1), (Opcode (i1 AbsVal), (i1 NanVal)),
+                                               (Opcode)));
+
+  dag Results = !con(!foreach(tmp, OutOperandList,
+                                   !subst(outs, set,
+                                   !subst(B32, !if(!eq(IsFloat, 1), f32, i32), tmp))),
+                     // Unfortunately, there is no way to append a dag hence
+                     // creating a dummy argument so that it can be replaced with
+                     // the intrinsic arg dag
+                     (set 0));
+
+  let Pattern = [!setdagarg(Results, !sub(!size(Results), 1),
+                                     !con(IntrinsicPattern, FlagOperands))];
+}
+
+let isConvergent = true in {
+  foreach shape = ["32x32b", "16x32bx2"] in {
+    foreach num = 1...8 in {
+      foreach redop = ["min", "max"] in {
+        defvar access_size = NVVM_TCGEN05_LDST_ACCESS_SIZE<shape, num>;
+        if access_size.valid then {
+          foreach abs = [0, 1] in {
+            foreach nan = [0, 1] in {
+                def : Tcgen05LdRedInst<shape, access_size.veclen, redop, "f32", abs, nan>;
+              } // nan
+            } // abs
+          def : Tcgen05LdRedInst<shape, access_size.veclen, redop, "i32">;
+        } // valid
+      } // redop
+    } // num
+  } // shape
+} // isConvergent
+
 // Bulk store instructions
 def st_bulk_imm : TImmLeaf<i64, [{ return Imm == 0; }]>;
 

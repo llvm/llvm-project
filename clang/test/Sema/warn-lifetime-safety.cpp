@@ -1431,3 +1431,64 @@ void not_silenced_via_conditional(bool cond) {
   (void)v;  // expected-note 2 {{later used here}}
 }
 } // namespace do_not_warn_on_std_move
+
+// Implicit this annotations with redecls.
+namespace GH172013 {
+// https://github.com/llvm/llvm-project/issues/62072
+// https://github.com/llvm/llvm-project/issues/172013
+struct S {
+    View x() const [[clang::lifetimebound]];
+    MyObj i;
+};
+
+View S::x() const { return i; }
+
+void bar() {
+    View x;
+    {
+        S s;
+        x = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
+        View y = S().x(); // FIXME: Handle temporaries.
+    } // expected-note {{destroyed here}}
+    (void)x; // expected-note {{used here}}
+}
+}
+
+namespace reference_type_decl_ref_expr {
+struct S {
+  S();
+  ~S();
+  const std::string& x() const [[clang::lifetimebound]];
+};
+
+const std::string& identity(const std::string& in [[clang::lifetimebound]]);
+const S& identity(const S& in [[clang::lifetimebound]]);
+
+void test_temporary() {
+  const std::string& x = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)x; // expected-note {{later used here}}
+
+  const std::string& y = identity(S().x()); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)y; // expected-note {{later used here}}
+
+  std::string_view z;
+  {
+    S s;
+    const std::string& zz = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
+    z = zz;
+  } // expected-note {{destroyed here}}
+  (void)z; // expected-note {{later used here}}
+}
+
+void test_lifetime_extension_ok() {
+  const S& x = S();
+  (void)x;
+  const S& y = identity(S()); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)y; // expected-note {{later used here}}
+}
+
+const std::string& test_return() {
+  const std::string& x = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  return x; // expected-note {{later used here}}
+}
+} // namespace reference_type_decl_ref_expr

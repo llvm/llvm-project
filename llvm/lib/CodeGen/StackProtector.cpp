@@ -521,22 +521,23 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
           continue;
         }
 
-        if (Strong &&
-            HasAddressTaken(
-                AI, M->getDataLayout().getTypeAllocSize(AI->getAllocatedType()),
-                M, VisitedPHIs)) {
-          ++NumAddrTaken;
-          if (!Layout)
-            return true;
-          Layout->insert(std::make_pair(AI, MachineFrameInfo::SSPLK_AddrOf));
-          ORE.emit([&]() {
-            return OptimizationRemark(DEBUG_TYPE, "StackProtectorAddressTaken",
-                                      &I)
-                   << "Stack protection applied to function "
-                   << ore::NV("Function", F)
-                   << " due to the address of a local variable being taken";
-          });
-          NeedsProtector = true;
+        if (Strong) {
+          std::optional<TypeSize> AllocSize =
+              AI->getAllocationSize(M->getDataLayout());
+          if (!AllocSize || HasAddressTaken(AI, *AllocSize, M, VisitedPHIs)) {
+            ++NumAddrTaken;
+            if (!Layout)
+              return true;
+            Layout->insert(std::make_pair(AI, MachineFrameInfo::SSPLK_AddrOf));
+            ORE.emit([&]() {
+              return OptimizationRemark(DEBUG_TYPE,
+                                        "StackProtectorAddressTaken", &I)
+                     << "Stack protection applied to function "
+                     << ore::NV("Function", F)
+                     << " due to the address of a local variable being taken";
+            });
+            NeedsProtector = true;
+          }
         }
         // Clear any PHIs that we visited, to make sure we examine all uses of
         // any subsequent allocas that we look at.

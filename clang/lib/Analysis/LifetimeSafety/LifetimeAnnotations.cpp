@@ -52,22 +52,33 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
          CMD->getParamDecl(0)->hasAttr<clang::LifetimeBoundAttr>();
 }
 
+/// Check if a function has a lifetimebound attribute on its function type
+/// (which represents the implicit 'this' parameter for methods).
+/// Returns the attribute if found, nullptr otherwise.
+static const LifetimeBoundAttr *
+getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
+  // Walk through the type layers looking for a lifetimebound attribute.
+  TypeLoc TL = TSI.getTypeLoc();
+  while (true) {
+    auto ATL = TL.getAsAdjusted<AttributedTypeLoc>();
+    if (!ATL)
+      break;
+    if (auto *LBAttr = ATL.getAttrAs<LifetimeBoundAttr>())
+      return LBAttr;
+    TL = ATL.getModifiedLoc();
+  }
+  return nullptr;
+}
+
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
-  const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
-  if (!TSI)
-    return false;
-  // Don't declare this variable in the second operand of the for-statement;
-  // GCC miscompiles that by ending its lifetime before evaluating the
-  // third operand. See gcc.gnu.org/PR86769.
-  AttributedTypeLoc ATL;
-  for (TypeLoc TL = TSI->getTypeLoc();
-       (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
-       TL = ATL.getModifiedLoc()) {
-    if (ATL.getAttrAs<clang::LifetimeBoundAttr>())
+  // Attribute merging doesn't work well with attributes on function types (like
+  // 'this' param). We need to check all redeclarations.
+  for (const FunctionDecl *Redecl : FD->redecls()) {
+    const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo();
+    if (TSI && getLifetimeBoundAttrFromFunctionType(*TSI))
       return true;
   }
-
   return isNormalAssignmentOperator(FD);
 }
 
