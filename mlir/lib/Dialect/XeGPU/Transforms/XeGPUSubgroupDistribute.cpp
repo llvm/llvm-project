@@ -62,10 +62,6 @@ namespace {
 /// In certain cases, we may need to favor XeGPU specific distribution patterns
 /// over generic vector distribution patterns. In such cases, we can assign
 /// priorities to patterns.
-static constexpr unsigned regularPatternBenefit = 1;
-static constexpr unsigned highPatternBenefit = 2;
-static constexpr unsigned highestPatternBenefit = 3;
-
 enum PatternHierarchy : unsigned {
   Regular = 1,
   AboveRegular = 2,
@@ -1217,9 +1213,8 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
-// Sink SG-uniform ops. An op is uniform if any of the following is true:
-// 1. It has no vector operands.
-// 2. All of its vector operands and results are uniform.
+// Sink SG-uniform ops. An op is uniform if any of the following is none
+// of its operands/results has a distribution layout attribute.
 // Non-uniform vectors are handled by dedicated patterns.
 // This pattern must have a higher priority than distribution patterns,
 // because a distributable shape may be logically intended as uniform.
@@ -1233,7 +1228,6 @@ struct SinkUniformOps final : public gpu::WarpDistributionPattern {
     // patterns.
     if (!warpRegionPreYieldOp || warpRegionPreYieldOp->getNumRegions())
       return failure();
-
     int operandIdx = -1;
     if (warpRegionPreYieldOp->getNumResults()) {
       OpOperand *operand = getWarpResult(
@@ -1259,8 +1253,6 @@ struct SinkUniformOps final : public gpu::WarpDistributionPattern {
     if (!uniformValuesOnly)
       return rewriter.notifyMatchFailure(warpOp,
                                          "Some values are not uniform.");
-
-    // Capture its operands and create a new warp op that yields them.
     SmallVector<size_t> newRetIndices;
     SmallVector<Value> operands =
         llvm::to_vector_of<Value>(warpRegionPreYieldOp->getOperands());
@@ -1269,9 +1261,7 @@ struct SinkUniformOps final : public gpu::WarpDistributionPattern {
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypes, newRetIndices);
 
-    // Clone the op after the new warp op.
     rewriter.setInsertionPointAfter(newWarpOp);
-
     IRMapping operandMapper;
     for (auto [oldOperandIdx, newOperandIdx] : llvm::enumerate(newRetIndices))
       operandMapper.map(warpRegionPreYieldOp->getOperand(oldOperandIdx),
