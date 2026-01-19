@@ -240,8 +240,8 @@ private:
 
   // Map of local resource variables to their used global resource.
   //
-  // The Binding can be a nullptr, in which case, the variable has not be
-  // initialized or assigned to yet.
+  // The binding can be a nullptr, in which case, the variable has yet to be
+  // initialized or assigned to.
   llvm::DenseMap<const VarDecl *, const DeclBindingInfo *>
       LocalResourceBindings;
 

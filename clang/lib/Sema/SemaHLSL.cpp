@@ -4452,7 +4452,7 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
     if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       if (VD->getStorageClass() != SC_Static) {
         if (VD->hasGlobalStorage()) {
-          // assignment to global resource is not allowed
+          // Assignment to a global resource is not allowed.
           SemaRef.Diag(Loc, diag::err_hlsl_assign_to_global_resource) << VD;
           SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
           return false;
@@ -4462,7 +4462,7 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
         // with previous assignments to global resources
         const DeclBindingInfo *LHSBinding = LocalResourceBindings[VD];
         if (!LHSBinding) {
-          // occurs when local resource was instantiated without an expression
+          // LHSBinding is a nullptr when the local resource is instantiated without an expression.
           LocalResourceBindings[VD] = *RHSBinding;
         } else if (LHSBinding != *RHSBinding) {
           SemaRef.Diag(Loc,
@@ -4848,7 +4848,7 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
 }
 
 bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
-  // If initializing a local resource, register the binding it is using
+  // If initializing a local resource, register the binding it is using.
   if (VDecl->getType()->isHLSLResourceRecord() && !VDecl->hasGlobalStorage())
     if (auto *InitExpr = Init) {
       if (auto Binding = GetGlobalBinding(InitExpr)) {
