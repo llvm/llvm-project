@@ -1105,7 +1105,7 @@ void CompilerInstance::LoadRequestedPlugins() {
 void CompilerInstance::parseLLVMArgs() {
   if (!getFrontendOpts().LLVMArgs.empty()) {
     unsigned NumArgs = getFrontendOpts().LLVMArgs.size();
-    auto Args = std::make_unique<const char*[]>(NumArgs + 2);
+    auto Args = std::make_unique<const char *[]>(NumArgs + 2);
     Args[0] = "clang (LLVM option parsing)";
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = getFrontendOpts().LLVMArgs[i].c_str();
