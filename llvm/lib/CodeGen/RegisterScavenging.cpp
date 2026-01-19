@@ -299,10 +299,32 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
   const MachineBasicBlock &MBB = *To->getParent();
   const MachineFunction &MF = *MBB.getParent();
 
+  // Obtain a list of candidate registers in allocation order of RC.
+  // If the instruction at MBBI has any early-clobber def regs, we must exclude
+  // them from the candidates, without including the whole of that instruction's
+  // constraints. We achieve this by filtering the allocation order of RC.
+  // First, determine if there are any such early-clobber def regs.
+  SmallVector<MCPhysReg> FilteredAllocationOrder;
+  SmallVector<MCPhysReg> ECDefs;
+  for (const MachineOperand &Op : MBBI->operands())
+    if (Op.isReg() && Op.isDef() && Op.isEarlyClobber())
+      ECDefs.push_back(Op.getReg());
+  if (!ECDefs.empty()) {
+    // if so, obtain the filtered version.
+    for (MCPhysReg Reg : RC.getRawAllocationOrder(MF)) {
+      // Only add Reg if it does not overlap with any element of ECDefs.
+      if (!llvm::any_of(ECDefs, [&](MCPhysReg ECReg) {
+            return TRI->regsOverlap(Reg, ECReg);
+          }))
+        FilteredAllocationOrder.push_back(Reg);
+    }
+  } else
+    FilteredAllocationOrder =
+        SmallVector<MCPhysReg>(RC.getRawAllocationOrder(MF));
+
   // Find the register whose use is furthest away.
-  ArrayRef<MCPhysReg> AllocationOrder = RC.getRawAllocationOrder(MF);
   std::pair<MCPhysReg, MachineBasicBlock::iterator> P = findSurvivorBackwards(
-      *MRI, std::prev(MBBI), To, LiveUnits, AllocationOrder, RestoreAfter);
+      *MRI, std::prev(MBBI), To, LiveUnits, FilteredAllocationOrder, RestoreAfter);
   MCPhysReg Reg = P.first;
   MachineBasicBlock::iterator SpillBefore = P.second;
   // Found an available register?

@@ -1,0 +1,45 @@
+# RUN: llc %s -mtriple=s390x-ibm-linux -mcpu=z15 -run-pass=prologepilog -o - | FileCheck %s
+# CHECK: STG killed $r2d, $r15d, 168
+# CHECK-NOT: $r1d = LAY $r11d, 4096, $noreg
+# CHECK: $r2d = LAY $r15d, 4096
+# CHECK: $r2d = LG $r15d, 168
+--- |
+  ; ModuleID = 'repro.ll'
+  target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+  target triple = "s390x-unknown-linux-gnu"
+  
+  define dso_local i64 @repro(i64 noundef %0, i64 noundef %1) local_unnamed_addr {
+    %3 = alloca [16384 x i8], align 1
+    %4 = getelementptr inbounds i8, ptr %3, i64 5000
+    %5 = call i64 asm sideeffect "  lg $0, $1\0A\09", "=&r,*m,~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{cc},~{memory}"(ptr nonnull elementtype(i8) %4)
+    %6 = add i64 %1, %0
+    %7 = add i64 %6, %5
+    ret i64 %7
+  }
+...
+---
+name:            repro
+alignment:       16
+
+tracksRegLiveness: true
+registers:       []
+liveins:
+  - { reg: '$r2d', virtual-reg: '' }
+  - { reg: '$r3d', virtual-reg: '' }
+frameInfo:
+  stackSize:       0
+  maxAlignment:    1
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 16384, alignment: 1, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0 (%ir-block.2):
+    liveins: $r2d, $r3d
+  
+    renamable $r0d = COPY $r3d
+    INLINEASM &"  lg $0, $1\0A\09", 25 /* sideeffect mayload maystore attdialect */, 1179659 /* regdef-ec:GR64Bit */, def early-clobber renamable $r1d, 262174 /* mem:m */, %stack.0, 5000, $noreg, 12 /* clobber */, implicit-def dead early-clobber $r3d, 12 /* clobber */, implicit-def dead early-clobber $r4d, 12 /* clobber */, implicit-def dead early-clobber $r5d, 12 /* clobber */, implicit-def dead early-clobber $r6d, 12 /* clobber */, implicit-def dead early-clobber $r7d, 12 /* clobber */, implicit-def dead early-clobber $r8d, 12 /* clobber */, implicit-def dead early-clobber $r9d, 12 /* clobber */, implicit-def dead early-clobber $r10d, 12 /* clobber */, implicit-def dead early-clobber $r11d, 12 /* clobber */, implicit-def dead early-clobber $r12d, 12 /* clobber */, implicit-def dead early-clobber $r13d, 12 /* clobber */, implicit-def dead early-clobber $r14d, 12 /* clobber */, implicit-def dead early-clobber $cc
+    renamable $r2d = AGR killed renamable $r2d, killed renamable $r0d, implicit-def dead $cc
+    renamable $r2d = AGR killed renamable $r2d, killed renamable $r1d, implicit-def dead $cc
+    Return implicit $r2d
+...
