@@ -988,6 +988,7 @@ public:
     bool isConsole = GetConsoleMode(hStdin, &consoleMode) != 0;
 
     while (true) {
+    read_loop:;
       {
         std::lock_guard<std::mutex> guard(m_mutex);
         if (GetIsDone())
@@ -1006,6 +1007,9 @@ public:
             if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead))
               goto exit_loop;
 
+            if (numRead == 0)
+              goto read_loop;
+
             // We only care about text input. Consume all non text input events
             // before letting ReadFile handle text input.
             if (inputRecord.EventType == KEY_EVENT &&
@@ -1013,8 +1017,7 @@ public:
                 inputRecord.Event.KeyEvent.uChar.AsciiChar != 0)
               break;
 
-            if (!ReadConsoleInput(hStdin, &inputRecord, 1, &numRead) ||
-                numRead == 0)
+            if (!ReadConsoleInput(hStdin, &inputRecord, 1, &numRead))
               goto exit_loop;
           }
         }
@@ -1048,7 +1051,7 @@ public:
     }
 
   exit_loop:;
-    SetIsRunning(false);
+  SetIsRunning(false);
   }
 
   void Cancel() override {
