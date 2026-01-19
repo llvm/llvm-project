@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // This checker uses a 7-step algorithm to accomplish scope analysis of a
-// variable and determine if it's in too large a scope. Note that the
+// variable and determine if it can be declared in a smaller scope. Note that the
 // clang-tidy framework is aimed mainly at supporting text-manipulation,
 // diagnostics, or common AST patterns. Scope reduction analysis is
 // quite specialized, and there's not much support specifically for
@@ -20,29 +20,33 @@
 //    - Only match variables within functions (hasAncestor(functionDecl())
 //    - Exclude for-loop declared variables
 //       (unless(hasParent(declStmt(hasParent(forStmt))))))
-//    - Exclude variables with function call initializors
+//    - Exclude variables with function call initializers
 //       (unless(hasInitializer(...)))
 //    - Exclude parameters from analysis
 //       (unless(parmVarDecl())
 // 2) Collect variable uses
-//    - find all DeclRefExpr nodes that reference the variable
+//    - Find all DeclRefExpr nodes that reference the variable
 // 3) Build scope chains
-//    - for each use, find all compound statements that contain it (from
+//    - For each use, find all compound statements that contain it (from
 //      innermost to outermost)
 // 4) Find the innermost compound statement that contains all uses
 //    - This is the smallest scope where the variable could be declared
-// 5) Find declaration scope
-//    - Locate the compound statement containing the variable declaration
-// 6) Verify nesting
-//    - Ensure the usage scope is actually nested within the declaration scope
-// 7) Alternate analysis - check for for-loop initialization opportunity
-//    - This is only run if compound stmt analysis didn't find smaller scope
+// 5) Switch case analysis
+//    - Check if variable uses span multiple case labels in the same switch
+//    - Skip analysis if so, as variables cannot be declared in switch body
+// 6) Verify scope nesting and report
+//    - Find the compound statement containing the variable declaration
+//    - Only report if the usage scope is nested within the declaration scope
+//    - This ensures we only suggest moving variables to smaller scopes
+// 7) Alternative analysis - check for for-loop initialization opportunity
+//    - Only runs if compound statement analysis didn't find a smaller scope
 //    - Only check local variables, not parameters
 //    - Determine if all uses are within the same for-loop and suggest
-//      for-loop initialization
+//      for-loop initialization, but only if for-loop is in smaller scope
 //
-// The algo works by finding the smallest scope that could contain the variable
-// declaration while still encompassing all it's uses.
+// The algorithm works by finding the smallest scope that could contain the variable
+// declaration while still encompassing all its uses, but only reports when that
+// scope is smaller than the current declaration scope.
 
 #include "ScopeReductionCheck.h"
 #include "../utils/DeclRefExprUtils.h"
@@ -168,7 +172,7 @@ void ScopeReductionCheck::check(
     }
   }
 
-  // Step 5: Check if current var declaration is broader than necessary
+  // Step 5: Check if current variable declaration can be moved to a smaller scope
   if (InnermostScope) {
     // Check if variable uses span multiple case labels in the same switch
     // If so, the only common scope would be the switch body, which is invalid
@@ -225,9 +229,10 @@ void ScopeReductionCheck::check(
       ParentNodes = Parents.getParents(*Parent);
     }
 
-    // Step 6: Verify that usage scope is nested within decl scope
+    // Step 6: Verify that usage scope is nested within declaration scope
+    // Only report if we can move the variable to a smaller scope
     if (VarScope && VarScope != InnermostScope) {
-      // Walk up from innermost usage to see if the decl scope is reached
+      // Walk up from innermost usage scope to see if declaration scope is reached
       const Stmt *CheckScope = InnermostScope;
       bool IsNested = false;
 
@@ -244,7 +249,7 @@ void ScopeReductionCheck::check(
         CheckScope = CheckParent;
       }
 
-      // Only report if the usage scope is truly nested within the decl scope
+      // Only report if the usage scope is truly nested within the declaration scope
       if (IsNested) {
         diag(Var->getLocation(),
              "variable '%0' can be declared in a smaller scope")
@@ -259,9 +264,9 @@ void ScopeReductionCheck::check(
     }
   }
 
-  // Step 7: Alternative analysis - check for for-loop initialization
-  // opportunity This only runs if the compound statement analysis didn't find a
-  // smaller scope Only check local variables, not parameters
+  // Step 7: Alternative analysis - check for for-loop initialization opportunity
+  // This only runs if the compound statement analysis didn't find a smaller scope
+  // Only check local variables, not parameters
   const ForStmt *CommonForLoop = nullptr;
   bool AllUsesInSameForLoop = true;
 
