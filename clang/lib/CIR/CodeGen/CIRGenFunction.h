@@ -1553,6 +1553,9 @@ public:
       clang::NestedNameSpecifier qualifier, bool isArrow,
       const clang::Expr *base);
 
+  RValue emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
+                                      ReturnValueSlot returnValue);
+
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
   void emitNewArrayInitializer(const CXXNewExpr *e, QualType elementType,
@@ -1864,6 +1867,10 @@ public:
   /// Note: CIR defers most of the special casting to the final lowering passes
   /// to conserve the high level information.
   mlir::Value emitToMemory(mlir::Value value, clang::QualType ty);
+
+  /// EmitFromMemory - Change a scalar value from its memory
+  /// representation to its value representation.
+  mlir::Value emitFromMemory(mlir::Value value, clang::QualType ty);
 
   /// Emit a trap instruction, which is used to abort the program in an abnormal
   /// way, usually for debugging purposes.
