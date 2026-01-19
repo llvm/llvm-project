@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   Instrumentation
   Passes
+  Plugins
   Support
   TargetParser
   TransformUtils

@@ -8,8 +8,8 @@ typedef __SIZE_TYPE__ size_t;
 
 void sincos(double, double *, double *);
 
-// ARMPL: armpl_vsincosq_f64
-// ARMPL: armpl_vsincosq_f64
+// ARMPL: armpl_vcexpiq_f64
+// ARMPL: armpl_vcexpiq_f64
 
 // SLEEF: _ZGVnN2vl8l8_sincos
 // SLEEF: _ZGVnN2vl8l8_sincos

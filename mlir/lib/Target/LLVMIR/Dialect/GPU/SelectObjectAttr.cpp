@@ -124,10 +124,10 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
   }
 
   IRBuilder<> builder(module.getContext());
-  auto i32Ty = builder.getInt32Ty();
-  auto i64Ty = builder.getInt64Ty();
-  auto ptrTy = builder.getPtrTy(0);
-  auto voidTy = builder.getVoidTy();
+  auto *i32Ty = builder.getInt32Ty();
+  auto *i64Ty = builder.getInt64Ty();
+  auto *ptrTy = builder.getPtrTy(0);
+  auto *voidTy = builder.getVoidTy();
 
   // Embed the module as a global object.
   auto *modulePtr = new GlobalVariable(
@@ -428,7 +428,7 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
   // a stream to make a synchronous kernel launch.
   Value *stream = nullptr;
   // Sync & destroy the stream, for synchronous launches.
-  auto destroyStream = make_scope_exit([&]() {
+  llvm::scope_exit destroyStream([&]() {
     builder.CreateCall(getStreamSyncFn(), {stream});
     builder.CreateCall(getStreamDestroyFn(), {stream});
   });

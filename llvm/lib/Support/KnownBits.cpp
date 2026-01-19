@@ -155,6 +155,127 @@ KnownBits KnownBits::computeForSubBorrow(const KnownBits &LHS, KnownBits RHS,
                               /*CarryOne=*/Borrow.Zero.getBoolValue());
 }
 
+KnownBits KnownBits::truncSSat(unsigned BitWidth) const {
+  unsigned InputBits = getBitWidth();
+  APInt MinInRange = APInt::getSignedMinValue(BitWidth).sext(InputBits);
+  APInt MaxInRange = APInt::getSignedMaxValue(BitWidth).sext(InputBits);
+  APInt InputMin = getSignedMinValue();
+  APInt InputMax = getSignedMaxValue();
+  KnownBits Known(BitWidth);
+
+  // Case 1: All values fit - just truncate
+  if (InputMin.sge(MinInRange) && InputMax.sle(MaxInRange)) {
+    Known = trunc(BitWidth);
+  }
+  // Case 2: All saturate to min
+  else if (InputMax.slt(MinInRange)) {
+    Known = KnownBits::makeConstant(APInt::getSignedMinValue(BitWidth));
+  }
+  // Case 3: All saturate to max
+  else if (InputMin.sgt(MaxInRange)) {
+    Known = KnownBits::makeConstant(APInt::getSignedMaxValue(BitWidth));
+  }
+  // Case 4: All non-negative, some fit, some saturate to max
+  else if (InputMin.isNonNegative()) {
+    // Output: truncated OR max saturation
+    // Max saturation has only sign bit as 0
+    Known.Zero = APInt(BitWidth, 0);
+    Known.Zero.setBit(BitWidth - 1); // Sign bit always 0
+    // Max saturation has all lower bits as 1, so preserve InputOneLower
+    Known.One = One.trunc(BitWidth);
+    Known.One.clearBit(BitWidth - 1); // Sign bit is 0, not 1
+  }
+  // Case 5: All negative, some fit, some saturate to min
+  else if (InputMax.isNegative()) {
+    // Output: truncated OR min saturation
+    // Min saturation has all lower bits as 0, so preserve InputZeroLower
+    Known.Zero = Zero.trunc(BitWidth);
+    Known.Zero.clearBit(BitWidth - 1); // Sign bit is 1, not 0
+    // Min saturation has only sign bit as 1
+    Known.One = APInt(BitWidth, 0);
+    Known.One.setBit(BitWidth - 1); // Sign bit always 1
+  }
+  // Case 6: Mixed positive and negative
+  else {
+    // Output: min saturation, truncated, or max saturation
+    APInt InputZeroLower = Zero.trunc(BitWidth);
+    APInt InputOneLower = One.trunc(BitWidth);
+    APInt MinSat = APInt::getSignedMinValue(BitWidth);
+    APInt MaxSat = APInt::getSignedMaxValue(BitWidth);
+    KnownBits MinSatKB = KnownBits::makeConstant(MinSat);
+    KnownBits MaxSatKB = KnownBits::makeConstant(MaxSat);
+    if (InputMax.sle(MaxInRange)) {
+      // Positive values fit, only negatives saturate to min
+      Known.Zero = InputZeroLower & MinSatKB.Zero;
+      Known.One = InputOneLower & MinSatKB.One;
+    } else if (InputMin.sge(MinInRange)) {
+      // Negative values fit, only positives saturate to max
+      Known.Zero = InputZeroLower & MaxSatKB.Zero;
+      Known.One = InputOneLower & MaxSatKB.One;
+    } else {
+      // Both positive and negative values might saturate
+      Known.Zero = InputZeroLower & MinSatKB.Zero & MaxSatKB.Zero;
+      Known.One = InputOneLower & MinSatKB.One & MaxSatKB.One;
+    }
+  }
+  return Known;
+}
+
+KnownBits KnownBits::truncSSatU(unsigned BitWidth) const {
+  unsigned InputBits = getBitWidth();
+  APInt MaxInRange = APInt::getAllOnes(BitWidth).zext(InputBits);
+  APInt InputMin = getSignedMinValue();
+  APInt InputMax = getSignedMaxValue();
+  KnownBits Known(BitWidth);
+
+  if (isNegative()) {
+    Known.setAllZero();
+  } else if (InputMin.isNonNegative() && InputMax.ule(MaxInRange)) {
+    Known = trunc(BitWidth);
+  } else if (InputMin.isNonNegative() && InputMin.ugt(MaxInRange)) {
+    Known.setAllOnes();
+  } else if (InputMin.isNonNegative()) {
+    // All non-negative but mixed: some fit, some saturate to all-ones
+    // No common zero bits (saturation is all-ones)
+    Known.Zero = APInt(BitWidth, 0);
+    // Common one bits: bits that are 1 in input stay 1
+    Known.One = One.trunc(BitWidth);
+  } else {
+    // Mixed: sign bit unknown
+    if (InputMax.ule(MaxInRange)) {
+      // Positive values all fit (no saturation to all-ones)
+      // Output: all-zeros (negatives) OR truncated (positives)
+      Known.Zero = Zero.trunc(BitWidth);
+      Known.One = APInt(BitWidth, 0);
+    } else {
+      // Positive values might saturate to all-ones
+      // Output: all-zeros OR truncated OR all-ones
+      // No common bits
+      Known.Zero = APInt(BitWidth, 0);
+      Known.One = APInt(BitWidth, 0);
+    }
+  }
+  return Known;
+}
+
+KnownBits KnownBits::truncUSat(unsigned BitWidth) const {
+  unsigned InputBits = getBitWidth();
+  APInt MaxInRange = APInt::getLowBitsSet(InputBits, BitWidth);
+  APInt InputMax = getMaxValue();
+  APInt InputMin = getMinValue();
+  KnownBits Known(BitWidth);
+
+  if (InputMax.ule(MaxInRange)) {
+    Known = trunc(BitWidth);
+  } else if (InputMin.ugt(MaxInRange)) {
+    Known.setAllOnes();
+  } else {
+    Known.resetAll();
+    Known.One = One.trunc(BitWidth);
+  }
+  return Known;
+}
+
 KnownBits KnownBits::sextInReg(unsigned SrcBitWidth) const {
   unsigned BitWidth = getBitWidth();
   assert(0 < SrcBitWidth && SrcBitWidth <= BitWidth &&
@@ -599,6 +720,46 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
   }
 
   return KnownAbs;
+}
+
+KnownBits KnownBits::reduceAdd(unsigned NumElts) const {
+  if (NumElts == 0)
+    return KnownBits(getBitWidth());
+
+  unsigned BitWidth = getBitWidth();
+  KnownBits Result(BitWidth);
+
+  if (isConstant())
+    // If all elements are the same constant, we can simply compute it
+    return KnownBits::makeConstant(NumElts * getConstant());
+
+  // The main idea is as follows.
+  //
+  // If KnownBits for each element has L leading zeros then
+  // X_i < 2^(W - L) for every i from [1, N].
+  //
+  //   ADD X_i <= ADD max(X_i) = N * max(X_i)
+  //           <  N * 2^(W - L)
+  //           <  2^(W - L + ceil(log2(N)))
+  //
+  // As the result, we can conclude that
+  //
+  //   L' = L - ceil(log2(N))
+  //
+  // Similar logic can be applied to leading ones.
+  unsigned LostBits = Log2_32_Ceil(NumElts);
+
+  if (isNonNegative()) {
+    unsigned LeadingZeros = countMinLeadingZeros();
+    LeadingZeros = LeadingZeros > LostBits ? LeadingZeros - LostBits : 0;
+    Result.Zero.setHighBits(LeadingZeros);
+  } else if (isNegative()) {
+    unsigned LeadingOnes = countMinLeadingOnes();
+    LeadingOnes = LeadingOnes > LostBits ? LeadingOnes - LostBits : 0;
+    Result.One.setHighBits(LeadingOnes);
+  }
+
+  return Result;
 }
 
 static KnownBits computeForSatAddSub(bool Add, bool Signed,

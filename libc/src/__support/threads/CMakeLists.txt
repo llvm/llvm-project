@@ -23,31 +23,54 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
 endif()
 
-if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.mutex)
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
+  add_header_library(
+    raw_mutex
+    HDRS
+    raw_mutex.h
+    COMPILE_OPTIONS
+    ${monotonicity_flags}
+    DEPENDS
+    .${LIBC_TARGET_OS}.futex_utils
+    libc.src.__support.threads.sleep
+    libc.src.__support.time.abs_timeout
+    libc.src.__support.time.monotonicity
+    libc.src.__support.CPP.optional
+    libc.hdr.types.pid_t
+  )
+
+  add_header_library(
+    unix_mutex
+    HDRS
+    unix_mutex.h
+    DEPENDS
+    .raw_mutex
+  )
+
   add_header_library(
     mutex
     HDRS
-      mutex.h
+    mutex.h
     DEPENDS
-      .${LIBC_TARGET_OS}.mutex
+    .unix_mutex
   )
 
   add_object_library(
     fork_callbacks
     SRCS
-      fork_callbacks.cpp
+    fork_callbacks.cpp
     HDRS
-      fork_callbacks.h
+    fork_callbacks.h
     DEPENDS
-      .mutex
-      libc.src.__support.CPP.mutex
+    .mutex
+    libc.src.__support.CPP.mutex
   )
 elseif(NOT (LIBC_CONF_THREAD_MODE STREQUAL LIBC_THREAD_MODE_PLATFORM))
   add_header_library(
     mutex
-  HDRS
+    HDRS
     mutex.h
-  DEPENDS
+    DEPENDS
     .mutex_common
   )
 endif()

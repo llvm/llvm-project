@@ -36,7 +36,7 @@ constexpr bool test() {
     assert(kc(1, 2));
     assert(!kc(2, 1));
     auto vc = m.value_comp();
-    ASSERT_SAME_TYPE(decltype(vc(std::make_pair(1, 2), std::make_pair(1, 2))), bool);
+    ASSERT_SAME_TYPE(decltype(vc(std::make_pair(1, '2'), std::make_pair(1, '2'))), bool);
     assert(vc({1, '2'}, {2, '1'}));
     assert(!vc({2, '1'}, {1, '2'}));
   }

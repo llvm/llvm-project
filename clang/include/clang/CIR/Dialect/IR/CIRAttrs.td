@@ -448,6 +448,114 @@ def CIR_ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// DataMemberAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DataMemberAttr : CIR_Attr<"DataMember", "data_member", [
+  TypedAttrInterface
+]> {
+  let summary = "Holds a constant data member pointer value";
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "cir::DataMemberType">:$type,
+                        OptionalParameter<
+                            "std::optional<unsigned>">:$member_index);
+  let description = [{
+    A data member attribute is a literal attribute that represents a constant
+    pointer-to-data-member value.
+
+    The `member_index` parameter represents the index of the pointed-to member
+    within its containing record. It is an optional parameter; lack of this
+    parameter indicates a null pointer-to-data-member value.
+
+    Example:
+    ```
+    #ptr = #cir.data_member<1> : !cir.data_member<!s32i in !rec_22Point22>
+
+    #null = #cir.data_member<null> : !cir.data_member<!s32i in !rec_22Point22>
+    ```
+  }];
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type), [{
+      return $_get(type.getContext(), type, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
+                                        "unsigned":$member_index), [{
+      return $_get(type.getContext(), type, member_index);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<` ($member_index^):(`null`)? `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isNullPtr() const {
+      return !getMemberIndex().has_value();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MethodAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
+  let summary = "Holds a constant pointer-to-member-function value";
+  let description = [{
+    A method attribute is a literal attribute that represents a constant
+    pointer-to-member-function value.
+
+    If the member function is a non-virtual function, the `symbol` parameter
+    gives the global symbol for the non-virtual member function.
+
+    Virtual function handling is not yet implemented.
+
+    If `symbol` is not present, the attribute represents a null pointer
+    constant.
+
+    Examples:
+    ```
+    // Non-virtual method
+    %0 = cir.const #cir.method<@_ZN1S2m1Ei> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
+
+    // Virtual method (not yet implemented)
+    %1 = cir.const #cir.method<vtable_offset = 8> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
+
+    // Null method pointer
+    %0 = cir.const #cir.method<null> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "cir::MethodType">:$type,
+                        OptionalParameter<
+                            "std::optional<mlir::FlatSymbolRefAttr>">:$symbol);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::MethodType":$type), [{
+      return $_get(type.getContext(), type, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::MethodType":$type,
+                                        "mlir::FlatSymbolRefAttr":$symbol), [{
+      return $_get(type.getContext(), type, symbol);
+    }]>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    bool isNull() const {
+      return !getSymbol().has_value();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 

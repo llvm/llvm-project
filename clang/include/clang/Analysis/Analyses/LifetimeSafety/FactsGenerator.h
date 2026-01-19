@@ -50,7 +50,16 @@ public:
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
 
 private:
+  OriginList *getOriginsList(const ValueDecl &D);
+  OriginList *getOriginsList(const Expr &E);
+
+  void flow(OriginList *Dst, OriginList *Src, bool Kill);
+
+  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+
   void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
+
+  void handleTemporaryDtor(const CFGTemporaryDtor &TemporaryDtor);
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 
@@ -64,25 +73,17 @@ private:
 
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {
-    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
-    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
-    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-        DestOID, SrcOID, /*KillDest=*/false));
+    flow(getOriginsList(D), getOriginsList(S), /*Kill=*/false);
   }
 
   template <typename Destination, typename Source>
   void killAndFlowOrigin(const Destination &D, const Source &S) {
-    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
-    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<OriginFlowFact>(DestOID, SrcOID, /*KillDest=*/true));
+    flow(getOriginsList(D), getOriginsList(S), /*Kill=*/true);
   }
 
   /// Checks if the expression is a `void("__lifetime_test_point_...")` cast.
   /// If so, creates a `TestPointFact` and returns true.
   bool handleTestPoint(const CXXFunctionalCastExpr *FCE);
-
-  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
 
   // A DeclRefExpr will be treated as a use of the referenced decl. It will be
   // checked for use-after-free unless it is later marked as being written to
@@ -91,6 +92,7 @@ private:
 
   void markUseAsWrite(const DeclRefExpr *DRE);
 
+  llvm::SmallVector<Fact *> issuePlaceholderLoans();
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
@@ -104,6 +106,15 @@ private:
   // corresponding to the left-hand side is updated to be a "write", thereby
   // exempting it from the check.
   llvm::DenseMap<const DeclRefExpr *, UseFact *> UseFacts;
+
+  // This is a flow-insensitive approximation: once a declaration is moved
+  // anywhere in the function, it's treated as moved everywhere. This can lead
+  // to false negatives on control flow paths where the value is not actually
+  // moved, but these are considered lower priority than the false positives
+  // this tracking prevents.
+  // TODO: The ideal solution would be flow-sensitive ownership tracking that
+  // records where values are moved from and to, but this is more complex.
+  llvm::DenseSet<const ValueDecl *> MovedDecls;
 };
 
 } // namespace clang::lifetimes::internal

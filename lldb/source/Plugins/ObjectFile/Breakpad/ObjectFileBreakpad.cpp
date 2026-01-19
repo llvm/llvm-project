@@ -57,29 +57,35 @@ void ObjectFileBreakpad::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ObjectFile *ObjectFileBreakpad::CreateInstance(
-    const ModuleSP &module_sp, DataBufferSP data_sp, offset_t data_offset,
-    const FileSpec *file, offset_t file_offset, offset_t length) {
-  if (!data_sp) {
-    data_sp = MapFileData(*file, length, file_offset);
+ObjectFile *ObjectFileBreakpad::CreateInstance(const ModuleSP &module_sp,
+                                               DataExtractorSP extractor_sp,
+                                               offset_t data_offset,
+                                               const FileSpec *file,
+                                               offset_t file_offset,
+                                               offset_t length) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
     data_offset = 0;
   }
-  auto text = toStringRef(data_sp->GetData());
+  auto text = toStringRef(extractor_sp->GetSharedDataBuffer()->GetData());
   std::optional<Header> header = Header::parse(text);
   if (!header)
     return nullptr;
 
   // Update the data to contain the entire file if it doesn't already
-  if (data_sp->GetByteSize() < length) {
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
     data_offset = 0;
   }
 
-  return new ObjectFileBreakpad(module_sp, data_sp, data_offset, file,
+  return new ObjectFileBreakpad(module_sp, extractor_sp, data_offset, file,
                                 file_offset, length, std::move(header->arch),
                                 std::move(header->uuid));
 }
@@ -104,12 +110,12 @@ size_t ObjectFileBreakpad::GetModuleSpecifications(
 }
 
 ObjectFileBreakpad::ObjectFileBreakpad(const ModuleSP &module_sp,
-                                       DataBufferSP &data_sp,
+                                       DataExtractorSP extractor_sp,
                                        offset_t data_offset,
                                        const FileSpec *file, offset_t offset,
                                        offset_t length, ArchSpec arch,
                                        UUID uuid)
-    : ObjectFile(module_sp, file, offset, length, data_sp, data_offset),
+    : ObjectFile(module_sp, file, offset, length, extractor_sp, data_offset),
       m_arch(std::move(arch)), m_uuid(std::move(uuid)) {}
 
 bool ObjectFileBreakpad::ParseHeader() {

@@ -1086,15 +1086,35 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 
   // -fdefault* family
-  if (args.hasArg(clang::options::OPT_fdefault_real_8)) {
-    res.getDefaultKinds().set_defaultRealKind(8);
-    res.getDefaultKinds().set_doublePrecisionKind(16);
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_fdefault_real_8,
+                          clang::options::OPT_fdefault_real_4)) {
+    const llvm::opt::Option &opt = arg->getOption();
+    if (opt.matches(clang::options::OPT_fdefault_real_8)) {
+      res.getDefaultKinds().set_defaultRealKind(8);
+      res.getDefaultKinds().set_doublePrecisionKind(16);
+    } else if (opt.matches(clang::options::OPT_fdefault_real_4)) {
+      res.getDefaultKinds().set_defaultRealKind(4);
+      res.getDefaultKinds().set_doublePrecisionKind(8);
+    }
   }
-  if (args.hasArg(clang::options::OPT_fdefault_integer_8)) {
-    res.getDefaultKinds().set_defaultIntegerKind(8);
-    res.getDefaultKinds().set_subscriptIntegerKind(8);
-    res.getDefaultKinds().set_sizeIntegerKind(8);
-    res.getDefaultKinds().set_defaultLogicalKind(8);
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_fdefault_integer_8,
+                          clang::options::OPT_fdefault_integer_4)) {
+    const llvm::opt::Option &opt = arg->getOption();
+    if (opt.matches(clang::options::OPT_fdefault_integer_8)) {
+      res.getDefaultKinds().set_defaultIntegerKind(8);
+      res.getDefaultKinds().set_subscriptIntegerKind(8);
+      res.getDefaultKinds().set_sizeIntegerKind(8);
+      res.getDefaultKinds().set_defaultLogicalKind(8);
+    } else if (opt.matches(clang::options::OPT_fdefault_integer_4)) {
+      // Note that the subscript integer kind is set to 8 here. If a
+      // default-integer-kind is not provided, it is also set to 8.
+      res.getDefaultKinds().set_defaultIntegerKind(4);
+      res.getDefaultKinds().set_subscriptIntegerKind(8);
+      res.getDefaultKinds().set_sizeIntegerKind(4);
+      res.getDefaultKinds().set_defaultLogicalKind(4);
+    }
   }
   if (args.hasArg(clang::options::OPT_fdefault_double_8)) {
     if (!args.hasArg(clang::options::OPT_fdefault_real_8)) {
@@ -1637,6 +1657,14 @@ bool CompilerInvocation::createFromArgs(
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
   parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
   success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
+
+  // Enable USE statement preservation for debug info if debug level is above
+  // LineTablesOnly.
+  using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
+  DebugInfoKind debugLevel = invoc.getCodeGenOpts().getDebugInfo();
+  invoc.loweringOpts.setPreserveUseDebugInfo(
+      debugLevel > DebugInfoKind::DebugLineTablesOnly);
+
   success &= parseVectorLibArg(invoc.getCodeGenOpts(), args, diags);
   success &= parseSemaArgs(invoc, args, diags);
   success &= parseDialectArgs(invoc, args, diags);

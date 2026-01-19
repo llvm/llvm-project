@@ -47,6 +47,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -1308,8 +1309,10 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       Instruction *NSI;
       if (IsOneZero)
         NSI = new ZExtInst(NLI, LI->getType(), "", LI->getIterator());
-      else
+      else {
         NSI = SelectInst::Create(NLI, OtherVal, InitVal, "", LI->getIterator());
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NSI, DEBUG_TYPE);
+      }
       NSI->takeName(LI);
       // Since LI is split into two instructions, NLI and NSI both inherit the
       // same DebugLoc
@@ -2144,9 +2147,10 @@ static void setUsedInitializer(GlobalVariable &V,
 
   Module *M = V.getParent();
   V.removeFromParent();
-  GlobalVariable *NV =
-      new GlobalVariable(*M, ATy, false, GlobalValue::AppendingLinkage,
-                         ConstantArray::get(ATy, UsedArray), "");
+  GlobalVariable *NV = new GlobalVariable(
+      *M, ATy, false, GlobalValue::AppendingLinkage,
+      ConstantArray::get(ATy, UsedArray), "", nullptr,
+      GlobalVariable::NotThreadLocal, V.getType()->getAddressSpace());
   NV->takeName(&V);
   NV->setSection("llvm.metadata");
   delete &V;
@@ -2546,6 +2550,8 @@ static bool OptimizeNonTrivialIFuncs(
 
   // Map containing the feature bits for a given function.
   DenseMap<Function *, APInt> FeatureMask;
+  // Map containing the priority bits for a given function.
+  DenseMap<Function *, APInt> PriorityMask;
   // Map containing all the function versions corresponding to an IFunc symbol.
   DenseMap<GlobalIFunc *, SmallVector<Function *>> VersionedFuncs;
   // Map containing the IFunc symbol a function is version of.
@@ -2581,14 +2587,17 @@ static bool OptimizeNonTrivialIFuncs(
 
     for (Function *V : Versions) {
       VersionOf.insert({V, &IF});
-      auto [It, Inserted] = FeatureMask.try_emplace(V);
-      if (Inserted)
-        It->second = GetTTI(*V).getFeatureMask(*V);
+      auto [FeatIt, FeatInserted] = FeatureMask.try_emplace(V);
+      if (FeatInserted)
+        FeatIt->second = GetTTI(*V).getFeatureMask(*V);
+      auto [PriorIt, PriorInserted] = PriorityMask.try_emplace(V);
+      if (PriorInserted)
+        PriorIt->second = GetTTI(*V).getPriorityMask(*V);
     }
 
     // Sort function versions in decreasing priority order.
     sort(Versions, [&](auto *LHS, auto *RHS) {
-      return FeatureMask[LHS].ugt(FeatureMask[RHS]);
+      return PriorityMask[LHS].ugt(PriorityMask[RHS]);
     });
 
     IFuncs.push_back(&IF);
