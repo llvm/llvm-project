@@ -1186,15 +1186,10 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
     return Error::success();
 
   bool Matched = false;
-  // Reuse the registered parser to parse the pass name.
-#define RA_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)          \
+  // Parse any machine function pass with parameters.
+#define MACHINE_FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER,    \
+                                          PARAMS)                              \
   if (PassBuilder::checkParametrizedPassName(PassOpt, NAME)) {                 \
-    if (!MatchPassTo.empty() && MatchPassTo != CLASS) {                        \
-      return make_error<StringError>(                                          \
-          Twine("expected ") + PIC->getPassNameForClassName(MatchPassTo) +     \
-              " in option --regalloc-npm",                                     \
-          inconvertibleErrorCode());                                           \
-    }                                                                          \
     auto Params = PassBuilder::parsePassParameters(PARSER, PassOpt, NAME, PB); \
     if (!Params)                                                               \
       return Params.takeError();                                               \
@@ -1204,8 +1199,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
 #include "llvm/Passes/MachinePassRegistry.def"
 
   if (!Matched)
-    return make_error<StringError>(Twine("unknown register allocator pass: ") +
-                                       PassOpt,
+    return make_error<StringError>(Twine("unknown machine pass: ") + PassOpt,
                                    inconvertibleErrorCode());
 
   return Error::success();
