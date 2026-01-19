@@ -308,14 +308,49 @@ void ScopeReductionCheck::check(
   }
 
   if (AllUsesInSameForLoop && CommonForLoop) {
-    diag(Var->getLocation(),
-         "variable '%0' can be declared in for-loop initialization")
-        << Var->getName();
+    // Check if for-loop scope is broader than current declaration scope
+    const DynTypedNode Current = DynTypedNode::create(*Var);
+    const CompoundStmt *VarScope = nullptr;
 
-    // Skip "used here" notes for for-loops, they're too noisy
-    //
-    diag(CommonForLoop->getBeginLoc(), "can be declared in this for-loop",
-         DiagnosticIDs::Note);
+    auto ParentNodes = Parents.getParents(Current);
+    while (!ParentNodes.empty()) {
+      const Stmt *Parent = ParentNodes[0].get<Stmt>();
+      if (!Parent)
+        break;
+
+      if (const auto *CS = dyn_cast<CompoundStmt>(Parent)) {
+        VarScope = CS;
+        break;
+      }
+      ParentNodes = Parents.getParents(*Parent);
+    }
+
+    // Only report if for-loop is in a smaller scope than current declaration
+    if (VarScope) {
+      const Stmt *CheckScope = CommonForLoop;
+      bool IsSmaller = false;
+
+      while (CheckScope) {
+        if (CheckScope == VarScope) {
+          IsSmaller = true;
+          break;
+        }
+        auto CheckParents = Parents.getParents(*CheckScope);
+        if (CheckParents.empty())
+          break;
+        CheckScope = CheckParents[0].get<Stmt>();
+      }
+
+      if (IsSmaller) {
+        diag(Var->getLocation(),
+             "variable '%0' can be declared in for-loop initialization")
+            << Var->getName();
+
+        // Skip usage notes for for-loops - usage pattern is obvious
+        diag(CommonForLoop->getBeginLoc(), "can be declared in this for-loop",
+             DiagnosticIDs::Note);
+      }
+    }
   }
 }
 

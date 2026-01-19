@@ -423,3 +423,25 @@ void test_for_loop_limiting() {
     int temp = i; // Fourth use of i
   }
 }
+
+// Test case for variables within the for-loop scope. (should NOT be reported)
+void testForLoopCase() {
+  for (int i = 0; i < 10; ++i) {
+    int byte = 0;  // Declared in for-loop scope, used in smaller loop body scope
+    byte = i * 2;  // Should NOT be reported - usage scope is smaller
+    byte += 1;
+  }
+}
+
+// Test case for variables used in broader scopes (SHOULD be reported)
+void testBroaderScope() {
+  int value = 0;  // Should be reported - used in broader if-statement scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'value' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+4]]:5: note: used here
+  // CHECK-NOTES: :[[@LINE+1]]:13: note: can be declared in this scope
+  if (true) {
+    value = 42;
+    value += 1;
+  }
+}
