@@ -18,7 +18,11 @@ function (check_fortran_builtins_available)
     # CMake's check_fortran_source_compiles/try_compile does not take a
     # user-defined CMAKE_Fortran_PREPROCESS_SOURCE into account. Instead of
     # test-compiling, ask Flang directly for the builtin module files.
-    if (NOT DEFINED HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD)
+    # CMAKE_Fortran_PREPROCESS_SOURCE is defined for CMake < 3.24 because it
+    # does not natively recognize Flang (see below). Once we bump the required
+    # CMake version, and because setting CMAKE_Fortran_PREPROCESS_SOURCE has
+    # been deprecated by CMake, this workaround can be removed.
+    if (NOT DEFINED FORTRAN_HAS_ISO_C_BINDING_MOD)
       message(STATUS "Performing Test ISO_C_BINDING_PATH")
       execute_process(
         COMMAND ${CMAKE_Fortran_COMPILER} ${CMAKE_Fortran_FLAGS} "-print-file-name=iso_c_binding.mod"
@@ -26,13 +30,13 @@ function (check_fortran_builtins_available)
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
       )
-      set(HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD "")
+      set(FORTRAN_HAS_ISO_C_BINDING_MOD "")
       if (EXISTS "${ISO_C_BINDING_PATH}")
         message(STATUS "Performing Test ISO_C_BINDING_PATH -- Success")
-        set(HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD TRUE CACHE INTERNAL "Existence result of ${CMAKE_Fortran_COMPILER} -print-file-name=iso_c_binding.mod")
+        set(FORTRAN_HAS_ISO_C_BINDING_MOD TRUE CACHE INTERNAL "Existence result of ${CMAKE_Fortran_COMPILER} -print-file-name=iso_c_binding.mod")
       else ()
         message(STATUS "Performing Test ISO_C_BINDING_PATH -- Failed")
-        set(HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD FALSE CACHE INTERNAL "Existence result of ${CMAKE_Fortran_COMPILER} -print-file-name=iso_c_binding.mod")
+        set(FORTRAN_HAS_ISO_C_BINDING_MOD FALSE CACHE INTERNAL "Existence result of ${CMAKE_Fortran_COMPILER} -print-file-name=iso_c_binding.mod")
       endif ()
     endif ()
   else ()
@@ -42,10 +46,10 @@ function (check_fortran_builtins_available)
       subroutine testroutine
         use iso_c_binding
       end subroutine
-      " HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD SRC_EXT F90)
+      " FORTRAN_HAS_ISO_C_BINDING_MOD SRC_EXT F90)
     cmake_pop_check_state()
   endif ()
-  set(HAVE_FORTRAN_INTRINSIC_MODS "${HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD}" PARENT_SCOPE)
+  set(HAVE_FORTRAN_INTRINSIC_MODS "${FORTRAN_HAS_ISO_C_BINDING_MOD}" PARENT_SCOPE)
 endfunction ()
 
 
@@ -108,27 +112,27 @@ if (CMAKE_Fortran_COMPILER AND ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "open
   set(RUNTIMES_FLANG_MODULES_ENABLED_default OFF)
   check_language(Fortran)
   if (CMAKE_Fortran_COMPILER)
-      enable_language(Fortran)
+    enable_language(Fortran)
 
-      if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang" AND "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-        # In a bootstrapping build (or any runtimes-build that includes flang-rt),
-        # the intrinsic modules are not built yet. Targets can depend on
-        # flang-rt-mod to ensure that flang-rt's modules are built first.
-        set(FORTRAN_MODULE_DEPS flang-rt-mod)
+    if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang" AND "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+      # In a bootstrapping build (or any runtimes-build that includes flang-rt),
+      # the intrinsic modules are not built yet. Targets can depend on
+      # flang-rt-mod to ensure that flang-rt's modules are built first.
+      set(FORTRAN_MODULE_DEPS flang-rt-mod)
+      set(RUNTIMES_FLANG_MODULES_ENABLED_default ON)
+    else ()
+      # Check whether building modules works, avoid causing the entire build to
+      # fail because of Fortran. The primary situation we want to support here
+      # is Flang, or its intrinsic modules were built separately in a
+      # non-bootstrapping build.
+      check_fortran_builtins_available()
+      if (HAVE_FORTRAN_INTRINSIC_MODS)
         set(RUNTIMES_FLANG_MODULES_ENABLED_default ON)
+        message(STATUS "${LLVM_SUBPROJECT_TITLE}: Non-bootstrapping Fortran modules build (${CMAKE_Fortran_COMPILER_ID} located at ${CMAKE_Fortran_COMPILER})")
       else ()
-        # Check whether building modules works, avoid causing the entire build to
-        # fail because of Fortran. The primary situation we want to support here
-        # is Flang, or its intrinsic modules were built separately in a
-        # non-bootstrapping build.
-        check_fortran_builtins_available()
-        if (HAVE_FORTRAN_INTRINSIC_MODS)
-          set(RUNTIMES_FLANG_MODULES_ENABLED_default ON)
-          message(STATUS "${LLVM_SUBPROJECT_TITLE}: Non-bootstrapping Fortran modules build (${CMAKE_Fortran_COMPILER_ID} located at ${CMAKE_Fortran_COMPILER})")
-        else ()
-          message(STATUS "Not compiling Flang modules: Not passing smoke check")
-        endif ()
+        message(STATUS "Not compiling Flang modules: Not passing smoke check")
       endif ()
+    endif ()
   endif ()
 
   option(RUNTIMES_FLANG_MODULES_ENABLED "Build Fortran modules" "${RUNTIMES_FLANG_MODULES_ENABLED_default}")
@@ -200,10 +204,13 @@ function (flang_module_target tgtname)
       # Let non-public modules find the public module files
       "$<$<COMPILE_LANGUAGE:Fortran>:-fintrinsic-modules-path=${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}>"
 
-      # Flang bug workaround: Reformating of cooked token buffer causes identifier to be split between lines
+      # Flang bug workaround: Reformating of cooked token buffer causes
+      # identifier to be split between lines
       "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-Xflang;SHELL:-fno-reformat>"
     )
 
+  # `flang --target=nvptx64` fails when not specifying `-march`, even when only
+  # emitting .mod files. Ensure that we pass `-march`.
   if (LLVM_RUNTIMES_TARGET MATCHES "^nvptx")
     foreach (_arch IN LISTS RUNTIMES_DEVICE_ARCHITECTURES)
       target_compile_options(${tgtname} PRIVATE
