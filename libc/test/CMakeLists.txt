@@ -6,6 +6,19 @@ add_dependencies(check-libc libc-unit-tests libc-hermetic-tests)
 add_custom_target(exhaustive-check-libc)
 add_custom_target(libc-long-running-tests)
 
+# Build-only targets for lit (don't run tests, just build executables)
+add_custom_target(libc-unit-tests-build)
+add_custom_target(libc-hermetic-tests-build)
+
+# Configure lit test infrastructure
+# Lit depends on build-only targets so tests aren't run during build
+configure_libc_lit_site_cfg()
+add_lit_testsuite(check-libc-lit
+  "Running libc tests via lit"
+  ${LIBC_BUILD_DIR}/test
+  DEPENDS libc-unit-tests-build libc-hermetic-tests-build
+)
+
 add_subdirectory(UnitTest)
 
 if(LIBC_TARGET_OS_IS_GPU)
