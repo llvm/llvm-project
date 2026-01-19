@@ -6,7 +6,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from . import availability, compiler, gdb, libcxx_macros, localization, misc, platform
+from . import availability, compiler, debugger, libcxx_macros, localization, misc, platform
 
 # Lit features are evaluated in order. Some features depend on other features, so
 # we are careful to define them in the correct order. For example, several features
