@@ -6777,7 +6777,7 @@ Informally, we can deduce from the above formal model that execution barriers be
   * Skip the next barrier *wait* operation if they have not previously *waited*.
 
 * Barriers cannot complete "out-of-thin-air"; a barrier *wait* ``W`` cannot depend on a barrier operation
- ``X`` to complete if ``W -> X`` in *barrier-executes-before*.
+  ``X`` to complete if ``W -> X`` in *barrier-executes-before*.
 * It is undefined behavior to operate on an uninitialized barrier.
 
 Execution Barrier GFX6-11
