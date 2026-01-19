@@ -511,6 +511,10 @@ llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
                            : -1)
                    << ": [TU=" << T.TUPart << ", M=" << T.TheModule.get()
                    << " (" << T.TheModule->getName() << ")]\n");
+#ifdef __EMSCRIPTEN__
+  // Re-apply stored -mllvm options; wasm builds reset LLVM opts in wasm-ld.
+  getCompilerInstance()->parseLLVMArgs();
+#endif
   if (!IncrExecutor) {
     auto Err = CreateExecutor();
     if (Err)
