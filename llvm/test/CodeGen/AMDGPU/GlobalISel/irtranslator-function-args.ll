@@ -3021,10 +3021,9 @@ define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[BITCAST]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[COPY]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x bfloat> %arg0, ptr addrspace(1) poison
   ret void

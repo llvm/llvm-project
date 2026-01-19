@@ -738,9 +738,9 @@ public:
     GetDependencyDirectives = std::move(Getter);
   }
 
-  std::string getSpecificModuleCachePath(StringRef ModuleHash);
+  std::string getSpecificModuleCachePath(StringRef ContextHash);
   std::string getSpecificModuleCachePath() {
-    return getSpecificModuleCachePath(getInvocation().getModuleHash());
+    return getSpecificModuleCachePath(getInvocation().computeContextHash());
   }
 
   /// Create the AST context.

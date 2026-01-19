@@ -1529,7 +1529,6 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    movl $1, %eax
 ; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-SSE-NEXT:    shll %cl, %eax
-; CHECK-SSE-NEXT:    movzwl %ax, %eax
 ; CHECK-SSE-NEXT:    cvtsi2ss %eax, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
@@ -1547,7 +1546,6 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 ; CHECK-AVX2-NEXT:    movl $1, %eax
 ; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-AVX2-NEXT:    shll %cl, %eax
-; CHECK-AVX2-NEXT:    movzwl %ax, %eax
 ; CHECK-AVX2-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    callq __extendhfsf2@PLT
@@ -1563,7 +1561,6 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 ; CHECK-ONLY-AVX512F-NEXT:    movl $1, %eax
 ; CHECK-ONLY-AVX512F-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-ONLY-AVX512F-NEXT:    shll %cl, %eax
-; CHECK-ONLY-AVX512F-NEXT:    movzwl %ax, %eax
 ; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-ONLY-AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1576,7 +1573,6 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    movl $1, %eax
 ; CHECK-SKX-NEXT:    shlxl %edi, %eax, %eax
-; CHECK-SKX-NEXT:    movzwl %ax, %eax
 ; CHECK-SKX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    vcvtph2ps %xmm0, %xmm0
