@@ -1145,7 +1145,7 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
     if (SelectInst *SI = dyn_cast<SelectInst>(SelectOp)) {
       // load (select (Cond, &V1, &V2))  --> select(Cond, load &V1, load &V2).
       // or
-      // load (select (Cond, addrspacecast(&V1), addrspacecast(&V2))) -->
+      // load (addrspacecast(select (Cond, &V1, &V2))) -->
       //  select(Cond, load (addrspacecast(&V1)), load (addrspacecast(&V2))).
       Align Alignment = LI.getAlign();
       if (isSafeToLoadUnconditionally(SI->getOperand(1), LI.getType(),
