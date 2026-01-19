@@ -14,8 +14,8 @@ define void @conditional_store(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP5]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[M]], i64 0
@@ -73,7 +73,7 @@ define void @conditional_store(ptr %addr, i64 %N, i64 %M) {
 ; TF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TF:       [[VECTOR_PH]]:
 ; TF-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP3]], 2
+; TF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP3]], 1
 ; TF-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
 ; TF-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP2]]
 ; TF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
@@ -139,8 +139,8 @@ define i64 @conditional_liveout_and_store(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[M]], i64 0
@@ -211,7 +211,7 @@ define i64 @conditional_liveout_and_store(ptr %addr, i64 %N, i64 %M) {
 ; TF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TF:       [[VECTOR_PH]]:
 ; TF-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP3]], 2
+; TF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP3]], 1
 ; TF-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
 ; TF-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP2]]
 ; TF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
@@ -285,8 +285,8 @@ define i64 @conditional_liveout_both_path(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[M]], i64 0
@@ -362,7 +362,7 @@ define i64 @conditional_liveout_both_path(ptr %addr, i64 %N, i64 %M) {
 ; TF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TF:       [[VECTOR_PH]]:
 ; TF-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP3]], 2
+; TF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP3]], 1
 ; TF-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
 ; TF-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP2]]
 ; TF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]

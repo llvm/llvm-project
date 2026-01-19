@@ -7069,6 +7069,12 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         }
         continue;
       }
+      // WidenIntrinsic with vp_reduce_or is generated from control flow
+      // vectorization. The plan will generate more recipes than legacy.
+      if (auto *WidenIntrinsic = dyn_cast<VPWidenIntrinsicRecipe>(&R)) {
+        if (WidenIntrinsic->getVectorIntrinsicID() == Intrinsic::vp_reduce_or)
+          return true;
+      }
       // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
       // cost model won't cost it whilst the legacy will.
       if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {

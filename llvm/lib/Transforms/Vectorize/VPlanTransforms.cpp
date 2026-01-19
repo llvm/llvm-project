@@ -2991,6 +2991,13 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                              {ZExt, Plan->getConstantInt(Ty, 1)}, {}, {}, DL);
   }
 
+  // This enables header mask removal for control-flow vectorization.
+  if (match(&CurRecipe, m_AnyOf(m_RemoveMask(HeaderMask, Mask))))
+    return new VPWidenIntrinsicRecipe(
+        Intrinsic::vp_reduce_or,
+        {Plan->getFalse(), Mask, Plan->getTrue(), &EVL},
+        TypeInfo.inferScalarType(Mask), {}, {}, DL);
+
   return nullptr;
 }
 

@@ -1877,8 +1877,9 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   applyFlags(*V);
   applyMetadata(*V);
 
-  if (!V->getType()->isVoidTy())
-    State.set(this, V);
+  Type *ValueType = V->getType();
+  if (!ValueType->isVoidTy())
+    State.set(this, V, !ValueType->isVectorTy() && !ValueType->isStructTy());
 }
 
 /// Compute the cost for the intrinsic \p ID with \p Operands, produced by \p R.
