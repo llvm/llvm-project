@@ -1007,7 +1007,8 @@ public:
                 numRead == 0)
               goto exit_loop;
 
-            // We only care about text input. Consume all non text input events before letting ReadFile handle text input.
+            // We only care about text input. Consume all non text input events
+            // before letting ReadFile handle text input.
             if (inputRecord.EventType == KEY_EVENT &&
                 inputRecord.Event.KeyEvent.bKeyDown &&
                 inputRecord.Event.KeyEvent.uChar.AsciiChar != 0)
