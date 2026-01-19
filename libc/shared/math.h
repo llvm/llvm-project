@@ -52,5 +52,6 @@
 #include "math/ldexpf.h"
 #include "math/ldexpf128.h"
 #include "math/ldexpf16.h"
+#include "math/logbl.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H

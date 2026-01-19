@@ -2765,6 +2765,16 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_logbl",
+    hdrs = ["src/__support/math/logbl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_common",
+        ":__support_macros_config",
+    ]
+)
+
 ############################### complex targets ################################
 
 libc_function(

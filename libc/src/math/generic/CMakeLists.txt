@@ -2299,7 +2299,7 @@ add_entrypoint_object(
   HDRS
     ../logbl.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.logbl
 )
 
 add_entrypoint_object(

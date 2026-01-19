@@ -800,3 +800,12 @@ add_header_library(
     .exp10f_utils
     libc.src.__support.FPUtil.multiply_add
 )
+
+add_header_library(
+  logbl
+  HDRS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
