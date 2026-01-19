@@ -511,10 +511,8 @@ protected:
   Error addRegAllocPass(PassManagerWrapper &PMW, bool Optimized) const;
 
   /// Parse the next pass from the --regalloc-npm option and add it.
-  /// If MatchPassTo is specified, ensures the pass matches the expected class.
-  /// Returns an error if parsing fails or validation fails.
-  Error addRegAllocPassFromOpt(PassManagerWrapper &PMW,
-                               StringRef MatchPassTo = StringRef{}) const;
+  /// Returns an error if parsing fails.
+  Error addRegAllocPassFromOpt(PassManagerWrapper &PMW) const;
 
   /// Add the next pass from the --regalloc-npm option if available,
   /// otherwise add the pass created by PassBuilder.
@@ -1174,7 +1172,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassOrOpt(
 
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
-    PassManagerWrapper &PMW, StringRef MatchPassTo) const {
+    PassManagerWrapper &PMW) const {
   StringRef Pipeline = Opt.RegAllocPipeline;
   if (Pipeline.empty())
     return Error::success();
@@ -1214,11 +1212,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
     PassManagerWrapper &PMW, bool Optimized) const {
-  // At O0 (not optimized), only regallocfast is allowed
-  StringRef MatchPassTo = Optimized ? StringRef{} : "RegAllocFastPass";
-
   // Use the specified --regalloc-npm option if provided
-  if (auto Err = addRegAllocPassFromOpt(PMW, MatchPassTo))
+  if (auto Err = addRegAllocPassFromOpt(PMW))
     return std::move(Err);
 
   // If no custom pipeline was specified, use the target's default allocator
