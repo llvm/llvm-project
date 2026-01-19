@@ -427,7 +427,6 @@ public:
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
-    VPWidenSelectSC,
     VPBlendSC,
     VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.
@@ -3225,8 +3224,8 @@ public:
     assert(Red->getRecurrenceKind() == RecurKind::Add &&
            "Expected an add reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
-    [[maybe_unused]] auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
-    assert(SubConst && SubConst->getValue() == 0 &&
+    [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
+    assert(SubConst && SubConst->isZero() &&
            Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
   }
 
@@ -4631,8 +4630,12 @@ public:
   VPIRValue *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPIRValue of a null Value");
     auto [It, Inserted] = LiveIns.try_emplace(V);
-    if (Inserted)
-      It->second = new VPIRValue(V);
+    if (Inserted) {
+      if (auto *CI = dyn_cast<ConstantInt>(V))
+        It->second = new VPConstantInt(CI);
+      else
+        It->second = new VPIRValue(V);
+    }
 
     assert(isa<VPIRValue>(It->second) &&
            "Only VPIRValues should be in mapping");
