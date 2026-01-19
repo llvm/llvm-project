@@ -18,7 +18,7 @@ void conditional_initialization(int idx) {
 void branched_assignment(int idx) {
     RWStructuredBuffer<int> Out = Out0; // expected-note {{variable 'Out' is declared here}}
     if (cond) {
-        // expected-error@+1 {{assignment to local resource 'Out1' is not to same the unique global resource}}
+        // expected-error@+1 {{assignment to local resource 'Out1' is not to the same unique global resource}}
         Out = Out1;
     }
     Out[idx] = In[idx];
