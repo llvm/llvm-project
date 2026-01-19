@@ -1,4 +1,4 @@
-//===- utils.cpp - IR2Vec/MIR2Vec Embedding Generation Tool -----------===//
+//===- Utils.cpp - IR2Vec/MIR2Vec Embedding Generation Tool -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "utils.h"
+#include "Utils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/IR/BasicBlock.h"
