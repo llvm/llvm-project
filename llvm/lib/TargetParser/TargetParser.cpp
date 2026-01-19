@@ -392,18 +392,20 @@ insertWaveSizeFeature(StringRef GPU, const Triple &T,
     return {AMDGPU::INVALID_FEATURE_COMBINATION,
             "'-wavefrontsize32' and '-wavefrontsize64' are mutually exclusive"};
 
-  if (!IsNullGPU && TargetHasWave64) {
-    if (EnableWave32)
-      return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "+wavefrontsize32"};
-    if (DisableWave64)
-      return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "-wavefrontsize64"};
-  }
+  if (!IsNullGPU) {
+    if (TargetHasWave64) {
+      if (EnableWave32)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "+wavefrontsize32"};
+      if (DisableWave64)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "-wavefrontsize64"};
+    }
 
-  if (!IsNullGPU && TargetHasWave32) {
-    if (EnableWave64)
-      return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "+wavefrontsize64"};
-    if (DisableWave32)
-      return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "-wavefrontsize32"};
+    if (TargetHasWave32) {
+      if (EnableWave64)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "+wavefrontsize64"};
+      if (DisableWave32)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "-wavefrontsize32"};
+    }
   }
 
   // Don't assume any wavesize with an unknown subtarget.
