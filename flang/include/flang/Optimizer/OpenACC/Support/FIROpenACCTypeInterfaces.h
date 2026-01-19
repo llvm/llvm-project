@@ -52,6 +52,8 @@ struct OpenACCPointerLikeModel
   bool genStore(mlir::Type pointer, mlir::OpBuilder &builder,
                 mlir::Location loc, mlir::Value valueToStore,
                 mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+
+  bool isDeviceData(mlir::Type pointer, mlir::Value var) const;
 };
 
 template <typename T>
@@ -102,6 +104,8 @@ struct OpenACCMappableModel
                         mlir::ValueRange bounds,
                         mlir::acc::ReductionOperator op,
                         mlir::Attribute fastmathFlags) const;
+
+  bool isDeviceData(mlir::Type type, mlir::Value var) const;
 };
 
 } // namespace fir::acc
