@@ -24,10 +24,10 @@ private:
   void emitUsageNotes(const llvm::SmallVector<const DeclRefExpr *, 8> &Uses);
 
   template <typename Container>
-  auto take(const Container &ThisContainer, size_t n) {
+  auto take(const Container &ThisContainer, size_t Count) {
     return llvm::make_range(ThisContainer.begin(),
                             ThisContainer.begin() +
-                                std::min(n, ThisContainer.size()));
+                                std::min(Count, ThisContainer.size()));
   }
 };
 
