@@ -407,8 +407,8 @@ Parser::parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
                      "hexadecimal float constant out of range for type");
   }
 
-  APInt truncatedValue(typeSizeInBits, intValue.getNumWords(),
-                       intValue.getRawData());
+  APInt truncatedValue(typeSizeInBits,
+                       ArrayRef(intValue.getRawData(), intValue.getNumWords()));
   result.emplace(semantics, truncatedValue);
   return success();
 }
@@ -2076,10 +2076,46 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
       if (originalOpName != opName)
         diag << " (tried '" << opName << "' as well)";
       auto &note = diag.attachNote();
-      note << "Registered dialects: ";
-      llvm::interleaveComma(getContext()->getAvailableDialects(), note,
-                            [&](StringRef dialect) { note << dialect; });
-      note << " ; for more info on dialect registration see "
+      note << "Available dialects: ";
+      std::vector<StringRef> registered = getContext()->getAvailableDialects();
+      auto loaded = getContext()->getLoadedDialects();
+
+      // Merge the sorted lists of registered and loaded dialects.
+      SmallVector<std::pair<StringRef, bool>> mergedDialects;
+      auto regIt = registered.begin(), regEnd = registered.end();
+      auto loadIt = loaded.rbegin(), loadEnd = loaded.rend();
+      bool isRegistered = false;
+      bool isOnlyLoaded = true;
+      while (regIt != regEnd && loadIt != loadEnd) {
+        StringRef reg = *regIt;
+        StringRef load = (*loadIt)->getNamespace();
+        if (load < reg) {
+          mergedDialects.emplace_back(load, isOnlyLoaded);
+          ++loadIt;
+        } else {
+          mergedDialects.emplace_back(reg, isRegistered);
+          ++regIt;
+          if (reg == load)
+            ++loadIt;
+        }
+      }
+      for (; regIt != regEnd; ++regIt)
+        mergedDialects.emplace_back(*regIt, isRegistered);
+      for (; loadIt != loadEnd; ++loadIt)
+        mergedDialects.emplace_back((*loadIt)->getNamespace(), isOnlyLoaded);
+
+      bool loadedUnregistered = false;
+      llvm::interleaveComma(mergedDialects, note, [&](auto &pair) {
+        note << pair.first;
+        if (pair.second) {
+          loadedUnregistered = true;
+          note << " (*)";
+        }
+      });
+      note << " ";
+      if (loadedUnregistered)
+        note << "(* corresponding to loaded but unregistered dialects)";
+      note << "; for more info on dialect registration see "
               "https://mlir.llvm.org/getting_started/Faq/"
               "#registered-loaded-dependent-whats-up-with-dialects-management";
       return nullptr;
@@ -2095,7 +2131,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
     parseAssemblyFn = *dialectHook;
   }
   getState().defaultDialectStack.push_back(defaultDialect);
-  auto restoreDefaultDialect = llvm::make_scope_exit(
+  llvm::scope_exit restoreDefaultDialect(
       [&]() { getState().defaultDialectStack.pop_back(); });
 
   // If the custom op parser crashes, produce some indication to help
@@ -2241,7 +2277,7 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
 
   // Parse the first block directly to allow for it to be unnamed.
   auto owningBlock = std::make_unique<Block>();
-  auto failureCleanup = llvm::make_scope_exit([&] {
+  llvm::scope_exit failureCleanup([&] {
     if (owningBlock) {
       // If parsing failed, as indicated by the fact that `owningBlock` still
       // owns the block, drop all forward references from preceding operations
@@ -2346,7 +2382,7 @@ ParseResult OperationParser::parseBlock(Block *&block) {
   // only in the case of a successful parse. This ensures that the Block
   // allocated is released if the parse fails and control returns early.
   std::unique_ptr<Block> inflightBlock;
-  auto cleanupOnFailure = llvm::make_scope_exit([&] {
+  llvm::scope_exit cleanupOnFailure([&] {
     if (inflightBlock)
       inflightBlock->dropAllDefinedValueUses();
   });

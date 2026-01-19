@@ -113,19 +113,20 @@ static void reportNumberOfEntries(const TargetLibraryInfo &TLI,
 
   // Assume this gets called after initialize(), so we have the above line of
   // output as a header.  So, for example, no need to repeat the triple.
-  for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
+  for (unsigned FI = LibFunc::Begin_LibFunc; FI != LibFunc::End_LibFunc; ++FI) {
     if (TLI.has(static_cast<LibFunc>(FI)))
       ++NumAvailable;
   }
 
-  outs() << "TLI knows " << LibFunc::NumLibFuncs << " symbols, " << NumAvailable
-         << " available for '" << TargetTriple << "'\n";
+  outs() << "TLI knows " << (LibFunc::End_LibFunc - LibFunc::Begin_LibFunc)
+         << " symbols, " << NumAvailable << " available for '" << TargetTriple
+         << "'\n";
 }
 
 static void dumpTLIEntries(const TargetLibraryInfo &TLI) {
   // Assume this gets called after initialize(), so we have the above line of
   // output as a header.  So, for example, no need to repeat the triple.
-  for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
+  for (unsigned FI = LibFunc::Begin_LibFunc; FI != LibFunc::End_LibFunc; ++FI) {
     LibFunc LF = static_cast<LibFunc>(FI);
     bool IsAvailable = TLI.has(LF);
     StringRef FuncName = TargetLibraryInfo::getStandardName(LF);
@@ -153,8 +154,12 @@ void SDKNameMap::maybeInsertSymbol(const SymbolRef &S, const ObjectFile &O) {
   uint32_t Flags = unwrapIgnoreError(S.getFlags());
   section_iterator Section = unwrapIgnoreError(S.getSection(),
                                                /*Default=*/O.section_end());
-  if (Type == SymbolRef::ST_Function && (Flags & SymbolRef::SF_Global) &&
-      Section != O.section_end()) {
+  bool IsRegularFunction = Type == SymbolRef::ST_Function &&
+                           (Flags & SymbolRef::SF_Global) &&
+                           Section != O.section_end();
+  bool IsIFunc =
+      Type == SymbolRef::ST_Other && (Flags & SymbolRef::SF_Indirect);
+  if (IsRegularFunction || IsIFunc) {
     StringRef Name = unwrapIgnoreError(S.getName());
     insert({ Name, true });
   }
@@ -312,7 +317,8 @@ int main(int argc, char *argv[]) {
     unsigned TLIandSDKboth = 0;
     unsigned TLIandSDKneither = 0;
 
-    for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
+    for (unsigned FI = LibFunc::Begin_LibFunc; FI != LibFunc::End_LibFunc;
+         ++FI) {
       LibFunc LF = static_cast<LibFunc>(FI);
 
       StringRef TLIName = TLI.getStandardName(LF);
@@ -340,7 +346,7 @@ int main(int argc, char *argv[]) {
 
     assert(TLIandSDKboth + TLIandSDKneither + TLIdoesSDKdoesnt +
                TLIdoesntSDKdoes ==
-           LibFunc::NumLibFuncs);
+           LibFunc::End_LibFunc - LibFunc::Begin_LibFunc);
     (void) TLIandSDKneither;
     outs() << "<< Total TLI yes SDK no:  " << TLIdoesSDKdoesnt
            << "\n>> Total TLI no  SDK yes: " << TLIdoesntSDKdoes

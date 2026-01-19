@@ -40,8 +40,6 @@ define i32 @main(i1 %arg.1, i64 %arg.2, i1 %arg.3, i64 %arg.4, i1 %arg.5, <vscal
 ; CHECK-NEXT:    li t0, 12
 ; CHECK-NEXT:    li s0, 4
 ; CHECK-NEXT:    li t1, 20
-; CHECK-NEXT:    ld a1, 112(sp)
-; CHECK-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    andi t3, a4, 1
@@ -142,7 +140,7 @@ define i32 @main(i1 %arg.1, i64 %arg.2, i1 %arg.3, i64 %arg.4, i1 %arg.5, <vscal
 ; CHECK-NEXT:    j .LBB0_11
 ; CHECK-NEXT:  .LBB0_12: # %for.body7.us.19
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; CHECK-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a0, 112(sp)
 ; CHECK-NEXT:    vmv.s.x v16, a0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma

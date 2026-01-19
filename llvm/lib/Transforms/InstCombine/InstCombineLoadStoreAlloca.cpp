@@ -107,8 +107,8 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
         // a load (but one that potentially returns the value itself), so we can
         // ignore it if we know that the value isn't captured.
         bool NoCapture = Call->doesNotCapture(DataOpNo);
-        if ((Call->onlyReadsMemory() && (Call->use_empty() || NoCapture)) ||
-            (Call->onlyReadsMemory(DataOpNo) && NoCapture))
+        if (NoCapture &&
+            (Call->onlyReadsMemory() || Call->onlyReadsMemory(DataOpNo)))
           continue;
       }
 
@@ -296,10 +296,9 @@ bool PointerReplacer::collectUsers() {
       /// TODO: Handle poison and null pointers for PHI and select.
       // If all incoming values are available, mark this PHI as
       // replacable and push it's users into the worklist.
-      bool IsReplaceable = true;
-      if (all_of(PHI->incoming_values(), [&](Value *V) {
-            if (!isa<Instruction>(V))
-              return IsReplaceable = false;
+      bool IsReplaceable = all_of(PHI->incoming_values(),
+                                  [](Value *V) { return isa<Instruction>(V); });
+      if (IsReplaceable && all_of(PHI->incoming_values(), [&](Value *V) {
             return isAvailable(cast<Instruction>(V));
           })) {
         UsersToReplace.insert(PHI);
@@ -338,8 +337,18 @@ bool PointerReplacer::collectUsers() {
       if (!TryPushInstOperand(TrueInst) || !TryPushInstOperand(FalseInst))
         return false;
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-      UsersToReplace.insert(GEP);
-      PushUsersToWorklist(GEP);
+      auto *PtrOp = dyn_cast<Instruction>(GEP->getPointerOperand());
+      if (!PtrOp)
+        return false;
+      if (isAvailable(PtrOp)) {
+        UsersToReplace.insert(GEP);
+        PushUsersToWorklist(GEP);
+        continue;
+      }
+
+      Worklist.emplace_back(GEP);
+      if (!TryPushInstOperand(PtrOp))
+        return false;
     } else if (auto *MI = dyn_cast<MemTransferInst>(Inst)) {
       if (MI->isVolatile())
         return false;

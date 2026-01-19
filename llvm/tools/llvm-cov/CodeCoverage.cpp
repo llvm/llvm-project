@@ -770,6 +770,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::desc("Show region statistics in summary table"),
       cl::init(true));
 
+  cl::opt<bool> FunctionSummary(
+      "show-function-summary", cl::Optional,
+      cl::desc("Show function statistics in summary table"), cl::init(true));
+
   cl::opt<bool> BranchSummary(
       "show-branch-summary", cl::Optional,
       cl::desc("Show branch condition statistics in summary table"),
@@ -962,6 +966,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ShowMCDCSummary = MCDCSummary;
     ViewOpts.ShowBranchSummary = BranchSummary;
     ViewOpts.ShowRegionSummary = RegionSummary;
+    ViewOpts.ShowFunctionSummary = FunctionSummary;
     ViewOpts.ShowInstantiationSummary = InstantiationSummary;
     ViewOpts.ExportSummaryOnly = SummaryOnly;
     ViewOpts.NumThreads = NumThreads;

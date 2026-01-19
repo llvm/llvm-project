@@ -1,7 +1,7 @@
 # REQUIRES: loongarch
 ## Test that we can handle --emit-relocs while relaxing.
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=+relax %s -o %t.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=+32s,+relax %s -o %t.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax --defsym ELF64=1 %s -o %t.64.o
 # RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs %t.32.o -o %t.32
 # RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs %t.64.o -o %t.64

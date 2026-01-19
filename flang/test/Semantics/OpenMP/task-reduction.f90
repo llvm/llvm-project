@@ -22,7 +22,7 @@ subroutine f02(p)
 end
 
 subroutine f03
-  common /c/ a, b 
+  common /c/ a, b
 !ERROR: Common block names are not allowed in TASK_REDUCTION clause
 !$omp taskgroup task_reduction(+: /c/)
 !$omp end taskgroup
@@ -47,6 +47,7 @@ subroutine f06
     integer :: a(10)
   end type
   type(t) :: x
+!ERROR: A variable that is part of another variable cannot appear on the TASK_REDUCTION clause
 !ERROR: The base expression of an array element or section in TASK_REDUCTION clause must be an identifier
 !$omp taskgroup task_reduction(+: x%a(2))
 !$omp end taskgroup
@@ -57,6 +58,7 @@ subroutine f07
     integer :: a(10)
   end type
   type(t) :: x
+!ERROR: A variable that is part of another variable cannot appear on the TASK_REDUCTION clause
 !ERROR: The base expression of an array element or section in TASK_REDUCTION clause must be an identifier
 !$omp taskgroup task_reduction(+: x%a(1:10))
 !$omp end taskgroup

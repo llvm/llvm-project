@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // NetBSD does not support LC_NUMERIC at the moment
 // XFAIL: netbsd
 
@@ -69,7 +66,7 @@ int main(int, char**)
         // The below tests work around GLIBC's use of U202F as LC_NUMERIC thousands_sep.
         std::locale l(LOCALE_fr_FR_UTF_8);
         {
-#if defined(_CS_GNU_LIBC_VERSION) || defined(_WIN32) || defined(_AIX)
+#if defined(_CS_GNU_LIBC_VERSION) || defined(_WIN32) || defined(_AIX) || defined(__APPLE__)
             const char sep = ' ';
 #else
             const char sep = ',';

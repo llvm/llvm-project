@@ -376,8 +376,6 @@ void SplitEditor::reset(LiveRangeEdit &LRE, ComplementSpillMode SM) {
   if (SpillMode)
     LICalc[1].reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
                     &LIS.getVNInfoAllocator());
-
-  Edit->anyRematerializable();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -533,6 +531,7 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(
               | getInternalReadRegState(!FirstCopy), SubIdx)
       .addReg(FromReg, 0, SubIdx);
 
+  CopyMI->setFlag(MachineInstr::LRSplit);
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
   if (FirstCopy) {
     Def = Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
@@ -552,6 +551,7 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
     // The full vreg is copied.
     MachineInstr *CopyMI =
         BuildMI(MBB, InsertBefore, DebugLoc(), Desc, ToReg).addReg(FromReg);
+    CopyMI->setFlag(MachineInstr::LRSplit);
     return Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
   }
 
@@ -638,7 +638,7 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
     LiveRangeEdit::Remat RM(ParentVNI);
     RM.OrigMI = LIS.getInstructionFromIndex(OrigVNI->def);
     if (RM.OrigMI && TII.isAsCheapAsAMove(*RM.OrigMI) &&
-        Edit->canRematerializeAt(RM, OrigVNI, UseIdx)) {
+        Edit->canRematerializeAt(RM, UseIdx)) {
       if (!rematWillIncreaseRestriction(RM.OrigMI, MBB, UseIdx)) {
         SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
         ++NumRemats;
@@ -1511,10 +1511,9 @@ void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {
   }
 
   // Trace value through phis.
-  SmallPtrSet<const VNInfo *, 8> Visited; ///< whether VNI was/is in worklist.
-  SmallVector<const VNInfo *, 4> WorkList;
-  Visited.insert(&ParentVNI);
-  WorkList.push_back(&ParentVNI);
+  ///< whether VNI was/is in worklist.
+  SmallPtrSet<const VNInfo *, 8> Visited = {&ParentVNI};
+  SmallVector<const VNInfo *, 4> WorkList = {&ParentVNI};
 
   const LiveInterval &ParentLI = Edit->getParent();
   const SlotIndexes &Indexes = *LIS.getSlotIndexes();

@@ -24,19 +24,19 @@ target triple = "bpf"
 %struct.net_device = type opaque
 
 ; Function Attrs: nounwind
-define dso_local i32 @bpf_prog(ptr) local_unnamed_addr #0 !dbg !15 {
+define dso_local i32 @bpf_prog(ptr) local_unnamed_addr !dbg !15 {
   %2 = alloca ptr, align 8
   call void @llvm.dbg.value(metadata ptr %0, metadata !26, metadata !DIExpression()), !dbg !28
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %2) #4, !dbg !29
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %2), !dbg !29
   call void @llvm.dbg.value(metadata ptr null, metadata !27, metadata !DIExpression()), !dbg !28
   store ptr null, ptr %2, align 8, !dbg !30, !tbaa !31
   %3 = tail call ptr @llvm.preserve.struct.access.index.p0.net_devices.p0.sk_buffs(ptr elementtype(%struct.sk_buff) %0, i32 1, i32 1), !dbg !35, !llvm.preserve.access.index !19
-  %4 = call i32 inttoptr (i64 4 to ptr)(ptr nonnull %2, i32 8, ptr %3) #4, !dbg !36
+  %4 = call i32 inttoptr (i64 4 to ptr)(ptr nonnull %2, i32 8, ptr %3), !dbg !36
   %5 = load ptr, ptr %2, align 8, !dbg !37, !tbaa !31
   call void @llvm.dbg.value(metadata ptr %5, metadata !27, metadata !DIExpression()), !dbg !28
   %6 = icmp ne ptr %5, null, !dbg !38
   %7 = zext i1 %6 to i32, !dbg !38
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %2) #4, !dbg !39
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %2), !dbg !39
   ret i32 %7, !dbg !40
 }
 
@@ -122,22 +122,16 @@ define dso_local i32 @bpf_prog(ptr) local_unnamed_addr #0 !dbg !15 {
 ; CHECK-NEXT:        .long   0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.net_devices.p0.sk_buffs(ptr, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.struct.access.index.p0.net_devices.p0.sk_buffs(ptr, i32 immarg, i32 immarg)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #3
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind }
-attributes #2 = { nounwind readnone }
-attributes #3 = { nounwind readnone speculatable }
-attributes #4 = { nounwind }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !12, !13}

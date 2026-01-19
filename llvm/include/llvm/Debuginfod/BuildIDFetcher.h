@@ -24,7 +24,7 @@ class DebuginfodFetcher : public object::BuildIDFetcher {
 public:
   DebuginfodFetcher(std::vector<std::string> DebugFileDirectories)
       : BuildIDFetcher(std::move(DebugFileDirectories)) {}
-  virtual ~DebuginfodFetcher() = default;
+  ~DebuginfodFetcher() override = default;
 
   /// Fetches the given Build ID using debuginfod and returns a local path to
   /// the resulting file.

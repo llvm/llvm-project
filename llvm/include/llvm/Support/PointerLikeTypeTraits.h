@@ -51,7 +51,7 @@ template <typename T> struct PointerLikeTypeTraits<T *> {
   static inline void *getAsVoidPointer(T *P) { return P; }
   static inline T *getFromVoidPointer(void *P) { return static_cast<T *>(P); }
 
-  static constexpr int NumLowBitsAvailable = CTLog2<alignof(T)>();
+  static constexpr int NumLowBitsAvailable = ConstantLog2<alignof(T)>();
 };
 
 template <> struct PointerLikeTypeTraits<void *> {
@@ -70,7 +70,7 @@ template <> struct PointerLikeTypeTraits<void *> {
 
 // Provide PointerLikeTypeTraits for const things.
 template <typename T> struct PointerLikeTypeTraits<const T> {
-  typedef PointerLikeTypeTraits<T> NonConst;
+  using NonConst = PointerLikeTypeTraits<T>;
 
   static inline const void *getAsVoidPointer(const T P) {
     return NonConst::getAsVoidPointer(P);
@@ -83,7 +83,7 @@ template <typename T> struct PointerLikeTypeTraits<const T> {
 
 // Provide PointerLikeTypeTraits for const pointers.
 template <typename T> struct PointerLikeTypeTraits<const T *> {
-  typedef PointerLikeTypeTraits<T *> NonConst;
+  using NonConst = PointerLikeTypeTraits<T *>;
 
   static inline const void *getAsVoidPointer(const T *P) {
     return NonConst::getAsVoidPointer(const_cast<T *>(P));
@@ -116,7 +116,7 @@ template <> struct PointerLikeTypeTraits<uintptr_t> {
 /// potentially use alignment attributes on functions to satisfy that.
 template <int Alignment, typename FunctionPointerT>
 struct FunctionPointerLikeTypeTraits {
-  static constexpr int NumLowBitsAvailable = CTLog2<Alignment>();
+  static constexpr int NumLowBitsAvailable = ConstantLog2<Alignment>();
   static inline void *getAsVoidPointer(FunctionPointerT P) {
     assert((reinterpret_cast<uintptr_t>(P) &
             ~((uintptr_t)-1 << NumLowBitsAvailable)) == 0 &&

@@ -18,9 +18,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include <map>
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace llvm {

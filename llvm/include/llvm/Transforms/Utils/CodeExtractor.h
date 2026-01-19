@@ -171,9 +171,9 @@ public:
     ///
     /// \param CEAC - Cache to speed up operations for the CodeExtractor when
     /// hoisting, and extracting lifetime values and assumes.
-    /// \param Inputs [out] - filled with  values marked as inputs to the
+    /// \param Inputs [in/out] - filled with  values marked as inputs to the
     /// newly outlined function.
-     /// \param Outputs [out] - filled with values marked as outputs to the
+    /// \param Outputs [out] - filled with values marked as outputs to the
     /// newly outlined function.
     /// \returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.

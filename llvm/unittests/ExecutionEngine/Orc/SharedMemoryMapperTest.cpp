@@ -8,6 +8,7 @@
 
 #include "OrcTestCommon.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
+#include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
@@ -22,7 +23,7 @@ using namespace llvm::orc::rt_bootstrap;
 #if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
 
 // A basic function to be used as both initializer/deinitializer
-CWrapperFunctionResult incrementWrapper(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer incrementWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr A) -> Error {
@@ -67,12 +68,16 @@ TEST(SharedMemoryMapperTest, MemReserveInitializeDeinitializeRelease) {
 
     auto PageSize = Mapper->getPageSize();
     size_t ReqSize = PageSize;
+    jitlink::LinkGraph G("G", std::make_shared<SymbolStringPool>(),
+                         Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+                         jitlink::getGenericEdgeKindName);
 
     Mapper->reserve(ReqSize, [&](Expected<ExecutorAddrRange> Result) {
       EXPECT_THAT_ERROR(Result.takeError(), Succeeded());
       auto Reservation = std::move(*Result);
       {
-        char *Addr = Mapper->prepare(Reservation.Start, TestString.size() + 1);
+        char *Addr =
+            Mapper->prepare(G, Reservation.Start, TestString.size() + 1);
         std::strcpy(Addr, TestString.c_str());
       }
       MemoryMapper::AllocInfo AI;

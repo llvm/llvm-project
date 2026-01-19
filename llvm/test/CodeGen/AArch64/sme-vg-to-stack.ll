@@ -23,7 +23,7 @@ define void @vg_unwind_simple() #0 {
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset vg, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
 ; CHECK-NEXT:    .cfi_offset w29, -32
@@ -66,7 +66,7 @@ define void @vg_unwind_simple() #0 {
 ; FP-CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; FP-CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; FP-CHECK-NEXT:    str x9, [sp, #80] // 8-byte Spill
 ; FP-CHECK-NEXT:    add x29, sp, #64
 ; FP-CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; FP-CHECK-NEXT:    .cfi_offset vg, -16
@@ -141,7 +141,7 @@ define void @vg_unwind_needs_gap() #0 {
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x20, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x20, [sp, #88] // 8-byte Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -192,7 +192,7 @@ define void @vg_unwind_needs_gap() #0 {
 ; FP-CHECK-NEXT:    smstart sm
 ; FP-CHECK-NEXT:    .cfi_def_cfa wsp, 96
 ; FP-CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; FP-CHECK-NEXT:    ldr x20, [sp, #88] // 8-byte Folded Reload
+; FP-CHECK-NEXT:    ldr x20, [sp, #88] // 8-byte Reload
 ; FP-CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; FP-CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; FP-CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -231,7 +231,7 @@ define void @vg_unwind_with_fixed_args(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    str x9, [sp, #96] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset vg, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
 ; CHECK-NEXT:    .cfi_offset w29, -32
@@ -243,9 +243,9 @@ define void @vg_unwind_with_fixed_args(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    .cfi_offset b13, -80
 ; CHECK-NEXT:    .cfi_offset b14, -88
 ; CHECK-NEXT:    .cfi_offset b15, -96
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    bl fixed_callee
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldp x29, x30, [sp, #80] // 16-byte Folded Reload
@@ -278,7 +278,7 @@ define void @vg_unwind_with_fixed_args(<4 x i32> %x) #0 {
 ; FP-CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp x29, x30, [sp, #80] // 16-byte Folded Spill
-; FP-CHECK-NEXT:    str x9, [sp, #96] // 8-byte Folded Spill
+; FP-CHECK-NEXT:    str x9, [sp, #96] // 8-byte Spill
 ; FP-CHECK-NEXT:    add x29, sp, #80
 ; FP-CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; FP-CHECK-NEXT:    .cfi_offset vg, -16
@@ -292,9 +292,9 @@ define void @vg_unwind_with_fixed_args(<4 x i32> %x) #0 {
 ; FP-CHECK-NEXT:    .cfi_offset b13, -80
 ; FP-CHECK-NEXT:    .cfi_offset b14, -88
 ; FP-CHECK-NEXT:    .cfi_offset b15, -96
-; FP-CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; FP-CHECK-NEXT:    smstop sm
-; FP-CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; FP-CHECK-NEXT:    bl fixed_callee
 ; FP-CHECK-NEXT:    smstart sm
 ; FP-CHECK-NEXT:    .cfi_def_cfa wsp, 112
@@ -332,7 +332,7 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x9, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK-NEXT:    .cfi_offset w27, -8
@@ -341,26 +341,26 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; CHECK-NEXT:    .cfi_offset w30, -40
 ; CHECK-NEXT:    .cfi_offset w29, -48
 ; CHECK-NEXT:    addvl sp, sp, #-18
-; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
-; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
 ; CHECK-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
-; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
 ; CHECK-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
-; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
 ; CHECK-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
-; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0c, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d8 @ cfa - 8 * IncomingVG - 48
@@ -376,6 +376,12 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB3_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    brk #0x1
+; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    ldr z0, [x29, #-19, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl scalable_callee
 ; CHECK-NEXT:    smstart sm
@@ -390,18 +396,18 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; CHECK-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
 ; CHECK-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; CHECK-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    .cfi_restore z8
 ; CHECK-NEXT:    .cfi_restore z9
@@ -428,7 +434,7 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; FP-CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; FP-CHECK-NEXT:    cntd x9
 ; FP-CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; FP-CHECK-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; FP-CHECK-NEXT:    str x9, [sp, #16] // 8-byte Spill
 ; FP-CHECK-NEXT:    mov x29, sp
 ; FP-CHECK-NEXT:    .cfi_def_cfa w29, 48
 ; FP-CHECK-NEXT:    .cfi_offset w27, -8
@@ -437,26 +443,26 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; FP-CHECK-NEXT:    .cfi_offset w30, -40
 ; FP-CHECK-NEXT:    .cfi_offset w29, -48
 ; FP-CHECK-NEXT:    addvl sp, sp, #-18
-; FP-CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
+; FP-CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
 ; FP-CHECK-NEXT:    ptrue pn8.b
-; FP-CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
+; FP-CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
 ; FP-CHECK-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
 ; FP-CHECK-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
-; FP-CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
+; FP-CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
 ; FP-CHECK-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
 ; FP-CHECK-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
-; FP-CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
+; FP-CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
 ; FP-CHECK-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
 ; FP-CHECK-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; FP-CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
+; FP-CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
 ; FP-CHECK-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
-; FP-CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; FP-CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; FP-CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; FP-CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; FP-CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; FP-CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; FP-CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; FP-CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; FP-CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0c, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d8 @ cfa - 8 * IncomingVG - 48
@@ -472,6 +478,12 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; FP-CHECK-NEXT:    //APP
 ; FP-CHECK-NEXT:    //NO_APP
 ; FP-CHECK-NEXT:    smstop sm
+; FP-CHECK-NEXT:    rdvl x8, #1
+; FP-CHECK-NEXT:    addsvl x8, x8, #-1
+; FP-CHECK-NEXT:    cbz x8, .LBB3_2
+; FP-CHECK-NEXT:  // %bb.1:
+; FP-CHECK-NEXT:    brk #0x1
+; FP-CHECK-NEXT:  .LBB3_2:
 ; FP-CHECK-NEXT:    ldr z0, [x29, #-19, mul vl] // 16-byte Folded Reload
 ; FP-CHECK-NEXT:    bl scalable_callee
 ; FP-CHECK-NEXT:    smstart sm
@@ -486,18 +498,18 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; FP-CHECK-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
 ; FP-CHECK-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; FP-CHECK-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; FP-CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; FP-CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; FP-CHECK-NEXT:    addvl sp, sp, #18
 ; FP-CHECK-NEXT:    .cfi_restore z8
 ; FP-CHECK-NEXT:    .cfi_restore z9
@@ -570,7 +582,7 @@ define void @vg_unwind_multiple_scratch_regs(ptr %out) #1 {
 ; CHECK-NEXT:    add sp, sp, #80, lsl #12 // =327680
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x28, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #88] // 8-byte Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -630,7 +642,7 @@ define void @vg_unwind_multiple_scratch_regs(ptr %out) #1 {
 ; FP-CHECK-NEXT:    add sp, sp, #80, lsl #12 // =327680
 ; FP-CHECK-NEXT:    .cfi_def_cfa wsp, 96
 ; FP-CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; FP-CHECK-NEXT:    ldr x28, [sp, #88] // 8-byte Folded Reload
+; FP-CHECK-NEXT:    ldr x28, [sp, #88] // 8-byte Reload
 ; FP-CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; FP-CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; FP-CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -670,7 +682,7 @@ define void @vg_locally_streaming_fn() #3 {
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset vg, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
 ; CHECK-NEXT:    .cfi_offset w29, -32
@@ -715,7 +727,7 @@ define void @vg_locally_streaming_fn() #3 {
 ; FP-CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; FP-CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; FP-CHECK-NEXT:    str x9, [sp, #80] // 8-byte Spill
 ; FP-CHECK-NEXT:    add x29, sp, #64
 ; FP-CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; FP-CHECK-NEXT:    .cfi_offset vg, -16
@@ -797,7 +809,7 @@ define void @streaming_compatible_to_streaming() #4 {
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB6_4:
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -853,7 +865,7 @@ define void @streaming_compatible_to_streaming() #4 {
 ; FP-CHECK-NEXT:  .LBB6_4:
 ; FP-CHECK-NEXT:    .cfi_def_cfa wsp, 96
 ; FP-CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; FP-CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; FP-CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Reload
 ; FP-CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; FP-CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; FP-CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -914,7 +926,7 @@ define void @streaming_compatible_to_non_streaming() #4 {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB7_4:
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -970,7 +982,7 @@ define void @streaming_compatible_to_non_streaming() #4 {
 ; FP-CHECK-NEXT:  .LBB7_4:
 ; FP-CHECK-NEXT:    .cfi_def_cfa wsp, 96
 ; FP-CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; FP-CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; FP-CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Reload
 ; FP-CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; FP-CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; FP-CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -1041,7 +1053,7 @@ define void @streaming_compatible_no_sve(i32 noundef %x) #4 {
 ; NO-SVE-CHECK-NEXT:  .LBB8_4:
 ; NO-SVE-CHECK-NEXT:    .cfi_def_cfa wsp, 96
 ; NO-SVE-CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; NO-SVE-CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Reload
 ; NO-SVE-CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; NO-SVE-CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; NO-SVE-CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -1118,7 +1130,7 @@ define void @vg_unwind_noasync() #5 {
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset vg, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
 ; CHECK-NEXT:    .cfi_offset w29, -32
@@ -1161,7 +1173,7 @@ define void @vg_unwind_noasync() #5 {
 ; FP-CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; FP-CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; FP-CHECK-NEXT:    str x9, [sp, #80] // 8-byte Spill
 ; FP-CHECK-NEXT:    add x29, sp, #64
 ; FP-CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; FP-CHECK-NEXT:    .cfi_offset vg, -16

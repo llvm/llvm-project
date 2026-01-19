@@ -12,6 +12,7 @@
 
 // The content of this file is x86_64-only
 #if defined(__x86_64__)
+.att_syntax
 
 // Save all GRPS except %rsp.
 // This value is also subtracted from %rsp below, despite the fact that %rbp

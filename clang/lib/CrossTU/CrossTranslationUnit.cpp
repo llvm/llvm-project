@@ -16,6 +16,7 @@
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CrossTU/CrossTUDiagnostic.h"
+#include "clang/Driver/CreateASTUnitFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -23,6 +24,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLParser.h"
@@ -200,10 +202,10 @@ parseCrossTUIndex(StringRef IndexPath) {
     SmallString<32> FilePath(FilePathInIndex);
     llvm::sys::path::native(FilePath, llvm::sys::path::Style::posix);
 
-    bool InsertionOccured;
-    std::tie(std::ignore, InsertionOccured) =
+    bool InsertionOccurred;
+    std::tie(std::ignore, InsertionOccurred) =
         Result.try_emplace(LookupName, FilePath.begin(), FilePath.end());
-    if (!InsertionOccured)
+    if (!InsertionOccurred)
       return llvm::make_error<IndexError>(
           index_error_code::multiple_definitions, IndexPath.str(), LineNo);
 
@@ -252,9 +254,9 @@ CrossTranslationUnitContext::CrossTranslationUnitContext(CompilerInstance &CI)
 CrossTranslationUnitContext::~CrossTranslationUnitContext() {}
 
 std::optional<std::string>
-CrossTranslationUnitContext::getLookupName(const NamedDecl *ND) {
+CrossTranslationUnitContext::getLookupName(const Decl *D) {
   SmallString<128> DeclUSR;
-  bool Ret = index::generateUSRForDecl(ND, DeclUSR);
+  bool Ret = index::generateUSRForDecl(D, DeclUSR);
   if (Ret)
     return {};
   return std::string(DeclUSR);
@@ -577,8 +579,8 @@ CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
       DiagnosticIDs::create(), *DiagOpts, DiagClient);
   return ASTUnit::LoadFromASTFile(
       ASTDumpPath, CI.getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadEverything, DiagOpts, Diags, CI.getFileSystemOpts(),
-      CI.getHeaderSearchOpts());
+      ASTUnit::LoadEverything, CI.getVirtualFileSystemPtr(), DiagOpts, Diags,
+      CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
 }
 
 /// Load the AST from a source-file, which is supposed to be located inside the
@@ -619,7 +621,9 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagID, *DiagOpts,
                                                             DiagClient);
 
-  return ASTUnit::LoadFromCommandLine(
+  // This runs the driver which isn't expected to be free of sandbox violations.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+  return CreateASTUnitFromCommandLine(
       CommandLineArgs.begin(), (CommandLineArgs.end()),
       CI.getPCHContainerOperations(), DiagOpts, Diags,
       CI.getHeaderSearchOpts().ResourceDir);
@@ -709,7 +713,7 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
     return llvm::make_error<IndexError>(PreviousParsingResult);
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileContent =
-      llvm::MemoryBuffer::getFile(InvocationListFilePath);
+      CI.getVirtualFileSystem().getBufferForFile(InvocationListFilePath);
   if (!FileContent) {
     PreviousParsingResult = index_error_code::invocation_list_file_not_found;
     return llvm::make_error<IndexError>(PreviousParsingResult);

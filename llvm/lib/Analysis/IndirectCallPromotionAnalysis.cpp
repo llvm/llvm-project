@@ -22,6 +22,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "pgo-icall-prom-analysis"
 
+namespace llvm {
+
 // The percent threshold for the direct-call target (this call site vs the
 // remaining call count) for it to be considered as the promotion target.
 static cl::opt<unsigned> ICPRemainingPercentThreshold(
@@ -53,6 +55,8 @@ static cl::opt<unsigned>
 cl::opt<unsigned> MaxNumVTableAnnotations(
     "icp-max-num-vtables", cl::init(6), cl::Hidden,
     cl::desc("Max number of vtables annotated for a vtable load instruction."));
+
+} // end namespace llvm
 
 bool ICallPromotionAnalysis::isPromotionProfitable(uint64_t Count,
                                                    uint64_t TotalCount,
@@ -89,9 +93,14 @@ uint32_t ICallPromotionAnalysis::getProfitablePromotionCandidates(
 
 MutableArrayRef<InstrProfValueData>
 ICallPromotionAnalysis::getPromotionCandidatesForInstruction(
-    const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates) {
+    const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates,
+    unsigned MaxNumValueData) {
+  // Use the max of the values specified by -icp-max-prom and the provided
+  // MaxNumValueData parameter.
+  if (MaxNumPromotions > MaxNumValueData)
+    MaxNumValueData = MaxNumPromotions;
   ValueDataArray = getValueProfDataFromInst(*I, IPVK_IndirectCallTarget,
-                                            MaxNumPromotions, TotalCount);
+                                            MaxNumValueData, TotalCount);
   if (ValueDataArray.empty()) {
     NumCandidates = 0;
     return MutableArrayRef<InstrProfValueData>();

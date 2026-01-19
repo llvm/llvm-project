@@ -1,4 +1,4 @@
-//===--- UseStdFormatCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -50,7 +50,7 @@ void UseStdFormatCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(argumentCountAtLeast(1),
                hasArgument(0, stringLiteral(isOrdinary())),
-               callee(functionDecl(matchers::matchesAnyListedName(
+               callee(functionDecl(matchers::matchesAnyListedRegexName(
                                        StrFormatLikeFunctions))
                           .bind("func_decl")))
           .bind("strformat"),

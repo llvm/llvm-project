@@ -57,10 +57,10 @@ void LLVMDialect::registerAttributes() {
 //===----------------------------------------------------------------------===//
 
 /// Checks whether the given type is an LLVM type that can be loaded or stored.
-static bool isValidLoadStoreImpl(Type type, ptr::AtomicOrdering ordering,
-                                 std::optional<int64_t> alignment,
-                                 const ::mlir::DataLayout *dataLayout,
-                                 function_ref<InFlightDiagnostic()> emitError) {
+bool LLVM::detail::isValidLoadStoreImpl(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) {
   if (!isLoadableType(type)) {
     if (emitError)
       emitError() << "type must be LLVM type with size, but got " << type;
@@ -87,14 +87,16 @@ bool AddressSpaceAttr::isValidLoad(
     Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
     const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return isValidLoadStoreImpl(type, ordering, alignment, dataLayout, emitError);
+  return detail::isValidLoadStoreImpl(type, ordering, alignment, dataLayout,
+                                      emitError);
 }
 
 bool AddressSpaceAttr::isValidStore(
     Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
     const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return isValidLoadStoreImpl(type, ordering, alignment, dataLayout, emitError);
+  return detail::isValidLoadStoreImpl(type, ordering, alignment, dataLayout,
+                                      emitError);
 }
 
 bool AddressSpaceAttr::isValidAtomicOp(
@@ -217,11 +219,16 @@ bool TBAANodeAttr::classof(Attribute attr) {
 MemoryEffectsAttr MemoryEffectsAttr::get(MLIRContext *context,
                                          ArrayRef<ModRefInfo> memInfoArgs) {
   if (memInfoArgs.empty())
-    return MemoryEffectsAttr::get(context, ModRefInfo::ModRef,
-                                  ModRefInfo::ModRef, ModRefInfo::ModRef);
-  if (memInfoArgs.size() == 3)
+    return MemoryEffectsAttr::get(context, /*other=*/ModRefInfo::ModRef,
+                                  /*argMem=*/ModRefInfo::ModRef,
+                                  /*inaccessibleMem=*/ModRefInfo::ModRef,
+                                  /*errnoMem=*/ModRefInfo::ModRef,
+                                  /*targetMem0=*/ModRefInfo::ModRef,
+                                  /*targetMem1=*/ModRefInfo::ModRef);
+  if (memInfoArgs.size() == 6)
     return MemoryEffectsAttr::get(context, memInfoArgs[0], memInfoArgs[1],
-                                  memInfoArgs[2]);
+                                  memInfoArgs[2], memInfoArgs[3],
+                                  memInfoArgs[4], memInfoArgs[5]);
   return {};
 }
 
@@ -231,6 +238,12 @@ bool MemoryEffectsAttr::isReadWrite() {
   if (this->getInaccessibleMem() != ModRefInfo::ModRef)
     return false;
   if (this->getOther() != ModRefInfo::ModRef)
+    return false;
+  if (this->getErrnoMem() != ModRefInfo::ModRef)
+    return false;
+  if (this->getTargetMem0() != ModRefInfo::ModRef)
+    return false;
+  if (this->getTargetMem1() != ModRefInfo::ModRef)
     return false;
   return true;
 }

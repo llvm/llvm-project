@@ -14,6 +14,9 @@ constexpr int *Global = new int(12); // both-error {{must be initialized by a co
 static_assert(*(new int(12)) == 12); // both-error {{not an integral constant expression}} \
                                      // both-note {{allocation performed here was not deallocated}}
 
+static_assert((delete[] (new int[3] + 1), true)); // both-error {{not an integral constant expression}} \
+                                                  // both-note {{delete of pointer to subobject '&{*new int[3]#0}[1]'}}
+
 
 constexpr int a() {
   new int(12); // both-note {{allocation performed here was not deallocated}}
@@ -523,7 +526,6 @@ namespace DeleteRunsDtors {
   static_assert(abc2() == 1);
 }
 
-/// FIXME: There is a slight difference in diagnostics here.
 namespace FaultyDtorCalledByDelete {
   struct InnerFoo {
     int *mem;
@@ -764,7 +766,7 @@ namespace Limits {
     return n;
   }
   static_assert(dynarray<char>(5, 0) == 'f');
-
+  static_assert(dynarray<char>(5, 4) == 0);
 
 #if __LP64__
   template <typename T>
@@ -1090,6 +1092,41 @@ namespace NewNegSizeNothrow {
 
   static_assert(test_nothrow_neg_size(), "expected nullptr");
 } // namespace NewNegSizeNothrow
+
+#if __SIZEOF_SIZE_T == 8
+/// We can't allocate the array here as it is too big.
+/// Make sure we're not crashing by assuming an non-null
+/// Descriptor.
+namespace HugeAllocation {
+  void *p;
+  void foo ()
+  {
+    p = new char [256][256][256][256][256];
+  }
+}
+#endif
+
+namespace ZeroSizeArray {
+  constexpr int foo() {
+    int *A = new int[0];
+    int diff = A - (&A[0]);
+    delete[] A;
+    return diff;
+  }
+  static_assert(foo() == 0);
+}
+
+namespace NonLiteralType {
+  /// This used to crash.
+  constexpr void foo() {
+    struct O {};
+
+    struct S {
+      O *s;
+      constexpr S() : s{std::allocator<O>{}.allocate(1)} {}
+    };
+  }
+}
 
 #else
 /// Make sure we reject this prior to C++20

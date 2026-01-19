@@ -87,7 +87,7 @@ class MxPseudoReg<string N, list<Register> SUBREGS = [], list<SubRegIndex> SUBID
     : MxReg<N, 0, SUBREGS, SUBIDX>;
 
 def CCR : MxPseudoReg<"ccr">;
-def SR  : MxPseudoReg<"sr">;
+def SR  : MxPseudoReg<"sr", [CCR], [MxSubRegIndex8Lo]>;
 
 def PC  : MxPseudoReg<"pc">;
 

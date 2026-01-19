@@ -20,6 +20,10 @@ cl::opt<bool>
 EmitJalrReloc("mips-jalr-reloc", cl::Hidden,
               cl::desc("MIPS: Emit R_{MICRO}MIPS_JALR relocation with jalr"),
               cl::init(true));
+cl::opt<bool>
+    NoZeroDivCheck("mno-check-zero-division", cl::Hidden,
+                   cl::desc("MIPS: Don't trap on integer division by zero."),
+                   cl::init(false));
 
 namespace {
 static const MCPhysReg O32IntRegs[4] = {Mips::A0, Mips::A1, Mips::A2, Mips::A3};
@@ -57,17 +61,16 @@ unsigned MipsABIInfo::GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const {
   llvm_unreachable("Unhandled ABI");
 }
 
-MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef CPU,
-                                          const MCTargetOptions &Options) {
-  if (Options.getABIName().starts_with("o32"))
+MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef ABIName) {
+  if (ABIName.starts_with("o32"))
     return MipsABIInfo::O32();
-  if (Options.getABIName().starts_with("n32"))
+  if (ABIName.starts_with("n32"))
     return MipsABIInfo::N32();
-  if (Options.getABIName().starts_with("n64"))
+  if (ABIName.starts_with("n64"))
     return MipsABIInfo::N64();
   if (TT.isABIN32())
     return MipsABIInfo::N32();
-  assert(Options.getABIName().empty() && "Unknown ABI option for MIPS");
+  assert(ABIName.empty() && "Unknown ABI option for MIPS");
 
   if (TT.isMIPS64())
     return MipsABIInfo::N64();

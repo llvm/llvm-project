@@ -8,4 +8,8 @@
 
 # REQUIRES: has-clang-tidy
 
-# RUN: %{python} %{libcxx-dir}/../clang-tools-extra/clang-tidy/tool/run-clang-tidy.py -clang-tidy-binary %{clang-tidy} -warnings-as-errors "*" -source-filter=".*libcxx/src.*" -quiet -p %{bin-dir}/..
+# RUN: %{python} %{libcxx-dir}/../clang-tools-extra/clang-tidy/tool/run-clang-tidy.py   \
+# RUN:      -clang-tidy-binary %{clang-tidy}                                            \
+# RUN:      -warnings-as-errors "*"                                                     \
+# RUN:      -source-filter=".*libcxx/src.*"                                             \
+# RUN:      -quiet -p %{bin-dir}/..

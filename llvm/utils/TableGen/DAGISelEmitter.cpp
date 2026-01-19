@@ -13,7 +13,7 @@
 #include "Common/CodeGenDAGPatterns.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenTarget.h"
-#include "Common/DAGISelMatcher.h"
+#include "DAGISelMatcher.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
@@ -51,7 +51,7 @@ static unsigned getResultPatternCost(const TreePatternNode &P,
   const Record *Op = P.getOperator();
   if (Op->isSubClassOf("Instruction")) {
     Cost++;
-    CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(Op);
+    const CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(Op);
     if (II.usesCustomInserter)
       Cost += 10;
   }

@@ -62,7 +62,7 @@ add_integration_test(
     libc.src.pthread.pthread_rwlockattr_destroy
     libc.src.pthread.pthread_rwlockattr_setpshared
     libc.src.pthread.pthread_rwlockattr_setkind_np
-    libc.src.__support.threads.linux.raw_mutex
+    libc.src.__support.threads.raw_mutex
     libc.src.stdio.printf
     libc.src.stdlib.getenv
     libc.src.sys.mman.mmap

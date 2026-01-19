@@ -85,6 +85,8 @@ extern uint32_t __bolt_instr_num_ind_targets;
 extern uint32_t __bolt_instr_num_funcs;
 // Time to sleep across dumps (when we write the fdata profile to disk)
 extern uint32_t __bolt_instr_sleep_time;
+// Max size of bump allocator
+extern uint32_t __bolt_instr_max_size;
 // Do not clear counters across dumps, rewrite file with the updated values
 extern bool __bolt_instr_no_counters_clear;
 // Wait until all forks of instrumented process will finish
@@ -214,7 +216,7 @@ private:
 /// __bolt_instr_setup, our initialization routine.
 BumpPtrAllocator *GlobalAlloc;
 
-// Base address which we substract from recorded PC values when searching for
+// Base address which we subtract from recorded PC values when searching for
 // indirect call description entries. Needed because indCall descriptions are
 // mapped read-only and contain static addresses. Initialized in
 // __bolt_instr_setup.
@@ -261,7 +263,7 @@ struct SimpleHashTableEntryBase {
     // Currently we have to do it the ugly way because
     // we want every message to be printed atomically via a single call to
     // __write. If we use reportNumber() and others nultiple times, we'll get
-    // garbage in mulithreaded environment
+    // garbage in multithreaded environment
     char Buf[BufSize];
     char *Ptr = Buf;
     Ptr = intToStr(Ptr, __getpid(), 10);
@@ -1551,14 +1553,14 @@ __bolt_instr_data_dump(int FD, const char *LibPath = nullptr,
   ret = __ftruncate(FD, 0);
   assert(ret == 0, "Failed to ftruncate!");
   BumpPtrAllocator HashAlloc;
-  HashAlloc.setMaxSize(0x6400000);
+  HashAlloc.setMaxSize(__bolt_instr_max_size);
   ProfileWriterContext Ctx = readDescriptions(LibContents, LibSize);
   Ctx.CallFlowTable = new (HashAlloc, 0) CallFlowHashTable(HashAlloc);
 
   DEBUG(printStats(Ctx));
 
   BumpPtrAllocator Alloc;
-  Alloc.setMaxSize(0x6400000);
+  Alloc.setMaxSize(__bolt_instr_max_size);
   const uint8_t *FuncDesc = Ctx.FuncDescriptions;
   for (int I = 0, E = __bolt_instr_num_funcs; I < E; ++I) {
     FuncDesc = writeFunctionProfile(FD, Ctx, FuncDesc, Alloc);
@@ -1585,7 +1587,7 @@ __bolt_instr_data_dump(int FD, const char *LibPath = nullptr,
 /// at user-specified intervals
 void watchProcess() {
   timespec ts, rem;
-  uint64_t Ellapsed = 0ull;
+  uint64_t Elapsed = 0ull;
   int FD = openProfile();
   uint64_t ppid;
   if (__bolt_instr_wait_forks) {
@@ -1615,10 +1617,10 @@ void watchProcess() {
       break;
     }
 
-    if (++Ellapsed < __bolt_instr_sleep_time)
+    if (++Elapsed < __bolt_instr_sleep_time)
       continue;
 
-    Ellapsed = 0;
+    Elapsed = 0;
     __bolt_instr_data_dump(FD);
     if (__bolt_instr_no_counters_clear == false)
       __bolt_instr_clear_counters();
@@ -1662,8 +1664,9 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
          "__bolt_instr_setup: failed to mmap page for metadata!");
 
   GlobalAlloc = new (GlobalMetadataStorage) BumpPtrAllocator;
-  // Conservatively reserve 100MiB
-  GlobalAlloc->setMaxSize(0x6400000);
+  // The max memory size can be set by -instrumentation-max-size, the default
+  // is 100MiB.
+  GlobalAlloc->setMaxSize(__bolt_instr_max_size);
   GlobalAlloc->setShared(Shared);
   GlobalWriteProfileMutex = new (*GlobalAlloc, 0) Mutex();
   if (__bolt_instr_num_ind_calls > 0)
