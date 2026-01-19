@@ -768,8 +768,6 @@ define void @fadd_v2f16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ldr s1, [x1]
-; CHECK-NEXT:    // kill: def $d0 killed $s0
-; CHECK-NEXT:    // kill: def $d1 killed $s1
 ; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret

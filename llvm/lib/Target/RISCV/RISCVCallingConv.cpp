@@ -246,7 +246,7 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
   if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
     // At least one half can be passed via register.
     State.addLoc(CCValAssign::getReg(VA1.getValNo(), VA1.getValVT(), Reg,
-                                     VA1.getValVT(), CCValAssign::Full));
+                                     VA1.getLocVT(), CCValAssign::Full));
   } else {
     // Both halves must be passed on the stack, with proper alignment.
     // TODO: To be compatible with GCC's behaviors, we force them to have 4-byte
@@ -257,22 +257,22 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
     State.addLoc(
         CCValAssign::getMem(VA1.getValNo(), VA1.getValVT(),
                             State.AllocateStack(XLenInBytes, StackAlign),
-                            VA1.getValVT(), CCValAssign::Full));
+                            VA1.getLocVT(), CCValAssign::Full));
     State.addLoc(CCValAssign::getMem(
         ValNo2, ValVT2, State.AllocateStack(XLenInBytes, Align(XLenInBytes)),
-        ValVT2, CCValAssign::Full));
+        LocVT2, CCValAssign::Full));
     return false;
   }
 
   if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
     // The second half can also be passed via register.
     State.addLoc(
-        CCValAssign::getReg(ValNo2, ValVT2, Reg, ValVT2, CCValAssign::Full));
+        CCValAssign::getReg(ValNo2, ValVT2, Reg, LocVT2, CCValAssign::Full));
   } else {
     // The second half is passed via the stack, without additional alignment.
     State.addLoc(CCValAssign::getMem(
         ValNo2, ValVT2, State.AllocateStack(XLenInBytes, Align(XLenInBytes)),
-        ValVT2, CCValAssign::Full));
+        LocVT2, CCValAssign::Full));
   }
 
   return false;
@@ -511,26 +511,11 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     return false;
   }
 
-  // Split arguments might be passed indirectly, so keep track of the pending
-  // values. Split vectors are passed via a mix of registers and indirectly, so
-  // treat them as we would any other argument.
-  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
-      (ArgFlags.isSplit() || !PendingLocs.empty())) {
-    LocVT = XLenVT;
-    LocInfo = CCValAssign::Indirect;
-    PendingLocs.push_back(
-        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
-    PendingArgFlags.push_back(ArgFlags);
-    if (!ArgFlags.isSplitEnd()) {
-      return false;
-    }
-  }
-
   // If the split argument only had two elements, it should be passed directly
   // in registers or on the stack.
   if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
-      ArgFlags.isSplitEnd() && PendingLocs.size() <= 2) {
-    assert(PendingLocs.size() == 2 && "Unexpected PendingLocs.size()");
+      ArgFlags.isSplitEnd() && PendingLocs.size() <= 1) {
+    assert(PendingLocs.size() == 1 && "Unexpected PendingLocs.size()");
     // Apply the normal calling convention rules to the first half of the
     // split argument.
     CCValAssign VA = PendingLocs[0];
@@ -540,6 +525,20 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     return CC_RISCVAssign2XLen(
         XLen, State, VA, AF, ValNo, ValVT, LocVT, ArgFlags,
         ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E);
+  }
+
+  // Split arguments might be passed indirectly, so keep track of the pending
+  // values. Split vectors excluding P extension packed vectors(see
+  // isPExtPackedType) are passed via a mix of registers and indirectly, so
+  // treat them as we would any other argument.
+  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
+      (ArgFlags.isSplit() || !PendingLocs.empty())) {
+    PendingLocs.push_back(
+        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+    PendingArgFlags.push_back(ArgFlags);
+    if (!ArgFlags.isSplitEnd()) {
+      return false;
+    }
   }
 
   // Allocate to a register if possible, or else a stack slot.
@@ -564,8 +563,6 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     } else {
       // For return values, the vector must be passed fully via registers or
       // via the stack.
-      // FIXME: The proposed vector ABI only mandates v8-v15 for return values,
-      // but we're using all of them.
       if (IsRet)
         return true;
       // Try using a GPR to pass the address
@@ -597,10 +594,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     for (auto &It : PendingLocs) {
       if (Reg)
-        It.convertToReg(Reg);
+        State.addLoc(CCValAssign::getReg(It.getValNo(), It.getValVT(), Reg,
+                                         XLenVT, CCValAssign::Indirect));
       else
-        It.convertToMem(StackOffset);
-      State.addLoc(It);
+        State.addLoc(CCValAssign::getMem(It.getValNo(), It.getValVT(),
+                                         StackOffset, XLenVT,
+                                         CCValAssign::Indirect));
     }
     PendingLocs.clear();
     PendingArgFlags.clear();
