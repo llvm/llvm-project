@@ -2525,6 +2525,9 @@ public:
                             const Expr *UnsafeArg = nullptr) override {
     unsigned DiagID = diag::warn_unsafe_buffer_libc_call;
     if (PrintfInfo & 0x8) {
+      // The callee is a function with the format attribute. See the
+      // documentation of PrintfInfo in UnsafeBufferUsageHandler, and
+      // UnsafeLibcFunctionCallGadget::UnsafeKind.
       DiagID = diag::warn_unsafe_buffer_format_attr_call;
       PrintfInfo ^= 0x8;
     }
