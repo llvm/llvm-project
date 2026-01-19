@@ -221,6 +221,7 @@ class IRInterpreterTestCase(TestBase):
 
         for expression in expressions:
             interp_expression = expression
+            # Calling a function forces the expression to be executed with JIT.
             jit_expression = func_call + "; " + expression
 
             interp_result = self.frame().EvaluateExpression(
