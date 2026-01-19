@@ -98,7 +98,7 @@ public:
 };
 
 // Some libc declares the math functions to be `noexcept`.
-#if _LIBCPP_GLIBC_PREREQ(2, 8) || defined(__LLVM_LIBC__)
+#if _LIBCPP_GLIBC_PREREQ(2, 8) || _LIBCPP_LIBC_LLVM_LIBC
 #  define _LIBCPP_LGAMMA_R_NOEXCEPT _NOEXCEPT
 #else
 #  define _LIBCPP_LGAMMA_R_NOEXCEPT

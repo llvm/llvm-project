@@ -1076,8 +1076,12 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 
     // Add template parameters to a class, structure or union types.
     if (Tag == dwarf::DW_TAG_class_type ||
-        Tag == dwarf::DW_TAG_structure_type || Tag == dwarf::DW_TAG_union_type)
-      addTemplateParams(Buffer, CTy->getTemplateParams());
+        Tag == dwarf::DW_TAG_structure_type ||
+        Tag == dwarf::DW_TAG_union_type) {
+      if (!(DD->useSplitDwarf() && !getCU().getSkeleton()) ||
+          CTy->isNameSimplified())
+        addTemplateParams(Buffer, CTy->getTemplateParams());
+    }
 
     // Add elements to structure type.
     DINodeArray Elements = CTy->getElements();
@@ -1420,7 +1424,8 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
   }
 
   // Add function template parameters.
-  addTemplateParams(SPDie, SP->getTemplateParams());
+  if (!Minimal || SP->isNameSimplified())
+    addTemplateParams(SPDie, SP->getTemplateParams());
 
   // Add the linkage name if we have one and it isn't in the Decl.
   StringRef LinkageName = SP->getLinkageName();

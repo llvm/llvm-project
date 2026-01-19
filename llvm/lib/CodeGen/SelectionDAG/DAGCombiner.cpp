@@ -4996,7 +4996,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
 
 /// Return true if divmod libcall is available.
 static bool isDivRemLibcallAvailable(SDNode *Node, bool isSigned,
-                                     const TargetLowering &TLI) {
+                                     const SelectionDAG &DAG) {
   RTLIB::Libcall LC;
   EVT NodeType = Node->getValueType(0);
   if (!NodeType.isSimple())
@@ -5010,7 +5010,7 @@ static bool isDivRemLibcallAvailable(SDNode *Node, bool isSigned,
   case MVT::i128: LC= isSigned ? RTLIB::SDIVREM_I128:RTLIB::UDIVREM_I128; break;
   }
 
-  return TLI.getLibcallImpl(LC) != RTLIB::Unsupported;
+  return DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported;
 }
 
 /// Issue divrem if both quotient and remainder are needed.
@@ -5033,7 +5033,7 @@ SDValue DAGCombiner::useDivRem(SDNode *Node) {
   // If DIVREM is going to get expanded into a libcall,
   // but there is no libcall available, then don't combine.
   if (!TLI.isOperationLegalOrCustom(DivRemOpc, VT) &&
-      !isDivRemLibcallAvailable(Node, isSigned, TLI))
+      !isDivRemLibcallAvailable(Node, isSigned, DAG))
     return SDValue();
 
   // If div is legal, it's better to do the normal expansion
@@ -6216,24 +6216,34 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (SDValue RMINMAX = reassociateOps(Opcode, DL, N0, N1, N->getFlags()))
     return RMINMAX;
 
-  // Is sign bits are zero, flip between UMIN/UMAX and SMIN/SMAX.
+  // If both operands are known to have the same sign (both non-negative or both
+  // negative), flip between UMIN/UMAX and SMIN/SMAX.
   // Only do this if:
   // 1. The current op isn't legal and the flipped is.
   // 2. The saturation pattern is broken by canonicalization in InstCombine.
   bool IsOpIllegal = !TLI.isOperationLegal(Opcode, VT);
   bool IsSatBroken = Opcode == ISD::UMIN && N0.getOpcode() == ISD::SMAX;
-  if ((IsSatBroken || IsOpIllegal) && (N0.isUndef() || DAG.SignBitIsZero(N0)) &&
-      (N1.isUndef() || DAG.SignBitIsZero(N1))) {
-    unsigned AltOpcode;
-    switch (Opcode) {
-    case ISD::SMIN: AltOpcode = ISD::UMIN; break;
-    case ISD::SMAX: AltOpcode = ISD::UMAX; break;
-    case ISD::UMIN: AltOpcode = ISD::SMIN; break;
-    case ISD::UMAX: AltOpcode = ISD::SMAX; break;
-    default: llvm_unreachable("Unknown MINMAX opcode");
+
+  if (IsSatBroken || IsOpIllegal) {
+    auto HasKnownSameSign = [&](SDValue A, SDValue B) {
+      if (A.isUndef() || B.isUndef())
+        return true;
+
+      KnownBits KA = DAG.computeKnownBits(A);
+      if (!KA.isNonNegative() && !KA.isNegative())
+        return false;
+
+      KnownBits KB = DAG.computeKnownBits(B);
+      if (KA.isNonNegative())
+        return KB.isNonNegative();
+      return KB.isNegative();
+    };
+
+    if (HasKnownSameSign(N0, N1)) {
+      unsigned AltOpcode = ISD::getOppositeSignednessMinMaxOpcode(Opcode);
+      if ((IsSatBroken && IsOpIllegal) || TLI.isOperationLegal(AltOpcode, VT))
+        return DAG.getNode(AltOpcode, DL, VT, N0, N1);
     }
-    if ((IsSatBroken && IsOpIllegal) || TLI.isOperationLegal(AltOpcode, VT))
-      return DAG.getNode(AltOpcode, DL, VT, N0, N1);
   }
 
   if (Opcode == ISD::SMIN || Opcode == ISD::SMAX)
