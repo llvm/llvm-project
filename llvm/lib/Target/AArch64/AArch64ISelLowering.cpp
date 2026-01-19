@@ -6279,6 +6279,11 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                        DAG.getTargetConstant(PrfOp, DL, MVT::i32), Addr,
                        Metadata);
   }
+  case Intrinsic::aarch64_prefetch_ir:
+    return DAG.getNode(AArch64ISD::PREFETCH, DL, MVT::Other,
+                       Op.getOperand(0),                        // Chain
+                       DAG.getTargetConstant(24, DL, MVT::i32), // Rt
+                       Op.getOperand(2));                       // Addr
   case Intrinsic::aarch64_sme_str:
   case Intrinsic::aarch64_sme_ldr: {
     return LowerSMELdrStr(Op, DAG, IntNo == Intrinsic::aarch64_sme_ldr);
