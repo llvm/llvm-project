@@ -79,6 +79,7 @@ static_library("CodeGen") {
     "IndirectBrExpandPass.cpp",
     "InitUndef.cpp",
     "InlineSpiller.cpp",
+    "InsertCodePrefetch.cpp",
     "InterferenceCache.cpp",
     "InterleavedAccessPass.cpp",
     "InterleavedLoadCombinePass.cpp",

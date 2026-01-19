@@ -200,6 +200,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SRL:
   case ISD::ROTL:
   case ISD::ROTR:
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
     R = ScalarizeVecRes_BinOp(N);
     break;
 
@@ -1271,7 +1274,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_SHUFFLE:
     SplitVecRes_VECTOR_SHUFFLE(cast<ShuffleVectorSDNode>(N), Lo, Hi);
     break;
-  case ISD::VECTOR_SPLICE:
+  case ISD::VECTOR_SPLICE_LEFT:
+  case ISD::VECTOR_SPLICE_RIGHT:
     SplitVecRes_VECTOR_SPLICE(N, Lo, Hi);
     break;
   case ISD::VECTOR_DEINTERLEAVE:
@@ -1385,6 +1389,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ADD: case ISD::VP_ADD:
   case ISD::SUB: case ISD::VP_SUB:
   case ISD::MUL: case ISD::VP_MUL:
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
   case ISD::MULHS:
   case ISD::MULHU:
   case ISD::ABDS:
@@ -4946,6 +4953,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SHL: case ISD::VP_SHL:
   case ISD::SRA: case ISD::VP_SRA:
   case ISD::SRL: case ISD::VP_SRL:
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::VP_FMINNUM:
@@ -7200,6 +7210,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
     Res = WidenVecOp_VP_CttzElements(N);
     break;
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Res = WidenVecOp_VECTOR_FIND_LAST_ACTIVE(N);
+    break;
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -8123,6 +8136,26 @@ SDValue DAGTypeLegalizer::WidenVecOp_VP_CttzElements(SDNode *N) {
 
   return DAG.getNode(N->getOpcode(), DL, N->getValueType(0),
                      {Source, Mask, N->getOperand(2)}, N->getFlags());
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Mask = N->getOperand(0);
+  EVT OrigMaskVT = Mask.getValueType();
+  SDValue WideMask = GetWidenedVector(Mask);
+  EVT WideMaskVT = WideMask.getValueType();
+
+  // Pad the mask with zeros to ensure inactive lanes don't affect the result.
+  unsigned OrigElts = OrigMaskVT.getVectorNumElements();
+  unsigned WideElts = WideMaskVT.getVectorNumElements();
+  if (OrigElts != WideElts) {
+    SDValue ZeroMask = DAG.getConstant(0, DL, WideMaskVT);
+    WideMask = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideMaskVT, ZeroMask,
+                           Mask, DAG.getVectorIdxConstant(0, DL));
+  }
+
+  return DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, DL, N->getValueType(0),
+                     WideMask);
 }
 
 //===----------------------------------------------------------------------===//

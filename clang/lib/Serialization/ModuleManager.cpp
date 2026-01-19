@@ -176,7 +176,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
 
   if (NewModule->Kind == MK_ImplicitModule)
     NewModule->InputFilesValidationTimestamp =
-        ModCache->getModuleTimestamp(NewModule->FileName);
+        ModCache.getModuleTimestamp(NewModule->FileName);
 
   // Load the contents of the module
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
@@ -330,7 +330,7 @@ void ModuleManager::moduleFileAccepted(ModuleFile *MF) {
 ModuleManager::ModuleManager(FileManager &FileMgr, ModuleCache &ModCache,
                              const PCHContainerReader &PCHContainerRdr,
                              const HeaderSearch &HeaderSearchInfo)
-    : FileMgr(FileMgr), ModCache(&ModCache), PCHContainerRdr(PCHContainerRdr),
+    : FileMgr(FileMgr), ModCache(ModCache), PCHContainerRdr(PCHContainerRdr),
       HeaderSearchInfo(HeaderSearchInfo) {}
 
 void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,

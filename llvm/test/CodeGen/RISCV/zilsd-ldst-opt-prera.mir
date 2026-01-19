@@ -238,6 +238,19 @@
   define i32 @symbolic_operands_interleave() {
     ret i32 0
   }
+
+  declare void @external(ptr)
+  define i32 @frame_index() {
+    %arr = alloca [2 x i32], align 4
+    %arrayidx1 = getelementptr inbounds nuw i8, ptr %arr, i32 4
+    ret i32 0
+  }
+
+  define i32 @frame_index_operands_interleave() {
+    %arr = alloca [2 x i32], align 4
+    %arrayidx1 = getelementptr inbounds nuw i8, ptr %arr, i32 4
+    ret i32 0
+  }
 ---
 # Basic case: two consecutive 32-bit loads that can be combined into LD
 name: basic_load_combine
@@ -1235,6 +1248,88 @@ body: |
     %3:gpr = LW %0, 4 :: (load (s32))
     %4:gpr = LW %0, 0 :: (load (s32))
     %5:gpr = LW %0, target-flags(riscv-lo) @global_var + 4 :: (load (s32))
+    %6:gpr = ADD %2, %4
+    %7:gpr = ADD %3, %5
+    PseudoRET
+
+...
+---
+name: frame_index
+alignment: 4
+tracksRegLiveness: true
+stack:
+  - { id: 0, offset: 0, size: 8, alignment: 4 }
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+  - { reg: '$x11', virtual-reg: '%1' }
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: frame_index
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: SW [[COPY]], %stack.0, 0 :: (store (s32) into %ir.arr)
+    ; CHECK-NEXT: SW [[COPY1]], %stack.0, 4 :: (store (s32) into %ir.arrayidx1)
+    ; CHECK-NEXT: PseudoRET
+    ;
+    ; CHECK-4BYTE-LABEL: name: frame_index
+    ; CHECK-4BYTE: liveins: $x10, $x11
+    ; CHECK-4BYTE-NEXT: {{  $}}
+    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-4BYTE-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-4BYTE-NEXT: PseudoSD_RV32_OPT [[COPY]], [[COPY1]], %stack.0, 0 :: (store (s32) into %ir.arr), (store (s32) into %ir.arrayidx1)
+    ; CHECK-4BYTE-NEXT: PseudoRET
+    %0:gpr = COPY $x10
+    %1:gpr = COPY $x11
+    SW %0:gpr, %stack.0, 0 :: (store (s32) into %ir.arr)
+    SW %1:gpr, %stack.0, 4 :: (store (s32) into %ir.arrayidx1)
+    PseudoRET
+...
+---
+name: frame_index_operands_interleave
+alignment: 4
+tracksRegLiveness: true
+stack:
+  - { id: 0, offset: 0, size: 8, alignment: 4 }
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+  - { reg: '$x11', virtual-reg: '%1' }
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: frame_index_operands_interleave
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW %stack.0, 0 :: (load (s32) from %ir.arr)
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
+    ; CHECK-NEXT: [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
+    ; CHECK-NEXT: [[LW3:%[0-9]+]]:gpr = LW %stack.0, 4 :: (load (s32) from %ir.arrayidx1)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW2]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[LW1]], [[LW3]]
+    ; CHECK-NEXT: PseudoRET
+    ;
+    ; CHECK-4BYTE-LABEL: name: frame_index_operands_interleave
+    ; CHECK-4BYTE: liveins: $x10, $x11
+    ; CHECK-4BYTE-NEXT: {{  $}}
+    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-4BYTE-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT %stack.0, 0 :: (load (s32) from %ir.arr), (load (s32) from %ir.arrayidx1)
+    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT2:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT3:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 0 :: (load (s32))
+    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT]], [[PseudoLD_RV32_OPT2]]
+    ; CHECK-4BYTE-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT3]], [[PseudoLD_RV32_OPT1]]
+    ; CHECK-4BYTE-NEXT: PseudoRET
+    %0:gpr = COPY $x10
+    %1:gpr = COPY $x11
+    %2:gpr = LW %stack.0, 0 :: (load (s32) from %ir.arr)
+    %3:gpr = LW %0, 4 :: (load (s32))
+    %4:gpr = LW %0, 0 :: (load (s32))
+    %5:gpr = LW %stack.0, 4 :: (load (s32) from %ir.arrayidx1)
     %6:gpr = ADD %2, %4
     %7:gpr = ADD %3, %5
     PseudoRET

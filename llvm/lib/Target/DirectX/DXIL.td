@@ -218,6 +218,7 @@ defset list<DXILOpClass> OpClasses = {
   def waveAllOp : DXILOpClass;
   def waveAllTrue : DXILOpClass;
   def waveAnyTrue : DXILOpClass;
+  def waveBallot : DXILOpClass;
   def waveGetLaneCount : DXILOpClass;
   def waveGetLaneIndex : DXILOpClass;
   def waveIsFirstLane : DXILOpClass;
@@ -1068,6 +1069,14 @@ def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let result = OverloadTy;
   let overloads = [Overloads<
       DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def WaveActiveBallot : DXILOp<118, waveBallot> {
+  let Doc = "returns uint4 containing a bitmask of the evaluation of the boolean expression for all active lanes in the current wave.";
+  let intrinsics = [IntrinSelect<int_dx_wave_ballot>];
+  let arguments = [Int1Ty];
+  let result = OverloadTy;
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 

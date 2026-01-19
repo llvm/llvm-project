@@ -27,7 +27,7 @@ std::string toString(FormatterBytecode::OpCodes op) {
     return s ? s : #NAME;                                                      \
   }
 #include "FormatterBytecode.def"
-#undef DEFINE_SIGNATURE
+#undef DEFINE_OPCODE
   }
   return llvm::utostr(op);
 }
@@ -38,7 +38,7 @@ std::string toString(FormatterBytecode::Selectors sel) {
   case ID:                                                                     \
     return "@" #NAME;
 #include "FormatterBytecode.def"
-#undef DEFINE_SIGNATURE
+#undef DEFINE_SELECTOR
   }
   return "@" + llvm::utostr(sel);
 }

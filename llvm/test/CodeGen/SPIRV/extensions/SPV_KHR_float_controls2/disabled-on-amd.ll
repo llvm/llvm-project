@@ -14,10 +14,10 @@
 ; CHECK: SPV_KHR_float_controls2
 ; CHECK-AMD-NOT: SPV_KHR_float_controls2
 
-define spir_kernel void @foo(float %a, float %b, float addrspace(1)* %out) {
+define spir_kernel void @foo(float %a, float %b, ptr addrspace(1) %out) {
 entry:
   ; Use contract to trigger a use of SPV_KHR_float_controls2
   %r1 = fadd contract float %a, %b
-  store volatile float %r1, float addrspace(1)* %out
+  store volatile float %r1, ptr addrspace(1) %out
   ret void
 }

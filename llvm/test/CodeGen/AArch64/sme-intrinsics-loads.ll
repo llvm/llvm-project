@@ -299,7 +299,6 @@ define void @ldr_with_off_16mulvl(ptr %ptr) {
 define void @ldr_with_off_var(ptr %base, i32 %off) {
 ; CHECK-LABEL: ldr_with_off_var:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sxtw x8, w1
 ; CHECK-NEXT:    rdsvl x9, #1
 ; CHECK-NEXT:    add w12, w1, #16

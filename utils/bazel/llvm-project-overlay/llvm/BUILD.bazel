@@ -2573,6 +2573,10 @@ llvm_target_lib_list = [lib for lib in [
                 ],
             ),
             (
+                ["-gen-sd-node-info"],
+                "lib/Target/Hexagon/HexagonGenSDNodeInfo.inc",
+            ),
+            (
                 ["-gen-subtarget"],
                 "lib/Target/Hexagon/HexagonGenSubtargetInfo.inc",
             ),
@@ -3911,6 +3915,20 @@ cc_library(
     copts = llvm_copts,
     includes = ["include"],
     deps = [
+        ":Support",
+    ],
+)
+
+cc_library(
+    name = "DTLTO",
+    srcs = ["lib/DTLTO/DTLTO.cpp"],
+    hdrs = ["include/llvm/DTLTO/DTLTO.h"],
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":Core",
+        ":LTO",
+        ":Object",
         ":Support",
     ],
 )
@@ -6608,10 +6626,11 @@ cc_binary(
     name = "llvm-ir2vec",
     testonly = True,
     srcs = glob([
-        "tools/llvm-ir2vec/*.cpp",
-        "tools/llvm-ir2vec/*.h",
+        "tools/llvm-ir2vec/**/*.cpp",
+        "tools/llvm-ir2vec/utils/*.h",
     ]),
     copts = llvm_copts,
+    includes = ["tools/llvm-ir2vec/utils"],
     stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
