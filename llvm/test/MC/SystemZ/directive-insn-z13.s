@@ -56,4 +56,9 @@ label.START:
 
 #CHECK: e7 12 34 56 70 21      vlgv %r1, %v2, 1110(%r3), 7
       .insn vrs_c,0xe70000000021,%r1,1110(%r3),%v2,7
+#CHECK: e7 16 00 00 30 21     vlgvg %r1, %v6, 0
+      .insn vrs,0xe70000000021,%r1,%v6,0(%r0),3
+#CHECK: e7 12 30 00 00 62      vlvgp %v1, %r2, %r3
+      .insn vrr_f,0xe70000000062,%v1,%r2,%r3
+
 

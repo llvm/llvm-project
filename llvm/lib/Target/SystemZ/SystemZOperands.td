@@ -374,6 +374,7 @@ defm imm32zx8 : Immediate<i32, [{
   return N->getAPIntValue().isIntN(8);
 }], UIMM8, "U8Imm">;
 
+// .insn-directive-only operand class. Should never match in Codegen.
 defm imm32xx8 : Immediate<i32, [{
   return false;
 }], UIMM8, "X8Imm">;
@@ -396,6 +397,7 @@ defm imm32zx16 : Immediate<i32, [{
   return N->getAPIntValue().isIntN(16);
 }], UIMM16, "U16Imm">;
 
+// .insn-directive-only operand class. Should never match in Codegen.
 defm imm32xx16 : Immediate<i32, [{
   return false;
 }], UIMM16, "X16Imm">;
@@ -526,6 +528,7 @@ defm imm64zx32 : Immediate<i64, [{
   return N->getAPIntValue().isIntN(32);
 }], UIMM32, "U32Imm">;
 
+// .insn-directive-only operand class. Should never match in Codegen.
 defm imm64xx32 : Immediate<i64, [{
   return false;
 }], UIMM32, "X32Imm">;

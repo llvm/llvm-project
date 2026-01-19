@@ -232,3 +232,10 @@ label.rsi:
 
 #CHECK: e9 12 34 56 78 90      pka 1110(%r3), 2192(19,%r7)
       .insn ss_f,0xe90000000000,1110(%r3),2192(19,%r7)
+
+#CHECK: c0 04 00 00 00 03      jgnop 0x17a
+      .insn ril_c,0xc00400000000,0,label.autogen_ril_c
+label.autogen_ril_c:
+
+#CHECK: e3 12 34 56 78 16      llgf %r1, 492630(%r2,%r3)
+      .insn rxy_a,0xe30000000016,%r1,492630(%r2,%r3)
