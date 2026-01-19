@@ -13,6 +13,7 @@
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -42,6 +43,11 @@ public:
 
   /// Identifies this checker family for debugging purposes.
   StringRef getDebugTag() const override { return "DivZeroChecker"; }
+
+public:
+  /// In strict mode, the checker warns about all potential divisions by zero
+  /// i.e., if zero falls within the range of possible divisor values.
+  bool Strict = false;
 };
 } // end anonymous namespace
 
@@ -73,7 +79,7 @@ void DivZeroChecker::reportTaintBug(
     auto R =
         std::make_unique<PathSensitiveBugReport>(TaintedDivChecker, Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
-    for (auto Sym : TaintedSyms)
+    for (const auto *Sym : TaintedSyms)
       R->markInteresting(Sym);
     C.emitReport(std::move(R));
   }
@@ -82,10 +88,7 @@ void DivZeroChecker::reportTaintBug(
 void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
                                   CheckerContext &C) const {
   BinaryOperator::Opcode Op = B->getOpcode();
-  if (Op != BO_Div &&
-      Op != BO_Rem &&
-      Op != BO_DivAssign &&
-      Op != BO_RemAssign)
+  if (Op != BO_Div && Op != BO_Rem && Op != BO_DivAssign && Op != BO_RemAssign)
     return;
 
   if (!B->getRHS()->getType()->isScalarType())
@@ -112,11 +115,13 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
 
   if ((stateNotZero && stateZero)) {
     std::vector<SymbolRef> taintedSyms = getTaintedSymbols(C.getState(), *DV);
-    if (!taintedSyms.empty()) {
+    if (Strict) {
+      reportBug("Potential division by zero", stateZero, C);
+    } else if (!taintedSyms.empty()) {
       reportTaintBug("Division by a tainted value, possibly zero", stateZero, C,
                      taintedSyms);
-      // Fallthrough to continue analysis in case of non-zero denominator.
     }
+    // Fallthrough to continue analysis in case of non-zero denominator.
   }
 
   // If we get here, then the denom should not be zero. We abandon the implicit
@@ -125,7 +130,11 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
 }
 
 void ento::registerDivZeroChecker(CheckerManager &Mgr) {
-  Mgr.getChecker<DivZeroChecker>()->DivideZeroChecker.enable(Mgr);
+  auto *Chk = Mgr.getChecker<DivZeroChecker>();
+  CheckerNameRef ChkName = Mgr.getCurrentCheckerName();
+  Chk->Strict =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(ChkName, "Strict");
+  Chk->DivideZeroChecker.enable(Mgr);
 }
 
 bool ento::shouldRegisterDivZeroChecker(const CheckerManager &) { return true; }

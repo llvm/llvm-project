@@ -214,6 +214,14 @@ def VLASizeChecker : Checker<"VLASize">,
 
 def DivZeroChecker : Checker<"DivideZero">,
   HelpText<"Check for division by zero">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "Strict",
+                  "Warn on all potential divisions by zero i.e., if zero "
+                  "falls within the range of possible divisor values.",
+                  "false",
+                  InAlpha>,
+  ]>,
   Documentation<HasDocumentation>;
 
 def UndefResultChecker : Checker<"UndefinedBinaryOperatorResult">,
