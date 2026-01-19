@@ -132,6 +132,15 @@ inline Expr *IgnoreUOpLNotSingleStep(Expr *E) {
   return E;
 }
 
+inline Expr *IgnoreBuiltinExpectSingleStep(Expr *E) {
+  if (auto *CE = dyn_cast<CallExpr>(E)) {
+    if (const FunctionDecl *FD = CE->getDirectCallee())
+      if (FD->getBuiltinID() == Builtin::BI__builtin_expect)
+        return CE->getArg(0);
+  }
+  return E;
+}
+
 inline Expr *IgnoreImplicitAsWrittenSingleStep(Expr *E) {
   if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
     return ICE->getSubExprAsWritten();

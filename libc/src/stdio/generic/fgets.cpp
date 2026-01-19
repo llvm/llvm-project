@@ -44,7 +44,7 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   bool has_eof = stream->iseof_unlocked();
   stream->unlock();
 
-  // If the requested read size makes no sense, an error occured, or no bytes
+  // If the requested read size makes no sense, an error occurred, or no bytes
   // were read due to an EOF, then return nullptr and don't write the null byte.
   if (has_error || (i == 0 && has_eof))
     return nullptr;

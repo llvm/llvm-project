@@ -270,7 +270,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
     return llvm::make_error<DILDiagnosticError>(m_expr, "invalid value object",
                                                 node.GetLocation());
   // Return the computed value-or-error. The caller is responsible for
-  // checking if an error occured during the evaluation.
+  // checking if an error occurred during the evaluation.
   return value_or_error;
 }
 
@@ -618,7 +618,7 @@ Interpreter::Visit(const ArraySubscriptNode &node) {
         base->GetSyntheticBitFieldChild(child_idx, child_idx, true);
     if (!child_valobj_sp) {
       std::string err_msg = llvm::formatv(
-          "bitfield range {0}-{1} is not valid for \"({2}) {3}\"", child_idx,
+          "bitfield range {0}:{1} is not valid for \"({2}) {3}\"", child_idx,
           child_idx, base->GetTypeName().AsCString("<invalid type>"),
           var_expr_path_strm.GetData());
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
@@ -706,7 +706,7 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
       base->GetSyntheticBitFieldChild(first_index, last_index, true);
   if (!child_valobj_sp) {
     std::string message = llvm::formatv(
-        "bitfield range {0}-{1} is not valid for \"({2}) {3}\"", first_index,
+        "bitfield range {0}:{1} is not valid for \"({2}) {3}\"", first_index,
         last_index, base->GetTypeName().AsCString("<invalid type>"),
         base->GetName().AsCString());
     return llvm::make_error<DILDiagnosticError>(m_expr, message,

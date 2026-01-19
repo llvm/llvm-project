@@ -47,7 +47,7 @@ public:
    * virtual void loadRegFromStackSlot(
    *    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
    *    unsigned DestReg, int FrameIndex, const TargetRegisterClass *RC,
-   *    const TargetRegisterInfo *TRI, Register VReg,
+   *    const TargetRegisterInfo *TRI, Register VReg, unsigned SubReg = 0,
    *    MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const;
    */
 
