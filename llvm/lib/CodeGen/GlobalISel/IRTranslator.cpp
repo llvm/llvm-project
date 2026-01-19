@@ -4079,14 +4079,19 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
 
 bool IRTranslator::emitSPDescriptorFailure(StackProtectorDescriptor &SPD,
                                            MachineBasicBlock *FailureBB) {
+  const RTLIB::LibcallImpl LibcallImpl =
+      TLI->getLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL);
+  if (LibcallImpl == RTLIB::Unsupported)
+    return false;
+
   CurBuilder->setInsertPt(*FailureBB, FailureBB->end());
 
-  const RTLIB::Libcall Libcall = RTLIB::STACKPROTECTOR_CHECK_FAIL;
-  const char *Name = TLI->getLibcallName(Libcall);
-
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = TLI->getLibcallCallingConv(Libcall);
-  Info.Callee = MachineOperand::CreateES(Name);
+  Info.CallConv = TLI->getLibcallImplCallingConv(LibcallImpl);
+
+  StringRef LibcallName =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
+  Info.Callee = MachineOperand::CreateES(LibcallName.data());
   Info.OrigRet = {Register(), Type::getVoidTy(MF->getFunction().getContext()),
                   0};
   if (!CLI->lowerCall(*CurBuilder, Info)) {
