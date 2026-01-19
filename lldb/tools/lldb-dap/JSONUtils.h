@@ -340,9 +340,14 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
 ///     launcher uses it on Linux tell the kernel that it should allow the
 ///     debugger process to attach.
 ///
-/// \param[in] stdio
-///     An array of file paths for redirecting the program's standard IO
-///     streams.
+/// \param[in] stdin_path
+///     A file path for redirecting the program's stdout stream.
+///
+/// \param[in] stdout_path
+///     A file path for redirecting the program's stdin stream.
+///
+/// \param[in] stderr_path
+///     A file path for redirecting the program's stderr stream.
 ///
 /// \param[in] external
 ///     If set to true, the program will run in an external terminal window
@@ -355,7 +360,9 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
     const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
     llvm::StringRef comm_file, lldb::pid_t debugger_pid,
-    const std::vector<std::optional<std::string>> &stdio, bool external);
+    const std::optional<std::string> &stdin_path,
+    const std::optional<std::string> &stdout_path,
+    const std::optional<std::string> &stderr_path, bool external);
 
 /// Create a "Terminated" JSON object that contains statistics
 ///

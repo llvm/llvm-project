@@ -707,7 +707,9 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
     const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
     llvm::StringRef comm_file, lldb::pid_t debugger_pid,
-    const std::vector<std::optional<std::string>> &stdio, bool external) {
+    const std::optional<std::string> &stdin_path,
+    const std::optional<std::string> &stdout_path,
+    const std::optional<std::string> &stderr_path, bool external) {
   llvm::json::Object run_in_terminal_args;
   if (external) {
     // This indicates the IDE to open an external terminal window.
@@ -725,17 +727,17 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
     req_args.push_back(std::to_string(debugger_pid));
   }
 
-  if (!stdio.empty()) {
-    req_args.emplace_back("--stdio");
-
-    std::stringstream ss;
-    std::string_view delimiter;
-    for (const std::optional<std::string> &file : stdio) {
-      ss << std::exchange(delimiter, ":");
-      if (file)
-        ss << *file;
-    }
-    req_args.push_back(ss.str());
+  if (stdin_path) {
+    req_args.push_back("--stdin-path");
+    req_args.push_back(*stdin_path);
+  }
+  if (stdout_path) {
+    req_args.push_back("--stdout-path");
+    req_args.push_back(*stdout_path);
+  }
+  if (stderr_path) {
+    req_args.push_back("--stderr-path");
+    req_args.push_back(*stderr_path);
   }
 
   // WARNING: Any argument added after `launch-target` is passed to to the

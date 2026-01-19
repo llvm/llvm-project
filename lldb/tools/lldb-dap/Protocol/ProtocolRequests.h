@@ -301,8 +301,14 @@ struct LaunchRequestArguments {
   /// terminal or external terminal.
   Console console = eConsoleInternal;
 
-  /// An array of file paths for redirecting the program's standard IO streams.
-  std::vector<std::optional<std::string>> stdio;
+  /// A file path for redirecting the program's stdin stream.
+  std::optional<std::string> stdin_path;
+
+  /// A file path for redirecting the program's stdout stream.
+  std::optional<std::string> stdout_path;
+
+  /// A file path for redirecting the program's stderr stream.
+  std::optional<std::string> stderr_path;
 
   /// @}
 };

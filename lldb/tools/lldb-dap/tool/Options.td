@@ -47,11 +47,20 @@ def debugger_pid: S<"debugger-pid">,
   HelpText<"The PID of the lldb-dap instance that sent the launchInTerminal "
     "request when using --launch-target.">;
 
-def stdio: S<"stdio">,
-  MetaVarName<"<stdin:stdout:stderr:...>">,
-  HelpText<"An array of file paths for redirecting the program's standard IO "
-    "streams. A colon-separated list of entries. Empty value means no "
-    "redirection.">;
+def stdin_path: S<"stdin-path">,
+  MetaVarName<"<stdin>">,
+  HelpText<"A file path for redirecting the program's stdin stream. Empty "
+    "value means no redirection.">;
+
+def stdout_path: S<"stdout-path">,
+  MetaVarName<"<stdout>">,
+  HelpText<"A file path for redirecting the program's stdout stream. Empty "
+    "value means no redirection.">;
+
+def stderr_path: S<"stderr-path">,
+  MetaVarName<"<stderr>">,
+  HelpText<"A file path for redirecting the program's stderr stream. Empty "
+    "value means no redirection.">;
 
 def repl_mode
     : S<"repl-mode">,

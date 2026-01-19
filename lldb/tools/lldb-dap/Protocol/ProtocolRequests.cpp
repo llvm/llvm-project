@@ -307,15 +307,20 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
       O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
       O.mapOptional("runInTerminal", LRA.console) &&
       O.mapOptional("console", LRA.console) &&
-      O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
+      O.mapOptional("stdin_path", LRA.stdin_path) &&
+      O.mapOptional("stdout_path", LRA.stdout_path) &&
+      O.mapOptional("stderr_path", LRA.stderr_path) &&
+      parseEnv(Params, LRA.env, P);
   if (!success)
     return false;
 
-  for (std::optional<std::string> &io_path : LRA.stdio) {
-    // set empty paths to null.
-    if (io_path && llvm::StringRef(*io_path).trim().empty())
-      io_path.reset();
-  }
+  // set empty paths to null.
+  if (LRA.stdin_path && llvm::StringRef(*LRA.stdin_path).trim().empty())
+    LRA.stdin_path.reset();
+  if (LRA.stdout_path && llvm::StringRef(*LRA.stdout_path).trim().empty())
+    LRA.stdout_path.reset();
+  if (LRA.stderr_path && llvm::StringRef(*LRA.stderr_path).trim().empty())
+    LRA.stderr_path.reset();
 
   // Validate that we have a well formed launch request.
   if (!LRA.launchCommands.empty() &&

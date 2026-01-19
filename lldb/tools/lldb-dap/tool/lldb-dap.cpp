@@ -194,54 +194,34 @@ struct FDGroup {
   bool write = false;
 };
 
-static llvm::Error RedirectToFile(const FDGroup &fdg, llvm::StringRef file) {
-  if (!fdg.read && !fdg.write)
-    return llvm::Error::success();
-  int target_fd = lldb_private::FileSystem::Instance().Open(
-      file.str().c_str(), fdg.GetFlags(), 0666);
-  if (target_fd == -1)
-    return llvm::errorCodeToError(
-        std::error_code(errno, std::generic_category()));
-  for (int fd : fdg.fds) {
-    if (target_fd == fd)
-      continue;
-    if (::dup2(target_fd, fd) == -1)
+static llvm::Error SetupIORedirection(llvm::StringRef stdin_path,
+                                      llvm::StringRef stdout_path,
+                                      llvm::StringRef stderr_path) {
+  if (!stdin_path.empty()) {
+    int target_fd = lldb_private::FileSystem::Instance().Open(
+        stdin_path.str().c_str(), O_NOCTTY | O_RDONLY, 0666);
+    if (target_fd == -1)
       return llvm::errorCodeToError(
           std::error_code(errno, std::generic_category()));
+    ::close(target_fd);
   }
-  ::close(target_fd);
-  return llvm::Error::success();
-}
-
-static llvm::Error
-SetupIORedirection(const llvm::SmallVectorImpl<llvm::StringRef> &files) {
-  llvm::SmallDenseMap<llvm::StringRef, FDGroup> groups;
-  for (size_t i = 0; i < files.size(); i++) {
-    if (files[i].empty())
-      continue;
-    auto group = groups.find(files[i]);
-    if (group == groups.end())
-      group = groups.insert({files[i], {{static_cast<int>(i)}}}).first;
-    else
-      group->second.fds.push_back(i);
-    switch (i) {
-    case 0:
-      group->second.read = true;
-      break;
-    case 1:
-    case 2:
-      group->second.write = true;
-      break;
-    default:
-      group->second.read = true;
-      group->second.write = true;
-      break;
-    }
+  if (!stdout_path.empty()) {
+    int target_fd = lldb_private::FileSystem::Instance().Open(
+        stdout_path.str().c_str(), O_NOCTTY | O_CREAT | O_WRONLY | O_TRUNC,
+        0666);
+    if (target_fd == -1)
+      return llvm::errorCodeToError(
+          std::error_code(errno, std::generic_category()));
+    ::close(target_fd);
   }
-  for (const auto &[file, group] : groups) {
-    if (llvm::Error err = RedirectToFile(group, file))
-      return llvm::createStringError(
-          llvm::formatv("{0}: {1}", file, llvm::toString(std::move(err))));
+  if (!stderr_path.empty()) {
+    int target_fd = lldb_private::FileSystem::Instance().Open(
+        stderr_path.str().c_str(), O_NOCTTY | O_CREAT | O_WRONLY | O_TRUNC,
+        0666);
+    if (target_fd == -1)
+      return llvm::errorCodeToError(
+          std::error_code(errno, std::generic_category()));
+    ::close(target_fd);
   }
   return llvm::Error::success();
 }
@@ -266,11 +246,11 @@ SetupIORedirection(const llvm::SmallVectorImpl<llvm::StringRef> &files) {
 //
 // In case of errors launching the target, a suitable error message will be
 // emitted to the debug adapter.
-static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                                             llvm::StringRef comm_file,
-                                             lldb::pid_t debugger_pid,
-                                             llvm::StringRef stdio,
-                                             char *argv[]) {
+static llvm::Error
+LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg, llvm::StringRef comm_file,
+                          lldb::pid_t debugger_pid, llvm::StringRef stdin_path,
+                          llvm::StringRef stdout_path,
+                          llvm::StringRef stderr_path, char *argv[]) {
 #if defined(_WIN32)
   return llvm::createStringError(
       "runInTerminal is only supported on POSIX systems");
@@ -588,10 +568,12 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
-      llvm::StringRef stdio = input_args.getLastArgValue(OPT_stdio);
-      if (llvm::Error err =
-              LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
-                                        stdio, argv + target_args_pos)) {
+      llvm::StringRef stdin_path = input_args.getLastArgValue(OPT_stdin_path);
+      llvm::StringRef stdout_path = input_args.getLastArgValue(OPT_stdout_path);
+      llvm::StringRef stderr_path = input_args.getLastArgValue(OPT_stderr_path);
+      if (llvm::Error err = LaunchRunInTerminalTarget(
+              *target_arg, comm_file->getValue(), pid, stdin_path, stdout_path,
+              stderr_path, argv + target_args_pos)) {
         llvm::errs() << llvm::toString(std::move(err)) << '\n';
         return EXIT_FAILURE;
       }

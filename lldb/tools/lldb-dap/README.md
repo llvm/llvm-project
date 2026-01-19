@@ -68,7 +68,8 @@ This will launch process and connect `stdin` to `in.txt`, both of `stdout` and `
   "request": "launch",
   "name": "Debug",
   "program": "/tmp/a.out",
-  "stdio": ["in.txt", "out.txt"]
+  "stdin-path": "in.txt",
+  "stdout-path": "out.txt"
 }
 ```
 
@@ -265,7 +266,9 @@ contain the following key/value pairs:
 | **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after launching.
 | **runInTerminal** (deprecated)    | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
 | **console**                       | string      |     | Specify where to launch the program: internal console (`internalConsole`), integrated terminal (`integratedTerminal`) or external terminal (`externalTerminal`). Supported from lldb-dap 21.0 version.
-| **stdio**                         | [string]    |     | Redirects the debuggee's standard I/O (stdin, stdout, stderr) to a file path, named pipe, or TTY device.<br/>Use null to redirect a stream to the default debug terminal.<br/>The first three values map to stdin, stdout, and stderr respectively, Additional values create extra file descriptors (4, 5, etc.).<br/><br/>Example: `stdio: [null, "./output_file"]`, the debuggee uses the default terminal for `stdin` and `stderr`, but writes `stdout` to `./output_file`.<br/>Added in version 22.0.
+| **stdin-path**                    | [string]    |     | Redirects the debuggee's standard input (stdin) to a file path, named pipe, or TTY device.<br/>Use null to redirect the stream to the default debug terminal.
+| **stdout-path**                   | [string]    |     | Redirects the debuggee's standard output (stdout) to a file path, named pipe, or TTY device.<br/>Use null to redirect the stream to the default debug terminal.
+| **stderr-path**                   | [string]    |     | Redirects the debuggee's standard error (stderr) to a file path, named pipe, or TTY device.<br/>Use null to redirect the stream to the default debug terminal.
 | **launchCommands**                | [string]    |     | LLDB commands executed to launch the program.
 
 For JSON configurations of `"type": "attach"`, the JSON configuration can contain

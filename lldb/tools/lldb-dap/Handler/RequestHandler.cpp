@@ -60,31 +60,16 @@ static uint32_t SetLaunchFlag(uint32_t flags, bool flag,
   return flags;
 }
 
-static void
-SetupIORedirection(const std::vector<std::optional<std::string>> &stdio,
-                   lldb::SBLaunchInfo &launch_info) {
-  for (const auto &[idx, value_opt] : llvm::enumerate(stdio)) {
-    if (!value_opt)
-      continue;
-    const std::string &path = value_opt.value();
-    assert(!path.empty() && "paths should not be empty");
-
-    const int fd = static_cast<int>(idx);
-    switch (fd) {
-    case 0:
-      launch_info.AddOpenFileAction(STDIN_FILENO, path.c_str(), true, false);
-      break;
-    case 1:
-      launch_info.AddOpenFileAction(STDOUT_FILENO, path.c_str(), false, true);
-      break;
-    case 2:
-      launch_info.AddOpenFileAction(STDERR_FILENO, path.c_str(), false, true);
-      break;
-    default:
-      launch_info.AddOpenFileAction(fd, path.c_str(), true, true);
-      break;
-    }
-  }
+static void SetupIORedirection(const std::optional<std::string> &stdin_path,
+                               const std::optional<std::string> &stdout_path,
+                               const std::optional<std::string> &stderr_path,
+                               lldb::SBLaunchInfo &launch_info) {
+  if (stdin_path)
+    launch_info.AddOpenFileAction(0, stdin_path->c_str(), true, false);
+  if (stdout_path)
+    launch_info.AddOpenFileAction(1, stdout_path->c_str(), false, true);
+  if (stderr_path)
+    launch_info.AddOpenFileAction(2, stderr_path->c_str(), false, true);
 }
 
 static llvm::Error
@@ -116,7 +101,8 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
       arguments.configuration.program, arguments.args, arguments.env,
-      arguments.cwd, comm_file.m_path, debugger_pid, arguments.stdio,
+      arguments.cwd, comm_file.m_path, debugger_pid, arguments.stdin_path,
+      arguments.stdout_path, arguments.stderr_path,
       arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
@@ -214,8 +200,10 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     launch_info.SetEnvironment(env, true);
   }
 
-  if (!arguments.stdio.empty() && !arguments.disableSTDIO)
-    SetupIORedirection(arguments.stdio, launch_info);
+  if ((arguments.stdin_path || arguments.stdout_path || arguments.stdin_path) &&
+      !arguments.disableSTDIO)
+    SetupIORedirection(arguments.stdin_path, arguments.stdout_path,
+                       arguments.stderr_path, launch_info);
 
   launch_info.SetDetachOnError(arguments.detachOnError);
   launch_info.SetShellExpandArguments(arguments.shellExpandArguments);
