@@ -4306,13 +4306,13 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
       return nullptr;
 
     Value *X = II->getArgOperand(0);
-    APInt IntMinIsPoison =
-        dyn_cast<ConstantInt>(II->getArgOperand(1))->getValue();
+    bool IntMinIsPoison =
+        dyn_cast<ConstantInt>(II->getArgOperand(1))->getValue().isOne();
 
-    // abs(X) u> K --> K >= 0 ? `X + K u> 2 * K` : `false`
+    // abs(X) u> C --> C >= 0 ? `X + C u> 2 * C` : `false`
     if (Pred == CmpInst::ICMP_UGT) {
       if (C.isNegative()) {
-        Cmp.replaceAllUsesWith(ConstantInt::getFalse(Ty));
+        Cmp.replaceAllUsesWith(ConstantInt::getFalse(Cmp.getType()));
         return nullptr;
       }
 
@@ -4321,10 +4321,12 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
                           ConstantInt::get(Ty, 2 * C));
     }
 
-    // abs(X) u< K --> K >= 1 ? `X + (K - 1) u<= 2 * (K - 1)` : K != 0
-    if (Pred == CmpInst::ICMP_ULT) {
+    // If abs(INT_MIN) is poison:
+    // abs(X) u< C --> C >= 1 ? `X + (C - 1) u<= 2 * (C - 1)` : C != 0
+    if (IntMinIsPoison && Pred == CmpInst::ICMP_ULT) {
       if (C.slt(1)) {
-        Cmp.replaceAllUsesWith(ConstantInt::getBool(Ty, !C.isZero()));
+        Cmp.replaceAllUsesWith(
+            ConstantInt::getBool(Cmp.getType(), !C.isZero()));
         return nullptr;
       }
 
