@@ -19,7 +19,6 @@
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/math/common_constants.h" // Lookup table for (1/f) and log(f)
-#include "src/math/logf.h"
 
 // This is an algorithm for log(x) in single precision which is correctly
 // rounded for all rounding modes, based on the implementation of log(x) from
