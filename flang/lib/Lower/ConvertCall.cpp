@@ -1839,9 +1839,13 @@ void prepareUserCallArguments(
         caller.placeInput(arg, boxStorage);
         continue;
       }
+      if (arg.testTKR(Fortran::common::IgnoreTKR::Contiguous) &&
+          actual.isBoxAddress()) {
+        caller.placeInput(arg, actual);
+        continue;
+      }
       if (fir::isPointerType(argTy) &&
-          (!Fortran::evaluate::IsObjectPointer(*expr) || thisIsPassArg) &&
-          !arg.testTKR(Fortran::common::IgnoreTKR::Contiguous)) {
+          (!Fortran::evaluate::IsObjectPointer(*expr) || thisIsPassArg)) {
         // Passing a non POINTER actual argument to a POINTER dummy argument.
         // Create a pointer of the dummy argument type and assign the actual
         // argument to it.
