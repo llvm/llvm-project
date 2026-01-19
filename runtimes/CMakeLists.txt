@@ -89,8 +89,9 @@ include(GetToolchainDirs)
 include(ExtendPath)
 include(HandleFortran)
 
-# Determine wither we can compile Fortran code.
-init_fortran_support()
+# Handle Fortran code. Sets RUNTIMES_FLANG_MODULES_ENABLED when a Fortran
+# toolchain is available and required by one or more of the LLVM_ENABLED_RUNTIMES.
+include(config-runtimes-Fortran)
 
 # Determine whether we are in the runtimes/runtimes-bins directory of a
 # bootstrap build.
