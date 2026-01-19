@@ -1459,8 +1459,7 @@ private:
         // first one which is enforced by isStrictlyAdjacent().
         // Replace the phi uses with the corresponding incoming value to clean
         // up the code.
-        assert(DT.dominates(FC0.ExitBlock, FC1.Preheader) &&
-               cast<PHINode>(I)->getNumIncomingValues() == 1 &&
+        assert(cast<PHINode>(I)->getNumIncomingValues() == 1 &&
                "Expected the sunk PHI node to have 1 incoming value.");
         I->replaceAllUsesWith(I->getOperand(0));
         I->eraseFromParent();
