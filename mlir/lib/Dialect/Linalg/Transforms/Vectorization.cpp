@@ -746,12 +746,12 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
   auto vectorType = state.getCanonicalVecType(
       getElementTypeOrSelf(outputOperand->get().getType()), vectorTypeMap);
 
+  SmallVector<Value> indices(linalgOp.getRank(outputOperand),
+                             arith::ConstantIndexOp::create(rewriter, loc, 0));
+
   Operation *write;
   if (vectorType.getRank() > 0) {
     AffineMap writeMap = inversePermutation(reindexIndexingMap(opOperandMap));
-    SmallVector<Value> indices(
-        linalgOp.getRank(outputOperand),
-        arith::ConstantIndexOp::create(rewriter, loc, 0));
     value = broadcastIfNeeded(rewriter, value, vectorType);
     assert(value.getType() == vectorType && "Incorrect type");
     write = vector::TransferWriteOp::create(
@@ -762,7 +762,7 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
       value = vector::BroadcastOp::create(rewriter, loc, vectorType, value);
     assert(value.getType() == vectorType && "Incorrect type");
     write = vector::TransferWriteOp::create(rewriter, loc, value,
-                                            outputOperand->get(), ValueRange{});
+                                            outputOperand->get(), indices);
   }
 
   write = state.maskOperation(rewriter, write, linalgOp, opOperandMap);
@@ -2511,13 +2511,14 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
   // which is zero here. Hence we will load the pad value which is what we want
   // in this case. If the low pad is dynamically zero then the lowering is
   // correct as well as no shifts are necessary.
-  if (llvm::any_of(llvm::enumerate(padOp.getLow()), [&](const auto &en) {
-        Value padValue = en.value();
-        unsigned pos = en.index();
-        std::optional<int64_t> pad = getConstantIntValue(padValue);
-        return (!pad.has_value() || pad.value() != 0) &&
-               resultTensorShape[pos] != 1;
-      })) {
+  if (llvm::any_of(llvm::enumerate(padOp.getMixedLowPad()),
+                   [&](const auto &en) {
+                     OpFoldResult padValue = en.value();
+                     unsigned pos = en.index();
+                     std::optional<int64_t> pad = getConstantIntValue(padValue);
+                     return (!pad.has_value() || pad.value() != 0) &&
+                            resultTensorShape[pos] != 1;
+                   })) {
     LDBG() << "low pad must all be zero for all non unit dims: " << padOp;
     return failure();
   }
@@ -2640,6 +2641,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
   // Cond 4: Only the following ops are supported in the
   // presence of scalable vectors
   return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
+                 isa<linalg::BatchMatmulOp>(op) ||
                  isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
                  isa<linalg::MatvecOp>(op) || isa<linalg::Mmt4DOp>(op) ||
                  isa<linalg::BatchMmt4DOp>(op) ||
@@ -2676,7 +2678,7 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
       .Case<tensor::InsertSliceOp>([&](auto sliceOp) {
         return vectorizeInsertSliceOpPrecondition(sliceOp, inputVectorSizes);
       })
-      .Default([](auto) { return failure(); });
+      .Default(failure());
 }
 
 /// Converts affine.apply Ops to arithmetic operations.
@@ -2783,7 +2785,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
             return vectorizeAsInsertSliceOp(rewriter, sliceOp, inputVectorSizes,
                                             results);
           })
-          .Default([](auto) { return failure(); });
+          .Default(failure());
 
   if (failed(vectorizeResult)) {
     LDBG() << "Vectorization failed";

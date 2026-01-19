@@ -417,10 +417,10 @@ private:
   }
 
   std::optional<bool>
-  isWorthFoldingIntoAddrMode(MachineInstr &MI,
+  isWorthFoldingIntoAddrMode(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI) const;
 
-  bool isWorthFoldingIntoExtendedReg(MachineInstr &MI,
+  bool isWorthFoldingIntoExtendedReg(const MachineInstr &MI,
                                      const MachineRegisterInfo &MRI,
                                      bool IsAddrOperand) const;
   ComplexRendererFns
@@ -2384,7 +2384,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     if (Ty.getSizeInBits() == 64) {
       I.getOperand(1).ChangeToRegister(AArch64::XZR, false);
       RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass, MRI);
-    } else if (Ty.getSizeInBits() == 32) {
+    } else if (Ty.getSizeInBits() <= 32) {
       I.getOperand(1).ChangeToRegister(AArch64::WZR, false);
       RBI.constrainGenericRegister(DefReg, AArch64::GPR32RegClass, MRI);
     } else
@@ -4084,9 +4084,7 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   Register SrcReg = I.getOperand(NumElts).getReg();
   const LLT NarrowTy = MRI.getType(I.getOperand(0).getReg());
   const LLT WideTy = MRI.getType(SrcReg);
-  (void)WideTy;
-  assert((WideTy.isVector() || WideTy.getSizeInBits() == 128) &&
-         "can only unmerge from vector or s128 types!");
+
   assert(WideTy.getSizeInBits() > NarrowTy.getSizeInBits() &&
          "source register size too small!");
 
@@ -4117,9 +4115,11 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   } else {
     // No. We have to perform subregister inserts. For each insert, create an
     // implicit def and a subregister insert, and save the register we create.
+    // For scalar sources, treat as a pseudo-vector of NarrowTy elements.
+    unsigned EltSize = WideTy.isVector() ? WideTy.getScalarSizeInBits()
+                                         : NarrowTy.getSizeInBits();
     const TargetRegisterClass *RC = getRegClassForTypeOnBank(
-        LLT::fixed_vector(NumElts, WideTy.getScalarSizeInBits()),
-        *RBI.getRegBank(SrcReg, MRI, TRI));
+        LLT::fixed_vector(NumElts, EltSize), *RBI.getRegBank(SrcReg, MRI, TRI));
     unsigned SubReg = 0;
     bool Found = getSubRegForClass(RC, TRI, SubReg);
     (void)Found;
@@ -7068,7 +7068,7 @@ AArch64InstructionSelector::selectNegArithImmed(MachineOperand &Root) const {
 /// %9:gpr(p0) = G_PTR_ADD %0, %8(s64)
 /// %12:gpr(s32) = G_LOAD %9(p0) :: (load (s16))
 std::optional<bool> AArch64InstructionSelector::isWorthFoldingIntoAddrMode(
-    MachineInstr &MI, const MachineRegisterInfo &MRI) const {
+    const MachineInstr &MI, const MachineRegisterInfo &MRI) const {
   if (MI.getOpcode() == AArch64::G_SHL) {
     // Address operands with shifts are free, except for running on subtargets
     // with AddrLSLSlow14.
@@ -7089,7 +7089,7 @@ std::optional<bool> AArch64InstructionSelector::isWorthFoldingIntoAddrMode(
 /// \p IsAddrOperand whether the def of MI is used as an address operand
 /// (e.g. feeding into an LDR/STR).
 bool AArch64InstructionSelector::isWorthFoldingIntoExtendedReg(
-    MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
     bool IsAddrOperand) const {
 
   // Always fold if there is one use, or if we're optimizing for size.

@@ -495,16 +495,13 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
           BranchProbability ProbReaching = BranchProbability::getOne();
           for (unsigned N = Count - 2; N >= 1; --N) {
             ProbReaching *= probOfNextInRemainder(OriginalLoopProb, N);
-            FreqRemIters += double(ProbReaching.getNumerator()) /
-                            ProbReaching.getDenominator();
+            FreqRemIters += ProbReaching.toDouble();
           }
         }
         // Solve for the loop probability that would produce that frequency.
         // Sum(i=0..inf)(Prob^i) = 1/(1-Prob) = FreqRemIters.
-        double ProbDouble = 1 - 1 / FreqRemIters;
-        BranchProbability Prob = BranchProbability::getBranchProbability(
-            std::round(ProbDouble * BranchProbability::getDenominator()),
-            BranchProbability::getDenominator());
+        BranchProbability Prob =
+            BranchProbability::getBranchProbability(1 - 1 / FreqRemIters);
         setBranchProbability(RemainderLoopLatch, Prob, /*ForFirstTarget=*/true);
       }
       NewIdx->addIncoming(Zero, InsertTop);
@@ -755,8 +752,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
 
   BasicBlock *PreHeader = L->getLoopPreheader();
   BranchInst *PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
-  const DataLayout &DL = Header->getDataLayout();
-  SCEVExpander Expander(*SE, DL, "loop-unroll");
+  SCEVExpander Expander(*SE, "loop-unroll");
   if (!AllowExpensiveTripCount &&
       Expander.isHighCostExpansion(TripCountSC, L, SCEVExpansionBudget, TTI,
                                    PreHeaderBR)) {

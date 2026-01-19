@@ -336,6 +336,9 @@ if (RUNTIMES_EXECUTE_ONLY_CODE)
   add_compile_definitions(_LIBUNWIND_EXECUTE_ONLY_CODE)
 endif()
 
+add_custom_target(unwind-test-depends
+  COMMENT "Build dependencies required to run the libunwind test suite.")
+
 #===============================================================================
 # Setup Source Code
 #===============================================================================

@@ -17,3 +17,5 @@ int structStrlen(void) {
   return 1;
 }
 
+void f() { __builtin_memcpy(f, f, 1); }
+void f2()  { __builtin_memchr(f2, 0, 1); }

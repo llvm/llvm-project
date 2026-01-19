@@ -978,10 +978,8 @@ GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
 
 static MachineInstr *getLastMIForRegion(MachineBasicBlock::iterator RegionBegin,
                                         MachineBasicBlock::iterator RegionEnd) {
-  auto REnd = RegionEnd == RegionBegin->getParent()->end()
-                  ? std::prev(RegionEnd)
-                  : RegionEnd;
-  return &*skipDebugInstructionsBackward(REnd, RegionBegin);
+  assert(RegionBegin != RegionEnd && "Region must not be empty");
+  return &*skipDebugInstructionsBackward(std::prev(RegionEnd), RegionBegin);
 }
 
 void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
@@ -1076,9 +1074,12 @@ GCNScheduleDAGMILive::getRegionLiveOutMap() const {
   assert(!Regions.empty());
   std::vector<MachineInstr *> RegionLastMIs;
   RegionLastMIs.reserve(Regions.size());
-  for (auto &[RegionBegin, RegionEnd] : reverse(Regions))
+  for (auto &[RegionBegin, RegionEnd] : reverse(Regions)) {
+    // Skip empty regions.
+    if (RegionBegin == RegionEnd)
+      continue;
     RegionLastMIs.push_back(getLastMIForRegion(RegionBegin, RegionEnd));
-
+  }
   return getLiveRegMap(RegionLastMIs, /*After=*/true, *LIS);
 }
 
@@ -1088,10 +1089,12 @@ void RegionPressureMap::buildLiveRegMap() {
   RegionLiveRegMap =
       IsLiveOut ? DAG->getRegionLiveOutMap() : DAG->getRegionLiveInMap();
   for (unsigned I = 0; I < DAG->Regions.size(); I++) {
+    auto &[RegionBegin, RegionEnd] = DAG->Regions[I];
+    // Skip empty regions.
+    if (RegionBegin == RegionEnd)
+      continue;
     MachineInstr *RegionKey =
-        IsLiveOut
-            ? getLastMIForRegion(DAG->Regions[I].first, DAG->Regions[I].second)
-            : &*DAG->Regions[I].first;
+        IsLiveOut ? getLastMIForRegion(RegionBegin, RegionEnd) : &*RegionBegin;
     IdxToInstruction[I] = RegionKey;
   }
 }
@@ -1843,18 +1846,29 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   DenseMap<unsigned, GCNRPTarget> OptRegions;
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(F);
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(F);
+  bool HasVectorRegisterExcess;
+
   auto ResetTargetRegions = [&]() {
     OptRegions.clear();
+    HasVectorRegisterExcess = false;
     for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
       const GCNRegPressure &RP = DAG.Pressure[I];
       GCNRPTarget Target(MaxSGPRs, MaxVGPRs, MF, RP);
       if (!Target.satisfied())
         OptRegions.insert({I, Target});
+      // We are willing to consider a RP that does not satisfy the target
+      // as long as it doesn't result in spilling to memory. We
+      // tolerate SGPR spills to VGPR since these have a lower impact on the
+      // performance.
+      // VGPR/AGPR excess could be aliviated by copying to an AGPR/VGPR.
+      // Currently, we consider any spilling as bad (we should consider this
+      // case in the future).
+      HasVectorRegisterExcess |= Target.hasVectorRegisterExcess();
     }
   };
 
   ResetTargetRegions();
-  if (!OptRegions.empty() || DAG.MinOccupancy >= MFI.getMaxWavesPerEU()) {
+  if (HasVectorRegisterExcess || DAG.MinOccupancy >= MFI.getMaxWavesPerEU()) {
     // In addition to register usage being above addressable limits, occupancy
     // below the minimum is considered like "spilling" as well.
     TargetOcc = std::nullopt;

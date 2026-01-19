@@ -1291,6 +1291,26 @@ bool ASTNodeImporter::hasSameVisibilityContextAndLinkage(TypedefNameDecl *Found,
 
 using namespace clang;
 
+auto ASTImporter::FunctionDeclImportCycleDetector::makeScopedCycleDetection(
+    const FunctionDecl *D) {
+  const FunctionDecl *LambdaD = nullptr;
+  if (!isCycle(D) && D) {
+    FunctionDeclsWithImportInProgress.insert(D);
+    LambdaD = D;
+  }
+  return llvm::scope_exit([this, LambdaD]() {
+    if (LambdaD) {
+      FunctionDeclsWithImportInProgress.erase(LambdaD);
+    }
+  });
+}
+
+bool ASTImporter::FunctionDeclImportCycleDetector::isCycle(
+    const FunctionDecl *D) const {
+  return FunctionDeclsWithImportInProgress.find(D) !=
+         FunctionDeclsWithImportInProgress.end();
+}
+
 ExpectedType ASTNodeImporter::VisitType(const Type *T) {
   Importer.FromDiag(SourceLocation(), diag::err_unsupported_ast_node)
     << T->getTypeClassName();
@@ -2527,8 +2547,7 @@ Error ASTNodeImporter::ImportDefinition(
   // Complete the definition even if error is returned.
   // The RecordDecl may be already part of the AST so it is better to
   // have it in complete state even if something is wrong with it.
-  auto DefinitionCompleterScopeExit =
-      llvm::make_scope_exit(DefinitionCompleter);
+  llvm::scope_exit DefinitionCompleterScopeExit(DefinitionCompleter);
 
   if (Error Err = setTypedefNameForAnonDecl(From, To, Importer))
     return Err;
@@ -4038,7 +4057,10 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // E.g.: auto foo() { struct X{}; return X(); }
     // To avoid an infinite recursion when importing, create the FunctionDecl
     // with a simplified return type.
-    if (hasReturnTypeDeclaredInside(D)) {
+    // Reuse this approach for auto return types declared as typenames from
+    // template params, tracked in FindFunctionDeclImportCycle.
+    if (hasReturnTypeDeclaredInside(D) ||
+        Importer.FindFunctionDeclImportCycle.isCycle(D)) {
       FromReturnTy = Importer.getFromContext().VoidTy;
       UsedDifferentProtoType = true;
     }
@@ -4061,6 +4083,8 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   Error Err = Error::success();
+  auto ScopedReturnTypeDeclCycleDetector =
+      Importer.FindFunctionDeclImportCycle.makeScopedCycleDetection(D);
   auto T = importChecked(Err, FromTy);
   auto TInfo = importChecked(Err, FromTSI);
   auto ToInnerLocStart = importChecked(Err, D->getInnerLocStart());
@@ -9774,8 +9798,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
 
   // Push FromD to the stack, and remove that when we return.
   ImportPath.push(FromD);
-  auto ImportPathBuilder =
-      llvm::make_scope_exit([this]() { ImportPath.pop(); });
+  llvm::scope_exit ImportPathBuilder([this]() { ImportPath.pop(); });
 
   // Check whether there was a previous failed import.
   // If yes return the existing error.

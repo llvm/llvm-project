@@ -2,31 +2,11 @@
 
 // Test invalid target architecture (sm_100 instead of sm_100a)
 gpu.module @invalid_arch_sm_100 [#nvvm.target<chip = "sm_100">] {
-  func.func @convert_rs() {
-    %f1 = llvm.mlir.constant(1.0 : f32) : f32
-    %f2 = llvm.mlir.constant(2.0 : f32) : f32
-    %rbits = llvm.mlir.constant(0x12345678 : i32) : i32
-    // expected-error@+1 {{'nvvm.convert.f32x2.to.f16x2' op is not supported on sm_100}}
-    %res = nvvm.convert.f32x2.to.f16x2 %f1, %f2, %rbits : vector<2xf16>
+  func.func @convert_rs(%src : vector<4xf32>, %rbits : i32) {
+    // expected-error@+1 {{'nvvm.convert.f32x4.to.f8x4' op is not supported on sm_100}}
+    %res = nvvm.convert.f32x4.to.f8x4 %src, %rbits : vector<4xf32> -> vector<4xi8> (f8E4M3FN)
     return
   }
-}
-
-// -----
-
-// Test that operations require stochastic rounding mode
-llvm.func @invalid_rnd_mode_f16x2(%srcA : f32, %srcB : f32, %rbits : i32) -> vector<2xf16> {
-  // expected-error@+1 {{Only RS rounding mode is supported for conversions from f32x2 to f16x2.}}
-  %res = nvvm.convert.f32x2.to.f16x2 %srcA, %srcB, %rbits {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf16>
-  llvm.return %res : vector<2xf16>
-}
-
-// -----
-
-llvm.func @invalid_rnd_mode_bf16x2(%srcA : f32, %srcB : f32, %rbits : i32) -> vector<2xbf16> {
-  // expected-error@+1 {{Only RS rounding mode is supported for conversions from f32x2 to bf16x2.}}
-  %res = nvvm.convert.f32x2.to.bf16x2 %srcA, %srcB, %rbits {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xbf16>
-  llvm.return %res : vector<2xbf16>
 }
 
 // -----

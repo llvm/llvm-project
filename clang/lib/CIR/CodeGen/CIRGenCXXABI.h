@@ -126,6 +126,9 @@ public:
 
   virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
+  virtual void emitBeginCatch(CIRGenFunction &cgf,
+                              const CXXCatchStmt *catchStmt) = 0;
+
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
 
@@ -158,6 +161,9 @@ public:
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
 
+  virtual CatchTypeInfo
+  getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
+                               QualType catchHandlerType) = 0;
   virtual CatchTypeInfo getCatchAllTypeInfo();
 
   /// Get the implicit (second) parameter that comes after the "this" pointer,
@@ -191,6 +197,9 @@ public:
                                        const CXXDeleteExpr *de, Address ptr,
                                        QualType elementType,
                                        const CXXDestructorDecl *dtor) = 0;
+
+  virtual size_t getSrcArgforCopyCtor(const CXXConstructorDecl *,
+                                      FunctionArgList &args) const = 0;
 
   /// Checks if ABI requires extra virtual offset for vtable field.
   virtual bool

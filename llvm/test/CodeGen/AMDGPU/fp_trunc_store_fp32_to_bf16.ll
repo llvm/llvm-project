@@ -119,6 +119,54 @@ entry:
   ret void
 }
 
+define void @v6(<6 x float> %num, ptr addrspace(1) %p) {
+; CHECK-LABEL: v6:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_bfe_u32 v8, v4, 16, 1
+; CHECK-NEXT:    s_movk_i32 s4, 0x7fff
+; CHECK-NEXT:    v_add3_u32 v8, v8, v4, s4
+; CHECK-NEXT:    v_or_b32_e32 v9, 0x400000, v4
+; CHECK-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
+; CHECK-NEXT:    v_cndmask_b32_e32 v4, v8, v9, vcc
+; CHECK-NEXT:    v_bfe_u32 v8, v5, 16, 1
+; CHECK-NEXT:    v_add3_u32 v8, v8, v5, s4
+; CHECK-NEXT:    v_or_b32_e32 v9, 0x400000, v5
+; CHECK-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc
+; CHECK-NEXT:    s_mov_b32 s5, 0x7060302
+; CHECK-NEXT:    v_perm_b32 v4, v5, v4, s5
+; CHECK-NEXT:    v_bfe_u32 v5, v2, 16, 1
+; CHECK-NEXT:    v_add3_u32 v5, v5, v2, s4
+; CHECK-NEXT:    v_or_b32_e32 v8, 0x400000, v2
+; CHECK-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, v5, v8, vcc
+; CHECK-NEXT:    v_bfe_u32 v5, v3, 16, 1
+; CHECK-NEXT:    v_add3_u32 v5, v5, v3, s4
+; CHECK-NEXT:    v_or_b32_e32 v8, 0x400000, v3
+; CHECK-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, v5, v8, vcc
+; CHECK-NEXT:    v_perm_b32 v3, v3, v2, s5
+; CHECK-NEXT:    v_bfe_u32 v2, v0, 16, 1
+; CHECK-NEXT:    v_add3_u32 v2, v2, v0, s4
+; CHECK-NEXT:    v_or_b32_e32 v5, 0x400000, v0
+; CHECK-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v2, v5, vcc
+; CHECK-NEXT:    v_bfe_u32 v2, v1, 16, 1
+; CHECK-NEXT:    v_add3_u32 v2, v2, v1, s4
+; CHECK-NEXT:    v_or_b32_e32 v5, 0x400000, v1
+; CHECK-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v2, v5, vcc
+; CHECK-NEXT:    v_perm_b32 v2, v1, v0, s5
+; CHECK-NEXT:    global_store_dwordx3 v[6:7], v[2:4], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %conv = fptrunc <6 x float> %num to <6 x bfloat>
+  store <6 x bfloat> %conv, ptr addrspace(1) %p, align 16
+  ret void
+}
+
 define void @v8(<8 x float> %num, ptr addrspace(1) %p) {
 ; CHECK-LABEL: v8:
 ; CHECK:       ; %bb.0: ; %entry

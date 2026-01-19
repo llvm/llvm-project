@@ -234,6 +234,12 @@ public:
 
   /// Whether the current RP is at or below the defined pressure target.
   bool satisfied() const;
+  bool hasVectorRegisterExcess() const;
+
+  unsigned getMaxSGPRs() const { return MaxSGPRs; }
+  unsigned getMaxVGPRs() const {
+    return UnifiedRF ? MaxUnifiedVGPRs : MaxVGPRs;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   friend raw_ostream &operator<<(raw_ostream &OS, const GCNRPTarget &Target) {
@@ -455,7 +461,7 @@ template <typename Range>
 DenseMap<MachineInstr*, GCNRPTracker::LiveRegSet>
 getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   std::vector<SlotIndex> Indexes;
-  Indexes.reserve(std::distance(R.begin(), R.end()));
+  Indexes.reserve(llvm::size(R));
   auto &SII = *LIS.getSlotIndexes();
   for (MachineInstr *I : R) {
     auto SI = SII.getInstructionIndex(*I);

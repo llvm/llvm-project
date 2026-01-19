@@ -9,6 +9,15 @@ namespace VoidCast {
   constexpr void* p = nullptr;
   constexpr int* q = static_cast<int*>(p);
   static_assert(q == nullptr);
+
+  static_assert((delete (int*)(void*)new int, true));
+  static_assert((delete[] (int*)(void*)new int[2], true));
+
+  static_assert((delete (float*)(void*)new int, true)); // both-error {{not an integral constant expression}} \
+                                                        // both-note {{cast from 'void *' is not allowed in a constant expression because the pointed object type 'int' is not similar to the target type 'float'}}
+
+  static_assert((delete[] (float*)(void*)new int[2], true)); // both-error {{not an integral constant expression}} \
+                                                             // both-note {{cast from 'void *' is not allowed in a constant expression because the pointed object type 'int' is not similar to the target type 'float'}}
 }
 
 namespace ReplaceableAlloc {

@@ -2277,6 +2277,15 @@ are listed below.
 
    See :doc: `AddressSanitizer` for more details.
 
+.. option:: -f[no-]sanitize-type-outline-instrumentation
+
+   Controls how type sanitizer code is generated. If enabled will always use
+   a function call instead of inlining the code. Turning this option off may
+   result in better run-time performance, but will increase binary size and
+   compilation overhead.
+
+   See :doc: `TypeSanitizer` for more details.
+
 .. option:: -f[no-]sanitize-stats
 
    Enable simple statistics gathering for the enabled sanitizers.
@@ -2342,6 +2351,56 @@ are listed below.
    However, this can increase the LTO link time and memory requirements over
    pure ThinLTO, as all split regular LTO modules are merged and LTO linked
    with regular LTO.
+
+.. option:: -fdevirtualize-speculatively
+
+   Enable speculative devirtualization optimization where a virtual call
+   can be transformed into a direct call under the assumption that its
+   object is of a particular type. A runtime check is inserted to validate
+   the assumption before making the direct call, and if the check fails,
+   the original virtual call is made instead. This optimization can enable
+   more inlining opportunities and better optimization of the direct call.
+   This is different from whole program devirtualization optimization
+   that rely on global analysis and hidden visibility of the objects to prove
+   that the object is always of a particular type at a virtual call site.
+   This optimization doesn't require global analysis or hidden visibility.
+   This optimization doesn't devirtualize all virtual calls, but only
+   when there's a single implementation of the virtual function in the module.
+   There could be a single implementation of the virtual function
+   either because the function is not overridden in any derived class,
+   or because all objects are instances of the same class/type.
+
+   Ex of IR before the optimization:
+
+   .. code-block:: llvm
+
+     %vtable = load ptr, ptr %BV, align 8, !tbaa !6
+     %0 = tail call i1 @llvm.public.type.test(ptr %vtable, metadata !"_ZTS4Base")
+     tail call void @llvm.assume(i1 %0)
+     %0 = load ptr, ptr %vtable, align 8
+     tail call void %0(ptr noundef nonnull align 8 dereferenceable(8) %BV)
+     ret void
+
+   IR after the optimization:
+
+   .. code-block:: llvm
+
+     %vtable = load ptr, ptr %BV, align 8, !tbaa !12
+     %0 = load ptr, ptr %vtable, align 8
+     %1 = icmp eq ptr %0, @_ZN4Base17virtual_function1Ev
+     br i1 %1, label %if.true.direct_targ, label %if.false.orig_indirect, !prof !15
+     if.true.direct_targ:                              ; preds = %entry
+       tail call void @_ZN4Base17virtual_function1Ev(ptr noundef nonnull align 8 dereferenceable(8) %BV)
+       br label %if.end.icp
+     if.false.orig_indirect:                           ; preds = %entry
+       tail call void %0(ptr noundef nonnull align 8 dereferenceable(8) %BV)
+       br label %if.end.icp
+     if.end.icp:                                       ; preds = %if.false.orig_indirect, %if.true.direct_targ
+       ret void
+
+   This feature is temporarily ignored at the LLVM side when LTO is enabled.
+   TODO: Update the comment when the LLVM side supports this feature for LTO.
+   This feature is turned off by default.
 
 .. option:: -f[no-]unique-source-file-names
 
@@ -5207,6 +5266,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fstandalone-debug      Emit full debug info for all types used by the program
       -fstrict-aliasing	      Enable optimizations based on strict aliasing rules
       -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
+      -fdevirtualize-speculatively
+                              Enables speculative devirtualization optimization.
       -fwhole-program-vtables Enables whole-program vtable optimization. Requires -flto
       -gcodeview-ghash        Emit type record hashes in a .debug$H section
       -gcodeview              Generate CodeView debug information

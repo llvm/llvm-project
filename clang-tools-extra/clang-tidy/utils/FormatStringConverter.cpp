@@ -14,6 +14,7 @@
 
 #include "FormatStringConverter.h"
 #include "../utils/FixItHintUtils.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
@@ -624,7 +625,6 @@ bool FormatStringConverter::HandlePrintfSpecifier(const PrintfSpecifier &FS,
                                                   const char *StartSpecifier,
                                                   unsigned SpecifierLen,
                                                   const TargetInfo &Target) {
-
   const size_t StartSpecifierPos = StartSpecifier - PrintfFormatString.data();
   assert(StartSpecifierPos + SpecifierLen <= PrintfFormatString.size());
 
@@ -701,6 +701,7 @@ void FormatStringConverter::finalizeFormatText() {
 /// Append literal parts of the format text, reinstating escapes as required.
 void FormatStringConverter::appendFormatText(const StringRef Text) {
   for (const char Ch : Text) {
+    const auto UCh = static_cast<unsigned char>(Ch);
     if (Ch == '\a')
       StandardFormatString += "\\a";
     else if (Ch == '\b')
@@ -725,10 +726,10 @@ void FormatStringConverter::appendFormatText(const StringRef Text) {
     } else if (Ch == '}') {
       StandardFormatString += "}}";
       FormatStringNeededRewriting = true;
-    } else if (Ch < 32) {
+    } else if (UCh < 32) {
       StandardFormatString += "\\x";
-      StandardFormatString += llvm::hexdigit(Ch >> 4, true);
-      StandardFormatString += llvm::hexdigit(Ch & 0xf, true);
+      StandardFormatString += llvm::hexdigit(UCh >> 4, true);
+      StandardFormatString += llvm::hexdigit(UCh & 0xf, true);
     } else
       StandardFormatString += Ch;
   }
@@ -793,15 +794,15 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
     // Now we need to modify the ArgFix index too so that we fix the right
     // argument. We don't need to care about the width and precision indices
     // since they never need fixing.
-    for (auto &ArgFix : ArgFixes) {
+    for (auto &ArgFix : ArgFixes)
       if (ArgFix.ArgIndex == ValueArgIndex)
         ArgFix.ArgIndex = ValueArgIndex - ArgCount;
-    }
   }
 
   for (const auto &[ArgIndex, Replacement] : ArgFixes) {
     const SourceLocation AfterOtherSide =
-        Lexer::findNextToken(Args[ArgIndex]->getEndLoc(), SM, LangOpts)
+        utils::lexer::findNextTokenSkippingComments(Args[ArgIndex]->getEndLoc(),
+                                                    SM, LangOpts)
             ->getLocation();
 
     Diag << FixItHint::CreateInsertion(Args[ArgIndex]->getBeginLoc(),

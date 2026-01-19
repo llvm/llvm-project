@@ -868,9 +868,9 @@ void updateDomTree(MachineDominatorTree *DomTree, const SSAIfConv &IfConv,
   for (auto *B : Removed) {
     MachineDomTreeNode *Node = DomTree->getNode(B);
     assert(Node != HeadNode && "Cannot erase the head node");
-    while (Node->getNumChildren()) {
+    while (!Node->isLeaf()) {
       assert(Node->getBlock() == IfConv.Tail && "Unexpected children");
-      DomTree->changeImmediateDominator(Node->back(), HeadNode);
+      DomTree->changeImmediateDominator(*Node->begin(), HeadNode);
     }
     DomTree->eraseNode(B);
   }
@@ -942,9 +942,9 @@ bool EarlyIfConverter::shouldConvertIf() {
                all_of(Def->operands(), [&](MachineOperand &Op) {
                  if (Op.isImm())
                    return true;
-                 if (!MO.isReg() || !MO.isUse())
-                   return false;
-                 Register Reg = MO.getReg();
+                 if (!Op.isReg() || !Op.isUse())
+                   return true;
+                 Register Reg = Op.getReg();
                  if (Reg.isPhysical())
                    return false;
 

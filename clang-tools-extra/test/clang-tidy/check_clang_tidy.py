@@ -110,7 +110,7 @@ class CheckRunner:
 
         file_name_with_extension = self.assume_file_name or self.input_file_name
         _, extension = os.path.splitext(file_name_with_extension)
-        if extension not in [".c", ".hpp", ".m", ".mm"]:
+        if extension not in [".c", ".hpp", ".m", ".mm", ".cu"]:
             extension = ".cpp"
         self.temp_file_name = self.temp_file_name + extension
 
@@ -398,6 +398,8 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     args, extra_args = parse_arguments()
 
     abbreviated_stds = args.std

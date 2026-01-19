@@ -778,8 +778,8 @@ public:
   /// Try to get a specific unwind plan for a named trap handler.
   /// The default is not to have specific unwind plans for trap handlers.
   ///
-  /// \param[in] triple
-  ///     Triple of the current target.
+  /// \param[in] arch
+  ///     Architecture of the current target.
   ///
   /// \param[in] name
   ///     Name of the trap handler function.
@@ -788,8 +788,8 @@ public:
   ///     A specific unwind plan for that trap handler, or an empty
   ///     shared pointer. The latter means there is no specific plan,
   ///     unwind as normal.
-  virtual lldb::UnwindPlanSP
-  GetTrapHandlerUnwindPlan(const llvm::Triple &triple, ConstString name) {
+  virtual lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const ArchSpec &arch,
+                                                      ConstString name) {
     return {};
   }
 
@@ -925,7 +925,7 @@ public:
   ///     A structured data dictionary containing at each entry, the crash
   ///     information type as the entry key and the matching  an array as the
   ///     entry value. \b nullptr if not implemented or  if the process has no
-  ///     crash information entry. \b error if an error occured.
+  ///     crash information entry. \b error if an error occurred.
   virtual llvm::Expected<StructuredData::DictionarySP>
   FetchExtendedCrashInformation(lldb_private::Process &process) {
     return nullptr;

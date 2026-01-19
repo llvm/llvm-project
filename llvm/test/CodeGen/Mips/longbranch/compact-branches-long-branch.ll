@@ -90,7 +90,7 @@ cond.false:
 }
 
 ; CHECK-LABEL: test6:
-; CHECK:       bnezc
+; CHECK:       bltuc
 ; CHECK-NEXT:  nop
 
 define i32 @test6(i32 %a, i32 %b) {
@@ -106,7 +106,7 @@ cond.false:
 }
 
 ; CHECK-LABEL: test7:
-; CHECK:       beqzc
+; CHECK:       bgeuc
 ; CHECK-NEXT:  nop
 
 define i32 @test7(i32 %a, i32 %b) {
@@ -122,7 +122,7 @@ cond.false:
 }
 
 ; CHECK-LABEL: test8:
-; CHECK:       bnezc
+; CHECK:       bltuc
 ; CHECK-NEXT:  nop
 
 define i32 @test8(i32 %a, i32 %b) {
@@ -138,7 +138,7 @@ cond.false:
 }
 
 ; CHECK-LABEL: test9:
-; CHECK:       beqzc
+; CHECK:       bgeuc
 ; CHECK-NEXT:  nop
 
 define i32 @test9(i32 %a, i32 %b) {

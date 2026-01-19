@@ -156,6 +156,10 @@ public:
   ///     would be valid for this thread, false otherwise.
   bool ValidForThisThread(Thread &thread);
 
+  /// Returns true if at least one constituent is both public and valid for
+  /// `thread`.
+  bool ContainsUserBreakpointForThread(Thread &thread);
+
   /// Print a description of this breakpoint site to the stream \a s.
   /// GetDescription tells you about the breakpoint site's constituents. Use
   /// BreakpointSite::Dump(Stream *) to get information about the breakpoint

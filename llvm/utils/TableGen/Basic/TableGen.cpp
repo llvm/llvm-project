@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the global defintions (mostly command line parameters)
+// This file contains the global definitions (mostly command line parameters)
 // shared between llvm-tblgen and llvm-min-tblgen.
 //
 //===----------------------------------------------------------------------===//
@@ -73,7 +73,7 @@ int tblgen_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv);
 
-  std::function<MultiFileTableGenMainFn> MainFn = nullptr;
+  MultiFileTableGenMainFn MainFn = nullptr;
   return TableGenMain(argv[0], MainFn);
 }
 

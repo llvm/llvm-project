@@ -234,7 +234,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: tuple<!fir.boxproc<() -> ()>, i64> {fir.char_proc})
 subroutine host2(f)
   ! Test that dummy length is overridden by local length even when used
-  ! in the internal procedure. 
+  ! in the internal procedure.
   character*(42) :: f
   external :: f
   ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1:.*]], %{{.*}} : (!fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>>, i32) -> !fir.ref<tuple<!fir.boxproc<() -> ()>, i64>>

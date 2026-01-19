@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/new.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/hash.h"
 #include "src/stdlib/rand.h"
 #include "src/stdlib/srand.h"

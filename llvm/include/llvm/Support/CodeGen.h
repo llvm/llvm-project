@@ -82,7 +82,7 @@ namespace llvm {
   enum class CodeGenOptLevel {
     None = 0,      ///< -O0
     Less = 1,      ///< -O1
-    Default = 2,   ///< -O2, -Os
+    Default = 2,   ///< -O2, -Os, -Oz
     Aggressive = 3 ///< -O3
   };
 
@@ -171,6 +171,16 @@ namespace llvm {
     BestEffort = 1,
     // Use unwind v2 everywhere, otherwise raise an error.
     Required = 2,
+  };
+
+  enum class ControlFlowGuardMode {
+    // Don't enable Control Flow Guard.
+    Disabled = 0,
+    // Emit the Control Flow Guard tables in the binary, but don't emit any
+    // checks.
+    TableOnly = 1,
+    // Enable Control Flow Guard checks and emit the tables.
+    Enabled = 2,
   };
 
   } // namespace llvm

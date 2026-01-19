@@ -1937,6 +1937,7 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToBoolean:
   case CK_HLSLArrayRValue:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
   CheckNoBasePath:
@@ -3791,6 +3792,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
 
   case ParenExprClass:
   case ArraySubscriptExprClass:
+  case MatrixSingleSubscriptExprClass:
   case MatrixSubscriptExprClass:
   case ArraySectionExprClass:
   case OMPArrayShapingExprClass:
@@ -5216,6 +5218,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__scoped_atomic_fetch_min:
   case AO__scoped_atomic_fetch_max:
   case AO__scoped_atomic_exchange_n:
+  case AO__scoped_atomic_uinc_wrap:
+  case AO__scoped_atomic_udec_wrap:
   case AO__hip_atomic_exchange:
   case AO__hip_atomic_fetch_add:
   case AO__hip_atomic_fetch_sub:
