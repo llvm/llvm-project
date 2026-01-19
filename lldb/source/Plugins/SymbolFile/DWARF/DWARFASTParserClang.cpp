@@ -61,15 +61,6 @@
 #include <optional>
 #include <vector>
 
-// #define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
-
-#ifdef ENABLE_DEBUG_PRINTF
-#include <cstdio>
-#define DEBUG_PRINTF(fmt, ...) printf(fmt, __VA_ARGS__)
-#else
-#define DEBUG_PRINTF(fmt, ...)
-#endif
-
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
@@ -826,10 +817,6 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     }
   }
 
-  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\") type => 0x%8.8lx\n", die.GetID(),
-               DW_TAG_value_to_name(tag), type_name_cstr,
-               encoding_uid.Reference());
-
   switch (tag) {
   default:
     break;
@@ -1412,9 +1399,6 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   bool is_variadic = false;
   bool has_template_params = false;
 
-  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
-               DW_TAG_value_to_name(tag), type_name_cstr);
-
   CompilerType return_clang_type;
   Type *func_type = nullptr;
 
@@ -1584,9 +1568,6 @@ TypeSP
 DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
                                     const ParsedDWARFTypeAttributes &attrs) {
   SymbolFileDWARF *dwarf = die.GetDWARF();
-
-  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
-               DW_TAG_value_to_name(tag), type_name_cstr);
 
   DWARFDIE type_die = attrs.type.Reference();
   Type *element_type = dwarf->ResolveTypeUID(type_die, true);
@@ -1935,9 +1916,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       }
     }
   }
-
-  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
-               DW_TAG_value_to_name(tag), type_name_cstr);
 
   int tag_decl_kind = -1;
   AccessType default_accessibility = eAccessNone;
