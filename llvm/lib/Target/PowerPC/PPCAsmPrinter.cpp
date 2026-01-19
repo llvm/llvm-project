@@ -3464,9 +3464,11 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
       }
       return Res;
     }
+    // clang-format off
     // @switch.table.resolve_foo = private unnamed_addr constant [3 x ptr] [ptr @foo_static, ptr @foo_hidden, ptr @foo_protected]
     // %switch.gep = getelementptr inbounds nuw ptr, ptr @switch.table, i64 %2
     // V = load ptr, ptr %switch.gep,
+    // clang-format on
     else if (auto *Op = getPointerOperand(I)) {
       while (isa<GEPOperator>(Op))
         Op = cast<GEPOperator>(Op)->getPointerOperand();
