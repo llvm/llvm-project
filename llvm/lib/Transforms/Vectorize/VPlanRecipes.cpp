@@ -710,17 +710,20 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                        Builder.getInt32(0));
   }
   case VPInstruction::ComputeAnyOfResult: {
-    // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
-    // and will be removed by breaking up the recipe further.
-    auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
-    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-    Value *ReducedPartRdx = State.get(getOperand(2));
+    Value *Start = State.get(getOperand(0), VPLane(0));
+    Value *NewVal = State.get(getOperand(1), VPLane(0));
+    Value *ReducedResult = State.get(getOperand(2));
     for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
-      ReducedPartRdx =
+      ReducedResult =
           Builder.CreateBinOp(Instruction::Or, State.get(getOperand(Idx)),
-                              ReducedPartRdx, "bin.rdx");
-    return createAnyOfReduction(Builder, ReducedPartRdx,
-                                State.get(getOperand(1), VPLane(0)), OrigPhi);
+                              ReducedResult, "bin.rdx");
+    // If any predicate is true it means that we want to select the new value.
+    if (ReducedResult->getType()->isVectorTy())
+      ReducedResult = Builder.CreateOrReduce(ReducedResult);
+    // The compares in the loop may yield poison, which propagates through the
+    // bitwise ORs. Freeze it here before the condition is used.
+    ReducedResult = Builder.CreateFreeze(ReducedResult);
+    return Builder.CreateSelect(ReducedResult, NewVal, Start, "rdx.select");
   }
   case VPInstruction::ComputeFindIVResult: {
     // The recipe's operands are the start value, the sentinel value, followed
@@ -1405,7 +1408,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     // WidePtrAdd supports scalar and vector base addresses.
     return false;
   case VPInstruction::ComputeAnyOfResult:
-    return Op == getOperand(1);
+    return Op == getOperand(0) || Op == getOperand(1);
   case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(0);
   case VPInstruction::ExtractLane:
@@ -2173,6 +2176,9 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     RecurKind RK = getRecurKind();
     O << " (";
     switch (RK) {
+    case RecurKind::AnyOf:
+      O << "any-of";
+      break;
     case RecurKind::SMax:
       O << "smax";
       break;
