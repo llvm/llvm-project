@@ -252,21 +252,14 @@ static std::vector<deferred_entry_t *> *_deferred_fns_ptr;
 // static std::list<deferred_entry_t *> _deferred_fns;
 //
 
-extern "C" EmissaryReturn_t
-EmissaryFortrt(char *data, emisArgBuf_t *ab,
-               std::unordered_map<void *, void *> *D2HAddrList) {
+extern "C" EmissaryReturn_t EmissaryFortrt(char *data, emisArgBuf_t *ab,
+                                           emis_argptr_t *a[]) {
   EmissaryReturn_t return_value = (EmissaryReturn_t)0;
-
   if (ab->DataLen == 0)
     return _ERC_SUCCESS;
 
   void *fnptr;
   if (ab->NumArgs <= 0)
-    return _ERC_ERROR_INVALID_REQUEST;
-
-  emis_argptr_t *a[MAXVARGS];
-  if (EmissaryBuildVargs(ab->NumArgs, ab->keyptr, ab->argptr, ab->strptr,
-                         &ab->data_not_used, a, D2HAddrList) != _ERC_SUCCESS)
     return _ERC_ERROR_INVALID_REQUEST;
 
   // std::list<deferred_entry_t *> _deferred_fns;

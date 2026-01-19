@@ -78,7 +78,7 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
       if (buffer_ptr) {
         emisArgBuf_t ab;
         emisExtractArgBuf((char *)buffer_ptr, &ab);
-        Results[id++] = Emissary((char *)buffer_ptr, &ab, nullptr);
+        Results[id++] = EmissaryTop((char *)buffer_ptr, &ab, nullptr);
       }
     }
     Port.send([&](rpc::Buffer *Buffer, uint32_t ID) {
@@ -152,7 +152,7 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
           emisSkipXferArgSet(ab);
         for (uint32_t idx = 0; idx < ab->NumRecvXfers; idx++)
           emisSkipXferArgSet(ab);
-        Results[id] = Emissary((char *)buffer_ptr, ab, &D2HAddrList);
+        Results[id] = EmissaryTop((char *)buffer_ptr, ab, &D2HAddrList);
         id++;
       }
     }
@@ -213,7 +213,7 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
     });
 
     break;
-  } // END CASE OFFLOAD_EMISSARY
+  } // END CASE OFFLOAD_EMISSARY_DM
 
   default:
     return rpc::RPC_UNHANDLED_OPCODE;

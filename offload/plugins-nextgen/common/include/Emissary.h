@@ -22,14 +22,14 @@
 extern "C" {
 
 /// Called by rpc after receiving emissary argument buffer
-EmissaryReturn_t Emissary(char *data, emisArgBuf_t *ab,
-                          std::unordered_map<void *, void *> *D2HAddrList);
+EmissaryReturn_t EmissaryTop(char *data, emisArgBuf_t *ab,
+                             std::unordered_map<void *, void *> *D2HAddrList);
 
+#ifdef EMISSARY_FLANGRT_SUPPORT
 /// Called by Emissary for all Fortrt emissary functions
-/// Declared weak in case built without flangrt.
-EmissaryReturn_t __attribute((weak))
-EmissaryFortrt(char *data, emisArgBuf_t *ab,
-               std::unordered_map<void *, void *> *D2HAddrList);
+EmissaryReturn_t EmissaryFortrt(char *data, emisArgBuf_t *ab,
+                                emis_argptr_t *arg[]);
+#endif
 
 /// Called by Emissary for all misc print functions
 EmissaryReturn_t EmissaryPrint(char *data, emisArgBuf_t *ab);

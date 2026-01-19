@@ -6835,10 +6835,10 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   // arg buffer.
   if ((CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()) && FnType &&
       dyn_cast<FunctionProtoType>(FnType) &&
-      dyn_cast<FunctionProtoType>(FnType)->isVariadic() &&
-      (E->getDirectCallee()->getNameAsString() == "_emissary_exec") &&
-      CGM.getLangOpts().OpenMP)
-    return EmitEmissaryExec(E);
+      dyn_cast<FunctionProtoType>(FnType)->isVariadic()) {
+    if (E->getDirectCallee()->getNameAsString() == "_emissary_exec")
+      return EmitEmissaryExec(E);
+  }
 
   auto Arguments = E->arguments();
   if (StaticOperator) {

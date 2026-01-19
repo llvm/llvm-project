@@ -19,6 +19,8 @@
 #include "Debug.h"
 #include "EmissaryIds.h"
 
+unsigned long long _emissary_exec(unsigned long long, ...);
+
 // This definition of __ockl_devmem_request and __ockl_sanitizer_report needs to
 // override the weak symbol for __ockl_devmem_request and
 // __ockl_sanitizer_report in rocm device lib ockl.bc because ockl uses

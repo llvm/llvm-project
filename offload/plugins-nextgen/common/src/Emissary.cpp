@@ -20,8 +20,8 @@
 #include <unordered_map>
 
 extern "C" EmissaryReturn_t
-Emissary(char *data, emisArgBuf_t *ab,
-         std::unordered_map<void *, void *> *D2HAddrList) {
+EmissaryTop(char *data, emisArgBuf_t *ab,
+            std::unordered_map<void *, void *> *D2HAddrList) {
   EmissaryReturn_t result = 0;
   emis_argptr_t **args = (emis_argptr_t **)aligned_alloc(
       sizeof(emis_argptr_t), ab->NumArgs * sizeof(emis_argptr_t *));
@@ -33,7 +33,15 @@ Emissary(char *data, emisArgBuf_t *ab,
     break;
   }
   case EMIS_ID_FORTRT: {
-    result = EmissaryFortrt(data, ab, D2HAddrList);
+#ifdef EMISSARY_FLANGRT_SUPPORT
+    if (EmissaryBuildVargs(ab->NumArgs, ab->keyptr, ab->argptr, ab->strptr,
+                           &(ab->data_not_used), &args[0],
+                           D2HAddrList) != _ERC_SUCCESS)
+      return (EmissaryReturn_t)0;
+    result = EmissaryFortrt(data, ab, args);
+#else
+    result = 0;
+#endif
     break;
   }
   case EMIS_ID_PRINT: {
@@ -188,8 +196,6 @@ EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr, char *strptr,
         a[argcount] = (emis_argptr_t *)getuint32(dataptr);
       else
         a[argcount] = (emis_argptr_t *)getuint64(dataptr);
-      // fprintf(stderr, "Arg:%d  IntegerType bytes:%ld val:%ld\n",argcount,
-      // num_bytes,(uint64_t) a[argcount]);
       break;
 
     case PointerTyID: {   ///< 15: Pointers
@@ -212,11 +218,11 @@ EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr, char *strptr,
           return _ERC_DATA_USED_ERROR;
         a[argcount] = (emis_argptr_t *)getuint64(dataptr);
       }
-      auto found = D2HAddrList->find((void *)a[argcount]);
-      if (found != D2HAddrList->end())
-        a[argcount] = (emis_argptr_t *)found->second;
-      // fprintf(stderr, "Arg:%d  pointer Type bytes:%ld val:%p\n",argcount,
-      // num_bytes, (void*) a[argcount]);
+      if (D2HAddrList) {
+        auto found = D2HAddrList->find((void *)a[argcount]);
+        if (found != D2HAddrList->end())
+          a[argcount] = (emis_argptr_t *)found->second;
+      }
     } break;
 
     case HalfTyID:           ///<  1: 16-bit floating point type
@@ -239,7 +245,6 @@ EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr, char *strptr,
     default:
       return _ERC_INVALID_ID_ERROR;
     }
-
     // Move to next argument
     dataptr += num_bytes;
     strptr += strsz;
