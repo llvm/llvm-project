@@ -1000,17 +1000,23 @@ public:
         goto exit_loop;
       case WAIT_OBJECT_0: {
         if (isConsole) {
-          INPUT_RECORD inputRecord;
-          DWORD numRead = 0;
-          if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead) ||
-              numRead == 0)
-            goto exit_loop;
-          // We only care about text input. Ignore all non text input events and
-          // let other IOHandlers handle them.
-          if (inputRecord.EventType != KEY_EVENT ||
-              !inputRecord.Event.KeyEvent.bKeyDown ||
-              inputRecord.Event.KeyEvent.uChar.AsciiChar == 0)
-            break;
+          while (true) {
+            INPUT_RECORD inputRecord;
+            DWORD numRead = 0;
+            if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead) ||
+                numRead == 0)
+              goto exit_loop;
+
+            // We only care about text input. Consume all non text input events before letting ReadFile handle text input.
+            if (inputRecord.EventType == KEY_EVENT &&
+                inputRecord.Event.KeyEvent.bKeyDown &&
+                inputRecord.Event.KeyEvent.uChar.AsciiChar != 0)
+              break;
+
+            if (!ReadConsoleInput(hStdin, &inputRecord, 1, &numRead) ||
+                numRead == 0)
+              goto exit_loop;
+          }
         }
 
         char ch = 0;
