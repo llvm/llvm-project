@@ -73,7 +73,7 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-runners
+    runs-on: llvm-premerge-libcxx-release-runners
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
