@@ -68,10 +68,10 @@ static std::pair<bool, bool> runImpl(MachineFunction &MF) {
         // The expansion may involve new basic blocks.
         if (NewMBB != MBB) {
           PreserveCFG = false;
-          // Check if the block was split.
-          if (MBBI != MBBE && MBBI->getParent() != MBB)
-            break;
-          // No split: MBBI still valid in MBB, continue processing.
+          MBB = NewMBB;
+          I = NewMBB->getIterator();
+          MBBI = NewMBB->begin();
+          MBBE = NewMBB->end();
         }
       }
     }
