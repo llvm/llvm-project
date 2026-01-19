@@ -38,6 +38,9 @@
 /* Relative directory for resource files */
 #define CLANG_RESOURCE_DIR "${CLANG_RESOURCE_DIR}"
 
+/* Directory in which libc++ is installed */
+#cmakedefine LIBCXX_INSTALL_LIBRARY_DIR "${LIBCXX_INSTALL_LIBRARY_DIR}"
+
 /* Directories clang will search for headers */
 #define C_INCLUDE_DIRS "${C_INCLUDE_DIRS}"
 

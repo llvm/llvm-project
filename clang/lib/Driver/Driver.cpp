@@ -216,6 +216,9 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
 
   // Compute the path to the resource directory.
   ResourceDir = GetResourcesPath(ClangExecutable);
+
+  // Compute the path to Libc++'s install directory
+  LibCxxDir = GetLibCxxPath(ClangExecutable);
 }
 
 void Driver::setDriverMode(StringRef Value) {
@@ -6581,6 +6584,14 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   llvm::sys::path::append(R2, "..", "..", Name);
   if (llvm::sys::fs::exists(Twine(R2)))
     return std::string(R2);
+
+  // search Libc++ install dir (if configured)
+  // this is required for find the .modules.json manifest when libc++ is
+  // installed in a non-default location
+  SmallString<128> L(LibCxxDir);
+  llvm::sys::path::append(L, Name);
+  if (llvm::sys::fs::exists(Twine(L)))
+    return std::string(L);
 
   return std::string(Name);
 }

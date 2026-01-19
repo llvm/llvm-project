@@ -24,6 +24,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 # Must go below project(..)
 include(GNUInstallDirs)
 include(GetDarwinLinkerVersion)
+include(GetLibCxxInstallDir)
 
 if(CLANG_BUILT_STANDALONE)
   set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
@@ -905,6 +906,12 @@ if(CLANG_BUILT_STANDALONE)
 endif()
 
 set(CLANG_INSTALL_LIBDIR_BASENAME "lib${CLANG_LIBDIR_SUFFIX}")
+
+if(NOT DEFINED LIBCXX_INSTALL_LIBRARY_DIR)
+  get_libcxx_install_dir(LIBCXX_INSTALL_LIBRARY_DIR)
+endif()
+
+message(STATUS "Clang LIBCXX_INSTALL_LIBRARY_DIR: ${LIBCXX_INSTALL_LIBRARY_DIR}")
 
 configure_file(
   ${CLANG_SOURCE_DIR}/include/clang/Config/config.h.cmake

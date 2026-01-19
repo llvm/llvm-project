@@ -77,6 +77,10 @@ std::string GetResourcesPath(StringRef BinaryPath);
 /// executable), for finding the builtin compiler path.
 std::string GetResourcesPath(const char *Argv0, void *MainAddr);
 
+/// Get the directory where LibC++ is installed, relative to the
+/// compiler binary path \p BinaryPath.
+std::string GetLibCxxPath(StringRef BinaryPath);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_OPTIONS_OPTIONUTILS_H

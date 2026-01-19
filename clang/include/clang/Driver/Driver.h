@@ -194,6 +194,9 @@ public:
   /// User directory for config files.
   std::string UserConfigDir;
 
+  /// directory where Libc++ is installed
+  std::string LibCxxDir;
+
   /// A prefix directory used to emulate a limited subset of GCC's '-Bprefix'
   /// functionality.
   /// FIXME: This type of customization should be removed in favor of the
