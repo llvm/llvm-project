@@ -110,8 +110,8 @@ Changes in existing checks
     option.
 
 - Improved :doc:`modernize-use-std-format
-   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
-   when an argument is part of a macro expansion.
+  <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
+  when an argument is part of a macro expansion.
 
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
