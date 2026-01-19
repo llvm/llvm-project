@@ -13452,7 +13452,7 @@ def warn_unsafe_buffer_libc_call : Warning<
   InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;
 def warn_unsafe_buffer_format_attr_call : Warning<
   "formatting function %0 is unsafe">,
-  InGroup<UnsafeBufferUsageFormatAttr>, DefaultIgnore;
+  InGroup<UnsafeBufferUsageInFormatAttrCall>, DefaultIgnore;
 
 def note_unsafe_buffer_printf_call : Note<
   "%select{|change to 'snprintf' for explicit bounds checking | buffer pointer and size may not match"

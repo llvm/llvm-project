@@ -3,9 +3,11 @@
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage -Wno-gcc-compat\
 // RUN:            -verify %s -x objective-c++
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
-// RUN:            -Wunsafe-buffer-usage-format-attr -Wno-gcc-compat -verify %s
+// RUN:            -Wunsafe-buffer-usage-in-format-attr-call -Wno-gcc-compat \
+// RUN:            -verify %s
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
-// RUN:            -Wunsafe-buffer-usage-format-attr -Wno-gcc-compat -verify %s -DTEST_STD_NS
+// RUN:            -Wunsafe-buffer-usage-in-format-attr-call -Wno-gcc-compat \
+// RUN:            -verify %s -DTEST_STD_NS
 
 typedef struct {} FILE;
 typedef unsigned int size_t;
