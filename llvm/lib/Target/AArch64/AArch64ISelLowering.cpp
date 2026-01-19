@@ -13367,22 +13367,24 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
         // we'll emit the correct register as well.
         if (VT != MVT::Other) {
           switch (VT.getSizeInBits()) {
-          default:
-            Res.first = AArch64::FPR128RegClass.getRegister(RegNo);
-            Res.second = &AArch64::FPR128RegClass;
-            break;
-          case 64:
-            Res.first = AArch64::FPR64RegClass.getRegister(RegNo);
-            Res.second = &AArch64::FPR64RegClass;
+          case 16:
+            Res.first = AArch64::FPR16RegClass.getRegister(RegNo);
+            Res.second = &AArch64::FPR16RegClass;
             break;
           case 32:
             Res.first = AArch64::FPR32RegClass.getRegister(RegNo);
             Res.second = &AArch64::FPR32RegClass;
             break;
-          case 16:
-            Res.first = AArch64::FPR16RegClass.getRegister(RegNo);
-            Res.second = &AArch64::FPR16RegClass;
+          case 64:
+            Res.first = AArch64::FPR64RegClass.getRegister(RegNo);
+            Res.second = &AArch64::FPR64RegClass;
             break;
+          case 128:
+            Res.first = AArch64::FPR128RegClass.getRegister(RegNo);
+            Res.second = &AArch64::FPR128RegClass;
+            break;
+          default:
+            return std::make_pair(0U, nullptr);
           }
         } else {
           Res.first = AArch64::FPR128RegClass.getRegister(RegNo);
