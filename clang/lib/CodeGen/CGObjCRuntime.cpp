@@ -179,6 +179,26 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     }
   }
 
+  if (useFunclets)
+    if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
+      CodeGenFunction HelperCGF(CGM, /*suppressNewContext=*/true);
+      if (!CGF.CurSEHParent)
+        CGF.CurSEHParent = cast<NamedDecl>(CGF.CurFuncDecl);
+      // Outline the finally block.
+      const Stmt *FinallyBlock = Finally->getFinallyBody();
+      HelperCGF.startOutlinedSEHHelper(CGF, /*isFilter*/ false, FinallyBlock);
+
+      // Emit the original filter expression, convert to i32, and return.
+      HelperCGF.EmitStmt(FinallyBlock);
+
+      HelperCGF.FinishFunction(FinallyBlock->getEndLoc());
+
+      llvm::Function *FinallyFunc = HelperCGF.CurFn;
+
+      // Push a cleanup for __finally blocks.
+      CGF.pushSEHCleanup(NormalAndEHCleanup, FinallyFunc);
+    }
+
   SmallVector<CatchHandler, 8> Handlers;
 
   // Enter the catch, if there is one.
@@ -312,8 +332,13 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   CGF.Builder.restoreIP(SavedIP);
 
   // Pop out of the finally.
-  if (!useFunclets && S.getFinallyStmt())
-    FinallyInfo.exit(CGF);
+  if (S.getFinallyStmt()) {
+    if (useFunclets) {
+      CGF.PopCleanupBlock();
+    } else {
+      FinallyInfo.exit(CGF);
+    }
+  }
 
   if (Cont.isValid())
     CGF.EmitBlock(Cont.getBlock());
