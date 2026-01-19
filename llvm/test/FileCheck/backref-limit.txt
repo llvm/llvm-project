@@ -1,4 +1,4 @@
-; RUN: not FileCheck -check-prefix=CHECK-BACKREF %s < /dev/null 2>&1 | FileCheck -check-prefix=ERR-CHECK-BACKREF %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK-BACKREF %s < /dev/null 2>&1 | FileCheck -check-prefix=ERR-CHECK-BACKREF %s
 
 ; ERR-CHECK-BACKREF: error: Can't back-reference more than 20 variables
 
