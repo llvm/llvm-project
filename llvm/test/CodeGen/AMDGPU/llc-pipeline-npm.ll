@@ -11,6 +11,7 @@
 ; GCN-O0-NEXT: require<profile-summary>
 ; GCN-O0-NEXT: require<collector-metadata>
 ; GCN-O0-NEXT: require<runtime-libcall-info>
+; GCN-O0-NEXT: require<libcall-lowering-info>
 ; GCN-O0-NEXT: pre-isel-intrinsic-lowering
 ; GCN-O0-NEXT: function(expand-ir-insts<O0>)
 ; GCN-O0-NEXT: amdgpu-remove-incompatible-functions
@@ -90,6 +91,7 @@
 ; GCN-O2-NEXT: require<profile-summary>
 ; GCN-O2-NEXT: require<collector-metadata>
 ; GCN-O2-NEXT: require<runtime-libcall-info>
+; GCN-O2-NEXT: require<libcall-lowering-info>
 ; GCN-O2-NEXT: pre-isel-intrinsic-lowering
 ; GCN-O2-NEXT: function(expand-ir-insts<O2>)
 ; GCN-O2-NEXT: amdgpu-remove-incompatible-functions
@@ -261,6 +263,7 @@
 ; GCN-O3-NEXT: require<profile-summary>
 ; GCN-O3-NEXT: require<collector-metadata>
 ; GCN-O3-NEXT: require<runtime-libcall-info>
+; GCN-O3-NEXT: require<libcall-lowering-info>
 ; GCN-O3-NEXT: pre-isel-intrinsic-lowering
 ; GCN-O3-NEXT: function(expand-ir-insts<O3>)
 ; GCN-O3-NEXT: amdgpu-remove-incompatible-functions

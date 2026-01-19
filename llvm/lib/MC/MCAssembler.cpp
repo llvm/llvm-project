@@ -733,8 +733,11 @@ void MCAssembler::layout() {
 void MCAssembler::Finish() {
   layout();
 
-  // Write the object file.
-  stats::ObjectBytes += getWriter().writeObject();
+  // Write the object file if there is no error. The output would be discarded
+  // anyway, and this avoids wasting time writing large files (e.g. when testing
+  // fixup overflow with `.space 0x80000000`).
+  if (!getContext().hadError())
+    stats::ObjectBytes += getWriter().writeObject();
 
   HasLayout = false;
   assert(PendingErrors.empty());

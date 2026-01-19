@@ -3815,8 +3815,7 @@ define half @v_fma_mul_add_32_f16(half %x, half %y) {
 ; GFX11-SDAG-TRUE16-LABEL: v_fma_mul_add_32_f16:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    v_fmamk_f16 v0.l, v0.l, 0x5000, v0.h
+; GFX11-SDAG-TRUE16-NEXT:    v_fmamk_f16 v0.l, v0.l, 0x5000, v1.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: v_fma_mul_add_32_f16:
@@ -3915,8 +3914,7 @@ define half @v_fma_mul_add_neg32_f16(half %x, half %y) {
 ; GFX11-SDAG-TRUE16-LABEL: v_fma_mul_add_neg32_f16:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    v_fmamk_f16 v0.l, v0.l, 0xd000, v0.h
+; GFX11-SDAG-TRUE16-NEXT:    v_fmamk_f16 v0.l, v0.l, 0xd000, v1.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: v_fma_mul_add_neg32_f16:
