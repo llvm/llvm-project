@@ -995,6 +995,11 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
       } else {
         mapFlag |= mlir::omp::ClauseMapFlags::to;
       }
+    } else if (semantics::IsNamedConstant(sym)) {
+      // Parameter constants should be mapped as read-only (to) since they
+      // cannot be modified. Mapping them as tofrom would cause a crash when
+      // trying to write back to read-only memory.
+      mapFlag |= mlir::omp::ClauseMapFlags::to;
     } else if (!fir::isa_builtin_cptr_type(varType)) {
       mapFlag |= mlir::omp::ClauseMapFlags::to;
       mapFlag |= mlir::omp::ClauseMapFlags::from;
@@ -2657,8 +2662,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (!converter.getSymbolAddress(sym))
       return;
 
-    // Skip parameters/constants as they do not need to be mapped.
-    if (semantics::IsNamedConstant(sym))
+    // Skip scalar parameters/constants as they do not need to be mapped.
+    // However, parameter arrays must be mapped as they may be accessed with
+    // dynamic indices on the device (e.g., const_array(runtime_index)).
+    if (semantics::IsNamedConstant(sym) && sym.Rank() == 0)
       return;
 
     if (!isDuplicateMappedSymbol(sym, dsp.getAllSymbolsToPrivatize(),
