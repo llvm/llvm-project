@@ -7806,6 +7806,12 @@ def : Pat<(v8i8 (vec_ins_or_scal_vec GPR32:$Rn)),
 def : Pat<(v8i8 (bitconvert (i64 (zext GPR32:$Rn)))),
           (SUBREG_TO_REG (i32 0), (f32 (FMOVWSr GPR32:$Rn)), ssub)>;
 
+def: Pat<(f64 (bitconvert (i64 (zext (i32 (bitconvert (f32 FPR32:$Rn))))))),
+         (SUBREG_TO_REG (i32 0), (f32 (FMOVSr FPR32:$Rn)), ssub)>;
+
+def: Pat<(f32 (bitconvert (i32 (trunc (i64 (bitconvert (f64 FPR64:$Rn))))))),
+         (f32 (EXTRACT_SUBREG FPR64:$Rn, ssub))>;
+
 def : Pat<(v8i16 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),
                          (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;

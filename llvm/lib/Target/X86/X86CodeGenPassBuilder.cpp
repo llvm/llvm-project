@@ -208,8 +208,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
                          PMW);
   // TODO(boomanaiden154): Add X86IndirectThunksPass here
   // once it has been ported.
-  // TODO(boomanaiden154): Add X86ReturnThunksPass here
-  // once it has been ported.
+  addMachineFunctionPass(X86ReturnThunksPass(), PMW);
 
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.

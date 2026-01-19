@@ -197,10 +197,13 @@
           "name": "constant.language.mlir"
         },
         {
-          "begin": "\\b(affine_map|affine_set)\\s*\\<",
+          "begin": "\\b(affine_map|affine_set)\\s*(\\<)",
           "beginCaptures": {
             "1": {
               "name": "constant.language.mlir"
+            },
+            "2": {
+              "name": "punctuation.bracket.angle.begin.mlir"
             }
           },
           "patterns": [
@@ -216,13 +219,21 @@
               "include": "#number"
             }
           ],
-          "end": "\\)\\>"
+          "end": "\\)(\\>)",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.bracket.angle.end.mlir"
+            }
+          }
         },
         {
-          "begin": "\\b(dense|opaque|sparse)\\s*\\<",
+          "begin": "\\b(dense|opaque|sparse)\\s*(\\<)",
           "beginCaptures": {
             "1": {
               "name": "constant.language.mlir"
+            },
+            "2": {
+              "name": "punctuation.bracket.angle.begin.mlir"
             }
           },
           "patterns": [
@@ -230,7 +241,12 @@
               "include": "#attribute_value"
             }
           ],
-          "end": "\\>"
+          "end": "(\\>)",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.bracket.angle.end.mlir"
+            }
+          }
         },
         {
           "begin": "\\[",
@@ -258,10 +274,13 @@
           "name": "entity.name.function.mlir"
         },
         {
-          "begin": "(\\#[\\w\\$\\-\\.]+)\\<",
+          "begin": "(\\#[\\w\\$\\-\\.]+)(\\<)",
           "beginCaptures": {
             "1": {
               "name": "constant.language.mlir"
+            },
+            "2": {
+              "name": "punctuation.bracket.angle.begin.mlir"
             }
           },
           "patterns": [
@@ -275,7 +294,12 @@
               "include": "#bare_identifier"
             }
           ],
-          "end": "\\>"
+          "end": "(\\>)",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.bracket.angle.end.mlir"
+            }
+          }
         },
         {
           "match": "\\#[\\w\\$\\-\\.]+\\b",
@@ -285,7 +309,12 @@
           "include": "#type_value"
         },
         {
-          "begin": "\\<",
+          "begin": "(\\<)",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.bracket.angle.begin.mlir"
+            }
+          },
           "patterns": [
             {
               "include": "#attribute_value"
@@ -294,7 +323,12 @@
               "include": "#bare_identifier"
             }
           ],
-          "end": "\\>"
+          "end": "(\\>)",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.bracket.angle.end.mlir"
+            }
+          }
         }
       ]
     },
@@ -318,10 +352,13 @@
     "type_value": {
       "patterns": [
         {
-          "begin": "(\\![\\w\\$\\-\\.]+)\\<",
+          "begin": "(\\![\\w\\$\\-\\.]+)(\\<)",
           "beginCaptures": {
             "1": {
               "name": "entity.name.type.mlir"
+            },
+            "2": {
+              "name": "punctuation.bracket.angle.begin.mlir"
             }
           },
           "patterns": [
@@ -336,17 +373,25 @@
               "include": "#bare_identifier"
             }
           ],
-          "end": "\\>"
+          "end": "(\\>)",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.bracket.angle.end.mlir"
+            }
+          }
         },
         {
           "match": "\\![\\w\\$\\-\\.]+\\b",
           "name": "entity.name.type.mlir"
         },
         {
-          "begin": "(complex|memref|tensor|tuple|vector)\\<",
+          "begin": "(complex|memref|tensor|tuple|vector)(\\<)",
           "beginCaptures": {
             "1": {
               "name": "entity.name.type.mlir"
+            },
+            "2": {
+              "name": "punctuation.bracket.angle.begin.mlir"
             }
           },
           "patterns": [
@@ -373,7 +418,12 @@
               "include": "#bare_identifier"
             }
           ],
-          "end": "\\>"
+          "end": "(\\>)",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.bracket.angle.end.mlir"
+            }
+          }
         },
         {
           "match": "bf16|f16|f32|f64|f80|f128|index|none|(u|s)?i[0-9]+",

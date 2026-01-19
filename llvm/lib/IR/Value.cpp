@@ -942,9 +942,8 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       CanBeNull = true;
     }
   } else if (auto *AI = dyn_cast<AllocaInst>(this)) {
-    if (!AI->isArrayAllocation()) {
-      DerefBytes =
-          DL.getTypeStoreSize(AI->getAllocatedType()).getKnownMinValue();
+    if (std::optional<TypeSize> Size = AI->getAllocationSize(DL)) {
+      DerefBytes = Size->getKnownMinValue();
       CanBeNull = false;
       CanBeFreed = false;
     }
@@ -1102,8 +1101,6 @@ const Value *Value::DoPHITranslation(const BasicBlock *CurBB,
     return PN->getIncomingValueForBlock(PredBB);
   return this;
 }
-
-LLVMContext &Value::getContext() const { return VTy->getContext(); }
 
 void Value::reverseUseList() {
   if (!UseList || !UseList->Next)
