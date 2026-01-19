@@ -9178,21 +9178,22 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
                                         VPCostContext &CostCtx, VPlan &Plan,
                                         ScalarEpilogueLowering SEL,
                                         std::optional<unsigned> VScale) {
-  InstructionCost TotalCost = Checks.getCost();
-  if (!TotalCost.isValid())
+  InstructionCost RtCost = Checks.getCost();
+  if (!RtCost.isValid())
     return false;
 
+  InstructionCost OverheadCost = RtCost;
   // Add on the cost of any work required in the vector early exit block, if
   // one exists.
-  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
+  OverheadCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
 
-  TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
+  OverheadCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
 
   // When interleaving only scalar and vector cost will be equal, which in turn
   // would lead to a divide by 0. Fall back to hard threshold.
   if (VF.Width.isScalar()) {
     // TODO: Should we rename VectorizeMemoryCheckThreshold?
-    if (TotalCost > VectorizeMemoryCheckThreshold) {
+    if (OverheadCost > VectorizeMemoryCheckThreshold) {
       LLVM_DEBUG(
           dbgs()
           << "LV: Interleaving only is not profitable due to runtime checks\n");
@@ -9216,10 +9217,10 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   //  * ScalarC is the cost of a single scalar iteration.
   //
   //  The total cost of the vector loop is
-  //    RtC + VecC * (TC / VF) + EpiC
+  //    OverheadC + VecC * (TC / VF) + EpiC
   //  where
-  //  * RtC is the sum of the costs cost of
-  //    - the generated runtime checks
+  //  * OverheadC is the sum of the costs cost of
+  //    - the generated runtime checks, i.e. RtC
   //    - performing any additional work in the vector.early.exit block for
   //      loops with uncountable early exits.
   //    - the middle block, if ExpectedTC <=  VF.Width.
@@ -9231,18 +9232,18 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   //
   // Vectorization is profitable once the total vector cost is less than the
   // total scalar cost:
-  //   RtC + VecC * (TC / VF) + EpiC <  ScalarC * TC
+  //   OverheadC + VecC * (TC / VF) + EpiC <  ScalarC * TC
   //
   // Now we can compute the minimum required trip count TC as
-  //   VF * (RtC + EpiC) / (ScalarC * VF - VecC) < TC
+  //   VF * (OverheadC + EpiC) / (ScalarC * VF - VecC) < TC
   //
   // For now we assume the epilogue cost EpiC = 0 for simplicity. Note that
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
   unsigned IntVF = estimateElementCount(VF.Width, VScale);
-  uint64_t RtC = TotalCost.getValue();
+  uint64_t OverheadC = OverheadCost.getValue();
   uint64_t Div = ScalarC * IntVF - VF.Cost.getValue();
-  uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(RtC * IntVF, Div);
+  uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(OverheadC * IntVF, Div);
 
   // Second, compute a minimum iteration count so that the cost of the
   // runtime checks is only a fraction of the total scalar loop cost. This
@@ -9251,6 +9252,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // * TC. To bound the runtime check to be a fraction 1/X of the scalar
   // cost, compute
   //   RtC < ScalarC * TC * (1 / X)  ==>  RtC * X / ScalarC < TC
+  uint64_t RtC = RtCost.getValue();
   uint64_t MinTC2 = divideCeil(RtC * 10, ScalarC);
 
   // Now pick the larger minimum. If it is not a multiple of VF and a scalar
