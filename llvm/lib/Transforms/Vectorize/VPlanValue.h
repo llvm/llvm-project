@@ -238,6 +238,8 @@ class VPRecipeValue : public VPValue {
 
 #if !defined(NDEBUG)
   /// Returns true if this VPRecipeValue is defined by \p D.
+  /// NOTE: Only used by VPDef to assert that VPRecipeValues added/removed from
+  /// /p D are associated with its VPRecipeBase,
   bool isDefinedBy(const VPDef *D) const;
 #endif
 
@@ -382,6 +384,7 @@ class VPDef {
 
 public:
   VPDef() {}
+
   virtual ~VPDef() {
     for (VPRecipeValue *D : to_vector(DefinedValues)) {
       assert(D->isDefinedBy(this) &&

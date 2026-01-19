@@ -378,8 +378,8 @@ public:
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
 /// instructions. VPRecipeBase owns the VPValues it defines through VPDef
-/// and is responsible for deleting its defined values. Single-value recipes
-/// must inherit from VPSingleDefRecipe instead of inheriting from both
+/// and is responsible for deleting its defined values. Single-value
+/// recipes must inherit from VPSingleDef instead of inheriting from both
 /// VPRecipeBase and VPValue separately.
 class LLVM_ABI_FOR_TEST VPRecipeBase
     : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
