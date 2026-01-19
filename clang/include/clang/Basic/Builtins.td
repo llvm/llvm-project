@@ -923,6 +923,12 @@ def FrameAddress : Builtin {
   let Prototype = "void*(_Constant unsigned int)";
 }
 
+def StackAddress : Builtin {
+  let Spellings = ["__builtin_stack_address"];
+  let Attributes = [NoThrow];
+  let Prototype = "void*()";
+}
+
 def ClearCache : Builtin {
   let Spellings = ["__builtin___clear_cache"];
   let Attributes = [NoThrow];
@@ -1223,6 +1229,12 @@ def Unreachable : Builtin {
 def AllowRuntimeCheck : Builtin {
   let Spellings = ["__builtin_allow_runtime_check"];
   let Attributes = [NoThrow, Pure, Const];
+  let Prototype = "bool(char const*)";
+}
+
+def BuiltinAllowSanitizeCheck : Builtin {
+  let Spellings = ["__builtin_allow_sanitize_check"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "bool(char const*)";
 }
 
@@ -5049,6 +5061,12 @@ def HLSLWaveActiveAnyTrue : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "bool(bool)";
 }
 
+def HLSLWaveActiveBallot : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_ballot"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "_ExtVector<4, unsigned int>(bool)";
+}
+
 def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
@@ -5280,6 +5298,18 @@ def HLSLDdxCoarse : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLDdyCoarse : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_ddy_coarse"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLDdxFine : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_ddx_fine"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLDdyFine : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_ddy_fine"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }

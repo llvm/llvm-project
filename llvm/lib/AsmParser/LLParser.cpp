@@ -1958,13 +1958,16 @@ bool LLParser::parseOptionalAddrSpace(unsigned &AddrSpace, unsigned DefaultAS) {
 
   auto ParseAddrspaceValue = [&](unsigned &AddrSpace) -> bool {
     if (Lex.getKind() == lltok::StringConstant) {
-      auto AddrSpaceStr = Lex.getStrVal();
+      const std::string &AddrSpaceStr = Lex.getStrVal();
       if (AddrSpaceStr == "A") {
         AddrSpace = M->getDataLayout().getAllocaAddrSpace();
       } else if (AddrSpaceStr == "G") {
         AddrSpace = M->getDataLayout().getDefaultGlobalsAddressSpace();
       } else if (AddrSpaceStr == "P") {
         AddrSpace = M->getDataLayout().getProgramAddressSpace();
+      } else if (std::optional<unsigned> AS =
+                     M->getDataLayout().getNamedAddressSpace(AddrSpaceStr)) {
+        AddrSpace = *AS;
       } else {
         return tokError("invalid symbolic addrspace '" + AddrSpaceStr + "'");
       }
@@ -2581,7 +2584,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
   // We use syntax like memory(argmem: read), so the colon should not be
   // interpreted as a label terminator.
   Lex.setIgnoreColonInIdentifiers(true);
-  auto _ = make_scope_exit([&] { Lex.setIgnoreColonInIdentifiers(false); });
+  llvm::scope_exit _([&] { Lex.setIgnoreColonInIdentifiers(false); });
 
   Lex.Lex();
   if (!EatIfPresent(lltok::lparen)) {
@@ -3241,7 +3244,7 @@ bool LLParser::parseCapturesAttr(AttrBuilder &B) {
   // We use syntax like captures(ret: address, provenance), so the colon
   // should not be interpreted as a label terminator.
   Lex.setIgnoreColonInIdentifiers(true);
-  auto _ = make_scope_exit([&] { Lex.setIgnoreColonInIdentifiers(false); });
+  llvm::scope_exit _([&] { Lex.setIgnoreColonInIdentifiers(false); });
 
   Lex.Lex();
   if (parseToken(lltok::lparen, "expected '('"))

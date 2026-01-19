@@ -19,7 +19,7 @@ using namespace llvm::orc::shared;
 namespace {
 
 template <typename WriteT, typename SPSWriteT>
-CWrapperFunctionResult testWriteUInts(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer testWriteUInts(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSWriteT>)>::handle(
              ArgData, ArgSize,
              [](std::vector<WriteT> Ws) {
@@ -29,7 +29,7 @@ CWrapperFunctionResult testWriteUInts(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-CWrapperFunctionResult testWritePointers(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer testWritePointers(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSMemoryAccessPointerWrite>)>::
       handle(ArgData, ArgSize,
              [](std::vector<tpctypes::PointerWrite> Ws) {
@@ -39,7 +39,7 @@ CWrapperFunctionResult testWritePointers(const char *ArgData, size_t ArgSize) {
           .release();
 }
 
-CWrapperFunctionResult testWriteBuffers(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer testWriteBuffers(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSMemoryAccessBufferWrite>)>::handle(
              ArgData, ArgSize,
              [](std::vector<tpctypes::BufferWrite> Ws) {
@@ -51,7 +51,7 @@ CWrapperFunctionResult testWriteBuffers(const char *ArgData, size_t ArgSize) {
 }
 
 template <typename ReadT>
-CWrapperFunctionResult testReadUInts(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer testReadUInts(const char *ArgData, size_t ArgSize) {
   using SPSSig = SPSSequence<ReadT>(SPSSequence<SPSExecutorAddr>);
   return WrapperFunction<SPSSig>::handle(ArgData, ArgSize,
                                          [](std::vector<ExecutorAddr> Rs) {
@@ -65,7 +65,7 @@ CWrapperFunctionResult testReadUInts(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-CWrapperFunctionResult testReadPointers(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer testReadPointers(const char *ArgData, size_t ArgSize) {
   using SPSSig = SPSSequence<SPSExecutorAddr>(SPSSequence<SPSExecutorAddr>);
   return WrapperFunction<SPSSig>::handle(
              ArgData, ArgSize,
@@ -80,7 +80,7 @@ CWrapperFunctionResult testReadPointers(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-CWrapperFunctionResult testReadBuffers(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer testReadBuffers(const char *ArgData, size_t ArgSize) {
   using SPSSig =
       SPSSequence<SPSSequence<uint8_t>>(SPSSequence<SPSExecutorAddrRange>);
   return WrapperFunction<SPSSig>::handle(
@@ -99,7 +99,7 @@ CWrapperFunctionResult testReadBuffers(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-CWrapperFunctionResult testReadStrings(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer testReadStrings(const char *ArgData, size_t ArgSize) {
   using SPSSig = SPSSequence<SPSString>(SPSSequence<SPSExecutorAddr>);
   return WrapperFunction<SPSSig>::handle(
              ArgData, ArgSize,

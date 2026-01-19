@@ -53,6 +53,7 @@ class SectionAPITestCase(TestBase):
 
     @no_debug_info_test
     @skipIfXmlSupportMissing
+    @skipIfZLIBSupportMissing
     def test_compressed_section_data(self):
         exe = self.getBuildArtifact("compressed-sections.out")
         self.yaml2obj("compressed-sections.yaml", exe)

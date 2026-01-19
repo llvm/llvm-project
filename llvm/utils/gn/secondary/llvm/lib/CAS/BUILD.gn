@@ -10,6 +10,7 @@ static_library("CAS") {
     "MappedFileRegionArena.cpp",
     "ObjectStore.cpp",
     "OnDiskCAS.cpp",
+    "OnDiskCASLogger.cpp",
     "OnDiskCommon.cpp",
     "OnDiskDataAllocator.cpp",
     "OnDiskGraphDB.cpp",

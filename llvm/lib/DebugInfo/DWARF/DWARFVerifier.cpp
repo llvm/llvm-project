@@ -234,7 +234,6 @@ bool DWARFVerifier::verifyName(const DWARFDie &Die) {
   raw_string_ostream OS(ReconstructedName);
   std::string OriginalFullName;
   Die.getFullName(OS, &OriginalFullName);
-  OS.flush();
   if (OriginalFullName.empty() || OriginalFullName == ReconstructedName)
     return false;
 

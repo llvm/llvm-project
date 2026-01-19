@@ -343,6 +343,17 @@ public:
         auto *Callee = CE->getCallee();
         if (!Callee)
           return;
+        Callee = Callee->IgnoreParenCasts();
+        if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Callee)) {
+          Callee = MTE->getSubExpr();
+          if (!Callee)
+            return;
+          Callee = Callee->IgnoreParenCasts();
+        }
+        if (auto *L = dyn_cast<LambdaExpr>(Callee)) {
+          LambdasToIgnore.insert(L); // Calling a lambda upon creation is safe.
+          return;
+        }
         auto *DRE = dyn_cast<DeclRefExpr>(Callee->IgnoreParenCasts());
         if (!DRE)
           return;
@@ -416,12 +427,9 @@ public:
             return false;
           }
           if (auto *CE = dyn_cast<CallExpr>(Arg)) {
-            if (CE->isCallToStdMove() && CE->getNumArgs() == 1) {
-              Arg = CE->getArg(0)->IgnoreParenCasts();
-              continue;
-            }
             if (auto *Callee = CE->getDirectCallee()) {
-              if (isCtorOfSafePtr(Callee) && CE->getNumArgs() == 1) {
+              if ((isStdOrWTFMove(Callee) || isCtorOfSafePtr(Callee)) &&
+                  CE->getNumArgs() == 1) {
                 Arg = CE->getArg(0)->IgnoreParenCasts();
                 continue;
               }
