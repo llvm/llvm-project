@@ -203,7 +203,7 @@ private:
   }
   void Show(const evaluate::Relational<evaluate::SomeType> &x);
   template <typename T> void Show(const evaluate::Expr<T> &x) {
-    Indent("expr <" + std::string(TypeOf<T>::name) + ">");
+    Indent("expr <"s + std::string(TypeOf<T>::name) + ">"s);
     Show(x.u);
     Outdent();
   }
