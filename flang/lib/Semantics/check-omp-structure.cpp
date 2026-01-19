@@ -4863,11 +4863,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
           useDeviceAddrNameList.push_back(*name);
         }
       }
-      if (version < 60 && IsWholeAssumedSizeArray(ompObject)) {
-        auto maybeSource{GetObjectSource(ompObject)};
-        context_.Say(maybeSource.value_or(clause->source),
-            "Whole assumed-size arrays are not allowed on USE_DEVICE_ADDR clause"_err_en_US);
-      }
     }
     CheckMultipleOccurrence(
         listVars, useDeviceAddrNameList, clause->source, "USE_DEVICE_ADDR");
