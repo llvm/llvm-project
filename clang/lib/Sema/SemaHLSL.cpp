@@ -4398,7 +4398,35 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   return false;
 }
 
-// Return true if everything is ok; returns false if there was an error.
+std::optional<const DeclBindingInfo *> SemaHLSL::GetGlobalBinding(Expr *E) {
+  if (auto *Ternary = dyn_cast<ConditionalOperator>(E)) {
+    auto TrueInfo = GetGlobalBinding(Ternary->getTrueExpr());
+    auto FalseInfo = GetGlobalBinding(Ternary->getFalseExpr());
+    if (!TrueInfo || !FalseInfo)
+      return std::nullopt;
+    if (*TrueInfo != *FalseInfo)
+      return std::nullopt;
+    return TrueInfo;
+  }
+
+  if (auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+    E = ASE->getBase()->IgnoreParenImpCasts();
+
+  if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens()))
+    if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
+      if (Ty->isArrayType())
+        Ty = Ty->getArrayElementTypeNoTypeQual();
+      if (const auto *AttrResType =
+              HLSLAttributedResourceType::findHandleTypeOnResource(Ty)) {
+        ResourceClass RC = AttrResType->getAttrs().ResourceClass;
+        return Bindings.getDeclBindingInfo(VD, RC);
+      }
+    }
+
+  return nullptr;
+}
+
 bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
                                   Expr *RHSExpr, SourceLocation Loc) {
   assert((LHSExpr->getType()->isHLSLResourceRecord() ||
@@ -4412,14 +4440,37 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
   while (auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
     E = ASE->getBase()->IgnoreParenImpCasts();
 
+  auto RHSBinding = GetGlobalBinding(RHSExpr);
+  if (!RHSBinding) {
+    SemaRef.Diag(Loc, diag::err_hlsl_assigning_local_resource_is_not_unique)
+        << RHSExpr;
+    return false;
+  }
+
   // Report error if LHS is a non-static resource declared at a global scope.
   if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
     if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (VD->hasGlobalStorage() && VD->getStorageClass() != SC_Static) {
-        // assignment to global resource is not allowed
-        SemaRef.Diag(Loc, diag::err_hlsl_assign_to_global_resource) << VD;
-        SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
-        return false;
+      if (VD->getStorageClass() != SC_Static) {
+        if (VD->hasGlobalStorage()) {
+          // assignment to global resource is not allowed
+          SemaRef.Diag(Loc, diag::err_hlsl_assign_to_global_resource) << VD;
+          SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
+          return false;
+        }
+
+        // Ensure assignment to a non-static local resource does not conflict
+        // with previous assignments to global resources
+        const DeclBindingInfo *LHSBinding = LocalResourceBindings[VD];
+        if (!LHSBinding) {
+          // occurs when local resource was instantiated without an expression
+          LocalResourceBindings[VD] = *RHSBinding;
+        } else if (LHSBinding != *RHSBinding) {
+          SemaRef.Diag(Loc,
+                       diag::err_hlsl_assigning_local_resource_is_not_unique)
+              << RHSExpr;
+          SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
+          return false;
+        }
       }
     }
   }
@@ -4797,6 +4848,19 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
 }
 
 bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
+  // If initializing a local resource, register the binding it is using
+  if (VDecl->getType()->isHLSLResourceRecord() && !VDecl->hasGlobalStorage())
+    if (auto *InitExpr = Init) {
+      if (auto Binding = GetGlobalBinding(InitExpr)) {
+        LocalResourceBindings.insert({VDecl, *Binding});
+      } else {
+        SemaRef.Diag(Init->getBeginLoc(),
+                     diag::err_hlsl_assigning_local_resource_is_not_unique)
+            << Init;
+        return false;
+      }
+    }
+
   const HLSLVkConstantIdAttr *ConstIdAttr =
       VDecl->getAttr<HLSLVkConstantIdAttr>();
   if (!ConstIdAttr)

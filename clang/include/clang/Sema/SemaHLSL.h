@@ -132,6 +132,14 @@ public:
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
+
+  // Return an info if the expr has common global binding info; returns
+  // std::nullopt if the expr refers to non-unique global bindings, returns
+  // nullptr if it isn't refer to any global binding, otherwise it returns
+  // a reference to the global binding info.
+  std::optional<const DeclBindingInfo *> GetGlobalBinding(Expr *E);
+
+  // Return true if everything is ok; returns false if there was an error.
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
 
@@ -229,6 +237,13 @@ private:
 
   // List of all resource bindings
   ResourceBindings Bindings;
+
+  // Map of local resource variables to their used global resource.
+  //
+  // The Binding can be a nullptr, in which case, the variable has not be
+  // initialized or assigned to yet.
+  llvm::DenseMap<const VarDecl *, const DeclBindingInfo *>
+      LocalResourceBindings;
 
   // Global declaration collected for the $Globals default constant
   // buffer which will be created at the end of the translation unit.
