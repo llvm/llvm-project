@@ -1772,7 +1772,7 @@ add_entrypoint_object(
   HDRS
     ../ilogbf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.ilogbf
 )
 
 add_entrypoint_object(
