@@ -313,7 +313,7 @@ bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
 /// field is required.
 using LaunchResponse = VoidResponse;
 
-#define LLDB_DAP_INVALID_PORT -1
+#define LLDB_DAP_INVALID_PORT (-1)
 /// An invalid 'frameId' default value.
 #define LLDB_DAP_INVALID_FRAME_ID UINT64_MAX
 
@@ -407,11 +407,11 @@ struct CompletionsArguments {
   /// The position within `text` for which to determine the completion
   /// proposals. It is measured in UTF-16 code units and the client capability
   /// `columnsStartAt1` determines whether it is 0- or 1-based.
-  int64_t column = 0;
+  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
 
   /// A line for which to determine the completion proposals. If missing the
   /// first line of the text is assumed.
-  int64_t line = 0;
+  uint32_t line = 1;
 };
 bool fromJSON(const llvm::json::Value &, CompletionsArguments &,
               llvm::json::Path);
