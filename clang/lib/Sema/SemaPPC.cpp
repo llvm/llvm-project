@@ -91,6 +91,14 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_amo_ldat:
   case PPC::BI__builtin_amo_lwat_s:
   case PPC::BI__builtin_amo_ldat_s:
+  case PPC::BI__builtin_amo_lwat_cond:
+  case PPC::BI__builtin_amo_ldat_cond:
+  case PPC::BI__builtin_amo_lwat_cond_s:
+  case PPC::BI__builtin_amo_ldat_cond_s:
+  case PPC::BI__builtin_amo_stwat:
+  case PPC::BI__builtin_amo_stdat:
+  case PPC::BI__builtin_amo_stwat_s:
+  case PPC::BI__builtin_amo_stdat_s:
     return true;
   }
   return false;
@@ -280,6 +288,45 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
            << toString(Result, 10) << (IsUnsigned ? "0-4, 6" : "0, 5, 7") << "8"
            << Arg->getSourceRange();
+  }
+  case PPC::BI__builtin_amo_lwat_cond:
+  case PPC::BI__builtin_amo_ldat_cond:
+  case PPC::BI__builtin_amo_lwat_cond_s:
+  case PPC::BI__builtin_amo_ldat_cond_s: {
+    llvm::APSInt Result;
+    if (SemaRef.BuiltinConstantArg(TheCall, 1, Result))
+      return true;
+    unsigned Val = Result.getZExtValue();
+    if (llvm::is_contained({24u, 25u, 28u}, Val))
+      return false;
+
+    Expr *Arg = TheCall->getArg(1);
+    return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
+           << toString(Result, 10) << "24, 25" << "28" << Arg->getSourceRange();
+  }
+  case PPC::BI__builtin_amo_stwat:
+  case PPC::BI__builtin_amo_stdat:
+  case PPC::BI__builtin_amo_stwat_s:
+  case PPC::BI__builtin_amo_stdat_s: {
+    llvm::APSInt Result;
+    if (SemaRef.BuiltinConstantArg(TheCall, 2, Result))
+      return true;
+    unsigned Val = Result.getZExtValue();
+
+    bool IsUnsigned = (BuiltinID == PPC::BI__builtin_amo_stwat ||
+                       BuiltinID == PPC::BI__builtin_amo_stdat);
+
+    bool IsValid = IsUnsigned
+                       ? llvm::is_contained({0u, 1u, 2u, 3u, 4u, 6u, 24u}, Val)
+                       : llvm::is_contained({0u, 5u, 7u, 24u}, Val);
+
+    if (IsValid)
+      return false;
+
+    Expr *Arg = TheCall->getArg(2);
+    return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
+           << toString(Result, 10) << (IsUnsigned ? "0-4, 6" : "0, 5, 7")
+           << "24" << Arg->getSourceRange();
   }
   }
   llvm_unreachable("must return from switch");

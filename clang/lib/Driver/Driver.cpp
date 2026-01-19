@@ -801,27 +801,11 @@ static llvm::Triple computeTargetTriple(const Driver &D,
           ArchName, /*EnableExperimentalExtensions=*/true);
       if (!llvm::errorToBool(ISAInfo.takeError())) {
         unsigned XLen = (*ISAInfo)->getXLen();
-        if (XLen == 32) {
-          if (Target.isLittleEndian())
-            Target.setArch(llvm::Triple::riscv32);
-          else
-            Target.setArch(llvm::Triple::riscv32be);
-        } else if (XLen == 64) {
-          if (Target.isLittleEndian())
-            Target.setArch(llvm::Triple::riscv64);
-          else
-            Target.setArch(llvm::Triple::riscv64be);
-        }
+        if (XLen == 32)
+          Target.setArch(llvm::Triple::riscv32);
+        else if (XLen == 64)
+          Target.setArch(llvm::Triple::riscv64);
       }
-    }
-  }
-
-  if (Target.getArch() == llvm::Triple::riscv32be ||
-      Target.getArch() == llvm::Triple::riscv64be) {
-    static bool WarnedRISCVBE = false;
-    if (!WarnedRISCVBE) {
-      D.Diag(diag::warn_drv_riscv_be_experimental);
-      WarnedRISCVBE = true;
     }
   }
 
@@ -7009,8 +6993,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         break;
       case llvm::Triple::riscv32:
       case llvm::Triple::riscv64:
-      case llvm::Triple::riscv32be:
-      case llvm::Triple::riscv64be:
         TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);
         break;
       case llvm::Triple::ve:

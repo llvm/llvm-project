@@ -1690,6 +1690,7 @@ module std [system] {
     }
     module uses_allocator                     { header "__memory/uses_allocator.h" }
     module uses_allocator_construction        { header "__memory/uses_allocator_construction.h" }
+    module valid_range                        { header "__memory/valid_range.h" }
 
     header "memory"
     export *
@@ -2172,7 +2173,6 @@ module std [system] {
     }
     module integer_sequence                { header "__utility/integer_sequence.h" }
     module is_pointer_in_range             { header "__utility/is_pointer_in_range.h" }
-    module is_valid_range                  { header "__utility/is_valid_range.h" }
     module lazy_synth_three_way_comparator { header "__utility/lazy_synth_three_way_comparator.h" }
     module move                            { header "__utility/move.h" }
     module no_destroy                      { header "__utility/no_destroy.h" }
@@ -2426,10 +2426,6 @@ module std_errno_h [system] {
 }
 module std_fenv_h [system] {
   header "fenv.h"
-  export *
-}
-module std_float_h [system] {
-  header "float.h"
   export *
 }
 module std_inttypes_h [system] {
