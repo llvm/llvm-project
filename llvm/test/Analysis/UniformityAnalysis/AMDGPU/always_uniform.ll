@@ -199,13 +199,6 @@ define void @s_memrealtime(ptr addrspace(1) inreg %out) {
   ret void
 }
 
-; CHECK-LABEL: for function 'get_stack_base':
-; CHECK: ALL VALUES UNIFORM
-define amdgpu_cs void @get_stack_base(ptr addrspace(1) inreg %out) {
-  %v = call i32 @llvm.amdgcn.get.stack.base()
-  store i32 %v, ptr addrspace(1) %out
-  ret void
-}
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.readfirstlane(i32) #0
@@ -223,7 +216,6 @@ declare i32 @llvm.amdgcn.cluster.workgroup.max.id.x()
 declare i32 @llvm.amdgcn.cluster.workgroup.max.id.y()
 declare i32 @llvm.amdgcn.cluster.workgroup.max.id.z()
 declare i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
-declare i32 @llvm.amdgcn.get.stack.base()
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone convergent }

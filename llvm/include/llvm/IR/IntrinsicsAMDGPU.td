@@ -3799,12 +3799,6 @@ def int_amdgcn_cooperative_atomic_store_16x8B : AMDGPUCooperativeAtomicStore<llv
 def int_amdgcn_cooperative_atomic_load_8x16B : AMDGPUCooperativeAtomicLoad<llvm_v4i32_ty>;
 def int_amdgcn_cooperative_atomic_store_8x16B : AMDGPUCooperativeAtomicStore<llvm_v4i32_ty>;
 
-// Return the offset for the actual base of the stack, skipping over any
-// reserved areas (e.g. the area reserved for saving the dynamic VGPRs when CWSR
-// is active). The returned value only makes sense in functions that set up
-// their own stack.
-def int_amdgcn_get_stack_base : PureIntrinsic<[llvm_i32_ty]>;
-
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.
