@@ -101,7 +101,9 @@ bool isPointerLikeType(QualType QT) {
 }
 
 bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
-  if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
+  if (!Callee)
+    return false;
+  if (auto *Conv = dyn_cast<CXXConversionDecl>(Callee))
     if (isGslPointerType(Conv->getConversionType()) &&
         Callee->getParent()->hasAttr<OwnerAttr>())
       return true;
@@ -110,6 +112,12 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
   if (!isGslPointerType(Callee->getFunctionObjectParameterType()) &&
       !isGslOwnerType(Callee->getFunctionObjectParameterType()))
     return false;
+
+  // Track dereference operator for GSL pointers in STL.
+  if (isGslPointerType(Callee->getFunctionObjectParameterType()))
+    if (Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Star)
+      return true;
+
   if (isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier())
       return false;
