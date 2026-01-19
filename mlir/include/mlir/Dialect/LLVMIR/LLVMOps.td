@@ -940,6 +940,7 @@ def LLVM_InsertValueOp : LLVM_Op<
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 
   string llvmInstName = "InsertValue";
   string llvmBuilder = [{

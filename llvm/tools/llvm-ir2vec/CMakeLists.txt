@@ -20,7 +20,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 # Add the utils subdirectory for the library
-add_subdirectory(utils)
+add_subdirectory(lib)
 
 # Main executable
 add_llvm_tool(llvm-ir2vec
@@ -30,5 +30,5 @@ add_llvm_tool(llvm-ir2vec
   intrinsics_gen
 )
 
-target_include_directories(llvm-ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils)
-target_link_libraries(llvm-ir2vec PRIVATE emb_utils)
+target_include_directories(llvm-ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib)
+target_link_libraries(llvm-ir2vec PRIVATE LLVMEmbUtils)
