@@ -1777,43 +1777,8 @@ TEST(STLExtrasTest, ReverseConditionally) {
 struct Foo;
 struct Bar {};
 
-TEST(STLExtrasTest, HasEqualityComparison) {
-  static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
-  static_assert(!is_incomplete_v<Bar>, "Bar is defined");
-
-  struct NoEqualityComparison {};
-  static_assert(!has_equality_comparison_v<NoEqualityComparison>);
-
-  // Mutating equality comparison doesn't count.
-  struct MutatingEqualityComparison {
-    bool operator==(MutatingEqualityComparison &Other) { return false; }
-  };
-  static_assert(!has_equality_comparison_v<MutatingEqualityComparison>);
-
-  struct PrivateEqualityComparison {
-  private:
-    bool operator==(const PrivateEqualityComparison &Other) const {
-      return false;
-    }
-  };
-  static_assert(!has_equality_comparison_v<PrivateEqualityComparison>);
-
-  struct PublicEqualityComparison {
-    bool operator==(const PublicEqualityComparison &Other) const {
-      return false;
-    }
-  };
-  static_assert(has_equality_comparison_v<PublicEqualityComparison>);
-
-  struct StructA {};
-  struct StructB {
-    bool operator==(const StructA &Other) const { return false; }
-  };
-  static_assert(!has_equality_comparison_v<StructA, StructB>);
-  static_assert(has_equality_comparison_v<StructB, StructA>);
-
-  SUCCEED();
-}
+static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
+static_assert(!is_incomplete_v<Bar>, "Bar is defined");
 
 TEST(STLExtrasTest, Search) {
   // Test finding a subsequence in the middle.
