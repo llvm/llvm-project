@@ -136,10 +136,12 @@ void UnrollState::addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
   Type *IntStepTy =
       IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
   VPValue *StartIndex = Steps->getVFValue();
-  StartIndex = Builder.createOverflowingOp(
-      Instruction::Mul,
-      {StartIndex,
-       Plan.getConstantInt(TypeInfo.inferScalarType(StartIndex), Part)});
+  if (Part > 1) {
+    StartIndex = Builder.createOverflowingOp(
+        Instruction::Mul,
+        {StartIndex,
+         Plan.getConstantInt(TypeInfo.inferScalarType(StartIndex), Part)});
+  }
   StartIndex = Builder.createScalarSExtOrTrunc(
       StartIndex, IntStepTy, TypeInfo.inferScalarType(StartIndex),
       DebugLoc::getUnknown());

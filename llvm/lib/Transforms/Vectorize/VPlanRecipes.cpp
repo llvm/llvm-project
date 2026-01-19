@@ -2491,8 +2491,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     MulOp = Instruction::FMul;
   }
 
-  // Determine the number of scalars we need to generate for each unroll
-  // iteration.
+  // Determine the number of scalars we need to generate.
   bool FirstLaneOnly = vputils::onlyFirstLaneUsed(this);
   // Compute the scalar steps and save the results in State.
 
@@ -2502,11 +2501,8 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     StartLane = State.Lane->getKnownLane();
     EndLane = StartLane + 1;
   }
-  Value *StartIdx0;
-  if (getNumOperands() == 3)
-    StartIdx0 = Constant::getNullValue(BaseIVTy);
-  else
-    StartIdx0 = State.get(getOperand(3), true);
+  Value *StartIdx0 = getNumOperands() == 3 ? Constant::getNullValue(BaseIVTy)
+                                           : State.get(getOperand(3), true);
 
   for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
     // It is okay if the induction variable type cannot hold the lane number,

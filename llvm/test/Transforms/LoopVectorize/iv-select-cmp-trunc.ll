@@ -1714,6 +1714,21 @@ define i1 @select_with_trunc_i1_iv(i64 %n, i64 %start) {
 ; CHECK-VF1IC4-LABEL: define i1 @select_with_trunc_i1_iv(
 ; CHECK-VF1IC4-SAME: i64 [[N:%.*]], i64 [[START:%.*]]) {
 ; CHECK-VF1IC4-NEXT:  [[ENTRY:.*]]:
+; CHECK-VF1IC4-NEXT:    br label %[[LOOP:.*]]
+; CHECK-VF1IC4:       [[LOOP]]:
+; CHECK-VF1IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-VF1IC4-NEXT:    [[CTR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[CTR_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-VF1IC4-NEXT:    [[ACCUM:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[SEL:%.*]], %[[LOOP]] ]
+; CHECK-VF1IC4-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], 0
+; CHECK-VF1IC4-NEXT:    [[TRUNC:%.*]] = trunc i64 [[CTR]] to i1
+; CHECK-VF1IC4-NEXT:    [[SEL]] = select i1 [[CMP]], i1 [[ACCUM]], i1 [[TRUNC]]
+; CHECK-VF1IC4-NEXT:    [[CTR_NEXT]] = add i64 [[CTR]], 1
+; CHECK-VF1IC4-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-VF1IC4-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[N]], [[CTR]]
+; CHECK-VF1IC4-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-VF1IC4:       [[EXIT]]:
+; CHECK-VF1IC4-NEXT:    [[SEL_LCSSA:%.*]] = phi i1 [ [[SEL]], %[[LOOP]] ]
+; CHECK-VF1IC4-NEXT:    ret i1 [[SEL_LCSSA]]
 ;
 entry:
   br label %loop
