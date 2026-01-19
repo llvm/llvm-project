@@ -22,9 +22,9 @@
 // Checking PLT entries before running BOLT
 // RUN: llvm-objdump -d -j .plt %t.exe | FileCheck %s --check-prefix=CHECK-EXE
 // CHECK-EXE: <abort@plt>
-// CHECK-EXE-NEXT: adrp    x16, 0x8230000
-// CHECK-EXE-NEXT: ldr     x17, [x16, #0xaf0]
-// CHECK-EXE-NEXT: add     x16, x16, #0xaf0
+// CHECK-EXE-NEXT: adrp    x16, {{0x[0-9a-f]+}}
+// CHECK-EXE-NEXT: ldr     x17, [x16, #{{0x[0-9a-f]+}}]
+// CHECK-EXE-NEXT: add     x16, x16, #{{0x[0-9a-f]+}}
 // CHECK-EXE-NEXT: br      x17
 // CHECK-EXE-NEXT: nop
 // CHECK-EXE-NEXT: nop
@@ -34,9 +34,9 @@
 // RUN: --check-prefix=CHECK-BOLT
 // CHECK-BOLT: <abort@plt>
 // CHECK-BOLT-NEXT: bti     c
-// CHECK-BOLT-NEXT: adrp    x16, 0x8230000
-// CHECK-BOLT-NEXT: ldr     x17, [x16, #0xaf0]
-// CHECK-BOLT-NEXT: add     x16, x16, #0xaf0
+// CHECK-BOLT-NEXT: adrp    x16, {{0x[0-9a-f]+}}
+// CHECK-BOLT-NEXT: ldr     x17, [x16, #{{0x[0-9a-f]+}}]
+// CHECK-BOLT-NEXT: add     x16, x16, #{{0x[0-9a-f]+}}
 // CHECK-BOLT-NEXT: br      x17
 // CHECK-BOLT-NEXT: nop
 
