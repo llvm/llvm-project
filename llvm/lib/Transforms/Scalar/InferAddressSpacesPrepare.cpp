@@ -16,6 +16,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -86,28 +87,12 @@ static Value *getPtrToIntRecursively(Value *Val, int Depth) {
   if (Depth <= 0)
     return nullptr;
 
-  // For phi instruction, we need to check all the incoming value to get the
-  // original pointer. In the following code, the %or value is derived from %a1
-  // or %a2. We need check both %a1 and %a2 only changes in low bits. We don't
-  // support phi node for now.
-  // if:
-  //   %a1 = addrspacecast ptr addrspace(3) %sp1 to ptr
-  //   %t1 = ptrtoint ptr %a1 to i64
-  //   %or1 = or i64 %t1, 16
-  //   br label %exit
-  // else:
-  //   %a2 = addrspacecast ptr addrspace(3) %sp2 to ptr
-  //   %t2 = ptrtoint ptr %a2 to i64
-  //   %or2 = or i64 %t2, 16
-  //   br label %exit
-  // exit:
-  //   %or = phi i64 [%or1, %if], [%or2, %else]
-  //   %gp2 = inttoptr i64 %or to ptr
-  if (isa<PHINode>(Inst))
+  if (!isa<BinaryOperator>(Inst) && !isa<UnaryInstruction>(Inst))
     return nullptr;
 
   // Recursively look up each operand to find the ptrtoint instruction.
   for (unsigned J = 0, E = Inst->getNumOperands(); J != E; ++J) {
+    Inst->getOperand(J)->dump();
     if (auto *P2I = getPtrToIntRecursively(Inst->getOperand(J), Depth))
       return P2I;
   }
