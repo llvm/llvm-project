@@ -1802,6 +1802,13 @@ struct PublicEqualityComparison {
 };
 static_assert(has_equality_comparison_v<PublicEqualityComparison>);
 
+struct StructA {};
+struct StructB {
+  bool operator==(const StructA &Other) const { return false; }
+};
+static_assert(!has_equality_comparison_v<StructA, StructB>);
+static_assert(has_equality_comparison_v<StructB, StructA>);
+
 TEST(STLExtrasTest, Search) {
   // Test finding a subsequence in the middle.
   std::vector<int> Haystack = {1, 2, 3, 4, 5, 6, 7, 8};
