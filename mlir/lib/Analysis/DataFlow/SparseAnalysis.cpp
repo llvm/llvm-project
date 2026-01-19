@@ -639,8 +639,6 @@ void AbstractSparseBackwardDataFlowAnalysis::
     visitRegionSuccessorsFromTerminator(
         RegionBranchTerminatorOpInterface terminator,
         RegionBranchOpInterface branch) {
-  assert(isa<RegionBranchTerminatorOpInterface>(terminator) &&
-         "expected a `RegionBranchTerminatorOpInterface` op");
   assert(terminator->getParentOp() == branch.getOperation() &&
          "expected `branch` to be the parent op of `terminator`");
 

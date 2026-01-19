@@ -766,6 +766,10 @@ struct PackOpTiling
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
     auto packOp = cast<PackOp>(op);
+    // TODO: Support Memref PackOp. Temporarily return failure.
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     Location loc = packOp.getLoc();
 
     // The tiling is applied on interchanged dimensions. We have to undo the
@@ -1010,6 +1014,10 @@ struct PackOpTiling
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
 
     auto packOp = cast<PackOp>(op);
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     Location loc = packOp.getLoc();
 
     int64_t inputRank = packOp.getSourceRank();
@@ -1189,6 +1197,10 @@ struct UnPackOpTiling
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
     auto unpackOp = cast<UnPackOp>(op);
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!unpackOp.hasPureTensorSemantics())
+      return failure();
+
     int64_t srcRank = unpackOp.getSourceRank();
     int64_t destRank = unpackOp.getDestRank();
     int64_t numInnerTiles = srcRank - destRank;
@@ -1359,6 +1371,10 @@ struct UnPackOpTiling
       return failure();
     }
     auto unPackOp = cast<UnPackOp>(op);
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!unPackOp.hasPureTensorSemantics())
+      return failure();
+
     ArrayRef<OpFoldResult> offsets(allOffsets[0]);
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
 

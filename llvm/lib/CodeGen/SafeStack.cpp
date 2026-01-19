@@ -198,14 +198,10 @@ public:
 };
 
 uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
-  uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
-  if (AI->isArrayAllocation()) {
-    auto C = dyn_cast<ConstantInt>(AI->getArraySize());
-    if (!C)
-      return 0;
-    Size *= C->getZExtValue();
-  }
-  return Size;
+  if (auto Size = AI->getAllocationSize(DL))
+    if (Size->isFixed())
+      return Size->getFixedValue();
+  return 0;
 }
 
 bool SafeStack::IsAccessSafe(Value *Addr, uint64_t AccessSize,

@@ -942,9 +942,8 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       CanBeNull = true;
     }
   } else if (auto *AI = dyn_cast<AllocaInst>(this)) {
-    if (!AI->isArrayAllocation()) {
-      DerefBytes =
-          DL.getTypeStoreSize(AI->getAllocatedType()).getKnownMinValue();
+    if (std::optional<TypeSize> Size = AI->getAllocationSize(DL)) {
+      DerefBytes = Size->getKnownMinValue();
       CanBeNull = false;
       CanBeFreed = false;
     }

@@ -313,7 +313,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
             predecessorValues.push_back($_op.getEntrySuccessorOperands(successor)[index]);
             continue;
           }
-          auto terminator = cast<RegionBranchTerminatorOpInterface>(predecessor.getTerminatorPredecessorOrNull());
+          auto terminator = predecessor.getTerminatorPredecessorOrNull();
           predecessorValues.push_back(terminator.getSuccessorOperands(successor)[index]);
         }
       }]>,

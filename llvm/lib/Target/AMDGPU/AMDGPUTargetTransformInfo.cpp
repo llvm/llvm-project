@@ -206,9 +206,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
             dyn_cast<AllocaInst>(getUnderlyingObject(Ptr));
         if (!Alloca || !Alloca->isStaticAlloca())
           continue;
-        Type *Ty = Alloca->getAllocatedType();
-        unsigned AllocaSize = Ty->isSized() ? DL.getTypeAllocSize(Ty) : 0;
-        if (AllocaSize > MaxAlloca)
+        auto AllocaSize = Alloca->getAllocationSize(DL);
+        if (!AllocaSize || AllocaSize->getFixedValue() > MaxAlloca)
           continue;
       } else if (AS == AMDGPUAS::LOCAL_ADDRESS ||
                  AS == AMDGPUAS::REGION_ADDRESS) {
@@ -1455,7 +1454,8 @@ static unsigned getCallArgsTotalAllocaSize(const CallBase *CB,
     if (!AI || !AI->isStaticAlloca() || !AIVisited.insert(AI).second)
       continue;
 
-    AllocaSize += DL.getTypeAllocSize(AI->getAllocatedType());
+    if (auto Size = AI->getAllocationSize(DL))
+      AllocaSize += Size->getFixedValue();
   }
   return AllocaSize;
 }
@@ -1509,10 +1509,13 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
     Threshold += Threshold / 2;
   }
 
-  auto ArgAllocaSize = DL.getTypeAllocSize(AI->getAllocatedType());
+  auto ArgAllocaSize = AI->getAllocationSize(DL);
+  if (!ArgAllocaSize)
+    return 0;
 
   // Attribute the bonus proportionally to the alloca size
-  unsigned AllocaThresholdBonus = (Threshold * ArgAllocaSize) / AllocaSize;
+  unsigned AllocaThresholdBonus =
+      (Threshold * ArgAllocaSize->getFixedValue()) / AllocaSize;
 
   return AllocaThresholdBonus;
 }
