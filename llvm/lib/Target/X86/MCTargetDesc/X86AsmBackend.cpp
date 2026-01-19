@@ -698,21 +698,22 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
 
   assert(Fixup.getOffset() + Size <= F.getSize() && "Invalid fixup offset!");
 
-  int64_t SignedValue = static_cast<int64_t>(Value);
-  if (IsResolved && Fixup.isPCRel()) {
-    // check that PC relative fixup fits into the fixup size.
-    if (Size > 0 && !isIntN(Size * 8, SignedValue))
+  // Check fixup value overflow similar to GAS. Fixups emitted as RELA
+  // relocations have a value of 0.
+  //
+  // - Signed: high bits must be all 0s or all 1s (sign extension).
+  // - Unsigned: abs(value) must fit (e.g. 1-byte field allows [-255,255]).
+  //
+  // Currently only PC-relative fixups are treated as signed. GAS treats
+  // more (e.g. FK_Data_4 for R_X86_64_32S) as signed.
+  if (Size && Size < 8) {
+    bool Signed = Fixup.isPCRel();
+    uint64_t Mask = ~uint64_t(0) << (Size * 8 - (Signed ? 1 : 0));
+    if ((Value & Mask) && (Signed ? (Value & Mask) != Mask : (-Value & Mask)))
       getContext().reportError(Fixup.getLoc(),
-                               "value of " + Twine(SignedValue) +
+                               "value of " + Twine(int64_t(Value)) +
                                    " is too large for field of " + Twine(Size) +
-                                   ((Size == 1) ? " byte." : " bytes."));
-  } else {
-    // Check that uppper bits are either all zeros or all ones.
-    // Specifically ignore overflow/underflow as long as the leakage is
-    // limited to the lower bits. This is to remain compatible with
-    // other assemblers.
-    assert((Size == 0 || isIntN(Size * 8 + 1, SignedValue)) &&
-           "Value does not fit in the Fixup field");
+                                   (Size == 1 ? " byte" : " bytes"));
   }
 
   for (unsigned i = 0; i != Size; ++i)
