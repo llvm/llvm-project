@@ -58,7 +58,7 @@ _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept {
 
 // `is_debugger_present()` implementation
 
-_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WEAK bool is_debugger_present() noexcept {
+_LIBCPP_EXPORTED_FROM_ABI [[gnu::weak]] bool is_debugger_present() noexcept {
 #if defined(_LIBCPP_WIN32API)
 
   return IsDebuggerPresent();
