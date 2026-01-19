@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/overridable_function.h"
+
 #include <__assert>
 #include <__config>
 #include <debugging>
@@ -58,7 +60,7 @@ _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept {
 
 // `is_debugger_present()` implementation
 
-_LIBCPP_EXPORTED_FROM_ABI [[gnu::weak]] bool is_debugger_present() noexcept {
+OVERRIDABLE_FUNCTION _LIBCPP_EXPORTED_FROM_ABI bool is_debugger_present() noexcept {
 #if defined(_LIBCPP_WIN32API)
 
   return IsDebuggerPresent();
