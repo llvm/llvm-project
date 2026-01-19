@@ -2182,7 +2182,7 @@ bool RewriteMFMAFormStage::rewrite(
   // copy) that it should be replaced with.
   DenseMap<Register, Register> RedefMap;
   // The map of the original MFMA registers to the relevant MFMA operands.
-  DenseMap<Register, std::set<MachineOperand *>> ReplaceMap;
+  DenseMap<Register, DenseSet<MachineOperand *>> ReplaceMap;
   // The map of reaching defs for a given register -- to avoid duplicate copies.
   DenseMap<Register, SmallPtrSet<MachineInstr *, 8>> ReachingDefCopyMap;
   // The map of reaching uses for a given register by basic block -- to avoid
@@ -2340,7 +2340,7 @@ bool RewriteMFMAFormStage::rewrite(
       }
     }
 
-    std::set<MachineOperand *> &DstRegSet = ReplaceMap[DstReg];
+    DenseSet<MachineOperand *> &DstRegSet = ReplaceMap[DstReg];
     for (MachineOperand *RU : DstReachingUseCopies) {
       MachineBasicBlock *RUBlock = RU->getParent()->getParent();
       // Just keep track of the reaching use of this register by block. After we
