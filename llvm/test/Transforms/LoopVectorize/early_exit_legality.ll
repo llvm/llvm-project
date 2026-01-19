@@ -318,7 +318,7 @@ return:
 ; support this yet.
 define i64 @uncountable_exit_on_last_block() {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_on_last_block'
-; CHECK:       LV: Not vectorizing: Early exit is not the latch predecessor.
+; CHECK:       LV: Not vectorizing: Last early exiting block in the chain is not the latch predecessor.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -346,10 +346,12 @@ loop.end:
 }
 
 
-; We don't currently support multiple uncountable early exits.
+; Multiple uncountable early exits pass legality but are not yet supported
+; in VPlan transformations.
 define i64 @multiple_uncountable_exits() {
 ; CHECK-LABEL: LV: Checking a loop in 'multiple_uncountable_exits'
-; CHECK:       LV: Not vectorizing: Loop has too many uncountable exits.
+; CHECK:       LV: We can vectorize this loop!
+; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with multiple uncountable early exits is not yet supported.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -494,7 +496,7 @@ exit:                                             ; preds = %for.body
 
 define i64 @uncountable_exit_in_conditional_block(ptr %mask) {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_in_conditional_block'
-; CHECK:       LV: Not vectorizing: Early exit is not the latch predecessor.
+; CHECK:       LV: Not vectorizing: Last early exiting block in the chain is not the latch predecessor.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -596,7 +598,7 @@ loop.end:
 ; Two early exits on parallel branches (neither dominates the other).
 define i64 @uncountable_exits_on_parallel_branches() {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exits_on_parallel_branches'
-; CHECK:       LV: Not vectorizing: Loop has too many uncountable exits.
+; CHECK:       LV: Not vectorizing: Uncountable early exits do not form a dominance chain.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]

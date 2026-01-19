@@ -9773,11 +9773,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (LVL.hasUncountableEarlyExit() && !EnableEarlyExitVectorization) {
-    reportVectorizationFailure("Auto-vectorization of loops with uncountable "
-                               "early exit is not enabled",
-                               "UncountableEarlyExitLoopsDisabled", ORE, L);
-    return false;
+  if (LVL.hasUncountableEarlyExit()) {
+    if (!EnableEarlyExitVectorization) {
+      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                                 "early exit is not enabled",
+                                 "UncountableEarlyExitLoopsDisabled", ORE, L);
+      return false;
+    }
+    SmallVector<BasicBlock *, 8> ExitingBlocks;
+    L->getExitingBlocks(ExitingBlocks);
+    // TODO: Support multiple uncountable early exits.
+    if (ExitingBlocks.size() - LVL.getCountableExitingBlocks().size() > 1) {
+      reportVectorizationFailure("Auto-vectorization of loops with multiple "
+                                 "uncountable early exits is not yet supported",
+                                 "MultipleUncountableEarlyExits", ORE, L);
+      return false;
+    }
   }
 
   if (!LVL.getPotentiallyFaultingLoads().empty()) {

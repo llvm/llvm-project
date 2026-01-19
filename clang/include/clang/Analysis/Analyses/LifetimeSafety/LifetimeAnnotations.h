@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 
 namespace clang ::lifetimes {
