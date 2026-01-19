@@ -2,8 +2,9 @@
 ; RUN: opt -S -mtriple=x86_64-- -expand-ir-insts -expand-div-rem-bits 128 < %s | FileCheck %s
 ; RUN: opt -S -mtriple=x86_64-- -passes='require<libcall-lowering-info>,expand-ir-insts' -expand-div-rem-bits 128 < %s | FileCheck %s
 
-define void @test(ptr %ptr, ptr %out) nounwind {
+define void @test(ptr %ptr, ptr %out) nounwind !prof !0 {
 ; CHECK-LABEL: @test(
+; CHECK: !prof [[PROF_0:![0-9]+]] {
 ; CHECK-NEXT:  _udiv-special-cases:
 ; CHECK-NEXT:    [[A:%.*]] = load i129, ptr [[PTR:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = freeze i129 [[A]]
@@ -17,11 +18,11 @@ define void @test(ptr %ptr, ptr %out) nounwind {
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i129 @llvm.ctlz.i129(i129 [[TMP3]], i1 true)
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i129 [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i129 [[TMP9]], 128
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP6]], i1 true, i1 [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP6]], i1 true, i1 [[TMP10]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i129 [[TMP9]], 128
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP11]], i129 0, i129 [[TMP3]]
-; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP11]], i1 true, i1 [[TMP12]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[UDIV_END:%.*]], label [[UDIV_BB1:%.*]]
+; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP11]], i129 0, i129 [[TMP3]], !prof [[PROF_1:![0-9]+]]
+; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP11]], i1 true, i1 [[TMP12]], !prof [[PROF_1:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP14]], label [[UDIV_END:%.*]], label [[UDIV_BB1:%.*]], !prof [[PROF_1:![0-9]+]]
 ; CHECK:       udiv-loop-exit:
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi i129 [ 0, [[UDIV_BB1]] ], [ [[TMP30:%.*]], [[UDIV_DO_WHILE:%.*]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi i129 [ [[TMP39:%.*]], [[UDIV_BB1]] ], [ [[TMP27:%.*]], [[UDIV_DO_WHILE]] ]
@@ -45,7 +46,7 @@ define void @test(ptr %ptr, ptr %out) nounwind {
 ; CHECK-NEXT:    [[TMP32]] = sub i129 [[TMP25]], [[TMP31]]
 ; CHECK-NEXT:    [[TMP33]] = add i129 [[TMP20]], -1
 ; CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i129 [[TMP33]], 0
-; CHECK-NEXT:    br i1 [[TMP34]], label [[UDIV_LOOP_EXIT:%.*]], label [[UDIV_DO_WHILE]]
+; CHECK-NEXT:    br i1 [[TMP34]], label [[UDIV_LOOP_EXIT:%.*]], label [[UDIV_DO_WHILE]], !prof [[PROF_1:![0-9]+]]
 ; CHECK:       udiv-preheader:
 ; CHECK-NEXT:    [[TMP35]] = lshr i129 [[TMP3]], [[TMP37]]
 ; CHECK-NEXT:    [[TMP36]] = add i129 [[TMP2]], -1
@@ -55,7 +56,7 @@ define void @test(ptr %ptr, ptr %out) nounwind {
 ; CHECK-NEXT:    [[TMP38:%.*]] = sub i129 128, [[TMP9]]
 ; CHECK-NEXT:    [[TMP39]] = shl i129 [[TMP3]], [[TMP38]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = icmp eq i129 [[TMP37]], 0
-; CHECK-NEXT:    br i1 [[TMP40]], label [[UDIV_LOOP_EXIT]], label [[UDIV_PREHEADER]]
+; CHECK-NEXT:    br i1 [[TMP40]], label [[UDIV_LOOP_EXIT]], label [[UDIV_PREHEADER]], !prof [[PROF_1:![0-9]+]]
 ; CHECK:       udiv-end:
 ; CHECK-NEXT:    [[TMP41:%.*]] = phi i129 [ [[TMP18]], [[UDIV_LOOP_EXIT]] ], [ [[TMP13]], [[_UDIV_SPECIAL_CASES:%.*]] ]
 ; CHECK-NEXT:    [[TMP42:%.*]] = mul i129 [[TMP1]], [[TMP41]]
@@ -68,3 +69,7 @@ define void @test(ptr %ptr, ptr %out) nounwind {
   store i129 %res, ptr %out
   ret void
 }
+
+!0 = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF_1]] = !{!"branch_weights", i32 1, i32 1048575}
