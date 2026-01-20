@@ -6478,10 +6478,17 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
 
   Value *X;
   switch (IID) {
-  case Intrinsic::fabs:
-    if (computeKnownFPSignBit(Op0, Q) == false)
+  case Intrinsic::fabs: {
+    KnownFPClass KnownClass = computeKnownFPClass(Op0, fcAllFlags, Q);
+    if (KnownClass.SignBit == false)
       return Op0;
+
+    if (KnownClass.cannotBeOrderedLessThanZero() &&
+        KnownClass.isKnownNeverNaN() && Call->hasNoSignedZeros())
+      return Op0;
+
     break;
+  }
   case Intrinsic::bswap:
     // bswap(bswap(x)) -> x
     if (match(Op0, m_BSwap(m_Value(X))))

@@ -52,22 +52,33 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
          CMD->getParamDecl(0)->hasAttr<clang::LifetimeBoundAttr>();
 }
 
+/// Check if a function has a lifetimebound attribute on its function type
+/// (which represents the implicit 'this' parameter for methods).
+/// Returns the attribute if found, nullptr otherwise.
+static const LifetimeBoundAttr *
+getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
+  // Walk through the type layers looking for a lifetimebound attribute.
+  TypeLoc TL = TSI.getTypeLoc();
+  while (true) {
+    auto ATL = TL.getAsAdjusted<AttributedTypeLoc>();
+    if (!ATL)
+      break;
+    if (auto *LBAttr = ATL.getAttrAs<LifetimeBoundAttr>())
+      return LBAttr;
+    TL = ATL.getModifiedLoc();
+  }
+  return nullptr;
+}
+
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
-  const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
-  if (!TSI)
-    return false;
-  // Don't declare this variable in the second operand of the for-statement;
-  // GCC miscompiles that by ending its lifetime before evaluating the
-  // third operand. See gcc.gnu.org/PR86769.
-  AttributedTypeLoc ATL;
-  for (TypeLoc TL = TSI->getTypeLoc();
-       (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
-       TL = ATL.getModifiedLoc()) {
-    if (ATL.getAttrAs<clang::LifetimeBoundAttr>())
+  // Attribute merging doesn't work well with attributes on function types (like
+  // 'this' param). We need to check all redeclarations.
+  for (const FunctionDecl *Redecl : FD->redecls()) {
+    const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo();
+    if (TSI && getLifetimeBoundAttrFromFunctionType(*TSI))
       return true;
   }
-
   return isNormalAssignmentOperator(FD);
 }
 
@@ -89,8 +100,11 @@ bool isPointerLikeType(QualType QT) {
   return isGslPointerType(QT) || QT->isPointerType() || QT->isNullPtrType();
 }
 
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
-  if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
+bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+                                  bool RunningUnderLifetimeSafety) {
+  if (!Callee)
+    return false;
+  if (auto *Conv = dyn_cast<CXXConversionDecl>(Callee))
     if (isGslPointerType(Conv->getConversionType()) &&
         Callee->getParent()->hasAttr<OwnerAttr>())
       return true;
@@ -99,6 +113,16 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
   if (!isGslPointerType(Callee->getFunctionObjectParameterType()) &&
       !isGslOwnerType(Callee->getFunctionObjectParameterType()))
     return false;
+
+  // Track dereference operator for GSL pointers in STL. Only do so for lifetime
+  // safety analysis and not for Sema's statement-local analysis as it starts
+  // to have false-positives.
+  if (RunningUnderLifetimeSafety &&
+      isGslPointerType(Callee->getFunctionObjectParameterType()) &&
+      (Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Star ||
+       Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Arrow))
+    return true;
+
   if (isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier())
       return false;

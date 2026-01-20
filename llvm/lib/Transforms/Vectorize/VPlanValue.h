@@ -239,9 +239,9 @@ class VPRecipeValue : public VPValue {
   VPDef *Def;
 
 public:
-  VPRecipeValue(VPDef *Def, Value *UV = nullptr);
+  LLVM_ABI_FOR_TEST VPRecipeValue(VPDef *Def, Value *UV = nullptr);
 
-  virtual ~VPRecipeValue();
+  LLVM_ABI_FOR_TEST virtual ~VPRecipeValue();
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVRecipeValueSC;
@@ -410,7 +410,6 @@ public:
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
-    VPWidenSelectSC,
     VPBlendSC,
     VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.

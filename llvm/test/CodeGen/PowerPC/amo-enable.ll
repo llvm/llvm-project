@@ -46,5 +46,75 @@ entry:
   ret void
 }
 
+define void @test_lwat_cond(ptr noundef %ptr, ptr nocapture %resp) {
+; CHECK-LABEL: test_lwat_cond:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lwat r6, r3, 24
+; CHECK-NEXT:    stw r6, 0(r4)
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_lwat_cond:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    lwat r6, r3, 24
+; CHECK-BE-NEXT:    stw r6, 0(r4)
+; CHECK-BE-NEXT:    blr
+entry:
+  %0 = tail call i32 @llvm.ppc.amo.lwat.cond(ptr %ptr, i32 24)
+  store i32 %0, ptr %resp, align 4
+  ret void
+}
+
+define void @test_ldat_cond(ptr noundef %ptr, ptr nocapture %resp) {
+; CHECK-LABEL: test_ldat_cond:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ldat r6, r3, 24
+; CHECK-NEXT:    std r6, 0(r4)
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_ldat_cond:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    ldat r6, r3, 24
+; CHECK-BE-NEXT:    std r6, 0(r4)
+; CHECK-BE-NEXT:    blr
+entry:
+  %0 = tail call i64 @llvm.ppc.amo.ldat.cond(ptr %ptr, i32 24)
+  store i64 %0, ptr %resp, align 8
+  ret void
+}
+
+define void @test_stwat(ptr noundef %ptr, i32 noundef %value) {
+; CHECK-LABEL: test_stwat:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    stwat r4, r3, 0
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_stwat:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    stwat r4, r3, 0
+; CHECK-BE-NEXT:    blr
+entry:
+  tail call void @llvm.ppc.amo.stwat(ptr %ptr, i32 %value, i32 0)
+  ret void
+}
+
+define void @test_stdat(ptr noundef %ptr, i64 noundef %value) {
+; CHECK-LABEL: test_stdat:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    stdat r4, r3, 0
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_stdat:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    stdat r4, r3, 0
+; CHECK-BE-NEXT:    blr
+entry:
+  tail call void @llvm.ppc.amo.stdat(ptr %ptr, i64 %value, i32 0)
+  ret void
+}
+
 declare i64 @llvm.ppc.amo.ldat(ptr, i64, i32 immarg)
 declare i32 @llvm.ppc.amo.lwat(ptr, i32, i32 immarg)
+declare i64 @llvm.ppc.amo.ldat.cond(ptr, i32 immarg)
+declare i32 @llvm.ppc.amo.lwat.cond(ptr, i32 immarg)
+declare void @llvm.ppc.amo.stwat(ptr, i32, i32 immarg)
+declare void @llvm.ppc.amo.stdat(ptr, i64, i32 immarg)

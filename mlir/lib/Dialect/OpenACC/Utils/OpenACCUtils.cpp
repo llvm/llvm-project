@@ -9,6 +9,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
@@ -249,6 +250,12 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
 }
 
 bool mlir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
+  // Types that can be passed by value are legal.
+  Type type = val.getType();
+  if (type.isIntOrIndexOrFloat() || isa<mlir::ComplexType>(type) ||
+      llvm::isa<mlir::VectorType>(type))
+    return true;
+
   // If this is produced by an ACC data entry operation, it is valid.
   if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(val.getDefiningOp()))
     return true;

@@ -2011,7 +2011,48 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_rdrand64_step:
   case X86::BI__builtin_ia32_rdseed16_step:
   case X86::BI__builtin_ia32_rdseed32_step:
-  case X86::BI__builtin_ia32_rdseed64_step:
+  case X86::BI__builtin_ia32_rdseed64_step: {
+    llvm::StringRef intrinsicName;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_rdrand16_step:
+      intrinsicName = "x86.rdrand.16";
+      break;
+    case X86::BI__builtin_ia32_rdrand32_step:
+      intrinsicName = "x86.rdrand.32";
+      break;
+    case X86::BI__builtin_ia32_rdrand64_step:
+      intrinsicName = "x86.rdrand.64";
+      break;
+    case X86::BI__builtin_ia32_rdseed16_step:
+      intrinsicName = "x86.rdseed.16";
+      break;
+    case X86::BI__builtin_ia32_rdseed32_step:
+      intrinsicName = "x86.rdseed.32";
+      break;
+    case X86::BI__builtin_ia32_rdseed64_step:
+      intrinsicName = "x86.rdseed.64";
+      break;
+    }
+
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Type randTy = cast<cir::PointerType>(ops[0].getType()).getPointee();
+    llvm::SmallVector<mlir::Type, 2> resultTypes = {randTy,
+                                                    builder.getUInt32Ty()};
+    cir::RecordType resRecord =
+        cir::RecordType::get(&getMLIRContext(), resultTypes, false, false,
+                             cir::RecordType::RecordKind::Struct);
+
+    mlir::Value call =
+        emitIntrinsicCallOp(builder, loc, intrinsicName, resRecord);
+    mlir::Value rand =
+        cir::ExtractMemberOp::create(builder, loc, randTy, call, 0);
+    builder.CIRBaseBuilderTy::createStore(loc, rand, ops[0]);
+
+    return cir::ExtractMemberOp::create(builder, loc, builder.getUInt32Ty(),
+                                        call, 1);
+  }
   case X86::BI__builtin_ia32_addcarryx_u32:
   case X86::BI__builtin_ia32_addcarryx_u64:
   case X86::BI__builtin_ia32_subborrow_u32:
@@ -2227,10 +2268,23 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   }
   case X86::BI__shiftleft128:
   case X86::BI__shiftright128: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    // Flip low/high ops and zero-extend amount to matching type.
+    // shiftleft128(Low, High, Amt) -> fshl(High, Low, Amt)
+    // shiftright128(Low, High, Amt) -> fshr(High, Low, Amt)
+    std::swap(ops[0], ops[1]);
+
+    // Zero-extend shift amount to i64 if needed
+    auto amtTy = mlir::cast<cir::IntType>(ops[2].getType());
+    cir::IntType i64Ty = builder.getUInt64Ty();
+
+    if (amtTy != i64Ty)
+      ops[2] = builder.createIntCast(ops[2], i64Ty);
+
+    const StringRef intrinsicName =
+        (builtinID == X86::BI__shiftleft128) ? "fshl" : "fshr";
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               intrinsicName, i64Ty,
+                               mlir::ValueRange{ops[0], ops[1], ops[2]});
   }
   case X86::BI_ReadWriteBarrier:
   case X86::BI_ReadBarrier:
