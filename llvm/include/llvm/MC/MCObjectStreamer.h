@@ -14,6 +14,7 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MCContext;
@@ -36,7 +37,7 @@ class raw_pwrite_stream;
 /// are expected to subclass this interface to implement directives specific
 /// to that file format or custom semantics expected by the object writer
 /// implementation.
-class MCObjectStreamer : public MCStreamer {
+class LLVM_ABI MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
   bool EmitEHFrame;
   bool EmitDebugFrame;

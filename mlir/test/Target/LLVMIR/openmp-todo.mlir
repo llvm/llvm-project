@@ -173,15 +173,6 @@ llvm.func @target_allocate(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @target_device(%x : i32) {
-  omp.target device(%x : i32) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):

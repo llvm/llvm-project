@@ -43,8 +43,8 @@ struct StructType : PyConcreteType<StructType> {
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get_literal",
-        [](const std::vector<PyType> &elements, bool packed, MlirLocation loc,
-           DefaultingPyMlirContext context) {
+        [](const std::vector<PyType> &elements, bool packed,
+           DefaultingPyLocation loc, DefaultingPyMlirContext context) {
           python::CollectDiagnosticsToStringScope scope(
               mlirLocationGetContext(loc));
           std::vector<MlirType> elements_(elements.size());

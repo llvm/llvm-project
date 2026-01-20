@@ -74,7 +74,7 @@ public:
 
   bool coversAllReachableMemory() const { return !DeadBytes.has_value(); }
 
-  static DeadOnReturnInfo createFromintValue(uint64_t Data) {
+  static DeadOnReturnInfo createFromIntValue(uint64_t Data) {
     if (Data == std::numeric_limits<uint64_t>::max())
       return DeadOnReturnInfo();
     return DeadOnReturnInfo(Data);
