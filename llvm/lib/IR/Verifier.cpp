@@ -546,6 +546,7 @@ private:
   void visitAccessGroupMetadata(const MDNode *MD);
   void visitCapturesMetadata(Instruction &I, const MDNode *Captures);
   void visitAllocTokenMetadata(Instruction &I, MDNode *MD);
+  void visitMemCacheHintMetadata(Instruction &I, MDNode *MD);
 
   template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
@@ -5567,6 +5568,38 @@ void Verifier::visitAllocTokenMetadata(Instruction &I, MDNode *MD) {
         "expected integer constant", MD);
 }
 
+void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
+  Check(I.mayReadOrWriteMemory(),
+        "!mem.cache_hint is only valid on memory operations", &I);
+
+  // Top-level metadata is an array of operand-specific nodes
+  for (const MDOperand &Op : MD->operands()) {
+    Check(Op, "!mem.cache_hint operand must not be null", MD);
+    const auto *Node = dyn_cast<MDNode>(Op);
+    Check(Node, "!mem.cache_hint operand must be a metadata node", MD);
+
+    // Each node contains key-value pairs with even number of operands
+    Check(Node->getNumOperands() % 2 == 0,
+          "!mem.cache_hint node must have even number of operands (key-value "
+          "pairs)",
+          Node);
+
+    // Validate that keys are strings; values are target-specific
+    for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
+      const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
+      Check(Key, "!mem.cache_hint key must be a string", Node);
+
+      // operand_no is a generic key that must be an integer
+      if (Key->getString() == "operand_no") {
+        auto *CI = mdconst::dyn_extract<ConstantInt>(Node->getOperand(j + 1));
+        Check(CI, "!mem.cache_hint 'operand_no' must be an integer constant",
+              Node);
+      }
+      // Other keys are target-specific; their values are not validated here
+    }
+  }
+}
+
 /// verifyInstruction - Verify that an instruction is well formed.
 ///
 void Verifier::visitInstruction(Instruction &I) {
@@ -5798,6 +5831,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_alloc_token))
     visitAllocTokenMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint))
+    visitMemCacheHintMetadata(I, MD);
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);

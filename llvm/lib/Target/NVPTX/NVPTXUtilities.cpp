@@ -24,7 +24,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/Mutex.h"
 #include <cstdint>
@@ -34,8 +33,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-
-#define DEBUG_TYPE "nvptx-utilities"
 
 namespace llvm {
 
@@ -426,35 +423,21 @@ static const MDNode *findCacheControlHintNode(const MDNode *MD,
 
   for (const MDOperand &Op : MD->operands()) {
     const auto *Node = dyn_cast<MDNode>(Op);
-    if (!Node || Node->getNumOperands() < 2) {
-      LLVM_DEBUG(if (Node) dbgs()
-                 << "NVPTX: Skipping malformed cache hint node with "
-                 << Node->getNumOperands() << " operands\n");
+    if (!Node)
       continue;
-    }
 
     // Search for operand_no in the node (can be at any position)
-    // Key-value pairs require index iteration with stride 2
-    std::optional<unsigned> NodeOperandNo;
     for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
       const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
       if (Key && Key->getString() == "operand_no") {
         if (auto *OpNoCI =
-                mdconst::dyn_extract<ConstantInt>(Node->getOperand(j + 1)))
-          NodeOperandNo = OpNoCI->getZExtValue();
-        else
-          LLVM_DEBUG(dbgs() << "NVPTX: operand_no value is not ConstantInt\n");
+                mdconst::dyn_extract<ConstantInt>(Node->getOperand(j + 1))) {
+          if (OpNoCI->getZExtValue() == OperandNo)
+            return Node;
+        }
         break;
       }
     }
-
-    if (!NodeOperandNo) {
-      LLVM_DEBUG(dbgs() << "NVPTX: Cache hint node missing operand_no\n");
-      continue;
-    }
-
-    if (*NodeOperandNo == OperandNo)
-      return Node;
   }
 
   return nullptr;
@@ -465,7 +448,7 @@ unsigned getCacheControlHintFromMetadata(const Instruction *I,
   if (!I)
     return 0;
 
-  MDNode *MD = I->getMetadata("mem.cache_hint");
+  MDNode *MD = I->getMetadata(LLVMContext::MD_mem_cache_hint);
   const MDNode *Node = findCacheControlHintNode(MD, OperandNo);
   if (!Node)
     return 0;
@@ -474,50 +457,32 @@ unsigned getCacheControlHintFromMetadata(const Instruction *I,
   L2Eviction L2 = L2Eviction::Normal;
   L2Prefetch Prefetch = L2Prefetch::None;
 
-  // Parse all key-value pairs from the matching node
-  // Key-value pairs require index iteration with stride 2
+  // Parse all key-value pairs from the matching node.
+  // Metadata structure is validated by the IR Verifier.
   for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
     const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
-    if (!Key) {
-      LLVM_DEBUG(dbgs() << "NVPTX: Cache hint key at index " << j
-                        << " is not a string\n");
+    if (!Key)
       continue;
-    }
 
     StringRef KeyStr = Key->getString();
     if (KeyStr == "operand_no")
-      continue; // Already processed by findCacheHintNode
+      continue; // Already processed by findCacheControlHintNode
 
     // For eviction and prefetch hints, value should be a string
     const auto *Val = dyn_cast<MDString>(Node->getOperand(j + 1));
-    if (!Val) {
-      // nvvm.l2_cache_hint uses i64, not string - skip here
-      if (KeyStr != "nvvm.l2_cache_hint") {
-        LLVM_DEBUG(dbgs() << "NVPTX: Value for '" << KeyStr
-                          << "' is not a string\n");
-      }
-      continue;
-    }
+    if (!Val)
+      continue; // nvvm.l2_cache_hint uses i64, handled separately
 
     StringRef ValStr = Val->getString();
     if (KeyStr == "nvvm.l1_eviction") {
       if (auto Parsed = parseL1Eviction(ValStr))
         L1 = *Parsed;
-      else
-        LLVM_DEBUG(dbgs() << "NVPTX: Unknown L1 eviction policy: " << ValStr
-                          << "\n");
     } else if (KeyStr == "nvvm.l2_eviction") {
       if (auto Parsed = parseL2Eviction(ValStr))
         L2 = *Parsed;
-      else
-        LLVM_DEBUG(dbgs() << "NVPTX: Unknown L2 eviction policy: " << ValStr
-                          << "\n");
     } else if (KeyStr == "nvvm.l2_prefetch_size") {
       if (auto Parsed = parseL2Prefetch(ValStr))
         Prefetch = *Parsed;
-      else
-        LLVM_DEBUG(dbgs() << "NVPTX: Unknown L2 prefetch size: " << ValStr
-                          << "\n");
     }
     // Unknown keys are silently ignored (may be target-specific extensions)
   }
@@ -530,25 +495,21 @@ std::optional<uint64_t> getCachePolicyFromMetadata(const Instruction *I,
   if (!I)
     return std::nullopt;
 
-  MDNode *MD = I->getMetadata("mem.cache_hint");
+  MDNode *MD = I->getMetadata(LLVMContext::MD_mem_cache_hint);
   const MDNode *Node = findCacheControlHintNode(MD, OperandNo);
   if (!Node)
     return std::nullopt;
 
-  // Look for nvvm.l2_cache_hint in the matching node
-  // Key-value pairs require index iteration with stride 2
+  // Look for nvvm.l2_cache_hint in the matching node.
+  // Metadata structure is validated by the IR Verifier.
   for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
     const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
     if (!Key || Key->getString() != "nvvm.l2_cache_hint")
       continue;
 
-    // The value should be an i64 constant
     if (auto *ValCI =
             mdconst::dyn_extract<ConstantInt>(Node->getOperand(j + 1)))
       return ValCI->getZExtValue();
-
-    LLVM_DEBUG(
-        dbgs() << "NVPTX: nvvm.l2_cache_hint value is not ConstantInt\n");
   }
 
   return std::nullopt;

@@ -656,7 +656,7 @@ define i32 @test_load_cache_hint_null_value(ptr addrspace(1) %p) {
   ret i32 %v
 }
 
-; nvvm.l2_cache_hint with wrong type (i32 instead of i64) - should still work
+; nvvm.l2_cache_hint with i32 instead of i64 - should still work
 ; as mdconst::dyn_extract<ConstantInt> accepts any integer type
 ; CHECK-LABEL: test_load_cache_hint_i32_value
 ; CHECK: mov.b64 [[POLICY:%rd[0-9]+]], 99999
