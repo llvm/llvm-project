@@ -62,6 +62,7 @@ bool AArch64GISelUtils::isCMN(const MachineInstr *MaybeSub,
 
 bool AArch64GISelUtils::tryEmitBZero(MachineInstr &MI,
                                      MachineIRBuilder &MIRBuilder,
+                                     const LibcallLoweringInfo &Libcalls,
                                      bool MinSize) {
   assert(MI.getOpcode() == TargetOpcode::G_MEMSET);
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
