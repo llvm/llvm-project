@@ -1,8 +1,9 @@
 ! Check the Flang Print Function Names example plugin prints and counts function/subroutine definitions
 ! This includes internal and external Function/Subroutines, but not Statement Functions
-! This requires that the examples are built (LLVM_BUILD_EXAMPLES=ON) to access flangPrintFunctionNames.so
+! This requires that the examples are built (LLVM_INCLUDE_EXAMPLES=ON) to access flangPrintFunctionNames.so
 
 ! REQUIRES: plugins, examples
+! XFAIL: system-aix
 
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangPrintFunctionNames%pluginext -plugin print-fns %s 2>&1 | FileCheck %s
 

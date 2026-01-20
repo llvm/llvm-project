@@ -48,7 +48,6 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLParser.h"
@@ -1066,10 +1065,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     A->render(Args, CmdArgs);
   }
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_D, options::OPT_U, options::OPT_I_Group,
-                   options::OPT_F, options::OPT_embed_dir_EQ});
-
   if (C.isOffloadingHostKind(Action::OFK_Cuda) ||
       JA.isDeviceOffloading(Action::OFK_Cuda)) {
     // Collect all enabled NVPTX architectures.
@@ -1091,6 +1086,10 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString("-D__CUDA_ARCH_LIST__=" + List));
     }
   }
+
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_D, options::OPT_U, options::OPT_I_Group,
+                   options::OPT_F, options::OPT_embed_dir_EQ});
 
   // Add -Wp, and -Xpreprocessor if using the preprocessor.
 
@@ -5492,19 +5491,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
   }
 
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_fpreferred_function_alignment_EQ)) {
-    unsigned Value = 0;
-    if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536 ||
-        !llvm::isPowerOf2_32(Value))
-      TC.getDriver().Diag(diag::err_drv_invalid_int_value)
-          << A->getAsString(Args) << A->getValue();
-
-    CmdArgs.push_back("-preferred-function-alignment");
-    CmdArgs.push_back(Args.MakeArgString(
-        std::to_string(llvm::Log2_32_Ceil(std::min(Value, 65536u)))));
-  }
-
   // We support -falign-loops=N where N is a power of 2. GCC supports more
   // forms.
   if (const Arg *A = Args.getLastArg(options::OPT_falign_loops_EQ)) {
@@ -9318,18 +9304,23 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
   const auto &LinkCommand = C.getJobs().getJobs().back();
 
-  // Forward -Xoffload-linker<-triple> arguments to the device link job.
-  for (Arg *A : Args.filtered(options::OPT_Xoffload_linker)) {
+  // Forward -Xoffload-{compiler,linker}<-triple> arguments to the linker
+  // wrapper.
+  for (Arg *A :
+       Args.filtered(options::OPT_Xoffload_compiler, OPT_Xoffload_linker)) {
     StringRef Val = A->getValue(0);
+    bool IsLinkJob = A->getOption().getID() == OPT_Xoffload_linker;
+    auto WrapperOption =
+        IsLinkJob ? Twine("--device-linker=") : Twine("--device-compiler=");
     if (Val.empty())
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine("--device-linker=") + A->getValue(1)));
+      CmdArgs.push_back(Args.MakeArgString(WrapperOption + A->getValue(1)));
     else
       CmdArgs.push_back(Args.MakeArgString(
-          "--device-linker=" +
+          WrapperOption +
           ToolChain::getOpenMPTriple(Val.drop_front()).getTriple() + "=" +
           A->getValue(1)));
   }
+  Args.ClaimAllArgs(options::OPT_Xoffload_compiler);
   Args.ClaimAllArgs(options::OPT_Xoffload_linker);
 
   // Embed bitcode instead of an object in JIT mode.

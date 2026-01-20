@@ -525,9 +525,9 @@ static void printShuffleMask(raw_ostream &Out, Type *Ty, ArrayRef<int> Mask) {
   if (isa<ScalableVectorType>(Ty))
     Out << "vscale x ";
   Out << Mask.size() << " x i32> ";
-  if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
+  if (all_of(Mask, equal_to(0))) {
     Out << "zeroinitializer";
-  } else if (all_of(Mask, [](int Elt) { return Elt == PoisonMaskElem; })) {
+  } else if (all_of(Mask, equal_to(PoisonMaskElem))) {
     Out << "poison";
   } else {
     Out << "<";
@@ -4213,8 +4213,6 @@ void AssemblyWriter::printFunction(const Function *F) {
   maybePrintComdat(Out, *F);
   if (MaybeAlign A = F->getAlign())
     Out << " align " << A->value();
-  if (MaybeAlign A = F->getPreferredAlignment())
-    Out << " prefalign " << A->value();
   if (F->hasGC())
     Out << " gc \"" << F->getGC() << '"';
   if (F->hasPrefixData()) {

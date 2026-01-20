@@ -627,7 +627,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(gc);
   KEYWORD(prefix);
   KEYWORD(prologue);
-  KEYWORD(prefalign);
 
   KEYWORD(no_sanitize_address);
   KEYWORD(no_sanitize_hwaddress);
