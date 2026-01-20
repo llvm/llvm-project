@@ -217,7 +217,7 @@ CIRGenFunction::emitCoroBeginBuiltinCall(mlir::Location loc,
 
 cir::CallOp CIRGenFunction::emitCoroEndBuiltinCall(mlir::Location loc,
                                                    mlir::Value nullPtr) {
-  auto boolTy = builder.getBoolTy();
+  cir::BoolType boolTy = builder.getBoolTy();
   mlir::Operation *builtin = cgm.getGlobalValue(cgm.builtinCoroEnd);
 
   cir::FuncOp fnOp;
