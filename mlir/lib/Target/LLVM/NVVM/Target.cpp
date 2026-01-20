@@ -581,7 +581,7 @@ NVPTXSerializer::compileToBinaryNVPTX(StringRef ptxCode) {
   setOptionalCommandlineArguments(getTarget(), cmdOpts.second);
   // Create the compiler handle.
   RETURN_ON_NVPTXCOMPILER_ERROR(
-      nvPTXCompilerCreate(&compiler, ptxCode.size(), ptxCode.c_str()));
+      nvPTXCompilerCreate(&compiler, ptxCode.size(), ptxCode.str().c_str());
 
   // Try to compile the binary.
   status = nvPTXCompilerCompile(compiler, cmdOpts.second.size(),
