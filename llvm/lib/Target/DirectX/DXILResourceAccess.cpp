@@ -480,20 +480,6 @@ static hlsl::Binding getHandleIntrinsicBinding(IntrinsicInst *Handle,
   return hlsl::Binding(Class, Space, LowerBound, UpperBound, nullptr);
 }
 
-static bool haveSameBinding(ArrayRef<IntrinsicInst *> Handles,
-                            DXILResourceTypeMap &DRTM) {
-  unsigned NumHandles = Handles.size();
-  if (NumHandles <= 1)
-    return false; // No-legalization required
-
-  hlsl::Binding B = getHandleIntrinsicBinding(Handles[0], DRTM);
-  for (unsigned I = 1; I < NumHandles; I++)
-    if (B != getHandleIntrinsicBinding(Handles[I], DRTM))
-      return false; // No-legalization is possible
-
-  return true;
-}
-
 // getHandleIndicies traverses up the control flow that a ptr came from and
 // propagates back the GetPtrIdx and HandleIdx:
 //
@@ -597,10 +583,16 @@ static bool tryReplaceHandlesWithIndices(Function &F,
     for (Instruction &I : BB)
       if (auto *PtrOp = getPointerOperand(&I)) {
         SmallVector<IntrinsicInst *> Handles = collectUsedHandles(PtrOp);
-        if (Handles.size() <= 1)
-          continue;
-        // Can replace with an index into handle call
-        if (haveSameBinding(Handles, DRTM))
+        unsigned NumHandles = Handles.size();
+        if (NumHandles <= 1)
+          continue; // No-replacement required
+
+        bool CanReplace = true;
+        hlsl::Binding B = getHandleIntrinsicBinding(Handles[0], DRTM);
+        for (unsigned I = 1; I < NumHandles; I++)
+          CanReplace &= (B == getHandleIntrinsicBinding(Handles[I], DRTM));
+
+        if (CanReplace)
           replaceHandleWithIndicies(PtrOp, Handles[0], DeadInsts);
       }
 
