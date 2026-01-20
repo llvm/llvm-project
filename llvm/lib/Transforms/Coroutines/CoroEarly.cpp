@@ -8,7 +8,6 @@
 
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -24,12 +23,10 @@ namespace {
 class Lowerer : public coro::LowererBase {
   IRBuilder<> Builder;
   PointerType *const AnyResumeFnPtrTy;
-  Constant *NoopCoro = nullptr;
 
   void lowerResumeOrDestroy(CallBase &CB, CoroSubFnInst::ResumeKind);
   void lowerCoroPromise(CoroPromiseInst *Intrin);
   void lowerCoroDone(IntrinsicInst *II);
-  void lowerCoroNoop(IntrinsicInst *II);
   void hidePromiseAlloca(CoroIdInst *CoroId, CoroBeginInst *CoroBegin);
 
 public:
@@ -96,62 +93,6 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
   auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
 
   II->replaceAllUsesWith(Cond);
-  II->eraseFromParent();
-}
-
-static void buildDebugInfoForNoopResumeDestroyFunc(Function *NoopFn) {
-  Module &M = *NoopFn->getParent();
-  if (M.debug_compile_units().empty())
-     return;
-
-  DICompileUnit *CU = *M.debug_compile_units_begin();
-  DIBuilder DB(M, /*AllowUnresolved*/ false, CU);
-  std::array<Metadata *, 2> Params{nullptr, nullptr};
-  auto *SubroutineType =
-      DB.createSubroutineType(DB.getOrCreateTypeArray(Params));
-  StringRef Name = NoopFn->getName();
-  auto *SP = DB.createFunction(
-      CU, /*Name=*/Name, /*LinkageName=*/Name, /*File=*/ CU->getFile(),
-      /*LineNo=*/0, SubroutineType, /*ScopeLine=*/0, DINode::FlagArtificial,
-      DISubprogram::SPFlagDefinition);
-  NoopFn->setSubprogram(SP);
-  DB.finalize();
-}
-
-void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
-  if (!NoopCoro) {
-    LLVMContext &C = Builder.getContext();
-    Module &M = *II->getModule();
-
-    // Create a noop.frame struct type.
-    auto *FnTy = FunctionType::get(Type::getVoidTy(C), Builder.getPtrTy(0),
-                                   /*isVarArg=*/false);
-    auto *FnPtrTy = Builder.getPtrTy(0);
-    StructType *FrameTy =
-        StructType::create({FnPtrTy, FnPtrTy}, "NoopCoro.Frame");
-
-    // Create a Noop function that does nothing.
-    Function *NoopFn = Function::createWithDefaultAttr(
-        FnTy, GlobalValue::LinkageTypes::InternalLinkage,
-        M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
-        &M);
-    NoopFn->setCallingConv(CallingConv::Fast);
-    buildDebugInfoForNoopResumeDestroyFunc(NoopFn);
-    auto *Entry = BasicBlock::Create(C, "entry", NoopFn);
-    ReturnInst::Create(C, Entry);
-
-    // Create a constant struct for the frame.
-    Constant* Values[] = {NoopFn, NoopFn};
-    Constant* NoopCoroConst = ConstantStruct::get(FrameTy, Values);
-    NoopCoro = new GlobalVariable(M, NoopCoroConst->getType(), /*isConstant=*/true,
-                                GlobalVariable::PrivateLinkage, NoopCoroConst,
-                                "NoopCoro.Frame.Const");
-    cast<GlobalVariable>(NoopCoro)->setNoSanitizeMetadata();
-  }
-
-  Builder.SetInsertPoint(II);
-  auto *NoopCoroVoidPtr = Builder.CreateBitCast(NoopCoro, Int8Ptr);
-  II->replaceAllUsesWith(NoopCoroVoidPtr);
   II->eraseFromParent();
 }
 
@@ -230,9 +171,6 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
         if (cast<AnyCoroEndInst>(&I)->isFallthrough())
           CB->setCannotDuplicate();
         break;
-      case Intrinsic::coro_noop:
-        lowerCoroNoop(cast<IntrinsicInst>(&I));
-        break;
       case Intrinsic::coro_id:
         if (auto *CII = cast<CoroIdInst>(&I)) {
           if (CII->getInfo().isPreSplit()) {
@@ -290,7 +228,7 @@ static bool declaresCoroEarlyIntrinsics(const Module &M) {
       M, {Intrinsic::coro_id, Intrinsic::coro_id_retcon,
           Intrinsic::coro_id_retcon_once, Intrinsic::coro_id_async,
           Intrinsic::coro_destroy, Intrinsic::coro_done, Intrinsic::coro_end,
-          Intrinsic::coro_end_async, Intrinsic::coro_noop, Intrinsic::coro_free,
+          Intrinsic::coro_end_async, Intrinsic::coro_free,
           Intrinsic::coro_promise, Intrinsic::coro_resume});
 }
 

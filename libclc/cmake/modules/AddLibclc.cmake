@@ -408,7 +408,7 @@ function(add_libclc_builtin_set)
     set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${obj_suffix} )
     if ( LIBCLC_USE_SPIRV_BACKEND )
       add_custom_command( OUTPUT ${libclc_builtins_lib}
-        COMMAND ${clang_exe} --target=${ARG_TRIPLE} -x ir -o ${libclc_builtins_lib} ${builtins_link_lib}
+        COMMAND ${clang_exe} -c --target=${ARG_TRIPLE} -x ir -o ${libclc_builtins_lib} ${builtins_link_lib}
         DEPENDS ${clang_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
     else()
