@@ -1,0 +1,363 @@
+# RUN: llc -march=hexagon -mcpu=hexagonv71t -run-pass=global-sched %s -o - | FileCheck %s
+
+# Test that the global scheduler doesn't create a bundle with 4 instructions.
+
+# CHECK: bb.15.if.else166:
+# CHECK: BUNDLE
+# CHECK-NEXT: C2_cmpeq
+# CHECK-NEXT: C2_cmovenewit
+# CHECK-NEXT: J2_jumptnew
+
+--- |
+
+  %struct.netbox = type { %struct.netbox*, i32, i32, i32, i32, i32, i32, i16, i16, i16, i8, i8, i8, i8 }
+  %struct.termbox = type { %struct.termbox*, %struct.netbox*, i32, i32, i16, [2 x i16], [2 x i16], i16 }
+
+  @numRows = external local_unnamed_addr global i32, align 4
+
+  define i32 @test(i32 %flag) local_unnamed_addr #0 {
+  prepglob.exit:
+    br i1 undef, label %if.end, label %for.body
+
+  for.body:
+    unreachable
+
+  if.end:
+    br i1 undef, label %for.end1106, label %for.cond16.preheader
+
+  for.cond16.preheader:
+    br i1 undef, label %for.end1106, label %for.body18.preheader
+
+  for.body18.preheader:
+    br label %for.body18
+
+  for.body18:
+    br i1 undef, label %for.body18, label %if.end23
+
+  if.end23:
+    br i1 undef, label %for.body18, label %for.cond29.preheader
+
+  for.cond29.preheader:
+    %0 = load i32, i32* @numRows, align 4
+    %cmp311663 = icmp slt i32 %0, -1
+    br i1 %cmp311663, label %for.body46, label %for.body33.lr.ph
+
+  for.body33.lr.ph:
+    unreachable
+
+  for.body46:
+    switch i32 %flag, label %if.end215.loopexit [
+      i32 0, label %if.then59
+      i32 1, label %land.lhs.true54
+    ]
+
+  land.lhs.true54:
+    unreachable
+
+  if.then59:
+    %1 = zext i16 undef to i32
+    switch i32 %1, label %if.else122 [
+      i32 1, label %for.inc252
+      i32 9, label %for.inc252
+      i32 5, label %for.inc252
+      i32 7, label %for.inc252
+      i32 3, label %for.inc252
+      i32 10, label %for.inc252
+      i32 6, label %for.inc252
+      i32 8, label %for.inc252
+    ]
+
+  if.else122:
+    br i1 undef, label %if.end215, label %if.else166
+
+  if.else166:
+    %2 = load %struct.netbox*, %struct.netbox** undef, align 8
+    %cmp169 = icmp eq %struct.netbox* undef, %2
+    br i1 %cmp169, label %if.then171, label %for.cond185.preheader
+
+  for.cond185.preheader:
+    br label %for.cond185
+
+  if.then171:
+    store %struct.netbox* undef, %struct.netbox** undef, align 8
+    %call.i1547 = tail call i32 bitcast (i32 (...)* @safe_free to i32 (%struct.termbox*)*)(%struct.termbox* null)
+    unreachable
+
+  for.cond185:
+    %saveptr.0 = phi %struct.netbox* [ %3, %for.cond185 ], [ %2, %for.cond185.preheader ]
+    %cgep17 = bitcast %struct.netbox* %saveptr.0 to %struct.netbox*
+    %cgep58 = bitcast %struct.netbox* %cgep17 to %struct.netbox**
+    %3 = load %struct.netbox*, %struct.netbox** %cgep58, align 4
+    %cmp187 = icmp eq %struct.netbox* %3, undef
+    br i1 %cmp187, label %for.end193, label %for.cond185
+
+  for.end193:
+    %4 = bitcast %struct.netbox* %saveptr.0 to %struct.netbox*
+    %call200 = tail call i32 bitcast (i32 (...)* @safe_free to i32 (%struct.netbox*)*)(%struct.netbox* undef)
+    %cgep69 = bitcast %struct.netbox* %4 to %struct.netbox**
+    %5 = load %struct.netbox*, %struct.netbox** %cgep69, align 4
+    br label %if.end215
+
+  if.end215.loopexit:
+    br label %if.end215
+
+  if.end215:
+    %netptr.3 = phi %struct.netbox* [ undef, %if.else122 ], [ undef, %if.end215.loopexit ], [ %5, %for.end193 ]
+    %cgep10 = bitcast %struct.netbox* %netptr.3 to %struct.netbox*
+    %cgep3 = getelementptr %struct.netbox, %struct.netbox* %cgep10, i32 0, i32 7
+    %6 = load i16, i16* %cgep3, align 4
+    %conv217 = sext i16 %6 to i32
+    %call247 = tail call i32 @detfeed(i32 %flag, i32 %conv217, i32 undef)
+    %conv248 = trunc i32 %call247 to i16
+    store i16 %conv248, i16* undef, align 2
+    unreachable
+
+  for.inc252:
+    switch i32 %flag, label %for.body289.if.end306_crit_edge [
+      i32 0, label %if.end306
+      i32 1, label %land.lhs.true300
+    ]
+
+  for.body289.if.end306_crit_edge:
+    unreachable
+
+  land.lhs.true300:
+    unreachable
+
+  if.end306:
+    %7 = zext i16 undef to i32
+    switch i32 %7, label %for.body18 [
+      i32 1, label %if.end371
+      i32 9, label %if.end371
+      i32 5, label %if.end371
+      i32 7, label %if.end371
+      i32 3, label %if.end371
+      i32 10, label %if.end371
+      i32 6, label %if.end371
+      i32 8, label %if.end371
+    ]
+
+  if.end371:
+    br i1 undef, label %if.end687, label %if.then394
+
+  if.then394:
+    br i1 undef, label %if.then435, label %if.end629
+
+  if.then435:
+    unreachable
+
+  if.end629:
+    unreachable
+
+  if.end687:
+    unreachable
+
+  for.end1106:
+    ret i32 undef
+  }
+
+  declare i32 @safe_free(...) local_unnamed_addr #0
+  declare i32 @detfeed(i32, i32, i32) local_unnamed_addr #0
+
+...
+---
+name:            test
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$d8' }
+body:             |
+  bb.0.prepglob.exit:
+    successors: %bb.1.if.end(0x7ffff800), %bb.28.for.body(0x00000800)
+    liveins: $r0:0x00000001, $d8, $d8, $p0, $p1, $p2, $r16, $r17, $r2, $r3
+
+    $r29 = S2_allocframe killed $r29, 8, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit $r30, implicit killed $r31 :: (store 4)
+    BUNDLE implicit-def $r16, implicit-def $pc, implicit killed $r29, implicit killed $d8, implicit $r0, implicit killed undef $p0 {
+      S2_storerd_io killed $r29, 0, killed $d8 :: (store 8 into %fixed-stack.0)
+      $r16 = A2_tfr $r0
+      J2_jumpf killed undef $p0, %bb.28.for.body, implicit-def $pc
+    }
+
+  bb.1.if.end:
+    successors: %bb.3.for.end1106(0x40000000), %bb.2.for.cond16.preheader(0x40000000)
+    liveins: $p1, $p2, $r0, $r16, $r2, $r3
+
+    J2_jumpt undef $p1, %bb.3.for.end1106, implicit-def dead $pc
+
+  bb.2.for.cond16.preheader:
+    successors: %bb.3.for.end1106(0x40000000), %bb.4.for.body18.preheader(0x40000000)
+    liveins: $p2, $r0, $r16, $r2, $r3
+
+    BUNDLE implicit-def $r3, implicit-def $r2, implicit-def $pc, implicit killed undef $p2 {
+      $r3 = C2_cmoveif undef $p2, 2026
+      $r2 = C2_cmoveif undef $p2, 0
+      J2_jumpf killed undef $p2, %bb.4.for.body18.preheader, implicit-def $pc
+    }
+
+  bb.3.for.end1106 (align 4):
+    $d8 = L2_loadrd_io killed $r29, 0 :: (load 8 from %fixed-stack.0)
+    $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit-def $pc, implicit killed $d8
+
+  bb.4.for.body18.preheader (align 4):
+    successors: %bb.5.for.body18(0x80000000)
+    liveins: $r0, $r2, $r3, $r16, $r3
+
+    BUNDLE implicit-def $p2, implicit-def $p0, implicit killed $r3, implicit killed $r2, implicit $r16 {
+      $p1 = C2_cmpeqi $r16, 0
+      $p2 = S2_tstbit_r killed $r3, $r2
+      $p0 = C2_cmpeqi $r16, 1
+    }
+
+  bb.5.for.body18 (align 4):
+    successors: %bb.5.for.body18(0x40000000), %bb.6.if.end23(0x40000000)
+    liveins: $p0, $p1, $p2, $r0, $r16, $r2
+
+    J2_jumpt undef $p0, %bb.5.for.body18, implicit-def dead $pc
+
+  bb.6.if.end23:
+    successors: %bb.5.for.body18(0x40000000), %bb.7.for.cond29.preheader(0x40000000)
+    liveins: $p0, $p1, $p2, $r0, $r16, $r2
+
+    BUNDLE implicit-def $r2, implicit-def dead $pc, implicit undef $p1, implicit killed $gp {
+      $r2 = L4_ploadrif_abs undef $p1, @numRows, implicit killed $gp :: (dereferenceable load 4 from @numRows)
+      J2_jumpt undef $p1, %bb.5.for.body18, implicit-def dead $pc
+    }
+
+  bb.7.for.cond29.preheader:
+    successors: %bb.8.for.body46(0x7ffff800), %bb.21.for.body33.lr.ph(0x00000800)
+    liveins: $p0, $p1, $p2, $r0, $r2, $r16, $r2
+
+    BUNDLE implicit-def dead $p3, implicit-def $pc, implicit $r2 {
+      $p3 = C2_cmpgti $r2, -2
+      J2_jumptnew internal killed $p3, %bb.21.for.body33.lr.ph, implicit-def $pc
+    }
+
+  bb.8.for.body46:
+    successors: %bb.9.if.then59(0x7ffff800), %bb.22.for.body46(0x00000800)
+    liveins: $p0, $p1, $p2, $r0, $r2, $r16
+
+    J2_jumpf $p1, %bb.22.for.body46, implicit-def $pc
+
+  bb.9.if.then59:
+    successors: %bb.10.for.inc252(0x7df7df7e), %bb.14.if.else122(0x02082082)
+    liveins: $p0, $p1, $p2, $r0, $r2, $r16
+
+    J2_jumpf $p2, %bb.14.if.else122, implicit-def $pc
+
+  bb.10.for.inc252:
+    successors: %bb.26.land.lhs.true300(0x00000400), %bb.11.if.end306(0x7ffffc00)
+    liveins: $p0, $p2, $p1, $r0, $r16, $r2
+
+    J2_jumpt $p0, %bb.26.land.lhs.true300, implicit-def $pc
+
+  bb.11.if.end306:
+    successors: %bb.12.if.end371(0x00001000), %bb.5.for.body18(0x7ffff000)
+    liveins: $p0, $p2, $p1, $r0, $r16, $r2
+
+    J2_jumpf $p2, %bb.5.for.body18, implicit-def $pc
+
+  bb.12.if.end371:
+    successors: %bb.13.if.end687(0x40000000), %bb.24.if.then394(0x40000000)
+    liveins: $p0, $p2
+
+    J2_jumpf undef $p2, %bb.24.if.then394, implicit-def $pc
+
+  bb.13.if.end687:
+
+  bb.14.if.else122 (align 4):
+    successors: %bb.29(0x00000800), %bb.15.if.else166(0x7ffff800)
+    liveins: $p1, $r0, $r2, $r16
+
+    BUNDLE implicit-def $r2, implicit-def $pc, implicit undef $p1, implicit undef $r2 {
+      $r2 = L2_ploadrif_io undef $p1, undef $r2, 0 :: (load 4 from `%struct.netbox** undef`, align 8)
+      J2_jumpt undef $p1, %bb.29, implicit-def $pc
+    }
+
+  bb.15.if.else166:
+    successors: %bb.30.if.then171(0x00000800), %bb.16.for.cond185(0x7ffff800)
+    liveins: $r0, $r2, $r16, $r2
+
+    BUNDLE implicit-def dead $p2, implicit-def $pc, implicit undef $r2 {
+      $p2 = C2_cmpeq undef $r2, $r2
+      J2_jumptnew internal $p2, %bb.30.if.then171, implicit-def $pc
+    }
+
+  bb.16.for.cond185 (align 4):
+    successors: %bb.17.for.end193(0x00000800), %bb.16.for.cond185(0x7ffff800)
+    liveins: $r0, $r2, $r16
+
+    $r17 = A2_tfr killed $r2
+    $r2 = L2_loadri_io $r17, 0 :: (load 4 from %ir.cgep58)
+    BUNDLE implicit-def dead $p0, implicit-def dead $pc, implicit $r2 {
+      $p0 = C4_cmpneq $r2, undef $r2
+      J2_jumptnewpt internal killed $p0, %bb.16.for.cond185, implicit-def dead $pc
+    }
+
+  bb.17.for.end193:
+    successors: %bb.18.for.end193(0x80000000)
+    liveins: $r0, $r16, $r17
+
+    J2_call @safe_free, hexagoncsr, implicit-def $pc, implicit-def $r31, implicit $r29, implicit undef $r0, implicit-def $r29, implicit-def $r0
+
+  bb.18.for.end193 (align 4):
+    successors: %bb.19.if.end215(0x80000000)
+    liveins: $r16, $r17
+
+    $r2 = L2_loadri_io killed $r17, 0 :: (load 4 from %ir.cgep69)
+
+  bb.19.if.end215 (align 4):
+    successors: %bb.20.if.end215(0x80000000)
+    liveins: $r2, $r16
+
+    BUNDLE implicit-def $r1, implicit-def $r0, implicit-def $pc, implicit-def $r31, implicit-def $r29, implicit $r2, implicit killed $r16, implicit $r29 {
+      $r1 = L2_loadrh_io $r2, 28 :: (load 2 from %ir.cgep3, align 4)
+      $r0 = A2_tfr killed $r16
+      J2_call @detfeed, hexagoncsr, implicit-def $pc, implicit-def $r31, implicit $r29, implicit internal $r0, implicit internal $r1, implicit undef $r2, implicit-def $r29, implicit-def $r0
+    }
+
+  bb.20.if.end215 (align 4):
+    liveins: $r0, $r2
+
+    S2_storerh_io killed undef $r2, 0, killed $r0 :: (store 2 into `i16* undef`)
+
+  bb.21.for.body33.lr.ph (align 4):
+
+  bb.22.for.body46 (align 4):
+    successors: %bb.19.if.end215(0x40000000), %bb.23.land.lhs.true54(0x40000000)
+    liveins: $p0, $r16
+
+    $r2 = IMPLICIT_DEF
+    J2_jumpf killed $p0, %bb.19.if.end215, implicit-def $pc
+
+  bb.23.land.lhs.true54:
+
+  bb.24.if.then394 (align 4):
+    successors: %bb.25.if.then435(0x40000000), %bb.27.if.end629(0x40000000)
+    liveins: $p0
+
+    J2_jumpt killed undef $p0, %bb.27.if.end629, implicit-def dead $pc
+
+  bb.25.if.then435:
+
+  bb.26.land.lhs.true300 (align 4):
+
+  bb.27.if.end629 (align 4):
+
+  bb.28.for.body (align 4):
+
+  bb.29 (align 4):
+    successors: %bb.19.if.end215(0x80000000)
+    liveins: $r16
+
+    $r2 = IMPLICIT_DEF
+    J2_jump %bb.19.if.end215, implicit-def $pc
+
+  bb.30.if.then171 (align 4):
+    BUNDLE implicit-def $r0, implicit-def $r29 {
+      $r0 = A2_tfrsi 0
+      PS_call_nr @safe_free, hexagoncsr, implicit internal $r0, implicit-def $r29, implicit-def $r0
+    }
+
+...

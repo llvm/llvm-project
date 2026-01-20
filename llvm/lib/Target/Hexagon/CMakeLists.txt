@@ -39,6 +39,7 @@ add_llvm_target(HexagonCodeGen
   HexagonGenMux.cpp
   HexagonGenPredicate.cpp
   HexagonGlobalRegion.cpp
+  HexagonGlobalScheduler.cpp
   HexagonLiveVariables.cpp
   HexagonHardwareLoops.cpp
   HexagonHazardRecognizer.cpp
