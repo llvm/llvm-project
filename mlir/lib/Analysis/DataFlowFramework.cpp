@@ -19,11 +19,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "dataflow"
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-#define DATAFLOW_DEBUG(X) LLVM_DEBUG(X)
-#else
-#define DATAFLOW_DEBUG(X)
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 
 using namespace mlir;
 
@@ -43,12 +38,10 @@ void AnalysisState::addDependency(ProgramPoint *dependent,
                                   DataFlowAnalysis *analysis) {
   auto inserted = dependents.insert({dependent, analysis});
   (void)inserted;
-  DATAFLOW_DEBUG({
-    if (inserted) {
-      LDBG() << "Creating dependency between " << debugName << " of " << anchor
-             << "\nand " << debugName << " on " << *dependent;
-    }
-  });
+  if (inserted) {
+    LDBG() << "Creating dependency between " << debugName << " of " << anchor
+           << "\nand " << debugName << " on " << *dependent;
+  }
 }
 
 void AnalysisState::dump() const { print(llvm::errs()); }
@@ -127,7 +120,7 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
 
   // Initialize the analyses.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
-    DATAFLOW_DEBUG(LDBG() << "Priming analysis: " << analysis.debugName);
+    LDBG() << "Priming analysis: " << analysis.debugName;
     if (failed(analysis.initialize(top)))
       return failure();
   }
@@ -139,8 +132,7 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
     auto [point, analysis] = worklist.front();
     worklist.pop();
 
-    DATAFLOW_DEBUG(LDBG() << "Invoking '" << analysis->debugName
-                          << "' on: " << *point);
+    LDBG() << "Invoking '" << analysis->debugName << "' on: " << *point;
     if (failed(analysis->visit(point)))
       return failure();
   }
@@ -153,9 +145,9 @@ void DataFlowSolver::propagateIfChanged(AnalysisState *state,
   assert(isRunning &&
          "DataFlowSolver is not running, should not use propagateIfChanged");
   if (changed == ChangeResult::Change) {
-    DATAFLOW_DEBUG(LDBG() << "Propagating update to " << state->debugName
-                          << " of " << state->anchor << "\n"
-                          << "Value: " << *state);
+    LDBG() << "Propagating update to " << state->debugName << " of "
+           << state->anchor << "\n"
+           << "Value: " << *state;
     state->onUpdate(this);
   }
 }
