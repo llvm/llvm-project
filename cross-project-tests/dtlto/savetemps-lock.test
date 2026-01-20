@@ -27,6 +27,8 @@ RUN:       -fthinlto-distributor=%python \
 RUN:       -Xthinlto-distributor=%S/local_codegen_and_wait.py 2>&1 \
 RUN:         | FileCheck %s --implicit-check-not=warning
 
+# Sanity check for the expected test_temps.py behaviour.
+CHECK-DAG: Lock any files in the output directory.
 CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.[[#PID:]].dist-file.json': {{.*}}
 # Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o.
 CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET:]]).1.[[HEXPID:[A-Z0-9]+]].1.[[#PID]].native.o': {{.*}}

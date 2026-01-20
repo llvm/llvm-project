@@ -45,13 +45,13 @@ if p.poll() is not None:
     sys.exit(1)
 
 if output_dir == "locked":
-    # lock any files in the output directory.
+    print("Lock any files in the output directory.")
     for f in Path(output_dir).iterdir():
         if f.is_file():
             lock_no_delete_share(str(f))
 
 if output_dir == "removed":
-    # remove non-essential files in the output directory.
+    print("Remove non-essential files in the output directory.")
     for f in Path(output_dir).iterdir():
         if f.is_file() and not f.name.endswith("native.o"):
             f.unlink()

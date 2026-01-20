@@ -49,10 +49,14 @@ TEMPS: {{^}}t.elf.resolution.txt{{$}}
 # No files are expected after.
 BOOKEND-NOT: {{.}}
 
-# Check that no warnings are produced if temporary files are missing.
+# Check that no warnings are produced if temporary files are missing. Note that
+# the use of the name "removed" for the output directory triggers special
+# behaviour in test_temps.py.
 REDEFINE: %{tdir} = removed
 RUN: %{test-temps-dtlto} 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty
 RUN: ls %{tdir} | sort |  FileCheck %s --check-prefixes=BOOKEND,ELF
+# Sanity check for the expected test_temps.py behaviour.
+NOWARN: Remove non-essential files in the output directory.
 NOWARN-NOT: warning
 
 #--- t1.c
