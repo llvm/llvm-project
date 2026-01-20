@@ -111,6 +111,19 @@ public:
   ///     or 0 if this information is unavailable.
   int GetPageSize();
 
+  /// Returns whether this memory region has a memory protection key.
+  ///
+  /// \return
+  ///     True if the region memory region has a memory protection key.
+  bool HasProtectionKey();
+
+  /// Returns the memory protection key of the memory region.
+  ///
+  /// \return
+  ///     The memory protection key of the region. This value is only valid if
+  ///     HasProtectionKey() is true.
+  uint32_t GetProtectionKey();
+
   bool operator==(const lldb::SBMemoryRegionInfo &rhs) const;
 
   bool operator!=(const lldb::SBMemoryRegionInfo &rhs) const;
