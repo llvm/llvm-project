@@ -29,7 +29,7 @@ module attributes {llvm.data_layout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:6
     %66 = llvm.sub %63, %19 : i64
     %67 = omp.map.bounds lower_bound(%20 : i64) upper_bound(%66 : i64) extent(%63 : i64) stride(%65 : i64) start_idx(%61 : i64) {stride_in_bytes = true}
     %68 = llvm.getelementptr %22[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-    %69 = omp.map.info var_ptr(%22 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%68 : !llvm.ptr) bounds(%67) -> !llvm.ptr {name = ""}
+    %69 = omp.map.info var_ptr(%22 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%68 : !llvm.ptr, i32) bounds(%67) -> !llvm.ptr {name = ""}
     %70 = omp.map.info var_ptr(%22 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(to) capture(ByRef) members(%69 : [0] : !llvm.ptr) -> !llvm.ptr {name = "a"}
     %71 = omp.map.info var_ptr(%17 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "b"}
     %72 = omp.map.info var_ptr(%14 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "k"}

@@ -47,7 +47,7 @@ module attributes {omp.is_target_device = false} {
     %6 = arith.subi %5#1, %c1 : index
     %7 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%6 : index) extent(%5#1 : index) stride(%4 : index) start_idx(%5#0 : index) {stride_in_bytes = true}
     %8 = fir.box_offset %arg0 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,16>>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?x?x!fir.char<1,16>>>>
-    %9 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,16>>>>>, !fir.char<1,16>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%8 : !fir.llvm_ptr<!fir.ref<!fir.array<?x?x!fir.char<1,16>>>>) bounds(%3, %7) -> !fir.llvm_ptr<!fir.ref<!fir.array<?x?x!fir.char<1,16>>>> {name = ""}
+    %9 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,16>>>>>, !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,16>>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%8 : !fir.llvm_ptr<!fir.ref<!fir.array<?x?x!fir.char<1,16>>>>, !fir.char<1,16>) bounds(%3, %7) -> !fir.llvm_ptr<!fir.ref<!fir.array<?x?x!fir.char<1,16>>>> {name = ""}
     %10 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,16>>>>>, !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,16>>>>) map_clauses(to) capture(ByRef) members(%9 : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?x?x!fir.char<1,16>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,16>>>>> {name = "csv_chem_list_a"}
     omp.target map_entries(%10 -> %arg1, %9 -> %arg2 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,16>>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?x?x!fir.char<1,16>>>>) {
       omp.terminator
@@ -86,7 +86,7 @@ module attributes {omp.is_target_device = false} {
 // CHECK:           %[[VAL_25:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_26:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_27:.*]] = omp.map.bounds lower_bound(%[[VAL_23]] : i64) upper_bound(%[[VAL_24]] : i64) extent(%[[VAL_24]] : i64) stride(%[[VAL_25]] : i64) start_idx(%[[VAL_26]] : i64)
-// CHECK:           %[[VAL_28:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i8) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_22]] : !llvm.ptr) bounds(%[[VAL_12]], %[[VAL_21]], %[[VAL_27]]) -> !llvm.ptr {name = ""}
+// CHECK:           %[[VAL_28:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_22]] : !llvm.ptr, i8) bounds(%[[VAL_12]], %[[VAL_21]], %[[VAL_27]]) -> !llvm.ptr {name = ""}
 // CHECK:           %[[VAL_29:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>) map_clauses(to) capture(ByRef) members(%[[VAL_28]] : [0] : !llvm.ptr) -> !llvm.ptr {name = "csv_chem_list_a"}
 // CHECK:           omp.target map_entries(%[[VAL_29]] -> %[[VAL_30:.*]], %[[VAL_28]] -> %[[VAL_31:.*]] : !llvm.ptr, !llvm.ptr) {
 // CHECK:             omp.terminator

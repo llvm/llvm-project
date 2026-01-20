@@ -187,7 +187,8 @@ class MapInfoFinalizationPass
         op.getMapTypeAttr(),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
-        /*varPtrPtr=*/mlir::Value{}, /*members=*/mlir::ValueRange{},
+        /*varPtrPtr=*/mlir::Value{}, /*varPtrPtr=*/mlir::TypeAttr{},
+        /*members=*/mlir::ValueRange{},
         /*members_index=*/mlir::ArrayAttr{}, bounds,
         /*mapperId=*/mlir::FlatSymbolRefAttr(),
         builder.getStringAttr(op.getNameAttr().strref() + "." + memberName +
@@ -286,7 +287,7 @@ class MapInfoFinalizationPass
                                       fir::FirOpBuilder &builder,
                                       bool &canDescBeDeferred) {
     mlir::Value descriptor = boxMap.getVarPtr();
-    if (!fir::isTypeWithDescriptor(boxMap.getVarType()))
+    if (!fir::isTypeWithDescriptor(boxMap.getVarPtrType()))
       if (auto addrOp = mlir::dyn_cast_if_present<fir::BoxAddrOp>(
               boxMap.getVarPtr().getDefiningOp()))
         descriptor = addrOp.getVal();
@@ -355,22 +356,26 @@ class MapInfoFinalizationPass
     mlir::Value baseAddrAddr = fir::BoxOffsetOp::create(
         builder, loc, descriptor, fir::BoxFieldAttr::base_addr);
 
-    mlir::Type underlyingVarType =
+    mlir::Type underlyingBaseAddrType =
         llvm::cast<mlir::omp::PointerLikeType>(
             fir::unwrapRefType(baseAddrAddr.getType()))
             .getElementType();
-    if (auto seqType = llvm::dyn_cast<fir::SequenceType>(underlyingVarType))
+    if (auto seqType =
+            llvm::dyn_cast<fir::SequenceType>(underlyingBaseAddrType))
       if (seqType.hasDynamicExtents())
-        underlyingVarType = seqType.getEleTy();
+        underlyingBaseAddrType = seqType.getEleTy();
+
+    mlir::Type underlyingDescType = fir::unwrapRefType(descriptor.getType());
 
     // Member of the descriptor pointing at the allocated data
     return mlir::omp::MapInfoOp::create(
         builder, loc, baseAddrAddr.getType(), descriptor,
-        mlir::TypeAttr::get(underlyingVarType),
+        mlir::TypeAttr::get(underlyingDescType),
         builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
-        baseAddrAddr, /*members=*/mlir::SmallVector<mlir::Value>{},
+        baseAddrAddr, mlir::TypeAttr::get(underlyingBaseAddrType),
+        /*members=*/mlir::SmallVector<mlir::Value>{},
         /*membersIndex=*/mlir::ArrayAttr{}, bounds,
         /*mapperId=*/mapperId,
         /*name=*/builder.getStringAttr(""),
@@ -535,6 +540,7 @@ class MapInfoFinalizationPass
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         /*varPtrPtr=*/mlir::Value{},
+        /*varPtrPtrType=*/mlir::TypeAttr{},
         /*members=*/llvm::SmallVector<mlir::Value>{},
         /*member_index=*/mlir::ArrayAttr{},
         /*bounds=*/op.getBounds(),
@@ -545,8 +551,8 @@ class MapInfoFinalizationPass
     // Rebuild the parent as a container with the `__address` member.
     mlir::omp::MapInfoOp newParent = mlir::omp::MapInfoOp::create(
         builder, op.getLoc(), op.getResult().getType(), op.getVarPtr(),
-        op.getVarTypeAttr(), mapTypeAttr, op.getMapCaptureTypeAttr(),
-        /*varPtrPtr=*/mlir::Value{},
+        op.getVarPtrTypeAttr(), mapTypeAttr, op.getMapCaptureTypeAttr(),
+        /*varPtrPtr=*/mlir::Value{}, mlir::TypeAttr{},
         /*members=*/llvm::SmallVector<mlir::Value>{memberMap},
         /*member_index=*/newMembersAttr,
         /*bounds=*/llvm::SmallVector<mlir::Value>{},
@@ -648,8 +654,9 @@ class MapInfoFinalizationPass
         mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
         builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
             getDescriptorMapType(mapType, target)),
-        op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{}, newMembers,
-        newMembersAttr, /*bounds=*/mlir::SmallVector<mlir::Value>{},
+        op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{},
+        /*varPtrPtrType=*/mlir::TypeAttr{}, newMembers, newMembersAttr,
+        /*bounds=*/mlir::SmallVector<mlir::Value>{},
         /*mapperId=*/mlir::FlatSymbolRefAttr(), op.getNameAttr(),
         /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
@@ -848,11 +855,12 @@ class MapInfoFinalizationPass
 
     mlir::omp::MapInfoOp newDescParentMapOp = mlir::omp::MapInfoOp::create(
         builder, op->getLoc(), op.getResult().getType(), op.getVarPtr(),
-        op.getVarTypeAttr(),
+        op.getVarPtrTypeAttr(),
         builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
             mlir::omp::ClauseMapFlags::to | mlir::omp::ClauseMapFlags::always),
         op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{},
-        mlir::SmallVector<mlir::Value>{}, mlir::ArrayAttr{},
+        /*varPtrPtrType=*/mlir::TypeAttr{}, mlir::SmallVector<mlir::Value>{},
+        mlir::ArrayAttr{},
         /*bounds=*/mlir::SmallVector<mlir::Value>{},
         /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
         /*partial_map=*/builder.getBoolAttr(false));
@@ -909,8 +917,9 @@ class MapInfoFinalizationPass
         builder.loadIfRef(op->getLoc(), baseAddr.getVarPtrPtr());
     mlir::omp::MapInfoOp newBaseAddrMapOp = mlir::omp::MapInfoOp::create(
         builder, op->getLoc(), loadBaseAddr.getType(), loadBaseAddr,
-        baseAddr.getVarTypeAttr(), baseAddr.getMapTypeAttr(),
-        baseAddr.getMapCaptureTypeAttr(), mlir::Value{}, members, membersAttr,
+        baseAddr.getVarPtrPtrTypeAttr(), baseAddr.getMapTypeAttr(),
+        baseAddr.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{},
+        /*varPtrPtrType=*/mlir::TypeAttr{}, members, membersAttr,
         baseAddr.getBounds(),
         /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
         /*partial_map=*/builder.getBoolAttr(false));
@@ -1177,7 +1186,7 @@ class MapInfoFinalizationPass
                "of a MapInfoOp");
 
         if (hasADescriptor(op.getVarPtr().getDefiningOp(),
-                           fir::unwrapRefType(op.getVarType()))) {
+                           fir::unwrapRefType(op.getVarPtrType()))) {
           builder.setInsertionPoint(op);
           mlir::Operation *targetUser = getFirstTargetUser(op);
           assert(targetUser && "expected user of map operation was not found");
