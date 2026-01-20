@@ -167,16 +167,15 @@ public:
       std::string invalidString =
           llvm::join(llvm::map_range(invalidSyms, getSymName), ", ");
 
-      if (softCheck) {
-        // Emit warnings for illegal symbols.
+      // Emit only warnings when softCheck is enabled.
+      if (softCheck)
         regionOp->emitWarning("offload target verifier: illegal symbol(s): ")
             << invalidString;
-      } else {
+      else
         accSupport.emitNYI(regionOp->getLoc(),
                            "offload target verifier failed due to illegal "
                            "symbol(s): " +
                                invalidString);
-      }
     }
 
     return hasIllegalSymbols;
@@ -219,9 +218,8 @@ public:
       if (hasIllegalSyms)
         hasErrors = true;
 
-      if (!hasIllegalValues && !hasIllegalSyms && softCheck) {
+      if (!hasIllegalValues && !hasIllegalSyms && softCheck)
         op->emitRemark("offload target verifier: passed validity check");
-      }
 
       return WalkResult::advance();
     });
