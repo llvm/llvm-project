@@ -551,15 +551,11 @@ static void printf_common(void *ctx, const char *format, va_list aq) {
       continue;
     } else if (size == FSS_STRLEN) {
       if (void *argp = va_arg(aq, void *)) {
-        // Skip strlen/strnlen checking if the first byte is not readable.
+        // Check whether the first byte of the %s argument is readable.
         if (!IsAccessibleMemoryRange((uptr)argp, 1)) {
-          static int ReportedOnce;
-          if (!ReportedOnce++)
-            Report(
-                "%s: WARNING: unreadable pointer %p for %%s format specifier "
-                "(reported once per process)\n",
-                SanitizerToolName, argp);
-          continue;
+          Report("%s: ERROR: unreadable pointer %p for %%s format specifier\n",
+                 SanitizerToolName, argp);
+          Die();
         }
         uptr len;
         if (dir.starredPrecision) {
