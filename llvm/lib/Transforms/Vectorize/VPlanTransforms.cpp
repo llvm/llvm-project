@@ -4133,8 +4133,11 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                     ? std::optional{Red->getFastMathFlags()}
                     : std::nullopt);
           } else {
-            // Only partial reductions support mixed extends at the moment.
-            if (Ext0 && Ext1 && Ext0->getOpcode() != Ext1->getOpcode())
+            // Only partial reductions support mixed or floating-point extends
+            // at the moment.
+            if (Ext0 && Ext1 &&
+                (Ext0->getOpcode() != Ext1->getOpcode() ||
+                 Ext0->getOpcode() == Instruction::CastOps::FPExt))
               return false;
 
             bool IsZExt =

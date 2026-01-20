@@ -352,6 +352,248 @@ for.exit:                        ; preds = %for.body
   ret float %add
 }
 
+define float @not_fdot_f16_f32_nosve(ptr %a, ptr %b) {
+; CHECK-LABEL: define float @not_fdot_f16_f32_nosve(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x float> [ <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ splat (float -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[TMP0]], i64 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x half>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fpext <8 x half> [[WIDE_LOAD]] to <8 x float>
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <8 x half> [[WIDE_LOAD2]] to <8 x float>
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr [[TMP4]], i64 8
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x half>, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x half>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = fpext <8 x half> [[WIDE_LOAD3]] to <8 x float>
+; CHECK-NEXT:    [[TMP7:%.*]] = fpext <8 x half> [[WIDE_LOAD4]] to <8 x float>
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <8 x float> [[TMP6]], [[TMP2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul <8 x float> [[TMP7]], [[TMP3]]
+; CHECK-NEXT:    [[TMP10]] = fadd reassoc contract <8 x float> [[TMP8]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP11]] = fadd reassoc contract <8 x float> [[TMP9]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <8 x float> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[BIN_RDX]])
+; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
+; CHECK:       [[FOR_EXIT]]:
+; CHECK-NEXT:    ret float [[TMP13]]
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
+  %gep.a = getelementptr half, ptr %a, i64 %iv
+  %load.a = load half, ptr %gep.a, align 1
+  %ext.a = fpext half %load.a to float
+  %gep.b = getelementptr half, ptr %b, i64 %iv
+  %load.b = load half, ptr %gep.b, align 1
+  %ext.b = fpext half %load.b to float
+  %mul = fmul float %ext.b, %ext.a
+  %add = fadd reassoc contract float %mul, %accum
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:                        ; preds = %for.body
+  ret float %add
+}
+
+define double @not_fdot_f32_f64_nosve(ptr %a, ptr %b) {
+; CHECK-LABEL: define double @not_fdot_f32_f64_nosve(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ <double 0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fpext <4 x float> [[WIDE_LOAD]] to <4 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <4 x float> [[WIDE_LOAD2]] to <4 x double>
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP4]], i64 4
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x float>, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = fpext <4 x float> [[WIDE_LOAD3]] to <4 x double>
+; CHECK-NEXT:    [[TMP7:%.*]] = fpext <4 x float> [[WIDE_LOAD4]] to <4 x double>
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x double> [[TMP6]], [[TMP2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul <4 x double> [[TMP7]], [[TMP3]]
+; CHECK-NEXT:    [[TMP10]] = fadd reassoc contract <4 x double> [[TMP8]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP11]] = fadd reassoc contract <4 x double> [[TMP9]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <4 x double> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[BIN_RDX]])
+; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
+; CHECK:       [[FOR_EXIT]]:
+; CHECK-NEXT:    ret double [[TMP13]]
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %accum = phi double [ 0.0, %entry ], [ %add, %for.body ]
+  %gep.a = getelementptr float, ptr %a, i64 %iv
+  %load.a = load float, ptr %gep.a, align 1
+  %ext.a = fpext float %load.a to double
+  %gep.b = getelementptr float, ptr %b, i64 %iv
+  %load.b = load float, ptr %gep.b, align 1
+  %ext.b = fpext float %load.b to double
+  %mul = fmul double %ext.b, %ext.a
+  %add = fadd reassoc contract double %mul, %accum
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:                        ; preds = %for.body
+  ret double %add
+}
+
+define fp128 @not_fdot_f64_f128(ptr %a, ptr %b) #0 {
+; CHECK-LABEL: define fp128 @not_fdot_f64_f128(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ZERO:%.*]] = fpext double 0.000000e+00 to fp128
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x fp128> splat (fp128 0xL00000000000000008000000000000000), fp128 [[ZERO]], i32 0
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x fp128> [ [[TMP0]], %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x fp128> [ splat (fp128 0xL00000000000000008000000000000000), %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x double>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x double> [[WIDE_LOAD]] to <2 x fp128>
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x double> [[WIDE_LOAD2]] to <2 x fp128>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[TMP5]], i64 2
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x double>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x double>, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fpext <2 x double> [[WIDE_LOAD3]] to <2 x fp128>
+; CHECK-NEXT:    [[TMP8:%.*]] = fpext <2 x double> [[WIDE_LOAD4]] to <2 x fp128>
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x fp128> [[TMP7]], [[TMP3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x fp128> [[TMP8]], [[TMP4]]
+; CHECK-NEXT:    [[TMP11]] = fadd reassoc contract <2 x fp128> [[TMP9]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP12]] = fadd reassoc contract <2 x fp128> [[TMP10]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <2 x fp128> [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = call reassoc contract fp128 @llvm.vector.reduce.fadd.v2f128(fp128 0xL00000000000000008000000000000000, <2 x fp128> [[BIN_RDX]])
+; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
+; CHECK:       [[FOR_EXIT]]:
+; CHECK-NEXT:    ret fp128 [[TMP14]]
+;
+entry:
+  %zero = fpext double 0.0 to fp128
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %accum = phi fp128 [ %zero, %entry ], [ %add, %for.body ]
+  %gep.a = getelementptr double, ptr %a, i64 %iv
+  %load.a = load double, ptr %gep.a, align 1
+  %ext.a = fpext double %load.a to fp128
+  %gep.b = getelementptr double, ptr %b, i64 %iv
+  %load.b = load double, ptr %gep.b, align 1
+  %ext.b = fpext double %load.b to fp128
+  %mul = fmul fp128 %ext.b, %ext.a
+  %add = fadd reassoc contract fp128 %mul, %accum
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:                        ; preds = %for.body
+  ret fp128 %add
+}
+
+define fp128 @not_fdot_f64_f128_nosve(ptr %a, ptr %b) {
+; CHECK-LABEL: define fp128 @not_fdot_f64_f128_nosve(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ZERO:%.*]] = fpext double 0.000000e+00 to fp128
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x fp128> splat (fp128 0xL00000000000000008000000000000000), fp128 [[ZERO]], i32 0
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x fp128> [ [[TMP0]], %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x fp128> [ splat (fp128 0xL00000000000000008000000000000000), %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x double>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x double> [[WIDE_LOAD]] to <2 x fp128>
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x double> [[WIDE_LOAD2]] to <2 x fp128>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[TMP5]], i64 2
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x double>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x double>, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fpext <2 x double> [[WIDE_LOAD3]] to <2 x fp128>
+; CHECK-NEXT:    [[TMP8:%.*]] = fpext <2 x double> [[WIDE_LOAD4]] to <2 x fp128>
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x fp128> [[TMP7]], [[TMP3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x fp128> [[TMP8]], [[TMP4]]
+; CHECK-NEXT:    [[TMP11]] = fadd reassoc contract <2 x fp128> [[TMP9]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP12]] = fadd reassoc contract <2 x fp128> [[TMP10]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <2 x fp128> [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = call reassoc contract fp128 @llvm.vector.reduce.fadd.v2f128(fp128 0xL00000000000000008000000000000000, <2 x fp128> [[BIN_RDX]])
+; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
+; CHECK:       [[FOR_EXIT]]:
+; CHECK-NEXT:    ret fp128 [[TMP14]]
+;
+entry:
+  %zero = fpext double 0.0 to fp128
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %accum = phi fp128 [ %zero, %entry ], [ %add, %for.body ]
+  %gep.a = getelementptr double, ptr %a, i64 %iv
+  %load.a = load double, ptr %gep.a, align 1
+  %ext.a = fpext double %load.a to fp128
+  %gep.b = getelementptr double, ptr %b, i64 %iv
+  %load.b = load double, ptr %gep.b, align 1
+  %ext.b = fpext double %load.b to fp128
+  %mul = fmul fp128 %ext.b, %ext.a
+  %add = fadd reassoc contract fp128 %mul, %accum
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:                        ; preds = %for.body
+  ret fp128 %add
+}
+
 ; Test that we don't generate a partial reduction when the inputs aren't
 ; extended.
 define float @not_fdot_f32_f32(ptr %a, ptr %b) #0 {
@@ -387,7 +629,7 @@ define float @not_fdot_f32_f32(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP15]] = fadd reassoc contract <vscale x 4 x float> [[TMP13]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <vscale x 4 x float> [[TMP15]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[BIN_RDX]])
@@ -408,7 +650,7 @@ define float @not_fdot_f32_f32(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[ADD]] = fadd reassoc contract float [[MUL]], [[ACCUM]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[FOR_EXIT]]:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], %[[FOR_BODY]] ], [ [[TMP17]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[ADD_LCSSA]]
@@ -470,7 +712,7 @@ define double @not_fdot_different_types(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP19]] = fadd reassoc contract <vscale x 8 x double> [[TMP17]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <vscale x 8 x double> [[TMP19]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.nxv8f64(double -0.000000e+00, <vscale x 8 x double> [[BIN_RDX]])
@@ -493,7 +735,7 @@ define double @not_fdot_different_types(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[ADD]] = fadd reassoc contract double [[MUL]], [[ACCUM]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[FOR_EXIT]]:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi double [ [[ADD]], %[[FOR_BODY]] ], [ [[TMP21]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret double [[ADD_LCSSA]]
@@ -560,7 +802,7 @@ define float @not_fdot_ext_outside_plan(ptr %a, half %b, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP13]] = fadd reassoc contract <vscale x 8 x float> [[TMP11]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <vscale x 8 x float> [[TMP13]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[BIN_RDX]])
@@ -580,7 +822,7 @@ define float @not_fdot_ext_outside_plan(ptr %a, half %b, i64 %n) #0 {
 ; CHECK-NEXT:    [[ADD]] = fadd reassoc contract float [[MUL]], [[ACCUM]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP_1]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_1]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi float [ [[ADD]], %[[FOR_BODY]] ], [ [[TMP15]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[RESULT]]
@@ -646,7 +888,7 @@ define float @fdot_f16_f32_nocontract(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP19]] = fadd reassoc <vscale x 8 x float> [[TMP17]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc <vscale x 8 x float> [[TMP19]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = call reassoc float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[BIN_RDX]])
@@ -669,7 +911,7 @@ define float @fdot_f16_f32_nocontract(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[ADD]] = fadd reassoc float [[MUL]], [[ACCUM]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       [[FOR_EXIT]]:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], %[[FOR_BODY]] ], [ [[TMP21]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[ADD_LCSSA]]
