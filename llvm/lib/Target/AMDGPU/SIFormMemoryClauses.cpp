@@ -278,6 +278,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     GCNDownwardRPTracker RPT(*LIS);
+    RPT.initPhysLiveRegs(*MRI);
     MachineBasicBlock::instr_iterator Next;
     for (auto I = MBB.instr_begin(), E = MBB.instr_end(); I != E; I = Next) {
       MachineInstr &MI = *I;

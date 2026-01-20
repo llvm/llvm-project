@@ -1,5 +1,5 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack -amdgpu-use-amdgpu-trackers=1  2>&1  < %s | FileCheck -check-prefixes=ERR-GCNTRACKERS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack 2>&1  < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack -amdgpu-use-amdgpu-trackers=1 2>&1 < %s | FileCheck -check-prefixes=GCN-TRACKERS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack 2>&1 < %s | FileCheck -check-prefixes=GCN %s
 
 %asm.output = type { <16 x i32>, <16 x i32>, <16 x i32>, <8 x i32>, <2 x i32>, i32, ; sgprs
                      <16 x i32>, <7 x i32>, ; vgprs
@@ -16,10 +16,12 @@
                      i64 ; vcc
                      }
 
-; ERR-GCNTRACKERS: ran out of registers during register allocation
+; GCN-TRACKERS-NOT: ran out of registers during register allocation
 ; GCN-NOT: ran out of registers during register allocation
 
-; FIXME: GCN Trackers do not track pressure from PhysRegs, so scheduling is actually worse
+; GCN Trackers now track physical register pressure correctly, so this test
+; verifies that both trackers can successfully handle code with heavy physical
+; register usage from inline assembly.
 
 define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 {
   %alloca0 = alloca [4096 x i32], align 64, addrspace(5)
