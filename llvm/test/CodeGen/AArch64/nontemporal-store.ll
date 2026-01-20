@@ -793,6 +793,405 @@ entry:
   ret void
 }
 
+define void @test_stnp_i32_register_offset_i8(ptr %ptr, i32 %v, i8 %offset) {
+; CHECK-LE-LABEL: test_stnp_i32_register_offset_i8:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-LE-NEXT:    sbfiz x8, x2, #3, #8
+; CHECK-LE-NEXT:    str w1, [x0, x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i32_register_offset_i8:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-BE-NEXT:    sbfiz x8, x2, #3, #8
+; CHECK-BE-NEXT:    str w1, [x0, x8]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i8 %offset
+  store i32 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i32_register_offset_i16(ptr %ptr, i32 %v, i16 %offset) {
+; CHECK-LE-LABEL: test_stnp_i32_register_offset_i16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-LE-NEXT:    sbfiz x8, x2, #3, #16
+; CHECK-LE-NEXT:    str w1, [x0, x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i32_register_offset_i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-BE-NEXT:    sbfiz x8, x2, #3, #16
+; CHECK-BE-NEXT:    str w1, [x0, x8]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i16 %offset
+  store i32 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i32_register_offset_i32(ptr %ptr, i32 %v, i32 %offset) {
+; CHECK-LE-LABEL: test_stnp_i32_register_offset_i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-LE-NEXT:    sbfiz x8, x2, #3, #32
+; CHECK-LE-NEXT:    str w1, [x0, x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i32_register_offset_i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-BE-NEXT:    sbfiz x8, x2, #3, #32
+; CHECK-BE-NEXT:    str w1, [x0, x8]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i32 %offset
+  store i32 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i32_register_offset_i64(ptr %ptr, i32 %v, i64 %offset) {
+; CHECK-LE-LABEL: test_stnp_i32_register_offset_i64:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsl x8, x2, #3
+; CHECK-LE-NEXT:    str w1, [x0, x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i32_register_offset_i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    lsl x8, x2, #3
+; CHECK-BE-NEXT:    str w1, [x0, x8]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i64 %offset
+  store i32 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+; Test non-power-of-2 offset type
+define void @test_stnp_i32_register_offset_i65(ptr %ptr, i32 %v, i65 %offset) {
+; CHECK-LE-LABEL: test_stnp_i32_register_offset_i65:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsl x8, x2, #3
+; CHECK-LE-NEXT:    str w1, [x0, x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i32_register_offset_i65:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    lsl x8, x3, #3
+; CHECK-BE-NEXT:    str w1, [x0, x8]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i65 %offset
+  store i32 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i64_register_offset_i8(ptr %ptr, i64 %v, i8 %offset) {
+; CHECK-LE-LABEL: test_stnp_i64_register_offset_i8:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    add x8, x0, w2, sxtb #3
+; CHECK-LE-NEXT:    lsr x9, x1, #32
+; CHECK-LE-NEXT:    stnp w1, w9, [x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i64_register_offset_i8:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-BE-NEXT:    sxtb x8, w2
+; CHECK-BE-NEXT:    str x1, [x0, x8, lsl #3]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i8 %offset
+  store i64 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i64_register_offset_i16(ptr %ptr, i64 %v, i16 %offset) {
+; CHECK-LE-LABEL: test_stnp_i64_register_offset_i16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    add x8, x0, w2, sxth #3
+; CHECK-LE-NEXT:    lsr x9, x1, #32
+; CHECK-LE-NEXT:    stnp w1, w9, [x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i64_register_offset_i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-BE-NEXT:    sxth x8, w2
+; CHECK-BE-NEXT:    str x1, [x0, x8, lsl #3]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i16 %offset
+  store i64 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i64_register_offset_i32(ptr %ptr, i64 %v, i32 %offset) {
+; CHECK-LE-LABEL: test_stnp_i64_register_offset_i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    add x8, x0, w2, sxtw #3
+; CHECK-LE-NEXT:    lsr x9, x1, #32
+; CHECK-LE-NEXT:    stnp w1, w9, [x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i64_register_offset_i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    str x1, [x0, w2, sxtw #3]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i32 %offset
+  store i64 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i64_register_offset_i64(ptr %ptr, i64 %v, i64 %offset) {
+; CHECK-LE-LABEL: test_stnp_i64_register_offset_i64:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-LE-NEXT:    lsr x9, x1, #32
+; CHECK-LE-NEXT:    stnp w1, w9, [x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i64_register_offset_i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    str x1, [x0, x2, lsl #3]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i64 %offset
+  store i64 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+; Test non-power-of-2 offset type
+define void @test_stnp_i64_register_offset_i65(ptr %ptr, i64 %v, i65 %offset) {
+; CHECK-LE-LABEL: test_stnp_i64_register_offset_i65:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-LE-NEXT:    lsr x9, x1, #32
+; CHECK-LE-NEXT:    stnp w1, w9, [x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i64_register_offset_i65:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    str x1, [x0, x3, lsl #3]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i65 %offset
+  store i64 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i65_register_offset_i8(ptr %ptr, i65 %v, i8 %offset) {
+; CHECK-LE-LABEL: test_stnp_i65_register_offset_i8:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsr x8, x2, #32
+; CHECK-LE-NEXT:    add x9, x0, w4, sxtb #3
+; CHECK-LE-NEXT:    and w10, w3, #0x1
+; CHECK-LE-NEXT:    stnp w2, w8, [x9]
+; CHECK-LE-NEXT:    strb w10, [x9, #8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i65_register_offset_i8:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    extr x8, x2, x3, #8
+; CHECK-BE-NEXT:    add x9, x0, w4, sxtb #3
+; CHECK-BE-NEXT:    and x8, x8, #0x1ffffffffffffff
+; CHECK-BE-NEXT:    strb w3, [x9, #8]
+; CHECK-BE-NEXT:    str x8, [x9]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i8 %offset
+  store i65 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i65_register_offset_i16(ptr %ptr, i65 %v, i16 %offset) {
+; CHECK-LE-LABEL: test_stnp_i65_register_offset_i16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsr x8, x2, #32
+; CHECK-LE-NEXT:    add x9, x0, w4, sxth #3
+; CHECK-LE-NEXT:    and w10, w3, #0x1
+; CHECK-LE-NEXT:    stnp w2, w8, [x9]
+; CHECK-LE-NEXT:    strb w10, [x9, #8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i65_register_offset_i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    extr x8, x2, x3, #8
+; CHECK-BE-NEXT:    add x9, x0, w4, sxth #3
+; CHECK-BE-NEXT:    and x8, x8, #0x1ffffffffffffff
+; CHECK-BE-NEXT:    strb w3, [x9, #8]
+; CHECK-BE-NEXT:    str x8, [x9]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i16 %offset
+  store i65 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i65_register_offset_i32(ptr %ptr, i65 %v, i32 %offset) {
+; CHECK-LE-LABEL: test_stnp_i65_register_offset_i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsr x8, x2, #32
+; CHECK-LE-NEXT:    add x9, x0, w4, sxtw #3
+; CHECK-LE-NEXT:    and w10, w3, #0x1
+; CHECK-LE-NEXT:    stnp w2, w8, [x9]
+; CHECK-LE-NEXT:    strb w10, [x9, #8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i65_register_offset_i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    extr x8, x2, x3, #8
+; CHECK-BE-NEXT:    add x9, x0, w4, sxtw #3
+; CHECK-BE-NEXT:    and x8, x8, #0x1ffffffffffffff
+; CHECK-BE-NEXT:    strb w3, [x9, #8]
+; CHECK-BE-NEXT:    str x8, [x9]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i32 %offset
+  store i65 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i65_register_offset_i64(ptr %ptr, i65 %v, i64 %offset) {
+; CHECK-LE-LABEL: test_stnp_i65_register_offset_i64:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsr x8, x2, #32
+; CHECK-LE-NEXT:    add x9, x0, x4, lsl #3
+; CHECK-LE-NEXT:    and w10, w3, #0x1
+; CHECK-LE-NEXT:    stnp w2, w8, [x9]
+; CHECK-LE-NEXT:    strb w10, [x9, #8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i65_register_offset_i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    extr x8, x2, x3, #8
+; CHECK-BE-NEXT:    add x9, x0, x4, lsl #3
+; CHECK-BE-NEXT:    and x8, x8, #0x1ffffffffffffff
+; CHECK-BE-NEXT:    strb w3, [x9, #8]
+; CHECK-BE-NEXT:    str x8, [x9]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i64 %offset
+  store i65 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+; Test non-power-of-2 offset type
+define void @test_stnp_i65_register_offset_i65(ptr %ptr, i65 %v, i65 %offset) {
+; CHECK-LE-LABEL: test_stnp_i65_register_offset_i65:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsr x8, x2, #32
+; CHECK-LE-NEXT:    add x9, x0, x4, lsl #3
+; CHECK-LE-NEXT:    and w10, w3, #0x1
+; CHECK-LE-NEXT:    stnp w2, w8, [x9]
+; CHECK-LE-NEXT:    strb w10, [x9, #8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i65_register_offset_i65:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    extr x8, x2, x3, #8
+; CHECK-BE-NEXT:    add x9, x0, x5, lsl #3
+; CHECK-BE-NEXT:    and x8, x8, #0x1ffffffffffffff
+; CHECK-BE-NEXT:    strb w3, [x9, #8]
+; CHECK-BE-NEXT:    str x8, [x9]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i65 %offset
+  store i65 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i128_register_offset_i8(ptr %ptr, i128 %v, i8 %offset) {
+; CHECK-LE-LABEL: test_stnp_i128_register_offset_i8:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsr x8, x3, #32
+; CHECK-LE-NEXT:    add x9, x0, w4, sxtb #3
+; CHECK-LE-NEXT:    lsr x10, x2, #32
+; CHECK-LE-NEXT:    stnp w3, w8, [x9, #8]
+; CHECK-LE-NEXT:    stnp w2, w10, [x9]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i128_register_offset_i8:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    add x8, x0, w4, sxtb #3
+; CHECK-BE-NEXT:    stp x2, x3, [x8]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i8 %offset
+  store i128 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i128_register_offset_i16(ptr %ptr, i128 %v, i16 %offset) {
+; CHECK-LE-LABEL: test_stnp_i128_register_offset_i16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsr x8, x3, #32
+; CHECK-LE-NEXT:    add x9, x0, w4, sxth #3
+; CHECK-LE-NEXT:    lsr x10, x2, #32
+; CHECK-LE-NEXT:    stnp w3, w8, [x9, #8]
+; CHECK-LE-NEXT:    stnp w2, w10, [x9]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i128_register_offset_i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    add x8, x0, w4, sxth #3
+; CHECK-BE-NEXT:    stp x2, x3, [x8]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i16 %offset
+  store i128 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i128_register_offset_i32(ptr %ptr, i128 %v, i32 %offset) {
+; CHECK-LE-LABEL: test_stnp_i128_register_offset_i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsr x8, x3, #32
+; CHECK-LE-NEXT:    add x9, x0, w4, sxtw #3
+; CHECK-LE-NEXT:    lsr x10, x2, #32
+; CHECK-LE-NEXT:    stnp w3, w8, [x9, #8]
+; CHECK-LE-NEXT:    stnp w2, w10, [x9]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i128_register_offset_i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    add x8, x0, w4, sxtw #3
+; CHECK-BE-NEXT:    stp x2, x3, [x8]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i32 %offset
+  store i128 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i128_register_offset_i64(ptr %ptr, i128 %v, i64 %offset) {
+; CHECK-LE-LABEL: test_stnp_i128_register_offset_i64:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsr x8, x3, #32
+; CHECK-LE-NEXT:    add x9, x0, x4, lsl #3
+; CHECK-LE-NEXT:    lsr x10, x2, #32
+; CHECK-LE-NEXT:    stnp w3, w8, [x9, #8]
+; CHECK-LE-NEXT:    stnp w2, w10, [x9]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i128_register_offset_i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    add x8, x0, x4, lsl #3
+; CHECK-BE-NEXT:    stp x2, x3, [x8]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i64 %offset
+  store i128 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+; Test non-power-of-2 offset type
+define void @test_stnp_i128_register_offset_i65(ptr %ptr, i128 %v, i65 %offset) {
+; CHECK-LE-LABEL: test_stnp_i128_register_offset_i65:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    lsr x8, x3, #32
+; CHECK-LE-NEXT:    add x9, x0, x4, lsl #3
+; CHECK-LE-NEXT:    lsr x10, x2, #32
+; CHECK-LE-NEXT:    stnp w3, w8, [x9, #8]
+; CHECK-LE-NEXT:    stnp w2, w10, [x9]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i128_register_offset_i65:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    add x8, x0, x5, lsl #3
+; CHECK-BE-NEXT:    stp x2, x3, [x8]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i65 %offset
+  store i128 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
 !0 = !{ i32 1 }
 
 attributes #0 = { nounwind }
