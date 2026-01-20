@@ -898,30 +898,45 @@ fallthrough:
 
 ; Different types but null is the first?
 define i32 @test19(i1 %cond1, i1 %cond2, ptr %b2, ptr %b1) {
-; CHECK-LABEL: define i32 @test19(
-; CHECK-SAME: i1 [[COND1:%.*]], i1 [[COND2:%.*]], ptr [[B2:%.*]], ptr [[B1:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i64, ptr [[B2]], i64 5
-; CHECK-NEXT:    br i1 [[COND1]], label %[[IF_THEN1:.*]], label %[[IF_THEN2:.*]]
-; CHECK:       [[IF_THEN1]]:
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i8, ptr [[B1]], i64 40
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast ptr [[G2]] to ptr
-; CHECK-NEXT:    br label %[[FALLTHROUGH:.*]]
-; CHECK:       [[IF_THEN2]]:
-; CHECK-NEXT:    [[BC1_1:%.*]] = bitcast ptr [[G1]] to ptr
-; CHECK-NEXT:    br i1 [[COND2]], label %[[FALLTHROUGH]], label %[[IF_THEN3:.*]]
-; CHECK:       [[IF_THEN3]]:
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i64, ptr null, i64 5
-; CHECK-NEXT:    [[BC1_2:%.*]] = bitcast ptr [[G3]] to ptr
-; CHECK-NEXT:    br label %[[FALLTHROUGH]]
-; CHECK:       [[FALLTHROUGH]]:
-; CHECK-NEXT:    [[C:%.*]] = phi ptr [ [[BC2]], %[[IF_THEN1]] ], [ [[BC1_1]], %[[IF_THEN2]] ], [ [[BC1_2]], %[[IF_THEN3]] ]
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[C]], align 4
-; CHECK-NEXT:    [[G1_1:%.*]] = getelementptr inbounds i64, ptr [[B2]], i64 5
-; CHECK-NEXT:    [[BC1_1_1:%.*]] = bitcast ptr [[G1_1]] to ptr
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[BC1_1_1]], align 4
-; CHECK-NEXT:    [[V:%.*]] = add i32 [[V1]], [[V2]]
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-YES-LABEL: define i32 @test19(
+; CHECK-YES-SAME: i1 [[COND1:%.*]], i1 [[COND2:%.*]], ptr [[B2:%.*]], ptr [[B1:%.*]]) {
+; CHECK-YES-NEXT:  [[ENTRY:.*:]]
+; CHECK-YES-NEXT:    br i1 [[COND1]], label %[[IF_THEN1:.*]], label %[[IF_THEN2:.*]]
+; CHECK-YES:       [[IF_THEN1]]:
+; CHECK-YES-NEXT:    br label %[[FALLTHROUGH:.*]]
+; CHECK-YES:       [[IF_THEN2]]:
+; CHECK-YES-NEXT:    br i1 [[COND2]], label %[[FALLTHROUGH]], label %[[IF_THEN3:.*]]
+; CHECK-YES:       [[IF_THEN3]]:
+; CHECK-YES-NEXT:    br label %[[FALLTHROUGH]]
+; CHECK-YES:       [[FALLTHROUGH]]:
+; CHECK-YES-NEXT:    [[SUNK_PHI:%.*]] = phi ptr [ null, %[[IF_THEN3]] ], [ [[B2]], %[[IF_THEN2]] ], [ [[B1]], %[[IF_THEN1]] ]
+; CHECK-YES-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr [[SUNK_PHI]], i64 40
+; CHECK-YES-NEXT:    [[V1:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-YES-NEXT:    [[G1_1:%.*]] = getelementptr inbounds i64, ptr [[B2]], i64 5
+; CHECK-YES-NEXT:    [[V2:%.*]] = load i32, ptr [[G1_1]], align 4
+; CHECK-YES-NEXT:    [[V:%.*]] = add i32 [[V1]], [[V2]]
+; CHECK-YES-NEXT:    ret i32 [[V]]
+;
+; CHECK-NO-LABEL: define i32 @test19(
+; CHECK-NO-SAME: i1 [[COND1:%.*]], i1 [[COND2:%.*]], ptr [[B2:%.*]], ptr [[B1:%.*]]) {
+; CHECK-NO-NEXT:  [[ENTRY:.*:]]
+; CHECK-NO-NEXT:    [[G1:%.*]] = getelementptr inbounds i64, ptr [[B2]], i64 5
+; CHECK-NO-NEXT:    br i1 [[COND1]], label %[[IF_THEN1:.*]], label %[[IF_THEN2:.*]]
+; CHECK-NO:       [[IF_THEN1]]:
+; CHECK-NO-NEXT:    [[G2:%.*]] = getelementptr inbounds i8, ptr [[B1]], i64 40
+; CHECK-NO-NEXT:    br label %[[FALLTHROUGH:.*]]
+; CHECK-NO:       [[IF_THEN2]]:
+; CHECK-NO-NEXT:    br i1 [[COND2]], label %[[FALLTHROUGH]], label %[[IF_THEN3:.*]]
+; CHECK-NO:       [[IF_THEN3]]:
+; CHECK-NO-NEXT:    [[G3:%.*]] = getelementptr inbounds i64, ptr null, i64 5
+; CHECK-NO-NEXT:    br label %[[FALLTHROUGH]]
+; CHECK-NO:       [[FALLTHROUGH]]:
+; CHECK-NO-NEXT:    [[C:%.*]] = phi ptr [ [[G2]], %[[IF_THEN1]] ], [ [[G1]], %[[IF_THEN2]] ], [ [[G3]], %[[IF_THEN3]] ]
+; CHECK-NO-NEXT:    [[V1:%.*]] = load i32, ptr [[C]], align 4
+; CHECK-NO-NEXT:    [[G1_1:%.*]] = getelementptr inbounds i64, ptr [[B2]], i64 5
+; CHECK-NO-NEXT:    [[V2:%.*]] = load i32, ptr [[G1_1]], align 4
+; CHECK-NO-NEXT:    [[V:%.*]] = add i32 [[V1]], [[V2]]
+; CHECK-NO-NEXT:    ret i32 [[V]]
 ;
 entry:
   %g1 = getelementptr inbounds i64, ptr %b2, i64 5
