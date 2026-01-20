@@ -699,12 +699,14 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   assert(Fixup.getOffset() + Size <= F.getSize() && "Invalid fixup offset!");
 
   // Check fixup value overflow similar to GAS (fixups emitted as RELA
-  // relocations have a value of 0):
-  // - Signed: high bits must be all 0s or all 1s (sign extension).
-  // - Unsigned: abs(value) must fit (e.g. 1-byte field allows [-255,255]).
+  // relocations have a value of 0).
+  // - Unknown signedness: the range (-2^N, 2^N) is allowed,
+  //   accommodating intN_t, uintN_t, and a non-positive value type.
+  // - Signed (intN_t): the range [-2^(N-1), 2^(N-1)) is allowed.
+  //
   // Currently only resolved PC-relative fixups are treated as signed. GAS
-  // treats more as signed (e.g. unresolved FK_Data_4 for R_X86_64_32S).
-  // Unresolved fixups are treated as unsigned to allow `jmp foo+0xffffffff`.
+  // treats more as signed (e.g. unresolved R_X86_64_32S).
+  // Unresolved fixups have unknown signedness to allow `jmp foo+0xffffffff`.
   if (Size && Size < 8) {
     bool Signed = IsResolved && Fixup.isPCRel();
     uint64_t Mask = ~uint64_t(0) << (Size * 8 - (Signed ? 1 : 0));
