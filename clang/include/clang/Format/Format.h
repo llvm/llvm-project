@@ -3523,7 +3523,7 @@ struct FormatStyle {
   /// by the remaining newlines. See
   /// `GNU formfeed coding standard
   /// <https://www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed>`_
-  ///  for more information.
+  /// for more information.
   /// \version 20
   bool KeepFormFeed;
 
