@@ -7794,3 +7794,837 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
   store <2 x i64> %yx, ptr %p1
   ret void
 }
+
+define <2 x i64> @pclmul(<2 x i64> %v0, <2 x i64> %v1) {
+; SSE2-NOPCLMUL-LABEL: pclmul:
+; SSE2-NOPCLMUL:       # %bb.0:
+; SSE2-NOPCLMUL-NEXT:    pushq %rbp
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 16
+; SSE2-NOPCLMUL-NEXT:    pushq %r15
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 24
+; SSE2-NOPCLMUL-NEXT:    pushq %r14
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 32
+; SSE2-NOPCLMUL-NEXT:    pushq %r13
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 40
+; SSE2-NOPCLMUL-NEXT:    pushq %r12
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 48
+; SSE2-NOPCLMUL-NEXT:    pushq %rbx
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 56
+; SSE2-NOPCLMUL-NEXT:    subq $560, %rsp # imm = 0x230
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 616
+; SSE2-NOPCLMUL-NEXT:    .cfi_offset %rbx, -56
+; SSE2-NOPCLMUL-NEXT:    .cfi_offset %r12, -48
+; SSE2-NOPCLMUL-NEXT:    .cfi_offset %r13, -40
+; SSE2-NOPCLMUL-NEXT:    .cfi_offset %r14, -32
+; SSE2-NOPCLMUL-NEXT:    .cfi_offset %r15, -24
+; SSE2-NOPCLMUL-NEXT:    .cfi_offset %rbp, -16
+; SSE2-NOPCLMUL-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; SSE2-NOPCLMUL-NEXT:    movq %xmm1, %r12
+; SSE2-NOPCLMUL-NEXT:    movabsq $1085102592571150095, %rdx # imm = 0xF0F0F0F0F0F0F0F
+; SSE2-NOPCLMUL-NEXT:    movabsq $3689348814741910323, %rdi # imm = 0x3333333333333333
+; SSE2-NOPCLMUL-NEXT:    movabsq $6148914691236517205, %rsi # imm = 0x5555555555555555
+; SSE2-NOPCLMUL-NEXT:    movq %r12, %rax
+; SSE2-NOPCLMUL-NEXT:    bswapq %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    shrq $4, %rcx
+; SSE2-NOPCLMUL-NEXT:    andq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    andq %rdx, %rax
+; SSE2-NOPCLMUL-NEXT:    shlq $4, %rax
+; SSE2-NOPCLMUL-NEXT:    orq %rcx, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    andq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    shrq $2, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %rdi, %rax
+; SSE2-NOPCLMUL-NEXT:    leaq (%rax,%rcx,4), %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    andq %rsi, %rcx
+; SSE2-NOPCLMUL-NEXT:    shrq %rax
+; SSE2-NOPCLMUL-NEXT:    andq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    leaq (%rax,%rcx,2), %rsi
+; SSE2-NOPCLMUL-NEXT:    movabsq $4294967296, %rcx # imm = 0x100000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %rcx, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $8589934592, %rdi # imm = 0x200000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %rdi, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $17179869184, %rdx # imm = 0x400000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %rdx, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $34359738368, %r11 # imm = 0x800000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r11, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $68719476736, %r8 # imm = 0x1000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $137438953472, %r8 # imm = 0x2000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $274877906944, %r8 # imm = 0x4000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $549755813888, %r8 # imm = 0x8000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $1099511627776, %r8 # imm = 0x10000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $2199023255552, %r8 # imm = 0x20000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $4398046511104, %r8 # imm = 0x40000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $8796093022208, %r8 # imm = 0x80000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $17592186044416, %r8 # imm = 0x100000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $35184372088832, %r8 # imm = 0x200000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $70368744177664, %r8 # imm = 0x400000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $140737488355328, %r8 # imm = 0x800000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $281474976710656, %r8 # imm = 0x1000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $562949953421312, %r8 # imm = 0x2000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $1125899906842624, %r8 # imm = 0x4000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $2251799813685248, %r8 # imm = 0x8000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $4503599627370496, %r8 # imm = 0x10000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $9007199254740992, %r8 # imm = 0x20000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $18014398509481984, %r8 # imm = 0x40000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $36028797018963968, %r8 # imm = 0x80000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $72057594037927936, %r8 # imm = 0x100000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $144115188075855872, %r8 # imm = 0x200000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $288230376151711744, %r8 # imm = 0x400000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $576460752303423488, %r8 # imm = 0x800000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $1152921504606846976, %r8 # imm = 0x1000000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $2305843009213693952, %r8 # imm = 0x2000000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $4611686018427387904, %r8 # imm = 0x4000000000000000
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r8, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $2, %r8d
+; SSE2-NOPCLMUL-NEXT:    movq %xmm0, %rax
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $1, %r8d
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $4, %r8d
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $8, %r8d
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $16, %r8d
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $32, %r8d
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %ebp
+; SSE2-NOPCLMUL-NEXT:    andl $64, %ebp
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rbp
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $128, %r8d
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $256, %r8d # imm = 0x100
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $512, %r8d # imm = 0x200
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r15d
+; SSE2-NOPCLMUL-NEXT:    andl $1024, %r15d # imm = 0x400
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r15
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $2048, %r8d # imm = 0x800
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $4096, %r8d # imm = 0x1000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $8192, %r8d # imm = 0x2000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $16384, %r8d # imm = 0x4000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r10d
+; SSE2-NOPCLMUL-NEXT:    andl $32768, %r10d # imm = 0x8000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r10
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $65536, %r8d # imm = 0x10000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $131072, %r8d # imm = 0x20000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $262144, %r8d # imm = 0x40000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $524288, %r8d # imm = 0x80000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $1048576, %r8d # imm = 0x100000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r9d
+; SSE2-NOPCLMUL-NEXT:    andl $2097152, %r9d # imm = 0x200000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r9
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $4194304, %r8d # imm = 0x400000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $8388608, %r8d # imm = 0x800000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $16777216, %r8d # imm = 0x1000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $33554432, %r8d # imm = 0x2000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $67108864, %r8d # imm = 0x4000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r13d
+; SSE2-NOPCLMUL-NEXT:    andl $134217728, %r13d # imm = 0x8000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r13
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r8d
+; SSE2-NOPCLMUL-NEXT:    andl $268435456, %r8d # imm = 0x10000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r8
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %ebx
+; SSE2-NOPCLMUL-NEXT:    andl $536870912, %ebx # imm = 0x20000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rbx
+; SSE2-NOPCLMUL-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %r14d
+; SSE2-NOPCLMUL-NEXT:    andl $1073741824, %r14d # imm = 0x40000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r14
+; SSE2-NOPCLMUL-NEXT:    movl %r12d, %ebx
+; SSE2-NOPCLMUL-NEXT:    andl $-2147483648, %ebx # imm = 0x80000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rbx
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rdi
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rdx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %r11
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r11
+; SSE2-NOPCLMUL-NEXT:    movq %r11, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $68719476736, %rcx # imm = 0x1000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $137438953472, %rcx # imm = 0x2000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $274877906944, %rcx # imm = 0x4000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $549755813888, %rcx # imm = 0x8000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $1099511627776, %rcx # imm = 0x10000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $2199023255552, %rcx # imm = 0x20000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $4398046511104, %rcx # imm = 0x40000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $8796093022208, %rcx # imm = 0x80000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $17592186044416, %rcx # imm = 0x100000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $35184372088832, %rcx # imm = 0x200000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $70368744177664, %rcx # imm = 0x400000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, (%rsp) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $140737488355328, %rcx # imm = 0x800000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $281474976710656, %rcx # imm = 0x1000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $562949953421312, %rcx # imm = 0x2000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $1125899906842624, %rcx # imm = 0x4000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $2251799813685248, %rcx # imm = 0x8000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $4503599627370496, %rcx # imm = 0x10000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $9007199254740992, %rcx # imm = 0x20000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $18014398509481984, %rcx # imm = 0x40000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $36028797018963968, %rcx # imm = 0x80000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $72057594037927936, %rcx # imm = 0x100000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $144115188075855872, %rcx # imm = 0x200000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $288230376151711744, %rcx # imm = 0x400000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $576460752303423488, %rcx # imm = 0x800000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $1152921504606846976, %rcx # imm = 0x1000000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $2305843009213693952, %rcx # imm = 0x2000000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $4611686018427387904, %rcx # imm = 0x4000000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %r12, %rcx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NOPCLMUL-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %rcx, %r12
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %r12
+; SSE2-NOPCLMUL-NEXT:    bswapq %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    shrq $4, %rdi
+; SSE2-NOPCLMUL-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; SSE2-NOPCLMUL-NEXT:    andq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    andq %rcx, %rax
+; SSE2-NOPCLMUL-NEXT:    shlq $4, %rax
+; SSE2-NOPCLMUL-NEXT:    orq %rdi, %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; SSE2-NOPCLMUL-NEXT:    andq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    shrq $2, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %rcx, %rax
+; SSE2-NOPCLMUL-NEXT:    leaq (%rax,%rdi,4), %rax
+; SSE2-NOPCLMUL-NEXT:    movq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    movabsq $6148914691236517205, %r11 # imm = 0x5555555555555555
+; SSE2-NOPCLMUL-NEXT:    andq %r11, %rdi
+; SSE2-NOPCLMUL-NEXT:    shrq %rax
+; SSE2-NOPCLMUL-NEXT:    andq %r11, %rax
+; SSE2-NOPCLMUL-NEXT:    leaq (%rax,%rdi,2), %rax
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edi
+; SSE2-NOPCLMUL-NEXT:    andl $2, %edi
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %ecx
+; SSE2-NOPCLMUL-NEXT:    andl $1, %ecx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edi
+; SSE2-NOPCLMUL-NEXT:    andl $4, %edi
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $8, %edx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %ecx
+; SSE2-NOPCLMUL-NEXT:    andl $16, %ecx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edi
+; SSE2-NOPCLMUL-NEXT:    andl $32, %edi
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %ecx
+; SSE2-NOPCLMUL-NEXT:    andl $64, %ecx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $128, %edx
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edi
+; SSE2-NOPCLMUL-NEXT:    andl $256, %edi # imm = 0x100
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $512, %edx # imm = 0x200
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edi
+; SSE2-NOPCLMUL-NEXT:    andl $1024, %edi # imm = 0x400
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %ecx
+; SSE2-NOPCLMUL-NEXT:    andl $2048, %ecx # imm = 0x800
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $4096, %edx # imm = 0x1000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %ecx
+; SSE2-NOPCLMUL-NEXT:    andl $8192, %ecx # imm = 0x2000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $16384, %edx # imm = 0x4000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %ecx
+; SSE2-NOPCLMUL-NEXT:    andl $32768, %ecx # imm = 0x8000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $65536, %edx # imm = 0x10000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edi
+; SSE2-NOPCLMUL-NEXT:    andl $131072, %edi # imm = 0x20000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $262144, %edx # imm = 0x40000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edi
+; SSE2-NOPCLMUL-NEXT:    andl $524288, %edi # imm = 0x80000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $1048576, %edx # imm = 0x100000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edi
+; SSE2-NOPCLMUL-NEXT:    andl $2097152, %edi # imm = 0x200000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %ecx
+; SSE2-NOPCLMUL-NEXT:    andl $4194304, %ecx # imm = 0x400000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $8388608, %edx # imm = 0x800000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %ecx
+; SSE2-NOPCLMUL-NEXT:    andl $16777216, %ecx # imm = 0x1000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $33554432, %edx # imm = 0x2000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %ecx
+; SSE2-NOPCLMUL-NEXT:    andl $67108864, %ecx # imm = 0x4000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $134217728, %edx # imm = 0x8000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %ecx
+; SSE2-NOPCLMUL-NEXT:    andl $268435456, %ecx # imm = 0x10000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $536870912, %edx # imm = 0x20000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edi
+; SSE2-NOPCLMUL-NEXT:    andl $1073741824, %edi # imm = 0x40000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movl %esi, %edx
+; SSE2-NOPCLMUL-NEXT:    andl $-2147483648, %edx # imm = 0x80000000
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq %rdx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rdi
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
+; SSE2-NOPCLMUL-NEXT:    andq %rdi, %rsi
+; SSE2-NOPCLMUL-NEXT:    imulq %rax, %rsi
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rsi
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rsi
+; SSE2-NOPCLMUL-NEXT:    bswapq %rsi
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    shrq $4, %rax
+; SSE2-NOPCLMUL-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; SSE2-NOPCLMUL-NEXT:    andq %rcx, %rax
+; SSE2-NOPCLMUL-NEXT:    andq %rcx, %rsi
+; SSE2-NOPCLMUL-NEXT:    shlq $4, %rsi
+; SSE2-NOPCLMUL-NEXT:    orq %rax, %rsi
+; SSE2-NOPCLMUL-NEXT:    movq %rsi, %rax
+; SSE2-NOPCLMUL-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; SSE2-NOPCLMUL-NEXT:    andq %rcx, %rax
+; SSE2-NOPCLMUL-NEXT:    shrq $2, %rsi
+; SSE2-NOPCLMUL-NEXT:    andq %rcx, %rsi
+; SSE2-NOPCLMUL-NEXT:    leaq (%rsi,%rax,4), %rax
+; SSE2-NOPCLMUL-NEXT:    andq %rax, %r11
+; SSE2-NOPCLMUL-NEXT:    shrq %rax
+; SSE2-NOPCLMUL-NEXT:    movabsq $6148914691236517204, %rcx # imm = 0x5555555555555554
+; SSE2-NOPCLMUL-NEXT:    andq %rax, %rcx
+; SSE2-NOPCLMUL-NEXT:    leaq (%rcx,%r11,2), %rax
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Folded Reload
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Folded Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Folded Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rbp
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rbp
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Folded Reload
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %r15
+; SSE2-NOPCLMUL-NEXT:    xorq %rbp, %r15
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Folded Reload
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %r10
+; SSE2-NOPCLMUL-NEXT:    xorq %r15, %r10
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Folded Reload
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %r9
+; SSE2-NOPCLMUL-NEXT:    xorq %r10, %r9
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Folded Reload
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %r13
+; SSE2-NOPCLMUL-NEXT:    xorq %r13, %r8
+; SSE2-NOPCLMUL-NEXT:    xorq %r9, %r8
+; SSE2-NOPCLMUL-NEXT:    xorq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Folded Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %r14, %rbx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rbx, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %r8, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Folded Reload
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rsi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rsi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rsi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rsi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rsi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rsi, %rdi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdi, %rdx
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq (%rsp), %rcx # 8-byte Folded Reload
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rsi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rsi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rsi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rsi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rsi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rsi, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %rsi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rsi, %rcx
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rcx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Folded Reload
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rsi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rsi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rsi
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rsi, %rdx
+; SSE2-NOPCLMUL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; SSE2-NOPCLMUL-NEXT:    xorq %rdx, %rsi
+; SSE2-NOPCLMUL-NEXT:    xorq %rsi, %r12
+; SSE2-NOPCLMUL-NEXT:    xorq %rcx, %r12
+; SSE2-NOPCLMUL-NEXT:    movq %rax, %xmm1
+; SSE2-NOPCLMUL-NEXT:    movq %r12, %xmm0
+; SSE2-NOPCLMUL-NEXT:    psrlq $1, %xmm1
+; SSE2-NOPCLMUL-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NOPCLMUL-NEXT:    addq $560, %rsp # imm = 0x230
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 56
+; SSE2-NOPCLMUL-NEXT:    popq %rbx
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 48
+; SSE2-NOPCLMUL-NEXT:    popq %r12
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 40
+; SSE2-NOPCLMUL-NEXT:    popq %r13
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 32
+; SSE2-NOPCLMUL-NEXT:    popq %r14
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 24
+; SSE2-NOPCLMUL-NEXT:    popq %r15
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 16
+; SSE2-NOPCLMUL-NEXT:    popq %rbp
+; SSE2-NOPCLMUL-NEXT:    .cfi_def_cfa_offset 8
+; SSE2-NOPCLMUL-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: pclmul:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm1, %xmm0
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX2-LABEL: pclmul:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; AVX2-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: pclmul:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; AVX512-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %i0 = zext i1 0 to i64 ; constant time lo/hi select
+  %i1 = zext i1 1 to i64 ; constant time lo/hi select
+  %a0 = extractelement <2 x i64> %v0, i64 %i0
+  %a1 = extractelement <2 x i64> %v1, i64 %i1
+  %x0 = zext i64 %a0 to i128
+  %x1 = zext i64 %a1 to i128
+  %cl = call i128 @llvm.clmul.i128(i128 %x0, i128 %x1)
+  %r = bitcast i128 %cl to <2 x i64>
+  ret <2 x i64> %r
+}
