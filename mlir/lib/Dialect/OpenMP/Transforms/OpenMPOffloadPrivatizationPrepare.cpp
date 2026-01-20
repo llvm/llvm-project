@@ -127,7 +127,7 @@ class PrepareForOMPOffloadPrivatizationPass
         // For boxchars this won't be a pointer. But, MapsForPrivatizedSymbols
         // should have mapped the pointer to the boxchar so use that as varPtr.
         Value varPtr = mapInfoOp.getVarPtr();
-        Type varType = mapInfoOp.getVarType();
+        Type varType = mapInfoOp.getVarPtrType();
         bool isPrivatizedByValue =
             !isa<LLVM::LLVMPointerType>(privVar.getType());
 

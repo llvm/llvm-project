@@ -4479,10 +4479,14 @@ static void collectMapDataFromMapOperands(
       mapData.BasePointers.push_back(mapData.OriginalValue.back());
     }
 
-    mapData.BaseType.push_back(
-        moduleTranslation.convertType(mapOp.getVarType()));
+    // In every situation we currently have if we have a varPtrPtr present
+    // we wish to utilise it's type for the base type, main cases are
+    // currently Fortran descriptor base address maps and attach maps.
+    mlir::Type baseTy = mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtrType().value()
+                                             : mapOp.getVarPtrType();
+    mapData.BaseType.push_back(moduleTranslation.convertType(baseTy));
     mapData.Sizes.push_back(
-        getSizeInBytes(dl, mapOp.getVarType(), mapOp, mapData.Pointers.back(),
+        getSizeInBytes(dl, baseTy, mapOp, mapData.Pointers.back(),
                        mapData.BaseType.back(), builder, moduleTranslation));
     mapData.MapClause.push_back(mapOp.getOperation());
     mapData.Types.push_back(convertClauseMapFlags(mapOp.getMapType()));
@@ -4530,8 +4534,9 @@ static void collectMapDataFromMapOperands(
         mapData.Pointers.push_back(mapData.OriginalValue.back());
         mapData.IsDeclareTarget.push_back(false);
         mapData.BasePointers.push_back(mapData.OriginalValue.back());
-        mapData.BaseType.push_back(
-            moduleTranslation.convertType(mapOp.getVarType()));
+        mapData.BaseType.push_back(moduleTranslation.convertType(
+            mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtrType().value()
+                                 : mapOp.getVarPtrType()));
         mapData.Sizes.push_back(builder.getInt64(0));
         mapData.MapClause.push_back(mapOp.getOperation());
         mapData.Types.push_back(
@@ -4564,10 +4569,12 @@ static void collectMapDataFromMapOperands(
     mapData.BasePointers.push_back(origValue);
     mapData.Pointers.push_back(origValue);
     mapData.IsDeclareTarget.push_back(false);
-    mapData.BaseType.push_back(
-        moduleTranslation.convertType(mapOp.getVarType()));
-    mapData.Sizes.push_back(
-        builder.getInt64(dl.getTypeSize(mapOp.getVarType())));
+
+    mlir::Type baseTy = mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtrType().value()
+                                             : mapOp.getVarPtrType();
+    mapData.BaseType.push_back(moduleTranslation.convertType(baseTy));
+    mapData.Sizes.push_back(builder.getInt64(dl.getTypeSize(baseTy)));
+
     mapData.MapClause.push_back(mapOp.getOperation());
     if (llvm::to_underlying(mapType & mapTypeAlways)) {
       // Descriptors are mapped with the ALWAYS flag, since they can get
@@ -5960,7 +5967,7 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
       capture = mapOp.getMapCaptureType();
       // Get information of alignment of mapped object
       alignmentValue = typeToLLVMIRTranslator.getPreferredAlignment(
-          mapOp.getVarType(), ompBuilder.M.getDataLayout());
+          mapOp.getVarPtrType(), ompBuilder.M.getDataLayout());
       break;
     }
 
@@ -6460,7 +6467,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       // So, we don't store it in any datastructure. Instead, we just
       // do some sanity checks on it right now.
       auto mapInfoOp = mappedValue.getDefiningOp<omp::MapInfoOp>();
-      [[maybe_unused]] Type varType = mapInfoOp.getVarType();
+      [[maybe_unused]] Type varType = mapInfoOp.getVarPtrType();
 
       // Check #1: Check that the type of the private variable matches
       // the type of the variable being mapped.
