@@ -198,8 +198,9 @@ class StdStringPrinter(object):
             data = long_field["__data_"]
             size = long_field["__size_"]
         else:
-            char_ptr = gdb.lookup_type("char").pointer()
-            data = short_field["__data_"].cast(char_ptr)
+            data = short_field["__data_"]
+            ptr_type = data.type.target().pointer()
+            data = data.cast(ptr_type)
             size = short_field["__size_"]
         return data.lazy_string(length=size)
 
