@@ -4,35 +4,18 @@
 define void @reverse_predicated_store(i1 %c, ptr %dst, i64 %n) #0 {
 ; CHECK-LABEL: @reverse_predicated_store(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[FOR_BODY]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; CHECK-NEXT:    [[IV:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i64 [[IV]], -1
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[FOR_INC]]
+; CHECK:       if.then:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr float, ptr [[DST:%.*]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.experimental.vp.reverse.nxv4f32(<vscale x 4 x float> zeroinitializer, <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 0, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 -1, [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[ARRAYIDX]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[TMP7]]
-; CHECK-NEXT:    [[VP_REVERSE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vp.reverse.nxv4i1(<vscale x 4 x i1> [[BROADCAST_SPLAT]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[TMP12]], ptr align 4 [[TMP9]], <vscale x 4 x i1> [[VP_REVERSE_MASK]], i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP10]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_INC:%.*]]
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV]], 0
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

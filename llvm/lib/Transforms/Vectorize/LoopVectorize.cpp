@@ -7079,32 +7079,34 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
     return nullptr;
   };
 
-  // Check if a select for a safe divisor was hoisted to the pre-header. If so,
-  // the select doesn't need to be considered for the vector loop cost; go with
-  // the more accurate VPlan-based cost model.
   for (VPRecipeBase &R : *Plan.getVectorPreheader()) {
-    auto *VPI = dyn_cast<VPInstruction>(&R);
-    if (!VPI)
-      continue;
-
-    // The reverse operations are created for reverse accesses. LICM will hoist
-    // the reverse operation to the preheader if the reversed value is
-    // invariant.
-    if (VPI->getOpcode() == VPInstruction::Reverse)
+    using namespace VPlanPatternMatch;
+    // Reverse operations for reverse memory accesses may be hoisted to the
+    // preheader by LICM if the reversed value is loop invariant. In this case,
+    // the VPlan-based cost model diverges from the legacy cost model.
+    if (match(&R,
+              m_CombineOr(m_Reverse(m_VPValue()),
+                          m_Intrinsic<Intrinsic::experimental_vp_reverse>())))
       return true;
 
-    if (VPI->getOpcode() == Instruction::Select)
-      if (auto *WR = dyn_cast_or_null<VPWidenRecipe>(VPI->getSingleUser())) {
-        switch (WR->getOpcode()) {
-        case Instruction::UDiv:
-        case Instruction::SDiv:
-        case Instruction::URem:
-        case Instruction::SRem:
-          return true;
-        default:
-          break;
-        }
+    // Check if a select for a safe divisor was hoisted to the pre-header. If
+    // so, the select doesn't need to be considered for the vector loop cost; go
+    // with the more accurate VPlan-based cost model.
+    auto *VPI = dyn_cast<VPInstruction>(&R);
+    if (!VPI || VPI->getOpcode() != Instruction::Select)
+      continue;
+
+    if (auto *WR = dyn_cast_or_null<VPWidenRecipe>(VPI->getSingleUser())) {
+      switch (WR->getOpcode()) {
+      case Instruction::UDiv:
+      case Instruction::SDiv:
+      case Instruction::URem:
+      case Instruction::SRem:
+        return true;
+      default:
+        break;
       }
+    }
   }
 
   DenseSet<Instruction *> SeenInstrs;
@@ -7120,10 +7122,10 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         }
         continue;
       }
+      using namespace VPlanPatternMatch;
       // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
       // cost model won't cost it whilst the legacy will.
       if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
-        using namespace VPlanPatternMatch;
         if (none_of(FOR->users(),
                     match_fn(m_VPInstruction<
                              VPInstruction::FirstOrderRecurrenceSplice>())))
@@ -7160,10 +7162,14 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
                 RepR->getUnderlyingInstr(), VF))
           return true;
       }
+
+      // vp.reverse is generated during EVL tail folding transformation.
+      if (match(&R, m_Intrinsic<Intrinsic::experimental_vp_reverse>()))
+        return true;
+
       if (Instruction *UI = GetInstructionForCost(&R)) {
         // If we adjusted the predicate of the recipe, the cost in the legacy
         // cost model may be different.
-        using namespace VPlanPatternMatch;
         CmpPredicate Pred;
         if (match(&R, m_Cmp(Pred, m_VPValue(), m_VPValue())) &&
             cast<VPRecipeWithIRFlags>(R).getPredicate() !=
