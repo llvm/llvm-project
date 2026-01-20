@@ -1365,6 +1365,14 @@ let TargetPrefix = "nvvm" in {
       def int_nvvm_mul_ # rnd # _d : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
     }
+    
+    foreach ftz = ["", "_ftz"] in {
+      def int_nvvm_mul_rn # ftz # _sat_f16 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
+
+      def int_nvvm_mul_rn # ftz # _sat_v2f16 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
+    } // ftz
   }
 
   //
@@ -1496,16 +1504,23 @@ let TargetPrefix = "nvvm" in {
       def int_nvvm_fma_rn # ftz # variant # _f16x2 :
         PureIntrinsic<[llvm_v2f16_ty],
           [llvm_v2f16_ty, llvm_v2f16_ty, llvm_v2f16_ty]>;
-
-      def int_nvvm_fma_rn # ftz # variant # _bf16 : NVVMBuiltin,
-        PureIntrinsic<[llvm_bfloat_ty],
-          [llvm_bfloat_ty, llvm_bfloat_ty, llvm_bfloat_ty]>;
-
-      def int_nvvm_fma_rn # ftz # variant # _bf16x2 : NVVMBuiltin,
-        PureIntrinsic<[llvm_v2bf16_ty],
-          [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty]>;
     } // ftz
   } // variant
+  
+  foreach relu = ["", "_relu"] in { 
+    def int_nvvm_fma_rn # relu # _bf16 : NVVMBuiltin,
+      PureIntrinsic<[llvm_bfloat_ty],
+        [llvm_bfloat_ty, llvm_bfloat_ty, llvm_bfloat_ty]>;
+
+    def int_nvvm_fma_rn # relu # _bf16x2 : NVVMBuiltin,
+      PureIntrinsic<[llvm_v2bf16_ty],
+        [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty]>;
+    
+    // oob (out-of-bounds) - clamps the result to 0 if either of the operand is 
+    // an OOB NaN value.
+    def int_nvvm_fma_rn_oob # relu : PureIntrinsic<[llvm_anyfloat_ty],
+        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
+  } // relu
 
   foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
     foreach ftz = ["", "_ftz"] in {
@@ -1575,6 +1590,7 @@ let TargetPrefix = "nvvm" in {
   //
   // Add
   //
+
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
                         IntrNoCreateUndefOrPoison] in {
     foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
@@ -1586,7 +1602,16 @@ let TargetPrefix = "nvvm" in {
       } // ftz
       def int_nvvm_add # rnd # _d : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    } // rnd
+    }
+    
+    foreach ftz = ["", "_ftz"] in {
+      def int_nvvm_add_rn # ftz # _sat_f16 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
+
+      def int_nvvm_add_rn # ftz # _sat_v2f16 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
+        
+    } // ftz
   }
 
   //
