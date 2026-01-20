@@ -614,6 +614,8 @@ private:
 
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerNTStore(StoreSDNode *, EVT VT, EVT MemVT, const SDLoc &DL,
+                       SelectionDAG &DAG) const;
   SDValue LowerStore128(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFMUL(SDValue Op, SelectionDAG &DAG) const;
