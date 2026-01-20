@@ -8033,9 +8033,9 @@ private:
           const Expr *StrideExpr = OASE->getStride();
           if (!StrideExpr)
             return false;
-         
+
           assert(StrideExpr->getType()->isIntegerType() &&
-          "Stride expression must be of integer type");
+                 "Stride expression must be of integer type");
 
           // If the stride is a variable (not a constant), it's non-contiguous.
           const Expr *S = StrideExpr->IgnoreParenImpCasts();

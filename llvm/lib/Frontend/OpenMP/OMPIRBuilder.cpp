@@ -9776,8 +9776,8 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
     bool IsNonContigEntry =
         IsNonContiguous &&
         (static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-            CombinedInfo.Types[I] &
-            OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG) != 0);
+             CombinedInfo.Types[I] &
+             OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG) != 0);
     // For NON_CONTIG entries ArgSizes must carry the dimension count
     // (number of descriptor_dim records) – NOT the byte size expression.
     // Variable subsection forms (e.g. 0:s.len/2:2) previously produced a
