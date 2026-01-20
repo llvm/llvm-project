@@ -2414,7 +2414,7 @@ static Value *combineAndOrOfImmCmpToBitExtract(Instruction &I,
                                                InstCombiner::BuilderTy &Builder,
                                                const DataLayout &DL) {
   // Currently only support scalars
-  if (I.getType()->isVectorTy())
+  if (!I.getType()->isIntegerTy(1))
     return nullptr;
 
   ConstantComparesGatherer ConstantCompare(&I, DL, /*OneUse=*/true);
