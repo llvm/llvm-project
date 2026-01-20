@@ -1155,7 +1155,9 @@ class DebugCommunication(object):
         disableSTDIO=False,
         shellExpandArguments=False,
         console: Optional[str] = None,
-        stdio: Optional[list[str]] = None,
+        stdin_path: Optional[str] = None,
+        stdout_path: Optional[str] = None,
+        stderr_path: Optional[str] = None,
         enableAutoVariableSummaries=False,
         displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
@@ -1207,8 +1209,12 @@ class DebugCommunication(object):
             args_dict["sourceMap"] = sourceMap
         if console:
             args_dict["console"] = console
-        if stdio:
-            args_dict["stdio"] = stdio
+        if stdin_path:
+            args_dict["stdin_path"] = stdin_path
+        if stdout_path:
+            args_dict["stdout_path"] = stdout_path
+        if stderr_path:
+            args_dict["stderr_path"] = stderr_path
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if customFrameFormat:

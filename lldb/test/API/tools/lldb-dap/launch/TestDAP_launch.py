@@ -2,6 +2,7 @@
 Test lldb-dap setBreakpoints request
 """
 
+from sys import stderr
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
@@ -634,7 +635,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
 
         with tempfile.NamedTemporaryFile("rt") as f:
-            self.launch(program, stdio=[None, f.name])
+            self.launch(program, stdout_path=f.name)
             self.continue_to_exit()
             lines = f.readlines()
             self.assertIn(
@@ -654,7 +655,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
         with tempfile.NamedTemporaryFile("rt") as f:
             self.launch(
-                program, console="integratedTerminal", stdio=[None, f.name, None]
+                program, console="integratedTerminal", stdout_path=f.name, stderr_path=f.name
             )
             self.continue_to_exit()
             lines = f.readlines()

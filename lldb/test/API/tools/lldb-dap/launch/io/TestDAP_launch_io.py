@@ -47,7 +47,9 @@ class DAP_launchIO(lldbdap_testcase.DAPTestCaseBase):
             stdin.flush()
             self.launch(
                 program,
-                stdio=[stdin.name, stdout.name, stderr.name],
+                stdin_path=stdin.name,
+                stdout_path=stdout.name,
+                stderr_path=stderr.name,
                 console=console,
                 args=program_args,
             )
@@ -81,7 +83,7 @@ class DAP_launchIO(lldbdap_testcase.DAPTestCaseBase):
         with NamedTemporaryFile("w+t") as stdin:
             stdin.write(input_text)
             stdin.flush()
-            self.launch(program, stdio=[stdin.name], console=console, args=program_args)
+            self.launch(program, stdin_path=stdin.name, console=console, args=program_args)
             self.continue_to_exit()
 
             stdout_text = self._get_debuggee_stdout()
@@ -112,7 +114,7 @@ class DAP_launchIO(lldbdap_testcase.DAPTestCaseBase):
         with NamedTemporaryFile("rt") as stdout:
             self.launch(
                 program,
-                stdio=[None, stdout.name],
+                stdout_path=stdout.name,
                 console=console,
                 args=program_args,
                 env=env,
@@ -173,7 +175,7 @@ class DAP_launchIO(lldbdap_testcase.DAPTestCaseBase):
         with NamedTemporaryFile("rt") as stderr:
             self.launch(
                 program,
-                stdio=[None, None, stderr.name],
+                stderr_path=stderr.name,
                 console=console,
                 args=program_args,
                 env=env,
