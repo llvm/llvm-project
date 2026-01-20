@@ -130,7 +130,6 @@ using unsigned_count_t = std::uint64_t;
 //  - nanoseconds for kinds 8, 16
 constexpr unsigned_count_t DS_PER_SEC{10u};
 constexpr unsigned_count_t MS_PER_SEC{1'000u};
-[[maybe_unused]] constexpr unsigned_count_t US_PER_SEC{1'000'000u};
 constexpr unsigned_count_t NS_PER_SEC{1'000'000'000u};
 
 // Computes HUGE(INT(0,kind)) as an unsigned integer value.
@@ -159,14 +158,14 @@ count_t ConvertSecondsNanosecondsToCount(
 // Function converts a struct timeval into the desired count to
 // be returned by the timing functions in accordance with the requested
 // kind at the call site.
-count_t ConvertTimevalToCount(int kind, const struct timeval &tval) {
+static count_t ConvertTimevalToCount(int kind, const struct timeval &tval) {
   unsigned_count_t sec{static_cast<unsigned_count_t>(tval.tv_sec)};
   unsigned_count_t nsec{static_cast<unsigned_count_t>(tval.tv_usec) * 1000};
   return ConvertSecondsNanosecondsToCount(kind, sec, nsec);
 }
 
 template <typename Unused = void>
-count_t GetSystemClockCount(int kind, fallback_implementation) {
+static count_t GetSystemClockCount(int kind, fallback_implementation) {
   struct timeval tval;
 
   if (gettimeofday(&tval, /*timezone=*/nullptr) != 0) {
@@ -193,7 +192,7 @@ count_t ConvertTimeSpecToCount(int kind, const struct timespec &tspec) {
 #ifndef _AIX
 // More accurate version with nanosecond accuracy
 template <typename Unused = void>
-count_t GetSystemClockCount(int kind, fallback_implementation) {
+static count_t GetSystemClockCount(int kind, fallback_implementation) {
   struct timespec tspec;
 
   if (timespec_get(&tspec, TIME_UTC) < 0) {
@@ -209,16 +208,12 @@ count_t GetSystemClockCount(int kind, fallback_implementation) {
 #endif // !NO_TIMESPEC
 
 template <typename Unused = void>
-count_t GetSystemClockCountRate(int kind, fallback_implementation) {
-#ifdef NO_TIMESPEC
-  return kind >= 8 ? US_PER_SEC : kind >= 2 ? MS_PER_SEC : DS_PER_SEC;
-#else
+static count_t GetSystemClockCountRate(int kind, fallback_implementation) {
   return kind >= 8 ? NS_PER_SEC : kind >= 2 ? MS_PER_SEC : DS_PER_SEC;
-#endif
 }
 
 template <typename Unused = void>
-count_t GetSystemClockCountMax(int kind, fallback_implementation) {
+static count_t GetSystemClockCountMax(int kind, fallback_implementation) {
   unsigned_count_t maxCount{GetHUGE(kind)};
   return maxCount;
 }
@@ -226,7 +221,7 @@ count_t GetSystemClockCountMax(int kind, fallback_implementation) {
 #ifndef NO_TIMESPEC
 #ifdef CLOCKID_ELAPSED_TIME
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCount(int kind, preferred_implementation,
+static count_t GetSystemClockCount(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -243,7 +238,7 @@ count_t GetSystemClockCount(int kind, preferred_implementation,
 #endif // CLOCKID_ELAPSED_TIME
 
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCountRate(int kind, preferred_implementation,
+static count_t GetSystemClockCountRate(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -251,7 +246,7 @@ count_t GetSystemClockCountRate(int kind, preferred_implementation,
 }
 
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCountMax(int kind, preferred_implementation,
+static count_t GetSystemClockCountMax(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
