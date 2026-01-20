@@ -18,8 +18,10 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/baremetal/file_internal.h"
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
+#include "src/stdio/ungetc.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -33,12 +35,12 @@ public:
 
   LIBC_INLINE char getc() {
     char c;
-    auto result = __llvm_libc_stdio_read(stream, &c, 1);
+    auto result = read_internal(&c, 1, stream);
     if (result != 1)
       return '\0';
     return c;
   }
-  LIBC_INLINE void ungetc(int) {}
+  LIBC_INLINE void ungetc(int c) { (void)LIBC_NAMESPACE::ungetc(c, stream); }
 };
 
 } // namespace internal
