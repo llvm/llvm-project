@@ -1188,6 +1188,106 @@ used in the '``llvm.nvvm.idp4a.[us].u``' variants, while sign-extension is used
 with '``llvm.nvvm.idp4a.[us].s``' variants. The dot product of these 4-element
 vectors is added to ``%c`` to produce the return.
 
+'``llvm.nvvm.add.*``' Half-precision Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare half @llvm.nvvm.add.rn.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.add.rn.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+    declare half @llvm.nvvm.add.rn.ftz.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.add.*``' intrinsics perform an addition operation with the 
+specified rounding mode and modifiers. 
+
+Semantics:
+""""""""""
+
+The '``.sat``' modifier performs a saturating addition where the result is 
+clamped to ``[0.0, 1.0]`` and ``NaN`` results are flushed to ``+0.0f``. 
+The '``.ftz``' modifier flushes subnormal inputs and results to sign-preserving 
+zero.
+
+'``llvm.nvvm.mul.*``' Half-precision Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare half @llvm.nvvm.mul.rn.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.mul.rn.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+    declare half @llvm.nvvm.mul.rn.ftz.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.mul.*``' intrinsics perform a multiplication operation with 
+the specified rounding mode and modifiers. 
+
+Semantics:
+""""""""""
+
+The '``.sat``' modifier performs a saturating multiplication where the result is 
+clamped to ``[0.0, 1.0]`` and ``NaN`` results are flushed to ``+0.0f``. 
+The '``.ftz``' modifier flushes subnormal inputs and results to sign-preserving 
+zero.
+
+'``llvm.nvvm.fma.*``' Half-precision Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare half @llvm.nvvm.fma.rn{.ftz}.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+    declare bfloat @llvm.nvvm.fma.rn.bf16(bfloat %a, bfloat %b, bfloat %c)
+    declare <2 x bfloat> @llvm.nvvm.fma.rn.bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+
+    declare half @llvm.nvvm.fma.rn{.ftz}.sat.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.sat.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+
+    declare half @llvm.nvvm.fma.rn{.ftz}.relu.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.relu.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+    declare bfloat @llvm.nvvm.fma.rn.relu.bf16(bfloat %a, bfloat %b, bfloat %c)
+    declare <2 x bfloat> @llvm.nvvm.fma.rn.relu.bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+
+    declare half @llvm.nvvm.fma.rn.oob{.relu}.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn.oob{.relu}.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+    declare bfloat @llvm.nvvm.fma.rn.oob{.relu}.bf16(bfloat %a, bfloat %b, bfloat %c)
+    declare <2 x bfloat> @llvm.nvvm.fma.rn.oob{.relu}.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fma.*``' intrinsics perform a fused multiply-add with no loss 
+of precision in the intermediate product and addition.
+
+Semantics:
+""""""""""
+
+The '``.sat``' modifier performs a saturating operation where the result is 
+clamped to ``[0.0, 1.0]`` and ``NaN`` results are flushed to ``+0.0f``. 
+The '``.ftz``' modifier flushes subnormal inputs and results to sign-preserving 
+zero.
+The '``.relu``' modifier clamps the result to ``0`` if negative and ``NaN`` 
+results are flushed to canonical ``NaN``.
+The '``.oob``' modifier clamps the result to ``0`` if either of the operands is 
+an ``OOB NaN`` (defined under `Tensors <https://docs.nvidia.com/cuda/parallel-thread-execution/#tensors>`__) value.
+
 Bit Manipulation Intrinsics
 ---------------------------
 
