@@ -1001,10 +1001,12 @@ def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
   let dependentDialects = [
     "affine::AffineDialect",
     "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "cf::ControlFlowDialect",
     "memref::MemRefDialect",
     "mpi::MPIDialect",
     "scf::SCFDialect",
-    "bufferization::BufferizationDialect"
+    "tensor::TensorDialect"
   ];
 }
 

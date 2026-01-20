@@ -66,7 +66,7 @@ struct ProcessMultiIndexOpLowering
                     [&completeMultiIndex](GridAxis gridAxis) {
                       return completeMultiIndex[gridAxis];
                     });
-    rewriter.replaceAllUsesWith(op.getResults(), multiIndex);
+    rewriter.replaceOp(op, multiIndex);
     return success();
   }
 };
@@ -157,8 +157,7 @@ struct AllSliceOpLowering
                                                  offsets, sizes, strides);
     Value newResult =
         tensor::CastOp::create(builder, op.getResult().getType(), slice);
-    rewriter.replaceAllUsesWith(op.getResult(), newResult);
-
+    rewriter.replaceOp(op, newResult);
     return success();
   }
 };
