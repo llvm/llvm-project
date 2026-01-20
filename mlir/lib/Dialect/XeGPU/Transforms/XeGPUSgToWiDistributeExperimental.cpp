@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -14,6 +15,7 @@
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/GraphWriter.h"
@@ -40,6 +42,33 @@ static Value resolveTy(ConversionPatternRewriter &rewriter,
   assert(v.getType().getNumElements() == expectedTy.getNumElements() &&
          "total number of elements must match");
   return vector::ShapeCastOp::create(rewriter, v.getLoc(), expectedTy, v);
+}
+
+static LogicalResult verifyLayouts(Operation *root) {
+  auto walkResult = root->walk([&](Operation *nestedOp) -> WalkResult {
+    if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(nestedOp)) {
+      auto layout = anchorOp.getAnchorLayout();
+      if (!layout) {
+        nestedOp->emitError("expected anchor layout attribute on operation");
+        return WalkResult::interrupt();
+      }
+      return WalkResult::advance();
+    }
+    // For each vector result, check if the op contains a result layout
+    // attribute.
+    for (OpResult result : nestedOp->getResults()) {
+      if (isa<VectorType>(result.getType())) {
+        auto layout = xegpu::getDistributeLayoutAttr(result);
+        if (!layout) {
+          nestedOp->emitError(
+              "expected result layout attribute on vector result");
+          return WalkResult::interrupt();
+        }
+      }
+    }
+    return WalkResult::advance();
+  });
+  return walkResult.wasInterrupted() ? failure() : success();
 }
 
 struct CreateNdDescOpPattern
@@ -278,27 +307,102 @@ struct XeGPUSgToWiDistributeExperimentalPass
 } // namespace
 
 void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
-  // // Recover layouts.
-  // Operation *op = getOperation();
-  // if (!xegpu::recoverTemporaryLayouts(op)) {
-  //   signalPassFailure();
-  //   return;
-  // }
-
-  // // Define conversion target
-  // ConversionTarget target(getContext());
-  // target.addLegalDialect<index::IndexDialect, memref::MemRefDialect,
-  //                        vector::VectorDialect>();
-  // target.addDynamicallyLegalDialect<xegpu::XeGPUDialect>(
-  //     [](Operation *op) { return true; });
-
-  // // Define type converter
-  // TypeConverter typeConverter;
-  // typeConverter.addConversion([](Type type) { return type; });
+  // Verify if all XeGPU and vector operations have layouts.
+  Operation *root = getOperation();
+  if (failed(verifyLayouts(root))) {
+    signalPassFailure();
+    return;
+  }
 }
+void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target) {
 
-void xegpu::populateXeGPUSgToWiDistributeExperimentalPatterns(
-    RewritePatternSet &patterns, TypeConverter &typeConverter) {
+  // Populate type conversions.
+  // - Any type other than TensorDescType and VectorType are legal as is.
+  typeConverter.addConversion([](Type type) -> std::optional<Type> {
+    if (!isa<TensorDescType, VectorType>(type))
+      return type;
+    return std::nullopt;
+  });
+  // For TensorDescType, drop the layout attribute if any.
+  typeConverter.addConversion([](TensorDescType type) -> Type {
+    if (type.getLayoutAttr()) {
+      return type.dropLayouts();
+    }
+    return type;
+  });
+  // - For VectorType, check if there is a distribute layout attribute on the
+  //   value. If so, convert to the distributed vector type based on the layout.
+  typeConverter.addConversion([](Value v) -> std::optional<Type> {
+    auto type = v.getType();
+    auto layout = xegpu::getDistributeLayoutAttr(v);
+    // If no valid layout, nothing to do.
+    if (!layout || !layout.isForSubgroup())
+      return std::nullopt;
+    // Vector type is distributed based on lane layout.
+    if (isa<VectorType>(type)) {
+      auto newTyOrFailure =
+          getDistVecTypeBasedOnLaneLayout(layout, cast<VectorType>(type));
+      if (succeeded(newTyOrFailure))
+        return *newTyOrFailure;
+    }
+    return std::nullopt;
+  });
+  // - Materialization casts are only used for testing purposes.
+  auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
+                             mlir::ValueRange inputs,
+                             mlir::Location loc) -> mlir::Value {
+    return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+        .getResult(0);
+  };
+  typeConverter.addSourceMaterialization(materializeCast);
+  typeConverter.addTargetMaterialization(materializeCast);
+  // Define legality.
+  // - CreateNdDescOp is legal only if its result type has no layout attribute.
+  target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
+      [&](xegpu::CreateNdDescOp op) { return !op.getType().getLayoutAttr(); });
+  // - Any anchor XeGPU op is legal only if it has no anchor layout.
+  target.addDynamicallyLegalDialect<xegpu::XeGPUDialect>([](Operation *op) {
+    auto anchorOp = dyn_cast<AnchorLayoutInterface>(op);
+    if (!anchorOp)
+      return true;
+    return !anchorOp.getAnchorLayout();
+  });
+  target.addDynamicallyLegalOp<arith::ConstantOp>(
+      [=](arith::ConstantOp op) -> bool {
+        // If the result type is not a vector, it's legal.
+        if (!isa<VectorType>(op.getResult().getType()))
+          return true;
+        // For vector result types, check if it has a layout attribute.
+        return !xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+      });
+  // - In math and arith dialects, only handle elementwise ops with a single
+  //   result and with a result layout attribute.
+  target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(
+      [=](Operation *op) -> std::optional<bool> {
+        // Only handle elementwise mappable ops
+        if (!OpTrait::hasElementwiseMappableTraits(op))
+          return true;
+        // Only handle ops with single vector result
+        if (op->getNumResults() != 1)
+          return true;
+
+        VectorType resultType =
+            dyn_cast<VectorType>(op->getResult(0).getType());
+        if (!resultType)
+          return true;
+
+        // Check if all operands are vectors of the same shape
+        for (Value operand : op->getOperands()) {
+          VectorType operandType = dyn_cast<VectorType>(operand.getType());
+          if (!operandType || operandType.getShape() != resultType.getShape()) {
+            return true;
+          }
+        }
+        return !xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
+      });
+  target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<CreateNdDescOpPattern, LoadNdOpPattern, StoreNdOpPattern,
                DpasOpPattern, ElementWiseOpPattern, ArithConstantOpPattern>(
       typeConverter, patterns.getContext());

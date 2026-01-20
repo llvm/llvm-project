@@ -283,108 +283,11 @@ struct TestXeGPUSgToWiDistributeExperimental
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
-
     TypeConverter typeConverter;
-    typeConverter.addConversion([](Type type) -> std::optional<Type> {
-      // non tensor_desc and vector types are legal as is.
-      if (!isa<TensorDescType, VectorType>(type))
-        return type;
-      return std::nullopt;
-    });
-    typeConverter.addConversion([](TensorDescType type) -> Type {
-      if (type.getLayoutAttr()) {
-        return type.dropLayouts();
-      }
-      return type;
-    });
-    typeConverter.addConversion([](Value v) -> std::optional<Type> {
-      auto type = v.getType();
-      auto layout = xegpu::getDistributeLayoutAttr(v);
-      // If no valid layout, nothing to do.
-      if (!layout || !layout.isForSubgroup())
-        return std::nullopt;
-      // Operation *op = v.getDefiningOp();
-      // if (isa<LoadNdOp>(op)) {
-      //   auto loadNdOp = cast<LoadNdOp>(op);
-      //   layout = loadNdOp.getAnchorLayout();
-      //   auto newTyOrFailure =
-      //       getDistributedVectorType(loadNdOp.getTensorDescType());
-      //   if (succeeded(newTyOrFailure))
-      //     return *newTyOrFailure;
-      //   return std::nullopt;
-      // }
-      // For other vector types, distribute based on the lane layout.
-      if (isa<VectorType>(type)) {
-        auto newTyOrFailure =
-            getDistVecTypeBasedOnLaneLayout(layout, cast<VectorType>(type));
-        if (succeeded(newTyOrFailure))
-          return *newTyOrFailure;
-      }
-      return std::nullopt;
-    });
-    auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
-                               mlir::ValueRange inputs,
-                               mlir::Location loc) -> mlir::Value {
-      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
-          .getResult(0);
-    };
-    typeConverter.addSourceMaterialization(materializeCast);
-    typeConverter.addTargetMaterialization(materializeCast);
-
     ConversionTarget target(*ctx);
-    // CreateNdDescOp is legal only if its result type has no layout attribute.
-    target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
-        [&](xegpu::CreateNdDescOp op) {
-          return !op.getType().getLayoutAttr();
-        });
-    // Any anchor XeGPU op is legal only if it has no anchor layout.
-    target.addDynamicallyLegalDialect<xegpu::XeGPUDialect>([](Operation *op) {
-      auto anchorOp = dyn_cast<AnchorLayoutInterface>(op);
-      if (!anchorOp)
-        return true;
-      return !anchorOp.getAnchorLayout();
-    });
-    target.addDynamicallyLegalOp<arith::ConstantOp>(
-        [=](arith::ConstantOp op) -> bool {
-          // If the result type is not a vector, it's legal.
-          if (!isa<VectorType>(op.getResult().getType()))
-            return true;
-          // For vector result types, check if it has a layout attribute.
-          return !xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
-        });
-    // In math and arith dialects, only handle elementwise ops with a single
-    // result and with a result layout attribute.
-    target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(
-        [=](Operation *op) -> std::optional<bool> {
-          // Only handle elementwise mappable ops
-          if (!OpTrait::hasElementwiseMappableTraits(op))
-            return true;
-          // Only handle ops with single vector result
-          if (op->getNumResults() != 1)
-            return true;
-
-          VectorType resultType =
-              dyn_cast<VectorType>(op->getResult(0).getType());
-          if (!resultType)
-            return true;
-
-          // Check if all operands are vectors of the same shape
-          for (Value operand : op->getOperands()) {
-            VectorType operandType = dyn_cast<VectorType>(operand.getType());
-            if (!operandType ||
-                operandType.getShape() != resultType.getShape()) {
-              return true;
-            }
-          }
-          return !xegpu::getTemporaryLayout(
-              dyn_cast<OpResult>(op->getResult(0)));
-        });
-    target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
-
     RewritePatternSet patterns(ctx);
-    xegpu::populateXeGPUSgToWiDistributeExperimentalPatterns(patterns,
-                                                             typeConverter);
-
+    xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+        typeConverter, patterns, target);
     (void)applyPartialConversion(getOperation(), target, std::move(patterns));
   }
 };
