@@ -176,7 +176,7 @@ void %(check_name)s::check(const MatchFinder::MatchResult &Result) {
 
 } // namespace clang::tidy::%(namespace)s
 """
-            % {"check_name": check_name_camel, "module": module, "namespace": namespace}
+            % {"check_name": check_name_camel, "namespace": namespace}
         )
 
 
@@ -578,7 +578,6 @@ def update_checks_list(clang_tidy_path: str) -> None:
                         "check_name": check_name,
                         "module": module,
                         "check_file": check_file,
-                        "target": target,
                         "title": title,
                         "autofix": autofix,
                     }
