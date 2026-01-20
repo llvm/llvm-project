@@ -3815,7 +3815,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAll);
   case Intrinsic::spv_wave_any:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
-  case Intrinsic::spv_wave_ballot:
+  case Intrinsic::spv_subgroup_ballot:
     return selectWaveOpInst(ResVReg, ResType, I,
                             SPIRV::OpGroupNonUniformBallot);
   case Intrinsic::spv_wave_is_first_lane:

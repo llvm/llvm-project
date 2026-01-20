@@ -298,6 +298,50 @@ getResultLengthFromElementalOp(fir::FirOpBuilder &builder,
       lengths.push_back(len);
 }
 
+// Go through the args. Any descriptor args that have ignore_tkr(c) cause
+// function type modification to avoid changing the descriptor args.
+static std::optional<mlir::FunctionType>
+getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
+                      Fortran::lower::CallerInterface &caller,
+                      mlir::MLIRContext *context) {
+  llvm::SmallVector<mlir::Type> newInputs =
+      llvm::to_vector(funcType.getInputs());
+  bool typeChanged = false;
+  for (const auto &arg : caller.getPassedArguments()) {
+    if (arg.firArgument >= 0 &&
+        arg.firArgument < static_cast<int>(newInputs.size())) {
+
+      // Only need to change the arg type for ignore_tkr(c)
+      if (!arg.testTKR(Fortran::common::IgnoreTKR::Contiguous))
+        continue;
+
+      mlir::Type expectedType = newInputs[arg.firArgument];
+      // Cast is only needed for descriptors
+      if (!fir::isa_box_type(expectedType))
+        continue;
+
+      // Handle ignore_tkr(c) for descriptors
+      mlir::Value actual = caller.getInput(arg);
+      if (!actual)
+        continue;
+
+      mlir::Type actualType = actual.getType();
+      if (fir::isBoxAddress(actualType)) {
+        newInputs[arg.firArgument] = actualType;
+        typeChanged = true;
+      }
+    }
+  }
+
+  if (typeChanged) {
+    // At least one of the arguments had its type changed, so need to
+    // create a new function type to be used in a cast.
+    return mlir::FunctionType::get(context, newInputs, funcType.getResults());
+  }
+
+  return std::nullopt;
+}
+
 std::pair<Fortran::lower::LoweredResult, bool>
 Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
@@ -495,6 +539,29 @@ Fortran::lower::genCallOpAndResult(
 
   mlir::FunctionType funcType =
       funcPointer ? callSiteType : caller.getFuncOp().getFunctionType();
+
+  // If we have any ignore_tkr(c) dummy args, adjust the function type to
+  // have these args match the caller.
+  if (auto modifiedFuncType =
+          getTypeWithIgnoreTkrC(funcType, caller, builder.getContext())) {
+    // Note: funcPointer would only be non-null here, if we are already
+    // processing indirect function call. In such case we can re-use the same
+    // funcPointer and we'll cast it below the the modified funcType.
+    if (!funcPointer) {
+      // We want to cast the function to a different type, in order to avoid
+      // changing/casting some of the args. The cast will generate a new
+      // function pointer, so that we would make a function call not through
+      // the original function symbol, but through the new function pointer
+      // (an indirect function call).
+      mlir::SymbolRefAttr symbolAttr =
+          builder.getSymbolRefAttr(caller.getMangledName());
+      // Create pointer to original function. This pointer will be cast later.
+      funcPointer = fir::AddrOfOp::create(builder, loc, funcType, symbolAttr);
+      funcSymbolAttr = {}; // This marks it as indirect call
+    }
+    funcType = *modifiedFuncType;
+  }
+
   llvm::SmallVector<mlir::Value> operands;
   // First operand of indirect call is the function pointer. Cast it to
   // required function type for the call to handle procedures that have a
@@ -1257,6 +1324,12 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // element if this is an array in an elemental call.
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
+  if (arg.testTKR(Fortran::common::IgnoreTKR::Contiguous) &&
+      actual.isBoxAddress()) {
+    // With ignore_tkr(c), pointer to a descriptor should be passed as is
+    return PreparedDummyArgument{actual, /*cleanups=*/{}};
+  }
+
   // Handle procedure arguments (procedure pointers should go through
   // prepareProcedurePointerActualArgument).
   if (hlfir::isFortranProcedureValue(dummyType)) {
@@ -1754,6 +1827,12 @@ void prepareUserCallArguments(
         mlir::Value boxStorage =
             fir::factory::genNullBoxStorage(builder, loc, boxTy);
         caller.placeInput(arg, boxStorage);
+        continue;
+      }
+      if (arg.testTKR(Fortran::common::IgnoreTKR::Contiguous) &&
+          actual.isBoxAddress()) {
+        // With ignore_tkr(c), pointer to a descriptor should be passed as is
+        caller.placeInput(arg, actual);
         continue;
       }
       if (fir::isPointerType(argTy) &&

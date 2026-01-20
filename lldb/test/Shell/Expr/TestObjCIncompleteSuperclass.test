@@ -3,7 +3,6 @@
 # it will fail to do so. LLDB should handle this situation gracefully.
 # A super-class definition is required when laying out Obj-C types.
 #
-# XFAIL: *
 # REQUIRES: system-darwin
 #
 # RUN: split-file %s %t
