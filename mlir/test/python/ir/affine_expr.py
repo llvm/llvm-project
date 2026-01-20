@@ -424,3 +424,14 @@ def testAffineExprSimplify():
     with Context() as ctx:
         expr = AffineExpr.get_dim(0) + AffineExpr.get_symbol(0)
         assert expr == AffineExpr.simplify_affine_expr(expr, 1, 1)
+
+
+# CHECK-LABEL: TEST: testAffineExprDowncast
+@run
+def testAffineExprDowncast():
+    with Context() as ctx:
+        expr = AffineExpr.get_dim(0) + AffineExpr.get_symbol(0)
+        assert isinstance(expr.lhs, AffineDimExpr)
+        assert isinstance(expr.rhs, AffineSymbolExpr)
+        assert expr.lhs.position == 0
+        assert expr.rhs.position == 0

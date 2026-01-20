@@ -611,9 +611,14 @@ public:
 
   /// Attempts to replace V with a simpler value based on the demanded
   /// floating-point classes
-  Value *SimplifyDemandedUseFPClass(Value *V, FPClassTest DemandedMask,
+  Value *SimplifyDemandedUseFPClass(Instruction *I, FPClassTest DemandedMask,
                                     KnownFPClass &Known, Instruction *CxtI,
                                     unsigned Depth = 0);
+  Value *SimplifyMultipleUseDemandedFPClass(Instruction *I,
+                                            FPClassTest DemandedMask,
+                                            KnownFPClass &Known,
+                                            Instruction *CxtI, unsigned Depth);
+
   bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);

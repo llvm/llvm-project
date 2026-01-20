@@ -256,7 +256,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
               TII->getNamedOperand(MovMI, AMDGPU::OpName::vdst)->getReg()),
           *MRI));
       auto *Def = getVRegSubRegDef(CombOldVGPR, *MRI);
-      DPPInst.addReg(CombOldVGPR.Reg, Def ? 0 : RegState::Undef,
+      DPPInst.addReg(CombOldVGPR.Reg, getUndefRegState(!Def),
                      CombOldVGPR.SubReg);
       ++NumOperands;
     } else if (TII->isVOPC(DPPOp) || (TII->isVOP3(DPPOp) && OrigOpE32 != -1 &&

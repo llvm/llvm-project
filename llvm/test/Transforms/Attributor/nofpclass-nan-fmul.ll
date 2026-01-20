@@ -164,9 +164,9 @@ define float @ret_fmul_daz_nonan_nozero_nosub__nonan_nozero(float nofpclass(nan 
   ret float %fmul
 }
 
-define float @ret_fmul_square(float %arg) #0 {
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square
-; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0]] {
+define float @ret_fmul_square(float noundef %arg) #0 {
+; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square
+; CHECK-SAME: (float noundef [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FMUL]]
 ;
@@ -174,9 +174,9 @@ define float @ret_fmul_square(float %arg) #0 {
   ret float %fmul
 }
 
-define float @ret_fmul_square_nnan(float nofpclass(nan) %arg) #0 {
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square_nnan
-; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR0]] {
+define float @ret_fmul_square_nnan(float noundef nofpclass(nan) %arg) #0 {
+; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @ret_fmul_square_nnan
+; CHECK-SAME: (float noundef nofpclass(nan) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FMUL]]
 ;
@@ -184,9 +184,9 @@ define float @ret_fmul_square_nnan(float nofpclass(nan) %arg) #0 {
   ret float %fmul
 }
 
-define float @ret_fmul_square_nnan_nzero(float nofpclass(nan zero) %arg) #0 {
-; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_fmul_square_nnan_nzero
-; CHECK-SAME: (float nofpclass(nan zero) [[ARG:%.*]]) #[[ATTR0]] {
+define float @ret_fmul_square_nnan_nzero(float noundef nofpclass(nan zero) %arg) #0 {
+; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @ret_fmul_square_nnan_nzero
+; CHECK-SAME: (float noundef nofpclass(nan zero) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FMUL]]
 ;

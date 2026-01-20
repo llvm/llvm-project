@@ -1215,7 +1215,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Substring &ss) {
               if (!ubValue) {
                 ubValue = len;
               }
-              if (lbValue && ubValue && *lbValue > *ubValue) {
+              if ((len && *len == 0) ||
+                  (lbValue && ubValue && *lbValue > *ubValue)) {
                 // valid, substring is empty
               } else if (lbValue && *lbValue < 1 && (ubValue || !last)) {
                 Say("Substring must begin at 1 or later, not %jd"_err_en_US,
@@ -1223,7 +1224,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Substring &ss) {
                 return std::nullopt;
               } else if (ubValue && len && *ubValue > *len &&
                   (lbValue || !first)) {
-                Say("Substring must end at %zd or earlier, not %jd"_err_en_US,
+                Say("Substring must end at %jd or earlier, not %jd"_err_en_US,
                     static_cast<std::intmax_t>(*len),
                     static_cast<std::intmax_t>(*ubValue));
                 return std::nullopt;
@@ -2075,10 +2076,15 @@ MaybeExpr ArrayConstructorContext::ToExpr() {
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
   const parser::AcSpec &acSpec{array.v};
+  const auto &[type, values]{acSpec.t};
+  bool hadAnyFatalError{context_.AnyFatalError()};
   ArrayConstructorContext acContext{
-      *this, AnalyzeTypeSpec(acSpec.type, GetFoldingContext())};
-  for (const parser::AcValue &value : acSpec.values) {
+      *this, AnalyzeTypeSpec(type, GetFoldingContext())};
+  for (const parser::AcValue &value : values) {
     acContext.Add(value);
+  }
+  if (!hadAnyFatalError && context_.AnyFatalError()) {
+    return std::nullopt;
   }
   return acContext.ToExpr();
 }
@@ -2706,7 +2712,10 @@ static bool CheckCompatibleArgument(bool isElemental,
             } else if (!isElemental && actual.Rank() != x.type.Rank() &&
                 !x.type.attrs().test(
                     characteristics::TypeAndShape::Attr::AssumedRank) &&
-                !x.ignoreTKR.test(common::IgnoreTKR::Rank)) {
+                !x.ignoreTKR.test(common::IgnoreTKR::Rank) &&
+                !(x.type.type().IsAssumedType() &&
+                    x.type.attrs().test(
+                        characteristics::TypeAndShape::Attr::AssumedSize))) {
               return false;
             } else if (auto actualType{actual.GetType()}) {
               return x.type.type().IsTkCompatibleWith(*actualType, x.ignoreTKR);
@@ -2958,6 +2967,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
             continue;
           }
         }
+        tried.push_back(*specific);
         if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
                 context_, false /* no integer conversions */) &&
             CheckCompatibleArguments(
@@ -2990,7 +3000,6 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
           crtMatchingDistance = ComputeCudaMatchingDistance(
               context_.languageFeatures(), *procedure, localActuals);
         } else {
-          tried.push_back(*specific);
         }
       }
     }
@@ -3149,17 +3158,23 @@ void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
       if (auto procChars{characteristics::Procedure::Characterize(
               specific, GetFoldingContext())}) {
         if (procChars->HasExplicitInterface()) {
-          if (auto reasons{semantics::CheckExplicitInterface(*procChars,
-                  arguments, context_, &scope, /*intrinsic=*/nullptr,
-                  /*allocActualArgumentConversions=*/false,
-                  /*extentErrors=*/false,
-                  /*ignoreImplicitVsExplicit=*/false)};
-              !reasons.empty()) {
-            reasons.AttachTo(
-                msg->Attach(specific.name(),
-                    "Specific procedure '%s' does not match the actual arguments because"_en_US,
-                    specific.name()),
-                parser::Severity::None);
+          auto reasons{semantics::CheckExplicitInterface(*procChars, arguments,
+              context_, &scope, /*intrinsic=*/nullptr,
+              /*allocActualArgumentConversions=*/false,
+              /*extentErrors=*/false,
+              /*ignoreImplicitVsExplicit=*/false)};
+          if (reasons.AnyFatalError() != dueToAmbiguity) {
+            if (dueToAmbiguity) {
+              msg->Attach(specific.name(),
+                  "Specific procedure '%s' matched the actual arguments"_en_US,
+                  specific.name());
+            } else {
+              reasons.AttachTo(
+                  msg->Attach(specific.name(),
+                      "Specific procedure '%s' does not match the actual arguments because"_en_US,
+                      specific.name()),
+                  parser::Severity::None);
+            }
           }
         }
       }

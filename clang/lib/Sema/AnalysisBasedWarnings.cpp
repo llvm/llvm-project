@@ -25,6 +25,7 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
@@ -36,6 +37,7 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/CallGraph.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -48,10 +50,12 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <deque>
 #include <iterator>
@@ -2523,7 +2527,15 @@ public:
   void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
                             ASTContext &Ctx,
                             const Expr *UnsafeArg = nullptr) override {
-    S.Diag(Call->getBeginLoc(), diag::warn_unsafe_buffer_libc_call)
+    unsigned DiagID = diag::warn_unsafe_buffer_libc_call;
+    if (PrintfInfo & 0x8) {
+      // The callee is a function with the format attribute. See the
+      // documentation of PrintfInfo in UnsafeBufferUsageHandler, and
+      // UnsafeLibcFunctionCallGadget::UnsafeKind.
+      DiagID = diag::warn_unsafe_buffer_format_attr_call;
+      PrintfInfo ^= 0x8;
+    }
+    S.Diag(Call->getBeginLoc(), DiagID)
         << Call->getDirectCallee() // We've checked there is a direct callee
         << Call->getSourceRange();
     if (PrintfInfo > 0) {
@@ -2624,6 +2636,12 @@ public:
 
   bool ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const override {
     return S.Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc);
+  }
+
+  bool ignoreUnsafeBufferInStaticSizedArray(
+      const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(
+        diag::warn_unsafe_buffer_usage_in_static_sized_array, Loc);
   }
 
   // Returns the text representation of clang::unsafe_buffer_usage attribute.
@@ -2915,6 +2933,30 @@ private:
 } // namespace
 } // namespace clang::lifetimes
 
+static void
+LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
+                         clang::lifetimes::LifetimeSafetyStats &LSStats) {
+  llvm::TimeTraceScope TimeProfile("LifetimeSafetyTUAnalysis");
+  CallGraph CG;
+  CG.addToCallGraph(TU);
+  lifetimes::LifetimeSafetyReporterImpl Reporter(S);
+  for (auto *Node : llvm::post_order(&CG)) {
+    const clang::FunctionDecl *CanonicalFD =
+        dyn_cast_or_null<clang::FunctionDecl>(Node->getDecl());
+    if (!CanonicalFD)
+      continue;
+    const FunctionDecl *FD = CanonicalFD->getDefinition();
+    if (!FD)
+      continue;
+    AnalysisDeclContext AC(nullptr, FD);
+    AC.getCFGBuildOptions().PruneTriviallyFalseEdges = false;
+    AC.getCFGBuildOptions().AddLifetime = true;
+    AC.getCFGBuildOptions().setAllAlwaysAdd();
+    if (AC.getCFG())
+      runLifetimeSafetyAnalysis(AC, &Reporter, LSStats, S.CollectStats);
+  }
+}
+
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
      TranslationUnitDecl *TU) {
   if (!TU)
@@ -2969,6 +3011,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     CallableVisitor(CallAnalyzers, TU->getOwningModule())
         .TraverseTranslationUnitDecl(TU);
   }
+
+  if (S.getLangOpts().EnableLifetimeSafety && S.getLangOpts().CPlusPlus &&
+      S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
+    LifetimeSafetyTUAnalysis(S, TU, LSStats);
 }
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
@@ -3015,7 +3061,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
-  bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
+  bool EnableLifetimeSafetyAnalysis =
+      S.getLangOpts().EnableLifetimeSafety &&
+      !S.getLangOpts().EnableLifetimeSafetyTUAnalysis;
 
   if (EnableLifetimeSafetyAnalysis)
     AC.getCFGBuildOptions().AddLifetime = true;

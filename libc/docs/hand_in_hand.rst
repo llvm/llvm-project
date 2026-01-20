@@ -26,7 +26,7 @@ defines. The client library then includes "shared/<header>" to get the necessary
 components. All of the functions shared via Hand-in-Hand are header only.
 
 The Hand-in-Hand interface is intended to be an internal implementation detail,
-and is has no guarantees of stability. When the internal LLVM-libc interface is
+and it has no guarantees of stability. When the internal LLVM-libc interface is
 changed the other users inside of the LLVM repository are updated in the same
 commit. This allows LLVM-libc to update their interface without breaking their
 users.

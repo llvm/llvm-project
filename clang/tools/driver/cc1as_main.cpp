@@ -163,6 +163,10 @@ struct AssemblerInvocation {
   LLVM_PREFERRED_TYPE(bool)
   unsigned EmitCompactUnwindNonCanonical : 1;
 
+  // Whether to emit sframe unwind sections.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned EmitSFrameUnwind : 1;
+
   LLVM_PREFERRED_TYPE(bool)
   unsigned Crel : 1;
   LLVM_PREFERRED_TYPE(bool)
@@ -388,6 +392,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
 
   Opts.EmitCompactUnwindNonCanonical =
       Args.hasArg(OPT_femit_compact_unwind_non_canonical);
+  Opts.EmitSFrameUnwind = Args.hasArg(OPT_gsframe);
   Opts.Crel = Args.hasArg(OPT_crel);
   Opts.ImplicitMapsyms = Args.hasArg(OPT_mmapsyms_implicit);
   Opts.X86RelaxRelocations = !Args.hasArg(OPT_mrelax_relocations_no);
@@ -453,6 +458,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   MCOptions.MCRelaxAll = Opts.RelaxAll;
   MCOptions.EmitDwarfUnwind = Opts.EmitDwarfUnwind;
   MCOptions.EmitCompactUnwindNonCanonical = Opts.EmitCompactUnwindNonCanonical;
+  MCOptions.EmitSFrameUnwind = Opts.EmitSFrameUnwind;
   MCOptions.MCSaveTempLabels = Opts.SaveTemporaryLabels;
   MCOptions.Crel = Opts.Crel;
   MCOptions.ImplicitMapSyms = Opts.ImplicitMapsyms;

@@ -95,6 +95,24 @@ static cl::opt<unsigned> MinimumBitTestCmpsOverride(
     cl::desc("Set minimum of largest number of comparisons "
              "to use bit test for switch."));
 
+static cl::opt<unsigned> MaxStoresPerMemsetOverride(
+    "max-store-memset", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemset and "
+             "MaxStoresPerMemsetOptSize. "
+             "Set to 0 to use the target default."));
+
+static cl::opt<unsigned> MaxStoresPerMemcpyOverride(
+    "max-store-memcpy", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemcpy and "
+             "MaxStoresPerMemcpyOptSize. "
+             "Set to 0 to use the target default."));
+
+static cl::opt<unsigned> MaxStoresPerMemmoveOverride(
+    "max-store-memmove", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemmove and "
+             "MaxStoresPerMemmoveOptSize. "
+             "Set to 0 to use the target default."));
+
 // FIXME: This option is only to test if the strict fp operation processed
 // correctly by preventing mutating strict fp operation to normal fp operation
 // during development. When the backend supports strict float operation, this
@@ -1238,6 +1256,10 @@ void TargetLoweringBase::initActions() {
   // This one by default will call __clear_cache unless the target
   // wants something different.
   setOperationAction(ISD::CLEAR_CACHE, MVT::Other, LibCall);
+
+  // By default, STACKADDRESS nodes are expanded like STACKSAVE nodes.
+  // On SPARC targets, custom lowering is required.
+  setOperationAction(ISD::STACKADDRESS, MVT::Other, Expand);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
@@ -2116,6 +2138,27 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                             MMO.getFlags(), Fast);
 }
 
+unsigned TargetLoweringBase::getMaxStoresPerMemset(bool OptSize) const {
+  if (MaxStoresPerMemsetOverride > 0)
+    return MaxStoresPerMemsetOverride;
+
+  return OptSize ? MaxStoresPerMemsetOptSize : MaxStoresPerMemset;
+}
+
+unsigned TargetLoweringBase::getMaxStoresPerMemcpy(bool OptSize) const {
+  if (MaxStoresPerMemcpyOverride > 0)
+    return MaxStoresPerMemcpyOverride;
+
+  return OptSize ? MaxStoresPerMemcpyOptSize : MaxStoresPerMemcpy;
+}
+
+unsigned TargetLoweringBase::getMaxStoresPerMemmove(bool OptSize) const {
+  if (MaxStoresPerMemmoveOverride > 0)
+    return MaxStoresPerMemmoveOverride;
+
+  return OptSize ? MaxStoresPerMemmoveOptSize : MaxStoresPerMemmove;
+}
+
 //===----------------------------------------------------------------------===//
 //  TargetTransformInfo Helpers
 //===----------------------------------------------------------------------===//
@@ -2259,9 +2302,9 @@ TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   auto *PtrTy = PointerType::getUnqual(M->getContext());
 
-  const char *SafestackPointerAddressName =
-      getLibcallName(RTLIB::SAFESTACK_POINTER_ADDRESS);
-  if (!SafestackPointerAddressName) {
+  RTLIB::LibcallImpl SafestackPointerAddressImpl =
+      getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
+  if (SafestackPointerAddressImpl == RTLIB::Unsupported) {
     M->getContext().emitError(
         "no libcall available for safestack pointer address");
     return PoisonValue::get(PtrTy);
@@ -2269,8 +2312,8 @@ TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
 
   // Android provides a libc function to retrieve the address of the current
   // thread's unsafe stack pointer.
-  FunctionCallee Fn =
-      M->getOrInsertFunction(SafestackPointerAddressName, PtrTy);
+  FunctionCallee Fn = M->getOrInsertFunction(
+      getLibcallImplName(SafestackPointerAddressImpl), PtrTy);
   return IRB.CreateCall(Fn);
 }
 

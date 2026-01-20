@@ -58,6 +58,8 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::FindFirstIVUMin:
   case RecurKind::FindLastIVSMax:
   case RecurKind::FindLastIVUMax:
+  // TODO: Make type-agnostic.
+  case RecurKind::FindLast:
     return true;
   }
   return false;
@@ -721,9 +723,15 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 //     if (src[i] > 3)
 //       r = i;
 //   }
+// or like this:
+//   int r = 0;
+//   for (int i = 0; i < n; i++) {
+//     if (src[i] > 3)
+//       r = <loop-varying value>;
+//   }
 // The reduction value (r) is derived from either the values of an induction
-// variable (i) sequence, or from the start value (0). The LLVM IR generated for
-// such loops would be as follows:
+// variable (i) sequence, an arbitrary loop-varying value, or from the start
+// value (0). The LLVM IR generated for such loops would be as follows:
 //   for.body:
 //     %r = phi i32 [ %spec.select, %for.body ], [ 0, %entry ]
 //     %i = phi i32 [ %inc, %for.body ], [ 0, %entry ]
@@ -732,23 +740,27 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 //     %spec.select = select i1 %cmp, i32 %i, i32 %r
 //     %inc = add nsw i32 %i, 1
 //     ...
-// Since 'i' is an induction variable, the reduction value after the loop will
-// be the maximum (increasing induction) or minimum (decreasing induction) value
-// of 'i' that the condition (src[i] > 3) is satisfied, or the start value (0 in
-// the example above). When the start value of the induction variable 'i' is
-// greater than the minimum (increasing induction) or maximum (decreasing
-// induction) value of the data type, we can use the minimum (increasing
-// induction) or maximum (decreasing induction) value of the data type as a
-// sentinel value to replace the start value. This allows us to perform a single
-// reduction max (increasing induction) or min (decreasing induction) operation
-// to obtain the final reduction result.
+// When searching for an induction variable (i), the reduction value after the
+// loop will be the maximum (increasing induction) or minimum (decreasing
+// induction) value of 'i' that the condition (src[i] > 3) is satisfied, or the
+// start value (0 in the example above). When the start value of the induction
+// variable 'i' is greater than the minimum (increasing induction) or maximum
+// (decreasing induction) value of the data type, we can use the minimum
+// (increasing induction) or maximum (decreasing induction) value of the data
+// type as a sentinel value to replace the start value. This allows us to
+// perform a single reduction max (increasing induction) or min (decreasing
+// induction) operation to obtain the final reduction result.
 // TODO: It is possible to solve the case where the start value is the minimum
 // value of the data type or a non-constant value by using mask and multiple
 // reduction operations.
+//
+// When searching for an arbitrary loop-varying value, the reduction value will
+// either be the initial value (0) if the condition was never met, or the value
+// of the loop-varying value in the most recent loop iteration where the
+// condition was met.
 RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
-                                      PHINode *OrigPhi, Instruction *I,
-                                      ScalarEvolution &SE) {
+RecurrenceDescriptor::isFindPattern(Loop *TheLoop, PHINode *OrigPhi,
+                                    Instruction *I, ScalarEvolution &SE) {
   // TODO: Support the vectorization of FindLastIV when the reduction phi is
   // used by more than one select instruction. This vectorization is only
   // performed when the SCEV of each increasing induction variable used by the
@@ -757,8 +769,10 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
     return InstDesc(false, I);
 
   // We are looking for selects of the form:
-  //   select(cmp(), phi, loop_induction) or
-  //   select(cmp(), loop_induction, phi)
+  //   select(cmp(), phi, value) or
+  //   select(cmp(), value, phi)
+  // where 'value' must be a loop induction variable
+  // (for FindFirstIV/FindLastIV) or an arbitrary value (for FindLast).
   // TODO: Match selects with multi-use cmp conditions.
   Value *NonRdxPhi = nullptr;
   if (!match(I, m_CombineOr(m_Select(m_OneUse(m_Cmp()), m_Value(NonRdxPhi),
@@ -769,7 +783,7 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
 
   // Returns either FindFirstIV/FindLastIV, if such a pattern is found, or
   // std::nullopt.
-  auto GetRecurKind = [&](Value *V) -> std::optional<RecurKind> {
+  auto GetFindFirstLastIVRecurKind = [&](Value *V) -> std::optional<RecurKind> {
     Type *Ty = V->getType();
     if (!SE.isSCEVable(Ty))
       return std::nullopt;
@@ -780,8 +794,9 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
                                        m_SpecificLoop(TheLoop))))
       return std::nullopt;
 
-    if ((isFindFirstIVRecurrenceKind(Kind) && !SE.isKnownNegative(Step)) ||
-        (isFindLastIVRecurrenceKind(Kind) && !SE.isKnownPositive(Step)))
+    // We must have a known positive or negative step for FindIV
+    const bool PositiveStep = SE.isKnownPositive(Step);
+    if (!SE.isKnownNonZero(Step))
       return std::nullopt;
 
     // Check if the minimum (FindLast) or maximum (FindFirst) value of the
@@ -796,41 +811,32 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
       const ConstantRange IVRange =
           IsSigned ? SE.getSignedRange(AR) : SE.getUnsignedRange(AR);
       unsigned NumBits = Ty->getIntegerBitWidth();
-      ConstantRange ValidRange = ConstantRange::getEmpty(NumBits);
-      if (isFindLastIVRecurrenceKind(Kind)) {
-        APInt Sentinel = IsSigned ? APInt::getSignedMinValue(NumBits)
-                                  : APInt::getMinValue(NumBits);
-        ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
+      APInt Sentinel;
+      if (PositiveStep) {
+        Sentinel = IsSigned ? APInt::getSignedMinValue(NumBits)
+                            : APInt::getMinValue(NumBits);
       } else {
-        if (IsSigned)
-          ValidRange =
-              ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits),
-                                         APInt::getSignedMaxValue(NumBits) - 1);
-        else
-          ValidRange = ConstantRange::getNonEmpty(
-              APInt::getMinValue(NumBits), APInt::getMaxValue(NumBits) - 1);
+        Sentinel = IsSigned ? APInt::getSignedMaxValue(NumBits)
+                            : APInt::getMaxValue(NumBits);
       }
+      ConstantRange ValidRange = ConstantRange(Sentinel).inverse();
 
-      LLVM_DEBUG(dbgs() << "LV: "
-                        << (isFindLastIVRecurrenceKind(Kind) ? "FindLastIV"
-                                                             : "FindFirstIV")
-                        << " valid range is " << ValidRange
-                        << ", and the range of " << *AR << " is " << IVRange
-                        << "\n");
+      LLVM_DEBUG(
+          dbgs() << "LV: " << (PositiveStep ? "FindLastIV" : "FindFirstIV")
+                 << " valid range is " << ValidRange << ", and the range of "
+                 << *AR << " is " << IVRange << "\n");
 
       // Ensure the induction variable does not wrap around by verifying that
       // its range is fully contained within the valid range.
       return ValidRange.contains(IVRange);
     };
-    if (isFindLastIVRecurrenceKind(Kind)) {
+    if (PositiveStep) {
       if (CheckRange(true))
         return RecurKind::FindLastIVSMax;
       if (CheckRange(false))
         return RecurKind::FindLastIVUMax;
       return std::nullopt;
     }
-    assert(isFindFirstIVRecurrenceKind(Kind) &&
-           "Kind must either be a FindLastIV or FindFirstIV");
 
     if (CheckRange(true))
       return RecurKind::FindFirstIVSMin;
@@ -839,10 +845,11 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
     return std::nullopt;
   };
 
-  if (auto RK = GetRecurKind(NonRdxPhi))
+  if (auto RK = GetFindFirstLastIVRecurKind(NonRdxPhi))
     return InstDesc(I, *RK);
 
-  return InstDesc(false, I);
+  // If the recurrence is not specific to an IV, return a generic FindLast.
+  return InstDesc(I, RecurKind::FindLast);
 }
 
 RecurrenceDescriptor::InstDesc
@@ -976,8 +983,8 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
         Kind == RecurKind::Add || Kind == RecurKind::Mul ||
         Kind == RecurKind::Sub || Kind == RecurKind::AddChainWithSubs)
       return isConditionalRdxPattern(I);
-    if (isFindIVRecurrenceKind(Kind) && SE)
-      return isFindIVPattern(Kind, L, OrigPhi, I, *SE);
+    if (isFindRecurrenceKind(Kind) && SE)
+      return isFindPattern(L, OrigPhi, I, *SE);
     [[fallthrough]];
   case Instruction::FCmp:
   case Instruction::ICmp:
@@ -1117,14 +1124,9 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
                       << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::FindLastIVSMax, TheLoop, FMF, RedDes, DB,
-                      AC, DT, SE)) {
-    LLVM_DEBUG(dbgs() << "Found a FindLastIV reduction PHI." << *Phi << "\n");
-    return true;
-  }
-  if (AddReductionVar(Phi, RecurKind::FindFirstIVSMin, TheLoop, FMF, RedDes, DB,
-                      AC, DT, SE)) {
-    LLVM_DEBUG(dbgs() << "Found a FindFirstIV reduction PHI." << *Phi << "\n");
+  if (AddReductionVar(Phi, RecurKind::FindLast, TheLoop, FMF, RedDes, DB, AC,
+                      DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found a Find reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::FMul, TheLoop, FMF, RedDes, DB, AC, DT,
@@ -1174,7 +1176,6 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
                       << "\n");
     return true;
   }
-
   // Not a reduction of known type.
   return false;
 }
@@ -1299,6 +1300,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMaximumNum:
   case RecurKind::FMinimumNum:
     return Instruction::FCmp;
+  case RecurKind::FindLast:
   case RecurKind::AnyOf:
   case RecurKind::FindFirstIVSMin:
   case RecurKind::FindFirstIVUMin:

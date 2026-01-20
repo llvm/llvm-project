@@ -19,7 +19,7 @@ echo --x86: build and test x86 variant
 echo --x64: build and test x64 variant
 echo --arm64: build and test arm64 variant
 echo --skip-checkout: use local git checkout instead of downloading src.zip
-echo --local-python: use installed Python and does not try to use a specific version (3.10)
+echo --local-python: use installed Python and does not try to use a specific version (3.11)
 echo --force-msvc: use MSVC compiler for stage0, even if clang-cl is present
 echo.
 echo Note: At least one variant to build is required.
@@ -115,8 +115,8 @@ echo Using VS devcmd: %vsdevcmd%
 :: start echoing what we do
 @echo on
 
-set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-32
-set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310
+set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-32
+set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311
 set pythonarm64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-arm64
 
 set revision=llvmorg-%version%
