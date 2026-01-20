@@ -655,6 +655,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
           break;
         case ISD::EXTRACT_SUBVECTOR:
         case ISD::CONCAT_VECTORS:
+        case ISD::FSIN:
+        case ISD::FCOS:
           setOperationAction(Op, VT, Custom);
           break;
         default:
@@ -12974,23 +12976,36 @@ SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
   // if Arg is already the result of a multiply by constant.
   auto Flags = Op->getFlags();
 
+  // AMDGPUISD nodes of vector type must be unrolled here since
+  // they will not be expanded elsewhere.
+  auto UnrollIfVec = [&DAG](SDValue V) -> SDValue {
+    if (!V.getValueType().isVector())
+      return V;
+
+    return DAG.UnrollVectorOp(cast<SDNode>(V));
+  };
+
   SDValue OneOver2Pi = DAG.getConstantFP(0.5 * numbers::inv_pi, DL, VT);
 
   if (Subtarget->hasTrigReducedRange()) {
     SDValue MulVal = DAG.getNode(ISD::FMUL, DL, VT, Arg, OneOver2Pi, Flags);
-    TrigVal = DAG.getNode(AMDGPUISD::FRACT, DL, VT, MulVal, Flags);
+    TrigVal = UnrollIfVec(DAG.getNode(AMDGPUISD::FRACT, DL, VT, MulVal, Flags));
   } else {
     TrigVal = DAG.getNode(ISD::FMUL, DL, VT, Arg, OneOver2Pi, Flags);
   }
 
   switch (Op.getOpcode()) {
   case ISD::FCOS:
-    return DAG.getNode(AMDGPUISD::COS_HW, SDLoc(Op), VT, TrigVal, Flags);
+    TrigVal = DAG.getNode(AMDGPUISD::COS_HW, SDLoc(Op), VT, TrigVal, Flags);
+    break;
   case ISD::FSIN:
-    return DAG.getNode(AMDGPUISD::SIN_HW, SDLoc(Op), VT, TrigVal, Flags);
+    TrigVal = DAG.getNode(AMDGPUISD::SIN_HW, SDLoc(Op), VT, TrigVal, Flags);
+    break;
   default:
     llvm_unreachable("Wrong trig opcode");
   }
+
+  return UnrollIfVec(TrigVal);
 }
 
 SDValue SITargetLowering::LowerATOMIC_CMP_SWAP(SDValue Op,
