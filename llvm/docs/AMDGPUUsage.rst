@@ -6596,11 +6596,11 @@ Execution Barriers
 
 Threads can synchronize execution by performing barrier operations on barrier *objects* as described below:
 
-* Each barrier *objects* has the following state:
+* Each barrier *object* has the following state:
 
-  * An unsigned non-zero positive integer *expected count*: counts the number of *signal* operations
+  * An unsigned positive integer *expected count*: counts the number of *signal* operations
     expected for this barrier *object*.
-  * An unsigned positive integer *signal count*: counts the number of *signal* operations
+  * An unsigned non-negative integer *signal count*: counts the number of *signal* operations
     already performed on this barrier *object*.
 
       * The initial value of *signal count* is zero.
@@ -6672,7 +6672,6 @@ Threads can synchronize execution by performing barrier operations on barrier *o
     *expected count* of ``BO`` are equal after ``B`` is performed. ``B`` is the only barrier operation in ``S``
     that causes the *signal count* and *expected count* of ``BO`` to be equal.
 
-* For every barrier operation ``X``, there is a barrier *init* ``I`` such that ``I`` *happens-before* ``X``.
 * For every barrier *signal* ``S`` performed on a barrier *object* ``BO``:
 
   * The immediate successor of ``S`` in *thread-barrier-order<BO>* is a barrier *wait*. :sup:`WIP`
@@ -6688,6 +6687,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 * *Barrier-executes-before* is a strict partial order defined over the union of all barrier operations
   performed by all threads on all barriers. It is the transitive closure of all the following orders:
 
+  * *Happens-before*.
   * *Thread-barrier-order<BO>* for every barrier object ``BO``.
   * *Barrier-participates-in<BO>* for every barrier object ``BO``.
 
@@ -6695,6 +6695,9 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 * For every barrier *object* ``BO``:
 
   * *Barrier-modification-order<BO>* is consistent with *barrier-executes-before*.
+
+* For every barrier operation ``X`` on a barrier *object* ``BO``,
+  there is a barrier *init* ``I`` on ``BO`` such that ``I`` *barrier-executes-before* ``X``.
 
   .. note::
 
