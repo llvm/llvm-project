@@ -498,12 +498,12 @@
 # CHECK-NEXT:  1      3     1.00                        umull	x11, w13, w17
 # CHECK-NEXT:  1      3     1.00                        smnegl	x11, w13, w17
 # CHECK-NEXT:  1      3     1.00                        umnegl	x11, w13, w17
-# CHECK-NEXT:  1      1     0.50                        extr	w3, w5, w7, #0
-# CHECK-NEXT:  1      1     0.50                        extr	w11, w13, w17, #31
+# CHECK-NEXT:  2      3     1.00                        extr	w3, w5, w7, #0
+# CHECK-NEXT:  2      3     1.00                        extr	w11, w13, w17, #31
 # CHECK-NEXT:  2      3     1.00                        extr	x3, x5, x7, #15
 # CHECK-NEXT:  2      3     1.00                        extr	x11, x13, x17, #63
-# CHECK-NEXT:  2      3     1.00                        ror	x19, x23, #24
-# CHECK-NEXT:  2      3     1.00                        ror	x29, xzr, #63
+# CHECK-NEXT:  1      1     0.50                        ror	x19, x23, #24
+# CHECK-NEXT:  1      1     0.50                        ror	x29, xzr, #63
 # CHECK-NEXT:  1      1     0.50                        ror	w9, w13, #31
 # CHECK-NEXT:  1      3     0.50                        fcmp	s3, s5
 # CHECK-NEXT:  1      3     0.50                        fcmp	s31, #0.0
@@ -1672,12 +1672,12 @@
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     umull	x11, w13, w17
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     smnegl	x11, w13, w17
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     umnegl	x11, w13, w17
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     extr	w3, w5, w7, #0
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     extr	w11, w13, w17, #31
+# CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -     extr	w3, w5, w7, #0
+# CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -     extr	w11, w13, w17, #31
 # CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -     extr	x3, x5, x7, #15
 # CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -     extr	x11, x13, x17, #63
-# CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -     ror	x19, x23, #24
-# CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -     ror	x29, xzr, #63
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     ror	x19, x23, #24
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     ror	x29, xzr, #63
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     ror	w9, w13, #31
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   fcmp	s3, s5
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   fcmp	s31, #0.0
