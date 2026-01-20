@@ -308,6 +308,11 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_header_staging_dir}
   COMMENT "LLDB headers: create staging directory for LLDB headers")
 
+# Create a target for the staging directory so that all header staging targets
+# can depend on it. This is required for Xcode's new build system which doesn't
+# allow custom commands attached to multiple targets without a common dependency.
+add_custom_target(liblldb-header-staging-dir DEPENDS ${lldb_header_staging_dir})
+
 find_program(unifdef_EXECUTABLE unifdef)
 
 add_custom_target(liblldb-header-staging)
@@ -335,10 +340,10 @@ foreach(header
   endif()
 
   add_custom_target(liblldb-stage-header-${basename} DEPENDS ${staged_header})
-  add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums)
+  add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums liblldb-header-staging-dir)
   add_dependencies(liblldb-header-staging liblldb-stage-header-${basename})
   add_custom_command(
-    DEPENDS ${header} ${lldb_header_staging_dir} OUTPUT ${staged_header}
+    DEPENDS ${header} OUTPUT ${staged_header}
     COMMAND ${copy_command}
     COMMENT "LLDB headers: stage LLDB headers in include directory")
 
