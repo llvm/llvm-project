@@ -53,6 +53,7 @@ static Error dumpPartToFile(StringRef PartName, StringRef Filename,
     return createFileError(Filename,
                            std::make_error_code(std::errc::invalid_argument),
                            "part '%s' not found", PartName.str().c_str());
+
   ArrayRef<uint8_t> Contents = PartIter->Data;
   // The DXContainer format is a bit odd because the part-specific headers are
   // contained inside the part data itself. For parts that contain LLVM bitcode
@@ -81,16 +82,15 @@ static Error dumpPartToFile(StringRef PartName, StringRef Filename,
 
 static Error handleArgs(const CommonConfig &Config, Object &Obj) {
   for (StringRef Flag : Config.DumpSection) {
-    auto [SecName, FileName] = Flag.split("=");
-    if (Error E = dumpPartToFile(SecName, FileName, Config.InputFilename, Obj))
+    auto [SectionName, FileName] = Flag.split("=");
+    if (Error E =
+            dumpPartToFile(SectionName, FileName, Config.InputFilename, Obj))
       return E;
   }
 
   // Extract all sections before any modifications.
   for (StringRef Flag : Config.ExtractSection) {
-    StringRef SectionName;
-    StringRef FileName;
-    std::tie(SectionName, FileName) = Flag.split('=');
+    auto [SectionName, FileName] = Flag.split('=');
     if (Error E = extractPartAsObject(SectionName, FileName,
                                       Config.InputFilename, Obj))
       return E;
