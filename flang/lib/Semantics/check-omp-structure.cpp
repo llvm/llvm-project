@@ -3638,7 +3638,7 @@ void OmpStructureChecker::CheckReductionObjects(
     // a language identifier.
     for (const parser::OmpObject &object : objects.v) {
       if (auto *elem{GetArrayElementFromObj(object)}) {
-        const parser::DataRef &base = elem->base;
+        const parser::DataRef &base = elem->Base();
         if (!std::holds_alternative<parser::Name>(base.u)) {
           auto source{GetObjectSource(object)};
           context_.Say(source ? *source : GetContext().clauseSource,
@@ -3955,7 +3955,7 @@ bool OmpStructureChecker::IsDataRefTypeParamInquiry(
   bool dataRefIsTypeParamInquiry{false};
   if (const auto *structComp{
           parser::Unwrap<parser::StructureComponent>(dataRef)}) {
-    if (const auto *compSymbol{structComp->component.symbol}) {
+    if (const auto *compSymbol{structComp->Component().symbol}) {
       if (const auto *compSymbolMiscDetails{
               std::get_if<MiscDetails>(&compSymbol->details())}) {
         const auto detailsKind = compSymbolMiscDetails->kind();
@@ -4627,7 +4627,7 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
       // Do-construct, collect the induction variable.
       if (auto &control{(*doc)->GetLoopControl()}) {
         if (auto *b{std::get_if<parser::LoopControl::Bounds>(&control->u)}) {
-          inductionVars.insert(b->name.thing.symbol);
+          inductionVars.insert(b->Name().thing.symbol);
         }
       }
     } else {
@@ -5033,10 +5033,10 @@ void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
       common::visitors{
           [&](const common::Indirection<parser::ArrayElement> &elem) {
             // Check if the base element is valid on Depend Clause
-            CheckDependList(elem.value().base);
+            CheckDependList(elem.value().Base());
           },
           [&](const common::Indirection<parser::StructureComponent> &comp) {
-            CheckDependList(comp.value().base);
+            CheckDependList(comp.value().Base());
           },
           [&](const common::Indirection<parser::CoindexedNamedObject> &) {
             context_.Say(GetContext().clauseSource,
@@ -5060,7 +5060,7 @@ void OmpStructureChecker::CheckArraySection(
   // looking for strings.
   if (!IsAssumedSizeArray(*name.symbol)) {
     evaluate::ExpressionAnalyzer ea{context_};
-    if (MaybeExpr expr = ea.Analyze(arrayElement.base)) {
+    if (MaybeExpr expr = ea.Analyze(arrayElement.Base())) {
       if (expr->Rank() == 0) {
         // Not an array: rank 0
         if (std::optional<evaluate::DynamicType> type = expr->GetType()) {
@@ -5079,8 +5079,8 @@ void OmpStructureChecker::CheckArraySection(
       }
     }
   }
-  if (!arrayElement.subscripts.empty()) {
-    for (const auto &subscript : arrayElement.subscripts) {
+  if (!arrayElement.Subscripts().empty()) {
+    for (const auto &subscript : arrayElement.Subscripts()) {
       if (const auto *triplet{
               std::get_if<parser::SubscriptTriplet>(&subscript.u)}) {
         if (std::get<0>(triplet->t) && std::get<1>(triplet->t)) {
@@ -5373,7 +5373,7 @@ struct NameHelper {
     return Visit(std::get<parser::DataRef>(x.t));
   }
   static const parser::Name *Visit(const parser::ArrayElement &x) {
-    return Visit(x.base);
+    return Visit(x.Base());
   }
   static const parser::Name *Visit(const parser::Designator &x) {
     return common::visit([](auto &&s) { return Visit(s); }, x.u);
