@@ -8,7 +8,7 @@
 
 // REQUIRES: has-unix-headers
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: no-exceptions, libcpp-hardening-mode=none
+// UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <iostream>
