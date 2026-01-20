@@ -76,17 +76,16 @@ BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
                                                lldb::addr_t offset,
                                                bool skip_prologue)
     : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
-      m_class_name(nullptr), m_regex(std::move(func_regex)),
-      m_match_type(Breakpoint::Regexp), m_language(language),
-      m_skip_prologue(skip_prologue) {}
+      m_regex(std::move(func_regex)), m_match_type(Breakpoint::Regexp),
+      m_language(language), m_skip_prologue(skip_prologue) {}
 
 BreakpointResolverName::BreakpointResolverName(
     const BreakpointResolverName &rhs)
     : BreakpointResolver(rhs.GetBreakpoint(), BreakpointResolver::NameResolver,
                          rhs.GetOffset(), rhs.GetOffsetIsInsnCount()),
-      m_lookups(rhs.m_lookups), m_class_name(rhs.m_class_name),
-      m_regex(rhs.m_regex), m_match_type(rhs.m_match_type),
-      m_language(rhs.m_language), m_skip_prologue(rhs.m_skip_prologue) {}
+      m_lookups(rhs.m_lookups), m_regex(rhs.m_regex),
+      m_match_type(rhs.m_match_type), m_language(rhs.m_language),
+      m_skip_prologue(rhs.m_skip_prologue) {}
 
 BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
     const StructuredData::Dictionary &options_dict, Status &error) {
@@ -257,12 +256,6 @@ Searcher::CallbackReturn
 BreakpointResolverName::SearchCallback(SearchFilter &filter,
                                        SymbolContext &context, Address *addr) {
   Log *log = GetLog(LLDBLog::Breakpoints);
-
-  if (m_class_name) {
-    if (log)
-      log->Warning("Class/method function specification not supported yet.\n");
-    return Searcher::eCallbackReturnStop;
-  }
 
   SymbolContextList func_list;
   bool filter_by_cu =

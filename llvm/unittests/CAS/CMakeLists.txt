@@ -1,5 +1,6 @@
 set(ONDISK_CAS_TEST_SOURCES
   BuiltinUnifiedCASDatabasesTest.cpp
+  OnDiskCASLoggerTest.cpp
   OnDiskGraphDBTest.cpp
   OnDiskDataAllocatorTest.cpp
   OnDiskKeyValueDBTest.cpp

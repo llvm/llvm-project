@@ -105,10 +105,23 @@ public:
   /// Creates a SectionMemoryManager instance with \p MM as the associated
   /// memory mapper.  If \p MM is nullptr then a default memory mapper is used
   /// that directly calls into the operating system.
-  SectionMemoryManager(MemoryMapper *MM = nullptr);
+  ///
+  /// If \p ReserveAlloc is true all memory will be pre-allocated, and any
+  /// attempts to allocate beyond pre-allocated memory will fail.
+  SectionMemoryManager(MemoryMapper *MM = nullptr, bool ReserveAlloc = false);
   SectionMemoryManager(const SectionMemoryManager &) = delete;
   void operator=(const SectionMemoryManager &) = delete;
   ~SectionMemoryManager() override;
+
+  /// Enable reserveAllocationSpace when requested.
+  bool needsToReserveAllocationSpace() override { return ReserveAllocation; }
+
+  /// Implements allocating all memory in a single block. This is required to
+  /// limit memory offsets to fit the ARM ABI; large memory systems may
+  /// otherwise allocate separate sections too far apart.
+  void reserveAllocationSpace(uintptr_t CodeSize, Align CodeAlign,
+                              uintptr_t RODataSize, Align RODataAlign,
+                              uintptr_t RWDataSize, Align RWDataAlign) override;
 
   /// Allocates a memory block of (at least) the given size suitable for
   /// executable code.
@@ -181,6 +194,8 @@ private:
   std::error_code applyMemoryGroupPermissions(MemoryGroup &MemGroup,
                                               unsigned Permissions);
 
+  bool hasSpace(const MemoryGroup &MemGroup, uintptr_t Size) const;
+
   void anchor() override;
 
   MemoryGroup CodeMem;
@@ -188,6 +203,7 @@ private:
   MemoryGroup RODataMem;
   MemoryMapper *MMapper;
   std::unique_ptr<MemoryMapper> OwnedMMapper;
+  bool ReserveAllocation;
 };
 
 } // end namespace llvm

@@ -79,6 +79,34 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
         """
         pass
 
+    @staticmethod
+    def get_priority():
+        """Get the priority of this frame provider.
+
+        This static method is called to determine the evaluation order when
+        multiple frame providers could apply to the same thread. Lower numbers
+        indicate higher priority (like Unix nice values).
+
+        Returns:
+            int or None: Priority value where 0 is highest priority.
+                Return None for default priority (UINT32_MAX - lowest priority).
+
+        Example:
+
+        .. code-block:: python
+
+            @staticmethod
+            def get_priority():
+                # High priority - runs before most providers
+                return 10
+
+            @staticmethod
+            def get_priority():
+                # Default priority - runs last
+                return None
+        """
+        return None  # Default/lowest priority
+
     def __init__(self, input_frames, args):
         """Construct a scripted frame provider.
 

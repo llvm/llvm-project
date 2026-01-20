@@ -1092,9 +1092,9 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __tree_.size(); }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT { return __tree_.max_size(); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](const key_type& __k);
+  _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](const key_type& __k);
 #  ifndef _LIBCPP_CXX03_LANG
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](key_type&& __k);
+  _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](key_type&& __k);
 #  endif
 
   template <class _Arg,

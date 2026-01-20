@@ -1,4 +1,5 @@
-# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s
+# RUN: llc %s -run-pass x86-avoid-sfb -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s
+# RUN: llc %s -passes=x86-avoid-sfb -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s
 #
 # This was generated from:
 #

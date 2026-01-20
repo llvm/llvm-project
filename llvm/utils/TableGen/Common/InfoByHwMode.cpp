@@ -67,19 +67,6 @@ bool ValueTypeByHwMode::operator<(const ValueTypeByHwMode &T) const {
   return Map < T.Map;
 }
 
-MVT &ValueTypeByHwMode::getOrCreateTypeForMode(unsigned Mode, MVT Type) {
-  auto F = Map.find(Mode);
-  if (F != Map.end())
-    return F->second;
-  // If Mode is not in the map, look up the default mode. If it exists,
-  // make a copy of it for Mode and return it.
-  auto D = Map.begin();
-  if (D != Map.end() && D->first == DefaultMode)
-    return Map.try_emplace(Mode, D->second).first->second;
-  // If default mode is not present either, use provided Type.
-  return Map.try_emplace(Mode, Type).first->second;
-}
-
 StringRef ValueTypeByHwMode::getMVTName(MVT T) {
   StringRef N = llvm::getEnumName(T.SimpleTy);
   N.consume_front("MVT::");
