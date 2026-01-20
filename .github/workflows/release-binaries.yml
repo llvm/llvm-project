@@ -289,7 +289,13 @@ jobs:
         # This will be empty on non-Windows builds.
         WINDOWS_INSTALLER_FILENAME: ${{ steps.build-windows.outputs.windows-installer-filename }}
       run: |
-          echo "digest=$(cat $WINDOWS_INSTALLER_FILENAME $RELEASE_BINARY_FILENAME | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            # Mac runners don't have sha256sum.
+            sha256sum="shasum -a 256"
+          else
+            sha256sum="sha256sum"
+          fi
+          echo "digest=$(cat $WINDOWS_INSTALLER_FILENAME $RELEASE_BINARY_FILENAME | $sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
     - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       id: artifact-upload

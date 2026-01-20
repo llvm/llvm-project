@@ -75,6 +75,18 @@ if (current_toolchain == default_toolchain) {
         [ "LIBCXX_CONFIG_SITE_MODULE_ENTRY=textual header \"__config_site\"" ]
   }
 
+  # FIXME: Remove this after a while.
+  action("remove_float_h") {
+    stamp = "$target_gen_dir/remove_float_h.stamp"
+    outputs = [ stamp ]
+    script = "//llvm/utils/gn/build/remove_if_exists.py"
+    args = [
+      "--stamp",
+      rebase_path(stamp, root_build_dir),
+      rebase_path("$root_build_dir/include/c++/v1/float.h", root_build_dir),
+    ]
+  }
+
   copy("copy_headers") {
     sources = [
       "__algorithm/adjacent_find.h",
@@ -1677,7 +1689,6 @@ if (current_toolchain == default_toolchain) {
       "filesystem",
       "flat_map",
       "flat_set",
-      "float.h",
       "format",
       "forward_list",
       "fstream",
@@ -1754,6 +1765,7 @@ if (current_toolchain == default_toolchain) {
       ":write_assertion_handler",
       ":write_config_site",
       ":write_modulemap",
+      ":remove_float_h",
     ]
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets
