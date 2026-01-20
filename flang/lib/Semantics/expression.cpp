@@ -869,19 +869,20 @@ struct RealTypeVisitor {
 
 // Reads a real literal constant and encodes it with the right kind.
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
+  const auto &[xreal, xkind](x.t);
   // Use a local message context around the real literal for better
   // provenance on any messages.
-  auto restorer{GetContextualMessages().SetLocation(x.real.source)};
+  auto restorer{GetContextualMessages().SetLocation(xreal.source)};
   // If a kind parameter appears, it defines the kind of the literal and the
   // letter used in an exponent part must be 'E' (e.g., the 'E' in
   // "6.02214E+23").  In the absence of an explicit kind parameter, any
   // exponent letter determines the kind.  Otherwise, defaults apply.
   auto &defaults{context_.defaultKinds()};
   int defaultKind{defaults.GetDefaultKind(TypeCategory::Real)};
-  const char *end{x.real.source.end()};
+  const char *end{xreal.source.end()};
   char expoLetter{' '};
   std::optional<int> letterKind;
-  for (const char *p{x.real.source.begin()}; p < end; ++p) {
+  for (const char *p{xreal.source.begin()}; p < end; ++p) {
     if (parser::IsLetter(*p)) {
       expoLetter = *p;
       switch (expoLetter) {
@@ -905,20 +906,20 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
   }
   // C716 requires 'E' as an exponent.
   // Extension: allow exponent-letter matching the kind-param.
-  auto kind{AnalyzeKindParam(x.kind, defaultKind)};
+  auto kind{AnalyzeKindParam(xkind, defaultKind)};
   if (letterKind && expoLetter != 'e') {
     if (kind != *letterKind) {
       Warn(common::LanguageFeature::ExponentMatchingKindParam,
           "Explicit kind parameter on real constant disagrees with exponent letter '%c'"_warn_en_US,
           expoLetter);
-    } else if (x.kind) {
+    } else if (xkind) {
       Warn(common::LanguageFeature::ExponentMatchingKindParam,
           "Explicit kind parameter together with non-'E' exponent letter is not standard"_port_en_US);
     }
   }
-  bool isDefaultKind{!x.kind && letterKind.value_or('e') == 'e'};
-  auto result{common::SearchTypes(RealTypeVisitor{
-      kind, x.real.source, GetFoldingContext(), isDefaultKind})};
+  bool isDefaultKind{!xkind && letterKind.value_or('e') == 'e'};
+  auto result{common::SearchTypes(
+      RealTypeVisitor{kind, xreal.source, GetFoldingContext(), isDefaultKind})};
   if (!result) { // C717
     Say("Unsupported REAL(KIND=%d)"_err_en_US, kind);
   }
@@ -2712,7 +2713,10 @@ static bool CheckCompatibleArgument(bool isElemental,
             } else if (!isElemental && actual.Rank() != x.type.Rank() &&
                 !x.type.attrs().test(
                     characteristics::TypeAndShape::Attr::AssumedRank) &&
-                !x.ignoreTKR.test(common::IgnoreTKR::Rank)) {
+                !x.ignoreTKR.test(common::IgnoreTKR::Rank) &&
+                !(x.type.type().IsAssumedType() &&
+                    x.type.attrs().test(
+                        characteristics::TypeAndShape::Attr::AssumedSize))) {
               return false;
             } else if (auto actualType{actual.GetType()}) {
               return x.type.type().IsTkCompatibleWith(*actualType, x.ignoreTKR);
@@ -2964,6 +2968,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
             continue;
           }
         }
+        tried.push_back(*specific);
         if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
                 context_, false /* no integer conversions */) &&
             CheckCompatibleArguments(
@@ -2996,7 +3001,6 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
           crtMatchingDistance = ComputeCudaMatchingDistance(
               context_.languageFeatures(), *procedure, localActuals);
         } else {
-          tried.push_back(*specific);
         }
       }
     }
@@ -3155,17 +3159,23 @@ void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
       if (auto procChars{characteristics::Procedure::Characterize(
               specific, GetFoldingContext())}) {
         if (procChars->HasExplicitInterface()) {
-          if (auto reasons{semantics::CheckExplicitInterface(*procChars,
-                  arguments, context_, &scope, /*intrinsic=*/nullptr,
-                  /*allocActualArgumentConversions=*/false,
-                  /*extentErrors=*/false,
-                  /*ignoreImplicitVsExplicit=*/false)};
-              !reasons.empty()) {
-            reasons.AttachTo(
-                msg->Attach(specific.name(),
-                    "Specific procedure '%s' does not match the actual arguments because"_en_US,
-                    specific.name()),
-                parser::Severity::None);
+          auto reasons{semantics::CheckExplicitInterface(*procChars, arguments,
+              context_, &scope, /*intrinsic=*/nullptr,
+              /*allocActualArgumentConversions=*/false,
+              /*extentErrors=*/false,
+              /*ignoreImplicitVsExplicit=*/false)};
+          if (reasons.AnyFatalError() != dueToAmbiguity) {
+            if (dueToAmbiguity) {
+              msg->Attach(specific.name(),
+                  "Specific procedure '%s' matched the actual arguments"_en_US,
+                  specific.name());
+            } else {
+              reasons.AttachTo(
+                  msg->Attach(specific.name(),
+                      "Specific procedure '%s' does not match the actual arguments because"_en_US,
+                      specific.name()),
+                  parser::Severity::None);
+            }
           }
         }
       }
@@ -3404,7 +3414,8 @@ std::optional<Chevrons> ExpressionAnalyzer::AnalyzeChevrons(
         which);
     return false;
   }};
-  if (const auto &chevrons{call.chevrons}) {
+  if (const auto &chevrons{
+          std::get<std::optional<parser::CallStmt::Chevrons>>(call.t)}) {
     auto &starOrExpr{std::get<0>(chevrons->t)};
     if (starOrExpr.v) {
       if (auto expr{Analyze(*starOrExpr.v)};
@@ -3504,7 +3515,7 @@ static bool HasAlternateReturns(const evaluate::ActualArguments &args) {
 }
 
 void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
-  const parser::Call &call{callStmt.call};
+  const auto &call{std::get<parser::Call>(callStmt.t)};
   auto restorer{GetContextualMessages().SetLocation(callStmt.source)};
   ArgumentAnalyzer analyzer{*this, callStmt.source, true /* isProcedureCall */};
   const auto &actualArgList{std::get<std::list<parser::ActualArgSpec>>(call.t)};
