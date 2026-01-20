@@ -370,7 +370,8 @@ void ScopeReductionCheck::check(
     // Step 7: Verify that usage scope is nested within declaration scope
     // Only report if we can move the variable to a smaller scope
     if (VarScope && VarScope != InnermostScope) {
-      // Walk up from innermost usage scope to see if declaration scope is reached
+      // Walk up from innermost usage scope to see if declaration scope is
+      // reached
       const Stmt *CheckScope = InnermostScope;
       bool IsNested = false;
 
@@ -404,8 +405,8 @@ void ScopeReductionCheck::check(
   }
 
   // Step 8: Alternative analysis - check for for-loop initialization
-  // opportunity This only runs if the compound statement analysis didn't find a
-  // smaller scope Only check local variables, not parameters
+  // opportunity This only runs if the compound statement analysis didn't find
+  // a smaller scope Only check local variables, not parameters
   const ForStmt *CommonForLoop = nullptr;
   bool AllUsesInSameForLoop = true;
 
