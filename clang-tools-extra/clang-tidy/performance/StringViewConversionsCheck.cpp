@@ -40,7 +40,8 @@ void StringViewConversionsCheck::registerMatchers(MatchFinder *Finder) {
   //   - Copy from existing string: std::string(s) where s is std::string
   const auto RedundantStringConstruction = cxxConstructExpr(
       hasType(IsStdString),
-      hasArgument(0, ignoringImplicit(ImplicitlyConvertibleToStringView)));
+      hasArgument(0, ignoringImplicit(ImplicitlyConvertibleToStringView)),
+      unless(hasArgument(1, unless(cxxDefaultArgExpr()))));
 
   // Matches functional cast syntax: std::string(expr):
   // std::string(sv), std::string("literal")

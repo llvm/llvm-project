@@ -6,7 +6,6 @@ performance-string-view-conversions
 Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view``
 to ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
 
-
 Before:
 
 .. code-block:: c++

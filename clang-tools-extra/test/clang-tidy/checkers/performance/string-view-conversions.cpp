@@ -129,6 +129,9 @@ void negative(std::string_view sv, std::wstring_view wsv) {
   foo_sv(42, std::move(s), 3.14);
 
   // Inner calls are ignored
-  foo_wsv(foo_wstr(142, "Hello, world"));
-  foo_wsv(foo_wstr(1, std::string("Hello, world")));
+  foo_wsv(foo_wstr(42, "Hello, world"));
+  foo_wsv(foo_wstr(42, std::string("Hello, world")));
+
+  // No warnings expected: string parameter of a limited length, not string-view
+  foo_sv(142, std::string("Hello, world", 5), 3.14);
 }
