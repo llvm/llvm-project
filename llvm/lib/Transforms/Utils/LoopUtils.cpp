@@ -1054,7 +1054,6 @@ BranchProbability llvm::getBranchProbability(BasicBlock *Src, BasicBlock *Dst) {
   return BranchProbability(Numerator, Total);
 }
 
-
 bool llvm::setBranchProbability(BranchInst *B, BranchProbability P,
                                 bool ForFirstTarget) {
   if (B->getNumSuccessors() != 2)
