@@ -902,7 +902,8 @@ static std::optional<unsigned> getExtractIndex(const Instruction *E) {
     auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
     if (!CI)
       return std::nullopt;
-    // Check if the index is out of bound  - we can get the source vector from operand 0
+    // Check if the index is out of bound  - we can get the source vector from
+    // operand 0
     unsigned Idx = CI->getZExtValue();
     auto *EE = cast<ExtractElementInst>(E);
     const unsigned VF = ::getNumElements(EE->getVectorOperandType());
