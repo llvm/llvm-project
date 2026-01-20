@@ -1323,8 +1323,10 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
 
   // If we haven't found the beneficial conditions, prefer the VGPR form which
   // may result in less cross RC copies.
-  if (Cost > 0)
+  if (Cost > 0) {
+    restoreRegClasses(RewriteCands);
     return false;
+  }
 
   return rewrite(RewriteCands);
 }
@@ -1961,6 +1963,8 @@ bool RewriteMFMAFormStage::initHeuristics(
     std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
     DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
+  bool Changed = false;
+
   // Prepare for the heuristics
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -2022,10 +2026,11 @@ bool RewriteMFMAFormStage::initHeuristics(
       DAG.MRI.setRegClass(Dst.getReg(), AGPRRC);
       if (Src2->isReg())
         DAG.MRI.setRegClass(Src2->getReg(), AGPRRC);
+      Changed = true;
     }
   }
 
-  return true;
+  return Changed;
 }
 
 int64_t RewriteMFMAFormStage::getRewriteCost(
@@ -2121,6 +2126,19 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   }
 
   return Cost + CopyCost;
+}
+
+void RewriteMFMAFormStage::restoreRegClasses(
+    const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands) {
+  for (auto &[MI, OriginalOpcode] : RewriteCands) {
+    MachineOperand &Dst = MI->getOperand(0);
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    const TargetRegisterClass *AGPRRC = DAG.MRI.getRegClass(Dst.getReg());
+    const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(AGPRRC);
+    DAG.MRI.setRegClass(Dst.getReg(), VGPRRC);
+    if (Src2->isReg())
+      DAG.MRI.setRegClass(Src2->getReg(), VGPRRC);
+  }
 }
 
 bool RewriteMFMAFormStage::rewrite(

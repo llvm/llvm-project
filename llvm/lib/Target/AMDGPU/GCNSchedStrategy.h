@@ -439,6 +439,11 @@ private:
                  DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
                  SmallPtrSetImpl<MachineInstr *> &CopyForDef);
 
+  /// Restore the register classes speculatively rewritten by initHueristics if
+  /// we exit without rewriting the instructions permanently.
+  void restoreRegClasses(
+      const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands);
+
   /// Calculate the rewrite cost and undo the state change (e.g. rewriting) done
   /// in initHeuristics. Uses \p CopyForUse and \p CopyForDef to calculate copy
   /// costs, and \p RewriteCands to undo rewriting.
