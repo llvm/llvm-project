@@ -1,4 +1,4 @@
-//===-- Implementation of f16sqrt function --------------------------------===//
+//===-- Implementation header of f16sqrt function -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,7 @@
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_F16SQRTL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_F16SQRTL_H
+
 #include "include/llvm-libc-macros/float16-macros.h"
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
