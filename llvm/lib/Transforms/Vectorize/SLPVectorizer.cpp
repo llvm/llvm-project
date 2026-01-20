@@ -15042,7 +15042,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       if (DemandedElts.isZero())
         DemandedElts = APInt::getZero(getNumElements(SrcVecTy));
-      DemandedElts.setBit(*getExtractIndex(I));
+      unsigned ExtIdx = *getExtractIndex(I);
+      //Out-of-bounds extractelement produces poison.So it do no corresponds to a concrete vector lane,
+      // so instead of treating it as an invalid pattern we can avoid marking any demanded element
+      if (ExtIdx  < DemandedElts.getBitWidth())
+      {
+        DemandedElts.setBit(ExtIdx);
+      }
+      // DemandedElts.setBit(*getExtractIndex(I));
       return InstructionCost(TTI::TCC_Free);
     };
     auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
