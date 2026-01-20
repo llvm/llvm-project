@@ -16,18 +16,13 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 namespace {
 
-AST_MATCHER_P(FunctionDecl, isEnabled, llvm::StringSet<>,
-              FunctionsThatShouldNotThrow) {
-  return FunctionsThatShouldNotThrow.contains(Node.getNameAsString());
+AST_MATCHER_P(FunctionDecl, hasAnyName, llvm::StringSet<>, Names) {
+  return Names.contains(Node.getNameAsString());
 }
 
 AST_MATCHER(FunctionDecl, isExplicitThrow) {
   return isExplicitThrowExceptionSpec(Node.getExceptionSpecType()) &&
          Node.getExceptionSpecSourceRange().isValid();
-}
-
-AST_MATCHER(FunctionDecl, hasAtLeastOneParameter) {
-  return Node.getNumParams() > 0;
 }
 
 } // namespace
@@ -36,9 +31,9 @@ UnsafeToAllowExceptionsCheck::UnsafeToAllowExceptionsCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RawCheckedSwapFunctions(
-          Options.get("CheckedSwapFunctions", "swap,iter_swap,iter_move")) {
+          Options.get("CheckedSwapFunctions", "swap;iter_swap;iter_move")) {
   llvm::SmallVector<StringRef, 4> CheckedSwapFunctionsVec;
-  RawCheckedSwapFunctions.split(CheckedSwapFunctionsVec, ",", -1, false);
+  RawCheckedSwapFunctions.split(CheckedSwapFunctionsVec, ";", -1, false);
   CheckedSwapFunctions.insert_range(CheckedSwapFunctionsVec);
 }
 
@@ -53,8 +48,8 @@ void UnsafeToAllowExceptionsCheck::registerMatchers(MatchFinder *Finder) {
                          anyOf(cxxDestructorDecl(),
                                cxxConstructorDecl(isMoveConstructor()),
                                cxxMethodDecl(isMoveAssignmentOperator()),
-                               allOf(isEnabled(CheckedSwapFunctions),
-                                     hasAtLeastOneParameter()),
+                               allOf(hasAnyName(CheckedSwapFunctions),
+                                     unless(parameterCountIs(0))),
                                isMain())))
           .bind("f"),
       this);
@@ -69,7 +64,7 @@ void UnsafeToAllowExceptionsCheck::check(
 
   diag(MatchedDecl->getLocation(),
        "function %0 should not throw exceptions but "
-       "it is still marked as throwable")
+       "it is still marked as potentially throwing")
       << MatchedDecl;
 }
 

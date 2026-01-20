@@ -15,7 +15,7 @@
 namespace clang::tidy::bugprone {
 
 /// Finds functions where throwing exceptions is unsafe but the function is
-/// still marked as throwable.
+/// still marked as potentially throwing.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unsafe-to-allow-exceptions.html
