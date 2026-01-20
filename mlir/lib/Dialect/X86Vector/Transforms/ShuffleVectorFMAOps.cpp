@@ -69,7 +69,7 @@ static bool validateVectorFMAOp(vector::FMAOp fmaOp) {
 // consumer. If the consumer is vector.ShapeCastOp and has only one user then
 // move before the consumer of vector.ShapeCastOp.
 // TODO: Move before first consumer, if there are multiple.
-static void moveFMA(vector::FMAOp fmaOp) {
+static void moveFMA(PatternRewriter &rewriter, vector::FMAOp fmaOp) {
   Operation *consumer = *fmaOp.getResult().getUsers().begin();
 
   if (auto shapeCastOp = dyn_cast<vector::ShapeCastOp>(consumer)) {
@@ -77,18 +77,19 @@ static void moveFMA(vector::FMAOp fmaOp) {
       Operation *nxtConsumer = *shapeCastOp.getResult().getUsers().begin();
       if (nxtConsumer->getBlock() == fmaOp->getBlock()) {
         consumer = *shapeCastOp.getResult().getUsers().begin();
-        fmaOp.getLhs().getDefiningOp()->moveBefore(consumer);
-        fmaOp.getRhs().getDefiningOp()->moveBefore(consumer);
-        fmaOp->moveBefore(consumer);
-        shapeCastOp->moveBefore(consumer);
+        rewriter.moveOpBefore(fmaOp.getLhs().getDefiningOp(), consumer);
+        rewriter.moveOpBefore(fmaOp.getRhs().getDefiningOp(), consumer);
+        rewriter.moveOpBefore(fmaOp.getOperation(), consumer);
+        rewriter.moveOpBefore(shapeCastOp.getOperation(), consumer);
         return;
       }
     }
   }
 
-  fmaOp.getLhs().getDefiningOp()->moveBefore(consumer);
-  fmaOp.getRhs().getDefiningOp()->moveBefore(consumer);
-  fmaOp->moveBefore(consumer);
+  rewriter.moveOpBefore(fmaOp.getLhs().getDefiningOp(), consumer);
+  rewriter.moveOpBefore(fmaOp.getRhs().getDefiningOp(), consumer);
+  rewriter.moveOpBefore(fmaOp.getOperation(), consumer);
+
   return;
 }
 
@@ -164,11 +165,14 @@ struct ShuffleVectorFMAOps : public OpRewritePattern<vector::FMAOp> {
     }
 
     if (fmaOps.empty())
-      return failure();
+      return rewriter.notifyMatchFailure(
+          fmaOp, "No eligible FMA operations were found: the operation may "
+                 "already be shuffled, there may be no following FMAs, or the "
+                 "following FMAs do not satisfy the shuffle conditions.");
 
     fmaOps.push_back(fmaOp);
     for (auto fmaOp : fmaOps)
-      moveFMA(fmaOp);
+      moveFMA(rewriter, fmaOp);
 
     return success();
   }
