@@ -84,6 +84,7 @@ struct PrintingPolicy {
         AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
         UseEnumerators(true), UseHLSLTypes(LO.HLSL),
+        SuppressDeclAttributes(false),
         /* TO_UPSTREAM(BoundsSafety) ON */
         CountedByInArrayBracket(false), DelayedArrayQual() {
     // GNU Attributes cannot be placed inside the array bracket, hence 'counted_by'
@@ -375,6 +376,10 @@ struct PrintingPolicy {
   /// sugared types when possible.
   LLVM_PREFERRED_TYPE(bool)
   unsigned UseHLSLTypes : 1;
+
+  /// Whether to suppress attributes in decl printing.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SuppressDeclAttributes : 1;
 
   /// Whether to print 'counted_by' attribute inside the array bracket.
   LLVM_PREFERRED_TYPE(bool)
