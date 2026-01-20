@@ -11857,8 +11857,6 @@ SDValue DAGCombiner::visitCLMUL(SDNode *N) {
   return SDValue();
 }
 
-
-
 SDValue DAGCombiner::visitBSWAP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
