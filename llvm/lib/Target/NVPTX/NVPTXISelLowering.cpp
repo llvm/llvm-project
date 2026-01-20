@@ -7374,8 +7374,8 @@ void NVPTXTargetLowering::recordTargetMMOInfo(MachineFunction &MF,
   uint64_t CachePolicy = 0;
   if (auto Policy = NVPTX::getCachePolicyFromMetadata(&I, OperandNo)) {
     CachePolicy = *Policy;
-    // Set the L2CacheHintFlag to indicate policy mode
-    CacheControlHint |= NVPTX::L2CacheHintFlag;
+    // Set the L2CacheHintBit to indicate policy mode
+    Bitfield::set<NVPTX::L2CacheHintBit>(CacheControlHint, true);
   }
 
   // If no cache hints, nothing to store

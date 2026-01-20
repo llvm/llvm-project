@@ -1139,8 +1139,8 @@ getCachePolicy(const MemSDNode *N, const NVPTXMachineFunctionInfo *MFI) {
   if (!Data)
     return std::nullopt;
 
-  // Only return policy if L2CacheHintFlag is set (indicating policy mode)
-  if (!(Data->CacheControlHint & NVPTX::L2CacheHintFlag))
+  // Only return policy if L2CacheHintBit is set (indicating policy mode)
+  if (!NVPTX::isL2CacheHintMode(Data->CacheControlHint))
     return std::nullopt;
 
   return Data->Policy;
@@ -1162,12 +1162,14 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getCacheControlHintAndPolicyReg(
 
   // Check L1 eviction hint (SM 70+)
   if (!Subtarget->hasL1EvictionHint()) {
-    CacheControlHint &= ~(NVPTX::L1EvictionMask << NVPTX::L1EvictionShift);
+    Bitfield::set<NVPTX::L1EvictionBits>(CacheControlHint,
+                                         NVPTX::L1Eviction::Normal);
   }
 
   // Check L2 eviction hint (SM 70+)
   if (!Subtarget->hasL2EvictionHint()) {
-    CacheControlHint &= ~(NVPTX::L2EvictionMask << NVPTX::L2EvictionShift);
+    Bitfield::set<NVPTX::L2EvictionBits>(CacheControlHint,
+                                         NVPTX::L2Eviction::Normal);
   }
 
   // Check L2 prefetch hints (SM 75+ for 64B/128B, SM 80+ for 256B)
@@ -1189,14 +1191,15 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getCacheControlHintAndPolicyReg(
     }
     if (!PrefetchSupported) {
       // Clear the prefetch bits if not supported
-      CacheControlHint &= ~(NVPTX::L2PrefetchMask << NVPTX::L2PrefetchShift);
+      Bitfield::set<NVPTX::L2PrefetchBits>(CacheControlHint,
+                                           NVPTX::L2Prefetch::None);
     }
   }
 
   // L2::cache_hint is only supported for global address space.
   // Clear the flag for non-global address spaces.
   if (CodeAddrSpace != NVPTX::AddressSpace::Global) {
-    CacheControlHint &= ~NVPTX::L2CacheHintFlag;
+    Bitfield::set<NVPTX::L2CacheHintBit>(CacheControlHint, false);
   } else if (Subtarget->hasL2CacheHint()) {
     // Check for L2::cache_hint with cache policy (requires SM 80+ and PTX 7.4+)
     if (auto CachePolicyVal = getCachePolicy(N, MFI)) {
@@ -1211,7 +1214,7 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getCacheControlHintAndPolicyReg(
   // If no policy or L2::cache_hint not supported, use NOREG and clear flag
   if (!PolicyReg) {
     PolicyReg = CurDAG->getRegister(NVPTX::NoRegister, MVT::i64);
-    CacheControlHint &= ~NVPTX::L2CacheHintFlag;
+    Bitfield::set<NVPTX::L2CacheHintBit>(CacheControlHint, false);
   }
 
   return {CacheControlHint, PolicyReg};

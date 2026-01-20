@@ -243,15 +243,6 @@ using L2PrefetchBits =
     Bitfield::Element<L2Prefetch, 5, 2, L2Prefetch::Bytes256>;
 using L2CacheHintBit = Bitfield::Element<bool, 7, 1>;
 
-// Masks for clearing/testing fields (for legacy code and instruction emission)
-constexpr unsigned L1EvictionShift = 0;
-constexpr unsigned L1EvictionMask = 0x7;
-constexpr unsigned L2EvictionShift = 3;
-constexpr unsigned L2EvictionMask = 0x3;
-constexpr unsigned L2PrefetchShift = 5;
-constexpr unsigned L2PrefetchMask = 0x3;
-constexpr unsigned L2CacheHintFlag = 0x80; // Bit 7: L2::cache_hint mode
-
 inline unsigned encodeCacheControlHint(L1Eviction L1, L2Eviction L2,
                                        L2Prefetch P) {
   unsigned Hint = 0;
