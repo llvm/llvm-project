@@ -1324,6 +1324,12 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // element if this is an array in an elemental call.
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
+  if (arg.testTKR(Fortran::common::IgnoreTKR::Contiguous) &&
+      actual.isBoxAddress()) {
+    // With ignore_tkr(c), pointer to a descriptor should be passed as is
+    return PreparedDummyArgument{actual, /*cleanups=*/{}};
+  }
+
   // Handle procedure arguments (procedure pointers should go through
   // prepareProcedurePointerActualArgument).
   if (hlfir::isFortranProcedureValue(dummyType)) {
@@ -1463,19 +1469,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // Step 2: prepare the storage for the dummy arguments, ensuring that it
   // matches the dummy requirements (e.g., must be contiguous or must be
   // a temporary).
-
-  const bool ignoreTKRcontig =
-      arg.testTKR(Fortran::common::IgnoreTKR::Contiguous);
-
-  // If IgnoreTKR(C) is set and we are passing by descriptor, we want to
-  // avoid loading the descriptor if it is already a reference to a box.
-  const bool keepRefToBox =
-      arg.passBy == Fortran::lower::CallerInterface::PassEntityBy::Box &&
-      ignoreTKRcontig && actual.isMutableBox();
-
   hlfir::Entity entity =
-      keepRefToBox ? actual
-                   : hlfir::derefPointersAndAllocatables(loc, builder, actual);
+      hlfir::derefPointersAndAllocatables(loc, builder, actual);
   if (entity.isVariable()) {
     // Set dynamic type if needed before any copy-in or copy so that the dummy
     // is contiguous according to the dummy type.
@@ -1547,14 +1542,11 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         loc, fir::isa_volatile_type(dummyType), entity)};
     addr = hlfir::genVariableBoxChar(loc, builder, nonVolatileEntity);
   } else if (mlir::isa<fir::BaseBoxType>(dummyTypeWithActualRank)) {
-    if (!keepRefToBox)
-      entity = hlfir::genVariableBox(loc, builder, entity);
+    entity = hlfir::genVariableBox(loc, builder, entity);
     // Ensures the box has the right attributes and that it holds an
     // addendum if needed.
     fir::BaseBoxType actualBoxType =
-        keepRefToBox
-            ? mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(entity.getType()))
-            : mlir::cast<fir::BaseBoxType>(entity.getType());
+        mlir::cast<fir::BaseBoxType>(entity.getType());
     mlir::Type boxEleType = actualBoxType.getEleTy();
     // For now, assume it is not OK to pass the allocatable/pointer
     // descriptor to a non pointer/allocatable dummy. That is a strict
@@ -1573,9 +1565,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     const bool needToAddAddendum =
         fir::isUnlimitedPolymorphicType(dummyTypeWithActualRank) &&
         !actualBoxHasAddendum;
-    if ((needToAddAddendum || actualBoxHasAllocatableOrPointerFlag ||
-         needsZeroLowerBounds) &&
-        !ignoreTKRcontig) {
+    if (needToAddAddendum || actualBoxHasAllocatableOrPointerFlag ||
+        needsZeroLowerBounds) {
       if (actualIsAssumedRank) {
         auto lbModifier = needsZeroLowerBounds
                               ? fir::LowerBoundModifierAttribute::SetToZeroes
@@ -1609,8 +1600,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // For TKR dummy characters, the boxchar creation also happens later when
   // creating the fir.call .
   preparedDummy.dummy =
-      keepRefToBox ? addr
-                   : builder.createConvert(loc, dummyTypeWithActualRank, addr);
+      builder.createConvert(loc, dummyTypeWithActualRank, addr);
   return preparedDummy;
 }
 
@@ -1841,6 +1831,7 @@ void prepareUserCallArguments(
       }
       if (arg.testTKR(Fortran::common::IgnoreTKR::Contiguous) &&
           actual.isBoxAddress()) {
+        // With ignore_tkr(c), pointer to a descriptor should be passed as is
         caller.placeInput(arg, actual);
         continue;
       }
