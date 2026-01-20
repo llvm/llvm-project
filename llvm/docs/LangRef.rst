@@ -15114,7 +15114,7 @@ Let’s consider the following code:
 
 
 In this example, the frontend doesn't know the exact physical layout, but
-known those logical layouts are lowered to the same physical layout:
+knows those logical layouts are lowered to the same physical layout:
 
     - `{ i32, i32, i32, i32 }`
     - `[ i32 x 4 ]`

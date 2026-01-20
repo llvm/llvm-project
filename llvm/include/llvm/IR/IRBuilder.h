@@ -1927,7 +1927,7 @@ public:
   StructuredGEPInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
                                          ArrayRef<Value *> Indices,
                                          const Twine &Name = "") {
-    SmallVector<llvm::Value *> Args;
+    SmallVector<Value *> Args;
     Args.push_back(PtrBase);
     llvm::append_range(Args, Indices);
 
