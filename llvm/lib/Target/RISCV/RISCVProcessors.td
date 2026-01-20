@@ -106,6 +106,7 @@ def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
 def GENERIC_OOO : RISCVTuneProcessorModel<"generic-ooo", GenericOOOModel>,
                   GenericTuneInfo;
 
+// clang-format off
 def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                      MIPSP8700Model,
                                      [Feature64Bit,
@@ -619,10 +620,15 @@ def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
                                                  TTAscalonD8Model,
                                                  !listconcat(RVA23S64Features,
                                                  [FeatureStdExtSmaia,
+                                                  FeatureStdExtSmmpm,
+                                                  FeatureStdExtSmnpm,
+                                                  FeatureStdExtSmrnmi,
+                                                  FeatureStdExtSmstateen,
                                                   FeatureStdExtSsaia,
                                                   FeatureStdExtSsstrict,
                                                   FeatureStdExtZfbfmin,
                                                   FeatureStdExtZfh,
+                                                  FeatureStdExtZkr,
                                                   FeatureStdExtZvbc,
                                                   FeatureStdExtZvfbfmin,
                                                   FeatureStdExtZvfbfwma,
@@ -881,3 +887,20 @@ def ANDES_AX45MPV : RISCVProcessorModel<"andes-ax45mpv",
                                          FeatureStdExtV,
                                          FeatureVendorXAndesPerf],
                                         Andes45TuneFeatures>;
+
+def ESPERANTO_SOC1 : RISCVProcessorModel<"et-soc1",
+                                         NoSchedModel,
+                                         [Feature64Bit,
+                                          FeatureStdExtM,
+                                          FeatureStdExtF,
+                                          FeatureStdExtC,
+                                          FeatureVendorXAIFET]>;
+
+def AINEKKO_ERBIUM : RISCVProcessorModel<"an-erbium",
+                                         NoSchedModel,
+                                         [Feature64Bit,
+                                          FeatureStdExtM,
+                                          FeatureStdExtF,
+                                          FeatureStdExtC,
+                                          FeatureVendorXAIFET]>;
+// clang-format on

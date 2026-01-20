@@ -430,6 +430,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     ```mlir
     vector-type ::= !cir.vector<size x element-type>
+    size ::= (decimal-literal | `[` decimal-literal `]`)
     element-type ::= float-type | integer-type | pointer-type
     ```
 
@@ -442,6 +443,13 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     !cir.vector<4 x !cir.int<u, 8>>
     !cir.vector<2 x !cir.float>
     ```
+
+    Scalable vectors are indicated by enclosing size in square brackets.
+
+    Example:
+    ```mlir
+    !cir.vector<[4] x !cir.int<u, 8>>
+    ```
   }];
 
   let parameters = (ins
@@ -449,10 +457,6 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     "uint64_t":$size,
     OptionalParameter<"bool">:$is_scalable
   );
-
-  let assemblyFormat = [{
-    `<` $size `x` $element_type `>`
-  }];
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
@@ -471,6 +475,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -543,6 +548,34 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     /// Returns a clone of this function type with the given argument
     /// and result types.
     FuncType clone(mlir::TypeRange inputs, mlir::TypeRange results) const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MethodType
+//===----------------------------------------------------------------------===//
+
+def CIR_MethodType : CIR_Type<"Method", "method",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+  let summary = "CIR type that represents C++ pointer-to-member-function type";
+  let description = [{
+    `cir.method` models the pointer-to-member-function type in C++. The layout
+    of this type is ABI-dependent.
+  }];
+
+  let parameters = (ins "cir::FuncType":$member_func_ty,
+                        "cir::RecordType":$class_ty);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "cir::FuncType":$member_func_ty, "cir::RecordType":$class_ty
+    ), [{
+      return $_get(member_func_ty.getContext(), member_func_ty, class_ty);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` qualified($member_func_ty) `in` $class_ty `>`
   }];
 }
 
@@ -727,7 +760,7 @@ def CIRRecordType : Type<
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType,
-  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType
+  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType
 ]>;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD

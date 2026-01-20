@@ -50,25 +50,13 @@ struct __move_impl {
     return std::make_pair(std::move(__first), std::move(__result));
   }
 
-  template <class _InIter, class _OutIter>
-  struct _MoveSegment {
-    using _Traits _LIBCPP_NODEBUG = __segmented_iterator_traits<_InIter>;
-
-    _OutIter& __result_;
-
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit _MoveSegment(_OutIter& __result)
-        : __result_(__result) {}
-
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-    operator()(typename _Traits::__local_iterator __lfirst, typename _Traits::__local_iterator __llast) {
-      __result_ = std::__move<_AlgPolicy>(__lfirst, __llast, std::move(__result_)).second;
-    }
-  };
-
   template <class _InIter, class _OutIter, __enable_if_t<__is_segmented_iterator_v<_InIter>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
   operator()(_InIter __first, _InIter __last, _OutIter __result) const {
-    std::__for_each_segment(__first, __last, _MoveSegment<_InIter, _OutIter>(__result));
+    using __local_iterator = typename __segmented_iterator_traits<_InIter>::__local_iterator;
+    std::__for_each_segment(__first, __last, [&__result](__local_iterator __lfirst, __local_iterator __llast) {
+      __result = std::__move<_AlgPolicy>(__lfirst, __llast, std::move(__result)).second;
+    });
     return std::make_pair(__last, std::move(__result));
   }
 

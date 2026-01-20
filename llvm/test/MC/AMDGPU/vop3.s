@@ -5,10 +5,10 @@
 // Make sure interp instructions disassemble regardless of lds bank count
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 -show-encoding %s | FileCheck %s --check-prefix=VI
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii %s 2>&1 | FileCheck %s -check-prefix=NOCI --check-prefix=NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 %s 2>&1 | FileCheck -check-prefix=NOVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii %s -filetype=null 2>&1 | FileCheck %s -check-prefix=NOCI --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 %s -filetype=null 2>&1 | FileCheck -check-prefix=NOVI --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // VOPC Instructions

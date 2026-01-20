@@ -199,6 +199,24 @@ std::optional<Object> getBaseObject(const Object &object,
   return std::nullopt;
 }
 
+StylizedInstance makeStylizedInstance(const parser::OmpStylizedInstance &inp,
+                                      semantics::SemanticsContext &semaCtx) {
+  ObjectList variables;
+  llvm::transform(std::get<std::list<parser::OmpStylizedDeclaration>>(inp.t),
+                  std::back_inserter(variables),
+                  [&](const parser::OmpStylizedDeclaration &s) {
+                    return makeObject(s.var, semaCtx);
+                  });
+
+  SomeExpr instance = [&]() {
+    if (auto &&expr = semantics::omp::MakeEvaluateExpr(inp))
+      return std::move(*expr);
+    llvm_unreachable("Expecting expression instance");
+  }();
+
+  return StylizedInstance{{std::move(variables), std::move(instance)}};
+}
+
 // Helper macros
 #define MAKE_EMPTY_CLASS(cls, from_cls)                                        \
   cls make(const parser::OmpClause::from_cls &,                                \
@@ -250,17 +268,25 @@ MAKE_EMPTY_CLASS(Write, Write);
 // Artificial clauses
 MAKE_EMPTY_CLASS(Depobj, Depobj);
 MAKE_EMPTY_CLASS(Flush, Flush);
+MAKE_EMPTY_CLASS(Groupprivate, Groupprivate);
 MAKE_EMPTY_CLASS(MemoryOrder, MemoryOrder);
 MAKE_EMPTY_CLASS(Threadprivate, Threadprivate);
-MAKE_EMPTY_CLASS(Groupprivate, Groupprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
+MAKE_INCOMPLETE_CLASS(Apply, Apply);
 MAKE_INCOMPLETE_CLASS(Collector, Collector);
+MAKE_INCOMPLETE_CLASS(Counts, Counts);
 MAKE_INCOMPLETE_CLASS(GraphId, GraphId);
 MAKE_INCOMPLETE_CLASS(GraphReset, GraphReset);
+MAKE_INCOMPLETE_CLASS(Induction, Induction);
 MAKE_INCOMPLETE_CLASS(Inductor, Inductor);
+MAKE_INCOMPLETE_CLASS(InitComplete, InitComplete);
+MAKE_INCOMPLETE_CLASS(Interop, Interop);
+MAKE_INCOMPLETE_CLASS(Local, Local);
+MAKE_INCOMPLETE_CLASS(Memscope, Memscope);
 MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
+MAKE_INCOMPLETE_CLASS(Safesync, Safesync);
 MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 
 List<IteratorSpecifier>
@@ -561,6 +587,17 @@ Collapse make(const parser::OmpClause::Collapse &inp,
   return Collapse{/*N=*/makeExpr(inp.v, semaCtx)};
 }
 
+Combiner make(const parser::OmpClause::Combiner &inp,
+              semantics::SemanticsContext &semaCtx) {
+  const parser::OmpCombinerExpression &cexpr = inp.v.v;
+  Combiner combiner;
+
+  for (const parser::OmpStylizedInstance &sinst : cexpr.v)
+    combiner.v.push_back(makeStylizedInstance(sinst, semaCtx));
+
+  return combiner;
+}
+
 // Compare: empty
 
 Contains make(const parser::OmpClause::Contains &inp,
@@ -680,37 +717,20 @@ Doacross makeDoacross(const parser::OmpDoacross &doa,
   return common::visit(common::visitors{visitSink, visitSource}, doa.u);
 }
 
-Depend make(const parser::OmpClause::Depend &inp,
-            semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpDependClause
-  using wrapped = parser::OmpDependClause;
-  using Variant = decltype(Depend::u);
+Depend makeDepend(const parser::OmpDependClause::TaskDep &inp,
+                  semantics::SemanticsContext &semaCtx) {
+  auto &mods = semantics::OmpGetModifiers(inp);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
+  auto *m1 =
+      semantics::OmpGetUniqueModifier<parser::OmpTaskDependenceType>(mods);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.t);
+  assert(m1 && "expecting task dependence type");
 
-  auto visitTaskDep = [&](const wrapped::TaskDep &s) -> Variant {
-    auto &mods = semantics::OmpGetModifiers(s);
-    auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
-    auto *m1 =
-        semantics::OmpGetUniqueModifier<parser::OmpTaskDependenceType>(mods);
-    auto &t1 = std::get<parser::OmpObjectList>(s.t);
-    assert(m1 && "expecting task dependence type");
-
-    auto &&maybeIter =
-        m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
-    return Depend::TaskDep{{/*DependenceType=*/makeDepType(*m1),
-                            /*Iterator=*/std::move(maybeIter),
-                            /*LocatorList=*/makeObjects(t1, semaCtx)}};
-  };
-
-  return Depend{common::visit( //
-      common::visitors{
-          // Doacross
-          [&](const parser::OmpDoacross &s) -> Variant {
-            return makeDoacross(s, semaCtx);
-          },
-          // Depend::TaskDep
-          visitTaskDep,
-      },
-      inp.v.u)};
+  auto &&maybeIter =
+      m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
+  return Depend{{/*DependenceType=*/makeDepType(*m1),
+                 /*Iterator=*/std::move(maybeIter),
+                 /*LocatorList=*/makeObjects(t1, semaCtx)}};
 }
 
 // Depobj: empty
@@ -998,24 +1018,8 @@ Initializer make(const parser::OmpClause::Initializer &inp,
   const parser::OmpInitializerExpression &iexpr = inp.v.v;
   Initializer initializer;
 
-  for (const parser::OmpStylizedInstance &sinst : iexpr.v) {
-    ObjectList variables;
-    llvm::transform(
-        std::get<std::list<parser::OmpStylizedDeclaration>>(sinst.t),
-        std::back_inserter(variables),
-        [&](const parser::OmpStylizedDeclaration &s) {
-          return makeObject(s.var, semaCtx);
-        });
-
-    SomeExpr instance = [&]() {
-      if (auto &&expr = semantics::omp::MakeEvaluateExpr(sinst))
-        return std::move(*expr);
-      llvm_unreachable("Expecting expression instance");
-    }();
-
-    initializer.v.push_back(
-        StylizedInstance{{std::move(variables), std::move(instance)}});
-  }
+  for (const parser::OmpStylizedInstance &sinst : iexpr.v)
+    initializer.v.push_back(makeStylizedInstance(sinst, semaCtx));
 
   return initializer;
 }
@@ -1680,12 +1684,28 @@ Clause makeClause(const parser::OmpClause &cls,
       common::visitors{
           [&](const parser::OmpClause::Default &s) {
             using DSA = parser::OmpDefaultClause::DataSharingAttribute;
+            using ODS = common::Indirection<parser::OmpDirectiveSpecification>;
             if (std::holds_alternative<DSA>(s.v.u)) {
               return makeClause(llvm::omp::Clause::OMPC_default,
                                 clause::makeDefault(s, semaCtx), cls.source);
-            } else {
+            } else if (std::holds_alternative<ODS>(s.v.u)) {
               return makeClause(llvm::omp::Clause::OMPC_otherwise,
                                 clause::makeOtherwise(s, semaCtx), cls.source);
+            } else {
+              llvm_unreachable("Unexpected alternative");
+            }
+          },
+          [&](const parser::OmpClause::Depend &s) {
+            using TaskDep = parser::OmpDependClause::TaskDep;
+            if (auto *dep = std::get_if<TaskDep>(&s.v.u)) {
+              return makeClause(llvm::omp::Clause::OMPC_depend,
+                                clause::makeDepend(*dep, semaCtx), cls.source);
+            } else if (auto *doa = std::get_if<parser::OmpDoacross>(&s.v.u)) {
+              return makeClause(llvm::omp::Clause::OMPC_doacross,
+                                clause::makeDoacross(*doa, semaCtx),
+                                cls.source);
+            } else {
+              llvm_unreachable("Unexpected alternative");
             }
           },
           [&](auto &&s) {

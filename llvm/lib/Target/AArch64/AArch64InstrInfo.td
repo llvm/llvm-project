@@ -538,6 +538,7 @@ def SDT_AArch64trivec : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                            SDTCisSameAs<0,3>]>;
 def SDT_AArch64TCRET : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
 def SDT_AArch64PREFETCH : SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisPtrTy<1>]>;
+def SDT_AArch64RANGE_PREFETCH: SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisPtrTy<1>, SDTCisVT<2, i64>]>;
 
 def SDT_AArch64ITOF  : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0,1>]>;
 
@@ -1034,11 +1035,18 @@ def AArch64uqadd:   SDNode<"AArch64ISD::UQADD",   SDTFPBinOp>;
 def AArch64uqrshl:  SDNode<"AArch64ISD::UQRSHL",  SDTFPBinOp>;
 def AArch64uqshl:   SDNode<"AArch64ISD::UQSHL",   SDTFPBinOp>;
 def AArch64uqsub:   SDNode<"AArch64ISD::UQSUB",   SDTFPBinOp>;
-def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL", 
-                           SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>, 
+def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL",
+                           SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>,
                            SDTCisFP<0>, SDTCisFP<1>]>>;
-
-//def Aarch64softf32tobf16v8: SDNode<"AArch64ISD::", SDTFPRoundOp>;
+def AArch64sqshrun: SDNode<"AArch64ISD::SQSHRUN", SDTFPTruncRoundOp>;
+def AArch64sqrshrun: SDNode<"AArch64ISD::SQRSHRUN", SDTFPTruncRoundOp>;
+def AArch64sqshrn: SDNode<"AArch64ISD::SQSHRN", SDTFPTruncRoundOp>;
+def AArch64uqshrn: SDNode<"AArch64ISD::UQSHRN", SDTFPTruncRoundOp>;
+def AArch64sqrshrn: SDNode<"AArch64ISD::SQRSHRN", SDTFPTruncRoundOp>;
+def AArch64uqrshrn: SDNode<"AArch64ISD::UQRSHRN", SDTFPTruncRoundOp>;
+def AArch64sqrdmulh: SDNode<"AArch64ISD::SQRDMULH", SDTFPBinOp>;
+def AArch64sqrdmlah: SDNode<"AArch64ISD::SQRDMLAH", SDTFPTernaryOp>;
+def AArch64sqrdmlsh: SDNode<"AArch64ISD::SQRDMLSH", SDTFPTernaryOp>;
 
 // Vector immediate ops
 def AArch64bici: SDNode<"AArch64ISD::BICi", SDT_AArch64vecimm>;
@@ -1051,6 +1059,10 @@ def AArch64tcret: SDNode<"AArch64ISD::TC_RETURN", SDT_AArch64TCRET,
 // Custom prefetch handling
 def AArch64Prefetch        : SDNode<"AArch64ISD::PREFETCH", SDT_AArch64PREFETCH,
                                [SDNPHasChain, SDNPSideEffect]>;
+
+def AArch64RangePrefetch: SDNode<"AArch64ISD::RANGE_PREFETCH",
+                                 SDT_AArch64RANGE_PREFETCH,
+                                 [SDNPHasChain, SDNPSideEffect]>;
 
 // {s|u}int to FP within a FP register.
 def AArch64sitof: SDNode<"AArch64ISD::SITOF", SDT_AArch64ITOF>;
@@ -1084,7 +1096,8 @@ def AArch64smull    : SDNode<"AArch64ISD::SMULL", SDT_AArch64mull,
                              [SDNPCommutative]>;
 def AArch64umull    : SDNode<"AArch64ISD::UMULL", SDT_AArch64mull,
                              [SDNPCommutative]>;
-def AArch64sqdmulh : SDNode<"AArch64ISD::SQDMULH", SDT_AArch64mull>;
+def AArch64sqdmulh : SDNode<"AArch64ISD::SQDMULH",
+                            SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>]>>;
 
 // Reciprocal estimates and steps.
 def AArch64frecpe   : SDNode<"AArch64ISD::FRECPE", SDTFPUnaryOp>;
@@ -2760,11 +2773,6 @@ def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
 
-let AddedComplexity = 1 in {
-def : Pat<(add copyFromSP:$R2, (add_uxtx GPR64:$R3, arith_extendlsl64:$imm)),
-          (ADDXrx64 GPR64sp:$R2, GPR64:$R3, arith_extendlsl64:$imm)>;
-}
-
 
 def trunc_isWorthFoldingALU : PatFrag<(ops node:$src), (trunc $src)> {
   let PredicateCode = [{ return isWorthFoldingALU(SDValue(N, 0)); }];
@@ -3273,6 +3281,10 @@ def : InstAlias<"tst $src1, $src2$sh",
 
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;
 def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
+def : Pat<(not logical_shifted_reg32:$Rm_and_shift),
+          (ORNWrs WZR, logical_shifted_reg32:$Rm_and_shift)>;
+def : Pat<(not logical_shifted_reg64:$Rm_and_shift),
+          (ORNXrs XZR, logical_shifted_reg64:$Rm_and_shift)>;
 
 // Emit (and 0xFFFFFFFF) as a ORRWrr move which may be eliminated.
 let AddedComplexity = 6 in
@@ -3284,7 +3296,7 @@ def : Pat<(i64 (and GPR64:$Rn, 0xffffffff)),
 // One operand data processing instructions.
 //===----------------------------------------------------------------------===//
 
-defm CLS    : OneOperandData<0b000101, "cls">;
+defm CLS    : OneOperandData<0b000101, "cls", ctls>;
 defm CLZ    : OneOperandData<0b000100, "clz", ctlz>;
 defm RBIT   : OneOperandData<0b000000, "rbit", bitreverse>;
 
@@ -3296,14 +3308,6 @@ def : Pat<(cttz GPR32:$Rn),
           (CLZWr (RBITWr GPR32:$Rn))>;
 def : Pat<(cttz GPR64:$Rn),
           (CLZXr (RBITXr GPR64:$Rn))>;
-def : Pat<(ctlz (or (shl (xor (sra GPR32:$Rn, (i64 31)), GPR32:$Rn), (i64 1)),
-                (i32 1))),
-          (CLSWr GPR32:$Rn)>;
-def : Pat<(ctlz (or (shl (xor (sra GPR64:$Rn, (i64 63)), GPR64:$Rn), (i64 1)),
-                (i64 1))),
-          (CLSXr GPR64:$Rn)>;
-def : Pat<(int_aarch64_cls GPR32:$Rn), (CLSWr GPR32:$Rn)>;
-def : Pat<(int_aarch64_cls64 GPR64:$Rm), (EXTRACT_SUBREG (CLSXr GPR64:$Rm), sub_32)>;
 
 // Unlike the other one operand instructions, the instructions with the "rev"
 // mnemonic do *not* just different in the size bit, but actually use different
@@ -6440,8 +6444,8 @@ defm FMULX    : SIMDFPThreeScalar<0, 0, 0b011, "fmulx", int_aarch64_neon_fmulx, 
 defm FRECPS   : SIMDFPThreeScalar<0, 0, 0b111, "frecps", int_aarch64_neon_frecps, HasNEONandIsStreamingSafe>;
 defm FRSQRTS  : SIMDFPThreeScalar<0, 1, 0b111, "frsqrts", int_aarch64_neon_frsqrts, HasNEONandIsStreamingSafe>;
 defm SQADD    : SIMDThreeScalarBHSD<0, 0b00001, "sqadd", AArch64sqadd, int_aarch64_neon_sqadd, saddsat>;
-defm SQDMULH  : SIMDThreeScalarHS<  0, 0b10110, "sqdmulh", int_aarch64_neon_sqdmulh>;
-defm SQRDMULH : SIMDThreeScalarHS<  1, 0b10110, "sqrdmulh", int_aarch64_neon_sqrdmulh>;
+defm SQDMULH  : SIMDThreeScalarHS<  0, 0b10110, "sqdmulh", AArch64sqdmulh, int_aarch64_neon_sqdmulh>;
+defm SQRDMULH : SIMDThreeScalarHS<  1, 0b10110, "sqrdmulh", AArch64sqrdmulh, int_aarch64_neon_sqrdmulh>;
 defm SQRSHL   : SIMDThreeScalarBHSD<0, 0b01011, "sqrshl", AArch64sqrshl, int_aarch64_neon_sqrshl, int_aarch64_neon_sqrshl>;
 defm SQSHL    : SIMDThreeScalarBHSD<0, 0b01001, "sqshl", AArch64sqshl, int_aarch64_neon_sqshl, int_aarch64_neon_sqshl>;
 defm SQSUB    : SIMDThreeScalarBHSD<0, 0b00101, "sqsub", AArch64sqsub, int_aarch64_neon_sqsub, ssubsat>;
@@ -6455,14 +6459,8 @@ defm UQSUB    : SIMDThreeScalarBHSD<1, 0b00101, "uqsub", AArch64uqsub, int_aarch
 defm URSHL    : SIMDThreeScalarD<   1, 0b01010, "urshl", int_aarch64_neon_urshl>;
 defm USHL     : SIMDThreeScalarD<   1, 0b01000, "ushl", int_aarch64_neon_ushl>;
 let Predicates = [HasRDM] in {
-  defm SQRDMLAH : SIMDThreeScalarHSTied<1, 0, 0b10000, "sqrdmlah">;
-  defm SQRDMLSH : SIMDThreeScalarHSTied<1, 0, 0b10001, "sqrdmlsh">;
-  def : Pat<(i32 (int_aarch64_neon_sqrdmlah (i32 FPR32:$Rd), (i32 FPR32:$Rn),
-                                            (i32 FPR32:$Rm))),
-            (SQRDMLAHv1i32 FPR32:$Rd, FPR32:$Rn, FPR32:$Rm)>;
-  def : Pat<(i32 (int_aarch64_neon_sqrdmlsh (i32 FPR32:$Rd), (i32 FPR32:$Rn),
-                                            (i32 FPR32:$Rm))),
-            (SQRDMLSHv1i32 FPR32:$Rd, FPR32:$Rn, FPR32:$Rm)>;
+  defm SQRDMLAH : SIMDThreeScalarHSTied<1, 0, 0b10000, "sqrdmlah", AArch64sqrdmlah, int_aarch64_neon_sqrdmlah>;
+  defm SQRDMLSH : SIMDThreeScalarHSTied<1, 0, 0b10001, "sqrdmlsh", AArch64sqrdmlsh, int_aarch64_neon_sqrdmlsh>;
 }
 
 defm : FMULScalarFromIndexedLane0Patterns<"FMULX", "16", "32", "64",
@@ -6556,6 +6554,26 @@ defm UCVTF  : SIMDFPTwoScalarCVT<   1, 0, 0b11101, "ucvtf", AArch64uitof>;
 defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar_uqxtn>;
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd",
                                     int_aarch64_neon_usqadd>;
+
+// Floating-point conversion patterns.
+multiclass IntegerToFPSIMDScalarPatterns<SDPatternOperator OpN, string INST> {
+  let Predicates = [HasFPRCVT] in {
+  def : Pat<(f64 (OpN (i32 (bitconvert (f32 FPR32:$Rn))))),
+            (!cast<Instruction>(INST # DSr) FPR32:$Rn)>;
+  def : Pat<(f16 (OpN (i32 (bitconvert (f32 FPR32:$Rn))))),
+            (!cast<Instruction>(INST # HSr) FPR32:$Rn)>;
+  def : Pat<(f16 (OpN (i64 (bitconvert (f64 FPR64:$Rn))))),
+            (!cast<Instruction>(INST # HDr) FPR64:$Rn)>;
+  def : Pat<(f32 (OpN (i64 (bitconvert (f64 FPR64:$Rn))))),
+            (!cast<Instruction>(INST # SDr) FPR64:$Rn)>;
+  }
+  def : Pat<(f32 (OpN (i32 (bitconvert (f32 FPR32:$Rn))))),
+            (!cast<Instruction>(INST # v1i32) FPR32:$Rn)>;
+  def : Pat<(f64 (OpN (i64 (bitconvert (f64 FPR64:$Rn))))),
+            (!cast<Instruction>(INST # v1i64) FPR64:$Rn)>;
+}
+defm : IntegerToFPSIMDScalarPatterns<any_sint_to_fp, "SCVTF">;
+defm : IntegerToFPSIMDScalarPatterns<any_uint_to_fp, "UCVTF">;
 
 // Floating-point conversion patterns.
 multiclass FPToIntegerSIMDScalarPatterns<SDPatternOperator OpN, string INST> {
@@ -7788,6 +7806,12 @@ def : Pat<(v8i8 (vec_ins_or_scal_vec GPR32:$Rn)),
 def : Pat<(v8i8 (bitconvert (i64 (zext GPR32:$Rn)))),
           (SUBREG_TO_REG (i32 0), (f32 (FMOVWSr GPR32:$Rn)), ssub)>;
 
+def: Pat<(f64 (bitconvert (i64 (zext (i32 (bitconvert (f32 FPR32:$Rn))))))),
+         (SUBREG_TO_REG (i32 0), (f32 (FMOVSr FPR32:$Rn)), ssub)>;
+
+def: Pat<(f32 (bitconvert (i32 (trunc (i64 (bitconvert (f64 FPR64:$Rn))))))),
+         (f32 (EXTRACT_SUBREG FPR64:$Rn, ssub))>;
+
 def : Pat<(v8i16 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),
                          (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
@@ -8809,8 +8833,8 @@ def : Pat<(v2f64 (any_fmul V128:$Rn, (AArch64dup (f64 FPR64:$Rm)))),
             (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), FPR64:$Rm, dsub),
             (i64 0))>;
 
-defm SQDMULH : SIMDIndexedHS<0, 0b1100, "sqdmulh", int_aarch64_neon_sqdmulh>;
-defm SQRDMULH : SIMDIndexedHS<0, 0b1101, "sqrdmulh", int_aarch64_neon_sqrdmulh>;
+defm SQDMULH : SIMDIndexedHS<0, 0b1100, "sqdmulh", AArch64sqdmulh, int_aarch64_neon_sqdmulh>;
+defm SQRDMULH : SIMDIndexedHS<0, 0b1101, "sqrdmulh", AArch64sqrdmulh, int_aarch64_neon_sqrdmulh>;
 
 defm SQDMULH : SIMDIndexedHSPatterns<int_aarch64_neon_sqdmulh_lane,
                                      int_aarch64_neon_sqdmulh_laneq>;
@@ -8832,9 +8856,9 @@ defm SQDMLAL : SIMDIndexedLongSQDMLXSDTied<0, 0b0011, "sqdmlal", saddsat,
 defm SQDMLSL : SIMDIndexedLongSQDMLXSDTied<0, 0b0111, "sqdmlsl", ssubsat,
                                            AArch64sqsub, int_aarch64_neon_sqsub>;
 defm SQRDMLAH : SIMDIndexedSQRDMLxHSDTied<1, 0b1101, "sqrdmlah",
-                                          int_aarch64_neon_sqrdmlah>;
+                                          AArch64sqrdmlah, int_aarch64_neon_sqrdmlah>;
 defm SQRDMLSH : SIMDIndexedSQRDMLxHSDTied<1, 0b1111, "sqrdmlsh",
-                                          int_aarch64_neon_sqrdmlsh>;
+                                          AArch64sqrdmlsh, int_aarch64_neon_sqrdmlsh>;
 defm SQDMULL : SIMDIndexedLongSD<0, 0b1011, "sqdmull", int_aarch64_neon_sqdmull>;
 defm UMLAL   : SIMDVectorIndexedLongSDTied<1, 0b0010, "umlal",
     TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
@@ -8938,15 +8962,15 @@ def : Pat<(i32 (int_aarch64_neon_facgt (f16 FPR16:$Rn), (f16 FPR16:$Rm))),
 defm SHL      : SIMDScalarLShiftD<   0, 0b01010, "shl", AArch64vshl>;
 defm SLI      : SIMDScalarLShiftDTied<1, 0b01010, "sli", AArch64vsli>;
 defm SQRSHRN  : SIMDScalarRShiftBHS< 0, 0b10011, "sqrshrn",
-                                     int_aarch64_neon_sqrshrn>;
+                                     AArch64sqrshrn, int_aarch64_neon_sqrshrn>;
 defm SQRSHRUN : SIMDScalarRShiftBHS< 1, 0b10001, "sqrshrun",
-                                     int_aarch64_neon_sqrshrun>;
+                                     AArch64sqrshrun, int_aarch64_neon_sqrshrun>;
 defm SQSHLU   : SIMDScalarLShiftBHSD<1, 0b01100, "sqshlu", AArch64sqshlui>;
 defm SQSHL    : SIMDScalarLShiftBHSD<0, 0b01110, "sqshl", AArch64sqshli>;
 defm SQSHRN   : SIMDScalarRShiftBHS< 0, 0b10010, "sqshrn",
-                                     int_aarch64_neon_sqshrn>;
+                                     AArch64sqshrn, int_aarch64_neon_sqshrn>;
 defm SQSHRUN  : SIMDScalarRShiftBHS< 1, 0b10000, "sqshrun",
-                                     int_aarch64_neon_sqshrun>;
+                                     AArch64sqshrun, int_aarch64_neon_sqshrun>;
 defm SRI      : SIMDScalarRShiftDTied<   1, 0b01000, "sri", AArch64vsri>;
 defm SRSHR    : SIMDScalarRShiftD<   0, 0b00100, "srshr", AArch64srshri>;
 defm SRSRA    : SIMDScalarRShiftDTied<   0, 0b00110, "srsra",
@@ -8957,10 +8981,10 @@ defm SSRA     : SIMDScalarRShiftDTied<   0, 0b00010, "ssra",
     TriOpFrag<(add_and_or_is_add node:$LHS,
                    (AArch64vashr node:$MHS, node:$RHS))>>;
 defm UQRSHRN  : SIMDScalarRShiftBHS< 1, 0b10011, "uqrshrn",
-                                     int_aarch64_neon_uqrshrn>;
+                                     AArch64uqrshrn, int_aarch64_neon_uqrshrn>;
 defm UQSHL    : SIMDScalarLShiftBHSD<1, 0b01110, "uqshl", AArch64uqshli>;
 defm UQSHRN   : SIMDScalarRShiftBHS< 1, 0b10010, "uqshrn",
-                                     int_aarch64_neon_uqshrn>;
+                                     AArch64uqshrn, int_aarch64_neon_uqshrn>;
 defm URSHR    : SIMDScalarRShiftD<   1, 0b00100, "urshr", AArch64urshri>;
 defm URSRA    : SIMDScalarRShiftDTied<   1, 0b00110, "ursra",
     TriOpFrag<(add node:$LHS,
@@ -11073,6 +11097,9 @@ def RPRFM:
   // the decoder namespace to "Fallback".
   let DecoderNamespace = "Fallback";
 }
+
+def : Pat<(AArch64RangePrefetch rprfop:$Rt, GPR64sp:$Rn, GPR64:$Rm),
+          (RPRFM rprfop:$Rt, GPR64:$Rm, GPR64sp:$Rn)>;
 
 //===----------------------------------------------------------------------===//
 // 128-bit Atomics (FEAT_LSE128)

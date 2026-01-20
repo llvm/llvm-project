@@ -333,8 +333,10 @@ Frontend (test.cc)
 | | InstantiateFunction (fooA<int>, a.h:7)
 | | | InstantiateFunction (fooB<int>, b.h:8)
 | | | | DeferInstantiation (fooC<int>)
+| | | | BuildCFG
 | | | DeferInstantiation (fooMTA<int>)
 | | | InstantiateFunction (fooC<int>, b.h:3)
+| | | | BuildCFG
 | | | InstantiateFunction (fooMTA<int>, a.h:4)
 )",
             buildTraceGraph(Json));

@@ -14,7 +14,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
+#if _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 15
 
 namespace __itoa {
 
@@ -27,7 +27,7 @@ _LIBCPP_DIAGNOSTIC_POP
 
 } // namespace __itoa
 
-#endif // _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
+#endif // _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 15
 
 // The original version of floating-point to_chars was written by Microsoft and
 // contributed with the following license.

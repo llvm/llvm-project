@@ -57,7 +57,7 @@ struct AllocActionFunction {
       return WrapperFunctionBuffer::createOutOfBandError(
           "Could not deserialize allocation action argument buffer");
 
-    return std::apply(std::forward<Handler>(H), std::move(Args)).release();
+    return std::apply(std::forward<Handler>(H), std::move(Args));
   }
 };
 
@@ -69,7 +69,7 @@ struct AllocAction {
 
   [[nodiscard]] WrapperFunctionBuffer operator()() {
     assert(Fn && "Attempt to call null action");
-    return Fn(ArgData.data(), ArgData.size());
+    return WrapperFunctionBuffer(Fn(ArgData.data(), ArgData.size()));
   }
 
   explicit operator bool() const noexcept { return !!Fn; }

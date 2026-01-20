@@ -1,6 +1,8 @@
 ## Check that llvm-bolt successfully relaxes branches for compact (<128MB) code
 ## model.
 
+# REQUIRES: system-linux
+
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o

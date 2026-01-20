@@ -310,7 +310,7 @@ bool llvm::hasExplicitlyUnknownBranchWeights(const Instruction &I) {
 void llvm::setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
                             bool IsExpected, bool ElideAllZero) {
   if ((ElideAllZeroBranchWeights && ElideAllZero) &&
-      llvm::all_of(Weights, [](uint32_t V) { return V == 0; })) {
+      llvm::all_of(Weights, equal_to(0))) {
     I.setMetadata(LLVMContext::MD_prof, nullptr);
     return;
   }

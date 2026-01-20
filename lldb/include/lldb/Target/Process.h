@@ -1680,6 +1680,9 @@ public:
   size_t ReadCStringFromMemory(lldb::addr_t vm_addr, std::string &out_str,
                                Status &error);
 
+  llvm::SmallVector<std::optional<std::string>>
+  ReadCStringsFromMemory(llvm::ArrayRef<lldb::addr_t> addresses);
+
   /// Reads an unsigned integer of the specified byte size from process
   /// memory.
   ///
@@ -2533,6 +2536,30 @@ void PruneThreadPlans();
   }
 
   void CalculateExecutionContext(ExecutionContext &exe_ctx) override;
+
+#ifdef _WIN32
+  /// Associates a ConPTY read and write HANDLEs with the process' STDIO
+  /// handling and configures an asynchronous reading of that ConPTY's stdout
+  /// HANDLE.
+  ///
+  /// This method installs a ConnectionGenericFile for the passed ConPTY and
+  /// starts a dedicated read thread. If the read thread starts successfully,
+  /// the method also ensures that an IOHandlerProcessSTDIOWindows is created to
+  /// manage user input to the process.
+  ///
+  /// When data is successfully read from the ConPTY, it is stored in
+  /// m_stdout_data. There is no differentiation between stdout and stderr.
+  ///
+  /// \param[in] pty
+  ///     The ConPTY to use for process STDIO communication. It's
+  ///     assumed to be valid.
+  ///
+  /// \see lldb_private::Process::STDIOReadThreadBytesReceived()
+  /// \see lldb_private::IOHandlerProcessSTDIOWindows
+  /// \see lldb_private::PseudoConsole
+  virtual void
+  SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) {};
+#endif
 
   /// Associates a file descriptor with the process' STDIO handling
   /// and configures an asynchronous reading of that descriptor.

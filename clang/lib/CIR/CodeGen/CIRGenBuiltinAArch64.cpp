@@ -13,6 +13,7 @@
 
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/MissingFeatures.h"
 
 // TODO(cir): once all builtins are covered, decide whether we still
@@ -25,7 +26,6 @@
 #include "mlir/IR/Value.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/TargetBuiltins.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -52,6 +52,80 @@ static mlir::Value genVscaleTimesFactor(mlir::Location loc,
                                builder.getUInt64(scalingFactor, loc));
 }
 
+static bool aarch64SVEIntrinsicsProvenSorted = false;
+
+namespace {
+struct AArch64BuiltinInfo {
+  unsigned builtinID;
+  unsigned llvmIntrinsic;
+  uint64_t typeModifier;
+
+  bool operator<(unsigned rhsBuiltinID) const {
+    return builtinID < rhsBuiltinID;
+  }
+  bool operator<(const AArch64BuiltinInfo &te) const {
+    return builtinID < te.builtinID;
+  }
+};
+} // end anonymous namespace
+
+#define SVEMAP1(NameBase, llvmIntrinsic, TypeModifier)                         \
+  {SVE::BI__builtin_sve_##NameBase, Intrinsic::llvmIntrinsic, TypeModifier}
+
+#define SVEMAP2(NameBase, TypeModifier)                                        \
+  {SVE::BI__builtin_sve_##NameBase, 0, TypeModifier}
+static const AArch64BuiltinInfo aarch64SVEIntrinsicMap[] = {
+#define GET_SVE_LLVM_INTRINSIC_MAP
+#include "clang/Basic/arm_sve_builtin_cg.inc"
+#undef GET_SVE_LLVM_INTRINSIC_MAP
+};
+
+static const AArch64BuiltinInfo *
+findARMVectorIntrinsicInMap(ArrayRef<AArch64BuiltinInfo> intrinsicMap,
+                            unsigned builtinID, bool &mapProvenSorted) {
+
+#ifndef NDEBUG
+  if (!mapProvenSorted) {
+    assert(llvm::is_sorted(intrinsicMap));
+    mapProvenSorted = true;
+  }
+#endif
+
+  const AArch64BuiltinInfo *info = llvm::lower_bound(intrinsicMap, builtinID);
+
+  if (info != intrinsicMap.end() && info->builtinID == builtinID)
+    return info;
+
+  return nullptr;
+}
+
+bool CIRGenFunction::getAArch64SVEProcessedOperands(
+    unsigned builtinID, const CallExpr *expr, SmallVectorImpl<mlir::Value> &ops,
+    SVETypeFlags typeFlags) {
+  // Find out if any arguments are required to be integer constant expressions.
+  unsigned iceArguments = 0;
+  ASTContext::GetBuiltinTypeError error;
+  getContext().GetBuiltinType(builtinID, error, &iceArguments);
+  assert(error == ASTContext::GE_None && "Should not codegen an error");
+
+  for (unsigned i = 0, e = expr->getNumArgs(); i != e; i++) {
+    bool isIce = iceArguments & (1 << i);
+    mlir::Value arg = emitScalarExpr(expr->getArg(i));
+
+    if (isIce) {
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    }
+
+    // FIXME: Handle types like svint16x2_t, which are currently incorrectly
+    // converted to i32. These should be treated as structs and unpacked.
+
+    ops.push_back(arg);
+  }
+  return true;
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                                           const CallExpr *expr) {
@@ -65,8 +139,125 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
 
   assert(!cir::MissingFeatures::aarch64SVEIntrinsics());
 
+  auto *builtinIntrInfo = findARMVectorIntrinsicInMap(
+      aarch64SVEIntrinsicMap, builtinID, aarch64SVEIntrinsicsProvenSorted);
+
+  // The operands of the builtin call
+  llvm::SmallVector<mlir::Value> ops;
+
+  SVETypeFlags typeFlags(builtinIntrInfo->typeModifier);
+  if (!CIRGenFunction::getAArch64SVEProcessedOperands(builtinID, expr, ops,
+                                                      typeFlags))
+    return mlir::Value{};
+
+  if (typeFlags.isLoad() || typeFlags.isStore() || typeFlags.isGatherLoad() ||
+      typeFlags.isScatterStore() || typeFlags.isPrefetch() ||
+      typeFlags.isGatherPrefetch() || typeFlags.isStructLoad() ||
+      typeFlags.isStructStore() || typeFlags.isTupleSet() ||
+      typeFlags.isTupleGet() || typeFlags.isTupleCreate() ||
+      typeFlags.isUndef())
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+
   mlir::Location loc = getLoc(expr->getExprLoc());
 
+  // Handle built-ins for which there is a corresponding LLVM Intrinsic.
+  // -------------------------------------------------------------------
+  if (builtinIntrInfo->llvmIntrinsic != 0) {
+    // Emit set FPMR for intrinsics that require it.
+    if (typeFlags.setsFPMR())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+
+    if (typeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+
+    if (typeFlags.getMergeType() == SVETypeFlags::MergeAnyExp)
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+
+    // Some ACLE builtins leave out the argument to specify the predicate
+    // pattern, which is expected to be expanded to an SV_ALL pattern.
+    if (typeFlags.isAppendSVALL())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    if (typeFlags.isInsertOp1SVALL())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+
+    // Predicates must match the main datatype.
+    for (mlir::Value &op : ops)
+      if (auto predTy = dyn_cast<mlir::VectorType>(op.getType()))
+        if (predTy.getElementType().isInteger(1))
+          cgm.errorNYI(expr->getSourceRange(),
+                       std::string("unimplemented AArch64 builtin call: ") +
+                           getContext().BuiltinInfo.getName(builtinID));
+
+    // Splat scalar operand to vector (intrinsics with _n infix)
+    if (typeFlags.hasSplatOperand()) {
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    }
+
+    if (typeFlags.isReverseCompare())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    if (typeFlags.isReverseUSDOT())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    if (typeFlags.isReverseMergeAnyBinOp() &&
+        typeFlags.getMergeType() == SVETypeFlags::MergeAny)
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    if (typeFlags.isReverseMergeAnyAccOp() &&
+        typeFlags.getMergeType() == SVETypeFlags::MergeAny)
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+
+    // Predicated intrinsics with _z suffix.
+    if (typeFlags.getMergeType() == SVETypeFlags::MergeZero) {
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    }
+
+    std::string llvmIntrName(Intrinsic::getBaseName(
+        (llvm::Intrinsic::ID)builtinIntrInfo->llvmIntrinsic));
+
+    llvmIntrName.erase(0, /*std::strlen(".llvm")=*/5);
+
+    auto retTy = convertType(expr->getType());
+
+    auto call = emitIntrinsicCallOp(builder, loc, llvmIntrName, retTy,
+                                    mlir::ValueRange{ops});
+    if (call.getType() == retTy)
+      return call;
+
+    // Predicate results must be converted to svbool_t.
+    if (isa<mlir::VectorType>(retTy) &&
+        cast<mlir::VectorType>(retTy).isScalable())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    // TODO Handle struct types, e.g. svint8x2_t (update the converter first).
+
+    llvm_unreachable("unsupported element count!");
+  }
+
+  // Handle the remaining built-ins.
+  // -------------------------------
   switch (builtinID) {
   default:
     return std::nullopt;
@@ -103,10 +294,12 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
   case SVE::BI__builtin_sve_svpmullb_u64:
   case SVE::BI__builtin_sve_svpmullb_n_u16:
   case SVE::BI__builtin_sve_svpmullb_n_u64:
+
   case SVE::BI__builtin_sve_svdup_n_b8:
   case SVE::BI__builtin_sve_svdup_n_b16:
   case SVE::BI__builtin_sve_svdup_n_b32:
   case SVE::BI__builtin_sve_svdup_n_b64:
+
   case SVE::BI__builtin_sve_svdupq_n_b8:
   case SVE::BI__builtin_sve_svdupq_n_b16:
   case SVE::BI__builtin_sve_svdupq_n_b32:
@@ -129,22 +322,27 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+
   case SVE::BI__builtin_sve_svlen_u8:
   case SVE::BI__builtin_sve_svlen_s8:
     return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 16);
+
   case SVE::BI__builtin_sve_svlen_u16:
   case SVE::BI__builtin_sve_svlen_s16:
   case SVE::BI__builtin_sve_svlen_f16:
   case SVE::BI__builtin_sve_svlen_bf16:
     return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 8);
+
   case SVE::BI__builtin_sve_svlen_u32:
   case SVE::BI__builtin_sve_svlen_s32:
   case SVE::BI__builtin_sve_svlen_f32:
     return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 4);
+
   case SVE::BI__builtin_sve_svlen_u64:
   case SVE::BI__builtin_sve_svlen_s64:
   case SVE::BI__builtin_sve_svlen_f64:
     return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 2);
+
   case SVE::BI__builtin_sve_svtbl2_u8:
   case SVE::BI__builtin_sve_svtbl2_s8:
   case SVE::BI__builtin_sve_svtbl2_u16:

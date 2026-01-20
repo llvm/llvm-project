@@ -139,6 +139,10 @@ class TreeTransform {
     ~ForgetPartiallySubstitutedPackRAII() {
       Self.RememberPartiallySubstitutedPack(Old);
     }
+    ForgetPartiallySubstitutedPackRAII(
+        const ForgetPartiallySubstitutedPackRAII &) = delete;
+    ForgetPartiallySubstitutedPackRAII &
+    operator=(const ForgetPartiallySubstitutedPackRAII &) = delete;
   };
 
 protected:
@@ -233,6 +237,8 @@ public:
     ~TemporaryBase() {
       Self.getDerived().setBase(OldLocation, OldEntity);
     }
+    TemporaryBase(const TemporaryBase &) = delete;
+    TemporaryBase &operator=(const TemporaryBase &) = delete;
   };
 
   /// Determine whether the given type \p T has already been
@@ -1845,6 +1851,13 @@ public:
     return getSema().OpenMP().ActOnOpenMPProcBindClause(
         Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
   }
+  OMPClause *RebuildOMPTransparentClause(Expr *ImpexTypeArg,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPTransparentClause(
+        ImpexTypeArg, StartLoc, LParenLoc, EndLoc);
+  }
 
   /// Build a new OpenMP 'schedule' clause.
   ///
@@ -2252,9 +2265,12 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
-                                          const OMPVarListLocTy &Locs) {
-    return getSema().OpenMP().ActOnOpenMPUseDevicePtrClause(VarList, Locs);
+  OMPClause *RebuildOMPUseDevicePtrClause(
+      ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
+      OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+      SourceLocation FallbackModifierLoc) {
+    return getSema().OpenMP().ActOnOpenMPUseDevicePtrClause(
+        VarList, Locs, FallbackModifier, FallbackModifierLoc);
   }
 
   /// Build a new OpenMP 'use_device_addr' clause.
@@ -4316,6 +4332,14 @@ public:
         AssociatedDecl, NTTP, Loc, Arg, PackIndex, Final);
   }
 
+  OMPClause *RebuildOpenMPTransparentClause(Expr *ImpexType,
+                                            SourceLocation StartLoc,
+                                            SourceLocation LParenLoc,
+                                            SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPTransparentClause(ImpexType, StartLoc,
+                                                           LParenLoc, EndLoc);
+  }
+
 private:
   QualType TransformTypeInObjectScope(TypeLocBuilder &TLB, TypeLoc TL,
                                       QualType ObjectType,
@@ -5359,7 +5383,7 @@ bool TreeTransform<Derived>::PreparePackForExpansion(TemplateArgumentLoc In,
   //   };
   //   TupleWithInt<int>::type y;
   // At this point we will see the `__builtin_dedup_pack<int, int>` with a known
-  // lenght and run `ComputeInfo()` to provide the necessary information to our
+  // length and run `ComputeInfo()` to provide the necessary information to our
   // caller.
   //
   // Note that we may still have situations where builtin is not going to be
@@ -10668,6 +10692,20 @@ TreeTransform<Derived>::TransformOMPThreadsetClause(OMPThreadsetClause *C) {
 
 template <typename Derived>
 OMPClause *
+TreeTransform<Derived>::TransformOMPTransparentClause(OMPTransparentClause *C) {
+  Expr *Impex = C->getImpexType();
+  ExprResult TransformedImpex = getDerived().TransformExpr(Impex);
+
+  if (TransformedImpex.isInvalid())
+    return nullptr;
+
+  return getDerived().RebuildOMPTransparentClause(
+      TransformedImpex.get(), C->getBeginLoc(), C->getLParenLoc(),
+      C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
 TreeTransform<Derived>::TransformOMPProcBindClause(OMPProcBindClause *C) {
   return getDerived().RebuildOMPProcBindClause(
       C->getProcBindKind(), C->getProcBindKindKwLoc(), C->getBeginLoc(),
@@ -11618,7 +11656,8 @@ OMPClause *TreeTransform<Derived>::TransformOMPUseDevicePtrClause(
     Vars.push_back(EVar.get());
   }
   OMPVarListLocTy Locs(C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
-  return getDerived().RebuildOMPUseDevicePtrClause(Vars, Locs);
+  return getDerived().RebuildOMPUseDevicePtrClause(
+      Vars, Locs, C->getFallbackModifier(), C->getFallbackModifierLoc());
 }
 
 template <typename Derived>

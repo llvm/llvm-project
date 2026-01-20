@@ -1018,7 +1018,7 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
                                             : TypeRange()));
 
     // Copy over all attributes other than the function name and type.
-    for (const auto &namedAttr : funcOp->getAttrs()) {
+    for (NamedAttribute namedAttr : funcOp->getAttrs()) {
       if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
           namedAttr.getName() != SymbolTable::getSymbolAttrName())
         newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
