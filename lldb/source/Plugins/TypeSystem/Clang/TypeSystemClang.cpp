@@ -2660,8 +2660,7 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::Type *GetCompleteRecordType(clang::ASTContext *ast,
-                                                clang::QualType qual_type,
-                                                bool allow_completion) {
+                                                clang::QualType qual_type) {
   assert(qual_type->isRecordType());
 
   const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
@@ -2680,9 +2679,6 @@ static const clang::Type *GetCompleteRecordType(clang::ASTContext *ast,
   // Already completed this type, nothing to be done.
   if (is_complete && fields_loaded)
     return tag_type;
-
-  if (!allow_completion)
-    return nullptr;
 
   // Call the field_begin() accessor to for it to use the external source
   // to load the fields...
@@ -2706,8 +2702,7 @@ static const clang::Type *GetCompleteRecordType(clang::ASTContext *ast,
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::Type *GetCompleteEnumType(clang::ASTContext *ast,
-                                              clang::QualType qual_type,
-                                              bool allow_completion) {
+                                              clang::QualType qual_type) {
   assert(qual_type->isEnumeralType());
   assert(ast);
 
@@ -2720,9 +2715,6 @@ static const clang::Type *GetCompleteEnumType(clang::ASTContext *ast,
   // Already completed, nothing to be done.
   if (tag_decl->getDefinition())
     return enum_type;
-
-  if (!allow_completion)
-    return nullptr;
 
   // No definition but can't complete it, error out.
   if (!tag_decl->hasExternalLexicalStorage())
@@ -2742,8 +2734,7 @@ static const clang::Type *GetCompleteEnumType(clang::ASTContext *ast,
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::Type *
-GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type,
-                          bool allow_completion) {
+GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
   assert(qual_type->isObjCObjectType());
   assert(ast);
 
@@ -2760,9 +2751,6 @@ GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type,
   if (auto *def = class_interface_decl->getDefinition())
     return objc_class_type;
 
-  if (!allow_completion)
-    return nullptr;
-
   // No definition but can't complete it, error out.
   if (!class_interface_decl->hasExternalLexicalStorage())
     return nullptr;
@@ -2777,8 +2765,7 @@ GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type,
 }
 
 static bool GetCompleteQualType(clang::ASTContext *ast,
-                                clang::QualType qual_type,
-                                bool allow_completion = true) {
+                                clang::QualType qual_type) {
   qual_type = RemoveWrappingTypes(qual_type);
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
   switch (type_class) {
@@ -2789,27 +2776,24 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
         llvm::dyn_cast<clang::ArrayType>(qual_type.getTypePtr());
 
     if (array_type)
-      return GetCompleteQualType(ast, array_type->getElementType(),
-                                 allow_completion);
+      return GetCompleteQualType(ast, array_type->getElementType());
   } break;
   case clang::Type::Record: {
-    if (const auto *RT =
-            GetCompleteRecordType(ast, qual_type, allow_completion))
+    if (const auto *RT = GetCompleteRecordType(ast, qual_type))
       return !RT->isIncompleteType();
 
     return false;
   } break;
 
   case clang::Type::Enum: {
-    if (const auto *ET = GetCompleteEnumType(ast, qual_type, allow_completion))
+    if (const auto *ET = GetCompleteEnumType(ast, qual_type))
       return !ET->isIncompleteType();
 
     return false;
   } break;
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface: {
-    if (const auto *OT =
-            GetCompleteObjCObjectType(ast, qual_type, allow_completion))
+    if (const auto *OT = GetCompleteObjCObjectType(ast, qual_type))
       return !OT->isIncompleteType();
 
     return false;
@@ -2817,8 +2801,7 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
 
   case clang::Type::Attributed:
     return GetCompleteQualType(
-        ast, llvm::cast<clang::AttributedType>(qual_type)->getModifiedType(),
-        allow_completion);
+        ast, llvm::cast<clang::AttributedType>(qual_type)->getModifiedType());
 
   case clang::Type::MemberPointer:
     // MS C++ ABI requires type of the class to be complete of which the pointee
@@ -2826,8 +2809,7 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
     if (ast->getTargetInfo().getCXXABI().isMicrosoft()) {
       auto *MPT = qual_type.getTypePtr()->castAs<clang::MemberPointerType>();
       if (auto *RD = MPT->getMostRecentCXXRecordDecl())
-        GetCompleteRecordType(ast, ast->getCanonicalTagType(RD),
-                              allow_completion);
+        GetCompleteRecordType(ast, ast->getCanonicalTagType(RD));
 
       return !qual_type.getTypePtr()->isIncompleteType();
     }
@@ -3043,9 +3025,7 @@ bool TypeSystemClang::IsCompleteType(lldb::opaque_compiler_type_t type) {
   // definition. Without completing the type now we would just tell the user
   // the current (internal) completeness state of the type and most users don't
   // care (or even know) about this behavior.
-  const bool allow_completion = true;
-  return GetCompleteQualType(&getASTContext(), GetQualType(type),
-                             allow_completion);
+  return GetCompleteQualType(&getASTContext(), GetQualType(type));
 }
 
 bool TypeSystemClang::IsConst(lldb::opaque_compiler_type_t type) {
@@ -3855,9 +3835,7 @@ bool TypeSystemClang::IsObjCObjectPointerType(const CompilerType &type,
 bool TypeSystemClang::GetCompleteType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return false;
-  const bool allow_completion = true;
-  return GetCompleteQualType(&getASTContext(), GetQualType(type),
-                             allow_completion);
+  return GetCompleteQualType(&getASTContext(), GetQualType(type));
 }
 
 ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type,
