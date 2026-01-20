@@ -311,13 +311,13 @@ getSymbolFromAccObject(const Fortran::parser::AccObject &accObject) {
             Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
                 *designator)) {
       const Fortran::parser::Name &name =
-          Fortran::parser::GetLastName(arrayElement->base);
+          Fortran::parser::GetLastName(arrayElement->Base());
       return *name.symbol;
     }
     if (const auto *component =
             Fortran::parser::Unwrap<Fortran::parser::StructureComponent>(
                 *designator)) {
-      return *component->component.symbol;
+      return *component->Component().symbol;
     }
   } else if (const auto *name =
                  std::get_if<Fortran::parser::Name>(&accObject.u)) {
@@ -1996,18 +1996,18 @@ static void processDoLoopBounds(
             mlir::Location loc) {
           locs.push_back(loc);
           lowerbounds.push_back(fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(bounds.lower), stmtCtx)));
+              *Fortran::semantics::GetExpr(bounds.Lower()), stmtCtx)));
           upperbounds.push_back(fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(bounds.upper), stmtCtx)));
-          if (bounds.step)
+              *Fortran::semantics::GetExpr(bounds.Upper()), stmtCtx)));
+          if (auto &step = bounds.Step())
             steps.push_back(fir::getBase(converter.genExprValue(
-                *Fortran::semantics::GetExpr(bounds.step), stmtCtx)));
+                *Fortran::semantics::GetExpr(step), stmtCtx)));
           else // If `step` is not present, assume it is `1`.
             steps.push_back(builder.createIntegerConstant(
                 currentLocation, upperbounds[upperbounds.size() - 1].getType(),
                 1));
           Fortran::semantics::Symbol &ivSym =
-              bounds.name.thing.symbol->GetUltimate();
+              bounds.Name().thing.symbol->GetUltimate();
           privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                       privateOperands, ivPrivate);
 
@@ -2178,7 +2178,7 @@ static void privatizeInductionVariables(
                        mlir::Location loc) {
                      locs.push_back(loc);
                      Fortran::semantics::Symbol &ivSym =
-                         bounds.name.thing.symbol->GetUltimate();
+                         bounds.Name().thing.symbol->GetUltimate();
                      privatizeIv(converter, ivSym, currentLocation, ivTypes,
                                  ivLocs, privateOperands, ivPrivate);
                    });

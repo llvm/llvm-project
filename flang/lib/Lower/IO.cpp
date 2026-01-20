@@ -951,7 +951,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   const auto &itemList = std::get<0>(ioImpliedDo.t);
   const auto &control = std::get<1>(ioImpliedDo.t);
   const auto &loopSym =
-      *Fortran::parser::UnwrapRef<Fortran::parser::Name>(control.name).symbol;
+      *Fortran::parser::UnwrapRef<Fortran::parser::Name>(control.Name()).symbol;
   mlir::Value loopVar = fir::getBase(converter.genExprAddr(
       Fortran::evaluate::AsGenericExpr(loopSym).value(), stmtCtx));
   auto genControlValue = [&](const Fortran::parser::ScalarIntExpr &expr) {
@@ -959,11 +959,11 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
         converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
     return builder.createConvert(loc, builder.getIndexType(), v);
   };
-  mlir::Value lowerValue = genControlValue(control.lower);
-  mlir::Value upperValue = genControlValue(control.upper);
+  mlir::Value lowerValue = genControlValue(control.Lower());
+  mlir::Value upperValue = genControlValue(control.Upper());
   mlir::Value stepValue =
-      control.step.has_value()
-          ? genControlValue(*control.step)
+      control.Step().has_value()
+          ? genControlValue(*control.Step())
           : mlir::arith::ConstantIndexOp::create(builder, loc, 1);
   auto genItemList = [&](const D &ioImpliedDo) {
     if constexpr (std::is_same_v<D, Fortran::parser::InputImpliedDo>)

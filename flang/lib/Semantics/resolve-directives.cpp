@@ -226,7 +226,7 @@ public:
   bool Pre(const parser::LoopBounds<parser::ScalarName, A> &x) {
     if (!dirContext_.empty() && GetContext().withinConstruct) {
       if (auto *symbol{ResolveAcc(
-              x.name.thing, Symbol::Flag::AccPrivate, currScope())}) {
+              x.Name().thing, Symbol::Flag::AccPrivate, currScope())}) {
         AddToContextObjectWithDSA(*symbol, Symbol::Flag::AccPrivate);
       }
     }
@@ -807,9 +807,9 @@ public:
           }
           if (auto *procRef{
                   parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
-            if (!procRef->v.thing.component.symbol) {
-              if (!ResolveName(&procRef->v.thing.component)) {
-                createDummyProcSymbol(&procRef->v.thing.component);
+            if (!procRef->v.thing.Component().symbol) {
+              if (!ResolveName(&procRef->v.thing.Component())) {
+                createDummyProcSymbol(&procRef->v.thing.Component());
               }
             }
           }
@@ -1130,9 +1130,9 @@ std::tuple<const parser::Name *, const parser::ScalarExpr *,
 DirectiveAttributeVisitor<T>::GetLoopBounds(const parser::DoConstruct &x) {
   using Bounds = parser::LoopControl::Bounds;
   if (x.GetLoopControl()) {
-    if (const Bounds * b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
-      auto &step = b->step;
-      return {&b->name.thing, &b->lower, &b->upper,
+    if (const Bounds *b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
+      const auto &step = b->Step();
+      return {&b->Name().thing, &b->Lower(), &b->Upper(),
           step.has_value() ? &step.value() : nullptr};
     }
   } else {
@@ -1677,12 +1677,12 @@ void AccAttributeVisitor::CheckAssociatedLoop(
       if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
         if (auto &control{loop->GetLoopControl()}) {
           if (const Bounds * b{std::get_if<Bounds>(&control->u)}) {
-            if (auto lowerExpr{semantics::AnalyzeExpr(context_, b->lower)}) {
+            if (auto lowerExpr{semantics::AnalyzeExpr(context_, b->Lower())}) {
               semantics::UnorderedSymbolSet lowerSyms =
                   evaluate::CollectSymbols(*lowerExpr);
               checkExprHasSymbols(ivs, lowerSyms);
             }
-            if (auto upperExpr{semantics::AnalyzeExpr(context_, b->upper)}) {
+            if (auto upperExpr{semantics::AnalyzeExpr(context_, b->Upper())}) {
               semantics::UnorderedSymbolSet upperSyms =
                   evaluate::CollectSymbols(*upperExpr);
               checkExprHasSymbols(ivs, upperSyms);

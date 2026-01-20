@@ -26,7 +26,7 @@ namespace Fortran::semantics {
 // represented as such in the "body" of the implied DO loop.
 void DataChecker::Enter(const parser::DataImpliedDo &x) {
   const auto &name{parser::UnwrapRef<parser::Name>(
-      std::get<parser::DataImpliedDo::Bounds>(x.t).name)};
+      std::get<parser::DataImpliedDo::Bounds>(x.t).Name())};
   int kind{evaluate::ResultType<evaluate::ImpliedDoIndex>::kind};
   if (const auto dynamicType{evaluate::DynamicType::From(DEREF(name.symbol))}) {
     if (dynamicType->category() == TypeCategory::Integer) {
@@ -38,7 +38,7 @@ void DataChecker::Enter(const parser::DataImpliedDo &x) {
 
 void DataChecker::Leave(const parser::DataImpliedDo &x) {
   const auto &name{parser::UnwrapRef<parser::Name>(
-      std::get<parser::DataImpliedDo::Bounds>(x.t).name)};
+      std::get<parser::DataImpliedDo::Bounds>(x.t).Name())};
   exprAnalyzer_.RemoveImpliedDo(name.source);
 }
 

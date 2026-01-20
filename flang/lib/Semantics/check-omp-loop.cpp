@@ -489,7 +489,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
 const parser::Name OmpStructureChecker::GetLoopIndex(
     const parser::DoConstruct *x) {
   using Bounds = parser::LoopControl::Bounds;
-  return std::get<Bounds>(x->GetLoopControl()->u).name.thing;
+  return std::get<Bounds>(x->GetLoopControl()->u).Name().thing;
 }
 
 void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {

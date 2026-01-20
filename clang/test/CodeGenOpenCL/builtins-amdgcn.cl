@@ -1229,9 +1229,9 @@ kernel void test_mqsad_u32_u8(global uint4* out, ulong src0, uint src1, uint4 sr
 }
 
 // CHECK-LABEL: test_s_setreg(
-// CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.setreg(i32 8193, i32 %val)
+// CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.setreg(i32 65535, i32 %val)
 kernel void test_s_setreg(uint val) {
-  __builtin_amdgcn_s_setreg(8193, val);
+  __builtin_amdgcn_s_setreg(65535, val);
 }
 
 // CHECK-LABEL test_atomic_inc_dec(

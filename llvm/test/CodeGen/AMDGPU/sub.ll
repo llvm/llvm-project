@@ -646,13 +646,15 @@ define amdgpu_kernel void @test_sub_v4i16(ptr addrspace(1) %out, ptr addrspace(1
 define amdgpu_kernel void @s_sub_i64(ptr addrspace(1) noalias %out, i64 %a, i64 %b) nounwind {
 ; GFX6-LABEL: s_sub_i64:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
-; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX6-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_sub_u32 s0, s0, s2
-; GFX6-NEXT:    s_subb_u32 s1, s1, s3
+; GFX6-NEXT:    s_mov_b32 s4, s0
+; GFX6-NEXT:    s_sub_u32 s0, s2, s8
+; GFX6-NEXT:    s_mov_b32 s5, s1
+; GFX6-NEXT:    s_subb_u32 s1, s3, s9
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
@@ -660,41 +662,41 @@ define amdgpu_kernel void @s_sub_i64(ptr addrspace(1) noalias %out, i64 %a, i64 
 ;
 ; GFX8-LABEL: s_sub_i64:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_sub_u32 s0, s0, s2
-; GFX8-NEXT:    s_subb_u32 s1, s1, s3
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    s_sub_u32 s0, s2, s4
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    s_subb_u32 s1, s3, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s1
-; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: s_sub_i64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_sub_u32 s0, s0, s2
-; GFX9-NEXT:    s_subb_u32 s1, s1, s3
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
+; GFX9-NEXT:    s_sub_u32 s2, s2, s6
+; GFX9-NEXT:    s_subb_u32 s3, s3, s7
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
+; GFX9-NEXT:    v_mov_b32_e32 v1, s3
+; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: s_sub_i64:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
-; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX12-NEXT:    s_sub_nc_u64 s[2:3], s[2:3], s[4:5]
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
+; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_endpgm
   %result = sub i64 %a, %b
   store i64 %result, ptr addrspace(1) %out, align 8
@@ -739,12 +741,12 @@ define amdgpu_kernel void @v_sub_i64(ptr addrspace(1) noalias %out, ptr addrspac
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; GFX8-NEXT:    flat_load_dwordx2 v[2:3], v[2:3]
+; GFX8-NEXT:    v_mov_b32_e32 v4, s0
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_sub_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_subb_u32_e32 v1, vcc, v1, v3, vcc
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
-; GFX8-NEXT:    v_mov_b32_e32 v2, s0
-; GFX8-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; GFX8-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: v_sub_i64:
@@ -831,14 +833,14 @@ define amdgpu_kernel void @v_test_sub_v2i64(ptr addrspace(1) %out, ptr addrspace
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; GFX8-NEXT:    v_mov_b32_e32 v8, s0
+; GFX8-NEXT:    v_mov_b32_e32 v9, s1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_sub_u32_e32 v2, vcc, v2, v6
 ; GFX8-NEXT:    v_subb_u32_e32 v3, vcc, v3, v7, vcc
 ; GFX8-NEXT:    v_sub_u32_e32 v0, vcc, v0, v4
 ; GFX8-NEXT:    v_subb_u32_e32 v1, vcc, v1, v5, vcc
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
-; GFX8-NEXT:    v_mov_b32_e32 v4, s0
-; GFX8-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; GFX8-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: v_test_sub_v2i64:
