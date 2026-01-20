@@ -16,18 +16,18 @@
 
 using namespace llvm;
 
-static constexpr const char *SWaitAluImmPrefix = ".";
-static constexpr const char *SWaitAluDelim = "_";
+const char SWaitAluImmPrefix = '.';
+StringLiteral SWaitAluDelim = "_";
 
-static constexpr const char *VaVdstName = "VaVdst";
-static constexpr const char *VaSdstName = "VaSdst";
-static constexpr const char *VaSsrcName = "VaSsrc";
-static constexpr const char *HoldCntName = "HoldCnt";
-static constexpr const char *VmVsrcName = "VmVsrc";
-static constexpr const char *VaVccName = "VaVcc";
-static constexpr const char *SaSdstName = "SaSdst";
+StringLiteral VaVdstName = "VaVdst";
+StringLiteral VaSdstName = "VaSdst";
+StringLiteral VaSsrcName = "VaSsrc";
+StringLiteral HoldCntName = "HoldCnt";
+StringLiteral VmVsrcName = "VmVsrc";
+StringLiteral VaVccName = "VaVcc";
+StringLiteral SaSdstName = "SaSdst";
 
-static constexpr const char *AllOff = "AllOff";
+StringLiteral AllOff = "AllOff";
 
 void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm,
                                           llvm::raw_ostream &OS) const {
@@ -149,10 +149,11 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
   Imm = AMDGPU::DepCtr::getDefaultDepCtrEncoding(STI);
   // The input is in the form: .Name1_Num1_Name2_Num2
   // Drop the '.' prefix.
-  bool Expected = Src.consume_front(SWaitAluImmPrefix);
-  if (!Expected)
+  bool ConsumePrefix = Src.consume_front(SWaitAluImmPrefix);
+  if (!ConsumePrefix)
     return ErrorCallback(Src.begin(), "expected prefix");
-  bool Empty = true;
+  if (Src.empty())
+    return ErrorCallback(Src.begin(), "expected <CounterName>_<CounterNum>");
 
   // Special case for all off.
   if (Src == AllOff)
@@ -162,32 +163,29 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
   while (!Src.empty()) {
     // Src: Name1_Num1_Name2_Num2
     //           ^
-    size_t Delim1Idx = Src.find(SWaitAluDelim);
-    if (Delim1Idx == StringRef::npos) {
-      if (Empty)
-        return ErrorCallback(Src.begin() + Src.size(),
-                             "expected <CounterName>_<CounterNum>");
-      break;
-    }
+    size_t DelimIdx = Src.find(SWaitAluDelim);
+    if (DelimIdx == StringRef::npos)
+      return ErrorCallback(Src.begin(), "expected <CounterName>_<CounterNum>");
     // Src: Name1_Num1_Name2_Num2
     //      ^^^^^
-    StringRef Name = Src.substr(0, Delim1Idx);
-    // Src: Name1_Num1_Name2_Num2
+    StringRef Name = Src.substr(0, DelimIdx);
+    // Save the position of the name for accurate error reporting.
+    StringRef::iterator NamePos = Src.begin();
+    bool ConsumeName = Src.consume_front(Name);
+    assert(ConsumeName && "Expected name");
+    bool ConsumeDelim = Src.consume_front(SWaitAluDelim);
+    assert(ConsumeDelim && "Expected delimiter");
+    // Src:       Num1_Name2_Num2
     //                ^
-    size_t Delim2Idx = Src.find(SWaitAluDelim, Delim1Idx + 1);
-    // Src: Name1_Num1_Name2_Num2
+    DelimIdx = Src.find(SWaitAluDelim);
+    // Src:       Num1_Name2_Num2
     //            ^^^^
-    StringRef NumStr = Src.substr(Delim1Idx + 1, Delim2Idx);
-    if (Name.empty() || NumStr.empty())
-      return ErrorCallback(Src.begin() + Delim1Idx,
-                           "expected <CounterName>_<CounterNum>");
-    // Make sure the counter number is legal.
     int64_t Num;
-    if (NumStr.consumeInteger(10, Num) || Num < 0)
-      return ErrorCallback(Src.begin() + Delim1Idx + 1,
+    // Save the position of the number for accurate error reporting.
+    StringRef::iterator NumPos = Src.begin();
+    if (Src.consumeInteger(10, Num) || Num < 0)
+      return ErrorCallback(NumPos,
                            "expected non-negative integer counter number");
-
-    // Encode the counter number into Imm.
     unsigned Max;
     if (Name == VaVdstName) {
       Max = llvm::AMDGPU::DepCtr::getVaVdstBitMask();
@@ -211,16 +209,13 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
       Max = llvm::AMDGPU::DepCtr::getSaSdstBitMask();
       Imm = llvm::AMDGPU::DepCtr::encodeFieldSaSdst(Imm, Num);
     } else {
-      return ErrorCallback(Src.begin(), "bad counter name");
+      return ErrorCallback(NamePos, "invalid counter name");
     }
     // Don't allow the values to reach their maximum value.
     if (Num >= Max)
-      return ErrorCallback(Src.begin() + Delim1Idx + 1,
-                           "counter value too large");
-    // Drop the part of Src that we just parsed.
-    // Src: Name2_Num2
-    Src = Src.drop_front(Delim2Idx != StringRef::npos ? Delim2Idx + 1
-                                                      : Src.size());
+      return ErrorCallback(NumPos, "counter value too large");
+    // Src:            Name2_Num2
+    Src.consume_front(SWaitAluDelim);
   }
   return false;
 }
