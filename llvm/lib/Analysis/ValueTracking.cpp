@@ -10799,9 +10799,9 @@ bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ,
   // In the InstCombine case, we know this will be convered to bitmask so
   // there is no added cost of having more values. Limit to the max register
   // size since that's the largest BitMap we can handle anyways
-  if (Span.isSizeLargerThan(OneUseOnly ? DL.getLargestLegalIntTypeSizeInBits()
-                                       : 8) ||
-      Span.isEmptySet()) {
+  uint64_t MaxSpan =
+      OneUseOnly ? (uint64_t)DL.getLargestLegalIntTypeSizeInBits() : 8;
+  if (Span.isSizeLargerThan(MaxSpan) || Span.isEmptySet()) {
     return false;
   }
 
