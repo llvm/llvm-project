@@ -2156,17 +2156,13 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
 // LoopVectorizationCostModel and LoopVectorizationPlanner.
 //===----------------------------------------------------------------------===//
 
-/// Compute the transformed value of Index at offset StartValue using step
-/// StepValue.
-/// For integer induction, returns StartValue + Index * StepValue.
-/// For pointer induction, returns StartValue[Index * StepValue].
 /// FIXME: The newly created binary instructions should contain nsw/nuw
 /// flags, which can be found from the original scalar operations.
-static Value *
-emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
-                     Value *Step,
-                     InductionDescriptor::InductionKind InductionKind,
-                     const BinaryOperator *InductionBinOp) {
+Value *
+llvm::emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
+                           Value *Step,
+                           InductionDescriptor::InductionKind InductionKind,
+                           const BinaryOperator *InductionBinOp) {
   using namespace llvm::PatternMatch;
   Type *StepTy = Step->getType();
   Value *CastedIndex = StepTy->isIntegerTy()
@@ -8967,23 +8963,6 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
       OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
 }
 
-void VPDerivedIVRecipe::execute(VPTransformState &State) {
-  assert(!State.Lane && "VPDerivedIVRecipe being replicated.");
-
-  // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  if (FPBinOp)
-    State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
-
-  Value *Step = State.get(getStepValue(), VPLane(0));
-  Value *Index = State.get(getOperand(1), VPLane(0));
-  Value *DerivedIV = emitTransformedIndex(
-      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
-      cast_if_present<BinaryOperator>(FPBinOp));
-  DerivedIV->setName(Name);
-  State.set(this, DerivedIV, VPLane(0));
-}
-
 // Determine how to lower the scalar epilogue, which depends on 1) optimising
 // for minimum code-size, 2) predicate compiler options, 3) loop hints forcing
 // predication, and 4) a TTI hook that analyses whether the loop is suitable
@@ -9773,11 +9752,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (LVL.hasUncountableEarlyExit() && !EnableEarlyExitVectorization) {
-    reportVectorizationFailure("Auto-vectorization of loops with uncountable "
-                               "early exit is not enabled",
-                               "UncountableEarlyExitLoopsDisabled", ORE, L);
-    return false;
+  if (LVL.hasUncountableEarlyExit()) {
+    if (!EnableEarlyExitVectorization) {
+      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                                 "early exit is not enabled",
+                                 "UncountableEarlyExitLoopsDisabled", ORE, L);
+      return false;
+    }
+    SmallVector<BasicBlock *, 8> ExitingBlocks;
+    L->getExitingBlocks(ExitingBlocks);
+    // TODO: Support multiple uncountable early exits.
+    if (ExitingBlocks.size() - LVL.getCountableExitingBlocks().size() > 1) {
+      reportVectorizationFailure("Auto-vectorization of loops with multiple "
+                                 "uncountable early exits is not yet supported",
+                                 "MultipleUncountableEarlyExits", ORE, L);
+      return false;
+    }
   }
 
   if (!LVL.getPotentiallyFaultingLoads().empty()) {

@@ -2158,4 +2158,13 @@ let TargetPrefix = "ppc" in {
     DefaultAttrsIntrinsic<[llvm_i64_ty],[llvm_ptr_ty,
                            llvm_i32_ty],
                           [IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
+
+  def int_ppc_amo_stwat : ClangBuiltin<"__builtin_amo_stwat">,
+    DefaultAttrsIntrinsic<[],[llvm_ptr_ty,
+                           llvm_i32_ty, llvm_i32_ty],
+                          [IntrArgMemOnly, ImmArg<ArgIndex<2>>]>;
+ def int_ppc_amo_stdat : ClangBuiltin<"__builtin_amo_stdat">,
+    DefaultAttrsIntrinsic<[],[llvm_ptr_ty,
+                           llvm_i64_ty, llvm_i32_ty],
+                          [IntrArgMemOnly, ImmArg<ArgIndex<2>>]>;
 }
