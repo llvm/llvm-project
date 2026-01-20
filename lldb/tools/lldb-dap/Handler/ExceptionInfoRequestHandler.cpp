@@ -88,8 +88,11 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
       body.details->stackTrace = ThreadSummary(exception_backtrace);
   }
 
-  lldb::SBStructuredData crash_info =
-      dap.target.GetProcess().GetExtendedCrashInformation();
+  lldb::SBProcess process = dap.target.GetProcess();
+  if (!process)
+    return body;
+
+  lldb::SBStructuredData crash_info = process.GetExtendedCrashInformation();
   stream.Clear();
   if (crash_info.IsValid() && crash_info.GetDescription(stream))
     body.description += "\n\nExtended Crash Information:\n" +
@@ -98,8 +101,9 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
   for (uint32_t idx = 0; idx < lldb::eNumInstrumentationRuntimeTypes; idx++) {
     lldb::InstrumentationRuntimeType type =
         static_cast<lldb::InstrumentationRuntimeType>(idx);
-    if (!dap.target.GetProcess().IsInstrumentationRuntimePresent(type))
+    if (!process.IsInstrumentationRuntimePresent(type))
       continue;
+
     lldb::SBThreadCollection threads =
         thread.GetStopReasonExtendedBacktraces(type);
     for (uint32_t tidx = 0; tidx < threads.GetSize(); tidx++) {
