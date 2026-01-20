@@ -93,7 +93,6 @@ class vector {
   template <class _SplitBuffer, class _Tp2, class _Allocator2>
   using __split_buffer_layout _LIBCPP_NODEBUG = __split_buffer_pointer_layout<_SplitBuffer, _Tp2, _Allocator2>;
 #endif
-
 public:
   ///
   /// Types
