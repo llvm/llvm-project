@@ -800,22 +800,24 @@ struct AllGatherOpLowering : public ConvertOpToLLVMPattern<mpi::AllGatherOp> {
     //     void* buffer_recv, int count_recv, MPI_Datatype datatype_recv,
     //     MPI_Comm communicator);
     auto funcType = LLVM::LLVMFunctionType::get(
-        i32, {ptrType, i32, sDataType.getType(),
-              ptrType, i32, rDataType.getType(),
-              comm.getType()});
+        i32, {ptrType, i32, sDataType.getType(), ptrType, i32,
+              rDataType.getType(), comm.getType()});
     // get or create function declaration:
     LLVM::LLVMFuncOp funcDecl =
         getOrDefineFunction(moduleOp, loc, rewriter, "MPI_Allgather", funcType);
 
     // count_recv is the number of elements received from each rank, not total
-    Value nRanks = mpi::CommSizeOp::create(rewriter, loc, i32, adaptor.getComm()).getSize();
-    Value recvCountPerRank = LLVM::UDivOp::create(
-        rewriter, loc, i32, recvSize, nRanks);
+    Value nRanks =
+        mpi::CommSizeOp::create(rewriter, loc, i32, adaptor.getComm())
+            .getSize();
+    Value recvCountPerRank =
+        LLVM::UDivOp::create(rewriter, loc, i32, recvSize, nRanks);
 
     // replace op with function call
-    auto funcCall = LLVM::CallOp::create(
-        rewriter, loc, funcDecl,
-        ValueRange{sendPtr, sendSize, sDataType, recvPtr, recvCountPerRank, rDataType, comm});
+    auto funcCall =
+        LLVM::CallOp::create(rewriter, loc, funcDecl,
+                             ValueRange{sendPtr, sendSize, sDataType, recvPtr,
+                                        recvCountPerRank, rDataType, comm});
 
     if (op.getRetval())
       rewriter.replaceOp(op, funcCall.getResult());
@@ -915,9 +917,10 @@ void mpi::populateMPIToLLVMConversionPatterns(LLVMTypeConverter &converter,
   converter.addConversion([](mpi::CommType type) {
     return IntegerType::get(type.getContext(), 64);
   });
-  patterns.add<CommRankOpLowering, CommSizeOpLowering, CommSplitOpLowering, CommWorldOpLowering,
-               FinalizeOpLowering, InitOpLowering, SendOpLowering,
-               RecvOpLowering, AllGatherOpLowering, AllReduceOpLowering>(converter);
+  patterns.add<CommRankOpLowering, CommSizeOpLowering, CommSplitOpLowering,
+               CommWorldOpLowering, FinalizeOpLowering, InitOpLowering,
+               SendOpLowering, RecvOpLowering, AllGatherOpLowering,
+               AllReduceOpLowering>(converter);
 }
 
 void mpi::registerConvertMPIToLLVMInterface(DialectRegistry &registry) {
