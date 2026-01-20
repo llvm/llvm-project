@@ -110,10 +110,15 @@ static void addAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
 }
 
 /// Construct the CIR attribute list of a function or call.
-void CIRGenModule::constructAttributeList(CIRGenCalleeInfo calleeInfo,
-                                          mlir::NamedAttrList &attrs) {
+void CIRGenModule::constructAttributeList(llvm::StringRef name,
+                                          const CIRGenFunctionInfo &info,
+                                          CIRGenCalleeInfo calleeInfo,
+                                          mlir::NamedAttrList &attrs,
+                                          cir::CallingConv &callingConv,
+                                          cir::SideEffect &sideEffect,
+                                          bool attrOnCallSite, bool isThunk) {
   assert(!cir::MissingFeatures::opCallCallConv());
-  auto sideEffect = cir::SideEffect::All;
+  sideEffect = cir::SideEffect::All;
 
   addAttributesFromFunctionProtoType(getBuilder(), attrs,
                                      calleeInfo.getCalleeFunctionProtoType());
@@ -631,7 +636,11 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 
   assert(!cir::MissingFeatures::opCallCallConv());
   assert(!cir::MissingFeatures::opCallAttrs());
-  cgm.constructAttributeList(callee.getAbstractInfo(), attrs);
+  cir::CallingConv callingConv;
+  cir::SideEffect sideEffect;
+  cgm.constructAttributeList(funcName, funcInfo, callee.getAbstractInfo(),
+                             attrs, callingConv, sideEffect,
+                             /*attrOnCallSite=*/true, /*isThunk=*/false);
 
   cir::FuncType indirectFuncTy;
   mlir::Value indirectFuncVal;

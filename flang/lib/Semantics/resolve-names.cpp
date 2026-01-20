@@ -4660,19 +4660,19 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
 }
 
 bool SubprogramVisitor::Pre(const parser::Suffix &suffix) {
-  if (suffix.resultName) {
+  if (const auto &resultName{std::get<std::optional<parser::Name>>(suffix.t)}) {
     if (IsFunction(currScope())) {
       if (FuncResultStack::FuncInfo * info{funcResultStack().Top()}) {
         if (info->inFunctionStmt) {
-          info->resultName = &suffix.resultName.value();
+          info->resultName = &resultName.value();
         } else {
           // will check the result name in Post(EntryStmt)
         }
       }
     } else {
-      Message &msg{Say(*suffix.resultName,
-          "RESULT(%s) may appear only in a function"_err_en_US)};
-      if (const Symbol * subprogram{InclusiveScope().symbol()}) {
+      Message &msg{Say(
+          *resultName, "RESULT(%s) may appear only in a function"_err_en_US)};
+      if (const Symbol *subprogram{InclusiveScope().symbol()}) {
         msg.Attach(subprogram->name(), "Containing subprogram"_en_US);
       }
     }
@@ -4846,7 +4846,10 @@ void SubprogramVisitor::Post(const parser::InterfaceBody::Function &x) {
   const auto &stmt{std::get<parser::Statement<parser::FunctionStmt>>(x.t)};
   const auto &maybeSuffix{
       std::get<std::optional<parser::Suffix>>(stmt.statement.t)};
-  EndSubprogram(stmt.source, maybeSuffix ? &maybeSuffix->binding : nullptr);
+  EndSubprogram(stmt.source,
+      maybeSuffix ? &std::get<std::optional<parser::LanguageBindingSpec>>(
+                        maybeSuffix->t)
+                  : nullptr);
 }
 
 bool SubprogramVisitor::Pre(const parser::SubroutineStmt &stmt) {
@@ -4961,7 +4964,7 @@ Symbol &SubprogramVisitor::PostSubprogramStmt() {
 
 void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
   if (const auto &suffix{std::get<std::optional<parser::Suffix>>(stmt.t)}) {
-    Walk(suffix->binding);
+    Walk(std::get<std::optional<parser::LanguageBindingSpec>>(suffix->t));
   }
   PostEntryStmt(stmt);
   EndAttrs();
@@ -5000,9 +5003,17 @@ void SubprogramVisitor::CreateEntry(
           : Symbol::Flag::Subroutine};
   Attrs attrs;
   const auto &suffix{std::get<std::optional<parser::Suffix>>(stmt.t)};
-  bool hasGlobalBindingName{outer.IsGlobal() && suffix && suffix->binding &&
-      std::get<std::optional<parser::ScalarDefaultCharConstantExpr>>(
-          suffix->binding->t)
+  const auto *binding{[&]() {
+    if (suffix) {
+      if (auto &b{std::get<std::optional<parser::LanguageBindingSpec>>(
+              suffix->t)}) {
+        return &*b;
+      }
+    }
+    return static_cast<const parser::LanguageBindingSpec *>(nullptr);
+  }()};
+  bool hasGlobalBindingName{outer.IsGlobal() && binding &&
+      std::get<std::optional<parser::ScalarDefaultCharConstantExpr>>(binding->t)
           .has_value()};
   if (!hasGlobalBindingName) {
     if (Symbol * extant{FindSymbol(outer, entryName)}) {
@@ -5019,10 +5030,17 @@ void SubprogramVisitor::CreateEntry(
       attrs = extant->attrs();
     }
   }
+  const auto *resultName{[&]() {
+    if (suffix) {
+      if (auto &n{std::get<std::optional<parser::Name>>(suffix->t)}) {
+        return &*n;
+      }
+    }
+    return static_cast<const parser::Name *>(nullptr);
+  }()};
   std::optional<SourceName> distinctResultName;
-  if (suffix && suffix->resultName &&
-      suffix->resultName->source != entryName.source) {
-    distinctResultName = suffix->resultName->source;
+  if (resultName && resultName->source != entryName.source) {
+    distinctResultName = resultName->source;
   }
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
     attrs.set(Attr::PUBLIC);
@@ -5060,7 +5078,7 @@ void SubprogramVisitor::CreateEntry(
     if (distinctResultName) {
       // An explicit RESULT() can also be an explicit RESULT()
       // of the function or another ENTRY.
-      if (auto iter{currScope().find(suffix->resultName->source)};
+      if (auto iter{currScope().find(resultName->source)};
           iter != currScope().end()) {
         result = &*iter->second;
       }
@@ -5076,7 +5094,7 @@ void SubprogramVisitor::CreateEntry(
         result = nullptr;
       }
       if (result) {
-        Resolve(*suffix->resultName, *result);
+        Resolve(*resultName, *result);
       }
     } else {
       result = &MakeSymbol(entryName.source, Attrs{}, std::move(resultDetails));
@@ -5315,7 +5333,8 @@ void SubprogramVisitor::EndSubprogram(
       if (const auto &suffix{
               std::get<std::optional<parser::Suffix>>(entryStmt.t)}) {
         const auto &name{std::get<parser::Name>(entryStmt.t)};
-        HandleLanguageBinding(name.symbol, name.source, &suffix->binding);
+        HandleLanguageBinding(name.symbol, name.source,
+            &std::get<std::optional<parser::LanguageBindingSpec>>(suffix->t));
       }
     }
   }
@@ -6812,7 +6831,8 @@ void DeclarationVisitor::Post(
   if (GetAttrs().test(Attr::DEFERRED)) { // C783
     Say("DEFERRED is only allowed when an interface-name is provided"_err_en_US);
   }
-  for (auto &declaration : x.declarations) {
+  const auto &declarations{std::get<std::list<parser::TypeBoundProcDecl>>(x.t)};
+  for (auto &declaration : declarations) {
     auto &bindingName{std::get<parser::Name>(declaration.t)};
     auto &optName{std::get<std::optional<parser::Name>>(declaration.t)};
     const parser::Name &procedureName{optName ? *optName : bindingName};
@@ -6835,7 +6855,9 @@ void DeclarationVisitor::Post(
 void DeclarationVisitor::CheckBindings(
     const parser::TypeBoundProcedureStmt::WithoutInterface &tbps) {
   CHECK(currScope().IsDerivedType());
-  for (auto &declaration : tbps.declarations) {
+  const auto &declarations{
+      std::get<std::list<parser::TypeBoundProcDecl>>(tbps.t)};
+  for (auto &declaration : declarations) {
     auto &bindingName{std::get<parser::Name>(declaration.t)};
     if (Symbol * binding{FindInScope(bindingName)}) {
       if (auto *details{binding->detailsIf<ProcBindingDetails>()}) {
@@ -6869,8 +6891,9 @@ void DeclarationVisitor::Post(
   if (!GetAttrs().test(Attr::DEFERRED)) { // C783
     Say("DEFERRED is required when an interface-name is provided"_err_en_US);
   }
-  if (Symbol * interface{NoteInterfaceName(x.interfaceName)}) {
-    for (auto &bindingName : x.bindingNames) {
+  const auto &[interfaceName, _, bindingNames]{x.t};
+  if (Symbol * interface{NoteInterfaceName(interfaceName)}) {
+    for (auto &bindingName : bindingNames) {
       if (auto *s{
               MakeTypeSymbol(bindingName, ProcBindingDetails{*interface})}) {
         SetPassNameOn(*s);
@@ -8706,8 +8729,9 @@ bool ResolveNamesVisitor::Pre(const parser::FunctionReference &x) {
   return false;
 }
 bool ResolveNamesVisitor::Pre(const parser::CallStmt &x) {
-  HandleCall(Symbol::Flag::Subroutine, x.call);
-  Walk(x.chevrons);
+  const auto &[call, chevrons]{x.t};
+  HandleCall(Symbol::Flag::Subroutine, call);
+  Walk(chevrons);
   return false;
 }
 
@@ -10408,7 +10432,8 @@ public:
     NoteCall(Symbol::Flag::Function, fr.v, false);
   }
   void Post(const parser::CallStmt &cs) {
-    NoteCall(Symbol::Flag::Subroutine, cs.call, cs.chevrons.has_value());
+    const auto &[call, chevrons]{cs.t};
+    NoteCall(Symbol::Flag::Subroutine, call, chevrons.has_value());
   }
 
 private:
@@ -10601,7 +10626,8 @@ void ResolveNamesVisitor::EndScopeForNode(const ProgramTree &node) {
               if (const auto &maybeSuffix{
                       std::get<std::optional<parser::Suffix>>(
                           stmt->statement.t)}) {
-                binding = &maybeSuffix->binding;
+                binding = &std::get<std::optional<parser::LanguageBindingSpec>>(
+                    maybeSuffix->t);
               }
             }
           },
@@ -10671,7 +10697,7 @@ public:
     return false;
   }
   void Post(const parser::TypeBoundProcedureStmt::WithInterface &tbps) {
-    resolver_.CheckExplicitInterface(tbps.interfaceName);
+    resolver_.CheckExplicitInterface(std::get<parser::Name>(tbps.t));
   }
   void Post(const parser::TypeBoundProcedureStmt::WithoutInterface &tbps) {
     if (outerScope_) {

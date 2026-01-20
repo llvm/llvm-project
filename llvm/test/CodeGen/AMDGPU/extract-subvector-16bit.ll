@@ -132,14 +132,14 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:  .LBB0_3: ; %exit
-; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,0]
-; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, 15, v3.l
+; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v2, 15, v2 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, 0x8000, v1.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, 0x8000, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, 0x8000, v0.h
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, 0x8000, v1.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, 0x8000, v0.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, 0x8000, v2.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, 0x8000, v2.h
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v1.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB0_4:
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
@@ -762,14 +762,14 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:  .LBB3_3: ; %exit
-; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,0]
-; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, 15, v3.l
+; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v2, 15, v2 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, 0x8000, v1.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, 0x8000, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, 0x8000, v0.h
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, 0x8000, v1.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, 0x8000, v0.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, 0x8000, v2.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, 0x8000, v2.h
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v1.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB3_4:
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
