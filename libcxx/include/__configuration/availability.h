@@ -249,6 +249,27 @@
 #define _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19
 #define _LIBCPP_AVAILABILITY_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
 
+// These macros controls the availability of __cxa_init_primary_exception
+// in the built library, which std::make_exception_ptr might use
+// (see libcxx/include/__exception/exception_ptr.h).
+#define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION _LIBCPP_INTRODUCED_IN_LLVM_18
+#define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION _LIBCPP_INTRODUCED_IN_LLVM_18_ATTRIBUTE
+
+// This controls the availability of C++23 <print>, which
+// has a dependency on the built library (it needs access to
+// the underlying buffer types of std::cout, std::cerr, and std::clog.
+#define _LIBCPP_AVAILABILITY_HAS_PRINT _LIBCPP_INTRODUCED_IN_LLVM_18
+#define _LIBCPP_AVAILABILITY_PRINT _LIBCPP_INTRODUCED_IN_LLVM_18_ATTRIBUTE
+
+// Define availability attributes that depend on both
+// _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.
+#if !_LIBCPP_HAS_EXCEPTIONS || !_LIBCPP_HAS_RTTI
+#  undef _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
+#  undef _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
+#  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 0
+#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
+#endif
+
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
 // iostreams by providing a single strong definition in the shared library.
@@ -282,27 +303,6 @@
 //       use availability annotations until that bug has been fixed.
 #define _LIBCPP_AVAILABILITY_HAS_PMR _LIBCPP_INTRODUCED_IN_LLVM_16
 #define _LIBCPP_AVAILABILITY_PMR
-
-// These macros controls the availability of __cxa_init_primary_exception
-// in the built library, which std::make_exception_ptr might use
-// (see libcxx/include/__exception/exception_ptr.h).
-#define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION _LIBCPP_INTRODUCED_IN_LLVM_18
-#define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION _LIBCPP_INTRODUCED_IN_LLVM_18_ATTRIBUTE
-
-// This controls the availability of C++23 <print>, which
-// has a dependency on the built library (it needs access to
-// the underlying buffer types of std::cout, std::cerr, and std::clog.
-#define _LIBCPP_AVAILABILITY_HAS_PRINT _LIBCPP_INTRODUCED_IN_LLVM_18
-#define _LIBCPP_AVAILABILITY_PRINT _LIBCPP_INTRODUCED_IN_LLVM_18_ATTRIBUTE
-
-// Define availability attributes that depend on both
-// _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.
-#if !_LIBCPP_HAS_EXCEPTIONS || !_LIBCPP_HAS_RTTI
-#  undef _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
-#  undef _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
-#  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 0
-#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
-#endif
 
 // Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
 #  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8
