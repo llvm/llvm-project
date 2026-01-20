@@ -40,7 +40,8 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       typeLoc(InImplicitTypenameContext).bind("dependentTypeLoc"), this);
   Finder->addMatcher(
-      varDecl(hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())),
+      varDecl(hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl(),
+                                   cxxRecordDecl())),
               unless(parmVarDecl()),
               hasTypeLoc(typeLoc().bind("dependentTypeLoc"))),
       this);

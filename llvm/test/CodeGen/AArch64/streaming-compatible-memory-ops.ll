@@ -94,7 +94,6 @@ define void @se_memset(i64 noundef %n) "aarch64_pstate_sm_enabled" nounwind {
 ; CHECK-MOPS-NEXT:    adrp x8, :got:dst
 ; CHECK-MOPS-NEXT:    mov w9, #2 // =0x2
 ; CHECK-MOPS-NEXT:    ldr x8, [x8, :got_lo12:dst]
-; CHECK-MOPS-NEXT:    // kill: def $x9 killed $w9
 ; CHECK-MOPS-NEXT:    setp [x8]!, x0!, x9
 ; CHECK-MOPS-NEXT:    setm [x8]!, x0!, x9
 ; CHECK-MOPS-NEXT:    sete [x8]!, x0!, x9
