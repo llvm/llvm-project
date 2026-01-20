@@ -7,7 +7,7 @@ define double @CompareDistmats(double noundef %distmat1_, double noundef %distma
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[RMSD_0:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP0:%.*]], %[[FOR_BODY:.*]] ]
+; CHECK-NEXT:    [[RMSD_0:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[FMACALL:%.*]], %[[FOR_BODY:.*]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ false, %[[FOR_BODY]] ]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
@@ -15,7 +15,7 @@ define double @CompareDistmats(double noundef %distmat1_, double noundef %distma
 ; CHECK-NEXT:    ret double [[SQRT]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[DISTMAT1_]], [[DISTMAT2_]]
-; CHECK-NEXT:    [[TMP0]] = call double @llvm.fmuladd.f64(double [[SUB]], double [[SUB]], double [[RMSD_0]])
+; CHECK-NEXT:    [[FMACALL]] = call double @llvm.fmuladd.f64(double [[SUB]], double [[SUB]], double [[RMSD_0]])
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ;
 entry:
@@ -46,7 +46,7 @@ define double @nonSquareCompareDistmats(double noundef %distmat1_, double nounde
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[RMSD_0:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP0:%.*]], %[[FOR_BODY:.*]] ]
+; CHECK-NEXT:    [[RMSD_0:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[FMACALL:%.*]], %[[FOR_BODY:.*]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ false, %[[FOR_BODY]] ]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
@@ -55,7 +55,7 @@ define double @nonSquareCompareDistmats(double noundef %distmat1_, double nounde
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[DISTMAT1_]], [[DISTMAT2_]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[DISTMAT1_]], [[DISTMAT2_]]
-; CHECK-NEXT:    [[TMP0]] = call double @llvm.fmuladd.f64(double [[SUB]], double [[ADD]], double [[RMSD_0]])
+; CHECK-NEXT:    [[FMACALL]] = call double @llvm.fmuladd.f64(double [[SUB]], double [[ADD]], double [[RMSD_0]])
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ;
 entry:
@@ -74,5 +74,40 @@ for.body:                                         ; preds = %for.cond
   %sub = fsub double %distmat1_, %distmat2_
   %add = fadd double %distmat1_, %distmat2_
   %fmacall = call double @llvm.fmuladd.f64(double %sub, double %add, double %RMSD.0)
+  br label %for.cond
+}
+
+define double @negInitialCompareDistmats(double noundef %distmat1_, double noundef %distmat2_) {
+; CHECK-LABEL: define double @negInitialCompareDistmats(
+; CHECK-SAME: double noundef [[DISTMAT1_:%.*]], double noundef [[DISTMAT2_:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[FOR_COND:.*]]
+; CHECK:       [[FOR_COND]]:
+; CHECK-NEXT:    [[RMSD_0:%.*]] = phi double [ -1.000000e+00, %[[ENTRY]] ], [ [[FMACALL:%.*]], %[[FOR_BODY:.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ false, %[[FOR_BODY]] ]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP:.*]]
+; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    [[CALL:%.*]] = call double @sqrt(double noundef [[RMSD_0]])
+; CHECK-NEXT:    ret double [[CALL]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[DISTMAT1_]], [[DISTMAT2_]]
+; CHECK-NEXT:    [[FMACALL]] = call double @llvm.fmuladd.f64(double [[SUB]], double [[SUB]], double [[RMSD_0]])
+; CHECK-NEXT:    br label %[[FOR_COND]]
+;
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.body, %entry
+  %RMSD.0 = phi double [ -1.000000e+00, %entry ], [ %fmacall, %for.body ]
+  %cmp = phi i1 [ true, %entry ], [ false, %for.body ]
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  %call = call double @sqrt(double noundef %RMSD.0)
+  ret double %call
+
+for.body:                                         ; preds = %for.cond
+  %sub = fsub double %distmat1_, %distmat2_
+  %fmacall = call double @llvm.fmuladd.f64(double %sub, double %sub, double %RMSD.0)
   br label %for.cond
 }
