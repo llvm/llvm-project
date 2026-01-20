@@ -1019,9 +1019,8 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
 
     void *Buffer = malloc(Size);
     if (!Buffer)
-      return createOffloadError(
-          ErrorCode::OUT_OF_RESOURCES,
-          "Couldn't allocate a buffer for transfer");
+      return createOffloadError(ErrorCode::OUT_OF_RESOURCES,
+                                "Couldn't allocate a buffer for transfer");
     Error Res = SrcDevice->Device->dataRetrieve(Buffer, SrcPtr, Size, nullptr);
     if (!Res)
       Res = DstDevice->Device->dataSubmit(DstPtr, Buffer, Size, nullptr);
