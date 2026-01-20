@@ -2210,7 +2210,7 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                   /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars,
                   clauses.mapVars, clauses.nowait, clauses.privateVars,
                   makeArrayAttr(ctx, clauses.privateSyms),
-                  clauses.privateNeedsBarrier, clauses.threadLimitVals,
+                  clauses.privateNeedsBarrier, clauses.threadLimitVars,
                   /*private_maps=*/nullptr);
 }
 
@@ -2242,7 +2242,7 @@ LogicalResult TargetOp::verifyRegions() {
       if (auto teamsOp = dyn_cast<TeamsOp>(user)) {
         if (teamsOp.getNumTeamsLower() == hostEvalArg ||
             teamsOp.getNumTeamsUpper() == hostEvalArg ||
-            llvm::is_contained(teamsOp.getThreadLimitVals(), hostEvalArg))
+            llvm::is_contained(teamsOp.getThreadLimitVars(), hostEvalArg))
           continue;
 
         return emitOpError() << "host_eval argument only legal as 'num_teams' "
@@ -2631,7 +2631,7 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
                  clauses.reductionVars,
                  makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                  makeArrayAttr(ctx, clauses.reductionSyms),
-                 clauses.threadLimitVals);
+                 clauses.threadLimitVars);
 }
 
 // Verify num_teams clause

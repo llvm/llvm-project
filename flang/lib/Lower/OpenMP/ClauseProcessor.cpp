@@ -670,7 +670,7 @@ bool ClauseProcessor::processThreadLimit(
   if (auto *clause = findUniqueClause<omp::clause::ThreadLimit>()) {
     mlir::Value threadLimitVal =
         fir::getBase(converter.genExprValue(clause->v, stmtCtx));
-    result.threadLimitVals.push_back(threadLimitVal);
+    result.threadLimitVars.push_back(threadLimitVal);
     return true;
   }
   return false;

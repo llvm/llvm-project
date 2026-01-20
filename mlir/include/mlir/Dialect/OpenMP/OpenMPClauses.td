@@ -1452,11 +1452,11 @@ class OpenMP_ThreadLimitClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    Variadic<IntLikeType>:$thread_limit_vals
+    Variadic<IntLikeType>:$thread_limit_vars
   );
 
   let optAssemblyFormat = [{
-    `thread_limit` `(` $thread_limit_vals `:` type($thread_limit_vals) `)`
+    `thread_limit` `(` $thread_limit_vars `:` type($thread_limit_vars) `)`
   }];
 
   let description = [{
@@ -1478,12 +1478,12 @@ class OpenMP_ThreadLimitClauseSkip<
   let extraClassDeclaration = [{
     /// Returns true if using multi-dimensional values (more than one value)
     bool hasThreadLimitMultiDim() {
-      return getThreadLimitVals().size() > 1;
+      return getThreadLimitVars().size() > 1;
     }
 
     /// Returns the number of dimensions specified for thread_limit
     unsigned getThreadLimitDimsCount() {
-      return getThreadLimitVals().size();
+      return getThreadLimitVars().size();
     }
 
     /// Returns the value for a specific dimension
@@ -1491,7 +1491,7 @@ class OpenMP_ThreadLimitClauseSkip<
     ::mlir::Value getThreadLimit(unsigned dim = 0) {
       assert(dim < getThreadLimitDimsCount() &&
              "Thread limit index out of bounds");
-      return getThreadLimitVals()[dim];
+      return getThreadLimitVars()[dim];
     }
   }];
 }

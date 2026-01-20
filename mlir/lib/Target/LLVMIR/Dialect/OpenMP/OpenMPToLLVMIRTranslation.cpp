@@ -2081,7 +2081,7 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
     numTeamsUpper = moduleTranslation.lookupValue(numTeamsUpperVar);
 
   llvm::Value *threadLimit = nullptr;
-  if (!op.getThreadLimitVals().empty())
+  if (!op.getThreadLimitVars().empty())
     threadLimit = moduleTranslation.lookupValue(op.getThreadLimit(0));
 
   llvm::Value *ifExpr = nullptr;
@@ -6051,7 +6051,7 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
               numTeamsLower = hostEvalVar;
             else if (teamsOp.getNumTeamsUpper() == blockArg)
               numTeamsUpper = hostEvalVar;
-            else if (!teamsOp.getThreadLimitVals().empty() &&
+            else if (!teamsOp.getThreadLimitVars().empty() &&
                      teamsOp.getThreadLimit(0) == blockArg)
               threadLimit = hostEvalVar;
             else
@@ -6172,7 +6172,7 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     if (auto teamsOp = castOrGetParentOfType<omp::TeamsOp>(capturedOp)) {
       numTeamsLower = teamsOp.getNumTeamsLower();
       numTeamsUpper = teamsOp.getNumTeamsUpper();
-      if (!teamsOp.getThreadLimitVals().empty())
+      if (!teamsOp.getThreadLimitVars().empty())
         threadLimit = teamsOp.getThreadLimit(0);
     }
 
@@ -6218,7 +6218,7 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
 
   // Extract 'thread_limit' clause from 'target' and 'teams' directives.
   int32_t targetThreadLimitVal = -1, teamsThreadLimitVal = -1;
-  if (!targetOp.getThreadLimitVals().empty())
+  if (!targetOp.getThreadLimitVars().empty())
     setMaxValueFromClause(targetOp.getThreadLimit(0), targetThreadLimitVal);
   setMaxValueFromClause(threadLimit, teamsThreadLimitVal);
 
@@ -6298,7 +6298,7 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
                          teamsThreadLimit, &lowerBounds, &upperBounds, &steps);
 
   // TODO: Handle constant 'if' clauses.
-  if (!targetOp.getThreadLimitVals().empty()) {
+  if (!targetOp.getThreadLimitVars().empty()) {
     Value targetThreadLimit = targetOp.getThreadLimit(0);
     attrs.TargetThreadLimit.front() =
         moduleTranslation.lookupValue(targetThreadLimit);
