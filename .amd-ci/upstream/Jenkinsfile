@@ -134,7 +134,7 @@ Boolean hasSourceChanges = true, isSkippableMerge = false
 Integer zero = 0, successStat = zero
 
 // llvmVer is processed by automation:
-String llvmVer = '22.0.0'
+String llvmVer = '23.0.0'
 // stageBuildNum is processed during branch creation:
 String stageBuildNum = env.BUILD_NUMBER
 // versionVal is processed during branch creation:
