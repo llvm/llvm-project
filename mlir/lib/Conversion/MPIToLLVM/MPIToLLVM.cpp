@@ -808,7 +808,7 @@ struct AllGatherOpLowering : public ConvertOpToLLVMPattern<mpi::AllGatherOp> {
         getOrDefineFunction(moduleOp, loc, rewriter, "MPI_Allgather", funcType);
 
     // count_recv is the number of elements received from each rank, not total
-    Value nRanks = mlir::mpi::CommSizeOp::create(rewriter, loc, i32, adaptor.getComm()).getSize();
+    Value nRanks = mpi::CommSizeOp::create(rewriter, loc, i32, adaptor.getComm()).getSize();
     Value recvCountPerRank = LLVM::UDivOp::create(
         rewriter, loc, i32, recvSize, nRanks);
 
