@@ -5,6 +5,7 @@
 #===============================================================================
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "libc++abi")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
@@ -33,6 +34,11 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
  build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
  )
 
+if (MSVC)
+  message(FATAL_ERROR "Libc++abi can't be built for MSVC targets, and doing so is pointless anyway because such "
+                      "targets must use the MS C++ ABI, and libc++abi provides the Itanium C++ ABI.")
+endif()
+
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
@@ -58,6 +64,9 @@ option(LIBCXXABI_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of wi
 option(LIBCXXABI_HAS_EXTERNAL_THREAD_API
   "Build libc++abi with an externalized threading API.
   This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON." OFF)
+set(LIBCXXABI_AVAILABILITY_MINIMUM_HEADER_VERSION "2" CACHE STRING
+  "Minimum version of the libc++ headers that are allowed to be used by binaries linked against the libc++ library. This
+   version must correspond to the major version of an LLVM release.")
 option(LIBCXXABI_ENABLE_FORGIVING_DYNAMIC_CAST
 "Make dynamic_cast more forgiving when type_info's mistakenly have hidden \
 visibility, and thus multiple type_infos can exist for a single type. \
@@ -130,11 +139,6 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-# TODO: Remove this, which shouldn't be necessary since we know we're being built
-#       side-by-side with libc++.
-set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
-    "Specify path to libc++ includes.")
-
 set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT OFF)
 if (WIN32)
   set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT ON)
@@ -182,14 +186,18 @@ set(LIBCXXABI_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
     "Path where built libc++abi runtime libraries should be installed.")
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
-  set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
-  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
-      "Path where built libc++abi libraries should be installed.")
-  if(LIBCXX_LIBDIR_SUBDIR)
-    string(APPEND LIBCXXABI_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
-    string(APPEND LIBCXXABI_INSTALL_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
+  set(LIBCXXABI_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+  if(LIBCXXABI_LIBDIR_SUBDIR)
+    string(APPEND LIBCXXABI_TARGET_SUBDIR /${LIBCXXABI_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBCXXABI_TARGET_SUBDIR)
+  set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
+  set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXXABI_TARGET_SUBDIR})
+  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXXABI_TARGET_SUBDIR} CACHE STRING
+      "Path where built libc++abi libraries should be installed.")
+  set(LIBCXXABI_INSTALL_INCLUDE_TARGET_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${LIBCXXABI_TARGET_SUBDIR}/c++/v1" CACHE STRING
+      "Path where target-specific libc++abi headers should be installed.")
+  unset(LIBCXXABI_TARGET_SUBDIR)
 else()
   if(LLVM_LIBRARY_OUTPUT_INTDIR)
     set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
@@ -200,6 +208,8 @@ else()
   endif()
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE STRING
       "Path where built libc++abi libraries should be installed.")
+  set(LIBCXXABI_INSTALL_INCLUDE_TARGET_DIR "${LIBCXXABI_INSTALL_INCLUDE_DIR}" CACHE STRING
+      "Path where target-specific libc++abi headers should be installed.")
 endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
@@ -225,8 +235,7 @@ set(LIBCXXABI_CXX_FLAGS "")
 set(LIBCXXABI_COMPILE_FLAGS "")
 set(LIBCXXABI_LINK_FLAGS "")
 set(LIBCXXABI_LIBRARIES "")
-set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
-    "Additional Compile only flags which can be provided in cache")
+set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING "See documentation LIBCXX_ADDITIONAL_COMPILE_FLAGS")
 set(LIBCXXABI_ADDITIONAL_LIBRARIES "" CACHE STRING
     "Additional libraries libc++abi is linked to which can be provided in cache")
 
@@ -238,15 +247,16 @@ include(HandleLibcxxabiFlags)
 #===============================================================================
 
 # Configure target flags
-if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
-add_compile_flags("${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 add_library_flags("${LIBCXXABI_ADDITIONAL_LIBRARIES}")
 
 # Configure compiler. Must happen after setting the target flags.
 include(config-ix)
+
+include(HandleLibC) # Setup the C library flags
 
 if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   list(APPEND LIBCXXABI_COMPILE_FLAGS -nostdinc++)
@@ -264,6 +274,49 @@ if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   string(REPLACE "-stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
 
+function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
+  set(SANITIZER_FLAGS)
+  set(USE_SANITIZER "${USE_SANITIZER}")
+  # NOTE: LLVM_USE_SANITIZER checks for a UNIX like system instead of MSVC.
+  # But we don't have LLVM_ON_UNIX so checking for MSVC is the best we can do.
+  if (USE_SANITIZER AND NOT MSVC)
+    append_flags_if_supported(SANITIZER_FLAGS "-fno-omit-frame-pointer")
+    append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
+
+    if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND
+            NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")
+      append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
+    endif()
+    if (USE_SANITIZER STREQUAL "Address")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address")
+    elseif (USE_SANITIZER STREQUAL "HWAddress")
+      append_flags(SANITIZER_FLAGS "-fsanitize=hwaddress")
+    elseif (USE_SANITIZER MATCHES "Memory(WithOrigins)?")
+      append_flags(SANITIZER_FLAGS -fsanitize=memory)
+      if (USE_SANITIZER STREQUAL "MemoryWithOrigins")
+        append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
+      endif()
+    elseif (USE_SANITIZER STREQUAL "Undefined")
+      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
+    elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
+            USE_SANITIZER STREQUAL "Undefined;Address")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
+    elseif (USE_SANITIZER STREQUAL "Thread")
+      append_flags(SANITIZER_FLAGS -fsanitize=thread)
+    elseif (USE_SANITIZER STREQUAL "DataFlow")
+      append_flags(SANITIZER_FLAGS -fsanitize=dataflow)
+    else()
+      message(WARNING "Unsupported value of LLVM_USE_SANITIZER: ${USE_SANITIZER}")
+    endif()
+  elseif(USE_SANITIZER AND MSVC)
+    message(WARNING "LLVM_USE_SANITIZER is not supported on this platform.")
+  endif()
+  set(${OUT_VAR} "${SANITIZER_FLAGS}" PARENT_SCOPE)
+endfunction()
+
+get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
+list(APPEND LIBCXXABI_COMPILE_FLAGS ${SANITIZER_FLAGS})
+
 # Let the library headers know they are currently being used to build the
 # library.
 add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
@@ -271,6 +324,7 @@ add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
 # libcxxabi needs to, for various reasons, include the libcpp headers as if
 # it is being built as part of libcxx.
 add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
+add_definitions(-D_LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION=${LIBCXXABI_AVAILABILITY_MINIMUM_HEADER_VERSION})
 
 # Get feature flags.
 add_compile_flags_if_supported(-fstrict-aliasing)
@@ -408,7 +462,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBCXXABI_C_FLAGS}")
 
 # On AIX, avoid picking up VMX extensions(i.e. vec_malloc) which would change
 # the default alignment of the allocators here.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_definitions("-D_XOPEN_SOURCE=700")
 endif()
 
@@ -441,6 +495,9 @@ endif()
 if (NOT "${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}" STREQUAL "")
   include_directories("${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}")
 endif()
+
+add_custom_target(cxxabi-test-depends
+  COMMENT "Build dependencies required to run the libc++abi test suite.")
 
 # Add source code. This also contains all of the logic for deciding linker flags
 # soname, etc...

@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/FrameOptimizer.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/ShrinkWrapping.h"
 #include "bolt/Passes/StackAvailableExpressions.h"
@@ -43,7 +43,7 @@ FrameOptimization("frame-opt",
   cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
-cl::opt<bool> RemoveStores(
+static cl::opt<bool> RemoveStores(
     "frame-opt-rm-stores", cl::init(FOP_NONE),
     cl::desc("apply additional analysis to remove stores (experimental)"),
     cl::cat(BoltOptCategory));
@@ -223,6 +223,11 @@ void FrameOptimizerPass::removeUnusedStores(const FrameAnalysis &FA,
 Error FrameOptimizerPass::runOnFunctions(BinaryContext &BC) {
   if (opts::FrameOptimization == FOP_NONE)
     return Error::success();
+
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is supported only on X86\n";
+    exit(1);
+  }
 
   std::unique_ptr<BinaryFunctionCallGraph> CG;
   std::unique_ptr<FrameAnalysis> FA;

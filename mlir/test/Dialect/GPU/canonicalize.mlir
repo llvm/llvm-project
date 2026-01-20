@@ -152,6 +152,17 @@ func.func @gpu_dim_of_alloc(%size: index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @out_of_bound_memref.dim
+//  CHECK:   %[[MEMREF:.[a-z0-9A-Z_]+]] = memref.dim
+//  CHECK:   return %[[MEMREF]] : index
+func.func @out_of_bound_memref.dim(%arg : memref<?xi8>, %size: index) -> index {
+  %c2 = arith.constant 2 : index
+  %1 = memref.dim %arg, %c2 : memref<?xi8>
+  return %1 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @simplify_gpu_launch
 func.func @simplify_gpu_launch() attributes {llvm.emit_c_interface} {
   %cst = arith.constant 0.000000e+00 : f32
@@ -246,6 +257,24 @@ func.func @make_subgroup_reduce_uniform() {
 
 // -----
 
+// CHECK-LABEL: func @subgroup_reduce_cluster_size_1
+//       CHECK: gpu.launch blocks
+//       CHECK: %[[V1:.*]] = "test.test2"() : () -> i32
+//       CHECK: "test.test3"(%[[V1]]) : (i32) -> ()
+func.func @subgroup_reduce_cluster_size_1() {
+  %0:6 = "test.test1"() : () -> (index, index, index, index, index, index)
+  gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %0#0, %arg7 = %0#1, %arg8 = %0#2)
+    threads(%arg3, %arg4, %arg5) in (%arg9 = %0#3, %arg10 = %0#4, %arg11 = %0#5) {
+    %1 = "test.test2"() : () -> i32
+    %2 = gpu.subgroup_reduce add %1 cluster(size=1) : (i32) -> (i32)
+    "test.test3"(%2) : (i32) -> ()
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
 // The GPU kernel does not have any side effecting ops, so the entire
 // gpu.launch op can fold away.
 
@@ -259,4 +288,27 @@ func.func @gpu_launch_without_side_effects() {
     gpu.terminator
   }
   return
+}
+
+// -----
+
+
+// CHECK-LABEL: func @broadcast_of_broadcast1
+//  CHECK-SAME:   (%[[VALUE:.*]]: f32, %[[LANE:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = gpu.subgroup_broadcast %[[VALUE]], first_active_lane : f32
+//       CHECK:   return %[[RES:.*]]
+func.func @broadcast_of_broadcast1(%value : f32, %lane : i32) -> f32 {
+  %0 = gpu.subgroup_broadcast %value, first_active_lane : f32
+  %1 = gpu.subgroup_broadcast %0, specific_lane %lane : f32
+  return %1 : f32
+}
+
+// CHECK-LABEL: func @broadcast_of_broadcast2
+//  CHECK-SAME:   (%[[VALUE:.*]]: f32, %[[LANE:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = gpu.subgroup_broadcast %[[VALUE]], specific_lane %[[LANE]] : f32
+//       CHECK:   return %[[RES:.*]]
+func.func @broadcast_of_broadcast2(%value : f32, %lane : i32) -> f32 {
+  %0 = gpu.subgroup_broadcast %value, specific_lane %lane : f32
+  %1 = gpu.subgroup_broadcast %0, first_active_lane : f32
+  return %1 : f32
 }

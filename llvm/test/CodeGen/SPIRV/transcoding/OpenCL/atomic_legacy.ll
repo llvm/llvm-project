@@ -20,10 +20,10 @@
 ;; a bit more information than original source
 
 ;; 0x2 Workgroup
-; CHECK-SPIRV-DAG: %[[#WORKGROUP_SCOPE:]] = OpConstant %[[#UINT]] 2
+; CHECK-SPIRV-DAG: %[[#WORKGROUP_SCOPE:]] = OpConstant %[[#UINT]] 2{{$}}
 
 ;; 0x0 Relaxed
-; CHECK-SPIRV-DAG: %[[#RELAXED:]] = OpConstant %[[#UINT]] 0
+; CHECK-SPIRV-DAG: %[[#RELAXED:]] = OpConstantNull %[[#UINT]]
 
 ; CHECK-SPIRV:     %[[#TEST]] = OpFunction %[[#]]
 ; CHECK-SPIRV:     %[[#PTR:]] = OpFunctionParameter %[[#UINT_PTR]]
@@ -31,16 +31,16 @@
 ; CHECK-SPIRV:     %[[#]] = OpAtomicIAdd %[[#UINT]] %[[#PTR]] %[[#WORKGROUP_SCOPE]] %[[#RELAXED]] %[[#VAL]]
 ; CHECK-SPIRV:     %[[#]] = OpAtomicIAdd %[[#UINT]] %[[#PTR]] %[[#WORKGROUP_SCOPE]] %[[#RELAXED]] %[[#VAL]]
 
-define dso_local spir_kernel void @test_legacy_atomics(i32 addrspace(1)* noundef %p, i32 noundef %val) local_unnamed_addr {
+define dso_local spir_kernel void @test_legacy_atomics(ptr addrspace(1) noundef %p, i32 noundef %val) local_unnamed_addr {
 entry:
-  %call = tail call spir_func i32 @_Z8atom_addPU3AS1Vii(i32 addrspace(1)* noundef %p, i32 noundef %val)
-  %call1 = tail call spir_func i32 @_Z10atomic_addPU3AS1Vii(i32 addrspace(1)* noundef %p, i32 noundef %val)
+  %call = tail call spir_func i32 @_Z8atom_addPU3AS1Vii(ptr addrspace(1) noundef %p, i32 noundef %val)
+  %call1 = tail call spir_func i32 @_Z10atomic_addPU3AS1Vii(ptr addrspace(1) noundef %p, i32 noundef %val)
   ret void
 }
 
-declare spir_func i32 @_Z8atom_addPU3AS1Vii(i32 addrspace(1)* noundef, i32 noundef) local_unnamed_addr
+declare spir_func i32 @_Z8atom_addPU3AS1Vii(ptr addrspace(1) noundef, i32 noundef) local_unnamed_addr
 
-declare spir_func i32 @_Z10atomic_addPU3AS1Vii(i32 addrspace(1)* noundef, i32 noundef) local_unnamed_addr
+declare spir_func i32 @_Z10atomic_addPU3AS1Vii(ptr addrspace(1) noundef, i32 noundef) local_unnamed_addr
 
 ;; References:
 ;; [1]: https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_C.html#atomic-legacy

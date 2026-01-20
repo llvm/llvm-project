@@ -13,8 +13,8 @@
 #include "MachODump.h"
 
 #include "ObjdumpOptID.h"
+#include "SourcePrinter.h"
 #include "llvm-objdump.h"
-#include "llvm-c/Disassembler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -41,11 +41,8 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -131,7 +128,8 @@ void objdump::parseMachOOptions(const llvm::opt::InputArgList &InputArgs) {
 
 static const Target *GetTarget(const MachOObjectFile *MachOObj,
                                const char **McpuDefault,
-                               const Target **ThumbTarget) {
+                               const Target **ThumbTarget,
+                               Triple &ThumbTriple) {
   // Figure out the target triple.
   Triple TT(TripleName);
   if (TripleName.empty()) {
@@ -142,19 +140,19 @@ static const Target *GetTarget(const MachOObjectFile *MachOObj,
   if (TT.getArch() == Triple::arm) {
     // We've inferred a 32-bit ARM target from the object file. All MachO CPUs
     // that support ARM are also capable of Thumb mode.
-    Triple ThumbTriple = TT;
     std::string ThumbName = (Twine("thumb") + TT.getArchName().substr(3)).str();
+    ThumbTriple = TT;
     ThumbTriple.setArchName(ThumbName);
     ThumbTripleName = ThumbTriple.str();
   }
 
   // Get the target specific parser.
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
   if (TheTarget && ThumbTripleName.empty())
     return TheTarget;
 
-  *ThumbTarget = TargetRegistry::lookupTarget(ThumbTripleName, Error);
+  *ThumbTarget = TargetRegistry::lookupTarget(ThumbTriple, Error);
   if (*ThumbTarget)
     return TheTarget;
 
@@ -385,7 +383,7 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   uint64_t Val = O->getPlainRelocationSymbolNum(RE);
 
   if (O->getAnyRelocationType(RE) == MachO::ARM64_RELOC_ADDEND &&
-      (O->getArch() == Triple::aarch64 || O->getArch() == Triple::aarch64_be)) {
+      Triple(O->getArchTriple()).isAArch64()) {
     Fmt << format("0x%0" PRIx64, Val);
     return;
   }
@@ -592,7 +590,6 @@ Error objdump::getMachORelocationValueString(const MachOObjectFile *Obj,
   } else
     printRelocationTargetName(Obj, RE, Fmt);
 
-  Fmt.flush();
   Result.append(FmtBuf.begin(), FmtBuf.end());
   return Error::success();
 }
@@ -1753,7 +1750,7 @@ static void DumpLiteralPointerSection(MachOObjectFile *O,
 
     StringRef BytesStr = unwrapOrError(Sect->getContents(), O->getFileName());
 
-    const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
+    const char *Contents = BytesStr.data();
 
     switch (section_type) {
     case MachO::S_CSTRING_LITERALS:
@@ -1969,7 +1966,7 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
 
         StringRef BytesStr =
             unwrapOrError(Section.getContents(), O->getFileName());
-        const char *sect = reinterpret_cast<const char *>(BytesStr.data());
+        const char *sect = BytesStr.data();
         uint32_t sect_size = BytesStr.size();
         uint64_t sect_addr = Section.getAddress();
 
@@ -2053,7 +2050,7 @@ static void DumpInfoPlistSectionContents(StringRef Filename,
         outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
       StringRef BytesStr =
           unwrapOrError(Section.getContents(), O->getFileName());
-      const char *sect = reinterpret_cast<const char *>(BytesStr.data());
+      const char *sect = BytesStr.data();
       outs() << format("%.*s", BytesStr.size(), sect) << "\n";
       return;
     }
@@ -2394,8 +2391,16 @@ static void printMachOUniversalHeaders(const object::MachOUniversalBinary *UB,
       outs() << "    cpusubtype " << (cpusubtype & ~MachO::CPU_SUBTYPE_MASK)
              << "\n";
     }
-    if (verbose &&
-        (cpusubtype & MachO::CPU_SUBTYPE_MASK) == MachO::CPU_SUBTYPE_LIB64)
+    if (verbose && cputype == MachO::CPU_TYPE_ARM64 &&
+        MachO::CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpusubtype)) {
+      outs() << "    capabilities CPU_SUBTYPE_ARM64E_";
+      if (MachO::CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpusubtype))
+        outs() << "KERNEL_";
+      outs() << format("PTRAUTH_VERSION %d",
+                       MachO::CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpusubtype))
+             << "\n";
+    } else if (verbose && (cpusubtype & MachO::CPU_SUBTYPE_MASK) ==
+                              MachO::CPU_SUBTYPE_LIB64)
       outs() << "    capabilities CPU_SUBTYPE_LIB64\n";
     else
       outs() << "    capabilities "
@@ -3136,7 +3141,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     op_info->AddSymbol.Value = value;
     return 1;
   }
-  if (Arch == Triple::aarch64) {
+  if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32) {
     if (Offset != 0 || InstSize != 4)
       return 0;
     if (info->O->getHeader().filetype != MachO::MH_OBJECT) {
@@ -3233,7 +3238,7 @@ static const char *GuessCstringPointer(uint64_t ReferenceValue,
           uint64_t object_offset = Sec.offset + sect_offset;
           StringRef MachOContents = info->O->getData();
           uint64_t object_size = MachOContents.size();
-          const char *object_addr = (const char *)MachOContents.data();
+          const char *object_addr = MachOContents.data();
           if (object_offset < object_size) {
             const char *name = object_addr + object_offset;
             return name;
@@ -3254,7 +3259,7 @@ static const char *GuessCstringPointer(uint64_t ReferenceValue,
           uint64_t object_offset = Sec.offset + sect_offset;
           StringRef MachOContents = info->O->getData();
           uint64_t object_size = MachOContents.size();
-          const char *object_addr = (const char *)MachOContents.data();
+          const char *object_addr = MachOContents.data();
           if (object_offset < object_size) {
             const char *name = object_addr + object_offset;
             return name;
@@ -3380,7 +3385,7 @@ static void method_reference(struct DisassembleInfo *info,
           if (method != nullptr) {
             if (Arch == Triple::x86_64)
               strcpy(method, "-[%rdi ");
-            else if (Arch == Triple::aarch64)
+            else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32)
               strcpy(method, "-[x0 ");
             else
               strcpy(method, "-[r? ");
@@ -3400,7 +3405,7 @@ static void method_reference(struct DisassembleInfo *info,
         if (method != nullptr) {
           if (Arch == Triple::x86_64)
             strcpy(method, "-[[%rdi super] ");
-          else if (Arch == Triple::aarch64)
+          else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32)
             strcpy(method, "-[[x0 super] ");
           else
             strcpy(method, "-[[r? super] ");
@@ -3443,7 +3448,7 @@ static uint64_t GuessPointerPointer(uint64_t ReferenceValue,
           uint64_t object_offset = Sec.offset + sect_offset;
           StringRef MachOContents = info->O->getData();
           uint64_t object_size = MachOContents.size();
-          const char *object_addr = (const char *)MachOContents.data();
+          const char *object_addr = MachOContents.data();
           if (object_offset < object_size) {
             uint64_t pointer_value;
             memcpy(&pointer_value, object_addr + object_offset,
@@ -3600,7 +3605,7 @@ namespace {
 
 // These are structs in the Objective-C meta data and read to produce the
 // comments for disassembly.  While these are part of the ABI they are no
-// public defintions.  So the are here not in include/llvm/BinaryFormat/MachO.h
+// public definitions.  So the are here not in include/llvm/BinaryFormat/MachO.h
 // .
 
 // The cfstring object in a 64-bit Mach-O file.
@@ -4346,7 +4351,7 @@ walk_pointer_list_64(const char *listname, const SectionRef S,
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
 
   StringRef BytesStr = unwrapOrError(S.getContents(), O->getFileName());
-  const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
+  const char *Contents = BytesStr.data();
 
   for (uint32_t i = 0; i < S.getSize(); i += sizeof(uint64_t)) {
     uint32_t left = S.getSize() - i;
@@ -4395,7 +4400,7 @@ walk_pointer_list_32(const char *listname, const SectionRef S,
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
 
   StringRef BytesStr = unwrapOrError(S.getContents(), O->getFileName());
-  const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
+  const char *Contents = BytesStr.data();
 
   for (uint32_t i = 0; i < S.getSize(); i += sizeof(uint32_t)) {
     uint32_t left = S.getSize() - i;
@@ -7007,7 +7012,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // If this is arm64 and the reference is an adrp instruction save the
     // instruction, passed in ReferenceValue and the address of the instruction
     // for use later if we see and add immediate instruction.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADRP) {
     info->adrp_inst = ReferenceValue;
     info->adrp_addr = ReferencePC;
@@ -7021,7 +7027,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // this add's Xn register reconstruct the value being referenced and look to
     // see if it is a literal pointer.  Note the add immediate instruction is
     // passed in ReferenceValue.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADDXri &&
              ReferencePC - 4 == info->adrp_addr &&
              (info->adrp_inst & 0x9f000000) == 0x90000000 &&
@@ -7051,7 +7058,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // matches this add's Xn register reconstruct the value being referenced and
     // look to see if it is a literal pointer.  Note the load register
     // instruction is passed in ReferenceValue.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_LDRXui &&
              ReferencePC - 4 == info->adrp_addr &&
              (info->adrp_inst & 0x9f000000) == 0x90000000 &&
@@ -7067,8 +7075,10 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     ldrxui_inst = ReferenceValue;
     ldrxui_imm = (ldrxui_inst >> 10) & 0xfff;
 
+    // The size field (bits [31:30]) determines the scaling.
+    unsigned Scale = (ldrxui_inst >> 30) & 0x3;
     ReferenceValue = (info->adrp_addr & 0xfffffffffffff000LL) +
-                     (adrp_imm << 12) + (ldrxui_imm << 3);
+                     (adrp_imm << 12) + (ldrxui_imm << Scale);
 
     *ReferenceName =
         GuessLiteralPointer(ReferenceValue, ReferencePC, ReferenceType, info);
@@ -7077,7 +7087,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
   }
   // If this arm64 and is an load register (PC-relative) instruction the
   // ReferenceValue is the PC plus the immediate value.
-  else if (info->O->getArch() == Triple::aarch64 &&
+  else if ((info->O->getArch() == Triple::aarch64 ||
+            info->O->getArch() == Triple::aarch64_32) &&
            (*ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_LDRXl ||
             *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADR)) {
     *ReferenceName =
@@ -7092,8 +7103,7 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
       *ReferenceName = info->demangled_name;
       *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
     }
-  }
-  else {
+  } else {
     *ReferenceName = nullptr;
     *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
   }
@@ -7179,7 +7189,7 @@ objdump::getMachODSymObject(const MachOObjectFile *MachOOF, StringRef Filename,
     DSYMBuf = std::move(BufOrErr.get());
 
     Expected<std::unique_ptr<Binary>> BinaryOrErr =
-        createBinary(DSYMBuf.get()->getMemBufferRef());
+        createBinary(DSYMBuf->getMemBufferRef());
     if (!BinaryOrErr) {
       reportError(BinaryOrErr.takeError(), DSYMPath);
       return nullptr;
@@ -7230,11 +7240,26 @@ objdump::getMachODSymObject(const MachOObjectFile *MachOOF, StringRef Filename,
   return DbgObj;
 }
 
+static bool shouldInstPrinterUseColor() {
+  switch (DisassemblyColor) {
+  case ColorOutput::Enable:
+    return true;
+  case ColorOutput::Auto:
+    return outs().has_colors();
+  case ColorOutput::Disable:
+  case ColorOutput::Invalid:
+    return false;
+  }
+  return false;
+}
+
 static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              StringRef DisSegName, StringRef DisSectName) {
   const char *McpuDefault = nullptr;
   const Target *ThumbTarget = nullptr;
-  const Target *TheTarget = GetTarget(MachOOF, &McpuDefault, &ThumbTarget);
+  Triple ThumbTriple;
+  const Target *TheTarget =
+      GetTarget(MachOOF, &McpuDefault, &ThumbTarget, ThumbTriple);
   if (!TheTarget) {
     // GetTarget prints out stuff.
     return;
@@ -7281,37 +7306,40 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     FeaturesStr = Features.getString();
   }
 
+  Triple TheTriple(TripleName);
+
   MCTargetOptions MCOptions;
   // Set up disassembler.
   std::unique_ptr<const MCRegisterInfo> MRI(
-      TheTarget->createMCRegInfo(TripleName));
+      TheTarget->createMCRegInfo(TheTriple));
   CHECK_TARGET_INFO_CREATION(MRI);
   std::unique_ptr<const MCAsmInfo> AsmInfo(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   CHECK_TARGET_INFO_CREATION(AsmInfo);
   std::unique_ptr<const MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MachOMCPU, FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, MachOMCPU, FeaturesStr));
   CHECK_TARGET_INFO_CREATION(STI);
-  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
   CHECK_TARGET_INFO_CREATION(DisAsm);
   std::unique_ptr<MCSymbolizer> Symbolizer;
   struct DisassembleInfo SymbolizerInfo(nullptr, nullptr, nullptr, false);
   std::unique_ptr<MCRelocationInfo> RelInfo(
-      TheTarget->createMCRelocationInfo(TripleName, Ctx));
+      TheTarget->createMCRelocationInfo(TheTriple, Ctx));
   if (RelInfo) {
     Symbolizer.reset(TheTarget->createMCSymbolizer(
-        TripleName, SymbolizerGetOpInfo, SymbolizerSymbolLookUp,
-        &SymbolizerInfo, &Ctx, std::move(RelInfo)));
+        TheTriple, SymbolizerGetOpInfo, SymbolizerSymbolLookUp, &SymbolizerInfo,
+        &Ctx, std::move(RelInfo)));
     DisAsm->setSymbolizer(std::move(Symbolizer));
   }
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AsmPrinterVariant, *AsmInfo, *InstrInfo, *MRI));
+      TheTriple, AsmPrinterVariant, *AsmInfo, *InstrInfo, *MRI));
   CHECK_TARGET_INFO_CREATION(IP);
-  // Set the display preference for hex vs. decimal immediates.
   IP->setPrintImmHex(PrintImmHex);
+  IP->setUseColor(shouldInstPrinterUseColor());
+
   // Comment stream and backing vector.
   SmallString<128> CommentsToEmit;
   raw_svector_ostream CommentStream(CommentsToEmit);
@@ -7321,6 +7349,10 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   // (32-bit and 64-bit) comments printed with different spacing before the
   // comment causing different diffs with the 'C' disassembler library API.
   // IP->setCommentStream(CommentStream);
+
+  for (StringRef Opt : DisassemblerOptions)
+    if (!IP->applyTargetSpecificCLOption(Opt))
+      reportError(Filename, "unrecognized disassembler option: " + Opt);
 
   // Set up separate thumb disassembler if needed.
   std::unique_ptr<const MCRegisterInfo> ThumbMRI;
@@ -7333,35 +7365,34 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   struct DisassembleInfo ThumbSymbolizerInfo(nullptr, nullptr, nullptr, false);
   std::unique_ptr<MCRelocationInfo> ThumbRelInfo;
   if (ThumbTarget) {
-    ThumbMRI.reset(ThumbTarget->createMCRegInfo(ThumbTripleName));
+    ThumbMRI.reset(ThumbTarget->createMCRegInfo(ThumbTriple));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbMRI);
     ThumbAsmInfo.reset(
-        ThumbTarget->createMCAsmInfo(*ThumbMRI, ThumbTripleName, MCOptions));
+        ThumbTarget->createMCAsmInfo(*ThumbMRI, ThumbTriple, MCOptions));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbAsmInfo);
-    ThumbSTI.reset(
-        ThumbTarget->createMCSubtargetInfo(ThumbTripleName, MachOMCPU,
-                                           FeaturesStr));
+    ThumbSTI.reset(ThumbTarget->createMCSubtargetInfo(ThumbTriple, MachOMCPU,
+                                                      FeaturesStr));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbSTI);
-    ThumbCtx.reset(new MCContext(Triple(ThumbTripleName), ThumbAsmInfo.get(),
+    ThumbCtx.reset(new MCContext(ThumbTriple, ThumbAsmInfo.get(),
                                  ThumbMRI.get(), ThumbSTI.get()));
     ThumbDisAsm.reset(ThumbTarget->createMCDisassembler(*ThumbSTI, *ThumbCtx));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbDisAsm);
     MCContext *PtrThumbCtx = ThumbCtx.get();
     ThumbRelInfo.reset(
-        ThumbTarget->createMCRelocationInfo(ThumbTripleName, *PtrThumbCtx));
+        ThumbTarget->createMCRelocationInfo(ThumbTriple, *PtrThumbCtx));
     if (ThumbRelInfo) {
       ThumbSymbolizer.reset(ThumbTarget->createMCSymbolizer(
-          ThumbTripleName, SymbolizerGetOpInfo, SymbolizerSymbolLookUp,
+          ThumbTriple, SymbolizerGetOpInfo, SymbolizerSymbolLookUp,
           &ThumbSymbolizerInfo, PtrThumbCtx, std::move(ThumbRelInfo)));
       ThumbDisAsm->setSymbolizer(std::move(ThumbSymbolizer));
     }
     int ThumbAsmPrinterVariant = ThumbAsmInfo->getAssemblerDialect();
     ThumbIP.reset(ThumbTarget->createMCInstPrinter(
-        Triple(ThumbTripleName), ThumbAsmPrinterVariant, *ThumbAsmInfo,
-        *ThumbInstrInfo, *ThumbMRI));
+        ThumbTriple, ThumbAsmPrinterVariant, *ThumbAsmInfo, *ThumbInstrInfo,
+        *ThumbMRI));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbIP);
-    // Set the display preference for hex vs. decimal immediates.
     ThumbIP->setPrintImmHex(PrintImmHex);
+    ThumbIP->setUseColor(shouldInstPrinterUseColor());
   }
 
 #undef CHECK_TARGET_INFO_CREATION
@@ -7403,16 +7434,26 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<DIContext> diContext;
   std::unique_ptr<Binary> DSYMBinary;
   std::unique_ptr<MemoryBuffer> DSYMBuf;
-  if (UseDbg) {
-    // If separate DSym file path was specified, parse it as a macho file,
-    // get the sections and supply it to the section name parsing machinery.
-    if (const ObjectFile *DbgObj =
-            getMachODSymObject(MachOOF, Filename, DSYMBinary, DSYMBuf)) {
+  const ObjectFile *DbgObj = MachOOF;
+  if (UseDbg || PrintSource || PrintLines) {
+    // Look for debug info in external dSYM file or embedded in the object.
+    // getMachODSymObject returns MachOOF by default if no external dSYM found.
+    const ObjectFile *DSym =
+        getMachODSymObject(MachOOF, Filename, DSYMBinary, DSYMBuf);
+    if (!DSym)
+      return;
+    DbgObj = DSym;
+    if (UseDbg || PrintLines) {
       // Setup the DIContext
       diContext = DWARFContext::create(*DbgObj);
-    } else {
-      return;
     }
+  }
+
+  std::optional<SourcePrinter> SP;
+  std::optional<LiveElementPrinter> LEP;
+  if (PrintSource || PrintLines) {
+    SP.emplace(DbgObj, TheTarget->getName());
+    LEP.emplace(*MRI, *STI);
   }
 
   if (FilterSections.empty())
@@ -7593,6 +7634,12 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
           outs() << SymName << ":\n";
 
         uint64_t PC = SectAddress + Index;
+
+        if (PrintSource || PrintLines) {
+          formatted_raw_ostream FOS(outs());
+          SP->printSourceLine(FOS, {PC, SectIdx}, Filename, *LEP);
+        }
+
         if (LeadingAddr) {
           if (FullLeadingAddr) {
             if (MachOOF->is64Bit())
@@ -7634,7 +7681,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
           // Print debug info.
           if (diContext) {
-            DILineInfo dli = diContext->getLineInfoForAddress({PC, SectIdx});
+            DILineInfo dli = diContext->getLineInfoForAddress({PC, SectIdx})
+                                 .value_or(DILineInfo());
             // Print valid line info if it changed.
             if (dli != lastLine && dli.Line != 0)
               outs() << "\t## " << dli.FileName << ':' << dli.Line << ':'
@@ -7647,7 +7695,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
             outs() << format("\t.byte 0x%02x #bad opcode\n",
                              *(Bytes.data() + Index) & 0xff);
             Size = 1; // skip exactly one illegible byte and move on.
-          } else if (Arch == Triple::aarch64 ||
+          } else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32 ||
                      (Arch == Triple::arm && !IsThumb)) {
             uint32_t opcode = (*(Bytes.data() + Index) & 0xff) |
                               (*(Bytes.data() + Index + 1) & 0xff) << 8 |
@@ -7661,7 +7709,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                               (*(Bytes.data() + Index + 1) & 0xff) << 8;
             outs() << format("\t.short\t0x%04x\n", opcode);
             Size = 2;
-          } else{
+          } else {
             WithColor::warning(errs(), "llvm-objdump")
                 << "invalid instruction encoding\n";
             if (Size == 0)
@@ -7682,6 +7730,11 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         MCInst Inst;
 
         uint64_t PC = SectAddress + Index;
+
+        if (PrintSource || PrintLines) {
+          formatted_raw_ostream FOS(outs());
+          SP->printSourceLine(FOS, {PC, SectIdx}, Filename, *LEP);
+        }
 
         if (DumpAndSkipDataInCode(PC, Bytes.data() + Index, Dices, InstSize))
           continue;
@@ -8368,7 +8421,17 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
       outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
       break;
     }
-    if ((cpusubtype & MachO::CPU_SUBTYPE_MASK) == MachO::CPU_SUBTYPE_LIB64) {
+
+    if (cputype == MachO::CPU_TYPE_ARM64 &&
+        MachO::CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpusubtype)) {
+      const char *Format =
+          MachO::CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpusubtype)
+              ? " PAK%02d"
+              : " PAC%02d";
+      outs() << format(Format,
+                       MachO::CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpusubtype));
+    } else if ((cpusubtype & MachO::CPU_SUBTYPE_MASK) ==
+               MachO::CPU_SUBTYPE_LIB64) {
       outs() << " LIB64";
     } else {
       outs() << format("  0x%02" PRIx32,
@@ -9044,7 +9107,7 @@ static void PrintDyldLoadCommand(MachO::dylinker_command dyld,
   if (dyld.name >= dyld.cmdsize)
     outs() << "         name ?(bad offset " << dyld.name << ")\n";
   else {
-    const char *P = (const char *)(Ptr) + dyld.name;
+    const char *P = Ptr + dyld.name;
     outs() << "         name " << P << " (offset " << dyld.name << ")\n";
   }
 }
@@ -9075,7 +9138,7 @@ static void PrintRpathLoadCommand(MachO::rpath_command rpath, const char *Ptr) {
   if (rpath.path >= rpath.cmdsize)
     outs() << "         path ?(bad offset " << rpath.path << ")\n";
   else {
-    const char *P = (const char *)(Ptr) + rpath.path;
+    const char *P = Ptr + rpath.path;
     outs() << "         path " << P << " (offset " << rpath.path << ")\n";
   }
 }
@@ -10022,7 +10085,7 @@ static void PrintDylibCommand(MachO::dylib_command dl, const char *Ptr) {
   else
     outs() << "\n";
   if (dl.dylib.name < dl.cmdsize) {
-    const char *P = (const char *)(Ptr) + dl.dylib.name;
+    const char *P = Ptr + dl.dylib.name;
     outs() << "         name " << P << " (offset " << dl.dylib.name << ")\n";
   } else {
     outs() << "         name ?(bad offset " << dl.dylib.name << ")\n";

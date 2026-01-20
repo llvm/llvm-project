@@ -20,10 +20,9 @@ namespace clang {
 namespace format {
 namespace {
 
-class CleanupTest : public ::testing::Test {
+class CleanupTest : public testing::Test {
 protected:
-  std::string cleanup(llvm::StringRef Code,
-                      const std::vector<tooling::Range> &Ranges,
+  std::string cleanup(StringRef Code, const std::vector<tooling::Range> &Ranges,
                       const FormatStyle &Style = getLLVMStyle()) {
     tooling::Replacements Replaces = format::cleanup(Style, Code, Ranges);
 
@@ -33,8 +32,7 @@ protected:
   }
 
   // Returns code after cleanup around \p Offsets.
-  std::string cleanupAroundOffsets(llvm::ArrayRef<unsigned> Offsets,
-                                   llvm::StringRef Code,
+  std::string cleanupAroundOffsets(ArrayRef<unsigned> Offsets, StringRef Code,
                                    const FormatStyle &Style = getLLVMStyle()) {
     std::vector<tooling::Range> Ranges;
     for (auto Offset : Offsets)
@@ -332,7 +330,7 @@ protected:
                            const tooling::Replacements &Replaces) {
     auto CleanReplaces = cleanupAroundReplacements(Code, Replaces, Style);
     EXPECT_TRUE(static_cast<bool>(CleanReplaces))
-        << llvm::toString(CleanReplaces.takeError()) << "\n";
+        << toString(CleanReplaces.takeError()) << "\n";
     auto Result = applyAllReplacements(Code, *CleanReplaces);
     EXPECT_TRUE(static_cast<bool>(Result));
     return *Result;
@@ -342,10 +340,10 @@ protected:
                                     const tooling::Replacements &Replaces) {
     auto CleanReplaces = cleanupAroundReplacements(Code, Replaces, Style);
     EXPECT_TRUE(static_cast<bool>(CleanReplaces))
-        << llvm::toString(CleanReplaces.takeError()) << "\n";
+        << toString(CleanReplaces.takeError()) << "\n";
     auto FormattedReplaces = formatReplacements(Code, *CleanReplaces, Style);
     EXPECT_TRUE(static_cast<bool>(FormattedReplaces))
-        << llvm::toString(FormattedReplaces.takeError()) << "\n";
+        << toString(FormattedReplaces.takeError()) << "\n";
     auto Result = applyAllReplacements(Code, *FormattedReplaces);
     EXPECT_TRUE(static_cast<bool>(Result));
     return *Result;
@@ -425,7 +423,7 @@ TEST_F(CleanUpReplacementsTest, InsertMultipleIncludesGoogleStyle) {
   tooling::Replacements Replaces =
       toReplacements({createInsertion("#include <list>"),
                       createInsertion("#include \"x/x.h\"")});
-  Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp);
+  Style = getGoogleStyle(FormatStyle::LK_Cpp);
   EXPECT_EQ(Expected, apply(Code, Replaces));
 }
 
@@ -462,7 +460,7 @@ TEST_F(CleanUpReplacementsTest, InsertMultipleNewHeadersAndSortGoogle) {
        createInsertion("#include \"b.h\""),
        createInsertion("#include <vector>"), createInsertion("#include <list>"),
        createInsertion("#include \"fix.h\"")});
-  Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp);
+  Style = getGoogleStyle(FormatStyle::LK_Cpp);
   EXPECT_EQ(Expected, formatAndApply(Code, Replaces));
 }
 

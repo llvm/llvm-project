@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true \
-; RUN: -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
 ;
 ; This test case checks whether Polly generates alias metadata in case of
 ; the ublas gemm kernel and polly-invariant-load-hoisting.

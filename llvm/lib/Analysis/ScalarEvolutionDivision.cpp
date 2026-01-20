@@ -15,17 +15,19 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
 
+#define DEBUG_TYPE "scev-division"
+
 namespace llvm {
 class Type;
-}
+} // namespace llvm
 
 using namespace llvm;
-
-namespace {
 
 static inline int sizeOfSCEV(const SCEV *S) {
   struct FindSCEVSize {
@@ -47,8 +49,6 @@ static inline int sizeOfSCEV(const SCEV *S) {
   ST.visitAll(S);
   return F.Size;
 }
-
-} // namespace
 
 // Computes the Quotient and Remainder of the division of Numerator by
 // Denominator.
@@ -256,4 +256,32 @@ SCEVDivision::SCEVDivision(ScalarEvolution &S, const SCEV *Numerator,
 void SCEVDivision::cannotDivide(const SCEV *Numerator) {
   Quotient = Zero;
   Remainder = Numerator;
+}
+
+void SCEVDivisionPrinterPass::runImpl(Function &F, ScalarEvolution &SE) {
+  OS << "Printing analysis 'Scalar Evolution Division' for function '"
+     << F.getName() << "':\n";
+  for (Instruction &Inst : instructions(F)) {
+    BinaryOperator *Div = dyn_cast<BinaryOperator>(&Inst);
+    if (!Div || Div->getOpcode() != Instruction::SDiv)
+      continue;
+
+    const SCEV *Numerator = SE.getSCEV(Div->getOperand(0));
+    const SCEV *Denominator = SE.getSCEV(Div->getOperand(1));
+    const SCEV *Quotient, *Remainder;
+    SCEVDivision::divide(SE, Numerator, Denominator, &Quotient, &Remainder);
+
+    OS << "Instruction: " << *Div << "\n";
+    OS.indent(2) << "Numerator: " << *Numerator << "\n";
+    OS.indent(2) << "Denominator: " << *Denominator << "\n";
+    OS.indent(2) << "Quotient: " << *Quotient << "\n";
+    OS.indent(2) << "Remainder: " << *Remainder << "\n";
+  }
+}
+
+PreservedAnalyses SCEVDivisionPrinterPass::run(Function &F,
+                                               FunctionAnalysisManager &AM) {
+  ScalarEvolution &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  runImpl(F, SE);
+  return PreservedAnalyses::all();
 }

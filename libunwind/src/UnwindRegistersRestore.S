@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !defined(__wasm__)
+
 #include "assembly.h"
 
 #define FROM_0_TO_15 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
@@ -16,6 +18,8 @@
 
 #if defined(_AIX)
   .toc
+#elif defined(__aarch64__) && defined(__ELF__) && defined(_LIBUNWIND_EXECUTE_ONLY_CODE)
+  .section .text,"axy",@progbits,unique,0
 #else
   .text
 #endif
@@ -23,6 +27,8 @@
 #if !defined(__USING_SJLJ_EXCEPTIONS__)
 
 #if defined(__i386__)
+.att_syntax
+
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
 #
 # extern "C" void __libunwind_Registers_x86_jumpto(Registers_x86 *);
@@ -66,7 +72,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
   # skip fs
   # skip gs
 
-#elif defined(__x86_64__)
+#elif defined(__x86_64__) && !defined(__arm64ec__)
+.att_syntax
 
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
 #
@@ -629,14 +636,35 @@ Lnovec:
 
 #elif defined(__aarch64__)
 
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
+
+#if defined(__ARM_FEATURE_GCS_DEFAULT)
+.arch_extension gcs
+#endif
+
 //
-// extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
+// extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *, unsigned);
 //
 // On entry:
 //  thread_state pointer is in x0
+//  walked_frames counter is in x1
 //
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
+
+  #if defined(_LIBUNWIND_TRACE_RET_INJECT)
+    cbz     w1, 1f
+  0:
+    subs    w1, w1, #1
+    adr     x16, #8
+    ret     x16
+
+    b.ne    0b
+  1:
+  #endif
+
   // skip restore of x0,x1 for now
   ldp    x2, x3,  [x0, #0x010]
   ldp    x4, x5,  [x0, #0x020]
@@ -653,8 +681,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x24,x25, [x0, #0x0C0]
   ldp    x26,x27, [x0, #0x0D0]
   ldp    x28,x29, [x0, #0x0E0]
-  ldr    x30,     [x0, #0x100]  // restore pc into lr
 
+#if defined(__ARM_FP) && __ARM_FP != 0
   ldp    d0, d1,  [x0, #0x110]
   ldp    d2, d3,  [x0, #0x120]
   ldp    d4, d5,  [x0, #0x130]
@@ -672,15 +700,41 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    d28,d29, [x0, #0x1F0]
   ldr    d30,     [x0, #0x200]
   ldr    d31,     [x0, #0x208]
-
+#endif
   // Finally, restore sp. This must be done after the last read from the
   // context struct, because it is allocated on the stack, and an exception
   // could clobber the de-allocated portion of the stack after sp has been
   // restored.
-  ldr    x16,     [x0, #0x0F8]
+
+  ldr    x16,     [x0, #0x0F8]  // load sp into scratch
+  ldr    lr,      [x0, #0x100]  // restore pc into lr
+
+#if __has_feature(ptrauth_calls)
+  // The LR is signed with its address inside the register state.  Time
+  // to resign to be a regular ROP protected signed pointer
+  add    x1, x0, #0x100
+  autib  lr, x1
+  pacib  lr, x16  // signed the scratch register for sp
+#endif
+
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
   mov    sp,x16                 // restore sp
+#if defined(__ARM_FEATURE_GCS_DEFAULT)
+  // If GCS is enabled we need to push the address we're returning to onto the
+  // GCS stack. We can't just return using br, as there won't be a BTI landing
+  // pad instruction at the destination.
+  mov      x16, #1
+  chkfeat  x16
+  cbnz     x16, Lnogcs
+  gcspushm x30
+Lnogcs:
+#endif
+
+#if __has_feature(ptrauth_calls)
+  retab
+#else
   ret    x30                    // jump to pc
+#endif
 
 #elif defined(__arm__) && !defined(__APPLE__)
 
@@ -1030,9 +1084,10 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
   lw    $27, (4 * 27)($4)
   lw    $28, (4 * 28)($4)
   lw    $29, (4 * 29)($4)
-  lw    $30, (4 * 30)($4)
   // load new pc into ra
   lw    $31, (4 * 32)($4)
+  // MIPS 1 has load delay slot. Ensure lw $31 and jr are separated by an instruction.
+  lw    $30, (4 * 30)($4)
   // jump to ra, load a0 in the delay slot
   jr    $31
   lw    $4, (4 * 4)($4)
@@ -1068,11 +1123,13 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind21Registers_mips_newabi6jumptoEv)
   ld    $2, (8 * 2)($4)
   ld    $3, (8 * 3)($4)
   // skip a0 for now
-  .irp i,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30
+  .irp i,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29
     ld $\i, (8 * \i)($4)
   .endr
   // load new pc into ra
   ld    $31, (8 * 32)($4)
+  // MIPS 1 has load delay slot. Ensure lw $31 and jr are separated by an instruction.
+  ld    $30, (8 * 30)($4)
   // jump to ra, load a0 in the delay slot
   jr    $31
   ld    $4, (8 * 4)($4)
@@ -1169,7 +1226,11 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_riscv6jumptoEv)
     ILOAD x\i, (RISCV_ISIZE * \i)(a0)
   .endr
   // skip a0 for now
+#if defined(__riscv_32e)
+  .irp i,11,12,13,14,15
+#else
   .irp i,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+#endif
     ILOAD x\i, (RISCV_ISIZE * \i)(a0)
   .endr
   ILOAD    x10, (RISCV_ISIZE * 10)(a0)   // restore a0
@@ -1236,3 +1297,4 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind19Registers_loongarch6jumptoEv)
 
 NO_EXEC_STACK_DIRECTIVE
 
+#endif /* !defined(__wasm__) */

@@ -6,8 +6,8 @@ modernize-use-constraints
 Replace ``std::enable_if`` with C++20 requires clauses.
 
 ``std::enable_if`` is a SFINAE mechanism for selecting the desired function or
-class template based on type traits or other requirements. ``enable_if`` changes
-the meta-arity of the template, and has other
+class template based on type traits or other requirements. ``enable_if``
+changes the meta-arity of the template, and has other
 `adverse side effects
 <https://open-std.org/JTC1/SC22/WG21/docs/papers/2016/p0225r0.html>`_
 in the code. C++20 introduces concepts and constraints as a cleaner language
@@ -68,3 +68,7 @@ The tool will replace the above code with,
   // The tool will not emit a diagnostic or attempt to replace the code.
   template <typename T, std::enable_if_t<T::some_trait, int> = 0>
   struct my_class {};
+
+.. note::
+
+  System headers are not analyzed by this check.

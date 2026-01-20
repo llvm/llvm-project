@@ -4,14 +4,14 @@
 ; CHECK-SPIRV-DAG: %[[#]] = OpBuildNDRange %[[#]] %[[#GWS:]] %[[#LWS:]] %[[#GWO:]]
 ; CHECK-SPIRV-DAG: %[[#GWS]] = OpConstant %[[#]] 123
 ; CHECK-SPIRV-DAG: %[[#LWS]] = OpConstant %[[#]] 456
-; CHECK-SPIRV-DAG: %[[#GWO]] = OpConstant %[[#]] 0
+; CHECK-SPIRV-DAG: %[[#GWO]] = OpConstantNull %[[#]]
 
 %struct.ndrange_t = type { i32, [3 x i32], [3 x i32], [3 x i32] }
 
 define spir_kernel void @test() {
   %ndrange = alloca %struct.ndrange_t, align 4
-  call spir_func void @_Z10ndrange_1Djj(%struct.ndrange_t* sret(%struct.ndrange_t*) %ndrange, i32 123, i32 456)
+  call spir_func void @_Z10ndrange_1Djj(ptr sret(ptr) %ndrange, i32 123, i32 456)
   ret void
 }
 
-declare spir_func void @_Z10ndrange_1Djj(%struct.ndrange_t* sret(%struct.ndrange_t*), i32, i32)
+declare spir_func void @_Z10ndrange_1Djj(ptr sret(ptr), i32, i32)

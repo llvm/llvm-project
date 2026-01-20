@@ -12,17 +12,17 @@
 ; CHECK-DAG: %[[#Int8Ptr:]] = OpTypePointer Generic %[[#Int8]]
 
 ; CHECK-DAG: %[[#Const4:]] = OpConstant %[[#Int32]] 4
-; CHECK: %[[#Int8x4:]] = OpTypeArray %[[#Int8]] %[[#Const4]]
+; CHECK-DAG: %[[#Int8x4:]] = OpTypeArray %[[#Int8]] %[[#Const4]]
 
 ; CHECK-DAG: %[[#Const12:]] = OpConstant %[[#Int32]] 12
-; CHECK: %[[#Int8x12:]] = OpTypeArray %[[#Int8]] %[[#Const12]]
+; CHECK-DAG: %[[#Int8x12:]] = OpTypeArray %[[#Int8]] %[[#Const12]]
 
 ; CHECK-DAG: %[[#Const21:]] = OpConstant %[[#Int8]] 21
 ; CHECK-DAG: %[[#False:]] = OpConstantFalse %[[#]]
 ; CHECK-DAG: %[[#ConstComp:]] = OpConstantComposite %[[#Int8x4]] %[[#Const21]] %[[#Const21]] %[[#Const21]] %[[#Const21]]
 ; CHECK-DAG: %[[#ConstNull:]] = OpConstantNull %[[#Int8x12]]
-; CHECK: %[[#VarComp:]] = OpVariable %[[#]] UniformConstant %[[#ConstComp]]
-; CHECK: %[[#VarNull:]] = OpVariable %[[#]] UniformConstant %[[#ConstNull]]
+; CHECK-DAG: %[[#VarComp:]] = OpVariable %[[#]] UniformConstant %[[#ConstComp]]
+; CHECK-DAG: %[[#VarNull:]] = OpVariable %[[#]] UniformConstant %[[#ConstNull]]
 
 ; CHECK-DAG: %[[#Int8PtrConst:]] = OpTypePointer UniformConstant %[[#Int8]]
 ; CHECK: OpCopyMemorySized %[[#Target:]] %[[#Source:]] %[[#Const12]] Aligned 4
@@ -57,34 +57,34 @@
 
 %struct.S1 = type { i32, i32, i32 }
 
-define spir_func void @_Z5foo11v(%struct.S1 addrspace(4)* noalias nocapture sret(%struct.S1 addrspace(4)*) %agg.result, i32 %s1, i64 %s2, i8 %v) {
+define spir_func void @_Z5foo11v(ptr addrspace(4) noalias nocapture sret(ptr addrspace(4)) %agg.result, i32 %s1, i64 %s2, i8 %v) {
   %x = alloca [4 x i8]
-  %x.bc = bitcast [4 x i8]* %x to i8*
-  %a = bitcast %struct.S1 addrspace(4)* %agg.result to i8 addrspace(4)*
-  tail call void @llvm.memset.p4i8.i32(i8 addrspace(4)* align 4 %a, i8 0, i32 12, i1 false)
-  tail call void @llvm.memset.p0i8.i32(i8* align 4 %x.bc, i8 21, i32 4, i1 false)
+  %x.bc = bitcast ptr %x to ptr
+  %a = bitcast ptr addrspace(4) %agg.result to ptr addrspace(4)
+  tail call void @llvm.memset.p4.i32(ptr addrspace(4) align 4 %a, i8 0, i32 12, i1 false)
+  tail call void @llvm.memset.p0.i32(ptr align 4 %x.bc, i8 21, i32 4, i1 false)
 
   ;; non-const value
-  tail call void @llvm.memset.p0i8.i32(i8* align 4 %x.bc, i8 %v, i32 3, i1 false)
+  tail call void @llvm.memset.p0.i32(ptr align 4 %x.bc, i8 %v, i32 3, i1 false)
 
   ;; non-const value and size
-  tail call void @llvm.memset.p0i8.i32(i8*  align 4 %x.bc, i8 %v, i32 %s1, i1 false)
+  tail call void @llvm.memset.p0.i32(ptr  align 4 %x.bc, i8 %v, i32 %s1, i1 false)
 
   ;; Address spaces, non-const value and size
-  %b = addrspacecast i8 addrspace(4)* %a to i8 addrspace(3)*
-  tail call void @llvm.memset.p3i8.i32(i8 addrspace(3)* align 4 %b, i8 %v, i32 %s1, i1 false)
-  %c = addrspacecast i8 addrspace(4)* %a to i8 addrspace(1)*
-  tail call void @llvm.memset.p1i8.i64(i8 addrspace(1)* align 4 %c, i8 %v, i64 %s2, i1 false)
+  %b = addrspacecast ptr addrspace(4) %a to ptr addrspace(3)
+  tail call void @llvm.memset.p3.i32(ptr addrspace(3) align 4 %b, i8 %v, i32 %s1, i1 false)
+  %c = addrspacecast ptr addrspace(4) %a to ptr addrspace(1)
+  tail call void @llvm.memset.p1.i64(ptr addrspace(1) align 4 %c, i8 %v, i64 %s2, i1 false)
 
   ;; Volatile
-  tail call void @llvm.memset.p1i8.i64(i8 addrspace(1)* align 4 %c, i8 %v, i64 %s2, i1 true)
+  tail call void @llvm.memset.p1.i64(ptr addrspace(1) align 4 %c, i8 %v, i64 %s2, i1 true)
   ret void
 }
 
-declare void @llvm.memset.p4i8.i32(i8 addrspace(4)* nocapture, i8, i32, i1)
+declare void @llvm.memset.p4.i32(ptr addrspace(4) nocapture, i8, i32, i1)
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1)
+declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1)
 
-declare void @llvm.memset.p3i8.i32(i8 addrspace(3)*, i8, i32, i1)
+declare void @llvm.memset.p3.i32(ptr addrspace(3), i8, i32, i1)
 
-declare void @llvm.memset.p1i8.i64(i8 addrspace(1)*, i8, i64, i1)
+declare void @llvm.memset.p1.i64(ptr addrspace(1), i8, i64, i1)

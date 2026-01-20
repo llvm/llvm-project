@@ -35,7 +35,7 @@ public:
     /// Match calls to functions from the C standard library. This also
     /// recognizes builtin variants whose name is derived by adding
     /// "__builtin", "__inline" or similar prefixes or suffixes; but only
-    /// matches functions than are externally visible and are declared either
+    /// matches functions that are externally visible and are declared either
     /// directly within a TU or in the namespace 'std'.
     /// For the exact heuristics, see CheckerContext::isCLibraryFunction().
     CLibrary,
@@ -56,9 +56,10 @@ public:
     /// overloaded operator, a constructor or a destructor).
     CXXMethod,
 
-    /// Match any CallEvent that is not an ObjCMethodCall.
-    /// FIXME: Previously this was the default behavior of CallDescription, but
-    /// its use should be replaced by a more specific mode almost everywhere.
+    /// Match any CallEvent that is not an ObjCMethodCall. This should not be
+    /// used when the checker looks for a concrete function (and knows whether
+    /// it is a method); but GenericTaintChecker uses this mode to match
+    /// functions whose name was configured by the user.
     Unspecified,
 
     /// FIXME: Add support for ObjCMethodCall events (I'm not adding it because
@@ -99,13 +100,6 @@ public:
   CallDescription(Mode MatchAs, ArrayRef<StringRef> QualifiedName,
                   MaybeCount RequiredArgs = std::nullopt,
                   MaybeCount RequiredParams = std::nullopt);
-
-  /// Construct a CallDescription with default flags.
-  CallDescription(ArrayRef<StringRef> QualifiedName,
-                  MaybeCount RequiredArgs = std::nullopt,
-                  MaybeCount RequiredParams = std::nullopt);
-
-  CallDescription(std::nullptr_t) = delete;
 
   /// Get the name of the function that this object matches.
   StringRef getFunctionName() const { return QualifiedName.back(); }
@@ -158,7 +152,7 @@ public:
   /// exists only when that is not available, for example, when _only_
   /// syntactic check is done on a piece of code.
   ///
-  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candicade
+  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candidate
   /// for syntactic only matching if you are writing a new checker. This is
   /// handy if a CallDescriptionMap is already there.
   ///
@@ -239,7 +233,7 @@ public:
   /// exists only when that is not available, for example, when _only_
   /// syntactic check is done on a piece of code.
   ///
-  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candicade
+  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candidate
   /// for syntactic only matching if you are writing a new checker. This is
   /// handy if a CallDescriptionMap is already there.
   ///
@@ -280,7 +274,7 @@ public:
   /// exists only when that is not available, for example, when _only_
   /// syntactic check is done on a piece of code.
   ///
-  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candicade
+  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candidate
   /// for syntactic only matching if you are writing a new checker. This is
   /// handy if a CallDescriptionMap is already there.
   ///

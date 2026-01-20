@@ -1,6 +1,7 @@
 # Test the SBAPI for GetStatistics()
 
 import json
+
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -54,6 +55,11 @@ class TestStatsAPI(TestBase):
             stats_json,
             'Make sure the "frameVariable" key in in target.GetStatistics()["targets"][0]',
         )
+        self.assertNotIn(
+            "loadCoreTime",
+            stats_json,
+            "LoadCoreTime should not be present in a live, non-coredump target",
+        )
         expressionEvaluation = stats_json["expressionEvaluation"]
         self.assertIn(
             "successes",
@@ -85,14 +91,15 @@ class TestStatsAPI(TestBase):
         stats_summary.GetAsJSON(stream_summary)
         debug_stats_summary = json.loads(stream_summary.GetData())
         self.assertNotIn("modules", debug_stats_summary)
-        self.assertNotIn("memory", debug_stats_summary)
         self.assertNotIn("commands", debug_stats_summary)
 
         # Summary values should be the same as in full statistics.
-        # Except the parse time on Mac OS X is not deterministic.
+        # The exceptions to this are:
+        # - The parse time on Mac OS X is not deterministic.
+        # - Memory usage may grow over time due to the use of ConstString.
         for key, value in debug_stats_summary.items():
             self.assertIn(key, debug_stats)
-            if key != "targets" and not key.endswith("Time"):
+            if key != "memory" and key != "targets" and not key.endswith("Time"):
                 self.assertEqual(debug_stats[key], value)
 
     def test_command_stats_api(self):
@@ -156,3 +163,25 @@ class TestStatsAPI(TestBase):
         stats_force.GetAsJSON(stream_force)
         debug_stats_force = json.loads(stream_force.GetData())
         self.assertEqual(debug_stats_force["totalDebugInfoByteSize"], 445)
+
+    def test_core_load_time(self):
+        """
+        Test to see if the coredump path is included in statistics dump.
+        """
+        yaml_file = "arm64-minidump-build-ids.yaml"
+        src_dir = self.getSourceDir()
+        minidump_path = self.getBuildArtifact(os.path.basename(yaml_file) + ".dmp")
+        self.yaml2obj(os.path.join(src_dir, yaml_file), minidump_path)
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(minidump_path)
+        self.assertTrue(process.IsValid())
+
+        stats_options = lldb.SBStatisticsOptions()
+        stats = target.GetStatistics(stats_options)
+        stream = lldb.SBStream()
+        stats.GetAsJSON(stream)
+        debug_stats = json.loads(stream.GetData())
+        self.assertTrue("targets" in debug_stats)
+        target_info = debug_stats["targets"][0]
+        self.assertTrue("loadCoreTime" in target_info)
+        self.assertTrue(float(target_info["loadCoreTime"]) > 0.0)

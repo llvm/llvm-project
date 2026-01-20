@@ -14,8 +14,8 @@ RUN: echo %t
 # Out-of-process fuzzing with this rig is slow,
 # we can not wait for the fuzzer to find the faulty input.
 # Just run for a bit and observe the corpus expansion.
-RUN: LIBFUZZER_OOP_TARGET="./oop-target > /dev/null 2>&1 " ./oop-fuzzer -max_len=3 OOP_CORPUS -runs=1000 -jobs=4
-CHECK: Running: OOP_CORPUS/
-CHECK: Running: OOP_CORPUS/
-CHECK: Running: OOP_CORPUS/
+RUN: env LIBFUZZER_OOP_TARGET="./oop-target > /dev/null 2>&1 " ./oop-fuzzer -max_len=3 OOP_CORPUS -runs=1000 -jobs=4
+CHECK: Running: {{.*}}OOP_CORPUS/
+CHECK: Running: {{.*}}OOP_CORPUS/
+CHECK: Running: {{.*}}OOP_CORPUS/
 RUN: ./oop-target OOP_CORPUS/* 2>&1 | FileCheck %s

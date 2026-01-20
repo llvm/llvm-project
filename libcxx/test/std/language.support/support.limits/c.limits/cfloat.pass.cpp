@@ -16,8 +16,10 @@
 #error FLT_ROUNDS not defined
 #endif
 
+#if TEST_STD_VER >= 11
 #ifndef FLT_EVAL_METHOD
 #error FLT_EVAL_METHOD not defined
+#endif
 #endif
 
 #ifndef FLT_RADIX
@@ -50,8 +52,10 @@
 #error LDBL_MANT_DIG not defined
 #endif
 
+#if TEST_STD_VER >= 11
 #ifndef DECIMAL_DIG
 #error DECIMAL_DIG not defined
+#endif
 #endif
 
 #if TEST_STD_VER > 14

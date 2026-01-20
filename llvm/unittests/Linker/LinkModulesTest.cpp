@@ -40,8 +40,9 @@ protected:
 
     AT = ArrayType::get(PointerType::getUnqual(Ctx), 3);
 
-    GV = new GlobalVariable(*M.get(), AT, false /*=isConstant*/,
-                            GlobalValue::InternalLinkage, nullptr,"switch.bas");
+    GV =
+        new GlobalVariable(*M, AT, false /*=isConstant*/,
+                           GlobalValue::InternalLinkage, nullptr, "switch.bas");
 
     // Global Initializer
     std::vector<Constant *> Init;
@@ -105,10 +106,10 @@ TEST_F(LinkModuleTest, BlockAddress) {
   const GlobalVariable *LinkedGV = LinkedModule->getNamedGlobal("switch.bas");
   const Constant *Init = LinkedGV->getInitializer();
 
-  // @switch.bas = internal global [3 x i8*]
-  //   [i8* blockaddress(@ba_func, %switch.case.1),
-  //    i8* blockaddress(@ba_func, %switch.case.2),
-  //    i8* inttoptr (i32 1 to i8*)]
+  // @switch.bas = internal global [3 x ptr]
+  //   [ptr blockaddress(@ba_func, %switch.case.1),
+  //    ptr blockaddress(@ba_func, %switch.case.2),
+  //    ptr inttoptr (i32 1 to ptr)]
 
   ArrayType *AT = ArrayType::get(PointerType::getUnqual(Ctx), 3);
   EXPECT_EQ(AT, Init->getType());
@@ -159,7 +160,7 @@ static Module *getInternal(LLVMContext &Ctx) {
   IRBuilder<> Builder(BB);
   Builder.CreateRetVoid();
 
-  StructType *STy = StructType::create(Ctx, PointerType::get(FTy, 0));
+  StructType *STy = StructType::create(Ctx, PointerType::get(Ctx, 0));
 
   GlobalVariable *GV =
       new GlobalVariable(*InternalM, STy, false /*=isConstant*/,
@@ -357,7 +358,7 @@ TEST_F(LinkModuleTest, RemangleIntrinsics) {
   // types, so they must be uniquified by linker. Check that they use the same
   // intrinsic definition.
   Function *F = Foo->getFunction("llvm.ssa.copy.s_struct.rtx_defs");
-  ASSERT_EQ(F->getNumUses(), (unsigned)2);
+  ASSERT_TRUE(F->hasNUses(2));
 }
 
 } // end anonymous namespace

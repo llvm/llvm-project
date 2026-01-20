@@ -238,7 +238,10 @@ private:
     }
 
     if (AddUnderscores) {
-      if (!isDecorated(E.Name, MingwDef))
+      // Don't add underscore if the name is already mangled or if it's a
+      // forward target.
+      if (!isDecorated(E.Name, MingwDef) &&
+          (E.ExtName.empty() || !StringRef(E.Name).contains(".")))
         E.Name = (std::string("_").append(E.Name));
       if (!E.ExtName.empty() && !isDecorated(E.ExtName, MingwDef))
         E.ExtName = (std::string("_").append(E.ExtName));
@@ -282,8 +285,6 @@ private:
       if (Tok.K == EqualEqual) {
         read();
         E.ImportName = std::string(Tok.Value);
-        if (AddUnderscores && !isDecorated(E.ImportName, MingwDef))
-          E.ImportName = std::string("_").append(E.ImportName);
         continue;
       }
       // EXPORTAS must be at the end of export definition

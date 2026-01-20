@@ -8,11 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// UNSUPPORTED: availability-filesystem-missing
-
-// qemu: Unsupported SemiHosting SWI 0x30
-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
-
 // <chrono>
 
 // file_clock

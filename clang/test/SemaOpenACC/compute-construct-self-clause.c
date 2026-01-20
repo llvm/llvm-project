@@ -33,22 +33,22 @@ void BoolExpr(int *I, float *F) {
 void WarnMaybeNotUsed(int val1, int val2) {
 
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'self' clause is here}}
 #pragma acc parallel self if(val1)
   while(0);
 
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'self' clause is here}}
 #pragma acc parallel self(val1) if(val1)
   while(0);
 
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc parallel if(val1) self
   while(0);
 
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc parallel if(val1) self(val2)
   while(0);
 
@@ -79,4 +79,8 @@ void WarnMaybeNotUsed(int val1, int val2) {
   // expected-error@+1{{use of undeclared identifier 'invalid'}}
 #pragma acc parallel if(invalid) self(val1)
   while(0);
+
+  // expected-error@+1{{OpenACC 'self' clause is not valid on 'loop' directive}}
+#pragma acc loop self
+  for(int i = 5; i < 10;++i);
 }

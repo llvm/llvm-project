@@ -38,9 +38,9 @@ define <8 x i8> @vaaddu_vx_v8i8_floor(<8 x i8> %x, i8 %y) {
 define <8 x i8> @vaaddu_vv_v8i8_floor_sexti16(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_floor_sexti16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vnsrl.wi v8, v10, 1
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = sext <8 x i8> %x to <8 x i16>
   %yzv = sext <8 x i8> %y to <8 x i16>
@@ -185,14 +185,15 @@ define <8 x i64> @vaaddu_vx_v8i64_floor(<8 x i64> %x, i64 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    csrwi vxrm, 2
 ; RV32-NEXT:    vaaddu.vv v8, v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vaaddu_vx_v8i64_floor:
@@ -248,12 +249,9 @@ define <8 x i8> @vaaddu_vx_v8i8_ceil(<8 x i8> %x, i8 %y) {
 define <8 x i8> @vaaddu_vv_v8i8_ceil_sexti16(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_ceil_sexti16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vadd.vi v8, v10, 1
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 1
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = sext <8 x i8> %x to <8 x i16>
   %yzv = sext <8 x i8> %y to <8 x i16>
@@ -431,14 +429,15 @@ define <8 x i64> @vaaddu_vx_v8i64_ceil(<8 x i64> %x, i64 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    csrwi vxrm, 0
 ; RV32-NEXT:    vaaddu.vv v8, v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vaaddu_vx_v8i64_ceil:

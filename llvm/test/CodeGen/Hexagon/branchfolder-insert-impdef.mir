@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass branch-folder %s -o - -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass branch-folder %s -o - -verify-machineinstrs | FileCheck %s
 
 # Branch folding will perform tail merging of bb.1 and bb.2, and bb.2 will
 # become the common tail. The use of R0 in bb.2 is <undef> while the

@@ -202,11 +202,9 @@ void R600SchedStrategy::releaseBottomNode(SUnit *SU) {
 
 bool R600SchedStrategy::regBelongsToClass(Register Reg,
                                           const TargetRegisterClass *RC) const {
-  if (!Reg.isVirtual()) {
+  if (!Reg.isVirtual())
     return RC->contains(Reg);
-  } else {
-    return MRI->getRegClass(Reg) == RC;
-  }
+  return MRI->getRegClass(Reg) == RC;
 }
 
 R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
@@ -319,9 +317,8 @@ SUnit *R600SchedStrategy::PopInst(std::vector<SUnit *> &Q, bool AnyALU) {
       InstructionsGroupCandidate.pop_back();
       Q.erase((It + 1).base());
       return SU;
-    } else {
-      InstructionsGroupCandidate.pop_back();
     }
+    InstructionsGroupCandidate.pop_back();
   }
   return nullptr;
 }
@@ -353,13 +350,9 @@ void R600SchedStrategy::AssignSlot(MachineInstr* MI, unsigned Slot) {
   Register DestReg = MI->getOperand(DstIndex).getReg();
   // PressureRegister crashes if an operand is def and used in the same inst
   // and we try to constraint its regclass
-  for (MachineInstr::mop_iterator It = MI->operands_begin(),
-      E = MI->operands_end(); It != E; ++It) {
-    MachineOperand &MO = *It;
-    if (MO.isReg() && !MO.isDef() &&
-        MO.getReg() == DestReg)
+  for (const MachineOperand &MO : MI->all_uses())
+    if (MO.getReg() == DestReg)
       return;
-  }
   // Constrains the regclass of DestReg to assign it to Slot
   switch (Slot) {
   case 0:

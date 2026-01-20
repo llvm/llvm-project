@@ -8,7 +8,6 @@
 
 #include "DWARFLinkerTypeUnit.h"
 #include "DIEGenerator.h"
-#include "DWARFEmitterImpl.h"
 #include "llvm/Support/LEB128.h"
 
 using namespace llvm;
@@ -286,21 +285,18 @@ uint32_t TypeUnit::addFileNameIntoLinetable(StringEntry *Dir,
       DirIdx++;
   }
 
-  uint32_t FileIdx = 0;
-  FilenamesMapTy::iterator FileEntry = FileNamesMap.find({FileName, DirIdx});
-  if (FileEntry == FileNamesMap.end()) {
+  auto [FileEntry, Inserted] = FileNamesMap.try_emplace(
+      {FileName, DirIdx}, LineTable.Prologue.FileNames.size());
+  if (Inserted) {
     // We currently do not support more than UINT32_MAX files.
     assert(LineTable.Prologue.FileNames.size() < UINT32_MAX);
-    FileIdx = LineTable.Prologue.FileNames.size();
-    FileNamesMap.insert({{FileName, DirIdx}, FileIdx});
     LineTable.Prologue.FileNames.push_back(DWARFDebugLine::FileNameEntry());
     LineTable.Prologue.FileNames.back().Name = DWARFFormValue::createFromPValue(
         dwarf::DW_FORM_string, FileName->getKeyData());
     LineTable.Prologue.FileNames.back().DirIdx = DirIdx;
-  } else {
-    FileIdx = FileEntry->second;
   }
 
+  uint32_t FileIdx = FileEntry->second;
   return getVersion() < 5 ? FileIdx + 1 : FileIdx;
 }
 

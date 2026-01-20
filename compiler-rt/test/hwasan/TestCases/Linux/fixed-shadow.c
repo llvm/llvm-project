@@ -1,15 +1,19 @@
 // Test fixed shadow base functionality.
 //
 // Default compiler instrumentation works with any shadow base (dynamic or fixed).
-// RUN: %clang_hwasan %s -o %t && %run %t
-// RUN: %clang_hwasan %s -o %t && HWASAN_OPTIONS=fixed_shadow_base=263878495698944 %run %t
-// RUN: %clang_hwasan %s -o %t && HWASAN_OPTIONS=fixed_shadow_base=4398046511104 %run %t
+// RUN: %clang_hwasan %s -o %t
+// RUN: %run %t
+// RUN: env HWASAN_OPTIONS=fixed_shadow_base=17592186044416 %run %t
+// RUN: env HWASAN_OPTIONS=fixed_shadow_base=4398046511104 %run %t
 //
 // If -hwasan-mapping-offset is set, then the fixed_shadow_base needs to match.
-// RUN: %clang_hwasan %s -mllvm -hwasan-mapping-offset=263878495698944 -o %t && HWASAN_OPTIONS=fixed_shadow_base=263878495698944 %run %t
-// RUN: %clang_hwasan %s -mllvm -hwasan-mapping-offset=4398046511104 -o %t && HWASAN_OPTIONS=fixed_shadow_base=4398046511104 %run %t
-// RUN: %clang_hwasan %s -mllvm -hwasan-mapping-offset=263878495698944 -o %t && HWASAN_OPTIONS=fixed_shadow_base=4398046511104 not %run %t
-// RUN: %clang_hwasan %s -mllvm -hwasan-mapping-offset=4398046511104 -o %t && HWASAN_OPTIONS=fixed_shadow_base=263878495698944 not %run %t
+// RUN: %clang_hwasan %s -mllvm -hwasan-mapping-offset=17592186044416 -o %t
+// RUN: env HWASAN_OPTIONS=fixed_shadow_base=17592186044416 %run %t
+// RUN: env HWASAN_OPTIONS=fixed_shadow_base=4398046511104 not %run %t
+
+// RUN: %clang_hwasan %s -mllvm -hwasan-mapping-offset=4398046511104 -o %t
+// RUN: env HWASAN_OPTIONS=fixed_shadow_base=4398046511104 %run %t
+// RUN: env HWASAN_OPTIONS=fixed_shadow_base=263878495698944 not %run %t
 //
 // Note: if fixed_shadow_base is not set, compiler-rt will dynamically choose a
 // shadow base, which has a tiny but non-zero probability of matching the

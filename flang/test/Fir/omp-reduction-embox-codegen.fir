@@ -25,12 +25,14 @@ omp.declare_reduction @test_reduction : !fir.ref<!fir.box<i32>> init {
 
 func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {
   %4 = fir.alloca !fir.box<i32>
-  omp.parallel byref reduction(@test_reduction %4 -> %arg0 : !fir.ref<!fir.box<i32>>) {
+  omp.parallel reduction(byref @test_reduction %4 -> %arg0 : !fir.ref<!fir.box<i32>>) {
     omp.terminator
   }
+  func.call @__use_box_i32(%4) : (!fir.ref<!fir.box<i32>>) -> ()
   return
 }
 
+func.func private @__use_box_i32(!fir.ref<!fir.box<i32>>) -> ()
 // basically we are testing that there isn't a crash
 // CHECK-LABEL: define void @_QQmain
 // CHECK-NEXT:    alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1, align 8

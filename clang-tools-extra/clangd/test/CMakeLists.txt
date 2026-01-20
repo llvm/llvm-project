@@ -2,13 +2,21 @@ set(CLANGD_TEST_DEPS
   clangd
   ClangdTests
   clangd-indexer
-  # No tests for it, but we should still make sure they build.
-  dexp
+  split-file
   )
+
+if (LLVM_INCLUDE_BENCHMARKS)
+  list(APPEND CLANGD_TEST_DEPS IndexBenchmark)
+endif()
 
 if(CLANGD_BUILD_XPC)
   list(APPEND CLANGD_TEST_DEPS clangd-xpc-test-client)
   list(APPEND CLANGD_TEST_DEPS ClangdXpcUnitTests)
+endif()
+
+if(CLANGD_BUILD_DEXP)
+  # No tests for it, but we should still make sure they build.
+  list(APPEND CLANGD_TEST_DEPS dexp)
 endif()
 
 if(CLANGD_ENABLE_REMOTE)

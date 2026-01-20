@@ -3,10 +3,11 @@ add_mlir_dialect_library(MLIRLLVMIRTransforms
   DIExpressionLegalization.cpp
   DIExpressionRewriter.cpp
   DIScopeForLLVMFuncOp.cpp
+  InlinerInterfaceImpl.cpp
   LegalizeForExport.cpp
   OptimizeForNVVM.cpp
   RequestCWrappers.cpp
-  TypeConsistency.cpp
+  UseDefaultVisibilityPass.cpp
 
   DEPENDS
   MLIRLLVMPassIncGen
@@ -18,4 +19,5 @@ add_mlir_dialect_library(MLIRLLVMIRTransforms
   MLIRPass
   MLIRTransforms
   MLIRNVVMDialect
+  MLIROpenMPDialect
   )

@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-exceptions
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
 
-// Prior to http://llvm.org/D123580, there was a bug with how the max_size()
-// was calculated. That was inlined into some functions in the dylib, which leads
-// to failures when running this test against an older system dylib.
-// XFAIL: stdlib=apple-libc++ && target=arm64-apple-macosx{{11.0|12.0}}
+// This test fails when using a built library that does not contain
+// 15860446a8c3, which changed the return value of max_size(). Without
+// that change, the built library believes the max size to be one greater
+// than it really is, and we fail to throw `length_error` from `string::resize()`,
+// which is explicitly instantiated in the built library.
+//
+// XFAIL: using-built-library-before-llvm-21
 
 // <string>
 

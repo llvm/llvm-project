@@ -29,8 +29,8 @@
 %struct.anon = type <{ i32, double }>
 @astruct = global [1 x %struct.anon] [%struct.anon <{ i32 1, double 7.000000e+00 }>], align 1
 
-%struct.anon2 = type { double, i32 }
-@bstruct = global [1 x %struct.anon2] [%struct.anon2 { double 7.000000e+00 , i32 1}], align 8
+%struct.anon2 = type { double, i32, [4 x i8] }
+@bstruct = global [1 x %struct.anon2] [%struct.anon2 { double 7.000000e+00 , i32 1, [4 x i8] undef }], align 8
 
 @a = common global i32 0, align 4
 @b = common global i64 0, align 8
@@ -45,8 +45,10 @@
 
 ; CHECK-NOT: .toc
 
-; CHECK:  .file
-; CHECK-NEXT:      .csect ..text..[PR],5
+; CHECK:      .file
+; CHECK-NEXT: .csect ..text..[PR],5
+; CHECK-NEXT: .rename ..text..[PR],""
+; CHECK-NEXT: .machine "PWR7"
 
 ; CHECK:      .csect .data[RW],5
 ; CHECK-NEXT: .globl  ivar
@@ -212,8 +214,7 @@
 ; SYMS-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYMS-NEXT:     Section: N_DEBUG
 ; SYMS-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
-; SYMS32-NEXT:   CPU Version ID: TCPU_COM (0x3)
-; SYMS64-NEXT:   CPU Version ID: TCPU_PPC64 (0x2)
+; SYMS-NEXT:     CPU Version ID: TCPU_PWR7 (0x18)
 ; SYMS-NEXT:     StorageClass: C_FILE (0x67)
 ; SYMS-NEXT:     NumberOfAuxEntries: 2
 ; SYMS-NEXT:     File Auxiliary Entry {

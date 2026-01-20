@@ -13,7 +13,7 @@ define void @sitofp_fptosi_range() {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], ptr @array, i64 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    store i32 [[IV_INT]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[DEC_INT]] = add nsw i32 [[IV_INT]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[DEC_INT]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DEC_INT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -49,7 +49,7 @@ define void @sitofp_fptosi_range_overflow() {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], ptr @array, i64 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[DEC_INT]] = add nsw i32 [[IV_INT]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[DEC_INT]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DEC_INT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -84,7 +84,7 @@ define void @sitofp_fptosi_range_trunc() {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], ptr @array, i64 0, i64 [[IV_INT]]
 ; CHECK-NEXT:    store i32 [[IV_INT_TRUNC]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[DEC_INT]] = add nsw i64 [[IV_INT]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[DEC_INT]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[DEC_INT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -155,7 +155,7 @@ define void @sitofp_fptoui_range_zext() {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], ptr @array, i64 0, i64 [[IV_INT_ZEXT]]
 ; CHECK-NEXT:    store i32 [[IV_INT_ZEXT1]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[DEC_INT]] = add nsw i16 [[IV_INT]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[DEC_INT]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i16 [[DEC_INT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -191,7 +191,7 @@ define void @sitofp_fptoui_range_zext_postinc() {
 ; CHECK-NEXT:    [[INC_INT_ZEXT:%.*]] = zext i16 [[INC_INT]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], ptr @array, i64 0, i64 [[INC_INT_ZEXT]]
 ; CHECK-NEXT:    store i32 [[INC_INT_ZEXT1]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[INC_INT]], 200
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i16 [[INC_INT]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -227,7 +227,7 @@ define void @uitofp_fptosi_range_zext() {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], ptr @array, i64 0, i64 [[IV_INT_ZEXT]]
 ; CHECK-NEXT:    store i32 [[IV_INT_ZEXT1]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INC_INT]] = add nuw nsw i16 [[IV_INT]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[INC_INT]], 200
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i16 [[INC_INT]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -261,7 +261,7 @@ define void @sitofp_fptoui_range() {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], ptr @array, i64 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    store i32 [[IV_INT]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[DEC_INT]] = add nsw i32 [[IV_INT]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[DEC_INT]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DEC_INT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -329,7 +329,7 @@ define void @uitofp_fptoui_range () {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], ptr @array, i64 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    store i32 [[IV_INT]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[DEC_INT]] = add nsw i32 [[IV_INT]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[DEC_INT]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DEC_INT]], 3
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -357,7 +357,7 @@ define void @uitofp_fptoui_range_with_negative() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i32 100, ptr getelementptr inbounds ([16777219 x i32], ptr @array, i64 0, i64 100), align 4
+; CHECK-NEXT:    store i32 100, ptr getelementptr inbounds nuw (i8, ptr @array, i64 400), align 4
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -390,7 +390,7 @@ define void @uitofp_fptosi_range () {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], ptr @array, i64 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    store i32 [[IV_INT]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[DEC_INT]] = add nsw i32 [[IV_INT]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[DEC_INT]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DEC_INT]], 3
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -418,7 +418,7 @@ define void @uitofp_fptosi_range_with_negative () {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i32 100, ptr getelementptr inbounds ([16777219 x i32], ptr @array, i64 0, i64 100), align 4
+; CHECK-NEXT:    store i32 100, ptr getelementptr inbounds nuw (i8, ptr @array, i64 400), align 4
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void

@@ -21,32 +21,32 @@ define void @fold_snprintf_pcnt_c(i32 %c) {
 ; CHECK-LABEL: @fold_snprintf_pcnt_c(
 ; CHECK-NEXT:    [[PDIMAX:%.*]] = load ptr, ptr @adst, align 8
 ; CHECK-NEXT:    store i8 1, ptr [[PDIMAX]], align 1
-; CHECK-NEXT:    [[NUL:%.*]] = getelementptr inbounds i8, ptr [[PDIMAX]], i64 1
+; CHECK-NEXT:    [[NUL:%.*]] = getelementptr inbounds nuw i8, ptr [[PDIMAX]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[NUL]], align 1
 ; CHECK-NEXT:    store i32 1, ptr @asiz, align 4
-; CHECK-NEXT:    [[PD2:%.*]] = load ptr, ptr getelementptr ([0 x ptr], ptr @adst, i64 0, i64 1), align 8
+; CHECK-NEXT:    [[PD2:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 8), align 8
 ; CHECK-NEXT:    store i8 2, ptr [[PD2]], align 1
-; CHECK-NEXT:    [[NUL1:%.*]] = getelementptr inbounds i8, ptr [[PD2]], i64 1
+; CHECK-NEXT:    [[NUL1:%.*]] = getelementptr inbounds nuw i8, ptr [[PD2]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[NUL1]], align 1
-; CHECK-NEXT:    store i32 1, ptr getelementptr ([0 x i32], ptr @asiz, i64 0, i64 1), align 4
-; CHECK-NEXT:    [[PD2_0:%.*]] = load ptr, ptr getelementptr ([0 x ptr], ptr @adst, i64 0, i64 2), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr (i8, ptr @asiz, i64 4), align 4
+; CHECK-NEXT:    [[PD2_0:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 16), align 8
 ; CHECK-NEXT:    store i8 0, ptr [[PD2_0]], align 1
-; CHECK-NEXT:    [[NUL2:%.*]] = getelementptr inbounds i8, ptr [[PD2_0]], i64 1
+; CHECK-NEXT:    [[NUL2:%.*]] = getelementptr inbounds nuw i8, ptr [[PD2_0]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[NUL2]], align 1
-; CHECK-NEXT:    store i32 1, ptr getelementptr ([0 x i32], ptr @asiz, i64 0, i64 2), align 4
-; CHECK-NEXT:    [[PD1:%.*]] = load ptr, ptr getelementptr ([0 x ptr], ptr @adst, i64 0, i64 3), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr (i8, ptr @asiz, i64 8), align 4
+; CHECK-NEXT:    [[PD1:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 24), align 8
 ; CHECK-NEXT:    store i8 0, ptr [[PD1]], align 1
-; CHECK-NEXT:    store i32 1, ptr getelementptr ([0 x i32], ptr @asiz, i64 0, i64 3), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr ([0 x i32], ptr @asiz, i64 0, i64 4), align 4
-; CHECK-NEXT:    [[PD2_C:%.*]] = load ptr, ptr getelementptr ([0 x ptr], ptr @adst, i64 0, i64 4), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr (i8, ptr @asiz, i64 12), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr (i8, ptr @asiz, i64 16), align 4
+; CHECK-NEXT:    [[PD2_C:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 32), align 8
 ; CHECK-NEXT:    [[CHAR:%.*]] = trunc i32 [[C:%.*]] to i8
 ; CHECK-NEXT:    store i8 [[CHAR]], ptr [[PD2_C]], align 1
-; CHECK-NEXT:    [[NUL3:%.*]] = getelementptr inbounds i8, ptr [[PD2_C]], i64 1
+; CHECK-NEXT:    [[NUL3:%.*]] = getelementptr inbounds nuw i8, ptr [[PD2_C]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[NUL3]], align 1
-; CHECK-NEXT:    store i32 1, ptr getelementptr ([0 x i32], ptr @asiz, i64 0, i64 4), align 4
-; CHECK-NEXT:    [[PD1_C:%.*]] = load ptr, ptr getelementptr ([0 x ptr], ptr @adst, i64 0, i64 5), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr (i8, ptr @asiz, i64 16), align 4
+; CHECK-NEXT:    [[PD1_C:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 40), align 8
 ; CHECK-NEXT:    store i8 0, ptr [[PD1_C]], align 1
-; CHECK-NEXT:    store i32 1, ptr getelementptr ([0 x i32], ptr @asiz, i64 0, i64 5), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr (i8, ptr @asiz, i64 20), align 4
 ; CHECK-NEXT:    ret void
 ;
 
@@ -100,12 +100,12 @@ define void @call_snprintf_pcnt_c_ximax(i32 %c) {
 ; CHECK-NEXT:    [[PDM1:%.*]] = load ptr, ptr @adst, align 8
 ; CHECK-NEXT:    [[NM1:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr noundef nonnull dereferenceable(1) [[PDM1]], i64 -1, ptr nonnull @pcnt_c, i8 0)
 ; CHECK-NEXT:    store i32 [[NM1]], ptr @asiz, align 4
-; CHECK-NEXT:    [[PDIMAXP1:%.*]] = load ptr, ptr getelementptr ([0 x ptr], ptr @adst, i64 0, i64 1), align 8
+; CHECK-NEXT:    [[PDIMAXP1:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 8), align 8
 ; CHECK-NEXT:    [[NIMAXP1:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr noundef nonnull dereferenceable(1) [[PDIMAXP1]], i64 2147483648, ptr nonnull @pcnt_c, i8 1)
-; CHECK-NEXT:    store i32 [[NIMAXP1]], ptr getelementptr ([0 x i32], ptr @asiz, i64 0, i64 1), align 4
-; CHECK-NEXT:    [[PDM1SL32:%.*]] = load ptr, ptr getelementptr ([0 x ptr], ptr @adst, i64 0, i64 2), align 8
+; CHECK-NEXT:    store i32 [[NIMAXP1]], ptr getelementptr (i8, ptr @asiz, i64 4), align 4
+; CHECK-NEXT:    [[PDM1SL32:%.*]] = load ptr, ptr getelementptr (i8, ptr @adst, i64 16), align 8
 ; CHECK-NEXT:    [[NM1SL32:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr noundef nonnull dereferenceable(1) [[PDM1SL32]], i64 -4294967296, ptr nonnull @pcnt_c, i8 1)
-; CHECK-NEXT:    store i32 [[NM1SL32]], ptr getelementptr ([0 x i32], ptr @asiz, i64 0, i64 2), align 4
+; CHECK-NEXT:    store i32 [[NM1SL32]], ptr getelementptr (i8, ptr @asiz, i64 8), align 4
 ; CHECK-NEXT:    ret void
 ;
 

@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -verify-dom-info -polly-codegen -S < %s \
-; RUN: -polly-invariant-load-hoisting=true | FileCheck %s
+; RUN: opt %loadNPMPolly -verify-dom-info '-passes=polly<no-default-opts>' -S -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; This caused an infinite recursion during invariant load hoisting at some
 ; point. Check it does not and we add a "false" runtime check.
@@ -42,7 +41,7 @@ for.cond.12.preheader.lr.ph:                      ; preds = %entry
   br label %for.body.14.lr.ph
 
 for.body.14.lr.ph:                                ; preds = %for.end, %for.cond.12.preheader.lr.ph
-  %d.050 = phi ptr [ %tmp3, %for.cond.12.preheader.lr.ph ], [ undef, %for.end ]
+  %d.050 = phi ptr [ %tmp3, %for.cond.12.preheader.lr.ph ], [ poison, %for.end ]
   %w = getelementptr inbounds %struct.AudioVectorScopeContext.21.43.879.1209.1297.1319.1573, ptr %s, i32 0, i32 2
   %tmp4 = load i32, ptr %w, align 4
   %cmp13.46 = icmp sgt i32 %tmp4, 0

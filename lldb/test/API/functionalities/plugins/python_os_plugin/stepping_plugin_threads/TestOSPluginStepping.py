@@ -40,11 +40,6 @@ class TestOSPluginStepping(TestBase):
     def run_python_os_step_missing_thread(self, do_prune):
         """Test that the Python operating system plugin works correctly"""
 
-        # Our OS plugin does NOT report all threads:
-        result = self.dbg.HandleCommand(
-            "settings set process.experimental.os-plugin-reports-all-threads false"
-        )
-
         python_os_plugin_path = os.path.join(self.getSourceDir(), "operating_system.py")
         (target, self.process, thread, thread_bkpt) = lldbutil.run_to_source_breakpoint(
             self, "first stop in thread - do a step out", self.main_file
@@ -128,5 +123,5 @@ class TestOSPluginStepping(TestBase):
             os_thread = self.get_os_thread()
             self.assertTrue(os_thread.IsValid(), "The OS thread is back after continue")
             self.assertIn(
-                "step out", os_thread.GetStopDescription(100), "Completed step out plan"
+                "step out", os_thread.stop_description, "Completed step out plan"
             )

@@ -23,8 +23,8 @@ The check will only fix 'CamelCase' to 'camelCase'. In some other cases we will
 only provide warning messages since the property name could be complicated.
 Users will need to come up with a proper name by their own.
 
-This check also accepts special acronyms as prefixes or suffixes. Such prefixes or suffixes
-will suppress the Lower Camel Case check according to the guide:
+This check also accepts special acronyms as prefixes or suffixes. Such prefixes
+or suffixes will suppress the Lower Camel Case check according to the guide:
 https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/CodingGuidelines/Articles/NamingBasics.html#//apple_ref/doc/uid/20001281-1002931-BBCFHEAB
 
 For a full list of well-known acronyms:

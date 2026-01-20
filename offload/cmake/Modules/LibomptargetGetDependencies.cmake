@@ -1,19 +1,8 @@
-#
-#//===----------------------------------------------------------------------===//
-#//
-#// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-#// See https://llvm.org/LICENSE.txt for license information.
-#// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#//
-#//===----------------------------------------------------------------------===//
-#
-
 # Try to detect in the system several dependencies required by the different
 # components of libomptarget. These are the dependencies we have:
 #
 # libffi : required to launch target kernels given function and argument
 #          pointers.
-# CUDA : required to control offloading to NVIDIA GPUs.
 
 include (FindPackageHandleStandardArgs)
 
@@ -54,11 +43,14 @@ find_package(FFI QUIET)
 set(LIBOMPTARGET_DEP_LIBFFI_FOUND ${FFI_FOUND})
 
 ################################################################################
-# Looking for CUDA...
+# Looking for offload-arch...
 ################################################################################
-
-find_package(CUDAToolkit QUIET)
-set(LIBOMPTARGET_DEP_CUDA_FOUND ${CUDAToolkit_FOUND})
+if(TARGET offload-arch)
+  get_property(LIBOMPTARGET_OFFLOAD_ARCH TARGET offload-arch PROPERTY LOCATION)
+else()
+  find_program(LIBOMPTARGET_OFFLOAD_ARCH NAMES offload-arch
+               PATHS ${LLVM_TOOLS_BINARY_DIR})
+endif()
 
 ################################################################################
 # Looking for NVIDIA GPUs...
@@ -69,7 +61,7 @@ if(TARGET nvptx-arch)
   get_property(LIBOMPTARGET_NVPTX_ARCH TARGET nvptx-arch PROPERTY LOCATION)
 else()
   find_program(LIBOMPTARGET_NVPTX_ARCH NAMES nvptx-arch
-               PATHS ${LLVM_TOOLS_BINARY_DIR}/bin)
+               PATHS ${LLVM_TOOLS_BINARY_DIR})
 endif()
 
 if(LIBOMPTARGET_NVPTX_ARCH)
@@ -93,7 +85,7 @@ if(TARGET amdgpu-arch)
   get_property(LIBOMPTARGET_AMDGPU_ARCH TARGET amdgpu-arch PROPERTY LOCATION)
 else()
   find_program(LIBOMPTARGET_AMDGPU_ARCH NAMES amdgpu-arch
-               PATHS ${LLVM_TOOLS_BINARY_DIR}/bin)
+               PATHS ${LLVM_TOOLS_BINARY_DIR})
 endif()
 
 if(LIBOMPTARGET_AMDGPU_ARCH)
@@ -104,6 +96,29 @@ if(LIBOMPTARGET_AMDGPU_ARCH)
   if(amdgpu_arch_list)
     set(LIBOMPTARGET_FOUND_AMDGPU_GPU TRUE)
     set(LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST "${amdgpu_arch_list}")
+  endif()
+endif()
+
+################################################################################
+# Looking for Level0
+################################################################################
+find_path(LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR NAMES level_zero/ze_api.h)
+
+if(NOT LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR)
+  set(LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND FALSE)
+else()
+  set(LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND TRUE)
+  find_library(LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY NAMES ze_loader)
+endif()
+
+if(LIBOMPTARGET_OFFLOAD_ARCH)
+  execute_process(COMMAND ${LIBOMPTARGET_OFFLOAD_ARCH} "--only=intel"
+                  OUTPUT_VARIABLE LIBOMPTARGET_INTELGPU_ARCH_OUTPUT
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REPLACE "\n" ";" intelgpu_arch_list "${LIBOMPTARGET_INTELGPU_ARCH_OUTPUT}")
+  if(intelgpu_arch_list)
+    set(LIBOMPTARGET_FOUND_INTELGPU_GPU TRUE)
+    set(LIBOMPTARGET_INTELGPU_DETECTED_ARCH_LIST "${intelgpu_arch_list}")
   endif()
 endif()
 

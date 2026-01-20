@@ -5,32 +5,30 @@ define <16 x i8> @lower_trunc_16xi8(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 
 ; CHECK-LABEL: lower_trunc_16xi8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    ldr h1, [sp]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov v0.b[1], w1
+; CHECK-NEXT:    mov v0.b[2], w2
+; CHECK-NEXT:    mov v0.b[3], w3
+; CHECK-NEXT:    mov v0.b[4], w4
+; CHECK-NEXT:    mov v0.b[5], w5
+; CHECK-NEXT:    mov v0.b[6], w6
+; CHECK-NEXT:    mov v0.b[7], w7
+; CHECK-NEXT:    ld1 { v0.b }[8], [x8]
 ; CHECK-NEXT:    add x8, sp, #8
-; CHECK-NEXT:    ld1 { v1.h }[1], [x8]
+; CHECK-NEXT:    ld1 { v0.b }[9], [x8]
 ; CHECK-NEXT:    add x8, sp, #16
-; CHECK-NEXT:    mov v0.h[1], w1
-; CHECK-NEXT:    ld1 { v1.h }[2], [x8]
+; CHECK-NEXT:    ld1 { v0.b }[10], [x8]
 ; CHECK-NEXT:    add x8, sp, #24
-; CHECK-NEXT:    mov v0.h[2], w2
-; CHECK-NEXT:    ld1 { v1.h }[3], [x8]
+; CHECK-NEXT:    ld1 { v0.b }[11], [x8]
 ; CHECK-NEXT:    add x8, sp, #32
-; CHECK-NEXT:    mov v0.h[3], w3
-; CHECK-NEXT:    ld1 { v1.h }[4], [x8]
+; CHECK-NEXT:    ld1 { v0.b }[12], [x8]
 ; CHECK-NEXT:    add x8, sp, #40
-; CHECK-NEXT:    ld1 { v1.h }[5], [x8]
+; CHECK-NEXT:    ld1 { v0.b }[13], [x8]
 ; CHECK-NEXT:    add x8, sp, #48
-; CHECK-NEXT:    mov v0.h[4], w4
-; CHECK-NEXT:    ld1 { v1.h }[6], [x8]
+; CHECK-NEXT:    ld1 { v0.b }[14], [x8]
 ; CHECK-NEXT:    add x8, sp, #56
-; CHECK-NEXT:    mov v0.h[5], w5
-; CHECK-NEXT:    ld1 { v1.h }[7], [x8]
-; CHECK-NEXT:    mov v0.h[6], w6
-; CHECK-NEXT:    add v2.8h, v1.8h, v1.8h
-; CHECK-NEXT:    mov v0.h[7], w7
-; CHECK-NEXT:    add v3.8h, v0.8h, v0.8h
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    uzp1 v1.16b, v3.16b, v2.16b
+; CHECK-NEXT:    ld1 { v0.b }[15], [x8]
+; CHECK-NEXT:    add v1.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %a1 = insertelement <16 x i16> poison, i16 %a, i16 0
@@ -59,18 +57,15 @@ define <16 x i8> @lower_trunc_16xi8(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 
 define <8 x i16> @lower_trunc_8xi16(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
 ; CHECK-LABEL: lower_trunc_8xi16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w4
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    mov v0.s[1], w5
-; CHECK-NEXT:    mov v1.s[1], w1
-; CHECK-NEXT:    mov v0.s[2], w6
-; CHECK-NEXT:    mov v1.s[2], w2
-; CHECK-NEXT:    mov v0.s[3], w7
-; CHECK-NEXT:    mov v1.s[3], w3
-; CHECK-NEXT:    add v2.4s, v0.4s, v0.4s
-; CHECK-NEXT:    add v3.4s, v1.4s, v1.4s
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    uzp1 v1.8h, v3.8h, v2.8h
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov v0.h[1], w1
+; CHECK-NEXT:    mov v0.h[2], w2
+; CHECK-NEXT:    mov v0.h[3], w3
+; CHECK-NEXT:    mov v0.h[4], w4
+; CHECK-NEXT:    mov v0.h[5], w5
+; CHECK-NEXT:    mov v0.h[6], w6
+; CHECK-NEXT:    mov v0.h[7], w7
+; CHECK-NEXT:    add v1.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %a1 = insertelement <8 x i32> poison, i32 %a, i32 0
@@ -91,14 +86,11 @@ define <8 x i16> @lower_trunc_8xi16(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 
 define <4 x i32> @lower_trunc_4xi32(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-LABEL: lower_trunc_4xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x2
-; CHECK-NEXT:    fmov d1, x0
-; CHECK-NEXT:    mov v0.d[1], x3
-; CHECK-NEXT:    mov v1.d[1], x1
-; CHECK-NEXT:    add v2.2d, v0.2d, v0.2d
-; CHECK-NEXT:    add v3.2d, v1.2d, v1.2d
-; CHECK-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    uzp1 v1.4s, v3.4s, v2.4s
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov v0.s[1], w1
+; CHECK-NEXT:    mov v0.s[2], w2
+; CHECK-NEXT:    mov v0.s[3], w3
+; CHECK-NEXT:    add v1.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %a1 = insertelement <4 x i64> poison, i64 %a, i64 0
@@ -115,24 +107,20 @@ define <4 x i32> @lower_trunc_4xi32(i64 %a, i64 %b, i64 %c, i64 %d) {
 define <8 x i32> @lower_trunc_8xi32(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) {
 ; CHECK-LABEL: lower_trunc_8xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x2
-; CHECK-NEXT:    fmov d1, x0
-; CHECK-NEXT:    fmov d2, x6
-; CHECK-NEXT:    fmov d3, x4
-; CHECK-NEXT:    mov v0.d[1], x3
-; CHECK-NEXT:    mov v1.d[1], x1
-; CHECK-NEXT:    mov v2.d[1], x7
-; CHECK-NEXT:    mov v3.d[1], x5
-; CHECK-NEXT:    add v4.2d, v0.2d, v0.2d
-; CHECK-NEXT:    add v5.2d, v1.2d, v1.2d
-; CHECK-NEXT:    add v6.2d, v2.2d, v2.2d
-; CHECK-NEXT:    add v7.2d, v3.2d, v3.2d
+; CHECK-NEXT:    fmov d0, x6
+; CHECK-NEXT:    fmov d1, x4
+; CHECK-NEXT:    fmov d2, x2
+; CHECK-NEXT:    fmov d3, x0
+; CHECK-NEXT:    mov v0.d[1], x7
+; CHECK-NEXT:    mov v1.d[1], x5
+; CHECK-NEXT:    mov v2.d[1], x3
+; CHECK-NEXT:    mov v3.d[1], x1
+; CHECK-NEXT:    uzp1 v1.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    uzp1 v2.4s, v3.4s, v2.4s
-; CHECK-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    uzp1 v3.4s, v5.4s, v4.4s
-; CHECK-NEXT:    uzp1 v1.4s, v7.4s, v6.4s
-; CHECK-NEXT:    eor v0.16b, v0.16b, v3.16b
-; CHECK-NEXT:    eor v1.16b, v2.16b, v1.16b
+; CHECK-NEXT:    add v3.4s, v1.4s, v1.4s
+; CHECK-NEXT:    add v0.4s, v2.4s, v2.4s
+; CHECK-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    eor v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    ret
   %a1 = insertelement <8 x i64> poison, i64 %a, i64 0
   %b1 = insertelement <8 x i64> %a1, i64 %b, i64 1

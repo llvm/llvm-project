@@ -16,7 +16,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "llvm/ADT/ArrayRef.h"
 #include <iterator>
 #include <optional>
 
@@ -47,13 +46,6 @@ ento::CallDescription::CallDescription(Mode MatchAs,
   llvm::transform(QualifiedName, std::back_inserter(this->QualifiedName),
                   [](StringRef From) { return From.str(); });
 }
-
-/// Construct a CallDescription with default flags.
-ento::CallDescription::CallDescription(ArrayRef<StringRef> QualifiedName,
-                                       MaybeCount RequiredArgs /*= None*/,
-                                       MaybeCount RequiredParams /*= None*/)
-    : CallDescription(Mode::Unspecified, QualifiedName, RequiredArgs,
-                      RequiredParams) {}
 
 bool ento::CallDescription::matches(const CallEvent &Call) const {
   // FIXME: Add ObjC Message support.

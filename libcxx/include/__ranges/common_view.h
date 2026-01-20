@@ -56,16 +56,16 @@ public:
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
     if constexpr (random_access_range<_View> && sized_range<_View>)
       return ranges::begin(__base_);
     else
       return common_iterator<iterator_t<_View>, sentinel_t<_View>>(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires range<const _View>
   {
     if constexpr (random_access_range<const _View> && sized_range<const _View>)
@@ -74,14 +74,14 @@ public:
       return common_iterator<iterator_t<const _View>, sentinel_t<const _View>>(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (random_access_range<_View> && sized_range<_View>)
       return ranges::begin(__base_) + ranges::size(__base_);
     else
       return common_iterator<iterator_t<_View>, sentinel_t<_View>>(ranges::end(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires range<const _View>
   {
     if constexpr (random_access_range<const _View> && sized_range<const _View>)
@@ -90,13 +90,13 @@ public:
       return common_iterator<iterator_t<const _View>, sentinel_t<const _View>>(ranges::end(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
     return ranges::size(__base_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
     return ranges::size(__base_);
@@ -114,16 +114,14 @@ namespace __common {
 struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
     requires common_range<_Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
-      noexcept(noexcept(views::all(std::forward<_Range>(__range))))
-          -> decltype(views::all(std::forward<_Range>(__range))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const noexcept(
+      noexcept(views::all(std::forward<_Range>(__range)))) -> decltype(views::all(std::forward<_Range>(__range))) {
     return views::all(std::forward<_Range>(__range));
   }
 
   template <class _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
-      noexcept(noexcept(common_view{std::forward<_Range>(__range)}))
-          -> decltype(common_view{std::forward<_Range>(__range)}) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const noexcept(noexcept(common_view{
+      std::forward<_Range>(__range)})) -> decltype(common_view{std::forward<_Range>(__range)}) {
     return common_view{std::forward<_Range>(__range)};
   }
 };

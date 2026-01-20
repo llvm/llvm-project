@@ -7,16 +7,27 @@
 //===----------------------------------------------------------------------===//
 //
 // Shared functionality between the new constant expression
-// interpreter (AST/Interp/) and the current one (ExprConstant.cpp).
+// interpreter (AST/ByteCode/) and the current one (ExprConstant.cpp).
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 #define LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 
+#include "clang/Basic/TypeTraits.h"
+#include <cstdint>
+
+namespace llvm {
+class APFloat;
+class APInt;
+class APSInt;
+}
 namespace clang {
 class QualType;
 class LangOptions;
+class ASTContext;
+class CharUnits;
+class Expr;
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -55,5 +66,20 @@ enum class GCCTypeClass {
 
 GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
                                          const LangOptions &LangOpts);
+
+void HandleComplexComplexMul(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
+                             llvm::APFloat D, llvm::APFloat &ResR,
+                             llvm::APFloat &ResI);
+void HandleComplexComplexDiv(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
+                             llvm::APFloat D, llvm::APFloat &ResR,
+                             llvm::APFloat &ResI);
+
+CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
+                         UnaryExprOrTypeTrait ExprKind);
+
+uint8_t GFNIMultiplicativeInverse(uint8_t Byte);
+uint8_t GFNIMul(uint8_t AByte, uint8_t BByte);
+uint8_t GFNIAffine(uint8_t XByte, const llvm::APInt &AQword,
+                   const llvm::APSInt &Imm, bool Inverse = false);
 
 #endif

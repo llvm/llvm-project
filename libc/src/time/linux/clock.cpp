@@ -10,15 +10,16 @@
 #include "hdr/time_macros.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
-#include "src/__support/time/linux/clock_gettime.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/time/clock_gettime.h"
 #include "src/__support/time/units.h"
-#include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
   using namespace time_units;
-  struct timespec ts;
+  timespec ts;
   auto result = internal::clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
   if (!result.has_value()) {
     libc_errno = result.error();
@@ -43,4 +44,4 @@ LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
                  ts.tv_nsec / (1_s_ns / CLOCKS_PER_SEC));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -14,9 +14,11 @@
 #ifdef __linux__
 #include <linux/errno.h>
 
-#include "llvm-libc-macros/error-number-macros.h"
-#else // __linux__
-#include "llvm-libc-macros/generic-error-number-macros.h"
+#include "include/llvm-libc-macros/error-number-macros.h"
+#elif defined(__APPLE__)
+#include <sys/errno.h>
+#else // __APPLE__
+#include "include/llvm-libc-macros/generic-error-number-macros.h"
 #endif
 
 #else // Overlay mode

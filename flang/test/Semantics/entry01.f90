@@ -7,6 +7,10 @@ module m1
   interface
     module subroutine separate
     end subroutine
+    subroutine hasentry
+      !ERROR: An ENTRY statement may not appear in an interface body
+      entry ent
+    end subroutine
   end interface
  contains
   subroutine modproc
@@ -83,6 +87,7 @@ function ifunc()
   !ERROR: 'ibad1' is already declared in this scoping unit
   entry ibad1() result(ibad1res) ! C1570
   !ERROR: 'ibad2' is already declared in this scoping unit
+  !ERROR: Procedure 'ibad2' is referenced before being sufficiently defined in a context where it must be so
   entry ibad2()
   !ERROR: ENTRY in a function may not have an alternate return dummy argument
   entry ibadalt(*) ! C1573
@@ -91,6 +96,7 @@ function ifunc()
   entry iok()
   !ERROR: Explicit RESULT('iok') of function 'isameres2' cannot have the same name as a distinct ENTRY into the same scope
   entry isameres2() result(iok) ! C1574
+  !ERROR: Procedure 'iok2' is referenced before being sufficiently defined in a context where it must be so
   !ERROR: Explicit RESULT('iok2') of function 'isameres3' cannot have the same name as a distinct ENTRY into the same scope
   entry isameres3() result(iok2) ! C1574
   !ERROR: 'iok2' is already declared in this scoping unit

@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "src/fenv/fegetexceptflag.h"
 #include "hdr/types/fexcept_t.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fegetexceptflag, (fexcept_t * flagp, int excepts)) {
   static_assert(sizeof(int) >= sizeof(fexcept_t),
@@ -20,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, fegetexceptflag, (fexcept_t * flagp, int excepts)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

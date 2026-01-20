@@ -86,7 +86,7 @@ end subroutine
 ! CHECK:  }  (%[[VAL_9:.*]]: i64) {
 ! CHECK:    %[[VAL_10:.*]] = hlfir.forall_index "i" %[[VAL_9]] : (i64) -> !fir.ref<i64>
 ! CHECK:    hlfir.forall_mask {
-! CHECK:      %[[VAL_11:.*]] = fir.call @_QPpredicate(%[[VAL_10]]) fastmath<contract> : (!fir.ref<i64>) -> !fir.logical<4>
+! CHECK:      %[[VAL_11:.*]] = fir.call @_QPpredicate(%[[VAL_10]]) proc_attrs<pure> fastmath<contract> : (!fir.ref<i64>) -> !fir.logical<4>
 ! CHECK:      %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.logical<4>) -> i1
 ! CHECK:      hlfir.yield %[[VAL_12]] : i1
 ! CHECK:    } do {
@@ -113,8 +113,8 @@ end subroutine
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare {{.*}}Ey
 ! CHECK:  %[[VAL_7:.*]] = fir.call @_QPibar() fastmath<contract> : () -> i32
 ! CHECK:  %[[VAL_8:.*]] = fir.call @_QPifoo() fastmath<contract> : () -> i32
-! CHECK:  %[[VAL_9:.*]] = fir.call @_QPjfoo() fastmath<contract> : () -> i64
-! CHECK:  %[[VAL_10:.*]] = fir.call @_QPjbar() fastmath<contract> : () -> i64
+! CHECK:  %[[VAL_9:.*]] = fir.call @_QPjfoo() proc_attrs<pure> fastmath<contract> : () -> i64
+! CHECK:  %[[VAL_10:.*]] = fir.call @_QPjbar() proc_attrs<pure> fastmath<contract> : () -> i64
 ! CHECK:  hlfir.forall lb {
 ! CHECK:    hlfir.yield %[[VAL_7]] : i32
 ! CHECK:  } ub {
@@ -126,7 +126,7 @@ end subroutine
 ! CHECK:      hlfir.yield %[[VAL_10]] : i64
 ! CHECK:    }  (%[[VAL_12:.*]]: i64) {
 ! CHECK:      hlfir.region_assign {
-! CHECK:        %[[VAL_13:.*]] = fir.call @_QPifoo2(%[[VAL_11]], %[[VAL_12]]) fastmath<contract> : (i64, i64) -> i64
+! CHECK:        %[[VAL_13:.*]] = fir.call @_QPifoo2(%[[VAL_11]], %[[VAL_12]]) proc_attrs<pure> fastmath<contract> : (i64, i64) -> i64
 ! CHECK:        %[[VAL_14:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<10xi32>>, i64) -> !fir.ref<i32>
 ! CHECK:        %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<i32>
 ! CHECK:        hlfir.yield %[[VAL_15]] : i32
@@ -144,7 +144,7 @@ subroutine test_nested_foralls()
     ! ifoo and ibar could depend on x since it is a module
     ! variable use associated. The calls in the control value
     ! computation cannot be hoisted from the outer forall
-    ! even when they do not depend on outer forall indicies.
+    ! even when they do not depend on outer forall indices.
     forall (integer(8)::j=jfoo():jbar())
       x(i, j) = x(j, i)
     end forall
@@ -169,10 +169,10 @@ end subroutine
 ! CHECK:      hlfir.yield %[[VAL_12]] : !fir.ref<i32>
 ! CHECK:    }
 ! CHECK:    hlfir.forall lb {
-! CHECK:      %[[VAL_13:.*]] = fir.call @_QPjfoo() fastmath<contract> : () -> i64
+! CHECK:      %[[VAL_13:.*]] = fir.call @_QPjfoo() proc_attrs<pure> fastmath<contract> : () -> i64
 ! CHECK:      hlfir.yield %[[VAL_13]] : i64
 ! CHECK:    } ub {
-! CHECK:      %[[VAL_14:.*]] = fir.call @_QPjbar() fastmath<contract> : () -> i64
+! CHECK:      %[[VAL_14:.*]] = fir.call @_QPjbar() proc_attrs<pure> fastmath<contract> : () -> i64
 ! CHECK:      hlfir.yield %[[VAL_14]] : i64
 ! CHECK:    }  (%[[VAL_15:.*]]: i64) {
 ! CHECK:      hlfir.region_assign {

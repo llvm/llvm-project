@@ -56,19 +56,14 @@ define void @test(ptr %arg, i64 %arg1) {
 ; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds double, ptr [[LCSSA_PTR_IV_1]], i64 1
 ; CHECK-NEXT:    br label [[INNER_2:%.*]]
 ; CHECK:       inner.2:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[INNER_2]] ], [ 0, [[INNER_1_EXIT]] ]
 ; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[GEP_5]], [[INNER_1_EXIT]] ], [ [[PTR_IV_2_NEXT:%.*]], [[INNER_2]] ]
 ; CHECK-NEXT:    [[PTR_IV_2_NEXT]] = getelementptr inbounds double, ptr [[PTR_IV_2]], i64 1
-; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 false, label [[INNER_3_LVER_CHECK:%.*]], label [[INNER_2]]
 ; CHECK:       inner.3.lver.check:
-; CHECK-NEXT:    [[INDVAR_LCSSA:%.*]] = phi i64 [ [[INDVAR]], [[INNER_2]] ]
 ; CHECK-NEXT:    [[LCSSA_PTR_IV_2:%.*]] = phi ptr [ [[PTR_IV_2]], [[INNER_2]] ]
 ; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds double, ptr [[PTR_PHI]], i64 1
 ; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds double, ptr [[LCSSA_PTR_IV_2]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVAR_LCSSA]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 24
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[LCSSA_PTR_IV_1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[LCSSA_PTR_IV_2]], i64 16
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_7]], [[GEP_1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[PTR_PHI]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
@@ -90,10 +85,10 @@ define void @test(ptr %arg, i64 %arg1) {
 ; CHECK:       inner.3:
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ 0, [[INNER_3_PH]] ], [ [[IV_2_NEXT:%.*]], [[INNER_3]] ]
 ; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr inbounds double, ptr [[GEP_6]], i64 [[IV_2]]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP_7]], align 8, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP_8]], align 8, !alias.scope !3
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP_7]], align 8, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP_8]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr double, ptr [[PTR_PHI]], i64 [[IV_2]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load double, ptr [[GEP_9]], align 8, !alias.scope !3
+; CHECK-NEXT:    [[TMP18:%.*]] = load double, ptr [[GEP_9]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add nuw nsw i64 [[IV_2]], 1
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i64 [[IV_2]], 1
 ; CHECK-NEXT:    br i1 [[C_2]], label [[OUTER_LATCH_LOOPEXIT3:%.*]], label [[INNER_3]]

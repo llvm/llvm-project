@@ -202,7 +202,7 @@ define float @fadd_fast(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK: %[[ADD2:.*]] = fadd fast <vscale x 8 x float> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[ADD:.*]] = fadd fast <vscale x 8 x float> %[[ADD2]], %[[ADD1]]
-; CHECK-NEXT: call fast float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> %[[ADD]])
+; CHECK-NEXT: call fast float @llvm.vector.reduce.fadd.nxv8f32(float 0.000000e+00, <vscale x 8 x float> %[[ADD]])
 entry:
   br label %for.body
 
@@ -231,7 +231,7 @@ define bfloat @fadd_fast_bfloat(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK: %[[FADD2:.*]] = fadd fast <8 x bfloat> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[RDX:.*]] = fadd fast <8 x bfloat> %[[FADD2]], %[[FADD1]]
-; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0xR8000, <8 x bfloat> %[[RDX]])
+; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0xR0000, <8 x bfloat> %[[RDX]])
 entry:
   br label %for.body
 
@@ -350,6 +350,38 @@ for.cond.cleanup:
   ret void
 }
 
+
+; ADD (with reduction of i1)
+
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
+define i1 @add_trunc_i32_i1(ptr nocapture %src, i64 %N) {
+; CHECK-LABEL: @add_trunc_i32_i1
+; CHECK: vector.body:
+; CHECK: %[[PHI1:.*]] = phi <vscale x 8 x i1> [ zeroinitializer, %{{.*}} ], [ [[XOR1:%.+]], %vector.body ]
+; CHECK: %[[PHI2:.*]] = phi <vscale x 8 x i1> [ zeroinitializer, %{{.*}} ], [ [[XOR2:%.+]], %vector.body ]
+; CHECK: %[[TRUNC1:.*]] = trunc <vscale x 8 x i32> %{{.*}} to <vscale x 8 x i1>
+; CHECK: %[[TRUNC2:.*]] = trunc <vscale x 8 x i32> %{{.*}} to <vscale x 8 x i1>
+; CHECK: [[XOR1]] = xor <vscale x 8 x i1> %[[PHI1]], %[[TRUNC1]]
+; CHECK: [[XOR2]] = xor <vscale x 8 x i1> %[[PHI2]], %[[TRUNC2]]
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %red = phi i1 [ 0, %entry ], [ %red.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load32 = load i32, ptr %arrayidx, align 4
+  %trunc = trunc i32 %load32 to i1
+  %red.next = xor i1 %red, %trunc
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %N
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:
+  ret i1 %red.next
+}
+
+
 ; Reduction cannot be vectorized
 
 ; MUL
@@ -385,21 +417,17 @@ for.end:                                 ; preds = %for.body, %entry
 
 ; Note: This test was added to ensure we always check the legality of reductions (end emit a warning if necessary) before checking for memory dependencies
 ; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
-; CHECK-REMARK: vectorized loop (vectorization width: 4, interleaved count: 2)
+; CHECK-REMARK: Ignoring user-specified interleave count due to possibly unsafe dependencies in the loop.
+; CHECK-REMARK: vectorized loop (vectorization width: 4, interleaved count: 1)
 define i32 @memory_dependence(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
 ; CHECK-LABEL: @memory_dependence
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <4 x i32>
 ; CHECK: %[[LOAD2:.*]] = load <4 x i32>
-; CHECK: %[[LOAD3:.*]] = load <4 x i32>
-; CHECK: %[[LOAD4:.*]] = load <4 x i32>
-; CHECK: %[[ADD1:.*]] = add nsw <4 x i32> %[[LOAD3]], %[[LOAD1]]
-; CHECK: %[[ADD2:.*]] = add nsw <4 x i32> %[[LOAD4]], %[[LOAD2]]
-; CHECK: %[[MUL1:.*]] = mul <4 x i32> %[[LOAD3]]
-; CHECK: %[[MUL2:.*]] = mul <4 x i32> %[[LOAD4]]
+; CHECK: %[[ADD1:.*]] = add nsw <4 x i32> %[[LOAD2]], %[[LOAD1]]
+; CHECK: %[[MUL1:.*]] = mul <4 x i32> %[[LOAD2]]
 ; CHECK: middle.block:
-; CHECK: %[[RDX:.*]] = mul <4 x i32> %[[MUL2]], %[[MUL1]]
-; CHECK: call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %[[RDX]])
+; CHECK: call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %[[MUL1]])
 entry:
   br label %for.body
 

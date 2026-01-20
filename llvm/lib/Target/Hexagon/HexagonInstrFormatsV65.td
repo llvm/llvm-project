@@ -20,11 +20,6 @@
 //                         Instruction Classes Definitions +
 //----------------------------------------------------------------------------//
 
-class CVI_VA_Resource_NoOpcode<dag outs, dag ins, string asmstr,
-                       list<dag> pattern = [], string cstr = "",
-                       InstrItinClass itin = CVI_VA>
-   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VA>;
-
 class CVI_GATHER_TMP_LD_Resource_NoOpcode<dag outs, dag ins, string asmstr,
                         list<dag> pattern = [], string cstr = "",
                         InstrItinClass itin = CVI_GATHER_PSEUDO>

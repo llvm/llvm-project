@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -222,14 +222,15 @@ void FDSimpleRemoteEPCTransport::listenLoop() {
     }
 
     // Read the argument bytes.
-    SimpleRemoteEPCArgBytesVector ArgBytes;
-    ArgBytes.resize(MsgSize - FDMsgHeader::Size);
+    auto ArgBytes =
+        shared::WrapperFunctionBuffer::allocate(MsgSize - FDMsgHeader::Size);
     if (auto Err2 = readBytes(ArgBytes.data(), ArgBytes.size())) {
       Err = joinErrors(std::move(Err), std::move(Err2));
       break;
     }
 
-    if (auto Action = C.handleMessage(OpC, SeqNo, TagAddr, ArgBytes)) {
+    if (auto Action =
+            C.handleMessage(OpC, SeqNo, TagAddr, std::move(ArgBytes))) {
       if (*Action == SimpleRemoteEPCTransportClient::EndSession)
         break;
     } else {

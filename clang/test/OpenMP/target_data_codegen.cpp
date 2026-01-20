@@ -37,8 +37,8 @@ double gc[100];
 
 // CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 5]
 
-// CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 24]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
+// CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 24, i64 {{4|8}}]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 1, i64 [[#0x4000]]]
 
 // CK1: [[MTYPE05:@.+]] = {{.+}}constant [1 x i64] [i64 1025]
 
@@ -132,32 +132,32 @@ void foo(int arg) {
   {++arg;}
 
   // Region 04
-  // CK1-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%[^,]+]], ptr [[MTYPE04]], ptr null, ptr null)
+  //
+  // &gb.b[0], &gb.b[/*lb=*/0], 3 * sizeof(gb.b[0]), TO
+  // &gb.b,    &gb.b[/*lb=*/0], sizeof(gb.b),        ATTACH
+  //
+  // CK1-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZE04]], ptr [[MTYPE04]], ptr null, ptr null)
   // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-  // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[PSZ:%[^,]+]]
 
   // CK1-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK1-DAG: [[PS0:%.+]] = getelementptr inbounds {{.+}}[[PSZ]], i{{.+}} 0, i{{.+}} 0
-  // CK1-DAG: store ptr @gb, ptr [[BP0]]
-  // CK1-DAG: store ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1), ptr [[P0]]
-  // CK1-DAG: [[DIV:%.+]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr (ptr, ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1) to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK1-DAG: store i64 [[DIV]], ptr [[PS0]],
+  // CK1-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
+  // CK1-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
+  // CK1-DAG: [[VAR0]] = load ptr, ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i32 0, i32 1)
+  // CK1-DAG: [[SEC0]] = getelementptr inbounds nuw double, ptr [[SEC00:.+]], i{{.+}} 0
+  // CK1-DAG: [[SEC00]] = load ptr, ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i32 0, i32 1)
 
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK1-DAG: store ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1), ptr [[BP1]]
-  // CK1-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
-  // CK1-DAG: [[SEC1]] = getelementptr inbounds {{.+}}ptr [[SEC11:%[^,]+]], i{{.+}} 0
-  // CK1-DAG: [[SEC11]] = load ptr, ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1),
+  // CK1-DAG: store ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i32 0, i32 1), ptr [[BP1]]
+  // CK1-DAG: store ptr [[SEC0]], ptr [[P1]]
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
 
-  // CK1-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%[^,]+]], ptr [[MTYPE04]], ptr null, ptr null)
+  // CK1-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZE04]], ptr [[MTYPE04]], ptr null, ptr null)
   // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
   // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P]]
-  // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[PSZ]]
   #pragma omp target data map(to: gb.b[:3])
   {++arg;}
 
@@ -342,8 +342,8 @@ struct ST {
   }
 };
 
-// CK2: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 24]
-// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710677]
+// CK2: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 24, i64 {{4|8}}]
+// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 5, i64 [[#0x4000]]]
 
 // CK2-LABEL: _Z3bari
 int bar(int arg){
@@ -352,30 +352,32 @@ int bar(int arg){
 }
 
 // Region 00
+//
+// &b[0], &b[1], 3 * sizeof(b[0]), ALWAYS | TO
+// &b,    &b[1], sizeof(b),        ATTACH
+//
 // CK2-DAG: [[DEV:%[^,]+]] = sext i32 [[DEVi32:%[^,]+]] to i64
 // CK2-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
 // CK2: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 // CK2: [[IFTHEN]]
-// CK2-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK2-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZE00]], ptr [[MTYPE00]], ptr null, ptr null)
 // CK2-DAG: [[GEPBP]] = getelementptr inbounds [2 x ptr], ptr [[BP:%[^,]+]]
 // CK2-DAG: [[GEPP]] = getelementptr inbounds [2 x ptr], ptr [[P:%[^,]+]]
-// CK2-DAG: [[GEPS]] = getelementptr inbounds [2 x i64], ptr [[PS:%[^,]+]]
 
 // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-// CK2-DAG: [[PS0:%.+]] = getelementptr inbounds [2 x i64], ptr [[PS]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK2-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
-// CK2-DAG: store i64 {{%.+}}, ptr [[PS0]],
-// CK2-DAG: [[SEC0]] = getelementptr inbounds {{.*}}ptr [[VAR0]], i32 0, i32 1
+// CK2-DAG: [[VAR0]] = load ptr, ptr [[VAR00:%[^,]+]]
+// CK2-DAG: [[VAR00]] = getelementptr inbounds nuw [[ST]], ptr [[THIS:%this.*]], i32 0, i32 1
+// CK2-DAG: [[SEC0]] = getelementptr inbounds {{.*}}ptr [[SEC00:%[^,]+]], i{{.+}} 1
+// CK2-DAG: [[SEC00]] = load ptr, ptr [[SEC000:%[^,]+]],
+// CK2-DAG: [[SEC000]] = getelementptr inbounds {{.*}}ptr [[THIS]], i32 0, i32 1
 
 // CK2-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
 // CK2-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-// CK2-DAG: store ptr [[SEC0]], ptr [[BP1]]
-// CK2-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
-// CK2-DAG: [[SEC1]] = getelementptr inbounds {{.*}}ptr [[SEC11:%[^,]+]], i{{.+}} 1
-// CK2-DAG: [[SEC11]] = load ptr, ptr [[SEC111:%[^,]+]],
-// CK2-DAG: [[SEC111]] = getelementptr inbounds {{.*}}ptr [[VAR0]], i32 0, i32 1
+// CK2-DAG: store ptr [[VAR00]], ptr [[BP1]]
+// CK2-DAG: store ptr [[SEC0]], ptr [[P1]]
 
 // CK2: br label %[[IFEND:[^,]+]]
 
@@ -386,10 +388,9 @@ int bar(int arg){
 // CK2: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 
 // CK2: [[IFTHEN]]
-// CK2-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK2-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZE00]], ptr [[MTYPE00]], ptr null, ptr null)
 // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
 // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P]]
-// CK2-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[PS]]
 // CK2: br label %[[IFEND:[^,]+]]
 // CK2: [[IFELSE]]
 // CK2: br label %[[IFEND]]
@@ -453,8 +454,8 @@ struct STT {
   }
 };
 
-// CK4: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 24]
-// CK4: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976711701]
+// CK4: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 24, i64 {{4|8}}]
+// CK4: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 [[#0x405]], i64 [[#0x4000]]]
 
 // CK4-LABEL: _Z3bari
 int bar(int arg){
@@ -463,30 +464,32 @@ int bar(int arg){
 }
 
 // Region 00
+//
+// &b[0], &b[1], 3 * sizeof(b[0]), CLOSE | ALWAYS | TO
+// &b,    &b[1], sizeof(b),        ATTACH
+//
 // CK4-DAG: [[DEV:%[^,]+]] = sext i32 [[DEVi32:%[^,]+]] to i64
 // CK4-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
 // CK4: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 // CK4: [[IFTHEN]]
-// CK4-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%.+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK4-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZE00]], ptr [[MTYPE00]], ptr null, ptr null)
 // CK4-DAG: [[GEPBP]] = getelementptr inbounds [2 x ptr], ptr [[BP:%[^,]+]]
 // CK4-DAG: [[GEPP]] = getelementptr inbounds [2 x ptr], ptr [[P:%[^,]+]]
-// CK4-DAG: [[GEPS]] = getelementptr inbounds [2 x i64], ptr [[PS:%[^,]+]]
 
 // CK4-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK4-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-// CK4-DAG: [[PS0:%.+]] = getelementptr inbounds {{.+}}[[PS]], i{{.+}} 0, i{{.+}} 0
 // CK4-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK4-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
-// CK4-DAG: store i64 {{%.+}}, ptr [[PS0]],
-// CK4-DAG: [[SEC0]] = getelementptr inbounds {{.*}}ptr [[VAR0]], i32 0, i32 1
+// CK4-DAG: [[VAR0]] = load ptr, ptr [[VAR00:%[^,]*]]
+// CK4-DAG: [[VAR00]] = getelementptr inbounds {{.*}}, ptr [[THIS:%this.*]], i32 0, i32 1
+// CK4-DAG: [[SEC0]] = getelementptr inbounds nuw double, ptr [[SEC00:%[^,]+]], i{{.+}} 1
+// CK4-DAG: [[SEC00]] = load ptr, ptr [[SEC000:%[^,]+]],
+// CK4-DAG: [[SEC000]] = getelementptr inbounds {{.*}}, ptr [[THIS]], i32 0, i32 1
 
 // CK4-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
 // CK4-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-// CK4-DAG: store ptr [[SEC0]], ptr [[BP1]]
-// CK4-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
-// CK4-DAG: [[SEC1]] = getelementptr inbounds {{.*}}ptr [[SEC11:%[^,]+]], i{{.+}} 1
-// CK4-DAG: [[SEC11]] = load ptr, ptr [[SEC111:%[^,]+]],
-// CK4-DAG: [[SEC111]] = getelementptr inbounds {{.*}}ptr [[VAR0]], i32 0, i32 1
+// CK4-DAG: store ptr [[VAR00]], ptr [[BP1]]
+// CK4-DAG: store ptr [[SEC0]], ptr [[P1]]
 
 // CK4: br label %[[IFEND:[^,]+]]
 
@@ -497,10 +500,9 @@ int bar(int arg){
 // CK4: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 
 // CK4: [[IFTHEN]]
-// CK4-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%.+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK4-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZE00]], ptr [[MTYPE00]], ptr null, ptr null)
 // CK4-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
 // CK4-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P]]
-// CK4-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[PS]]
 // CK4: br label %[[IFEND:[^,]+]]
 // CK4: [[IFELSE]]
 // CK4: br label %[[IFEND]]
@@ -532,7 +534,12 @@ struct S2 {
 
 void test_close_modifier(int arg) {
   S2 *ps;
-// CK5: private unnamed_addr constant [5 x i64] [i64 1027, i64 0, i64 562949953421328, i64 16, i64 1043]
+// CK5: private unnamed_addr constant [3 x i64] [i64 1027, i64 1027, i64 16384]
+//
+// &arg,               &arg,                 sizeof(arg),                 CLOSE | TOFROM
+// &ps->ps->ps->ps[0], &ps->ps->ps->ps[0].s, sizeof(ps->ps->ps->ps[0].s), CLOSE | TOFROM
+// &ps->ps->ps->ps,    &ps->ps->ps->ps[0].s, sizeof(struct S2 *),         ATTACH
+//
 #pragma omp target data map(close, tofrom \
                             : arg, ps->ps->ps->ps->s)
   {
@@ -623,40 +630,42 @@ void test_present_modifier(int arg) {
   S2 *ps1;
   S2 *ps2;
 
-  // Make sure the struct picks up present even if another element of the struct
-  // doesn't have present.
-  // CK8: private unnamed_addr constant [11 x i64] [i64 0, i64 {{4|8}}, i64 {{4|8}}, i64 4, i64 4, i64 4, i64 0, i64 4, i64 {{4|8}}, i64 {{4|8}}, i64 4]
-  // CK8: private unnamed_addr constant [11 x i64]
-
+// Make sure the struct picks up present even if another element of the struct
+// doesn't have present.
+// CK8: private unnamed_addr constant [9 x i64] [i64 4, i64 {{4|8}}, i64 4, i64 {{4|8}}, i64 4, i64 4, i64 {{4|8}}, i64 4, i64 {{4|8}}]
+// CK8: private unnamed_addr constant [9 x i64]
 // ps1
 //
-// PRESENT=0x1000 = 0x1000
-// MEMBER_OF_1=0x1000000000000 | PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1000000001010
-// PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1010
-// PRESENT=0x1000 | PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x1013
-// MEMBER_OF_1=0x1000000000000 | FROM=0x2 | TO=0x1 = 0x1000000000003
+// &ps1[0], &ps1->s, sizeof(ps1->s), FROM | TO
+// &ps1,    &ps1->s, sizeof(ps1),    ATTACH
 //
-// CK8-SAME: {{^}} [i64 [[#0x1000]], i64 [[#0x1000000001010]],
-// CK8-SAME: {{^}} i64 [[#0x1010]], i64 [[#0x1013]], i64 [[#0x1000000000003]],
+// CK8-SAME: {{^}} [i64 3, i64 [[#0x4000]],
+//
+// &ps1->ps->ps->ps[0], &ps1->ps->ps->ps[0].s, sizeof(ps1->ps->ps->ps[0].s), PRESENT | FROM | TO
+// &ps1->ps->ps->ps,    &ps1->ps->ps->ps[0].s, sizeof(struct S2 *),          ATTACH
+//
+// CK8-SAME: {{^}} i64 [[#0x1003]], i64 [[#0x4000]],
 
 // arg
 //
-// PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x1003
+// &arg, &arg, sizeof(arg), PRESENT | FROM | TO
 //
 // CK8-SAME: {{^}} i64 [[#0x1003]],
 
 // ps2
 //
-// PRESENT=0x1000 = 0x1000
-// MEMBER_OF_7=0x7000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x7000000001003
-// MEMBER_OF_7=0x7000000000000 | PTR_AND_OBJ=0x10 = 0x7000000000010
-// PTR_AND_OBJ=0x10 = 0x10
-// PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x13
+// &ps2[0], &ps2->s, sizeof(ps2->s), PRESENT | FROM | TO
+// &ps2,    &ps2->s, sizeof(ps2),    ATTACH
 //
-// CK8-SAME: {{^}} i64 [[#0x1000]], i64 [[#0x7000000001003]],
-// CK8-SAME: {{^}} i64 [[#0x7000000000010]], i64 [[#0x10]], i64 [[#0x13]]]
+// CK8-SAME: {{^}} i64 [[#0x1003]], i64 [[#0x4000]],
+//
+// &ps2->ps->ps->ps[0], &ps2->ps->ps->ps[0].s, sizeof(ps2->ps->ps->ps[0].s), FROM | TO
+// &ps2->ps->ps->ps,    &ps2->ps->ps->ps[0].s, sizeof(struct S2 *),          ATTACH
+//
+// CK8-SAME: {{^}} i64 3, i64 [[#0x4000]]]
+
 #pragma omp target data map(tofrom         \
-                            : ps1->s)      \
+  : ps1->s)      \
     map(present, tofrom                    \
         : arg, ps1->ps->ps->ps->s, ps2->s) \
         map(tofrom                         \

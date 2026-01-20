@@ -15,9 +15,7 @@
 #include <algorithm>
 #include <cassert>
 #include <deque>
-#if __has_include(<ranges>)
-#  include <ranges>
-#endif
+#include <ranges>
 #include <vector>
 
 #include "test_macros.h"
@@ -56,9 +54,7 @@ struct Test {
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<int*>(), Test());
 
-  // TODO: Remove the `_LIBCPP_ENABLE_EXPERIMENTAL` check once we have the FTM guarded or views::join isn't
-  // experimental anymore
-#if TEST_STD_VER >= 20 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
+#if TEST_STD_VER >= 20
   { // Make sure that the segmented iterator optimization works during constant evaluation
     std::vector<std::vector<int>> vecs = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     auto v                             = std::views::join(vecs);

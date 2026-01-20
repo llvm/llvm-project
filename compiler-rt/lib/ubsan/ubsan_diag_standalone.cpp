@@ -29,7 +29,7 @@ extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_print_stack_trace() {
   GET_CURRENT_PC_BP;
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
   stack.Print();
 }

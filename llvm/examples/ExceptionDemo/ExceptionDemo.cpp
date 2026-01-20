@@ -883,7 +883,6 @@ void generateStringPrint(llvm::LLVMContext &context,
   builder.CreateCall(printFunct, cast);
 }
 
-
 /// Generates code to print given runtime integer according to constant
 /// string format, and a given print function.
 /// @param context llvm context
@@ -891,7 +890,7 @@ void generateStringPrint(llvm::LLVMContext &context,
 /// @param builder builder instance
 /// @param printFunct function used to "print" integer
 /// @param toPrint string to print
-/// @param format printf like formating string for print
+/// @param format printf like formatting string for print
 /// @param useGlobal A value of true (default) indicates a GlobalValue is
 ///        generated, and is used to hold the constant string. A value of
 ///        false indicates that the constant string will be stored on the
@@ -1244,11 +1243,7 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   // the exception is foreign.
   llvm::Value *unwindExceptionClass = builder.CreateLoad(
       builder.getInt64Ty(),
-      builder.CreateStructGEP(
-          ourUnwindExceptionType,
-          builder.CreatePointerCast(unwindException,
-                                    ourUnwindExceptionType->getPointerTo()),
-          0));
+      builder.CreateStructGEP(ourUnwindExceptionType, unwindException, 0));
 
   // Branch to the externalExceptionBlock if the exception is foreign or
   // to a catch router if not. Either way the finally block will be run.
@@ -1279,10 +1274,8 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   // (OurException instance).
   //
   // Note: ourBaseFromUnwindOffset is usually negative
-  llvm::Value *typeInfoThrown = builder.CreatePointerCast(
-      builder.CreateConstGEP1_64(builder.getPtrTy(), unwindException,
-                                 ourBaseFromUnwindOffset),
-      ourExceptionType->getPointerTo());
+  llvm::Value *typeInfoThrown = builder.CreateConstGEP1_64(
+      builder.getInt8Ty(), unwindException, ourBaseFromUnwindOffset);
 
   // Retrieve thrown exception type info type
   //
@@ -1293,10 +1286,9 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   llvm::Value *typeInfoThrownType =
       builder.CreateStructGEP(ourTypeInfoType, typeInfoThrown, 0);
 
-  llvm::Value *ti8 =
-      builder.CreateLoad(builder.getInt8Ty(), typeInfoThrownType);
-  generateIntegerPrint(context, module, builder, *toPrint32Int,
-                       builder.CreateZExt(ti8, builder.getInt32Ty()),
+  llvm::Value *ti32 =
+      builder.CreateLoad(builder.getInt32Ty(), typeInfoThrownType);
+  generateIntegerPrint(context, module, builder, *toPrint32Int, ti32,
                        "Gen: Exception type <%d> received (stack unwound) "
                        " in " +
                            ourId + ".\n",
@@ -1546,8 +1538,7 @@ static void runExceptionThrow(llvm::orc::LLJIT *JIT, std::string function,
 
   // Find test's function pointer
   OurExceptionThrowFunctType functPtr =
-      reinterpret_cast<OurExceptionThrowFunctType>(reinterpret_cast<uintptr_t>(
-          ExitOnErr(JIT->lookup(function)).getValue()));
+      ExitOnErr(JIT->lookup(function)).toPtr<OurExceptionThrowFunctType>();
 
   try {
     // Run test
@@ -1856,7 +1847,8 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
 
   // llvm.eh.typeid.for intrinsic
 
-  getDeclaration(&module, llvm::Intrinsic::eh_typeid_for);
+  getOrInsertDeclaration(&module, llvm::Intrinsic::eh_typeid_for,
+                         builder.getPtrTy());
 }
 
 

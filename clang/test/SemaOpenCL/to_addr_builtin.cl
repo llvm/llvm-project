@@ -24,21 +24,21 @@ void test(void) {
 #if (__OPENCL_C_VERSION__ < CL_VERSION_2_0) || (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 && !defined(__opencl_c_generic_address_space))
   // expected-error@-2{{use of undeclared identifier 'to_global'}}
 #else
-  // expected-error@-4{{invalid argument x to function: 'to_global', expecting a generic pointer argument}}
+  // expected-error@-4{{invalid argument 'x' to function: 'to_global', expecting a generic pointer argument}}
 #endif
 
   glob = to_global(con);
 #if (__OPENCL_C_VERSION__ < CL_VERSION_2_0) || (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 && !defined(__opencl_c_generic_address_space))
   // expected-error@-2{{use of undeclared identifier 'to_global'}}
 #else
-  // expected-error@-4{{invalid argument con to function: 'to_global', expecting a generic pointer argument}}
+  // expected-error@-4{{invalid argument 'con' to function: 'to_global', expecting a generic pointer argument}}
 #endif
 
   glob = to_global(con_typedef);
 #if (__OPENCL_C_VERSION__ < CL_VERSION_2_0) || (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 && !defined(__opencl_c_generic_address_space))
   // expected-error@-2{{use of undeclared identifier 'to_global'}}
 #else
-  // expected-error@-4{{invalid argument con_typedef to function: 'to_global', expecting a generic pointer argument}}
+  // expected-error@-4{{invalid argument 'con_typedef' to function: 'to_global', expecting a generic pointer argument}}
 #endif
 
   loc = to_global(glob);
@@ -115,7 +115,7 @@ void test(void) {
 #if (__OPENCL_C_VERSION__ < CL_VERSION_2_0) || (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 && !defined(__opencl_c_generic_address_space))
   // expected-error@-2{{use of undeclared identifier 'to_global'}}
 #else
-  // expected-warning@-4{{incompatible pointer types initializing '__global char *__private' with an expression of type '__global int *'}}
+  // expected-error@-4{{incompatible pointer types initializing '__global char *__private' with an expression of type '__global int *'}}
   // expected-warning@-5{{passing non-generic address space pointer to to_global may cause dynamic conversion affecting performance}}
 #endif
 
@@ -123,7 +123,7 @@ void test(void) {
 #if (__OPENCL_C_VERSION__ < CL_VERSION_2_0) || (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 && !defined(__opencl_c_generic_address_space))
   // expected-error@-2{{use of undeclared identifier 'to_global'}}
 #else
-  // expected-warning@-4{{incompatible pointer types assigning to '__global float *__private' from '__global int *'}}
+  // expected-error@-4{{incompatible pointer types assigning to '__global float *__private' from '__global int *'}}
   // expected-warning@-5{{passing non-generic address space pointer to to_global may cause dynamic conversion affecting performance}}
 #endif
 

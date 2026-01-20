@@ -81,22 +81,6 @@ private:
 // provided constant.
 static void replaceWithConstant(Constant *Value,
                                 SmallVectorImpl<CoroSubFnInst *> &Users) {
-  if (Users.empty())
-    return;
-
-  // See if we need to bitcast the constant to match the type of the intrinsic
-  // being replaced. Note: All coro.subfn.addr intrinsics return the same type,
-  // so we only need to examine the type of the first one in the list.
-  Type *IntrTy = Users.front()->getType();
-  Type *ValueTy = Value->getType();
-  if (ValueTy != IntrTy) {
-    // May need to tweak the function type to match the type expected at the
-    // use site.
-    assert(ValueTy->isPointerTy() && IntrTy->isPointerTy());
-    Value = ConstantExpr::getBitCast(Value, IntrTy);
-  }
-
-  // Now the value type matches the type of the intrinsic. Replace them all!
   for (CoroSubFnInst *I : Users)
     replaceAndRecursivelySimplify(I, Value);
 }
@@ -104,7 +88,7 @@ static void replaceWithConstant(Constant *Value,
 // See if any operand of the call instruction references the coroutine frame.
 static bool operandReferences(CallInst *CI, AllocaInst *Frame, AAResults &AA) {
   for (Value *Op : CI->operand_values())
-    if (!AA.isNoAlias(Op, Frame))
+    if (Op->getType()->isPointerTy() && !AA.isNoAlias(Op, Frame))
       return true;
   return false;
 }
@@ -236,7 +220,7 @@ void CoroIdElider::elideHeapAllocations(uint64_t FrameSize, Align FrameAlign) {
   // is spilled into the coroutine frame and recreate the alignment information
   // here. Possibly we will need to do a mini SROA here and break the coroutine
   // frame into individual AllocaInst recreating the original alignment.
-  const DataLayout &DL = FEI.ContainingFunction->getParent()->getDataLayout();
+  const DataLayout &DL = FEI.ContainingFunction->getDataLayout();
   auto FrameTy = ArrayType::get(Type::getInt8Ty(C), FrameSize);
   auto *Frame = new AllocaInst(FrameTy, DL.getAllocaAddrSpace(), "", InsertPt);
   Frame->setAlignment(FrameAlign);
@@ -464,13 +448,9 @@ bool CoroIdElider::attemptElide() {
   return true;
 }
 
-static bool declaresCoroElideIntrinsics(Module &M) {
-  return coro::declaresIntrinsics(M, {"llvm.coro.id", "llvm.coro.id.async"});
-}
-
 PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &M = *F.getParent();
-  if (!declaresCoroElideIntrinsics(M))
+  if (!coro::declaresIntrinsics(M, Intrinsic::coro_id))
     return PreservedAnalyses::all();
 
   FunctionElideInfo FEI{&F};

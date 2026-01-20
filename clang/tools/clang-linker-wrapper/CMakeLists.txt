@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Analysis
   Passes
+  Plugins
   IRReader
   Object
   Option
@@ -41,3 +42,5 @@ target_link_libraries(clang-linker-wrapper
   PRIVATE
   ${CLANG_LINKER_WRAPPER_LIB_DEPS}
   )
+
+export_executable_symbols_for_plugins(clang-linker-wrapper)

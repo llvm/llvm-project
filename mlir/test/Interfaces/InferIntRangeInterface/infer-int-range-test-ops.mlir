@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-int-range-inference %s | FileCheck %s
+// RUN: mlir-opt -int-range-optimizations %s | FileCheck %s
 
 // CHECK-LABEL: func @constant
 // CHECK: %[[cst:.*]] = "test.constant"() <{value = 3 : index}
@@ -103,13 +103,11 @@ func.func @func_args_unbound(%arg0 : index) -> index {
 
 // CHECK-LABEL: func @propagate_across_while_loop_false()
 func.func @propagate_across_while_loop_false() -> index {
-  // CHECK-DAG: %[[C0:.*]] = "test.constant"() <{value = 0
-  // CHECK-DAG: %[[C1:.*]] = "test.constant"() <{value = 1
+  // CHECK: %[[C1:.*]] = "test.constant"() <{value = 1
   %0 = test.with_bounds { umin = 0 : index, umax = 0 : index,
                           smin = 0 : index, smax = 0 : index } : index
   %1 = scf.while : () -> index {
     %false = arith.constant false
-    // CHECK: scf.condition(%{{.*}}) %[[C0]]
     scf.condition(%false) %0 : index
   } do {
   ^bb0(%i1: index):
@@ -122,12 +120,10 @@ func.func @propagate_across_while_loop_false() -> index {
 
 // CHECK-LABEL: func @propagate_across_while_loop
 func.func @propagate_across_while_loop(%arg0 : i1) -> index {
-  // CHECK-DAG: %[[C0:.*]] = "test.constant"() <{value = 0
-  // CHECK-DAG: %[[C1:.*]] = "test.constant"() <{value = 1
+  // CHECK: %[[C1:.*]] = "test.constant"() <{value = 1
   %0 = test.with_bounds { umin = 0 : index, umax = 0 : index,
                           smin = 0 : index, smax = 0 : index } : index
   %1 = scf.while : () -> index {
-    // CHECK: scf.condition(%{{.*}}) %[[C0]]
     scf.condition(%arg0) %0 : index
   } do {
   ^bb0(%i1: index):
@@ -158,3 +154,49 @@ func.func @dont_propagate_across_infinite_loop() -> index {
   return %2 : index
 }
 
+// CHECK-LABEL: @propagate_from_block_to_iterarg
+func.func @propagate_from_block_to_iterarg(%arg0: index, %arg1: i1) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.if %arg1 -> (index) {
+    %1 = scf.if %arg1 -> (index) {
+      scf.yield %arg0 : index
+    } else {
+      scf.yield %arg0 : index
+    }
+    scf.yield %1 : index
+  } else {
+    scf.yield %c1 : index
+  }
+  scf.for %arg2 = %c0 to %arg0 step %c1 {
+    scf.if %arg1 {
+      %1 = arith.subi %0, %c1 : index
+      %2 = arith.muli %0, %1 : index
+      %3 = arith.addi %2, %c1 : index
+      scf.for %arg3 = %c0 to %3 step %c1 {
+        %4 = arith.cmpi uge, %arg3, %c1 : index
+        // CHECK-NOT: scf.if %false
+        scf.if %4 {
+          "test.foo"() : () -> ()
+        }
+      }
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func @multiple_loop_ivs
+func.func @multiple_loop_ivs(%arg0: memref<?x64xi32>) {
+  %ub1 = test.with_bounds { umin = 1 : index, umax = 32 : index,
+                          smin = 1 : index, smax = 32 : index } : index
+  %c0_i32 = arith.constant 0 : i32
+  // CHECK: scf.forall
+  scf.forall (%arg1, %arg2) in (%ub1, 64) {
+    // CHECK: test.reflect_bounds {smax = 31 : index, smin = 0 : index, umax = 31 : index, umin = 0 : index}
+    %1 = test.reflect_bounds %arg1 : index
+    // CHECK-NEXT: test.reflect_bounds {smax = 63 : index, smin = 0 : index, umax = 63 : index, umin = 0 : index}
+    %2 = test.reflect_bounds %arg2 : index
+    memref.store %c0_i32, %arg0[%1, %2] : memref<?x64xi32>
+  }
+  return
+}

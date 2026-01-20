@@ -56,7 +56,7 @@ public:
   // Format: Source.cpp:123 (/path/to/Source.cpp:123)
   std::string getSourceLocation(uint64_t off) const;
   // Return the relocation at \p off, if it exists. This does a linear search.
-  const Reloc *getRelocAt(uint32_t off) const;
+  const Relocation *getRelocAt(uint32_t off) const;
   // Whether the data at \p off in this InputSection is live.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
@@ -88,7 +88,7 @@ public:
 
   OutputSection *parent = nullptr;
   ArrayRef<uint8_t> data;
-  std::vector<Reloc> relocs;
+  std::vector<Relocation> relocs;
   // The symbols that belong to this InputSection, sorted by value. With
   // .subsections_via_symbols, there is typically only one element here.
   llvm::TinyPtrVector<Defined *> symbols;
@@ -117,7 +117,8 @@ public:
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
   void writeTo(uint8_t *buf);
 
-  void foldIdentical(ConcatInputSection *redundant);
+  void foldIdentical(ConcatInputSection *redundant,
+                     Symbol::ICFFoldKind foldKind = Symbol::ICFFoldKind::Body);
   ConcatInputSection *canonical() override {
     return replacement ? replacement : this;
   }
@@ -338,6 +339,7 @@ constexpr const char const_[] = "__const";
 constexpr const char lazySymbolPtr[] = "__la_symbol_ptr";
 constexpr const char lazyBinding[] = "__lazy_binding";
 constexpr const char literals[] = "__literals";
+constexpr const char functionMap[] = "__llvm_merge";
 constexpr const char moduleInitFunc[] = "__mod_init_func";
 constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";
@@ -353,6 +355,7 @@ constexpr const char objcMethname[] = "__objc_methname";
 constexpr const char objcNonLazyCatList[] = "__objc_nlcatlist";
 constexpr const char objcNonLazyClassList[] = "__objc_nlclslist";
 constexpr const char objcProtoList[] = "__objc_protolist";
+constexpr const char outlinedHashTree[] = "__llvm_outline";
 constexpr const char pageZero[] = "__pagezero";
 constexpr const char pointers[] = "__pointers";
 constexpr const char rebase[] = "__rebase";

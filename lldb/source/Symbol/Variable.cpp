@@ -9,8 +9,6 @@
 #include "lldb/Symbol/Variable.h"
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerDecl.h"
@@ -31,6 +29,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "llvm/ADT/Twine.h"
 
@@ -221,8 +221,7 @@ bool Variable::LocationIsValidForFrame(StackFrame *frame) {
       TargetSP target_sp(frame->CalculateTarget());
 
       addr_t loclist_base_load_addr =
-          function->GetAddressRange().GetBaseAddress().GetLoadAddress(
-              target_sp.get());
+          function->GetAddress().GetLoadAddress(target_sp.get());
       if (loclist_base_load_addr == LLDB_INVALID_ADDRESS)
         return false;
       // It is a location list. We just need to tell if the location list
@@ -259,7 +258,7 @@ bool Variable::LocationIsValidForAddress(const Address &address) {
 
       if (sc.function) {
         addr_t loclist_base_file_addr =
-            sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+            sc.function->GetAddress().GetFileAddress();
         if (loclist_base_file_addr == LLDB_INVALID_ADDRESS)
           return false;
         // It is a location list. We just need to tell if the location list
@@ -291,28 +290,9 @@ bool Variable::IsInScope(StackFrame *frame) {
       // this variable was defined in is currently
       Block *deepest_frame_block =
           frame->GetSymbolContext(eSymbolContextBlock).block;
-      if (deepest_frame_block) {
-        SymbolContext variable_sc;
-        CalculateSymbolContext(&variable_sc);
-
-        // Check for static or global variable defined at the compile unit
-        // level that wasn't defined in a block
-        if (variable_sc.block == nullptr)
-          return true;
-
-        // Check if the variable is valid in the current block
-        if (variable_sc.block != deepest_frame_block &&
-            !variable_sc.block->Contains(deepest_frame_block))
-          return false;
-
-        // If no scope range is specified then it means that the scope is the
-        // same as the scope of the enclosing lexical block.
-        if (m_scope_range.IsEmpty())
-          return true;
-
-        addr_t file_address = frame->GetFrameCodeAddress().GetFileAddress();
-        return m_scope_range.FindEntryThatContains(file_address) != nullptr;
-      }
+      Address frame_addr = frame->GetFrameCodeAddress();
+      if (deepest_frame_block)
+        return IsInScope(*deepest_frame_block, frame_addr);
     }
     break;
 
@@ -322,13 +302,34 @@ bool Variable::IsInScope(StackFrame *frame) {
   return false;
 }
 
+bool Variable::IsInScope(const Block &block, const Address &addr) {
+  SymbolContext variable_sc;
+  CalculateSymbolContext(&variable_sc);
+
+  // Check for static or global variable defined at the compile unit
+  // level that wasn't defined in a block
+  if (variable_sc.block == nullptr)
+    return true;
+
+  // Check if the variable is valid in the current block
+  if (variable_sc.block != &block && !variable_sc.block->Contains(&block))
+    return false;
+
+  // If no scope range is specified then it means that the scope is the
+  // same as the scope of the enclosing lexical block.
+  if (m_scope_range.IsEmpty())
+    return true;
+
+  return m_scope_range.FindEntryThatContains(addr.GetFileAddress()) != nullptr;
+}
+
 Status Variable::GetValuesForVariableExpressionPath(
     llvm::StringRef variable_expr_path, ExecutionContextScope *scope,
     GetVariableCallback callback, void *baton, VariableList &variable_list,
     ValueObjectList &valobj_list) {
   Status error;
   if (!callback || variable_expr_path.empty()) {
-    error.SetErrorString("unknown error");
+    error = Status::FromErrorString("unknown error");
     return error;
   }
 
@@ -338,7 +339,7 @@ Status Variable::GetValuesForVariableExpressionPath(
         variable_expr_path.drop_front(), scope, callback, baton, variable_list,
         valobj_list);
     if (error.Fail()) {
-      error.SetErrorString("unknown error");
+      error = Status::FromErrorString("unknown error");
       return error;
     }
     for (uint32_t i = 0; i < valobj_list.GetSize();) {
@@ -372,7 +373,7 @@ Status Variable::GetValuesForVariableExpressionPath(
         }
       }
     } else {
-      error.SetErrorString("unknown error");
+      error = Status::FromErrorString("unknown error");
     }
     return error;
   } break;
@@ -383,13 +384,13 @@ Status Variable::GetValuesForVariableExpressionPath(
     llvm::SmallVector<llvm::StringRef, 2> matches;
     variable_list.Clear();
     if (!g_regex.Execute(variable_expr_path, &matches)) {
-      error.SetErrorStringWithFormatv(
+      error = Status::FromErrorStringWithFormatv(
           "unable to extract a variable name from '{0}'", variable_expr_path);
       return error;
     }
     std::string variable_name = matches[1].str();
     if (!callback(baton, variable_name.c_str(), variable_list)) {
-      error.SetErrorString("unknown error");
+      error = Status::FromErrorString("unknown error");
       return error;
     }
     uint32_t i = 0;
@@ -413,7 +414,7 @@ Status Variable::GetValuesForVariableExpressionPath(
         valobj_sp = variable_valobj_sp->GetValueForExpressionPath(
             variable_sub_expr_path);
         if (!valobj_sp) {
-          error.SetErrorStringWithFormatv(
+          error = Status::FromErrorStringWithFormatv(
               "invalid expression path '{0}' for variable '{1}'",
               variable_sub_expr_path, var_sp->GetName().GetCString());
           variable_list.RemoveVariableAtIndex(i);
@@ -434,7 +435,7 @@ Status Variable::GetValuesForVariableExpressionPath(
     }
   } break;
   }
-  error.SetErrorString("unknown error");
+  error = Status::FromErrorString("unknown error");
   return error;
 }
 
@@ -450,8 +451,7 @@ bool Variable::DumpLocations(Stream *s, const Address &address) {
 
   const addr_t file_addr = address.GetFileAddress();
   if (sc.function) {
-    addr_t loclist_base_file_addr =
-        sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+    addr_t loclist_base_file_addr = sc.function->GetAddress().GetFileAddress();
     if (loclist_base_file_addr == LLDB_INVALID_ADDRESS)
       return false;
     return m_location_list.DumpLocations(s, eDescriptionLevelBrief,

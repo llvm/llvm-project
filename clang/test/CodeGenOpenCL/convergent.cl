@@ -127,17 +127,18 @@ void test_not_unroll() {
 // CHECK: declare spir_func void @nodupfun(){{[^#]*}} #[[attr3:[0-9]+]]
 
 // CHECK-LABEL: @assume_convergent_asm
-// CHECK: tail call void asm sideeffect "s_barrier", ""() #5
+// CHECK: tail call void asm sideeffect "s_barrier", ""() #6
 kernel void assume_convergent_asm()
 {
   __asm__ volatile("s_barrier");
 }
 
-// CHECK: attributes #0 = { nofree noinline norecurse nounwind "
+// CHECK: attributes #0 = { nofree noinline norecurse nounwind memory(readwrite, target_mem0: none, target_mem1: none) "
 // CHECK: attributes #1 = { {{[^}]*}}convergent{{[^}]*}} }
 // CHECK: attributes #2 = { {{[^}]*}}convergent{{[^}]*}} }
 // CHECK: attributes #3 = { {{[^}]*}}convergent noduplicate{{[^}]*}} }
 // CHECK: attributes #4 = { {{[^}]*}}convergent{{[^}]*}} }
-// CHECK: attributes #5 = { {{[^}]*}}convergent{{[^}]*}} }
-// CHECK: attributes #6 = { {{[^}]*}}nounwind{{[^}]*}} }
-// CHECK: attributes #7 = { {{[^}]*}}convergent noduplicate nounwind{{[^}]*}} }
+// CHECK: attributes #5 = { {{[^}]*}}alwaysinline convergent{{[^}]*}} }
+// CHECK: attributes #6 = { {{[^}]*}}convergent{{[^}]*}} }
+// CHECK: attributes #7 = { {{[^}]*}}nounwind{{[^}]*}} }
+// CHECK: attributes #8 = { {{[^}]*}}convergent noduplicate nounwind{{[^}]*}} }

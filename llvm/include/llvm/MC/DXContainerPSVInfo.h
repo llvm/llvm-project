@@ -17,7 +17,6 @@
 #include "llvm/TargetParser/Triple.h"
 
 #include <array>
-#include <numeric>
 #include <stdint.h>
 
 namespace llvm {
@@ -47,7 +46,9 @@ struct PSVSignatureElement {
 // modifiable format, and can be used to serialize the data back into valid PSV
 // RuntimeInfo.
 struct PSVRuntimeInfo {
-  PSVRuntimeInfo() : DXConStrTabBuilder(StringTableBuilder::DXContainer) {}
+  PSVRuntimeInfo() : DXConStrTabBuilder(StringTableBuilder::DXContainer) {
+    memset((void *)&BaseData, 0, sizeof(dxbc::PSV::v3::RuntimeInfo));
+  }
   bool IsFinalized = false;
   dxbc::PSV::v3::RuntimeInfo BaseData;
   SmallVector<dxbc::PSV::v2::ResourceBindInfo> Resources;

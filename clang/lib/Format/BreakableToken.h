@@ -384,6 +384,8 @@ protected:
   // The intended start column of the first line of text from this section.
   unsigned StartColumn;
 
+  const bool AlwaysReflow = Style.ReflowComments == FormatStyle::RCS_Always;
+
   // The prefix to use in front a line that has been reflown up.
   // For example, when reflowing the second line after the first here:
   // // comment 1

@@ -9,6 +9,6 @@
 #ifndef LLVM_LIBC_TYPES_FSFILCNT_T_H
 #define LLVM_LIBC_TYPES_FSFILCNT_T_H
 
-typedef __SIZE_TYPE__ fsfilcnt_t;
+typedef __UINT64_TYPE__ fsfilcnt_t;
 
 #endif // LLVM_LIBC_TYPES_FSFILCNT_T_H

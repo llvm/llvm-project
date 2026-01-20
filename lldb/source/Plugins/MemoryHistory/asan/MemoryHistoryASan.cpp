@@ -8,19 +8,21 @@
 
 #include "MemoryHistoryASan.h"
 
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/MemoryHistory.h"
 
+#include "Plugins/InstrumentationRuntime/Utility/Utility.h"
 #include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-private.h"
 
 #include <sstream>
@@ -89,11 +91,9 @@ const char *memory_history_asan_command_format =
     t;
 )";
 
-static void CreateHistoryThreadFromValueObject(ProcessSP process_sp,
-                                               ValueObjectSP return_value_sp,
-                                               const char *type,
-                                               const char *thread_name,
-                                               HistoryThreads &result) {
+static void CreateHistoryThreadFromValueObject(
+    ProcessSP process_sp, ValueObjectSP return_value_sp, HistoryPCType pc_type,
+    const char *type, const char *thread_name, HistoryThreads &result) {
   std::string count_path = "." + std::string(type) + "_count";
   std::string tid_path = "." + std::string(type) + "_tid";
   std::string trace_path = "." + std::string(type) + "_trace";
@@ -107,7 +107,7 @@ static void CreateHistoryThreadFromValueObject(ProcessSP process_sp,
     return;
 
   int count = count_sp->GetValueAsUnsigned(0);
-  tid_t tid = tid_sp->GetValueAsUnsigned(0) + 1;
+  lldb::tid_t tid = tid_sp->GetValueAsUnsigned(0) + 1;
 
   if (count <= 0)
     return;
@@ -126,12 +126,8 @@ static void CreateHistoryThreadFromValueObject(ProcessSP process_sp,
     pcs.push_back(pc);
   }
 
-  // The ASAN runtime already massages the return addresses into call
-  // addresses, we don't want LLDB's unwinder to try to locate the previous
-  // instruction again as this might lead to us reporting a different line.
-  bool pcs_are_call_addresses = true;
   HistoryThread *history_thread =
-      new HistoryThread(*process_sp, tid, pcs, pcs_are_call_addresses);
+      new HistoryThread(*process_sp, tid, pcs, pc_type);
   ThreadSP new_thread_sp(history_thread);
   std::ostringstream thread_name_with_number;
   thread_name_with_number << thread_name << " Thread " << tid;
@@ -162,7 +158,6 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   ExecutionContext exe_ctx(frame_sp);
   ValueObjectSP return_value_sp;
   StreamString expr;
-  Status eval_error;
   expr.Printf(memory_history_asan_command_format, address, address);
 
   EvaluateExpressionOptions options;
@@ -175,12 +170,20 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
+  auto [m, pc_type] = GetPreferredAsanModule(process_sp->GetTarget());
+  if (m) {
+    SymbolContextList sc_list;
+    sc_list.Append(SymbolContext(std::move(m)));
+    options.SetPreferredSymbolContexts(std::move(sc_list));
+  }
+
   ExpressionResults expr_result = UserExpression::Evaluate(
-      exe_ctx, options, expr.GetString(), "", return_value_sp, eval_error);
+      exe_ctx, options, expr.GetString(), "", return_value_sp);
   if (expr_result != eExpressionCompleted) {
     StreamString ss;
     ss << "cannot evaluate AddressSanitizer expression:\n";
-    ss << eval_error.AsCString();
+    if (return_value_sp)
+      ss << return_value_sp->GetError().AsCString();
     Debugger::ReportWarning(ss.GetString().str(),
                             process_sp->GetTarget().GetDebugger().GetID());
     return result;
@@ -189,10 +192,10 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   if (!return_value_sp)
     return result;
 
-  CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "free",
-                                     "Memory deallocated by", result);
-  CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "alloc",
-                                     "Memory allocated by", result);
+  CreateHistoryThreadFromValueObject(process_sp, return_value_sp, pc_type,
+                                     "free", "Memory deallocated by", result);
+  CreateHistoryThreadFromValueObject(process_sp, return_value_sp, pc_type,
+                                     "alloc", "Memory allocated by", result);
 
   return result;
 }

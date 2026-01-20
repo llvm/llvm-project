@@ -14,17 +14,21 @@
 #define LLVM_CLANG_SEMA_ANALYSISBASEDWARNINGS_H
 
 #include "clang/AST/Decl.h"
-#include "llvm/ADT/DenseMap.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
+#include "clang/Sema/ScopeInfo.h"
 #include <memory>
 
 namespace clang {
 
+class AnalysisDeclContext;
 class Decl;
 class FunctionDecl;
 class QualType;
 class Sema;
+class VarDecl;
 namespace sema {
   class FunctionScopeInfo;
+  class SemaPPCallbacks;
 }
 
 namespace sema {
@@ -33,6 +37,7 @@ class AnalysisBasedWarnings {
 public:
   class Policy {
     friend class AnalysisBasedWarnings;
+    friend class SemaPPCallbacks;
     // The warnings to run.
     LLVM_PREFERRED_TYPE(bool)
     unsigned enableCheckFallThrough : 1;
@@ -49,13 +54,17 @@ public:
 
 private:
   Sema &S;
-  Policy DefaultPolicy;
 
   class InterProceduralData;
   std::unique_ptr<InterProceduralData> IPData;
 
   enum VisitFlag { NotVisited = 0, Visited = 1, Pending = 2 };
   llvm::DenseMap<const FunctionDecl*, VisitFlag> VisitedFD;
+  std::multimap<VarDecl *, PossiblyUnreachableDiag>
+      VarDeclPossiblyUnreachableDiags;
+
+  Policy PolicyOverrides;
+  void clearOverrides();
 
   /// \name Statistics
   /// @{
@@ -91,6 +100,11 @@ private:
   /// a single function.
   unsigned MaxUninitAnalysisBlockVisitsPerFunction;
 
+  /// Statistics collected during lifetime safety analysis.
+  /// These are accumulated across all analyzed functions and printed
+  /// when -print-stats is enabled.
+  clang::lifetimes::LifetimeSafetyStats LSStats;
+
   /// @}
 
 public:
@@ -103,7 +117,17 @@ public:
   // Issue warnings that require whole-translation-unit analysis.
   void IssueWarnings(TranslationUnitDecl *D);
 
-  Policy getDefaultPolicy() { return DefaultPolicy; }
+  void registerVarDeclWarning(VarDecl *VD, PossiblyUnreachableDiag PUD);
+
+  void issueWarningsForRegisteredVarDecl(VarDecl *VD);
+
+  // Gets the default policy which is in effect at the given source location.
+  Policy getPolicyInEffectAt(SourceLocation Loc);
+
+  // Get the policies we may want to override due to things like #pragma clang
+  // diagnostic handling. If a caller sets any of these policies to true, that
+  // will override the policy used to issue warnings.
+  Policy &getPolicyOverrides() { return PolicyOverrides; }
 
   void PrintStats() const;
 };

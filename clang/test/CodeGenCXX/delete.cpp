@@ -16,7 +16,7 @@ void t3(S *s) {
   // CHECK: icmp {{.*}} null
   // CHECK: br i1
 
-  // CHECK: call void @_ZdlPv
+  // CHECK: call void @_ZdlPvm
 
   // Check the delete is inside the 'if !null' check unless we're optimizing
   // for size. FIXME: We could omit the branch entirely in this case.
@@ -35,7 +35,7 @@ struct T {
 void t4(T *t) {
   // CHECK: call void @_ZN1TD1Ev
   // CHECK-SIZE-NEXT: br
-  // CHECK: call void @_ZdlPv
+  // CHECK: call void @_ZdlPvm
   delete t;
 }
 
@@ -76,22 +76,42 @@ namespace test1 {
     ~A();
   };
 
-  // CHECK-LABEL: define{{.*}} void @_ZN5test14testEPA10_A20_NS_1AE(
-  void test(A (*arr)[10][20]) {
+  // CHECK-LABEL: define{{.*}} void @_ZN5test11fEPA10_A20_NS_1AE(
+  void f(A (*arr)[10][20]) {
     delete [] arr;
     // CHECK:      icmp eq ptr [[PTR:%.*]], null
     // CHECK-NEXT: br i1
 
-    // CHECK:      [[BEGIN:%.*]] = getelementptr inbounds [10 x [20 x [[A:%.*]]]], ptr [[PTR]], i32 0, i32 0, i32 0
-    // CHECK-NEXT: [[ALLOC:%.*]] = getelementptr inbounds i8, ptr [[BEGIN]], i64 -8
+    // CHECK:      [[ALLOC:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 -8
     // CHECK-NEXT: [[COUNT:%.*]] = load i64, ptr [[ALLOC]]
-    // CHECK:      [[END:%.*]] = getelementptr inbounds [[A]], ptr [[BEGIN]], i64 [[COUNT]]
-    // CHECK-NEXT: [[ISEMPTY:%.*]] = icmp eq ptr [[BEGIN]], [[END]]
+    // CHECK:      [[END:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[PTR]], i64 [[COUNT]]
+    // CHECK-NEXT: [[ISEMPTY:%.*]] = icmp eq ptr [[PTR]], [[END]]
     // CHECK-NEXT: br i1 [[ISEMPTY]],
     // CHECK:      [[PAST:%.*]] = phi ptr [ [[END]], {{%.*}} ], [ [[CUR:%.*]], {{%.*}} ]
     // CHECK-NEXT: [[CUR:%.*]] = getelementptr inbounds [[A]], ptr [[PAST]], i64 -1
     // CHECK-NEXT: call void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[CUR]])
-    // CHECK-NEXT: [[ISDONE:%.*]] = icmp eq ptr [[CUR]], [[BEGIN]]
+    // CHECK-NEXT: [[ISDONE:%.*]] = icmp eq ptr [[CUR]], [[PTR]]
+    // CHECK-NEXT: br i1 [[ISDONE]]
+    // CHECK:      [[MUL:%.*]] = mul i64 4, [[COUNT]]
+    // CHECK-NEXT: [[SIZE:%.*]] = add i64 [[MUL]], 8
+    // CHECK-NEXT: call void @_ZdaPvm(ptr noundef [[ALLOC]], i64 noundef [[SIZE]])
+  }
+
+  // CHECK-LABEL: define{{.*}} void @_ZN5test11gEPA_NS_1AE(
+  void g(A (*arr)[]) {
+    delete [] arr;
+    // CHECK:      icmp eq ptr [[PTR:%.*]], null
+    // CHECK-NEXT: br i1
+
+    // CHECK:      [[ALLOC:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 -8
+    // CHECK-NEXT: [[COUNT:%.*]] = load i64, ptr [[ALLOC]]
+    // CHECK:      [[END:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[PTR]], i64 [[COUNT]]
+    // CHECK-NEXT: [[ISEMPTY:%.*]] = icmp eq ptr [[PTR]], [[END]]
+    // CHECK-NEXT: br i1 [[ISEMPTY]],
+    // CHECK:      [[PAST:%.*]] = phi ptr [ [[END]], {{%.*}} ], [ [[CUR:%.*]], {{%.*}} ]
+    // CHECK-NEXT: [[CUR:%.*]] = getelementptr inbounds [[A]], ptr [[PAST]], i64 -1
+    // CHECK-NEXT: call void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[CUR]])
+    // CHECK-NEXT: [[ISDONE:%.*]] = icmp eq ptr [[CUR]], [[PTR]]
     // CHECK-NEXT: br i1 [[ISDONE]]
     // CHECK:      call void @_ZdaPv(ptr noundef [[ALLOC]])
   }
@@ -100,7 +120,7 @@ namespace test1 {
 namespace test2 {
   // CHECK-LABEL: define{{.*}} void @_ZN5test21fEPb
   void f(bool *b) {
-    // CHECK: call void @_ZdlPv(ptr
+    // CHECK: call void @_ZdlPvm(ptr{{.*}}i64
     delete b;
     // CHECK: call void @_ZdaPv(ptr
     delete [] b;
@@ -137,7 +157,7 @@ namespace test4 {
     // CHECK-NEXT: [[DTOR:%.*]] = load ptr, ptr [[T0]]
     // CHECK-NEXT: call void [[DTOR]](ptr {{[^,]*}} [[OBJ:%.*]])
     //   Call the global operator delete.
-    // CHECK-NEXT: call void @_ZdlPv(ptr noundef [[ALLOCATED]]) [[NUW:#[0-9]+]]
+    // CHECK-NEXT: call void @_ZdlPvm(ptr noundef [[ALLOCATED]], i64 noundef 8) [[NUW:#[0-9]+]]
     ::delete xp;
   }
 }

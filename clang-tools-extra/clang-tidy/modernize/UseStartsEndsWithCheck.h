@@ -1,4 +1,4 @@
-//===--- UseStartsEndsWithCheck.h - clang-tidy ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,12 +14,12 @@
 namespace clang::tidy::modernize {
 
 /// Checks for common roundabout ways to express ``starts_with`` and
-/// ``ends_with`` and suggests replacing with ``starts_with`` when the method is
+/// ``ends_with`` and suggests replacing with the simpler method when it is
 /// available. Notably, this will work with ``std::string`` and
 /// ``std::string_view``.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-starts-ends-with.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-starts-ends-with.html
 class UseStartsEndsWithCheck : public ClangTidyCheck {
 public:
   UseStartsEndsWithCheck(StringRef Name, ClangTidyContext *Context);

@@ -32,6 +32,7 @@
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -74,16 +75,27 @@ private:
   ///       always have the same depth.
   unsigned Depth = 0;
 
+  /// Cache for the results of GetExitBlocks
+  mutable SmallVector<BlockT *, 4> ExitBlocksCache;
+
   void clear() {
     Entries.clear();
     Children.clear();
     Blocks.clear();
     Depth = 0;
     ParentCycle = nullptr;
+    clearCache();
   }
 
-  void appendEntry(BlockT *Block) { Entries.push_back(Block); }
-  void appendBlock(BlockT *Block) { Blocks.insert(Block); }
+  void appendEntry(BlockT *Block) {
+    Entries.push_back(Block);
+    clearCache();
+  }
+
+  void appendBlock(BlockT *Block) {
+    Blocks.insert(Block);
+    clearCache();
+  }
 
   GenericCycle(const GenericCycle &) = delete;
   GenericCycle &operator=(const GenericCycle &) = delete;
@@ -102,9 +114,22 @@ public:
     return Entries;
   }
 
+  /// Clear the cache of the cycle.
+  /// This should be run in all non-const function in GenericCycle
+  /// and GenericCycleInfo.
+  void clearCache() const { ExitBlocksCache.clear(); }
+
   /// \brief Return whether \p Block is an entry block of the cycle.
   bool isEntry(const BlockT *Block) const {
     return is_contained(Entries, Block);
+  }
+
+  /// \brief Replace all entries with \p Block as single entry.
+  void setSingleEntry(BlockT *Block) {
+    assert(contains(Block));
+    Entries.clear();
+    Entries.push_back(Block);
+    clearCache();
   }
 
   /// \brief Return whether \p Block is contained in the cycle.
@@ -139,6 +164,9 @@ public:
   /// If the cycle has exactly one entry with exactly one predecessor, return
   /// it, otherwise return nullptr.
   BlockT *getCyclePredecessor() const;
+
+  void verifyCycle() const;
+  void verifyCycleNest() const;
 
   /// Iteration over child cycles.
   //@{
@@ -189,22 +217,23 @@ public:
   //@{
   using const_entry_iterator =
       typename SmallVectorImpl<BlockT *>::const_iterator;
-
+  const_entry_iterator entry_begin() const { return Entries.begin(); }
+  const_entry_iterator entry_end() const { return Entries.end(); }
   size_t getNumEntries() const { return Entries.size(); }
   iterator_range<const_entry_iterator> entries() const {
-    return llvm::make_range(Entries.begin(), Entries.end());
+    return llvm::make_range(entry_begin(), entry_end());
   }
+  using const_reverse_entry_iterator =
+      typename SmallVectorImpl<BlockT *>::const_reverse_iterator;
+  const_reverse_entry_iterator entry_rbegin() const { return Entries.rbegin(); }
+  const_reverse_entry_iterator entry_rend() const { return Entries.rend(); }
   //@}
 
   Printable printEntries(const ContextT &Ctx) const {
     return Printable([this, &Ctx](raw_ostream &Out) {
-      bool First = true;
-      for (auto *Entry : Entries) {
-        if (!First)
-          Out << ' ';
-        First = false;
-        Out << Ctx.print(Entry);
-      }
+      ListSeparator LS(" ");
+      for (auto *Entry : Entries)
+        Out << LS << Ctx.print(Entry);
     });
   }
 
@@ -252,12 +281,6 @@ private:
   /// the subtree.
   void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
 
-  /// Assumes that \p Cycle is the innermost cycle containing \p Block.
-  /// \p Block will be appended to \p Cycle and all of its parent cycles.
-  /// \p Block will be added to BlockMap with \p Cycle and
-  /// BlockMapTopLevel with \p Cycle's top level parent cycle.
-  void addBlockToCycle(BlockT *Block, CycleT *Cycle);
-
 public:
   GenericCycleInfo() = default;
   GenericCycleInfo(GenericCycleInfo &&) = default;
@@ -272,14 +295,20 @@ public:
 
   CycleT *getCycle(const BlockT *Block) const;
   CycleT *getSmallestCommonCycle(CycleT *A, CycleT *B) const;
+  CycleT *getSmallestCommonCycle(BlockT *A, BlockT *B) const;
   unsigned getCycleDepth(const BlockT *Block) const;
   CycleT *getTopLevelParentCycle(BlockT *Block);
 
+  /// Assumes that \p Cycle is the innermost cycle containing \p Block.
+  /// \p Block will be appended to \p Cycle and all of its parent cycles.
+  /// \p Block will be added to BlockMap with \p Cycle and
+  /// BlockMapTopLevel with \p Cycle's top level parent cycle.
+  void addBlockToCycle(BlockT *Block, CycleT *Cycle);
+
   /// Methods for debug and self-test.
   //@{
-#ifndef NDEBUG
-  bool validateTree() const;
-#endif
+  void verifyCycleNest(bool VerifyFull = false) const;
+  void verify() const;
   void print(raw_ostream &Out) const;
   void dump() const { print(dbgs()); }
   Printable print(const CycleT *Cycle) { return Cycle->print(Context); }

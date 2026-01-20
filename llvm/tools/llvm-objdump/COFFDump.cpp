@@ -22,6 +22,7 @@
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Win64EH.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,11 +33,6 @@ using namespace llvm::object;
 using namespace llvm::Win64EH;
 
 namespace {
-template <typename T> struct EnumEntry {
-  T Value;
-  StringRef Name;
-};
-
 class COFFDumper : public Dumper {
 public:
   explicit COFFDumper(const llvm::object::COFFObjectFile &O)
@@ -67,22 +63,22 @@ objdump::createCOFFDumper(const object::COFFObjectFile &Obj) {
 }
 
 constexpr EnumEntry<uint16_t> PEHeaderMagic[] = {
-    {uint16_t(COFF::PE32Header::PE32), "PE32"},
-    {uint16_t(COFF::PE32Header::PE32_PLUS), "PE32+"},
+    {"PE32", uint16_t(COFF::PE32Header::PE32)},
+    {"PE32+", uint16_t(COFF::PE32Header::PE32_PLUS)},
 };
 
 constexpr EnumEntry<COFF::WindowsSubsystem> PEWindowsSubsystem[] = {
-    {COFF::IMAGE_SUBSYSTEM_UNKNOWN, "unspecified"},
-    {COFF::IMAGE_SUBSYSTEM_NATIVE, "NT native"},
-    {COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI, "Windows GUI"},
-    {COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI, "Windows CUI"},
-    {COFF::IMAGE_SUBSYSTEM_POSIX_CUI, "POSIX CUI"},
-    {COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI, "Wince CUI"},
-    {COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION, "EFI application"},
-    {COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER, "EFI boot service driver"},
-    {COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER, "EFI runtime driver"},
-    {COFF::IMAGE_SUBSYSTEM_EFI_ROM, "SAL runtime driver"},
-    {COFF::IMAGE_SUBSYSTEM_XBOX, "XBOX"},
+    {"unspecified", COFF::IMAGE_SUBSYSTEM_UNKNOWN},
+    {"NT native", COFF::IMAGE_SUBSYSTEM_NATIVE},
+    {"Windows GUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI},
+    {"Windows CUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI},
+    {"POSIX CUI", COFF::IMAGE_SUBSYSTEM_POSIX_CUI},
+    {"Wince CUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI},
+    {"EFI application", COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION},
+    {"EFI boot service driver", COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER},
+    {"EFI runtime driver", COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER},
+    {"SAL runtime driver", COFF::IMAGE_SUBSYSTEM_EFI_ROM},
+    {"XBOX", COFF::IMAGE_SUBSYSTEM_XBOX},
 };
 
 template <typename T, typename TEnum>
@@ -187,7 +183,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
       Size = Data->Size;
     }
     outs() << format("Entry %x ", I) << formatAddr(Addr)
-           << format(" %08x %s\n", uint32_t(Size), DirName[I]);
+           << format(" %08x %s\n", Size, DirName[I]);
   }
 }
 
@@ -240,10 +236,10 @@ static unsigned getNumUsedSlots(const UnwindCode &UnwindCode) {
   case UOP_AllocSmall:
   case UOP_SetFPReg:
   case UOP_PushMachFrame:
+  case UOP_Epilog:
     return 1;
   case UOP_SaveNonVol:
   case UOP_SaveXMM128:
-  case UOP_Epilog:
     return 2;
   case UOP_SaveNonVolBig:
   case UOP_SaveXMM128Big:
@@ -257,7 +253,7 @@ static unsigned getNumUsedSlots(const UnwindCode &UnwindCode) {
 // Prints one unwind code. Because an unwind code can occupy up to 3 slots in
 // the unwind codes array, this function requires that the correct number of
 // slots is provided.
-static void printUnwindCode(ArrayRef<UnwindCode> UCs) {
+static void printUnwindCode(ArrayRef<UnwindCode> UCs, bool &SeenFirstEpilog) {
   assert(UCs.size() >= getNumUsedSlots(UCs[0]));
   outs() <<  format("      0x%02x: ", unsigned(UCs[0].u.CodeOffset))
          << getUnwindCodeTypeName(UCs[0].getUnwindOp());
@@ -301,11 +297,29 @@ static void printUnwindCode(ArrayRef<UnwindCode> UCs) {
     outs() << " " << (UCs[0].getOpInfo() ? "w/o" : "w")
            << " error code";
     break;
+
+  case UOP_Epilog:
+    if (SeenFirstEpilog) {
+      uint32_t Offset = UCs[0].getEpilogOffset();
+      if (Offset == 0) {
+        outs() << " padding";
+      } else {
+        outs() << " offset=" << format("0x%X", Offset);
+      }
+    } else {
+      SeenFirstEpilog = true;
+      bool AtEnd = (UCs[0].getOpInfo() & 0x1) != 0;
+      uint32_t Length = UCs[0].u.CodeOffset;
+      outs() << " atend=" << (AtEnd ? "yes" : "no")
+             << ", length=" << format("0x%X", Length);
+    }
+    break;
   }
   outs() << "\n";
 }
 
 static void printAllUnwindCodes(ArrayRef<UnwindCode> UCs) {
+  bool SeenFirstEpilog = false;
   for (const UnwindCode *I = UCs.begin(), *E = UCs.end(); I < E; ) {
     unsigned UsedSlots = getNumUsedSlots(*I);
     if (UsedSlots > UCs.size()) {
@@ -316,7 +330,7 @@ static void printAllUnwindCodes(ArrayRef<UnwindCode> UCs) {
              << " remaining in buffer";
       return ;
     }
-    printUnwindCode(ArrayRef(I, E));
+    printUnwindCode(ArrayRef(I, E), SeenFirstEpilog);
     I += UsedSlots;
   }
 }
@@ -823,7 +837,6 @@ void objdump::printCOFFSymbolTable(const object::COFFImportFile &i) {
     raw_string_ostream NS(Name);
 
     cantFail(Sym.printName(NS));
-    NS.flush();
 
     outs() << "[" << format("%2d", Index) << "]"
            << "(sec " << format("%2d", 0) << ")"

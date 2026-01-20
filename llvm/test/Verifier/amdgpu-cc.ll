@@ -218,25 +218,35 @@ define amdgpu_cs_chain_preserve void @inalloca_cc_amdgpu_cs_chain_preserve(ptr i
   ret void
 }
 
-declare amdgpu_cs_chain void @amdgpu_cs_chain_call_target()
-declare amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_call_target()
+; CHECK: Calling convention requires first argument to be i1
+; CHECK-NEXT: ptr @whole_wave_no_args
+define amdgpu_gfx_whole_wave void @whole_wave_no_args() {
+  ret void
+}
 
-define amdgpu_cs_chain void @cant_call_amdgpu_cs_chain_functions(ptr %f) {
-  ; CHECK: Direct calls to amdgpu_cs_chain/amdgpu_cs_chain_preserve functions not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.
-  ; CHECK-NEXT: call amdgpu_cs_chain
-  call amdgpu_cs_chain void @amdgpu_cs_chain_call_target()
+; CHECK: Calling convention requires first argument to be i1
+; CHECK-NEXT: ptr @whole_wave_must_have_i1_active
+define amdgpu_gfx_whole_wave void @whole_wave_must_have_i1_active(i32 %x) {
+  ret void
+}
 
-  ; CHECK: Direct calls to amdgpu_cs_chain/amdgpu_cs_chain_preserve functions not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.
-  ; CHECK-NEXT: call amdgpu_cs_chain_preserve
-  call amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_call_target()
+; CHECK: Calling convention requires first argument to not be inreg
+; CHECK-NEXT: ptr @whole_wave_i1_active_inreg
+define amdgpu_gfx_whole_wave void @whole_wave_i1_active_inreg(i1 inreg %active) {
+  ret void
+}
 
-  ; CHECK: Direct calls to amdgpu_cs_chain/amdgpu_cs_chain_preserve functions not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.
-  ; CHECK-NEXT: call amdgpu_cs_chain
-  call amdgpu_cs_chain void %f()
+; CHECK: Calling convention does not support varargs
+; CHECK-NEXT: ptr @whole_wave_varargs
+define amdgpu_gfx_whole_wave void @whole_wave_varargs(i1 %active, i32 %x, ...) {
+  ret void
+}
 
-  ; CHECK: Direct calls to amdgpu_cs_chain/amdgpu_cs_chain_preserve functions not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.
-  ; CHECK-NEXT: call amdgpu_cs_chain
-  call amdgpu_cs_chain_preserve void %f()
+declare amdgpu_gfx_whole_wave void @whole_wave_callee(i1 %active)
 
+; CHECK: calling convention does not permit calls
+; CHECK-NEXT: call amdgpu_gfx_whole_wave void @whole_wave_callee(i1 true)
+define amdgpu_cs void @cant_call_whole_wave_func() {
+  call amdgpu_gfx_whole_wave void @whole_wave_callee(i1 true)
   ret void
 }

@@ -11,11 +11,14 @@
 
 // constexpr T& optional<T>::operator*() &;
 
-#include <optional>
-#include <type_traits>
 #include <cassert>
+#include <memory>
+#include <optional>
 
 #include "test_macros.h"
+#if TEST_STD_VER >= 26
+#  include "copy_move_types.h"
+#endif
 
 using std::optional;
 
@@ -39,26 +42,62 @@ test()
     return (*opt).test();
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test_ref() {
+  {
+    TracedCopyMove x{};
+    std::optional<TracedCopyMove&> opt(x);
+    static_assert(noexcept(*opt));
+    ASSERT_SAME_TYPE(decltype(*opt), TracedCopyMove&);
+
+    assert(std::addressof(*opt) == std::addressof(x));
+    assert(x.constMove == 0);
+    assert(x.nonConstMove == 0);
+    assert(x.constCopy == 0);
+    assert(x.nonConstCopy == 0);
+  }
+
+  {
+    TracedCopyMove x{};
+    std::optional<const TracedCopyMove&> opt(x);
+    static_assert(noexcept(*opt));
+    ASSERT_SAME_TYPE(decltype(*opt), const TracedCopyMove&);
+
+    assert(std::addressof(*opt) == std::addressof(x));
+    assert(x.constMove == 0);
+    assert(x.nonConstMove == 0);
+    assert(x.constCopy == 0);
+    assert(x.nonConstCopy == 0);
+  }
+
+  return true;
+}
+#endif
+
 int main(int, char**)
 {
     {
         optional<X> opt; ((void)opt);
         ASSERT_SAME_TYPE(decltype(*opt), X&);
-        LIBCPP_STATIC_ASSERT(noexcept(*opt));
-        // ASSERT_NOT_NOEXCEPT(*opt);
-        // FIXME: This assertion fails with GCC because it can see that
-        // (A) operator*() is constexpr, and
-        // (B) there is no path through the function that throws.
-        // It's arguable if this is the correct behavior for the noexcept
-        // operator.
-        // Regardless this function should still be noexcept(false) because
-        // it has a narrow contract.
+        ASSERT_NOEXCEPT(*opt);
     }
     {
         optional<X> opt(X{});
         assert((*opt).test() == 4);
     }
+#if TEST_STD_VER >= 26
+    {
+      X x{};
+      optional<X&> opt(x);
+      ASSERT_SAME_TYPE(decltype(*opt), X&);
+      ASSERT_NOEXCEPT(*opt);
+    }
+    {
+      X x{};
+      optional<X&> opt(x);
+      assert((*opt).test() == 4);
+    }
+#endif
     static_assert(test() == 7, "");
-
     return 0;
 }

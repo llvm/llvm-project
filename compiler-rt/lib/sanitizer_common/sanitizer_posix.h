@@ -28,6 +28,9 @@ namespace __sanitizer {
 // Don't use directly, use __sanitizer::OpenFile() instead.
 uptr internal_open(const char *filename, int flags);
 uptr internal_open(const char *filename, int flags, u32 mode);
+#  if SANITIZER_FREEBSD
+uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags);
+#  endif
 uptr internal_close(fd_t fd);
 
 uptr internal_read(fd_t fd, void *buf, uptr count);
@@ -64,7 +67,8 @@ uptr internal_ptrace(int request, int pid, void *addr, void *data);
 uptr internal_waitpid(int pid, int *status, int options);
 
 int internal_fork();
-fd_t internal_spawn(const char *argv[], const char *envp[], pid_t *pid);
+bool internal_spawn(const char* argv[], const char* envp[], pid_t* pid,
+                    fd_t fd_stdin, fd_t fd_stdout);
 
 int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
                     uptr *oldlenp, const void *newp, uptr newlen);
@@ -74,21 +78,21 @@ int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
 // These functions call appropriate pthread_ functions directly, bypassing
 // the interceptor. They are weak and may not be present in some tools.
 SANITIZER_WEAK_ATTRIBUTE
-int real_pthread_create(void *th, void *attr, void *(*callback)(void *),
-                        void *param);
+int internal_pthread_create(void *th, void *attr, void *(*callback)(void *),
+                            void *param);
 SANITIZER_WEAK_ATTRIBUTE
-int real_pthread_join(void *th, void **ret);
+int internal_pthread_join(void *th, void **ret);
 
-#define DEFINE_REAL_PTHREAD_FUNCTIONS                                          \
-  namespace __sanitizer {                                                      \
-  int real_pthread_create(void *th, void *attr, void *(*callback)(void *),     \
-                          void *param) {                                       \
-    return REAL(pthread_create)(th, attr, callback, param);                    \
-  }                                                                            \
-  int real_pthread_join(void *th, void **ret) {                                \
-    return REAL(pthread_join(th, ret));                                        \
-  }                                                                            \
-  }  // namespace __sanitizer
+#  define DEFINE_INTERNAL_PTHREAD_FUNCTIONS                               \
+    namespace __sanitizer {                                               \
+    int internal_pthread_create(void *th, void *attr,                     \
+                                void *(*callback)(void *), void *param) { \
+      return REAL(pthread_create)(th, attr, callback, param);             \
+    }                                                                     \
+    int internal_pthread_join(void *th, void **ret) {                     \
+      return REAL(pthread_join)(th, ret);                                 \
+    }                                                                     \
+    }  // namespace __sanitizer
 
 int internal_pthread_attr_getstack(void *attr, void **addr, uptr *size);
 
@@ -108,6 +112,7 @@ bool IsStateDetached(int state);
 fd_t ReserveStandardFds(fd_t fd);
 
 bool ShouldMockFailureToOpen(const char *path);
+bool OpenReadsVaArgs(int oflag);
 
 // Create a non-file mapping with a given /proc/self/maps name.
 uptr MmapNamed(void *addr, uptr length, int prot, int flags, const char *name);

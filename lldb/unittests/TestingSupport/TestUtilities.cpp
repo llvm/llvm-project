@@ -20,6 +20,11 @@ using namespace lldb_private;
 extern const char *TestMainArgv0;
 
 std::once_flag TestUtilities::g_debugger_initialize_flag;
+
+std::string lldb_private::PrettyPrint(const llvm::json::Value &value) {
+  return llvm::formatv("{0:2}", value).str();
+}
+
 std::string lldb_private::GetInputFilePath(const llvm::Twine &name) {
   llvm::SmallString<128> result = llvm::sys::path::parent_path(TestMainArgv0);
   llvm::sys::fs::make_absolute(result);
@@ -46,4 +51,13 @@ llvm::Expected<TestFile> TestFile::fromYamlFile(const llvm::Twine &Name) {
   if (!BufferOrError)
     return llvm::errorCodeToError(BufferOrError.getError());
   return fromYaml(BufferOrError.get()->getBuffer());
+}
+
+llvm::Expected<llvm::sys::fs::TempFile> TestFile::writeToTemporaryFile() {
+  llvm::Expected<llvm::sys::fs::TempFile> Temp =
+      llvm::sys::fs::TempFile::create("temp%%%%%%%%%%%%%%%%");
+  if (!Temp)
+    return Temp.takeError();
+  llvm::raw_fd_ostream(Temp->FD, /*shouldClose=*/false) << Buffer;
+  return std::move(*Temp);
 }

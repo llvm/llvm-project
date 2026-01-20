@@ -146,11 +146,6 @@ private:
   /// virtual registers and offsets.
   ValueToVRegInfo VMap;
 
-  // N.b. it's not completely obvious that this will be sufficient for every
-  // LLVM IR construct (with "invoke" being the obvious candidate to mess up our
-  // lives.
-  DenseMap<const BasicBlock *, MachineBasicBlock *> BBToMBB;
-
   // One BasicBlock can be translated to multiple MachineBasicBlocks.  For such
   // BasicBlocks translated to multiple MachineBasicBlocks, MachinePreds retains
   // a mapping between the edges arriving at the BasicBlock to the corresponding
@@ -302,6 +297,10 @@ private:
   /// \pre \p U is a call instruction.
   bool translateCall(const User &U, MachineIRBuilder &MIRBuilder);
 
+  bool translateIntrinsic(
+      const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
+      const TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo = nullptr);
+
   /// When an invoke or a cleanupret unwinds to the next EH pad, there are
   /// many places it could ultimately go. In the IR, we have a single unwind
   /// destination, but in the machine CFG, we enumerate all the possible blocks.
@@ -318,6 +317,8 @@ private:
   bool translateInvoke(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateCallBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateCallBrIntrinsic(const CallBrInst &I,
+                                MachineIRBuilder &MIRBuilder);
 
   bool translateLandingPad(const User &U, MachineIRBuilder &MIRBuilder);
 
@@ -491,6 +492,10 @@ private:
   bool translatePtrToInt(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
   }
+  bool translatePtrToAddr(const User &U, MachineIRBuilder &MIRBuilder) {
+    // FIXME: this is not correct for pointers with addr width != pointer width
+    return translatePtrToInt(U, MIRBuilder);
+  }
   bool translateTrunc(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateCast(TargetOpcode::G_TRUNC, U, MIRBuilder);
   }
@@ -551,8 +556,10 @@ private:
   bool translateVAArg(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateInsertElement(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateInsertVector(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateExtractElement(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateExtractVector(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateShuffleVector(const User &U, MachineIRBuilder &MIRBuilder);
 
@@ -628,6 +635,7 @@ private:
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const LibcallLoweringInfo *Libcalls = nullptr;
   const TargetLowering *TLI = nullptr;
   FunctionLoweringInfo FuncInfo;
 
@@ -655,7 +663,7 @@ private:
       IRT->addSuccessorWithProb(Src, Dst, Prob);
     }
 
-    virtual ~GISelSwitchLowering() = default;
+    ~GISelSwitchLowering() override = default;
 
   private:
     IRTranslator *IRT;

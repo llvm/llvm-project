@@ -155,8 +155,8 @@ void test_ds_fmaxf(local float *out, float src, int a) {
 void test_fence() {
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST + 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
   __builtin_amdgcn_fence(__ATOMIC_ACQUIRE - 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
-  __builtin_amdgcn_fence(4); // expected-error {{too few arguments to function call, expected 2}}
-  __builtin_amdgcn_fence(4, 4, 4); // expected-error {{too many arguments to function call, expected 2}}
+  __builtin_amdgcn_fence(4); // expected-error {{too few arguments to function call, expected at least 2, have 1}}
+  __builtin_amdgcn_fence(4, 4, 4); // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
   __builtin_amdgcn_fence(3.14, ""); // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
   __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, 5); // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
   const char ptr[] = "workgroup";
@@ -166,6 +166,8 @@ void test_fence() {
 void test_s_setreg(int x, int y) {
   __builtin_amdgcn_s_setreg(x, 0); // expected-error {{argument to '__builtin_amdgcn_s_setreg' must be a constant integer}}
   __builtin_amdgcn_s_setreg(x, y); // expected-error {{argument to '__builtin_amdgcn_s_setreg' must be a constant integer}}
+  __builtin_amdgcn_s_setreg(193768, y); // expected-error {{argument value 193768 is outside the valid range [0, 65535]}}
+  __builtin_amdgcn_s_setreg(65536, y); // expected-error {{argument value 65536 is outside the valid range [0, 65535]}}
 }
 
 void test_atomic_inc32() {

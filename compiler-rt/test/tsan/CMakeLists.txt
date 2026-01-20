@@ -31,6 +31,8 @@ endif()
 foreach(arch ${TSAN_TEST_ARCH})
   set(TSAN_TEST_APPLE_PLATFORM "osx")
   set(TSAN_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_osx_MIN_VER_FLAG}")
+  set(TSAN_TEST_APPLE_TARGET_IS_HOST ON)
+  pythonize_bool(TSAN_TEST_APPLE_TARGET_IS_HOST)
 
   set(TSAN_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}" TSAN_TEST_CONFIG_SUFFIX)
@@ -97,6 +99,8 @@ if(APPLE)
       set(CONFIG_NAME "${PLATFORM_CAPITALIZED}${ARCH_UPPER_CASE}Config")
       set(TSAN_TEST_CONFIG_SUFFIX "-${arch}-${platform}")
       set(TSAN_TEST_APPLE_PLATFORM "${platform}")
+      set(TSAN_TEST_APPLE_TARGET_IS_HOST OFF)
+      pythonize_bool(TSAN_TEST_APPLE_TARGET_IS_HOST)
       set(TSAN_TEST_TARGET_ARCH "${arch}")
       set(TSAN_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_${platform}_MIN_VER_FLAG}")
       configure_lit_site_cfg(
@@ -111,20 +115,18 @@ if(APPLE)
   endforeach()
 endif()
 
-if(COMPILER_RT_INCLUDE_TESTS)
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
+if(COMPILER_RT_TSAN_HAS_STATIC_RUNTIME)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
-  if(COMPILER_RT_TSAN_HAS_STATIC_RUNTIME)
-    configure_lit_site_cfg(
-      ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-      ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic/lit.site.cfg.py)
-  endif()
-  list(APPEND TSAN_TEST_DEPS TsanUnitTests)
-  list(APPEND TSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
-  if(COMPILER_RT_TSAN_HAS_STATIC_RUNTIME)
-    list(APPEND TSAN_DYNAMIC_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic)
-  endif()
+    ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic/lit.site.cfg.py)
+endif()
+list(APPEND TSAN_TEST_DEPS TsanUnitTests)
+list(APPEND TSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
+if(COMPILER_RT_TSAN_HAS_STATIC_RUNTIME)
+  list(APPEND TSAN_DYNAMIC_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic)
 endif()
 
 add_lit_testsuite(check-tsan "Running ThreadSanitizer tests"
@@ -137,5 +139,4 @@ if(COMPILER_RT_TSAN_HAS_STATIC_RUNTIME)
                     ${TSAN_DYNAMIC_TESTSUITES}
                     EXCLUDE_FROM_CHECK_ALL
                     DEPENDS ${TSAN_DYNAMIC_TEST_DEPS})
-  set_target_properties(check-tsan-dynamic PROPERTIES FOLDER "Compiler-RT Misc")
 endif()

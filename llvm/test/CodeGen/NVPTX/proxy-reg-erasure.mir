@@ -1,0 +1,98 @@
+# RUN: llc %s --run-pass=nvptx-proxyreg-erasure -mtriple=nvptx64 -o - | FileCheck %s
+
+--- |
+  ; ModuleID = 'third-party/llvm-project/llvm/test/CodeGen/NVPTX/proxy-reg-erasure-mir.ll'
+  source_filename = "third-party/llvm-project/llvm/test/CodeGen/NVPTX/proxy-reg-erasure-mir.ll"
+  target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
+
+  declare <4 x i32> @callee_vec_i32()
+
+  define <4 x i32> @check_vec_i32() {
+    %ret = call <4 x i32> @callee_vec_i32()
+    ret <4 x i32> %ret
+  }
+
+...
+---
+name:            check_vec_i32
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: b32, preferred-register: '' }
+  - { id: 1, class: b32, preferred-register: '' }
+  - { id: 2, class: b32, preferred-register: '' }
+  - { id: 3, class: b32, preferred-register: '' }
+  - { id: 4, class: b32, preferred-register: '' }
+  - { id: 5, class: b32, preferred-register: '' }
+  - { id: 6, class: b32, preferred-register: '' }
+  - { id: 7, class: b32, preferred-register: '' }
+  - { id: 8, class: b32, preferred-register: '' }
+  - { id: 9, class: b32, preferred-register: '' }
+  - { id: 10, class: b32, preferred-register: '' }
+  - { id: 11, class: b32, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       []
+  restorePoint:    []
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    %0:b32, %1:b32, %2:b32, %3:b32 = LDV_i32_v4 0, 0, 101, 3, 32, -1, &retval0, 0 :: (load (s128), addrspace 101)
+    ; CHECK-NOT: ProxyReg
+    %4:b32 = ProxyRegB32 killed %0
+    %5:b32 = ProxyRegB32 killed %1
+    %6:b32 = ProxyRegB32 killed %2
+    %7:b32 = ProxyRegB32 killed %3
+    ; CHECK: STV_i32_v4 killed %0, killed %1, killed %2, killed %3
+    STV_i32_v4 killed %4, killed %5, killed %6, killed %7, 0, 0, 101, 32, &func_retval0, 0 :: (store (s128), addrspace 101)
+
+    %8:b32 = LD_i32 0, 0, 101, 3, 32, -1, &retval0, 0 :: (load (s32), addrspace 101)
+    ; CHECK-NOT: ProxyReg
+    %9:b32 = ProxyRegB32 killed %8
+    %10:b32 = ProxyRegB32 killed %9
+    %11:b32 = ProxyRegB32 killed %10
+    ; CHECK: ST_i32 killed %8
+    ST_i32 killed %11, 0, 0, 101, 32, &func_retval0, 0 :: (store (s32), addrspace 101)
+    Return
+
+...

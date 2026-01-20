@@ -17,6 +17,7 @@
 
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include <optional>
 
 using namespace lldb;
@@ -48,8 +49,73 @@ Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
   if (lldb::SBError *sb_error = reinterpret_cast<lldb::SBError *>(
           python::LLDBSWIGPython_CastPyObjectToSBError(p.get())))
     return m_interpreter.GetStatusFromSBError(*sb_error);
-  else
-    error.SetErrorString("Couldn't cast lldb::SBError to lldb::Status.");
+  error =
+      Status::FromErrorString("Couldn't cast lldb::SBError to lldb::Status.");
+
+  return {};
+}
+
+template <>
+Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBEvent *sb_event = reinterpret_cast<lldb::SBEvent *>(
+          python::LLDBSWIGPython_CastPyObjectToSBEvent(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBEvent(*sb_event);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBEvent to lldb_private::Event.");
+
+  return nullptr;
+}
+
+template <>
+lldb::StreamSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StreamSP>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBStream *sb_stream = reinterpret_cast<lldb::SBStream *>(
+          python::LLDBSWIGPython_CastPyObjectToSBStream(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBStream(*sb_stream);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBStream to lldb_private::Stream.");
+
+  return nullptr;
+}
+
+template <>
+lldb::StackFrameSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameSP>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBFrame *sb_frame = reinterpret_cast<lldb::SBFrame *>(
+          python::LLDBSWIGPython_CastPyObjectToSBFrame(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBFrame(*sb_frame);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBFrame to lldb_private::StackFrame.");
+
+  return nullptr;
+}
+
+template <>
+lldb::ThreadSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ThreadSP>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBThread *sb_thread = reinterpret_cast<lldb::SBThread *>(
+          python::LLDBSWIGPython_CastPyObjectToSBThread(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBThread(*sb_thread);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBThread to lldb_private::Thread.");
+
+  return nullptr;
+}
+
+template <>
+SymbolContext
+ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBSymbolContext *sb_symbol_context =
+          reinterpret_cast<lldb::SBSymbolContext *>(
+              python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBSymbolContext(*sb_symbol_context);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBSymbolContext to lldb_private::SymbolContext.");
 
   return {};
 }
@@ -62,7 +128,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
       python::LLDBSWIGPython_CastPyObjectToSBData(p.get()));
 
   if (!sb_data) {
-    error.SetErrorString(
+    error = Status::FromErrorStringWithFormat(
         "Couldn't cast lldb::SBData to lldb::DataExtractorSP.");
     return nullptr;
   }
@@ -78,12 +144,30 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
       python::LLDBSWIGPython_CastPyObjectToSBBreakpoint(p.get()));
 
   if (!sb_breakpoint) {
-    error.SetErrorString(
+    error = Status::FromErrorStringWithFormat(
         "Couldn't cast lldb::SBBreakpoint to lldb::BreakpointSP.");
     return nullptr;
   }
 
   return m_interpreter.GetOpaqueTypeFromSBBreakpoint(*sb_breakpoint);
+}
+
+template <>
+lldb::BreakpointLocationSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::BreakpointLocationSP>(python::PythonObject &p, Status &error) {
+  lldb::SBBreakpointLocation *sb_break_loc =
+      reinterpret_cast<lldb::SBBreakpointLocation *>(
+          python::LLDBSWIGPython_CastPyObjectToSBBreakpointLocation(p.get()));
+
+  if (!sb_break_loc) {
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't cast lldb::SBBreakpointLocation to "
+        "lldb::BreakpointLocationSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBBreakpointLocation(*sb_break_loc);
 }
 
 template <>
@@ -93,7 +177,7 @@ lldb::ProcessAttachInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
       python::LLDBSWIGPython_CastPyObjectToSBAttachInfo(p.get()));
 
   if (!sb_attach_info) {
-    error.SetErrorString(
+    error = Status::FromErrorStringWithFormat(
         "Couldn't cast lldb::SBAttachInfo to lldb::ProcessAttachInfoSP.");
     return nullptr;
   }
@@ -108,7 +192,7 @@ lldb::ProcessLaunchInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
       python::LLDBSWIGPython_CastPyObjectToSBLaunchInfo(p.get()));
 
   if (!sb_launch_info) {
-    error.SetErrorString(
+    error = Status::FromErrorStringWithFormat(
         "Couldn't cast lldb::SBLaunchInfo to lldb::ProcessLaunchInfoSP.");
     return nullptr;
   }
@@ -126,12 +210,67 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
           python::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(p.get()));
 
   if (!sb_mem_reg_info) {
-    error.SetErrorString(
-        "Couldn't cast lldb::SBMemoryRegionInfo to lldb::MemoryRegionInfoSP.");
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't cast lldb::SBMemoryRegionInfo to "
+        "lldb_private::MemoryRegionInfo.");
     return {};
   }
 
   return m_interpreter.GetOpaqueTypeFromSBMemoryRegionInfo(*sb_mem_reg_info);
+}
+
+template <>
+lldb::ExecutionContextRefSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ExecutionContextRefSP>(python::PythonObject &p, Status &error) {
+
+  lldb::SBExecutionContext *sb_exe_ctx =
+      reinterpret_cast<lldb::SBExecutionContext *>(
+          python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(p.get()));
+
+  if (!sb_exe_ctx) {
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't cast lldb::SBExecutionContext to "
+        "lldb::ExecutionContextRefSP.");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBExecutionContext(*sb_exe_ctx);
+}
+
+template <>
+lldb::DescriptionLevel
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
+    python::PythonObject &p, Status &error) {
+  lldb::DescriptionLevel ret_val = lldb::eDescriptionLevelBrief;
+  llvm::Expected<unsigned long long> unsigned_or_err = p.AsUnsignedLongLong();
+  if (!unsigned_or_err) {
+    error = (Status::FromError(unsigned_or_err.takeError()));
+    return ret_val;
+  }
+  unsigned long long unsigned_val = *unsigned_or_err;
+  if (unsigned_val >= lldb::DescriptionLevel::kNumDescriptionLevels) {
+    error = Status("value too large for lldb::DescriptionLevel.");
+    return ret_val;
+  }
+  return static_cast<lldb::DescriptionLevel>(unsigned_val);
+}
+
+template <>
+lldb::StackFrameListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
+    python::PythonObject &p, Status &error) {
+
+  lldb::SBFrameList *sb_frame_list = reinterpret_cast<lldb::SBFrameList *>(
+      python::LLDBSWIGPython_CastPyObjectToSBFrameList(p.get()));
+
+  if (!sb_frame_list) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBFrameList to lldb::StackFrameListSP.");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBFrameList(*sb_frame_list);
 }
 
 #endif

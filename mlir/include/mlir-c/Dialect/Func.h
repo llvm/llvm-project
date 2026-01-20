@@ -35,8 +35,14 @@ MLIR_CAPI_EXPORTED void mlirFuncSetArgAttr(MlirOperation op, intptr_t pos,
                                            MlirStringRef name,
                                            MlirAttribute attr);
 
+MLIR_CAPI_EXPORTED void mlirFuncSetResultAttr(MlirOperation op, intptr_t pos,
+                                              MlirStringRef name,
+                                              MlirAttribute attr);
+
 #ifdef __cplusplus
 }
 #endif
+
+#include "mlir/Dialect/Func/Transforms/Passes.capi.h.inc"
 
 #endif // MLIR_C_DIALECT_FUNC_H

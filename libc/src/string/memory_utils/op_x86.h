@@ -12,9 +12,12 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H
 
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
 
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
 
 #include "src/__support/common.h"
 #include "src/string/memory_utils/op_builtin.h"
@@ -28,16 +31,20 @@
 // Define fake functions to prevent the compiler from failing on undefined
 // functions in case the CPU extension is not present.
 #if !defined(__AVX512BW__) && (defined(_MSC_VER) || defined(__SCE__))
+#undef _mm512_cmpneq_epi8_mask
 #define _mm512_cmpneq_epi8_mask(A, B) 0
 #endif
 #if !defined(__AVX2__) && (defined(_MSC_VER) || defined(__SCE__))
+#undef _mm256_movemask_epi8
 #define _mm256_movemask_epi8(A) 0
 #endif
 #if !defined(__SSE2__) && (defined(_MSC_VER) || defined(__SCE__))
+#undef _mm_movemask_epi8
 #define _mm_movemask_epi8(A) 0
 #endif
 
-namespace LIBC_NAMESPACE::x86 {
+namespace LIBC_NAMESPACE_DECL {
+namespace x86 {
 
 // A set of constants to check compile time features.
 LIBC_INLINE_VAR constexpr bool K_SSE2 = LLVM_LIBC_IS_DEFINED(__SSE2__);
@@ -51,13 +58,20 @@ LIBC_INLINE_VAR constexpr bool K_AVX512_BW = LLVM_LIBC_IS_DEFINED(__AVX512BW__);
 // Memcpy repmovsb implementation
 struct Memcpy {
   LIBC_INLINE static void repmovsb(void *dst, const void *src, size_t count) {
+#ifdef LIBC_COMPILER_IS_MSVC
+    __movsb(static_cast<unsigned char *>(dst),
+            static_cast<const unsigned char *>(src), count);
+#else
     asm volatile("rep movsb" : "+D"(dst), "+S"(src), "+c"(count) : : "memory");
+#endif // LIBC_COMPILER_IS_MSVC
   }
 };
 
-} // namespace LIBC_NAMESPACE::x86
+} // namespace x86
+} // namespace LIBC_NAMESPACE_DECL
 
-namespace LIBC_NAMESPACE::generic {
+namespace LIBC_NAMESPACE_DECL {
+namespace generic {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint16_t
@@ -121,8 +135,10 @@ LIBC_INLINE MemcmpReturnType cmp_neq<uint64_t>(CPtr p1, CPtr p2,
 // When we use these SIMD types in template specialization GCC complains:
 // "ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
 // Therefore, we disable this warning in this file.
+#ifndef LIBC_COMPILER_IS_MSVC
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif // !LIBC_COMPILER_IS_MSVC
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for __m128i
@@ -312,10 +328,13 @@ LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
 }
 #endif // __AVX512BW__
 
+#ifndef LIBC_COMPILER_IS_MSVC
 #pragma GCC diagnostic pop
+#endif // !LIBC_COMPILER_IS_MSVC
 
-} // namespace LIBC_NAMESPACE::generic
+} // namespace generic
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TARGET_ARCH_IS_X86_64
+#endif // LIBC_TARGET_ARCH_IS_X86
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H

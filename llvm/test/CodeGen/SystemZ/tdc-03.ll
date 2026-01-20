@@ -3,9 +3,22 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+declare half @llvm.fabs.f16(half)
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare fp128 @llvm.fabs.f128(fp128)
+
+; Compare with 0 (unworthy)
+define i32 @f0(half %x) {
+; CHECK-LABEL: f0
+; CHECK-NOT: tceb
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: ltebr {{%f[0-9]+}}, %f0
+; CHECK-NOT: tceb
+  %res = fcmp ugt half %x, 0.0
+  %xres = zext i1 %res to i32
+  ret i32 %xres
+}
 
 ; Compare with 0 (unworthy)
 define i32 @f1(float %x) {
@@ -42,8 +55,19 @@ define i32 @f3(float %x) {
 }
 
 ; Compare fabs with inf
+define i32 @f4_half(half %x) {
+; CHECK-LABEL: f4_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: tceb %f0, 4047
+  %y = call half @llvm.fabs.f16(half %x)
+  %res = fcmp ult half %y, 0x7ff0000000000000
+  %xres = zext i1 %res to i32
+  ret i32 %xres
+}
+
+; Compare fabs with inf
 define i32 @f4(float %x) {
-; CHECK-LABEL: f4
+; CHECK-LABEL: f4:
 ; CHECK: tceb %f0, 4047
   %y = call float @llvm.fabs.f32(float %x)
   %res = fcmp ult float %y, 0x7ff0000000000000

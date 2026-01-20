@@ -1,4 +1,4 @@
-; RUN: mlir-translate -import-llvm %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
 
 @_ZTIi = external dso_local constant ptr
 @_ZTIii= external dso_local constant ptr
@@ -123,9 +123,7 @@ define void @landingpad_dominance() personality ptr @__gxx_personality_v0 {
 entry:
   ; CHECK:    %[[null:.*]] = llvm.mlir.zero : !llvm.ptr
   ; CHECK:    %[[c1:.*]] = llvm.mlir.constant(0 : i32) : i32
-  ; CHECK:    %[[undef:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i32)>
-  ; CHECK:    %[[tmpstruct:.*]] = llvm.insertvalue %[[null]], %[[undef]][0] : !llvm.struct<(ptr, i32)>
-  ; CHECK:    %[[struct:.*]] = llvm.insertvalue %[[c1]], %[[tmpstruct]][1] : !llvm.struct<(ptr, i32)>
+  ; CHECK:    %[[struct:.*]] = llvm.mlir.zero : !llvm.struct<(ptr, i32)>
   ; CHECK:    llvm.call @f0(%[[null]]) : (!llvm.ptr) -> ()
   call void @f0(ptr null)
   ; CHECK:    llvm.call @f1(%[[c1]]) : (i32) -> ()
@@ -146,5 +144,101 @@ catch:
 ; CHECK:  ^[[block2]]:
 exit:
   ; CHECK:    llvm.return
+  ret void
+}
+
+; // -----
+
+declare i32 @__gxx_personality_v0(...)
+declare void @foo(ptr)
+
+; CHECK-LABEL: @invokeLandingpad
+define i32 @invokeLandingpad(ptr %addr) personality ptr @__gxx_personality_v0 {
+entry:
+  %1 = alloca i8
+  %zzz = load i32, ptr %addr, align 4
+  invoke void @foo(ptr %1) to label %bb1 unwind label %bb2
+
+bb1:
+  %yyy = load i32, ptr %addr, align 4
+  invoke void @foo(ptr %1) to label %bb3 unwind label %bb2
+
+; CHECK: ^bb{{.*}}(%[[ARG:.*]]: i32):
+bb2:
+  %phi_var = phi i32 [ %zzz, %entry ], [ %yyy, %bb1 ], !dbg !5
+  ; CHECK: llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  ; CHECK-NEXT: llvm.intr.dbg.value #di_local_variable #llvm.di_expression<[DW_OP_LLVM_fragment(64, 64)]> = %[[ARG]] : i32
+  %3 = landingpad { ptr, i32 } cleanup, !dbg !5
+  #dbg_value(i32 %phi_var, !8, !DIExpression(DW_OP_LLVM_fragment, 64, 64), !7)
+  br label %bb3
+
+bb3:
+  ; CHECK: llvm.return %{{[0-9]+}} : i32
+  ret i32 1
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "landingpad.ll", directory: "/")
+!3 = distinct !DISubprogram(name: "instruction_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!4 = distinct !DISubprogram(name: "callee", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!5 = !DILocation(line: 1, column: 2, scope: !3)
+!6 = !DILocation(line: 2, column: 2, scope: !3)
+!7 = !DILocation(line: 7, column: 4, scope: !4, inlinedAt: !6)
+!8 = !DILocalVariable(scope: !4, name: "size")
+
+; // -----
+
+declare i32 @__gxx_personality_v0(...)
+declare void @foo(ptr)
+
+; Test that landingpad filter clauses with zeroinitializer are correctly
+; translated to llvm.mlir.zero
+
+; CHECK-LABEL: @landingpad_zero_filter
+define void @landingpad_zero_filter() personality ptr @__gxx_personality_v0 {
+entry:
+  ; CHECK: %[[ZERO:.+]] = llvm.mlir.zero : !llvm.array<0 x ptr>
+  invoke void @foo(ptr null) to label %normal unwind label %lpad
+
+normal:
+  ret void
+
+lpad:
+  ; CHECK: %{{[0-9]+}} = llvm.landingpad cleanup (filter %[[ZERO]] : !llvm.array<0 x ptr>) : !llvm.struct<(ptr, i32)>
+  %0 = landingpad { ptr, i32 }
+          cleanup
+          filter [0 x ptr] zeroinitializer
+  ret void
+}
+
+; // -----
+
+declare i32 @__gxx_personality_v0(...)
+declare void @foo(ptr)
+
+; Test that landingpad with multiple filter clauses of different zero-element
+; array types are correctly handled. Note that zero-element arrays of primitive
+; types like i32 may be converted to dense attributes, while ptr arrays use
+; llvm.mlir.zero.
+
+; CHECK-LABEL: @landingpad_mixed_filters
+define void @landingpad_mixed_filters() personality ptr @__gxx_personality_v0 {
+entry:
+  ; CHECK: %[[ZERO1:.+]] = llvm.mlir.zero : !llvm.array<0 x ptr>
+  ; CHECK: %[[ZERO2:.+]] = llvm.mlir.{{(zero|constant)}}{{.*}}: !llvm.array<0 x i32>
+  invoke void @foo(ptr null) to label %normal unwind label %lpad
+
+normal:
+  ret void
+
+lpad:
+  ; CHECK: %{{[0-9]+}} = llvm.landingpad cleanup (filter %[[ZERO1]] : !llvm.array<0 x ptr>) (filter %[[ZERO2]] : !llvm.array<0 x i32>) : !llvm.struct<(ptr, i32)>
+  %0 = landingpad { ptr, i32 }
+          cleanup
+          filter [0 x ptr] zeroinitializer
+          filter [0 x i32] zeroinitializer
   ret void
 }

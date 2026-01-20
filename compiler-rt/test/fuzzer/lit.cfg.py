@@ -33,19 +33,18 @@ if (
 ):
     lit_config.note("lsan feature unavailable")
 else:
-    lit_config.note("lsan feature available")
     config.available_features.add("lsan")
 
 # MemorySanitizer is not supported on OSX or Windows right now
 if (
     sys.platform.startswith("darwin")
     or sys.platform.startswith("win")
-    or config.target_arch == "i386"
 ):
     lit_config.note("msan feature unavailable")
     assert "msan" not in config.available_features
+elif config.target_arch == "i386":
+    assert "msan" not in config.available_features
 else:
-    lit_config.note("msan feature available")
     config.available_features.add("msan")
 
 if sys.platform.startswith("win") or sys.platform.startswith("cygwin"):
@@ -57,10 +56,7 @@ if sys.platform.startswith("darwin"):
 if sys.platform.startswith("linux"):
     # Note the value of ``sys.platform`` is not consistent
     # between python 2 and 3, hence the use of ``.startswith()``.
-    lit_config.note("linux feature available")
     config.available_features.add("linux")
-else:
-    lit_config.note("linux feature unavailable")
 
 if config.arm_thumb:
     config.available_features.add("thumb")
@@ -153,5 +149,5 @@ config.substitutions.append(
 if not config.parallelism_group:
     config.parallelism_group = "shadow-memory"
 
-if config.host_os == "NetBSD":
+if config.target_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))

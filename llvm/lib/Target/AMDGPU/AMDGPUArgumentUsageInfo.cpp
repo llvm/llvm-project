@@ -8,7 +8,6 @@
 
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPU.h"
-#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -20,7 +19,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-argument-reg-usage-info"
 
-INITIALIZE_PASS(AMDGPUArgumentUsageInfo, DEBUG_TYPE,
+INITIALIZE_PASS(AMDGPUArgumentUsageInfoWrapperLegacy, DEBUG_TYPE,
                 "Argument Register Usage Information Storage", false, true)
 
 void ArgDescriptor::print(raw_ostream &OS,
@@ -43,22 +42,13 @@ void ArgDescriptor::print(raw_ostream &OS,
   OS << '\n';
 }
 
-char AMDGPUArgumentUsageInfo::ID = 0;
+char AMDGPUArgumentUsageInfoWrapperLegacy::ID = 0;
 
 const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::ExternFunctionInfo{};
 
 // Hardcoded registers from fixed function ABI
 const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::FixedABIFunctionInfo
   = AMDGPUFunctionArgInfo::fixedABILayout();
-
-bool AMDGPUArgumentUsageInfo::doInitialization(Module &M) {
-  return false;
-}
-
-bool AMDGPUArgumentUsageInfo::doFinalization(Module &M) {
-  ArgInfoMap.clear();
-  return false;
-}
 
 // TODO: Print preload kernargs?
 void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
@@ -87,6 +77,12 @@ void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
   }
 }
 
+bool AMDGPUArgumentUsageInfo::invalidate(Module &M, const PreservedAnalyses &PA,
+                                         ModuleAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<AMDGPUArgumentUsageAnalysis>();
+  return !PAC.preservedWhenStateless();
+}
+
 std::tuple<const ArgDescriptor *, const TargetRegisterClass *, LLT>
 AMDGPUFunctionArgInfo::getPreloadedValue(
     AMDGPUFunctionArgInfo::PreloadedValue Value) const {
@@ -108,6 +104,14 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
   case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
     return std::tuple(WorkGroupIDZ ? &WorkGroupIDZ : nullptr,
                       &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z:
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID:
+    return std::tuple(nullptr, &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
   case AMDGPUFunctionArgInfo::LDS_KERNEL_ID:
     return std::tuple(LDSKernelId ? &LDSKernelId : nullptr,
                       &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
@@ -115,6 +119,9 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
     return std::tuple(
         PrivateSegmentWaveByteOffset ? &PrivateSegmentWaveByteOffset : nullptr,
         &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_SIZE:
+    return {PrivateSegmentSize ? &PrivateSegmentSize : nullptr,
+            &AMDGPU::SGPR_32RegClass, LLT::scalar(32)};
   case AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR:
     return std::tuple(KernargSegmentPtr ? &KernargSegmentPtr : nullptr,
                       &AMDGPU::SGPR_64RegClass,
@@ -180,4 +187,11 @@ AMDGPUArgumentUsageInfo::lookupFuncArgInfo(const Function &F) const {
   if (I == ArgInfoMap.end())
     return FixedABIFunctionInfo;
   return I->second;
+}
+
+AnalysisKey AMDGPUArgumentUsageAnalysis::Key;
+
+AMDGPUArgumentUsageInfo
+AMDGPUArgumentUsageAnalysis::run(Module &M, ModuleAnalysisManager &) {
+  return AMDGPUArgumentUsageInfo();
 }

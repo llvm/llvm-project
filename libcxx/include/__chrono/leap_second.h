@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #  include <__chrono/duration.h>
 #  include <__chrono/system_clock.h>
@@ -22,6 +22,8 @@
 #  include <__compare/ordering.h>
 #  include <__compare/three_way_comparable.h>
 #  include <__config>
+#  include <__cstddef/size_t.h>
+#  include <__functional/hash.h>
 #  include <__utility/private_constructor_tag.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -43,84 +45,100 @@ public:
   _LIBCPP_HIDE_FROM_ABI leap_second(const leap_second&)            = default;
   _LIBCPP_HIDE_FROM_ABI leap_second& operator=(const leap_second&) = default;
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr sys_seconds date() const noexcept { return __date_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr sys_seconds date() const noexcept { return __date_; }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr seconds value() const noexcept { return __value_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr seconds value() const noexcept { return __value_; }
 
 private:
   sys_seconds __date_;
   seconds __value_;
+
+  // The function
+  //   template<class Duration>
+  //    requires three_way_comparable_with<sys_seconds, sys_time<Duration>>
+  //    constexpr auto operator<=>(const leap_second& x, const sys_time<Duration>& y) noexcept;
+  //
+  // Has constraints that are recursive (LWG4139). The proposed resolution is
+  // to make the funcion a hidden friend. For consistency make this change for
+  // all comparison functions.
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const leap_second& __x, const leap_second& __y) {
+    return __x.date() == __y.date();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering operator<=>(const leap_second& __x, const leap_second& __y) {
+    return __x.date() <=> __y.date();
+  }
+
+  template <class _Duration>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const leap_second& __x, const sys_time<_Duration>& __y) {
+    return __x.date() == __y;
+  }
+
+  template <class _Duration>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const leap_second& __x, const sys_time<_Duration>& __y) {
+    return __x.date() < __y;
+  }
+
+  template <class _Duration>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const sys_time<_Duration>& __x, const leap_second& __y) {
+    return __x < __y.date();
+  }
+
+  template <class _Duration>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(const leap_second& __x, const sys_time<_Duration>& __y) {
+    return __y < __x;
+  }
+
+  template <class _Duration>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(const sys_time<_Duration>& __x, const leap_second& __y) {
+    return __y < __x;
+  }
+
+  template <class _Duration>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(const leap_second& __x, const sys_time<_Duration>& __y) {
+    return !(__y < __x);
+  }
+
+  template <class _Duration>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(const sys_time<_Duration>& __x, const leap_second& __y) {
+    return !(__y < __x);
+  }
+
+  template <class _Duration>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(const leap_second& __x, const sys_time<_Duration>& __y) {
+    return !(__x < __y);
+  }
+
+  template <class _Duration>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(const sys_time<_Duration>& __x, const leap_second& __y) {
+    return !(__x < __y);
+  }
+
+  template <class _Duration>
+    requires three_way_comparable_with<sys_seconds, sys_time<_Duration>>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(const leap_second& __x, const sys_time<_Duration>& __y) {
+    return __x.date() <=> __y;
+  }
 };
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator==(const leap_second& __x, const leap_second& __y) {
-  return __x.date() == __y.date();
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr strong_ordering operator<=>(const leap_second& __x, const leap_second& __y) {
-  return __x.date() <=> __y.date();
-}
-
-template <class _Duration>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const leap_second& __x, const sys_time<_Duration>& __y) {
-  return __x.date() == __y;
-}
-
-template <class _Duration>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const leap_second& __x, const sys_time<_Duration>& __y) {
-  return __x.date() < __y;
-}
-
-template <class _Duration>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const sys_time<_Duration>& __x, const leap_second& __y) {
-  return __x < __y.date();
-}
-
-template <class _Duration>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const leap_second& __x, const sys_time<_Duration>& __y) {
-  return __y < __x;
-}
-
-template <class _Duration>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const sys_time<_Duration>& __x, const leap_second& __y) {
-  return __y < __x;
-}
-
-template <class _Duration>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const leap_second& __x, const sys_time<_Duration>& __y) {
-  return !(__y < __x);
-}
-
-template <class _Duration>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const sys_time<_Duration>& __x, const leap_second& __y) {
-  return !(__y < __x);
-}
-
-template <class _Duration>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const leap_second& __x, const sys_time<_Duration>& __y) {
-  return !(__x < __y);
-}
-
-template <class _Duration>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const sys_time<_Duration>& __x, const leap_second& __y) {
-  return !(__x < __y);
-}
-
-#    ifndef _LIBCPP_COMPILER_GCC
-// This requirement cause a compilation loop in GCC-13 and running out of memory.
-// TODO TZDB Test whether GCC-14 fixes this.
-template <class _Duration>
-  requires three_way_comparable_with<sys_seconds, sys_time<_Duration>>
-_LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(const leap_second& __x, const sys_time<_Duration>& __y) {
-  return __x.date() <=> __y;
-}
-#    endif
 
 } // namespace chrono
 
-#  endif //_LIBCPP_STD_VER >= 20
+#    if _LIBCPP_STD_VER >= 26
+
+template <>
+struct hash<chrono::leap_second> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::leap_second& __lp) noexcept {
+    return std::__hash_combine(hash<chrono::sys_seconds>{}(__lp.date()), hash<chrono::seconds>{}(__lp.value()));
+  }
+};
+
+#    endif // _LIBCPP_STD_VER >= 26
+
+#  endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #endif // _LIBCPP___CHRONO_LEAP_SECOND_H

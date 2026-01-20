@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -ccc-print-phases --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 -c \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
@@ -18,5 +15,5 @@
 // RUN:   --hip-link %S/Inputs/hip_multiple_inputs/a.cu 2>&1 \
 // RUN: | FileCheck -check-prefix=MIX %s
 
-// CHECK-NOT: error: mixed CUDA and HIP compilation is not supported
-// MIX: error: mixed CUDA and HIP compilation is not supported
+// CHECK-NOT: error: mixed CUDA and HIP offloading compilation is not supported
+// MIX: error: mixed CUDA and HIP offloading compilation is not supported

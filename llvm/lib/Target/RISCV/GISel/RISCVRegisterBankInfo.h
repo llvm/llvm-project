@@ -33,11 +33,11 @@ class RISCVRegisterBankInfo final : public RISCVGenRegisterBankInfo {
 public:
   RISCVRegisterBankInfo(unsigned HwMode);
 
-  const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                             LLT Ty) const override;
-
   const InstructionMapping &
   getInstrMapping(const MachineInstr &MI) const override;
+
+  const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
+                                             LLT Ty) const override;
 
 private:
   /// \returns true if \p MI only uses and defines FPRs.

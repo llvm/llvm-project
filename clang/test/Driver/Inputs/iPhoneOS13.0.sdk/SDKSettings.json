@@ -1,1 +1,4 @@
-{"Version":"13.0", "MaximumDeploymentTarget": "13.0.99"}
+{"Version":"13.0", "CanonicalName": "iphoneos13.0", "MaximumDeploymentTarget": "13.0.99",
+ "SupportedTargets": {
+   "iphoneos": {"Archs": ["armv7", "armv7s", "arm64"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "ios", "LLVMTargetTripleEnvironment": ""}
+}}

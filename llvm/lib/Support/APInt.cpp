@@ -15,10 +15,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -34,9 +34,7 @@ using namespace llvm;
 /// A utility function for allocating memory, checking for allocation failures,
 /// and ensuring the contents are zeroed.
 inline static uint64_t* getClearedMemory(unsigned numWords) {
-  uint64_t *result = new uint64_t[numWords];
-  memset(result, 0, numWords * sizeof(uint64_t));
-  return result;
+  return new uint64_t[numWords]();
 }
 
 /// A utility function for allocating memory and checking for allocation
@@ -74,12 +72,15 @@ inline static unsigned getDigit(char cdigit, uint8_t radix) {
 
 
 void APInt::initSlowCase(uint64_t val, bool isSigned) {
-  U.pVal = getClearedMemory(getNumWords());
-  U.pVal[0] = val;
-  if (isSigned && int64_t(val) < 0)
-    for (unsigned i = 1; i < getNumWords(); ++i)
-      U.pVal[i] = WORDTYPE_MAX;
-  clearUnusedBits();
+  if (isSigned && int64_t(val) < 0) {
+    U.pVal = getMemory(getNumWords());
+    U.pVal[0] = val;
+    memset(&U.pVal[1], 0xFF, APINT_WORD_SIZE * (getNumWords() - 1));
+    clearUnusedBits();
+  } else {
+    U.pVal = getClearedMemory(getNumWords());
+    U.pVal[0] = val;
+  }
 }
 
 void APInt::initSlowCase(const APInt& that) {
@@ -234,7 +235,8 @@ APInt& APInt::operator-=(uint64_t RHS) {
 APInt APInt::operator*(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
   if (isSingleWord())
-    return APInt(BitWidth, U.VAL * RHS.U.VAL);
+    return APInt(BitWidth, U.VAL * RHS.U.VAL, /*isSigned=*/false,
+                 /*implicitTrunc=*/true);
 
   APInt Result(getMemory(getNumWords()), getBitWidth());
   tcMultiply(Result.U.pVal, U.pVal, RHS.U.pVal, getNumWords());
@@ -332,6 +334,33 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
   // Fill any words between loWord and hiWord with all ones.
   for (unsigned word = loWord + 1; word < hiWord; ++word)
     U.pVal[word] = WORDTYPE_MAX;
+}
+
+void APInt::clearBitsSlowCase(unsigned LoBit, unsigned HiBit) {
+  unsigned LoWord = whichWord(LoBit);
+  unsigned HiWord = whichWord(HiBit);
+
+  // Create an initial mask for the low word with ones below loBit.
+  uint64_t LoMask = ~(WORDTYPE_MAX << whichBit(LoBit));
+
+  // If HiBit is not aligned, we need a high mask.
+  unsigned HiShiftAmt = whichBit(HiBit);
+  if (HiShiftAmt != 0) {
+    // Create a high mask with ones above HiBit.
+    uint64_t HiMask = ~(WORDTYPE_MAX >> (APINT_BITS_PER_WORD - HiShiftAmt));
+    // If LoWord and HiWord are equal, then we combine the masks. Otherwise,
+    // clear the bits in HiWord.
+    if (HiWord == LoWord)
+      LoMask |= HiMask;
+    else
+      U.pVal[HiWord] &= HiMask;
+  }
+  // Apply the mask to the low word.
+  U.pVal[LoWord] &= LoMask;
+
+  // Fill any words between LoWord and HiWord with all zeros.
+  for (unsigned Word = LoWord + 1; Word < HiWord; ++Word)
+    U.pVal[Word] = 0;
 }
 
 // Complement a bignum in-place.
@@ -455,7 +484,8 @@ APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
          "Illegal bit extraction");
 
   if (isSingleWord())
-    return APInt(numBits, U.VAL >> bitPosition);
+    return APInt(numBits, U.VAL >> bitPosition, /*isSigned=*/false,
+                 /*implicitTrunc=*/true);
 
   unsigned loBit = whichBit(bitPosition);
   unsigned loWord = whichWord(bitPosition);
@@ -463,7 +493,8 @@ APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
 
   // Single word result extracting bits from a single word source.
   if (loWord == hiWord)
-    return APInt(numBits, U.pVal[loWord] >> loBit);
+    return APInt(numBits, U.pVal[loWord] >> loBit, /*isSigned=*/false,
+                 /*implicitTrunc=*/true);
 
   // Extracting bits that start on a source word boundary can be done
   // as a fast memory copy.
@@ -496,16 +527,16 @@ uint64_t APInt::extractBitsAsZExtValue(unsigned numBits,
   if (isSingleWord())
     return (U.VAL >> bitPosition) & maskBits;
 
+  static_assert(APINT_BITS_PER_WORD >= 64,
+                "This code assumes only two words affected");
   unsigned loBit = whichBit(bitPosition);
   unsigned loWord = whichWord(bitPosition);
   unsigned hiWord = whichWord(bitPosition + numBits - 1);
   if (loWord == hiWord)
     return (U.pVal[loWord] >> loBit) & maskBits;
 
-  static_assert(8 * sizeof(WordType) <= 64, "This code assumes only two words affected");
-  unsigned wordBits = 8 * sizeof(WordType);
   uint64_t retBits = U.pVal[loWord] >> loBit;
-  retBits |= U.pVal[hiWord] << (wordBits - loBit);
+  retBits |= U.pVal[hiWord] << (APINT_BITS_PER_WORD - loBit);
   retBits &= maskBits;
   return retBits;
 }
@@ -847,15 +878,14 @@ APInt llvm::APIntOps::RoundDoubleToAPInt(double Double, unsigned width) {
 /// |  1[63]   11[62-52]   52[51-00]   1023 |
 ///  --------------------------------------
 double APInt::roundToDouble(bool isSigned) const {
-
   // Handle the simple case where the value is contained in one uint64_t.
   // It is wrong to optimize getWord(0) to VAL; there might be more than one word.
   if (isSingleWord() || getActiveBits() <= APINT_BITS_PER_WORD) {
     if (isSigned) {
       int64_t sext = SignExtend64(getWord(0), BitWidth);
       return double(sext);
-    } else
-      return double(getWord(0));
+    }
+    return double(getWord(0));
   }
 
   // Determine if the value is negative.
@@ -907,7 +937,8 @@ APInt APInt::trunc(unsigned width) const {
   assert(width <= BitWidth && "Invalid APInt Truncate request");
 
   if (width <= APINT_BITS_PER_WORD)
-    return APInt(width, getRawData()[0]);
+    return APInt(width, getRawData()[0], /*isSigned=*/false,
+                 /*implicitTrunc=*/true);
 
   if (width == BitWidth)
     return *this;
@@ -938,7 +969,7 @@ APInt APInt::truncUSat(unsigned width) const {
   return APInt::getMaxValue(width);
 }
 
-// Truncate to new width with signed saturation.
+// Truncate to new width with signed saturation to signed result.
 APInt APInt::truncSSat(unsigned width) const {
   assert(width <= BitWidth && "Invalid APInt Truncate request");
 
@@ -950,12 +981,23 @@ APInt APInt::truncSSat(unsigned width) const {
                       : APInt::getSignedMaxValue(width);
 }
 
+// Truncate to new width with signed saturation to unsigned result.
+APInt APInt::truncSSatU(unsigned width) const {
+  assert(width <= BitWidth && "Invalid APInt Truncate request");
+
+  // Can we just losslessly truncate it?
+  if (isIntN(width))
+    return trunc(width);
+  // If not, then just return the new limits.
+  return isNegative() ? APInt::getZero(width) : APInt::getMaxValue(width);
+}
+
 // Sign extend to a new width.
 APInt APInt::sext(unsigned Width) const {
   assert(Width >= BitWidth && "Invalid APInt SignExtend request");
 
   if (Width <= APINT_BITS_PER_WORD)
-    return APInt(Width, SignExtend64(U.VAL, BitWidth));
+    return APInt(Width, SignExtend64(U.VAL, BitWidth), /*isSigned=*/true);
 
   if (Width == BitWidth)
     return *this;
@@ -1050,11 +1092,10 @@ void APInt::ashrSlowCase(unsigned ShiftAmt) {
         U.pVal[i] = (U.pVal[i + WordShift] >> BitShift) |
                     (U.pVal[i + WordShift + 1] << (APINT_BITS_PER_WORD - BitShift));
 
-      // Handle the last word which has no high bits to copy.
-      U.pVal[WordsToMove - 1] = U.pVal[WordShift + WordsToMove - 1] >> BitShift;
-      // Sign extend one more time.
+      // Handle the last word which has no high bits to copy. Use an arithmetic
+      // shift to preserve the sign bit.
       U.pVal[WordsToMove - 1] =
-          SignExtend64(U.pVal[WordsToMove - 1], APINT_BITS_PER_WORD - BitShift);
+          (int64_t)U.pVal[WordShift + WordsToMove - 1] >> BitShift;
     }
   }
 
@@ -1347,7 +1388,7 @@ static void KnuthDiv(uint32_t *u, uint32_t *v, uint32_t *q, uint32_t* r,
     // the true value, and a "borrow" to the left should be remembered.
     int64_t borrow = 0;
     for (unsigned i = 0; i < n; ++i) {
-      uint64_t p = uint64_t(qp) * uint64_t(v[i]);
+      uint64_t p = qp * uint64_t(v[i]);
       int64_t subres = int64_t(u[j+i]) - borrow - Lo_32(p);
       u[j+i] = Lo_32(subres);
       borrow = Hi_32(p) - Hi_32(subres);
@@ -2223,7 +2264,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
   while (*Prefix) {
     Str.push_back(*Prefix);
     ++Prefix;
-  };
+  }
 
   // We insert the digits backward, then reverse them to get the right order.
   unsigned StartDig = Str.size();
@@ -2547,8 +2588,9 @@ int APInt::tcMultiplyPart(WordType *dst, const WordType *src,
       if (low + dst[i] < low)
         high++;
       dst[i] += low;
-    } else
+    } else {
       dst[i] = low;
+    }
 
     carry = high;
   }
@@ -3103,4 +3145,76 @@ APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
   APInt C1Ext = C1.zext(FullWidth);
   APInt C2Ext = C2.zext(FullWidth);
   return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
+}
+
+APInt APIntOps::mulsExtended(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.sext(FullWidth);
+  APInt C2Ext = C2.sext(FullWidth);
+  return C1Ext * C2Ext;
+}
+
+APInt APIntOps::muluExtended(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.zext(FullWidth);
+  APInt C2Ext = C2.zext(FullWidth);
+  return C1Ext * C2Ext;
+}
+
+APInt APIntOps::pow(const APInt &X, int64_t N) {
+  assert(N >= 0 && "negative exponents not supported.");
+  APInt Acc = APInt(X.getBitWidth(), 1);
+  if (N == 0)
+    return Acc;
+  APInt Base = X;
+  int64_t RemainingExponent = N;
+  while (RemainingExponent > 0) {
+    while (RemainingExponent % 2 == 0) {
+      Base *= Base;
+      RemainingExponent /= 2;
+    }
+    --RemainingExponent;
+    Acc *= Base;
+  }
+  return Acc;
+}
+
+APInt llvm::APIntOps::fshl(const APInt &Hi, const APInt &Lo,
+                           const APInt &Shift) {
+  assert(Hi.getBitWidth() == Lo.getBitWidth());
+  unsigned ShiftAmt = rotateModulo(Hi.getBitWidth(), Shift);
+  if (ShiftAmt == 0)
+    return Hi;
+  return Hi.shl(ShiftAmt) | Lo.lshr(Hi.getBitWidth() - ShiftAmt);
+}
+
+APInt llvm::APIntOps::fshr(const APInt &Hi, const APInt &Lo,
+                           const APInt &Shift) {
+  assert(Hi.getBitWidth() == Lo.getBitWidth());
+  unsigned ShiftAmt = rotateModulo(Hi.getBitWidth(), Shift);
+  if (ShiftAmt == 0)
+    return Lo;
+  return Hi.shl(Hi.getBitWidth() - ShiftAmt) | Lo.lshr(ShiftAmt);
+}
+
+APInt llvm::APIntOps::clmul(const APInt &LHS, const APInt &RHS) {
+  assert(LHS.getBitWidth() == RHS.getBitWidth());
+  unsigned BW = LHS.getBitWidth();
+  APInt Result(BW, 0);
+  for (unsigned I : seq<unsigned>(BW))
+    if (RHS[I])
+      Result ^= LHS.shl(I);
+  return Result;
+}
+
+APInt llvm::APIntOps::clmulr(const APInt &LHS, const APInt &RHS) {
+  assert(LHS.getBitWidth() == RHS.getBitWidth());
+  return clmul(LHS.reverseBits(), RHS.reverseBits()).reverseBits();
+}
+
+APInt llvm::APIntOps::clmulh(const APInt &LHS, const APInt &RHS) {
+  assert(LHS.getBitWidth() == RHS.getBitWidth());
+  return clmulr(LHS, RHS).lshr(1);
 }

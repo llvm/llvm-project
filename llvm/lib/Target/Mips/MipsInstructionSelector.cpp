@@ -123,9 +123,13 @@ const TargetRegisterClass *MipsInstructionSelector::getRegClassForTypeOnBank(
   const unsigned TySize = Ty.getSizeInBits();
 
   if (isRegInGprb(Reg, MRI)) {
-    assert((Ty.isScalar() || Ty.isPointer()) && TySize == 32 &&
+    assert((Ty.isScalar() || Ty.isPointer()) &&
+           (TySize == 32 || TySize == 64) &&
            "Register class not available for LLT, register bank combination");
-    return &Mips::GPR32RegClass;
+    if (TySize == 32)
+      return &Mips::GPR32RegClass;
+    if (TySize == 64)
+      return &Mips::GPR64RegClass;
   }
 
   if (isRegInFprb(Reg, MRI)) {
@@ -927,9 +931,10 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
 }
 
 namespace llvm {
-InstructionSelector *createMipsInstructionSelector(const MipsTargetMachine &TM,
-                                                   MipsSubtarget &Subtarget,
-                                                   MipsRegisterBankInfo &RBI) {
+InstructionSelector *
+createMipsInstructionSelector(const MipsTargetMachine &TM,
+                              const MipsSubtarget &Subtarget,
+                              const MipsRegisterBankInfo &RBI) {
   return new MipsInstructionSelector(TM, Subtarget, RBI);
 }
 } // end namespace llvm

@@ -1,4 +1,4 @@
-//===---------- ExprSequence.cpp - clang-tidy -----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,13 +29,13 @@ static SmallVector<const Stmt *, 1> getParentStmts(const Stmt *S,
                                                    ASTContext *Context) {
   SmallVector<const Stmt *, 1> Result;
 
-  TraversalKindScope RAII(*Context, TK_AsIs);
+  const TraversalKindScope RAII(*Context, TK_AsIs);
   DynTypedNodeList Parents = Context->getParents(*S);
 
   SmallVector<DynTypedNode, 1> NodesToProcess(Parents.begin(), Parents.end());
 
   while (!NodesToProcess.empty()) {
-    DynTypedNode Node = NodesToProcess.back();
+    const DynTypedNode Node = NodesToProcess.back();
     NodesToProcess.pop_back();
 
     if (const auto *S = Node.get<Stmt>()) {
@@ -49,38 +49,38 @@ static SmallVector<const Stmt *, 1> getParentStmts(const Stmt *S,
   return Result;
 }
 
-namespace {
-
-bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
-                         ASTContext *Context) {
+static bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
+                                ASTContext *Context) {
   if (Descendant == Ancestor)
     return true;
-  for (const Stmt *Parent : getParentStmts(Descendant, Context)) {
-    if (isDescendantOrEqual(Parent, Ancestor, Context))
-      return true;
-  }
-
-  return false;
+  return llvm::any_of(getParentStmts(Descendant, Context),
+                      [Ancestor, Context](const Stmt *Parent) {
+                        return isDescendantOrEqual(Parent, Ancestor, Context);
+                      });
 }
 
-llvm::SmallVector<const InitListExpr *>
+static bool isDescendantOfArgs(const Stmt *Descendant, const CallExpr *Call,
+                               ASTContext *Context) {
+  return llvm::any_of(Call->arguments(),
+                      [Descendant, Context](const Expr *Arg) {
+                        return isDescendantOrEqual(Descendant, Arg, Context);
+                      });
+}
+
+static llvm::SmallVector<const InitListExpr *>
 getAllInitListForms(const InitListExpr *InitList) {
-  llvm::SmallVector<const InitListExpr *> result = {InitList};
+  llvm::SmallVector<const InitListExpr *> Result = {InitList};
   if (const InitListExpr *AltForm = InitList->getSyntacticForm())
-    result.push_back(AltForm);
+    Result.push_back(AltForm);
   if (const InitListExpr *AltForm = InitList->getSemanticForm())
-    result.push_back(AltForm);
-  return result;
+    Result.push_back(AltForm);
+  return Result;
 }
-
-} // namespace
 
 ExprSequence::ExprSequence(const CFG *TheCFG, const Stmt *Root,
                            ASTContext *TheContext)
     : Context(TheContext), Root(Root) {
-  for (const auto &SyntheticStmt : TheCFG->synthetic_stmts()) {
-    SyntheticStmtSourceMap[SyntheticStmt.first] = SyntheticStmt.second;
-  }
+  SyntheticStmtSourceMap.insert_range(TheCFG->synthetic_stmts());
 }
 
 bool ExprSequence::inSequence(const Stmt *Before, const Stmt *After) const {
@@ -95,14 +95,62 @@ bool ExprSequence::inSequence(const Stmt *Before, const Stmt *After) const {
       return true;
   }
 
-  // If 'After' is a parent of 'Before' or is sequenced after one of these
-  // parents, we know that it is sequenced after 'Before'.
-  for (const Stmt *Parent : getParentStmts(Before, Context)) {
-    if (Parent == After || inSequence(Parent, After))
+  const SmallVector<const Stmt *, 1> BeforeParents =
+      getParentStmts(Before, Context);
+
+  // Since C++17, the callee of a call expression is guaranteed to be sequenced
+  // before all of the arguments.
+  // We handle this as a special case rather than using the general
+  // `getSequenceSuccessor` logic above because the callee expression doesn't
+  // have an unambiguous successor; the order in which arguments are evaluated
+  // is indeterminate.
+  for (const Stmt *Parent : BeforeParents) {
+    // Special case: If the callee is a `MemberExpr` with a `DeclRefExpr` as its
+    // base, we consider it to be sequenced _after_ the arguments. This is
+    // because the variable referenced in the base will only actually be
+    // accessed when the call happens, i.e. once all of the arguments have been
+    // evaluated. This has no basis in the C++ standard, but it reflects actual
+    // behavior that is relevant to a use-after-move scenario:
+    //
+    // ```
+    // a.bar(consumeA(std::move(a));
+    // ```
+    //
+    // In this example, we end up accessing `a` after it has been moved from,
+    // even though nominally the callee `a.bar` is evaluated before the argument
+    // `consumeA(std::move(a))`. Note that this is not specific to C++17, so
+    // we implement this logic unconditionally.
+    if (const auto *Call = dyn_cast<CXXMemberCallExpr>(Parent)) {
+      if (is_contained(Call->arguments(), Before) &&
+          isa<DeclRefExpr>(
+              Call->getImplicitObjectArgument()->IgnoreParenImpCasts()) &&
+          isDescendantOrEqual(After, Call->getImplicitObjectArgument(),
+                              Context))
+        return true;
+
+      // We need this additional early exit so that we don't fall through to the
+      // more general logic below.
+      if (const auto *Member = dyn_cast<MemberExpr>(Before);
+          Member && Call->getCallee() == Member &&
+          isa<DeclRefExpr>(Member->getBase()->IgnoreParenImpCasts()) &&
+          isDescendantOfArgs(After, Call, Context))
+        return false;
+    }
+
+    if (!Context->getLangOpts().CPlusPlus17)
+      continue;
+
+    if (const auto *Call = dyn_cast<CallExpr>(Parent);
+        Call && Call->getCallee() == Before &&
+        isDescendantOfArgs(After, Call, Context))
       return true;
   }
 
-  return false;
+  // If 'After' is a parent of 'Before' or is sequenced after one of these
+  // parents, we know that it is sequenced after 'Before'.
+  return llvm::any_of(BeforeParents, [&](const Stmt *Parent) {
+    return Parent == After || inSequence(Parent, After);
+  });
 }
 
 bool ExprSequence::potentiallyAfter(const Stmt *After,
@@ -125,21 +173,17 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
       // Initializer list: Each initializer clause is sequenced after the
       // clauses that precede it.
       for (const InitListExpr *Form : getAllInitListForms(InitList)) {
-        for (unsigned I = 1; I < Form->getNumInits(); ++I) {
-          if (Form->getInit(I - 1) == S) {
+        for (unsigned I = 1; I < Form->getNumInits(); ++I)
+          if (Form->getInit(I - 1) == S)
             return Form->getInit(I);
-          }
-        }
       }
     } else if (const auto *ConstructExpr = dyn_cast<CXXConstructExpr>(Parent)) {
       // Constructor arguments are sequenced if the constructor call is written
       // as list-initialization.
       if (ConstructExpr->isListInitialization()) {
-        for (unsigned I = 1; I < ConstructExpr->getNumArgs(); ++I) {
-          if (ConstructExpr->getArg(I - 1) == S) {
+        for (unsigned I = 1; I < ConstructExpr->getNumArgs(); ++I)
+          if (ConstructExpr->getArg(I - 1) == S)
             return ConstructExpr->getArg(I);
-          }
-        }
       }
     } else if (const auto *Compound = dyn_cast<CompoundStmt>(Parent)) {
       // Compound statement: Each sub-statement is sequenced after the
@@ -204,7 +248,7 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
 }
 
 const Stmt *ExprSequence::resolveSyntheticStmt(const Stmt *S) const {
-  if (SyntheticStmtSourceMap.count(S))
+  if (SyntheticStmtSourceMap.contains(S))
     return SyntheticStmtSourceMap.lookup(S);
   return S;
 }
@@ -212,15 +256,14 @@ const Stmt *ExprSequence::resolveSyntheticStmt(const Stmt *S) const {
 StmtToBlockMap::StmtToBlockMap(const CFG *TheCFG, ASTContext *TheContext)
     : Context(TheContext) {
   for (const auto *B : *TheCFG) {
-    for (const auto &Elem : *B) {
+    for (const auto &Elem : *B)
       if (std::optional<CFGStmt> S = Elem.getAs<CFGStmt>())
         Map[S->getStmt()] = B;
-    }
   }
 }
 
 const CFGBlock *StmtToBlockMap::blockContainingStmt(const Stmt *S) const {
-  while (!Map.count(S)) {
+  while (!Map.contains(S)) {
     SmallVector<const Stmt *, 1> Parents = getParentStmts(S, Context);
     if (Parents.empty())
       return nullptr;

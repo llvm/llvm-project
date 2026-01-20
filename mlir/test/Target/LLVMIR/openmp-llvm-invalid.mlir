@@ -35,7 +35,7 @@ llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %expr: i32) {
 llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %v: !llvm.ptr, %expr: i32) {
   // expected-error @+1 {{LLVM Translation failed for operation: omp.atomic.capture}}
   omp.atomic.capture memory_order(seq_cst) {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     // expected-error @+1 {{no atomic update operation with region argument as operand found inside atomic.update region}}
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
@@ -52,7 +52,7 @@ llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %v: !llvm.ptr, 
 // update operation
 llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %v: !llvm.ptr, %expr: i32) {
   omp.atomic.capture memory_order(seq_cst) {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %t1 = llvm.mul %xval, %expr : i32
@@ -87,5 +87,29 @@ llvm.func @omp_threadprivate() {
   }
 
   llvm.store %3, %5 : i32, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error @below {{Ill-formed type attributes for linear variables}}
+  omp.wsloop linear(%x = %step : !llvm.ptr) {
+     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+       omp.yield
+     }
+  } {linear_var_types = []}
+  llvm.return
+}
+
+// -----
+
+llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error @below {{Ill-formed type attributes for linear variables}} 
+  omp.simd linear(%x = %step : !llvm.ptr) {
+     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+       omp.yield
+     }
+  } {linear_var_types = []}
   llvm.return
 }

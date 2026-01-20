@@ -12,8 +12,10 @@
 // concept three_way_comparable_with = // see below
 
 #include <compare>
+#include <cstddef>
 
 #include "compare_types.h"
+#include "test_macros.h"
 
 template <class T, class U = T, typename Cat = std::partial_ordering>
 constexpr bool check_three_way_comparable_with() {
@@ -223,4 +225,33 @@ struct SpaceshipNonConstArgument {
 };
 
 static_assert(!check_three_way_comparable_with<SpaceshipNonConstArgument>());
+
+struct MoveOnlyIntComparable {
+  MoveOnlyIntComparable(int) {}
+
+  MoveOnlyIntComparable(MoveOnlyIntComparable&&)            = default;
+  MoveOnlyIntComparable& operator=(MoveOnlyIntComparable&&) = default;
+
+  friend auto operator<=>(MoveOnlyIntComparable const&, MoveOnlyIntComparable const&) = default;
+};
+
+// P2404
+static_assert(check_three_way_comparable_with<MoveOnlyIntComparable, int>());
+
+struct NonMovableIntComparable {
+  NonMovableIntComparable(int) {}
+
+  NonMovableIntComparable(NonMovableIntComparable&&)            = delete;
+  NonMovableIntComparable& operator=(NonMovableIntComparable&&) = delete;
+
+  friend auto operator<=>(NonMovableIntComparable const&, NonMovableIntComparable const&) = default;
+};
+
+// TODO: Clang is broken, see https://llvm.org/PR171438
+#if defined(TEST_COMPILER_CLANG) && !defined(TEST_COMPILER_APPLE_CLANG)
+static_assert(check_three_way_comparable_with<NonMovableIntComparable, int>());
+#else
+static_assert(!check_three_way_comparable_with<NonMovableIntComparable, int>());
+#endif
+
 } // namespace user_defined

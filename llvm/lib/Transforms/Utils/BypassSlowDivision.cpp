@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -27,11 +26,11 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
 
@@ -41,22 +40,22 @@ using namespace llvm;
 
 namespace {
 
-  struct QuotRemPair {
-    Value *Quotient;
-    Value *Remainder;
+struct QuotRemPair {
+  Value *Quotient;
+  Value *Remainder;
 
-    QuotRemPair(Value *InQuotient, Value *InRemainder)
-        : Quotient(InQuotient), Remainder(InRemainder) {}
-  };
+  QuotRemPair(Value *InQuotient, Value *InRemainder)
+      : Quotient(InQuotient), Remainder(InRemainder) {}
+};
 
-  /// A quotient and remainder, plus a BB from which they logically "originate".
-  /// If you use Quotient or Remainder in a Phi node, you should use BB as its
-  /// corresponding predecessor.
-  struct QuotRemWithBB {
-    BasicBlock *BB = nullptr;
-    Value *Quotient = nullptr;
-    Value *Remainder = nullptr;
-  };
+/// A quotient and remainder, plus a BB from which they logically "originate".
+/// If you use Quotient or Remainder in a Phi node, you should use BB as its
+/// corresponding predecessor.
+struct QuotRemWithBB {
+  BasicBlock *BB = nullptr;
+  Value *Quotient = nullptr;
+  Value *Remainder = nullptr;
+};
 
 using DivCacheTy = DenseMap<DivRemMapKey, QuotRemPair>;
 using BypassWidthsTy = DenseMap<unsigned, unsigned>;
@@ -233,7 +232,7 @@ ValueRange FastDivInsertionTask::getValueRange(Value *V,
   assert(LongLen > ShortLen && "Value type must be wider than BypassType");
   unsigned HiBits = LongLen - ShortLen;
 
-  const DataLayout &DL = SlowDivOrRem->getModule()->getDataLayout();
+  const DataLayout &DL = SlowDivOrRem->getDataLayout();
   KnownBits Known(LongLen);
 
   computeKnownBits(V, Known, DL);
@@ -336,10 +335,10 @@ Value *FastDivInsertionTask::insertOperandRuntimeCheck(Value *Op1, Value *Op2) {
   else
     OrV = Op1 ? Op1 : Op2;
 
-  // BitMask is inverted to check if the operands are
-  // larger than the bypass type
-  uint64_t BitMask = ~BypassType->getBitMask();
-  Value *AndV = Builder.CreateAnd(OrV, BitMask);
+  // Check whether the operands are larger than the bypass type.
+  Value *AndV = Builder.CreateAnd(
+      OrV, APInt::getBitsSetFrom(OrV->getType()->getIntegerBitWidth(),
+                                 BypassType->getBitWidth()));
 
   // Compare operand values
   Value *ZeroV = ConstantInt::getSigned(getSlowType(), 0);
@@ -458,7 +457,7 @@ bool llvm::bypassSlowDivision(BasicBlock *BB,
     Next = Next->getNextNode();
 
     // Ignore dead code to save time and avoid bugs.
-    if (I->hasNUses(0))
+    if (I->use_empty())
       continue;
 
     FastDivInsertionTask Task(I, BypassWidths);

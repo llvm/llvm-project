@@ -12,12 +12,12 @@
 #include "mlir/IR/Action.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/PassRegistry.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/Statistic.h"
 #include <optional>
 
 namespace mlir {
+class PassInstrumentation;
 namespace detail {
 class OpToOpPassAdaptor;
 struct OpPassManagerImpl;
@@ -119,8 +119,9 @@ public:
                     function_ref<LogicalResult(const Twine &)> errorHandler);
 
   /// Prints out the pass in the textual representation of pipelines. If this is
-  /// an adaptor pass, print its pass managers.
-  void printAsTextualPipeline(raw_ostream &os);
+  /// an adaptor pass, print its pass managers. When `pretty` is true, the
+  /// printed pipeline is formatted for readability.
+  void printAsTextualPipeline(raw_ostream &os, bool pretty = false);
 
   //===--------------------------------------------------------------------===//
   // Statistics
@@ -193,6 +194,13 @@ protected:
   /// This is useful for generic operation passes to add restrictions on the
   /// operations they operate on.
   virtual bool canScheduleOn(RegisteredOperationName opName) const = 0;
+  virtual bool canScheduleOn(Operation *op) const {
+    std::optional<RegisteredOperationName> registeredInfo =
+        op->getName().getRegisteredInfo();
+    if (!registeredInfo)
+      return false;
+    return canScheduleOn(*registeredInfo);
+  }
 
   /// Schedule an arbitrary pass pipeline on the provided operation.
   /// This can be invoke any time in a pass to dynamic schedule more passes.
@@ -334,6 +342,9 @@ private:
 
   /// Allow access to 'passOptions'.
   friend class PassInfo;
+
+  /// Allow access to 'signalPassFailure'.
+  friend class PassInstrumentation;
 };
 
 //===----------------------------------------------------------------------===//
@@ -436,6 +447,7 @@ protected:
   /// Indicate if the current pass can be scheduled on the given operation type.
   /// For an InterfacePass, this checks if the operation implements the given
   /// interface.
+  bool canScheduleOn(Operation *op) const final { return isa<InterfaceT>(op); }
   bool canScheduleOn(RegisteredOperationName opName) const final {
     return opName.hasInterface<InterfaceT>();
   }
@@ -494,8 +506,6 @@ class PassExecutionAction : public tracing::ActionImpl<PassExecutionAction> {
   using Base = tracing::ActionImpl<PassExecutionAction>;
 
 public:
-  /// Define a TypeID for this PassExecutionAction.
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PassExecutionAction)
   /// Construct a PassExecutionAction. This is called by the OpToOpPassAdaptor
   /// when it calls `executeAction`.
   PassExecutionAction(ArrayRef<IRUnit> irUnits, const Pass &pass);
@@ -526,5 +536,8 @@ public:
 };
 
 } // namespace mlir
+
+/// Define a TypeID for this PassExecutionAction.
+MLIR_DECLARE_EXPLICIT_TYPE_ID(::mlir::PassExecutionAction)
 
 #endif // MLIR_PASS_PASS_H

@@ -82,8 +82,8 @@ public:
   bool isAccum : 1;         // 1.0hk/k/lk/uhk/uk/ulk
   bool isBitInt : 1;        // 1wb, 1uwb (C23) or 1__wb, 1__uwb (Clang extension in C++
                             // mode)
-  uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, or i64.
-
+  uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, i64, or
+                            // i128.
 
   bool isFixedPointLiteral() const {
     return (saw_period || saw_exponent) && saw_fixed_point_suffix;
@@ -118,12 +118,10 @@ public:
   /// bits of the result and return true.  Otherwise, return false.
   bool GetIntegerValue(llvm::APInt &Val);
 
-  /// GetFloatValue - Convert this numeric literal to a floating value, using
-  /// the specified APFloat fltSemantics (specifying float, double, etc).
-  /// The optional bool isExact (passed-by-reference) has its value
-  /// set to true if the returned APFloat can represent the number in the
-  /// literal exactly, and false otherwise.
-  llvm::APFloat::opStatus GetFloatValue(llvm::APFloat &Result);
+  /// Convert this numeric literal to a floating value, using the specified
+  /// APFloat fltSemantics (specifying float, double, etc) and rounding mode.
+  llvm::APFloat::opStatus GetFloatValue(llvm::APFloat &Result,
+                                        llvm::RoundingMode RM);
 
   /// GetFixedPointValue - Convert this numeric literal value into a
   /// scaled integer that represents this value. Returns true if an overflow

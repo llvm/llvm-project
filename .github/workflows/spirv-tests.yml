@@ -4,7 +4,6 @@ permissions:
   contents: read
 
 on:
-  workflow_dispatch:
   pull_request:
     paths:
       - 'llvm/lib/Target/SPIRV/**'
@@ -21,9 +20,27 @@ jobs:
   check_spirv:
     if: github.repository_owner == 'llvm'
     name: Test SPIR-V
-    uses: ./.github/workflows/llvm-project-tests.yml
-    with:
-      build_target: check-llvm-codegen-spirv
-      projects:
-      extra_cmake_args: '-DLLVM_TARGETS_TO_BUILD="" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="SPIRV" -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON'
-      os_list: '["ubuntu-latest"]'
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/llvm/ci-ubuntu-24.04:latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
+        with:
+          max-size: 2G
+          key: spirv-ubuntu-24.04
+          variant: sccache
+      - name: Build and Test
+        run: |
+          mkdir build
+          cmake -GNinja \
+            -S llvm \
+            -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            -DLLVM_TARGETS_TO_BUILD="SPIRV" \
+            -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON
+          ninja -C build check-llvm-codegen-spirv

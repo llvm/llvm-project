@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "src/fenv/fetestexceptflag.h"
 #include "hdr/types/fexcept_t.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fetestexceptflag,
                    (const fexcept_t *flagp, int excepts)) {
@@ -20,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, fetestexceptflag,
   return *flagp | fputil::test_except(excepts);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

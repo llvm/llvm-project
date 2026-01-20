@@ -6,6 +6,7 @@ set(LLVM_OPTIONAL_SOURCES
   Liveness.cpp
   CFGLoopInfo.cpp
   SliceAnalysis.cpp
+  TopologicalSortUtils.cpp
 
   AliasAnalysis/LocalAliasAnalysis.cpp
 
@@ -28,6 +29,8 @@ add_mlir_library(MLIRAnalysis
   Liveness.cpp
   CFGLoopInfo.cpp
   SliceAnalysis.cpp
+  SliceWalk.cpp
+  TopologicalSortUtils.cpp
 
   AliasAnalysis/LocalAliasAnalysis.cpp
 
@@ -37,6 +40,7 @@ add_mlir_library(MLIRAnalysis
   DataFlow/IntegerRangeAnalysis.cpp
   DataFlow/LivenessAnalysis.cpp
   DataFlow/SparseAnalysis.cpp
+  DataFlow/StridedMetadataRangeAnalysis.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
@@ -50,6 +54,7 @@ add_mlir_library(MLIRAnalysis
   MLIRDataLayoutInterfaces
   MLIRFunctionInterfaces
   MLIRInferIntRangeInterface
+  MLIRInferStridedMetadataInterface
   MLIRInferTypeOpInterface
   MLIRLoopLikeInterface
   MLIRPresburger
