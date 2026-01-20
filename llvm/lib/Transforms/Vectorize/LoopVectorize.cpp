@@ -7084,20 +7084,27 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
   // the more accurate VPlan-based cost model.
   for (VPRecipeBase &R : *Plan.getVectorPreheader()) {
     auto *VPI = dyn_cast<VPInstruction>(&R);
-    if (!VPI || VPI->getOpcode() != Instruction::Select)
+    if (!VPI)
       continue;
 
-    if (auto *WR = dyn_cast_or_null<VPWidenRecipe>(VPI->getSingleUser())) {
-      switch (WR->getOpcode()) {
-      case Instruction::UDiv:
-      case Instruction::SDiv:
-      case Instruction::URem:
-      case Instruction::SRem:
-        return true;
-      default:
-        break;
+    // The reverse operations are created for reverse accesses. LICM will hoist
+    // the reverse operation to the preheader if the reversed value is
+    // invariant.
+    if (VPI->getOpcode() == VPInstruction::Reverse)
+      return true;
+
+    if (VPI->getOpcode() == Instruction::Select)
+      if (auto *WR = dyn_cast_or_null<VPWidenRecipe>(VPI->getSingleUser())) {
+        switch (WR->getOpcode()) {
+        case Instruction::UDiv:
+        case Instruction::SDiv:
+        case Instruction::URem:
+        case Instruction::SRem:
+          return true;
+        default:
+          break;
+        }
       }
-    }
   }
 
   DenseSet<Instruction *> SeenInstrs;
@@ -7136,23 +7143,6 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         if (AddrI && vputils::isSingleScalar(WidenMemR->getAddr()) !=
                          CostCtx.isLegacyUniformAfterVectorization(AddrI, VF))
           return true;
-
-        // If the stored value of a reverse store is invariant, LICM will
-        // hoist the reverse operation to the preheader. In this case, the
-        // result of the VPlan-based cost model will diverge from that of
-        // the legacy model.
-        if (isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe>(WidenMemR)) {
-          VPValue *StoredVal;
-          if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(WidenMemR))
-            StoredVal = StoreR->getStoredValue();
-          else
-            StoredVal =
-                cast<VPWidenStoreEVLRecipe>(WidenMemR)->getStoredValue();
-
-          using namespace VPlanPatternMatch;
-          if (match(StoredVal, m_Reverse(m_VPValue())))
-            return StoredVal->isDefinedOutsideLoopRegions();
-        }
       }
 
       // The legacy cost model costs non-header phis with a scalar VF as a phi,
