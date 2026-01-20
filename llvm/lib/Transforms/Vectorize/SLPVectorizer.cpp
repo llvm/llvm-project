@@ -24075,13 +24075,12 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
 }
 
 /// Checks if the quadratic mean deviation is less than 90% of the mean size.
-static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes,
-                           bool First) {
+static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes) {
   unsigned Num = 0;
   uint64_t Sum = std::accumulate(
       Sizes.begin(), Sizes.end(), static_cast<uint64_t>(0),
       [&](uint64_t V, const std::pair<unsigned, unsigned> &Val) {
-        unsigned Size = First ? Val.first : Val.second;
+        unsigned Size = Val.first;
         if (Size == 1)
           return V;
         ++Num;
@@ -24095,7 +24094,7 @@ static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes,
   uint64_t Dev = std::accumulate(
                      Sizes.begin(), Sizes.end(), static_cast<uint64_t>(0),
                      [&](uint64_t V, const std::pair<unsigned, unsigned> &Val) {
-                       unsigned P = First ? Val.first : Val.second;
+                       unsigned P = Val.first;
                        if (P == 1)
                          return V;
                        return V + (P - Mean) * (P - Mean);
@@ -24291,6 +24290,9 @@ bool SLPVectorizerPass::vectorizeStores(
       unsigned End = Operands.size();
       unsigned Repeat = 0;
       constexpr unsigned MaxAttempts = 4;
+      // first: the best TreeSize from all prior loops over CandidateVFs, gets
+      // updated after looping through CandidateVFs second: the best TreeSize
+      // from all prior loops including the current one
       llvm::SmallVector<std::pair<unsigned, unsigned>> RangeSizesStorage(
           Operands.size(), {1, 1});
       // The `slice` and `drop_front` interfaces are convenient
@@ -24302,9 +24304,9 @@ bool SLPVectorizerPass::vectorizeStores(
       auto IsVectorized = [](const std::pair<unsigned, unsigned> &P) {
         return P.first == 0;
       };
-      auto VFIsProfitable = [](bool First, unsigned Size,
+      auto VFIsProfitable = [](unsigned Size,
                                const std::pair<unsigned, unsigned> &P) {
-        return First ? Size >= P.first : Size >= P.second;
+        return Size >= P.first;
       };
       auto FirstSizeSame = [](unsigned Size,
                               const std::pair<unsigned, unsigned> &P) {
@@ -24328,8 +24330,7 @@ bool SLPVectorizerPass::vectorizeStores(
             unsigned MaxSliceEnd = FirstVecStore >= End ? End : FirstVecStore;
             for (unsigned SliceStartIdx = FirstUnvecStore;
                  SliceStartIdx + VF <= MaxSliceEnd;) {
-              if (!checkTreeSizes(RangeSizes.slice(SliceStartIdx, VF),
-                                  VF > MaxRegVF)) {
+              if (!checkTreeSizes(RangeSizes.slice(SliceStartIdx, VF))) {
                 ++SliceStartIdx;
                 continue;
               }
@@ -24397,8 +24398,7 @@ bool SLPVectorizerPass::vectorizeStores(
               }
               if (VF > 2 && Res &&
                   !all_of(RangeSizes.slice(SliceStartIdx, VF),
-                          std::bind(VFIsProfitable, VF > MaxRegVF, TreeSize,
-                                    _1))) {
+                          std::bind(VFIsProfitable, TreeSize, _1))) {
                 SliceStartIdx += VF;
                 continue;
               }
@@ -24413,15 +24413,10 @@ bool SLPVectorizerPass::vectorizeStores(
                   ++SliceStartIdx;
                 continue;
               }
-              if (TreeSize > 1) {
+              if (TreeSize > 1)
                 for (std::pair<unsigned, unsigned> &P :
-                     RangeSizes.slice(SliceStartIdx, VF)) {
-                  if (VF > MaxRegVF)
-                    P.second = std::max(P.second, TreeSize);
-                  else
-                    P.first = std::max(P.first, TreeSize);
-                }
-              }
+                     RangeSizes.slice(SliceStartIdx, VF))
+                  P.second = std::max(P.second, TreeSize);
               ++SliceStartIdx;
               AnyProfitableGraph = true;
             }
