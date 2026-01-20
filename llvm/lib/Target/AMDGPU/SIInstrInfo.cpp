@@ -2124,11 +2124,21 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     break;
 
   case AMDGPU::SI_SPILL_S32_TO_VGPR:
-    MI.setDesc(get(AMDGPU::V_WRITELANE_B32));
+    mutateAndCleanupImplicit(MI, get(AMDGPU::V_WRITELANE_B32));
+    // When leftover implicit-def operands are removed, kill flag is no longer
+    // valid.  Thus:
+    //   $X = SI_SPILL_S32_TO_VGPR killed $sgpr0, 0, $X(tied-def 0),
+    //   implicit-def $sgpr0_sgpr1, implicit $sgpr0_sgpr1
+    // must be converted to:
+    //   $X = V_WRITELANE_B32 $sgpr0, 0, $X(tied-def 0)
+    MI.getOperand(1).setIsKill(false);
+    // Sometimes a SGPR that has already been killed is spilled.
+    // Add undef to appease the MachineVerifier.
+    MI.getOperand(1).setIsUndef(true);
     break;
 
   case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
-    MI.setDesc(get(AMDGPU::V_READLANE_B32));
+    mutateAndCleanupImplicit(MI, get(AMDGPU::V_READLANE_B32));
     break;
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();

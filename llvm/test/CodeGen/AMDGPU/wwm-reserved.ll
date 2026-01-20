@@ -135,7 +135,6 @@ define amdgpu_cs void @cfg(ptr addrspace(8) inreg %tmp14, i32 %arg) {
 ; GFX9-O0-NEXT:    v_writelane_b32 v5, s0, 3
 ; GFX9-O0-NEXT:    v_writelane_b32 v5, s1, 4
 ; GFX9-O0-NEXT:    s_mov_b32 s0, 0
-; GFX9-O0-NEXT:    s_nop 2
 ; GFX9-O0-NEXT:    buffer_load_dwordx2 v[3:4], off, s[4:7], s0
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-O0-NEXT:    buffer_store_dword v3, off, s[16:19], 0 offset:12 ; 4-byte Folded Spill
@@ -965,7 +964,6 @@ define amdgpu_cs void @strict_wwm_cfg(ptr addrspace(8) inreg %tmp14, i32 %arg) {
 ; GFX9-O0-NEXT:    v_writelane_b32 v5, s0, 3
 ; GFX9-O0-NEXT:    v_writelane_b32 v5, s1, 4
 ; GFX9-O0-NEXT:    s_mov_b32 s0, 0
-; GFX9-O0-NEXT:    s_nop 2
 ; GFX9-O0-NEXT:    buffer_load_dwordx2 v[3:4], off, s[4:7], s0
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-O0-NEXT:    buffer_store_dword v3, off, s[16:19], 0 offset:12 ; 4-byte Folded Spill
