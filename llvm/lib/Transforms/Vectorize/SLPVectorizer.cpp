@@ -904,13 +904,13 @@ static std::optional<unsigned> getExtractIndex(const Instruction *E) {
       return std::nullopt;
     // Check if the index is out of bound  - we can get the source vector from operand 0
     unsigned Idx =  CI->getZExtValue();
-    if (auto *VecTy = dyn_cast<FixedVectorType>(E->getOperand(0)->getType()))
-    {
-      if (Idx >= VecTy->getNumElements())
-      {
-        return std::nullopt;
-      }
-    }
+    //argument E passed to getExtractIndex is of type "const Instrunction * "
+    //but the instrunction class doesn't consist the getVectorOperandType
+    //so just a simple casting to ExtractElementInst
+    auto *EE = cast<ExtractElementInst>(E);
+    const unsigned VF = ::getNumElements(EE->getVectorOperandType());
+    if (Idx >= VF)
+      return std::nullopt;
     return Idx;
   }
   auto *EI = cast<ExtractValueInst>(E);
@@ -15051,14 +15051,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       if (DemandedElts.isZero())
         DemandedElts = APInt::getZero(getNumElements(SrcVecTy));
-      unsigned ExtIdx = *getExtractIndex(I);
-      //Out-of-bounds extractelement produces poison.So it do no corresponds to a concrete vector lane,
-      // so instead of treating it as an invalid pattern we can avoid marking any demanded element
-      if (ExtIdx  < DemandedElts.getBitWidth())
-      {
-        DemandedElts.setBit(ExtIdx);
-      }
-      // DemandedElts.setBit(*getExtractIndex(I));
+      DemandedElts.setBit(*getExtractIndex(I));
       return InstructionCost(TTI::TCC_Free);
     };
     auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
