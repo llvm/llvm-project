@@ -52,11 +52,11 @@ def testMyInt():
 
         module = Module.create()
         with InsertionPoint(module.body):
-            two = ConstantOp(i32, IntegerAttr.get(i32, 2))
-            three = ConstantOp(i32, IntegerAttr.get(i32, 3))
-            add1 = AddOp(i32, two, three)
-            add2 = AddOp(i32, add1, two)
-            add3 = AddOp(i32, add2, three)
+            two = ConstantOp(IntegerAttr.get(i32, 2))
+            three = ConstantOp(IntegerAttr.get(i32, 3))
+            add1 = AddOp(two, three)
+            add2 = AddOp(add1, two)
+            add3 = AddOp(add2, three)
 
         # CHECK: %0 = "myint.constant"() {value = 2 : i32} : () -> i32
         # CHECK: %1 = "myint.constant"() {value = 3 : i32} : () -> i32
@@ -84,9 +84,9 @@ def testMyInt():
         print(two.value)
         # CHECK: OpResult(%0
         print(two.cst)
-        # CHECK: (self, /, res, lhs, rhs, *, loc=None, ip=None)
+        # CHECK: (self, /, lhs, rhs, *, loc=None, ip=None)
         print(AddOp.__init__.__signature__)
-        # CHECK: (self, /, cst, value, *, loc=None, ip=None)
+        # CHECK: (self, /, value, *, loc=None, ip=None)
         print(ConstantOp.__init__.__signature__)
 
 
@@ -219,7 +219,7 @@ def testExtDialect():
         print(VariadicOp.__init__.__signature__)
         # CHECK: (self, /, b, a, *, loc=None, ip=None)
         print(Variadic2Op.__init__.__signature__)
-        # CHECK: (self, /, out, in1, in2, in4, in5, *, in3=None, loc=None, ip=None)
+        # CHECK: (self, /, in1, in2, in4, in5, *, in3=None, loc=None, ip=None)
         print(MixedOp.__init__.__signature__)
 
         # CHECK: None None
@@ -279,9 +279,9 @@ def testExtDialect():
             v6 = Variadic2Op([i32, i32], [ione])
 
             # CHECK: %8 = "ext_test.mixed"(%c1_i32, %c1_i32) {in2 = 2 : i32, in4 = 2 : i32, operandSegmentSizes = array<i32: 1, 0, 1>} : (i32, i32) -> i32
-            m1 = MixedOp(i32, ione, iattr, iattr, ione)
+            m1 = MixedOp(ione, iattr, iattr, ione)
             # CHECK: %9 = "ext_test.mixed"(%c1_i32, %c1_i32, %c1_i32) {in2 = 2 : i32, in4 = 2 : i32, operandSegmentSizes = array<i32: 1, 1, 1>} : (i32, i32, i32) -> i32
-            m2 = MixedOp(i32, ione, iattr, iattr, ione, in3=ione)
+            m2 = MixedOp(ione, iattr, iattr, ione, in3=ione)
 
         print(module)
         assert module.operation.verify()

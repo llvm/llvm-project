@@ -8,6 +8,8 @@ from typing import (
     Union,
     Tuple,
     Any,
+    Optional,
+    Callable,
     TypeVar,
     get_origin,
     get_args,
@@ -67,6 +69,20 @@ class ConstraintLoweringContext:
             return irdl.base(base_name=f"#{type_.attr_name}")
 
         raise TypeError(f"unsupported type in constraints: {type_}")
+
+
+# A function to infer ir.Type from type annotation.
+# Returns a callable that returns the inferred ir.Type,
+# or None if the type cannot be inferred.
+# We use callables so that MLIR contexts are not required
+# while calling this function.
+def infer_type(type_) -> Optional[Callable[[], ir.Type]]:
+    origin = get_origin(type_)
+    if origin and issubclass(origin, ir.Type):
+        return lambda: origin.get(*get_args(type_))
+    elif isinstance(type_, TypeVar):
+        return infer_type(type_.__bound__)
+    return None
 
 
 class FieldDef:
@@ -202,12 +218,15 @@ class Operation(ir.OpView):
         return None
 
     @staticmethod
-    def _generate_init_signature(fields: List[FieldDef]) -> Signature:
+    def _generate_init_signature(
+        fields: List[FieldDef], can_infer_types: bool
+    ) -> Signature:
+        result_args = (
+            [] if can_infer_types else [i for i in fields if isinstance(i, ResultDef)]
+        )
         # results are placed at the beginning of the parameter list,
         # but operands and attributes can appear in any relative order.
-        args = [i for i in fields if isinstance(i, ResultDef)] + [
-            i for i in fields if not isinstance(i, ResultDef)
-        ]
+        args = result_args + [i for i in fields if not isinstance(i, ResultDef)]
         positional_args = [
             i.name for i in args if i.variadicity != Variadicity.optional
         ]
@@ -225,8 +244,16 @@ class Operation(ir.OpView):
 
     @classmethod
     def _generate_init_method(cls, fields: List[FieldDef]) -> None:
-        init_sig = cls._generate_init_signature(fields)
         operands, attrs, results = partition_fields(fields)
+        inferred_types = [infer_type(i.constraint) for i in results]
+
+        # we infer result types only when all result types can be inferred
+        # and all results are single (not optional or variadic)
+        can_infer_types = all(inferred_types) and all(
+            i.variadicity == Variadicity.single for i in results
+        )
+
+        init_sig = cls._generate_init_signature(fields, can_infer_types)
 
         def __init__(*args, **kwargs):
             bound = init_sig.bind(*args, **kwargs)
@@ -234,7 +261,11 @@ class Operation(ir.OpView):
             args = bound.arguments
 
             _operands = [args[operand.name] for operand in operands]
-            _results = [args[result.name] for result in results]
+            _results = (
+                [t() for t in inferred_types]
+                if can_infer_types
+                else [args[result.name] for result in results]
+            )
             _attributes = dict(
                 (attr.name, args[attr.name])
                 for attr in attrs
