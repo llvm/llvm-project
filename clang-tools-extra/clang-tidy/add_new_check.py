@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import textwrap
+from operator import methodcaller
 
 # FIXME Python 3.9: Replace typing.Tuple with builtins.tuple.
 from typing import Optional, Tuple, Match
@@ -391,7 +392,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
         lambda s: os.path.isdir(os.path.join(docs_dir, s)), os.listdir(docs_dir)
     ):
         for file in filter(
-            lambda s: s.endswith(".rst"), os.listdir(os.path.join(docs_dir, subdir))
+            methodcaller("endswith", ".rst"), os.listdir(os.path.join(docs_dir, subdir))
         ):
             doc_files.append((subdir, file))
     doc_files.sort()
@@ -412,9 +413,10 @@ def update_checks_list(clang_tidy_path: str) -> None:
                 return ""
             if (stmt_end_pos := code.find(";", name_pos)) == -1:
                 return ""
-            if (stmt_start_pos := code.rfind(";", 0, name_pos)) == -1:
-                if (stmt_start_pos := code.rfind("{", 0, name_pos)) == -1:
-                    return ""
+            if (stmt_start_pos := code.rfind(";", 0, name_pos)) == -1 and (
+                stmt_start_pos := code.rfind("{", 0, name_pos)
+            ) == -1:
+                return ""
             stmt = code[stmt_start_pos + 1 : stmt_end_pos]
             matches = re.search(r'registerCheck<([^>:]*)>\(\s*"([^"]*)"\s*\)', stmt)
             if matches and matches[2] == full_check_name:
