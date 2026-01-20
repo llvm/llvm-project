@@ -2625,7 +2625,7 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                 clauses.ifExpr, clauses.numTeamsVals, clauses.numTeamsLower,
+                 clauses.ifExpr, clauses.numTeamsVars, clauses.numTeamsLower,
                  clauses.numTeamsUpper,
                  /*private_vars=*/{}, /*private_syms=*/nullptr,
                  /*private_needs_barrier=*/nullptr, clauses.reductionMod,
@@ -2637,13 +2637,13 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
 
 // Verify num_teams clause
 static LogicalResult verifyNumTeamsClause(Operation *op,
-                                          OperandRange numTeamsVals,
+                                          OperandRange numTeamsVars,
                                           Value numTeamsLower,
                                           Value numTeamsUpper) {
   bool hasLegacyOperands = numTeamsLower || numTeamsUpper;
 
   // Cannot use both multi-dimensional and legacy format simultaneously
-  if (!numTeamsVals.empty() && hasLegacyOperands) {
+  if (!numTeamsVars.empty() && hasLegacyOperands) {
     return op->emitError()
            << "num_teams multi-dimensional values cannot be used together with "
               "legacy lower/upper bounds";
@@ -2677,7 +2677,7 @@ LogicalResult TeamsOp::verify() {
                      "in any OpenMP dialect operations");
 
   // Check for num_teams clause restrictions
-  if (failed(verifyNumTeamsClause(op, this->getNumTeamsVals(),
+  if (failed(verifyNumTeamsClause(op, this->getNumTeamsVars(),
                                   this->getNumTeamsLower(),
                                   this->getNumTeamsUpper())))
     return failure();

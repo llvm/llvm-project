@@ -974,14 +974,14 @@ class OpenMP_NumTeamsClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    Variadic<IntLikeType>:$num_teams_vals,
+    Variadic<IntLikeType>:$num_teams_vars,
     Optional<AnyInteger>:$num_teams_lower,
     Optional<AnyInteger>:$num_teams_upper
   );
 
   let optAssemblyFormat = [{
     `num_teams` `(` custom<NumTeamsClause>(
-      $num_teams_vals, type($num_teams_vals),
+      $num_teams_vars, type($num_teams_vars),
       $num_teams_lower, type($num_teams_lower),
       $num_teams_upper, type($num_teams_upper)
     ) `)`
@@ -992,11 +992,11 @@ class OpenMP_NumTeamsClauseSkip<
     construct on which it appears.
 
     Multi-dimensional (OpenMP 6.1 dims modifier):
-    - Uses `num_teams_vals` with multiple values (one per dimension)
+    - Uses `num_teams_vars` with multiple values (one per dimension)
     - Values may have different types; they will be cast at LLVM IR translation
     - Format: `num_teams(%v0, %v1, ... : type0, type1, ...)`
     - Example: `num_teams(%ub0, %ub1, %ub2 : i32, i64, i32)`
-    - The number of dimensions is implicitly `num_teams_vals.size()`
+    - The number of dimensions is implicitly `num_teams_vars.size()`
 
     Uni-dimensional (legacy format):
     - Uses `num_teams_upper` and optional `num_teams_lower`
@@ -1008,22 +1008,22 @@ class OpenMP_NumTeamsClauseSkip<
   let extraClassDeclaration = [{
     /// Returns true if using the multi-dimensional values format
     bool hasNumTeamsMultiDim() {
-      return !getNumTeamsVals().empty();
+      return !getNumTeamsVars().empty();
     }
 
     /// Returns the number of dimensions specified for num_teams
     unsigned getNumTeamsDimsCount() {
       if (hasNumTeamsMultiDim())
-        return getNumTeamsVals().size();
+        return getNumTeamsVars().size();
       return getNumTeamsUpper() ? 1 : 0;
     }
 
     /// Returns the value for a specific dimension index (multi-dim format)
-    /// Index must be less than getNumTeamsVals().size()
+    /// Index must be less than getNumTeamsVars().size()
     ::mlir::Value getNumTeams(unsigned dim = 0) {
       assert(dim < getNumTeamsDimsCount() &&
              "Num teams dims index out of bounds");
-      return getNumTeamsVals()[dim];
+      return getNumTeamsVars()[dim];
     }
   }];
 }
