@@ -244,35 +244,29 @@ entry:
 define <16 x i8> @test_avgceilu_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-P9-LABEL: test_avgceilu_v16i8:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    xxspltib 36, 1
-; CHECK-P9-NEXT:    xxlor 0, 35, 34
-; CHECK-P9-NEXT:    vsrb 5, 2, 4
-; CHECK-P9-NEXT:    vsrb 0, 3, 4
-; CHECK-P9-NEXT:    xxland 34, 0, 36
-; CHECK-P9-NEXT:    vaddubm 3, 0, 5
-; CHECK-P9-NEXT:    vaddubm 2, 3, 2
+; CHECK-P9-NEXT:    xxlor 36, 35, 34
+; CHECK-P9-NEXT:    xxlxor 34, 35, 34
+; CHECK-P9-NEXT:    xxspltib 35, 1
+; CHECK-P9-NEXT:    vsrb 2, 2, 3
+; CHECK-P9-NEXT:    vsububm 2, 4, 2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: test_avgceilu_v16i8:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    vspltisb 4, 1
-; CHECK-P8-NEXT:    xxlor 0, 35, 34
-; CHECK-P8-NEXT:    vsrb 5, 2, 4
-; CHECK-P8-NEXT:    vsrb 0, 3, 4
-; CHECK-P8-NEXT:    xxland 34, 0, 36
-; CHECK-P8-NEXT:    vaddubm 3, 0, 5
-; CHECK-P8-NEXT:    vaddubm 2, 3, 2
+; CHECK-P8-NEXT:    xxlor 37, 35, 34
+; CHECK-P8-NEXT:    xxlxor 34, 35, 34
+; CHECK-P8-NEXT:    vsrb 2, 2, 4
+; CHECK-P8-NEXT:    vsububm 2, 5, 2
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: test_avgceilu_v16i8:
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    vspltisb 4, 1
-; CHECK-P7-NEXT:    xxlor 0, 35, 34
-; CHECK-P7-NEXT:    vsrb 5, 2, 4
-; CHECK-P7-NEXT:    vsrb 0, 3, 4
-; CHECK-P7-NEXT:    xxland 34, 0, 36
-; CHECK-P7-NEXT:    vaddubm 3, 0, 5
-; CHECK-P7-NEXT:    vaddubm 2, 3, 2
+; CHECK-P7-NEXT:    xxlor 37, 35, 34
+; CHECK-P7-NEXT:    xxlxor 34, 35, 34
+; CHECK-P7-NEXT:    vsrb 2, 2, 4
+; CHECK-P7-NEXT:    vsububm 2, 5, 2
 ; CHECK-P7-NEXT:    blr
   %a_shr_1 = lshr <16 x i8> %a, splat (i8 1)
   %b_shr_1 = lshr <16 x i8> %b, splat (i8 1)
@@ -286,35 +280,29 @@ define <16 x i8> @test_avgceilu_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @test_avgceilu_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-P9-LABEL: test_avgceilu_v8i16:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    vspltish 4, 1
-; CHECK-P9-NEXT:    xxlor 0, 35, 34
-; CHECK-P9-NEXT:    vsrh 5, 2, 4
-; CHECK-P9-NEXT:    vsrh 0, 3, 4
-; CHECK-P9-NEXT:    xxland 34, 0, 36
-; CHECK-P9-NEXT:    vadduhm 3, 0, 5
-; CHECK-P9-NEXT:    vadduhm 2, 3, 2
+; CHECK-P9-NEXT:    xxlor 36, 35, 34
+; CHECK-P9-NEXT:    xxlxor 34, 35, 34
+; CHECK-P9-NEXT:    vspltish 3, 1
+; CHECK-P9-NEXT:    vsrh 2, 2, 3
+; CHECK-P9-NEXT:    vsubuhm 2, 4, 2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: test_avgceilu_v8i16:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    vspltish 4, 1
-; CHECK-P8-NEXT:    xxlor 0, 35, 34
-; CHECK-P8-NEXT:    vsrh 5, 2, 4
-; CHECK-P8-NEXT:    vsrh 0, 3, 4
-; CHECK-P8-NEXT:    xxland 34, 0, 36
-; CHECK-P8-NEXT:    vadduhm 3, 0, 5
-; CHECK-P8-NEXT:    vadduhm 2, 3, 2
+; CHECK-P8-NEXT:    xxlor 37, 35, 34
+; CHECK-P8-NEXT:    xxlxor 34, 35, 34
+; CHECK-P8-NEXT:    vsrh 2, 2, 4
+; CHECK-P8-NEXT:    vsubuhm 2, 5, 2
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: test_avgceilu_v8i16:
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    vspltish 4, 1
-; CHECK-P7-NEXT:    xxlor 0, 35, 34
-; CHECK-P7-NEXT:    vsrh 5, 2, 4
-; CHECK-P7-NEXT:    vsrh 0, 3, 4
-; CHECK-P7-NEXT:    xxland 34, 0, 36
-; CHECK-P7-NEXT:    vadduhm 3, 0, 5
-; CHECK-P7-NEXT:    vadduhm 2, 3, 2
+; CHECK-P7-NEXT:    xxlor 37, 35, 34
+; CHECK-P7-NEXT:    xxlxor 34, 35, 34
+; CHECK-P7-NEXT:    vsrh 2, 2, 4
+; CHECK-P7-NEXT:    vsubuhm 2, 5, 2
 ; CHECK-P7-NEXT:    blr
   %a_shr_1 = lshr <8 x i16> %a, splat (i16 1)
   %b_shr_1 = lshr <8 x i16> %b, splat (i16 1)
@@ -328,35 +316,29 @@ define <8 x i16> @test_avgceilu_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <16 x i8> @test_avgceils_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-P9-LABEL: test_avgceils_v16i8:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    xxspltib 36, 1
-; CHECK-P9-NEXT:    xxlor 0, 35, 34
-; CHECK-P9-NEXT:    vsrab 5, 2, 4
-; CHECK-P9-NEXT:    vsrab 0, 3, 4
-; CHECK-P9-NEXT:    xxland 34, 0, 36
-; CHECK-P9-NEXT:    vaddubm 3, 0, 5
-; CHECK-P9-NEXT:    vaddubm 2, 3, 2
+; CHECK-P9-NEXT:    xxlor 36, 35, 34
+; CHECK-P9-NEXT:    xxlxor 34, 35, 34
+; CHECK-P9-NEXT:    xxspltib 35, 1
+; CHECK-P9-NEXT:    vsrab 2, 2, 3
+; CHECK-P9-NEXT:    vsububm 2, 4, 2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: test_avgceils_v16i8:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    vspltisb 4, 1
-; CHECK-P8-NEXT:    xxlor 0, 35, 34
-; CHECK-P8-NEXT:    vsrab 5, 2, 4
-; CHECK-P8-NEXT:    vsrab 0, 3, 4
-; CHECK-P8-NEXT:    xxland 34, 0, 36
-; CHECK-P8-NEXT:    vaddubm 3, 0, 5
-; CHECK-P8-NEXT:    vaddubm 2, 3, 2
+; CHECK-P8-NEXT:    xxlor 37, 35, 34
+; CHECK-P8-NEXT:    xxlxor 34, 35, 34
+; CHECK-P8-NEXT:    vsrab 2, 2, 4
+; CHECK-P8-NEXT:    vsububm 2, 5, 2
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: test_avgceils_v16i8:
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    vspltisb 4, 1
-; CHECK-P7-NEXT:    xxlor 0, 35, 34
-; CHECK-P7-NEXT:    vsrab 5, 2, 4
-; CHECK-P7-NEXT:    vsrab 0, 3, 4
-; CHECK-P7-NEXT:    xxland 34, 0, 36
-; CHECK-P7-NEXT:    vaddubm 3, 0, 5
-; CHECK-P7-NEXT:    vaddubm 2, 3, 2
+; CHECK-P7-NEXT:    xxlor 37, 35, 34
+; CHECK-P7-NEXT:    xxlxor 34, 35, 34
+; CHECK-P7-NEXT:    vsrab 2, 2, 4
+; CHECK-P7-NEXT:    vsububm 2, 5, 2
 ; CHECK-P7-NEXT:    blr
   %a_shr_1 = ashr <16 x i8> %a, splat (i8 1)
   %b_shr_1 = ashr <16 x i8> %b, splat (i8 1)
@@ -370,35 +352,29 @@ define <16 x i8> @test_avgceils_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @test_avgceils_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-P9-LABEL: test_avgceils_v8i16:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    vspltish 4, 1
-; CHECK-P9-NEXT:    xxlor 0, 35, 34
-; CHECK-P9-NEXT:    vsrah 5, 2, 4
-; CHECK-P9-NEXT:    vsrah 0, 3, 4
-; CHECK-P9-NEXT:    xxland 34, 0, 36
-; CHECK-P9-NEXT:    vadduhm 3, 0, 5
-; CHECK-P9-NEXT:    vadduhm 2, 3, 2
+; CHECK-P9-NEXT:    xxlor 36, 35, 34
+; CHECK-P9-NEXT:    xxlxor 34, 35, 34
+; CHECK-P9-NEXT:    vspltish 3, 1
+; CHECK-P9-NEXT:    vsrah 2, 2, 3
+; CHECK-P9-NEXT:    vsubuhm 2, 4, 2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: test_avgceils_v8i16:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    vspltish 4, 1
-; CHECK-P8-NEXT:    xxlor 0, 35, 34
-; CHECK-P8-NEXT:    vsrah 5, 2, 4
-; CHECK-P8-NEXT:    vsrah 0, 3, 4
-; CHECK-P8-NEXT:    xxland 34, 0, 36
-; CHECK-P8-NEXT:    vadduhm 3, 0, 5
-; CHECK-P8-NEXT:    vadduhm 2, 3, 2
+; CHECK-P8-NEXT:    xxlor 37, 35, 34
+; CHECK-P8-NEXT:    xxlxor 34, 35, 34
+; CHECK-P8-NEXT:    vsrah 2, 2, 4
+; CHECK-P8-NEXT:    vsubuhm 2, 5, 2
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: test_avgceils_v8i16:
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    vspltish 4, 1
-; CHECK-P7-NEXT:    xxlor 0, 35, 34
-; CHECK-P7-NEXT:    vsrah 5, 2, 4
-; CHECK-P7-NEXT:    vsrah 0, 3, 4
-; CHECK-P7-NEXT:    xxland 34, 0, 36
-; CHECK-P7-NEXT:    vadduhm 3, 0, 5
-; CHECK-P7-NEXT:    vadduhm 2, 3, 2
+; CHECK-P7-NEXT:    xxlor 37, 35, 34
+; CHECK-P7-NEXT:    xxlxor 34, 35, 34
+; CHECK-P7-NEXT:    vsrah 2, 2, 4
+; CHECK-P7-NEXT:    vsubuhm 2, 5, 2
 ; CHECK-P7-NEXT:    blr
   %a_shr_1 = ashr <8 x i16> %a, splat (i16 1)
   %b_shr_1 = ashr <8 x i16> %b, splat (i16 1)
