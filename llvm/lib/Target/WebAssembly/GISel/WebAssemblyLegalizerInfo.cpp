@@ -14,8 +14,10 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/InstrTypes.h"
 
 #define DEBUG_TYPE "wasm-legalinfo"
 
@@ -310,11 +312,19 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
   getLegacyLegalizerInfo().computeTables();
 }
 
+static MachineInstrBuilder buildEqz(MachineIRBuilder &MIBuilder,
+                                    const DstOp &Dst, const SrcOp &Src0) {
+  auto Zero = MIBuilder.buildConstant(Dst.getLLTTy(*MIBuilder.getMRI()), 0);
+  return MIBuilder.buildICmp(llvm::CmpInst::ICMP_EQ, Dst, Src0, Zero);
+}
+
 bool WebAssemblyLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
   auto &MRI = *Helper.MIRBuilder.getMRI();
   auto &MIRBuilder = Helper.MIRBuilder;
+
+  const LLT s1 = LLT::scalar(1);
 
   switch (MI.getOpcode()) {
   case TargetOpcode::G_FCANONICALIZE: {
@@ -343,7 +353,7 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
           .addUse(MI.getOperand(2).getReg())
           .setMIFlags(MI.getFlags());
     } else {
-      auto TmpReg = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpReg = MRI.createGenericVirtualRegister(s1);
 
       MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_OLT, TmpReg,
                            MI.getOperand(1), MI.getOperand(2));
@@ -363,7 +373,7 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
           .addUse(MI.getOperand(2).getReg())
           .setMIFlags(MI.getFlags());
     } else {
-      auto TmpReg = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto TmpReg = MRI.createGenericVirtualRegister(s1);
 
       MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_OGT, TmpReg,
                            MI.getOperand(1), MI.getOperand(2));
@@ -398,15 +408,14 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
 
     auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
 
-    if (!DstTy.isScalar() || !SrcTy.isVector() ||
-        SrcTy.getElementType() != LLT::scalar(1))
+    if (!DstTy.isScalar() || !SrcTy.isVector() || SrcTy.getElementType() != s1)
       return false;
 
     Register ResultReg = MRI.createGenericVirtualRegister(DstTy);
     MIRBuilder.buildConstant(ResultReg, 0);
 
     for (unsigned i = 0; i < SrcTy.getNumElements(); i++) {
-      auto Elm = MRI.createGenericVirtualRegister(LLT::scalar(1));
+      auto Elm = MRI.createGenericVirtualRegister(s1);
       auto ExtElm = MRI.createGenericVirtualRegister(DstTy);
       auto ShiftedElm = MRI.createGenericVirtualRegister(DstTy);
       auto Idx = MRI.createGenericVirtualRegister(LLT::scalar(8));
@@ -450,81 +459,70 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
     case CmpInst::FCMP_OLE:
       return true;
     case CmpInst::FCMP_ONE: {
-      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
-      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
-      auto TmpRegC = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-      MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, TmpRegA, LHS, RHS);
-      MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, TmpRegB, LHS, RHS);
-      MIRBuilder.buildOr(TmpRegC, TmpRegA, TmpRegB);
-      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegC);
+      MIRBuilder.buildAnyExt(
+          MI.getOperand(0).getReg(),
+          MIRBuilder.buildOr(
+              s1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, s1, LHS, RHS).getReg(0),
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, s1, LHS, RHS).getReg(0)));
       break;
     }
     case CmpInst::FCMP_ORD: {
-      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
-      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
-      auto TmpRegC = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-      MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, TmpRegA, LHS, LHS);
-      MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, TmpRegB, RHS, RHS);
-      MIRBuilder.buildAnd(TmpRegC, TmpRegA, TmpRegB);
-      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegC);
+      MIRBuilder.buildAnyExt(
+          MI.getOperand(0).getReg(),
+          MIRBuilder.buildAnd(
+              s1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, s1, RHS, RHS).getReg(0),
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, s1, LHS, LHS).getReg(0)));
       break;
     }
     case CmpInst::FCMP_UNO: {
-      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
-      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
-      auto TmpRegC = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-      MIRBuilder.buildFCmp(CmpInst::FCMP_UNE, TmpRegA, LHS, LHS);
-      MIRBuilder.buildFCmp(CmpInst::FCMP_UNE, TmpRegB, RHS, RHS);
-      MIRBuilder.buildOr(TmpRegC, TmpRegA, TmpRegB);
-      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegC);
+      MIRBuilder.buildAnyExt(
+          MI.getOperand(0).getReg(),
+          MIRBuilder.buildOr(
+              s1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_UNE, s1, RHS, RHS).getReg(0),
+              MIRBuilder.buildFCmp(CmpInst::FCMP_UNE, s1, LHS, LHS).getReg(0)));
       break;
     }
     case CmpInst::FCMP_UEQ: {
-      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
-      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-      MIRBuilder.buildFCmp(CmpInst::FCMP_ONE, TmpRegA, LHS, RHS);
-      MIRBuilder.buildNot(TmpRegB, TmpRegA);
-      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegB);
+      MIRBuilder.buildAnyExt(
+          MI.getOperand(0).getReg(),
+          buildEqz(
+              MIRBuilder, s1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_ONE, s1, LHS, RHS).getReg(0)));
       break;
     }
     case CmpInst::FCMP_UGT: {
-      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
-      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-      MIRBuilder.buildFCmp(CmpInst::FCMP_OLE, TmpRegA, LHS, RHS);
-      MIRBuilder.buildNot(TmpRegB, TmpRegA);
-      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegB);
+      MIRBuilder.buildAnyExt(
+          MI.getOperand(0).getReg(),
+          buildEqz(
+              MIRBuilder, s1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OLE, s1, LHS, RHS).getReg(0)));
       break;
     }
     case CmpInst::FCMP_UGE: {
-      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
-      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-      MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, TmpRegA, LHS, RHS);
-      MIRBuilder.buildNot(TmpRegB, TmpRegA);
-      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegB);
+      MIRBuilder.buildAnyExt(
+          MI.getOperand(0).getReg(),
+          buildEqz(
+              MIRBuilder, s1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, s1, LHS, RHS).getReg(0)));
       break;
     }
     case CmpInst::FCMP_ULT: {
-      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
-      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-      MIRBuilder.buildFCmp(CmpInst::FCMP_OGE, TmpRegA, LHS, RHS);
-      MIRBuilder.buildNot(TmpRegB, TmpRegA);
-      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegB);
+      MIRBuilder.buildAnyExt(
+          MI.getOperand(0).getReg(),
+          buildEqz(
+              MIRBuilder, s1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OGE, s1, LHS, RHS).getReg(0)));
       break;
     }
     case CmpInst::FCMP_ULE: {
-      auto TmpRegA = MRI.createGenericVirtualRegister(LLT::scalar(1));
-      auto TmpRegB = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-      MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, TmpRegA, LHS, RHS);
-      MIRBuilder.buildNot(TmpRegB, TmpRegA);
-      MIRBuilder.buildAnyExt(MI.getOperand(0).getReg(), TmpRegB);
+      MIRBuilder.buildAnyExt(
+          MI.getOperand(0).getReg(),
+          buildEqz(
+              MIRBuilder, s1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, s1, LHS, RHS).getReg(0)));
       break;
     }
     case CmpInst::FCMP_UNE:
