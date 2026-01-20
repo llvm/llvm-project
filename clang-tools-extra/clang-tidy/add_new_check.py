@@ -218,8 +218,7 @@ def adapt_module(
             while True:
                 line = next(lines_iter)
                 if not header_added:
-                    match = re.search('#include "(.*)"', line)
-                    if match:
+                    if match := re.search('#include "(.*)"', line):
                         header_found = True
                         if match.group(1) > check_name_camel:
                             header_added = True
@@ -233,11 +232,10 @@ def adapt_module(
                         check_added = True
                         f.write(check_decl)
                     else:
-                        match = re.search(
-                            r'registerCheck<(.*)> *\( *(?:"([^"]*)")?', line
-                        )
                         prev_line = None
-                        if match:
+                        if match := re.search(
+                            r'registerCheck<(.*)> *\( *(?:"([^"]*)")?', line
+                        ):
                             current_check_name = match.group(2)
                             if current_check_name is None:
                                 # If we didn't find the check name on this line, look on the
@@ -410,17 +408,13 @@ def update_checks_list(clang_tidy_path: str) -> None:
         with io.open(module_file, "r") as f:
             code = f.read()
             full_check_name = module_name + "-" + check_name
-            name_pos = code.find('"' + full_check_name + '"')
-            if name_pos == -1:
+            if (name_pos := code.find('"' + full_check_name + '"')) == -1:
                 return ""
-            stmt_end_pos = code.find(";", name_pos)
-            if stmt_end_pos == -1:
+            if (stmt_end_pos := code.find(";", name_pos)) == -1:
                 return ""
-            stmt_start_pos = code.rfind(";", 0, name_pos)
-            if stmt_start_pos == -1:
-                stmt_start_pos = code.rfind("{", 0, name_pos)
-            if stmt_start_pos == -1:
-                return ""
+            if (stmt_start_pos := code.rfind(";", 0, name_pos)) == -1:
+                if (stmt_start_pos := code.rfind("{", 0, name_pos)) == -1:
+                    return ""
             stmt = code[stmt_start_pos + 1 : stmt_end_pos]
             matches = re.search(r'registerCheck<([^>:]*)>\(\s*"([^"]*)"\s*\)', stmt)
             if matches and matches[2] == full_check_name:
@@ -493,8 +487,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
             if has_fixits(code):
                 return ' "Yes"'
 
-        base_class = get_base_class(code, check_file)
-        if base_class:
+        if base_class := get_base_class(code, check_file):
             base_file = os.path.join(clang_tidy_path, dirname, base_class + ".cpp")
             if os.path.isfile(base_file):
                 with io.open(base_file, encoding="utf8") as f:
@@ -752,8 +745,7 @@ def main() -> None:
 
     if language == "c":
         language_restrict = "!%(lang)s.CPlusPlus"
-        extra = c_language_to_requirements.get(args.standard, None)
-        if extra:
+        if extra := c_language_to_requirements.get(args.standard, None):
             language_restrict += f" && %(lang)s.{extra}"
     elif language == "c++":
         language_restrict = (

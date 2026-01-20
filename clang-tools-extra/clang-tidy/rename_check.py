@@ -70,7 +70,7 @@ def deleteMatchingLines(fileName: str, pattern: str) -> bool:
         return False
 
     print("Removing lines matching '%s' in '%s'..." % (pattern, fileName))
-    print("  " + "  ".join([line for line in lines if re.search(pattern, line)]))
+    print("  " + "  ".join(line for line in lines if re.search(pattern, line)))
     with io.open(fileName, "w", encoding="utf8") as f:
         f.writelines(not_matching_lines)
 
