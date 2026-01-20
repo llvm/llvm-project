@@ -72,16 +72,18 @@ exit:
 define i1 @bitmap_expand_deep(i32 %type) {
 ; CHECK-LABEL: define i1 @bitmap_expand_deep(
 ; CHECK-SAME: i32 [[TYPE:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[TYPE]], 16
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[TYPE]] to i16
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -32703, [[SWITCH_CAST]]
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i1
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TYPE]], 19
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TMP1]], [[CMP2]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[TYPE]], 31
-; CHECK-NEXT:    [[RET_VAL:%.*]] = select i1 [[OR_COND]], i1 true, i1 [[CMP3]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    switch i32 [[TYPE]], label %[[ANOTHER_CMP:.*]] [
+; CHECK-NEXT:      i32 19, label %[[EXIT:.*]]
+; CHECK-NEXT:      i32 15, label %[[EXIT]]
+; CHECK-NEXT:      i32 6, label %[[EXIT]]
+; CHECK-NEXT:      i32 0, label %[[EXIT]]
+; CHECK-NEXT:      i32 31, label %[[EXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       [[ANOTHER_CMP]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RET_VAL:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ false, %[[ANOTHER_CMP]] ], [ true, %[[ENTRY]] ], [ true, %[[ENTRY]] ], [ true, %[[ENTRY]] ], [ true, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i1 [[RET_VAL]]
 ;
 entry:
