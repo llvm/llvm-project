@@ -3290,7 +3290,7 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
 
     bool Blend = isa_and_nonnull<PHINode>(Cur->getUnderlyingValue()) &&
                  match(Cur, m_VPInstruction<Instruction::Select>());
-    // Check if any V* in m_Select(C1, m_Select(C2, ..., V2), V1) was visited.
+    // Check if any V* in m_Select(C1, V1, m_Select(C2, V2, ...)) was visited.
     auto VisitedIncomingValue = [&Seen](const VPSingleDefRecipe *Blend) {
       const VPValue *V = Blend;
       SmallVector<const VPValue *> IncomingVals;
