@@ -2152,11 +2152,11 @@ static Value *simplifyDemandedFPClassCopysignMag(Value *MagSrc,
     constexpr FPClassTest PosOrZero = fcPositive | fcNegZero;
 
     if ((DemandedMask & ~NegOrZero) == fcNone &&
-        KnownSrc.isKnownNever(KnownFPClass::OrderedGreaterThanZeroMask | fcNan))
+        KnownSrc.isKnownAlways(NegOrZero))
       return MagSrc;
 
     if ((DemandedMask & ~PosOrZero) == fcNone &&
-        KnownSrc.isKnownNever(KnownFPClass::OrderedLessThanZeroMask | fcNan))
+        KnownSrc.isKnownAlways(PosOrZero))
       return MagSrc;
   } else {
     if ((DemandedMask & ~fcNegative) == fcNone && KnownSrc.SignBit == true)
@@ -2775,7 +2775,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::copysign: {
       // Flip on more potentially demanded classes
       const FPClassTest DemandedMaskAnySign = llvm::unknown_sign(DemandedMask);
-      if (SimplifyDemandedFPClass(CI, 0, DemandedMaskAnySign, Known, Depth + 1))
+      if (SimplifyDemandedFPClass(I, 0, DemandedMaskAnySign, Known, Depth + 1))
         return I;
 
       if ((DemandedMask & fcNegative) == DemandedMask) {
