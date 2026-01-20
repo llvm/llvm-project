@@ -74,7 +74,9 @@ information about building LLVM is available `here
 are targeted by OpenMP are enabled. That can be done by adjusting the CMake 
 option ``LLVM_TARGETS_TO_BUILD``. The corresponding targets for offloading to AMD 
 and Nvidia GPUs are ``"AMDGPU"`` and ``"NVPTX"``, respectively. By default, 
-Clang will be built with all backends enabled.
+Clang will be built with all backends enabled. When building with 
+``LLVM_ENABLE_RUNTIMES="openmp"`` OpenMP should not be enabled in 
+``LLVM_ENABLE_PROJECTS`` because it is enabled by default.
 
 Support for the device library comes from a separate build of the OpenMP library
 that targets the GPU architecture. Building it requires enabling the runtime
