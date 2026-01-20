@@ -1947,7 +1947,7 @@ class Target {
   //
   // This enables interval-based representation of register units, which can
   // improve data structure representations in target backends.
-  bit RegistersAreIntervals = 0;
+  int RegistersAreIntervals = 0;
 }
 
 //===----------------------------------------------------------------------===//
