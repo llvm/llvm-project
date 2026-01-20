@@ -12062,6 +12062,57 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
                          DAG.getConstant(AArch64CC::NE, DL, MVT::i32), Flags);
     }
 
+    // Optimize sign-bit-based float selection to stay in SIMD domain.
+    // Pattern: (SELECT_CC setlt, (bitcast f32/f64 to i32/i64), 0, f32/f64, f32/f64)
+    // This checks the sign bit of a float and selects between float values.
+    // Instead of: fmov GPR, float; cmp GPR, #0; fcsel (crosses GPR/FPR domains)
+    // Generate:   sshr (sign extend); bsl (bitwise select) - stays in SIMD
+    if (CC == ISD::SETLT && RHSC && RHSC->isZero() &&
+        LHS.getOpcode() == ISD::BITCAST && Subtarget->isNeonAvailable()) {
+      SDValue FloatSrc = LHS.getOperand(0);
+      EVT FloatVT = FloatSrc.getValueType();
+
+      // Check that the bitcast source is a float type and TVal/FVal match
+      if ((FloatVT == MVT::f32 || FloatVT == MVT::f64) &&
+          TVal.getValueType() == FloatVT && FVal.getValueType() == FloatVT) {
+
+        // Determine vector type: v4i32 for f32, v2i64 for f64
+        MVT VecVT = FloatVT == MVT::f32 ? MVT::v4i32 : MVT::v2i64;
+        MVT VecFloatVT = FloatVT == MVT::f32 ? MVT::v4f32 : MVT::v2f64;
+        unsigned ShiftAmt = FloatVT == MVT::f32 ? 31 : 63;
+        unsigned SubReg = FloatVT == MVT::f32 ? AArch64::ssub : AArch64::dsub;
+
+        // Insert scalar values into vector lane 0
+        SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+
+        // Create sign mask by arithmetic shift right of the float's bits
+        SDValue FloatAsInt = DAG.getNode(ISD::BITCAST, DL, LHS.getValueType(), FloatSrc);
+        SDValue FloatVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecVT,
+                                       DAG.getUNDEF(VecVT), FloatAsInt, Zero);
+        SDValue SignMask = DAG.getNode(ISD::SRA, DL, VecVT, FloatVec,
+                                       DAG.getConstant(ShiftAmt, DL, VecVT));
+
+        // Insert TVal and FVal into vectors (need integer vector for BSP)
+        SDValue TVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecFloatVT,
+                                   DAG.getUNDEF(VecFloatVT), TVal, Zero);
+        SDValue FVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecFloatVT,
+                                   DAG.getUNDEF(VecFloatVT), FVal, Zero);
+
+        // Bitcast to integer vector for BSP operation
+        SDValue TVecInt = DAG.getNode(ISD::BITCAST, DL, VecVT, TVec);
+        SDValue FVecInt = DAG.getNode(ISD::BITCAST, DL, VecVT, FVec);
+
+        // BSP: result = (SignMask & TVal) | (~SignMask & FVal)
+        // When sign bit is set (negative), SignMask is all 1s -> selects TVal
+        // When sign bit is clear, SignMask is all 0s -> selects FVal
+        SDValue BSP = DAG.getNode(AArch64ISD::BSP, DL, VecVT, SignMask, TVecInt, FVecInt);
+
+        // Bitcast back to float vector and extract result
+        SDValue BSPFloat = DAG.getNode(ISD::BITCAST, DL, VecFloatVT, BSP);
+        return DAG.getTargetExtractSubreg(SubReg, DL, FloatVT, BSPFloat);
+      }
+    }
+
     // Canonicalise absolute difference patterns:
     //   select_cc lhs, rhs, sub(lhs, rhs), sub(rhs, lhs), cc ->
     //   select_cc lhs, rhs, sub(lhs, rhs), neg(sub(lhs, rhs)), cc
