@@ -1536,8 +1536,7 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
   const std::string PGOVTableName = getPGOName(*GV);
   // Record the length of the vtable. This is needed since vtable pointers
   // loaded from C++ objects might be from the middle of a vtable definition.
-  uint32_t VTableSizeVal =
-      M.getDataLayout().getTypeAllocSize(GV->getValueType());
+  uint32_t VTableSizeVal = GV->getGlobalSize(M.getDataLayout());
 
   Constant *DataVals[] = {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) Init,
