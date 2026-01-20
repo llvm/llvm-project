@@ -239,3 +239,36 @@ exit:
 ; uselistorder directives
   uselistorder label %exit, { 1, 0 }
 }
+
+define i64 @two_early_exits_same_exit_with_constant_live_outs() {
+; CHECK: LV: Not vectorizing:  Auto-vectorization of loops with multiple uncountable early exits is not yet supported.
+;
+entry:
+  %A = alloca [1024 x i8]
+  %B = alloca [1024 x i8]
+  call void @init(ptr %A, i64 1024)
+  call void @init(ptr %B, i64 1024)
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
+  %ld.A = load i8, ptr %gep.A, align 1
+  %cmp1 = icmp eq i8 %ld.A, 42
+  br i1 %cmp1, label %exit, label %early.exit.0
+
+early.exit.0:
+  %gep.B = getelementptr inbounds i8, ptr %B, i64 %iv
+  %ld.B = load i8, ptr %gep.B, align 1
+  %cmp2 = icmp eq i8 %ld.A, %ld.B
+  br i1 %cmp2, label %exit, label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp ne i64 %iv.next, 67
+  br i1 %ec, label %loop.header, label %exit
+
+exit:
+  %retval = phi i64 [ %iv, %loop.header ], [ 100, %early.exit.0 ], [ 43, %loop.latch ]
+  ret i64 %retval
+}

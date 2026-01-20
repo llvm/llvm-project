@@ -2662,9 +2662,11 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       if (!isAligned(PrefAlign, Offset2))
         continue;
       AllocaInst *AI;
-      if ((AI = dyn_cast<AllocaInst>(Val)) && AI->getAlign() < PrefAlign &&
-          DL->getTypeAllocSize(AI->getAllocatedType()) >= MinSize + Offset2)
-        AI->setAlignment(PrefAlign);
+      if ((AI = dyn_cast<AllocaInst>(Val)) && AI->getAlign() < PrefAlign) {
+        std::optional<TypeSize> AllocaSize = AI->getAllocationSize(*DL);
+        if (AllocaSize && AllocaSize->getKnownMinValue() >= MinSize + Offset2)
+          AI->setAlignment(PrefAlign);
+      }
       // Global variables can only be aligned if they are defined in this
       // object (i.e. they are uniquely initialized in this object), and
       // over-aligning global variables that have an explicit section is
@@ -7944,7 +7946,7 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
 
   for (Use *U : reverse(OpsToSink)) {
     auto *UI = cast<Instruction>(U->get());
-    if (isa<PHINode>(UI))
+    if (isa<PHINode>(UI) || UI->mayHaveSideEffects() || UI->mayReadFromMemory())
       continue;
     if (UI->getParent() == TargetBB) {
       if (InstOrdering[UI] < InstOrdering[InsertPoint])
