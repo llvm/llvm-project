@@ -30,6 +30,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
 /// variable.
 /// TODO: Model access paths of other types, e.g., s.field, heap and globals.
 struct AccessPath {
+private:
   // An access path can be:
   // - ValueDecl * , to represent the storage location corresponding to the
   //   variable declared in ValueDecl.
@@ -39,6 +40,7 @@ struct AccessPath {
                            const clang::MaterializeTemporaryExpr *>
       P;
 
+public:
   AccessPath(const clang::ValueDecl *D) : P(D) {}
   AccessPath(const clang::MaterializeTemporaryExpr *MTE) : P(MTE) {}
 

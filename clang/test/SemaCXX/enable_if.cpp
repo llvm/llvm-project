@@ -595,6 +595,19 @@ void main() {
   auto c = static_cast<wxuin_t>(deleted);
 }
 
+namespace Regression {
+
+const int kMaxNumber = 1;
+struct Arg {
+  Arg(int);
+};
+void PlaceholderBitmask();
+void Substitute(Arg) __attribute__((enable_if(PlaceholderBitmask, ""))) {
+  (void)[] { Substitute(kMaxNumber); };
+}
+
+}
+
 }
 
 namespace DefaultArgs {

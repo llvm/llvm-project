@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 
 namespace clang ::lifetimes {
@@ -50,7 +51,8 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 // pointers or references that depend on the lifetime of the object, such as
 // container iterators (begin, end), data accessors (c_str, data, get), or
 // element accessors (operator[], operator*, front, back, at).
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee);
+bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+                                  bool RunningUnderLifetimeSafety);
 
 // Returns true if the first argument of a free function should be tracked for
 // GSL lifetime analysis. This applies to STL free functions that take a pointer
