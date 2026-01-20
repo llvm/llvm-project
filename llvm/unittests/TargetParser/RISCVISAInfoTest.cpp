@@ -1312,7 +1312,9 @@ R"(All available -march extensions for RISC-V
     svinval              1.0
     svnapot              1.0
     svpbmt               1.0
+    svrsw60t59b          1.0
     svvptc               1.0
+    xaifet               1.0
     xandesbfhcvt         5.0
     xandesperf           5.0
     xandesvbfhcvt        5.0

@@ -147,6 +147,15 @@ void removeLayoutAttr(const T &operandOrResult);
 /// applied recursively to the contained operations
 void removeLayoutAttrs(Operation *op);
 
+/// Updates the NamedAttribute sequence by dropping sg-layout and
+/// sg-data information from any DistributeLayoutAttr found.
+SmallVector<NamedAttribute>
+dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs);
+
+/// Updates the NamedAttribute sequence by dropping inst-data information from
+/// any DistributeLayoutAttr found.
+SmallVector<NamedAttribute> dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
+
 /// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpResult
 /// user should use setAnchorLayout instead
 void setDistributeLayoutAttr(const OpResult &Result,

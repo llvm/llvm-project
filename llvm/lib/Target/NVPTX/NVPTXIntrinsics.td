@@ -1503,6 +1503,11 @@ def INT_NVVM_MUL_RP_D : F_MATH_2<"mul.rp.f64", B64, B64, B64, int_nvvm_mul_rp_d>
 def INT_NVVM_MUL24_I : F_MATH_2<"mul24.lo.s32", B32, B32, B32, int_nvvm_mul24_i>;
 def INT_NVVM_MUL24_UI : F_MATH_2<"mul24.lo.u32", B32, B32, B32, int_nvvm_mul24_ui>;
 
+def INT_NVVM_MUL_RN_SAT_F16 : F_MATH_2<"mul.rn.sat.f16", B16, B16, B16, int_nvvm_mul_rn_sat_f16>;
+def INT_NVVM_MUL_RN_FTZ_SAT_F16 : F_MATH_2<"mul.rn.ftz.sat.f16", B16, B16, B16, int_nvvm_mul_rn_ftz_sat_f16>;
+def INT_NVVM_MUL_RN_SAT_F16X2 : F_MATH_2<"mul.rn.sat.f16x2", B32, B32, B32, int_nvvm_mul_rn_sat_v2f16>;
+def INT_NVVM_MUL_RN_FTZ_SAT_F16X2 : F_MATH_2<"mul.rn.ftz.sat.f16x2", B32, B32, B32, int_nvvm_mul_rn_ftz_sat_v2f16>;
+
 //
 // Div
 //
@@ -1705,15 +1710,7 @@ multiclass FMA_INST {
       [hasPTX<70>, hasSM<80>]>,
 
     FMA_TUPLE<"_rn_bf16", int_nvvm_fma_rn_bf16, B16, [hasPTX<70>, hasSM<80>]>,
-    FMA_TUPLE<"_rn_ftz_bf16", int_nvvm_fma_rn_ftz_bf16, B16,
-      [hasPTX<70>, hasSM<80>]>,
-    FMA_TUPLE<"_rn_sat_bf16", int_nvvm_fma_rn_sat_bf16, B16,
-      [hasPTX<70>, hasSM<80>]>,
-    FMA_TUPLE<"_rn_ftz_sat_bf16", int_nvvm_fma_rn_ftz_sat_bf16, B16,
-      [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_relu_bf16", int_nvvm_fma_rn_relu_bf16, B16,
-      [hasPTX<70>, hasSM<80>]>,
-    FMA_TUPLE<"_rn_ftz_relu_bf16", int_nvvm_fma_rn_ftz_relu_bf16, B16,
       [hasPTX<70>, hasSM<80>]>,
 
     FMA_TUPLE<"_rn_f16x2", int_nvvm_fma_rn_f16x2, B32,
@@ -1728,10 +1725,11 @@ multiclass FMA_INST {
       [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_ftz_relu_f16x2", int_nvvm_fma_rn_ftz_relu_f16x2,
       B32, [hasPTX<70>, hasSM<80>]>,
+
     FMA_TUPLE<"_rn_bf16x2", int_nvvm_fma_rn_bf16x2, B32,
       [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_relu_bf16x2", int_nvvm_fma_rn_relu_bf16x2, B32,
-      [hasPTX<70>, hasSM<80>]>
+      [hasPTX<70>, hasSM<80>]>,
   ] in {
     def P.Variant :
       F_MATH_3<!strconcat("fma", !subst("_", ".", P.Variant)),
@@ -1765,6 +1763,18 @@ let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
   def : Pat<(f32 (fma (f32 (fpextend bf16:$a)), 
                       (f32 (fpextend bf16:$b)), f32:$c)),
             (INT_NVVM_MIXED_FMA_rn_f32_bf16 B16:$a, B16:$b, B32:$c)>;
+}
+
+foreach ty = [F16RT, F16X2RT, BF16RT, BF16X2RT] in {
+  foreach relu = ["", "_relu"] in {
+    defvar Intr = !cast<Intrinsic>("int_nvvm_fma_rn_oob" # relu);
+    defvar suffix = !subst("_", ".", relu # "_" # ty.PtxType);
+    def INT_NVVM_FMA_OOB # relu # ty.PtxType : 
+      BasicNVPTXInst<(outs ty.RC:$dst), (ins ty.RC:$a, ty.RC:$b, ty.RC:$c),
+        "fma.rn.oob" # suffix,
+        [(set ty.Ty:$dst, (Intr ty.Ty:$a, ty.Ty:$b, ty.Ty:$c))]>,
+      Requires<[hasPTX<81>, hasSM<90>]>;
+  }
 }
 
 //
@@ -1865,6 +1875,11 @@ let Predicates = [doRsqrtOpt] in {
 // Add
 //
 
+def INT_NVVM_ADD_RN_SAT_F16 : F_MATH_2<"add.rn.sat.f16", B16, B16, B16, int_nvvm_add_rn_sat_f16>;
+def INT_NVVM_ADD_RN_FTZ_SAT_F16 : F_MATH_2<"add.rn.ftz.sat.f16", B16, B16, B16, int_nvvm_add_rn_ftz_sat_f16>;
+def INT_NVVM_ADD_RN_SAT_F16X2 : F_MATH_2<"add.rn.sat.f16x2", B32, B32, B32, int_nvvm_add_rn_sat_v2f16>;
+def INT_NVVM_ADD_RN_FTZ_SAT_F16X2 : F_MATH_2<"add.rn.ftz.sat.f16x2", B32, B32, B32, int_nvvm_add_rn_ftz_sat_v2f16>;
+
 def INT_NVVM_ADD_RN_FTZ_F : F_MATH_2<"add.rn.ftz.f32", B32, B32, B32, int_nvvm_add_rn_ftz_f>;
 def INT_NVVM_ADD_RN_SAT_FTZ_F : F_MATH_2<"add.rn.sat.ftz.f32", B32, B32, B32, int_nvvm_add_rn_ftz_sat_f>;
 def INT_NVVM_ADD_RN_F : F_MATH_2<"add.rn.f32", B32, B32, B32, int_nvvm_add_rn_f>;
@@ -1913,6 +1928,21 @@ let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
 //
 // Sub
 //
+
+def sub_rn_sat : SDNode<"NVPTXISD::SUB_RN_SAT", SDTFPBinOp>;
+def sub_rn_ftz_sat : 
+  SDNode<"NVPTXISD::SUB_RN_FTZ_SAT", SDTFPBinOp>;
+  
+class INT_NVVM_SUB_RN<RegTyInfo TyInfo, string variant> :
+  BasicNVPTXInst<(outs TyInfo.RC:$dst), (ins TyInfo.RC:$a, TyInfo.RC:$b),
+    !subst("_", ".", "sub.rn" # variant # "." # TyInfo.PtxType),
+    [(set TyInfo.Ty:$dst, 
+     (!cast<SDNode>("sub_rn" # variant) TyInfo.Ty:$a, TyInfo.Ty:$b))]>;
+
+def INT_NVVM_SUB_RN_SAT_F16 : INT_NVVM_SUB_RN<F16RT, "_sat">;
+def INT_NVVM_SUB_RN_FTZ_SAT_F16 : INT_NVVM_SUB_RN<F16RT, "_ftz_sat">;
+def INT_NVVM_SUB_RN_SAT_F16X2 : INT_NVVM_SUB_RN<F16X2RT, "_sat">;
+def INT_NVVM_SUB_RN_FTZ_SAT_F16X2 : INT_NVVM_SUB_RN<F16X2RT, "_ftz_sat">;
 
 foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
   foreach ftz = ["", "_ftz"] in {
@@ -5761,6 +5791,108 @@ foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
   }
 }
 
+} // isConvergent
+
+//
+// tcgen05.ld.red
+//
+
+class Tcgen05LdRedTypeProfile<int Num, bit hasOffset, ValueType RedValTy>:
+        SDTypeProfile<0, 0, []> {
+
+  list<ValueType> Results = !listsplat(RedValTy, !add(Num, 1)); // ret_type, red_val
+  list<ValueType> VTs = !listconcat(
+    Results,
+    [i32],                                // ptr
+    !if(!eq(hasOffset, 1), [i64], []),    // offset
+    [i32],                                // redOp
+    !if(!eq(RedValTy, f32), [i1, i1], []) // abs, nan
+  );
+  let Constraints = !foreach(x, !range(!size(VTs)), SDTCisVT<x, VTs[x]>);
+  let NumResults = !size(Results);
+  let NumOperands = !sub(!size(VTs), NumResults);
+}
+
+class Tcgen05LdRedSDNode<string Shape, int Num, string Type>:
+        SDNode<"NVPTXISD::TCGEN05_LD_RED_" # Shape # "_X" # Num # "_" # !toupper(Type),
+        Tcgen05LdRedTypeProfile<Num, !eq(Shape, "16x32bx2"), !cast<ValueType>(Type)>,
+                    [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
+
+class Tcgen05LdRedInst<string Shape, int Num, string RedOp, string Type,
+                       bit Abs = 0, bit Nan = 0>:
+         NVPTXInst<(outs), (ins), "?", []>,
+         Requires<[callSubtarget<"hasTcgen05LdRedSupport">]> {
+
+  bit IsFloat = !eq(Type, "f32");
+  string TypeStr = !if(IsFloat, "f32", "u32");
+
+  SDNode Opcode = Tcgen05LdRedSDNode<Shape, Num, Type>;
+
+  TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<Num>;
+
+  let InOperandList = !con((ins B32:$addr),
+                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset),
+                                                       (ins)));
+
+  let OutOperandList = !con(Info.Outs, (outs B32:$redVal));
+
+  string AbsStr = !if(!and(!eq(IsFloat, 1), !eq(Abs, 1)), ".abs", "");
+  string NanStr = !if(!and(!eq(IsFloat, 1), !eq(Nan, 1)), ".NaN", "");
+
+  let AsmString = "tcgen05.ld.red.sync.aligned"
+                  # "." # Shape
+                  # ".x" # Num
+                  # "." # RedOp
+                  # AbsStr # NanStr
+                  # "." # TypeStr # " "
+                  # Info.regstring # ", $redVal, [$addr]"
+                  # !if(!eq(Shape, "16x32bx2"), ", $offset", "")
+                  # ";";
+
+  int RedOpVal = !cond(
+    !eq(RedOp, "min") : 0,
+    !eq(RedOp, "max") : 1,
+  );
+
+  int AbsVal = !if(!eq(Abs, 1), -1, 0);
+  int NanVal = !if(!eq(Nan, 1), -1, 0);
+
+  dag IntrinsicPattern = !con((Opcode i32:$addr),
+                              !if(!eq(Shape, "16x32bx2"), (Opcode i64:$offset),
+                                                          (Opcode)));
+
+  dag FlagOperands = !con((Opcode (i32 RedOpVal)),
+                          !if(!eq(IsFloat, 1), (Opcode (i1 AbsVal), (i1 NanVal)),
+                                               (Opcode)));
+
+  dag Results = !con(!foreach(tmp, OutOperandList,
+                                   !subst(outs, set,
+                                   !subst(B32, !if(!eq(IsFloat, 1), f32, i32), tmp))),
+                     // Unfortunately, there is no way to append a dag hence
+                     // creating a dummy argument so that it can be replaced with
+                     // the intrinsic arg dag
+                     (set 0));
+
+  let Pattern = [!setdagarg(Results, !sub(!size(Results), 1),
+                                     !con(IntrinsicPattern, FlagOperands))];
+}
+
+let isConvergent = true in {
+  foreach shape = ["32x32b", "16x32bx2"] in {
+    foreach num = 1...8 in {
+      foreach redop = ["min", "max"] in {
+        defvar access_size = NVVM_TCGEN05_LDST_ACCESS_SIZE<shape, num>;
+        if access_size.valid then {
+          foreach abs = [0, 1] in {
+            foreach nan = [0, 1] in {
+                def : Tcgen05LdRedInst<shape, access_size.veclen, redop, "f32", abs, nan>;
+              } // nan
+            } // abs
+          def : Tcgen05LdRedInst<shape, access_size.veclen, redop, "i32">;
+        } // valid
+      } // redop
+    } // num
+  } // shape
 } // isConvergent
 
 // Bulk store instructions

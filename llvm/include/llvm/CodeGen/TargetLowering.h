@@ -2141,16 +2141,19 @@ public:
   /// returns the address of that location. Otherwise, returns nullptr.
   /// DEPRECATED: please override useLoadStackGuardNode and customize
   ///             LOAD_STACK_GUARD, or customize \@llvm.stackguard().
-  virtual Value *getIRStackGuard(IRBuilderBase &IRB) const;
+  virtual Value *getIRStackGuard(IRBuilderBase &IRB,
+                                 const LibcallLoweringInfo &Libcalls) const;
 
   /// Inserts necessary declarations for SSP (stack protection) purpose.
   /// Should be used only when getIRStackGuard returns nullptr.
-  virtual void insertSSPDeclarations(Module &M) const;
+  virtual void insertSSPDeclarations(Module &M,
+                                     const LibcallLoweringInfo &Libcalls) const;
 
   /// Return the variable that's previously inserted by insertSSPDeclarations,
   /// if any, otherwise return nullptr. Should be used only when
   /// getIRStackGuard returns nullptr.
-  virtual Value *getSDagStackGuard(const Module &M) const;
+  virtual Value *getSDagStackGuard(const Module &M,
+                                   const LibcallLoweringInfo &Libcalls) const;
 
   /// If this function returns true, stack protection checks should XOR the
   /// frame pointer (or whichever pointer is used to address locals) into the
@@ -2162,7 +2165,8 @@ public:
   /// performs validation and error handling, returns the function. Otherwise,
   /// returns nullptr. Must be previously inserted by insertSSPDeclarations.
   /// Should be used only when getIRStackGuard returns nullptr.
-  Function *getSSPStackGuardCheck(const Module &M) const;
+  Function *getSSPStackGuardCheck(const Module &M,
+                                  const LibcallLoweringInfo &Libcalls) const;
 
 protected:
   Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
@@ -2170,7 +2174,9 @@ protected:
 
 public:
   /// Returns the target-specific address of the unsafe stack pointer.
-  virtual Value *getSafeStackPointerLocation(IRBuilderBase &IRB) const;
+  virtual Value *
+  getSafeStackPointerLocation(IRBuilderBase &IRB,
+                              const LibcallLoweringInfo &Libcalls) const;
 
   /// Returns the name of the symbol used to emit stack probes or the empty
   /// string if not applicable.
@@ -2438,13 +2444,14 @@ public:
   /// Returns how the given atomic cmpxchg should be expanded by the IR-level
   /// AtomicExpand pass.
   virtual AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const {
     return AtomicExpansionKind::None;
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
   /// AtomicRMW, if at all. Default is to never expand.
-  virtual AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  virtual AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
     return RMW->isFloatingPointOperation() ?
       AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
   }
@@ -3023,6 +3030,9 @@ public:
     case ISD::UMIN:
     case ISD::UMAX:
     case ISD::MUL:
+    case ISD::CLMUL:
+    case ISD::CLMULH:
+    case ISD::CLMULR:
     case ISD::MULHU:
     case ISD::MULHS:
     case ISD::SMUL_LOHI:
@@ -3626,6 +3636,8 @@ public:
     return RuntimeLibcallInfo;
   }
 
+  const LibcallLoweringInfo &getLibcallLoweringInfo() const { return Libcalls; }
+
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     Libcalls.setLibcallImpl(Call, Impl);
   }
@@ -3859,6 +3871,7 @@ private:
   const RTLIB::RuntimeLibcallsInfo RuntimeLibcallInfo;
 
   /// The list of libcalls that the target will use.
+  /// FIXME: This should not live here; it should come from an analysis.
   LibcallLoweringInfo Libcalls;
 
   /// The bits of IndexedModeActions used to store the legalisation actions
@@ -5177,7 +5190,8 @@ public:
   /// This method returns a target specific FastISel object, or null if the
   /// target does not support "fast" ISel.
   virtual FastISel *createFastISel(FunctionLoweringInfo &,
-                                   const TargetLibraryInfo *) const {
+                                   const TargetLibraryInfo *,
+                                   const LibcallLoweringInfo *) const {
     return nullptr;
   }
 
