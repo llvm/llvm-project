@@ -63,15 +63,6 @@ int main(int argc, char** argv) {
           name("std::partial_sort_copy(vector<NonIntegral>)"), std_partial_sort_copy, gen2);
       bm.operator()<std::deque<int>>(name("std::partial_sort_copy(deque<int>)"), std_partial_sort_copy, generate);
       bm.operator()<std::list<int>>(name("std::partial_sort_copy(list<int>)"), std_partial_sort_copy, generate);
-
-      bm.operator()<std::vector<int>>(
-          name("rng::partial_sort_copy(vector<int>)"), std::ranges::partial_sort_copy, generate);
-      bm.operator()<std::vector<support::NonIntegral>>(
-          name("rng::partial_sort_copy(vector<NonIntegral>)"), std::ranges::partial_sort_copy, gen2);
-      bm.operator()<std::deque<int>>(
-          name("rng::partial_sort_copy(deque<int>)"), std::ranges::partial_sort_copy, generate);
-      bm.operator()<std::list<int>>(
-          name("rng::partial_sort_copy(list<int>)"), std::ranges::partial_sort_copy, generate);
     };
 
     register_bm(support::quicksort_adversarial_data<int>, "qsort adversarial");
