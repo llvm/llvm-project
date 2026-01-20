@@ -5937,6 +5937,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       PHINode *PN;
       if (matchSimpleTernaryIntrinsicRecurrence(I, PN, Init, L, R)) {
         switch (I->getIntrinsicID()) {
+        case Intrinsic::fma:
         case Intrinsic::fmuladd: {
           KnownFPClass KnownStart;
           computeKnownFPClass(Init, DemandedElts,
