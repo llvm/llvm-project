@@ -1048,7 +1048,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   if (Target.getRegistersAreIntervals()) {
     OS << "extern const unsigned " << TargetName
        << "RegUnitIntervals[][2] = {\n";
-    for (const auto &Reg : Regs) {
+    for (const CodeGenRegister &Reg : Regs) {
       const auto &Units = Reg.getNativeRegUnits();
       if (Units.empty()) {
         OS << "  { 0, 0 },\n";

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -1126,8 +1125,10 @@ CodeGenRegisterCategory::CodeGenRegisterCategory(CodeGenRegBank &RegBank,
 //===----------------------------------------------------------------------===//
 
 CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
-                               const CodeGenHwModes &Modes)
-    : Records(Records), CGH(Modes) {
+                               const CodeGenHwModes &Modes,
+                               const bool RegistersAreIntervals)
+    : Records(Records), CGH(Modes),
+      RegistersAreIntervals(RegistersAreIntervals) {
   // Configure register Sets to understand register classes and tuples.
   Sets.addFieldExpander("RegisterClass", "MemberList");
   Sets.addFieldExpander("CalleeSavedRegs", "SaveList");
@@ -1930,12 +1931,23 @@ void CodeGenRegBank::computeRegUnitWeights() {
   }
 }
 
+// isContiguous is a enforceRegUnitIntervals helper that returns true if all
+// units in Units form a contiguous interval.
+static bool isContiguous(const CodeGenRegister::RegUnitList &Units) {
+  unsigned LastUnit = Units.find_first();
+  for (auto ThisUnit : llvm::make_range(++Units.begin(), Units.end())) {
+    if (ThisUnit != LastUnit + 1)
+      return false;
+    LastUnit = ThisUnit;
+  }
+  return true;
+}
+
 // Enforce that all registers are intervals of regunits if the target
 // requests this property. This will renumber regunits to ensure the
 // interval property holds, or error out if it cannot be satisfied.
 void CodeGenRegBank::enforceRegUnitIntervals() {
-  CodeGenTarget Target(Records);
-  if (!Target.getRegistersAreIntervals())
+  if (!RegistersAreIntervals)
     return;
 
   LLVM_DEBUG(dbgs() << "Enforcing regunit intervals for target\n");
@@ -1946,19 +1958,10 @@ void CodeGenRegBank::enforceRegUnitIntervals() {
   SparseBitVector<> DontRenumberUnits;
 
   auto GetRenumberedUnit = [&](unsigned RegUnit) -> unsigned {
-    if (RegUnitRenumbering[RegUnit] != ~0u)
-      return RegUnitRenumbering[RegUnit];
+    if (unsigned RenumberedUnit = RegUnitRenumbering[RegUnit];
+        RenumberedUnit != ~0u)
+      return RenumberedUnit;
     return RegUnit;
-  };
-
-  auto IsContiguous = [&](CodeGenRegister::RegUnitList &Units) -> bool {
-    unsigned LastUnit = Units.find_first();
-    for (auto ThisUnit : llvm::make_range(++Units.begin(), Units.end())) {
-      if (ThisUnit != LastUnit + 1)
-        return false;
-      LastUnit = ThisUnit;
-    }
-    return true;
   };
 
   // Process registers in definition order
@@ -1983,7 +1986,7 @@ void CodeGenRegBank::enforceRegUnitIntervals() {
       if (ThisUnit != LastUnit + 1) {
         if (DontRenumberUnits.test(LastUnit + 1)) {
           PrintFatalError(
-              "Cannot enforce regunit intervals for register " + Reg.getName() +
+              "cannot enforce regunit intervals for register " + Reg.getName() +
               ": unit " + Twine(LastUnit + 1) +
               " (root: " + RegUnits[LastUnit + 1].Roots[0]->getName() +
               ") has already been renumbered and cannot be swapped");
@@ -2009,8 +2012,8 @@ void CodeGenRegBank::enforceRegUnitIntervals() {
     CodeGenRegister::RegUnitList NewNativeUnits;
     for (unsigned OldUnit : Reg.getNativeRegUnits())
       NewNativeUnits.set(GetRenumberedUnit(OldUnit));
-    if (!IsContiguous(NewNativeUnits)) {
-      PrintFatalError("Cannot enforce regunit intervals, final "
+    if (!isContiguous(NewNativeUnits)) {
+      PrintFatalError("cannot enforce regunit intervals, final "
                       "renumbering did not produce contiguous units "
                       "for register " +
                       Reg.getName() + "\n");
