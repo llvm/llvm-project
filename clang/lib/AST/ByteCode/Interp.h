@@ -2888,7 +2888,9 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS,
     S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
     if (!S.noteUndefinedBehavior())
       return false;
-    RHS = -RHS;
+
+    RHS = RHS.isMin() ? RT(APSInt::getMaxValue(RHS.bitWidth(), false)) : -RHS;
+
     return DoShift<LT, RT,
                    Dir == ShiftDir::Left ? ShiftDir::Right : ShiftDir::Left>(
         S, OpPC, LHS, RHS, Result);
