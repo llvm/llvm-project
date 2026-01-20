@@ -485,9 +485,7 @@ define amdgpu_kernel void @fmuladd_f16_imm_a(
 ; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-DENORM-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX11-DENORM-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX11-DENORM-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-DENORM-TRUE16-NEXT:    v_fmamk_f16 v0.l, v0.l, 0x4200, v0.h
+; GFX11-DENORM-TRUE16-NEXT:    v_fmamk_f16 v0.l, v0.l, 0x4200, v1.l
 ; GFX11-DENORM-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-DENORM-TRUE16-NEXT:    s_endpgm
 ;
@@ -719,9 +717,7 @@ define amdgpu_kernel void @fmuladd_f16_imm_b(
 ; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-DENORM-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX11-DENORM-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX11-DENORM-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-DENORM-TRUE16-NEXT:    v_fmamk_f16 v0.l, v0.l, 0x4200, v0.h
+; GFX11-DENORM-TRUE16-NEXT:    v_fmamk_f16 v0.l, v0.l, 0x4200, v1.l
 ; GFX11-DENORM-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-DENORM-TRUE16-NEXT:    s_endpgm
 ;
