@@ -283,6 +283,9 @@ void GPUDialect::initialize() {
   addInterfaces<GPUInlinerInterface>();
   declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
                            TerminatorOp>();
+  declarePromisedInterfaces<memref::IndexedAccessOpInterface,
+                            SubgroupMmaLoadMatrixOp,
+                            SubgroupMmaStoreMatrixOp>();
   declarePromisedInterfaces<
       ValueBoundsOpInterface, ClusterDimOp, ClusterDimBlocksOp, ClusterIdOp,
       ClusterBlockIdOp, BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp, LaneIdOp,

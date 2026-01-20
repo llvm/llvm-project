@@ -44,6 +44,8 @@ def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
     This operation is meant to follow the semantic of described here:
     https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-instructions-ldmatrix
 
+    Promises IndexedAccessOpInterface.
+
     Example:
     ```mlir
     %0 = nvgpu.ldmatrix %sm[%c0, %c0] {numTiles = 4 : i32, transpose = false} :
@@ -304,12 +306,12 @@ def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
 def NVGPU_MBarrierCreateOp : NVGPU_Op<"mbarrier.create", []> {
   let summary = "Creates a `nvgpu.mbarrier` object.";
   let description = [{
-    The Op generates one or more `mbarrier` object, which is a barrier created in 
+    The Op generates one or more `mbarrier` object, which is a barrier created in
     shared memory and supports various synchronization behaviors for threads.
 
     The `mbarrier` object has the following type and alignment requirements:
       Type: .b64, Alignment: 8, Memory space: .shared
-    
+
     Example:
     ```mlir
       %barrier = nvgpu.mbarrier.create -> !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
@@ -325,7 +327,7 @@ def NVGPU_MBarrierCreateOp : NVGPU_Op<"mbarrier.create", []> {
 def NVGPU_MBarrierGetOp : NVGPU_Op<"mbarrier.get", []> {
   let summary = "Return a pointer to an `nvgpu.mbarrier`.";
   let description = [{
-    The `nvgpu.mbarrier.get` operation retrieves a pointer to a specific 
+    The `nvgpu.mbarrier.get` operation retrieves a pointer to a specific
     `mbarrier` object from a group of barriers created by the `nvgpu.mbarrier.create` operation.
 
     Example:
@@ -360,7 +362,7 @@ def NVGPU_MBarrierInitOp : NVGPU_Op<"mbarrier.init", []> {
 def NVGPU_MBarrierTestWaitOp : NVGPU_Op<"mbarrier.test.wait", []> {
   let summary = "Checks if the `nvgpu.mbarrier` has completed its current phase.";
   let description = [{
-    Checks whether the mbarrier object has completed the phase. It is is a 
+    Checks whether the mbarrier object has completed the phase. It is is a
     non-blocking instruction which tests for the completion of the phase.
 
     Example:
@@ -376,7 +378,7 @@ def NVGPU_MBarrierTestWaitOp : NVGPU_Op<"mbarrier.test.wait", []> {
 def NVGPU_MBarrierArriveOp : NVGPU_Op<"mbarrier.arrive", []> {
   let summary = "Performs arrive operation on the `nvgpu.mbarrier.arrive`.";
   let description = [{
-    The Op performs arrive-on operation on the `mbarrier` object and returns a 
+    The Op performs arrive-on operation on the `mbarrier` object and returns a
     `nvgpu.mbarrier.token`.
 
     For more information, see
@@ -395,7 +397,7 @@ let assemblyFormat = "$barriers `[` $mbarId `]` attr-dict `:` type($barriers) `-
 def NVGPU_MBarrierArriveNoCompleteOp : NVGPU_Op<"mbarrier.arrive.nocomplete", []> {
   let summary = "Performs arrive operation on the `nvgpu.mbarrier.arrive.nocomplete` as non-blocking.";
   let description = [{
-    The Op performs arrive-on operation on the `mbarrier` object and returns a 
+    The Op performs arrive-on operation on the `mbarrier` object and returns a
     `nvgpu.mbarrier.token`.
 
     The Op does not cause the `nvgpu.mbarrier` to complete its current phase.
@@ -414,13 +416,13 @@ def NVGPU_MBarrierArriveNoCompleteOp : NVGPU_Op<"mbarrier.arrive.nocomplete", []
 def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
   let summary = "Performs expect_tx operation on the `nvgpu.mbarrier.arrive`";
   let description = [{
-    A thread executing the Op performs an expect-tx operation on the mbarrier 
-    object at the location specified by the address operand $barrier. The 
-    expect-tx operation, with an $txcount argument, increases the tx-count of 
-    an mbarrier object by the value specified by $txcount. This makes the 
-    current phase of the mbarrier object to expect and track the completion of 
+    A thread executing the Op performs an expect-tx operation on the mbarrier
+    object at the location specified by the address operand $barrier. The
+    expect-tx operation, with an $txcount argument, increases the tx-count of
+    an mbarrier object by the value specified by $txcount. This makes the
+    current phase of the mbarrier object to expect and track the completion of
     additional asynchronous transactions.
-    
+
     The `$txCount` specifies the number of element to the expect-tx operation.
 
     Example:
@@ -435,12 +437,12 @@ def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
 def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
   let summary = "Waits for the `nvgpu.mbarrier` to complete its current phase.";
   let description = [{
-    Checks whether the mbarrier object has completed the phase. It is is a 
-    potentially blocking instruction which tests for the completion of the 
-    phase. Suspended thread resumes execution when the specified phase completes 
-    OR before the phase completes following a system-dependent time limit. 
+    Checks whether the mbarrier object has completed the phase. It is is a
+    potentially blocking instruction which tests for the completion of the
+    phase. Suspended thread resumes execution when the specified phase completes
+    OR before the phase completes following a system-dependent time limit.
 
-    The `$phaseParity` specifies either even phase (0) or odd phase (1) to 
+    The `$phaseParity` specifies either even phase (0) or odd phase (1) to
     wait.
 
     Example:
@@ -449,7 +451,7 @@ def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
     ```
   }];
   let arguments = (ins NVGPU_MBarrierGroup:$barriers, I1:$phaseParity, Index:$ticks, Index:$mbarId);
-  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phaseParity `,` $ticks attr-dict `:` type($barriers)";  
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phaseParity `,` $ticks attr-dict `:` type($barriers)";
 }
 
 def NVGPU_TmaFenceOp : NVGPU_Op<"tma.fence.descriptor", []> {
@@ -469,7 +471,7 @@ def NVGPU_TmaFenceOp : NVGPU_Op<"tma.fence.descriptor", []> {
 def NVGPU_TmaPrefetchOp : NVGPU_Op<"tma.prefetch.descriptor", []> {
   let summary = "Prefetch given `nvgpu.tensormap.descriptor` ";
   let description = [{
-    The Op brings the cache line containing the given `$tmaDescriptor` for 
+    The Op brings the cache line containing the given `$tmaDescriptor` for
     subsequent use by the `tma.async.load` instruction.
   }];
   let arguments = (ins NVGPU_TensorMapDescriptor:$tensorMapDescriptor, Optional<I1>:$predicate);
@@ -481,27 +483,27 @@ def NVGPU_TmaPrefetchOp : NVGPU_Op<"tma.prefetch.descriptor", []> {
 def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]> {
   let summary = "TMA asynchronous load";
   let description = [{
-    The Op loads a tile memory region from global memory to shared memory by 
+    The Op loads a tile memory region from global memory to shared memory by
     Tensor Memory Access (TMA).
-    
+
     `$tensorMapDescriptor` is tensor map descriptor which has information about
     tile shape. The descriptor is created by `nvgpu.tma.create.descriptor`
 
-    The Op uses `$barrier` mbarrier based completion mechanism. 
-  }];  
+    The Op uses `$barrier` mbarrier based completion mechanism.
+  }];
   let arguments = (ins  Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect>]>:$dst,
                         NVGPU_MBarrierGroup:$barriers,
                         NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
-                        Variadic<Index>:$coordinates, 
+                        Variadic<Index>:$coordinates,
                         Index:$mbarId,
                         Optional<I16>:$multicastMask,
                         Optional<I1>:$predicate);
   let assemblyFormat = [{
-    $tensorMapDescriptor `[` $coordinates `]` `,` $barriers `[` $mbarId `]` 
+    $tensorMapDescriptor `[` $coordinates `]` `,` $barriers `[` $mbarId `]`
       `to` $dst
       (`multicast_mask` `=` $multicastMask^ )?
       (`,` `predicate` `=` $predicate^)?
-      attr-dict `:` type($tensorMapDescriptor) `,` type($barriers) 
+      attr-dict `:` type($tensorMapDescriptor) `,` type($barriers)
       `->` type($dst)
   }];
   let hasVerifier = 1;
@@ -511,15 +513,15 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]
 def NVGPU_TmaAsyncStoreOp : NVGPU_Op<"tma.async.store", [AttrSizedOperandSegments]> {
   let summary = "TMA asynchronous store";
   let description = [{
-    The Op store a tile memory region from global memory to shared memory by 
+    The Op store a tile memory region from global memory to shared memory by
     Tensor Memory Access (TMA).
-    
+
     `$tensorMapDescriptor` is tensor map descriptor which has information about
     tile shape. The descriptor is created by `nvgpu.tma.create.descriptor`
-  }];  
+  }];
   let arguments = (ins  Arg<AnyMemRef, "", [MemReadAt<0, FullEffect>]>:$src,
                         Arg<NVGPU_TensorMapDescriptor, "", [MemWriteAt<0, FullEffect>]>:$tensorMapDescriptor,
-                        Variadic<Index>:$coordinates, 
+                        Variadic<Index>:$coordinates,
                         Optional<I1>:$predicate);
   let assemblyFormat = [{
       $src `to` $tensorMapDescriptor `[` $coordinates `]`
@@ -533,11 +535,11 @@ def NVGPU_TmaAsyncStoreOp : NVGPU_Op<"tma.async.store", [AttrSizedOperandSegment
 def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
   let summary = "TMA create descriptor";
   let description = [{
-    The Op creates a tensor map descriptor object representing tiled memory 
-    region. To do that it calls CUDA Driver's `cuTensorMapEncodeTiled`. The 
+    The Op creates a tensor map descriptor object representing tiled memory
+    region. To do that it calls CUDA Driver's `cuTensorMapEncodeTiled`. The
     descriptor is used by Tensor Memory Access (TMA).
 
-    The `tensor` is the source tensor to be tiled. 
+    The `tensor` is the source tensor to be tiled.
 
     The `boxDimensions` is the size of the tiled memory region in each dimension.
 
@@ -557,15 +559,15 @@ def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
 def NVGPU_WarpgroupGenerateDescriptorOp : NVGPU_Op<"warpgroup.generate.descriptor", []> {
   let summary = "Generate a warpgroup matrix descriptor";
   let description = [{
-  This Op builds a `nvgpu.warpgroup.descriptor` that is used by 
-  `nvgpu.warpgroup.mma` to perform warpgroup-level matrix multiply and 
+  This Op builds a `nvgpu.warpgroup.descriptor` that is used by
+  `nvgpu.warpgroup.mma` to perform warpgroup-level matrix multiply and
   accumulate.
 
-  The descriptor specifies the properties of the matrix in shared memory that 
-  is a multiplicand in the matrix multiply and accumulate operation. 
-  }];  
+  The descriptor specifies the properties of the matrix in shared memory that
+  is a multiplicand in the matrix multiply and accumulate operation.
+  }];
   let results = (outs NVGPU_WarpgroupMatrixDescriptor:$descriptor);
-  let arguments = (ins Arg<AnyMemRef, "", [MemRead]>:$tensor, 
+  let arguments = (ins Arg<AnyMemRef, "", [MemRead]>:$tensor,
                        NVGPU_TensorMapDescriptor:$tensorMap);
   let assemblyFormat = [{$tensor `,` $tensorMap attr-dict `:` type($tensor) `,` type($tensorMap) `->` type($descriptor)}];
   let hasVerifier = 1;
@@ -573,42 +575,42 @@ def NVGPU_WarpgroupGenerateDescriptorOp : NVGPU_Op<"warpgroup.generate.descripto
 
 def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
   let description = [{
-    The `nvgpu.warpgroup.mma` op performs the warpgroup-level (4 warps) 
-    matrix-multiply-and-accumulate (mma) operation that results in 
-    `nvvm.wgmma.mma_async`. 
-    
-    The operands are `descriptorA` and `descriptorB` that are wgmma matrix 
-    descriptors that shows the properties of the matrix in shared memory. The 
-    results are thread-level ownership to the warpgroup-level mma operation 
+    The `nvgpu.warpgroup.mma` op performs the warpgroup-level (4 warps)
+    matrix-multiply-and-accumulate (mma) operation that results in
+    `nvvm.wgmma.mma_async`.
+
+    The operands are `descriptorA` and `descriptorB` that are wgmma matrix
+    descriptors that shows the properties of the matrix in shared memory. The
+    results are thread-level ownership to the warpgroup-level mma operation
     shape. The shape is deduced from the descriptor types and output vector.
 
-    The Op encapsulates multiple `nvvm.wgmma.mma_async` operations to complete 
-    the given shape. As `nvvm.wgmma.async` Op, or its corresponding PTX 
-    instruction, is asynchronous, this Op groups the `nvvm.wgmma.async` and 
-    surrounds them between `wgmma.fence.aligned` and 
+    The Op encapsulates multiple `nvvm.wgmma.mma_async` operations to complete
+    the given shape. As `nvvm.wgmma.async` Op, or its corresponding PTX
+    instruction, is asynchronous, this Op groups the `nvvm.wgmma.async` and
+    surrounds them between `wgmma.fence.aligned` and
     `wgmma.commit.group.sync.aligned`, `wgmma.wait.group.sync.aligned` Ops.
 
     Example:
     ```mlir
-      %r1,%r2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc2: 
-                 !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>, 
-                 !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>, 
+      %r1,%r2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc2:
+                 !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>,
+                 !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>,
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>,
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
-                 -> 
+                 ->
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>,
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
     ```
   }];
 
-  let arguments = (ins NVGPU_WarpgroupMatrixDescriptor:$descriptorA, 
-                       NVGPU_WarpgroupMatrixDescriptor:$descriptorB,                                               
+  let arguments = (ins NVGPU_WarpgroupMatrixDescriptor:$descriptorA,
+                       NVGPU_WarpgroupMatrixDescriptor:$descriptorB,
                        DefaultValuedOptionalAttr<I64Attr, "1">:$waitGroup,
                        OptionalAttr<UnitAttr>:$transposeA,
                        OptionalAttr<UnitAttr>:$transposeB,
                        NVGPU_WarpgroupAccumulator:$matrixC);
   let results = (outs NVGPU_WarpgroupAccumulator:$matrixD);
-  let assemblyFormat = [{    
+  let assemblyFormat = [{
     $descriptorA`,` $descriptorB`,` $matrixC attr-dict
     `:` type($descriptorA) `,` type($descriptorB) `,` type($matrixC) `->` type($matrixD)
   }];
@@ -617,29 +619,29 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
 
 def NVGPU_WarpgroupMmaStoreOp : NVGPU_Op<"warpgroup.mma.store"> {
   let description = [{
-    The `nvgpu.warpgroup.mma.store` op performs the store of fragmented result 
-    in $matrixD to given memref. 
+    The `nvgpu.warpgroup.mma.store` op performs the store of fragmented result
+    in $matrixD to given memref.
 
     [See the details of register fragment layout for accumulator matrix D]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d) 
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d)
 
     Note that, the op must be run with warp group.
   }];
 
   let arguments = (ins NVGPU_WarpgroupAccumulator:$matrixD,
                        Arg<AnyMemRef, "", [MemWrite]>:$dstMemref);
-  
+
   let assemblyFormat = [{
     $matrixD `,` $dstMemref attr-dict `:` type($matrixD) `to` type($dstMemref)
   }];
   let hasVerifier = 1;
 }
 
-def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulator"> {  
+def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulator"> {
   let summary = "Initializes the accumulator matrix";
 
   let description = [{
-    This Op generates and initializes the accumulator matrix for 
+    This Op generates and initializes the accumulator matrix for
     `nvgpu.warpgroup.mma` op to perform matrix-multiply-and-accumulate.
   }];
   let results = (outs NVGPU_WarpgroupAccumulator:$matrixC);
@@ -662,7 +664,7 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
                        UnitAttr:$ftz);
   let results = (outs VectorOfNonZeroRankOf<[F32]>:$out);
   let assemblyFormat = [{
-    $in `{` `rounding` `=` $rounding (`,` `ftz` $ftz^)? `}` 
+    $in `{` `rounding` `=` $rounding (`,` `ftz` $ftz^)? `}`
     attr-dict `:` type($out)
   }];
   let hasVerifier = 1;
