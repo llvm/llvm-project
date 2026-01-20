@@ -16802,7 +16802,6 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
         LHS.getOpcode() == ISD::SELECT &&
         isa<ConstantSDNode>(LHS.getOperand(1)) &&
         isa<ConstantSDNode>(LHS.getOperand(2)) &&
-        LHS.getConstantOperandVal(1) != LHS.getConstantOperandVal(2) &&
         isBoolSGPR(LHS.getOperand(0))) {
       // Given CT != FT:
       // setcc (select cc, CT, CF), CF, eq => xor cc, -1
@@ -16812,13 +16811,14 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
       const APInt &CT = LHS.getConstantOperandAPInt(1);
       const APInt &CF = LHS.getConstantOperandAPInt(2);
 
-      if ((CF == CRHSVal && CC == ISD::SETEQ) ||
-          (CT == CRHSVal && CC == ISD::SETNE))
-        return DAG.getNode(ISD::XOR, SL, MVT::i1, LHS.getOperand(0),
-                           DAG.getAllOnesConstant(SL, MVT::i1));
-      if ((CF == CRHSVal && CC == ISD::SETNE) ||
-          (CT == CRHSVal && CC == ISD::SETEQ))
-        return LHS.getOperand(0);
+      if (CT != CF) {
+        if ((CF == CRHSVal && CC == ISD::SETEQ) ||
+            (CT == CRHSVal && CC == ISD::SETNE))
+          return DAG.getNOT(SL, LHS.getOperand(0), MVT::i1);
+        if ((CF == CRHSVal && CC == ISD::SETNE) ||
+            (CT == CRHSVal && CC == ISD::SETEQ))
+          return LHS.getOperand(0);
+      }
     }
   }
 
