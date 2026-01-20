@@ -8299,9 +8299,7 @@ private:
             (Next == CE && MapType != OMPC_MAP_unknown)) {
           if (!IsMappingWholeStruct) {
             CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
-            CombinedInfo.BasePointers.push_back(IsNonContiguous
-                                                    ? LB.emitRawPointer(CGF)
-                                                    : BP.emitRawPointer(CGF));
+            CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
             CombinedInfo.DevicePtrDecls.push_back(nullptr);
             CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
             CombinedInfo.Pointers.push_back(LB.emitRawPointer(CGF));
