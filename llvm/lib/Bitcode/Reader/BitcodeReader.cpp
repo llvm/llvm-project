@@ -3193,7 +3193,24 @@ Error BitcodeReader::resolveGlobalAndIndirectSymbolInits() {
         Expected<Constant *> MaybeC = getValueForInitializer(ValID);
         if (!MaybeC)
           return MaybeC.takeError();
-        Info.F->setPersonalityFn(MaybeC.get());
+        Constant *C = MaybeC.get();
+        // Old bitcode may have null/undef/poison as personality - treat as none.
+        // Also unwrap any ConstantExpr (bitcast, etc.) to get the underlying
+        // function.
+        if (!C->isNullValue() && !isa<UndefValue>(C)) {
+          C = C->stripPointerCasts();
+          if (!C->isNullValue() && !isa<UndefValue>(C)) {
+            Function *PersonalityFn = dyn_cast<Function>(C);
+            if (!PersonalityFn) {
+              // Warn and drop unsupported personality (e.g. alias, constant).
+              errs() << "warning: dropping unsupported personality for "
+                     << Info.F->getName() << " (got "
+                     << C->getNameOrAsOperand() << ")\n";
+            } else {
+              Info.F->setPersonalityFn(PersonalityFn);
+            }
+          }
+        }
         Info.PersonalityFn = 0;
       }
     }
@@ -6204,9 +6221,12 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
                              nullptr))
           return error("Invalid landingpad record");
 
+        Function *PersonalityFn = dyn_cast<Function>(PersFn);
+        if (!PersonalityFn)
+          return error("Personality function is not a Function");
         if (!F->hasPersonalityFn())
-          F->setPersonalityFn(cast<Constant>(PersFn));
-        else if (F->getPersonalityFn() != cast<Constant>(PersFn))
+          F->setPersonalityFn(PersonalityFn);
+        else if (F->getPersonalityFn() != PersonalityFn)
           return error("Personality function mismatch");
       }
 

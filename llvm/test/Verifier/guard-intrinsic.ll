@@ -1,5 +1,6 @@
 ; RUN: not opt -S -passes=verify < %s 2>&1 | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare void @llvm.experimental.guard(i1, ...)
 
 declare void @unknown()
@@ -11,7 +12,7 @@ entry:
   ret void
 }
 
-define void @f_invoke() personality i8 3 {
+define void @f_invoke() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void(i1, ...) @llvm.experimental.guard(i1 undef, i32 0, float 0.0) [ "deopt"() ] to label %ok unwind label %not_ok
 ; CHECK: guard cannot be invoked

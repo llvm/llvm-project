@@ -21722,7 +21722,7 @@ bool ARMTargetLowering::functionArgumentNeedsConsecutiveRegisters(
 }
 
 Register ARMTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    const Function *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
   ExceptionHandling EM = getTargetMachine().getExceptionModel();
@@ -21730,7 +21730,7 @@ Register ARMTargetLowering::getExceptionPointerRegister(
 }
 
 Register ARMTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    const Function *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
   ExceptionHandling EM = getTargetMachine().getExceptionModel();

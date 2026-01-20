@@ -3,6 +3,7 @@
 ; Test to make sure we destroy LCSSA's single entry phi nodes before
 ; running liveness
 
+declare i32 @__gxx_personality_v0(...)
 declare void @consume(...) "gc-leaf-function"
 
 define void @test6(ptr addrspace(1) %obj) gc "statepoint-example" {
@@ -38,7 +39,7 @@ unreached:                                        ; preds = %unreached
   br label %unreached
 }
 
-define void @test8() gc "statepoint-example" personality ptr undef {
+define void @test8() gc "statepoint-example" personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: test8
 ; CHECK-NOT: gc.statepoint
 ; Bound the last check-not

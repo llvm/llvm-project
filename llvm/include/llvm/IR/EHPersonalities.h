@@ -40,7 +40,7 @@ enum class EHPersonality {
 /// See if the given exception handling personality function is one
 /// that we understand.  If so, return a description of it; otherwise return
 /// Unknown.
-LLVM_ABI EHPersonality classifyEHPersonality(const Value *Pers);
+LLVM_ABI EHPersonality classifyEHPersonality(const Function *Pers);
 
 LLVM_ABI StringRef getEHPersonalityName(EHPersonality Pers);
 

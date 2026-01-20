@@ -1,7 +1,7 @@
 ; Check that coro-split doesn't choke on intrinsics in unreachable blocks
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S
 
-define ptr @f(i1 %arg) presplitcoroutine personality i32 0 {
+define ptr @f(i1 %arg) presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %arg.addr = alloca i1
   store i1 %arg, ptr %arg.addr
@@ -34,6 +34,7 @@ no.predecessors:
 
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)

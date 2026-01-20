@@ -4,6 +4,7 @@
 ; RUN: -passes='cgscc(inline,function(coro-elide,dce),inline,function(coro-elide,dce))' \
 ; RUN:   | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare void @print(i32) nounwind
 
 ; resume part of the coroutine
@@ -97,7 +98,7 @@ ret:
 }
 
 ; CHECK-LABEL: @eh(
-define void @eh() personality ptr null {
+define void @eh() personality ptr @__gxx_personality_v0 {
 entry:
   %hdl = call ptr @f()
 

@@ -1,6 +1,8 @@
 ; RUN: opt -passes=consthoist -S < %s | FileCheck %s
 target triple = "thumbv6m-none-eabi"
 
+declare i32 @__gxx_personality_v0(...)
+
 ; Allocas in the entry block get handled (for free) by
 ; prologue/epilogue. Elsewhere they're fair game though.
 define void @avoid_allocas() {
@@ -111,7 +113,7 @@ entry:
 @exception_type = external global i8
 
 ; Constants in inline ASM should not be hoisted.
-define i32 @inline_asm_invoke() personality ptr null {
+define i32 @inline_asm_invoke() personality ptr @__gxx_personality_v0 {
 ;CHECK-LABEL: @inline_asm_invoke
 ;CHECK-NOT: %const = 214672
 ;CHECK: %X = invoke i32 asm "bswap $0", "=r,r"(i32 214672)

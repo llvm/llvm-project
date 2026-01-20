@@ -623,7 +623,7 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
     // EH landing pads clobber exception pointer/selector registers.
     if (BB->isEHPad()) {
       const MachineFunction &MF = *BB->getParent();
-      const Constant *PersonalityFn = MF.getFunction().getPersonalityFn();
+      const Function *PersonalityFn = MF.getFunction().getPersonalityFn();
       const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
       if (MCRegister Reg = TLI.getExceptionPointerRegister(PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))

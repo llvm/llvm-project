@@ -3198,11 +3198,10 @@ void Verifier::visitFunction(const Function &F) {
 
   // Check validity of the personality function
   if (F.hasPersonalityFn()) {
-    auto *Per = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
-    if (Per)
-      Check(Per->getParent() == F.getParent(),
-            "Referencing personality function in another module!", &F,
-            F.getParent(), Per, Per->getParent());
+    Function *Per = F.getPersonalityFn();
+    Check(Per->getParent() == F.getParent(),
+          "Referencing personality function in another module!", &F,
+          F.getParent(), Per, Per->getParent());
   }
 
   // EH funclet coloring can be expensive, recompute on-demand

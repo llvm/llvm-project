@@ -6,7 +6,9 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @f(i1 %B) personality i1 undef {
+declare i32 @__gxx_personality_v0(...)
+
+define void @f(i1 %B) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @g()

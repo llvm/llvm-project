@@ -3125,7 +3125,7 @@ bool IRTranslator::translateLandingPad(const User &U,
 
   // If there aren't registers to copy the values into (e.g., during SjLj
   // exceptions), then don't bother.
-  const Constant *PersonalityFn = MF->getFunction().getPersonalityFn();
+  const Function *PersonalityFn = MF->getFunction().getPersonalityFn();
   if (TLI->getExceptionPointerRegister(PersonalityFn) == 0 &&
       TLI->getExceptionSelectorRegister(PersonalityFn) == 0)
     return true;

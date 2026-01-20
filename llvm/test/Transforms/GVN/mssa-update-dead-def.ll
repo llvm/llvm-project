@@ -4,8 +4,8 @@
 ; This is a regression test for a bug in MemorySSA updater.
 ; Make sure that we don't crash and end up with a valid MemorySSA.
 
-define void @test() personality ptr null {
-; CHECK-LABEL: define void @test() personality ptr null {
+define void @test() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define void @test() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @bar()
 ; CHECK-NEXT:            to label %[[BAR_NORMAL:.*]] unwind label %[[EXCEPTIONAL:.*]]
 ; CHECK:       [[BAR_NORMAL]]:
@@ -44,6 +44,7 @@ exceptional:
   ret void
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare void @foo()
 declare void @bar()
 declare void @baz()

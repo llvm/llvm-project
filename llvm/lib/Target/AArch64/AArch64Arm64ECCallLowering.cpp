@@ -830,13 +830,10 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
 
   for (Function &F : Mod) {
     if (F.hasPersonalityFn()) {
-      GlobalValue *PersFn =
-          cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
-      if (PersFn->getValueType() && PersFn->getValueType()->isFunctionTy()) {
-        if (std::optional<std::string> MangledName =
-                getArm64ECMangledFunctionName(*PersFn)) {
-          PersFn->setName(MangledName.value());
-        }
+      Function *PersFn = F.getPersonalityFn();
+      if (std::optional<std::string> MangledName =
+              getArm64ECMangledFunctionName(*PersFn)) {
+        PersFn->setName(MangledName.value());
       }
     }
 

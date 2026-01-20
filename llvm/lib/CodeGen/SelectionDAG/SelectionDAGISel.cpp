@@ -1440,7 +1440,7 @@ static void mapWasmLandingPadIndex(MachineBasicBlock *MBB,
 /// do other setup for EH landing-pad blocks.
 bool SelectionDAGISel::PrepareEHLandingPad() {
   MachineBasicBlock *MBB = FuncInfo->MBB;
-  const Constant *PersonalityFn = FuncInfo->Fn->getPersonalityFn();
+  const Function *PersonalityFn = FuncInfo->Fn->getPersonalityFn();
   const BasicBlock *LLVMBB = MBB->getBasicBlock();
   const TargetRegisterClass *PtrRC =
       TLI->getRegClassFor(TLI->getPointerTy(CurDAG->getDataLayout()));

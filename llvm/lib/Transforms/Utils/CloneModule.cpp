@@ -158,7 +158,8 @@ std::unique_ptr<Module> llvm::CloneModule(
                       Returns);
 
     if (I.hasPersonalityFn())
-      F->setPersonalityFn(MapValue(I.getPersonalityFn(), VMap));
+      F->setPersonalityFn(
+          cast<Function>(MapValue(I.getPersonalityFn(), VMap)));
 
     copyComdat(F, &I);
   }

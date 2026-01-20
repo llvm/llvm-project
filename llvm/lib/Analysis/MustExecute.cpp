@@ -104,7 +104,7 @@ void LoopSafetyInfo::computeBlockColors(const Loop *CurLoop) {
   // personality routine.
   Function *Fn = CurLoop->getHeader()->getParent();
   if (Fn->hasPersonalityFn())
-    if (Constant *PersonalityFn = Fn->getPersonalityFn())
+    if (Function *PersonalityFn = Fn->getPersonalityFn())
       if (isScopedEHPersonality(classifyEHPersonality(PersonalityFn)))
         BlockColors = colorEHFunclets(*Fn);
 }

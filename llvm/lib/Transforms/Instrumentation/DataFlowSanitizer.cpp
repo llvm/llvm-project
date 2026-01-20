@@ -1557,20 +1557,18 @@ bool DataFlowSanitizer::runImpl(
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
   SmallPtrSet<Function *, 2> FnsWithForceZeroLabel;
-  SmallPtrSet<Constant *, 1> PersonalityFns;
+  SmallPtrSet<Function *, 1> PersonalityFns;
   for (Function &F : M)
     if (!F.isIntrinsic() && !DFSanRuntimeFunctions.contains(&F) &&
         !LibAtomicFunction(F) &&
         !F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation)) {
       FnsToInstrument.push_back(&F);
       if (F.hasPersonalityFn())
-        PersonalityFns.insert(F.getPersonalityFn()->stripPointerCasts());
+        PersonalityFns.insert(F.getPersonalityFn());
     }
 
   if (ClIgnorePersonalityRoutine) {
-    for (auto *C : PersonalityFns) {
-      assert(isa<Function>(C) && "Personality routine is not a function!");
-      Function *F = cast<Function>(C);
+    for (Function *F : PersonalityFns) {
       if (!isInstrumented(F))
         llvm::erase(FnsToInstrument, F);
     }

@@ -1829,13 +1829,13 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
   // function that has a personality function or that can be unwound past has
   // its personality function changed to a thunk that calls the personality
   // function wrapper in the runtime.
-  MapVector<Constant *, std::vector<Function *>> PersonalityFns;
+  MapVector<Function *, std::vector<Function *>> PersonalityFns;
   for (Function &F : M) {
     if (F.isDeclaration() || !F.hasFnAttribute(Attribute::SanitizeHWAddress))
       continue;
 
     if (F.hasPersonalityFn()) {
-      PersonalityFns[F.getPersonalityFn()->stripPointerCasts()].push_back(&F);
+      PersonalityFns[F.getPersonalityFn()].push_back(&F);
     } else if (!F.hasFnAttribute(Attribute::NoUnwind)) {
       PersonalityFns[nullptr].push_back(&F);
     }
@@ -1856,8 +1856,7 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
       ThunkName += ("." + P.first->getName()).str();
     FunctionType *ThunkFnTy = FunctionType::get(
         Int32Ty, {Int32Ty, Int32Ty, Int64Ty, PtrTy, PtrTy}, false);
-    bool IsLocal = P.first && (!isa<GlobalValue>(P.first) ||
-                               cast<GlobalValue>(P.first)->hasLocalLinkage());
+    bool IsLocal = P.first && P.first->hasLocalLinkage();
     auto *ThunkFn = Function::Create(ThunkFnTy,
                                      IsLocal ? GlobalValue::InternalLinkage
                                              : GlobalValue::LinkOnceODRLinkage,

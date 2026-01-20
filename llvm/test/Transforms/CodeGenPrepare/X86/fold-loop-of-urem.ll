@@ -782,9 +782,9 @@ for.body:
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-define void @weird_loop(i64 %sub.ptr.div.i56) personality ptr null {
+define void @weird_loop(i64 %sub.ptr.div.i56) {
 ; CHECK-LABEL: define void @weird_loop(
-; CHECK-SAME: i64 [[SUB_PTR_DIV_I56:%.*]]) personality ptr null {
+; CHECK-SAME: i64 [[SUB_PTR_DIV_I56:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ADD74_US:%.*]] = add nuw i64 0, 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[ADD74_US]], [[SUB_PTR_DIV_I56]]

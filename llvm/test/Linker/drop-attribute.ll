@@ -12,7 +12,7 @@
 ; CHECK-NEXT: call void @test_nocallback_declaration_definition_linked_in()
 ; Test that checks that nocallback attribute on a call-site in an invoke instruction is dropped.
 ; CHECK-NEXT: invoke void @test_nocallback_call_site(){{$}}
-define i32 @main() personality i8 0 {
+define i32 @main() personality ptr @__gxx_personality_v0 {
 entry:
   call void @test_nocallback_definition()
   call void @test_nocallback_call_site() nocallback
@@ -36,6 +36,7 @@ define void @test_nocallback_definition() nocallback {
 
 ; Test that checks that nocallback attribute on a call site is dropped.
 ; CHECK: declare void @test_nocallback_call_site(){{$}}
+declare i32 @__gxx_personality_v0(...)
 declare void @test_nocallback_call_site()
 
 ; Test that checks that nocallback attribute on an intrinsic is NOT dropped.

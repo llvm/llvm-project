@@ -5,6 +5,7 @@
 ; RUN: -passes='cgscc(inline,function(coro-elide,instsimplify,simplifycfg))' \
 ; RUN:   -aa-pipeline='basic-aa' | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare void @print(i32) nounwind
 
 %f.frame = type {i32}
@@ -23,7 +24,7 @@ declare void @CustomFree(ptr)
   [ptr @f.resume, ptr @f.destroy, ptr @f.cleanup]
 
 ; a coroutine start function
-define ptr @f() personality ptr null {
+define ptr @f() personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null,
                       ptr @f,
@@ -126,7 +127,7 @@ coro.ret:
 }
 
 ; CHECK-LABEL: @callResume_with_coro_suspend_2(
-define void @callResume_with_coro_suspend_2() personality ptr null {
+define void @callResume_with_coro_suspend_2() personality ptr @__gxx_personality_v0 {
 entry:
 ; CHECK: alloca [4 x i8], align 4
 ; CHECK-NOT: coro.begin
@@ -303,7 +304,7 @@ return:
 
 ; a coroutine start function (cannot elide heap alloc, due to second argument to
 ; coro.begin not pointint to coro.alloc)
-define ptr @f_no_elision() personality ptr null {
+define ptr @f_no_elision() personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null,
                       ptr @f_no_elision,

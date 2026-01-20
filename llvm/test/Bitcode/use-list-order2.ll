@@ -3,9 +3,10 @@
 ; Test 1
 @g1 = global i8 0
 
+declare i32 @__gxx_personality_v0(...)
 declare void @llvm.donothing() nounwind readnone
 
-define void @f.no_personality1() personality i8 0 {
+define void @f.no_personality1() personality ptr @__gxx_personality_v0 {
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
   %cleanup = landingpad i8 cleanup
@@ -18,7 +19,7 @@ normal:
 @g2 = global i8 -1
 @g3 = global i8 -1
 
-define void @f.no_personality2() personality i8 -1 {
+define void @f.no_personality2() personality ptr @__gxx_personality_v0 {
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
   %cleanup = landingpad i8 cleanup

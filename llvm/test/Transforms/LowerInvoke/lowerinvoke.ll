@@ -1,9 +1,10 @@
 ; RUN: opt < %s -passes=lower-invoke -S | FileCheck %s
 ; RUN: opt < %s -passes='lower-invoke' -S | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare i32 @external_func(i64 %arg)
 
-define i32 @invoke_test(i64 %arg) personality ptr null {
+define i32 @invoke_test(i64 %arg) personality ptr @__gxx_personality_v0 {
 entry:
   %result = invoke fastcc i32 @external_func(i64 inreg %arg)
       to label %cont unwind label %lpad

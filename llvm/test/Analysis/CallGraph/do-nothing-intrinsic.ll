@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes='require<callgraph>'
 ; PR13903
 
-define void @main() personality i8 0 {
+define void @main() personality ptr @__gxx_personality_v0 {
   invoke void @llvm.donothing()
           to label %ret unwind label %unw
 unw:
@@ -10,4 +10,5 @@ unw:
 ret:
   ret void
 }
+declare i32 @__gxx_personality_v0(...)
 declare void @llvm.donothing() nounwind readnone

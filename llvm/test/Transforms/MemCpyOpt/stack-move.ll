@@ -3,6 +3,7 @@
 
 %struct.Foo = type { i32, i32, i32 }
 
+declare i32 @__gxx_personality_v0(...)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 declare void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 declare void @llvm.memcpy.p2.p1.i64(ptr addrspace(2) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg)
@@ -393,8 +394,8 @@ define void @avoid_memory_use_last_user_crash() {
 }
 
 ; For multi-bb patch, we will insert it for next immediate post dominator block.
-define void @terminator_lastuse() personality i32 0 {
-; CHECK-LABEL: define void @terminator_lastuse() personality i32 0 {
+define void @terminator_lastuse() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define void @terminator_lastuse() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 ; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])

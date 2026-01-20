@@ -905,8 +905,8 @@ public:
   }
 
   /// Get the personality function associated with this function.
-  Constant *getPersonalityFn() const;
-  void setPersonalityFn(Constant *Fn);
+  Function *getPersonalityFn() const;
+  void setPersonalityFn(Function *Fn);
 
   /// Check whether this function has prefix data.
   bool hasPrefixData() const {

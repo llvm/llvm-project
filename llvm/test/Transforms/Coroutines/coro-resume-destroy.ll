@@ -1,6 +1,8 @@
 ; Tests that CoroEarly pass correctly lowers coro.resume, coro.destroy
 ; RUN: opt < %s -S -passes=coro-early | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
+
 ; CHECK-LABEL: @callResume(
 define void @callResume(ptr %hdl) {
 ; CHECK-NEXT: entry
@@ -18,7 +20,7 @@ entry:
 }
 
 ; CHECK-LABEL: @eh(
-define void @eh(ptr %hdl) personality ptr null {
+define void @eh(ptr %hdl) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT: entry
 entry:
 ;  CHECK-NEXT: %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)

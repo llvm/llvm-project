@@ -158,9 +158,7 @@ bool WinEHStatePass::runOnFunction(Function &F) {
   // Check the personality. Do nothing if this personality doesn't use funclets.
   if (!F.hasPersonalityFn())
     return false;
-  PersonalityFn = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
-  if (!PersonalityFn)
-    return false;
+  PersonalityFn = F.getPersonalityFn();
   Personality = classifyEHPersonality(PersonalityFn);
   if (!isFuncletEHPersonality(Personality))
     return false;

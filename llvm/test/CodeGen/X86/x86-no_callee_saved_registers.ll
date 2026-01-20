@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -O0 < %s | FileCheck --check-prefixes=CHECK,CHECK-O0 %s
 ; RUN: llc -mtriple=x86_64-unknown-unknown -O3 < %s | FileCheck --check-prefixes=CHECK,CHECK-O3 %s
 
+declare i32 @__gxx_personality_v0(...)
 declare void @external()
 declare void @no_csr() "no_callee_saved_registers"
 
@@ -107,7 +108,7 @@ define void @test2() {
 }
 
 ; on an invoke instead
-define i32 @test3() personality ptr undef {
+define i32 @test3() personality ptr @__gxx_personality_v0 {
 ; CHECK-O0-LABEL: test3:
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    pushq %rbp

@@ -6,7 +6,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-LABEL: define {{.*}}@foo(
 ; CHECK: landingpad
 ; CHECK: sideeffect(i32 2)
-define void @foo(i32 %cond) personality i8 0 {
+define void @foo(i32 %cond) personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @llvm.donothing() to label %normal unwind label %exception
 
@@ -30,7 +30,7 @@ normal:
 ;
 ; CHECK-LABEL: define {{.*}}@bar(
 ; CHECK: landingpad
-define void @bar(i32 %cond) personality i8 0 {
+define void @bar(i32 %cond) personality ptr @__gxx_personality_v0 {
 entry:
   br i1 undef, label %exit, label %continue
 
@@ -54,7 +54,7 @@ normal:
   ret void
 }
 
-define void @baz() personality i8 0 {
+define void @baz() personality ptr @__gxx_personality_v0 {
 entry:
   br i1 undef, label %exit, label %cold1
 
@@ -95,6 +95,7 @@ cold4:
 ; CHECK-LABEL: define {{.*}}@baz.cold.2(
 ; CHECK: sideeffect(i32 1)
 
+declare i32 @__gxx_personality_v0(...)
 declare void @sideeffect(i32)
 
 declare void @sink() cold

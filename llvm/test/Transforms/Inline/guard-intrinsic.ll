@@ -1,5 +1,6 @@
 ; RUN: opt -S -passes=always-inline < %s | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare void @llvm.experimental.guard(i1, ...)
 
 define i8 @callee(ptr %c_ptr) alwaysinline {
@@ -20,7 +21,7 @@ entry:
   ret void
 }
 
-define i32 @caller_1(ptr %c, ptr %ptr) personality i8 3 {
+define i32 @caller_1(ptr %c, ptr %ptr) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @caller_1(
 ; CHECK:  [[COND:%[^ ]+]] = load volatile i1, ptr %c
 ; CHECK-NEXT:  call void (i1, ...) @llvm.experimental.guard(i1 [[COND]], i32 1) [ "deopt"(i32 3, i32 1) ]

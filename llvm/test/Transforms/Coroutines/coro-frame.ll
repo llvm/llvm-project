@@ -1,7 +1,7 @@
 ; Check that we can handle spills of the result of the invoke instruction
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define ptr @f(i64 %this) presplitcoroutine personality i32 0 {
+define ptr @f(i64 %this) presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %this.addr = alloca i64
   store i64 %this, ptr %this.addr
@@ -49,6 +49,7 @@ pad:
 ; CHECK: call double @print(double %r.reload)
 ; CHECK: ret void
 
+declare i32 @__gxx_personality_v0(...)
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)

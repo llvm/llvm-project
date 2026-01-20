@@ -11,7 +11,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-NOT: noreturn
 
-define i32 @foo() personality i8 0 {
+define i32 @foo() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @llvm.donothing() to label %normal unwind label %exception
 
@@ -35,6 +35,7 @@ exit:
   ret i32 0
 }
 
+declare i32 @__gxx_personality_v0(...)
 declare void @sideeffect(i32)
 
 declare void @sink() cold

@@ -227,9 +227,12 @@ namespace llvm {
 
     /// getGlobalVal - Get a value with the specified name or ID, creating a
     /// forward reference record if needed.  This can return null if the value
-    /// exists but does not have the right type.
-    GlobalValue *getGlobalVal(const std::string &N, Type *Ty, LocTy Loc);
-    GlobalValue *getGlobalVal(unsigned ID, Type *Ty, LocTy Loc);
+    /// exists but does not have the right type. If ExpectFunction is true,
+    /// forward references will be created as Function placeholders.
+    GlobalValue *getGlobalVal(const std::string &N, Type *Ty, LocTy Loc,
+                              bool ExpectFunction = false);
+    GlobalValue *getGlobalVal(unsigned ID, Type *Ty, LocTy Loc,
+                              bool ExpectFunction = false);
 
     /// Get a Comdat with the specified name, creating a forward reference
     /// record if needed.
@@ -520,7 +523,8 @@ namespace llvm {
     };
 
     bool convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
-                             PerFunctionState *PFS);
+                             PerFunctionState *PFS,
+                             bool ExpectFunction = false);
 
     Value *checkValidVariableType(LocTy Loc, const Twine &Name, Type *Ty,
                                   Value *Val);
@@ -577,6 +581,7 @@ namespace llvm {
                     Type *ExpectedTy = nullptr);
     bool parseGlobalValue(Type *Ty, Constant *&C);
     bool parseGlobalTypeAndValue(Constant *&V);
+    bool parsePersonality(Function *&F);
     bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts);
     bool parseOptionalComdat(StringRef GlobalName, Comdat *&C);
     bool parseSanitizer(GlobalVariable *GV);

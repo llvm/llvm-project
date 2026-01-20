@@ -2,11 +2,12 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 ; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare void @fakeresume1(ptr)
 declare void @may_throw(ptr)
 declare void @print()
 
-define void @f(i1 %cond) #0 personality i32 3 {
+define void @f(i1 %cond) #0 personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %alloc = call ptr @malloc(i64 16) #3

@@ -2,12 +2,12 @@
 ; REQUIRES: asserts
 ; RUN: llc -verify-machineinstrs -max-registers-for-gc-values=256 -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
+
 ; Verify that FixupStatepointCallerSaved pass uses correct intruction for spilling a register after copyprop
-define dso_local ptr addrspace(1) @foo(ptr addrspace(1) %arg) gc "statepoint-example" personality ptr null {
+define dso_local ptr addrspace(1) @foo(ptr addrspace(1) %arg) gc "statepoint-example" personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: foo:
-; CHECK:       .Lfunc_begin0:
-; CHECK-NEXT:    .cfi_startproc
-; CHECK-NEXT:  // %bb.0:
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48

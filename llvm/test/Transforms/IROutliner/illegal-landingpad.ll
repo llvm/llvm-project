@@ -5,9 +5,10 @@
 ; in a similar section.  Dealing with exception handling inside of an outlined
 ; function would require a lot of handling that is not implemented yet.
 
+declare i32 @__gxx_personality_v0(...)
 declare void @llvm.donothing() nounwind readnone
 
-define void @function1() personality i8 3 {
+define void @function1() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @function1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -35,7 +36,7 @@ normal:
   ret void
 }
 
-define void @function2() personality i8 3 {
+define void @function2() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @function2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4

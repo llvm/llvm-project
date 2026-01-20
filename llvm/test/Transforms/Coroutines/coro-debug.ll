@@ -6,7 +6,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: noinline nounwind
-define ptr @flink(i32 %x) #0 personality i32 0 !dbg !6 {
+define ptr @flink(i32 %x) #0 personality ptr @__gxx_personality_v0 !dbg !6 {
 entry:
   %x.addr = alloca i32, align 4
   %coro_hdl = alloca ptr, align 8
@@ -82,6 +82,7 @@ ehcleanup:
 }
 
 ; Function Attrs: nounwind readnone speculatable
+declare i32 @__gxx_personality_v0(...)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind readnone speculatable
@@ -157,13 +158,13 @@ attributes #0 = { noinline nounwind presplitcoroutine }
 !32 = !DILocalVariable(name: "inline_asm", scope: !6, file: !7, line: 55, type: !11)
 
 ; Check that the original function is visible and capture its debug info id.
-; CHECK: define ptr @flink(i32 %x) #0 personality i32 0 !dbg ![[ORIG:[0-9]+]]
+; CHECK: define ptr @flink(i32 %x) #0 personality ptr @__gxx_personality_v0 !dbg ![[ORIG:[0-9]+]]
 
 ; Check that the resume function is present and capture its debug info id.
 ; Also check that it contains `#dbg_declare` and `#dbg_value` debug instructions
 ; making the debug variables available to the debugger.
 ;
-; CHECK: define internal fastcc void @flink.resume(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
+; CHECK: define internal fastcc void @flink.resume(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality ptr @__gxx_personality_v0 !dbg ![[RESUME:[0-9]+]]
 ; CHECK: entry.resume:
 ; CHECK: %[[DBG_PTR:.*]] = alloca ptr
 ; CHECK-NEXT: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_COROHDL:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
@@ -188,8 +189,8 @@ attributes #0 = { noinline nounwind presplitcoroutine }
 
 ; Check that the destroy and cleanup functions are present and capture their debug info id.
 ;
-; CHECK: define internal fastcc void @flink.destroy(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
-; CHECK: define internal fastcc void @flink.cleanup(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
+; CHECK: define internal fastcc void @flink.destroy(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality ptr @__gxx_personality_v0 !dbg ![[DESTROY:[0-9]+]]
+; CHECK: define internal fastcc void @flink.cleanup(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality ptr @__gxx_personality_v0 !dbg ![[CLEANUP:[0-9]+]]
 
 ; Check that the linkage name of the original function is set correctly.
 ;

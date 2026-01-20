@@ -3,6 +3,7 @@
 
 ; Make sure libcalls are replaced with intrinsic calls.
 
+declare i32 @__gxx_personality_v0(...)
 declare float @llvm.fabs.f32(float)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare double @llvm.fabs.f64(double)
@@ -1649,7 +1650,7 @@ define <2 x i1> @test_fabs_used_vp_is_fpclass_zero_or_pinf(<2 x float> %x, <2 x 
   ret <2 x i1> %is_fpclass
 }
 
-define void @test_fabs_nsz_used_by_invoke(float %x) personality ptr null {
+define void @test_fabs_nsz_used_by_invoke(float %x) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test_fabs_nsz_used_by_invoke(
 ; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    invoke void @use(float nofpclass(nan) [[SEL]])

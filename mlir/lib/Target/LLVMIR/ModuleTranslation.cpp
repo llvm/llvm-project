@@ -1527,7 +1527,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvm::Type *ty = llvm::PointerType::getUnqual(llvmFunc->getContext());
     if (llvm::Constant *pfunc = getLLVMConstant(ty, func.getPersonalityAttr(),
                                                 func.getLoc(), *this))
-      llvmFunc->setPersonalityFn(pfunc);
+      llvmFunc->setPersonalityFn(cast<llvm::Function>(pfunc));
   }
 
   if (std::optional<StringRef> section = func.getSection())

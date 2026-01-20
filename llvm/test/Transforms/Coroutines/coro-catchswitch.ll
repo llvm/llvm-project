@@ -5,7 +5,7 @@ target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc"
 
 ; CHECK-LABEL: define void @f(
-define void @f(i1 %cond) presplitcoroutine personality i32 0 {
+define void @f(i1 %cond) presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 8, ptr null, ptr null, ptr null)
   %size = call i32 @llvm.coro.size.i32()
@@ -63,6 +63,7 @@ cleanuppad:
 }
 
 ; Function Attrs: argmemonly nounwind readonly
+declare i32 @__gxx_personality_v0(...)
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
 
 ; Function Attrs: nounwind

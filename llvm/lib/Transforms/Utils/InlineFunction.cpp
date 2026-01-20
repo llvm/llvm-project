@@ -2525,18 +2525,14 @@ llvm::InlineResult llvm::CanInlineCallSite(const CallBase &CB,
   }
 
   // Get the personality function from the callee if it contains a landing pad.
-  Constant *CalledPersonality =
-      CalledFunc->hasPersonalityFn()
-          ? CalledFunc->getPersonalityFn()->stripPointerCasts()
-          : nullptr;
+  Function *CalledPersonality =
+      CalledFunc->hasPersonalityFn() ? CalledFunc->getPersonalityFn() : nullptr;
 
   // Find the personality function used by the landing pads of the caller. If it
   // exists, then check to see that it matches the personality function used in
   // the callee.
-  Constant *CallerPersonality =
-      Caller->hasPersonalityFn()
-          ? Caller->getPersonalityFn()->stripPointerCasts()
-          : nullptr;
+  Function *CallerPersonality =
+      Caller->hasPersonalityFn() ? Caller->getPersonalityFn() : nullptr;
   if (CalledPersonality) {
     // If the personality functions match, then we can perform the
     // inlining. Otherwise, we can't inline.
@@ -2640,13 +2636,11 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   }
 
   if (CalledFunc->hasPersonalityFn()) {
-    Constant *CalledPersonality =
-        CalledFunc->getPersonalityFn()->stripPointerCasts();
+    Function *CalledPersonality = CalledFunc->getPersonalityFn();
     if (!Caller->hasPersonalityFn()) {
       Caller->setPersonalityFn(CalledPersonality);
     } else
-      assert(Caller->getPersonalityFn()->stripPointerCasts() ==
-                 CalledPersonality &&
+      assert(Caller->getPersonalityFn() == CalledPersonality &&
              "CanInlineCallSite should have verified compatible personality");
   }
 

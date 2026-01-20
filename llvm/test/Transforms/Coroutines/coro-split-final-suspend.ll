@@ -1,7 +1,7 @@
 ; Tests that we'll generate the store to the final suspend index if we see the unwind coro end.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define ptr @unwind_coro_end() presplitcoroutine personality i32 3 {
+define ptr @unwind_coro_end() presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
@@ -71,7 +71,7 @@ eh.resume:
 ; CHECK: %[[INDEX:.+]] = load i1, ptr %index.addr
 ; CHECK-NEXT: switch i1 %[[INDEX]],
 
-define ptr @nounwind_coro_end(i1 %val) presplitcoroutine personality i32 3 {
+define ptr @nounwind_coro_end(i1 %val) presplitcoroutine personality ptr @__gxx_personality_v0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
@@ -114,6 +114,7 @@ suspend:
 ; CHECK:  %[[RESUME_FN:.+]] = load ptr, ptr %hdl, align 8
 ; CHECK:  %{{.*}} = icmp eq ptr %[[RESUME_FN]], null
 
+declare i32 @__gxx_personality_v0(...)
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)

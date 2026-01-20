@@ -1,5 +1,6 @@
 ; RUN: opt -S -passes=always-inline < %s | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare i8 @llvm.experimental.deoptimize.i8(...)
 declare i32 @llvm.experimental.deoptimize.i32(...)
 
@@ -56,7 +57,7 @@ entry:
 
 }
 
-define i32 @caller_1(ptr %c, ptr %ptr) personality i8 3 {
+define i32 @caller_1(ptr %c, ptr %ptr) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @caller_1(
 entry:
   %v = invoke i8 @callee(ptr %c)  [ "deopt"(i32 3) ] to label %normal

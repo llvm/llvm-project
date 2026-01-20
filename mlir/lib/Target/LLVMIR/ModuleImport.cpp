@@ -2599,22 +2599,8 @@ FlatSymbolRefAttr ModuleImport::getPersonalityAsAttr(llvm::Function *f) {
   if (!f->hasPersonalityFn())
     return nullptr;
 
-  llvm::Constant *pf = f->getPersonalityFn();
-
-  // If it directly has a name, we can use it.
-  if (pf->hasName())
-    return SymbolRefAttr::get(builder.getContext(), pf->getName());
-
-  // If it doesn't have a name, currently, only function pointers that are
-  // bitcast to i8* are parsed.
-  if (auto *ce = dyn_cast<llvm::ConstantExpr>(pf)) {
-    if (ce->getOpcode() == llvm::Instruction::BitCast &&
-        ce->getType() == llvm::PointerType::getUnqual(f->getContext())) {
-      if (auto *func = dyn_cast<llvm::Function>(ce->getOperand(0)))
-        return SymbolRefAttr::get(builder.getContext(), func->getName());
-    }
-  }
-  return FlatSymbolRefAttr();
+  llvm::Function *pf = f->getPersonalityFn();
+  return SymbolRefAttr::get(builder.getContext(), pf->getName());
 }
 
 static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {

@@ -1,9 +1,10 @@
 ; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
 ; CHECK: @main
 
+declare i32 @__gxx_personality_v0(...)
 %struct.wobble = type { i8 }
 
-define i32 @main() local_unnamed_addr personality ptr undef {
+define i32 @main() local_unnamed_addr personality ptr @__gxx_personality_v0 {
 bb12:
   br i1 false, label %bb13, label %bb28
 

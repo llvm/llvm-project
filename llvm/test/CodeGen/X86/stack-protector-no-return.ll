@@ -2,8 +2,10 @@
 ; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu -o - -verify-dom-info | FileCheck %s
 ; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu -disable-check-noreturn-call=true -o - -verify-dom-info | FileCheck --check-prefix=DISNOTET %s
 
+declare i32 @__gxx_personality_v0(...)
+
 ; Function Attrs: sspreq
-define void @_Z7catchesv() #0 personality ptr null {
+define void @_Z7catchesv() #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: _Z7catchesv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax

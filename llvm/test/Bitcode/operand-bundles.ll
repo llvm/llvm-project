@@ -1,5 +1,6 @@
 ; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 
+declare i32 @__gxx_personality_v0(...)
 declare void @callee0()
 declare void @callee1(i32,i32)
 
@@ -66,7 +67,7 @@ entry:
 ; Invoke versions of the above tests:
 
 
-define void @g0(i32* %ptr) personality i8 3 {
+define void @g0(i32* %ptr) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @g0(
  entry:
   %l = load i32, i32* %ptr
@@ -81,7 +82,7 @@ normal:
   ret void
 }
 
-define void @g1(i32* %ptr) personality i8 3 {
+define void @g1(i32* %ptr) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @g1(
  entry:
   %l = load i32, i32* %ptr
@@ -114,7 +115,7 @@ normal2:
   ret void
 }
 
-define void @g2(i32* %ptr) personality i8 3 {
+define void @g2(i32* %ptr) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @g2(
  entry:
   invoke void @callee0() [ "foo"() ] to label %normal unwind label %exception
@@ -127,7 +128,7 @@ normal:
   ret void
 }
 
-define void @g3(i32* %ptr) personality i8 3 {
+define void @g3(i32* %ptr) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @g3(
  entry:
   %l = load i32, i32* %ptr
@@ -142,7 +143,7 @@ normal:
   ret void
 }
 
-define void @g4(i32* %ptr) personality i8 3 {
+define void @g4(i32* %ptr) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @g4(
  entry:
   %l = load i32, i32* %ptr
@@ -158,7 +159,7 @@ normal:
   ret void
 }
 
-define void @g5(ptr %ptr) personality i8 3 {
+define void @g5(ptr %ptr) personality ptr @__gxx_personality_v0 {
 entry:
   %l = load i32, ptr %ptr, align 4
   %x = add i32 42, 1

@@ -1597,9 +1597,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     StringRef PersName = getEHPersonalityName(EHPersonality::Wasm_CXX);
     FunctionType *PersType =
         FunctionType::get(IRB.getInt32Ty(), /* isVarArg */ true);
-    Value *PersF = M.getOrInsertFunction(PersName, PersType).getCallee();
-    F.setPersonalityFn(
-        cast<Constant>(IRB.CreateBitCast(PersF, IRB.getPtrTy())));
+    FunctionCallee PersFC = M.getOrInsertFunction(PersName, PersType);
+    F.setPersonalityFn(cast<Function>(PersFC.getCallee()));
   }
 
   // Use the entry BB's debugloc as a fallback

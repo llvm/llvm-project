@@ -1036,12 +1036,12 @@ bool Function::callsFunctionThatReturnsTwice() const {
   return false;
 }
 
-Constant *Function::getPersonalityFn() const {
+Function *Function::getPersonalityFn() const {
   assert(hasPersonalityFn() && getNumOperands());
-  return cast<Constant>(Op<0>());
+  return cast<Function>(Op<0>());
 }
 
-void Function::setPersonalityFn(Constant *Fn) {
+void Function::setPersonalityFn(Function *Fn) {
   setHungoffOperand<0>(Fn);
   setValueSubclassDataBit(3, Fn != nullptr);
 }
