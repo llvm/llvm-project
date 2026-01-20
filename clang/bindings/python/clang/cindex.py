@@ -3058,9 +3058,7 @@ class CompletionChunk:
     def __init__(self, completionString: CObjP, key: int):
         self.cs = completionString
         self.key = key
-        self.__kind_id = conf.lib.clang_getCompletionChunkKind(
-                self.cs, self.key
-            )
+        self.__kind_id = conf.lib.clang_getCompletionChunkKind(self.cs, self.key)
 
     def __repr__(self) -> str:
         return "{'" + self.spelling + "', " + str(self.kind) + "}"
