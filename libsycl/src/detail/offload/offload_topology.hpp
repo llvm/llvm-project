@@ -62,8 +62,7 @@ struct OffloadTopology {
   range_view<const ol_device_handle_t>
   devicesForPlatform(size_t PlatformId) const {
     if (PlatformId >= MDevRangePerPlatformId.size()) {
-      assert(false && "Incorrect usage: platform id passed to "
-                      "devicesForPlatform must be within a valid range.");
+      assert(false && "Platform index exceeds number of platforms.");
       return {nullptr, 0};
     }
     return MDevRangePerPlatformId[PlatformId];
