@@ -910,8 +910,7 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::preserveInitSections(
     // Also preserve fini sections (.fini_array, .fini, .dtors)
     for (auto &FiniSection : G.sections()) {
       // Skip non-fini sections.
-      if (!isELFFinalizerSection(FiniSection.getName()) ||
-          FiniSection.empty())
+      if (!isELFFinalizerSection(FiniSection.getName()) || FiniSection.empty())
         continue;
 
       // Create the init symbol if it has not been created already and attach it
@@ -950,8 +949,8 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
   // Helper to get section type and priority for sorting.
   // Returns: {type_order, priority, has_priority}
   // type_order: 0 = .init_array, 1 = .init, 2 = .ctors
-  auto getInitSectionInfo = [](const jitlink::Section *Sec)
-      -> std::tuple<int, uint64_t, bool> {
+  auto getInitSectionInfo =
+      [](const jitlink::Section *Sec) -> std::tuple<int, uint64_t, bool> {
     StringRef Name = Sec->getName();
     if (Name.starts_with(".init_array")) {
       StringRef PrioStr = Name;
@@ -965,8 +964,8 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
     if (Name.starts_with(".ctors")) {
       StringRef PrioStr = Name;
       uint64_t Prio = 0;
-      bool HasPrio = PrioStr.consume_front(".ctors.") &&
-                     !PrioStr.getAsInteger(10, Prio);
+      bool HasPrio =
+          PrioStr.consume_front(".ctors.") && !PrioStr.getAsInteger(10, Prio);
       return {2, Prio, HasPrio};
     }
     return {3, 0, false};
@@ -975,35 +974,38 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
   // Sort init sections:
   // 1. .init_array sections first (ascending priority - lower runs first)
   // 2. .init sections next
-  // 3. .ctors sections last (descending priority - higher runs first, legacy behavior)
-  llvm::sort(OrderedInitSections, [&](const jitlink::Section *LHS,
-                                      const jitlink::Section *RHS) {
-    auto [LType, LPrio, LHasPrio] = getInitSectionInfo(LHS);
-    auto [RType, RPrio, RHasPrio] = getInitSectionInfo(RHS);
+  // 3. .ctors sections last (descending priority - higher runs first, legacy
+  // behavior)
+  llvm::sort(OrderedInitSections,
+             [&](const jitlink::Section *LHS, const jitlink::Section *RHS) {
+               auto [LType, LPrio, LHasPrio] = getInitSectionInfo(LHS);
+               auto [RType, RPrio, RHasPrio] = getInitSectionInfo(RHS);
 
-    if (LType != RType)
-      return LType < RType;
+               if (LType != RType)
+                 return LType < RType;
 
-    // Same type - sort by priority
-    if (LType == 0) {
-      // .init_array: ascending priority (lower priority number runs first)
-      if (LHasPrio && RHasPrio)
-        return LPrio < RPrio;
-      if (LHasPrio)
-        return true;
-      if (RHasPrio)
-        return false;
-    } else if (LType == 2) {
-      // .ctors: descending priority (higher priority number runs first)
-      if (LHasPrio && RHasPrio)
-        return LPrio > RPrio;
-      if (LHasPrio)
-        return true;
-      if (RHasPrio)
-        return false;
-    }
-    return LHS->getName() < RHS->getName();
-  });
+               // Same type - sort by priority
+               if (LType == 0) {
+                 // .init_array: ascending priority (lower priority number runs
+                 // first)
+                 if (LHasPrio && RHasPrio)
+                   return LPrio < RPrio;
+                 if (LHasPrio)
+                   return true;
+                 if (RHasPrio)
+                   return false;
+               } else if (LType == 2) {
+                 // .ctors: descending priority (higher priority number runs
+                 // first)
+                 if (LHasPrio && RHasPrio)
+                   return LPrio > RPrio;
+                 if (LHasPrio)
+                   return true;
+                 if (RHasPrio)
+                   return false;
+               }
+               return LHS->getName() < RHS->getName();
+             });
 
   for (auto &Sec : OrderedInitSections)
     ELFNixPlatformSecs.push_back(jitlink::SectionRange(*Sec).getRange());
@@ -1061,14 +1063,14 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerFiniSections(
   // Helper to get section type and priority for sorting.
   // Returns: {type_order, priority, has_priority}
   // type_order: 0 = .dtors, 1 = .fini, 2 = .fini_array
-  auto getFiniSectionInfo = [](const jitlink::Section *Sec)
-      -> std::tuple<int, uint64_t, bool> {
+  auto getFiniSectionInfo =
+      [](const jitlink::Section *Sec) -> std::tuple<int, uint64_t, bool> {
     StringRef Name = Sec->getName();
     if (Name.starts_with(".dtors")) {
       StringRef PrioStr = Name;
       uint64_t Prio = 0;
-      bool HasPrio = PrioStr.consume_front(".dtors.") &&
-                     !PrioStr.getAsInteger(10, Prio);
+      bool HasPrio =
+          PrioStr.consume_front(".dtors.") && !PrioStr.getAsInteger(10, Prio);
       return {0, Prio, HasPrio};
     }
     if (Name.starts_with(".fini"))
@@ -1088,34 +1090,36 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerFiniSections(
   // 1. .dtors sections first (ascending priority, as they appear)
   // 2. .fini sections next
   // 3. .fini_array sections last (descending priority - higher runs first)
-  llvm::sort(OrderedFiniSections, [&](const jitlink::Section *LHS,
-                                      const jitlink::Section *RHS) {
-    auto [LType, LPrio, LHasPrio] = getFiniSectionInfo(LHS);
-    auto [RType, RPrio, RHasPrio] = getFiniSectionInfo(RHS);
+  llvm::sort(OrderedFiniSections,
+             [&](const jitlink::Section *LHS, const jitlink::Section *RHS) {
+               auto [LType, LPrio, LHasPrio] = getFiniSectionInfo(LHS);
+               auto [RType, RPrio, RHasPrio] = getFiniSectionInfo(RHS);
 
-    if (LType != RType)
-      return LType < RType;
+               if (LType != RType)
+                 return LType < RType;
 
-    // Same type - sort by priority
-    if (LType == 0) {
-      // .dtors: no-priority first, then ascending priority (lower runs first)
-      if (LHasPrio && RHasPrio)
-        return LPrio < RPrio;
-      if (LHasPrio)
-        return false;
-      if (RHasPrio)
-        return true;
-    } else if (LType == 2) {
-      // .fini_array: no-priority first, then descending priority (higher runs first)
-      if (LHasPrio && RHasPrio)
-        return LPrio > RPrio;
-      if (LHasPrio)
-        return false;
-      if (RHasPrio)
-        return true;
-    }
-    return LHS->getName() < RHS->getName();
-  });
+               // Same type - sort by priority
+               if (LType == 0) {
+                 // .dtors: no-priority first, then ascending priority (lower
+                 // runs first)
+                 if (LHasPrio && RHasPrio)
+                   return LPrio < RPrio;
+                 if (LHasPrio)
+                   return false;
+                 if (RHasPrio)
+                   return true;
+               } else if (LType == 2) {
+                 // .fini_array: no-priority first, then descending priority
+                 // (higher runs first)
+                 if (LHasPrio && RHasPrio)
+                   return LPrio > RPrio;
+                 if (LHasPrio)
+                   return false;
+                 if (RHasPrio)
+                   return true;
+               }
+               return LHS->getName() < RHS->getName();
+             });
 
   for (auto *Sec : OrderedFiniSections)
     ELFNixFiniSecs.push_back(jitlink::SectionRange(*Sec).getRange());
