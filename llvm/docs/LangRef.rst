@@ -15113,14 +15113,16 @@ Let’s consider the following code:
    int val = my_struct->b;
 
 
-The frontend in this example knows the following types have the same physical
-layout (even if it doesn't know the exact physical layout):
+In this example, the frontend doesn't know the exact physical layout, but
+known those logical layouts are lowered to the same physical layout:
+
     - `{ i32, i32, i32, i32 }`
     - `[ i32 x 4 ]`
 
 This means is is valid to lower the following code to either:
 
 .. code-block:: llvm
+
     %S = type { i32, i32, i32, i32 }
     %src = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 1)
     load i32, ptr %src
@@ -15128,6 +15130,7 @@ This means is is valid to lower the following code to either:
 Or:
 
 .. code-block:: llvm
+
     %src = call ptr @llvm.structured.gep(ptr elementtype([ 4 x i32 ]) %my_struct, i32 1)
     load i32, ptr %src
 
