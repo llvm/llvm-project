@@ -1027,7 +1027,6 @@ set(files
   filesystem
   flat_map
   flat_set
-  float.h
   format
   forward_list
   fstream

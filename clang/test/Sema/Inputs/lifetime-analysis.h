@@ -58,6 +58,12 @@ struct vector {
   void insert(iterator, T&&);
 };
 
+template<typename A, typename B>
+struct pair {
+  A first;
+  B second;
+};
+
 template<typename T>
 struct basic_string_view {
   basic_string_view();

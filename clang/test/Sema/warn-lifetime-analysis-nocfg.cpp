@@ -986,8 +986,35 @@ std::string_view test_opt_strings(std::optional<std::vector<std::string>> string
 namespace iterator_arrow {
 std::string_view test() {
   std::vector<std::string> strings;
-  // FIXME: Track operator-> of iterators.
-  return strings.begin()->data();
+  return strings.begin()->data(); // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+}
+
+void operator_star_arrow_reference() {
+  std::vector<std::string> v;
+  const char* p = v.begin()->data();
+  const char* q = (*v.begin()).data();
+  const std::string& r = *v.begin();
+
+  auto temporary = []() { return std::vector<std::string>{{"1"}}; };
+  const char* x = temporary().begin()->data();    // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const char* y = (*temporary().begin()).data();  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const std::string& z = (*temporary().begin());  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+
+  use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
+}
+
+void operator_star_arrow_of_iterators_false_positive_no_cfg_analysis() {
+  std::vector<std::pair<int, std::string>> v;
+  const char* p = v.begin()->second.data();
+  const char* q = (*v.begin()).second.data();
+  const std::string& r = (*v.begin()).second;
+
+  auto temporary = []() { return std::vector<std::pair<int, std::string>>{{1, "1"}}; };
+  const char* x = temporary().begin()->second.data();   // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const std::string& z = (*temporary().begin()).second; // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+
+  use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
 }
 } // namespace iterator_arrow
 
@@ -1027,24 +1054,27 @@ struct S {
 };
 struct Q {
   const S* get() const [[clang::lifetimebound]];
+  ~Q();
 };
 
 std::string_view foo(std::string_view sv [[clang::lifetimebound]]);
 
-// FIXME: Detect this using the CFG-based lifetime analysis.
-//        Detect dangling references to struct field.
-//        https://github.com/llvm/llvm-project/issues/176144
 void test1() {
   std::string_view k1 = S().sv; // OK
-  std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}}
+  std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}} \
+                               // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
   std::string_view k3 = Q().get()->sv; // OK
-  std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}}
+  std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}} \
+                                       // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
-  std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}}
-  std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}}
 
-  use(k1, k2, k3, k4, lb1, lb2);
+  std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}} \
+                                     // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}} \
+                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+
+  use(k1, k2, k3, k4, lb1, lb2);  // cfg-note 4 {{later used here}}
 }
 
 struct Bar {};

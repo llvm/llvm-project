@@ -100,7 +100,8 @@ bool isPointerLikeType(QualType QT) {
   return isGslPointerType(QT) || QT->isPointerType() || QT->isNullPtrType();
 }
 
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
+bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+                                  bool RunningUnderLifetimeSafety) {
   if (!Callee)
     return false;
   if (auto *Conv = dyn_cast<CXXConversionDecl>(Callee))
@@ -113,10 +114,14 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
       !isGslOwnerType(Callee->getFunctionObjectParameterType()))
     return false;
 
-  // Track dereference operator for GSL pointers in STL.
-  if (isGslPointerType(Callee->getFunctionObjectParameterType()))
-    if (Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Star)
-      return true;
+  // Track dereference operator for GSL pointers in STL. Only do so for lifetime
+  // safety analysis and not for Sema's statement-local analysis as it starts
+  // to have false-positives.
+  if (RunningUnderLifetimeSafety &&
+      isGslPointerType(Callee->getFunctionObjectParameterType()) &&
+      (Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Star ||
+       Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Arrow))
+    return true;
 
   if (isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier())
