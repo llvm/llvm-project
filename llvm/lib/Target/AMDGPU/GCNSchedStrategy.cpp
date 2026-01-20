@@ -31,6 +31,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1422,11 +1423,7 @@ bool PreRARematStage::initGCNSchedStage() {
     dbgs() << ")\n";
   });
 
-  if (AchievedOcc > DAG.MinOccupancy) {
-    DAG.MinOccupancy = AchievedOcc;
-    SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-    MFI.increaseOccupancy(MF, DAG.MinOccupancy);
-  }
+  DAG.setTargetOccupancy(getStageTargetOccupancy());
   return true;
 }
 
@@ -1537,10 +1534,8 @@ bool UnclusteredHighRPStage::initGCNRegion() {
   // occupancy changes in the DAG and MFI.
   if (!IsAnyRegionScheduled && IsSchedulingThisRegion) {
     IsAnyRegionScheduled = true;
-    if (MFI.getMaxWavesPerEU() > DAG.MinOccupancy) {
-      DAG.MinOccupancy = TempTargetOccupancy;
-      MFI.increaseOccupancy(MF, TempTargetOccupancy);
-    }
+    if (MFI.getMaxWavesPerEU() > DAG.MinOccupancy)
+      DAG.setTargetOccupancy(TempTargetOccupancy);
   }
   return IsSchedulingThisRegion;
 }
@@ -1587,6 +1582,23 @@ void GCNSchedStage::finalizeGCNRegion() {
   if (DAG.RegionsWithIGLPInstrs[RegionIdx] &&
       StageID != GCNSchedStageID::UnclusteredHighRPReschedule)
     SavedMutations.swap(DAG.Mutations);
+}
+
+void PreRARematStage::finalizeGCNRegion() {
+  GCNSchedStage::finalizeGCNRegion();
+  // When the goal is to increase occupancy, all regions must reach the target
+  // occupancy for rematerializations to be possibly useful, otherwise we will
+  // just hurt latency for no benefit. If minimum occupancy drops below the
+  // target there is no point in trying to re-schedule further regions.
+  if (TargetOcc) {
+    RegionReverts.emplace_back(RegionIdx, Unsched, PressureBefore);
+    if (DAG.MinOccupancy < *TargetOcc) {
+      REMAT_DEBUG(dbgs() << "Region " << RegionIdx
+                         << " cannot meet occupancy target, interrupting "
+                            "re-scheduling in all regions\n");
+      RescheduleRegions.reset();
+    }
+  }
 }
 
 void GCNSchedStage::checkScheduling() {
@@ -1862,8 +1874,7 @@ bool ClusteredLowOccStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool PreRARematStage::shouldRevertScheduling(unsigned WavesAfter) {
-  return GCNSchedStage::shouldRevertScheduling(WavesAfter) ||
-         mayCauseSpilling(WavesAfter) || (TargetOcc && WavesAfter < TargetOcc);
+  return mayCauseSpilling(WavesAfter);
 }
 
 bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
@@ -2487,6 +2498,10 @@ bool RewriteMFMAFormStage::rewrite(
   return true;
 }
 
+unsigned PreRARematStage::getStageTargetOccupancy() const {
+  return TargetOcc ? *TargetOcc : MFI.getMinWavesPerEU();
+}
+
 bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   const Function &F = MF.getFunction();
 
@@ -2828,13 +2843,31 @@ bool PreRARematStage::isReMaterializable(const MachineInstr &MI) {
 
 void PreRARematStage::finalizeGCNSchedStage() {
   // We consider that reducing spilling is always beneficial so we never
-  // rollback rematerializations in such cases. It's also possible that
-  // rescheduling lowers occupancy over the one achieved just through remats, in
-  // which case we do not want to rollback either (the rescheduling was already
-  // reverted in PreRARematStage::shouldRevertScheduling in such cases).
-  unsigned MaxOcc = std::max(AchievedOcc, DAG.MinOccupancy);
-  if (!TargetOcc || MaxOcc >= *TargetOcc)
+  // rollback rematerializations or revert scheduling in such cases.
+  if (!TargetOcc)
     return;
+
+  // When increasing occupancy, it is possible that re-scheduling is not able to
+  // achieve the target occupancy in all regions, in which case re-scheduling in
+  // all regions should be reverted.
+  if (DAG.MinOccupancy >= *TargetOcc)
+    return;
+  for (const auto &[RegionIdx, OrigMIOrder, MaxPressure] : RegionReverts) {
+    REMAT_DEBUG(dbgs() << "Reverting re-scheduling in region " << RegionIdx
+                        << '\n');
+    DAG.Pressure[RegionIdx] = MaxPressure;
+    modifyRegionSchedule(RegionIdx, RegionBB[RegionIdx], OrigMIOrder);
+  }
+
+  // It is possible that re-scheduling lowers occupancy over the one achieved
+  // just through rematerializations, in which case we revert re-scheduling in
+  // all regions but do not roll back rematerializations.
+  if (AchievedOcc >= *TargetOcc) {
+    DAG.setTargetOccupancy(AchievedOcc);
+    return;
+  }
+  // Reset the target occupancy to what it was pre-rematerialization.
+  DAG.setTargetOccupancy(*TargetOcc - 1);
 
   REMAT_DEBUG(dbgs() << "Rolling back all rematerializations\n");
   const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
@@ -2901,6 +2934,14 @@ void GCNScheduleDAGMILive::updateRegionBoundaries(
     RegionBounds.first = std::next(MI); // Removal
   else
     RegionBounds.first = NewMI; // Insertion
+}
+
+void GCNScheduleDAGMILive::setTargetOccupancy(unsigned TargetOccupancy) {
+  MinOccupancy = TargetOccupancy;
+  if (MFI.getOccupancy() < TargetOccupancy)
+    MFI.increaseOccupancy(MF, MinOccupancy);
+  else
+    MFI.limitOccupancy(MinOccupancy);
 }
 
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
