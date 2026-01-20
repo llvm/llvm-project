@@ -1351,7 +1351,6 @@ def V_FMAAK_F64 : VOP2_Pseudo<"v_fmaak_f64", VOP_MADAK_F64, [], "">;
 // A dedicated profile for V_PK_FMAC_F16.
 def VOP_V2F16_V2F16_V2F16_SPLAT : VOPProfile <[v2f16, v2f16, v2f16, untyped]> {
   let Src0RC32 = VSrc_v2f16_splat;
-  let Src1RC32 = VSrc_v2f16_splat;
 }
 
 let SubtargetPredicate = HasPkFmacF16Inst in {

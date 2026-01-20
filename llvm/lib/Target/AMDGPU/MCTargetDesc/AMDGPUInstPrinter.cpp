@@ -623,8 +623,25 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
         printImmediateFP16(static_cast<uint16_t>(Imm), STI, O))
       return;
     break;
-  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
-    llvm_unreachable("OPERAND_REG_IMM_V2FP16_SPLAT is not supported");
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT: {
+    if (AMDGPU::isGFX11Plus(STI)) {
+      // For GFX11+, the inline constant is duplicated to both channels, so we
+      // need to check if the low and high 16 bits are the same, and then if
+      // they can be printed as inline constant values.
+      uint16_t Lo16 = static_cast<uint16_t>(Imm & 0xFFFF);
+      uint16_t Hi16 = static_cast<uint16_t>((Imm >> 16) & 0xFFFF);
+      if (Lo16 == Hi16 &&
+          printImmediateFP16(static_cast<uint16_t>(Imm), STI, O))
+        return;
+    } else {
+      // For pre-GFX11, the inline constant is in the low 16 bits, so we need
+      // to check if it can be printed as inline constant value.
+      if (isUInt<16>(Imm) &&
+          printImmediateFP16(static_cast<uint16_t>(Imm), STI, O))
+        return;
+    }
+    break;
+  }
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     if (isUInt<16>(Imm) &&
@@ -869,14 +886,13 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_V2INT16:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP16:
+    case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
       printImmediateV216(Op.getImm(), OpTy, STI, O);
       break;
-    case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
-      llvm_unreachable("OPERAND_REG_IMM_V2FP16_SPLAT is not supported");
     case MCOI::OPERAND_UNKNOWN:
     case MCOI::OPERAND_PCREL:
       O << formatDec(Op.getImm());

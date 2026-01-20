@@ -1778,9 +1778,6 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
 LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
 
-/// Returns true if \p Opc is a V_PK_FMAC_F16 instruction variant.
-LLVM_READONLY bool isPKFMACF16(unsigned Opc);
-
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset);

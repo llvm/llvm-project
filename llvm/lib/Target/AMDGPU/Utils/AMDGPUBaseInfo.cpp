@@ -3259,6 +3259,7 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
   case OPERAND_REG_IMM_INT32:
   case OPERAND_REG_IMM_V2BF16:
   case OPERAND_REG_IMM_V2FP16:
+  case OPERAND_REG_IMM_V2FP16_SPLAT:
   case OPERAND_REG_IMM_V2FP32:
   case OPERAND_REG_IMM_V2INT16:
   case OPERAND_REG_IMM_V2INT32:
@@ -3269,8 +3270,6 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
     return Lo_32(Imm);
   case OPERAND_REG_IMM_FP64:
     return IsLit ? Imm : Hi_32(Imm);
-  case OPERAND_REG_IMM_V2FP16_SPLAT:
-    llvm_unreachable("OPERAND_REG_IMM_V2FP16_SPLAT is not supported");
   }
   return Imm;
 }
@@ -3694,29 +3693,6 @@ bool isPackedFP32Inst(unsigned Opc) {
   case AMDGPU::V_PK_MUL_F32_gfx12:
   case AMDGPU::V_PK_FMA_F32:
   case AMDGPU::V_PK_FMA_F32_gfx12:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool isPKFMACF16(unsigned Opc) {
-  switch (Opc) {
-  case AMDGPU::V_PK_FMAC_F16_dpp:
-  case AMDGPU::V_PK_FMAC_F16_e32:
-  case AMDGPU::V_PK_FMAC_F16_e64:
-  case AMDGPU::V_PK_FMAC_F16_e64_dpp:
-  case AMDGPU::V_PK_FMAC_F16_sdwa:
-  case AMDGPU::V_PK_FMAC_F16_dpp8_gfx10:
-  case AMDGPU::V_PK_FMAC_F16_dpp_gfx10:
-  case AMDGPU::V_PK_FMAC_F16_dpp_gfx9:
-  case AMDGPU::V_PK_FMAC_F16_e32_gfx10:
-  case AMDGPU::V_PK_FMAC_F16_e32_gfx11:
-  case AMDGPU::V_PK_FMAC_F16_e32_gfx12:
-  case AMDGPU::V_PK_FMAC_F16_e32_gfx9:
-  case AMDGPU::V_PK_FMAC_F16_e32_vi:
-  case AMDGPU::V_PK_FMAC_F16_e64_gfx9:
-  case AMDGPU::V_PK_FMAC_F16_sdwa_gfx9:
     return true;
   default:
     return false;
