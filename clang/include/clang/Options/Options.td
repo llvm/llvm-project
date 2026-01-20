@@ -7307,7 +7307,6 @@ defm : FlangIgnoredDiagOpt<"target-lifetime">;
 let Group = sycl_Group in {
 def fsycl : Flag<["-"], "fsycl">,
   HelpText<"Enable SYCL C++ extensions">;
-def fno_sycl : Flag<["-"], "fno-sycl">, HelpText<"Disable SYCL C++ extensions">;
 def fsycl_device_only : Flag<["-"], "fsycl-device-only">,
   Alias<offload_device_only>, HelpText<"Compile SYCL code for device only">;
 def fsycl_host_only : Flag<["-"], "fsycl-host-only">,
