@@ -33,28 +33,26 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 17
 
-template <typename _Result, typename _Source, bool _IsSigned = is_signed<_Source>::value>
-struct __ct_abs;
-
-template <typename _Result, typename _Source>
-struct __ct_abs<_Result, _Source, true> {
-  constexpr _LIBCPP_HIDE_FROM_ABI _Result operator()(_Source __t) const noexcept {
+template <class _Result, class _Source>
+constexpr _LIBCPP_HIDE_FROM_ABI _Result __abs_in_type(_Source __t) noexcept {
+  if constexpr (is_signed_v<_Source>) {
     if (__t >= 0)
       return __t;
     if (__t == numeric_limits<_Source>::min())
       return -static_cast<_Result>(__t);
     return -__t;
+  } else {
+    return __t;
   }
-};
+}
 
-template <typename _Result, typename _Source>
-struct __ct_abs<_Result, _Source, false> {
-  constexpr _LIBCPP_HIDE_FROM_ABI _Result operator()(_Source __t) const noexcept { return __t; }
-};
-
-template <class _Tp>
-constexpr _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
-  static_assert(!is_signed<_Tp>::value, "");
+template <class _Tp, class _Up>
+constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> gcd(_Tp __m, _Up __n) {
+  static_assert(is_integral<_Tp>::value && is_integral<_Up>::value, "Arguments to gcd must be integer types");
+  static_assert(!is_same<__remove_cv_t<_Tp>, bool>::value, "First argument to gcd cannot be bool");
+  static_assert(!is_same<__remove_cv_t<_Up>, bool>::value, "Second argument to gcd cannot be bool");
+  using _Rp = common_type_t<_Tp, _Up>;
+  using _Wp = make_unsigned_t<_Rp>;
 
   // Using Binary GCD algorithm https://en.wikipedia.org/wiki/Binary_GCD_algorithm, based on an implementation
   // from https://lemire.me/blog/2024/04/13/greatest-common-divisor-the-extended-euclidean-algorithm-and-speed/
@@ -67,22 +65,25 @@ constexpr _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
   //
   // And standard gcd algorithm where instead of modulo, minus is used.
 
+  auto __a = static_cast<_Wp>(std::__abs_in_type<_Rp>(__m));
+  auto __b = static_cast<_Wp>(std::__abs_in_type<_Rp>(__n));
+
   if (__a < __b) {
-    _Tp __tmp = __b;
+    _Wp __tmp = __b;
     __b       = __a;
     __a       = __tmp;
   }
   if (__b == 0)
-    return __a;
+    return static_cast<_Rp>(__a);
   __a %= __b; // Make both argument of the same size, and early result in the easy case.
   if (__a == 0)
-    return __b;
+    return static_cast<_Rp>(__b);
 
-  _Tp __c     = __a | __b;
+  _Wp __c     = __a | __b;
   int __shift = std::__countr_zero(__c);
   __a >>= std::__countr_zero(__a);
   do {
-    _Tp __t = __b >> std::__countr_zero(__b);
+    _Wp __t = __b >> std::__countr_zero(__b);
     if (__a > __t) {
       __b = __a - __t;
       __a = __t;
@@ -90,18 +91,7 @@ constexpr _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
       __b = __t - __a;
     }
   } while (__b != 0);
-  return __a << __shift;
-}
-
-template <class _Tp, class _Up>
-constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> gcd(_Tp __m, _Up __n) {
-  static_assert(is_integral<_Tp>::value && is_integral<_Up>::value, "Arguments to gcd must be integer types");
-  static_assert(!is_same<__remove_cv_t<_Tp>, bool>::value, "First argument to gcd cannot be bool");
-  static_assert(!is_same<__remove_cv_t<_Up>, bool>::value, "Second argument to gcd cannot be bool");
-  using _Rp = common_type_t<_Tp, _Up>;
-  using _Wp = make_unsigned_t<_Rp>;
-  return static_cast<_Rp>(
-      std::__gcd(static_cast<_Wp>(__ct_abs<_Rp, _Tp>()(__m)), static_cast<_Wp>(__ct_abs<_Rp, _Up>()(__n))));
+  return static_cast<_Rp>(__a << __shift);
 }
 
 template <class _Tp, class _Up>
@@ -113,8 +103,8 @@ constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> lcm(_Tp __m, _Up __n) {
     return 0;
 
   using _Rp  = common_type_t<_Tp, _Up>;
-  _Rp __val1 = __ct_abs<_Rp, _Tp>()(__m) / std::gcd(__m, __n);
-  _Rp __val2 = __ct_abs<_Rp, _Up>()(__n);
+  _Rp __val1 = std::__abs_in_type<_Rp>(__m) / std::gcd(__m, __n);
+  _Rp __val2 = std::__abs_in_type<_Rp>(__n);
   _Rp __res;
   [[maybe_unused]] bool __overflow = __builtin_mul_overflow(__val1, __val2, std::addressof(__res));
   _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__overflow, "Overflow in lcm");

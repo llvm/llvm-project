@@ -16,7 +16,7 @@ jobs:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2022, windows-2025, macos-14]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2022, windows-2025, macos-15]
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
@@ -35,7 +35,7 @@ jobs:
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
-          - os: macos-14
+          - os: macos-15
             compiler:
               c_compiler: clang
               cpp_compiler: clang++

@@ -18,6 +18,7 @@ set(NVPTXCodeGen_sources
   NVPTXAssignValidGlobalNames.cpp
   NVPTXAtomicLower.cpp
   NVPTXCtorDtorLowering.cpp
+  NVPTXIRPeephole.cpp
   NVPTXForwardParams.cpp
   NVPTXFrameLowering.cpp
   NVPTXGenericToNVVM.cpp

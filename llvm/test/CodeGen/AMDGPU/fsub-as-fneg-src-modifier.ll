@@ -2,6 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=CHECK,SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=CHECK,GISEL %s
 
+; TODO: Switch test to use -new-reg-bank-select after adding G_FCANONICALIZE support.
+
 ; Test that fneg is folded into source modifiers when it wasn't
 ; possible to fold fsub to fneg without context.
 

@@ -130,24 +130,3 @@ LogicalResult LLVM::detail::vectorOneToOneRewrite(
   return handleMultidimensionalVectors(op, operands, typeConverter, callback,
                                        rewriter);
 }
-
-/// Return the given type if it's a floating point type. If the given type is
-/// a vector type, return its element type if it's a floating point type.
-static FloatType getFloatingPointType(Type type) {
-  if (auto floatType = dyn_cast<FloatType>(type))
-    return floatType;
-  if (auto vecType = dyn_cast<VectorType>(type))
-    return dyn_cast<FloatType>(vecType.getElementType());
-  return nullptr;
-}
-
-bool LLVM::detail::isUnsupportedFloatingPointType(
-    const TypeConverter &typeConverter, Type type) {
-  FloatType floatType = getFloatingPointType(type);
-  if (!floatType)
-    return false;
-  Type convertedType = typeConverter.convertType(floatType);
-  if (!convertedType)
-    return true;
-  return !isa<FloatType>(convertedType);
-}

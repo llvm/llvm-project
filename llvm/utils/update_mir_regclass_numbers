@@ -5,7 +5,7 @@ set -e
 # class numbers change.
 
 if [ $# -eq 0 ] ; then
-    echo "usage: ${0##*/} /path/to/<Target>GenRegisterInfo.inc test/CodeGen/<Target>/testfile.mir..." >&2
+    echo "usage: ${0##*/} /path/to/<Target>GenRegisterInfoEnums.inc test/CodeGen/<Target>/testfile.mir..." >&2
     exit 1
 fi
 

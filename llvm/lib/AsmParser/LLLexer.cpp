@@ -1129,15 +1129,25 @@ lltok::Kind LLLexer::Lex0x() {
     HexToIntPair(TokStart+3, CurPtr, Pair);
     APFloatVal = APFloat(APFloat::PPCDoubleDouble(), APInt(128, Pair));
     return lltok::APFloat;
-  case 'H':
-    APFloatVal = APFloat(APFloat::IEEEhalf(),
-                         APInt(16,HexIntToVal(TokStart+3, CurPtr)));
+  case 'H': {
+    uint64_t Val = HexIntToVal(TokStart + 3, CurPtr);
+    if (!llvm::isUInt<16>(Val)) {
+      LexError("hexadecimal constant too large for half (16-bit)");
+      return lltok::Error;
+    }
+    APFloatVal = APFloat(APFloat::IEEEhalf(), APInt(16, Val));
     return lltok::APFloat;
-  case 'R':
+  }
+  case 'R': {
     // Brain floating point
-    APFloatVal = APFloat(APFloat::BFloat(),
-                         APInt(16, HexIntToVal(TokStart + 3, CurPtr)));
+    uint64_t Val = HexIntToVal(TokStart + 3, CurPtr);
+    if (!llvm::isUInt<16>(Val)) {
+      LexError("hexadecimal constant too large for bfloat (16-bit)");
+      return lltok::Error;
+    }
+    APFloatVal = APFloat(APFloat::BFloat(), APInt(16, Val));
     return lltok::APFloat;
+  }
   }
 }
 
