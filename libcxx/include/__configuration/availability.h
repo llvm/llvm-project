@@ -286,6 +286,11 @@
 #define _LIBCPP_AVAILABILITY_HAS_VERBOSE_ABORT _LIBCPP_INTRODUCED_IN_LLVM_15
 #define _LIBCPP_AVAILABILITY_VERBOSE_ABORT _LIBCPP_INTRODUCED_IN_LLVM_15_ATTRIBUTE
 
+// This controls the availability of floating-point std::to_chars functions.
+// These overloads were added later than the integer overloads.
+#define _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_14
+#define _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_14_ATTRIBUTE
+
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
 // iostreams by providing a single strong definition in the shared library.
@@ -298,11 +303,6 @@
 #else
 #  define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 0
 #endif
-
-// This controls the availability of floating-point std::to_chars functions.
-// These overloads were added later than the integer overloads.
-#define _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_14
-#define _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_14_ATTRIBUTE
 
 // Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
 #  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8
