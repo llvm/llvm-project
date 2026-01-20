@@ -303,15 +303,10 @@ list(REMOVE_ITEM root_public_headers ${root_private_headers})
 # Skip the initial copy of lldb-defines.h. The fixed version is generated at build time.
 list(REMOVE_ITEM root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h)
 
-add_custom_command(
+add_custom_target(liblldb-header-staging-dir
   OUTPUT ${lldb_header_staging_dir}
   COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_header_staging_dir}
   COMMENT "LLDB headers: create staging directory for LLDB headers")
-
-# Create a target for the staging directory so that all header staging targets
-# can depend on it. This is required for Xcode's new build system which doesn't
-# allow custom commands attached to multiple targets without a common dependency.
-add_custom_target(liblldb-header-staging-dir DEPENDS ${lldb_header_staging_dir})
 
 find_program(unifdef_EXECUTABLE unifdef)
 
