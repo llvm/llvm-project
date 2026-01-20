@@ -13,7 +13,7 @@ module param_array_module
 
 contains
 
-! Test 1: Parameter array with dynamic index in target region with teams distribute
+! Parameter array with dynamic index in target region with teams distribute
 ! CHECK-LABEL: func.func @_QMparam_array_modulePtest_param_array_target
 subroutine test_param_array_target(idx)
   integer, intent(in) :: idx
@@ -56,5 +56,34 @@ subroutine test_scalar_param()
   !$omp end target
 
 end subroutine test_scalar_param
+
+! Test character scalar parameter with dynamic substring access
+! CHECK-LABEL: func.func @_QMparam_array_modulePtest_char_substring
+subroutine test_char_substring(start_idx, end_idx)
+  integer, intent(in) :: start_idx, end_idx
+  character(len=20), parameter :: char_scalar = "constant_string_data"
+  character(len=10) :: result
+
+  ! CHECK: omp.map.info{{.*}}map_clauses(implicit, to){{.*}}{name = "char_scalar"}
+  !$omp target
+    ! Dynamic substring access - character scalar must be mapped
+    result = char_scalar(start_idx:end_idx)
+  !$omp end target
+
+end subroutine test_char_substring
+
+! Verify character scalar with constant substring is NOT mapped
+! CHECK-LABEL: func.func @_QMparam_array_modulePtest_char_const_substring
+subroutine test_char_const_substring()
+  character(len=20), parameter :: char_const = "constant_string_data"
+  character(len=5) :: result
+
+  ! CHECK-NOT: omp.map.info{{.*}}{name = "char_const"}
+  !$omp target
+    ! Constant substring access - can be inlined, no mapping needed
+    result = char_const(1:5)
+  !$omp end target
+
+end subroutine test_char_const_substring
 
 end module param_array_module
