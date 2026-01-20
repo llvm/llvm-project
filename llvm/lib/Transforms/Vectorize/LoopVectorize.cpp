@@ -7365,8 +7365,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
            "start value");
     MainResumeValue = Cmp->getOperand(0);
   } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
-    auto *Sel = cast<SelectInst>(MainResumeValue);
-    MainResumeValue = Sel->getFalseValue();
+    MainResumeValue = cast<SelectInst>(MainResumeValue)->getFalseValue();
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
 
@@ -9452,13 +9451,13 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         // Find the icmp user of RdxResult to get the sentinel value.
         // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
         VPValue *SentinelVPV = nullptr;
-        for (VPUser *U : RdxResult->users()) {
-          if (match(U, VPlanPatternMatch::m_SpecificICmp(
-                           ICmpInst::ICMP_NE, m_Specific(RdxResult),
-                           m_VPValue(SentinelVPV))))
-            break;
-        }
-        assert(SentinelVPV && "expected to find icmp using RdxResult");
+        [[maybe_unused]] bool Found =
+            any_of(RdxResult->users(), [&](VPUser *U) {
+              return match(U, VPlanPatternMatch::m_SpecificICmp(
+                                  ICmpInst::ICMP_NE, m_Specific(RdxResult),
+                                  m_VPValue(SentinelVPV)));
+            });
+        assert(Found && "expected to find icmp using RdxResult");
 
         // Get the frozen start value from the main loop.
         Value *FrozenStartV = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
