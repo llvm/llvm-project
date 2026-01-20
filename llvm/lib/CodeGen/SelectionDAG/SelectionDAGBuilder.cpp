@@ -3080,7 +3080,8 @@ static SDValue getLoadStackGuard(SelectionDAG &DAG, const SDLoc &DL,
   EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
   EVT PtrMemTy = TLI.getPointerMemTy(DAG.getDataLayout());
   MachineFunction &MF = DAG.getMachineFunction();
-  Value *Global = TLI.getSDagStackGuard(*MF.getFunction().getParent());
+  Value *Global =
+      TLI.getSDagStackGuard(*MF.getFunction().getParent(), DAG.getLibcalls());
   MachineSDNode *Node =
       DAG.getMachineNode(TargetOpcode::LOAD_STACK_GUARD, DL, PtrTy, Chain);
   if (Global) {
@@ -3135,7 +3136,8 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   if (SPD.shouldEmitFunctionBasedCheckStackProtector()) {
     // Get the guard check function from the target and verify it exists since
     // we're using function-based instrumentation
-    const Function *GuardCheckFn = TLI.getSSPStackGuardCheck(M);
+    const Function *GuardCheckFn =
+        TLI.getSSPStackGuardCheck(M, DAG.getLibcalls());
     assert(GuardCheckFn && "Guard check function is null");
 
     // The target provides a guard check function to validate the guard value.
@@ -3167,7 +3169,7 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   if (TLI.useLoadStackGuardNode(M)) {
     Guard = getLoadStackGuard(DAG, dl, Chain);
   } else {
-    if (const Value *IRGuard = TLI.getSDagStackGuard(M)) {
+    if (const Value *IRGuard = TLI.getSDagStackGuard(M, DAG.getLibcalls())) {
       SDValue GuardPtr = getValue(IRGuard);
       Guard = DAG.getLoad(PtrMemTy, dl, Chain, GuardPtr,
                           MachinePointerInfo(IRGuard, 0), Align,
@@ -3214,7 +3216,7 @@ void SelectionDAGBuilder::visitSPDescriptorFailure(
   // For -Oz builds with a guard check function, we use function-based
   // instrumentation. Otherwise, if we have a guard check function, we call it
   // in the failure block.
-  auto *GuardCheckFn = TLI.getSSPStackGuardCheck(M);
+  auto *GuardCheckFn = TLI.getSSPStackGuardCheck(M, DAG.getLibcalls());
   if (GuardCheckFn && !SPD.shouldEmitFunctionBasedCheckStackProtector()) {
     // First create the loads to the guard/stack slot for the comparison.
     auto &DL = DAG.getDataLayout();
@@ -4161,8 +4163,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   EVT SrcVT = Src1.getValueType();
 
-  if (all_of(Mask, [](int Elem) { return Elem == 0; }) &&
-      VT.isScalableVector()) {
+  if (all_of(Mask, equal_to(0)) && VT.isScalableVector()) {
     // Canonical splat form of first element of first input vector.
     SDValue FirstElt =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SrcVT.getScalarType(), Src1,
@@ -7439,10 +7440,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::UCMP, sdl, DestVT, Op1, Op2));
     break;
   }
+  case Intrinsic::stackaddress:
   case Intrinsic::stacksave: {
+    unsigned SDOpcode = Intrinsic == Intrinsic::stackaddress ? ISD::STACKADDRESS
+                                                             : ISD::STACKSAVE;
     SDValue Op = getRoot();
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    Res = DAG.getNode(ISD::STACKSAVE, sdl, DAG.getVTList(VT, MVT::Other), Op);
+    Res = DAG.getNode(SDOpcode, sdl, DAG.getVTList(VT, MVT::Other), Op);
     setValue(&I, Res);
     DAG.setRoot(Res.getValue(1));
     return;
@@ -7469,7 +7473,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       Res = getLoadStackGuard(DAG, sdl, Chain);
       Res = DAG.getPtrExtOrTrunc(Res, sdl, PtrTy);
     } else {
-      const Value *Global = TLI.getSDagStackGuard(M);
+      const Value *Global = TLI.getSDagStackGuard(M, DAG.getLibcalls());
       if (!Global) {
         LLVMContext &Ctx = *DAG.getContext();
         Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
@@ -9432,11 +9436,9 @@ bool SelectionDAGBuilder::visitStrCpyCall(const CallInst &I, bool isStpcpy) {
   const Value *Arg0 = I.getArgOperand(0), *Arg1 = I.getArgOperand(1);
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
-  std::pair<SDValue, SDValue> Res =
-    TSI.EmitTargetCodeForStrcpy(DAG, getCurSDLoc(), getRoot(),
-                                getValue(Arg0), getValue(Arg1),
-                                MachinePointerInfo(Arg0),
-                                MachinePointerInfo(Arg1), isStpcpy);
+  std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForStrcpy(
+      DAG, getCurSDLoc(), getRoot(), getValue(Arg0), getValue(Arg1),
+      MachinePointerInfo(Arg0), MachinePointerInfo(Arg1), isStpcpy, &I);
   if (Res.first.getNode()) {
     setValue(&I, Res.first);
     DAG.setRoot(Res.second);
@@ -9508,6 +9510,24 @@ bool SelectionDAGBuilder::visitStrNLenCall(const CallInst &I) {
     return true;
   }
 
+  return false;
+}
+
+/// See if we can lower a Strstr call into an optimized form.  If so, return
+/// true and lower it, otherwise return false and it will be lowered like a
+/// normal call.
+/// The caller already checked that \p I calls the appropriate LibFunc with a
+/// correct prototype.
+bool SelectionDAGBuilder::visitStrstrCall(const CallInst &I) {
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
+  const Value *Arg0 = I.getArgOperand(0), *Arg1 = I.getArgOperand(1);
+  std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForStrstr(
+      DAG, getCurSDLoc(), DAG.getRoot(), getValue(Arg0), getValue(Arg1), &I);
+  if (Res.first) {
+    processIntegerCallValue(I, Res.first, false);
+    PendingLoads.push_back(Res.second);
+    return true;
+  }
   return false;
 }
 
@@ -9699,6 +9719,10 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_ldexpf:
       case LibFunc_ldexpl:
         if (visitBinaryFloatCall(I, ISD::FLDEXP))
+          return;
+        break;
+      case LibFunc_strstr:
+        if (visitStrstrCall(I))
           return;
         break;
       case LibFunc_memcmp:
@@ -10056,6 +10080,8 @@ public:
       Flags |= InlineAsm::Extra_HasSideEffects;
     if (IA->isAlignStack())
       Flags |= InlineAsm::Extra_IsAlignStack;
+    if (IA->canThrow())
+      Flags |= InlineAsm::Extra_MayUnwind;
     if (Call.isConvergent())
       Flags |= InlineAsm::Extra_IsConvergent;
     Flags |= IA->getDialect() * InlineAsm::Extra_AsmDialect;
@@ -11679,10 +11705,10 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
     // Don't elide copies from the same argument twice.
     const Value *Val = SI->getValueOperand()->stripPointerCasts();
     const auto *Arg = dyn_cast<Argument>(Val);
+    std::optional<TypeSize> AllocaSize = AI->getAllocationSize(DL);
     if (!Arg || Arg->hasPassPointeeByValueCopyAttr() ||
-        Arg->getType()->isEmptyTy() ||
-        DL.getTypeStoreSize(Arg->getType()) !=
-            DL.getTypeAllocSize(AI->getAllocatedType()) ||
+        Arg->getType()->isEmptyTy() || !AllocaSize ||
+        DL.getTypeStoreSize(Arg->getType()) != *AllocaSize ||
         !DL.typeSizeEqualsStoreSize(Arg->getType()) ||
         ArgCopyElisionCandidates.count(Arg)) {
       *Info = StaticAllocaInfo::Clobbered;

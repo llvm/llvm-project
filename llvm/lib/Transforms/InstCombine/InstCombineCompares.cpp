@@ -3158,6 +3158,19 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
             createLogicFromTable(Table, Op0, Op1, Builder, Add->hasOneUse()))
       return replaceInstUsesWith(Cmp, Cond);
   }
+
+  // icmp ult (add nuw A, (lshr A, ShAmtC)), C --> icmp ult A, C
+  // when C <= (1 << ShAmtC).
+  const APInt *ShAmtC;
+  Value *A;
+  unsigned BitWidth = C.getBitWidth();
+  if (Pred == ICmpInst::ICMP_ULT &&
+      match(Add,
+            m_c_NUWAdd(m_Value(A), m_LShr(m_Deferred(A), m_APInt(ShAmtC)))) &&
+      ShAmtC->ult(BitWidth) &&
+      C.ule(APInt::getOneBitSet(BitWidth, ShAmtC->getZExtValue())))
+    return new ICmpInst(Pred, A, ConstantInt::get(A->getType(), C));
+
   const APInt *C2;
   if (Cmp.isEquality() || !match(Y, m_APInt(C2)))
     return nullptr;
@@ -3878,7 +3891,10 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
 
   case Intrinsic::ssub_sat:
     // ssub.sat(a, b) == 0 -> a == b
-    if (C.isZero())
+    //
+    // Note this doesn't work for ssub.sat.i1 because ssub.sat.i1 0, -1 = 0
+    // (because 1 saturates to 0).  Just skip the optimization for i1.
+    if (C.isZero() && II->getType()->getScalarSizeInBits() > 1)
       return new ICmpInst(Pred, II->getArgOperand(0), II->getArgOperand(1));
     break;
   case Intrinsic::usub_sat: {
@@ -4269,7 +4285,10 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
   }
   case Intrinsic::ssub_sat:
     // ssub.sat(a, b) spred 0 -> a spred b
-    if (ICmpInst::isSigned(Pred)) {
+    //
+    // Note this doesn't work for ssub.sat.i1 because ssub.sat.i1 0, -1 = 0
+    // (because 1 saturates to 0).  Just skip the optimization for i1.
+    if (ICmpInst::isSigned(Pred) && C.getBitWidth() > 1) {
       if (C.isZero())
         return new ICmpInst(Pred, II->getArgOperand(0), II->getArgOperand(1));
       // X s<= 0 is cannonicalized to X s< 1

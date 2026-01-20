@@ -44,8 +44,11 @@ void X86WinCOFFStreamer::emitWinEHHandlerData(SMLoc Loc) {
 
   // We have to emit the unwind info now, because this directive
   // actually switches to the .xdata section.
-  if (WinEH::FrameInfo *CurFrame = getCurrentWinFrameInfo())
+  if (WinEH::FrameInfo *CurFrame = getCurrentWinFrameInfo()) {
+    // Handlers are always associated with the parent frame.
+    CurFrame = CurFrame->ChainedParent ? CurFrame->ChainedParent : CurFrame;
     EHStreamer.EmitUnwindInfo(*this, CurFrame, /* HandlerData = */ true);
+  }
 }
 
 void X86WinCOFFStreamer::emitWindowsUnwindTables(WinEH::FrameInfo *Frame) {

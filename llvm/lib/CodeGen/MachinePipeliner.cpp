@@ -344,15 +344,9 @@ private:
                                           const LoadStoreChunk &To);
 
   /// Add a loop-carried order dependency between \p Src and \p Dst if we
-  /// cannot prove they are independent. When \p PerformCheapCheck is true, a
-  /// lightweight dependency test (referred to as "cheap check" below) is
-  /// performed at first. Note that the cheap check is retained to maintain the
-  /// existing behavior and not expected to be used anymore.
-  ///
-  /// TODO: Remove \p PerformCheapCheck and the corresponding cheap check.
+  /// cannot prove they are independent.
   void addDependenciesBetweenSUs(const SUnitWithMemInfo &Src,
-                                 const SUnitWithMemInfo &Dst,
-                                 bool PerformCheapCheck = false);
+                                 const SUnitWithMemInfo &Dst);
 
   void computeDependenciesAux();
 };
@@ -1051,11 +1045,12 @@ bool SUnitWithMemInfo::getUnderlyingObjects() {
 
 /// Returns true if there is a loop-carried order dependency from \p Src to \p
 /// Dst.
-static bool
-hasLoopCarriedMemDep(const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
-                     BatchAAResults &BAA, const TargetInstrInfo *TII,
-                     const TargetRegisterInfo *TRI,
-                     const SwingSchedulerDAG *SSD, bool PerformCheapCheck) {
+static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
+                                 const SUnitWithMemInfo &Dst,
+                                 BatchAAResults &BAA,
+                                 const TargetInstrInfo *TII,
+                                 const TargetRegisterInfo *TRI,
+                                 const SwingSchedulerDAG *SSD) {
   if (Src.isTriviallyDisjoint(Dst))
     return false;
   if (isSuccOrder(Src.SU, Dst.SU))
@@ -1063,28 +1058,6 @@ hasLoopCarriedMemDep(const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
 
   MachineInstr &SrcMI = *Src.SU->getInstr();
   MachineInstr &DstMI = *Dst.SU->getInstr();
-  if (PerformCheapCheck) {
-    // First, perform the cheaper check that compares the base register.
-    // If they are the same and the load offset is less than the store
-    // offset, then mark the dependence as loop carried potentially.
-    //
-    // TODO: This check will be removed.
-    const MachineOperand *BaseOp1, *BaseOp2;
-    int64_t Offset1, Offset2;
-    bool Offset1IsScalable, Offset2IsScalable;
-    if (TII->getMemOperandWithOffset(SrcMI, BaseOp1, Offset1, Offset1IsScalable,
-                                     TRI) &&
-        TII->getMemOperandWithOffset(DstMI, BaseOp2, Offset2, Offset2IsScalable,
-                                     TRI)) {
-      if (BaseOp1->isIdenticalTo(*BaseOp2) &&
-          Offset1IsScalable == Offset2IsScalable &&
-          (int)Offset1 < (int)Offset2) {
-        assert(TII->areMemAccessesTriviallyDisjoint(SrcMI, DstMI) &&
-               "What happened to the chain edge?");
-        return true;
-      }
-    }
-  }
 
   if (!SSD->mayOverlapInLaterIter(&SrcMI, &DstMI))
     return false;
@@ -1158,13 +1131,12 @@ LoopCarriedOrderDepsTracker::getInstrTag(SUnit *SU) const {
 }
 
 void LoopCarriedOrderDepsTracker::addDependenciesBetweenSUs(
-    const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
-    bool PerformCheapCheck) {
+    const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst) {
   // Avoid self-dependencies.
   if (Src.SU == Dst.SU)
     return;
 
-  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG, PerformCheapCheck))
+  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG))
     LoopCarried[Src.SU->NodeNum].set(Dst.SU->NodeNum);
 }
 
@@ -1173,8 +1145,7 @@ void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
   // Add load-to-store dependencies (WAR).
   for (const SUnitWithMemInfo &Src : From.Loads)
     for (const SUnitWithMemInfo &Dst : To.Stores)
-      // Perform a cheap check first if this is a forward dependency.
-      addDependenciesBetweenSUs(Src, Dst, Src.SU->NodeNum < Dst.SU->NodeNum);
+      addDependenciesBetweenSUs(Src, Dst);
 
   // Add store-to-load dependencies (RAW).
   for (const SUnitWithMemInfo &Src : From.Stores)
