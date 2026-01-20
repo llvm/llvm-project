@@ -907,7 +907,7 @@ static std::optional<unsigned> getExtractIndex(const Instruction *E) {
     //argument E passed to getExtractIndex is of type "const Instrunction * "
     //but the instrunction class doesn't consist the getVectorOperandType
     //so just a simple casting to ExtractElementInst
-    auto *EE = dyn_cast<ExtractElementInst>(E);
+    auto *EE = cast<ExtractElementInst>(E);
     const unsigned VF = ::getNumElements(EE->getVectorOperandType());// can be implemented inside an IF statement - to be safe
     if (Idx >= VF)
       return std::nullopt;
