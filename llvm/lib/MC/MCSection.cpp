@@ -30,6 +30,16 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   return End;
 }
 
+Align MCSection::getAlignmentForObjectFile(uint64_t Size) const {
+  if (Size < getAlign().value())
+    return getAlign();
+
+  if (Size < getPreferredAlignment().value())
+    return Align(NextPowerOf2(Size - 1));
+
+  return getPreferredAlignment();
+}
+
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

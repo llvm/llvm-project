@@ -912,10 +912,10 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
       sh_link = Sym->getSection().getOrdinal();
   }
 
-  writeSectionHeaderEntry(StrTabBuilder.getOffset(Section.getName()),
-                          Section.getType(), Section.getFlags(), 0, Offset,
-                          Size, sh_link, sh_info, Section.getAlign(),
-                          Section.getEntrySize());
+  writeSectionHeaderEntry(
+      StrTabBuilder.getOffset(Section.getName()), Section.getType(),
+      Section.getFlags(), 0, Offset, Size, sh_link, sh_info,
+      Section.getAlignmentForObjectFile(Size), Section.getEntrySize());
 }
 
 void ELFWriter::writeSectionHeaders() {

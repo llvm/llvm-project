@@ -43,6 +43,13 @@ namespace objdump {
 
 enum DebugFormat { DFASCII, DFDisabled, DFInvalid, DFLimitsOnly, DFUnicode };
 
+enum class ColorOutput {
+  Auto,
+  Enable,
+  Disable,
+  Invalid,
+};
+
 extern bool ArchiveHeaders;
 extern int DbgIndent;
 extern DebugFormat DbgVariables;
@@ -51,6 +58,7 @@ extern bool Demangle;
 extern bool Disassemble;
 extern bool DisassembleAll;
 extern std::vector<std::string> DisassemblerOptions;
+extern ColorOutput DisassemblyColor;
 extern DIDumpType DwarfDumpType;
 extern std::vector<std::string> FilterSections;
 extern bool LeadingAddr;
