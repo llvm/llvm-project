@@ -87,6 +87,6 @@ for mode in ("none", "fast", "extensive", "debug"):
     features.append(
         Feature(
             name=f"libcpp-hardening-mode={mode}",
-            when=lambda cfg: programSucceeds(cfg, check_program)
+            when=lambda cfg, prog=check_program: programSucceeds(cfg, prog)
         )
     )
