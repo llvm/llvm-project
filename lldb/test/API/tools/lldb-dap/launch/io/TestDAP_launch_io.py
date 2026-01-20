@@ -83,7 +83,9 @@ class DAP_launchIO(lldbdap_testcase.DAPTestCaseBase):
         with NamedTemporaryFile("w+t") as stdin:
             stdin.write(input_text)
             stdin.flush()
-            self.launch(program, stdin_path=stdin.name, console=console, args=program_args)
+            self.launch(
+                program, stdin_path=stdin.name, console=console, args=program_args
+            )
             self.continue_to_exit()
 
             stdout_text = self._get_debuggee_stdout()
