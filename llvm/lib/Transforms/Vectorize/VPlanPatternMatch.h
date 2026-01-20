@@ -107,17 +107,13 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
     auto *VPI = dyn_cast<VPInstruction>(VPV);
     if (VPI && VPI->getOpcode() == VPInstruction::Broadcast)
       VPV = VPI->getOperand(0);
-    auto *IRV = dyn_cast<VPIRValue>(VPV);
-    if (!IRV)
-      return false;
-    assert(!IRV->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(IRV->getValue());
+    auto *CI = dyn_cast<VPConstantInt>(VPV);
     if (!CI)
       return false;
 
     if (BitWidth != 0 && CI->getBitWidth() != BitWidth)
       return false;
-    return P.isValue(CI->getValue());
+    return P.isValue(CI->getAPInt());
   }
 };
 
@@ -181,14 +177,10 @@ struct bind_apint {
   bind_apint(const APInt *&Res) : Res(Res) {}
 
   bool match(VPValue *VPV) const {
-    auto *IRV = dyn_cast<VPIRValue>(VPV);
-    if (!IRV)
-      return false;
-    assert(!IRV->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(IRV->getValue());
+    auto *CI = dyn_cast<VPConstantInt>(VPV);
     if (!CI)
       return false;
-    Res = &CI->getValue();
+    Res = &CI->getAPInt();
     return true;
   }
 };
@@ -472,6 +464,26 @@ template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::LastActiveLane, Op0_t>
 m_LastActiveLane(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::LastActiveLane>(Op0);
+}
+
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::ComputeReductionResult, Op0_t>
+m_ComputeReductionResult(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ComputeReductionResult>(Op0);
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline VPInstruction_match<VPInstruction::ComputeAnyOfResult, Op0_t, Op1_t,
+                           Op2_t>
+m_ComputeAnyOfResult(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<VPInstruction::ComputeAnyOfResult>(Op0, Op1, Op2);
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline VPInstruction_match<VPInstruction::ComputeFindIVResult, Op0_t, Op1_t,
+                           Op2_t>
+m_ComputeFindIVResult(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<VPInstruction::ComputeFindIVResult>(Op0, Op1, Op2);
 }
 
 template <typename Op0_t>
@@ -950,6 +962,56 @@ struct live_in_vpvalue {
 };
 
 inline live_in_vpvalue m_LiveIn() { return live_in_vpvalue(); }
+
+/// Match a GEP recipe (VPWidenGEPRecipe, VPInstruction, or VPReplicateRecipe)
+/// and bind the source element type and operands.
+struct GetElementPtr_match {
+  Type *&SourceElementType;
+  ArrayRef<VPValue *> &Operands;
+
+  GetElementPtr_match(Type *&SourceElementType, ArrayRef<VPValue *> &Operands)
+      : SourceElementType(SourceElementType), Operands(Operands) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    return matchRecipeAndBind<VPWidenGEPRecipe>(V) ||
+           matchRecipeAndBind<VPInstruction>(V) ||
+           matchRecipeAndBind<VPReplicateRecipe>(V);
+  }
+
+private:
+  template <typename RecipeTy> bool matchRecipeAndBind(const VPValue *V) const {
+    auto *DefR = dyn_cast<RecipeTy>(V);
+    if (!DefR)
+      return false;
+
+    if constexpr (std::is_same_v<RecipeTy, VPWidenGEPRecipe>) {
+      SourceElementType = DefR->getSourceElementType();
+    } else if (DefR->getOpcode() == Instruction::GetElementPtr) {
+      SourceElementType = cast<GetElementPtrInst>(DefR->getUnderlyingInstr())
+                              ->getSourceElementType();
+    } else if constexpr (std::is_same_v<RecipeTy, VPInstruction>) {
+      if (DefR->getOpcode() == VPInstruction::PtrAdd) {
+        // PtrAdd is a byte-offset GEP with i8 element type.
+        LLVMContext &Ctx = DefR->getParent()->getPlan()->getContext();
+        SourceElementType = Type::getInt8Ty(Ctx);
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+
+    Operands = ArrayRef<VPValue *>(DefR->op_begin(), DefR->op_end());
+    return true;
+  }
+};
+
+/// Match a GEP recipe with any number of operands and bind source element type
+/// and operands.
+inline GetElementPtr_match m_GetElementPtr(Type *&SourceElementType,
+                                           ArrayRef<VPValue *> &Operands) {
+  return GetElementPtr_match(SourceElementType, Operands);
+}
 
 template <typename SubPattern_t> struct OneUse_match {
   SubPattern_t SubPattern;
