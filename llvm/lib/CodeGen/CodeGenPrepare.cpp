@@ -1471,8 +1471,7 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   // If the cast is between identical types, just replace it with its operand.
   // This avoids infinite loops with optimizePhiType which may reintroduce such
   // casts.
-  if (CI->getOperand(0)->getType() == CI->getType() &&
-      !CI->getType()->isPointerTy()) {
+  if (CI->getOperand(0)->getType() == CI->getType()) {
     CI->replaceAllUsesWith(CI->getOperand(0));
     CI->eraseFromParent();
     return true;
