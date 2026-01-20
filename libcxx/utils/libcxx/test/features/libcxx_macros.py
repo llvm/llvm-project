@@ -77,7 +77,7 @@ for macro, feature in inverted_macros.items():
 
 for mode in ("none", "fast", "extensive", "debug"):
     check_program = f"""
-        #include <cassert>
+        #include <stddef.h> // any header to get the definitions
         #if defined(_LIBCPP_HARDENING_MODE)
             int main(int, char**) {{ return _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_{mode.upper()} ? 0 : 1; }}
         #else
