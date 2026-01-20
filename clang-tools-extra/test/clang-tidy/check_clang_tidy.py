@@ -95,7 +95,7 @@ class CheckRunner:
         self.check_name = args.check_name
         self.temp_file_name = args.temp_file_name
         self.check_headers = args.check_headers
-        self.original_file_name = self.temp_file_name + ".orig"
+        self.original_file_name = f"{self.temp_file_name}.orig"
         self.expect_clang_tidy_error = args.expect_clang_tidy_error
         self.std = args.std
         self.check_suffix = args.check_suffix
@@ -133,7 +133,7 @@ class CheckRunner:
                 for h in self.check_headers
             }
 
-            self.clang_extra_args.insert(0, "-I" + self.header_dir)
+            self.clang_extra_args.insert(0, f"-I{self.header_dir}")
 
         # If the test does not specify a config style, force an empty one; otherwise
         # auto-detection logic can discover a ".clang-tidy" file that is not related to
@@ -150,7 +150,7 @@ class CheckRunner:
                 "-fblocks",
             ] + self.clang_extra_args
 
-        self.clang_extra_args.append("-std=" + self.std)
+        self.clang_extra_args.append(f"-std={self.std}")
 
         # Tests should not rely on STL being available, and instead provide mock
         # implementations of relevant APIs.
@@ -172,8 +172,8 @@ class CheckRunner:
         for suffix in self.check_suffix:
             if suffix and not re.match("^[A-Z0-9\\-]+$", suffix):
                 sys.exit(
-                    'Only A..Z, 0..9 and "-" are allowed in check suffixes list,'
-                    + ' but "%s" was given' % suffix
+                    'Only A..Z, 0..9 and "-" are allowed in check suffixes list, '
+                    f'but "{suffix}" was given'
                 )
 
             file_check_suffix = ("-" + suffix) if suffix else ""
@@ -238,7 +238,7 @@ class CheckRunner:
                     cleaned_header = self._sanitize_content(f.read())
 
                 write_file(temp_header_path, cleaned_header)
-                write_file(temp_header_path + ".orig", cleaned_header)
+                write_file(f"{temp_header_path}.orig", cleaned_header)
 
     def run_clang_tidy(self) -> str:
         args = (
@@ -251,11 +251,11 @@ class CheckRunner:
                 (
                     "-fix"
                     if self.export_fixes is None
-                    else "--export-fixes=" + self.export_fixes
+                    else f"--export-fixes={self.export_fixes}"
                 )
             ]
             + [
-                "--checks=-*," + self.check_name,
+                f"--checks=-*,{self.check_name}",
             ]
             + self.clang_tidy_extra_args
             + ["--"]
@@ -263,7 +263,7 @@ class CheckRunner:
         )
         if self.expect_clang_tidy_error:
             args.insert(0, "not")
-        print("Running " + repr(args) + "...")
+        print(f"Running {repr(args)}...")
         clang_tidy_output = try_run(args)
         print("------------------------ clang-tidy output -----------------------")
         print(
@@ -279,13 +279,7 @@ class CheckRunner:
         if self.check_headers:
             for temp_header_path in self.check_header_map:
                 diff_output += try_run(
-                    [
-                        "diff",
-                        "-u",
-                        temp_header_path + ".orig",
-                        temp_header_path,
-                    ],
-                    False,
+                    ["diff", "-u", f"{temp_header_path}.orig", temp_header_path], False
                 )
 
         print("------------------------------ Fixes -----------------------------")
@@ -311,9 +305,9 @@ class CheckRunner:
         try_run(
             [
                 "FileCheck",
-                "--input-file=" + input_file,
+                f"--input-file={input_file}",
                 check_file,
-                "--check-prefixes=" + ",".join(active_prefixes),
+                f"--check-prefixes={','.join(active_prefixes)}",
                 (
                     "--strict-whitespace"  # Keeping past behavior.
                     if self.match_partial_fixes
@@ -342,16 +336,16 @@ class CheckRunner:
         try_run(
             [
                 "FileCheck",
-                "-input-file=" + messages_file,
+                f"-input-file={messages_file}",
                 check_file,
-                "-check-prefixes=" + ",".join(active_prefixes),
+                f"-check-prefixes={','.join(active_prefixes)}",
                 "-implicit-check-not={{warning|error}}:",
             ]
         )
 
     def check_notes(self, clang_tidy_output: str) -> None:
         if self.has_check_notes:
-            notes_file = self.temp_file_name + ".notes"
+            notes_file = f"{self.temp_file_name}.notes"
             filtered_output = [
                 line
                 for line in clang_tidy_output.splitlines()
@@ -361,9 +355,9 @@ class CheckRunner:
             try_run(
                 [
                     "FileCheck",
-                    "-input-file=" + notes_file,
+                    f"-input-file={notes_file}",
                     self.input_file_name,
-                    "-check-prefixes=" + ",".join(self.notes.prefixes),
+                    f"-check-prefixes={','.join(self.notes.prefixes)}",
                     "-implicit-check-not={{note|warning|error}}:",
                 ]
             )
@@ -408,9 +402,7 @@ class CheckRunner:
                 continue
 
             self.check_messages(
-                messages,
-                messages_file=temp_header + ".msg",
-                check_file=original_header,
+                messages, messages_file=f"{temp_header}.msg", check_file=original_header
             )
 
         return "".join(remaining_lines)
