@@ -30,5 +30,4 @@ add_llvm_tool(llvm-ir2vec
   intrinsics_gen
 )
 
-target_include_directories(llvm-ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 target_link_libraries(llvm-ir2vec PRIVATE LLVMEmbUtils)
