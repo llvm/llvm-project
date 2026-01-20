@@ -6,73 +6,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// REQUIRES: std-at-least-c++20
 
 // Test that functions are marked [[nodiscard]].
 
 #include <ranges>
 #include <utility>
+#include <vector>
 
-#include "test_iterators.h"
 #include "test_range.h"
 
 void test() {
-  int range[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-  int pattern[2]  = {-1, -1};
-
-  std::ranges::join_with_view view(range, pattern);
+  std::vector<int> range;
+  std::ranges::subrange subrange{range.begin(), range.end()};
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  view.base();
+  std::as_const(subrange).begin();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(view).base();
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(std::as_const(view)).base();
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(view).base();
+  subrange.begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  view.begin();
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(view).begin();
+  std::as_const(subrange).end();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  view.end();
+  std::as_const(subrange).empty();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(view).end();
-
-  // }
-
-  // void test_iterator() {
-  //   char range[3][2] = {{'x', 'x'}, {'y', 'y'}, {'z', 'z'}};
-  //   char pattern[2]  = {',', ' '};
-
-  //   std::ranges::join_with_view view(range, pattern);
+  std::as_const(subrange).size();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  *view.begin();
+  std::as_const(subrange).next();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  *std::as_const(view).begin();
+  std::move(subrange).next();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter_move(view.begin());
+  std::as_const(subrange).prev();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter_move(std::as_const(view).begin());
-
-  // }
-
-  // void test_overview() {
-  //   int range[3][3]     = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-  //   int pattern_base[2] = {-1, -1};
-  //   auto pattern        = std::views::all(pattern_base);
+  std::move(subrange).prev();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::join_with(pattern);
+  std::get<0>(std::as_const(subrange));
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::join_with(range, pattern);
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::join_with(0);
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::join_with(range, 0);
+  std::get<0>(std::move(subrange));
 }
