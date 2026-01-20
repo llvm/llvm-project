@@ -261,12 +261,8 @@ static bool PerformStatementSemantics(
   }
   if (!context.messages().AnyFatalError()) {
     WarnUndefinedFunctionResult(context, context.globalScope());
-  }
-  if (!context.messages().AnyFatalError()) {
-    WarnUnusedOrUndefinedLocal(context, context.globalScope());
-  }
-  if (!context.AnyFatalError()) {
     pass2.CompileDataInitializationsIntoInitializers();
+    WarnUnusedOrUndefinedLocal(context, context.globalScope());
   }
   return !context.AnyFatalError();
 }
