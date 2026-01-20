@@ -1719,8 +1719,7 @@ namespace GH176402 {
     auto recursiveLambda = [](auto self, int depth) -> void {
       struct MyClass;
       auto testConcept = []<typename T> {
-        return requires(T) { &MyClass::operator0 }
-        // expected-error {{expected ';' at end of requirement}}
+        return requires(T) { &MyClass::operator0 } /* expected-error {{expected ';' at end of requirement}} */;
       };
     };
     recursiveLambda(recursiveLambda, 5);
