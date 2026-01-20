@@ -104,12 +104,7 @@ endif()
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
 # These projects will be included when "all" is included in LLVM_ENABLE_PROJECTS.
-set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libclc;lld;lldb;mlir;openmp;polly")
-if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
-  # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
-  # LLVM_ENABLE_RUNTIMES.
-  list(REMOVE_ITEM LLVM_ALL_PROJECTS openmp)
-endif()
+set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libclc;lld;lldb;mlir;polly")
 
 # The "libc" project, which is not part of "all" projects, could be included in
 # LLVM_ENABLE_PROJECTS.  It is preferred to include "libc" in
@@ -124,6 +119,15 @@ set(LLVM_ENABLE_PROJECTS "" CACHE STRING
 # Make sure expansion happens first to not handle "all" in rest of the checks.
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
+endif()
+
+if ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(FATAL_ERROR "
+Support for the LLVM_ENABLE_PROJECTS=openmp build mode has been removed. Please switch to the bootstrapping build
+    cmake -S <llvm-project>/llvm -B build -DLLVM_ENABLE_PROJECTS=clang -DLLVM_ENABLE_RUNTIMES=openmp
+or to the runtimes default build
+    cmake -S <llvm-project>/runtimes -B build -DLLVM_ENABLE_RUNTIMES=openmp
+")
 endif()
 
 foreach(proj ${LLVM_ENABLE_PROJECTS})
@@ -192,13 +196,6 @@ if ("offload" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=offload is deprecated now, and will "
     "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=offload or see the instructions at "
-    "https://openmp.llvm.org/ for building the runtimes.")
-endif()
-
-if ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=openmp is deprecated now, and will "
-    "become a fatal error in a future release.  Please use "
-    "-DLLVM_ENABLE_RUNTIMES=openmp or see the instructions at "
     "https://openmp.llvm.org/ for building the runtimes.")
 endif()
 

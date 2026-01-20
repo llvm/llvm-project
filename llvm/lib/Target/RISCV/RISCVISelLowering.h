@@ -409,7 +409,8 @@ public:
 
   /// If the target has a standard location for the stack protector cookie,
   /// returns the address of that location. Otherwise, returns nullptr.
-  Value *getIRStackGuard(IRBuilderBase &IRB) const override;
+  Value *getIRStackGuard(IRBuilderBase &IRB,
+                         const LibcallLoweringInfo &Libcalls) const override;
 
   /// Returns whether or not generating a interleaved load/store intrinsic for
   /// this type will be legal.

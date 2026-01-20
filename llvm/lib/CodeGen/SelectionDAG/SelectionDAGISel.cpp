@@ -1940,7 +1940,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
     if (SP->shouldEmitSDCheck(*LLVMBB)) {
       bool FunctionBasedInstrumentation =
-          TLI->getSSPStackGuardCheck(*Fn.getParent()) && Fn.hasMinSize();
+          TLI->getSSPStackGuardCheck(*Fn.getParent(), *LibcallLowering) &&
+          Fn.hasMinSize();
       SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->getMBB(LLVMBB),
                                    FunctionBasedInstrumentation);
     }

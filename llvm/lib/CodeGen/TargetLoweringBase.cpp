@@ -2292,8 +2292,8 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
   return UnsafeStackPtr;
 }
 
-Value *
-TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
+Value *TargetLoweringBase::getSafeStackPointerLocation(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
   // FIXME: Can this triple check be replaced with SAFESTACK_POINTER_ADDRESS
   // being available?
   if (!TM.getTargetTriple().isAndroid())
@@ -2303,7 +2303,7 @@ TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   auto *PtrTy = PointerType::getUnqual(M->getContext());
 
   RTLIB::LibcallImpl SafestackPointerAddressImpl =
-      getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
+      Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
   if (SafestackPointerAddressImpl == RTLIB::Unsupported) {
     M->getContext().emitError(
         "no libcall available for safestack pointer address");
@@ -2312,8 +2312,10 @@ TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
 
   // Android provides a libc function to retrieve the address of the current
   // thread's unsafe stack pointer.
-  FunctionCallee Fn = M->getOrInsertFunction(
-      getLibcallImplName(SafestackPointerAddressImpl), PtrTy);
+  FunctionCallee Fn =
+      M->getOrInsertFunction(RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+                                 SafestackPointerAddressImpl),
+                             PtrTy);
   return IRB.CreateCall(Fn);
 }
 
@@ -2368,8 +2370,11 @@ bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
 
 // For OpenBSD return its special guard variable. Otherwise return nullptr,
 // so that SelectionDAG handle SSP.
-Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
-  RTLIB::LibcallImpl GuardLocalImpl = getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+Value *
+TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB,
+                                    const LibcallLoweringInfo &Libcalls) const {
+  RTLIB::LibcallImpl GuardLocalImpl =
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (GuardLocalImpl != RTLIB::impl___guard_local)
     return nullptr;
 
@@ -2385,8 +2390,10 @@ Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
 
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
-void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
-  RTLIB::LibcallImpl StackGuardImpl = getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+void TargetLoweringBase::insertSSPDeclarations(
+    Module &M, const LibcallLoweringInfo &Libcalls) const {
+  RTLIB::LibcallImpl StackGuardImpl =
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (StackGuardImpl == RTLIB::Unsupported)
     return;
 
@@ -2412,17 +2419,20 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
 
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
-Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
-  RTLIB::LibcallImpl GuardVarImpl = getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+Value *TargetLoweringBase::getSDagStackGuard(
+    const Module &M, const LibcallLoweringInfo &Libcalls) const {
+  RTLIB::LibcallImpl GuardVarImpl =
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (GuardVarImpl == RTLIB::Unsupported)
     return nullptr;
   return M.getNamedValue(getLibcallImplName(GuardVarImpl));
 }
 
-Function *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
+Function *TargetLoweringBase::getSSPStackGuardCheck(
+    const Module &M, const LibcallLoweringInfo &Libcalls) const {
   // MSVC CRT has a function to validate security cookie.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+      Libcalls.getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported)
     return M.getFunction(getLibcallImplName(SecurityCheckCookieLibcall));
   return nullptr;
