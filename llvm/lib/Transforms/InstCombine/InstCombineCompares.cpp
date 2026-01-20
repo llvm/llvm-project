@@ -4302,34 +4302,24 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
     }
     break;
   case Intrinsic::abs: {
-    if (!Cmp.getOperand(0)->hasOneUse())
+    if (!II->hasOneUse())
       return nullptr;
 
     Value *X = II->getArgOperand(0);
-    bool IntMinIsPoison =
-        dyn_cast<ConstantInt>(II->getArgOperand(1))->getValue().isOne();
+    bool IsIntMinPoison =
+        cast<ConstantInt>(II->getArgOperand(1))->getValue().isOne();
 
-    // abs(X) u> C --> C >= 0 ? `X + C u> 2 * C` : `false`
-    if (Pred == CmpInst::ICMP_UGT) {
-      if (C.isNegative()) {
-        Cmp.replaceAllUsesWith(ConstantInt::getFalse(Cmp.getType()));
-        return nullptr;
-      }
-
+    // If C >= 0:
+    // abs(X) u> C --> X + C u> 2 * C
+    if (Pred == CmpInst::ICMP_UGT && C.isNonNegative()) {
       return new ICmpInst(ICmpInst::ICMP_UGT,
                           Builder.CreateAdd(X, ConstantInt::get(Ty, C)),
                           ConstantInt::get(Ty, 2 * C));
     }
 
-    // If abs(INT_MIN) is poison:
-    // abs(X) u< C --> C >= 1 ? `X + (C - 1) u<= 2 * (C - 1)` : C != 0
-    if (IntMinIsPoison && Pred == CmpInst::ICMP_ULT) {
-      if (C.slt(1)) {
-        Cmp.replaceAllUsesWith(
-            ConstantInt::getBool(Cmp.getType(), !C.isZero()));
-        return nullptr;
-      }
-
+    // If abs(INT_MIN) is poison and C >= 1:
+    // abs(X) u< C --> X + (C - 1) u<= 2 * (C - 1)
+    if (IsIntMinPoison && Pred == CmpInst::ICMP_ULT && C.sge(1)) {
       return new ICmpInst(ICmpInst::ICMP_ULE,
                           Builder.CreateAdd(X, ConstantInt::get(Ty, C - 1)),
                           ConstantInt::get(Ty, 2 * (C - 1)));

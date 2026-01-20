@@ -429,7 +429,7 @@ define i32 @abs_sext(i8 %x) {
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
   %s = sext i8 %x to i32
-  %a = call i32 @llvm.abs.i32(i32 %s, i1 0)
+  %a = call i32 @llvm.abs.i32(i32 %s, i1 false)
   ret i32 %a
 }
 
@@ -440,7 +440,7 @@ define <3 x i82> @abs_nsw_sext(<3 x i7> %x) {
 ; CHECK-NEXT:    ret <3 x i82> [[A]]
 ;
   %s = sext <3 x i7> %x to <3 x i82>
-  %a = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %s, i1 1)
+  %a = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %s, i1 true)
   ret <3 x i82> %a
 }
 
@@ -453,7 +453,7 @@ define i32 @abs_sext_extra_use(i8 %x, ptr %p) {
 ;
   %s = sext i8 %x to i32
   store i32 %s, ptr %p
-  %a = call i32 @llvm.abs.i32(i32 %s, i1 0)
+  %a = call i32 @llvm.abs.i32(i32 %s, i1 false)
   ret i32 %a
 }
 
@@ -1004,7 +1004,7 @@ define i1 @abs_cmp_ule_no_poison(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %cmp = icmp ule i32 %x.abs, 31
   ret i1 %cmp
 }
@@ -1016,7 +1016,7 @@ define i1 @abs_cmp_ule_no_poison_multiuse(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   call void @use(i32 %x.abs)
   %cmp = icmp ule i32 %x.abs, 31
   ret i1 %cmp
@@ -1028,7 +1028,7 @@ define i1 @abs_cmp_ule_poison(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 63
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
   %cmp = icmp ule i32 %x.abs, 31
   ret i1 %cmp
 }
@@ -1040,7 +1040,7 @@ define i1 @abs_cmp_ule_poison_multiuse(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[X_ABS]], 32
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
   call void @use(i32 %x.abs)
   %cmp = icmp ule i32 %x.abs, 31
   ret i1 %cmp
@@ -1052,7 +1052,7 @@ define i1 @abs_cmp_ult_no_poison(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %cmp = icmp ult i32 %x.abs, 32
   ret i1 %cmp
 }
@@ -1064,7 +1064,7 @@ define i1 @abs_cmp_ult_no_poison_multiuse(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   call void @use(i32 %x.abs)
   %cmp = icmp ult i32 %x.abs, 32
   ret i1 %cmp
@@ -1076,7 +1076,7 @@ define i1 @abs_cmp_ult_poison(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 63
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
   %cmp = icmp ult i32 %x.abs, 32
   ret i1 %cmp
 }
@@ -1088,7 +1088,7 @@ define i1 @abs_cmp_ult_poison_multiuse(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[X_ABS]], 32
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
   call void @use(i32 %x.abs)
   %cmp = icmp ult i32 %x.abs, 32
   ret i1 %cmp
@@ -1100,7 +1100,7 @@ define i1 @abs_cmp_uge_no_poison(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -61
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %cmp = icmp ugt i32 %x.abs, 30
   ret i1 %cmp
 }
@@ -1112,7 +1112,7 @@ define i1 @abs_cmp_uge_no_poison_multiuse(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X_ABS]], 30
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   call void @use(i32 %x.abs)
   %cmp = icmp ugt i32 %x.abs, 30
   ret i1 %cmp
@@ -1124,7 +1124,7 @@ define i1 @abs_cmp_uge_poison(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -61
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
   %cmp = icmp ugt i32 %x.abs, 30
   ret i1 %cmp
 }
@@ -1136,7 +1136,7 @@ define i1 @abs_cmp_uge_poison_multiuse(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[X_ABS]], 30
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
   call void @use(i32 %x.abs)
   %cmp = icmp ugt i32 %x.abs, 30
   ret i1 %cmp
@@ -1148,7 +1148,7 @@ define i1 @abs_cmp_ugt_no_poison(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -63
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %cmp = icmp ugt i32 %x.abs, 31
   ret i1 %cmp
 }
@@ -1160,7 +1160,7 @@ define i1 @abs_cmp_ugt_no_poison_multiuse(i32 %x) {
 ; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %cmp = icmp ugt i32 %x.abs, 31
   call void @use(i32 %x.abs)
   ret i1 %cmp
@@ -1172,7 +1172,7 @@ define i1 @abs_cmp_ugt_poison(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -63
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
   %cmp = icmp ugt i32 %x.abs, 31
   ret i1 %cmp
 }
@@ -1184,7 +1184,7 @@ define i1 @abs_cmp_ugt_poison_multiuse(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[X_ABS]], 31
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
   call void @use(i32 %x.abs)
   %cmp = icmp ugt i32 %x.abs, 31
   ret i1 %cmp
