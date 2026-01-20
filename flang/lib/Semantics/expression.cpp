@@ -4374,29 +4374,76 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Allocation &x) {
   }
 
   const auto &shapeSpec{shapeSpecList.front()};
+  const auto &lowerBoundOpt = std::get<0>(shapeSpec.t);
   auto &expr = parser::UnwrapRef<parser::Expr>(std::get<1>(shapeSpec.t));
   
   if (const auto *arrayConstructor{
       std::get_if<parser::ArrayConstructor>(&expr.u)}) {
     
     const auto &acSpec{arrayConstructor->v}; // AcSpec
-    std::list<parser::AllocateShapeSpec> newShapeSpecs;
+    std::vector<std::optional<parser::BoundExpr>> lowerBoundExprs;
+    // assume array literal for now
+    if(lowerBoundOpt) {
+      auto &exprLower = parser::UnwrapRef<parser::Expr>(*lowerBoundOpt);
+      if(const auto *arrayConstructorLower{
+          std::get_if<parser::ArrayConstructor>(&exprLower.u)
+      }) {
+        const auto &acSpecLower{arrayConstructorLower->v}; // AcSpec
+        for(const auto &acValueLower : acSpecLower.values) {
+          if (const auto *indirExprLower = 
+              std::get_if<common::Indirection<parser::Expr>>(&acValueLower.u)) {
+            parser::BoundExpr lowerBoundExpr{parser::Integer(
+              std::move(const_cast<common::Indirection<parser::Expr>&>(*indirExprLower)))};
+            lowerBoundExprs.push_back(std::move(lowerBoundExpr));
+          }
+        }
+      }
+      else if(const auto *literalConst{
+          std::get_if<parser::LiteralConstant>(&exprLower.u)
+      }) {
+        if(const auto *intConst{
+            std::get_if<parser::IntLiteralConstant>(&literalConst->u)
+        }) {
+          // We found a scalar integer literal
+          // Duplicate it for each dimension
+          for(size_t i = 0; i < acSpec.values.size(); i++) {
+            parser::BoundExpr boundExpr{parser::Integer(
+                common::Indirection<parser::Expr>{
+                    parser::Expr{std::move(const_cast<parser::LiteralConstant&>(*literalConst))}
+                })};
+            lowerBoundExprs.push_back(std::move(boundExpr));
+          }
+        }
+      }
+    }
+    else {
+      // fill lowerBoundExprs with empty opt,
+      // std::optional<parser::BoundExpr>{}, 
+      for(size_t i = 0; i < acSpec.values.size(); i++) {
+        lowerBoundExprs.push_back(std::optional<parser::BoundExpr>{});
+      }
+    }
 
     // Iterate through array constructor values
+    std::vector<parser::BoundExpr> newBoundExprs;
     for (const auto &acValue : acSpec.values) {
       if (const auto *indirExpr = 
           std::get_if<common::Indirection<parser::Expr>>(&acValue.u)) {
         parser::BoundExpr newBoundExpr{parser::Integer(
           std::move(const_cast<common::Indirection<parser::Expr>&>(*indirExpr)))};
-        
+        newBoundExprs.push_back(std::move(newBoundExpr));
+      }
+    }
+
+    std::list<parser::AllocateShapeSpec> newShapeSpecs;
+    for(int i = 0; i < acSpec.values.size(); i++) {
         // Create new AllocateShapeSpec with optional lower bound and upper bound
         parser::AllocateShapeSpec newSpec = 
             std::make_tuple(
-              std::optional<parser::BoundExpr>{}, 
-              std::move(newBoundExpr));
+              std::move(lowerBoundExprs[i]), 
+              std::move(newBoundExprs[i]));
         
         newShapeSpecs.push_back(std::move(newSpec));
-      }
     }
     
     // Replace the original list with expanded specs
