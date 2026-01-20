@@ -3053,46 +3053,29 @@ SPELLING_CACHE = {
 
 
 class CompletionChunk:
-    class Kind:
-        def __init__(self, name: str):
-            self.name = name
-
-        def __str__(self) -> str:
-            return self.name
-
-        def __repr__(self) -> str:
-            return "<ChunkKind: %s>" % self
+    __kind_id: int
 
     def __init__(self, completionString: CObjP, key: int):
         self.cs = completionString
         self.key = key
-        self.__kindNumberCache = -1
+        self.__kind_id = conf.lib.clang_getCompletionChunkKind(
+                self.cs, self.key
+            )
 
     def __repr__(self) -> str:
         return "{'" + self.spelling + "', " + str(self.kind) + "}"
 
     @CachedProperty
     def spelling(self) -> str:
-        if self.__kindNumber in SPELLING_CACHE:
-            return SPELLING_CACHE[self.__kindNumber]
+        if self.__kind_id in SPELLING_CACHE:
+            return SPELLING_CACHE[self.__kind_id]
         return _CXString.from_result(
             conf.lib.clang_getCompletionChunkText(self.cs, self.key)
         )
 
-    # We do not use @CachedProperty here, as the manual implementation is
-    # apparently still significantly faster. Please profile carefully if you
-    # would like to add CachedProperty back.
-    @property
-    def __kindNumber(self) -> int:
-        if self.__kindNumberCache == -1:
-            self.__kindNumberCache = conf.lib.clang_getCompletionChunkKind(
-                self.cs, self.key
-            )
-        return self.__kindNumberCache
-
     @CachedProperty
-    def kind(self) -> Kind:
-        return completionChunkKindMap[self.__kindNumber]
+    def kind(self) -> CompletionChunkKind:
+        return CompletionChunkKind.from_id(self.__kind_id)
 
     @CachedProperty
     def string(self) -> CompletionString | None:
@@ -3103,19 +3086,19 @@ class CompletionChunk:
         return CompletionString(res)
 
     def isKindOptional(self) -> bool:
-        return self.__kindNumber == 0
+        return self.__kind_id == 0
 
     def isKindTypedText(self) -> bool:
-        return self.__kindNumber == 1
+        return self.__kind_id == 1
 
     def isKindPlaceHolder(self) -> bool:
-        return self.__kindNumber == 3
+        return self.__kind_id == 3
 
     def isKindInformative(self) -> bool:
-        return self.__kindNumber == 4
+        return self.__kind_id == 4
 
     def isKindResultType(self) -> bool:
-        return self.__kindNumber == 15
+        return self.__kind_id == 15
 
 ### Completion Chunk Kinds ###
 class CompletionChunkKind(BaseEnumeration):
@@ -3164,31 +3147,6 @@ class CompletionChunkKind(BaseEnumeration):
     EQUAL = 18
     HORIZONTAL_SPACE = 19
     VERTICAL_SPACE = 20
-
-
-completionChunkKindMap = {
-    0: CompletionChunk.Kind("Optional"),
-    1: CompletionChunk.Kind("TypedText"),
-    2: CompletionChunk.Kind("Text"),
-    3: CompletionChunk.Kind("Placeholder"),
-    4: CompletionChunk.Kind("Informative"),
-    5: CompletionChunk.Kind("CurrentParameter"),
-    6: CompletionChunk.Kind("LeftParen"),
-    7: CompletionChunk.Kind("RightParen"),
-    8: CompletionChunk.Kind("LeftBracket"),
-    9: CompletionChunk.Kind("RightBracket"),
-    10: CompletionChunk.Kind("LeftBrace"),
-    11: CompletionChunk.Kind("RightBrace"),
-    12: CompletionChunk.Kind("LeftAngle"),
-    13: CompletionChunk.Kind("RightAngle"),
-    14: CompletionChunk.Kind("Comma"),
-    15: CompletionChunk.Kind("ResultType"),
-    16: CompletionChunk.Kind("Colon"),
-    17: CompletionChunk.Kind("SemiColon"),
-    18: CompletionChunk.Kind("Equal"),
-    19: CompletionChunk.Kind("HorizontalSpace"),
-    20: CompletionChunk.Kind("VerticalSpace"),
-}
 
 
 class CompletionString(ClangObject):
