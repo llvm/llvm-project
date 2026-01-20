@@ -89,6 +89,19 @@ endif()
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 
 add_object_library(
+  gnu_property_section
+  SRCS
+    gnu_property_section.cpp
+  HDRS
+    gnu_property_section.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.config
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+)
+
+add_object_library(
   do_start
   SRCS
     do_start.cpp
@@ -119,6 +132,7 @@ merge_relocatable_object(
   .${LIBC_TARGET_ARCHITECTURE}.start
   .${LIBC_TARGET_ARCHITECTURE}.tls
   .do_start
+  .gnu_property_section
 )
 
 add_startup_object(

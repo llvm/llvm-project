@@ -303,15 +303,20 @@ void Filler::insertCallDefsUses(MachineBasicBlock::iterator MI,
                                 SmallSet<unsigned, 32>& RegDefs,
                                 SmallSet<unsigned, 32>& RegUses)
 {
-  // Call defines o7, which is visible to the instruction in delay slot.
-  RegDefs.insert(SP::O7);
-
+  // Regular calls define o7, which is visible to the instruction in delay slot.
+  // On the other hand, tail calls preserve it.
   switch(MI->getOpcode()) {
   default: llvm_unreachable("Unknown opcode.");
   case SP::CALL:
+    RegDefs.insert(SP::O7);
+    break;
+  case SP::TAIL_CALL:
     break;
   case SP::CALLrr:
   case SP::CALLri:
+    RegDefs.insert(SP::O7);
+    [[fallthrough]];
+  case SP::TAIL_CALLri:
     assert(MI->getNumOperands() >= 2);
     const MachineOperand &Reg = MI->getOperand(0);
     assert(Reg.isReg() && "CALL first operand is not a register.");
@@ -390,17 +395,31 @@ bool Filler::needsUnimp(MachineBasicBlock::iterator I, unsigned &StructSize)
   return true;
 }
 
-static bool combineRestoreADD(MachineBasicBlock::iterator RestoreMI,
+static bool combineRestoreADD(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator RestoreMI,
                               MachineBasicBlock::iterator AddMI,
-                              const TargetInstrInfo *TII)
-{
+                              const TargetInstrInfo *TII) {
   // Before:  add  <op0>, <op1>, %i[0-7]
   //          restore %g0, %g0, %i[0-7]
   //
   // After :  restore <op0>, <op1>, %o[0-7]
 
+  const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
   Register reg = AddMI->getOperand(0).getReg();
   if (reg < SP::I0 || reg > SP::I7)
+    return false;
+
+  // Check whether it uses %o7 as its source and the corresponding branch
+  // instruction is a call.
+  MachineBasicBlock::iterator LastInst = MBB.getFirstTerminator();
+  bool IsCall = LastInst != MBB.end() && LastInst->isCall();
+
+  if (IsCall && AddMI->getOpcode() == SP::ADDrr &&
+      AddMI->readsRegister(SP::O7, TRI))
+    return false;
+
+  if (IsCall && AddMI->getOpcode() == SP::ADDri &&
+      AddMI->readsRegister(SP::O7, TRI))
     return false;
 
   // Erase RESTORE.
@@ -417,16 +436,17 @@ static bool combineRestoreADD(MachineBasicBlock::iterator RestoreMI,
   return true;
 }
 
-static bool combineRestoreOR(MachineBasicBlock::iterator RestoreMI,
+static bool combineRestoreOR(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator RestoreMI,
                              MachineBasicBlock::iterator OrMI,
-                             const TargetInstrInfo *TII)
-{
+                             const TargetInstrInfo *TII) {
   // Before:  or  <op0>, <op1>, %i[0-7]
   //          restore %g0, %g0, %i[0-7]
   //    and <op0> or <op1> is zero,
   //
   // After :  restore <op0>, <op1>, %o[0-7]
 
+  const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
   Register reg = OrMI->getOperand(0).getReg();
   if (reg < SP::I0 || reg > SP::I7)
     return false;
@@ -440,6 +460,15 @@ static bool combineRestoreOR(MachineBasicBlock::iterator RestoreMI,
   if (OrMI->getOpcode() == SP::ORri
       && OrMI->getOperand(1).getReg() != SP::G0
       && (!OrMI->getOperand(2).isImm() || OrMI->getOperand(2).getImm() != 0))
+    return false;
+
+  // Check whether it uses %o7 as its source and the corresponding branch
+  // instruction is a call.
+  MachineBasicBlock::iterator LastInst = MBB.getFirstTerminator();
+  bool IsCall = LastInst != MBB.end() && LastInst->isCall();
+
+  if (IsCall && OrMI->getOpcode() == SP::ORrr &&
+      OrMI->readsRegister(SP::O7, TRI))
     return false;
 
   // Erase RESTORE.
@@ -520,9 +549,11 @@ bool Filler::tryCombineRestoreWithPrevInst(MachineBasicBlock &MBB,
   switch (PrevInst->getOpcode()) {
   default: break;
   case SP::ADDrr:
-  case SP::ADDri: return combineRestoreADD(MBBI, PrevInst, TII); break;
+  case SP::ADDri:
+    return combineRestoreADD(MBB, MBBI, PrevInst, TII);
   case SP::ORrr:
-  case SP::ORri:  return combineRestoreOR(MBBI, PrevInst, TII); break;
+  case SP::ORri:
+    return combineRestoreOR(MBB, MBBI, PrevInst, TII);
   case SP::SETHIi: return combineRestoreSETHIi(MBBI, PrevInst, TII); break;
   }
   // It cannot combine with the previous instruction.

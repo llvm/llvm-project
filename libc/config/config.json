@@ -52,6 +52,10 @@
     "LIBC_CONF_PRINTF_RUNTIME_DISPATCH": {
       "value": true,
       "doc": "Use dynamic dispatch for the output mechanism to reduce code size."
+    },
+    "LIBC_CONF_PRINTF_DISABLE_WIDE": {
+      "value": false,
+      "doc": "Disable handling wide characters for printf and friends."
     }
   },
   "scanf": {
