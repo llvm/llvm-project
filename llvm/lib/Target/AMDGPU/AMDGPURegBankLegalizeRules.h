@@ -225,6 +225,7 @@ enum LoweringMethodID {
   S_BFE,
   V_BFE,
   VgprToVccCopy,
+  UniMAD64,
   SplitTo32,
   ScalarizeToS16,
   SplitTo32Select,
