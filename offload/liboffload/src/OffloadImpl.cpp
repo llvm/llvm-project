@@ -1007,7 +1007,7 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
       return Res;
   } else {
     if (SrcDevice->Platform.Plugin == DstDevice->Platform.Plugin &&
-      SrcDevice->Platform.Plugin->is_data_exchangable(
+      SrcDevice->Platform.Plugin->isDataExchangable(
         SrcDevice->Device->getDeviceId(), DstDevice->Device->getDeviceId())) {
       if (auto Res = SrcDevice->Device->dataExchange(SrcPtr, 
                                                   *DstDevice->Device,
