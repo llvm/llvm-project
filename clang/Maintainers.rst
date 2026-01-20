@@ -64,9 +64,6 @@ Clang MLIR generation
 
 Analysis & CFG
 ~~~~~~~~~~~~~~
-| Dmitri Gribenko
-| gribozavr\@gmail.com (email), gribozavr (Phabricator), gribozavr (GitHub)
-
 | Yitzhak Mandelbaum
 | yitzhakm\@google.com (email), ymandel (Phabricator), ymand (GitHub)
 
@@ -400,3 +397,4 @@ Inactive component maintainers
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
+| Dmitri Gribenko (gribozavr\@gmail.com (email), gribozavr (Phabricator), gribozavr (GitHub)) -- Analysis & CFG
