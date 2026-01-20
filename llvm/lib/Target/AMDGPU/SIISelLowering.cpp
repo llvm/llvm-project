@@ -2214,7 +2214,8 @@ bool SITargetLowering::isExtractVecEltCheap(EVT VT, unsigned Index) const {
   // TODO: This should be more aggressive, particular for 16-bit element
   // vectors. However there are some mixed improvements and regressions.
   EVT EltTy = VT.getVectorElementType();
-  return EltTy.getSizeInBits() % 32 == 0;
+  unsigned MinAlign = Subtarget->useRealTrue16Insts() ? 16 : 32;
+  return EltTy.getSizeInBits() % MinAlign == 0;
 }
 
 bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {

@@ -276,9 +276,6 @@ Inline assembly
 
 Text encodings
 ~~~~~~~~~~~~~~
-| Tom Honermann
-| tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)
-
 | Corentin Jabot
 | corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
 
@@ -398,3 +395,4 @@ Inactive component maintainers
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
 | Dmitri Gribenko (gribozavr\@gmail.com (email), gribozavr (Phabricator), gribozavr (GitHub)) -- Analysis & CFG
+| Tom Honermann (tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)) -- Text Encodings

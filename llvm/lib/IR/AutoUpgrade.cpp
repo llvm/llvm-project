@@ -6526,6 +6526,13 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return Res;
   }
 
+  if (T.isSystemZ() && !DL.empty()) {
+    // Make sure the stack alignment is present.
+    if (!DL.contains("-S64"))
+      return "E-S64" + DL.drop_front(1).str();
+    return DL.str();
+  }
+
   auto AddPtr32Ptr64AddrSpaces = [&DL, &Res]() {
     // If the datalayout matches the expected format, add pointer size address
     // spaces to the datalayout.
