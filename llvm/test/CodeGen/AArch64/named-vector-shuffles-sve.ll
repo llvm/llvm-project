@@ -1053,24 +1053,23 @@ define <vscale x 2 x i8> @splice_nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i8> 
 }
 
 ; Verify splitvec type legalisation works as expected.
-define <vscale x 8 x i32> @splice_nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b) #0 {
+define <vscale x 8 x i32> @splice_nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b) vscale_range(1, 16) #0 {
 ; CHECK-LABEL: splice_nxv8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    rdvl x8, #2
-; CHECK-NEXT:    mov w9, #32 // =0x20
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    cmp x8, #32
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    add x8, x9, x8
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
-; CHECK-NEXT:    csel x9, x8, x9, lo
-; CHECK-NEXT:    add x8, x10, x8
+; CHECK-NEXT:    mov x9, #-8 // =0xfffffffffffffff8
 ; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    sub x10, x8, #32
 ; CHECK-NEXT:    str z3, [sp, #3, mul vl]
-; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
-; CHECK-NEXT:    ldr z0, [x8]
-; CHECK-NEXT:    ldr z1, [x8, #1, mul vl]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8, x9, lsl #2]
+; CHECK-NEXT:    ldr z1, [x10, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
