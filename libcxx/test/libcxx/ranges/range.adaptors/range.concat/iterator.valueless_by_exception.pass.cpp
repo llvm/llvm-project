@@ -375,10 +375,11 @@ int main() {
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE(
           [&] {
-            std::ranges::iterator_t<const decltype(cv)> it3(iter1);
-            (void)it3;
+            auto it3(iter1);
+            (void)*it3;
           }(),
           "valueless by exception");
     }
+
   }
 }
