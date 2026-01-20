@@ -1415,7 +1415,11 @@ void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
                       false);
   ConsumeAnnotationToken();
 
-  llvm::scope_exit OnReturn([this]() { SkipUntil(tok::eof); });
+  llvm::scope_exit OnReturn([this]() {
+    while (Tok.isNot(tok::eof))
+      PP.Lex(Tok);
+    PP.Lex(Tok);
+  });
 
   do {
     PP.Lex(Tok);
