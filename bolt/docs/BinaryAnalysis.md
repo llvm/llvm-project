@@ -633,6 +633,28 @@ valid pointer with a pointer to an arbitrary *higher* address.
 
 ## How to add your own binary analysis
 
+### Pointer Authentication validator
+
+To implement the detection of a new gadget kind, add new
+`shouldReport*Gadget` function to `bolt/lib/Passes/PAuthGadgetScanner.cpp` and
+call it either from `FunctionAnalysisContext::findUnsafeUses` or
+`FunctionAnalysisContext::findUnsafeDefs`.
+
+To improve overall analysis quality by better computing register properties,
+either modify one of `*SafetyAnalysis` classes in `PAuthGadgetScanner.cpp`
+(if the improvement is target-neutral), or one of target-specific hooks in
+the subclass of `MCPlusBuilder` corresponding to your target (if an analysis of
+target-specific instruction patterns is to be improved).
+
+To add support for a new target, if one eventually implements similar pointer
+protection technique, implement PtrAuth-related hooks in the subclass of
+`MCPlusBuilder` corresponding to your target. Ideally, no changes should be
+needed in `PAuthGadgetScanner.cpp`, as it is intended to be reasonably target-
+independent, though it is possible that some amount of further generalization
+may be required.
+
+### New types of analyses
+
 _TODO: this section needs to be written. Ideally, we should have a simple
 "example" or "template" analysis that can be the starting point for implementing
 custom analyses_
