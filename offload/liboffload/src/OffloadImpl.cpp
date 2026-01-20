@@ -1007,23 +1007,25 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
       return Res;
   } else {
     if (SrcDevice->Platform.Plugin == DstDevice->Platform.Plugin &&
-      SrcDevice->Platform.Plugin->isDataExchangable(
-        SrcDevice->Device->getDeviceId(), DstDevice->Device->getDeviceId())) {
-      if (auto Res = SrcDevice->Device->dataExchange(SrcPtr, 
-                                                  *DstDevice->Device,
-                                                  DstPtr, Size, QueueImpl))
+        SrcDevice->Platform.Plugin->isDataExchangable(
+            SrcDevice->Device->getDeviceId(),
+            DstDevice->Device->getDeviceId())) {
+      if (auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
+                                                     DstPtr, Size, QueueImpl))
         return Res;
     } else {
       void *Buffer = malloc(Size);
       ol_queue_handle_t Queue;
       olCreateQueue(SrcDevice, &Queue);
-      Error Res = SrcDevice->Device->dataRetrieve(Buffer, SrcPtr, Size, Queue->AsyncInfo);
+      Error Res = SrcDevice->Device->dataRetrieve(Buffer, SrcPtr, Size,
+                                                  Queue->AsyncInfo);
       olDestroyQueue(Queue);
 
       if (!Res) {
         ol_queue_handle_t Queue;
         olCreateQueue(DstDevice, &Queue);
-        Res = DstDevice->Device->dataSubmit(DstPtr, Buffer, Size, Queue->AsyncInfo);
+        Res = DstDevice->Device->dataSubmit(DstPtr, Buffer, Size,
+                                            Queue->AsyncInfo);
         olDestroyQueue(Queue);
       }
       free(Buffer);
