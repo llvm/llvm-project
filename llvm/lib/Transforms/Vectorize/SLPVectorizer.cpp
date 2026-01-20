@@ -3919,8 +3919,8 @@ private:
   /// opportunities.
   void reorderGatherNode(TreeEntry &TE);
 
-  /// Checks if the tree represents disjoin or reduction of shl(zext, (0, 8, ..,
-  /// 56))-like pattern.
+  /// Checks if the tree represents disjoint or reduction of shl(zext, (0, 8,
+  /// .., 56))-like pattern.
   bool matchesShlZExt(const TreeEntry &TE) const;
 
   class TreeEntry {
@@ -16246,8 +16246,8 @@ InstructionCost BoUpSLP::getSpillCost() {
   SmallPtrSet<const TreeEntry *, 8> ScalarOrPseudoEntries;
   for (const auto &TEPtr : VectorizableTree) {
     if (TEPtr->CombinedOp == TreeEntry::ReducedBitcast) {
-        ScalarOrPseudoEntries.insert(TEPtr.get());
-        continue;
+      ScalarOrPseudoEntries.insert(TEPtr.get());
+      continue;
     }
     if (!TEPtr->isGather()) {
       Instruction *LastInst = &getLastInstructionInBundle(TEPtr.get());
@@ -25911,8 +25911,8 @@ private:
   /// Creates the reduction from the given \p Vec vector value with the given
   /// scale \p Scale and signedness \p IsSigned.
   Value *createSingleOp(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
-                        Value *Vec, unsigned Scale, bool IsSigned,
-                        Type *DestTy, bool ReducedInTree) {
+                        Value *Vec, unsigned Scale, bool IsSigned, Type *DestTy,
+                        bool ReducedInTree) {
     Value *Rdx;
     if (ReducedInTree) {
       Rdx = Vec;
