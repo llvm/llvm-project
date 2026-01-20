@@ -807,16 +807,14 @@ enum class Sign { Positive, Negative };
 // R715 significand -> digit-string . [digit-string] | . digit-string
 // R717 exponent -> signed-digit-string
 struct RealLiteralConstant {
-  BOILERPLATE(RealLiteralConstant);
+  TUPLE_CLASS_BOILERPLATE(RealLiteralConstant);
   struct Real {
+    using EmptyTrait = std::true_type;
     COPY_AND_ASSIGN_BOILERPLATE(Real);
     Real() {}
     CharBlock source;
   };
-  RealLiteralConstant(Real &&r, std::optional<KindParam> &&k)
-      : real{std::move(r)}, kind{std::move(k)} {}
-  Real real;
-  std::optional<KindParam> kind;
+  std::tuple<Real, std::optional<KindParam>> t;
 };
 
 // R713 signed-real-literal-constant -> [sign] real-literal-constant
@@ -1133,21 +1131,12 @@ struct TypeBoundProcDecl {
 struct TypeBoundProcedureStmt {
   UNION_CLASS_BOILERPLATE(TypeBoundProcedureStmt);
   struct WithoutInterface {
-    BOILERPLATE(WithoutInterface);
-    WithoutInterface(
-        std::list<BindAttr> &&as, std::list<TypeBoundProcDecl> &&ds)
-        : attributes(std::move(as)), declarations(std::move(ds)) {}
-    std::list<BindAttr> attributes;
-    std::list<TypeBoundProcDecl> declarations;
+    TUPLE_CLASS_BOILERPLATE(WithoutInterface);
+    std::tuple<std::list<BindAttr>, std::list<TypeBoundProcDecl>> t;
   };
   struct WithInterface {
-    BOILERPLATE(WithInterface);
-    WithInterface(Name &&n, std::list<BindAttr> &&as, std::list<Name> &&bs)
-        : interfaceName(std::move(n)), attributes(std::move(as)),
-          bindingNames(std::move(bs)) {}
-    Name interfaceName;
-    std::list<BindAttr> attributes;
-    std::list<Name> bindingNames;
+    TUPLE_CLASS_BOILERPLATE(WithInterface);
+    std::tuple<Name, std::list<BindAttr>, std::list<Name>> t;
   };
   std::variant<WithoutInterface, WithInterface> u;
 };
@@ -1794,14 +1783,8 @@ struct Expr {
 
 // R912 part-ref -> part-name [( section-subscript-list )] [image-selector]
 struct PartRef {
-  BOILERPLATE(PartRef);
-  PartRef(Name &&n, std::list<SectionSubscript> &&ss,
-      std::optional<ImageSelector> &&is)
-      : name{std::move(n)}, subscripts(std::move(ss)),
-        imageSelector{std::move(is)} {}
-  Name name;
-  std::list<SectionSubscript> subscripts;
-  std::optional<ImageSelector> imageSelector;
+  TUPLE_CLASS_BOILERPLATE(PartRef);
+  std::tuple<Name, std::list<SectionSubscript>, std::optional<ImageSelector>> t;
 };
 
 // R911 data-ref -> part-ref [% part-ref]...
@@ -3121,13 +3104,10 @@ struct PrefixSpec {
 //         proc-language-binding-spec [RESULT ( result-name )] |
 //         RESULT ( result-name ) [proc-language-binding-spec]
 struct Suffix {
-  BOILERPLATE(Suffix);
+  TUPLE_CLASS_BOILERPLATE(Suffix);
   Suffix(LanguageBindingSpec &&lbs, std::optional<Name> &&rn)
-      : binding(std::move(lbs)), resultName(std::move(rn)) {}
-  Suffix(Name &&rn, std::optional<LanguageBindingSpec> &&lbs)
-      : binding(std::move(lbs)), resultName(std::move(rn)) {}
-  std::optional<LanguageBindingSpec> binding;
-  std::optional<Name> resultName;
+      : t(std::move(rn), std::move(lbs)) {}
+  std::tuple<std::optional<Name>, std::optional<LanguageBindingSpec>> t;
 };
 
 // R1530 function-stmt ->
@@ -3262,7 +3242,7 @@ struct FunctionReference {
 // (CUDA) chevrons -> <<< * | scalar-expr, scalar-expr [,
 //          scalar-expr [, scalar-int-expr ] ] >>>
 struct CallStmt {
-  BOILERPLATE(CallStmt);
+  TUPLE_CLASS_BOILERPLATE(CallStmt);
   WRAPPER_CLASS(StarOrExpr, std::optional<ScalarExpr>);
   struct Chevrons {
     TUPLE_CLASS_BOILERPLATE(Chevrons);
@@ -3272,9 +3252,8 @@ struct CallStmt {
   };
   explicit CallStmt(ProcedureDesignator &&pd, std::optional<Chevrons> &&ch,
       std::list<ActualArgSpec> &&args)
-      : call{std::move(pd), std::move(args)}, chevrons{std::move(ch)} {}
-  Call call;
-  std::optional<Chevrons> chevrons;
+      : CallStmt(Call{std::move(pd), std::move(args)}, std::move(ch)) {}
+  std::tuple<Call, std::optional<Chevrons>> t;
   CharBlock source;
   mutable TypedCall typedCall; // filled by semantics
 };
