@@ -23,30 +23,31 @@ using namespace object;
 
 static Error extractPartAsObject(StringRef PartName, StringRef OutFilename,
                                  StringRef InputFilename, const Object &Obj) {
-  for (const Part &P : Obj.Parts)
-    if (P.Name == PartName) {
-      Object PartObj;
-      PartObj.Header = Obj.Header;
-      PartObj.Parts.push_back({P.Name, P.Data});
-      PartObj.recomputeHeader();
+  auto *PartIter = llvm::find_if(
+      Obj.Parts, [&PartName](const Part &P) { return P.Name == PartName; });
+  if (PartIter == Obj.Parts.end())
+    return createFileError(InputFilename,
+                           std::make_error_code(std::errc::invalid_argument),
+                           "part '%s' not found", PartName.str().c_str());
 
-      auto Write = [&OutFilename, &PartObj](raw_ostream &Out) -> Error {
-        DXContainerWriter Writer(PartObj, Out);
-        if (Error E = Writer.write())
-          return createFileError(OutFilename, std::move(E));
-        return Error::success();
-      };
+  Object PartObj;
+  PartObj.Header = Obj.Header;
+  PartObj.Parts.push_back({PartIter->Name, PartIter->Data});
+  PartObj.recomputeHeader();
 
-      return writeToOutput(OutFilename, Write);
-    }
+  auto Write = [&OutFilename, &PartObj](raw_ostream &Out) -> Error {
+    DXContainerWriter Writer(PartObj, Out);
+    if (Error E = Writer.write())
+      return createFileError(OutFilename, std::move(E));
+    return Error::success();
+  };
 
-  return createFileError(InputFilename, object_error::parse_failed,
-                         "part '%s' not found", PartName.str().c_str());
+  return writeToOutput(OutFilename, Write);
 }
 
 static Error dumpPartToFile(StringRef PartName, StringRef Filename,
                             StringRef InputFilename, Object &Obj) {
-  auto PartIter = llvm::find_if(
+  auto *PartIter = llvm::find_if(
       Obj.Parts, [&PartName](const Part &P) { return P.Name == PartName; });
   if (PartIter == Obj.Parts.end())
     return createFileError(Filename,
