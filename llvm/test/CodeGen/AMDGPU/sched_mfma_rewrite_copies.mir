@@ -2447,7 +2447,7 @@ body:             |
   ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   SCHED_BARRIER 0
   ; CHECK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:areg_128_align2 = DS_READ_B128_gfx9 [[DEF9]], 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[DEF9]], 0, 0, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = COPY [[DS_READ_B128_gfx9_]]
   ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
@@ -2577,7 +2577,7 @@ body:             |
   ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   SCHED_BARRIER 0
   ; CHECK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:areg_128_align2 = DS_READ_B128_gfx9 [[DEF9]], 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[DEF9]], 0, 0, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = COPY [[DS_READ_B128_gfx9_]]
   ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF

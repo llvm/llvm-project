@@ -1323,10 +1323,8 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
 
   // If we haven't found the beneficial conditions, prefer the VGPR form which
   // may result in less cross RC copies.
-  if (Cost > 0) {
-    restoreRegClasses(RewriteCands);
+  if (Cost > 0)
     return false;
-  }
 
   return rewrite(RewriteCands);
 }
@@ -1975,6 +1973,7 @@ bool RewriteMFMAFormStage::initHeuristics(
       assert(ReplacementOp != -1);
 
       RewriteCands.push_back({&MI, MI.getOpcode()});
+      MI.setDesc(TII->get(ReplacementOp));
 
       MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
       if (Src2->isReg()) {
@@ -1985,7 +1984,7 @@ bool RewriteMFMAFormStage::initHeuristics(
         // insert a copy.
         for (SlotIndex RDIdx : Src2ReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-          if (!isRewriteCandidate(RD))
+          if (!TII->isMAI(*RD))
             CopyForDef.insert(RD);
         }
       }
@@ -2056,7 +2055,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     GCNRegPressure &PressureBefore = DAG.Pressure[Region];
     unsigned SpillCostBefore = PressureBefore.getVGPRSpills(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
-
+ 
     // For the cases we care about (i.e. ArchVGPR usage is greater than the
     // addressable limit), rewriting alone should bring pressure to manageable
     // level. If we find any such region, then the rewrite is potentially
@@ -2065,7 +2064,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     unsigned SpillCostAfter = PressureAfter.getVGPRSpills(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
 
-    uint64_t BlockFreq =
+     uint64_t BlockFreq =
         MBFI->getBlockFreq(DAG.Regions[Region].first->getParent())
             .getFrequency();
 
@@ -2096,7 +2095,6 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   // Set the cost to the largest decrease in spill cost in order to not double
   // count spill reductions.
   Cost = BestSpillCost;
-
   assert(Cost <= 0);
 
   unsigned CopyCost = 0;
@@ -2124,21 +2122,27 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
       CopyCost += RC->getCopyCost() * UseFreq;
     }
   }
-
-  return Cost + CopyCost;
-}
-
-void RewriteMFMAFormStage::restoreRegClasses(
-    const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands) {
+  
+  // Reset the classes that were changed to AGPR for better RB analysis.
+  // We must do rewriting after copy-insertion, as some defs of the register 
+  // may require VGPR.  Additionally, if we bail out and don't perform the
+  // rewrite then these need to be restored anyway.
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
-    MachineOperand &Dst = MI->getOperand(0);
-    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-    const TargetRegisterClass *AGPRRC = DAG.MRI.getRegClass(Dst.getReg());
+    assert(TII->isMAI(*MI));
+    const TargetRegisterClass *AGPRRC =
+        DAG.MRI.getRegClass(MI->getOperand(0).getReg());
     const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(AGPRRC);
-    DAG.MRI.setRegClass(Dst.getReg(), VGPRRC);
+
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    assert(Src2);
+
     if (Src2->isReg())
       DAG.MRI.setRegClass(Src2->getReg(), VGPRRC);
+    DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VGPRRC);
+    MI->setDesc(TII->get(OriginalOpcode));
   }
+
+  return Cost + CopyCost;
 }
 
 bool RewriteMFMAFormStage::rewrite(
