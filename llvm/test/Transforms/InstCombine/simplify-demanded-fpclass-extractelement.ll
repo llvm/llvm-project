@@ -17,7 +17,8 @@ define nofpclass(inf norm sub zero) half @ret_only_nan__extractelement_unknown(<
 define nofpclass(snan inf norm sub zero) half @ret_only_qnan__extractelement_unknown(<4 x half> %vec, i32 %idx) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan__extractelement_unknown(
 ; CHECK-SAME: <4 x half> [[VEC:%.*]], i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x half> [[VEC]], i32 [[IDX]]
+; CHECK-NEXT:    ret half [[EXT]]
 ;
   %ext = extractelement <4 x half> %vec, i32 %idx
   ret half %ext

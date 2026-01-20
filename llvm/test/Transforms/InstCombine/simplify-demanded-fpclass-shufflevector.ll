@@ -28,7 +28,8 @@ define nofpclass(qnan inf zero sub norm) <4 x half> @ret_only_snan__shufflevecto
 define nofpclass(snan inf zero sub norm) <4 x half> @ret_only_qnan__shufflevector_unknown(<4 x half> %vec0, <4 x half> %vec1) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) <4 x half> @ret_only_qnan__shufflevector_unknown(
 ; CHECK-SAME: <4 x half> [[VEC0:%.*]], <4 x half> [[VEC1:%.*]]) {
-; CHECK-NEXT:    ret <4 x half> splat (half 0xH7E00)
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x half> [[VEC0]], <4 x half> [[VEC1]], <4 x i32> <i32 6, i32 2, i32 3, i32 0>
+; CHECK-NEXT:    ret <4 x half> [[SHUFFLE]]
 ;
   %shuffle = shufflevector <4 x half> %vec0, <4 x half> %vec1, <4 x i32> <i32 6, i32 2, i32 3, i32 0>
   ret <4 x half> %shuffle
@@ -241,7 +242,7 @@ define nofpclass(snan) <4 x half> @ret_nonnan_rhs_taints_known_nan_result(i1 %co
 ; CHECK-LABEL: define nofpclass(snan) <4 x half> @ret_nonnan_rhs_taints_known_nan_result(
 ; CHECK-SAME: i1 [[COND:%.*]], <4 x half> [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NAN:%.*]] = call <4 x half> @returns_nan()
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x half> <half 0xH7E00, half 0xH7E00, half poison, half 0xH7E00>, <4 x half> [[UNKNOWN]], <4 x i32> <i32 5, i32 0, i32 1, i32 3>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x half> [[NAN]], <4 x half> [[UNKNOWN]], <4 x i32> <i32 5, i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[EXP:%.*]] = call <4 x half> @llvm.exp.v4f16(<4 x half> [[SHUFFLE]])
 ; CHECK-NEXT:    ret <4 x half> [[EXP]]
 ;
@@ -256,7 +257,7 @@ define nofpclass(snan) <4 x half> @ret_nonnan_lhs_taints_known_nan_result(i1 %co
 ; CHECK-LABEL: define nofpclass(snan) <4 x half> @ret_nonnan_lhs_taints_known_nan_result(
 ; CHECK-SAME: i1 [[COND:%.*]], <4 x half> [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NAN:%.*]] = call <4 x half> @returns_nan()
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x half> [[UNKNOWN]], <4 x half> <half poison, half 0xH7E00, half poison, half poison>, <4 x i32> <i32 5, i32 0, i32 1, i32 3>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x half> [[UNKNOWN]], <4 x half> [[NAN]], <4 x i32> <i32 5, i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[EXP:%.*]] = call <4 x half> @llvm.exp.v4f16(<4 x half> [[SHUFFLE]])
 ; CHECK-NEXT:    ret <4 x half> [[EXP]]
 ;

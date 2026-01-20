@@ -29,7 +29,8 @@ define nofpclass(qnan inf zero sub norm) <4 x half> @ret_only_snan__insert_unkno
 define nofpclass(snan inf zero sub norm) <4 x half> @ret_only_qnan__insert_unknown_unknown(<4 x half> %vec, half %elt, i32 %idx) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) <4 x half> @ret_only_qnan__insert_unknown_unknown(
 ; CHECK-SAME: <4 x half> [[VEC:%.*]], half [[ELT:%.*]], i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    ret <4 x half> splat (half 0xH7E00)
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x half> [[VEC]], half [[ELT]], i32 [[IDX]]
+; CHECK-NEXT:    ret <4 x half> [[INSERT]]
 ;
   %insert = insertelement <4 x half> %vec, half %elt, i32 %idx
   ret <4 x half> %insert
@@ -159,7 +160,7 @@ define nofpclass(snan) <4 x half> @insert_unknown_taints_known_nan_vector_input(
 ; CHECK-LABEL: define nofpclass(snan) <4 x half> @insert_unknown_taints_known_nan_vector_input(
 ; CHECK-SAME: half [[UNKNOWN_ELT:%.*]], i32 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[NAN_VEC:%.*]] = call <4 x half> @returns_nan()
-; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x half> splat (half 0xH7E00), half [[UNKNOWN_ELT]], i32 [[IDX]]
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x half> [[NAN_VEC]], half [[UNKNOWN_ELT]], i32 [[IDX]]
 ; CHECK-NEXT:    [[EXP:%.*]] = call <4 x half> @llvm.exp.v4f16(<4 x half> [[INSERT]])
 ; CHECK-NEXT:    ret <4 x half> [[EXP]]
 ;
@@ -174,7 +175,7 @@ define nofpclass(snan) <4 x half> @insert_unknown_vector_taints_known_nan_vector
 ; CHECK-LABEL: define nofpclass(snan) <4 x half> @insert_unknown_vector_taints_known_nan_vector_insert(
 ; CHECK-SAME: <4 x half> [[UNKNOWN_VEC:%.*]], i32 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[NAN_ELT:%.*]] = call half @returns_nan_f16()
-; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x half> [[UNKNOWN_VEC]], half 0xH7E00, i32 [[IDX]]
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x half> [[UNKNOWN_VEC]], half [[NAN_ELT]], i32 [[IDX]]
 ; CHECK-NEXT:    [[EXP:%.*]] = call <4 x half> @llvm.exp.v4f16(<4 x half> [[INSERT]])
 ; CHECK-NEXT:    ret <4 x half> [[EXP]]
 ;

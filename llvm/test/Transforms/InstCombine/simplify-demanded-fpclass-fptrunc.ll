@@ -40,7 +40,8 @@ define nofpclass(inf norm sub zero qnan) half @ret_only_snan__fptrunc(float %x) 
 define nofpclass(inf norm sub zero snan) half @ret_only_qnan__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc float [[X]] to half
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %result = fptrunc float %x to half
   ret half %result

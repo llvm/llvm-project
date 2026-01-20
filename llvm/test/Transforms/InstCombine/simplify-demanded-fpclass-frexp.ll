@@ -316,7 +316,8 @@ define nofpclass(qnan) half @ret_nofpclass_qnan__frexp_select_unknown_qnan(i1 %c
 ; CHECK-LABEL: define nofpclass(qnan) half @ret_nofpclass_qnan__frexp_select_unknown_qnan(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_QNAN:%.*]] = call half @returns_qnan()
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_QNAN]]
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
 ;
