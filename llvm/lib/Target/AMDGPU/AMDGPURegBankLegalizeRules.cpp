@@ -1165,6 +1165,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{_, UniS64}, {{}, {IntrId, Sgpr64}}});
 
   addRulesForIOpcs({amdgcn_if_break}, Standard)
+      .Uni(S64, {{Sgpr64}, {IntrId, Vcc, Sgpr64}})
       .Uni(S32, {{Sgpr32}, {IntrId, Vcc, Sgpr32}});
 
   addRulesForIOpcs({amdgcn_mbcnt_lo, amdgcn_mbcnt_hi}, Standard)
