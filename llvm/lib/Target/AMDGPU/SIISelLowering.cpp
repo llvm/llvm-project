@@ -230,9 +230,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
           ISD::FCEIL,    ISD::FTRUNC,     ISD::FRINT,   ISD::FNEARBYINT,
           ISD::FROUND,   ISD::FROUNDEVEN, ISD::FFLOOR,  ISD::FCANONICALIZE,
           ISD::SETCC}) {
-      // FIXME: The promoted to type shouldn't need to be explicit
       setOperationAction(Opc, MVT::bf16, Promote);
-      AddPromotedToType(Opc, MVT::bf16, MVT::f32);
     }
 
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Expand);
@@ -16804,7 +16802,6 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
         LHS.getOpcode() == ISD::SELECT &&
         isa<ConstantSDNode>(LHS.getOperand(1)) &&
         isa<ConstantSDNode>(LHS.getOperand(2)) &&
-        LHS.getConstantOperandVal(1) != LHS.getConstantOperandVal(2) &&
         isBoolSGPR(LHS.getOperand(0))) {
       // Given CT != FT:
       // setcc (select cc, CT, CF), CF, eq => xor cc, -1
@@ -16814,13 +16811,14 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
       const APInt &CT = LHS.getConstantOperandAPInt(1);
       const APInt &CF = LHS.getConstantOperandAPInt(2);
 
-      if ((CF == CRHSVal && CC == ISD::SETEQ) ||
-          (CT == CRHSVal && CC == ISD::SETNE))
-        return DAG.getNode(ISD::XOR, SL, MVT::i1, LHS.getOperand(0),
-                           DAG.getAllOnesConstant(SL, MVT::i1));
-      if ((CF == CRHSVal && CC == ISD::SETNE) ||
-          (CT == CRHSVal && CC == ISD::SETEQ))
-        return LHS.getOperand(0);
+      if (CT != CF) {
+        if ((CF == CRHSVal && CC == ISD::SETEQ) ||
+            (CT == CRHSVal && CC == ISD::SETNE))
+          return DAG.getNOT(SL, LHS.getOperand(0), MVT::i1);
+        if ((CF == CRHSVal && CC == ISD::SETNE) ||
+            (CT == CRHSVal && CC == ISD::SETEQ))
+          return LHS.getOperand(0);
+      }
     }
   }
 
@@ -18674,7 +18672,7 @@ getPrivateAtomicExpansionKind(const GCNSubtarget &STI) {
 }
 
 TargetLowering::AtomicExpansionKind
-SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return getPrivateAtomicExpansionKind(*getSubtarget());
@@ -18773,7 +18771,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
           Op == AtomicRMWInst::Xor) {
         // Atomic sub/or/xor do not work over PCI express, but atomic add
         // does. InstCombine transforms these with 0 to or, so undo that.
-        if (Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
+        if (const Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
             ConstVal && ConstVal->isNullValue())
           return AtomicExpansionKind::CustomExpand;
       }
@@ -18972,7 +18970,8 @@ SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
+SITargetLowering::shouldExpandAtomicCmpXchgInIR(
+    const AtomicCmpXchgInst *CmpX) const {
   unsigned AddrSpace = CmpX->getPointerAddressSpace();
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return getPrivateAtomicExpansionKind(*getSubtarget());

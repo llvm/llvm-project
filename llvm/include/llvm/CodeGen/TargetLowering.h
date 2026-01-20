@@ -2438,13 +2438,14 @@ public:
   /// Returns how the given atomic cmpxchg should be expanded by the IR-level
   /// AtomicExpand pass.
   virtual AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const {
     return AtomicExpansionKind::None;
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
   /// AtomicRMW, if at all. Default is to never expand.
-  virtual AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  virtual AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
     return RMW->isFloatingPointOperation() ?
       AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
   }
@@ -3023,6 +3024,9 @@ public:
     case ISD::UMIN:
     case ISD::UMAX:
     case ISD::MUL:
+    case ISD::CLMUL:
+    case ISD::CLMULH:
+    case ISD::CLMULR:
     case ISD::MULHU:
     case ISD::MULHS:
     case ISD::SMUL_LOHI:
@@ -3626,6 +3630,8 @@ public:
     return RuntimeLibcallInfo;
   }
 
+  const LibcallLoweringInfo &getLibcallLoweringInfo() const { return Libcalls; }
+
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     Libcalls.setLibcallImpl(Call, Impl);
   }
@@ -3859,6 +3865,7 @@ private:
   const RTLIB::RuntimeLibcallsInfo RuntimeLibcallInfo;
 
   /// The list of libcalls that the target will use.
+  /// FIXME: This should not live here; it should come from an analysis.
   LibcallLoweringInfo Libcalls;
 
   /// The bits of IndexedModeActions used to store the legalisation actions
@@ -5177,7 +5184,8 @@ public:
   /// This method returns a target specific FastISel object, or null if the
   /// target does not support "fast" ISel.
   virtual FastISel *createFastISel(FunctionLoweringInfo &,
-                                   const TargetLibraryInfo *) const {
+                                   const TargetLibraryInfo *,
+                                   const LibcallLoweringInfo *) const {
     return nullptr;
   }
 

@@ -242,7 +242,7 @@ public:
       : BoundArgs(std::forward<BoundArgsArgT>(Args)...), FnStorage() {}
 
   template <typename... CallArgsT>
-  constexpr auto operator()(CallArgsT &&...CallArgs) {
+  constexpr decltype(auto) operator()(CallArgsT &&...CallArgs) {
     if constexpr (BindFront)
       return llvm::invoke(FnStorage.get(), std::get<Indices>(BoundArgs)...,
                           std::forward<CallArgsT>(CallArgs)...);
@@ -252,7 +252,7 @@ public:
   }
 
   template <typename... CallArgsT>
-  constexpr auto operator()(CallArgsT &&...CallArgs) const {
+  constexpr decltype(auto) operator()(CallArgsT &&...CallArgs) const {
     if constexpr (BindFront)
       return llvm::invoke(FnStorage.get(), std::get<Indices>(BoundArgs)...,
                           std::forward<CallArgsT>(CallArgs)...);

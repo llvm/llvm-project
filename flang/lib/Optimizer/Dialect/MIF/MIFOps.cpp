@@ -155,16 +155,14 @@ llvm::LogicalResult mif::CoSumOp::verify() {
 
 void mif::ChangeTeamOp::build(mlir::OpBuilder &builder,
                               mlir::OperationState &result, mlir::Value team,
-                              bool ensureTerminator,
                               llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   build(builder, result, team, /*stat*/ mlir::Value{}, /*errmsg*/ mlir::Value{},
-        ensureTerminator, attributes);
+        attributes);
 }
 
 void mif::ChangeTeamOp::build(mlir::OpBuilder &builder,
                               mlir::OperationState &result, mlir::Value team,
                               mlir::Value stat, mlir::Value errmsg,
-                              bool ensureTerminator,
                               llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   std::int32_t argStat = 0, argErrmsg = 0;
   result.addOperands(team);
@@ -179,8 +177,6 @@ void mif::ChangeTeamOp::build(mlir::OpBuilder &builder,
 
   mlir::Region *bodyRegion = result.addRegion();
   bodyRegion->push_back(new mlir::Block{});
-  if (ensureTerminator)
-    ChangeTeamOp::ensureTerminator(*bodyRegion, builder, result.location);
 
   result.addAttribute(getOperandSegmentSizeAttr(),
                       builder.getDenseI32ArrayAttr({1, argStat, argErrmsg}));
@@ -192,8 +188,11 @@ static mlir::ParseResult parseChangeTeamOpBody(mlir::OpAsmParser &parser,
   if (parser.parseRegion(body))
     return mlir::failure();
 
-  auto &builder = parser.getBuilder();
-  mif::ChangeTeamOp::ensureTerminator(body, builder, builder.getUnknownLoc());
+  mlir::Operation *terminator = body.back().getTerminator();
+  if (!terminator || !mlir::isa<mif::EndTeamOp>(terminator))
+    return parser.emitError(parser.getNameLoc(),
+                            "missing mif.end_team terminator");
+
   return mlir::success();
 }
 
