@@ -20241,7 +20241,7 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
   } else {
     if (IsUnsigned || IntVT == MVT::i64) {
       // SSE2 can only perform f64/f32 <-> i32 signed.
-      if (!Subtarget.hasAVX512())
+      if (!Subtarget.useAVX512Regs() || !Subtarget.hasDQI())
         return SDValue();
 
       // Need to extend width for AVX512DQ without AVX512VL.
