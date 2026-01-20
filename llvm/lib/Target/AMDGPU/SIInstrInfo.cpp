@@ -4765,20 +4765,6 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   }
 }
 
-bool SIInstrInfo::isInlineConstant(const MachineInstr &MI, unsigned OpIdx,
-                                   int64_t ImmVal, uint8_t OpType) const {
-  // V_PK_FMAC_F16 has different inline constant behavior:
-  // - Pre-GFX11: fp16 inline constants have the value in low 16 bits, 0 in high
-  // - GFX11+: fp16 inline constants are duplicated into both halves
-  if ((OpType == AMDGPU::OPERAND_REG_IMM_V2FP16 ||
-       OpType == AMDGPU::OPERAND_REG_INLINE_C_V2FP16) &&
-      (MI.getOpcode() == AMDGPU::V_PK_FMAC_F16_e32 ||
-       MI.getOpcode() == AMDGPU::V_PK_FMAC_F16_e64))
-    return AMDGPU::isPKFMACF16InlineConstant(ImmVal, ST.isGFX11Plus());
-
-  return isInlineConstant(ImmVal, OpType);
-}
-
 static bool compareMachineOp(const MachineOperand &Op0,
                              const MachineOperand &Op1) {
   if (Op0.getType() != Op1.getType())

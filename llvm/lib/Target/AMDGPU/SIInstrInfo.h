@@ -1278,8 +1278,7 @@ public:
       return isInlineConstant(ImmVal, OpType);
     }
 
-    return isInlineConstant(MI, OpIdx, ImmVal,
-                            MI.getDesc().operands()[OpIdx].OperandType);
+    return isInlineConstant(ImmVal, MI.getDesc().operands()[OpIdx].OperandType);
   }
 
   bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx,
@@ -1290,13 +1289,6 @@ public:
   bool isInlineConstant(const MachineOperand &MO) const {
     return isInlineConstant(*MO.getParent(), MO.getOperandNo());
   }
-
-  /// Check if \p ImmVal can be used as an inline constant for operand \p OpIdx
-  /// in instruction \p MI with operand type \p OpType.
-  /// This handles V_PK_FMAC_F16 specially due to different inline constant
-  /// behavior on pre-GFX11 vs GFX11+.
-  bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx, int64_t ImmVal,
-                        uint8_t OpType) const;
 
   bool isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
                          const MachineOperand &MO) const;
