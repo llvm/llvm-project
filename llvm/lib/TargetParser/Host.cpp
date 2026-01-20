@@ -2241,6 +2241,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
                                    .Case("fp", "fp-armv8")
                                    .Case("crc32", "crc")
                                    .Case("atomics", "lse")
+                                   .Case("rng", "rand")
                                    .Case("sha3", "sha3")
                                    .Case("sm4", "sm4")
                                    .Case("sve", "sve")
@@ -2290,6 +2291,10 @@ StringMap<bool> sys::getHostCPUFeatures() {
   // detect support at runtime.
   if (!Features.contains("sve"))
     Features["sve"] = false;
+
+  // Also disable RNG if we can't detect support at runtime.
+  if (!Features.contains("rand"))
+    Features["rand"] = false;
 #endif
 
   return Features;
