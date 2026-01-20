@@ -127,6 +127,85 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
   return valobj;
 }
 
+static size_t IntegerConversionRank(CompilerType type) {
+  switch (type.GetCanonicalType().GetBasicTypeEnumeration()) {
+  case lldb::eBasicTypeBool:
+    return 1;
+  case lldb::eBasicTypeChar:
+  case lldb::eBasicTypeSignedChar:
+  case lldb::eBasicTypeUnsignedChar:
+    return 2;
+  case lldb::eBasicTypeShort:
+  case lldb::eBasicTypeUnsignedShort:
+    return 3;
+  case lldb::eBasicTypeInt:
+  case lldb::eBasicTypeUnsignedInt:
+    return 4;
+  case lldb::eBasicTypeLong:
+  case lldb::eBasicTypeUnsignedLong:
+    return 5;
+  case lldb::eBasicTypeLongLong:
+  case lldb::eBasicTypeUnsignedLongLong:
+    return 6;
+  case lldb::eBasicTypeInt128:
+  case lldb::eBasicTypeUnsignedInt128:
+    return 7;
+  default:
+    break;
+  }
+  return 0;
+}
+
+llvm::Expected<CompilerType>
+Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
+                                  lldb::ValueObjectSP &rhs, uint32_t location) {
+  // Apply unary conversion for both operands.
+  auto lhs_or_err = UnaryConversion(lhs, location);
+  if (!lhs_or_err)
+    return lhs_or_err.takeError();
+  lhs = *lhs_or_err;
+  auto rhs_or_err = UnaryConversion(rhs, location);
+  if (!rhs_or_err)
+    return rhs_or_err.takeError();
+  rhs = *rhs_or_err;
+
+  CompilerType lhs_type = lhs->GetCompilerType();
+  CompilerType rhs_type = rhs->GetCompilerType();
+
+  if (lhs_type.CompareTypes(rhs_type))
+    return lhs_type;
+
+  // If either of the operands is not arithmetic (e.g. pointer), we're done.
+  if (!lhs_type.IsScalarType() || !rhs_type.IsScalarType())
+    return CompilerType();
+
+  // Handle conversions for floating types (float, double).
+  if (lhs_type.IsFloat() || rhs_type.IsFloat()) {
+    // If both are floats, convert the smaller operand to the bigger.
+    if (lhs_type.IsFloat() && rhs_type.IsFloat()) {
+      if (lhs_type.GetBasicTypeEnumeration() >
+          rhs_type.GetBasicTypeEnumeration())
+        return lhs_type;
+      return rhs_type;
+    }
+    if (lhs_type.IsFloat() && rhs_type.IsInteger())
+      return lhs_type;
+    return rhs_type;
+  }
+
+  if (lhs_type.IsInteger() && rhs_type.IsInteger()) {
+    using Rank = std::tuple<size_t, bool>;
+    Rank l_rank = {IntegerConversionRank(lhs_type), !lhs_type.IsSigned()};
+    Rank r_rank = {IntegerConversionRank(rhs_type), !rhs_type.IsSigned()};
+
+    if (l_rank < r_rank)
+      return rhs_type;
+    if (l_rank > r_rank)
+      return lhs_type;
+  }
+  return rhs_type;
+}
+
 static lldb::VariableSP DILFindVariable(ConstString name,
                                         VariableList &variable_list) {
   lldb::VariableSP exact_match;
@@ -391,6 +470,82 @@ Interpreter::Visit(const UnaryOpNode &node) {
   }
   return llvm::make_error<DILDiagnosticError>(m_expr, "invalid unary operation",
                                               node.GetLocation());
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                              lldb::ValueObjectSP rhs, CompilerType result_type,
+                              uint32_t location) {
+  Scalar l, r;
+  bool l_resolved = lhs->ResolveValue(l);
+  bool r_resolved = rhs->ResolveValue(r);
+
+  if (!l_resolved || !r_resolved)
+    return llvm::make_error<DILDiagnosticError>(m_expr, "invalid scalar value",
+                                                location);
+
+  auto value_object = [this, result_type](Scalar scalar) {
+    return ValueObject::CreateValueObjectFromScalar(m_target, scalar,
+                                                    result_type, "result");
+  };
+
+  switch (kind) {
+  case BinaryOpKind::Add:
+    return value_object(l + r);
+  }
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, "invalid arithmetic operation", location);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '+' works for:
+  //   {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
+  // TODO: Pointer arithmetics
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs, location);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (result_type.IsScalarType())
+    return EvaluateScalarOp(BinaryOpKind::Add, lhs, rhs, result_type, location);
+
+  std::string errMsg =
+      llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                    orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+  return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const BinaryOpNode &node) {
+  auto lhs_or_err = EvaluateAndDereference(node.GetLHS());
+  if (!lhs_or_err)
+    return lhs_or_err;
+  lldb::ValueObjectSP lhs = *lhs_or_err;
+  auto rhs_or_err = EvaluateAndDereference(node.GetRHS());
+  if (!rhs_or_err)
+    return rhs_or_err;
+  lldb::ValueObjectSP rhs = *rhs_or_err;
+
+  lldb::TypeSystemSP lhs_system =
+      lhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+  lldb::TypeSystemSP rhs_system =
+      rhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+  if (lhs_system->GetPluginName() != rhs_system->GetPluginName()) {
+    // TODO: Attempt to convert values to current CU's type system
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "operands have different type systems", node.GetLocation());
+  }
+
+  switch (node.GetKind()) {
+  case BinaryOpKind::Add:
+    return EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+  }
+
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, "unimplemented binary operation", node.GetLocation());
 }
 
 llvm::Expected<lldb::ValueObjectSP>
