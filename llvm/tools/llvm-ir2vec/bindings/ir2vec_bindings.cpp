@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
-PYBIND11_MODULE(py_ir2vec, m) { m.doc() = "Python bindings for IR2Vec"; }
+NB_MODULE(py_ir2vec, m) { m.doc() = "Python bindings for IR2Vec"; }
