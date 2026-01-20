@@ -1260,12 +1260,12 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
                   << "Restoring target descriptor " << ShadowPtr.TgtPtrAddr
                   << " to its original content (" << ShadowPtr.PtrSize
                   << " bytes), containing pointee address "
-                  << ShadowPtr.TgtPtrContent.data();
+                  << static_cast<const void *>(ShadowPtr.TgtPtrContent.data());
             } else {
               ODBG(ODT_Mapping)
                   << "Restoring target pointer " << ShadowPtr.TgtPtrAddr
                   << " to its original value "
-                  << ShadowPtr.TgtPtrContent.data();
+                  << static_cast<const void *>(ShadowPtr.TgtPtrContent.data());
             }
             Ret = Device.submitData(ShadowPtr.TgtPtrAddr,
                                     ShadowPtr.TgtPtrContent.data(),
@@ -1305,12 +1305,14 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
                     << "Restoring host descriptor " << ShadowPtr.HstPtrAddr
                     << " to its original content (" << ShadowPtr.PtrSize
                     << " bytes), containing pointee address "
-                    << ShadowPtr.HstPtrContent.data();
+                    << static_cast<const void *>(
+                           ShadowPtr.HstPtrContent.data());
               } else {
                 ODBG(ODT_Mapping)
                     << "Restoring host pointer " << ShadowPtr.HstPtrAddr
                     << " to its original value "
-                    << ShadowPtr.HstPtrContent.data();
+                    << static_cast<const void *>(
+                           ShadowPtr.HstPtrContent.data());
               }
               std::memcpy(ShadowPtr.HstPtrAddr, ShadowPtr.HstPtrContent.data(),
                           ShadowPtr.PtrSize);
