@@ -135,7 +135,7 @@ function(_get_compile_options_from_config output_var)
     endif()
   endif()
 
-  if (LIBC_CONF_PRINTF_DISABLE_WIDE)
+  if(LIBC_CONF_PRINTF_DISABLE_WIDE)
     list(APPEND config_options "-DLIBC_COPT_PRINTF_DISABLE_WIDE")
   endif()
 
