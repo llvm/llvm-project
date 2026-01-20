@@ -252,8 +252,9 @@ public:
   bool isParent() const { return predecessor == nullptr; }
 
   /// Returns the terminator if branching from a region.
-  /// A null pointer otherwise.
-  Operation *getTerminatorPredecessorOrNull() const { return predecessor; }
+  /// A "null" operation otherwise.
+  inline RegionBranchTerminatorOpInterface
+  getTerminatorPredecessorOrNull() const;
 
   /// Returns true if the two branch points are equal.
   friend bool operator==(RegionBranchPoint lhs, RegionBranchPoint rhs) {
@@ -268,32 +269,6 @@ private:
   /// op and the region terminator being branched from otherwise.
   Operation *predecessor = nullptr;
 };
-
-inline bool operator!=(RegionBranchPoint lhs, RegionBranchPoint rhs) {
-  return !(lhs == rhs);
-}
-
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     RegionBranchPoint point) {
-  if (point.isParent())
-    return os << "<from parent>";
-  return os << "<region #"
-            << point.getTerminatorPredecessorOrNull()
-                   ->getParentRegion()
-                   ->getRegionNumber()
-            << ", terminator "
-            << OpWithFlags(point.getTerminatorPredecessorOrNull(),
-                           OpPrintingFlags().skipRegions())
-            << ">";
-}
-
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     RegionSuccessor successor) {
-  if (successor.isParent())
-    return os << "<to parent>";
-  return os << "<to region #" << successor.getSuccessor()->getRegionNumber()
-            << ">";
-}
 
 /// This class represents upper and lower bounds on the number of times a region
 /// of a `RegionBranchOpInterface` can be invoked. The lower bound is at least
@@ -381,6 +356,39 @@ namespace mlir {
 inline RegionBranchPoint::RegionBranchPoint(
     RegionBranchTerminatorOpInterface predecessor)
     : predecessor(predecessor.getOperation()) {}
+
+inline RegionBranchTerminatorOpInterface
+RegionBranchPoint::getTerminatorPredecessorOrNull() const {
+  if (!predecessor)
+    return nullptr;
+  return cast<RegionBranchTerminatorOpInterface>(predecessor);
+}
+
+inline bool operator!=(RegionBranchPoint lhs, RegionBranchPoint rhs) {
+  return !(lhs == rhs);
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     RegionBranchPoint point) {
+  if (point.isParent())
+    return os << "<from parent>";
+  return os << "<region #"
+            << point.getTerminatorPredecessorOrNull()
+                   ->getParentRegion()
+                   ->getRegionNumber()
+            << ", terminator "
+            << OpWithFlags(point.getTerminatorPredecessorOrNull(),
+                           OpPrintingFlags().skipRegions())
+            << ">";
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     RegionSuccessor successor) {
+  if (successor.isParent())
+    return os << "<to parent>";
+  return os << "<to region #" << successor.getSuccessor()->getRegionNumber()
+            << ">";
+}
 } // namespace mlir
 
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES_H

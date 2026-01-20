@@ -439,9 +439,7 @@ RegionBranchOpInterface::getSuccessorOperands(RegionBranchPoint src,
                                               RegionSuccessor dest) {
   if (src.isParent())
     return getEntrySuccessorOperands(dest);
-  auto terminator = cast<RegionBranchTerminatorOpInterface>(
-      src.getTerminatorPredecessorOrNull());
-  return terminator.getSuccessorOperands(dest);
+  return src.getTerminatorPredecessorOrNull().getSuccessorOperands(dest);
 }
 
 static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
