@@ -3340,7 +3340,7 @@ func.func @omp_target_map_clause_type_test(%arg0 : memref<?xi32>) -> () {
     // CHECK: %{{.*}}map_clauses(ompx_hold){{.*}}
     // CHECK: %{{.*}}map_clauses(attach){{.*}}
     // CHECK: %{{.*}}map_clauses(attach_always){{.*}}
-    // CHECK: %{{.*}}map_clauses(attach_none){{.*}}
+    // CHECK: %{{.*}}map_clauses(attach_never){{.*}}
     // CHECK: %{{.*}}map_clauses(attach_auto){{.*}}
     // CHECK: %{{.*}}map_clauses(ref_ptr){{.*}}
     // CHECK: %{{.*}}map_clauses(ref_ptee){{.*}}
@@ -3360,7 +3360,7 @@ func.func @omp_target_map_clause_type_test(%arg0 : memref<?xi32>) -> () {
     %mapv12 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ompx_hold) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv13 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv14 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_always) capture(ByRef) -> memref<?xi32> {name = ""}
-    %mapv15 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_none) capture(ByRef) -> memref<?xi32> {name = ""}
+    %mapv15 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_never) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv16 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_auto) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv17 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ref_ptr) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv18 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ref_ptee) capture(ByRef) -> memref<?xi32> {name = ""}
