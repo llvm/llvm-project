@@ -10589,18 +10589,18 @@ ConstantInt *llvm::getConstantInt(Value *V, const DataLayout &DL) {
 /// Construct and compute the result for the comparison instruction Cond
 ConstantComparesGatherer::ConstantComparesGatherer(Instruction *Cond,
                                                    const DataLayout &DL,
-                                                   const bool InstCombine)
+                                                   const bool OneUseOnly)
     : DL(DL) {
   assert(!Cond->getType()->isVectorTy() &&
          "ConstantComparesGatherer only supports scalars.");
-  gather(Cond, InstCombine);
+  gather(Cond, OneUseOnly);
   if (CompValue || !MultipleMatches)
     return;
   Extra = nullptr;
   Vals.clear();
   UsedICmps = 0;
   IgnoreFirstMatch = true;
-  gather(Cond, InstCombine);
+  gather(Cond, OneUseOnly);
 }
 
 /// Try to set the current value used for the comparison, it succeeds only if
@@ -10626,10 +10626,10 @@ bool ConstantComparesGatherer::setValueOnce(Value *NewVal) {
 /// If CompValue is already set, the function is expected to fail if a match
 /// is found but the value compared to is different.
 bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ,
-                                                const bool InstCombine) {
+                                                const bool OneUseOnly) {
   if (match(I, m_Not(m_Instruction(I)))) {
     isEQ = !isEQ;
-    if (InstCombine && !I->hasOneUse())
+    if (OneUseOnly && !I->hasOneUse())
       return false;
   }
 
@@ -10785,7 +10785,7 @@ bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ,
   if (match(I->getOperand(0), m_Add(m_Value(RHSVal), m_APInt(RHSC)))) {
     Span = Span.subtract(*RHSC);
     CandidateVal = RHSVal;
-    if (InstCombine && !CandidateVal->hasOneUse())
+    if (OneUseOnly && !CandidateVal->hasOneUse())
       return false;
   }
 
@@ -10799,8 +10799,8 @@ bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ,
   // In the InstCombine case, we know this will be convered to bitmask so
   // there is no added cost of having more values. Limit to the max register
   // size since that's the largest BitMap we can handle anyways
-  if (Span.isSizeLargerThan(InstCombine ? DL.getLargestLegalIntTypeSizeInBits()
-                                        : 8) ||
+  if (Span.isSizeLargerThan(OneUseOnly ? DL.getLargestLegalIntTypeSizeInBits()
+                                       : 8) ||
       Span.isEmptySet()) {
     return false;
   }
@@ -10824,8 +10824,8 @@ bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ,
 /// the value being compared, and stick the list constants into the Vals
 /// vector.
 /// One "Extra" case is allowed to differ from the other.
-void ConstantComparesGatherer::gather(Value *V, const bool InstCombine) {
-  if (InstCombine && !V->hasOneUse())
+void ConstantComparesGatherer::gather(Value *V, const bool OneUseOnly) {
+  if (OneUseOnly && !V->hasOneUse())
     return;
   Value *Op0, *Op1;
   if (match(V, m_LogicalOr(m_Value(Op0), m_Value(Op1))))
@@ -10840,7 +10840,7 @@ void ConstantComparesGatherer::gather(Value *V, const bool InstCombine) {
 
   while (!DFT.empty()) {
     V = DFT.pop_back_val();
-    if (InstCombine && !V->hasOneUse()) {
+    if (OneUseOnly && !V->hasOneUse()) {
       CompValue = nullptr;
       return;
     }
@@ -10858,7 +10858,7 @@ void ConstantComparesGatherer::gather(Value *V, const bool InstCombine) {
       }
 
       // Try to match the current instruction
-      if (matchInstruction(I, IsEq, InstCombine))
+      if (matchInstruction(I, IsEq, OneUseOnly))
         // Match succeed, continue the loop
         continue;
     }
