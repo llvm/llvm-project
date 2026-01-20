@@ -1908,10 +1908,7 @@ inline bool CheckNull(InterpState &S, CodePtr OpPC) {
 
 inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
                            const Pointer &Ptr) {
-  Pointer Base = Ptr;
-  while (Base.isBaseClass())
-    Base = Base.getBase();
-
+  Pointer Base = Ptr.stripBaseCasts();
   const Record::Base *VirtBase = Base.getRecord()->getVirtualBase(Decl);
   S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
   return true;
@@ -2888,7 +2885,9 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS,
     S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
     if (!S.noteUndefinedBehavior())
       return false;
-    RHS = -RHS;
+
+    RHS = RHS.isMin() ? RT(APSInt::getMaxValue(RHS.bitWidth(), false)) : -RHS;
+
     return DoShift<LT, RT,
                    Dir == ShiftDir::Left ? ShiftDir::Right : ShiftDir::Left>(
         S, OpPC, LHS, RHS, Result);
@@ -3197,6 +3196,9 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
   const auto &DestPtr = S.Stk.peek<Pointer>();
 
   if (SrcPtr.isDummy() || DestPtr.isDummy())
+    return false;
+
+  if (!SrcPtr.isBlockPointer() || !DestPtr.isBlockPointer())
     return false;
 
   for (uint32_t I = 0; I != Size; ++I) {

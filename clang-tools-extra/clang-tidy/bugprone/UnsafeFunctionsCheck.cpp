@@ -60,7 +60,8 @@ static StringRef getReplacementFor(StringRef FunctionName,
       .Cases({"asctime", "asctime_r"}, "strftime")
       .Case("gets", "fgets")
       .Case("rewind", "fseek")
-      .Case("setbuf", "setvbuf");
+      .Case("setbuf", "setvbuf")
+      .Case("get_temporary_buffer", "operator new[]");
 }
 
 static StringRef getReplacementForAdditional(StringRef FunctionName,
@@ -97,6 +98,9 @@ static StringRef getRationaleFor(StringRef FunctionName) {
       .Cases({"rewind", "setbuf"}, "has no error detection")
       .Case("vfork", "is insecure as it can lead to denial of service "
                      "situations in the parent process")
+      .Case("get_temporary_buffer", "returns uninitialized memory without "
+                                    "performance advantages, was deprecated in "
+                                    "C++17 and removed in C++20")
       .Default("is not bounds-checking");
 }
 
@@ -221,7 +225,8 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
 
     // Matching functions with replacements without Annex K.
     auto FunctionNamesMatcher =
-        hasAnyName("::asctime", "asctime_r", "::gets", "::rewind", "::setbuf");
+        hasAnyName("::asctime", "asctime_r", "::gets", "::rewind", "::setbuf",
+                   "::std::get_temporary_buffer");
     Finder->addMatcher(
         declRefExpr(
             to(functionDecl(FunctionNamesMatcher).bind(FunctionNamesId)))
