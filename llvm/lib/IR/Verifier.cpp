@@ -6881,11 +6881,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::structured_gep: {
     // Parser should refuse those 2 cases.
     assert(Call.getNumOperands() >= 2);
-    assert(Call.getOperand(0)->getType()->isPointerTy())
+    assert(Call.getOperand(0)->getType()->isPointerTy());
 
-        Check(Call.paramHasAttr(0, Attribute::ElementType),
-              "Intrinsic first parameter is missing an ElementType attribute",
-              &Call);
+    Check(Call.paramHasAttr(0, Attribute::ElementType),
+          "Intrinsic first parameter is missing an ElementType attribute",
+          &Call);
 
     Type *T = Call.getParamAttr(0, Attribute::ElementType).getValueAsType();
     for (unsigned I = 1; I < Call.getNumOperands() - 1; ++I) {
