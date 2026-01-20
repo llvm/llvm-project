@@ -66,9 +66,7 @@ public:
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
   }
-  bool isBoxAddress() const {
-    return fir::isBoxAddress(getType());
-  }
+  bool isBoxAddress() const { return fir::isBoxAddress(getType()); }
 
   /// Is this entity a procedure designator?
   bool isProcedure() const { return isFortranProcedureValue(getType()); }

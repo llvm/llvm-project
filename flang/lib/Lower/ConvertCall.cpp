@@ -543,7 +543,7 @@ Fortran::lower::genCallOpAndResult(
   // If we have any ignore_tkr(c) dummy args, adjust the function type to
   // have these args match the caller.
   if (auto modifiedFuncType =
-      getTypeWithIgnoreTkrC(funcType, caller, builder.getContext())) {
+          getTypeWithIgnoreTkrC(funcType, caller, builder.getContext())) {
     // Note: funcPointer would only be non-null here, if we are already
     // processing indirect function call. In such case we can re-use the same
     // funcPointer and we'll cast it below the the modified funcType.
