@@ -12,8 +12,7 @@ define amdgpu_ps i32 @shl32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_lshl_b32 s0, s0, s1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = shl i32 %val0, %val1
   %cmp = icmp ne i32 %result, 0
@@ -56,8 +55,7 @@ define amdgpu_ps i32 @shl64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_lshl_b64 s[0:1], s[0:1], s2
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = shl i64 %val0, %val1
   %cmp = icmp ne i64 %result, 0
@@ -70,8 +68,7 @@ define amdgpu_ps i32 @lshr32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_lshr_b32 s0, s0, s1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = lshr i32 %val0, %val1
   %cmp = icmp ne i32 %result, 0
@@ -84,8 +81,7 @@ define amdgpu_ps i32 @lshr64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = lshr i64 %val0, %val1
   %cmp = icmp ne i64 %result, 0
@@ -98,8 +94,7 @@ define amdgpu_ps i32 @ashr32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_ashr_i32 s0, s0, s1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = ashr i32 %val0, %val1
   %cmp = icmp ne i32 %result, 0
@@ -112,8 +107,7 @@ define amdgpu_ps i32 @ashr64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_ashr_i64 s[0:1], s[0:1], s2
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = ashr i64 %val0, %val1
   %cmp = icmp ne i64 %result, 0
@@ -129,8 +123,7 @@ define amdgpu_ps i32 @abs32(i32 inreg %val0) {
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %neg = sub i32 0, %val0
   %cond = icmp sgt i32 %val0, %neg
@@ -146,8 +139,7 @@ define amdgpu_ps i32 @absdiff32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_absdiff_i32 s0, s0, s1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %diff = sub i32 %val0, %val1
   %result = call i32 @llvm.abs.i32(i32 %diff, i1 false)
@@ -161,8 +153,7 @@ define amdgpu_ps i32 @and32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_and_b32 s0, s0, s1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = and i32 %val0, %val1
   %cmp = icmp ne i32 %result, 0
@@ -175,8 +166,7 @@ define amdgpu_ps i32 @and64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = and i64 %val0, %val1
   %cmp = icmp ne i64 %result, 0
@@ -192,8 +182,7 @@ define amdgpu_ps i32 @and32_clear_one_bit(i32 inreg %val0) {
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = and i32 %val0, 2147483647
   call void asm "; use $0", "s"(i32 %result)
@@ -211,8 +200,7 @@ define amdgpu_ps i32 @and64_clear_one_bit(i64 inreg %val0) {
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = and i64 %val0, -2147483649
   call void asm "; use $0", "s"(i64 %result)
@@ -226,8 +214,7 @@ define amdgpu_ps i32 @or32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_or_b32 s0, s0, s1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = or i32 %val0, %val1
   %cmp = icmp ne i32 %result, 0
@@ -240,8 +227,7 @@ define amdgpu_ps i32 @or64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = or i64 %val0, %val1
   %cmp = icmp ne i64 %result, 0
@@ -254,8 +240,7 @@ define amdgpu_ps i32 @xor32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_xor_b32 s0, s0, s1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = xor i32 %val0, %val1
   %cmp = icmp ne i32 %result, 0
@@ -268,8 +253,7 @@ define amdgpu_ps i32 @xor64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = xor i64 %val0, %val1
   %cmp = icmp ne i64 %result, 0
@@ -285,8 +269,7 @@ define amdgpu_ps i32 @nand32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = and i32 %val0, %val1
   %result2 = xor i32 %result, -1
@@ -304,8 +287,7 @@ define amdgpu_ps i32 @nand64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = and i64 %val0, %val1
   %result2 = xor i64 %result, -1
@@ -323,8 +305,7 @@ define amdgpu_ps i32 @nor32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = or i32 %val0, %val1
   %result2 = xor i32 %result, -1
@@ -342,8 +323,7 @@ define amdgpu_ps i32 @nor64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = or i64 %val0, %val1
   %result2 = xor i64 %result, -1
@@ -361,8 +341,7 @@ define amdgpu_ps i32 @xnor32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = xor i32 %val0, %val1
   %result2 = xor i32 %result, -1
@@ -380,8 +359,7 @@ define amdgpu_ps i32 @xnor64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = xor i64 %val0, %val1
   %result2 = xor i64 %result, -1
@@ -396,8 +374,7 @@ define amdgpu_ps i32 @andn232(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_andn2_b32 s0, s0, s1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %nval1 = xor i32 %val1, -1
   %result = and i32 %val0, %nval1
@@ -411,8 +388,7 @@ define amdgpu_ps i32 @nandn264(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %nval1 = xor i64 %val1, -1
   %result = and i64 %val0, %nval1
@@ -426,8 +402,7 @@ define amdgpu_ps i32 @orn232(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_orn2_b32 s0, s0, s1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %nval1 = xor i32 %val1, -1
   %result = or i32 %val0, %nval1
@@ -441,8 +416,7 @@ define amdgpu_ps i32 @orn264(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_orn2_b64 s[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %nval1 = xor i64 %val1, -1
   %result = or i64 %val0, %nval1
@@ -456,8 +430,7 @@ define amdgpu_ps i32 @bfe_i32(i32 inreg %val0) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bfe_i32 s0, s0, 0x80010
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %shl = shl i32 %val0, 8
   %result = ashr i32 %shl, 24
@@ -474,8 +447,7 @@ define amdgpu_ps i32 @bfe_i64(i64 inreg %val0) {
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -493,8 +465,7 @@ define amdgpu_ps i32 @bfe_u32(i32 inreg %val0) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bfe_u32 s0, s0, 0x80010
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %shl = shl i32 %val0, 8
   %result = lshr i32 %shl, 24
@@ -513,8 +484,7 @@ define amdgpu_ps i32 @bfe_u64(i64 inreg %val0) {
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %shl = shl i64 %val0, 56
   %result = lshr i64 %shl, 56
@@ -534,8 +504,7 @@ define amdgpu_ps i32 @bcnt032(i32 inreg %val0) {
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.ctpop.i32(i32 %val0) nounwind readnone
   %result2 = sub i32 32, %result
@@ -556,8 +525,7 @@ define amdgpu_ps i32 @bcnt064(i64 inreg %val0) {
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i64 @llvm.ctpop.i64(i64 %val0) nounwind readnone
   %result2 = sub i64 64, %result
@@ -575,8 +543,7 @@ define amdgpu_ps i32 @bcnt132(i32 inreg %val0) {
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.ctpop.i32(i32 %val0) nounwind readnone
   call void asm "; use $0", "s"(i32 %result)
@@ -595,8 +562,7 @@ define amdgpu_ps i32 @bcnt164(i64 inreg %val0) {
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i64 @llvm.ctpop.i64(i64 %val0) nounwind readnone
   call void asm "; use $0", "s"(i64 %result)
@@ -613,8 +579,7 @@ define amdgpu_ps i32 @quadmask32(i32 inreg %val0) {
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.s.quadmask.i32(i32 %val0) nounwind readnone
   call void asm "; use $0", "s"(i32 %result)
@@ -631,8 +596,7 @@ define amdgpu_ps i32 @quadmask64(i64 inreg %val0) {
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i64 @llvm.amdgcn.s.quadmask.i64(i64 %val0) nounwind readnone
   call void asm "; use $0", "s"(i64 %result)
@@ -649,8 +613,7 @@ define amdgpu_ps i32 @not32(i32 inreg %val0) {
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = xor i32 %val0, -1
   call void asm "; use $0", "s"(i32 %result)
@@ -667,8 +630,7 @@ define amdgpu_ps i32 @not64(i64 inreg %val0) {
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = xor i64 %val0, -1
   call void asm "; use $0", "s"(i64 %result)

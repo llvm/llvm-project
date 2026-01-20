@@ -13,13 +13,18 @@ define amdgpu_kernel void @memoryIntrinstic(ptr addrspace(3) %inptr, i1 %cond, p
 ; CHECK-NEXT:    ds_read_b64_tr_b16 v[2:3], v0 offset:8192
 ; CHECK-NEXT:    s_mov_b32 s1, 0x7060302
 ; CHECK-NEXT:    s_mov_b32 s3, 0x5040100
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_perm_b32 v0, v3, v2, s1
 ; CHECK-NEXT:    v_perm_b32 v1, v3, v2, s3
-; CHECK-NEXT:    s_cbranch_execz .LBB0_3
+; CHECK-NEXT:    s_bitcmp0_b32 s4, 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_3
 ; CHECK-NEXT:    s_branch .LBB0_4
 ; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    s_mov_b64 s[4:5], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    s_bitcmp0_b32 s4, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
 ; CHECK-NEXT:  .LBB0_3: ; %then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    ds_read_b64_tr_b16 v[2:3], v0 offset:8192
@@ -70,10 +75,15 @@ define amdgpu_kernel void @badIntrinsicUse(ptr addrspace(3) %inptr, i1 %cond, pt
 ; CHECK-NEXT:    v_perm_b32 v0, v3, v2, s0
 ; CHECK-NEXT:    s_mov_b32 s0, 0x5040100
 ; CHECK-NEXT:    v_perm_b32 v1, v3, v2, s0
-; CHECK-NEXT:    s_cbranch_execz .LBB1_3
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_bitcmp0_b32 s0, 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB1_3
 ; CHECK-NEXT:    s_branch .LBB1_4
 ; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    s_mov_b64 s[0:1], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    s_bitcmp0_b32 s0, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB1_4
 ; CHECK-NEXT:  .LBB1_3: ; %then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s3
 ; CHECK-NEXT:    ds_read_b64_tr_b16 v[2:3], v0
@@ -126,10 +136,15 @@ define amdgpu_kernel void @badIntrinsicUse2(ptr addrspace(3) %inptr, i1 %cond, p
 ; CHECK-NEXT:    v_perm_b32 v0, v3, v2, s0
 ; CHECK-NEXT:    s_mov_b32 s0, 0x5040100
 ; CHECK-NEXT:    v_perm_b32 v1, v3, v2, s0
-; CHECK-NEXT:    s_cbranch_execz .LBB2_3
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_bitcmp0_b32 s0, 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB2_3
 ; CHECK-NEXT:    s_branch .LBB2_4
 ; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:    s_mov_b64 s[0:1], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    s_bitcmp0_b32 s0, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB2_4
 ; CHECK-NEXT:  .LBB2_3: ; %then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    ds_read_b64_tr_b16 v[2:3], v0

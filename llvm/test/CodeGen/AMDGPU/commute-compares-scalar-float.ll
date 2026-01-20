@@ -6,10 +6,9 @@ define amdgpu_vs void @fcmp_f32_olt_to_ogt(ptr addrspace(1) inreg %out, float in
 ; SDAG-LABEL: fcmp_f32_olt_to_ogt:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_gt_f32 s2, 2.0
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -34,10 +33,9 @@ define amdgpu_vs void @fcmp_f32_ogt_to_olt(ptr addrspace(1) inreg %out, float in
 ; SDAG-LABEL: fcmp_f32_ogt_to_olt:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_lt_f32 s2, 2.0
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -62,10 +60,9 @@ define amdgpu_vs void @fcmp_f32_ole_to_oge(ptr addrspace(1) inreg %out, float in
 ; SDAG-LABEL: fcmp_f32_ole_to_oge:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_ge_f32 s2, 2.0
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -90,10 +87,9 @@ define amdgpu_vs void @fcmp_f32_oge_to_ole(ptr addrspace(1) inreg %out, float in
 ; SDAG-LABEL: fcmp_f32_oge_to_ole:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_le_f32 s2, 2.0
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -118,10 +114,9 @@ define amdgpu_vs void @fcmp_f32_ult_to_ugt(ptr addrspace(1) inreg %out, float in
 ; SDAG-LABEL: fcmp_f32_ult_to_ugt:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_nle_f32 s2, 2.0
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -146,10 +141,9 @@ define amdgpu_vs void @fcmp_f32_ugt_to_ult(ptr addrspace(1) inreg %out, float in
 ; SDAG-LABEL: fcmp_f32_ugt_to_ult:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_nge_f32 s2, 2.0
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -174,10 +168,9 @@ define amdgpu_vs void @fcmp_f32_ule_to_uge(ptr addrspace(1) inreg %out, float in
 ; SDAG-LABEL: fcmp_f32_ule_to_uge:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_nlt_f32 s2, 2.0
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -202,10 +195,9 @@ define amdgpu_vs void @fcmp_f32_uge_to_ule(ptr addrspace(1) inreg %out, float in
 ; SDAG-LABEL: fcmp_f32_uge_to_ule:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_ngt_f32 s2, 2.0
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -230,10 +222,9 @@ define amdgpu_vs void @fcmp_f16_olt_to_ogt(ptr addrspace(1) inreg %out, half inr
 ; SDAG-LABEL: fcmp_f16_olt_to_ogt:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_gt_f16 s2, 0x4000
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -258,10 +249,9 @@ define amdgpu_vs void @fcmp_f16_ogt_to_olt(ptr addrspace(1) inreg %out, half inr
 ; SDAG-LABEL: fcmp_f16_ogt_to_olt:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_lt_f16 s2, 0x4000
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -286,10 +276,9 @@ define amdgpu_vs void @fcmp_f16_ole_to_oge(ptr addrspace(1) inreg %out, half inr
 ; SDAG-LABEL: fcmp_f16_ole_to_oge:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_ge_f16 s2, 0x4000
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -314,10 +303,9 @@ define amdgpu_vs void @fcmp_f16_oge_to_ole(ptr addrspace(1) inreg %out, half inr
 ; SDAG-LABEL: fcmp_f16_oge_to_ole:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_le_f16 s2, 0x4000
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -342,10 +330,9 @@ define amdgpu_vs void @fcmp_f16_ult_to_ugt(ptr addrspace(1) inreg %out, half inr
 ; SDAG-LABEL: fcmp_f16_ult_to_ugt:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_nle_f16 s2, 0x4000
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -370,10 +357,9 @@ define amdgpu_vs void @fcmp_f16_ugt_to_ult(ptr addrspace(1) inreg %out, half inr
 ; SDAG-LABEL: fcmp_f16_ugt_to_ult:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_nge_f16 s2, 0x4000
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -398,10 +384,9 @@ define amdgpu_vs void @fcmp_ule_to_uge(ptr addrspace(1) inreg %out, half inreg %
 ; SDAG-LABEL: fcmp_ule_to_uge:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_nlt_f16 s2, 0x4000
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -426,10 +411,9 @@ define amdgpu_vs void @fcmp_uge_to_ule(ptr addrspace(1) inreg %out, half inreg %
 ; SDAG-LABEL: fcmp_uge_to_ule:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_cmp_ngt_f16 s2, 0x4000
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
 ;

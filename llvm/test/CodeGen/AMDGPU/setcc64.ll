@@ -59,7 +59,7 @@ entry:
 
 ; GCN-LABEL: {{^}}f64_one:
 ; GCN: v_cmp_lg_f64_e32 vcc
-; GCN: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f64_one(ptr addrspace(1) %out, double %a, double %b) #0 {
 entry:
   %tmp0 = fcmp one double %a, %b
@@ -80,7 +80,7 @@ entry:
 
 ; GCN-LABEL: {{^}}f64_ueq:
 ; GCN: v_cmp_nlg_f64_e32 vcc
-; GCN: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f64_ueq(ptr addrspace(1) %out, double %a, double %b) #0 {
 entry:
   %tmp0 = fcmp ueq double %a, %b
@@ -92,7 +92,7 @@ entry:
 ; GCN-LABEL: {{^}}f64_ugt:
 
 ; GCN: v_cmp_nle_f64_e32 vcc
-; GCN: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f64_ugt(ptr addrspace(1) %out, double %a, double %b) #0 {
 entry:
   %tmp0 = fcmp ugt double %a, %b
@@ -103,7 +103,7 @@ entry:
 
 ; GCN-LABEL: {{^}}f64_uge:
 ; GCN: v_cmp_nlt_f64_e32 vcc
-; GCN: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f64_uge(ptr addrspace(1) %out, double %a, double %b) #0 {
 entry:
   %tmp0 = fcmp uge double %a, %b
@@ -114,7 +114,7 @@ entry:
 
 ; GCN-LABEL: {{^}}f64_ult:
 ; GCN: v_cmp_nge_f64_e32 vcc
-; GCN: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f64_ult(ptr addrspace(1) %out, double %a, double %b) #0 {
 entry:
   %tmp0 = fcmp ult double %a, %b
@@ -125,7 +125,7 @@ entry:
 
 ; GCN-LABEL: {{^}}f64_ule:
 ; GCN: v_cmp_ngt_f64_e32 vcc
-; GCN: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f64_ule(ptr addrspace(1) %out, double %a, double %b) #0 {
 entry:
   %tmp0 = fcmp ule double %a, %b
@@ -261,10 +261,9 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}i128_sle:
-; GCN: v_cmp_le_i64
-; CGV: v_cndmask
-; SI: v_cmp_eq_u64
-; VI: s_cmp_eq_u64
+; GCN-DAG: v_cmp_le_i64
+; SI-DAG: v_cmp_eq_u64
+; VI-DAG: s_cmp_eq_u64
 define amdgpu_kernel void @i128_sle(ptr addrspace(1) %out, i128 %a, i128 %b) #0 {
 entry:
   %tmp0 = icmp sle i128 %a, %b

@@ -104,8 +104,8 @@ define amdgpu_kernel void @set_inactive_scc(ptr addrspace(1) %out, i32 %in, <4 x
 ; GCN-NEXT:    s_mov_b64 s[2:3], -1
 ; GCN-NEXT:    s_cbranch_scc1 .LBB4_3
 ; GCN-NEXT:  ; %bb.1: ; %Flow
-; GCN-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
-; GCN-NEXT:    s_cbranch_vccz .LBB4_4
+; GCN-NEXT:    s_bitcmp0_b32 s2, 0
+; GCN-NEXT:    s_cbranch_scc0 .LBB4_4
 ; GCN-NEXT:  .LBB4_2: ; %.exit
 ; GCN-NEXT:    s_endpgm
 ; GCN-NEXT:  .LBB4_3: ; %.one
@@ -113,7 +113,9 @@ define amdgpu_kernel void @set_inactive_scc(ptr addrspace(1) %out, i32 %in, <4 x
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], 0
-; GCN-NEXT:    s_cbranch_execnz .LBB4_2
+; GCN-NEXT:    s_mov_b64 s[2:3], 0
+; GCN-NEXT:    s_bitcmp0_b32 s2, 0
+; GCN-NEXT:    s_cbranch_scc1 .LBB4_2
 ; GCN-NEXT:  .LBB4_4: ; %.zero
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1

@@ -7,24 +7,23 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_sub_i32 s6, 1, s4
 ; GCN-NEXT:    s_cmp_lt_u32 s4, 2
 ; GCN-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GCN-NEXT:    s_and_b64 s[2:3], s[0:1], exec
 ; GCN-NEXT:    s_cselect_b32 s2, s6, 1
+; GCN-NEXT:    s_and_b32 s3, s0, 1
 ; GCN-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GCN-NEXT:    s_addc_u32 s0, 1, 0
 ; GCN-NEXT:    s_cmp_ge_u32 s2, s4
-; GCN-NEXT:    v_readfirstlane_b32 s1, v1
-; GCN-NEXT:    s_cselect_b32 s4, s0, s1
-; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    s_cselect_b32 s4, s0, s3
 ; GCN-NEXT:    s_cmp_lg_u64 0, 0
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
-; GCN-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    v_mov_b64_e32 v[0:1], 0
 ; GCN-NEXT:    s_branch .LBB0_3
 ; GCN-NEXT:  .LBB0_1: ; %Flow

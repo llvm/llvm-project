@@ -11,8 +11,8 @@ define amdgpu_kernel void @kernel1() #0 {
 ; GFX12-NEXT:    s_barrier_wait -1
 ; GFX12-NEXT:    s_cselect_b32 s0, -1, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_vccnz .LBB0_2
+; GFX12-NEXT:    s_bitcmp0_b32 s0, 0
+; GFX12-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GFX12-NEXT:  ; %bb.1:
 ; GFX12-NEXT:    s_barrier_signal -3
 ; GFX12-NEXT:  .LBB0_2:

@@ -5,9 +5,10 @@
 ; GCN-LABEL: sub_zext_zext:
 ; GCN: ds_read_b32 [[VAL:v[0-9]+]],
 ; GCN: v_cmp_lt_f32{{.*}} vcc, 0, [[VAL]]
-; GCN: v_cndmask_{{.*}} [[ZEXTCC1:v[0-9]+]], 0, 1, vcc
-; GCN: v_cmp_gt_f32{{.*}} vcc, 0, [[VAL]]
-; GCN: v_subbrev{{.*}} {{v[0-9]+}}, vcc, 0, [[ZEXTCC1]], vcc
+; GCN: v_cmp_gt_f32{{.*}} s[{{[0-9:]+}}], 0, [[VAL]]
+; GCN: s_and_b32 [[ZEXTCC1:s[0-9]+]], vcc_lo, 1
+; GCN: s_cmp_lg_u64 s[{{[0-9:]+}}], 0
+; GCN: s_subb_u32 {{s[0-9]+}}, [[ZEXTCC1]], 0
 ;
 ; Before the reversion that this test is attached to, the compiler commuted
 ; the operands to the sub and used different logic to select the addc/subc

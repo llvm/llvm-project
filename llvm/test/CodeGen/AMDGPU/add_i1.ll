@@ -69,7 +69,8 @@ define amdgpu_kernel void @add_var_imm_i1(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX9-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GFX9-NEXT:    s_xor_b64 s[2:3], vcc, -1
-; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
+; GFX9-NEXT:    s_and_b32 s2, s2, 1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    global_store_byte v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -83,7 +84,8 @@ define amdgpu_kernel void @add_var_imm_i1(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX10-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
 ; GFX10-NEXT:    s_xor_b32 s2, vcc_lo, -1
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
+; GFX10-NEXT:    s_and_b32 s2, s2, 1
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-NEXT:    global_store_byte v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -98,7 +100,9 @@ define amdgpu_kernel void @add_var_imm_i1(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
 ; GFX11-NEXT:    s_xor_b32 s2, vcc_lo, -1
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
+; GFX11-NEXT:    s_and_b32 s2, s2, 1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX11-NEXT:    global_store_b8 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %a = load volatile i1, ptr addrspace(1) %in

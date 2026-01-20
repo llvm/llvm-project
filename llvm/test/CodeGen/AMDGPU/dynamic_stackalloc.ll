@@ -851,7 +851,9 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX9-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], s6
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-SDAG-NEXT:    s_cbranch_execnz .LBB7_5
+; GFX9-SDAG-NEXT:    s_mov_b64 s[6:7], 0
+; GFX9-SDAG-NEXT:    s_bitcmp0_b32 s6, 0
+; GFX9-SDAG-NEXT:    s_cbranch_scc1 .LBB7_5
 ; GFX9-SDAG-NEXT:  .LBB7_4: ; %bb.0
 ; GFX9-SDAG-NEXT:    s_add_i32 s4, s32, 0xfff
 ; GFX9-SDAG-NEXT:    s_lshl2_add_u32 s5, s5, 15
@@ -866,7 +868,10 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX9-SDAG-NEXT:  .LBB7_5: ; %bb.2
 ; GFX9-SDAG-NEXT:    s_endpgm
 ; GFX9-SDAG-NEXT:  .LBB7_6:
-; GFX9-SDAG-NEXT:    s_branch .LBB7_4
+; GFX9-SDAG-NEXT:    s_mov_b64 s[6:7], -1
+; GFX9-SDAG-NEXT:    s_bitcmp0_b32 s6, 0
+; GFX9-SDAG-NEXT:    s_cbranch_scc0 .LBB7_4
+; GFX9-SDAG-NEXT:    s_branch .LBB7_5
 ;
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_kernel_control_flow:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
@@ -945,10 +950,12 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, s32
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, s0, 5, s2
+; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v1, s2 dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s32, v0
-; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB7_5
+; GFX11-SDAG-NEXT:    s_bitcmp0_b32 s0, 0
+; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB7_5
 ; GFX11-SDAG-NEXT:  .LBB7_4: ; %bb.0
 ; GFX11-SDAG-NEXT:    s_lshl2_add_u32 s1, s1, 15
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 2
@@ -962,7 +969,11 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-SDAG-NEXT:  .LBB7_5: ; %bb.2
 ; GFX11-SDAG-NEXT:    s_endpgm
 ; GFX11-SDAG-NEXT:  .LBB7_6:
-; GFX11-SDAG-NEXT:    s_branch .LBB7_4
+; GFX11-SDAG-NEXT:    s_mov_b32 s0, -1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_bitcmp0_b32 s0, 0
+; GFX11-SDAG-NEXT:    s_cbranch_scc0 .LBB7_4
+; GFX11-SDAG-NEXT:    s_branch .LBB7_5
 ;
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_kernel_control_flow:
 ; GFX11-GISEL:       ; %bb.0: ; %entry

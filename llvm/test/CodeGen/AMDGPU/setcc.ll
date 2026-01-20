@@ -102,7 +102,7 @@ entry:
 ; R600-DAG: SETNE_INT
 
 ; GCN: v_cmp_lg_f32_e32 vcc
-; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f32_one(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp one float %a, %b
@@ -132,7 +132,7 @@ entry:
 ; R600-DAG: SETE_INT
 
 ; GCN: v_cmp_nlg_f32_e32 vcc
-; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f32_ueq(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp ueq float %a, %b
@@ -145,7 +145,7 @@ entry:
 ; R600: SETGE
 ; R600: SETE_DX10
 ; GCN: v_cmp_nle_f32_e32 vcc
-; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f32_ugt(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp ugt float %a, %b
@@ -159,7 +159,7 @@ entry:
 ; R600: SETE_DX10
 
 ; GCN: v_cmp_nlt_f32_e32 vcc
-; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f32_uge(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp uge float %a, %b
@@ -173,7 +173,7 @@ entry:
 ; R600: SETE_DX10
 
 ; GCN: v_cmp_nge_f32_e32 vcc
-; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f32_ult(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp ult float %a, %b
@@ -187,7 +187,7 @@ entry:
 ; R600: SETE_DX10
 
 ; GCN: v_cmp_ngt_f32_e32 vcc
-; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, vcc_lo
 define amdgpu_kernel void @f32_ule(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp ule float %a, %b

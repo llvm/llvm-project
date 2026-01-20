@@ -559,8 +559,8 @@ define amdgpu_kernel void @xor_cf(ptr addrspace(1) %out, ptr addrspace(1) %in, i
 ; SI-NEXT:    s_mov_b32 s12, s2
 ; SI-NEXT:    s_mov_b32 s13, s3
 ; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[12:15], 0
-; SI-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
-; SI-NEXT:    s_cbranch_vccnz .LBB14_3
+; SI-NEXT:    s_bitcmp0_b32 s8, 0
+; SI-NEXT:    s_cbranch_scc1 .LBB14_3
 ; SI-NEXT:  .LBB14_2: ; %if
 ; SI-NEXT:    s_xor_b64 s[2:3], s[4:5], s[6:7]
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -573,8 +573,11 @@ define amdgpu_kernel void @xor_cf(ptr addrspace(1) %out, ptr addrspace(1) %in, i
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB14_4:
+; SI-NEXT:    s_mov_b64 s[8:9], -1
 ; SI-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; SI-NEXT:    s_branch .LBB14_2
+; SI-NEXT:    s_bitcmp0_b32 s8, 0
+; SI-NEXT:    s_cbranch_scc0 .LBB14_2
+; SI-NEXT:    s_branch .LBB14_3
 ;
 ; VI-LABEL: xor_cf:
 ; VI:       ; %bb.0: ; %entry
@@ -587,8 +590,8 @@ define amdgpu_kernel void @xor_cf(ptr addrspace(1) %out, ptr addrspace(1) %in, i
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
-; VI-NEXT:    s_cbranch_vccnz .LBB14_3
+; VI-NEXT:    s_bitcmp0_b32 s8, 0
+; VI-NEXT:    s_cbranch_scc1 .LBB14_3
 ; VI-NEXT:  .LBB14_2: ; %if
 ; VI-NEXT:    s_xor_b64 s[2:3], s[4:5], s[6:7]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -601,8 +604,11 @@ define amdgpu_kernel void @xor_cf(ptr addrspace(1) %out, ptr addrspace(1) %in, i
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
 ; VI-NEXT:  .LBB14_4:
+; VI-NEXT:    s_mov_b64 s[8:9], -1
 ; VI-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; VI-NEXT:    s_branch .LBB14_2
+; VI-NEXT:    s_bitcmp0_b32 s8, 0
+; VI-NEXT:    s_cbranch_scc0 .LBB14_2
+; VI-NEXT:    s_branch .LBB14_3
 entry:
   %0 = icmp eq i64 %a, 0
   br i1 %0, label %if, label %else

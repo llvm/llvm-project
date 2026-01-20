@@ -266,8 +266,8 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    s_addc_u32 s7, s7, (.LBB5_4-.Lpost_getpc5)>>32
 ; GCN-NEXT:    s_setpc_b64 s[6:7]
 ; GCN-NEXT:  .LBB5_1: ; %Flow
-; GCN-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
-; GCN-NEXT:    s_cbranch_vccnz .LBB5_3
+; GCN-NEXT:    s_bitcmp0_b32 s0, 0
+; GCN-NEXT:    s_cbranch_scc1 .LBB5_3
 ; GCN-NEXT:  .LBB5_2: ; %bb2
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
@@ -291,8 +291,9 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    s_mov_b64 vcc, exec
-; GCN-NEXT:    s_cbranch_execnz .LBB5_5
+; GCN-NEXT:    s_mov_b64 s[0:1], 0
+; GCN-NEXT:    s_bitcmp0_b32 s0, 0
+; GCN-NEXT:    s_cbranch_scc1 .LBB5_5
 ; GCN-NEXT:  ; %bb.9: ; %bb3
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
 ; GCN-NEXT:  .Lpost_getpc6:
