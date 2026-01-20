@@ -492,7 +492,7 @@ static bool haveCommonBinding(ArrayRef<IntrinsicInst *> Handles,
 }
 
 // getHandleIndicies traverses up the control flow that a ptr came from and
-// propogates back the GetPtrIdx and HandleIdx:
+// propagates back the GetPtrIdx and HandleIdx:
 //
 //  - GetPtrIdx is the index of dx.resource.getpointer
 //  - HandleIdx is the index of dx.resource.handlefrom.*
