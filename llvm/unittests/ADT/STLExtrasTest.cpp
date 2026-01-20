@@ -1777,10 +1777,10 @@ TEST(STLExtrasTest, ReverseConditionally) {
 struct Foo;
 struct Bar {};
 
-TEST(STLExtrasTest, HasEqualityComparison) {
-  static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
-  static_assert(!is_incomplete_v<Bar>, "Bar is defined");
+static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
+static_assert(!is_incomplete_v<Bar>, "Bar is defined");
 
+TEST(STLExtrasTest, HasEqualityComparison) {
   struct NoEqualityComparison {};
   static_assert(!has_equality_comparison_v<NoEqualityComparison>);
 
