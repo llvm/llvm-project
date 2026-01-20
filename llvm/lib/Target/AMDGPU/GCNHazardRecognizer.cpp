@@ -2163,11 +2163,8 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) {
 void GCNHazardRecognizer::insertVnopsBeforeTerminator(MachineBasicBlock *MBB,
                                                       int Count) {
   MachineBasicBlock::iterator InsertPt = MBB->getFirstTerminator();
-  const DebugLoc &DL =
-      InsertPt != MBB->end() ? InsertPt->getDebugLoc() : DebugLoc();
-
   for (int i = 0; i < Count; ++i) {
-    BuildMI(*MBB, InsertPt, DL, TII.get(AMDGPU::V_NOP_e32));
+    BuildMI(*MBB, InsertPt, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
   }
 }
 
@@ -2297,7 +2294,8 @@ bool GCNHazardRecognizer::tryHoistWMMAVnopsFromLoop(MachineInstr *MI,
   }
 
   LLVM_DEBUG(dbgs() << "WMMA V_NOP Hoisting: Moving " << WaitStatesNeeded
-                    << " V_NOPs from loop to " << Preheader->getName() << "\n");
+                    << " V_NOPs from loop to " << printMBBReference(*Preheader)
+                    << "\n");
 
   insertVnopsBeforeTerminator(Preheader, WaitStatesNeeded);
   NumWMMANopsHoisted += WaitStatesNeeded;
