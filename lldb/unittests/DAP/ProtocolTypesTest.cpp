@@ -1042,10 +1042,10 @@ TEST(ProtocolTypesTest, CompletionsArguments) {
     "text": "abc"
   })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(expected->frameId, 7u);
+  EXPECT_EQ(expected->frameId, 7U);
   EXPECT_EQ(expected->text, "abc");
-  EXPECT_EQ(expected->column, 8);
-  EXPECT_EQ(expected->line, 9);
+  EXPECT_EQ(expected->column, 8U);
+  EXPECT_EQ(expected->line, 9U);
 
   // Check required keys.
   EXPECT_THAT_EXPECTED(parse<CompletionsArguments>(R"({})"),
@@ -1137,7 +1137,7 @@ TEST(ProtocolTypesTest, ExceptionBreakMode) {
        {ExceptionBreakMode::eExceptionBreakModeUnhandled, "unhandled"},
        {ExceptionBreakMode::eExceptionBreakModeUserUnhandled, "userUnhandled"}};
 
-  for (const auto [value, expected] : test_cases) {
+  for (const auto &[value, expected] : test_cases) {
     json::Value const serialized = toJSON(value);
     ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
     EXPECT_EQ(serialized.getAsString(), expected);
@@ -1261,4 +1261,13 @@ TEST(ProtocolTypesTest, StackFrame) {
 
   ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
   EXPECT_EQ(pp(*expected_frame), pp(frame));
+}
+
+TEST(ProtocolTypesTest, DAPSession) {
+  const DAPSession session{/*targetId=*/1000, /*debuggerId=*/300};
+
+  auto expected = parse<DAPSession>(R"({"targetId": 1000, "debuggerId": 300})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->debuggerId, session.debuggerId);
+  EXPECT_EQ(expected->targetId, session.targetId);
 }
