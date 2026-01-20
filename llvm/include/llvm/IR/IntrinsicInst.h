@@ -1830,6 +1830,8 @@ public:
     for (unsigned I = 0; I < getNumIndices(); I++) {
       if (ArrayType *AT = dyn_cast<ArrayType>(CurrentType)) {
         CurrentType = AT->getElementType();
+      } else if (VectorType *VT = dyn_cast<VectorType>(CurrentType)) {
+        CurrentType = VT->getElementType();
       } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
         ConstantInt *CI = cast<ConstantInt>(getIndexOperand(I));
         CurrentType = ST->getElementType(CI->getZExtValue());
