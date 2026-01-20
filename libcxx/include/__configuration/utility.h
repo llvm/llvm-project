@@ -1,3 +1,4 @@
+// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -6,12 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <expected>
+#ifndef _LIBCPP___CONFIGURATION_UTILITY_H
+#define _LIBCPP___CONFIGURATION_UTILITY_H
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+#include <__config_site>
 
-const char* bad_expected_access<void>::what() const noexcept { return "bad access to std::expected"; }
+#ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
+#  pragma GCC system_header
+#endif
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
-_LIBCPP_END_NAMESPACE_STD
+#define _LIBCPP_TOSTRING2(x) #x
+#define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
+
+#endif // _LIBCPP___CONFIGURATION_UTILITY_H
