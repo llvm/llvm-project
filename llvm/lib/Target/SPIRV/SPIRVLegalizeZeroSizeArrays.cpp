@@ -300,10 +300,6 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
     if (!hasZeroSizeArray(GV.getValueType()))
       continue;
 
-    // llvm.embedded.module is handled by SPIRVPrepareGlobals.
-    if (GV.getName() == "llvm.embedded.module")
-      continue;
-
     Type *NewTy = legalizeType(GV.getValueType());
     Constant *LegalizedInitializer = legalizeConstant(GV.getInitializer());
 
