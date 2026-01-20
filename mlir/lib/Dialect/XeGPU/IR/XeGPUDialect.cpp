@@ -396,7 +396,8 @@ bool LayoutAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
 }
 
 // set the layout for unit dims: sg_data, inst_data and lane_data to 1
-DistributeLayoutAttr LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) const{
+DistributeLayoutAttr
+LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) const {
   auto sgDataOpt = getSgData();
   auto instDataOpt = getInstData();
   auto laneDataOpt = getLaneData();
@@ -437,7 +438,8 @@ DistributeLayoutAttr LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) con
 }
 
 // set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-DistributeLayoutAttr LayoutAttr::setUnitDimLayout(SetVector<int64_t> unitDims) const{
+DistributeLayoutAttr
+LayoutAttr::setUnitDimLayout(SetVector<int64_t> unitDims) const {
   auto sgLayoutOpt = getSgLayout();
   auto laneLayoutOpt = getLaneLayout();
 
@@ -628,12 +630,14 @@ mapSlicedDimsToParentSpace(const SetVector<int64_t> &dimsToMap,
   // so that dimsToMap can be adjusted safely. This upper bound is defined as
   // max(dimsToMap, sliceDims) + 1 + sliceDims.size().
   int64_t maxDim = -1;
-  maxDim = std::max(maxDim, *std::max_element(sliceDims.begin(), sliceDims.end()));
+  maxDim =
+      std::max(maxDim, *std::max_element(sliceDims.begin(), sliceDims.end()));
   maxDim =
       std::max(maxDim, *std::max_element(dimsToMap.begin(), dimsToMap.end()));
   int64_t parentSpaceRank = maxDim + sliceDims.size() + 1;
 
-  // get remaining dims in parent space after applying slicing with parent's slice Dims
+  // get remaining dims in parent space after applying slicing with parent's
+  // slice Dims
   llvm::SmallDenseSet<int64_t> slicedDimsSet(sliceDims.begin(),
                                              sliceDims.end());
   SmallVector<int64_t> remainingDims;
@@ -653,7 +657,8 @@ mapSlicedDimsToParentSpace(const SetVector<int64_t> &dimsToMap,
 }
 
 // set the layout for unit dims: sg_data, inst_data and lane_data to 1
-DistributeLayoutAttr SliceAttr::setUnitDimData(SetVector<int64_t> unitDims) const{
+DistributeLayoutAttr
+SliceAttr::setUnitDimData(SetVector<int64_t> unitDims) const {
   DistributeLayoutAttr parentLayout = getParent();
 
   ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
@@ -661,12 +666,13 @@ DistributeLayoutAttr SliceAttr::setUnitDimData(SetVector<int64_t> unitDims) cons
   SetVector<int64_t> adjustUnitDims =
       mapSlicedDimsToParentSpace(unitDims, sliceDims);
 
-  return SliceAttr::get(getContext(), parentLayout.setUnitDimData(adjustUnitDims),
-                        getDims());
+  return SliceAttr::get(getContext(),
+                        parentLayout.setUnitDimData(adjustUnitDims), getDims());
 }
 
 // set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-DistributeLayoutAttr SliceAttr::setUnitDimLayout(SetVector<int64_t> unitDims) const{
+DistributeLayoutAttr
+SliceAttr::setUnitDimLayout(SetVector<int64_t> unitDims) const {
   DistributeLayoutAttr parentLayout = getParent();
 
   ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
@@ -674,8 +680,8 @@ DistributeLayoutAttr SliceAttr::setUnitDimLayout(SetVector<int64_t> unitDims) co
   SetVector<int64_t> adjustUnitDims =
       mapSlicedDimsToParentSpace(unitDims, sliceDims);
 
-  return SliceAttr::get(getContext(), parentLayout.setUnitDimLayout(adjustUnitDims),
-                        getDims());
+  return SliceAttr::get(
+      getContext(), parentLayout.setUnitDimLayout(adjustUnitDims), getDims());
 }
 
 //===----------------------------------------------------------------------===//
