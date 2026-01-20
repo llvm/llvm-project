@@ -5360,11 +5360,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // - <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8
   //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
   // - <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8
-  //                 (<4 x i32> R%, <16 x i8> %X, <16 x i8> %Y)
+  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
   //
   // Note:
-  // - < 4 x *> is a 2x2 matrix
-  // - <16 x *> is a 2x8 matrix and 8x2 matrix respectively
+  // - <4 x i32> is a 2x2 matrix
+  // - <16 x i8> %X and %Y are 2x8 and 8x2 matrices respectively
+  //
+  //   2x8 %X                                8x2 %Y
+  //   [ X01 X02 X03 X04 X05 X06 X07 X08 ]   [ Y01 Y09 ]
+  //   [ X09 X10 X11 X12 X13 X14 X15 X16 ] x [ Y02 Y10 ]
+  //                                         [ Y03 Y11 ]
+  //                                         [ Y04 Y12 ]
+  //                                         [ Y05 Y13 ]
+  //                                         [ Y06 Y14 ]
+  //                                         [ Y07 Y15 ]
+  //                                         [ Y08 Y16 ]
   //
   // The general shadow propagation approach is:
   // 1) get the shadows of the input matrices %X and %Y
@@ -5380,11 +5390,27 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //
   // Floating-point matrix multiplication:
   // - <4 x float> @llvm.aarch64.neon.bfmmla
-  //                   (<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b)
-  // Although there are half as many elements of %a and %b compared to the
+  //                   (<4 x float> %R, <8 x bfloat> %X, <8 x bfloat> %Y)
+  //   %X and %Y are 2x4 and 4x2 matrices respectively
+  //
+  // Although there are half as many elements of %X and %Y compared to the
   // integer case, each element is twice the bit-width. Thus, we can reuse the
   // shadow propagation logic if we cast the shadows to the same type as the
-  // integer case, and apply ummla to the shadows.
+  // integer case, and apply ummla to the shadows:
+  //
+  //   2x4 %X                                4x2 %Y
+  //   [ A01:A02 A03:A04 A05:A06 A07:A08 ]   [ B01:B02 B09:B10 ]
+  //   [ A09:A10 A11:A12 A13:A14 A15:A16 ] x [ B03:B04 B11:B12 ]
+  //                                         [ B05:B06 B13:B14 ]
+  //                                         [ B07:B08 B15:B16 ]
+  //
+  // For example, consider multiplying the first row of %X with the first
+  // column of Y. We want to know if
+  // A01:A02*B01:B02 + A03:A04*B03:B04 + A05:A06*B06:B06 + A07:A08*B07:B08 is
+  // fully initialized, which will be true if and only if (A01, A02, ..., A08)
+  // and (B01, B02, ..., B08) are each fully initialized. This latter condition
+  // is equivalent to what is tested by the instrumentation for the integer
+  // form.
   void handleNEONMatrixMultiply(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
