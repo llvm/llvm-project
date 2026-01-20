@@ -4791,6 +4791,18 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   Register Reg = GR.buildGlobalVariable(
       ResVReg, ResType, GlobalIdent, GV, StorageClass, Init,
       GlobalVar->isConstant(), LnkType, MIRBuilder, true);
+  // TODO: For AMDGCN, we pipe externally_initialized through via
+  // HostAccessINTEL, with ReadWrite (3) access, which is we then handle during
+  // reverse translation. We should remove this once SPIR-V gains the ability to
+  // express the concept.
+  if (GlobalVar->isExternallyInitialized() &&
+      STI.getTargetTriple().getVendor() == Triple::AMD) {
+    constexpr unsigned ReadWriteINTEL = 3u;
+    buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::HostAccessINTEL,
+                    {ReadWriteINTEL});
+    MachineInstrBuilder MIB(*MF, --MIRBuilder.getInsertPt());
+    addStringImm(GV->getName(), MIB);
+  }
   return Reg.isValid();
 }
 

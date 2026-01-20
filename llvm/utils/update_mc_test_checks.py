@@ -380,14 +380,14 @@ def update_test(ti: common.TestInfo):
 
             if hasErr(o):
                 line_offset = len(check_lines) + 1
-                check = getErrCheckLines(prefix, o, mc_mode, line_offset)
+                checks = getErrCheckLines(prefix, o, mc_mode, line_offset)
             else:
-                check = getStdCheckLines(prefix, o, mc_mode)
-                check = common.generalize_check_lines(
-                    check, ginfo, vars_seen[prefix], global_vars_seen[prefix]
+                checks = getStdCheckLines(prefix, o, mc_mode)
+                checks = common.generalize_check_lines(
+                    checks, ginfo, vars_seen[prefix], global_vars_seen[prefix]
                 )
 
-            check_lines.extend(check)
+            check_lines.extend(checks)
 
         generated_prefixes[input_line] = "\n".join(check_lines)
 

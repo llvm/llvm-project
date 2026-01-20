@@ -101,24 +101,18 @@ entry:
 
 declare i64 @strlen(ptr noundef) nounwind
 
-define ptr @test_memmove(ptr noundef %destination, ptr noundef %source, i64 noundef %num) #0 {
+define ptr @test_memmove(ptr noundef %dst, ptr noundef %src, i64 noundef %n) nounwind {
 ; CHECK-LE-P9-LABEL: test_memmove:
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    mflr r0
-; CHECK-LE-P9-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-LE-P9-NEXT:    .cfi_offset lr, 16
-; CHECK-LE-P9-NEXT:    .cfi_offset r30, -16
 ; CHECK-LE-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-LE-P9-NEXT:    stdu r1, -80(r1)
-; CHECK-LE-P9-NEXT:    std r0, 96(r1)
+; CHECK-LE-P9-NEXT:    stdu r1, -48(r1)
+; CHECK-LE-P9-NEXT:    std r0, 64(r1)
 ; CHECK-LE-P9-NEXT:    mr r30, r3
-; CHECK-LE-P9-NEXT:    std r3, 56(r1)
-; CHECK-LE-P9-NEXT:    std r4, 48(r1)
-; CHECK-LE-P9-NEXT:    std r5, 40(r1)
 ; CHECK-LE-P9-NEXT:    bl memmove
 ; CHECK-LE-P9-NEXT:    nop
 ; CHECK-LE-P9-NEXT:    mr r3, r30
-; CHECK-LE-P9-NEXT:    addi r1, r1, 80
+; CHECK-LE-P9-NEXT:    addi r1, r1, 48
 ; CHECK-LE-P9-NEXT:    ld r0, 16(r1)
 ; CHECK-LE-P9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-LE-P9-NEXT:    mtlr r0
@@ -127,21 +121,15 @@ define ptr @test_memmove(ptr noundef %destination, ptr noundef %source, i64 noun
 ; CHECK-BE-P9-LABEL: test_memmove:
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    mflr r0
-; CHECK-BE-P9-NEXT:    stdu r1, -160(r1)
-; CHECK-BE-P9-NEXT:    std r0, 176(r1)
-; CHECK-BE-P9-NEXT:    .cfi_def_cfa_offset 160
-; CHECK-BE-P9-NEXT:    .cfi_offset lr, 16
-; CHECK-BE-P9-NEXT:    .cfi_offset r30, -16
-; CHECK-BE-P9-NEXT:    std r30, 144(r1) # 8-byte Folded Spill
+; CHECK-BE-P9-NEXT:    stdu r1, -128(r1)
+; CHECK-BE-P9-NEXT:    std r0, 144(r1)
+; CHECK-BE-P9-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
 ; CHECK-BE-P9-NEXT:    mr r30, r3
-; CHECK-BE-P9-NEXT:    std r3, 136(r1)
-; CHECK-BE-P9-NEXT:    std r4, 128(r1)
-; CHECK-BE-P9-NEXT:    std r5, 120(r1)
 ; CHECK-BE-P9-NEXT:    bl memmove
 ; CHECK-BE-P9-NEXT:    nop
 ; CHECK-BE-P9-NEXT:    mr r3, r30
-; CHECK-BE-P9-NEXT:    ld r30, 144(r1) # 8-byte Folded Reload
-; CHECK-BE-P9-NEXT:    addi r1, r1, 160
+; CHECK-BE-P9-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
+; CHECK-BE-P9-NEXT:    addi r1, r1, 128
 ; CHECK-BE-P9-NEXT:    ld r0, 16(r1)
 ; CHECK-BE-P9-NEXT:    mtlr r0
 ; CHECK-BE-P9-NEXT:    blr
@@ -149,48 +137,34 @@ define ptr @test_memmove(ptr noundef %destination, ptr noundef %source, i64 noun
 ; CHECK-AIX-64-P9-LABEL: test_memmove:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
-; CHECK-AIX-64-P9-NEXT:    stdu r1, -144(r1)
-; CHECK-AIX-64-P9-NEXT:    std r0, 160(r1)
-; CHECK-AIX-64-P9-NEXT:    std r31, 136(r1) # 8-byte Folded Spill
+; CHECK-AIX-64-P9-NEXT:    stdu r1, -128(r1)
+; CHECK-AIX-64-P9-NEXT:    std r0, 144(r1)
+; CHECK-AIX-64-P9-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
 ; CHECK-AIX-64-P9-NEXT:    mr r31, r3
-; CHECK-AIX-64-P9-NEXT:    std r3, 128(r1)
-; CHECK-AIX-64-P9-NEXT:    std r4, 120(r1)
-; CHECK-AIX-64-P9-NEXT:    std r5, 112(r1)
 ; CHECK-AIX-64-P9-NEXT:    bl .___memmove64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
 ; CHECK-AIX-64-P9-NEXT:    mr r3, r31
-; CHECK-AIX-64-P9-NEXT:    ld r31, 136(r1) # 8-byte Folded Reload
-; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 144
+; CHECK-AIX-64-P9-NEXT:    ld r31, 120(r1) # 8-byte Folded Reload
+; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 128
 ; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
 ; CHECK-AIX-64-P9-NEXT:    mtlr r0
 ; CHECK-AIX-64-P9-NEXT:    blr
 entry:
-  %destination.addr = alloca ptr, align 8
-  %source.addr = alloca ptr, align 8
-  %num.addr = alloca i64, align 8
-  store ptr %destination, ptr %destination.addr, align 8
-  store ptr %source, ptr %source.addr, align 8
-  store i64 %num, ptr %num.addr, align 8
-  %0 = load ptr, ptr %destination.addr, align 8
-  %1 = load ptr, ptr %source.addr, align 8
-  %2 = load i64, ptr %num.addr, align 8
-  call void @llvm.memmove.p0.p0.i64(ptr align 1 %0, ptr align 1 %1, i64 %2, i1 false)
-  ret ptr %0
+  call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 %n, i1 false)
+  ret ptr %dst
 }
 
-declare void @llvm.memmove.p0.p0.i32(ptr writeonly captures(none), ptr readonly captures(none), i32, i1 immarg)
+declare void @llvm.memmove.p0.p0.i64(ptr writeonly captures(none), ptr readonly captures(none), i64, i1 immarg)
 
-define dso_local void @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
+define dso_local ptr @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
 ; CHECK-LE-P9-LABEL: strcpy_test:
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    mflr r0
-; CHECK-LE-P9-NEXT:    stdu r1, -48(r1)
-; CHECK-LE-P9-NEXT:    std r0, 64(r1)
-; CHECK-LE-P9-NEXT:    std r3, 40(r1)
-; CHECK-LE-P9-NEXT:    std r4, 32(r1)
+; CHECK-LE-P9-NEXT:    stdu r1, -32(r1)
+; CHECK-LE-P9-NEXT:    std r0, 48(r1)
 ; CHECK-LE-P9-NEXT:    bl strcpy
 ; CHECK-LE-P9-NEXT:    nop
-; CHECK-LE-P9-NEXT:    addi r1, r1, 48
+; CHECK-LE-P9-NEXT:    addi r1, r1, 32
 ; CHECK-LE-P9-NEXT:    ld r0, 16(r1)
 ; CHECK-LE-P9-NEXT:    mtlr r0
 ; CHECK-LE-P9-NEXT:    blr
@@ -198,13 +172,11 @@ define dso_local void @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind
 ; CHECK-BE-P9-LABEL: strcpy_test:
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    mflr r0
-; CHECK-BE-P9-NEXT:    stdu r1, -128(r1)
-; CHECK-BE-P9-NEXT:    std r0, 144(r1)
-; CHECK-BE-P9-NEXT:    std r3, 120(r1)
-; CHECK-BE-P9-NEXT:    std r4, 112(r1)
+; CHECK-BE-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-BE-P9-NEXT:    std r0, 128(r1)
 ; CHECK-BE-P9-NEXT:    bl strcpy
 ; CHECK-BE-P9-NEXT:    nop
-; CHECK-BE-P9-NEXT:    addi r1, r1, 128
+; CHECK-BE-P9-NEXT:    addi r1, r1, 112
 ; CHECK-BE-P9-NEXT:    ld r0, 16(r1)
 ; CHECK-BE-P9-NEXT:    mtlr r0
 ; CHECK-BE-P9-NEXT:    blr
@@ -212,26 +184,300 @@ define dso_local void @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind
 ; CHECK-AIX-64-P9-LABEL: strcpy_test:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
+; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
+; CHECK-AIX-64-P9-NEXT:    bl .___strcpy64[PR]
+; CHECK-AIX-64-P9-NEXT:    nop
+; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112
+; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
+; CHECK-AIX-64-P9-NEXT:    mtlr r0
+; CHECK-AIX-64-P9-NEXT:    blr
+entry:
+  %call = call ptr @strcpy(ptr noundef %dest, ptr noundef %src)
+  ret ptr %call
+}
+
+declare ptr @strcpy(ptr noundef, ptr noundef)
+
+define dso_local ptr @stpcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
+; CHECK-LE-P9-LABEL: stpcpy_test:
+; CHECK-LE-P9:       # %bb.0: # %entry
+; CHECK-LE-P9-NEXT:    mflr r0
+; CHECK-LE-P9-NEXT:    stdu r1, -32(r1)
+; CHECK-LE-P9-NEXT:    std r0, 48(r1)
+; CHECK-LE-P9-NEXT:    bl stpcpy
+; CHECK-LE-P9-NEXT:    nop
+; CHECK-LE-P9-NEXT:    addi r1, r1, 32
+; CHECK-LE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-LE-P9-NEXT:    mtlr r0
+; CHECK-LE-P9-NEXT:    blr
+;
+; CHECK-BE-P9-LABEL: stpcpy_test:
+; CHECK-BE-P9:       # %bb.0: # %entry
+; CHECK-BE-P9-NEXT:    mflr r0
+; CHECK-BE-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-BE-P9-NEXT:    std r0, 128(r1)
+; CHECK-BE-P9-NEXT:    bl stpcpy
+; CHECK-BE-P9-NEXT:    nop
+; CHECK-BE-P9-NEXT:    addi r1, r1, 112
+; CHECK-BE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-BE-P9-NEXT:    mtlr r0
+; CHECK-BE-P9-NEXT:    blr
+;
+; CHECK-AIX-64-P9-LABEL: stpcpy_test:
+; CHECK-AIX-64-P9:       # %bb.0: # %entry
+; CHECK-AIX-64-P9-NEXT:    mflr r0
+; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
+; CHECK-AIX-64-P9-NEXT:    bl .stpcpy[PR]
+; CHECK-AIX-64-P9-NEXT:    nop
+; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112
+; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
+; CHECK-AIX-64-P9-NEXT:    mtlr r0
+; CHECK-AIX-64-P9-NEXT:    blr
+entry:
+  %call = call ptr @stpcpy(ptr noundef %dest, ptr noundef %src)
+  ret ptr %call
+}
+
+declare ptr @stpcpy(ptr noundef, ptr noundef)
+
+define ptr @test_memcpy(ptr noundef %dst, ptr noundef %src, i64 noundef %n) nounwind {
+; CHECK-LE-P9-LABEL: test_memcpy:
+; CHECK-LE-P9:       # %bb.0:
+; CHECK-LE-P9-NEXT:    mflr r0
+; CHECK-LE-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-LE-P9-NEXT:    stdu r1, -48(r1)
+; CHECK-LE-P9-NEXT:    std r0, 64(r1)
+; CHECK-LE-P9-NEXT:    mr r30, r3
+; CHECK-LE-P9-NEXT:    bl memcpy
+; CHECK-LE-P9-NEXT:    nop
+; CHECK-LE-P9-NEXT:    mr r3, r30
+; CHECK-LE-P9-NEXT:    addi r1, r1, 48
+; CHECK-LE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-LE-P9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-LE-P9-NEXT:    mtlr r0
+; CHECK-LE-P9-NEXT:    blr
+;
+; CHECK-BE-P9-LABEL: test_memcpy:
+; CHECK-BE-P9:       # %bb.0:
+; CHECK-BE-P9-NEXT:    mflr r0
+; CHECK-BE-P9-NEXT:    stdu r1, -128(r1)
+; CHECK-BE-P9-NEXT:    std r0, 144(r1)
+; CHECK-BE-P9-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
+; CHECK-BE-P9-NEXT:    mr r30, r3
+; CHECK-BE-P9-NEXT:    bl memcpy
+; CHECK-BE-P9-NEXT:    nop
+; CHECK-BE-P9-NEXT:    mr r3, r30
+; CHECK-BE-P9-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
+; CHECK-BE-P9-NEXT:    addi r1, r1, 128
+; CHECK-BE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-BE-P9-NEXT:    mtlr r0
+; CHECK-BE-P9-NEXT:    blr
+;
+; CHECK-AIX-64-P9-LABEL: test_memcpy:
+; CHECK-AIX-64-P9:       # %bb.0:
+; CHECK-AIX-64-P9-NEXT:    mflr r0
 ; CHECK-AIX-64-P9-NEXT:    stdu r1, -128(r1)
 ; CHECK-AIX-64-P9-NEXT:    std r0, 144(r1)
-; CHECK-AIX-64-P9-NEXT:    std r3, 120(r1)
-; CHECK-AIX-64-P9-NEXT:    std r4, 112(r1)
-; CHECK-AIX-64-P9-NEXT:    bl .strcpy[PR]
+; CHECK-AIX-64-P9-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
+; CHECK-AIX-64-P9-NEXT:    mr r31, r3
+; CHECK-AIX-64-P9-NEXT:    bl .___memmove64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
+; CHECK-AIX-64-P9-NEXT:    mr r3, r31
+; CHECK-AIX-64-P9-NEXT:    ld r31, 120(r1) # 8-byte Folded Reload
+; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 128
+; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
+; CHECK-AIX-64-P9-NEXT:    mtlr r0
+; CHECK-AIX-64-P9-NEXT:    blr
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 %n, i1 false)
+  ret ptr %dst
+}
+
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i64, i1 immarg)
+
+define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i64 noundef %num) nounwind {
+; CHECK-LE-P9-LABEL: test_memset:
+; CHECK-LE-P9:       # %bb.0: # %entry
+; CHECK-LE-P9-NEXT:    mflr r0
+; CHECK-LE-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-LE-P9-NEXT:    stdu r1, -48(r1)
+; CHECK-LE-P9-NEXT:    clrldi r4, r4, 56
+; CHECK-LE-P9-NEXT:    std r0, 64(r1)
+; CHECK-LE-P9-NEXT:    mr r30, r3
+; CHECK-LE-P9-NEXT:    bl memset
+; CHECK-LE-P9-NEXT:    nop
+; CHECK-LE-P9-NEXT:    mr r3, r30
+; CHECK-LE-P9-NEXT:    addi r1, r1, 48
+; CHECK-LE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-LE-P9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-LE-P9-NEXT:    mtlr r0
+; CHECK-LE-P9-NEXT:    blr
+;
+; CHECK-BE-P9-LABEL: test_memset:
+; CHECK-BE-P9:       # %bb.0: # %entry
+; CHECK-BE-P9-NEXT:    mflr r0
+; CHECK-BE-P9-NEXT:    stdu r1, -128(r1)
+; CHECK-BE-P9-NEXT:    clrldi r4, r4, 56
+; CHECK-BE-P9-NEXT:    std r0, 144(r1)
+; CHECK-BE-P9-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
+; CHECK-BE-P9-NEXT:    mr r30, r3
+; CHECK-BE-P9-NEXT:    bl memset
+; CHECK-BE-P9-NEXT:    nop
+; CHECK-BE-P9-NEXT:    mr r3, r30
+; CHECK-BE-P9-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
+; CHECK-BE-P9-NEXT:    addi r1, r1, 128
+; CHECK-BE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-BE-P9-NEXT:    mtlr r0
+; CHECK-BE-P9-NEXT:    blr
+;
+; CHECK-AIX-64-P9-LABEL: test_memset:
+; CHECK-AIX-64-P9:       # %bb.0: # %entry
+; CHECK-AIX-64-P9-NEXT:    mflr r0
+; CHECK-AIX-64-P9-NEXT:    stdu r1, -128(r1)
+; CHECK-AIX-64-P9-NEXT:    clrldi r4, r4, 56
+; CHECK-AIX-64-P9-NEXT:    std r0, 144(r1)
+; CHECK-AIX-64-P9-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
+; CHECK-AIX-64-P9-NEXT:    mr r31, r3
+; CHECK-AIX-64-P9-NEXT:    bl .___memset64[PR]
+; CHECK-AIX-64-P9-NEXT:    nop
+; CHECK-AIX-64-P9-NEXT:    mr r3, r31
+; CHECK-AIX-64-P9-NEXT:    ld r31, 120(r1) # 8-byte Folded Reload
 ; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 128
 ; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
 ; CHECK-AIX-64-P9-NEXT:    mtlr r0
 ; CHECK-AIX-64-P9-NEXT:    blr
 entry:
-  %dest.addr = alloca ptr, align 8
-  %src.addr = alloca ptr, align 8
-  store ptr %dest, ptr %dest.addr, align 8
-  store ptr %src, ptr %src.addr, align 8
-  %0 = load ptr, ptr %dest.addr, align 8
-  %1 = load ptr, ptr %src.addr, align 8
-  %call = call ptr @strcpy(ptr noundef %0, ptr noundef %1)
-  ret void
+  %0 = trunc i32 %value to i8
+  call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %0, i64 %num, i1 false)
+  ret ptr %dst
 }
 
+define ptr @test_strstr(ptr noundef %s1, ptr noundef %s2) nounwind {
+; CHECK-LE-P9-LABEL: test_strstr:
+; CHECK-LE-P9:       # %bb.0: # %entry
+; CHECK-LE-P9-NEXT:    mflr r0
+; CHECK-LE-P9-NEXT:    stdu r1, -32(r1)
+; CHECK-LE-P9-NEXT:    std r0, 48(r1)
+; CHECK-LE-P9-NEXT:    bl strstr
+; CHECK-LE-P9-NEXT:    nop
+; CHECK-LE-P9-NEXT:    addi r1, r1, 32
+; CHECK-LE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-LE-P9-NEXT:    mtlr r0
+; CHECK-LE-P9-NEXT:    blr
+;
+; CHECK-BE-P9-LABEL: test_strstr:
+; CHECK-BE-P9:       # %bb.0: # %entry
+; CHECK-BE-P9-NEXT:    mflr r0
+; CHECK-BE-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-BE-P9-NEXT:    std r0, 128(r1)
+; CHECK-BE-P9-NEXT:    bl strstr
+; CHECK-BE-P9-NEXT:    nop
+; CHECK-BE-P9-NEXT:    addi r1, r1, 112
+; CHECK-BE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-BE-P9-NEXT:    mtlr r0
+; CHECK-BE-P9-NEXT:    blr
+;
+; CHECK-AIX-64-P9-LABEL: test_strstr:
+; CHECK-AIX-64-P9:       # %bb.0: # %entry
+; CHECK-AIX-64-P9-NEXT:    mflr r0
+; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
+; CHECK-AIX-64-P9-NEXT:    bl .___strstr64[PR]
+; CHECK-AIX-64-P9-NEXT:    nop
+; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112
+; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
+; CHECK-AIX-64-P9-NEXT:    mtlr r0
+; CHECK-AIX-64-P9-NEXT:    blr
+entry:
+  %call = call ptr @strstr(ptr noundef %s1, ptr noundef %s2)
+  ret ptr %call
+}
 
-declare ptr @strcpy(ptr noundef, ptr noundef)
+declare ptr @strstr(ptr noundef, ptr noundef) #3
+
+define ptr @test_memccpy(ptr noalias noundef %dst, ptr noalias noundef %src, i32 noundef signext %c, i64 noundef %n) nounwind {
+; CHECK-LE-P9-LABEL: test_memccpy:
+; CHECK-LE-P9:       # %bb.0: # %entry
+; CHECK-LE-P9-NEXT:    mflr r0
+; CHECK-LE-P9-NEXT:    stdu r1, -32(r1)
+; CHECK-LE-P9-NEXT:    std r0, 48(r1)
+; CHECK-LE-P9-NEXT:    bl memccpy
+; CHECK-LE-P9-NEXT:    nop
+; CHECK-LE-P9-NEXT:    addi r1, r1, 32
+; CHECK-LE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-LE-P9-NEXT:    mtlr r0
+; CHECK-LE-P9-NEXT:    blr
+;
+; CHECK-BE-P9-LABEL: test_memccpy:
+; CHECK-BE-P9:       # %bb.0: # %entry
+; CHECK-BE-P9-NEXT:    mflr r0
+; CHECK-BE-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-BE-P9-NEXT:    std r0, 128(r1)
+; CHECK-BE-P9-NEXT:    bl memccpy
+; CHECK-BE-P9-NEXT:    nop
+; CHECK-BE-P9-NEXT:    addi r1, r1, 112
+; CHECK-BE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-BE-P9-NEXT:    mtlr r0
+; CHECK-BE-P9-NEXT:    blr
+;
+; CHECK-AIX-64-P9-LABEL: test_memccpy:
+; CHECK-AIX-64-P9:       # %bb.0: # %entry
+; CHECK-AIX-64-P9-NEXT:    mflr r0
+; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
+; CHECK-AIX-64-P9-NEXT:    bl .memccpy[PR]
+; CHECK-AIX-64-P9-NEXT:    nop
+; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112
+; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
+; CHECK-AIX-64-P9-NEXT:    mtlr r0
+; CHECK-AIX-64-P9-NEXT:    blr
+entry:
+  %call = call ptr @memccpy(ptr noundef %dst, ptr noundef %src, i32 noundef signext %c, i64 noundef %n)
+  ret ptr %call
+}
+
+declare ptr @memccpy(ptr noundef, ptr noundef, i32 noundef signext, i64 noundef)
+
+define signext i32 @test_strcmp(ptr noundef %s1, ptr noundef %s2) nounwind {
+; CHECK-LE-P9-LABEL: test_strcmp:
+; CHECK-LE-P9:       # %bb.0: # %entry
+; CHECK-LE-P9-NEXT:    mflr r0
+; CHECK-LE-P9-NEXT:    stdu r1, -32(r1)
+; CHECK-LE-P9-NEXT:    std r0, 48(r1)
+; CHECK-LE-P9-NEXT:    bl strcmp
+; CHECK-LE-P9-NEXT:    nop
+; CHECK-LE-P9-NEXT:    addi r1, r1, 32
+; CHECK-LE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-LE-P9-NEXT:    mtlr r0
+; CHECK-LE-P9-NEXT:    blr
+;
+; CHECK-BE-P9-LABEL: test_strcmp:
+; CHECK-BE-P9:       # %bb.0: # %entry
+; CHECK-BE-P9-NEXT:    mflr r0
+; CHECK-BE-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-BE-P9-NEXT:    std r0, 128(r1)
+; CHECK-BE-P9-NEXT:    bl strcmp
+; CHECK-BE-P9-NEXT:    nop
+; CHECK-BE-P9-NEXT:    addi r1, r1, 112
+; CHECK-BE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-BE-P9-NEXT:    mtlr r0
+; CHECK-BE-P9-NEXT:    blr
+;
+; CHECK-AIX-64-P9-LABEL: test_strcmp:
+; CHECK-AIX-64-P9:       # %bb.0: # %entry
+; CHECK-AIX-64-P9-NEXT:    mflr r0
+; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
+; CHECK-AIX-64-P9-NEXT:    bl .strcmp[PR]
+; CHECK-AIX-64-P9-NEXT:    nop
+; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112
+; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
+; CHECK-AIX-64-P9-NEXT:    mtlr r0
+; CHECK-AIX-64-P9-NEXT:    blr
+entry:
+  %call = call signext i32 @strcmp(ptr noundef %s1, ptr noundef %s2)
+  ret i32 %call
+}
+
+declare signext i32 @strcmp(ptr noundef, ptr noundef)
