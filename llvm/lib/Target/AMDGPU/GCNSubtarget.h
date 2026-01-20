@@ -77,7 +77,6 @@ protected:
   bool BackOffBarrier = false;
   bool UnalignedScratchAccess = false;
   bool UnalignedAccessMode = false;
-  bool RelaxedBufferOOBMode = false;
   bool HasApertureRegs = false;
   bool SupportsXNACK = false;
   bool KernargPreload = false;
@@ -305,6 +304,17 @@ protected:
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
+
+  // Module flag features.
+
+  // Out-Of-Bounds mode flags.
+  // Setting a bit enables a relaxed mode that disables strict OOB guarantees;
+  // an out-of-bounds access may cause a neighboring in-bounds access to be
+  // treated as OOB.
+  // If bit is set, enable relaxed mode. 0 in a bit keeps the corresponding check strict.
+  // OOBMode{0} - untyped buffers (buffer_load)
+  // OOBMode{1} - typed buffers (tbuffer_load)
+  unsigned OOBMode = 0;
 
 private:
   SIInstrInfo InstrInfo;
@@ -633,7 +643,8 @@ public:
     return UnalignedAccessMode;
   }
 
-  bool hasRelaxedBufferOOBMode() const { return RelaxedBufferOOBMode; }
+  bool hasRelaxedBufferOOBMode() const { return OOBMode == 1; // TODO: Use named const/enum.}
+  void setOOBMode(unsigned val) { OOBMode = val; }
 
   bool hasApertureRegs() const {
     return HasApertureRegs;

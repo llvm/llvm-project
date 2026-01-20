@@ -1120,6 +1120,15 @@ bool AMDGPUTargetMachine::splitModule(
   return true;
 }
 
+static unsigned getOOBModeFromModule(const Module *M) {
+  unsigned Mode = 0;
+  if (M)
+    if (Metadata *MD = M->getModuleFlag("amdgpu.oob.mode"))
+      if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+        Mode = CI->getZExtValue();
+  return Mode;
+}
+
 //===----------------------------------------------------------------------===//
 // GCN Target Machine (SI+)
 //===----------------------------------------------------------------------===//
@@ -1150,6 +1159,7 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   }
 
   I->setScalarizeGlobalBehavior(ScalarizeGlobal);
+  I->setOOBMode(getOOBModeFromModule(F.getParent()));
 
   return I.get();
 }
