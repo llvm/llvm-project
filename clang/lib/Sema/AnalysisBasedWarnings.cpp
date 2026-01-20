@@ -2951,6 +2951,8 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     AnalysisDeclContext AC(nullptr, FD);
     AC.getCFGBuildOptions().PruneTriviallyFalseEdges = false;
     AC.getCFGBuildOptions().AddLifetime = true;
+    AC.getCFGBuildOptions().AddImplicitDtors = true;
+    AC.getCFGBuildOptions().AddTemporaryDtors = true;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
     if (AC.getCFG())
       runLifetimeSafetyAnalysis(AC, &Reporter, LSStats, S.CollectStats);
@@ -3065,9 +3067,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       S.getLangOpts().EnableLifetimeSafety &&
       !S.getLangOpts().EnableLifetimeSafetyTUAnalysis;
 
-  if (EnableLifetimeSafetyAnalysis)
-    AC.getCFGBuildOptions().AddLifetime = true;
-
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.
   // FIXME: This isn't the right factoring.  This is here for initial
@@ -3088,9 +3087,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::ImplicitCastExprClass)
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
-  if (EnableLifetimeSafetyAnalysis) {
+  if (EnableLifetimeSafetyAnalysis)
     AC.getCFGBuildOptions().AddLifetime = true;
-  }
 
   // Install the logical handler.
   std::optional<LogicalErrorHandler> LEH;

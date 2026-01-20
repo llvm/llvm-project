@@ -186,33 +186,32 @@ namespace SPIRV {
 std::string lookupBuiltinNameHelper(StringRef DemangledCall,
                                     FPDecorationId *DecorationId) {
   StringRef PassPrefix = "(anonymous namespace)::";
-  std::string BuiltinName;
-  // Itanium Demangler result may have "(anonymous namespace)::" prefix
-  if (DemangledCall.starts_with(PassPrefix))
-    BuiltinName = DemangledCall.substr(PassPrefix.size());
-  else
-    BuiltinName = DemangledCall;
-  // Extract the builtin function name and types of arguments from the call
-  // skeleton.
-  BuiltinName = BuiltinName.substr(0, BuiltinName.find('('));
-
-  // Account for possible "__spirv_ocl_" prefix in SPIR-V friendly LLVM IR
-  if (BuiltinName.rfind("__spirv_ocl_", 0) == 0)
-    BuiltinName = BuiltinName.substr(12);
+  StringRef SpvPrefix = "__spv::";
+  std::string BuiltinName = DemangledCall.str();
 
   // Check if the extracted name contains type information between angle
   // brackets. If so, the builtin is an instantiated template - needs to have
   // the information after angle brackets and return type removed.
-  std::size_t Pos1 = BuiltinName.rfind('<');
-  if (Pos1 != std::string::npos && BuiltinName.back() == '>') {
-    std::size_t Pos2 = BuiltinName.rfind(' ', Pos1);
-    if (Pos2 == std::string::npos)
-      Pos2 = 0;
-    else
-      ++Pos2;
-    BuiltinName = BuiltinName.substr(Pos2, Pos1 - Pos2);
-    BuiltinName = BuiltinName.substr(BuiltinName.find_last_of(' ') + 1);
+  std::size_t Pos = BuiltinName.find(">(");
+  if (Pos != std::string::npos) {
+    BuiltinName = BuiltinName.substr(0, BuiltinName.rfind('<', Pos));
+  } else {
+    Pos = BuiltinName.find('(');
+    if (Pos != std::string::npos)
+      BuiltinName = BuiltinName.substr(0, Pos);
   }
+  BuiltinName = BuiltinName.substr(BuiltinName.find_last_of(' ') + 1);
+
+  // Itanium Demangler result may have "(anonymous namespace)::" or "__spv::"
+  // prefix.
+  if (BuiltinName.find(PassPrefix) == 0)
+    BuiltinName = BuiltinName.substr(PassPrefix.size());
+  else if (BuiltinName.find(SpvPrefix) == 0)
+    BuiltinName = BuiltinName.substr(SpvPrefix.size());
+
+  // Account for possible "__spirv_ocl_" prefix in SPIR-V friendly LLVM IR
+  if (BuiltinName.rfind("__spirv_ocl_", 0) == 0)
+    BuiltinName = BuiltinName.substr(12);
 
   // Check if the extracted name begins with:
   // - "__spirv_ImageSampleExplicitLod"
