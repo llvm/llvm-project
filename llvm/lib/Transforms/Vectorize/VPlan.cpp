@@ -240,9 +240,11 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, LoopInfo *LI,
                                    DominatorTree *DT, AssumptionCache *AC,
                                    IRBuilderBase &Builder, VPlan *Plan,
-                                   Loop *CurrentParentLoop, Type *CanonicalIVTy)
+                                   Loop *CurrentParentLoop, Type *CanonicalIVTy,
+                                   VPValue *ClampedVF)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
+      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan),
+      ClampedVF(ClampedVF) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (isa<VPIRValue, VPSymbolicValue>(Def))
@@ -1073,6 +1075,12 @@ void VPlan::printLiveIns(raw_ostream &O) const {
     O << " = vector-trip-count";
   }
 
+  if (AliasMask.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    AliasMask.printAsOperand(O, SlotTracker);
+    O << " = alias-mask";
+  }
+
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
     O << "\nLive-in ";
     BackedgeTakenCount->printAsOperand(O, SlotTracker);
@@ -1203,6 +1211,7 @@ VPlan *VPlan::duplicate() {
   Old2NewVPValues[&VF] = &NewPlan->VF;
   Old2NewVPValues[&UF] = &NewPlan->UF;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
+  Old2NewVPValues[&AliasMask] = &NewPlan->AliasMask;
   if (BackedgeTakenCount) {
     NewPlan->BackedgeTakenCount = new VPSymbolicValue();
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
@@ -1496,6 +1505,8 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   if (Plan.VFxUF.getNumUsers() > 0)
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);
+  if (Plan.AliasMask.getNumUsers() > 0)
+    assignName(&Plan.AliasMask);
   if (Plan.BackedgeTakenCount)
     assignName(Plan.BackedgeTakenCount);
   for (VPValue *LI : Plan.getLiveIns())

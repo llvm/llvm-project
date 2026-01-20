@@ -46,11 +46,20 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
   auto *Expanded = new VPExpandSCEVRecipe(Expr);
-  Plan.getEntry()->appendRecipe(Expanded);
+  VPBasicBlock *EntryVPBB = Plan.getEntry();
+  Plan.getEntry()->insert(Expanded, EntryVPBB->getFirstNonPhi());
   return Expanded;
 }
 
 bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
+  if (V == &Plan.getAliasMask())
+    return true;
+
+  VPValue *Mask;
+  if (match(V,
+            m_c_BinaryAnd(m_VPValue(Mask), m_Specific(&Plan.getAliasMask()))))
+    V = Mask;
+
   if (isa<VPActiveLaneMaskPHIRecipe>(V))
     return true;
 
@@ -606,7 +615,28 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
       HeaderMask = VPI;
     }
   }
+
   return HeaderMask;
+}
+
+VPValue *vputils::findLoopBodyMask(VPlan &Plan) {
+  VPValue *LoopMask = findHeaderMask(Plan);
+
+  // If an alias-mask is in use, ensure that it included in the loop mask.
+  VPValue *AliasMask = &Plan.getAliasMask();
+  if (AliasMask->getNumUsers() > 0) {
+    if (LoopMask) {
+      assert(AliasMask->hasOneUse() &&
+             "expected one use (`loop-mask = and alias-mask, lane-mask`)");
+      auto *VPI = dyn_cast<VPInstruction>(AliasMask->getSingleUser());
+      if (vputils::isHeaderMask(VPI, Plan))
+        LoopMask = VPI;
+    } else {
+      LoopMask = AliasMask;
+    }
+  }
+
+  return LoopMask;
 }
 
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,

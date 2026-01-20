@@ -200,7 +200,7 @@ struct VPTransformState {
   VPTransformState(const TargetTransformInfo *TTI, ElementCount VF,
                    LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                    IRBuilderBase &Builder, VPlan *Plan, Loop *CurrentParentLoop,
-                   Type *CanonicalIVTy);
+                   Type *CanonicalIVTy, VPValue *ClampedVF);
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
@@ -278,6 +278,13 @@ struct VPTransformState {
     Iter->second[CacheIdx] = V;
   }
 
+  /// Returns the runtime clamped VF (or nullptr if the VF is not clamped).
+  Value *getRTClampedVF() {
+    if (!ClampedVF)
+      return nullptr;
+    return get(ClampedVF, /*IsScalar=*/true);
+  }
+
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
@@ -332,6 +339,9 @@ struct VPTransformState {
 
   /// VPlan-based dominator tree.
   VPDominatorTree VPDT;
+
+  /// Runtime clamped VF value.
+  VPValue *ClampedVF = nullptr;
 };
 
 /// Struct to hold various analysis needed for cost computations.

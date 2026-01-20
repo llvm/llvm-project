@@ -2131,6 +2131,15 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
     }
   }
 
+  if (!canMaskLoop())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "LV: can fold tail by masking.\n");
+
+  return true;
+}
+
+bool LoopVectorizationLegality::canMaskLoop() const {
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;
 
@@ -2139,17 +2148,15 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   SmallPtrSet<const Instruction *, 8> TmpMaskedOp;
   for (BasicBlock *BB : TheLoop->blocks()) {
     if (!blockCanBePredicated(BB, SafePointers, TmpMaskedOp)) {
-      LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking.\n");
+      LLVM_DEBUG(dbgs() << "LV: Cannot mask loop.\n");
       return false;
     }
   }
 
-  LLVM_DEBUG(dbgs() << "LV: can fold tail by masking.\n");
-
   return true;
 }
 
-void LoopVectorizationLegality::prepareToFoldTailByMasking() {
+void LoopVectorizationLegality::prepareToMaskLoop() {
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;
 

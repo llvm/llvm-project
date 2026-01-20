@@ -5112,6 +5112,60 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
          "VF, UF, and VFxUF not expected to be used");
 }
 
+VPValue *
+VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheck,
+                                      ArrayRef<PointerDiffInfo> DiffChecks) {
+  VPValue &AliasMask = Plan.getAliasMask();
+  VPBuilder Builder(AliasCheck, AliasCheck->begin());
+  Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
+  Type *I64Ty = IntegerType::getInt64Ty(Plan.getContext());
+  Type *PtrTy = PointerType::getUnqual(Plan.getContext());
+
+  VPValue *Mask = nullptr;
+  for (PointerDiffInfo Check : DiffChecks) {
+    VPValue *Src = vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SrcStart);
+    VPValue *Sink =
+        vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SinkStart);
+
+    VPValue *SrcPtr =
+        Builder.createScalarCast(Instruction::CastOps::IntToPtr, Src, PtrTy,
+                                 DebugLoc::getCompilerGenerated());
+    VPValue *SinkPtr =
+        Builder.createScalarCast(Instruction::CastOps::IntToPtr, Sink, PtrTy,
+                                 DebugLoc::getCompilerGenerated());
+
+    VPWidenIntrinsicRecipe *WARMask = new VPWidenIntrinsicRecipe(
+        Intrinsic::loop_dependence_war_mask,
+        {SrcPtr, SinkPtr, Plan.getConstantInt(I64Ty, Check.AccessSize)}, I1Ty);
+    Builder.insert(WARMask);
+
+    if (Mask)
+      Mask = Builder.createAnd(Mask, WARMask);
+    else
+      Mask = WARMask;
+  }
+
+  // Replace all users of the symbolic alias-mask with the materialized value.
+  AliasMask.replaceAllUsesWith(Mask);
+
+  Type *IVTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
+  VPValue *NumActive =
+      Builder.createNaryOp(VPInstruction::NumActiveLanes, {Mask});
+  return Builder.createScalarZExtOrTrunc(NumActive, IVTy, I64Ty,
+                                         DebugLoc::getCompilerGenerated());
+}
+
+void VPlanTransforms::fixupVFUsersForClampedVF(VPlan &Plan,
+                                               VPValue *ClampedVF) {
+  if (!ClampedVF)
+    return;
+
+  assert(Plan.getConcreteUF() == 1 &&
+         "Clamped VF not support with interleaving");
+  Plan.getVF().replaceAllUsesWith(ClampedVF);
+  Plan.getVFxUF().replaceAllUsesWith(ClampedVF);
+}
+
 DenseMap<const SCEV *, Value *>
 VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   SCEVExpander Expander(SE, "induction", /*PreserveLCSSA=*/false);

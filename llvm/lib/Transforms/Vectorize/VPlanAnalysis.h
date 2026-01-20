@@ -46,6 +46,7 @@ class VPTypeAnalysis {
   /// count).
   Type *CanonicalIVTy;
   LLVMContext &Ctx;
+  const VPlan &Plan;
 
   Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
   Type *inferScalarTypeForRecipe(const VPInstruction *R);
