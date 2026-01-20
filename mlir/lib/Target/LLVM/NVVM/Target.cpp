@@ -547,7 +547,7 @@ NVPTXSerializer::compileToBinary(StringRef ptxCode) {
     if (auto status = (expr)) {                                                \
       emitError(loc) << llvm::Twine(#expr).concat(" failed with error code ")  \
                      << status;                                                \
-      return mlir::failure();                                                     \
+      return mlir::failure();                                                  \
     }                                                                          \
   } while (false)
 
@@ -559,7 +559,7 @@ NVPTXSerializer::compileToBinary(StringRef ptxCode) {
     if (result != nvFatbinResult::NVFATBIN_SUCCESS) {                          \
       emitError(loc) << llvm::Twine(#expr).concat(" failed with error: ")      \
                      << nvFatbinGetErrorString(result);                        \
-      return std::nullopt;                                                     \
+      return mlir::failure();                                                  \
     }                                                                          \
   } while (false)
 
