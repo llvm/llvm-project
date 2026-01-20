@@ -1,0 +1,64 @@
+//===- MemoryAccessOpInterfaces.cpp ---------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/Value.h"
+
+//===----------------------------------------------------------------------===//
+// IndexedAccessOpInterface and IndexedMemCpyOpInterface
+//===----------------------------------------------------------------------===//
+
+namespace mlir::memref {
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.cpp.inc"
+} // namespace mlir::memref
+
+using namespace mlir;
+using namespace mlir::memref;
+
+LogicalResult
+mlir::memref::detail::verifyIndexedAccessOpInterface(Operation *op) {
+  auto iface = dyn_cast<IndexedAccessOpInterface>(op);
+  TypedValue<MemRefType> memref = iface.getAccessedMemref();
+  if (!memref) {
+    // Some operations can carry tensors, this is fine.
+    return success();
+  }
+  if (memref.getType().getRank() !=
+      static_cast<int64_t>(iface.getIndices().size()))
+    return op->emitOpError(
+        "invalid number of indices for accessed memref, expected " +
+        Twine(memref.getType().getRank()) + " but got " +
+        Twine(iface.getIndices().size()));
+  return success();
+}
+
+LogicalResult
+mlir::memref::detail::verifyIndexedMemCopyOpInterface(Operation *op) {
+  auto iface = dyn_cast<IndexedMemCopyOpInterface>(op);
+  TypedValue<MemRefType> src = iface.getSrc();
+  TypedValue<MemRefType> dst = iface.getDst();
+  if (!src || !dst) {
+    // Allow operations to not always have memref arguments.
+    return ::mlir::success();
+  }
+  if (src.getType().getRank() !=
+      static_cast<int64_t>(iface.getSrcIndices().size()))
+    return op->emitOpError(
+        "invalid number of indices for source memref, expected " +
+        Twine(src.getType().getRank()) + ", got " +
+        Twine(iface.getSrcIndices().size()));
+  if (dst.getType().getRank() !=
+      static_cast<int64_t>(iface.getDstIndices().size()))
+    return op->emitOpError(
+        "invalid number of indices for destination memref, expected " +
+        Twine(dst.getType().getRank()) + ", got " +
+        Twine(iface.getDstIndices().size()));
+  return success();
+}
