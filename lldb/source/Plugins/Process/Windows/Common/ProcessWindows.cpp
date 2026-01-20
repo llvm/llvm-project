@@ -1007,6 +1007,8 @@ public:
             if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead))
               goto exit_loop;
 
+            // If the pipe is empty, go back to waiting on
+            // WaitForMultipleObjects rather than ReadFile.
             if (numRead == 0)
               goto read_loop;
 
@@ -1051,7 +1053,7 @@ public:
     }
 
   exit_loop:;
-  SetIsRunning(false);
+    SetIsRunning(false);
   }
 
   void Cancel() override {
