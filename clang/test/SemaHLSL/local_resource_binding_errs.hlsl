@@ -10,7 +10,7 @@ cbuffer c {
 };
 
 void conditional_initialization(int idx) {
-    // expected-error@+1 {{assignment to local resource 'cond ? Out0 : Out1' is not to the same unique global resource}}
+    // expected-error@+1 {{assignment of 'cond ? Out0 : Out1' to local resource 'Out' is not to the same unique global resource}}
     RWStructuredBuffer<int> Out = cond ? Out0 : Out1;
     Out[idx] = In[idx];
 }
@@ -18,7 +18,7 @@ void conditional_initialization(int idx) {
 void branched_assignment(int idx) {
     RWStructuredBuffer<int> Out = Out0; // expected-note {{variable 'Out' is declared here}}
     if (cond) {
-        // expected-error@+1 {{assignment to local resource 'Out1' is not to the same unique global resource}}
+        // expected-error@+1 {{assignment of 'Out1' to local resource 'Out' is not to the same unique global resource}}
         Out = Out1;
     }
     Out[idx] = In[idx];
@@ -27,7 +27,7 @@ void branched_assignment(int idx) {
 void branched_assignment_with_array(int idx) {
     RWStructuredBuffer<int> Out = Out0; // expected-note {{variable 'Out' is declared here}}
     if (cond) {
-        // expected-error@+1 {{assignment to local resource 'OutArr[0]' is not to the same unique global resource}}
+        // expected-error@+1 {{assignment of 'OutArr[0]' to local resource 'Out' is not to the same unique global resource}}
         Out = OutArr[0];
     }
     Out[idx] = In[idx];
@@ -35,7 +35,7 @@ void branched_assignment_with_array(int idx) {
 
 void conditional_assignment(int idx) {
     RWStructuredBuffer<int> Out;
-    // expected-error@+1 {{assignment to local resource 'cond ? Out0 : Out1' is not to the same unique global resource}}
+    // expected-error@+1 {{assignment of 'cond ? Out0 : Out1' to local resource 'Out' is not to the same unique global resource}}
     Out = cond ? Out0 : Out1;
     Out[idx] = In[idx];
 }

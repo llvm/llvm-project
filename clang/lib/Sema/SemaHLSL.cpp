@@ -4440,13 +4440,6 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
   while (auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
     E = ASE->getBase()->IgnoreParenImpCasts();
 
-  auto RHSBinding = GetGlobalBinding(RHSExpr);
-  if (!RHSBinding) {
-    SemaRef.Diag(Loc, diag::err_hlsl_assigning_local_resource_is_not_unique)
-        << RHSExpr;
-    return false;
-  }
-
   // Report error if LHS is a non-static resource declared at a global scope.
   if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
     if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
@@ -4455,6 +4448,14 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
           // Assignment to a global resource is not allowed.
           SemaRef.Diag(Loc, diag::err_hlsl_assign_to_global_resource) << VD;
           SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
+          return false;
+        }
+
+        auto RHSBinding = GetGlobalBinding(RHSExpr);
+        if (!RHSBinding) {
+          SemaRef.Diag(Loc,
+                       diag::err_hlsl_assigning_local_resource_is_not_unique)
+              << RHSExpr << VD;
           return false;
         }
 
@@ -4468,7 +4469,7 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
         } else if (LHSBinding != *RHSBinding) {
           SemaRef.Diag(Loc,
                        diag::err_hlsl_assigning_local_resource_is_not_unique)
-              << RHSExpr;
+              << RHSExpr << VD;
           SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
           return false;
         }
@@ -4857,7 +4858,7 @@ bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
       } else {
         SemaRef.Diag(Init->getBeginLoc(),
                      diag::err_hlsl_assigning_local_resource_is_not_unique)
-            << Init;
+            << Init << VDecl;
         return false;
       }
     }
