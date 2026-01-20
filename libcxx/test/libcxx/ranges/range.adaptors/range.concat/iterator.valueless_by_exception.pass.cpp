@@ -47,14 +47,16 @@ public:
   Iter(int* ptr) : ptr_(ptr) {}
   Iter(const Iter&) = default;
   Iter(Iter&& other) : ptr_(other.ptr_) {
-      if (flag) throw 5;
+    if (flag)
+      throw 5;
   }
 
   Iter& operator=(const Iter&) = default;
   Iter& operator=(Iter&& o) {
-      ptr_ = o.ptr_;
-      if (flag) throw 5;
-      return *this;
+    ptr_ = o.ptr_;
+    if (flag)
+      throw 5;
+    return *this;
   }
 
   reference operator*() const { return *ptr_; }
@@ -167,8 +169,6 @@ int main() {
     try {
       iter1 = std::move(iter2);
     } catch (...) {
-      auto f = std::ranges::distance(r1);
-      (void)f;
       TEST_LIBCPP_ASSERT_FAILURE([=] { *iter1; }(), "valueless by exception");
     }
   }
