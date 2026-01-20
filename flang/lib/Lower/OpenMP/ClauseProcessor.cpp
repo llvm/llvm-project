@@ -1716,6 +1716,16 @@ bool ClauseProcessor::processUseDevicePtr(
   return clauseFound;
 }
 
+bool ClauseProcessor::processUniform(
+    mlir::omp::UniformClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Uniform>(
+      [&](const omp::clause::Uniform &clause, const parser::CharBlock &) {
+        const auto &objects = clause.v;
+        if (!objects.empty())
+          genObjectList(objects, converter, result.uniformVars);
+      });
+}
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

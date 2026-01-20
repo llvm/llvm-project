@@ -14,7 +14,7 @@ define nofpclass(snan) float @ret_no_snan__floor_no_snan(float nofpclass(nan) %x
 define nofpclass(inf norm sub zero) float @ret_only_nan__floor(float %x) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_only_nan__floor(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float [[X]]
 ;
   %result = call float @llvm.floor.f32(float %x)
   ret float %result
@@ -23,7 +23,7 @@ define nofpclass(inf norm sub zero) float @ret_only_nan__floor(float %x) {
 define nofpclass(inf norm sub zero) <2 x float> @ret_only_nan__floor_vec(<2 x float> %x) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) <2 x float> @ret_only_nan__floor_vec(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF8000000000000)
+; CHECK-NEXT:    ret <2 x float> [[X]]
 ;
   %result = call <2 x float> @llvm.floor.v2f32(<2 x float> %x)
   ret <2 x float> %result
@@ -32,8 +32,7 @@ define nofpclass(inf norm sub zero) <2 x float> @ret_only_nan__floor_vec(<2 x fl
 define nofpclass(inf norm sub zero qnan) float @ret_only_snan__floor(float %x) {
 ; CHECK-LABEL: define nofpclass(qnan inf zero sub norm) float @ret_only_snan__floor(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.floor.f32(float [[X]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %result = call float @llvm.floor.f32(float %x)
   ret float %result
@@ -42,8 +41,7 @@ define nofpclass(inf norm sub zero qnan) float @ret_only_snan__floor(float %x) {
 define nofpclass(inf norm sub zero snan) float @ret_only_qnan__floor(float %x) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_only_qnan__floor(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.floor.f32(float [[X]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %result = call float @llvm.floor.f32(float %x)
   ret float %result
@@ -52,8 +50,7 @@ define nofpclass(inf norm sub zero snan) float @ret_only_qnan__floor(float %x) {
 define nofpclass(nan norm sub zero) float @ret_only_inf__floor(float %x) {
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) float @ret_only_inf__floor(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.floor.f32(float [[X]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %result = call float @llvm.floor.f32(float %x)
   ret float %result

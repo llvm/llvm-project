@@ -1256,15 +1256,13 @@ WRAPPER_CLASS(ArrayConstructor, AcSpec);
 using DoVariable = Scalar<Integer<Name>>;
 
 template <typename VAR, typename BOUND> struct LoopBounds {
-  LoopBounds(LoopBounds &&that) = default;
-  LoopBounds(
-      VAR &&name, BOUND &&lower, BOUND &&upper, std::optional<BOUND> &&step)
-      : name{std::move(name)}, lower{std::move(lower)}, upper{std::move(upper)},
-        step{std::move(step)} {}
-  LoopBounds &operator=(LoopBounds &&) = default;
-  VAR name;
-  BOUND lower, upper;
-  std::optional<BOUND> step;
+  TUPLE_CLASS_BOILERPLATE(LoopBounds);
+  std::tuple<VAR, BOUND, BOUND, std::optional<BOUND>> t;
+
+  const VAR &Name() const { return std::get<0>(t); }
+  const BOUND &Lower() const { return std::get<1>(t); }
+  const BOUND &Upper() const { return std::get<2>(t); }
+  const std::optional<BOUND> &Step() const { return std::get<3>(t); }
 };
 
 using ScalarName = Scalar<Name>;
@@ -1858,11 +1856,11 @@ using ScalarIntVariable = Scalar<Integer<Variable>>;
 
 // R913 structure-component -> data-ref
 struct StructureComponent {
-  BOILERPLATE(StructureComponent);
-  StructureComponent(DataRef &&dr, Name &&n)
-      : base{std::move(dr)}, component(std::move(n)) {}
-  DataRef base;
-  Name component;
+  TUPLE_CLASS_BOILERPLATE(StructureComponent);
+  std::tuple<DataRef, Name> t;
+
+  const DataRef &Base() const { return std::get<DataRef>(t); }
+  const Name &Component() const { return std::get<Name>(t); }
 };
 
 // R1039 proc-component-ref -> scalar-variable % procedure-component-name
@@ -1873,23 +1871,22 @@ struct ProcComponentRef {
 
 // R914 coindexed-named-object -> data-ref
 struct CoindexedNamedObject {
-  BOILERPLATE(CoindexedNamedObject);
-  CoindexedNamedObject(DataRef &&dr, ImageSelector &&is)
-      : base{std::move(dr)}, imageSelector{std::move(is)} {}
-  DataRef base;
-  ImageSelector imageSelector;
+  TUPLE_CLASS_BOILERPLATE(CoindexedNamedObject);
+  std::tuple<DataRef, ImageSelector> t;
 };
 
 // R917 array-element -> data-ref
 struct ArrayElement {
-  BOILERPLATE(ArrayElement);
-  ArrayElement(DataRef &&dr, std::list<SectionSubscript> &&ss)
-      : base{std::move(dr)}, subscripts(std::move(ss)) {}
+  TUPLE_CLASS_BOILERPLATE(ArrayElement);
   Substring ConvertToSubstring();
   StructureConstructor ConvertToStructureConstructor(
       const semantics::DerivedTypeSpec &);
-  DataRef base;
-  std::list<SectionSubscript> subscripts;
+  std::tuple<DataRef, std::list<SectionSubscript>> t;
+
+  const DataRef &Base() const { return std::get<DataRef>(t); }
+  const std::list<SectionSubscript> &Subscripts() const {
+    return std::get<std::list<SectionSubscript>>(t);
+  }
 };
 
 // R933 allocate-object -> variable-name | structure-component
