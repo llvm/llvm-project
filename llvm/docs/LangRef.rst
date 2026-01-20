@@ -15008,9 +15008,10 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.structured.gep``' intrinsic (structured **G**\ et\ **E**\ lement\ **P**\ tr) computes a new pointer address
-resulting of a logical indexing into the ``<source>`` pointer. The returned
-address depends on the indices and may depend on the layout of ``<basetype>``
+The '``llvm.structured.gep``' intrinsic (structured
+**G**\ et\ **E**\ lement\ **P**\ tr) computes a new pointer address resulting
+from a logical indexing into the ``<source>`` pointer. The returned address
+depends on the indices and may depend on the layout of ``<basetype>``
 at runtime.
 
 Arguments:
@@ -15067,9 +15068,9 @@ element in the logical layout by overflowing:
   the index is assumed to belong to ``[0; N[``.
 - If the traversed type is an array of size ``0``, the array size is assumed
   to be known at runtime, and the instruction assumes the index is always
-  inbound.
+  inbounds.
 
-In all cases **except** when the accessed type is a 0-sized array**, indexing
+In all cases **except** when the accessed type is a 0-sized array, indexing
 out of bounds yields `poison`. When the index value is unknown, optimizations
 can use the type bounds to determine the range of values the index can have.
 If the source pointer is poison, the instruction returns poison.
@@ -15103,66 +15104,35 @@ Let’s consider the following code:
 .. code-block:: cpp
 
    struct S {
-       uint3 array[5];
-       float my_float;
+       uint a;
+       uint b;
+       uint c;
+       uint d;
    }
 
-   my_struct->array[2].y = 12;
-   int val = my_struct->array[index].y;
+   int val = my_struct->b;
 
 
-The frontend knows this struct has a particular physical layout:
-    - an array of 5 vectors of 3 integers, aligned on 16 bytes.
-    - one float at the end, with no alignment requirement, so packed right
-      after the last ``uint3``, which is a ``<3 x uint>``.
+The frontend in this example knows the following types have the same physical
+layout (even if it doesn't know the exact physical layout):
+    - `{ i32, i32, i32, i32 }`
+    - `[ i32 x 4 ]`
 
-.. code-block:: llvm
-
-    %S = type { [4 x { <3 x i32>, i32 }], <3 x i32>, float }
-    ;                               `-> explicit padding
-    ; -> 4 byte padding between each array element, except
-    ;    between the last vector and the float.
-
-The store is simple:
+This means is is valid to lower the following code to either:
 
 .. code-block:: llvm
+    %S = type { i32, i32, i32, i32 }
+    %src = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 1)
+    load i32, ptr %src
 
-    %dst = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 0, i32 2, i32 0, i32 1)
-    store i32 12, ptr %dst
-
-But the load depends on a dynamic index. This means accessing logically the
-first 4 elements is different than accessing the last:
-
-.. code-block:: llvm
-
-    %firsts = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 0, i32 %index, i32 0)
-    %last = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 1)
-
-And because :ref:`i_structured_gep` always assumes indexing inbounds, we
-cannot reach the last element by doing:
+Or:
 
 .. code-block:: llvm
-
-    ; BAD
-    call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 0, i32 5, i32 0)
-
-If codegen knew nothing about the physical layout of ``%S``, a condition
-would be required to select between ``%firsts`` and ``%last`` depending on
-the value of ``%index``.
-But if the codegen knows that some logical layouts are lowered to the same
-physical layout, it can interchangeably use them.
-In this example, the codegen knows `%S` and `%T` have the same physical
-layout (even if layout itself is unknown). Hence, the codegen can access
-every element in the array with a single structured.gep:
-
-.. code-block:: llvm
-
-    %T = type [ 5 x { <3 x i32>, i32 } ]
-    %ptr = call ptr @llvm.structured.gep(ptr elementtype(%T) %my_struct, i32 %index, i32 0, i32 1)
-    store i32 12, ptr %ptr
+    %src = call ptr @llvm.structured.gep(ptr elementtype([ 4 x i32 ]) %my_struct, i32 1)
+    load i32, ptr %src
 
 This is, however, dependent on context that codegen has an insight on. The
-fact that `%T` and `%S` are equivalent depends on the target.
+fact that `[ i32 x 4 ]` and `%S` are equivalent depends on the target.
 
 
 .. _int_get_dynamic_area_offset:

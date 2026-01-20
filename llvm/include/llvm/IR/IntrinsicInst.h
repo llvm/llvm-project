@@ -1818,16 +1818,16 @@ public:
     return getParamAttr(0, Attribute::ElementType).getValueAsType();
   }
 
-  unsigned getIndicesCount() const { return getNumOperands() - 2; }
+  unsigned getNumIndices() const { return getNumOperands() - 2; }
 
   Value *getIndexOperand(size_t Index) const {
-    assert(Index < getIndicesCount());
+    assert(Index < getNumIndices());
     return getOperand(Index + 1);
   }
 
   Type *getResultElementType() const {
     Type *CurrentType = getBaseType();
-    for (unsigned I = 0; I < getIndicesCount(); I++) {
+    for (unsigned I = 0; I < getNumIndices(); I++) {
       if (ArrayType *AT = dyn_cast<ArrayType>(CurrentType)) {
         CurrentType = AT->getElementType();
       } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
@@ -1836,7 +1836,7 @@ public:
       } else {
         // FIXME(Keenuts): add testing reaching those places once initial
         // implementation has landed.
-        assert(0);
+        llvm_unreachable("unimplemented");
       }
     }
 
