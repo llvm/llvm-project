@@ -103,6 +103,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check by adding the function
+  ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
+  function is unsafe, useless, deprecated in C++17 and removed in C++20).
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:
 
@@ -112,6 +117,11 @@ Changes in existing checks
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
   positives on trivially copyable types with a non-public copy constructor.
+
+- Improved :doc:`readability-enum-initial-value
+  <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
+  now uses separate note diagnostics for each uninitialized enumerator, making
+  it easier to see which specific enumerators need explicit initialization.
 
 Removed checks
 ^^^^^^^^^^^^^^

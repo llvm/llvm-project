@@ -164,6 +164,7 @@ private:
 bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, ModeTy Mask,
                                       MachineBasicBlock::instr_iterator I) {
   assert((NewMode.raw_bits() & ~Mask.raw_bits()).none());
+  assert((CurrentMode.raw_bits() & ~CurrentMask.raw_bits()).none());
 
   auto Delta = NewMode.raw_bits() ^ CurrentMode.raw_bits();
 
@@ -172,7 +173,8 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, ModeTy Mask,
     return false;
   }
 
-  if (MostRecentModeSet && (Delta & CurrentMask.raw_bits()).none()) {
+  if (MostRecentModeSet &&
+      ((Delta & Mask.raw_bits()) & CurrentMask.raw_bits()).none()) {
     CurrentMode |= NewMode;
     CurrentMask |= Mask;
 

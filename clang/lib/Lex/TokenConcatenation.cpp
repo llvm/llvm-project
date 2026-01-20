@@ -161,7 +161,8 @@ bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
                                      const Token &PrevTok,
                                      const Token &Tok) const {
   // No space is required between header unit name in quote and semi.
-  if (PrevTok.is(tok::annot_header_unit) && Tok.is(tok::semi))
+  if (PrevTok.isOneOf(tok::annot_header_unit, tok::annot_module_name) &&
+      Tok.is(tok::semi))
     return false;
 
   // Conservatively assume that every annotation token that has a printable
@@ -197,11 +198,12 @@ bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
   if (Tok.isAnnotation()) {
     // Modules annotation can show up when generated automatically for includes.
     assert(Tok.isOneOf(tok::annot_module_include, tok::annot_module_begin,
-                       tok::annot_module_end, tok::annot_embed) &&
+                       tok::annot_module_end, tok::annot_embed,
+                       tok::annot_module_name) &&
            "unexpected annotation in AvoidConcat");
 
     ConcatInfo = 0;
-    if (Tok.is(tok::annot_embed))
+    if (Tok.isOneOf(tok::annot_embed, tok::annot_module_name))
       return true;
   }
 

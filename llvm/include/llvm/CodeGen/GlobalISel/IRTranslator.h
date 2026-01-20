@@ -635,6 +635,7 @@ private:
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const LibcallLoweringInfo *Libcalls = nullptr;
   const TargetLowering *TLI = nullptr;
   FunctionLoweringInfo FuncInfo;
 

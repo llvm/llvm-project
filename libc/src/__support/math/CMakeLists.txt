@@ -390,7 +390,6 @@ add_header_library(
     cosf.h
   DEPENDS
     .sincosf_utils
-    libc.src.errno.errno
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -658,6 +657,16 @@ add_header_library(
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
     libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  ilogbf
+  HDRS
+    ilogbf.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_header_library(

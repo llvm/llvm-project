@@ -5628,8 +5628,8 @@ bool AArch64InstructionSelector::selectIndexedStore(GIndexedStore &I,
   Register Val = I.getValueReg();
   Register Base = I.getBaseReg();
   Register Offset = I.getOffsetReg();
-  LLT ValTy = MRI.getType(Val);
-  assert(ValTy.getSizeInBits() <= 128 && "Unexpected type for indexed store");
+  assert(MRI.getType(Val).getSizeInBits() <= 128 &&
+         "Unexpected type for indexed store");
 
   LocationSize MemSize = I.getMMO().getSize();
   unsigned MemSizeInBytes = MemSize.getValue();
