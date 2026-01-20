@@ -219,7 +219,6 @@ struct MissingFeatures {
   static bool appleKext() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
   static bool asmGoto() { return false; }
-  static bool asmInputOperands() { return false; }
   static bool asmLabelAttr() { return false; }
   static bool asmLLVMAssume() { return false; }
   static bool asmMemoryEffects() { return false; }
