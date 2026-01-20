@@ -1066,8 +1066,8 @@ void Sema::ProcessAPINotes(Decl *D) {
 
   auto *DC = D->getDeclContext();
   // Globals.
-  if (DC->isFileContext() || DC->isNamespace() || DC->isExternCContext() ||
-      DC->isExternCXXContext()) {
+  if (DC->isFileContext() || DC->isNamespace() ||
+      DC->getDeclKind() == Decl::LinkageSpec) {
     std::optional<api_notes::Context> APINotesContext =
         UnwindNamespaceContext(DC, APINotes);
     // Global variables.
