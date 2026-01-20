@@ -3366,7 +3366,7 @@ void PPCAIXAsmPrinter::emitTTypeReference(const GlobalValue *GV,
 void PPCAIXAsmPrinter::emitRefMetadata(const GlobalObject *GO) {
   SmallVector<MDNode *> MDs;
   GO->getMetadata(LLVMContext::MD_implicit_ref, MDs);
-  assert(MDs.size() && "Expected asscoiated metadata nodes");
+  assert(MDs.size() && "Expected !implicit.ref metadata nodes");
 
   for (const MDNode *MD : MDs) {
     const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
