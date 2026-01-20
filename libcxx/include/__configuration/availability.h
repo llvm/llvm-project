@@ -220,6 +220,16 @@
 #define _LIBCPP_AVAILABILITY_HAS_NEW_SYNC _LIBCPP_INTRODUCED_IN_LLVM_22
 #define _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE
 
+// This controls whether `std::__hash_memory` is available in the dylib, which
+// is used for some `std::hash` specializations.
+#define _LIBCPP_AVAILABILITY_HAS_HASH_MEMORY _LIBCPP_INTRODUCED_IN_LLVM_21
+// No attribute, since we've had hash in the headers before
+
+// This controls whether we provide a message for `bad_function_call::what()` that specific to `std::bad_function_call`.
+// See https://wg21.link/LWG2233. This requires `std::bad_function_call::what()` to be available in the dylib.
+#define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
+// No attribute, since we've had bad_function_call::what() in the headers before
+
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
 // iostreams by providing a single strong definition in the shared library.
@@ -284,16 +294,6 @@
 // These overloads were added later than the integer overloads.
 #define _LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_20
 #define _LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE
-
-// This controls whether `std::__hash_memory` is available in the dylib, which
-// is used for some `std::hash` specializations.
-#define _LIBCPP_AVAILABILITY_HAS_HASH_MEMORY _LIBCPP_INTRODUCED_IN_LLVM_21
-// No attribute, since we've had hash in the headers before
-
-// This controls whether we provide a message for `bad_function_call::what()` that specific to `std::bad_function_call`.
-// See https://wg21.link/LWG2233. This requires `std::bad_function_call::what()` to be available in the dylib.
-#define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
-// No attribute, since we've had bad_function_call::what() in the headers before
 
 // Define availability attributes that depend on both
 // _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.
