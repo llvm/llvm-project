@@ -1322,7 +1322,8 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
             ContextDirectiveAsFortran());
       } else if (!IsSaved(*name->symbol) &&
           declScope.kind() != Scope::Kind::MainProgram &&
-          declScope.kind() != Scope::Kind::Module) {
+          declScope.kind() != Scope::Kind::Module &&
+          !name->symbol->attrs().test(Attr::EXTERNAL)) {
         context_.Say(name->source,
             "A variable that appears in a %s directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly"_err_en_US,
             ContextDirectiveAsFortran());
@@ -3637,7 +3638,7 @@ void OmpStructureChecker::CheckReductionObjects(
     // a language identifier.
     for (const parser::OmpObject &object : objects.v) {
       if (auto *elem{GetArrayElementFromObj(object)}) {
-        const parser::DataRef &base = elem->base;
+        const parser::DataRef &base = elem->Base();
         if (!std::holds_alternative<parser::Name>(base.u)) {
           auto source{GetObjectSource(object)};
           context_.Say(source ? *source : GetContext().clauseSource,
@@ -3954,7 +3955,7 @@ bool OmpStructureChecker::IsDataRefTypeParamInquiry(
   bool dataRefIsTypeParamInquiry{false};
   if (const auto *structComp{
           parser::Unwrap<parser::StructureComponent>(dataRef)}) {
-    if (const auto *compSymbol{structComp->component.symbol}) {
+    if (const auto *compSymbol{structComp->Component().symbol}) {
       if (const auto *compSymbolMiscDetails{
               std::get_if<MiscDetails>(&compSymbol->details())}) {
         const auto detailsKind = compSymbolMiscDetails->kind();
@@ -4300,10 +4301,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
     static auto isValidForVersion{
         [](parser::OmpMapType::Value t, unsigned version) {
           switch (t) {
-          case parser::OmpMapType::Value::Alloc:
           case parser::OmpMapType::Value::Delete:
-          case parser::OmpMapType::Value::Release:
             return version < 60;
+          case parser::OmpMapType::Value::Alloc:
+          case parser::OmpMapType::Value::Release:
+            return version <= 60;
           case parser::OmpMapType::Value::Storage:
             return version >= 60;
           default:
@@ -4336,8 +4338,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
         llvm::is_contained(leafs, Directive::OMPD_target_data)) {
       if (version >= 60) {
         // Map types listed in the decay table. [6.0:276]
-        CheckAllowedMapTypes(
-            type->v, {Value::Storage, Value::From, Value::To, Value::Tofrom});
+        CheckAllowedMapTypes(type->v,
+            {Value::Alloc, Value::Release, Value::Storage, Value::From,
+                Value::To, Value::Tofrom});
       } else {
         CheckAllowedMapTypes(
             type->v, {Value::Alloc, Value::From, Value::To, Value::Tofrom});
@@ -4624,7 +4627,7 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
       // Do-construct, collect the induction variable.
       if (auto &control{(*doc)->GetLoopControl()}) {
         if (auto *b{std::get_if<parser::LoopControl::Bounds>(&control->u)}) {
-          inductionVars.insert(b->name.thing.symbol);
+          inductionVars.insert(b->Name().thing.symbol);
         }
       }
     } else {
@@ -4848,7 +4851,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
   semantics::UnorderedSymbolSet listVars;
-  unsigned version{context_.langOptions().OpenMPVersion};
 
   for (auto [_, clause] :
       FindClauses(llvm::omp::Clause::OMPC_use_device_addr)) {
@@ -4861,11 +4863,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
         if (name->symbol) {
           useDeviceAddrNameList.push_back(*name);
         }
-      }
-      if (version < 60 && IsWholeAssumedSizeArray(ompObject)) {
-        auto maybeSource{GetObjectSource(ompObject)};
-        context_.Say(maybeSource.value_or(clause->source),
-            "Whole assumed-size arrays are not allowed on USE_DEVICE_ADDR clause"_err_en_US);
       }
     }
     CheckMultipleOccurrence(
@@ -5036,10 +5033,10 @@ void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
       common::visitors{
           [&](const common::Indirection<parser::ArrayElement> &elem) {
             // Check if the base element is valid on Depend Clause
-            CheckDependList(elem.value().base);
+            CheckDependList(elem.value().Base());
           },
           [&](const common::Indirection<parser::StructureComponent> &comp) {
-            CheckDependList(comp.value().base);
+            CheckDependList(comp.value().Base());
           },
           [&](const common::Indirection<parser::CoindexedNamedObject> &) {
             context_.Say(GetContext().clauseSource,
@@ -5063,7 +5060,7 @@ void OmpStructureChecker::CheckArraySection(
   // looking for strings.
   if (!IsAssumedSizeArray(*name.symbol)) {
     evaluate::ExpressionAnalyzer ea{context_};
-    if (MaybeExpr expr = ea.Analyze(arrayElement.base)) {
+    if (MaybeExpr expr = ea.Analyze(arrayElement.Base())) {
       if (expr->Rank() == 0) {
         // Not an array: rank 0
         if (std::optional<evaluate::DynamicType> type = expr->GetType()) {
@@ -5082,8 +5079,8 @@ void OmpStructureChecker::CheckArraySection(
       }
     }
   }
-  if (!arrayElement.subscripts.empty()) {
-    for (const auto &subscript : arrayElement.subscripts) {
+  if (!arrayElement.Subscripts().empty()) {
+    for (const auto &subscript : arrayElement.Subscripts()) {
       if (const auto *triplet{
               std::get_if<parser::SubscriptTriplet>(&subscript.u)}) {
         if (std::get<0>(triplet->t) && std::get<1>(triplet->t)) {
@@ -5376,7 +5373,7 @@ struct NameHelper {
     return Visit(std::get<parser::DataRef>(x.t));
   }
   static const parser::Name *Visit(const parser::ArrayElement &x) {
-    return Visit(x.base);
+    return Visit(x.Base());
   }
   static const parser::Name *Visit(const parser::Designator &x) {
     return common::visit([](auto &&s) { return Visit(s); }, x.u);
