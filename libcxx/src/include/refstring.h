@@ -15,7 +15,7 @@
 #include <cstring>
 #include <stdexcept>
 
-// MacOS and iOS used to ship with libstdc++, and still support old applications
+// macOS and iOS used to ship with libstdc++, and still support old applications
 // linking against libstdc++. The libc++ and libstdc++ exceptions are supposed
 // to be ABI compatible, such that they can be thrown from one library and caught
 // in the other.
