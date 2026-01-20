@@ -35,6 +35,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/CodeCompletionHandler.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
@@ -55,11 +56,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -114,6 +118,8 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
 
   // We haven't read anything from the external source.
   ReadMacrosFromExternalSource = false;
+
+  LastTokenWasExportKeyword.reset();
 
   BuiltinInfo = std::make_unique<Builtin::Context>();
 
@@ -576,6 +582,11 @@ void Preprocessor::EnterMainSourceFile() {
     // export module M; // error: module declaration must occur
     //                  //        at the start of the translation unit.
     if (getLangOpts().CPlusPlusModules) {
+      std::optional<StringRef> Input =
+          getSourceManager().getBufferDataOrNone(MainFileID);
+      if (!isPreprocessedModuleFile() && Input)
+        MainFileIsPreprocessedModuleFile =
+            clang::isPreprocessedModuleFile(*Input);
       auto Tracer = std::make_unique<NoTrivialPPDirectiveTracer>(*this);
       DirTracer = Tracer.get();
       addPPCallbacks(std::move(Tracer));
@@ -875,15 +886,13 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   // used in contexts where import declarations are disallowed.
   //
   // Likewise if this is the standard C++ import keyword.
-  if (((LastTokenWasAt && II.isModulesImport()) ||
+  if (((LastTokenWasAt && II.isImportKeyword()) ||
        Identifier.is(tok::kw_import)) &&
-      !InMacroArgs && !DisableMacroExpansion &&
-      (getLangOpts().Modules || getLangOpts().DebuggerSupport) &&
+      !InMacroArgs &&
+      (!DisableMacroExpansion || MacroExpansionInDirectivesOverride) &&
       CurLexerCallback != CLK_CachingLexer) {
     ModuleImportLoc = Identifier.getLocation();
-    NamedModuleImportPath.clear();
     IsAtImport = true;
-    ModuleImportExpectsIdentifier = true;
     CurLexerCallback = CLK_LexAfterModuleImport;
   }
   return true;
@@ -932,6 +941,7 @@ void Preprocessor::Lex(Token &Result) {
     // This token is injected to represent the translation of '#include "a.h"'
     // into "import a.h;". Mimic the notional ';'.
     case tok::annot_module_include:
+    case tok::annot_repl_input_end:
     case tok::semi:
       TrackGMFState.handleSemi();
       StdCXXImportSeqState.handleSemi();
@@ -951,35 +961,23 @@ void Preprocessor::Lex(Token &Result) {
     case tok::colon:
       ModuleDeclState.handleColon();
       break;
-    case tok::period:
-      ModuleDeclState.handlePeriod();
-      break;
-    case tok::eod:
-      break;
-    case tok::identifier:
-      // Check "import" and "module" when there is no open bracket. The two
-      // identifiers are not meaningful with open brackets.
+    case tok::kw_import:
       if (StdCXXImportSeqState.atTopLevel()) {
-        if (Result.getIdentifierInfo()->isModulesImport()) {
-          TrackGMFState.handleImport(StdCXXImportSeqState.afterTopLevelSeq());
-          StdCXXImportSeqState.handleImport();
-          if (StdCXXImportSeqState.afterImportSeq()) {
-            ModuleImportLoc = Result.getLocation();
-            NamedModuleImportPath.clear();
-            IsAtImport = false;
-            ModuleImportExpectsIdentifier = true;
-            CurLexerCallback = CLK_LexAfterModuleImport;
-          }
-          break;
-        } else if (Result.getIdentifierInfo() == getIdentifierInfo("module")) {
-          if (hasSeenNoTrivialPPDirective())
-            Result.setFlag(Token::HasSeenNoTrivialPPDirective);
-          TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
-          ModuleDeclState.handleModule();
-          break;
-        }
+        TrackGMFState.handleImport(StdCXXImportSeqState.afterTopLevelSeq());
+        StdCXXImportSeqState.handleImport();
       }
-      ModuleDeclState.handleIdentifier(Result.getIdentifierInfo());
+      break;
+    case tok::kw_module:
+      if (StdCXXImportSeqState.atTopLevel()) {
+        if (hasSeenNoTrivialPPDirective())
+          Result.setFlag(Token::HasSeenNoTrivialPPDirective);
+        TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
+        ModuleDeclState.handleModule();
+      }
+      break;
+    case tok::annot_module_name:
+      ModuleDeclState.handleModuleName(
+          static_cast<ModuleNameLoc *>(Result.getAnnotationValue()));
       if (ModuleDeclState.isModuleCandidate())
         break;
       [[fallthrough]];
@@ -997,7 +995,16 @@ void Preprocessor::Lex(Token &Result) {
   }
 
   LastTokenWasAt = Result.is(tok::at);
+  if (Result.isNot(tok::kw_export))
+    LastTokenWasExportKeyword.reset();
+
   --LexLevel;
+
+  // Destroy any lexers that were deferred while we were in nested Lex calls.
+  // This must happen after decrementing LexLevel but before any other
+  // processing that might re-enter Lex.
+  if (LexLevel == 0 && !PendingDestroyLexers.empty())
+    PendingDestroyLexers.clear();
 
   if ((LexLevel == 0 || PreprocessToken) &&
       !Result.getFlag(Token::IsReinjected)) {
@@ -1119,41 +1126,247 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
   return false;
 }
 
+std::optional<Token> Preprocessor::peekNextPPToken() const {
+  // Do some quick tests for rejection cases.
+  std::optional<Token> Val;
+  if (CurLexer)
+    Val = CurLexer->peekNextPPToken();
+  else
+    Val = CurTokenLexer->peekNextPPToken();
+
+  if (!Val) {
+    // We have run off the end.  If it's a source file we don't
+    // examine enclosing ones (C99 5.1.1.2p4).  Otherwise walk up the
+    // macro stack.
+    if (CurPPLexer)
+      return std::nullopt;
+    for (const IncludeStackInfo &Entry : llvm::reverse(IncludeMacroStack)) {
+      if (Entry.TheLexer)
+        Val = Entry.TheLexer->peekNextPPToken();
+      else
+        Val = Entry.TheTokenLexer->peekNextPPToken();
+
+      if (Val)
+        break;
+
+      // Ran off the end of a source file?
+      if (Entry.ThePPLexer)
+        return std::nullopt;
+    }
+  }
+
+  // Okay, we found the token and return.  Otherwise we found the end of the
+  // translation unit.
+  return Val;
+}
+
+// We represent the primary and partition names as 'Paths' which are sections
+// of the hierarchical access path for a clang module.  However for C++20
+// the periods in a name are just another character, and we will need to
+// flatten them into a string.
+std::string ModuleLoader::getFlatNameFromPath(ModuleIdPath Path) {
+  std::string Name;
+  if (Path.empty())
+    return Name;
+
+  for (auto &Piece : Path) {
+    assert(Piece.getIdentifierInfo() && Piece.getLoc().isValid());
+    if (!Name.empty())
+      Name += ".";
+    Name += Piece.getIdentifierInfo()->getName();
+  }
+  return Name;
+}
+
+ModuleNameLoc *ModuleNameLoc::Create(Preprocessor &PP, ModuleIdPath Path) {
+  assert(!Path.empty() && "expect at least one identifier in a module name");
+  void *Mem = PP.getPreprocessorAllocator().Allocate(
+      totalSizeToAlloc<IdentifierLoc>(Path.size()), alignof(ModuleNameLoc));
+  return new (Mem) ModuleNameLoc(Path);
+}
+
+bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
+                                         SmallVectorImpl<Token> &Suffix,
+                                         SmallVectorImpl<IdentifierLoc> &Path,
+                                         bool AllowMacroExpansion,
+                                         bool IsPartition) {
+  auto ConsumeToken = [&]() {
+    if (AllowMacroExpansion)
+      Lex(Tok);
+    else
+      LexUnexpandedToken(Tok);
+    Suffix.push_back(Tok);
+  };
+
+  while (true) {
+    if (Tok.isNot(tok::identifier)) {
+      if (Tok.is(tok::code_completion)) {
+        CurLexer->cutOffLexing();
+        CodeComplete->CodeCompleteModuleImport(UseLoc, Path);
+        return true;
+      }
+
+      Diag(Tok, diag::err_pp_module_expected_ident) << Path.empty();
+      return true;
+    }
+
+    // [cpp.pre]/p2:
+    // No identifier in the pp-module-name or pp-module-partition shall
+    // currently be defined as an object-like macro.
+    if (MacroInfo *MI = getMacroInfo(Tok.getIdentifierInfo());
+        MI && MI->isObjectLike() && getLangOpts().CPlusPlus20 &&
+        !AllowMacroExpansion) {
+      Diag(Tok, diag::err_pp_module_name_is_macro)
+          << IsPartition << Tok.getIdentifierInfo();
+      Diag(MI->getDefinitionLoc(), diag::note_macro_here)
+          << Tok.getIdentifierInfo();
+    }
+
+    // Record this part of the module path.
+    Path.emplace_back(Tok.getLocation(), Tok.getIdentifierInfo());
+    ConsumeToken();
+
+    if (Tok.isNot(tok::period))
+      return false;
+
+    ConsumeToken();
+  }
+}
+
+/// [cpp.pre]/p2:
+/// A preprocessing directive consists of a sequence of preprocessing tokens
+/// that satisfies the following constraints: At the start of translation phase
+/// 4, the first preprocessing token in the sequence, referred to as a
+/// directive-introducing token, begins with the first character in the source
+/// file (optionally after whitespace containing no new-line characters) or
+/// follows whitespace containing at least one new-line character, and is:
+///   - a # preprocessing token, or
+///   - an import preprocessing token immediately followed on the same logical
+///   source line by a header-name, <, identifier, or : preprocessing token, or
+///   - a module preprocessing token immediately followed on the same logical
+///   source line by an identifier, :, or ; preprocessing token, or
+///   - an export preprocessing token immediately followed on the same logical
+///   source line by one of the two preceding forms.
+///
+///
+/// At the start of phase 4 an import or module token is treated as starting a
+/// directive and are converted to their respective keywords iff:
+///   - After skipping horizontal whitespace are
+///     - at the start of a logical line, or
+///     - preceded by an 'export' at the start of the logical line.
+///   - Are followed by an identifier pp token (before macro expansion), or
+///     - <, ", or : (but not ::) pp tokens for 'import', or
+///     - ; for 'module'
+/// Otherwise the token is treated as an identifier.
+bool Preprocessor::HandleModuleContextualKeyword(
+    Token &Result, bool TokAtPhysicalStartOfLine) {
+  if (!getLangOpts().CPlusPlusModules || !Result.isModuleContextualKeyword())
+    return false;
+
+  if (Result.is(tok::kw_export)) {
+    LastTokenWasExportKeyword = {Result, TokAtPhysicalStartOfLine};
+    return false;
+  }
+
+  /// Trait 'module' and 'import' as a identifier when the main file is a
+  /// preprocessed module file. We only allow '__preprocessed_module' and
+  /// '__preprocessed_import' in this context.
+  IdentifierInfo *II = Result.getIdentifierInfo();
+  if (isPreprocessedModuleFile() &&
+      (II->isStr(tok::getKeywordSpelling(tok::kw_import)) ||
+       II->isStr(tok::getKeywordSpelling(tok::kw_module))))
+    return false;
+
+  if (LastTokenWasExportKeyword.isValid()) {
+    // The export keyword was not at the start of line, it's not a
+    // directive-introducing token.
+    if (!LastTokenWasExportKeyword.isAtPhysicalStartOfLine())
+      return false;
+    // [cpp.pre]/1.4
+    // export         // not a preprocessing directive
+    // import foo;    // preprocessing directive (ill-formed at phase7)
+    if (TokAtPhysicalStartOfLine)
+      return false;
+  } else if (!TokAtPhysicalStartOfLine)
+    return false;
+
+  llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
+      CurPPLexer->ParsingPreprocessorDirective, true);
+
+  // The next token may be an angled string literal after import keyword.
+  llvm::SaveAndRestore<bool> SavedParsingFilemame(
+      CurPPLexer->ParsingFilename,
+      Result.getIdentifierInfo()->isImportKeyword());
+
+  std::optional<Token> NextTok =
+      CurLexer ? CurLexer->peekNextPPToken() : CurTokenLexer->peekNextPPToken();
+  if (!NextTok)
+    return false;
+
+  if (NextTok->is(tok::raw_identifier))
+    LookUpIdentifierInfo(*NextTok);
+
+  if (Result.getIdentifierInfo()->isImportKeyword()) {
+    if (NextTok->isOneOf(tok::identifier, tok::less, tok::colon,
+                         tok::header_name)) {
+      Result.setKind(tok::kw_import);
+      ModuleImportLoc = Result.getLocation();
+      IsAtImport = false;
+      return true;
+    }
+  }
+
+  if (Result.getIdentifierInfo()->isModuleKeyword() &&
+      NextTok->isOneOf(tok::identifier, tok::colon, tok::semi)) {
+    Result.setKind(tok::kw_module);
+    ModuleDeclLoc = Result.getLocation();
+    return true;
+  }
+
+  // Ok, it's an identifier.
+  return false;
+}
+
+bool Preprocessor::CollectPPImportSuffixAndEnterStream(
+    SmallVectorImpl<Token> &Toks, bool StopUntilEOD) {
+  CollectPPImportSuffix(Toks);
+  EnterModuleSuffixTokenStream(Toks);
+  return false;
+}
+
 /// Collect the tokens of a C++20 pp-import-suffix.
-void Preprocessor::CollectPpImportSuffix(SmallVectorImpl<Token> &Toks) {
-  // FIXME: For error recovery, consider recognizing attribute syntax here
-  // and terminating / diagnosing a missing semicolon if we find anything
-  // else? (Can we leave that to the parser?)
-  unsigned BracketDepth = 0;
+void Preprocessor::CollectPPImportSuffix(SmallVectorImpl<Token> &Toks,
+                                         bool StopUntilEOD) {
   while (true) {
     Toks.emplace_back();
     Lex(Toks.back());
 
     switch (Toks.back().getKind()) {
-    case tok::l_paren: case tok::l_square: case tok::l_brace:
-      ++BracketDepth;
-      break;
-
-    case tok::r_paren: case tok::r_square: case tok::r_brace:
-      if (BracketDepth == 0)
-        return;
-      --BracketDepth;
-      break;
-
     case tok::semi:
-      if (BracketDepth == 0)
+      if (!StopUntilEOD)
         return;
-    break;
-
+      [[fallthrough]];
+    case tok::eod:
     case tok::eof:
       return;
-
     default:
       break;
     }
   }
 }
 
+// Allocate a holding buffer for a sequence of tokens and introduce it into
+// the token stream.
+void Preprocessor::EnterModuleSuffixTokenStream(ArrayRef<Token> Toks) {
+  if (Toks.empty())
+    return;
+  auto ToksCopy = std::make_unique<Token[]>(Toks.size());
+  std::copy(Toks.begin(), Toks.end(), ToksCopy.get());
+  EnterTokenStream(std::move(ToksCopy), Toks.size(),
+                   /*DisableMacroExpansion*/ false, /*IsReinject*/ false);
+  assert(CurTokenLexer && "Must have a TokenLexer");
+  CurTokenLexer->setLexingCXXModuleDirective();
+}
 
 /// Lex a token following the 'import' contextual keyword.
 ///
@@ -1178,186 +1391,47 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   // Figure out what kind of lexer we actually have.
   recomputeCurLexerKind();
 
-  // Lex the next token. The header-name lexing rules are used at the start of
-  // a pp-import.
-  //
-  // For now, we only support header-name imports in C++20 mode.
-  // FIXME: Should we allow this in all language modes that support an import
-  // declaration as an extension?
-  if (NamedModuleImportPath.empty() && getLangOpts().CPlusPlusModules) {
-    if (LexHeaderName(Result))
-      return true;
-
-    if (Result.is(tok::colon) && ModuleDeclState.isNamedModule()) {
-      std::string Name = ModuleDeclState.getPrimaryName().str();
-      Name += ":";
-      NamedModuleImportPath.emplace_back(Result.getLocation(),
-                                         getIdentifierInfo(Name));
-      CurLexerCallback = CLK_LexAfterModuleImport;
-      return true;
-    }
-  } else {
-    Lex(Result);
-  }
-
-  // Allocate a holding buffer for a sequence of tokens and introduce it into
-  // the token stream.
-  auto EnterTokens = [this](ArrayRef<Token> Toks) {
-    auto ToksCopy = std::make_unique<Token[]>(Toks.size());
-    std::copy(Toks.begin(), Toks.end(), ToksCopy.get());
-    EnterTokenStream(std::move(ToksCopy), Toks.size(),
-                     /*DisableMacroExpansion*/ true, /*IsReinject*/ false);
-  };
-
-  bool ImportingHeader = Result.is(tok::header_name);
-  // Check for a header-name.
   SmallVector<Token, 32> Suffix;
-  if (ImportingHeader) {
-    // Enter the header-name token into the token stream; a Lex action cannot
-    // both return a token and cache tokens (doing so would corrupt the token
-    // cache if the call to Lex comes from CachingLex / PeekAhead).
-    Suffix.push_back(Result);
+  SmallVector<IdentifierLoc, 3> Path;
+  Lex(Result);
+  if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path))
+    return CollectPPImportSuffixAndEnterStream(Suffix);
 
-    // Consume the pp-import-suffix and expand any macros in it now. We'll add
-    // it back into the token stream later.
-    CollectPpImportSuffix(Suffix);
-    if (Suffix.back().isNot(tok::semi)) {
-      // This is not a pp-import after all.
-      EnterTokens(Suffix);
-      return false;
-    }
-
-    // C++2a [cpp.module]p1:
-    //   The ';' preprocessing-token terminating a pp-import shall not have
-    //   been produced by macro replacement.
-    SourceLocation SemiLoc = Suffix.back().getLocation();
-    if (SemiLoc.isMacroID())
-      Diag(SemiLoc, diag::err_header_import_semi_in_macro);
-
-    // Reconstitute the import token.
-    Token ImportTok;
-    ImportTok.startToken();
-    ImportTok.setKind(tok::kw_import);
-    ImportTok.setLocation(ModuleImportLoc);
-    ImportTok.setIdentifierInfo(getIdentifierInfo("import"));
-    ImportTok.setLength(6);
-
-    auto Action = HandleHeaderIncludeOrImport(
-        /*HashLoc*/ SourceLocation(), ImportTok, Suffix.front(), SemiLoc);
-    switch (Action.Kind) {
-    case ImportAction::None:
-      break;
-
-    case ImportAction::ModuleBegin:
-      // Let the parser know we're textually entering the module.
-      Suffix.emplace_back();
-      Suffix.back().startToken();
-      Suffix.back().setKind(tok::annot_module_begin);
-      Suffix.back().setLocation(SemiLoc);
-      Suffix.back().setAnnotationEndLoc(SemiLoc);
-      Suffix.back().setAnnotationValue(Action.ModuleForHeader);
-      [[fallthrough]];
-
-    case ImportAction::ModuleImport:
-    case ImportAction::HeaderUnitImport:
-    case ImportAction::SkippedModuleImport:
-      // We chose to import (or textually enter) the file. Convert the
-      // header-name token into a header unit annotation token.
-      Suffix[0].setKind(tok::annot_header_unit);
-      Suffix[0].setAnnotationEndLoc(Suffix[0].getLocation());
-      Suffix[0].setAnnotationValue(Action.ModuleForHeader);
-      // FIXME: Call the moduleImport callback?
-      break;
-    case ImportAction::Failure:
-      assert(TheModuleLoader.HadFatalFailure &&
-             "This should be an early exit only to a fatal error");
-      Result.setKind(tok::eof);
-      CurLexer->cutOffLexing();
-      EnterTokens(Suffix);
-      return true;
-    }
-
-    EnterTokens(Suffix);
-    return false;
-  }
-
-  // The token sequence
-  //
-  //   import identifier (. identifier)*
-  //
-  // indicates a module import directive. We already saw the 'import'
-  // contextual keyword, so now we're looking for the identifiers.
-  if (ModuleImportExpectsIdentifier && Result.getKind() == tok::identifier) {
-    // We expected to see an identifier here, and we did; continue handling
-    // identifiers.
-    NamedModuleImportPath.emplace_back(Result.getLocation(),
-                                       Result.getIdentifierInfo());
-    ModuleImportExpectsIdentifier = false;
-    CurLexerCallback = CLK_LexAfterModuleImport;
-    return true;
-  }
-
-  // If we're expecting a '.' or a ';', and we got a '.', then wait until we
-  // see the next identifier. (We can also see a '[[' that begins an
-  // attribute-specifier-seq here under the Standard C++ Modules.)
-  if (!ModuleImportExpectsIdentifier && Result.getKind() == tok::period) {
-    ModuleImportExpectsIdentifier = true;
-    CurLexerCallback = CLK_LexAfterModuleImport;
-    return true;
-  }
-
-  // If we didn't recognize a module name at all, this is not a (valid) import.
-  if (NamedModuleImportPath.empty() || Result.is(tok::eof))
-    return true;
+  ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
+  Suffix.clear();
+  Suffix.emplace_back();
+  Suffix.back().setKind(tok::annot_module_name);
+  Suffix.back().setAnnotationRange(NameLoc->getRange());
+  Suffix.back().setAnnotationValue(static_cast<void *>(NameLoc));
+  Suffix.push_back(Result);
 
   // Consume the pp-import-suffix and expand any macros in it now, if we're not
   // at the semicolon already.
   SourceLocation SemiLoc = Result.getLocation();
-  if (Result.isNot(tok::semi)) {
-    Suffix.push_back(Result);
-    CollectPpImportSuffix(Suffix);
+  if (Suffix.back().isNot(tok::semi)) {
+    if (Suffix.back().isNot(tok::eof))
+      CollectPPImportSuffix(Suffix);
     if (Suffix.back().isNot(tok::semi)) {
       // This is not an import after all.
-      EnterTokens(Suffix);
+      EnterModuleSuffixTokenStream(Suffix);
       return false;
     }
     SemiLoc = Suffix.back().getLocation();
   }
 
-  // Under the standard C++ Modules, the dot is just part of the module name,
-  // and not a real hierarchy separator. Flatten such module names now.
-  //
-  // FIXME: Is this the right level to be performing this transformation?
-  std::string FlatModuleName;
-  if (getLangOpts().CPlusPlusModules) {
-    for (auto &Piece : NamedModuleImportPath) {
-      // If the FlatModuleName ends with colon, it implies it is a partition.
-      if (!FlatModuleName.empty() && FlatModuleName.back() != ':')
-        FlatModuleName += ".";
-      FlatModuleName += Piece.getIdentifierInfo()->getName();
-    }
-    SourceLocation FirstPathLoc = NamedModuleImportPath[0].getLoc();
-    NamedModuleImportPath.clear();
-    NamedModuleImportPath.emplace_back(FirstPathLoc,
-                                       getIdentifierInfo(FlatModuleName));
-  }
-
   Module *Imported = nullptr;
-  // We don't/shouldn't load the standard c++20 modules when preprocessing.
-  if (getLangOpts().Modules && !isInImportingCXXNamedModules()) {
-    Imported = TheModuleLoader.loadModule(ModuleImportLoc,
-                                          NamedModuleImportPath,
-                                          Module::Hidden,
+  if (getLangOpts().Modules) {
+    Imported = TheModuleLoader.loadModule(ModuleImportLoc, Path, Module::Hidden,
                                           /*IsInclusionDirective=*/false);
     if (Imported)
       makeModuleVisible(Imported, SemiLoc);
   }
 
   if (Callbacks)
-    Callbacks->moduleImport(ModuleImportLoc, NamedModuleImportPath, Imported);
+    Callbacks->moduleImport(ModuleImportLoc, Path, Imported);
 
   if (!Suffix.empty()) {
-    EnterTokens(Suffix);
+    EnterModuleSuffixTokenStream(Suffix);
     return false;
   }
   return true;

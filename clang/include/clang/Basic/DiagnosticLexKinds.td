@@ -503,8 +503,8 @@ def warn_cxx98_compat_variadic_macro : Warning<
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def ext_named_variadic_macro : Extension<
   "named variadic macros are a GNU extension">, InGroup<VariadicMacros>;
-def err_embedded_directive : Error<
-  "embedding a #%0 directive within macro arguments is not supported">;
+def err_embedded_directive : Error<"embedding a %select{#|C++ }0%1 directive "
+                                   "within macro arguments is not supported">;
 def ext_embedded_directive : Extension<
   "embedding a directive within macro arguments has undefined behavior">,
   InGroup<DiagGroup<"embedded-directive">>;
@@ -998,6 +998,21 @@ def warn_module_conflict : Warning<
   InGroup<ModuleConflict>;
 
 // C++20 modules
+def err_pp_module_name_is_macro : Error<
+  "%select{module|partition}0 name component %1 cannot be a object-like macro">;
+def err_pp_module_expected_ident : Error<
+  "expected %select{identifier after '.' in |}0module name">;
+def err_pp_unexpected_tok_after_module_name : Error<
+  "unexpected preprocessing token '%0' after module name, "
+  "only ';' and '[' (start of attribute specifier sequence) are allowed">;
+def warn_pp_extra_tokens_at_module_directive_eol
+    : Warning<"extra tokens after semicolon in '%0' directive">,
+      InGroup<ExtraTokens>;
+def err_pp_module_decl_in_header
+    : Error<"module declaration must not come from an #include directive">;
+def err_pp_cond_span_module_decl
+    : Error<"module directive lines are not allowed on lines controlled "
+    "by preprocessor conditionals">;
 def err_header_import_semi_in_macro : Error<
   "semicolon terminating header import declaration cannot be produced "
   "by a macro">;
