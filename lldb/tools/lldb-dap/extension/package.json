@@ -643,7 +643,7 @@
                     "null"
                   ]
                 },
-                "description": "The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.).",
+                "description": "Redirects the debuggee's standard I/O (stdin, stdout, stderr) to a file path, named pipe, or TTY device.\nUse null to redirect a stream to the default debug terminal.\nThe first three values map to stdin, stdout, and stderr respectively.\nAdditional values create extra file descriptors (4, 5, etc.).\n\nExample: stdio: [null, \"./output_file\"], the debuggee uses the default terminal for stdin and stderr, but writes stdout to `./output_file`.\nAdded in version 22.0.",
                 "default": []
               },
               "timeout": {
@@ -795,9 +795,21 @@
                 "description": "Custom commands that are executed instead of attaching to a process ID or to a process by name. These commands may optionally create a new target and must perform an attach. A valid process must exist after these commands complete or the \"attach\" will fail.",
                 "default": []
               },
-              "targetId": {
-                "type": "number",
-                "description": "The globally unique target id to attach to. Used when a target is dynamically created."
+              "session": {
+                "type": "object",
+                "properties": {
+                  "targetId": {
+                    "type": "number",
+                    "description": "The globally unique target id to attach to. Use when a target is dynamically created."
+                  },
+                  "debuggerId": {
+                    "type": "number",
+                    "description": "ID of an existing debugger instance to use."
+                  },
+                  "additionalProperties": false,
+                  "required": ["targetId", "debuggerId"]
+                },
+                "description": "This property is Experimental.\nAttach to an existing debugging session.\nAdded in version 22.0."
               },
               "initCommands": {
                 "type": "array",

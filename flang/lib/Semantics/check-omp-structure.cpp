@@ -1322,7 +1322,8 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
             ContextDirectiveAsFortran());
       } else if (!IsSaved(*name->symbol) &&
           declScope.kind() != Scope::Kind::MainProgram &&
-          declScope.kind() != Scope::Kind::Module) {
+          declScope.kind() != Scope::Kind::Module &&
+          !name->symbol->attrs().test(Attr::EXTERNAL)) {
         context_.Say(name->source,
             "A variable that appears in a %s directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly"_err_en_US,
             ContextDirectiveAsFortran());
@@ -4300,10 +4301,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
     static auto isValidForVersion{
         [](parser::OmpMapType::Value t, unsigned version) {
           switch (t) {
-          case parser::OmpMapType::Value::Alloc:
           case parser::OmpMapType::Value::Delete:
-          case parser::OmpMapType::Value::Release:
             return version < 60;
+          case parser::OmpMapType::Value::Alloc:
+          case parser::OmpMapType::Value::Release:
+            return version <= 60;
           case parser::OmpMapType::Value::Storage:
             return version >= 60;
           default:
@@ -4336,8 +4338,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
         llvm::is_contained(leafs, Directive::OMPD_target_data)) {
       if (version >= 60) {
         // Map types listed in the decay table. [6.0:276]
-        CheckAllowedMapTypes(
-            type->v, {Value::Storage, Value::From, Value::To, Value::Tofrom});
+        CheckAllowedMapTypes(type->v,
+            {Value::Alloc, Value::Release, Value::Storage, Value::From,
+                Value::To, Value::Tofrom});
       } else {
         CheckAllowedMapTypes(
             type->v, {Value::Alloc, Value::From, Value::To, Value::Tofrom});
@@ -4848,7 +4851,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
   semantics::UnorderedSymbolSet listVars;
-  unsigned version{context_.langOptions().OpenMPVersion};
 
   for (auto [_, clause] :
       FindClauses(llvm::omp::Clause::OMPC_use_device_addr)) {
@@ -4861,11 +4863,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
         if (name->symbol) {
           useDeviceAddrNameList.push_back(*name);
         }
-      }
-      if (version < 60 && IsWholeAssumedSizeArray(ompObject)) {
-        auto maybeSource{GetObjectSource(ompObject)};
-        context_.Say(maybeSource.value_or(clause->source),
-            "Whole assumed-size arrays are not allowed on USE_DEVICE_ADDR clause"_err_en_US);
       }
     }
     CheckMultipleOccurrence(
@@ -5506,7 +5503,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::ThreadLimit &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
-  bool isDependClauseOccured{false};
+  bool isDependClauseOccurred{false};
   int targetCount{0}, targetSyncCount{0};
   const auto &dir{std::get<parser::OmpDirectiveName>(x.v.t)};
   std::set<const Symbol *> objectSymbolList;
@@ -5551,7 +5548,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
               }
             },
             [&](const parser::OmpClause::Depend &dependClause) {
-              isDependClauseOccured = true;
+              isDependClauseOccurred = true;
             },
             [&](const parser::OmpClause::Destroy &destroyClause) {
               const auto &interopVar{
@@ -5585,7 +5582,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
     context_.Say(GetContext().directiveSource,
         "Each interop-type may be specified at most once."_err_en_US);
   }
-  if (isDependClauseOccured && !targetSyncCount) {
+  if (isDependClauseOccurred && !targetSyncCount) {
     context_.Say(GetContext().directiveSource,
         "A DEPEND clause can only appear on the directive if the interop-type includes TARGETSYNC"_err_en_US);
   }

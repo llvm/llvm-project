@@ -6626,10 +6626,11 @@ cc_binary(
     name = "llvm-ir2vec",
     testonly = True,
     srcs = glob([
-        "tools/llvm-ir2vec/*.cpp",
-        "tools/llvm-ir2vec/*.h",
+        "tools/llvm-ir2vec/**/*.cpp",
+        "tools/llvm-ir2vec/lib/*.h",
     ]),
     copts = llvm_copts,
+    includes = ["tools/llvm-ir2vec/lib"],
     stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",

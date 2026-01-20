@@ -89,8 +89,10 @@ class PPCFastISel final : public FastISel {
 
   public:
     explicit PPCFastISel(FunctionLoweringInfo &FuncInfo,
-                         const TargetLibraryInfo *LibInfo)
-        : FastISel(FuncInfo, LibInfo), TM(FuncInfo.MF->getTarget()),
+                         const TargetLibraryInfo *LibInfo,
+                         const LibcallLoweringInfo *LibcallLowering)
+        : FastISel(FuncInfo, LibInfo, LibcallLowering),
+          TM(FuncInfo.MF->getTarget()),
           Subtarget(&FuncInfo.MF->getSubtarget<PPCSubtarget>()),
           PPCFuncInfo(FuncInfo.MF->getInfo<PPCFunctionInfo>()),
           TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()),
@@ -2462,12 +2464,13 @@ Register PPCFastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
 
 namespace llvm {
   // Create the fast instruction selector for PowerPC64 ELF.
-  FastISel *PPC::createFastISel(FunctionLoweringInfo &FuncInfo,
-                                const TargetLibraryInfo *LibInfo) {
-    // Only available on 64-bit for now.
-    const PPCSubtarget &Subtarget = FuncInfo.MF->getSubtarget<PPCSubtarget>();
-    if (Subtarget.isPPC64())
-      return new PPCFastISel(FuncInfo, LibInfo);
-    return nullptr;
-  }
+FastISel *PPC::createFastISel(FunctionLoweringInfo &FuncInfo,
+                              const TargetLibraryInfo *LibInfo,
+                              const LibcallLoweringInfo *LibcallLowering) {
+  // Only available on 64-bit for now.
+  const PPCSubtarget &Subtarget = FuncInfo.MF->getSubtarget<PPCSubtarget>();
+  if (Subtarget.isPPC64())
+    return new PPCFastISel(FuncInfo, LibInfo, LibcallLowering);
+  return nullptr;
+}
 }

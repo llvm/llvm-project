@@ -2715,7 +2715,10 @@ static bool CheckCompatibleArgument(bool isElemental,
             } else if (!isElemental && actual.Rank() != x.type.Rank() &&
                 !x.type.attrs().test(
                     characteristics::TypeAndShape::Attr::AssumedRank) &&
-                !x.ignoreTKR.test(common::IgnoreTKR::Rank)) {
+                !x.ignoreTKR.test(common::IgnoreTKR::Rank) &&
+                !(x.type.type().IsAssumedType() &&
+                    x.type.attrs().test(
+                        characteristics::TypeAndShape::Attr::AssumedSize))) {
               return false;
             } else if (auto actualType{actual.GetType()}) {
               return x.type.type().IsTkCompatibleWith(*actualType, x.ignoreTKR);
@@ -2967,6 +2970,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
             continue;
           }
         }
+        tried.push_back(*specific);
         if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
                 context_, false /* no integer conversions */) &&
             CheckCompatibleArguments(
@@ -2999,7 +3003,6 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
           crtMatchingDistance = ComputeCudaMatchingDistance(
               context_.languageFeatures(), *procedure, localActuals);
         } else {
-          tried.push_back(*specific);
         }
       }
     }
@@ -3158,17 +3161,23 @@ void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
       if (auto procChars{characteristics::Procedure::Characterize(
               specific, GetFoldingContext())}) {
         if (procChars->HasExplicitInterface()) {
-          if (auto reasons{semantics::CheckExplicitInterface(*procChars,
-                  arguments, context_, &scope, /*intrinsic=*/nullptr,
-                  /*allocActualArgumentConversions=*/false,
-                  /*extentErrors=*/false,
-                  /*ignoreImplicitVsExplicit=*/false)};
-              !reasons.empty()) {
-            reasons.AttachTo(
-                msg->Attach(specific.name(),
-                    "Specific procedure '%s' does not match the actual arguments because"_en_US,
-                    specific.name()),
-                parser::Severity::None);
+          auto reasons{semantics::CheckExplicitInterface(*procChars, arguments,
+              context_, &scope, /*intrinsic=*/nullptr,
+              /*allocActualArgumentConversions=*/false,
+              /*extentErrors=*/false,
+              /*ignoreImplicitVsExplicit=*/false)};
+          if (reasons.AnyFatalError() != dueToAmbiguity) {
+            if (dueToAmbiguity) {
+              msg->Attach(specific.name(),
+                  "Specific procedure '%s' matched the actual arguments"_en_US,
+                  specific.name());
+            } else {
+              reasons.AttachTo(
+                  msg->Attach(specific.name(),
+                      "Specific procedure '%s' does not match the actual arguments because"_en_US,
+                      specific.name()),
+                  parser::Severity::None);
+            }
           }
         }
       }
