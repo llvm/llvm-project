@@ -368,7 +368,8 @@ static void computeBlocksDominatingExits(
 }
 
 /// Ensure strict LCSSA form for the given loop, by removing lifetime
-/// intrinsics that are used outside the loop.
+/// intrinsics that cross the exit boundary, as well as their associated
+/// partners.
 ///
 /// Returns true if any modifications are made.
 bool llvm::cleanupDanglingLifetimeUsers(Loop *L, const DominatorTree &DT) {
@@ -378,35 +379,34 @@ bool llvm::cleanupDanglingLifetimeUsers(Loop *L, const DominatorTree &DT) {
   if (ExitBlocks.empty())
     return false;
 
-  // Look only at allocas that dominate the loop exits.
+  // Look only at allocas in the loop, that dominate the loop exits.
   SmallSetVector<BasicBlock *, 8> BlocksDominatingExits;
   computeBlocksDominatingExits(*L, DT, ExitBlocks, BlocksDominatingExits);
 
-  SmallVector<Instruction *, 8> ToRemove;
-  bool Changed = false;
+  SmallVector<AllocaInst *, 8> ToClean;
 
   for (auto *BB : BlocksDominatingExits) {
     for (auto &I : *BB) {
       if (auto *AI = dyn_cast<AllocaInst>(&I)) {
-        for (Use &U : AI->uses()) {
-          auto *User = cast<Instruction>(U.getUser());
+        bool LifetimeOutsideLoop = llvm::any_of(AI->users(), [&](User *U) {
+          auto *Inst = cast<Instruction>(U);
+          return Inst->isLifetimeStartOrEnd() &&
+                 !L->contains(Inst->getParent());
+        });
 
-          if (L->contains(User->getParent()))
-            continue;
-
-          if (User->isLifetimeStartOrEnd())
-            ToRemove.push_back(User);
-        }
+        if (LifetimeOutsideLoop)
+          ToClean.push_back(AI);
       }
     }
   }
 
-  for (Instruction *I : ToRemove) {
-    I->eraseFromParent();
-    Changed = true;
-  }
+  for (auto *AI : ToClean)
+    for (auto *U : make_early_inc_range(AI->users()))
+      if (auto *II = dyn_cast<IntrinsicInst>(U))
+        if (II->isLifetimeStartOrEnd())
+          II->eraseFromParent();
 
-  return Changed;
+  return !ToClean.empty();
 }
 
 static bool formLCSSAImpl(Loop &L, const DominatorTree &DT, const LoopInfo *LI,

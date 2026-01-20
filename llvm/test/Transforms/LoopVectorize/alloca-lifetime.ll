@@ -9,8 +9,8 @@ declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
 declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind
 
 ; CHECK-LABEL: @live_alloca
-; CHECK: 4 x i32
-; CHECK-NOT: call {{.*}} @llvm.lifetime.end
+; CHECK: 4 x i64
+; CHECK-NOT: call {{.*}} @llvm.lifetime
 define i32 @live_alloca(ptr %a, i64 %n) {
 entry:
   br label %for.body
@@ -35,8 +35,7 @@ for.end:
 }
 
 ; CHECK-LABEL: @live_alloca2
-; CHECK: alloca i32
-; CHECK-NOT: call {{.*}} @llvm.lifetime.end
+; CHECK-NOT: call {{.*}} @llvm.lifetime
 define void @live_alloca2(ptr %ptr) {
 entry:
   br label %loop
