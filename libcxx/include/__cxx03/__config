@@ -32,10 +32,6 @@
 #  define _LIBCPP_CONCAT_IMPL(_X, _Y) _X##_Y
 #  define _LIBCPP_CONCAT(_X, _Y) _LIBCPP_CONCAT_IMPL(_X, _Y)
 
-#  if __STDC_HOSTED__ == 0
-#    define _LIBCPP_FREESTANDING
-#  endif
-
 // HARDENING {
 
 // This is for backward compatibility -- make enabling `_LIBCPP_ENABLE_ASSERTIONS` (which predates hardening modes)
