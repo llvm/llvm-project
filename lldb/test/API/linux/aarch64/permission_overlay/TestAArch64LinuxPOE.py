@@ -79,6 +79,16 @@ class AArch64LinuxPOE(TestBase):
         self.expect("expression expr_function()", substrs=["$0 = 1"])
         self.expect("register read por", substrs=[self.EXPECTED_POR])
 
+        # Unmapped region has no key (not even default).
+        self.expect("memory region 0", substrs=["protection key:"], matching=False)
+
+        # The region has base permissions rwx, which is what we see here.
+        self.expect(
+            "memory region read_only_page", substrs=["rwx", "protection key: 6"]
+        )
+        # A region not assigned to a protection key has the default key 0.
+        self.expect("memory region key_zero_page", substrs=["rwx", "protection key: 0"])
+
         # Not passing this to the application allows us to fix the permissions
         # using lldb, then continue to a normal exit.
         self.runCmd("process handle SIGSEGV --pass false")
@@ -127,3 +137,7 @@ class AArch64LinuxPOE(TestBase):
                 "register read por",
                 substrs=[f"     {self.EXPECTED_POR}\n" + self.EXPECTED_POR_FIELDS],
             )
+
+        # Protection keys are listed in /proc/<pid>/smaps, which is not included
+        # in core files.
+        self.expect("memory region --all", substrs=["protection key:"], matching=False)

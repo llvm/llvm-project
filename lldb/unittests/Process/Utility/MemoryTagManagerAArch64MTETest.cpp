@@ -236,7 +236,7 @@ static MemoryRegionInfo MakeRegionInfo(lldb::addr_t base, lldb::addr_t size,
       MemoryRegionInfo::eYes, ConstString(), MemoryRegionInfo::eNo, 0,
       /*memory_tagged=*/
       tagged ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo,
-      MemoryRegionInfo::eDontKnow, MemoryRegionInfo::eDontKnow);
+      MemoryRegionInfo::eDontKnow, MemoryRegionInfo::eDontKnow, std::nullopt);
 }
 
 TEST(MemoryTagManagerAArch64MTETest, MakeTaggedRange) {
