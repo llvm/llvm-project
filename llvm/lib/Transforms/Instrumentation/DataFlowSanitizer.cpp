@@ -351,7 +351,7 @@ public:
     if (isIn(*GA.getParent(), Category))
       return true;
 
-    if (isa<FunctionType>(GA.getValueType()))
+    if (GA.isFunctionPointer())
       return SCL->inSection("dataflow", "fun", GA.getName(), Category);
 
     return SCL->inSection("dataflow", "global", GA.getName(), Category) ||

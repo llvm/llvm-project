@@ -2078,7 +2078,7 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
       MachineFunction &MF = DAG.getMachineFunction();
       MVT PtrVT = getPointerTy(MF.getDataLayout());
       const char *BaseName;
-      if (GV->getValueType()->isFunctionTy()) {
+      if (GV->isFunctionPointer()) {
         BaseName = MF.createExternalSymbolName("__table_base");
         OperandFlags = WebAssemblyII::MO_TABLE_BASE_REL;
       } else {

@@ -473,7 +473,7 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   // that their nominal addresses are tagged and outside of the code model. In
   // AArch64ExpandPseudo::expandMI we emit an additional instruction to set the
   // tag if necessary based on MO_TAGGED.
-  if (AllowTaggedGlobals && !isa<FunctionType>(GV->getValueType()))
+  if (AllowTaggedGlobals && !GV->isFunctionPointer())
     return AArch64II::MO_NC | AArch64II::MO_TAGGED;
 
   return AArch64II::MO_NO_FLAG;
@@ -494,7 +494,7 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
     return AArch64II::MO_GOT;
 
   if (getTargetTriple().isOSWindows()) {
-    if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy()) {
+    if (isWindowsArm64EC() && GV->isFunctionPointer()) {
       if (GV->hasDLLImportStorageClass()) {
         // On Arm64EC, if we're calling a symbol from the import table
         // directly, use MO_ARM64EC_CALLMANGLE.

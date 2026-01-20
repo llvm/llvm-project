@@ -2810,9 +2810,8 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
                          .addImm(0));
 
       assert(GAOp.isGlobal());
-      assert(GAOp.getGlobal()->getValueType() != nullptr);
 
-      bool IsFunctionTy = GAOp.getGlobal()->getValueType()->isFunctionTy();
+      bool IsFunctionTy = GAOp.getGlobal()->isFunctionPointer();
       auto AuthKey = IsFunctionTy ? AArch64PACKey::IA : AArch64PACKey::DA;
       emitAUT(AuthKey, AArch64::X16, AArch64::X17);
 
@@ -2889,9 +2888,7 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
             .addExpr(MCSymbolRefExpr::create(UndefWeakSym, OutContext)));
   }
 
-  assert(GAMO.getGlobal()->getValueType() != nullptr);
-
-  bool IsFunctionTy = GAMO.getGlobal()->getValueType()->isFunctionTy();
+  bool IsFunctionTy = GAMO.getGlobal()->isFunctionPointer();
   auto AuthKey = IsFunctionTy ? AArch64PACKey::IA : AArch64PACKey::DA;
   emitAUT(AuthKey, AuthResultReg, AArch64::X17);
 

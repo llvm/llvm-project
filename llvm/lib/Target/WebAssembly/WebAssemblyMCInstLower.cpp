@@ -70,7 +70,7 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
     return WasmSym;
   }
 
-  const auto *FuncTy = cast<FunctionType>(Global->getValueType());
+  const auto *FuncTy = Global->getFunctionType();
   const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
   const TargetMachine &TM = MF.getTarget();
   const Function &CurrentFunc = MF.getFunction();

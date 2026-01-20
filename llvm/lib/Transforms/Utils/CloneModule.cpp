@@ -90,13 +90,10 @@ std::unique_ptr<Module> llvm::CloneModule(
     if (!ShouldCloneDefinition(&I)) {
       // An alias cannot act as an external reference, so we need to create
       // either a function or a global variable depending on the value type.
-      // FIXME: Once pointee types are gone we can probably pick one or the
-      // other.
       GlobalValue *GV;
-      if (I.getValueType()->isFunctionTy())
-        GV = Function::Create(cast<FunctionType>(I.getValueType()),
-                              GlobalValue::ExternalLinkage, I.getAddressSpace(),
-                              I.getName(), New.get());
+      if (FunctionType *FTy = I.getFunctionType())
+        GV = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                              I.getAddressSpace(), I.getName(), New.get());
       else
         GV = new GlobalVariable(*New, I.getValueType(), false,
                                 GlobalValue::ExternalLinkage, nullptr,

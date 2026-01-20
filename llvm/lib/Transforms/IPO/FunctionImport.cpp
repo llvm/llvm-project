@@ -1642,11 +1642,9 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
     V->setComdat(nullptr);
   } else {
     GlobalValue *NewGV;
-    if (GV.getValueType()->isFunctionTy())
-      NewGV =
-          Function::Create(cast<FunctionType>(GV.getValueType()),
-                           GlobalValue::ExternalLinkage, GV.getAddressSpace(),
-                           "", GV.getParent());
+    if (FunctionType *FTy = GV.getFunctionType())
+      NewGV = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                               GV.getAddressSpace(), "", GV.getParent());
     else
       NewGV =
           new GlobalVariable(*GV.getParent(), GV.getValueType(),

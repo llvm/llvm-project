@@ -546,7 +546,7 @@ std::string Module::getUniqueIntrinsicName(StringRef BaseName, Intrinsic::ID Id,
     }
 
     // A declaration with this name already exists. Remember it.
-    FunctionType *FT = dyn_cast<FunctionType>(F->getValueType());
+    FunctionType *FT = F->getFunctionType();
     auto UinItInserted = UniquedIntrinsicNames.insert({{Id, FT}, Count});
     if (FT == Proto) {
       // It was a declaration for our prototype. This entry was allocated in the

@@ -445,7 +445,7 @@ void ModuleLinker::dropReplacedComdat(
     auto &Alias = cast<GlobalAlias>(GV);
     Module &M = *Alias.getParent();
     GlobalValue *Declaration;
-    if (auto *FTy = dyn_cast<FunctionType>(Alias.getValueType())) {
+    if (FunctionType *FTy = Alias.getFunctionType()) {
       Declaration = Function::Create(FTy, GlobalValue::ExternalLinkage, "", &M);
     } else {
       Declaration =

@@ -247,7 +247,7 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
     if (NeedQuotes)
       OS << "\"";
 
-    if (!GV->getValueType()->isFunctionTy()) {
+    if (!GV->isFunctionPointer()) {
       if (TT.isWindowsMSVCEnvironment() || TT.isUEFI())
         OS << ",DATA";
       else

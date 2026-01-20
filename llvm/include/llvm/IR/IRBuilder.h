@@ -2028,7 +2028,7 @@ public:
         CreateGlobalString(Str, Name, AddressSpace, M, AddNull);
     Constant *Zero = ConstantInt::get(Type::getInt32Ty(Context), 0);
     Constant *Indices[] = {Zero, Zero};
-    return ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV,
+    return ConstantExpr::getInBoundsGetElementPtr(Type::getInt8Ty(Context), GV,
                                                   Indices);
   }
 

@@ -285,7 +285,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       return error(GVRef.Loc, "unknown function '" + GVRef.StrVal +
                                   "' referenced by dso_local_equivalent");
 
-    if (!GV->getValueType()->isFunctionTy())
+    if (!GV->isFunctionPointer())
       return error(GVRef.Loc,
                    "expected a function, alias to function, or ifunc "
                    "in dso_local_equivalent");
@@ -4229,7 +4229,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       return false;
     }
 
-    if (!GV->getValueType()->isFunctionTy())
+    if (!GV->isFunctionPointer())
       return error(Fn.Loc, "expected a function, alias to function, or ifunc "
                            "in dso_local_equivalent");
 

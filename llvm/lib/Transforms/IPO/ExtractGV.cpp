@@ -135,10 +135,9 @@ PreservedAnalyses ExtractGVPass::run(Module &M, ModuleAnalysisManager &) {
     if (!Delete)
       continue;
 
-    auto *FuncType = dyn_cast<FunctionType>(IF.getValueType());
     IF.removeFromParent();
     llvm::Value *Declaration =
-        Function::Create(FuncType, GlobalValue::ExternalLinkage,
+        Function::Create(IF.getFunctionType(), GlobalValue::ExternalLinkage,
                          IF.getAddressSpace(), IF.getName(), &M);
     IF.replaceAllUsesWith(Declaration);
     delete &IF;

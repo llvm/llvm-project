@@ -23,7 +23,7 @@ using namespace llvm;
 EHPersonality llvm::classifyEHPersonality(const Value *Pers) {
   const GlobalValue *F =
       Pers ? dyn_cast<GlobalValue>(Pers->stripPointerCasts()) : nullptr;
-  if (!F || !F->getValueType() || !F->getValueType()->isFunctionTy())
+  if (!F || !F->isFunctionPointer())
     return EHPersonality::Unknown;
 
   StringRef Name = F->getName();

@@ -5234,7 +5234,7 @@ static bool isFunctionGlobalAddress(const GlobalValue *GV) {
     if (GV->isThreadLocal())
       return false;
 
-    return GV->getValueType()->isFunctionTy();
+    return GV->isFunctionPointer();
   }
 
   return false;

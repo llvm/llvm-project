@@ -297,6 +297,17 @@ public:
 
   Type *getValueType() const { return ValueType; }
 
+  /// If this global is a function object (Function, GlobalIFunc, or a
+  /// GlobalAlias that points to a Function), return the function type,
+  /// otherwise return null.
+  FunctionType *getFunctionType() const {
+    return dyn_cast<FunctionType>(ValueType);
+  }
+
+  /// Returns true if this global is a function pointer (Function, GlobalIFunc,
+  /// or an alias to a Function).
+  bool isFunctionPointer() const { return getFunctionType() != nullptr; }
+
   bool isImplicitDSOLocal() const {
     return hasLocalLinkage() ||
            (!hasDefaultVisibility() && !hasExternalWeakLinkage());
