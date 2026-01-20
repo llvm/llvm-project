@@ -235,6 +235,20 @@
 #define _LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_20
 #define _LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE
 
+// This controls the availability of the C++20 time zone database.
+// The parser code is built in the library.
+#define _LIBCPP_AVAILABILITY_HAS_TZDB _LIBCPP_INTRODUCED_IN_LLVM_19
+#define _LIBCPP_AVAILABILITY_TZDB _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
+
+// These macros determine whether we assume that std::bad_function_call and
+// std::bad_expected_access provide a key function in the dylib. This allows
+// centralizing their vtable and typeinfo instead of having all TUs provide
+// a weak definition that then gets deduplicated.
+#define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19
+#define _LIBCPP_AVAILABILITY_BAD_FUNCTION_CALL_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
+#define _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19
+#define _LIBCPP_AVAILABILITY_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
+
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
 // iostreams by providing a single strong definition in the shared library.
@@ -280,20 +294,6 @@
 // the underlying buffer types of std::cout, std::cerr, and std::clog.
 #define _LIBCPP_AVAILABILITY_HAS_PRINT _LIBCPP_INTRODUCED_IN_LLVM_18
 #define _LIBCPP_AVAILABILITY_PRINT _LIBCPP_INTRODUCED_IN_LLVM_18_ATTRIBUTE
-
-// This controls the availability of the C++20 time zone database.
-// The parser code is built in the library.
-#define _LIBCPP_AVAILABILITY_HAS_TZDB _LIBCPP_INTRODUCED_IN_LLVM_19
-#define _LIBCPP_AVAILABILITY_TZDB _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
-
-// These macros determine whether we assume that std::bad_function_call and
-// std::bad_expected_access provide a key function in the dylib. This allows
-// centralizing their vtable and typeinfo instead of having all TUs provide
-// a weak definition that then gets deduplicated.
-#define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19
-#define _LIBCPP_AVAILABILITY_BAD_FUNCTION_CALL_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
-#define _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19
-#define _LIBCPP_AVAILABILITY_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
 
 // Define availability attributes that depend on both
 // _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.
