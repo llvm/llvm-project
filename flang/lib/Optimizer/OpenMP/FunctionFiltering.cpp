@@ -30,6 +30,34 @@ namespace flangomp {
 using namespace mlir;
 
 namespace {
+void checkDeviceImplementationStatus(
+    omp::OffloadModuleInterface offloadModule) {
+  if (!offloadModule.getIsGPU())
+    return;
+
+  offloadModule->walk<WalkOrder::PreOrder>([&](omp::DeclareReductionOp redOp) {
+    if (redOp.symbolKnownUseEmpty(offloadModule))
+      return WalkResult::advance();
+
+    if (!redOp.getByrefElementType())
+      return WalkResult::advance();
+
+    auto seqTy =
+        mlir::dyn_cast<fir::SequenceType>(*redOp.getByrefElementType());
+
+    bool isByRefReductionSupported =
+        !seqTy || !fir::sequenceWithNonConstantShape(seqTy);
+
+    if (!isByRefReductionSupported) {
+      TODO(redOp.getLoc(),
+           "Reduction of dynamically-shaped arrays are not supported yet "
+           "on the GPU.");
+    }
+
+    return WalkResult::advance();
+  });
+}
+
 class FunctionFilteringPass
     : public flangomp::impl::FunctionFilteringPassBase<FunctionFilteringPass> {
 public:
@@ -103,28 +131,7 @@ public:
       return WalkResult::advance();
     });
 
-    if (op.getIsGPU())
-      op->walk<WalkOrder::PreOrder>([&](omp::DeclareReductionOp redOp) {
-        if (redOp.symbolKnownUseEmpty(op))
-          return WalkResult::advance();
-
-        if (!redOp.getByrefElementType())
-          return WalkResult::advance();
-
-        auto seqTy =
-            mlir::dyn_cast<fir::SequenceType>(*redOp.getByrefElementType());
-
-        bool isByRefReductionSupported =
-            !seqTy || !fir::sequenceWithNonConstantShape(seqTy);
-
-        if (!isByRefReductionSupported) {
-          TODO(redOp.getLoc(),
-               "Reduction of dynamically-shaped arrays are not supported yet "
-               "on the GPU.");
-        }
-
-        return WalkResult::advance();
-      });
+    checkDeviceImplementationStatus(op);
   }
 };
 } // namespace
