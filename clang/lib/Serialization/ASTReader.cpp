@@ -5119,6 +5119,8 @@ ASTReader::ReadASTCore(StringRef FileName,
                           ExpectedSignature, readASTFileSignature,
                           M, ErrorStr);
 
+  auto &MC = getModuleManager().getModuleCache().getInMemoryModuleCache();
+
   switch (AddResult) {
   case ModuleManager::AlreadyLoaded:
     Diag(diag::remark_module_import)
@@ -5153,13 +5155,28 @@ ASTReader::ReadASTCore(StringRef FileName,
         << moduleKindForDiagnostic(Type) << FileName << !ErrorStr.empty()
         << ErrorStr;
     return Failure;
+  case ModuleManager::ExpectationNotMet:
+    if (!MC.isPCMFinal(FileName)) {
+      // The importer expected a different PCM. We don't know for sure whether
+      // it's this PCM that's out of date, or whether it's the importer and it
+      // therefore has out-of-date expectations.
+      // Let's defensively remove this PCM from the in-memory cache so that we
+      // are able to properly validate a fresh one later on.
+      MC.erasePCM(FileName);
+    }
+    if (ClientLoadCapabilities & ARR_OutOfDate)
+      return OutOfDate;
+    // Otherwise, return an error.
+    Diag(diag::err_ast_file_out_of_date)
+        << moduleKindForDiagnostic(Type) << FileName << !ErrorStr.empty()
+        << ErrorStr;
+    return Failure;
   }
 
   assert(M && "Missing module file");
 
   bool ShouldFinalizePCM = false;
   llvm::scope_exit FinalizeOrDropPCM([&]() {
-    auto &MC = getModuleManager().getModuleCache().getInMemoryModuleCache();
     if (ShouldFinalizePCM)
       MC.finalizePCM(FileName);
     else

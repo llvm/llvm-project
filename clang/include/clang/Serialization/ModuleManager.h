@@ -198,7 +198,10 @@ public:
     Missing,
 
     /// The module file is out-of-date.
-    OutOfDate
+    OutOfDate,
+
+    /// The module file has a different size/mtime/signature than expected.
+    ExpectationNotMet,
   };
 
   using ASTFileSignatureReader = ASTFileSignature (*)(StringRef);

@@ -125,7 +125,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     ErrorStr = IgnoreModTime ? "module file has a different size than expected"
                              : "module file has a different size or "
                                "modification time than expected";
-    return OutOfDate;
+    return ExpectationNotMet;
   }
 
   if (!Entry) {
@@ -159,7 +159,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     if (implicitModuleNamesMatch(Type, ModuleEntry, *Entry)) {
       // Check the stored signature.
       if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
-        return OutOfDate;
+        return ExpectationNotMet;
 
       Module = ModuleEntry;
       updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
@@ -226,7 +226,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // ReadSignature unless there's something to check though.
   if (ExpectedSignature && checkSignature(ReadSignature(NewModule->Data),
                                           ExpectedSignature, ErrorStr))
-    return OutOfDate;
+    return ExpectationNotMet;
 
   // We're keeping this module.  Store it everywhere.
   Module = Modules[*Entry] = NewModule.get();

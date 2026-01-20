@@ -74,6 +74,11 @@ public:
   llvm::MemoryBuffer &addBuiltPCM(llvm::StringRef Filename,
                                   std::unique_ptr<llvm::MemoryBuffer> Buffer);
 
+  /// Completely remove the PCM from the cache.
+  ///
+  /// \post state is Unknown
+  void erasePCM(llvm::StringRef Filename);
+
   /// Try to remove a buffer from the cache.  No effect if state is Final.
   ///
   /// \pre state is Tentative/Final.
