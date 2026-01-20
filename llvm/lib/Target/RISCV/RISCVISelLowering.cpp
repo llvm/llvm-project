@@ -23656,7 +23656,7 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
     return false;
 
   // Do not tail call opt if caller's and callee's byval arguments do not match.
-  for (unsigned i = 0, j = 0; i < Outs.size(); i++) {
+  for (unsigned i = 0, j = 0, e = Outs.size(); i != e; ++i) {
     if (!Outs[i].Flags.isByVal())
       continue;
     if (j++ >= RVFI->getIncomingByValArgsSize())
