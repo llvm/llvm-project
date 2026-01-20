@@ -2933,6 +2933,24 @@ void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
     addUsedOrCompilerUsedGlobal(GV);
 }
 
+/// Get the feature delta from the default feature map for the given target CPU.
+static std::vector<std::string>
+getFeatureDeltaFromDefault(const CodeGenModule &CGM, StringRef TargetCPU,
+                           llvm::StringMap<bool> &FeatureMap) {
+  llvm::StringMap<bool> DefaultFeatureMap;
+  CGM.getTarget().initFeatureMap(
+      DefaultFeatureMap, CGM.getContext().getDiagnostics(), TargetCPU, {});
+
+  std::vector<std::string> Delta;
+  for (const auto &[K, V] : FeatureMap) {
+    auto DefaultIt = DefaultFeatureMap.find(K);
+    if (DefaultIt == DefaultFeatureMap.end() || DefaultIt->getValue() != V)
+      Delta.push_back((V ? "+" : "-") + K.str());
+  }
+
+  return Delta;
+}
+
 bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                                 llvm::AttrBuilder &Attrs,
                                                 bool SetTargetFeatures) {
@@ -2950,18 +2968,6 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   const auto *SD = FD ? FD->getAttr<CPUSpecificAttr>() : nullptr;
   const auto *TC = FD ? FD->getAttr<TargetClonesAttr>() : nullptr;
   bool AddedAttr = false;
-  auto HandleFeatureDelta = [&](llvm::StringMap<bool> &FeatureMap) {
-    // Get the default feature map for the (possibly overridden) target CPU.
-    llvm::StringMap<bool> DefaultFeatureMap;
-    getTarget().initFeatureMap(DefaultFeatureMap, getContext().getDiagnostics(),
-                               TargetCPU, {});
-    for (const auto &[K, V] : FeatureMap) {
-      auto DefaultIt = DefaultFeatureMap.find(K);
-      // Emit if the feature is not in defaults or has a different value.
-      if (DefaultIt == DefaultFeatureMap.end() || DefaultIt->getValue() != V)
-        Features.push_back((V ? "+" : "-") + K.str());
-    }
-  };
   if (TD || TV || SD || TC) {
     llvm::StringMap<bool> FeatureMap;
     getContext().getFunctionFeatureMap(FeatureMap, GD);
@@ -2993,7 +2999,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     // target CPU's defaults). Other targets might want to follow a similar
     // pattern.
     if (getTarget().getTriple().isAMDGPU()) {
-      HandleFeatureDelta(FeatureMap);
+      Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
     } else {
       // Produce the canonical string for this set of features.
       for (const llvm::StringMap<bool>::value_type &Entry : FeatureMap)
@@ -3012,7 +3018,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    TargetCPU,
                                    getTarget().getTargetOpts().Features);
       }
-      HandleFeatureDelta(FeatureMap);
+      Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
     } else {
       Features = getTarget().getTargetOpts().Features;
     }
