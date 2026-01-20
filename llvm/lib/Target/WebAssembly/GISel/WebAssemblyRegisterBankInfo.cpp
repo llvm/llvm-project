@@ -1,8 +1,8 @@
 #include "WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_TARGET_REGBANK_IMPL
@@ -196,6 +196,52 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         return getInvalidInstructionMapping();
     }
   }
+
+  if (MI.isDebugValue()) {
+    const MachineOperand &MO = MI.getOperand(0);
+
+    if (!MO.isReg())
+      return getInstructionMapping(DefaultMappingID, /*Cost=*/1, nullptr, 0);
+
+    auto &CurBankOrClass = MRI.getRegClassOrRegBank(MO.getReg());
+
+    const RegisterBank *NewBank;
+
+    if (auto *CurBank = CurBankOrClass.dyn_cast<const RegisterBank *>()) {
+      NewBank = CurBank;
+    } else if (auto *CurClass =
+                   CurBankOrClass.dyn_cast<const TargetRegisterClass *>()) {
+      getRegBankFromRegClass(*CurClass, MRI.getType(MO.getReg())).dump();
+      NewBank = &getRegBankFromRegClass(*CurClass, MRI.getType(MO.getReg()));
+    } else {
+      llvm_unreachable("Encountered DBG_VALUE with an unmapped register.");
+    }
+
+    WebAssembly::ValueMappingIdx ValueMappingIdx;
+
+    switch (NewBank->getID()) {
+    case WebAssembly::I32RegBankID:
+      ValueMappingIdx = WebAssembly::I32Idx;
+      break;
+    case WebAssembly::I64RegBankID:
+      ValueMappingIdx = WebAssembly::I64Idx;
+      break;
+    case WebAssembly::F32RegBankID:
+      ValueMappingIdx = WebAssembly::F32Idx;
+      break;
+    case WebAssembly::F64RegBankID:
+      ValueMappingIdx = WebAssembly::F64Idx;
+      break;
+    default:
+      llvm_unreachable("Encountered unexpected register bank.");
+    }
+
+    return getInstructionMapping(
+        MappingID, /*Cost=*/1,
+        getOperandsMapping({&WebAssembly::ValueMappings[ValueMappingIdx]}),
+        NumOperands);
+  }
+
   switch (Opc) {
   case G_BR:
     return getInstructionMapping(MappingID, /*Cost=*/1,
