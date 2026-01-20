@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL1.2 -cl-ext=+__cl_clang_non_kernel_scope_local_memory
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__cl_clang_non_kernel_scope_local_memory
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__cl_clang_non_kernel_scope_local_memory
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_generic_address_space,+__cl_clang_non_kernel_scope_local_memory
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space,+__cl_clang_non_kernel_scope_local_memory
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__cl_clang_non_kernel_scope_local_memory
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__cl_clang_non_kernel_scope_local_memory
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_generic_address_space,+__cl_clang_non_kernel_scope_local_memory
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space,+__cl_clang_non_kernel_scope_local_memory
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL1.2 -cl-ext=+__cl_clang_local_memory_all_scopes
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__cl_clang_local_memory_all_scopes
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__cl_clang_local_memory_all_scopes
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_generic_address_space,+__cl_clang_local_memory_all_scopes
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space,+__cl_clang_local_memory_all_scopes
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__cl_clang_local_memory_all_scopes
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__cl_clang_local_memory_all_scopes
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_generic_address_space,+__cl_clang_local_memory_all_scopes
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space,+__cl_clang_local_memory_all_scopes
 static constant int G1 = 0;
 constant int G2 = 0;
 
@@ -280,12 +280,12 @@ void f(void) {
 }
 
 void f_local(void) {
-#pragma OPENCL EXTENSION __cl_clang_non_kernel_scope_local_memory : enable
+#pragma OPENCL EXTENSION __cl_clang_local_memory_all_scopes : enable
   local int L2;
   {
     local int L2;
   }
-#pragma OPENCL EXTENSION __cl_clang_non_kernel_scope_local_memory : disable
+#pragma OPENCL EXTENSION __cl_clang_local_memory_all_scopes : disable
   local int L2;                               // expected-error{{non-kernel function variable cannot be declared in local address space}}
   {
     local int L2;                             // expected-error{{non-kernel function variable cannot be declared in local address space}}

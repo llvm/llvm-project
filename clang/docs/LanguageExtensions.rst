@@ -2840,27 +2840,27 @@ between the host and device is known to be compatible.
   );
   #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : disable
 
-``__cl_clang_non_kernel_scope_local_memory``
+``__cl_clang_local_memory_all_scopes``
 ----------------------------------------------
 
 This extension allows declaring variables in the local address space within
-non-kernel functions or nested scopes within a kernel, using regular OpenCL
-extension pragma mechanism detailed in `the OpenCL Extension Specification,
-section 1.2
+any scope, including non-kernel functions or nested scopes within a kernel,
+using regular OpenCL extension pragma mechanism detailed in `the OpenCL
+Extension Specification, section 1.2
 <https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
 
 This relaxes the `Declaration Scopes and Variable Types
 <https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_C.html#_usage_for_declaration_scopes_and_variable_types>`_
-rule that limits local-address-space variable declarations to the outermost scope
-of a kernel function only.
+rule that limits local-address-space variable declarations to the outermost
+compound statement inside the body of the kernel function.
 
-With this relaxation, targets can force-inline non-kernel functions that declare
-local memory - so static local allocations are visible at kernel scope - or pass
-a kernel-allocated local buffer to those functions via an implicit argument.
+To expose static local allocations at kernel scope, targets can either force-
+inline non-kernel functions that declare local memory or pass a kernel-allocated
+local buffer to those functions via an implicit argument.
 
 .. code-block:: c++
 
-  #pragma OPENCL EXTENSION __cl_clang_non_kernel_scope_local_memory : enable
+  #pragma OPENCL EXTENSION __cl_clang_local_memory_all_scopes : enable
   kernel void kernel1(...)
   {
     {
@@ -2872,7 +2872,7 @@ a kernel-allocated local buffer to those functions via an implicit argument.
     local float c; // compiled - no diagnostic generated
   }
 
-  #pragma OPENCL EXTENSION __cl_clang_non_kernel_scope_local_memory : disable
+  #pragma OPENCL EXTENSION __cl_clang_local_memory_all_scopes : disable
   kernel void kernel2(...)
   {
     {

@@ -27,10 +27,10 @@
 #endif
 #pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
 
-#ifndef __cl_clang_non_kernel_scope_local_memory
-#error "Missing __cl_clang_non_kernel_scope_local_memory define"
+#ifndef __cl_clang_local_memory_all_scopes
+#error "Missing __cl_clang_local_memory_all_scopes define"
 #endif
-#pragma OPENCL EXTENSION __cl_clang_non_kernel_scope_local_memory : enable
+#pragma OPENCL EXTENSION __cl_clang_local_memory_all_scopes : enable
 
 #ifndef cl_khr_fp16
 #error "Missing cl_khr_fp16 define"

@@ -8954,7 +8954,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
       bool AllowNonKernelLocal =
           T.getAddressSpace() == LangAS::opencl_local &&
           getOpenCLOptions().isAvailableOption(
-              "__cl_clang_non_kernel_scope_local_memory", getLangOpts());
+              "__cl_clang_local_memory_all_scopes", getLangOpts());
       if (AllowNonKernelLocal) {
         // Direct pass: No further diagnostics needed for this specific case.
       } else if (T.getAddressSpace() == LangAS::opencl_constant ||
