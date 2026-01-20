@@ -11,11 +11,11 @@ float4x4 gMat;
 [numthreads(1, 1, 1)]
 void main() {
   float4x4 A = gMat;
-  float3 v1 = A._11_22_33;
-  float2 v2 = A._m00_m11;
+  float3 v1 = A._12_21_32;
+  float2 v2 = A._m01_m10;
 }
 
 // CHECK: float4x4 gMat;
 // CHECK: float4x4 A = gMat;
-// CHECK: float3 v1 = A._11_22_33;
-// CHECK: float2 v2 = A._m00_m11;
+// CHECK: float3 v1 = A._12_21_32;
+// CHECK: float2 v2 = A._m01_m10;

@@ -1622,7 +1622,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   if (S.getLangOpts().HLSL && BaseType->isConstantMatrixType()) {
     IdentifierInfo *Member = MemberName.getAsIdentifierInfo();
     ExprValueKind VK = BaseExpr.get()->getValueKind();
-    QualType Ret = S.HLSL().CheckMatrixComponent(S, BaseType, VK, OpLoc, Member,
+    QualType Ret = S.HLSL().checkMatrixComponent(S, BaseType, VK, OpLoc, Member,
                                                  MemberLoc);
     if (Ret.isNull())
       return ExprError();

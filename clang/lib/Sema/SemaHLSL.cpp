@@ -5051,14 +5051,14 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   return true;
 }
 
-QualType SemaHLSL::CheckMatrixComponent(Sema &S, QualType baseType,
+QualType SemaHLSL::checkMatrixComponent(Sema &S, QualType baseType,
                                         ExprValueKind &VK, SourceLocation OpLoc,
                                         const IdentifierInfo *CompName,
                                         SourceLocation CompLoc) {
   const auto *MT = baseType->getAs<ConstantMatrixType>();
   StringRef AccessorName = CompName->getName();
   assert(MT &&
-         "CheckMatrixComponent is intended to be used on ConstantMatrixType");
+         "checkMatrixComponent is intended to be used on ConstantMatrixType");
   assert(!AccessorName.empty() && "Matrix Accessor must have a name");
 
   unsigned Rows = MT->getNumRows();
@@ -5073,13 +5073,14 @@ QualType SemaHLSL::CheckMatrixComponent(Sema &S, QualType baseType,
         << SourceRange(CompLoc);
     return QualType();
   }
-  if (AccessorName[0] == '_' && AccessorName[1] == 'm') {
-    IsZeroBasedAccessor = true; // zero-based: 00..33
-    ChunkLen = 4;               // zero-based: "_mRC"
-  } else if (AccessorName[0] == '_')
-    // one-based: 11..44
-    ChunkLen = 3; // one-based: "_RC"
-  else {
+  if (AccessorName[0] == '_') {
+    if (AccessorName[1] == 'm') {
+      IsZeroBasedAccessor = true;
+      ChunkLen = 4; // zero-based: "_mRC"
+    } else {
+      ChunkLen = 3; // one-based: "_RC"
+    }
+  } else {
     const char Expected[] =
         "zero based: \'_mRC\' or one-based: \'_RC\' accessor";
     S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
@@ -5088,25 +5089,19 @@ QualType SemaHLSL::CheckMatrixComponent(Sema &S, QualType baseType,
     return QualType();
   }
 
-  if (IsZeroBasedAccessor && AccessorName.size() < 4) {
-    const char Expected[] = "zero based: \'_mRC\' accessor";
-    S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
-        << CompName->getName() << StringRef(Expected, sizeof(Expected) - 1)
-        << SourceRange(CompLoc);
-    return QualType();
-  }
+  if (AccessorName.size() % ChunkLen != 0) {
+    const llvm::StringRef Expected = IsZeroBasedAccessor
+                                         ? "zero based: '_mRC' accessor"
+                                         : "one-based: '_RC' accessor";
 
-  if (AccessorName.size() < 3) {
-    const char Expected[] = "one-based: \'_RC\' accessor";
     S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
-        << CompName->getName() << StringRef(Expected, sizeof(Expected) - 1)
-        << SourceRange(CompLoc);
+        << CompName->getName() << Expected << SourceRange(CompLoc);
     return QualType();
   }
 
   auto isDigit = [](char c) { return c >= '0' && c <= '9'; };
-  auto isZeroBasedIndex = [](int i) { return i >= 0 && i <= 3; };
-  auto isOneBasedIndex = [](int i) { return i >= 1 && i <= 4; };
+  auto isZeroBasedIndex = [](unsigned i) { return i <= 3; };
+  auto isOneBasedIndex = [](unsigned i) { return i >= 1 && i <= 4; };
 
   bool HasRepeated = false;
   SmallVector<bool, 16> Seen(Rows * Cols, false);

@@ -2297,7 +2297,6 @@ static RawAddress MaybeConvertMatrixAddress(RawAddress Addr,
 }
 
 LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
-  // return EmitUnsupportedLValue(E, "Matrix swizzle");
   LValue Base;
   if (E->getBase()->isGLValue())
     Base = EmitLValue(E->getBase());
@@ -2313,7 +2312,7 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
     Builder.CreateStore(Mat, MatMem);
     Base = MakeAddrLValue(MatMem, Ty, AlignmentSource::Decl);
   }
-  QualType type =
+  QualType ResultType =
       E->getType().withCVRQualifiers(Base.getQuals().getCVRQualifiers());
 
   // Encode the element access list into a vector of unsigned indices.
@@ -2324,7 +2323,7 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
     llvm::Constant *CV =
         llvm::ConstantDataVector::get(getLLVMContext(), Indices);
     return LValue::MakeExtVectorElt(
-        MaybeConvertMatrixAddress(Base.getAddress(), *this), CV, type,
+        MaybeConvertMatrixAddress(Base.getAddress(), *this), CV, ResultType,
         Base.getBaseInfo(), TBAAAccessInfo());
   }
   assert(Base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
@@ -2336,8 +2335,8 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
     CElts.push_back(BaseElts->getAggregateElement(Index));
   llvm::Constant *CV = llvm::ConstantVector::get(CElts);
   return LValue::MakeExtVectorElt(
-      MaybeConvertMatrixAddress(Base.getExtVectorAddress(), *this), CV, type,
-      Base.getBaseInfo(), TBAAAccessInfo());
+      MaybeConvertMatrixAddress(Base.getExtVectorAddress(), *this), CV,
+      ResultType, Base.getBaseInfo(), TBAAAccessInfo());
 }
 
 // Emit a store of a matrix LValue. This may require casting the original

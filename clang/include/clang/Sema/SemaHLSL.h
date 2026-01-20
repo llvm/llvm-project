@@ -215,7 +215,7 @@ public:
   bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
   bool handleInitialization(VarDecl *VDecl, Expr *&Init);
   void deduceAddressSpace(VarDecl *Decl);
-  QualType CheckMatrixComponent(Sema &S, QualType baseType, ExprValueKind &VK,
+  QualType checkMatrixComponent(Sema &S, QualType baseType, ExprValueKind &VK,
                                 SourceLocation OpLoc,
                                 const IdentifierInfo *CompName,
                                 SourceLocation CompLoc);

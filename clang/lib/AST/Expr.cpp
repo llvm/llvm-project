@@ -4479,15 +4479,13 @@ bool MatrixElementExpr::containsDuplicateElements() const {
     IsZeroIndexed = false;
     ChunkLen = 3;
   }
-
-  assert(ChunkLen && "unrecognized matrix swizzle format");
   assert(Comp.size() % ChunkLen == 0 &&
          "matrix swizzle accessor has invalid length");
 
   // Track visited elements using real matrix size.
   SmallVector<bool, 16> Seen(Max, false);
 
-  for (unsigned I = 0, e = Comp.size(); I < e; I += ChunkLen) {
+  for (unsigned I = 0, E = Comp.size(); I < E; I += ChunkLen) {
     unsigned Row = 0, Col = 0;
 
     if (IsZeroIndexed) {
