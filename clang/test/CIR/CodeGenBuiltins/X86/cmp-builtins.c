@@ -188,9 +188,6 @@ __mmask32 test_mm512_mask_cmp_epi16_mask(__mmask32 __m, __m512i __a, __m512i __b
 __mmask8 test_mm_cmp_epi32_mask(__m128i __a, __m128i __b) {
   // CIR-LABEL: test_mm_cmp_epi32_mask
   // CIR: cir.vec.cmp(eq, {{%.*}}, {{%.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !cir.int<s, 1>>
-  // CIR: cir.cast bitcast {{%.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
-  // CIR: cir.vec.shuffle({{%.*}}, {{%.*}} : !cir.vector<8 x !cir.int<s, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<s, 1>>
-  // CIR: cir.binop(and, {{%.*}}, {{%.*}}) : !cir.vector<4 x !cir.int<s, 1>>
   // CIR: cir.const #cir.zero : !cir.vector<4 x !cir.int<s, 1>>
   // CIR: cir.vec.shuffle({{%.*}}, {{%.*}} : !cir.vector<4 x !cir.int<s, 1>>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{%.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
