@@ -2309,7 +2309,7 @@ SDValue SITargetLowering::convertArgType(SelectionDAG &DAG, EVT VT, EVT MemVT,
   if (MemVT.isFloatingPoint()) {
     if (VT.isFloatingPoint()) {
       Val = getFPExtOrFPRound(DAG, Val, SL, VT);
-    }  else {
+    } else {
       assert(!MemVT.isVector());
       EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
       SDValue Cast = DAG.getBitcast(IntVT, Val);
