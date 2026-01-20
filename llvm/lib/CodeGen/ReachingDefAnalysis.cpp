@@ -134,9 +134,9 @@ void ReachingDefInfo::enterBasicBlock(MachineBasicBlock *MBB) {
         // Treat function live-ins as if they were defined just before the first
         // instruction.  Usually, function arguments are set up immediately
         // before the call.
-        if (LiveRegs[static_cast<unsigned>(Unit)] != -1) {
-          LiveRegs[static_cast<unsigned>(Unit)] = -1;
-          MBBReachingDefs.append(MBBNumber, Unit, -1);
+        if (LiveRegs[static_cast<unsigned>(Unit)] != FunctionLiveInMarker) {
+          LiveRegs[static_cast<unsigned>(Unit)] = FunctionLiveInMarker;
+          MBBReachingDefs.append(MBBNumber, Unit, FunctionLiveInMarker);
         }
       }
     }
@@ -293,11 +293,21 @@ void ReachingDefInfo::run(MachineFunction &mf) {
 }
 
 void ReachingDefInfo::print(raw_ostream &OS) {
-  OS << "RDA results for " << MF->getName() << "\n";
+  // Create a map from instruction to numerical ids.
+  // Since a reaching def can come after instruction,
+  // this map needs to be populated first.
   int Num = 0;
   DenseMap<MachineInstr *, int> InstToNumMap;
+  for (MachineBasicBlock &MBB : *MF) {
+    for (MachineInstr &MI : MBB) {
+      InstToNumMap[&MI] = Num;
+      ++Num;
+    }
+  }
+
   SmallPtrSet<MachineInstr *, 2> Defs;
   for (MachineBasicBlock &MBB : *MF) {
+    OS << printMBBReference(MBB) << ":\n";
     for (MachineInstr &MI : MBB) {
       for (MachineOperand &MO : MI.operands()) {
         Register Reg;
@@ -324,9 +334,7 @@ void ReachingDefInfo::print(raw_ostream &OS) {
           OS << Num << " ";
         OS << "}\n";
       }
-      OS << Num << ": " << MI << "\n";
-      InstToNumMap[&MI] = Num;
-      ++Num;
+      OS << InstToNumMap[&MI] << ": " << MI << "\n";
     }
   }
 }
@@ -663,18 +671,18 @@ MachineInstr *ReachingDefInfo::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
   if (Last == MBB->end())
     return nullptr;
 
+  // Check if Last is the definition
   if (Reg.isStack()) {
     int FrameIndex = Reg.stackSlotIndex();
     if (isFIDef(*Last, FrameIndex, TII))
       return &*Last;
+  } else {
+    for (auto &MO : Last->operands())
+      if (isValidRegDefOf(MO, Reg, TRI))
+        return &*Last;
   }
 
   int Def = getReachingDef(&*Last, Reg);
-
-  for (auto &MO : Last->operands())
-    if (isValidRegDefOf(MO, Reg, TRI))
-      return &*Last;
-
   return Def < 0 ? nullptr : getInstFromId(MBB, Def);
 }
 

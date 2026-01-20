@@ -449,7 +449,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI path& assign(string_type&& __s) noexcept {
+  _LIBCPP_HIDE_FROM_ABI path& assign(string_type&& __s) noexcept _LIBCPP_LIFETIMEBOUND {
     __pn_ = std::move(__s);
     return *this;
   }
@@ -460,14 +460,14 @@ public:
   }
 
   template <class _Source>
-  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> assign(const _Source& __src) {
+  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> assign(const _Source& __src) _LIBCPP_LIFETIMEBOUND {
     __pn_.clear();
     _SourceCVT<_Source>::__append_source(__pn_, __src);
     return *this;
   }
 
   template <class _InputIt>
-  _LIBCPP_HIDE_FROM_ABI path& assign(_InputIt __first, _InputIt __last) {
+  _LIBCPP_HIDE_FROM_ABI path& assign(_InputIt __first, _InputIt __last) _LIBCPP_LIFETIMEBOUND {
     typedef typename iterator_traits<_InputIt>::value_type _ItVal;
     __pn_.clear();
     _PathCVT<_ItVal>::__append_range(__pn_, __first, __last);
@@ -501,12 +501,12 @@ public:
   }
 
   template <class _Source>
-  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> append(const _Source& __src) {
+  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> append(const _Source& __src) _LIBCPP_LIFETIMEBOUND {
     return operator/=(path(__src));
   }
 
   template <class _InputIt>
-  _LIBCPP_HIDE_FROM_ABI path& append(_InputIt __first, _InputIt __last) {
+  _LIBCPP_HIDE_FROM_ABI path& append(_InputIt __first, _InputIt __last) _LIBCPP_LIFETIMEBOUND {
     return operator/=(path(__first, __last));
   }
 #  else
@@ -530,7 +530,7 @@ public:
   }
 
   template <class _Source>
-  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> append(const _Source& __src) {
+  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> append(const _Source& __src) _LIBCPP_LIFETIMEBOUND {
     using _Traits             = __is_pathable<_Source>;
     using _CVT                = _PathCVT<_SourceChar<_Source> >;
     bool __source_is_absolute = filesystem::__is_separator(_Traits::__first_or_null(__src));
@@ -543,7 +543,7 @@ public:
   }
 
   template <class _InputIt>
-  _LIBCPP_HIDE_FROM_ABI path& append(_InputIt __first, _InputIt __last) {
+  _LIBCPP_HIDE_FROM_ABI path& append(_InputIt __first, _InputIt __last) _LIBCPP_LIFETIMEBOUND {
     typedef typename iterator_traits<_InputIt>::value_type _ItVal;
     static_assert(__can_convert_char<_ItVal>::value, "Must convertible");
     using _CVT = _PathCVT<_ItVal>;
@@ -594,13 +594,13 @@ public:
   }
 
   template <class _Source>
-  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> concat(const _Source& __x) {
+  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> concat(const _Source& __x) _LIBCPP_LIFETIMEBOUND {
     _SourceCVT<_Source>::__append_source(__pn_, __x);
     return *this;
   }
 
   template <class _InputIt>
-  _LIBCPP_HIDE_FROM_ABI path& concat(_InputIt __first, _InputIt __last) {
+  _LIBCPP_HIDE_FROM_ABI path& concat(_InputIt __first, _InputIt __last) _LIBCPP_LIFETIMEBOUND {
     typedef typename iterator_traits<_InputIt>::value_type _ItVal;
     _PathCVT<_ItVal>::__append_range(__pn_, __first, __last);
     return *this;
@@ -609,26 +609,26 @@ public:
   // modifiers
   _LIBCPP_HIDE_FROM_ABI void clear() noexcept { __pn_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI path& make_preferred() {
+  _LIBCPP_HIDE_FROM_ABI path& make_preferred() _LIBCPP_LIFETIMEBOUND {
 #  if defined(_LIBCPP_WIN32API)
     std::replace(__pn_.begin(), __pn_.end(), L'/', L'\\');
 #  endif
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI path& remove_filename() {
+  _LIBCPP_HIDE_FROM_ABI path& remove_filename() _LIBCPP_LIFETIMEBOUND {
     auto __fname = __filename();
     if (!__fname.empty())
       __pn_.erase(__fname.data() - __pn_.data());
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI path& replace_filename(const path& __replacement) {
+  _LIBCPP_HIDE_FROM_ABI path& replace_filename(const path& __replacement) _LIBCPP_LIFETIMEBOUND {
     remove_filename();
     return (*this /= __replacement);
   }
 
-  path& replace_extension(const path& __replacement = path());
+  path& replace_extension(const path& __replacement = path()) _LIBCPP_LIFETIMEBOUND;
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(const path& __lhs, const path& __rhs) noexcept {
     return __lhs.__compare(__rhs.__pn_) == 0;
@@ -667,9 +667,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI void __reserve(size_t __s) { __pn_.reserve(__s); }
 
   // native format observers
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const string_type& native() const noexcept { return __pn_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const string_type& native() const noexcept _LIBCPP_LIFETIMEBOUND { return __pn_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const value_type* c_str() const noexcept { return __pn_.c_str(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const value_type* c_str() const noexcept _LIBCPP_LIFETIMEBOUND {
+    return __pn_.c_str();
+  }
 
   _LIBCPP_HIDE_FROM_ABI operator string_type() const { return __pn_; }
 

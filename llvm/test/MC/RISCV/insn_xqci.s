@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=riscv32 -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcilia,+experimental-xqcilo,+experimental-xqcibi,+experimental-xqcilb \
+# RUN:     | llvm-objdump --mattr=+xqcilia,+xqcilo,+xqcibi,+xqcilb \
 # RUN:         -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ %s
 

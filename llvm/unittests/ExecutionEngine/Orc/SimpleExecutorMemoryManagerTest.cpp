@@ -19,7 +19,7 @@ using namespace llvm::orc::rt_bootstrap;
 
 namespace {
 
-CWrapperFunctionResult incrementWrapper(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer incrementWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr A) -> Error {

@@ -68,8 +68,10 @@ INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
 // Detect either of the patterns:
 //
 // 1. (medlow pattern):
-//   lui   vreg1, %hi(s)
-//   addi  vreg2, vreg1, %lo(s)
+//   a. lui   vreg1, %hi(s)
+//      addi  vreg2, vreg1, %lo(s)
+//
+//   b.  qc.e.li vreg1, s
 //
 // 2. (medany pattern):
 // .Lpcrel_hi1:
@@ -85,12 +87,13 @@ bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
                                              MachineInstr *&Lo) {
   auto HiOpc = Hi.getOpcode();
   if (HiOpc != RISCV::LUI && HiOpc != RISCV::AUIPC &&
-      HiOpc != RISCV::PseudoMovAddr)
+      HiOpc != RISCV::PseudoMovAddr && HiOpc != RISCV::QC_E_LI)
     return false;
 
   const MachineOperand &HiOp1 = Hi.getOperand(1);
-  unsigned ExpectedFlags =
-      HiOpc == RISCV::AUIPC ? RISCVII::MO_PCREL_HI : RISCVII::MO_HI;
+  unsigned ExpectedFlags = HiOpc == RISCV::AUIPC     ? RISCVII::MO_PCREL_HI
+                           : HiOpc == RISCV::QC_E_LI ? RISCVII::MO_None
+                                                     : RISCVII::MO_HI;
   if (HiOp1.getTargetFlags() != ExpectedFlags)
     return false;
 
@@ -98,9 +101,9 @@ bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
       HiOp1.getOffset() != 0)
     return false;
 
-  if (HiOpc == RISCV::PseudoMovAddr) {
+  if (HiOpc == RISCV::PseudoMovAddr || HiOpc == RISCV::QC_E_LI) {
     // Most of the code should handle it correctly without modification by
-    // setting Lo and Hi both point to PseudoMovAddr
+    // setting Lo and Hi both point to PseudoMovAddr/QC_E_LI
     Lo = &Hi;
   } else {
     Register HiDestReg = Hi.getOperand(0).getReg();
@@ -112,17 +115,19 @@ bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
       return false;
   }
 
-  const MachineOperand &LoOp2 = Lo->getOperand(2);
-  if (HiOpc == RISCV::LUI || HiOpc == RISCV::PseudoMovAddr) {
-    if (LoOp2.getTargetFlags() != RISCVII::MO_LO ||
-        !(LoOp2.isGlobal() || LoOp2.isCPI() || LoOp2.isBlockAddress()) ||
-        LoOp2.getOffset() != 0)
-      return false;
-  } else {
-    assert(HiOpc == RISCV::AUIPC);
-    if (LoOp2.getTargetFlags() != RISCVII::MO_PCREL_LO ||
-        LoOp2.getType() != MachineOperand::MO_MCSymbol)
-      return false;
+  if (HiOpc != RISCV::QC_E_LI) {
+    const MachineOperand &LoOp2 = Lo->getOperand(2);
+    if (HiOpc == RISCV::LUI || HiOpc == RISCV::PseudoMovAddr) {
+      if (LoOp2.getTargetFlags() != RISCVII::MO_LO ||
+          !(LoOp2.isGlobal() || LoOp2.isCPI() || LoOp2.isBlockAddress()) ||
+          LoOp2.getOffset() != 0)
+        return false;
+    } else {
+      assert(HiOpc == RISCV::AUIPC);
+      if (LoOp2.getTargetFlags() != RISCVII::MO_PCREL_LO ||
+          LoOp2.getType() != MachineOperand::MO_MCSymbol)
+        return false;
+    }
   }
 
   if (HiOp1.isGlobal()) {
@@ -160,7 +165,7 @@ bool RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
 
   // Put the offset back in Hi and the Lo
   Hi.getOperand(1).setOffset(Offset);
-  if (HiOpc != RISCV::AUIPC)
+  if (Hi.getOpcode() != RISCV::AUIPC && Hi.getOpcode() != RISCV::QC_E_LI)
     Lo.getOperand(2).setOffset(Offset);
   // Delete the tail instruction.
   Register LoOp0Reg = Lo.getOperand(0).getReg();
@@ -335,21 +340,24 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
     LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr:"
                       << Tail);
     break;
-  case RISCV::ADDI: {
+  case RISCV::ADDI:
+  case RISCV::QC_E_ADDI:
+  case RISCV::QC_E_ADDAI: {
     // Offset is simply an immediate operand.
     int64_t Offset = Tail.getOperand(2).getImm();
-
-    // We might have two ADDIs in a row.
-    Register TailDestReg = Tail.getOperand(0).getReg();
-    if (MRI->hasOneUse(TailDestReg)) {
-      MachineInstr &TailTail = *MRI->use_instr_begin(TailDestReg);
-      if (TailTail.getOpcode() == RISCV::ADDI) {
-        Offset += TailTail.getOperand(2).getImm();
-        LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);
-        if (!foldOffset(Hi, Lo, TailTail, Offset))
-          return false;
-        Tail.eraseFromParent();
-        return true;
+    if (Tail.getOpcode() == RISCV::ADDI) {
+      // We might have two ADDIs in a row.
+      Register TailDestReg = Tail.getOperand(0).getReg();
+      if (MRI->hasOneUse(TailDestReg)) {
+        MachineInstr &TailTail = *MRI->use_instr_begin(TailDestReg);
+        if (TailTail.getOpcode() == RISCV::ADDI) {
+          Offset += TailTail.getOperand(2).getImm();
+          LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);
+          if (!foldOffset(Hi, Lo, TailTail, Offset))
+            return false;
+          Tail.eraseFromParent();
+          return true;
+        }
       }
     }
 
@@ -385,9 +393,12 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   // If all the uses are memory ops with the same offset, we can transform:
   //
   // 1. (medlow pattern):
-  // Hi:   lui vreg1, %hi(foo)          --->  lui vreg1, %hi(foo+8)
-  // Lo:   addi vreg2, vreg1, %lo(foo)  --->  lw vreg3, lo(foo+8)(vreg1)
-  // Tail: lw vreg3, 8(vreg2)
+  //   a. Hi:   lui vreg1, %hi(foo)          --->  lui vreg1, %hi(foo+8)
+  //      Lo:   addi vreg2, vreg1, %lo(foo)  --->  lw vreg3, lo(foo+8)(vreg1)
+  //      Tail: lw vreg3, 8(vreg2)
+  //
+  //   b. Hi:   qc.e.li vreg1, foo           ---> qc.e.li vreg1, foo+8
+  //      Tail: lw vreg2, 8(vreg1)           ---> lw vreg2, 0(vreg1)
   //
   // 2. (medany pattern):
   // Hi: 1:auipc vreg1, %pcrel_hi(s)         ---> auipc vreg1, %pcrel_hi(foo+8)
@@ -505,7 +516,8 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
     return false;
 
   Hi.getOperand(1).setOffset(NewOffset);
-  MachineOperand &ImmOp = Lo.getOperand(2);
+  MachineOperand &ImmOp =
+      Hi.getOpcode() == RISCV::QC_E_LI ? Lo.getOperand(1) : Lo.getOperand(2);
   auto HiOpc = Hi.getOpcode();
   // Expand PseudoMovAddr into LUI
   if (HiOpc == RISCV::PseudoMovAddr) {
@@ -544,8 +556,12 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
         }
       }
     } else {
-      UseMI.removeOperand(2);
-      UseMI.addOperand(ImmOp);
+      if (Hi.getOpcode() == RISCV::QC_E_LI) {
+        UseMI.getOperand(2).ChangeToImmediate(0);
+      } else {
+        UseMI.removeOperand(2);
+        UseMI.addOperand(ImmOp);
+      }
     }
   }
 
