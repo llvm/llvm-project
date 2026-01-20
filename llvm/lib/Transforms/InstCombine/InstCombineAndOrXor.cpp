@@ -4941,11 +4941,11 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
   if (IsBinaryOp) {
     NewLogicOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
   } else {
-    SelectInst *SI = cast<SelectInst>(
+    NewLogicOp =
         Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not",
-                                ProfcheckDisableMetadataFixes ? nullptr : &I));
-    SI->swapProfMetadata();
-    NewLogicOp = SI;
+                                ProfcheckDisableMetadataFixes ? nullptr : &I);
+    if (SelectInst *SI = dyn_cast<SelectInst>(NewLogicOp))
+      SI->swapProfMetadata();
   }
 
   replaceInstUsesWith(I, NewLogicOp);
