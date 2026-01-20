@@ -1492,3 +1492,64 @@ const std::string& test_return() {
   return x; // expected-note {{later used here}}
 }
 } // namespace reference_type_decl_ref_expr
+
+namespace field_access {
+
+struct S {
+  std::string s;
+  std::string_view sv;
+};
+
+void uaf() {
+  std::string_view view;
+  {
+    S str;
+    S* p = &str;  // expected-warning {{object whose reference is captured does not live long enough}}
+    view = p->s;
+  } // expected-note {{destroyed here}}
+  (void)view;  // expected-note {{later used here}}
+}
+
+void not_uaf() {
+  std::string_view view;
+  {
+    S str;
+    S* p = &str;
+    view = p->sv;
+  }
+  (void)view;
+}
+
+union U {
+  std::string s;
+  std::string_view sv;
+  ~U() {}
+};
+
+void uaf_union() {
+  std::string_view view;
+  {
+    U u = U{"hello"};
+    U* up = &u;  // expected-warning {{object whose reference is captured does not live long enough}}
+    view = up->s;
+  } // expected-note {{destroyed here}}
+  (void)view;  // expected-note {{later used here}}
+}
+
+struct AnonymousUnion {
+union {
+  int x;
+  float y;
+};
+};
+
+void uaf_anonymous_union() {
+  int* ip;
+  {
+    AnonymousUnion au;
+    AnonymousUnion* up = &au;  // expected-warning {{object whose reference is captured does not live long enough}}
+    ip = &up->x;
+  } // expected-note {{destroyed here}}
+  (void)ip;  // expected-note {{later used here}}
+}
+} // namespace field_access
