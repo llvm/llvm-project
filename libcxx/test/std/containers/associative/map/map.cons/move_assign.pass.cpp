@@ -103,8 +103,8 @@ bool test() {
 int main(int, char**) {
   test();
 #if TEST_STD_VER >= 26
-// FIXME: Within __tree, it is not allowed to move from a `const MoveOnly` which prevents this from executing during constant evaluation
-//  static_assert(test());
+  // FIXME: Within __tree, it is not allowed to move from a `const MoveOnly` which prevents this from executing during constant evaluation
+  static_assert(test());
 #endif
   return 0;
 }
