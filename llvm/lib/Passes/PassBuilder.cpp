@@ -247,6 +247,7 @@
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
+#include "llvm/Transforms/Instrumentation/LowFatSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
@@ -974,6 +975,16 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
               .str(),
           inconvertibleErrorCode());
     }
+  }
+  return Result;
+}
+
+Expected<LowFatSanitizerOptions> parseLowFatPassOptions(StringRef Params) {
+  LowFatSanitizerOptions Result;
+  if (!Params.empty()) {
+    return make_error<StringError>(
+        formatv("invalid LowFatSanitizer pass parameter '{}'", Params).str(),
+        inconvertibleErrorCode());
   }
   return Result;
 }

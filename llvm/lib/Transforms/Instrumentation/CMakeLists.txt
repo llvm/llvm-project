@@ -14,6 +14,7 @@ add_llvm_component_library(LLVMInstrumentation
   IndirectCallPromotion.cpp
   InstrProfiling.cpp
   KCFI.cpp
+  LowFatSanitizer.cpp
   LowerAllowCheckPass.cpp
   PGOCtxProfFlattening.cpp
   PGOCtxProfLowering.cpp
