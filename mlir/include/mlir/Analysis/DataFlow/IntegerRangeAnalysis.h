@@ -68,6 +68,7 @@ public:
   /// known bounds.
   void
   visitNonControlFlowArguments(Operation *op, const RegionSuccessor &successor,
+                               ValueRange successorInputs,
                                ArrayRef<IntegerValueRangeLattice *> argLattices,
                                unsigned firstIndex) override;
 };

@@ -111,6 +111,8 @@ STATISTIC(NumImportantContextIds, "Number of important context ids");
 STATISTIC(NumFixupEdgeIdsInserted, "Number of fixup edge ids inserted");
 STATISTIC(NumFixupEdgesAdded, "Number of fixup edges added");
 STATISTIC(NumFixedContexts, "Number of contexts with fixed edges");
+STATISTIC(AliaseesPrevailingInDiffModuleFromAlias,
+          "Number of aliasees prevailing in a different module than its alias");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -1083,6 +1085,7 @@ private:
                            unsigned CloneNo);
   std::string getLabel(const FunctionSummary *Func, const IndexCall &Call,
                        unsigned CloneNo) const;
+  DenseSet<GlobalValue::GUID> findAliaseeGUIDsPrevailingInDifferentModule();
 
   // Saves mapping from function summaries containing memprof records back to
   // its VI, for use in checking and debugging.
@@ -2467,17 +2470,61 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
       Call.call()->setMetadata(LLVMContext::MD_callsite, nullptr);
 }
 
+// Finds the set of GUIDs for weak aliasees that are prevailing in different
+// modules than any of their aliases. We need to handle these specially.
+DenseSet<GlobalValue::GUID>
+IndexCallsiteContextGraph::findAliaseeGUIDsPrevailingInDifferentModule() {
+  DenseSet<GlobalValue::GUID> AliaseeGUIDs;
+  for (auto &I : Index) {
+    auto VI = Index.getValueInfo(I);
+    for (auto &S : VI.getSummaryList()) {
+      // We only care about aliases to functions.
+      auto *AS = dyn_cast<AliasSummary>(S.get());
+      if (!AS)
+        continue;
+      auto *AliaseeSummary = &AS->getAliasee();
+      auto *AliaseeFS = dyn_cast<FunctionSummary>(AliaseeSummary);
+      if (!AliaseeFS)
+        continue;
+      // Skip this summary if it is not for the prevailing symbol for this GUID.
+      // The linker doesn't resolve local linkage values so don't check whether
+      // those are prevailing.
+      if (!GlobalValue::isLocalLinkage(S->linkage()) &&
+          !isPrevailing(VI.getGUID(), S.get()))
+        continue;
+      // Prevailing aliasee could be in a different module only if it is weak.
+      if (!GlobalValue::isWeakForLinker(AliaseeSummary->linkage()))
+        continue;
+      auto AliaseeGUID = AS->getAliaseeGUID();
+      // If the aliasee copy in this module is not prevailing, record it.
+      if (!isPrevailing(AliaseeGUID, AliaseeSummary))
+        AliaseeGUIDs.insert(AliaseeGUID);
+    }
+  }
+  AliaseesPrevailingInDiffModuleFromAlias += AliaseeGUIDs.size();
+  return AliaseeGUIDs;
+}
+
 IndexCallsiteContextGraph::IndexCallsiteContextGraph(
     ModuleSummaryIndex &Index,
     llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing)
     : Index(Index), isPrevailing(isPrevailing) {
+  // Since we use the aliasee summary info to create the necessary clones for
+  // its aliases, conservatively skip recording the aliasee function's callsites
+  // in the CCG for any that are prevailing in a different module than one of
+  // its aliases. We could record the necessary information to do this in the
+  // summary, but this case should not be common.
+  DenseSet<GlobalValue::GUID> GUIDsToSkip =
+      findAliaseeGUIDsPrevailingInDifferentModule();
   // Map for keeping track of the largest cold contexts up to the number given
   // by MemProfTopNImportant. Must be a std::map (not DenseMap) because keys
   // must be sorted.
   std::map<uint64_t, uint32_t> TotalSizeToContextIdTopNCold;
   for (auto &I : Index) {
     auto VI = Index.getValueInfo(I);
+    if (GUIDsToSkip.contains(VI.getGUID()))
+      continue;
     for (auto &S : VI.getSummaryList()) {
       // We should only add the prevailing nodes. Otherwise we may try to clone
       // in a weak copy that won't be linked (and may be different than the
@@ -3240,13 +3287,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
        << ")\n";
   if (!Clones.empty()) {
     OS << "\tClones: ";
-    bool First = true;
-    for (auto *C : Clones) {
-      if (!First)
-        OS << ", ";
-      First = false;
-      OS << C << " NodeId: " << C->NodeId;
-    }
+    ListSeparator LS;
+    for (auto *C : Clones)
+      OS << LS << C << " NodeId: " << C->NodeId;
     OS << "\n";
   } else if (CloneOf) {
     OS << "\tClone of " << CloneOf << " NodeId: " << CloneOf->NodeId << "\n";

@@ -13,6 +13,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
+#include "mlir/IR/Builders.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include "clang/AST/Expr.h"
@@ -130,8 +131,12 @@ public:
                      Expr *exprToVisit, ArrayRef<Expr *> args,
                      Expr *arrayFiller);
 
+  void emitFinalDestCopy(QualType type, RValue src);
+
   /// Perform the final copy to DestPtr, if desired.
-  void emitFinalDestCopy(QualType type, const LValue &src);
+  void emitFinalDestCopy(QualType type, const LValue &src,
+                         CIRGenFunction::ExprValueKind srcValueKind =
+                             CIRGenFunction::EVK_NonRValue);
 
   void emitCopy(QualType type, const AggValueSlot &dest,
                 const AggValueSlot &src);
@@ -397,7 +402,8 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXThrowExpr");
   }
   void VisitAtomicExpr(AtomicExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitAtomicExpr");
+    RValue result = cgf.emitAtomicExpr(e);
+    emitFinalDestCopy(e->getType(), result);
   }
 };
 
@@ -587,14 +593,33 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   }
 }
 
+/// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
+void AggExprEmitter::emitFinalDestCopy(QualType type, RValue src) {
+  assert(src.isAggregate() && "value must be aggregate value!");
+  LValue srcLV = cgf.makeAddrLValue(src.getAggregateAddress(), type);
+  emitFinalDestCopy(type, srcLV, CIRGenFunction::EVK_RValue);
+}
+
 /// Perform the final copy to destPtr, if desired.
-void AggExprEmitter::emitFinalDestCopy(QualType type, const LValue &src) {
+void AggExprEmitter::emitFinalDestCopy(
+    QualType type, const LValue &src,
+    CIRGenFunction::ExprValueKind srcValueKind) {
   // If dest is ignored, then we're evaluating an aggregate expression
   // in a context that doesn't care about the result.  Note that loads
   // from volatile l-values force the existence of a non-ignored
   // destination.
   if (dest.isIgnored())
     return;
+
+  if (srcValueKind == CIRGenFunction::EVK_RValue) {
+    if (type.isNonTrivialToPrimitiveDestructiveMove() == QualType::PCK_Struct) {
+      cgf.cgm.errorNYI("emitFinalDestCopy: EVK_RValue & PCK_Struct");
+    }
+  } else {
+    if (type.isNonTrivialToPrimitiveCopy() == QualType::PCK_Struct) {
+      cgf.cgm.errorNYI("emitFinalDestCopy: !EVK_RValue & PCK_Struct");
+    }
+  }
 
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
   assert(!cir::MissingFeatures::aggEmitFinalDestCopyRValue());
@@ -737,7 +762,28 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
 
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
   CIRGenFunction::RunCleanupsScope cleanups(cgf);
-  Visit(e->getSubExpr());
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
+  mlir::OpBuilder::InsertPoint scopeBegin;
+
+  // Explicitly introduce a scope for cleanup expressions, even though this
+  // overlaps with the RunCleanupsScope above.
+  //
+  // CIR does not yet model cleanup scopes explicitly, so a lexical scope is
+  // used as a temporary approximation. This is expected to be revisited once
+  // cleanup handling is redesigned.
+  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
+                       [&](mlir::OpBuilder &b, mlir::Location loc) {
+                         scopeBegin = b.saveInsertionPoint();
+                       });
+
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.restoreInsertionPoint(scopeBegin);
+    CIRGenFunction::LexicalScope lexScope{cgf, scopeLoc,
+                                          builder.getInsertionBlock()};
+    Visit(e->getSubExpr());
+  }
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {

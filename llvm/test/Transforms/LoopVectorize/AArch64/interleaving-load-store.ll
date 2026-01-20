@@ -227,8 +227,8 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-4-VLA-NEXT:    br i1 [[MIN_ITERS_CHECK3]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE-4-VLA:       vector.ph:
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-4-VLA-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP6]], 16
-; INTERLEAVE-4-VLA-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP10]], 4
+; INTERLEAVE-4-VLA-NEXT:    [[TMP10:%.*]] = shl nuw i64 [[TMP6]], 4
+; INTERLEAVE-4-VLA-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP10]], 2
 ; INTERLEAVE-4-VLA-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP7]]
 ; INTERLEAVE-4-VLA-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; INTERLEAVE-4-VLA-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
@@ -239,7 +239,7 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-4-VLA:       vector.body:
 ; INTERLEAVE-4-VLA-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP13:%.*]] = mul nuw nsw i64 [[TMP10]], 2
+; INTERLEAVE-4-VLA-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[TMP10]], 1
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP16:%.*]] = mul nuw nsw i64 [[TMP10]], 3
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 [[TMP10]]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 [[TMP13]]

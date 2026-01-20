@@ -124,10 +124,6 @@ if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")
 endif()
 
 if(CMAKE_HOST_APPLE)
-  if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_FRAMEWORK_DIR ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework)
-  endif()
-
   if(LLDB_USE_SYSTEM_DEBUGSERVER)
     lldb_find_system_debugserver(system_debugserver_path)
     if(LLDB_BUILD_FRAMEWORK)
