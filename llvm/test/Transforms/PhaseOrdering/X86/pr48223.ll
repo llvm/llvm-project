@@ -14,16 +14,12 @@ define { i64, i64 } @compute_min(ptr noundef nonnull align 2 dereferenceable(16)
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[Y]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[X]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw <4 x i64> [[TMP3]], <i64 0, i64 16, i64 32, i64 48>
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP4]])
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP2]] to i64
 ; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i16>, ptr [[PT0_4]], align 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i16>, ptr [[PT1_4]], align 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = tail call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP6]], <4 x i16> [[TMP7]])
-; CHECK-NEXT:    [[TMP9:%.*]] = zext <4 x i16> [[TMP8]] to <4 x i64>
-; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw <4 x i64> [[TMP9]], <i64 0, i64 16, i64 32, i64 48>
-; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP10]])
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x i16> [[TMP8]] to i64
 ; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { i64, i64 } [[DOTFCA_0_INSERT]], i64 [[TMP11]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[DOTFCA_1_INSERT]]
 ;
