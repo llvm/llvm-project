@@ -15162,7 +15162,7 @@ every element in the array with a single structured.gep:
     store i32 12, ptr %ptr
 
 This is, however, dependent on context that codegen has an insight on. The
-fact that `%T` and `%S` are equivalent depends on the target & frontend.
+fact that `%T` and `%S` are equivalent depends on the target.
 
 
 .. _int_get_dynamic_area_offset:
