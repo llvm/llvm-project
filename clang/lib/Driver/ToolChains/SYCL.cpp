@@ -15,15 +15,20 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-SYCLInstallationDetector::SYCLInstallationDetector(const Driver &D)
-    : D(D), InstallationCandidates() {
-  InstallationCandidates.emplace_back(D.Dir + "/..");
-}
-
 SYCLInstallationDetector::SYCLInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
     const llvm::opt::ArgList &Args)
-    : SYCLInstallationDetector(D) {}
+    : D(D) {
+  // Detect the presence of the SYCL runtime library (libsycl.so) in the
+  // filesystem. This is used to determine whether a usable SYCL installation
+  // is available for the current driver invocation.
+  StringRef SysRoot = D.SysRoot;
+  if (StringRef(D.Dir).starts_with(SysRoot) &&
+      (Args.hasArg(options::OPT_fsycl) ||
+       D.getVFS().exists(D.Dir + "/../lib/libsycl.so"))) {
+    SYCLRTLibPath = D.Dir + "/../lib";
+  }
+}
 
 void SYCLInstallationDetector::addSYCLIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {

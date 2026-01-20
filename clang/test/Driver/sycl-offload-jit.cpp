@@ -29,13 +29,13 @@
 // CHK-DEVICE-TRIPLE-SAME: "-O2"
 // CHK-DEVICE-TRIPLE: llvm-offload-binary{{.*}} "--image=file={{.*}}.bc,triple=spirv64-unknown-unknown,arch=generic,kind=sycl"
 
-// Check if -lsycl is passed to clang-linker-wrapper tool by default for SYCL compilation.
+// Check if path to libsycl.so is passed to clang-linker-wrapper tool by default for SYCL compilation.
 // The test also checks if SYCL header include paths are added to the SYCL host and device compilation.
 // RUN: %clang -### -fsycl %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHECK-LSYCL,CHECK-SYCL-HEADERS-HOST,CHECK-SYCL-HEADERS-DEVICE %s
 // CHECK-SYCL-HEADERS-DEVICE: "-fsycl-is-device"{{.*}} "-internal-isystem" "{{.*}}bin/../include"
 // CHECK-SYCL-HEADERS-HOST: "-fsycl-is-host"{{.*}} "-internal-isystem" "{{.*}}bin/../include"
-// CHECK-LSYCL: clang-linker-wrapper{{.*}} "-L{{.*}}bin/../lib"{{.*}} "-lsycl"
+// CHECK-LSYCL: clang-linker-wrapper{{.*}} "{{.*}}bin/../lib/libsycl.so"
 
 /// Check -fsycl-is-device is passed when compiling for the device.
 /// Check -fsycl-is-host is passed when compiling for host.
