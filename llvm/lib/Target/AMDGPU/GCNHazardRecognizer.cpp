@@ -14,13 +14,22 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "gcn-hazard-recognizer"
+
+STATISTIC(NumWMMANopsHoisted,
+          "Number of WMMA hazard V_NOPs hoisted from loops");
+STATISTIC(NumWMMAHoistingBailed,
+          "Number of WMMA hazards where V_NOP hoisting was not possible");
 
 namespace {
 
@@ -49,6 +58,10 @@ static cl::opt<unsigned, false, MFMAPaddingRatioParser>
 static cl::opt<unsigned>
     NopPadding("amdgpu-snop-padding", cl::init(0), cl::Hidden,
                cl::desc("Insert a s_nop x before every instruction"));
+
+static cl::opt<bool> EnableWMMAVnopHoisting(
+    "amdgpu-wmma-vnop-hoisting", cl::init(true), cl::Hidden,
+    cl::desc("Hoist WMMA hazard V_NOPs from loops to preheaders"));
 
 //===----------------------------------------------------------------------===//
 // Hazard Recognizer Implementation
@@ -1288,7 +1301,7 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixVALUTransUseHazard(MI);
   fixVALUTransCoexecutionHazards(MI);
   fixWMMAHazards(MI); // fall-through if co-execution is enabled.
-  emitVNops(MI, checkWMMACoexecutionHazards(MI));
+  fixWMMACoexecutionHazards(MI);
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
   fixRequiredExportPriority(MI);
@@ -2084,8 +2097,6 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) {
   if (!TII->isXDLWMMA(*MI) && !isCoexecutableVALUInst(*MI))
     return 0;
 
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
-
   // WaitStates here is the number of V_NOPs or unrelated VALU instructions must
   // be in between the first WMMA and the second instruction to cover the hazard
   // (WMMAWaitStates if the second is also a WMMA, VALUWaitStates if the second
@@ -2095,7 +2106,7 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) {
   const int VALUWaitStates[] = {4, 8, 2, 4};
   unsigned Category = 0;
 
-  auto IsWMMAHazardFn = [MI, TII, TRI, &Category, this](const MachineInstr &I) {
+  auto IsWMMAHazardFn = [MI, TII, &Category, this](const MachineInstr &I) {
     if (!TII->isXDLWMMA(I))
       return false;
 
@@ -2103,24 +2114,10 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) {
     if (!IsWMMAHazardInstInCategory(I, TII, Latency, Category))
       return false;
 
-    Register D0 = TII->getNamedOperand(I, AMDGPU::OpName::vdst)->getReg();
-    Register A1 = TII->getNamedOperand(*MI, AMDGPU::OpName::src0)->getReg();
-    Register B1 = TII->getNamedOperand(*MI, AMDGPU::OpName::src1)->getReg();
-
-    // WMMA0 wrires (D0), WMMA1 reads (A1/B1/Idx1).
-    if (TRI->regsOverlap(D0, A1) || TRI->regsOverlap(D0, B1))
-      return true;
-
-    if (SIInstrInfo::isSWMMAC(*MI)) {
-      Register Idx1 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2)->getReg();
-      if (TRI->regsOverlap(D0, Idx1))
-        return true;
-    }
-
-    return false;
+    return hasWMMAToWMMARegOverlap(I, *MI);
   };
 
-  auto IsVALUHazardFn = [MI, TII, TRI, &Category, this](const MachineInstr &I) {
+  auto IsVALUHazardFn = [MI, TII, &Category, this](const MachineInstr &I) {
     if (!TII->isXDLWMMA(I))
       return false;
 
@@ -2128,35 +2125,7 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) {
     if (!IsWMMAHazardInstInCategory(I, TII, Latency, Category))
       return false;
 
-    // WMMA writes, VALU reads.
-    Register D0 = TII->getNamedOperand(I, AMDGPU::OpName::vdst)->getReg();
-    for (const MachineOperand &ValuUse : MI->explicit_uses()) {
-      if (ValuUse.isReg() && TRI->regsOverlap(D0, ValuUse.getReg()))
-        return true;
-    }
-
-    auto *ValuDst = TII->getNamedOperand(*MI, AMDGPU::OpName::vdst);
-    if (!ValuDst || !ValuDst->isReg())
-      return false;
-    Register D1 = ValuDst->getReg();
-
-    // WMMA writes, VALU writes.
-    if (TRI->regsOverlap(D0, D1))
-      return true;
-
-    // WMMA reads, VALU writes.
-    Register A0 = TII->getNamedOperand(I, AMDGPU::OpName::src0)->getReg();
-    Register B0 = TII->getNamedOperand(I, AMDGPU::OpName::src1)->getReg();
-    if (TRI->regsOverlap(A0, D1) || TRI->regsOverlap(B0, D1))
-      return true;
-
-    if (SIInstrInfo::isSWMMAC(I)) {
-      Register Idx0 = TII->getNamedOperand(I, AMDGPU::OpName::src2)->getReg();
-      if (TRI->regsOverlap(D1, Idx0))
-        return true;
-    }
-
-    return false;
+    return hasWMMAToVALURegOverlap(I, *MI);
   };
 
   int Limit = 0;
@@ -2189,6 +2158,161 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) {
   }
 
   return WaitStatesNeeded;
+}
+
+void GCNHazardRecognizer::insertVnopsBeforeTerminator(MachineBasicBlock *MBB,
+                                                      int Count) {
+  MachineBasicBlock::iterator InsertPt = MBB->getFirstTerminator();
+  const DebugLoc &DL =
+      InsertPt != MBB->end() ? InsertPt->getDebugLoc() : DebugLoc();
+
+  for (int i = 0; i < Count; ++i) {
+    BuildMI(*MBB, InsertPt, DL, TII.get(AMDGPU::V_NOP_e32));
+  }
+}
+
+bool GCNHazardRecognizer::hasWMMAToWMMARegOverlap(
+    const MachineInstr &WMMA, const MachineInstr &MI) const {
+  Register D0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::vdst)->getReg();
+  Register A1 = TII.getNamedOperand(MI, AMDGPU::OpName::src0)->getReg();
+  Register B1 = TII.getNamedOperand(MI, AMDGPU::OpName::src1)->getReg();
+
+  // WMMA0 writes (D0), WMMA1 reads (A1/B1/Idx1).
+  if (TRI.regsOverlap(D0, A1) || TRI.regsOverlap(D0, B1))
+    return true;
+
+  if (SIInstrInfo::isSWMMAC(MI)) {
+    Register Idx1 = TII.getNamedOperand(MI, AMDGPU::OpName::src2)->getReg();
+    if (TRI.regsOverlap(D0, Idx1))
+      return true;
+  }
+  return false;
+}
+
+bool GCNHazardRecognizer::hasWMMAToVALURegOverlap(
+    const MachineInstr &WMMA, const MachineInstr &MI) const {
+  // WMMA writes, VALU reads.
+  Register D0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::vdst)->getReg();
+  for (const MachineOperand &ValuUse : MI.explicit_uses()) {
+    if (ValuUse.isReg() && TRI.regsOverlap(D0, ValuUse.getReg()))
+      return true;
+  }
+
+  auto *ValuDst = TII.getNamedOperand(MI, AMDGPU::OpName::vdst);
+  if (!ValuDst || !ValuDst->isReg())
+    return false;
+  Register D1 = ValuDst->getReg();
+
+  // WMMA writes, VALU writes.
+  if (TRI.regsOverlap(D0, D1))
+    return true;
+
+  // WMMA reads, VALU writes.
+  Register A0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src0)->getReg();
+  Register B0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src1)->getReg();
+  if (TRI.regsOverlap(A0, D1) || TRI.regsOverlap(B0, D1))
+    return true;
+
+  if (SIInstrInfo::isSWMMAC(WMMA)) {
+    Register Idx0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src2)->getReg();
+    if (TRI.regsOverlap(D1, Idx0))
+      return true;
+  }
+  return false;
+}
+
+bool GCNHazardRecognizer::isCoexecutionHazardFor(const MachineInstr &I,
+                                                 const MachineInstr &MI) const {
+  if (!TII.isXDLWMMA(I))
+    return false;
+
+  // Dispatch based on MI type
+  if (TII.isXDLWMMA(MI))
+    return hasWMMAToWMMARegOverlap(I, MI);
+  else if (isCoexecutableVALUInst(MI))
+    return hasWMMAToVALURegOverlap(I, MI);
+
+  return false;
+}
+
+bool GCNHazardRecognizer::hasWMMAHazardInLoop(MachineLoop *L, MachineInstr *MI,
+                                              bool IncludeSubloops) {
+  // Scan loop for any WMMA that hazards MI.
+  // TODO: Avoid full loop scan when WMMA is beyond VALU distance.
+  for (MachineBasicBlock *MBB : L->getBlocks()) {
+    if (!IncludeSubloops && MLI->getLoopFor(MBB) != L)
+      continue;
+    for (MachineInstr &I : *MBB) {
+      if (&I == MI)
+        continue;
+      if (isCoexecutionHazardFor(I, *MI))
+        return true;
+    }
+  }
+  return false;
+}
+
+void GCNHazardRecognizer::ensureLoopInfoAvailable() {
+  // Lazily compute MDT and MLI only when needed
+  if (MLI)
+    return;
+
+  OwnedMDT =
+      std::make_unique<MachineDominatorTree>(const_cast<MachineFunction &>(MF));
+  OwnedMLI = std::make_unique<MachineLoopInfo>();
+  OwnedMLI->analyze(*OwnedMDT);
+
+  MLI = OwnedMLI.get();
+}
+
+bool GCNHazardRecognizer::tryHoistWMMAVnopsFromLoop(MachineInstr *MI,
+                                                    int WaitStatesNeeded) {
+  ensureLoopInfoAvailable();
+
+  MachineLoop *L = MLI->getLoopFor(MI->getParent());
+  if (!L) {
+    ++NumWMMAHoistingBailed;
+    return false;
+  }
+
+  // If innermost loop has WMMA hazard, we can't hoist at all
+  if (hasWMMAHazardInLoop(L, MI)) {
+    ++NumWMMAHoistingBailed;
+    return false;
+  }
+
+  // Find outermost loop with no internal hazard
+  MachineLoop *TargetLoop = L;
+  while (MachineLoop *Parent = TargetLoop->getParentLoop()) {
+    if (hasWMMAHazardInLoop(Parent, MI, false))
+      break;             // Parent has hazard in its own blocks, stop here
+    TargetLoop = Parent; // Safe to hoist further out
+  }
+
+  // Need valid preheader to insert V_NOPs
+  MachineBasicBlock *Preheader = TargetLoop->getLoopPreheader();
+  if (!Preheader) {
+    ++NumWMMAHoistingBailed;
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "WMMA V_NOP Hoisting: Moving " << WaitStatesNeeded
+                    << " V_NOPs from loop to " << Preheader->getName() << "\n");
+
+  insertVnopsBeforeTerminator(Preheader, WaitStatesNeeded);
+  NumWMMANopsHoisted += WaitStatesNeeded;
+  return true;
+}
+
+bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
+  int WaitStatesNeeded = checkWMMACoexecutionHazards(MI);
+  if (WaitStatesNeeded <= 0)
+    return false;
+
+  if (EnableWMMAVnopHoisting && tryHoistWMMAVnopsFromLoop(MI, WaitStatesNeeded))
+    return true;
+
+  return emitVNops(MI, WaitStatesNeeded);
 }
 
 bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {

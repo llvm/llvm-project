@@ -15,9 +15,12 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include <list>
+#include <memory>
 
 namespace llvm {
 
@@ -49,6 +52,12 @@ private:
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   const TargetSchedModel &TSchedModel;
+
+  // Loop info for V_NOP hoisting, computed on demand only when needed.
+  std::unique_ptr<MachineDominatorTree> OwnedMDT;
+  std::unique_ptr<MachineLoopInfo> OwnedMLI;
+  MachineLoopInfo *MLI = nullptr;
+
   bool RunLdsBranchVmemWARHazardFixup;
 
   /// RegUnits of uses in the current soft memory clause.
@@ -114,6 +123,18 @@ private:
   bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
   bool fixWMMAHazards(MachineInstr *MI);
   int checkWMMACoexecutionHazards(MachineInstr *MI);
+  bool fixWMMACoexecutionHazards(MachineInstr *MI);
+  void ensureLoopInfoAvailable();
+  bool tryHoistWMMAVnopsFromLoop(MachineInstr *MI, int WaitStatesNeeded);
+  bool hasWMMAHazardInLoop(MachineLoop *L, MachineInstr *MI,
+                           bool IncludeSubloops = true);
+  bool hasWMMAToWMMARegOverlap(const MachineInstr &WMMA,
+                               const MachineInstr &MI) const;
+  bool hasWMMAToVALURegOverlap(const MachineInstr &WMMA,
+                               const MachineInstr &MI) const;
+  bool isCoexecutionHazardFor(const MachineInstr &I,
+                              const MachineInstr &MI) const;
+  void insertVnopsBeforeTerminator(MachineBasicBlock *MBB, int Count);
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
