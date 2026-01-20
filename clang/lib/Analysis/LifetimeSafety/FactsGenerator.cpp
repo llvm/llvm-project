@@ -203,6 +203,21 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   }
 }
 
+void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
+  if (isa<FieldDecl>(ME->getMemberDecl())) {
+    assert(ME->isGLValue() && "Field member should be GL value");
+    OriginList *Dst = getOriginsList(*ME);
+    assert(Dst && "Field member should have an origin list as it is GL value");
+    OriginList *Src = getOriginsList(*ME->getBase());
+    assert(Src && "Base expression should be a pointer/reference type");
+    // The field's glvalue (outermost origin) holds the same loans as the base
+    // expression.
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        Dst->getOuterOriginID(), Src->getOuterOriginID(),
+        /*Kill=*/true));
+  }
+}
+
 static bool isStdMove(const FunctionDecl *FD) {
   return FD && FD->isInStdNamespace() && FD->getIdentifier() &&
          FD->getName() == "move";
