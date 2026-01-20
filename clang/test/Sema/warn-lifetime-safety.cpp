@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wexperimental-lifetime-safety -Wno-dangling -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -949,7 +950,7 @@ View lifetimebound_return_by_value_param_template(T t) {
                       // expected-note@-1 {{returned here}}
 }
 void use_lifetimebound_return_by_value_param_template() { 
-  lifetimebound_return_by_value_param_template(MyObj{}); // expected-note {{in instantiation of}}
+  lifetimebound_return_by_value_param_template(MyObj{}); // function-note {{in instantiation of}}
 }
 
 void lambda_uar_param() {
