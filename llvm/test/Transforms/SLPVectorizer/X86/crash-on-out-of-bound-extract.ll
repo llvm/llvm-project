@@ -1,0 +1,25 @@
+; RUN: opt -passes=slp-vectorizer -S < %s | FileCheck %s
+
+define <4 x i32> @test(<4 x i32> %A){
+; CHECK-LABEL: @test(
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   [[TMP0:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 1>
+; CHECK-NEXT:   [[TMP1:%.*]] = sdiv <4 x i32> [[A]], [[TMP0]]
+; CHECK-NEXT:   ret <4 x i32> [[TMP1]]
+;
+entry:
+    %e0 = extractelement <4 x i32> %A, i64 0
+    %e1 = extractelement <4 x i32> %A, i64 1
+    %e2 = extractelement <4 x i32> %A, i64 2
+    %e3 = extractelement <4 x i32> %A, i64 3
+    %oob = extractelement <4 x i32> %A, i64 4
+    %d0 = sdiv i32 %e0, %e0
+    %d1 = sdiv i32 %oob, %e1
+    %d2 = sdiv i32 %e2, %e3
+    %d3 = sdiv i32 %oob, %e1
+    %v0 = insertelement <4 x i32> poison, i32 %d0, i64 0
+    %v1 = insertelement <4 x i32> %v0, i32 %d1, i64 1
+    %v2 = insertelement <4 x i32> %v1, i32 %d1, i64 2
+    %v3 = insertelement <4 x i32> %v2, i32 %d1, i64 3
+    ret <4 x i32> %v3
+}
