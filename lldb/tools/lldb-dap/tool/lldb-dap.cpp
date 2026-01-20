@@ -194,35 +194,46 @@ struct FDGroup {
   bool write = false;
 };
 
+static llvm::Error RedirectToFile(llvm::StringRef file, int fd) {
+  int flags = fd == STDIN_FILENO ? O_RDONLY : O_CREAT | O_WRONLY | O_TRUNC;
+  flags |= O_NOCTTY;
+  int target_fd = lldb_private::FileSystem::Instance().Open(file.str().c_str(),
+                                                            flags, 0666);
+  if (target_fd == -1)
+    return llvm::createStringError(
+        std::error_code(errno, std::generic_category()),
+        llvm::formatv("failed to open file '{0}'", file));
+  if (target_fd != fd) {
+    if (::dup2(target_fd, fd) == -1) {
+      int saved_errno = errno;
+      ::close(target_fd);
+      return llvm::createStringError(
+          std::error_code(saved_errno, std::generic_category()),
+          llvm::formatv("failed to redirect to '{0}'", file));
+    }
+    ::close(target_fd);
+  }
+  return llvm::Error::success();
+}
+
 static llvm::Error SetupIORedirection(llvm::StringRef stdin_path,
                                       llvm::StringRef stdout_path,
                                       llvm::StringRef stderr_path) {
-  if (!stdin_path.empty()) {
-    int target_fd = lldb_private::FileSystem::Instance().Open(
-        stdin_path.str().c_str(), O_NOCTTY | O_RDONLY, 0666);
-    if (target_fd == -1)
-      return llvm::errorCodeToError(
-          std::error_code(errno, std::generic_category()));
-    ::close(target_fd);
-  }
-  if (!stdout_path.empty()) {
-    int target_fd = lldb_private::FileSystem::Instance().Open(
-        stdout_path.str().c_str(), O_NOCTTY | O_CREAT | O_WRONLY | O_TRUNC,
-        0666);
-    if (target_fd == -1)
-      return llvm::errorCodeToError(
-          std::error_code(errno, std::generic_category()));
-    ::close(target_fd);
-  }
-  if (!stderr_path.empty()) {
-    int target_fd = lldb_private::FileSystem::Instance().Open(
-        stderr_path.str().c_str(), O_NOCTTY | O_CREAT | O_WRONLY | O_TRUNC,
-        0666);
-    if (target_fd == -1)
-      return llvm::errorCodeToError(
-          std::error_code(errno, std::generic_category()));
-    ::close(target_fd);
-  }
+  if (!stdin_path.empty())
+    if (llvm::Error err = RedirectToFile(stdin_path, STDIN_FILENO))
+      return llvm::createStringError(llvm::formatv(
+          "{0}: {1}", stdin_path, llvm::toString(std::move(err))));
+
+  if (!stdout_path.empty())
+    if (llvm::Error err = RedirectToFile(stdout_path, STDOUT_FILENO))
+      return llvm::createStringError(llvm::formatv(
+          "{0}: {1}", stdout_path, llvm::toString(std::move(err))));
+
+  if (!stderr_path.empty())
+    if (llvm::Error err = RedirectToFile(stderr_path, STDERR_FILENO))
+      return llvm::createStringError(llvm::formatv(
+          "{0}: {1}", stderr_path, llvm::toString(std::move(err))));
+
   return llvm::Error::success();
 }
 #endif

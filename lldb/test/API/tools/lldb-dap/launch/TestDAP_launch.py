@@ -654,12 +654,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
 
         with tempfile.NamedTemporaryFile("rt") as f:
-            self.launch(
-                program,
-                console="integratedTerminal",
-                stdout_path=f.name,
-                stderr_path=f.name,
-            )
+            self.launch(program, console="integratedTerminal", stdout_path=f.name)
             self.continue_to_exit()
             lines = f.readlines()
             self.assertIn(
