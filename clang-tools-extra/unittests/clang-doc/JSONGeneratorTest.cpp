@@ -64,8 +64,8 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
     {
       "Access": "public",
       "End": true,
-      "HasPublicFunctions": true,
       "HasPublicMembers": true,
+      "HasPublicMethods": true,
       "InfoType": "record",
       "IsParent": true,
       "IsTypedef": false,
@@ -73,7 +73,14 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
       "MangledName": "",
       "Name": "F",
       "Path": "path/to/F",
-      "PublicFunctions": [
+      "PublicMembers": [
+        {
+          "IsStatic": false,
+          "Name": "N",
+          "Type": "int"
+        }
+      ],
+      "PublicMethods": [
         {
           "InfoType": "function",
           "IsStatic": false,
@@ -86,12 +93,6 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
             "USR": "0000000000000000000000000000000000000000"
           },
           "USR": "0000000000000000000000000000000000000000"
-        }
-      ],
-      "PublicMembers": [
-        {
-          "Name": "N",
-          "Type": "int"
         }
       ],
       "TagType": "struct",
@@ -115,8 +116,11 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
     }
   ],
   "HasEnums": true,
-  "HasPublicFunctions": true,
+  "HasParents": true,
+  "HasProtectedMembers": true,
+  "HasPublicMethods": true,
   "HasRecords": true,
+  "HasVirtualParents": true,
   "InfoType": "record",
   "IsTypedef": false,
   "Location": {
@@ -132,7 +136,6 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
     {
       "End": true,
       "Name": "F",
-      "Path": "",
       "QualName": "",
       "USR": "0000000000000000000000000000000000000000"
     }
@@ -140,11 +143,12 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
   "Path": "GlobalNamespace",
   "ProtectedMembers": [
     {
+      "IsStatic": false,
       "Name": "X",
       "Type": "int"
     }
   ],
-  "PublicFunctions": [
+  "PublicMethods": [
     {
       "InfoType": "function",
       "IsStatic": false,
@@ -171,7 +175,10 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
   "TagType": "class",
   "Template": {
     "Parameters": [
-      "class T"
+      {
+        "End": true,
+        "Param": "class T"
+      }
     ]
   },
   "USR": "0000000000000000000000000000000000000000",
@@ -239,9 +246,11 @@ TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
     }
   ],
   "HasEnums": true,
+  "HasFunctions": true,
+  "HasNamespaces": true,
   "HasRecords": true,
   "InfoType": "namespace",
-  "Name": "Namespace",
+  "Name": "Global Namespace",
   "Namespace": [
     "A"
   ],

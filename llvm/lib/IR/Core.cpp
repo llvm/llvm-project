@@ -249,7 +249,6 @@ char *LLVMGetDiagInfoDescription(LLVMDiagnosticInfoRef DI) {
   DiagnosticPrinterRawOStream DP(Stream);
 
   unwrap(DI)->print(DP);
-  Stream.flush();
 
   return LLVMCreateMessage(MsgStorage.c_str());
 }
@@ -477,7 +476,6 @@ char *LLVMPrintModuleToString(LLVMModuleRef M) {
   raw_string_ostream os(buf);
 
   unwrap(M)->print(os, nullptr);
-  os.flush();
 
   return strdup(buf.c_str());
 }
@@ -654,8 +652,6 @@ char *LLVMPrintTypeToString(LLVMTypeRef Ty) {
     unwrap(Ty)->print(os);
   else
     os << "Printing <null> Type";
-
-  os.flush();
 
   return strdup(buf.c_str());
 }
@@ -1050,8 +1046,6 @@ char* LLVMPrintValueToString(LLVMValueRef Val) {
   else
     os << "Printing <null> Value";
 
-  os.flush();
-
   return strdup(buf.c_str());
 }
 
@@ -1067,8 +1061,6 @@ char *LLVMPrintDbgRecordToString(LLVMDbgRecordRef Record) {
     unwrap(Record)->print(os);
   else
     os << "Printing <null> DbgRecord";
-
-  os.flush();
 
   return strdup(buf.c_str());
 }
@@ -3259,6 +3251,19 @@ void LLVMSetCondition(LLVMValueRef Branch, LLVMValueRef Cond) {
 
 LLVMBasicBlockRef LLVMGetSwitchDefaultDest(LLVMValueRef Switch) {
   return wrap(unwrap<SwitchInst>(Switch)->getDefaultDest());
+}
+
+LLVMValueRef LLVMGetSwitchCaseValue(LLVMValueRef Switch, unsigned i) {
+  assert(i > 0 && i <= unwrap<SwitchInst>(Switch)->getNumCases());
+  auto It = unwrap<SwitchInst>(Switch)->case_begin() + (i - 1);
+  return wrap(It->getCaseValue());
+}
+
+void LLVMSetSwitchCaseValue(LLVMValueRef Switch, unsigned i,
+                            LLVMValueRef CaseValue) {
+  assert(i > 0 && i <= unwrap<SwitchInst>(Switch)->getNumCases());
+  auto It = unwrap<SwitchInst>(Switch)->case_begin() + (i - 1);
+  It->setValue(unwrap<ConstantInt>(CaseValue));
 }
 
 /*--.. Operations on alloca instructions (only) ............................--*/

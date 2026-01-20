@@ -1,7 +1,7 @@
 ! This test checks the lowering and application of default map types for the target enter/exit data constructs and map clauses
 
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-version=52 -o - %s | FileCheck %s --check-prefix=CHECK-52
-!RUN: not %flang_fc1 -emit-fir -fopenmp -fopenmp-version=51 -o - %s 2>&1| FileCheck %s --check-prefix=CHECK-51
+!RUN: %flang -fc1 -emit-fir -fopenmp -fopenmp-version=52 -o - %s | FileCheck %s --check-prefix=CHECK-52
+!RUN: not %flang -fc1 -emit-fir -fopenmp -fopenmp-version=51 -o - %s 2>&1| FileCheck %s --check-prefix=CHECK-51
 
 module test
   real, allocatable :: A

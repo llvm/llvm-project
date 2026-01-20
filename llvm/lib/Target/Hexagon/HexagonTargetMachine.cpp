@@ -47,13 +47,8 @@ static cl::opt<bool>
     DisableHardwareLoops("disable-hexagon-hwloops", cl::Hidden,
                          cl::desc("Disable Hardware Loops for Hexagon target"));
 
-static cl::opt<bool>
-    EnableGenWideningVec("hexagon-widening-vectors", cl::init(true), cl::Hidden,
-                         cl::desc("Generate widening vector instructions"));
-
-static cl::opt<bool>
-    EnableOptShuffleVec("hexagon-opt-shuffvec", cl::init(true), cl::Hidden,
-                        cl::desc("Enable optimization of shuffle vectors"));
+static cl::opt<bool> EnableMCR("hexagon-mcr", cl::Hidden, cl::init(true),
+                               cl::desc("Enable the machine combiner pass"));
 
 static cl::opt<bool>
     DisableAModeOpt("disable-hexagon-amodeopt", cl::Hidden,
@@ -277,11 +272,13 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(HexagonLoopIdiomRecognitionPass());
+        if (Level.getSpeedupLevel() > 0)
+          LPM.addPass(HexagonLoopIdiomRecognitionPass());
       });
   PB.registerLoopOptimizerEndEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(HexagonVectorLoopCarriedReusePass());
+        if (Level.getSpeedupLevel() > 0)
+          LPM.addPass(HexagonVectorLoopCarriedReusePass());
       });
 }
 
@@ -317,6 +314,7 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
+  bool addILPOpts() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
@@ -329,8 +327,6 @@ TargetPassConfig *HexagonTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void HexagonPassConfig::addIRPasses() {
-  HexagonTargetMachine &HTM = getHexagonTargetMachine();
-
   TargetPassConfig::addIRPasses();
   bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
@@ -360,13 +356,6 @@ void HexagonPassConfig::addIRPasses() {
     // Replace certain combinations of shifts and ands with extracts.
     if (EnableGenExtract)
       addPass(createHexagonGenExtract());
-    if (EnableGenWideningVec) {
-      addPass(createHexagonGenWideningVecInstr(HTM));
-      addPass(createHexagonGenWideningVecFloatInstr(HTM));
-      addPass(createDeadCodeEliminationPass());
-    }
-    if (EnableOptShuffleVec)
-      addPass(createHexagonOptShuffleVector(HTM));
   }
 }
 
@@ -408,6 +397,13 @@ bool HexagonPassConfig::addInstSelector() {
   }
 
   return false;
+}
+
+bool HexagonPassConfig::addILPOpts() {
+  if (EnableMCR)
+    addPass(&MachineCombinerID);
+
+  return true;
 }
 
 void HexagonPassConfig::addPreRegAlloc() {

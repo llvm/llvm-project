@@ -6,7 +6,7 @@ namespace GH46386 {
 
   // CHECK:      error: templates must have C++ linkage
   // CHECK-NEXT: {{^}}  void f(auto) {}
-  // CHECK-NEXT: {{^}}         ^~~~~{{$}}
+  // CHECK-NEXT: {{^}}  ^~~~~~~~~~~~{{$}}
   void f(auto) {} // expected-error {{templates must have C++ linkage}}
 
   void f(void) { // expected-note {{candidate function not viable: requires 0 arguments, but 1 was provided}}

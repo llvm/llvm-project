@@ -67,11 +67,6 @@ void HexagonMCELFStreamer::emitInstruction(const MCInst &MCB,
   assert(MCB.getOpcode() == Hexagon::BUNDLE);
   assert(HexagonMCInstrInfo::bundleSize(MCB) <= HEXAGON_PACKET_SIZE);
   assert(HexagonMCInstrInfo::bundleSize(MCB) > 0);
-  const MCRegisterInfo *RI = getContext().getRegisterInfo();
-  HexagonMCChecker Check(getContext(), *MCII, STI, const_cast<MCInst &>(MCB),
-                         *RI);
-  [[maybe_unused]] bool CheckOk = Check.check(false);
-  assert(CheckOk);
 
   // At this point, MCB is a bundle
   // Iterate through the bundle and assign addends for the instructions

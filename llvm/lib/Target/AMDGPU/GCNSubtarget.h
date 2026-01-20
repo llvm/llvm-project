@@ -166,6 +166,7 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasMcastLoadInsts = false;
   bool HasCubeInsts = false;
   bool HasLerpInst = false;
   bool HasSadInsts = false;
@@ -244,6 +245,7 @@ protected:
   bool HasRestrictedSOffset = false;
   bool Has64BitLiterals = false;
   bool Has1024AddressableVGPRs = false;
+  bool HasSetregVGPRMSBFixup = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasTensorCvtLutInsts = false;
@@ -289,6 +291,7 @@ protected:
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
+  bool HasSWakeupBarrier = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -298,6 +301,7 @@ protected:
 
   bool HasClusters = false;
   bool RequiresWaitsBeforeSystemScopeStores = false;
+  bool UseAddPC64Inst = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -453,30 +457,6 @@ public:
     return getGeneration() == SOUTHERN_ISLANDS;
   }
 
-  bool hasBFE() const {
-    return true;
-  }
-
-  bool hasBFI() const {
-    return true;
-  }
-
-  bool hasBFM() const {
-    return hasBFE();
-  }
-
-  bool hasBCNT(unsigned Size) const {
-    return true;
-  }
-
-  bool hasFFBL() const {
-    return true;
-  }
-
-  bool hasFFBH() const {
-    return true;
-  }
-
   bool hasMed3_16() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
@@ -490,10 +470,6 @@ public:
   }
 
   bool hasFmaMixBF16Insts() const { return HasFmaMixBF16Insts; }
-
-  bool hasCARRY() const {
-    return true;
-  }
 
   bool hasFMA() const {
     return FMA;
@@ -898,6 +874,8 @@ public:
   }
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
+
+  bool hasMcastLoadInsts() const { return HasMcastLoadInsts; }
 
   bool hasCubeInsts() const { return HasCubeInsts; }
 
@@ -1470,13 +1448,22 @@ public:
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
+  bool useAddPC64Inst() const { return UseAddPC64Inst; }
+
   bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
+
+  bool hasSetregVGPRMSBFixup() const { return HasSetregVGPRMSBFixup; }
 
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
 
   bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
+
+  /// \returns true if the target supports expert scheduling mode 2 which relies
+  /// on the compiler to insert waits to avoid hazards between VMEM and VALU
+  /// instructions in some instances.
+  bool hasExpertSchedulingMode() const { return getGeneration() >= GFX12; }
 
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1250.
@@ -1579,6 +1566,8 @@ public:
 
   bool hasGFX1250Insts() const { return GFX1250Insts; }
 
+  bool hasINVWBL2WaitCntRequirement() const { return GFX1250Insts; }
+
   bool hasVOPD3() const { return GFX1250Insts; }
 
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
@@ -1611,6 +1600,9 @@ public:
 
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
+
+  // \returns true if target has S_WAKEUP_BARRIER instruction.
+  bool hasSWakeupBarrier() const { return HasSWakeupBarrier; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1250 has not only fixed the bug but also
@@ -1906,6 +1898,16 @@ public:
 
   bool requiresWaitsBeforeSystemScopeStores() const {
     return RequiresWaitsBeforeSystemScopeStores;
+  }
+
+  bool supportsBPermute() const {
+    return getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS;
+  }
+
+  bool supportsWaveWideBPermute() const {
+    return (getGeneration() <= AMDGPUSubtarget::GFX9 ||
+            getGeneration() == AMDGPUSubtarget::GFX12) ||
+           isWave32();
   }
 };
 

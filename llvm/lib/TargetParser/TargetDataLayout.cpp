@@ -247,6 +247,10 @@ static std::string computePowerDataLayout(const Triple &T, StringRef ABIName) {
   else
     Ret += "-n32";
 
+  // The ABI alignment for doubles on AIX is 4 bytes.
+  if (T.isOSAIX())
+    Ret += "-f64:32:64";
+
   // Specify the vector alignment explicitly. For v256i1 and v512i1, the
   // calculated alignment would be 256*alignment(i1) and 512*alignment(i1),
   // which is 256 and 512 bytes - way over aligned.
@@ -276,6 +280,13 @@ static std::string computeAMDDataLayout(const Triple &TT) {
 }
 
 static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
+  if (TT.isOSBinFormatMachO()) {
+    assert(TT.isLittleEndian() && "Invalid endianness");
+    assert(TT.isArch32Bit() && "Invalid triple");
+    assert((ABIName != "ilp32e") && "Invalid ABI.");
+    return "e-m:o-p:32:32-i64:64-n32-S128";
+  }
+
   std::string Ret;
 
   if (TT.isLittleEndian())
@@ -345,6 +356,9 @@ static std::string computeSystemZDataLayout(const Triple &TT) {
 
   // Big endian.
   Ret += "E";
+
+  // The natural stack alignment is 64 bits.
+  Ret += "-S64";
 
   // Data mangling.
   Ret += getManglingComponent(TT);

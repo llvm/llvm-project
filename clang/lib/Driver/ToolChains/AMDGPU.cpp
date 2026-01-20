@@ -127,10 +127,6 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       FiniteOnly.Off = FilePath;
     } else if (BaseName == "oclc_finite_only_on") {
       FiniteOnly.On = FilePath;
-    } else if (BaseName == "oclc_daz_opt_on") {
-      DenormalsAreZero.On = FilePath;
-    } else if (BaseName == "oclc_daz_opt_off") {
-      DenormalsAreZero.Off = FilePath;
     } else if (BaseName == "oclc_correctly_rounded_sqrt_on") {
       CorrectlyRoundedSqrt.On = FilePath;
     } else if (BaseName == "oclc_correctly_rounded_sqrt_off") {
@@ -858,8 +854,7 @@ void AMDGPUToolChain::addClangTargetOptions(
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
-                         options::OPT_fvisibility_ms_compat) &&
-      !getDriver().IsFlangMode()) {
+                         options::OPT_fvisibility_ms_compat)) {
     CC1Args.push_back("-fvisibility=hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
@@ -968,6 +963,10 @@ void ROCMToolChain::addClangTargetOptions(
                           true))
     return;
 
+  // For SPIR-V (SPIRVAMDToolChain) we must not link any device libraries so we
+  // skip it.
+  if (this->getEffectiveTriple().isSPIRV())
+    return;
   // Get the device name and canonicalize it
   const StringRef GpuArch = getGPUArch(DriverArgs);
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
@@ -1047,7 +1046,6 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     AddBCLib(getOCKLPath());
   else if (Pref.GPUSan && Pref.IsOpenMP)
     AddBCLib(getOCKLPath(), false);
-  AddBCLib(getDenormalsAreZeroPath(Pref.DAZ));
   AddBCLib(getUnsafeMathPath(Pref.UnsafeMathOpt || Pref.FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly || Pref.FastRelaxedMath));
   AddBCLib(getCorrectlyRoundedSqrtPath(Pref.CorrectSqrt));

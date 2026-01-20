@@ -97,6 +97,7 @@ endfunction()
 
 # Linker flags
 function(libomp_get_ldflags ldflags)
+  cmake_parse_arguments(ARG "FOR_UNITTESTS" "" "" ${ARGN})
   set(ldflags_local)
   libomp_append(ldflags_local "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_LIB_NAME}.def"
     IF_DEFINED CMAKE_LINK_DEF_FILE_FLAG)
@@ -105,7 +106,11 @@ function(libomp_get_ldflags ldflags)
   libomp_append(ldflags_local "${CMAKE_C_OSX_COMPATIBILITY_VERSION_FLAG}${LIBOMP_VERSION_MAJOR}.${LIBOMP_VERSION_MINOR}"
     IF_DEFINED CMAKE_C_OSX_COMPATIBILITY_VERSION_FLAG)
   libomp_append(ldflags_local -Wl,--as-needed LIBOMP_HAVE_AS_NEEDED_FLAG)
-  libomp_append(ldflags_local "-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  if(ARG_FOR_UNITTESTS)
+    libomp_append(ldflags_local "-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  else()
+    libomp_append(ldflags_local "-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  endif()
   libomp_append(ldflags_local -static-libgcc LIBOMP_HAVE_STATIC_LIBGCC_FLAG)
   libomp_append(ldflags_local -Wl,-z,noexecstack LIBOMP_HAVE_Z_NOEXECSTACK_FLAG)
   libomp_append(ldflags_local -no-intel-extensions LIBOMP_HAVE_NO_INTEL_EXTENSIONS_FLAG)
@@ -154,6 +159,17 @@ function(libomp_get_libflags libflags)
   libomp_setup_flags(libflags_local)
   libomp_string_to_list("${libflags_local}" libflags_local_list)
   set(${libflags} ${libflags_local_list} PARENT_SCOPE)
+endfunction()
+
+# Fortran flags
+function(libomp_get_fflags fflags)
+  set(fflags_local)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    libomp_append(fflags_local -m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
+  endif()
+  set(fflags_local ${fflags_local} ${LIBOMP_FFLAGS})
+  libomp_setup_flags(fflags_local)
+  set(${fflags} ${fflags_local} PARENT_SCOPE)
 endfunction()
 
 # Python generate-defs.py flags (For Windows only)

@@ -1788,6 +1788,7 @@ enum : unsigned {
   NT_ARM_ZA = 0x40c,
   NT_ARM_ZT = 0x40d,
   NT_ARM_FPMR = 0x40e,
+  NT_ARM_POE = 0x40f,
   NT_ARM_GCS = 0x410,
 
   NT_FILE = 0x46494c45,

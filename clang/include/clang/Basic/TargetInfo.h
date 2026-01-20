@@ -1131,6 +1131,7 @@ public:
       CI_HasMatchingInput = 0x08,  // This output operand has a matching input.
       CI_ImmediateConstant = 0x10, // This operand must be an immediate constant
       CI_EarlyClobber = 0x20,      // "&" output constraint (early clobber).
+      CI_OutputOperandBounds = 0x40, // Output operand bounds.
     };
     unsigned Flags;
     int TiedOperand;
@@ -1227,11 +1228,11 @@ public:
     void setOutputOperandBounds(unsigned Min, unsigned Max) {
       ImmRange.Min = Min;
       ImmRange.Max = Max;
-      ImmRange.isConstrained = true;
+      Flags |= CI_OutputOperandBounds;
     }
     std::optional<std::pair<unsigned, unsigned>>
     getOutputOperandBounds() const {
-      return ImmRange.isConstrained
+      return (Flags & CI_OutputOperandBounds) != 0
                  ? std::make_pair(ImmRange.Min, ImmRange.Max)
                  : std::optional<std::pair<unsigned, unsigned>>();
     }
@@ -1797,6 +1798,11 @@ public:
   /// with Microsoft ABI, so it will call global operator delete in the deleting
   /// destructor body.
   virtual bool callGlobalDeleteInDeletingDtor(const LangOptions &) const;
+
+  /// Controls whether to emit MSVC vector deleting destructors. The support for
+  /// vector deleting affects vtable layout and therefore is an ABI breaking
+  /// change. The support was only implemented at Clang 22 timeframe.
+  virtual bool emitVectorDeletingDtors(const LangOptions &) const;
 
   /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.

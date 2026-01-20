@@ -433,6 +433,21 @@ ISD::NodeType ISD::getInverseMinMaxOpcode(unsigned MinMaxOpc) {
   }
 }
 
+ISD::NodeType ISD::getOppositeSignednessMinMaxOpcode(unsigned MinMaxOpc) {
+  switch (MinMaxOpc) {
+  default:
+    llvm_unreachable("unrecognized min/max opcode");
+  case ISD::SMIN:
+    return ISD::UMIN;
+  case ISD::SMAX:
+    return ISD::UMAX;
+  case ISD::UMIN:
+    return ISD::SMIN;
+  case ISD::UMAX:
+    return ISD::SMAX;
+  }
+}
+
 ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   switch (VecReduceOpcode) {
   default:
@@ -1368,6 +1383,7 @@ SelectionDAG::SelectionDAG(const TargetMachine &tm, CodeGenOptLevel OL)
 void SelectionDAG::init(MachineFunction &NewMF,
                         OptimizationRemarkEmitter &NewORE, Pass *PassPtr,
                         const TargetLibraryInfo *LibraryInfo,
+                        const LibcallLoweringInfo *LibcallsInfo,
                         UniformityInfo *NewUA, ProfileSummaryInfo *PSIin,
                         BlockFrequencyInfo *BFIin, MachineModuleInfo &MMIin,
                         FunctionVarLocs const *VarLocs) {
@@ -1377,6 +1393,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   TLI = getSubtarget().getTargetLowering();
   TSI = getSubtarget().getSelectionDAGInfo();
   LibInfo = LibraryInfo;
+  Libcalls = LibcallsInfo;
   Context = &MF->getFunction().getContext();
   UA = NewUA;
   PSI = PSIin;
@@ -1569,8 +1586,14 @@ SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
   assert((!VT.isVector() ||
           VT.getVectorElementCount() == OpVT.getVectorElementCount()) &&
          "Vector element counts must match in getZeroExtendInReg");
-  assert(VT.bitsLE(OpVT) && "Not extending!");
+  assert(VT.getScalarType().bitsLE(OpVT.getScalarType()) && "Not extending!");
   if (OpVT == VT)
+    return Op;
+  // TODO: Use computeKnownBits instead of AssertZext.
+  if (Op.getOpcode() == ISD::AssertZext && cast<VTSDNode>(Op.getOperand(1))
+                                               ->getVT()
+                                               .getScalarType()
+                                               .bitsLE(VT.getScalarType()))
     return Op;
   APInt Imm = APInt::getLowBitsSet(OpVT.getScalarSizeInBits(),
                                    VT.getScalarSizeInBits());
@@ -1587,7 +1610,7 @@ SDValue SelectionDAG::getVPZeroExtendInReg(SDValue Op, SDValue Mask,
          "getVPZeroExtendInReg type and operand type should be vector!");
   assert(VT.getVectorElementCount() == OpVT.getVectorElementCount() &&
          "Vector element counts must match in getZeroExtendInReg");
-  assert(VT.bitsLE(OpVT) && "Not extending!");
+  assert(VT.getScalarType().bitsLE(OpVT.getScalarType()) && "Not extending!");
   if (OpVT == VT)
     return Op;
   APInt Imm = APInt::getLowBitsSet(OpVT.getScalarSizeInBits(),
@@ -1970,7 +1993,7 @@ SDValue SelectionDAG::getJumpTable(int JTI, EVT VT, bool isTarget,
 SDValue SelectionDAG::getJumpTableDebugInfo(int JTI, SDValue Chain,
                                             const SDLoc &DL) {
   EVT PTy = getTargetLoweringInfo().getPointerTy(getDataLayout());
-  return getNode(ISD::JUMP_TABLE_DEBUG_INFO, DL, MVT::Glue, Chain,
+  return getNode(ISD::JUMP_TABLE_DEBUG_INFO, DL, MVT::Other, Chain,
                  getTargetConstant(static_cast<uint64_t>(JTI), DL, PTy, true));
 }
 
@@ -2067,7 +2090,7 @@ SDValue SelectionDAG::getExternalSymbol(const char *Sym, EVT VT) {
 }
 
 SDValue SelectionDAG::getExternalSymbol(RTLIB::LibcallImpl Libcall, EVT VT) {
-  StringRef SymName = TLI->getLibcallImplName(Libcall);
+  StringRef SymName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Libcall);
   return getExternalSymbol(SymName.data(), VT);
 }
 
@@ -2088,6 +2111,12 @@ SDValue SelectionDAG::getTargetExternalSymbol(const char *Sym, EVT VT,
   N = newSDNode<ExternalSymbolSDNode>(true, Sym, TargetFlags, getVTList(VT));
   InsertNode(N);
   return SDValue(N, 0);
+}
+
+SDValue SelectionDAG::getTargetExternalSymbol(RTLIB::LibcallImpl Libcall,
+                                              EVT VT, unsigned TargetFlags) {
+  StringRef SymName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Libcall);
+  return getTargetExternalSymbol(SymName.data(), VT, TargetFlags);
 }
 
 SDValue SelectionDAG::getCondCode(ISD::CondCode Cond) {
@@ -2785,6 +2814,7 @@ bool SelectionDAG::SignBitIsZero(SDValue Op, unsigned Depth) const {
   return MaskedValueIsZero(Op, APInt::getSignMask(BitWidth), Depth);
 }
 
+// TODO: Should have argument to specify if sign bit of nan is ignorable.
 bool SelectionDAG::SignBitIsZeroFP(SDValue Op, unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
@@ -2801,11 +2831,25 @@ bool SelectionDAG::SignBitIsZeroFP(SDValue Op, unsigned Depth) const {
     return (NoFPClass & TestMask) == TestMask;
   }
   case ISD::ARITH_FENCE:
-    return SignBitIsZeroFP(Op, Depth + 1);
+    return SignBitIsZeroFP(Op.getOperand(0), Depth + 1);
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
     return Op->getFlags().hasNoNaNs();
+  case ISD::FMINNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMINIMUMNUM:
+    return SignBitIsZeroFP(Op.getOperand(1), Depth + 1) &&
+           SignBitIsZeroFP(Op.getOperand(0), Depth + 1);
+  case ISD::FMAXNUM:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::FMAXIMUM:
+  case ISD::FMAXIMUMNUM:
+    // TODO: If we can ignore the sign bit of nans, only one side being known 0
+    // is sufficient.
+    return SignBitIsZeroFP(Op.getOperand(1), Depth + 1) &&
+           SignBitIsZeroFP(Op.getOperand(0), Depth + 1);
   default:
     return false;
   }
@@ -3849,6 +3893,14 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known.Zero.setBitsFrom(LowBits);
     break;
   }
+  case ISD::CTLS: {
+    unsigned MinRedundantSignBits =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1) - 1;
+    ConstantRange Range(APInt(BitWidth, MinRedundantSignBits),
+                        APInt(BitWidth, BitWidth));
+    Known = Range.toKnownBits();
+    break;
+  }
   case ISD::CTPOP: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // If we know some of the bits are zero, they can't be one.
@@ -3993,6 +4045,21 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::TRUNCATE: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known = Known.trunc(BitWidth);
+    break;
+  }
+  case ISD::TRUNCATE_SSAT_S: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known = Known.truncSSat(BitWidth);
+    break;
+  }
+  case ISD::TRUNCATE_SSAT_U: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known = Known.truncSSatU(BitWidth);
+    break;
+  }
+  case ISD::TRUNCATE_USAT_U: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known = Known.truncUSat(BitWidth);
     break;
   }
   case ISD::AssertZext: {
@@ -5111,7 +5178,6 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return Tmp;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
-    assert(!VT.isScalableVector());
     SDValue InVec = Op.getOperand(0);
     SDValue EltNo = Op.getOperand(1);
     EVT VecVT = InVec.getValueType();
@@ -5196,6 +5262,10 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return Tmp;
   }
   case ISD::LOAD: {
+    // If we are looking at the loaded value of the SDNode.
+    if (Op.getResNo() != 0)
+      break;
+
     LoadSDNode *LD = cast<LoadSDNode>(Op);
     if (const MDNode *Ranges = LD->getRanges()) {
       if (DemandedElts != 1)
@@ -5219,6 +5289,49 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         break;
       return std::min(CR.getSignedMin().getNumSignBits(),
                       CR.getSignedMax().getNumSignBits());
+    }
+
+    unsigned ExtType = LD->getExtensionType();
+    switch (ExtType) {
+    default:
+      break;
+    case ISD::SEXTLOAD: // e.g. i16->i32 = '17' bits known.
+      Tmp = LD->getMemoryVT().getScalarSizeInBits();
+      return VTBits - Tmp + 1;
+    case ISD::ZEXTLOAD: // e.g. i16->i32 = '16' bits known.
+      Tmp = LD->getMemoryVT().getScalarSizeInBits();
+      return VTBits - Tmp;
+    case ISD::NON_EXTLOAD:
+      if (const Constant *Cst = TLI->getTargetConstantFromLoad(LD)) {
+        // We only need to handle vectors - computeKnownBits should handle
+        // scalar cases.
+        Type *CstTy = Cst->getType();
+        if (CstTy->isVectorTy() && !VT.isScalableVector() &&
+            (NumElts * VTBits) == CstTy->getPrimitiveSizeInBits() &&
+            VTBits == CstTy->getScalarSizeInBits()) {
+          Tmp = VTBits;
+          for (unsigned i = 0; i != NumElts; ++i) {
+            if (!DemandedElts[i])
+              continue;
+            if (Constant *Elt = Cst->getAggregateElement(i)) {
+              if (auto *CInt = dyn_cast<ConstantInt>(Elt)) {
+                const APInt &Value = CInt->getValue();
+                Tmp = std::min(Tmp, Value.getNumSignBits());
+                continue;
+              }
+              if (auto *CFP = dyn_cast<ConstantFP>(Elt)) {
+                APInt Value = CFP->getValueAPF().bitcastToAPInt();
+                Tmp = std::min(Tmp, Value.getNumSignBits());
+                continue;
+              }
+            }
+            // Unknown type. Conservatively assume no bits match sign bit.
+            return 1;
+          }
+          return Tmp;
+        }
+      }
+      break;
     }
 
     break;
@@ -5264,54 +5377,6 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     }
     break;
   }
-  }
-
-  // If we are looking at the loaded value of the SDNode.
-  if (Op.getResNo() == 0) {
-    // Handle LOADX separately here. EXTLOAD case will fallthrough.
-    if (LoadSDNode *LD = dyn_cast<LoadSDNode>(Op)) {
-      unsigned ExtType = LD->getExtensionType();
-      switch (ExtType) {
-      default: break;
-      case ISD::SEXTLOAD: // e.g. i16->i32 = '17' bits known.
-        Tmp = LD->getMemoryVT().getScalarSizeInBits();
-        return VTBits - Tmp + 1;
-      case ISD::ZEXTLOAD: // e.g. i16->i32 = '16' bits known.
-        Tmp = LD->getMemoryVT().getScalarSizeInBits();
-        return VTBits - Tmp;
-      case ISD::NON_EXTLOAD:
-        if (const Constant *Cst = TLI->getTargetConstantFromLoad(LD)) {
-          // We only need to handle vectors - computeKnownBits should handle
-          // scalar cases.
-          Type *CstTy = Cst->getType();
-          if (CstTy->isVectorTy() && !VT.isScalableVector() &&
-              (NumElts * VTBits) == CstTy->getPrimitiveSizeInBits() &&
-              VTBits == CstTy->getScalarSizeInBits()) {
-            Tmp = VTBits;
-            for (unsigned i = 0; i != NumElts; ++i) {
-              if (!DemandedElts[i])
-                continue;
-              if (Constant *Elt = Cst->getAggregateElement(i)) {
-                if (auto *CInt = dyn_cast<ConstantInt>(Elt)) {
-                  const APInt &Value = CInt->getValue();
-                  Tmp = std::min(Tmp, Value.getNumSignBits());
-                  continue;
-                }
-                if (auto *CFP = dyn_cast<ConstantFP>(Elt)) {
-                  APInt Value = CFP->getValueAPF().bitcastToAPInt();
-                  Tmp = std::min(Tmp, Value.getNumSignBits());
-                  continue;
-                }
-              }
-              // Unknown type. Conservatively assume no bits match sign bit.
-              return 1;
-            }
-            return Tmp;
-          }
-        }
-        break;
-      }
-    }
   }
 
   // Allow the target to implement this method for its nodes.
@@ -5631,6 +5696,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BSWAP:
   case ISD::CTTZ:
   case ISD::CTLZ:
+  case ISD::CTLS:
   case ISD::CTPOP:
   case ISD::BITREVERSE:
   case ISD::PARITY:
@@ -5703,6 +5769,9 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FP_EXTEND:
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
+  case ISD::TRUNCATE_SSAT_S:
+  case ISD::TRUNCATE_SSAT_U:
+  case ISD::TRUNCATE_USAT_U:
     // No poison except from flags (which is handled above)
     return false;
 
@@ -6868,6 +6937,12 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     return APIntOps::mulhs(C1, C2);
   case ISD::MULHU:
     return APIntOps::mulhu(C1, C2);
+  case ISD::CLMUL:
+    return APIntOps::clmul(C1, C2);
+  case ISD::CLMULR:
+    return APIntOps::clmulr(C1, C2);
+  case ISD::CLMULH:
+    return APIntOps::clmulh(C1, C2);
   }
   return std::nullopt;
 }
@@ -7805,6 +7880,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     [[fallthrough]];
   case ISD::ROTL:
   case ISD::ROTR:
+  case ISD::SSHLSAT:
+  case ISD::USHLSAT:
     assert(VT == N1.getValueType() &&
            "Shift operators return type must be the same as their first arg");
     assert(VT.isInteger() && N2.getValueType().isInteger() &&
@@ -7869,7 +7946,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert((!EVT.isVector() ||
             EVT.getVectorElementCount() == VT.getVectorElementCount()) &&
            "Vector element counts must match in SIGN_EXTEND_INREG");
-    assert(EVT.bitsLE(VT) && "Not extending!");
+    assert(EVT.getScalarType().bitsLE(VT.getScalarType()) && "Not extending!");
     if (EVT == VT) return N1;  // Not actually extending
     break;
   }
@@ -8226,11 +8303,14 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::VECTOR_SHUFFLE:
     llvm_unreachable("should use getVectorShuffle constructor!");
-  case ISD::VECTOR_SPLICE: {
-    if (cast<ConstantSDNode>(N3)->isZero())
+  case ISD::VECTOR_SPLICE_LEFT:
+    if (isNullConstant(N3))
       return N1;
     break;
-  }
+  case ISD::VECTOR_SPLICE_RIGHT:
+    if (isNullConstant(N3))
+      return N2;
+    break;
   case ISD::INSERT_VECTOR_ELT: {
     assert(VT.isVector() && VT == N1.getValueType() &&
            "INSERT_VECTOR_ELT vector type mismatch");
@@ -9105,10 +9185,45 @@ static bool isInTailCallPositionWrapper(const CallInst *CI,
                                   funcReturnsFirstArgOfCall(*CI));
 }
 
+static std::pair<SDValue, SDValue>
+getRuntimeCallSDValueHelper(SDValue Chain, const SDLoc &dl,
+                            TargetLowering::ArgListTy &&Args,
+                            const CallInst *CI, RTLIB::Libcall Call,
+                            SelectionDAG *DAG, const TargetLowering *TLI) {
+  RTLIB::LibcallImpl LCImpl = DAG->getLibcalls().getLibcallImpl(Call);
+
+  if (LCImpl == RTLIB::Unsupported)
+    return {};
+
+  TargetLowering::CallLoweringInfo CLI(*DAG);
+  bool IsTailCall =
+      isInTailCallPositionWrapper(CI, DAG, /*AllowReturnsFirstArg=*/true);
+  SDValue Callee =
+      DAG->getExternalSymbol(LCImpl, TLI->getPointerTy(DAG->getDataLayout()));
+
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(DAG->getLibcalls().getLibcallImplCallingConv(LCImpl),
+                    CI->getType(), Callee, std::move(Args))
+      .setTailCall(IsTailCall);
+
+  return TLI->LowerCallTo(CLI);
+}
+
+std::pair<SDValue, SDValue> SelectionDAG::getStrstr(SDValue Chain,
+                                                    const SDLoc &dl, SDValue S1,
+                                                    SDValue S2,
+                                                    const CallInst *CI) {
+  PointerType *PT = PointerType::getUnqual(*getContext());
+  TargetLowering::ArgListTy Args = {{S1, PT}, {S2, PT}};
+  return getRuntimeCallSDValueHelper(Chain, dl, std::move(Args), CI,
+                                     RTLIB::STRSTR, this, TLI);
+}
+
 std::pair<SDValue, SDValue>
 SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
                         SDValue Mem1, SDValue Size, const CallInst *CI) {
-  RTLIB::LibcallImpl MemcmpImpl = TLI->getLibcallImpl(RTLIB::MEMCMP);
+  RTLIB::LibcallImpl MemcmpImpl = Libcalls->getLibcallImpl(RTLIB::MEMCMP);
   if (MemcmpImpl == RTLIB::Unsupported)
     return {};
 
@@ -9122,14 +9237,39 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
   bool IsTailCall =
       isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
 
-  StringRef LibCallName = TLI->getLibcallImplName(MemcmpImpl);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
-      .setLibCallee(TLI->getLibcallImplCallingConv(MemcmpImpl),
-                    Type::getInt32Ty(*getContext()),
-                    getExternalSymbol(LibCallName.data(),
-                                      TLI->getPointerTy(getDataLayout())),
-                    std::move(Args))
+      .setLibCallee(
+          Libcalls->getLibcallImplCallingConv(MemcmpImpl),
+          Type::getInt32Ty(*getContext()),
+          getExternalSymbol(MemcmpImpl, TLI->getPointerTy(getDataLayout())),
+          std::move(Args))
+      .setTailCall(IsTailCall);
+
+  return TLI->LowerCallTo(CLI);
+}
+
+std::pair<SDValue, SDValue> SelectionDAG::getStrcpy(SDValue Chain,
+                                                    const SDLoc &dl,
+                                                    SDValue Dst, SDValue Src,
+                                                    const CallInst *CI) {
+  RTLIB::LibcallImpl LCImpl = Libcalls->getLibcallImpl(RTLIB::STRCPY);
+  if (LCImpl == RTLIB::Unsupported)
+    return {};
+
+  PointerType *PT = PointerType::getUnqual(*getContext());
+  TargetLowering::ArgListTy Args = {{Dst, PT}, {Src, PT}};
+
+  TargetLowering::CallLoweringInfo CLI(*this);
+  bool IsTailCall =
+      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg=*/true);
+
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(
+          Libcalls->getLibcallImplCallingConv(LCImpl), CI->getType(),
+          getExternalSymbol(LCImpl, TLI->getPointerTy(getDataLayout())),
+          std::move(Args))
       .setTailCall(IsTailCall);
 
   return TLI->LowerCallTo(CLI);
@@ -9139,7 +9279,7 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
                                                     const SDLoc &dl,
                                                     SDValue Src,
                                                     const CallInst *CI) {
-  RTLIB::LibcallImpl StrlenImpl = TLI->getLibcallImpl(RTLIB::STRLEN);
+  RTLIB::LibcallImpl StrlenImpl = Libcalls->getLibcallImpl(RTLIB::STRLEN);
   if (StrlenImpl == RTLIB::Unsupported)
     return {};
 
@@ -9150,15 +9290,14 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall =
       isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
-  StringRef LibcallName = TLI->getLibcallImplName(StrlenImpl);
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
-      .setLibCallee(
-          TLI->getLibcallImplCallingConv(StrlenImpl), CI->getType(),
-          getExternalSymbol(LibcallName.data(),
-                            TLI->getProgramPointerTy(getDataLayout())),
-          std::move(Args))
+      .setLibCallee(Libcalls->getLibcallImplCallingConv(StrlenImpl),
+                    CI->getType(),
+                    getExternalSymbol(
+                        StrlenImpl, TLI->getProgramPointerTy(getDataLayout())),
+                    std::move(Args))
       .setTailCall(IsTailCall);
 
   return TLI->LowerCallTo(CLI);
@@ -9234,10 +9373,9 @@ SDValue SelectionDAG::getMemcpy(
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallImplCallingConv(MemCpyImpl),
+          Libcalls->getLibcallImplCallingConv(MemCpyImpl),
           Dst.getValueType().getTypeForEVT(*getContext()),
-          getExternalSymbol(TLI->getLibcallImplName(MemCpyImpl).data(),
-                            TLI->getPointerTy(getDataLayout())),
+          getExternalSymbol(MemCpyImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setDiscardResult()
       .setTailCall(IsTailCall);
@@ -9261,7 +9399,7 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(ElemSz);
-  RTLIB::LibcallImpl LibcallImpl = TLI->getLibcallImpl(LibraryCall);
+  RTLIB::LibcallImpl LibcallImpl = Libcalls->getLibcallImpl(LibraryCall);
   if (LibcallImpl == RTLIB::Unsupported)
     report_fatal_error("Unsupported element size");
 
@@ -9269,10 +9407,9 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallImplCallingConv(LibcallImpl),
+          Libcalls->getLibcallImplCallingConv(LibcallImpl),
           Type::getVoidTy(*getContext()),
-          getExternalSymbol(TLI->getLibcallImplName(LibcallImpl).data(),
-                            TLI->getPointerTy(getDataLayout())),
+          getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setDiscardResult()
       .setTailCall(isTailCall);
@@ -9329,7 +9466,7 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // FIXME:  pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
 
-  RTLIB::LibcallImpl MemmoveImpl = TLI->getLibcallImpl(RTLIB::MEMMOVE);
+  RTLIB::LibcallImpl MemmoveImpl = Libcalls->getLibcallImpl(RTLIB::MEMMOVE);
 
   bool IsTailCall = false;
   if (OverrideTailCall.has_value()) {
@@ -9342,10 +9479,9 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallImplCallingConv(MemmoveImpl),
+          Libcalls->getLibcallImplCallingConv(MemmoveImpl),
           Dst.getValueType().getTypeForEVT(*getContext()),
-          getExternalSymbol(TLI->getLibcallImplName(MemmoveImpl).data(),
-                            TLI->getPointerTy(getDataLayout())),
+          getExternalSymbol(MemmoveImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setDiscardResult()
       .setTailCall(IsTailCall);
@@ -9369,7 +9505,7 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(ElemSz);
-  RTLIB::LibcallImpl LibcallImpl = TLI->getLibcallImpl(LibraryCall);
+  RTLIB::LibcallImpl LibcallImpl = Libcalls->getLibcallImpl(LibraryCall);
   if (LibcallImpl == RTLIB::Unsupported)
     report_fatal_error("Unsupported element size");
 
@@ -9377,10 +9513,9 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallImplCallingConv(LibcallImpl),
+          Libcalls->getLibcallImplCallingConv(LibcallImpl),
           Type::getVoidTy(*getContext()),
-          getExternalSymbol(TLI->getLibcallImplName(LibcallImpl).data(),
-                            TLI->getPointerTy(getDataLayout())),
+          getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setDiscardResult()
       .setTailCall(isTailCall);
@@ -9442,7 +9577,7 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // FIXME: pass in SDLoc
   CLI.setDebugLoc(dl).setChain(Chain);
 
-  RTLIB::LibcallImpl BzeroImpl = TLI->getLibcallImpl(RTLIB::BZERO);
+  RTLIB::LibcallImpl BzeroImpl = Libcalls->getLibcallImpl(RTLIB::BZERO);
   bool UseBZero = BzeroImpl != RTLIB::Unsupported && isNullConstant(Src);
 
   // If zeroing out and bzero is present, use it.
@@ -9451,26 +9586,22 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
     Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
     Args.emplace_back(Size, DL.getIntPtrType(Ctx));
     CLI.setLibCallee(
-        TLI->getLibcallImplCallingConv(BzeroImpl), Type::getVoidTy(Ctx),
-        getExternalSymbol(TLI->getLibcallImplName(BzeroImpl).data(),
-                          TLI->getPointerTy(DL)),
-        std::move(Args));
+        Libcalls->getLibcallImplCallingConv(BzeroImpl), Type::getVoidTy(Ctx),
+        getExternalSymbol(BzeroImpl, TLI->getPointerTy(DL)), std::move(Args));
   } else {
-    RTLIB::LibcallImpl MemsetImpl = TLI->getLibcallImpl(RTLIB::MEMSET);
+    RTLIB::LibcallImpl MemsetImpl = Libcalls->getLibcallImpl(RTLIB::MEMSET);
 
     TargetLowering::ArgListTy Args;
     Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
     Args.emplace_back(Src, Src.getValueType().getTypeForEVT(Ctx));
     Args.emplace_back(Size, DL.getIntPtrType(Ctx));
-    CLI.setLibCallee(
-        TLI->getLibcallImplCallingConv(MemsetImpl),
-        Dst.getValueType().getTypeForEVT(Ctx),
-        getExternalSymbol(TLI->getLibcallImplName(MemsetImpl).data(),
-                          TLI->getPointerTy(DL)),
-        std::move(Args));
+    CLI.setLibCallee(Libcalls->getLibcallImplCallingConv(MemsetImpl),
+                     Dst.getValueType().getTypeForEVT(Ctx),
+                     getExternalSymbol(MemsetImpl, TLI->getPointerTy(DL)),
+                     std::move(Args));
   }
 
-  RTLIB::LibcallImpl MemsetImpl = TLI->getLibcallImpl(RTLIB::MEMSET);
+  RTLIB::LibcallImpl MemsetImpl = Libcalls->getLibcallImpl(RTLIB::MEMSET);
   bool LowersToMemset = MemsetImpl == RTLIB::impl_memset;
 
   // If we're going to use bzero, make sure not to tail call unless the
@@ -9499,7 +9630,7 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(ElemSz);
-  RTLIB::LibcallImpl LibcallImpl = TLI->getLibcallImpl(LibraryCall);
+  RTLIB::LibcallImpl LibcallImpl = Libcalls->getLibcallImpl(LibraryCall);
   if (LibcallImpl == RTLIB::Unsupported)
     report_fatal_error("Unsupported element size");
 
@@ -9507,10 +9638,9 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallImplCallingConv(LibcallImpl),
+          Libcalls->getLibcallImplCallingConv(LibcallImpl),
           Type::getVoidTy(*getContext()),
-          getExternalSymbol(TLI->getLibcallImplName(LibcallImpl).data(),
-                            TLI->getPointerTy(getDataLayout())),
+          getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setDiscardResult()
       .setTailCall(isTailCall);
@@ -10800,9 +10930,9 @@ SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
   if (Cond.isUndef())
     return isConstantValueOfAnyType(T) ? T : F;
   if (T.isUndef())
-    return F;
+    return isGuaranteedNotToBePoison(F) ? F : getFreeze(F);
   if (F.isUndef())
-    return T;
+    return isGuaranteedNotToBePoison(T) ? T : getFreeze(T);
 
   // select true, T, F --> T
   // select false, T, F --> F
@@ -12364,7 +12494,8 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
       const SDValue &ToOp = To[Use.getResNo()];
       ++UI;
       Use.set(ToOp);
-      To_IsDivergent |= ToOp->isDivergent();
+      if (ToOp.getValueType() != MVT::Other)
+        To_IsDivergent |= ToOp->isDivergent();
     } while (UI != UE && UI->getUser() == User);
 
     if (To_IsDivergent != From->isDivergent())
@@ -14239,16 +14370,15 @@ SDValue SelectionDAG::makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
   TargetLowering::ArgListTy Args;
   Args.emplace_back(Ptr, Ptr.getValueType().getTypeForEVT(*getContext()));
   RTLIB::LibcallImpl LibcallImpl =
-      TLI->getLibcallImpl(static_cast<RTLIB::Libcall>(LibFunc));
+      Libcalls->getLibcallImpl(static_cast<RTLIB::Libcall>(LibFunc));
   if (LibcallImpl == RTLIB::Unsupported)
     reportFatalUsageError("emitting call to unsupported libcall");
 
   SDValue Callee =
-      getExternalSymbol(TLI->getLibcallImplName(LibcallImpl).data(),
-                        TLI->getPointerTy(getDataLayout()));
+      getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(*this);
   CLI.setDebugLoc(DLoc).setChain(InChain).setLibCallee(
-      TLI->getLibcallImplCallingConv(LibcallImpl),
+      Libcalls->getLibcallImplCallingConv(LibcallImpl),
       Type::getVoidTy(*getContext()), Callee, std::move(Args));
   return TLI->LowerCallTo(CLI).second;
 }

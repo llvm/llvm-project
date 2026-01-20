@@ -1,5 +1,7 @@
-# Test the --dump-dot-func option with multiple functions 
+# Test the --dump-dot-func option with multiple functions
 # (includes tests for both mangled/unmangled names)
+
+REQUIRES: system-linux
 
 RUN: %clangxx %p/Inputs/multi-func.cpp -o %t.exe -Wl,-q
 

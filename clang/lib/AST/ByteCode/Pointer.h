@@ -354,7 +354,8 @@ public:
       if (const auto *CT = getFieldDesc()->getType()->getAs<VectorType>())
         return CT->getElementType();
     }
-    return getFieldDesc()->getType();
+
+    return getFieldDesc()->getDataElemType();
   }
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
@@ -750,6 +751,16 @@ public:
     getInlineDesc()->LifeState = Lifetime::Started;
   }
 
+  /// Strip base casts from this Pointer.
+  /// The result is either a root pointer or something
+  /// that isn't a base class anymore.
+  [[nodiscard]] Pointer stripBaseCasts() const {
+    Pointer P = *this;
+    while (P.isBaseClass())
+      P = P.getBase();
+    return P;
+  }
+
   /// Compare two pointers.
   ComparisonCategoryResult compare(const Pointer &Other) const {
     if (!hasSameBase(*this, Other))
@@ -784,7 +795,7 @@ public:
   /// Compute an integer that can be used to compare this pointer to
   /// another one. This is usually NOT the same as the pointer offset
   /// regarding the AST record layout.
-  size_t computeOffsetForComparison() const;
+  size_t computeOffsetForComparison(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;

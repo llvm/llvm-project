@@ -214,6 +214,8 @@ set(files
   __atomic/atomic_lock_free.h
   __atomic/atomic_ref.h
   __atomic/atomic_sync.h
+  __atomic/atomic_sync_timed.h
+  __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
   __atomic/fence.h
@@ -308,6 +310,7 @@ set(files
   __concepts/class_or_enum.h
   __concepts/common_reference_with.h
   __concepts/common_with.h
+  __concepts/comparison_common_type.h
   __concepts/constructible.h
   __concepts/convertible_to.h
   __concepts/copyable.h
@@ -527,6 +530,7 @@ set(files
   __locale_dir/num.h
   __locale_dir/pad_and_output.h
   __locale_dir/scan_keyword.h
+  __locale_dir/support/aix.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
@@ -604,6 +608,7 @@ set(files
   __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
+  __memory/valid_range.h
   __memory_resource/memory_resource.h
   __memory_resource/monotonic_buffer_resource.h
   __memory_resource/polymorphic_allocator.h
@@ -700,6 +705,8 @@ set(files
   __random/uniform_real_distribution.h
   __random/weibull_distribution.h
   __ranges/access.h
+  __ranges/adjacent_transform_view.h
+  __ranges/adjacent_view.h
   __ranges/all.h
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
@@ -711,6 +718,7 @@ set(files
   __ranges/data.h
   __ranges/drop_view.h
   __ranges/drop_while_view.h
+  __ranges/elements_of.h
   __ranges/elements_view.h
   __ranges/empty.h
   __ranges/empty_view.h
@@ -788,6 +796,7 @@ set(files
   __tuple/tuple_like.h
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
+  __tuple/tuple_transform.h
   __type_traits/add_cv_quals.h
   __type_traits/add_pointer.h
   __type_traits/add_reference.h
@@ -924,7 +933,6 @@ set(files
   __utility/in_place.h
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
-  __utility/is_valid_range.h
   __utility/lazy_synth_three_way_comparator.h
   __utility/move.h
   __utility/no_destroy.h
@@ -1020,7 +1028,6 @@ set(files
   filesystem
   flat_map
   flat_set
-  float.h
   format
   forward_list
   fstream
@@ -1751,10 +1758,8 @@ if (LIBCXX_INSTALL_HEADERS)
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-cxx-headers
-                      DEPENDS cxx-headers
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx-headers
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      DEPENDS cxx-headers
+      COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx-headers)
     # Stripping is a no-op for headers
     add_custom_target(install-cxx-headers-stripped DEPENDS install-cxx-headers)
   endif()
