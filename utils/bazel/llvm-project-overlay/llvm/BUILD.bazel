@@ -6628,7 +6628,7 @@ cc_binary(
     srcs = glob([
         "tools/llvm-ir2vec/**/*.cpp",
         "tools/llvm-ir2vec/lib/*.h",
-    ]),
+    ], allow_empty = True),
     copts = llvm_copts,
     includes = ["tools/llvm-ir2vec/lib"],
     stamp = 0,
