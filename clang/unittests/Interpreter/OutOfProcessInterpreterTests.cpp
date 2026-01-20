@@ -104,84 +104,117 @@ static std::string getExecutorPath() {
   return ExecutorPath.str().str();
 }
 
-class OutOfProcessInterpreterTest : public InterpreterTestBase {
-protected:
-  static bool HostSupportsOutOfProcessJIT() {
-    if (!InterpreterTestBase::HostSupportsJIT())
-      return false;
-    return !getExecutorPath().empty();
-  }
-};
-
 struct OutOfProcessInterpreterInfo {
   std::string OrcRuntimePath;
   std::unique_ptr<Interpreter> Interp;
 };
 
-static OutOfProcessInterpreterInfo
+static llvm::Expected<OutOfProcessInterpreterInfo>
 createInterpreterWithRemoteExecution(std::shared_ptr<IOContext> io_ctx,
                                      const Args &ExtraArgs = {}) {
   Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
   llvm::append_range(ClangArgs, ExtraArgs);
 
   auto Config = std::make_unique<IncrementalExecutorBuilder>();
-  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
 
-  if (SystemTriple.isOSBinFormatELF() || SystemTriple.isOSBinFormatMachO()) {
-    Config->IsOutOfProcess = true;
-    Config->OOPExecutor = getExecutorPath();
-    Config->UseSharedMemory = false;
-    Config->SlabAllocateSize = 0;
+  Config->IsOutOfProcess = true;
+  Config->OOPExecutor = getExecutorPath();
+  Config->UseSharedMemory = false;
+  Config->SlabAllocateSize = 0;
 
-    // Capture the raw file descriptors by value explicitly. This lambda will
-    // be invoked in the child process after fork(), so capturing the fd ints is
-    // safe and avoids capturing FILE* pointers or outer 'this'.
-    int stdin_fd = fileno(io_ctx->stdin_file.get());
-    int stdout_fd = fileno(io_ctx->stdout_file.get());
-    int stderr_fd = fileno(io_ctx->stderr_file.get());
+  // Capture the raw file descriptors by value explicitly. This lambda will
+  // be invoked in the child process after fork(), so capturing the fd ints is
+  // safe and avoids capturing FILE* pointers or outer 'this'.
+  int stdin_fd = fileno(io_ctx->stdin_file.get());
+  int stdout_fd = fileno(io_ctx->stdout_file.get());
+  int stderr_fd = fileno(io_ctx->stderr_file.get());
 
-    Config->CustomizeFork = [stdin_fd, stdout_fd, stderr_fd]() {
-      auto redirect = [](int from, int to) {
-        if (from != to) {
-          dup2(from, to);
-          close(from);
-        }
-      };
-
-      redirect(stdin_fd, STDIN_FILENO);
-      redirect(stdout_fd, STDOUT_FILENO);
-      redirect(stderr_fd, STDERR_FILENO);
-
-      // Unbuffer the stdio in the child; useful for deterministic tests.
-      setvbuf(stdout, nullptr, _IONBF, 0);
-      setvbuf(stderr, nullptr, _IONBF, 0);
-
-      // Helpful marker for the unit-test to assert that fork customization ran.
-      printf("CustomizeFork executed\n");
-      fflush(stdout);
+  Config->CustomizeFork = [stdin_fd, stdout_fd, stderr_fd]() {
+    auto redirect = [](int from, int to) {
+      if (from != to) {
+        dup2(from, to);
+        close(from);
+      }
     };
-  }
+
+    redirect(stdin_fd, STDIN_FILENO);
+    redirect(stdout_fd, STDOUT_FILENO);
+    redirect(stderr_fd, STDERR_FILENO);
+
+    // Unbuffer the stdio in the child; useful for deterministic tests.
+    setvbuf(stdout, nullptr, _IONBF, 0);
+    setvbuf(stderr, nullptr, _IONBF, 0);
+
+    // Helpful marker for the unit-test to assert that fork customization ran.
+    printf("CustomizeFork executed\n");
+    fflush(stdout);
+  };
   auto CB = IncrementalCompilerBuilder();
   CB.SetCompilerArgs(ClangArgs);
   CB.SetDriverCompilationCallback(Config->UpdateOrcRuntimePathCB);
-  auto CI = cantFail(CB.CreateCpp());
-  return {Config->OrcRuntimePath,
-          cantFail(Interpreter::create(std::move(CI), std::move(Config)))};
+
+  auto CIOrErr = CB.CreateCpp();
+  if (!CIOrErr)
+    return CIOrErr.takeError();
+
+  OutOfProcessInterpreterInfo Info;
+  Info.OrcRuntimePath = Config->OrcRuntimePath;
+
+  auto InterpOrErr =
+      Interpreter::create(std::move(*CIOrErr), std::move(Config));
+  if (!InterpOrErr)
+    return InterpOrErr.takeError();
+
+  Info.Interp = std::move(*InterpOrErr);
+  return Info;
 }
+
+class OutOfProcessInterpreterTest : public InterpreterTestBase {
+protected:
+  static bool HostSupportsOutOfProcessJIT() {
+    if (!InterpreterTestBase::HostSupportsJIT())
+      return false;
+
+    llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
+    if (!SystemTriple.isOSBinFormatELF() && !SystemTriple.isOSBinFormatMachO())
+      return false;
+
+    return !getExecutorPath().empty();
+  }
+
+  static void SetUpTestSuite() {
+    if (!HostSupportsOutOfProcessJIT())
+      GTEST_SKIP() << "Host does not support out-of-process JIT";
+
+    auto io_ctx = std::make_shared<IOContext>();
+    if (!io_ctx->initializeTempFiles())
+      GTEST_SKIP() << "Cannot initialize temporary files";
+
+    auto ErrOrI = createInterpreterWithRemoteExecution(io_ctx);
+    if (!ErrOrI) {
+      consumeError(llvm::handleErrors(
+          ErrOrI.takeError(), [](const llvm::StringError &SE) {
+            // check for your specific error code
+            if (SE.convertToErrorCode() ==
+                std::errc::no_such_file_or_directory) {
+              // skip the test
+              GTEST_SKIP() << "File not found: " << SE.getMessage();
+            }
+          }));
+    }
+  }
+};
 
 static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
   return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
 }
 
 TEST_F(OutOfProcessInterpreterTest, SanityWithRemoteExecution) {
-  if (!HostSupportsOutOfProcessJIT())
-    GTEST_SKIP();
-
   auto io_ctx = std::make_shared<IOContext>();
   ASSERT_TRUE(io_ctx->initializeTempFiles());
 
   OutOfProcessInterpreterInfo Info =
-      createInterpreterWithRemoteExecution(io_ctx);
+      cantFail(createInterpreterWithRemoteExecution(io_ctx));
   Interpreter *Interp = Info.Interp.get();
   ASSERT_TRUE(Interp);
 
@@ -199,14 +232,12 @@ TEST_F(OutOfProcessInterpreterTest, SanityWithRemoteExecution) {
 }
 
 TEST_F(OutOfProcessInterpreterTest, FindRuntimeInterface) {
-  if (!HostSupportsOutOfProcessJIT())
-    GTEST_SKIP();
-
   // make a fresh io context for this test
   auto io_ctx = std::make_shared<IOContext>();
   ASSERT_TRUE(io_ctx->initializeTempFiles());
 
-  OutOfProcessInterpreterInfo I = createInterpreterWithRemoteExecution(io_ctx);
+  OutOfProcessInterpreterInfo I =
+      cantFail(createInterpreterWithRemoteExecution(io_ctx));
   ASSERT_TRUE(I.Interp);
 
   // FIXME: Not yet supported.
