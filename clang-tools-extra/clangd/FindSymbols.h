@@ -57,12 +57,17 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
 /// same order that they appear.
 llvm::Expected<std::vector<DocumentSymbol>> getDocumentSymbols(ParsedAST &AST);
 
-/// Returns the symbol tags for the given declaration.
-/// \p ND The declaration to get tags for.
-std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND);
+/// Converts a single SymbolTag to a bitmask.
+SymbolTags toSymbolTagBitmask(SymbolTag ST);
 
 /// Computes symbol tags for a given NamedDecl.
 SymbolTags computeSymbolTags(const NamedDecl &ND);
+
+/// Returns the symbol tags for the given declaration.
+/// This is a wrapper around computeSymbolTags() which unpacks
+/// the tags into a vector.
+/// \p ND The declaration to get tags for.
+std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND);
 
 } // namespace clangd
 } // namespace clang

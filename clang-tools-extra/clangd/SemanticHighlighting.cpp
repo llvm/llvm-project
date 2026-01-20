@@ -22,7 +22,6 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -1025,10 +1024,6 @@ public:
 private:
   HighlightingsBuilder &H;
 };
-
-SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
-  return (1 << static_cast<unsigned>(ST));
-}
 } // namespace
 
 std::vector<HighlightingToken>
@@ -1063,7 +1058,7 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
 
           const auto SymbolTags = computeSymbolTags(*Decl);
 
-          static const llvm::DenseMap<SymbolTag, HighlightingModifier>
+          static const thread_local llvm::DenseMap<SymbolTag, HighlightingModifier>
               TagModifierMap = {
                   {SymbolTag::Deprecated, HighlightingModifier::Deprecated},
                   {SymbolTag::ReadOnly, HighlightingModifier::Readonly},

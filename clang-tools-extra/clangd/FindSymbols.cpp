@@ -30,9 +30,6 @@ namespace clang {
 namespace clangd {
 
 namespace {
-SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
-  return (1 << static_cast<unsigned>(ST));
-}
 
 // "Static" means many things in C++, only some get the "static" modifier.
 //
@@ -157,6 +154,10 @@ bool isUniqueDefinition(const NamedDecl *Decl) {
          isa<ObjCImplDecl>(Decl);
 }
 } // namespace
+
+SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
+  return (1 << static_cast<unsigned>(ST));
+}
 
 SymbolTags computeSymbolTags(const NamedDecl &ND) {
   SymbolTags Result = 0;

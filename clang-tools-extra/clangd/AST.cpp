@@ -8,7 +8,6 @@
 
 #include "AST.h"
 
-#include "SemanticHighlighting.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -618,7 +617,6 @@ public:
 
   QualType DeducedType;
 };
-
 } // namespace
 
 std::optional<QualType> getDeducedType(ASTContext &ASTCtx,

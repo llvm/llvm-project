@@ -17,7 +17,6 @@
 #include "index/Symbol.h"
 #include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclObjC.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MacroInfo.h"
