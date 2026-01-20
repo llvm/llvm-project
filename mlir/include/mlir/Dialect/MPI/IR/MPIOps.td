@@ -262,6 +262,39 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// AllGatherOp
+//===----------------------------------------------------------------------===//
+
+def MPI_AllGatherOp : MPI_Op<"allgather", []> {
+  let summary = [{
+    Equivalent to `MPI_Allgather(sendbuf, sendcount, sendtype,
+                                 recvbuf, recvcount, recvtype,
+                                 comm)`.
+  }];
+  let description = [{
+    MPI_Allgather collects data from all processes in a given communicator and
+    stores the data collected in the receive buffer of each process.
+
+    Each process is expected to contribute the same amount of data.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let arguments = (
+    ins AnyMemRef : $sendbuf,
+        AnyMemRef : $recvbuf,
+        MPI_Comm : $comm
+  );
+
+  let results = (outs Optional<MPI_Retval>:$retval);
+
+  let assemblyFormat = "`(` $sendbuf `,` $recvbuf `,` $comm `)` "
+                       "attr-dict `:` type($sendbuf) `,` type($recvbuf) "
+                       "(`->` type($retval)^)?";
+}
+
+//===----------------------------------------------------------------------===//
 // AllReduceOp
 //===----------------------------------------------------------------------===//
 
