@@ -3414,6 +3414,17 @@ func.func @omp_declare_simd_linear(%a: f64, %b: f64, %iv: i32, %step: i32) -> ()
   return
 }
 
+// CHECK-LABEL: func.func @omp_declare_simd_uniform
+func.func @omp_declare_simd_uniform(%a: f64, %b: f64,
+                                    %p0: memref<i32>, %p1: memref<i32>) -> () {
+  // CHECK:      omp.declare_simd
+  // CHECK-SAME: uniform(
+  // CHECK-SAME: %{{.*}} : memref<i32>,
+  // CHECK-SAME: %{{.*}} : memref<i32>)
+  omp.declare_simd uniform(%p0 : memref<i32>, %p1 : memref<i32>)
+  return
+}
+
 // CHECK-LABEL: func.func @omp_declare_simd_all_clauses
 func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
                                         %p0: memref<i32>, %p1: memref<i32>,
@@ -3424,9 +3435,13 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
   // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
   // CHECK-SAME: linear(%{{.*}} = %{{.*}} : i32)
   // CHECK-SAME: simdlen(8)
+  // CHECK-SAME: uniform(
+  // CHECK-SAME: %{{.*}} : memref<i32>,
+  // CHECK-SAME: %{{.*}} : memref<i32>)
   omp.declare_simd simdlen(8)
     aligned(%p0 : memref<i32> -> 32 : i64,
             %p1 : memref<i32> -> 128 : i64)
     linear(%iv = %step : i32)
+    uniform(%p0 : memref<i32>, %p1 : memref<i32>)
   return
 }

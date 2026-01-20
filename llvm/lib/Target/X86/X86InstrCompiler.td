@@ -272,6 +272,12 @@ let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
                             "#SEH_UnwindV2Start", []>;
 }
 
+// Chain instructions:
+let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
+  def SEH_SplitChained : I<0, Pseudo, (outs), (ins),
+                            "#SEH_SplitChained", []>;
+}
+
 //===----------------------------------------------------------------------===//
 // Pseudo instructions used by KCFI.
 //===----------------------------------------------------------------------===//

@@ -3848,7 +3848,7 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   cp.processAligned(clauseOps);
   cp.processLinear(clauseOps);
   cp.processSimdlen(clauseOps);
-  cp.processTODO<clause::Uniform>(loc, llvm::omp::Directive::OMPD_declare_simd);
+  cp.processUniform(clauseOps);
 
   mlir::omp::DeclareSimdOp::create(converter.getFirOpBuilder(), loc, clauseOps);
 }
