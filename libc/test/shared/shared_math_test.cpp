@@ -33,6 +33,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::expf16(0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::expm1f16(0.0f16));
 
+  EXPECT_FP_EQ(float16(10.0), LIBC_NAMESPACE::shared::f16fma(2.0, 3.0, 4.0));
+
   ASSERT_FP_EQ(float16(8 << 5), LIBC_NAMESPACE::shared::ldexpf16(8.0f16, 5));
   ASSERT_FP_EQ(float16(-1 * (8 << 5)),
                LIBC_NAMESPACE::shared::ldexpf16(-8.0f16, 5));
@@ -75,6 +77,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ_ALL_ROUNDING(0.75f,
                             LIBC_NAMESPACE::shared::frexpf(24.0f, &exponent));
   EXPECT_EQ(exponent, 5);
+
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbf(1.0f));
 
   ASSERT_FP_EQ(float(8 << 5), LIBC_NAMESPACE::shared::ldexpf(8.0f, 5));
   ASSERT_FP_EQ(float(-1 * (8 << 5)), LIBC_NAMESPACE::shared::ldexpf(-8.0f, 5));

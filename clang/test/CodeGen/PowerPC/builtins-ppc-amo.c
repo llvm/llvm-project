@@ -156,6 +156,69 @@ void test_signed_ldat_cond(long int *ptr, long int * resp) {
   *resp = res;
 }
 
+// CHECK-LABEL: define dso_local void @test_unsigned_stwat(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef zeroext [[VALUE:%.*]], ptr noundef readnone captures(none) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    tail call void @llvm.ppc.amo.stwat(ptr [[PTR]], i32 [[VALUE]], i32 24)
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_unsigned_stwat(
+// AIX-SAME: ptr noundef [[PTR:%.*]], i32 noundef zeroext [[VALUE:%.*]], ptr noundef readnone captures(none) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    tail call void @llvm.ppc.amo.stwat(ptr [[PTR]], i32 [[VALUE]], i32 24)
+// AIX-NEXT:    ret void
+//
+void test_unsigned_stwat(unsigned int *ptr, unsigned int value, unsigned int * resp) {
+  __builtin_amo_stwat(ptr, value, 24);
+}
+
+// CHECK-LABEL: define dso_local void @test_unsigned_stdat(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VALUE:%.*]], ptr noundef readnone captures(none) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    tail call void @llvm.ppc.amo.stdat(ptr [[PTR]], i64 [[VALUE]], i32 3)
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_unsigned_stdat(
+// AIX-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VALUE:%.*]], ptr noundef readnone captures(none) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    tail call void @llvm.ppc.amo.stdat(ptr [[PTR]], i64 [[VALUE]], i32 3)
+// AIX-NEXT:    ret void
+//
+void test_unsigned_stdat(unsigned long int *ptr, unsigned long int value, unsigned long int * resp) {
+  __builtin_amo_stdat(ptr, value, 3);
+}
+
+// CHECK-LABEL: define dso_local void @test_signed_stwat(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef signext [[VALUE:%.*]], ptr noundef readnone captures(none) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    tail call void @llvm.ppc.amo.stwat(ptr [[PTR]], i32 [[VALUE]], i32 24)
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_signed_stwat(
+// AIX-SAME: ptr noundef [[PTR:%.*]], i32 noundef signext [[VALUE:%.*]], ptr noundef readnone captures(none) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    tail call void @llvm.ppc.amo.stwat(ptr [[PTR]], i32 [[VALUE]], i32 24)
+// AIX-NEXT:    ret void
+//
+void test_signed_stwat(int *ptr, int value, int * resp) {
+  __builtin_amo_stwat_s(ptr, value, 24);
+}
+
+// CHECK-LABEL: define dso_local void @test_signed_stdat(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VALUE:%.*]], ptr noundef readnone captures(none) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    tail call void @llvm.ppc.amo.stdat(ptr [[PTR]], i64 [[VALUE]], i32 5)
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_signed_stdat(
+// AIX-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VALUE:%.*]], ptr noundef readnone captures(none) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    tail call void @llvm.ppc.amo.stdat(ptr [[PTR]], i64 [[VALUE]], i32 5)
+// AIX-NEXT:    ret void
+//
+void test_signed_stdat(long int *ptr, long int value, long int * resp) {
+  __builtin_amo_stdat_s(ptr, value, 5);
+}
 //.
 // CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}

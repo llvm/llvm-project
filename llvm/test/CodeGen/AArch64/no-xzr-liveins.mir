@@ -1,0 +1,30 @@
+# RUN: llc -mtriple=aarch64-unknown-fuchsia -run-pass=prologepilog %s -o - | FileCheck %s
+
+# This test ensures that constant registers like XZR are not considered live
+# even if they are in the liveins list. This prevents the stack probe from
+# incorrectly thinking it needs to preserve XZR if it's used as a temporary
+# register.
+
+--- |
+  define void @func() #0 {
+    ret void
+  }
+  attributes #0 = { "probe-stack"="inline-asm" "stack-probe-size"="4096" }
+...
+---
+name:            func
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       4096
+  maxAlignment:    8
+  localFrameSize:  4096
+stack:
+  - { id: 0, size: 4096, alignment: 8 }
+  - { id: 1, type: variable-sized }
+body:             |
+  bb.0:
+    liveins: $xzr
+    ; CHECK-LABEL: name: func
+    ; CHECK: $xzr = frame-setup LDRXui $sp, 0
+    $x0 = COPY $xzr
+    RET_ReallyLR
