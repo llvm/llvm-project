@@ -273,12 +273,17 @@ def MPI_AllGatherOp : MPI_Op<"allgather", []> {
   }];
   let description = [{
     MPI_Allgather collects data from all processes in a given communicator and
-    stores the data collected in the receive buffer of each process.
+    stores the gathered data in the receive buffer of each process.
 
-    Each process is expected to contribute the same amount of data.
+    Each process contributes the same amount of data defined by `sendbuf`.
+    The MPI call specifies the number of elements contributed by each process
+    via the `recvcount` parameter. However, this operation, assumes `recvbuf`
+    to be sufficiently large to hold the data contributed by all processes.
+    Therefore, `recvcount` is implicitly defined as
+    `num_elements(recvbuf) / MPI_Comm_size(comm)`.
 
-    This operation can optionally return an `!mpi.retval` value that can be used
-    to check for errors.
+    This operation may optionally return an !mpi.retval value, which can be
+    used for error checking.
   }];
 
   let arguments = (
