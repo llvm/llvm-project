@@ -14,11 +14,8 @@ set(UNITTEST_SOURCES
 )
 add_executable(omptest-unittests ${UNITTEST_SOURCES})
 
-# Add local and LLVM-provided GoogleTest include directories.
-target_include_directories(omptest-unittests PRIVATE
-  ../include
-  ${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include)
-
+# Add local include directory and link omptest library
+target_include_directories(omptest-unittests PRIVATE ../include)
 target_link_libraries(omptest-unittests PRIVATE omptest)
 
 set_target_properties(omptest-unittests PROPERTIES
