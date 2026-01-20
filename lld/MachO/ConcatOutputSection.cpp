@@ -115,18 +115,15 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 
 DenseMap<Symbol *, ThunkInfo> lld::macho::thunkMap;
 
-namespace {
 
 // Returns true if `osec` can be the target of a BRANCH relocation.
 // Branch targets include code sections and stub sections for dynamic calls.
-bool isBranchTargetSection(const OutputSection *osec) {
+static bool isBranchTargetSection(const OutputSection *osec) {
   assert(osec->parent && "section must be in a segment");
   return sections::isCodeSection(osec->name, osec->parent->name, osec->flags) ||
          osec->name == section_names::stubs ||
          osec->name == section_names::objcStubs;
 }
-
-} // namespace
 
 uint64_t TextOutputSection::estimateEndVA(uint64_t startVA) const {
   uint64_t endVA = startVA;
@@ -139,15 +136,16 @@ uint64_t TextOutputSection::estimateFurthestBranchTargetEndVA() const {
   uint64_t curVA = estimateEndVA(addr);
   uint64_t furthestTargetEndVA = isBranchTargetSection(this) ? curVA : addr;
 
-  // Find this section in the segment's section list.
-  const std::vector<OutputSection *> &sections = parent->getSections();
-  auto it = llvm::find(sections, this);
-  assert(it != sections.end() && "section not found in parent segment");
+  // Find this section in the segment's section list and get subsequent sections.
+  ArrayRef<OutputSection *> sections = parent->getSections();
+  ArrayRef<OutputSection *> fromThis = sections.drop_until(
+      [this](const OutputSection *s) { return s == this; });
+  assert(!fromThis.empty() && "section not found in parent segment");
+  ArrayRef<OutputSection *> subsequentSections = fromThis.drop_front(1);
 
   // Walk sections after this one, simulating layout (alignment + size).
   // Track the end VA of the furthest branch target section.
-  for (++it; it != sections.end(); ++it) {
-    OutputSection *osec = *it;
+  for (OutputSection *osec : subsequentSections) {
     if (!osec->isNeeded())
       continue;
 
