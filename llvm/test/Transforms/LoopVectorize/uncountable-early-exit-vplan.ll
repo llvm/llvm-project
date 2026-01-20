@@ -241,7 +241,7 @@ exit:
 }
 
 define i64 @two_early_exits_same_exit_with_constant_live_outs() {
-; CHECK: LV: Not vectorizing: Loop has too many uncountable exits.
+; CHECK: LV: Not vectorizing:  Auto-vectorization of loops with multiple uncountable early exits is not yet supported.
 ;
 entry:
   %A = alloca [1024 x i8]
