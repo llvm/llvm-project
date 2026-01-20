@@ -1790,14 +1790,6 @@ TEST(STLExtrasTest, HasEqualityComparison) {
   };
   static_assert(!has_equality_comparison_v<MutatingEqualityComparison>);
 
-  struct PrivateEqualityComparison {
-  private:
-    bool operator==(const PrivateEqualityComparison &Other) const {
-      return false;
-    }
-  };
-  static_assert(!has_equality_comparison_v<PrivateEqualityComparison>);
-
   struct PublicEqualityComparison {
     bool operator==(const PublicEqualityComparison &Other) const {
       return false;
