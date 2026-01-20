@@ -6,12 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/sinhf.h"
-#include "src/__support/math/sinhf.h"
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINHF_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_SINHF_H
+
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/sinhfcoshf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
+namespace math {
+
+static constexpr float sinhf(float x) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
   uint32_t x_abs = xbits.abs().uintval();
@@ -72,4 +81,8 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
       math::sinhfcoshf_internal::exp_pm_eval</*is_sinh*/ true>(x));
 }
 
+} // namespace math
+
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_SINHF_H

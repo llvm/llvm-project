@@ -1175,6 +1175,19 @@ add_header_library(
 )
 
 add_header_library(
+  sinhf
+  HDRS
+    sinhf.h
+  DEPENDS
+    libc.src.__support.FPUtil.FEnvImpl
+    libc.src.__support.FPUtil.FPBits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.math.sinhfcoshf_utils
+)
+
+add_header_library(
   dfmal
   HDRS
     dfmal.h
