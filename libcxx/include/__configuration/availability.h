@@ -270,6 +270,16 @@
 #  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
 #endif
 
+// This controls the availability of the C++17 std::pmr library,
+// which is implemented in large part in the built library.
+//
+// TODO: Enable std::pmr markup once https://llvm.org/PR40340 has been fixed
+//       Until then, it is possible for folks to try to use `std::pmr` when back-deploying to targets that don't support
+//       it and it'll be a load-time error, but we don't have a good alternative because the library won't compile if we
+//       use availability annotations until that bug has been fixed.
+#define _LIBCPP_AVAILABILITY_HAS_PMR _LIBCPP_INTRODUCED_IN_LLVM_16
+#define _LIBCPP_AVAILABILITY_PMR
+
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
 // iostreams by providing a single strong definition in the shared library.
@@ -293,16 +303,6 @@
 // to use it when the mechanism isn't overriden at compile-time.
 #define _LIBCPP_AVAILABILITY_HAS_VERBOSE_ABORT _LIBCPP_INTRODUCED_IN_LLVM_15
 #define _LIBCPP_AVAILABILITY_VERBOSE_ABORT _LIBCPP_INTRODUCED_IN_LLVM_15_ATTRIBUTE
-
-// This controls the availability of the C++17 std::pmr library,
-// which is implemented in large part in the built library.
-//
-// TODO: Enable std::pmr markup once https://llvm.org/PR40340 has been fixed
-//       Until then, it is possible for folks to try to use `std::pmr` when back-deploying to targets that don't support
-//       it and it'll be a load-time error, but we don't have a good alternative because the library won't compile if we
-//       use availability annotations until that bug has been fixed.
-#define _LIBCPP_AVAILABILITY_HAS_PMR _LIBCPP_INTRODUCED_IN_LLVM_16
-#define _LIBCPP_AVAILABILITY_PMR
 
 // Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
 #  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8
