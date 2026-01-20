@@ -18,9 +18,9 @@ define void @test_2d_array(i64 %i, i64 %j, i64 %N, i64 %M) {
 ; CHECK-NEXT:  Inst: %val = load i32, ptr %gepij, align 4
 ; CHECK-NEXT:  AccessFunction: {{\{\{}}0,+,80}<%for.i>,+,4}<%for.j>
 ; CHECK-NEXT:  Base offset: @test_array_10x20
-; CHECK-NEXT:  ArrayDecl[UnknownSize][20] with elements of 4 bytes.
+; CHECK-NEXT:  ArrayDecl[10][20] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><%for.i>][{0,+,1}<nuw><nsw><%for.j>]
-; CHECK-NEXT:  Delinearization validation: Failed
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   br label %for.i
