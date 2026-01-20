@@ -1003,10 +1003,12 @@ LLVM_ABI bool matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
 
 /// Attempt to match a simple value-accumulating recurrence of the form:
 ///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
-///   %llvm.intrinsic = call Ty @llvm.intrinsic(%OtherOp0, %OtherOp1, %llvm.intrinsic.acc)
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%OtherOp0, %OtherOp1,
+///   %llvm.intrinsic.acc)
 /// OR
 ///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
-///   %llvm.intrinsic = call Ty @llvm.intrinsic(%llvm.intrinsic.acc, %OtherOp0, %OtherOp1)
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%llvm.intrinsic.acc, %OtherOp0,
+///   %OtherOp1)
 ///
 /// The recurrence relation is of kind:
 ///   X_0 = %a (initial value),
