@@ -2554,7 +2554,7 @@ foreach fvti = AllFloatAndBF16Vectors in {
   }
 }
 
-foreach fvti = AllFloatVectors in {
+foreach fvti = AllFloatAndBF16Vectors in {
   defvar ivti = GetIntVTypeInfo<fvti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
   def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
@@ -2583,7 +2583,9 @@ foreach fvti = AllFloatVectors in {
                                             fvti.RegClass:$rs2,
                                             fvti.RegClass:$passthru,
                                             VLOpFrag)),
-              (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
+              (!cast<Instruction>("PseudoVFMERGE"#
+                                  !if(!eq(fvti.Scalar, bf16), "_ALT", "")#
+                                  "_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
                    fvti.RegClass:$passthru, fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
                    (fvti.Mask VMV0:$vm), GPR:$vl, fvti.Log2SEW)>;
