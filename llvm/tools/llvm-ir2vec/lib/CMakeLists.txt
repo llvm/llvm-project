@@ -1,5 +1,7 @@
-add_llvm_library(emb_utils STATIC
-  utils.cpp
+add_llvm_library(LLVMEmbUtils STATIC
+  Utils.cpp
+
+  BUILDTREE_ONLY
 
   DEPENDS
   intrinsics_gen
