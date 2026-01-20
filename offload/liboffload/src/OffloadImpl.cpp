@@ -1014,13 +1014,18 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
       return Res;
   } else {
     if (Queue)
-      olSyncQueue(Queue);
+      if (auto Res = olSyncQueue_impl(Queue))
+        return Res;
 
     void *Buffer = malloc(Size);
+    if (!Buffer)
+      return createOffloadError(
+          ErrorCode::OUT_OF_RESOURCES,
+          "Couldn't allocate a buffer for transfer");
     Error Res = SrcDevice->Device->dataRetrieve(Buffer, SrcPtr, Size, nullptr);
-    if (!Res) {
+    if (!Res)
       Res = DstDevice->Device->dataSubmit(DstPtr, Buffer, Size, nullptr);
-    }
+
     free(Buffer);
     return Res;
   }
