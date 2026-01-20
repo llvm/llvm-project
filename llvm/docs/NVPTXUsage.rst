@@ -1239,7 +1239,7 @@ the specified rounding mode and modifiers.
 Semantics:
 """"""""""
 
-The '``.sat``' modifier performs a saturating addition where the result is 
+The '``.sat``' modifier performs a saturating multiplication where the result is 
 clamped to ``[0.0, 1.0]`` and ``NaN`` results are flushed to ``+0.0f``. 
 The '``.ftz``' modifier flushes subnormal inputs and results to sign-preserving 
 zero.
@@ -1279,7 +1279,7 @@ of precision in the intermediate product and addition.
 Semantics:
 """"""""""
 
-The '``.sat``' modifier performs a saturating addition where the result is 
+The '``.sat``' modifier performs a saturating operation where the result is 
 clamped to ``[0.0, 1.0]`` and ``NaN`` results are flushed to ``+0.0f``. 
 The '``.ftz``' modifier flushes subnormal inputs and results to sign-preserving 
 zero.
