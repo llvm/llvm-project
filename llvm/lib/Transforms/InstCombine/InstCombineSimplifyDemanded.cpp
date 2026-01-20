@@ -2775,7 +2775,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::copysign: {
       // Flip on more potentially demanded classes
       const FPClassTest DemandedMaskAnySign = llvm::unknown_sign(DemandedMask);
-      if (SimplifyDemandedFPClass(I, 0, DemandedMaskAnySign, Known, Depth + 1))
+      KnownFPClass KnownMag;
+      if (SimplifyDemandedFPClass(CI, 0, DemandedMaskAnySign, KnownMag,
+                                  Depth + 1))
         return I;
 
       if ((DemandedMask & fcNegative) == DemandedMask) {
@@ -2791,7 +2793,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       }
 
       if (Value *Simplified = simplifyDemandedFPClassCopysignMag(
-              CI->getArgOperand(0), DemandedMask, Known, FMF.noSignedZeros()))
+              CI->getArgOperand(0), DemandedMask, KnownMag,
+              FMF.noSignedZeros()))
         return Simplified;
 
       KnownFPClass KnownSign = computeKnownFPClass(CI->getArgOperand(1),
@@ -2818,7 +2821,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         return I;
       }
 
-      Known.copysign(KnownSign);
+      Known = KnownFPClass::copysign(KnownMag, KnownSign);
       Known.knownNot(~DemandedMask);
       break;
     }
@@ -3430,6 +3433,36 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
               Known, CI->getArgOperand(0), DemandedMask, KnownSrc,
               /*NSZ=*/false))
         return Simplified;
+      break;
+    }
+    case Intrinsic::copysign: {
+      Value *Mag = CI->getArgOperand(0);
+      Value *Sign = CI->getArgOperand(1);
+      KnownFPClass KnownMag =
+          computeKnownFPClass(Mag, fcAllFlags, CxtI, Depth + 1);
+
+      // Rule out some cases by magnitude, which may help prove the sign bit is
+      // one direction or the other.
+      KnownMag.knownNot(~llvm::unknown_sign(DemandedMask));
+
+      // Cannot use nsz in the multiple use case.
+      if (Value *Simplified = simplifyDemandedFPClassCopysignMag(
+              Mag, DemandedMask, KnownMag, /*NSZ=*/false))
+        return Simplified;
+
+      KnownFPClass KnownSign =
+          computeKnownFPClass(Sign, fcAllFlags, CxtI, Depth + 1);
+
+      if (FMF.noInfs())
+        KnownSign.knownNot(fcInf);
+      if (FMF.noNaNs())
+        KnownSign.knownNot(fcNan);
+
+      if (KnownSign.SignBit && KnownMag.SignBit &&
+          *KnownSign.SignBit == *KnownMag.SignBit)
+        return Mag;
+
+      Known = KnownFPClass::copysign(KnownMag, KnownSign);
       break;
     }
     case Intrinsic::maximum:
