@@ -66,7 +66,8 @@ LLVM_ABI bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                       bool PreserveLCSSA);
 
 /// Ensure strict LCSSA form for the given loop, by removing lifetime
-/// intrinsics that are used outside the loop.
+/// intrinsics that cross the exit boundary, as well as their associated
+/// partners.
 ///
 /// Returns true if any modifications are made.
 LLVM_ABI bool cleanupDanglingLifetimeUsers(Loop *L, const DominatorTree &DT);

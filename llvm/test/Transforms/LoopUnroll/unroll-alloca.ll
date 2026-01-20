@@ -34,7 +34,7 @@ bb2:                                              ; preds = %bb1
 ; CHECK-LABEL: @partial
 ; CHECK: call{{.*}}umax
 ; CHECK: alloca i32
-; CHECK-NOT: call{{.*}}@llvm.lifetime.end
+; CHECK-NOT: call{{.*}}@llvm.lifetime
 
 define fastcc i32 @partial(i32 %max) {
 bb:
