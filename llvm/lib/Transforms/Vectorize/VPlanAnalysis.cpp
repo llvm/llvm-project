@@ -553,10 +553,16 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
           // even in the scalar case.
           RegUsage[ClassID] += 1;
         } else {
-          // The output from scaled phis and scaled reductions actually has
-          // fewer lanes than the VF.
-          unsigned ScaleFactor =
-              vputils::getVFScaleFactor(VPV->getDefiningRecipe());
+          unsigned ScaleFactor;
+          auto *DefR = VPV->getDefiningRecipe();
+          if (auto *ER = dyn_cast<VPExpressionRecipe>(DefR))
+            // In an expression recipe we want the maximum register usage out of
+            // its subexpressions, which means the minimum scaling factor.
+            ScaleFactor = ER->getMinVFScaleFactor();
+          else
+            // The output from scaled phis and scaled reductions actually has
+            // fewer lanes than the VF.
+            ScaleFactor = vputils::getVFScaleFactor(DefR);
           ElementCount VF = VFs[J];
           if (ScaleFactor > 1) {
             VF = VFs[J].divideCoefficientBy(ScaleFactor);

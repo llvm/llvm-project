@@ -3215,6 +3215,8 @@ public:
     return PR ? PR->getVFScaleFactor() : 1;
   }
 
+  unsigned getMinVFScaleFactor() const;
+
   /// Method for generating code, must not be called as this recipe is abstract.
   void execute(VPTransformState &State) override {
     llvm_unreachable("recipe must be removed before execute");

@@ -2949,6 +2949,14 @@ void VPExpressionRecipe::decompose() {
   ExpressionRecipes.clear();
 }
 
+unsigned VPExpressionRecipe::getMinVFScaleFactor() const {
+  unsigned Min = UINT_MAX;
+  for (auto *R : ExpressionRecipes) {
+    Min = std::min(Min, vputils::getVFScaleFactor(R));
+  }
+  return Min;
+}
+
 InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
                                                 VPCostContext &Ctx) const {
   Type *RedTy = Ctx.Types.inferScalarType(this);
