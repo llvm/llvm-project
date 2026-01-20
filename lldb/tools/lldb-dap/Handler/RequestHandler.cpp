@@ -200,7 +200,8 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     launch_info.SetEnvironment(env, true);
   }
 
-  if ((arguments.stdin_path || arguments.stdout_path || arguments.stderr_path) &&
+  if ((arguments.stdin_path || arguments.stdout_path ||
+       arguments.stderr_path) &&
       !arguments.disableSTDIO)
     SetupIORedirection(arguments.stdin_path, arguments.stdout_path,
                        arguments.stderr_path, launch_info);
