@@ -119,7 +119,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
 
     Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
         diag::err_ppc_invalid_arg_type)
-        << ArgIndex << VecType;
+        << ArgIndex << VecType << ArgTy;
     return false;
   };
 
@@ -130,7 +130,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
 
     Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
         diag::err_ppc_invalid_arg_type)
-        << ArgIndex << "integer";
+        << ArgIndex << "integer" << ArgTy;
     return false;
   };
 
