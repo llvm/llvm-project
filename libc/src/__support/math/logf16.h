@@ -1,4 +1,4 @@
-//===-- Implementation header for logf16 ----------------------*- C++ -*-===//
+//===-- Implementation header for logf16 ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,7 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
+#include "expxf16_utils.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -25,7 +26,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
-#include "src/__support/math/expxf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
