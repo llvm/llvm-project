@@ -2410,14 +2410,14 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
   return nullptr;
 }
 
-static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
+static Value *combineAndOrOfImmCmpToBitExtract(Instruction &I,
                                                InstCombiner::BuilderTy &Builder,
                                                const DataLayout &DL) {
   // Currently only support scalars
-  if (Or.getType()->isVectorTy())
+  if (I.getType()->isVectorTy())
     return nullptr;
 
-  ConstantComparesGatherer ConstantCompare(&Or, DL, /*OneUse=*/true);
+  ConstantComparesGatherer ConstantCompare(&I, DL, /*OneUse=*/true);
   // Unpack the result
   SmallVectorImpl<ConstantInt *> &Values = ConstantCompare.Vals;
   Value *Index = ConstantCompare.CompValue;
@@ -2439,7 +2439,7 @@ static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
     if (Val > MaxVal)
       MaxVal = Val;
   }
-  LLVMContext &Context = Or.getContext();
+  LLVMContext &Context = I.getContext();
   APInt BitMapAP(MaxVal + 1, 0);
   for (auto *CI : Values) {
     uint64_t Val = CI->getValue().getLimitedValue();
