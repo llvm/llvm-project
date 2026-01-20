@@ -1045,7 +1045,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   OS << "};\n\n";
 
   // Emit the table of register unit intervals.
-  if (Target.getTargetRecord()->getValueAsBit("RegistersAreIntervals")) {
+  if (Target.getRegistersAreIntervals()) {
     OS << "extern const unsigned " << TargetName
        << "RegUnitIntervals[][2] = {\n";
     for (const auto &Reg : Regs) {
