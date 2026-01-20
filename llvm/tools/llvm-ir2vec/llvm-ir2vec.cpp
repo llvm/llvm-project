@@ -54,7 +54,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Utils.h"
+#include "lib/Utils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/IR/BasicBlock.h"
@@ -73,7 +73,6 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
-
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/MIR2Vec.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
