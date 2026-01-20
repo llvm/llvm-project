@@ -484,7 +484,7 @@ bad_leaks_to_callee:
   ret
 ```
 
-## Known false positives and negatives
+## Known issues and missing features
 
 ### Control-flow graph availability
 
@@ -525,12 +525,111 @@ Some of the reports contain extra information like this
 This information is provided on a best-effort basis and is less reliable than
 gadget reports themselves.
 
+### Feature: scan for unsafe computation of discriminator value
+
+There is a common pattern on AArch64 to compute the discriminator as a blend
+of an address and an integer modifier by inserting a compile-time constant
+value into the top 16 bits of the storage address. It is not necessarily
+possible to prevent an attacker from modifying the storage address, but the
+insertion of 16-bit constant modifier can always be performed immediately before
+the discriminator value is used by signing or authentication instruction.
+
+While not as bad as signing an arbitrary value or spilling an already authenticated
+value to memory, spilling a "ready-to-use" discriminator value instead of computing
+it right before usage is something we would rather avoid. On the other hand,
+using an arbitrary value as the discriminator should probably be allowed, making
+it hard to distinguish the below patterns:
+
+```asm
+; Valid and not reported.
+good_store_with_address_and_constant_diversity:
+  mov     x16, x1
+  movk    x16, #1234, lsl #48
+  pacda   x0, x16
+  str     x0, [x1]
+  ret
+
+; Valid and not reported.
+good_store_with_address_diversity:
+  pacda   x0, x1
+  str     x0, [x1]
+  ret
+
+; Spilled discriminator. Not critically wrong, but could rather be avoided.
+; Not reported, but probably should (false negative).
+bad_spilling:
+  mov     x16, x1
+  movk    x16, #1234, lsl #48
+
+  ; Spilling the discriminator to memory.
+  str     x16, [x2]
+  ; Reloaded value could have been modified by an attacker.
+  ldr     x16, [x2]
+
+  pacda   x0, x16
+  str     x0, [x1]
+  ret
+
+; Not reported (and should probably not).
+better_spilling:
+  mov     x16, x1
+  str     x16, [x2]
+  ; Reloaded value could have been modified by an attacker.
+  ldr     x16, [x2]
+
+  movk    x16, #1234, lsl #48
+  pacda   x0, x16
+  str     x0, [x1]
+  ret
+```
+
+### Handling of constants
+
+While (PC-relative) address constants are tracked as "trusted" register state
+by `SrcSafetyAnalysis`, constant values are not generally accounted for.
+
+This results in false-positives like reporting
+
+```asm
+  ; Let assume FEAT_FPAC is implemented.
+  autda   x16, x22
+  mov     x17, #0x128
+  add     x16, x16, x17
+  pacda   x16, x22
+```
+
+as a signing oracle, even though
+
+```asm
+  ; Let assume FEAT_FPAC is implemented.
+  autda   x16, x22
+  add     x16, x16, #8
+  pacda   x16, x22
+```
+
+is not reported, because `add Xdst, Xsrc, #imm` is recognized as a safe address
+computation.
+
+As an example of false-negative, it is possible that an instruction like
+`add x0, x0, #1` could be called in a loop with an attacker-controlled number
+of iterations, making it technically possible for an attacker to replace a
+valid pointer with a pointer to an arbitrary *higher* address.
+
 ### Other known issues
 
 * Not handling "no-return" functions. See issue
   [#115154](https://github.com/llvm/llvm-project/issues/115154) for details and
   pointers to open PRs to fix this.
-
+* Scanning of binaries compiled by Clang at `-Oz` optimization level produces a
+  lot of reports due to outlining. Many such reports could probably be considered
+  false negatives as long as an attacker is unable to call `OUTLINED_FUNCTION`s
+  as ROP gadgets in the first place.
+* False positives are possible due to multi-instruction pointer-checking sequences
+  not being detected without CFG.
+* While obviously "checking" the result of pointer authentication, store
+  instructions do not transition their address operand register from safe-to-
+  dereference to trusted state yet. This does not affect scanning regular code
+  hardened neither by `pac-ret`, nor by `arm64e` or `pauthtest`.
 
 ## How to add your own binary analysis
 
