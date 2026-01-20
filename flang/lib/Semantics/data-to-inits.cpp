@@ -179,14 +179,14 @@ bool DataInitializationCompiler<DSV>::Scan(
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(const parser::DataImpliedDo &ido) {
   const auto &bounds{std::get<parser::DataImpliedDo::Bounds>(ido.t)};
-  const auto &name{parser::UnwrapRef<parser::Name>(bounds.name)};
-  const auto *lowerExpr{GetExpr(
-      exprAnalyzer_.context(), parser::UnwrapRef<parser::Expr>(bounds.lower))};
-  const auto *upperExpr{GetExpr(
-      exprAnalyzer_.context(), parser::UnwrapRef<parser::Expr>(bounds.upper))};
-  const auto *stepExpr{bounds.step
+  const auto &name{parser::UnwrapRef<parser::Name>(bounds.Name())};
+  const auto *lowerExpr{GetExpr(exprAnalyzer_.context(),
+      parser::UnwrapRef<parser::Expr>(bounds.Lower()))};
+  const auto *upperExpr{GetExpr(exprAnalyzer_.context(),
+      parser::UnwrapRef<parser::Expr>(bounds.Upper()))};
+  const auto *stepExpr{bounds.Step()
           ? GetExpr(exprAnalyzer_.context(),
-                parser::UnwrapRef<parser::Expr>(bounds.step))
+                parser::UnwrapRef<parser::Expr>(bounds.Step()))
           : nullptr};
   if (lowerExpr && upperExpr) {
     // Fold the bounds expressions (again) in case any of them depend
