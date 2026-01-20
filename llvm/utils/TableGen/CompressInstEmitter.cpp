@@ -890,7 +890,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
             CodeStream.indent(6) << "OutInst.addOperand(MCOperand::createReg(";
             if (Reg->isSubClassOf("RegisterByHwMode")) {
               RegisterByHwMode(Reg, Target.getRegBank())
-                      .emitResolverCall(CodeStream, "HwModeId");
+                  .emitResolverCall(CodeStream, "HwModeId");
             } else {
               CodeStream << TargetName << "::" << Reg->getName();
             }

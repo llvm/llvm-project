@@ -2289,7 +2289,8 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
               << indent(6) << "Inst.addOperand(MCOperand::createReg(";
         if (IsRegByHwMode) {
           RegisterByHwMode(OpInfo.Register, Target.getRegBank())
-                  .emitResolverCall(CvtOS, "STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo)");
+              .emitResolverCall(
+                  CvtOS, "STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo)");
         } else {
           CvtOS << Reg;
         }

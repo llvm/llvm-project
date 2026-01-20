@@ -259,7 +259,8 @@ RegisterByHwMode::RegisterByHwMode(const Record *R, CodeGenRegBank &RegBank)
   }
 }
 
-void RegisterByHwMode::emitResolverCall(raw_ostream &OS, const Twine &HwMode) const {
+void RegisterByHwMode::emitResolverCall(raw_ostream &OS,
+                                        const Twine &HwMode) const {
   OS << Namespace << "::RegisterByHwMode::get" << Def->getName() << "("
      << HwMode << ")";
 }
