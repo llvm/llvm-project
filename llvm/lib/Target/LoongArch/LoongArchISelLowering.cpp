@@ -474,6 +474,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   }
 
   // Set DAG combine for LA32 and LA64.
+  if (Subtarget.hasBasicF()) {
+    setTargetDAGCombine(ISD::SINT_TO_FP);
+  }
 
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
@@ -6969,6 +6972,45 @@ static SDValue performVANDNCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const LoongArchSubtarget &Subtarget) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  if (VT != MVT::f32 && VT != MVT::f64)
+    return SDValue();
+  if (VT == MVT::f32 && !Subtarget.hasBasicF())
+    return SDValue();
+  if (VT == MVT::f64 && !Subtarget.hasBasicD())
+    return SDValue();
+
+  // Only optimize when the source and destination types have the same width.
+  if (VT.getSizeInBits() != N->getOperand(0).getValueSizeInBits())
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+  // If the result of an integer load is only used by an integer-to-float
+  // conversion, use a fp load instead. This eliminates an integer-to-float-move
+  // (movgr2fr) instruction.
+  if (ISD::isNormalLoad(Src.getNode()) && Src.hasOneUse() &&
+      // Do not change the width of a volatile load. This condition check is
+      // inspired by AArch64.
+      !cast<LoadSDNode>(Src)->isVolatile()) {
+    LoadSDNode *LN0 = cast<LoadSDNode>(Src);
+    SDValue Load = DAG.getLoad(VT, DL, LN0->getChain(), LN0->getBasePtr(),
+                               LN0->getPointerInfo(), LN0->getAlign(),
+                               LN0->getMemOperand()->getFlags());
+
+    // Make sure successors of the original load stay after it by updating them
+    // to use the new Chain.
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), Load.getValue(1));
+    return DAG.getNode(LoongArchISD::SITOF, SDLoc(N), VT, Load);
+  }
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -6985,6 +7027,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performSRLCombine(N, DAG, DCI, Subtarget);
   case ISD::BITCAST:
     return performBITCASTCombine(N, DAG, DCI, Subtarget);
+  case ISD::SINT_TO_FP:
+    return performSINT_TO_FPCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BITREV_W:
     return performBITREV_WCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BR_CC:

@@ -77,7 +77,7 @@ static constexpr auto globalCompilerDirective{
 
 static constexpr auto globalOpenACCCompilerDirective{
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
-        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{}))};
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
