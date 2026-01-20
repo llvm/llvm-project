@@ -19,6 +19,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
@@ -716,6 +717,53 @@ bool RegBankLegalizeHelper::lowerSplitTo16(MachineInstr &MI) {
   return true;
 }
 
+bool RegBankLegalizeHelper::lowerUniMAD64(MachineInstr &MI) {
+  Register Dst0 = MI.getOperand(0).getReg();
+  Register Dst1 = MI.getOperand(1).getReg();
+  Register Src0 = MI.getOperand(2).getReg();
+  Register Src1 = MI.getOperand(3).getReg();
+  Register Src2 = MI.getOperand(4).getReg();
+
+  const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
+
+  // Keep the multiplication on the SALU.
+  Register DstLo = B.buildMul(SgprRB_S32, Src0, Src1).getReg(0);
+  Register DstHi = MRI.createVirtualRegister(SgprRB_S32);
+  if (ST.hasScalarMulHiInsts()) {
+    B.buildInstr(AMDGPU::G_UMULH, {{DstHi}}, {Src0, Src1});
+  } else {
+    auto VSrc0 = B.buildCopy(VgprRB_S32, Src0);
+    auto VSrc1 = B.buildCopy(VgprRB_S32, Src1);
+    auto MulHi = B.buildInstr(AMDGPU::G_UMULH, {VgprRB_S32}, {VSrc0, VSrc1});
+    buildReadAnyLane(B, DstHi, MulHi.getReg(0), RBI);
+  }
+
+  // Accumulate and produce the "carry-out" bit.
+
+  // The "carry-out" is defined as bit 64 of the result when computed as a
+  // big integer. For unsigned multiply-add, this matches the usual
+  // definition of carry-out.
+  if (mi_match(Src2, MRI, MIPatternMatch::m_ZeroInt())) {
+    // No accumulate: result is just the multiplication, carry is 0.
+    B.buildMergeLikeInstr(Dst0, {DstLo, DstHi});
+    B.buildConstant(Dst1, 0);
+  } else {
+    // Accumulate: add Src2 to the multiplication result with carry chain.
+    Register Src2Lo = MRI.createVirtualRegister(SgprRB_S32);
+    Register Src2Hi = MRI.createVirtualRegister(SgprRB_S32);
+    B.buildUnmerge({Src2Lo, Src2Hi}, Src2);
+
+    auto AddLo = B.buildUAddo(SgprRB_S32, SgprRB_S32, DstLo, Src2Lo);
+    auto AddHi =
+        B.buildUAdde(SgprRB_S32, SgprRB_S32, DstHi, Src2Hi, AddLo.getReg(1));
+    B.buildMergeLikeInstr(Dst0, {AddLo.getReg(0), AddHi.getReg(0)});
+    B.buildCopy(Dst1, AddHi.getReg(1));
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
@@ -857,6 +905,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerV_BFE(MI);
   case S_BFE:
     return lowerS_BFE(MI);
+  case UniMAD64:
+    return lowerUniMAD64(MI);
   case SplitTo32:
     return lowerSplitTo32(MI);
   case SplitTo32Select:
@@ -949,6 +999,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32ZExt:
   case UniInVgprS32:
   case Vgpr32:
+  case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
     return LLT::scalar(32);
@@ -1121,6 +1172,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprB128:
   case VgprB256:
   case VgprB512:
+  case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
     return VgprRB;
@@ -1202,9 +1254,11 @@ bool RegBankLegalizeHelper::applyMappingDst(
       assert(RB == SgprRB);
       Register NewDst = MRI.createVirtualRegister(VccRB_S1);
       Op.setReg(NewDst);
-      auto CopyS32_Vcc =
-          B.buildInstr(AMDGPU::G_AMDGPU_COPY_SCC_VCC, {SgprRB_S32}, {NewDst});
-      B.buildTrunc(Reg, CopyS32_Vcc);
+      if (!MRI.use_empty(Reg)) {
+        auto CopyS32_Vcc =
+            B.buildInstr(AMDGPU::G_AMDGPU_COPY_SCC_VCC, {SgprRB_S32}, {NewDst});
+        B.buildTrunc(Reg, CopyS32_Vcc);
+      }
       break;
     }
     case UniInVgprS16: {
@@ -1406,6 +1460,13 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       assert(RB == SgprRB);
       auto Zext = B.buildZExt({SgprRB, S32}, Reg);
       Op.setReg(Zext.getReg(0));
+      break;
+    }
+    case Vgpr32AExt: {
+      assert(Ty.getSizeInBits() < 32);
+      assert(RB == VgprRB);
+      auto Aext = B.buildAnyExt({VgprRB, S32}, Reg);
+      Op.setReg(Aext.getReg(0));
       break;
     }
     case Vgpr32SExt: {

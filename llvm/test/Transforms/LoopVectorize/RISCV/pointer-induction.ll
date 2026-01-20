@@ -113,9 +113,6 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP29:%.*]] = sub i64 [[TMP26]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP23:%.*]] = mul nuw i64 [[TMP22]], 2
-; CHECK-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP23]], 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 2 x i1> [[TMP17]], i64 [[TMP29]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
