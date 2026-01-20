@@ -400,6 +400,7 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     libc.src.__support.CPP.utility
+    libc.src.__support.CPP.optional
     libc.src.__support.libc_assert
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config

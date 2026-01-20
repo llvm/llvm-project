@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/optional.h"
 #include "src/__support/weak_avl.h"
+#include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
 using Node = LIBC_NAMESPACE::WeakAVLNode<int>;
@@ -31,13 +33,41 @@ bool validate_pure_insertion(const Node *node) {
 
 // Insert according to pattern `next(i)`
 using NextFn = int (*)(int);
-
-static Node *build_tree(NextFn next, int N, int (*compare)(int, int)) {
+using OptionalNodePtr = LIBC_NAMESPACE::cpp::optional<Node *>;
+struct Tree {
   Node *root = nullptr;
-  for (int i = 0; i < N; ++i)
-    Node::find_or_insert(root, next(i), compare);
-  return root;
-}
+
+  bool validate_pure_insertion() { return ::validate_pure_insertion(root); }
+
+  bool contains(int value) {
+    return Node::find(root, value, ternary_compare).has_value();
+  }
+
+  OptionalNodePtr insert(int value) {
+    return Node::find_or_insert(root, value, ternary_compare);
+  }
+
+  OptionalNodePtr find(int value) {
+    return Node::find(root, value, ternary_compare);
+  }
+
+  void erase(int value) {
+    if (auto node = Node::find(root, value, ternary_compare)) {
+      Node::erase(root, node.value());
+    }
+  }
+
+  template <typename NextFn> static Tree build(NextFn next, int N) {
+    Tree tree;
+    for (int i = 0; i < N; ++i)
+      tree.insert(next(i));
+    return tree;
+  }
+
+  bool empty() const { return root == nullptr; }
+
+  ~Tree() { Node::destroy(root); }
+};
 
 // Insertion patterns
 static int seq(int i) { return i; }
@@ -53,227 +83,194 @@ static int stride(int i, int prime = 7919) {
   return (i * prime) % N;
 }
 
-// Thin wrappers to make test intent explicit.
-template <typename Compare>
-static Node *find(Node *root, int value, Compare &&comp) {
-  return Node::find(root, value, comp);
-}
-
-static void erase(Node *&root, Node *node) { Node::erase(root, node); }
-
 } // namespace
 
 TEST(LlvmLibcWeakAVLTest, SimpleInsertion) {
-  Node *root = nullptr;
+  Tree tree;
 
-  Node *node10 = Node::find_or_insert(root, 10, ternary_compare);
-  ASSERT_TRUE(node10 != nullptr);
-  ASSERT_EQ(root, node10);
-  ASSERT_TRUE(validate_pure_insertion(root));
+  OptionalNodePtr node10 = tree.insert(10);
+  ASSERT_TRUE(node10.has_value());
+  ASSERT_TRUE(tree.insert(5).has_value());
+  ASSERT_TRUE(tree.validate_pure_insertion());
 
-  Node *node5 = Node::find_or_insert(root, 5, ternary_compare);
-  ASSERT_TRUE(node5 != nullptr);
-  ASSERT_TRUE(validate_pure_insertion(root));
+  OptionalNodePtr node15 = tree.insert(15);
+  ASSERT_TRUE(node15.has_value());
+  ASSERT_TRUE(tree.validate_pure_insertion());
 
-  Node *node15 = Node::find_or_insert(root, 15, ternary_compare);
-  ASSERT_TRUE(node15 != nullptr);
-  ASSERT_TRUE(validate_pure_insertion(root));
-
-  Node *node10_again = Node::find_or_insert(root, 10, ternary_compare);
-  ASSERT_EQ(node10, node10_again);
-  ASSERT_TRUE(validate_pure_insertion(root));
-
-  Node::destroy(root);
+  OptionalNodePtr node10_again = tree.insert(10);
+  ASSERT_EQ(*node10, *node10_again);
+  ASSERT_TRUE(tree.validate_pure_insertion());
 }
 
 TEST(LlvmLibcWeakAVLTest, SequentialInsertion) {
   constexpr int N = TEST_SIZE;
 
-  Node *root = build_tree(seq, N, ternary_compare);
-  ASSERT_TRUE(validate_pure_insertion(root));
+  Tree tree = Tree::build(seq, N);
+  ASSERT_TRUE(tree.validate_pure_insertion());
 
   for (int i = 0; i < N; ++i) {
-    Node *node = Node::find_or_insert(root, i, ternary_compare);
-    ASSERT_TRUE(node != nullptr);
-    ASSERT_EQ(node->get_data(), i);
+    OptionalNodePtr node = tree.insert(i);
+    ASSERT_TRUE(node.has_value());
+    ASSERT_EQ(node.value()->get_data(), i);
   }
 
-  ASSERT_TRUE(validate_pure_insertion(root));
-  Node::destroy(root);
+  ASSERT_TRUE(tree.validate_pure_insertion());
 }
 
 TEST(LlvmLibcWeakAVLTest, ReversedInsertion) {
   constexpr int N = TEST_SIZE;
 
-  Node *root = build_tree(rev, N, ternary_compare);
-  ASSERT_TRUE(validate_pure_insertion(root));
+  Tree tree = Tree::build(rev, N);
+  ASSERT_TRUE(tree.validate_pure_insertion());
 
   for (int i = 0; i < N; ++i) {
-    Node *node = Node::find_or_insert(root, i, ternary_compare);
-    ASSERT_TRUE(node != nullptr);
-    ASSERT_EQ(node->get_data(), i);
+    OptionalNodePtr node = tree.insert(i);
+    ASSERT_TRUE(node.has_value());
+    ASSERT_EQ(node.value()->get_data(), i);
   }
 
-  ASSERT_TRUE(validate_pure_insertion(root));
-  Node::destroy(root);
+  ASSERT_TRUE(tree.validate_pure_insertion());
 }
 
 TEST(LlvmLibcWeakAVLTest, StridedInsertion) {
   constexpr int N = TEST_SIZE;
 
-  Node *root = build_tree([](int i) { return stride(i); }, N, ternary_compare);
-  ASSERT_TRUE(validate_pure_insertion(root));
+  Tree tree = Tree::build([](int i) { return stride(i); }, N);
+  ASSERT_TRUE(tree.validate_pure_insertion());
 
   for (int i = 0; i < N; ++i) {
-    Node *node = Node::find_or_insert(root, i, ternary_compare);
-    ASSERT_TRUE(node != nullptr);
-    ASSERT_EQ(node->get_data(), i);
+    OptionalNodePtr node = tree.insert(i);
+    ASSERT_TRUE(node.has_value());
+    ASSERT_EQ(node.value()->get_data(), i);
   }
 
-  ASSERT_TRUE(validate_pure_insertion(root));
-  Node::destroy(root);
+  ASSERT_TRUE(tree.validate_pure_insertion());
 }
 
 TEST(LlvmLibcWeakAVLTest, FindExistingAndMissing) {
   constexpr int N = TEST_SIZE;
 
-  Node *root = build_tree(seq, N, ternary_compare);
-  ASSERT_TRUE(validate_pure_insertion(root));
+  Tree tree = Tree::build(seq, N);
+  ASSERT_TRUE(tree.validate_pure_insertion());
 
   for (int i = 0; i < N; ++i) {
-    Node *node = find(root, i, ternary_compare);
-    ASSERT_TRUE(node != nullptr);
-    ASSERT_EQ(node->get_data(), i);
+    OptionalNodePtr node = tree.find(i);
+    ASSERT_TRUE(node.has_value());
+    ASSERT_EQ(node.value()->get_data(), i);
   }
 
-  ASSERT_TRUE(find(root, -1, ternary_compare) == nullptr);
-  ASSERT_TRUE(find(root, N, ternary_compare) == nullptr);
-  ASSERT_TRUE(find(root, 2 * N, ternary_compare) == nullptr);
-
-  Node::destroy(root);
+  ASSERT_FALSE(tree.find(-1).has_value());
+  ASSERT_FALSE(tree.find(N).has_value());
+  ASSERT_FALSE(tree.find(2 * N).has_value());
 }
 
 TEST(LlvmLibcWeakAVLTest, SequentialErase) {
   constexpr int N = TEST_SIZE;
 
-  Node *root = build_tree(seq, N, ternary_compare);
+  Tree tree = Tree::build(seq, N);
 
   for (int i = 0; i < N; ++i) {
-    Node *node = find(root, i, ternary_compare);
-    ASSERT_TRUE(node != nullptr);
-
-    erase(root, node);
-    ASSERT_TRUE(find(root, i, ternary_compare) == nullptr);
+    ASSERT_TRUE(tree.contains(i));
+    tree.erase(i);
+    ASSERT_FALSE(tree.contains(i));
   }
 
-  ASSERT_TRUE(root == nullptr);
+  ASSERT_TRUE(tree.empty());
 }
 
 TEST(LlvmLibcWeakAVLTest, ReverseErase) {
   constexpr int N = TEST_SIZE;
 
-  Node *root = build_tree(seq, N, ternary_compare);
+  Tree tree = Tree::build(seq, N);
 
   for (int i = N - 1; i >= 0; --i) {
-    Node *node = find(root, i, ternary_compare);
-    ASSERT_TRUE(node != nullptr);
-
-    erase(root, node);
-    ASSERT_TRUE(find(root, i, ternary_compare) == nullptr);
+    ASSERT_TRUE(tree.contains(i));
+    tree.erase(i);
+    ASSERT_FALSE(tree.contains(i));
   }
 
-  ASSERT_TRUE(root == nullptr);
+  ASSERT_TRUE(tree.empty());
 }
 
 TEST(LlvmLibcWeakAVLTest, StridedErase) {
   constexpr int N = TEST_SIZE;
 
-  Node *root = build_tree(seq, N, ternary_compare);
+  Tree tree = Tree::build(seq, N);
 
   for (int i = 0; i < N; ++i) {
     int key = stride(i, 5261);
-    Node *node = find(root, key, ternary_compare);
-    ASSERT_TRUE(node != nullptr);
-
-    erase(root, node);
-    ASSERT_TRUE(find(root, key, ternary_compare) == nullptr);
+    ASSERT_TRUE(tree.contains(key));
+    tree.erase(key);
+    ASSERT_FALSE(tree.contains(key));
   }
 
-  ASSERT_TRUE(root == nullptr);
+  ASSERT_TRUE(tree.empty());
 }
 
 TEST(LlvmLibcWeakAVLTest, EraseStructuralCases) {
-  Node *root = nullptr;
+  Tree tree;
   int keys[] = {10, 5, 15, 3, 7, 12, 18};
 
-  for (int k : keys)
-    Node::find_or_insert(root, k, ternary_compare);
+  // rank1:               10              10
+  //                      /              / \
+  // rank0:   10   -->   5        -->   5   15
 
-  // Erase leaf.
-  erase(root, find(root, 3, ternary_compare));
-  ASSERT_TRUE(find(root, 3, ternary_compare) == nullptr);
+  // rank2:                   10               10
+  //                         / \              / \
+  // rank1:   10            5   \            5   \
+  //         / \   -->     /     \     -->  /\    \
+  // rank0: 5  15         3       15       3  7    15
 
-  // Erase internal nodes.
-  erase(root, find(root, 5, ternary_compare));
-  ASSERT_TRUE(find(root, 5, ternary_compare) == nullptr);
-
-  erase(root, find(root, 10, ternary_compare));
-  ASSERT_TRUE(find(root, 10, ternary_compare) == nullptr);
-
-  int attempts[] = {7, 12, 15, 18};
-  for (int k : attempts) {
-    Node *n = find(root, k, ternary_compare);
-    ASSERT_TRUE(n != nullptr);
-    ASSERT_EQ(n->get_data(), k);
-  }
-
-  Node::destroy(root);
-}
-
-TEST(LlvmLibcTreeWalk, EraseStructuralCases) {
-  using WeakAVLNode = LIBC_NAMESPACE::WeakAVLNode<int>;
-
-  WeakAVLNode *root = nullptr;
-  int keys[] = {10, 5, 15, 3, 7, 12, 18};
+  // rank2:     10            10             10
+  //           / \           / \            / \
+  // rank1:   5   \   -->   5   15   -->   5   15
+  //         /\    \       /\   /         /\   / \
+  // rank0: 3  7    15    3  7 12       3  7 12  18
 
   for (int k : keys)
-    WeakAVLNode::find_or_insert(root, k, ternary_compare);
+    tree.insert(k);
 
   // Erase leaf.
-  erase(root, find(root, 3, ternary_compare));
-  ASSERT_TRUE(find(root, 3, ternary_compare) == nullptr);
+  // rank2:     10                   10
+  //           / \                  / \
+  // rank1:   5   15               5   15
+  //         /\   / \      -->     \   / \
+  // rank0: 3  7 12  18            7  12  18
+  tree.erase(3);
+  ASSERT_FALSE(tree.contains(3));
 
   // Erase internal nodes.
-  erase(root, find(root, 5, ternary_compare));
-  ASSERT_TRUE(find(root, 5, ternary_compare) == nullptr);
+  // Erase leaf.
+  // rank2:     10                   10               10
+  //           / \                  / \              / \
+  // rank1:   5   15               7   15           /  15
+  //          \   / \      -->     \   / \    -->  /   /\
+  // rank0:    7 12  18            5  12  18      7  12  18
+  tree.erase(5);
+  ASSERT_FALSE(tree.contains(5));
 
-  erase(root, find(root, 10, ternary_compare));
-  ASSERT_TRUE(find(root, 10, ternary_compare) == nullptr);
+  // Erase root.
+  // rank2:     10              12               12
+  //           / \             / \              / \
+  // rank1:   /  15     -->   /  15     -->    /  15
+  //         /   /\          /   /\           /    \
+  // rank0: 7  12  18      7  10  18         7     18
+  tree.erase(10);
+  ASSERT_FALSE(tree.contains(10));
 
   int attempts[] = {7, 12, 15, 18};
-  for (int k : attempts) {
-    WeakAVLNode *n = find(root, k, ternary_compare);
-    ASSERT_TRUE(n != nullptr);
-    ASSERT_EQ(n->get_data(), k);
-  }
-
-  WeakAVLNode::destroy(root);
+  for (int k : attempts)
+    ASSERT_TRUE(tree.contains(k));
 }
 
 TEST(LlvmLibcTreeWalk, InOrderTraversal) {
-  using WeakAVLNode = LIBC_NAMESPACE::WeakAVLNode<int>;
-
-  WeakAVLNode *root = build_tree([](int x) { return stride(x, 1007); },
-                                 TEST_SIZE, ternary_compare);
+  Tree tree = Tree::build([](int x) { return stride(x, 1007); }, TEST_SIZE);
   int data[TEST_SIZE];
   int counter = 0;
-  WeakAVLNode::walk(root, [&](WeakAVLNode *node, WeakAVLNode::WalkType type) {
-    if (type == WeakAVLNode::WalkType::InOrder ||
-        type == WeakAVLNode::WalkType::Leaf)
+  Node::walk(tree.root, [&](Node *node, Node::WalkType type) {
+    if (type == Node::WalkType::InOrder || type == Node::WalkType::Leaf)
       data[counter++] = node->get_data();
   });
-
   for (int i = 0; i < TEST_SIZE; ++i)
     ASSERT_EQ(data[i], i);
-  WeakAVLNode::destroy(root);
 }

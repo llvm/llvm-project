@@ -12,6 +12,7 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/utility/move.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/libc_assert.h"
@@ -209,6 +210,8 @@ template <typename T> class WeakAVLNode {
   }
 
 public:
+  using OptionalNodePtr = cpp::optional<WeakAVLNode *>;
+
   LIBC_INLINE const WeakAVLNode *get_left() const { return children[0]; }
   LIBC_INLINE const WeakAVLNode *get_right() const { return children[1]; }
   LIBC_INLINE const T &get_data() const { return data; }
@@ -222,7 +225,7 @@ public:
       return;
     destroy(node->children[0]);
     destroy(node->children[1]);
-    ::delete node;
+    delete node;
   }
   // Rotate the subtree rooted at node in the given direction.
   //
@@ -244,9 +247,9 @@ public:
       grandchild->parent = node;
     pivot->parent = node->parent;
     // Pivot becomes the new root of the subtree
-    if (!node->parent)
+    if (!node->parent) {
       root = pivot;
-    else {
+    } else {
       bool node_is_right = node->parent->children[1] == node;
       node->parent->children[node_is_right] = pivot;
     }
@@ -255,13 +258,15 @@ public:
     return pivot;
   }
 
-  // Find data in the subtree rooted at root. If not found, returns nullptr.
-  // `Compare` returns integer values for ternary comparison.
+  // Find data in the subtree rooted at root. If not found, returns
+  // OptionalNode. `Compare` returns integer values for ternary comparison.
   // Unlike other interfaces, `find` does not modify the tree; hence we pass
   // the `root` by value.
+  // It is assumed that the order returned by the comparator is consistent
+  // on each call.
   template <typename Compare>
-  LIBC_INLINE static WeakAVLNode *find(WeakAVLNode *root, T data,
-                                       Compare comp) {
+  LIBC_INLINE static OptionalNodePtr find(WeakAVLNode *root, T data,
+                                          Compare comp) {
     WeakAVLNode *cursor = root;
     while (cursor != nullptr) {
       int comp_result = comp(cursor->data, data);
@@ -270,16 +275,18 @@ public:
       bool is_right = comp_result < 0;
       cursor = cursor->children[is_right];
     }
-    return nullptr; // Node not found
+    return cpp::nullopt;
   }
   // Insert data into the subtree rooted at root.
   // Returns the node if insertion is successful or the node exists in
   // the tree.
-  // Returns nullptr if memory allocation fails.
+  // Returns cpp::nullopt if memory allocation fails.
   // `Compare` returns integer values for ternary comparison.
+  // It is assumed that the order returned by the comparator is consistent
+  // on each call.
   template <typename Compare>
-  LIBC_INLINE static WeakAVLNode *find_or_insert(WeakAVLNode *&root, T data,
-                                                 Compare comp) {
+  LIBC_INLINE static OptionalNodePtr find_or_insert(WeakAVLNode *&root, T data,
+                                                    Compare comp) {
     WeakAVLNode *parent = nullptr, *cursor = root;
     bool is_right = false;
     while (cursor != nullptr) {
@@ -292,7 +299,7 @@ public:
     }
     WeakAVLNode *allocated = create(cpp::move(data));
     if (!allocated)
-      return nullptr;
+      return cpp::nullopt;
     WeakAVLNode *node = allocated;
     node->parent = parent;
 

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "hdr/types/ENTRY.h"
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/weak_avl.h"
 
@@ -37,17 +38,20 @@ class AVLTree {
 public:
   AVLTree(bool reversed = false) : reversed(reversed) {}
   bool find(int key) {
-    return Node::find(root, key, reversed ? reverse_compare : compare);
+    return Node::find(root, key, reversed ? reverse_compare : compare)
+        .has_value();
   }
   bool find_or_insert(int key) {
-    return Node::find_or_insert(root, key,
-                                reversed ? reverse_compare : compare);
+    return Node::find_or_insert(root, key, reversed ? reverse_compare : compare)
+        .has_value();
   }
   bool erase(int key) {
-    Node *node = Node::find(root, key, reversed ? reverse_compare : compare);
-    if (node)
-      Node::erase(root, node);
-    return node;
+    if (cpp::optional<Node *> node =
+            Node::find(root, key, reversed ? reverse_compare : compare)) {
+      Node::erase(root, node.value());
+      return true;
+    }
+    return false;
   }
   ~AVLTree() { Node::destroy(root); }
 };
