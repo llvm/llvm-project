@@ -565,7 +565,8 @@ void ModuleDepCollectorPP::InclusionDirective(
 void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
                                         ModuleIdPath Path,
                                         const Module *Imported) {
-  if (MDC.ScanInstance.getPreprocessor().isInImportingCXXNamedModules()) {
+  auto &PP = MDC.ScanInstance.getPreprocessor();
+  if (PP.getLangOpts().CPlusPlusModules && PP.isImportingCXXNamedModules()) {
     P1689ModuleInfo RequiredModule;
     RequiredModule.ModuleName = Path[0].getIdentifierInfo()->getName().str();
     RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;

@@ -4615,9 +4615,6 @@ let Predicates = [HasLSUI, HasNEON] in {
 def : Pat<(AArch64stp GPR64z:$Rt, GPR64z:$Rt2, (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
           (STPXi GPR64z:$Rt, GPR64z:$Rt2, GPR64sp:$Rn, simm7s8:$offset)>;
 
-def : Pat<(AArch64stnp FPR128:$Rt, FPR128:$Rt2, (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
-          (STNPQi FPR128:$Rt, FPR128:$Rt2, GPR64sp:$Rn, simm7s16:$offset)>;
-
 
 //---
 // (Register offset)
@@ -10726,8 +10723,18 @@ def : Pat<(i64 (int_aarch64_neon_urshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
 // Patterns for nontemporal/no-allocate stores.
 // We have to resort to tricks to turn a single-input store into a store pair,
 // because there is no single-input nontemporal store, only STNP.
-let Predicates = [IsLE] in {
-let AddedComplexity = 15 in {
+//
+// Currently, STNP lowering can only either keep or increase code size, thus
+// we predicate it to not apply when optimizing for code size.
+let Predicates = [IsLE, NotForCodeSize] in {
+
+// Make non-temporal store patterns have high complexity so they are prioritized
+// for non-temporal stores over temporal store patterns.
+let AddedComplexity = 18 in {
+
+def : Pat<(AArch64stnp FPR128:$Rt, FPR128:$Rt2, (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
+          (STNPQi FPR128:$Rt, FPR128:$Rt2, GPR64sp:$Rn, simm7s16:$offset)>;
+
 class NTStore128Pat<ValueType VT> :
   Pat<(nontemporalstore (VT FPR128:$Rt),
         (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
@@ -10759,7 +10766,7 @@ def : Pat<(nontemporalstore GPR64:$Rt,
           (STNPWi (EXTRACT_SUBREG GPR64:$Rt, sub_32),
                   (EXTRACT_SUBREG (UBFMXri GPR64:$Rt, 32, 63), sub_32),
                   GPR64sp:$Rn, simm7s4:$offset)>;
-} // AddedComplexity=10
+} // AddedComplexity=18
 } // Predicates = [IsLE]
 
 // Tail call return handling. These are all compiler pseudo-instructions,

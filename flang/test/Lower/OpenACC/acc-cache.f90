@@ -560,3 +560,106 @@ subroutine test_cache_in_nested_do()
 ! CHECK: fir.do_loop
 ! CHECK: hlfir.designate %[[B_VAR]]#0
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_derived_type()
+subroutine test_cache_derived_type()
+  type :: dt
+    real :: array(100)
+  end type
+
+  integer, parameter :: n = 100
+  type(dt) :: data
+  real :: a(n)
+  integer :: i
+
+  !$acc loop
+  do i = 5, n - 4
+    !$acc cache(data%array(i-4:i+4))
+    a(i) = data%array(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: %[[ARRAY_COORD:.*]] = hlfir.designate %{{.*}}{"array"} shape %{{.*}} : (!fir.ref<!fir.type<_QFtest_cache_derived_typeTdt{array:!fir.array<100xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {name = "data%array(i-4_4:i+4_4)", structured = false}
+! CHECK: acc.yield
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_derived_type_readonly()
+subroutine test_cache_derived_type_readonly()
+  type :: dt
+    real :: array(100)
+  end type
+
+  integer, parameter :: n = 100
+  type(dt) :: data
+  real :: a(n)
+  integer :: i
+
+  !$acc loop
+  do i = 5, n - 4
+    !$acc cache(readonly: data%array(i-4:i+4))
+    a(i) = data%array(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: %[[ARRAY_COORD:.*]] = hlfir.designate %{{.*}}{"array"} shape %{{.*}} : (!fir.ref<!fir.type<_QFtest_cache_derived_type_readonlyTdt{array:!fir.array<100xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {modifiers = #acc<data_clause_modifier readonly>, name = "data%array(i-4_4:i+4_4)", structured = false}
+! CHECK: acc.yield
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_nested_derived_type()
+subroutine test_cache_nested_derived_type()
+  type :: inner
+    real :: arr(50)
+  end type
+
+  type :: outer
+    type(inner) :: in
+  end type
+
+  integer, parameter :: n = 50
+  type(outer) :: obj
+  real :: a(n)
+  integer :: i
+
+  !$acc loop
+  do i = 1, n
+    !$acc cache(obj%in%arr(i))
+    a(i) = obj%in%arr(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: %[[IN_COORD:.*]] = hlfir.designate %{{.*}}{"in"} : (!fir.ref<!fir.type<_QFtest_cache_nested_derived_typeTouter{in:!fir.type<_QFtest_cache_nested_derived_typeTinner{arr:!fir.array<50xf32>}>}>>) -> !fir.ref<!fir.type<_QFtest_cache_nested_derived_typeTinner{arr:!fir.array<50xf32>}>>
+! CHECK: %[[ARR_COORD:.*]] = hlfir.designate %[[IN_COORD]]{"arr"} shape %{{.*}} : (!fir.ref<!fir.type<_QFtest_cache_nested_derived_typeTinner{arr:!fir.array<50xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARR_COORD]] : !fir.ref<!fir.array<50xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<50xf32>> {name = "obj%in%arr(i)", structured = false}
+! CHECK: acc.yield
+end subroutine
+
+! Test cache with temporary in designator bounds - verifies local statement context
+! doesn't cause issues with temporary cleanup
+! CHECK-LABEL: func.func @_QPtest_cache_temp_in_designator(
+subroutine test_cache_temp_in_designator(data, a)
+  integer, parameter :: n = 100
+  real :: data(n)
+  real :: a(n)
+  integer :: i
+
+  !$acc loop
+  do i = 5, n - 4
+    !$acc cache(readonly: data(1:maxloc(a+a, dim=1)))
+    a(i) = data(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental
+! CHECK: %[[MAXLOC:.*]] = hlfir.maxloc %[[ELEMENTAL]]
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound({{.*}}) upperbound({{.*}})
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}}) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {modifiers = #acc<data_clause_modifier readonly>, name = "data(1:maxloc(a+a,dim=1_4))", structured = false}
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]]
+! CHECK: hlfir.destroy %[[ELEMENTAL]]
+! CHECK: hlfir.designate %[[DECL]]#0
+! CHECK: acc.yield
+end subroutine
