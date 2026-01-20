@@ -1259,7 +1259,8 @@ bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
     MadeChange |= OptimizeBlock(&MBB);
 
     // If it is dead, remove it.
-    if (MBB.pred_empty() && !MBB.isMachineBlockAddressTaken()) {
+    if (MBB.pred_empty() && !MBB.isMachineBlockAddressTaken() &&
+        !MBB.isEHPad()) {
       RemoveDeadBlock(&MBB);
       MadeChange = true;
       ++NumDeadBlocks;

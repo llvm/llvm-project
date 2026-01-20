@@ -1908,10 +1908,7 @@ inline bool CheckNull(InterpState &S, CodePtr OpPC) {
 
 inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
                            const Pointer &Ptr) {
-  Pointer Base = Ptr;
-  while (Base.isBaseClass())
-    Base = Base.getBase();
-
+  Pointer Base = Ptr.stripBaseCasts();
   const Record::Base *VirtBase = Base.getRecord()->getVirtualBase(Decl);
   S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
   return true;
