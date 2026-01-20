@@ -1407,16 +1407,20 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
   generateGetClauseVal(DirLang, OS);
 
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
-  generateIsAllowedClause(DirLang, OS << "\n");
+  OS << "\n";
+  generateIsAllowedClause(DirLang, OS);
 
   // getDirectiveAssociation(Directive D)
-  generateGetDirectiveAssociation(DirLang, OS << "\n");
+  OS << "\n";
+  generateGetDirectiveAssociation(DirLang, OS);
 
   // getDirectiveCategory(Directive D)
-  generateGetDirectiveCategory(DirLang, OS << "\n");
+  OS << "\n";
+  generateGetDirectiveCategory(DirLang, OS);
 
   // getDirectiveLanguages(Directive D)
-  generateGetDirectiveLanguages(DirLang, OS << "\n");
+  OS << "\n";
+  generateGetDirectiveLanguages(DirLang, OS);
 
   // Leaf table for getLeafConstructs, etc.
   emitLeafTable(DirLang, OS, "LeafConstructTable");
