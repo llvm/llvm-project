@@ -2166,6 +2166,8 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
   TemplateOrNonTemplateCallOperatorDecl->setLexicalDeclContext(Class);
 
   {
+    // TreeTransform of immediate functions may call getCurLambda, which
+    // requires both the paired LSI and the lambda DeclContext.
     ContextRAII SavedContext(*this, CallOperator, /*NewThisContext=*/false);
     PopExpressionEvaluationContext();
   }
