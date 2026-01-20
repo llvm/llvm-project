@@ -13368,15 +13368,17 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE) const {
   unsigned CurrentValue = 0;
   if (!(RhsTE->isGather() && RhsTE->ReorderIndices.empty() &&
         RhsTE->ReuseShuffleIndices.empty() && !MinBWs.contains(RhsTE) &&
-        all_of(RhsTE->Scalars, [&](Value *V) {
-          CurrentValue += Stride;
-          if (isa<UndefValue>(V))
-            return true;
-          auto *C = dyn_cast<Constant>(V);
-          if (!C)
-            return false;
-          return C->getUniqueInteger() == CurrentValue - Stride;
-        })))
+        all_of(RhsTE->Scalars,
+               [&](Value *V) {
+                 CurrentValue += Stride;
+                 if (isa<UndefValue>(V))
+                   return true;
+                 auto *C = dyn_cast<Constant>(V);
+                 if (!C)
+                   return false;
+                 return C->getUniqueInteger() == CurrentValue - Stride;
+               }) &&
+        CurrentValue == Sz))
     return false;
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   FastMathFlags FMF;
@@ -16416,7 +16418,6 @@ InstructionCost BoUpSLP::getSpillCost() {
     }
     Instruction *LastInst = EntriesToLastInstruction.at(Entry);
     BasicBlock *Parent = LastInst->getParent();
-
     for (const TreeEntry *Op : Operands) {
       if (!Op->isGather())
         LiveEntries.push_back(Op);
