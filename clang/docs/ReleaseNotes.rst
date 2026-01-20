@@ -65,6 +65,13 @@ Clang Python Bindings Potentially Breaking Changes
   to compare with the return values of ``CompletionString.availability``.
 - Remove ``availabilityKinds``. In this release, uses of ``availabilityKinds``
   need to be replaced by ``CompletionString.AvailabilityKind``.
+- ``CompletionChunk.kind`` now returns instances of ``CompletionChunkKind``.
+
+  Instances of ``CompletionChunkKind`` have the same ``__str__`` representation
+  as the previous ``CompletionChunk.Kind``s for compatibility.
+  These representations will be changed in a future release to match other enums.
+- Remove ``completionChunkKindMap``. In this release, uses of ``completionChunkKindMap``
+  need to be replaced by ``CompletionChunkKind``.
 
 What's New in Clang |release|?
 ==============================
