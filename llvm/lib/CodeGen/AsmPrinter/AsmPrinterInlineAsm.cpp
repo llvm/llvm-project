@@ -73,7 +73,8 @@ unsigned AsmPrinter::addInlineAsmDiagBuffer(StringRef AsmStr,
 void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
                                const MCTargetOptions &MCOptions,
                                const MDNode *LocMDNode,
-                               InlineAsm::AsmDialect Dialect) const {
+                               InlineAsm::AsmDialect Dialect,
+                               const MachineInstr *MI) {
   assert(!Str.empty() && "Can't emit empty inline asm block");
 
   // Remember if the buffer is nul terminated or not so we can avoid a copy.
@@ -93,7 +94,7 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
       !OutStreamer->isIntegratedAssemblerRequired()) {
     emitInlineAsmStart();
     OutStreamer->emitRawText(Str);
-    emitInlineAsmEnd(STI, nullptr);
+    emitInlineAsmEnd(STI, nullptr, MI);
     return;
   }
 
@@ -135,7 +136,7 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   // Don't implicitly switch to the text section before the asm.
   (void)Parser->Run(/*NoInitialTextSection*/ true,
                     /*NoFinalize*/ true);
-  emitInlineAsmEnd(STI, &TAP->getSTI());
+  emitInlineAsmEnd(STI, &TAP->getSTI(), MI);
 }
 
 static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
@@ -336,7 +337,7 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
 
 /// This method formats and emits the specified machine instruction that is an
 /// inline asm.
-void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
+void AsmPrinter::emitInlineAsm(const MachineInstr *MI) {
   assert(MI->isInlineAsm() && "printInlineAsm only works on inline asms");
 
   // Disassemble the AsmStr, printing out the literal pieces, the operands, etc.
@@ -417,7 +418,7 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   }
 
   emitInlineAsm(StringData, getSubtargetInfo(), TM.Options.MCOptions, LocMD,
-                MI->getInlineAsmDialect());
+                MI->getInlineAsmDialect(), MI);
 
   // Emit the #NOAPP end marker.  This has to happen even if verbose-asm isn't
   // enabled, so we use emitRawComment.
@@ -518,4 +519,5 @@ bool AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 void AsmPrinter::emitInlineAsmStart() const {}
 
 void AsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                                  const MCSubtargetInfo *EndInfo) const {}
+                                  const MCSubtargetInfo *EndInfo,
+                                  const MachineInstr *MI) {}

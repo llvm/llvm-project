@@ -535,7 +535,7 @@ let test_global_variables () =
     let m = create_module context "temp" in
 
     insist (get_module_identifier m = "temp");
-    set_module_identifer m "temp2";
+    set_module_identifier m "temp2";
     insist (get_module_identifier m = "temp2");
 
     insist (At_end m = global_begin m);

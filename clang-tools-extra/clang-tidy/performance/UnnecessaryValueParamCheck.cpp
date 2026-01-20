@@ -51,11 +51,11 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl = parmVarDecl(
-      hasType(qualType(
-          hasCanonicalType(matchers::isExpensiveToCopy()),
-          unless(anyOf(hasCanonicalType(referenceType()),
-                       hasDeclaration(namedDecl(
-                           matchers::matchesAnyListedName(AllowedTypes))))))),
+      hasType(qualType(hasCanonicalType(matchers::isExpensiveToCopy()),
+                       unless(anyOf(hasCanonicalType(referenceType()),
+                                    hasDeclaration(namedDecl(
+                                        matchers::matchesAnyListedRegexName(
+                                            AllowedTypes))))))),
       decl().bind("param"));
   Finder->addMatcher(
       traverse(TK_AsIs,

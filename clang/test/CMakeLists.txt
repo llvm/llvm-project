@@ -185,6 +185,10 @@ if( NOT CLANG_BUILT_STANDALONE )
     yaml2obj
     )
 
+  if(TARGET lld)
+    list(APPEND CLANG_TEST_DEPS lld)
+  endif()
+
   if(TARGET llvm-lto)
     list(APPEND CLANG_TEST_DEPS llvm-lto)
   endif()

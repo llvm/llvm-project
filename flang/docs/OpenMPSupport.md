@@ -34,32 +34,32 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | proc_bind clause                                           | Y      | |
-| simd construct                                             | P      | linear clause is not supported |
+| simd construct                                             | P      | Implicit linearization is skipped if iv is a pointer or allocatable|
 | declare simd construct                                     | N      | |
-| do simd construct                                          | P      | linear clause is not supported |
-| target data construct                                      | P      | device clause not supported |
-| target construct                                           | P      | device clause not supported |
-| target update construct                                    | P      | device clause not supported |
+| do simd construct                                          | P      | Implicit linearization is skipped if iv is a pointer or allocatable |
+| target data construct                                      | Y      | |
+| target construct                                           | Y      | |
+| target update construct                                    | Y      | |
 | declare target directive                                   | Y      | |
 | teams construct                                            | Y      | |
 | distribute construct                                       | Y      | |
-| distribute simd construct                                  | P      | linear clauses are not supported |
+| distribute simd construct                                  | P      | Implicit linearization is skipped if iv is a pointer or allocatable |
 | distribute parallel loop construct                         | Y      | |
-| distribute parallel loop simd construct                    | P      | linear clauses are not supported |
+| distribute parallel loop simd construct                    | P      | Implicit linearization is skipped if iv is a pointer or allocatable |
 | depend clause                                              | Y      | |
 | declare reduction construct                                | N      | |
 | atomic construct extensions                                | Y      | |
 | cancel construct                                           | Y      | |
 | cancellation point construct                               | Y      | |
-| parallel do simd construct                                 | P      | linear clause not supported |
-| target teams construct                                     | P      | device clause not supported |
+| parallel do simd construct                                 | P      | Implicit linearization is skipped if iv is a pointer or allocatable |
+| target teams construct                                     | Y      | |
 | teams distribute construct                                 | Y      | |
-| teams distribute simd construct                            | P      | linear clause is not supported |
-| target teams distribute construct                          | P      | device clause is not supported |
+| teams distribute simd construct                            | P      | Implicit linearization is skipped if iv is a pointer or allocatable |
+| target teams distribute construct                          | Y      | |
 | teams distribute parallel loop construct                   | Y      | |
-| target teams distribute parallel loop construct            | P      | device clause is not supported |
-| teams distribute parallel loop simd construct              | P      | linear clause is not supported |
-| target teams distribute parallel loop simd construct       | P      | device and linear clauses are not supported |
+| target teams distribute parallel loop construct            | Y      | |
+| teams distribute parallel loop simd construct              | P      | Implicit linearization is skipped if iv is a pointer or allocatable |
+| target teams distribute parallel loop simd construct       | P      | Implicit linearization is completely skipped |
 
 ## Extensions
 ### ATOMIC construct
