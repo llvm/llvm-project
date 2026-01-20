@@ -4036,7 +4036,7 @@ LexStart:
 
     // LexIdentifierContinue may trigger HandleEndOfFile which would
     // normally destroy this Lexer. However, the Preprocessor now defers
-    // lexer destruction until the Lex call stack unwinds (LexLevel == 0),
+    // lexer destruction until the stack of Lexer unwinds (LexLevel == 0),
     // so it's safe to access member variables after this call returns.
     bool returnedToken = LexIdentifierContinue(Result, CurPtr);
 

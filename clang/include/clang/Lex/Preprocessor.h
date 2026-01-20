@@ -832,7 +832,7 @@ private:
   std::unique_ptr<Lexer> CurLexer;
 
   /// Lexers that are pending destruction, deferred until the current
-  /// Lex call stack unwinds completely (LexLevel returns to 0).
+  /// Stack of Lexer unwinds completely (LexLevel returns to 0).
   /// This avoids use-after-free when HandleEndOfFile is called from
   /// within a Lexer method that still needs to access its members.
   SmallVector<std::unique_ptr<Lexer>, 2> PendingDestroyLexers;
