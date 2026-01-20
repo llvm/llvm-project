@@ -218,6 +218,10 @@ void SplitAnalysis::calcLiveBlockInfo() {
     SlotIndex Start, Stop;
     std::tie(Start, Stop) = LIS.getSlotIndexes()->getMBBRange(BI.MBB);
 
+    // Skip any uses that are placed before the current block.
+    while (UseI != UseE && *UseI < Start)
+      ++UseI;
+
     // If the block contains no uses, the range must be live through. At one
     // point, RegisterCoalescer could create dangling ranges that ended
     // mid-block.
