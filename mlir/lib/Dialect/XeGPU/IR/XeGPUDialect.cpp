@@ -624,10 +624,9 @@ bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
 static SetVector<int64_t>
 mapSlicedDimsToParentSpace(const SetVector<int64_t> &dimsToMap,
                            ArrayRef<int64_t> sliceDims) {
-  // get max number from sliceDims and unitDims to determine parent space rank
-  // the recovered parent space from sliceDims/unitDims is not necessary the
-  // actual parent rank. As long as the parent space rank covers both maximum
-  // number of sliceDims and unitDims, the algorithm works.
+  // Rather than recovering the exact parent rank, we compute a safe upper bound
+  // so that dimsToMap can be adjusted safely. This upper bound is defined as
+  // max(dimsToMap, sliceDims) + 1 + sliceDims.size().
   int64_t maxDim = -1;
   maxDim = std::max(maxDim, *std::max_element(sliceDims.begin(), sliceDims.end()));
   maxDim =
