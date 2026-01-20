@@ -52,9 +52,8 @@ struct Tree {
   }
 
   void erase(int value) {
-    if (auto node = Node::find(root, value, ternary_compare)) {
+    if (OptionalNodePtr node = Node::find(root, value, ternary_compare))
       Node::erase(root, node.value());
-    }
   }
 
   template <typename NextFn> static Tree build(NextFn next, int N) {
