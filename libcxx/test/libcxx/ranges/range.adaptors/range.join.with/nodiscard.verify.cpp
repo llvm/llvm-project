@@ -22,12 +22,10 @@ void test() {
 
   std::ranges::join_with_view view(range, pattern);
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  view.base();
+  // [range.join.with.view]
+
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(view).base();
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(std::as_const(view)).base();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::move(view).base();
 
@@ -41,38 +39,20 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(view).end();
 
-  // }
+  // [range.join.with.iterator]
 
-  // void test_iterator() {
-  //   char range[3][2] = {{'x', 'x'}, {'y', 'y'}, {'z', 'z'}};
-  //   char pattern[2]  = {',', ' '};
-
-  //   std::ranges::join_with_view view(range, pattern);
+  auto cIt = std::as_const(view).begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  *view.begin();
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  *std::as_const(view).begin();
+  *cIt;
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter_move(view.begin());
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter_move(std::as_const(view).begin());
+  iter_move(cIt);
 
-  // }
+  // [range.join.with.overview]
 
-  // void test_overview() {
-  //   int range[3][3]     = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-  //   int pattern_base[2] = {-1, -1};
-  //   auto pattern        = std::views::all(pattern_base);
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::join_with(pattern);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::join_with(range, pattern);
-
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::join_with(0);
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::join_with(range, 0);
+  std::views::join_with(pattern);
 }

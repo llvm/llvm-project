@@ -14,16 +14,41 @@
 #include <utility>
 #include <vector>
 
-#include "test_range.h"
+struct MoveOnlyIterator {
+  using iterator_concept = std::input_iterator_tag;
+  using difference_type  = std::ptrdiff_t;
+  using value_type       = int;
+
+  MoveOnlyIterator() = default;
+
+  MoveOnlyIterator(MoveOnlyIterator&&)            = default;
+  MoveOnlyIterator& operator=(MoveOnlyIterator&&) = default;
+
+  MoveOnlyIterator(const MoveOnlyIterator&)            = delete;
+  MoveOnlyIterator& operator=(const MoveOnlyIterator&) = delete;
+
+  int operator*() const;
+
+  MoveOnlyIterator& operator++();
+
+  void operator++(int);
+
+  friend bool operator==(const MoveOnlyIterator&, std::default_sentinel_t);
+};
+static_assert(std::input_iterator<MoveOnlyIterator>);
+static_assert(!std::copyable<MoveOnlyIterator>);
 
 void test() {
   std::vector<int> range;
   std::ranges::subrange subrange{range.begin(), range.end()};
 
+  MoveOnlyIterator it;
+  auto moveOnlySubrange = std::ranges::subrange(std::move(it), std::default_sentinel);
+
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(subrange).begin();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  subrange.begin();
+  std::move(moveOnlySubrange).begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(subrange).end();
