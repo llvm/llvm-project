@@ -324,6 +324,9 @@ define i16 @clamp_i64_i16_uniform(i64 inreg %in) #0 {
 ; GFX678-NEXT:    v_mov_b32_e32 v1, 0xffff8000
 ; GFX678-NEXT:    v_mov_b32_e32 v2, 0x7fff
 ; GFX678-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX678-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX678-NEXT:    s_add_i32 s4, s4, s4
+; GFX678-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: clamp_i64_i16_uniform:
@@ -334,6 +337,9 @@ define i16 @clamp_i64_i16_uniform(i64 inreg %in) #0 {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff8000
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0x7fff
 ; GFX9-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-NEXT:    s_add_i32 s4, s4, s4
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: clamp_i64_i16_uniform:
@@ -342,6 +348,9 @@ define i16 @clamp_i64_i16_uniform(i64 inreg %in) #0 {
 ; GFX10-NEXT:    v_cvt_pk_i16_i32 v0, s16, s17
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0x7fff
 ; GFX10-NEXT:    v_med3_i32 v0, 0xffff8000, v0, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-NEXT:    s_add_i32 s4, s4, s4
+; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: clamp_i64_i16_uniform:
@@ -349,12 +358,17 @@ define i16 @clamp_i64_i16_uniform(i64 inreg %in) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cvt_pk_i16_i32 v0, s0, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_med3_i32 v0, 0xffff8000, v0, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    s_add_i32 s0, s0, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %max = call i64 @llvm.smax.i64(i64 %in, i64 -32768)
   %min = call i64 @llvm.smin.i64(i64 %max, i64 32767)
   %result = trunc i64 %min to i16
-  ret i16 %result
+  %ret = add i16 %result, %result
+  ret i16 %ret
 }
