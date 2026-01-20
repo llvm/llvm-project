@@ -6,26 +6,26 @@ define i32 @sink_and_duplicate_for_tailc(i1 %c) nounwind {
 ; OPT-LABEL: define i32 @sink_and_duplicate_for_tailc(
 ; OPT-SAME: i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
-; OPT-NEXT:    [[RV:%.*]] = tail call i32 @qux()
-; OPT-NEXT:    br i1 [[C]], label %[[IF_THEN:.*]], label %[[RETURN:.*]]
+; OPT-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; OPT-NEXT:    br i1 [[C_FR]], label %[[IF_THEN:.*]], label %[[RETURN:.*]]
 ; OPT:       [[IF_THEN]]:
+; OPT-NEXT:    [[RV1:%.*]] = tail call i32 @qux()
 ; OPT-NEXT:    [[TMP0:%.*]] = tail call i32 @quux()
-; OPT-NEXT:    br label %[[RETURN]]
+; OPT-NEXT:    ret i32 [[RV1]]
 ; OPT:       [[RETURN]]:
+; OPT-NEXT:    [[RV:%.*]] = tail call i32 @qux()
 ; OPT-NEXT:    ret i32 [[RV]]
 ;
 ; CHECK-LABEL: sink_and_duplicate_for_tailc:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    callq _qux
-; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    je LBB0_2
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    je _qux ## TAILCALL
 ; CHECK-NEXT:  ## %bb.1: ## %if.then
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    callq _qux
 ; CHECK-NEXT:    movl %eax, %ebx
 ; CHECK-NEXT:    callq _quux
 ; CHECK-NEXT:    movl %ebx, %eax
-; CHECK-NEXT:  LBB0_2: ## %return
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 entry:
@@ -44,27 +44,27 @@ define ptr @sink_and_duplicate_for_tailc_extractvalue(i1 noundef %c) nounwind {
 ; OPT-LABEL: define ptr @sink_and_duplicate_for_tailc_extractvalue(
 ; OPT-SAME: i1 noundef [[C:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
-; OPT-NEXT:    [[CALL:%.*]] = tail call { ptr, i32 } @qux_twice()
 ; OPT-NEXT:    br i1 [[C]], label %[[IF_THEN:.*]], label %[[RETURN:.*]]
 ; OPT:       [[IF_THEN]]:
+; OPT-NEXT:    [[CALL1:%.*]] = tail call { ptr, i32 } @qux_twice()
 ; OPT-NEXT:    [[TMP0:%.*]] = tail call { ptr, i32 } @quux_twice()
-; OPT-NEXT:    br label %[[RETURN]]
+; OPT-NEXT:    [[TMP1:%.*]] = extractvalue { ptr, i32 } [[CALL1]], 0
+; OPT-NEXT:    ret ptr [[TMP1]]
 ; OPT:       [[RETURN]]:
+; OPT-NEXT:    [[CALL:%.*]] = tail call { ptr, i32 } @qux_twice()
 ; OPT-NEXT:    [[RV:%.*]] = extractvalue { ptr, i32 } [[CALL]], 0
 ; OPT-NEXT:    ret ptr [[RV]]
 ;
 ; CHECK-LABEL: sink_and_duplicate_for_tailc_extractvalue:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    callq _qux_twice
-; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    je LBB2_2
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    je _qux_twice ## TAILCALL
 ; CHECK-NEXT:  ## %bb.1: ## %if.then
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    callq _qux_twice
 ; CHECK-NEXT:    movq %rax, %rbx
 ; CHECK-NEXT:    callq _quux_twice
 ; CHECK-NEXT:    movq %rbx, %rax
-; CHECK-NEXT:  LBB2_2: ## %return
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 entry:
@@ -82,32 +82,35 @@ return:
 
 define i32 @sink_and_duplicate_for_tailc_two_args(i1 noundef %c, i32 %a, i32 %b) nounwind {
 ; OPT-LABEL: define i32 @sink_and_duplicate_for_tailc_two_args(
-; OPT-SAME: i1 [[C:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
+; OPT-SAME: i1 noundef [[C:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
-; OPT-NEXT:    [[RV:%.*]] = tail call i32 @two_args(i32 [[A]], i32 [[B]])
 ; OPT-NEXT:    br i1 [[C]], label %[[IF_THEN:.*]], label %[[RETURN:.*]]
 ; OPT:       [[IF_THEN]]:
+; OPT-NEXT:    [[RV1:%.*]] = tail call i32 @two_args(i32 [[A]], i32 [[B]])
 ; OPT-NEXT:    [[TMP0:%.*]] = tail call i32 @quux()
-; OPT-NEXT:    br label %[[RETURN]]
+; OPT-NEXT:    ret i32 [[RV1]]
 ; OPT:       [[RETURN]]:
+; OPT-NEXT:    [[RV:%.*]] = tail call i32 @two_args(i32 [[A]], i32 [[B]])
 ; OPT-NEXT:    ret i32 [[RV]]
 ;
 ; CHECK-LABEL: sink_and_duplicate_for_tailc_two_args:
 ; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    je LBB2_2
+; CHECK-NEXT:  ## %bb.1: ## %if.then
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    movl %esi, %edi
 ; CHECK-NEXT:    movl %edx, %esi
 ; CHECK-NEXT:    callq _two_args
-; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    je LBB3_2
-; CHECK-NEXT:  ## %bb.1: ## %if.then
 ; CHECK-NEXT:    movl %eax, %ebx
 ; CHECK-NEXT:    callq _quux
 ; CHECK-NEXT:    movl %ebx, %eax
-; CHECK-NEXT:  LBB3_2: ## %return
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
+; CHECK-NEXT:  LBB2_2: ## %return
+; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    movl %edx, %esi
+; CHECK-NEXT:    jmp _two_args ## TAILCALL
 entry:
   %rv = tail call i32 @two_args(i32 %a, i32 %b)
   br i1 %c, label %if.then, label %return

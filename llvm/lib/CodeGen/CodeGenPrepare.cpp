@@ -275,6 +275,10 @@ static cl::opt<bool>
     DisableDeletePHIs("disable-cgp-delete-phis", cl::Hidden, cl::init(false),
                       cl::desc("Disable elimination of dead PHI nodes."));
 
+static cl::opt<bool> EnableSinkCallForTailCall(
+    "cgp-sink-call-for-tailcall", cl::Hidden, cl::init(true),
+    cl::desc("Enable sinking and duplicate call for tail call optimization."));
+
 namespace {
 
 enum ExtType {
@@ -2912,10 +2916,104 @@ static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
   return false;
 }
 
+/// Attempt to find a triangle-like pattern where sinking and duplicating a call
+/// may be profitable in order to enable further tail call optimization.
+/// We look for the following pattern:
+/// @code
+///   entry:
+///     %retval = call @func()
+///     br i1 %c, label %if.then, label %return
+///   if.then:
+///     ...
+///     br label %return
+///   return:
+///     ret %retval
+/// @endcode
+static bool
+sinkAndDuplicateCallForTailCall(CallInst *CI, BasicBlock *RetBB,
+                                function_ref<bool(BasicBlock *)> TryFoldReturn,
+                                SmallPtrSetImpl<Instruction *> &InsertedInsts) {
+  if (!CI->hasOneUse() || CI->cannotDuplicate() || CI->isConvergent() ||
+      pred_size(RetBB) != 2)
+    return false;
+
+  constexpr static auto MaxArgsForDuplication = 2;
+  if (CI->arg_size() > MaxArgsForDuplication ||
+      CI->getAttributes().hasAttrSomewhere(Attribute::ByVal))
+    return false;
+
+  auto It = std::next(CI->getIterator());
+  while (isa<PseudoProbeInst>(It) || isa<LifetimeIntrinsic>(It))
+    It = std::next(It);
+
+  // No instructions between the call and its terminator.
+  auto *CIBBTerm = CI->getParent()->getTerminator();
+  if (&*It != CIBBTerm)
+    return false;
+
+  auto *BI = dyn_cast<BranchInst>(CIBBTerm);
+  if (!BI || !BI->isConditional())
+    return false;
+
+  BasicBlock *BBToSinkCall;
+  if (BI->getSuccessor(0) == RetBB)
+    BBToSinkCall = BI->getSuccessor(1);
+  else if (BI->getSuccessor(1) == RetBB)
+    BBToSinkCall = BI->getSuccessor(0);
+  else
+    return false;
+
+  // Won't be profitable to duplicate the call if the basic block where we sink
+  // the call is more than just a jump (and at most another call).
+  if (BBToSinkCall->sizeWithoutDebug() > 2)
+    return false;
+
+  // Maybe found a candidate block to sink the call into.
+  if (!TryFoldReturn(BBToSinkCall))
+    return false;
+
+  // The return has been duplicated in one of its predecessor. Make sure the
+  // original call is sunk to such a predecessor, and duplicated in the
+  // original block that returns.
+  auto *NewRI =
+      cast<ReturnInst>(BBToSinkCall->getTerminator())->getReturnValue();
+  auto *OrigCI = dyn_cast<CallInst>(NewRI);
+  if (!OrigCI) {
+    OrigCI = dyn_cast<CallInst>(cast<ExtractValueInst>(NewRI)->getOperand(0));
+    assert(OrigCI && "Expected call-site.");
+  }
+
+  auto *OrigCITerm = cast<BranchInst>(OrigCI->getParent()->getTerminator());
+  auto *Cond = OrigCITerm->getCondition();
+  if (!isGuaranteedNotToBeUndefOrPoison(Cond)) {
+    auto *FI = new FreezeInst(Cond, Cond->getName() + ".fr",
+                              OrigCITerm->getIterator());
+    OrigCITerm->setCondition(FI);
+    InsertedInsts.insert(FI);
+  }
+
+  // Sink original call to if/then basic block.
+  OrigCI->moveBefore(BBToSinkCall->getFirstInsertionPt());
+
+  // Duplicate the original call in the return basic block.
+  auto *ClonedCI = OrigCI->clone();
+  auto *OrigRI = cast<ReturnInst>(RetBB->getTerminator());
+  ClonedCI->setName(OrigCI->getName() + ".cloned");
+  ClonedCI->insertBefore(RetBB->getFirstInsertionPt());
+  if (auto *EVI = dyn_cast<ExtractValueInst>(OrigRI->getReturnValue()))
+    EVI->setOperand(0, ClonedCI);
+  else
+    OrigRI->setOperand(0, ClonedCI);
+
+  InsertedInsts.insert(ClonedCI);
+  return true;
+}
+
 /// Look for opportunities to duplicate return instructions to the predecessor
 /// to enable tail call optimizations. The case it is currently looking for is
-/// the following one. Known intrinsics or library function that may be tail
-/// called are taken into account as well.
+/// primarily the following one. In some cases, duplicating a function call to
+/// enable TCO in one block is allowed. Known intrinsics or library function
+/// that may be tail called are taken into account as well.
 /// @code
 /// bb0:
 ///   %tmp0 = tail call i32 @f0()
@@ -3085,13 +3183,12 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
     }
   }
 
-  bool Changed = false;
-  for (auto const &TailCallBB : TailCallBBs) {
+  auto TryFoldReturn = [&](BasicBlock *TailCallBB) -> bool {
     // Make sure the call instruction is followed by an unconditional branch to
     // the return block.
     BranchInst *BI = dyn_cast<BranchInst>(TailCallBB->getTerminator());
     if (!BI || !BI->isUnconditional() || BI->getSuccessor(0) != BB)
-      continue;
+      return false;
 
     // Duplicate the return into TailCallBB.
     (void)FoldReturnIntoUncondBranch(RetI, BB, TailCallBB);
@@ -3100,9 +3197,24 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
     BFI->setBlockFreq(BB,
                       (BFI->getBlockFreq(BB) - BFI->getBlockFreq(TailCallBB)));
     ModifiedDT = ModifyDT::ModifyBBDT;
-    Changed = true;
     ++NumRetsDup;
+    return true;
+  };
+
+  // If we have not found any tail call opportunity yet, but we know the return
+  // value of function call is being returned, then in triangle-like if/then it
+  // may be profitable to sink the call in one branch and duplicate it in the
+  // current return block, so that the duplicated call is in tail position.
+  if (EnableSinkCallForTailCall && TailCallBBs.empty()) {
+    auto *CI = dyn_cast_or_null<CallInst>(V);
+    if (CI && MayBePermittedAsTailCall(CI))
+      if (sinkAndDuplicateCallForTailCall(CI, BB, TryFoldReturn, InsertedInsts))
+        return true;
   }
+
+  bool Changed = false;
+  for (const auto &TailCallBB : TailCallBBs)
+    Changed |= TryFoldReturn(TailCallBB);
 
   // If we eliminated all predecessors of the block, delete the block now.
   if (Changed && !BB->hasAddressTaken() && pred_empty(BB)) {
