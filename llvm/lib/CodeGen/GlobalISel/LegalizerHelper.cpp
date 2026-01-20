@@ -639,10 +639,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::createLibcall(
   if (LibcallImpl == RTLIB::Unsupported)
     return LegalizerHelper::UnableToLegalize;
 
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-
   StringRef Name = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
-  const CallingConv::ID CC = TLI.getLibcallImplCallingConv(LibcallImpl);
+  const CallingConv::ID CC = Libcalls->getLibcallImplCallingConv(LibcallImpl);
   return createLibcall(Name.data(), Result, Args, CC, LocObserver, MI);
 }
 
@@ -807,44 +805,46 @@ LegalizerHelper::createMemLibcall(MachineRegisterInfo &MRI, MachineInstr &MI,
   }
 
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   RTLIB::Libcall RTLibcall;
   unsigned Opc = MI.getOpcode();
-  const char *Name;
   switch (Opc) {
   case TargetOpcode::G_BZERO:
     RTLibcall = RTLIB::BZERO;
-    Name = TLI.getLibcallName(RTLibcall);
     break;
   case TargetOpcode::G_MEMCPY:
     RTLibcall = RTLIB::MEMCPY;
-    Name = TLI.getLibcallImplName(TLI.getMemcpyImpl()).data();
     Args[0].Flags[0].setReturned();
     break;
   case TargetOpcode::G_MEMMOVE:
     RTLibcall = RTLIB::MEMMOVE;
-    Name = TLI.getLibcallName(RTLibcall);
     Args[0].Flags[0].setReturned();
     break;
   case TargetOpcode::G_MEMSET:
     RTLibcall = RTLIB::MEMSET;
-    Name = TLI.getLibcallName(RTLibcall);
     Args[0].Flags[0].setReturned();
     break;
   default:
     llvm_unreachable("unsupported opcode");
   }
 
+  if (!Libcalls) // FIXME: Should be mandatory
+    return LegalizerHelper::UnableToLegalize;
+
+  RTLIB::LibcallImpl RTLibcallImpl = Libcalls->getLibcallImpl(RTLibcall);
+
   // Unsupported libcall on the target.
-  if (!Name) {
+  if (RTLibcallImpl == RTLIB::Unsupported) {
     LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
                       << MIRBuilder.getTII().getName(Opc) << "\n");
     return LegalizerHelper::UnableToLegalize;
   }
 
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
-  Info.Callee = MachineOperand::CreateES(Name);
+  Info.CallConv = Libcalls->getLibcallImplCallingConv(RTLibcallImpl);
+
+  StringRef LibcallName =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(RTLibcallImpl);
+  Info.Callee = MachineOperand::CreateES(LibcallName.data());
   Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0);
   Info.IsTailCall =
       MI.getOperand(MI.getNumOperands() - 1).getImm() &&
@@ -926,9 +926,9 @@ static RTLIB::Libcall getOutlineAtomicLibcall(MachineInstr &MI) {
 #undef LCALL5
 }
 
-static LegalizerHelper::LegalizeResult
-createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
-  auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
+LegalizerHelper::LegalizeResult
+LegalizerHelper::createAtomicLibcall(MachineInstr &MI) const {
+  auto &Ctx = MIRBuilder.getContext();
 
   Type *RetTy;
   SmallVector<Register> RetRegs;
@@ -980,21 +980,26 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
     llvm_unreachable("unsupported opcode");
   }
 
+  if (!Libcalls) // FIXME: Should be mandatory
+    return LegalizerHelper::UnableToLegalize;
+
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   RTLIB::Libcall RTLibcall = getOutlineAtomicLibcall(MI);
-  const char *Name = TLI.getLibcallName(RTLibcall);
+  RTLIB::LibcallImpl RTLibcallImpl = Libcalls->getLibcallImpl(RTLibcall);
 
   // Unsupported libcall on the target.
-  if (!Name) {
+  if (RTLibcallImpl == RTLIB::Unsupported) {
     LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
                       << MIRBuilder.getTII().getName(Opc) << "\n");
     return LegalizerHelper::UnableToLegalize;
   }
 
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
-  Info.Callee = MachineOperand::CreateES(Name);
+  Info.CallConv = Libcalls->getLibcallImplCallingConv(RTLibcallImpl);
+
+  StringRef LibcallName =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(RTLibcallImpl);
+  Info.Callee = MachineOperand::CreateES(LibcallName.data());
   Info.OrigRet = CallLowering::ArgInfo(RetRegs, RetTy, 0);
 
   llvm::append_range(Info.OrigArgs, Args);
@@ -1487,7 +1492,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_ATOMICRMW_XOR:
   case TargetOpcode::G_ATOMIC_CMPXCHG:
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
-    auto Status = createAtomicLibcall(MIRBuilder, MI);
+    auto Status = createAtomicLibcall(MI);
     if (Status != Legalized)
       return Status;
     break;
@@ -1754,6 +1759,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
   case TargetOpcode::G_CTTZ:
   case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTLS:
   case TargetOpcode::G_CTPOP:
     if (TypeIdx == 1)
       switch (MI.getOpcode()) {
@@ -1765,6 +1771,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
         return narrowScalarCTTZ(MI, TypeIdx, NarrowTy);
       case TargetOpcode::G_CTPOP:
         return narrowScalarCTPOP(MI, TypeIdx, NarrowTy);
+      case TargetOpcode::G_CTLS:
+        return narrowScalarCTLS(MI, TypeIdx, NarrowTy);
       default:
         return UnableToLegalize;
       }
@@ -2792,6 +2800,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_CTTZ_ZERO_UNDEF:
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTLS:
   case TargetOpcode::G_CTPOP: {
     if (TypeIdx == 0) {
       Observer.changingInstr(MI);
@@ -2803,10 +2812,19 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Register SrcReg = MI.getOperand(1).getReg();
 
     // First extend the input.
-    unsigned ExtOpc = Opcode == TargetOpcode::G_CTTZ ||
-                              Opcode == TargetOpcode::G_CTTZ_ZERO_UNDEF
-                          ? TargetOpcode::G_ANYEXT
-                          : TargetOpcode::G_ZEXT;
+    unsigned ExtOpc;
+    switch (Opcode) {
+    case TargetOpcode::G_CTTZ:
+    case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+      ExtOpc = TargetOpcode::G_ANYEXT;
+      break;
+    case TargetOpcode::G_CTLS:
+      ExtOpc = TargetOpcode::G_SEXT;
+      break;
+    default:
+      ExtOpc = TargetOpcode::G_ZEXT;
+    }
+
     auto MIBSrc = MIRBuilder.buildInstr(ExtOpc, {WideTy}, {SrcReg});
     LLT CurTy = MRI.getType(SrcReg);
     unsigned NewOpc = Opcode;
@@ -2836,7 +2854,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     // Perform the operation at the larger size.
     auto MIBNewOp = MIRBuilder.buildInstr(NewOpc, {WideTy}, {MIBSrc});
     // This is already the correct result for CTPOP and CTTZs
-    if (Opcode == TargetOpcode::G_CTLZ) {
+    if (Opcode == TargetOpcode::G_CTLZ || Opcode == TargetOpcode::G_CTLS) {
       // The correct result is NewOp - (Difference in widety and current ty).
       MIBNewOp = MIRBuilder.buildSub(
           WideTy, MIBNewOp, MIRBuilder.buildConstant(WideTy, SizeDiff));
@@ -4649,6 +4667,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
   case TargetOpcode::G_CTPOP:
+  case TargetOpcode::G_CTLS:
     return lowerBitCount(MI);
   case G_UADDO: {
     auto [Res, CarryOut, LHS, RHS] = MI.getFirst4Regs();
@@ -7541,6 +7560,52 @@ LegalizerHelper::narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
+                                  LLT NarrowTy) {
+  if (TypeIdx != 1)
+    return UnableToLegalize;
+
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  unsigned NarrowSize = NarrowTy.getSizeInBits();
+
+  if (!SrcTy.isScalar() || SrcTy.getSizeInBits() != 2 * NarrowSize)
+    return UnableToLegalize;
+
+  MachineIRBuilder &B = MIRBuilder;
+
+  auto UnmergeSrc = B.buildUnmerge(NarrowTy, SrcReg);
+  Register Lo = UnmergeSrc.getReg(0);
+  Register Hi = UnmergeSrc.getReg(1);
+
+  auto ShAmt = B.buildConstant(NarrowTy, NarrowSize - 1);
+  auto Sign = B.buildAShr(NarrowTy, Hi, ShAmt);
+
+  auto LoSign = B.buildAShr(NarrowTy, Lo, ShAmt);
+  auto LoSameSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
+                                LoSign.getReg(0), Sign.getReg(0));
+
+  auto HiIsSign =
+      B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign.getReg(0));
+
+  auto LoCTLS = B.buildCTLS(DstTy, Lo);
+  auto GNarrowSize = B.buildConstant(DstTy, NarrowSize);
+  auto HiIsSignCTLS = B.buildAdd(DstTy, LoCTLS, GNarrowSize);
+
+  // If the low half flips sign, the run of redundant bits stops at the
+  // boundary, so use (NarrowSize - 1) instead of extending into Lo.
+  auto GNarrowSizeMinus1 = B.buildConstant(DstTy, NarrowSize - 1);
+  auto HiSignResult =
+      B.buildSelect(DstTy, LoSameSign, HiIsSignCTLS, GNarrowSizeMinus1);
+
+  auto HiCTLS = B.buildCTLS(DstTy, Hi);
+
+  B.buildSelect(DstReg, HiIsSign, HiSignResult, HiCTLS);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx,
                                    LLT NarrowTy) {
   if (TypeIdx != 1)
@@ -7759,6 +7824,23 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
       }
       B.buildLShr(MI.getOperand(0).getReg(), ResTmp, C_SizeM8);
     }
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case TargetOpcode::G_CTLS: {
+    auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+
+    // ctls(x) -> ctlz(x ^ (x >> (N - 1))) - 1
+    auto SignIdxC =
+        MIRBuilder.buildConstant(SrcTy, SrcTy.getScalarSizeInBits() - 1);
+    auto OneC = MIRBuilder.buildConstant(DstTy, 1);
+
+    auto Shr = MIRBuilder.buildAShr(SrcTy, SrcReg, SignIdxC);
+
+    auto Xor = MIRBuilder.buildXor(SrcTy, SrcReg, Shr);
+    auto Ctlz = MIRBuilder.buildCTLZ(DstTy, Xor);
+
+    MIRBuilder.buildSub(DstReg, Ctlz, OneC);
     MI.eraseFromParent();
     return Legalized;
   }

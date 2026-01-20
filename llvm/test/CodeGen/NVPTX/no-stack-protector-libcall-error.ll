@@ -1,4 +1,4 @@
-; RUN: not opt -disable-output -mtriple=nvptx64-- -enable-selectiondag-sp=0 -passes=stack-protector %s 2>&1 | FileCheck %s
+; RUN: not opt -disable-output -mtriple=nvptx64-- -enable-selectiondag-sp=0 -passes='require<libcall-lowering-info>,stack-protector' %s 2>&1 | FileCheck %s
 
 ; CHECK: error: no libcall available for stack protector
 define void @func() sspreq nounwind {

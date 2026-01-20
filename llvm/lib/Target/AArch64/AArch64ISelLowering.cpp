@@ -2947,10 +2947,10 @@ bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
   return true;
 }
 
-FastISel *
-AArch64TargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
-                                      const TargetLibraryInfo *libInfo) const {
-  return AArch64::createFastISel(funcInfo, libInfo);
+FastISel *AArch64TargetLowering::createFastISel(
+    FunctionLoweringInfo &funcInfo, const TargetLibraryInfo *libInfo,
+    const LibcallLoweringInfo *libcallLowering) const {
+  return AArch64::createFastISel(funcInfo, libInfo, libcallLowering);
 }
 
 MachineBasicBlock *
@@ -3135,7 +3135,7 @@ MachineBasicBlock *AArch64TargetLowering::EmitZTInstr(MachineInstr &MI,
   MachineInstrBuilder MIB;
 
   MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opcode))
-            .addReg(MI.getOperand(0).getReg(), Op0IsDef ? RegState::Define : 0);
+            .addReg(MI.getOperand(0).getReg(), getDefRegState(Op0IsDef));
   for (unsigned I = 1; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));
 
