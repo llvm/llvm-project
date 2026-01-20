@@ -387,7 +387,8 @@ void ScopeReductionCheck::check(
         CheckScope = CheckParent;
       }
 
-      // Only report if the usage scope is truly nested within the declaration scope
+      // Only report if the usage scope is truly nested within the declaration
+      // scope
       if (IsNested) {
         diag(Var->getLocation(),
              "variable '%0' can be declared in a smaller scope")
