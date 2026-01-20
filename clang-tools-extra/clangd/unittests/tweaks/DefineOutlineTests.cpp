@@ -631,6 +631,19 @@ TEST_F(DefineOutlineTest, QualifyReturnValue) {
         class Foo {};
         Foo foo() ;)cpp",
        "Foo foo() { return {}; }"},
+      {R"cpp(
+        template <typename T> class Expected {};
+        class Foo {
+          class Bar {};
+          Expected<Bar> fu^nc() { return {}; }
+        };)cpp",
+       R"cpp(
+        template <typename T> class Expected {};
+        class Foo {
+          class Bar {};
+          Expected<Bar> func() ;
+        };)cpp",
+       "Expected<Foo::Bar> Foo::func() { return {}; }\n"},
   };
   llvm::StringMap<std::string> EditedFiles;
   for (auto &Case : Cases) {
