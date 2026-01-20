@@ -1169,7 +1169,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_zip",
             "values": {"c++23": 202110},
             "headers": ["ranges", "tuple", "utility"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ratio",
