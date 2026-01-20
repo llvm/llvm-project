@@ -1865,13 +1865,14 @@ define <2 x half> @fmul_select_v2f16_test3(<2 x half> %x, <2 x i32> %bool.arg1, 
 ; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v3, 0x7fff
 ; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-GISEL-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v4
-; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v1, 0xffff8000, v1, v3
 ; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v2, 0xffff8000, v2, v3
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v0.h, v2.l
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v4.l, v2.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: fmul_select_v2f16_test3:
@@ -2031,13 +2032,14 @@ define <2 x half> @fmul_select_v2f16_test4(<2 x half> %x, <2 x i32> %bool.arg1, 
 ; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v3, 0x7fff
 ; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
 ; GFX11-GISEL-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v4
-; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v1, 0xffff8000, v1, v3
 ; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc_lo
 ; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v2, 0xffff8000, v2, v3
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v0.h, v2.l
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v4.l, v2.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: fmul_select_v2f16_test4:

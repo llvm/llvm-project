@@ -9194,19 +9194,22 @@ define <2 x half> @v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum(<2 x half
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-GISEL-TRUE16-NEXT:    v_pk_max_f16 v1, v0, 2.0 op_sel_hi:[1,0]
+; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_pk_max_f16 v2, v0, 2.0 op_sel_hi:[1,0]
 ; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 2.0, v0.l
-; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e64 s0, 2.0, v0.h
-; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v1.l, vcc_lo
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e64 s0, 2.0, v1.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0x7e00, v2.l, vcc_lo
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0x7e00, v0.l, s0
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v1.h, s0
-; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 4.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 4.0, v1.l
+; GFX11-GISEL-TRUE16-NEXT:    v_pk_min_f16 v0, v1, 4.0 op_sel_hi:[1,0]
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e64 s0, 4.0, v1.h
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-GISEL-TRUE16-NEXT:    v_pk_min_f16 v1, v0, 4.0 op_sel_hi:[1,0]
-; GFX11-GISEL-TRUE16-NEXT:    v_cmp_o_f16_e64 s0, 4.0, v0.h
-; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v1.l, vcc_lo
-; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v1.h, s0
+; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v0.l, vcc_lo
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v1.l, s0
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %a.add = fadd nnan <2 x half> %a, splat (half 1.0)
   %max = call <2 x half> @llvm.maximum.v2f16(<2 x half> %a.add, <2 x half> splat (half 2.0))

@@ -462,8 +462,14 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
     MemSize = std::max(MemSize, Align);
 #endif
 
-  // Only 1-byte and 2-byte to 32-bit extloads are valid.
-  if (MemSize != RegSize && RegSize != 32)
+  // Only 8-bit and 16-bit to 32-bit extloads are valid.
+  if (!ST.useRealTrue16Insts() && MemSize != RegSize && RegSize != 32)
+    return false;
+
+  // 8-bit to 16-bit extloads are valid using True16 instructions.
+  // 8-bit and 16-bit to 32-bit extloads are valid for non-True16 D16 memory
+  // ops, which could be re-implemented as True16
+  if (ST.useRealTrue16Insts() && MemSize != RegSize && RegSize > 32)
     return false;
 
   if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad,
@@ -542,7 +548,7 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
 
 static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query) {
   const LLT Ty = Query.Types[0];
-  return isRegisterType(ST, Ty) && isLoadStoreSizeLegal(ST, Query) &&
+  return isRegisterClassType(ST, Ty) && isLoadStoreSizeLegal(ST, Query) &&
          !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(Ty);
 }
 
@@ -1549,6 +1555,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                       {V4S32, ConstantPtr, V4S32, GlobalAlign32},
                                       {S64, ConstantPtr, S64, GlobalAlign32},
                                       {V2S32, ConstantPtr, V2S32, GlobalAlign32}});
+
+    if (ST.useRealTrue16Insts())
+      Actions.legalForTypesWithMemDesc({{S16, GlobalPtr, S8, GlobalAlign8},
+                                        {S16, GlobalPtr, S16, GlobalAlign16},
+                                        {S16, LocalPtr, S8, 8},
+                                        {S16, LocalPtr, S16, 16},
+                                        {S16, PrivatePtr, S8, 8},
+                                        {S16, PrivatePtr, S16, 16}});
+
     Actions.legalIf(
       [=](const LegalityQuery &Query) -> bool {
         return isLoadStoreLegal(ST, Query);
@@ -2023,7 +2038,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     auto &Builder =
         getActionDefinitionsBuilder(Op)
-            .legalIf(all(isRegisterType(ST, 0), isRegisterType(ST, 1)))
             .lowerFor({{S16, V2S16}})
             .lowerIf([=](const LegalityQuery &Query) {
               const LLT BigTy = Query.Types[BigTyIdx];
@@ -2054,7 +2068,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                   return notValidElt(Query, BigTyIdx);
                 },
                 scalarize(1))
-            .clampScalar(BigTyIdx, S32, MaxScalar);
+            .clampScalar(BigTyIdx, S32, MaxScalar)
+            // legalIf must come after other rules because we don't have 16-bit SGPRs.
+            // We expect 16-bit values to already be lowered or widened by this point.
+            .legalIf(all(isRegisterType(ST, 0), isRegisterType(ST, 1)));
 
     if (Op == G_MERGE_VALUES) {
       Builder.widenScalarIf(

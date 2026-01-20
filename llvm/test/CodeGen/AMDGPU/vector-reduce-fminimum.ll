@@ -100,7 +100,9 @@ define half @test_vector_reduce_fminimum_v2half(<2 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v0.h
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_vector_reduce_fminimum_v2half:
@@ -241,8 +243,9 @@ define half @test_vector_reduce_fminimum_v3half(<3 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v0.h
-; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v2.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -407,8 +410,11 @@ define half @test_vector_reduce_fminimum_v4half(<4 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v0.h
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.h, v1.l, v1.h
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v2.l
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.h, v1.l, v3.l
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v0.h
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -675,10 +681,16 @@ define half @test_vector_reduce_fminimum_v8half(<8 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v0.h
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.h, v1.l, v1.h
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v1.l, v2.l, v2.h
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v1.h, v3.l, v3.h
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v4.l
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.h, v1.l, v5.l
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v1.l, v2.l, v6.l
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v1.h, v3.l, v7.l
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v0.h
 ; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.h, v1.l, v1.h
@@ -1169,14 +1181,22 @@ define half @test_vector_reduce_fminimum_v16half(<16 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v0.h
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.h, v1.l, v1.h
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v1.l, v2.l, v2.h
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v1.h, v3.l, v3.h
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v2.l, v4.l, v4.h
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v2.h, v5.l, v5.h
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v3.l, v6.l, v6.h
-; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v3.h, v7.l, v7.h
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v11, 16, v3
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v12, 16, v4
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v13, 16, v5
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v14, 16, v6
+; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v15, 16, v7
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v8.l
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.h, v1.l, v9.l
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v1.l, v2.l, v10.l
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v1.h, v3.l, v11.l
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v2.l, v4.l, v12.l
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v2.h, v5.l, v13.l
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v3.l, v6.l, v14.l
+; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v3.h, v7.l, v15.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v0.h
 ; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.h, v1.l, v1.h
 ; GFX12-GISEL-TRUE16-NEXT:    v_minimum_f16 v1.l, v2.l, v2.h
