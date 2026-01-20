@@ -338,8 +338,9 @@ foreach(header
   add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums liblldb-header-staging-dir)
   add_dependencies(liblldb-header-staging liblldb-stage-header-${basename})
   add_custom_command(
-    DEPENDS ${header} OUTPUT ${staged_header}
+    OUTPUT ${staged_header}
     COMMAND ${copy_command}
+    DEPENDS ${header}     
     COMMENT "LLDB headers: stage LLDB headers in include directory")
 
   list(APPEND lldb_staged_headers ${staged_header})
