@@ -526,8 +526,7 @@ void BuiltinTypeMethodBuilder::createDecl() {
   for (int I = 0, E = Params.size(); I != E; I++) {
     Param &MP = Params[I];
     ParmVarDecl *Parm = ParmVarDecl::Create(
-        AST, Method->getDeclContext(), SourceLocation(), SourceLocation(),
-        &MP.NameII, MP.Ty,
+        AST, Method, SourceLocation(), SourceLocation(), &MP.NameII, MP.Ty,
         AST.getTrivialTypeSourceInfo(MP.Ty, SourceLocation()), SC_None,
         nullptr);
     if (MP.Modifier != HLSLParamModifierAttr::Keyword_in) {
