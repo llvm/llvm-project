@@ -159,6 +159,7 @@
 // CHECK-NEXT:     svinval              1.0       'Svinval' (Fine-Grained Address-Translation Cache Invalidation)
 // CHECK-NEXT:     svnapot              1.0       'Svnapot' (NAPOT Translation Contiguity)
 // CHECK-NEXT:     svpbmt               1.0       'Svpbmt' (Page-Based Memory Types)
+// CHECK-NEXT:     svrsw60t59b          1.0       'Svrsw60t59b' (PTE Reserved-for-Software Bits 60-59)
 // CHECK-NEXT:     svvptc               1.0       'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)
 // CHECK-NEXT:     xaifet               1.0       'XAIFET' (AI Foundry ET Extension)
 // CHECK-NEXT:     xandesbfhcvt         5.0       'XAndesBFHCvt' (Andes Scalar BFLOAT16 Conversion Extension)

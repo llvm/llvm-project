@@ -1044,6 +1044,10 @@ def FeatureStdExtSvnapot
 def FeatureStdExtSvpbmt
     : RISCVExtension<1, 0, "Page-Based Memory Types">;
 
+def FeatureStdExtSvrsw60t59b
+    : RISCVExtension<1, 0,
+                     "PTE Reserved-for-Software Bits 60-59">;
+
 def FeatureStdExtSvvptc
     : RISCVExtension<1, 0,
                      "Obviating Memory-Management Instructions after Marking PTEs Valid">;
