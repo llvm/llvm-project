@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64-unknown-linux"
 
-@stackbuf = dso_local local_unnamed_addr global ptr null, align 8
+@stackbuf = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 @jbuf = dso_local global [32 x i64] zeroinitializer, align 8
 
 declare void @may_jump()

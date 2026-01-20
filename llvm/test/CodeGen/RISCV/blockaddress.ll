@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 
-@addr = global ptr null
+@addr = global ptr zeroinitializer
 
 define void @test_blockaddress() nounwind {
 ; RV32I-LABEL: test_blockaddress:

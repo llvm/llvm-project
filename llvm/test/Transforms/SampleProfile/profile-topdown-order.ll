@@ -17,7 +17,7 @@
 ; DYNAMIC: ![[#PROF]] = !{!"function_entry_count", i64 27}
 
 @factor = dso_local global i32 3, align 4, !dbg !0
-@fp = dso_local global ptr null, align 8
+@fp = dso_local global ptr zeroinitializer, align 8
 
 define dso_local i32 @_Z5funcAi(i32 %x) local_unnamed_addr #0 !dbg !40 {
 entry:

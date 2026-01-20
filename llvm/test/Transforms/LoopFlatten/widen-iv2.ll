@@ -12,7 +12,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 @d = dso_local global i32 0, align 4
 @b = internal global i32 0, align 4
 @a = internal global i32 0, align 4
-@c = dso_local global ptr null, align 8
+@c = dso_local global ptr zeroinitializer, align 8
 
 define dso_local i32 @fn1() local_unnamed_addr #0 {
 ; CHECK-LABEL: @fn1(

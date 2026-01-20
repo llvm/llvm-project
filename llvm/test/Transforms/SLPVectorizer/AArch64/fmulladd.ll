@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=slp-vectorizer -mtriple=aarch64-unknown-unknown -mcpu=cortex-a53 -S | FileCheck %s
 
 @b = common global i32 0, align 4
-@a = common global ptr null, align 8
+@a = common global ptr zeroinitializer, align 8
 
 define void @foo(ptr %d, ptr %e) {
 ; CHECK-LABEL: @foo(

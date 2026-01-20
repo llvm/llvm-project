@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
-@a = internal global ptr null, align 8
+@a = internal global ptr zeroinitializer, align 8
 ; CHECK: @a
 
 ; PR13968

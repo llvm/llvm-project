@@ -3814,9 +3814,18 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     EntryBuilder->buildFConstant(Reg, *CF);
   } else if (isa<UndefValue>(C))
     EntryBuilder->buildUndef(Reg);
-  else if (isa<ConstantPointerNull>(C))
-    EntryBuilder->buildConstant(Reg, 0);
-  else if (auto GV = dyn_cast<GlobalValue>(&C))
+  else if (auto *NullPtr = dyn_cast<ConstantPointerNull>(&C)) {
+    const DataLayout &DL = EntryBuilder->getMF().getDataLayout();
+    if (std::optional<APInt> NullPtrValue =
+            DL.getNullPtrValue(NullPtr->getType()->getAddressSpace())) {
+      if (NullPtrValue->isZero())
+        EntryBuilder->buildConstant(Reg, 0);
+      else if (NullPtrValue->isAllOnes())
+        EntryBuilder->buildConstant(Reg, -1);
+      else
+        llvm_unreachable("unknown null pointer value");
+    }
+  } else if (auto GV = dyn_cast<GlobalValue>(&C))
     EntryBuilder->buildGlobalValue(Reg, GV);
   else if (auto CPA = dyn_cast<ConstantPtrAuth>(&C)) {
     Register Addr = getOrCreateVReg(*CPA->getPointer());

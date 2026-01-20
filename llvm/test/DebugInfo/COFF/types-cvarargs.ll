@@ -49,7 +49,7 @@ target triple = "x86_64-pc-windows-msvc19.11.25507"
 
 $"\01?MemberFunc@A@MemberTest@@QEAAHZZ" = comdat any
 
-@"\01?funcVar@@3P6AXHMZZEA" = global ptr null, align 8, !dbg !0
+@"\01?funcVar@@3P6AXHMZZEA" = global ptr zeroinitializer, align 8, !dbg !0
 
 ; Function Attrs: noinline optnone uwtable
 define i32 @"\01?f@@YAHXZ"() #0 !dbg !17 {

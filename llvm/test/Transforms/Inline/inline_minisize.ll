@@ -1,6 +1,6 @@
 ; RUN: opt -passes=inline -inline-threshold=225 -inlinehint-threshold=360 -S < %s | FileCheck %s
 
-@data = common global ptr null, align 8
+@data = common global ptr zeroinitializer, align 8
 
 define i32 @fct1(i32 %a) nounwind uwtable ssp {
 entry:

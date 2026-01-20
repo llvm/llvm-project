@@ -60,11 +60,11 @@
 
 ; VERIFY: No errors.
 
-@_ZN4lldb7SBBlockC1ERKS0_ = common dso_local global ptr null, align 8, !dbg !0
-@_ZN4lldb7SBErrorC1ERKS0_ = common dso_local global ptr null, align 8, !dbg !6
-@_ZN4lldb7SBValueC1ERKS0_ = common dso_local global ptr null, align 8, !dbg !10
-@_ZL11NumCommutes = common dso_local global ptr null, align 8, !dbg !13
-@_ZL9NumReMats = common dso_local global ptr null, align 8, !dbg !16
+@_ZN4lldb7SBBlockC1ERKS0_ = common dso_local global ptr zeroinitializer, align 8, !dbg !0
+@_ZN4lldb7SBErrorC1ERKS0_ = common dso_local global ptr zeroinitializer, align 8, !dbg !6
+@_ZN4lldb7SBValueC1ERKS0_ = common dso_local global ptr zeroinitializer, align 8, !dbg !10
+@_ZL11NumCommutes = common dso_local global ptr zeroinitializer, align 8, !dbg !13
+@_ZL9NumReMats = common dso_local global ptr zeroinitializer, align 8, !dbg !16
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!20, !21, !22}

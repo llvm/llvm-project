@@ -62,7 +62,7 @@ block2:
   ret ptr addrspace(1) %z2
 }
 
-@h = common local_unnamed_addr global ptr null, align 4
+@h = common local_unnamed_addr global ptr zeroinitializer, align 4
 
 define ptr addrspace(1) @addrspacecast_constant() {
 ; CHECK-LABEL: @addrspacecast_constant(

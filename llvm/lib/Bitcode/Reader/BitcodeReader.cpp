@@ -3299,6 +3299,14 @@ Error BitcodeReader::parseConstants() {
           return error("Invalid type for a constant null value");
       V = Constant::getNullValue(CurTy);
       break;
+    case bitc::CST_CODE_ZERO_VALUE: // ZERO_VALUE
+      if (CurTy->isVoidTy() || CurTy->isFunctionTy() || CurTy->isLabelTy())
+        return error("Invalid type for a constant zero value");
+      if (auto *TETy = dyn_cast<TargetExtType>(CurTy))
+        if (!TETy->hasProperty(TargetExtType::HasZeroInit))
+          return error("Invalid type for a constant zero value");
+      V = Constant::getZeroValue(CurTy);
+      break;
     case bitc::CST_CODE_INTEGER:   // INTEGER: [intval]
       if (!CurTy->isIntOrIntVectorTy() || Record.empty())
         return error("Invalid integer const record");

@@ -1,6 +1,6 @@
 ; RUN: opt -S -aa-pipeline=basic-aa,objc-arc-aa -passes=gvn < %s | FileCheck %s
 
-@x = common global ptr null, align 8
+@x = common global ptr zeroinitializer, align 8
 
 declare ptr @llvm.objc.retain(ptr)
 declare i32 @llvm.objc.sync.enter(ptr)

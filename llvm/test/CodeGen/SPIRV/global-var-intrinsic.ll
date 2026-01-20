@@ -9,8 +9,8 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; CHECK: OpFunction
 
-@ptr_0 = dso_local global ptr null, align 4
-@ptr_1 = dso_local global ptr null, align 4
+@ptr_0 = dso_local global ptr zeroinitializer, align 4
+@ptr_1 = dso_local global ptr zeroinitializer, align 4
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_example.cpp, ptr null }]
 
 define internal spir_func void @__cxx_global_var_init() {

@@ -22,11 +22,11 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-@B = common global ptr null, align 8
-@A = common global ptr null, align 8
-@C = common global ptr null, align 8
-@D = common global ptr null, align 8
-@E = common global ptr null, align 8
+@B = common global ptr zeroinitializer, align 8
+@A = common global ptr zeroinitializer, align 8
+@C = common global ptr zeroinitializer, align 8
+@D = common global ptr zeroinitializer, align 8
+@E = common global ptr zeroinitializer, align 8
 
 define void @f() {
 entry:

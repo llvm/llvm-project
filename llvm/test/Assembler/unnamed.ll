@@ -12,7 +12,7 @@ module asm "this is another inline asm block"
 
 @0 = global i32 0
 @1 = global float 3.0
-@2 = global ptr null
+@2 = global ptr zeroinitializer
 @3 = global x86_fp80 0xK4001E000000000000000
 
 define float @foo(ptr %p) nounwind {

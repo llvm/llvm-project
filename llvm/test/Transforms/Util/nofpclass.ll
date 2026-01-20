@@ -3,7 +3,7 @@
 ; Test that CallPromotionUtils will promote calls which require pointer cast
 ; safely, i.e. drop incompatible attributes.
 
-@foo = common global ptr null, align 8
+@foo = common global ptr zeroinitializer, align 8
 
 ; correct type, preserve attributes
 define double @func_double(double %a) {

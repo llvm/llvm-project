@@ -8,7 +8,7 @@
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_address_class	(0x00000001)
 
-@y = global ptr null, align 8, !dbg !0
+@y = global ptr zeroinitializer, align 8, !dbg !0
 
 !llvm.dbg.cu = !{!5}
 !llvm.module.flags = !{!8, !9}

@@ -198,8 +198,8 @@ DataLayout::DataLayout()
       FloatSpecs(ArrayRef(DefaultFloatSpecs)),
       VectorSpecs(ArrayRef(DefaultVectorSpecs)) {
   // Default pointer type specifications.
-  setPointerSpec(0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false,
-                 false, "");
+  setPointerSpec(0, 64, Align::Constant<8>(), Align::Constant<8>(), 64,
+                 APInt(64, 0), false, false, "");
 }
 
 DataLayout::DataLayout(StringRef LayoutString) : DataLayout() {
@@ -450,6 +450,15 @@ Error DataLayout::parsePointerSpec(
   bool ExternalState = false;
   bool UnstableRepr = false;
   StringRef AddrSpaceName;
+  // Default nullptr value kind is all-zeros, which is same as the previous
+  // behavior.
+  enum {
+    AllZeros,
+    AllOnes,
+    // The nullptr value is neither all-zeros nor all-ones. LLVM doesn't accept
+    // arbitrary bit patterns, so it will not be able to fold nullptr.
+    Custom
+  } NullPtrValueKind = AllZeros;
   StringRef AddrSpaceStr = Components[0];
   while (!AddrSpaceStr.empty()) {
     char C = AddrSpaceStr.front();
@@ -457,6 +466,12 @@ Error DataLayout::parsePointerSpec(
       ExternalState = true;
     } else if (C == 'u') {
       UnstableRepr = true;
+    } else if (C == 'z') {
+      NullPtrValueKind = AllZeros;
+    } else if (C == 'o') {
+      NullPtrValueKind = AllOnes;
+    } else if (C == 'c') {
+      NullPtrValueKind = Custom;
     } else if (isAlpha(C)) {
       return createStringError("'%c' is not a valid pointer specification flag",
                                C);
@@ -509,8 +524,14 @@ Error DataLayout::parsePointerSpec(
     return createStringError(
         "index size cannot be larger than the pointer size");
 
+  std::optional<APInt> NullPtrValue;
+  if (NullPtrValueKind == AllZeros)
+    NullPtrValue = APInt::getZero(BitWidth);
+  else if (NullPtrValueKind == AllOnes)
+    NullPtrValue = APInt::getAllOnes(BitWidth);
+
   setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth,
-                 UnstableRepr, ExternalState, AddrSpaceName);
+                 NullPtrValue, UnstableRepr, ExternalState, AddrSpaceName);
   return Error::success();
 }
 
@@ -689,8 +710,8 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
     // the spec for AS0, and we then update that to mark it non-integral.
     const PointerSpec &PS = getPointerSpec(AS);
     setPointerSpec(AS, PS.BitWidth, PS.ABIAlign, PS.PrefAlign, PS.IndexBitWidth,
-                   /*HasUnstableRepr=*/true, /*HasExternalState=*/false,
-                   getAddressSpaceName(AS));
+                   PS.NullPtrValue, /*HasUnstableRepr=*/true,
+                   /*HasExternalState=*/false, getAddressSpaceName(AS));
   }
 
   return Error::success();
@@ -738,19 +759,22 @@ DataLayout::getPointerSpec(uint32_t AddrSpace) const {
 
 void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
                                 Align ABIAlign, Align PrefAlign,
-                                uint32_t IndexBitWidth, bool HasUnstableRepr,
-                                bool HasExternalState,
+                                uint32_t IndexBitWidth,
+                                std::optional<APInt> NullPtrValue,
+                                bool HasUnstableRepr, bool HasExternalState,
                                 StringRef AddrSpaceName) {
   auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
   if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
     PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
-                                       IndexBitWidth, HasUnstableRepr,
-                                       HasExternalState, AddrSpaceName.str()});
+                                       IndexBitWidth, NullPtrValue,
+                                       HasUnstableRepr, HasExternalState,
+                                       AddrSpaceName.str()});
   } else {
     I->BitWidth = BitWidth;
     I->ABIAlign = ABIAlign;
     I->PrefAlign = PrefAlign;
     I->IndexBitWidth = IndexBitWidth;
+    I->NullPtrValue = NullPtrValue;
     I->HasUnstableRepresentation = HasUnstableRepr;
     I->HasExternalState = HasExternalState;
     I->AddrSpaceName = AddrSpaceName.str();

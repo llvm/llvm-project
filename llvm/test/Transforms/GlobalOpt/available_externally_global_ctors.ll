@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @foo_static_init, ptr null }]
 
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @foo_static_init, ptr null }]
-@foo_external = available_externally global ptr null
+@foo_external = available_externally global ptr zeroinitializer
 
 define internal void @foo_static_init() {
 entry:

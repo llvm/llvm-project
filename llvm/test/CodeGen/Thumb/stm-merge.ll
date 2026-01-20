@@ -3,8 +3,8 @@ target datalayout = "e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i64:64-v128:64:128-
 target triple = "thumbv6m--linux-gnueabi"
 
 @d = internal unnamed_addr global i32 0, align 4
-@c = internal global ptr null, align 4
-@e = internal unnamed_addr global ptr null, align 4
+@c = internal global ptr zeroinitializer, align 4
+@e = internal unnamed_addr global ptr zeroinitializer, align 4
 
 ; Function Attrs: nounwind optsize
 define void @fn1(i32 %x, i32 %y, i32 %z) #0 {

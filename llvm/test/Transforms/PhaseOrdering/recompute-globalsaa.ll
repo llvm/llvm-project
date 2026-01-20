@@ -2,7 +2,7 @@
 ; RUN: opt -passes='default<O2>' -S < %s | FileCheck %s
 @a = internal global i32 0, align 4
 @c = internal global ptr @b, align 8
-@b = internal global ptr null, align 8
+@b = internal global ptr zeroinitializer, align 8
 @e = internal global ptr @d, align 8
 @d = internal global i32 0, align 4
 

@@ -3,7 +3,7 @@
 ; This tests the i686 lowering of mempcpy.
 ; Also see mempcpy.ll
 
-@G = common global ptr null, align 8
+@G = common global ptr zeroinitializer, align 8
 
 ; CHECK-LABEL: RET_MEMPCPY:
 ; CHECK: movl [[REG:%e[a-z0-9]+]], {{.*}}G

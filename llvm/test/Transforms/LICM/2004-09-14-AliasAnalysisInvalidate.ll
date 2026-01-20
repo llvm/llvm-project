@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes='require<globals-aa>,function(loop-mssa(licm))' -disable-output
 
-@PL_regcomp_parse = internal global ptr null		; <ptr> [#uses=2]
+@PL_regcomp_parse = internal global ptr zeroinitializer		; <ptr> [#uses=2]
 
 define void @test() {
 	br label %Outer

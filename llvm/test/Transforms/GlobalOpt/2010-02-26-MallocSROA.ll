@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %struct.xyz = type { double, i32 }
 
-@Y = internal global ptr null            ; <ptr> [#uses=2]
+@Y = internal global ptr zeroinitializer            ; <ptr> [#uses=2]
 @numf2s = external global i32                     ; <ptr> [#uses=1]
 
 define fastcc void @init_net() nounwind {

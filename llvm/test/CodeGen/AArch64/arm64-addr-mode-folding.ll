@@ -1,7 +1,7 @@
 ; RUN: llc -O3 -mtriple arm64-apple-ios3 -aarch64-enable-gep-opt=false %s -o - | FileCheck %s
 ; <rdar://problem/13621857>
 
-@block = common global ptr null, align 8
+@block = common global ptr zeroinitializer, align 8
 
 define i32 @fct(i32 %i1, i32 %i2) {
 ; CHECK: @fct

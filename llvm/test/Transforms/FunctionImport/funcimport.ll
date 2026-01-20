@@ -91,7 +91,7 @@ declare void @callfuncptr(...) #1
 
 ; Ensure that all uses of local variable @P which has used in setfuncptr
 ; and callfuncptr are to the same promoted/renamed global.
-; CHECK-DAG: @P.llvm.{{.*}} = available_externally hidden global ptr null
+; CHECK-DAG: @P.llvm.{{.*}} = available_externally hidden global ptr zeroinitializer
 ; CHECK-DAG: %0 = load ptr, ptr @P.llvm.
 ; CHECK-DAG: store ptr @staticfunc2.llvm.{{.*}}, ptr @P.llvm.
 

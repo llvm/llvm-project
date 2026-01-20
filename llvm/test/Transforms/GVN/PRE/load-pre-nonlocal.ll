@@ -6,8 +6,8 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 %struct.S1 = type { i32, i32 }
 
-@a2 = common global ptr null, align 8
-@a = common global ptr null, align 8
+@a2 = common global ptr zeroinitializer, align 8
+@a = common global ptr zeroinitializer, align 8
 @s1 = common global %struct.S1 zeroinitializer, align 8
 
 ; Check that GVN doesn't determine %2 is partially redundant.

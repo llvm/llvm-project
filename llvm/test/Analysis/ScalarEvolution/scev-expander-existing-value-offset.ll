@@ -4,7 +4,7 @@
 ; CHECK: select
 ; CHECK-NOT: select
 
-@ySrcL = common global ptr null, align 8
+@ySrcL = common global ptr zeroinitializer, align 8
 @smL = common global i32 0, align 4
 
 define void @foo(i32 %rwL, i32 %kL, i32 %xfL) {

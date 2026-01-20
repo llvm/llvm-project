@@ -6,7 +6,7 @@
 ;; __attribute__((nodebug)) int Cond;
 ;; __attribute__((nodebug)) Blob *C;
 ;; __attribute__((nodebug)) void call(int);
-;; 
+;;
 ;; void f() {
 ;;   int A[16];
 ;;   __attribute__ ((nodebug)) int B[16];
@@ -14,7 +14,7 @@
 ;;   __builtin_memmove(&A[0], &Glob, sizeof(Blob));
 ;;   call(0);
 ;;   // B[8:14) <- Glob
-;;   __builtin_memmove(&B[8], &Glob, sizeof(Blob));  
+;;   __builtin_memmove(&B[8], &Glob, sizeof(Blob));
 ;;   call(A[0]);
 ;;   // A[8:14) <- A[0:6)
 ;;   __builtin_memmove(&A[8], &A[0], sizeof(Blob));
@@ -24,9 +24,9 @@
 ;;     __builtin_memmove(C, &A[8], sizeof(Blob));
 ;;   else
 ;;     // C <- B[8:14)
-;;     __builtin_memmove(C, &B[8], sizeof(Blob));    
+;;     __builtin_memmove(C, &B[8], sizeof(Blob));
 ;; }
-;; 
+;;
 ;; using:
 ;;   clang test.cpp -emit-llvm -S -g -O2 -Xclang -disable-llvm-passes -o - \
 ;;   | opt -passes=declare-to-assign -o test.ll - -S
@@ -55,7 +55,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @Glob = dso_local global %struct.Blob zeroinitializer, align 4
 @Cond = dso_local global i32 0, align 4
-@C = dso_local global ptr null, align 8
+@C = dso_local global ptr zeroinitializer, align 8
 
 ; Function Attrs: mustprogress uwtable
 define dso_local void @_Z1fv() #0 !dbg !9 {

@@ -21,7 +21,7 @@ declare void @llvm.assume(i1)
 ; CHECK: @GPtr4 = addrspace(4) global ptr addrspace(4) null
 ; CHECK: @G = global i32 42
 ; CHECK: @GS = addrspace(3) global i32 0
-; CHECK: @GPtr = global ptr null
+; CHECK: @GPtr = global ptr zeroinitializer
 ; CHECK: @PG1 = thread_local global i32 42
 ; CHECK: @PG2 = addrspace(5) global i32 0
 ; CHECK: @GPtr5 = global ptr addrspace(5) null
@@ -294,7 +294,7 @@ define amdgpu_kernel void @pos_constant_loads() "kernel" {
 }
 @G = global i32 42
 @GS = addrspace(3) global i32 0
-@GPtr = global ptr null
+@GPtr = global ptr zeroinitializer
 ; TODO: We could remove some of the barriers due to the lack of write effects.
 define amdgpu_kernel void @neg_loads() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@neg_loads

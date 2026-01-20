@@ -4,10 +4,10 @@
 
 @c = common global i32 0, align 4
 @e = common global i32 0, align 4
-@g = common global ptr null, align 4
+@g = common global ptr zeroinitializer, align 4
 @a = common global i32 0, align 4
 @b = common global i32 0, align 4
-@h = common global ptr null, align 4
+@h = common global ptr zeroinitializer, align 4
 @d = common global i32 0, align 4
 @f = common global i32 0, align 4
 

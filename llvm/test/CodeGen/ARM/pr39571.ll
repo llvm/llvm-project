@@ -10,7 +10,7 @@
 %union.ie = type { %struct.ib }
 %struct.ib = type { i8, i8, i16 }
 
-@a = common dso_local local_unnamed_addr global ptr null, align 4
+@a = common dso_local local_unnamed_addr global ptr zeroinitializer, align 4
 @b = common dso_local local_unnamed_addr global %struct.anon.0 zeroinitializer, align 1
 
 ; Function Attrs: norecurse nounwind

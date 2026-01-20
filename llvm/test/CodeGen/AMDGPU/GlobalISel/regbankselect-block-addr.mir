@@ -3,7 +3,7 @@
 
 --- |
 
-  @addr = global ptr null
+  @addr = global ptr zeroinitializer
 
   define void @test_blockaddress() {
     store ptr blockaddress(@test_blockaddress, %block), ptr @addr

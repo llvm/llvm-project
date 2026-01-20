@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=ve | FileCheck %s
 
-@addr = global ptr null, align 8
+@addr = global ptr zeroinitializer, align 8
 
 ; Function Attrs: nofree norecurse nounwind writeonly
 define void @test() {

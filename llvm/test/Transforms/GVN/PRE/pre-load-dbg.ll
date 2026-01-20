@@ -9,7 +9,7 @@
 %struct.a = type { i16 }
 
 @f = local_unnamed_addr global i16 0, align 1
-@m = local_unnamed_addr global ptr null, align 1
+@m = local_unnamed_addr global ptr zeroinitializer, align 1
 @h = global %struct.a zeroinitializer, align 1
 
 define void @withdbg() {

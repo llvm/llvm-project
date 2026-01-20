@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=arm64-none-linux-gnu -frame-pointer=non-leaf -disable-post-ra < %s | FileCheck %s
 declare void @use_addr(ptr)
 
-@addr = global ptr null
+@addr = global ptr zeroinitializer
 
 define void @test_bigframe() {
 ; CHECK-LABEL: test_bigframe:

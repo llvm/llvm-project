@@ -24,7 +24,7 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 ; a destination type. Since these types are not in the source module,
 ; there should be no attempt to create a mapping involving them;
 ; both types should be left as they are.
-@use = global ptr null
+@use = global ptr zeroinitializer
 
 ; Mark %Tricky used.
 !llvm.dbg.cu = !{!2}

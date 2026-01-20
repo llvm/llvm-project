@@ -4,7 +4,7 @@
 
 %struct.xyz = type { double, i32 }
 
-@Y = internal global ptr null ,section ".foo"            ; <ptr> [#uses=2]
+@Y = internal global ptr zeroinitializer ,section ".foo"            ; <ptr> [#uses=2]
 @numf2s = external global i32                     ; <ptr> [#uses=1]
 
 define void @init_net() #0 {

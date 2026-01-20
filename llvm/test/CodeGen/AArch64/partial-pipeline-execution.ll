@@ -17,7 +17,7 @@ source_filename = "loop.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-none-linux-gnu"
 
-@q = dso_local local_unnamed_addr global ptr null, align 8
+@q = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 
 ; Function Attrs: nofree norecurse nounwind
 define dso_local i32 @main(i32 %argc, ptr nocapture readnone %argv) local_unnamed_addr #0 {

@@ -4,7 +4,7 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-arm-linux-gnu"
 
-  @v = common dso_local global ptr null, align 8
+  @v = common dso_local global ptr zeroinitializer, align 8
 
   ; Function Attrs: nounwind
   define dso_local void @legal0() #0 {

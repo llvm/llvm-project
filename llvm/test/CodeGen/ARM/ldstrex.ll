@@ -98,7 +98,7 @@ define void @test_clear() {
 
 declare void @llvm.arm.clrex() nounwind
 
-@base = global ptr null
+@base = global ptr zeroinitializer
 
 define void @excl_addrmode() {
 ; CHECK-T2ADDRMODE-LABEL: excl_addrmode:

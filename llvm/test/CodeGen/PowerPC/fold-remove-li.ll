@@ -7,7 +7,7 @@
 
 %0 = type { i32, i16 }
 
-@val = common dso_local local_unnamed_addr global ptr null, align 8
+@val = common dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 
 define dso_local signext i32 @redunLoadImm(ptr %arg) {
 ; CHECK-LABEL: redunLoadImm:

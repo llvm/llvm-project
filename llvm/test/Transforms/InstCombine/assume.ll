@@ -409,9 +409,10 @@ define i1 @nonnull5(ptr %a) {
 ; CHECK-LABEL: @nonnull5(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    tail call void @escape(ptr [[LOAD]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr [[LOAD]], null
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr [[LOAD]], zeroinitializer
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp eq ptr [[LOAD]], null
+; CHECK-NEXT:    ret i1 [[RVAL]]
 ;
   %load = load ptr, ptr %a
   ;; This call may throw!

@@ -2,7 +2,7 @@
 ; RUN: llc --mtriple=loongarch32 -mattr=+d < %s | FileCheck %s --check-prefix=LA32
 ; RUN: llc --mtriple=loongarch64 -mattr=+d < %s | FileCheck %s --check-prefix=LA64
 
-@addr = dso_local global ptr null
+@addr = dso_local global ptr zeroinitializer
 
 define void @test_blockaddress() nounwind {
 ; LA32-LABEL: test_blockaddress:

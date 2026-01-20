@@ -3,7 +3,7 @@
 ; RUN: llc < %s -relocation-model=static -mtriple=thumbv7-apple-darwin | FileCheck %s -check-prefix=THUMB2
 ; RUN: llc < %s -relocation-model=static -mtriple=thumbv8-apple-darwin | FileCheck %s -check-prefix=THUMB2
 
-@nextaddr = global ptr null                       ; <ptr> [#uses=2]
+@nextaddr = global ptr zeroinitializer                       ; <ptr> [#uses=2]
 @C.0.2070 = private constant [5 x ptr] [ptr blockaddress(@foo, %L1), ptr blockaddress(@foo, %L2), ptr blockaddress(@foo, %L3), ptr blockaddress(@foo, %L4), ptr blockaddress(@foo, %L5)] ; <ptr> [#uses=1]
 
 define internal i32 @foo(i32 %i) nounwind {

@@ -12,7 +12,7 @@ define void @func3.llvm.12345() !PGOFuncName !4 {
   ret void
 }
 
-@foo = common global ptr null, align 8
+@foo = common global ptr zeroinitializer, align 8
 declare i32 @func1()
 declare i32 @func2()
 

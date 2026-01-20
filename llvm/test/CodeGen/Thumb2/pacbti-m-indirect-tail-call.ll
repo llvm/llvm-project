@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-unknown-eabi"
 
-@p = hidden local_unnamed_addr global ptr null, align 4
+@p = hidden local_unnamed_addr global ptr zeroinitializer, align 4
 
 define hidden i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
 ; CHECK-LABEL: f:

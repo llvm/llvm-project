@@ -2,7 +2,7 @@
 ; PR2488
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32"
 target triple = "i386-pc-linux-gnu"
-@p = weak global ptr null		; <ptr> [#uses=2]
+@p = weak global ptr zeroinitializer		; <ptr> [#uses=2]
 
 define i32 @main() nounwind  {
 entry:
@@ -32,6 +32,6 @@ bb44:		; preds = %bb44, %entry
 	br i1 %exitcond, label %bb, label %bb44
 }
 
-declare ptr @llvm.stacksave() nounwind 
+declare ptr @llvm.stacksave() nounwind
 
-declare void @llvm.stackrestore(ptr) nounwind 
+declare void @llvm.stackrestore(ptr) nounwind

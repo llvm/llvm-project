@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -mtriple="powerpc64le-unknown-linux-gnu" -relocation-model=pic < %s | FileCheck %s
 
-@a = thread_local global ptr null, align 8
+@a = thread_local global ptr zeroinitializer, align 8
 
 define void @test_foo(ptr nocapture %x01, ptr nocapture %x02, ptr nocapture %x03, ptr nocapture %x04, ptr nocapture %x05, ptr nocapture %x06, ptr nocapture %x07, ptr nocapture %x08) #0 {
 entry:

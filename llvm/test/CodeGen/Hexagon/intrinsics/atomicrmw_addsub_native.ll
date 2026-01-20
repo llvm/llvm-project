@@ -17,9 +17,9 @@
 @i64First   = global i64 0, align 8
 @i64Second  = global i64 0, align 8
 @i64Result  = global i64 0, align 8
-@ptrFirst   = global ptr null, align 4
-@ptrSecond  = global ptr null, align 4
-@ptrResult  = global ptr null, align 4
+@ptrFirst   = global ptr zeroinitializer, align 4
+@ptrSecond  = global ptr zeroinitializer, align 4
+@ptrResult  = global ptr zeroinitializer, align 4
 
 define void @atomicrmw_op_i32() #0 {
 BINARY_OP_entry:

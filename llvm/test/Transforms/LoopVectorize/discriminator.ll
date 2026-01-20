@@ -15,8 +15,8 @@
 ;  6     a[i] += b[i];
 ;  7 }
 
-@a = local_unnamed_addr global ptr null, align 8
-@b = local_unnamed_addr global ptr null, align 8
+@a = local_unnamed_addr global ptr zeroinitializer, align 8
+@b = local_unnamed_addr global ptr zeroinitializer, align 8
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {

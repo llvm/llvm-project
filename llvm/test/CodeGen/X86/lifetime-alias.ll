@@ -15,7 +15,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %"struct.std::__3::basic_string<char, std::__3::char_traits<char>, std::__3::allocator<char> >::__short" = type { [23 x i8], %struct.anon }
 %struct.anon = type { i8 }
 
-@do_not_optimize = dso_local global ptr null, align 8
+@do_not_optimize = dso_local global ptr zeroinitializer, align 8
 @.str = private unnamed_addr constant [12 x i8] c"The Culture\00", align 1
 @.str.1 = private unnamed_addr constant [22 x i8] c"FunnyItWorkedLastTime\00", align 1
 @.str.2 = private unnamed_addr constant [19 x i8] c"agg.a2_[16] == 't'\00", align 1

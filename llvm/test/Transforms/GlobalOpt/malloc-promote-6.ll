@@ -2,7 +2,7 @@
 
 ; CHECK-NOT: @global
 
-@global = internal global ptr null
+@global = internal global ptr zeroinitializer
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @zot, ptr null }]
 
 declare ptr @_Znwm(i64)

@@ -11,7 +11,7 @@
 
 ;; There is an indirect call _Z5funcAi -> _Z3fibi in the program.
 ;; With -use-profiled-call-graph=0, the processing order computed
-;; based on the static call graph is (_Z3fibi, _Z5funcAi). With 
+;; based on the static call graph is (_Z3fibi, _Z5funcAi). With
 ;; -use-profiled-call-graph=1, the indirect call edge from profile is
 ;; considered, thus the order becomes (_Z5funcAi, _Z3fibi) which leads to
 ;; _Z3fibi inlined into _Z5funcAi.
@@ -26,7 +26,7 @@
 
 
 @factor = dso_local global i32 3, align 4, !dbg !0
-@fp = dso_local global ptr null, align 8
+@fp = dso_local global ptr zeroinitializer, align 8
 
 ; INLINE: define dso_local i32 @_Z5funcAi
 ; INLINE-NOT: call i32 @_Z8funcLeafi

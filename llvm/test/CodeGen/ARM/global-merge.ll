@@ -13,7 +13,7 @@
 
 ; Global used in landing pad instruction must be kept
 ; CHECK: ZTIi
-@_ZTIi = internal global ptr null
+@_ZTIi = internal global ptr zeroinitializer
 
 define i32 @_Z9exceptioni(i32 %arg) personality ptr @__gxx_personality_sj0 {
 bb:

@@ -6,7 +6,7 @@
 @vec = global <4 x ptr> <ptr null, ptr null, ptr null, ptr null>
 @index = global i16 1
 @ptr = global [4 x i16] [i16 1, i16 2, i16 3, i16 4]
-@ptrptr = global ptr null
+@ptrptr = global ptr zeroinitializer
 
 ; constant index
 define void @test1() {

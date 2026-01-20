@@ -5,7 +5,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 @staticvar = internal global i32 1, align 4
 @staticconstvar = internal unnamed_addr constant [2 x i32] [i32 10, i32 20], align 4
 @commonvar = common global i32 0, align 4
-@P = internal global ptr null, align 8
+@P = internal global ptr zeroinitializer, align 8
 
 @weakalias = weak alias void (...), ptr @globalfunc1
 @analias = alias void (...), ptr @globalfunc2

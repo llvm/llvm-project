@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=thumbv4t-eabi %s -o - | FileCheck --check-prefix=CHECK -check-prefix=CHECK-V4T %s
 ; RUN: llc -mtriple=thumbv5t-eabi %s -o - | FileCheck --check-prefix=CHECK -check-prefix=CHECK-V5T %s
 
-@f = common global ptr null, align 4
+@f = common global ptr zeroinitializer, align 4
 
 ; CHECK-LABEL: foo:
 define void @foo(i32 %x) {

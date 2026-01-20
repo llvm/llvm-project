@@ -10,7 +10,7 @@
 
 ;.
 ; CHECK: @[[G1:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global [2 x ptr] zeroinitializer
-; CHECK: @[[G2:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global ptr null
+; CHECK: @[[G2:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global ptr zeroinitializer
 ; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending global [0 x { i32, ptr, ptr }] zeroinitializer
 ;.
 define internal void @ctor() {

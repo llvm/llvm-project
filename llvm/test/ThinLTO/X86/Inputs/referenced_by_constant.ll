@@ -12,8 +12,8 @@ define internal void @localreferencedbyglobal() {
 
 @someglobal = internal unnamed_addr constant ptr @referencedbyglobal
 @someglobal2 = internal unnamed_addr constant ptr @localreferencedbyglobal
-@ptr = global ptr null
-@ptr2 = global ptr null
+@ptr = global ptr zeroinitializer
+@ptr2 = global ptr zeroinitializer
 
 define  void @bar() #0 align 2 {
   store ptr @someglobal , ptr @ptr, align 8

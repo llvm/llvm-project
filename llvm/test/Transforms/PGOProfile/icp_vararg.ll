@@ -2,7 +2,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@foo = common global ptr null, align 8
+@foo = common global ptr zeroinitializer, align 8
 
 define i32 @va_func(i32 %num, ...) {
 entry:
@@ -24,7 +24,7 @@ entry:
   ret i32 %call
 ; ICALL-PROM:if.end.icp:
 ; ICALL-PROM:  [[PHI_RET:%[0-9]+]] = phi i32 [ %call, %if.false.orig_indirect ], [ [[DIRCALL_RET]], %if.true.direct_targ ]
-; ICALL-PROM:  ret i32 [[PHI_RET]] 
+; ICALL-PROM:  ret i32 [[PHI_RET]]
 
 }
 

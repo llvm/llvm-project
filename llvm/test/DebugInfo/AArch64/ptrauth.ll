@@ -41,7 +41,7 @@
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
-@p = global ptr null, align 8, !dbg !0
+@p = global ptr zeroinitializer, align 8, !dbg !0
 
 !llvm.dbg.cu = !{!10}
 !llvm.module.flags = !{!19, !20}

@@ -9,7 +9,7 @@ target triple = "i686-unknown-linux-gnu"
 %struct.Foo.1 = type { i32 }
 %struct.Foo.2 = type { i32 }
 
-@foo = common global ptr null, align 8
+@foo = common global ptr zeroinitializer, align 8
 
 define i32 @func4(ptr byval(%struct.Foo.1) %p) {
 entry:

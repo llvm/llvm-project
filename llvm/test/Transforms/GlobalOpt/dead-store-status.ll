@@ -4,13 +4,13 @@
 ; false. This was caught by the pass return status check that is hidden under
 ; EXPENSIVE_CHECKS.
 
-; CHECK: @global = internal unnamed_addr global ptr null, align 1
+; CHECK: @global = internal unnamed_addr global ptr zeroinitializer, align 1
 
 ; CHECK-LABEL: @foo
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: ret i16 undef
 
-@global = internal unnamed_addr global ptr null, align 1
+@global = internal unnamed_addr global ptr zeroinitializer, align 1
 
 ; Function Attrs: nofree noinline norecurse nounwind writeonly
 define i16 @foo(i16 %c) local_unnamed_addr #0 {

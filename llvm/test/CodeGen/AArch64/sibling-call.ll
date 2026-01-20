@@ -100,7 +100,7 @@ define dso_local void @caller_to16_from16([8 x i64], i64 %a, i64 %b) {
 
 }
 
-@func = dso_local global ptr null
+@func = dso_local global ptr zeroinitializer
 
 define dso_local void @indirect_tail() {
 ; CHECK-LABEL: indirect_tail:

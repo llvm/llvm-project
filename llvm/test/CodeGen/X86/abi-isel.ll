@@ -21,13 +21,13 @@
 @ptr = external global ptr
 @dsrc = dso_local global [131072 x i32] zeroinitializer, align 32
 @ddst = dso_local global [131072 x i32] zeroinitializer, align 32
-@dptr = dso_local global ptr null
+@dptr = dso_local global ptr zeroinitializer
 @lsrc = internal global [131072 x i32] zeroinitializer
 @ldst = internal global [131072 x i32] zeroinitializer
-@lptr = internal global ptr null
+@lptr = internal global ptr zeroinitializer
 @ifunc = external global ptr
-@difunc = dso_local global ptr null
-@lifunc = internal global ptr null
+@difunc = dso_local global ptr zeroinitializer
+@lifunc = internal global ptr zeroinitializer
 @lxsrc = internal global [32 x i32] zeroinitializer, align 32
 @lxdst = internal global [32 x i32] zeroinitializer, align 32
 @dxsrc = dso_local global [32 x i32] zeroinitializer, align 32

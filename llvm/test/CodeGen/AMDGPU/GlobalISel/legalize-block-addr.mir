@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -O0 -run-pass=legalizer %s -o - | FileCheck %s
 --- |
 
-  @addr = global ptr null
+  @addr = global ptr zeroinitializer
 
   define void @test_blockaddress() {
     store ptr blockaddress(@test_blockaddress, %block), ptr @addr

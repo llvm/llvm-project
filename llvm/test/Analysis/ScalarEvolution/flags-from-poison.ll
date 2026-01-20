@@ -1627,7 +1627,7 @@ exit:
 
 ; PR28932: Don't assert on non-SCEV-able value %2.
 %struct.anon = type { ptr }
-@a = common global ptr null, align 8
+@a = common global ptr zeroinitializer, align 8
 @b = common global i32 0, align 4
 declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32)
 declare void @llvm.trap()

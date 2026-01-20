@@ -3,7 +3,7 @@
 
 %struct.A = type { i8 }
 
-@c = global ptr null
+@c = global ptr zeroinitializer
 @d = global i32 4
 
 define void @_Z3fn1v() {

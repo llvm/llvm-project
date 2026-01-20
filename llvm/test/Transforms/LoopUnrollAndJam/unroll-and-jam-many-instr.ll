@@ -4,7 +4,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 @a = common dso_local local_unnamed_addr global i32 0, align 4
 @b = common dso_local local_unnamed_addr global i8 0, align 1
 @e = common dso_local local_unnamed_addr global i64 0, align 8
-@c = common dso_local local_unnamed_addr global ptr null, align 8
+@c = common dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 @g = common dso_local local_unnamed_addr global i64 0, align 8
 @f = common dso_local local_unnamed_addr global i32 0, align 4
 

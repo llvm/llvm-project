@@ -77,7 +77,7 @@ target triple = "i686-pc-windows-msvc19.0.24215"
 
 %struct.A = type { i8 }
 
-@"\01?p@@3PAUA@@A" = global ptr null, align 4, !dbg !0
+@"\01?p@@3PAUA@@A" = global ptr zeroinitializer, align 4, !dbg !0
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_t.cpp, ptr null }]
 
 ; Function Attrs: noinline

@@ -18,7 +18,7 @@ define i32 @bar() {
 ; CHECK-NEXT: ret i32 17
 }
 
-@a = internal global ptr null, align 8
+@a = internal global ptr zeroinitializer, align 8
 ; CHECK-NOT: @a
 
 ; PR13968
@@ -35,7 +35,7 @@ define void @qux() nounwind {
 ; CHECK-NOT: load
 }
 
-@addrspacecast_a = internal global ptr null
+@addrspacecast_a = internal global ptr zeroinitializer
 
 define void @addrspacecast_user() {
 ; CHECK-LABEL: @addrspacecast_user

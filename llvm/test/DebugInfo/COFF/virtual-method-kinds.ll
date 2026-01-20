@@ -122,7 +122,7 @@ $"\01??_7A@@6B@" = comdat largest
 
 $"\01??_R4A@@6B@" = comdat any
 
-@"\01?p@@3PEAUC@@EA" = global ptr null, align 8, !dbg !0
+@"\01?p@@3PEAUC@@EA" = global ptr zeroinitializer, align 8, !dbg !0
 @0 = private unnamed_addr constant [3 x ptr] [ptr @"\01??_R4C@@6B@", ptr @"\01?f@C@@UEAAXXZ", ptr @"\01?g@C@@UEAAXXZ"], comdat($"\01??_7C@@6B@")
 @"\01??_R4C@@6B@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 1, i32 0, i32 0, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"\01??_R0?AUC@@@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"\01??_R3C@@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"\01??_R4C@@6B@" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32) }, comdat
 @"\01??_7type_info@@6B@" = external constant ptr

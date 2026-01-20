@@ -3,7 +3,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
-@a = common global ptr null, align 8
+@a = common global ptr zeroinitializer, align 8
 @b = common global double 0.000000e+00, align 8
 
 define void @fn1(i32 %p1) {

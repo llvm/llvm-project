@@ -2,7 +2,7 @@
 
 ; Test that CallPromotionUtils will promote calls which require pointer casts.
 
-@foo = common global ptr null, align 8
+@foo = common global ptr zeroinitializer, align 8
 
 ; Check ptrcast arguments.
 define i64 @func1(ptr %a) {

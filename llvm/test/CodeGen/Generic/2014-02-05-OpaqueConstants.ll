@@ -2,9 +2,9 @@
 ; RUN: llc < %s
 ; XFAIL: target=r600{{.*}}
 
-@a = common global ptr null, align 8
+@a = common global ptr zeroinitializer, align 8
 @c = common global i32 0, align 4
-@b = common global ptr null, align 8
+@b = common global ptr zeroinitializer, align 8
 
 ; Function Attrs: nounwind ssp uwtable
 define void @fn() {

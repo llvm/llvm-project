@@ -1058,7 +1058,7 @@ for.end:                                          ; preds = %for.inc
 }
 
 @a = common global [1 x ptr] zeroinitializer, align 8
-@c = common global ptr null, align 8
+@c = common global ptr zeroinitializer, align 8
 
 ; Reverse loop
 ;void foo6(ptr in, ptr out, unsigned size, int *trigger) {

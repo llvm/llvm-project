@@ -45,8 +45,8 @@ source_filename = "test/DebugInfo/X86/misched-dbg-value.ll"
 @Char2Glob = common global i8 0, align 1, !dbg !15
 @Array1Glob = common global [51 x i32] zeroinitializer, align 16, !dbg !17
 @Array2Glob = common global [51 x [51 x i32]] zeroinitializer, align 16, !dbg !23
-@PtrGlb = common global ptr null, align 8, !dbg !28
-@PtrGlbNext = common global ptr null, align 8, !dbg !54
+@PtrGlb = common global ptr zeroinitializer, align 8, !dbg !28
+@PtrGlbNext = common global ptr zeroinitializer, align 8, !dbg !54
 
 ; Function Attrs: nounwind optsize
 define void @Proc8(ptr nocapture %Array1Par, ptr nocapture %Array2Par, i32 %IntParI1, i32 %IntParI2) #0 !dbg !61 {

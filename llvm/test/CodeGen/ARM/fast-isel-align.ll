@@ -18,7 +18,7 @@
 ; Check unaligned stores
 %struct.anon = type <{ float }>
 
-@a = common global ptr null, align 4
+@a = common global ptr zeroinitializer, align 4
 
 define void @unaligned_store(float %x, float %y) nounwind {
 entry:

@@ -2,7 +2,7 @@
 ; RUN: opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-attributor < %s | FileCheck %s
 
 ;.
-; CHECK: @G1 = global ptr null
+; CHECK: @G1 = global ptr zeroinitializer
 ; CHECK: @G2 = global i32 0
 ;.
 define weak void @weak() {
@@ -15,7 +15,7 @@ define weak void @weak() {
   ret void
 }
 
-@G1 = global ptr null
+@G1 = global ptr zeroinitializer
 
 define internal void @internal1() {
 ; CHECK-LABEL: define {{[^@]+}}@internal1

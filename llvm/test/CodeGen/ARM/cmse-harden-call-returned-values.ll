@@ -3,7 +3,7 @@
 ; RUN: llc %s -mtriple=thumbv8.1m.main   -o - | FileCheck %s --check-prefixes V81M-COMMON,V81M-LE
 ; RUN: llc %s -mtriple=thumbebv8.1m.main -o - | FileCheck %s --check-prefixes V81M-COMMON,V81M-BE
 
-@get_idx = hidden local_unnamed_addr global ptr null, align 4
+@get_idx = hidden local_unnamed_addr global ptr zeroinitializer, align 4
 @arr = hidden local_unnamed_addr global [256 x i32] zeroinitializer, align 4
 
 define i32 @access_i16() {

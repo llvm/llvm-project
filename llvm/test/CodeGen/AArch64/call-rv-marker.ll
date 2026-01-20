@@ -22,8 +22,8 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 %struct.S = type { i8 }
 
-@g = dso_local global ptr null, align 8
-@fptr = dso_local global ptr null, align 8
+@g = dso_local global ptr zeroinitializer, align 8
+@fptr = dso_local global ptr zeroinitializer, align 8
 
 define dso_local ptr @rv_marker_1_retain() {
 ; SELDAG-LABEL: rv_marker_1_retain:

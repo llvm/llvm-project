@@ -3409,6 +3409,7 @@ define amdgpu_gs void @wqm_init_exec() {
 ; GFX9-W64-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
 ; GFX9-W64-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $exec
+; GFX9-W64-NEXT:    v_mov_b32_e32 v0, -1
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-W64-NEXT:    ds_write_b32 v0, v1
 ; GFX9-W64-NEXT:    s_endpgm
@@ -3416,20 +3417,21 @@ define amdgpu_gs void @wqm_init_exec() {
 ; GFX10-W32-LABEL: wqm_init_exec:
 ; GFX10-W32:       ; %bb.0: ; %bb
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, -1
-; GFX10-W32-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
+; GFX10-W32-NEXT:    s_mov_b32 s2, exec_lo
+; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-W32-NEXT:    s_mov_b32 s1, s0
 ; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10-W32-NEXT:    s_mov_b32 s2, s0
-; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s1
+; GFX10-W32-NEXT:    s_mov_b32 s3, s0
+; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v3, v0
-; GFX10-W32-NEXT:    v_mov_b32_e32 v4, s0
-; GFX10-W32-NEXT:    s_mov_b32 s1, s0
-; GFX10-W32-NEXT:    s_mov_b32 s3, s0
+; GFX10-W32-NEXT:    v_mov_b32_e32 v4, -1
+; GFX10-W32-NEXT:    v_mov_b32_e32 v5, s0
+; GFX10-W32-NEXT:    s_mov_b32 s2, s0
 ; GFX10-W32-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; GFX10-W32-NEXT:    ds_write_b32 v0, v4
+; GFX10-W32-NEXT:    ds_write_b32 v4, v5
 ; GFX10-W32-NEXT:    s_endpgm
 bb:
   call void @llvm.amdgcn.init.exec(i64 -1)

@@ -441,7 +441,7 @@ entry:
   ret void
 }
 
- @_ZL3ptr = internal unnamed_addr global ptr null, align 8
+ @_ZL3ptr = internal unnamed_addr global ptr zeroinitializer, align 8
 define void @_Z14WriteStaticPtrv() {
 ; CHECK-LABEL: _Z14WriteStaticPtrv:
 ; CHECK:       # %bb.0: # %entry

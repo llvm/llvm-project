@@ -10,7 +10,7 @@
 ; RUN: llvm-dis %t.out.1.2.internalize.bc -o - | FileCheck %s --check-prefix=INTERNALIZE
 
 ; CHECK: @_ZZN9SingletonI1SE11getInstanceEvE8instance = available_externally dso_local global %struct.S zeroinitializer
-; CHECK: @_ZZN9SingletonI1SE11getInstanceEvE13instance_weak = available_externally dso_local global ptr null, align 8
+; CHECK: @_ZZN9SingletonI1SE11getInstanceEvE13instance_weak = available_externally dso_local global ptr zeroinitializer, align 8
 
 ;; We should not internalize a linkonce_odr function when the IR definition(s)
 ;; are not prevailing (prevailing def in native object). This can break function
@@ -32,7 +32,7 @@ $_ZZN9SingletonI1SE11getInstanceEvE13instance_weak = comdat any
 
 @_ZZN9SingletonI1SE11getInstanceEvE8instance = linkonce_odr dso_local global %struct.S zeroinitializer, comdat, align 8
 
-@_ZZN9SingletonI1SE11getInstanceEvE13instance_weak = weak_odr dso_local global ptr null, comdat, align 8
+@_ZZN9SingletonI1SE11getInstanceEvE13instance_weak = weak_odr dso_local global ptr zeroinitializer, comdat, align 8
 
 define dso_local void @_ZL5initSv() {
   %1 = call dereferenceable(16) ptr @_ZN9SingletonI1SE11getInstanceEv()

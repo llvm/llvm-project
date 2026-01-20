@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @escape(ptr)
 
-@sink = global ptr null, align 4
+@sink = global ptr zeroinitializer, align 4
 @const_global = external constant i32
 @non_const_global = global i32 0, align 4
 @const_global_array = external constant [10 x i32]

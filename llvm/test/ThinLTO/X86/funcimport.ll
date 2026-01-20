@@ -12,7 +12,7 @@
 ; EXPORTSTATIC-DAG: @staticvar.llvm.0 = hidden global
 ; Eventually @staticconstvar can be exported as a copy and not promoted
 ; EXPORTSTATIC-DAG: @staticconstvar.llvm.0 = hidden unnamed_addr constant
-; EXPORTSTATIC-DAG: @P.llvm.0 = hidden global ptr null
+; EXPORTSTATIC-DAG: @P.llvm.0 = hidden global ptr zeroinitializer
 ; EXPORTSTATIC-DAG: define hidden i32 @staticfunc.llvm.0
 ; EXPORTSTATIC-DAG: define hidden void @staticfunc2.llvm.0
 
@@ -55,7 +55,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 @staticvar2 = internal global i32 1, align 4
 @staticconstvar = internal unnamed_addr constant [2 x i32] [i32 10, i32 20], align 4
 @commonvar = common global i32 0, align 4
-@P = internal global ptr null, align 8
+@P = internal global ptr zeroinitializer, align 8
 
 @weakalias = weak alias void (...), ptr @globalfunc1
 @analias = alias void (...), ptr @globalfunc2

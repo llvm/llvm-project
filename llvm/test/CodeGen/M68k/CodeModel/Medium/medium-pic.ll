@@ -23,7 +23,7 @@ entry:
     ret void
 }
 
-@ptr2 = global ptr null
+@ptr2 = global ptr zeroinitializer
 @dst2 = global i32 0
 @src2 = global i32 0
 
@@ -93,7 +93,7 @@ entry:
     ret void
 }
 
-@ptr6 = internal global ptr null
+@ptr6 = internal global ptr zeroinitializer
 @dst6 = internal global i32 0
 @src6 = internal global i32 0
 

@@ -146,7 +146,7 @@ define dso_local void @check_i128_align() {
   ret void
 }
 
-@fptr = dso_local global ptr null
+@fptr = dso_local global ptr zeroinitializer
 
 define dso_local void @check_indirect_call() {
 ; CHECK-LABEL: check_indirect_call:

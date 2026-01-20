@@ -3,13 +3,13 @@
 
 @llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @ctor, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @ctor_nocfi, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @ctor_dso_local_equivalent, ptr null }]
 
-@foo = internal global ptr null
+@foo = internal global ptr zeroinitializer
 
 declare void @user(ptr)
 
 ;.
 ; CHECK: @llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @ctor, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @ctor_nocfi, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @ctor_dso_local_equivalent, ptr null }]
-; CHECK: @foo = internal global ptr null
+; CHECK: @foo = internal global ptr zeroinitializer
 ;.
 define void @ctor() {
 ; CHECK-LABEL: define void @ctor() {

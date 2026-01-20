@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
 @global = dso_local local_unnamed_addr global i32 0, align 4
-@global.1 = dso_local local_unnamed_addr global ptr null, align 4
+@global.1 = dso_local local_unnamed_addr global ptr zeroinitializer, align 4
 
 ; Check that loop in hoge_3, with a runtime upperbound of 3, is not unrolled.
 define dso_local void @hoge_3(i8 %arg) {

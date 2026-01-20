@@ -7,7 +7,7 @@
 ; This testing case makes sure that we correctly transfer the tbaa tags from the
 ; original loads to the newly-created loads when promoting pointer arguments.
 
-@a = global ptr null, align 8
+@a = global ptr zeroinitializer, align 8
 @e = global ptr @a, align 8
 @g = global i32 0, align 4
 @c = global i64 0, align 8

@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 @dst = global i32 0             ; <ptr> [#uses=1]
-@ptr = global ptr null         ; <ptr> [#uses=1]
+@ptr = global ptr zeroinitializer         ; <ptr> [#uses=1]
 
 define void @test() {
 ; CHECK-LABEL: test:

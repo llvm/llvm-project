@@ -12,7 +12,7 @@ source_filename = "./csmith107.i.debug.ll"
 
 @a = global i16 0, !dbg !0
 @b = global i32 0, !dbg !4
-@c = global ptr null, !dbg !9
+@c = global ptr zeroinitializer, !dbg !9
 
 define i16 @fn1() !dbg !17 {
 bb2:

@@ -6,7 +6,7 @@ target triple = "x86_64-apple-macosx10.10.0"
 @b = common global i32 0, align 4
 @c = internal global i32 0, align 4
 @d = common global i32 0, align 4
-@e = common global ptr null, align 4
+@e = common global ptr zeroinitializer, align 4
 
 define void @foo(ptr %P) noinline {
 ; CHECK: define void @foo

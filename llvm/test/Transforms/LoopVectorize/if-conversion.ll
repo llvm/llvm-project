@@ -228,7 +228,7 @@ for.end:                                          ; preds = %for.inc, %entry
 }
 
 @a = common global [1 x ptr] zeroinitializer, align 8
-@c = common global ptr null, align 8
+@c = common global ptr zeroinitializer, align 8
 
 ; We use to if convert this loop. This is not safe because there is a trapping
 ; constant expression.

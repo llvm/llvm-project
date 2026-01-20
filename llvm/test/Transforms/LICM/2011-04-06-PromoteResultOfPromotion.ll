@@ -3,7 +3,7 @@
 ; PR9634
 
 @g_58 = common global i32 0, align 4
-@g_116 = common global ptr null, align 8
+@g_116 = common global ptr zeroinitializer, align 8
 
 define void @f() {
 ; CHECK-LABEL: define void @f() {

@@ -3,7 +3,7 @@
 
 target triple = "hexagon"
 
-@fp = common global ptr null, align 4
+@fp = common global ptr zeroinitializer, align 4
 
 ; CHECK: [[REG:r[0-9]+]] = memw
 ; CHECK: {

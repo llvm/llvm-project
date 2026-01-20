@@ -1,6 +1,6 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
-@g1 = common global ptr null, align 8
+@g1 = common global ptr zeroinitializer, align 8
 
 %struct.S1 = type { i32, float }
 %struct.S2 = type { float, i32 }

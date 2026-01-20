@@ -28,7 +28,7 @@
 
 ; Provides definition of Struct1 and of S1GV.
 %Struct1 = type { i32 }
-@S1GV = global ptr null
+@S1GV = global ptr zeroinitializer
 
 define i32 @foo(i32 %blah) {
   store i32 %blah, ptr @MyVar

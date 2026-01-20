@@ -3,11 +3,11 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 @_ZTISt9exception = external constant ptr
-@pfptr = global ptr null, align 8
+@pfptr = global ptr zeroinitializer, align 8
 
 define internal i32 @_ZL4bar1v() !PGOFuncName !0 {
 entry:
-  ret i32 100 
+  ret i32 100
 }
 
 ; Function Attrs: uwtable
@@ -46,7 +46,7 @@ catch:                                            ; preds = %lpad
   br label %cleanup
 
 cleanup:                                          ; preds = %catch, %if.end, %entry
-; ICP-NOT: %[0-9]+ = phi 
+; ICP-NOT: %[0-9]+ = phi
   ret i32 0
 
 ehcleanup:                                        ; preds = %lpad

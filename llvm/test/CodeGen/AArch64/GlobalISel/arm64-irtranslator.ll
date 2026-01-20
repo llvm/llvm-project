@@ -2251,7 +2251,7 @@ define i32 @test_atomicrmw_umax(ptr %addr) {
   ret i32 %oldval
 }
 
-@addr = global ptr null
+@addr = global ptr zeroinitializer
 
 define void @test_blockaddress() {
 ; CHECK-LABEL: name: test_blockaddress

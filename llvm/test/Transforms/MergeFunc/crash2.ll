@@ -8,8 +8,8 @@
 ; causes an assert in the ValueHandle call back because we are RAUWing with a
 ; different type (AllocaInst) than its key type (GlobalValue).
 
-@G = internal global ptr null
-@G2 = internal global ptr null
+@G = internal global ptr zeroinitializer
+@G2 = internal global ptr zeroinitializer
 
 define i32 @main(i32 %argc, ptr %argv) norecurse {
 ; CHECK: alloca

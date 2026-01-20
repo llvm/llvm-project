@@ -14,7 +14,7 @@
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names < %s | grep 'xvmuldp' | count 2
 ; RUN: llc -verify-machineinstrs --mtriple powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | grep 'xvmuldp' | count 2
-@IndirectCallPtr = dso_local local_unnamed_addr global ptr null, align 8
+@IndirectCallPtr = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 
 define dso_local signext i32 @func1() local_unnamed_addr #0 {
 entry:

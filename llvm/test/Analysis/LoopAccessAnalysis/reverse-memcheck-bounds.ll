@@ -17,8 +17,8 @@ target triple = "aarch64"
 ; CHECK: function 'f':
 ; CHECK: (Low: (20000 + %a)<nuw> High: (60004 + %a))
 
-@B = common global ptr null, align 8
-@A = common global ptr null, align 8
+@B = common global ptr zeroinitializer, align 8
+@A = common global ptr zeroinitializer, align 8
 
 define void @f() {
 entry:
@@ -57,7 +57,7 @@ for.end:                                          ; preds = %for.body
 
 ; Here it is not obvious what the limits are, since 'step' could be negative.
 
-; CHECK: Low: ((60000 + %a) umin (60000 + (-40000 * %step) + %a)) 
+; CHECK: Low: ((60000 + %a) umin (60000 + (-40000 * %step) + %a))
 ; CHECK: High: (4 + ((60000 + %a) umax (60000 + (-40000 * %step) + %a)))
 
 define void @g(i64 %step) {

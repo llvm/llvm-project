@@ -6,7 +6,7 @@
 %struct.jmpbuf_env = type { i32, i32, [1 x %struct.__jmp_buf_tag], i32 }
 %struct.__jmp_buf_tag = type { [3 x i32], i32, %0 }
 
-@jenv = common unnamed_addr global ptr null
+@jenv = common unnamed_addr global ptr zeroinitializer
 @.cst = private unnamed_addr constant [30 x i8] c"in bar with jmp_buf's id: %d\0A\00", align 64
 
 ; CHECK-LABEL: foo

@@ -203,7 +203,7 @@ define i64 @bar_128() {
 ; void (*ptr)(int, ...);
 ; void call_ptr(void) { ptr(0); }
 
-@ptr = dso_local global ptr null, align 8
+@ptr = dso_local global ptr zeroinitializer, align 8
 
 define dso_local void @call_ptr() {
   %1 = load ptr, ptr @ptr, align 8

@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 $_Z3fooi = comdat any
 
-@g2 = local_unnamed_addr global ptr null, align 8
+@g2 = local_unnamed_addr global ptr zeroinitializer, align 8
 
 define i32 @_Z3bari(i32 %i) {
 entry:

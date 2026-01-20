@@ -13,8 +13,8 @@
 @i32Dest = global i32 0, align 4
 @i64Src  = global i64 0, align 8
 @i64Dest = global i64 0, align 8
-@ptrSrc  = global ptr null, align 4
-@ptrDest = global ptr null, align 4
+@ptrSrc  = global ptr zeroinitializer, align 4
+@ptrDest = global ptr zeroinitializer, align 4
 
 define void @load_i8() #0 {
 entry:

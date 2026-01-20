@@ -8,7 +8,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 %struct._GtkSheetRow = type { ptr, i32, i32, i32, %struct._GtkSheetButton, i32, i32 }
 %struct._GtkSheetButton = type { i32, ptr, i32, ptr, i32 }
 
-@a = common global ptr null, align 8
+@a = common global ptr zeroinitializer, align 8
 
 define void @fn1() nounwind uwtable ssp {
 entry:

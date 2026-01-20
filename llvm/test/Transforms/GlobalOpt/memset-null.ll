@@ -18,7 +18,7 @@ entry:
 }
 
 %struct.X = type { i8 }
-@y = global ptr null, align 8
+@y = global ptr zeroinitializer, align 8
 @x = global %struct.X zeroinitializer, align 1
 
 define internal void @_GLOBAL__I_b() nounwind {

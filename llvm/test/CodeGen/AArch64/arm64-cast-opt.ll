@@ -3,7 +3,7 @@
 ; Zero truncation is not necessary when the values are extended properly
 ; already.
 
-@block = common global ptr null, align 8
+@block = common global ptr zeroinitializer, align 8
 
 define zeroext i8 @foo(i32 %i1, i32 %i2) {
 ; CHECK-LABEL: foo:

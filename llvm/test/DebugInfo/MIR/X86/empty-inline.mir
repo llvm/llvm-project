@@ -28,7 +28,7 @@
   %class.A = type { i8 }
   %class.C = type <{ ptr, %class.B, [2 x i8] }>
 
-  @a = local_unnamed_addr global ptr null, align 4
+  @a = local_unnamed_addr global ptr zeroinitializer, align 4
 
   define i32 @_ZN1C5m_fn3Ev(ptr nocapture) local_unnamed_addr align 2 !dbg !6 {
     %2 = alloca %class.B, align 1

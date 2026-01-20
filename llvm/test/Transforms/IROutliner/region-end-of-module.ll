@@ -4,7 +4,7 @@
 ; This test checks that we do not fail when there is a similarity group with
 ; an ending instruction that is also the end of the module.
 
-@a = global ptr null
+@a = global ptr zeroinitializer
 
 define void @foo() {
 entry:

@@ -1990,7 +1990,7 @@ define amdgpu_kernel void @p1i8_arg(ptr addrspace(1) %arg) nounwind {
   ; HSA-VI-NEXT: {{  $}}
   ; HSA-VI-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; HSA-VI-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 9
-  ; HSA-VI-NEXT:   [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 0
+  ; HSA-VI-NEXT:   [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
   ; HSA-VI-NEXT:   G_STORE [[C]](s8), [[C1]](p3) :: (store (s8) into `ptr addrspace(3) null`, addrspace 3)
   ; HSA-VI-NEXT:   S_ENDPGM 0
   ;
@@ -2000,7 +2000,7 @@ define amdgpu_kernel void @p1i8_arg(ptr addrspace(1) %arg) nounwind {
   ; LEGACY-MESA-VI-NEXT: {{  $}}
   ; LEGACY-MESA-VI-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; LEGACY-MESA-VI-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 9
-  ; LEGACY-MESA-VI-NEXT:   [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 0
+  ; LEGACY-MESA-VI-NEXT:   [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
   ; LEGACY-MESA-VI-NEXT:   G_STORE [[C]](s8), [[C1]](p3) :: (store (s8) into `ptr addrspace(3) null`, addrspace 3)
   ; LEGACY-MESA-VI-NEXT:   S_ENDPGM 0
   store i8 9, ptr addrspace(3) null

@@ -5,7 +5,7 @@
 
 %struct.Foo = type { i64, i64, i64 }
 
-@a = dso_local global ptr null, align 8
+@a = dso_local global ptr zeroinitializer, align 8
 
 define dso_local void @_Z3bar3Foo(ptr byval(%struct.Foo) align 8 %0) {
 ; CHECK-LABEL: @_Z3bar3Foo(

@@ -8,7 +8,7 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m5       | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n1     | FileCheck %s --check-prefix=CHECKFUSE-NEOVERSE
 
-@g = common local_unnamed_addr global ptr null, align 8
+@g = common local_unnamed_addr global ptr zeroinitializer, align 8
 
 define dso_local ptr @litp(i32 %a, i32 %b) {
 entry:

@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 
 @p = dso_local local_unnamed_addr global i64 0, align 8
-@l = dso_local local_unnamed_addr global ptr null, align 8
+@l = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 @c = dso_local local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)

@@ -51,8 +51,8 @@ entry:
 
 ; PR19955
 
-@dllimportptr = global ptr null, align 4
-; CHECK: @dllimportptr = local_unnamed_addr global ptr null, align 4
+@dllimportptr = global ptr zeroinitializer, align 4
+; CHECK: @dllimportptr = local_unnamed_addr global ptr zeroinitializer, align 4
 @dllimportvar = external dllimport global i32
 define internal void @test3() {
 entry:
@@ -60,7 +60,7 @@ entry:
   ret void
 }
 
-@dllexportptr = global ptr null, align 4
+@dllexportptr = global ptr zeroinitializer, align 4
 ; CHECK: @dllexportptr = local_unnamed_addr global ptr @dllexportvar, align 4
 @dllexportvar = dllexport global i32 0, align 4
 ; CHECK: @dllexportvar = dllexport global i32 20, align 4
@@ -71,8 +71,8 @@ entry:
   ret void
 }
 
-@threadlocalptr = global ptr null, align 4
-; CHECK: @threadlocalptr = local_unnamed_addr global ptr null, align 4
+@threadlocalptr = global ptr zeroinitializer, align 4
+; CHECK: @threadlocalptr = local_unnamed_addr global ptr zeroinitializer, align 4
 @threadlocalvar = external thread_local global i32
 define internal void @test5() {
 entry:

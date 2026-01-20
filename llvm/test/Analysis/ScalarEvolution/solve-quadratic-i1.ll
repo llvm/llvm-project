@@ -40,7 +40,7 @@ b2:                                               ; preds = %b1
 
 @g0 = common dso_local global i16 0, align 2
 @g1 = common dso_local global i32 0, align 4
-@g2 = common dso_local global ptr null, align 8
+@g2 = common dso_local global ptr zeroinitializer, align 8
 
 define void @f1() #0 {
 ; CHECK-LABEL: 'f1'

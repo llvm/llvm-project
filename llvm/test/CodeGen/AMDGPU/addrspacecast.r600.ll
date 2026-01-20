@@ -42,7 +42,7 @@ define amdgpu_kernel void @addrspacecast_flat_null_to_local(ptr addrspace(1) %ou
 ; CHECK-NEXT:    PAD
 ; CHECK-NEXT:    ALU clause starting at 4:
 ; CHECK-NEXT:     MOV * T0.X, literal.x,
-; CHECK-NEXT:    -1(nan), 0(0.000000e+00)
+; CHECK-NEXT:    0(0.000000e+00), 0(0.000000e+00)
 ; CHECK-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; CHECK-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   store ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), ptr addrspace(1) %out

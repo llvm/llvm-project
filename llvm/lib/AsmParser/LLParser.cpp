@@ -6594,7 +6594,7 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
     if (auto *TETy = dyn_cast<TargetExtType>(Ty))
       if (!TETy->hasProperty(TargetExtType::HasZeroInit))
         return error(ID.Loc, "invalid type for null constant");
-    V = Constant::getNullValue(Ty);
+    V = Constant::getZeroValue(Ty);
     return false;
   case ValID::t_None:
     if (!Ty->isTokenTy())

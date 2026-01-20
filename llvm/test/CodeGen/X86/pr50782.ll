@@ -7,7 +7,7 @@
 @f = global i32 0, align 4
 @g = global float 0.000000e+00, align 4
 @e = global i32 0, align 4
-@c = global ptr null, align 4
+@c = global ptr zeroinitializer, align 4
 
 ; The FP stack should be preserved across the call to __alloca.
 define void @h(float %i) {

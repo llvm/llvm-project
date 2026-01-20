@@ -7,7 +7,7 @@ define void @tail_call_uniform_vgpr_value() {
 ; CHECK-LABEL: tail_call_uniform_vgpr_value:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, -1
 ; CHECK-NEXT:    ds_read_b64 v[0:1], v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_readfirstlane_b32 s17, v1

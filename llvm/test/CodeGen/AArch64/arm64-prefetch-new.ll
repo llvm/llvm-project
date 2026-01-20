@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+v8.9a --global-isel=0 < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -mattr=+v8.9a --global-isel=1 --global-isel-abort=1 < %s | FileCheck %s
 
-@a = internal global ptr null, align 8
+@a = internal global ptr zeroinitializer, align 8
 @b = external global ptr, align 8
 
 define void @test(ptr %i, i32 %j) nounwind ssp {

@@ -5,8 +5,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @b = common global i32 0, align 4
 @f = common global i32 0, align 4
 @a = common global i32 0, align 4
-@d = common global ptr null, align 8
-@e = common global ptr null, align 8
+@d = common global ptr zeroinitializer, align 8
+@e = common global ptr zeroinitializer, align 8
 @c = common global i32 0, align 4
 
 ; CHECK-LABEL: @fn1(

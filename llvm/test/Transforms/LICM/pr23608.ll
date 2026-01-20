@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %struct.PyFrameObject = type { i32 }
 
-@a = common global ptr null, align 8
+@a = common global ptr zeroinitializer, align 8
 @__msan_origin_tls = external thread_local(initialexec) global i32
 
 define void @fn1() {

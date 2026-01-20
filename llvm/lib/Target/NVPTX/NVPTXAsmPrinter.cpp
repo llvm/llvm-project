@@ -1028,7 +1028,8 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
            (GVar->getAddressSpace() == ADDRESS_SPACE_CONST)) &&
           GVar->hasInitializer()) {
         const Constant *Initializer = GVar->getInitializer();
-        if (!isa<UndefValue>(Initializer) && !Initializer->isNullValue()) {
+        if (!isa<UndefValue>(Initializer) && !Initializer->isNullValue() &&
+            !Initializer->isZeroValue()) {
           AggBuffer aggBuffer(ElementSize, *this);
           bufferAggregateConstant(Initializer, &aggBuffer);
           if (aggBuffer.numSymbols()) {

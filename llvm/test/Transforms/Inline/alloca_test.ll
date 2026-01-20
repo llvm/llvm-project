@@ -41,7 +41,7 @@ define void @PR27277(i32 %p1) {
 
 ; Don't assume that the size is a ConstantInt (a ConstExpr is also a constant).
 
-@GV = common global ptr null
+@GV = common global ptr zeroinitializer
 
 define void @PR27277_part2(i32 %p1) {
 ; CHECK-LABEL: @PR27277_part2(

@@ -214,10 +214,10 @@ define void @st_i64_32(i64 %val64) {
 }
 
 
-@arr8 = dso_local global ptr null
-@arr16 = dso_local global ptr null
-@arr32 = dso_local global ptr null
-@arr64 = dso_local global ptr null
+@arr8 = dso_local global ptr zeroinitializer
+@arr16 = dso_local global ptr zeroinitializer
+@arr32 = dso_local global ptr zeroinitializer
+@arr64 = dso_local global ptr zeroinitializer
 
 ; Now check that our selection copes with accesses more complex than a
 ; single symbol. Permitted offsets should be folded into the loads and

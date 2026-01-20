@@ -17,7 +17,7 @@ define internal ptr @test2(ptr returned %this) {
 }
 
 ; dummy to keep 'this' alive
-@dummy = global ptr null 
+@dummy = global ptr zeroinitializer
 
 ; Validate that return value is dead
 ; CHECK-LABEL: define internal void @test3(ptr %this)

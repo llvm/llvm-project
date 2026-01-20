@@ -8,7 +8,7 @@ entry:
 }
 
 %struct = type { i32 }
-@func_ptr = common global ptr null, align 8
+@func_ptr = common global ptr zeroinitializer, align 8
 
 define void @test() {
 ; Even though value profiling suggests @va_func is the call target, don't do

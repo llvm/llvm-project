@@ -431,6 +431,10 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
       return LLVMConstGEPWithNoWrapFlags(ElemTy, Ptr, Idx.data(), NumIdx,
                                          LLVMGEPGetNoWrapFlags(Cst));
     }
+    case LLVMIntToPtr: {
+      return LLVMConstIntToPtr(clone_constant(LLVMGetOperand(Cst, 0), M),
+                               TypeCloner(M).Clone(Cst));
+    }
     default:
       fprintf(stderr, "%d is not a supported opcode for constant expressions\n",
               Op);

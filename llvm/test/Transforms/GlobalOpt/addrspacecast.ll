@@ -4,11 +4,11 @@
 ; Test behavior of trying to fold access of global variables
 ; initialized one time through addrspacecast.
 
-@as0_ptr = internal global ptr null
+@as0_ptr = internal global ptr zeroinitializer
 @as1_ptr = internal global ptr addrspace(1) null
 @as2_ptr = internal global ptr addrspace(2) null
 @as1_null_valid_ptr = internal global ptr addrspace(1) null
-@as0_null_valid_ptr = internal global ptr null
+@as0_null_valid_ptr = internal global ptr zeroinitializer
 
 @Actual.as0 = internal global i32 1234
 @Actual.as1 = internal addrspace(1) global i32 5678

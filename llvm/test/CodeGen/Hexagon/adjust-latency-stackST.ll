@@ -15,7 +15,7 @@
 %struct.1 = type { i32, i32, [31 x i8] }
 %struct.2 = type { %struct.1 }
 
-@G = common global ptr null, align 4
+@G = common global ptr zeroinitializer, align 4
 
 define i32 @test(ptr nocapture %a0) #0 {
 b1:

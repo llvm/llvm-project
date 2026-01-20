@@ -2,7 +2,7 @@
 ; RUN: llc < %s -relocation-model=static -mtriple=powerpc-unknown-linux-gnu -ppc-asm-full-reg-names | FileCheck %s -check-prefix=STATIC
 ; RUN: llc < %s -relocation-model=pic -mtriple=powerpc64-unknown-linux-gnu -ppc-asm-full-reg-names | FileCheck %s -check-prefix=PPC64
 
-@nextaddr = global ptr null                       ; <ptr> [#uses=2]
+@nextaddr = global ptr zeroinitializer                       ; <ptr> [#uses=2]
 @C.0.2070 = private constant [5 x ptr] [ptr blockaddress(@foo, %L1), ptr blockaddress(@foo, %L2), ptr blockaddress(@foo, %L3), ptr blockaddress(@foo, %L4), ptr blockaddress(@foo, %L5)] ; <ptr> [#uses=1]
 
 define internal i32 @foo(i32 %i) nounwind {

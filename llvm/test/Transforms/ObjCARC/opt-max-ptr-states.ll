@@ -1,7 +1,7 @@
 ; RUN: opt -passes=objc-arc -S < %s | FileCheck -check-prefix=ENABLE -check-prefix=CHECK %s
 ; RUN: opt -passes=objc-arc -arc-opt-max-ptr-states=1 -S < %s | FileCheck -check-prefix=DISABLE -check-prefix=CHECK %s
 
-@g0 = common global ptr null, align 8
+@g0 = common global ptr zeroinitializer, align 8
 
 ; CHECK: call ptr @llvm.objc.retain
 ; ENABLE-NOT: call ptr @llvm.objc.retain

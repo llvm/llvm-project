@@ -13,7 +13,7 @@ target triple = "hexagon-unknown-linux-gnu"
 
 @y = global { <{ { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e }, { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e } }> } { <{ { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e }, { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e } }> <{ { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e } { %struct.e { i8 3, i8 0, [2 x i8] undef }, { i8, i8, i8, [5 x i8] } { i8 -47, i8 2, i8 0, [5 x i8] undef }, %struct.e { i8 3, i8 0, [2 x i8] undef } }, { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e } { %struct.e { i8 3, i8 0, [2 x i8] undef }, { i8, i8, i8, [5 x i8] } { i8 -47, i8 2, i8 0, [5 x i8] undef }, %struct.e { i8 3, i8 0, [2 x i8] undef } } }> }, align 4
 @t = common global %struct.s zeroinitializer, align 4
-@q = internal global ptr null, align 4
+@q = internal global ptr zeroinitializer, align 4
 
 define void @foo() nounwind {
 entry:

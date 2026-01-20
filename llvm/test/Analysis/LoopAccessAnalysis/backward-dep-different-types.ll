@@ -14,8 +14,8 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; CHECK: Report: unsafe dependent memory operations in loop
 ; CHECK-NOT: Memory dependences are safe
 
-@B = common global ptr null, align 8
-@A = common global ptr null, align 8
+@B = common global ptr zeroinitializer, align 8
+@A = common global ptr zeroinitializer, align 8
 
 define void @f() {
 entry:

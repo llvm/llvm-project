@@ -36,7 +36,7 @@ define ptr @test_load_offset(ptr %argv) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[APP_MEM_MASK:%.*]] = load i64, ptr @__tysan_app_memory_mask, align 4
 ; CHECK-NEXT:    [[SHADOW_BASE:%.*]] = load i64, ptr @__tysan_shadow_memory_address, align 4
-; CHECK-NEXT:    [[APP_PTR_MASKED:%.*]] = and i64 0, [[APP_MEM_MASK]]
+; CHECK-NEXT:    [[APP_PTR_MASKED:%.*]] = and i64 ptrtoint (ptr null to i64), [[APP_MEM_MASK]]
 ; CHECK-NEXT:    [[APP_PTR_SHIFTED:%.*]] = shl i64 [[APP_PTR_MASKED]], 3
 ; CHECK-NEXT:    [[SHADOW_PTR_INT:%.*]] = add i64 [[APP_PTR_SHIFTED]], [[SHADOW_BASE]]
 ; CHECK-NEXT:    [[SHADOW_PTR:%.*]] = inttoptr i64 [[SHADOW_PTR_INT]] to ptr

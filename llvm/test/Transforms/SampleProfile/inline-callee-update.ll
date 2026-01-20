@@ -2,8 +2,8 @@
 
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/inline-callee-update.prof -S | FileCheck %s
 
-@y = global ptr null, align 8
-@z = global ptr null, align 8
+@y = global ptr zeroinitializer, align 8
+@z = global ptr zeroinitializer, align 8
 
 ; CHECK: define ptr @sample_loader_inlinee() {{.*}} !prof ![[ENTRY:[0-9]+]]
 define ptr @sample_loader_inlinee() #0 !dbg !3 {

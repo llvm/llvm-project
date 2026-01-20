@@ -18,7 +18,7 @@
 @c = external global i16, align 2
 @globa = common global i32 0, align 4
 
-@ptr = internal global ptr null, align 4
+@ptr = internal global ptr zeroinitializer, align 4
 
 declare void @foo()
 

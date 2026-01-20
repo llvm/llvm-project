@@ -16,7 +16,7 @@
   @csum_ipv6_magic_saddr = dso_local local_unnamed_addr global %struct.in6_addr zeroinitializer, align 1
   @csum_ipv6_magic_daddr = dso_local local_unnamed_addr global i32 0, align 4
   @csum_ipv6_magic_proto = dso_local local_unnamed_addr global i32 0, align 4
-  @synproxy_send_tcp_ipv6_nskb = dso_local local_unnamed_addr global ptr null, align 4
+  @synproxy_send_tcp_ipv6_nskb = dso_local local_unnamed_addr global ptr zeroinitializer, align 4
   @synproxy_send_tcp_ipv6_fl6 = dso_local local_unnamed_addr global %struct.in6_addr zeroinitializer, align 1
 
   ; Function Attrs: nounwind uwtable

@@ -11,7 +11,7 @@ entry:
   ret ptr %q1
 }
 
-@sink = dso_local global ptr null, align 8
+@sink = dso_local global ptr zeroinitializer, align 8
 
 ; Check that IRG is pinned to %b because the store instruction needs
 ; the address in a non-fixed physical register and can benefit from it

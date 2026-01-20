@@ -21,8 +21,8 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 %struct.S = type { i8 }
 
-@g = global ptr null, align 8
-@fptr = global ptr null, align 8
+@g = global ptr zeroinitializer, align 8
+@fptr = global ptr zeroinitializer, align 8
 
 define ptr @rv_marker_1_retain() {
 ; CHECK-LABEL:  rv_marker_1_retain:

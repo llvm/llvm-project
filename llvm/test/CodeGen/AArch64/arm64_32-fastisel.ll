@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=arm64_32-apple-ios -O0 -fast-isel %s -o - | FileCheck %s
-@var = global ptr null
+@var = global ptr zeroinitializer
 
 define void @test_store_release_ptr() {
 ; CHECK-LABEL: test_store_release_ptr

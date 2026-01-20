@@ -225,7 +225,7 @@ define void @local_nullptr(ptr addrspace(1) nocapture %results, ptr addrspace(3)
 ; CHECK-LABEL: define void @local_nullptr(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[RESULTS:%.*]], ptr addrspace(3) [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr addrspace(3) [[A]], addrspacecast (ptr addrspace(5) null to ptr addrspace(3))
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr addrspace(3) [[A]], null
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL]] to i32
 ; CHECK-NEXT:    store i32 [[CONV]], ptr addrspace(1) [[RESULTS]], align 4
 ; CHECK-NEXT:    ret void

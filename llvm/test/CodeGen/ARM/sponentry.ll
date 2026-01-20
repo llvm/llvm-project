@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=thumbv7-windows-msvc %s -o - | FileCheck %s --check-prefix=NOFP
 ; RUN: llc -mtriple=thumbv7-windows-msvc -fast-isel %s -o - | FileCheck %s --check-prefix=NOFP
 
-@env2 = common dso_local global ptr null, align 8
+@env2 = common dso_local global ptr zeroinitializer, align 8
 
 define dso_local void @bar() {
   %1 = call ptr @llvm.sponentry()

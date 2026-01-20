@@ -9,7 +9,7 @@
 ; CHECK-NOT: movq wibble2
 ; CHECK: cmpq {{%[a-z]+}}, wibble2(%rip)
 
-; Regenerate test with this command: 
+; Regenerate test with this command:
 ;   clang -emit-llvm -S -O2 -g
 ; from this source:
 ;   struct Foo {
@@ -33,9 +33,9 @@
 %struct.Wibble = type { i32 }
 %struct.Flibble = type { i8 }
 
-@pfoo = dso_local global ptr null, align 8
-@wibble1 = dso_local global ptr null, align 8
-@wibble2 = dso_local global ptr null, align 8
+@pfoo = dso_local global ptr zeroinitializer, align 8
+@wibble1 = dso_local global ptr zeroinitializer, align 8
+@wibble2 = dso_local global ptr zeroinitializer, align 8
 @flibble = dso_local global %struct.Flibble zeroinitializer, align 1
 
 ; Function Attrs: nounwind readonly uwtable

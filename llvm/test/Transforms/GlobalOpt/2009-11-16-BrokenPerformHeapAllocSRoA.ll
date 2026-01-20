@@ -7,7 +7,7 @@ target triple = "x86_64-apple-darwin10.0"
 %struct.strchartype = type { ptr, ptr, ptr }
 
 @hashheader = internal global %struct.hashheader zeroinitializer, align 32 ; <ptr> [#uses=1]
-@chartypes = internal global ptr null ; <ptr> [#uses=1]
+@chartypes = internal global ptr zeroinitializer ; <ptr> [#uses=1]
 ; CHECK-NOT: @hashheader
 ; CHECK-NOT: @chartypes
 

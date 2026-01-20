@@ -95,7 +95,7 @@ entry:
 
 
 ; The constant in multiplication does not have to be a literal integer constant.
-@X = linkonce_odr global ptr null
+@X = linkonce_odr global ptr zeroinitializer
 define i64 @MulNonIntegerConst(i64 %a) sanitize_memory {
   %mul = mul i64 %a, ptrtoint (ptr @X to i64)
   ret i64 %mul

@@ -212,8 +212,7 @@ entry:
 define i1 @invalid_bitcast_icmp_addrspacecast_as0_null(ptr addrspace(5) %ptr) {
 ; CHECK-LABEL: @invalid_bitcast_icmp_addrspacecast_as0_null(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr addrspace(5) [[PTR:%.*]], addrspacecast (ptr null to ptr addrspace(5))
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    ret i1 false
 ;
 bb:
   %tmp1 = getelementptr inbounds i32, ptr addrspace(5) %ptr, i32 1
@@ -224,7 +223,9 @@ bb:
 define i1 @invalid_bitcast_icmp_addrspacecast_as0_null_var(ptr addrspace(5) %ptr, i32 %idx) {
 ; CHECK-LABEL: @invalid_bitcast_icmp_addrspacecast_as0_null_var(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr addrspace(5) [[PTR:%.*]], addrspacecast (ptr null to ptr addrspace(5))
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(5) [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr addrspace(5) [[TMP1]], null
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
 bb:

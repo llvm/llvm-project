@@ -19,7 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @_ZTVN10__cxxabiv117__class_type_infoE = external dso_local global ptr
 @_ZTS3Foo = dso_local constant [5 x i8] c"3Foo\00", align 1
 @_ZTI3Foo = dso_local constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS3Foo }, align 8
-@b = dso_local local_unnamed_addr global ptr null, align 8
+@b = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 
 define dso_local i32 @main() local_unnamed_addr {
 entry:

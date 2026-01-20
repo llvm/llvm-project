@@ -11,8 +11,8 @@ define void @phi_poison(ptr addrspace(1) %arg, <2 x ptr addrspace(1)> %arg1) {
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[I:%.*]] = phi ptr addrspace(1) [ [[ARG:%.*]], [[LEADER]] ], [ poison, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I2:%.*]] = phi <2 x ptr addrspace(1)> [ [[ARG1:%.*]], [[LEADER]] ], [ poison, [[ENTRY]] ]
-; CHECK-NEXT:    [[J:%.*]] = icmp eq ptr addrspace(1) [[I]], addrspacecast (ptr null to ptr addrspace(1))
-; CHECK-NEXT:    [[J1:%.*]] = icmp eq <2 x ptr addrspace(1)> [[I2]], <ptr addrspace(1) addrspacecast (ptr null to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr null to ptr addrspace(1))>
+; CHECK-NEXT:    [[J:%.*]] = icmp eq ptr addrspace(1) [[I]], null
+; CHECK-NEXT:    [[J1:%.*]] = icmp eq <2 x ptr addrspace(1)> [[I2]], zeroinitializer
 ; CHECK-NEXT:    ret void
 ;
 entry:

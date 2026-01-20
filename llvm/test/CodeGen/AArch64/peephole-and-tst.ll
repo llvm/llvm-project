@@ -4,7 +4,7 @@
 
 %struct.anon = type { ptr, ptr }
 
-@ptr_wrapper = common global ptr null, align 8
+@ptr_wrapper = common global ptr zeroinitializer, align 8
 
 define i32 @test_func_i32_two_uses(i32 %in, i32 %bit, i32 %mask) {
 ; CHECK-SD-LABEL: test_func_i32_two_uses:

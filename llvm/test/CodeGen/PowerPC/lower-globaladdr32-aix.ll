@@ -13,8 +13,8 @@
 ; RUN: -print-before=register-coalescer 2>&1 < %s | FileCheck \
 ; RUN: --check-prefix=SMALL %s
 
-@msg = common global ptr null, align 4
-@ptr = common global ptr null, align 4
+@msg = common global ptr zeroinitializer, align 4
+@ptr = common global ptr zeroinitializer, align 4
 
 define void @foo() {
 entry:

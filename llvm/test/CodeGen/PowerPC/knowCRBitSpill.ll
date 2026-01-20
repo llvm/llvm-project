@@ -13,7 +13,7 @@
 
 %struct.anon = type { i32 }
 
-@b = common dso_local global ptr null, align 8
+@b = common dso_local global ptr zeroinitializer, align 8
 @a = common dso_local global i64 0, align 8
 
 ; Function Attrs: nounwind

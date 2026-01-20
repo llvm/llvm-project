@@ -9,7 +9,7 @@
 
   %struct.A = type { i32, i32, i32 }
 
-  @c = common local_unnamed_addr global ptr null, align 8
+  @c = common local_unnamed_addr global ptr zeroinitializer, align 8
   @a = common local_unnamed_addr global i32 0, align 4
   @d = common local_unnamed_addr global i32 0, align 4
   @b = common local_unnamed_addr global i32 0, align 4

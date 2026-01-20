@@ -32,7 +32,7 @@
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_AT_prototyped (true)
 
-@x = dso_local global ptr null, align 8, !dbg !0
+@x = dso_local global ptr zeroinitializer, align 8, !dbg !0
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @y() #0 !dbg !16 {

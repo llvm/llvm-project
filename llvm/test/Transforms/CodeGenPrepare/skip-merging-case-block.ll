@@ -145,7 +145,7 @@ declare void @calldefault(...) local_unnamed_addr
 ; This test that BFI/BPI is created without any assertion in isMergingEmptyBlockProfitable()
 ; in the case where empty blocks are removed before creating BFI/BPI.
 @b = common global i32 0, align 4
-@a = common global ptr null, align 8
+@a = common global ptr zeroinitializer, align 8
 define i32 @should_not_assert(i32 %i) local_unnamed_addr {
 entry:
   %0 = load i32, ptr @b, align 4

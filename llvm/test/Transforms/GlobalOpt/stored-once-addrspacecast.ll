@@ -4,11 +4,11 @@
 ; Test that we do not fold away addresscasts when optimizing once-stored
 ; globals, as these may be runtime operations.
 
-@g1 = internal global ptr null
+@g1 = internal global ptr zeroinitializer
 @g2 = addrspace(1) global i32 0
 
 ;.
-; CHECK: @g1 = internal unnamed_addr global ptr null
+; CHECK: @g1 = internal unnamed_addr global ptr zeroinitializer
 ; CHECK: @g2 = addrspace(1) global i32 0
 ; CHECK: @g4 = local_unnamed_addr addrspace(1) global i32 0
 ;.
@@ -27,7 +27,7 @@ define i64 @test1() {
   ret i64 %l3
 }
 
-@g3 = internal global ptr null
+@g3 = internal global ptr zeroinitializer
 @g4 = addrspace(1) global i32 0
 
 define i64 @test2() {

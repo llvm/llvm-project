@@ -6,7 +6,7 @@
 
 target datalayout = "p:32:32:32"
 
-@G = internal global ptr null		; <ptr> [#uses=3]
+@G = internal global ptr zeroinitializer		; <ptr> [#uses=3]
 
 declare noalias ptr @malloc(i32) allockind("alloc,uninitialized") allocsize(0) inaccessiblememonly
 define void @malloc_init() {
@@ -34,7 +34,7 @@ define i32 @malloc_test(ptr %P) {
   ret i32 %X
 }
 
-@G2 = internal global ptr null		; <ptr> [#uses=3]
+@G2 = internal global ptr zeroinitializer		; <ptr> [#uses=3]
 
 declare noalias ptr @calloc(i32, i32) allockind("alloc,zeroed") allocsize(0,1) inaccessiblememonly
 define void @calloc_init() {
@@ -62,7 +62,7 @@ define i32 @calloc_test(ptr %P) {
   ret i32 %X
 }
 
-@G3 = internal global ptr null		; <ptr> [#uses=3]
+@G3 = internal global ptr zeroinitializer		; <ptr> [#uses=3]
 
 declare noalias ptr @my_alloc(i32)
 define void @my_alloc_init() {

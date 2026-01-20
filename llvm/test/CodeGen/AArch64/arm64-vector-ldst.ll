@@ -36,18 +36,18 @@ entry:
 
 ; add a bunch of tests for rdar://11246289
 
-@globalArray64x2 = common global ptr null, align 8
-@globalArray32x4 = common global ptr null, align 8
-@globalArray16x8 = common global ptr null, align 8
-@globalArray8x16 = common global ptr null, align 8
-@globalArray64x1 = common global ptr null, align 8
-@globalArray32x2 = common global ptr null, align 8
-@globalArray16x4 = common global ptr null, align 8
-@globalArray8x8 = common global ptr null, align 8
-@floatglobalArray64x2 = common global ptr null, align 8
-@floatglobalArray32x4 = common global ptr null, align 8
-@floatglobalArray64x1 = common global ptr null, align 8
-@floatglobalArray32x2 = common global ptr null, align 8
+@globalArray64x2 = common global ptr zeroinitializer, align 8
+@globalArray32x4 = common global ptr zeroinitializer, align 8
+@globalArray16x8 = common global ptr zeroinitializer, align 8
+@globalArray8x16 = common global ptr zeroinitializer, align 8
+@globalArray64x1 = common global ptr zeroinitializer, align 8
+@globalArray32x2 = common global ptr zeroinitializer, align 8
+@globalArray16x4 = common global ptr zeroinitializer, align 8
+@globalArray8x8 = common global ptr zeroinitializer, align 8
+@floatglobalArray64x2 = common global ptr zeroinitializer, align 8
+@floatglobalArray32x4 = common global ptr zeroinitializer, align 8
+@floatglobalArray64x1 = common global ptr zeroinitializer, align 8
+@floatglobalArray32x2 = common global ptr zeroinitializer, align 8
 
 define void @fct1_64x2(ptr nocapture %array, i64 %offset) nounwind ssp {
 ; CHECK-LABEL: fct1_64x2:

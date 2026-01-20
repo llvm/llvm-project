@@ -19,7 +19,7 @@
 source_filename = "debugtest-opt.c"
 target triple = "wasm32"
 
-@globl = hidden local_unnamed_addr global ptr null, align 4, !dbg !0
+@globl = hidden local_unnamed_addr global ptr zeroinitializer, align 4, !dbg !0
 
 ; Function Attrs: nounwind writeonly
 define hidden void @baz(i32 %arg) local_unnamed_addr #0 !dbg !12 {

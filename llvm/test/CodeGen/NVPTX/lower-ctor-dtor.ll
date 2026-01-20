@@ -20,14 +20,14 @@
 ; CHECK: @__init_array_object_foo_[[HASH:[0-9a-f]+]]_1 = protected addrspace(4) constant ptr @foo, section ".init_array.1"
 ; CHECK: @__fini_array_object_bar_[[HASH:[0-9a-f]+]]_1 = protected addrspace(4) constant ptr @bar, section ".fini_array.1"
 ; CHECK: @llvm.used = appending global [2 x ptr] [ptr addrspacecast (ptr addrspace(4) @__init_array_object_foo_[[HASH]]_1 to ptr), ptr addrspacecast (ptr addrspace(4) @__fini_array_object_bar_[[HASH]]_1 to ptr)], section "llvm.metadata"
-; CHECK: @__fini_array_start = weak protected addrspace(1) global ptr null
-; CHECK: @__fini_array_end = weak protected addrspace(1) global ptr null
+; CHECK: @__fini_array_start = weak protected addrspace(1) global ptr zeroinitializer
+; CHECK: @__fini_array_end = weak protected addrspace(1) global ptr zeroinitializer
 
 ; GLOBAL: @__init_array_object_foo_unique_id_1 = protected addrspace(4) constant ptr @foo, section ".init_array.1"
 ; GLOBAL: @__fini_array_object_bar_unique_id_1 = protected addrspace(4) constant ptr @bar, section ".fini_array.1"
 ; GLOBAL: @llvm.used = appending global [2 x ptr] [ptr addrspacecast (ptr addrspace(4) @__init_array_object_foo_unique_id_1 to ptr), ptr addrspacecast (ptr addrspace(4) @__fini_array_object_bar_unique_id_1 to ptr)], section "llvm.metadata"
-; GLOBAL: @__fini_array_start = weak protected addrspace(1) global ptr null
-; GLOBAL: @__fini_array_end = weak protected addrspace(1) global ptr null
+; GLOBAL: @__fini_array_start = weak protected addrspace(1) global ptr zeroinitializer
+; GLOBAL: @__fini_array_end = weak protected addrspace(1) global ptr zeroinitializer
 
 ; KERNEL: @__init_array_object_foo_[[HASH:[0-9a-f]+]]_1 = protected addrspace(4) constant ptr @foo, section ".init_array.1"
 ; KERNEL: @__fini_array_object_bar_[[HASH:[0-9a-f]+]]_1 = protected addrspace(4) constant ptr @bar, section ".fini_array.1"

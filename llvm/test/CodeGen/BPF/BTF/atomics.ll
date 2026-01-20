@@ -31,10 +31,10 @@ target triple = "bpf"
 @gstruct = dso_local global %struct.gstruct_t zeroinitializer, align 4, !dbg !0
 @ext = external dso_local global i32, align 4, !dbg !34
 @gbl = dso_local global i32 0, align 4, !dbg !16
-@pgbl = dso_local local_unnamed_addr global ptr null, align 8, !dbg !20
+@pgbl = dso_local local_unnamed_addr global ptr zeroinitializer, align 8, !dbg !20
 @vvar = dso_local global i32 0, align 4, !dbg !23
-@tagptr1 = dso_local local_unnamed_addr global ptr null, align 8, !dbg !26
-@tagptr2 = dso_local local_unnamed_addr global ptr null, align 8, !dbg !31
+@tagptr1 = dso_local local_unnamed_addr global ptr zeroinitializer, align 8, !dbg !26
+@tagptr2 = dso_local local_unnamed_addr global ptr zeroinitializer, align 8, !dbg !31
 
 ; Function Attrs: mustprogress nofree norecurse nounwind willreturn
 define dso_local i32 @foo(i32 returned %a1, ptr nocapture noundef %p1) local_unnamed_addr #0 !dbg !45 {

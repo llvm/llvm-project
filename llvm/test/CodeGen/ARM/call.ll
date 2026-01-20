@@ -7,7 +7,7 @@
 ; RUN: llc -mtriple=armv6-linux-gnueabi -relocation-model=pic %s -o - \
 ; RUN:   | FileCheck %s -check-prefix=CHECKELF
 
-@t = weak global ptr null           ; <ptr> [#uses=1]
+@t = weak global ptr zeroinitializer           ; <ptr> [#uses=1]
 
 declare void @g(i32, i32, i32, i32)
 

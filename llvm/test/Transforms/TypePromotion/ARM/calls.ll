@@ -97,7 +97,7 @@ entry:
   ret void
 }
 
-@a = global ptr null, align 4
+@a = global ptr zeroinitializer, align 4
 @b = global i32 0, align 4
 
 define i32 @constexpr() {

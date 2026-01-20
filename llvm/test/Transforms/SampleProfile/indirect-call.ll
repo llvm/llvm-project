@@ -135,7 +135,7 @@ define void @branch_prof_valid(ptr %t0) #0 !dbg !33 {
 }
 
 @x = global i32 0, align 4
-@y = global ptr null, align 8
+@y = global ptr zeroinitializer, align 8
 
 define ptr @foo_inline1(ptr %x) #0 !dbg !14 {
   ret ptr %x

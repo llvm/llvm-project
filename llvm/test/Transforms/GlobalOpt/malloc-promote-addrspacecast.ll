@@ -4,7 +4,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 
 declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
 
-@G = internal global ptr null
+@G = internal global ptr zeroinitializer
 
 define void @init() {
 ; CHECK-LABEL: @init(

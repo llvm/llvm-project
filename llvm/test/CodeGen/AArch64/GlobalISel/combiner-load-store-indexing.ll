@@ -219,4 +219,4 @@ define ptr @test_load_post_gep_offset_after(ptr %ptr) {
 declare void @bar(ptr)
 declare i64 @get_offset()
 @var = global i8 0
-@varp8 = global ptr null
+@varp8 = global ptr zeroinitializer

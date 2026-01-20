@@ -365,7 +365,7 @@ for.body:
 define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN-LABEL: loop_arg_0:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, -1
 ; GCN-NEXT:    s_mov_b32 m0, -1
 ; GCN-NEXT:    ds_read_u8 v0, v0
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x9
@@ -401,7 +401,7 @@ define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN_DBG-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN_DBG-NEXT:    v_writelane_b32 v2, s0, 0
-; GCN_DBG-NEXT:    v_mov_b32_e32 v0, 0
+; GCN_DBG-NEXT:    v_mov_b32_e32 v0, -1
 ; GCN_DBG-NEXT:    s_mov_b32 m0, -1
 ; GCN_DBG-NEXT:    ds_read_u8 v0, v0
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)

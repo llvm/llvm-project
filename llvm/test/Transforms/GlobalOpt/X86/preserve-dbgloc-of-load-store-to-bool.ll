@@ -8,7 +8,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 target triple = "x86_64-unknown-linux-gnu"
 
 @global = internal global i32 0
-@global.1 = internal unnamed_addr global ptr null, align 8
+@global.1 = internal unnamed_addr global ptr zeroinitializer, align 8
 
 define void @ham() !dbg !7 {
 ; CHECK-LABEL: define void @ham(

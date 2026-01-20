@@ -12,7 +12,7 @@
 ; Test various combinations of 32/64bit GP registers and single/double floating point support.
 
 @i1 = global [3 x i32] [i32 1, i32 2, i32 3], align 4
-@i3 = common global ptr null, align 4
+@i3 = common global ptr zeroinitializer, align 4
 
 ; ALL-LABEL: test_float_int_:
 ; 32:   mtc1 ${{[0-9]+}}, $f[[R0:[0-9]+]]

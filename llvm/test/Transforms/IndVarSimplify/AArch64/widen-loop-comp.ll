@@ -12,7 +12,7 @@ target datalayout = "n8:16:32:64"
 
 @idx = common global i32 0, align 4
 @e = common global i32 0, align 4
-@ptr = common global ptr null, align 8
+@ptr = common global ptr zeroinitializer, align 8
 
 
 define i32 @test1() {

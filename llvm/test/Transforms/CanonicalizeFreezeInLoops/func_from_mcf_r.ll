@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 %struct.g = type { i64, %struct.arc, i64, i64, i64 }
 
 @m = global i64 0
-@h = global ptr null
+@h = global ptr zeroinitializer
 @j = global %struct.g zeroinitializer
 
 define dso_local i32 @main() {

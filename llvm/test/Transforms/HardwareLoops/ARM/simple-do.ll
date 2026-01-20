@@ -5,7 +5,7 @@
 ; DISABLED-NOT: llvm.{{.*}}.loop.iterations
 ; DISABLED-NOT: llvm.loop.decrement
 
-@g = common local_unnamed_addr global ptr null, align 4
+@g = common local_unnamed_addr global ptr zeroinitializer, align 4
 
 ; CHECK-LABEL: do_copy
 ; CHECK: [[START:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 %n)

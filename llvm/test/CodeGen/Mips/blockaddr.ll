@@ -13,7 +13,7 @@
 ; RUN: llc -mtriple=mipsel-linux-gnu -mcpu=mips32 -mattr=+mips16 \
 ; RUN:     -relocation-model=static < %s | FileCheck %s -check-prefix=STATIC-MIPS16
 
-@reg = common global ptr null, align 4
+@reg = common global ptr zeroinitializer, align 4
 
 define ptr @dummy(ptr %x) nounwind readnone noinline {
 entry:

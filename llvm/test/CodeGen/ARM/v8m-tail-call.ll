@@ -78,7 +78,7 @@ define hidden i32 @f2(i32, i32, i32, i32, i32) {
 
 ; Make sure that tail calls to function pointers that require r0-r3 for argument
 ; passing do not break the compiler.
-@fnptr = global ptr null
+@fnptr = global ptr zeroinitializer
 define i32 @test3() {
 ; CHECK-LABEL: test3:
 ; CHECK:       @ %bb.0:
@@ -97,7 +97,7 @@ define i32 @test3() {
   ret i32 %2
 }
 
-@fnptr2 = global ptr null
+@fnptr2 = global ptr zeroinitializer
 define i32 @test4() {
 ; CHECK-LABEL: test4:
 ; CHECK:       @ %bb.0:
@@ -119,7 +119,7 @@ define i32 @test4() {
 ; Check that tail calls to function pointers where not all of r0-r3 are used for
 ; parameter passing are tail-call optimized.
 ; test5: params in r0, r1. r2 & r3 are free.
-@fnptr3 = global ptr null
+@fnptr3 = global ptr zeroinitializer
 define i32 @test5() {
 ; CHECK-LABEL: test5:
 ; CHECK:       @ %bb.0:
@@ -135,7 +135,7 @@ define i32 @test5() {
 }
 
 ; test6: params in r0 and r2-r3. r1 is free.
-@fnptr4 = global ptr null
+@fnptr4 = global ptr zeroinitializer
 define i32 @test6() {
 ; CHECK-LABEL: test6:
 ; CHECK:       @ %bb.0:

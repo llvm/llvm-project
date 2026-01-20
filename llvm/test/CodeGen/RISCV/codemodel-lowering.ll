@@ -73,7 +73,7 @@ define i32 @lower_global(i32 %a) nounwind {
 
 ; Check lowering of blockaddresses
 
-@addr = global ptr null
+@addr = global ptr zeroinitializer
 
 define void @lower_blockaddress() nounwind {
 ; RV32I-SMALL-LABEL: lower_blockaddress:

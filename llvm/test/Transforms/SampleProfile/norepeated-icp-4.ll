@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@p = dso_local global ptr null, align 8
+@p = dso_local global ptr zeroinitializer, align 8
 
 ; After _Z3goov is inlined into _Z3foov, the value profile of the indirect
 ; call in _Z3goov and _Z3foov need to be scaled. The test is to make sure
@@ -61,7 +61,7 @@ attributes #0 = { uwtable mustprogress "use-sample-profile" }
 ; CHECK: ![[PROF_ID1]] = !{!"VP", i32 0, i64 7200, i64 -7383239051784516332, i64 -1, i64 -3834823603621627078, i64 7200}
 ; CHECK: ![[PROF_ID2]] = !{!"VP", i32 0, i64 800, i64 -7383239051784516332, i64 -1, i64 -3834823603621627078, i64 800}
 !22 = !{!"VP", i32 0, i64 8000, i64 -7383239051784516332, i64 -1, i64 125292384912345234234, i64 8000}
-!23 = !{!"function_entry_count", i64 1000} 
+!23 = !{!"function_entry_count", i64 1000}
 !24 = !{!"branch_weights", i32 100}
 !25 = !{i32 1, !"ProfileSummary", !26}
 !26 = !{!27, !28, !29, !30, !31, !32, !33, !34}

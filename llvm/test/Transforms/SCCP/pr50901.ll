@@ -67,8 +67,8 @@
 @g_3 = dso_local global i8 97, align 1, !dbg !10
 @g_4 = dso_local global i32 4, align 4, !dbg !13
 @g_5 = dso_local global i8 1, align 1, !dbg !16
-@g_6 = dso_local global ptr null, align 8, !dbg !19
-@g_7 = dso_local global ptr null, align 8, !dbg !23
+@g_6 = dso_local global ptr zeroinitializer, align 8, !dbg !19
+@g_7 = dso_local global ptr zeroinitializer, align 8, !dbg !23
 @g_8 = dso_local global half 0xH4321, align 4, !dbg !86
 @g_9 = dso_local global bfloat 0xR3F80, align 4, !dbg !90
 @_ZL4g_11 = internal global i32 -5, align 4, !dbg !25
@@ -76,7 +76,7 @@
 @_ZL4g_33 = internal global i8 98, align 1, !dbg !29
 @_ZL4g_44 = internal global i32 5, align 4, !dbg !31
 @_ZL4g_55 = internal global i8 1, align 1, !dbg !33
-@_ZL4g_66 = internal global ptr null, align 8, !dbg !35
+@_ZL4g_66 = internal global ptr zeroinitializer, align 8, !dbg !35
 @_ZL4g_77 = internal global ptr inttoptr (i64 70 to ptr), align 8, !dbg !37
 @g_float_undef = internal global float undef, align 4, !dbg !83
 @_ZL4g_88 = internal global half 0xH5678, align 4, !dbg !88

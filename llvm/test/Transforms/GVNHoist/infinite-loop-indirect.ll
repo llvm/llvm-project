@@ -6,8 +6,8 @@
 %class.bar = type { ptr, ptr }
 %class.base = type { ptr }
 
-@bar = local_unnamed_addr global ptr null, align 8
-@bar1 = local_unnamed_addr global ptr null, align 8
+@bar = local_unnamed_addr global ptr zeroinitializer, align 8
+@bar1 = local_unnamed_addr global ptr zeroinitializer, align 8
 
 ; Check that the bitcast is not hoisted because it is after an indirect call
 define i32 @foo(ptr nocapture readonly %i) {

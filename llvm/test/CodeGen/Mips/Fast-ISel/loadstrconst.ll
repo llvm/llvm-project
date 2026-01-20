@@ -4,7 +4,7 @@
 ; RUN:     < %s | FileCheck %s
 
 @.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
-@s = common global ptr null, align 4
+@s = common global ptr zeroinitializer, align 4
 
 ; Function Attrs: nounwind
 define void @foo() #0 {

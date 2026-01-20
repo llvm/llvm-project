@@ -4,9 +4,9 @@
 
 
 @var = global i32 1;
-@fun_a = global ptr null;
-@fun_b = global ptr null;
-@fun_c = global ptr null;
+@fun_a = global ptr zeroinitializer;
+@fun_b = global ptr zeroinitializer;
+@fun_c = global ptr zeroinitializer;
 
 ; Check a conditional sibling call.
 define void @f1(i32 %val1, i32 %val2) {
