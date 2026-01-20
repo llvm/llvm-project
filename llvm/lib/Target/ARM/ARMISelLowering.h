@@ -289,8 +289,10 @@ class VectorType;
 
     /// createFastISel - This method returns a target specific FastISel object,
     /// or null if the target does not support "fast" ISel.
-    FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                             const TargetLibraryInfo *libInfo) const override;
+    FastISel *
+    createFastISel(FunctionLoweringInfo &funcInfo,
+                   const TargetLibraryInfo *libInfo,
+                   const LibcallLoweringInfo *libcallLowering) const override;
 
     Sched::Preference getSchedulingPreference(SDNode *N) const override;
 
@@ -727,8 +729,9 @@ class VectorType;
 
   namespace ARM {
 
-    FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                             const TargetLibraryInfo *libInfo);
+  FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
+                           const TargetLibraryInfo *libInfo,
+                           const LibcallLoweringInfo *libcallLowering);
 
   } // end namespace ARM
 

@@ -1006,6 +1006,15 @@ TARGET_BUILTIN(__builtin_amo_lwat, "UiUi*UiIi", "", "isa-v30-instructions")
 TARGET_BUILTIN(__builtin_amo_ldat, "ULiULi*ULiIi", "", "isa-v30-instructions")
 TARGET_BUILTIN(__builtin_amo_lwat_s, "SiSi*SiIi", "", "isa-v30-instructions")
 TARGET_BUILTIN(__builtin_amo_ldat_s, "SLiSLi*SLiIi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_lwat_cond, "UiUi*Ii", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_ldat_cond, "ULiULi*Ii", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_lwat_cond_s, "SiSi*Ii", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_ldat_cond_s, "SLiSLi*Ii", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_stwat, "vUi*UiIi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_stdat, "vULi*ULiIi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_stwat_s, "vSi*SiIi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_stdat_s, "vSLi*SLiIi", "", "isa-v30-instructions")
+
 
 // Set the floating point rounding mode
 BUILTIN(__builtin_setrnd, "di", "")
