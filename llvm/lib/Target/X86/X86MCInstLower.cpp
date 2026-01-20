@@ -1801,10 +1801,6 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
     OutStreamer->emitWinCFIUnwindVersion(MI->getOperand(0).getImm());
     break;
 
-  case X86::SEH_SplitChained:
-    OutStreamer->emitWinCFISplitChained();
-    break;
-
   default:
     llvm_unreachable("expected SEH_ instruction");
   }
@@ -2533,8 +2529,13 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::SEH_EndEpilogue:
   case X86::SEH_UnwindV2Start:
   case X86::SEH_UnwindVersion:
-  case X86::SEH_SplitChained:
     EmitSEHInstruction(MI);
+    return;
+
+  case X86::SEH_SplitChainedAtEndOfBlock:
+    assert(!SplitChainedAtEndOfBlock &&
+           "Duplicate SEH_SplitChainedAtEndOfBlock in a current block");
+    SplitChainedAtEndOfBlock = true;
     return;
 
   case X86::SEH_BeginEpilogue: {
