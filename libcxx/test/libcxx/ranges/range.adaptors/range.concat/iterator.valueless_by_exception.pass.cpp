@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
+// REQUIRES: has-unix-headers, libcpp-hardening-mode={{extensive|debug}}
 // REQUIRES: std-at-least-c++26
 // UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
@@ -46,15 +46,15 @@ public:
   Iter() = default;
   Iter(int* ptr) : ptr_(ptr) {}
   Iter(const Iter&) = default;
-  Iter(Iter&& other) noexcept : ptr_(other.ptr_) {}
-
-  template <std::size_t M>
-  Iter(const Iter<M>& other) : ptr_(other.ptr_) {}
+  Iter(Iter&& other) : ptr_(other.ptr_) {
+      if (flag) throw 5;
+  }
 
   Iter& operator=(const Iter&) = default;
-  Iter& operator=(Iter&& other) noexcept {
-    ptr_ = other.ptr_;
-    return *this;
+  Iter& operator=(Iter&& o) {
+      ptr_ = o.ptr_;
+      if (flag) throw 5;
+      return *this;
   }
 
   reference operator*() const { return *ptr_; }
