@@ -453,8 +453,8 @@ void PyVectorType::bindDerived(ClassTy &c) {
                   nb::arg("scalable_dims") = nb::none(),
                   nb::arg("context") = nb::none(), "Create a vector type")
       .def_prop_ro("scalable",
-                   [](MlirType self) { return mlirVectorTypeIsScalable(self); })
-      .def_prop_ro("scalable_dims", [](MlirType self) {
+                   [](PyType self) { return mlirVectorTypeIsScalable(self); })
+      .def_prop_ro("scalable_dims", [](PyType self) {
         std::vector<bool> scalableDims;
         size_t rank = static_cast<size_t>(mlirShapedTypeGetRank(self));
         scalableDims.reserve(rank);
@@ -745,9 +745,11 @@ void PyTupleType::bindDerived(ClassTy &c) {
       "Create a tuple type");
   c.def_static(
       "get_tuple",
-      [](std::vector<MlirType> elements, DefaultingPyMlirContext context) {
-        MlirType t =
-            mlirTupleTypeGet(context->get(), elements.size(), elements.data());
+      [](std::vector<PyType> elements, DefaultingPyMlirContext context) {
+        std::vector<MlirType> elements_(elements.size());
+        std::copy(elements.begin(), elements.end(), elements_.begin());
+        MlirType t = mlirTupleTypeGet(context->get(), elements_.size(),
+                                      elements_.data());
         return PyTupleType(context->getRef(), t);
       },
       nb::arg("elements"), nb::arg("context") = nb::none(),
@@ -793,11 +795,15 @@ void PyFunctionType::bindDerived(ClassTy &c) {
       "Gets a FunctionType from a list of input and result types");
   c.def_static(
       "get",
-      [](std::vector<MlirType> inputs, std::vector<MlirType> results,
+      [](std::vector<PyType> inputs, std::vector<PyType> results,
          DefaultingPyMlirContext context) {
+        std::vector<MlirType> inputs_(inputs.size());
+        std::copy(inputs.begin(), inputs.end(), inputs_.begin());
+        std::vector<MlirType> results_(results.size());
+        std::copy(results.begin(), results.end(), results_.begin());
         MlirType t =
-            mlirFunctionTypeGet(context->get(), inputs.size(), inputs.data(),
-                                results.size(), results.data());
+            mlirFunctionTypeGet(context->get(), inputs_.size(), inputs_.data(),
+                                results_.size(), results_.data());
         return PyFunctionType(context->getRef(), t);
       },
       nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),

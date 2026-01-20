@@ -399,6 +399,12 @@
 .attribute arch, "rv32i_svbare1p0"
 # CHECK: attribute      5, "rv32i2p1_svbare1p0"
 
+.attribute arch, "rv32i_svrsw60t59b1p0"
+# CHECK: attribute      5, "rv32i2p1_svrsw60t59b1p0"
+
+.attribute arch, "rv64i_svrsw60t59b1p0"
+# CHECK: attribute      5, "rv64i2p1_svrsw60t59b1p0"
+
 .attribute arch, "rv32i_svukte0p3"
 # CHECK: attribute      5, "rv32i2p1_svukte0p3"
 

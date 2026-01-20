@@ -33,12 +33,10 @@
 // CHECK-FEAT-CA57: Extensions enabled for the given AArch64 target
 // CHECK-FEAT-CA57-EMPTY:
 // CHECK-FEAT-CA57:    Architecture Feature(s)                                Description
-// CHECK-FEAT-CA57:    FEAT_AES, FEAT_PMULL                                   Enable AES support
 // CHECK-FEAT-CA57:    FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // CHECK-FEAT-CA57:    FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
 // CHECK-FEAT-CA57:    FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
 // CHECK-FEAT-CA57:    FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
-// CHECK-FEAT-CA57:    FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support
 
 // RUN: export LLVM_CPUINFO=%S/Inputs/cpunative/cortex-a72
 // RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=native | FileCheck --strict-whitespace  --check-prefix=CHECK-FEAT-CA72 --implicit-check-not=FEAT_ %s

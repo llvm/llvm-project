@@ -1055,6 +1055,28 @@ TEST(STLExtrasTest, to_address) {
   EXPECT_EQ(V1, llvm::to_address(V3));
 }
 
+TEST(STLExtras, EqualToNotEqualTo) {
+  std::vector<int> V;
+  EXPECT_TRUE(all_of(V, equal_to(1)));
+  EXPECT_TRUE(all_of(V, not_equal_to(1)));
+
+  V.push_back(1);
+  EXPECT_TRUE(all_of(V, equal_to(1)));
+  EXPECT_TRUE(all_of(V, not_equal_to(2)));
+
+  V.push_back(1);
+  V.push_back(1);
+  EXPECT_TRUE(all_of(V, equal_to(1)));
+  EXPECT_TRUE(all_of(V, not_equal_to(2)));
+  EXPECT_TRUE(none_of(V, equal_to(2)));
+
+  V.push_back(2);
+  EXPECT_FALSE(all_of(V, equal_to(1)));
+  EXPECT_FALSE(all_of(V, not_equal_to(1)));
+  EXPECT_TRUE(any_of(V, equal_to(2)));
+  EXPECT_TRUE(any_of(V, not_equal_to(2)));
+}
+
 TEST(STLExtrasTest, partition_point) {
   std::vector<int> V = {1, 3, 5, 7, 9};
 
@@ -1757,6 +1779,33 @@ struct Bar {};
 
 static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
 static_assert(!is_incomplete_v<Bar>, "Bar is defined");
+
+TEST(STLExtrasTest, HasEqualityComparison) {
+  struct NoEqualityComparison {};
+  static_assert(!has_equality_comparison_v<NoEqualityComparison>);
+
+  // Mutating equality comparison doesn't count.
+  struct MutatingEqualityComparison {
+    bool operator==(MutatingEqualityComparison &Other) { return false; }
+  };
+  static_assert(!has_equality_comparison_v<MutatingEqualityComparison>);
+
+  struct PublicEqualityComparison {
+    bool operator==(const PublicEqualityComparison &Other) const {
+      return false;
+    }
+  };
+  static_assert(has_equality_comparison_v<PublicEqualityComparison>);
+
+  struct StructA {};
+  struct StructB {
+    bool operator==(const StructA &Other) const { return false; }
+  };
+  static_assert(!has_equality_comparison_v<StructA, StructB>);
+  static_assert(has_equality_comparison_v<StructB, StructA>);
+
+  SUCCEED();
+}
 
 TEST(STLExtrasTest, Search) {
   // Test finding a subsequence in the middle.

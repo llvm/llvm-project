@@ -78,9 +78,7 @@ public:
   /// Return true if this argument has the byval attribute.
   LLVM_ABI bool hasByValAttr() const;
 
-  /// Return the number of bytes marked dead by the dead_on_return attribute.
-  /// If no count was specified (implying all memory reachable through the
-  /// pointer is marked dead on return), std::nullopt is returned.
+  /// Returns information on the memory marked dead_on_return for the argument.
   LLVM_ABI DeadOnReturnInfo getDeadOnReturnInfo() const;
 
   /// Return true if this argument has the byref attribute.

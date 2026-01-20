@@ -349,6 +349,39 @@ An overview of all the command-line options:
         some-check.SomeOption: 'some value'
       ...
 
+Running Clang-Tidy on CUDA Files
+--------------------------------
+
+:program:`clang-tidy` supports analyzing CUDA source files. To ensure correct
+header resolution, it is important to specify the CUDA toolkit path using
+``--cuda-path``. For more details on how Clang handles CUDA, see
+`Compiling CUDA with Clang <https://llvm.org/docs/CompileCudaWithLLVM.html>`_.
+
+If you are using a GCC + NVCC build setup, the compiler command database will
+contain NVCC-specific flags that :program:`clang-tidy` does not understand.
+
+In this case, you should use the ``RemovedArgs`` configuration option (or
+``--removed-arg`` command-line option) to remove these flags, and
+``ExtraArgs`` (or ``--extra-arg``) to provide the ``--cuda-path``.
+
+For example, to remove the NVCC-specific ``-gencode`` flag and provide the
+CUDA path:
+
+.. code-block:: console
+
+  $ clang-tidy source.cu --removed-arg="-gencode" --removed-arg="arch=.." --extra-arg="--cuda-path=/path/to/cuda"
+
+By default, :program:`clang-tidy` will analyze both host and device code.
+To restrict the analysis to a specific side and specifically choose device
+compilation flags, use the ``--extra-arg`` flag to pass the arguments.
+
+For example, to perform device analysis only, use
+the ``--cuda-device-only`` flag:
+
+.. code-block:: console
+
+  $ clang-tidy source.cu --extra-arg="--cuda-device-only" --extra-arg="--cuda-path=/path/to/cuda"
+
 Clang-Tidy Automation
 =====================
 
