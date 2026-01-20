@@ -122,11 +122,8 @@
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       IRTranslator
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
-; CHECK-NEXT:       MachineDominator Tree Construction
-; CHECK-NEXT:       Analysis containing CSE Info
-; CHECK-NEXT:       AArch64PreLegalizerCombiner
+; CHECK-NEXT:       AArch64O0PreLegalizerCombiner
 ; CHECK-NEXT:       Localizer
-; CHECK-NEXT:       LoadStoreOpt
 ; CHECK-NEXT:       Analysis containing CSE Info
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       Legalizer

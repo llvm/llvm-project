@@ -744,7 +744,12 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  if (getOptLevel() == CodeGenOptLevel::None) {
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+  if (getOptLevel() == CodeGenOptLevel::None ||
+      (static_cast<unsigned>(getOptLevel()) >
+           this->getAArch64TargetMachine().getEnableGlobalISelAtO() &&
+       !GlobalISelFlag)) {
     addPass(createAArch64O0PreLegalizerCombiner());
     addPass(new Localizer());
   } else {

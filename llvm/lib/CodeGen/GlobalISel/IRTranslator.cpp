@@ -4132,11 +4132,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MF = &CurMF;
   const Function &F = MF->getFunction();
   ORE = std::make_unique<OptimizationRemarkEmitter>(&F);
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  // Set the CSEConfig and run the analysis.
-  GISelCSEInfo *CSEInfo = nullptr;
-  TPC = &getAnalysis<TargetPassConfig>();
   CLI = MF->getSubtarget().getCallLowering();
 
   if (CLI->fallBackToDAGISel(*MF)) {
@@ -4145,16 +4140,15 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     R << "unable to lower function: "
       << ore::NV("Prototype", F.getFunctionType());
 
-    // // Create a block if this would have been the first block
-    // // to avoid MachineDominatorTree hitting a sentinel assertion
-    // if (MF->empty()) {
-    //   MachineBasicBlock *EntryBB = MF->CreateMachineBasicBlock();
-    //   MF->push_back(EntryBB);
-    // }
-
     reportTranslationError(*MF, *ORE, R);
     return false;
   }
+
+  GISelCSEAnalysisWrapper &Wrapper =
+      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+  // Set the CSEConfig and run the analysis.
+  GISelCSEInfo *CSEInfo = nullptr;
+  TPC = &getAnalysis<TargetPassConfig>();
 
   bool EnableCSE = EnableCSEInIRTranslator.getNumOccurrences()
                        ? EnableCSEInIRTranslator
