@@ -2840,11 +2840,11 @@ between the host and device is known to be compatible.
   );
   #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : disable
 
-``__cl_clang_local_memory_all_scopes``
+``__cl_clang_function_scope_local_variables``
 ----------------------------------------------
 
 This extension allows declaring variables in the local address space within
-any scope, including non-kernel functions or nested scopes within a kernel,
+function scope, including non-kernel functions or nested scopes within a kernel,
 using regular OpenCL extension pragma mechanism detailed in `the OpenCL
 Extension Specification, section 1.2
 <https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
@@ -2860,7 +2860,7 @@ local buffer to those functions via an implicit argument.
 
 .. code-block:: c++
 
-  #pragma OPENCL EXTENSION __cl_clang_local_memory_all_scopes : enable
+  #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
   kernel void kernel1(...)
   {
     {
@@ -2872,7 +2872,7 @@ local buffer to those functions via an implicit argument.
     local float c; // compiled - no diagnostic generated
   }
 
-  #pragma OPENCL EXTENSION __cl_clang_local_memory_all_scopes : disable
+  #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : disable
   kernel void kernel2(...)
   {
     {

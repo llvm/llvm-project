@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -triple spir64 -disable-llvm-passes -emit-llvm -o - | FileCheck %s
 
-#pragma OPENCL EXTENSION __cl_clang_local_memory_all_scopes : enable
+#pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
 
 void func(local int*);
 
