@@ -10,8 +10,8 @@
 #ifndef MLIR_C_DIALECT_TRANSFORM_H
 #define MLIR_C_DIALECT_TRANSFORM_H
 
-#include "mlir-c/Interfaces.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Interfaces.h"
 #include "mlir-c/Rewrite.h"
 #include "mlir-c/Support.h"
 

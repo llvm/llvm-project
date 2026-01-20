@@ -5,7 +5,13 @@ from contextlib import contextmanager
 from mlir import ir
 from mlir.ir import TypeAttr, F32Type, UnitAttr
 from mlir.dialects import transform, irdl, func
-from mlir.dialects.transform import AnyOpType, AnyValueType, AnyParamType, structured, interpreter
+from mlir.dialects.transform import (
+    AnyOpType,
+    AnyValueType,
+    AnyParamType,
+    structured,
+    interpreter,
+)
 
 from mlir.dialects._ods_common import get_op_result_or_value, get_op_results_or_values
 
@@ -45,9 +51,7 @@ def emit_payload():
     payload_module = ir.Module.create()
     with ir.InsertionPoint(payload_module.body):
 
-        @func.FuncOp.from_py_func(
-            F32Type.get(), F32Type.get(), results=[F32Type.get()]
-        )
+        @func.FuncOp.from_py_func(F32Type.get(), F32Type.get(), results=[F32Type.get()])
         def name_of_func(a, b):
             func.ReturnOp([b])
 
