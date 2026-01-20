@@ -1856,6 +1856,9 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
     matrix which eventually allows the lowering to determine the size of each
     row.  If the `transpose` attribute is present then the op does a transposed load.
 
+    The memory indices along each dimension must be in-bounds for that dimension
+    as with an ordinary `memref.load`.
+
     For integer types, the resulting `!gpu.mma_matrix` type needs to specify the
     signedness of the data if the matrix type is an `A` or `B` operand for
     `gpu.subgroup_mma_compute`.
@@ -1869,6 +1872,8 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
      %0 = gpu.subgroup_mma_load_matrix src[%i,%j] : {leadDimension = 32 : i32}
           : memref<32x32xf16, 3>, !gpu.mma_matrix<16x16xf16, "AOp">
     ```
+
+    Promises IndexedAccessOpInterface.
   }];
 
   let arguments = (ins Arg<GPU_MMAMemRef, "",
@@ -1904,12 +1909,17 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
     This op is often meant to be used along with `gpu.subgroup_mma_load_matrix` and
     `gpu.subgroup_mma_compute`.
 
+    The memory indices along each dimension must be in-bounds for that dimension
+    as with an ordinary `memref.load`.
+
     Example:
 
     ```mlir
     gpu.subgroup_mma_store_matrix %D, %sg[%i,%j] : { leadDimension = 32 : i32}
                     : !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16, 3>
     ```
+
+    Promises IndexedAccessOpInterface.
   }];
 
   let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, I32, F16, F32, F64]>>:$src,
