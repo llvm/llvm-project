@@ -2,47 +2,91 @@
 Test lldb-dap completions request
 """
 
+# FIXME: remove when LLDB_MINIMUM_PYTHON_VERSION > 3.8
+from __future__ import annotations
+
+import json
+from typing import Optional
 import lldbdap_testcase
-import dap_server
-from lldbsuite.test import lldbutil
+from dataclasses import dataclass, replace, asdict
 from lldbsuite.test.decorators import skipIf
 from lldbsuite.test.lldbtest import line_number
 
-session_completion = {
-    "text": "session",
-    "label": "session",
-    "detail": "Commands controlling LLDB session.",
-}
-settings_completion = {
-    "text": "settings",
-    "label": "settings",
-    "detail": "Commands for managing LLDB settings.",
-}
-memory_completion = {
-    "text": "memory",
-    "label": "memory",
-    "detail": "Commands for operating on memory in the current target process.",
-}
-command_var_completion = {
-    "text": "var",
-    "label": "var",
-    "detail": "Show variables for the current stack frame. Defaults to all arguments and local variables in scope. Names of argument, local, file static and file global variables can be specified.",
-}
-variable_var_completion = {"text": "var", "label": "var", "detail": "vector<baz> &"}
-variable_var1_completion = {"text": "var1", "label": "var1", "detail": "int &"}
-variable_var2_completion = {"text": "var2", "label": "var2", "detail": "int &"}
+
+@dataclass(frozen=True)
+class CompletionItem:
+    label: str
+    text: Optional[str] = None
+    detail: Optional[str] = None
+    start: Optional[int] = None
+    length: int = 0
+
+    def __repr__(self):
+        # use json as it easier to see the diff on failure.
+        return json.dumps(asdict(self), indent=4)
+
+    def clone(self, **kwargs) -> CompletionItem:
+        """Creates a copy of this CompletionItem with specified fields modified."""
+        return replace(self, **kwargs)
+
+
+@dataclass
+class TestCase:
+    input: str
+    expected: set[CompletionItem]
+    not_expected: Optional[set[CompletionItem]] = None
+
+
+session_completion = CompletionItem(
+    label="session",
+    detail="Commands controlling LLDB session.",
+)
+settings_completion = CompletionItem(
+    label="settings",
+    detail="Commands for managing LLDB settings.",
+)
+memory_completion = CompletionItem(
+    label="memory",
+    detail="Commands for operating on memory in the current target process.",
+)
+command_var_completion = CompletionItem(
+    label="var",
+    detail="Show variables for the current stack frame. Defaults to all arguments and local variables in scope. Names of argument, local, file static and file global variables can be specified.",
+    length=3,
+)
+variable_var_completion = CompletionItem(label="var", detail="vector<baz> &", length=3)
+variable_var1_completion = CompletionItem(label="var1", detail="int &")
+variable_var2_completion = CompletionItem(label="var2", detail="int &")
+
+str1_completion = CompletionItem(
+    label="str1",
+    detail="std::string &",
+)
 
 
 # Older version of libcxx produce slightly different typename strings for
 # templates like vector.
 @skipIf(compiler="clang", compiler_version=["<", "16.0"])
 class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
-    def verify_completions(self, actual_list, expected_list, not_expected_list=[]):
-        for expected_item in expected_list:
-            self.assertIn(expected_item, actual_list)
+    def verify_completions(self, case: TestCase):
+        completions = {
+            CompletionItem(**comp)
+            for comp in self.dap_server.get_completions(case.input)
+        }
 
-        for not_expected_item in not_expected_list:
-            self.assertNotIn(not_expected_item, actual_list)
+        # handle expected completions
+        expected_completions = case.expected
+        for exp_comp in expected_completions:
+            # with self.subTest(f"Expected completion : {exp_comp}"):
+            self.assertIn(
+                exp_comp, completions, f"\nCompletion for input: {case.input}"
+            )
+
+        # unexpected completions
+        not_expected_label = case.not_expected or set()
+        for not_exp_comp in not_expected_label:
+            with self.subTest(f"Not expected completion : {not_exp_comp}"):
+                self.assertNotIn(not_exp_comp, completions)
 
     def setup_debuggee(self):
         program = self.getBuildArtifact("a.out")
@@ -70,72 +114,96 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Provides completion for top-level commands
         self.verify_completions(
-            self.dap_server.get_completions("se"),
-            [session_completion, settings_completion],
+            TestCase(
+                input="se",
+                expected={
+                    session_completion.clone(length=2),
+                    settings_completion.clone(length=2),
+                },
+            )
         )
-
         # Provides completions for sub-commands
         self.verify_completions(
-            self.dap_server.get_completions("memory "),
-            [
-                {
-                    "text": "read",
-                    "label": "read",
-                    "detail": "Read from the memory of the current target process.",
+            TestCase(
+                input="memory ",
+                expected={
+                    CompletionItem(
+                        label="read",
+                        detail="Read from the memory of the current target process.",
+                    ),
+                    CompletionItem(
+                        label="region",
+                        detail="Get information on the memory region containing an address in the current target process.",
+                    ),
                 },
-                {
-                    "text": "region",
-                    "label": "region",
-                    "detail": "Get information on the memory region containing an address in the current target process.",
-                },
-            ],
+            )
         )
 
         # Provides completions for parameter values of commands
         self.verify_completions(
-            self.dap_server.get_completions("`log enable  "),
-            [{"text": "gdb-remote", "label": "gdb-remote"}],
+            TestCase(
+                input="`log enable  ", expected={CompletionItem(label="gdb-remote")}
+            )
         )
 
         # Also works if the escape prefix is used
         self.verify_completions(
-            self.dap_server.get_completions("`mem"), [memory_completion]
+            TestCase(input="`mem", expected={memory_completion.clone(length=3)})
         )
 
         self.verify_completions(
-            self.dap_server.get_completions("`"),
-            [session_completion, settings_completion, memory_completion],
-        )
-
-        # Completes an incomplete quoted token
-        self.verify_completions(
-            self.dap_server.get_completions('setting "se'),
-            [
-                {
-                    "text": "set",
-                    "label": "set",
-                    "detail": "Set the value of the specified debugger setting.",
-                }
-            ],
+            TestCase(
+                input="`",
+                expected={
+                    session_completion.clone(),
+                    settings_completion.clone(),
+                    memory_completion.clone(),
+                },
+            )
         )
 
         # Completes an incomplete quoted token
         self.verify_completions(
-            self.dap_server.get_completions("'mem"),
-            [memory_completion],
+            TestCase(
+                input='setting "se',
+                expected={
+                    CompletionItem(
+                        label="set",
+                        detail="Set the value of the specified debugger setting.",
+                        length=3,
+                    )
+                },
+            )
+        )
+
+        # Completes an incomplete quoted token
+        self.verify_completions(
+            TestCase(input="'mem", expected={memory_completion.clone(length=4)})
         )
 
         # Completes expressions with quotes inside
         self.verify_completions(
-            self.dap_server.get_completions('expr " "; typed'),
-            [{"text": "typedef", "label": "typedef"}],
+            TestCase(
+                input='expr " "; typed',
+                expected={CompletionItem(label="typedef", length=5)},
+            )
         )
 
         # Provides completions for commands, but not variables
         self.verify_completions(
-            self.dap_server.get_completions("var"),
-            [command_var_completion],
-            [variable_var_completion],
+            TestCase(
+                input="var",
+                expected={command_var_completion.clone()},
+                not_expected={variable_var_completion.clone()},
+            )
+        )
+
+        # Completes partial completion
+        self.verify_completions(
+            TestCase(
+                input="plugin list ar",
+                expected={CompletionItem(label="architecture", length=2)},
+            )
         )
 
     def test_variable_completions(self):
@@ -152,26 +220,32 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Provides completions for varibles, but not command
         self.verify_completions(
-            self.dap_server.get_completions("var"),
-            [variable_var_completion],
-            [command_var_completion],
+            TestCase(
+                input="var",
+                expected={variable_var_completion.clone()},
+                not_expected={command_var_completion.clone()},
+            )
         )
 
         # We stopped inside `fun`, so we shouldn't see variables from main
         self.verify_completions(
-            self.dap_server.get_completions("var"),
-            [variable_var_completion],
-            [
-                variable_var1_completion,
-                variable_var2_completion,
-            ],
+            TestCase(
+                input="var",
+                expected={variable_var_completion},
+                not_expected={
+                    variable_var1_completion.clone(length=3),
+                    variable_var2_completion.clone(length=3),
+                },
+            )
         )
 
         # We should see global keywords but not variables inside main
         self.verify_completions(
-            self.dap_server.get_completions("str"),
-            [{"text": "struct", "label": "struct"}],
-            [{"text": "str1", "label": "str1", "detail": "std::string &"}],
+            TestCase(
+                input="str",
+                expected={CompletionItem(label="struct", length=3)},
+                not_expected={str1_completion.clone(length=3)},
+            )
         )
 
         self.continue_to_next_stop()
@@ -179,65 +253,86 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         # We stopped in `main`, so we should see variables from main but
         # not from the other function
         self.verify_completions(
-            self.dap_server.get_completions("var"),
-            [
-                variable_var1_completion,
-                variable_var2_completion,
-            ],
-            [
-                variable_var_completion,
-            ],
+            TestCase(
+                input="var",
+                expected={
+                    variable_var1_completion.clone(length=3),
+                    variable_var2_completion.clone(length=3),
+                },
+                not_expected={
+                    variable_var_completion.clone(length=3),
+                },
+            )
         )
 
         self.verify_completions(
-            self.dap_server.get_completions("str"),
-            [
-                {"text": "struct", "label": "struct"},
-                {"text": "str1", "label": "str1", "detail": "std::string &"},
-            ],
+            TestCase(
+                input="str",
+                expected={
+                    CompletionItem(label="struct", length=3),
+                    str1_completion.clone(length=3),
+                },
+            )
         )
 
         self.assertIsNotNone(self.dap_server.get_completions("ƒ"))
         # Test utf8 after ascii.
+        # TODO
         self.dap_server.get_completions("mƒ")
 
         # Completion also works for more complex expressions
         self.verify_completions(
-            self.dap_server.get_completions("foo1.v"),
-            [{"text": "var1", "label": "foo1.var1", "detail": "int"}],
+            TestCase(
+                input="foo1.v",
+                expected={CompletionItem(label="foo1.var1", detail="int", length=6)},
+            )
         )
 
         self.verify_completions(
-            self.dap_server.get_completions("foo1.my_bar_object.v"),
-            [{"text": "var1", "label": "foo1.my_bar_object.var1", "detail": "int"}],
+            TestCase(
+                input="foo1.my_bar_object.v",
+                expected={
+                    CompletionItem(
+                        label="foo1.my_bar_object.var1", detail="int", length=20
+                    )
+                },
+            )
         )
 
         self.verify_completions(
-            self.dap_server.get_completions("foo1.var1 + foo1.v"),
-            [{"text": "var1", "label": "foo1.var1", "detail": "int"}],
+            TestCase(
+                input="foo1.var1 + foo1.v",
+                expected={CompletionItem(label="foo1.var1", detail="int", length=6)},
+            )
         )
 
         self.verify_completions(
-            self.dap_server.get_completions("foo1.var1 + v"),
-            [{"text": "var1", "label": "var1", "detail": "int &"}],
+            TestCase(
+                input="foo1.var1 + v",
+                expected={CompletionItem(label="var1", detail="int &", length=1)},
+            )
         )
 
         # should correctly handle spaces between objects and member operators
         self.verify_completions(
-            self.dap_server.get_completions("foo1 .v"),
-            [{"text": "var1", "label": ".var1", "detail": "int"}],
-            [{"text": "var2", "label": ".var2", "detail": "int"}],
+            TestCase(
+                input="foo1 .v",
+                expected={CompletionItem(label=".var1", detail="int", length=2)},
+                not_expected={CompletionItem(label=".var2", detail="int", length=2)},
+            )
         )
 
         self.verify_completions(
-            self.dap_server.get_completions("foo1 . v"),
-            [{"text": "var1", "label": "var1", "detail": "int"}],
-            [{"text": "var2", "label": "var2", "detail": "int"}],
+            TestCase(
+                input="foo1 . v",
+                expected={CompletionItem(label="var1", detail="int", length=1)},
+                not_expected={CompletionItem(label="var2", detail="int", length=1)},
+            )
         )
 
         # Even in variable mode, we can still use the escape prefix
         self.verify_completions(
-            self.dap_server.get_completions("`mem"), [memory_completion]
+            TestCase(input="`mem", expected={memory_completion.clone(length=3)})
         )
 
     def test_auto_completions(self):
@@ -261,24 +356,28 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         # We are stopped inside `main`. Variables `var1` and `var2` are in scope.
         # Make sure, we offer all completions
         self.verify_completions(
-            self.dap_server.get_completions("va"),
-            [
-                command_var_completion,
-                variable_var1_completion,
-                variable_var2_completion,
-            ],
+            TestCase(
+                input="va",
+                expected={
+                    command_var_completion.clone(length=2),
+                    variable_var1_completion.clone(length=2),
+                    variable_var2_completion.clone(length=2),
+                },
+            )
         )
 
         # If we are using the escape prefix, only commands are suggested, but no variables
         self.verify_completions(
-            self.dap_server.get_completions("`va"),
-            [
-                command_var_completion,
-            ],
-            [
-                variable_var1_completion,
-                variable_var2_completion,
-            ],
+            TestCase(
+                input="`va",
+                expected={
+                    command_var_completion.clone(length=2),
+                },
+                not_expected={
+                    variable_var1_completion.clone(length=2),
+                    variable_var2_completion.clone(length=2),
+                },
+            )
         )
 
         # TODO: Note we are not checking the result because the `expression --` command adds an extra character
