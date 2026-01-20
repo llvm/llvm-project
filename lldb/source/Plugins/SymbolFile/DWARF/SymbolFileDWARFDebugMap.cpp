@@ -33,6 +33,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 #include "lldb/Target/StackFrame.h"
@@ -1609,8 +1610,8 @@ SymbolFileDWARFDebugMap::ResolveFunctionCallLabel(FunctionCallLabel &label) {
   const uint64_t oso_idx = GetOSOIndexFromUserID(label.symbol_id);
   SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
   if (!oso_dwarf)
-    return llvm::createStringError(llvm::formatv(
-        "couldn't find symbol file for {0} in debug-map.", label));
+    return llvm::createStringErrorV(
+        "couldn't find symbol file for {0} in debug-map.", label);
 
   return oso_dwarf->ResolveFunctionCallLabel(label);
 }

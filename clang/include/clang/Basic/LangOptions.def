@@ -424,7 +424,6 @@ ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest, NotCompatible,
              "with")
 
 VALUE_LANGOPT(FunctionAlignment, 5, 0, Compatible, "Default alignment for functions")
-VALUE_LANGOPT(PreferredFunctionAlignment, 5, 0, Compatible, "Preferred alignment for functions")
 VALUE_LANGOPT(LoopAlignment, 32, 0, Compatible, "Default alignment for loops")
 
 LANGOPT(FixedPoint, 1, 0, NotCompatible, "fixed point types")
@@ -505,6 +504,9 @@ LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety analysis for C++")
 
 LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Experimental lifetime safety inference analysis for C++")
+
+// TODO: Remove flag and default to end-of-TU analysis for lifetime safety after performance validation.
+LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, NotCompatible, "Experimental lifetime safety at translation-unit end, analyzing functions in call graph post-order for C++")
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 

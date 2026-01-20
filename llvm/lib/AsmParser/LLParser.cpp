@@ -1470,7 +1470,7 @@ bool LLParser::parseGlobal(const std::string &Name, unsigned NameID,
         return true;
     } else if (Lex.getKind() == lltok::kw_align) {
       MaybeAlign Alignment;
-      if (parseOptionalAlignment(lltok::kw_align, Alignment))
+      if (parseOptionalAlignment(Alignment))
         return true;
       if (Alignment)
         GV->setAlignment(*Alignment);
@@ -1569,7 +1569,7 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
         return true;
       Alignment = Align(Value);
     } else {
-      if (parseOptionalAlignment(lltok::kw_align, Alignment, true))
+      if (parseOptionalAlignment(Alignment, true))
         return true;
     }
     B.addAlignmentAttr(Alignment);
@@ -2415,11 +2415,10 @@ bool LLParser::parseOptionalFunctionMetadata(Function &F) {
 
 /// parseOptionalAlignment
 ///   ::= /* empty */
-///   ::= KW 4
-bool LLParser::parseOptionalAlignment(lltok::Kind KW, MaybeAlign &Alignment,
-                                      bool AllowParens) {
+///   ::= 'align' 4
+bool LLParser::parseOptionalAlignment(MaybeAlign &Alignment, bool AllowParens) {
   Alignment = std::nullopt;
-  if (!EatIfPresent(KW))
+  if (!EatIfPresent(lltok::kw_align))
     return false;
   LocTy AlignLoc = Lex.getLoc();
   uint64_t Value = 0;
@@ -2733,7 +2732,7 @@ bool LLParser::parseOptionalCommaAlign(MaybeAlign &Alignment,
     if (Lex.getKind() != lltok::kw_align)
       return error(Lex.getLoc(), "expected metadata or 'align'");
 
-    if (parseOptionalAlignment(lltok::kw_align, Alignment))
+    if (parseOptionalAlignment(Alignment))
       return true;
   }
 
@@ -6803,7 +6802,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   LocTy BuiltinLoc;
   std::string Section;
   std::string Partition;
-  MaybeAlign Alignment, PrefAlignment;
+  MaybeAlign Alignment;
   std::string GC;
   GlobalValue::UnnamedAddr UnnamedAddr = GlobalValue::UnnamedAddr::None;
   unsigned AddrSpace = 0;
@@ -6820,8 +6819,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
       (EatIfPresent(lltok::kw_section) && parseStringConstant(Section)) ||
       (EatIfPresent(lltok::kw_partition) && parseStringConstant(Partition)) ||
       parseOptionalComdat(FunctionName, C) ||
-      parseOptionalAlignment(lltok::kw_align, Alignment) ||
-      parseOptionalAlignment(lltok::kw_prefalign, PrefAlignment) ||
+      parseOptionalAlignment(Alignment) ||
       (EatIfPresent(lltok::kw_gc) && parseStringConstant(GC)) ||
       (EatIfPresent(lltok::kw_prefix) && parseGlobalTypeAndValue(Prefix)) ||
       (EatIfPresent(lltok::kw_prologue) && parseGlobalTypeAndValue(Prologue)) ||
@@ -6923,7 +6921,6 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   Fn->setUnnamedAddr(UnnamedAddr);
   if (Alignment)
     Fn->setAlignment(*Alignment);
-  Fn->setPreferredAlignment(PrefAlignment);
   Fn->setSection(Section);
   Fn->setPartition(Partition);
   Fn->setComdat(C);
@@ -8559,7 +8556,7 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
   bool AteExtraComma = false;
   if (EatIfPresent(lltok::comma)) {
     if (Lex.getKind() == lltok::kw_align) {
-      if (parseOptionalAlignment(lltok::kw_align, Alignment))
+      if (parseOptionalAlignment(Alignment))
         return true;
       if (parseOptionalCommaAddrSpace(AddrSpace, ASLoc, AteExtraComma))
         return true;
@@ -8574,7 +8571,7 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
         return true;
       if (EatIfPresent(lltok::comma)) {
         if (Lex.getKind() == lltok::kw_align) {
-          if (parseOptionalAlignment(lltok::kw_align, Alignment))
+          if (parseOptionalAlignment(Alignment))
             return true;
           if (parseOptionalCommaAddrSpace(AddrSpace, ASLoc, AteExtraComma))
             return true;

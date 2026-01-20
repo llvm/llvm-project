@@ -3,9 +3,11 @@
 misc-const-correctness
 ======================
 
-This check implements detection of local variables which could be declared as
-``const`` but are not. Declaring variables as ``const`` is required or
-recommended by many coding guidelines, such as:
+Finds local variables and function parameters which could be declared as
+``const`` but are not.
+
+Declaring variables as ``const`` is required or recommended by many coding
+guidelines, such as:
 `ES.25 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es25-declare-an-object-const-or-constexpr-unless-you-want-to-modify-its-value-later-on>`_
 from the C++ Core Guidelines.
 
@@ -58,9 +60,9 @@ Limitations
 
 The check does not run on `C` code.
 
-The check will not analyze templated variables or variables that are
-instantiation dependent. Different instantiations can result in
-different ``const`` correctness properties and in general it is not
+The check will not analyze templated variables, template functions or variables
+that are instantiation dependent. Different instantiations can result
+in different ``const`` correctness properties and in general it is not
 possible to find all instantiations of a template. The template might
 be used differently in an independent translation unit.
 
@@ -103,6 +105,20 @@ Options
   ``int *ptr = &i;``. For specific checks, see
   :option:`WarnPointersAsValues` and :option:`WarnPointersAsPointers`.
   Default is `true`.
+
+.. option:: AnalyzeParameters
+
+  Enable or disable the analysis of function parameters, like
+  ``void foo(int* ptr)``. Only reference and pointer parameters are analyzed.
+  Currently, member functions (including constructors) and lambdas are excluded
+  from the analysis. Default is `true`.
+
+  .. code-block:: c++
+
+    // Warning
+    void function(int& param) {}
+    // No warning
+    void function(const int& param) {}
 
 .. option:: WarnPointersAsValues
 
