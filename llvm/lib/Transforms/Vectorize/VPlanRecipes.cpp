@@ -3288,14 +3288,23 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
     if (!Cur || !Seen.insert(Cur).second)
       continue;
 
+    bool Blend = isa_and_nonnull<PHINode>(Cur->getUnderlyingValue()) &&
+                 match(Cur, m_VPInstruction<Instruction::Select>());
+    // Check if any V* in m_Select(C1, m_Select(C2, ..., V2), V1) was visited.
+    auto VisitedIncomingValue = [&Seen](const VPSingleDefRecipe *Blend) {
+      const VPValue *V = Blend;
+      SmallVector<const VPValue *> IncomingVals;
+      while (V->getUnderlyingValue() == Blend->getUnderlyingValue()) {
+        const VPRecipeBase *Select = V->getDefiningRecipe();
+        if (Seen.contains(Select->getOperand(1)->getDefiningRecipe()))
+          return true;
+        V = Select->getOperand(2);
+      }
+      return Seen.contains(V->getDefiningRecipe());
+    };
     // Skip blends that use V only through a compare by checking if any incoming
     // value was already visited.
-    VPValue *SelTrue, *SelFalse;
-    if (isa_and_nonnull<PHINode>(Cur->getUnderlyingValue()) &&
-        match(Cur, m_VPInstruction<Instruction::Select>(
-                       m_VPValue(), m_VPValue(SelTrue), m_VPValue(SelFalse))) &&
-        !Seen.contains(SelTrue->getDefiningRecipe()) &&
-        !Seen.contains(SelFalse->getDefiningRecipe()))
+    if (Blend && !VisitedIncomingValue(Cur))
       continue;
 
     for (VPUser *U : Cur->users()) {
@@ -3316,17 +3325,13 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
       }
     }
 
-    for (VPUser *U : Cur->users()) {
-      // The legacy cost model only supports scalarization loads/stores with phi
-      // addresses, if the phi is directly used as load/store address. Don't
-      // traverse further for PHI selects.
-      if (isa_and_nonnull<PHINode>(Cur->getUnderlyingValue()) &&
-          (!isa<VPSingleDefRecipe>(U) ||
-           cast<VPSingleDefRecipe>(U)->getUnderlyingValue() !=
-               Cur->getUnderlyingValue()))
-        continue;
-      WorkList.push_back(U);
-    }
+    // The legacy cost model only supports scalarization loads/stores with phi
+    // addresses, if the phi is directly used as load/store address. Don't
+    // traverse further for Blends.
+    if (Blend)
+      continue;
+
+    append_range(WorkList, Cur->users());
   }
   return false;
 }
