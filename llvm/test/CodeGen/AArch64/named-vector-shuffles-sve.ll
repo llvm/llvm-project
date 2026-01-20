@@ -459,21 +459,17 @@ define <vscale x 2 x i8> @splice_nxv2i8_idx(<vscale x 2 x i8> %a, <vscale x 2 x 
 }
 
 ; Verify splitvec type legalisation works as expected.
-define <vscale x 8 x i32> @splice_nxv8i32_idx(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b) #0 {
+define <vscale x 8 x i32> @splice_nxv8i32_idx(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b) vscale_range(1, 16) #0 {
 ; CHECK-LABEL: splice_nxv8i32_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-4
-; CHECK-NEXT:    rdvl x8, #2
-; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
-; CHECK-NEXT:    cmp x8, #8
 ; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    orr x8, x8, #0x8
 ; CHECK-NEXT:    str z3, [sp, #3, mul vl]
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
-; CHECK-NEXT:    orr x8, x9, x8
 ; CHECK-NEXT:    ldr z0, [x8]
 ; CHECK-NEXT:    ldr z1, [x8, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #4
