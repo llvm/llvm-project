@@ -10,7 +10,7 @@
 
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
-// template<class ExecutionPolicy, class ForwardIterator,
+// template<class ExecutionPolicy, class ForwardIterator>
 //   bool is_sorted(ExecutionPolicy&& exec,
 //                  ForwardIterator first, ForwardIterator last);
 
@@ -18,6 +18,7 @@
 #include <cassert>
 #include <functional>
 #include <numeric>
+#include <limits>
 
 #include "test_execution_policies.h"
 #include "test_iterators.h"
@@ -174,6 +175,46 @@ struct Test {
       int a[]     = {1, 1, 1, 1};
       unsigned sa = sizeof(a) / sizeof(a[0]);
       assert(std::is_sorted(policy, Iter(a), Iter(a + sa)));
+    }
+    {
+      int a[]     = {std::numeric_limits<int>::min(),
+                     std::numeric_limits<int>::min(),
+                     std::numeric_limits<int>::max(),
+                     std::numeric_limits<int>::max()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(std::is_sorted(policy, Iter(a), Iter(a + sa)));
+    }
+    {
+      int a[]     = {std::numeric_limits<int>::min(),
+                     std::numeric_limits<int>::max(),
+                     std::numeric_limits<int>::min(),
+                     std::numeric_limits<int>::max()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(!std::is_sorted(policy, Iter(a), Iter(a + sa)));
+    }
+    {
+      int a[] = {
+          std::numeric_limits<int>::min(),
+          std::numeric_limits<int>::min() / 2,
+          -1,
+          0,
+          1,
+          std::numeric_limits<int>::max() / 2,
+          std::numeric_limits<int>::max()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(std::is_sorted(policy, Iter(a), Iter(a + sa)));
+    }
+    {
+      int a[] = {
+          std::numeric_limits<int>::min(),
+          std::numeric_limits<int>::min() / 2,
+          1,
+          0,
+          -1,
+          std::numeric_limits<int>::max() / 2,
+          std::numeric_limits<int>::max()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(!std::is_sorted(policy, Iter(a), Iter(a + sa)));
     }
   }
 };

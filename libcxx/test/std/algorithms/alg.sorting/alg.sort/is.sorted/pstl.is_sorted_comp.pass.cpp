@@ -176,6 +176,46 @@ struct Test {
       unsigned sa = sizeof(a) / sizeof(a[0]);
       assert(std::is_sorted(policy, Iter(a), Iter(a + sa), std::greater<int>()));
     }
+    {
+      int a[]     = {std::numeric_limits<int>::max(),
+                     std::numeric_limits<int>::max(),
+                     std::numeric_limits<int>::min(),
+                     std::numeric_limits<int>::min()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(std::is_sorted(policy, Iter(a), Iter(a + sa), std::greater<int>()));
+    }
+    {
+      int a[]     = {std::numeric_limits<int>::min(),
+                     std::numeric_limits<int>::max(),
+                     std::numeric_limits<int>::min(),
+                     std::numeric_limits<int>::max()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(!std::is_sorted(policy, Iter(a), Iter(a + sa), std::greater<int>()));
+    }
+    {
+      int a[] = {
+          std::numeric_limits<int>::max(),
+          std::numeric_limits<int>::max() / 2,
+          1,
+          0,
+          -1,
+          std::numeric_limits<int>::min() / 2,
+          std::numeric_limits<int>::min()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(std::is_sorted(policy, Iter(a), Iter(a + sa), std::greater<int>()));
+    }
+    {
+      int a[] = {
+          std::numeric_limits<int>::max(),
+          std::numeric_limits<int>::max() / 2,
+          -1,
+          0,
+          1,
+          std::numeric_limits<int>::min() / 2,
+          std::numeric_limits<int>::min()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(!std::is_sorted(policy, Iter(a), Iter(a + sa), std::greater<int>()));
+    }
   }
 };
 

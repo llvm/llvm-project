@@ -81,6 +81,7 @@ namespace __pstl {
 // - count
 // - equal(3 legs)
 // - equal
+// - is_sorted
 // - reduce
 //
 // transform and transform_binary family
@@ -394,13 +395,14 @@ struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Comp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
-    if constexpr (__has_random_access_iterator_category<_ForwardIterator>::value) {
+    if constexpr (__has_bidirectional_iterator_category<_ForwardIterator>::value) {
       if (__first == __last)
         return true; // Empty, sorted by definition
-      _ForwardIterator __first2 = __first + 1;
+      _ForwardIterator __first2 = __first;
+      ++__first2; // __first2 = __first + 1
       if (__first2 == __last)
         return true; // Only one element, sorted by definition
-      --__last;
+      --__last;      // __last = __last - 1
       using _TransformReduce = __dispatch<__transform_reduce_binary, __current_configuration, _ExecutionPolicy>;
       using _Ref             = __iterator_reference<_ForwardIterator>;
       return _TransformReduce()(
