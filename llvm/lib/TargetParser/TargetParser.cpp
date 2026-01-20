@@ -373,21 +373,44 @@ insertWaveSizeFeature(StringRef GPU, const Triple &T,
   const bool IsNullGPU = GPU.empty();
   const bool TargetHasWave32 = DefaultFeatures.count("wavefrontsize32");
   const bool TargetHasWave64 = DefaultFeatures.count("wavefrontsize64");
-  const bool HaveWave32 = Features.count("wavefrontsize32");
-  const bool HaveWave64 = Features.count("wavefrontsize64");
-  if (HaveWave32 && HaveWave64)
+
+  auto Wave32Itr = Features.find("wavefrontsize32");
+  auto Wave64Itr = Features.find("wavefrontsize64");
+  const bool EnableWave32 =
+      Wave32Itr != Features.end() && Wave32Itr->getValue();
+  const bool EnableWave64 =
+      Wave64Itr != Features.end() && Wave64Itr->getValue();
+  const bool DisableWave32 =
+      Wave32Itr != Features.end() && !Wave32Itr->getValue();
+  const bool DisableWave64 =
+      Wave64Itr != Features.end() && !Wave64Itr->getValue();
+
+  if (EnableWave32 && EnableWave64)
     return {AMDGPU::INVALID_FEATURE_COMBINATION,
-            "'wavefrontsize32' and 'wavefrontsize64' are mutually exclusive"};
+            "'+wavefrontsize32' and '+wavefrontsize64' are mutually exclusive"};
+  if (DisableWave32 && DisableWave64)
+    return {AMDGPU::INVALID_FEATURE_COMBINATION,
+            "'-wavefrontsize32' and '-wavefrontsize64' are mutually exclusive"};
 
-  if (HaveWave32 && !IsNullGPU && TargetHasWave64)
-    return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "wavefrontsize32"};
+  if (!IsNullGPU) {
+    if (TargetHasWave64) {
+      if (EnableWave32)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "+wavefrontsize32"};
+      if (DisableWave64)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "-wavefrontsize64"};
+    }
 
-  if (HaveWave64 && !IsNullGPU && TargetHasWave32)
-    return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "wavefrontsize64"};
+    if (TargetHasWave32) {
+      if (EnableWave64)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "+wavefrontsize64"};
+      if (DisableWave32)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "-wavefrontsize32"};
+    }
+  }
 
   // Don't assume any wavesize with an unknown subtarget.
   // Default to wave32 if target supports both.
-  if (!IsNullGPU && !HaveWave32 && !HaveWave64 && !TargetHasWave32 &&
+  if (!IsNullGPU && !EnableWave32 && !EnableWave64 && !TargetHasWave32 &&
       !TargetHasWave64)
     Features.insert(std::make_pair("wavefrontsize32", true));
 
