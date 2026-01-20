@@ -5,6 +5,10 @@ build system see
 [LLVM's Getting Started](https://llvm.org/docs/GettingStarted.html) and
 [Advanced Build](https://llvm.org//docs/AdvancedBuilds.html) pages.
 
+```{contents}
+:depth: 3
+```
+
 
 ## Requirements
 
@@ -36,9 +40,10 @@ omitting `amdgpu` from the
 
 ## Building on Linux
 
-### Bootstrapping Build
+### Bootstrapping Build (Build together with LLVM)
 
-An LLVM *bootstrapping build* compiles LLVM and Clang first, then uses this just-built clang to build the runtimes such as OpenMP.
+An LLVM *bootstrapping build* compiles LLVM and Clang first, then uses this
+just-built Clang to build the runtimes such as OpenMP.
 
 ```sh
 git clone https://github.com/llvm/llvm-project.git
@@ -87,12 +92,12 @@ as well.
 
 If [`CMAKE_INSTALL_PREFIX`][CMAKE_INSTALL_PREFIX] is omitted, CMake defaults to
 `/usr/local` to install the libraries globally. This is not recommended since it
-may be in interfere with the system's OpenMP installation, such as `omp.h` from
+might interfere with the system's OpenMP installation, such as `omp.h` from
 gcc.
 
 
 (default_runtimes_build)=
-### Runtimes Default/Standalone Build
+### Runtimes Default/Standalone Build (Using a pre-built LLVM)
 
 An LLVM *default runtimes build* (sometimes also *standalone runtimes build*)
 uses an pre-existing LLVM and Clang builds to directly compile the OpenMP
@@ -101,24 +106,42 @@ libraries.
 ```sh
 git clone https://github.com/llvm/llvm-project.git
 cd llvm-project
+
+# Building LLVM
+mkdir build
+cd build
+cmake ../llvm -G Ninja            \
+    -DCMAKE_BUILD_TYPE=Release    \
+    -DCMAKE_INSTALL_PREFIX=<PATH> \
+    -DLLVM_ENABLE_PROJECTS=clang
+ninja
+ninja install
+cd ..
+
+# Building the OpenMP libraries
 mkdir build-runtimes
 cd build-runtimes
-cmake ../runtimes -G Ninja         \
-    -DCMAKE_BUILD_TYPE=Release     \
-    -DCMAKE_INSTALL_PREFIX=<PATH>  \
-    -DLLVM_BINARY_DIR=../build     \
+cmake ../runtimes -G Ninja        \
+    -DCMAKE_BUILD_TYPE=Release    \
+    -DCMAKE_INSTALL_PREFIX=<PATH> \
+    -DLLVM_BINARY_DIR=../build    \
     -DLLVM_ENABLE_RUNTIMES=openmp
 ninja              # Build
 ninja check-openmp # Run regression and unit tests
 ninja install      # Installs files to <PATH>/bin, <PATH>/lib, etc
 ```
 
-where `../build` is the path to a completed LLVM and Clang build. It is expected
-to have been built from the same Git commit as OpenMP. It will, however, use the
-compiler detected by CMake, usually gcc. To also make it use Clang, add
+Here, `../build` is the path the build of LLVM completed in the first step. It
+is expected to have been built from the same Git commit as OpenMP. It will,
+however, use the compiler detected by CMake, usually gcc.
+To also make it use Clang, add
 `-DCMAKE_C_COMPILER=../build/bin/clang -DCMAKE_C_COMPILER=../build/bin/clang++`.
 In any case, it will use Clang from `LLVM_BINARY_DIR` for running the regression
-tests. `LLVM_BINARY_DIR` can also be omitted in which case testing is disabled.
+tests. `LLVM_BINARY_DIR` can also be omitted in which case testing
+(`ninja check-openmp`) is disabled.
+
+The `CMAKE_INSTALL_PREFIX` can be the same, but does not need to. Using the same
+path will allow Clang to automatically find the OpenMP files.
 
 
 (build_offload_capable_compiler)=
@@ -172,7 +195,7 @@ cmake ../llvm -G Ninja                       \
 ```
 
 
-### Building on Windows
+## Building on Windows
 
 Building the OpenMP libraries in Windows is not much different than on Linux,
 only accounting for some differences of the shell (`cmd.exe`; for PowerShell
@@ -207,7 +230,7 @@ Compiling OpenMP with the MSVC compiler for a
 However, offloading is not supported on the Windows platform.
 
 
-### Building on macOS
+## Building on macOS
 
 On macOS machines, it is possible to build universal (or fat) libraries which
 include both i386 and x86_64 architecture objects in a single archive.
@@ -222,7 +245,7 @@ $ ninja
 ```
 
 
-## CMake Parameter Reference
+## CMake Configuration Parameter Reference
 
 CMake configuration parameters specific to OpenMP are prefixed with `OPENMP_`,
 `LIBOMP_`, ``LIBOMPTEST_`, `LIBOMPD_`, or `LIBARCHER_`. Additional configuration
@@ -318,7 +341,7 @@ This option is only used if [`LIBOMP_USE_HWLOC`](LIBOMP_USE_HWLOC) is `ON`.
 : Additional Fortran compiler flags.
 
 
-### Options for OMPT Support
+### Options for OMPT
 
 (LIBOMP_OMPT_SUPPORT)=
 **LIBOMP_OMPT_SUPPORT**:BOOL
@@ -351,7 +374,7 @@ This option is `OFF` if this feature is not supported for the platform.
 : Use `-stdlibc++` instead of `-libc++` library for C++.
 
 
-### Options for offload/`libomptarget`
+### Options for `libomptarget`/offload
 
 **LIBOMPTARGET_OPENMP_HEADER_FOLDER**:PATH
 : Path of the folder that contains `omp.h`.  This is required for testing
