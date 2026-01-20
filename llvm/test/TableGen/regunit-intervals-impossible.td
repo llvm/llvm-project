@@ -32,4 +32,4 @@ let Namespace = "Test" in {
 
 def GPR32 : RegisterClass<"Test", [i32], 32, (add R1, R2, R3)>;
 
-// CHECK: error: Cannot enforce regunit intervals, final renumbering did not produce contiguous units for register R10_R11
+// CHECK: LLVM ERROR: Cannot enforce regunit intervals, final renumbering did not produce contiguous units for register R1_R2

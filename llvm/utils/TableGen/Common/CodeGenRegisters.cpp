@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenRegisters.h"
+#include "CodeGenTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -1933,14 +1934,8 @@ void CodeGenRegBank::computeRegUnitWeights() {
 // requests this property. This will renumber regunits to ensure the
 // interval property holds, or error out if it cannot be satisfied.
 void CodeGenRegBank::enforceRegUnitIntervals() {
-  std::vector<const Record *> Targets =
-      Records.getAllDerivedDefinitions("Target");
-
-  if (Targets.empty())
-    return;
-
-  const Record *Target = Targets[0];
-  if (!Target->getValueAsBit("RegistersAreIntervals"))
+  CodeGenTarget Target(Records);
+  if (!Target.getRegistersAreIntervals())
     return;
 
   LLVM_DEBUG(dbgs() << "Enforcing regunit intervals for target\n");
@@ -2015,10 +2010,10 @@ void CodeGenRegBank::enforceRegUnitIntervals() {
     for (unsigned OldUnit : Reg.getNativeRegUnits())
       NewNativeUnits.set(GetRenumberedUnit(OldUnit));
     if (!IsContiguous(NewNativeUnits)) {
-      reportFatalInternalError("Cannot enforce regunit intervals, final "
-                               "renumbering did not produce contiguous units "
-                               "for register " +
-                               Reg.getName() + "\n");
+      PrintFatalError("Cannot enforce regunit intervals, final "
+                      "renumbering did not produce contiguous units "
+                      "for register " +
+                      Reg.getName() + "\n");
     }
     Reg.NativeRegUnits = NewNativeUnits;
   }

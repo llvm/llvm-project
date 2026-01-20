@@ -31,7 +31,7 @@ let Namespace = "Test" in {
   }
 }
 
-// CHECK: extern const uint16_t TestTargetRegUnitIntervals[][2] = {
+// CHECK: extern const unsigned TestTargetRegUnitIntervals[][2] = {
 // CHECK-NEXT: { 0, 1 },
 // CHECK-NEXT: { 1, 2 },
 // CHECK-NEXT: { 2, 3 },
