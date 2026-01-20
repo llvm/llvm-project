@@ -6880,7 +6880,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::structured_gep: {
     // Parser should refuse those 2 cases.
-    assert(Call.getNumOperands() >= 2);
+    assert(Call.arg_size() >= 1);
     assert(Call.getOperand(0)->getType()->isPointerTy());
 
     Check(Call.paramHasAttr(0, Attribute::ElementType),
@@ -6888,7 +6888,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
 
     Type *T = Call.getParamAttr(0, Attribute::ElementType).getValueAsType();
-    for (unsigned I = 1; I < Call.getNumOperands() - 1; ++I) {
+    for (unsigned I = 1; I < Call.arg_size(); ++I) {
       Value *Index = Call.getOperand(I);
       ConstantInt *CI = dyn_cast<ConstantInt>(Index);
       Check(Index->getType()->isIntegerTy(),

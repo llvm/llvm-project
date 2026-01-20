@@ -1818,7 +1818,7 @@ public:
     return getParamAttr(0, Attribute::ElementType).getValueAsType();
   }
 
-  unsigned getNumIndices() const { return getNumOperands() - 2; }
+  unsigned getNumIndices() const { return arg_size() - 1; }
 
   Value *getIndexOperand(size_t Index) const {
     assert(Index < getNumIndices());

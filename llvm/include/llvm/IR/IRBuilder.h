@@ -32,7 +32,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
@@ -1924,15 +1923,15 @@ public:
     return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID));
   }
 
-  StructuredGEPInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
-                                         ArrayRef<Value *> Indices,
-                                         const Twine &Name = "") {
+  CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
+                                ArrayRef<Value *> Indices,
+                                const Twine &Name = "") {
     SmallVector<Value *> Args;
     Args.push_back(PtrBase);
     llvm::append_range(Args, Indices);
 
-    StructuredGEPInst *Output = cast<StructuredGEPInst>(CreateIntrinsic(
-        Intrinsic::structured_gep, {PtrBase->getType()}, Args, {}, Name));
+    CallInst *Output = CreateIntrinsic(Intrinsic::structured_gep,
+                                       {PtrBase->getType()}, Args, {}, Name);
     Output->addParamAttr(
         0, Attribute::get(getContext(), Attribute::ElementType, BaseType));
     return Output;
