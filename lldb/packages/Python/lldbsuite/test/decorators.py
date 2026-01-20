@@ -103,10 +103,11 @@ def _match_decorator_property(expected, actual):
 
 def _compiler_supports(compiler, flag, source="int main() {}", output_file=None):
     """Test whether the compiler supports the given flag."""
-    with contextlib.nullcontext(
-        output_file if output_file else temp_file.OnDiskTempFile()
-    ) as ctx:
-        path = ctx.path
+    if output_file:
+        context = contextlib.nullcontext(output_file)
+    else:
+        context = temp_file.OnDiskTempFile()
+    with context as ctx:
         if platform.system() == "Darwin":
             compiler = "xcrun " + compiler
         try:
@@ -114,7 +115,7 @@ def _compiler_supports(compiler, flag, source="int main() {}", output_file=None)
                 source,
                 compiler,
                 flag,
-                path,
+                ctx.path,
             )
             subprocess.check_call(cmd, shell=True)
         except subprocess.CalledProcessError:
