@@ -197,7 +197,7 @@ public:
                                                     const FunctionType *fnType);
 
   const CIRGenFunctionInfo &
-  arrangeCIRFunctionInfo(CanQualType returnType,
+  arrangeCIRFunctionInfo(FunctionType::ExtInfo info, CanQualType returnType,
                          llvm::ArrayRef<CanQualType> argTypes,
                          RequiredArgs required);
 

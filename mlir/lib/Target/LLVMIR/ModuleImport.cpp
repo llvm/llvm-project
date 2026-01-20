@@ -2673,6 +2673,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
+    StringLiteral("noreturn"),
 };
 
 /// Converts LLVM attributes from `func` into MLIR attributes and adds them
