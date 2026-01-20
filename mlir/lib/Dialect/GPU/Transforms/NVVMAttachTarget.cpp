@@ -53,6 +53,8 @@ DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
     addFlag("fast");
   if (ftzFlag)
     addFlag("ftz");
+  if (compilerDiagnosticsFlag)
+    addFlag("collect-compiler-diagnostics");
 
   // Tokenize and set the optional command line options.
   if (!cmdOptions.empty()) {
