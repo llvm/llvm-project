@@ -320,28 +320,37 @@ static bool bodyMatcherForZeroPointOffsets(Operation *addOp, Operation *mulOp,
 ///     %out + (%lhs * %rhs)
 ///   where: %lhs, %rhs and %out are block arguments and
 ///          %lhs and %rhs can have optional upcast operation.
+/// For i1 element types, the pattern matches:
+///     %out | (%lhs & %rhs)
+///   using arith.ori for accumulation and arith.andi for multiplication.
 /// NOTE: In case of zero point offset convolution ops %lhs and %rhs would be :-
 ///       %input - %input_scalar
 ///          where, %input_scalar can have optional upcast operation.
 static bool bodyMatcherForConvolutionOps(Value yieldVal, Block *body,
                                          bool containsZeroPointOffset = false) {
-  Operation *addOp = yieldVal.getDefiningOp();
-  if (!isa_and_present<arith::AddIOp, arith::AddFOp>(addOp))
-    return false;
+  bool isOrOp = false;
+  Operation *accOp = yieldVal.getDefiningOp();
+  if (!isa_and_present<arith::AddIOp, arith::AddFOp>(accOp)) {
+    if (!isa_and_present<arith::OrIOp>(accOp))
+      return false;
+    isOrOp = true;
+  }
 
-  Operation *mulOp = addOp->getOperand(1).getDefiningOp();
-  if (!isa_and_present<arith::MulIOp, arith::MulFOp>(mulOp))
+  Operation *mulOp = accOp->getOperand(1).getDefiningOp();
+  if (!isOrOp && !isa_and_present<arith::MulIOp, arith::MulFOp>(mulOp))
+    return false;
+  if (isOrOp && !isa_and_present<arith::AndIOp>(mulOp))
     return false;
 
   if (containsZeroPointOffset) {
-    return bodyMatcherForZeroPointOffsets(addOp, mulOp, body);
+    return bodyMatcherForZeroPointOffsets(accOp, mulOp, body);
   }
   BlockArgument lhsBlockArg =
       getBlockArgumentWithOptionalCastOps(mulOp->getOperand(0));
   BlockArgument rhsBlockArg =
       getBlockArgumentWithOptionalCastOps(mulOp->getOperand(1));
   BlockArgument outBlockArg =
-      getBlockArgumentWithOptionalCastOps(addOp->getOperand(0));
+      getBlockArgumentWithOptionalCastOps(accOp->getOperand(0));
   if (!lhsBlockArg || !rhsBlockArg || !outBlockArg ||
       lhsBlockArg.getOwner() != body || rhsBlockArg.getOwner() != body ||
       outBlockArg.getOwner() != body || lhsBlockArg.getArgNumber() != 0 ||
@@ -386,8 +395,11 @@ static bool bodyMatcherForMinUnsignedPoolOps(Value yieldVal, Block *body) {
   return bodyMatcherForPoolOps<arith::MinUIOp>(yieldVal, body);
 }
 
+/// Matches sum pooling body pattern. For i1 element types, arith.ori is used
+/// instead of arith.addi/arith.addf for accumulation.
 static bool bodyMatcherForSumPoolOps(Value yieldVal, Block *body) {
-  return bodyMatcherForPoolOps<arith::AddIOp, arith::AddFOp>(yieldVal, body);
+  return bodyMatcherForPoolOps<arith::AddIOp, arith::AddFOp, arith::OrIOp>(
+      yieldVal, body);
 }
 
 static AffineExpr getAffineMapDim(ArrayAttr indexingMaps, uint32_t mapIndex,
