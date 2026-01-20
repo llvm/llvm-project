@@ -12,20 +12,12 @@ class OnDiskTempFile:
     def __init__(self, delete=True):
         self.path = None
 
-    def __del__(self):
-        if self.path and os.path.exists(self.path):
-            os.remove(self.path)
-
-    def _set_path(self):
-        if self.path:
-            return
+    def __enter__(self):
         fd, path = tempfile.mkstemp()
         os.close(fd)
         self.path = path
-
-    def __enter__(self):
-        self._set_path()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+        if os.path.exists(self.path):
+            os.remove(self.path)
