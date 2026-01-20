@@ -1551,10 +1551,10 @@ bool ARMTargetLowering::shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
 }
 
 // Create a fast isel object.
-FastISel *
-ARMTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
-                                  const TargetLibraryInfo *libInfo) const {
-  return ARM::createFastISel(funcInfo, libInfo);
+FastISel *ARMTargetLowering::createFastISel(
+    FunctionLoweringInfo &funcInfo, const TargetLibraryInfo *libInfo,
+    const LibcallLoweringInfo *libcallLowering) const {
+  return ARM::createFastISel(funcInfo, libInfo, libcallLowering);
 }
 
 Sched::Preference ARMTargetLowering::getSchedulingPreference(SDNode *N) const {
