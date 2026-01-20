@@ -29,6 +29,7 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -49,9 +50,9 @@ namespace {
 static bool inDeviceContext(mlir::Operation *op) {
   if (op->getParentOfType<cuf::KernelOp>())
     return true;
-  if (auto funcOp = op->getParentOfType<mlir::gpu::GPUFuncOp>())
+  if (op->getParentOfType<mlir::acc::OffloadRegionOpInterface>())
     return true;
-  if (auto funcOp = op->getParentOfType<mlir::gpu::LaunchOp>())
+  if (auto funcOp = op->getParentOfType<mlir::gpu::GPUFuncOp>())
     return true;
   if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
     if (auto cudaProcAttr =
@@ -128,6 +129,9 @@ struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
     if (op.getResult().getUsers().empty())
       return success();
     if (auto addrOfOp = op.getMemref().getDefiningOp<fir::AddrOfOp>()) {
+      if (inDeviceContext(addrOfOp)) {
+        return failure();
+      }
       if (auto global = symTab.lookup<fir::GlobalOp>(
               addrOfOp.getSymbol().getRootReference().getValue())) {
         if (cuf::isRegisteredDeviceGlobal(global)) {

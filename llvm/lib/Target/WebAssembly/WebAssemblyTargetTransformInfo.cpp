@@ -58,6 +58,26 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
 
+  if (ST->hasSIMD128()) {
+    static const CostTblEntry ArithCostTbl[]{
+        // extmul + (maybe awkward) shuffle
+        {ISD::MUL, MVT::v8i8, 4},
+        // 2x extmul + (okay) shuffle
+        {ISD::MUL, MVT::v16i8, 4},
+        // extmul
+        {ISD::MUL, MVT::v4i16, 1},
+        // extmul
+        {ISD::MUL, MVT::v2i32, 1},
+    };
+    EVT DstVT = TLI->getValueType(DL, Ty);
+    if (DstVT.isSimple()) {
+      int ISD = TLI->InstructionOpcodeToISD(Opcode);
+      if (const auto *Entry =
+              CostTableLookup(ArithCostTbl, ISD, DstVT.getSimpleVT()))
+        return Entry->Cost;
+    }
+  }
+
   InstructionCost Cost =
       BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
           Opcode, Ty, CostKind, Op1Info, Op2Info);
@@ -302,6 +322,9 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
     if (ElSize != 8 && ElSize != 16 && ElSize != 32 && ElSize != 64)
       return InstructionCost::getInvalid();
 
+    if (Factor != 2 && Factor != 4)
+      return InstructionCost::getInvalid();
+
     auto *SubVecTy =
         VectorType::get(VecTy->getElementType(),
                         VecTy->getElementCount().divideCoefficientBy(Factor));
@@ -428,6 +451,19 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
     return OpAExtend == TTI::PR_SignExtend ? Cost * 2 : Cost * 4;
 
   return Invalid;
+}
+
+InstructionCost
+WebAssemblyTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                          TTI::TargetCostKind CostKind) const {
+  switch (ICA.getID()) {
+  case Intrinsic::experimental_vector_extract_last_active:
+    // TODO: Remove once the intrinsic can be lowered without crashes.
+    return InstructionCost::getInvalid();
+  default:
+    break;
+  }
+  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
 TTI::ReductionShuffle WebAssemblyTTIImpl::getPreferredExpandedReductionShuffle(

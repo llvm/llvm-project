@@ -261,9 +261,8 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
               o << "0";
             } else if (Reg->isSubClassOf("RegisterByHwMode")) {
               RegisterByHwMode(Reg, Target.getRegBank())
-                      .generateResolverLambda(o, Target.getHwModes(),
-                                              /*Indent=*/6)
-                  << "(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))";
+                  .emitResolverCall(
+                      o, "STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo)");
             } else {
               o << Reg->getValueAsString("Namespace") << "::" << Reg->getName();
             }

@@ -40,6 +40,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/HashRecognize.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -3180,7 +3181,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   if (auto *I = dyn_cast<Instruction>(NewXNext))
     I->copyIRFlags(XNext, /*IncludeWrapFlags=*/true);
 
-  // Step 3: Adjust the successor basic block to recieve the computed
+  // Step 3: Adjust the successor basic block to receive the computed
   //         recurrence's final value instead of the recurrence itself.
 
   XCurr->replaceUsesOutsideBlock(NewX, LoopHeaderBB);
@@ -3517,7 +3518,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
                         CurLoop->getName() + ".tripcount", /*HasNUW=*/true,
                         /*HasNSW=*/Bitwidth != 2);
 
-  // Step 2: Adjust the successor basic block to recieve the original
+  // Step 2: Adjust the successor basic block to receive the original
   //         induction variable's final value instead of the orig. IV itself.
 
   IV->replaceUsesOutsideBlock(IVFinal, LoopHeaderBB);

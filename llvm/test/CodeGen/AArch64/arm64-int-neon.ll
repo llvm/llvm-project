@@ -3,7 +3,13 @@
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -global-isel -global-isel-abort=2 -mattr=+fprcvt,+fullfp16 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 
-; CHECK-GI:  warning: Instruction selection used fallback path for test_uqadd_s32
+; CHECK-GI:  warning: Instruction selection used fallback path for test_sqshrn_s32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqshrun_s32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqshrn_s32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqrshrn_s32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqrshrun_s32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqrshrn_s32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqadd_s32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqadd_s64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqsub_s32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqsub_s64
@@ -117,6 +123,90 @@ entry:
   %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
   %res = tail call i64 @llvm.aarch64.neon.uqshl.i64(i64 %cvt, i64 %cvt)
   store i64 %res, ptr %dst, align 8
+  ret void
+}
+
+define void @test_sqshrn_s32(float noundef %a, ptr %dst) {
+; CHECK-LABEL: test_sqshrn_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    sqshrn s0, d0, #1
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
+  %res = tail call i32 @llvm.aarch64.neon.sqshrn.i32(i64 %cvt, i32 1)
+  store i32 %res, ptr %dst, align 4
+  ret void
+}
+
+define void @test_sqshrun_s32(float noundef %a, ptr %dst) {
+; CHECK-LABEL: test_sqshrun_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    sqshrun s0, d0, #1
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
+  %res = tail call i32 @llvm.aarch64.neon.sqshrun.i32(i64 %cvt, i32 1)
+  store i32 %res, ptr %dst, align 4
+  ret void
+}
+
+define void @test_uqshrn_s32(float noundef %a, ptr %dst) {
+; CHECK-LABEL: test_uqshrn_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    uqshrn s0, d0, #1
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
+  %res = tail call i32 @llvm.aarch64.neon.uqshrn.i32(i64 %cvt, i32 1)
+  store i32 %res, ptr %dst, align 4
+  ret void
+}
+
+define void @test_sqrshrn_s32(float noundef %a, ptr %dst) {
+; CHECK-LABEL: test_sqrshrn_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    sqrshrn s0, d0, #1
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
+  %res = tail call i32 @llvm.aarch64.neon.sqrshrn.i32(i64 %cvt, i32 1)
+  store i32 %res, ptr %dst, align 4
+  ret void
+}
+
+define void @test_sqrshrun_s32(float noundef %a, ptr %dst) {
+; CHECK-LABEL: test_sqrshrun_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    sqrshrun s0, d0, #1
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
+  %res = tail call i32 @llvm.aarch64.neon.sqrshrun.i32(i64 %cvt, i32 1)
+  store i32 %res, ptr %dst, align 4
+  ret void
+}
+
+define void @test_uqrshrn_s32(float noundef %a, ptr %dst) {
+; CHECK-LABEL: test_uqrshrn_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    uqrshrn s0, d0, #1
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
+  %res = tail call i32 @llvm.aarch64.neon.uqrshrn.i32(i64 %cvt, i32 1)
+  store i32 %res, ptr %dst, align 4
   ret void
 }
 

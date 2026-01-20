@@ -66,6 +66,11 @@ flang:frontend:
       - flang/Evaluate/**/*
       - flang/Semantics/**/*
 
+flang-rt:
+  - changed-files:
+    - any-glob-to-any-file:
+      - flang-rt/**/*
+
 libclc:
   - changed-files:
     - any-glob-to-any-file:

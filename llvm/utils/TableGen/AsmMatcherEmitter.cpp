@@ -2289,9 +2289,7 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
               << indent(6) << "Inst.addOperand(MCOperand::createReg(";
         if (IsRegByHwMode) {
           RegisterByHwMode(OpInfo.Register, Target.getRegBank())
-                  .generateResolverLambda(CvtOS, Target.getHwModes(),
-                                          /*Indent=*/6)
-              << "(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))";
+                  .emitResolverCall(CvtOS, "STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo)");
         } else {
           CvtOS << Reg;
         }

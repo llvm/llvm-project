@@ -1,13 +1,57 @@
-// RUN: llvm-tblgen --gen-asm-matcher -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=ASMMATCHER %s
-// RUN: llvm-tblgen --gen-pseudo-lowering -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=PSEUDO %s
 // RUN: llvm-tblgen --gen-subtarget -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=SUBTARGET %s
 // RUN: llvm-tblgen --gen-instr-info -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=INSTRINFO %s
+// RUN: llvm-tblgen --gen-asm-matcher -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=ASMMATCHER %s
+// RUN: llvm-tblgen --gen-pseudo-lowering -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=PSEUDO %s
 // RUN: llvm-tblgen --gen-asm-writer -I %p/../../include -I %S %s -o - | FileCheck --check-prefix=ASMWRITER %s
+/// The RegInfo output is split over multiple files:
+// RUN: llvm-tblgen --gen-register-info -I %p/../../include -I %S %s -o %t.inc
+// RUN: FileCheck %s --input-file=%tEnums.inc --check-prefix=REGINFO-HEADER
+// RUN: FileCheck %s --input-file=%tMCDesc.inc --check-prefix=REGINFO-MCDESC
 /// Note: No impact on disassembler (handled by the alias expansion), so not tested here
 /// Note: DAGIsel is not supported yet
 // RUNTODO: llvm-tblgen --gen-dag-isel -I %p/../../include -I %S %s -o -
 // RUNTODO: llvm-tblgen --gen-global-isel -I %p/../../include -I %S %s -o -
 
+// REGINFO-HEADER-LABEL: // Registers by HwMode
+// REGINFO-HEADER-NEXT: class MCRegister;
+// REGINFO-HEADER-NEXT: namespace MyTarget::RegisterByHwMode {
+// REGINFO-HEADER-NEXT: LLVM_READONLY MCRegister getModeCountReg(unsigned HwMode);
+// REGINFO-HEADER-NEXT: LLVM_READONLY MCRegister getNullReg(unsigned HwMode);
+// REGINFO-HEADER-NEXT: LLVM_READONLY MCRegister getPtrRegFor64BitModesOnly(unsigned HwMode);
+// REGINFO-HEADER-NEXT: } // end namespace MyTarget::RegisterByHwMode
+// REGINFO-HEADER-NEXT:
+// REGINFO-HEADER-NEXT: } // end namespace llvm
+
+// REGINFO-MCDESC-LABEL: // Registers by HwMode
+// REGINFO-MCDESC-NEXT: namespace MyTarget::RegisterByHwMode {
+// REGINFO-MCDESC-NEXT: LLVM_READONLY MCRegister getModeCountReg(unsigned HwMode) {
+// REGINFO-MCDESC-NEXT:   switch (HwMode) {
+// REGINFO-MCDESC-NEXT:   case 0: return MyTarget::X0; // DefaultMode
+// REGINFO-MCDESC-NEXT:   case 1: return MyTarget::X1; // XPtr64
+// REGINFO-MCDESC-NEXT:   case 2: return MyTarget::X2; // YPtr32
+// REGINFO-MCDESC-NEXT:   case 3: return MyTarget::X3; // YPtr64
+// REGINFO-MCDESC-NEXT:   default: llvm_unreachable("Unhandled HwMode for Register ModeCountReg");
+// REGINFO-MCDESC-NEXT:   }
+// REGINFO-MCDESC-NEXT: }
+// REGINFO-MCDESC-NEXT: LLVM_READONLY MCRegister getNullReg(unsigned HwMode) {
+// REGINFO-MCDESC-NEXT:   switch (HwMode) {
+// REGINFO-MCDESC-NEXT:   case 0: return MyTarget::X0; // DefaultMode
+// REGINFO-MCDESC-NEXT:   case 1: return MyTarget::X0; // XPtr64
+// REGINFO-MCDESC-NEXT:   case 2: return MyTarget::Y0; // YPtr32
+// REGINFO-MCDESC-NEXT:   case 3: return MyTarget::Y0; // YPtr64
+// REGINFO-MCDESC-NEXT:   default: llvm_unreachable("Unhandled HwMode for Register NullReg");
+// REGINFO-MCDESC-NEXT:   }
+// REGINFO-MCDESC-NEXT: }
+// REGINFO-MCDESC-NEXT: LLVM_READONLY MCRegister getPtrRegFor64BitModesOnly(unsigned HwMode) {
+// REGINFO-MCDESC-NEXT:   switch (HwMode) {
+// REGINFO-MCDESC-NEXT:   case 1: return MyTarget::X1; // XPtr64
+// REGINFO-MCDESC-NEXT:   case 3: return MyTarget::Y1; // YPtr64
+// REGINFO-MCDESC-NEXT:   default: llvm_unreachable("Unhandled HwMode for Register PtrRegFor64BitModesOnly");
+// REGINFO-MCDESC-NEXT:   }
+// REGINFO-MCDESC-NEXT: }
+// REGINFO-MCDESC-NEXT: } // end namespace MyTarget::RegisterByHwMode
+// REGINFO-MCDESC-NEXT:
+// REGINFO-MCDESC-NEXT: } // end namespace llvm
 
 // SUBTARGET-LABEL:  enum class MyTargetHwModeBits : unsigned {
 // SUBTARGET-NEXT:    DefaultMode = 0,
@@ -58,31 +102,34 @@
 // INSTRINFO-NEXT: };
 
 // ASMWRITER-LABEL: static const AliasPatternCond Conds[] = {
-// ASMWRITER-NEXT:    // (TEST_PTRREG PtrRC:$dst, PtrRC:$src) - 0
+// ASMWRITER-NEXT:    // (TEST_PTRREG PtrRC:$dst, PtrRC:$src) -
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClassByHwMode, MyTarget::PtrRC},
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClassByHwMode, MyTarget::PtrRC},
-// ASMWRITER-NEXT:    // (TEST_PTRREG EvenPtrRC:$dst, EvenPtrRC:$src) - 2
+// ASMWRITER-NEXT:    // (TEST_PTRREG EvenPtrRC:$dst, EvenPtrRC:$src) -
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClassByHwMode, MyTarget::EvenPtrRC},
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClassByHwMode, MyTarget::EvenPtrRC},
-// ASMWRITER-NEXT:    // (TEST_PTRREG NullReg, PtrRC:$src) - 4
+// ASMWRITER-NEXT:    // (TEST_PTRREG NullReg, PtrRC:$src) -
 // ASMWRITER-NEXT:    {AliasPatternCond::K_Custom, 1/*NullReg*/},
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClassByHwMode, MyTarget::PtrRC},
-// ASMWRITER-NEXT:    // (TEST_PTRREG NullReg, EvenPtrRC:$src) - 6
+// ASMWRITER-NEXT:    // (TEST_PTRREG NullReg, EvenPtrRC:$src) -
 // ASMWRITER-NEXT:    {AliasPatternCond::K_Custom, 1/*NullReg*/},
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClassByHwMode, MyTarget::EvenPtrRC},
-// ASMWRITER-NEXT:    // (TEST_XREG X0, XRegs:$src) - 8
+// ASMWRITER-NEXT:    // (TEST_PTRREG PtrRegFor64BitModesOnly, PtrRC:$src) - 8
+// ASMWRITER-NEXT:    {AliasPatternCond::K_Custom, 2/*PtrRegFor64BitModesOnly*/},
+// ASMWRITER-NEXT:    {AliasPatternCond::K_RegClassByHwMode, MyTarget::PtrRC},
+// ASMWRITER-NEXT:    // (TEST_XREG X0, XRegs:$src) -
 // ASMWRITER-NEXT:    {AliasPatternCond::K_Reg, MyTarget::X0},
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClass, MyTarget::XRegsRegClassID},
-// ASMWRITER-NEXT:    // (TEST_XREG X0, EvenXRegs:$src) - 10
+// ASMWRITER-NEXT:    // (TEST_XREG X0, EvenXRegs:$src) -
 // ASMWRITER-NEXT:    {AliasPatternCond::K_Reg, MyTarget::X0},
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClass, MyTarget::EvenXRegsRegClassID},
-// ASMWRITER-NEXT:    // (TEST_XREG ModeCountReg, XRegs:$src) - 12
+// ASMWRITER-NEXT:    // (TEST_XREG ModeCountReg, XRegs:$src) -
 // ASMWRITER-NEXT:    {AliasPatternCond::K_Custom, 2/*ModeCountReg*/},
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClass, MyTarget::XRegsRegClassID},
-// ASMWRITER-NEXT:    // (TEST_YREG Y0, YRegs:$src) - 14
+// ASMWRITER-NEXT:    // (TEST_YREG Y0, YRegs:$src) -
 // ASMWRITER-NEXT:    {AliasPatternCond::K_Reg, MyTarget::Y0},
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClass, MyTarget::YRegsRegClassID},
-// ASMWRITER-NEXT:    // (TEST_YREG Y0, EvenYRegs:$src) - 16
+// ASMWRITER-NEXT:    // (TEST_YREG Y0, EvenYRegs:$src) -
 // ASMWRITER-NEXT:    {AliasPatternCond::K_Reg, MyTarget::Y0},
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClass, MyTarget::EvenYRegsRegClassID},
 // ASMWRITER-NEXT:  };
@@ -118,6 +165,18 @@
 // ASMWRITER-NEXT:      };
 // ASMWRITER-NEXT:      return MCOp.isReg() && MCOp.getReg() == getModeCountReg(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
 // ASMWRITER-NEXT:    }
+// ASMWRITER-NEXT:    case 3: {
+// ASMWRITER-NEXT:      auto getModeCountReg = [](unsigned HwMode) {
+// ASMWRITER-NEXT:        switch (HwMode) {
+// ASMWRITER-NEXT:        case 0: return MyTarget::X0; // DefaultMode
+// ASMWRITER-NEXT:        case 1: return MyTarget::X1; // XPtr64
+// ASMWRITER-NEXT:        case 2: return MyTarget::X2; // YPtr32
+// ASMWRITER-NEXT:        case 3: return MyTarget::X3; // YPtr64
+// ASMWRITER-NEXT:        default: llvm_unreachable("Unhandled HwMode for Register ModeCountReg");
+// ASMWRITER-NEXT:        }
+// ASMWRITER-NEXT:      };
+// ASMWRITER-NEXT:      return MCOp.isReg() && MCOp.getReg() == getModeCountReg(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+// ASMWRITER-NEXT:    }
 // ASMWRITER-NEXT:    }
 // ASMWRITER-NEXT:  }
 
@@ -129,6 +188,7 @@
 // ASMMATCHER-NEXT:    Convert__regNullReg__RegByHwMode_EvenPtrRC1_0,
 // ASMMATCHER-NEXT:    Convert__regX0__Reg1_0,
 // ASMMATCHER-NEXT:    Convert__regY0__Reg1_0,
+// ASMMATCHER-NEXT:    Convert__regPtrRegFor64BitModesOnly__RegByHwMode_PtrRC1_0,
 // ASMMATCHER-NEXT:    Convert__RegByHwMode_PtrRC1_0__RegByHwMode_PtrRC1_1,
 // ASMMATCHER-NEXT:    Convert__RegByHwMode_EvenPtrRC1_0__RegByHwMode_EvenPtrRC1_1,
 // ASMMATCHER-NEXT:    Convert__Reg1_0__Reg1_1,
@@ -146,6 +206,8 @@
 // ASMMATCHER-NEXT:    { CVT_regX0, 0, CVT_95_Reg, 1, CVT_Done },
 // ASMMATCHER-NEXT:    // Convert__regY0__Reg1_0
 // ASMMATCHER-NEXT:    { CVT_regY0, 0, CVT_95_Reg, 1, CVT_Done },
+// ASMMATCHER-NEXT:    // Convert__regPtrRegFor64BitModesOnly__RegByHwMode_PtrRC1_0
+// ASMMATCHER-NEXT:    { CVT_regPtrRegFor64BitModesOnly, 0, CVT_95_addRegOperands, 1, CVT_Done },
 // ASMMATCHER-NEXT:    // Convert__RegByHwMode_PtrRC1_0__RegByHwMode_PtrRC1_1
 // ASMMATCHER-NEXT:    { CVT_95_addRegOperands, 1, CVT_95_addRegOperands, 2, CVT_Done },
 // ASMMATCHER-NEXT:    // Convert__RegByHwMode_EvenPtrRC1_0__RegByHwMode_EvenPtrRC1_1
@@ -156,29 +218,13 @@
 
 // ASMMATCHER-LABEL: convertToMCInst(unsigned Kind, MCInst &Inst, unsigned Opcode,
 // ASMMATCHER-LABEL:  case CVT_regModeCountReg:
-// ASMMATCHER-NEXT:     Inst.addOperand(MCOperand::createReg([](unsigned HwMode) {
-// ASMMATCHER-NEXT:       switch (HwMode) {
-// ASMMATCHER-NEXT:       case 0: return MyTarget::X0; // DefaultMode
-// ASMMATCHER-NEXT:       case 1: return MyTarget::X1; // XPtr64
-// ASMMATCHER-NEXT:       case 2: return MyTarget::X2; // YPtr32
-// ASMMATCHER-NEXT:       case 3: return MyTarget::X3; // YPtr64
-// ASMMATCHER-NEXT:       default: llvm_unreachable("Unhandled HwMode for Register ModeCountReg");
-// ASMMATCHER-NEXT:       }
-// ASMMATCHER-NEXT:     }(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))));
+// ASMMATCHER-NEXT:     Inst.addOperand(MCOperand::createReg(MyTarget::RegisterByHwMode::getModeCountReg(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))));
 // ASMMATCHER-NEXT:     break;
 // ASMMATCHER-NEXT:   case CVT_95_Reg:
 // ASMMATCHER-NEXT:     static_cast<MyTargetOperand &>(*Operands[OpIdx]).addRegOperands(Inst, 1);
 // ASMMATCHER-NEXT:     break;
 // ASMMATCHER-NEXT:   case CVT_regNullReg:
-// ASMMATCHER-NEXT:     Inst.addOperand(MCOperand::createReg([](unsigned HwMode) {
-// ASMMATCHER-NEXT:       switch (HwMode) {
-// ASMMATCHER-NEXT:       case 0: return MyTarget::X0; // DefaultMode
-// ASMMATCHER-NEXT:       case 1: return MyTarget::X0; // XPtr64
-// ASMMATCHER-NEXT:       case 2: return MyTarget::Y0; // YPtr32
-// ASMMATCHER-NEXT:       case 3: return MyTarget::Y0; // YPtr64
-// ASMMATCHER-NEXT:       default: llvm_unreachable("Unhandled HwMode for Register NullReg");
-// ASMMATCHER-NEXT:       }
-// ASMMATCHER-NEXT:     }(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))));
+// ASMMATCHER-NEXT:     Inst.addOperand(MCOperand::createReg(MyTarget::RegisterByHwMode::getNullReg(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))));
 // ASMMATCHER-NEXT:     break;
 // ASMMATCHER-NEXT:   case CVT_95_addRegOperands:
 // ASMMATCHER-NEXT:     static_cast<MyTargetOperand &>(*Operands[OpIdx]).addRegOperands(Inst, 1);
@@ -188,6 +234,9 @@
 // ASMMATCHER-NEXT:     break;
 // ASMMATCHER-NEXT:   case CVT_regY0:
 // ASMMATCHER-NEXT:     Inst.addOperand(MCOperand::createReg(MyTarget::Y0));
+// ASMMATCHER-NEXT:     break;
+// ASMMATCHER-NEXT:   case CVT_regPtrRegFor64BitModesOnly:
+// ASMMATCHER-NEXT:     Inst.addOperand(MCOperand::createReg(MyTarget::RegisterByHwMode::getPtrRegFor64BitModesOnly(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))));
 // ASMMATCHER-NEXT:     break;
 // ASMMATCHER-NEXT:   }
 
@@ -216,6 +265,7 @@
 // ASMMATCHER-NEXT:    /* t_x.even */, MyTarget::TEST_XREG, Convert__regX0__Reg1_0, AMFBS_None, { MCK_EvenXRegs }, },
 // ASMMATCHER-NEXT:    /* t_y */, MyTarget::TEST_YREG, Convert__regY0__Reg1_0, AMFBS_None, { MCK_YRegs }, },
 // ASMMATCHER-NEXT:    /* t_y.even */, MyTarget::TEST_YREG, Convert__regY0__Reg1_0, AMFBS_None, { MCK_EvenYRegs }, },
+// ASMMATCHER-NEXT:    /* test_64_only */, MyTarget::TEST_PTRREG, Convert__regPtrRegFor64BitModesOnly__RegByHwMode_PtrRC1_0, AMFBS_None, { MCK_RegByHwMode_PtrRC }, },
 // ASMMATCHER-NEXT:    /* test_alias */, MyTarget::TEST_PTRREG, Convert__RegByHwMode_PtrRC1_0__RegByHwMode_PtrRC1_1, AMFBS_None, { MCK_RegByHwMode_PtrRC, MCK_RegByHwMode_PtrRC }, },
 // ASMMATCHER-NEXT:    /* test_alias.even */, MyTarget::TEST_PTRREG, Convert__RegByHwMode_EvenPtrRC1_0__RegByHwMode_EvenPtrRC1_1, AMFBS_None, { MCK_RegByHwMode_EvenPtrRC, MCK_RegByHwMode_EvenPtrRC }, },
 // ASMMATCHER-NEXT:    /* test_ptr */, MyTarget::TEST_PTRREG, Convert__RegByHwMode_PtrRC1_0__RegByHwMode_PtrRC1_1, AMFBS_None, { MCK_RegByHwMode_PtrRC, MCK_RegByHwMode_PtrRC }, },
@@ -244,10 +294,15 @@ def MY_T_Y_EVEN : InstAlias<"t_y.even $src", (TEST_YREG Y0, EvenYRegs:$src)>;
 def MY_T_PTR : InstAlias<"t_ptr $src", (TEST_PTRREG NullReg, PtrRC:$src)>;
 def MY_T_PTR_EVEN : InstAlias<"t_ptr.even $src", (TEST_PTRREG NullReg, EvenPtrRC:$src)>;
 
-// Add another test where the register number varies, but the regclass doesn't
+/// Add another test where the register number varies, but the regclass doesn't
 def ModeCountReg : RegisterByHwMode<XRegs, [XPtr32, XPtr64, YPtr32, YPtr64],
                                            [X0,     X1,     X2,     X3]>;
 def TEST_MODE_COUNT : InstAlias<"mode_count $src", (TEST_XREG ModeCountReg, XRegs:$src)>;
+
+/// Test where we don't have valid values for RegisterByHwMode cases:
+def PtrRegFor64BitModesOnly : RegisterByHwMode<PtrRC, [XPtr64, YPtr64], [X1, Y1]>;
+let Predicates = [Is64Bit] in
+def TEST_64_ONLY : InstAlias<"test_64_only $src", (TEST_PTRREG PtrRegFor64BitModesOnly, PtrRC:$src)>;
 
 /// Include a test for -gen-pseudo-lowering:
 class Pseudo<dag outs, dag ins> : TestInstruction {
@@ -257,19 +312,24 @@ class Pseudo<dag outs, dag ins> : TestInstruction {
   let isCodeGenOnly = 1;
 }
 // PSEUDO-LABEL: lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst)
-// PSEUDO-LABEL: case MyTarget::PseudoPtr: {
+// PSEUDO-NEXT: Inst.clear();
+// PSEUDO-NEXT: switch (MI->getOpcode()) {
+// PSEUDO-NEXT: default: return false;
+// PSEUDO-NEXT: case MyTarget::Pseudo64Only: {
+// PSEUDO-NEXT:   MCOperand MCOp;
+// PSEUDO-NEXT:   Inst.setOpcode(MyTarget::TEST_PTRREG);
+// PSEUDO-NEXT:   // Operand: dst
+// PSEUDO-NEXT:   Inst.addOperand(MCOperand::createReg(MyTarget::RegisterByHwMode::getPtrRegFor64BitModesOnly(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))));
+// PSEUDO-NEXT:   // Operand: src
+// PSEUDO-NEXT:   lowerOperand(MI->getOperand(0), MCOp);
+// PSEUDO-NEXT:   Inst.addOperand(MCOp);
+// PSEUDO-NEXT:   break;
+// PSEUDO-NEXT: }
+// PSEUDO-NEXT: case MyTarget::PseudoPtr: {
 // PSEUDO-NEXT:    MCOperand MCOp;
 // PSEUDO-NEXT:    Inst.setOpcode(MyTarget::TEST_PTRREG);
 // PSEUDO-NEXT:    // Operand: dst
-// PSEUDO-NEXT:    Inst.addOperand(MCOperand::createReg([](unsigned HwMode) {
-// PSEUDO-NEXT:        switch (HwMode) {
-// PSEUDO-NEXT:        case 0: return MyTarget::X0; // DefaultMode
-// PSEUDO-NEXT:        case 1: return MyTarget::X0; // XPtr64
-// PSEUDO-NEXT:        case 2: return MyTarget::Y0; // YPtr32
-// PSEUDO-NEXT:        case 3: return MyTarget::Y0; // YPtr64
-// PSEUDO-NEXT:        default: llvm_unreachable("Unhandled HwMode for Register NullReg");
-// PSEUDO-NEXT:        }
-// PSEUDO-NEXT:      }(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))));
+// PSEUDO-NEXT:    Inst.addOperand(MCOperand::createReg(MyTarget::RegisterByHwMode::getNullReg(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))));
 // PSEUDO-NEXT:    // Operand: src
 // PSEUDO-NEXT:    lowerOperand(MI->getOperand(0), MCOp);
 // PSEUDO-NEXT:    Inst.addOperand(MCOp);
@@ -279,15 +339,7 @@ class Pseudo<dag outs, dag ins> : TestInstruction {
 // PSEUDO-NEXT:    MCOperand MCOp;
 // PSEUDO-NEXT:    Inst.setOpcode(MyTarget::TEST_XREG);
 // PSEUDO-NEXT:    // Operand: dst
-// PSEUDO-NEXT:    Inst.addOperand(MCOperand::createReg([](unsigned HwMode) {
-// PSEUDO-NEXT:        switch (HwMode) {
-// PSEUDO-NEXT:        case 0: return MyTarget::X0; // DefaultMode
-// PSEUDO-NEXT:        case 1: return MyTarget::X1; // XPtr64
-// PSEUDO-NEXT:        case 2: return MyTarget::X2; // YPtr32
-// PSEUDO-NEXT:        case 3: return MyTarget::X3; // YPtr64
-// PSEUDO-NEXT:        default: llvm_unreachable("Unhandled HwMode for Register ModeCountReg");
-// PSEUDO-NEXT:        }
-// PSEUDO-NEXT:      }(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))));
+// PSEUDO-NEXT:    Inst.addOperand(MCOperand::createReg(MyTarget::RegisterByHwMode::getModeCountReg(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo))));
 // PSEUDO-NEXT:    // Operand: src
 // PSEUDO-NEXT:    lowerOperand(MI->getOperand(0), MCOp);
 // PSEUDO-NEXT:    Inst.addOperand(MCOp);
@@ -298,6 +350,9 @@ def PseudoX : Pseudo<(outs), (ins EvenXRegs:$rs1)>,
     PseudoInstExpansion<(TEST_XREG ModeCountReg, XRegs:$rs1)>;
 def PseudoPtr : Pseudo<(outs), (ins EvenPtrRC:$rs1)>,
     PseudoInstExpansion<(TEST_PTRREG NullReg, PtrRegOperand:$rs1)>;
+let Predicates = [Is64Bit] in
+def Pseudo64Only : Pseudo<(outs), (ins PtrRC:$rs1)>,
+    PseudoInstExpansion<(TEST_PTRREG PtrRegFor64BitModesOnly, PtrRegOperand:$rs1)>;
 
 // TODO: Add DAGISel support
 def int_with_mode_reg : Intrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrWillReturn]>;

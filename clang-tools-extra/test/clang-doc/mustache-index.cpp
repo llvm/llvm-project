@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --format=html --output=%t --executor=standalone %s 
+// RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %s 
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html
 
 enum Color {
@@ -19,7 +19,7 @@ class Foo;
 // CHECK-NEXT:      </li>
 // CHECK-NEXT:  </ul>
 // CHECK:       <summary class="sidebar-section">
-// CHECK-NEXT:      <a class="sidebar-item" href="#Classes">Inner Classes</a>
+// CHECK-NEXT:      <a class="sidebar-item" href="#Records">Records</a>
 // CHECK-NEXT:  </summary>
 // CHECK-NEXT:  <ul>
 // CHECK-NEXT:      <li class="sidebar-item-container">
@@ -54,15 +54,13 @@ class Foo;
 // CHECK-NEXT:                      </tr>
 // CHECK-NEXT:                  </tbody>
 // CHECK-NEXT:              </table>
-// CHECK-NEXT:              <div>
-// CHECK-NEXT:                  Defined at line 5 of file {{.*}}mustache-index.cpp
-// CHECK-NEXT:              </div>
+// CHECK-NEXT:              <p>Defined at line 5 of file {{.*}}mustache-index.cpp</p>
 // CHECK-NEXT:          </div>
 // CHECK-NEXT:      </div>
 // CHECK-NEXT:  </section>
 
-// CHECK:       <section id="Classes" class="section-container">
-// CHECK-NEXT:      <h2>Inner Classes</h2>
+// CHECK:       <section id="Records" class="section-container">
+// CHECK-NEXT:      <h2>Records</h2>
 // CHECK-NEXT:      <ul class="class-container">
 // CHECK-NEXT:          <li id="{{[0-9A-F]*}}" style="max-height: 40px;">
 // CHECK-NEXT:              <a href="_ZTV3Foo.html">

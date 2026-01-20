@@ -1319,12 +1319,11 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
           PrintFatalError(Target.getAsmWriter()->getLoc(),
                           "PassSubtarget must be set in "
                           "AsmWriter to handle RegisterByHwMode");
-        O << "    auto get" << Rec->getName() << " = ";
+        O << "    return MCOp.isReg() && MCOp.getReg() == ";
         RegisterByHwMode(Rec, Target.getRegBank())
-                .generateResolverLambda(O, Target.getHwModes(), /*Indent=*/4)
-            << ";\n";
-        O << "    return MCOp.isReg() && MCOp.getReg() == get" << Rec->getName()
-          << "(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));\n";
+            .emitResolverCall(O,
+                              "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)");
+        O << ";\n";
       } else {
         // Normal MCOperandPredicate code snippet, emit verbatim.
         O << Rec->getValueAsString("MCOperandPredicate") << "\n";

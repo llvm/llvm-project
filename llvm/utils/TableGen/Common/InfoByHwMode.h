@@ -262,11 +262,11 @@ public:
 struct RegisterByHwMode : public InfoByHwMode<const CodeGenRegister *> {
   RegisterByHwMode(const Record *R, CodeGenRegBank &RegBank);
   RegisterByHwMode() = default;
-  // TODO: Should probably emit this register selection code somewhere shared
-  // instead of emitting it every time.
-  raw_ostream &generateResolverLambda(raw_ostream &OS,
-                                      const CodeGenHwModes &CGH,
-                                      unsigned Indent) const;
+  /// Resolve the register by calling <target>::RegByHwMode::get<name>(HwMode).
+  void emitResolverCall(raw_ostream &OS, const Twine &HwMode) const;
+
+private:
+  StringRef Namespace;
 };
 
 } // namespace llvm

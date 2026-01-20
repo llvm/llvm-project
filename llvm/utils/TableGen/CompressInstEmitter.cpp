@@ -766,9 +766,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
                      << ").getReg() == ";
           if (Reg->isSubClassOf("RegisterByHwMode")) {
             RegisterByHwMode(Reg, Target.getRegBank())
-                    .generateResolverLambda(CondStream, Target.getHwModes(),
-                                            /*Indent=*/8)
-                << "(HwModeId)";
+                .emitResolverCall(CondStream, "HwModeId");
           } else {
             CondStream << TargetName << "::" << Reg->getName();
           }
@@ -892,9 +890,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
             CodeStream.indent(6) << "OutInst.addOperand(MCOperand::createReg(";
             if (Reg->isSubClassOf("RegisterByHwMode")) {
               RegisterByHwMode(Reg, Target.getRegBank())
-                      .generateResolverLambda(CodeStream, Target.getHwModes(),
-                                              /*Indent=*/8)
-                  << "(HwModeId)";
+                      .emitResolverCall(CodeStream, "HwModeId");
             } else {
               CodeStream << TargetName << "::" << Reg->getName();
             }

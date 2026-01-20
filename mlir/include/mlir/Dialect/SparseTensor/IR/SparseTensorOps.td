@@ -1562,7 +1562,7 @@ def IterateOp : SparseTensor_Op<"iterate",
       ["getInitsMutable", "getLoopResults", "getRegionIterArgs",
        "getYieldedValuesMutable"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
-      ["getEntrySuccessorOperands"]>,
+      ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
      SingleBlockImplicitTerminator<"sparse_tensor::YieldOp">]> {
 
   let summary = "Iterates over a sparse iteration space";

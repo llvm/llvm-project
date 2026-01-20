@@ -752,9 +752,9 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   PM.add(new RuntimeLibraryInfoWrapper(
-      M->getTargetTriple(), Target->Options.ExceptionModel,
-      Target->Options.FloatABIType, Target->Options.EABIVersion,
-      Options.MCOptions.ABIName, Target->Options.VecLib));
+      TheTriple, Target->Options.ExceptionModel, Target->Options.FloatABIType,
+      Target->Options.EABIVersion, Options.MCOptions.ABIName,
+      Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();

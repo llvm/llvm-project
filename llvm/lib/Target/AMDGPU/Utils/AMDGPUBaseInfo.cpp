@@ -1785,6 +1785,25 @@ unsigned getStorecntBitMask(const IsaVersion &Version) {
   return (1 << getStorecntBitWidth(Version.Major)) - 1;
 }
 
+HardwareLimits::HardwareLimits(const IsaVersion &IV) {
+  bool HasExtendedWaitCounts = IV.Major >= 12;
+  if (HasExtendedWaitCounts) {
+    LoadcntMax = getLoadcntBitMask(IV);
+    DscntMax = getDscntBitMask(IV);
+  } else {
+    LoadcntMax = getVmcntBitMask(IV);
+    DscntMax = getLgkmcntBitMask(IV);
+  }
+  ExpcntMax = getExpcntBitMask(IV);
+  StorecntMax = getStorecntBitMask(IV);
+  SamplecntMax = getSamplecntBitMask(IV);
+  BvhcntMax = getBvhcntBitMask(IV);
+  KmcntMax = getKmcntBitMask(IV);
+  XcntMax = getXcntBitMask(IV);
+  VaVdstMax = DepCtr::getVaVdstBitMask();
+  VmVsrcMax = DepCtr::getVmVsrcBitMask();
+}
+
 unsigned getWaitcntBitMask(const IsaVersion &Version) {
   unsigned VmcntLo = getBitMask(getVmcntBitShiftLo(Version.Major),
                                 getVmcntBitWidthLo(Version.Major));
@@ -3679,9 +3698,9 @@ ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
 
   if (!Attr.has_value())
     AttrKind = Kind::Unknown;
-  else if (all_of(*Attr, [](unsigned V) { return V == EncoNoCluster; }))
+  else if (all_of(*Attr, equal_to(EncoNoCluster)))
     AttrKind = Kind::NoCluster;
-  else if (all_of(*Attr, [](unsigned V) { return V == EncoVariableDims; }))
+  else if (all_of(*Attr, equal_to(EncoVariableDims)))
     AttrKind = Kind::VariableDims;
 
   ClusterDimsAttr A(AttrKind);

@@ -235,6 +235,7 @@ RegisterByHwMode::RegisterByHwMode(const Record *R, CodeGenRegBank &RegBank)
   const CodeGenHwModes &CGH = RegBank.getHwModes();
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   const Record *RCDef = R->getValueAsDef("RegClass");
+  Namespace = RegBank.getRegClasses().front().Namespace;
   std::optional<RegClassByHwMode> RegClassByMode;
   if (RCDef->isSubClassOf("RegClassByHwMode"))
     RegClassByMode = RegClassByHwMode(RCDef, RegBank);
@@ -258,26 +259,9 @@ RegisterByHwMode::RegisterByHwMode(const Record *R, CodeGenRegBank &RegBank)
   }
 }
 
-raw_ostream &RegisterByHwMode::generateResolverLambda(raw_ostream &OS,
-                                                      const CodeGenHwModes &CGH,
-                                                      unsigned Indent) const {
-  unsigned NumModes = CGH.getNumModeIds();
-  OS << "[](unsigned HwMode) {\n"
-     << indent(Indent + 2) << "switch (HwMode) {\n";
-  for (unsigned M = 0; M < NumModes; ++M) {
-    if (hasMode(M)) {
-      const CodeGenRegister *R = get(M);
-      OS << indent(Indent + 2) << "case " << M << ": return "
-         << getQualifiedName(R->TheDef) << "; // " << CGH.getModeName(M, true)
-         << "\n";
-    }
-  }
-  OS << indent(Indent + 2)
-     << "default: llvm_unreachable(\"Unhandled HwMode for Register "
-     << Def->getName() << "\");\n"
-     << indent(Indent + 2) << "}\n"
-     << indent(Indent) << "}";
-  return OS;
+void RegisterByHwMode::emitResolverCall(raw_ostream &OS, const Twine &HwMode) const {
+  OS << Namespace << "::RegisterByHwMode::get" << Def->getName() << "("
+     << HwMode << ")";
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {

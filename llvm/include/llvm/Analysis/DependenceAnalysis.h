@@ -499,13 +499,6 @@ private:
   bool checkDstSubscript(const SCEV *Dst, const Loop *LoopNest,
                          SmallBitVector &Loops);
 
-  /// isKnownPredicate - Compare X and Y using the predicate Pred.
-  /// Basically a wrapper for SCEV::isKnownPredicate,
-  /// but tries harder, especially in the presence of sign and zero
-  /// extensions and symbolics.
-  bool isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
-                        const SCEV *Y) const;
-
   /// collectUpperBound - All subscripts are the same type (on my machine,
   /// an i64). The loop bound may be a smaller type. collectUpperBound
   /// find the bound, if available, and zero extends it to the Type T.
