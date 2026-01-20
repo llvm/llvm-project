@@ -6896,9 +6896,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
       if (ArrayType *AT = dyn_cast<ArrayType>(T)) {
         T = AT->getElementType();
-        if (CI && AT->getNumElements() != 0)
-          Check(CI->getZExtValue() < AT->getNumElements(),
-                "Indexing in an array should be inbounds", &Call);
       } else if (StructType *ST = dyn_cast<StructType>(T)) {
         Check(CI, "Indexing into a struct requires a constant int", &Call);
         Check(CI->getZExtValue() < ST->getNumElements(),

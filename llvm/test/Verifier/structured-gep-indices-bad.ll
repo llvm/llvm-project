@@ -23,13 +23,6 @@ entry:
   ret void
 }
 
-define void @biz(ptr %src, i32 %index) {
-entry:
-; CHECK: Indexing in an array should be inbounds
-  %ptr = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([ 2 x i32 ]) %src, i32 2)
-  ret void
-}
-
 define void @fiz(ptr %src) {
 entry:
 ; CHECK: Index operand type must be an integer
