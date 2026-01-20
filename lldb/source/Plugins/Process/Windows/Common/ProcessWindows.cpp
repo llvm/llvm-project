@@ -959,7 +959,7 @@ public:
         m_process(process),
         m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
         m_write_file(conpty_input) {
-    m_pipe.CreateNew();
+    m_interrupt_event = INVALID_HANDLE_VALUE;
   }
 
   ~IOHandlerProcessSTDIOWindows() override = default;
@@ -970,9 +970,36 @@ public:
     m_is_running = running;
   }
 
+  /// Peek the console for input. If it has any, drain the pipe until text input
+  /// is found or the pipe is empty.
+  ///
+  /// \param[in, out] hStdin
+  ///     The handle to the standard input's pipe.
+  ///
+  /// \return
+  ///     true if the pipe has text input.
+  llvm::Expected<bool> ConsoleHasTextInput(HANDLE hStdin) {
+    while (true) {
+      INPUT_RECORD inputRecord;
+      DWORD numRead = 0;
+      if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead))
+        return llvm::createStringError("Failed to peek standard input.");
+
+      if (numRead == 0)
+        return false;
+
+      if (inputRecord.EventType == KEY_EVENT &&
+          inputRecord.Event.KeyEvent.bKeyDown &&
+          inputRecord.Event.KeyEvent.uChar.AsciiChar != 0)
+        return true;
+
+      if (!ReadConsoleInput(hStdin, &inputRecord, 1, &numRead))
+        return llvm::createStringError("Failed to read standard input.");
+    }
+  }
+
   void Run() override {
-    if (!m_read_file.IsValid() || m_write_file == INVALID_HANDLE_VALUE ||
-        !m_pipe.CanRead() || !m_pipe.CanWrite()) {
+    if (!m_read_file.IsValid() || m_write_file == INVALID_HANDLE_VALUE) {
       SetIsDone(true);
       return;
     }
@@ -980,15 +1007,13 @@ public:
     SetIsDone(false);
     SetIsRunning(true);
 
-    HANDLE hStdin = (HANDLE)_get_osfhandle(m_read_file.GetDescriptor());
-    HANDLE hInterrupt = (HANDLE)_get_osfhandle(m_pipe.GetReadFileDescriptor());
-    HANDLE waitHandles[2] = {hStdin, hInterrupt};
+    HANDLE hStdin = m_read_file.GetWaitableHandle();
+    HANDLE waitHandles[2] = {hStdin, m_interrupt_event};
 
     DWORD consoleMode;
     bool isConsole = GetConsoleMode(hStdin, &consoleMode) != 0;
 
     while (true) {
-    read_loop:;
       {
         std::lock_guard<std::mutex> guard(m_mutex);
         if (GetIsDone())
@@ -1001,27 +1026,13 @@ public:
         goto exit_loop;
       case WAIT_OBJECT_0: {
         if (isConsole) {
-          while (true) {
-            INPUT_RECORD inputRecord;
-            DWORD numRead = 0;
-            if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead))
-              goto exit_loop;
+          auto hasInputOrErr = ConsoleHasTextInput(hStdin);
+          if (hasInputOrErr.takeError())
+            goto exit_loop;
 
-            // If the pipe is empty, go back to waiting on
-            // WaitForMultipleObjects rather than ReadFile.
-            if (numRead == 0)
-              goto read_loop;
-
-            // We only care about text input. Consume all non text input events
-            // before letting ReadFile handle text input.
-            if (inputRecord.EventType == KEY_EVENT &&
-                inputRecord.Event.KeyEvent.bKeyDown &&
-                inputRecord.Event.KeyEvent.uChar.AsciiChar != 0)
-              break;
-
-            if (!ReadConsoleInput(hStdin, &inputRecord, 1, &numRead))
-              goto exit_loop;
-          }
+          // If no text input is ready, go back to waiting.
+          if (!*hasInputOrErr)
+            continue;
         }
 
         char ch = 0;
@@ -1035,14 +1046,10 @@ public:
         break;
       }
       case WAIT_OBJECT_0 + 1: {
-        char ch = 0;
-        DWORD read = 0;
-        if (!ReadFile(hInterrupt, &ch, 1, &read, nullptr) || read != 1)
+        ControlOp op = m_pending_op.exchange(eControlOpNone);
+        if (op == eControlOpQuit)
           goto exit_loop;
-
-        if (ch == eControlOpQuit)
-          goto exit_loop;
-        if (ch == eControlOpInterrupt &&
+        if (op == eControlOpInterrupt &&
             StateIsRunningState(m_process->GetState()))
           m_process->SendAsyncInterrupt();
         break;
@@ -1060,18 +1067,16 @@ public:
     std::lock_guard<std::mutex> guard(m_mutex);
     SetIsDone(true);
     if (m_is_running) {
-      char ch = eControlOpQuit;
-      if (llvm::Error err = m_pipe.Write(&ch, 1).takeError()) {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
-                       "Pipe write failed: {0}");
-      }
+      m_pending_op.store(eControlOpQuit);
+      ::SetEvent(m_interrupt_event);
     }
   }
 
   bool Interrupt() override {
     if (m_active) {
-      char ch = eControlOpInterrupt;
-      return !errorToBool(m_pipe.Write(&ch, 1).takeError());
+      m_pending_op.store(eControlOpInterrupt);
+      ::SetEvent(m_interrupt_event);
+      return true;
     }
     if (StateIsRunningState(m_process->GetState())) {
       m_process->SendAsyncInterrupt();
@@ -1083,19 +1088,21 @@ public:
   void GotEOF() override {}
 
 private:
-  Process *m_process;
-  NativeFile m_read_file; // Read from this file (usually actual STDIN for LLDB
-  HANDLE m_write_file =
-      INVALID_HANDLE_VALUE; // Write to this file (usually the primary pty for
-                            // getting io to debuggee)
-  Pipe m_pipe;
-  std::mutex m_mutex;
-  bool m_is_running = false;
-
   enum ControlOp : char {
     eControlOpQuit = 'q',
     eControlOpInterrupt = 'i',
+    eControlOpNone = 0,
   };
+
+  Process *m_process;
+  /// Read from this file (usually actual STDIN for LLDB)
+  NativeFile m_read_file;
+  /// Write to this file (usually the primary pty for getting io to debuggee)
+  HANDLE m_write_file = INVALID_HANDLE_VALUE;
+  HANDLE m_interrupt_event = INVALID_HANDLE_VALUE;
+  std::atomic<ControlOp> m_pending_op{eControlOpNone};
+  std::mutex m_mutex;
+  bool m_is_running = false;
 };
 
 void ProcessWindows::SetPseudoConsoleHandle(
