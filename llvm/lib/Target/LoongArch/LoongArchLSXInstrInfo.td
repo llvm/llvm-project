@@ -1816,9 +1816,6 @@ def : Pat<(fma_nsz (fneg v2f64:$vj), v2f64:$vk, v2f64:$va),
 // VFSQRT_{S/D}
 defm : PatVrF<fsqrt, "VFSQRT">;
 
-// VFLOGB_{S/D}
-defm : PatVrF<flog2, "VFLOGB">;
-
 // VFRECIP_{S/D}
 def : Pat<(fdiv vsplatf32_fpimm_eq_1, v4f32:$vj),
           (VFRECIP_S v4f32:$vj)>;
