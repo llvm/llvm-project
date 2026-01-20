@@ -123,12 +123,12 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   // Lambda 1: verify vector unsigned char type
   auto IsVectorType = [&](QualType ArgTy, unsigned ArgIndex) -> bool {
     QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
-                                            VectorKind::AltiVecVector);
+                                             VectorKind::AltiVecVector);
     if (Context.hasSameType(ArgTy, VecType))
       return true;
 
     Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
-        diag::err_ppc_invalid_arg_type)
+         diag::err_ppc_invalid_arg_type)
         << ArgIndex << VecType << ArgTy;
     return false;
   };
@@ -139,7 +139,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
       return true;
 
     Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
-        diag::err_ppc_invalid_arg_type)
+         diag::err_ppc_invalid_arg_type)
         << ArgIndex << "integer" << ArgTy;
     return false;
   };
