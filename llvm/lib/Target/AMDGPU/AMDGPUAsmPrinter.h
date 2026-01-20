@@ -52,8 +52,6 @@ private:
 
   std::unique_ptr<AMDGPU::HSAMD::MetadataStreamer> HSAMetadataStream;
 
-  MCCodeEmitter *DumpCodeInstEmitter = nullptr;
-
   // When appropriate, add a _dvgpr$ symbol.
   void emitDVgprSymbol(MachineFunction &MF);
 

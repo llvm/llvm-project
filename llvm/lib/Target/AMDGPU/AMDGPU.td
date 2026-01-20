@@ -1094,12 +1094,6 @@ def FeatureMaxPrivateElementSize4 : FeatureMaxPrivateElementSize<4>;
 def FeatureMaxPrivateElementSize8 : FeatureMaxPrivateElementSize<8>;
 def FeatureMaxPrivateElementSize16 : FeatureMaxPrivateElementSize<16>;
 
-def FeatureDumpCodeLower : SubtargetFeature <"dumpcode",
-  "DumpCode",
-  "true",
-  "Dump MachineInstrs in the CodeEmitter"
->;
-
 // XXX - This should probably be removed once enabled by default
 def FeatureEnableLoadStoreOpt : SubtargetFeature <"load-store-opt",
   "EnableLoadStoreOpt",

@@ -454,34 +454,5 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       assert(CodeBytes.size() == STI.getInstrInfo()->getInstSizeInBytes(*MI));
     }
 #endif
-
-    if (DumpCodeInstEmitter) {
-      // Disassemble instruction/operands to text
-      DisasmLines.resize(DisasmLines.size() + 1);
-      std::string &DisasmLine = DisasmLines.back();
-      raw_string_ostream DisasmStream(DisasmLine);
-
-      AMDGPUInstPrinter InstPrinter(*TM.getMCAsmInfo(), *STI.getInstrInfo(),
-                                    *STI.getRegisterInfo());
-      InstPrinter.printInst(&TmpInst, 0, StringRef(), STI, DisasmStream);
-
-      // Disassemble instruction/operands to hex representation.
-      SmallVector<MCFixup, 4> Fixups;
-      SmallVector<char, 16> CodeBytes;
-
-      DumpCodeInstEmitter->encodeInstruction(
-          TmpInst, CodeBytes, Fixups, MF->getSubtarget<MCSubtargetInfo>());
-      HexLines.resize(HexLines.size() + 1);
-      std::string &HexLine = HexLines.back();
-      raw_string_ostream HexStream(HexLine);
-
-      for (size_t i = 0; i < CodeBytes.size(); i += 4) {
-        unsigned int CodeDWord =
-            support::endian::read32le(CodeBytes.data() + i);
-        HexStream << format("%s%08X", (i > 0 ? " " : ""), CodeDWord);
-      }
-
-      DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLine.size());
-    }
   }
 }
