@@ -1803,8 +1803,8 @@ static ParseResult parseMapClause(OpAsmParser &parser,
     if (mapTypeMod == "attach_always")
       mapTypeBits |= ClauseMapFlags::attach_always;
 
-    if (mapTypeMod == "attach_none")
-      mapTypeBits |= ClauseMapFlags::attach_none;
+    if (mapTypeMod == "attach_never")
+      mapTypeBits |= ClauseMapFlags::attach_never;
 
     if (mapTypeMod == "attach_auto")
       mapTypeBits |= ClauseMapFlags::attach_auto;
@@ -1880,8 +1880,8 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     mapTypeStrs.push_back("attach");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_always))
     mapTypeStrs.push_back("attach_always");
-  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_none))
-    mapTypeStrs.push_back("attach_none");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_never))
+    mapTypeStrs.push_back("attach_never");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_auto))
     mapTypeStrs.push_back("attach_auto");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr))
