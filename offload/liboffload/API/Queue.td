@@ -133,7 +133,8 @@ def olQueryQueue : Function {
       "If enqueued work has completed the function would perform internal queue cleanup."
     ];
     let params = [
-        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+        Param<"bool *", "IsQueueWorkCompleted", " A flag indicating if a queue work has completed", PARAM_OUT_OPTIONAL>
     ];
     let returns = [];
 }
