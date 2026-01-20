@@ -905,7 +905,7 @@ static std::optional<unsigned> getExtractIndex(const Instruction *E) {
     // Check if the index is out of bound  - we can get the source vector from operand 0
     unsigned Idx =  CI->getZExtValue();
     auto *EE = cast<ExtractElementInst>(E);
-    const unsigned VF = ::getNumElements(EE->getVectorOperandType());// can be implemented inside an IF statement - to be safe
+    const unsigned VF = ::getNumElements(EE->getVectorOperandType());
     if (Idx >= VF)
       return std::nullopt;
     return Idx;
