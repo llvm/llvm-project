@@ -814,7 +814,7 @@
 
 //  RUN: %clang --target=aarch64 -march=armv9-a+ssve-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SSVE-AES %s
 //  CHECK-SSVE-AES: __ARM_FEATURE_SME2 1
-//  CHECK-SSVE-AES: __ARM_FEATURE_SSVE_AES
+//  CHECK-SSVE-AES: __ARM_FEATURE_SSVE_AES 1
 //  CHECK-SSVE-AES: __ARM_FEATURE_SVE2_AES 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2p2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p2 %s
