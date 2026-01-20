@@ -81,6 +81,21 @@ public:
   mlir::Value lowerMethodCmp(cir::CmpOp op, mlir::Value loweredLhs,
                              mlir::Value loweredRhs,
                              mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerDataMemberBitcast(cir::CastOp op, mlir::Type loweredDstTy,
+                                     mlir::Value loweredSrc,
+                                     mlir::OpBuilder &builder) const override;
+
+  mlir::Value
+  lowerDataMemberToBoolCast(cir::CastOp op, mlir::Value loweredSrc,
+                            mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerMethodBitcast(cir::CastOp op, mlir::Type loweredDstTy,
+                                 mlir::Value loweredSrc,
+                                 mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerMethodToBoolCast(cir::CastOp op, mlir::Value loweredSrc,
+                                    mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -448,6 +463,52 @@ mlir::Value LowerItaniumCXXABI::lowerMethodCmp(cir::CmpOp op,
   }
 
   return result;
+}
+
+mlir::Value LowerItaniumCXXABI::lowerDataMemberBitcast(
+    cir::CastOp op, mlir::Type loweredDstTy, mlir::Value loweredSrc,
+    mlir::OpBuilder &builder) const {
+  if (loweredSrc.getType() == loweredDstTy)
+    return loweredSrc;
+
+  return cir::CastOp::create(builder, op.getLoc(), loweredDstTy,
+                             cir::CastKind::bitcast, loweredSrc);
+}
+
+mlir::Value LowerItaniumCXXABI::lowerDataMemberToBoolCast(
+    cir::CastOp op, mlir::Value loweredSrc, mlir::OpBuilder &builder) const {
+  // Itanium C++ ABI 2.3:
+  //   A NULL pointer is represented as -1.
+  auto nullAttr = cir::IntAttr::get(getPtrDiffCIRTy(lm), -1);
+  auto nullValue = cir::ConstantOp::create(builder, op.getLoc(), nullAttr);
+  return cir::CmpOp::create(builder, op.getLoc(), cir::CmpOpKind::ne,
+                            loweredSrc, nullValue);
+}
+
+mlir::Value
+LowerItaniumCXXABI::lowerMethodBitcast(cir::CastOp op, mlir::Type loweredDstTy,
+                                       mlir::Value loweredSrc,
+                                       mlir::OpBuilder &builder) const {
+  if (loweredSrc.getType() == loweredDstTy)
+    return loweredSrc;
+
+  return loweredSrc;
+}
+
+mlir::Value LowerItaniumCXXABI::lowerMethodToBoolCast(
+    cir::CastOp op, mlir::Value loweredSrc, mlir::OpBuilder &builder) const {
+  // Itanium C++ ABI 2.3.2:
+  //
+  //   In the standard representation, a null member function pointer is
+  //   represented with ptr set to a null pointer. The value of adj is
+  //   unspecified for null member function pointers.
+  cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
+  mlir::Value ptrdiffZero = cir::ConstantOp::create(
+      builder, op.getLoc(), cir::IntAttr::get(ptrdiffCIRTy, 0));
+  mlir::Value ptrField = cir::ExtractMemberOp::create(
+      builder, op.getLoc(), ptrdiffCIRTy, loweredSrc, 0);
+  return cir::CmpOp::create(builder, op.getLoc(), cir::CmpOpKind::ne, ptrField,
+                            ptrdiffZero);
 }
 
 } // namespace cir

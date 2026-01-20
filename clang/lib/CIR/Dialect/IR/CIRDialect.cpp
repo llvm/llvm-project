@@ -657,9 +657,16 @@ LogicalResult cir::CastOp::verify() {
              << "requires floating point !cir.complex type for result";
     return success();
   }
-  default:
-    llvm_unreachable("Unknown CastOp kind?");
+  case cir::CastKind::member_ptr_to_bool: {
+    if (!mlir::isa<cir::DataMemberType, cir::MethodType>(srcType))
+      return emitOpError()
+             << "requires !cir.data_member or !cir.method type for source";
+    if (!mlir::isa<cir::BoolType>(resType))
+      return emitOpError() << "requires !cir.bool type for result";
+    return success();
   }
+  }
+  llvm_unreachable("Unknown CastOp kind?");
 }
 
 static bool isIntOrBoolCast(cir::CastOp op) {

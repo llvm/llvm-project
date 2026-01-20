@@ -2431,7 +2431,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Query for the completion of the pending operations on the async info.
-  Error queryAsyncImpl(__tgt_async_info &AsyncInfo) override {
+  Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
+                       bool *IsQueueWorkCompleted) override {
+    if (IsQueueWorkCompleted)
+      *IsQueueWorkCompleted = false;
     AMDGPUStreamTy *Stream =
         reinterpret_cast<AMDGPUStreamTy *>(AsyncInfo.Queue);
     assert(Stream && "Invalid stream");
@@ -2444,11 +2447,16 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (!(*CompletedOrErr))
       return Plugin::success();
 
+    if (IsQueueWorkCompleted)
+      *IsQueueWorkCompleted = true;
     // Once the stream is completed, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
     // own tasks.
-    AsyncInfo.Queue = nullptr;
-    return AMDGPUStreamManager.returnResource(Stream);
+    if (ReleaseQueue) {
+      AsyncInfo.Queue = nullptr;
+      return AMDGPUStreamManager.returnResource(Stream);
+    }
+    return Plugin::success();
   }
 
   /// Pin the host buffer and return the device pointer that should be used for
