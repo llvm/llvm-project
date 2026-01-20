@@ -63,7 +63,11 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
 
 std::optional<DataRef> ExtractDataRef(
     const ActualArgument &arg, bool intoSubstring, bool intoComplexPart) {
-  return ExtractDataRef(arg.UnwrapExpr(), intoSubstring, intoComplexPart);
+  if (const Symbol *assumedType{arg.GetAssumedTypeDummy()}) {
+    return DataRef{*assumedType};
+  } else {
+    return ExtractDataRef(arg.UnwrapExpr(), intoSubstring, intoComplexPart);
+  }
 }
 
 std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
@@ -1090,6 +1094,9 @@ template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SomeInteger> &);
 template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
+template semantics::UnorderedSymbolSet CollectSymbols(
+    const ProcedureDesignator &);
+template semantics::UnorderedSymbolSet CollectSymbols(const Assignment &);
 
 struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
                                       semantics::UnorderedSymbolSet> {
@@ -1208,6 +1215,20 @@ struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,
 
 bool HasConstant(const Expr<SomeType> &expr) {
   return HasConstantHelper{}(expr);
+}
+
+// HasStructureComponent()
+struct HasStructureComponentHelper
+    : public AnyTraverse<HasStructureComponentHelper, bool, false> {
+  using Base = AnyTraverse<HasStructureComponentHelper, bool, false>;
+  HasStructureComponentHelper() : Base(*this) {}
+  using Base::operator();
+
+  bool operator()(const Component &) const { return true; }
+};
+
+bool HasStructureComponent(const Expr<SomeType> &expr) {
+  return HasStructureComponentHelper{}(expr);
 }
 
 parser::Message *AttachDeclaration(

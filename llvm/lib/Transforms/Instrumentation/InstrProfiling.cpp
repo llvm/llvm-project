@@ -1944,6 +1944,10 @@ void InstrLowerer::emitNameData() {
   NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
+  if (isGPUProfTarget(M)) {
+    NamesVar->setLinkage(GlobalValue::ExternalLinkage);
+    NamesVar->setVisibility(GlobalValue::ProtectedVisibility);
+  }
 
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);
@@ -2068,6 +2072,8 @@ bool InstrLowerer::emitRuntimeHook() {
     User->setVisibility(GlobalValue::HiddenVisibility);
     if (TT.supportsCOMDAT())
       User->setComdat(M.getOrInsertComdat(User->getName()));
+    // Explicitly mark this function as cold since it is never called.
+    User->setEntryCount(0);
 
     IRBuilder<> IRB(BasicBlock::Create(M.getContext(), "", User));
     auto *Load = IRB.CreateLoad(Int32Ty, Var);

@@ -37,7 +37,7 @@ def payload1 : PayloadOp<1>;
 def payload2 : PayloadOp<2>;
 def payload5 : PayloadOp<5>;
 
-def tsimm5 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
+def tsimm5 : RISCVOp, TImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<5>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<5>";
@@ -47,6 +47,7 @@ def tsimm5 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
       return isInt<5>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+  let OperandType = "OPERAND_SIMM5";
 }
 
 class SwapVCIXIns<dag funct6, dag rd, dag rs2, dag rs1, bit swap> {
@@ -935,7 +936,7 @@ let Predicates = [HasVendorXSfcease] in {
     let rd = 0b00000;
     let rs1 = 0b00000;
     let rs2 = 0b00101;
-}
+  }
 }
 
 let Predicates = [HasVendorXSfvfbfexp16e] in {

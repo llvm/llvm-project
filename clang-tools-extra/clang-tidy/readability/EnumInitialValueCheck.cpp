@@ -75,7 +75,7 @@ static void cleanInitialValue(DiagnosticBuilder &Diag,
 namespace {
 
 AST_MATCHER(EnumDecl, isMacro) {
-  SourceLocation Loc = Node.getBeginLoc();
+  const SourceLocation Loc = Node.getBeginLoc();
   return Loc.isMacroID();
 }
 
@@ -165,22 +165,36 @@ void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
 
 void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("inconsistent")) {
-    DiagnosticBuilder Diag =
-        diag(
-            Enum->getBeginLoc(),
-            "initial values in enum '%0' are not consistent, consider explicit "
-            "initialization of all, none or only the first enumerator")
-        << getName(Enum);
-    for (const EnumConstantDecl *ECD : Enum->enumerators())
-      if (ECD->getInitExpr() == nullptr) {
-        const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-            ECD->getLocation(), 0, *Result.SourceManager, getLangOpts());
-        if (EndLoc.isMacroID())
-          continue;
-        llvm::SmallString<8> Str{" = "};
-        ECD->getInitVal().toString(Str);
-        Diag << FixItHint::CreateInsertion(EndLoc, Str);
+    // Emit warning first (DiagnosticBuilder emits on destruction), then notes.
+    // Notes must follow the primary diagnostic or they may be dropped.
+    {
+      const DiagnosticBuilder Diag =
+          diag(Enum->getBeginLoc(), "initial values in enum '%0' are not "
+                                    "consistent, consider explicit "
+                                    "initialization of all, none or only the "
+                                    "first enumerator")
+          << getName(Enum);
+
+      for (const EnumConstantDecl *ECD : Enum->enumerators()) {
+        if (ECD->getInitExpr() == nullptr) {
+          const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+              ECD->getLocation(), 0, *Result.SourceManager, getLangOpts());
+          if (EndLoc.isMacroID())
+            continue;
+          llvm::SmallString<8> Str{" = "};
+          ECD->getInitVal().toString(Str);
+          Diag << FixItHint::CreateInsertion(EndLoc, Str);
+        }
       }
+    }
+
+    for (const EnumConstantDecl *ECD : Enum->enumerators()) {
+      if (ECD->getInitExpr() == nullptr) {
+        diag(ECD->getLocation(), "uninitialized enumerator '%0' defined here",
+             DiagnosticIDs::Note)
+            << ECD->getName();
+      }
+    }
     return;
   }
 

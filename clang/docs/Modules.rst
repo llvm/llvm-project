@@ -115,7 +115,7 @@ Objective-C provides syntax for importing a module via an *@import declaration*,
 
   @import std;
 
-The ``@import`` declaration above imports the entire contents of the ``std`` module (which would contain, e.g., the entire C or C++ standard library) and make its API available within the current translation unit. To import only part of a module, one may use dot syntax to specific a particular submodule, e.g.,
+The ``@import`` declaration above imports the entire contents of the ``std`` module (which would contain, e.g., the entire C or C++ standard library) and make its API available within the current translation unit. To import only part of a module, one may use dot syntax to specify a particular submodule, e.g.,
 
 .. parsed-literal::
 
@@ -297,7 +297,7 @@ First let us use an explicit mapping from modules to files.
   clang -cc1 -emit-module -o prebuilt/B.pcm -fmodules module.modulemap -fmodule-name=B -fmodule-file=A=prebuilt/A.pcm
   clang -cc1 -emit-obj use.c -fmodules -fmodule-map-file=module.modulemap -fmodule-file=A=prebuilt/A.pcm -fmodule-file=B=prebuilt/B.pcm
 
-Instead of of specifying the mappings manually, it can be convenient to use the ``-fprebuilt-module-path`` option. Let's also use ``-fimplicit-module-maps`` instead of manually pointing to our module map.
+Instead of specifying the mappings manually, it can be convenient to use the ``-fprebuilt-module-path`` option. Let's also use ``-fimplicit-module-maps`` instead of manually pointing to our module map.
 
 .. code-block:: sh
 

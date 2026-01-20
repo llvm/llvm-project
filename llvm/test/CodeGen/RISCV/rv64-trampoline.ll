@@ -4,8 +4,6 @@
 ; RUN: llc -O0 -mtriple=riscv64-unknown-linux-gnu -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64-LINUX %s
 
-declare void @llvm.init.trampoline(ptr, ptr, ptr)
-declare ptr @llvm.adjust.trampoline(ptr)
 declare i64 @f(ptr nest, i64)
 
 define i64 @test0(i64 %n, ptr %p) nounwind {

@@ -65,7 +65,7 @@ define weak_odr protected ptx_kernel void @__omp_offloading_10302_bd7e0_main_l13
 ; CHECK-NEXT:    tail call void @__kmpc_barrier_simple_spmd(ptr nonnull @[[GLOB1]], i32 [[TMP2]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[CAPTURED_VARS_ADDRS_I]] to ptr addrspace(5)
 ; CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(3) @i_shared to ptr), ptr addrspace(5) [[TMP4]], align 8
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I]], i64 1)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I]], i64 1, i32 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[CAPTURED_VARS_ADDRS_I]])
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -94,7 +94,7 @@ region.guarded.i:                                 ; preds = %user_code.entry
 _Z3fooi.internalized.exit:                        ; preds = %user_code.entry, %region.guarded.i
   tail call void @__kmpc_barrier_simple_spmd(ptr nonnull @1, i32 %2)
   store ptr addrspacecast (ptr addrspace(3) @i_shared to ptr), ptr %captured_vars_addrs.i, align 8
-  call void @__kmpc_parallel_51(ptr nonnull @1, i32 %1, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs.i, i64 1) #6
+  call void @__kmpc_parallel_60(ptr nonnull @1, i32 %1, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs.i, i64 1, i32 0) #6
   call void @llvm.lifetime.end.p0(ptr nonnull %captured_vars_addrs.i)
   call void @__kmpc_target_deinit() #6
   br label %common.ret
@@ -111,7 +111,7 @@ define hidden void @_Z3fooi(i32 noundef %i1) local_unnamed_addr #1 {
 ; CHECK-NEXT:    store i32 [[I1:%.*]], ptr [[I]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[CAPTURED_VARS_ADDRS]] to ptr addrspace(5)
 ; CHECK-NEXT:    store ptr [[I]], ptr addrspace(5) [[TMP1]], align 8
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS]], i64 1)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr nonnull @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS]], i64 1, i32 0)
 ; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[I]], i64 4) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
@@ -121,7 +121,7 @@ entry:
   %i = tail call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4)
   store i32 %i1, ptr %i, align 16
   store ptr %i, ptr %captured_vars_addrs, align 8
-  call void @__kmpc_parallel_51(ptr nonnull @1, i32 %0, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs, i64 1) #6
+  call void @__kmpc_parallel_60(ptr nonnull @1, i32 %0, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs, i64 1, i32 0) #6
   call void @__kmpc_free_shared(ptr %i, i64 4)
   ret void
 }
@@ -144,7 +144,7 @@ define weak_odr protected ptx_kernel void @__omp_offloading_10302_bd7e0_main_l16
 ; CHECK-NEXT:    store i32 [[I_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr addrspace(3) @i.i_shared, align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[CAPTURED_VARS_ADDRS_I]] to ptr addrspace(5)
 ; CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(3) @i.i_shared to ptr), ptr addrspace(5) [[TMP2]], align 8
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I]], i64 1)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I]], i64 1, i32 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[CAPTURED_VARS_ADDRS_I]])
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -164,7 +164,7 @@ user_code.entry:                                  ; preds = %entry
   %1 = tail call i32 @__kmpc_global_thread_num(ptr nonnull @1) #6
   store i32 %i.addr.sroa.0.0.extract.trunc, ptr addrspacecast (ptr addrspace(3) @i.i_shared to ptr), align 16
   store ptr addrspacecast (ptr addrspace(3) @i.i_shared to ptr), ptr %captured_vars_addrs.i, align 8
-  call void @__kmpc_parallel_51(ptr nonnull @1, i32 %1, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull %captured_vars_addrs.i, i64 1) #6
+  call void @__kmpc_parallel_60(ptr nonnull @1, i32 %1, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull %captured_vars_addrs.i, i64 1, i32 0) #6
   call void @llvm.lifetime.end.p0(ptr nonnull %captured_vars_addrs.i)
   call void @__kmpc_target_deinit() #6
   br label %common.ret
@@ -179,7 +179,7 @@ define hidden void @_Z4foo1i(i32 noundef %i1) local_unnamed_addr #1 {
 ; CHECK-NEXT:    store i32 [[I1:%.*]], ptr [[I]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[CAPTURED_VARS_ADDRS]] to ptr addrspace(5)
 ; CHECK-NEXT:    store ptr [[I]], ptr addrspace(5) [[TMP1]], align 8
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS]], i64 1)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr nonnull @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS]], i64 1, i32 0)
 ; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[I]], i64 4) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
@@ -189,7 +189,7 @@ entry:
   %i = tail call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4)
   store i32 %i1, ptr %i, align 16
   store ptr %i, ptr %captured_vars_addrs, align 8
-  call void @__kmpc_parallel_51(ptr nonnull @1, i32 %0, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull %captured_vars_addrs, i64 1) #6
+  call void @__kmpc_parallel_60(ptr nonnull @1, i32 %0, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull %captured_vars_addrs, i64 1, i32 0) #6
   call void @__kmpc_free_shared(ptr %i, i64 4)
   ret void
 }
@@ -207,7 +207,7 @@ define internal void @__omp_outlined__(ptr noalias nocapture readnone %.global_t
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[I_I]], align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[CAPTURED_VARS_ADDRS_I]] to ptr addrspace(5)
 ; CHECK-NEXT:    store ptr [[I_I]], ptr addrspace(5) [[TMP2]], align 8
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I]], i64 1)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I]], i64 1, i32 0)
 ; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[I_I]], i64 4) #[[ATTR2]]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[CAPTURED_VARS_ADDRS_I]])
 ; CHECK-NEXT:    ret void
@@ -220,7 +220,7 @@ entry:
   %i.i = tail call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4) #6
   store i32 %0, ptr %i.i, align 16
   store ptr %i.i, ptr %captured_vars_addrs.i, align 8
-  call void @__kmpc_parallel_51(ptr nonnull @1, i32 %1, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull %captured_vars_addrs.i, i64 1) #6
+  call void @__kmpc_parallel_60(ptr nonnull @1, i32 %1, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull %captured_vars_addrs.i, i64 1, i32 0) #6
   call void @__kmpc_free_shared(ptr %i.i, i64 4) #6
   call void @llvm.lifetime.end.p0(ptr nonnull %captured_vars_addrs.i)
   ret void
@@ -242,7 +242,7 @@ define internal void @__omp_outlined___wrapper(i16 zeroext %0, i32 %1) #5 {
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[I_I_I]], align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = addrspacecast ptr [[CAPTURED_VARS_ADDRS_I_I]] to ptr addrspace(5)
 ; CHECK-NEXT:    store ptr [[I_I_I]], ptr addrspace(5) [[TMP7]], align 8
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP6]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I_I]], i64 1)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr nonnull @[[GLOB1]], i32 [[TMP6]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I_I]], i64 1, i32 0)
 ; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[I_I_I]], i64 4) #[[ATTR2]]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[CAPTURED_VARS_ADDRS_I_I]])
 ; CHECK-NEXT:    ret void
@@ -259,7 +259,7 @@ entry:
   %i.i.i = call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4) #6
   store i32 %4, ptr %i.i.i, align 16
   store ptr %i.i.i, ptr %captured_vars_addrs.i.i, align 8
-  call void @__kmpc_parallel_51(ptr nonnull @1, i32 %5, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull %captured_vars_addrs.i.i, i64 1) #6
+  call void @__kmpc_parallel_60(ptr nonnull @1, i32 %5, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull %captured_vars_addrs.i.i, i64 1, i32 0) #6
   call void @__kmpc_free_shared(ptr %i.i.i, i64 4) #6
   call void @llvm.lifetime.end.p0(ptr nonnull %captured_vars_addrs.i.i)
   ret void
@@ -269,7 +269,7 @@ declare void @__kmpc_get_shared_variables(ptr) local_unnamed_addr
 
 declare i32 @__kmpc_global_thread_num(ptr) local_unnamed_addr #6
 
-declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) local_unnamed_addr #7
+declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32) local_unnamed_addr #7
 
 declare void @__kmpc_free_shared(ptr allocptr nocapture, i64) local_unnamed_addr #8
 

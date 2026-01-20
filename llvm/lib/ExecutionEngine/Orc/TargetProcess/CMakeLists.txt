@@ -16,9 +16,11 @@ add_llvm_component_library(LLVMOrcTargetProcess
   ExecutorSharedMemoryMapperService.cpp
   DefaultHostBootstrapValues.cpp
   ExecutorResolver.cpp
+  LibraryResolver.cpp
   JITLoaderGDB.cpp
   JITLoaderPerf.cpp
   JITLoaderVTune.cpp
+  LibraryScanner.cpp
   OrcRTBootstrap.cpp
   RegisterEHFrames.cpp
   SimpleExecutorDylibManager.cpp
@@ -28,7 +30,7 @@ add_llvm_component_library(LLVMOrcTargetProcess
   UnwindInfoManager.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc/TargetProcess
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
@@ -36,6 +38,8 @@ add_llvm_component_library(LLVMOrcTargetProcess
 
   LINK_COMPONENTS
   ${intel_jit_profiling}
+  BinaryFormat
+  Object
   OrcShared
   Support
   TargetParser

@@ -1992,6 +1992,8 @@ void CHR::addToMergedCondition(bool IsTrueBiased, Value *Cond,
 
   // Use logical and to avoid propagating poison from later conditions.
   MergedCondition = IRB.CreateLogicalAnd(MergedCondition, Cond);
+  if (auto *MergedInst = dyn_cast<Instruction>(MergedCondition))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*MergedInst, DEBUG_TYPE, &F);
 }
 
 void CHR::transformScopes(SmallVectorImpl<CHRScope *> &CHRScopes) {

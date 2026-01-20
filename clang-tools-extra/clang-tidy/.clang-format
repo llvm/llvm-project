@@ -1,3 +1,9 @@
 BasedOnStyle: LLVM
-QualifierAlignment: Left
+InsertNewlineAtEOF: true
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: false
+  AtStartOfFile: false
 LineEnding: LF
+QualifierAlignment: Left
+RemoveBracesLLVM: true

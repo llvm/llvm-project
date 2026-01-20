@@ -193,7 +193,8 @@ TEST_P(ASTMatchersTest, ExportDecl) {
   if (!GetParam().isCXX20OrLater()) {
     return;
   }
-  const std::string moduleHeader = "module;export module ast_matcher_test;";
+  const std::string moduleHeader =
+      "module;\n export module ast_matcher_test;\n";
   EXPECT_TRUE(matches(moduleHeader + "export void foo();",
                       exportDecl(has(functionDecl()))));
   EXPECT_TRUE(matches(moduleHeader + "export { void foo(); int v; }",
@@ -1177,6 +1178,12 @@ TEST_P(ASTMatchersTest, PredefinedExpr) {
   EXPECT_TRUE(matches("void foo() { __func__; }",
                       predefinedExpr(hasType(asString("const char[4]")),
                                      has(stringLiteral()))));
+}
+
+TEST_P(ASTMatchersTest, FileScopeAsmDecl) {
+  EXPECT_TRUE(matches("__asm(\"nop\");", fileScopeAsmDecl()));
+  EXPECT_TRUE(
+      notMatches("void f() { __asm(\"mov al, 2\"); }", fileScopeAsmDecl()));
 }
 
 TEST_P(ASTMatchersTest, AsmStatement) {
@@ -2347,6 +2354,46 @@ TEST_P(ASTMatchersTest, ReferenceTypeLocTest_BindsToAnyRvalueReferenceTypeLoc) {
   EXPECT_TRUE(matches("float&& r = 3.0;", matcher));
 }
 
+TEST_P(ASTMatchersTest, ArrayTypeLocTest_BindsToAnyArrayTypeLoc) {
+  auto matcher = varDecl(hasName("x"), hasTypeLoc(arrayTypeLoc()));
+  EXPECT_TRUE(matches("int x[3];", matcher));
+  EXPECT_TRUE(matches("float x[3];", matcher));
+  EXPECT_TRUE(matches("char x[3];", matcher));
+  EXPECT_TRUE(matches("void* x[3];", matcher));
+  EXPECT_TRUE(matches("const int x[3] = {1, 2, 3};", matcher));
+  EXPECT_TRUE(matches("int x[3][4];", matcher));
+  EXPECT_TRUE(matches("void foo(int x[]);", matcher));
+  EXPECT_TRUE(matches("int a[] = {1, 2}; void foo() {int x[a[0]];}", matcher));
+}
+
+TEST_P(ASTMatchersTest, ArrayTypeLocTest_DoesNotBindToNonArrayTypeLoc) {
+  auto matcher = varDecl(hasName("x"), hasTypeLoc(arrayTypeLoc()));
+  EXPECT_TRUE(notMatches("int x;", matcher));
+  EXPECT_TRUE(notMatches("float x;", matcher));
+  EXPECT_TRUE(notMatches("char x;", matcher));
+  EXPECT_TRUE(notMatches("void* x;", matcher));
+}
+
+TEST_P(ASTMatchersTest, FunctionTypeLocTest_BindsToAnyFunctionTypeLoc) {
+  auto matcher = functionTypeLoc();
+  EXPECT_TRUE(matches("void f();", matcher));
+  EXPECT_TRUE(matches("void f(void);", matcher));
+  EXPECT_TRUE(matches("void f(int);", matcher));
+  EXPECT_TRUE(matches("typedef double g(char, float);", matcher));
+  EXPECT_TRUE(matches("char (*fn_ptr)();", matcher));
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(matches("auto f = (void (*)())0;", matcher));
+}
+
+TEST_P(ASTMatchersTest, FunctionTypeLocTest_DoesNotBindToNonFunctionTypeLoc) {
+  auto matcher = functionTypeLoc();
+  EXPECT_TRUE(notMatches("int x;", matcher));
+  EXPECT_TRUE(notMatches("void* x;", matcher));
+  EXPECT_TRUE(notMatches("int x[10];", matcher));
+}
+
 TEST_P(ASTMatchersTest,
        TemplateSpecializationTypeLocTest_BindsToVarDeclTemplateSpecialization) {
   if (!GetParam().isCXX()) {
@@ -2442,7 +2489,8 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfReferenceType) {
                       "int main() {"
                       "  int a;"
                       "  f(a);"
-                      "}", matcher));
+                      "}",
+                      matcher));
   EXPECT_FALSE(matches("template <class ...T> void f(T &...args) {"
                        "  [...args = args] () mutable {"
                        "  }();"
@@ -2450,7 +2498,8 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfReferenceType) {
                        "int main() {"
                        "  int a;"
                        "  f(a);"
-                       "}", matcher));
+                       "}",
+                       matcher));
 }
 
 TEST_P(ASTMatchersTest, IsDerivedFromRecursion) {
@@ -2628,7 +2677,7 @@ TEST(ASTMatchersTestObjC, ObjCStringLiteral) {
                           "    [Test someFunction:@\"Ola!\"]; "
                           "}\n"
                           "@end ";
-    EXPECT_TRUE(matchesObjC(Objc1String, objcStringLiteral()));
+  EXPECT_TRUE(matchesObjC(Objc1String, objcStringLiteral()));
 }
 
 TEST(ASTMatchersTestObjC, ObjCDecls) {

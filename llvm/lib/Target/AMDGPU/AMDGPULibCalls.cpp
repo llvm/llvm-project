@@ -845,7 +845,7 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
           return false;
         }
       }
-      LLVMContext &context = CI->getParent()->getParent()->getContext();
+      LLVMContext &context = CI->getContext();
       Constant *nval;
       if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;
@@ -1333,7 +1333,7 @@ AMDGPULibCalls::insertSinCos(Value *Arg, FastMathFlags FMF, IRBuilder<> &B,
   // TODO: Is it worth trying to preserve the location for the cos calls for the
   // load?
 
-  LoadInst *LoadCos = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
+  LoadInst *LoadCos = B.CreateLoad(Arg->getType(), Alloc);
   return {SinCos, LoadCos, SinCos};
 }
 

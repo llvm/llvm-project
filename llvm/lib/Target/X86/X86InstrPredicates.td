@@ -46,6 +46,10 @@ def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
 def HasNDD       : Predicate<"Subtarget->hasNDD()">;
 def NoNDD        : Predicate<"!Subtarget->hasNDD()">;
 def HasZU        : Predicate<"Subtarget->hasZU()">;
+def PreferLegacySetCC  : Predicate<"!Subtarget->hasZU() || "
+                                   "Subtarget->preferLegacySetCC()">;
+def PreferNoLegacySetCC : Predicate<"Subtarget->hasZU() && "
+                                    "!Subtarget->preferLegacySetCC()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
@@ -183,7 +187,6 @@ def HasAMXINT8   : Predicate<"Subtarget->hasAMXINT8()">;
 def HasAMXCOMPLEX : Predicate<"Subtarget->hasAMXCOMPLEX()">;
 def HasAMXFP8    : Predicate<"Subtarget->hasAMXFP8()">;
 def HasAMXMOVRS  : Predicate<"Subtarget->hasAMXMOVRS()">;
-def HasAMXTRANSPOSE : Predicate<"Subtarget->hasAMXTRANSPOSE()">;
 def HasAMXAVX512 : Predicate<"Subtarget->hasAMXAVX512()">;
 def HasAMXTF32   : Predicate<"Subtarget->hasAMXTF32()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;

@@ -349,11 +349,11 @@ static void ValidateSubscriptValue(parser::ContextualMessages &messages,
   std::optional<ConstantSubscript> bound;
   if (lb && val < *lb) {
     msg =
-        "%ssubscript %jd is less than lower %sbound %jd for %sdimension %d of array"_err_en_US;
+        "%ssubscript %jd is less than lower %sbound %jd for %sdimension %d of array"_errUnlessDead_en_US;
     bound = *lb;
   } else if (ub && val > *ub) {
     msg =
-        "%ssubscript %jd is greater than upper %sbound %jd for %sdimension %d of array"_err_en_US;
+        "%ssubscript %jd is greater than upper %sbound %jd for %sdimension %d of array"_errUnlessDead_en_US;
     bound = *ub;
     if (dim + 1 == symbol.Rank() && IsDummy(symbol) && *bound == 1) {
       // Old-school overindexing of a dummy array isn't fatal when
@@ -834,7 +834,7 @@ Constant<TYPE> ReadRealLiteral(
   auto valWithFlags{
       Scalar<TYPE>::Read(p, context.targetCharacteristics().roundingMode())};
   CHECK(p == source.end());
-  RealFlagWarnings(context, valWithFlags.flags, "conversion of REAL literal");
+  context.RealFlagWarnings(valWithFlags.flags, "conversion of REAL literal");
   auto value{valWithFlags.value};
   if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
     value = value.FlushSubnormalToZero();
@@ -869,19 +869,20 @@ struct RealTypeVisitor {
 
 // Reads a real literal constant and encodes it with the right kind.
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
+  const auto &[xreal, xkind](x.t);
   // Use a local message context around the real literal for better
   // provenance on any messages.
-  auto restorer{GetContextualMessages().SetLocation(x.real.source)};
+  auto restorer{GetContextualMessages().SetLocation(xreal.source)};
   // If a kind parameter appears, it defines the kind of the literal and the
   // letter used in an exponent part must be 'E' (e.g., the 'E' in
   // "6.02214E+23").  In the absence of an explicit kind parameter, any
   // exponent letter determines the kind.  Otherwise, defaults apply.
   auto &defaults{context_.defaultKinds()};
   int defaultKind{defaults.GetDefaultKind(TypeCategory::Real)};
-  const char *end{x.real.source.end()};
+  const char *end{xreal.source.end()};
   char expoLetter{' '};
   std::optional<int> letterKind;
-  for (const char *p{x.real.source.begin()}; p < end; ++p) {
+  for (const char *p{xreal.source.begin()}; p < end; ++p) {
     if (parser::IsLetter(*p)) {
       expoLetter = *p;
       switch (expoLetter) {
@@ -905,20 +906,20 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
   }
   // C716 requires 'E' as an exponent.
   // Extension: allow exponent-letter matching the kind-param.
-  auto kind{AnalyzeKindParam(x.kind, defaultKind)};
+  auto kind{AnalyzeKindParam(xkind, defaultKind)};
   if (letterKind && expoLetter != 'e') {
     if (kind != *letterKind) {
       Warn(common::LanguageFeature::ExponentMatchingKindParam,
           "Explicit kind parameter on real constant disagrees with exponent letter '%c'"_warn_en_US,
           expoLetter);
-    } else if (x.kind) {
+    } else if (xkind) {
       Warn(common::LanguageFeature::ExponentMatchingKindParam,
           "Explicit kind parameter together with non-'E' exponent letter is not standard"_port_en_US);
     }
   }
-  bool isDefaultKind{!x.kind && letterKind.value_or('e') == 'e'};
-  auto result{common::SearchTypes(RealTypeVisitor{
-      kind, x.real.source, GetFoldingContext(), isDefaultKind})};
+  bool isDefaultKind{!xkind && letterKind.value_or('e') == 'e'};
+  auto result{common::SearchTypes(
+      RealTypeVisitor{kind, xreal.source, GetFoldingContext(), isDefaultKind})};
   if (!result) { // C717
     Say("Unsupported REAL(KIND=%d)"_err_en_US, kind);
   }
@@ -1215,7 +1216,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Substring &ss) {
               if (!ubValue) {
                 ubValue = len;
               }
-              if (lbValue && ubValue && *lbValue > *ubValue) {
+              if ((len && *len == 0) ||
+                  (lbValue && ubValue && *lbValue > *ubValue)) {
                 // valid, substring is empty
               } else if (lbValue && *lbValue < 1 && (ubValue || !last)) {
                 Say("Substring must begin at 1 or later, not %jd"_err_en_US,
@@ -1223,7 +1225,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Substring &ss) {
                 return std::nullopt;
               } else if (ubValue && len && *ubValue > *len &&
                   (lbValue || !first)) {
-                Say("Substring must end at %zd or earlier, not %jd"_err_en_US,
+                Say("Substring must end at %jd or earlier, not %jd"_err_en_US,
                     static_cast<std::intmax_t>(*len),
                     static_cast<std::intmax_t>(*ubValue));
                 return std::nullopt;
@@ -1579,6 +1581,19 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
         std::get<std::list<parser::ImageSelectorSpec>>(x.imageSelector.t)) {
       common::visit(
           common::visitors{
+              [&](const parser::ImageSelectorSpec::Notify &x) {
+                Analyze(x.v);
+                if (const auto *expr{GetExpr(context_, x.v)}) {
+                  if (coarrayRef.notify()) {
+                    Say("coindexed reference has multiple NOTIFY= specifiers"_err_en_US);
+                  } else if (auto dyType{expr->GetType()};
+                      dyType && IsNotifyType(GetDerivedTypeSpec(*dyType))) {
+                    coarrayRef.set_notify(Expr<SomeType>{*expr});
+                  } else {
+                    Say("NOTIFY= specifier must have type NOTIFY_TYPE from ISO_FORTRAN_ENV"_err_en_US);
+                  }
+                }
+              },
               [&](const parser::ImageSelectorSpec::Stat &x) {
                 Analyze(x.v);
                 if (const auto *expr{GetExpr(context_, x.v)}) {
@@ -1808,8 +1823,8 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
     }
   } else if (dyType->IsUnlimitedPolymorphic()) {
     if (!(messageDisplayedSet_ & 8)) {
-      exprAnalyzer_.Say("Cannot have an unlimited polymorphic value in an "
-                        "array constructor"_err_en_US); // C7113
+      exprAnalyzer_.Say(
+          "Cannot have an unlimited polymorphic value in an array constructor"_err_en_US); // C7113
       messageDisplayedSet_ |= 8;
     }
     return;
@@ -2027,8 +2042,7 @@ void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
       exprAnalyzer_.RemoveImpliedDo(name);
     } else if (!(messageDisplayedSet_ & 0x20)) {
       exprAnalyzer_.SayAt(name,
-          "Implied DO index '%s' is active in a surrounding implied DO loop "
-          "and may not have the same name"_err_en_US,
+          "Implied DO index '%s' is active in a surrounding implied DO loop and may not have the same name"_err_en_US,
           name); // C7115
       messageDisplayedSet_ |= 0x20;
     }
@@ -2063,10 +2077,15 @@ MaybeExpr ArrayConstructorContext::ToExpr() {
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
   const parser::AcSpec &acSpec{array.v};
+  const auto &[type, values]{acSpec.t};
+  bool hadAnyFatalError{context_.AnyFatalError()};
   ArrayConstructorContext acContext{
-      *this, AnalyzeTypeSpec(acSpec.type, GetFoldingContext())};
-  for (const parser::AcValue &value : acSpec.values) {
+      *this, AnalyzeTypeSpec(type, GetFoldingContext())};
+  for (const parser::AcValue &value : values) {
     acContext.Add(value);
+  }
+  if (!hadAnyFatalError && context_.AnyFatalError()) {
+    return std::nullopt;
   }
   return acContext.ToExpr();
 }
@@ -2090,17 +2109,32 @@ static MaybeExpr ImplicitConvertTo(const Symbol &sym, Expr<SomeType> &&expr,
 }
 
 MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
-    parser::CharBlock typeName, const semantics::DerivedTypeSpec &spec,
+    parser::CharBlock typeName, const semantics::DerivedTypeSpec &spec0,
     std::list<ComponentSpec> &&componentSpecs) {
+  semantics::Scope &scope{context_.FindScope(typeName)};
+  FoldingContext &foldingContext{GetFoldingContext()};
+  const semantics::DerivedTypeSpec *effectiveSpec{&spec0};
+  if (foldingContext.pdtInstance() && spec0.MightBeParameterized()) {
+    // We're processing a structure constructor in the context of a derived
+    // type instantiation, and the derived type of the structure constructor
+    // is parameterized.  Evaluate its parameters in the context of the
+    // instantiation in progress so that the components in constructor's scope
+    // have the correct types.
+    semantics::DerivedTypeSpec newSpec{spec0};
+    newSpec.ReevaluateParameters(context());
+    const semantics::DeclTypeSpec &instantiatedType{
+        semantics::FindOrInstantiateDerivedType(
+            scope, std::move(newSpec), semantics::DeclTypeSpec::TypeDerived)};
+    effectiveSpec = &instantiatedType.derivedTypeSpec();
+  }
+  const semantics::DerivedTypeSpec &spec{*effectiveSpec};
   const Symbol &typeSymbol{spec.typeSymbol()};
   if (!spec.scope() || !typeSymbol.has<semantics::DerivedTypeDetails>()) {
     return std::nullopt; // error recovery
   }
-  const semantics::Scope &scope{context_.FindScope(typeName)};
   const semantics::Scope *pureContext{FindPureProcedureContaining(scope)};
   const auto &typeDetails{typeSymbol.get<semantics::DerivedTypeDetails>()};
   const Symbol *parentComponent{typeDetails.GetParentComponent(*spec.scope())};
-
   if (typeSymbol.attrs().test(semantics::Attr::ABSTRACT)) { // C796
     AttachDeclaration(
         Say(typeName,
@@ -2140,6 +2174,9 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
     parser::CharBlock exprSource{componentSpec.exprSource};
     auto restorer{messages.SetLocation(source)};
     const Symbol *symbol{componentSpec.keywordSymbol};
+    if (symbol) {
+      symbol = spec.scope()->FindComponent(symbol->name());
+    }
     MaybeExpr &maybeValue{componentSpec.expr};
     if (!maybeValue.has_value()) {
       return std::nullopt;
@@ -2315,7 +2352,6 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
       // convert would cause a segfault. Lowering will deal with
       // conditionally converting and preserving the lower bounds in this
       // case.
-      FoldingContext &foldingContext{GetFoldingContext()};
       if (MaybeExpr converted{ImplicitConvertTo(*symbol, std::move(value),
               /*keepConvertImplicit=*/IsAllocatable(*symbol),
               foldingContext)}) {
@@ -2677,7 +2713,10 @@ static bool CheckCompatibleArgument(bool isElemental,
             } else if (!isElemental && actual.Rank() != x.type.Rank() &&
                 !x.type.attrs().test(
                     characteristics::TypeAndShape::Attr::AssumedRank) &&
-                !x.ignoreTKR.test(common::IgnoreTKR::Rank)) {
+                !x.ignoreTKR.test(common::IgnoreTKR::Rank) &&
+                !(x.type.type().IsAssumedType() &&
+                    x.type.attrs().test(
+                        characteristics::TypeAndShape::Attr::AssumedSize))) {
               return false;
             } else if (auto actualType{actual.GetType()}) {
               return x.type.type().IsTkCompatibleWith(*actualType, x.ignoreTKR);
@@ -2929,6 +2968,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
             continue;
           }
         }
+        tried.push_back(*specific);
         if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
                 context_, false /* no integer conversions */) &&
             CheckCompatibleArguments(
@@ -2961,7 +3001,6 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
           crtMatchingDistance = ComputeCudaMatchingDistance(
               context_.languageFeatures(), *procedure, localActuals);
         } else {
-          tried.push_back(*specific);
         }
       }
     }
@@ -3120,17 +3159,23 @@ void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
       if (auto procChars{characteristics::Procedure::Characterize(
               specific, GetFoldingContext())}) {
         if (procChars->HasExplicitInterface()) {
-          if (auto reasons{semantics::CheckExplicitInterface(*procChars,
-                  arguments, context_, &scope, /*intrinsic=*/nullptr,
-                  /*allocActualArgumentConversions=*/false,
-                  /*extentErrors=*/false,
-                  /*ignoreImplicitVsExplicit=*/false)};
-              !reasons.empty()) {
-            reasons.AttachTo(
-                msg->Attach(specific.name(),
-                    "Specific procedure '%s' does not match the actual arguments because"_en_US,
-                    specific.name()),
-                parser::Severity::None);
+          auto reasons{semantics::CheckExplicitInterface(*procChars, arguments,
+              context_, &scope, /*intrinsic=*/nullptr,
+              /*allocActualArgumentConversions=*/false,
+              /*extentErrors=*/false,
+              /*ignoreImplicitVsExplicit=*/false)};
+          if (reasons.AnyFatalError() != dueToAmbiguity) {
+            if (dueToAmbiguity) {
+              msg->Attach(specific.name(),
+                  "Specific procedure '%s' matched the actual arguments"_en_US,
+                  specific.name());
+            } else {
+              reasons.AttachTo(
+                  msg->Attach(specific.name(),
+                      "Specific procedure '%s' does not match the actual arguments because"_en_US,
+                      specific.name()),
+                  parser::Severity::None);
+            }
           }
         }
       }
@@ -3369,7 +3414,8 @@ std::optional<Chevrons> ExpressionAnalyzer::AnalyzeChevrons(
         which);
     return false;
   }};
-  if (const auto &chevrons{call.chevrons}) {
+  if (const auto &chevrons{
+          std::get<std::optional<parser::CallStmt::Chevrons>>(call.t)}) {
     auto &starOrExpr{std::get<0>(chevrons->t)};
     if (starOrExpr.v) {
       if (auto expr{Analyze(*starOrExpr.v)};
@@ -3469,7 +3515,7 @@ static bool HasAlternateReturns(const evaluate::ActualArguments &args) {
 }
 
 void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
-  const parser::Call &call{callStmt.call};
+  const auto &call{std::get<parser::Call>(callStmt.t)};
   auto restorer{GetContextualMessages().SetLocation(callStmt.source)};
   ArgumentAnalyzer analyzer{*this, callStmt.source, true /* isProcedureCall */};
   const auto &actualArgList{std::get<std::list<parser::ActualArgSpec>>(call.t)};
@@ -3730,6 +3776,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Parentheses &x) {
   if (MaybeExpr operand{Analyze(x.v.value())}) {
     if (IsNullPointerOrAllocatable(&*operand)) {
       Say("NULL() may not be parenthesized"_err_en_US);
+    } else if (semantics::IsAssumedRank(*operand)) {
+      Say("An assumed-rank dummy argument may not be parenthesized"_err_en_US);
     } else if (const semantics::Symbol *symbol{GetLastSymbol(*operand)}) {
       if (const semantics::Symbol *result{FindFunctionResult(*symbol)}) {
         if (semantics::IsProcedurePointer(*result)) {
@@ -5315,6 +5363,96 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
   return analyzer.AnalyzeKindSelector(category, selector);
 }
 
+// NoteUsedSymbols()
+
+static void NoteUsedSymbol(SemanticsContext &context, const Symbol &symbol) {
+  const Symbol &root{GetAssociationRoot(symbol)};
+  switch (root.owner().kind()) {
+  case semantics::Scope::Kind::Subprogram:
+  case semantics::Scope::Kind::MainProgram:
+  case semantics::Scope::Kind::BlockConstruct:
+    if ((root.has<semantics::ObjectEntityDetails>() ||
+            IsProcedurePointer(root))) {
+      context.NoteUsedSymbol(root);
+      if (root.test(Symbol::Flag::CrayPointee)) {
+        context.NoteUsedSymbol(GetCrayPointer(root));
+      }
+    }
+    break;
+  default:
+    break;
+  }
+}
+
+template <typename A>
+void NoteUsedSymbolsHelper(SemanticsContext &context, const A &x) {
+  if (context.ShouldWarn(common::UsageWarning::UnusedVariable)) {
+    for (const Symbol &symbol : CollectSymbols(x)) {
+      NoteUsedSymbol(context, symbol);
+    }
+  }
+}
+
+void NoteUsedSymbols(SemanticsContext &context, const SomeExpr &expr) {
+  NoteUsedSymbolsHelper(context, expr);
+}
+
+static bool IsBindingUsedAsProcedure(const SomeExpr &expr) {
+  if (const auto *pd{std::get_if<evaluate::ProcedureDesignator>(&expr.u)}) {
+    if (const Symbol *symbol{pd->GetSymbol()}) {
+      return symbol->has<ProcBindingDetails>();
+    }
+  }
+  return false;
+}
+
+void NoteUsedSymbols(
+    SemanticsContext &context, const evaluate::ProcedureRef &call) {
+  NoteUsedSymbolsHelper(context, call.proc());
+  for (const auto &maybeArg : call.arguments()) {
+    if (maybeArg) {
+      if (const auto *expr{maybeArg->UnwrapExpr()}) {
+        if (!IsBindingUsedAsProcedure(*expr)) {
+          // Ignore procedure bindings being used as actual procedures
+          // (a local extension).
+          NoteUsedSymbolsHelper(context, *expr);
+        }
+      }
+    }
+  }
+}
+
+void NoteUsedSymbols(
+    SemanticsContext &context, const evaluate::Assignment &assignment) {
+  if (IsBindingUsedAsProcedure(assignment.rhs)) {
+    // Don't look at the RHS, we're just using its binding (extension).
+    NoteUsedSymbolsHelper(context, assignment.lhs);
+  } else {
+    NoteUsedSymbolsHelper(context, assignment);
+  }
+}
+
+void NoteUsedSymbols(
+    SemanticsContext &context, const parser::TypedExpr &typedExpr) {
+  if (typedExpr && typedExpr->v) {
+    NoteUsedSymbols(context, *typedExpr->v);
+  }
+}
+
+void NoteUsedSymbols(
+    SemanticsContext &context, const parser::TypedCall &typedCall) {
+  if (typedCall) {
+    NoteUsedSymbols(context, *typedCall);
+  }
+}
+
+void NoteUsedSymbols(
+    SemanticsContext &context, const parser::TypedAssignment &typedAssignment) {
+  if (typedAssignment && typedAssignment->v) {
+    NoteUsedSymbols(context, *typedAssignment->v);
+  }
+}
+
 ExprChecker::ExprChecker(SemanticsContext &context) : context_{context} {}
 
 bool ExprChecker::Pre(const parser::DataStmtObject &obj) {
@@ -5339,6 +5477,88 @@ bool ExprChecker::Pre(const parser::DataImpliedDo &ido) {
   exprAnalyzer_.AddImpliedDo(name.source, kind);
   parser::Walk(std::get<std::list<parser::DataIDoObject>>(ido.t), *this);
   exprAnalyzer_.RemoveImpliedDo(name.source);
+  return false;
+}
+
+// Handle messages from dead code in block IF constructs
+bool ExprChecker::Pre(const parser::IfConstruct &construct) {
+  enum State {
+    NotYetKnownTrue,
+    WasKnownTrue,
+    TrueNow,
+    FalseNow
+  } state{NotYetKnownTrue};
+  auto &messages{exprAnalyzer_.GetContextualMessages()};
+  parser::CharBlock determiner; // source of relevant IF statement
+
+  auto consider{[&](const SomeExpr *expr, parser::CharBlock here) {
+    if (state == TrueNow) {
+      state = WasKnownTrue;
+    } else if (state != WasKnownTrue) {
+      state = NotYetKnownTrue;
+      if (expr) {
+        if (auto known{
+                evaluate::GetScalarConstantValue<evaluate::LogicalResult>(
+                    *expr)}) {
+          state = known->IsTrue() ? TrueNow : FalseNow;
+          determiner = here;
+        }
+      }
+    }
+  }};
+  auto doBlock{[&, this](const parser::Block &block) {
+    if ((state == FalseNow || state == WasKnownTrue) && messages.messages()) {
+      parser::Messages inDeadCode;
+      {
+        auto restorer{messages.SetMessages(inDeadCode)};
+        parser::Walk(block, *this);
+      }
+      for (auto &msg : inDeadCode.messages()) {
+        if (msg.severity() == parser::Severity::ErrorUnlessDeadCode) {
+          msg.set_severity(parser::Severity::Warning);
+          msg.set_usageWarning(common::UsageWarning::BadValueInDeadCode);
+          msg.Attach(determiner,
+              "in code known to be dead due to this compile-time IF expression value"_en_US);
+        }
+      }
+      if (context_.ShouldWarn(common::UsageWarning::BadValueInDeadCode) ||
+          inDeadCode.AnyFatalError()) {
+        messages.messages()->Annex(std::move(inDeadCode));
+      }
+    } else {
+      parser::Walk(block, *this);
+    }
+  }};
+
+  const auto &[ifThen, block, elseIfs, maybeElse, endIf]{construct.t};
+  // IF (...) THEN block
+  parser::Walk(ifThen, *this);
+  consider(GetExpr(&context_,
+               std::get<parser::ScalarLogicalExpr>(ifThen.statement.t)),
+      ifThen.source);
+  doBlock(block);
+  // ELSE IF (...) THEN block ...
+  for (const auto &elseIf : elseIfs) {
+    const auto &[stmt, block]{elseIf.t};
+    parser::Walk(stmt, *this);
+    consider(GetExpr(&context_,
+                 std::get<parser::ScalarLogicalExpr>(stmt.statement.t)),
+        stmt.source);
+    doBlock(block);
+  }
+  // ELSE block
+  if (maybeElse) {
+    const auto &[stmt, block]{maybeElse->t};
+    parser::Walk(stmt, *this);
+    if (state == TrueNow || state == WasKnownTrue) {
+      state = FalseNow;
+    } else {
+      state = TrueNow;
+    }
+    doBlock(block);
+  }
+  // END IF
+  parser::Walk(endIf, *this);
   return false;
 }
 

@@ -135,7 +135,25 @@ branches as follows:
   push:
     branches:
       - main
-      - releases/*
+      - release/*
+
+Make Workflows Run on Updates to the Workflow Definition
+--------------------------------------------------------
+
+Whenever possible, workflows should also run whenever the workflow definition
+is updated. This enables easily testing the workflow whenever modifying it. For
+example, if we have a workflow with a definition in ``.github/workflows/foo.yaml``,
+we should have at least the following event within the workflow:
+
+.. code-block:: yaml
+
+  pull_request:
+    paths:
+     - .github/workflows/foo.yaml
+
+Note that it is not always possible to enable this (e.g., issues that use a
+``workflow_run`` trigger). But when possible, this makes testing the workflow
+much simpler.
 
 Container Best Practices
 ========================
@@ -146,7 +164,7 @@ for LLVM infrastructure.
 Using Fully Qualified Container Names
 -------------------------------------
 
-When referencing container images from a registry, such as in Github Actions
+When referencing container images from a registry, such as in GitHub Actions
 workflows, or in ``Dockerfile`` files used for building images, prefer fully
 qualified names (i.e., including the registry domain) over just the image.
 For example, prefer ``docker.io/ubuntu:24.04`` over ``ubuntu:24.04``. This

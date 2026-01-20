@@ -981,6 +981,11 @@ public:
                                         SourceLocation StartLoc,
                                         SourceLocation LParenLoc,
                                         SourceLocation EndLoc);
+  /// Called on well-formed 'transparent' clause.
+  OMPClause *ActOnOpenMPTransparentClause(Expr *Transparent,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation EndLoc);
   /// Called on well-formed 'proc_bind' clause.
   OMPClause *ActOnOpenMPProcBindClause(llvm::omp::ProcBindKind Kind,
                                        SourceLocation KindLoc,
@@ -1171,9 +1176,11 @@ public:
     SourceLocation RLoc;
     CXXScopeSpec ReductionOrMapperIdScopeSpec;
     DeclarationNameInfo ReductionOrMapperId;
-    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend or
-                            ///< lastprivate clause.
+    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend,
+                            ///< lastprivate, or use_device_ptr clause.
     int OriginalSharingModifier = 0; // Default is shared
+    int NeedDevicePtrModifier = 0;
+    SourceLocation NeedDevicePtrModifierLoc;
     SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
         MapTypeModifiers;
     SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>
@@ -1349,7 +1356,7 @@ public:
   OMPClause *
   ActOnOpenMPToClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
                       ArrayRef<SourceLocation> MotionModifiersLoc,
-                      CXXScopeSpec &MapperIdScopeSpec,
+                      Expr *IteratorModifier, CXXScopeSpec &MapperIdScopeSpec,
                       DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                       ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                       ArrayRef<Expr *> UnresolvedMappers = {});
@@ -1357,13 +1364,15 @@ public:
   OMPClause *
   ActOnOpenMPFromClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
                         ArrayRef<SourceLocation> MotionModifiersLoc,
-                        CXXScopeSpec &MapperIdScopeSpec,
+                        Expr *IteratorModifier, CXXScopeSpec &MapperIdScopeSpec,
                         DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                         ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                         ArrayRef<Expr *> UnresolvedMappers = {});
   /// Called on well-formed 'use_device_ptr' clause.
-  OMPClause *ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
-                                           const OMPVarListLocTy &Locs);
+  OMPClause *ActOnOpenMPUseDevicePtrClause(
+      ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
+      OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+      SourceLocation FallbackModifierLoc);
   /// Called on well-formed 'use_device_addr' clause.
   OMPClause *ActOnOpenMPUseDeviceAddrClause(ArrayRef<Expr *> VarList,
                                             const OMPVarListLocTy &Locs);
@@ -1410,6 +1419,13 @@ public:
   OMPClause *ActOnOpenMPXDynCGroupMemClause(Expr *Size, SourceLocation StartLoc,
                                             SourceLocation LParenLoc,
                                             SourceLocation EndLoc);
+
+  /// Called on a well-formed 'dyn_groupprivate' clause.
+  OMPClause *ActOnOpenMPDynGroupprivateClause(
+      OpenMPDynGroupprivateClauseModifier M1,
+      OpenMPDynGroupprivateClauseFallbackModifier M2, Expr *Size,
+      SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation M1Loc,
+      SourceLocation M2Loc, SourceLocation EndLoc);
 
   /// Called on well-formed 'doacross' clause.
   OMPClause *
@@ -1462,6 +1478,13 @@ public:
   int getOpenMPDeviceNum() const;
 
   void setOpenMPDeviceNumID(StringRef ID);
+
+  enum class OpenMPImpexType {
+    OMP_NotImpex = 0,
+    OMP_Impex = 1,
+    OMP_Import = 2,
+    OMP_Export = 3
+  };
 
 private:
   void *VarDataSharingAttributesStack;

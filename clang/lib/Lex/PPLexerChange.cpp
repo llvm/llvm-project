@@ -441,7 +441,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       assert(CurLexer && "Got EOF but no current lexer set!");
       Result.startToken();
       CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
-      CurLexer.reset();
+      PendingDestroyLexers.push_back(std::move(CurLexer));
 
       CurPPLexer = nullptr;
       recomputeCurLexerKind();
@@ -558,9 +558,17 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
         << PPOpts.PCHThroughHeader << 0;
   }
 
-  if (!isIncrementalProcessingEnabled())
-    // We're done with lexing.
-    CurLexer.reset();
+  if (!isIncrementalProcessingEnabled()) {
+    // We're done with lexing. If we're inside a nested Lex call (LexLevel > 0),
+    // defer destruction of the lexer until Lex returns to avoid use-after-free
+    // when HandleEndOfFile is called from within Lexer methods that still need
+    // to access their members after this function returns.
+    if (LexLevel > 0 && CurLexer) {
+      PendingDestroyLexers.push_back(std::move(CurLexer));
+    } else {
+      CurLexer.reset();
+    }
+  }
 
   if (!isIncrementalProcessingEnabled())
     CurPPLexer = nullptr;

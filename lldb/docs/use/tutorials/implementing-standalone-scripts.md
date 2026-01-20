@@ -1,6 +1,6 @@
 # Implementing Standalone Scripts
 
-### Configuring `PYTHONPATH`
+## Configuring `PYTHONPATH`
 
 LLDB has all of its core code built into a shared library which gets used by
 the `lldb` command line application.
@@ -30,7 +30,7 @@ $ export PYTHONPATH=`lldb -P`
 Alternatively, you can append the LLDB Python directory to the sys.path list
 directly in your Python code before importing the lldb module.
 
-### Initialization
+## Initialization
 
 The standard test for `__main__`, like many python modules do, is useful for
 creating scripts that can be run from the command line. However, for command
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     lldb.SBDebugger.Terminate()
 ```
 
-### Example
+## Example
 
 Now your python scripts are ready to import the lldb module. Below is a python
 script that will launch a program from the current working directory called
@@ -133,7 +133,7 @@ if target:
                             print(symbol)
 ```
 
-### Expected Output
+## Expected Output
 
 Exact output varies by system, but you should see something like this:
 
@@ -147,3 +147,20 @@ SBFunction: id = 0x0000002e, name = main, type = main
 a.out[0x714]: mov    w0, #0x0                  ; =0
 a.out[0x718]: ret
 ```
+
+## Troubleshooting
+
+You can use all the usual Python tools to debug scripts, and on top of that
+you can enable LLDB's log channels. To do this in the script shown above, add
+this line right after `debugger` has been assigned:
+
+```python
+debugger.EnableLog("lldb", ["all"])
+```
+
+`lldb` `all` enables a lot of different channels, so you will probably want
+to enable only a few channels once you know what you are interested in.
+
+This API call is the equivalent of `log enable lldb all` when using LLDB
+interactively. All channels available to `log enable` can be enabled using
+`EnableLog` too.

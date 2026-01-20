@@ -302,7 +302,7 @@ public:
       if (FindInRHS == RHS.end())
         return false;
 
-      if constexpr (!std::is_same_v<ValueTy, std::nullopt_t>) {
+      if constexpr (!std::is_same_v<ValueTy, EmptyStringSetTag>) {
         if (!(KeyValue.getValue() == FindInRHS->getValue()))
           return false;
       }

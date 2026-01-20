@@ -31,11 +31,13 @@ define i16 @main(ptr %a) {
 ; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
 ; CHECK:       [[INNER_LATCH]]:
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add i16 [[J]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[J]], 42
 ; CHECK-NEXT:    br label %[[OUTER_BODY:.*]]
 ; CHECK:       [[INNER_LATCH_SPLIT]]:
 ; CHECK-NEXT:    [[NEW_COND_LCSSA:%.*]] = phi i16 [ [[COND]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    [[TMP1]] = add i16 [[J]], 1
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[INNER_HEADER]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[J]], 42
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[INNER_HEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[OUTER_BODY]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
@@ -62,7 +64,8 @@ inner.header:
 
 inner.latch:
   %j.next = add i16 %j, 1
-  br i1 true, label %outer.body, label %inner.header
+  %cmp = icmp slt i16 %j, 42
+  br i1 %cmp, label %inner.header, label %outer.body
 
 outer.body:
   %new.cond.lcssa = phi i16 [ %cond, %inner.latch ]

@@ -70,6 +70,9 @@ enum class RecurKind {
   FindLastIVUMax, ///< FindLast reduction with select(cmp(),x,y) where one of
                   ///< (x,y) is increasing loop induction, and both x and y
                   ///< are integer type, producing a UMax reduction.
+  FindLast,       ///< FindLast reduction with select(cmp(),x,y) where x and y
+                  ///< are an integer type, one is the current recurrence value,
+                  ///< and the other is an arbitrary value.
   // clang-format on
   // TODO: Any_of and FindLast reduction need not be restricted to integer type
   // only.
@@ -95,12 +98,17 @@ public:
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
                        Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
-                       unsigned MinWidthCastToRecurTy)
+                       unsigned MinWidthCastToRecurTy,
+                       bool PhiHasUsesOutsideReductionChain = false)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
         IsSigned(Signed), IsOrdered(Ordered),
+        PhiHasUsesOutsideReductionChain(PhiHasUsesOutsideReductionChain),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
     CastInsts.insert_range(CI);
+    assert(
+        (!PhiHasUsesOutsideReductionChain || isMinMaxRecurrenceKind(K)) &&
+        "Only min/max recurrences are allowed to have multiple uses currently");
   }
 
   /// This POD struct holds information about a potential recurrence operation.
@@ -175,13 +183,11 @@ public:
   /// Returns a struct describing whether the instruction is either a
   ///   Select(ICmp(A, B), X, Y), or
   ///   Select(FCmp(A, B), X, Y)
-  /// where one of (X, Y) is an increasing (FindLast) or decreasing (FindFirst)
-  /// loop induction variable, and the other is a PHI value.
-  // TODO: Support non-monotonic variable. FindLast does not need be restricted
-  // to increasing loop induction variables.
-  LLVM_ABI static InstDesc isFindIVPattern(RecurKind Kind, Loop *TheLoop,
-                                           PHINode *OrigPhi, Instruction *I,
-                                           ScalarEvolution &SE);
+  /// where one of (X, Y) is an increasing (FindLastIV) or decreasing
+  /// (FindFirstIV) loop induction variable, or an arbitrary integer value
+  /// (FindLast), and the other is a PHI value.
+  LLVM_ABI static InstDesc isFindPattern(Loop *TheLoop, PHINode *OrigPhi,
+                                         Instruction *I, ScalarEvolution &SE);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
@@ -305,6 +311,17 @@ public:
            isFindLastIVRecurrenceKind(Kind);
   }
 
+  /// Returns true if the recurrence kind is of the form
+  ///   select(cmp(),x,y) where one of (x,y) is an arbitrary value and the
+  ///   other is a recurrence.
+  static bool isFindLastRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::FindLast;
+  }
+
+  static bool isFindRecurrenceKind(RecurKind Kind) {
+    return isFindLastRecurrenceKind(Kind) || isFindIVRecurrenceKind(Kind);
+  }
+
   /// Returns the type of the recurrence. This type can be narrower than the
   /// actual type of the Phi if the recurrence has been type-promoted.
   Type *getRecurrenceType() const { return RecurrenceType; }
@@ -338,6 +355,13 @@ public:
 
   /// Expose an ordered FP reduction to the instance users.
   bool isOrdered() const { return IsOrdered; }
+
+  /// Returns true if the reduction PHI has any uses outside the reduction
+  /// chain. This is relevant for min/max reductions that are part of a
+  /// FindLastIV pattern.
+  bool hasUsesOutsideReductionChain() const {
+    return PhiHasUsesOutsideReductionChain;
+  }
 
   /// Attempts to find a chain of operations from Phi to LoopExitInst that can
   /// be treated as a set of reductions instructions for in-loop reductions.
@@ -376,6 +400,10 @@ private:
   // Currently only a non-reassociative FAdd can be considered in-order,
   // if it is also the only FAdd in the PHI's use chain.
   bool IsOrdered = false;
+  // True if the reduction PHI has in-loop users outside the reduction chain.
+  // This is relevant for min/max reductions that are part of a FindLastIV
+  // pattern.
+  bool PhiHasUsesOutsideReductionChain = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
   // The minimum width used by the recurrence.
@@ -451,12 +479,10 @@ public:
                           : Instruction::BinaryOpsEnd;
   }
 
-  /// Returns a reference to the type cast instructions in the induction
+  /// Returns an ArrayRef to the type cast instructions in the induction
   /// update chain, that are redundant when guarded with a runtime
   /// SCEV overflow check.
-  const SmallVectorImpl<Instruction *> &getCastInsts() const {
-    return RedundantCasts;
-  }
+  ArrayRef<Instruction *> getCastInsts() const { return RedundantCasts; }
 
 private:
   /// Private constructor - used by \c isInductionPHI.

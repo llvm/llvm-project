@@ -193,7 +193,7 @@ struct MarkerStyle {
   std::string Note;
   /// Does this marker indicate inclusion by -dump-input-filter=error?
   bool FiltersAsError;
-  MarkerStyle() {}
+  MarkerStyle() = default;
   MarkerStyle(char Lead, raw_ostream::Colors Color,
               const std::string &Note = "", bool FiltersAsError = false)
       : Lead(Lead), Color(Color), Note(Note), FiltersAsError(FiltersAsError) {

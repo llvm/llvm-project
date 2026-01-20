@@ -218,6 +218,7 @@ defset list<DXILOpClass> OpClasses = {
   def waveAllOp : DXILOpClass;
   def waveAllTrue : DXILOpClass;
   def waveAnyTrue : DXILOpClass;
+  def waveBallot : DXILOpClass;
   def waveGetLaneCount : DXILOpClass;
   def waveGetLaneIndex : DXILOpClass;
   def waveIsFirstLane : DXILOpClass;
@@ -930,6 +931,42 @@ def Discard : DXILOp<82, discard> {
   let stages = [Stages<DXIL1_0, [pixel]>];
 }
 
+def DerivCoarseX : DXILOp<83, unary> {
+  let Doc = "computes the rate of change per stamp in x direction";
+  let intrinsics = [IntrinSelect<int_dx_ddx_coarse>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>];
+}
+
+def DerivCoarseY : DXILOp<84, unary> {
+  let Doc = "computes the rate of change per stamp in y direction";
+  let intrinsics = [IntrinSelect<int_dx_ddy_coarse>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>];
+}
+
+def DerivFineX : DXILOp<85, unary> {
+  let Doc = "computes the rate of change per stamp in x direction";
+  let intrinsics = [IntrinSelect<int_dx_ddx_fine>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>];
+}
+
+def DerivFineY : DXILOp<86, unary> {
+  let Doc = "computes the rate of change per stamp in y direction";
+  let intrinsics = [IntrinSelect<int_dx_ddy_fine>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>];
+}
+
 def ThreadId : DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
   let intrinsics = [IntrinSelect<int_dx_thread_id>];
@@ -1035,6 +1072,14 @@ def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def WaveActiveBallot : DXILOp<118, waveBallot> {
+  let Doc = "returns uint4 containing a bitmask of the evaluation of the boolean expression for all active lanes in the current wave.";
+  let intrinsics = [IntrinSelect<int_dx_wave_ballot>];
+  let arguments = [Int1Ty];
+  let result = OverloadTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let Doc = "returns the result of the operation across waves";
   let intrinsics = [
@@ -1077,6 +1122,15 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   ];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, []>];
+}
+
+def LegacyF16ToF32 : DXILOp<131, legacyF16ToF32> {
+  let Doc = "returns the float16 stored in the low-half of the uint converted "
+            "to a float";
+  let intrinsics = [IntrinSelect<int_dx_legacyf16tof32>];
+  let arguments = [Int32Ty];
+  let result = FloatTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
 def WaveAllBitCount : DXILOp<135, waveAllOp> {

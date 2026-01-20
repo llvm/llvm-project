@@ -26,10 +26,12 @@ public:
     return "JSON object file reader.";
   }
 
-  static ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                 lldb::offset_t data_offset, const FileSpec *file,
-                 lldb::offset_t file_offset, lldb::offset_t length);
+  static ObjectFile *CreateInstance(const lldb::ModuleSP &module_sp,
+                                    lldb::DataExtractorSP extractor_sp,
+                                    lldb::offset_t data_offset,
+                                    const FileSpec *file,
+                                    lldb::offset_t file_offset,
+                                    lldb::offset_t length);
 
   static ObjectFile *CreateMemoryInstance(const lldb::ModuleSP &module_sp,
                                           lldb::WritableDataBufferSP data_sp,
@@ -111,10 +113,11 @@ private:
   std::vector<JSONSymbol> m_symbols;
   std::vector<JSONSection> m_sections;
 
-  ObjectFileJSON(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
-                 lldb::offset_t data_offset, const FileSpec *file,
-                 lldb::offset_t offset, lldb::offset_t length, ArchSpec arch,
-                 UUID uuid, Type type, std::vector<JSONSymbol> symbols,
+  ObjectFileJSON(const lldb::ModuleSP &module_sp,
+                 lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset,
+                 const FileSpec *file, lldb::offset_t offset,
+                 lldb::offset_t length, ArchSpec arch, UUID uuid, Type type,
+                 std::vector<JSONSymbol> symbols,
                  std::vector<JSONSection> sections);
 };
 

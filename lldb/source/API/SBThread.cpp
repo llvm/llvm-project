@@ -14,6 +14,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBFrameList.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStructuredData.h"
@@ -318,6 +319,13 @@ void SBThread::SetThread(const ThreadSP &lldb_object_sp) {
 lldb::tid_t SBThread::GetThreadID() const {
   LLDB_INSTRUMENT_VA(this);
 
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return LLDB_INVALID_THREAD_ID;
+  }
+
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
     return thread_sp->GetID();
@@ -326,6 +334,13 @@ lldb::tid_t SBThread::GetThreadID() const {
 
 uint32_t SBThread::GetIndexID() const {
   LLDB_INSTRUMENT_VA(this);
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return LLDB_INVALID_INDEX32;
+  }
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
@@ -1102,6 +1117,26 @@ SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
   return sb_frame;
 }
 
+lldb::SBFrameList SBThread::GetFrames() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBFrameList sb_frame_list;
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return SBFrameList();
+  }
+
+  if (exe_ctx->HasThreadScope()) {
+    StackFrameListSP frame_list_sp =
+        exe_ctx->GetThreadPtr()->GetStackFrameList();
+    sb_frame_list.SetFrameList(frame_list_sp);
+  }
+
+  return sb_frame_list;
+}
+
 lldb::SBFrame SBThread::GetSelectedFrame() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -1294,6 +1329,13 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
 uint32_t SBThread::GetExtendedBacktraceOriginatingIndexID() {
   LLDB_INSTRUMENT_VA(this);
 
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return LLDB_INVALID_INDEX32;
+  }
+
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
     return thread_sp->GetExtendedBacktraceOriginatingIndexID();
@@ -1302,6 +1344,13 @@ uint32_t SBThread::GetExtendedBacktraceOriginatingIndexID() {
 
 SBValue SBThread::GetCurrentException() {
   LLDB_INSTRUMENT_VA(this);
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return SBValue();
+  }
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (!thread_sp)
@@ -1313,6 +1362,13 @@ SBValue SBThread::GetCurrentException() {
 SBThread SBThread::GetCurrentExceptionBacktrace() {
   LLDB_INSTRUMENT_VA(this);
 
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return SBThread();
+  }
+
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (!thread_sp)
     return SBThread();
@@ -1322,6 +1378,13 @@ SBThread SBThread::GetCurrentExceptionBacktrace() {
 
 bool SBThread::SafeToCallFunctions() {
   LLDB_INSTRUMENT_VA(this);
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return false;
+  }
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
@@ -1341,6 +1404,13 @@ lldb_private::Thread *SBThread::get() {
 
 SBValue SBThread::GetSiginfo() {
   LLDB_INSTRUMENT_VA(this);
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return SBValue();
+  }
 
   ThreadSP thread_sp = m_opaque_sp->GetThreadSP();
   if (!thread_sp)

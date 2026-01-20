@@ -223,6 +223,14 @@ func.func @outerproduct_non_vector_operand(%arg0: f32) {
 
 // -----
 
+func.func @outerproduct_invalid_kind_attr(%arg0 : vector<[4]xf32>, %arg1 : vector<[8]xf32>) {
+  // expected-error@+1 {{expected 'kind' attribute of type CombiningKind (e.g. 'vector.kind<add>')}}
+  %0 = vector.outerproduct %arg0, %arg1 {kind = "invalid"} : vector<[4]xf32>, vector<[8]xf32>
+  return
+}
+
+// -----
+
 func.func @outerproduct_operand_1(%arg0: vector<4xf32>, %arg1: vector<4x8xf32>) {
   // expected-error@+1 {{expected 1-d vector for operand #1}}
   %1 = vector.outerproduct %arg1, %arg1 : vector<4x8xf32>, vector<4x8xf32>
@@ -994,6 +1002,27 @@ func.func @contract_missing_iterator_types(%arg0: vector<1x2xi32>, %arg1: vector
 
 // -----
 
+#contraction_accesses = [
+        affine_map<(i, j, k) -> (i, k)>,
+        affine_map<(i, j, k) -> (k, j)>,
+        affine_map<(i, j, k) -> (i, j)>
+      ]
+#contraction_trait = {
+        kind = "invalid",
+        indexing_maps = #contraction_accesses,
+        iterator_types = ["parallel", "parallel", "reduction"]
+      }
+func.func @contraction_invalid_kind(%arg0: vector<4x3xf32>,
+                                    %arg1: vector<3x7xf32>,
+                                    %arg2: vector<4x7xf32>) {
+  // expected-error@+1 {{expected 'kind' attribute of type CombiningKind (e.g. 'vector.kind<add>')}}
+  %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
+    : vector<4x3xf32>, vector<3x7xf32> into vector<4x7xf32>
+  return
+}
+
+// -----
+
 func.func @create_mask_0d_no_operands() {
   %c1 = arith.constant 1 : index
   // expected-error@+1 {{must specify exactly one operand for 0-D create_mask}}
@@ -1491,9 +1520,9 @@ func.func @gather_non_power_of_two_alignment(%base: memref<16xf32>, %indices: ve
 func.func @scatter_to_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
                              %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+2 {{custom op 'vector.scatter' invalid kind of type specified}}
+  // expected-error@+1 {{'vector.scatter' op operand #0 must be Tensor or MemRef of any type values, but got 'vector<16xf32>'}}
   vector.scatter %base[%c0][%indices], %mask, %pass_thru
-    : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
 }
 
 // -----

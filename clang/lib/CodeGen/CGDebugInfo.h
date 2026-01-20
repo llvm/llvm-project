@@ -511,7 +511,7 @@ public:
   /// This is needed for call site debug info.
   void EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                QualType CalleeType,
-                               const FunctionDecl *CalleeDecl);
+                               GlobalDecl CalleeGlobalDecl);
 
   /// Constructs the debug code for exiting a function.
   void EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn);
@@ -678,6 +678,10 @@ public:
   /// Emit symbol for debugger that holds the pointer to the vtable.
   void emitVTableSymbol(llvm::GlobalVariable *VTable, const CXXRecordDecl *RD);
 
+  /// Return flags which enable debug info emission for call sites, provided
+  /// that it is supported and enabled.
+  llvm::DINode::DIFlags getCallSiteRelatedAttrs() const;
+
 private:
   /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
   /// Rank (lower nonzero rank is higher precedence). Does nothing if \p I
@@ -710,7 +714,8 @@ private:
   };
 
   bool HasReconstitutableArgs(ArrayRef<TemplateArgument> Args) const;
-  std::string GetName(const Decl *, bool Qualified = false) const;
+  std::string GetName(const Decl *, bool Qualified = false,
+                      bool *NameIsSimplified = nullptr) const;
 
   /// Build up structure info for the byref.  See \a BuildByRefType.
   BlockByRefType EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
@@ -827,18 +832,14 @@ private:
                          unsigned LineNo, StringRef LinkageName,
                          llvm::GlobalVariable *Var, llvm::DIScope *DContext);
 
-
-  /// Return flags which enable debug info emission for call sites, provided
-  /// that it is supported and enabled.
-  llvm::DINode::DIFlags getCallSiteRelatedAttrs() const;
-
   /// Get the printing policy for producing names for debug info.
   PrintingPolicy getPrintingPolicy() const;
 
   /// Get function name for the given FunctionDecl. If the name is
   /// constructed on demand (e.g., C++ destructor) then the name is
   /// stored on the side.
-  StringRef getFunctionName(const FunctionDecl *FD);
+  StringRef getFunctionName(const FunctionDecl *FD,
+                            bool *NameIsSimplified = nullptr);
 
   /// Returns the unmangled name of an Objective-C method.
   /// This is the display name for the debugging info.
@@ -849,7 +850,8 @@ private:
   StringRef getSelectorName(Selector S);
 
   /// Get class name including template argument list.
-  StringRef getClassName(const RecordDecl *RD);
+  StringRef getClassName(const RecordDecl *RD,
+                         bool *NameIsSimplified = nullptr);
 
   /// Get the vtable name for the given class.
   StringRef getVTableName(const CXXRecordDecl *Decl);

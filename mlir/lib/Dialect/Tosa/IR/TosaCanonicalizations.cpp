@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
+#include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
@@ -539,7 +540,7 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
     auto inputEType = llvm::cast<ShapedType>(input.getType()).getElementType();
     if (auto quantType =
             llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputEType)) {
-      inputEType = quantType.getStorageType();
+      inputEType = getStorageElementTypeFromQuantized(quantType);
     }
 
     Attribute newMinValAttr, newMaxValAttr;
@@ -888,33 +889,101 @@ void SliceOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // Operator Folders.
 //===----------------------------------------------------------------------===//
 
-template <typename IntFolder, typename FloatFolder>
+template <typename Folder>
 static DenseElementsAttr binaryFolder(DenseElementsAttr lhs,
                                       DenseElementsAttr rhs,
                                       RankedTensorType returnTy) {
   if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
-    auto lETy = llvm::cast<ShapedType>(lhs.getType()).getElementType();
-    auto rETy = llvm::cast<ShapedType>(rhs.getType()).getElementType();
+    const auto lETy = llvm::cast<ShapedType>(lhs.getType()).getElementType();
+    const auto rETy = llvm::cast<ShapedType>(rhs.getType()).getElementType();
     if (lETy != rETy)
       return {};
 
-    if (llvm::isa<IntegerType>(lETy)) {
-      APInt l = lhs.getSplatValue<APInt>();
-      APInt r = rhs.getSplatValue<APInt>();
-      auto result = IntFolder()(l, r);
-      return DenseElementsAttr::get(returnTy, result);
+    if (const auto lIntTy = dyn_cast<IntegerType>(lETy)) {
+      const APInt l = lhs.getSplatValue<APInt>();
+      const APInt r = rhs.getSplatValue<APInt>();
+      const auto maybeResult = Folder::fold(l, r, lIntTy.isUnsigned());
+      if (failed(maybeResult))
+        return {};
+      return DenseElementsAttr::get(returnTy, maybeResult.value());
     }
 
     if (llvm::isa<FloatType>(lETy)) {
-      APFloat l = lhs.getSplatValue<APFloat>();
-      APFloat r = rhs.getSplatValue<APFloat>();
-      auto result = FloatFolder()(l, r);
-      return DenseElementsAttr::get(returnTy, result);
+      const APFloat l = lhs.getSplatValue<APFloat>();
+      const APFloat r = rhs.getSplatValue<APFloat>();
+      const auto maybeResult = Folder::fold(l, r);
+      if (failed(maybeResult))
+        return {};
+      return DenseElementsAttr::get(returnTy, maybeResult.value());
     }
   }
 
   return {};
 }
+struct FoldAddAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               const bool isUnsigned) {
+    bool overflow;
+    const APInt result =
+        isUnsigned ? lhs.uadd_ov(rhs, overflow) : lhs.sadd_ov(rhs, overflow);
+    if (overflow)
+      return failure();
+    return result;
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return lhs + rhs;
+  }
+};
+
+struct FoldSubAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               const bool isUnsigned) {
+    bool overflow;
+    const APInt result =
+        isUnsigned ? lhs.usub_ov(rhs, overflow) : lhs.ssub_ov(rhs, overflow);
+    if (overflow)
+      return failure();
+    return result;
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return lhs - rhs;
+  }
+};
+
+struct FoldGreaterAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               const bool isUnsigned) {
+    return isUnsigned ? APInt(1, lhs.ugt(rhs)) : APInt(1, lhs.sgt(rhs));
+  }
+
+  static FailureOr<APInt> fold(const APFloat &lhs, const APFloat &rhs) {
+    return APInt(1, lhs > rhs);
+  }
+};
+
+struct FoldGreaterEqualAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               const bool isUnsigned) {
+    return isUnsigned ? APInt(1, lhs.uge(rhs)) : APInt(1, lhs.sge(rhs));
+  }
+
+  static FailureOr<APInt> fold(const APFloat &lhs, const APFloat &rhs) {
+    return APInt(1, lhs >= rhs);
+  }
+};
+
+struct FoldEqualAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               const bool isUnsigned) {
+    return APInt(1, lhs == rhs);
+  }
+
+  static FailureOr<APInt> fold(const APFloat &lhs, const APFloat &rhs) {
+    return APInt(1, lhs == rhs);
+  }
+};
 
 static bool isSplatZero(Type elemType, DenseElementsAttr val) {
   if (llvm::isa<FloatType>(elemType))
@@ -962,8 +1031,7 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<std::plus<APInt>, std::plus<APFloat>>(lhsAttr, rhsAttr,
-                                                            resultTy);
+  return binaryFolder<FoldAddAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult ArgMaxOp::fold(FoldAdaptor adaptor) {
@@ -1144,37 +1212,8 @@ OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<std::minus<APInt>, std::minus<APFloat>>(lhsAttr, rhsAttr,
-                                                              resultTy);
+  return binaryFolder<FoldSubAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
-
-namespace {
-template <typename Cmp>
-struct ComparisonFold {
-  ComparisonFold() = default;
-  APInt operator()(const APInt &l, const APInt &r) {
-    return APInt(1, Cmp()(l, r));
-  }
-
-  APInt operator()(const APFloat &l, const APFloat &r) {
-    return APInt(1, Cmp()(l, r));
-  }
-};
-
-struct APIntFoldGreater {
-  APIntFoldGreater() = default;
-  APInt operator()(const APInt &l, const APInt &r) {
-    return APInt(1, l.sgt(r));
-  }
-};
-
-struct APIntFoldGreaterEqual {
-  APIntFoldGreaterEqual() = default;
-  APInt operator()(const APInt &l, const APInt &r) {
-    return APInt(1, l.sge(r));
-  }
-};
-} // namespace
 
 OpFoldResult GreaterOp::fold(FoldAdaptor adaptor) {
   auto resultTy = llvm::dyn_cast<RankedTensorType>(getType());
@@ -1186,8 +1225,7 @@ OpFoldResult GreaterOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<APIntFoldGreater, ComparisonFold<std::greater<APFloat>>>(
-      lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<FoldGreaterAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult GreaterEqualOp::fold(FoldAdaptor adaptor) {
@@ -1200,9 +1238,7 @@ OpFoldResult GreaterEqualOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<APIntFoldGreaterEqual,
-                      ComparisonFold<std::greater_equal<APFloat>>>(
-      lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<FoldGreaterEqualAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult EqualOp::fold(FoldAdaptor adaptor) {
@@ -1225,9 +1261,7 @@ OpFoldResult EqualOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<ComparisonFold<std::equal_to<APInt>>,
-                      ComparisonFold<std::equal_to<APFloat>>>(lhsAttr, rhsAttr,
-                                                              resultTy);
+  return binaryFolder<FoldEqualAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
@@ -1485,7 +1519,24 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+static bool
+mayRequireBroadcast(ValueTypeRange<mlir::OperandRange> operandTypes) {
+  const auto isDynamic = [](Type ty) {
+    const auto shapedTy = llvm::dyn_cast<ShapedType>(ty);
+    return !shapedTy || !shapedTy.hasStaticShape();
+  };
+
+  return llvm::any_of(operandTypes, isDynamic) ||
+         failed(verifyCompatibleShapes(operandTypes));
+}
+
 OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
+  // Select allows operand shapes to be broadcast to the output shape. For
+  // now, don't support folding when we cannot prove no broadcasting is
+  // involved.
+  if (mayRequireBroadcast(getOperandTypes()))
+    return {};
+
   if (getOnTrue() == getOnFalse())
     return getOnTrue();
 

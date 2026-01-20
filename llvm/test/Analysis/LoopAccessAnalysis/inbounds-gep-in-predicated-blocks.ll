@@ -10,7 +10,7 @@
 ;   s0 += (1ULL << 62) + 1;
 ;   s1 += (1ULL << 62) + 2;
 ; }
-; FIXME: We cannot use inbounds on idx.0, idx.1 to infer no-wrap (and determine
+; We cannot use inbounds on idx.0, idx.1 to infer no-wrap (and determine
 ; there are no dependences), as the pointers are not dereferenced in all loop iterations.
 define void @test_inbounds_gep_used_in_predicated_block(ptr %A, i64 %n) {
 ; CHECK-LABEL: 'test_inbounds_gep_used_in_predicated_block'
@@ -19,9 +19,14 @@ define void @test_inbounds_gep_used_in_predicated_block(ptr %A, i64 %n) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %A High: (-4611686018427387705 + %A))
+; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
+; CHECK-NEXT:            Member: {%A,+,4611686018427387905}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%A,+,4611686018427387906}<%loop.header> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -63,9 +68,14 @@ define void @test_inbounds_gep_used_in_predicated_block_stored_value_operand(ptr
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %A High: (-4611686018427387705 + %A))
+; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
+; CHECK-NEXT:            Member: {%A,+,4611686018427387905}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%A,+,4611686018427387906}<%loop.header> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -109,9 +119,14 @@ define void @test_inbounds_gep_used_in_predicated_block_non_memop_user(ptr %A, i
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %A High: (-4611686018427387705 + %A))
+; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
+; CHECK-NEXT:            Member: {%A,+,4611686018427387905}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%A,+,4611686018427387906}<%loop.header> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -146,6 +161,61 @@ exit:
   store i32 0, ptr %gep.idx.0
   store i32 0, ptr %gep.idx.1
   ret void
+}
+
+; Test for nusw GEP with load user outside the loop.
+; https://github.com/llvm/llvm-project/issues/174760
+define i32 @test_nusw_gep_with_load_user_outside_loop(ptr %A) {
+; CHECK-LABEL: 'test_nusw_gep_with_load_user_outside_loop'
+; CHECK-NEXT:    loop.header:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop.
+; CHECK-NEXT:      Unknown data dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            store i32 0, ptr %A, align 4 ->
+; CHECK-NEXT:            store i32 0, ptr %gep, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: (-392 + %A) High: (8 + %A))
+; CHECK-NEXT:            Member: {(4 + %A),+,-4}<%loop.header>
+; CHECK-NEXT:            Member: %A
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {true,+,true}<%loop.header> Added Flags: <nusw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE]  %gep = getelementptr nusw i32, ptr %A, i64 %and:
+; CHECK-NEXT:        ((4 * (zext i1 {true,+,true}<%loop.header> to i64))<nuw><nsw> + %A)
+; CHECK-NEXT:        --> {(4 + %A),+,-4}<%loop.header>
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop.latch ]
+  %and = and i64 %iv, 1
+  %cond = icmp eq i64 %and, 0
+  br i1 %cond, label %if.then, label %loop.latch
+
+if.then:
+  store i32 0, ptr %A, align 4
+  br label %loop.latch
+
+loop.latch:
+  %gep = getelementptr nusw i32, ptr %A, i64 %and
+  store i32 0, ptr %gep, align 4
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp ult i64 %iv, 100
+  br i1 %cmp, label %loop.header, label %exit
+
+exit:
+  ; Load user of %gep is outside the loop. blockNeedsPredication should not be
+  ; called on exit block.
+  %l = load i32, ptr %gep, align 4
+  ret i32 %l
 }
 
 define void @test_header_existing(ptr %src, ptr %dst, i64 %start) {

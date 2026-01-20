@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32ZBB
 
-declare i32 @llvm.ctlz.i32(i32, i1)
-
 define i32 @ctlz_i32(i32 %a) nounwind {
 ; RV32I-LABEL: ctlz_i32:
 ; RV32I:       # %bb.0:
@@ -56,8 +54,6 @@ define i32 @ctlz_i32(i32 %a) nounwind {
   ret i32 %1
 }
 
-declare i64 @llvm.ctlz.i64(i64, i1)
-
 define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-LABEL: ctlz_i64:
 ; RV32I:       # %bb.0:
@@ -102,8 +98,8 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB1_3:
-; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    li a0, 64
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB1_4:
 ; RV32I-NEXT:    srli a0, a1, 1
@@ -151,8 +147,6 @@ define i64 @ctlz_i64(i64 %a) nounwind {
   ret i64 %1
 }
 
-declare i32 @llvm.cttz.i32(i32, i1)
-
 define i32 @cttz_i32(i32 %a) nounwind {
 ; RV32I-LABEL: cttz_i32:
 ; RV32I:       # %bb.0:
@@ -184,8 +178,6 @@ define i32 @cttz_i32(i32 %a) nounwind {
   %1 = call i32 @llvm.cttz.i32(i32 %a, i1 false)
   ret i32 %1
 }
-
-declare i64 @llvm.cttz.i64(i64, i1)
 
 define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-LABEL: cttz_i64:
@@ -225,14 +217,13 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    j .LBB3_5
 ; RV32I-NEXT:  .LBB3_3:
 ; RV32I-NEXT:    li a0, 64
-; RV32I-NEXT:    j .LBB3_6
+; RV32I-NEXT:    j .LBB3_5
 ; RV32I-NEXT:  .LBB3_4:
 ; RV32I-NEXT:    srli s1, s1, 27
 ; RV32I-NEXT:    add s1, s3, s1
 ; RV32I-NEXT:    lbu a0, 0(s1)
-; RV32I-NEXT:  .LBB3_5: # %cond.false
+; RV32I-NEXT:  .LBB3_5: # %cond.end
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:  .LBB3_6: # %cond.end
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -257,8 +248,6 @@ define i64 @cttz_i64(i64 %a) nounwind {
   %1 = call i64 @llvm.cttz.i64(i64 %a, i1 false)
   ret i64 %1
 }
-
-declare i32 @llvm.ctpop.i32(i32)
 
 define i32 @ctpop_i32(i32 %a) nounwind {
 ; RV32I-LABEL: ctpop_i32:
@@ -369,8 +358,6 @@ define i1 @ctpop_i32_ne_one(i32 signext %a) nounwind {
   %2 = icmp ne i32 %1, 1
   ret i1 %2
 }
-
-declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
 
 define <2 x i32> @ctpop_v2i32(<2 x i32> %a) nounwind {
 ; RV32I-LABEL: ctpop_v2i32:
@@ -483,8 +470,6 @@ define <2 x i1> @ctpop_v2i32_ne_one(<2 x i32> %a) nounwind {
   %2 = icmp ne <2 x i32> %1, <i32 1, i32 1>
   ret <2 x i1> %2
 }
-
-declare i64 @llvm.ctpop.i64(i64)
 
 define i64 @ctpop_i64(i64 %a) nounwind {
 ; RV32I-LABEL: ctpop_i64:
@@ -648,8 +633,6 @@ define i1 @ctpop_i64_ne_one(i64 %a) nounwind {
   %2 = icmp ne i64 %1, 1
   ret i1 %2
 }
-
-declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 
 define <2 x i64> @ctpop_v2i64(<2 x i64> %a) nounwind {
 ; RV32I-LABEL: ctpop_v2i64:
@@ -1127,8 +1110,6 @@ define i64 @maxu_i64(i64 %a, i64 %b) nounwind {
   ret i64 %cond
 }
 
-declare i32 @llvm.abs.i32(i32, i1 immarg)
-
 define i32 @abs_i32(i32 %x) {
 ; RV32I-LABEL: abs_i32:
 ; RV32I:       # %bb.0:
@@ -1145,8 +1126,6 @@ define i32 @abs_i32(i32 %x) {
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
   ret i32 %abs
 }
-
-declare i64 @llvm.abs.i64(i64, i1 immarg)
 
 define i64 @abs_i64(i64 %x) {
 ; CHECK-LABEL: abs_i64:
@@ -1195,8 +1174,6 @@ define i64 @zexth_i64(i64 %a) nounwind {
   ret i64 %and
 }
 
-declare i32 @llvm.bswap.i32(i32)
-
 define i32 @bswap_i32(i32 %a) nounwind {
 ; RV32I-LABEL: bswap_i32:
 ; RV32I:       # %bb.0:
@@ -1220,8 +1197,6 @@ define i32 @bswap_i32(i32 %a) nounwind {
   %1 = tail call i32 @llvm.bswap.i32(i32 %a)
   ret i32 %1
 }
-
-declare i64 @llvm.bswap.i64(i64)
 
 define i64 @bswap_i64(i64 %a) {
 ; RV32I-LABEL: bswap_i64:
