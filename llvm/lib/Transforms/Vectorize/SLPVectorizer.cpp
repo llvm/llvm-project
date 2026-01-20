@@ -14392,7 +14392,7 @@ public:
         // vectorized tree.
         // Also, avoid adjusting the cost for extractelements with multiple uses
         // in different graph entries.
-        auto *EE = dyn_cast<ExtractElementInst>(V); // using dyncast instead of cast to rule out the crash if v is not an extract elementinst
+        auto *EE = cast<ExtractElementInst>(V);
         VecBase = EE->getVectorOperand();
         UniqueBases.insert(VecBase);
         ArrayRef<TreeEntry *> VEs = R.getTreeEntries(V);
