@@ -53,7 +53,8 @@ size_t NamedValuesSchema::getNumEntries(NamedValuesProxy Values) const {
 }
 
 Error NamedValuesSchema::forEachEntry(
-    NamedValuesProxy Values, function_ref<Error(const NamedValuesEntry &)> Callback) const {
+    NamedValuesProxy Values,
+    function_ref<Error(const NamedValuesEntry &)> Callback) const {
   for (size_t I = 0, IE = getNumEntries(Values); I != IE; ++I)
     if (Error E = Callback(loadEntry(Values, I)))
       return E;
@@ -61,7 +62,8 @@ Error NamedValuesSchema::forEachEntry(
   return Error::success();
 }
 
-NamedValuesEntry NamedValuesSchema::loadEntry(NamedValuesProxy Values, size_t I) const {
+NamedValuesEntry NamedValuesSchema::loadEntry(NamedValuesProxy Values,
+                                              size_t I) const {
   StringRef Name = Values.getName(I);
   auto ObjectRef = Values.getReference(I + 1);
 

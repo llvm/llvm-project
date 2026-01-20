@@ -30,12 +30,14 @@ struct NamedValuesEntry {
   StringRef Name;
   ObjectRef Ref;
 
-  friend bool operator==(const NamedValuesEntry &LHS, const NamedValuesEntry &RHS) {
+  friend bool operator==(const NamedValuesEntry &LHS,
+                         const NamedValuesEntry &RHS) {
     return LHS.Ref == RHS.Ref && LHS.Name == RHS.Name;
   }
 
   /// Ordering the entries by name. Items should have unique names.
-  friend bool operator<(const NamedValuesEntry &LHS, const NamedValuesEntry &RHS) {
+  friend bool operator<(const NamedValuesEntry &LHS,
+                        const NamedValuesEntry &RHS) {
     return LHS.Name < RHS.Name;
   }
 };
@@ -95,11 +97,13 @@ private:
   size_t getNumEntries(NamedValuesProxy Values) const;
 
   /// Iterate over entries with a callback.
-  Error forEachEntry(NamedValuesProxy Values,
-                     function_ref<Error(const NamedValuesEntry &)> Callback) const;
+  Error
+  forEachEntry(NamedValuesProxy Values,
+               function_ref<Error(const NamedValuesEntry &)> Callback) const;
 
   /// Lookup an entry by name.
-  std::optional<size_t> lookupEntry(NamedValuesProxy Values, StringRef Name) const;
+  std::optional<size_t> lookupEntry(NamedValuesProxy Values,
+                                    StringRef Name) const;
 
   /// Load an entry by index.
   NamedValuesEntry loadEntry(NamedValuesProxy Values, size_t I) const;
@@ -117,7 +121,8 @@ public:
   const NamedValuesSchema &getSchema() const { return *Schema; }
 
   /// Iterate over entries with a callback.
-  Error forEachEntry(function_ref<Error(const NamedValuesEntry &)> Callback) const {
+  Error
+  forEachEntry(function_ref<Error(const NamedValuesEntry &)> Callback) const {
     return Schema->forEachEntry(*this, Callback);
   }
 

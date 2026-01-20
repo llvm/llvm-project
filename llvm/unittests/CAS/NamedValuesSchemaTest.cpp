@@ -72,11 +72,12 @@ TEST(NamedValuesSchemaTest, Basic) {
     EXPECT_EQ(FlatEntries[I].size(), Value->size());
 
     size_t NumCalls = 0;
-    EXPECT_THAT_ERROR(Value->forEachEntry([&NumCalls](const NamedValuesEntry &E) {
-      ++NumCalls;
-      return Error::success();
-    }),
-                      Succeeded());
+    EXPECT_THAT_ERROR(
+        Value->forEachEntry([&NumCalls](const NamedValuesEntry &E) {
+          ++NumCalls;
+          return Error::success();
+        }),
+        Succeeded());
     EXPECT_EQ(FlatEntries[I].size(), NumCalls);
   }
 
@@ -128,7 +129,7 @@ TEST(NamedValuesSchemaTest, Basic) {
     // Copy one of the flat entries and add some trees.
     auto OriginalEntries = ArrayRef(FlatEntries[I % FlatEntries.size()]);
     SmallVector<NamedValuesEntry> Entries(OriginalEntries.begin(),
-                                    OriginalEntries.end());
+                                          OriginalEntries.end());
     std::string Name = ("tree" + Twine(I)).str();
     Entries.emplace_back(
         Name, *CAS1->getReference(FlatIDs[(I + 4) % FlatIDs.size()]));
@@ -190,8 +191,9 @@ TEST(NamedValuesSchemaTest, Lookup) {
                     Succeeded());
   ObjectRef Blob = *Node;
   SmallVector<NamedValuesEntry> FlatEntries = {
-      NamedValuesEntry("e", Blob), NamedValuesEntry("b", Blob), NamedValuesEntry("f", Blob),
-      NamedValuesEntry("a", Blob), NamedValuesEntry("c", Blob), NamedValuesEntry("d", Blob),
+      NamedValuesEntry("e", Blob), NamedValuesEntry("b", Blob),
+      NamedValuesEntry("f", Blob), NamedValuesEntry("a", Blob),
+      NamedValuesEntry("c", Blob), NamedValuesEntry("d", Blob),
   };
   std::optional<NamedValuesProxy> Value;
   NamedValuesSchema Schema = cantFail(NamedValuesSchema::create(*CAS));
