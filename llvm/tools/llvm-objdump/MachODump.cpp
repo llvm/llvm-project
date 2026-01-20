@@ -7235,20 +7235,17 @@ objdump::getMachODSymObject(const MachOObjectFile *MachOOF, StringRef Filename,
   return DbgObj;
 }
 
-static void setUpMachOInstPrinter(MCInstPrinter *IP) {
-  IP->setPrintImmHex(PrintImmHex);
+static bool shouldInstPrinterUseColor() {
   switch (DisassemblyColor) {
   case ColorOutput::Enable:
-    IP->setUseColor(true);
-    break;
+    return true;
   case ColorOutput::Auto:
-    IP->setUseColor(outs().has_colors());
-    break;
+    return outs().has_colors();
   case ColorOutput::Disable:
   case ColorOutput::Invalid:
-    IP->setUseColor(false);
-    break;
+    return false;
   }
+  return false;
 }
 
 static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
@@ -7335,7 +7332,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
       TheTriple, AsmPrinterVariant, *AsmInfo, *InstrInfo, *MRI));
   CHECK_TARGET_INFO_CREATION(IP);
-  setUpMachOInstPrinter(IP.get());
+  IP->setPrintImmHex(PrintImmHex);
+  IP->setUseColor(shouldInstPrinterUseColor());
 
   // Comment stream and backing vector.
   SmallString<128> CommentsToEmit;
@@ -7388,7 +7386,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         ThumbTriple, ThumbAsmPrinterVariant, *ThumbAsmInfo, *ThumbInstrInfo,
         *ThumbMRI));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbIP);
-    setUpMachOInstPrinter(ThumbIP.get());
+    ThumbIP->setPrintImmHex(PrintImmHex);
+    ThumbIP->setUseColor(shouldInstPrinterUseColor());
   }
 
 #undef CHECK_TARGET_INFO_CREATION
