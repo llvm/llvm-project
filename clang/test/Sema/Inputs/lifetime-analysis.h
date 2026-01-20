@@ -49,7 +49,8 @@ struct vector {
   template<typename InputIterator>
 	vector(InputIterator first, InputIterator __last);
 
-  T &at(int n);
+  T &  at(int n) &;
+  T && at(int n) &&;
 
   void push_back(const T&);
   void push_back(T&&);
