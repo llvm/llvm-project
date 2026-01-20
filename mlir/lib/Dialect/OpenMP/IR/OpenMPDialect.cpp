@@ -2252,7 +2252,7 @@ LogicalResult TargetOp::verifyRegions() {
       if (auto parallelOp = dyn_cast<ParallelOp>(user)) {
         if (bitEnumContainsAny(execFlags, TargetRegionFlags::spmd) &&
             parallelOp->isAncestor(capturedOp) &&
-            llvm::is_contained(parallelOp.getNumThreadsVals(), hostEvalArg))
+            llvm::is_contained(parallelOp.getNumThreadsVars(), hostEvalArg))
           continue;
 
         return emitOpError()
@@ -2504,7 +2504,7 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        ArrayRef<NamedAttribute> attributes) {
   ParallelOp::build(builder, state, /*allocate_vars=*/ValueRange(),
                     /*allocator_vars=*/ValueRange(), /*if_expr=*/nullptr,
-                    /*num_threads_vals=*/ValueRange(),
+                    /*num_threads_vars=*/ValueRange(),
                     /*private_vars=*/ValueRange(),
                     /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
                     /*proc_bind_kind=*/nullptr,
@@ -2517,7 +2517,7 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        const ParallelOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   ParallelOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                    clauses.ifExpr, clauses.numThreadsVals, clauses.privateVars,
+                    clauses.ifExpr, clauses.numThreadsVars, clauses.privateVars,
                     makeArrayAttr(ctx, clauses.privateSyms),
                     clauses.privateNeedsBarrier, clauses.procBindKind,
                     clauses.reductionMod, clauses.reductionVars,

@@ -99,7 +99,7 @@ public:
     if (ops.numTeamsUpper)
       vars.push_back(ops.numTeamsUpper);
 
-    for (auto numThreads : ops.numThreadsVals)
+    for (auto numThreads : ops.numThreadsVars)
       vars.push_back(numThreads);
 
     if (ops.threadLimit)
@@ -115,7 +115,7 @@ public:
     assert(args.size() ==
                ops.loopLowerBounds.size() + ops.loopUpperBounds.size() +
                    ops.loopSteps.size() + (ops.numTeamsLower ? 1 : 0) +
-                   (ops.numTeamsUpper ? 1 : 0) + ops.numThreadsVals.size() +
+                   (ops.numTeamsUpper ? 1 : 0) + ops.numThreadsVars.size() +
                    (ops.threadLimit ? 1 : 0) &&
            "invalid block argument list");
     int argIndex = 0;
@@ -134,8 +134,8 @@ public:
     if (ops.numTeamsUpper)
       ops.numTeamsUpper = args[argIndex++];
 
-    for (size_t i = 0; i < ops.numThreadsVals.size(); ++i)
-      ops.numThreadsVals[i] = args[argIndex++];
+    for (size_t i = 0; i < ops.numThreadsVars.size(); ++i)
+      ops.numThreadsVars[i] = args[argIndex++];
 
     if (ops.threadLimit)
       ops.threadLimit = args[argIndex++];
@@ -169,13 +169,13 @@ public:
   /// \returns whether an update was performed. If not, these clauses were not
   ///          evaluated in the host device.
   bool apply(mlir::omp::ParallelOperands &clauseOps) {
-    if (ops.numThreadsVals.empty() || parallelApplied) {
+    if (ops.numThreadsVars.empty() || parallelApplied) {
       parallelApplied = true;
       return false;
     }
 
     parallelApplied = true;
-    clauseOps.numThreadsVals = ops.numThreadsVals;
+    clauseOps.numThreadsVars = ops.numThreadsVars;
     return true;
   }
 

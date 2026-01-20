@@ -3273,7 +3273,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   if (auto ifVar = opInst.getIfExpr())
     ifCond = moduleTranslation.lookupValue(ifVar);
   llvm::Value *numThreads = nullptr;
-  if (!opInst.getNumThreadsVals().empty())
+  if (!opInst.getNumThreadsVars().empty())
     numThreads = moduleTranslation.lookupValue(opInst.getNumThreads(0));
   auto pbKind = llvm::omp::OMP_PROC_BIND_default;
   if (auto bind = opInst.getProcBindKind())
@@ -6055,7 +6055,7 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
               llvm_unreachable("unsupported host_eval use");
           })
           .Case([&](omp::ParallelOp parallelOp) {
-            if (!parallelOp.getNumThreadsVals().empty() &&
+            if (!parallelOp.getNumThreadsVars().empty() &&
                 parallelOp.getNumThreads(0) == blockArg)
               numThreads = hostEvalVar;
             else
@@ -6174,7 +6174,7 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     }
 
     if (auto parallelOp = castOrGetParentOfType<omp::ParallelOp>(capturedOp)) {
-      if (!parallelOp.getNumThreadsVals().empty())
+      if (!parallelOp.getNumThreadsVars().empty())
         numThreads = parallelOp.getNumThreads(0);
     }
   }

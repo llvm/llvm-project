@@ -1069,11 +1069,11 @@ class OpenMP_NumThreadsClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    Variadic<IntLikeType>:$num_threads_vals
+    Variadic<IntLikeType>:$num_threads_vars
   );
 
   let optAssemblyFormat = [{
-    `num_threads` `(` $num_threads_vals `:` type($num_threads_vals) `)`
+    `num_threads` `(` $num_threads_vars `:` type($num_threads_vars) `)`
   }];
 
   let description = [{
@@ -1095,20 +1095,20 @@ class OpenMP_NumThreadsClauseSkip<
   let extraClassDeclaration = [{
     /// Returns true if using multi-dimensional values (more than one value)
     bool hasNumThreadsMultiDim() {
-      return getNumThreadsVals().size() > 1;
+      return getNumThreadsVars().size() > 1;
     }
 
     /// Returns the number of dimensions specified for num_threads
     unsigned getNumThreadsDimsCount() {
-      return getNumThreadsVals().size();
+      return getNumThreadsVars().size();
     }
 
     /// Returns the value for a specific dimension index
-    /// Index must be less than getNumThreadsVals().size()
+    /// Index must be less than getNumThreadsVars().size()
     ::mlir::Value getNumThreads(unsigned dim = 0) {
       assert(dim < getNumThreadsDimsCount() &&
              "Num threads index out of bounds");
-      return getNumThreadsVals()[dim];
+      return getNumThreadsVars()[dim];
     }
   }];
 }
