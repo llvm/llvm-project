@@ -1143,7 +1143,7 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
     [OpType, llvm_i32_ty, llvm_i32_ty]);
 }
 
-class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num> {
+class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num, string ElemType = "i32"> {
   int shift = !cond(!eq(Shape, "16x128b"): 1,
                     !eq(Shape, "16x256b"): 2,
                     true : 0);
@@ -1151,14 +1151,14 @@ class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num> {
   int veclen = !shl(1, !add(Num, shift));
 
   int valid = !le(veclen, 128);
-  LLVMType type = !cond(!eq(veclen,   1): llvm_i32_ty,
-                        !eq(veclen,   2): llvm_v2i32_ty,
-                        !eq(veclen,   4): llvm_v4i32_ty,
-                        !eq(veclen,   8): llvm_v8i32_ty,
-                        !eq(veclen,  16): llvm_v16i32_ty,
-                        !eq(veclen,  32): llvm_v32i32_ty,
-                        !eq(veclen,  64): llvm_v64i32_ty,
-                        !eq(veclen, 128): llvm_v128i32_ty,
+  LLVMType type = !cond(!eq(veclen,   1): LLVMType<!cast<ValueType>(ElemType)>,
+                        !eq(veclen,   2): LLVMType<!cast<ValueType>("v"#2#ElemType)>,
+                        !eq(veclen,   4): LLVMType<!cast<ValueType>("v"#4#ElemType)>,
+                        !eq(veclen,   8): LLVMType<!cast<ValueType>("v"#8#ElemType)>,
+                        !eq(veclen,  16): LLVMType<!cast<ValueType>("v"#16#ElemType)>,
+                        !eq(veclen,  32): LLVMType<!cast<ValueType>("v"#32#ElemType)>,
+                        !eq(veclen,  64): LLVMType<!cast<ValueType>("v"#64#ElemType)>,
+                        !eq(veclen, 128): LLVMType<!cast<ValueType>("v"#128#ElemType)>,
                         true : llvm_void_ty);
 }
 
@@ -1266,12 +1266,6 @@ class NVVMBuiltin :
            "NVVMBuiltin must be a NVVM intrinsic starting with 'int_nvvm_'";
 }
 
-// Note(krzysz00): This class is named `NVVMPureIntrinsic` because the
-// `PureIntrinsic` class I added to `Intrinsics.td` also adds the
-// new `nocreateundeforpoison` property (which means that if the operanands
-// to the intrinsic aren't undef/poison, the result won't be either). I don't know
-// the NVVM intrinsics and so can't update the annotations. Someone from Nvidia
-// should go through an update these (or swap back to `PureIntrinsic` wholesale).
 class NVVMPureIntrinsic<list<LLVMType> ret_types,
                     list<LLVMType> param_types = [],
                     list<IntrinsicProperty> intr_properties = [],
@@ -1285,18 +1279,18 @@ let TargetPrefix = "nvvm" in {
   // PRMT - permute
   //
   def int_nvvm_prmt : NVVMBuiltin,
-    NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+    PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
 
   foreach mode = ["f4e", "b4e"] in
     def int_nvvm_prmt_ # mode :
-        NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+        PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
 
   // Note: these variants also have 2 source operands but only one will ever
   // be used so we eliminate the other operand in the IR (0 is used as the
   // placeholder in the backend).
   foreach mode = ["rc8", "ecl", "ecr", "rc16"] in
     def int_nvvm_prmt_ # mode :
-        NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
+        PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
 
   //
   // Nanosleep
@@ -1315,7 +1309,8 @@ let TargetPrefix = "nvvm" in {
   //
   // Min Max
   //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative] in {
+  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
+                        IntrNoCreateUndefOrPoison] in {
     foreach operation = ["min", "max"] in {
       def int_nvvm_f # operation # _d : NVVMBuiltin,
         DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
@@ -1346,7 +1341,8 @@ let TargetPrefix = "nvvm" in {
   //
   // Multiplication
   //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative] in {
+  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative, 
+                        IntrNoCreateUndefOrPoison] in {
     foreach sign = ["", "u"] in {
       def int_nvvm_mulhi_ # sign # s : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty]>;
@@ -1374,7 +1370,7 @@ let TargetPrefix = "nvvm" in {
   //
   // Div
   //
-  let IntrProperties = [IntrNoMem] in {
+  let IntrProperties = [IntrNoMem, IntrNoCreateUndefOrPoison] in {
     foreach ftz = ["", "_ftz"] in {
       def int_nvvm_div_approx # ftz # _f : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
@@ -1398,13 +1394,13 @@ let TargetPrefix = "nvvm" in {
   //
   foreach sign = ["", "u"] in {
     def int_nvvm_sad_ # sign # s : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty]>;
+        PureIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty]>;
 
     def int_nvvm_sad_ # sign # i : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+        PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
 
     def int_nvvm_sad_ # sign # ll : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty]>;
+        PureIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty]>;
   }
 
   //
@@ -1413,9 +1409,9 @@ let TargetPrefix = "nvvm" in {
   foreach op = ["floor", "ceil"] in {
     foreach ftz = ["", "_ftz"] in
       def int_nvvm_ # op # ftz # _f : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
+          PureIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
     def int_nvvm_ # op # _d : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
+        PureIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
   }
 
   //
@@ -1423,45 +1419,45 @@ let TargetPrefix = "nvvm" in {
   //
   foreach ftz = ["", "_ftz"] in
     def int_nvvm_fabs # ftz :
-      NVVMPureIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+      PureIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
 
   //
   // Neg bf16, bf16x2
   //
   def int_nvvm_neg_bf16 : NVVMBuiltin,
-    NVVMPureIntrinsic<[llvm_bfloat_ty], [llvm_bfloat_ty]>;
+    PureIntrinsic<[llvm_bfloat_ty], [llvm_bfloat_ty]>;
   def int_nvvm_neg_bf16x2 : NVVMBuiltin,
-    NVVMPureIntrinsic<[llvm_v2bf16_ty], [llvm_v2bf16_ty]>;
+    PureIntrinsic<[llvm_v2bf16_ty], [llvm_v2bf16_ty]>;
 
   //
   // Round
   //
   foreach ftz = ["", "_ftz"] in
     def int_nvvm_round # ftz # _f : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
+        PureIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
 
   def int_nvvm_round_d : NVVMBuiltin,
-      NVVMPureIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
+      PureIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
 
   //
   // Trunc
   //
   foreach ftz = ["", "_ftz"] in
     def int_nvvm_trunc # ftz # _f : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
+        PureIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
 
   def int_nvvm_trunc_d : NVVMBuiltin,
-      NVVMPureIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
+      PureIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
 
   //
   // Saturate
   //
   foreach ftz = ["", "_ftz"] in
     def int_nvvm_saturate # ftz # _f : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
+        PureIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
 
   def int_nvvm_saturate_d : NVVMBuiltin,
-      NVVMPureIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
+      PureIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
 
   //
   // Exp2  Log2
@@ -1469,14 +1465,14 @@ let TargetPrefix = "nvvm" in {
   let IntrProperties = [IntrNoMem] in {
     foreach ftz = ["", "_ftz"] in
       def int_nvvm_ex2_approx # ftz :
-          DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+          PureIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
 
     foreach ftz = ["", "_ftz"] in
       def int_nvvm_lg2_approx # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
+          PureIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
 
     def int_nvvm_lg2_approx_d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
+        PureIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
   }
 
   //
@@ -1485,7 +1481,8 @@ let TargetPrefix = "nvvm" in {
   foreach op = ["sin", "cos"] in
     foreach ftz = ["", "_ftz"] in
       def int_nvvm_ # op # _approx # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty],
+                                [IntrNoMem, IntrNoCreateUndefOrPoison]>;
 
   //
   // Fma
@@ -1493,19 +1490,19 @@ let TargetPrefix = "nvvm" in {
   foreach variant = ["", "_sat", "_relu"] in {
     foreach ftz = ["", "_ftz"] in {
       def int_nvvm_fma_rn # ftz # variant # _f16 :
-        NVVMPureIntrinsic<[llvm_half_ty],
+        PureIntrinsic<[llvm_half_ty],
           [llvm_half_ty, llvm_half_ty, llvm_half_ty]>;
 
       def int_nvvm_fma_rn # ftz # variant # _f16x2 :
-        NVVMPureIntrinsic<[llvm_v2f16_ty],
+        PureIntrinsic<[llvm_v2f16_ty],
           [llvm_v2f16_ty, llvm_v2f16_ty, llvm_v2f16_ty]>;
 
       def int_nvvm_fma_rn # ftz # variant # _bf16 : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_bfloat_ty],
+        PureIntrinsic<[llvm_bfloat_ty],
           [llvm_bfloat_ty, llvm_bfloat_ty, llvm_bfloat_ty]>;
 
       def int_nvvm_fma_rn # ftz # variant # _bf16x2 : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_v2bf16_ty],
+        PureIntrinsic<[llvm_v2bf16_ty],
           [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty]>;
     } // ftz
   } // variant
@@ -1514,7 +1511,7 @@ let TargetPrefix = "nvvm" in {
     foreach ftz = ["", "_ftz"] in {
       foreach sat = ["", "_sat"] in {
         def int_nvvm_fma # rnd # ftz # sat # _f : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_float_ty],
+          PureIntrinsic<[llvm_float_ty],
             [llvm_float_ty, llvm_float_ty, llvm_float_ty]>;
       } // sat
     } // ftz
@@ -1526,7 +1523,7 @@ let TargetPrefix = "nvvm" in {
   //
   // Rcp
   //
-  let IntrProperties = [IntrNoMem] in {
+  let IntrProperties = [IntrNoMem, IntrNoCreateUndefOrPoison] in {
     foreach rnd = ["rn", "rz", "rm", "rp"] in {
       foreach ftz = ["", "_ftz"] in
         def int_nvvm_rcp_ # rnd # ftz # _f : NVVMBuiltin,
@@ -1545,7 +1542,7 @@ let TargetPrefix = "nvvm" in {
   //
   // Sqrt
   //
-  let IntrProperties = [IntrNoMem] in {
+  let IntrProperties = [IntrNoMem, IntrNoCreateUndefOrPoison] in {
     foreach rnd = ["rn", "rz", "rm", "rp"] in {
       foreach ftz = ["", "_ftz"] in
         def int_nvvm_sqrt_ # rnd # ftz # _f : NVVMBuiltin,
@@ -1566,7 +1563,7 @@ let TargetPrefix = "nvvm" in {
   //
   // Rsqrt
   //
-  let IntrProperties = [IntrNoMem] in {
+  let IntrProperties = [IntrNoMem, IntrNoCreateUndefOrPoison] in {
     foreach ftz = ["", "_ftz"] in {
       def int_nvvm_rsqrt_approx # ftz # _f : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
@@ -1578,7 +1575,8 @@ let TargetPrefix = "nvvm" in {
   //
   // Add
   //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative] in {
+  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
+                        IntrNoCreateUndefOrPoison] in {
     foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
       foreach ftz = ["", "_ftz"] in {
         foreach sat = ["", "_sat"] in {
@@ -1597,10 +1595,10 @@ let TargetPrefix = "nvvm" in {
   foreach a_type = ["s", "u"] in {
     foreach b_type = ["s", "u"] in {
       def int_nvvm_idp4a_ # a_type # _ # b_type :
-          NVVMPureIntrinsic<[llvm_i32_ty],
+          PureIntrinsic<[llvm_i32_ty],
               [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
       def int_nvvm_idp2a_ # a_type # _ # b_type :
-          NVVMPureIntrinsic<[llvm_i32_ty],
+          PureIntrinsic<[llvm_i32_ty],
             [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
             [ImmArg<ArgIndex<2>>]>;
     }
@@ -1611,7 +1609,7 @@ let TargetPrefix = "nvvm" in {
   //
   foreach direction = ["l", "r"] in
     def int_nvvm_fsh # direction # _clamp :
-      NVVMPureIntrinsic<[llvm_anyint_ty],
+      PureIntrinsic<[llvm_anyint_ty],
                     [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
 
   //
@@ -1619,7 +1617,7 @@ let TargetPrefix = "nvvm" in {
   //
   foreach sign = ["s", "u"] in
     def int_nvvm_flo_ # sign :
-      NVVMPureIntrinsic<[llvm_i32_ty], [llvm_anyint_ty, llvm_i1_ty],
+      PureIntrinsic<[llvm_i32_ty], [llvm_anyint_ty, llvm_i1_ty],
                     [ImmArg<ArgIndex<1>>]>;
 
   //
@@ -1628,20 +1626,20 @@ let TargetPrefix = "nvvm" in {
   foreach ext = ["sext", "zext"] in
     foreach mode = ["wrap", "clamp"] in
       def int_nvvm_ # ext # _ # mode :
-        NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
+        PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
 
   //
   // BMSK - bit mask
   //
   foreach mode = ["wrap", "clamp"] in
     def int_nvvm_bmsk_ # mode :
-      NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
+      PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
 
   //
   // FNS - Find the n-th set bit
   //
   def int_nvvm_fns : NVVMBuiltin,
-      NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+      PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
 
   //
   // Convert
@@ -1651,71 +1649,71 @@ let TargetPrefix = "nvvm" in {
   //       have this attribute removed as they may be too expensive.
   //
   def int_nvvm_lohi_i2d : NVVMBuiltin,
-      NVVMPureIntrinsic<[llvm_double_ty], [llvm_i32_ty, llvm_i32_ty]>;
+      PureIntrinsic<[llvm_double_ty], [llvm_i32_ty, llvm_i32_ty]>;
 
   def int_nvvm_d2i_lo : NVVMBuiltin,
-      NVVMPureIntrinsic<[llvm_i32_ty], [llvm_double_ty]>;
+      PureIntrinsic<[llvm_i32_ty], [llvm_double_ty]>;
   def int_nvvm_d2i_hi : NVVMBuiltin,
-      NVVMPureIntrinsic<[llvm_i32_ty], [llvm_double_ty]>;
+      PureIntrinsic<[llvm_i32_ty], [llvm_double_ty]>;
 
   foreach rnd = ["rn", "rz", "rm", "rp"] in {
     foreach ftz = ["", "_ftz"] in
       def int_nvvm_d2f_ # rnd # ftz : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_float_ty], [llvm_double_ty]>;
+          PureIntrinsic<[llvm_float_ty], [llvm_double_ty]>;
 
     foreach sign = ["", "u"] in {
 
       def int_nvvm_d2 # sign # i_ # rnd : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_i32_ty], [llvm_double_ty]>;
+          PureIntrinsic<[llvm_i32_ty], [llvm_double_ty]>;
 
       def int_nvvm_ # sign # i2d_ # rnd : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_double_ty], [llvm_i32_ty]>;
+        PureIntrinsic<[llvm_double_ty], [llvm_i32_ty]>;
 
       foreach ftz = ["", "_ftz"] in
         def int_nvvm_f2 # sign # i_ # rnd # ftz : NVVMBuiltin,
-            NVVMPureIntrinsic<[llvm_i32_ty], [llvm_float_ty]>;
+            PureIntrinsic<[llvm_i32_ty], [llvm_float_ty]>;
 
       def int_nvvm_ # sign # i2f_ # rnd : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_float_ty], [llvm_i32_ty]>;
+          PureIntrinsic<[llvm_float_ty], [llvm_i32_ty]>;
 
       foreach ftz = ["", "_ftz"] in
         def int_nvvm_f2 # sign # ll_ # rnd # ftz : NVVMBuiltin,
-            NVVMPureIntrinsic<[llvm_i64_ty], [llvm_float_ty]>;
+            PureIntrinsic<[llvm_i64_ty], [llvm_float_ty]>;
 
       def int_nvvm_d2 # sign # ll_ # rnd : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_i64_ty], [llvm_double_ty]>;
+        PureIntrinsic<[llvm_i64_ty], [llvm_double_ty]>;
 
       def int_nvvm_ # sign # ll2f_ # rnd : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_float_ty], [llvm_i64_ty]>;
+          PureIntrinsic<[llvm_float_ty], [llvm_i64_ty]>;
 
       def int_nvvm_ # sign # ll2d_ # rnd : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_double_ty], [llvm_i64_ty]>;
+          PureIntrinsic<[llvm_double_ty], [llvm_i64_ty]>;
 
     } // sign
   } // rnd
 
   foreach ftz = ["", "_ftz"] in {
     def int_nvvm_f2h_rn # ftz : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_i16_ty], [llvm_float_ty]>;
+        PureIntrinsic<[llvm_i16_ty], [llvm_float_ty]>;
 
     def int_nvvm_bf2h_rn # ftz : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_i16_ty], [llvm_bfloat_ty]>;
+        PureIntrinsic<[llvm_i16_ty], [llvm_bfloat_ty]>;
   }
 
   foreach rnd = ["rn", "rz"] in {
     foreach relu = ["", "_relu"] in {
       foreach satfinite = ["", "_satfinite"] in {
         def int_nvvm_ff2bf16x2_ # rnd # relu # satfinite : NVVMBuiltin,
-            NVVMPureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
+            PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
 
         def int_nvvm_ff2f16x2_ # rnd # relu # satfinite : NVVMBuiltin,
-            NVVMPureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
+            PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
 
         def int_nvvm_f2bf16_ # rnd # relu # satfinite : NVVMBuiltin,
-            NVVMPureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
+            PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
 
         def int_nvvm_f2f16_ # rnd # relu # satfinite : NVVMBuiltin,
-            NVVMPureIntrinsic<[llvm_half_ty], [llvm_float_ty]>;
+            PureIntrinsic<[llvm_half_ty], [llvm_float_ty]>;
       }
     }
   }
@@ -1725,33 +1723,33 @@ let TargetPrefix = "nvvm" in {
   foreach relu = ["", "_relu"] in {
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_ff2f16x2_rs # relu # satfinite : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
+          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
 
       def int_nvvm_ff2bf16x2_rs # relu # satfinite : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
+          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
     }
   }
 
   foreach satfinite = ["", "_satfinite"] in {
     def int_nvvm_f2tf32_rna # satfinite : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_i32_ty], [llvm_float_ty]>;
+        PureIntrinsic<[llvm_i32_ty], [llvm_float_ty]>;
 
     foreach rnd = ["rn", "rz"] in
       foreach relu = ["", "_relu"] in
         def int_nvvm_f2tf32_ # rnd # relu # satfinite : NVVMBuiltin,
-            NVVMPureIntrinsic<[llvm_i32_ty], [llvm_float_ty]>;
+            PureIntrinsic<[llvm_i32_ty], [llvm_float_ty]>;
   }
 
   foreach type = ["e4m3x2", "e5m2x2"] in {
     foreach relu = ["", "_relu"] in {
       def int_nvvm_ff_to_ # type # _rn # relu : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+          PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
 
       def int_nvvm_f16x2_to_ # type # _rn # relu : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
+          PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
 
       def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
+          PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
     }
   }
 
@@ -1760,34 +1758,34 @@ let TargetPrefix = "nvvm" in {
   foreach type = ["e4m3x4", "e5m2x4"] in {
     foreach relu = ["", "_relu"] in {
       def int_nvvm_f32x4_to_ # type # _rs # relu # _satfinite : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_v4i8_ty], [llvm_v4f32_ty, llvm_i32_ty]>;
+          PureIntrinsic<[llvm_v4i8_ty], [llvm_v4f32_ty, llvm_i32_ty]>;
     }
   }
 
   // FP4 conversions.
   foreach relu = ["", "_relu"] in {
     def int_nvvm_ff_to_e2m1x2_rn # relu # _satfinite : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+        PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
 
     def int_nvvm_e2m1x2_to_f16x2_rn # relu : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
+        PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
   }
 
   // RS rounding mode (Stochastic Rounding) conversions for f4x4 type
   // The last i32 operand provides the random bits for the conversion
   foreach relu = ["", "_relu"] in {
     def int_nvvm_f32x4_to_e2m1x4_rs # relu # _satfinite : NVVMBuiltin,
-        NVVMPureIntrinsic<[llvm_i16_ty], [llvm_v4f32_ty, llvm_i32_ty]>;
+        PureIntrinsic<[llvm_i16_ty], [llvm_v4f32_ty, llvm_i32_ty]>;
   }
 
   // FP6 conversions.
   foreach type = ["e2m3x2", "e3m2x2"] in {
     foreach relu = ["", "_relu"] in {
       def int_nvvm_ff_to_ # type # _rn # relu # _satfinite : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+          PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
 
       def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
+          PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
     }
   }
 
@@ -1796,7 +1794,7 @@ let TargetPrefix = "nvvm" in {
   foreach type = ["e2m3x4", "e3m2x4"] in {
     foreach relu = ["", "_relu"] in {
       def int_nvvm_f32x4_to_ # type # _rs # relu # _satfinite : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_v4i8_ty], [llvm_v4f32_ty, llvm_i32_ty]>;
+          PureIntrinsic<[llvm_v4i8_ty], [llvm_v4f32_ty, llvm_i32_ty]>;
     }
   }
 
@@ -1805,16 +1803,16 @@ let TargetPrefix = "nvvm" in {
     foreach satmode = ["", "_satfinite"] in {
       defvar suffix = rmode # satmode;
       def int_nvvm_ff_to_ue8m0x2 # suffix : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+          PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
 
       def int_nvvm_bf16x2_to_ue8m0x2 # suffix : NVVMBuiltin,
-          NVVMPureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
+          PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
 
     }
   }
 
   def int_nvvm_ue8m0x2_to_bf16x2 : NVVMBuiltin,
-      NVVMPureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
+      PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
 
   //
   // Atomic operations
@@ -1895,10 +1893,10 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_barrier_cluster_wait_aligned : Intrinsic<[]>;
   }
 
-//
-// Membar / Fence
-//
-let IntrProperties = [IntrNoCallback] in {
+  //
+  // Membar / Fence
+  //
+  let IntrProperties = [IntrNoCallback] in {
     def int_nvvm_membar_cta : NVVMBuiltin, Intrinsic<[]>;
     def int_nvvm_membar_gl : NVVMBuiltin, Intrinsic<[]>;
     def int_nvvm_membar_sys : NVVMBuiltin, Intrinsic<[]>;
@@ -1917,9 +1915,9 @@ let IntrProperties = [IntrNoCallback] in {
           Intrinsic<[], [], [],
             "llvm.nvvm.fence.release.sync_restrict.space.cta.scope.cluster">;
 
-//
-// Proxy fence (uni-directional)
-//
+  //
+  // Proxy fence (uni-directional)
+  //
 
   def int_nvvm_fence_proxy_async_generic_acquire_sync_restrict_space_cluster_scope_cluster :
         Intrinsic<[], [], [],
@@ -1944,15 +1942,15 @@ let IntrProperties = [IntrNoCallback] in {
     }
   }
 
-//
-// Proxy fence (bi-directional)
-//
-  foreach proxykind = ["alias", "async", "async.global", "async.shared_cta",
-                        "async.shared_cluster"] in {
-    defvar Intr = IntrinsicName<"llvm.nvvm.fence.proxy." # proxykind>;
-    def Intr.record_name: Intrinsic<[], [], [], Intr.intr_name>;
+  //
+  // Proxy fence (bi-directional)
+  //
+    foreach proxykind = ["alias", "async", "async.global", "async.shared_cta",
+                          "async.shared_cluster"] in {
+      defvar Intr = IntrinsicName<"llvm.nvvm.fence.proxy." # proxykind>;
+      def Intr.record_name: Intrinsic<[], [], [], Intr.intr_name>;
+    }
   }
-}
 
 //
 // Async Copy
@@ -1998,47 +1996,34 @@ def int_nvvm_cp_async_bulk_wait_group_read :
     Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
 // mbarrier
-def int_nvvm_mbarrier_init : NVVMBuiltin,
-    Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-def int_nvvm_mbarrier_init_shared : NVVMBuiltin,
-    Intrinsic<[], [llvm_shared_ptr_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
+foreach is_shared = [true, false] in {
+  defvar mbarrier_ptr_ty = !if(is_shared, llvm_shared_ptr_ty, llvm_ptr_ty);
+  defvar shared = !if(is_shared, "_shared", "");
 
-def int_nvvm_mbarrier_inval : NVVMBuiltin,
-    Intrinsic<[], [llvm_ptr_ty],
-    [IntrConvergent, IntrWriteMem, IntrArgMemOnly, IntrNoCallback,
-    WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
-def int_nvvm_mbarrier_inval_shared : NVVMBuiltin,
-    Intrinsic<[], [llvm_shared_ptr_ty],
-    [IntrConvergent, IntrWriteMem, IntrArgMemOnly, IntrNoCallback,
-    WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+  def int_nvvm_mbarrier_init # shared : NVVMBuiltin,
+      Intrinsic<[], [mbarrier_ptr_ty, llvm_i32_ty],
+                [IntrConvergent, IntrNoCallback]>;
 
-let IntrProperties = [IntrConvergent, IntrNoCallback] in {
-  def int_nvvm_mbarrier_arrive : NVVMBuiltin,
-      Intrinsic<[llvm_i64_ty], [llvm_ptr_ty]>;
-  def int_nvvm_mbarrier_arrive_shared : NVVMBuiltin,
-      Intrinsic<[llvm_i64_ty], [llvm_shared_ptr_ty]>;
-  def int_nvvm_mbarrier_arrive_noComplete : NVVMBuiltin,
-      Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i32_ty]>;
-  def int_nvvm_mbarrier_arrive_noComplete_shared : NVVMBuiltin,
-      Intrinsic<[llvm_i64_ty], [llvm_shared_ptr_ty, llvm_i32_ty]>;
+  def int_nvvm_mbarrier_inval # shared : NVVMBuiltin,
+      Intrinsic<[], [mbarrier_ptr_ty],
+                [IntrConvergent, IntrWriteMem, IntrArgMemOnly, IntrNoCallback,
+                 WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
-  def int_nvvm_mbarrier_arrive_drop : NVVMBuiltin,
-      Intrinsic<[llvm_i64_ty], [llvm_ptr_ty]>;
-  def int_nvvm_mbarrier_arrive_drop_shared : NVVMBuiltin,
-      Intrinsic<[llvm_i64_ty], [llvm_shared_ptr_ty]>;
-  def int_nvvm_mbarrier_arrive_drop_noComplete : NVVMBuiltin,
-      Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i32_ty]>;
-  def int_nvvm_mbarrier_arrive_drop_noComplete_shared : NVVMBuiltin,
-      Intrinsic<[llvm_i64_ty], [llvm_shared_ptr_ty, llvm_i32_ty]>;
+  let IntrProperties = [IntrConvergent, IntrNoCallback] in {
+    foreach drop = ["", "_drop"] in {
+      def int_nvvm_mbarrier_arrive # drop # shared : NVVMBuiltin,
+          Intrinsic<[llvm_i64_ty], [mbarrier_ptr_ty]>;
+      def int_nvvm_mbarrier_arrive # drop # _noComplete # shared : NVVMBuiltin,
+          Intrinsic<[llvm_i64_ty], [mbarrier_ptr_ty, llvm_i32_ty]>;
+    }
 
-  def int_nvvm_mbarrier_test_wait : NVVMBuiltin,
-      Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_i64_ty]>;
-  def int_nvvm_mbarrier_test_wait_shared : NVVMBuiltin,
-      Intrinsic<[llvm_i1_ty], [llvm_shared_ptr_ty, llvm_i64_ty]>;
+    def int_nvvm_mbarrier_test_wait # shared : NVVMBuiltin,
+        Intrinsic<[llvm_i1_ty], [mbarrier_ptr_ty, llvm_i64_ty]>;
+  }
 }
 
 def int_nvvm_mbarrier_pending_count : NVVMBuiltin,
-    Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem, IntrConvergent, IntrNoCallback]>;
+    NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i64_ty]>;
 
 // mbarrier.{expect_tx/complete_tx}
 foreach op = ["expect_tx", "complete_tx"] in {
@@ -2386,10 +2371,8 @@ def int_nvvm_read_ptx_sreg_clock64 : PTXReadNCSRegIntrinsic<llvm_i64_ty>;
 def int_nvvm_read_ptx_sreg_globaltimer : PTXReadNCSRegIntrinsic<llvm_i64_ty>;
 def int_nvvm_read_ptx_sreg_globaltimer_lo : PTXReadNCSRegIntrinsic<llvm_i32_ty>;
 
-def int_nvvm_read_ptx_sreg_pm0 : PTXReadNCSRegIntrinsic<llvm_i32_ty>;
-def int_nvvm_read_ptx_sreg_pm1 : PTXReadNCSRegIntrinsic<llvm_i32_ty>;
-def int_nvvm_read_ptx_sreg_pm2 : PTXReadNCSRegIntrinsic<llvm_i32_ty>;
-def int_nvvm_read_ptx_sreg_pm3 : PTXReadNCSRegIntrinsic<llvm_i32_ty>;
+foreach i = 0...4 in
+  def int_nvvm_read_ptx_sreg_pm # i : PTXReadNCSRegIntrinsic<llvm_i32_ty>;
 
 def int_nvvm_read_ptx_sreg_warpsize
   : PTXReadSRegIntrinsic_r32<[Range<RetIndex, WARP_SIZE, !add(WARP_SIZE, 1)>]>;
@@ -2413,11 +2396,11 @@ def int_nvvm_read_ptx_sreg_cluster_ctarank : PTXReadSRegIntrinsicNB_r32;
 def int_nvvm_read_ptx_sreg_cluster_nctarank : PTXReadSRegIntrinsicNB_r32;
 
 def int_nvvm_read_ptx_sreg_total_smem_size :
-    PTXReadSRegIntrinsicNB_r32<[], "llvm.nvvm.read.ptx.sreg.total_smem_size">;
-def int_nvvm_read_ptx_sreg_aggr_smem_size  :
-    PTXReadSRegIntrinsicNB_r32<[], "llvm.nvvm.read.ptx.sreg.aggr_smem_size">;
+    PTXReadSRegIntrinsicNB_r32<name = "llvm.nvvm.read.ptx.sreg.total_smem_size">;
+def int_nvvm_read_ptx_sreg_aggr_smem_size :
+    PTXReadSRegIntrinsicNB_r32<name = "llvm.nvvm.read.ptx.sreg.aggr_smem_size">;
 def int_nvvm_read_ptx_sreg_dynamic_smem_size :
-    PTXReadSRegIntrinsicNB_r32<[], "llvm.nvvm.read.ptx.sreg.dynamic_smem_size">;
+    PTXReadSRegIntrinsicNB_r32<name = "llvm.nvvm.read.ptx.sreg.dynamic_smem_size">;
 
 //
 // SHUFFLE
@@ -3126,6 +3109,16 @@ class NVVM_TCGEN05_LD<string Shape, int Num> :
                                 [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>],
                                 [ImmArg<ArgIndex<1>>]))>;
 
+// Tcgen05 ld.red intrinsics
+class NVVM_TCGEN05_LD_RED<string Shape, int Num, string RedValTy> :
+        DefaultAttrsIntrinsicFlags<
+          [NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num, RedValTy>.type, LLVMType<!cast<ValueType>(RedValTy)>],
+                  [llvm_tmem_ptr_ty],
+                  !listconcat(!if(!eq(Shape, "16x32bx2"), [llvm_i64_ty], []),
+                              [llvm_i32_ty], // RedOp
+                              !if(!eq(RedValTy, "f32"), [llvm_i1_ty, llvm_i1_ty], [])), // abs, nan
+                  [IntrConvergent, IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+
 // Tcgen05 st intrinsics
 class NVVM_TCGEN05_ST<string Shape, int Num> :
         Intrinsic<[],
@@ -3138,6 +3131,7 @@ class NVVM_TCGEN05_ST<string Shape, int Num> :
                                 [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>],
                                 [ImmArg<ArgIndex<2>>]))>;
 
+// tcgen05 ld/st intrinsics
 foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
   foreach num = 0...8 in {
     if NVVM_TCGEN05_LDST_ACCESS_SIZE<shape, num>.valid then {
@@ -3148,6 +3142,21 @@ foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
     }
   }
 }
+
+// tcgen05.ld.red intrinsics
+foreach shape = ["32x32b", "16x32bx2"] in {
+  // num starts with x2 (1 << 1) as tcgen05.ld.red does not support x1
+  foreach num = 1...8 in {
+    foreach ty = ["f32", "i32"] in {
+      if NVVM_TCGEN05_LDST_ACCESS_SIZE<shape, num>.valid then {
+
+        def IntrinsicName<"llvm.nvvm.tcgen05.ld.red." # shape
+                          # ".x" # !shl(1, num) # "." # ty>.record_name:
+              NVVM_TCGEN05_LD_RED<shape, num, ty>;
+      } // valid
+    } // ty
+  } // num
+} // shape
 
 //
 // Bulk store intrinsics

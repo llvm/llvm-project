@@ -54,6 +54,17 @@ Clang Frontend Potentially Breaking Changes
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- Remove ``CompletionString.Availability``. No libclang interfaces returned instances of it.
+- ``CompletionString.availability`` now returns instances of ``CompletionString.AvailabilityKindCompat``.
+
+  Instances of ``AvailabilityKindCompat`` have the same ``__str__`` representation
+  as the previous ``CompletionChunk.Kind``s and are equality-comparable with
+  the existing ``AvailabilityKind`` enum. It will be replaced by ``AvailabilityKind``
+  in a future release. When this happens, the return type of ``CompletionString.availability``
+  will change to ``AvailabilityKind``, so it is recommended to use ``AvailabilityKind``
+  to compare with the return values of ``CompletionString.availability``.
+- Remove ``availabilityKinds``. In this release, uses of ``availabilityKinds``
+  need to be replaced by ``CompletionString.AvailabilityKind``.
 
 What's New in Clang |release|?
 ==============================
@@ -120,6 +131,7 @@ Bug Fixes to Compiler Builtins
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -132,6 +144,10 @@ Miscellaneous Bug Fixes
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash when attempting to jump over initialization of a variable with variably modified type. (#GH175540)
+- Fixed a crash when using loop hint with a value dependent argument inside a
+  generic lambda. (#GH172289)
 
 OpenACC Specific Changes
 ------------------------
@@ -181,6 +197,9 @@ NetBSD Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
+  (#GH118233)
+
 AVR Support
 ^^^^^^^^^^^
 
@@ -195,6 +214,7 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+- Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
 
 clang-format
 ------------
@@ -208,17 +228,13 @@ Code Completion
 Static Analyzer
 ---------------
 
-New features
-^^^^^^^^^^^^
-
-Crash and bug fixes
-^^^^^^^^^^^^^^^^^^^
-
-Improvements
-^^^^^^^^^^^^
-
-Moved checkers
-^^^^^^^^^^^^^^
+.. comment:
+  This is for the Static Analyzer.
+  Using the caret `^^^` underlining for subsections:
+    - Crash and bug fixes
+    - New checkers and features
+    - Improvements
+    - Moved checkers
 
 .. _release-notes-sanitizers:
 
@@ -230,6 +246,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support for ``transparent`` clause in task and taskloop directives.
 
 Improvements
 ^^^^^^^^^^^^
