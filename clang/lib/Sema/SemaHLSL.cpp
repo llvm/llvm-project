@@ -4443,36 +4443,34 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
   // Report error if LHS is a non-static resource declared at a global scope.
   if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
     if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (VD->getStorageClass() != SC_Static) {
-        if (VD->hasGlobalStorage()) {
+      if (VD->hasGlobalStorage() && VD->getStorageClass() != SC_Static) {
           // Assignment to a global resource is not allowed.
           SemaRef.Diag(Loc, diag::err_hlsl_assign_to_global_resource) << VD;
           SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
           return false;
-        }
+      }
 
-        auto RHSBinding = GetGlobalBinding(RHSExpr);
-        if (!RHSBinding) {
-          SemaRef.Diag(Loc,
-                       diag::err_hlsl_assigning_local_resource_is_not_unique)
-              << RHSExpr << VD;
-          return false;
-        }
+      auto RHSBinding = GetGlobalBinding(RHSExpr);
+      if (!RHSBinding) {
+        SemaRef.Diag(Loc,
+                     diag::err_hlsl_assigning_local_resource_is_not_unique)
+            << RHSExpr << VD;
+        return false;
+      }
 
-        // Ensure assignment to a non-static local resource does not conflict
-        // with previous assignments to global resources
-        const DeclBindingInfo *LHSBinding = LocalResourceBindings[VD];
-        if (!LHSBinding) {
-          // LHSBinding is a nullptr when the local resource is instantiated
-          // without an expression.
-          LocalResourceBindings[VD] = *RHSBinding;
-        } else if (LHSBinding != *RHSBinding) {
-          SemaRef.Diag(Loc,
-                       diag::err_hlsl_assigning_local_resource_is_not_unique)
-              << RHSExpr << VD;
-          SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
-          return false;
-        }
+      // Ensure assignment to a non-static local resource does not conflict
+      // with previous assignments to global resources
+      const DeclBindingInfo *LHSBinding = LocalResourceBindings[VD];
+      if (!LHSBinding) {
+        // LHSBinding is a nullptr when the local resource is instantiated
+        // without an expression.
+        LocalResourceBindings[VD] = *RHSBinding;
+      } else if (LHSBinding != *RHSBinding) {
+        SemaRef.Diag(Loc,
+                     diag::err_hlsl_assigning_local_resource_is_not_unique)
+            << RHSExpr << VD;
+        SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
+        return false;
       }
     }
   }

@@ -39,3 +39,11 @@ void conditional_assignment(int idx) {
     Out = cond ? Out0 : Out1;
     Out[idx] = In[idx];
 }
+
+static RWStructuredBuffer<int> StaticOut;
+
+void static_conditional_assignment(int idx) {
+    // expected-error@+1 {{assignment of 'cond ? Out0 : Out1' to local resource 'StaticOut' is not to the same unique global resource}}
+    StaticOut = cond ? Out0 : Out1;
+    StaticOut[idx] = In[idx];
+}
