@@ -1,8 +1,10 @@
 #include "WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_TARGET_REGBANK_IMPL
@@ -250,7 +252,7 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_DEBUGTRAP:
     return getInstructionMapping(MappingID, /*Cost=*/1, getOperandsMapping({}),
                                  0);
-  case COPY:
+  case COPY: {
     Register DstReg = MI.getOperand(0).getReg();
     if (DstReg.isPhysical()) {
       if (DstReg.id() == WebAssembly::SP32) {
@@ -259,18 +261,30 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
             getOperandsMapping(
                 {&WebAssembly::ValueMappings[WebAssembly::I32Idx]}),
             1);
-      } else if (DstReg.id() == WebAssembly::SP64) {
+      }
+
+      if (DstReg.id() == WebAssembly::SP64) {
         return getInstructionMapping(
             MappingID, /*Cost=*/1,
             getOperandsMapping(
                 {&WebAssembly::ValueMappings[WebAssembly::I64Idx]}),
             1);
-      } else {
-        llvm_unreachable("Trying to copy into WASM physical register other "
-                         "than sp32 or sp64?");
       }
+
+      llvm_unreachable("Trying to copy into WASM physical register other "
+                       "than sp32 or sp64?");
     }
     break;
+  }
+  case G_INTRINSIC:
+  case G_INTRINSIC_W_SIDE_EFFECTS: {
+    switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+      case Intrinsic::clear_cache:
+        reportFatalUsageError("llvm.clear_cache is not supported on wasm");
+        break;
+    }
+    return getInstructionMapping(DefaultMappingID, /*Cost=*/1, nullptr, 0);
+  }
   }
 
   const LLT Op0Ty = MRI.getType(MI.getOperand(0).getReg());
