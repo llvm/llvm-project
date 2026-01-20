@@ -68,3 +68,12 @@ define <vscale x 4 x i32> @rev_of_splat2(i32 %a, <vscale x 4 x i1> %m, i32 %evl)
   %rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %a.vec, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i32> %rev
 }
+
+define <vscale x 4 x i32> @rev_of_rev_diffmask(<vscale x 4 x i32> %a, <vscale x 4 x i1> %mask1, <vscale x 4 x i1> %mask2, i32 %evl) {
+; CHECK-LABEL: @rev_of_rev_diffmask(
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES:%.*]]
+;
+  %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %a, <vscale x 4 x i1> %mask1, i32 %evl)
+  %res = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %a.rev, <vscale x 4 x i1> %mask2, i32 %evl)
+  ret <vscale x 4 x i32> %res
+}

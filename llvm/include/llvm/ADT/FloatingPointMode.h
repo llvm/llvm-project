@@ -153,10 +153,32 @@ struct DenormalMode {
            Input == DenormalModeKind::PositiveZero;
   }
 
+  /// Return true if input denormals may be implicitly treated as 0.
+  constexpr bool inputsMayBeZero() const {
+    return inputsAreZero() || Input == DenormalMode::Dynamic;
+  }
+
   /// Return true if output denormals should be flushed to 0.
   constexpr bool outputsAreZero() const {
     return Output == DenormalModeKind::PreserveSign ||
            Output == DenormalModeKind::PositiveZero;
+  }
+
+  /// Return true if output denormals may be implicitly treated as 0.
+  constexpr bool outputsMayBeZero() const {
+    return outputsAreZero() || Output == DenormalMode::Dynamic;
+  }
+
+  /// Return true if input denormals could be flushed to +0.
+  constexpr bool inputsMayBePositiveZero() const {
+    return Input == DenormalMode::PositiveZero ||
+           Input == DenormalMode::Dynamic;
+  }
+
+  /// Return true if output denormals could be flushed to +0.
+  constexpr bool outputsMayBePositiveZero() const {
+    return Output == DenormalMode::PositiveZero ||
+           Output == DenormalMode::Dynamic;
   }
 
   /// Get the effective denormal mode if the mode if this caller calls into a

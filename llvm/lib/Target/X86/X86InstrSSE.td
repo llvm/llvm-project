@@ -5707,6 +5707,31 @@ let Predicates = [UseSSE41, OptForSize] in {
             (ROUNDSDmi addr:$src1, timm:$src2)>;
 }
 
+multiclass scalar_unary_math_patterns_with_immediate<
+    SDPatternOperator OpNode, string OpcPrefix, SDNode Move, ValueType VT> {
+  let Predicates = [UseSSE41] in {
+    def : Pat<(VT(Move VT:$dst, (scalar_to_vector(OpNode
+                                    (extractelt VT:$src, (i64 0)),
+                                    i32:$imm)))),
+              (!cast<Instruction>(OpcPrefix#ri_Int) VT:$dst, VT:$src,
+                  i32:$imm)>;
+  }
+
+  // Repeat for AVX versions of the instructions.
+  let Predicates = [UseAVX] in {
+    def : Pat<(VT(Move VT:$dst, (scalar_to_vector(OpNode
+                                    (extractelt VT:$src, (i64 0)),
+                                    i32:$imm)))),
+              (!cast<Instruction>("V"#OpcPrefix#ri_Int) VT:$dst, VT:$src,
+                  i32:$imm)>;
+  }
+}
+
+defm : scalar_unary_math_patterns_with_immediate<X86any_VRndScale, "ROUNDSS",
+                                                 X86Movss, v4f32>;
+defm : scalar_unary_math_patterns_with_immediate<X86any_VRndScale, "ROUNDSD",
+                                                 X86Movsd, v2f64>;
+
 //===----------------------------------------------------------------------===//
 // SSE4.1 - Packed Bit Test
 //===----------------------------------------------------------------------===//

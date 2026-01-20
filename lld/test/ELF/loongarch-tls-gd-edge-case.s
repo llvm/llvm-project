@@ -3,7 +3,7 @@
 ## Edge case: when a TLS symbol is being accessed in both GD and IE manners,
 ## correct reloc behavior should be preserved for both kinds of accesses.
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %s -o %t.la32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=+32s %s -o %t.la32.o
 # RUN: ld.lld %t.la32.o -shared -o %t.la32
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %s -o %t.la64.o
 # RUN: ld.lld %t.la64.o -shared -o %t.la64

@@ -8,11 +8,11 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../fuchsia/TemporaryObjectsCheck.h"
 
 namespace clang::tidy {
 namespace zircon {
+namespace {
 
 /// This module is for Zircon-specific checks.
 class ZirconModule : public ClangTidyModule {
@@ -22,6 +22,8 @@ public:
         "zircon-temporary-objects");
   }
 };
+
+} // namespace
 
 // Register the ZirconTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<ZirconModule>

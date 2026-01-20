@@ -293,7 +293,6 @@ public:
   bool isCtlzFast() const override { return true; }
   // VE has NND instruction.
   bool hasAndNot(SDValue Y) const override;
-
   /// } Target Optimization
 };
 } // namespace llvm

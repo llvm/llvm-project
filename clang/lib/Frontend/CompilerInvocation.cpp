@@ -2674,7 +2674,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   return Diags->getNumErrors() == NumErrorsBefore;
 }
 
-unsigned clang::getOptimizationLevel(ArgList &Args, InputKind IK,
+unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
                                      DiagnosticsEngine &Diags) {
   unsigned DefaultOpt = 0;
   if ((IK.getLanguage() == Language::OpenCL ||
@@ -2713,7 +2713,7 @@ unsigned clang::getOptimizationLevel(ArgList &Args, InputKind IK,
   return DefaultOpt;
 }
 
-unsigned clang::getOptimizationLevelSize(ArgList &Args) {
+unsigned clang::getOptimizationLevelSize(const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O)) {
       switch (A->getValue()[0]) {
@@ -3698,6 +3698,10 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Consumer, OPT_pic_is_pie);
     for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
       GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
+    for (StringRef Sanitizer :
+         serializeSanitizerKinds(Opts.UBSanFeatureIgnoredSanitize))
+      GenerateArg(Consumer, OPT_fsanitize_ignore_for_ubsan_feature_EQ,
+                  Sanitizer);
 
     return;
   }
@@ -3897,6 +3901,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
     GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
+  for (StringRef Sanitizer :
+       serializeSanitizerKinds(Opts.UBSanFeatureIgnoredSanitize))
+    GenerateArg(Consumer, OPT_fsanitize_ignore_for_ubsan_feature_EQ, Sanitizer);
 
   // Conflating '-fsanitize-system-ignorelist' and '-fsanitize-ignorelist'.
   for (const std::string &F : Opts.NoSanitizeFiles)
@@ -3956,6 +3963,15 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     StringRef S = llvm::getAllocTokenModeAsString(*Opts.AllocTokenMode);
     GenerateArg(Consumer, OPT_falloc_token_mode_EQ, S);
   }
+  // Generate args for matrix types.
+  if (Opts.MatrixTypes) {
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixColMajor)
+      GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "column-major");
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixRowMajor)
+      GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "row-major");
+  }
 }
 
 bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
@@ -3978,6 +3994,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.PIE = Args.hasArg(OPT_pic_is_pie);
     parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                         Diags, Opts.Sanitize);
+    parseSanitizerKinds(
+        "-fsanitize-ignore-for-ubsan-feature=",
+        Args.getAllArgValues(OPT_fsanitize_ignore_for_ubsan_feature_EQ), Diags,
+        Opts.UBSanFeatureIgnoredSanitize);
 
     return Diags.getNumErrors() == NumErrorsBefore;
   }
@@ -4395,6 +4415,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // Parse -fsanitize= arguments.
   parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                       Diags, Opts.Sanitize);
+  parseSanitizerKinds(
+      "-fsanitize-ignore-for-ubsan-feature=",
+      Args.getAllArgValues(OPT_fsanitize_ignore_for_ubsan_feature_EQ), Diags,
+      Opts.UBSanFeatureIgnoredSanitize);
   Opts.NoSanitizeFiles = Args.getAllArgValues(OPT_fsanitize_ignorelist_EQ);
   std::vector<std::string> systemIgnorelists =
       Args.getAllArgValues(OPT_fsanitize_system_ignorelist_EQ);
@@ -4548,6 +4572,27 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.AllocTokenMode = Mode;
     else
       Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+  }
+
+  // Enable options for matrix types.
+  if (Opts.MatrixTypes) {
+    if (const Arg *A = Args.getLastArg(OPT_fmatrix_memory_layout_EQ)) {
+      StringRef ClangValue = A->getValue();
+      if (ClangValue == "row-major")
+        Opts.setDefaultMatrixMemoryLayout(
+            LangOptions::MatrixMemoryLayout::MatrixRowMajor);
+      else
+        Opts.setDefaultMatrixMemoryLayout(
+            LangOptions::MatrixMemoryLayout::MatrixColMajor);
+
+      for (Arg *A : Args.filtered(options::OPT_mllvm)) {
+        StringRef OptValue = A->getValue();
+        if (OptValue.consume_front("-matrix-default-layout=") &&
+            ClangValue != OptValue)
+          Diags.Report(diag::err_conflicting_matrix_layout_flags)
+              << ClangValue << OptValue;
+      }
+    }
   }
 
   // Validate options for HLSL

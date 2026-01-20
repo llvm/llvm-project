@@ -149,7 +149,7 @@ void LoongArchInstrInfo::storeRegToStackSlot(
 
 void LoongArchInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DstReg,
-    int FI, const TargetRegisterClass *RC, Register VReg,
+    int FI, const TargetRegisterClass *RC, Register VReg, unsigned SubReg,
     MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
@@ -744,6 +744,7 @@ LoongArchInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_IE_PC64_HI, "loongarch-ie-pc64-hi"},
       {MO_LD_PC_HI, "loongarch-ld-pc-hi"},
       {MO_GD_PC_HI, "loongarch-gd-pc-hi"},
+      {MO_CALL30, "loongarch-call30"},
       {MO_CALL36, "loongarch-call36"},
       {MO_DESC_PC_HI, "loongarch-desc-pc-hi"},
       {MO_DESC_PC_LO, "loongarch-desc-pc-lo"},

@@ -15,10 +15,10 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 static constexpr char IgnoreMacrosName[] = "IgnoreMacros";
-static const bool IgnoreMacrosDefault = true;
+static constexpr bool IgnoreMacrosDefault = true;
 
 static constexpr char StrictModeName[] = "StrictMode";
-static const bool StrictModeDefault = true;
+static constexpr bool StrictModeDefault = true;
 
 AvoidReturnWithVoidValueCheck::AvoidReturnWithVoidValueCheck(
     StringRef Name, ClangTidyContext *Context)

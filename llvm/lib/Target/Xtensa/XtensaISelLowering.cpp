@@ -217,7 +217,7 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSQRT, VT, Expand);
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FCOS, VT, Expand);
-      setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::FREM, VT, LibCall);
       setOperationAction(ISD::FDIV, VT, Expand);
       setOperationAction(ISD::FPOW, VT, Expand);
       setOperationAction(ISD::FSQRT, VT, Expand);
@@ -964,7 +964,7 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
         isShiftedInt<8, 8>(Value))
       return Op;
     Type *Ty = Type::getInt32Ty(*DAG.getContext());
-    Constant *CV = ConstantInt::get(Ty, Value);
+    Constant *CV = ConstantInt::getSigned(Ty, Value);
     SDValue CP = DAG.getConstantPool(CV, MVT::i32);
     SDValue Res =
         DAG.getLoad(MVT::i32, DL, DAG.getEntryNode(), CP, MachinePointerInfo());

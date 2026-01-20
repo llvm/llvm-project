@@ -169,6 +169,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds atomic min and max instruction on floating-point numbers.
    * - ``SPV_INTEL_16bit_atomics``
      - Extends the SPV_EXT_shader_atomic_float_add and SPV_EXT_shader_atomic_float_min_max to support addition, minimum and maximum on 16-bit `bfloat16` floating-point numbers in memory.
+   * - ``SPV_NV_shader_atomic_fp16_vector``
+     - Adds atomic add, min and max instructions on 2 or 4-component vectors with 16-bit float components.
    * - ``SPV_INTEL_2d_block_io``
      - Adds additional subgroup block prefetch, load, load transposed, load transformed and store instructions to read two-dimensional blocks of data from a two-dimensional region of memory, or to write two-dimensional blocks of data to a two dimensional region of memory.
    * - ``SPV_ALTERA_arbitrary_precision_integers``
@@ -247,6 +249,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
    * - ``SPV_ALTERA_arbitrary_precision_fixed_point``
      - Add instructions for fixed point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
+   * - ``SPV_EXT_image_raw10_raw12``
+     - Adds Image Channel Data Type definitions for RAW10 and RAW12 image formats.
 
 
 SPIR-V representation in LLVM IR

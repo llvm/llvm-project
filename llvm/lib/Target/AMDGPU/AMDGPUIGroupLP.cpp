@@ -1044,7 +1044,7 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      auto SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
         return Succ.getKind() == SDep::Data;
       });
       if (SuccSize >= Size)
@@ -1052,7 +1052,7 @@ private:
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          auto SuccSize =
+          unsigned SuccSize =
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
@@ -1084,7 +1084,7 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      auto SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
         return Succ.getKind() == SDep::Data;
       });
       if (SuccSize >= Size)
@@ -1092,7 +1092,7 @@ private:
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          auto SuccSize =
+          unsigned SuccSize =
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });

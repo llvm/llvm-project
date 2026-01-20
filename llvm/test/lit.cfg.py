@@ -69,6 +69,8 @@ if config.enable_profcheck:
     config.excludes.append("Instrumentation")
     # profiling doesn't work quite well on GPU, excluding
     config.excludes.append("AMDGPU")
+    # these passes aren't hooked up to the pass pipeline:
+    config.excludes.append("IRCE")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -511,7 +513,7 @@ elif uname_r.endswith("microsoft-standard-WSL2"):
 if config.has_plugins:
     config.available_features.add("plugins")
 
-if config.build_examples:
+if config.include_examples:
     config.available_features.add("examples")
 
 if config.linked_bye_extension:

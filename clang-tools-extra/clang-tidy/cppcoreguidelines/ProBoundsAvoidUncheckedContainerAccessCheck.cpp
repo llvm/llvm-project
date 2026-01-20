@@ -95,7 +95,7 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::registerMatchers(
               cxxMethodDecl(
                   hasOverloadedOperatorName("[]"),
                   anyOf(parameterCountIs(0), parameterCountIs(1)),
-                  unless(matchers::matchesAnyListedName(ExcludedClasses)))
+                  unless(matchers::matchesAnyListedRegexName(ExcludedClasses)))
                   .bind("operator")))
           .bind("caller"),
       this);
@@ -176,7 +176,7 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::check(
     }
   } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(MatchedExpr)) {
     // Case: a.operator[](i) or a->operator[](i)
-    const auto *Callee = dyn_cast<MemberExpr>(MCE->getCallee());
+    const auto *Callee = cast<MemberExpr>(MCE->getCallee());
 
     if (FixMode == At) {
       // Cases: a.operator[](i) => a.at(i) and a->operator[](i) => a->at(i)

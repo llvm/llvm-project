@@ -496,6 +496,7 @@ public:
   bool parseTargetIndexOperand(MachineOperand &Dest);
   bool parseDbgInstrRefOperand(MachineOperand &Dest);
   bool parseCustomRegisterMaskOperand(MachineOperand &Dest);
+  bool parseLaneMaskOperand(MachineOperand &Dest);
   bool parseLiveoutRegisterMaskOperand(MachineOperand &Dest);
   bool parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
                            MachineOperand &Dest,
@@ -718,6 +719,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
+  bool IsEHScopeEntry = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
   std::optional<UniqueBBID> BBID;
@@ -745,6 +747,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_ehfunclet_entry:
         IsEHFuncletEntry = true;
+        lex();
+        break;
+      case MIToken::kw_ehscope_entry:
+        IsEHScopeEntry = true;
         lex();
         break;
       case MIToken::kw_align:
@@ -803,6 +809,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsEHPad(IsLandingPad);
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
+  MBB->setIsEHScopeEntry(IsEHScopeEntry);
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
@@ -2886,6 +2893,31 @@ bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
   return false;
 }
 
+bool MIParser::parseLaneMaskOperand(MachineOperand &Dest) {
+  assert(Token.is(MIToken::kw_lanemask));
+
+  lex();
+  if (expectAndConsume(MIToken::lparen))
+    return true;
+
+  // Parse lanemask.
+  if (Token.isNot(MIToken::IntegerLiteral) && Token.isNot(MIToken::HexLiteral))
+    return error("expected a valid lane mask value");
+  static_assert(sizeof(LaneBitmask::Type) == sizeof(uint64_t),
+                "Use correct get-function for lane mask.");
+  LaneBitmask::Type V;
+  if (getUint64(V))
+    return true;
+  LaneBitmask LaneMask(V);
+  lex();
+
+  if (expectAndConsume(MIToken::rparen))
+    return true;
+
+  Dest = MachineOperand::CreateLaneMask(LaneMask);
+  return false;
+}
+
 bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::kw_liveout));
   uint32_t *Mask = MF.allocateRegMask();
@@ -2986,6 +3018,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
     return parseIntrinsicOperand(Dest);
   case MIToken::kw_target_index:
     return parseTargetIndexOperand(Dest);
+  case MIToken::kw_lanemask:
+    return parseLaneMaskOperand(Dest);
   case MIToken::kw_liveout:
     return parseLiveoutRegisterMaskOperand(Dest);
   case MIToken::kw_floatpred:

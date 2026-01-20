@@ -1,4 +1,3 @@
-; REQUIRES: asserts
 ; RUN: opt < %s -passes=div-rem-pairs -debug-counter=div-rem-pairs-transform=1 \
 ; RUN: -S -mtriple=x86_64-unknown-unknown    | FileCheck %s
 ;; Test that, with debug counters on, we only skip the first div-rem-pairs opportunity, optimize one after it,
