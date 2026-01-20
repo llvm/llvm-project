@@ -707,10 +707,13 @@ bool WebAssemblyPassConfig::addRegBankSelect() {
 bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
 
-  addPass(createWebAssemblyArgumentMove());
-  addPass(createWebAssemblySetP2AlignOperands());
-  addPass(createWebAssemblyFixBrTableDefaults());
-  addPass(createWebAssemblyCleanCodeAfterTrap());
+  // We insert only if ISelDAG won't insert these at a later point.
+  if (isGlobalISelAbortEnabled()) {
+    addPass(createWebAssemblyArgumentMove());
+    addPass(createWebAssemblySetP2AlignOperands());
+    addPass(createWebAssemblyFixBrTableDefaults());
+    addPass(createWebAssemblyCleanCodeAfterTrap());
+  }
 
   return false;
 }
