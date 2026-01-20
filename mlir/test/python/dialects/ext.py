@@ -101,6 +101,9 @@ def testExtDialect():
     class ConstraintOp(Test.Operation, name="constraint"):
         a: Operand[i32 | IntegerType[64]]
         b: Operand[Any]
+        # Here we use `F32Type[()]` instead of just `F32Type`
+        # because of an existing issue in IRDL implementation
+        # where `irdl.base` cannot exist in `irdl.any_of`.
         c: Operand[F32Type[()] | i32]
         d: Operand[Any]
         x: IntegerAttr
