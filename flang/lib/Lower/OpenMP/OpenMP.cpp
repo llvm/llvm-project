@@ -2090,13 +2090,13 @@ static void genCanonicalLoopNest(
     assert(bounds && "Expected bounds for canonical loop");
     lower::StatementContext stmtCtx;
     mlir::Value loopLBVar = fir::getBase(
-        converter.genExprValue(*semantics::GetExpr(bounds->lower), stmtCtx));
+        converter.genExprValue(*semantics::GetExpr(bounds->Lower()), stmtCtx));
     mlir::Value loopUBVar = fir::getBase(
-        converter.genExprValue(*semantics::GetExpr(bounds->upper), stmtCtx));
+        converter.genExprValue(*semantics::GetExpr(bounds->Upper()), stmtCtx));
     mlir::Value loopStepVar = [&]() {
-      if (bounds->step) {
+      if (auto &step = bounds->Step()) {
         return fir::getBase(
-            converter.genExprValue(*semantics::GetExpr(bounds->step), stmtCtx));
+            converter.genExprValue(*semantics::GetExpr(step), stmtCtx));
       }
 
       // If `step` is not present, assume it is `1`.
@@ -2105,7 +2105,7 @@ static void genCanonicalLoopNest(
     }();
 
     // Get the integer kind for the loop variable and cast the loop bounds
-    size_t loopVarTypeSize = bounds->name.thing.symbol->GetUltimate().size();
+    size_t loopVarTypeSize = bounds->Name().thing.symbol->GetUltimate().size();
     mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
     loopVarTypes.push_back(loopVarType);
     loopLBVar = firOpBuilder.createConvert(loc, loopVarType, loopLBVar);
@@ -3839,8 +3839,18 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareSimdConstruct &declareSimdConstruct) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
+  mlir::Location loc = converter.getCurrentLocation();
+  const parser::OmpDirectiveSpecification &beginSpec = declareSimdConstruct.v;
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+
+  mlir::omp::DeclareSimdOperands clauseOps;
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAligned(clauseOps);
+  cp.processLinear(clauseOps);
+  cp.processSimdlen(clauseOps);
+  cp.processTODO<clause::Uniform>(loc, llvm::omp::Directive::OMPD_declare_simd);
+
+  mlir::omp::DeclareSimdOp::create(converter.getFirOpBuilder(), loc, clauseOps);
 }
 
 static void genOpenMPDeclareMapperImpl(
