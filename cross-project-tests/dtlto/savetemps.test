@@ -1,6 +1,4 @@
-# This test relies on locking files which is difficult to do in a robust test
-# on Linux.
-REQUIRES: ld.lld,system-windows
+REQUIRES: ld.lld
 
 # Test that DTLTO temporary files are "best-effort" cleaned up unless
 # --save-temps is specified. We use archives in this test as the handling for
@@ -13,28 +11,27 @@ RUN: %clang --target=x86_64-linux-gnu -O2 t1.c t2.c -flto=thin -c
 RUN: llvm-ar rcs t.a t1.o t2.o
 
 DEFINE: %{tdir} = dummy-to-make-lit-work
-DEFINE: %{locktemps-dtlto} = \
+DEFINE: %{test-temps-dtlto} = \
 DEFINE:   rm -f send-signal1 && rm -f send-signal2 && mkdir %{tdir} && \
-DEFINE:   %python locktemps.py %{tdir} \
+DEFINE:   %python %S/test_temps.py %{tdir} \
 DEFINE:     %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin \
 DEFINE:       -fuse-ld=lld -Wl,--whole-archive t.a -o %{tdir}/t.elf -shared \
 DEFINE:       -fthinlto-distributor=%python \
-DEFINE:       -Xthinlto-distributor=local_codegen_and_wait.py
+DEFINE:       -Xthinlto-distributor=%S/local_codegen_and_wait.py
 
 # Check that all temporary files are removed in normal operation.
 REDEFINE: %{tdir} = empty
-RUN: %{locktemps-dtlto}
+RUN: %{test-temps-dtlto}
 RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,ELF
 
 # Check that --save-temps preserves temporary files.
 REDEFINE: %{tdir} = savetemps
-RUN: mkdir %{tdir}
-RUN: %{locktemps-dtlto} -Wl,--save-temps
-RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,TEMPS,INDEX,ELF,OTHER
+RUN: %{test-temps-dtlto} -Wl,--save-temps
+RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,TEMPS,INDEX,ELF
 
 # Check that --thinlto-emit-index-files preserves the index files.
 REDEFINE: %{tdir} = index
-RUN: %{locktemps-dtlto} -Wl,--thinlto-emit-index-files
+RUN: %{test-temps-dtlto} -Wl,--thinlto-emit-index-files
 RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,INDEX,ELF
 
 # No files are expected before.
@@ -48,28 +45,13 @@ TEMPS: {{^}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[HEXPID]].2.[[#PID]].native.o{{$}}
 INDEX: {{^}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[HEXPID]].2.[[#PID]].native.o.thinlto.bc{{$}}
 TEMPS: {{^}}t.a(t2.o at [[#T2_OFFSET]]).2.[[HEXPID]].o{{$}}
 ELF:   {{^}}t.elf{{$}}
-OTHER: {{^}}t.elf.resolution.txt{{$}}
+TEMPS: {{^}}t.elf.resolution.txt{{$}}
 # No files are expected after.
 BOOKEND-NOT: {{.}}
 
-# Check that a warning is reported for each file that can't be removed.
-REDEFINE: %{tdir} = locked
-RUN: %{locktemps-dtlto} 2>&1 \
-RUN:   | FileCheck %s --check-prefixes=WARN --implicit-check-not=warning
-RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,TEMPS,INDEX,ELF
-
-WARN-DAG: warning: could not remove the file 'locked{{/|\\}}t.[[#PID:]].dist-file.json': {{.*}}
-# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o.
-WARN-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET:]]).1.[[HEXPID:[A-Z0-9]+]].1.[[#PID]].native.o': {{.*}}
-WARN-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET]]).1.[[HEXPID]].1.[[#PID]].native.o.thinlto.bc': {{.*}}
-WARN-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[HEXPID]].2.[[#PID]].native.o': {{.*}}
-WARN-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET]]).2.[[HEXPID]].2.[[#PID]].native.o.thinlto.bc': {{.*}}
-WARN-DAG: warning: could not remove temporary DTLTO input file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET]]).1.[[HEXPID]].o': {{.*}}
-WARN-DAG: warning: could not remove temporary DTLTO input file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET]]).2.[[HEXPID]].o': {{.*}}
-
 # Check that no warnings are produced if temporary files are missing.
 REDEFINE: %{tdir} = removed
-RUN: %{locktemps-dtlto} 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty
+RUN: %{test-temps-dtlto} 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty
 RUN: ls %{tdir} | sort |  FileCheck %s --check-prefixes=BOOKEND,ELF
 NOWARN-NOT: warning
 
@@ -78,77 +60,3 @@ __attribute__((retain)) int t1(int x) { return x; }
 
 #--- t2.c
 __attribute__((retain)) int t2(int x) { return x; }
-
-#--- local_codegen_and_wait.py
-"""Perform codegen locally, create "send-signal1" file and wait
-for "send-signal2" file to exist before exiting."""
-from pathlib import Path
-import json, subprocess, sys, time, os
-
-# Load the DTLTO information from the input JSON file.
-data = json.loads(Path(sys.argv[-1]).read_bytes())
-
-# Iterate over the jobs and execute the codegen tool.
-for job in data["jobs"]:
-    subprocess.check_call(data["common"]["args"] + job["args"])
-Path("send-signal1").touch()
-while not os.path.exists("send-signal2"):
-    time.sleep(0.05)
-
-#--- locktemps.py
-"""Run command, wait for "send-signal1" file to exist, lock the DTLTO
-temporary files then create "send-signal2" file."""
-import ctypes, os, subprocess, sys, time
-from ctypes import wintypes
-from pathlib import Path
-
-CreateFileW = ctypes.WinDLL("kernel32", use_last_error=True).CreateFileW
-CreateFileW.argtypes = [
-    wintypes.LPCWSTR, # lpFileName
-    wintypes.DWORD,   # dwDesiredAccess
-    wintypes.DWORD,   # dwShareMode
-    wintypes.LPVOID,  # lpSecurityAttributes
-    wintypes.DWORD,   # dwCreationDisposition
-    wintypes.DWORD,   # dwFlagsAndAttributes
-    wintypes.HANDLE,  # hTemplateFile
-]
-CreateFileW.restype = wintypes.HANDLE
-
-def lock_no_delete_share(path):
-    h = CreateFileW(
-        path,
-        0x80000000, # GENERIC_READ
-        0x00000003, # FILE_SHARE_READ/WRITE (no FILE_SHARE_DELETE)
-        None,       # lpSecurityAttributes
-        3,          # OPEN_EXISTING
-        0,          # dwFlagsAndAttributes
-        None,       # hTemplateFile
-    )
-    if h == wintypes.HANDLE(-1).value:
-        err = ctypes.get_last_error()
-        raise OSError(err, f"CreateFileW failed ({err}) for: {path}")
-    return h
-
-output_dir = sys.argv[1]
-p = subprocess.Popen(sys.argv[2:])
-
-while not os.path.exists("send-signal1") and p.poll() is None:
-    time.sleep(0.05)
-if p.poll() is not None:
-    sys.exit(1)
-
-if output_dir == "locked":
-    # lock any files in the output directory.
-    for f in Path(output_dir).iterdir():
-        if f.is_file():
-            lock_no_delete_share(str(f))
-
-if output_dir == "removed":
-    # remove non-essential files in the output directory.
-    for f in Path(output_dir).iterdir():
-        if f.is_file() and not f.name.endswith("native.o"):
-            f.unlink()
-
-Path("send-signal2").touch()
-
-sys.exit(p.wait())

@@ -218,7 +218,6 @@ void lto::DTLTO::cleanup() {
     for (auto &Input : InputFiles) {
       if (!Input->isMemberOfArchive())
         continue;
-
       std::error_code EC =
           sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
       if (EC &&
