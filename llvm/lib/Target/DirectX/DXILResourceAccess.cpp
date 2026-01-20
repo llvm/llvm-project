@@ -8,6 +8,7 @@
 
 #include "DXILResourceAccess.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
@@ -464,8 +465,10 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
   return Handles;
 }
 
-static hlsl::Binding getBinding(IntrinsicInst *Handle,
-                                DXILResourceTypeMap &DRTM) {
+static hlsl::Binding getHandleIntrinsicBinding(IntrinsicInst *Handle,
+                                               DXILResourceTypeMap &DRTM) {
+  assert(llvm::is_contained(HandleIntrins, Handle->getIntrinsicID()));
+
   auto *HandleTy = cast<TargetExtType>(Handle->getType());
   dxil::ResourceClass Class = DRTM[HandleTy].getResourceClass();
   uint32_t Space = cast<ConstantInt>(Handle->getArgOperand(0))->getZExtValue();
@@ -477,15 +480,15 @@ static hlsl::Binding getBinding(IntrinsicInst *Handle,
   return hlsl::Binding(Class, Space, LowerBound, UpperBound, nullptr);
 }
 
-static bool haveCommonBinding(ArrayRef<IntrinsicInst *> Handles,
-                              DXILResourceTypeMap &DRTM) {
+static bool haveSameBinding(ArrayRef<IntrinsicInst *> Handles,
+                            DXILResourceTypeMap &DRTM) {
   unsigned NumHandles = Handles.size();
   if (NumHandles <= 1)
     return false; // No-legalization required
 
-  hlsl::Binding B = getBinding(Handles[0], DRTM);
+  hlsl::Binding B = getHandleIntrinsicBinding(Handles[0], DRTM);
   for (unsigned I = 1; I < NumHandles; I++)
-    if (B != getBinding(Handles[I], DRTM))
+    if (B != getHandleIntrinsicBinding(Handles[I], DRTM))
       return false; // No-legalization is possible
 
   return true;
@@ -597,7 +600,7 @@ static bool tryReplaceHandlesWithIndices(Function &F,
         if (Handles.size() <= 1)
           continue;
         // Can replace with an index into handle call
-        if (haveCommonBinding(Handles, DRTM))
+        if (haveSameBinding(Handles, DRTM))
           replaceHandleWithIndicies(PtrOp, Handles[0], DeadInsts);
       }
 
