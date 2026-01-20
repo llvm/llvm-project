@@ -598,6 +598,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .lower();
 
   // fp intrinsics
+  // fpclass for i686 is disabled for llvm issue #171992
+  getActionDefinitionsBuilder(G_IS_FPCLASS)
+      .lowerFor(Is64Bit, {{s1, s32}, {s1, s64}, {s1, s80}});
+
   getActionDefinitionsBuilder({G_INTRINSIC_ROUNDEVEN, G_INTRINSIC_TRUNC})
       .scalarize(0)
       .minScalar(0, LLT::scalar(32))
