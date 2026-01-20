@@ -1468,14 +1468,9 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
       return false;
   }
 
-  // If the cast is between identical types, just replace it with its operand.
-  // This avoids infinite loops with optimizePhiType which may reintroduce such
-  // casts.
-  if (CI->getOperand(0)->getType() == CI->getType() &&
-    !isa<AddrSpaceCastInst>(CI)) {
-    CI->replaceAllUsesWith(CI->getOperand(0));
-    CI->eraseFromParent();
-    return true;
+  // Skip same-type casts to avoid infinite loop with optimizePhiType.
+  if (CI->getOperand(0)->getType() == CI->getType()) {
+    return false;
   }
 
   // If this is a noop copy,
