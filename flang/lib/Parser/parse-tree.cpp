@@ -50,20 +50,21 @@ bool Designator::EndsInBareName() const {
 }
 
 // R911 data-ref -> part-ref [% part-ref]...
-DataRef::DataRef(std::list<PartRef> &&prl) : u{std::move(prl.front().name)} {
+DataRef::DataRef(std::list<PartRef> &&prl)
+    : u{std::move(std::get<Name>(prl.front().t))} {
   for (bool first{true}; !prl.empty(); first = false, prl.pop_front()) {
-    PartRef &pr{prl.front()};
+    auto &&[name, subscripts, imageSelector]{prl.front().t};
     if (!first) {
       u = common::Indirection<StructureComponent>::Make(
-          std::move(*this), std::move(pr.name));
+          std::move(*this), std::move(name));
     }
-    if (!pr.subscripts.empty()) {
+    if (!subscripts.empty()) {
       u = common::Indirection<ArrayElement>::Make(
-          std::move(*this), std::move(pr.subscripts));
+          std::move(*this), std::move(subscripts));
     }
-    if (pr.imageSelector) {
+    if (imageSelector) {
       u = common::Indirection<CoindexedNamedObject>::Make(
-          std::move(*this), std::move(*pr.imageSelector));
+          std::move(*this), std::move(*imageSelector));
     }
   }
 }
