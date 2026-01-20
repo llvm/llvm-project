@@ -65,10 +65,10 @@ bool AArch64GISelUtils::tryEmitBZero(MachineInstr &MI,
                                      const LibcallLoweringInfo &Libcalls,
                                      bool MinSize) {
   assert(MI.getOpcode() == TargetOpcode::G_MEMSET);
-  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-  if (!TLI.getLibcallName(RTLIB::BZERO))
+  if (Libcalls.getLibcallImpl(RTLIB::BZERO) == RTLIB::Unsupported)
     return false;
+
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   auto Zero =
       getIConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI);
   if (!Zero || Zero->Value.getSExtValue() != 0)
