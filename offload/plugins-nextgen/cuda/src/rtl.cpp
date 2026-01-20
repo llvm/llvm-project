@@ -792,8 +792,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Query for the completion of the pending operations on the async info.
-  Error queryAsyncImpl(__tgt_async_info &AsyncInfo,
-                       bool ReleaseQueue,
+  Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                        bool *IsQueueWorkCompleted) override {
     if (IsQueueWorkCompleted)
       *IsQueueWorkCompleted = false;
@@ -803,7 +802,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     // Not ready streams must be considered as successful operations.
     if (Res == CUDA_ERROR_NOT_READY)
       return Plugin::success();
-    
+
     if (IsQueueWorkCompleted)
       *IsQueueWorkCompleted = true;
     // Once the stream is synchronized and the operations completed (or an error

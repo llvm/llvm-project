@@ -1233,7 +1233,8 @@ Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr) {
 
 Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
   if (Queue->AsyncInfo->Queue) {
-    if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo, false, IsQueueWorkCompleted))
+    if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo, false,
+                                                     IsQueueWorkCompleted))
       return Err;
   }
   return Error::success();

@@ -2430,8 +2430,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Query for the completion of the pending operations on the async info.
-  Error queryAsyncImpl(__tgt_async_info &AsyncInfo,
-                       bool ReleaseQueue,
+  Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                        bool *IsQueueWorkCompleted) override {
     if (IsQueueWorkCompleted)
       *IsQueueWorkCompleted = false;

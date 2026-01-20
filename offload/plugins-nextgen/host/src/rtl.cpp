@@ -336,8 +336,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// All functions are already synchronous. No need to do anything on this
   /// query function.
-  Error queryAsyncImpl(__tgt_async_info &AsyncInfo,
-                       bool ReleaseQueue,
+  Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                        bool *IsQueueWorkCompleted) override {
     if (IsQueueWorkCompleted)
       *IsQueueWorkCompleted = true;
