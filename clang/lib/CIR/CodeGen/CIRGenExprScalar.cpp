@@ -2244,6 +2244,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return builder.getNullDataMemberPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
   }
 
+  case CK_ReinterpretMemberPointer: {
+    mlir::Value src = Visit(subExpr);
+    return builder.createBitcast(cgf.getLoc(subExpr->getExprLoc()), src,
+                                 cgf.convertType(destTy));
+  }
   case CK_BaseToDerivedMemberPointer:
   case CK_DerivedToBaseMemberPointer: {
     mlir::Value src = Visit(subExpr);
