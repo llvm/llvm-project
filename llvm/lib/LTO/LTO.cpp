@@ -597,7 +597,7 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   return std::move(File);
 }
 
-bool InputFile::Symbol::isPreserved(
+bool InputFile::Symbol::isLibcall(
     const RTLIB::RuntimeLibcallsInfo &Libcalls) const {
   return Libcalls.getSupportedLibcallImpl(IRName) != RTLIB::Unsupported;
 }
@@ -694,14 +694,14 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
       GlobalRes.VisibleOutsideSummary = true;
     }
 
-    bool IsPreserved = Sym.isPreserved(Libcalls);
+    bool IsLibcall = Sym.isLibcall(Libcalls);
 
     // Set the partition to external if we know it is re-defined by the linker
     // with -defsym or -wrap options, used elsewhere, e.g. it is visible to a
     // regular object, is referenced from llvm.compiler.used/llvm.used, or was
     // already recorded as being referenced from a different partition.
     if (Res.LinkerRedefined || Res.VisibleToRegularObj || Sym.isUsed() ||
-        IsPreserved ||
+        IsLibcall ||
         (GlobalRes.Partition != GlobalResolution::Unknown &&
          GlobalRes.Partition != Partition)) {
       GlobalRes.Partition = GlobalResolution::External;
@@ -712,7 +712,7 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     // Flag as visible outside of summary if visible from a regular object or
     // from a module that does not have a summary.
     GlobalRes.VisibleOutsideSummary |=
-        (Res.VisibleToRegularObj || Sym.isUsed() || IsPreserved || !InSummary);
+        (Res.VisibleToRegularObj || Sym.isUsed() || IsLibcall || !InSummary);
 
     GlobalRes.ExportDynamic |= Res.ExportDynamic;
   }

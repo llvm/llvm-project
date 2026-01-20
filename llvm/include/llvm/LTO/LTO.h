@@ -169,7 +169,11 @@ public:
     using irsymtab::Symbol::isExecutable;
     using irsymtab::Symbol::isUsed;
 
-    bool isPreserved(const RTLIB::RuntimeLibcallsInfo &Libcalls) const;
+    // Returns whether this symbol is a library call that LTO code generation
+    // may emit references to. Such symbols must be considered external, as
+    // removing them or modifying their interfaces would invalidate the code
+    // generator's knowledge about them.
+    bool isLibcall(const RTLIB::RuntimeLibcallsInfo &Libcalls) const;
   };
 
   /// A range over the symbols in this InputFile.
