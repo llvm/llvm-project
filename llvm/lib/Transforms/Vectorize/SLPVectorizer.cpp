@@ -902,7 +902,16 @@ static std::optional<unsigned> getExtractIndex(const Instruction *E) {
     auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
     if (!CI)
       return std::nullopt;
-    return CI->getZExtValue();
+    // Check if the index is out of bound  - we can get the source vector from operand 0
+    unsigned Idx =  CI->getZExtValue();
+    if (auto *VecTy = dyn_cast<FixedVectorType>(E->getOperand(0)->getType()))
+    {
+      if (Idx >= VecTy->getNumElements())
+      {
+        return std::nullopt;
+      }
+    }
+    return Idx;
   }
   auto *EI = cast<ExtractValueInst>(E);
   if (EI->getNumIndices() != 1)
@@ -14383,7 +14392,7 @@ public:
         // vectorized tree.
         // Also, avoid adjusting the cost for extractelements with multiple uses
         // in different graph entries.
-        auto *EE = cast<ExtractElementInst>(V);
+        auto *EE = dyn_cast<ExtractElementInst>(V); // using dyncast instead of cast to rule out the crash if v is not an extract elementinst
         VecBase = EE->getVectorOperand();
         UniqueBases.insert(VecBase);
         ArrayRef<TreeEntry *> VEs = R.getTreeEntries(V);
