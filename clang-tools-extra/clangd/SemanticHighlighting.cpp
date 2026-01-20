@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SemanticHighlighting.h"
+#include "AST.h"
 #include "Config.h"
 #include "FindSymbols.h"
 #include "FindTarget.h"
@@ -32,7 +33,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 
-#include <AST.h>
 #include <algorithm>
 #include <optional>
 
@@ -1058,7 +1058,8 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
 
           const auto SymbolTags = computeSymbolTags(*Decl);
 
-          static const thread_local llvm::DenseMap<SymbolTag, HighlightingModifier>
+          static const thread_local llvm::DenseMap<SymbolTag,
+                                                   HighlightingModifier>
               TagModifierMap = {
                   {SymbolTag::Deprecated, HighlightingModifier::Deprecated},
                   {SymbolTag::ReadOnly, HighlightingModifier::Readonly},
