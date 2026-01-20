@@ -958,9 +958,7 @@ public:
                   IOHandler::Type::ProcessIO),
         m_process(process),
         m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
-        m_write_file(conpty_input) {
-    m_interrupt_event = INVALID_HANDLE_VALUE;
-  }
+        m_write_file(conpty_input), m_interrupt_event(INVALID_HANDLE_VALUE) {}
 
   ~IOHandlerProcessSTDIOWindows() override = default;
 
@@ -973,12 +971,12 @@ public:
   /// Peek the console for input. If it has any, drain the pipe until text input
   /// is found or the pipe is empty.
   ///
-  /// \param[in, out] hStdin
+  /// \param hStdin
   ///     The handle to the standard input's pipe.
   ///
   /// \return
   ///     true if the pipe has text input.
-  llvm::Expected<bool> ConsoleHasTextInput(HANDLE hStdin) {
+  llvm::Expected<bool> ConsoleHasTextInput(const HANDLE hStdin) {
     while (true) {
       INPUT_RECORD inputRecord;
       DWORD numRead = 0;
