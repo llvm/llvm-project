@@ -751,6 +751,16 @@ public:
     getInlineDesc()->LifeState = Lifetime::Started;
   }
 
+  /// Strip base casts from this Pointer.
+  /// The result is either a root pointer or something
+  /// that isn't a base class anymore.
+  [[nodiscard]] Pointer stripBaseCasts() const {
+    Pointer P = *this;
+    while (P.isBaseClass())
+      P = P.getBase();
+    return P;
+  }
+
   /// Compare two pointers.
   ComparisonCategoryResult compare(const Pointer &Other) const {
     if (!hasSameBase(*this, Other))

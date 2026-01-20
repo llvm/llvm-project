@@ -1320,8 +1320,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
 
     // Remove base casts.
     QualType InitialType = Ptr.getType();
-    while (Ptr.isBaseClass())
-      Ptr = Ptr.getBase();
+    Ptr = Ptr.stripBaseCasts();
 
     Source = Ptr.getDeclDesc()->asExpr();
     BlockToDelete = Ptr.block();
@@ -1709,8 +1708,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
 
 static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
                            const CXXRecordDecl *&DynamicDecl) {
-  while (TypePtr.isBaseClass())
-    TypePtr = TypePtr.getBase();
+  TypePtr = TypePtr.stripBaseCasts();
 
   QualType DynamicType = TypePtr.getType();
   if (TypePtr.isStatic() || TypePtr.isConst()) {
@@ -1794,8 +1792,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
       // If the function we call is further DOWN the hierarchy than the
       // FieldDesc of our pointer, just go up the hierarchy of this field
       // the furthest we can go.
-      while (ThisPtr.isBaseClass())
-        ThisPtr = ThisPtr.getBase();
+      ThisPtr = ThisPtr.stripBaseCasts();
     }
   }
 
