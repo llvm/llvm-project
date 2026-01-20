@@ -19511,10 +19511,11 @@ SDValue PPCTargetLowering::combineADD(SDNode *N, DAGCombinerInfo &DCI) const {
   return SDValue();
 }
 
-// The following transformation is meant to optimize vector compares not equal
-// to non-zeros Ex: vec[i] != 7, where vec is a vector and the comparison is
-// element non-zero number. (and (anyext (setcc A, B, SETNE)), splat32(1))
-//  -> (zext (add (setcc A, B, SETEQ), splat16(1)))
+// Transform:
+//     (and (anyext (setcc A, B, SETNE)), splat32(1))
+// Into:
+//     (zext (add (setcc A, B, SETEQ), splat16(1)))
+// This optimizes counting patterns like vec[i] != C in vectorized loops
 SDValue
 PPCTargetLowering::combineVectorZExtCompare(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
@@ -19529,31 +19530,27 @@ PPCTargetLowering::combineVectorZExtCompare(SDNode *N,
 
   APInt SplatVal;
   if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) || SplatVal != 1)
-    std::swap(Op0, Op1);
-  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) || SplatVal != 1)
     return SDValue();
 
-  if (Op0.getOpcode() != ISD::ANY_EXTEND_VECTOR_INREG &&
-      Op0.getOpcode() != ISD::ZERO_EXTEND_VECTOR_INREG)
+  // (and (anyext (setcc A, B, SETNE)), splat32(1)) -> Op0 = any_extend
+  if (Op0.getOpcode() != ISD::ANY_EXTEND_VECTOR_INREG)
     return SDValue();
 
   SDValue SetCC = Op0.getOperand(0);
   if (SetCC.getOpcode() != ISD::SETCC)
     return SDValue();
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(SetCC.getOperand(2))->get();
-  if (CC != ISD::SETNE)
+  if (cast<CondCodeSDNode>(SetCC.getOperand(2))->get() != ISD::SETNE)
     return SDValue();
 
   EVT SrcVT = SetCC.getValueType();
-  EVT EltVT = SrcVT.getVectorElementType();
 
   //(zext (add (setcc X, Y, SETEQ), splat(1)))
   SDValue EqCmp = DAG.getSetCC(DL, SrcVT, SetCC.getOperand(0),
                                SetCC.getOperand(1), ISD::SETEQ);
-  SDValue OneSplat =
-      DAG.getSplatBuildVector(SrcVT, DL, DAG.getConstant(1, DL, EltVT));
-  SDValue Add = DAG.getNode(ISD::ADD, DL, SrcVT, EqCmp, OneSplat);
+  SDValue OnesSplatBuild = DAG.getSplatBuildVector(
+      SrcVT, DL, DAG.getConstant(1, DL, SrcVT.getVectorElementType()));
+  SDValue Add = DAG.getNode(ISD::ADD, DL, SrcVT, EqCmp, OnesSplatBuild);
 
   return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, DL, VT, Add);
 }
