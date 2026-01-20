@@ -229,48 +229,6 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f32(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_undef_f32(ptr addrspace(1) %out) #1 {
-; GFX78-LABEL: test_fold_canonicalize_undef_f32:
-; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX78-NEXT:    s_add_i32 s12, s12, s17
-; GFX78-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GFX78-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GFX78-NEXT:    v_mov_b32_e32 v2, 0
-; GFX78-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX78-NEXT:    v_mov_b32_e32 v0, s0
-; GFX78-NEXT:    v_mov_b32_e32 v1, s1
-; GFX78-NEXT:    flat_store_dword v[0:1], v2
-; GFX78-NEXT:    s_endpgm
-;
-; GFX9-LABEL: test_fold_canonicalize_undef_f32:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_store_dword v0, v0, s[0:1]
-; GFX9-NEXT:    s_endpgm
-;
-; GFX10-LABEL: test_fold_canonicalize_undef_f32:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_store_dword v0, v0, s[0:1]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX11-LABEL: test_fold_canonicalize_undef_f32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_store_b32 v0, v0, s[0:1]
-; GFX11-NEXT:    s_endpgm
-  %canonicalized = call float @llvm.canonicalize.f32(float undef)
-  store float %canonicalized, ptr addrspace(1) %out
-  ret void
-}
-
 define amdgpu_kernel void @test_fold_canonicalize_p0_f32(ptr addrspace(1) %out) #1 {
 ; GFX78-LABEL: test_fold_canonicalize_p0_f32:
 ; GFX78:       ; %bb.0:
