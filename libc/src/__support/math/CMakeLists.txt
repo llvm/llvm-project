@@ -1234,3 +1234,13 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+add_header_library(
+  dfmaf128
+  HDRS
+    dfmaf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.llvm-libc-types.float128
+)

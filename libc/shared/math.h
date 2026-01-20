@@ -39,6 +39,7 @@
 #include "math/coshf16.h"
 #include "math/cospif.h"
 #include "math/cospif16.h"
+#include "math/dfmaf128.h"
 #include "math/dfmal.h"
 #include "math/dsqrtl.h"
 #include "math/erff.h"
