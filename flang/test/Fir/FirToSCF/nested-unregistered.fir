@@ -5,6 +5,10 @@
 
 // CHECK-LABEL: func.func @nested_region
 // CHECK-NOT:   fir.do_loop
+// CHECK:       scf.for
+// CHECK:       acc.kernels
+// CHECK:       scf.for
+// CHECK:       acc.terminator
 
 func.func @nested_region() {
   %c1 = arith.constant 1 : index
