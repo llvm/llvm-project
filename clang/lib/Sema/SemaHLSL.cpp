@@ -3326,7 +3326,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ElementTy = ResourceTy->getContainedType();
-    if (ResourceTy->getAttrs().RawBuffer && ElementTy->isChar8Type()) {
+    if (ResourceTy->isRaw() && !ResourceTy->isStructured()) {
       // Load method uses return type
       FunctionDecl *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
       ElementTy = FD->getReturnType();
@@ -3367,7 +3367,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ReturnType = ResourceTy->getContainedType();
-    if (ResourceTy->getAttrs().RawBuffer && ReturnType->isChar8Type()) {
+    if (ResourceTy->isRaw() && !ResourceTy->isStructured()) {
       FunctionDecl *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
       ReturnType = FD->getReturnType();
 

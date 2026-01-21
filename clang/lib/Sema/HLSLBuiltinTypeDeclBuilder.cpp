@@ -468,7 +468,7 @@ QualType BuiltinTypeMethodBuilder::addTemplateTypeParam(StringRef Name) {
       /* Typename */ true,
       /* ParameterPack */ false,
       /* HasTypeConstraint*/ false);
-  TemplateParamDecls.emplace_back(Decl);
+  TemplateParamDecls.push_back(Decl);
 
   return QualType(Decl->getTypeForDecl(), 0);
 }
@@ -1178,9 +1178,11 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
   DeclarationName Subscript =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
-  addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
+  addHandleAccessFunction(Subscript, getHandleElementType(), /*IsConst=*/true,
+                          /*IsRef=*/true);
   if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
-    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+    addHandleAccessFunction(Subscript, getHandleElementType(),
+                            /*IsConst=*/false, /*IsRef=*/true);
 
   return *this;
 }
@@ -1192,8 +1194,9 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
   DeclarationName Load(&II);
   // TODO: We also need versions with status for CheckAccessFullyMapped.
-  addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
-  addLoadWithStatusFunction(Load, /*IsConst=*/false);
+  addHandleAccessFunction(Load, getHandleElementType(), /*IsConst=*/false,
+                          /*IsRef=*/false);
+  addLoadWithStatusFunction(Load, getHandleElementType(), /*IsConst=*/false);
 
   return *this;
 }
@@ -1202,50 +1205,22 @@ BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
-  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
 
-  auto addLoadMethod = [&](StringRef MethodName, QualType ReturnType) {
+  auto AddLoads = [&](StringRef MethodName, QualType ReturnType) {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Load(&II);
 
-    // Load without status
-    BuiltinTypeMethodBuilder MMB(*this, Load, ReturnType);
-    QualType ElemTy = ReturnType;
-    if (ReturnType->isDependentType()) {
-      ElemTy = MMB.addTemplateTypeParam("element_type");
-      MMB.ReturnTy = ElemTy; // Update return type to template parameter
-    }
-    QualType AddrSpaceElemTy =
-        AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
-
-    MMB.addParam("Index", AST.UnsignedIntTy)
-        .callBuiltin("__builtin_hlsl_resource_getpointer",
-                     AST.getPointerType(AddrSpaceElemTy), PH::Handle, PH::_0)
-        .dereference(PH::LastStmt)
-        .finalize();
-
-    // Load with status
-    BuiltinTypeMethodBuilder MMB2(*this, Load, ReturnType);
-    if (ReturnType->isDependentType()) {
-      ReturnType = MMB2.addTemplateTypeParam("element_type");
-      MMB2.ReturnTy = ReturnType; // Update return type to template parameter
-    }
-
-    MMB2.addParam("Index", AST.UnsignedIntTy)
-        .addParam("Status", AST.UnsignedIntTy,
-                  HLSLParamModifierAttr::Keyword_out)
-        .callBuiltin("__builtin_hlsl_resource_load_with_status", ReturnType,
-                     PH::Handle, PH::_0, PH::_1)
-        .finalize();
+    addHandleAccessFunction(Load, ReturnType, /*IsConst=*/false,
+                            /*IsRef=*/false);
+    addLoadWithStatusFunction(Load, ReturnType, /*IsConst=*/false);
   };
 
-  addLoadMethod("Load", AST.UnsignedIntTy);
-  addLoadMethod("Load2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
-  addLoadMethod("Load3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
-  addLoadMethod("Load4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
-  addLoadMethod("Load", AST.DependentTy); // Templated version
-
+  AddLoads("Load", AST.UnsignedIntTy);
+  AddLoads("Load2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
+  AddLoads("Load3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
+  AddLoads("Load4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
+  AddLoads("Load", AST.DependentTy); // Templated version
   return *this;
 }
 
@@ -1253,33 +1228,20 @@ BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
-  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
 
-  auto addStoreMethod = [&](StringRef MethodName, QualType ValueType) {
+  auto AddStore = [&](StringRef MethodName, QualType ValueType) {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Store(&II);
 
-    BuiltinTypeMethodBuilder MMB(*this, Store, AST.VoidTy);
-    if (ValueType->isDependentType())
-      ValueType = MMB.addTemplateTypeParam("element_type");
-    QualType AddrSpaceElemTy =
-        AST.getAddrSpaceQualType(ValueType, LangAS::hlsl_device);
-
-    MMB.addParam("Index", AST.UnsignedIntTy)
-        .addParam("Value", ValueType)
-        .callBuiltin("__builtin_hlsl_resource_getpointer",
-                     AST.getPointerType(AddrSpaceElemTy), PH::Handle, PH::_0)
-        .dereference(PH::LastStmt)
-        .assign(PH::LastStmt, PH::_1)
-        .finalize();
+    addStoreFunction(Store, ValueType, /*IsConst=*/false);
   };
 
-  addStoreMethod("Store", AST.UnsignedIntTy);
-  addStoreMethod("Store2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
-  addStoreMethod("Store3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
-  addStoreMethod("Store4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
-  addStoreMethod("Store", AST.DependentTy); // Templated version
+  AddStore("Store", AST.UnsignedIntTy);
+  AddStore("Store2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
+  AddStore("Store3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
+  AddStore("Store4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
+  AddStore("Store", AST.DependentTy); // Templated version
 
   return *this;
 }
@@ -1372,30 +1334,38 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
       .finalize();
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
-                                                  bool IsConst) {
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadWithStatusFunction(
+    DeclarationName &Name, QualType ReturnTy, bool IsConst) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
-  QualType ReturnTy = getHandleElementType();
-  return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)
-      .addParam("Index", AST.UnsignedIntTy)
+  BuiltinTypeMethodBuilder MMB(*this, Name, ReturnTy, IsConst);
+
+  if (ReturnTy == AST.DependentTy) {
+    ReturnTy = MMB.addTemplateTypeParam("element_type");
+    MMB.ReturnTy = ReturnTy;
+  }
+
+  return MMB.addParam("Index", AST.UnsignedIntTy)
       .addParam("Status", AST.UnsignedIntTy, HLSLParamModifierAttr::Keyword_out)
       .callBuiltin("__builtin_hlsl_resource_load_with_status", ReturnTy,
                    PH::Handle, PH::_0, PH::_1)
       .finalize();
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addHandleAccessFunction(DeclarationName &Name,
-                                                bool IsConst, bool IsRef) {
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
+    DeclarationName &Name, QualType ElemTy, bool IsConst, bool IsRef) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
-  QualType ElemTy = getHandleElementType();
+  // The empty QualType is a placeholder. The actual return type is set below.
+  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), IsConst);
+
+  if (ElemTy == AST.DependentTy) {
+    ElemTy = MMB.addTemplateTypeParam("element_type");
+  }
   QualType AddrSpaceElemTy =
       AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
   QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
@@ -1411,12 +1381,36 @@ BuiltinTypeDeclBuilder::addHandleAccessFunction(DeclarationName &Name,
     if (IsConst)
       ReturnTy.addConst();
   }
+  MMB.ReturnTy = ReturnTy;
 
-  return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)
-      .addParam("Index", AST.UnsignedIntTy)
+  return MMB.addParam("Index", AST.UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
                    PH::_0)
       .dereference(PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name,
+                                         QualType ValueTy, bool IsConst) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  BuiltinTypeMethodBuilder MMB(*this, Name, AST.VoidTy, IsConst);
+
+  if (ValueTy == AST.DependentTy)
+    ValueTy = MMB.addTemplateTypeParam("element_type");
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ValueTy, LangAS::hlsl_device);
+  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
+
+  return MMB.addParam("Index", AST.UnsignedIntTy)
+      .addParam("Value", ValueTy)
+      .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
+                   PH::_0)
+      .dereference(PH::LastStmt)
+      .assign(PH::LastStmt, PH::_1)
       .finalize();
 }
 
