@@ -19,7 +19,6 @@
 #include "check_assertion.h"
 #include "double_move_tracker.h"
 #include "test_iterators.h"
-//#include "../../range_adaptor_types.h"
 
 int val[] = {1, 2, 3};
 
@@ -135,7 +134,7 @@ inline std::ptrdiff_t operator-(Iter<X> a, Iter<Y> b) {
 template <std::size_t N>
 struct Range : std::ranges::view_base {
   using iterator       = Iter<N>;
-  using const_iterator = const Iter<N>;
+  using const_iterator = Iter<N>;
   using sentinel       = sentinel_wrapper<iterator>;
 
   int* data_;
@@ -218,6 +217,7 @@ int main() {
     flag       = true;
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([=] { *iter1; }(), "valueless by exception");
     }
@@ -236,6 +236,7 @@ int main() {
     flag       = true;
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([=] { (void)(iter1 == iter3); }(), "valueless by exception");
     }
@@ -252,6 +253,7 @@ int main() {
     flag       = true;
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([=] { (void)(iter1 == std::default_sentinel); }(), "valueless by exception");
     }
@@ -286,6 +288,7 @@ int main() {
     flag       = true;
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([&] { ++iter1; }(), "valueless by exception");
     }
@@ -303,6 +306,7 @@ int main() {
     flag       = true;
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([&] { iter1 += 1; }(), "valueless by exception");
     }
@@ -320,6 +324,7 @@ int main() {
     flag       = true;
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 > iter2); }(), "valueless by exception");
     }
@@ -337,6 +342,7 @@ int main() {
     flag       = true;
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 >= iter2); }(), "valueless by exception");
     }
@@ -354,6 +360,7 @@ int main() {
     flag       = true;
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 < iter2); }(), "valueless by exception");
     }
@@ -371,6 +378,7 @@ int main() {
     flag       = true;
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 <= iter2); }(), "valueless by exception");
     }
@@ -388,6 +396,7 @@ int main() {
     flag       = true;
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 - iter2); }(), "valueless by exception");
     }
@@ -398,8 +407,9 @@ int main() {
     flag = false;
     Range<0> r1;
     Range<1> r2;
+    lse
 
-    auto cv    = std::views::concat(r1, r2);
+        auto cv = std::views::concat(r1, r2);
     auto iter1 = cv.begin();
     auto iter2 = std::ranges::next(cv.begin(), 4);
     flag       = true;
@@ -420,11 +430,12 @@ int main() {
     auto iter1 = cv.begin();
     auto iter2 = std::ranges::next(cv.begin(), 4);
     flag       = true;
-    using Iter  = std::ranges::iterator_t<decltype(cv)>;       // iterator<false>
+    using Iter  = std::ranges::iterator_t<decltype(cv)>;       // iterator<fa>
     using CIter = std::ranges::iterator_t<const decltype(cv)>; // iterator<true>
 
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE(
           [&] {
