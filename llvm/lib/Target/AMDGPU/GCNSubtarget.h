@@ -375,6 +375,8 @@ public:
     return (Generation)Gen;
   }
 
+  bool isGFX11Plus() const { return getGeneration() >= GFX11; }
+
   unsigned getMaxWaveScratchSize() const {
     // See COMPUTE_TMPRING_SIZE.WAVESIZE.
     if (getGeneration() >= GFX12) {
@@ -1565,6 +1567,8 @@ public:
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
   bool hasGFX1250Insts() const { return GFX1250Insts; }
+
+  bool hasINVWBL2WaitCntRequirement() const { return GFX1250Insts; }
 
   bool hasVOPD3() const { return GFX1250Insts; }
 
