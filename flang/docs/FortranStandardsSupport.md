@@ -95,7 +95,7 @@ All features except those listed in the following table are supported.
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | Coarrays                                                   | N      | Lowering and runtime support is not implemented         |
 | do concurrent                                              | P      | Sequential execution works. Parallel support in progress|
-| Internal procedure as an actual argument or pointer target | Y      | Current implementation requires stack to be executable. See [Proposal](InternalProcedureTrampolines.md) |
+| Internal procedure as an actual argument or pointer target | Y      | Current implementation requires stack to be executable. See [FAQ](FAQ.md#why-do-i-get-a-warning-or-an-error-about-an-executable-stack) and [Proposal](InternalProcedureTrampolines.md) |
 
 ## Fortran 2003
 All features except those listed in the following table are supported.

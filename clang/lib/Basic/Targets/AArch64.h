@@ -48,6 +48,7 @@ static const unsigned ARM64AddrSpaceMap[] = {
     0, // hlsl_private
     0, // hlsl_device
     0, // hlsl_input
+    0, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -130,6 +131,15 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasRCPC3 = false;
   bool HasSMEFA64 = false;
   bool HasPAuthLR = false;
+  bool HasFPRCVT = false;
+  bool HasF8F16MM = false;
+  bool HasF8F32MM = false;
+  bool HasSVE_F16F32MM = false;
+  bool HasSVE_BFSCALE = false;
+  bool HasSVE_AES2 = false;
+  bool HasSSVE_AES = false;
+  bool HasSVE2p2 = false;
+  bool HasSME2p2 = false;
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 

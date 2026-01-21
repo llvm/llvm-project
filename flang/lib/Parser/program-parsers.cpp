@@ -77,7 +77,7 @@ static constexpr auto globalCompilerDirective{
 
 static constexpr auto globalOpenACCCompilerDirective{
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
-        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{}))};
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
@@ -533,10 +533,12 @@ TYPE_PARSER(construct<AltReturnSpec>(star >> label))
 //         NON_RECURSIVE | PURE | RECURSIVE |
 // (CUDA)  ATTRIBUTES ( (DEVICE | GLOBAL | GRID_GLOBAL | HOST)... ) |
 //         LAUNCH_BOUNDS(expr-list) | CLUSTER_DIMS(expr-list)
-TYPE_PARSER(first("DEVICE" >> pure(common::CUDASubprogramAttrs::Device),
-    "GLOBAL" >> pure(common::CUDASubprogramAttrs::Global),
-    "GRID_GLOBAL" >> pure(common::CUDASubprogramAttrs::Grid_Global),
-    "HOST" >> pure(common::CUDASubprogramAttrs::Host)))
+TYPE_PARSER(withMessage(
+    "expected DEVICE, GLOBAL, GRID_GLOBAL, or HOST attribute"_err_en_US,
+    first("DEVICE" >> pure(common::CUDASubprogramAttrs::Device),
+        "GLOBAL" >> pure(common::CUDASubprogramAttrs::Global),
+        "GRID_GLOBAL" >> pure(common::CUDASubprogramAttrs::Grid_Global),
+        "HOST" >> pure(common::CUDASubprogramAttrs::Host))))
 TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
     construct<PrefixSpec>(construct<PrefixSpec::Elemental>("ELEMENTAL"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Impure>("IMPURE"_tok)),
@@ -546,9 +548,12 @@ TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
     construct<PrefixSpec>(construct<PrefixSpec::Pure>("PURE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Recursive>("RECURSIVE"_tok)),
     extension<LanguageFeature::CUDA>(
-        construct<PrefixSpec>(construct<PrefixSpec::Attributes>("ATTRIBUTES" >>
-            parenthesized(
-                optionalList(Parser<common::CUDASubprogramAttrs>{}))))),
+        construct<PrefixSpec>(construct<PrefixSpec::Attributes>(
+            localRecovery("expected valid ATTRIBUTES specification"_err_en_US,
+                "ATTRIBUTES" >> parenthesized(nonemptyList(
+                                    Parser<common::CUDASubprogramAttrs>{})),
+                "ATTRIBUTES" >> SkipTo<')'>{} >> ")"_ch >>
+                    pure<std::list<common::CUDASubprogramAttrs>>())))),
     extension<LanguageFeature::CUDA>(construct<PrefixSpec>(
         construct<PrefixSpec::Launch_Bounds>("LAUNCH_BOUNDS" >>
             parenthesized(nonemptyList(

@@ -161,6 +161,13 @@ DEFINE_COMPILERRT_FUNCTION(__arm_za_disable)
   ldr x14, [x14, CPU_FEATS_SYMBOL_OFFSET]
   tbz x14, #FEAT_SME_BIT, 0f
 
+  // If TPIDR2_EL0 is zero then nothing needs doing because
+  // __arm_za_disable is a private-ZA function and is only
+  // ever entered with ZA state 'off' or 'dormant', so
+  // we can assume PSTATE.ZA=0.
+  mrs x14, TPIDR2_EL0
+  cbz x14, 0f
+
   // Otherwise, the subroutine behaves as if it did the following:
   // * Call __arm_tpidr2_save.
   stp x29, x30, [sp, #-16]!

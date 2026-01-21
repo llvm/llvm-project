@@ -3253,10 +3253,10 @@ add x0, x27, 1
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
 # CHECK-NEXT: Total Cycles:      1006
-# CHECK-NEXT: Total uOps:        2000
+# CHECK-NEXT: Total uOps:        2200
 
 # CHECK:      Dispatch Width:    5
-# CHECK-NEXT: uOps Per Cycle:    1.99
+# CHECK-NEXT: uOps Per Cycle:    2.19
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 10.0
 

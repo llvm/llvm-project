@@ -1409,7 +1409,7 @@ static MachineInstrBuilder spillVGPRtoAGPR(const GCNSubtarget &ST,
   unsigned Dst = IsStore ? Reg : ValueReg;
   unsigned Src = IsStore ? ValueReg : Reg;
   bool IsVGPR = TRI->isVGPR(MRI, Reg);
-  DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI->getDebugLoc();
   if (IsVGPR == TRI->isVGPR(MRI, ValueReg)) {
     // Spiller during regalloc may restore a spilled register to its superclass.
     // It could result in AGPR spills restored to VGPRs or the other way around,
@@ -2653,7 +2653,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
           BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), ScavengedVGPR)
               .addReg(MaterializedReg,
-                      MaterializedReg != FrameReg ? RegState::Kill : 0);
+                      getKillRegState(MaterializedReg != FrameReg));
           MaterializedReg = ScavengedVGPR;
         }
 
@@ -2666,7 +2666,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           AddI32.add(MI->getOperand(1));
 
         unsigned MaterializedRegFlags =
-            MaterializedReg != FrameReg ? RegState::Kill : 0;
+            getKillRegState(MaterializedReg != FrameReg);
 
         if (isVGPRClass(getPhysRegBaseClass(MaterializedReg))) {
           // If we know we have a VGPR already, it's more likely the other
