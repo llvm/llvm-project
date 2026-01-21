@@ -72,49 +72,6 @@ static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
   return val;
 }
 
-struct CUFDeviceAddressOpConversion
-    : public mlir::OpRewritePattern<cuf::DeviceAddressOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  CUFDeviceAddressOpConversion(mlir::MLIRContext *context,
-                               const mlir::SymbolTable &symtab)
-      : OpRewritePattern(context), symTab{symtab} {}
-
-  mlir::LogicalResult
-  matchAndRewrite(cuf::DeviceAddressOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    if (auto global = symTab.lookup<fir::GlobalOp>(
-            op.getHostSymbol().getRootReference().getValue())) {
-      auto mod = op->getParentOfType<mlir::ModuleOp>();
-      mlir::Location loc = op.getLoc();
-      auto hostAddr = fir::AddrOfOp::create(
-          rewriter, loc, fir::ReferenceType::get(global.getType()),
-          op.getHostSymbol());
-      fir::FirOpBuilder builder(rewriter, mod);
-      mlir::func::FuncOp callee =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFGetDeviceAddress)>(loc,
-                                                                     builder);
-      auto fTy = callee.getFunctionType();
-      mlir::Value conv =
-          createConvertOp(rewriter, loc, fTy.getInput(0), hostAddr);
-      mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-      mlir::Value sourceLine =
-          fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
-      llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-          builder, loc, fTy, conv, sourceFile, sourceLine)};
-      auto call = fir::CallOp::create(rewriter, loc, callee, args);
-      mlir::Value addr = createConvertOp(rewriter, loc, hostAddr.getType(),
-                                         call->getResult(0));
-      rewriter.replaceOp(op, addr.getDefiningOp());
-      return success();
-    }
-    return failure();
-  }
-
-private:
-  const mlir::SymbolTable &symTab;
-};
-
 struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -558,6 +515,7 @@ public:
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
                            mlir::gpu::GPUDialect>();
     target.addLegalOp<cuf::StreamCastOp>();
+    target.addLegalOp<cuf::DeviceAddressOp>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
@@ -602,12 +560,10 @@ void cuf::populateCUFToFIRConversionPatterns(
   patterns.insert<CUFSyncDescriptorOpConversion>(patterns.getContext());
   patterns.insert<CUFDataTransferOpConversion>(patterns.getContext(), symtab,
                                                &dl, &converter);
-  patterns.insert<CUFLaunchOpConversion, CUFDeviceAddressOpConversion>(
-      patterns.getContext(), symtab);
+  patterns.insert<CUFLaunchOpConversion>(patterns.getContext(), symtab);
 }
 
 void cuf::populateFIRCUFConversionPatterns(const mlir::SymbolTable &symtab,
                                            mlir::RewritePatternSet &patterns) {
-  patterns.insert<DeclareOpConversion, CUFDeviceAddressOpConversion>(
-      patterns.getContext(), symtab);
+  patterns.insert<DeclareOpConversion>(patterns.getContext(), symtab);
 }
