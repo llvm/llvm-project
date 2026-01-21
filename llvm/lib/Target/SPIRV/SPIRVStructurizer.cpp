@@ -1113,7 +1113,7 @@ public:
 
   SPIRVStructurizer() : FunctionPass(ID) {}
 
-  virtual bool runOnFunction(Function &F) override {
+  bool runOnFunction(Function &F) override {
     bool Modified = false;
 
     // In LLVM, Switches are allowed to have several cases branching to the same

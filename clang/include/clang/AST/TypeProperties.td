@@ -486,9 +486,12 @@ let Class = PackIndexingType in {
   def : Property<"isFullySubstituted", Bool> {
     let Read = [{ node->isFullySubstituted() }];
   }
+  def : Property<"expansions", Array<QualType>> {
+    let Read = [{ node->getExpansions() }];
+  }
 
   def : Creator<[{
-    return ctx.getPackIndexingType(pattern, indexExpression, isFullySubstituted);
+    return ctx.getPackIndexingType(pattern, indexExpression, isFullySubstituted, expansions);
   }]>;
 }
 

@@ -282,14 +282,14 @@ fissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
           &newTeams.getRegion(), newTeams.getRegion().begin(), {}, {});
       for (auto arg : teamsBlock->getArguments())
         newTeamsBlock->addArgument(arg.getType(), arg.getLoc());
-      auto newWorkdistribute = rewriter.create<omp::WorkdistributeOp>(loc);
-      rewriter.create<omp::TerminatorOp>(loc);
+      auto newWorkdistribute = omp::WorkdistributeOp::create(rewriter, loc);
+      omp::TerminatorOp::create(rewriter, loc);
       rewriter.createBlock(&newWorkdistribute.getRegion(),
                            newWorkdistribute.getRegion().begin(), {}, {});
       auto *cloned = rewriter.clone(*parallelize);
       parallelize->replaceAllUsesWith(cloned);
       parallelize->erase();
-      rewriter.create<omp::TerminatorOp>(loc);
+      omp::TerminatorOp::create(rewriter, loc);
       changed = true;
     }
   }
@@ -298,10 +298,10 @@ fissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
 
 /// Generate omp.parallel operation with an empty region.
 static void genParallelOp(Location loc, OpBuilder &rewriter, bool composite) {
-  auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(loc);
+  auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loc);
   parallelOp.setComposite(composite);
   rewriter.createBlock(&parallelOp.getRegion());
-  rewriter.setInsertionPoint(rewriter.create<mlir::omp::TerminatorOp>(loc));
+  rewriter.setInsertionPoint(mlir::omp::TerminatorOp::create(rewriter, loc));
   return;
 }
 
@@ -309,7 +309,7 @@ static void genParallelOp(Location loc, OpBuilder &rewriter, bool composite) {
 static void genDistributeOp(Location loc, OpBuilder &rewriter, bool composite) {
   mlir::omp::DistributeOperands distributeClauseOps;
   auto distributeOp =
-      rewriter.create<mlir::omp::DistributeOp>(loc, distributeClauseOps);
+      mlir::omp::DistributeOp::create(rewriter, loc, distributeClauseOps);
   distributeOp.setComposite(composite);
   auto distributeBlock = rewriter.createBlock(&distributeOp.getRegion());
   rewriter.setInsertionPointToStart(distributeBlock);
@@ -334,12 +334,12 @@ static void genWsLoopOp(mlir::OpBuilder &rewriter, fir::DoLoopOp doLoop,
                         const mlir::omp::LoopNestOperands &clauseOps,
                         bool composite) {
 
-  auto wsloopOp = rewriter.create<mlir::omp::WsloopOp>(doLoop.getLoc());
+  auto wsloopOp = mlir::omp::WsloopOp::create(rewriter, doLoop.getLoc());
   wsloopOp.setComposite(composite);
   rewriter.createBlock(&wsloopOp.getRegion());
 
   auto loopNestOp =
-      rewriter.create<mlir::omp::LoopNestOp>(doLoop.getLoc(), clauseOps);
+      mlir::omp::LoopNestOp::create(rewriter, doLoop.getLoc(), clauseOps);
 
   // Clone the loop's body inside the loop nest construct using the
   // mapped values.
@@ -351,7 +351,7 @@ static void genWsLoopOp(mlir::OpBuilder &rewriter, fir::DoLoopOp doLoop,
   // Erase fir.result op of do loop and create yield op.
   if (auto resultOp = dyn_cast<fir::ResultOp>(terminatorOp)) {
     rewriter.setInsertionPoint(terminatorOp);
-    rewriter.create<mlir::omp::YieldOp>(doLoop->getLoc());
+    mlir::omp::YieldOp::create(rewriter, doLoop->getLoc());
     terminatorOp->erase();
   }
 }
@@ -494,15 +494,15 @@ static SmallVector<Value> convertFlatToMultiDim(OpBuilder &builder,
   // Convert flat index to multi-dimensional indices
   SmallVector<Value> indices(rank);
   Value temp = flatIdx;
-  auto c1 = builder.create<arith::ConstantIndexOp>(loc, 1);
+  auto c1 = arith::ConstantIndexOp::create(builder, loc, 1);
 
   // Work backwards through dimensions (row-major order)
   for (int i = rank - 1; i >= 0; --i) {
-    Value zeroBasedIdx = builder.create<arith::RemSIOp>(loc, temp, extents[i]);
+    Value zeroBasedIdx = arith::RemSIOp::create(builder, loc, temp, extents[i]);
     // Convert to one-based index
-    indices[i] = builder.create<arith::AddIOp>(loc, zeroBasedIdx, c1);
+    indices[i] = arith::AddIOp::create(builder, loc, zeroBasedIdx, c1);
     if (i > 0) {
-      temp = builder.create<arith::DivSIOp>(loc, temp, extents[i]);
+      temp = arith::DivSIOp::create(builder, loc, temp, extents[i]);
     }
   }
 
@@ -525,7 +525,7 @@ static Value CalculateTotalElements(OpBuilder &builder, Location loc,
     if (i == 0) {
       totalElems = extent;
     } else {
-      totalElems = builder.create<arith::MulIOp>(loc, totalElems, extent);
+      totalElems = arith::MulIOp::create(builder, loc, totalElems, extent);
     }
   }
   return totalElems;
@@ -562,14 +562,14 @@ static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
   // Load destination array box (if it's a reference)
   Value arrayBox = destBox;
   if (isa<fir::ReferenceType>(destBox.getType()))
-    arrayBox = builder.create<fir::LoadOp>(loc, destBox);
+    arrayBox = fir::LoadOp::create(builder, loc, destBox);
 
-  auto scalarValue = builder.create<fir::BoxAddrOp>(loc, srcBox);
-  Value scalar = builder.create<fir::LoadOp>(loc, scalarValue);
+  auto scalarValue = fir::BoxAddrOp::create(builder, loc, srcBox);
+  Value scalar = fir::LoadOp::create(builder, loc, scalarValue);
 
   // Calculate total number of elements (flattened)
-  auto c0 = builder.create<arith::ConstantIndexOp>(loc, 0);
-  auto c1 = builder.create<arith::ConstantIndexOp>(loc, 1);
+  auto c0 = arith::ConstantIndexOp::create(builder, loc, 0);
+  auto c1 = arith::ConstantIndexOp::create(builder, loc, 1);
   Value totalElems = CalculateTotalElements(builder, loc, arrayBox);
 
   auto *workdistributeBlock = &workdistribute.getRegion().front();
@@ -587,7 +587,7 @@ static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
       builder, loc, fir::ReferenceType::get(scalar.getType()), arrayBox,
       nullptr, nullptr, ValueRange{indices}, ValueRange{});
 
-  builder.create<fir::StoreOp>(loc, scalar, elemPtr);
+  fir::StoreOp::create(builder, loc, scalar, elemPtr);
 }
 
 /// workdistributeRuntimeCallLower method finds the runtime calls
@@ -719,10 +719,9 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   SmallVector<Value> outerMapInfos;
   // Create new mapinfo ops for the inner target region
   for (auto mapInfo : mapInfos) {
-    auto originalMapType =
-        (llvm::omp::OpenMPOffloadMappingFlags)(mapInfo.getMapType());
+    mlir::omp::ClauseMapFlags originalMapType = mapInfo.getMapType();
     auto originalCaptureType = mapInfo.getMapCaptureType();
-    llvm::omp::OpenMPOffloadMappingFlags newMapType;
+    mlir::omp::ClauseMapFlags newMapType;
     mlir::omp::VariableCaptureKind newCaptureType;
     // For bycopy, we keep the same map type and capture type
     // For byref, we change the map type to none and keep the capture type
@@ -730,7 +729,7 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
       newMapType = originalMapType;
       newCaptureType = originalCaptureType;
     } else if (originalCaptureType == mlir::omp::VariableCaptureKind::ByRef) {
-      newMapType = llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+      newMapType = mlir::omp::ClauseMapFlags::storage;
       newCaptureType = originalCaptureType;
       outerMapInfos.push_back(mapInfo);
     } else {
@@ -738,11 +737,8 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
       return failure();
     }
     auto innerMapInfo = cast<omp::MapInfoOp>(rewriter.clone(*mapInfo));
-    innerMapInfo.setMapTypeAttr(rewriter.getIntegerAttr(
-        rewriter.getIntegerType(64, false),
-        static_cast<
-            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-            newMapType)));
+    innerMapInfo.setMapTypeAttr(
+        rewriter.getAttr<omp::ClauseMapFlagsAttr>(newMapType));
     innerMapInfo.setMapCaptureType(newCaptureType);
     innerMapInfos.push_back(innerMapInfo.getResult());
   }
@@ -753,14 +749,15 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   auto deviceAddrVars = targetOp.getHasDeviceAddrVars();
   auto devicePtrVars = targetOp.getIsDevicePtrVars();
   // Create the target data op
-  auto targetDataOp = rewriter.create<omp::TargetDataOp>(
-      loc, device, ifExpr, outerMapInfos, deviceAddrVars, devicePtrVars);
+  auto targetDataOp =
+      omp::TargetDataOp::create(rewriter, loc, device, ifExpr, outerMapInfos,
+                                deviceAddrVars, devicePtrVars);
   auto taregtDataBlock = rewriter.createBlock(&targetDataOp.getRegion());
-  rewriter.create<mlir::omp::TerminatorOp>(loc);
+  mlir::omp::TerminatorOp::create(rewriter, loc);
   rewriter.setInsertionPointToStart(taregtDataBlock);
   // Create the inner target op
-  auto newTargetOp = rewriter.create<omp::TargetOp>(
-      targetOp.getLoc(), targetOp.getAllocateVars(),
+  auto newTargetOp = omp::TargetOp::create(
+      rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
       targetOp.getAllocatorVars(), targetOp.getBareAttr(),
       targetOp.getDependKindsAttr(), targetOp.getDependVars(),
       targetOp.getDevice(), targetOp.getHasDeviceAddrVars(),
@@ -825,20 +822,20 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
   // Get the appropriate type for allocation
   if (isPtr(ty)) {
     Type intTy = rewriter.getI32Type();
-    auto one = rewriter.create<LLVM::ConstantOp>(loc, intTy, 1);
+    auto one = LLVM::ConstantOp::create(rewriter, loc, intTy, 1);
     allocType = llvmPtrTy;
-    alloc = rewriter.create<LLVM::AllocaOp>(loc, llvmPtrTy, allocType, one);
+    alloc = LLVM::AllocaOp::create(rewriter, loc, llvmPtrTy, allocType, one);
     allocType = intTy;
   } else {
     allocType = ty;
-    alloc = rewriter.create<fir::AllocaOp>(loc, allocType);
+    alloc = fir::AllocaOp::create(rewriter, loc, allocType);
   }
   // Lambda to create mapinfo ops
-  auto getMapInfo = [&](uint64_t mappingFlags, const char *name) {
-    return rewriter.create<omp::MapInfoOp>(
-        loc, alloc.getType(), alloc, TypeAttr::get(allocType),
-        rewriter.getIntegerAttr(rewriter.getIntegerType(64, /*isSigned=*/false),
-                                mappingFlags),
+  auto getMapInfo = [&](mlir::omp::ClauseMapFlags mappingFlags,
+                        const char *name) {
+    return omp::MapInfoOp::create(
+        rewriter, loc, alloc.getType(), alloc, TypeAttr::get(allocType),
+        rewriter.getAttr<omp::ClauseMapFlagsAttr>(mappingFlags),
         rewriter.getAttr<omp::VariableCaptureKindAttr>(
             omp::VariableCaptureKind::ByRef),
         /*varPtrPtr=*/Value{},
@@ -849,14 +846,10 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
         /*name=*/rewriter.getStringAttr(name), rewriter.getBoolAttr(false));
   };
   // Create mapinfo ops.
-  uint64_t mapFrom =
-      static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
-  uint64_t mapTo =
-      static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
-  auto mapInfoFrom = getMapInfo(mapFrom, "__flang_workdistribute_from");
-  auto mapInfoTo = getMapInfo(mapTo, "__flang_workdistribute_to");
+  auto mapInfoFrom = getMapInfo(mlir::omp::ClauseMapFlags::from,
+                                "__flang_workdistribute_from");
+  auto mapInfoTo =
+      getMapInfo(mlir::omp::ClauseMapFlags::to, "__flang_workdistribute_to");
   return TempOmpVar{mapInfoFrom, mapInfoTo};
 }
 
@@ -987,12 +980,12 @@ static void reloadCacheAndRecompute(
     // If the original value is a pointer or reference, load and convert if
     // necessary.
     if (isPtr(original.getType())) {
-      restored = rewriter.create<LLVM::LoadOp>(loc, llvmPtrTy, newArg);
+      restored = LLVM::LoadOp::create(rewriter, loc, llvmPtrTy, newArg);
       if (!isa<LLVM::LLVMPointerType>(original.getType()))
         restored =
-            rewriter.create<fir::ConvertOp>(loc, original.getType(), restored);
+            fir::ConvertOp::create(rewriter, loc, original.getType(), restored);
     } else {
-      restored = rewriter.create<fir::LoadOp>(loc, newArg);
+      restored = fir::LoadOp::create(rewriter, loc, newArg);
     }
     irMapping.map(original, restored);
   }
@@ -1061,7 +1054,7 @@ static mlir::LLVM::ConstantOp
 genI32Constant(mlir::Location loc, mlir::RewriterBase &rewriter, int value) {
   mlir::Type i32Ty = rewriter.getI32Type();
   mlir::IntegerAttr attr = rewriter.getI32IntegerAttr(value);
-  return rewriter.create<mlir::LLVM::ConstantOp>(loc, i32Ty, attr);
+  return mlir::LLVM::ConstantOp::create(rewriter, loc, i32Ty, attr);
 }
 
 /// Given a box descriptor, extract the base address of the data it describes.
@@ -1238,8 +1231,8 @@ static void genFortranAssignOmpReplacement(fir::FirOpBuilder &builder,
       genOmpGetMappedPtrIfPresent(builder, loc, destBase, device, module);
   Value srcPtr =
       genOmpGetMappedPtrIfPresent(builder, loc, srcBase, device, module);
-  Value zero = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
-                                                builder.getI64IntegerAttr(0));
+  Value zero = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
+                                        builder.getI64IntegerAttr(0));
 
   // Generate the call to omp_target_memcpy to perform the data copy on the
   // device.
@@ -1356,23 +1349,24 @@ static LogicalResult moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
   for (Operation *op : opsToReplace) {
     if (auto allocOp = dyn_cast<fir::AllocMemOp>(op)) {
       rewriter.setInsertionPoint(allocOp);
-      auto ompAllocmemOp = rewriter.create<omp::TargetAllocMemOp>(
-          allocOp.getLoc(), rewriter.getI64Type(), device,
+      auto ompAllocmemOp = omp::TargetAllocMemOp::create(
+          rewriter, allocOp.getLoc(), rewriter.getI64Type(), device,
           allocOp.getInTypeAttr(), allocOp.getUniqNameAttr(),
           allocOp.getBindcNameAttr(), allocOp.getTypeparams(),
           allocOp.getShape());
-      auto firConvertOp = rewriter.create<fir::ConvertOp>(
-          allocOp.getLoc(), allocOp.getResult().getType(),
-          ompAllocmemOp.getResult());
+      auto firConvertOp = fir::ConvertOp::create(rewriter, allocOp.getLoc(),
+                                                 allocOp.getResult().getType(),
+                                                 ompAllocmemOp.getResult());
       rewriter.replaceOp(allocOp, firConvertOp.getResult());
     }
     // Replace fir.freemem with omp.target_freemem.
     else if (auto freeOp = dyn_cast<fir::FreeMemOp>(op)) {
       rewriter.setInsertionPoint(freeOp);
-      auto firConvertOp = rewriter.create<fir::ConvertOp>(
-          freeOp.getLoc(), rewriter.getI64Type(), freeOp.getHeapref());
-      rewriter.create<omp::TargetFreeMemOp>(freeOp.getLoc(), device,
-                                            firConvertOp.getResult());
+      auto firConvertOp =
+          fir::ConvertOp::create(rewriter, freeOp.getLoc(),
+                                 rewriter.getI64Type(), freeOp.getHeapref());
+      omp::TargetFreeMemOp::create(rewriter, freeOp.getLoc(), device,
+                                   firConvertOp.getResult());
       rewriter.eraseOp(freeOp);
     }
     // fir.declare changes its type when hoisting it out of omp.target to
@@ -1384,8 +1378,9 @@ static LogicalResult moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
           dyn_cast<fir::ReferenceType>(clonedInType);
       Type clonedEleTy = clonedRefType.getElementType();
       rewriter.setInsertionPoint(op);
-      Value loadedValue = rewriter.create<fir::LoadOp>(
-          clonedDeclareOp.getLoc(), clonedEleTy, clonedDeclareOp.getMemref());
+      Value loadedValue =
+          fir::LoadOp::create(rewriter, clonedDeclareOp.getLoc(), clonedEleTy,
+                              clonedDeclareOp.getMemref());
       clonedDeclareOp.getResult().replaceAllUsesWith(loadedValue);
     }
     // Replace runtime calls with omp versions.
@@ -1481,8 +1476,8 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
   auto *targetBlock = &targetOp.getRegion().front();
   SmallVector<Value> preHostEvalVars{targetOp.getHostEvalVars()};
   // update the hostEvalVars of preTargetOp
-  omp::TargetOp preTargetOp = rewriter.create<omp::TargetOp>(
-      targetOp.getLoc(), targetOp.getAllocateVars(),
+  omp::TargetOp preTargetOp = omp::TargetOp::create(
+      rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
       targetOp.getAllocatorVars(), targetOp.getBareAttr(),
       targetOp.getDependKindsAttr(), targetOp.getDependVars(),
       targetOp.getDevice(), targetOp.getHasDeviceAddrVars(), preHostEvalVars,
@@ -1521,13 +1516,13 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
     // Create the store operation.
     if (isPtr(originalResult.getType())) {
       if (!isa<LLVM::LLVMPointerType>(toStore.getType()))
-        toStore = rewriter.create<fir::ConvertOp>(loc, llvmPtrTy, toStore);
-      rewriter.create<LLVM::StoreOp>(loc, toStore, newArg);
+        toStore = fir::ConvertOp::create(rewriter, loc, llvmPtrTy, toStore);
+      LLVM::StoreOp::create(rewriter, loc, toStore, newArg);
     } else {
-      rewriter.create<fir::StoreOp>(loc, toStore, newArg);
+      fir::StoreOp::create(rewriter, loc, toStore, newArg);
     }
   }
-  rewriter.create<omp::TerminatorOp>(loc);
+  omp::TerminatorOp::create(rewriter, loc);
 
   // Update hostEvalVars with the mapped values for the loop bounds if we have
   // a loopNestOp and we are not generating code for the target device.
@@ -1571,8 +1566,8 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
                                 hostEvalVars.steps.end());
   }
   // Create the isolated target op
-  omp::TargetOp isolatedTargetOp = rewriter.create<omp::TargetOp>(
-      targetOp.getLoc(), targetOp.getAllocateVars(),
+  omp::TargetOp isolatedTargetOp = omp::TargetOp::create(
+      rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
       targetOp.getAllocatorVars(), targetOp.getBareAttr(),
       targetOp.getDependKindsAttr(), targetOp.getDependVars(),
       targetOp.getDevice(), targetOp.getHasDeviceAddrVars(),
@@ -1598,7 +1593,7 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
 
   // Clone the original operations.
   rewriter.clone(*splitBeforeOp, isolatedMapping);
-  rewriter.create<omp::TerminatorOp>(loc);
+  omp::TerminatorOp::create(rewriter, loc);
 
   // update the loop bounds in the isolatedTargetOp if we have host_eval vars
   // and we are not generating code for the target device.
@@ -1651,8 +1646,8 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
   auto *targetBlock = &targetOp.getRegion().front();
   SmallVector<Value> postHostEvalVars{targetOp.getHostEvalVars()};
   // Create the post target op
-  omp::TargetOp postTargetOp = rewriter.create<omp::TargetOp>(
-      targetOp.getLoc(), targetOp.getAllocateVars(),
+  omp::TargetOp postTargetOp = omp::TargetOp::create(
+      rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
       targetOp.getAllocatorVars(), targetOp.getBareAttr(),
       targetOp.getDependKindsAttr(), targetOp.getDependVars(),
       targetOp.getDevice(), targetOp.getHasDeviceAddrVars(), postHostEvalVars,

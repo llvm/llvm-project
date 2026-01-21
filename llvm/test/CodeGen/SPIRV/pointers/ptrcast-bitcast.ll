@@ -26,3 +26,25 @@ entry:
   store <4 x i32> %6, ptr addrspace(11) %7, align 16
   ret void
 }
+
+; This tests a load from a pointer that has been bitcast between vector types
+; which share the same total bit-width but have different numbers of elements.
+; Tests that legalize-pointer-casts works correctly by moving the bitcast to
+; the element that was loaded.
+
+define void @main2() local_unnamed_addr #0 {
+entry:
+; CHECK:  %[[LOAD:[0-9]+]] = OpLoad %[[#v2_double]] {{.*}}
+; CHECK:  %[[BITCAST1:[0-9]+]] = OpBitcast %[[#v4_uint]] %[[LOAD]]
+; CHECK:  %[[BITCAST2:[0-9]+]] = OpBitcast %[[#v2_double]] %[[BITCAST1]]
+; CHECK: OpStore {{%[0-9]+}} %[[BITCAST2]] {{.*}}
+
+  %0 = tail call target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0v2f64_12_1t(i32 0, i32 2, i32 1, i32 0, ptr nonnull @.str.2)
+  %2 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v2f64_12_1t(target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) %0, i32 0)
+  %3 = load <4 x i32>, ptr addrspace(11) %2
+  %4 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v2f64_12_1t(target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) %0, i32 1)
+  store <4 x i32> %3, ptr addrspace(11) %4
+  ret void
+}
+
+attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }

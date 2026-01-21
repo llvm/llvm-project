@@ -132,9 +132,10 @@ void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
                                                   IncomingWFRHandler SendResult,
                                                   ArrayRef<char> ArgBuffer) {
   using WrapperFnTy =
-      shared::CWrapperFunctionResult (*)(const char *Data, size_t Size);
+      shared::CWrapperFunctionBuffer (*)(const char *Data, size_t Size);
   auto *WrapperFn = WrapperFnAddr.toPtr<WrapperFnTy>();
-  SendResult(WrapperFn(ArgBuffer.data(), ArgBuffer.size()));
+  SendResult(shared::WrapperFunctionBuffer(
+      WrapperFn(ArgBuffer.data(), ArgBuffer.size())));
 }
 
 Error SelfExecutorProcessControl::disconnect() {
@@ -142,7 +143,7 @@ Error SelfExecutorProcessControl::disconnect() {
   return Error::success();
 }
 
-shared::CWrapperFunctionResult
+shared::CWrapperFunctionBuffer
 SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
     void *Ctx, const void *FnTag, const char *Data, size_t Size) {
 
@@ -151,16 +152,17 @@ SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
            << " byte payload.\n";
   });
 
-  std::promise<shared::WrapperFunctionResult> ResultP;
+  std::promise<shared::WrapperFunctionBuffer> ResultP;
   auto ResultF = ResultP.get_future();
   static_cast<SelfExecutorProcessControl *>(Ctx)
       ->getExecutionSession()
       .runJITDispatchHandler(
           [ResultP = std::move(ResultP)](
-              shared::WrapperFunctionResult Result) mutable {
+              shared::WrapperFunctionBuffer Result) mutable {
             ResultP.set_value(std::move(Result));
           },
-          ExecutorAddr::fromPtr(FnTag), {Data, Size});
+          ExecutorAddr::fromPtr(FnTag),
+          shared::WrapperFunctionBuffer::copyFrom(Data, Size));
 
   return ResultF.get().release();
 }

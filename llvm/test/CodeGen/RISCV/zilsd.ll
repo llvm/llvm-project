@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck -check-prefixes=CHECK,SLOW %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zilsd,+unaligned-scalar-mem -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CHECK,FAST %s
+; RUN: llc -mtriple=riscv32 -mattr=+zilsd,+zilsd-4byte-align -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=CHECK,4BYTEALIGN %s
 
 define i64 @load(ptr %a) nounwind {
 ; CHECK-LABEL: load:
@@ -17,6 +19,28 @@ define i64 @load(ptr %a) nounwind {
   ret i64 %2
 }
 
+define i64 @load_align4(ptr %a) nounwind {
+; SLOW-LABEL: load_align4:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    lw a2, 80(a0)
+; SLOW-NEXT:    lw a1, 84(a0)
+; SLOW-NEXT:    mv a0, a2
+; SLOW-NEXT:    ret
+;
+; FAST-LABEL: load_align4:
+; FAST:       # %bb.0:
+; FAST-NEXT:    ld a0, 80(a0)
+; FAST-NEXT:    ret
+;
+; 4BYTEALIGN-LABEL: load_align4:
+; 4BYTEALIGN:       # %bb.0:
+; 4BYTEALIGN-NEXT:    ld a0, 80(a0)
+; 4BYTEALIGN-NEXT:    ret
+  %1 = getelementptr i64, ptr %a, i32 10
+  %2 = load i64, ptr %1, align 4
+  ret i64 %2
+}
+
 define void @store(ptr %a, i64 %b) nounwind {
 ; CHECK-LABEL: store:
 ; CHECK:       # %bb.0:
@@ -28,6 +52,31 @@ define void @store(ptr %a, i64 %b) nounwind {
   store i64 %b, ptr %a
   %1 = getelementptr i64, ptr %a, i32 11
   store i64 %b, ptr %1
+  ret void
+}
+
+define void @store_align4(ptr %a, i64 %b) nounwind {
+; SLOW-LABEL: store_align4:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    sw a1, 88(a0)
+; SLOW-NEXT:    sw a2, 92(a0)
+; SLOW-NEXT:    ret
+;
+; FAST-LABEL: store_align4:
+; FAST:       # %bb.0:
+; FAST-NEXT:    mv a3, a2
+; FAST-NEXT:    mv a2, a1
+; FAST-NEXT:    sd a2, 88(a0)
+; FAST-NEXT:    ret
+;
+; 4BYTEALIGN-LABEL: store_align4:
+; 4BYTEALIGN:       # %bb.0:
+; 4BYTEALIGN-NEXT:    mv a3, a2
+; 4BYTEALIGN-NEXT:    mv a2, a1
+; 4BYTEALIGN-NEXT:    sd a2, 88(a0)
+; 4BYTEALIGN-NEXT:    ret
+  %1 = getelementptr i64, ptr %a, i32 11
+  store i64 %b, ptr %1, align 4
   ret void
 }
 
@@ -60,6 +109,30 @@ define i64 @load_unaligned(ptr %p) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    ld a0, 0(a0)
 ; FAST-NEXT:    ret
+;
+; 4BYTEALIGN-LABEL: load_unaligned:
+; 4BYTEALIGN:       # %bb.0:
+; 4BYTEALIGN-NEXT:    lbu a1, 1(a0)
+; 4BYTEALIGN-NEXT:    lbu a2, 2(a0)
+; 4BYTEALIGN-NEXT:    lbu a3, 3(a0)
+; 4BYTEALIGN-NEXT:    lbu a4, 0(a0)
+; 4BYTEALIGN-NEXT:    slli a1, a1, 8
+; 4BYTEALIGN-NEXT:    slli a2, a2, 16
+; 4BYTEALIGN-NEXT:    slli a3, a3, 24
+; 4BYTEALIGN-NEXT:    or a1, a1, a4
+; 4BYTEALIGN-NEXT:    or a2, a3, a2
+; 4BYTEALIGN-NEXT:    lbu a3, 5(a0)
+; 4BYTEALIGN-NEXT:    lbu a4, 4(a0)
+; 4BYTEALIGN-NEXT:    lbu a5, 6(a0)
+; 4BYTEALIGN-NEXT:    lbu a0, 7(a0)
+; 4BYTEALIGN-NEXT:    slli a3, a3, 8
+; 4BYTEALIGN-NEXT:    or a3, a3, a4
+; 4BYTEALIGN-NEXT:    slli a5, a5, 16
+; 4BYTEALIGN-NEXT:    slli a0, a0, 24
+; 4BYTEALIGN-NEXT:    or a5, a0, a5
+; 4BYTEALIGN-NEXT:    or a0, a2, a1
+; 4BYTEALIGN-NEXT:    or a1, a5, a3
+; 4BYTEALIGN-NEXT:    ret
   %res = load i64, ptr %p, align 1
   ret i64 %res
 }
@@ -89,6 +162,24 @@ define void @store_unaligned(ptr %p, i64 %v) {
 ; FAST-NEXT:    mv a2, a1
 ; FAST-NEXT:    sd a2, 0(a0)
 ; FAST-NEXT:    ret
+;
+; 4BYTEALIGN-LABEL: store_unaligned:
+; 4BYTEALIGN:       # %bb.0:
+; 4BYTEALIGN-NEXT:    srli a3, a2, 24
+; 4BYTEALIGN-NEXT:    srli a4, a2, 16
+; 4BYTEALIGN-NEXT:    srli a5, a2, 8
+; 4BYTEALIGN-NEXT:    srli a6, a1, 24
+; 4BYTEALIGN-NEXT:    srli a7, a1, 16
+; 4BYTEALIGN-NEXT:    sb a2, 4(a0)
+; 4BYTEALIGN-NEXT:    sb a5, 5(a0)
+; 4BYTEALIGN-NEXT:    sb a4, 6(a0)
+; 4BYTEALIGN-NEXT:    sb a3, 7(a0)
+; 4BYTEALIGN-NEXT:    srli a2, a1, 8
+; 4BYTEALIGN-NEXT:    sb a1, 0(a0)
+; 4BYTEALIGN-NEXT:    sb a2, 1(a0)
+; 4BYTEALIGN-NEXT:    sb a7, 2(a0)
+; 4BYTEALIGN-NEXT:    sb a6, 3(a0)
+; 4BYTEALIGN-NEXT:    ret
   store i64 %v, ptr %p, align 1
   ret void
 }
@@ -133,5 +224,70 @@ entry:
   %a = load i64, ptr %add.ptr, align 8
   %b = add i64 %a, 1
   store i64 %b, ptr %add.ptr, align 8
+  ret void
+}
+
+define void @fold_frame_idx(i32 %val1, i32 %val2, ptr nocapture %p) nounwind {
+; SLOW-LABEL: fold_frame_idx:
+; SLOW:       # %bb.0: # %entry
+; SLOW-NEXT:    addi sp, sp, -400
+; SLOW-NEXT:    sw a0, 40(sp)
+; SLOW-NEXT:    sw a1, 44(sp)
+; SLOW-NEXT:    addi sp, sp, 400
+; SLOW-NEXT:    ret
+;
+; FAST-LABEL: fold_frame_idx:
+; FAST:       # %bb.0: # %entry
+; FAST-NEXT:    addi sp, sp, -400
+; FAST-NEXT:    sd a0, 40(sp)
+; FAST-NEXT:    addi sp, sp, 400
+; FAST-NEXT:    ret
+;
+; 4BYTEALIGN-LABEL: fold_frame_idx:
+; 4BYTEALIGN:       # %bb.0: # %entry
+; 4BYTEALIGN-NEXT:    addi sp, sp, -400
+; 4BYTEALIGN-NEXT:    sd a0, 40(sp)
+; 4BYTEALIGN-NEXT:    addi sp, sp, 400
+; 4BYTEALIGN-NEXT:    ret
+entry:
+  %local = alloca [100 x i32]
+  %local.ptr = getelementptr inbounds i32, ptr %local, i64 10
+  %local1.ptr = getelementptr inbounds i32, ptr %local, i64 11
+  store i32 %val1, ptr %local.ptr, align 4
+  store i32 %val2, ptr %local1.ptr, align 4
+  ret void
+}
+
+define void @dont_fold_frame_idx(ptr nocapture %p, i32 %val1, i32 %val2) nounwind {
+; CHECK-LABEL: dont_fold_frame_idx:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -400
+; CHECK-NEXT:    sw a1, 40(sp)
+; CHECK-NEXT:    sw a2, 44(sp)
+; CHECK-NEXT:    addi sp, sp, 400
+; CHECK-NEXT:    ret
+entry:
+  %local = alloca [100 x i32]
+  %local.ptr = getelementptr inbounds i32, ptr %local, i64 10
+  %local1.ptr = getelementptr inbounds i32, ptr %local, i64 11
+  store i32 %val1, ptr %local.ptr, align 4
+  store i32 %val2, ptr %local1.ptr, align 4
+  ret void
+}
+
+define void @basic_store_zero_combine(ptr %0, i32 %1, i32 %2) {
+; SLOW-LABEL: basic_store_zero_combine:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    sw zero, 0(a0)
+; SLOW-NEXT:    sw zero, 4(a0)
+; SLOW-NEXT:    ret
+;
+; FAST-LABEL: basic_store_zero_combine:
+; FAST:       # %bb.0:
+; FAST-NEXT:    sd zero, 0(a0)
+; FAST-NEXT:    ret
+  store i32 0, ptr %0, align 4
+  %4 = getelementptr inbounds i32, ptr %0, i32 1
+  store i32 0, ptr %4, align 4
   ret void
 }

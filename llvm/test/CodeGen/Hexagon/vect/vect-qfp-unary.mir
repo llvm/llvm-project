@@ -1,0 +1,97 @@
+# RUN: llc -march=hexagon -mcpu=hexagonv68 -mattr=+hvxv68,+hvx-length128b \
+# RUN: -run-pass hexagon-qfp-optimizer %s -o - | FileCheck %s
+
+
+# CHECK: name: qfp_vilog32
+# CHECK: V6_vilog2_qf32
+---
+name: qfp_vilog32
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    $v0 = V6_vL32Ub_ai $r0, 0
+    $v1 = V6_vconv_sf_qf32 $v0
+    $v2 = V6_vilog2_sf $v1
+    V6_vS32Ub_ai $r2, 0, $v2
+...
+
+# CHECK-LABEL: name: qfp_vilog16
+# CHECK: V6_vilog2_qf16
+---
+name: qfp_vilog16
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    $v0 = V6_vL32Ub_ai $r0, 0
+    $v1 = V6_vconv_hf_qf16 $v0
+    $v2 = V6_vilog2_hf $v1
+    V6_vS32Ub_ai $r2, 0, $v2
+...
+
+# CHECK: name: qfp_vneg32
+# CHECK: V6_vneg_qf32_qf32
+---
+name: qfp_vneg32
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    $v0 = V6_vL32Ub_ai $r0, 0
+    $v1 = V6_vconv_sf_qf32 $v0
+    $v2 = V6_vneg_qf32_sf $v1
+    $v3 = V6_vconv_sf_qf32 $v2
+    V6_vS32Ub_ai $r2, 0, $v3
+...
+
+# CHECK-LABEL: name: qfp_vneg16
+# CHECK: V6_vneg_qf16_qf16
+---
+name: qfp_vneg16
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    $v0 = V6_vL32Ub_ai $r0, 0
+    $v1 = V6_vconv_hf_qf16 $v0
+    $v2 = V6_vneg_qf16_hf $v1
+    $v3 = V6_vconv_hf_qf16 $v2
+    V6_vS32Ub_ai $r2, 0, $v3
+...
+
+# CHECK: name: qfp_vabs32
+# CHECK: V6_vabs_qf32_qf32
+---
+name: qfp_vabs32
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    $v0 = V6_vL32Ub_ai $r0, 0
+    $v1 = V6_vconv_sf_qf32 $v0
+    $v2 = V6_vabs_qf32_sf $v1
+    $v3 = V6_vconv_sf_qf32 $v2
+    V6_vS32Ub_ai $r2, 0, $v3
+...
+
+# CHECK-LABEL: name: qfp_vabs16
+# CHECK: V6_vabs_qf16_qf16
+---
+name: qfp_vabs16
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    $v0 = V6_vL32Ub_ai $r0, 0
+    $v1 = V6_vconv_hf_qf16 $v0
+    $v2 = V6_vabs_qf16_hf $v1
+    $v3 = V6_vconv_hf_qf16 $v2
+    V6_vS32Ub_ai $r2, 0, $v3
+...

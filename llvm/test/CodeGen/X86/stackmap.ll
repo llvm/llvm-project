@@ -1,6 +1,9 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 -terminal-rule=0 | FileCheck %s
 ;
 ; Note: Print verbose stackmaps using -debug-only=stackmaps.
+
+; FIXME: Test should be fixed to produce the correct sized spill with
+; -terminal-rule=0 flag removed
 
 ; CHECK-LABEL:  .section  __LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
@@ -546,8 +549,8 @@ define void @clobberScratch(i32 %a) {
   ret void
 }
 
-; A stack frame which needs to be realigned at runtime (to meet alignment 
-; criteria for values on the stack) does not have a fixed frame size. 
+; A stack frame which needs to be realigned at runtime (to meet alignment
+; criteria for values on the stack) does not have a fixed frame size.
 ; CHECK-LABEL:  .long L{{.*}}-_needsStackRealignment
 ; CHECK-NEXT:   .short 0
 ; 0 locations

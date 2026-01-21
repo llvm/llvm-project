@@ -68,7 +68,7 @@ const llvm::StringRef RISCVSEWInstrument::DESC_NAME = "RISCV-SEW";
 bool RISCVSEWInstrument::isDataValid(llvm::StringRef Data) {
   // Return true if not one of the valid SEW strings
   return StringSwitch<bool>(Data)
-      .Cases("E8", "E16", "E32", "E64", true)
+      .Cases({"E8", "E16", "E32", "E64"}, true)
       .Default(false);
 }
 
@@ -215,7 +215,8 @@ getEEWAndEMUL(unsigned Opcode, RISCVVType::VLMUL LMUL, uint8_t SEW) {
     llvm_unreachable("Could not determine EEW from Opcode");
   }
 
-  auto EMUL = RISCVVType::getSameRatioLMUL(SEW, LMUL, EEW);
+  auto EMUL =
+      RISCVVType::getSameRatioLMUL(RISCVVType::getSEWLMULRatio(SEW, LMUL), EEW);
   if (!EEW)
     llvm_unreachable("Invalid SEW or LMUL for new ratio");
   return std::make_pair(EEW, *EMUL);

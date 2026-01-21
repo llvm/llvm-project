@@ -291,6 +291,14 @@ td_library(
 )
 
 gentbl_cc_library(
+    name = "basic_builtins_amdgpu_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsAMDGPU.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsAMDGPU.td",
+    deps = [":BuiltinsBaseTdFiles"],
+)
+
+gentbl_cc_library(
     name = "basic_builtins_bpf_gen",
     tbl_outs = {"include/clang/Basic/BuiltinsBPF.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
@@ -697,6 +705,7 @@ cc_library(
         ":basic_arm_sve_typeflags_gen",
         ":basic_attr_gen",
         ":basic_builtin_templates_gen",
+        ":basic_builtins_amdgpu_gen",
         ":basic_builtins_bpf_gen",
         ":basic_builtins_directx_gen",
         ":basic_builtins_gen",
@@ -1016,6 +1025,7 @@ cc_library(
         ":ast",
         ":ast_matchers",
         ":basic",
+        ":format",
         ":lex",
         ":support",
         "//llvm:Support",
@@ -1025,6 +1035,7 @@ cc_library(
 gentbl_cc_library(
     name = "sema_attr_gen",
     tbl_outs = {
+        "include/clang/Sema/AttrIsTypeDependent.inc": ["-gen-clang-attr-is-type-dependent"],
         "include/clang/Sema/AttrParsedAttrImpl.inc": ["-gen-clang-attr-parsed-attr-impl"],
         "include/clang/Sema/AttrParsedAttrKinds.inc": ["-gen-clang-attr-parsed-attr-kinds"],
         "include/clang/Sema/AttrSpellingListIndex.inc": ["-gen-clang-attr-spelling-index"],
@@ -1227,10 +1238,12 @@ cc_library(
         ":ast",
         ":ast_matchers",
         ":basic",
+        ":dependency_scanning",
         ":driver",
         ":format",
         ":frontend",
         ":lex",
+        ":options",
         ":rewrite",
         ":support",
         ":tooling_core",
@@ -1314,19 +1327,17 @@ cc_library(
 )
 
 cc_library(
-    name = "tooling_dependency_scanning",
+    name = "dependency_scanning",
     srcs = glob([
-        "lib/Tooling/DependencyScanning/**/*.h",
-        "lib/Tooling/DependencyScanning/**/*.cpp",
+        "lib/DependencyScanning/**/*.cpp",
     ]),
-    hdrs = glob(["include/clang/Tooling/DependencyScanning/**/*.h"]),
+    hdrs = glob(["include/clang/DependencyScanning/**/*.h"]),
     deps = [
         ":basic",
         ":driver",
         ":frontend",
         ":lex",
         ":serialization",
-        ":tooling",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -1367,6 +1378,7 @@ cc_library(
         ":analysis",
         ":ast",
         ":basic",
+        ":driver",
         ":frontend",
         ":index",
         "//llvm:Option",
@@ -1501,10 +1513,25 @@ cc_library(
 
 gentbl_cc_library(
     name = "driver_options_inc_gen",
-    tbl_outs = {"include/clang/Driver/Options.inc": ["-gen-opt-parser-defs"]},
+    tbl_outs = {"include/clang/Options/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
-    td_file = "include/clang/Driver/Options.td",
+    td_file = "include/clang/Options/Options.td",
     deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_library(
+    name = "options",
+    srcs = glob(["lib/Options/*.cpp"]),
+    hdrs = glob(["include/clang/Options/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":basic",
+        ":config",
+        ":driver_options_inc_gen",
+        ":static_analyzer_checkers_gen",
+        "//llvm:Option",
+        "//llvm:Support",
+    ],
 )
 
 cc_library(
@@ -1543,8 +1570,11 @@ cc_library(
         ":basic",
         ":config",
         ":driver_options_inc_gen",
+        ":frontend",
         ":lex",
+        ":options",
         ":parse",
+        ":serialization",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
         "//llvm:FrontendDebug",
@@ -1696,10 +1726,10 @@ cc_library(
         ":ast",
         ":basic",
         ":config",
-        ":driver",
         ":driver_options_inc_gen",
         ":edit",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -1714,6 +1744,7 @@ cc_library(
         "//llvm:Linker",
         "//llvm:MC",
         "//llvm:Option",
+        "//llvm:Plugins",
         "//llvm:ProfileData",
         "//llvm:Remarks",
         "//llvm:Support",
@@ -1769,6 +1800,7 @@ cc_library(
         ":frontend",
         ":frontend_tool",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -1776,6 +1808,7 @@ cc_library(
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
+        "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Option",
         "//llvm:OrcDebugging",
@@ -1846,6 +1879,7 @@ cc_library(
         "//llvm:ObjCARC",
         "//llvm:Object",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:ProfileData",
         "//llvm:Scalar",
         "//llvm:Support",
@@ -1995,12 +2029,14 @@ cc_library(
     hdrs = glob(["include/clang/FrontendTool/*.h"]),
     includes = ["include"],
     deps = [
+        ":basic",
         ":codegen",
         ":config",
         ":driver",
         ":extract_api",
         ":frontend",
         ":frontend_rewrite",
+        ":options",
         ":static_analyzer_frontend",
         "//llvm:Option",
         "//llvm:Support",
@@ -2025,6 +2061,7 @@ cc_library(
         ":frontend",
         ":index",
         ":lex",
+        ":options",
         ":rewrite",
         ":sema",
         ":tooling",
@@ -2057,6 +2094,7 @@ cc_plugin_library(
         ":frontend",
         ":index",
         ":lex",
+        ":options",
         ":rewrite",
         ":sema",
         ":tooling",
@@ -2098,6 +2136,7 @@ cc_binary(
         ":basic",
         ":codegen",
         ":config",
+        ":driver",
         ":frontend",
         ":index",
         ":lex",
@@ -2176,6 +2215,7 @@ cc_library(
         ":frontend_rewrite",
         ":frontend_tool",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -2213,6 +2253,7 @@ cc_binary(
     deps = [
         ":basic",
         ":diagnostic_defs_gen",
+        ":driver",
         ":frontend",
         ":lex",
         ":sema",
@@ -2258,6 +2299,7 @@ cc_binary(
         ":driver",
         ":frontend",
         ":frontend_rewrite",
+        ":options",
         ":serialization",
         ":static_analyzer_frontend",
         ":tooling",
@@ -2345,6 +2387,7 @@ cc_binary(
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:Target",
@@ -2423,10 +2466,10 @@ cc_library(
     srcs = glob(["tools/clang-scan-deps/*.cpp"]),
     deps = [
         ":ScanDepsTableGen",
+        ":dependency_scanning",
         ":driver",
         ":frontend",
         ":tooling",
-        ":tooling_dependency_scanning",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -2459,66 +2502,5 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
-    ],
-)
-
-cc_binary(
-    name = "clang-fuzzer-dictionary",
-    srcs = ["tools/clang-fuzzer/dictionary/dictionary.c"],
-    deps = [":basic"],
-)
-
-genrule(
-    name = "fuzzer-dictionary",
-    outs = ["fuzzer-dictionary.txt"],
-    cmd = "$(location :clang-fuzzer-dictionary) > $@",
-    tools = [":clang-fuzzer-dictionary"],
-)
-
-cc_library(
-    name = "handle-cxx",
-    srcs = ["tools/clang-fuzzer/handle-cxx/handle_cxx.cpp"],
-    hdrs = ["tools/clang-fuzzer/handle-cxx/handle_cxx.h"],
-    deps = [
-        ":codegen",
-        ":frontend",
-        ":lex",
-        ":tooling",
-        "//llvm:Option",
-        "//llvm:Support",
-    ],
-)
-
-proto_library(
-    name = "cxx-proto",
-    srcs = ["tools/clang-fuzzer/cxx_proto.proto"],
-)
-
-cc_proto_library(
-    name = "cxx_cc_proto",
-    deps = [":cxx-proto"],
-)
-
-cc_library(
-    name = "proto-to-cxx-lib",
-    srcs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx.cpp"],
-    hdrs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx.h"],
-    includes = ["tools/clang-fuzzer"],
-    deps = [":cxx_cc_proto"],
-)
-
-cc_binary(
-    name = "clang-proto-to-cxx",
-    srcs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx_main.cpp"],
-    deps = [":proto-to-cxx-lib"],
-)
-
-cc_library(
-    name = "clang-fuzzer-initialize",
-    srcs = ["tools/clang-fuzzer/fuzzer-initialize/fuzzer_initialize.cpp"],
-    hdrs = ["tools/clang-fuzzer/fuzzer-initialize/fuzzer_initialize.h"],
-    deps = [
-        "//llvm:Core",
-        "//llvm:Support",
     ],
 )

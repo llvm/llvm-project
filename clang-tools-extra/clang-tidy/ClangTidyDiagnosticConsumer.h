@@ -91,10 +91,6 @@ public:
   ClangTidyContext &operator=(const ClangTidyContext &) = delete;
 
   /// Report any errors detected using this method.
-  ///
-  /// This is still under heavy development and will likely change towards using
-  /// tablegen'd diagnostic IDs.
-  /// FIXME: Figure out a way to manage ID spaces.
   DiagnosticBuilder diag(StringRef CheckName, SourceLocation Loc,
                          StringRef Description,
                          DiagnosticIDs::Level Level = DiagnosticIDs::Warning);

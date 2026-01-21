@@ -640,6 +640,7 @@ private:
   void WriteDeclsWithEffectsToVerify(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
+  void WriteRISCVIntrinsicPragmas(Sema &SemaRef);
 
   unsigned DeclParmVarAbbrev = 0;
   unsigned DeclContextLexicalAbbrev = 0;
@@ -781,6 +782,10 @@ public:
 
   void AddLookupOffsets(const LookupBlockOffsets &Offsets,
                         RecordDataImpl &Record);
+
+  /// Emit a reference to a macro.
+  void AddMacroRef(MacroInfo *MI, const IdentifierInfo *Name,
+                   RecordDataImpl &Record);
 
   /// Emit a reference to a declaration.
   void AddDeclRef(const Decl *D, RecordDataImpl &Record);
@@ -951,6 +956,10 @@ private:
                               Expr *ThisArg) override;
   void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
                                   const FunctionDecl *Delete) override;
+  void ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                   const FunctionDecl *Delete) override;
+  void ResolvedOperatorGlobArrayDelete(const CXXDestructorDecl *DD,
+                                       const FunctionDecl *Delete) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void InstantiationRequested(const ValueDecl *D) override;
   void VariableDefinitionInstantiated(const VarDecl *D) override;

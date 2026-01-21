@@ -372,12 +372,10 @@ public:
   ProgramPoint getProgramPoint(bool IsPreVisit = false,
                                const ProgramPointTag *Tag = nullptr) const;
 
-  /// Returns a new state with all argument regions invalidated.
-  ///
-  /// This accepts an alternate state in case some processing has already
-  /// occurred.
+  /// Invalidates the regions (arguments, globals, special regions like 'this')
+  /// that may have been written by this call, returning the updated state.
   ProgramStateRef invalidateRegions(unsigned BlockCount,
-                                    ProgramStateRef Orig = nullptr) const;
+                                    ProgramStateRef State) const;
 
   using FrameBindingTy = std::pair<SVal, SVal>;
   using BindingsTy = SmallVectorImpl<FrameBindingTy>;

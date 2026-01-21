@@ -18,11 +18,18 @@ tablegen("HexagonGenDFAPacketizer") {
   td_file = "Hexagon.td"
 }
 
+tablegen("HexagonGenSDNodeInfo") {
+  visibility = [ ":LLVMHexagonCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "Hexagon.td"
+}
+
 static_library("LLVMHexagonCodeGen") {
   deps = [
     ":HexagonGenCallingConv",
     ":HexagonGenDAGISel",
     ":HexagonGenDFAPacketizer",
+    ":HexagonGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -79,6 +86,7 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonOptAddrMode.cpp",
     "HexagonOptimizeSZextends.cpp",
     "HexagonPeephole.cpp",
+    "HexagonQFPOptimizer.cpp",
     "HexagonRDFOpt.cpp",
     "HexagonRegisterInfo.cpp",
     "HexagonSelectionDAGInfo.cpp",

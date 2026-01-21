@@ -329,6 +329,72 @@ TEST_F(GlobPatternTest, PrefixSuffix) {
   EXPECT_EQ("cd", Pat->suffix());
 }
 
+TEST_F(GlobPatternTest, Substr) {
+  auto Pat = GlobPattern::create("");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->longest_substr());
+
+  Pat = GlobPattern::create("abcd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->longest_substr());
+
+  Pat = GlobPattern::create("*abcd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->longest_substr());
+
+  Pat = GlobPattern::create("abcd*");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc*d");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bc", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc*def*g");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("def", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcd*ef*g");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcd", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcd*efg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcd", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcd[ef]g*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcd", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc[d]efg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("efg", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc[]]efg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("efg", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcde\\fg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcde", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcde\\[fg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcde", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcde?fg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcde", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcdef{g}*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcdef", Pat->longest_substr());
+}
+
 TEST_F(GlobPatternTest, Pathological) {
   std::string P, S(40, 'a');
   StringRef Pieces[] = {"a*", "[ba]*", "{b*,a*}*"};

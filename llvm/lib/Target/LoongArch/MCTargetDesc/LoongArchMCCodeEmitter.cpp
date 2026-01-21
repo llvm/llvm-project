@@ -38,7 +38,7 @@ public:
   LoongArchMCCodeEmitter(MCContext &ctx, MCInstrInfo const &MCII)
       : Ctx(ctx), MCII(MCII) {}
 
-  ~LoongArchMCCodeEmitter() override {}
+  ~LoongArchMCCodeEmitter() override = default;
 
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -180,6 +180,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case ELF::R_LARCH_ABS64_HI12:
       FixupKind = LoongArch::fixup_loongarch_abs64_hi12;
       break;
+    case ELF::R_LARCH_CALL30:
     case ELF::R_LARCH_CALL36:
     case ELF::R_LARCH_TLS_LE_HI20_R:
     case ELF::R_LARCH_TLS_LE_LO12_R:

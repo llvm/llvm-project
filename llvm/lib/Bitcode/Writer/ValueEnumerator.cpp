@@ -164,6 +164,10 @@ static OrderMap orderModule(const Module &M) {
           orderConstantValue(Op);
         if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
           orderValue(SVI->getShuffleMaskForBitcode(), OM);
+        if (auto *SI = dyn_cast<SwitchInst>(&I)) {
+          for (const auto &Case : SI->cases())
+            orderValue(Case.getCaseValue(), OM);
+        }
         orderValue(&I, OM);
       }
   }
@@ -616,9 +620,8 @@ void ValueEnumerator::OptimizeConstants(unsigned CstStart, unsigned CstEnd) {
 /// EnumerateValueSymbolTable - Insert all of the values in the specified symbol
 /// table into the values table.
 void ValueEnumerator::EnumerateValueSymbolTable(const ValueSymbolTable &VST) {
-  for (ValueSymbolTable::const_iterator VI = VST.begin(), VE = VST.end();
-       VI != VE; ++VI)
-    EnumerateValue(VI->getValue());
+  for (const auto &VI : VST)
+    EnumerateValue(VI.getValue());
 }
 
 /// Insert all of the values referenced by named metadata in the specified
@@ -1093,6 +1096,10 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
       }
       if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
         EnumerateValue(SVI->getShuffleMaskForBitcode());
+      if (auto *SI = dyn_cast<SwitchInst>(&I)) {
+        for (const auto &Case : SI->cases())
+          EnumerateValue(Case.getCaseValue());
+      }
     }
     BasicBlocks.push_back(&BB);
     ValueMap[&BB] = BasicBlocks.size();

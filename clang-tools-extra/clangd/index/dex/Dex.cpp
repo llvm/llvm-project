@@ -379,6 +379,28 @@ void Dex::relations(
   }
 }
 
+void Dex::reverseRelations(
+    const RelationsRequest &Req,
+    llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
+  trace::Span Tracer("Dex reverseRelations");
+  assert(Req.Predicate == RelationKind::OverriddenBy);
+  uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
+  for (const SymbolID &Subject : Req.Subjects) {
+    LookupRequest LookupReq;
+    auto It = ReverseRelations.find(
+        std::make_pair(Subject, static_cast<uint8_t>(Req.Predicate)));
+    if (It != ReverseRelations.end()) {
+      for (const auto &Obj : It->second) {
+        if (Remaining > 0) {
+          --Remaining;
+          LookupReq.IDs.insert(Obj);
+        }
+      }
+    }
+    lookup(LookupReq, [&](const Symbol &Object) { Callback(Subject, Object); });
+  }
+}
+
 llvm::unique_function<IndexContents(llvm::StringRef) const>
 Dex::indexedFiles() const {
   return [this](llvm::StringRef FileURI) {
@@ -396,6 +418,7 @@ size_t Dex::estimateMemoryUsage() const {
   Bytes += Refs.getMemorySize();
   Bytes += RevRefs.size() * sizeof(RevRef);
   Bytes += Relations.getMemorySize();
+  Bytes += ReverseRelations.getMemorySize();
   return Bytes + BackingDataSize;
 }
 

@@ -77,10 +77,11 @@ buildDynamicCastAfterNullCheck(cir::CIRBaseBuilderTy &builder,
   if (op.isRefCast()) {
     // Emit a cir.if that checks the casted value.
     mlir::Value castedValueIsNull = builder.createPtrIsNull(castedPtr);
-    builder.create<cir::IfOp>(
-        loc, castedValueIsNull, false, [&](mlir::OpBuilder &, mlir::Location) {
-          buildBadCastCall(builder, loc, castInfo.getBadCastFunc());
-        });
+    cir::IfOp::create(builder, loc, castedValueIsNull, false,
+                      [&](mlir::OpBuilder &, mlir::Location) {
+                        buildBadCastCall(builder, loc,
+                                         castInfo.getBadCastFunc());
+                      });
   }
 
   // Note that castedPtr is a void*. Cast it to a pointer to the destination
@@ -118,10 +119,7 @@ buildDynamicCastToVoidAfterNullCheck(cir::CIRBaseBuilderTy &builder,
   // Access vtable to get the offset from the given object to its containing
   // complete object.
   // TODO: Add a specialized operation to get the object offset?
-  auto vptrTy = cir::VPtrType::get(builder.getContext());
-  cir::PointerType vptrPtrTy = builder.getPointerTo(vptrTy);
-  auto vptrPtr =
-      cir::VTableGetVPtrOp::create(builder, loc, vptrPtrTy, op.getSrc());
+  auto vptrPtr = cir::VTableGetVPtrOp::create(builder, loc, op.getSrc());
   mlir::Value vptr = builder.createLoad(loc, vptrPtr);
   mlir::Value elementPtr =
       builder.createBitcast(vptr, builder.getPointerTo(vtableElemTy));
@@ -154,19 +152,19 @@ LoweringPrepareItaniumCXXABI::lowerDynamicCast(cir::CIRBaseBuilderTy &builder,
     return buildDynamicCastAfterNullCheck(builder, op);
 
   mlir::Value srcValueIsNotNull = builder.createPtrToBoolCast(srcValue);
-  return builder
-      .create<cir::TernaryOp>(
-          loc, srcValueIsNotNull,
-          [&](mlir::OpBuilder &, mlir::Location) {
-            mlir::Value castedValue =
-                op.isCastToVoid()
-                    ? buildDynamicCastToVoidAfterNullCheck(builder, astCtx, op)
-                    : buildDynamicCastAfterNullCheck(builder, op);
-            builder.createYield(loc, castedValue);
-          },
-          [&](mlir::OpBuilder &, mlir::Location) {
-            builder.createYield(
-                loc, builder.getNullPtr(op.getType(), loc).getResult());
-          })
+  return cir::TernaryOp::create(
+             builder, loc, srcValueIsNotNull,
+             [&](mlir::OpBuilder &, mlir::Location) {
+               mlir::Value castedValue =
+                   op.isCastToVoid()
+                       ? buildDynamicCastToVoidAfterNullCheck(builder, astCtx,
+                                                              op)
+                       : buildDynamicCastAfterNullCheck(builder, op);
+               builder.createYield(loc, castedValue);
+             },
+             [&](mlir::OpBuilder &, mlir::Location) {
+               builder.createYield(
+                   loc, builder.getNullPtr(op.getType(), loc).getResult());
+             })
       .getResult();
 }

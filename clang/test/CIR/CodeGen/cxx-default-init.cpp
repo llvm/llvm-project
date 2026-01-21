@@ -168,9 +168,8 @@ struct ValueInit {
 // CIR:   %[[FOUR_FIVEI:.*]] = cir.const #cir.const_complex<#cir.fp<6.000000e+00> : !cir.float, #cir.fp<7.000000e+00>
 // CIR:   cir.store{{.*}} %[[FOUR_FIVEI]], %[[C]]
 // CIR:   %[[BF:.*]] = cir.get_member %[[THIS]][4] {name = "bf"}
-// CIR:   %[[FF:.*]] = cir.const #cir.int<255> : !s32i
-// CIR:   %[[FF_CAST:.*]] = cir.cast integral %[[FF]] : !s32i -> !u32i
-// CIR:   %[[BF_VAL:.*]] = cir.set_bitfield{{.*}} (#bfi_bf, %[[BF]] : !cir.ptr<!u8i>, %[[FF_CAST]] : !u32i)
+// CIR:   %[[FF:.*]] = cir.const #cir.int<255> : !u32i
+// CIR:   %[[BF_VAL:.*]] = cir.set_bitfield{{.*}} (#bfi_bf, %[[BF]] : !cir.ptr<!u8i>, %[[FF]] : !u32i)
 
 // LLVM: define{{.*}} void @_ZN9ValueInitC2Ev(ptr %[[THIS_ARG:.*]])
 // LLVM:   %[[THIS_ALLOCA:.*]] = alloca ptr

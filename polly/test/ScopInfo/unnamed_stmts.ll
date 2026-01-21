@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 
 ; This test case verifies that we generate numbered statement names in case
 ; no LLVM-IR names are used in the test case. We also verify, that we
@@ -48,7 +48,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @vec3(i64 %n, ptr, ptr) #0 {
+define void @vec3(i64 %n, ptr, ptr) {
   br label %.split
 
 .split:                                           ; preds = %0
@@ -140,8 +140,6 @@ define void @vec3(i64 %n, ptr, ptr) #0 {
 "name":
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

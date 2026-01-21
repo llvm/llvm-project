@@ -247,6 +247,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
       const MachineOperand &Src = MI.getOperand(Idx);
       Register SrcReg = Src.getReg();
+      LLT SrcTy = MRI.getType(SrcReg);
       // Look through trivial copies and phis but don't look through trivial
       // copies or phis of the form `%1:(s32) = OP %0:gpr32`, known-bits
       // analysis is currently unable to determine the bit width of a
@@ -255,9 +256,15 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       // We can't use NoSubRegister by name as it's defined by each target but
       // it's always defined to be 0 by tablegen.
       if (SrcReg.isVirtual() && Src.getSubReg() == 0 /*NoSubRegister*/ &&
-          MRI.getType(SrcReg).isValid()) {
+          SrcTy.isValid()) {
+        // In case we're forwarding from a vector register to a non-vector
+        // register we need to update the demanded elements to reflect this
+        // before recursing.
+        APInt NowDemandedElts = SrcTy.isFixedVector() && !DstTy.isFixedVector()
+                                    ? APInt::getAllOnes(SrcTy.getNumElements())
+                                    : DemandedElts; // Known to be APInt(1, 1)
         // For COPYs we don't do anything, don't increase the depth.
-        computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
+        computeKnownBitsImpl(SrcReg, Known2, NowDemandedElts,
                              Depth + (Opcode != TargetOpcode::COPY));
         Known2 = Known2.anyextOrTrunc(BitWidth);
         Known = Known.intersectWith(Known2);
@@ -602,6 +609,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
                          Depth + 1);
+    OffsetKnown = OffsetKnown.sext(BitWidth);
+    WidthKnown = WidthKnown.sext(BitWidth);
     Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.
@@ -613,7 +622,37 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_UADDO:
   case TargetOpcode::G_UADDE:
   case TargetOpcode::G_SADDO:
-  case TargetOpcode::G_SADDE:
+  case TargetOpcode::G_SADDE: {
+    if (MI.getOperand(1).getReg() == R) {
+      // If we know the result of a compare has the top bits zero, use this
+      // info.
+      if (TL.getBooleanContents(DstTy.isVector(), false) ==
+              TargetLowering::ZeroOrOneBooleanContent &&
+          BitWidth > 1)
+        Known.Zero.setBitsFrom(1);
+      break;
+    }
+
+    assert(MI.getOperand(0).getReg() == R &&
+           "We only compute knownbits for the sum here.");
+    // With [US]ADDE, a carry bit may be added in.
+    KnownBits Carry(1);
+    if (Opcode == TargetOpcode::G_UADDE || Opcode == TargetOpcode::G_SADDE) {
+      computeKnownBitsImpl(MI.getOperand(4).getReg(), Carry, DemandedElts,
+                           Depth + 1);
+      // Carry has bit width 1
+      Carry = Carry.trunc(1);
+    } else {
+      Carry.setAllZero();
+    }
+
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(3).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
+    break;
+  }
   case TargetOpcode::G_USUBO:
   case TargetOpcode::G_USUBE:
   case TargetOpcode::G_SSUBO:
@@ -639,6 +678,38 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     unsigned PossibleLZ = SrcOpKnown.countMaxLeadingZeros();
     unsigned LowBits = llvm::bit_width(PossibleLZ);
     Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
+    Register InVec = Extract.getVectorReg();
+    Register EltNo = Extract.getIndexReg();
+
+    auto ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+
+    LLT VecVT = MRI.getType(InVec);
+    // computeKnownBits not yet implemented for scalable vectors.
+    if (VecVT.isScalableVector())
+      break;
+
+    const unsigned EltBitWidth = VecVT.getScalarSizeInBits();
+    const unsigned NumSrcElts = VecVT.getNumElements();
+    // A return type different from the vector's element type may lead to
+    // issues with pattern selection. Bail out to avoid that.
+    if (BitWidth > EltBitWidth)
+      break;
+
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+    if (ConstEltNo && ConstEltNo->ult(NumSrcElts))
+      DemandedSrcElts =
+          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+
+    computeKnownBitsImpl(InVec, Known, DemandedSrcElts, Depth + 1);
     break;
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
@@ -811,8 +882,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   // assume this from flags/attributes.
   InterestedClasses &= ~KnownNotFromFlags;
 
-  auto ClearClassesFromFlags =
-      make_scope_exit([=, &Known] { Known.knownNot(KnownNotFromFlags); });
+  llvm::scope_exit ClearClassesFromFlags(
+      [=, &Known] { Known.knownNot(KnownNotFromFlags); });
 
   // All recursive calls that increase depth must come after this.
   if (Depth == MaxAnalysisRecursionDepth)
@@ -1332,7 +1403,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
           (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()))
         Known.knownNot(fcNan);
 
-      if (Opcode == Instruction::FAdd) {
+      if (Opcode == TargetOpcode::G_FADD ||
+          Opcode == TargetOpcode::G_STRICT_FADD) {
         if (KnownLHS.cannotBeOrderedLessThanZero() &&
             KnownRHS.cannotBeOrderedLessThanZero())
           Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
@@ -1447,7 +1519,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
                           KnownLHS, Depth + 1);
     }
 
-    if (Opcode == Instruction::FDiv) {
+    if (Opcode == TargetOpcode::G_FDIV) {
       // Only 0/0, Inf/Inf produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
           (KnownLHS.isKnownNeverInfinity() ||

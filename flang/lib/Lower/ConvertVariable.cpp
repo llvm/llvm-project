@@ -1711,7 +1711,7 @@ static void lowerExplicitLowerBounds(
 /// CFI_desc_t requirements in 18.5.3 point 5.).
 static mlir::Value getAssumedSizeExtent(mlir::Location loc,
                                         fir::FirOpBuilder &builder) {
-  return builder.createMinusOneInteger(loc, builder.getIndexType());
+  return fir::AssumedSizeExtentOp::create(builder, loc);
 }
 
 /// Lower explicit extents into \p result if this is an explicit-shape or
@@ -1806,6 +1806,9 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
   if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
     // CrayPointee are represented as pointers.
     flags = flags | fir::FortranVariableFlagsEnum::pointer;
+    // Still use the CrayPointee flag so that AliasAnalysis can handle these
+    // separately.
+    flags = flags | fir::FortranVariableFlagsEnum::cray_pointee;
     return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
   }
   const auto &attrs = sym.attrs();
@@ -1835,6 +1838,8 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
     flags = flags | fir::FortranVariableFlagsEnum::value;
   if (attrs.test(Fortran::semantics::Attr::VOLATILE))
     flags = flags | fir::FortranVariableFlagsEnum::fortran_volatile;
+  if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointer))
+    flags = flags | fir::FortranVariableFlagsEnum::cray_pointer;
   if (flags == fir::FortranVariableFlagsEnum::None)
     return {};
   return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
@@ -1946,12 +1951,15 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       return;
     }
     mlir::Value dummyScope;
-    if (converter.isRegisteredDummySymbol(sym))
+    unsigned argNo = 0;
+    if (converter.isRegisteredDummySymbol(sym)) {
       dummyScope = converter.dummyArgsScopeValue();
+      argNo = converter.getDummyArgPosition(sym);
+    }
     auto [storage, storageOffset] = converter.getSymbolStorage(sym);
     auto newBase = hlfir::DeclareOp::create(
         builder, loc, base, name, shapeOrShift, lenParams, dummyScope, storage,
-        storageOffset, attributes, dataAttr);
+        storageOffset, attributes, dataAttr, argNo);
     symMap.addVariableDefinition(sym, newBase, force);
     return;
   }
@@ -2004,15 +2012,17 @@ void Fortran::lower::genDeclareSymbol(
                                                         sym.GetUltimate());
     auto name = converter.mangleName(sym);
     mlir::Value dummyScope;
+    unsigned argNo = 0;
     fir::ExtendedValue base = exv;
     if (converter.isRegisteredDummySymbol(sym)) {
       base = genPackArray(converter, sym, exv);
       dummyScope = converter.dummyArgsScopeValue();
+      argNo = converter.getDummyArgPosition(sym);
     }
     auto [storage, storageOffset] = converter.getSymbolStorage(sym);
     hlfir::EntityWithAttributes declare =
         hlfir::genDeclare(loc, builder, base, name, attributes, dummyScope,
-                          storage, storageOffset, dataAttr);
+                          storage, storageOffset, dataAttr, argNo);
     symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
     return;
   }

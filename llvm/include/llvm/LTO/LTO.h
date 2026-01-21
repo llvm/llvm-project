@@ -130,6 +130,12 @@ private:
   std::vector<StringRef> DependentLibraries;
   std::vector<std::pair<StringRef, Comdat::SelectionKind>> ComdatTable;
 
+  MemoryBufferRef MbRef;
+  bool IsMemberOfArchive = false;
+  bool IsThinLTO = false;
+  StringRef ArchivePath;
+  StringRef MemberName;
+
 public:
   LLVM_ABI ~InputFile();
 
@@ -188,6 +194,25 @@ public:
 
   // Returns the only BitcodeModule from InputFile.
   LLVM_ABI BitcodeModule &getSingleBitcodeModule();
+  // Returns the primary BitcodeModule from InputFile.
+  LLVM_ABI BitcodeModule &getPrimaryBitcodeModule();
+  // Returns the memory buffer reference for this input file.
+  MemoryBufferRef getFileBuffer() const { return MbRef; }
+  // Returns true if this input file is a member of an archive.
+  bool isMemberOfArchive() const { return IsMemberOfArchive; }
+  // Mark this input file as a member of archive.
+  void memberOfArchive(bool MA) { IsMemberOfArchive = MA; }
+
+  // Returns true if bitcode is ThinLTO.
+  bool isThinLTO() const { return IsThinLTO; }
+
+  // Store an archive path and a member name.
+  void setArchivePathAndName(StringRef Path, StringRef Name) {
+    ArchivePath = Path;
+    MemberName = Name;
+  }
+  StringRef getArchivePath() const { return ArchivePath; }
+  StringRef getMemberName() const { return MemberName; }
 
 private:
   ArrayRef<Symbol> module_symbols(unsigned I) const {
@@ -317,6 +342,8 @@ LLVM_ABI ThinBackend createInProcessThinBackend(
 /// distributor.
 /// RemoteCompiler specifies the path to a Clang executable to be invoked for
 /// the backend jobs.
+/// RemoteCompilerPrependArgs specifies a list of prepend arguments to be
+/// applied to the backend compilations.
 /// RemoteCompilerArgs specifies a list of arguments to be applied to the
 /// backend compilations.
 /// SaveTemps is a debugging tool that prevents temporary files created by this
@@ -326,6 +353,7 @@ LLVM_ABI ThinBackend createOutOfProcessThinBackend(
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerPrependArgs,
     ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps);
 
 /// This ThinBackend writes individual module indexes to files, instead of
@@ -389,7 +417,7 @@ public:
   LLVM_ABI LTO(Config Conf, ThinBackend Backend = {},
                unsigned ParallelCodeGenParallelismLevel = 1,
                LTOKind LTOMode = LTOK_Default);
-  LLVM_ABI ~LTO();
+  LLVM_ABI virtual ~LTO();
 
   /// Add an input file to the LTO link, using the provided symbol resolutions.
   /// The symbol resolutions must appear in the enumeration order given by
@@ -416,6 +444,13 @@ public:
   /// by LTO but might not be visible from bitcode symbol table.
   LLVM_ABI static SmallVector<const char *>
   getRuntimeLibcallSymbols(const Triple &TT);
+
+protected:
+  // Called at the start of run().
+  virtual Error handleArchiveInputs() { return Error::success(); }
+
+  // Called before returning from run().
+  virtual void cleanup() {}
 
 private:
   Config Conf;
@@ -459,6 +494,19 @@ private:
     ModuleMapType ModuleMap;
     // The bitcode modules to compile, if specified by the LTO Config.
     std::optional<ModuleMapType> ModulesToCompile;
+
+    void setPrevailingModuleForGUID(GlobalValue::GUID GUID, StringRef Module) {
+      PrevailingModuleForGUID[GUID] = Module;
+    }
+    bool isPrevailingModuleForGUID(GlobalValue::GUID GUID,
+                                   StringRef Module) const {
+      auto It = PrevailingModuleForGUID.find(GUID);
+      return It != PrevailingModuleForGUID.end() && It->second == Module;
+    }
+
+  private:
+    // Make this private so all accesses must go through above accessor methods
+    // to avoid inadvertently creating new entries on lookups.
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 
@@ -575,6 +623,12 @@ private:
 
   // Diagnostic optimization remarks file
   LLVMRemarkFileHandle DiagnosticOutputFile;
+
+public:
+  virtual Expected<std::shared_ptr<lto::InputFile>>
+  addInput(std::unique_ptr<lto::InputFile> InputPtr) {
+    return std::shared_ptr<lto::InputFile>(InputPtr.release());
+  }
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

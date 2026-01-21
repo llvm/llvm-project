@@ -37,8 +37,8 @@ The default mode to calculate tokens is:
   pointers.
 
 Other token ID assignment modes are supported, but they may be subject to
-change or removal. These may (experimentally) be selected with ``-mllvm
--alloc-token-mode=<mode>``:
+change or removal. These may (experimentally) be selected with ``-Xclang
+-falloc-token-mode=<mode>``:
 
 * ``typehash``: This mode assigns a token ID based on the hash of the allocated
   type's name.
@@ -48,6 +48,39 @@ change or removal. These may (experimentally) be selected with ``-mllvm
 
 * ``increment``: This mode assigns a simple, incrementally increasing token ID
   to each allocation site.
+
+The following command-line options affect generated token IDs:
+
+* ``-falloc-token-max=<N>``
+    Configures the maximum number of token IDs. By default the number of tokens
+    is bounded by ``SIZE_MAX``.
+
+Querying Token IDs with ``__builtin_infer_alloc_token``
+=======================================================
+
+For use cases where the token ID must be known at compile time, Clang provides
+a builtin function:
+
+.. code-block:: c
+
+    size_t __builtin_infer_alloc_token(<args>, ...);
+
+This builtin returns the token ID inferred from its argument expressions, which
+mirror arguments normally passed to any allocation function. The argument
+expressions are **unevaluated**, so it can be used with expressions that would
+have side effects without any runtime impact.
+
+For example, it can be used as follows:
+
+.. code-block:: c
+
+    struct MyType { ... };
+    void *__partition_alloc(size_t size, size_t partition);
+    #define partition_alloc(...) __partition_alloc(__VA_ARGS__, __builtin_infer_alloc_token(__VA_ARGS__))
+
+    void foo(void) {
+        MyType *x = partition_alloc(sizeof(*x));
+    }
 
 Allocation Token Instrumentation
 ================================
@@ -69,16 +102,6 @@ example:
 
     // Instrumented:
     ptr = __alloc_token_malloc(size, <token id>);
-
-The following command-line options affect generated token IDs:
-
-* ``-falloc-token-max=<N>``
-    Configures the maximum number of tokens. No max by default (tokens bounded
-    by ``SIZE_MAX``).
-
-    .. code-block:: console
-
-        % clang++ -fsanitize=alloc-token -falloc-token-max=512 example.cc
 
 Runtime Interface
 -----------------
@@ -106,7 +129,7 @@ Fast ABI
 --------
 
 An alternative ABI can be enabled with ``-fsanitize-alloc-token-fast-abi``,
-which encodes the token ID hint in the allocation function name.
+which encodes the token ID in the allocation function name.
 
 .. code-block:: c
 

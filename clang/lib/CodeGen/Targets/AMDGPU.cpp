@@ -441,9 +441,10 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (FD)
     setFunctionDeclAttributes(FD, F, M);
-
   if (!getABIInfo().getCodeGenOpts().EmitIEEENaNCompliantInsts)
     F->addFnAttr("amdgpu-ieee", "false");
+  if (getABIInfo().getCodeGenOpts().AMDGPUExpandWaitcntProfiling)
+    F->addFnAttr("amdgpu-expand-waitcnt-profiling");
 }
 
 unsigned AMDGPUTargetCodeGenInfo::getDeviceKernelCallingConv() const {
@@ -507,6 +508,10 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   case SyncScope::OpenCLSubGroup:
   case SyncScope::WavefrontScope:
     Name = "wavefront";
+    break;
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    Name = "cluster";
     break;
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
@@ -654,7 +659,7 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   // kernel address (only the kernel descriptor).
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
                                    &Mod);
-  F->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+  F->setCallingConv(getDeviceKernelCallingConv());
 
   llvm::AttrBuilder KernelAttrs(C);
   // FIXME: The invoke isn't applying the right attributes either

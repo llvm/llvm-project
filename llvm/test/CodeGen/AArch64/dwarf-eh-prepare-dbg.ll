@@ -1,5 +1,5 @@
 ; RUN: opt -S -mtriple=aarch64-unknown-linux-gnu -dwarf-eh-prepare < %s | FileCheck %s
-; RUN: opt -S -mtriple=aarch64-unknown-linux-gnu -passes=dwarf-eh-prepare < %s | FileCheck %s
+; RUN: opt -S -mtriple=aarch64-unknown-linux-gnu -passes='require<libcall-lowering-info>,dwarf-eh-prepare' < %s | FileCheck %s
 
 ; If _Unwind_Resume is defined in the same module and we have debug
 ; info, then the inserted _Unwind_Resume calls also need to have a dummy debug

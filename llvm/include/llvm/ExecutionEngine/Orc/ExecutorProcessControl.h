@@ -39,27 +39,27 @@ class LLVM_ABI ExecutorProcessControl {
   friend class ExecutionSession;
 public:
 
-  /// A handler or incoming WrapperFunctionResults -- either return values from
+  /// A handler or incoming WrapperFunctionBuffers -- either return values from
   /// callWrapper* calls, or incoming JIT-dispatch requests.
   ///
   /// IncomingWFRHandlers are constructible from
-  /// unique_function<void(shared::WrapperFunctionResult)>s using the
+  /// unique_function<void(shared::WrapperFunctionBuffer)>s using the
   /// runInPlace function or a RunWithDispatch object.
   class IncomingWFRHandler {
     friend class ExecutorProcessControl;
   public:
     IncomingWFRHandler() = default;
     explicit operator bool() const { return !!H; }
-    void operator()(shared::WrapperFunctionResult WFR) { H(std::move(WFR)); }
+    void operator()(shared::WrapperFunctionBuffer WFR) { H(std::move(WFR)); }
   private:
     template <typename FnT> IncomingWFRHandler(FnT &&Fn)
       : H(std::forward<FnT>(Fn)) {}
 
-    unique_function<void(shared::WrapperFunctionResult)> H;
+    unique_function<void(shared::WrapperFunctionBuffer)> H;
   };
 
   /// Constructs an IncomingWFRHandler from a function object that is callable
-  /// as void(shared::WrapperFunctionResult). The function object will be called
+  /// as void(shared::WrapperFunctionBuffer). The function object will be called
   /// directly. This should be used with care as it may block listener threads
   /// in remote EPCs. It is only suitable for simple tasks (e.g. setting a
   /// future), or for performing some quick analysis before dispatching "real"
@@ -85,7 +85,7 @@ public:
     IncomingWFRHandler operator()(FnT &&Fn) {
       return IncomingWFRHandler(
           [&D = this->D, Fn = std::move(Fn)]
-          (shared::WrapperFunctionResult WFR) mutable {
+          (shared::WrapperFunctionBuffer WFR) mutable {
               D.dispatch(
                 makeGenericNamedTask(
                     [Fn = std::move(Fn), WFR = std::move(WFR)]() mutable {
@@ -219,7 +219,7 @@ public:
   /// The wrapper function should be callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
   virtual void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                                 IncomingWFRHandler OnComplete,
@@ -247,15 +247,15 @@ public:
   /// callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
-  shared::WrapperFunctionResult callWrapper(ExecutorAddr WrapperFnAddr,
+  shared::WrapperFunctionBuffer callWrapper(ExecutorAddr WrapperFnAddr,
                                             ArrayRef<char> ArgBuffer) {
-    std::promise<shared::WrapperFunctionResult> RP;
+    std::promise<shared::WrapperFunctionBuffer> RP;
     auto RF = RP.get_future();
     callWrapperAsync(
         RunInPlace(), WrapperFnAddr,
-        [&](shared::WrapperFunctionResult R) {
+        [&](shared::WrapperFunctionBuffer R) {
           RP.set_value(std::move(R));
         }, ArgBuffer);
     return RF.get();

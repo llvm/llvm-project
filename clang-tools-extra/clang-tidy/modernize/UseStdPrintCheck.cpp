@@ -36,7 +36,6 @@ UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()),
       MaybeHeaderToInclude(Options.get("PrintHeader")) {
-
   if (PrintfLikeFunctions.empty() && FprintfLikeFunctions.empty()) {
     PrintfLikeFunctions.emplace_back("::printf");
     PrintfLikeFunctions.emplace_back("absl::PrintF");
@@ -70,8 +69,8 @@ void UseStdPrintCheck::registerPPCallbacks(const SourceManager &SM,
   this->PP = PP;
 }
 
-static clang::ast_matchers::StatementMatcher
-unusedReturnValue(clang::ast_matchers::StatementMatcher MatchedCallExpr) {
+static clang::ast_matchers::StatementMatcher unusedReturnValue(
+    const clang::ast_matchers::StatementMatcher &MatchedCallExpr) {
   auto UnusedInCompoundStmt =
       compoundStmt(forEach(MatchedCallExpr),
                    // The checker can't currently differentiate between the
@@ -100,7 +99,7 @@ void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
         unusedReturnValue(
             callExpr(argumentCountAtLeast(1),
                      hasArgument(0, stringLiteral(isOrdinary())),
-                     callee(functionDecl(matchers::matchesAnyListedName(
+                     callee(functionDecl(matchers::matchesAnyListedRegexName(
                                              PrintfLikeFunctions))
                                 .bind("func_decl")))
                 .bind("printf")),
@@ -111,7 +110,7 @@ void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
         unusedReturnValue(
             callExpr(argumentCountAtLeast(2),
                      hasArgument(1, stringLiteral(isOrdinary())),
-                     callee(functionDecl(matchers::matchesAnyListedName(
+                     callee(functionDecl(matchers::matchesAnyListedRegexName(
                                              FprintfLikeFunctions))
                                 .bind("func_decl")))
                 .bind("fprintf")),

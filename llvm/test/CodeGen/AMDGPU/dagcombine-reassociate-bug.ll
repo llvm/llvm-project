@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -amdgpu-scalar-ir-passes=false < %s | FileCheck %s
 
 ; Test for a bug where DAGCombiner::ReassociateOps() was creating adds
 ; with offset in the first operand and base pointers in the second.

@@ -14,7 +14,9 @@
 #include "llvm/Support/Jobserver.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
@@ -39,6 +41,9 @@
 #define DEBUG_TYPE "jobserver-test"
 
 using namespace llvm;
+
+// Provided by the unit test main to locate the current test binary.
+extern const char *TestMainArgv0;
 
 namespace {
 
@@ -217,7 +222,44 @@ TEST_F(JobserverClientTest, UnixClientFifo) {
   EXPECT_TRUE(S1.isValid());
 }
 
+TEST_F(JobserverClientTest, UnixClientNonFifo) {
+  // This test verifies that non-FIFO jobservers can be used, such as steve
+  // or guildmaster.
+  SmallString<64> F;
+  std::error_code EC =
+      sys::fs::createTemporaryFile("jobserver-test", "nonfifo", F);
+  ASSERT_FALSE(EC);
+  FileRemover Cleanup(F);
+
+  // Intentionally inserted \t in environment string.
+  std::string Makeflags = " \t -j4\t \t--jobserver-auth=fifo:";
+  Makeflags += F.c_str();
+  ScopedEnvironment Env("MAKEFLAGS", Makeflags.c_str());
+
+  JobserverClient *Client = JobserverClient::getInstance();
+  ASSERT_NE(Client, nullptr);
+
+  // Get the implicit token.
+  JobSlot S1 = Client->tryAcquire();
+  EXPECT_TRUE(S1.isValid());
+  EXPECT_TRUE(S1.isImplicit());
+
+  // File is empty, next acquire fails.
+  JobSlot S2 = Client->tryAcquire();
+  EXPECT_FALSE(S2.isValid());
+
+  // Release does not write to the file for the implicit token.
+  Client->release(std::move(S1));
+
+  // Re-acquire the implicit token.
+  S1 = Client->tryAcquire();
+  EXPECT_TRUE(S1.isValid());
+}
+
 #if LLVM_ENABLE_THREADS
+// Unique anchor whose address helps locate the current test binary.
+static int JobserverTestAnchor = 0;
+
 // Test fixture for tests that use the jobserver strategy. It creates a
 // temporary FIFO, sets MAKEFLAGS, and provides a helper to pre-load the FIFO
 // with job tokens, simulating `make -jN`.
@@ -382,51 +424,93 @@ TEST_F(JobserverStrategyTest, ThreadPoolConcurrencyIsLimited) {
   EXPECT_EQ(CompletedTasks, NumTasks);
 }
 
-TEST_F(JobserverStrategyTest, ParallelForIsLimited) {
+// Parent-side driver that spawns a fresh process to run the child test which
+// validates that parallelFor respects the jobserver limit when it is the first
+// user of the default executor in that process.
+TEST_F(JobserverStrategyTest, ParallelForIsLimited_Subprocess) {
+  // Mark child execution.
+  setenv("LLVM_JOBSERVER_TEST_CHILD", "1", 1);
+
+  // Find the current test binary and build args to run only the child test.
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &JobserverTestAnchor);
+  ASSERT_FALSE(Executable.empty()) << "Failed to get main executable path";
+  SmallVector<StringRef, 4> Args{Executable,
+                                 "--gtest_filter=JobserverStrategyTest."
+                                 "ParallelForIsLimited_SubprocessChild"};
+
+  std::string Error;
+  bool ExecFailed = false;
+  int RC = sys::ExecuteAndWait(Executable, Args, std::nullopt, {}, 0, 0, &Error,
+                               &ExecFailed);
+  unsetenv("LLVM_JOBSERVER_TEST_CHILD");
+  ASSERT_FALSE(ExecFailed) << Error;
+  ASSERT_EQ(RC, 0) << "Executable failed with exit code " << RC;
+}
+
+// Child-side test: create FIFO and make-proxy in this process, set the
+// jobserver strategy, and then run parallelFor.
+TEST_F(JobserverStrategyTest, ParallelForIsLimited_SubprocessChild) {
+  if (!getenv("LLVM_JOBSERVER_TEST_CHILD"))
+    GTEST_SKIP() << "Not running in child mode";
+
   // This test verifies that llvm::parallelFor respects the jobserver limit.
   const int NumExplicitJobs = 3;
   const int ConcurrencyLimit = NumExplicitJobs + 1; // +1 implicit
   const int NumTasks = 20;
 
-  LLVM_DEBUG(dbgs() << "Calling startMakeProxy with " << NumExplicitJobs
-                    << " jobs.\n");
   startMakeProxy(NumExplicitJobs);
-  LLVM_DEBUG(dbgs() << "MakeProxy is running.\n");
 
-  // Set the global strategy. parallelFor will use this.
+  // Set the global strategy before any default executor is created.
   parallel::strategy = jobserver_concurrency();
 
   std::atomic<int> ActiveTasks{0};
   std::atomic<int> MaxActiveTasks{0};
 
-  parallelFor(0, NumTasks, [&](int i) {
+  parallelFor(0, NumTasks, [&]([[maybe_unused]] int i) {
     int CurrentActive = ++ActiveTasks;
-    LLVM_DEBUG(dbgs() << "Task " << i << ": Active tasks: " << CurrentActive
-                      << "\n");
     int OldMax = MaxActiveTasks.load();
     while (CurrentActive > OldMax)
       MaxActiveTasks.compare_exchange_weak(OldMax, CurrentActive);
-
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     --ActiveTasks;
   });
 
-  LLVM_DEBUG(dbgs() << "ParallelFor finished. Max active tasks was "
-                    << MaxActiveTasks << ".\n");
   EXPECT_LE(MaxActiveTasks, ConcurrencyLimit);
 }
 
-TEST_F(JobserverStrategyTest, ParallelSortIsLimited) {
-  // This test serves as an integration test to ensure parallelSort completes
-  // correctly when running under the jobserver strategy. It doesn't directly
-  // measure concurrency but verifies correctness.
+// Parent-side driver for parallelSort child test.
+TEST_F(JobserverStrategyTest, ParallelSortIsLimited_Subprocess) {
+  setenv("LLVM_JOBSERVER_TEST_CHILD", "1", 1);
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &JobserverTestAnchor);
+  ASSERT_FALSE(Executable.empty()) << "Failed to get main executable path";
+  SmallVector<StringRef, 4> Args{Executable,
+                                 "--gtest_filter=JobserverStrategyTest."
+                                 "ParallelSortIsLimited_SubprocessChild"};
+
+  std::string Error;
+  bool ExecFailed = false;
+  int RC = sys::ExecuteAndWait(Executable, Args, std::nullopt, {}, 0, 0, &Error,
+                               &ExecFailed);
+  unsetenv("LLVM_JOBSERVER_TEST_CHILD");
+  ASSERT_FALSE(ExecFailed) << Error;
+  ASSERT_EQ(RC, 0) << "Executable failed with exit code " << RC;
+}
+
+// Child-side test: ensure parallelSort runs and completes correctly under the
+// jobserver strategy when it owns default executor initialization.
+TEST_F(JobserverStrategyTest, ParallelSortIsLimited_SubprocessChild) {
+  if (!getenv("LLVM_JOBSERVER_TEST_CHILD"))
+    GTEST_SKIP() << "Not running in child mode";
+
   const int NumExplicitJobs = 3;
   startMakeProxy(NumExplicitJobs);
 
   parallel::strategy = jobserver_concurrency();
 
   std::vector<int> V(1024);
-  // Fill with random data
   std::mt19937 randEngine;
   std::uniform_int_distribution<int> dist;
   for (int &i : V)

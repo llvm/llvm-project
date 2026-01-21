@@ -815,6 +815,69 @@ public:
   Stmt *getAssociatedStmt() {
     return OpenACCAssociatedStmtConstruct::getAssociatedStmt();
   }
+
+  // A struct to represent a broken-down version of the associated statement,
+  // providing the information specified in OpenACC3.3 Section 2.12.
+  struct SingleStmtInfo {
+    // Holds the entire expression for this. In the case of a normal
+    // read/write/update, this should just be the associated statement.  in the
+    // case of an update, this is going to be the sub-expression this
+    // represents.
+    const Expr *WholeExpr;
+    const Expr *V;
+    const Expr *X;
+    // Listed as 'expr' in the standard, this is typically a generic expression
+    // as a component.
+    const Expr *RefExpr;
+    // If this is an 'update', records whether this is a post-fix
+    // increment/decrement.  In the case where we have a single-line variant of
+    // 'capture' we have to form the IR differently if this is the case to make
+    // sure the old value is 'read' in the 2nd step.
+    bool IsPostfixIncDec = false;
+    static SingleStmtInfo Empty() {
+      return {nullptr, nullptr, nullptr, nullptr, false};
+    }
+
+    static SingleStmtInfo createRead(const Expr *WholeExpr, const Expr *V,
+                                     const Expr *X) {
+      return {WholeExpr, V, X, /*RefExpr=*/nullptr};
+    }
+    static SingleStmtInfo createWrite(const Expr *WholeExpr, const Expr *X,
+                                      const Expr *RefExpr) {
+      return {WholeExpr, /*V=*/nullptr, X, RefExpr};
+    }
+    static SingleStmtInfo createUpdate(const Expr *WholeExpr, const Expr *X,
+                                       bool PostfixIncDec) {
+      return {WholeExpr, /*V=*/nullptr, X, /*RefExpr=*/nullptr, PostfixIncDec};
+    }
+  };
+
+  struct StmtInfo {
+    enum class StmtForm {
+      Read,
+      Write,
+      Update,
+      ReadWrite,
+      ReadUpdate,
+      UpdateRead
+    } Form;
+    SingleStmtInfo First, Second;
+
+    static StmtInfo createUpdateRead(SingleStmtInfo First,
+                                     SingleStmtInfo Second) {
+      return {StmtForm::UpdateRead, First, Second};
+    }
+    static StmtInfo createReadWrite(SingleStmtInfo First,
+                                    SingleStmtInfo Second) {
+      return {StmtForm::ReadWrite, First, Second};
+    }
+    static StmtInfo createReadUpdate(SingleStmtInfo First,
+                                     SingleStmtInfo Second) {
+      return {StmtForm::ReadUpdate, First, Second};
+    }
+  };
+
+  const StmtInfo getAssociatedStmtInfo() const;
 };
 
 } // namespace clang
