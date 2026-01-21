@@ -23,25 +23,51 @@ def p6 : PtrValueType<i32, 6>;
 // AMDGPU Subtarget Feature (device properties)
 //===----------------------------------------------------------------------===//
 
-// Multiclass to define a SubtargetFeature along with an optional predicate.
-// The predicate is generated when GenPredicate is 1 (default).
-// Usage: defm MadMixInsts : AMDGPUSubtargetFeature<"mad-mix-insts", "description">;
+// Multiclass to define a SubtargetFeature along with optional predicates.
+// Parameters:
+//   - FeatureString: The feature string used in the SubtargetFeature.
+//   - Description: The description of the feature.
+//   - GenPredicate: If 1 (default), generates a Has#NAME predicate.
+//   - GenAssemblerPredicate: If 1 (default), the predicate includes AssemblerPredicate.
+//   - Deps: List of dependent SubtargetFeatures (default empty).
+//
+// Usage:
+//   defm MadMixInsts : AMDGPUSubtargetFeature<"mad-mix-insts", "description">;
 // This generates:
 //   - FeatureMadMixInsts : SubtargetFeature<"mad-mix-insts", "HasMadMixInsts", "true", "description">
-//   - HasMadMixInsts : Predicate<"Subtarget->hasMadMixInsts()">, AssemblerPredicate<(any_of FeatureMadMixInsts)>
+//   - HasMadMixInsts : Predicate<"Subtarget->hasMadMixInsts()">,
+//                      AssemblerPredicate<(any_of FeatureMadMixInsts)>
+//
+// With GenAssemblerPredicate=0:
+//   defm Foo : AMDGPUSubtargetFeature<"foo", "desc", 1, 0>;
+// This generates:
+//   - FeatureFoo : SubtargetFeature<...>
+//   - HasFoo : Predicate<"Subtarget->hasFoo()"> (no AssemblerPredicate)
+//
+// With dependencies:
+//   defm Bar : AMDGPUSubtargetFeature<"bar", "desc", 1, 1, [FeatureFoo]>;
+// This generates:
+//   - FeatureBar : SubtargetFeature<"bar", "HasBar", "true", "desc", [FeatureFoo]>
+//   - HasBar : Predicate + AssemblerPredicate
 multiclass AMDGPUSubtargetFeature<string FeatureString,
                                   string Description,
-                                  bit GenPredicate = 1> {
+                                  bit GenPredicate = 1,
+                                  bit GenAssemblerPredicate = 1,
+                                  list<SubtargetFeature> Deps = []> {
   def Feature#NAME : SubtargetFeature<FeatureString,
     "Has"#NAME,
     "true",
-    Description
+    Description,
+    Deps
   >;
 
   if GenPredicate then
-    def Has#NAME
-      : Predicate<"Subtarget->has"#NAME#"()">,
-        AssemblerPredicate<(any_of !cast<SubtargetFeature>("Feature"#NAME))>;
+    if GenAssemblerPredicate then
+      def Has#NAME
+        : Predicate<"Subtarget->has"#NAME#"()">,
+          AssemblerPredicate<(any_of !cast<SubtargetFeature>("Feature"#NAME))>;
+    else
+      def Has#NAME : Predicate<"Subtarget->has"#NAME#"()">;
 }
 
 def FeatureFastFMAF32 : SubtargetFeature<"fast-fmaf",
@@ -152,7 +178,8 @@ def FeatureUnalignedDSAccess : SubtargetFeature<"unaligned-ds-access",
 def FeatureRelaxedBufferOOBMode : SubtargetFeature<"relaxed-buffer-oob-mode",
   "RelaxedBufferOOBMode",
   "true",
-  "Disable strict out-of-bounds buffer guarantees. An OOB access may potentially cause an adjacent access to be treated as if it were also OOB"
+  "Disable strict out-of-bounds buffer guarantees. An OOB access may potentially"
+  "cause an adjacent access to be treated as if it were also OOB"
 >;
 
 defm ApertureRegs : AMDGPUSubtargetFeature<"aperture-regs",
@@ -334,7 +361,8 @@ def FeatureNegativeScratchOffsetBug : SubtargetFeature<"negative-scratch-offset-
 def FeatureNegativeUnalignedScratchOffsetBug : SubtargetFeature<"negative-unaligned-scratch-offset-bug",
   "NegativeUnalignedScratchOffsetBug",
   "true",
-  "Scratch instructions with a VGPR offset and a negative immediate offset that is not a multiple of 4 read wrong memory on GFX10"
+  "Scratch instructions with a VGPR offset and a negative immediate offset that"
+  "is not a multiple of 4 read wrong memory on GFX10"
 >;
 
 defm Offset3fBug : AMDGPUSubtargetFeature<"offset-3f-bug",
@@ -352,10 +380,10 @@ defm ImageGather4D16Bug : AMDGPUSubtargetFeature<"image-gather4-d16-bug",
   /*GenPredicate=*/0
 >;
 
-def FeatureMADIntraFwdBug : SubtargetFeature<"mad-intra-fwd-bug",
-  "HasMADIntraFwdBug",
-  "true",
-  "MAD_U64/I64 intra instruction forwarding bug"
+defm MADIntraFwdBug : AMDGPUSubtargetFeature<"mad-intra-fwd-bug",
+  "MAD_U64/I64 intra instruction forwarding bug",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/0
 >;
 
 defm MSAALoadDstSelBug : AMDGPUSubtargetFeature<"msaa-load-dst-sel-bug",
@@ -533,9 +561,7 @@ defm 16BitInsts : AMDGPUSubtargetFeature<"16-bit-insts",
   "Has i16/f16 instructions"
 >;
 
-def FeatureTrue16BitInsts : SubtargetFeature<"true16",
-  "HasTrue16BitInsts",
-  "true",
+defm True16BitInsts : AMDGPUSubtargetFeature<"true16",
   "True 16-bit operand instructions"
 >;
 
@@ -587,10 +613,10 @@ defm ScalarAtomics : AMDGPUSubtargetFeature<"scalar-atomics",
   "Has atomic scalar memory instructions"
 >;
 
-def FeatureSDWA : SubtargetFeature<"sdwa",
-  "HasSDWA",
-  "true",
-  "Support SDWA (Sub-DWORD Addressing) extension"
+defm SDWA : AMDGPUSubtargetFeature<"sdwa",
+  "Support SDWA (Sub-DWORD Addressing) extension",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/0
 >;
 
 defm SDWAOmod : AMDGPUSubtargetFeature<"sdwa-omod",
@@ -772,10 +798,10 @@ defm FP8E5M3Insts : AMDGPUSubtargetFeature<"fp8e5m3-insts",
   "Has fp8 e5m3 format support"
 >;
 
-def FeatureCvtFP8VOP1Bug : SubtargetFeature<"cvt-fp8-vop1-bug",
-  "HasCvtFP8Vop1Bug",
-  "true",
+defm CvtFP8VOP1Bug : AMDGPUSubtargetFeature<"cvt-fp8-vop1-bug",
   "FP8/BF8 VOP1 form of conversion to F32 is unreliable",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/0,
   [FeatureFP8ConversionInsts]
 >;
 
@@ -820,11 +846,11 @@ defm AtomicFlatPkAdd16Insts : AMDGPUSubtargetFeature<"atomic-flat-pk-add-16-inst
   "Has flat_atomic_pk_add_f16 and flat_atomic_pk_add_bf16 instructions"
 >;
 
-def FeatureAtomicFaddRtnInsts : SubtargetFeature<"atomic-fadd-rtn-insts",
-  "HasAtomicFaddRtnInsts",
-  "true",
+defm AtomicFaddRtnInsts : AMDGPUSubtargetFeature<"atomic-fadd-rtn-insts",
   "Has buffer_atomic_add_f32 and global_atomic_add_f32 instructions that "
   "return original value",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
   [FeatureFlatGlobalInsts]
 >;
 
@@ -836,25 +862,25 @@ defm AtomicFMinFMaxF64GlobalInsts : AMDGPUSubtargetFeature<"atomic-fmin-fmax-glo
   "Has global/buffer instructions for atomicrmw fmin/fmax for float"
 >;
 
-def FeatureAtomicFMinFMaxF32FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f32",
-  "HasAtomicFMinFMaxF32FlatInsts",
-  "true",
+defm AtomicFMinFMaxF32FlatInsts : AMDGPUSubtargetFeature<"atomic-fmin-fmax-flat-f32",
   "Has flat memory instructions for atomicrmw fmin/fmax for float",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
   [FeatureFlatAddressSpace]
 >;
 
-def FeatureAtomicFMinFMaxF64FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f64",
-  "HasAtomicFMinFMaxF64FlatInsts",
-  "true",
+defm AtomicFMinFMaxF64FlatInsts : AMDGPUSubtargetFeature<"atomic-fmin-fmax-flat-f64",
   "Has flat memory instructions for atomicrmw fmin/fmax for double",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
   [FeatureFlatAddressSpace]
 >;
 
-def FeatureAtomicFaddNoRtnInsts : SubtargetFeature<"atomic-fadd-no-rtn-insts",
-  "HasAtomicFaddNoRtnInsts",
-  "true",
+defm AtomicFaddNoRtnInsts : AMDGPUSubtargetFeature<"atomic-fadd-no-rtn-insts",
   "Has buffer_atomic_add_f32 and global_atomic_add_f32 instructions that "
   "don't return original value",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
   [FeatureFlatGlobalInsts]
 >;
 
@@ -867,37 +893,36 @@ def FeatureAtomicBufferGlobalPkAddF16NoRtnInsts
   [FeatureFlatGlobalInsts]
 >;
 
-def FeatureAtomicBufferGlobalPkAddF16Insts : SubtargetFeature<"atomic-buffer-global-pk-add-f16-insts",
- "HasAtomicBufferGlobalPkAddF16Insts",
- "true",
- "Has buffer_atomic_pk_add_f16 and global_atomic_pk_add_f16 instructions that "
- "can return original value",
- [FeatureFlatGlobalInsts]
+defm AtomicBufferGlobalPkAddF16Insts : AMDGPUSubtargetFeature<"atomic-buffer-global-pk-add-f16-insts",
+  "Has buffer_atomic_pk_add_f16 and global_atomic_pk_add_f16 instructions that "
+  "can return original value",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureFlatGlobalInsts]
 >;
 
-def FeatureAtomicGlobalPkAddBF16Inst : SubtargetFeature<"atomic-global-pk-add-bf16-inst",
- "HasAtomicGlobalPkAddBF16Inst",
- "true",
- "Has global_atomic_pk_add_bf16 instruction",
- [FeatureFlatGlobalInsts]
+defm AtomicGlobalPkAddBF16Inst : AMDGPUSubtargetFeature<"atomic-global-pk-add-bf16-inst",
+  "Has global_atomic_pk_add_bf16 instruction",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureFlatGlobalInsts]
 >;
 
 defm AtomicBufferPkAddBF16Inst : AMDGPUSubtargetFeature<"atomic-buffer-pk-add-bf16-inst",
   "Has buffer_atomic_pk_add_bf16 instruction"
 >;
 
-def FeatureAtomicCSubNoRtnInsts : SubtargetFeature<"atomic-csub-no-rtn-insts",
-  "HasAtomicCSubNoRtnInsts",
-  "true",
+defm AtomicCSubNoRtnInsts : AMDGPUSubtargetFeature<"atomic-csub-no-rtn-insts",
   "Has buffer_atomic_csub and global_atomic_csub instructions that don't "
-  "return original value"
+  "return original value",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/0
 >;
 
-def FeatureFlatAtomicFaddF32Inst
-  : SubtargetFeature<"flat-atomic-fadd-f32-inst",
-  "HasFlatAtomicFaddF32Inst",
-  "true",
+defm FlatAtomicFaddF32Inst : AMDGPUSubtargetFeature<"flat-atomic-fadd-f32-inst",
   "Has flat_atomic_add_f32 instruction",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
   [FeatureFlatAddressSpace]
 >;
 
@@ -969,10 +994,10 @@ defm ShaderCyclesRegister : AMDGPUSubtargetFeature<"shader-cycles-register",
   "Has SHADER_CYCLES hardware register"
 >;
 
-def FeatureShaderCyclesHiLoRegisters : SubtargetFeature<"shader-cycles-hi-lo-registers",
-  "HasShaderCyclesHiLoRegisters",
-  "true",
-  "Has SHADER_CYCLES_HI/LO hardware registers"
+defm ShaderCyclesHiLoRegisters : AMDGPUSubtargetFeature<"shader-cycles-hi-lo-registers",
+  "Has SHADER_CYCLES_HI/LO hardware registers",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/0
 >;
 
 defm MadMacF32Insts : AMDGPUSubtargetFeature<"mad-mac-f32-insts",
@@ -1230,16 +1255,16 @@ defm ArchitectedSGPRs : AMDGPUSubtargetFeature<"architected-sgprs",
   /*GenPredicate=*/0
 >;
 
-def FeatureGDS : SubtargetFeature<"gds",
-  "HasGDS",
-  "true",
-  "Has Global Data Share"
+defm GDS : AMDGPUSubtargetFeature<"gds",
+  "Has Global Data Share",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/0
 >;
 
-def FeatureGWS : SubtargetFeature<"gws",
-  "HasGWS",
-  "true",
-  "Has Global Wave Sync"
+defm GWS : AMDGPUSubtargetFeature<"gws",
+  "Has Global Wave Sync",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/0
 >;
 
 def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
@@ -2355,14 +2380,6 @@ def isGFX940orGFX1250 :
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
 
-def HasAtomicFMinFMaxF32FlatInsts :
-  Predicate<"Subtarget->hasAtomicFMinFMaxF32FlatInsts()">,
-  AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF32FlatInsts)>;
-
-def HasAtomicFMinFMaxF64FlatInsts :
-  Predicate<"Subtarget->hasAtomicFMinFMaxF64FlatInsts()">,
-  AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF64FlatInsts)>;
-
 def HasAtomicCondSubClampFlatInsts :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
@@ -2432,8 +2449,6 @@ def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">;
 
 def HasXNACKEnabled : Predicate<"Subtarget->isXNACKEnabled()">;
 
-def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
-  AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
 def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of (not FeatureTrue16BitInsts))>;
 
@@ -2465,8 +2480,6 @@ def HasMinMaxDenormModes : Predicate<"Subtarget->supportsMinMaxDenormModes()">;
 def NotHasMinMaxDenormModes : Predicate<"!Subtarget->supportsMinMaxDenormModes()">;
 
 def HasFminFmaxLegacy : Predicate<"Subtarget->hasFminFmaxLegacy()">;
-
-def HasSDWA : Predicate<"Subtarget->hasSDWA()">;
 
 def HasSDWA8 : Predicate<"Subtarget->hasSDWA()">,
   AssemblerPredicate<(all_of (not FeatureGFX9Insts), FeatureSDWA)>;
@@ -2518,8 +2531,6 @@ def has32BankLDS : Predicate<"Subtarget->getLDSBankCount() == 32">;
 def NotHasMAIInsts : Predicate<"!Subtarget->hasMAIInsts()">,
   AssemblerPredicate<(all_of (not FeatureMAIInsts))>;
 
-def HasShaderCyclesHiLoRegisters : Predicate<"Subtarget->hasShaderCyclesHiLoRegisters()">;
-
 def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of (not FeatureFP8E5M3Insts))>;
 
@@ -2533,23 +2544,9 @@ def HasAtomicDsCondSubClampInsts :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
-def HasAtomicFaddRtnInsts : Predicate<"Subtarget->hasAtomicFaddRtnInsts()">,
-  AssemblerPredicate<(all_of FeatureAtomicFaddRtnInsts)>;
-def HasAtomicFaddNoRtnInsts : Predicate<"Subtarget->hasAtomicFaddNoRtnInsts()">,
-  AssemblerPredicate<(all_of FeatureAtomicFaddNoRtnInsts)>;
 def HasAtomicBufferGlobalPkAddF16NoRtnInsts
   : Predicate<"Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() || Subtarget->hasAtomicBufferGlobalPkAddF16Insts()">,
   AssemblerPredicate<(any_of FeatureAtomicBufferGlobalPkAddF16NoRtnInsts, FeatureAtomicBufferGlobalPkAddF16Insts)>;
-def HasAtomicBufferGlobalPkAddF16Insts
-  : Predicate<"Subtarget->hasAtomicBufferGlobalPkAddF16Insts()">,
-  AssemblerPredicate<(all_of FeatureAtomicBufferGlobalPkAddF16Insts)>;
-def HasAtomicGlobalPkAddBF16Inst
-  : Predicate<"Subtarget->hasAtomicGlobalPkAddBF16Inst()">,
-    AssemblerPredicate<(all_of FeatureAtomicGlobalPkAddBF16Inst)>;
-def HasFlatAtomicFaddF32Inst
-  : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
-  AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
-
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
@@ -2563,21 +2560,12 @@ def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
 def HasUnalignedAccessMode : Predicate<"Subtarget->hasUnalignedAccessMode()">,
   AssemblerPredicate<(all_of FeatureUnalignedAccessMode)>;
 
-def HasMADIntraFwdBug : Predicate<"Subtarget->hasMADIntraFwdBug()">;
-
-def HasNotMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
+def NotHasMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
 def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of (not FeatureSALUFloatInsts))>;
 
-def HasGDS : Predicate<"Subtarget->hasGDS()">;
-
-def HasGWS : Predicate<"Subtarget->hasGWS()">;
-
-def HasCvtFP8VOP1Bug : Predicate<"Subtarget->hasCvtFP8VOP1Bug()">;
-def HasNoCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
-
-def HasAtomicCSubNoRtnInsts : Predicate<"Subtarget->hasAtomicCSubNoRtnInsts()">;
+def NotHasCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
 
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
