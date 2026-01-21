@@ -27,7 +27,7 @@ define double @test_cross(float %in) {
 define double @test_cross_fail_nan(float %in) {
 ; CHECK-LABEL: test_cross_fail_nan:
   %cmp = fcmp olt float %in, 0.000000e+00
-  %val = select i1 %cmp, float %in, float 0.000000e+00
+  %val = select nnan nsz i1 %cmp, float %in, float 0.000000e+00
   %longer = fpext float %val to double
   ret double %longer
 
@@ -68,7 +68,7 @@ define float @minnum_fcmp_nsz(float %x, float %y) {
 define float @minnum_select_nsz(float %x, float %y) {
 ; CHECK-LABEL: minnum_select_nsz:
   %cmp = fcmp nnan ole float %x, %y
-  %sel = select nsz i1 %cmp, float %x, float %y
+  %sel = select nnan nsz i1 %cmp, float %x, float %y
   ret float %sel
 ; CHECK: fminnm s0, s0, s1
 }

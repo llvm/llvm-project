@@ -64,7 +64,7 @@ define double @f4(double %dummy, double %val) {
 ; CHECK-NEXT:    wfmaxdb %f0, %f2, %f0, 4
 ; CHECK-NEXT:    br %r14
   %cmp = fcmp ogt double %val, 0.0
-  %ret = select i1 %cmp, double %val, double 0.0
+  %ret = select nnan nsz i1 %cmp, double %val, double 0.0
   ret double %ret
 }
 
@@ -175,7 +175,7 @@ define float @f14(float %dummy, float %val) {
 ; CHECK-NEXT:    wfmaxsb %f0, %f2, %f0, 4
 ; CHECK-NEXT:    br %r14
   %cmp = fcmp ogt float %val, 0.0
-  %ret = select i1 %cmp, float %val, float 0.0
+  %ret = select nnan nsz i1 %cmp, float %val, float 0.0
   ret float %ret
 }
 
@@ -285,7 +285,7 @@ define void @f24(ptr %ptr, ptr %dst) {
 ; CHECK-NEXT:    br %r14
   %val = load fp128, ptr %ptr
   %cmp = fcmp ogt fp128 %val, 0xL00000000000000000000000000000000
-  %res = select i1 %cmp, fp128 %val, fp128 0xL00000000000000000000000000000000
+  %res = select nnan nsz i1 %cmp, fp128 %val, fp128 0xL00000000000000000000000000000000
   store fp128 %res, ptr %dst
   ret void
 }

@@ -859,7 +859,7 @@ define arm_aapcs_vfpcc <4 x float> @fcmp_fast_olt_v4f32_x(<4 x float> %x, <4 x f
 entry:
   %c = call <4 x i1> @llvm.arm.mve.vctp32(i32 %n)
   %a1 = fcmp fast olt <4 x float> %x, %y
-  %a = select <4 x i1> %a1, <4 x float> %x, <4 x float> %y
+  %a = select nnan nsz <4 x i1> %a1, <4 x float> %x, <4 x float> %y
   %b = select <4 x i1> %c, <4 x float> %a, <4 x float> %x
   ret <4 x float> %b
 }
@@ -874,7 +874,7 @@ define arm_aapcs_vfpcc <8 x half> @fcmp_fast_olt_v8f16_x(<8 x half> %x, <8 x hal
 entry:
   %c = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)
   %a1 = fcmp fast olt <8 x half> %x, %y
-  %a = select <8 x i1> %a1, <8 x half> %x, <8 x half> %y
+  %a = select nnan nsz <8 x i1> %a1, <8 x half> %x, <8 x half> %y
   %b = select <8 x i1> %c, <8 x half> %a, <8 x half> %x
   ret <8 x half> %b
 }
@@ -889,7 +889,7 @@ define arm_aapcs_vfpcc <4 x float> @fcmp_fast_ogt_v4f32_x(<4 x float> %x, <4 x f
 entry:
   %c = call <4 x i1> @llvm.arm.mve.vctp32(i32 %n)
   %a1 = fcmp fast ogt <4 x float> %x, %y
-  %a = select <4 x i1> %a1, <4 x float> %x, <4 x float> %y
+  %a = select nnan nsz <4 x i1> %a1, <4 x float> %x, <4 x float> %y
   %b = select <4 x i1> %c, <4 x float> %a, <4 x float> %x
   ret <4 x float> %b
 }
@@ -904,7 +904,7 @@ define arm_aapcs_vfpcc <8 x half> @fcmp_fast_ogt_v8f16_x(<8 x half> %x, <8 x hal
 entry:
   %c = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)
   %a1 = fcmp fast ogt <8 x half> %x, %y
-  %a = select <8 x i1> %a1, <8 x half> %x, <8 x half> %y
+  %a = select nnan nsz <8 x i1> %a1, <8 x half> %x, <8 x half> %y
   %b = select <8 x i1> %c, <8 x half> %a, <8 x half> %x
   ret <8 x half> %b
 }
@@ -2435,7 +2435,7 @@ define arm_aapcs_vfpcc <4 x float> @fcmp_fast_olt_v4f32_y(<4 x float> %x, <4 x f
 entry:
   %c = call <4 x i1> @llvm.arm.mve.vctp32(i32 %n)
   %a1 = fcmp fast olt <4 x float> %x, %y
-  %a = select <4 x i1> %a1, <4 x float> %x, <4 x float> %y
+  %a = select nnan nsz <4 x i1> %a1, <4 x float> %x, <4 x float> %y
   %b = select <4 x i1> %c, <4 x float> %a, <4 x float> %y
   ret <4 x float> %b
 }
@@ -2451,7 +2451,7 @@ define arm_aapcs_vfpcc <8 x half> @fcmp_fast_olt_v8f16_y(<8 x half> %x, <8 x hal
 entry:
   %c = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)
   %a1 = fcmp fast olt <8 x half> %x, %y
-  %a = select <8 x i1> %a1, <8 x half> %x, <8 x half> %y
+  %a = select nnan nsz <8 x i1> %a1, <8 x half> %x, <8 x half> %y
   %b = select <8 x i1> %c, <8 x half> %a, <8 x half> %y
   ret <8 x half> %b
 }
@@ -2467,7 +2467,7 @@ define arm_aapcs_vfpcc <4 x float> @fcmp_fast_ogt_v4f32_y(<4 x float> %x, <4 x f
 entry:
   %c = call <4 x i1> @llvm.arm.mve.vctp32(i32 %n)
   %a1 = fcmp fast ogt <4 x float> %x, %y
-  %a = select <4 x i1> %a1, <4 x float> %x, <4 x float> %y
+  %a = select nnan nsz <4 x i1> %a1, <4 x float> %x, <4 x float> %y
   %b = select <4 x i1> %c, <4 x float> %a, <4 x float> %y
   ret <4 x float> %b
 }
@@ -2483,7 +2483,7 @@ define arm_aapcs_vfpcc <8 x half> @fcmp_fast_ogt_v8f16_y(<8 x half> %x, <8 x hal
 entry:
   %c = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)
   %a1 = fcmp fast ogt <8 x half> %x, %y
-  %a = select <8 x i1> %a1, <8 x half> %x, <8 x half> %y
+  %a = select nnan nsz <8 x i1> %a1, <8 x half> %x, <8 x half> %y
   %b = select <8 x i1> %c, <8 x half> %a, <8 x half> %y
   ret <8 x half> %b
 }

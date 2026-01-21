@@ -1387,7 +1387,7 @@ define void @pr65820(ptr %y, <4 x float> %splat) {
 entry:
   %broadcast.splat = shufflevector <4 x float> %splat, <4 x float> zeroinitializer, <4 x i32> zeroinitializer
   %0 = fcmp ogt <4 x float> %broadcast.splat, zeroinitializer
-  %1 = select <4 x i1> %0, <4 x float> %broadcast.splat, <4 x float> zeroinitializer
+  %1 = select nnan nsz <4 x i1> %0, <4 x float> %broadcast.splat, <4 x float> zeroinitializer
   store <4 x float> %1, ptr %y, align 4
   ret void
 }

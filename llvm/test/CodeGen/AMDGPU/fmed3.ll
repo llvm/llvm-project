@@ -1105,11 +1105,11 @@ define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, 
 
   ; fmax_legacy
   %cmp0 = fcmp ule float %a.nnan, 2.0
-  %max = select i1 %cmp0, float 2.0, float %a.nnan
+  %max = select nnan nsz i1 %cmp0, float 2.0, float %a.nnan
 
   ; fmin_legacy
   %cmp1 = fcmp uge float %max, 4.0
-  %med = select i1 %cmp1, float 4.0, float %max
+  %med = select nnan nsz i1 %cmp1, float 4.0, float %max
 
   store float %med, ptr addrspace(1) %outgep
   ret void

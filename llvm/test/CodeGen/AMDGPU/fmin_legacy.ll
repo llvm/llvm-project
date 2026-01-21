@@ -306,7 +306,9 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v1f32(ptr addrspace(1) %out, ptr
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 
-; GCN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; GCN: v_mul_f32_e32 [[CA:v[0-9]+]], 1.0, [[A]]
+; GCN: v_mul_f32_e32 [[CB:v[0-9]+]], 1.0, [[B]]
+; GCN: v_min_f32_e32 {{v[0-9]+}}, [[CA]], [[CB]]
 define amdgpu_kernel void @test_fmin_legacy_ult_v1f32_fast(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr <1 x float>, ptr addrspace(1) %in, i32 %tid
@@ -349,8 +351,12 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v2f32(ptr addrspace(1) %out, ptr
 ; GCN: {{buffer|flat}}_load_dwordx2
 ; GCN: {{buffer|flat}}_load_dwordx2
 
-; GCN: v_min_f32_e32
-; GCN: v_min_f32_e32
+; SI: v_min_legacy_f32_e32
+; SI: v_min_legacy_f32_e32
+; VI: v_cmp_nge_f32_e32
+; VI: v_cndmask_b32_e32
+; VI: v_cmp_nge_f32_e32
+; VI: v_cndmask_b32_e32
 define amdgpu_kernel void @test_fmin_legacy_ult_v2f32_fast(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr <2 x float>, ptr addrspace(1) %in, i32 %tid
@@ -394,13 +400,17 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v3f32(ptr addrspace(1) %out, ptr
 }
 
 ; FUNC-LABEL: {{^}}test_fmin_legacy_ult_v3f32_fast:
-; VI-NOT: v_cmp
-; VI-NOT: v_cndmask
+; VI: v_cmp_nge_f32_e32
+; VI: v_cndmask_b32_e32
+; VI: v_cmp_nge_f32_e32
+; VI: v_cndmask_b32_e32
+; VI: v_cmp_nge_f32_e32
+; VI: v_cndmask_b32_e32
 
-; GCN: v_min_f32_e32
-; GCN: v_min_f32_e32
-; GCN: v_min_f32_e32
-; GCN-NOT: v_min_
+; SI: v_min_legacy_f32_e32
+; SI: v_min_legacy_f32_e32
+; SI: v_min_legacy_f32_e32
+; SI-NOT: v_min_
 define amdgpu_kernel void @test_fmin_legacy_ult_v3f32_fast(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr <3 x float>, ptr addrspace(1) %in, i32 %tid

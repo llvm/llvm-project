@@ -747,7 +747,7 @@ define arm_aapcs_vfpcc <4 x float> @fcmp_fast_olt_v4f32(<4 x float> %z, <4 x flo
 entry:
   %c = fcmp oeq <4 x float> %z, zeroinitializer
   %a1 = fcmp fast olt <4 x float> %x, %y
-  %a = select <4 x i1> %a1, <4 x float> %x, <4 x float> %y
+  %a = select nnan nsz <4 x i1> %a1, <4 x float> %x, <4 x float> %y
   %b = select <4 x i1> %c, <4 x float> %a, <4 x float> %z
   ret <4 x float> %b
 }
@@ -761,7 +761,7 @@ define arm_aapcs_vfpcc <8 x half> @fcmp_fast_olt_v8f16(<8 x half> %z, <8 x half>
 entry:
   %c = fcmp oeq <8 x half> %z, zeroinitializer
   %a1 = fcmp fast olt <8 x half> %x, %y
-  %a = select <8 x i1> %a1, <8 x half> %x, <8 x half> %y
+  %a = select nnan nsz <8 x i1> %a1, <8 x half> %x, <8 x half> %y
   %b = select <8 x i1> %c, <8 x half> %a, <8 x half> %z
   ret <8 x half> %b
 }
@@ -775,7 +775,7 @@ define arm_aapcs_vfpcc <4 x float> @fcmp_fast_ogt_v4f32(<4 x float> %z, <4 x flo
 entry:
   %c = fcmp oeq <4 x float> %z, zeroinitializer
   %a1 = fcmp fast ogt <4 x float> %x, %y
-  %a = select <4 x i1> %a1, <4 x float> %x, <4 x float> %y
+  %a = select nnan nsz <4 x i1> %a1, <4 x float> %x, <4 x float> %y
   %b = select <4 x i1> %c, <4 x float> %a, <4 x float> %z
   ret <4 x float> %b
 }
@@ -789,7 +789,7 @@ define arm_aapcs_vfpcc <8 x half> @fcmp_fast_ogt_v8f16(<8 x half> %z, <8 x half>
 entry:
   %c = fcmp oeq <8 x half> %z, zeroinitializer
   %a1 = fcmp fast ogt <8 x half> %x, %y
-  %a = select <8 x i1> %a1, <8 x half> %x, <8 x half> %y
+  %a = select nnan nsz <8 x i1> %a1, <8 x half> %x, <8 x half> %y
   %b = select <8 x i1> %c, <8 x half> %a, <8 x half> %z
   ret <8 x half> %b
 }
