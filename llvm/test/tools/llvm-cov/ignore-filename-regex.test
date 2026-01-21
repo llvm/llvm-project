@@ -46,7 +46,7 @@ RUN:   -path-equivalence=/tmp,%S/Inputs -ignore-filename-regex='.*\.cc$' \
 RUN:   %S/Inputs/sources_specified/main.covmapping \
 RUN:   | FileCheck -check-prefix=SHOW_IGNORE_CC %s
 
-# Order of files may differ, check that there are 3 files and not abs.h.
+# Order of files may differ, check that there are 3 files and not main.cc.
 SHOW_IGNORE_CC-NOT: {{.*}}main.cc{{.*}}
 SHOW_IGNORE_CC: {{.*}}sources_specified{{.*}}
 SHOW_IGNORE_CC: {{.*}}sources_specified{{.*}}
