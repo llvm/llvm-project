@@ -1980,21 +1980,15 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
   constexpr unsigned ECQueueWaveAbort = 0x400;
 
   MachineBasicBlock *TrapBB = &MBB;
-  MachineBasicBlock *ContBB = &MBB;
   MachineBasicBlock *HaltLoopBB = MF->CreateMachineBasicBlock();
 
   if (!MBB.succ_empty() || std::next(MI.getIterator()) != MBB.end()) {
-    ContBB = MBB.splitAt(MI, /*UpdateLiveIns=*/false);
+    MBB.splitAt(MI, /*UpdateLiveIns=*/false);
     TrapBB = MF->CreateMachineBasicBlock();
     BuildMI(MBB, MI, DL, get(AMDGPU::S_CBRANCH_EXECNZ)).addMBB(TrapBB);
     MF->push_back(TrapBB);
     MBB.addSuccessor(TrapBB);
-  } else {
-    // Since we're adding HaltLoopBB and modifying the CFG, we must return a
-    // different block to signal the change.
-    ContBB = HaltLoopBB;
   }
-
   // Start with a `s_trap 2`, if we're in PRIV=1 and we need the workaround this
   // will be a nop.
   BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_TRAP))
@@ -2030,7 +2024,7 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
   MF->push_back(HaltLoopBB);
   HaltLoopBB->addSuccessor(HaltLoopBB);
 
-  return ContBB;
+  return MBB.getNextNode();
 }
 
 unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
