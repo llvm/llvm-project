@@ -118,7 +118,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     printOpDecorate(MI, OS);
   } else if (OpCode == SPIRV::OpExtInstImport) {
     recordOpExtInstImport(MI);
-  } else if (OpCode == SPIRV::OpExtInst) {
+  } else if (OpCode == SPIRV::OpExtInst ||
+             OpCode == SPIRV::OpExtInstWithForwardRefsKHR) {
     printOpExtInst(MI, OS);
   } else if (OpCode == SPIRV::UNKNOWN_type) {
     printUnknownType(MI, OS);
