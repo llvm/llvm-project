@@ -84,6 +84,17 @@ class RISCVAsmParser : public MCTargetAsmParser {
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
   bool isRV64() const { return getSTI().hasFeature(RISCV::Feature64Bit); }
   bool isRVE() const { return getSTI().hasFeature(RISCV::FeatureStdExtE); }
+  /// \return When true, pointers should use YGPR instead of GPR
+  bool isCapMode() const { return getSTI().hasFeature(RISCV::FeatureCapMode); }
+  unsigned getPtrAddiOpcode() const {
+    return isCapMode() ? RISCV::ADDIY : RISCV::ADDI;
+  }
+  unsigned getPtrLoadOpcode() const {
+    if (isCapMode())
+      return RISCV::LY;
+    return isRV64() ? RISCV::LD : RISCV::LW;
+  }
+
   bool enableExperimentalExtension() const {
     return getSTI().hasFeature(RISCV::Experimental);
   }
@@ -1372,11 +1383,13 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg);
   bool IsRegVR = RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg);
 
-  // In RVY mode, the BasePtrRC register class should select capability
+  // In RVY mode, the various Ptr register class should select capability
   // registers for the base pointer operands, otherwise we use GPRs.
   // TODO: Is there any way we could do this in tablegen automatically?
-  if (Kind == MCK_RegByHwMode_BasePtrRC)
-    Kind = STI->hasFeature(RISCV::FeatureCapMode) ? MCK_YGPRNoX0 : MCK_GPR;
+  if (Kind == MCK_RegByHwMode_PtrReg)
+    Kind = isCapMode() ? MCK_YGPR : MCK_GPR;
+  else if (Kind == MCK_RegByHwMode_BasePtrRC)
+    Kind = isCapMode() ? MCK_YGPRNoX0 : MCK_GPR;
 
   if (Op.isGPR() && (Kind == MCK_YGPR || Kind == MCK_YGPRNoX0)) {
     // GPR and capability GPR use the same register names, convert if required.
@@ -3601,7 +3614,7 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_PCREL_HI20,
-                    RISCV::ADDI, IDLoc, Out);
+                    getPtrAddiOpcode(), IDLoc, Out);
 }
 
 void RISCVAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
@@ -3614,7 +3627,7 @@ void RISCVAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
   //             Lx rdest, %pcrel_lo(TmpLabel)(rdest)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
-  unsigned SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
+  unsigned SecondOpcode = getPtrLoadOpcode();
   emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_GOT_HI20,
                     SecondOpcode, IDLoc, Out);
 }
@@ -3644,9 +3657,8 @@ void RISCVAsmParser::emitLoadTLSIEAddress(MCInst &Inst, SMLoc IDLoc,
   //             Lx rdest, %pcrel_lo(TmpLabel)(rdest)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
-  unsigned SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
   emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_TLS_GOT_HI20,
-                    SecondOpcode, IDLoc, Out);
+                    getPtrLoadOpcode(), IDLoc, Out);
 }
 
 void RISCVAsmParser::emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc,
@@ -3660,7 +3672,7 @@ void RISCVAsmParser::emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_TLS_GD_HI20,
-                    RISCV::ADDI, IDLoc, Out);
+                    getPtrAddiOpcode(), IDLoc, Out);
 }
 
 void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,

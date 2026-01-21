@@ -272,8 +272,8 @@ def XLenVT : ValueTypeByHwMode<[RV32I, RV64I, RV32Y, RV64Y],
 defvar XLenPairVT = untyped;
 
 // Allow f64 in GPR for ZDINX on RV64.
-def XLenFVT : ValueTypeByHwMode<[RV64I, RV64Y],
-                                [f64,   f64]>;
+def XLenFVT : ValueTypeByHwMode<[DefaultMode, RV64I, RV64Y],
+                                [/*XLen*/i32, f64,   f64]>;
 def XLenPairFVT : ValueTypeByHwMode<[RV32I, RV32Y],
                                     [f64,   f64]>;
 
@@ -282,8 +282,8 @@ def XLenVecI8VT : ValueTypeByHwMode<[RV32I, RV64I, RV32Y, RV64Y],
                                     [v4i8,  v8i8,  v4i8,  v8i8]>;
 def XLenVecI16VT : ValueTypeByHwMode<[RV32I, RV64I, RV32Y, RV64Y],
                                      [v2i16, v4i16, v2i16, v4i16]>;
-def XLenVecI32VT : ValueTypeByHwMode<[RV64I, RV64Y],
-                                     [v2i32, v2i32]>;
+def XLenVecI32VT : ValueTypeByHwMode<[DefaultMode, RV64I, RV64Y],
+                                     [/*XLen*/i32, v2i32, v2i32]>;
 def XLenRI : RegInfoByHwMode<
       [RV32I,             RV64I,             RV32Y,             RV64Y],
       [RegInfo<32,32,32>, RegInfo<64,64,64>, RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -333,6 +333,18 @@ def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
   let RegInfos = YLenRI;
 }
 
+// Note: We have to use a multiclass here instead of inheriting from
+// RegClassByHwMode since tablegen does not allow subclasses.
+// TODO: could add a usage assert here that AddrRC is XLenVT and CapRC YLenVT?
+multiclass PtrRegClassByHwMode<RegisterClass AddrRC, RegisterClass CapRC> {
+  def "" : RegClassByHwMode<[RV32I,  RV64I,  RV32Y, RV64Y],
+                            [AddrRC, AddrRC, CapRC, CapRC]>;
+}
+
+// This register class represents a pointer: YLen in capability mode, XLen
+// otherwise. Used for mode-dependent instructions such as AUIPC/JALR.
+defm PtrReg : PtrRegClassByHwMode<GPR, YGPR>;
+
 def GPRX0 : GPRRegisterClass<(add X0)>;
 
 def GPRX1 : GPRRegisterClass<(add X1)> {
@@ -353,6 +365,10 @@ def YGPRNoX0 : GPRRegisterClass<(sub YGPR, X0_Y)> {
   let DiagnosticType = "InvalidRegClassYGPRNoNull";
   let DiagnosticString = GPRNoX0.DiagnosticString;
 }
+// Note: For RVY, the encodings using x0/zero (a null capability) as the base
+// are reserved. Therefore, we use YGPRNoX0 to reject them in the assembler
+// while allowing the encodings for RVI mode.
+defm BasePtrRC : PtrRegClassByHwMode<GPR, YGPRNoX0>;
 
 def GPRNoX2 : GPRRegisterClass<(sub GPR, X2)> {
   let DiagnosticType = "InvalidRegClassGPRNoX2";
@@ -405,6 +421,8 @@ def GPRNoX31 : GPRRegisterClass<(sub GPR, X31)> {
   let DiagnosticString = "register must be a GPR excluding t6 (x31)";
 }
 
+def NullReg : RegisterByHwMode<PtrReg, [RV32I, RV64I, RV32Y, RV64Y],
+                                       [X0,    X0,    X0_Y,  X0_Y]>;
 //===----------------------------------------------------------------------===//
 // Even-Odd GPR Pairs
 //===----------------------------------------------------------------------===//
