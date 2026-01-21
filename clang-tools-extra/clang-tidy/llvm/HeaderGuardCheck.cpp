@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HeaderGuardCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Path.h"
 
@@ -14,7 +15,9 @@ namespace clang::tidy::llvm_check {
 
 LLVMHeaderGuardCheck::LLVMHeaderGuardCheck(StringRef Name,
                                            ClangTidyContext *Context)
-    : HeaderGuardCheck(Name, Context) {}
+    : HeaderGuardCheck(Name, Context),
+      HeaderDirs(utils::options::parseStringList(
+          Options.get("HeaderDirs", "include"))) {}
 
 std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
                                                  StringRef OldGuard) {
@@ -27,10 +30,15 @@ std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
   // Sanitize the path. There are some rules for compatibility with the historic
   // style in include/llvm and include/clang which we want to preserve.
 
-  // We don't want _INCLUDE_ in our guards.
-  const size_t PosInclude = Guard.rfind("include/");
-  if (PosInclude != StringRef::npos)
-    Guard = Guard.substr(PosInclude + std::strlen("include/"));
+  // consider all directories from HeaderDirs option. Stop at first found.
+  for (StringRef HeaderDir : HeaderDirs) {
+    size_t PosHeaderDir = Guard.rfind(HeaderDir.str() + "/");
+    if (PosHeaderDir != StringRef::npos) {
+      // We don't want the header dir in our guards, i.e. _INCLUDE_
+      Guard = Guard.substr(PosHeaderDir + HeaderDir.size() + 1);
+      break; // stop at first found
+    }
+  }
 
   // For clang we drop the _TOOLS_.
   const size_t PosToolsClang = Guard.rfind("tools/clang/");
@@ -62,6 +70,11 @@ std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
     Guard = "FORTRAN" + Guard.substr(sizeof("flang") - 1);
 
   return StringRef(Guard).upper();
+}
+
+void LLVMHeaderGuardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "HeaderDirs",
+                utils::options::serializeStringList(HeaderDirs));
 }
 
 } // namespace clang::tidy::llvm_check

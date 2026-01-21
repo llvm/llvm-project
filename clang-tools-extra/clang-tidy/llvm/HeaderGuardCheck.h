@@ -21,7 +21,11 @@ public:
   LLVMHeaderGuardCheck(StringRef Name, ClangTidyContext *Context);
 
   bool shouldSuggestEndifComment(StringRef Filename) override { return false; }
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   std::string getHeaderGuard(StringRef Filename, StringRef OldGuard) override;
+
+private:
+  const std::vector<StringRef> HeaderDirs;
 };
 
 } // namespace clang::tidy::llvm_check

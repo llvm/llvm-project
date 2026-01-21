@@ -131,6 +131,9 @@ Changes in existing checks
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
 
+- Improved :doc:`llvm-header-guard <clang-tidy/checks/llvm/header-guard>` check
+  by adding the option `HeaderDirs` to configure header directory names.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
