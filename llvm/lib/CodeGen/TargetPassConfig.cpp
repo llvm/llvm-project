@@ -1509,6 +1509,12 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&UnreachableMachineBlockElimID);
   addPass(&LiveVariablesID);
 
+  // Run SSA machine scheduler runs just before PHI elimination.
+  if (EnableSSAMachineScheduler) {
+    addPass(&LiveIntervalsID);
+    addPass(&SSAMachineSchedulerID);
+  }
+
   // Edge splitting is smarter with machine loop info.
   addPass(&MachineLoopInfoID);
   addPass(&PHIEliminationID);

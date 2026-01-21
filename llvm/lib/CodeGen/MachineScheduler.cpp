@@ -347,6 +347,33 @@ protected:
   ScheduleDAGInstrs *createMachineScheduler();
 };
 
+/// Impl class for SSAMachineScheduler.
+class SSAMachineSchedulerImpl : public MachineSchedulerBase {
+  // These are only for using MF.verify()
+  // remove when verify supports passing in all analyses
+  MachineFunctionPass *P = nullptr;
+  MachineFunctionAnalysisManager *MFAM = nullptr;
+
+public:
+  struct RequiredAnalyses {
+    MachineLoopInfo &MLI;
+    MachineDominatorTree &MDT;
+    AAResults &AA;
+    LiveIntervals &LIS;
+  };
+
+  SSAMachineSchedulerImpl() {}
+  // Migration only
+  void setLegacyPass(MachineFunctionPass *P) { this->P = P; }
+  void setMFAM(MachineFunctionAnalysisManager *MFAM) { this->MFAM = MFAM; }
+
+  bool run(MachineFunction &MF, const TargetMachine &TM,
+           const RequiredAnalyses &Analyses);
+
+protected:
+  ScheduleDAGInstrs *createMachineScheduler();
+};
+
 /// Impl class for PostMachineScheduler.
 class PostMachineSchedulerImpl : public MachineSchedulerBase {
   // These are only for using MF.verify()
@@ -377,6 +404,7 @@ protected:
 using impl_detail::MachineSchedulerBase;
 using impl_detail::MachineSchedulerImpl;
 using impl_detail::PostMachineSchedulerImpl;
+using impl_detail::SSAMachineSchedulerImpl;
 
 namespace {
 /// MachineScheduler runs after coalescing and before register allocation.
@@ -387,6 +415,18 @@ public:
   MachineSchedulerLegacy();
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction&) override;
+
+  static char ID; // Class identification, replacement for typeinfo
+};
+
+/// SSAMachineScheduler runs before PHI elimination.
+class SSAMachineScheduler : public MachineFunctionPass {
+  SSAMachineSchedulerImpl Impl;
+
+public:
+  SSAMachineScheduler();
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &) override;
 
   static char ID; // Class identification, replacement for typeinfo
 };
@@ -435,6 +475,35 @@ void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+char SSAMachineScheduler::ID = 0;
+
+char &llvm::SSAMachineSchedulerID = SSAMachineScheduler::ID;
+
+INITIALIZE_PASS_BEGIN(SSAMachineScheduler, "ssa-machine-scheduler",
+                      "SSA Machine Instruction Scheduler", false, false)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_END(SSAMachineScheduler, "ssa-machine-scheduler",
+                    "SSA Machine Instruction Scheduler", false, false)
+
+SSAMachineScheduler::SSAMachineScheduler() : MachineFunctionPass(ID) {
+  initializeSSAMachineSchedulerPass(*PassRegistry::getPassRegistry());
+}
+
+void SSAMachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.setPreservesCFG();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addRequired<AAResultsWrapperPass>();
+  AU.addRequired<TargetPassConfig>();
+  AU.addRequired<SlotIndexesWrapperPass>();
+  AU.addRequired<LiveIntervalsWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -488,6 +557,11 @@ static cl::opt<bool> EnableMachineSched(
     "enable-misched",
     cl::desc("Enable the machine instruction scheduling pass."), cl::init(true),
     cl::Hidden);
+
+static cl::opt<bool> EnableSSAMachineSched(
+    "enable-ssa-misched",
+    cl::desc("Enable the machine instruction scheduling pass in SSA."),
+    cl::init(false), cl::Hidden);
 
 static cl::opt<bool> EnablePostRAMachineSched(
     "enable-post-misched",
@@ -559,6 +633,53 @@ bool MachineSchedulerImpl::run(MachineFunction &Func, const TargetMachine &TM,
   AA = &Analyses.AA;
   LIS = &Analyses.LIS;
   MBFI = &Analyses.MBFI;
+
+  if (VerifyScheduling) {
+    LLVM_DEBUG(LIS->dump());
+    const char *MSchedBanner = "Before machine scheduling.";
+    if (P)
+      MF->verify(P, MSchedBanner, &errs());
+    else
+      MF->verify(*MFAM, MSchedBanner, &errs());
+  }
+  RegClassInfo->runOnMachineFunction(*MF);
+
+  // Instantiate the selected scheduler for this target, function, and
+  // optimization level.
+  std::unique_ptr<ScheduleDAGInstrs> Scheduler(createMachineScheduler());
+  scheduleRegions(*Scheduler, false);
+
+  LLVM_DEBUG(LIS->dump());
+  if (VerifyScheduling) {
+    const char *MSchedBanner = "After machine scheduling.";
+    if (P)
+      MF->verify(P, MSchedBanner, &errs());
+    else
+      MF->verify(*MFAM, MSchedBanner, &errs());
+  }
+  return true;
+}
+
+/// Instantiate a ScheduleDAGInstrs that will be owned by the caller.
+ScheduleDAGInstrs *SSAMachineSchedulerImpl::createMachineScheduler() {
+  // Get the default scheduler set by the target for this function.
+  ScheduleDAGInstrs *Scheduler = TM->createMachineScheduler(this);
+  if (Scheduler)
+    return Scheduler;
+
+  // Default to GenericScheduler.
+  return createSchedLive(this);
+}
+
+bool SSAMachineSchedulerImpl::run(MachineFunction &Func,
+                                  const TargetMachine &TM,
+                                  const RequiredAnalyses &Analyses) {
+  MF = &Func;
+  MLI = &Analyses.MLI;
+  MDT = &Analyses.MDT;
+  this->TM = &TM;
+  AA = &Analyses.AA;
+  LIS = &Analyses.LIS;
 
   if (VerifyScheduling) {
     LLVM_DEBUG(LIS->dump());
@@ -669,11 +790,37 @@ bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   return Impl.run(MF, TM, {MLI, MDT, AA, LIS, MBFI});
 }
 
+bool SSAMachineScheduler::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  if (EnableSSAMachineSched.getNumOccurrences()) {
+    if (!EnableSSAMachineSched)
+      return false;
+  } else if (!MF.getSubtarget().enableSSAMachineScheduler()) {
+    return false;
+  }
+
+  auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  Impl.setLegacyPass(this);
+  return Impl.run(MF, TM, {MLI, MDT, AA, LIS});
+}
+
 MachineSchedulerPass::MachineSchedulerPass(const TargetMachine *TM)
     : Impl(std::make_unique<MachineSchedulerImpl>()), TM(TM) {}
 MachineSchedulerPass::~MachineSchedulerPass() = default;
 MachineSchedulerPass::MachineSchedulerPass(MachineSchedulerPass &&Other) =
     default;
+
+SSAMachineSchedulerPass::SSAMachineSchedulerPass(const TargetMachine *TM)
+    : Impl(std::make_unique<SSAMachineSchedulerImpl>()), TM(TM) {}
+SSAMachineSchedulerPass::SSAMachineSchedulerPass(
+    SSAMachineSchedulerPass &&Other) = default;
+SSAMachineSchedulerPass::~SSAMachineSchedulerPass() = default;
 
 PostMachineSchedulerPass::PostMachineSchedulerPass(const TargetMachine *TM)
     : Impl(std::make_unique<PostMachineSchedulerImpl>()), TM(TM) {}
@@ -709,6 +856,33 @@ MachineSchedulerPass::run(MachineFunction &MF,
       .preserveSet<CFGAnalyses>()
       .preserve<SlotIndexesAnalysis>()
       .preserve<LiveIntervalsAnalysis>();
+}
+
+PreservedAnalyses
+SSAMachineSchedulerPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  if (EnableSSAMachineSched.getNumOccurrences()) {
+    if (!EnableSSAMachineSched)
+      return PreservedAnalyses::all();
+  } else if (!MF.getSubtarget().enableSSAMachineScheduler()) {
+    LLVM_DEBUG(dbgs() << "Subtarget disables ssa-MI-sched.\n");
+    return PreservedAnalyses::all();
+  }
+
+  auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  auto &AA = FAM.getResult<AAManager>(MF.getFunction());
+  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  Impl->setMFAM(&MFAM);
+  bool Changed = Impl->run(MF, *TM, {MLI, MDT, AA, LIS});
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -767,11 +941,10 @@ PostMachineSchedulerPass::run(MachineFunction &MF,
 /// the boundary, but there would be no benefit to postRA scheduling across
 /// calls this late anyway.
 static bool isSchedBoundary(MachineBasicBlock::iterator MI,
-                            MachineBasicBlock *MBB,
-                            MachineFunction *MF,
+                            MachineBasicBlock *MBB, MachineFunction *MF,
                             const TargetInstrInfo *TII) {
   return MI->isCall() || TII->isSchedulingBoundary(*MI, MBB, *MF) ||
-         MI->isFakeUse();
+         MI->isFakeUse() || MI->isPHI();
 }
 
 using MBBRegionsVector = SmallVector<SchedRegion, 16>;

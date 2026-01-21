@@ -104,6 +104,7 @@ namespace impl_detail {
 // FIXME: Remove these declarations once RegisterClassInfo is queryable as an
 // analysis.
 class MachineSchedulerImpl;
+class SSAMachineSchedulerImpl;
 class PostMachineSchedulerImpl;
 } // namespace impl_detail
 
@@ -1466,6 +1467,20 @@ public:
   LLVM_ABI ~MachineSchedulerPass();
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
+};
+
+class SSAMachineSchedulerPass : public PassInfoMixin<SSAMachineSchedulerPass> {
+  // FIXME: Remove this member once RegisterClassInfo is queryable as an
+  // analysis.
+  std::unique_ptr<impl_detail::SSAMachineSchedulerImpl> Impl;
+  const TargetMachine *TM;
+
+public:
+  SSAMachineSchedulerPass(const TargetMachine *TM);
+  SSAMachineSchedulerPass(SSAMachineSchedulerPass &&Other);
+  ~SSAMachineSchedulerPass();
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 class PostMachineSchedulerPass

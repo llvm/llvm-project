@@ -1954,6 +1954,10 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
       if (UseRegion != MIRegion.end() && UseRegion->second == I)
         continue;
 
+      // Cannot insert instructions before PHIs.
+      if (UseMI->isPHI())
+        continue;
+
       // Do not rematerialize an instruction if it uses or is used by an
       // instruction that we have designated for rematerialization.
       // FIXME: Allow for rematerialization chains: this requires 1. updating
