@@ -1304,19 +1304,21 @@ define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) "target-fe
 ; CHECK-SVE2-LABEL: udot_v16i8tov2i32:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    movi v2.16b, #1
-; CHECK-SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE2-NEXT:    fmov d0, d0
 ; CHECK-SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-SVE2-NEXT:    udot z0.s, z1.b, z2.b
-; CHECK-SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE2-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-SVE2-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-I8MM-LABEL: udot_v16i8tov2i32:
 ; CHECK-SVE2-I8MM:       // %bb.0: // %entry
 ; CHECK-SVE2-I8MM-NEXT:    movi v2.16b, #1
-; CHECK-SVE2-I8MM-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE2-I8MM-NEXT:    fmov d0, d0
 ; CHECK-SVE2-I8MM-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-SVE2-I8MM-NEXT:    udot z0.s, z1.b, z2.b
-; CHECK-SVE2-I8MM-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE2-I8MM-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-SVE2-I8MM-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SVE2-I8MM-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: udot_v16i8tov2i32:
