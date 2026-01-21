@@ -2446,7 +2446,6 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
       InlineAsmMask |= (SGMask_t)SchedGroupMask::VMEM;
 
     Result = ((SGMask_t)SGMask & InlineAsmMask) != 0;
-
   }
 
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&

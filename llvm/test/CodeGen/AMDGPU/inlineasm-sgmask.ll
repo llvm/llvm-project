@@ -1,7 +1,6 @@
 ; RUN: llc -mcpu=gfx942 < %s | FileCheck %s
 target triple = "amdgcn-amd-amdhsa"
 
-; Function Attrs: convergent mustprogress norecurse nounwind
 define protected amdgpu_kernel void @test_valu(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %k, ptr addrspace(1) noundef writeonly captures(none) %ret.coerce, i32 noundef %length) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_valu
 ; CHECK: s_mul_i32
@@ -40,7 +39,6 @@ if.end:                                           ; preds = %if.then, %entry
   ret void
 }
 
-; Function Attrs: convergent mustprogress norecurse nounwind
 define protected amdgpu_kernel void @test_salu(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %k, ptr addrspace(1) noundef writeonly captures(none) %ret.coerce, i32 noundef %length) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_salu
 ; CHECK: %bb.1
@@ -81,7 +79,6 @@ if.end:                                           ; preds = %if.then, %entry
   ret void
 }
 
-; Function Attrs: convergent mustprogress norecurse nounwind
 define protected amdgpu_kernel void @test_mfma(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %length) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_mfma
 ; CHECK: v_add_f32_e32
@@ -129,7 +126,6 @@ if.end:                                           ; preds = %if.then, %entry
 
 @_ZZ16group4_sum_floatPfPKfE6cpymem = internal addrspace(3) global [8 x float] undef, align 16
 
-; Function Attrs: convergent mustprogress norecurse nounwind
 define protected amdgpu_kernel void @test_ds(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %length) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_ds
 ; CHECK-DAG: v_lshl_add_u64
@@ -170,13 +166,10 @@ if.end:                                           ; preds = %if.then, %entry
   ret void
 }
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef i32 @llvm.amdgcn.workgroup.id.x() #1
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x() #1
 
-; Function Attrs: convergent nocallback nofree nounwind willreturn
 declare void @llvm.amdgcn.sched.group.barrier(i32 immarg, i32 immarg, i32 immarg) #2
 
 attributes #0 = { convergent mustprogress norecurse nounwind "amdgpu-agpr-alloc"="1" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,8" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx942" "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-fmin-fmax-global-f64,+atomic-global-pk-add-bf16-inst,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+fp8-conversion-insts,+fp8-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+mai-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64,+xf32-insts" "uniform-work-group-size"="true" }
