@@ -860,7 +860,7 @@ def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8>;
 def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
 // Fractional LMUL register classes for inline assembly.
-// The ZZZ_ prefix is to make sure these are order after VR/VRNoV0 in the
+// The ZZZ_ prefix is to make sure these are ordered after VR/VRNoV0 in the
 // regclass enum. Tablegen uses the name to break ties. This is important
 // because only VR/VRNoV0 have the full type lists.
 def ZZZ_VRMF8 : VReg<VMF8VTs, (add VR), 1>;
