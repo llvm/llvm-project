@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value -Wno-pointer-to-int-cast -Wmicrosoft -verify -fms-anonymous-structs
 // RUN: %clang_cc1 -triple powerpc-ibm-aix %s -fsyntax-only -Wno-unused-value -Wno-pointer-to-int-cast -Wmicrosoft -verify -fms-anonymous-structs
+// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value -Wno-pointer-to-int-cast -Wmicrosoft -verify -fms-extensions
 
 typedef struct notnested {
   long bad1;

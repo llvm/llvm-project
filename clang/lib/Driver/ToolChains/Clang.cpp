@@ -7158,7 +7158,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
                    IsWindowsMSVC || IsUEFI)) {
     CmdArgs.push_back("-fms-extensions");
-    CmdArgs.push_back("-fms-anonymous-structs");
   }
 
   // -fms-compatibility=0 is default.

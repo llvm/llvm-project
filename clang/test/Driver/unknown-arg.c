@@ -25,7 +25,6 @@
 
 // This needs to exit non-0, for configure scripts.
 // RUN: not %clang /GR-
-// RUN: not %clang %s -fms-anonymous-structs -### 2>&1 | FileCheck %s --check-prefix=CL-MS-ERROR
 
 // CHECK: error: unknown argument: '-cake-is-lie'
 // CHECK: error: unknown argument: '-%0'
@@ -71,4 +70,3 @@
 //      O-WARN: warning: joined argument treated as '-o ffload-arch=sm_70'; did you mean '--offload-arch=sm_70'?
 // O-WARN-NEXT: warning: joined argument treated as '-o ffload-device-only'; did you mean '--offload-device-only'?
 // O-WARN-NEXT: warning: joined argument treated as '-o utput'; did you mean '--output'?
-// CL-MS-ERROR: error: unknown argument '-fms-anonymous-structs'; did you mean '-Xclang -fms-anonymous-structs'?
