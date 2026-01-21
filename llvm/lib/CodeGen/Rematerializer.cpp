@@ -227,8 +227,8 @@ void Rematerializer::transferUserInternal(unsigned FromRegIdx,
          "unrelated registers");
 
   LLVM_DEBUG(rdbgs() << "User transfer from " << printID(FromRegIdx) << " to "
-            << printID(ToRegIdx) << ": " << printUser(&UserMI)
-            << '\n');
+                     << printID(ToRegIdx) << ": " << printUser(&UserMI)
+                     << '\n');
 
   UserMI.substituteRegister(getReg(FromRegIdx).getDefReg(),
                             getReg(ToRegIdx).getDefReg(), 0, TRI);
