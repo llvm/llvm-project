@@ -610,7 +610,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (!V1->getType()->isVectorTy())
       return V1;
     Value *V2 = State.get(getOperand(1));
-    return Builder.CreateVectorSplice(V1, V2, -1, Name);
+    return Builder.CreateVectorSpliceRight(V1, V2, 1, Name);
   }
   case VPInstruction::CalculateTripCountMinusVF: {
     unsigned UF = getParent()->getPlan()->getUF();
