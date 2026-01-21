@@ -6687,7 +6687,6 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 * *Barrier-executes-before* is a strict partial order defined over the union of all barrier operations
   performed by all threads on all barriers. It is the transitive closure of all the following orders:
 
-  * *Happens-before*.
   * *Thread-barrier-order<BO>* for every barrier object ``BO``.
   * *Barrier-participates-in<BO>* for every barrier object ``BO``.
 
@@ -6724,7 +6723,9 @@ All barrier *objects* have the following additional target-specific properties:
   during initialization of the barrier by the hardware. :sup:`WIP`
 * Barrier *objects* are allocated and managed by the hardware.
 
-  * Barrier *objects* are stored in an inaccessible memory location.
+  * Barrier *objects* are stored in an unspecified memory region that does not alias with
+    any other address space. Updates to the barrier *object* are not done in order with any other
+    memory operation in any other :ref:`address space<amdgpu-address-spaces>`.
 
 * Barrier *objects* exist within a *scope* (see :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`),
   and can only be accessed by threads in that *scope*.
@@ -6779,7 +6780,7 @@ Informally, we can deduce from the above formal model that execution barriers be
   * Wake-up if they were sleeping because of a barrier *wait*, **or**
   * Skip the next barrier *wait* operation if they have not previously *waited*.
 
-* Barriers cannot complete "out-of-thin-air"; a barrier *wait* ``W`` cannot depend on a barrier operation
+* Barriers do not complete "out-of-thin-air"; a barrier *wait* ``W`` cannot depend on a barrier operation
   ``X`` to complete if ``W -> X`` in *barrier-executes-before*.
 * It is undefined behavior to operate on an uninitialized barrier.
 * It is undefined behavior for a barrier *wait* to never complete.
@@ -7034,8 +7035,11 @@ A ``BR`` *synchronizes-with* ``BA`` in an address space *AS* if and only if:
 * ``S`` *barrier-executes-before* ``W``.
 * *BA* and *BR*'s :ref:`synchronization scope<amdgpu-memory-scopes>` overlap.
 * *BA* and *BR*'s :ref:`synchronization scope<amdgpu-memory-scopes>`
-  allow cross address space synchronization (they cannot have ``one-as``).
+  allow cross address space synchronization (they cannot have ``one-as``) :sup:`1`.
 * *BA* and *BR*'s address spaces both include *AS*.
+
+:sup:`1`: This is a requirement due to how current hardware implements barrier operations.
+This limitation may be lifted in the future.
 
 .. _amdgpu-fence-as:
 
