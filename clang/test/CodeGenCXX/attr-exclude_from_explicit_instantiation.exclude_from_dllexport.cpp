@@ -93,8 +93,8 @@ template <class T> void E<T>::to_be_exported_explicitly() {}
 // MSC: @1 = private unnamed_addr constant {{.*}}, comdat($"??_7?$E@I@@6B@")
 // MSC: @"??_7?$E@H@@6B@" = dllexport unnamed_addr
 // MSC: @"??_7?$E@I@@6B@" = unnamed_addr
-// GNU:@_ZTV1EIiE = weak_odr dso_local dllexport unnamed_addr constant {{.*}}, comdat
-// GNU:@_ZTV1EIjE = weak_odr dso_local unnamed_addr constant {{.*}}, comdat
+// GNU: @_ZTV1EIiE = weak_odr dso_local dllexport unnamed_addr constant {{.*}}, comdat
+// GNU: @_ZTV1EIjE = weak_odr dso_local unnamed_addr constant {{.*}}, comdat
 
 // MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$C@H@@QEAAAEAU0@AEBU0@@Z"
 // MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$C@H@@QEAAAEAU0@$$QEAU0@@Z"
