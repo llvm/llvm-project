@@ -128,6 +128,10 @@ two_ints test_rvalue_aggregate() {
 //  CIR-NEXT:     cir.libc.memcpy %[[#SIZE]] bytes from %[[#SRC_VOID_PTR]] to %[[#DST_VOID_PTR]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
 //  CIR-NEXT:   }
 
+/// FIXME: The function signature below should be identical for both lowering
+/// paths, but CIR is still missing calling convention lowering. Update this
+/// once calling convention is unstreamed.
+
 // LLVM-DIRECT-LABEL: define dso_local{{.*}} i64 @_Z21test_rvalue_aggregatev
 // LLVM-VIA-CIR-LABEL: define dso_local{{.*}} %struct.two_ints @_Z21test_rvalue_aggregatev
 //  LLVM:   %[[SRC_SLOT:.*]] = alloca i64{{.*}}, align 8

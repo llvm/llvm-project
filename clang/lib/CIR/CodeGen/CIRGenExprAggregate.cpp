@@ -241,19 +241,18 @@ public:
       }
 
       LValue sourceLV = cgf.emitLValue(e->getSubExpr());
-      Address sourceAddress = sourceLV.getAddress();
-      Address destAddress = dest.getAddress();
+      Address sourceAddress =
+          sourceLV.getAddress().withElementType(cgf.getBuilder(), cgf.voidTy);
+      Address destAddress =
+          dest.getAddress().withElementType(cgf.getBuilder(), cgf.voidTy);
 
-      auto loc = cgf.getLoc(e->getExprLoc());
-      mlir::Value srcPtr = cgf.getBuilder().createBitcast(
-          loc, sourceAddress.getPointer(), cgf.voidPtrTy);
-      mlir::Value dstPtr = cgf.getBuilder().createBitcast(
-          loc, destAddress.getPointer(), cgf.voidPtrTy);
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
 
       mlir::Value sizeVal = cgf.getBuilder().getConstInt(
           loc, cgf.sizeTy,
           cgf.getContext().getTypeSizeInChars(e->getType()).getQuantity());
-      cgf.getBuilder().createMemCpy(loc, dstPtr, srcPtr, sizeVal);
+      cgf.getBuilder().createMemCpy(loc, destAddress.getPointer(),
+                                    sourceAddress.getPointer(), sizeVal);
 
       break;
     }

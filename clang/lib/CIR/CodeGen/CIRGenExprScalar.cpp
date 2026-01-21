@@ -2078,15 +2078,9 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     Address sourceAddr = sourceLVal.getAddress();
 
     mlir::Type destElemTy = cgf.convertTypeForMem(destTy);
-    mlir::Type destPtrTy = cgf.getBuilder().getPointerTo(destElemTy);
-    mlir::Value destPtr = cgf.getBuilder().createBitcast(
-        cgf.getLoc(subExpr->getExprLoc()), sourceAddr.getPointer(), destPtrTy);
-
-    Address destAddr = Address(destPtr, destElemTy, sourceAddr.getAlignment(),
-                               sourceAddr.isKnownNonNull());
+    Address destAddr = sourceAddr.withElementType(cgf.getBuilder(), destElemTy);
     LValue destLVal = cgf.makeAddrLValue(destAddr, destTy);
-    // TOOD: Uncomment once TBAA is upstreamed
-    // destLVal.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
+    assert(!cir::MissingFeatures::opTBAA());
     return emitLoadOfLValue(destLVal, ce->getExprLoc());
   }
 
