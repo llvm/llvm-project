@@ -18,19 +18,76 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "copy_move_types.h"
 #include "MoveOnly.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-TEST_CONSTEXPR_CXX26
-bool test() {
+class CopyConstructible {
+  int data_;
+
+public:
+  TEST_CONSTEXPR CopyConstructible(int data = 1) : data_(data) {}
+
+  CopyConstructible(const CopyConstructible&)            = default;
+  CopyConstructible& operator=(const CopyConstructible&) = default;
+
+  TEST_CONSTEXPR_CXX14 CopyConstructible(CopyConstructible&& x) TEST_NOEXCEPT : data_(x.data_) { x.data_ = 0; }
+  TEST_CONSTEXPR_CXX14 CopyConstructible& operator=(CopyConstructible&& x) {
+    data_   = x.data_;
+    x.data_ = 0;
+    return *this;
+  }
+
+  TEST_CONSTEXPR int get() const { return data_; }
+
+  friend TEST_CONSTEXPR bool operator==(const CopyConstructible& x, const CopyConstructible& y) {
+    return x.data_ == y.data_;
+  }
+  friend TEST_CONSTEXPR bool operator!=(const CopyConstructible& x, const CopyConstructible& y) {
+    return x.data_ != y.data_;
+  }
+  friend TEST_CONSTEXPR bool operator<(const CopyConstructible& x, const CopyConstructible& y) {
+    return x.data_ < y.data_;
+  }
+  friend TEST_CONSTEXPR bool operator<=(const CopyConstructible& x, const CopyConstructible& y) {
+    return x.data_ <= y.data_;
+  }
+  friend TEST_CONSTEXPR bool operator>(const CopyConstructible& x, const CopyConstructible& y) {
+    return x.data_ > y.data_;
+  }
+  friend TEST_CONSTEXPR bool operator>=(const CopyConstructible& x, const CopyConstructible& y) {
+    return x.data_ >= y.data_;
+  }
+
+#if TEST_STD_VER > 17
+  friend constexpr auto operator<=>(const CopyConstructible&, const CopyConstructible&) = default;
+#endif // TEST_STD_VER > 17
+
+  TEST_CONSTEXPR_CXX14 CopyConstructible operator+(const CopyConstructible& x) const {
+    return CopyConstructible(data_ + x.data_);
+  }
+  TEST_CONSTEXPR_CXX14 CopyConstructible operator*(const CopyConstructible& x) const {
+    return CopyConstructible(data_ * x.data_);
+  }
+
+  template <class T>
+  friend void operator,(CopyConstructible const&, T) = delete;
+
+  template <class T>
+  friend void operator,(T, CopyConstructible const&) = delete;
+};
+static_assert(std::is_copy_constructible_v<CopyConstructible>);
+
+template <typename TKeyType >
+TEST_CONSTEXPR_CXX26 bool test_move_assign() {
   {
-    typedef std::pair<MoveOnly, MoveOnly> V;
-    typedef std::pair<const MoveOnly, MoveOnly> VC;
-    typedef test_less<MoveOnly> C;
+    typedef std::pair<TKeyType, MoveOnly> V;
+    typedef std::pair<const TKeyType, MoveOnly> VC;
+    typedef test_less<TKeyType> C;
     typedef test_allocator<VC> A;
-    typedef std::map<MoveOnly, MoveOnly, C, A> M;
+    typedef std::map<TKeyType, MoveOnly, C, A> M;
     typedef std::move_iterator<V*> I;
     V a1[] = {V(1, 1), V(1, 2), V(1, 3), V(2, 1), V(2, 2), V(2, 3), V(3, 1), V(3, 2), V(3, 3)};
     M m1(I(a1), I(a1 + sizeof(a1) / sizeof(a1[0])), C(5), A(7));
@@ -44,11 +101,11 @@ bool test() {
     assert(m1.empty());
   }
   {
-    typedef std::pair<MoveOnly, MoveOnly> V;
-    typedef std::pair<const MoveOnly, MoveOnly> VC;
-    typedef test_less<MoveOnly> C;
+    typedef std::pair<TKeyType, MoveOnly> V;
+    typedef std::pair<const TKeyType, MoveOnly> VC;
+    typedef test_less<TKeyType> C;
     typedef test_allocator<VC> A;
-    typedef std::map<MoveOnly, MoveOnly, C, A> M;
+    typedef std::map<TKeyType, MoveOnly, C, A> M;
     typedef std::move_iterator<V*> I;
     V a1[] = {V(1, 1), V(1, 2), V(1, 3), V(2, 1), V(2, 2), V(2, 3), V(3, 1), V(3, 2), V(3, 3)};
     M m1(I(a1), I(a1 + sizeof(a1) / sizeof(a1[0])), C(5), A(7));
@@ -62,11 +119,11 @@ bool test() {
     LIBCPP_ASSERT(m1.empty());
   }
   {
-    typedef std::pair<MoveOnly, MoveOnly> V;
-    typedef std::pair<const MoveOnly, MoveOnly> VC;
-    typedef test_less<MoveOnly> C;
+    typedef std::pair<TKeyType, MoveOnly> V;
+    typedef std::pair<const TKeyType, MoveOnly> VC;
+    typedef test_less<TKeyType> C;
     typedef other_allocator<VC> A;
-    typedef std::map<MoveOnly, MoveOnly, C, A> M;
+    typedef std::map<TKeyType, MoveOnly, C, A> M;
     typedef std::move_iterator<V*> I;
     V a1[] = {V(1, 1), V(1, 2), V(1, 3), V(2, 1), V(2, 2), V(2, 3), V(3, 1), V(3, 2), V(3, 3)};
     M m1(I(a1), I(a1 + sizeof(a1) / sizeof(a1[0])), C(5), A(7));
@@ -80,11 +137,11 @@ bool test() {
     assert(m1.empty());
   }
   {
-    typedef std::pair<MoveOnly, MoveOnly> V;
-    typedef std::pair<const MoveOnly, MoveOnly> VC;
-    typedef test_less<MoveOnly> C;
+    typedef std::pair<TKeyType, MoveOnly> V;
+    typedef std::pair<const TKeyType, MoveOnly> VC;
+    typedef test_less<TKeyType> C;
     typedef min_allocator<VC> A;
-    typedef std::map<MoveOnly, MoveOnly, C, A> M;
+    typedef std::map<TKeyType, MoveOnly, C, A> M;
     typedef std::move_iterator<V*> I;
     V a1[] = {V(1, 1), V(1, 2), V(1, 3), V(2, 1), V(2, 2), V(2, 3), V(3, 1), V(3, 2), V(3, 3)};
     M m1(I(a1), I(a1 + sizeof(a1) / sizeof(a1[0])), C(5), A());
@@ -101,10 +158,17 @@ bool test() {
 }
 
 int main(int, char**) {
-  test();
+  test_move_assign<MoveOnly>();
 #if TEST_STD_VER >= 26
   // FIXME: Within __tree, it is not allowed to move from a `const MoveOnly` which prevents this from executing during constant evaluation
-  static_assert(test());
+// static_assert(test_move_assign<MoveOnly>());
 #endif
+
+  test_move_assign<CopyConstructible>();
+
+#if TEST_STD_VER >= 26
+  static_assert(test_move_assign<CopyConstructible>());
+#endif
+
   return 0;
 }

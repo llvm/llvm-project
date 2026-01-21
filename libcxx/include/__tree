@@ -1451,7 +1451,7 @@ private:
   __assign_value_sfinae(true_type, __get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     __node_allocator& __na = __node_alloc();
     __node_traits::destroy(__na, std::addressof(__lhs));
-    __node_traits::construct(__na, std::addressof(__lhs), __rhs.first, __rhs.second);
+    __node_traits::construct(__na, std::addressof(__lhs), __rhs.first, std::move(__rhs.second));
   }
 
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
@@ -1477,7 +1477,7 @@ private:
 
       __assign_value_sfinae(std::integral_constant<bool, std::is_copy_constructible_v<decltype(__rhs.first)>>(),
                             std::forward<decltype(__lhs)>(__lhs),
-                            std::forward<const value_type&>(__rhs));
+                            std::forward<decltype(__rhs)>(__rhs));
 
     } else
 #endif
@@ -1557,10 +1557,40 @@ private:
     return __construct_from_tree(__src, [this](const value_type& __val) { return __construct_node(__val); });
   }
 
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_holder
+  __construct_node_sfinae(true_type, _Args&&... __args) {
+    return __construct_node(std::forward<_Args>(__args)...);
+  }
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_holder __construct_node_sfinae(false_type, _Args&&...) {
+    // This method body should never be run. It only exists to allow for compilation for the false_type overload, during
+    // constant evaluation branch. See note in __assign_value for more information.
+
+    // Even if this method is never executed, we still need to return something "valid".
+    // Hence, we return a empty __node_holder
+    // statement for the code to compile
+    __node_allocator& __na   = __node_alloc();
+    __node_pointer __pointer = __node_pointer();
+    __node_holder __h(__pointer, _Dp(__na));
+    return __h;
+  }
+
   template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer __move_construct_tree(__node_pointer __src) {
     return __construct_from_tree(__src, [this](value_type& __val) {
-      return __construct_node(const_cast<key_type&&>(__val.first), std::move(__val.second));
+
+#if _LIBCPP_STD_VER >= 26
+      if (std::is_constant_evaluated() && std::is_copy_constructible_v<decltype(__val.first)>) {
+        return __construct_node_sfinae(
+            std::integral_constant<bool, std::is_copy_constructible_v<decltype(__val.first)>>(),
+            std::forward<decltype(__val.first)>(__val.first),
+            std::move(__val.second));
+
+      } else
+#endif
+        return __construct_node(const_cast<key_type&&>(__val.first), std::move(__val.second));
     });
   }
 
@@ -1764,14 +1794,15 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::__move_ass
   } else {
     value_comp() = std::move(__t.value_comp());
     if (__size_ != 0) {
-      *__root_ptr() = static_cast<__node_base_pointer>(__move_assign_tree(__root(), __t.__root()));
+      *__root_ptr() = std::__static_fancy_pointer_cast<__node_base_pointer>(__move_assign_tree(__root(), __t.__root()));
     } else {
-      *__root_ptr() = static_cast<__node_base_pointer>(__move_construct_tree(__t.__root()));
+      *__root_ptr() = std::__static_fancy_pointer_cast<__node_base_pointer>(__move_construct_tree(__t.__root()));
       if (__root())
         __root()->__parent_ = __end_node();
     }
-    __begin_node_ =
-        __end_node()->__left_ ? static_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_)) : __end_node();
+    __begin_node_ = __end_node()->__left_
+                      ? std::__static_fancy_pointer_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_))
+                      : __end_node();
     __size_ = __t.size();
     __t.clear(); // Ensure that __t is in a valid state after moving out the keys
   }
