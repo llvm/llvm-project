@@ -1950,10 +1950,6 @@ bool EndLifetime(InterpState &S, CodePtr OpPC) {
   if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
 
-  // FIXME: We need per-element lifetime information for primitive arrays.
-  if (Ptr.isArrayElement())
-    return true;
-
   endLifetimeRecurse(Ptr.narrow());
   return true;
 }
@@ -1963,10 +1959,6 @@ bool EndLifetimePop(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
     return false;
-
-  // FIXME: We need per-element lifetime information for primitive arrays.
-  if (Ptr.isArrayElement())
-    return true;
 
   endLifetimeRecurse(Ptr.narrow());
   return true;
@@ -1986,6 +1978,9 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   }
 
   if (!Ptr.isBlockPointer())
+    return false;
+
+  if (!CheckRange(S, OpPC, Ptr, AK_Construct))
     return false;
 
   startLifetimeRecurse(Ptr);
@@ -2364,6 +2359,34 @@ bool FinishInitGlobal(InterpState &S, CodePtr OpPC) {
     Ptr.activate();
   }
 
+  return true;
+}
+
+bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
+  assert(S.Current->getFunction());
+  // FIXME: We iterate the scope once here and then again in the destroy() call
+  // below.
+  for (auto &Local : S.Current->getFunction()->getScope(I).locals_reverse()) {
+    if (!S.Current->getLocalBlock(Local.Offset)->isInitialized())
+      continue;
+    const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
+    if (Ptr.getLifetime() == Lifetime::Ended) {
+      // Try to use the declaration for better diagnostics
+      if (const Decl *D = Ptr.getDeclDesc()->asDecl()) {
+        auto *ND = cast<NamedDecl>(D);
+        S.FFDiag(ND->getLocation(),
+                 diag::note_constexpr_destroy_out_of_lifetime)
+            << ND->getNameAsString();
+      } else {
+        S.FFDiag(Ptr.getDeclDesc()->getLocation(),
+                 diag::note_constexpr_destroy_out_of_lifetime)
+            << Ptr.toDiagnosticString(S.getASTContext());
+      }
+      return false;
+    }
+  }
+
+  S.Current->destroy(I);
   return true;
 }
 

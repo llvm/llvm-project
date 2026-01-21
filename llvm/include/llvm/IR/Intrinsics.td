@@ -1958,12 +1958,6 @@ def int_sideeffect : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly]>;
 def int_pseudoprobe : DefaultAttrsIntrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
                                     [IntrInaccessibleMemOnly]>;
 
-// Intrinsics to support half precision floating point format
-let IntrProperties = [IntrNoMem] in {
-def int_convert_to_fp16   : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;
-def int_convert_from_fp16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i16_ty]>;
-}
-
 // Saturating floating point to integer intrinsics
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in {
 def int_fptoui_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
@@ -2849,12 +2843,12 @@ def int_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
 def int_vector_splice_left
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
-                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+                            [IntrNoMem, IntrSpeculatable]>;
 
 def int_vector_splice_right
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
-                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+                            [IntrNoMem, IntrSpeculatable]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty],

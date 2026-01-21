@@ -12405,6 +12405,8 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
 SDValue AArch64TargetLowering::LowerVECTOR_SPLICE(SDValue Op,
                                                   SelectionDAG &DAG) const {
   EVT Ty = Op.getValueType();
+  if (!isa<ConstantSDNode>(Op.getOperand(2)))
+    return SDValue();
   auto Idx = Op.getConstantOperandAPInt(2);
   int64_t IdxVal = Idx.getSExtValue();
   assert(Ty.isScalableVector() &&
@@ -19892,6 +19894,10 @@ static SDValue performBuildShuffleExtendCombine(SDValue BV, SelectionDAG &DAG) {
       return SDValue();
 
     unsigned Opc = Op.getOpcode();
+    if (BV.getOpcode() == ISD::VECTOR_SHUFFLE &&
+        (Opc != ISD::SIGN_EXTEND && Opc != ISD::ZERO_EXTEND))
+      return SDValue();
+
     if (Opc == ISD::ANY_EXTEND)
       continue;
 
