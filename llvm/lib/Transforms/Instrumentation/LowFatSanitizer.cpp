@@ -15,7 +15,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "lowfat"
 
-LowFatSanitizerPass::LowFatSanitizerPass(const LowFatSanitizerOptions &Options) {}
+LowFatSanitizerPass::LowFatSanitizerPass(const LowFatSanitizerOptions &Options)
+    : Options(Options) {}
 
 PreservedAnalyses LowFatSanitizerPass::run(Module &M,
                                            ModuleAnalysisManager &AM) {

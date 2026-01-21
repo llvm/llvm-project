@@ -23,6 +23,9 @@ public:
   LowFatSanitizerPass(const LowFatSanitizerOptions &Options);
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
+
+private:
+  LowFatSanitizerOptions Options;
 };
 
 } // namespace llvm
