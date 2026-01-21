@@ -97,6 +97,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`performance-string-view-conversions
+  <clang-tidy/checks/performance/string-view-conversions>` check.
+
+  Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
+  ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

@@ -98,7 +98,6 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86LoadValueInjectionRetHardeningLegacyPass(PR);
   initializeX86OptimizeLEAsLegacyPass(PR);
   initializeX86PartialReductionLegacyPass(PR);
-  initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksLegacyPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotLegacyPass(PR);

@@ -2779,9 +2779,7 @@ class ModuloScheduleTest : public MachineFunctionPass {
 public:
   static char ID;
 
-  ModuloScheduleTest() : MachineFunctionPass(ID) {
-    initializeModuloScheduleTestPass(*PassRegistry::getPassRegistry());
-  }
+  ModuloScheduleTest() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void runOnLoop(MachineFunction &MF, MachineLoop &L);

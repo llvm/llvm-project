@@ -1841,20 +1841,26 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
-``dead_on_return``
+``dead_on_return`` or ``dead_on_return(<n>)``
     This attribute indicates that the memory pointed to by the argument is dead
     upon function return, both upon normal return and if the calls unwinds, meaning
     that the caller will not depend on its contents. Stores that would be observable
-    either on the return path or on the unwind path may be elided.
+    either on the return path or on the unwind path may be elided. A number of
+    bytes known to be dead may optionally be provided in parentheses. If a number
+    of bytes is not specified, all memory reachable through the pointer is marked as
+    dead on return.
 
     Specifically, the behavior is as-if any memory written through the pointer
     during the execution of the function is overwritten with a poison value
     upon function return. The caller may access the memory, but any load
-    not preceded by a store will return poison.
+    not preceded by a store will return poison. If a byte count is specified,
+    only writes within the specified range are overwritten with poison on
+    function return.
 
     This attribute does not imply aliasing properties. For pointer arguments that
     do not alias other memory locations, ``noalias`` attribute may be used in
-    conjunction. Conversely, this attribute always implies ``dead_on_unwind``.
+    conjunction. Conversely, this attribute always implies ``dead_on_unwind``. When
+    a byte count is specified, ``dead_on_unwind`` is implied only for that range.
 
     This attribute cannot be applied to return values.
 
@@ -14989,6 +14995,155 @@ Semantics:
 """"""""""
 
 See the description for :ref:`llvm.stacksave <int_stacksave>`.
+
+.. _i_structured_gep:
+
+'``llvm.structured.gep``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <ret_type>
+      @llvm.structured.gep(ptr elementtype(<basetype>) <source>
+                           {, [i32/i64] <index> }*)
+
+Overview:
+"""""""""
+
+The '``llvm.structured.gep``' intrinsic (structured
+**G**\ et\ **E**\ lement\ **P**\ tr) computes a new pointer address resulting
+from a logical indexing into the ``<source>`` pointer. The returned address
+depends on the indices and may depend on the layout of ``<basetype>``
+at runtime.
+
+Arguments:
+""""""""""
+
+``ptr elementtype(<basetype>) <source>``:
+A pointer to the memory location used as base for the address computation.
+
+The ``source`` argument must be annotated with an :ref:`elementtype
+<attr_elementtype>` attribute at the call-site. This attribute specifies the
+type of the element pointed to by the pointer source. This type will be
+used along with the provided indices and source operand to compute a new
+pointer representing the result of a logical indexing into the basetype
+pointed by source.
+
+The ``basetype`` is only associated with ``<source>`` for this particular
+call. A frontend could possibly emit multiple structured
+GEP with the same source pointer but a different ``basetype``.
+
+``[i32/i64] index, ...``:
+Indices used to traverse into the ``basetype`` and compute a pointer to the
+target element. Indices can be 32-bit or 64-bit unsigned integers. Indices being
+handled one by one, both sizes can be mixed in the same instruction. The
+precision used to compute the resulting pointer is target-dependent.
+When used to index into a struct, only integer constants are allowed.
+
+Semantics:
+""""""""""
+
+The ``llvm.structured.gep`` performs a logical traversal of the type
+``basetype`` using the list of provided indices, computing the pointer
+addressing the targeted element/field assuming ``source`` points to a
+physically laid out ``basetype``. The physical layout of the source depends
+on the target and does not necessarily match the one described by the
+datalayout.
+
+The first index determines which element/field of ``basetype`` is selected,
+computes the pointer to access this element/field assuming ``source`` points
+to the start of ``basetype``.
+This pointer becomes the new ``source``, the current type the new
+``basetype``, and the next indices is consumed until a scalar type is
+reached or all indices are consumed.
+
+All indices must be consumed, and it is illegal to index into a scalar type.
+Meaning the maximum number of indices depends on the depth of the basetype.
+
+Because this instruction performs a logical addressing, all indices are
+assumed to be inbounds. This means it is not possible to access the next
+element in the logical layout by overflowing:
+
+- If the indexed type is a struct with N fields, the index must be an
+  immediate/constant value in the range ``[0; N[``.
+- If indexing into an array or vector, the index can be a variable, but
+  is assumed to be inbounds with regards to the current basetype logical layout.
+- If the traversed type is an array or vector of N elements with ``N > 0``,
+  the index is assumed to belong to ``[0; N[``.
+- If the traversed type is an array of size ``0``, the array size is assumed
+  to be known at runtime, and the instruction assumes the index is always
+  inbounds.
+
+In all cases **except** when the accessed type is a 0-sized array, indexing
+out of bounds yields `poison`. When the index value is unknown, optimizations
+can use the type bounds to determine the range of values the index can have.
+If the source pointer is poison, the instruction returns poison.
+The resulting pointer belongs to the same address space as ``source``.
+This instruction does not dereference the pointer.
+
+Example:
+""""""""
+
+**Simple case: logical access of a struct field**
+
+.. code-block:: cpp
+
+    struct A { int a, int b, int c, int d };
+    int val = my_struct->b;
+
+Could be translated to:
+
+.. code-block:: llvm
+
+    %A = type { i32, i32, i32, i32 }
+    %src = call ptr @llvm.structured.gep(ptr elementtype(%A) %my_struct, i32 1)
+    %val = load i32, ptr %src
+
+**A more complex case**
+
+This instruction can also be used on the same pointer with different
+basetypes, as long as codegen knows how those are physically laid out.
+Let’s consider the following code:
+
+.. code-block:: cpp
+
+   struct S {
+       uint a;
+       uint b;
+       uint c;
+       uint d;
+   }
+
+   int val = my_struct->b;
+
+
+In this example, the frontend doesn't know the exact physical layout, but
+knows those logical layouts are lowered to the same physical layout:
+
+    - `{ i32, i32, i32, i32 }`
+    - `[ i32 x 4 ]`
+
+This means is is valid to lower the following code to either:
+
+.. code-block:: llvm
+
+    %S = type { i32, i32, i32, i32 }
+    %src = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 1)
+    load i32, ptr %src
+
+Or:
+
+.. code-block:: llvm
+
+    %src = call ptr @llvm.structured.gep(ptr elementtype([ 4 x i32 ]) %my_struct, i32 1)
+    load i32, ptr %src
+
+This is, however, dependent on context that codegen has an insight on. The
+fact that `[ i32 x 4 ]` and `%S` are equivalent depends on the target.
+
 
 .. _int_get_dynamic_area_offset:
 

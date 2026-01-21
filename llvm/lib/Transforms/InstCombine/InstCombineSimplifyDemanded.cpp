@@ -2214,8 +2214,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
   case Instruction::FAdd: {
     KnownFPClass KnownLHS, KnownRHS;
 
-    const SimplifyQuery &SQ = getSimplifyQuery();
-
     // fadd x, x can be handled more aggressively.
     if (I->getOperand(0) == I->getOperand(1) &&
         isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, CxtI, SQ.DT,
@@ -2337,7 +2335,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (DemandedMask & fcZero)
       SrcDemandedMask |= fcNormal | fcSubnormal;
 
-    const SimplifyQuery &SQ = getSimplifyQuery();
     if (X == Y && isGuaranteedNotToBeUndef(X, SQ.AC, CxtI, SQ.DT, Depth + 1)) {
       if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, Depth + 1))
         return I;
@@ -2942,7 +2939,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (KnownRHS.isKnownNever(DemandedMask))
       return I->getOperand(1);
 
-    const SimplifyQuery &SQ = getSimplifyQuery();
     adjustKnownFPClassForSelectArm(KnownLHS, I->getOperand(0), I->getOperand(1),
                                    /*Invert=*/false, SQ, Depth);
     adjustKnownFPClassForSelectArm(KnownRHS, I->getOperand(0), I->getOperand(2),
@@ -3015,7 +3011,6 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     if (KnownLHS.isKnownNever(DemandedMask))
       return I->getOperand(2);
 
-    const SimplifyQuery &SQ = getSimplifyQuery();
     adjustKnownFPClassForSelectArm(KnownLHS, I->getOperand(0), I->getOperand(1),
                                    /*Invert=*/false, SQ, Depth);
     adjustKnownFPClassForSelectArm(KnownRHS, I->getOperand(0), I->getOperand(2),

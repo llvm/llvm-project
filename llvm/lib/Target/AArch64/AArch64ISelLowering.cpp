@@ -9373,7 +9373,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
       CallAttrs.requiresPreservingAllZAState() ||
       CallAttrs.requiresPreservingZT0() ||
-      CallAttrs.caller().hasStreamingBody())
+      CallAttrs.caller().hasStreamingBody() || CallAttrs.caller().isNewZA() ||
+      CallAttrs.caller().isNewZT0())
     return false;
 
   // Functions using the C or Fast calling convention that have an SVE signature
@@ -26957,9 +26958,13 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   }
 
   //    setcc_merge_zero(
-  //       pred, insert_subvector(undef, signext_inreg(vNi1), 0), != splat(0))
+  //       pred, insert_subvector(undef, signext_inreg(x), 0), != splat(0))
   // => setcc_merge_zero(
-  //       pred, insert_subvector(undef, shl(vNi1), 0), != splat(0))
+  //       pred, insert_subvector(undef, shl(x), 0), != splat(0))
+  // or:
+  // => setcc_merge_zero(
+  //       pred, insert_subvector(undef, x, 0), != splat(0))
+  // iff it can be proven that x is already sign-extended.
   if (Cond == ISD::SETNE && isZerosVector(RHS.getNode()) &&
       LHS->getOpcode() == ISD::INSERT_SUBVECTOR && LHS.hasOneUse()) {
     SDValue L0 = LHS->getOperand(0);
@@ -26968,9 +26973,13 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
     if (L0.isUndef() && isNullConstant(L2) && isSignExtInReg(L1)) {
       SDLoc DL(N);
-      SDValue Shl = L1.getOperand(0);
+      SDValue ExtVal = L1.getOperand(0);
+      unsigned NumShiftBits = ExtVal.getConstantOperandVal(1);
+      SDValue ShlSrc = ExtVal.getOperand(0);
+      if (DCI.DAG.ComputeNumSignBits(ShlSrc) > NumShiftBits)
+        ExtVal = ShlSrc;
       SDValue NewLHS = DAG.getNode(ISD::INSERT_SUBVECTOR, DL,
-                                   LHS.getValueType(), L0, Shl, L2);
+                                   LHS.getValueType(), L0, ExtVal, L2);
       return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, N->getValueType(0),
                          Pred, NewLHS, RHS, N->getOperand(3));
     }

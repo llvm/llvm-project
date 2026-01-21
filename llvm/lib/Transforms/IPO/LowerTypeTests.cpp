@@ -1456,8 +1456,7 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // Can not RAUW F with an expression that uses F. Replace with a temporary
   // placeholder first.
   Function *PlaceholderFn =
-      Function::Create(cast<FunctionType>(F->getValueType()),
-                       GlobalValue::ExternalWeakLinkage,
+      Function::Create(F->getFunctionType(), GlobalValue::ExternalWeakLinkage,
                        F->getAddressSpace(), "", &M);
   replaceCfiUses(F, PlaceholderFn, IsJumpTableCanonical);
 

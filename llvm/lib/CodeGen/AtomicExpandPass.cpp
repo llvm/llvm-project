@@ -142,9 +142,7 @@ class AtomicExpandLegacy : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  AtomicExpandLegacy() : FunctionPass(ID) {
-    initializeAtomicExpandLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  AtomicExpandLegacy() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LibcallLoweringInfoWrapper>();

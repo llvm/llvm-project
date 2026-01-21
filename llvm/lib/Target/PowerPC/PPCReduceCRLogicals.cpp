@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
