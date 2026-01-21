@@ -4,6 +4,12 @@
 ; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff %s --function-sections --filetype=obj -o %t.o
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-FS
 
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --function-sections --code-model=large --filetype=obj %s -o %t.o
+; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s --check-prefixes=CHECK-LARGE,CHECK-LARGE-FS
+
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --code-model=large --filetype=obj %s -o %t.o
+; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s --check-prefixes=CHECK-LARGE
+
 ; CHECK: Disassembly of section .text:
 ;;;; R_REF relocations associating .foo to (1) the __init_ifuncs constructor
 ;;;; and (2) the __update_foo variable.
@@ -29,6 +35,18 @@
 ; CHECK-FS-NEXT:   mtctr 12
 ; CHECK-FS-NEXT:   bctr
 
+; CHECK-LARGE: {{\.foo|\.foo\[PR\]}}:
+; CHECK-LARGE-NEXT: addis 12, 2, 0
+; CHECK-LARGE-FS-NEXT: R_REF {{.*}} __ifunc_sec[RW]
+; CHECK-LARGE-FS-NEXT: R_REF {{.*}} .__init_ifuncs[PR]
+; CHECK-LARGE-NEXT:    R_TOCU {{.*}} foo[TE]
+; CHECK-LARGE-NEXT: ld 12, 8(12)
+; CHECK-LARGE-NEXT:    R_TOCL {{.*}} foo[TE]
+; CHECK-LARGE-NEXT: ld 11, 16(12)
+; CHECK-LARGE-NEXT: ld 12, 0(12)
+; CHECK-LARGE-NEXT: mtctr 12
+; CHECK-LARGE-NEXT: bctr
+
 ; CHECK:   Disassembly of section .data:
 ;;;; section __ifunc_sec holding the [foo:foo_resolver] pairs
 ;;;; @__update_foo = private global { ptr, ptr } { ptr @foo, ptr @foo.resolver }, section "__ifunc_sec", align 8
@@ -52,6 +70,11 @@
 ; CHECK-NEXT:  00 00 00 00   <unknown>
 ; CHECK-NEXT:       R_POS  {{.*}} foo[DS]
 ; CHECK-NEXT:  {{.*}}  <unknown>
+
+; CHECK-LARGE: {{.*}} foo[TE]:
+; CHECK-LARGE-NEXT:  <unknown>
+; CHECK-LARGE-NEXT:    R_POS {{.*}} foo[DS]
+; CHECK-LARGE-NEXT:  <unknown>
 
 @foo = ifunc i32 (...), ptr @foo.resolver
 
