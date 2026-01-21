@@ -234,6 +234,15 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getSMinExpr(Ops[0], Ops[1]);
     });
 
+  ArrayRef<VPValue *> Ops;
+  Type *SourceElementType;
+  if (match(V, m_GetElementPtr(SourceElementType, Ops))) {
+    const SCEV *GEPExpr = CreateSCEV(Ops, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getGEPExpr(Ops.front(), Ops.drop_front(), SourceElementType);
+    });
+    return PSE.getPredicatedSCEV(GEPExpr);
+  }
+
   // TODO: Support constructing SCEVs for more recipes as needed.
   const VPRecipeBase *DefR = V->getDefiningRecipe();
   const SCEV *Expr = TypeSwitch<const VPRecipeBase *, const SCEV *>(DefR)
@@ -275,31 +284,9 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                     L](const VPScalarIVStepsRecipe *R) {
         const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
         const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
-        if (isa<SCEVCouldNotCompute>(IV) || isa<SCEVCouldNotCompute>(Step) ||
-            !Step->isOne())
+        if (isa<SCEVCouldNotCompute>(IV) || !isa<SCEVConstant>(Step))
           return SE.getCouldNotCompute();
-        return SE.getMulExpr(SE.getTruncateOrSignExtend(IV, Step->getType()),
-                             Step);
-      })
-      .Case<VPReplicateRecipe>([&SE, &PSE, L](const VPReplicateRecipe *R) {
-        if (R->getOpcode() != Instruction::GetElementPtr)
-          return SE.getCouldNotCompute();
-
-        const SCEV *Base = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
-        if (isa<SCEVCouldNotCompute>(Base))
-          return SE.getCouldNotCompute();
-
-        SmallVector<const SCEV *> IndexExprs;
-        for (VPValue *Index : drop_begin(R->operands())) {
-          const SCEV *IndexExpr = getSCEVExprForVPValue(Index, PSE, L);
-          if (isa<SCEVCouldNotCompute>(IndexExpr))
-            return SE.getCouldNotCompute();
-          IndexExprs.push_back(IndexExpr);
-        }
-
-        Type *SrcElementTy = cast<GetElementPtrInst>(R->getUnderlyingInstr())
-                                 ->getSourceElementType();
-        return SE.getGEPExpr(Base, IndexExprs, SrcElementTy);
+        return SE.getTruncateOrSignExtend(IV, Step->getType());
       })
       .Default(
           [&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });

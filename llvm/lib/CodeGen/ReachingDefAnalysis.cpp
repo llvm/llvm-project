@@ -293,11 +293,21 @@ void ReachingDefInfo::run(MachineFunction &mf) {
 }
 
 void ReachingDefInfo::print(raw_ostream &OS) {
-  OS << "RDA results for " << MF->getName() << "\n";
+  // Create a map from instruction to numerical ids.
+  // Since a reaching def can come after instruction,
+  // this map needs to be populated first.
   int Num = 0;
   DenseMap<MachineInstr *, int> InstToNumMap;
+  for (MachineBasicBlock &MBB : *MF) {
+    for (MachineInstr &MI : MBB) {
+      InstToNumMap[&MI] = Num;
+      ++Num;
+    }
+  }
+
   SmallPtrSet<MachineInstr *, 2> Defs;
   for (MachineBasicBlock &MBB : *MF) {
+    OS << printMBBReference(MBB) << ":\n";
     for (MachineInstr &MI : MBB) {
       for (MachineOperand &MO : MI.operands()) {
         Register Reg;
@@ -324,9 +334,7 @@ void ReachingDefInfo::print(raw_ostream &OS) {
           OS << Num << " ";
         OS << "}\n";
       }
-      OS << Num << ": " << MI << "\n";
-      InstToNumMap[&MI] = Num;
-      ++Num;
+      OS << InstToNumMap[&MI] << ": " << MI << "\n";
     }
   }
 }

@@ -137,9 +137,19 @@ struct KnownFPClass {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
   }
 
-  KnownFPClass intersectWith(const KnownFPClass &RHS) {
-    return KnownFPClass(~(~KnownFPClasses & ~RHS.KnownFPClasses),
+  KnownFPClass intersectWith(const KnownFPClass &RHS) const {
+    return KnownFPClass(KnownFPClasses | RHS.KnownFPClasses,
                         SignBit == RHS.SignBit ? SignBit : std::nullopt);
+  }
+
+  KnownFPClass unionWith(const KnownFPClass &RHS) const {
+    std::optional<bool> MergedSignBit;
+    if (SignBit && !RHS.SignBit)
+      MergedSignBit = SignBit;
+    else if (!SignBit && RHS.SignBit)
+      MergedSignBit = RHS.SignBit;
+
+    return KnownFPClass(KnownFPClasses & RHS.KnownFPClasses, MergedSignBit);
   }
 
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
@@ -180,6 +190,18 @@ struct KnownFPClass {
       KnownFPClasses |= fcPosNormal;
 
     signBitMustBeZero();
+  }
+
+  static KnownFPClass fneg(const KnownFPClass &Src) {
+    KnownFPClass Known = Src;
+    Known.fneg();
+    return Known;
+  }
+
+  static KnownFPClass fabs(const KnownFPClass &Src) {
+    KnownFPClass Known = Src;
+    Known.fabs();
+    return Known;
   }
 
   // Enum of min/max intrinsics to avoid dependency on IR.
@@ -224,6 +246,7 @@ struct KnownFPClass {
 
     // X * X is always non-negative or a NaN.
     Known.knownNot(fcNegative);
+    Known.propagateNaN(Src);
     return Known;
   }
 
