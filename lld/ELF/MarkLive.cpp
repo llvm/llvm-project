@@ -327,8 +327,13 @@ void MarkLive<ELFT, TrackWhyLive>::printWhyLive(Symbol *s) const {
 
     if (std::holds_alternative<Symbol *>(cur))
       printSymbol(std::get<Symbol *>(cur));
-    else
-      msg << std::get<InputSectionBase *>(cur);
+    else {
+      auto *sec = std::get<InputSectionBase *>(cur);
+      msg << sec;
+      // Live EhInputSection has no tracked reason. Break.
+      if (isa<EhInputSection>(sec))
+        break;
+    }
   }
 }
 
@@ -443,9 +448,13 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
 
     for (Symbol *sym : ctx.symtab->getSymbols())
       handleSym(sym);
+    // Handle local symbols, skipping the symbol at index 0 and section
+    // symbols, which usually have empty names and technically not live. Note:
+    // a live section may lack an associated section symbol, making them
+    // unreliable liveness indicators.
     for (ELFFileBase *file : ctx.objectFiles)
       for (Symbol *sym : file->getSymbols())
-        if (sym->isLocal())
+        if (sym->isLocal() && sym->isDefined() && !sym->isSection())
           handleSym(sym);
   }
 }
