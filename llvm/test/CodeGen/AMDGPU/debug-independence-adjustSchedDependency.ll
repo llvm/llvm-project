@@ -1,6 +1,6 @@
 ; RUN: opt %s  -strip-debug -o %t.no_debug.ll -S
-; RUN: llc -O3 -mcpu=gfx1250 < %s             -filetype=obj -o %t.with_debug.o
-; RUN: llc -O3 -mcpu=gfx1250 < %t.no_debug.ll -filetype=obj -o %t.no_debug.o
+; RUN: llc -mcpu=gfx1250 < %s             -filetype=obj -o %t.with_debug.o
+; RUN: llc -mcpu=gfx1250 < %t.no_debug.ll -filetype=obj -o %t.no_debug.o
 ; RUN: llvm-strip %t.with_debug.o %t.no_debug.o
 ; RUN: cmp %t.with_debug.o %t.no_debug.o
 ; Ensure that compiling with and without debug generates identical code.
@@ -16,9 +16,9 @@ entry:
   %mul15.13 = mul i32 %lda, 13
   %idxprom.13 = sext i32 %mul15.13 to i64
   %arrayidx.13 = getelementptr float, ptr addrspace(1) %add.ptr1.i, i64 %idxprom.13
-  %0 = load float, ptr addrspace(1) %arrayidx.13, align 4
-  %1 = insertelement <2 x float> zeroinitializer, float %0, i64 0
-  store <2 x float> %1, ptr addrspace(3) %stPtr, align 4
+  %floatval = load float, ptr addrspace(1) %arrayidx.13, align 4
+  %floatpair = insertelement <2 x float> zeroinitializer, float %floatval, i64 0
+  store <2 x float> %floatpair, ptr addrspace(3) %stPtr, align 4
   ret void
 }
 
