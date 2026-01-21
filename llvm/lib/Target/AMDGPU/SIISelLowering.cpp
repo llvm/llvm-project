@@ -2214,7 +2214,8 @@ bool SITargetLowering::isExtractVecEltCheap(EVT VT, unsigned Index) const {
   // TODO: This should be more aggressive, particular for 16-bit element
   // vectors. However there are some mixed improvements and regressions.
   EVT EltTy = VT.getVectorElementType();
-  return EltTy.getSizeInBits() % 32 == 0;
+  unsigned MinAlign = Subtarget->useRealTrue16Insts() ? 16 : 32;
+  return EltTy.getSizeInBits() % MinAlign == 0;
 }
 
 bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
@@ -2306,9 +2307,16 @@ SDValue SITargetLowering::convertArgType(SelectionDAG &DAG, EVT VT, EVT MemVT,
     Val = DAG.getNode(Opc, SL, MemVT, Val, DAG.getValueType(VT));
   }
 
-  if (MemVT.isFloatingPoint())
-    Val = getFPExtOrFPRound(DAG, Val, SL, VT);
-  else if (Signed)
+  if (MemVT.isFloatingPoint()) {
+    if (VT.isFloatingPoint()) {
+      Val = getFPExtOrFPRound(DAG, Val, SL, VT);
+    } else {
+      assert(!MemVT.isVector());
+      EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
+      SDValue Cast = DAG.getBitcast(IntVT, Val);
+      Val = DAG.getAnyExtOrTrunc(Cast, SL, VT);
+    }
+  } else if (Signed)
     Val = DAG.getSExtOrTrunc(Val, SL, VT);
   else
     Val = DAG.getZExtOrTrunc(Val, SL, VT);
