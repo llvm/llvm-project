@@ -247,7 +247,7 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
       return DefaultABIInfo::classifyArgumentType(Ty);
 
     // Pack aggregates <= 8 bytes into single VGPR or pair.
-    unsigned Size = getContext().getTypeSize(Ty);
+    uint64_t Size = getContext().getTypeSize(Ty);
     if (Size <= 64) {
       unsigned NumRegs = (Size + 31) / 32;
       NumRegsLeft -= std::min(NumRegsLeft, NumRegs);
