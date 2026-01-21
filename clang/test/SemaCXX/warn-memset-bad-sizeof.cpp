@@ -225,6 +225,10 @@ void check_prints(){
     // expected-warning@#CheckCastPrint {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
     // expected-note@#CheckCastPrint {{did you mean to provide an explicit length?}}
 
+    snprintf((char*)(char*)a, sizeof(a), "%s", b); // #CheckDoubleCastPrint
+    // expected-warning@#CheckDoubleCastPrint {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#CheckDoubleCastPrint {{did you mean to provide an explicit length?}}
+
     __builtin_va_list list;
     vsnprintf(a, sizeof(a), "%s", list);  // #VSNprintCheck
     // expected-warning@#VSNprintCheck {{'vsnprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
@@ -233,6 +237,10 @@ void check_prints(){
     vsnprintf((char*)a, sizeof(a), "%s", list);  // #VSNprintCastCheck
     // expected-warning@#VSNprintCastCheck {{'vsnprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
     // expected-note@#VSNprintCastCheck {{did you mean to provide an explicit length?}}
+
+    vsnprintf((char*)(char*)a, sizeof(a), "%s", list);  // #VSNprintDoubleCastCheck
+    // expected-warning@#VSNprintDoubleCastCheck {{'vsnprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#VSNprintDoubleCastCheck {{did you mean to provide an explicit length?}}
 
     //No diagnostic output when dest is an array
     char c[20];

@@ -1449,10 +1449,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       }
     }
     DestinationSize = ComputeSizeArgument(0);
-    const Expr *LenArg = TheCall->getArg(1)->IgnoreParenImpCasts();
-    const Expr *Dest = TheCall->getArg(0)->IgnoreParenImpCasts();
-    if (const auto *DestCast = dyn_cast_or_null<CastExpr>(Dest))
-      Dest = DestCast->getSubExprAsWritten();
+    const Expr *LenArg = TheCall->getArg(1)->IgnoreCasts();
+    const Expr *Dest = TheCall->getArg(0)->IgnoreCasts();
     IdentifierInfo *FnInfo = FD->getIdentifier();
     CheckSizeofMemaccessArgument(LenArg, Dest, FnInfo);
   }
