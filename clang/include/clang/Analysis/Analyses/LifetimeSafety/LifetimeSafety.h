@@ -60,6 +60,10 @@ public:
   virtual void suggestAnnotation(SuggestionScope Scope,
                                  const ParmVarDecl *ParmToAnnotate,
                                  const Expr *EscapeExpr) {}
+
+  // Reports misuse of [[clang::noescape]] when parameter escapes through return
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const Expr *EscapeExpr) {}
 };
 
 /// The main entry point for the analysis.

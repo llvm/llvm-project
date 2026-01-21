@@ -2927,6 +2927,17 @@ public:
         << EscapeExpr->getSourceRange();
   }
 
+  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                               const Expr *EscapeExpr) override {
+    S.Diag(ParmWithNoescape->getBeginLoc(),
+           diag::warn_lifetime_safety_noescape_escapes)
+        << ParmWithNoescape->getSourceRange();
+
+    S.Diag(EscapeExpr->getBeginLoc(),
+           diag::note_lifetime_safety_suggestion_returned_here)
+        << EscapeExpr->getSourceRange();
+  }
+
 private:
   Sema &S;
 };

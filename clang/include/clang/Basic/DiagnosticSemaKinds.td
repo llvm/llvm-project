@@ -10844,6 +10844,12 @@ def warn_lifetime_safety_cross_tu_suggestion
 
 def note_lifetime_safety_suggestion_returned_here : Note<"param returned here">;
 
+def warn_lifetime_safety_noescape_escapes
+    : Warning<
+          "parameter is marked [[clang::noescape]] but escapes through return">,
+      InGroup<LifetimeSafetyNoescape>,
+      DefaultIgnore;
+
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
 // Array comparisons have similar warnings

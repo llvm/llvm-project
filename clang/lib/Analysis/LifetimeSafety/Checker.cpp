@@ -53,6 +53,7 @@ class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, const Expr *> AnnotationWarningsMap;
+  llvm::DenseMap<const ParmVarDecl *, const Expr *> NoescapeWarningsMap;
   const LoanPropagationAnalysis &LoanPropagation;
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
@@ -73,6 +74,7 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
+    reportNoescapeViolations();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -81,7 +83,8 @@ public:
   }
 
   /// Checks if an escaping origin holds a placeholder loan, indicating a
-  /// missing [[clang::lifetimebound]] annotation.
+  /// missing [[clang::lifetimebound]] annotation or a violation of
+  /// [[clang::noescape]].
   void checkAnnotations(const OriginEscapesFact *OEF) {
     OriginID EscapedOID = OEF->getEscapedOriginID();
     LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
@@ -89,6 +92,10 @@ public:
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
       if (const auto *PL = dyn_cast<PlaceholderLoan>(L)) {
         const ParmVarDecl *PVD = PL->getParmVarDecl();
+        if (PVD->hasAttr<NoEscapeAttr>()) {
+          NoescapeWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
+          continue;
+        }
         if (PVD->hasAttr<LifetimeBoundAttr>())
           continue;
         AnnotationWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
@@ -192,6 +199,13 @@ public:
       else
         Reporter->suggestAnnotation(SuggestionScope::IntraTU, PVD, EscapeExpr);
     }
+  }
+
+  void reportNoescapeViolations() {
+    if (!Reporter)
+      return;
+    for (const auto &[PVD, EscapeExpr] : NoescapeWarningsMap)
+      Reporter->reportNoescapeViolation(PVD, EscapeExpr);
   }
 
   void inferAnnotations() {
