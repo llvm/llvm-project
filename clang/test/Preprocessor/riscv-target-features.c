@@ -67,6 +67,7 @@
 // CHECK-NOT: __riscv_svinval {{.*$}}
 // CHECK-NOT: __riscv_svnapot {{.*$}}
 // CHECK-NOT: __riscv_svpbmt {{.*$}}
+// CHECK-NOT: __riscv_svrsw60t59b {{.*$}}
 // CHECK-NOT: __riscv_svvptc {{.*$}}
 // CHECK-NOT: __riscv_v {{.*$}}
 // CHECK-NOT: __riscv_v_elen {{.*$}}
@@ -532,6 +533,14 @@
 // RUN:   -march=rv64isvvptc -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SVVPTC-EXT %s
 // CHECK-SVVPTC-EXT: __riscv_svvptc 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32isvrsw60t59b -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVRSW60T59B-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64isvrsw60t59b -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVRSW60T59B-EXT %s
+// CHECK-SVRSW60T59B-EXT: __riscv_svrsw60t59b 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32iv1p0 -E -dM %s \

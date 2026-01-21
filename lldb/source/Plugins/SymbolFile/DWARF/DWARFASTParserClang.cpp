@@ -1622,6 +1622,12 @@ void DWARFASTParserClang::ParseInheritance(
 
   CompilerType base_class_clang_type = base_class_type->GetFullCompilerType();
   assert(base_class_clang_type);
+
+  // Make sure all base classes refer to complete types and not forward
+  // declarations. If we don't do this, clang will crash with an
+  // assertion in the call to clang_type.TransferBaseClasses()
+  TypeSystemClang::RequireCompleteType(base_class_clang_type);
+
   if (TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type)) {
     ast->SetObjCSuperClass(class_clang_type, base_class_clang_type);
     return;
@@ -2248,19 +2254,8 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     return {};
   }
 
-  if (!bases.empty()) {
-    // Make sure all base classes refer to complete types and not forward
-    // declarations. If we don't do this, clang will crash with an
-    // assertion in the call to clang_type.TransferBaseClasses()
-    for (const auto &base_class : bases) {
-      clang::TypeSourceInfo *type_source_info = base_class->getTypeSourceInfo();
-      if (type_source_info)
-        TypeSystemClang::RequireCompleteType(
-            m_ast.GetType(type_source_info->getType()));
-    }
-
+  if (!bases.empty())
     m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(), std::move(bases));
-  }
 
   m_ast.AddMethodOverridesForCXXRecordType(clang_type.GetOpaqueQualType());
   TypeSystemClang::BuildIndirectFields(clang_type);

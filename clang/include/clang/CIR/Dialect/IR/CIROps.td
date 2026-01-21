@@ -241,6 +241,7 @@ def CIR_CastOp : CIR_Op<"cast", [
   // The input and output types should match the cast kind.
   let hasVerifier = 1;
   let hasFolder = 1;
+  let hasCXXABILowering = 1;
 
   let extraLLVMLoweringPatternDecl = [{
     mlir::Type convertTy(mlir::Type ty) const;
@@ -2865,6 +2866,10 @@ def CIR_OptionalPriorityAttr : OptionalAttr<
     "65535"
   >
 >;
+
+// TODO(CIR): CallingConv is a placeholder here so we can use it in
+// infrastructure calls, but it currently has no values.
+def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", []>;
 
 def CIR_FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
