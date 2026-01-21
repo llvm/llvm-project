@@ -19121,15 +19121,14 @@ bool Sema::DefineUsedVTables() {
 
       if (IsExplicitInstantiationDeclaration) {
         const bool HasExcludeFromExplicitInstantiation =
-            llvm::any_of(Class->decls(), [](Decl *decl) {
-              // If the class has a virtual member function declared with
+            llvm::any_of(Class->methods(), [](CXXMethodDecl *method) {
+              // If the class has a member function declared with
               // `__attribute__((exclude_from_explicit_instantiation))`, the
-              // explicit instantiation declaration shouldn't suppress emitting
-              // the vtable to ensure that the excluded member function is
-              // accessible through the vtable.
-              auto *Method = dyn_cast<CXXMethodDecl>(decl);
-              return Method && Method->isVirtual() &&
-                     Method->hasAttr<ExcludeFromExplicitInstantiationAttr>();
+              // explicit instantiation declaration should not suppress emitting
+              // the vtable, since the corresponding explicit instantiation
+              // definition might not emit the vtable if a triggering method is
+              // excluded.
+              return method->hasAttr<ExcludeFromExplicitInstantiationAttr>();
             });
         if (!HasExcludeFromExplicitInstantiation)
           DefineVTable = false;
