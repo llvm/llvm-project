@@ -15,6 +15,9 @@
 define spir_func void @test_array_store() {
 entry:
   %var = alloca [4 x i32]
+  call void @escape(ptr %var)
   store i32 123, ptr %var
   ret void
 }
+
+declare void @escape(ptr)

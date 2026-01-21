@@ -25,6 +25,7 @@
 define internal spir_func float @foo() {
   %1 = alloca %struct.SF, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#sf_fp]] Function
+  call void @escape(ptr %1)
 
   %2 = load float, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpAccessChain %[[#float_fp]] %[[#var]] %[[#uint_0]]
@@ -36,6 +37,7 @@ define internal spir_func float @foo() {
 define internal spir_func i32 @bar() {
   %1 = alloca %struct.SU, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#su_fp]] Function
+  call void @escape(ptr %1)
 
   %2 = load i32, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]]
@@ -47,6 +49,7 @@ define internal spir_func i32 @bar() {
 define internal spir_func float @baz() {
   %1 = alloca %struct.SFUF, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#sfuf_fp]] Function
+  call void @escape(ptr %1)
 
   %2 = load float, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpAccessChain %[[#float_fp]] %[[#var]] %[[#uint_0]]
@@ -62,3 +65,5 @@ define internal spir_func float @biz() {
 
   ret float %2
 }
+
+declare void @escape(ptr)

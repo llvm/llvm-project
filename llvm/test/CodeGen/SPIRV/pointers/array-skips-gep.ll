@@ -16,6 +16,7 @@
 define internal spir_func i32 @foo() {
   %array = alloca [10 x i32], align 4
 ; CHECK: %[[#array:]] = OpVariable %[[#array_fp:]] Function
+  call void @escape(ptr %array)
 
   ; Direct load from the pointer index. This requires an OpAccessChain
   %1 = load i32, ptr %array, align 4
@@ -25,6 +26,8 @@ define internal spir_func i32 @foo() {
   ret i32 %1
 ; CHECK: OpReturnValue %[[#val]]
 }
+
+declare void @escape(ptr)
 
 define internal spir_func i32 @bar() {
   ; Direct load from the pointer index. This requires an OpAccessChain

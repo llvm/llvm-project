@@ -42,6 +42,7 @@
 define internal spir_func void @foo() {
   %1 = alloca %struct.SF, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#sf_fp]] Function
+  call void @escape(ptr %1)
 
   store float 0.0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#float_fp]] %[[#var]] %[[#uint_0]]
@@ -53,6 +54,7 @@ define internal spir_func void @foo() {
 define internal spir_func void @bar() {
   %1 = alloca %struct.SU, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#su_fp]] Function
+  call void @escape(ptr %1)
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]]
@@ -64,6 +66,7 @@ define internal spir_func void @bar() {
 define internal spir_func void @baz() {
   %1 = alloca %struct.SFUF, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#sfuf_fp]] Function
+  call void @escape(ptr %1)
 
   store float 0.0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#float_fp]] %[[#var]] %[[#uint_0]]
@@ -83,6 +86,7 @@ define internal spir_func void @biz() {
 define internal spir_func void @nested_store() {
   %1 = alloca %struct.SSU, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#ssu_fp]] Function
+  call void @escape(ptr %1)
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]] %[[#uint_0]]
@@ -94,6 +98,7 @@ define internal spir_func void @nested_store() {
 define internal spir_func void @nested_store_vector() {
   %1 = alloca %struct.SSV, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#ssv_fp]] Function
+  call void @escape(ptr %1)
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]]
@@ -105,6 +110,7 @@ define internal spir_func void @nested_store_vector() {
 define internal spir_func void @nested_array_vector() {
   %1 = alloca %struct.SSASSV, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#ssassv_fp]] Function
+  call void @escape(ptr %1)
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]]
@@ -112,3 +118,5 @@ define internal spir_func void @nested_array_vector() {
 
   ret void
 }
+
+declare void @escape(ptr)
