@@ -1522,7 +1522,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (!SrcAlloca->isStaticAlloca() || !DestAlloca->isStaticAlloca())
     return false;
 
-  // Check that copy is full with static size.
   const DataLayout &DL = DestAlloca->getDataLayout();
 
   auto DestOffset = DestPtr->getPointerOffsetFrom(DestAlloca, DL);
@@ -1535,6 +1534,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // Offset difference must preserve dest alloca's alignment.
   if ((*SrcOffset - *DestOffset) % DestAlloca->getAlign().value() != 0)
     return false;
+
   std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
   std::optional<TypeSize> DestSize = DestAlloca->getAllocationSize(DL);
   if (!SrcSize || !DestSize)
@@ -1542,11 +1542,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (*SrcSize != *DestSize)
     if (!SrcSize->isFixed() || !DestSize->isFixed())
       return false;
-  // Check that copy covers entirety of dest alloca.
-  if (Size != *DestSize || *DestOffset != 0) {
-    LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
-    return false;
-  }
 
   // Check if it will be legal to combine allocas without breaking dominator.
   bool MoveSrc = !DT->dominates(SrcAlloca, DestAlloca);
@@ -1658,6 +1653,47 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (!CaptureTrackingWithModRef(DestAlloca, DestModRefCallback,
                                  DestAddressCaptured))
     return false;
+
+  // Check that copy is full with dest size (from DestOffset to end), either
+  // because it wrote every byte, or it was fresh. The store itself was ignored
+  // earlier, but might be in a loop, so it could (in rare cases) observe that
+  // earlier store which needs to be checked for now. For example, a source
+  // language might emit code matching that pattern for a simple array reverse
+  // with a struct element type:
+  //   for (i = 0; i < size; i++) dest[size - i - 1] = src[i];
+  if (*DestOffset != 0 || Size != *DestSize) {
+    // Similar analysis to overreadUndefContents
+    MemoryLocation Loc;
+    Value *Ptr;
+    if (auto SI = dyn_cast<StoreInst>(Store)) {
+      Loc = MemoryLocation::get(SI);
+      Ptr = SI->getPointerOperand();
+    } else if (auto MI = dyn_cast<MemCpyInst>(Store)) {
+      Loc = MemoryLocation::getForDest(MI);
+      Ptr = MI->getDest();
+    } else {
+      llvm_unreachable("performStackMoveOptzn must have a known store kind");
+    }
+    // If offset and size are constant, then this overwrote the same bytes
+    // every time anyways.
+    if (!Ptr->getPointerOffsetFrom(DestAlloca, DL)) {
+      // Otherwise, if the other bytes are not known-undef, then also need to
+      // consider whether they could have been defined by this same store in a
+      // loop.
+      MemoryUseOrDef *MemAccess = MSSA->getMemoryAccess(Store);
+      MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
+          MemAccess->getDefiningAccess(), Loc, BAA);
+      bool allOverreadUndefContents = false;
+      if (auto *MD = dyn_cast<MemoryDef>(Clobber))
+        if (hasUndefContents(MSSA, BAA, Ptr, MD))
+          allOverreadUndefContents = true;
+      if (!allOverreadUndefContents) {
+        BasicBlock *BB = Store->getParent();
+        ReachabilityWorklist.append(succ_begin(BB), succ_end(BB));
+      }
+    }
+  }
+
   // Bailout if Dest may have any ModRef before Store.
   if (!ReachabilityWorklist.empty() &&
       isPotentiallyReachableFromMany(ReachabilityWorklist, Store->getParent(),
@@ -1701,12 +1737,36 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
       std::max(SrcAlloca->getAlign(), DestAlloca->getAlign()));
 
   // Size the allocas appropriately.
-  if (*SrcSize != *DestSize) {
-    // Only possible if both sizes are fixed (due to earlier check)
-    // Set Src to the type and array size of Dest if Dest was larger
-    if (DestSize->getFixedValue() > SrcSize->getFixedValue()) {
-      SrcAlloca->setAllocatedType(DestAlloca->getAllocatedType());
-      SrcAlloca->setOperand(0, DestAlloca->getArraySize());
+  // Dest accesses at offset X map to SrcAlloca + (SrcOffset - DestOffset) + X,
+  // so src alloca needs size >= (SrcOffset - DestOffset) + DestSize.
+  // The earlier checks ensure sizes are fixed when offsets differ or sizes
+  // differ.
+  if (SrcSize->isFixed() && DestSize->isFixed()) {
+    LLVMContext &Ctx = SrcAlloca->getContext();
+    uint64_t SrcSizeVal = SrcSize->getFixedValue();
+    uint64_t DestSizeVal = DestSize->getFixedValue();
+    uint64_t OffsetDiff = *SrcOffset - *DestOffset;
+    uint64_t NeededSrcSize = OffsetDiff + DestSizeVal;
+    if (NeededSrcSize > SrcSizeVal) {
+      if (*DestOffset == 0) {
+        // No offset difference, just use DestType directly.
+        SrcAlloca->setAllocatedType(DestAlloca->getAllocatedType());
+        SrcAlloca->setOperand(0, DestAlloca->getArraySize());
+      } else {
+        // Need trailing padding to grow src alloca.
+        // Use StructType to preserve src's type while adding padding.
+        Type *SrcTy = SrcAlloca->getAllocatedType();
+        if (SrcAlloca->isArrayAllocation()) {
+          auto *C = cast<ConstantInt>(SrcAlloca->getArraySize());
+          SrcTy = ArrayType::get(SrcTy, C->getZExtValue());
+          SrcAlloca->setOperand(
+              0, ConstantInt::get(SrcAlloca->getArraySize()->getType(), 1));
+        }
+        uint64_t TrailingPad = NeededSrcSize - SrcSizeVal;
+        Type *TrailingPadTy = ArrayType::get(Type::getInt8Ty(Ctx), TrailingPad);
+        Type *NewAllocaTy = StructType::get(SrcTy, TrailingPadTy);
+        SrcAlloca->setAllocatedType(NewAllocaTy);
+      }
     }
   }
 

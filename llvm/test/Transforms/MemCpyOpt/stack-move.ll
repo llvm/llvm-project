@@ -1047,22 +1047,14 @@ define void @mismatched_alloca_size() {
 }
 
 
-; Optimization failures follow:
-
 ; Tests that a memcpy that doesn't completely overwrite a stack value is a use
 ; for the purposes of liveness analysis, not a definition.
 define void @incomplete_memcpy() {
 ; CHECK-LABEL: define void @incomplete_memcpy() {
-; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
-; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr captures(none) [[SRC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr captures(none) [[DEST]])
-; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr noundef captures(none) [[SRC]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST]], ptr align 4 [[SRC]], i64 11, i1 false)
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[DEST]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr noundef captures(none) [[DEST]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr noundef captures(none) [[DEST]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr captures(none) [[SRC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr captures(none) [[DEST]])
 ; CHECK-NEXT:    ret void
 ;
   %src = alloca %struct.Foo, align 4
@@ -1082,17 +1074,10 @@ define void @incomplete_memcpy() {
 ; for the purposes of liveness analysis, not a definition.
 define void @incomplete_store() {
 ; CHECK-LABEL: define void @incomplete_store() {
-; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
-; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr captures(none) [[SRC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr captures(none) [[DEST]])
-; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr noundef captures(none) [[SRC]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC]], align 4
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[DEST]], align 4
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[DEST]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr noundef captures(none) [[DEST]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @use_nocapture(ptr noundef captures(none) [[DEST]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr captures(none) [[SRC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr captures(none) [[DEST]])
 ; CHECK-NEXT:    ret void
 ;
   %src = alloca %struct.Foo, align 4
@@ -1188,6 +1173,8 @@ define void @dynamically_sized_alloca(i64 %i) {
   ret void
 }
 
+
+; Optimization failures follow:
 
 ; Tests that inalloca attributed allocas are never merged, to prevent stacksave/stackrestore handling.
 define void @inalloca() {
