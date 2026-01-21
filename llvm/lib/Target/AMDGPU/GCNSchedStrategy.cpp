@@ -2055,7 +2055,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     GCNRegPressure &PressureBefore = DAG.Pressure[Region];
     unsigned SpillCostBefore = PressureBefore.getVGPRSpills(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
- 
+
     // For the cases we care about (i.e. ArchVGPR usage is greater than the
     // addressable limit), rewriting alone should bring pressure to manageable
     // level. If we find any such region, then the rewrite is potentially
@@ -2064,7 +2064,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     unsigned SpillCostAfter = PressureAfter.getVGPRSpills(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
 
-     uint64_t BlockFreq =
+    uint64_t BlockFreq =
         MBFI->getBlockFreq(DAG.Regions[Region].first->getParent())
             .getFrequency();
 
@@ -2122,9 +2122,9 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
       CopyCost += RC->getCopyCost() * UseFreq;
     }
   }
-  
+
   // Reset the classes that were changed to AGPR for better RB analysis.
-  // We must do rewriting after copy-insertion, as some defs of the register 
+  // We must do rewriting after copy-insertion, as some defs of the register
   // may require VGPR.  Additionally, if we bail out and don't perform the
   // rewrite then these need to be restored anyway.
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
