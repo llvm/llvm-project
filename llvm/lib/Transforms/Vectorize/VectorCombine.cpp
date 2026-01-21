@@ -1652,7 +1652,8 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
     }
 
     // Create the vector select and bitcast once for this condition.
-    // Insert in a block that dominates all selects, and where Cond and SrcVec are defined.
+    // Insert in a block that dominates all selects, and where Cond and SrcVec
+    // are defined.
     BasicBlock *InsertBB = Selects.front()->getParent();
     for (SelectInst *Sel : drop_begin(Selects))
       InsertBB = DT.findNearestCommonDominator(InsertBB, Sel->getParent());
