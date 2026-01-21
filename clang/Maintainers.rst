@@ -261,8 +261,8 @@ compiler.
 
 Attributes
 ~~~~~~~~~~
-| Erich Keane
-| ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+| Aaron Ballman
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 Plugins
