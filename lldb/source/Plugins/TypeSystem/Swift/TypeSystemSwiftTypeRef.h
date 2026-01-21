@@ -696,7 +696,7 @@ public:
 
   /// Forwards to SwiftASTContext.
   PersistentExpressionState *GetPersistentExpressionState() override;
-  Status PerformCompileUnitImports(const SymbolContext &sc);
+  llvm::Error PerformCompileUnitImports(const SymbolContext &sc);
   /// Returns how often ModulesDidLoad was called.
   unsigned GetGeneration() const { return m_generation; }
   /// Performs a target-wide search.

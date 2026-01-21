@@ -20,6 +20,7 @@
 #include "TypeSystemSwift.h"
 #include "TypeSystemSwiftTypeRef.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/lldb-enumerations.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTDemangler.h"
 #include "swift/AST/ASTMangler.h"
@@ -77,6 +78,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -135,6 +137,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -4270,21 +4273,18 @@ SwiftASTContext::GetModule(const FileSpec &module_spec) {
       "failed to get module \"{0}\" from AST context", module_spec.GetPath()));
 }
 
-template<typename ModuleT> swift::ModuleDecl *
+template <typename ModuleT>
+llvm::Expected<swift::ModuleDecl &>
 SwiftASTContext::FindAndLoadModule(const ModuleT &module, Process &process,
-                                   bool import_dylib, Status &error) {
-  VALID_OR_RETURN(nullptr);
+                                   bool import_dylib) {
+  VALID_OR_RETURN(llvm::createStringError("no context"));
 
   bool cached = false;
   auto swift_module_or_err = GetModule(module, &cached);
-  if (!swift_module_or_err) {
-    error = Status::FromError(swift_module_or_err.takeError());
-    return nullptr;
-  }
-  swift::ModuleDecl *swift_module = &*swift_module_or_err;
+  if (!swift_module_or_err)
+    return swift_module_or_err.takeError();
 
-  if (!swift_module)
-    return nullptr;
+  swift::ModuleDecl &swift_module = *swift_module_or_err;
 
   // If import_dylib is true, this is an explicit "import Module"
   // declaration in a user expression, and we should load the dylib
@@ -4300,7 +4300,8 @@ SwiftASTContext::FindAndLoadModule(const ModuleT &module, Process &process,
     return swift_module;
 
   if (import_dylib)
-    LoadModule(swift_module, process, error);
+    if (llvm::Error error = LoadModule(swift_module, process))
+      return error;
 
   return swift_module;
 }
@@ -4315,8 +4316,7 @@ bool SwiftASTContext::LoadOneImage(Process &process, FileSpec &link_lib_spec,
   if (platform_sp)
     return platform_sp->LoadImage(&process, FileSpec(), link_lib_spec, error) !=
            LLDB_INVALID_IMAGE_TOKEN;
-  else
-    return false;
+  return false;
 }
 
 static std::vector<std::string>
@@ -4337,9 +4337,9 @@ GetLibrarySearchPaths(const swift::SearchPathOptions &search_path_opts) {
   return paths;
 }
 
-void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
-                                 Process &process, Status &error) {
-  VALID_OR_RETURN();
+llvm::Error SwiftASTContext::LoadModule(swift::ModuleDecl &swift_module,
+                                        Process &process) {
+  VALID_OR_RETURN(llvm::createStringError("invalid context"));
 
   Status current_error;
   auto addLinkLibrary = [&](swift::LinkLibrary link_lib) {
@@ -4348,7 +4348,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
     std::string library_name = link_lib.getName().str();
 
     if (library_name.empty()) {
-      error = Status::FromErrorString(
+      current_error = Status::FromErrorString(
           "Empty library name passed to addLinkLibrary");
       return;
     }
@@ -4451,7 +4451,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       std::vector<std::string> uniqued_paths;
 
       for (const auto &framework_search_dir :
-           swift_module->getASTContext()
+           swift_module.getASTContext()
                .SearchPathOpts.getFrameworkSearchPaths()) {
         // The framework search dir as it comes from the AST context
         // often has duplicate entries, don't try to load along the
@@ -4511,7 +4511,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
     } break;
     case swift::LibraryKind::Library: {
       std::vector<std::string> search_paths =
-          GetLibrarySearchPaths(swift_module->getASTContext().SearchPathOpts);
+          GetLibrarySearchPaths(swift_module.getASTContext().SearchPathOpts);
 
       if (LoadLibraryUsingPaths(process, library_name, search_paths, true,
                                 all_dlopen_errors))
@@ -4526,14 +4526,14 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
 
     current_error = Status::FromErrorStringWithFormatv(
         "Failed to load linked library {0} of module {1} - errors:\n{2}\n",
-        library_name, swift_module->getName().str().str(),
+        library_name, swift_module.getName().str().str(),
         all_dlopen_errors.GetData());
   };
 
-  for (auto import : swift::namelookup::getAllImports(swift_module)) {
+  for (auto import : swift::namelookup::getAllImports(&swift_module)) {
     import.importedModule->collectLinkLibraries(addLinkLibrary);
   }
-  error = current_error.Clone();
+  return current_error.takeError();
 }
 
 bool SwiftASTContext::LoadLibraryUsingPaths(
@@ -5620,11 +5620,6 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
     DiagnosticManager fatal_diagnostics;
     diags.PrintDiagnostics(fatal_diagnostics, {}, bufferID, first_line,
                            last_line);
-    if (fatal_diagnostics.Diagnostics().size())
-      RaiseFatalError(fatal_diagnostics.GetString());
-    else
-      RaiseFatalError("Unknown fatal error occurred.");
-
     m_reported_fatal_error = true;
 
     for (const DiagnosticList::value_type &fatal_diagnostic :
@@ -5638,6 +5633,10 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
   } else {
     diags.PrintDiagnostics(diagnostic_manager, {}, bufferID, first_line,
                            last_line);
+    if (m_fatal_errors.Fail())
+      diagnostic_manager.AddDiagnostic(
+          llvm::toString(m_fatal_errors.Clone().takeError()),
+          lldb::eSeverityError, eDiagnosticOriginLLDB);
   }
 }
 
@@ -9211,37 +9210,33 @@ static void GetNameFromModule(swift::ModuleDecl *module, std::string &result) {
   }
 }
 
-static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
-                                        SwiftASTContext &swift_ast_context,
-                                        lldb::ProcessSP process_sp,
-                                        bool import_dylibs,
-                                        Status &error) {
+static llvm::Expected<swift::ModuleDecl &>
+LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
+              lldb::ProcessSP process_sp, bool import_dylibs) {
   if (!module.path.size())
-    return nullptr;
+    return llvm::createStringError("empty module name");
 
-  error.Clear();
   ConstString toplevel = module.path.front();
   const std::string &m_description = swift_ast_context.GetDescription();
   LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
              "Importing module %s", toplevel.AsCString());
-  swift::ModuleDecl *swift_module = nullptr;
-  auto *clangimporter = swift_ast_context.GetClangImporter();
-  swift::ModuleDecl *imported_header_module =
-      clangimporter ? clangimporter->getImportedHeaderModule() : nullptr;
-  if (imported_header_module &&
-      toplevel.GetStringRef() == imported_header_module->getName().str())
-    swift_module = imported_header_module;
-  else if (process_sp)
-    swift_module = swift_ast_context.FindAndLoadModule(
-        module, *process_sp.get(), import_dylibs, error);
-  else {
-    auto swift_module_or_err = swift_ast_context.GetModule(module);
-    if (!swift_module_or_err)
-      llvm::consumeError(swift_module_or_err.takeError());
-    else
-      swift_module = &*swift_module_or_err;
-  }
 
+  auto load_impl =
+      [&](ConstString path) -> llvm::Expected<swift::ModuleDecl &> {
+    auto *clangimporter = swift_ast_context.GetClangImporter();
+    swift::ModuleDecl *imported_header_module =
+        clangimporter ? clangimporter->getImportedHeaderModule() : nullptr;
+    if (imported_header_module &&
+        toplevel.GetStringRef() == imported_header_module->getName().str())
+      return *imported_header_module;
+    else if (process_sp) {
+      return swift_ast_context.FindAndLoadModule(module, *process_sp.get(),
+                                                 import_dylibs);
+    } else
+      return swift_ast_context.GetModule(module);
+  };
+
+  auto swift_module = load_impl(toplevel);
   if (swift_module && IsDWARFImported(*swift_module)) {
     // This module was "imported" from DWARF. This basically means the
     // import as a Swift or Clang module failed. We have not yet
@@ -9257,18 +9252,17 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
             : "Swift modules can be wrapped in object containers using "
               "-module-wrap and linked.");
 
-    if (toplevel.GetStringRef() == swift::STDLIB_NAME)
-      swift_module = nullptr;
+    if (toplevel.GetStringRef() == swift::STDLIB_NAME) {
+      swift_ast_context.RaiseFatalError(
+          "Could not import Swift standard library");
+      return llvm::createStringError("Could not import Swift standard library");
+    }
   }
 
-  if (!swift_module || !error.Success() || swift_ast_context.HasFatalErrors()) {
+  if (!swift_module) {
     LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
-               "Couldn't import module %s: %s", toplevel.AsCString(),
-               error.AsCString());
-
-    if (!swift_module || swift_ast_context.HasFatalErrors()) {
-      return nullptr;
-    }
+               "Couldn't import module %s", toplevel.AsCString());
+    return swift_module;
   }
 
   if (GetLog(LLDBLog::Types | LLDBLog::Expressions)) {
@@ -9282,13 +9276,12 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
   return swift_module;
 }
 
-bool SwiftASTContextForExpressions::GetImplicitImports(
+llvm::Error SwiftASTContextForExpressions::GetImplicitImports(
     SymbolContext &sc, lldb::ProcessSP process_sp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
-        &modules,
-    Status &error) {
-  if (!GetCompileUnitImports(sc, process_sp, modules, error))
-    return false;
+        &modules) {
+  if (auto error = GetCompileUnitImports(sc, process_sp, modules))
+    return error;
 
   // Get the hand-loaded modules from the SwiftPersistentExpressionState.
   for (auto &module_pair : m_hand_loaded_modules) {
@@ -9304,51 +9297,44 @@ bool SwiftASTContextForExpressions::GetImplicitImports(
     // Otherwise, try reloading the ModuleDecl using the module name.
     SourceModule module_info;
     module_info.path.emplace_back(module_pair.first());
-    auto *module = LoadOneModule(module_info, *this, process_sp,
-                                 /*import_dylibs=*/false, error);
+    auto module = LoadOneModule(module_info, *this, process_sp,
+                                /*import_dylibs=*/false);
     if (!module)
-      return false;
+      return module.takeError();
 
-    attributed_import.module = swift::ImportedModule(module);
+    attributed_import.module = swift::ImportedModule(&*module);
     modules.emplace_back(attributed_import);
   }
-  return true;
+  return llvm::Error::success();
 }
 
-void SwiftASTContextForExpressions::LoadImplicitModules(
-    TargetSP target, ProcessSP process, ExecutionContextScope &exe_scope) {
-  auto load_module = [&](ConstString module_name) {
+llvm::Error SwiftASTContextForExpressions::LoadImplicitModules(
+    ProcessSP process, ExecutionContextScope &exe_scope) {
+  auto load_module = [&](ConstString module_name) -> llvm::Error {
     SourceModule module_info;
     module_info.path.push_back(module_name);
-    Status err;
-    LoadOneModule(module_info, *this, process, true, err);
-    if (err.Fail()) {
-      LOG_PRINTF(GetLog(LLDBLog::Types),
-                 "Could not load module %s implicitly, error: %s",
-                 module_name.GetCString(), err.AsCString());
-      return;
+    {
+      auto module_or_err = LoadOneModule(module_info, *this, process, true);
+      if (!module_or_err)
+        return module_or_err.takeError();
     }
-
-    auto module_or_err = GetModule(module_info);
-    if (!module_or_err) {
-      std::string error = llvm::toString(module_or_err.takeError());
-      LOG_PRINTF(
-          GetLog(LLDBLog::Types),
-          "Could not add hand loaded module %s to persistent state, error: %s",
-          module_name.GetCString(), error.c_str());
-      return;
+    {
+      auto module_or_err = GetModule(module_info);
+      if (!module_or_err)
+        return module_or_err.takeError();
+      swift::ModuleDecl *module = &*module_or_err;
+      AddHandLoadedModule(module_name, swift::ImportedModule(module));
     }
-    swift::ModuleDecl *module = &*module_or_err;
-
-    AddHandLoadedModule(module_name, swift::ImportedModule(module));
+    return llvm::Error::success();
   };
 
-  load_module(ConstString(swift::SWIFT_STRING_PROCESSING_NAME));
-  load_module(ConstString(swift::SWIFT_CONCURRENCY_NAME));
+  return llvm::joinErrors(
+      load_module(ConstString(swift::SWIFT_STRING_PROCESSING_NAME)),
+      load_module(ConstString(swift::SWIFT_CONCURRENCY_NAME)));
 }
 
-bool SwiftASTContextForExpressions::CacheUserImports(
-    lldb::ProcessSP process_sp, swift::SourceFile &source_file, Status &error) {
+llvm::Error SwiftASTContextForExpressions::CacheUserImports(
+    lldb::ProcessSP process_sp, swift::SourceFile &source_file) {
   llvm::SmallString<1> m_description;
 
   auto src_file_imports = source_file.getImports();
@@ -9379,10 +9365,10 @@ bool SwiftASTContextForExpressions::CacheUserImports(
         LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
                    "Performing auto import on found module: %s.\n",
                    module_name.c_str());
-        auto *module_decl = LoadOneModule(module_info, *this, process_sp,
-                                          /*import_dylibs=*/true, error);
+        auto module_decl = LoadOneModule(module_info, *this, process_sp,
+                                         /*import_dylibs=*/true);
         if (!module_decl)
-          return false;
+          return module_decl.takeError();
         if (IsSerializedAST(*module_decl)) {
           // Parse additional search paths from the module.
           StringRef ast_file = module_decl->getModuleLoadedFilename();
@@ -9422,21 +9408,20 @@ bool SwiftASTContextForExpressions::CacheUserImports(
       }
     }
   }
-  return true;
+  return llvm::Error::success();
 }
 
-bool SwiftASTContext::GetCompileUnitImports(
+llvm::Error SwiftASTContext::GetCompileUnitImports(
     const SymbolContext &sc, ProcessSP process_sp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
-        &modules,
-    Status &error) {
-  return GetCompileUnitImportsImpl(sc, process_sp, &modules, error);
+        &modules) {
+  return GetCompileUnitImportsImpl(sc, process_sp, &modules);
 }
 
-void SwiftASTContext::PerformCompileUnitImports(const SymbolContext &sc,
-                                                lldb::ProcessSP process_sp,
-                                                Status &error) {
-  GetCompileUnitImportsImpl(sc, process_sp, nullptr, error);
+llvm::Error
+SwiftASTContext::PerformCompileUnitImports(const SymbolContext &sc,
+                                           lldb::ProcessSP process_sp) {
+  return GetCompileUnitImportsImpl(sc, process_sp, nullptr);
 }
 
 static std::pair<Module *, lldb::user_id_t>
@@ -9444,11 +9429,10 @@ GetCUSignature(CompileUnit &compile_unit) {
   return {compile_unit.GetModule().get(), compile_unit.GetID()};
 }
 
-bool SwiftASTContext::GetCompileUnitImportsImpl(
+llvm::Error SwiftASTContext::GetCompileUnitImportsImpl(
     const SymbolContext &sc, lldb::ProcessSP process_sp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
-        *modules,
-    Status &error) {
+        *modules) {
   // If EBM is enabled, disable implicit modules during contextual imports.
   bool turn_off_implicit = m_has_explicit_modules;
   auto reset = llvm::make_scope_exit([&] {
@@ -9502,52 +9486,57 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
     if (!m_cu_imports.insert(GetCUSignature(*compile_unit)).second)
       // List of imports isn't requested and we already processed this CU?
       if (!modules)
-        return true;
+        return llvm::Error::success();
 
-  // Import the Swift standard library and its dependencies.
-  SourceModule swift_module;
-  swift_module.path.emplace_back(swift::STDLIB_NAME);
-  auto *stdlib = LoadOneModule(swift_module, *this, process_sp,
-                               /*import_dylibs=*/true, error);
-  if (!stdlib)
-    return false;
+  bool loaded_stdlib = false;
+  if (compile_unit && compile_unit->GetLanguage() == lldb::eLanguageTypeSwift) {
+    std::vector<SourceModule> cu_imports = compile_unit->GetImportedModules();
+    LOG_PRINTF(GetLog(LLDBLog::Types), "Importing dependencies of current CU");
+    std::string category = "Importing dependencies for ";
+    category += compile_unit->GetPrimaryFile().GetFilename().GetString();
+    auto module_import_progress_raii = GetModuleImportProgressRAII(category);
 
-  if (modules)
-    modules->emplace_back(swift::ImportedModule(stdlib));
+    for (const SourceModule &module : cu_imports) {
+      // When building the Swift stdlib with debug info these will
+      // show up in "Swift.o", but we already imported them and
+      // manually importing them will fail.
+      // Also skip the "std" module, as the C++ standard library will be
+      // imported as "CxxStdlib", which should also be imported.
+      if (module.path.size() &&
+          llvm::StringSwitch<bool>(module.path.front().GetStringRef())
+              .Cases("SwiftShims", "Builtin", "std", true)
+              .Default(false))
+        continue;
 
-  if (!compile_unit || compile_unit->GetLanguage() != lldb::eLanguageTypeSwift)
-    return true;
+      auto loaded_module = LoadOneModule(module, *this, process_sp,
+                                         /*import_dylibs=*/false);
+      if (!loaded_module)
+        return loaded_module.takeError();
 
-  auto cu_imports = compile_unit->GetImportedModules();
-  if (cu_imports.size() == 0)
-    return true;
+      if (module.path.size() &&
+          module.path.front().GetStringRef() == swift::STDLIB_NAME)
+        loaded_stdlib = true;
 
-  LOG_PRINTF(GetLog(LLDBLog::Types), "Importing dependencies of current CU");
-  std::string category = "Importing dependencies for ";
-  category += compile_unit->GetPrimaryFile().GetFilename().GetString();
-  auto module_import_progress_raii = GetModuleImportProgressRAII(category);
- 
-  for (const SourceModule &module : cu_imports) {
-    // When building the Swift stdlib with debug info these will
-    // show up in "Swift.o", but we already imported them and
-    // manually importing them will fail.
-    // Also skip the "std" module, as the C++ standard library will be
-    // imported as "CxxStdlib", which should also be imported.
-    if (module.path.size() &&
-        llvm::StringSwitch<bool>(module.path.front().GetStringRef())
-            .Cases("Swift", "SwiftShims", "Builtin", "std", true)
-            .Default(false))
-      continue;
+      if (modules)
+        modules->emplace_back(swift::ImportedModule(&*loaded_module));
+    }
+  }
 
-    auto *loaded_module = LoadOneModule(module, *this, process_sp,
-                                        /*import_dylibs=*/false, error);
-    if (!loaded_module)
-      return false;
+  // If we haven't already loaded an explicitly tracked one, import the Swift
+  // standard library and its dependencies.
+  if (!loaded_stdlib) {
+    SourceModule swift_module;
+    swift_module.path.emplace_back(swift::STDLIB_NAME);
+    auto stdlib = LoadOneModule(swift_module, *this, process_sp,
+                                /*import_dylibs=*/true);
+    if (!stdlib)
+      return stdlib.takeError();
 
     if (modules)
-      modules->emplace_back(swift::ImportedModule(loaded_module));
+      modules->emplace_back(swift::ImportedModule(&*stdlib));
   }
-  return true;
+
+  return llvm::Error::success();
 }
 
 swift::Mangle::ManglingFlavor SwiftASTContext::GetManglingFlavor() {

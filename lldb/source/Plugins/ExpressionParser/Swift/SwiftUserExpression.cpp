@@ -16,6 +16,7 @@
 #include "SwiftPersistentExpressionState.h"
 #include "SwiftREPLMaterializer.h"
 
+#include "lldb/lldb-enumerations.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/GenericEnvironment.h"
 #include "swift/Demangling/Demangler.h"
@@ -761,16 +762,23 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   Log *log = GetLog(LLDBLog::Expressions);
   Status err;
 
-  auto error = [&](const char *error_msg, const char *detail = nullptr) {
+  auto diagnose = [&](const char *error_msg, const char *detail,
+                      lldb::Severity severity) -> bool {
     if (detail)
       LLDB_LOG(log, "{0}: {1}", error_msg, detail);
     else
       LLDB_LOG(log, error_msg);
 
-    diagnostic_manager.PutString(lldb::eSeverityError, error_msg);
+    diagnostic_manager.PutString(severity, error_msg);
     if (detail)
       diagnostic_manager.AppendMessageToDiagnostic(detail);
     return false;
+  };
+  auto error = [&](const char *error_msg, const char *detail = nullptr) {
+    return diagnose(error_msg, detail, lldb::eSeverityError);
+  };
+  auto note = [&](const char *error_msg, const char *detail = nullptr) {
+    return diagnose(error_msg, detail, lldb::eSeverityInfo);
   };
 
   InstallContext(exe_ctx);
@@ -823,12 +831,12 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   if (!m_swift_ast_ctx)
     return error("could not initialize Swift compiler",
-                 "run 'swift-healthcheck' for more details");
+                 "run \"swift-healthcheck\" for more details");
 
   if (m_swift_ast_ctx->HasFatalErrors()) {
     m_swift_ast_ctx->PrintDiagnostics(diagnostic_manager);
-    return error("Swift AST context is in a fatal error state",
-                 "run 'swift-healthcheck' for more details");
+    return note("Swift AST context is in a fatal error state, run "
+                "\"swift-healthcheck\" for more details");
   }
   
   // This may destroy the scratch context.
