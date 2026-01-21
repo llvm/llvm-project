@@ -17,7 +17,7 @@ typedef struct {
 __device__ huge_struct deviceFuncWithHugeRet() { return {}; }
 
 // CHECK-AMDGCNSPIRV: define spir_func void @_Z21deviceFuncWithHugeArg11huge_struct(ptr noundef byref(%struct.huge_struct) align 8
-// CHECK-AMDGCN: define dso_local void @_Z21deviceFuncWithHugeArg11huge_struct(i16
+// CHECK-AMDGCN: define dso_local void @_Z21deviceFuncWithHugeArg11huge_struct(ptr addrspace(5) noundef byref(%struct.huge_struct) align 8
 __device__ void deviceFuncWithHugeArg(huge_struct X) {}
 
 __device__ void deviceCaller() {
@@ -25,7 +25,7 @@ __device__ void deviceCaller() {
   // CHECK-AMDGCN: call void @_Z21deviceFuncWithHugeRetv(ptr addrspace(5) dead_on_unwind writable sret(%struct.huge_struct) align 8
   huge_struct X = deviceFuncWithHugeRet();
   // CHECK-AMDGCNSPIRV: call spir_func addrspace(4) void @_Z21deviceFuncWithHugeArg11huge_struct(ptr noundef byref(%struct.huge_struct) align 8
-  // CHECK-AMDGCN: call void @_Z21deviceFuncWithHugeArg11huge_struct(i16
+  // CHECK-AMDGCN: call void @_Z21deviceFuncWithHugeArg11huge_struct(ptr addrspace(5) noundef byref(%struct.huge_struct) align 8
   deviceFuncWithHugeArg(X);
 }
 
