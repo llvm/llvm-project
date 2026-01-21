@@ -75,7 +75,7 @@ template <typename T> int testTypeNestedPtr(T t1[2], T t2[3], T t3[4]) {
   for (int i = 0; i < 2; i++)
     t1[i].n.i1 = t3[i].n.i1 = 1;
 
-#pragma omp target map(tofrom : t1[0:2], t2[0:3], t3[0:4])
+#pragma omp target map(tofrom : t1[0 : 2], t2[0 : 3], t3[0 : 4])
   for (int i = 0; i < 2; i++) {
     t1[i].n.i3 = t3[i].n.i3 = t1[i].n.i1;
     t1[i].n.i1 = t3[i].n.i1 = 7;

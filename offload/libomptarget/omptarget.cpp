@@ -1110,7 +1110,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     int64_t DataSize = ArgSizes[I];
     bool IsImplicit = ArgTypes[I] & OMP_TGT_MAPTYPE_IMPLICIT;
     bool UpdateRef = !(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) ||
-                      (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ);
+                     (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ);
     bool ForceDelete = ArgTypes[I] & OMP_TGT_MAPTYPE_DELETE;
     bool HasPresentModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_PRESENT;
     bool HasHoldModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_OMPX_HOLD;
