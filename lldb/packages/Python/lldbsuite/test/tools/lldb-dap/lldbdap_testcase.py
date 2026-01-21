@@ -210,7 +210,7 @@ class DAPTestCaseBase(TestBase):
 
     def verify_stop_exception_info(
         self, expected_description: str, expected_text: Optional[str] = None
-    ):
+    ) -> None:
         """Wait for the process we are debugging to stop, and verify the stop
         reason is 'exception' and that the description matches
         'expected_description'
@@ -223,12 +223,13 @@ class DAPTestCaseBase(TestBase):
                 or stopped_event["body"]["reason"] != "exception"
             ):
                 continue
+            body = stopped_event["body"]
             self.assertIn(
                 "description",
-                stopped_event["body"],
-                f"stopped event missing description {stopped_event}",
+                body,
+                f"stopped event missing description {stopped_event!r}",
             )
-            description = stopped_event["body"]["description"]
+            description = body["description"]
             self.assertRegex(
                 description,
                 expected_description,
@@ -236,12 +237,12 @@ class DAPTestCaseBase(TestBase):
             )
             if expected_text:
                 self.assertRegex(
-                    stopped_event["body"]["text"],
+                    body["text"],
                     expected_text,
                     f"for stopped event {stopped_event!r}",
                 )
             return
-        self.fail(f"No valid stop exception info detected in {stopped_events}")
+        self.fail(f"No valid stop exception info detected in {stopped_events!r}")
 
     def verify_stop_on_entry(self) -> None:
         """Waits for the process to be stopped and then verifies at least one
