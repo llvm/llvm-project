@@ -150,11 +150,10 @@ body:             |
     ; NO-FP16: liveins: $h0
     ; NO-FP16-NEXT: {{  $}}
     ; NO-FP16-NEXT: %x:_(s16) = COPY $h0
-    ; NO-FP16-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT %x(s16)
-    ; NO-FP16-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -32768
-    ; NO-FP16-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[ANYEXT]], [[C]]
-    ; NO-FP16-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[XOR]](i32)
-    ; NO-FP16-NEXT: %op:_(s16) = G_BITCAST [[TRUNC]](i16)
+    ; NO-FP16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %x(s16)
+    ; NO-FP16-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -32768
+    ; NO-FP16-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[ANYEXT]], [[C]]
+    ; NO-FP16-NEXT: %op:_(s16) = G_TRUNC [[XOR]](s32)
     ; NO-FP16-NEXT: $h0 = COPY %op(s16)
     ; NO-FP16-NEXT: RET_ReallyLR implicit $h0
     ;
