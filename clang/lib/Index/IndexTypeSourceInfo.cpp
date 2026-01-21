@@ -194,19 +194,18 @@ public:
     return true;
   }
 
-  bool VisitSubstTemplateTypeParmTypeLoc(SubstTemplateTypeParmTypeLoc TL) {
-    auto QT = TL.getTypePtr()->getReplacementType();
-    auto *T = QT->getAsNonAliasTemplateSpecializationType();
-    if (!T)
-      return true;
-    HandleTemplateSpecializationTypeLoc(
-        T->getTemplateName(), TL.getTemplateNameLoc(), T->getAsCXXRecordDecl(),
-        T->isTypeAlias());
-    return true;
-  }
-
   bool TraverseSubstTemplateTypeParmTypeLoc(SubstTemplateTypeParmTypeLoc TL,
                                             bool TraverseQualifier) {
+    const auto *T = TL.getTypePtr();
+    if (!T)
+      return true;
+    auto QT = T->getReplacementType();
+    if (QT.isNull())
+      return true;
+
+    IndexCtx.handleReference(QT->getAsCXXRecordDecl(), TL.getNameLoc(), Parent,
+                             ParentDC, SymbolRoleSet(), Relations);
+
     return true;
   }
 

@@ -1878,8 +1878,8 @@ TEST(FindImplementations, Inheritance) {
       virtual void B$2^ar();
       void Concrete();  // No implementations for concrete methods.
     };
-    struct Child2 : Child1 {
-      void $3[[Foo]]() override;
+    struct $0[[Child2]] : Child1 {
+      void $1[[$3[[Foo]]]]() override;
       void $2[[Bar]]() override;
     };
     void FromReference() {
@@ -1958,14 +1958,27 @@ TEST(FindImplementations, InheritanceObjC) {
                                        Code.range("protocolDef"))));
 }
 
-TEST(FindImplementations, InheritanceRecursive) {
+TEST(FindImplementations, InheritanceTemplate) {
   Annotations Main(R"cpp(
+    class Fi$First^rst {};
+
+    class Sec$Second^ond {};
+
+    class Th$Third^ird {};
+
     template <typename... T>
-    struct Inherit : T... {};
+    struct $Third[[Inherit]] : T... {};
 
-    struct Al$Alpha^pha {};
+    template struct $First[[Inherit]]<First>;
 
-    struct $Impl1[[impl]]: Inherit<Alpha> {};
+    template<>
+    struct $Second[[Inherit]]<Second> : Second {};
+
+    class $First[[Battler]] : Inherit<First> {};
+
+    class $Second[[Beatrice]] : Inherit<Second> {};
+
+    class $Third[[Maria]] : Inherit<Third> {};
   )cpp");
 
   TestTU TU;
@@ -1973,9 +1986,14 @@ TEST(FindImplementations, InheritanceRecursive) {
   auto AST = TU.build();
   auto Index = TU.index();
 
-  EXPECT_THAT(
-      findImplementations(AST, Main.point("Alpha"), Index.get()),
-      ElementsAre(sym("impl", Main.range("Impl1"), Main.range("Impl1"))));
+  EXPECT_THAT(findImplementations(AST, Main.point("First"), Index.get()),
+              UnorderedPointwise(declRange(), Main.ranges("First")));
+
+  EXPECT_THAT(findImplementations(AST, Main.point("Second"), Index.get()),
+              UnorderedPointwise(declRange(), Main.ranges("Second")));
+
+  EXPECT_THAT(findImplementations(AST, Main.point("Third"), Index.get()),
+              UnorderedPointwise(declRange(), Main.ranges("Third")));
 }
 
 TEST(FindImplementations, CaptureDefinition) {
