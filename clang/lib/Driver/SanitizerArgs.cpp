@@ -663,6 +663,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::KernelAddress |
                          SanitizerKind::KernelHWAddress |
+                         SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::LowFat,
+                     SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::Memory)};
 
   // Enable toolchain specific default sanitizers if not explicitly disabled.

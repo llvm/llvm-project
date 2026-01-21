@@ -85,6 +85,7 @@
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 #include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
+#include "llvm/Transforms/Instrumentation/LowFatSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -767,6 +768,11 @@ static void addSanitizers(const Triple &TargetTriple,
     if (LangOpts.Sanitize.has(SanitizerKind::DataFlow)) {
       MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles,
                                         PB.getVirtualFileSystemPtr()));
+    }
+
+    if (LangOpts.Sanitize.has(SanitizerKind::LowFat)) {
+      LowFatSanitizerOptions Opts;
+      MPM.addPass(LowFatSanitizerPass(Opts));
     }
   };
   if (ClSanitizeOnOptimizerEarlyEP) {
