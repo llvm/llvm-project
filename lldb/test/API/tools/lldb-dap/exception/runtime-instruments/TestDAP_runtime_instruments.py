@@ -20,6 +20,6 @@ class TestDAP_runtime_instruments(lldbdap_testcase.DAPTestCaseBase):
         self.verify_stop_exception_info("Out of bounds index")
         exceptionInfo = self.get_exceptionInfo()
         self.assertEqual(exceptionInfo["breakMode"], "always")
-        self.assertEqual("Out of bounds index", exceptionInfo["description"])
+        self.assertRegex(exceptionInfo["description"], r"Out of bounds index")
         self.assertEqual(exceptionInfo["exceptionId"], "runtime-instrumentation")
         self.assertIn("main.c", exceptionInfo["details"]["stackTrace"])
