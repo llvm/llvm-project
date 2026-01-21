@@ -24024,7 +24024,9 @@ bool SLPVectorizerPass::vectorizeStores(
           unsigned FirstUnvecStore =
               std::distance(RangeSizes.begin(),
                             find_if(RangeSizes, std::bind(IsNotVectorized,
-                                                          VF >= MaxRegVF, _1)));
+                            // to go with the new definition of Large Vf definition of not counting vf which is equal to
+                            // maxregvf as large - changed ">=" to ">"
+                                                          VF > MaxRegVF, _1)));
 
           // Form slices of size VF starting from FirstUnvecStore and try to
           // vectorize them.
@@ -24032,12 +24034,16 @@ bool SLPVectorizerPass::vectorizeStores(
             unsigned FirstVecStore = std::distance(
                 RangeSizes.begin(),
                 find_if(RangeSizes.drop_front(FirstUnvecStore),
-                        std::bind(IsVectorized, VF >= MaxRegVF, _1)));
+                // to go with the new definition of Large Vf definition of not counting vf which is equal to
+                // maxregvf as large - changed ">=" to ">"
+                        std::bind(IsVectorized, VF > MaxRegVF, _1)));
             unsigned MaxSliceEnd = FirstVecStore >= End ? End : FirstVecStore;
             for (unsigned SliceStartIdx = FirstUnvecStore;
                  SliceStartIdx + VF <= MaxSliceEnd;) {
+              // to go with the new definition of Large Vf definition of not counting vf which is equal to
+              // maxregvf as large - changed ">=" to ">"
               if (!checkTreeSizes(RangeSizes.slice(SliceStartIdx, VF),
-                                  VF >= MaxRegVF)) {
+                                  VF > MaxRegVF)) {
                 ++SliceStartIdx;
                 continue;
               }
@@ -24105,13 +24111,17 @@ bool SLPVectorizerPass::vectorizeStores(
               }
               if (VF > 2 && Res &&
                   !all_of(RangeSizes.slice(SliceStartIdx, VF),
-                          std::bind(VFIsProfitable, VF >= MaxRegVF, TreeSize,
+                  // to go with the new definition of Large Vf definition of not counting vf which is equal to
+                  // maxregvf as large - changed ">=" to ">"
+                          std::bind(VFIsProfitable, VF > MaxRegVF, TreeSize,
                                     _1))) {
                 SliceStartIdx += VF;
                 continue;
               }
               // Check for the very big VFs that we're not rebuilding same
               // trees, just with larger number of elements.
+              // to go with the new definition of Large Vf definition of not counting vf which is equal to
+              // maxregvf as large - changed ">=" to ">"
               if (VF > MaxRegVF && TreeSize > 1 &&
                   all_of(RangeSizes.slice(SliceStartIdx, VF),
                          std::bind(FirstSizeSame, TreeSize, _1))) {
@@ -24124,7 +24134,9 @@ bool SLPVectorizerPass::vectorizeStores(
               if (TreeSize > 1) {
                 for (std::pair<unsigned, unsigned> &P :
                      RangeSizes.slice(SliceStartIdx, VF)) {
-                  if (VF >= MaxRegVF)
+                  // to go with the new definition of Large Vf definition of not counting vf which is equal to
+                  // maxregvf as large - changed ">=" to ">"
+                  if (VF > MaxRegVF)
                     P.second = std::max(P.second, TreeSize);
                   else
                     P.first = std::max(P.first, TreeSize);
@@ -24141,9 +24153,13 @@ bool SLPVectorizerPass::vectorizeStores(
             FirstUnvecStore = std::distance(
                 RangeSizes.begin(),
                 find_if(RangeSizes.drop_front(MaxSliceEnd),
-                        std::bind(IsNotVectorized, VF >= MaxRegVF, _1)));
+                        std::bind(IsNotVectorized, VF > MaxRegVF, _1)));
+            // to go with the new definition of Large Vf definition of not counting vf which is equal to
+            // maxregvf as large - changed ">=" to ">"
           }
-          if (!AnyProfitableGraph && VF >= MaxRegVF && has_single_bit(VF))
+          if (!AnyProfitableGraph && VF > MaxRegVF && has_single_bit(VF))
+            // to go with the new definition of Large Vf definition of not counting vf which is equal to
+            // maxregvf as large - changed ">=" to ">"
             break;
         }
         // All values vectorized - exit.
