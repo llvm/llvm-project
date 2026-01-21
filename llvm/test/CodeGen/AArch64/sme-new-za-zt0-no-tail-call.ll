@@ -6,6 +6,9 @@ declare void @inout_za_zt0() "aarch64_inout_za" "aarch64_inout_zt0"
 define void @new_za_zt0() "aarch64_new_za" "aarch64_new_zt0" {
 ; CHECK-LABEL: new_za_zt0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    cbz x8, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %entry
@@ -15,8 +18,10 @@ define void @new_za_zt0() "aarch64_new_za" "aarch64_new_zt0" {
 ; CHECK-NEXT:    zero { zt0 }
 ; CHECK-NEXT:  .LBB0_2: // %entry
 ; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    bl inout_za_zt0
 ; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    b inout_za_zt0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
 entry:
   tail call void @inout_za_zt0()
   ret void
@@ -27,6 +32,9 @@ declare void @inout_za() "aarch64_inout_za"
 define void @new_za() "aarch64_new_za" {
 ; CHECK-LABEL: new_za:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    cbz x8, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %entry
@@ -35,8 +43,10 @@ define void @new_za() "aarch64_new_za" {
 ; CHECK-NEXT:    zero {za}
 ; CHECK-NEXT:  .LBB1_2: // %entry
 ; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    bl inout_za
 ; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    b inout_za
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
 entry:
   tail call void @inout_za()
   ret void
@@ -47,6 +57,9 @@ declare void @inout_zt0() "aarch64_inout_zt0"
 define void @new_zt0() "aarch64_new_zt0" {
 ; CHECK-LABEL: new_zt0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    cbz x8, .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %entry
@@ -55,8 +68,10 @@ define void @new_zt0() "aarch64_new_zt0" {
 ; CHECK-NEXT:    zero { zt0 }
 ; CHECK-NEXT:  .LBB2_2: // %entry
 ; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    bl inout_zt0
 ; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    b inout_zt0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
 entry:
   tail call void @inout_zt0()
   ret void
