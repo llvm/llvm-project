@@ -7382,8 +7382,6 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
-  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
-  auto *RI = dyn_cast<AtomicRMWInst>(I);
   // When CAS bitwidth is not supported on the hardware, the CAS is emulated
   // using a retry loop that uses a higher-bitwidth monotonic CAS. Similarly, if
   // the atomicrmw operation is not supported on hardware, we emulate it with a
@@ -7394,11 +7392,11 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
   // synchronization effect.  However, atom only supports relaxed, acquire,
   // release and acq_rel.  So we also use explicit fences to enforce memory
   // order in seq_cast CAS or RMW instructions that can be lowered as acq_rel.
-  if (CI)
+  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I))
     return (cast<IntegerType>(CI->getCompareOperand()->getType())
                 ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
            CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
-  if (RI)
+  if (auto *RI = dyn_cast<AtomicRMWInst>(I))
     return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
            RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
   return false;
@@ -7418,40 +7416,38 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
   // seq_cst ordering.
   //
   // In all other cases, lower to atom.<op>.relaxed
-  const auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
-  const auto *RI = dyn_cast<AtomicRMWInst>(I);
-  AtomicOrdering Ordering;
-  if (CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
+  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
+      CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
       cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
           STI.getMinCmpXchgSizeInBits())
-    Ordering = AtomicOrdering::Acquire;
-  else if (RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
+    return AtomicOrdering::Acquire;
+  else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
+           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
            shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
-    Ordering = AtomicOrdering::Acquire;
-  else
-    Ordering = AtomicOrdering::Monotonic;
-  return Ordering;
+    return AtomicOrdering::Acquire;
+
+  return AtomicOrdering::Monotonic;
 }
 
 // prerequisites: shouldInsertFencesForAtomic() returns true for Inst
 Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
-  auto IsCmpXchg = isa<AtomicCmpXchgInst>(Inst);
-  auto IsRMW = isa<AtomicRMWInst>(Inst);
-  if (!IsCmpXchg && !IsRMW)
+  auto *CI = dyn_cast<AtomicCmpXchgInst>(Inst);
+  auto *RI = dyn_cast<AtomicRMWInst>(Inst);
+  if (!CI && !RI)
     return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
 
   // Specialize for cmpxchg and rmw
   // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
-  SyncScope::ID SSID = IsCmpXchg
-                           ? cast<AtomicCmpXchgInst>(Inst)->getSyncScopeID()
-                           : cast<AtomicRMWInst>(Inst)->getSyncScopeID();
+  auto SSID = getAtomicSyncScopeID(Inst);
+  assert(SSID.has_value() && "Expected an atomic operation");
+
   if (isReleaseOrStronger(Ord))
     return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
                                    ? Ord
                                    : AtomicOrdering::Release,
-                               SSID);
+                               SSID.value());
 
   return nullptr;
 }

@@ -3,9 +3,7 @@
 from string import Template
 from itertools import product
 
-TESTS = [(60, 50), (70, 63), (90, 87)]
-
-LLVM_SCOPES = ["", "block", "cluster", "device"]
+TEST_SM_ARCH_PAIRS = [(60, 50), (70, 63), (90, 87)]
 
 SCOPE_LLVM_TO_PTX = {"": "sys", "block": "cta", "cluster": "cluster", "device": "gpu"}
 
@@ -30,8 +28,6 @@ INTEGER_OPERATIONS = [
 ]
 
 FLOATING_POINT_OPERATIONS = ["fadd", "fsub", "fmin", "fmax", "fminimum", "fmaximum"]
-
-ADDRSPACES = [0, 1, 3]
 
 ADDRSPACE_NUM_TO_ADDRSPACE = {0: "generic", 1: "global", 3: "shared"}
 
@@ -58,7 +54,7 @@ def get_addrspace_cast(addrspace):
 
 
 if __name__ == "__main__":
-    for sm, ptx in TESTS:
+    for sm, ptx in TEST_SM_ARCH_PAIRS:
         # Slice 1: Keep addrspace, llvm_scope, ordering fixed, generate all possible operations and sizes
         with open("atomicrmw-sm{}.ll".format(str(sm)), "w") as fp:
             print(run_statement.substitute(sm=sm, ptx=ptx), file=fp)
