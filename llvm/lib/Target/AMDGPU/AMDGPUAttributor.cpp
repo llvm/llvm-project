@@ -573,8 +573,7 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
         // of whether it's internal to the module or not.
         //
         // TODO: Ignoring callsite attributes.
-        const bool IsTrapLikeTrapIntrinsic = isTrapLikeLeafIntrinsic(*Callee);
-        if (!IsTrapLikeTrapIntrinsic &&
+        if (!isTrapLikeLeafIntrinsic(*Callee) &&
             !Callee->hasFnAttribute(Attribute::NoCallback))
           return indicatePessimisticFixpoint();
         continue;
@@ -1408,13 +1407,12 @@ struct AAAMDGPUMinAGPRAlloc
 
         return true;
       }
-      default: {
+      default:
         // Some intrinsics may use AGPRs, but if we have a choice, we are not
         // required to use AGPRs.
         // Assume !nocallback intrinsics may call a function which requires
         // AGPRs.
         return CB.hasFnAttr(Attribute::NoCallback);
-      }
       }
 
       // TODO: Handle callsite attributes
