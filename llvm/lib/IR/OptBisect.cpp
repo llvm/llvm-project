@@ -100,8 +100,8 @@ bool OptBisect::shouldRunPass(StringRef PassName,
   int CurBisectNum = ++LastBisectNum;
 
   // Check if current pass number falls within any of the specified intervals.
-  // Since the bisector may be enabled by opt-disable, we also need to check if the
-  // BisectIntervals are empty.
+  // Since the bisector may be enabled by opt-disable, we also need to check if
+  // the BisectIntervals are empty.
   bool ShouldRun =
       BisectIntervals.empty() ||
       IntegerInclusiveIntervalUtils::contains(BisectIntervals, CurBisectNum);
