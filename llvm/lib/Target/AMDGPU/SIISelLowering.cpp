@@ -6043,11 +6043,11 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::COPY), AccumulatorVReg)
             .addReg(Accumulator->getOperand(0).getReg());
-        unsigned Modifier = Opc == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64
-                                ? SISrcMods::NEG
-                                : SISrcMods::NONE;
-        Opc = Opc == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64 ? AMDGPU::V_ADD_F64_e64
-                                                         : Opc;
+        unsigned Modifier = SISrcMods::NONE;
+        if (Opc == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64) {
+          Opc = AMDGPU::V_ADD_F64_e64;
+          Modifier = SISrcMods::NEG;
+        }
         auto DstVregInst = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstVreg)
                                .addImm(Modifier) // src0 modifiers
                                .addReg(LaneValue->getOperand(0).getReg())
@@ -6170,6 +6170,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_SUB_F32_e64);
   case AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64:
+    // There is no S/V_SUB_F64 opcode, so use the Pseudo instruction as a filler
+    // value for the function argument. Double type subtraction is expanded by
+    // using the V_ADD_F64 opcode and setting the NEG bit.
     return lowerWaveReduce(MI, *BB, *getSubtarget(),
                            AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64);
   case AMDGPU::WAVE_REDUCE_AND_PSEUDO_B32:
