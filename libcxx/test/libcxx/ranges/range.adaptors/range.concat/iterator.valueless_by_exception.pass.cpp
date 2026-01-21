@@ -19,6 +19,7 @@
 #include "check_assertion.h"
 #include "double_move_tracker.h"
 #include "test_iterators.h"
+//#include "../../range_adaptor_types.h"
 
 int val[] = {1, 2, 3};
 
@@ -134,7 +135,7 @@ inline std::ptrdiff_t operator-(Iter<X> a, Iter<Y> b) {
 template <std::size_t N>
 struct Range : std::ranges::view_base {
   using iterator       = Iter<N>;
-  using const_iterator = Iter<N>;
+  using const_iterator = const Iter<N>;
   using sentinel       = sentinel_wrapper<iterator>;
 
   int* data_;
@@ -149,8 +150,57 @@ struct Range : std::ranges::view_base {
 
   const_iterator begin() const { return const_iterator(data_); }
   const_iterator end() const { return const_iterator(data_ + size_); }
+};
 
-  std::size_t size() const { return size_; }
+template <std::size_t N, typename T>
+struct NonSimpleIter {
+  using difference_type = ptrdiff_t;
+  using value_type      = T;
+
+  T* ptr_ = nullptr;
+
+  NonSimpleIter() = default;
+  NonSimpleIter(T* ptr) : ptr_(ptr) {}
+
+  template <class U>
+    requires(std::is_const_v<T> && !std::is_const_v<U> &&
+             std::is_same_v<std::remove_const_t<U>, std::remove_const_t<T>>)
+  NonSimpleIter(const NonSimpleIter<N, U>& other) : ptr_(other.ptr_) {}
+
+  NonSimpleIter(const NonSimpleIter&) = default;
+  NonSimpleIter(NonSimpleIter&& other) : ptr_(other.ptr_) {
+    if (flag)
+      throw 5;
+  }
+
+  NonSimpleIter& operator=(const NonSimpleIter&) = default;
+  NonSimpleIter& operator=(NonSimpleIter&& o) {
+    ptr_ = o.ptr_;
+    if (flag)
+      throw 5;
+    return *this;
+  }
+
+  T& operator*() const { return *ptr_; }
+  NonSimpleIter& operator++() {
+    ++ptr_;
+    return *this;
+  }
+  NonSimpleIter operator++(int) {
+    auto tmp = *this;
+    ++*this;
+    return tmp;
+  }
+
+  friend bool operator==(NonSimpleIter, NonSimpleIter) = default;
+};
+
+template <std::size_t N, typename T>
+struct NonSimpleRange : std::ranges::view_base {
+  NonSimpleIter<N, T> begin() { return &val[0]; }
+  NonSimpleIter<N, T> end() { return &val[3]; }
+  NonSimpleIter<N, const T> begin() const { return &val[0]; }
+  NonSimpleIter<N, const T> end() const { return &val[3]; }
 };
 
 static_assert(std::ranges::range<Range<0>>);
@@ -363,20 +413,22 @@ int main() {
   {
     // valueless by exception test constructor
     flag = false;
-    Range<0> r1;
-    Range<1> r2;
+    NonSimpleRange<0, int> r1;
+    NonSimpleRange<1, int> r2;
 
     auto cv    = std::views::concat(r1, r2);
     auto iter1 = cv.begin();
     auto iter2 = std::ranges::next(cv.begin(), 4);
     flag       = true;
+    using Iter  = std::ranges::iterator_t<decltype(cv)>;       // iterator<false>
+    using CIter = std::ranges::iterator_t<const decltype(cv)>; // iterator<true>
+
     try {
       iter1 = std::move(iter2);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE(
           [&] {
-            auto it3(iter1);
-            (void)*it3;
+            [[maybe_unused]] CIter it3(iter1);
           }(),
           "valueless by exception");
     }
