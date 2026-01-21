@@ -77,13 +77,17 @@ public:
   template <class _Up>
     requires std::unsigned_integral<_Up>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit simd_mask(_Up __val) noexcept {
-    constexpr size_t __bit_limit = sizeof(_Up) * 8;
-    for (size_t __i = 0; __i < size(); ++__i) {
-      if (__i >= __bit_limit) {
-        (*this)[__i] = false;
-      } else {
-        (*this)[__i] = static_cast<bool>((__val >> __i) & 1);
-      }
+    constexpr size_t __bits = sizeof(_Up) * 8;
+
+    constexpr size_t __bit_limit = __bits > size() ? size() : __bits;
+    size_t __i = 0;
+  
+    for (; __i < __bit_limit; ++__i) {
+      (*this)[__i] = static_cast<bool>((__val >> __i) & 1);
+    }
+
+    for(; __i < size(); ++__i){
+      (*this)[__i] = false;
     }
   }
 
