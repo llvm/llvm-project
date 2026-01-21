@@ -329,23 +329,24 @@ multiclass VPatIntegerSetCCSDNode_VI_Swappable<string instruction_name,
 multiclass VPatFPSetCCSDNode_VV_VF_FV<CondCode cc,
                                       string inst_name,
                                       string swapped_op_inst_name> {
-  foreach fvti = AllFloatVectors in {
+  foreach fvti = AllFloatAndBF16Vectors in {
+    defvar alt = !if(!eq(fvti.Scalar, bf16), "_ALT", "");
     let Predicates = GetVTypePredicates<fvti>.Predicates in {
       def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
                                   (fvti.Vector fvti.RegClass:$rs2),
                                   cc)),
-                (!cast<Instruction>(inst_name#"_VV_"#fvti.LMul.MX)
+                (!cast<Instruction>(inst_name#alt#"_VV_"#fvti.LMul.MX)
                     fvti.RegClass:$rs1, fvti.RegClass:$rs2, fvti.AVL, fvti.Log2SEW)>;
       def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
                                   (SplatFPOp fvti.ScalarRegClass:$rs2),
                                   cc)),
-                (!cast<Instruction>(inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                (!cast<Instruction>(inst_name#alt#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
                     fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
                     fvti.AVL, fvti.Log2SEW)>;
       def : Pat<(fvti.Mask (setcc (SplatFPOp fvti.ScalarRegClass:$rs2),
                                   (fvti.Vector fvti.RegClass:$rs1),
                                   cc)),
-                (!cast<Instruction>(swapped_op_inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                (!cast<Instruction>(swapped_op_inst_name#alt#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
                     fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
                     fvti.AVL, fvti.Log2SEW)>;
     }

@@ -541,5 +541,6 @@ Transforms/UnifyLoopExits/nested.ll
 Transforms/UnifyLoopExits/restore-ssa.ll
 Transforms/UnifyLoopExits/switch.ll
 Transforms/UnifyLoopExits/undef-phis.ll
+Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
