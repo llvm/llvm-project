@@ -1233,10 +1233,11 @@ foreach fvti = AllFloatAndBF16Vectors in {
   // NOTE: We choose VFMADD because it has the most commuting freedom. So it
   // works best with how TwoAddressInstructionPass tries commuting.
   defvar suffix = fvti.LMul.MX # "_E" # fvti.SEW;
+  defvar alt = !if(!eq(fvti.Scalar, bf16), "_ALT", "");
   let Predicates = GetVTypePredicates<fvti>.Predicates in {
     def : Pat<(fvti.Vector (any_fma fvti.RegClass:$rs1, fvti.RegClass:$rd,
                                     fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVFMADD_VV_"# suffix)
+              (!cast<Instruction>("PseudoVFMADD" # alt # "_VV_"# suffix)
                    fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
                    // Value to indicate no rounding mode change in
                    // RISCVInsertReadWriteCSR
@@ -1244,7 +1245,7 @@ foreach fvti = AllFloatAndBF16Vectors in {
                    fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(fvti.Vector (any_fma fvti.RegClass:$rs1, fvti.RegClass:$rd,
                                     (fneg fvti.RegClass:$rs2))),
-              (!cast<Instruction>("PseudoVFMSUB_VV_"# suffix)
+              (!cast<Instruction>("PseudoVFMSUB" # alt # "_VV_"# suffix)
                    fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
                    // Value to indicate no rounding mode change in
                    // RISCVInsertReadWriteCSR
@@ -1252,7 +1253,7 @@ foreach fvti = AllFloatAndBF16Vectors in {
                    fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(fvti.Vector (any_fma (fneg fvti.RegClass:$rs1), fvti.RegClass:$rd,
                                     (fneg fvti.RegClass:$rs2))),
-              (!cast<Instruction>("PseudoVFNMADD_VV_"# suffix)
+              (!cast<Instruction>("PseudoVFNMADD" # alt # "_VV_"# suffix)
                    fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
                    // Value to indicate no rounding mode change in
                    // RISCVInsertReadWriteCSR
@@ -1260,7 +1261,7 @@ foreach fvti = AllFloatAndBF16Vectors in {
                    fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(fvti.Vector (any_fma (fneg fvti.RegClass:$rs1), fvti.RegClass:$rd,
                                     fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVFNMSUB_VV_"# suffix)
+              (!cast<Instruction>("PseudoVFNMSUB" # alt # "_VV_"# suffix)
                    fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
                    // Value to indicate no rounding mode change in
                    // RISCVInsertReadWriteCSR
@@ -1271,7 +1272,7 @@ foreach fvti = AllFloatAndBF16Vectors in {
     // commutable.
     def : Pat<(fvti.Vector (any_fma (SplatFPOp fvti.ScalarRegClass:$rs1),
                                     fvti.RegClass:$rd, fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVFMADD_V" # fvti.ScalarSuffix # "_" # suffix)
+              (!cast<Instruction>("PseudoVFMADD" # alt # "_V" # fvti.ScalarSuffix # "_" # suffix)
                    fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                    // Value to indicate no rounding mode change in
                    // RISCVInsertReadWriteCSR
@@ -1279,7 +1280,7 @@ foreach fvti = AllFloatAndBF16Vectors in {
                    fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(fvti.Vector (any_fma (SplatFPOp fvti.ScalarRegClass:$rs1),
                                     fvti.RegClass:$rd, (fneg fvti.RegClass:$rs2))),
-              (!cast<Instruction>("PseudoVFMSUB_V" # fvti.ScalarSuffix # "_" # suffix)
+              (!cast<Instruction>("PseudoVFMSUB" # alt # "_V" # fvti.ScalarSuffix # "_" # suffix)
                    fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                    // Value to indicate no rounding mode change in
                    // RISCVInsertReadWriteCSR
@@ -1288,7 +1289,7 @@ foreach fvti = AllFloatAndBF16Vectors in {
 
     def : Pat<(fvti.Vector (any_fma (SplatFPOp fvti.ScalarRegClass:$rs1),
                                     (fneg fvti.RegClass:$rd), (fneg fvti.RegClass:$rs2))),
-              (!cast<Instruction>("PseudoVFNMADD_V" # fvti.ScalarSuffix # "_" # suffix)
+              (!cast<Instruction>("PseudoVFNMADD" # alt # "_V" # fvti.ScalarSuffix # "_" # suffix)
                    fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                    // Value to indicate no rounding mode change in
                    // RISCVInsertReadWriteCSR
@@ -1296,7 +1297,7 @@ foreach fvti = AllFloatAndBF16Vectors in {
                    fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(fvti.Vector (any_fma (SplatFPOp fvti.ScalarRegClass:$rs1),
                                     (fneg fvti.RegClass:$rd), fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVFNMSUB_V" # fvti.ScalarSuffix # "_" # suffix)
+              (!cast<Instruction>("PseudoVFNMSUB" # alt # "_V" # fvti.ScalarSuffix # "_" # suffix)
                    fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                    // Value to indicate no rounding mode change in
                    // RISCVInsertReadWriteCSR
@@ -1306,7 +1307,7 @@ foreach fvti = AllFloatAndBF16Vectors in {
     // The splat might be negated.
     def : Pat<(fvti.Vector (any_fma (fneg (SplatFPOp fvti.ScalarRegClass:$rs1)),
                                     fvti.RegClass:$rd, (fneg fvti.RegClass:$rs2))),
-              (!cast<Instruction>("PseudoVFNMADD_V" # fvti.ScalarSuffix # "_" # suffix)
+              (!cast<Instruction>("PseudoVFNMADD" # alt # "_V" # fvti.ScalarSuffix # "_" # suffix)
                    fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                    // Value to indicate no rounding mode change in
                    // RISCVInsertReadWriteCSR
@@ -1314,7 +1315,7 @@ foreach fvti = AllFloatAndBF16Vectors in {
                    fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(fvti.Vector (any_fma (fneg (SplatFPOp fvti.ScalarRegClass:$rs1)),
                                     fvti.RegClass:$rd, fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVFNMSUB_V" # fvti.ScalarSuffix # "_" # suffix)
+              (!cast<Instruction>("PseudoVFNMSUB" # alt # "_V" # fvti.ScalarSuffix # "_" # suffix)
                    fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                    // Value to indicate no rounding mode change in
                    // RISCVInsertReadWriteCSR

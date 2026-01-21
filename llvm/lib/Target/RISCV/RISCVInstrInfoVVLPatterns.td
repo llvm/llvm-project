@@ -1814,11 +1814,12 @@ multiclass VPatFPMulAddVL_VV_VF<SDPatternOperator vop, string instruction_name> 
 multiclass VPatFPMulAddVL_VV_VF_RM<SDPatternOperator vop, string instruction_name> {
   foreach vti = AllFloatAndBF16Vectors in {
   defvar suffix = vti.LMul.MX # "_E" # vti.SEW;
+  defvar alt = !if(!eq(vti.Scalar, bf16), "_ALT", "");
   let Predicates = GetVTypePredicates<vti>.Predicates in {
     def : Pat<(vti.Vector (vop vti.RegClass:$rs1, vti.RegClass:$rd,
                                vti.RegClass:$rs2, (vti.Mask VMV0:$vm),
                                VLOpFrag)),
-              (!cast<Instruction>(instruction_name#"_VV_"# suffix #"_MASK")
+              (!cast<Instruction>(instruction_name # alt # "_VV_"# suffix #"_MASK")
                    vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
                    (vti.Mask VMV0:$vm),
                    // Value to indicate no rounding mode change in
@@ -1830,7 +1831,7 @@ multiclass VPatFPMulAddVL_VV_VF_RM<SDPatternOperator vop, string instruction_nam
                                vti.RegClass:$rd, vti.RegClass:$rs2,
                                (vti.Mask VMV0:$vm),
                                VLOpFrag)),
-              (!cast<Instruction>(instruction_name#"_V" # vti.ScalarSuffix # "_" # suffix # "_MASK")
+              (!cast<Instruction>(instruction_name # alt # "_V" # vti.ScalarSuffix # "_" # suffix # "_MASK")
                    vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
                    (vti.Mask VMV0:$vm),
                    // Value to indicate no rounding mode change in
