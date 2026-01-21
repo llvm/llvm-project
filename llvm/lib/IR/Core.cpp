@@ -627,6 +627,8 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMTargetExtTypeKind;
   case Type::TypedPointerTyID:
     llvm_unreachable("Typed pointers are unsupported via the C API");
+  case Type::SizedCapabilityTyID:
+    llvm_unreachable("Fixed-size capabilities are unsupported via the C API");
   }
   llvm_unreachable("Unhandled TypeID.");
 }
