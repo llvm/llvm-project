@@ -1,32 +1,22 @@
-# Require V2 and restrict the number of unwind codes to 8
-# RUN: not llc -mtriple=x86_64-pc-windows-msvc -o - %s \
-# RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-max-unwind-codes=8 \
-# RUN:    2>&1 | FileCheck %s -check-prefix=REQUIREV2
-
-# Force best-effort and restrict the number of unwind codes to 8
+# Restrict the number of unwind codes to 8
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
-# RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-max-unwind-codes=8 \
-# RUN:    -x86-wineh-unwindv2-force-mode=1 | \
-# RUN:    FileCheck %s -check-prefix=BESTEFFORT
+# RUN:    -x86-wineh-unwindv2-unwind-codes-threshold=8 \
+# RUN:    -run-pass=x86-wineh-unwindv2 | FileCheck %s \
+# RUN:    -check-prefixes=ALLOWLESS,CHECK
 
-# Require V2, but allow the default number of unwind codes (255)
+# Allow the default number of unwind codes (255)
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
-# RUN:    -run-pass=x86-wineh-unwindv2 | FileCheck %s -check-prefix=ALLOWMORE
+# RUN:    -run-pass=x86-wineh-unwindv2 | FileCheck %s \
+# RUN:    -check-prefixes=ALLOWMORE,CHECK
 
-# Usually 255 unwind codes are permitted, but we passed an arg to llc to limit
-# it to 8.
-# REQUIREV2: error: example.c:2:1: Windows x64 Unwind v2 is required, but the function 'too_many_epilogs' has too many unwind codes.
-# REQUIREV2-SAME: Try splitting the function or reducing the number of places where it exits early with a tail call.
+# CHECK-LABEL: too_many_epilogs
+# CHECK: SEH_UnwindVersion 2
+# CHECK: SEH_UnwindV2Start
 
-# If we force "best effort" mode, then we won't see any errors, but we won't use
-# v2.
-# BESTEFFORT-NOT: SEH_UnwindVersion
-# BESTEFFORT-NOT: SEH_UnwindV2Start
-
-# If we allow more epilogs then too_many_epilogs will compile with v2.
-# ALLOWMORE-LABEL: too_many_epilogs
-# ALLOWMORE: SEH_UnwindVersion 2
-# ALLOWMORE: SEH_UnwindV2Start
+# If we restricted the number of unwind codes, then we expect to use chained
+# infos.
+# ALLOWLESS:      SEH_SplitChainedAtEndOfBlock
+# ALLOWMORE-NOT:  SEH_SplitChainedAtEndOfBlock
 
 --- |
   define dso_local void @too_many_epilogs() local_unnamed_addr !dbg !9 {

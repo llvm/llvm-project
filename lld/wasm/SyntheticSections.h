@@ -373,7 +373,7 @@ public:
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "name"),
         segments(segments) {}
   bool isNeeded() const override {
-    if (ctx.arg.stripAll && !ctx.arg.keepSections.count(name))
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
       return false;
     return numNames() > 0;
   }
@@ -396,7 +396,7 @@ public:
   ProducersSection()
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "producers") {}
   bool isNeeded() const override {
-    if (ctx.arg.stripAll && !ctx.arg.keepSections.count(name))
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
       return false;
     return fieldCount() > 0;
   }
@@ -417,7 +417,7 @@ public:
   TargetFeaturesSection()
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "target_features") {}
   bool isNeeded() const override {
-    if (ctx.arg.stripAll && !ctx.arg.keepSections.count(name))
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
       return false;
     return features.size() > 0;
   }
