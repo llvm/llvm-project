@@ -87,6 +87,11 @@ static cl::opt<bool>
                                "be combined with a shift"),
                       cl::init(true));
 
+static cl::opt<bool> UseMachineCombinerVecFMA(
+    "riscv-machine-combiner-vec-fma", cl::Hidden,
+    cl::desc("Use machine combiner to form vector FMA instructions"),
+    cl::init(true));
+
 // TODO: Support more ops
 static const unsigned ZvfbfaVPOps[] = {
     ISD::VP_FNEG, ISD::VP_FABS, ISD::VP_FCOPYSIGN};
@@ -26189,6 +26194,6 @@ bool RISCVTargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
 
 bool RISCVTargetLowering::generateFMAsInMachineCombiner(
     EVT VT, CodeGenOptLevel OptLevel) const {
-  return (OptLevel >= CodeGenOptLevel::Aggressive) &&
+  return OptLevel >= CodeGenOptLevel::Aggressive && UseMachineCombinerVecFMA &&
          (VT.isVector() && Subtarget.hasVInstructions());
 }
