@@ -11,11 +11,11 @@ list(INSERT CMAKE_MODULE_PATH 0
   )
 
 if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-  message(FATAL_ERROR  [=[The legacy standalone build mode has been removed. Please change
+  message(FATAL_ERROR [[The legacy standalone build mode has been removed. Please change
     cmake <llvm-project>/openmp
 to
     cmake <llvm-project>/runtimes -DLLVM_ENABLE_RUNTIMES=openmp
-For more details on building the LLVM OpenMP libraries, see https://openmp.llvm.org/Building.html]=])
+For more details on building the LLVM OpenMP libraries, see https://openmp.llvm.org/Building.html]])
 endif()
 
 # Must go below project(..)
