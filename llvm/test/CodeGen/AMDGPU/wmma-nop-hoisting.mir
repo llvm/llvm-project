@@ -426,7 +426,51 @@ body: |
     S_ENDPGM 0
 ...
 
-# Test 7: Not in a loop; should NOT hoist
+# Test 7: Preheader without terminator
+---
+name: test_fallthrough_preheader_hoist
+body: |
+  ; NOHOIST-LABEL: name: test_fallthrough_preheader_hoist
+  ; NOHOIST: bb.0:
+  ; NOHOIST-NEXT:   successors: %bb.1(0x80000000)
+  ; NOHOIST-NEXT: {{  $}}
+  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; NOHOIST-NEXT: {{  $}}
+  ; NOHOIST-NEXT: bb.1:
+  ; NOHOIST-NEXT:   successors: %bb.1(0x80000000)
+  ; NOHOIST-NEXT: {{  $}}
+  ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
+  ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
+  ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
+  ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
+  ; NOHOIST-NEXT:   $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
+  ; NOHOIST-NEXT:   S_BRANCH %bb.1
+  ;
+  ; HOIST-LABEL: name: test_fallthrough_preheader_hoist
+  ; HOIST: bb.0:
+  ; HOIST-NEXT:   successors: %bb.1(0x80000000)
+  ; HOIST-NEXT: {{  $}}
+  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; HOIST-NEXT:   V_NOP_e32 implicit $exec
+  ; HOIST-NEXT:   V_NOP_e32 implicit $exec
+  ; HOIST-NEXT:   V_NOP_e32 implicit $exec
+  ; HOIST-NEXT:   V_NOP_e32 implicit $exec
+  ; HOIST-NEXT: {{  $}}
+  ; HOIST-NEXT: bb.1:
+  ; HOIST-NEXT:   successors: %bb.1(0x80000000)
+  ; HOIST-NEXT: {{  $}}
+  ; HOIST-NEXT:   $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
+  ; HOIST-NEXT:   S_BRANCH %bb.1
+  bb.0:
+    successors: %bb.1
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  bb.1:
+    successors: %bb.1
+    $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+...
+
+# Test 8: Not in a loop; should NOT hoist
 ---
 name: test_not_in_loop_no_hoist
 body: |

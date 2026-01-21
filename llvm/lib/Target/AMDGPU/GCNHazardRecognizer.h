@@ -107,9 +107,10 @@ private:
   int checkReadM0Hazards(MachineInstr *SMovRel);
   int checkNSAtoVMEMHazard(MachineInstr *MI);
   int checkFPAtomicToDenormModeHazard(MachineInstr *MI);
-  // Emit V_NOP instructions. \p WaitStatesNeeded is the number of V_NOPs we
-  // need to insert, negative means not needed.
-  bool emitVNops(MachineInstr *MI, int WaitStatesNeeded);
+  // Emit \p WaitStatesNeeded V_NOP instructions before \p InsertPt.
+  // If IsHoisting is true, uses empty DebugLoc for compiler-inserted NOPs.
+  void emitVNops(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
+                 int WaitStatesNeeded, bool IsHoisting = false);
   void fixHazards(MachineInstr *MI);
   bool fixVcmpxPermlaneHazards(MachineInstr *MI);
   bool fixVMEMtoScalarWriteHazards(MachineInstr *MI);
@@ -134,7 +135,6 @@ private:
                                const MachineInstr &MI) const;
   bool isCoexecutionHazardFor(const MachineInstr &I,
                               const MachineInstr &MI) const;
-  void insertVnopsBeforeTerminator(MachineBasicBlock *MBB, int Count);
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);

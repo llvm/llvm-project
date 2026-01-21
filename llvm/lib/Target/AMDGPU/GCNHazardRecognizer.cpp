@@ -1273,18 +1273,12 @@ int GCNHazardRecognizer::checkReadM0Hazards(MachineInstr *MI) {
          getWaitStatesSinceDef(AMDGPU::M0, IsHazardFn, ReadM0WaitStates);
 }
 
-// emit V_NOP instructions. \p WaitStatesNeeded is the number of V_NOPs we need
-// to insert, negative means not needed.
-bool GCNHazardRecognizer::emitVNops(MachineInstr *MI, int WaitStatesNeeded) {
-  if (WaitStatesNeeded <= 0)
-    return false;
-
-  const SIInstrInfo *TII = ST.getInstrInfo();
+void GCNHazardRecognizer::emitVNops(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator InsertPt,
+                                    int WaitStatesNeeded, bool IsHoisting) {
+  const DebugLoc &DL = IsHoisting ? DebugLoc() : InsertPt->getDebugLoc();
   for (int I = 0; I < WaitStatesNeeded; ++I)
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-            TII->get(AMDGPU::V_NOP_e32));
-
-  return true;
+    BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::V_NOP_e32));
 }
 
 void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
@@ -2160,14 +2154,6 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) {
   return WaitStatesNeeded;
 }
 
-void GCNHazardRecognizer::insertVnopsBeforeTerminator(MachineBasicBlock *MBB,
-                                                      int Count) {
-  MachineBasicBlock::iterator InsertPt = MBB->getFirstTerminator();
-  for (int i = 0; i < Count; ++i) {
-    BuildMI(*MBB, InsertPt, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
-  }
-}
-
 bool GCNHazardRecognizer::hasWMMAToWMMARegOverlap(
     const MachineInstr &WMMA, const MachineInstr &MI) const {
   Register D0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::vdst)->getReg();
@@ -2297,7 +2283,8 @@ bool GCNHazardRecognizer::tryHoistWMMAVnopsFromLoop(MachineInstr *MI,
                     << " V_NOPs from loop to " << printMBBReference(*Preheader)
                     << "\n");
 
-  insertVnopsBeforeTerminator(Preheader, WaitStatesNeeded);
+  emitVNops(*Preheader, Preheader->getFirstTerminator(), WaitStatesNeeded,
+            /*IsHoisting=*/true);
   NumWMMANopsHoisted += WaitStatesNeeded;
   return true;
 }
@@ -2310,7 +2297,8 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   if (EnableWMMAVnopHoisting && tryHoistWMMAVnopsFromLoop(MI, WaitStatesNeeded))
     return true;
 
-  return emitVNops(MI, WaitStatesNeeded);
+  emitVNops(*MI->getParent(), MI->getIterator(), WaitStatesNeeded);
+  return true;
 }
 
 bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
