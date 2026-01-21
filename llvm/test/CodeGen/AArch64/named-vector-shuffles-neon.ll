@@ -127,6 +127,43 @@ define <16 x i8> @splice_right_0(<16 x i8> %a, <16 x i8> %b) #0 {
   ret <16 x i8> %res
 }
 
+define <4 x i32> @splice_left_v4i32_variable_offset(<4 x i32> %a, <4 x i32> %b, i32 zeroext %offset) #0 {
+; CHECK-LABEL: splice_left_v4i32_variable_offset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    ubfiz x8, x0, #2, #32
+; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    stp q0, q1, [sp, #-32]!
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ldr q0, [x9, x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %res = call <4 x i32> @llvm.vector.splice.left(<4 x i32> %a, <4 x i32> %b, i32 %offset)
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @splice_right_v4i32_variable_offset(<4 x i32> %a, <4 x i32> %b, i32 zeroext %offset) #0 {
+; CHECK-LABEL: splice_right_v4i32_variable_offset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    ubfiz x8, x0, #2, #32
+; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    stp q0, q1, [sp]
+; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    add x9, x10, #16
+; CHECK-NEXT:    sub x8, x9, x8
+; CHECK-NEXT:    ldr q0, [x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %res = call <4 x i32> @llvm.vector.splice.right(<4 x i32> %a, <4 x i32> %b, i32 %offset)
+  ret <4 x i32> %res
+}
+
 declare <2 x i8> @llvm.vector.splice.v2i8(<2 x i8>, <2 x i8>, i32)
 declare <16 x i8> @llvm.vector.splice.v16i8(<16 x i8>, <16 x i8>, i32)
 declare <8 x i32> @llvm.vector.splice.v8i32(<8 x i32>, <8 x i32>, i32)
