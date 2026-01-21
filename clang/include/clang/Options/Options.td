@@ -3901,7 +3901,7 @@ def fopenmp_cuda_blocks_per_sm_EQ : Joined<["-"], "fopenmp-cuda-blocks-per-sm=">
 def fopenmp_cuda_teams_reduction_recs_num_EQ : Joined<["-"], "fopenmp-cuda-teams-reduction-recs-num=">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fopenmp_macros : Flag<["-"], "fopenmp-macros">, Group<f_Group>,
-  MarshallingInfoFlag<LangOpts<"OpenMPMacros">>,
+  MarshallingInfoFlag<LangOpts<"OpenMPMacrosOnly">>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 
 //===----------------------------------------------------------------------===//

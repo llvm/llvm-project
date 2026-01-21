@@ -1462,7 +1462,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   // CUDA / HIP offloading only supports OpenMP's CPU support, but both
   // compilations must define these macros to compile.
-  if (LangOpts.OpenMPMacros)
+  if (LangOpts.OpenMPMacrosOnly)
     Builder.defineMacro("_OPENMP", "0");
 
   // CUDA device path compilaton
