@@ -2001,7 +2001,10 @@ public:
     }
     case Intrinsic::vector_splice_left:
     case Intrinsic::vector_splice_right: {
-      unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
+      auto *COffset = dyn_cast<ConstantInt>(Args[2]);
+      if (!COffset)
+        break;
+      unsigned Index = COffset->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_Splice, cast<VectorType>(RetTy),
           cast<VectorType>(Args[0]->getType()), {}, CostKind,
