@@ -50,6 +50,8 @@ private:
                                MachineBasicBlock::iterator MBBI);
   void expandCALL_RVMARKER(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI);
+  void expandCallToGlobalAddr(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI);
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandMBB(MachineBasicBlock &MBB);
 
@@ -269,6 +271,20 @@ void X86ExpandPseudoImpl::expandCALL_RVMARKER(
                    std::next(RtCall->getIterator()));
 }
 
+void X86ExpandPseudoImpl::expandCallToGlobalAddr(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  // Expand CALL64m_GlobalAddress pseudo to CALL64m.
+  MachineInstr &MI = *MBBI;
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::CALL64m))
+      .addReg(X86::RIP)
+      .addImm(1)
+      .addReg(0)
+      .addGlobalAddress(MI.getOperand(0).getGlobal(), 0,
+                        MI.getOperand(0).getTargetFlags())
+      .addReg(0);
+  MI.eraseFromParent();
+}
+
 /// If \p MBBI is a pseudo instruction, this method expands
 /// it to the corresponding (sequence of) actual instruction(s).
 /// \returns true if \p MBBI has been expanded.
@@ -292,7 +308,8 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case X86::TCRETURNri64:
   case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64:
-  case X86::TCRETURN_WINmi64: {
+  case X86::TCRETURN_WINmi64:
+  case X86::TCRETURNmi64_GlobalAddr: {
     bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64 ||
                  Opcode == X86::TCRETURN_WINmi64;
     MachineOperand &JumpTarget = MBBI->getOperand(0);
@@ -373,6 +390,16 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
       BuildMI(MBB, MBBI, DL,
               TII->get(IsX64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
           .add(JumpTarget);
+    } else if (Opcode == X86::TCRETURNmi64_GlobalAddr) {
+      assert(IsX64 &&
+             "TCRETURNmi_GlobalAddr is currently only supported on x64");
+      BuildMI(MBB, MBBI, DL, TII->get(X86::TAILJMPm64_REX))
+          .addReg(X86::RIP)
+          .addImm(1)
+          .addReg(0)
+          .addGlobalAddress(JumpTarget.getGlobal(), 0,
+                            JumpTarget.getTargetFlags())
+          .addReg(0);
     } else {
       assert(!IsX64 && "Win64 and UEFI64 require REX for indirect jumps.");
       JumpTarget.setIsKill();
@@ -724,6 +751,9 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     return true;
   case X86::CALL64r_ImpCall:
     MI.setDesc(TII->get(X86::CALL64r));
+    return true;
+  case X86::CALL64m_GlobalAddress:
+    expandCallToGlobalAddr(MBB, MBBI);
     return true;
   case X86::ADD32mi_ND:
   case X86::ADD64mi32_ND:
