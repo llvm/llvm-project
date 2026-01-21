@@ -143,6 +143,26 @@ def SDT_PPCBinaryArithWithFlagsInOut : SDTypeProfile<2, 3, [
   SDTCisVT<1, i32>,
 ]>;
 
+def SDT_PPCBcdShift : SDTypeProfile<1, 3, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>, SDTCisInt<3>
+]>;
+
+def SDT_PPCBcdShiftRound : SDTypeProfile<1, 3, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>, SDTCisInt<3>
+]>;
+
+def SDT_PPCBcdTrunc : SDTypeProfile<1, 3, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>, SDTCisInt<3>
+]>;
+
+def SDT_PPCBcdUTrunc : SDTypeProfile<1, 2, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>
+]>;
+
+def SDT_PPCBcdUShift : SDTypeProfile<1, 2, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>
+]>;
+
 def SDT_PPCstat : SDTypeProfile<0, 3, [
   SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>
 ]>;
@@ -682,6 +702,11 @@ def PPCsubc : SDNode<"PPCISD::SUBC", SDT_PPCBinaryArithWithFlagsOut,
                      []>;
 def PPCsube : SDNode<"PPCISD::SUBE", SDT_PPCBinaryArithWithFlagsInOut,
                      []>;
+def PPCbcds      : SDNode<"PPCISD::BCDSHIFT", SDT_PPCBcdShift, []>;
+def PPCbcdsr     : SDNode<"PPCISD::BCDSHIFTROUND", SDT_PPCBcdShiftRound, []>;
+def PPCbcdtrunc  : SDNode<"PPCISD::BCDTRUNC", SDT_PPCBcdTrunc, []>;
+def PPCbcdutrunc : SDNode<"PPCISD::BCDUTRUNC", SDT_PPCBcdUTrunc, []>;
+def PPCbcdus     : SDNode<"PPCISD::BCDUSHIFT", SDT_PPCBcdUShift, []>;
 
 def PPCstat : SDNode<"PPCISD::STAT", SDT_PPCstat,
                      [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;

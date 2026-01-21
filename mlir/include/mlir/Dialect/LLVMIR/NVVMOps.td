@@ -6156,6 +6156,195 @@ def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM tensormap.replace Op
+//===----------------------------------------------------------------------===//
+
+// Tensormap Field Kind Enum
+def TensormapGlobalAddressField : I32EnumCase<"GLOBAL_ADDRESS", 0, "global_address">;
+def TensormapRankField : I32EnumCase<"RANK", 1, "rank">;
+def TensormapBoxDimField : I32EnumCase<"BOX_DIM", 2, "box_dim">;
+def TensormapGlobalDimField : I32EnumCase<"GLOBAL_DIM", 3, "global_dim">;
+def TensormapGlobalStrideField : I32EnumCase<"GLOBAL_STRIDE", 4, "global_stride">;
+def TensormapElementStrideField : I32EnumCase<"ELEMENT_STRIDE", 5, "element_stride">;
+def TensormapElemtypeField : I32EnumCase<"ELEMTYPE", 6, "elemtype">;
+def TensormapInterleaveLayoutField : I32EnumCase<"INTERLEAVE_LAYOUT", 7, "interleave_layout">;
+def TensormapSwizzleModeField : I32EnumCase<"SWIZZLE_MODE", 8, "swizzle_mode">;
+def TensormapSwizzleAtomicityField : I32EnumCase<"SWIZZLE_ATOMICITY", 9, "swizzle_atomicity">;
+def TensormapFillModeField : I32EnumCase<"FILL_MODE", 10, "fill_mode">;
+
+def TensormapField : I32Enum<"TensormapField", "NVVM Tensormap Field Kind",
+  [TensormapGlobalAddressField, TensormapRankField, TensormapBoxDimField, 
+   TensormapGlobalDimField, TensormapGlobalStrideField, 
+   TensormapElementStrideField, TensormapElemtypeField, 
+   TensormapInterleaveLayoutField, TensormapSwizzleModeField, 
+   TensormapSwizzleAtomicityField, TensormapFillModeField]> {
+    let cppNamespace = "::mlir::NVVM";
+}
+
+def TensormapFieldAttr : EnumAttr<NVVM_Dialect, TensormapField, "tensormap_field"> {
+  let assemblyFormat = "$value";
+}
+
+// Tensormap Elemtype Enum
+def TensormapElemtypeU8 : I32EnumCase<"U8", 0, "u8">;
+def TensormapElemtypeU16 : I32EnumCase<"U16", 1, "u16">;
+def TensormapElemtypeU32 : I32EnumCase<"U32", 2, "u32">;
+def TensormapElemtypeS32 : I32EnumCase<"S32", 3, "s32">;
+def TensormapElemtypeU64 : I32EnumCase<"U64", 4, "u64">;
+def TensormapElemtypeS64 : I32EnumCase<"S64", 5, "s64">;
+def TensormapElemtypeF16 : I32EnumCase<"F16", 6, "f16">;
+def TensormapElemtypeF32 : I32EnumCase<"F32", 7, "f32">;
+def TensormapElemtypeF32_Ftz : I32EnumCase<"F32_FTZ", 8, "f32.ftz">;
+def TensormapElemtypeF64 : I32EnumCase<"F64", 9, "f64">;
+def TensormapElemtypeBF16 : I32EnumCase<"BF16", 10, "bf16">;
+def TensormapElemtypeTF32 : I32EnumCase<"TF32", 11, "tf32">;
+def TensormapElemtypeTF32_Ftz : I32EnumCase<"TF32_FTZ", 12, "tf32.ftz">;
+def TensormapElemtypeB4x16 : I32EnumCase<"B4x16", 13, "b4x16">;
+def TensormapElemtypeB4x16P64 : I32EnumCase<"B4x16P64", 14, "b4x16_p64">;
+def TensormapElemtypeB6x16P32 : I32EnumCase<"B6x16P32", 15, "b6x16_p32">;
+
+def TensormapElemtype : I32Enum<"TensormapElemtype", "NVVM Tensormap Elemtype",
+  [TensormapElemtypeU8, TensormapElemtypeU16, 
+   TensormapElemtypeU32,TensormapElemtypeS32, 
+   TensormapElemtypeU64, TensormapElemtypeS64,
+   TensormapElemtypeF16, TensormapElemtypeF32, 
+   TensormapElemtypeF32_Ftz,TensormapElemtypeF64, 
+   TensormapElemtypeBF16, TensormapElemtypeTF32,
+   TensormapElemtypeTF32_Ftz, TensormapElemtypeB4x16, 
+   TensormapElemtypeB4x16P64, TensormapElemtypeB6x16P32]> {
+    let cppNamespace = "::mlir::NVVM";
+}
+
+def TensormapElemtypeAttr : EnumAttr<NVVM_Dialect, TensormapElemtype, "tensormap_elemtype"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+// Tensormap Interleave Layout Enum
+def TensormapInterleaveLayoutNoInterleave : 
+  I32EnumCase<"NO_INTERLEAVE", 0, "no_interleave">;
+def TensormapInterleaveLayoutB16 : I32EnumCase<"B16", 1, "b16">;
+def TensormapInterleaveLayoutB32 : I32EnumCase<"B32", 2, "b32">;
+
+def TensormapInterleaveLayout : 
+  I32Enum<"TensormapInterleaveLayout", "NVVM Tensormap Interleave Layout",
+  [TensormapInterleaveLayoutNoInterleave, 
+   TensormapInterleaveLayoutB16,
+   TensormapInterleaveLayoutB32]> {
+    let cppNamespace = "::mlir::NVVM";
+}
+
+def TensormapInterleaveLayoutAttr : EnumAttr<NVVM_Dialect,   
+  TensormapInterleaveLayout, "tensormap_interleave_layout"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+// Tensormap Swizzle Mode Enum
+def TensormapSwizzleModeNoSwizzling : I32EnumCase<"NO_SWIZZLING", 0, "no_swizzling">;
+def TensormapSwizzleMode32B : I32EnumCase<"B32", 1, "b32">;
+def TensormapSwizzleMode64B : I32EnumCase<"B64", 2, "b64">;
+def TensormapSwizzleMode128B : I32EnumCase<"B128", 3, "b128">;
+def TensormapSwizzleMode96B : I32EnumCase<"B96", 4, "b96">;
+
+def TensormapSwizzleMode : I32Enum<"TensormapSwizzleMode", "NVVM Tensormap Swizzle Mode",
+  [TensormapSwizzleModeNoSwizzling, 
+   TensormapSwizzleMode32B,
+   TensormapSwizzleMode64B, 
+   TensormapSwizzleMode128B,
+   TensormapSwizzleMode96B]> {
+    let cppNamespace = "::mlir::NVVM";
+}
+
+def TensormapSwizzleModeAttr : EnumAttr<NVVM_Dialect,
+  TensormapSwizzleMode, "tensormap_swizzle_mode"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+// Tensormap Swizzle Atomicity Enum
+def TensormapSwizzleAtomicityB16 : I32EnumCase<"B16", 0, "b16">;
+def TensormapSwizzleAtomicityB32 : I32EnumCase<"B32", 1, "b32">;
+def TensormapSwizzleAtomicityB32FlipB8 : I32EnumCase<"B32_FLIP_8B", 2, "b32_flip_b8">;
+def TensormapSwizzleAtomicityB64 : I32EnumCase<"B64", 3, "b64">;
+
+def TensormapSwizzleAtomicity : 
+  I32Enum<"TensormapSwizzleAtomicity", "NVVM Tensormap Swizzle Atomicity",
+  [TensormapSwizzleAtomicityB16, TensormapSwizzleAtomicityB32,
+   TensormapSwizzleAtomicityB32FlipB8, 
+   TensormapSwizzleAtomicityB64]> {
+    let cppNamespace = "::mlir::NVVM";
+}
+
+def TensormapSwizzleAtomicityAttr : EnumAttr<NVVM_Dialect,
+  TensormapSwizzleAtomicity, "tensormap_swizzle_atomicity"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+// Tensormap Fill Mode Enum
+def TensormapFillModeZeroFill : I32EnumCase<"ZERO", 0, "zero">;
+def TensormapFillModeOOBNaNFill : I32EnumCase<"OOB_NAN", 1, "oob_nan">;
+
+def TensormapFillMode : I32Enum<"TensormapFillMode", "NVVM Tensormap Fill Mode",
+  [TensormapFillModeZeroFill, TensormapFillModeOOBNaNFill]> {
+    let cppNamespace = "::mlir::NVVM";
+}
+
+def TensormapFillModeAttr : EnumAttr<NVVM_Dialect,
+  TensormapFillMode, "tensormap_fill_mode"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def TensormapFieldValueAttr :
+  AnyAttrOf<[TensormapElemtypeAttr, TensormapInterleaveLayoutAttr, 
+    TensormapSwizzleModeAttr, TensormapSwizzleAtomicityAttr, 
+    TensormapFillModeAttr]>;
+
+def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace"> {
+  let summary = "Modifies a field of the tensor-map object";
+  let description = [{
+    The `nvvm.tensormap.replace` replaces the specified field of the tensor-map 
+    object at the location specified by `addr` with a new value (specified by 
+    `new_value` or `new_value_attr`).
+
+    The `field` argument specifies the field of the tensor-map object to 
+    replace.
+
+    `new_value` is an `i32`/`i64` argument that specifies the new value to 
+    replace the `field` with for the `global_address`, `rank`, `box_dim`, 
+    `global_dim`, `global_stride`, and `element_stride` fields. It must be an 
+    `i64` for the `global_address` and `global_stride` fields and `i32` for the 
+    remaining fields.
+    
+    For `rank`, `new_value` must be one less than the desired tensor rank as 
+    this field uses zero-based numbering.
+
+    `new_value_attr` is an attribute that specifies the new value to replace 
+    the `field` with for the `elemtype`, `interleave_layout`, `swizzle_mode`, 
+    `swizzle_atomicity`, and `fill_mode` fields. It takes the place of 
+    `new_value` for these fields. It must be a valid attribute corresponding to 
+    the `field` type.
+
+    The ordinal `ord` is an immediate integer argument that specifies the 
+    ordinal of the `field` across the tensor which needs to be replaced and is 
+    required only for the `box_dim`, `global_dim`, `global_stride`, and 
+    `element_stride` fields.
+
+    [For more information, see PTX ISA.](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace)
+  }];
+
+  let hasVerifier = 1;
+  let arguments = (ins
+    TensormapFieldAttr:$field,
+    AnyTypeOf<[LLVM_PointerGlobal, LLVM_PointerShared]>:$addr,
+    Optional<AnyTypeOf<[I64, I32]>>:$new_value,
+    OptionalAttr<ConfinedAttr<I32Attr, [IntMinValue<1>, IntMaxValue<5>]>>:$ord,
+    OptionalAttr<TensormapFieldValueAttr>:$new_value_attr
+  );
+
+  let assemblyFormat = [{
+    `field` `=` $field (`[` $ord^ `]`)? `,` `new_value` `=` ($new_value_attr^):($new_value)? `in` $addr attr-dict `:` type(operands)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM target attribute.
 //===----------------------------------------------------------------------===//
 

@@ -31,9 +31,7 @@ class ProcessImplicitDefsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  ProcessImplicitDefsLegacy() : MachineFunctionPass(ID) {
-    initializeProcessImplicitDefsLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  ProcessImplicitDefsLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 

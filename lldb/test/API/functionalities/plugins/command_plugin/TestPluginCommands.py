@@ -31,10 +31,12 @@ class PluginCommandTestCase(TestBase):
 
         retobj = lldb.SBCommandReturnObject()
 
-        retval = self.dbg.GetCommandInterpreter().HandleCommand(
+        cinterpreter = self.dbg.GetCommandInterpreter()
+        retval = cinterpreter.HandleCommand(
             "plugin load %s" % self.getBuildArtifact(plugin_lib_name), retobj
         )
 
+        self.assertTrue(cinterpreter.UserCommandExists("plugin_loaded_command"))
         retobj.Clear()
 
         retval = self.dbg.GetCommandInterpreter().HandleCommand(
