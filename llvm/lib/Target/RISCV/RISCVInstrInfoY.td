@@ -105,4 +105,11 @@ let Predicates = [HasStdExtY] in {
   def SYEQ : RVY_rr<0x6, 0x4, "syeq", GPR, YGPR, YGPR>;
   def YLT : RVY_rr<0x6, 0x6, "ylt", GPR, YGPR, YGPR>;
   def YAMASK : RVY_r<0x7, "yamask", GPR, GPR>;
+
+  // Instructions to Load and Store Capability Data
+  def LY : Load_ri<0b100, "ly", YGPR, opcode=OPC_MISC_MEM>,
+           Sched<[/* TODO: WriteLDY, */ ReadMemBase]>;
+  def SY : Store_rri<0b100, "sy", YGPR>,
+           Sched<[/* TODO: WriteSTY, */ ReadStoreData, ReadMemBase]>;
+
 } // Predicates = [HasStdExtY]

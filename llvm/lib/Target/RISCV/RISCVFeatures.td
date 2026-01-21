@@ -1778,8 +1778,10 @@ def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of (not Feature64Bit)),
                                 "RV32I Base Instruction Set">;
 
-defvar RV32 = DefaultMode;
-def RV64 : HwMode<[IsRV64]>;
+defvar RV32I = DefaultMode;
+def RV64I : HwMode<[IsRV64, NotCapMode]>;
+def RV32Y : HwMode<[IsRV32, IsCapMode]>;
+def RV64Y : HwMode<[IsRV64, IsCapMode]>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",

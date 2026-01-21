@@ -264,6 +264,15 @@ static DecodeStatus DecodeGPRNoX0RegisterClass(MCInst &Inst, uint32_t RegNo,
   return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
+static DecodeStatus DecodeYGPRNoX0RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                                uint64_t Address,
+                                                const MCDisassembler *Decoder) {
+  if (RegNo == 0)
+    return MCDisassembler::Fail;
+
+  return DecodeYGPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
 static DecodeStatus DecodeGPRNoX2RegisterClass(MCInst &Inst, uint64_t RegNo,
                                                uint32_t Address,
                                                const MCDisassembler *Decoder) {

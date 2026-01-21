@@ -1372,9 +1372,17 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg);
   bool IsRegVR = RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg);
 
-  if (Op.isGPR() && Kind == MCK_YGPR) {
+  // In RVY mode, the BasePtrRC register class should select capability
+  // registers for the base pointer operands, otherwise we use GPRs.
+  // TODO: Is there any way we could do this in tablegen automatically?
+  if (Kind == MCK_RegByHwMode_BasePtrRC)
+    Kind = STI->hasFeature(RISCV::FeatureCapMode) ? MCK_YGPRNoX0 : MCK_GPR;
+
+  if (Op.isGPR() && (Kind == MCK_YGPR || Kind == MCK_YGPRNoX0)) {
     // GPR and capability GPR use the same register names, convert if required.
     Op.Reg.Reg = convertGPRToYGPR(Reg);
+    if (Kind == MCK_YGPRNoX0 && Op.Reg.Reg == RISCV::X0_Y)
+      return Match_InvalidRegClassYGPRNoNull;
     return Match_Success;
   }
   if (IsRegFPR64 && Kind == MCK_FPR256) {
