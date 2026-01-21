@@ -1159,11 +1159,11 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
                                                Op->getName() + ".cast");
           return Op;
         };
-        Value *LoadOp1 = MaybeCastedLoadOperant(SI->getOperand(1));
+        Value *LoadOp1 = MaybeCastedLoadOperand(SI->getOperand(1));
         LoadInst *V1 = Builder.CreateLoad(LI.getType(), LoadOp1,
                                           LoadOp1->getName() + ".val");
 
-        Value *LoadOp2 = MaybeCastedLoadOperant(SI->getOperand(2));
+        Value *LoadOp2 = MaybeCastedLoadOperand(SI->getOperand(2));
         LoadInst *V2 = Builder.CreateLoad(LI.getType(), LoadOp2,
                                           LoadOp2->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
