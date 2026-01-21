@@ -15,28 +15,18 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
   int q7;
   if (ax > ay) {
     int ex, ey;
-    ex = ({
-           int _exp;
-           __clc_frexp(ax, &_exp);
-           _exp;
-         }) -
-         1;
-    ax = __clc_ldexp(({
-                       int _exp;
-                       __clc_frexp(ax, &_exp);
-                     }),
-                     bits);
-    ey = ({
-           int _exp;
-           __clc_frexp(ay, &_exp);
-           _exp;
-         }) -
-         1;
-    ay = __clc_ldexp(({
-                       int _exp;
-                       __clc_frexp(ay, &_exp);
-                     }),
-                     1);
+    {
+      int _exp;
+      float _mant = __clc_frexp(ax, &_exp);
+      ex = _exp - 1;
+      ax = __clc_ldexp(_mant, bits);
+    }
+    {
+      int _exp;
+      float _mant = __clc_frexp(ay, &_exp);
+      ey = _exp - 1;
+      ay = __clc_ldexp(_mant, 1);
+    }
     int nb = ex - ey;
     float ayinv = __clc_native_recip(ay);
     int qacc = 0;
