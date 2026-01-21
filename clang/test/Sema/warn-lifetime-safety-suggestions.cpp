@@ -110,9 +110,9 @@ struct Container {
   MyObj data;
   const MyObj& getData() [[clang::lifetimebound]] { return data; }
 };
-// FIXME: c.data does not forward loans
-View return_struct_field(const Container& c) {
-  return c.data;
+
+View return_struct_field(const Container& c) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return c.data; // expected-note {{param returned here}}
 }
 View return_struct_lifetimebound_getter(Container& c) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
   return c.getData().getView();  // expected-note {{param returned here}}

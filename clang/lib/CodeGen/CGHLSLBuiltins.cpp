@@ -160,6 +160,42 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   return LastInst;
 }
 
+static Value *handleHlslWaveActiveBallot(CodeGenFunction &CGF,
+                                         const CallExpr *E) {
+  Value *Cond = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Type *I32 = CGF.Int32Ty;
+
+  llvm::Type *Vec4I32 = llvm::FixedVectorType::get(I32, 4);
+  [[maybe_unused]] llvm::StructType *Struct4I32 =
+      llvm::StructType::get(CGF.getLLVMContext(), {I32, I32, I32, I32});
+
+  if (CGF.CGM.getTarget().getTriple().isDXIL()) {
+    // Call DXIL intrinsic: returns { i32, i32, i32, i32 }
+    llvm::Function *Fn = CGF.CGM.getIntrinsic(Intrinsic::dx_wave_ballot, {I32});
+
+    Value *StructVal = CGF.EmitRuntimeCall(Fn, Cond);
+    assert(StructVal->getType() == Struct4I32 &&
+           "dx.wave.ballot must return {i32,i32,i32,i32}");
+
+    // Reassemble struct to <4 x i32>
+    llvm::Value *VecVal = llvm::PoisonValue::get(Vec4I32);
+    for (unsigned I = 0; I < 4; ++I) {
+      Value *Elt = CGF.Builder.CreateExtractValue(StructVal, I);
+      VecVal =
+          CGF.Builder.CreateInsertElement(VecVal, Elt, CGF.Builder.getInt32(I));
+    }
+
+    return VecVal;
+  }
+
+  if (CGF.CGM.getTarget().getTriple().isSPIRV())
+    return CGF.EmitRuntimeCall(
+        CGF.CGM.getIntrinsic(Intrinsic::spv_subgroup_ballot), Cond);
+
+  llvm_unreachable(
+      "WaveActiveBallot is only supported for DXIL and SPIRV targets");
+}
+
 static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF,
                                         const CallExpr *E) {
   Value *Op0 = CGF.EmitScalarExpr(E->getArg(0));
@@ -830,13 +866,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
-    Value *Op = EmitScalarExpr(E->getArg(0));
+    [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));
     assert(Op->getType()->isIntegerTy(1) &&
            "Intrinsic WaveActiveBallot operand must be a bool");
 
-    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBallotIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
+    return handleHlslWaveActiveBallot(*this, E);
   }
   case Builtin::BI__builtin_hlsl_wave_active_count_bits: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
