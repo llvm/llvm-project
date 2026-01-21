@@ -50,3 +50,34 @@ func.func @raw_hazard() -> i64 {
   return %extracted : i64
 }
 
+// -----
+
+// CHECK-LABEL: memref.global "private" @state_tensor
+ml_program.global private mutable @"state_tensor"(dense<0.0> : tensor<4x75xf32>) : tensor<4x75xf32>
+
+// CHECK-LABEL: func.func @global_load_store_tensor
+func.func @global_load_store_tensor() -> tensor<4x75xf32> {
+  // CHECK-DAG:     %[[C0:.*]] = arith.constant 0
+  // CHECK-DAG:     %[[CST:.*]] = arith.constant 1.000000e+00
+  // CHECK-DAG:     %[[GLOB:.*]] = memref.get_global @state_tensor
+  // CHECK:         %[[VAL:.*]] = memref.load %[[GLOB]][%[[C0]], %[[C0]]]
+  // CHECK:         %[[ADD:.*]] = arith.addf %[[VAL]], %[[CST]]
+  // CHECK:         %[[ALLOC1:.*]] = memref.alloc() {alignment = 64 : i64}
+  // CHECK:         memref.copy %[[GLOB]], %[[ALLOC1]] 
+  // CHECK:         memref.store %[[ADD]], %[[ALLOC1]][%[[C0]], %[[C0]]] 
+  // CHECK:         %[[TENSOR:.*]] = bufferization.to_tensor %[[ALLOC1]] 
+  // CHECK:         %[[ALLOC2:.*]] = memref.alloc() {alignment = 64 : i64}
+  // CHECK:         memref.copy %[[ALLOC1]], %[[ALLOC2]] 
+  // CHECK:         %[[GLOB_REF:.*]] = memref.get_global @state_tensor 
+  // CHECK:         memref.copy %[[ALLOC2]], %[[GLOB_REF]] 
+  // CHECK:         return %[[TENSOR]]
+  %c0 = arith.constant 0 : index
+  %cst_val = arith.constant 1.0 : f32
+  %initial_state = ml_program.global_load @"state_tensor" : tensor<4x75xf32>
+  %val = tensor.extract %initial_state[%c0, %c0] : tensor<4x75xf32>
+  %next_val = arith.addf %val, %cst_val : f32
+  %updated_tensor = tensor.insert %next_val into %initial_state[%c0, %c0] : tensor<4x75xf32>
+  ml_program.global_store @"state_tensor" = %updated_tensor : tensor<4x75xf32>
+  return %updated_tensor : tensor<4x75xf32>
+}
+
