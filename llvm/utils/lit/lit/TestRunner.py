@@ -8,10 +8,9 @@ import threading
 import traceback
 from typing import Optional, Tuple
 
-from lit.InprocBuiltins import *
-from lit.ShCommands import GlobItem, Command
 from lit.ShCommands import Command
-from lit.ShellEnvironment import *
+from lit.ShellEnvironment import expand_glob, expand_glob_expressions, InternalShellError, kAvoidDevNull, kDevNull, kIsWindows, kUseCloseFDs, processRedirects, ShellEnvironment, ShellCommandResult, quote_windows_command, updateEnv
+import lit.InprocBuiltins as InprocBuiltins
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
@@ -234,17 +233,17 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         os.path.dirname(os.path.abspath(__file__)), "builtin_commands"
     )
     inproc_builtins = {
-        "cd": executeBuiltinCd,
-        "export": executeBuiltinExport,
-        "echo": executeBuiltinEcho,
-        "@echo": executeBuiltinEcho,
-        "mkdir": executeBuiltinMkdir,
-        "popd": executeBuiltinPopd,
-        "pushd": executeBuiltinPushd,
-        "rm": executeBuiltinRm,
-        "ulimit": executeBuiltinUlimit,
-        "umask": executeBuiltinUmask,
-        ":": executeBuiltinColon,
+        "cd": InprocBuiltins.executeBuiltinCd,
+        "export": InprocBuiltins.executeBuiltinExport,
+        "echo": InprocBuiltins.executeBuiltinEcho,
+        "@echo": InprocBuiltins.executeBuiltinEcho,
+        "mkdir": InprocBuiltins.executeBuiltinMkdir,
+        "popd": InprocBuiltins.executeBuiltinPopd,
+        "pushd": InprocBuiltins.executeBuiltinPushd,
+        "rm": InprocBuiltins.executeBuiltinRm,
+        "ulimit": InprocBuiltins.executeBuiltinUlimit,
+        "umask": InprocBuiltins.executeBuiltinUmask,
+        ":": InprocBuiltins.executeBuiltinColon,
     }
     # To avoid deadlock, we use a single stderr stream for piped
     # output. This is null until we have seen some output using

@@ -6,7 +6,7 @@ import platform
 import shutil
 from io import StringIO
 
-from lit.ShellEnvironment import *
+from lit.ShellEnvironment import expand_glob_expressions, InternalShellError, kIsWindows, processRedirects, ShellCommandResult, updateEnv
 import lit.util
 
 def executeBuiltinCd(cmd, shenv):
