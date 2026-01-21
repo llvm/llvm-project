@@ -91,6 +91,19 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeYGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+
+  if (RegNo >= 32 || (IsRVE && RegNo >= 16))
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::X0_Y + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeGPRF16RegisterClass(MCInst &Inst, uint32_t RegNo,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder) {
@@ -249,6 +262,15 @@ static DecodeStatus DecodeGPRNoX0RegisterClass(MCInst &Inst, uint32_t RegNo,
     return MCDisassembler::Fail;
 
   return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus DecodeYGPRNoX0RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                                uint64_t Address,
+                                                const MCDisassembler *Decoder) {
+  if (RegNo == 0)
+    return MCDisassembler::Fail;
+
+  return DecodeYGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
 static DecodeStatus DecodeGPRNoX2RegisterClass(MCInst &Inst, uint64_t RegNo,
@@ -438,6 +460,15 @@ static DecodeStatus DecodeTRM4RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeYBNDSWImm(MCInst &Inst, uint64_t Imm, int64_t Address,
+                                    const MCDisassembler *Decoder) {
+  assert(isUInt<10>(Imm) && "Invalid immediate");
+  const uint32_t Shift = Imm >> 8;
+  uint64_t Result = (((Imm & maxUIntN(8)) + 257) << Shift) - 256;
+  Inst.addOperand(MCOperand::createImm(Result));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
                                    uint64_t Address,
                                    const MCDisassembler *Decoder) {
@@ -513,6 +544,20 @@ static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
 
   if (!Decoder->getSubtargetInfo().hasFeature(RISCV::Feature64Bit) &&
       !isUInt<5>(Imm))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeUImm7SrliyOperand(MCInst &Inst, uint32_t Imm,
+                                            int64_t Address,
+                                            const MCDisassembler *Decoder) {
+  assert(isUInt<7>(Imm) && "Invalid immediate");
+
+  uint32_t ExpectedValue =
+      Decoder->getSubtargetInfo().hasFeature(RISCV::Feature64Bit) ? 64 : 32;
+  if (Imm != ExpectedValue)
     return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm));
@@ -727,6 +772,9 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXSMT32, XSMTGroup, "SpacemiT extensions"},
     {DecoderTableXAIF32, XAIFGroup, "AI Foundry extensions"},
     // Standard Extensions
+    {DecoderTableRVYOnly32,
+     {RISCV::FeatureStdExtY},
+     "RVY-only standard 32-bit instructions"},
     {DecoderTable32, {}, "standard 32-bit instructions"},
     {DecoderTableRV32Only32, {}, "RV32-only standard 32-bit instructions"},
     {DecoderTableZfinx32, {}, "Zfinx (Float in Integer)"},
