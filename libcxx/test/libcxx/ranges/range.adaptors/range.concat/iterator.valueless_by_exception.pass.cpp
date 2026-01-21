@@ -438,6 +438,5 @@ int main() {
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([&] { [[maybe_unused]] CIter it3(iter1); }(), "valueless by exception");
     }
-
   }
 }
