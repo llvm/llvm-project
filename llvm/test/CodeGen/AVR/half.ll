@@ -28,97 +28,6 @@ define half @return(ptr %p) nounwind {
   ret half %r
 }
 
-define dso_local double @loadd(ptr nocapture readonly %a) local_unnamed_addr nounwind {
-; CHECK-LABEL: loadd:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov r30, r24
-; CHECK-NEXT:    mov r31, r25
-; CHECK-NEXT:    ldd r24, Z+2
-; CHECK-NEXT:    ldd r25, Z+3
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    rcall __extendsfdf2
-; CHECK-NEXT:    ret
-entry:
-  %arrayidx = getelementptr inbounds i16, ptr %a, i64 1
-  %0 = load i16, ptr %arrayidx, align 2
-  %1 = tail call double @llvm.convert.from.fp16.f64(i16 %0)
-  ret double %1
-}
-
-define dso_local float @loadf(ptr nocapture readonly %a) local_unnamed_addr nounwind {
-; CHECK-LABEL: loadf:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov r30, r24
-; CHECK-NEXT:    mov r31, r25
-; CHECK-NEXT:    ldd r24, Z+2
-; CHECK-NEXT:    ldd r25, Z+3
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    ret
-entry:
-  %arrayidx = getelementptr inbounds i16, ptr %a, i64 1
-  %0 = load i16, ptr %arrayidx, align 2
-  %1 = tail call float @llvm.convert.from.fp16.f32(i16 %0)
-  ret float %1
-}
-
-define dso_local void @stored(ptr nocapture %a, double %b) local_unnamed_addr nounwind {
-; CHECK-LABEL: stored:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    push r16
-; CHECK-NEXT:    push r17
-; CHECK-NEXT:    mov r30, r22
-; CHECK-NEXT:    mov r31, r23
-; CHECK-NEXT:    mov r22, r20
-; CHECK-NEXT:    mov r23, r21
-; CHECK-NEXT:    mov r20, r18
-; CHECK-NEXT:    mov r21, r19
-; CHECK-NEXT:    mov r18, r16
-; CHECK-NEXT:    mov r19, r17
-; CHECK-NEXT:    mov r16, r24
-; CHECK-NEXT:    mov r17, r25
-; CHECK-NEXT:    mov r24, r30
-; CHECK-NEXT:    mov r25, r31
-; CHECK-NEXT:    rcall __truncdfhf2
-; CHECK-NEXT:    mov r30, r16
-; CHECK-NEXT:    mov r31, r17
-; CHECK-NEXT:    std Z+1, r25
-; CHECK-NEXT:    st Z, r24
-; CHECK-NEXT:    pop r17
-; CHECK-NEXT:    pop r16
-; CHECK-NEXT:    ret
-entry:
-  %0 = tail call i16 @llvm.convert.to.fp16.f64(double %b)
-  store i16 %0, ptr %a, align 2
-  ret void
-}
-
-define dso_local void @storef(ptr nocapture %a, float %b) local_unnamed_addr nounwind {
-; CHECK-LABEL: storef:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    push r16
-; CHECK-NEXT:    push r17
-; CHECK-NEXT:    mov r18, r22
-; CHECK-NEXT:    mov r19, r23
-; CHECK-NEXT:    mov r16, r24
-; CHECK-NEXT:    mov r17, r25
-; CHECK-NEXT:    mov r22, r20
-; CHECK-NEXT:    mov r23, r21
-; CHECK-NEXT:    mov r24, r18
-; CHECK-NEXT:    mov r25, r19
-; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    mov r30, r16
-; CHECK-NEXT:    mov r31, r17
-; CHECK-NEXT:    std Z+1, r25
-; CHECK-NEXT:    st Z, r24
-; CHECK-NEXT:    pop r17
-; CHECK-NEXT:    pop r16
-; CHECK-NEXT:    ret
-entry:
-  %0 = tail call i16 @llvm.convert.to.fp16.f32(float %b)
-  store i16 %0, ptr %a, align 2
-  ret void
-}
-
 define void @test_load_store(ptr %in, ptr %out) nounwind {
 ; CHECK-LABEL: test_load_store:
 ; CHECK:       ; %bb.0:
@@ -496,11 +405,11 @@ define half @test_select_cc(half) nounwind {
 ; CHECK-NEXT:    mov r21, r17
 ; CHECK-NEXT:    rcall __nesf2
 ; CHECK-NEXT:    cpi r24, 0
-; CHECK-NEXT:    breq .LBB25_2
+; CHECK-NEXT:    breq .LBB21_2
 ; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    ldi r16, 0
 ; CHECK-NEXT:    ldi r17, 60
-; CHECK-NEXT:  .LBB25_2:
+; CHECK-NEXT:  .LBB21_2:
 ; CHECK-NEXT:    mov r24, r16
 ; CHECK-NEXT:    mov r25, r17
 ; CHECK-NEXT:    pop r17

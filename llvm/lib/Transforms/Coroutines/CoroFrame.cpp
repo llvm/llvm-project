@@ -1924,21 +1924,25 @@ salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
     return std::nullopt;
 
   auto *StorageAsArg = dyn_cast<Argument>(Storage);
-  const bool IsSwiftAsyncArg =
-      StorageAsArg && StorageAsArg->hasAttribute(Attribute::SwiftAsync);
 
-  // Swift async arguments are described by an entry value of the ABI-defined
-  // register containing the coroutine context.
+  const bool IsSingleLocationExpression = Expr->isSingleLocationExpression();
+  // Use an EntryValue when requested (UseEntryValue) for swift async Arguments.
   // Entry values in variadic expressions are not supported.
-  if (IsSwiftAsyncArg && UseEntryValue && !Expr->isEntryValue() &&
-      Expr->isSingleLocationExpression())
+  const bool WillUseEntryValue =
+      UseEntryValue && StorageAsArg &&
+      StorageAsArg->hasAttribute(Attribute::SwiftAsync) &&
+      !Expr->isEntryValue() && IsSingleLocationExpression;
+
+  if (WillUseEntryValue)
     Expr = DIExpression::prepend(Expr, DIExpression::EntryValue);
 
   // If the coroutine frame is an Argument, store it in an alloca to improve
   // its availability (e.g. registers may be clobbered).
   // Avoid this if the value is guaranteed to be available through other means
   // (e.g. swift ABI guarantees).
-  if (StorageAsArg && !IsSwiftAsyncArg) {
+  // Avoid this if multiple location expressions are involved, as LLVM does not
+  // know how to prepend a deref in this scenario.
+  if (StorageAsArg && !WillUseEntryValue && IsSingleLocationExpression) {
     auto &Cached = ArgToAllocaMap[StorageAsArg];
     if (!Cached) {
       Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,

@@ -81,6 +81,10 @@ namespace llvm {
     // marker instruction.
     CALL_RVMARKER,
 
+    // Psuedo for a call to a global address that must be called via a memory
+    // address (i.e., not loaded into a register then called).
+    CALL_GLOBALADDR,
+
     /// The same as ISD::CopyFromReg except that this node makes it explicit
     /// that it may lower to an x87 FPU stack pop. Optimizations should be more
     /// cautious when handling this node than a normal CopyFromReg to avoid
@@ -335,6 +339,10 @@ namespace llvm {
     /// Tail call return. See X86TargetLowering::LowerCall for
     /// the list of operands.
     TC_RETURN,
+
+    // Psuedo for a tail call return to a global address that must be called via
+    // a memory address (i.e., not loaded into a register then called).
+    TC_RETURN_GLOBALADDR,
 
     // Vector move to low scalar and zero higher vector elements.
     VZEXT_MOVL,
@@ -1603,16 +1611,21 @@ namespace llvm {
 
     /// This method returns a target specific FastISel object,
     /// or null if the target does not support "fast" ISel.
-    FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                             const TargetLibraryInfo *libInfo) const override;
+    FastISel *
+    createFastISel(FunctionLoweringInfo &funcInfo,
+                   const TargetLibraryInfo *libInfo,
+                   const LibcallLoweringInfo *libcallLowering) const override;
 
     /// If the target has a standard location for the stack protector cookie,
     /// returns the address of that location. Otherwise, returns nullptr.
-    Value *getIRStackGuard(IRBuilderBase &IRB) const override;
+    Value *getIRStackGuard(IRBuilderBase &IRB,
+                           const LibcallLoweringInfo &Libcalls) const override;
 
     bool useLoadStackGuardNode(const Module &M) const override;
     bool useStackGuardXorFP() const override;
-    void insertSSPDeclarations(Module &M) const override;
+    void
+    insertSSPDeclarations(Module &M,
+                          const LibcallLoweringInfo &Libcalls) const override;
     SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
                                 const SDLoc &DL) const override;
 
@@ -1620,7 +1633,8 @@ namespace llvm {
     /// Return true if the target stores SafeStack pointer at a fixed offset in
     /// some non-standard address space, and populates the address space and
     /// offset as appropriate.
-    Value *getSafeStackPointerLocation(IRBuilderBase &IRB) const override;
+    Value *getSafeStackPointerLocation(
+        IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const override;
 
     std::pair<SDValue, SDValue> BuildFILD(EVT DstVT, EVT SrcVT, const SDLoc &DL,
                                           SDValue Chain, SDValue Pointer,
@@ -1738,11 +1752,11 @@ namespace llvm {
 
     // Call lowering helpers.
 
-    /// Check whether the call is eligible for tail call optimization. Targets
-    /// that want to do tail call optimization should implement this function.
-    bool IsEligibleForTailCallOptimization(
-        TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
-        SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const;
+    /// Check whether the call is eligible for sibling call optimization.
+    bool
+    isEligibleForSiblingCallOpt(TargetLowering::CallLoweringInfo &CLI,
+                                CCState &CCInfo,
+                                SmallVectorImpl<CCValAssign> &ArgLocs) const;
     SDValue EmitTailCallLoadRetAddr(SelectionDAG &DAG, SDValue &OutRetAddr,
                                     SDValue Chain, bool IsTailCall,
                                     bool Is64Bit, int FPDiff,
@@ -1951,8 +1965,9 @@ namespace llvm {
   };
 
   namespace X86 {
-    FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                             const TargetLibraryInfo *libInfo);
+  FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
+                           const TargetLibraryInfo *libInfo,
+                           const LibcallLoweringInfo *libcallLowering);
   } // end namespace X86
 
   // X86 specific Gather/Scatter nodes.

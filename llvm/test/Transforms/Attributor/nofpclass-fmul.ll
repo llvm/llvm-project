@@ -44,6 +44,36 @@ define float @ret_mul_exponent_f32_22(float %arg0) {
   ret float %call
 }
 
+define float @ret_fmul_square_f32_src_no_nan(float noundef nofpclass(nan) %arg) {
+; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @ret_fmul_square_f32_src_no_nan(
+; CHECK-SAME: float noundef nofpclass(nan) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg, %arg
+  ret float %fmul
+}
+
+define float @ret_fmul_square_f32_src_no_snan(float noundef nofpclass(snan) %arg) {
+; CHECK-LABEL: define noundef nofpclass(snan ninf nzero nsub nnorm) float @ret_fmul_square_f32_src_no_snan(
+; CHECK-SAME: float noundef nofpclass(snan) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg, %arg
+  ret float %fmul
+}
+
+define float @ret_fmul_square_f32_src_no_qnan(float noundef nofpclass(qnan) %arg) {
+; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square_f32_src_no_qnan(
+; CHECK-SAME: float noundef nofpclass(qnan) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg, %arg
+  ret float %fmul
+}
+
 define float @ret_mul_exponent_f32_23(float %arg0) {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_mul_exponent_f32_23(
 ; CHECK-SAME: float [[ARG0:%.*]]) #[[ATTR0]] {
