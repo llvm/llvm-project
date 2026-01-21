@@ -19,12 +19,12 @@ define <8 x i16> @test_v8i16(<8 x i16> %m, <8 x i16> %n) {
 ; CHECK-P7-NEXT:    vavguh 2, 2, 3
 ; CHECK-P7-NEXT:    blr
 entry:
-  %xm = zext <8 x i16> %m to <8 x i17>
-  %xn = zext <8 x i16> %n to <8 x i17>
-  %add = add <8 x i17> %xm, <i17 1, i17 1, i17 1, i17 1, i17 1, i17 1, i17 1, i17 1>
-  %add1 = add <8 x i17> %add, %xn
-  %shr = lshr <8 x i17> %add1, <i17 1, i17 1, i17 1, i17 1, i17 1, i17 1, i17 1, i17 1>
-  %tr = trunc <8 x i17> %shr to <8 x i16>
+  %xm = zext <8 x i16> %m to <8 x i18>
+  %xn = zext <8 x i16> %n to <8 x i18>
+  %add = add <8 x i18> %xm, <i18 1, i18 1, i18 1, i18 1, i18 1, i18 1, i18 1, i18 1>
+  %add1 = add <8 x i18> %add, %xn
+  %shr = lshr <8 x i18> %add1, <i18 1, i18 1, i18 1, i18 1, i18 1, i18 1, i18 1, i18 1>
+  %tr = trunc <8 x i18> %shr to <8 x i16>
   ret <8 x i16> %tr
 }
 
@@ -44,12 +44,12 @@ define <8 x i16> @test_v8i16_sign(<8 x i16> %m, <8 x i16> %n) {
 ; CHECK-P7-NEXT:    vavgsh 2, 2, 3
 ; CHECK-P7-NEXT:    blr
 entry:
-  %xm = sext <8 x i16> %m to <8 x i17>
-  %xn = sext <8 x i16> %n to <8 x i17>
-  %add = add <8 x i17> %xm, <i17 1, i17 1, i17 1, i17 1, i17 1, i17 1, i17 1, i17 1>
-  %add1 = add <8 x i17> %add, %xn
-  %shr = ashr <8 x i17> %add1, <i17 1, i17 1, i17 1, i17 1, i17 1, i17 1, i17 1, i17 1>
-  %tr = trunc <8 x i17> %shr to <8 x i16>
+  %xm = sext <8 x i16> %m to <8 x i18>
+  %xn = sext <8 x i16> %n to <8 x i18>
+  %add = add <8 x i18> %xm, <i18 1, i18 1, i18 1, i18 1, i18 1, i18 1, i18 1, i18 1>
+  %add1 = add <8 x i18> %add, %xn
+  %shr = ashr <8 x i18> %add1, <i18 1, i18 1, i18 1, i18 1, i18 1, i18 1, i18 1, i18 1>
+  %tr = trunc <8 x i18> %shr to <8 x i16>
   ret <8 x i16> %tr
 }
 
@@ -69,12 +69,12 @@ define <4 x i32> @test_v4i32(<4 x i32> %m, <4 x i32> %n) {
 ; CHECK-P7-NEXT:    vavguw 2, 2, 3
 ; CHECK-P7-NEXT:    blr
 entry:
-  %xm = zext <4 x i32> %m to <4 x i33>
-  %xn = zext <4 x i32> %n to <4 x i33>
-  %add = add <4 x i33> %xm, <i33 1, i33 1, i33 1, i33 1>
-  %add1 = add <4 x i33> %add, %xn
-  %shr = lshr <4 x i33> %add1, <i33 1, i33 1, i33 1, i33 1>
-  %tr = trunc <4 x i33> %shr to <4 x i32>
+  %xm = zext <4 x i32> %m to <4 x i34>
+  %xn = zext <4 x i32> %n to <4 x i34>
+  %add = add <4 x i34> %xm, <i34 1, i34 1, i34 1, i34 1>
+  %add1 = add <4 x i34> %add, %xn
+  %shr = lshr <4 x i34> %add1, <i34 1, i34 1, i34 1, i34 1>
+  %tr = trunc <4 x i34> %shr to <4 x i32>
   ret <4 x i32> %tr
 }
 
@@ -94,12 +94,12 @@ define <4 x i32> @test_v4i32_sign(<4 x i32> %m, <4 x i32> %n) {
 ; CHECK-P7-NEXT:    vavgsw 2, 2, 3
 ; CHECK-P7-NEXT:    blr
 entry:
-  %xm = sext <4 x i32> %m to <4 x i33>
-  %xn = sext <4 x i32> %n to <4 x i33>
-  %add = add <4 x i33> %xm, <i33 1, i33 1, i33 1, i33 1>
-  %add1 = add <4 x i33> %add, %xn
-  %shr = ashr <4 x i33> %add1, <i33 1, i33 1, i33 1, i33 1>
-  %tr = trunc <4 x i33> %shr to <4 x i32>
+  %xm = sext <4 x i32> %m to <4 x i34>
+  %xn = sext <4 x i32> %n to <4 x i34>
+  %add = add <4 x i34> %xm, <i34 1, i34 1, i34 1, i34 1>
+  %add1 = add <4 x i34> %add, %xn
+  %shr = ashr <4 x i34> %add1, <i34 1, i34 1, i34 1, i34 1>
+  %tr = trunc <4 x i34> %shr to <4 x i32>
   ret <4 x i32> %tr
 }
 
@@ -119,12 +119,12 @@ define <16 x i8> @test_v16i8(<16 x i8> %m, <16 x i8> %n) {
 ; CHECK-P7-NEXT:    vavgub 2, 2, 3
 ; CHECK-P7-NEXT:    blr
 entry:
-  %xm = zext <16 x i8> %m to <16 x i9>
-  %xn = zext <16 x i8> %n to <16 x i9>
-  %add = add <16 x i9> %xm, <i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1>
-  %add1 = add <16 x i9> %add, %xn
-  %shr = lshr <16 x i9> %add1, <i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1>
-  %tr = trunc <16 x i9> %shr to <16 x i8>
+  %xm = zext <16 x i8> %m to <16 x i10>
+  %xn = zext <16 x i8> %n to <16 x i10>
+  %add = add <16 x i10> %xm, <i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1>
+  %add1 = add <16 x i10> %add, %xn
+  %shr = lshr <16 x i10> %add1, <i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1>
+  %tr = trunc <16 x i10> %shr to <16 x i8>
   ret <16 x i8> %tr
 }
 
@@ -143,12 +143,12 @@ define <16 x i8> @test_v16i8_sign(<16 x i8> %m, <16 x i8> %n) {
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    vavgsb 2, 2, 3
 ; CHECK-P7-NEXT:    blr
-  %xm = sext <16 x i8> %m to <16 x i9>
-  %xn = sext <16 x i8> %n to <16 x i9>
-  %add = add <16 x i9> %xm, <i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1>
-  %add1 = add <16 x i9> %add, %xn
-  %shr = ashr <16 x i9> %add1, <i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1, i9 1>
-  %tr = trunc <16 x i9> %shr to <16 x i8>
+  %xm = sext <16 x i8> %m to <16 x i10>
+  %xn = sext <16 x i8> %n to <16 x i10>
+  %add = add <16 x i10> %xm, <i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1>
+  %add1 = add <16 x i10> %add, %xn
+  %shr = ashr <16 x i10> %add1, <i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1, i10 1>
+  %tr = trunc <16 x i10> %shr to <16 x i8>
   ret <16 x i8> %tr
 }
 
