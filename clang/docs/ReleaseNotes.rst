@@ -122,6 +122,18 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- Added the ``flatten_depth`` attribute, which provides a hint to the inliner to aggressively
+  inline calls within the attributed function up to a specified depth. This attribute takes
+  a single unsigned integer argument representing the requested depth of inlining. Unlike
+  a strict limit, the requested depth is a hint that works cooperatively with other inlining
+  mechanisms, including:
+
+  - Functions marked with ``always_inline`` will be inlined even if they exceed the requested depth
+  - The compiler's cost model may choose to inline beyond the requested depth for beneficial cases
+    (e.g., trivial wrapper functions)
+  - Functions marked with ``noinline`` will not be inlined regardless of the requested depth
+  - For recursive functions, the attribute applies the depth limit to prevent infinite inlining
+
 Improvements to Clang's diagnostics
 -----------------------------------
 

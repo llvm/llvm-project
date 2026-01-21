@@ -1619,6 +1619,22 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     B.addDereferenceableOrNullAttr(Bytes);
     return false;
   }
+  case Attribute::FlattenDepth: {
+    uint64_t Depth = 0;
+    if (InAttrGroup) {
+      Lex.Lex();
+      LocTy DepthLoc = Lex.getLoc();
+      if (parseToken(lltok::equal, "expected '=' here") || parseUInt64(Depth))
+        return true;
+      if (!Depth)
+        return error(DepthLoc, "flatten_depth depth must be non-zero");
+    } else {
+      if (parseOptionalFlattenDepthDepthHint(lltok::kw_flatten_depth, Depth))
+        return true;
+    }
+    B.addFlattenDepthAttr(Depth);
+    return false;
+  }
   case Attribute::UWTable: {
     UWTableKind Kind;
     if (parseOptionalUWTableKind(Kind))
@@ -2493,6 +2509,30 @@ bool LLParser::parseOptionalDerefAttrBytes(lltok::Kind AttrKind,
     return error(ParenLoc, "expected ')'");
   if (!Bytes)
     return error(DerefLoc, "dereferenceable bytes must be non-zero");
+  return false;
+}
+
+/// parseOptionalFlattenDepthDepthHint
+///   ::= /* empty */
+///   ::= 'flatten_depth' '(' 4 ')'
+bool LLParser::parseOptionalFlattenDepthDepthHint(lltok::Kind AttrKind,
+                                                  uint64_t &Depth) {
+  assert(AttrKind == lltok::kw_flatten_depth && "contract!");
+
+  Depth = 0;
+  if (!EatIfPresent(AttrKind))
+    return false;
+  LocTy ParenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::lparen))
+    return error(ParenLoc, "expected '('");
+  LocTy DepthLoc = Lex.getLoc();
+  if (parseUInt64(Depth))
+    return true;
+  ParenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::rparen))
+    return error(ParenLoc, "expected ')'");
+  if (!Depth)
+    return error(DepthLoc, "flatten_depth depth must be non-zero");
   return false;
 }
 
