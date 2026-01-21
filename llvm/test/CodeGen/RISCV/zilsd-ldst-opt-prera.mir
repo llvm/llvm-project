@@ -19,6 +19,13 @@
     ret void
   }
 
+  define void @basic_store_zero_combine(ptr %0, i32 %1, i32 %2) {
+    store i32 0, ptr %0, align 4
+    %4 = getelementptr inbounds i32, ptr %0, i32 1
+    store i32 0, ptr %4, align 4
+    ret void
+  }
+
   define i32 @basic_load_combine_8_byte_aligned(ptr %0) {
     %2 = load i32, ptr %0, align 8
     %3 = getelementptr inbounds i32, ptr %0, i32 1
@@ -321,6 +328,40 @@ body: |
     %2:gpr = COPY $x12
     SW %1, %0, 0 :: (store (s32))
     SW %2, %0, 4 :: (store (s32))
+    PseudoRET
+
+...
+---
+# Basic case: two consecutive 32-bit store 0 that can be combined into SD
+name: basic_store_zero_combine
+alignment: 4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+body: |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: basic_store_zero_combine
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x0
+    ; CHECK-NEXT: SW [[COPY1]], [[COPY]], 0 :: (store (s32))
+    ; CHECK-NEXT: SW [[COPY1]], [[COPY]], 4 :: (store (s32))
+    ; CHECK-NEXT: PseudoRET
+    ;
+    ; CHECK-4BYTE-LABEL: name: basic_store_zero_combine
+    ; CHECK-4BYTE: liveins: $x10
+    ; CHECK-4BYTE-NEXT: {{  $}}
+    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-4BYTE-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x0
+    ; CHECK-4BYTE-NEXT: PseudoSD_RV32_OPT [[COPY1]], [[COPY1]], [[COPY]], 0 :: (store (s32))
+    ; CHECK-4BYTE-NEXT: PseudoRET
+    %0:gpr = COPY $x10
+    %1:gpr = COPY $x0
+    SW %1, %0, 0 :: (store (s32))
+    SW %1, %0, 4 :: (store (s32))
     PseudoRET
 
 ...
