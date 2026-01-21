@@ -677,6 +677,13 @@ bool SymbolCollector::handleDeclOccurrence(
   processRelations(ID, *ASTNode.OrigD, Relations);
 
   bool CollectRef = static_cast<bool>(Opts.RefFilter & toRefKind(Roles));
+  // For now we only want the bare minimum of information for a class
+  // instantiation such that we have symbols for the `BaseOf` relation.
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D);
+      CTSD && CTSD->hasDefinition() && !CTSD->bases().empty() &&
+      !CTSD->isExplicitSpecialization()) {
+    CollectRef = false;
+  }
   // Unlike other fields, e.g. Symbols (which use spelling locations), we use
   // file locations for references (as it aligns the behavior of clangd's
   // AST-based xref).
