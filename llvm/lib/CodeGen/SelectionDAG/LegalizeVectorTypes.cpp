@@ -7709,26 +7709,24 @@ SDValue DAGTypeLegalizer::WidenVecOp_EXTEND_VECTOR_INREG(SDNode *N) {
   SDValue WideInOp = GetWidenedVector(N->getOperand(0));
   EVT WideInVT = WideInOp.getValueType();
 
+  // Simple case: if widened input is still smaller than or equal to result,
+  // just use it directly.
+  if (WideInVT.getSizeInBits() <= ResVT.getSizeInBits())
+    return DAG.getNode(N->getOpcode(), DL, ResVT, WideInOp);
+
   // EXTEND_VECTOR_INREG requires input bits <= result bits.
   // If widening makes the input larger than the original result, widen the
   // result to match, then extract back down.
-  if (WideInVT.getSizeInBits() > ResVT.getSizeInBits()) {
-    assert(ResVT.isVector() &&
-           "Expected vector result for EXTEND_VECTOR_INREG");
-    EVT ResEltVT = ResVT.getVectorElementType();
-    unsigned EltBits = ResEltVT.getSizeInBits();
-    assert(EltBits && (WideInVT.getSizeInBits() % EltBits) == 0 &&
-           "Widened input size must be a multiple of result element size");
+  EVT ResEltVT = ResVT.getVectorElementType();
+  unsigned EltBits = ResEltVT.getSizeInBits();
+  assert((WideInVT.getSizeInBits() % EltBits) == 0 &&
+         "Widened input size must be a multiple of result element size");
 
-    unsigned WideNumElts = WideInVT.getSizeInBits() / EltBits;
-    EVT WideResVT = EVT::getVectorVT(*DAG.getContext(), ResEltVT, WideNumElts);
+  unsigned WideNumElts = WideInVT.getSizeInBits() / EltBits;
+  EVT WideResVT = EVT::getVectorVT(*DAG.getContext(), ResEltVT, WideNumElts);
 
-    SDValue WideRes = DAG.getNode(N->getOpcode(), DL, WideResVT, WideInOp);
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResVT, WideRes,
-                       DAG.getVectorIdxConstant(0, DL));
-  }
-
-  return DAG.getNode(N->getOpcode(), DL, ResVT, WideInOp);
+  SDValue WideRes = DAG.getNode(N->getOpcode(), DL, WideResVT, WideInOp);
+  return DAG.getExtractSubvector(DL, ResVT, WideRes, 0);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
