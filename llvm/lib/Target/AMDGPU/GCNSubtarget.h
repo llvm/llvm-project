@@ -375,6 +375,8 @@ public:
     return (Generation)Gen;
   }
 
+  bool isGFX11Plus() const { return getGeneration() >= GFX11; }
+
   unsigned getMaxWaveScratchSize() const {
     // See COMPUTE_TMPRING_SIZE.WAVESIZE.
     if (getGeneration() >= GFX12) {
