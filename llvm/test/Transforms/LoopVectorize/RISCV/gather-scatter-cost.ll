@@ -41,9 +41,6 @@ define void @predicated_uniform_load(ptr %src, i32 %n, ptr %dst, i1 %cond) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[COND]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP12]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP15:%.*]] = mul nuw i64 [[TMP14]], 4
-; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP15]], 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 4 x i32> [[PREDPHI]], i64 [[TMP18]]
 ; CHECK-NEXT:    store i32 [[TMP20]], ptr [[NBRBOXES]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP10]]
@@ -166,19 +163,35 @@ exit:
 define void @store_to_addr_generated_from_invariant_addr(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2, ptr %p3, i64 %N) {
 ; RVA23-LABEL: @store_to_addr_generated_from_invariant_addr(
 ; RVA23-NEXT:  entry:
+; RVA23-NEXT:    [[TMP5:%.*]] = add i64 [[N:%.*]], 1
 ; RVA23-NEXT:    br label [[LOOP:%.*]]
-; RVA23:       loop:
-; RVA23-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; RVA23-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr i32, ptr [[P1:%.*]], i64 [[IV]]
-; RVA23-NEXT:    store ptr [[P0:%.*]], ptr [[ARRAYIDX11]], align 8
+; RVA23:       vector.ph:
+; RVA23-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 1 x ptr> poison, ptr [[P0:%.*]], i64 0
+; RVA23-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 1 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 1 x ptr> poison, <vscale x 1 x i32> zeroinitializer
+; RVA23-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+; RVA23-NEXT:    br label [[VECTOR_BODY:%.*]]
+; RVA23:       vector.body:
+; RVA23-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[TMP1]], [[LOOP]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; RVA23-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP5]], [[LOOP]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; RVA23-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 1, i1 true)
+; RVA23-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; RVA23-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[TMP3]], i64 0
+; RVA23-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 1 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+; RVA23-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[P1:%.*]], <vscale x 1 x i64> [[VEC_IND]]
+; RVA23-NEXT:    call void @llvm.vp.scatter.nxv1p0.nxv1p0(<vscale x 1 x ptr> [[BROADCAST_SPLAT]], <vscale x 1 x ptr> align 8 [[TMP4]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
 ; RVA23-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P2:%.*]], align 4
 ; RVA23-NEXT:    [[BITS_TO_GO:%.*]] = getelementptr i8, ptr [[P3:%.*]], i64 [[TMP0]]
-; RVA23-NEXT:    store i32 0, ptr [[BITS_TO_GO]], align 4
-; RVA23-NEXT:    store i32 0, ptr [[BITS_TO_GO]], align 4
-; RVA23-NEXT:    store i8 0, ptr [[BITS_TO_GO]], align 1
-; RVA23-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; RVA23-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV]], [[N:%.*]]
-; RVA23-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[LOOP]]
+; RVA23-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 1 x ptr> poison, ptr [[BITS_TO_GO]], i64 0
+; RVA23-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 1 x ptr> [[BROADCAST_SPLATINSERT3]], <vscale x 1 x ptr> poison, <vscale x 1 x i32> zeroinitializer
+; RVA23-NEXT:    call void @llvm.vp.scatter.nxv1i32.nxv1p0(<vscale x 1 x i32> zeroinitializer, <vscale x 1 x ptr> align 4 [[BROADCAST_SPLAT4]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
+; RVA23-NEXT:    call void @llvm.vp.scatter.nxv1i32.nxv1p0(<vscale x 1 x i32> zeroinitializer, <vscale x 1 x ptr> align 4 [[BROADCAST_SPLAT4]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
+; RVA23-NEXT:    call void @llvm.vp.scatter.nxv1i8.nxv1p0(<vscale x 1 x i8> zeroinitializer, <vscale x 1 x ptr> align 1 [[BROADCAST_SPLAT4]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
+; RVA23-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
+; RVA23-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 1 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; RVA23-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; RVA23-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; RVA23:       middle.block:
+; RVA23-NEXT:    br label [[EXIT:%.*]]
 ; RVA23:       exit:
 ; RVA23-NEXT:    ret void
 ;
@@ -270,7 +283,7 @@ define i8 @mixed_gather_scatters(ptr %A, ptr %B, ptr %C) #0 {
 ; RVA23-NEXT:    [[TMP14]] = call <vscale x 2 x i8> @llvm.vp.merge.nxv2i8(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> [[TMP13]], <vscale x 2 x i8> [[VEC_PHI]], i32 [[TMP0]])
 ; RVA23-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
 ; RVA23-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; RVA23-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; RVA23-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; RVA23:       middle.block:
 ; RVA23-NEXT:    [[TMP16:%.*]] = call i8 @llvm.vector.reduce.or.nxv2i8(<vscale x 2 x i8> [[TMP14]])
 ; RVA23-NEXT:    br label [[EXIT:%.*]]
