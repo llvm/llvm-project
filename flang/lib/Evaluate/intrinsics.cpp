@@ -3266,20 +3266,34 @@ IntrinsicProcTable::Implementation::HandleC_F_Strpointer(
     ActualArguments &arguments, FoldingContext &context) const {
   characteristics::Procedure::Attrs attrs;
   attrs.set(characteristics::Procedure::Attr::Subroutine);
-  // The first argument can be either CSTRARRAY or CSTRPTR - we use a generic
-  // keyword since they're mutually exclusive
-  static const char *const keywords[]{
-      "cstrarray", "fstrptr", "nchars", nullptr};
+
+  // The first argument can be either CSTRARRAY or CSTRPTR (overloaded).
+  // Assign common internal keyword "cstr" for CheckAndRearrangeArguments.
+  std::optional<std::string> firstArgKeyword;
+  for (auto &arg : arguments) {
+    if (arg && arg->keyword()) {
+      auto kw{arg->keyword()->ToString()};
+      if (kw == "cstrarray" || kw == "cstrptr") {
+        if (!firstArgKeyword) {
+          firstArgKeyword = kw;
+        }
+        static const char cstrKeyword[] = "cstr";
+        arg->set_keyword(
+            parser::CharBlock{cstrKeyword, sizeof(cstrKeyword) - 1});
+      }
+    }
+  }
+
+  static const char *const keywords[]{"cstr", "fstrptr", "nchars", nullptr};
   characteristics::DummyArguments dummies;
-  if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 2)) {
+  if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
     CHECK(arguments.size() == 3);
     const bool hasNchars{arguments[2].has_value()};
+    const int cCharKind = defaults_.GetDefaultKind(TypeCategory::Character);
 
     // Check first argument (CSTRARRAY or CSTRPTR) and optional third argument
     // (NCHARS)
     if (const auto *expr{arguments[0].value().UnwrapExpr()}) {
-      // General semantic checks will catch an actual argument that's not
-      // scalar.
       const auto at{arguments[0]->sourceLocation()};
       if (const auto type{expr->GetType()}) {
         if (type->category() == TypeCategory::Derived &&
@@ -3289,6 +3303,10 @@ IntrinsicProcTable::Implementation::HandleC_F_Strpointer(
                 type->GetDerivedTypeSpec().typeSymbol().name() ==
                     "__builtin_c_devptr")) {
           // First argument is C_PTR (CSTRPTR form)
+          if (firstArgKeyword && *firstArgKeyword != "cstrptr") {
+            context.messages().Say(at,
+                "Keyword CSTRARRAY= cannot be used with a C_PTR argument; use CSTRPTR= instead"_err_en_US);
+          }
           if (!hasNchars) {
             context.messages().Say(at,
                 "NCHARS= argument is required when CSTRPTR= appears in C_F_STRPOINTER()"_err_en_US);
@@ -3299,7 +3317,11 @@ IntrinsicProcTable::Implementation::HandleC_F_Strpointer(
           dummies.emplace_back("cstrptr"s, std::move(cstrptr));
         } else if (type->category() == TypeCategory::Character) {
           // First argument should be CSTRARRAY - rank-1 character array
-          if (type->kind() != 1) {
+          if (firstArgKeyword && *firstArgKeyword != "cstrarray") {
+            context.messages().Say(at,
+                "Keyword CSTRPTR= cannot be used with a character array argument; use CSTRARRAY= instead"_err_en_US);
+          }
+          if (type->kind() != cCharKind) {
             context.messages().Say(at,
                 "CSTRARRAY= argument to C_F_STRPOINTER() must be of kind C_CHAR"_err_en_US);
           }
@@ -3327,7 +3349,7 @@ IntrinsicProcTable::Implementation::HandleC_F_Strpointer(
             }
           }
           // Check if NCHARS > size(CSTRARRAY) at compile time
-          if (hasNchars && arguments[2]) {
+          if (hasNchars) {
             if (const auto *ncharsExpr{arguments[2]->UnwrapExpr()}) {
               if (const auto ncharsVal{ToInt64(*ncharsExpr)}) {
                 if (const auto shape{GetShape(context, *expr)};
@@ -3363,7 +3385,7 @@ IntrinsicProcTable::Implementation::HandleC_F_Strpointer(
           context.messages().Say(at,
               "FSTRPTR= argument to C_F_STRPOINTER() must be a character pointer"_err_en_US);
         } else {
-          if (type->kind() != 1) {
+          if (type->kind() != cCharKind) {
             context.messages().Say(at,
                 "FSTRPTR= argument to C_F_STRPOINTER() must be of kind C_CHAR"_err_en_US);
           }

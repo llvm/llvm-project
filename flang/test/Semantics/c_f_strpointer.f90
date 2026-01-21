@@ -13,10 +13,25 @@ program test
   call c_f_strpointer(cstrarray, fstrptr)  ! ok
   call c_f_strpointer(cstrarray, fstrptr, 50)  ! ok with NCHARS
   call c_f_strpointer(cptr, fstrptr, 100)  ! ok with CSTRPTR form
+  call c_f_strpointer(CSTRARRAY=cstrarray, FSTRPTR=fstrptr)  ! ok with CSTRARRAY keyword
+  call c_f_strpointer(CSTRARRAY=cstrarray, FSTRPTR=fstrptr, NCHARS=50)  ! ok with all keywords
+  call c_f_strpointer(CSTRPTR=cptr, FSTRPTR=fstrptr, NCHARS=50)  ! ok with all keywords
 
   ! Error: CSTRPTR form requires NCHARS
   !ERROR: NCHARS= argument is required when CSTRPTR= appears in C_F_STRPOINTER()
   call c_f_strpointer(cptr, fstrptr)
+
+  ! Error: CSTRPTR form requires NCHARS (with explicit keyword)
+  !ERROR: NCHARS= argument is required when CSTRPTR= appears in C_F_STRPOINTER()
+  call c_f_strpointer(CSTRPTR=cptr, FSTRPTR=fstrptr)
+
+  ! Error: Wrong keyword for C_PTR argument
+  !ERROR: Keyword CSTRARRAY= cannot be used with a C_PTR argument; use CSTRPTR= instead
+  call c_f_strpointer(CSTRARRAY=cptr, FSTRPTR=fstrptr, NCHARS=10)
+
+  ! Error: Wrong keyword for character array argument
+  !ERROR: Keyword CSTRPTR= cannot be used with a character array argument; use CSTRARRAY= instead
+  call c_f_strpointer(CSTRPTR=cstrarray, FSTRPTR=fstrptr, NCHARS=50)
 
   ! Error: FSTRPTR must have deferred length
   !ERROR: FSTRPTR= argument to C_F_STRPOINTER() must have deferred length
@@ -29,6 +44,19 @@ program test
   ! Error: NCHARS greater than array size (compile-time check)
   !ERROR: NCHARS=150 is greater than the size of CSTRARRAY=100 in C_F_STRPOINTER()
   call c_f_strpointer(cstrarray, fstrptr, 150)
+
+  ! Error: Missing required argument FSTRPTR
+  !ERROR: Dummy argument 'fstrptr=' is absent and not OPTIONAL
+  call c_f_strpointer(cstrarray)
+
+  ! Error: Missing both required arguments
+  !ERROR: Dummy argument 'cstr=' is absent and not OPTIONAL
+  !ERROR: Dummy argument 'fstrptr=' is absent and not OPTIONAL
+  call c_f_strpointer()
+
+  ! Error: Too many arguments
+  !ERROR: Too many actual arguments (4 > 3)
+  call c_f_strpointer(cstrarray, fstrptr, 50, 999)
 
 end program
 
