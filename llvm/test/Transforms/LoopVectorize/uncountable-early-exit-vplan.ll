@@ -276,29 +276,29 @@ define i64 @two_early_exits_same_exit_with_constant_live_outs() {
 ; CHECK-NEXT:     EMIT branch-on-two-conds vp<[[ANY_OF]]>, vp<[[CMP]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
+; CHECK-NEXT: Successor(s): vector.early.exit.check, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<67>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: vector.early.exit:
+; CHECK-NEXT: vector.early.exit.check:
 ; CHECK-NEXT:   EMIT vp<%first.active.lane> = first-active-lane vp<[[OR]]>
 ; CHECK-NEXT:   EMIT vp<%exit.cond.at.lane> = extract-lane vp<%first.active.lane>, ir<%cmp1>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%exit.cond.at.lane>
-; CHECK-NEXT: Successor(s): vector.early.exit, vector.early.exit
+; CHECK-NEXT: Successor(s): vector.early.exit.0, vector.early.exit.1
 ; CHECK-EMPTY:
-; CHECK-NEXT: vector.early.exit:
+; CHECK-NEXT: vector.early.exit.1:
 ; CHECK-NEXT: Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
-; CHECK-NEXT: vector.early.exit:
+; CHECK-NEXT: vector.early.exit.0:
 ; CHECK-NEXT:   EMIT vp<[[FIRST_ACTIVE:%.+]]> = first-active-lane vp<[[OR]]>
 ; CHECK-NEXT:   EMIT vp<[[FINAL_IV:%.+]]> = add vp<[[CAN_IV]]>, vp<[[FIRST_ACTIVE]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR   %retval = phi i64 [ %iv, %loop.header ], [ 100, %early.exit.0 ], [ 43, %loop.latch ] (extra operands: ir<43> from middle.block, ir<100> from vector.early.exit, vp<[[FINAL_IV]]> from vector.early.exit)
+; CHECK-NEXT:   IR   %retval = phi i64 [ %iv, %loop.header ], [ 100, %early.exit.0 ], [ 43, %loop.latch ] (extra operands: ir<43> from middle.block, ir<100> from vector.early.exit.1, vp<[[FINAL_IV]]> from vector.early.exit.0)
 ;
 entry:
   %A = alloca [1024 x i8]
