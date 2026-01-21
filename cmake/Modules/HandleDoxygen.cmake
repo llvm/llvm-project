@@ -1,4 +1,4 @@
-option(LLVM_ENABLE_DOXYGEN "Use doxygen to generate llvm API documentation." OFF)
+option(LLVM_ENABLE_DOXYGEN "Use Doxygen to generate API documentation." OFF)
 
 
 # available programs checks
