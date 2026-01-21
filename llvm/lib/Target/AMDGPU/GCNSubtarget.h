@@ -75,7 +75,7 @@
   X(BVHDualAndBVH8Insts)                                                       \
   X(Clusters)                                                                  \
   X(CubeInsts)                                                                 \
-  X(CvtFP8Vop1Bug)                                                             \
+  X(CvtFP8VOP1Bug)                                                             \
   X(CvtNormInsts)                                                              \
   X(CvtPkNormVOP2Insts)                                                        \
   X(CvtPkNormVOP3Insts)                                                        \
@@ -1007,9 +1007,6 @@ public:
 
   // \returns true if the target has split barriers feature
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
-
-  // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
-  bool hasCvtFP8VOP1Bug() const { return HasCvtFP8Vop1Bug; }
 
   // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
   // no-return form.

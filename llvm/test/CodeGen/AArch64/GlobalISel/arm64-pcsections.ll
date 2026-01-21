@@ -377,8 +377,8 @@ define i8 @atomic_load_relaxed_8(ptr %p, i32 %off32) {
   ; CHECK-NEXT:   liveins: $w1, $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w8 = LDRBBui renamable $x0, 4095, pcsections !0 :: (load monotonic (s8) from %ir.ptr_unsigned)
-  ; CHECK-NEXT:   renamable $w9 = LDRBBroW renamable $x0, killed renamable $w1, 1, 0 :: (load unordered (s8) from %ir.ptr_regoff)
-  ; CHECK-NEXT:   renamable $w10 = LDURBBi renamable $x0, -256 :: (load monotonic (s8) from %ir.ptr_unscaled)
+  ; CHECK-NEXT:   renamable $w9 = LDRBBroW renamable $x0, killed renamable $w1, 1, 0, pcsections !0 :: (load unordered (s8) from %ir.ptr_regoff)
+  ; CHECK-NEXT:   renamable $w10 = LDURBBi renamable $x0, -256, pcsections !0 :: (load monotonic (s8) from %ir.ptr_unscaled)
   ; CHECK-NEXT:   renamable $w8 = ADDWrx killed renamable $w9, killed renamable $w8, 0, pcsections !0
   ; CHECK-NEXT:   renamable $x9 = ADDXri killed renamable $x0, 291, 12
   ; CHECK-NEXT:   renamable $w8 = ADDWrx killed renamable $w8, killed renamable $w10, 0, pcsections !0
@@ -409,8 +409,8 @@ define i16 @atomic_load_relaxed_16(ptr %p, i32 %off32) {
   ; CHECK-NEXT:   liveins: $w1, $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w8 = LDRHHui renamable $x0, 4095, pcsections !0 :: (load monotonic (s16) from %ir.ptr_unsigned)
-  ; CHECK-NEXT:   renamable $w9 = LDRHHroW renamable $x0, killed renamable $w1, 1, 1 :: (load unordered (s16) from %ir.ptr_regoff)
-  ; CHECK-NEXT:   renamable $w10 = LDURHHi renamable $x0, -256 :: (load monotonic (s16) from %ir.ptr_unscaled)
+  ; CHECK-NEXT:   renamable $w9 = LDRHHroW renamable $x0, killed renamable $w1, 1, 1, pcsections !0 :: (load unordered (s16) from %ir.ptr_regoff)
+  ; CHECK-NEXT:   renamable $w10 = LDURHHi renamable $x0, -256, pcsections !0 :: (load monotonic (s16) from %ir.ptr_unscaled)
   ; CHECK-NEXT:   renamable $w8 = ADDWrx killed renamable $w9, killed renamable $w8, 8, pcsections !0
   ; CHECK-NEXT:   renamable $x9 = ADDXri killed renamable $x0, 291, 12
   ; CHECK-NEXT:   renamable $w8 = ADDWrx killed renamable $w8, killed renamable $w10, 8, pcsections !0
@@ -623,6 +623,7 @@ define i32 @load_zext(ptr %p8, ptr %p16) {
   ; CHECK-NOLSE-NEXT: {{  $}}
   ; CHECK-NOLSE-NEXT:   renamable $w8 = LDARB killed renamable $x0, pcsections !0 :: (load acquire (s8) from %ir.p8)
   ; CHECK-NOLSE-NEXT:   renamable $w9 = LDRHHui killed renamable $x1, 0, pcsections !0 :: (load unordered (s16) from %ir.p16)
+  ; CHECK-NOLSE-NEXT:   renamable $w9 = UBFMWri killed renamable $w9, 0, 15
   ; CHECK-NOLSE-NEXT:   renamable $w0 = ADDWrx killed renamable $w9, killed renamable $w8, 0, pcsections !0
   ; CHECK-NOLSE-NEXT:   RET undef $lr, implicit $w0
   ;
@@ -632,6 +633,7 @@ define i32 @load_zext(ptr %p8, ptr %p16) {
   ; CHECK-LDAPR-NEXT: {{  $}}
   ; CHECK-LDAPR-NEXT:   renamable $w8 = LDAPRB killed renamable $x0, pcsections !0 :: (load acquire (s8) from %ir.p8)
   ; CHECK-LDAPR-NEXT:   renamable $w9 = LDRHHui killed renamable $x1, 0, pcsections !0 :: (load unordered (s16) from %ir.p16)
+  ; CHECK-LDAPR-NEXT:   renamable $w9 = UBFMWri killed renamable $w9, 0, 15
   ; CHECK-LDAPR-NEXT:   renamable $w0 = ADDWrx killed renamable $w9, killed renamable $w8, 0, pcsections !0
   ; CHECK-LDAPR-NEXT:   RET undef $lr, implicit $w0
   %val1.8 = load atomic i8, ptr %p8 acquire, align 1, !pcsections !0

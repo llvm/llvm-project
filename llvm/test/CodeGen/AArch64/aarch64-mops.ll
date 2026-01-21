@@ -60,17 +60,31 @@ entry:
 }
 
 define void @memset_10_zeroval(ptr %dst) {
-; GISel-WITHOUT-MOPS-LABEL: memset_10_zeroval:
-; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-NEXT:    str xzr, [x0]
-; GISel-WITHOUT-MOPS-NEXT:    strh wzr, [x0, #8]
-; GISel-WITHOUT-MOPS-NEXT:    ret
+; GISel-WITHOUT-MOPS-O0-LABEL: memset_10_zeroval:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    str xzr, [x0]
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, wzr
+; GISel-WITHOUT-MOPS-O0-NEXT:    strh w8, [x0, #8]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
 ;
-; GISel-MOPS-LABEL: memset_10_zeroval:
-; GISel-MOPS:       // %bb.0: // %entry
-; GISel-MOPS-NEXT:    str xzr, [x0]
-; GISel-MOPS-NEXT:    strh wzr, [x0, #8]
-; GISel-MOPS-NEXT:    ret
+; GISel-WITHOUT-MOPS-O3-LABEL: memset_10_zeroval:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    str xzr, [x0]
+; GISel-WITHOUT-MOPS-O3-NEXT:    strh wzr, [x0, #8]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memset_10_zeroval:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    str xzr, [x0]
+; GISel-MOPS-O0-NEXT:    mov w8, wzr
+; GISel-MOPS-O0-NEXT:    strh w8, [x0, #8]
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memset_10_zeroval:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    str xzr, [x0]
+; GISel-MOPS-O3-NEXT:    strh wzr, [x0, #8]
+; GISel-MOPS-O3-NEXT:    ret
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_10_zeroval:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
@@ -89,17 +103,31 @@ entry:
 }
 
 define void @memset_10_zeroval_volatile(ptr %dst) {
-; GISel-WITHOUT-MOPS-LABEL: memset_10_zeroval_volatile:
-; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-NEXT:    str xzr, [x0]
-; GISel-WITHOUT-MOPS-NEXT:    strh wzr, [x0, #8]
-; GISel-WITHOUT-MOPS-NEXT:    ret
+; GISel-WITHOUT-MOPS-O0-LABEL: memset_10_zeroval_volatile:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    str xzr, [x0]
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, wzr
+; GISel-WITHOUT-MOPS-O0-NEXT:    strh w8, [x0, #8]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
 ;
-; GISel-MOPS-LABEL: memset_10_zeroval_volatile:
-; GISel-MOPS:       // %bb.0: // %entry
-; GISel-MOPS-NEXT:    str xzr, [x0]
-; GISel-MOPS-NEXT:    strh wzr, [x0, #8]
-; GISel-MOPS-NEXT:    ret
+; GISel-WITHOUT-MOPS-O3-LABEL: memset_10_zeroval_volatile:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    str xzr, [x0]
+; GISel-WITHOUT-MOPS-O3-NEXT:    strh wzr, [x0, #8]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memset_10_zeroval_volatile:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    str xzr, [x0]
+; GISel-MOPS-O0-NEXT:    mov w8, wzr
+; GISel-MOPS-O0-NEXT:    strh w8, [x0, #8]
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memset_10_zeroval_volatile:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    str xzr, [x0]
+; GISel-MOPS-O3-NEXT:    strh wzr, [x0, #8]
+; GISel-MOPS-O3-NEXT:    ret
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_10_zeroval_volatile:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
