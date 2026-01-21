@@ -9,13 +9,20 @@
 
 // CHECK-LABEL: func.func @iterate_while
 // CHECK:       scf.while (%[[IV:.*]] = %c1, %[[OK:.*]] = %true) : (index, i1) -> (index, i1) {
-// CHECK:         arith.cmpi
-// CHECK:         arith.cmpi
-// CHECK:         arith.andi
-// CHECK:         scf.condition
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         %[[CMP0:.*]] = arith.cmpi slt, %[[C0]], %c1 : index
+// CHECK:         %[[CMP1:.*]] = arith.cmpi sle, %[[IV]], %c10 : index
+// CHECK:         %[[CMP2:.*]] = arith.cmpi slt, %c1, %[[C0]] : index
+// CHECK:         %[[CMP3:.*]] = arith.cmpi sge, %[[IV]], %c10 : index
+// CHECK:         %[[AND0:.*]] = arith.andi %[[CMP0]], %[[CMP1]] : i1
+// CHECK:         %[[AND1:.*]] = arith.andi %[[CMP2]], %[[CMP3]] : i1
+// CHECK:         %[[OR:.*]] = arith.ori %[[AND0]], %[[AND1]] : i1
+// CHECK:         %[[AND2:.*]] = arith.andi %[[OK]], %[[OR]] : i1
+// CHECK:         scf.condition(%[[AND2]]) %[[IV]], %[[OK]] : index, i1
 // CHECK:       } do {
-// CHECK:       ^bb0
-// CHECK:         scf.if %[[OK]]
+// CHECK:       ^bb0(%[[IV2:.*]]: index, %[[OK2:.*]]: i1):
+// CHECK:         %[[NEXT:.*]] = arith.addi %[[IV2]], %c1
+// CHECK:         scf.if %[[OK2]]
 // CHECK:         scf.yield
 
 func.func @iterate_while() {
