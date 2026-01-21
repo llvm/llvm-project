@@ -3864,7 +3864,7 @@ void Verifier::visitCallBase(CallBase &Call) {
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
   bool IsIntrinsic = Callee && Callee->isIntrinsic();
   if (IsIntrinsic)
-    Check(Callee->getValueType() == FTy,
+    Check(Callee->getFunctionType() == FTy,
           "Intrinsic called with incompatible signature", Call);
 
   // Verify if the calling convention of the callee is callable.
@@ -6866,6 +6866,38 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     const Instruction &First = *LandingPadBB->begin();
     Check(&First == &Call, "No other instructions may proceed intrinsic",
           &Call);
+    break;
+  }
+  case Intrinsic::structured_gep: {
+    // Parser should refuse those 2 cases.
+    assert(Call.arg_size() >= 1);
+    assert(Call.getOperand(0)->getType()->isPointerTy());
+
+    Check(Call.paramHasAttr(0, Attribute::ElementType),
+          "Intrinsic first parameter is missing an ElementType attribute",
+          &Call);
+
+    Type *T = Call.getParamAttr(0, Attribute::ElementType).getValueAsType();
+    for (unsigned I = 1; I < Call.arg_size(); ++I) {
+      Value *Index = Call.getOperand(I);
+      ConstantInt *CI = dyn_cast<ConstantInt>(Index);
+      Check(Index->getType()->isIntegerTy(),
+            "Index operand type must be an integer", &Call);
+
+      if (ArrayType *AT = dyn_cast<ArrayType>(T)) {
+        T = AT->getElementType();
+      } else if (StructType *ST = dyn_cast<StructType>(T)) {
+        Check(CI, "Indexing into a struct requires a constant int", &Call);
+        Check(CI->getZExtValue() < ST->getNumElements(),
+              "Indexing in a struct should be inbounds", &Call);
+        T = ST->getElementType(CI->getZExtValue());
+      } else if (VectorType *VT = dyn_cast<VectorType>(T)) {
+        T = VT->getElementType();
+      } else {
+        CheckFailed("Reached a non-composite type with more indices to process",
+                    &Call);
+      }
+    }
     break;
   }
   case Intrinsic::amdgcn_cs_chain: {

@@ -22,9 +22,11 @@ struct basic_string {
   typedef size_t size_type;
   typedef basic_string<C, T, A> _Type;
   basic_string();
+  basic_string(basic_string_view<C, T>);
   basic_string(const C *p, const A &a = A());
   basic_string(const C *p, size_type count);
   basic_string(const C *b, const C *e);
+  basic_string(size_t, C);
 
   ~basic_string();
 
@@ -90,8 +92,14 @@ struct basic_string {
 
 typedef basic_string<char> string;
 typedef basic_string<wchar_t> wstring;
+#if __cplusplus >= 202002L
+typedef basic_string<char8_t> u8string;
+typedef basic_string<char16_t> u16string;
+typedef basic_string<char32_t> u32string;
+#else
 typedef basic_string<char16> u16string;
 typedef basic_string<char32> u32string;
+#endif
 
 template <typename C, typename T>
 struct basic_string_view {
@@ -100,6 +108,7 @@ struct basic_string_view {
 
   const C *str;
   constexpr basic_string_view(const C* s) : str(s) {}
+  basic_string_view(const basic_string<C, T>&) {}
 
   const C *data() const;
 
@@ -136,8 +145,14 @@ struct basic_string_view {
 
 typedef basic_string_view<char> string_view;
 typedef basic_string_view<wchar_t> wstring_view;
+#if __cplusplus >= 202002L
+typedef basic_string_view<char8_t> u8string_view;
+typedef basic_string_view<char16_t> u16string_view;
+typedef basic_string_view<char32_t> u32string_view;
+#else
 typedef basic_string_view<char16> u16string_view;
 typedef basic_string_view<char32> u32string_view;
+#endif
 
 std::string operator+(const std::string&, const std::string&);
 std::string operator+(const std::string&, const char*);
@@ -166,6 +181,15 @@ bool operator!=(const char*, const std::string_view&);
 #endif
 
 size_t strlen(const char* str);
+
+namespace literals {
+namespace string_literals {
+  string operator""s(const char *, size_t);
+}
+namespace string_view_literals {
+  string_view operator""sv(const char *, size_t);
+}
+}
 }
 
 #endif // _STRING_

@@ -76,7 +76,7 @@ static void findUses(Value *V, Function &F,
       if (Callee != V)
         // Skip calls where the function isn't the callee
         continue;
-      if (CB->getFunctionType() == F.getValueType())
+      if (CB->getFunctionType() == F.getFunctionType())
         // Skip uses that are immediately called
         continue;
       Uses.push_back(std::make_pair(CB, &F));
