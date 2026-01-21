@@ -31,10 +31,11 @@
 //      innermost to outermost)
 // 4) Find the innermost compound statement that contains all uses
 //    - This is the smallest scope where the variable could be declared
-// 5) Check for accumulator patterns
-//    - Detect compound assignments (+=, -=, etc.) and self-referencing
-//    assignments
-//    - Skip analysis for accumulator variables to avoid false positives
+// 5) Check for loop usage
+//    - Skip analysis for any variable used within loops to avoid false
+//    positives
+//    - This prevents suggesting moving variables into loop bodies (inefficient)
+//    - Covers both accumulator patterns and read-only usage in loops
 // 6) Switch case analysis
 //    - Check if variable uses span multiple case labels in the same switch
 //    - Skip analysis if so, as variables cannot be declared in switch body
@@ -176,135 +177,59 @@ void ScopeReductionCheck::check(
     }
   }
 
-  // Step 5: Check for accumulator patterns - skip if variable is used in
-  // accumulator pattern
-  for (const auto *Use : Uses) {
-    auto Parents = Result.Context->getParentMapContext().getParents(*Use);
-    if (!Parents.empty()) {
-      if (const auto *BinOp = Parents[0].get<BinaryOperator>()) {
-        // Check for compound assignments (+=, -=, *=, etc.)
-        if (BinOp->isCompoundAssignmentOp() && BinOp->getLHS() == Use) {
-          // Only consider it an accumulator if it's inside a loop
-          const Stmt *Current = BinOp;
-          bool InLoop = false;
-          while (Current) {
-            auto CurrentParents =
-                Result.Context->getParentMapContext().getParents(*Current);
-            if (CurrentParents.empty())
-              break;
+  // Step 5: Check if suggested scope would place variable inside loop body
+  if (InnermostScope) {
+    for (const auto *Use : Uses) {
+      // Check if this use is inside a loop
+      const Stmt *Current = Use;
+      const Stmt *ContainingLoop = nullptr;
 
-            const Stmt *Parent = CurrentParents[0].get<Stmt>();
-            if (!Parent)
-              break;
+      while (Current) {
+        auto CurrentParents =
+            Result.Context->getParentMapContext().getParents(*Current);
+        if (CurrentParents.empty())
+          break;
 
-            if (isa<ForStmt>(Parent) || isa<WhileStmt>(Parent) ||
-                isa<DoStmt>(Parent) || isa<CXXForRangeStmt>(Parent)) {
-              InLoop = true;
-              break;
-            }
-            Current = Parent;
+        const Stmt *Parent = CurrentParents[0].get<Stmt>();
+        if (!Parent) {
+          // Try to get Decl parent and continue from there
+          if (const auto *DeclParent = CurrentParents[0].get<Decl>()) {
+            auto DeclParentNodes =
+                Result.Context->getParentMapContext().getParents(*DeclParent);
+            if (!DeclParentNodes.empty())
+              Parent = DeclParentNodes[0].get<Stmt>();
           }
-
-          if (InLoop)
-            return; // Skip compound assignment patterns in loops
+          if (!Parent)
+            break;
         }
-        // Check for self-referencing assignments (var = var + something)
-        if (BinOp->isAssignmentOp() && BinOp->getLHS() == Use) {
-          if (const auto *RHS = BinOp->getRHS()) {
-            // Look for the variable on the right side
-            if (const auto *RHSRef =
-                    dyn_cast<DeclRefExpr>(RHS->IgnoreParenImpCasts())) {
-              if (RHSRef->getDecl() == Var) {
-                // Only consider it an accumulator if it's inside a loop
-                const Stmt *Current = BinOp;
-                bool InLoop = false;
-                while (Current) {
-                  auto CurrentParents =
-                      Result.Context->getParentMapContext().getParents(
-                          *Current);
-                  if (CurrentParents.empty())
-                    break;
 
-                  const Stmt *Parent = CurrentParents[0].get<Stmt>();
-                  if (!Parent)
-                    break;
+        if (isa<ForStmt>(Parent) || isa<WhileStmt>(Parent) ||
+            isa<DoStmt>(Parent) || isa<CXXForRangeStmt>(Parent)) {
+          ContainingLoop = Parent;
+          break;
+        }
+        Current = Parent;
+      }
 
-                  if (isa<ForStmt>(Parent) || isa<WhileStmt>(Parent) ||
-                      isa<DoStmt>(Parent) || isa<CXXForRangeStmt>(Parent)) {
-                    InLoop = true;
-                    break;
-                  }
-                  Current = Parent;
-                }
+      // If use is in a loop, check if suggested scope is inside that loop
+      if (ContainingLoop) {
+        const Stmt *CheckScope = InnermostScope;
+        bool ScopeInsideLoop = false;
 
-                if (InLoop)
-                  return; // Skip self-referencing assignment in loops
-              }
-            }
-            // Check binary operations on RHS (var = var op something)
-            if (const auto *RHSBinOp =
-                    dyn_cast<BinaryOperator>(RHS->IgnoreParenImpCasts())) {
-              if (const auto *LHSRef = dyn_cast<DeclRefExpr>(
-                      RHSBinOp->getLHS()->IgnoreParenImpCasts())) {
-                if (LHSRef->getDecl() == Var) {
-                  // Only consider it an accumulator if it's inside a loop
-                  const Stmt *Current = BinOp;
-                  bool InLoop = false;
-                  while (Current) {
-                    auto CurrentParents =
-                        Result.Context->getParentMapContext().getParents(
-                            *Current);
-                    if (CurrentParents.empty())
-                      break;
-
-                    const Stmt *Parent = CurrentParents[0].get<Stmt>();
-                    if (!Parent)
-                      break;
-
-                    if (isa<ForStmt>(Parent) || isa<WhileStmt>(Parent) ||
-                        isa<DoStmt>(Parent) || isa<CXXForRangeStmt>(Parent)) {
-                      InLoop = true;
-                      break;
-                    }
-                    Current = Parent;
-                  }
-
-                  if (InLoop)
-                    return; // Skip accumulator pattern in loops
-                }
-              }
-              if (const auto *RHSRef = dyn_cast<DeclRefExpr>(
-                      RHSBinOp->getRHS()->IgnoreParenImpCasts())) {
-                if (RHSRef->getDecl() == Var) {
-                  // Only consider it an accumulator if it's inside a loop
-                  const Stmt *Current = BinOp;
-                  bool InLoop = false;
-                  while (Current) {
-                    auto CurrentParents =
-                        Result.Context->getParentMapContext().getParents(
-                            *Current);
-                    if (CurrentParents.empty())
-                      break;
-
-                    const Stmt *Parent = CurrentParents[0].get<Stmt>();
-                    if (!Parent)
-                      break;
-
-                    if (isa<ForStmt>(Parent) || isa<WhileStmt>(Parent) ||
-                        isa<DoStmt>(Parent) || isa<CXXForRangeStmt>(Parent)) {
-                      InLoop = true;
-                      break;
-                    }
-                    Current = Parent;
-                  }
-
-                  if (InLoop)
-                    return; // Skip accumulator pattern in loops
-                }
-              }
-            }
+        while (CheckScope) {
+          if (CheckScope == ContainingLoop) {
+            ScopeInsideLoop = true;
+            break;
           }
+          auto CheckParents =
+              Result.Context->getParentMapContext().getParents(*CheckScope);
+          if (CheckParents.empty())
+            break;
+          CheckScope = CheckParents[0].get<Stmt>();
         }
+
+        if (ScopeInsideLoop)
+          return; // Skip if suggested scope is inside loop body
       }
     }
   }

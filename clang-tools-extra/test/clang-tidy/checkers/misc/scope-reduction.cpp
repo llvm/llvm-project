@@ -39,15 +39,9 @@ void test_same_scope() {
   int y = x + 5;
 }
 
-// Variable can be moved to while loop body
-// FIXME: This is a false positive. Correcting this will require
-//        loop semantic comprehension and var lifetime analysis.
+// Variable can be moved to while loop body. should NOT warn
 void test_while_loop() {
   int counter = 0;
-  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'counter' can be declared in a smaller scope
-  // CHECK-NOTES: :[[@LINE+4]]:5: note: used here
-  // CHECK-NOTES: :[[@LINE+4]]:9: note: used here
-  // CHECK-NOTES: :[[@LINE+1]]:16: note: can be declared in this scope
   while (true) {
     counter++;
     if (counter > 10) break;
@@ -64,12 +58,9 @@ void test_if_branches(bool condition) {
   }
 }
 
-// Variable can be moved to for-loop body
+// Variable can be moved to for-loop body. should NOT warn
 void test_for_loop_body() {
   int temp = 0;
-  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'temp' can be declared in a smaller scope
-  // CHECK-NOTES: :[[@LINE+3]]:5: note: used here
-  // CHECK-NOTES: :[[@LINE+1]]:32: note: can be declared in this scope
   for (int i = 0; i < 10; i++) {
     temp = i * i;
   }
@@ -572,9 +563,6 @@ void test_mixed_accumulator_usage() {
 // Variable used in loop but not as accumulator - should warn
 void test_non_accumulator_in_loop() {
   int temp = 42;  // Used in loop but not modified - should warn
-  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'temp' can be declared in a smaller scope
-  // CHECK-NOTES: :[[@LINE+3]]:18: note: used here
-  // CHECK-NOTES: :[[@LINE+1]]:32: note: can be declared in this scope
   for (int i = 0; i < 10; ++i) {
     int result = temp * 2;  // Just reading temp, not modifying it
   }
