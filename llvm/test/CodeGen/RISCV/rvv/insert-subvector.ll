@@ -453,8 +453,8 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_2(<vscale x 4 x i1> %v, <vscale x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v10, v9, 1, v0
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    srli a1, a0, 3

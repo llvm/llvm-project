@@ -17,12 +17,12 @@ define <vscale x 1 x bfloat> @vp_ceil_vv_nxv1bf16(<vscale x 1 x bfloat> %va, <vs
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    fsrmi a0, 3
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfabs.v v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa5, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -67,12 +67,12 @@ define <vscale x 2 x bfloat> @vp_ceil_vv_nxv2bf16(<vscale x 2 x bfloat> %va, <vs
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    fsrmi a0, 3
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfabs.v v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa5, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
@@ -410,12 +410,12 @@ define <vscale x 1 x half> @vp_ceil_vv_nxv1f16(<vscale x 1 x half> %va, <vscale 
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8, v0.t
-; ZVFHMIN-NEXT:    vmv1r.v v10, v0
 ; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    fsrmi a0, 3
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9, v0.t
+; ZVFHMIN-NEXT:    vmv1r.v v10, v0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -494,12 +494,12 @@ define <vscale x 2 x half> @vp_ceil_vv_nxv2f16(<vscale x 2 x half> %va, <vscale 
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8, v0.t
-; ZVFHMIN-NEXT:    vmv1r.v v10, v0
 ; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    fsrmi a0, 3
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9, v0.t
+; ZVFHMIN-NEXT:    vmv1r.v v10, v0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma

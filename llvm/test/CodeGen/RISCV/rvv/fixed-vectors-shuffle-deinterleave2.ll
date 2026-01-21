@@ -1611,40 +1611,38 @@ define <16 x i64> @unzip2a_dual_v16i64_exact(<16 x i64> %a, <16 x i64> %b) vscal
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
 ; V-NEXT:    vslideup.vi v16, v15, 2
-; V-NEXT:    vmv.v.i v17, 8
-; V-NEXT:    vmv.v.i v19, 2
-; V-NEXT:    vmv.v.i v18, 12
-; V-NEXT:    vmv.v.v v0, v17
+; V-NEXT:    vmv.v.i v0, 8
+; V-NEXT:    vslideup.vi v17, v11, 2
 ; V-NEXT:    vslideup.vi v16, v15, 1, v0.t
-; V-NEXT:    vmv.v.v v0, v19
+; V-NEXT:    vmv.v.v v15, v0
+; V-NEXT:    vmv.v.i v0, 2
 ; V-NEXT:    vslidedown.vi v14, v14, 1, v0.t
+; V-NEXT:    vmv.v.v v18, v0
+; V-NEXT:    vmv.v.v v0, v15
+; V-NEXT:    vslideup.vi v17, v11, 1, v0.t
+; V-NEXT:    vmv.v.v v11, v15
 ; V-NEXT:    vmv.v.v v0, v18
-; V-NEXT:    vmerge.vvm v15, v14, v16, v0
-; V-NEXT:    vslideup.vi v14, v13, 2
-; V-NEXT:    vmv.v.v v0, v17
-; V-NEXT:    vslideup.vi v14, v13, 1, v0.t
+; V-NEXT:    vslidedown.vi v10, v10, 1, v0.t
+; V-NEXT:    vmv.v.v v19, v18
+; V-NEXT:    vslideup.vi v15, v13, 2
+; V-NEXT:    vslideup.vi v18, v9, 2
+; V-NEXT:    vmv.v.v v0, v11
+; V-NEXT:    vslideup.vi v15, v13, 1, v0.t
+; V-NEXT:    vslideup.vi v18, v9, 1, v0.t
+; V-NEXT:    vmv.v.i v0, 12
+; V-NEXT:    vmerge.vvm v11, v14, v16, v0
+; V-NEXT:    vmerge.vvm v9, v10, v17, v0
+; V-NEXT:    vmv.v.v v10, v0
 ; V-NEXT:    vmv.v.v v0, v19
 ; V-NEXT:    vslidedown.vi v12, v12, 1, v0.t
-; V-NEXT:    vmv.v.v v0, v18
-; V-NEXT:    vmerge.vvm v14, v12, v14, v0
-; V-NEXT:    vslideup.vi v12, v11, 2
-; V-NEXT:    li a0, -256
-; V-NEXT:    vmv.v.v v0, v17
-; V-NEXT:    vslideup.vi v12, v11, 1, v0.t
-; V-NEXT:    vmv.v.v v0, v19
-; V-NEXT:    vslidedown.vi v10, v10, 1, v0.t
-; V-NEXT:    vmv.v.v v0, v18
-; V-NEXT:    vmerge.vvm v13, v10, v12, v0
-; V-NEXT:    vslideup.vi v10, v9, 2
-; V-NEXT:    vmv.v.v v0, v17
-; V-NEXT:    vslideup.vi v10, v9, 1, v0.t
-; V-NEXT:    vmv.v.v v0, v19
 ; V-NEXT:    vslidedown.vi v8, v8, 1, v0.t
-; V-NEXT:    vmv.v.v v0, v18
-; V-NEXT:    vmerge.vvm v12, v8, v10, v0
+; V-NEXT:    vmv.v.v v0, v10
+; V-NEXT:    vmerge.vvm v10, v12, v15, v0
+; V-NEXT:    li a0, -256
+; V-NEXT:    vmerge.vvm v8, v8, v18, v0
 ; V-NEXT:    vmv.s.x v0, a0
 ; V-NEXT:    vsetivli zero, 16, e64, m4, ta, ma
-; V-NEXT:    vmerge.vvm v8, v12, v12, v0
+; V-NEXT:    vmerge.vvm v8, v8, v8, v0
 ; V-NEXT:    ret
 ;
 ; ZVE32F-LABEL: unzip2a_dual_v16i64_exact:

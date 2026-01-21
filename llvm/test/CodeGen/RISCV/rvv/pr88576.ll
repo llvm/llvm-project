@@ -22,28 +22,18 @@ define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 ; CHECK-NEXT:    addi s0, sp, 80
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 2
-; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    slli a2, a2, 2
-; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    andi sp, sp, -64
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 1
-; CHECK-NEXT:    add a2, sp, a2
-; CHECK-NEXT:    addi a2, a2, 64
+; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v1
+; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
+; CHECK-NEXT:    addi a2, sp, 64
 ; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    addi a3, sp, 64
-; CHECK-NEXT:    vs2r.v v0, (a3) # vscale x 16-byte Folded Spill
-; CHECK-NEXT:    vmv1r.v v0, v1
-; CHECK-NEXT:    vmerge.vim v16, v8, 1, v0
-; CHECK-NEXT:    addi a3, sp, 64
-; CHECK-NEXT:    vl2r.v v0, (a3) # vscale x 16-byte Folded Reload
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    vs8r.v v8, (a2)
 ; CHECK-NEXT:    lbu a0, 0(a0)

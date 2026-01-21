@@ -31,12 +31,12 @@ define <2 x half> @vp_floor_v2f16(<2 x half> %va, <2 x i1> %m, i32 zeroext %evl)
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8, v0.t
-; ZVFHMIN-NEXT:    vmv1r.v v10, v0
 ; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    fsrmi a0, 2
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9, v0.t
+; ZVFHMIN-NEXT:    vmv1r.v v10, v0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -115,12 +115,12 @@ define <4 x half> @vp_floor_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext %evl)
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8, v0.t
-; ZVFHMIN-NEXT:    vmv1r.v v10, v0
 ; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    fsrmi a0, 2
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9, v0.t
+; ZVFHMIN-NEXT:    vmv1r.v v10, v0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma

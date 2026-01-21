@@ -19,11 +19,12 @@ define i32 @_ZN4Mesh12rezone_countESt6vectorIiSaIiEERiS3_(<vscale x 4 x i32> %wi
 ; CHECK-NEXT:    vmv2r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v0, v17
 ; CHECK-NEXT:    vle32.v v14, (a0), v0.t
-; CHECK-NEXT:    vor.vi v12, v12, 1, v0.t
 ; CHECK-NEXT:    vand.vi v14, v14, 1
 ; CHECK-NEXT:    vmsne.vi v16, v14, 0
 ; CHECK-NEXT:    vmand.mm v0, v17, v16
 ; CHECK-NEXT:    vmerge.vim v10, v10, -1, v0
+; CHECK-NEXT:    vmv1r.v v0, v17
+; CHECK-NEXT:    vor.vi v12, v12, 1, v0.t
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    j .LBB0_1
 entry:
