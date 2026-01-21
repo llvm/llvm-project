@@ -17,8 +17,8 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>
-#include <numeric>
 #include <limits>
+#include <numeric>
 
 #include "test_execution_policies.h"
 #include "test_iterators.h"

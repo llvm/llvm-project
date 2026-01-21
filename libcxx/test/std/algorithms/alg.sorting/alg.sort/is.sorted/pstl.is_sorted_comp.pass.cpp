@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>
+#include <limits>
 #include <numeric>
 
 #include "test_execution_policies.h"
