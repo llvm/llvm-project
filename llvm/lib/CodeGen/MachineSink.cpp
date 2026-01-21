@@ -293,9 +293,7 @@ class MachineSinkingLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  MachineSinkingLegacy() : MachineFunctionPass(ID) {
-    initializeMachineSinkingLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  MachineSinkingLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

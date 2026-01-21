@@ -48,9 +48,7 @@ INITIALIZE_PASS(ReachingDefInfoWrapperPass, DEBUG_TYPE,
 char ReachingDefInfoWrapperPass::ID = 0;
 
 ReachingDefInfoWrapperPass::ReachingDefInfoWrapperPass()
-    : MachineFunctionPass(ID) {
-  initializeReachingDefInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 ReachingDefInfo::ReachingDefInfo() = default;
 ReachingDefInfo::ReachingDefInfo(ReachingDefInfo &&) = default;

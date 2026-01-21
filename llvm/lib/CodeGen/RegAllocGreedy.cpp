@@ -169,9 +169,7 @@ public:
 } // end anonymous namespace
 
 RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
-    : MachineFunctionPass(ID), F(std::move(F)) {
-  initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID), F(std::move(F)) {}
 
 struct RAGreedy::RequiredAnalyses {
   VirtRegMap *VRM = nullptr;

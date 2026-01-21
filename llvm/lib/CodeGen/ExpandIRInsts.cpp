@@ -1139,9 +1139,7 @@ public:
   static char ID;
 
   ExpandIRInstsLegacyPass(CodeGenOptLevel OptLevel)
-      : FunctionPass(ID), OptLevel(OptLevel) {
-    initializeExpandIRInstsLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+      : FunctionPass(ID), OptLevel(OptLevel) {}
 
   ExpandIRInstsLegacyPass() : ExpandIRInstsLegacyPass(CodeGenOptLevel::None) {};
 

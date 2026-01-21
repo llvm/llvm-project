@@ -200,7 +200,6 @@ public:
     Opt.MaxOffset = GlobalMergeMaxOffset;
     Opt.MergeConstantGlobals = EnableGlobalMergeOnConst;
     Opt.MergeConstAggressive = GlobalMergeAllConst;
-    initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
@@ -212,7 +211,6 @@ public:
     Opt.MergeExternal = MergeExternalGlobals;
     Opt.MergeConstantGlobals = MergeConstantGlobals;
     Opt.MergeConstAggressive = MergeConstAggressive;
-    initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
   bool doInitialization(Module &M) override {

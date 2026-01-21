@@ -558,9 +558,7 @@ class PeepholeOptimizerLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
 
-  PeepholeOptimizerLegacy() : MachineFunctionPass(ID) {
-    initializePeepholeOptimizerLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  PeepholeOptimizerLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
