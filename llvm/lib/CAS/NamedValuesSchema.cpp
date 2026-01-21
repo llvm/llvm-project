@@ -24,7 +24,6 @@ bool NamedValuesSchema::isNode(const ObjectProxy &Node) const {
   if (Node.getNumReferences() < 1)
     return false;
 
-  // If can't load the first ref, consume error and return false.
   auto FirstRef = Node.getReference(0);
   return FirstRef == *NamedValuesKindRef;
 }
@@ -72,14 +71,12 @@ NamedValuesEntry NamedValuesSchema::loadEntry(NamedValuesProxy Values,
 
 std::optional<size_t> NamedValuesSchema::lookupEntry(NamedValuesProxy Values,
                                                      StringRef Name) const {
-  size_t NumNames = Values.size();
+  size_t NumNames = getNumEntries(Values);
   if (!NumNames)
     return std::nullopt;
 
   // Start with a binary search, if there are enough entries.
-  //
-  // FIXME: Should just use std::lower_bound, but we need the actual iterators
-  // to know the index in the NameCache...
+  // FIXME: MaxLinearSearchSize is a heuristic and not optimized.
   const size_t MaxLinearSearchSize = 4;
   size_t Last = NumNames;
   size_t First = 0;
@@ -130,10 +127,10 @@ NamedValuesSchema::construct(ArrayRef<NamedValuesEntry> Entries) {
   Refs.push_back(*NamedValuesKindRef);
 
   // Ensure a stable order for entries and ignore name collisions.
-  SmallVector<NamedValuesEntry> Sorted(Entries.begin(), Entries.end());
-  std::stable_sort(Sorted.begin(), Sorted.end());
+  SmallVector<NamedValuesEntry> Sorted(Entries);
+  llvm::stable_sort(Sorted);
 
-  if (std::unique(Sorted.begin(), Sorted.end()) != Sorted.end())
+  if (llvm::unique(Sorted) != Sorted.end())
     return createStringError("entry names are not unique");
 
   raw_svector_ostream OS(Data);
