@@ -910,9 +910,9 @@ define <32 x bfloat> @pr63017() {
 ; SSE2-LABEL: pr63017:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm0, %xmm0
-; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    xorps %xmm2, %xmm2
-; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    movaps %xmm0, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; AVX512-LABEL: pr63017:
@@ -923,7 +923,7 @@ define <32 x bfloat> @pr63017() {
 ; AVXNC-LABEL: pr63017:
 ; AVXNC:       # %bb.0:
 ; AVXNC-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVXNC-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVXNC-NEXT:    vmovaps %ymm0, %ymm1
 ; AVXNC-NEXT:    retq
   ret <32 x bfloat> zeroinitializer
 }

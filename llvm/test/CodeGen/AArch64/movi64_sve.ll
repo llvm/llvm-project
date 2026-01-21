@@ -12,6 +12,7 @@ define <2 x i64> @movi_1_v2i64() {
 ; SVE-LABEL: movi_1_v2i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #1 // =0x1
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <2 x i64> splat (i64 1)
 }
@@ -26,6 +27,7 @@ define <2 x i64> @movi_127_v2i64() {
 ; SVE-LABEL: movi_127_v2i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #127 // =0x7f
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <2 x i64> splat (i64 127)
 }
@@ -40,6 +42,7 @@ define <2 x i64> @movi_m128_v2i64() {
 ; SVE-LABEL: movi_m128_v2i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #-128 // =0xffffffffffffff80
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <2 x i64> splat (i64 -128)
 }
@@ -54,6 +57,7 @@ define <2 x i64> @movi_256_v2i64() {
 ; SVE-LABEL: movi_256_v2i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #256 // =0x100
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <2 x i64> splat (i64 256)
 }
@@ -68,6 +72,7 @@ define <2 x i64> @movi_32512_v2i64() {
 ; SVE-LABEL: movi_32512_v2i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #32512 // =0x7f00
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <2 x i64> splat (i64 32512)
 }
@@ -82,6 +87,7 @@ define <2 x i64> @movi_m32768_v2i64() {
 ; SVE-LABEL: movi_m32768_v2i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #-32768 // =0xffffffffffff8000
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <2 x i64> splat (i64 -32768)
 }
@@ -98,6 +104,7 @@ define <4 x i32> @movi_v4i32_1() {
 ; SVE-LABEL: movi_v4i32_1:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #127 // =0x7f
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <4 x i32> <i32 127, i32 0, i32 127, i32 0>
 }
@@ -112,6 +119,7 @@ define <4 x i32> @movi_v4i32_2() {
 ; SVE-LABEL: movi_v4i32_2:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #32512 // =0x7f00
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <4 x i32> <i32 32512, i32 0, i32 32512, i32 0>
 }
@@ -140,6 +148,7 @@ define <8 x i16> @movi_v8i16_1() {
 ; SVE-LABEL: movi_v8i16_1:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #127 // =0x7f
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <8 x i16> <i16 127, i16 0, i16 0, i16 0, i16 127, i16 0, i16 0, i16 0>
 }
@@ -154,6 +163,7 @@ define <8 x i16> @movi_v8i16_2() {
 ; SVE-LABEL: movi_v8i16_2:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #32512 // =0x7f00
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <8 x i16> <i16 32512, i16 0, i16 0, i16 0, i16 32512, i16 0, i16 0, i16 0>
 }
@@ -182,6 +192,7 @@ define <16 x i8> @movi_v16i8_1() {
 ; SVE-LABEL: movi_v16i8_1:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #127 // =0x7f
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <16 x i8> <i8 127, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 127, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
 }
@@ -196,6 +207,7 @@ define <16 x i8> @movi_v16i8_2() {
 ; SVE-LABEL: movi_v16i8_2:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #32512 // =0x7f00
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
   ret <16 x i8> <i8 0, i8 127, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 127, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
 }

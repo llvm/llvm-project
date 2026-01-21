@@ -54,9 +54,9 @@ define x86_vectorcallcc double @test_fp_2(double, double, double, double, double
 define x86_vectorcallcc {double, double, double, double} @test_fp_3() {
 ; CHECK-LABEL: {{^}}test_fp_3@@0:
 ; CHECK: xorps %xmm0
-; CHECK: xorps %xmm1
-; CHECK: xorps %xmm2
-; CHECK: xorps %xmm3
+; CHECK: movaps	%xmm0, %xmm1
+; CHECK: movaps	%xmm0, %xmm2
+; CHECK: movaps	%xmm0, %xmm3
   ret {double, double, double, double}
         { double 0.0, double 0.0, double 0.0, double 0.0 }
 }
@@ -65,11 +65,11 @@ define x86_vectorcallcc {double, double, double, double} @test_fp_3() {
 ; tablegen any other way.
 define x86_vectorcallcc {double, double, double, double, double} @test_fp_4() {
 ; CHECK-LABEL: {{^}}test_fp_4@@0:
+; CHECK: xorps	%xmm0, %xmm0
 ; CHECK: fldz
-; CHECK: xorps %xmm0
-; CHECK: xorps %xmm1
-; CHECK: xorps %xmm2
-; CHECK: xorps %xmm3
+; CHECK: movaps	%xmm0, %xmm1
+; CHECK: movaps	%xmm0, %xmm2
+; CHECK: movaps	%xmm0, %xmm3
   ret {double, double, double, double, double}
         { double 0.0, double 0.0, double 0.0, double 0.0, double 0.0 }
 }

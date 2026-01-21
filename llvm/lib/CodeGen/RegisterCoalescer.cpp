@@ -300,6 +300,14 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   bool reMaterializeDef(const CoalescerPair &CP, MachineInstr *CopyMI,
                         bool &IsDefCopy);
 
+  /// Check if rematerialization should be skipped for a physical register
+  /// used as a return value. This helps enable better coalescing by avoiding
+  /// rematerialization when a copy to a return register can be coalesced.
+  /// Returns true if rematerialization should be skipped.
+  bool shouldSkipRematerializationForReturn(Register DstReg, Register SrcReg,
+                                            MachineInstr *DefMI,
+                                            MachineInstr *CopyMI);
+
   /// Return true if a copy involving a physreg should be joined.
   bool canJoinPhys(const CoalescerPair &CP);
 
@@ -1292,6 +1300,78 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
 
 /// Returns true if @p MI defines the full vreg @p Reg, as opposed to just
 /// defining a subregister.
+bool RegisterCoalescer::shouldSkipRematerializationForReturn(
+    Register DstReg, Register SrcReg, MachineInstr *DefMI,
+    MachineInstr *CopyMI) {
+  MachineBasicBlock *MBB = CopyMI->getParent();
+  if (!DstReg.isPhysical() || DefMI->getParent() != MBB || MBB->empty())
+    return false;
+
+  // Check if the last instruction is a return using DstReg
+  const MachineInstr &LastInstr = MBB->back();
+  if (!LastInstr.isReturn() || !LastInstr.readsRegister(DstReg, TRI))
+    return false;
+
+  // Exception: Allow rematerialization for zero-idiom instructions
+  // (e.g., xorps %xmm0, %xmm0) because rematerialization produces
+  // independent zero-latency instructions, which is better than copying
+  const TargetSubtargetInfo &STI = MF->getSubtarget();
+  APInt Mask;
+  if (STI.isZeroIdiom(DefMI, Mask)) {
+    LLVM_DEBUG(dbgs() << "\tAllow remat: zero-idiom instruction\n");
+    return false;
+  }
+
+  // Check for duplicate DefMI before CopyMI
+  bool HasDuplicateDef = false;
+  for (MachineBasicBlock::iterator I = MBB->begin(); &*I != CopyMI; ++I) {
+    if (&*I != DefMI && I->isIdenticalTo(*DefMI, MachineInstr::IgnoreDefs)) {
+      HasDuplicateDef = true;
+      break;
+    }
+  }
+
+  // Check if register is redefined after CopyMI
+  bool RegRedefinedAfterCopy = false;
+  for (auto I = std::next(CopyMI->getIterator()); I != MBB->end(); ++I) {
+    if (I->modifiesRegister(DstReg, TRI)) {
+      RegRedefinedAfterCopy = true;
+      break;
+    }
+  }
+
+  // Only consider skipping remat if there's no duplicate def and register
+  // is not redefined after the copy
+  if (!HasDuplicateDef && !RegRedefinedAfterCopy) {
+    // Exception: Allow remat for constant moves with restricted usage
+    if (DefMI->isMoveImmediate()) {
+      // Single use is fine - allow remat
+      if (MRI->hasOneNonDBGUse(SrcReg))
+        return false;
+
+      // Multiple uses: only allow if all uses are copies
+      bool OnlyUsedByCopies = true;
+      for (const MachineOperand &MO : MRI->use_operands(SrcReg)) {
+        const MachineInstr *UseMI = MO.getParent();
+        if (!UseMI->isCopy() && !UseMI->isSubregToReg()) {
+          OnlyUsedByCopies = false;
+          break;
+        }
+      }
+
+      if (OnlyUsedByCopies)
+        return false;
+    }
+
+    // Skip remat for return register to enable better coalescing
+    LLVM_DEBUG(dbgs() << "\tSkip remat for return register: "
+                      << printReg(DstReg, TRI) << '\n');
+    return true;
+  }
+
+  return false;
+}
+
 static bool definesFullReg(const MachineInstr &MI, Register Reg) {
   assert(!Reg.isPhysical() && "This code cannot handle physreg aliasing");
 
@@ -1332,6 +1412,9 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     return false;
   }
   if (!TII->isAsCheapAsAMove(*DefMI))
+    return false;
+
+  if (shouldSkipRematerializationForReturn(DstReg, SrcReg, DefMI, CopyMI))
     return false;
 
   if (!TII->isReMaterializable(*DefMI))

@@ -391,6 +391,7 @@ define double @f64_positive_fimm1() nounwind {
 ; LA64-LABEL: f64_positive_fimm1:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vldi $vr0, -912
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    ret
   ret double 1.0
 }

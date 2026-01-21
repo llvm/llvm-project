@@ -80,7 +80,7 @@ define <4 x i64> @and_undef_elts(<2 x i64> %x) {
 ; SSE-LABEL: and_undef_elts:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: and_undef_elts:
@@ -99,7 +99,7 @@ define <4 x i64> @or_undef_elts(<2 x i64> %x) {
 ; SSE-LABEL: or_undef_elts:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: or_undef_elts:

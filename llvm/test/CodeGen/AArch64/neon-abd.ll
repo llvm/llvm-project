@@ -525,6 +525,7 @@ define <4 x i16> @combine_sabd_4h_zerosign(<4 x i16> %a, <4 x i16> %b) #0 {
 ; CHECK-LABEL: combine_sabd_4h_zerosign:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %a.ext = ashr <4 x i16> %a, <i16 7, i16 8, i16 9, i16 10>
   %b.ext = ashr <4 x i16> %b, <i16 11, i16 12, i16 13, i16 14>

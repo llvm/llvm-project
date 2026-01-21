@@ -5,7 +5,7 @@
 ; CHECK-LABEL: test_inlineasm_w_input_constraint
 define dso_local i32 @test_inlineasm_w_input_constraint() {
   tail call void asm sideeffect "w0 = $0", "w"(i32 42)
-; CHECK: w0 = w1
+; CHECK: w0 = w0
   ret i32 42
 }
 

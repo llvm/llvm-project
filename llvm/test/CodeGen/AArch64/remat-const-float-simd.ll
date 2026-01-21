@@ -10,6 +10,7 @@ define float @foo() {
 ; CHECK-NEON-LABEL: foo:
 ; CHECK-NEON:       // %bb.0: // %entry
 ; CHECK-NEON-NEXT:    movi v0.2s, #79, lsl #24
+; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-SCALAR-LABEL: foo:

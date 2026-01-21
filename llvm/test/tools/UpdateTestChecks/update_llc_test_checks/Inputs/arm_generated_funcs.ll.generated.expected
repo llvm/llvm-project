@@ -100,23 +100,20 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="none" }
 ; CHECK-NEXT:    sub sp, sp, #20
 ; CHECK-NEXT:    ldr r0, .LCPI1_0
 ; CHECK-NEXT:    mov r1, #1
-; CHECK-NEXT:    mov r2, #3
-; CHECK-NEXT:    mov r3, #4
+; CHECK-NEXT:    mov r12, #2
+; CHECK-NEXT:    mov r3, #3
+; CHECK-NEXT:    mov r2, #4
 ; CHECK-NEXT:    str r1, [sp, #12]
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    str r0, [sp, #16]
-; CHECK-NEXT:    mov r0, #2
-; CHECK-NEXT:    str r0, [sp, #8]
-; CHECK-NEXT:    str r2, [sp, #4]
-; CHECK-NEXT:    str r3, [sp]
+; CHECK-NEXT:    str r12, [sp, #8]
+; CHECK-NEXT:    str r3, [sp, #4]
+; CHECK-NEXT:    str r2, [sp]
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    str r0, [sp, #8]
-; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    str r1, [sp, #12]
-; CHECK-NEXT:    str r2, [sp, #4]
-; CHECK-NEXT:    str r3, [sp]
+; CHECK-NEXT:    stm sp, {r2, r3, r12}
 ; CHECK-NEXT:    add sp, sp, #20
 ; CHECK-NEXT:    mov pc, lr
 ; CHECK-NEXT:    .p2align 2

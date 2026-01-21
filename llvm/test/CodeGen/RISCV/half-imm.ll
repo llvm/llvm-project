@@ -120,6 +120,7 @@ define half @half_negative_zero(ptr %pf) nounwind {
 ; CHECKIZHINX-LABEL: half_negative_zero:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    lui a0, 1048568
+; CHECKIZHINX-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: half_negative_zero:
@@ -131,6 +132,7 @@ define half @half_negative_zero(ptr %pf) nounwind {
 ; CHECKIZHINXMIN-LABEL: half_negative_zero:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    lui a0, 1048568
+; CHECKIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINXMIN-NEXT:    ret
   ret half -0.0
 }

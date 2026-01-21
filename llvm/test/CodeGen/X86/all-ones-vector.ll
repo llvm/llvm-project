@@ -92,7 +92,7 @@ define <32 x i8> @allones_v32i8() nounwind {
 ; SSE-LABEL: allones_v32i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v32i8:
@@ -112,7 +112,7 @@ define <16 x i16> @allones_v16i16() nounwind {
 ; SSE-LABEL: allones_v16i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v16i16:
@@ -132,7 +132,7 @@ define <8 x i32> @allones_v8i32() nounwind {
 ; SSE-LABEL: allones_v8i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v8i32:
@@ -152,7 +152,7 @@ define <4 x i64> @allones_v4i64() nounwind {
 ; SSE-LABEL: allones_v4i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v4i64:
@@ -172,7 +172,7 @@ define <4 x double> @allones_v4f64() nounwind {
 ; SSE-LABEL: allones_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v4f64:
@@ -192,7 +192,7 @@ define <4 x double> @allones_v4f64_optsize() nounwind optsize {
 ; SSE-LABEL: allones_v4f64_optsize:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v4f64_optsize:
@@ -212,7 +212,7 @@ define <8 x float> @allones_v8f32() nounwind {
 ; SSE-LABEL: allones_v8f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v8f32:
@@ -232,7 +232,7 @@ define <8 x float> @allones_v8f32_optsize() nounwind optsize {
 ; SSE-LABEL: allones_v8f32_optsize:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v8f32_optsize:
@@ -252,9 +252,9 @@ define <64 x i8> @allones_v64i8() nounwind {
 ; SSE-LABEL: allones_v64i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v64i8:
@@ -267,12 +267,12 @@ define <64 x i8> @allones_v64i8() nounwind {
 ; AVX2-LABEL: allones_v64i8:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX2-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512-LABEL: allones_v64i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
 ; AVX512-NEXT:    ret{{[l|q]}}
   ret <64 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 }
@@ -281,9 +281,9 @@ define <32 x i16> @allones_v32i16() nounwind {
 ; SSE-LABEL: allones_v32i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v32i16:
@@ -296,12 +296,12 @@ define <32 x i16> @allones_v32i16() nounwind {
 ; AVX2-LABEL: allones_v32i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX2-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512-LABEL: allones_v32i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
 ; AVX512-NEXT:    ret{{[l|q]}}
   ret <32 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
 }
@@ -310,9 +310,9 @@ define <16 x i32> @allones_v16i32() nounwind {
 ; SSE-LABEL: allones_v16i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v16i32:
@@ -325,12 +325,12 @@ define <16 x i32> @allones_v16i32() nounwind {
 ; AVX2-LABEL: allones_v16i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX2-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512-LABEL: allones_v16i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
 ; AVX512-NEXT:    ret{{[l|q]}}
   ret <16 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
 }
@@ -339,9 +339,9 @@ define <8 x i64> @allones_v8i64() nounwind {
 ; SSE-LABEL: allones_v8i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v8i64:
@@ -354,12 +354,12 @@ define <8 x i64> @allones_v8i64() nounwind {
 ; AVX2-LABEL: allones_v8i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX2-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512-LABEL: allones_v8i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
 ; AVX512-NEXT:    ret{{[l|q]}}
   ret <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
 }
@@ -368,9 +368,9 @@ define <8 x double> @allones_v8f64() nounwind {
 ; SSE-LABEL: allones_v8f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v8f64:
@@ -383,12 +383,12 @@ define <8 x double> @allones_v8f64() nounwind {
 ; AVX2-LABEL: allones_v8f64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX2-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512-LABEL: allones_v8f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
 ; AVX512-NEXT:    ret{{[l|q]}}
   ret <8 x double> <double 0xffffffffffffffff, double 0xffffffffffffffff, double 0xffffffffffffffff, double 0xffffffffffffffff, double 0xffffffffffffffff, double 0xffffffffffffffff, double 0xffffffffffffffff, double 0xffffffffffffffff>
 }
@@ -397,9 +397,9 @@ define <16 x float> @allones_v16f32() nounwind {
 ; SSE-LABEL: allones_v16f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: allones_v16f32:
@@ -412,12 +412,12 @@ define <16 x float> @allones_v16f32() nounwind {
 ; AVX2-LABEL: allones_v16f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX2-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512-LABEL: allones_v16f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
 ; AVX512-NEXT:    ret{{[l|q]}}
   ret <16 x float> <float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000>
 }
