@@ -134,6 +134,7 @@ static void MaybeDieIfNoTaggingAbi(const char *message) {
 #  define PR_SET_TAGGED_ADDR_CTRL 55
 #  define PR_GET_TAGGED_ADDR_CTRL 56
 #  define PR_TAGGED_ADDR_ENABLE (1UL << 0)
+#  define PR_PMLEN_SHIFT 24
 #  define ARCH_GET_UNTAG_MASK 0x4001
 #  define ARCH_ENABLE_TAGGED_ADDR 0x4002
 #  define ARCH_GET_MAX_TAG_BITS 0x4003
@@ -182,7 +183,7 @@ static bool EnableTaggingAbi() {
   if (mask & kAddressTagMask)
     return false;
   return true;
-#  else
+#  elif defined(__aarch64__)
   // Enable ARM TBI tagging for the process. If for some reason tagging is not
   // supported, prctl(PR_SET_TAGGED_ADDR_CTRL, PR_TAGGED_ADDR_ENABLE) returns
   // -EINVAL.
@@ -194,7 +195,18 @@ static bool EnableTaggingAbi() {
       PR_TAGGED_ADDR_ENABLE)
     return false;
   return true;
-#  endif // __x86_64__
+#  elif SANITIZER_RISCV64
+  // Enable RISC-V address tagging via pointer masking.
+  uptr req = kTagBits << PR_PMLEN_SHIFT | PR_TAGGED_ADDR_ENABLE;
+  if (internal_iserror(internal_prctl(PR_SET_TAGGED_ADDR_CTRL, req, 0, 0, 0)))
+    return false;
+  uptr rsp = internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0);
+  if (internal_iserror(rsp))
+    return false;
+  return rsp & PR_TAGGED_ADDR_ENABLE;
+#  else
+#    error Architecture not supported
+#  endif  // __x86_64__
 }
 
 void InitializeOsSupport() {
