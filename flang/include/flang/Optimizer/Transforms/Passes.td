@@ -494,6 +494,11 @@ def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
                         "Convert allocation related operation with this pass">];
 }
 
+def CUFOpConversionLate : Pass<"cuf-convert-late", "mlir::ModuleOp"> {
+  let summary = "Convert CUF operations to runtime calls late in the pipeline";
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
 def CUFDeviceGlobal :
     Pass<"cuf-device-global", "mlir::ModuleOp"> {
   let summary = "Flag globals used in device function with data attribute";
