@@ -346,12 +346,6 @@ public:
   /// Returns denormal_fpenv.
   LLVM_ABI struct DenormalFPEnv getDenormalFPEnv() const;
 
-  /// Returns denormal_fp_math.
-  LLVM_ABI DenormalMode getDenormalFPMathRaw() const;
-
-  /// Returns denormal_fp_math_f32.
-  LLVM_ABI DenormalMode getDenormalFPMathF32Raw() const;
-
   /// Returns information from captures attribute.
   LLVM_ABI CaptureInfo getCaptureInfo() const;
 

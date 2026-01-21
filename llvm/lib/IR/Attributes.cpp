@@ -517,14 +517,6 @@ DenormalFPEnv Attribute::getDenormalFPEnv() const {
   return DenormalFPEnv::createFromIntValue(pImpl->getValueAsInt());
 }
 
-DenormalMode Attribute::getDenormalFPMathRaw() const {
-  return DenormalMode::createFromIntValue(pImpl->getValueAsInt());
-}
-
-DenormalMode Attribute::getDenormalFPMathF32Raw() const {
-  return DenormalMode::createFromIntValue(pImpl->getValueAsInt());
-}
-
 FPClassTest Attribute::getNoFPClass() const {
   assert(hasAttribute(Attribute::NoFPClass) &&
          "Can only call getNoFPClass() on nofpclass attribute");
