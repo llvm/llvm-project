@@ -2753,14 +2753,6 @@ StmtResult Sema::BuildCXXForRangeStmt(
                             diag::err_for_range_incomplete_type))
       return StmtError();
 
-    // P2718R0 - Lifetime extension in range-based for loops.
-    if (getLangOpts().CPlusPlus23 && !LifetimeExtendTemps.empty()) {
-      InitializedEntity Entity =
-          InitializedEntity::InitializeVariable(RangeVar);
-      for (auto *MTE : LifetimeExtendTemps)
-        MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
-    }
-
     // Build auto __begin = begin-expr, __end = end-expr.
     // Divide by 2, since the variables are in the inner scope (loop body).
     const auto DepthStr = std::to_string(S->getDepth() / 2);
@@ -3016,6 +3008,13 @@ StmtResult Sema::BuildCXXForRangeStmt(
   // analysis of first part (if any).
   if (getLangOpts().OpenMP >= 50 && BeginDeclStmt.isUsable())
     OpenMP().ActOnOpenMPLoopInitialization(ForLoc, BeginDeclStmt.get());
+
+  // P2718R0 - Lifetime extension in range-based for loops.
+  if (getLangOpts().CPlusPlus23 && !LifetimeExtendTemps.empty()) {
+    InitializedEntity Entity = InitializedEntity::InitializeVariable(RangeVar);
+    for (auto *MTE : LifetimeExtendTemps)
+      MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
+  }
 
   return new (Context) CXXForRangeStmt(
       InitStmt, RangeDS, cast_or_null<DeclStmt>(BeginDeclStmt.get()),

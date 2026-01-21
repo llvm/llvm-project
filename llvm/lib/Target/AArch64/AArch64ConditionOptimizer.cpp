@@ -194,28 +194,9 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
       }
       return &I;
     }
-    // Prevent false positive case like:
-    // cmp      w19, #0
-    // cinc     w0, w19, gt
-    // ...
-    // fcmp     d8, #0.0
-    // b.gt     .LBB0_5
-    case AArch64::FCMPDri:
-    case AArch64::FCMPSri:
-    case AArch64::FCMPESri:
-    case AArch64::FCMPEDri:
-
-    case AArch64::SUBSWrr:
-    case AArch64::SUBSXrr:
-    case AArch64::ADDSWrr:
-    case AArch64::ADDSXrr:
-    case AArch64::FCMPSrr:
-    case AArch64::FCMPDrr:
-    case AArch64::FCMPESrr:
-    case AArch64::FCMPEDrr:
-      // Skip comparison instructions without immediate operands.
-      return nullptr;
     }
+    if (I.modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr))
+      return nullptr;
   }
   LLVM_DEBUG(dbgs() << "Flags not defined in " << printMBBReference(*MBB)
                     << '\n');

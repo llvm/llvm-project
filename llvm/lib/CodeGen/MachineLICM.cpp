@@ -310,17 +310,13 @@ namespace {
   class MachineLICM : public MachineLICMBase {
   public:
     static char ID;
-    MachineLICM() : MachineLICMBase(ID, false) {
-      initializeMachineLICMPass(*PassRegistry::getPassRegistry());
-    }
+    MachineLICM() : MachineLICMBase(ID, false) {}
   };
 
   class EarlyMachineLICM : public MachineLICMBase {
   public:
     static char ID;
-    EarlyMachineLICM() : MachineLICMBase(ID, true) {
-      initializeEarlyMachineLICMPass(*PassRegistry::getPassRegistry());
-    }
+    EarlyMachineLICM() : MachineLICMBase(ID, true) {}
   };
 
 } // end anonymous namespace
@@ -837,24 +833,25 @@ void MachineLICMImpl::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
       continue;
 
     Scopes.push_back(Node);
-    unsigned NumChildren = Node->getNumChildren();
 
     // Don't hoist things out of a large switch statement.  This often causes
     // code to be hoisted that wasn't going to be executed, and increases
     // register pressure in a situation where it's likely to matter.
-    if (BB->succ_size() >= 25)
-      NumChildren = 0;
-
-    OpenChildren[Node] = NumChildren;
-    if (NumChildren) {
-      // Add children in reverse order as then the next popped worklist node is
-      // the first child of this node.  This means we ultimately traverse the
-      // DOM tree in exactly the same order as if we'd recursed.
-      for (MachineDomTreeNode *Child : reverse(Node->children())) {
-        ParentMap[Child] = Node;
-        WorkList.push_back(Child);
-      }
+    if (BB->succ_size() >= 25) {
+      OpenChildren[Node] = 0;
+      continue;
     }
+
+    // Add children in reverse order as then the next popped worklist node is
+    // the first child of this node.  This means we ultimately traverse the
+    // DOM tree in exactly the same order as if we'd recursed.
+    size_t WorkListStart = WorkList.size();
+    for (MachineDomTreeNode *Child : Node->children()) {
+      ParentMap[Child] = Node;
+      WorkList.push_back(Child);
+    }
+    std::reverse(WorkList.begin() + WorkListStart, WorkList.end());
+    OpenChildren[Node] = WorkList.size() - WorkListStart;
   }
 
   if (Scopes.size() == 0)

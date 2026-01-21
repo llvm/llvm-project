@@ -6478,10 +6478,17 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
 
   Value *X;
   switch (IID) {
-  case Intrinsic::fabs:
-    if (computeKnownFPSignBit(Op0, Q) == false)
+  case Intrinsic::fabs: {
+    KnownFPClass KnownClass = computeKnownFPClass(Op0, fcAllFlags, Q);
+    if (KnownClass.SignBit == false)
       return Op0;
+
+    if (KnownClass.cannotBeOrderedLessThanZero() &&
+        KnownClass.isKnownNeverNaN() && Call->hasNoSignedZeros())
+      return Op0;
+
     break;
+  }
   case Intrinsic::bswap:
     // bswap(bswap(x)) -> x
     if (match(Op0, m_BSwap(m_Value(X))))
@@ -7285,6 +7292,30 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
         (Q.isUndefValue(Vec) || Vec == X) && IdxN == 0 &&
         X->getType() == ReturnType)
       return X;
+
+    return nullptr;
+  }
+  case Intrinsic::vector_splice_left:
+  case Intrinsic::vector_splice_right: {
+    Value *Offset = Args[2];
+    auto *Ty = cast<VectorType>(F->getReturnType());
+    if (Q.isUndefValue(Offset))
+      return PoisonValue::get(Ty);
+
+    unsigned BitWidth = Offset->getType()->getScalarSizeInBits();
+    ConstantRange NumElts(
+        APInt(BitWidth, Ty->getElementCount().getKnownMinValue()));
+    if (Ty->isScalableTy())
+      NumElts = NumElts.multiply(getVScaleRange(Call->getFunction(), BitWidth));
+
+    // If we know Offset > NumElts, simplify to poison.
+    ConstantRange CR = computeConstantRangeIncludingKnownBits(Offset, false, Q);
+    if (CR.getUnsignedMin().ugt(NumElts.getUnsignedMax()))
+      return PoisonValue::get(Ty);
+
+    // splice.left(a, b, 0) --> a, splice.right(a, b, 0) --> b
+    if (CR.isSingleElement() && CR.getSingleElement()->isZero())
+      return IID == Intrinsic::vector_splice_left ? Args[0] : Args[1];
 
     return nullptr;
   }

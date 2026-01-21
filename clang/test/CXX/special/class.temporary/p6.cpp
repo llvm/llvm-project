@@ -700,4 +700,38 @@ void default_init2() {
   for (auto &&x : B{0}.a.arr) {}
 }
 } // namespace default_init
+
+namespace GH165182 {
+extern "C" int printf(const char *, ...);
+
+const char* s = "1";
+
+struct Foo {
+  int& x;
+  Foo(int& x) noexcept : x{x} {}
+  ~Foo() noexcept { x = 42; }
+  const char* begin() const noexcept { return s; }
+  const char* end() const noexcept { return s + 1; }
+};
+
+const Foo& f1(const Foo& t) noexcept { return t; }
+Foo g(int& x) noexcept { return Foo(x); }
+
+// Lifetime extension is missing!
+template <typename T>
+int test1() {
+    int x = 5;
+    int sum = 0;
+    // CHECK-CXX23: for.cond.cleanup:
+    // CHECK-CXX23-NEXT: call void @_ZN7P2718R08GH1651823FooD1Ev(
+    for (int _ : f1(g(x))) sum += x;
+    sum += x;
+    return sum;
+}
+
+int foo() {
+    printf("%i\n", test1<int>());
+}
+
+} // namespace GH165182
 } // namespace P2718R0
