@@ -85,13 +85,9 @@ void StringViewConversionsCheck::registerMatchers(MatchFinder *Finder) {
 
 void StringViewConversionsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ParamExpr = Result.Nodes.getNodeAs<Expr>("expr");
-  assert(ParamExpr);
-
   const auto *RedundantExpr = Result.Nodes.getNodeAs<Expr>("redundantExpr");
-  assert(RedundantExpr);
-
   const auto *OriginalExpr = Result.Nodes.getNodeAs<Expr>("originalStringView");
-  assert(OriginalExpr);
+  assert(RedundantExpr && ParamExpr && OriginalExpr);
 
   // Sanity check. Verify that the redundant expression is the direct source of
   // the argument, not part of a larger expression (e.g., std::string(sv) +
