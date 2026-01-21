@@ -383,24 +383,28 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     Info.add("Device Name", " Host Offload Device", "", DeviceInfo::NAME);
     Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
     Info.add("Number of total EUs", 1, "", DeviceInfo::NUM_COMPUTE_UNITS);
-    Info.add("Max memory clock frequency (MHz)", 1, "", DeviceInfo::MEMORY_CLOCK_RATE);
-    Info.add("Max clock frequency (MHz)", 1, "", DeviceInfo::MAX_CLOCK_FREQUENCY);
+    Info.add("Max memory clock frequency (MHz)", 1, "",
+             DeviceInfo::MEMORY_CLOCK_RATE);
+    Info.add("Max clock frequency (MHz)", 1, "",
+             DeviceInfo::MAX_CLOCK_FREQUENCY);
     Info.add("Memory Address Size", uint64_t{64u}, "bits",
-           DeviceInfo::ADDRESS_BITS);
-    Info.add("Local memory size (bytes)", 1, "", DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
+             DeviceInfo::ADDRESS_BITS);
+    Info.add("Local memory size (bytes)", 1, "",
+             DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
     Info.add("Global memory size (bytes)", 1, "", DeviceInfo::GLOBAL_MEM_SIZE);
-    Info.add("Max Memory Allocation Size (bytes)", 1, "", DeviceInfo::MAX_MEM_ALLOC_SIZE);
+    Info.add("Max Memory Allocation Size (bytes)", 1, "",
+             DeviceInfo::MAX_MEM_ALLOC_SIZE);
     Info.add("Max Group size", 1, "", DeviceInfo::MAX_WORK_GROUP_SIZE);
     auto &MaxGroupSize =
-      *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
-                DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
+        *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
+                  DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
     MaxGroupSize.add("x", 1);
     MaxGroupSize.add("y", 1);
     MaxGroupSize.add("z", 1);
-    Info.add("Maximum Grid Dimensions", uint32_max,
-           "", DeviceInfo::MAX_WORK_SIZE);
+    Info.add("Maximum Grid Dimensions", uint32_max, "",
+             DeviceInfo::MAX_WORK_SIZE);
     auto &MaxSize = *Info.add("Grid Size per Dimension", std::monostate{}, "",
-                            DeviceInfo::MAX_WORK_SIZE_PER_DIMENSION);
+                              DeviceInfo::MAX_WORK_SIZE_PER_DIMENSION);
     MaxSize.add("x", uint32_max);
     MaxSize.add("y", uint32_max);
     MaxSize.add("z", uint32_max);
