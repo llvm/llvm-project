@@ -39,17 +39,17 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_recursive_mutex_init(__libcpp_recursiv
   return mtx_init(__m, mtx_plain | mtx_recursive) == thrd_success ? 0 : EINVAL;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
 __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t* __m) {
   return mtx_lock(__m) == thrd_success ? 0 : EINVAL;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI bool
 __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t* __m) {
   return mtx_trylock(__m) == thrd_success;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
 __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t* __m) {
   return mtx_unlock(__m) == thrd_success ? 0 : EINVAL;
 }
@@ -59,15 +59,15 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_recursive_mutex_destroy(__libcpp_recur
   return 0;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_mutex_lock(__libcpp_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mutex_lock(__libcpp_mutex_t* __m) {
   return mtx_lock(__m) == thrd_success ? 0 : EINVAL;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool __libcpp_mutex_trylock(__libcpp_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_mutex_trylock(__libcpp_mutex_t* __m) {
   return mtx_trylock(__m) == thrd_success;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_mutex_unlock(__libcpp_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mutex_unlock(__libcpp_mutex_t* __m) {
   return mtx_unlock(__m) == thrd_success ? 0 : EINVAL;
 }
 
@@ -92,12 +92,12 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_condvar_broadcast(__libcpp_condvar_t* 
   return cnd_broadcast(__cv) == thrd_success ? 0 : EINVAL;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
 __libcpp_condvar_wait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m) {
   return cnd_wait(__cv, __m) == thrd_success ? 0 : EINVAL;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
 __libcpp_condvar_timedwait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m, timespec* __ts) {
   int __ec = cnd_timedwait(__cv, __m, __ts);
   return __ec == thrd_timedout ? ETIMEDOUT : __ec;

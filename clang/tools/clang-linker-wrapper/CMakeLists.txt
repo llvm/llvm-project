@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Analysis
   Passes
+  Plugins
   IRReader
   Object
   Option

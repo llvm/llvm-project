@@ -9,7 +9,7 @@ target triple = "amdgcn-amd-amdhsa"
 
 define amdgpu_kernel void @__omp_offloading_32_70c2e76c_main_l24(ptr %dyn) {
   %1 = tail call i32 @__kmpc_target_init(ptr null, ptr %dyn)
-  call void @__kmpc_parallel_51(ptr null, i32 0, i32 0, i32 0, i32 0, ptr @__omp_offloading_32_70c2e76c_main_l24_omp_outlined, ptr null, ptr null, i64 0)
+  call void @__kmpc_parallel_60(ptr null, i32 0, i32 0, i32 0, i32 0, ptr @__omp_offloading_32_70c2e76c_main_l24_omp_outlined, ptr null, ptr null, i64 0, i32 0)
   ret void
 }
 
@@ -29,7 +29,7 @@ define internal i32 @__kmpc_target_init(ptr %0, ptr) {
   ret i32 0
 }
 
-declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
+declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32)
 
 define void @__kmpc_for_static_init_4() {
   %1 = load i32, ptr addrspace(3) @_ZN4ompx5state9TeamStateE, align 8

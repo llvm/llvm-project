@@ -8,7 +8,6 @@
 ; CHECK-DAG: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
 ; CHECK: = and([[REG0]],#255)
-; CHECK: [[REG0]]{{[:0-9]*}} =
 ; CHECK: endloop
 
 define void @fred(ptr noalias nocapture %src, i32 %srcWidth, i32 %srcHeight, i32 %srcStride, ptr noalias nocapture %dst, i32 %dstStride) #0 {

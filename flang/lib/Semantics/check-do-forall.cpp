@@ -71,7 +71,7 @@ static const Bounds &GetBounds(const parser::DoConstruct &doConstruct) {
 static const parser::Name &GetDoVariable(
     const parser::DoConstruct &doConstruct) {
   const Bounds &bounds{GetBounds(doConstruct)};
-  return bounds.name.thing;
+  return bounds.Name().thing;
 }
 
 static parser::MessageFixedText GetEnclosingDoMsg() {
@@ -546,14 +546,14 @@ private:
     // C1120 -- types of DO variables must be INTEGER, extended by allowing
     // REAL and DOUBLE PRECISION
     const Bounds &bounds{GetBounds(doConstruct)};
-    CheckDoVariable(bounds.name);
-    CheckDoExpression(bounds.lower);
-    CheckDoExpression(bounds.upper);
-    if (bounds.step) {
-      CheckDoExpression(*bounds.step);
-      if (IsZero(*bounds.step)) {
+    CheckDoVariable(bounds.Name());
+    CheckDoExpression(bounds.Lower());
+    CheckDoExpression(bounds.Upper());
+    if (auto &step{bounds.Step()}) {
+      CheckDoExpression(*step);
+      if (IsZero(*step)) {
         context_.Warn(common::UsageWarning::ZeroDoStep,
-            parser::UnwrapRef<parser::Expr>(bounds.step).source,
+            parser::UnwrapRef<parser::Expr>(step).source,
             "DO step expression should not be zero"_warn_en_US);
       }
     }
@@ -1101,8 +1101,8 @@ static void CheckIfArgIsDoVar(const evaluate::ActualArgument &arg,
 // messages.
 void DoForallChecker::Leave(const parser::CallStmt &callStmt) {
   if (const auto &typedCall{callStmt.typedCall}) {
-    const auto &parsedArgs{
-        std::get<std::list<parser::ActualArgSpec>>(callStmt.call.t)};
+    const auto &call{std::get<parser::Call>(callStmt.t)};
+    const auto &parsedArgs{std::get<std::list<parser::ActualArgSpec>>(call.t)};
     auto parsedArgIter{parsedArgs.begin()};
     const evaluate::ActualArguments &checkedArgs{typedCall->arguments()};
     for (const auto &checkedOptionalArg : checkedArgs) {
@@ -1194,13 +1194,13 @@ static void CheckIoImpliedDoIndex(
 void DoForallChecker::Leave(const parser::OutputImpliedDo &outputImpliedDo) {
   CheckIoImpliedDoIndex(context_,
       parser::UnwrapRef<parser::Name>(
-          std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).name));
+          std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).Name()));
 }
 
 void DoForallChecker::Leave(const parser::InputImpliedDo &inputImpliedDo) {
   CheckIoImpliedDoIndex(context_,
       parser::UnwrapRef<parser::Name>(
-          std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).name));
+          std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).Name()));
 }
 
 void DoForallChecker::Leave(const parser::StatVariable &statVariable) {

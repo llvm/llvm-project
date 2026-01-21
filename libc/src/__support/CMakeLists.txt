@@ -162,7 +162,6 @@ add_header_library(
     wctype_utils.h
   DEPENDS
     libc.hdr.types.wchar_t
-    libc.hdr.types.wint_t
 )
 
 add_header_library(
@@ -414,6 +413,7 @@ add_subdirectory(time)
 # Therefore, cannot currently build this on macos in overlay mode
 if(NOT (LIBC_TARGET_OS_IS_DARWIN))
   add_subdirectory(wchar)
+  add_subdirectory(wctype)
 endif()
 
 add_subdirectory(math)

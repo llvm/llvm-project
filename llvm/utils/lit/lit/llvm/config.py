@@ -79,9 +79,6 @@ class LLVMConfig(object):
             if not self.use_lit_shell and lit_config.update_tests:
                 print("note: --update-tests is not supported when using external shell")
 
-        if not self.use_lit_shell:
-            features.add("shell")
-
         self.with_system_environment(
             [
                 "ASAN_SYMBOLIZER_PATH",
@@ -226,7 +223,7 @@ class LLVMConfig(object):
                         continue
 
                     # We found it, stop enumerating.
-                    return lit.util.to_string(candidate_path)
+                    return candidate_path
             except:
                 continue
 
@@ -287,8 +284,8 @@ class LLVMConfig(object):
                 env=self.config.environment,
             )
             stdout, stderr = cmd.communicate()
-            stdout = lit.util.to_string(stdout)
-            stderr = lit.util.to_string(stderr)
+            stdout = stdout.decode("utf-8", errors="replace")
+            stderr = stderr.decode("utf-8", errors="replace")
             return (stdout, stderr)
         except OSError:
             self.lit_config.fatal("Could not run process %s" % command)

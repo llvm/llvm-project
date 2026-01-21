@@ -257,9 +257,12 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       Register Def = MI.getOperand(0).getReg();
       Register Source = MI.getOperand(2).getReg();
       Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
-      SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-          ElemTy, MI,
-          addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST));
+      auto SC =
+          isa<FunctionType>(ElemTy)
+              ? SPIRV::StorageClass::CodeSectionINTEL
+              : addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST);
+      SPIRVType *AssignedPtrType =
+          GR->getOrCreateSPIRVPointerType(ElemTy, MI, SC);
 
       // If the ptrcast would be redundant, replace all uses with the source
       // register.
@@ -385,11 +388,11 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
 
 // To support current approach and limitations wrt. bit width here we widen a
 // scalar register with a bit width greater than 1 to valid sizes and cap it to
-// 64 width.
+// 128 width.
 static unsigned widenBitWidthToNextPow2(unsigned BitWidth) {
   if (BitWidth == 1)
     return 1; // No need to widen 1-bit values
-  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 64u);
+  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 128u);
 }
 
 static void widenScalarType(Register Reg, MachineRegisterInfo &MRI) {
@@ -425,52 +428,20 @@ static void setInsertPtAfterDef(MachineIRBuilder &MIB, MachineInstr *Def) {
 }
 
 namespace llvm {
-void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
-                       SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
-                       MachineRegisterInfo &MRI) {
+void updateRegType(Register Reg, Type *Ty, SPIRVType *SpvType,
+                   SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                   MachineRegisterInfo &MRI) {
   assert((Ty || SpvType) && "Either LLVM or SPIRV type is expected.");
   MachineInstr *Def = MRI.getVRegDef(Reg);
   setInsertPtAfterDef(MIB, Def);
   if (!SpvType)
     SpvType = GR->getOrCreateSPIRVType(Ty, MIB,
                                        SPIRV::AccessQualifier::ReadWrite, true);
-
-  if (!isTypeFoldingSupported(Def->getOpcode())) {
-    // No need to generate SPIRV::ASSIGN_TYPE pseudo-instruction
-    if (!MRI.getRegClassOrNull(Reg))
-      MRI.setRegClass(Reg, GR->getRegClass(SpvType));
-    if (!MRI.getType(Reg).isValid())
-      MRI.setType(Reg, GR->getRegType(SpvType));
-    GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
-    return;
-  }
-
-  // Tablegen definition assumes SPIRV::ASSIGN_TYPE pseudo-instruction is
-  // present after each auto-folded instruction to take a type reference from.
-  Register NewReg = MRI.createGenericVirtualRegister(MRI.getType(Reg));
-  const auto *RegClass = GR->getRegClass(SpvType);
-  MRI.setRegClass(NewReg, RegClass);
-  MRI.setRegClass(Reg, RegClass);
-
+  if (!MRI.getRegClassOrNull(Reg))
+    MRI.setRegClass(Reg, GR->getRegClass(SpvType));
+  if (!MRI.getType(Reg).isValid())
+    MRI.setType(Reg, GR->getRegType(SpvType));
   GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
-  // This is to make it convenient for Legalizer to get the SPIRVType
-  // when processing the actual MI (i.e. not pseudo one).
-  GR->assignSPIRVTypeToVReg(SpvType, NewReg, MIB.getMF());
-  // Copy MIFlags from Def to ASSIGN_TYPE instruction. It's required to keep
-  // the flags after instruction selection.
-  const uint32_t Flags = Def->getFlags();
-  MIB.buildInstr(SPIRV::ASSIGN_TYPE)
-      .addDef(Reg)
-      .addUse(NewReg)
-      .addUse(GR->getSPIRVTypeID(SpvType))
-      .setMIFlags(Flags);
-  for (unsigned I = 0, E = Def->getNumDefs(); I != E; ++I) {
-    MachineOperand &MO = Def->getOperand(I);
-    if (MO.getReg() == Reg) {
-      MO.setReg(NewReg);
-      break;
-    }
-  }
 }
 
 void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
@@ -509,7 +480,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
 
   bool IsExtendedInts =
       ST->canUseExtension(
-          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers) ||
+          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
       ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
       ST->canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
 
@@ -543,10 +514,9 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
-        if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE &&
-            Def->getOpcode() != SPIRV::ASSIGN_TYPE)
-          insertAssignInstr(Reg, nullptr, AssignedPtrType, GR, MIB,
-                            MF.getRegInfo());
+        if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE)
+          updateRegType(Reg, nullptr, AssignedPtrType, GR, MIB,
+                        MF.getRegInfo());
         ToErase.push_back(&MI);
       } else if (isSpvIntrinsic(MI, Intrinsic::spv_assign_type)) {
         Register Reg = MI.getOperand(1).getReg();
@@ -554,9 +524,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
-        if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE &&
-            Def->getOpcode() != SPIRV::ASSIGN_TYPE)
-          insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
+        if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE)
+          updateRegType(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
         ToErase.push_back(&MI);
       } else if (MIOp == TargetOpcode::FAKE_USE && MI.getNumOperands() > 0) {
         MachineInstr *MdMI = MI.getPrevNode();
@@ -581,20 +550,9 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                  MIOp == TargetOpcode::G_FCONSTANT ||
                  MIOp == TargetOpcode::G_BUILD_VECTOR) {
         // %rc = G_CONSTANT ty Val
-        // ===>
-        // %cty = OpType* ty
-        // %rctmp = G_CONSTANT ty Val
-        // %rc = ASSIGN_TYPE %rctmp, %cty
+        // Ensure %rc has a valid SPIR-V type assigned in the Global Registry.
         Register Reg = MI.getOperand(0).getReg();
-        bool NeedAssignType = true;
-        if (MRI.hasOneUse(Reg)) {
-          MachineInstr &UseMI = *MRI.use_instr_begin(Reg);
-          if (isSpvIntrinsic(UseMI, Intrinsic::spv_assign_type) ||
-              isSpvIntrinsic(UseMI, Intrinsic::spv_assign_name))
-            continue;
-          if (UseMI.getOpcode() == SPIRV::ASSIGN_TYPE)
-            NeedAssignType = false;
-        }
+        bool NeedAssignType = GR->getSPIRVTypeForVReg(Reg) == nullptr;
         Type *Ty = nullptr;
         if (MIOp == TargetOpcode::G_CONSTANT) {
           auto TargetExtIt = TargetExtConstTypes.find(&MI);
@@ -639,13 +597,6 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             if (const SPIRVType *ElemSpvType =
                     GR->getSPIRVTypeForVReg(MI.getOperand(1).getReg(), &MF))
               ElemTy = const_cast<Type *>(GR->getTypeForSPIRVType(ElemSpvType));
-            if (!ElemTy) {
-              // There may be a case when we already know Reg's type.
-              MachineInstr *NextMI = MI.getNextNode();
-              if (!NextMI || NextMI->getOpcode() != SPIRV::ASSIGN_TYPE ||
-                  NextMI->getOperand(1).getReg() != Reg)
-                llvm_unreachable("Unexpected opcode");
-            }
           }
           if (ElemTy)
             Ty = VectorType::get(
@@ -655,7 +606,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             NeedAssignType = false;
         }
         if (NeedAssignType)
-          insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MRI);
+          updateRegType(Reg, Ty, nullptr, GR, MIB, MRI);
       } else if (MIOp == TargetOpcode::G_GLOBAL_VALUE) {
         propagateSPIRVType(&MI, GR, MRI, MIB);
       }

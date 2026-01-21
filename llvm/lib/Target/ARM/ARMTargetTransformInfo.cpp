@@ -66,6 +66,11 @@ extern cl::opt<bool> EnableMaskedGatherScatters;
 
 extern cl::opt<unsigned> MVEMaxSupportedInterleaveFactor;
 
+static cl::opt<int> ArmForceUnrollThreshold(
+    "arm-force-unroll-threshold", cl::init(12), cl::Hidden,
+    cl::desc(
+        "Threshold for forced unrolling of small loops in Arm architecture"));
+
 /// Convert a vector load intrinsic into a simple llvm load instruction.
 /// This is beneficial when the underlying object being addressed comes
 /// from a constant, since we get constant-folding for free.
@@ -102,6 +107,55 @@ bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
   // the callers'.
   bool MatchSubset = ((CallerBits & CalleeBits) & InlineFeaturesAllowed) ==
                      (CalleeBits & InlineFeaturesAllowed);
+
+  LLVM_DEBUG({
+    if (!MatchExact || !MatchSubset) {
+      dbgs() << "=== Inline compatibility debug ===\n";
+      dbgs() << "Caller: " << Caller->getName() << "\n";
+      dbgs() << "Callee: " << Callee->getName() << "\n";
+
+      // Bit diffs
+      FeatureBitset MissingInCaller = CalleeBits & ~CallerBits; // callee-only
+      FeatureBitset ExtraInCaller = CallerBits & ~CalleeBits;   // caller-only
+
+      // Counts
+      dbgs() << "Only-in-caller bit count: " << ExtraInCaller.count() << "\n";
+      dbgs() << "Only-in-callee bit count: " << MissingInCaller.count() << "\n";
+
+      dbgs() << "Only-in-caller feature indices [";
+      {
+        bool First = true;
+        for (size_t I = 0, E = ExtraInCaller.size(); I < E; ++I) {
+          if (ExtraInCaller.test(I)) {
+            if (!First)
+              dbgs() << ", ";
+            dbgs() << I;
+            First = false;
+          }
+        }
+      }
+      dbgs() << "]\n";
+
+      dbgs() << "Only-in-callee feature indices [";
+      {
+        bool First = true;
+        for (size_t I = 0, E = MissingInCaller.size(); I < E; ++I) {
+          if (MissingInCaller.test(I)) {
+            if (!First)
+              dbgs() << ", ";
+            dbgs() << I;
+            First = false;
+          }
+        }
+      }
+      dbgs() << "]\n";
+
+      // Indices map to features as found in
+      // llvm-project/(your_build)/lib/Target/ARM/ARMGenSubtargetInfo.inc
+      dbgs() << "MatchExact=" << (MatchExact ? "true" : "false")
+             << " MatchSubset=" << (MatchSubset ? "true" : "false") << "\n";
+    }
+  });
   return MatchExact && MatchSubset;
 }
 
@@ -1125,7 +1179,8 @@ bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) const {
 }
 
 bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
-                                   unsigned /*AddressSpace*/) const {
+                                   unsigned /*AddressSpace*/,
+                                   TTI::MaskKind /*MaskKind*/) const {
   if (!EnableMaskedLoadStores || !ST->hasMVEIntegerOps())
     return false;
 
@@ -1631,6 +1686,20 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost
+ARMTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                                     TTI::TargetCostKind CostKind) const {
+  switch (MICA.getID()) {
+  case Intrinsic::masked_scatter:
+  case Intrinsic::masked_gather:
+    return getGatherScatterOpCost(MICA, CostKind);
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_store:
+    return getMaskedMemoryOpCost(MICA, CostKind);
+  }
+  return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+}
+
+InstructionCost
 ARMTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                   TTI::TargetCostKind CostKind) const {
   unsigned IID = MICA.getID();
@@ -1646,7 +1715,7 @@ ARMTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       return ST->getMVEVectorCostFactor(CostKind);
   }
   if (!isa<FixedVectorType>(Src))
-    return BaseT::getMaskedMemoryOpCost(MICA, CostKind);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
   // Scalar cost, which is currently very high due to the efficiency of the
   // generated code.
   return cast<FixedVectorType>(Src)->getNumElements() * 8;
@@ -1693,13 +1762,19 @@ InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
                                            UseMaskForCond, UseMaskForGaps);
 }
 
-InstructionCost ARMTTIImpl::getGatherScatterOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
+InstructionCost
+ARMTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                   TTI::TargetCostKind CostKind) const {
+
+  Type *DataTy = MICA.getDataType();
+  const Value *Ptr = MICA.getPointer();
+  bool VariableMask = MICA.getVariableMask();
+  Align Alignment = MICA.getAlignment();
+  const Instruction *I = MICA.getInst();
+
   using namespace PatternMatch;
   if (!ST->hasMVEIntegerOps() || !EnableMaskedGatherScatters)
-    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   assert(DataTy->isVectorTy() && "Can't do gather/scatters on scalar!");
   auto *VTy = cast<FixedVectorType>(DataTy);
@@ -2730,7 +2805,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   // Force unrolling small loops can be very useful because of the branch
   // taken cost of the backedge.
-  if (Cost < 12)
+  if (Cost < ArmForceUnrollThreshold)
     UP.Force = true;
 }
 

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Remarks.h"
@@ -21,7 +23,6 @@
 #include "gtest/gtest.h"
 #include <optional>
 
-using namespace llvm;
 using namespace mlir;
 using namespace testing;
 namespace {
@@ -33,9 +34,9 @@ TEST(Remark, TestOutputOptimizationRemark) {
   std::string categoryInliner("Inliner");
   std::string categoryReroller("Reroller");
   std::string myPassname1("myPass1");
-  SmallString<64> tmpPathStorage;
-  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
-                            /*MakeAbsolute=*/true);
+  llvm::SmallString<64> tmpPathStorage;
+  llvm::sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
+                                  /*MakeAbsolute=*/true);
   std::string yamlFile =
       std::string(tmpPathStorage.data(), tmpPathStorage.size());
   ASSERT_FALSE(yamlFile.empty());
@@ -94,7 +95,7 @@ TEST(Remark, TestOutputOptimizationRemark) {
   }
 
   // Read the file
-  auto bufferOrErr = MemoryBuffer::getFile(yamlFile);
+  auto bufferOrErr = llvm::MemoryBuffer::getFile(yamlFile);
   ASSERT_TRUE(static_cast<bool>(bufferOrErr)) << "Failed to open remarks file";
   std::string content = bufferOrErr.get()->getBuffer().str();
 
@@ -152,8 +153,8 @@ TEST(Remark, TestNoOutputOptimizationRemark) {
   std::string categoryFailName("myImportantCategory");
   std::string myPassname1("myPass1");
   SmallString<64> tmpPathStorage;
-  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
-                            /*MakeAbsolute=*/true);
+  llvm::sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
+                                  /*MakeAbsolute=*/true);
   std::string yamlFile =
       std::string(tmpPathStorage.data(), tmpPathStorage.size());
   ASSERT_FALSE(yamlFile.empty());
@@ -376,5 +377,36 @@ TEST(Remark, TestRemarkFinal) {
   EXPECT_EQ(errOut.find(pass2Msg), std::string::npos); // dropped
   EXPECT_NE(errOut.find(pass3Msg), std::string::npos); // shown
   EXPECT_NE(errOut.find(pass4Msg), std::string::npos); // shown
+}
+
+TEST(Remark, TestArgWithAttribute) {
+  MLIRContext context;
+
+  llvm::SmallVector<Attribute> elements;
+  elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 1));
+  elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 2));
+  elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 3));
+  ArrayAttr arrayAttr = ArrayAttr::get(&context, elements);
+  remark::detail::Remark::Arg argWithArray("Values", arrayAttr);
+
+  // Verify the attribute is stored
+  EXPECT_TRUE(argWithArray.hasAttribute());
+  EXPECT_EQ(argWithArray.getAttribute(), arrayAttr);
+
+  // Ensure it can be retrieved as an ArrayAttr.
+  auto retrievedAttr = dyn_cast<ArrayAttr>(argWithArray.getAttribute());
+  EXPECT_TRUE(retrievedAttr);
+  EXPECT_EQ(retrievedAttr.size(), 3u);
+  EXPECT_EQ(cast<IntegerAttr>(retrievedAttr[0]).getInt(), 1);
+  EXPECT_EQ(cast<IntegerAttr>(retrievedAttr[1]).getInt(), 2);
+  EXPECT_EQ(cast<IntegerAttr>(retrievedAttr[2]).getInt(), 3);
+
+  // Create an Arg without an Attribute (string-based)
+  remark::detail::Remark::Arg argWithoutAttr("Key", "Value");
+
+  // Verify no attribute is stored
+  EXPECT_FALSE(argWithoutAttr.hasAttribute());
+  EXPECT_FALSE(argWithoutAttr.getAttribute()); // Returns null Attribute
+  EXPECT_EQ(argWithoutAttr.val, "Value");
 }
 } // namespace

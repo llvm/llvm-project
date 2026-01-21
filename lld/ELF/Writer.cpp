@@ -1583,9 +1583,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       if (part.relrAuthDyn) {
         auto it = llvm::remove_if(
             part.relrAuthDyn->relocs, [this, &part](const RelativeReloc &elem) {
-              const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
+              Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
               if (isInt<32>(reloc.sym->getVA(ctx, reloc.addend)))
                 return false;
+              reloc.expr = R_NONE;
               part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
                                       reloc.offset, false, *reloc.sym,
                                       reloc.addend, R_ABS});
@@ -2110,20 +2111,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // Dynamic section must be the last one in this list and dynamic
     // symbol table section (dynSymTab) must be the first one.
     for (Partition &part : ctx.partitions) {
-      if (part.relaDyn) {
-        part.relaDyn->mergeRels();
-        // Compute DT_RELACOUNT to be used by part.dynamic.
-        part.relaDyn->partitionRels();
-        finalizeSynthetic(ctx, part.relaDyn.get());
-      }
-      if (part.relrDyn) {
-        part.relrDyn->mergeRels();
-        finalizeSynthetic(ctx, part.relrDyn.get());
-      }
-      if (part.relrAuthDyn) {
-        part.relrAuthDyn->mergeRels();
-        finalizeSynthetic(ctx, part.relrAuthDyn.get());
-      }
+      finalizeSynthetic(ctx, part.relaDyn.get());
+      finalizeSynthetic(ctx, part.relrDyn.get());
+      finalizeSynthetic(ctx, part.relrAuthDyn.get());
 
       finalizeSynthetic(ctx, part.dynSymTab.get());
       finalizeSynthetic(ctx, part.gnuHashTab.get());

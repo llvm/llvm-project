@@ -206,6 +206,7 @@ enum RegBankLLTMappingApplyID {
   Sgpr32AExtBoolInReg,
   Sgpr32SExt,
   Sgpr32ZExt,
+  Vgpr32AExt,
   Vgpr32SExt,
   Vgpr32ZExt,
 };
@@ -224,6 +225,7 @@ enum LoweringMethodID {
   S_BFE,
   V_BFE,
   VgprToVccCopy,
+  UniMAD64,
   SplitTo32,
   ScalarizeToS16,
   SplitTo32Select,
@@ -287,7 +289,7 @@ public:
   SetOfRulesForOpcode();
   SetOfRulesForOpcode(FastRulesTypes FastTypes);
 
-  const RegBankLLTMapping &
+  const RegBankLLTMapping *
   findMappingForMI(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                    const MachineUniformityInfo &MUI) const;
 
@@ -385,7 +387,7 @@ public:
     MRI = &_MRI;
   };
 
-  const SetOfRulesForOpcode &getRulesForOpc(MachineInstr &MI) const;
+  const SetOfRulesForOpcode *getRulesForOpc(MachineInstr &MI) const;
 };
 
 } // end namespace AMDGPU

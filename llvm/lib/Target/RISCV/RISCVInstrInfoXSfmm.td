@@ -30,6 +30,10 @@ def XSfmmVTypeOp : RISCVOp {
   }];
 }
 
+def twiden : RISCVOp {
+  let OperandType = "OPERAND_XSFMM_TWIDEN";
+}
+
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class SFInstSetSingle<dag outs, dag ins, bits<5> rs2, string opcodestr,
                       string argstr>
@@ -278,8 +282,8 @@ let Uses = [FRM], mayRaiseFPException = true in {
 } // DecoderNamespace = "XSfvector"
 
 class VPseudoSF_VTileLoad
-    : RISCVVPseudo<(outs), (ins GPR:$rs2, GPR:$rs1, AVL:$atn, ixlenimm:$sew,
-                                ixlenimm:$twiden)> {
+    : RISCVVPseudo<(outs), (ins GPR:$rs2, GPR:$rs1, GPRNoX0:$atn, sew:$sew,
+                                twiden:$twiden)> {
   let mayLoad = 1;
   let mayStore = 0;
   let HasVLOp = 1; // Tn
@@ -289,8 +293,8 @@ class VPseudoSF_VTileLoad
 }
 
 class VPseudoSF_VTileStore
-    : RISCVVPseudo<(outs), (ins GPR:$rs2, GPR:$rs1, AVL:$atn, ixlenimm:$sew,
-                                ixlenimm:$twiden)> {
+    : RISCVVPseudo<(outs), (ins GPR:$rs2, GPR:$rs1, GPRNoX0:$atn, sew:$sew,
+                                twiden:$twiden)> {
   let mayLoad = 0;
   let mayStore = 1;
   let HasVLOp = 1; // Tn
@@ -300,8 +304,8 @@ class VPseudoSF_VTileStore
 }
 
 class VPseudoSF_VTileMove_V_T
-    : RISCVVPseudo<(outs VRM8:$vd), (ins GPR:$rs1, AVL:$atn, ixlenimm:$sew,
-                                         ixlenimm:$twiden)> {
+    : RISCVVPseudo<(outs VRM8:$vd), (ins GPR:$rs1, GPRNoX0:$atn, sew:$sew,
+                                         twiden:$twiden)> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1; // Tn
@@ -311,8 +315,8 @@ class VPseudoSF_VTileMove_V_T
 }
 
 class VPseudoSF_VTileMove_T_V
-    : RISCVVPseudo<(outs), (ins GPR:$rs1, VRM8:$vs2, AVL:$atn, ixlenimm:$sew,
-                                ixlenimm:$twiden)> {
+    : RISCVVPseudo<(outs), (ins GPR:$rs1, VRM8:$vs2, GPRNoX0:$atn, sew:$sew,
+                                twiden:$twiden)> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1; // Tn
@@ -323,8 +327,9 @@ class VPseudoSF_VTileMove_T_V
 
 class VPseudoSF_MatMul<RegisterClass mtd_class>
     : RISCVVPseudo<(outs),
-                   (ins mtd_class:$rd, VRM8:$vs2, VRM8:$vs1, AVL:$atm, AVL:$atn,
-                        AVL:$atk, ixlenimm:$sew, ixlenimm:$twiden)> {
+                   (ins mtd_class:$rd, VRM8:$vs2, VRM8:$vs1, GPRNoX0:$atm,
+                        GPRNoX0:$atn, GPRNoX0:$atk, sew:$sew,
+                        twiden:$twiden)> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasTmOp = 1;
@@ -337,9 +342,9 @@ class VPseudoSF_MatMul<RegisterClass mtd_class>
 
 class VPseudoSF_MatMul_FRM<RegisterClass mtd_class>
     : RISCVVPseudo<(outs),
-                   (ins mtd_class:$rd, VRM8:$vs2, VRM8:$vs1, ixlenimm:$frm,
-                        AVL:$atm, AVL:$atn, AVL:$atk, ixlenimm:$sew,
-                        ixlenimm:$twiden), []> {
+                   (ins mtd_class:$rd, VRM8:$vs2, VRM8:$vs1, vec_rm:$rm,
+                        GPRNoX0:$atm, GPRNoX0:$atn, GPRNoX0:$atk, sew:$sew,
+                        twiden:$twiden), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasTmOp = 1;
@@ -375,12 +380,12 @@ let Defs = [VL, VTYPE] in {
 let Defs = [VTYPE], Uses = [VTYPE], HasTWidenOp = 1, HasSEWOp = 1 in {
   def PseudoSF_VSETTM
       : Pseudo<(outs GPR:$rd),
-               (ins GPR:$rs1, ixlenimm:$log2sew, ixlenimm:$twiden), []>,
+               (ins GPR:$rs1, sew:$sew, twiden:$twiden), []>,
         PseudoInstExpansion<(SF_VSETTM GPR:$rd, GPR:$rs1)>,
         Sched<[WriteVSETVLI, ReadVSETVLI]>;
   def PseudoSF_VSETTK
       : Pseudo<(outs GPR:$rd),
-               (ins GPR:$rs1, ixlenimm:$logwsew, ixlenimm:$twiden), []>,
+               (ins GPR:$rs1, sew:$sew, twiden:$twiden), []>,
         PseudoInstExpansion<(SF_VSETTK GPR:$rd, GPR:$rs1)>,
         Sched<[WriteVSETVLI, ReadVSETVLI]>;
 }
@@ -413,8 +418,8 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
   let HasVLOp = 1, HasTmOp = 1, HasTWidenOp = 1, HasSEWOp = 1 in
     def PseudoSF_VTZERO_T
         : RISCVVPseudo<(outs),
-                       (ins TR:$rd, AVL:$atm, AVL:$atn, ixlenimm:$sew,
-                            ixlenimm:$twiden)>;
+                       (ins TR:$rd, GPRNoX0:$atm, GPRNoX0:$atn, sew:$sew,
+                            twiden:$twiden)>;
   def PseudoSF_VTDISCARD : RISCVVPseudo<(outs), (ins), []>;
 }
 
@@ -424,7 +429,7 @@ class VPatXSfmmTileStore<string intrinsic_name,
   Pat<(!cast<Intrinsic>(intrinsic_name)
        (XLenVT GPR:$rs2),
        (XLenVT GPR:$rs1),
-       (XLenVT AVL:$tn)),
+       (XLenVT GPRNoX0:$tn)),
       (!cast<Instruction>(inst_name)
        (XLenVT GPR:$rs2),
        (XLenVT GPR:$rs1),
@@ -437,7 +442,7 @@ class VPatXSfmmTileMove_T_V<string intrinsic_name,
   Pat<(!cast<Intrinsic>(intrinsic_name)
                     (XLenVT GPR:$rs1),
                     (reg_type VRM8:$vs2),
-                    (XLenVT AVL:$atn)),
+                    (XLenVT GPRNoX0:$atn)),
       (!cast<Instruction>(inst_name)
        (XLenVT GPR:$rs1),
        (reg_type VRM8:$vs2),
@@ -449,7 +454,7 @@ class VPatXSfmmTileMove_V_T<string intrinsic_name,
                             int log2sew> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
                     (XLenVT GPR:$rs1),
-                    (XLenVT AVL:$atn))),
+                    (XLenVT GPRNoX0:$atn))),
       (!cast<Instruction>(inst_name)
        (XLenVT GPR:$rs1),
        GPR:$atn, log2sew, 1)>;

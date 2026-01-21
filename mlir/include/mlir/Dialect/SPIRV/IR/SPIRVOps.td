@@ -45,6 +45,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVNonUniformOps.td"
 include "mlir/Dialect/SPIRV/IR/SPIRVPrimitiveOps.td"
 include "mlir/Dialect/SPIRV/IR/SPIRVCLOps.td"
 include "mlir/Dialect/SPIRV/IR/SPIRVStructureOps.td"
+include "mlir/Dialect/SPIRV/IR/SPIRVTosaOps.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 #endif // MLIR_DIALECT_SPIRV_IR_OPS

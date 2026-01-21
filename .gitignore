@@ -47,6 +47,7 @@ cscope.out
 autoconf/aclocal.m4
 autoconf/autom4te.cache
 /compile_commands.json
+/tablegen_compile_commands.yml
 # Visual Studio built-in CMake configuration
 /CMakeSettings.json
 # CLion project configuration
@@ -57,6 +58,12 @@ autoconf/autom4te.cache
 .claude/
 /GEMINI.md
 .gemini/
+AGENTS.md
+.codex/
+# Cursor specific files
+.cursor
+.cursorignore
+.cursorindexingignore
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
@@ -71,6 +78,7 @@ pythonenv*
 # clangd index. (".clangd" is a config file now, thus trailing slash)
 .clangd/
 .cache
+.clangd
 # static analyzer regression testing project files
 /clang/utils/analyzer/projects/*/CachedSource
 /clang/utils/analyzer/projects/*/PatchedSource

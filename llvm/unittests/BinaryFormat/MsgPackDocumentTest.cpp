@@ -420,3 +420,89 @@ TEST(MsgPackDocument, TestInputYAMLMap) {
   ASSERT_EQ(SS.getKind(), Type::String);
   ASSERT_EQ(SS.getString(), "2");
 }
+
+TEST(MsgPackDocument, TestYAMLBoolean) {
+  Document Doc;
+  auto GetFirst = [](Document &Doc) { return Doc.getRoot().getArray()[0]; };
+  auto ToYAML = [](Document &Doc) {
+    std::string S;
+    raw_string_ostream OS(S);
+    Doc.toYAML(OS);
+    return S;
+  };
+
+  bool Ok;
+
+  Ok = Doc.fromYAML("- n\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::String);
+  ASSERT_EQ(GetFirst(Doc).getString(), "n");
+  ASSERT_EQ(ToYAML(Doc), "---\n- n\n...\n");
+
+  Ok = Doc.fromYAML("- y\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::String);
+  ASSERT_EQ(GetFirst(Doc).getString(), "y");
+  ASSERT_EQ(ToYAML(Doc), "---\n- y\n...\n");
+
+  Ok = Doc.fromYAML("- no\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::String);
+  ASSERT_EQ(GetFirst(Doc).getString(), "no");
+  ASSERT_EQ(ToYAML(Doc), "---\n- no\n...\n");
+
+  Ok = Doc.fromYAML("- yes\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::String);
+  ASSERT_EQ(GetFirst(Doc).getString(), "yes");
+  ASSERT_EQ(ToYAML(Doc), "---\n- yes\n...\n");
+
+  Ok = Doc.fromYAML("- false\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::Boolean);
+  ASSERT_EQ(GetFirst(Doc).getBool(), false);
+  ASSERT_EQ(ToYAML(Doc), "---\n- false\n...\n");
+
+  Ok = Doc.fromYAML("- true\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::Boolean);
+  ASSERT_EQ(GetFirst(Doc).getBool(), true);
+  ASSERT_EQ(ToYAML(Doc), "---\n- true\n...\n");
+
+  Ok = Doc.fromYAML("- !str false\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::String);
+  ASSERT_EQ(GetFirst(Doc).getString(), "false");
+  ASSERT_EQ(ToYAML(Doc), "---\n- !str 'false'\n...\n");
+
+  Ok = Doc.fromYAML("- !str true\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::String);
+  ASSERT_EQ(GetFirst(Doc).getString(), "true");
+  ASSERT_EQ(ToYAML(Doc), "---\n- !str 'true'\n...\n");
+
+  Ok = Doc.fromYAML("- !bool false\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::Boolean);
+  ASSERT_EQ(GetFirst(Doc).getBool(), false);
+  ASSERT_EQ(ToYAML(Doc), "---\n- false\n...\n");
+
+  Ok = Doc.fromYAML("- !bool true\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::Boolean);
+  ASSERT_EQ(GetFirst(Doc).getBool(), true);
+  ASSERT_EQ(ToYAML(Doc), "---\n- true\n...\n");
+
+  // FIXME: A fix for these requires changes in YAMLParser/YAMLTraits.
+  Ok = Doc.fromYAML("- \"false\"\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::Boolean);
+  ASSERT_EQ(GetFirst(Doc).getBool(), false);
+  ASSERT_EQ(ToYAML(Doc), "---\n- false\n...\n");
+
+  Ok = Doc.fromYAML("- \"true\"\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::Boolean);
+  ASSERT_EQ(GetFirst(Doc).getBool(), true);
+  ASSERT_EQ(ToYAML(Doc), "---\n- true\n...\n");
+}

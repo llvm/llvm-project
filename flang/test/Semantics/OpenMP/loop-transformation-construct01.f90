@@ -5,45 +5,45 @@
 subroutine loop_transformation_construct1
   implicit none
 
+  !ERROR: OpenMP loop construct cannot apply to a fully unrolled loop
   !$omp do
-  !ERROR: A DO loop must follow the UNROLL directive
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp unroll
 end subroutine
 
 subroutine loop_transformation_construct2
   implicit none
-  integer :: i = 5
+  integer, parameter :: i = 5
   integer :: x
   integer :: v(i)
 
   !$omp do
+  !ERROR: At least one of SIZES clause must appear on the TILE directive
   !$omp tile
   do x = 1, i
     v(x) = v(x) * 2
   end do
   !$omp end tile
   !$omp end do
-  !ERROR: The END TILE directive must follow the DO loop associated with the loop construct
-  !$omp end tile
 end subroutine
 
-subroutine loop_transformation_construct2
+subroutine loop_transformation_construct3
   implicit none
-  integer :: i = 5
+  integer, parameter :: i = 5
   integer :: x
   integer :: v(i)
 
   !$omp do
-  !ERROR: Only Loop Transformation Constructs or Loop Nests can be nested within Loop Constructs
+  !ERROR: Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs
   !$omp parallel do
   do x = 1, i
     v(x) = v(x) * 2
   end do
 end subroutine
 
-subroutine loop_transformation_construct3
+subroutine loop_transformation_construct4
   implicit none
-  integer :: i = 5
+  integer, parameter :: i = 5
   integer :: x
   integer :: v(i)
 
@@ -51,18 +51,20 @@ subroutine loop_transformation_construct3
   do x = 1, i
     v(x) = v(x) * 2
   end do
-  !ERROR: A DO loop must follow the TILE directive
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+  !ERROR: At least one of SIZES clause must appear on the TILE directive
   !$omp tile
 end subroutine
 
-subroutine loop_transformation_construct4
+subroutine loop_transformation_construct5
   implicit none
-  integer :: i = 5
+  integer, parameter :: i = 5
   integer :: x
   integer :: v(i)
 
   !$omp do
-  !ERROR: If a loop construct has been fully unrolled, it cannot then be further transformed
+  !ERROR: OpenMP loop construct cannot apply to a fully unrolled loop
+  !ERROR: At least one of SIZES clause must appear on the TILE directive
   !$omp tile
   !$omp unroll full
   do x = 1, i
@@ -70,14 +72,15 @@ subroutine loop_transformation_construct4
   end do
 end subroutine
 
-subroutine loop_transformation_construct5
+subroutine loop_transformation_construct6
   implicit none
-  integer :: i = 5
+  integer, parameter :: i = 5
   integer :: x
   integer :: v(i)
 
   !$omp do
-  !ERROR: If a loop construct has been fully unrolled, it cannot then be further transformed
+  !ERROR: OpenMP loop construct cannot apply to a fully unrolled loop
+  !ERROR: At least one of SIZES clause must appear on the TILE directive
   !$omp tile
   !$omp unroll
   do x = 1, i
@@ -85,13 +88,14 @@ subroutine loop_transformation_construct5
   end do
 end subroutine
 
-subroutine loop_transformation_construct6
+subroutine loop_transformation_construct7
   implicit none
-  integer :: i = 5
+  integer, parameter :: i = 5
   integer :: x
   integer :: v(i)
 
   !$omp do
+  !ERROR: At least one of SIZES clause must appear on the TILE directive
   !$omp tile
   !$omp unroll partial(2)
   do x = 1, i

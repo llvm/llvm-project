@@ -8,13 +8,13 @@ SUBROUTINE aa(a, nn)
   !DIR$ assume_aligned a:16
 !CHECK:  !DIR$ ASSUME_ALIGNED a:16
   !DIR$ assume_aligned a (1):16
-!CHECK:  !DIR$ ASSUME_ALIGNED a(1):16  
+!CHECK:  !DIR$ ASSUME_ALIGNED a(1):16
   !DIR$ assume_aligned a(1):16
 !CHECK:  !DIR$ ASSUME_ALIGNED a(1):16
   !DIR$ assume_aligned a(nn):16
-!CHECK:  !DIR$ ASSUME_ALIGNED a(nn):16  
+!CHECK:  !DIR$ ASSUME_ALIGNED a(nn):16
   !DIR$ assume_aligned a(44):16
-!CHECK:  !DIR$ ASSUME_ALIGNED a(44):16  
+!CHECK:  !DIR$ ASSUME_ALIGNED a(44):16
   DO i=1,nn
      a(i)=a(i)+1.5
   END DO
@@ -31,22 +31,22 @@ END SUBROUTINE bb
 
 SUBROUTINE f(n)
   IMPLICIT NONE
-  TYPE node 
+  TYPE node
     REAL(KIND=8), POINTER :: a(:,:)
-  END TYPE NODE 
-  
+  END TYPE NODE
+
   TYPE(NODE), POINTER :: nodes
   INTEGER :: i
   INTEGER, INTENT(IN) :: n
 
-  ALLOCATE(nodes) 
+  ALLOCATE(nodes)
   ALLOCATE(nodes%a(1000,1000))
 
-  !DIR$ ASSUME_ALIGNED nodes%a(1,1) : 16               
+  !DIR$ ASSUME_ALIGNED nodes%a(1,1) : 16
 !CHECK: !DIR$ ASSUME_ALIGNED nodes%a(1,1):16
-  DO i=1,n 
-    nodes%a(1,i) = nodes%a(1,i)+1 
-  END DO 
+  DO i=1,n
+    nodes%a(1,i) = nodes%a(1,i)+1
+  END DO
 END SUBROUTINE f
 
 SUBROUTINE g(a, b)

@@ -328,7 +328,7 @@ TEST(TypePrinter, NestedNameSpecifiers) {
   // Further levels of nesting print the entire scope.
   ASSERT_TRUE(PrintedTypeMatches(
       Code, {}, fieldDecl(hasName("u"), hasType(qualType().bind("id"))),
-      "union level1()::Inner::Inner(int)::(anonymous struct)::(unnamed)",
+      "union level1()::Inner::Inner(int)::(unnamed struct)::(unnamed)",
       [](PrintingPolicy &Policy) {
         Policy.FullyQualifiedName = true;
         Policy.AnonymousTagLocations = false;
@@ -338,6 +338,25 @@ TEST(TypePrinter, NestedNameSpecifiers) {
       Code, {}, fieldDecl(hasName("u"), hasType(qualType().bind("id"))),
       "union (unnamed)", [](PrintingPolicy &Policy) {
         Policy.FullyQualifiedName = false;
+        Policy.AnonymousTagLocations = false;
+      }));
+}
+
+TEST(TypePrinter, NestedNameSpecifiersTypedef) {
+  constexpr char Code[] = R"cpp(
+    typedef union {
+      struct {
+        struct {
+          unsigned int baz;
+        } bar;
+      };
+    } foo;
+  )cpp";
+
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, fieldDecl(hasName("bar"), hasType(qualType().bind("id"))),
+      "struct foo::(anonymous struct)::(unnamed)", [](PrintingPolicy &Policy) {
+        Policy.FullyQualifiedName = true;
         Policy.AnonymousTagLocations = false;
       }));
 }
