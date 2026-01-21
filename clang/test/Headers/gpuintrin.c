@@ -1267,7 +1267,7 @@ __gpu_kernel void foo() {
 // SPIRV-NEXT:  [[ENTRY:.*:]]
 // SPIRV-NEXT:    [[__MASK:%.*]] = alloca <4 x i32>, align 16
 // SPIRV-NEXT:    [[REF_TMP:%.*]] = alloca <2 x i32>, align 8
-// SPIRV-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.spv.wave.ballot(i1 true)
+// SPIRV-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.spv.subgroup.ballot(i1 true)
 // SPIRV-NEXT:    store <4 x i32> [[TMP0]], ptr [[__MASK]], align 16
 // SPIRV-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[__MASK]], align 16
 // SPIRV-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[__MASK]], align 16
@@ -1335,7 +1335,7 @@ __gpu_kernel void foo() {
 // SPIRV-NEXT:    store i8 [[STOREDV]], ptr [[__X_ADDR]], align 1
 // SPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr [[__X_ADDR]], align 1
 // SPIRV-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
-// SPIRV-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.spv.wave.ballot(i1 [[LOADEDV]])
+// SPIRV-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.spv.subgroup.ballot(i1 [[LOADEDV]])
 // SPIRV-NEXT:    store <4 x i32> [[TMP1]], ptr [[__MASK]], align 16
 // SPIRV-NEXT:    [[TMP2:%.*]] = load i64, ptr [[__LANE_MASK_ADDR]], align 8
 // SPIRV-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[__MASK]], align 16

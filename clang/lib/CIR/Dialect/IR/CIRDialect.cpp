@@ -657,9 +657,16 @@ LogicalResult cir::CastOp::verify() {
              << "requires floating point !cir.complex type for result";
     return success();
   }
-  default:
-    llvm_unreachable("Unknown CastOp kind?");
+  case cir::CastKind::member_ptr_to_bool: {
+    if (!mlir::isa<cir::DataMemberType, cir::MethodType>(srcType))
+      return emitOpError()
+             << "requires !cir.data_member or !cir.method type for source";
+    if (!mlir::isa<cir::BoolType>(resType))
+      return emitOpError() << "requires !cir.bool type for result";
+    return success();
   }
+  }
+  llvm_unreachable("Unknown CastOp kind?");
 }
 
 static bool isIntOrBoolCast(cir::CastOp op) {
@@ -2700,6 +2707,53 @@ LogicalResult cir::GetRuntimeMemberOp::verify() {
     return emitError() << "record type does not match the member pointer type";
   if (getType().getPointee() != memberPtrTy.getMemberTy())
     return emitError() << "result type does not match the member pointer type";
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetMethodOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::GetMethodOp::verify() {
+  cir::MethodType methodTy = getMethod().getType();
+
+  // Assume objectTy is !cir.ptr<!T>
+  cir::PointerType objectPtrTy = getObject().getType();
+  mlir::Type objectTy = objectPtrTy.getPointee();
+
+  if (methodTy.getClassTy() != objectTy)
+    return emitError() << "method class type and object type do not match";
+
+  // Assume methodFuncTy is !cir.func<!Ret (!Args)>
+  auto calleeTy = mlir::cast<cir::FuncType>(getCallee().getType().getPointee());
+  cir::FuncType methodFuncTy = methodTy.getMemberFuncTy();
+
+  // We verify at here that calleeTy is !cir.func<!Ret (!cir.ptr<!void>, !Args)>
+  // Note that the first parameter type of the callee is !cir.ptr<!void> instead
+  // of !cir.ptr<!T> because the "this" pointer may be adjusted before calling
+  // the callee.
+
+  if (methodFuncTy.getReturnType() != calleeTy.getReturnType())
+    return emitError()
+           << "method return type and callee return type do not match";
+
+  llvm::ArrayRef<mlir::Type> calleeArgsTy = calleeTy.getInputs();
+  llvm::ArrayRef<mlir::Type> methodFuncArgsTy = methodFuncTy.getInputs();
+
+  if (calleeArgsTy.empty())
+    return emitError() << "callee parameter list lacks receiver object ptr";
+
+  auto calleeThisArgPtrTy = mlir::dyn_cast<cir::PointerType>(calleeArgsTy[0]);
+  if (!calleeThisArgPtrTy ||
+      !mlir::isa<cir::VoidType>(calleeThisArgPtrTy.getPointee())) {
+    return emitError()
+           << "the first parameter of callee must be a void pointer";
+  }
+
+  if (calleeArgsTy.slice(1) != methodFuncArgsTy)
+    return emitError()
+           << "callee parameters and method parameters do not match";
+
   return mlir::success();
 }
 
