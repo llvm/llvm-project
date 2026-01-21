@@ -1607,9 +1607,9 @@ TEST_F(AArch64GISelMITest, LowerFNEG) {
 
   auto CheckStr = R"(
   CHECK: [[FADD:%[0-9]+]]:_(s64) = nsz G_FADD %0:_, %1:_
-  CHECK: [[CONST0:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
+  CHECK: [[CONST0:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
   CHECK: [[FSUB0:%[0-9]+]]:_(s64) = G_XOR [[FADD]]:_, [[CONST0]]:_
-  CHECK: [[CONST1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
+  CHECK: [[CONST1:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
   CHECK: [[FSUB1:%[0-9]+]]:_(s64) = G_XOR %0:_, [[CONST1]]:_
   )";
 
@@ -1673,32 +1673,32 @@ TEST_F(AArch64GISelMITest, LowerMinMax) {
             Helper.lower(*UMaxV, 0, v2s32));
 
   auto CheckStr = R"(
-  CHECK: [[CMP0:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), %0:_(s64), %1:_
-  CHECK: [[SMIN:%[0-9]+]]:_(s64) = G_SELECT [[CMP0]]:_(s1), %0:_, %1:_
+  CHECK: [[CMP0:%[0-9]+]]:_(i1) = G_ICMP intpred(slt), %0:_(s64), %1:_
+  CHECK: [[SMIN:%[0-9]+]]:_(s64) = G_SELECT [[CMP0]]:_(i1), %0:_, %1:_
 
-  CHECK: [[CMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), %0:_(s64), %1:_
-  CHECK: [[SMAX:%[0-9]+]]:_(s64) = G_SELECT [[CMP1]]:_(s1), %0:_, %1:_
+  CHECK: [[CMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(sgt), %0:_(s64), %1:_
+  CHECK: [[SMAX:%[0-9]+]]:_(s64) = G_SELECT [[CMP1]]:_(i1), %0:_, %1:_
 
-  CHECK: [[CMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), %0:_(s64), %1:_
-  CHECK: [[UMIN:%[0-9]+]]:_(s64) = G_SELECT [[CMP2]]:_(s1), %0:_, %1:_
+  CHECK: [[CMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(ult), %0:_(s64), %1:_
+  CHECK: [[UMIN:%[0-9]+]]:_(s64) = G_SELECT [[CMP2]]:_(i1), %0:_, %1:_
 
-  CHECK: [[CMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), %0:_(s64), %1:_
-  CHECK: [[UMAX:%[0-9]+]]:_(s64) = G_SELECT [[CMP3]]:_(s1), %0:_, %1:_
+  CHECK: [[CMP3:%[0-9]+]]:_(i1) = G_ICMP intpred(ugt), %0:_(s64), %1:_
+  CHECK: [[UMAX:%[0-9]+]]:_(s64) = G_SELECT [[CMP3]]:_(i1), %0:_, %1:_
 
   CHECK: [[VEC0:%[0-9]+]]:_(<2 x s32>) = G_BITCAST %0:_(s64)
   CHECK: [[VEC1:%[0-9]+]]:_(<2 x s32>) = G_BITCAST %1:_(s64)
 
-  CHECK: [[VCMP0:%[0-9]+]]:_(<2 x s1>) = G_ICMP intpred(slt), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
-  CHECK: [[SMINV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP0]]:_(<2 x s1>), [[VEC0]]:_, [[VEC1]]:_
+  CHECK: [[VCMP0:%[0-9]+]]:_(<2 x i1>) = G_ICMP intpred(slt), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
+  CHECK: [[SMINV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP0]]:_(<2 x i1>), [[VEC0]]:_, [[VEC1]]:_
 
-  CHECK: [[VCMP1:%[0-9]+]]:_(<2 x s1>) = G_ICMP intpred(sgt), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
-  CHECK: [[SMAXV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP1]]:_(<2 x s1>), [[VEC0]]:_, [[VEC1]]:_
+  CHECK: [[VCMP1:%[0-9]+]]:_(<2 x i1>) = G_ICMP intpred(sgt), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
+  CHECK: [[SMAXV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP1]]:_(<2 x i1>), [[VEC0]]:_, [[VEC1]]:_
 
-  CHECK: [[VCMP2:%[0-9]+]]:_(<2 x s1>) = G_ICMP intpred(ult), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
-  CHECK: [[UMINV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP2]]:_(<2 x s1>), [[VEC0]]:_, [[VEC1]]:_
+  CHECK: [[VCMP2:%[0-9]+]]:_(<2 x i1>) = G_ICMP intpred(ult), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
+  CHECK: [[UMINV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP2]]:_(<2 x i1>), [[VEC0]]:_, [[VEC1]]:_
 
-  CHECK: [[VCMP3:%[0-9]+]]:_(<2 x s1>) = G_ICMP intpred(ugt), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
-  CHECK: [[UMAXV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP3]]:_(<2 x s1>), [[VEC0]]:_, [[VEC1]]:_
+  CHECK: [[VCMP3:%[0-9]+]]:_(<2 x i1>) = G_ICMP intpred(ugt), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
+  CHECK: [[UMAXV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP3]]:_(<2 x i1>), [[VEC0]]:_, [[VEC1]]:_
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -2181,8 +2181,8 @@ TEST_F(AArch64GISelMITest, LibcallMul) {
   CHECK: $x0 = COPY [[COPY]]
   CHECK: $x1 = COPY [[COPY]]
   CHECK: BL &__muldi3
-  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
-  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV2:%[0-9]+]]:_(i64), [[UV3:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x0 = COPY [[UV]]
   CHECK: $x1 = COPY [[UV1]]
   CHECK: $x2 = COPY [[UV2]]
@@ -2239,8 +2239,8 @@ TEST_F(AArch64GISelMITest, LibcallSRem) {
   CHECK: $x0 = COPY [[COPY]]
   CHECK: $x1 = COPY [[COPY]]
   CHECK: BL &__moddi3
-  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
-  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV2:%[0-9]+]]:_(i64), [[UV3:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x0 = COPY [[UV]]
   CHECK: $x1 = COPY [[UV1]]
   CHECK: $x2 = COPY [[UV2]]
@@ -2297,8 +2297,8 @@ TEST_F(AArch64GISelMITest, LibcallURem) {
   CHECK: $x0 = COPY [[COPY]]
   CHECK: $x1 = COPY [[COPY]]
   CHECK: BL &__umoddi3
-  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
-  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV2:%[0-9]+]]:_(i64), [[UV3:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x0 = COPY [[UV]]
   CHECK: $x1 = COPY [[UV1]]
   CHECK: $x2 = COPY [[UV2]]
@@ -2354,7 +2354,7 @@ TEST_F(AArch64GISelMITest, LibcallCtlzZeroUndef) {
   CHECK: BL &__clzsi2
   CHECK: $x0 = COPY [[COPY]]
   CHECK: BL &__clzdi2
-  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x0 = COPY [[UV]]
   CHECK: $x1 = COPY [[UV1]]
   CHECK: BL &__clzti2
@@ -4267,7 +4267,7 @@ TEST_F(AArch64GISelMITest, MoreElementsSelect) {
   CHECK: [[ZERO0:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), %{{[0-9]+}}:_(s64), [[ZERO0]]
   CHECK: [[IMPDEF:%[0-9]+]]:_(<2 x s1>) = G_IMPLICIT_DEF
-  CHECK: [[ZERO1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  CHECK: [[ZERO1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
   CHECK: [[INSERT:%[0-9]+]]:_(<2 x s1>) = G_INSERT_VECTOR_ELT [[IMPDEF]]:_, [[CMP]]:_(s1), [[ZERO1]]
   CHECK: [[SHUFFLE:%[0-9]+]]:_(<2 x s1>) = G_SHUFFLE_VECTOR [[INSERT]]:_(<2 x s1>), [[IMPDEF]]:_, shufflemask(0, 0)
   CHECK: [[SELECT:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[SHUFFLE]]:_(<2 x s1>), [[BITCAST0]]:_, [[BITCAST1]]:_
