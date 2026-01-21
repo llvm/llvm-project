@@ -542,7 +542,7 @@ optMain(int argc, char **argv,
 
     Triple TT(TripleStr);
 
-    std::string Str = TT.computeDataLayout(ABIName);
+    std::string Str = TT.computeDataLayout(ABIName, codegen::getFeaturesStr());
     if (Str.empty()) {
       errs() << argv[0]
              << ": warning: failed to infer data layout from target triple\n";

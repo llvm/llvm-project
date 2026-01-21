@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
 using namespace llvm;
@@ -279,14 +281,14 @@ static std::string computeAMDDataLayout(const Triple &TT) {
          "v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
 }
 
-static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
+static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName,
+                                          StringRef FS) {
   if (TT.isOSBinFormatMachO()) {
     assert(TT.isLittleEndian() && "Invalid endianness");
     assert(TT.isArch32Bit() && "Invalid triple");
     assert((ABIName != "ilp32e") && "Invalid ABI.");
     return "e-m:o-p:32:32-i64:64-n32-S128";
   }
-
   std::string Ret;
 
   if (TT.isLittleEndian())
@@ -296,14 +298,25 @@ static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
 
   Ret += "-m:e";
 
+  std::vector<std::string> Features;
+  if (!FS.empty())
+    llvm::append_range(Features, llvm::split(FS, ','));
+  auto ISAInfo = cantFail(
+      llvm::RISCVISAInfo::parseFeatures(TT.isArch64Bit() ? 64 : 32, Features));
+  bool HasRVY = ISAInfo->hasExtension("experimental-y");
+
   // Pointer and integer sizes.
   if (TT.isRISCV64()) {
-    Ret += "-p:64:64-i64:64-i128:128";
-    Ret += "-n32:64";
+    Ret += "-p:64:64";
+    if (HasRVY)
+      Ret += "-pe200:128:128:128:64";
+    Ret += "-i64:64-i128:128-n32:64";
   } else {
     assert(TT.isRISCV32() && "only RV32 and RV64 are currently supported");
-    Ret += "-p:32:32-i64:64";
-    Ret += "-n32";
+    Ret += "-p:32:32";
+    if (HasRVY)
+      Ret += "-pe200:64:64:64:32";
+    Ret += "-i64:64-n32";
   }
 
   // Stack alignment based on ABI.
@@ -541,7 +554,7 @@ static std::string computeVEDataLayout(const Triple &T) {
   return Ret;
 }
 
-std::string Triple::computeDataLayout(StringRef ABIName) const {
+std::string Triple::computeDataLayout(StringRef ABIName, StringRef FS) const {
   switch (getArch()) {
   case Triple::arm:
   case Triple::armeb:
@@ -596,7 +609,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::riscv64:
   case Triple::riscv32be:
   case Triple::riscv64be:
-    return computeRISCVDataLayout(*this, ABIName);
+    return computeRISCVDataLayout(*this, ABIName, FS);
   case Triple::sparc:
   case Triple::sparcv9:
   case Triple::sparcel:
