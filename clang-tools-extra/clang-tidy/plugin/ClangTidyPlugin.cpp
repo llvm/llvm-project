@@ -1,4 +1,4 @@
-//===- ClangTidyPlugin.cpp - clang-tidy as a clang plugin -----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +14,7 @@
 #include "clang/Frontend/MultiplexConsumer.h"
 
 namespace clang::tidy {
+namespace {
 
 /// The core clang tidy plugin action. This just provides the AST consumer and
 /// command line flag parsing for using clang-tidy as a clang plugin.
@@ -74,6 +75,8 @@ public:
 private:
   std::unique_ptr<ClangTidyContext> Context;
 };
+
+} // namespace
 } // namespace clang::tidy
 
 // This anchor is used to force the linker to link in the generated object file

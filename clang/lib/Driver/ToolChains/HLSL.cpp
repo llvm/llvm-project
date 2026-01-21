@@ -412,7 +412,17 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 
   const OptTable &Opts = getDriver().getOpts();
 
+  if (Args.hasArg(options::OPT_dxc_col_major) &&
+      Args.hasArg(options::OPT_dxc_row_major))
+    getDriver().Diag(diag::err_drv_dxc_invalid_matrix_layout);
+
   for (Arg *A : Args) {
+    if (A->getOption().getID() == options::OPT_dxc_all_resources_bound) {
+      DAL->AddFlagArg(nullptr,
+                      Opts.getOption(options::OPT_hlsl_all_resources_bound));
+      A->claim();
+      continue;
+    }
     if (A->getOption().getID() == options::OPT_dxil_validator_version) {
       StringRef ValVerStr = A->getValue();
       if (!isLegalValidatorVersion(ValVerStr, getDriver()))
@@ -503,6 +513,20 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       // -fnative-int16-type
       DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_half_type));
       DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_int16_type));
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_col_major) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
+                        "column-major");
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_row_major) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
+                        "row-major");
       A->claim();
       continue;
     }

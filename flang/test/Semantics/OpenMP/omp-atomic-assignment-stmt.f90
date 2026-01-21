@@ -45,8 +45,8 @@ program sample
 
     !$omp atomic
     !ERROR: Atomic variable k cannot be ALLOCATABLE
-        k = v * k  
-         
+        k = v * k
+
     !$omp atomic write
     !ERROR: Within atomic operation z%y and x+z%y access the same storage
        z%y = x + z%y
@@ -58,7 +58,7 @@ program sample
     !$omp atomic write
     !ERROR: Within atomic operation m and min(m,x,z%m)+k access the same storage
         m = min(m, x, z%m) + k
- 
+
     !$omp atomic read
     !ERROR: Within atomic operation x and x access the same storage
         x = x

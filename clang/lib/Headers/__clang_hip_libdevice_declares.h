@@ -309,28 +309,6 @@ __device__ __attribute__((pure)) __2f16 __ocml_log_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log10_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log2_2f16(__2f16);
 
-#if HIP_VERSION_MAJOR * 100 + HIP_VERSION_MINOR >= 560
-#define __DEPRECATED_SINCE_HIP_560(X) __attribute__((deprecated(X)))
-#else
-#define __DEPRECATED_SINCE_HIP_560(X)
-#endif
-
-// Deprecated, should be removed when rocm releases using it are no longer
-// relevant.
-__DEPRECATED_SINCE_HIP_560("use ((_Float16)1.0) / ")
-__device__ inline _Float16 __llvm_amdgcn_rcp_f16(_Float16 x) {
-  return ((_Float16)1.0f) / x;
-}
-
-__DEPRECATED_SINCE_HIP_560("use ((__2f16)1.0) / ")
-__device__ inline __2f16
-__llvm_amdgcn_rcp_2f16(__2f16 __x)
-{
-  return ((__2f16)1.0f) / __x;
-}
-
-#undef __DEPRECATED_SINCE_HIP_560
-
 __device__ __attribute__((const)) __2f16 __ocml_rint_2f16(__2f16);
 __device__ __attribute__((const)) __2f16 __ocml_rsqrt_2f16(__2f16);
 __device__ __2f16 __ocml_sin_2f16(__2f16);

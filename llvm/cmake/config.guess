@@ -908,6 +908,9 @@ EOF
     crisv32:Linux:*:*)
 	echo crisv32-axis-linux-gnu
 	exit ;;
+    e2k:Linux:*:*)
+	echo ${UNAME_MACHINE}-unknown-linux-gnu
+	exit ;;
     frv:Linux:*:*)
 	echo frv-unknown-linux-gnu
 	exit ;;

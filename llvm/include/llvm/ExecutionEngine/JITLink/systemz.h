@@ -507,6 +507,21 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   RequestGOTAndTransformToDelta32dbl,
 
+  /// A TLSInfo entry getter/constructor, transformed to Delta64FromGOT.
+  ///
+  /// Indicates that this edge should be transformed into a Delta64FromGOT
+  /// targeting the TLSInfo entry for the edge's current target. A TLSInfo
+  /// entry for the target should be created if one does not already exist.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestTLSDescInGOTAndTransformToDelta64FromGOT,
+
   /// A 32-bit Delta to GOT base.
   ///
   /// Fixup expression:
@@ -832,7 +847,7 @@ public:
       KindToSet = systemz::Delta64FromGOT;
       break;
     case systemz::RequestGOTAndTransformToDelta32dbl:
-      KindToSet = systemz::DeltaPLT32dbl;
+      KindToSet = systemz::Delta32dbl;
       break;
     default:
       return false;
@@ -914,6 +929,11 @@ public:
   GOTTableManager &GOT;
   Section *StubsSection = nullptr;
 };
+
+/// Optimize the GOT and Stub relocations edge kind DeltaPLT32dbl if the edge
+/// target address is in range. For this edge kind, if the target is in range,
+/// replace a indirect jump by plt stub with a direct jump to the target.
+LLVM_ABI Error optimizeGOTAndStubAccesses(LinkGraph &G);
 
 } // namespace systemz
 } // namespace jitlink

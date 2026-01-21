@@ -87,10 +87,6 @@ public:
   bool defaultSynthProperties() const { return DefaultSynthProperties; }
 };
 
-/// \returns true if \p Class is NS or CF objects AND not retained, false if
-/// not, std::nullopt if inconclusive.
-std::optional<bool> isUnretained(const clang::QualType T, bool IsARCEnabled);
-
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUncounted(const clang::CXXRecordDecl* Class);
@@ -106,10 +102,6 @@ std::optional<bool> isUncountedPtr(const clang::QualType T);
 /// \returns true if \p T is either a raw pointer or reference to an unchecked
 /// class, false if not, std::nullopt if inconclusive.
 std::optional<bool> isUncheckedPtr(const clang::QualType T);
-
-/// \returns true if \p T is either a raw pointer or reference to an uncounted
-/// or unchecked class, false if not, std::nullopt if inconclusive.
-std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled);
 
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or its
 /// variant, false if not.

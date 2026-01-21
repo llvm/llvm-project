@@ -1,11 +1,11 @@
 set(BUILTINS_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-# If COMPILER_RT_TEST_BUILTINS_DIR is set, the builtins
+# If COMPILER_RT_TEST_EXTERNAL_BUILTINS is set, the builtins
 # were already built and we are just going to test them.
 # NOTE: This is currently an LLVM-internal option which should
 # only be used by the LLVM_ENABLE_RUNTIMES build configured
 # in llvm/runtimes/CMakeLists.txt
-if(COMPILER_RT_TEST_BUILTINS_DIR)
+if(COMPILER_RT_TEST_EXTERNAL_BUILTINS)
   set(BUILTINS_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 else()
   set(BUILTINS_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS} builtins)
@@ -23,7 +23,7 @@ configure_lit_site_cfg(
 
 include(builtin-config-ix)
 
-if (COMPILER_RT_BUILD_CRT)
+if (COMPILER_RT_BUILD_CRT AND TARGET crt)
   list(APPEND BUILTINS_TEST_DEPS crt)
 endif()
 pythonize_bool(COMPILER_RT_BUILD_CRT)
@@ -91,21 +91,23 @@ foreach(arch ${BUILTIN_TEST_ARCH})
   if(APPLE)
     # TODO: Support other Apple platforms.
     set(BUILTIN_LIB_TARGET_NAME "clang_rt.builtins_${arch}_osx")
+    set(BUILTIN_LIB_OUTPUT_NAME "clang_rt.builtins_${arch}_osx")
   else()
     set(BUILTIN_LIB_TARGET_NAME "clang_rt.builtins-${arch}")
+    set_output_name(BUILTIN_LIB_OUTPUT_NAME clang_rt.builtins ${arch})
   endif()
   # Normally, we can just inspect the target directly to get the sources, but if
-  # we are testing an externally-built builtins library, we expect
-  # COMPILER_RT_TEST_BUILTINS_DIR to be set and contain a file named
-  # ${BUILTIN_LIB_TARGET_NAME}.sources.txt from the builtins build. This file
-  # is created by compiler-rt/lib/builtins/CMakeLists.txt
-  if(NOT COMPILER_RT_TEST_BUILTINS_DIR)
+  # we are testing an externally-built builtins library, we expect a file named
+  # ${BUILTIN_LIB_OUTPUT_NAME}.sources.txt in the compiler-rt output directory.
+  # This file is created by compiler-rt/lib/builtins/CMakeLists.txt
+  if(NOT COMPILER_RT_TEST_EXTERNAL_BUILTINS)
     if (NOT TARGET "${BUILTIN_LIB_TARGET_NAME}")
       message(FATAL_ERROR "Target ${BUILTIN_LIB_TARGET_NAME} does not exist")
     endif()
     get_target_property(BUILTIN_LIB_SOURCES "${BUILTIN_LIB_TARGET_NAME}" SOURCES)
   else()
-    file(READ "${COMPILER_RT_TEST_BUILTINS_DIR}/${BUILTIN_LIB_TARGET_NAME}.sources.txt" BUILTIN_LIB_SOURCES)
+    get_compiler_rt_output_dir(${arch} BUILTIN_LIB_OUTPUT_DIR)
+    file(READ "${BUILTIN_LIB_OUTPUT_DIR}/${BUILTIN_LIB_OUTPUT_NAME}.sources.txt" BUILTIN_LIB_SOURCES)
   endif()
   list(LENGTH BUILTIN_LIB_SOURCES BUILTIN_LIB_SOURCES_LENGTH)
   if (BUILTIN_LIB_SOURCES_LENGTH EQUAL 0)

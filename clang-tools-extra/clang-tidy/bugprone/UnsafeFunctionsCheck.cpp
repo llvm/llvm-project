@@ -19,21 +19,19 @@ using namespace llvm;
 
 namespace clang::tidy::bugprone {
 
-static constexpr llvm::StringLiteral OptionNameCustomFunctions =
-    "CustomFunctions";
-static constexpr llvm::StringLiteral OptionNameReportDefaultFunctions =
+static constexpr StringRef OptionNameCustomFunctions = "CustomFunctions";
+static constexpr StringRef OptionNameReportDefaultFunctions =
     "ReportDefaultFunctions";
-static constexpr llvm::StringLiteral OptionNameReportMoreUnsafeFunctions =
+static constexpr StringRef OptionNameReportMoreUnsafeFunctions =
     "ReportMoreUnsafeFunctions";
 
-static constexpr llvm::StringLiteral FunctionNamesWithAnnexKReplacementId =
+static constexpr StringRef FunctionNamesWithAnnexKReplacementId =
     "FunctionNamesWithAnnexKReplacement";
-static constexpr llvm::StringLiteral FunctionNamesId = "FunctionsNames";
-static constexpr llvm::StringLiteral AdditionalFunctionNamesId =
+static constexpr StringRef FunctionNamesId = "FunctionsNames";
+static constexpr StringRef AdditionalFunctionNamesId =
     "AdditionalFunctionsNames";
-static constexpr llvm::StringLiteral CustomFunctionNamesId =
-    "CustomFunctionNames";
-static constexpr llvm::StringLiteral DeclRefId = "DRE";
+static constexpr StringRef CustomFunctionNamesId = "CustomFunctionNames";
+static constexpr StringRef DeclRefId = "DRE";
 
 static std::optional<std::string>
 getAnnexKReplacementFor(StringRef FunctionName) {
@@ -62,7 +60,8 @@ static StringRef getReplacementFor(StringRef FunctionName,
       .Cases({"asctime", "asctime_r"}, "strftime")
       .Case("gets", "fgets")
       .Case("rewind", "fseek")
-      .Case("setbuf", "setvbuf");
+      .Case("setbuf", "setvbuf")
+      .Case("get_temporary_buffer", "operator new[]");
 }
 
 static StringRef getReplacementForAdditional(StringRef FunctionName,
@@ -99,6 +98,9 @@ static StringRef getRationaleFor(StringRef FunctionName) {
       .Cases({"rewind", "setbuf"}, "has no error detection")
       .Case("vfork", "is insecure as it can lead to denial of service "
                      "situations in the parent process")
+      .Case("get_temporary_buffer", "returns uninitialized memory without "
+                                    "performance advantages, was deprecated in "
+                                    "C++17 and removed in C++20")
       .Default("is not bounds-checking");
 }
 
@@ -157,7 +159,7 @@ parseCheckedFunctions(StringRef Option, ClangTidyContext *Context) {
 
     Result.push_back(
         {Name.trim().str(),
-         matchers::MatchesAnyListedNameMatcher::NameMatcher(Name.trim()),
+         matchers::MatchesAnyListedRegexNameMatcher::NameMatcher(Name.trim()),
          Replacement.trim().str(), Reason.trim().str()});
   }
 
@@ -169,13 +171,12 @@ static std::string serializeCheckedFunctions(
   std::vector<std::string> Result;
   Result.reserve(Functions.size());
 
-  for (const auto &Entry : Functions) {
+  for (const auto &Entry : Functions)
     if (Entry.Reason.empty())
       Result.push_back(Entry.Name + "," + Entry.Replacement);
     else
       Result.push_back(Entry.Name + "," + Entry.Replacement + "," +
                        Entry.Reason);
-  }
 
   return llvm::join(Result, ";");
 }
@@ -224,7 +225,8 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
 
     // Matching functions with replacements without Annex K.
     auto FunctionNamesMatcher =
-        hasAnyName("::asctime", "asctime_r", "::gets", "::rewind", "::setbuf");
+        hasAnyName("::asctime", "asctime_r", "::gets", "::rewind", "::setbuf",
+                   "::std::get_temporary_buffer");
     Finder->addMatcher(
         declRefExpr(
             to(functionDecl(FunctionNamesMatcher).bind(FunctionNamesId)))
@@ -250,7 +252,8 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
     for (const auto &Entry : CustomFunctions)
       FunctionNames.emplace_back(Entry.Name);
 
-    auto CustomFunctionsMatcher = matchers::matchesAnyListedName(FunctionNames);
+    auto CustomFunctionsMatcher =
+        matchers::matchesAnyListedRegexName(FunctionNames);
 
     Finder->addMatcher(declRefExpr(to(functionDecl(CustomFunctionsMatcher)
                                           .bind(CustomFunctionNamesId)))

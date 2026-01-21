@@ -72,21 +72,12 @@ test_call_extern_plt_stub:
 
         .size   test_call_extern_plt_stub, .-test_call_extern_plt_stub
 
-# Check R_390_PLT32(DeltaPLT32dbl) handling with a call to an external. 
-# This produces a Delta32dbl edge, because externals are not defined 
-# locally. During resolution, the target turns out to be in-range from the 
-# callsite.
-### TODO: edge can be relaxed in post-allocation optimization, it will then
-### require:
-### jitlink-check: decode_operand(test_call_extern, 1) = \
-### jitlink-check:     extern_in_range32 - test_call_extern
-#
-# Same as test_call_extern_plt(no-optimization)
+# Check R_390_PTL32DBL handling with a call to an external. This produces edge
+# DeltaPLT32dbl, because externals are not defined locally. During resolution,
+# the target turns out to be in-range from the callsite and so the edge is
+# relaxed in post-allocation optimization to Delta32dbl.
 # jitlink-check: decode_operand(test_call_extern, 1) = \
-# jitlink-check:     stub_addr(elf_pic_reloc.o, extern_in_range32) - \
-# jitlink-check:        test_call_extern
-# jitlink-check: *{8}(got_addr(elf_pic_reloc.o, extern_in_range32)) = \
-# jitlink-check:     extern_in_range32
+# jitlink-check:     extern_in_range32 - test_call_extern
         .globl  test_call_extern
         .p2align       4
         .type   test_call_extern,@function

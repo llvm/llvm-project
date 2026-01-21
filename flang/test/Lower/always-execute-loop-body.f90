@@ -1,5 +1,5 @@
-! RUN: bbc --always-execute-loop-body --emit-fir -hlfir=false %s -o - | FileCheck %s
-! RUN: %flang_fc1 -mmlir --always-execute-loop-body -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
+! RUN: bbc --always-execute-loop-body --emit-fir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mmlir --always-execute-loop-body -emit-fir %s -o - | FileCheck %s
 
 ! Given the flag `--always-execute-loop-body` the compiler emits an extra
 ! code to change to tripcount, test tries to verify the extra emitted FIR.
@@ -8,11 +8,12 @@
 subroutine some()
   integer :: i
 
-  ! CHECK: [[tripcount:%[0-9]+]] = arith.divsi
-  ! CHECK: [[one:%c1_i32[_0-9]*]] = arith.constant 1 : i32
-  ! CHECK: [[cmp:%[0-9]+]] = arith.cmpi slt, [[tripcount]], [[one]] : i32
-  ! CHECK: [[newtripcount:%[0-9]+]] = arith.select [[cmp]], [[one]], [[tripcount]] : i32
-  ! CHECK: fir.store [[newtripcount]] to %{{[0-9]+}} : !fir.ref<i32>
+  ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+  ! CHECK: %[[TRIP:.*]] = fir.alloca i32
+  ! CHECK: fir.store %[[C1]] to %[[TRIP]] : !fir.ref<i32>
+  ! CHECK: %[[LOADED_TRIP:.*]] = fir.load %[[TRIP]] : !fir.ref<i32>
+  ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[LOADED_TRIP]], %c0{{.*}} : i32
+  ! CHECK: cf.cond_br %[[CMP]]
   do i=4,1,1
     stop 2
   end do
