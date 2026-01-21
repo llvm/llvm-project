@@ -287,23 +287,10 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
 }
 
 bool llvm::isDereferenceableAndAlignedInLoop(
-    LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
-    AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
-  const Align Alignment = LI->getAlign();
-  auto &DL = LI->getDataLayout();
-  Value *Ptr = LI->getPointerOperand();
-  APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
-                DL.getTypeStoreSize(LI->getType()).getFixedValue());
-
-  // If given a uniform (i.e. non-varying) address, see if we can prove the
-  // access is safe within the loop w/o needing predication.
-  if (L->isLoopInvariant(Ptr))
-    return isDereferenceableAndAlignedPointer(
-        Ptr, Alignment, EltSize, DL, &*L->getHeader()->getFirstNonPHIIt(), AC,
-        &DT);
-
-  const SCEV *PtrScev = SE.getSCEV(Ptr);
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrScev);
+    const SCEV *PtrSCEV, Align Alignment, const SCEV *EltSizeSCEV, Loop *L,
+    ScalarEvolution &SE, DominatorTree &DT, AssumptionCache *AC,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+  auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrSCEV);
 
   // Check to see if we have a repeating access pattern and it's possible
   // to prove all accesses are well aligned.
@@ -314,6 +301,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (!Step)
     return false;
 
+  const APInt &EltSize = cast<SCEVConstant>(EltSizeSCEV)->getAPInt();
   // For the moment, restrict ourselves to the case where the access size is a
   // multiple of the requested alignment and the base is aligned.
   // TODO: generalize if a case found which warrants
@@ -333,9 +321,11 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
   std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+
+  auto &DL = L->getHeader()->getDataLayout();
   const auto &[AccessStart, AccessEnd] =
-      getStartAndEndForAccess(L, PtrScev, LI->getType(), BECount, MaxBECount,
-                              &SE, nullptr, &DT, AC, LoopGuards);
+      getStartAndEndForAccess(L, PtrSCEV, EltSizeSCEV, BECount, MaxBECount, &SE,
+                              nullptr, &DT, AC, LoopGuards);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
@@ -406,6 +396,29 @@ bool llvm::isDereferenceableAndAlignedInLoop(
              DL, CtxI, AC, &DT) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, DL,
                                             CtxI, AC, &DT);
+}
+
+bool llvm::isDereferenceableAndAlignedInLoop(
+    LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
+    AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+  auto &DL = LI->getDataLayout();
+  Value *Ptr = LI->getPointerOperand();
+  const SCEV *PtrSCEV = SE.getSCEV(Ptr);
+
+  // If given a uniform (i.e. non-varying) address, see if we can prove the
+  // access is safe within the loop w/o needing predication.
+  if (SE.isLoopInvariant(PtrSCEV, L)) {
+    APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
+                  DL.getTypeStoreSize(LI->getType()).getFixedValue());
+    return isDereferenceableAndAlignedPointer(
+        Ptr, LI->getAlign(), EltSize, DL, &*L->getHeader()->getFirstNonPHIIt(),
+        AC, &DT);
+  }
+
+  Type *IdxTy = DL.getIndexType(PtrSCEV->getType());
+  const SCEV *EltSizeSCEV = SE.getStoreSizeOfExpr(IdxTy, LI->getType());
+  return isDereferenceableAndAlignedInLoop(PtrSCEV, LI->getAlign(), EltSizeSCEV,
+                                           L, SE, DT, AC, Predicates);
 }
 
 static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
