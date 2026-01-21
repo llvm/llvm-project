@@ -1998,6 +1998,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  log2bf16
+  SRCS
+    log2bf16.cpp
+  HDRS
+    ../log2bf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_entrypoint_object(
   log1p
   SRCS
     log1p.cpp
