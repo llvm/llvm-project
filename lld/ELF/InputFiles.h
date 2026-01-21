@@ -306,6 +306,11 @@ private:
 
   bool shouldMerge(const Elf_Shdr &sec, StringRef name);
 
+  // Section indices that belong to comdat groups where this file replaced a
+  // large version with its small version. Used to ensure symbols in these
+  // sections are properly taken over during symbol resolution.
+  llvm::DenseSet<uint32_t> replacedComdatSectionIndices;
+
   // Each ELF symbol contains a section index which the symbol belongs to.
   // However, because the number of bits dedicated for that is limited, a
   // symbol can directly point to a section only when the section index is
