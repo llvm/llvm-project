@@ -14,17 +14,23 @@ features = [
     # mon_decimal_point == ".", which our tests don't handle.
     Feature(
         name="glibc-old-ru_RU-decimal-point",
-        when=lambda cfg: not "_LIBCPP_HAS_LOCALIZATION" in compilerMacros(cfg)
-        or compilerMacros(cfg)["_LIBCPP_HAS_LOCALIZATION"] == "1"
-        and not programSucceeds(
+        when=lambda cfg: programSucceeds(
             cfg,
             """
-            #include <locale.h>
+            #include <stdlib.h>
             #include <string.h>
-            int main(int, char**) {
-              setlocale(LC_ALL, "ru_RU.UTF-8");
-              return strcmp(localeconv()->mon_decimal_point, ",");
-            }
+            #if __has_include(<locale.h>)
+              #include <locale.h>
+            #endif
+
+              int main(int, char**) {
+            #if __has_include(<locale.h>) && (!defined(_LIBCPP_HAS_LOCALIZATION) || _LIBCPP_HAS_LOCALIZATION == 1)
+                setlocale(LC_ALL, "ru_RU.UTF-8");
+                return strcmp(localeconv()->mon_decimal_point, ".") == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+            #else
+                return EXIT_FAILURE;
+            #endif
+              }
           """,
         ),
     ),
