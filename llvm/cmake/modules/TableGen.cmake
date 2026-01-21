@@ -49,7 +49,7 @@ function(tablegen project ofn)
   else()
     set(include_td_dirs "${tblgen_includes}")
     list(TRANSFORM include_td_dirs APPEND "/*.td")
-    file(GLOB global_tds ${include_td_dirs})
+    file(GLOB_RECURSE global_tds ${include_td_dirs})
     set(additional_cmdline
       -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       )
