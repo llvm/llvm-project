@@ -21,13 +21,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SEMANTICHIGHLIGHTING_H
 
 #include "Protocol.h"
-
-#include "clang/AST/TypeBase.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
-class NamedDecl;
-
 namespace clangd {
 class ParsedAST;
 
