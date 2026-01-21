@@ -154,7 +154,7 @@ void CheckSameMatcher::printImpl(raw_ostream &OS, indent Indent) const {
 }
 
 void CheckChildSameMatcher::printImpl(raw_ostream &OS, indent Indent) const {
-  OS << Indent << "CheckChild" << ChildNo << "Same\n";
+  OS << Indent << "CheckChildSame " << ChildNo << ' ' << MatchNumber << '\n';
 }
 
 void CheckPatternPredicateMatcher::printImpl(raw_ostream &OS,

@@ -2407,7 +2407,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           ScoreBrackets.determineWaitForPhysReg(SmemAccessCounter, Reg, Wait);
         }
 
-        if (ST->hasWaitXCnt() && Op.isDef())
+        if (ST->hasWaitXcnt() && Op.isDef())
           ScoreBrackets.determineWaitForPhysReg(X_CNT, Reg, Wait);
       }
     }
@@ -2744,7 +2744,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     }
   }
 
-  if (!ST->hasWaitXCnt())
+  if (!ST->hasWaitXcnt())
     return;
 
   if (IsVMEMAccess)

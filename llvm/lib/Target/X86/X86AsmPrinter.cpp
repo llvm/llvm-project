@@ -495,6 +495,13 @@ void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
       }
     }
   }
+  if (SplitChainedAtEndOfBlock) {
+    OutStreamer->emitWinCFISplitChained();
+    // Splitting into a new unwind info implicitly starts a prolog. We have no
+    // instructions to add to the prolog, so immediately end it.
+    OutStreamer->emitWinCFIEndProlog();
+    SplitChainedAtEndOfBlock = false;
+  }
   AsmPrinter::emitBasicBlockEnd(MBB);
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
 }

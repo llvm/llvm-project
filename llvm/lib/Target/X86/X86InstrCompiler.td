@@ -274,8 +274,8 @@ let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
 
 // Chain instructions:
 let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
-  def SEH_SplitChained : I<0, Pseudo, (outs), (ins),
-                            "#SEH_SplitChained", []>;
+  def SEH_SplitChainedAtEndOfBlock : I<0, Pseudo, (outs), (ins),
+                            "#SEH_SplitChainedAtEndOfBlock", []>;
 }
 
 //===----------------------------------------------------------------------===//

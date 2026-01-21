@@ -15,9 +15,8 @@
 
 # If we restricted the number of unwind codes, then we expect to use chained
 # infos.
-# ALLOWLESS:      SEH_SplitChained
-# ALLOWLESS-NEXT: SEH_EndPrologue
-# ALLOWMORE-NOT:  SEH_SplitChained
+# ALLOWLESS:      SEH_SplitChainedAtEndOfBlock
+# ALLOWMORE-NOT:  SEH_SplitChainedAtEndOfBlock
 
 --- |
   define dso_local void @too_many_epilogs() local_unnamed_addr !dbg !9 {
