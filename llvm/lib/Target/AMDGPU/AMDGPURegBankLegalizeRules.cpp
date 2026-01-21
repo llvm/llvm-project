@@ -509,6 +509,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64, Vcc}, {Vgpr32, Vgpr32, Vgpr64}})
       .Uni(S64, {{Sgpr64, Sgpr32Trunc}, {Sgpr32, Sgpr32, Sgpr64}, UniMAD64});
 
+  bool HasScalarSMulU64 = ST->hasScalarSMulU64();
+  addRulesForGOpcs({G_AMDGPU_S_MUL_U64_U32, G_AMDGPU_S_MUL_I64_I32}, Standard)
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr64}, UniMul64}, HasScalarSMulU64)
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}, DivSMulToMAD});
+
   addRulesForGOpcs({G_XOR, G_OR, G_AND}, StandardB)
       .Any({{UniS1}, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}}})
       .Any({{DivS1}, {{Vcc}, {Vcc, Vcc}}})
