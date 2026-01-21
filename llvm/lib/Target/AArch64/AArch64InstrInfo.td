@@ -1323,6 +1323,11 @@ def fminnum_nnan : PatFrag<(ops node:$Rn, node:$Rm),
   return N->getFlags().hasNoNaNs();
   }]>;
 
+def pmul_or_clmul : PatFrags<(ops node:$Rn, node:$Rm),
+                             [(int_aarch64_neon_pmul node:$Rn, node:$Rm),
+                             (clmul node:$Rn, node:$Rm)]>;
+
+
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -6062,7 +6067,7 @@ defm MLS      : SIMDThreeSameVectorBHSTied<1, 0b10010, "mls", null_frag>;
 
 defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
 let isCommutable = 1 in
-defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", int_aarch64_neon_pmul>;
+defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", pmul_or_clmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
       TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
 defm SABD     : SIMDThreeSameVectorBHS<0,0b01110,"sabd", abds>;
