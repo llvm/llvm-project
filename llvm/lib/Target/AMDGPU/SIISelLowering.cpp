@@ -17007,8 +17007,8 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
 // %sel = select i1 %cmp, i32 4242, i32 %other
 // It can be optimized to reuse %val instead of 4242 in select.
 SDValue SITargetLowering::foldShareConstSelect(SDNode *N, DAGCombinerInfo &DCI,
-                                               SDValue &Cond, SDValue &TrueVal,
-                                               SDValue &FalseVal) const {
+                                               SDValue Cond, SDValue TrueVal,
+                                               SDValue FalseVal) const {
   // Check if condition is a comparison.
   if (Cond.getOpcode() != ISD::SETCC)
     return SDValue();
@@ -17069,11 +17069,8 @@ SDValue SITargetLowering::foldShareConstSelect(SDNode *N, DAGCombinerInfo &DCI,
 
 // Try to convert vXiY into vZi32 with X * Y = Z * 32
 SDValue SITargetLowering::castTypeSelect(SDNode *N, DAGCombinerInfo &DCI,
-                                         SDValue &Cond, SDValue &TrueVal,
-                                         SDValue &FalseVal) const {
-  if (N->getNumValues() != 1)
-    return SDValue();
-
+                                         SDValue Cond, SDValue TrueVal,
+                                         SDValue FalseVal) const {
   EVT ResultVT = N->getValueType(0);
   if (ResultVT.isSimple() || !ResultVT.isVector() ||
       !ResultVT.isPow2VectorType())
@@ -17086,18 +17083,15 @@ SDValue SITargetLowering::castTypeSelect(SDNode *N, DAGCombinerInfo &DCI,
     return SDValue();
 
   unsigned NewNumElts = ResultVT.getVectorNumElements() / (32 / EltBitSize);
-  if (TrueVal.getValueType() == ResultVT &&
-      FalseVal.getValueType() == ResultVT) {
-    EVT NewVT = EVT::getVectorVT(*DCI.DAG.getContext(), MVT::i32, NewNumElts);
-    SDValue NewTrue =
-        DCI.DAG.getNode(ISD::BITCAST, SDLoc(TrueVal), NewVT, TrueVal);
-    SDValue NewFalse =
-        DCI.DAG.getNode(ISD::BITCAST, SDLoc(FalseVal), NewVT, FalseVal);
-    SDValue NewSelect =
-        DCI.DAG.getNode(ISD::SELECT, SDLoc(N), NewVT, Cond, NewTrue, NewFalse);
-    return DCI.DAG.getNode(ISD::BITCAST, SDLoc(N), ResultVT, NewSelect);
-  }
-  return SDValue();
+
+  EVT NewVT = EVT::getVectorVT(*DCI.DAG.getContext(), MVT::i32, NewNumElts);
+  SDValue NewTrue =
+      DCI.DAG.getNode(ISD::BITCAST, SDLoc(TrueVal), NewVT, TrueVal);
+  SDValue NewFalse =
+      DCI.DAG.getNode(ISD::BITCAST, SDLoc(FalseVal), NewVT, FalseVal);
+  SDValue NewSelect =
+      DCI.DAG.getNode(ISD::SELECT, SDLoc(N), NewVT, Cond, NewTrue, NewFalse);
+  return DCI.DAG.getNode(ISD::BITCAST, SDLoc(N), ResultVT, NewSelect);
 }
 
 SDValue SITargetLowering::performSelectCombine(SDNode *N,
@@ -17109,8 +17103,8 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 
   if (SDValue Res = foldShareConstSelect(N, DCI, Cond, TrueVal, FalseVal))
     return Res;
-  else
-    return castTypeSelect(N, DCI, Cond, TrueVal, FalseVal);
+
+  return castTypeSelect(N, DCI, Cond, TrueVal, FalseVal);
 }
 
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
