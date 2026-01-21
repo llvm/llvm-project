@@ -52,6 +52,17 @@ class RISCVReg128<RISCVReg64 subreg>
   let SubRegIndices = [sub_64];
 }
 
+// A subreg index for the address part of capability registers (this is just the
+// default XLEN-wide X<N> register).
+def sub_cap_addr : SubRegIndex<32> {
+  let SubRegRanges =
+      SubRegRangeByHwMode<[RV32, RV64], [SubRegRange<32>, SubRegRange<64>]>;
+}
+class RISCVCapReg<RISCVRegWithSubRegs subreg, string n, list<string> alt = []>
+    : RISCVRegWithSubRegs<subreg.HWEncoding{4 -0}, n, [subreg], alt> {
+  let SubRegIndices = [sub_cap_addr];
+}
+
 let FallbackRegAltNameIndex = NoRegAltName in
 def ABIRegAltName : RegAltNameIndex;
 
@@ -211,6 +222,46 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def X31 : RISCVRegWithSubRegs<31,"x31", [X31_W], ["t6"]>, DwarfRegNum<[31]>;
   }
   }
+  // CHERI capability registers (Y extension)
+  let SubRegIndices = [sub_cap_addr] in {
+  let isConstant = true in
+  def X0_Y : RISCVCapReg<X0, "x0", ["zero", "null"]>, DwarfRegAlias<X0>;
+  let CostPerUse = [0, 1] in {
+  def X1_Y : RISCVCapReg<X1, "x1", ["ra"]>, DwarfRegAlias<X1>;
+  def X2_Y : RISCVCapReg<X2, "x2", ["sp"]>, DwarfRegAlias<X2>;
+  def X3_Y : RISCVCapReg<X3, "x3", ["gp"]>, DwarfRegAlias<X3>;
+  def X4_Y : RISCVCapReg<X4, "x4", ["tp"]>, DwarfRegAlias<X4>;
+  def X5_Y : RISCVCapReg<X5, "x5", ["t0"]>, DwarfRegAlias<X5>;
+  def X6_Y : RISCVCapReg<X6, "x6", ["t1"]>, DwarfRegAlias<X6>;
+  def X7_Y : RISCVCapReg<X7, "x7", ["t2"]>, DwarfRegAlias<X7>;
+  }
+  def X8_Y : RISCVCapReg<X8, "x8", ["s0", "fp"]>, DwarfRegAlias<X8>;
+  def X9_Y : RISCVCapReg<X9, "x9", ["s1"]>, DwarfRegAlias<X9>;
+  def X10_Y : RISCVCapReg<X10, "x10", ["a0"]>, DwarfRegAlias<X0>;
+  def X11_Y : RISCVCapReg<X11, "x11", ["a1"]>, DwarfRegAlias<X1>;
+  def X12_Y : RISCVCapReg<X12, "x12", ["a2"]>, DwarfRegAlias<X2>;
+  def X13_Y : RISCVCapReg<X13, "x13", ["a3"]>, DwarfRegAlias<X3>;
+  def X14_Y : RISCVCapReg<X14, "x14", ["a4"]>, DwarfRegAlias<X4>;
+  def X15_Y : RISCVCapReg<X15, "x15", ["a5"]>, DwarfRegAlias<X5>;
+  let CostPerUse = [0, 1] in {
+  def X16_Y : RISCVCapReg<X16, "x16", ["a6"]>, DwarfRegAlias<X16>;
+  def X17_Y : RISCVCapReg<X17, "x17", ["a7"]>, DwarfRegAlias<X17>;
+  def X18_Y : RISCVCapReg<X18, "x18", ["s2"]>, DwarfRegAlias<X18>;
+  def X19_Y : RISCVCapReg<X19, "x19", ["s3"]>, DwarfRegAlias<X19>;
+  def X20_Y : RISCVCapReg<X20, "x20", ["s4"]>, DwarfRegAlias<X20>;
+  def X21_Y : RISCVCapReg<X21, "x21", ["s5"]>, DwarfRegAlias<X21>;
+  def X22_Y : RISCVCapReg<X22, "x22", ["s6"]>, DwarfRegAlias<X22>;
+  def X23_Y : RISCVCapReg<X23, "x23", ["s7"]>, DwarfRegAlias<X23>;
+  def X24_Y : RISCVCapReg<X24, "x24", ["s8"]>, DwarfRegAlias<X24>;
+  def X25_Y : RISCVCapReg<X25, "x25", ["s9"]>, DwarfRegAlias<X25>;
+  def X26_Y : RISCVCapReg<X26, "x26", ["s10"]>, DwarfRegAlias<X26>;
+  def X27_Y : RISCVCapReg<X27, "x27", ["s11"]>, DwarfRegAlias<X27>;
+  def X28_Y : RISCVCapReg<X28, "x28", ["t3"]>, DwarfRegAlias<X28>;
+  def X29_Y : RISCVCapReg<X29, "x29", ["t4"]>, DwarfRegAlias<X29>;
+  def X30_Y : RISCVCapReg<X30, "x30", ["t5"]>, DwarfRegAlias<X30>;
+  def X31_Y : RISCVCapReg<X31, "x31", ["t6"]>, DwarfRegAlias<X31>;
+  }
+  }
 }
 
 def XLenVT : ValueTypeByHwMode<[RV32, RV64],
@@ -233,6 +284,9 @@ def XLenVecI32VT : ValueTypeByHwMode<[RV64],
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
+def YLenVT : ValueTypeByHwMode<[RV32, RV64], [c64, c128]>;
+def YLenRI : RegInfoByHwMode<[RV32, RV64], [RegInfo<64, 64, 64>,
+                                            RegInfo<128, 128, 128>]>;
 
 class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
     : RegisterClass<"RISCV", regTypes, align, regList> {
@@ -260,6 +314,16 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 8, 9),
                                 (sequence "X%u", 18, 27),
                                 (sequence "X%u", 0, 4))>;
+
+def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
+                         (add (sequence "X%u_Y", 10, 17),
+                              (sequence "X%u_Y", 5, 7),
+                              (sequence "X%u_Y", 28, 31),
+                              (sequence "X%u_Y", 8, 9),
+                              (sequence "X%u_Y", 18, 27),
+                              (sequence "X%u_Y", 0, 4))> {
+  let RegInfos = YLenRI;
+}
 
 def GPRX0 : GPRRegisterClass<(add X0)>;
 

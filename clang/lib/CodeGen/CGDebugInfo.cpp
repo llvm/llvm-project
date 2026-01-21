@@ -1852,7 +1852,7 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
       EltTys.push_back(DBuilder.createUnspecifiedParameter());
   }
 
-  llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
+  llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
   llvm::DIType *F = DBuilder.createSubroutineType(
       EltTypeArray, Flags, getDwarfCC(Ty->getCallConv()));
   return F;
@@ -2254,7 +2254,7 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
       getOrCreateType(CGM.getContext().getFunctionType(
                           Func->getReturnType(), Func->getParamTypes(), EPI),
                       Unit));
-  llvm::DITypeRefArray Args = OriginalFunc->getTypeArray();
+  llvm::DITypeArray Args = OriginalFunc->getTypeArray();
   assert(Args.size() && "Invalid number of arguments!");
 
   SmallVector<llvm::Metadata *, 16> Elts;
@@ -2285,7 +2285,7 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
     Elts[1] = DBuilder.createObjectPointerType(Args[1], /*Implicit=*/false);
   }
 
-  llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
+  llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
 
   return DBuilder.createSubroutineType(EltTypeArray, OriginalFunc->getFlags(),
                                        getDwarfCC(Func->getCallConv()));
@@ -2762,7 +2762,7 @@ llvm::DIType *CGDebugInfo::getOrCreateVTablePtrType(llvm::DIFile *Unit) {
 
   /* Function type */
   llvm::Metadata *STy = getOrCreateType(Context.IntTy, Unit);
-  llvm::DITypeRefArray SElements = DBuilder.getOrCreateTypeArray(STy);
+  llvm::DITypeArray SElements = DBuilder.getOrCreateTypeArray(STy);
   llvm::DIType *SubTy = DBuilder.createSubroutineType(SElements);
   unsigned Size = Context.getTypeSize(Context.VoidPtrTy);
   unsigned VtblPtrAddressSpace = CGM.getTarget().getVtblPtrAddressSpace();
@@ -4755,7 +4755,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
     if (OMethod->isVariadic())
       Elts.push_back(DBuilder.createUnspecifiedParameter());
 
-    llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
+    llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
     return DBuilder.createSubroutineType(EltTypeArray, llvm::DINode::FlagZero,
                                          getDwarfCC(CC));
   }
@@ -4770,7 +4770,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
         for (QualType ParamType : FPT->param_types())
           EltTys.push_back(getOrCreateType(ParamType, F));
       EltTys.push_back(DBuilder.createUnspecifiedParameter());
-      llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
+      llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
       return DBuilder.createSubroutineType(EltTypeArray, llvm::DINode::FlagZero,
                                            getDwarfCC(CC));
     }
@@ -4962,7 +4962,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   // DISubprogram's retainedNodes in the DIBuilder::finalize() call.
   if (IsDeclForCallSite && CGM.getTarget().getTriple().isBPF()) {
     if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-      llvm::DITypeRefArray ParamTypes = STy->getTypeArray();
+      llvm::DITypeArray ParamTypes = STy->getTypeArray();
       unsigned ArgNo = 1;
       for (ParmVarDecl *PD : FD->parameters()) {
         llvm::DINodeArray ParamAnnotations = CollectBTFDeclTagAnnotations(PD);
