@@ -15044,7 +15044,9 @@ Semantics:
 The ``llvm.structured.gep`` performs a logical traversal of the type
 ``basetype`` using the list of provided indices, computing the pointer
 addressing the targeted element/field assuming ``source`` points to a
-physically laid out ``basetype``.
+physically laid out ``basetype``. The physical layout of the source depends
+on the target and does not necessarily match the one described by the
+datalayout.
 
 The first index determines which element/field of ``basetype`` is selected,
 computes the pointer to access this element/field assuming ``source`` points
