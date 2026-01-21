@@ -230,8 +230,8 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     return OutOfDate;
 
   if (NewFileBuffer)
-    getModuleCache().getInMemoryModuleCache().addPCM(
-        FileName, std::move(NewFileBuffer));
+    getModuleCache().getInMemoryModuleCache().addPCM(FileName,
+                                                     std::move(NewFileBuffer));
 
   // We're keeping this module.  Store it everywhere.
   Module = Modules[*Entry] = NewModule.get();
