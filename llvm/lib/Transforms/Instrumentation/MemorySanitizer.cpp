@@ -3924,7 +3924,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Instrument multiply-add(-accumulate)? intrinsics.
+  // Instrument dot-product / multiply-add(-accumulate)? intrinsics.
   //
   // e.g., Two operands:
   //         <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a, <8 x i16> %b)
@@ -3935,7 +3935,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //       Three operands:
   //         <4 x i32> @llvm.x86.avx512.vpdpbusd.128
   //                       (<4 x i32> %s, <16 x i8> %a, <16 x i8> %b)
-  //         (this is equivalent to multiply-add on %a and %b, followed by
+  //         <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16
+  //                       (<2 x float> %acc, <4 x bfloat> %a, <4 x bfloat> %b)
+  //         (these are equivalent to multiply-add on %a and %b, followed by
   //          adding/"accumulating" %s. "Accumulation" stores the result in one
   //          of the source registers, but this accumulate vs. add distinction
   //          is lost when dealing with LLVM intrinsics.)
@@ -3943,9 +3945,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // ZeroPurifies means that multiplying a known-zero with an uninitialized
   // value results in an initialized value. This is applicable for integer
   // multiplication, but not floating-point (counter-example: NaN).
-  void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
-                                  bool ZeroPurifies,
-                                  unsigned EltSizeInBits = 0) {
+  void handleVectorDotProductIntrinsic(IntrinsicInst &I,
+                                       unsigned ReductionFactor,
+                                       bool ZeroPurifies,
+                                       unsigned EltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
 
     [[maybe_unused]] FixedVectorType *ReturnType =
@@ -5890,20 +5893,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
     case Intrinsic::x86_avx2_pmadd_ub_sw:
     case Intrinsic::x86_avx512_pmaddubs_w_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
-                                 /*ZeroPurifies=*/true);
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/true);
       break;
 
     // <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_ssse3_pmadd_ub_sw:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
-                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/8);
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/8);
       break;
 
     // <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_mmx_pmadd_wd:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
-                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/16);
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/16);
       break;
 
     // AVX Vector Neural Network Instructions: bytes
@@ -6022,8 +6027,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_vpdpbuuds_128:
     case Intrinsic::x86_avx2_vpdpbuuds_256:
     case Intrinsic::x86_avx10_vpdpbuuds_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4,
-                                 /*ZeroPurifies=*/true);
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
+                                      /*ZeroPurifies=*/true);
       break;
 
     // AVX Vector Neural Network Instructions: words
@@ -6142,8 +6147,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_vpdpwuuds_128:
     case Intrinsic::x86_avx2_vpdpwuuds_256:
     case Intrinsic::x86_avx10_vpdpwuuds_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
-                                 /*ZeroPurifies=*/true);
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/true);
       break;
 
     // Dot Product of BF16 Pairs Accumulated Into Packed Single
@@ -6157,8 +6162,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512bf16_dpbf16ps_128:
     case Intrinsic::x86_avx512bf16_dpbf16ps_256:
     case Intrinsic::x86_avx512bf16_dpbf16ps_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
-                                 /*ZeroPurifies=*/false);
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false);
       break;
 
     case Intrinsic::x86_sse_cmp_ss:
@@ -6829,6 +6834,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_usmmla:
       handleNEONMatrixMultiply(I, /*ARows=*/2, /*ACols=*/8, /*BRows=*/8,
                                /*BCols=*/2);
+      break;
+
+    // <2 x i32> @llvm.aarch64.neon.[us]dot.v2i32.v8i8
+    //               (<2 x i32> %acc, <8 x i8> %a, <8 x i8> %b)
+    // <4 x i32> @llvm.aarch64.neon.[us]dot.v4i32.v16i8
+    //               (<4 x i32> %acc, <16 x i8> %a, <16 x i8> %b)
+    case Intrinsic::aarch64_neon_sdot:
+    case Intrinsic::aarch64_neon_udot:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
+                                      /*ZeroPurifies=*/true);
+      break;
+
+    // <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16
+    //               (<2 x float> %acc, <4 x bfloat> %a, <4 x bfloat> %b)
+    // <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v8bf16
+    //               (<4 x float> %acc, <8 x bfloat> %a, <8 x bfloat> %b)
+    case Intrinsic::aarch64_neon_bfdot:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false);
       break;
 
     default:
