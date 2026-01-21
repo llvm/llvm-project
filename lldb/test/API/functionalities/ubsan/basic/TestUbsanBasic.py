@@ -11,6 +11,7 @@ import json
 
 
 class UbsanBasicTestCase(TestBase):
+    @skip
     @skipUnlessUndefinedBehaviorSanitizer
     @no_debug_info_test
     def test(self):

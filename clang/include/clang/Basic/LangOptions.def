@@ -501,12 +501,12 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
 
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 
-LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety analysis for C++")
+LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Lifetime safety analysis for C++")
 
-LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Experimental lifetime safety inference analysis for C++")
+LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Lifetime safety inference analysis for C++")
 
 // TODO: Remove flag and default to end-of-TU analysis for lifetime safety after performance validation.
-LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, NotCompatible, "Experimental lifetime safety at translation-unit end, analyzing functions in call graph post-order for C++")
+LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, NotCompatible, "Lifetime safety at translation-unit end, analyzing functions in call graph post-order for C++")
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 
