@@ -34,7 +34,7 @@ define <vscale x 1 x bfloat> @vfmadd_vv_nxv1bf16(<vscale x 1 x bfloat> %va, <vsc
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_nxv1bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfmadd.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
 ;
@@ -64,7 +64,7 @@ define <vscale x 1 x bfloat> @vfmadd_vv_nxv1bf16_commuted(<vscale x 1 x bfloat> 
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_nxv1bf16_commuted:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfmacc.vv v8, v10, v9
 ; ZVFBFA-NEXT:    ret
 ;
@@ -94,7 +94,7 @@ define <vscale x 1 x bfloat> @vfmadd_vf_nxv1bf16(<vscale x 1 x bfloat> %va, <vsc
 ;
 ; ZVFBFA-LABEL: vfmadd_vf_nxv1bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfmadd.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
 ;
@@ -126,7 +126,7 @@ define <vscale x 2 x bfloat> @vfmadd_vv_nxv2bf16(<vscale x 2 x bfloat> %va, <vsc
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_nxv2bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfmadd.vv v8, v10, v9
 ; ZVFBFA-NEXT:    ret
 ;
@@ -156,7 +156,7 @@ define <vscale x 2 x bfloat> @vfmadd_vf_nxv2bf16(<vscale x 2 x bfloat> %va, <vsc
 ;
 ; ZVFBFA-LABEL: vfmadd_vf_nxv2bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfmacc.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
 ;
@@ -188,7 +188,7 @@ define <vscale x 4 x bfloat> @vfmadd_vv_nxv4bf16(<vscale x 4 x bfloat> %va, <vsc
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_nxv4bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfmadd.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
 ;
@@ -218,7 +218,7 @@ define <vscale x 4 x bfloat> @vfmadd_vf_nxv4bf16(<vscale x 4 x bfloat> %va, <vsc
 ;
 ; ZVFBFA-LABEL: vfmadd_vf_nxv4bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfmadd.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
 ;
@@ -250,7 +250,7 @@ define <vscale x 8 x bfloat> @vfmadd_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vsc
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_nxv8bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfmacc.vv v8, v12, v10
 ; ZVFBFA-NEXT:    ret
 ;
@@ -280,7 +280,7 @@ define <vscale x 8 x bfloat> @vfmadd_vf_nxv8bf16(<vscale x 8 x bfloat> %va, <vsc
 ;
 ; ZVFBFA-LABEL: vfmadd_vf_nxv8bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfmacc.vf v8, fa0, v10
 ; ZVFBFA-NEXT:    ret
 ;
@@ -312,7 +312,7 @@ define <vscale x 16 x bfloat> @vfmadd_vv_nxv16bf16(<vscale x 16 x bfloat> %va, <
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_nxv16bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m4, ta, ma
 ; ZVFBFA-NEXT:    vfmadd.vv v8, v16, v12
 ; ZVFBFA-NEXT:    ret
 ;
@@ -342,7 +342,7 @@ define <vscale x 16 x bfloat> @vfmadd_vf_nxv16bf16(<vscale x 16 x bfloat> %va, <
 ;
 ; ZVFBFA-LABEL: vfmadd_vf_nxv16bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m4, ta, ma
 ; ZVFBFA-NEXT:    vfmadd.vf v8, fa0, v12
 ; ZVFBFA-NEXT:    ret
 ;
@@ -448,7 +448,7 @@ define <vscale x 32 x bfloat> @vfmadd_vv_nxv32bf16(<vscale x 32 x bfloat> %va, <
 ; ZVFBFA-LABEL: vfmadd_vv_nxv32bf16:
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vl8re16.v v24, (a0)
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m8, ta, ma
 ; ZVFBFA-NEXT:    vfmacc.vv v8, v16, v24
 ; ZVFBFA-NEXT:    ret
 ;
@@ -574,7 +574,7 @@ define <vscale x 32 x bfloat> @vfmadd_vf_nxv32bf16(<vscale x 32 x bfloat> %va, <
 ;
 ; ZVFBFA-LABEL: vfmadd_vf_nxv32bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m8, ta, ma
 ; ZVFBFA-NEXT:    vfmacc.vf v8, fa0, v16
 ; ZVFBFA-NEXT:    ret
 ;

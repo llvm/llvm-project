@@ -212,10 +212,21 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *MI0,
 
   // Check that the two destination/source registers are different for
   // load/store respectively.
+  // The only case two destinations/sources can be same is (x0, x0). This pass
+  // is run before register coalescer so it will be the form of:
+  //   %0 = COPY $x0
+  //   SW %0, %ptr
+  // instead of:
+  //   SW $x0, %ptr
   Register FirstReg = MI0->getOperand(0).getReg();
   Register SecondReg = MI1->getOperand(0).getReg();
-  if (FirstReg == SecondReg)
+  if (FirstReg == SecondReg) {
+    const MachineInstr *FirstOpDefInst = MRI->getUniqueVRegDef(FirstReg);
+    if (FirstOpDefInst->isCopy() &&
+        FirstOpDefInst->getOperand(1).getReg() == RISCV::X0)
+      return true;
     return false;
+  }
 
   return true;
 }
