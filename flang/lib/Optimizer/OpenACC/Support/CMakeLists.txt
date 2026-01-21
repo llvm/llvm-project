@@ -28,7 +28,9 @@ add_flang_library(FIROpenACCSupport
 
   MLIR_DEPS
   MLIROpenACCDialect
+  MLIROpenACCUtils
 
   MLIR_LIBS
   MLIROpenACCDialect
+  MLIROpenACCUtils
 )
