@@ -101,5 +101,6 @@ bb.3:
 bb.4:
   br label %bb.3
 
+  ; required to trigger the issue.
   uselistorder label %bb.4, { 1, 0 }
 }
