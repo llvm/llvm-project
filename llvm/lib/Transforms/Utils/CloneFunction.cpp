@@ -429,7 +429,7 @@ public:
   /// The specified block is found to be reachable, clone it and
   /// anything that it can reach.
   void CloneBlock(const BasicBlock *BB, BasicBlock::const_iterator StartingInst,
-                  std::vector<const BasicBlock *> &ToClone);
+                  std::vector<const BasicBlock *> &ToClone, CallBase &CB);
 };
 } // namespace
 
@@ -506,9 +506,10 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
 
 /// The specified block is found to be reachable, clone it and
 /// anything that it can reach.
-void PruningFunctionCloner::CloneBlock(
-    const BasicBlock *BB, BasicBlock::const_iterator StartingInst,
-    std::vector<const BasicBlock *> &ToClone) {
+void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
+                                       BasicBlock::const_iterator StartingInst,
+                                       std::vector<const BasicBlock *> &ToClone,
+                                       CallBase &CB) {
   WeakTrackingVH &BBEntry = VMap[BB];
 
   // Have we already cloned this block?
@@ -639,6 +640,20 @@ void PruningFunctionCloner::CloneBlock(
         VMap[OldTI] = NewBI;
         ToClone.push_back(Dest);
         TerminatorDone = true;
+      } else {
+        if (auto *CI = dyn_cast<CmpInst>(BI->getCondition()))
+          if (auto *A = dyn_cast<Argument>(CI->getOperand(0)))
+            if (CI->isEquality() &&
+                isa<ConstantPointerNull>(CI->getOperand(1)) &&
+                CB.paramHasAttr(A->getArgNo(), Attribute::NonNull)) {
+              bool IsEqual = CI->getPredicate() == CmpInst::ICMP_EQ;
+              BasicBlock *Dest = BI->getSuccessor(IsEqual);
+              auto *NewBI = BranchInst::Create(Dest, NewBB);
+              NewBI->setDebugLoc(BI->getDebugLoc());
+              VMap[OldTI] = NewBI;
+              ToClone.push_back(Dest);
+              TerminatorDone = true;
+            }
       }
     }
   } else if (const SwitchInst *SI = dyn_cast<SwitchInst>(OldTI)) {
@@ -699,13 +714,11 @@ void PruningFunctionCloner::CloneBlock(
 /// This works like CloneAndPruneFunctionInto, except that it does not clone the
 /// entire function. Instead it starts at an instruction provided by the caller
 /// and copies (and prunes) only the code reachable from that instruction.
-void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
-                                     const Instruction *StartingInst,
-                                     ValueToValueMapTy &VMap,
-                                     bool ModuleLevelChanges,
-                                     SmallVectorImpl<ReturnInst *> &Returns,
-                                     const char *NameSuffix,
-                                     ClonedCodeInfo *CodeInfo) {
+void llvm::CloneAndPruneIntoFromInst(
+    CallBase &CB, Function *NewFunc, const Function *OldFunc,
+    const Instruction *StartingInst, ValueToValueMapTy &VMap,
+    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
+    const char *NameSuffix, ClonedCodeInfo *CodeInfo) {
   assert(NameSuffix && "NameSuffix cannot be null!");
 
   ValueMapTypeRemapper *TypeMapper = nullptr;
@@ -731,11 +744,11 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 
   // Clone the entry block, and anything recursively reachable from it.
   std::vector<const BasicBlock *> CloneWorklist;
-  PFC.CloneBlock(StartingBB, StartingInst->getIterator(), CloneWorklist);
+  PFC.CloneBlock(StartingBB, StartingInst->getIterator(), CloneWorklist, CB);
   while (!CloneWorklist.empty()) {
     const BasicBlock *BB = CloneWorklist.back();
     CloneWorklist.pop_back();
-    PFC.CloneBlock(BB, BB->begin(), CloneWorklist);
+    PFC.CloneBlock(BB, BB->begin(), CloneWorklist, CB);
   }
 
   // Loop over all of the basic blocks in the old function.  If the block was
@@ -985,12 +998,16 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 /// constant arguments cause a significant amount of code in the callee to be
 /// dead.  Since this doesn't produce an exact copy of the input, it can't be
 /// used for things like CloneFunction or CloneModule.
-void llvm::CloneAndPruneFunctionInto(
-    Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
-    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
-    const char *NameSuffix, ClonedCodeInfo *CodeInfo) {
-  CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap,
-                            ModuleLevelChanges, Returns, NameSuffix, CodeInfo);
+void llvm::CloneAndPruneFunctionInto(CallBase &CB, Function *NewFunc,
+                                     const Function *OldFunc,
+                                     ValueToValueMapTy &VMap,
+                                     bool ModuleLevelChanges,
+                                     SmallVectorImpl<ReturnInst *> &Returns,
+                                     const char *NameSuffix,
+                                     ClonedCodeInfo *CodeInfo) {
+  CloneAndPruneIntoFromInst(CB, NewFunc, OldFunc, &OldFunc->front().front(),
+                            VMap, ModuleLevelChanges, Returns, NameSuffix,
+                            CodeInfo);
 }
 
 /// Remaps instructions in \p Blocks using the mapping in \p VMap.
