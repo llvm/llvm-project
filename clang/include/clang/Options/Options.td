@@ -3664,12 +3664,12 @@ defm digraphs : BoolFOption<"digraphs",
 def fno_eliminate_unused_debug_symbols : Flag<["-"], "fno-eliminate-unused-debug-symbols">, Group<f_Group>;
 def fno_inline_functions : Flag<["-"], "fno-inline-functions">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>;
-def fno_inline : Flag<["-"], "fno-inline">, Group<f_Group>,
+def fno_inline : Flag<["-"], "fno-inline">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>;
-def fno_global_isel : Flag<["-"], "fno-global-isel">, Group<f_Group>,
+def fno_global_isel : Flag<["-"], "fno-global-isel">, Group<f_clang_Group>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Disables the global instruction selector">;
-def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_Group>,
+def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_Group>,
   Visibility<[ClangOption, FlangOption]>,
   Alias<fno_global_isel>;
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
