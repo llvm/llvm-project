@@ -95,7 +95,7 @@ static const unsigned ZvfbfaOps[] = {
     ISD::FSUB,        ISD::FMUL,        ISD::FMINNUM,     ISD::FMAXNUM,
     ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUM,    ISD::FMAXIMUM,
     ISD::FMA,         ISD::IS_FPCLASS,  ISD::STRICT_FADD, ISD::STRICT_FSUB,
-    ISD::STRICT_FMUL, ISD::STRICT_FMA};
+    ISD::STRICT_FMUL, ISD::STRICT_FMA,  ISD::SETCC};
 
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
@@ -1149,7 +1149,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                                 ISD::FROUNDEVEN,
                                                 ISD::FRINT,
                                                 ISD::FNEARBYINT,
-                                                ISD::SETCC,
                                                 ISD::STRICT_FDIV,
                                                 ISD::STRICT_FSQRT,
                                                 ISD::VECREDUCE_FMIN,
@@ -1355,6 +1354,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::STRICT_FMA},
                          VT, Legal);
       setOperationAction(ZvfbfaVPOps, VT, Custom);
+      setCondCodeAction(VFPCCToExpand, VT, Expand);
 
       setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
                           ISD::MGATHER, ISD::MSCATTER, ISD::VP_LOAD,
@@ -1680,6 +1680,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           if (Subtarget.hasStdExtZvfbfa()) {
             setOperationAction(ZvfbfaOps, VT, Custom);
             setOperationAction(ZvfbfaVPOps, VT, Custom);
+            setCondCodeAction(VFPCCToExpand, VT, Expand);
           }
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
