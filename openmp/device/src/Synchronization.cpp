@@ -262,20 +262,20 @@ void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 
 uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
                    atomic::MemScopeTy MemScope) {
-  uint32_t old;
+  uint32_t Old;
   while (true) {
-    old = atomic::load(Address, Ordering, MemScope);
-    if (old >= Val) {
-      if (atomic::cas(Address, old, 0u, Ordering, Ordering))
+    Old = atomic::load(Address, Ordering, MemScope);
+    if (Old >= Val) {
+      if (atomic::cas(Address, Old, 0u, Ordering, Ordering, MemScope))
         break;
-    } else if (atomic::cas(Address, old, old + 1, Ordering, Ordering))
+    } else if (atomic::cas(Address, Old, Old + 1, Ordering, Ordering, MemScope))
       break;
   }
-  return old;
+  return Old;
 }
 
-void namedBarrierInit() {} // TODO
-void namedBarrier() {}     // TODO
+void namedBarrierInit() { __builtin_trap(); } // TODO
+void namedBarrier() { __builtin_trap(); }     // TODO
 void fenceTeam(atomic::OrderingTy Ordering) {
   return __scoped_atomic_thread_fence(Ordering, atomic::workgroup);
 }
@@ -299,14 +299,14 @@ int testLock(omp_lock_t *Lock) {
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
-  int32_t *lock_ptr = (int32_t *)Lock;
-  bool acquired = false;
-  int32_t expected;
-  while (!acquired) {
-    expected = 0;
-    if (expected == atomic::load(lock_ptr, atomic::seq_cst))
-      acquired =
-          atomic::cas(lock_ptr, expected, 1, atomic::seq_cst, atomic::seq_cst);
+  int32_t *Lock_ptr = (int32_t *)Lock;
+  bool Acquired = false;
+  int32_t Expected;
+  while (!Acquired) {
+    Expected = 0;
+    if (Expected == atomic::load(Lock_ptr, atomic::seq_cst))
+      Acquired =
+          atomic::cas(Lock_ptr, Expected, 1, atomic::seq_cst, atomic::seq_cst);
   }
 }
 

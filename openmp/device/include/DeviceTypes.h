@@ -132,6 +132,10 @@ struct IdentTy {
 using __kmpc_impl_lanemask_t = LaneMaskTy;
 
 #ifdef __SPIRV__
+// Function pointers in SPIRV backend have a special address space 9.
+// Since function pointers are passed as regular void * pointers it is
+// necessary to annotate them with proper address space to avoid casting
+// errors during compilation.
 const uint32_t ProgramAS = 9;
 using FnPtrTy = __attribute__((address_space(ProgramAS))) void *;
 #else
