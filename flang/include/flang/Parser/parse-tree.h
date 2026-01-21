@@ -807,16 +807,14 @@ enum class Sign { Positive, Negative };
 // R715 significand -> digit-string . [digit-string] | . digit-string
 // R717 exponent -> signed-digit-string
 struct RealLiteralConstant {
-  BOILERPLATE(RealLiteralConstant);
+  TUPLE_CLASS_BOILERPLATE(RealLiteralConstant);
   struct Real {
+    using EmptyTrait = std::true_type;
     COPY_AND_ASSIGN_BOILERPLATE(Real);
     Real() {}
     CharBlock source;
   };
-  RealLiteralConstant(Real &&r, std::optional<KindParam> &&k)
-      : real{std::move(r)}, kind{std::move(k)} {}
-  Real real;
-  std::optional<KindParam> kind;
+  std::tuple<Real, std::optional<KindParam>> t;
 };
 
 // R713 signed-real-literal-constant -> [sign] real-literal-constant
@@ -1133,21 +1131,12 @@ struct TypeBoundProcDecl {
 struct TypeBoundProcedureStmt {
   UNION_CLASS_BOILERPLATE(TypeBoundProcedureStmt);
   struct WithoutInterface {
-    BOILERPLATE(WithoutInterface);
-    WithoutInterface(
-        std::list<BindAttr> &&as, std::list<TypeBoundProcDecl> &&ds)
-        : attributes(std::move(as)), declarations(std::move(ds)) {}
-    std::list<BindAttr> attributes;
-    std::list<TypeBoundProcDecl> declarations;
+    TUPLE_CLASS_BOILERPLATE(WithoutInterface);
+    std::tuple<std::list<BindAttr>, std::list<TypeBoundProcDecl>> t;
   };
   struct WithInterface {
-    BOILERPLATE(WithInterface);
-    WithInterface(Name &&n, std::list<BindAttr> &&as, std::list<Name> &&bs)
-        : interfaceName(std::move(n)), attributes(std::move(as)),
-          bindingNames(std::move(bs)) {}
-    Name interfaceName;
-    std::list<BindAttr> attributes;
-    std::list<Name> bindingNames;
+    TUPLE_CLASS_BOILERPLATE(WithInterface);
+    std::tuple<Name, std::list<BindAttr>, std::list<Name>> t;
   };
   std::variant<WithoutInterface, WithInterface> u;
 };
@@ -1267,15 +1256,13 @@ WRAPPER_CLASS(ArrayConstructor, AcSpec);
 using DoVariable = Scalar<Integer<Name>>;
 
 template <typename VAR, typename BOUND> struct LoopBounds {
-  LoopBounds(LoopBounds &&that) = default;
-  LoopBounds(
-      VAR &&name, BOUND &&lower, BOUND &&upper, std::optional<BOUND> &&step)
-      : name{std::move(name)}, lower{std::move(lower)}, upper{std::move(upper)},
-        step{std::move(step)} {}
-  LoopBounds &operator=(LoopBounds &&) = default;
-  VAR name;
-  BOUND lower, upper;
-  std::optional<BOUND> step;
+  TUPLE_CLASS_BOILERPLATE(LoopBounds);
+  std::tuple<VAR, BOUND, BOUND, std::optional<BOUND>> t;
+
+  const VAR &Name() const { return std::get<0>(t); }
+  const BOUND &Lower() const { return std::get<1>(t); }
+  const BOUND &Upper() const { return std::get<2>(t); }
+  const std::optional<BOUND> &Step() const { return std::get<3>(t); }
 };
 
 using ScalarName = Scalar<Name>;
@@ -1794,14 +1781,8 @@ struct Expr {
 
 // R912 part-ref -> part-name [( section-subscript-list )] [image-selector]
 struct PartRef {
-  BOILERPLATE(PartRef);
-  PartRef(Name &&n, std::list<SectionSubscript> &&ss,
-      std::optional<ImageSelector> &&is)
-      : name{std::move(n)}, subscripts(std::move(ss)),
-        imageSelector{std::move(is)} {}
-  Name name;
-  std::list<SectionSubscript> subscripts;
-  std::optional<ImageSelector> imageSelector;
+  TUPLE_CLASS_BOILERPLATE(PartRef);
+  std::tuple<Name, std::list<SectionSubscript>, std::optional<ImageSelector>> t;
 };
 
 // R911 data-ref -> part-ref [% part-ref]...
@@ -1875,11 +1856,11 @@ using ScalarIntVariable = Scalar<Integer<Variable>>;
 
 // R913 structure-component -> data-ref
 struct StructureComponent {
-  BOILERPLATE(StructureComponent);
-  StructureComponent(DataRef &&dr, Name &&n)
-      : base{std::move(dr)}, component(std::move(n)) {}
-  DataRef base;
-  Name component;
+  TUPLE_CLASS_BOILERPLATE(StructureComponent);
+  std::tuple<DataRef, Name> t;
+
+  const DataRef &Base() const { return std::get<DataRef>(t); }
+  const Name &Component() const { return std::get<Name>(t); }
 };
 
 // R1039 proc-component-ref -> scalar-variable % procedure-component-name
@@ -1890,23 +1871,22 @@ struct ProcComponentRef {
 
 // R914 coindexed-named-object -> data-ref
 struct CoindexedNamedObject {
-  BOILERPLATE(CoindexedNamedObject);
-  CoindexedNamedObject(DataRef &&dr, ImageSelector &&is)
-      : base{std::move(dr)}, imageSelector{std::move(is)} {}
-  DataRef base;
-  ImageSelector imageSelector;
+  TUPLE_CLASS_BOILERPLATE(CoindexedNamedObject);
+  std::tuple<DataRef, ImageSelector> t;
 };
 
 // R917 array-element -> data-ref
 struct ArrayElement {
-  BOILERPLATE(ArrayElement);
-  ArrayElement(DataRef &&dr, std::list<SectionSubscript> &&ss)
-      : base{std::move(dr)}, subscripts(std::move(ss)) {}
+  TUPLE_CLASS_BOILERPLATE(ArrayElement);
   Substring ConvertToSubstring();
   StructureConstructor ConvertToStructureConstructor(
       const semantics::DerivedTypeSpec &);
-  DataRef base;
-  std::list<SectionSubscript> subscripts;
+  std::tuple<DataRef, std::list<SectionSubscript>> t;
+
+  const DataRef &Base() const { return std::get<DataRef>(t); }
+  const std::list<SectionSubscript> &Subscripts() const {
+    return std::get<std::list<SectionSubscript>>(t);
+  }
 };
 
 // R933 allocate-object -> variable-name | structure-component
@@ -3121,13 +3101,10 @@ struct PrefixSpec {
 //         proc-language-binding-spec [RESULT ( result-name )] |
 //         RESULT ( result-name ) [proc-language-binding-spec]
 struct Suffix {
-  BOILERPLATE(Suffix);
+  TUPLE_CLASS_BOILERPLATE(Suffix);
   Suffix(LanguageBindingSpec &&lbs, std::optional<Name> &&rn)
-      : binding(std::move(lbs)), resultName(std::move(rn)) {}
-  Suffix(Name &&rn, std::optional<LanguageBindingSpec> &&lbs)
-      : binding(std::move(lbs)), resultName(std::move(rn)) {}
-  std::optional<LanguageBindingSpec> binding;
-  std::optional<Name> resultName;
+      : t(std::move(rn), std::move(lbs)) {}
+  std::tuple<std::optional<Name>, std::optional<LanguageBindingSpec>> t;
 };
 
 // R1530 function-stmt ->
@@ -3262,7 +3239,7 @@ struct FunctionReference {
 // (CUDA) chevrons -> <<< * | scalar-expr, scalar-expr [,
 //          scalar-expr [, scalar-int-expr ] ] >>>
 struct CallStmt {
-  BOILERPLATE(CallStmt);
+  TUPLE_CLASS_BOILERPLATE(CallStmt);
   WRAPPER_CLASS(StarOrExpr, std::optional<ScalarExpr>);
   struct Chevrons {
     TUPLE_CLASS_BOILERPLATE(Chevrons);
@@ -3272,9 +3249,8 @@ struct CallStmt {
   };
   explicit CallStmt(ProcedureDesignator &&pd, std::optional<Chevrons> &&ch,
       std::list<ActualArgSpec> &&args)
-      : call{std::move(pd), std::move(args)}, chevrons{std::move(ch)} {}
-  Call call;
-  std::optional<Chevrons> chevrons;
+      : CallStmt(Call{std::move(pd), std::move(args)}, std::move(ch)) {}
+  std::tuple<Call, std::optional<Chevrons>> t;
   CharBlock source;
   mutable TypedCall typedCall; // filled by semantics
 };

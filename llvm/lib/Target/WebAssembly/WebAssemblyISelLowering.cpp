@@ -442,7 +442,8 @@ MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
 }
 
 TargetLowering::AtomicExpansionKind
-WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(
+    const AtomicRMWInst *AI) const {
   // We have wasm instructions for these
   switch (AI->getOperation()) {
   case AtomicRMWInst::Add:
@@ -479,8 +480,9 @@ bool WebAssemblyTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
 }
 
 FastISel *WebAssemblyTargetLowering::createFastISel(
-    FunctionLoweringInfo &FuncInfo, const TargetLibraryInfo *LibInfo) const {
-  return WebAssembly::createFastISel(FuncInfo, LibInfo);
+    FunctionLoweringInfo &FuncInfo, const TargetLibraryInfo *LibInfo,
+    const LibcallLoweringInfo *LibcallLowering) const {
+  return WebAssembly::createFastISel(FuncInfo, LibInfo, LibcallLowering);
 }
 
 MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,

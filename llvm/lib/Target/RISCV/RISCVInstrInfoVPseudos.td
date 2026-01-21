@@ -2596,7 +2596,11 @@ multiclass VPseudoBinaryM<DAGOperand Op2Class, LMULInfo m, bit Commutable = 0> {
                           !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""),
                           TargetConstraintType = 2>;
     def "_" # m.MX # "_MASK" :
-      VPseudoBinaryMOutMask<VR, m.vrclass, Op2Class,
+      VPseudoBinaryMOutMask<!if(!ge(m.octuple, 16), VRNoV0, VR),
+                            GetVRegNoV0<m.vrclass>.R,
+                            !if(!isa<VReg>(Op2Class),
+                                GetVRegNoV0<!cast<VReg>(Op2Class)>.R,
+                                Op2Class),
                             !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""),
                             TargetConstraintType = 2>,
       RISCVMaskedPseudo<MaskIdx=3>;

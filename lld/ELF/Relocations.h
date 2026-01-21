@@ -133,6 +133,7 @@ enum RelExpr {
   // also reused for TLS, making the semantics differ from other architectures.
   RE_LOONGARCH_GOT,
   RE_LOONGARCH_GOT_PAGE_PC,
+  RE_LOONGARCH_PC_INDIRECT,
   RE_LOONGARCH_TLSGD_PAGE_PC,
   RE_LOONGARCH_TLSDESC_PAGE_PC,
   RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC,

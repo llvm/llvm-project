@@ -17,6 +17,7 @@ from tempfile import NamedTemporaryFile
 
 from lldbsuite.test.decorators import (
     skip,
+    skipIfAsan,
     skipIfBuildType,
     skipIfRemote,
     skipIfWindows,
@@ -254,6 +255,7 @@ class TestDAP_launchInternalConsole(DAP_launchIO):
 
 
 @skipIfRemote
+@skipIfAsan
 @skipIfBuildType(["debug"])
 @skipIfWindows
 class TestDAP_launchIntegratedTerminal(DAP_launchIO):
@@ -306,6 +308,7 @@ class TestDAP_launchIntegratedTerminal(DAP_launchIO):
 
 @skip  # NOTE: Currently there is no difference between internal and externalTerminal.
 @skipIfRemote
+@skipIfAsan
 @skipIfBuildType(["debug"])
 @skipIfWindows
 class TestDAP_launchExternalTerminal(DAP_launchIO):

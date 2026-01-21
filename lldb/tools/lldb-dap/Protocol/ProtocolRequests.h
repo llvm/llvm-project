@@ -313,9 +313,18 @@ bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
 /// field is required.
 using LaunchResponse = VoidResponse;
 
-#define LLDB_DAP_INVALID_PORT -1
+#define LLDB_DAP_INVALID_PORT (-1)
 /// An invalid 'frameId' default value.
 #define LLDB_DAP_INVALID_FRAME_ID UINT64_MAX
+
+struct DAPSession {
+  /// A unique ID of an existing target to attach to.
+  lldb::user_id_t targetId;
+
+  /// A unique ID of an existing debugger instance to use.
+  lldb::user_id_t debuggerId;
+};
+bool fromJSON(const llvm::json::Value &, DAPSession &, llvm::json::Path);
 
 /// lldb-dap specific attach arguments.
 struct AttachRequestArguments {
@@ -351,11 +360,8 @@ struct AttachRequestArguments {
   /// Path to the core file to debug.
   std::string coreFile;
 
-  /// Unique ID of an existing target to attach to.
-  std::optional<lldb::user_id_t> targetId;
-
-  /// ID of an existing debugger instance to use.
-  std::optional<int> debuggerId;
+  /// An existing session that consist of a target and debugger.
+  std::optional<DAPSession> session;
 
   /// @}
 };
@@ -401,11 +407,11 @@ struct CompletionsArguments {
   /// The position within `text` for which to determine the completion
   /// proposals. It is measured in UTF-16 code units and the client capability
   /// `columnsStartAt1` determines whether it is 0- or 1-based.
-  int64_t column = 0;
+  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
 
   /// A line for which to determine the completion proposals. If missing the
   /// first line of the text is assumed.
-  int64_t line = 0;
+  uint32_t line = 1;
 };
 bool fromJSON(const llvm::json::Value &, CompletionsArguments &,
               llvm::json::Path);

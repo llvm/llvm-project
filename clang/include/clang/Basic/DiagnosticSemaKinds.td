@@ -11259,6 +11259,8 @@ def err_ppc_invalid_use_mma_type : Error<
   "invalid use of PPC MMA type">;
 def err_ppc_invalid_test_data_class_type : Error<
   "expected a 'float', 'double' or '__float128' for the first argument">;
+def err_ppc_invalid_arg_type : Error<
+  "argument %0 must be of type %1">;
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
 def err_x86_builtin_invalid_scale : Error<
@@ -12477,6 +12479,10 @@ def err_ompx_bare_no_grid : Error<
   "'ompx_bare' clauses requires explicit grid size via 'num_teams' and 'thread_limit' clauses">;
 def err_omp_multi_expr_not_allowed: Error<"only one expression allowed in '%0' clause">;
 def err_ompx_more_than_three_expr_not_allowed: Error<"at most three expressions are allowed in '%0' clause in 'target teams ompx_bare' construct">;
+def err_omp_transparent_invalid_value : Error<"invalid value for transparent clause,"
+  " expected one of: omp_not_impex, omp_import, omp_export, omp_impex">;
+def err_omp_transparent_invalid_type : Error<
+  "transparent clause cannot be applied to type: %0">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -13450,6 +13456,10 @@ def warn_unsafe_buffer_operation : Warning<
 def warn_unsafe_buffer_libc_call : Warning<
   "function %0 is unsafe">,
   InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;
+def warn_unsafe_buffer_format_attr_call : Warning<
+  "formatting function %0 is unsafe">,
+  InGroup<UnsafeBufferUsageInFormatAttrCall>, DefaultIgnore;
+
 def note_unsafe_buffer_printf_call : Note<
   "%select{|change to 'snprintf' for explicit bounds checking | buffer pointer and size may not match"
           "|string argument is not guaranteed to be null-terminated"
@@ -13468,6 +13478,8 @@ def warn_unsafe_buffer_usage_in_container : Warning<
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
 def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking">,
   InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
+def warn_unsafe_buffer_usage_in_static_sized_array : Warning<"direct access on T[N] is unsafe due to the lack of bounds checking">,
+  InGroup<UnsafeBufferUsageInStaticSizedArray>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).

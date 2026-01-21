@@ -1,4 +1,4 @@
-//===-- CUFDeviceGlobal.cpp -----------------------------------------------===//
+//===-- CUFOpConversion.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,6 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
-#include "flang/Optimizer/Transforms/CUDA/CUFAllocationConversion.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/CUDA/allocatable.h"
 #include "flang/Runtime/CUDA/common.h"
@@ -561,9 +560,6 @@ public:
     target.addLegalOp<cuf::StreamCastOp>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
-    if (allocationConversion)
-      cuf::populateCUFAllocationConversionPatterns(typeConverter, *dl, symtab,
-                                                   patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(ctx),

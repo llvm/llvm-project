@@ -90,10 +90,7 @@ public:
     }
     Cond.notify_all();
     ThreadsCreated.get_future().wait();
-  }
 
-  ~ThreadPoolExecutor() override {
-    stop();
     std::thread::id CurrentThreadId = std::this_thread::get_id();
     for (std::thread &T : Threads)
       if (T.get_id() == CurrentThreadId)
@@ -101,6 +98,8 @@ public:
       else
         T.join();
   }
+
+  ~ThreadPoolExecutor() override { stop(); }
 
   struct Creator {
     static void *call() { return new ThreadPoolExecutor(strategy); }
@@ -128,8 +127,6 @@ private:
     // JobserverClient models this by returning an implicit JobSlot on the
     // first successful tryAcquire() in a process. This guarantees forward
     // progress without requiring a dedicated "always-on" thread here.
-
-    static thread_local std::unique_ptr<ExponentialBackoff> Backoff;
 
     while (true) {
       if (TheJobserver) {
@@ -196,22 +193,8 @@ private:
 Executor *Executor::getDefaultExecutor() {
 #ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
-  // llvm_shutdown() which allows a "clean" fast exit, e.g. via _exit(). This
-  // stops the thread pool and waits for any worker thread creation to complete
-  // but does not wait for the threads to finish. The wait for worker thread
-  // creation to complete is important as it prevents intermittent crashes on
-  // Windows due to a race condition between thread creation and process exit.
-  //
-  // The ThreadPoolExecutor will only be destroyed when the static unique_ptr to
-  // it is destroyed, i.e. in a normal full exit. The ThreadPoolExecutor
-  // destructor ensures it has been stopped and waits for worker threads to
-  // finish. The wait is important as it prevents intermittent crashes on
-  // Windows when the process is doing a full exit.
-  //
-  // The Windows crashes appear to only occur with the MSVC static runtimes and
-  // are more frequent with the debug static runtime.
-  //
-  // This also prevents intermittent deadlocks on exit with the MinGW runtime.
+  // llvm_shutdown() on Windows. This is important to avoid various race
+  // conditions at process exit that can cause crashes or deadlocks.
 
   static ManagedStatic<ThreadPoolExecutor, ThreadPoolExecutor::Creator,
                        ThreadPoolExecutor::Deleter>

@@ -152,15 +152,11 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
     const TargetMachine *TM)
-    : ImmutablePass(ID), MMI(TM) {
-  initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), MMI(TM) {}
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
     const TargetMachine *TM, MCContext *ExtContext)
-    : ImmutablePass(ID), MMI(TM, ExtContext) {
-  initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), MMI(TM, ExtContext) {}
 
 // Handle the Pass registration stuff necessary to use DataLayout's.
 INITIALIZE_PASS(MachineModuleInfoWrapperPass, "machinemoduleinfo",

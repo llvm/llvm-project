@@ -51,9 +51,7 @@ private:
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  BreakFalseDeps() : MachineFunctionPass(ID) {
-    initializeBreakFalseDepsPass(*PassRegistry::getPassRegistry());
-  }
+  BreakFalseDeps() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
