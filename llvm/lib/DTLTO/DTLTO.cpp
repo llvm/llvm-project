@@ -132,7 +132,8 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
   StringRef ModuleId = Input->getName();
   StringRef ArchivePath = Input->getArchivePath();
 
-  // Only process archive members and FatLTO objects.
+  // In most cases, the module ID already points to an individual bitcode file
+  // on disk, so no further preparation for distribution is required.
   if (ArchivePath.empty() && !Input->isFatLTOObject())
     return Input;
 
