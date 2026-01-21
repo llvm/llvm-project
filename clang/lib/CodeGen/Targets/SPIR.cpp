@@ -861,8 +861,23 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
       Ty->isSignedIntegerType() ? "spirv.SignedImage" : "spirv.Image";
 
   // Dim
-  // For now we assume everything is a buffer.
-  IntParams[0] = 5;
+  switch (attributes.ResourceDimension) {
+  case llvm::dxil::ResourceDimension::Dimension1D:
+    IntParams[0] = 0;
+    break;
+  case llvm::dxil::ResourceDimension::Dimension2D:
+    IntParams[0] = 1;
+    break;
+  case llvm::dxil::ResourceDimension::Dimension3D:
+    IntParams[0] = 2;
+    break;
+  case llvm::dxil::ResourceDimension::DimensionCube:
+    IntParams[0] = 3;
+    break;
+  case llvm::dxil::ResourceDimension::DimensionUnknown:
+    IntParams[0] = 5;
+    break;
+  }
 
   // Depth
   // HLSL does not indicate if it is a depth texture or not, so we use unknown.

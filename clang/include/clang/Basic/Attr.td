@@ -5093,13 +5093,22 @@ def HLSLROV : TypeAttr {
 
 def HLSLResourceClass : TypeAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
-  let LangOpts = [HLSL];
-  let Args = [
-	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
-				 /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
-				 ["SRV", "UAV", "CBuffer", "Sampler"],
-				 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
-  ];
+  let Args = [EnumArgument<
+      "ResourceClass", "llvm::hlsl::ResourceClass",
+      /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
+      ["SRV", "UAV", "CBuffer", "Sampler"],
+      /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLResourceDimension : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "dimension">];
+  let Args = [EnumArgument<
+      "Dimension", "llvm::hlsl::ResourceDimension",
+      /*is_string=*/true, ["Unknown", "1D", "2D", "3D", "Cube"],
+      ["DimensionUnknown", "Dimension1D", "Dimension2D", "Dimension3D",
+       "DimensionCube"],
+      /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
   let Documentation = [InternalOnly];
 }
 

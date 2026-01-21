@@ -500,6 +500,46 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "SamplerState")
+             .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    BuiltinTypeDeclBuilder(*SemaPtr, Decl)
+        .addSamplerHandle()
+        .addDefaultHandleConstructor()
+        .addCopyConstructor()
+        .addCopyAssignmentOperator()
+        .addStaticInitializationFunctions(false)
+        .completeDefinition();
+  });
+
+  Decl =
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "SamplerComparisonState")
+          .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    BuiltinTypeDeclBuilder(*SemaPtr, Decl)
+        .addSamplerHandle()
+        .addDefaultHandleConstructor()
+        .addCopyConstructor()
+        .addCopyAssignmentOperator()
+        .addStaticInitializationFunctions(false)
+        .completeDefinition();
+  });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2D")
+             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
+             .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    BuiltinTypeDeclBuilder(*SemaPtr, Decl)
+        .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false,
+                          ResourceDimension::Dimension2D)
+        .addDefaultHandleConstructor()
+        .addCopyConstructor()
+        .addCopyAssignmentOperator()
+        .addStaticInitializationFunctions(false)
+        .addSampleMethods()
+        .completeDefinition();
+  });
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
