@@ -292,6 +292,10 @@ def FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 : VPseudoInstSI <(outs VOPDstOperand_t1
    let UseNamedOperandTable = 1;
 }
 
+// The operands of these pseudos should match V_CVT_PKRTZ_F16_F32_e32
+def FPTRUNC_ROUND_RTZ_F16_F32_PSEUDO_e32 : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VGPR_32:$src0, VGPR_32:$src1, i32imm:$round)>;
+
 def FPTRUNC_ROUND_F32_F64_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VReg_64:$src0, i32imm:$round)>;
 } // End Uses = [MODE, EXEC]
@@ -308,7 +312,22 @@ let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 $src0_modifiers, $src0, (as_hw_round_mode $round))>;
 
+def : GCNPat <(v2f16 (build_vector (f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode:$round))),
+                                 (f16 (fptrunc_round f32:$src1, (i32 RtzRoundMode:$round))))),
+     (FPTRUNC_ROUND_RTZ_F16_F32_PSEUDO_e32 $src0, $src1, (as_hw_round_mode $round))>;
+
+let True16Predicate = NotUseRealTrue16Insts in
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode:$round))),
+     (FPTRUNC_ROUND_RTZ_F16_F32_PSEUDO_e32 $src0, (IMPLICIT_DEF), (as_hw_round_mode $round))>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode:$round))),
+     (EXTRACT_SUBREG (FPTRUNC_ROUND_RTZ_F16_F32_PSEUDO_e32 $src0, (IMPLICIT_DEF), (as_hw_round_mode $round)), lo16)>;
+
 def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F32_F64_PSEUDO $src0, (as_hw_round_mode $round))>;
+
+def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 RtzRoundMode:$round))),
      (FPTRUNC_ROUND_F32_F64_PSEUDO $src0, (as_hw_round_mode $round))>;
 
 // Invert the exec mask and overwrite the inactive lanes of dst with inactive,
