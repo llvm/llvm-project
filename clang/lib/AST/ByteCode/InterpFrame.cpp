@@ -191,15 +191,15 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
   Off += Func->hasRVO() ? primSize(PT_Ptr) : 0;
   Off += Func->hasThisPointer() ? primSize(PT_Ptr) : 0;
 
+  llvm::ListSeparator Comma;
   for (unsigned I = 0, N = F->getNumParams(); I < N; ++I) {
+    OS << Comma;
     QualType Ty = F->getParamDecl(I)->getType();
 
     PrimType PrimTy = S.Ctx.classify(Ty).value_or(PT_Ptr);
 
     TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getASTContext(), Ty));
     Off += align(primSize(PrimTy));
-    if (I + 1 != N)
-      OS << ", ";
   }
   OS << ")";
 }

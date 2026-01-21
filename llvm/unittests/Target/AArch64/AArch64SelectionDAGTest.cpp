@@ -148,7 +148,7 @@ TEST_F(AArch64SelectionDAGTest,
   auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2, /*IsScalable=*/true);
   auto InVec = DAG->getConstant(1, Loc, InVecVT);
   auto Op = DAG->getNode(ISD::SIGN_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
-  auto DemandedElts = APInt(2, 3);
+  auto DemandedElts = APInt(1, 1);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 1u);
 }
 
@@ -160,6 +160,20 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_EXTRACT_SUBVECTOR) {
   auto Vec = DAG->getConstant(1, Loc, VecVT);
   auto ZeroIdx = DAG->getConstant(0, Loc, IdxVT);
   auto Op = DAG->getNode(ISD::EXTRACT_SUBVECTOR, Loc, VecVT, Vec, ZeroIdx);
+  auto DemandedElts = APInt(3, 7);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 7u);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_EXTRACT_SUBVECTOR) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto ScalableVecVT =
+      EVT::getVectorVT(Context, IntVT, 16, /*IsScalable=*/true);
+  auto FixedVecVT = EVT::getVectorVT(Context, IntVT, 16, /*IsScalable=*/false);
+  auto IdxVT = EVT::getIntegerVT(Context, 64);
+  auto Vec = DAG->getConstant(1, Loc, ScalableVecVT);
+  auto ZeroIdx = DAG->getConstant(0, Loc, IdxVT);
+  auto Op = DAG->getNode(ISD::EXTRACT_SUBVECTOR, Loc, FixedVecVT, Vec, ZeroIdx);
   auto DemandedElts = APInt(3, 7);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 7u);
 }
