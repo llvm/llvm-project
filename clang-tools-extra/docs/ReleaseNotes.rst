@@ -93,23 +93,63 @@ Potentially Breaking Changes
 Improvements to clangd
 ----------------------
 
-Inlay hints
-^^^^^^^^^^^
+Compile flags
+^^^^^^^^^^^^^
 
-- ``clangd`` now shows designator hints for aggregate initialization of structures 
-  with parentheses-list initialization (``CXXParenListInitExpr``) syntax. 
+- Added proper support for the ``-std=c++latest`` flag, often used by
+  Windows users writing C++23 code.
 
 Diagnostics
 ^^^^^^^^^^^
 
-Semantic Highlighting
-^^^^^^^^^^^^^^^^^^^^^
-
-Compile flags
-^^^^^^^^^^^^^
+- Fixed a bug that caused the quick-fix for the ``readability-identifier-naming``
+  diagnostic not to work in some editors.
 
 Hover
 ^^^^^
+
+- Added support for parsing and presenting doxygen and markdown documentation
+- Added a ``MacroContentsLimit`` config option to allow users to opt into
+  showing macro definitions in hovers even if they're very long  
+- Fixed a bug that prevented documentation from being shown for members of
+  class templates defined in a header
+- Fixed a bug that prevented documentation from being shown for
+  abbreviated function templates
+
+Cross-references
+^^^^^^^^^^^^^^^^
+
+- Improved "go to definition" support for dependent ``auto``
+- Improved "go to definition" support for C++23 "deducing this"
+- Fixed a bug where attributes on a method broke various features including
+  "go to definition" on a method's name
+- "Find references" on a constructor now finds call sites of forwarding
+  functions such as ``make_unique`` as well
+- "Document links" now supports ``#include`` directives with a macro argument
+
+Inlay hints
+^^^^^^^^^^^
+
+- Show designator hints for aggregate initialization of structures 
+  with parentheses-list initialization (``CXXParenListInitExpr``) syntax. 
+- Show type hints for simple cases of dependent ``auto``
+
+Call hierarchy
+^^^^^^^^^^^^^^
+
+- Support invoking call hierarchy on enum constants
+- When invoked on a virtual function, show callers of base functions as well
+
+Document symbols
+^^^^^^^^^^^^^^^^
+
+- Include inline friend functions in document symbols
+
+Code folding
+^^^^^^^^^^^^
+
+- Support folding of preprocessor branches
+- Support folding of ``#pragma region`` blocks
 
 Code completion
 ^^^^^^^^^^^^^^^
@@ -118,6 +158,10 @@ Code completion
   allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting
   macros. ``ExactPrefix`` is the default, which retains previous
   behavior of suggesting macros which match the prefix exactly.
+- Improved support for C++23 "deducing this"
+- Header insertion now checks ``AngledHeaders`` and ``QuotedHeaders``
+  against resolved rather than spelled paths, consistent with the
+  existing behaviour of include-cleaner diagnostics.
 
 Code actions
 ^^^^^^^^^^^^
@@ -129,15 +173,18 @@ Code actions
   implementation. The overrides are intelligently grouped under their original
   access specifiers (e.g., ``public``, ``protected``), creating new access
   specifier blocks if necessary.
+- Improved the "move function body out-of-line" code action's logic for choosing
+  where to place the definition. It now tries to place it next to the definition
+  of a method with an adjacent declaration.
 
-Signature help
-^^^^^^^^^^^^^^
+C++20 Modules support
+^^^^^^^^^^^^^^^^^^^^^
 
-Cross-references
-^^^^^^^^^^^^^^^^
-
-Objective-C
-^^^^^^^^^^^
+- Fixed a crash when using ``--experimental-modules-support`` without a
+  compilation database
+- Added a ``--debug-modules-builder`` option to help debug clangd's modules support
+- Improved diagnostics related to modules
+- Clangd now tries to reuse a module from the project's build if it's suitable
 
 Miscellaneous
 ^^^^^^^^^^^^^
