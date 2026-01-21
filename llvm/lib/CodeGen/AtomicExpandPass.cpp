@@ -1681,10 +1681,9 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
   LoadInst *InitLoaded = Builder.CreateAlignedLoad(ResultTy, Addr, AddrAlign);
-  // TODO: The initial load must be strong to avoid a data race with concurrent
-  // stores. Issue a strong load with the same synchronization scope as the
-  // atomicrmw instruction here. If the instruction being emulated is volatile,
-  // issue a volatile load.
+  // TODO: The initial load must be atomic with the same synchronization scope
+  // to avoid a data race with concurrent stores. If the instruction being
+  // emulated is volatile, issue a volatile load.
   Builder.CreateBr(LoopBB);
 
   // Start the main loop block now that we've taken care of the preliminaries.

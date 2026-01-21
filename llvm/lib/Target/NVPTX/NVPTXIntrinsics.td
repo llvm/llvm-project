@@ -2495,14 +2495,15 @@ defm INT_PTX_ATOMIC_MIN_64 : F_ATOMIC_2<I64RT, atomic_load_min_i64, "min.s64", a
 defm INT_PTX_ATOMIC_UMIN_32 : F_ATOMIC_2<I32RT, atomic_load_umin_i32, "min.u32", atomic_load_umin>;
 defm INT_PTX_ATOMIC_UMIN_64 : F_ATOMIC_2<I64RT, atomic_load_umin_i64, "min.u64", atomic_load_umin, [hasSM<32>]>;
 
-// NOTE: The semantics for atomicrmw fmin (aka llvm.minnum)[1] are *slightly*
-// different from the ones from the ones for atom.min.f32[2]. However, LLVM
-// LangRef specifies that sNaNs can be treated as qNaNs. This makes the two
-// operations equivalent- as the only difference in behavior is that min(sNaN,
-// NUM) -> qNaN in LLVM, and atom.min returns min(NaN, NUM) -> NUM for all NaNs.
+// NOTE: The semantics for atomicrmw fmin (and fmax) upholds LangRef
+// requirements.  The LangRef requires the semantics of fmin/fmax to follow
+// llvm.minimum/llvm.maximum[1], but allows sNaNs to be treated as qNaNs[2],
+// that is the llvm.minnum(sNaN, NUM) -> qNaN case can be handled as (qNaN, NUM)
+// -> NUM. NVPTX implements this by lowering to atom.min.f32[3], which has those
+// semantics.
 // [1] https://llvm.org/docs/LangRef.html#llvm-implementation
-// [2] https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#half-precision-floating-point-instructions-min
-// [3] https://llvm.org/docs/LangRef.html#behavior-of-floating-point-nan-values 
+// [2] https://llvm.org/docs/LangRef.html#behavior-of-floating-point-nan-values
+// [3] https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#half-precision-floating-point-instructions-min
 
 // atom_inc  atom_dec
 defm INT_PTX_ATOM_INC_32 : F_ATOMIC_2<I32RT, atomic_load_uinc_wrap_i32, "inc.u32", atomic_load_uinc_wrap>;
