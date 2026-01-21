@@ -13,7 +13,7 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 4
+; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw i64 [[TMP15]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
@@ -46,7 +46,7 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-IN-LOOP:       vector.ph:
 ; CHECK-IN-LOOP-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-IN-LOOP-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 4
+; CHECK-IN-LOOP-NEXT:    [[TMP17:%.*]] = shl nuw i64 [[TMP16]], 2
 ; CHECK-IN-LOOP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-IN-LOOP-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
@@ -97,7 +97,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 4
+; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw i64 [[TMP15]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
@@ -129,7 +129,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-IN-LOOP:       vector.ph:
 ; CHECK-IN-LOOP-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-IN-LOOP-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 4
+; CHECK-IN-LOOP-NEXT:    [[TMP16:%.*]] = shl nuw i64 [[TMP15]], 2
 ; CHECK-IN-LOOP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-IN-LOOP-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
@@ -178,7 +178,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP22:%.*]] = mul nuw i64 [[TMP21]], 4
+; CHECK-NEXT:    [[TMP22:%.*]] = shl nuw i64 [[TMP21]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[N:%.*]], [[TMP6]]
@@ -215,7 +215,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-IN-LOOP-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-IN-LOOP:       vector.ph:
 ; CHECK-IN-LOOP-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-IN-LOOP-NEXT:    [[TMP21:%.*]] = mul nuw i64 [[TMP20]], 4
+; CHECK-IN-LOOP-NEXT:    [[TMP21:%.*]] = shl nuw i64 [[TMP20]], 2
 ; CHECK-IN-LOOP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-IN-LOOP-NEXT:    [[TMP7:%.*]] = sub i64 [[N:%.*]], [[TMP6]]

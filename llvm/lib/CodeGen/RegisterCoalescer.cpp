@@ -392,9 +392,7 @@ class RegisterCoalescerLegacy : public MachineFunctionPass {
 public:
   static char ID; ///< Class identification, replacement for typeinfo
 
-  RegisterCoalescerLegacy() : MachineFunctionPass(ID) {
-    initializeRegisterCoalescerLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  RegisterCoalescerLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -867,6 +865,14 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   assert(DefIdx != -1);
   unsigned UseOpIdx;
   if (!DefMI->isRegTiedToUseOperand(DefIdx, &UseOpIdx))
+    return {false, false};
+
+  // If DefMI only defines the register partially, we can't replace uses of the
+  // full register with the new destination register after commuting it.
+  if (IntA.reg().isVirtual() &&
+      none_of(DefMI->all_defs(), [&](const MachineOperand &DefMO) {
+        return DefMO.getReg() == IntA.reg() && !DefMO.getSubReg();
+      }))
     return {false, false};
 
   // FIXME: The code below tries to commute 'UseOpIdx' operand with some other

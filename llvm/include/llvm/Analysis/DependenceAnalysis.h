@@ -499,13 +499,6 @@ private:
   bool checkDstSubscript(const SCEV *Dst, const Loop *LoopNest,
                          SmallBitVector &Loops);
 
-  /// isKnownPredicate - Compare X and Y using the predicate Pred.
-  /// Basically a wrapper for SCEV::isKnownPredicate,
-  /// but tries harder, especially in the presence of sign and zero
-  /// extensions and symbolics.
-  bool isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
-                        const SCEV *Y) const;
-
   /// collectUpperBound - All subscripts are the same type (on my machine,
   /// an i64). The loop bound may be a smaller type. collectUpperBound
   /// find the bound, if available, and zero extends it to the Type T.
@@ -543,7 +536,7 @@ private:
   /// If the dependence isn't proven to exist,
   /// marks the Result as inconsistent.
   bool testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
-               FullDependence &Result) const;
+               FullDependence &Result, bool UnderRuntimeAssumptions);
 
   /// testRDIV - Tests the RDIV subscript pair (Src and Dst) for dependence.
   /// Things of the form [c1 + a1*i] and [c2 + a2*j]
@@ -573,7 +566,7 @@ private:
   bool strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
                      const SCEV *DstConst, const Loop *CurrentSrcLoop,
                      const Loop *CurrentDstLoop, unsigned Level,
-                     FullDependence &Result) const;
+                     FullDependence &Result, bool UnderRuntimeAssumptions);
 
   /// weakCrossingSIVtest - Tests the weak-crossing SIV subscript pair
   /// (Src and Dst) for dependence.

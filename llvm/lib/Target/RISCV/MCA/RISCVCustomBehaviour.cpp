@@ -215,7 +215,8 @@ getEEWAndEMUL(unsigned Opcode, RISCVVType::VLMUL LMUL, uint8_t SEW) {
     llvm_unreachable("Could not determine EEW from Opcode");
   }
 
-  auto EMUL = RISCVVType::getSameRatioLMUL(SEW, LMUL, EEW);
+  auto EMUL =
+      RISCVVType::getSameRatioLMUL(RISCVVType::getSEWLMULRatio(SEW, LMUL), EEW);
   if (!EEW)
     llvm_unreachable("Invalid SEW or LMUL for new ratio");
   return std::make_pair(EEW, *EMUL);

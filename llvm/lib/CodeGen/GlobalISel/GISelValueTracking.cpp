@@ -33,6 +33,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
@@ -622,7 +623,37 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_UADDO:
   case TargetOpcode::G_UADDE:
   case TargetOpcode::G_SADDO:
-  case TargetOpcode::G_SADDE:
+  case TargetOpcode::G_SADDE: {
+    if (MI.getOperand(1).getReg() == R) {
+      // If we know the result of a compare has the top bits zero, use this
+      // info.
+      if (TL.getBooleanContents(DstTy.isVector(), false) ==
+              TargetLowering::ZeroOrOneBooleanContent &&
+          BitWidth > 1)
+        Known.Zero.setBitsFrom(1);
+      break;
+    }
+
+    assert(MI.getOperand(0).getReg() == R &&
+           "We only compute knownbits for the sum here.");
+    // With [US]ADDE, a carry bit may be added in.
+    KnownBits Carry(1);
+    if (Opcode == TargetOpcode::G_UADDE || Opcode == TargetOpcode::G_SADDE) {
+      computeKnownBitsImpl(MI.getOperand(4).getReg(), Carry, DemandedElts,
+                           Depth + 1);
+      // Carry has bit width 1
+      Carry = Carry.trunc(1);
+    } else {
+      Carry.setAllZero();
+    }
+
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(3).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
+    break;
+  }
   case TargetOpcode::G_USUBO:
   case TargetOpcode::G_USUBE:
   case TargetOpcode::G_SSUBO:
@@ -852,8 +883,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   // assume this from flags/attributes.
   InterestedClasses &= ~KnownNotFromFlags;
 
-  auto ClearClassesFromFlags =
-      make_scope_exit([=, &Known] { Known.knownNot(KnownNotFromFlags); });
+  llvm::scope_exit ClearClassesFromFlags(
+      [=, &Known] { Known.knownNot(KnownNotFromFlags); });
 
   // All recursive calls that increase depth must come after this.
   if (Depth == MaxAnalysisRecursionDepth)
@@ -1373,7 +1404,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
           (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()))
         Known.knownNot(fcNan);
 
-      if (Opcode == Instruction::FAdd) {
+      if (Opcode == TargetOpcode::G_FADD ||
+          Opcode == TargetOpcode::G_STRICT_FADD) {
         if (KnownLHS.cannotBeOrderedLessThanZero() &&
             KnownRHS.cannotBeOrderedLessThanZero())
           Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
@@ -1488,7 +1520,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
                           KnownLHS, Depth + 1);
     }
 
-    if (Opcode == Instruction::FDiv) {
+    if (Opcode == TargetOpcode::G_FDIV) {
       // Only 0/0, Inf/Inf produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
           (KnownLHS.isKnownNeverInfinity() ||

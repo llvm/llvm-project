@@ -1017,7 +1017,9 @@ struct DSEState {
     // Treat byval, inalloca or dead on return arguments the same as Allocas,
     // stores to them are dead at the end of the function.
     for (Argument &AI : F.args())
-      if (AI.hasPassPointeeByValueCopyAttr() || AI.hasDeadOnReturnAttr())
+      if (AI.hasPassPointeeByValueCopyAttr() ||
+          (AI.getType()->isPointerTy() &&
+           AI.getDeadOnReturnInfo().coversAllReachableMemory()))
         InvisibleToCallerAfterRet.insert({&AI, true});
 
     // Collect whether there is any irreducible control flow in the function.
@@ -2079,9 +2081,13 @@ struct DSEState {
               .removeFnAttribute(Ctx, "alloc-variant-zeroed");
       FunctionCallee ZeroedVariant = Malloc->getModule()->getOrInsertFunction(
           ZeroedVariantName, InnerCallee->getFunctionType(), Attrs);
+      cast<Function>(ZeroedVariant.getCallee())
+          ->setCallingConv(Malloc->getCallingConv());
       SmallVector<Value *, 3> Args;
       Args.append(Malloc->arg_begin(), Malloc->arg_end());
-      Calloc = IRB.CreateCall(ZeroedVariant, Args, ZeroedVariantName);
+      CallInst *CI = IRB.CreateCall(ZeroedVariant, Args, ZeroedVariantName);
+      CI->setCallingConv(Malloc->getCallingConv());
+      Calloc = CI;
     } else {
       Type *SizeTTy = Malloc->getArgOperand(0)->getType();
       Calloc =

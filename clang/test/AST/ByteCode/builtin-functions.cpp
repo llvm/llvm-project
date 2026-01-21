@@ -1649,6 +1649,10 @@ namespace Memchr {
     return __builtin_char_memchr(c + 1, 'f', 1) == nullptr;
   }
   static_assert(f());
+
+
+  extern const char char_memchr_arg[0l];
+  char *memchr_result = __builtin_char_memchr(char_memchr_arg, 123, 32);
 }
 
 namespace Strchr {
@@ -1848,11 +1852,9 @@ namespace WithinLifetime {
   } xstd; // both-error {{is not a constant expression}} \
           // both-note {{in call to}}
 
-  /// FIXME: We do not have per-element lifetime information for primitive arrays.
-  /// See https://github.com/llvm/llvm-project/issues/147528
   consteval bool test_dynamic(bool read_after_deallocate) {
     std::allocator<int> a;
-    int* p = a.allocate(1); // expected-note 2{{allocation performed here was not deallocated}}
+    int* p = a.allocate(1);
     // a.allocate starts the lifetime of an array,
     // the complete object of *p has started its lifetime
     if (__builtin_is_within_lifetime(p))
@@ -1865,12 +1867,12 @@ namespace WithinLifetime {
       return false;
     a.deallocate(p, 1);
     if (read_after_deallocate)
-      __builtin_is_within_lifetime(p); // ref-note {{read of heap allocated object that has been deleted}}
+      __builtin_is_within_lifetime(p); // both-note {{read of heap allocated object that has been deleted}}
     return true;
   }
-  static_assert(test_dynamic(false)); // expected-error {{not an integral constant expression}}
+  static_assert(test_dynamic(false));
   static_assert(test_dynamic(true)); // both-error {{not an integral constant expression}} \
-                                     // ref-note {{in call to}}
+                                     // both-note {{in call to}}
 }
 
 #ifdef __SIZEOF_INT128__

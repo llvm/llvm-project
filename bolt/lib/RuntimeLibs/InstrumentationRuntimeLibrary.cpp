@@ -33,6 +33,7 @@ extern cl::opt<bool> InstrumentationFileAppendPID;
 extern cl::opt<bool> ConservativeInstrumentation;
 extern cl::opt<std::string> InstrumentationFilename;
 extern cl::opt<std::string> InstrumentationBinpath;
+extern cl::opt<uint32_t> InstrumentationMaxSize;
 extern cl::opt<uint32_t> InstrumentationSleepTime;
 extern cl::opt<bool> InstrumentationNoCountersClear;
 extern cl::opt<bool> InstrumentationWaitForks;
@@ -167,6 +168,7 @@ void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
     emitFill(sizeof(uint64_t), Label);
 
   emitPadding(BC.RegularPageSize);
+  emitIntValue("__bolt_instr_max_size", opts::InstrumentationMaxSize);
   emitIntValue("__bolt_instr_sleep_time", opts::InstrumentationSleepTime);
   emitIntValue("__bolt_instr_no_counters_clear",
                !!opts::InstrumentationNoCountersClear, 1);

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_exp.h>
-#include <clc/opencl/math/exp.h>
 
 #define __CLC_FUNCTION exp
 #define __CLC_BODY <clc/shared/unary_def.inc>

@@ -135,6 +135,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_ARM_ZA);
   ECase(NT_ARM_ZT);
   ECase(NT_ARM_FPMR);
+  ECase(NT_ARM_POE);
   ECase(NT_ARM_GCS);
   ECase(NT_FILE);
   ECase(NT_PRXFPREG);
@@ -2054,12 +2055,6 @@ void MappingTraits<ELFYAML::CallGraphEntryWeight>::mapping(
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("Weight", E.Weight);
 }
-
-LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_AFL_REG)
-LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_ABI_FP)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_EXT)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_ASE)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_FLAGS1)
 
 } // end namespace yaml
 

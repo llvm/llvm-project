@@ -238,6 +238,9 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
     if (!targetShape)
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropInstData();
     int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
     bool hasOffsets = (offsetSize != 0) || op.getConstOffsetsAttr();
 
@@ -250,12 +253,12 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
     if (!hasOffsets) {
       for (auto t : convertedTdesc)
         xegpu::PrefetchNdOp::create(rewriter, loc, TypeRange(), t,
-                                    op->getAttrs());
+                                    xegpu::dropInstDataOnAttrs(op->getAttrs()));
     } else {
       auto createPrefetch = [&](SmallVector<OpFoldResult> offsets) -> Value {
         xegpu::PrefetchNdOp::create(rewriter, loc, convertedTdesc[0], offsets,
                                     op.getL1HintAttr(), op.getL2HintAttr(),
-                                    op.getL3HintAttr());
+                                    op.getL3HintAttr(), layout);
         // return dummy Value to satisfy function's signature
         return nullptr;
       };
@@ -282,6 +285,9 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     if (!targetShape)
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropInstData();
     int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
     bool hasOffsets = (offsetSize != 0) || op.getConstOffsetsAttr();
 
@@ -297,8 +303,9 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
 
     if (!hasOffsets) {
       for (auto t : convertedTdescs) {
-        auto newOp = xegpu::LoadNdOp::create(rewriter, loc, newValueTy, t,
-                                             op->getAttrs());
+        auto newOp =
+            xegpu::LoadNdOp::create(rewriter, loc, newValueTy, t,
+                                    xegpu::dropInstDataOnAttrs(op->getAttrs()));
         newOps.push_back(newOp);
       }
     } else {
@@ -306,7 +313,7 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
         return xegpu::LoadNdOp::create(
             rewriter, loc, newValueTy, convertedTdescs[0], offsets,
             op.getPackedAttr(), op.getTransposeAttr(), op.getL1HintAttr(),
-            op.getL2HintAttr(), op.getL3HintAttr());
+            op.getL2HintAttr(), op.getL3HintAttr(), layout);
       };
       newOps = computeUnrolledOffsets(op.getMixedOffsets(), tdescTy,
                                       *targetShape, createLoad, loc, rewriter);
@@ -331,6 +338,9 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     if (!targetShape)
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropInstData();
     int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
     bool hasOffsets = (offsetSize != 0) || op.getConstOffsetsAttr();
 
@@ -354,7 +364,7 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
         xegpu::StoreNdOp::create(rewriter, loc, convertedValues[valueIndex++],
                                  convertedTdescs[0], offsets,
                                  op.getL1HintAttr(), op.getL2HintAttr(),
-                                 op.getL3HintAttr());
+                                 op.getL3HintAttr(), layout);
         // return dummy Value to satisfy function's signature
         return nullptr;
       };
@@ -453,8 +463,9 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
           if (tmpC)
             operands.push_back(tmpC);
 
-          tmpC = xegpu::DpasOp::create(rewriter, loc, vecTy, operands,
-                                       op->getAttrs());
+          tmpC =
+              xegpu::DpasOp::create(rewriter, loc, vecTy, operands,
+                                    xegpu::dropInstDataOnAttrs(op->getAttrs()));
         }
         newOps.push_back(tmpC);
       }
@@ -816,7 +827,8 @@ struct UnrollPrefetchOp : public UnrollPattern<xegpu::PrefetchOp> {
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
 
     for (auto t : convertedTdesc)
-      xegpu::PrefetchOp::create(rewriter, loc, TypeRange(), t, op->getAttrs());
+      xegpu::PrefetchOp::create(rewriter, loc, TypeRange(), t,
+                                xegpu::dropInstDataOnAttrs(op->getAttrs()));
 
     rewriter.eraseOp(op);
     return success();

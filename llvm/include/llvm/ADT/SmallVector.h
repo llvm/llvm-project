@@ -211,6 +211,8 @@ protected:
       this->assertSafeToReferenceAfterResize(From, 0);
       this->assertSafeToReferenceAfterResize(To - 1, 0);
     }
+    (void)From;
+    (void)To;
   }
 
   /// Check whether any part of the range will be invalidated by growing.

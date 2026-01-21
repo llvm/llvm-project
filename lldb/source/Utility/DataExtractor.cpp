@@ -149,6 +149,15 @@ DataExtractor::DataExtractor(const DataBufferSP &data_sp, ByteOrder endian,
   SetData(data_sp);
 }
 
+// Make a shared pointer reference to the shared data in "data_sp".
+DataExtractor::DataExtractor(const DataBufferSP &data_sp,
+                             uint32_t target_byte_size)
+    : m_byte_order(endian::InlHostByteOrder()), m_addr_size(sizeof(void *)),
+      m_data_sp(data_sp), m_target_byte_size(target_byte_size) {
+  if (data_sp)
+    SetData(data_sp);
+}
+
 // Initialize this object with a subset of the data bytes in "data". If "data"
 // contains shared data, then a reference to this shared data will added and
 // the shared data will stay around as long as any object contains a reference

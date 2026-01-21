@@ -2,6 +2,7 @@
 // RUN: env OMP_NUM_TEAMS=1 OMP_TEAMS_THREAD_LIMIT=1 LIBOMPTARGET_INFO=16 \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic
 // REQUIRES: gpu
+// XFAIL: intelgpu
 
 #define N 256
 

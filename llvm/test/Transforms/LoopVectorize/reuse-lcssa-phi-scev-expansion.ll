@@ -13,7 +13,7 @@ define void @reuse_lcssa_phi_for_add_rec1(ptr %head) {
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[FOR:%.*]] = phi ptr [ [[HEAD]], %[[ENTRY]] ], [ [[L_1:%.*]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[L_1]] = load ptr, ptr [[FOR]], align 8
-; CHECK-NEXT:    [[IV_2_NEXT]] = add nuw nsw i32 [[IV_2]], 1
+; CHECK-NEXT:    [[IV_2_NEXT]] = add nuw i32 [[IV_2]], 1
 ; CHECK-NEXT:    [[EC_1:%.*]] = icmp eq ptr [[L_1]], null
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[EC_1]], label %[[PH:.*]], label %[[LOOP_1]]
@@ -41,8 +41,8 @@ define void @reuse_lcssa_phi_for_add_rec1(ptr %head) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x ptr> [[WIDE_LOAD]], <2 x ptr> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[REVERSE]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[REVERSE]], i32 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[REVERSE]], i32 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

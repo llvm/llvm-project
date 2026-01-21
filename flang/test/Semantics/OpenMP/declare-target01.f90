@@ -58,7 +58,7 @@ module declare_target01
 
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopen-mp-usage]
   !$omp declare target to (my_var) device_type(host)
-  
+
   !$omp declare target enter (my_var) device_type(host)
 
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive

@@ -255,7 +255,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     "result": (
                         "{x:11, y:22, buffer:{...}}"
                         if enableAutoVariableSummaries
-                        else "PointType @ 0x"
+                        else "PointType"
                     )
                 },
                 "hasVariablesReference": True,
@@ -266,7 +266,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     "result": (
                         "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
                         if enableAutoVariableSummaries
-                        else "int[16] @ 0x"
+                        else "int[16]"
                     )
                 },
                 "hasVariablesReference": True,
@@ -502,7 +502,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                         "result": (
                             "{x:11, y:22, buffer:{...}}"
                             if enableAutoVariableSummaries
-                            else "PointType @ 0x"
+                            else "PointType"
                         )
                     },
                     "missing": ["indexedVariables"],
@@ -514,7 +514,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                         "result": (
                             "{x:11, y:22, buffer:{...}}"
                             if enableAutoVariableSummaries
-                            else "PointType @ 0x"
+                            else "PointType"
                         )
                     },
                     "missing": ["indexedVariables"],
@@ -526,7 +526,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                         "result": (
                             "{x:11, y:22, buffer:{...}}"
                             if enableAutoVariableSummaries
-                            else "PointType @ 0x"
+                            else "PointType"
                         )
                     },
                     "missing": ["indexedVariables"],
