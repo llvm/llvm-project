@@ -2825,7 +2825,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // dead_on_return if we have virtual base classes because they will
       // generally still be live after the base object destructor.
       if (ClassDecl->getNumBases() == 0 && ClassDecl->getNumVBases() == 0)
-        Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
+        Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo(
+            getMinimumClassObjectSize(ClassDecl).getQuantity()));
     }
 
     ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);
