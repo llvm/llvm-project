@@ -704,8 +704,7 @@ OperandRange ForOp::getEntrySuccessorOperands(RegionSuccessor successor) {
 
 void ForOp::getSuccessorRegions(RegionBranchPoint point,
                                 SmallVectorImpl<RegionSuccessor> &regions) {
-  std::optional<APInt> tripCount = getStaticTripCount();
-  if (tripCount.has_value()) {
+  if (std::optional<APInt> tripCount = getStaticTripCount()) {
     // The loop has a known static trip count.
     if (point.isParent()) {
       if (*tripCount == 0) {
