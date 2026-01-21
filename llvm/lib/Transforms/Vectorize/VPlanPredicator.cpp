@@ -35,6 +35,10 @@ class VPPredicator {
 
   BlockMaskCacheTy BlockMaskCache;
 
+  /// A map of blocks to masks that should be applied to each of its successors'
+  /// edges.
+  const BlockMaskCacheTy SuccessorMasks;
+
   /// Create an edge mask for every destination of cases and/or default.
   void createSwitchEdgeMasks(VPInstruction *SI);
 
@@ -61,6 +65,9 @@ class VPPredicator {
   }
 
 public:
+  VPPredicator(const BlockMaskCacheTy &SuccessorMasks)
+      : SuccessorMasks(SuccessorMasks) {}
+
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
     return BlockMaskCache.lookup(VPBB);
@@ -91,6 +98,10 @@ VPValue *VPPredicator::createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst) {
     return EdgeMask;
 
   VPValue *SrcMask = getBlockInMask(Src);
+
+  if (VPValue *SuccessorMask = SuccessorMasks.lookup(Src))
+    SrcMask = SrcMask ? Builder.createLogicalAnd(SrcMask, SuccessorMask)
+                      : SuccessorMask;
 
   // If there's a single successor, there's no terminator recipe.
   if (Src->getNumSuccessors() == 1)
@@ -234,15 +245,15 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   }
 }
 
-DenseMap<VPBasicBlock *, VPValue *>
-VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
+DenseMap<VPBasicBlock *, VPValue *> VPlanTransforms::introduceMasksAndLinearize(
+    VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &SuccessorMasks) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
-  VPPredicator Predicator;
+  VPPredicator Predicator(SuccessorMasks);
   for (VPBlockBase *VPB : RPOT) {
     // Non-outer regions with VPBBs only are supported at the moment.
     auto *VPBB = cast<VPBasicBlock>(VPB);

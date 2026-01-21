@@ -8463,13 +8463,15 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     InterleaveGroups.insert(IG);
   }
 
+  DenseMap<VPBasicBlock *, VPValue *> SuccessorMasks;
   if (CM.foldTailByMasking())
-    VPlanTransforms::foldTailByMasking(*Plan);
+    VPlanTransforms::foldTailByMasking(*Plan, SuccessorMasks);
 
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  auto BlockMaskCache = VPlanTransforms::introduceMasksAndLinearize(*Plan);
+  auto BlockMaskCache =
+      VPlanTransforms::introduceMasksAndLinearize(*Plan, SuccessorMasks);
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
