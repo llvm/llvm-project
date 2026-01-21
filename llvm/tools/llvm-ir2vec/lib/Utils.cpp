@@ -191,6 +191,41 @@ IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
   return Result;
 }
 
+BBEmbeddingsMap IR2VecTool::getBBEmbeddings(const Function &F,
+                                            IR2VecKind Kind) const {
+  assert(Vocab && Vocab->isValid() && "Vocabulary not initialized");
+
+  BBEmbeddingsMap Result;
+
+  if (F.isDeclaration())
+    return Result;
+
+  auto Emb = Embedder::create(Kind, F, *Vocab);
+  if (!Emb)
+    return Result;
+
+  for (const BasicBlock &BB : F)
+    Result.try_emplace(&BB, Emb->getBBVector(BB));
+
+  return Result;
+}
+
+BBEmbeddingsMap IR2VecTool::getBBEmbeddings(IR2VecKind Kind) const {
+  assert(Vocab && Vocab->isValid() && "Vocabulary not initialized");
+
+  BBEmbeddingsMap Result;
+
+  for (const Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    BBEmbeddingsMap FuncBBVecs = getBBEmbeddings(F, Kind);
+    Result.insert(FuncBBVecs.begin(), FuncBBVecs.end());
+  }
+
+  return Result;
+}
+
 void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
                                          EmbeddingLevel Level) const {
   if (!Vocab || !Vocab->isValid()) {

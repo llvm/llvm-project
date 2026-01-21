@@ -22,6 +22,16 @@ if tool is not None:
         print(f"Function: {func_name}")
         print(f"  Embedding: {emb.tolist()}")
 
+    # Test getBBEmbMap
+    print("\n=== Basic Block Embeddings ===")
+    bb_emb_list = tool.getBBEmbMap()
+
+    # Sorting by BB name for deterministic output
+    bb_sorted = sorted(bb_emb_list, key=lambda x: (x[0], tuple(x[1].tolist())))
+    for bb_name, emb in bb_sorted:
+        print(f"BB: {bb_name}")
+        print(f"  Embedding: {emb.tolist()}")
+
 # CHECK: SUCCESS: Tool initialized
 # CHECK: Tool type: IR2VecTool
 # CHECK: === Function Embeddings ===
@@ -31,3 +41,16 @@ if tool is not None:
 # CHECK-NEXT:   Embedding: [413.20000000298023, 421.20000000298023, 429.20000000298023]
 # CHECK: Function: multiply
 # CHECK-NEXT:   Embedding: [50.0, 52.0, 54.0]
+# CHECK: === Basic Block Embeddings ===
+# CHECK: BB: entry
+# CHECK-NEXT:   Embedding: [38.0, 40.0, 42.0]
+# CHECK: BB: entry
+# CHECK-NEXT:   Embedding: [50.0, 52.0, 54.0]
+# CHECK: BB: entry
+# CHECK-NEXT:   Embedding: [161.20000000298023, 163.20000000298023, 165.20000000298023]
+# CHECK: BB: exit
+# CHECK-NEXT:   Embedding: [164.0, 166.0, 168.0]
+# CHECK: BB: negative
+# CHECK-NEXT:   Embedding: [47.0, 49.0, 51.0]
+# CHECK: BB: positive
+# CHECK-NEXT:   Embedding: [41.0, 43.0, 45.0]
