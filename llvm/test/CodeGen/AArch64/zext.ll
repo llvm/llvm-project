@@ -1127,41 +1127,41 @@ entry:
 define <16 x i64> @zext_v16i10_v16i64(<16 x i10> %a) {
 ; CHECK-SD-LABEL: zext_v16i10_v16i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov s0, w2
-; CHECK-SD-NEXT:    fmov s1, w0
+; CHECK-SD-NEXT:    fmov s0, w6
+; CHECK-SD-NEXT:    fmov s1, w4
 ; CHECK-SD-NEXT:    ldr s2, [sp]
-; CHECK-SD-NEXT:    fmov s3, w4
-; CHECK-SD-NEXT:    fmov s4, w6
-; CHECK-SD-NEXT:    add x9, sp, #8
+; CHECK-SD-NEXT:    fmov s3, w2
+; CHECK-SD-NEXT:    fmov s4, w0
 ; CHECK-SD-NEXT:    ldr s5, [sp, #16]
 ; CHECK-SD-NEXT:    ldr s6, [sp, #32]
 ; CHECK-SD-NEXT:    ldr s7, [sp, #48]
-; CHECK-SD-NEXT:    mov v1.s[1], w1
-; CHECK-SD-NEXT:    mov v0.s[1], w3
-; CHECK-SD-NEXT:    ld1 { v2.s }[1], [x9]
-; CHECK-SD-NEXT:    mov v3.s[1], w5
-; CHECK-SD-NEXT:    mov v4.s[1], w7
+; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    mov v1.s[1], w5
+; CHECK-SD-NEXT:    mov v0.s[1], w7
 ; CHECK-SD-NEXT:    add x9, sp, #24
+; CHECK-SD-NEXT:    mov v4.s[1], w1
+; CHECK-SD-NEXT:    mov v3.s[1], w3
 ; CHECK-SD-NEXT:    add x10, sp, #40
 ; CHECK-SD-NEXT:    add x11, sp, #56
+; CHECK-SD-NEXT:    ld1 { v2.s }[1], [x8]
 ; CHECK-SD-NEXT:    ld1 { v5.s }[1], [x9]
 ; CHECK-SD-NEXT:    ld1 { v6.s }[1], [x10]
 ; CHECK-SD-NEXT:    ld1 { v7.s }[1], [x11]
 ; CHECK-SD-NEXT:    mov w8, #1023 // =0x3ff
-; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-SD-NEXT:    dup v16.2d, x8
-; CHECK-SD-NEXT:    ushll v17.2d, v0.2s, #0
-; CHECK-SD-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-SD-NEXT:    ushll v17.2d, v1.2s, #0
+; CHECK-SD-NEXT:    ushll v18.2d, v0.2s, #0
 ; CHECK-SD-NEXT:    ushll v4.2d, v4.2s, #0
-; CHECK-SD-NEXT:    ushll v18.2d, v2.2s, #0
+; CHECK-SD-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
 ; CHECK-SD-NEXT:    ushll v5.2d, v5.2s, #0
 ; CHECK-SD-NEXT:    ushll v6.2d, v6.2s, #0
 ; CHECK-SD-NEXT:    ushll v7.2d, v7.2s, #0
-; CHECK-SD-NEXT:    and v0.16b, v1.16b, v16.16b
-; CHECK-SD-NEXT:    and v1.16b, v17.16b, v16.16b
-; CHECK-SD-NEXT:    and v2.16b, v3.16b, v16.16b
-; CHECK-SD-NEXT:    and v3.16b, v4.16b, v16.16b
-; CHECK-SD-NEXT:    and v4.16b, v18.16b, v16.16b
+; CHECK-SD-NEXT:    and v0.16b, v4.16b, v16.16b
+; CHECK-SD-NEXT:    and v1.16b, v3.16b, v16.16b
+; CHECK-SD-NEXT:    and v4.16b, v2.16b, v16.16b
+; CHECK-SD-NEXT:    and v2.16b, v17.16b, v16.16b
+; CHECK-SD-NEXT:    and v3.16b, v18.16b, v16.16b
 ; CHECK-SD-NEXT:    and v5.16b, v5.16b, v16.16b
 ; CHECK-SD-NEXT:    and v6.16b, v6.16b, v16.16b
 ; CHECK-SD-NEXT:    and v7.16b, v7.16b, v16.16b
