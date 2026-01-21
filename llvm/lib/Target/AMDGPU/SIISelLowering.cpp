@@ -17078,11 +17078,13 @@ SDValue SITargetLowering::castTypeSelect(SDNode *N, DAGCombinerInfo &DCI,
 
   EVT EltVT = ResultVT.getVectorElementType();
   unsigned EltBitSize = EltVT.getSizeInBits();
-  ElementCount NumElts = ResultVT.getVectorElementCount();
-  if (!EltVT.isInteger() || !isPowerOf2_32(EltBitSize) || NumElts.isScalar())
+  if (!EltVT.isInteger() || ResultVT.getVectorElementCount().isScalar())
     return SDValue();
 
   unsigned NewNumElts = ResultVT.getVectorNumElements() / (32 / EltBitSize);
+
+  if (NewNumElts * 32 != EltBitSize * ResultVT.getVectorNumElements())
+    return SDValue();
 
   EVT NewVT = EVT::getVectorVT(*DCI.DAG.getContext(), MVT::i32, NewNumElts);
   SDValue NewTrue =
