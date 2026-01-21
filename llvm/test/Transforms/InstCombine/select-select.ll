@@ -531,7 +531,151 @@ define <2 x i8> @strong_order_cmp_eq_ugt_vector_poison3(<2 x i32> %a, <2 x i32> 
   ret <2 x i8> %sel.gt
 }
 
+; Minimal code that triigers the optimizations.
 
+define i32 @selectSelect11(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
+; CHECK-LABEL: @selectSelect11(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND2:%.*]], i1 true, i1 [[COND1:%.*]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP1]], i32 [[VAR:%.*]], i32 [[DEFAULTVAL:%.*]]
+; CHECK-NEXT:    ret i32 [[SEL2]]
+;
+  %sel1 = select i1 %cond1, i32 %defaultVal, i32 %var
+  %sel2 = select i1 %cond2, i32 %defaultVal, i32 %sel1
+  ret i32 %sel2
+}
+
+define i32 @selectSelect22(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
+; CHECK-LABEL: @selectSelect22(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND2:%.*]], i1 [[COND1:%.*]], i1 false
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP1]], i32 [[VAR:%.*]], i32 [[DEFAULTVAL:%.*]]
+; CHECK-NEXT:    ret i32 [[SEL2]]
+;
+  %sel1 = select i1 %cond1, i32 %var, i32 %defaultVal
+  %sel2 = select i1 %cond2, i32 %sel1, i32 %defaultVal
+  ret i32 %sel2
+}
+
+define i32 @selectSelect12(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
+; CHECK-LABEL: @selectSelect12(
+; CHECK-NEXT:    [[SEL3:%.*]] = select i1 [[TMP1:%.*]], i32 [[DEFAULTVAL:%.*]], i32 [[VAR:%.*]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND2:%.*]], i32 [[SEL3]], i32 [[DEFAULTVAL]]
+; CHECK-NEXT:    ret i32 [[SEL2]]
+;
+  %sel1 = select i1 %cond1, i32 %defaultVal,i32 %var
+  %sel2 = select i1 %cond2, i32 %sel1, i32 %defaultVal
+  ret i32 %sel2
+}
+
+define i32 @selectSelect21(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
+; CHECK-LABEL: @selectSelect21(
+; CHECK-NEXT:    [[DEFAULTVAL:%.*]] = select i1 [[TMP1:%.*]], i32 [[VAR:%.*]], i32 [[DEFAULTVAL1:%.*]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND2:%.*]], i32 [[DEFAULTVAL1]], i32 [[DEFAULTVAL]]
+; CHECK-NEXT:    ret i32 [[SEL2]]
+;
+  %sel1 = select i1 %cond1, i32 %var, i32 %defaultVal
+  %sel2 = select i1 %cond2, i32 %defaultVal, i32 %sel1
+  ret i32 %sel2
+}
+
+define i32 @selectSelect11Use(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
+; CHECK-LABEL: @selectSelect11Use(
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND1:%.*]], i32 [[DEFAULTVAL:%.*]], i32 [[VAR:%.*]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND2:%.*]], i32 [[DEFAULTVAL]], i32 [[SEL1]]
+; CHECK-NEXT:    call void @use32(i32 [[SEL1]])
+; CHECK-NEXT:    ret i32 [[SEL2]]
+;
+  %sel1 = select i1 %cond1, i32 %defaultVal, i32 %var
+  %sel2 = select i1 %cond2, i32 %defaultVal, i32 %sel1
+  call void @use32(i32 %sel1)
+  ret i32 %sel2
+}
+
+define i32 @selectSelect22Use(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
+; CHECK-LABEL: @selectSelect22Use(
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND1:%.*]], i32 [[VAR:%.*]], i32 [[DEFAULTVAL:%.*]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND2:%.*]], i32 [[SEL1]], i32 [[DEFAULTVAL]]
+; CHECK-NEXT:    call void @use32(i32 [[SEL1]])
+; CHECK-NEXT:    ret i32 [[SEL2]]
+;
+  %sel1 = select i1 %cond1, i32 %var, i32 %defaultVal
+  %sel2 = select i1 %cond2, i32 %sel1, i32 %defaultVal
+  call void @use32(i32 %sel1)
+  ret i32 %sel2
+}
+
+define i32 @selectSelect12Use(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
+; CHECK-LABEL: @selectSelect12Use(
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND1:%.*]], i32 [[DEFAULTVAL:%.*]], i32 [[VAR:%.*]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND2:%.*]], i32 [[SEL1]], i32 [[DEFAULTVAL]]
+; CHECK-NEXT:    call void @use32(i32 [[SEL1]])
+; CHECK-NEXT:    ret i32 [[SEL2]]
+;
+  %sel1 = select i1 %cond1, i32 %defaultVal,i32 %var
+  %sel2 = select i1 %cond2, i32 %sel1, i32 %defaultVal
+  call void @use32(i32 %sel1)
+  ret i32 %sel2
+}
+
+define i32 @selectSelect21Use(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
+; CHECK-LABEL: @selectSelect21Use(
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND1:%.*]], i32 [[VAR:%.*]], i32 [[DEFAULTVAL:%.*]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND2:%.*]], i32 [[DEFAULTVAL]], i32 [[SEL1]]
+; CHECK-NEXT:    call void @use32(i32 [[SEL1]])
+; CHECK-NEXT:    ret i32 [[SEL2]]
+;
+  %sel1 = select i1 %cond1, i32 %var, i32 %defaultVal
+  %sel2 = select i1 %cond2, i32 %defaultVal, i32 %sel1
+  call void @use32(i32 %sel1)
+  ret i32 %sel2
+}
+
+; Examples from real world prgrams.
+
+define i32 @abseil_cpp_example(i32 %a, i64 %b, i32 %c) {
+; CHECK-LABEL: @abseil_cpp_example(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[B:%.*]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[B]], 0
+; CHECK-NEXT:    [[SPEC_SELECT632:%.*]] = select i1 [[CMP2]], i32 0, i32 [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP1]], i32 [[A]], i32 [[SPEC_SELECT632]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %cmp1 = icmp eq i64 %b, 0
+  %cmp2 = icmp slt i64 %b, 0
+  %spec.select632 = select i1 %cmp2, i32 0, i32 %a
+  %85 = select i1 %cmp1, i32 %a, i32 %spec.select632
+  ret i32 %85
+}
+
+define i32 @hermes_example(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @hermes_example(
+; CHECK-NEXT:    [[CMP108_I:%.*]] = icmp slt i32 [[A:%.*]], 9
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[A]], 17
+; CHECK-NEXT:    [[Z_5_I:%.*]] = select i1 [[TMP2]], i32 [[B:%.*]], i32 [[C:%.*]]
+; CHECK-NEXT:    [[Z_5_I1:%.*]] = select i1 [[CMP108_I]], i32 [[C]], i32 [[Z_5_I]]
+; CHECK-NEXT:    ret i32 [[Z_5_I1]]
+;
+  %cmp108.i = icmp slt i32 %a, 9
+  %cmp113.i = icmp slt i32 %a, 17
+  %spec.select.i = select i1 %cmp113.i, i32 %c, i32 %b
+  %z.5.i = select i1 %cmp108.i, i32 %b, i32 %spec.select.i
+  ret i32 %z.5.i
+}
+
+define i64 @hermes_example2(i32 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: @hermes_example2(
+; CHECK-NEXT:    [[CMP16_I_I:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[CMP20_I_I:%.*]] = icmp ugt i32 [[A]], 511
+; CHECK-NEXT:    [[RETVAL_0_I_I:%.*]] = select i1 [[CMP20_I_I]], i64 [[C:%.*]], i64 [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL_0_I_I1:%.*]] = select i1 [[CMP16_I_I]], i64 [[B]], i64 [[RETVAL_0_I_I]]
+; CHECK-NEXT:    ret i64 [[RETVAL_0_I_I1]]
+;
+  %cmp16.i.i = icmp eq i32 %a, 0
+  %cmp20.i.i = icmp ugt i32 %a, 511
+  %spec.select11.i = select i1 %cmp20.i.i, i64 %b, i64 %c
+  %retval.0.i.i = select i1 %cmp16.i.i, i64 %c, i64 %spec.select11.i
+  ret i64 %retval.0.i.i
+}
 
 declare void @use1(i1)
 declare void @use8(i8)
+declare void @use32(i32)
