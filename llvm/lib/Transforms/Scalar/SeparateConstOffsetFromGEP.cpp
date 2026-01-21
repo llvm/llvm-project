@@ -744,6 +744,9 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
           //   Therefore the correct form is:
           //       b + ((a ^ non_disjoint(c)) + disjoint(c)) * scale
 
+          // And not b + ((a ^ (c)) + disjoint(c)) * scale, which ignores the
+          // non_disjoint split of the constant c which is incorrect.
+
           // Rationale:
           //   - Bits of c that are disjoint from a (i.e., where a is known
           //   zero)
