@@ -1,4 +1,4 @@
-//===-- Double-precision log10(x) function --------------------------------===//
+//===-- Shared log1p function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/log10.h"
-#include "src/__support/math/log10.h"
+#ifndef LLVM_LIBC_SHARED_MATH_LOG1P_H
+#define LLVM_LIBC_SHARED_MATH_LOG1P_H
 
+#include "shared/libc_common.h"
+#include "src/__support/math/log1p.h"
 namespace LIBC_NAMESPACE_DECL {
-LLVM_LIBC_FUNCTION(double, log10, (double x)) { return math::log10(x); }
+
+namespace shared {
+using math::log1p;
+} // namespace shared
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_LOG1P_H
