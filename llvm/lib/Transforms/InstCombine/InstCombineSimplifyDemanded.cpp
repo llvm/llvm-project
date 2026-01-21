@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -2198,6 +2199,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     DemandedMask = adjustDemandedMaskFromFlags(DemandedMask, FMF);
   }
 
+  // Remove unwanted results from the computed result
+  scope_exit ApplyDemandedMask(
+      [=, &Known]() { Known.knownNot(~DemandedMask); });
+
   switch (I->getOpcode()) {
   case Instruction::FNeg: {
     if (SimplifyDemandedFPClass(I, 0, llvm::fneg(DemandedMask), Known,
@@ -2208,8 +2213,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
   }
   case Instruction::FAdd: {
     KnownFPClass KnownLHS, KnownRHS;
-
-    const SimplifyQuery &SQ = getSimplifyQuery();
 
     // fadd x, x can be handled more aggressively.
     if (I->getOperand(0) == I->getOperand(1) &&
@@ -2332,7 +2335,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (DemandedMask & fcZero)
       SrcDemandedMask |= fcNormal | fcSubnormal;
 
-    const SimplifyQuery &SQ = getSimplifyQuery();
     if (X == Y && isGuaranteedNotToBeUndef(X, SQ.AC, CxtI, SQ.DT, Depth + 1)) {
       if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, Depth + 1))
         return I;
@@ -2937,7 +2939,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (KnownRHS.isKnownNever(DemandedMask))
       return I->getOperand(1);
 
-    const SimplifyQuery &SQ = getSimplifyQuery();
     adjustKnownFPClassForSelectArm(KnownLHS, I->getOperand(0), I->getOperand(1),
                                    /*Invert=*/false, SQ, Depth);
     adjustKnownFPClassForSelectArm(KnownRHS, I->getOperand(0), I->getOperand(2),
@@ -2992,6 +2993,10 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     DemandedMask = adjustDemandedMaskFromFlags(DemandedMask, FMF);
   }
 
+  // Remove unwanted results from the computed result
+  scope_exit ApplyDemandedMask(
+      [=, &Known]() { Known.knownNot(~DemandedMask); });
+
   switch (I->getOpcode()) {
   case Instruction::Select: {
     // TODO: Can we infer which side it came from based on adjusted result
@@ -3006,7 +3011,6 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     if (KnownLHS.isKnownNever(DemandedMask))
       return I->getOperand(2);
 
-    const SimplifyQuery &SQ = getSimplifyQuery();
     adjustKnownFPClassForSelectArm(KnownLHS, I->getOperand(0), I->getOperand(1),
                                    /*Invert=*/false, SQ, Depth);
     adjustKnownFPClassForSelectArm(KnownRHS, I->getOperand(0), I->getOperand(2),
@@ -3113,9 +3117,9 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
   if (!VInst) {
     // Handle constants and arguments
     Known = computeKnownFPClass(V, fcAllFlags, I, Depth);
+    Known.knownNot(~DemandedMask);
 
-    FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
-    if (ValidResults == fcNone) {
+    if (Known.KnownFPClasses == fcNone) {
       if (isa<UndefValue>(V))
         return false;
       replaceUse(U, PoisonValue::get(VTy));
@@ -3128,7 +3132,7 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
     if (isa<Constant>(V))
       return false;
 
-    Value *FoldedToConst = getFPClassConstant(VTy, ValidResults);
+    Value *FoldedToConst = getFPClassConstant(VTy, Known.KnownFPClasses);
     if (!FoldedToConst || FoldedToConst == V)
       return false;
 

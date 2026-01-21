@@ -1044,6 +1044,10 @@ def FeatureStdExtSvnapot
 def FeatureStdExtSvpbmt
     : RISCVExtension<1, 0, "Page-Based Memory Types">;
 
+def FeatureStdExtSvrsw60t59b
+    : RISCVExtension<1, 0,
+                     "PTE Reserved-for-Software Bits 60-59">;
+
 def FeatureStdExtSvvptc
     : RISCVExtension<1, 0,
                      "Obviating Memory-Management Instructions after Marking PTEs Valid">;
@@ -1122,9 +1126,8 @@ def HasStdExtZbkbOrP
 // "Y" extension (CHERI support)
 
 def FeatureStdExtY : RISCVExperimentalExtension<0, 96, "'Base Y' (CHERI)">;
-def HasStdExtY
-    : Predicate<"Subtarget->hasStdExtY()">,
-      AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
+def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
+                 AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 
 // When enabled all memory operations (e.g. loads/stores) uses capability
 // registers as the base operand instead of the address sub-register.
@@ -1134,11 +1137,11 @@ def HasStdExtY
 // fully backwards compatible with non-Y code).
 def FeatureCapMode : SubtargetFeature<"cap-mode", "IsCapMode", "true",
                                       "Capability pointer mode">;
-def IsCapMode
-    : Predicate<"Subtarget->isCapMode()">,
-      AssemblerPredicate<(all_of FeatureCapMode), "Capability Pointer Mode">;
+def IsCapMode : Predicate<"Subtarget->isCapMode()">,
+                AssemblerPredicate<(all_of FeatureCapMode),
+                                   "Capability Pointer Mode">;
 def NotCapMode : Predicate<"!Subtarget->isCapMode()">,
-                 AssemblerPredicate<(all_of(not FeatureCapMode)),
+                 AssemblerPredicate<(all_of (not FeatureCapMode)),
                                     "Not Capability Pointer Mode">;
 
 //===----------------------------------------------------------------------===//
@@ -2002,3 +2005,4 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
+
