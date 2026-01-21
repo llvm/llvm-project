@@ -176,10 +176,10 @@ parseXCOFFSectionType(StringRef TypeStr) {
 }
 
 // Find the base VMA of the unique section matching the given type for XCOFF.
-// The syntax (SECTION_TYPE)(+offset) represents an offset from the section base,
-// so we return the section's base address to compute: VMA = base + offset.
-// This function verifies there is exactly one section of the given type, as
-// multiple sections of the same type would make the address ambiguous.
+// The syntax (SECTION_TYPE)(+offset) represents an offset from the section
+// base, so we return the section's base address to compute: VMA = base +
+// offset. This function verifies there is exactly one section of the given
+// type, as multiple sections of the same type would make the address ambiguous.
 static Expected<uint64_t>
 getXCOFFSectionBaseAddress(const object::XCOFFObjectFile *XCOFFObj,
                            XCOFF::SectionTypeFlags TypeFlag) {
@@ -205,53 +205,53 @@ getXCOFFSectionBaseAddress(const object::XCOFFObjectFile *XCOFFObj,
   return *SectionBase;
 }
 
- static Expected<uint64_t> validateSectionType(StringRef ModulePath,
-                                                 StringRef SectionType,
-                                                 uint64_t &Offset,
-                                                 LLVMSymbolizer &Symbolizer) {
-   // Parse the section type string
-   auto SectionTypeFlag = parseXCOFFSectionType(SectionType);
-   if (!SectionTypeFlag) {
-     return createStringError(inconvertibleErrorCode(),
-                              "unknown or unsupported section type: " +
-                                  SectionType.str());
-   }
+static Expected<uint64_t> validateSectionType(StringRef ModulePath,
+                                              StringRef SectionType,
+                                              uint64_t &Offset,
+                                              LLVMSymbolizer &Symbolizer) {
+  // Parse the section type string
+  auto SectionTypeFlag = parseXCOFFSectionType(SectionType);
+  if (!SectionTypeFlag) {
+    return createStringError(inconvertibleErrorCode(),
+                             "unknown or unsupported section type: " +
+                                 SectionType.str());
+  }
 
-   // Get the module info to access the object file
-   auto ModuleOrErr = Symbolizer.getOrCreateModuleInfo(ModulePath);
-   if (!ModuleOrErr) {
-     return ModuleOrErr.takeError();
-   }
+  // Get the module info to access the object file
+  auto ModuleOrErr = Symbolizer.getOrCreateModuleInfo(ModulePath);
+  if (!ModuleOrErr) {
+    return ModuleOrErr.takeError();
+  }
 
-   auto BinaryOrErr = object::createBinary(ModulePath);
-   if (!BinaryOrErr) {
-     return BinaryOrErr.takeError();
-   }
+  auto BinaryOrErr = object::createBinary(ModulePath);
+  if (!BinaryOrErr) {
+    return BinaryOrErr.takeError();
+  }
 
-   object::Binary *Binary = BinaryOrErr->getBinary();
-   if (auto *XCOFFObj = dyn_cast<object::XCOFFObjectFile>(Binary)) {
-     // Get the base VMA of the section matching the type
-     auto SectionBaseOrErr =
-         getXCOFFSectionBaseAddress(XCOFFObj, *SectionTypeFlag);
-     if (!SectionBaseOrErr)
-       return SectionBaseOrErr.takeError();
+  object::Binary *Binary = BinaryOrErr->getBinary();
+  if (auto *XCOFFObj = dyn_cast<object::XCOFFObjectFile>(Binary)) {
+    // Get the base VMA of the section matching the type
+    auto SectionBaseOrErr =
+        getXCOFFSectionBaseAddress(XCOFFObj, *SectionTypeFlag);
+    if (!SectionBaseOrErr)
+      return SectionBaseOrErr.takeError();
 
-     uint64_t SectionBase = *SectionBaseOrErr;
-     uint64_t SectionRelativeOffset = Offset;
+    uint64_t SectionBase = *SectionBaseOrErr;
+    uint64_t SectionRelativeOffset = Offset;
 
-     // Convert section-relative offset to absolute VMA
-     // VMA = section_base + offset
-     Offset = SectionBase + SectionRelativeOffset;
+    // Convert section-relative offset to absolute VMA
+    // VMA = section_base + offset
+    Offset = SectionBase + SectionRelativeOffset;
 
-     // Return UndefSection - XCOFF symbolizer doesn't support SectionedAddress,
-     // so we use absolute VMA addressing instead.
-     return object::SectionedAddress::UndefSection;
-   }
+    // Return UndefSection - XCOFF symbolizer doesn't support SectionedAddress,
+    // so we use absolute VMA addressing instead.
+    return object::SectionedAddress::UndefSection;
+  }
 
-   return createStringError(
-       inconvertibleErrorCode(),
-       "section type syntax is only supported for XCOFF objects");
- }
+  return createStringError(
+      inconvertibleErrorCode(),
+      "section type syntax is only supported for XCOFF objects");
+}
 
 static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
                           StringRef InputString, Command &Cmd,
