@@ -122,6 +122,7 @@ bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD);
 bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
                               const FixedPoint &FP);
 
+bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I);
 bool isConstexprUnknown(const Pointer &P);
 
 enum class ShiftDir { Left, Right };
@@ -2463,38 +2464,6 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
     return handleOverflow(S, OpPC, R64);
 
   S.Stk.push<T>(T::from(R64));
-  return true;
-}
-
-//===----------------------------------------------------------------------===//
-// Destroy
-//===----------------------------------------------------------------------===//
-
-inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
-  assert(S.Current->getFunction());
-
-  // FIXME: We iterate the scope once here and then again in the destroy() call
-  // below.
-  for (auto &Local : S.Current->getFunction()->getScope(I).locals_reverse()) {
-    const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
-
-    if (Ptr.getLifetime() == Lifetime::Ended) {
-      // Try to use the declaration for better diagnostics
-      if (const Decl *D = Ptr.getDeclDesc()->asDecl()) {
-        auto *ND = cast<NamedDecl>(D);
-        S.FFDiag(ND->getLocation(),
-                 diag::note_constexpr_destroy_out_of_lifetime)
-            << ND->getNameAsString();
-      } else {
-        S.FFDiag(Ptr.getDeclDesc()->getLocation(),
-                 diag::note_constexpr_destroy_out_of_lifetime)
-            << Ptr.toDiagnosticString(S.getASTContext());
-      }
-      return false;
-    }
-  }
-
-  S.Current->destroy(I);
   return true;
 }
 
