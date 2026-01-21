@@ -2789,10 +2789,12 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     return loopInfo;
   };
 
-  llvm::Value *ubVal = builder.getInt32(1);
   Operation::operand_range lowerBounds = loopOp.getLoopLowerBounds();
   Operation::operand_range upperBounds = loopOp.getLoopUpperBounds();
+  Operation::operand_range steps = loopOp.getLoopSteps();
   llvm::Value *lbVal = nullptr;
+  llvm::Value *ubVal = builder.getInt32(1);
+  llvm::Value *stepVal = nullptr;
   if (loopOp.getCollapseNumLoops() > 1) {
     // In cases where Collapse is used with Taskloop, the upper bound of the
     // iteration space needs to be recalculated to cater for the collapsed loop.
@@ -2816,13 +2818,33 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(lowerBounds[i]), builder.getInt32(1));
       llvm::Value *loopTripCount = builder.CreateSub(
           moduleTranslation.lookupValue(upperBounds[i]), lowerBoundMinusOne);
+      // For loops that have a step value greater than 1, we need to adjust the
+      // trip count to ensure the correct number of iterations for the loop is
+      // captured.
+      llvm::Value *loopTripCountDivStep = builder.CreateUDiv(
+          loopTripCount, moduleTranslation.lookupValue(steps[i]));
+      llvm::Value *loopTripCountRem = builder.CreateURem(
+          loopTripCount, moduleTranslation.lookupValue(steps[i]));
+      llvm::Value *needsRoundUp = builder.CreateICmpNE(
+          loopTripCountRem,
+          builder.getIntN(loopTripCountRem->getType()->getIntegerBitWidth(),
+                          0));
+      loopTripCount =
+          builder.CreateAdd(loopTripCountDivStep,
+                            builder.CreateZExtOrTrunc(
+                                needsRoundUp, loopTripCountDivStep->getType()));
       lbVal = builder.getInt32(1);
       ubVal = builder.CreateMul(ubVal, loopTripCount);
+      stepVal = builder.getInt32(1);
     }
   } else {
     lbVal = moduleTranslation.lookupValue(lowerBounds[0]);
     ubVal = moduleTranslation.lookupValue(upperBounds[0]);
+    stepVal = moduleTranslation.lookupValue(steps[0]);
   }
+  assert(lbVal != nullptr && "Expected value for lbVal");
+  assert(ubVal != nullptr && "Expected value for ubVal");
+  assert(stepVal != nullptr && "Expected value for stepVal");
 
   llvm::Value *ifCond = nullptr;
   llvm::Value *grainsize = nullptr;
@@ -2856,8 +2878,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTaskloop(
-          ompLoc, allocaIP, bodyCB, loopInfo, lbVal, ubVal,
-          moduleTranslation.lookupValue(loopOp.getLoopSteps()[0]),
+          ompLoc, allocaIP, bodyCB, loopInfo, lbVal, ubVal, stepVal,
           taskloopOp.getUntied(), ifCond, grainsize, taskloopOp.getNogroup(),
           sched, moduleTranslation.lookupValue(taskloopOp.getFinal()),
           taskloopOp.getMergeable(),
