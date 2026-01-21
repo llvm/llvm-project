@@ -21,15 +21,15 @@ define void @spillDMRreg(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) nounwind {
 ; CHECK-NEXT:    stdu r1, -176(r1)
 ; CHECK-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-NEXT:    lxvp vsp36, 32(r3)
-; CHECK-NEXT:    mr r30, r6
-; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; CHECK-NEXT:    lxvp vsp34, 64(r3)
-; CHECK-NEXT:    lxvp vsp36, 96(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
-; CHECK-NEXT:    lxv v2, 16(r4)
-; CHECK-NEXT:    lxv v3, 0(r4)
+; CHECK-NEXT:    lxvp vsp32, 64(r3)
+; CHECK-NEXT:    lxvp vsp38, 96(r3)
+; CHECK-NEXT:    lxv v8, 16(r4)
+; CHECK-NEXT:    lxv v9, 0(r4)
 ; CHECK-NEXT:    lxv vs0, 0(r5)
-; CHECK-NEXT:    dmxvbf16gerx2pp dmr0, vsp34, vs0
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp38, vsp32, 0
+; CHECK-NEXT:    mr r30, r6
+; CHECK-NEXT:    dmxvbf16gerx2pp dmr0, vsp40, vs0
 ; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp36, 128(r1)
 ; CHECK-NEXT:    stxvp vsp34, 96(r1)
@@ -63,15 +63,15 @@ define void @spillDMRreg(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) nounwind {
 ; AIX-NEXT:    std r31, 248(r1) # 8-byte Folded Spill
 ; AIX-NEXT:    lxvp vsp34, 96(r3)
 ; AIX-NEXT:    lxvp vsp36, 64(r3)
-; AIX-NEXT:    mr r31, r6
-; AIX-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; AIX-NEXT:    lxvp vsp34, 32(r3)
-; AIX-NEXT:    lxvp vsp36, 0(r3)
-; AIX-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
-; AIX-NEXT:    lxv v2, 0(r4)
-; AIX-NEXT:    lxv v3, 16(r4)
+; AIX-NEXT:    lxvp vsp32, 32(r3)
+; AIX-NEXT:    lxvp vsp38, 0(r3)
+; AIX-NEXT:    lxv v8, 0(r4)
+; AIX-NEXT:    lxv v9, 16(r4)
 ; AIX-NEXT:    lxv vs0, 0(r5)
-; AIX-NEXT:    dmxvbf16gerx2pp dmr0, vsp34, vs0
+; AIX-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
+; AIX-NEXT:    dmxxinstdmr512 wacc0, vsp38, vsp32, 0
+; AIX-NEXT:    mr r31, r6
+; AIX-NEXT:    dmxvbf16gerx2pp dmr0, vsp40, vs0
 ; AIX-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
 ; AIX-NEXT:    stxvp vsp36, 112(r1)
 ; AIX-NEXT:    stxvp vsp34, 144(r1)
@@ -106,15 +106,15 @@ define void @spillDMRreg(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) nounwind {
 ; AIX32-NEXT:    stw r31, 204(r1) # 4-byte Folded Spill
 ; AIX32-NEXT:    lxvp vsp34, 96(r3)
 ; AIX32-NEXT:    lxvp vsp36, 64(r3)
-; AIX32-NEXT:    mr r31, r6
-; AIX32-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; AIX32-NEXT:    lxvp vsp34, 32(r3)
-; AIX32-NEXT:    lxvp vsp36, 0(r3)
-; AIX32-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
-; AIX32-NEXT:    lxv v2, 0(r4)
-; AIX32-NEXT:    lxv v3, 16(r4)
+; AIX32-NEXT:    lxvp vsp32, 32(r3)
+; AIX32-NEXT:    lxvp vsp38, 0(r3)
+; AIX32-NEXT:    lxv v8, 0(r4)
+; AIX32-NEXT:    lxv v9, 16(r4)
 ; AIX32-NEXT:    lxv vs0, 0(r5)
-; AIX32-NEXT:    dmxvbf16gerx2pp dmr0, vsp34, vs0
+; AIX32-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
+; AIX32-NEXT:    dmxxinstdmr512 wacc0, vsp38, vsp32, 0
+; AIX32-NEXT:    mr r31, r6
+; AIX32-NEXT:    dmxvbf16gerx2pp dmr0, vsp40, vs0
 ; AIX32-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
 ; AIX32-NEXT:    stxvp vsp36, 64(r1)
 ; AIX32-NEXT:    stxvp vsp34, 96(r1)

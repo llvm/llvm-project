@@ -90,6 +90,12 @@ def push_dynamic_library_lookup_path(config, new_path):
     new_ld_library_path = os.path.pathsep.join(
         (new_path, config.environment.get(dynamic_library_lookup_var, ""))
     )
+
+    if platform.system() == "Darwin":
+        # Workaround an issue in LD which does not use the correct libLTO
+        # if the DYLD_LIBRARY_PATH is not normalized.
+        new_ld_library_path = os.path.normpath(new_ld_library_path)
+
     config.environment[dynamic_library_lookup_var] = new_ld_library_path
 
     if platform.system() == "FreeBSD":
@@ -126,8 +132,6 @@ config.recursiveExpansionLimit = 10
 
 # Setup test format.
 config.test_format = lit.formats.ShTest(execute_external)
-if execute_external:
-    config.available_features.add("shell")
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 target_is_windows = bool(re.match(r".*-windows.*$", config.target_triple))
@@ -179,6 +183,14 @@ if config.enable_per_target_runtime_dir:
     elif config.target_arch == "sparcv9":
         config.compiler_rt_libdir = re.sub(
             r"/sparc(?=-[^/]+$)", "/sparcv9", config.compiler_rt_libdir
+        )
+    if config.target_arch == "powerpc":
+        config.compiler_rt_libdir = re.sub(
+            r"/powerpc64(?=-[^/]+$)", "/powerpc", config.compiler_rt_libdir
+        )
+    elif config.target_arch == "powerpc64":
+        config.compiler_rt_libdir = re.sub(
+            r"/powerpc(?=-[^/]+$)", "/powerpc64", config.compiler_rt_libdir
         )
 
 # Check if the test compiler resource dir matches the local build directory
@@ -405,7 +417,7 @@ if emulator:
     lit_config.warning("%device_rm is not implemented")
     config.substitutions.append(("%device_rm", "echo "))
     config.compile_wrapper = ""
-elif config.target_os == "Darwin" and config.apple_platform != "osx":
+elif config.target_os == "Darwin" and not config.apple_target_is_host:
     # Darwin tests can be targetting macOS, a device or a simulator. All devices
     # are declared as "ios", even for iOS derivatives (tvOS, watchOS). Similarly,
     # all simulators are "iossim". See the table below.
@@ -413,18 +425,25 @@ elif config.target_os == "Darwin" and config.apple_platform != "osx":
     # =========================================================================
     # Target             | Feature set
     # =========================================================================
-    # macOS              | darwin
-    # iOS device         | darwin, ios
-    # iOS simulator      | darwin, ios, iossim
-    # tvOS device        | darwin, ios, tvos
-    # tvOS simulator     | darwin, ios, iossim, tvos, tvossim
-    # watchOS device     | darwin, ios, watchos
-    # watchOS simulator  | darwin, ios, iossim, watchos, watchossim
+    # macOS host         | darwin
+    # macOS device       | darwin, darwin-remote
+    # iOS device         | darwin, darwin-remote, ios
+    # iOS simulator      | darwin, darwin-remote, ios, iossim
+    # tvOS device        | darwin, darwin-remote, ios, tvos
+    # tvOS simulator     | darwin, darwin-remote, ios, iossim, tvos, tvossim
+    # watchOS device     | darwin, darwin-remote, ios, watchos
+    # watchOS simulator  | darwin, darwin-remote, ios, iossim, watchos, watchossim
     # =========================================================================
+
+    # All suites that aren't running on the host get the darwin-remote feature.
+    config.available_features.add("darwin-remote")
+
+    # All non-OSX targets have the ios feature (see the above table)
+    if config.apple_platform != "osx":
+        config.available_features.add("ios")
 
     ios_or_iossim = "iossim" if config.apple_platform.endswith("sim") else "ios"
 
-    config.available_features.add("ios")
     device_id_env = "SANITIZER_" + ios_or_iossim.upper() + "_TEST_DEVICE_IDENTIFIER"
     if ios_or_iossim == "iossim":
         config.available_features.add("iossim")
@@ -452,6 +471,7 @@ elif config.target_os == "Darwin" and config.apple_platform != "osx":
     # the work.
     config.substitutions.append(("%device_rm", "{} rm ".format(run_wrapper)))
     config.compile_wrapper = compile_wrapper
+    config.darwin_run_wrapper = run_wrapper
 
     try:
         prepare_output = (
@@ -491,6 +511,7 @@ else:
     # When running locally %device_rm is a no-op.
     config.substitutions.append(("%device_rm", "echo "))
     config.compile_wrapper = ""
+    config.darwin_run_wrapper = ""
 
 # Define CHECK-%os to check for OS-dependent output.
 config.substitutions.append(("CHECK-%os", ("CHECK-" + config.target_os)))
@@ -561,27 +582,32 @@ config.substitutions.append(
 )
 
 if config.target_os == "Darwin":
-    osx_version = (10, 0, 0)
-    try:
-        osx_version = subprocess.check_output(
-            ["sw_vers", "-productVersion"], universal_newlines=True
-        )
-        osx_version = tuple(int(x) for x in osx_version.split("."))
-        if len(osx_version) == 2:
-            osx_version = (osx_version[0], osx_version[1], 0)
-        if osx_version >= (10, 11):
-            config.available_features.add("osx-autointerception")
-            config.available_features.add("osx-ld64-live_support")
-        if osx_version >= (13, 1):
-            config.available_features.add("jit-compatible-osx-swift-runtime")
-    except subprocess.CalledProcessError:
-        pass
+    if config.darwin_run_wrapper != "" and not config.apple_platform.endswith("sim"):
+        os_detection_prefix = [config.darwin_run_wrapper]
+    else:
+        # There is no simulator-specific sw_vers/sysctl, so we use the host OS version
+        os_detection_prefix = []
 
-    config.darwin_osx_version = osx_version
+    darwin_os_version = subprocess.check_output(
+        os_detection_prefix + ["sw_vers", "-productVersion"], universal_newlines=True
+    )
+    darwin_os_version = tuple(int(x) for x in darwin_os_version.split("."))
+
+    if len(darwin_os_version) == 2:
+        darwin_os_version = (darwin_os_version[0], darwin_os_version[1], 0)
+    if darwin_os_version >= (10, 11):
+        config.available_features.add("osx-autointerception")
+        config.available_features.add("osx-ld64-live_support")
+    if darwin_os_version >= (13, 1):
+        config.available_features.add("jit-compatible-osx-swift-runtime")
+
+    config.darwin_os_version = darwin_os_version
 
     # Detect x86_64h
     try:
-        output = subprocess.check_output(["sysctl", "hw.cpusubtype"])
+        output = subprocess.check_output(
+            os_detection_prefix + ["sysctl", "hw.cpusubtype"]
+        )
         output_re = re.match("^hw.cpusubtype: ([0-9]+)$", output)
         if output_re:
             cpu_subtype = int(output_re.group(1))

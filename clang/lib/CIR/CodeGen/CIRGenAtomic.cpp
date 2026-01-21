@@ -709,25 +709,40 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: dynamic sync scope");
 }
 
-static bool isMemOrderValid(uint64_t order, bool isStore, bool isLoad) {
-  if (!cir::isValidCIRAtomicOrderingCABI(order))
-    return false;
-  auto memOrder = static_cast<cir::MemOrder>(order);
-  if (isStore)
-    return memOrder != cir::MemOrder::Consume &&
-           memOrder != cir::MemOrder::Acquire &&
-           memOrder != cir::MemOrder::AcquireRelease;
-  if (isLoad)
-    return memOrder != cir::MemOrder::Release &&
-           memOrder != cir::MemOrder::AcquireRelease;
-  return true;
+static std::optional<cir::MemOrder>
+getEffectiveAtomicMemOrder(cir::MemOrder oriOrder, bool isStore, bool isLoad,
+                           bool isFence) {
+  // Some memory orders are not supported by partial atomic operation:
+  // {memory_order_releaxed} is not valid for fence operations.
+  // {memory_order_consume, memory_order_acquire} are not valid for write-only
+  // operations.
+  // {memory_order_release} is not valid for read-only operations.
+  // {memory_order_acq_rel} is only valid for read-write operations.
+  if (isStore) {
+    if (oriOrder == cir::MemOrder::Consume ||
+        oriOrder == cir::MemOrder::Acquire ||
+        oriOrder == cir::MemOrder::AcquireRelease)
+      return std::nullopt;
+  } else if (isLoad) {
+    if (oriOrder == cir::MemOrder::Release ||
+        oriOrder == cir::MemOrder::AcquireRelease)
+      return std::nullopt;
+  } else if (isFence) {
+    if (oriOrder == cir::MemOrder::Relaxed)
+      return std::nullopt;
+  }
+  // memory_order_consume is not implemented, it is always treated like
+  // memory_order_acquire
+  if (oriOrder == cir::MemOrder::Consume)
+    return cir::MemOrder::Acquire;
+  return oriOrder;
 }
 
 static void emitAtomicExprWithDynamicMemOrder(
-    CIRGenFunction &cgf, mlir::Value order, AtomicExpr *e, Address dest,
-    Address ptr, Address val1, Address val2, Expr *isWeakExpr,
-    Expr *orderFailExpr, uint64_t size, bool isStore, bool isLoad,
-    const std::optional<Expr::EvalResult> &scopeConst, mlir::Value scopeValue) {
+    CIRGenFunction &cgf, mlir::Value order, bool isStore, bool isLoad,
+    bool isFence, llvm::function_ref<void(cir::MemOrder)> emitAtomicOpFn) {
+  if (!order)
+    return;
   // The memory order is not known at compile-time.  The atomic operations
   // can't handle runtime memory orders; the memory order must be hard coded.
   // Generate a "switch" statement that converts a runtime value into a
@@ -738,54 +753,74 @@ static void emitAtomicExprWithDynamicMemOrder(
       [&](mlir::OpBuilder &, mlir::Location loc, mlir::OperationState &) {
         mlir::Block *switchBlock = builder.getBlock();
 
-        auto emitMemOrderCase = [&](llvm::ArrayRef<cir::MemOrder> caseOrders,
-                                    cir::MemOrder actualOrder) {
-          if (caseOrders.empty())
+        auto emitMemOrderCase = [&](llvm::ArrayRef<cir::MemOrder> caseOrders) {
+          // Checking there are same effective memory order for each case.
+          for (int i = 1, e = caseOrders.size(); i < e; i++)
+            assert((getEffectiveAtomicMemOrder(caseOrders[i - 1], isStore,
+                                               isLoad, isFence) ==
+                    getEffectiveAtomicMemOrder(caseOrders[i], isStore, isLoad,
+                                               isFence)) &&
+                   "Effective memory order must be same!");
+          // Emit case label and atomic opeartion if neccessary.
+          if (caseOrders.empty()) {
             emitMemOrderDefaultCaseLabel(builder, loc);
-          else
+            // There is no good way to report an unsupported memory order at
+            // runtime, hence the fallback to memory_order_relaxed.
+            if (!isFence)
+              emitAtomicOpFn(cir::MemOrder::Relaxed);
+          } else if (std::optional<cir::MemOrder> actualOrder =
+                         getEffectiveAtomicMemOrder(caseOrders[0], isStore,
+                                                    isLoad, isFence)) {
+            // Included in default case.
+            if (!isFence && actualOrder == cir::MemOrder::Relaxed)
+              return;
+            // Creating case operation for effective memory order. If there are
+            // multiple cases in `caseOrders`, the actual order of each case
+            // must be same, this needs to be guaranteed by the caller.
             emitMemOrderCaseLabel(builder, loc, order.getType(), caseOrders);
-          emitAtomicOp(cgf, e, dest, ptr, val1, val2, isWeakExpr, orderFailExpr,
-                       size, actualOrder, scopeConst, scopeValue);
+            emitAtomicOpFn(actualOrder.value());
+          } else {
+            // Do nothing if (!caseOrders.empty() && !actualOrder)
+            return;
+          }
           builder.createBreak(loc);
           builder.setInsertionPointToEnd(switchBlock);
         };
 
-        // default:
-        // Use memory_order_relaxed for relaxed operations and for any memory
-        // order value that is not supported.  There is no good way to report
-        // an unsupported memory order at runtime, hence the fallback to
-        // memory_order_relaxed.
-        emitMemOrderCase(/*caseOrders=*/{}, cir::MemOrder::Relaxed);
-
-        if (!isStore) {
-          // case consume:
-          // case acquire:
-          // memory_order_consume is not implemented; it is always treated
-          // like memory_order_acquire.  These memory orders are not valid for
-          // write-only operations.
-          emitMemOrderCase({cir::MemOrder::Consume, cir::MemOrder::Acquire},
-                           cir::MemOrder::Acquire);
-        }
-
-        if (!isLoad) {
-          // case release:
-          // memory_order_release is not valid for read-only operations.
-          emitMemOrderCase({cir::MemOrder::Release}, cir::MemOrder::Release);
-        }
-
-        if (!isLoad && !isStore) {
-          // case acq_rel:
-          // memory_order_acq_rel is only valid for read-write operations.
-          emitMemOrderCase({cir::MemOrder::AcquireRelease},
-                           cir::MemOrder::AcquireRelease);
-        }
-
-        // case seq_cst:
-        emitMemOrderCase({cir::MemOrder::SequentiallyConsistent},
-                         cir::MemOrder::SequentiallyConsistent);
+        emitMemOrderCase(/*default:*/ {});
+        emitMemOrderCase({cir::MemOrder::Relaxed});
+        emitMemOrderCase({cir::MemOrder::Consume, cir::MemOrder::Acquire});
+        emitMemOrderCase({cir::MemOrder::Release});
+        emitMemOrderCase({cir::MemOrder::AcquireRelease});
+        emitMemOrderCase({cir::MemOrder::SequentiallyConsistent});
 
         builder.createYield(loc);
       });
+}
+
+void CIRGenFunction::emitAtomicExprWithMemOrder(
+    const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
+    llvm::function_ref<void(cir::MemOrder)> emitAtomicOpFn) {
+  // Emit the memory order operand, and try to evaluate it as a constant.
+  Expr::EvalResult eval;
+  if (memOrder->EvaluateAsInt(eval, getContext())) {
+    uint64_t constOrder = eval.Val.getInt().getZExtValue();
+    // We should not ever get to a case where the ordering isn't a valid CABI
+    // value, but it's hard to enforce that in general.
+    if (!cir::isValidCIRAtomicOrderingCABI(constOrder))
+      return;
+    cir::MemOrder oriOrder = static_cast<cir::MemOrder>(constOrder);
+    if (std::optional<cir::MemOrder> actualOrder =
+            getEffectiveAtomicMemOrder(oriOrder, isStore, isLoad, isFence))
+      emitAtomicOpFn(actualOrder.value());
+    return;
+  }
+
+  // Otherwise, handle variable memory ordering. Emit `SwitchOp` to convert
+  // dynamic value to static value.
+  mlir::Value dynOrder = emitScalarExpr(memOrder);
+  emitAtomicExprWithDynamicMemOrder(*this, dynOrder, isStore, isLoad, isFence,
+                                    emitAtomicOpFn);
 }
 
 RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
@@ -811,12 +846,6 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
 
   TypeInfoChars typeInfo = getContext().getTypeInfoInChars(atomicTy);
   uint64_t size = typeInfo.Width.getQuantity();
-
-  // Emit the memory order operand, and try to evaluate it as a constant.
-  mlir::Value order = emitScalarExpr(e->getOrder());
-  std::optional<Expr::EvalResult> orderConst;
-  if (Expr::EvalResult eval; e->getOrder()->EvaluateAsInt(eval, getContext()))
-    orderConst.emplace(std::move(eval));
 
   // Emit the sync scope operand, and try to evaluate it as a constant.
   mlir::Value scope =
@@ -979,19 +1008,12 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
                 e->getOp() == AtomicExpr::AO__scoped_atomic_load ||
                 e->getOp() == AtomicExpr::AO__scoped_atomic_load_n;
 
-  if (orderConst.has_value()) {
-    // We have evaluated the memory order as an integer constant in orderConst.
-    // We should not ever get to a case where the ordering isn't a valid CABI
-    // value, but it's hard to enforce that in general.
-    uint64_t ord = orderConst->Val.getInt().getZExtValue();
-    if (isMemOrderValid(ord, isStore, isLoad))
-      emitAtomicOp(*this, e, dest, ptr, val1, val2, isWeakExpr, orderFailExpr,
-                   size, static_cast<cir::MemOrder>(ord), scopeConst, scope);
-  } else {
-    emitAtomicExprWithDynamicMemOrder(*this, order, e, dest, ptr, val1, val2,
-                                      isWeakExpr, orderFailExpr, size, isStore,
-                                      isLoad, scopeConst, scope);
-  }
+  auto emitAtomicOpCallBackFn = [&](cir::MemOrder memOrder) {
+    emitAtomicOp(*this, e, dest, ptr, val1, val2, isWeakExpr, orderFailExpr,
+                 size, memOrder, scopeConst, scope);
+  };
+  emitAtomicExprWithMemOrder(e->getOrder(), isStore, isLoad, /*isFence*/ false,
+                             emitAtomicOpCallBackFn);
 
   if (resultTy->isVoidType())
     return RValue::get(nullptr);

@@ -1790,6 +1790,42 @@ OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
   return std::copy_if(adl_begin(Range), adl_end(Range), Out, P);
 }
 
+/// Provide wrappers to std::search which searches for the first occurrence of
+/// Range2 within Range1.
+/// \returns An iterator to the start of Range2 within Range1 if found, or
+///          the end iterator of Range1 if not found.
+template <typename R1, typename R2> auto search(R1 &&Range1, R2 &&Range2) {
+  return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                     adl_end(Range2));
+}
+
+/// Provide wrappers to std::search which searches for the first occurrence of
+/// Range2 within Range1 using predicate `P`.
+/// \returns An iterator to the start of Range2 within Range1 if found, or
+///          the end iterator of Range1 if not found.
+template <typename R1, typename R2, typename BinaryPredicate>
+auto search(R1 &&Range1, R2 &&Range2, BinaryPredicate P) {
+  return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                     adl_end(Range2), P);
+}
+
+/// Provide wrappers to std::adjacent_find which finds the first pair of
+/// adjacent elements that are equal.
+/// \returns An iterator to the first adjacent element within Range1 if found,
+///          or the end iterator of Range1 if not found.
+template <typename R> auto adjacent_find(R &&Range) {
+  return std::adjacent_find(adl_begin(Range), adl_end(Range));
+}
+
+/// Provide wrappers to std::adjacent_find which finds the first pair of
+/// adjacent elements that are satisfy `P`.
+/// \returns An iterator to the first adjacent element within Range1 if found,
+///          or the end iterator of Range1 if not found.
+template <typename R, typename BinaryPredicate>
+auto adjacent_find(R &&Range, BinaryPredicate P) {
+  return std::adjacent_find(adl_begin(Range), adl_end(Range), P);
+}
+
 /// Return the single value in \p Range that satisfies
 /// \p P(<member of \p Range> *, AllowRepeats)->T * returning nullptr
 /// when no values or multiple values were found.
@@ -2119,6 +2155,20 @@ template <typename R> bool all_equal(R &&Range) {
 // is empty.
 template <typename T> bool all_equal(std::initializer_list<T> Values) {
   return all_equal<std::initializer_list<T>>(std::move(Values));
+}
+
+/// Functor variant of std::equal_to that can be used as a UnaryPredicate in
+/// functional algorithms like all_of. `Args` is forwarded and stored by value.
+/// If you would like to pass by reference, use `std::ref` or `std::cref`.
+template <typename T> constexpr auto equal_to(T &&Arg) {
+  return llvm::bind_front(std::equal_to<>{}, std::forward<T>(Arg));
+}
+
+/// Functor variant of std::not_equal_to that can be used as a UnaryPredicate in
+/// functional algorithms like all_of. `Args` is forwarded and stored by value.
+/// If you would like to pass by reference, use `std::ref` or `std::cref`.
+template <typename T> constexpr auto not_equal_to(T &&Arg) {
+  return llvm::bind_front(std::not_equal_to<>{}, std::forward<T>(Arg));
 }
 
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's

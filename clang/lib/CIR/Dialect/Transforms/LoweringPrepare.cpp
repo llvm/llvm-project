@@ -1029,8 +1029,7 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
       /*condBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
-        mlir::Type boolTy = cir::BoolType::get(b.getContext());
-        auto cmp = cir::CmpOp::create(builder, loc, boolTy, cir::CmpOpKind::ne,
+        auto cmp = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
                                       currentElement, stop);
         builder.createCondition(cmp);
       },

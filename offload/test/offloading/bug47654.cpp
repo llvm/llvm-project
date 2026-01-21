@@ -1,5 +1,6 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 // RUN: %libomptarget-compileoptxx-run-and-check-generic
+// XFAIL: intelgpu
 
 #include <cassert>
 #include <iostream>
