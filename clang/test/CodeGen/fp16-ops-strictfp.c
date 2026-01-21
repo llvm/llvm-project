@@ -334,7 +334,7 @@ void foo(void) {
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f64(double 4.200000e+01, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fptrunc.f16.f64(double 4.200000e+01, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %98, metadata !"fpexcept.strict")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call i1 @llvm.experimental.constrained.fcmps.f32(float %{{.*}}, float %{{.*}}, metadata !"ole", metadata !"fpexcept.strict")
   // NATIVE-HALF: call i1 @llvm.experimental.constrained.fcmps.f16(half %{{.*}}, half %{{.*}}, metadata !"ole", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} i32 {{.*}}, ptr
@@ -418,7 +418,7 @@ void foo(void) {
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f64(double 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fptrunc.f16.f64(double 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %122, metadata !"fpexcept.strict")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call i1 @llvm.experimental.constrained.fcmp.f32(float %{{.*}}, float %{{.*}}, metadata !"oeq", metadata !"fpexcept.strict")
   // NATIVE-HALF: call i1 @llvm.experimental.constrained.fcmp.f16(half %{{.*}}, half %{{.*}}, metadata !"oeq", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} i32 {{.*}}, ptr

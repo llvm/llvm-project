@@ -16517,34 +16517,46 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
-  case Builtin::BI_rotl8: // Microsoft variants of rotate right
-  case Builtin::BI_rotl16:
-  case Builtin::BI_rotl:
-  case Builtin::BI_lrotl:
-  case Builtin::BI_rotl64: {
-    APSInt Val, Amt;
-    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
-        !EvaluateInteger(E->getArg(1), Amt, Info))
-      return false;
-
-    return Success(Val.rotl(Amt), E);
-  }
-
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64: {
-    APSInt Val, Amt;
-    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
-        !EvaluateInteger(E->getArg(1), Amt, Info))
+    APSInt Value, Amount;
+    if (!EvaluateInteger(E->getArg(0), Value, Info) ||
+        !EvaluateInteger(E->getArg(1), Amount, Info))
       return false;
 
-    return Success(Val.rotr(Amt), E);
+    Amount = NormalizeRotateAmount(Value, Amount);
+
+    switch (BuiltinOp) {
+    case Builtin::BI__builtin_rotateright8:
+    case Builtin::BI__builtin_rotateright16:
+    case Builtin::BI__builtin_rotateright32:
+    case Builtin::BI__builtin_rotateright64:
+    case Builtin::BI__builtin_stdc_rotate_right:
+    case Builtin::BI_rotr8:
+    case Builtin::BI_rotr16:
+    case Builtin::BI_rotr:
+    case Builtin::BI_lrotr:
+    case Builtin::BI_rotr64:
+      return Success(
+          APSInt(Value.rotr(Amount.getZExtValue()), Value.isUnsigned()), E);
+    default:
+      return Success(
+          APSInt(Value.rotl(Amount.getZExtValue()), Value.isUnsigned()), E);
+    }
   }
 
   case Builtin::BI__builtin_elementwise_add_sat: {
@@ -19923,6 +19935,46 @@ void HandleComplexComplexDiv(APFloat A, APFloat B, APFloat C, APFloat D,
       ResI = APFloat::getZero(ResI.getSemantics()) * (B * C - A * D);
     }
   }
+}
+
+APSInt NormalizeRotateAmount(const APSInt &Value, const APSInt &Amount) {
+  // Normalize shift amount to [0, BitWidth) range to match runtime behavior
+  APSInt NormAmt = Amount;
+  unsigned BitWidth = Value.getBitWidth();
+  unsigned AmtBitWidth = NormAmt.getBitWidth();
+  if (BitWidth == 1) {
+    // Rotating a 1-bit value is always a no-op
+    NormAmt = APSInt(APInt(AmtBitWidth, 0), NormAmt.isUnsigned());
+  } else if (BitWidth == 2) {
+    // For 2-bit values: rotation amount is 0 or 1 based on
+    // whether the amount is even or odd. We can't use srem here because
+    // the divisor (2) would be misinterpreted as -2 in 2-bit signed arithmetic.
+    NormAmt =
+        APSInt(APInt(AmtBitWidth, NormAmt[0] ? 1 : 0), NormAmt.isUnsigned());
+  } else {
+    APInt Divisor;
+    if (AmtBitWidth > BitWidth) {
+      Divisor = llvm::APInt(AmtBitWidth, BitWidth);
+    } else {
+      Divisor = llvm::APInt(BitWidth, BitWidth);
+      if (AmtBitWidth < BitWidth) {
+        NormAmt = NormAmt.extend(BitWidth);
+      }
+    }
+
+    // Normalize to [0, BitWidth)
+    if (NormAmt.isSigned()) {
+      NormAmt = APSInt(NormAmt.srem(Divisor), /*isUnsigned=*/false);
+      if (NormAmt.isNegative()) {
+        APSInt SignedDivisor(Divisor, /*isUnsigned=*/false);
+        NormAmt += SignedDivisor;
+      }
+    } else {
+      NormAmt = APSInt(NormAmt.urem(Divisor), /*isUnsigned=*/true);
+    }
+  }
+
+  return NormAmt;
 }
 
 bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {

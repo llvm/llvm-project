@@ -1826,3 +1826,13 @@ func.func @test_conv2d_block_scaled_stride_y(%arg0: tensor<1x8194x33x32xf8E4M3FN
             (tensor<1x8194x33x32xf8E4M3FN>, tensor<1x8194x33x1xf8E8M0FNU>, tensor<16x2x2x32xf8E4M3FN>, tensor<16x2x2x1xf8E8M0FNU>, tensor<16xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x2x32x16xf32>
   return %0 : tensor<1x2x32x16xf32>
 }
+
+// -----
+
+func.func @test_assert_equal_shape_invalid_rank() -> () {
+  %a = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  %b = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.assert_equal_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  tosa.assert_equal_shape %a, %b {allow_broadcast = true} : (!tosa.shape<17>, !tosa.shape<17>) -> ()
+  return
+}

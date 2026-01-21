@@ -19892,6 +19892,10 @@ static SDValue performBuildShuffleExtendCombine(SDValue BV, SelectionDAG &DAG) {
       return SDValue();
 
     unsigned Opc = Op.getOpcode();
+    if (BV.getOpcode() == ISD::VECTOR_SHUFFLE &&
+        (Opc != ISD::SIGN_EXTEND && Opc != ISD::ZERO_EXTEND))
+      return SDValue();
+
     if (Opc == ISD::ANY_EXTEND)
       continue;
 
