@@ -1841,7 +1841,8 @@ static bool generateDotOrFMulInst(const StringRef DemangledCall,
                                   SPIRVGlobalRegistry *GR) {
   bool IsVec = GR->getSPIRVTypeForVReg(Call->Arguments[0])->getOpcode() ==
                SPIRV::OpTypeVector;
-  bool IsInt = GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt);
+  bool IsInt =
+      GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt);
 
   const auto *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
@@ -1874,8 +1875,7 @@ static bool generateDotOrFMulInst(const StringRef DemangledCall,
       SmallVector<StringRef, 10> TypeStrs;
       SPIRV::parseBuiltinTypeStr(TypeStrs, DemangledCall, Ctx);
       bool IsFirstSigned = TypeStrs.size() > 0 && TypeStrs[0].trim()[0] != 'u';
-      bool IsSecondSigned =
-          TypeStrs.size() > 1 && TypeStrs[1].trim()[0] != 'u';
+      bool IsSecondSigned = TypeStrs.size() > 1 && TypeStrs[1].trim()[0] != 'u';
 
       if (Call->BuiltinName == "dot") {
         if (IsFirstSigned && IsSecondSigned)

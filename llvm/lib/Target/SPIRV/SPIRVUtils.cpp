@@ -1237,9 +1237,10 @@ bool generateIntegerDotExpansion(MachineIRBuilder &MIRBuilder, Register ResVReg,
         .addUse(TmpVec)
         .addImm(i);
 
-    Register NewSum = (i == NumComponents - 1)
-                          ? ResVReg
-                          : MRI->createVirtualRegister(GR->getRegClass(ResType));
+    Register NewSum =
+        (i == NumComponents - 1)
+            ? ResVReg
+            : MRI->createVirtualRegister(GR->getRegClass(ResType));
     MIRBuilder.buildInstr(SPIRV::OpIAddS)
         .addDef(NewSum)
         .addUse(GR->getSPIRVTypeID(ResType))
