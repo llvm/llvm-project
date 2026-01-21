@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fexperimental-lifetime-safety -mllvm -debug-only=LifetimeFacts -Wexperimental-lifetime-safety %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -mllvm -debug-only=LifetimeFacts -Wlifetime-safety %s 2>&1 | FileCheck %s
 // REQUIRES: asserts
 
 struct MyObj {
