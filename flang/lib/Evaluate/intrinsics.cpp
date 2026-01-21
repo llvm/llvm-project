@@ -2158,12 +2158,6 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       break;
     case KindCode::defaultIntegerKind:
       argOk = type->kind() == defaults.GetDefaultKind(TypeCategory::Integer);
-      if (!argOk && name == "exit"s) {
-        messages.Say(arg->sourceLocation(),
-            "'exit' intrinsic converts INTEGER(kind=%d) to default INTEGER kind"_en_US,
-            type->kind());
-        argOk = true;  
-      }
       break;
     case KindCode::defaultRealKind:
       argOk = type->kind() == defaults.GetDefaultKind(TypeCategory::Real);
@@ -2182,6 +2176,13 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       break;
     case KindCode::any:
       argOk = true;
+      if (name == "exit"s && type->category() == TypeCategory::Integer) {
+        if (type->kind() != defaults.GetDefaultKind(TypeCategory::Integer)) {
+          messages.Say(arg->sourceLocation(),
+              "'exit' intrinsic converts INTEGER(kind=%d) to default INTEGER kind"_port_en_US,
+              type->kind());
+        }
+      }
       break;
     case KindCode::kindArg:
       CHECK(type->category() == TypeCategory::Integer);
