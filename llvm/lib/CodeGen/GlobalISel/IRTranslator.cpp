@@ -181,6 +181,8 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
   }
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addPreserved<TargetLibraryInfoWrapperPass>();
+  AU.addRequired<LibcallLoweringInfoWrapper>();
+
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -1867,7 +1869,8 @@ bool IRTranslator::translateVectorDeinterleave2Intrinsic(
 
 void IRTranslator::getStackGuard(Register DstReg,
                                  MachineIRBuilder &MIRBuilder) {
-  Value *Global = TLI->getSDagStackGuard(*MF->getFunction().getParent());
+  Value *Global =
+      TLI->getSDagStackGuard(*MF->getFunction().getParent(), *Libcalls);
   if (!Global) {
     LLVMContext &Ctx = MIRBuilder.getContext();
     Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
@@ -3944,7 +3947,7 @@ bool IRTranslator::finalizeBasicBlock(const BasicBlock &BB,
   StackProtector &SP = getAnalysis<StackProtector>();
   if (SP.shouldEmitSDCheck(BB)) {
     bool FunctionBasedInstrumentation =
-        TLI->getSSPStackGuardCheck(*MF->getFunction().getParent());
+        TLI->getSSPStackGuardCheck(*MF->getFunction().getParent(), *Libcalls);
     SPDescriptor.initialize(&BB, &MBB, FunctionBasedInstrumentation);
   }
   // Handle stack protector.
@@ -4015,7 +4018,7 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   }
 
   // Retrieve guard check function, nullptr if instrumentation is inlined.
-  if (const Function *GuardCheckFn = TLI->getSSPStackGuardCheck(M)) {
+  if (const Function *GuardCheckFn = TLI->getSSPStackGuardCheck(M, *Libcalls)) {
     // This path is currently untestable on GlobalISel, since the only platform
     // that needs this seems to be Windows, and we fall back on that currently.
     // The code still lives here in case that changes.
@@ -4056,7 +4059,7 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
     getStackGuard(Guard, *CurBuilder);
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
-    const Value *IRGuard = TLI->getSDagStackGuard(M);
+    const Value *IRGuard = TLI->getSDagStackGuard(M, *Libcalls);
     Register GuardPtr = getOrCreateVReg(*IRGuard);
 
     Guard = CurBuilder
@@ -4080,14 +4083,14 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
 bool IRTranslator::emitSPDescriptorFailure(StackProtectorDescriptor &SPD,
                                            MachineBasicBlock *FailureBB) {
   const RTLIB::LibcallImpl LibcallImpl =
-      TLI->getLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL);
+      Libcalls->getLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL);
   if (LibcallImpl == RTLIB::Unsupported)
     return false;
 
   CurBuilder->setInsertPt(*FailureBB, FailureBB->end());
 
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = TLI->getLibcallImplCallingConv(LibcallImpl);
+  Info.CallConv = Libcalls->getLibcallImplCallingConv(LibcallImpl);
 
   StringRef LibcallName =
       RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
@@ -4148,7 +4151,9 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   bool EnableCSE = EnableCSEInIRTranslator.getNumOccurrences()
                        ? EnableCSEInIRTranslator
                        : TPC->isGISelCSEEnabled();
-  TLI = MF->getSubtarget().getTargetLowering();
+
+  const TargetSubtargetInfo &Subtarget = MF->getSubtarget();
+  TLI = Subtarget.getTargetLowering();
 
   if (EnableCSE) {
     EntryBuilder = std::make_unique<CSEMIRBuilder>(CurMF);
@@ -4160,7 +4165,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     EntryBuilder = std::make_unique<MachineIRBuilder>();
     CurBuilder = std::make_unique<MachineIRBuilder>();
   }
-  CLI = MF->getSubtarget().getCallLowering();
+  CLI = Subtarget.getCallLowering();
   CurBuilder->setMF(*MF);
   EntryBuilder->setMF(*MF);
   MRI = &MF->getRegInfo();
@@ -4181,6 +4186,9 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
       MF->getFunction());
   LibInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  Libcalls = &getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+      *F.getParent(), Subtarget);
+
   FuncInfo.CanLowerReturn = CLI->checkReturnTypeForCallConv(*MF);
 
   SL = std::make_unique<GISelSwitchLowering>(this, FuncInfo);

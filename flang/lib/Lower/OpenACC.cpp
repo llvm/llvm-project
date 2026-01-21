@@ -311,13 +311,13 @@ getSymbolFromAccObject(const Fortran::parser::AccObject &accObject) {
             Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
                 *designator)) {
       const Fortran::parser::Name &name =
-          Fortran::parser::GetLastName(arrayElement->base);
+          Fortran::parser::GetLastName(arrayElement->Base());
       return *name.symbol;
     }
     if (const auto *component =
             Fortran::parser::Unwrap<Fortran::parser::StructureComponent>(
                 *designator)) {
-      return *component->component.symbol;
+      return *component->Component().symbol;
     }
   } else if (const auto *name =
                  std::get_if<Fortran::parser::Name>(&accObject.u)) {
@@ -718,6 +718,31 @@ public:
 };
 } // namespace
 
+/// Extract the component reference from a designator expression, if any.
+/// For `data%array(i)`, this returns the Component for `data%array`.
+static std::optional<Fortran::evaluate::Component>
+extractComponentFromDesignator(
+    const Fortran::semantics::MaybeExpr &designator) {
+  if (!designator)
+    return std::nullopt;
+  std::optional<Fortran::evaluate::Component> componentRef;
+  if (std::optional<Fortran::evaluate::DataRef> dataRef =
+          Fortran::evaluate::ExtractDataRef(*designator)) {
+    Fortran::common::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::evaluate::Component &component) {
+              componentRef = component;
+            },
+            [&](const Fortran::evaluate::ArrayRef &arrayRef) {
+              if (auto *comp = arrayRef.base().UnwrapComponent())
+                componentRef = *comp;
+            },
+            [](const auto &) {}},
+        dataRef->u);
+  }
+  return componentRef;
+}
+
 template <typename Op>
 static void
 genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
@@ -741,23 +766,10 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
 
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
 
-    std::optional<Fortran::evaluate::Component> componentRef;
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
-    if (std::optional<Fortran::evaluate::DataRef> dataRef =
-            Fortran::evaluate::ExtractDataRef(designator)) {
-      Fortran::common::visit(
-          Fortran::common::visitors{
-              [&](const Fortran::evaluate::Component &component) {
-                componentRef = component;
-              },
-              [&](const Fortran::evaluate::ArrayRef &arrayRef) {
-                if (auto *comp = arrayRef.base().UnwrapComponent())
-                  componentRef = *comp;
-              },
-              [](const auto &) {}},
-          dataRef->u);
-    }
+    std::optional<Fortran::evaluate::Component> componentRef =
+        extractComponentFromDesignator(designator);
 
     bool isPrivate = std::is_same_v<Op, mlir::acc::PrivateOp> ||
                      std::is_same_v<Op, mlir::acc::FirstprivateOp>;
@@ -1984,18 +1996,18 @@ static void processDoLoopBounds(
             mlir::Location loc) {
           locs.push_back(loc);
           lowerbounds.push_back(fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(bounds.lower), stmtCtx)));
+              *Fortran::semantics::GetExpr(bounds.Lower()), stmtCtx)));
           upperbounds.push_back(fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(bounds.upper), stmtCtx)));
-          if (bounds.step)
+              *Fortran::semantics::GetExpr(bounds.Upper()), stmtCtx)));
+          if (auto &step = bounds.Step())
             steps.push_back(fir::getBase(converter.genExprValue(
-                *Fortran::semantics::GetExpr(bounds.step), stmtCtx)));
+                *Fortran::semantics::GetExpr(step), stmtCtx)));
           else // If `step` is not present, assume it is `1`.
             steps.push_back(builder.createIntegerConstant(
                 currentLocation, upperbounds[upperbounds.size() - 1].getType(),
                 1));
           Fortran::semantics::Symbol &ivSym =
-              bounds.name.thing.symbol->GetUltimate();
+              bounds.Name().thing.symbol->GetUltimate();
           privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                       privateOperands, ivPrivate);
 
@@ -2166,7 +2178,7 @@ static void privatizeInductionVariables(
                        mlir::Location loc) {
                      locs.push_back(loc);
                      Fortran::semantics::Symbol &ivSym =
-                         bounds.name.thing.symbol->GetUltimate();
+                         bounds.Name().thing.symbol->GetUltimate();
                      privatizeIv(converter, ivSym, currentLocation, ivTypes,
                                  ivLocs, privateOperands, ivPrivate);
                    });
@@ -4645,7 +4657,6 @@ genACC(Fortran::lower::AbstractConverter &converter,
   for (const auto &accObject : accObjectList.v) {
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
-
     std::stringstream asFortran;
 
     Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
@@ -4653,19 +4664,16 @@ genACC(Fortran::lower::AbstractConverter &converter,
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
 
     llvm::SmallVector<mlir::Value> bounds;
-    Fortran::lower::gatherDataOperandAddrAndBounds<mlir::acc::DataBoundsOp,
-                                                   mlir::acc::DataBoundsType>(
-        converter, builder, semanticsContext, stmtCtx, symbol, designator,
-        operandLocation, asFortran, bounds,
-        /*treatIndexAsSection=*/true, /*unwrapFirBox=*/false,
-        /*genDefaultBounds=*/false, /*strideIncludeLowerExtent=*/false,
-        /*loadAllocatableAndPointerComponent=*/false);
+    fir::factory::AddrAndBoundsInfo info =
+        Fortran::lower::gatherDataOperandAddrAndBounds<
+            mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
+            converter, builder, semanticsContext, stmtCtx, symbol, designator,
+            operandLocation, asFortran, bounds,
+            /*treatIndexAsSection=*/true, /*unwrapFirBox=*/false,
+            /*genDefaultBounds=*/false, /*strideIncludeLowerExtent=*/false,
+            /*loadAllocatableAndPointerComponent=*/false);
 
-    std::optional<fir::FortranVariableOpInterface> varDef =
-        converter.getSymbolMap().lookupVariableDefinition(symbol);
-    assert(varDef.has_value() && llvm::isa<hlfir::DeclareOp>(*varDef) &&
-           "expected symbol to be mapped to hlfir.declare");
-    mlir::Value base = varDef->getBase();
+    mlir::Value base = info.addr;
 
     mlir::acc::CacheOp cacheOp = createDataEntryOp<mlir::acc::CacheOp>(
         builder, operandLocation, base, asFortran, bounds,
@@ -4676,9 +4684,31 @@ genACC(Fortran::lower::AbstractConverter &converter,
         isReadonly ? mlir::acc::DataClauseModifier::readonly
                    : mlir::acc::DataClauseModifier::none);
 
-    fir::ExtendedValue hostExv = converter.getSymbolExtendedValue(symbol);
-    fir::ExtendedValue cacheExv = fir::substBase(hostExv, cacheOp.getAccVar());
-    converter.bindSymbol(symbol, cacheExv);
+    // Rebind the symbol so subsequent references use the cached value.
+    if (Fortran::lower::SymbolBox symBox =
+            converter.getSymbolMap().lookupSymbol(symbol)) {
+      // For simple variables, rebind the symbol directly.
+      fir::ExtendedValue hostExv = converter.getSymbolExtendedValue(symbol);
+      fir::ExtendedValue cacheExv =
+          fir::substBase(hostExv, cacheOp.getAccVar());
+      converter.bindSymbol(symbol, cacheExv);
+    } else {
+      // Must be a derived type component reference.
+      assert(designator && "expected designator for non-symbol cache operand");
+      std::optional<Fortran::evaluate::Component> componentRef =
+          extractComponentFromDesignator(designator);
+      assert(componentRef &&
+             "expected component reference for derived type cache operand");
+      // Component references are lowered to designate operations.
+      auto designate = base.getDefiningOp<hlfir::DesignateOp>();
+      assert(designate && "expected designate op for component reference");
+      auto declareOp = hlfir::DeclareOp::create(
+          builder, operandLocation, cacheOp.getAccVar(), asFortran.str(),
+          designate.getShape(), designate.getTypeparams(),
+          /*dummyScope=*/nullptr, /*storage=*/nullptr,
+          /*storageOffset=*/0, designate.getFortranAttrsAttr());
+      converter.getSymbolMap().addComponentOverride(*componentRef, declareOp);
+    }
   }
 }
 
