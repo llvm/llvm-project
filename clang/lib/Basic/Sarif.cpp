@@ -23,6 +23,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 
 #include <optional>
 #include <string>
@@ -406,8 +407,26 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
 
   if (!Result.RelatedLocations.empty()) {
     json::Array ReLocs;
-    for (auto &Range : Result.RelatedLocations) {
-      ReLocs.emplace_back(createLocation(createPhysicalLocation(Range)));
+    for (auto &RelatedLocation : Result.RelatedLocations) {
+      const SarifChildResult *ChildResultPtr =
+          std::get_if<SarifChildResult>(&RelatedLocation);
+      const CharSourceRange *CharSourceRangePtr =
+          std::get_if<CharSourceRange>(&RelatedLocation);
+      if (ChildResultPtr) {
+        json::Object Object;
+        Object.insert(
+            {"message", createMessage(ChildResultPtr->DiagnosticMessage)});
+        if (ChildResultPtr->Locations.size() >= 1)
+          for (auto &kv : createLocation(
+                   createPhysicalLocation(ChildResultPtr->Locations[0])))
+            Object.insert({kv.getFirst(), kv.getSecond()});
+        Object.insert({"properties", json::Object{{"nestingLevel",
+                                                   ChildResultPtr->Nesting}}});
+        ReLocs.emplace_back(std::move(Object));
+      } else if (CharSourceRangePtr) {
+        ReLocs.emplace_back(
+            createLocation(createPhysicalLocation(*CharSourceRangePtr)));
+      }
     }
     Ret["relatedLocations"] = std::move(ReLocs);
   }
@@ -429,6 +448,29 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
   json::Object &Run = getCurrentRun();
   json::Array *Results = Run.getArray("results");
   Results->emplace_back(std::move(Ret));
+}
+
+void SarifDocumentWriter::appendInvocation(
+    const std::vector<std::string> &CommandLine, bool ExecutionSuccessful,
+    StringRef Message) {
+  // In clang++, the appendInvocation always happens after all runs have been
+  // created. Clang first prints diagnostics on each frontend input file, and
+  // finally prints the diagnostics stats (X warnings and Y errors generated)
+  // which corresponds to toolExecutionNotifications here.
+  auto &LastRun = *Runs.back().getAsObject();
+  if (LastRun.find("invocations") == LastRun.end())
+    LastRun.insert({"invocations", json::Array()});
+  LastRun.getArray("invocations")
+      ->push_back(json::Object{
+          {"commandLine", llvm::join(CommandLine, " ")},
+          {"executionSuccessful", ExecutionSuccessful},
+          {"exitCode", ExecutionSuccessful
+                           ? 0
+                           : 1}, // See clang/tools/driver/cc1_main.cpp, the
+                                 // process exit code is either 0 or 1.
+          {"toolExecutionNotifications",
+           json::Array{json::Object{{"level", "note"},
+                                    {"message", createMessage(Message)}}}}});
 }
 
 json::Object SarifDocumentWriter::createDocument() {

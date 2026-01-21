@@ -11,14 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/SARIFDiagnosticPrinter.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/Sarif.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Frontend/SARIFDiagnostic.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace clang {
 
@@ -29,20 +32,18 @@ SARIFDiagnosticPrinter::SARIFDiagnosticPrinter(raw_ostream &OS,
 void SARIFDiagnosticPrinter::BeginSourceFile(const LangOptions &LO,
                                              const Preprocessor *PP) {
   // Build the SARIFDiagnostic utility.
-  assert(hasSarifWriter() && "Writer not set!");
-  assert(!SARIFDiag && "SARIFDiagnostic already set.");
-  SARIFDiag = std::make_unique<SARIFDiagnostic>(OS, LO, DiagOpts, &*Writer);
+  if (!SARIFDiag)
+    SARIFDiag = std::make_unique<SARIFDiagnostic>(OS, LO, DiagOpts, &*Writer);
+  else
+    SARIFDiag->setLangOptions(LO);
   // Initialize the SARIF object.
   Writer->createRun("clang", Prefix);
 }
 
 void SARIFDiagnosticPrinter::EndSourceFile() {
   assert(SARIFDiag && "SARIFDiagnostic has not been set.");
+  SARIFDiag->writeResult();
   Writer->endRun();
-  llvm::json::Value Value(Writer->createDocument());
-  OS << "\n" << Value << "\n\n";
-  OS.flush();
-  SARIFDiag.reset();
 }
 
 void SARIFDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
@@ -75,5 +76,17 @@ void SARIFDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   SARIFDiag->emitDiagnostic(
       FullSourceLoc(Info.getLocation(), Info.getSourceManager()), Level,
       DiagMessageStream.str(), Info.getRanges(), Info.getFixItHints(), &Info);
+}
+
+void SARIFDiagnosticPrinter::PrintDiagnosticStats(StringRef Message,
+                                                  CompilerInstance &Compiler) {
+  if (Compiler.getDiagnosticOpts().ShowCarets)
+    SARIFDiag->emitInvocation(
+        /*Compiler=*/Compiler,
+        /*Successul=*/getNumErrors() == 0,
+        /*Message=*/Message);
+  llvm::json::Value Value(Writer->createDocument());
+  OS << "\n" << Value << "\n\n";
+  OS.flush();
 }
 } // namespace clang

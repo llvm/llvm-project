@@ -14,9 +14,14 @@
 #ifndef LLVM_CLANG_FRONTEND_SARIFDIAGNOSTIC_H
 #define LLVM_CLANG_FRONTEND_SARIFDIAGNOSTIC_H
 
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Sarif.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include <unordered_set>
 
 namespace clang {
 
@@ -25,18 +30,21 @@ public:
   SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                   DiagnosticOptions &DiagOpts, SarifDocumentWriter *Writer);
 
-  ~SARIFDiagnostic() = default;
-
   SARIFDiagnostic &operator=(const SARIFDiagnostic &&) = delete;
   SARIFDiagnostic(SARIFDiagnostic &&) = delete;
   SARIFDiagnostic &operator=(const SARIFDiagnostic &) = delete;
   SARIFDiagnostic(const SARIFDiagnostic &) = delete;
 
+  void writeResult();
+  void setLangOptions(const LangOptions &LangOpts);
+  void emitInvocation(CompilerInstance &Compiler, bool Successful,
+                      StringRef Message);
+
 protected:
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
                              DiagnosticsEngine::Level Level, StringRef Message,
                              ArrayRef<CharSourceRange> Ranges,
-                             DiagOrStoredDiag D) override;
+                             DiagOrStoredDiag Diag) override;
 
   void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
                          DiagnosticsEngine::Level Level,
@@ -55,28 +63,69 @@ protected:
                                   StringRef ModuleName) override;
 
 private:
-  // Shared between SARIFDiagnosticPrinter and this renderer.
-  SarifDocumentWriter *Writer;
+  class Node {
+  public:
+    // Subclasses
+    struct Result {
+      DiagnosticsEngine::Level Level;
+      std::string Message;
+      DiagOrStoredDiag Diag;
+    };
 
-  SarifResult addLocationToResult(SarifResult Result, FullSourceLoc Loc,
-                                  PresumedLoc PLoc,
-                                  ArrayRef<CharSourceRange> Ranges,
-                                  const Diagnostic &Diag);
+    struct Location {
+      FullSourceLoc Loc;
+      PresumedLoc PLoc;
+      llvm::SmallVector<CharSourceRange> Ranges;
 
-  SarifResult addRelatedLocationToResult(SarifResult Result, FullSourceLoc Loc,
-                                         PresumedLoc PLoc);
+      // Methods to construct a llvm-style location.
+      llvm::SmallVector<CharSourceRange>
+      getCharSourceRangesWithOption(const LangOptions &LangOpts);
+    };
 
-  llvm::SmallVector<CharSourceRange>
-  getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
-                   ArrayRef<CharSourceRange> Ranges);
+    // Constructor
+    Node(Result Result_, int Nesting);
 
-  SarifRule addDiagnosticLevelToRule(SarifRule Rule,
-                                     DiagnosticsEngine::Level Level);
+    // Operations on building a node-tree.
+    // Arguments and results are all in node-style.
+    Node &getParent();
+    Node &getForkableParent();
+    llvm::SmallVector<std::unique_ptr<Node>> &getChildrenPtrs();
+    Node &addChildResult(Result);
+    Node &addLocation(Location);
+    Node &addRelatedLocation(Location);
+    template <class Func> void recursiveForEach(Func &&);
 
-  llvm::StringRef emitFilename(StringRef Filename, const SourceManager &SM);
+    // Methods to access underlying data for other llvm-components to read from
+    // it. Arguments and results are all in llvm-style.
+    unsigned getDiagID();
+    DiagnosticsEngine::Level getLevel();
+    std::string getDiagnosticMessage();
+    llvm::SmallVector<CharSourceRange>
+    getLocations(const LangOptions &LangOpts);
+    llvm::SmallVector<CharSourceRange>
+    getRelatedLocations(const LangOptions &LangOpts);
+    int getNesting();
 
-  llvm::SmallVector<std::pair<FullSourceLoc, PresumedLoc>>
-      RelatedLocationsCache;
+  private:
+    Result Result_;
+    llvm::SmallVector<Location> Locations;
+    llvm::SmallVector<Location> RelatedLocations;
+    int Nesting;
+    Node *ParentPtr = nullptr;
+    llvm::SmallVector<std::unique_ptr<Node>> ChildrenPtrs = {};
+  };
+
+  Node Root;
+  Node *Current = &Root;
+  const LangOptions *LangOptsPtr;
+  SarifDocumentWriter
+      *Writer; // Shared between SARIFDiagnosticPrinter and this renderer.
+
+  // TODO: get rid of the fixed forkable diag lists.
+  // The proper long-term fix is definitely "build diag-tree where diag is
+  // provided", not "reassemble diag-tree where diag is consumed". See
+  // https://github.com/llvm/llvm-project/pull/151234.
+  static std::unordered_set<unsigned> ForkableDiagIDs;
 };
 
 } // end namespace clang

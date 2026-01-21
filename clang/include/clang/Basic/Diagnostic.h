@@ -51,6 +51,7 @@ class FileSystem;
 
 namespace clang {
 
+class CompilerInstance;
 class DeclContext;
 class Diagnostic;
 class DiagnosticBuilder;
@@ -1788,6 +1789,10 @@ public:
   /// warnings and errors.
   virtual void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                                 const Diagnostic &Info);
+
+  /// At the end of a compilation, print the number of warnings/errors.
+  virtual void PrintDiagnosticStats(StringRef Message,
+                                    CompilerInstance &Compiler);
 };
 
 /// A diagnostic client that ignores all diagnostics.

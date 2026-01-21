@@ -241,7 +241,7 @@ public:
   bool ExecuteAction(FrontendAction &Act);
 
   /// At the end of a compilation, print the number of warnings/errors.
-  void printDiagnosticStats();
+  std::string getDiagnosticStats();
 
   /// Load the list of plugins requested in the \c FrontendOptions.
   void LoadRequestedPlugins();

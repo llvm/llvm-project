@@ -7,111 +7,220 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/SARIFDiagnostic.h"
-#include "clang/Basic/CharInfo.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
+#include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Sarif.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Locale.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <string>
+#include <unordered_set>
 
 namespace clang {
 
 SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                                  DiagnosticOptions &DiagOpts,
                                  SarifDocumentWriter *Writer)
-    : DiagnosticRenderer(LangOpts, DiagOpts), Writer(Writer) {}
+    : DiagnosticRenderer(LangOpts, DiagOpts),
+      Root(Node::Result{/*Level=*/DiagnosticsEngine::Level::Error,
+                        /*Message=*/"", /*Diag=*/nullptr},
+           /*Nesting=*/-1), // The root does not represents a diagnostic.
+      Current(&Root), LangOptsPtr(&LangOpts), Writer(Writer) {}
 
-// FIXME(llvm-project/issues/57323): Refactor Diagnostic classes.
+void SARIFDiagnostic::writeResult() {
+  // clang-format off
+  for (auto& TopLevelDiagnosticsPtr : Root.getChildrenPtrs()) { // For each top-level error/warnings.
+    unsigned DiagID = TopLevelDiagnosticsPtr->getDiagID();
+    SarifRule Rule = SarifRule::create() // Each top-level error/warning has a corresponding Rule.
+      .setRuleId(std::to_string(DiagID))
+      .setDefaultConfiguration(
+        SarifReportingConfiguration::create()
+          .setLevel(
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Note    ? SarifResultLevel::Note    :
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Remark  ? SarifResultLevel::Note    :
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Warning ? SarifResultLevel::Warning :
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Error   ? SarifResultLevel::Error   :
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Fatal   ? SarifResultLevel::Error   :
+                                         (assert(false && "Invalid diagnostic type"), SarifResultLevel::None)
+          )
+          .setRank(
+            TopLevelDiagnosticsPtr->getLevel() <= DiagnosticsEngine::Level::Warning ? 0   :
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Error   ? 50  :
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Fatal   ? 100 :
+                                         (assert(false && "Invalid diagnostic type"), 0)
+          )
+      );
+    unsigned RuleIndex = Writer->createRule(Rule); // Write into Writer.
+
+    SarifResult Result = SarifResult::create(RuleIndex)
+      .setDiagnosticMessage(TopLevelDiagnosticsPtr->getDiagnosticMessage())
+      .addLocations(TopLevelDiagnosticsPtr->getLocations(*LangOptsPtr))
+      .addRelatedLocations(TopLevelDiagnosticsPtr->getRelatedLocations(*LangOptsPtr));
+    TopLevelDiagnosticsPtr->recursiveForEach([&] (Node& Node) { // For each (recursive) ChildResults.
+      Result.addRelatedLocations({
+        SarifChildResult::create()
+          .setDiagnosticMessage(Node.getDiagnosticMessage())
+          .addLocations(Node.getLocations(*LangOptsPtr))
+          .setNesting(Node.getNesting())
+      });
+      Result.addRelatedLocations(Node.getRelatedLocations(*LangOptsPtr));
+    });
+    Writer->appendResult(Result); // Write into Writer.
+  }
+  // clang-format on
+  Root.getChildrenPtrs().clear(); // Reset the result cache
+}
+
+void SARIFDiagnostic::setLangOptions(const LangOptions &LangOpts) {
+  LangOptsPtr = &LangOpts;
+}
+
+void SARIFDiagnostic::emitInvocation(CompilerInstance &Compiler,
+                                     bool Successful, StringRef Message) {
+  Writer->appendInvocation(
+      /*CommandLine=*/Compiler.getInvocation().getCC1CommandLine(),
+      /*ExecutionSuccessful=*/Successful,
+      /*ToolExecutionNotification=*/Message);
+}
+
 void SARIFDiagnostic::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
-    DiagOrStoredDiag D) {
-
-  const auto *Diag = D.dyn_cast<const Diagnostic *>();
-
-  if (!Diag)
-    return;
-
-  SarifRule Rule = SarifRule::create().setRuleId(std::to_string(Diag->getID()));
-
-  Rule = addDiagnosticLevelToRule(Rule, Level);
-
-  unsigned RuleIdx = Writer->createRule(Rule);
-
-  SarifResult Result =
-      SarifResult::create(RuleIdx).setDiagnosticMessage(Message);
-
-  if (Loc.isValid())
-    Result = addLocationToResult(Result, Loc, PLoc, Ranges, *Diag);
-
-  for (auto &[RelLoc, RelPLoc] : RelatedLocationsCache)
-    Result = addRelatedLocationToResult(Result, RelLoc, RelPLoc);
-  RelatedLocationsCache.clear();
-
-  Writer->appendResult(Result);
+    DiagOrStoredDiag Diag) {
+  if (Level >= DiagnosticsEngine::Level::Warning) {
+    Current =
+        &Root; // If this is a top-level error/warning, repoint Current to Root.
+  } else {
+    auto ID = llvm::isa<const Diagnostic *>(Diag)
+                  ? Diag.dyn_cast<const Diagnostic *>()->getID()
+                  : Diag.dyn_cast<const StoredDiagnostic *>()->getID();
+    if (ForkableDiagIDs.find(ID) != ForkableDiagIDs.end() or
+        Message.starts_with("candidate"))
+      Current =
+          &Current
+               ->getForkableParent(); // If this is an forked-case note, repoint
+                                      // Current to the nearest forkable Node.
+  }
+  Current = &Current->addChildResult(
+      Node::Result{Level, std::string(Message),
+                   Diag}); // Add child to the parent error/warning/note Node.
+  Current = &Current->addLocation(
+      Node::Location{Loc, PLoc, llvm::SmallVector<CharSourceRange>(Ranges)});
 }
 
 void SARIFDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
-  // We always emit include location before results, for example:
-  //
-  // In file included from ...
-  // In file included from ...
-  // error: ...
-  //
-  // At this time We cannot peek the SarifRule. But what we
-  // do is to push it into a cache and wait for next time
-  // \ref SARIFDiagnostic::emitDiagnosticMessage to pick it up.
-  RelatedLocationsCache.push_back({Loc, PLoc});
+  Current =
+      &Current->addRelatedLocation(Node::Location{Loc, PLoc, /*Ranges=*/{}});
 }
 
 void SARIFDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
                                          StringRef ModuleName) {
-  RelatedLocationsCache.push_back({Loc, PLoc});
+  Current = &Current->addRelatedLocation(Node::Location{Loc, PLoc, {}});
 }
 
-SarifResult SARIFDiagnostic::addLocationToResult(
-    SarifResult Result, FullSourceLoc Loc, PresumedLoc PLoc,
-    ArrayRef<CharSourceRange> Ranges, const Diagnostic &Diag) {
-  auto Locations = getSarifLocation(Loc, PLoc, Ranges);
-  return Result.addLocations(Locations);
+SARIFDiagnostic::Node::Node(Result Result_, int Nesting)
+    : Result_(std::move(Result_)), Nesting(Nesting) {}
+
+SARIFDiagnostic::Node &SARIFDiagnostic::Node::getParent() {
+  assert(ParentPtr && "getParent() of SARIFDiagnostic::Root!");
+  return *ParentPtr;
 }
 
-SarifResult SARIFDiagnostic::addRelatedLocationToResult(SarifResult Result,
-                                                        FullSourceLoc Loc,
-                                                        PresumedLoc PLoc) {
-  auto Locations = getSarifLocation(Loc, PLoc, {});
-  return Result.addRelatedLocations(Locations);
+SARIFDiagnostic::Node &SARIFDiagnostic::Node::getForkableParent() {
+  Node *Ptr = this;
+  // The forkable node here "is and only is" warning/error/fatal.
+  while (Ptr->getLevel() <= DiagnosticsEngine::Note)
+    Ptr = &Ptr->getParent();
+  return *Ptr;
+}
+
+llvm::SmallVector<std::unique_ptr<SARIFDiagnostic::Node>> &
+SARIFDiagnostic::Node::getChildrenPtrs() {
+  return ChildrenPtrs;
+}
+
+SARIFDiagnostic::Node &
+SARIFDiagnostic::Node::addChildResult(Result ChildResult) {
+  ChildrenPtrs.push_back(std::make_unique<Node>(
+      Node::Result(std::move(ChildResult)), Nesting + 1));
+  ChildrenPtrs.back()->ParentPtr = this; // I am the parent of this new child.
+  return *ChildrenPtrs.back();
+}
+
+SARIFDiagnostic::Node &SARIFDiagnostic::Node::addLocation(Location Location) {
+  Locations.push_back(std::move(Location));
+  return *this;
+}
+
+SARIFDiagnostic::Node &
+SARIFDiagnostic::Node::addRelatedLocation(Location Location) {
+  RelatedLocations.push_back(std::move(Location));
+  return *this;
+}
+
+template <class Func>
+void SARIFDiagnostic::Node::recursiveForEach(Func &&Function) {
+  for (auto &&ChildPtr : getChildrenPtrs()) {
+    Function(*ChildPtr);
+    ChildPtr->recursiveForEach(std::forward<Func &&>(Function));
+  }
+}
+
+unsigned SARIFDiagnostic::Node::getDiagID() {
+  return llvm::isa<const Diagnostic *>(Result_.Diag)
+             ? Result_.Diag.dyn_cast<const Diagnostic *>()->getID()
+             : Result_.Diag.dyn_cast<const StoredDiagnostic *>()->getID();
+}
+
+DiagnosticsEngine::Level SARIFDiagnostic::Node::getLevel() {
+  return Result_.Level;
+}
+
+std::string SARIFDiagnostic::Node::getDiagnosticMessage() {
+  return Result_.Message;
 }
 
 llvm::SmallVector<CharSourceRange>
-SARIFDiagnostic::getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
-                                  ArrayRef<CharSourceRange> Ranges) {
+SARIFDiagnostic::Node::getLocations(const LangOptions &LangOpts) {
+  llvm::SmallVector<CharSourceRange> CharSourceRanges;
+  llvm::for_each(Locations, [&](Location &Location) {
+    CharSourceRanges.append(Location.getCharSourceRangesWithOption(LangOpts));
+  });
+  return CharSourceRanges;
+}
+
+llvm::SmallVector<CharSourceRange>
+SARIFDiagnostic::Node::getRelatedLocations(const LangOptions &LangOpts) {
+  llvm::SmallVector<CharSourceRange> CharSourceRanges;
+  llvm::for_each(RelatedLocations, [&](Location &RelatedLocation) {
+    CharSourceRanges.append(
+        RelatedLocation.getCharSourceRangesWithOption(LangOpts));
+  });
+  return CharSourceRanges;
+}
+
+int SARIFDiagnostic::Node::getNesting() { return Nesting; }
+
+llvm::SmallVector<CharSourceRange>
+SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(
+    const LangOptions &LangOpts) {
   SmallVector<CharSourceRange> Locations = {};
 
   if (PLoc.isInvalid()) {
-    // At least add the file name if available:
-    FileID FID = Loc.getFileID();
-    if (FID.isValid()) {
-      if (OptionalFileEntryRef FE = Loc.getFileEntryRef()) {
-        emitFilename(FE->getName(), Loc.getManager());
-        // FIXME(llvm-project/issues/57366): File-only locations
-      }
-    }
-    return {};
+    // FIXME(llvm-project/issues/57366): File-only locations
+    // At least add the file name if available.
   }
 
   FileID CaretFileID = Loc.getExpansionLoc().getFileID();
@@ -149,7 +258,7 @@ SARIFDiagnostic::getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
 
     Locations.push_back(
         CharSourceRange{SourceRange{BeginLoc, EndLoc}, /* ITR = */ false});
-    // FIXME: Additional ranges should use presumed location in both
+    // FIXME: additional ranges should use presumed location in both
     // Text and SARIF diagnostics.
   }
 
@@ -170,67 +279,80 @@ SARIFDiagnostic::getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
   return Locations;
 }
 
-SarifRule
-SARIFDiagnostic::addDiagnosticLevelToRule(SarifRule Rule,
-                                          DiagnosticsEngine::Level Level) {
-  auto Config = SarifReportingConfiguration::create();
+std::unordered_set<unsigned> SARIFDiagnostic::ForkableDiagIDs = {
+    // Overload
+    diag::note_ovl_too_many_candidates,
+    diag::note_ovl_candidate,
+    diag::note_ovl_candidate_explicit,
+    diag::note_ovl_candidate_inherited_constructor,
+    diag::note_ovl_candidate_inherited_constructor_slice,
+    diag::note_ovl_candidate_illegal_constructor,
+    diag::note_ovl_candidate_illegal_constructor_adrspace_mismatch,
+    diag::note_ovl_candidate_bad_deduction,
+    diag::note_ovl_candidate_incomplete_deduction,
+    diag::note_ovl_candidate_incomplete_deduction_pack,
+    diag::note_ovl_candidate_inconsistent_deduction,
+    diag::note_ovl_candidate_inconsistent_deduction_types,
+    diag::note_ovl_candidate_explicit_arg_mismatch_named,
+    diag::note_ovl_candidate_unsatisfied_constraints,
+    diag::note_ovl_candidate_explicit_arg_mismatch_unnamed,
+    diag::note_ovl_candidate_instantiation_depth,
+    diag::note_ovl_candidate_underqualified,
+    diag::note_ovl_candidate_substitution_failure,
+    diag::note_ovl_candidate_disabled_by_enable_if,
+    diag::note_ovl_candidate_disabled_by_requirement,
+    diag::note_ovl_candidate_has_pass_object_size_params,
+    diag::note_ovl_candidate_disabled_by_function_cond_attr,
+    diag::note_ovl_candidate_deduced_mismatch,
+    diag::note_ovl_candidate_non_deduced_mismatch,
+    diag::note_ovl_candidate_non_deduced_mismatch_qualified,
+    diag::note_ovl_candidate_arity,
+    diag::note_ovl_candidate_arity_one,
+    diag::note_ovl_candidate_deleted,
+    diag::note_ovl_candidate_bad_conv_incomplete,
+    diag::note_ovl_candidate_bad_list_argument,
+    diag::note_ovl_candidate_bad_overload,
+    diag::note_ovl_candidate_bad_conv,
+    diag::note_ovl_candidate_bad_arc_conv,
+    diag::note_ovl_candidate_bad_value_category,
+    diag::note_ovl_candidate_bad_addrspace,
+    diag::note_ovl_candidate_bad_addrspace_this,
+    diag::note_ovl_candidate_bad_gc,
+    diag::note_ovl_candidate_bad_ownership,
+    diag::note_ovl_candidate_bad_ptrauth,
+    diag::note_ovl_candidate_bad_cvr_this,
+    diag::note_ovl_candidate_bad_cvr,
+    diag::note_ovl_candidate_bad_base_to_derived_conv,
+    diag::note_ovl_candidate_bad_target,
+    diag::note_ovl_candidate_constraints_not_satisfied,
+    diag::note_ovl_surrogate_constraints_not_satisfied,
+    diag::note_ovl_builtin_candidate,
+    diag::note_ovl_ambiguous_oper_binary_reversed_self,
+    diag::note_ovl_ambiguous_eqeq_reversed_self_non_const,
+    diag::note_ovl_ambiguous_oper_binary_selected_candidate,
+    diag::note_ovl_ambiguous_oper_binary_reversed_candidate,
+    diag::note_ovl_surrogate_cand,
 
-  switch (Level) {
-  case DiagnosticsEngine::Note:
-    Config = Config.setLevel(SarifResultLevel::Note);
-    break;
-  case DiagnosticsEngine::Remark:
-    Config = Config.setLevel(SarifResultLevel::None);
-    break;
-  case DiagnosticsEngine::Warning:
-    Config = Config.setLevel(SarifResultLevel::Warning);
-    break;
-  case DiagnosticsEngine::Error:
-    Config = Config.setLevel(SarifResultLevel::Error).setRank(50);
-    break;
-  case DiagnosticsEngine::Fatal:
-    Config = Config.setLevel(SarifResultLevel::Error).setRank(100);
-    break;
-  case DiagnosticsEngine::Ignored:
-    assert(false && "Invalid diagnostic type");
-  }
+    // Multi-declaration/definition
+    diag::note_previous_declaration,
+    diag::note_previous_definition,
+    diag::note_declared_at,
 
-  return Rule.setDefaultConfiguration(Config);
-}
+    // Base-derived reason list.
+    diag::note_unsatisfied_trait_reason,
+    diag::note_overridden_virtual_function,
 
-llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,
-                                              const SourceManager &SM) {
-  if (DiagOpts.AbsolutePath) {
-    auto File = SM.getFileManager().getOptionalFileRef(Filename);
-    if (File) {
-      // We want to print a simplified absolute path, i. e. without "dots".
-      //
-      // The hardest part here are the paths like "<part1>/<link>/../<part2>".
-      // On Unix-like systems, we cannot just collapse "<link>/..", because
-      // paths are resolved sequentially, and, thereby, the path
-      // "<part1>/<part2>" may point to a different location. That is why
-      // we use FileManager::getCanonicalName(), which expands all indirections
-      // with llvm::sys::fs::real_path() and caches the result.
-      //
-      // On the other hand, it would be better to preserve as much of the
-      // original path as possible, because that helps a user to recognize it.
-      // real_path() expands all links, which is sometimes too much. Luckily,
-      // on Windows we can just use llvm::sys::path::remove_dots(), because,
-      // on that system, both aforementioned paths point to the same place.
-#ifdef _WIN32
-      SmallString<256> TmpFilename = File->getName();
-      SM.getFileManager().makeAbsolutePath(TmpFilename);
-      llvm::sys::path::native(TmpFilename);
-      llvm::sys::path::remove_dots(TmpFilename, /* remove_dot_dot */ true);
-      Filename = StringRef(TmpFilename.data(), TmpFilename.size());
-#else
-      Filename = SM.getFileManager().getCanonicalName(*File);
-#endif
-    }
-  }
+    // See clang/lib/Sema/SemaLookup.cpp -> DiagnoseAmbiguousLookup()
+    diag::note_ambiguous_candidate,
+    diag::note_ambiguous_member_found,
+    diag::note_ambiguous_member_type_found,
 
-  return Filename;
-}
+    // See clang/lib/Sema/Sema.cpp -> noteOverloads()
+    diag::note_possible_target_of_call,
+
+    // See clang/lib/Sema/SemaStmt.cpp -> ActOnFinishSwitchStmt()
+    diag::note_duplicate_case_prev,
+};
 
 /// Print out the file/line/column information and include trace.
 ///
