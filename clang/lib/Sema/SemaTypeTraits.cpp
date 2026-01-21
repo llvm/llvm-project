@@ -518,8 +518,8 @@ static bool equalityComparisonIsDefaulted(Sema &S, const TagDecl *Decl,
   // obj == obj;
   S.LookupBinOp(S.TUScope, {}, BinaryOperatorKind::BO_EQ, Functions);
 
-  auto Result = S.CreateOverloadedBinOp(KeyLoc, BinaryOperatorKind::BO_EQ,
-                                        Functions, &Operand, &Operand);
+  ExprResult Result = S.CreateOverloadedBinOp(KeyLoc, BinaryOperatorKind::BO_EQ,
+                                              Functions, &Operand, &Operand);
   if (Result.isInvalid() || SFINAE.hasErrorOccurred())
     return false;
 
@@ -532,7 +532,7 @@ static bool equalityComparisonIsDefaulted(Sema &S, const TagDecl *Decl,
     return false;
   if (!ParamT->isReferenceType()) {
     const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Decl);
-    if (!RD->isTriviallyCopyable())
+    if (RD && !RD->isTriviallyCopyable())
       return false;
   }
   return S.Context.hasSameUnqualifiedType(ParamT.getNonReferenceType(), T);
