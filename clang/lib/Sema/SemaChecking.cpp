@@ -2326,6 +2326,105 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+class RotateIntegerConverter : public Sema::ContextualImplicitConverter {
+  unsigned ArgIndex;
+  bool OnlyUnsigned;
+
+  Sema::SemaDiagnosticBuilder emitError(Sema &S, SourceLocation Loc,
+                                        QualType T) {
+    return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
+           << ArgIndex << /*scalar*/ 1
+           << (OnlyUnsigned ? /*unsigned integer*/ 3 : /*integer*/ 1)
+           << /*no fp*/ 0 << T;
+  }
+
+public:
+  RotateIntegerConverter(unsigned ArgIndex, bool OnlyUnsigned)
+      : ContextualImplicitConverter(/*Suppress=*/false,
+                                    /*SuppressConversion=*/true),
+        ArgIndex(ArgIndex), OnlyUnsigned(OnlyUnsigned) {}
+
+  bool match(QualType T) override {
+    return OnlyUnsigned ? T->isUnsignedIntegerType() : T->isIntegerType();
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseNoMatch(Sema &S, SourceLocation Loc,
+                                              QualType T) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseIncomplete(Sema &S, SourceLocation Loc,
+                                                 QualType T) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseExplicitConv(Sema &S, SourceLocation Loc,
+                                                   QualType T,
+                                                   QualType ConvTy) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder noteExplicitConv(Sema &S, CXXConversionDecl *Conv,
+                                               QualType ConvTy) override {
+    return S.Diag(Conv->getLocation(), diag::note_conv_function_declared_at);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseAmbiguous(Sema &S, SourceLocation Loc,
+                                                QualType T) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder noteAmbiguous(Sema &S, CXXConversionDecl *Conv,
+                                            QualType ConvTy) override {
+    return S.Diag(Conv->getLocation(), diag::note_conv_function_declared_at);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseConversion(Sema &S, SourceLocation Loc,
+                                                 QualType T,
+                                                 QualType ConvTy) override {
+    llvm_unreachable("conversion functions are permitted");
+  }
+};
+
+/// Checks that __builtin_stdc_rotate_{left,right} was called with two
+/// arguments, that the first argument is an unsigned integer type, and that
+/// the second argument is an integer type.
+static bool BuiltinRotateGeneric(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 2))
+    return true;
+
+  // First argument (value to rotate) must be unsigned integer type.
+  RotateIntegerConverter Arg0Converter(1, /*OnlyUnsigned=*/true);
+  ExprResult Arg0Res = S.PerformContextualImplicitConversion(
+      TheCall->getArg(0)->getBeginLoc(), TheCall->getArg(0), Arg0Converter);
+  if (Arg0Res.isInvalid())
+    return true;
+
+  Expr *Arg0 = Arg0Res.get();
+  TheCall->setArg(0, Arg0);
+
+  QualType Arg0Ty = Arg0->getType();
+  if (!Arg0Ty->isUnsignedIntegerType())
+    return true;
+
+  // Second argument (rotation count) must be integer type.
+  RotateIntegerConverter Arg1Converter(2, /*OnlyUnsigned=*/false);
+  ExprResult Arg1Res = S.PerformContextualImplicitConversion(
+      TheCall->getArg(1)->getBeginLoc(), TheCall->getArg(1), Arg1Converter);
+  if (Arg1Res.isInvalid())
+    return true;
+
+  Expr *Arg1 = Arg1Res.get();
+  TheCall->setArg(1, Arg1);
+
+  QualType Arg1Ty = Arg1->getType();
+  if (!Arg1Ty->isIntegerType())
+    return true;
+
+  TheCall->setType(Arg0Ty);
+  return false;
+}
+
 static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
                                    unsigned Pos, bool AllowConst,
                                    bool AllowAS) {
@@ -3574,6 +3673,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_clzg:
   case Builtin::BI__builtin_ctzg:
     if (BuiltinCountZeroBitsGeneric(*this, TheCall))
+      return ExprError();
+    break;
+
+  case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BI__builtin_stdc_rotate_right:
+    if (BuiltinRotateGeneric(*this, TheCall))
       return ExprError();
     break;
 

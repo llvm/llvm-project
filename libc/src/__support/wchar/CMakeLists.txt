@@ -20,12 +20,10 @@ add_header_library(
     .character_converter 
 )
 
-add_object_library(
+add_header_library(
   character_converter
   HDRS
     character_converter.h
-  SRCS 
-    character_converter.cpp
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.types.char8_t
@@ -36,12 +34,10 @@ add_object_library(
     .mbstate
 )
 
-add_object_library(
+add_header_library(
   wcrtomb
   HDRS
     wcrtomb.h
-  SRCS 
-    wcrtomb.cpp
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.types.char32_t
@@ -49,6 +45,7 @@ add_object_library(
     libc.hdr.types.wchar_t
     libc.src.__support.error_or
     libc.src.__support.common
+    libc.src.__support.macros.null_check
     .character_converter
     .mbstate
 )
