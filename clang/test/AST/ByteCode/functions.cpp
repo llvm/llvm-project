@@ -735,10 +735,9 @@ namespace PtrPtrCast {
   void foo() { ; }
   void bar(int *a) { a = (int *)(void *)(foo); }
 }
-//the extra test case 
 namespace GH176536 {
   constexpr void foo(int n) {
-    return n > 1 ? foo(n - 1) : 0; // expected-error {{left operand to ? is void, but right operand is of type 'int'}}
+    return n > 1 ? foo(n - 1) : 0; // both-error {{left operand to ? is void, but right operand is of type 'int'}}
   }
-  static_assert((foo(2), true), ""); // expected-error {{static assertion expression is not an integral constant expression}}
+  static_assert((foo(2), true), ""); // both-error {{static assertion expression is not an integral constant expression}}
 }

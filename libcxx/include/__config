@@ -731,14 +731,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 #  endif
 
-#  if _LIBCPP_STD_VER >= 20
-#    define _LIBCPP_CONSTINIT constinit
-#  elif __has_attribute(__require_constant_initialization__)
-#    define _LIBCPP_CONSTINIT __attribute__((__require_constant_initialization__))
-#  else
-#    define _LIBCPP_CONSTINIT
-#  endif
-
 #  if defined(__CUDACC__) || defined(__CUDA_ARCH__) || defined(__CUDA_LIBDEVICE__)
 // The CUDA SDK contains an unfortunate definition for the __noinline__ macro,
 // which breaks the regular __attribute__((__noinline__)) syntax. Therefore,

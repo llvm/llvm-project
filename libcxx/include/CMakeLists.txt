@@ -214,6 +214,7 @@ set(files
   __atomic/atomic_lock_free.h
   __atomic/atomic_ref.h
   __atomic/atomic_sync.h
+  __atomic/atomic_sync_timed.h
   __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
@@ -1027,7 +1028,6 @@ set(files
   filesystem
   flat_map
   flat_set
-  float.h
   format
   forward_list
   fstream
