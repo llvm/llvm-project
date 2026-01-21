@@ -559,7 +559,7 @@ NVPTXSerializer::compileToBinary(StringRef ptxCode) {
     if (result != nvFatbinResult::NVFATBIN_SUCCESS) {                          \
       emitError(loc) << llvm::Twine(#expr).concat(" failed with error: ")      \
                      << nvFatbinGetErrorString(result);                        \
-      return mlir::failure();                                                  \
+      return failure();                                                  \
     }                                                                          \
   } while (false)
 
