@@ -983,7 +983,6 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
             m_thread.GetID(), num_frames_displayed))
       break;
 
-
     if (!frame_sp->GetStatus(strm, show_frame_info,
                              num_frames_with_source > (first_frame - frame_idx),
                              show_unique, marker))

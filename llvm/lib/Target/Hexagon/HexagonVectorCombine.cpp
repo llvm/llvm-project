@@ -76,6 +76,9 @@ cl::opt<unsigned> VAGroupCountLimit("hvc-va-group-count-limit", cl::Hidden,
                                     cl::init(~0));
 cl::opt<unsigned> VAGroupSizeLimit("hvc-va-group-size-limit", cl::Hidden,
                                    cl::init(~0));
+cl::opt<unsigned>
+    MinLoadGroupSizeForAlignment("hvc-ld-min-group-size-for-alignment",
+                                 cl::Hidden, cl::init(4));
 
 class HexagonVectorCombine {
 public:
@@ -1035,8 +1038,11 @@ auto AlignVectors::createLoadGroups(const AddrList &Group) const -> MoveList {
       LoadGroups.emplace_back(Info, Group.front().Inst, isHvx(Info), true);
   }
 
-  // Erase singleton groups.
-  erase_if(LoadGroups, [](const MoveGroup &G) { return G.Main.size() <= 1; });
+  // Erase groups smaller than the minimum load group size.
+  unsigned LoadGroupSizeLimit = MinLoadGroupSizeForAlignment;
+  erase_if(LoadGroups, [LoadGroupSizeLimit](const MoveGroup &G) {
+    return G.Main.size() < LoadGroupSizeLimit;
+  });
 
   // Erase HVX groups on targets < HvxV62 (due to lack of predicated loads).
   if (!HVC.HST.useHVXV62Ops())
