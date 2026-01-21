@@ -40,6 +40,9 @@ func.func @implied_do(%arg0: !fir.ref<!fir.array<4xi32>> {fir.bindc_name = "a"})
 
 // CHECK-LABEL: @implied_do_in_acc_serial
 // CHECK-NOT:   fir.do_loop
+// CHECK:       acc.serial
+// CHECK:       scf.for
+// CHECK:       acc.yield
 
 func.func @implied_do_in_acc_serial(%arg0: !fir.ref<!fir.array<4xi32>> {fir.bindc_name = "a"}) {
   %c1 = arith.constant 1 : index
