@@ -4796,7 +4796,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
       // Create new load of smaller vector.
       Value *NewPtr =
           LowOffset > 0u
-              ? Builder.CreateInBoundsPtrAdd(PtrOp, Builder.getInt64(LowOffset))
+              ? Builder.CreateInBoundsPtrAdd(PtrOp, Builder.getInt32(LowOffset))
               : PtrOp;
 
       auto *NewLoad = cast<LoadInst>(
