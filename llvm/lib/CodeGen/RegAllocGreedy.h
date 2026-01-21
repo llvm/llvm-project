@@ -312,7 +312,7 @@ private:
   const LiveInterval *dequeue(PQueue &CurQueue);
 
   bool hasVirtRegAlloc();
-  BlockFrequency calcSpillCost();
+  BlockFrequency calcBlockSplitCost();
   bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &);
   bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
   bool growRegion(GlobalSplitCandidate &Cand);
@@ -360,6 +360,7 @@ private:
                                    AllocationOrder &Order, MCRegister PhysReg,
                                    uint8_t &CostPerUseLimit,
                                    SmallVectorImpl<Register> &NewVRegs);
+  BlockFrequency calcSpillCost(const LiveInterval &LI);
   void initializeCSRCost();
   MCRegister tryBlockSplit(const LiveInterval &, AllocationOrder &,
                            SmallVectorImpl<Register> &);
