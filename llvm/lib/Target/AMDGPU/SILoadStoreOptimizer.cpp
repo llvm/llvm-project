@@ -193,6 +193,8 @@ class SILoadStoreOptimizer {
 
     unsigned LoSubReg = 0;
     unsigned HiSubReg = 0;
+    // True when using V_ADD_U64_e64 pattern
+    bool UseV64Pattern = false;
   };
 
   struct MemAddress {
@@ -283,6 +285,9 @@ private:
   Register computeBase(MachineInstr &MI, const MemAddress &Addr) const;
   MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI) const;
   std::optional<int32_t> extractConstOffset(const MachineOperand &Op) const;
+  std::optional<int64_t> extractConstOffset64(const MachineOperand &Op) const;
+  bool processBaseWithConstOffset64(const MachineOperand &Base,
+                                    MemAddress &Addr) const;
   void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr) const;
   /// Promotes constant offset to the immediate by adjusting the base. It
   /// tries to use a base from the nearby instructions that allows it to have
@@ -2166,6 +2171,33 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
   MachineBasicBlock::iterator MBBI = MI.getIterator();
   const DebugLoc &DL = MI.getDebugLoc();
 
+  LLVM_DEBUG(dbgs() << "  Re-Computed Anchor-Base:\n");
+
+  // Use V_ADD_U64_e64 when the original pattern used it (gfx1250+)
+  if (Addr.Base.UseV64Pattern) {
+    Register FullDestReg = MRI->createVirtualRegister(TRI->getVGPR64Class());
+
+    // Load the 64-bit offset into an SGPR pair if needed
+    Register OffsetReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+    MachineInstr *MovOffset =
+        BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B64_IMM_PSEUDO),
+                OffsetReg)
+            .addImm(Addr.Offset);
+    (void)MovOffset;
+    LLVM_DEBUG(dbgs() << "    "; MovOffset->dump(););
+
+    MachineInstr *Add64 =
+        BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_U64_e64), FullDestReg)
+            .addReg(Addr.Base.LoReg)
+            .addReg(OffsetReg, RegState::Kill)
+            .addImm(0);
+    (void)Add64;
+    LLVM_DEBUG(dbgs() << "    "; Add64->dump(); dbgs() << "\n";);
+
+    return FullDestReg;
+  }
+
+  // Original carry-chain pattern (V_ADD_CO_U32 + V_ADDC_U32)
   assert((TRI->getRegSizeInBits(Addr.Base.LoReg, *MRI) == 32 ||
           Addr.Base.LoSubReg) &&
          "Expected 32-bit Base-Register-Low!!");
@@ -2174,7 +2206,6 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
           Addr.Base.HiSubReg) &&
          "Expected 32-bit Base-Register-Hi!!");
 
-  LLVM_DEBUG(dbgs() << "  Re-Computed Anchor-Base:\n");
   MachineOperand OffsetLo = createRegOrImm(static_cast<int32_t>(Addr.Offset), MI);
   MachineOperand OffsetHi =
     createRegOrImm(static_cast<int32_t>(Addr.Offset >> 32), MI);
@@ -2243,6 +2274,72 @@ SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) const {
   return Def->getOperand(1).getImm();
 }
 
+std::optional<int64_t>
+SILoadStoreOptimizer::extractConstOffset64(const MachineOperand &Op) const {
+  if (Op.isImm())
+    return Op.getImm();
+
+  if (!Op.isReg())
+    return std::nullopt;
+
+  MachineInstr *Def = MRI->getUniqueVRegDef(Op.getReg());
+  if (!Def)
+    return std::nullopt;
+
+  // Handle S_MOV_B64_IMM_PSEUDO for 64-bit immediates
+  if (Def->getOpcode() == AMDGPU::S_MOV_B64_IMM_PSEUDO)
+    return TII->getNamedImmOperand(*Def, AMDGPU::OpName::src0);
+
+  return std::nullopt;
+}
+
+// Helper to extract a 64-bit constant offset from a V_ADD_U64_e64 instruction.
+// Returns true if successful, populating Addr with base register info and
+// offset.
+bool SILoadStoreOptimizer::processBaseWithConstOffset64(
+    const MachineOperand &Base, MemAddress &Addr) const {
+  if (!Base.isReg())
+    return false;
+
+  MachineInstr *Def = MRI->getUniqueVRegDef(Base.getReg());
+  if (!Def || Def->getOpcode() != AMDGPU::V_ADD_U64_e64)
+    return false;
+
+  const auto *Src0 = TII->getNamedOperand(*Def, AMDGPU::OpName::src0);
+  const auto *Src1 = TII->getNamedOperand(*Def, AMDGPU::OpName::src1);
+  if (!Src0 || !Src1)
+    return false;
+
+  const MachineOperand *ConstOp = nullptr;
+  const MachineOperand *BaseOp = nullptr;
+
+  auto Offset = extractConstOffset64(*Src1);
+
+  if (Offset) {
+    ConstOp = Src1;
+    BaseOp = Src0;
+    Addr.Offset = *Offset;
+  } else {
+    // Both or neither are constants - can't handle this pattern
+    return false;
+  }
+
+  // Now extract the base register (which should be a 64-bit VGPR).
+  assert(BaseOp->isReg() && "Expected base operand to be a register");
+  MachineInstr *BaseDef = MRI->getUniqueVRegDef(BaseOp->getReg());
+  assert(BaseDef && "Expected definition for base register");
+  assert(TRI->getRegSizeInBits(BaseOp->getReg(), *MRI) == 64 &&
+         BaseOp->getSubReg() == 0 &&
+         "Expected 64-bit Base Register for V_ADD_U64_e64 pattern and no "
+         "subregisters");
+  Addr.Base.LoReg = BaseOp->getReg();
+  Addr.Base.HiReg = 0;
+  Addr.Base.LoSubReg = 0;
+  Addr.Base.HiSubReg = 0;
+  Addr.Base.UseV64Pattern = true;
+  return true;
+}
+
 // Analyze Base and extracts:
 //  - 32bit base registers, subregisters
 //  - 64bit constant offset
@@ -2253,14 +2350,27 @@ SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) const {
 //   %HI:vgpr_32, = V_ADDC_U32_e64 %BASE_HI:vgpr_32, 0, killed %c:sreg_64_xexec
 //   %Base:vreg_64 =
 //       REG_SEQUENCE %LO:vgpr_32, %subreg.sub0, %HI:vgpr_32, %subreg.sub1
+//
+// Also handles V_ADD_U64_e64 pattern (gfx1250+):
+//   %OFFSET:sreg_64 = S_MOV_B64_IMM_PSEUDO 256
+//   %Base:vreg_64 = V_ADD_U64_e64 %BASE:vreg_64, %OFFSET:sreg_64, 0
 void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base,
                                                       MemAddress &Addr) const {
   if (!Base.isReg())
     return;
 
   MachineInstr *Def = MRI->getUniqueVRegDef(Base.getReg());
-  if (!Def || Def->getOpcode() != AMDGPU::REG_SEQUENCE
-      || Def->getNumOperands() != 5)
+  if (!Def)
+    return;
+
+  // Try V_ADD_U64_e64 pattern first (simpler, used on gfx1250+)
+  if (Def->getOpcode() == AMDGPU::V_ADD_U64_e64) {
+    if (processBaseWithConstOffset64(Base, Addr))
+      return;
+  }
+
+  // Fall through to REG_SEQUENCE + V_ADD_CO_U32 + V_ADDC_U32 pattern
+  if (Def->getOpcode() != AMDGPU::REG_SEQUENCE || Def->getNumOperands() != 5)
     return;
 
   MachineOperand BaseLo = Def->getOperand(1);
@@ -2321,10 +2431,9 @@ void SILoadStoreOptimizer::updateAsyncLDSAddress(MachineInstr &MI,
     return;
 
   Register OldVDst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)->getReg();
-  Register NewVDst =
-      MRI->createVirtualRegister(TRI->getRegClassForReg(*MRI, OldVDst));
+  Register NewVDst = MRI->createVirtualRegister(MRI->getRegClass(OldVDst));
   MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
+  const DebugLoc &DL = MI.getDebugLoc();
   BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e64), NewVDst)
       .addReg(OldVDst)
       .addImm(-OffsetDiff)
