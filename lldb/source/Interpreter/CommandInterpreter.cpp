@@ -1544,7 +1544,8 @@ bool CommandInterpreter::AliasExists(llvm::StringRef cmd) const {
 }
 
 bool CommandInterpreter::UserCommandExists(llvm::StringRef cmd) const {
-  return m_user_dict.find(cmd) != m_user_dict.end();
+  return llvm::is_contained(m_user_dict, cmd) ||
+         llvm::is_contained(m_user_mw_dict, cmd);
 }
 
 bool CommandInterpreter::UserMultiwordCommandExists(llvm::StringRef cmd) const {
