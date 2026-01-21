@@ -7713,7 +7713,8 @@ SDValue DAGTypeLegalizer::WidenVecOp_EXTEND_VECTOR_INREG(SDNode *N) {
   // If widening makes the input larger than the original result, widen the
   // result to match, then extract back down.
   if (WideInVT.getSizeInBits() > ResVT.getSizeInBits()) {
-    assert(ResVT.isVector() && "Expected vector result for EXTEND_VECTOR_INREG");
+    assert(ResVT.isVector() &&
+           "Expected vector result for EXTEND_VECTOR_INREG");
     EVT ResEltVT = ResVT.getVectorElementType();
     unsigned EltBits = ResEltVT.getSizeInBits();
     assert(EltBits && (WideInVT.getSizeInBits() % EltBits) == 0 &&
@@ -7729,7 +7730,6 @@ SDValue DAGTypeLegalizer::WidenVecOp_EXTEND_VECTOR_INREG(SDNode *N) {
 
   return DAG.getNode(N->getOpcode(), DL, ResVT, WideInOp);
 }
-
 
 SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
   // We have to widen the value, but we want only to store the original
