@@ -482,12 +482,13 @@ private:
   /// Some of these events are essential to be presented in the file.
   /// Please see a short summary below:
   /// MEM: Optional. Parsing memory profile is enabled by default, unless
-  /// '--itrace' aggregation is set (like Arm SPE). In the latter case
-  /// MEM profile won't be added into the pre-parsed profile.
+  /// '--itrace' aggregation is set. In the latter case MEM profile
+  /// won't be added into the pre-parsed profile. Note that, currently
+  /// mem events only supported if they were gathered on X86_64.
   /// MMAP: Compulsory, the mmap data is required to be in the file.
   /// BUILDID: Ignored (you should use --ignore-build-id),
   /// if buildid information doesn't exist in the input profile.
-  /// TASK: When task related data exists in the input profile,
+  /// TASK: If task related data exists in the input profile,
   /// Perf2bolt will always parse it.
   /// MAIN: Compulsory; the MAIN events always have to be represented in the
   /// file. Main events could be either 'brstack' or 'basic' sample data
@@ -497,7 +498,8 @@ private:
   /// perf2bolt -p perf.data BINARY -o perf.text --ba --generate-perf-text-data
   ///
   /// This is how a pre-parsed profile data looks like for Basic Aggregation:
-  /// PERFTEXT;BUILDIDS=50;MMAP=3000000;MAIN=5000;TASK=350000;
+  /// PERFTEXT;BUILDIDS=0x0000000000000032;MMAP=0x000000000002DC6C0;MAIN=0x00000000000001388;
+  /// TASK=0x00000000000055730;MEM=0x0000000000000128;
   /// abcd1234 /example/bin1
   /// ...
   /// bin1   1234 ... PERF_RECORD_MMAP2 1234/1234: ... r-xp /example/bin1
@@ -505,9 +507,11 @@ private:
   /// bin1   1234 ... PERF_RECORD_COMM exec: bin1:1234/1234
   /// bin1   1234 ... PERF_RECORD_EXIT(1234:1234):(20469:20469)
   /// ...
-  /// 1234 branch: ffffffd1a4764d04 ffffffd1a4764cfc
-  /// 1234 branch: ffffffd1a44777f4 ffffffd1a4fc8af0
+  /// 1234 branch: abcd1234 abcd1237
+  /// 1234 branch: abcd5678 abce9876
   /// ...
+  /// 1234 mem-loads: efgh1234 efgh1234
+  /// 1234 mem-loads: efgh4567 efgh8910
   void generatePerfTextData();
 
   /// If \p Address falls into the binary address space based on memory
