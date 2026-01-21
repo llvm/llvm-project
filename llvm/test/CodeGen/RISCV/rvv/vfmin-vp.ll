@@ -182,22 +182,22 @@ define <vscale x 32 x bfloat> @vfmin_vv_nxv32bf16(<vscale x 32 x bfloat> %va, <v
 ; CHECK-NEXT:    slli a1, a2, 1
 ; CHECK-NEXT:    srli a2, a2, 2
 ; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    sltu a4, a0, a3
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a3, a4, a3
 ; CHECK-NEXT:    csrr a4, vlenb
 ; CHECK-NEXT:    slli a4, a4, 4
 ; CHECK-NEXT:    add a4, sp, a4
 ; CHECK-NEXT:    addi a4, a4, 16
 ; CHECK-NEXT:    vs1r.v v0, (a4) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    vslidedown.vx v7, v0, a2
+; CHECK-NEXT:    sltu a2, a0, a3
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    add a2, sp, a2
-; CHECK-NEXT:    addi a2, a2, 16
-; CHECK-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    add a3, sp, a3
+; CHECK-NEXT:    addi a3, a3, 16
+; CHECK-NEXT:    vs8r.v v24, (a3) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v28, v0.t
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a3, a2, 4
@@ -585,22 +585,22 @@ define <vscale x 32 x half> @vfmin_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
 ; ZVFHMIN-NEXT:    slli a1, a2, 1
 ; ZVFHMIN-NEXT:    srli a2, a2, 2
 ; ZVFHMIN-NEXT:    sub a3, a0, a1
-; ZVFHMIN-NEXT:    sltu a4, a0, a3
-; ZVFHMIN-NEXT:    addi a4, a4, -1
-; ZVFHMIN-NEXT:    and a3, a4, a3
 ; ZVFHMIN-NEXT:    csrr a4, vlenb
 ; ZVFHMIN-NEXT:    slli a4, a4, 4
 ; ZVFHMIN-NEXT:    add a4, sp, a4
 ; ZVFHMIN-NEXT:    addi a4, a4, 16
 ; ZVFHMIN-NEXT:    vs1r.v v0, (a4) # vscale x 8-byte Folded Spill
 ; ZVFHMIN-NEXT:    vslidedown.vx v7, v0, a2
+; ZVFHMIN-NEXT:    sltu a2, a0, a3
+; ZVFHMIN-NEXT:    addi a2, a2, -1
+; ZVFHMIN-NEXT:    and a2, a2, a3
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v7
-; ZVFHMIN-NEXT:    csrr a2, vlenb
-; ZVFHMIN-NEXT:    slli a2, a2, 3
-; ZVFHMIN-NEXT:    add a2, sp, a2
-; ZVFHMIN-NEXT:    addi a2, a2, 16
-; ZVFHMIN-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
-; ZVFHMIN-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    csrr a3, vlenb
+; ZVFHMIN-NEXT:    slli a3, a3, 3
+; ZVFHMIN-NEXT:    add a3, sp, a3
+; ZVFHMIN-NEXT:    addi a3, a3, 16
+; ZVFHMIN-NEXT:    vs8r.v v24, (a3) # vscale x 64-byte Folded Spill
+; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v28, v0.t
 ; ZVFHMIN-NEXT:    csrr a2, vlenb
 ; ZVFHMIN-NEXT:    slli a3, a2, 4

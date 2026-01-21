@@ -145,11 +145,12 @@ define void @deinterleave6_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmv.v.i v0, 2
+; CHECK-NEXT:    vmv.v.i v10, 4
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 5, v0.t
-; CHECK-NEXT:    vmv.v.i v0, 4
+; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vrgather.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -189,11 +190,12 @@ define void @deinterleave7_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmv.v.i v0, 2
+; CHECK-NEXT:    vmv.v.i v10, 4
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 6, v0.t
-; CHECK-NEXT:    vmv.v.i v0, 4
+; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vrgather.vi v8, v9, 6, v0.t
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret

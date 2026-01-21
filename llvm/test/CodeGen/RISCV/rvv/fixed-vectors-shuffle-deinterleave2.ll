@@ -1612,21 +1612,22 @@ define <16 x i64> @unzip2a_dual_v16i64_exact(<16 x i64> %a, <16 x i64> %b) vscal
 ; V-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
 ; V-NEXT:    vslideup.vi v16, v15, 2
 ; V-NEXT:    vmv.v.i v0, 8
+; V-NEXT:    vmv.v.i v18, 2
 ; V-NEXT:    vslideup.vi v17, v11, 2
 ; V-NEXT:    vslideup.vi v16, v15, 1, v0.t
-; V-NEXT:    vmv.v.v v15, v0
-; V-NEXT:    vmv.v.i v0, 2
+; V-NEXT:    vmv.v.v v19, v0
+; V-NEXT:    vmv.v.v v0, v18
 ; V-NEXT:    vslidedown.vi v14, v14, 1, v0.t
-; V-NEXT:    vmv.v.v v18, v0
-; V-NEXT:    vmv.v.v v0, v15
+; V-NEXT:    vmv.v.v v15, v18
+; V-NEXT:    vmv.v.v v0, v19
 ; V-NEXT:    vslideup.vi v17, v11, 1, v0.t
-; V-NEXT:    vmv.v.v v11, v15
+; V-NEXT:    vmv.v.v v20, v19
 ; V-NEXT:    vmv.v.v v0, v18
 ; V-NEXT:    vslidedown.vi v10, v10, 1, v0.t
 ; V-NEXT:    vmv.v.v v19, v18
 ; V-NEXT:    vslideup.vi v15, v13, 2
 ; V-NEXT:    vslideup.vi v18, v9, 2
-; V-NEXT:    vmv.v.v v0, v11
+; V-NEXT:    vmv.v.v v0, v20
 ; V-NEXT:    vslideup.vi v15, v13, 1, v0.t
 ; V-NEXT:    vslideup.vi v18, v9, 1, v0.t
 ; V-NEXT:    vmv.v.i v0, 12

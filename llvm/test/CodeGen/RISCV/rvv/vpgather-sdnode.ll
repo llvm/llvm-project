@@ -255,12 +255,12 @@ define <vscale x 32 x i8> @vpgather_baseidx_nxv32i8(ptr %base, <vscale x 32 x i8
 ; RV32-NEXT:    sltu a5, a1, a4
 ; RV32-NEXT:    addi a5, a5, -1
 ; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    vsetvli a5, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vmv1r.v v12, v0
+; RV32-NEXT:    vslidedown.vx v0, v0, a3
 ; RV32-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; RV32-NEXT:    vsext.vf4 v16, v10
-; RV32-NEXT:    vmv1r.v v12, v0
-; RV32-NEXT:    vsetvli a5, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vslidedown.vx v0, v0, a3
-; RV32-NEXT:    vsetvli zero, a4, e8, m2, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; RV32-NEXT:    vluxei32.v v10, (a0), v16, v0.t
 ; RV32-NEXT:    bltu a1, a2, .LBB12_2
 ; RV32-NEXT:  # %bb.1:
@@ -277,11 +277,14 @@ define <vscale x 32 x i8> @vpgather_baseidx_nxv32i8(ptr %base, <vscale x 32 x i8
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    slli a3, a2, 1
-; RV64-NEXT:    srli a7, a2, 2
-; RV64-NEXT:    sub a4, a1, a3
-; RV64-NEXT:    sltu a5, a1, a4
-; RV64-NEXT:    addi a5, a5, -1
-; RV64-NEXT:    and a5, a5, a4
+; RV64-NEXT:    srli a4, a2, 2
+; RV64-NEXT:    sub a5, a1, a3
+; RV64-NEXT:    vsetvli a6, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vmv1r.v v12, v0
+; RV64-NEXT:    vslidedown.vx v14, v0, a4
+; RV64-NEXT:    sltu a4, a1, a5
+; RV64-NEXT:    addi a4, a4, -1
+; RV64-NEXT:    and a5, a4, a5
 ; RV64-NEXT:    sub a4, a5, a2
 ; RV64-NEXT:    sltu a6, a5, a4
 ; RV64-NEXT:    addi a6, a6, -1
@@ -289,12 +292,9 @@ define <vscale x 32 x i8> @vpgather_baseidx_nxv32i8(ptr %base, <vscale x 32 x i8
 ; RV64-NEXT:    srli a4, a2, 3
 ; RV64-NEXT:    vsetvli zero, a6, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf8 v16, v11
-; RV64-NEXT:    vmv1r.v v12, v0
-; RV64-NEXT:    vsetvli t0, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vx v11, v0, a7
-; RV64-NEXT:    vmv1r.v v13, v11
+; RV64-NEXT:    vmv1r.v v13, v14
 ; RV64-NEXT:    vsetvli a7, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v11, a4
+; RV64-NEXT:    vslidedown.vx v0, v14, a4
 ; RV64-NEXT:    bltu a5, a2, .LBB12_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a5, a2

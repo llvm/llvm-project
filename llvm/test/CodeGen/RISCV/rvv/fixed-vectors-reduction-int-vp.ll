@@ -645,18 +645,18 @@ define signext i32 @vpreduce_xor_v64i32(i32 signext %s, <64 x i32> %v, <64 x i1>
 ; CHECK-LABEL: vpreduce_xor_v64i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a3, 32
-; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v25, v0, 4
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    bltu a1, a3, .LBB49_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:  .LBB49_2:
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v24, a0
+; CHECK-NEXT:    addi a0, a1, -32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vredxor.vs v24, v8, v24, v0.t
-; CHECK-NEXT:    addi a0, a1, -32
 ; CHECK-NEXT:    sltu a1, a1, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0

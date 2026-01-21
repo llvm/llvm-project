@@ -1556,9 +1556,9 @@ define <128 x i16> @vp_bswap_v128i16(<128 x i16> %va, <128 x i1> %m, i32 zeroext
 ; CHECK-LABEL: vp_bswap_v128i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 64
-; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v7, v0, 8
+; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB26_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 64

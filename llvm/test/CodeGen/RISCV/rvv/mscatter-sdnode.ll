@@ -1951,8 +1951,8 @@ define void @mscatter_baseidx_zext_nxv1i1_nxv1i8(<vscale x 1 x i8> %val, ptr %ba
 ; CHECK-LABEL: mscatter_baseidx_zext_nxv1i1_nxv1i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v11, 0
-; CHECK-NEXT:    vmerge.vim v10, v11, 1, v0
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vsoxei8.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    ret
