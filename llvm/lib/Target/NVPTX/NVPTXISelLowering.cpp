@@ -7389,8 +7389,8 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
   // atomicrmw and cmpxchg instructions not efficiently supported by PTX
   // are lowered to CAS emulation loops that preserve their memory order,
   // syncscope, and volatile semantics. For PTX, it is more efficient to use
-  // atom.cas.relaxed.sco instructions within the loop, and fences before and after
-  // the loop to restore order.
+  // atom.cas.relaxed.sco instructions within the loop, and fences before and
+  // after the loop to restore order.
   //
   // Atomic instructions efficiently supported by PTX are lowered to
   // `atom.<op>.<sem>.<scope` instruction with their corresponding memory order
