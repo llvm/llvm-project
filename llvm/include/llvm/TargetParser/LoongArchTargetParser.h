@@ -24,6 +24,9 @@ class StringRef;
 namespace LoongArch {
 
 enum FeatureKind : uint32_t {
+  // 32-bit ISA is available.
+  FK_32BIT = 1 << 0,
+
   // 64-bit ISA is available.
   FK_64BIT = 1 << 1,
 
@@ -67,6 +70,9 @@ enum FeatureKind : uint32_t {
 
   // sc.q is available.
   FK_SCQ = 1 << 14,
+
+  // 32-bit standard variant is available.
+  FK_32S = 1 << 15,
 };
 
 struct FeatureInfo {

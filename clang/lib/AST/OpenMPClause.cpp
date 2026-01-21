@@ -127,6 +127,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadset:
+  case OMPC_transparent:
   case OMPC_threadprivate:
   case OMPC_groupprivate:
   case OMPC_flush:
@@ -1441,7 +1442,9 @@ OMPUseDevicePtrClause *OMPUseDevicePtrClause::Create(
     const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
     ArrayRef<Expr *> PrivateVars, ArrayRef<Expr *> Inits,
     ArrayRef<ValueDecl *> Declarations,
-    MappableExprComponentListsRef ComponentLists) {
+    MappableExprComponentListsRef ComponentLists,
+    OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+    SourceLocation FallbackModifierLoc) {
   OMPMappableExprListSizeTy Sizes;
   Sizes.NumVars = Vars.size();
   Sizes.NumUniqueDeclarations = getUniqueDeclarationsTotalNumber(Declarations);
@@ -1465,7 +1468,8 @@ OMPUseDevicePtrClause *OMPUseDevicePtrClause::Create(
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
 
-  OMPUseDevicePtrClause *Clause = new (Mem) OMPUseDevicePtrClause(Locs, Sizes);
+  OMPUseDevicePtrClause *Clause = new (Mem)
+      OMPUseDevicePtrClause(Locs, Sizes, FallbackModifier, FallbackModifierLoc);
 
   Clause->setVarRefs(Vars);
   Clause->setPrivateCopies(PrivateVars);
@@ -2049,6 +2053,12 @@ void OMPClausePrinter::VisitOMPThreadsetClause(OMPThreadsetClause *Node) {
      << getOpenMPSimpleClauseTypeName(OMPC_threadset,
                                       unsigned(Node->getThreadsetKind()))
      << ")";
+}
+
+void OMPClausePrinter::VisitOMPTransparentClause(OMPTransparentClause *Node) {
+  OS << "transparent(";
+  Node->getImpexType()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {
@@ -2753,7 +2763,15 @@ void OMPClausePrinter::VisitOMPDefaultmapClause(OMPDefaultmapClause *Node) {
 void OMPClausePrinter::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "use_device_ptr";
-    VisitOMPClauseList(Node, '(');
+    if (Node->getFallbackModifier() != OMPC_USE_DEVICE_PTR_FALLBACK_unknown) {
+      OS << "("
+         << getOpenMPSimpleClauseTypeName(OMPC_use_device_ptr,
+                                          Node->getFallbackModifier())
+         << ":";
+      VisitOMPClauseList(Node, ' ');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
     OS << ")";
   }
 }

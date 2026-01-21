@@ -441,10 +441,25 @@
 #define LLVM_CTOR_NODISCARD
 #endif
 
+// Macro to suppress the MSVC warning C4848:
+// "support for attribute [[msvc::no_unique_address]] in C++17 and earlier
+// is a vendor extension".
+// This warning is removed in versions >= 19.43.
+#if !defined(_MSC_VER) || _MSC_VER >= 1943 || defined(__clang__)
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
+#else // MSVC < 19.43
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                             \
+  _Pragma("warning(push)") _Pragma("warning(disable : 4848)")
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP _Pragma("warning(pop)")
+#endif
+
 #if LLVM_HAS_CPP_ATTRIBUTE(no_unique_address)
 #define LLVM_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #elif LLVM_HAS_CPP_ATTRIBUTE(msvc::no_unique_address)
-#define LLVM_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#define LLVM_NO_UNIQUE_ADDRESS                                                 \
+  LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                                   \
+  [[msvc::no_unique_address]] LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
 #else
 #define LLVM_NO_UNIQUE_ADDRESS
 #endif
@@ -746,5 +761,31 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
     virtual void anchor()
 #endif
 // clang-format on
+
+/// \macro LLVM_SUPPORTS_RUNTIME_SSE42_CHECK
+/// Expands to true if runtime detection of SSE4.2 is supported.
+/// This can be used to guard runtime checks for SSE4.2 support.
+#if ((defined(__i386__) || defined(__x86_64__)) && defined(__has_attribute) && \
+     __has_attribute(target) && !defined(_WIN32))
+#define LLVM_SUPPORTS_RUNTIME_SSE42_CHECK 1
+#else
+#define LLVM_SUPPORTS_RUNTIME_SSE42_CHECK 0
+#endif
+
+/// \macro LLVM_TARGET_DEFAULT
+/// Function attribute to compile a function with default target features.
+#if defined(__has_attribute) && __has_attribute(target)
+#define LLVM_TARGET_DEFAULT __attribute__((target("default")))
+#else
+#define LLVM_TARGET_DEFAULT
+#endif
+
+/// \macro LLVM_TARGET_SSE42
+/// Function attribute to compile a function with SSE4.2 enabled.
+#if defined(__has_attribute) && __has_attribute(target)
+#define LLVM_TARGET_SSE42 __attribute__((target("sse4.2")))
+#else
+#define LLVM_TARGET_SSE42
+#endif
 
 #endif
