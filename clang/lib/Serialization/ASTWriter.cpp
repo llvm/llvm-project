@@ -4449,15 +4449,15 @@ public:
       if (Chain && isa<NamespaceDecl>(D) && D->isFromASTFile() &&
           D == Chain->getKeyDeclaration(D)) {
         // In ASTReader, we stored only the key declaration of a namespace decl
-        // for this TU rather than storing all of the key declarations from each
-        // imported module. If we have an external namespace decl, this is that
-        // key declaration and we need to re-expand it to write out all of the
-        // key declarations from each imported module again.
+        // for this TU. If we have an external namespace decl, this is that
+        // key declaration and we need to re-expand it to write out the first
+        // decl from each module.
         //
         // See comment 'ASTReader::FindExternalVisibleDeclsByName' for details.
-        Chain->forEachImportedKeyDecl(D, [&AddDecl](const Decl *D) {
-          AddDecl(cast<NamedDecl>(const_cast<Decl *>(D)));
-        });
+        auto Firsts =
+            Writer.CollectFirstDeclFromEachModule(D, /*IncludeLocal=*/false);
+        for (const auto &[_, First] : Firsts)
+          AddDecl(cast<NamedDecl>(const_cast<Decl *>(First)));
       } else {
         AddDecl(D);
       }
@@ -6932,6 +6932,19 @@ TypeID ASTWriter::GetOrCreateTypeID(ASTContext &Context, QualType T) {
     }
     return Idx;
   });
+}
+
+llvm::MapVector<ModuleFile *, const Decl *>
+ASTWriter::CollectFirstDeclFromEachModule(const Decl *D, bool IncludeLocal) {
+  llvm::MapVector<ModuleFile *, const Decl *> Firsts;
+  // FIXME: We can skip entries that we know are implied by others.
+  for (const Decl *R = D->getMostRecentDecl(); R; R = R->getPreviousDecl()) {
+    if (R->isFromASTFile())
+      Firsts[Chain->getOwningModuleFile(R)] = R;
+    else if (IncludeLocal)
+      Firsts[nullptr] = R;
+  }
+  return Firsts;
 }
 
 void ASTWriter::AddLookupOffsets(const LookupBlockOffsets &Offsets,
