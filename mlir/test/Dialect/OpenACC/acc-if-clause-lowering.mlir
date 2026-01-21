@@ -292,12 +292,13 @@ acc.reduction.recipe @reduction_add_memref_i32 : memref<i32> reduction_operator 
 
 func.func @test_acc_reduction(%arg0: memref<i32>, %cond: i1) {
 
+  %c0_i32 = arith.constant 0 : i32
   %reduction = acc.reduction varPtr(%arg0 : memref<i32>) recipe(@reduction_add_memref_i32) -> memref<i32>
 
   // In the else branch, uses of %reduction should be replaced with %arg0
   // CHECK: scf.if
-  // CHECK: [[REDUCTION:%.*]] = acc.reduction varPtr(%arg0 : memref<i32>) recipe(@memref_i32) -> memref<i32>
-  // CHECK: acc.parallel {{.*}} reduction([[REDUCTION]] : memref<i32>) {
+  // CHECK: [[REDUCTION:%.*]] = acc.reduction varPtr(%arg0 : memref<i32>) recipe(@reduction_add_memref_i32) -> memref<i32>
+  // CHECK: acc.parallel reduction([[REDUCTION]] : memref<i32>) {
   // CHECK: } else {
   // CHECK: [[LOAD:%.*]] = memref.load %arg0[] : memref<i32>
   // CHECK: memref.store {{.*}}, %arg0[] : memref<i32>
