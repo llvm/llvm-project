@@ -313,6 +313,7 @@ std::vector<LocatedSymbol> findImplementors(llvm::DenseSet<SymbolID> IDs,
     Req.Subjects = std::move(RecursiveSearch);
     RecursiveSearch = {};
     Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
+      RecursiveSearch.insert(Object.ID);
       auto DeclLoc =
           indexToLSPLocation(Object.CanonicalDeclaration, MainFilePath);
       if (!DeclLoc) {
@@ -328,7 +329,6 @@ std::vector<LocatedSymbol> findImplementors(llvm::DenseSet<SymbolID> IDs,
         return;
       }
       Results.back().Definition = *DefLoc;
-      RecursiveSearch.insert(Object.ID);
     });
   }
   return Results;
