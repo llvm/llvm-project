@@ -2384,6 +2384,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addInAllocaAttr(nullptr);
           else if (Kind == Attribute::UWTable)
             B.addUWTableAttr(UWTableKind::Default);
+          else if (Kind == Attribute::DeadOnReturn)
+            B.addDeadOnReturnAttr(DeadOnReturnInfo());
           else if (Attribute::isEnumAttrKind(Kind))
             B.addAttribute(Kind);
           else
@@ -2402,6 +2404,9 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addDereferenceableAttr(Record[++i]);
           else if (Kind == Attribute::DereferenceableOrNull)
             B.addDereferenceableOrNullAttr(Record[++i]);
+          else if (Kind == Attribute::DeadOnReturn)
+            B.addDeadOnReturnAttr(
+                DeadOnReturnInfo::createFromIntValue(Record[++i]));
           else if (Kind == Attribute::AllocSize)
             B.addAllocSizeAttrFromRawRepr(Record[++i]);
           else if (Kind == Attribute::VScaleRange)
