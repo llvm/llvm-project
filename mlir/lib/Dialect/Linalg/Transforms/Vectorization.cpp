@@ -1877,8 +1877,9 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
   SmallVector<int64_t> preTransposeWriteVecSizses(writeVectorSizes);
   auto destInvPermutation = getPackInverseDestPerm(packOp, packMetadata);
   applyPermutationToVector(preTransposeWriteVecSizses, destInvPermutation);
-  auto preTransposeWriteVecType = VectorType::get(
-      preTransposeWriteVecSizses, packOp.getType().getElementType());
+  auto preTransposeWriteVecType =
+      VectorType::get(preTransposeWriteVecSizses,
+                      packOp.getResult().getType().getElementType());
 
   // Compute vector type for the _read_ opeartion. This is simply
   // pre-transpose-write-vector-type with the dimensions collapsed
@@ -1954,7 +1955,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unpackOp);
 
-  RankedTensorType unpackTensorType = unpackOp.getSourceType();
+  ShapedType unpackTensorType = unpackOp.getSourceType();
 
   ArrayRef<int64_t> sourceShape = unpackTensorType.getShape();
   bool useInBoundsInsteadOfMasking = false;
@@ -2117,6 +2118,10 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
+  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  if (!unpackOp.hasPureTensorSemantics())
+    return failure();
+
   // If there are no input vector sizes and all shapes are static, there is
   // nothing left to check.
   if (inputVectorSizes.empty() && unpackOp.getDestType().hasStaticShape() &&
@@ -2454,6 +2459,10 @@ static LogicalResult vectorizeLinalgOpPrecondition(
 static LogicalResult
 vectorizePackOpPrecondition(linalg::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
+  // TODO: Support Memref PackOp. Temporarily return failure.
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   auto padValue = packOp.getPaddingValue();
   Attribute cstAttr;
   // TODO: Relax this condiiton
@@ -2511,13 +2520,14 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
   // which is zero here. Hence we will load the pad value which is what we want
   // in this case. If the low pad is dynamically zero then the lowering is
   // correct as well as no shifts are necessary.
-  if (llvm::any_of(llvm::enumerate(padOp.getLow()), [&](const auto &en) {
-        Value padValue = en.value();
-        unsigned pos = en.index();
-        std::optional<int64_t> pad = getConstantIntValue(padValue);
-        return (!pad.has_value() || pad.value() != 0) &&
-               resultTensorShape[pos] != 1;
-      })) {
+  if (llvm::any_of(llvm::enumerate(padOp.getMixedLowPad()),
+                   [&](const auto &en) {
+                     OpFoldResult padValue = en.value();
+                     unsigned pos = en.index();
+                     std::optional<int64_t> pad = getConstantIntValue(padValue);
+                     return (!pad.has_value() || pad.value() != 0) &&
+                            resultTensorShape[pos] != 1;
+                   })) {
     LDBG() << "low pad must all be zero for all non unit dims: " << padOp;
     return failure();
   }

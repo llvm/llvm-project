@@ -489,7 +489,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
 const parser::Name OmpStructureChecker::GetLoopIndex(
     const parser::DoConstruct *x) {
   using Bounds = parser::LoopControl::Bounds;
-  return std::get<Bounds>(x->GetLoopControl()->u).name.thing;
+  return std::get<Bounds>(x->GetLoopControl()->u).Name().thing;
 }
 
 void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
@@ -764,7 +764,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
         context_.Say(clauseSource,
             "A modifier may not be specified in a LINEAR clause on the %s directive"_err_en_US,
             ContextDirectiveAsFortran());
-        return;
+        // Don't return early - continue to check other restrictions
       }
 
       auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};

@@ -2257,7 +2257,7 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
   let Inst{23-16} = LdScaleOp;
   let Inst{40-32} = scale_src0;
   let Inst{49-41} = scale_src1;
-  let Inst{58-50} = 0x100; // scale src2 = vgpr0 (dummy)
+  let Inst{58-50} = ?; // scale src2
   let Inst{59}    = matrix_b_scale{0}; // scale_op_sel_hi(0)
   let Inst{60}    = 0;                 // scale_op_sel_hi(1)
   let Inst{63-61} = {0, matrix_a_scale_fmt{1-0}}; // neg (lo)
@@ -2276,9 +2276,9 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
 
   let Inst{87-80} = op;
   let Inst{95-88} = 0xcc; //encoding
-  let Inst{104-96} = !if(P.HasSrc0, src0, 0);
-  let Inst{113-105} = !if(P.HasSrc1, src1, 0);
-  let Inst{122-114} = !if(P.HasSrc2, src2, 0);
+  let Inst{104-96} = !if(P.HasSrc0, src0, ?);
+  let Inst{113-105} = !if(P.HasSrc1, src1, ?);
+  let Inst{122-114} = !if(P.HasSrc2, src2, ?);
 
   // neg_lo
   let Inst{125} = !if(P.NegLo01, src0_modifiers{0}, 0);
@@ -2287,11 +2287,13 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
 }
 
 multiclass VOP3PX2_Real_ScaledWMMA_F4<string Gen, bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile WMMAP> {
-   defvar PS = !cast<VOP3P_Pseudo>(NAME # "_twoaddr");
-   if !eq(Gen, "gfx1250") then {
-     def _gfx1250 : VOP3P_Real_Gen<PS, GFX1250Gen, PS.Mnemonic>,
-                    VOP3PX2e <op, LdScaleOp, WMMAP>;
-   }
+  defvar PS = !cast<VOP3P_Pseudo>(NAME # "_twoaddr");
+  if !eq(Gen, "gfx1250") then {
+    def _gfx1250 : VOP3P_Real_Gen<PS, GFX1250Gen, PS.Mnemonic>,
+                   VOP3PX2e <op, LdScaleOp, WMMAP> {
+      let PostEncoderMethod = "postEncodeLdScale";
+    }
+  }
 }
 
 multiclass VOP3PX2_Real_ScaledWMMA<string Gen, bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile WMMAP> {
@@ -2303,6 +2305,7 @@ multiclass VOP3PX2_Real_ScaledWMMA<string Gen, bits<8> op, bits<8> LdScaleOp, VO
                    VOP3PX2e <op, LdScaleOp, WMMAP>,
                    MFMA_F8F6F4_WithSizeTable_Helper<PS, psName # "_f8_f8_w32_" # Gen> {
       let AsmString = asmName # PS.AsmOperands;
+      let PostEncoderMethod = "postEncodeLdScale";
     }
   }
 }
@@ -2472,15 +2475,6 @@ multiclass VOP3P_Real_with_name_gfx12<bits<8> op,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> :
   VOP3P_Real_with_name<GFX12Gen, op, backing_ps_name, asmName>;
 
-multiclass VOP3P_Real_LD_SCALE_gfx1250<bits<8> op> {
-  defvar ps = !cast<VOP3P_Pseudo>(NAME);
-  def _gfx1250 :
-    VOP3P_Real_Gen<ps, GFX1250Gen, ps.Mnemonic>,
-    VOP3Pe_gfx11_gfx12<op, ps.Pfl> {
-      let Inst{58-50} = 0x100; // scale src2 = vgpr0 (dummy)
-    }
-}
-
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
 defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 
@@ -2510,8 +2504,10 @@ defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple<GFX1250Gen, 0x3d>;
 defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3e>;
 defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3f>;
 
-defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_LD_SCALE_gfx1250<0x35>;
-defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_LD_SCALE_gfx1250<0x3a>;
+let PostEncoderMethod = "postEncodeLdScale" in {
+  defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_gfx1250<0x35>;
+  defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
+}
 
 let AssemblerPredicate = isGFX1250Plus in
 def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
