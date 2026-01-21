@@ -308,9 +308,7 @@ class SelectOptimize : public FunctionPass {
 public:
   static char ID;
 
-  SelectOptimize() : FunctionPass(ID) {
-    initializeSelectOptimizePass(*PassRegistry::getPassRegistry());
-  }
+  SelectOptimize() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))

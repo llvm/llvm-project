@@ -3,7 +3,7 @@
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-define void @vector_splice() #0 {
+define void @vector_splice(i32 %offset) #0 {
 ; CHECK-LABEL: 'vector_splice'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call <16 x i8> @llvm.vector.splice.left.v16i8(<16 x i8> zeroinitializer, <16 x i8> zeroinitializer, i32 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = call <32 x i8> @llvm.vector.splice.left.v32i8(<32 x i8> zeroinitializer, <32 x i8> zeroinitializer, i32 1)
@@ -33,6 +33,8 @@ define void @vector_splice() #0 {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %26 = call <4 x i1> @llvm.vector.splice.left.v4i1(<4 x i1> zeroinitializer, <4 x i1> zeroinitializer, i32 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %27 = call <2 x i1> @llvm.vector.splice.left.v2i1(<2 x i1> zeroinitializer, <2 x i1> zeroinitializer, i32 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %28 = call <2 x i128> @llvm.vector.splice.left.v2i128(<2 x i128> zeroinitializer, <2 x i128> zeroinitializer, i32 1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %left.variable = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 %offset)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %right.variable = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 %offset)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %splice.v16i8 = call <16 x i8> @llvm.vector.splice.v16i8(<16 x i8> zeroinitializer, <16 x i8> zeroinitializer, i32 1)
@@ -63,6 +65,9 @@ define void @vector_splice() #0 {
   %splice.v4i1 = call <4 x i1> @llvm.vector.splice.v4i1(<4 x i1> zeroinitializer, <4 x i1> zeroinitializer, i32 1)
   %splice.v2i1 = call <2 x i1> @llvm.vector.splice.v2i1(<2 x i1> zeroinitializer, <2 x i1> zeroinitializer, i32 1)
   %splice.v2i128 = call <2 x i128> @llvm.vector.splice.v2i128(<2 x i128> zeroinitializer, <2 x i128> zeroinitializer, i32 1)
+
+  %left.variable = call <4 x i32> @llvm.vector.splice.left(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 %offset)
+  %right.variable = call <4 x i32> @llvm.vector.splice.right(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 %offset)
   ret void
 }
 

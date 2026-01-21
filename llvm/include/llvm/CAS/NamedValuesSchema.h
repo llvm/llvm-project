@@ -18,6 +18,7 @@
 #include "llvm/CAS/CASNodeSchema.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::cas {
 
@@ -45,7 +46,8 @@ struct NamedValuesEntry {
 /// A schema for representing an array of named nodes in a CAS. The name of the
 /// nodes are stored in the root node so child node can be loaded on demand
 /// based on name and the name for all nodes need to be unique.
-class NamedValuesSchema : public RTTIExtends<NamedValuesSchema, NodeSchema> {
+class LLVM_ABI NamedValuesSchema
+    : public RTTIExtends<NamedValuesSchema, NodeSchema> {
   void anchor() override;
 
 public:
@@ -77,10 +79,10 @@ public:
     Builder(ObjectStore &CAS) : CAS(CAS) {}
 
     /// Add an entry to the builder.
-    void add(StringRef Name, ObjectRef Ref);
+    LLVM_ABI void add(StringRef Name, ObjectRef Ref);
 
     /// Build the node from added entries.
-    Expected<NamedValuesProxy> build();
+    LLVM_ABI Expected<NamedValuesProxy> build();
 
   private:
     ObjectStore &CAS;
@@ -140,7 +142,7 @@ public:
   }
 
   /// Get the name of an entry by index.
-  StringRef getName(size_t I) const;
+  LLVM_ABI StringRef getName(size_t I) const;
 
   /// Get an entry by index.
   NamedValuesEntry get(size_t I) const { return Schema->loadEntry(*this, I); }

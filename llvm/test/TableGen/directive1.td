@@ -58,7 +58,6 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #include "llvm/Frontend/Directive/Spelling.h"
 // CHECK-NEXT:  #include "llvm/Support/Compiler.h"
 // CHECK-NEXT:  #include <cstddef>
-// CHECK-NEXT:  #include <optional>
 // CHECK-NEXT:  #include <utility>
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
@@ -135,48 +134,6 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  constexpr auto TDLCV_vala = AKind::TDLCV_vala;
 // CHECK-NEXT:  constexpr auto TDLCV_valb = AKind::TDLCV_valb;
 // CHECK-NEXT:  constexpr auto TDLCV_valc = AKind::TDLCV_valc;
-// CHECK-EMPTY:
-// CHECK-NEXT:  // Constexpr functions.
-// CHECK-EMPTY:
-// CHECK-NEXT:  constexpr std::optional<bool> isAllowedClauseForDirectiveOpt(Directive D, Clause C, unsigned Version) {
-// CHECK-NEXT:    switch (D) {
-// CHECK-NEXT:      case TDLD_dira:
-// CHECK-NEXT:        switch (C) {
-// CHECK-NEXT:          case TDLC_clausea:
-// CHECK-NEXT:            return 1 <= Version && 2147483647 >= Version;
-// CHECK-NEXT:          case TDLC_clauseb:
-// CHECK-NEXT:            return 1 <= Version && 2147483647 >= Version;
-// CHECK-NEXT:          default:
-// CHECK-NEXT:            return false;
-// CHECK-NEXT:        }
-// CHECK-NEXT:        break;
-// CHECK-NEXT:    }
-// CHECK-NEXT:    return std::nullopt;
-// CHECK-NEXT:  }
-// CHECK-EMPTY:
-// CHECK-NEXT:  constexpr std::optional<Association> getDirectiveAssociationOpt(Directive D) {
-// CHECK-NEXT:    switch (D) {
-// CHECK-NEXT:    case TDLD_dira:
-// CHECK-NEXT:      return Association::None;
-// CHECK-NEXT:    } // switch (D)
-// CHECK-NEXT:    return std::nullopt;
-// CHECK-NEXT:  }
-// CHECK-EMPTY:
-// CHECK-NEXT:  constexpr std::optional<Category> getDirectiveCategoryOpt(Directive D) {
-// CHECK-NEXT:    switch (D) {
-// CHECK-NEXT:    case TDLD_dira:
-// CHECK-NEXT:      return Category::Executable;
-// CHECK-NEXT:    } // switch (D)
-// CHECK-NEXT:    return std::nullopt;
-// CHECK-NEXT:  }
-// CHECK-EMPTY:
-// CHECK-NEXT:  constexpr std::optional<SourceLanguage> getDirectiveLanguagesOpt(Directive D) {
-// CHECK-NEXT:    switch (D) {
-// CHECK-NEXT:    case TDLD_dira:
-// CHECK-NEXT:      return SourceLanguage::C | SourceLanguage::Fortran;
-// CHECK-NEXT:    } // switch(D)
-// CHECK-NEXT:    return std::nullopt;
-// CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
 // CHECK-NEXT:  LLVM_ABI std::pair<Directive, directive::VersionRange> getTdlDirectiveKindAndVersions(StringRef Str);
@@ -459,30 +416,42 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:  bool llvm::tdl::isAllowedClauseForDirective(llvm::tdl::Directive D, llvm::tdl::Clause C, unsigned Version) {
 // IMPL-NEXT:    assert(unsigned(D) <= Directive_enumSize);
 // IMPL-NEXT:    assert(unsigned(C) <= Clause_enumSize);
-// IMPL-NEXT:    if (auto X = isAllowedClauseForDirectiveOpt(D, C, Version)) {
-// IMPL-NEXT:      return *X;
+// IMPL-NEXT:    switch (D) {
+// IMPL-NEXT:      case TDLD_dira:
+// IMPL-NEXT:        switch (C) {
+// IMPL-NEXT:          case TDLC_clausea:
+// IMPL-NEXT:            return 1 <= Version && 2147483647 >= Version;
+// IMPL-NEXT:          case TDLC_clauseb:
+// IMPL-NEXT:            return 1 <= Version && 2147483647 >= Version;
+// IMPL-NEXT:          default:
+// IMPL-NEXT:            return false;
+// IMPL-NEXT:        }
+// IMPL-NEXT:        break;
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::tdl::Association llvm::tdl::getDirectiveAssociation(llvm::tdl::Directive D) {
-// IMPL-NEXT:    if (auto X = getDirectiveAssociationOpt(D)) {
-// IMPL-NEXT:      return *X;
-// IMPL-NEXT:    }
+// IMPL-NEXT:  llvm::tdl::Association llvm::tdl::getDirectiveAssociation(llvm::tdl::Directive Dir) {
+// IMPL-NEXT:    switch (Dir) {
+// IMPL-NEXT:    case TDLD_dira:
+// IMPL-NEXT:      return Association::None;
+// IMPL-NEXT:    } // switch (Dir)
 // IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::tdl::Category llvm::tdl::getDirectiveCategory(llvm::tdl::Directive D) {
-// IMPL-NEXT:    if (auto X = getDirectiveCategoryOpt(D)) {
-// IMPL-NEXT:      return *X;
-// IMPL-NEXT:    }
+// IMPL-NEXT:  llvm::tdl::Category llvm::tdl::getDirectiveCategory(llvm::tdl::Directive Dir) {
+// IMPL-NEXT:    switch (Dir) {
+// IMPL-NEXT:    case TDLD_dira:
+// IMPL-NEXT:      return Category::Executable;
+// IMPL-NEXT:    } // switch (Dir)
 // IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  llvm::tdl::SourceLanguage llvm::tdl::getDirectiveLanguages(llvm::tdl::Directive D) {
-// IMPL-NEXT:    if (auto X = getDirectiveLanguagesOpt(D)) {
-// IMPL-NEXT:      return *X;
-// IMPL-NEXT:    }
+// IMPL-NEXT:    switch (D) {
+// IMPL-NEXT:    case TDLD_dira:
+// IMPL-NEXT:      return SourceLanguage::C | SourceLanguage::Fortran;
+// IMPL-NEXT:    } // switch(D)
 // IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:

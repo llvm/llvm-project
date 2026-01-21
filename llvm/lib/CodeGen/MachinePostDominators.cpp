@@ -66,10 +66,7 @@ INITIALIZE_PASS(MachinePostDominatorTreeWrapperPass, "machinepostdomtree",
                 "MachinePostDominator Tree Construction", true, true)
 
 MachinePostDominatorTreeWrapperPass::MachinePostDominatorTreeWrapperPass()
-    : MachineFunctionPass(ID), PDT() {
-  initializeMachinePostDominatorTreeWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID), PDT() {}
 
 bool MachinePostDominatorTreeWrapperPass::runOnMachineFunction(
     MachineFunction &F) {

@@ -10,6 +10,7 @@
 #define LLVM_CAS_CASNODESCHEMA_H
 
 #include "llvm/CAS/CASReference.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 
 namespace llvm::cas {
@@ -17,7 +18,7 @@ namespace llvm::cas {
 class ObjectProxy;
 
 /// A base class for schemas built on top of CAS nodes.
-class NodeSchema : public RTTIExtends<NodeSchema, RTTIRoot> {
+class LLVM_ABI NodeSchema : public RTTIExtends<NodeSchema, RTTIRoot> {
   void anchor() override;
 
 public:
