@@ -105,6 +105,10 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
+  unsigned getYBNDSWImmOpValue(const MCInst &MI, unsigned OpNo,
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const;
+
   unsigned getVMaskReg(const MCInst &MI, unsigned OpNo,
                        SmallVectorImpl<MCFixup> &Fixups,
                        const MCSubtargetInfo &STI) const;
@@ -728,6 +732,31 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   ++MCNumFixups;
 
   return 0;
+}
+
+unsigned
+RISCVMCCodeEmitter::getYBNDSWImmOpValue(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  unsigned Imm = getImmOpValue(MI, OpNo, Fixups, STI);
+  // The 10-bit immediate is encoded as `((imm[7:0] + 257) << imm[9:8]) - 256`.
+  if (Imm <= 256) {
+    assert(Imm > 0); // 1, 2, ..., 255, 256
+    return Imm - 1;
+  }
+  if (Imm <= 768) {
+    assert(Imm % 2 == 0); // 258, 260, ..., 766, 768
+    return ((Imm - 258) >> 1) | (1 << 8);
+  }
+  if (Imm <= 1792) {
+    assert(Imm % 4 == 0); // 772, 776, ..., 1788, 1792
+    return ((Imm - 772) >> 2) | (2 << 8);
+  }
+  if (Imm <= 3840) {
+    assert(Imm % 8 == 0); // 1800, 1808, ..., 3832, 3840
+    return ((Imm - 1800) >> 3) | (3 << 8);
+  }
+  llvm_unreachable("Invalid immediate for YBNDSWI");
 }
 
 unsigned RISCVMCCodeEmitter::getVMaskReg(const MCInst &MI, unsigned OpNo,
