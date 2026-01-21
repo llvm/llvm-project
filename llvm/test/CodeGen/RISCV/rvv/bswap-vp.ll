@@ -1819,17 +1819,17 @@ define <vscale x 8 x i64> @vp_bswap_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32
 define <vscale x 64 x i16> @vp_bswap_nxv64i16(<vscale x 64 x i16> %va, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_bswap_nxv64i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 1
-; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a1, a2, 2
+; CHECK-NEXT:    sub a3, a0, a1
+; CHECK-NEXT:    sltu a4, a0, a3
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    srli a2, a2, 1
+; CHECK-NEXT:    vsetvli a4, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, a3, e16, m8, ta, ma
 ; CHECK-NEXT:    vsrl.vi v24, v16, 8, v0.t
 ; CHECK-NEXT:    vsll.vi v16, v16, 8, v0.t
 ; CHECK-NEXT:    vor.vv v16, v16, v24, v0.t
@@ -1846,17 +1846,17 @@ define <vscale x 64 x i16> @vp_bswap_nxv64i16(<vscale x 64 x i16> %va, <vscale x
 ;
 ; CHECK-ZVKB-LABEL: vp_bswap_nxv64i16:
 ; CHECK-ZVKB:       # %bb.0:
-; CHECK-ZVKB-NEXT:    csrr a1, vlenb
-; CHECK-ZVKB-NEXT:    srli a2, a1, 1
-; CHECK-ZVKB-NEXT:    slli a1, a1, 2
-; CHECK-ZVKB-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-ZVKB-NEXT:    csrr a2, vlenb
+; CHECK-ZVKB-NEXT:    slli a1, a2, 2
+; CHECK-ZVKB-NEXT:    sub a3, a0, a1
+; CHECK-ZVKB-NEXT:    sltu a4, a0, a3
+; CHECK-ZVKB-NEXT:    addi a4, a4, -1
+; CHECK-ZVKB-NEXT:    and a3, a4, a3
+; CHECK-ZVKB-NEXT:    srli a2, a2, 1
+; CHECK-ZVKB-NEXT:    vsetvli a4, zero, e8, m1, ta, ma
 ; CHECK-ZVKB-NEXT:    vmv1r.v v24, v0
 ; CHECK-ZVKB-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-ZVKB-NEXT:    sub a2, a0, a1
-; CHECK-ZVKB-NEXT:    sltu a3, a0, a2
-; CHECK-ZVKB-NEXT:    addi a3, a3, -1
-; CHECK-ZVKB-NEXT:    and a2, a3, a2
-; CHECK-ZVKB-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vsetvli zero, a3, e16, m8, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v16, v16, v0.t
 ; CHECK-ZVKB-NEXT:    bltu a0, a1, .LBB32_2
 ; CHECK-ZVKB-NEXT:  # %bb.1:

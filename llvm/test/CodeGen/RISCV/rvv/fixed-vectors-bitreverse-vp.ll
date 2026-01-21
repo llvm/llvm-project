@@ -2696,9 +2696,9 @@ define <128 x i16> @vp_bitreverse_v128i16(<128 x i16> %va, <128 x i1> %m, i32 ze
 ; CHECK-LABEL: vp_bitreverse_v128i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v7, v0, 8
-; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB34_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 64
@@ -2706,59 +2706,50 @@ define <128 x i16> @vp_bitreverse_v128i16(<128 x i16> %va, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vsrl.vi v24, v8, 8, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 8, v0.t
-; CHECK-NEXT:    lui a2, 1
-; CHECK-NEXT:    lui a4, 3
-; CHECK-NEXT:    addi a3, a0, -64
-; CHECK-NEXT:    sltu a0, a0, a3
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a3, a0, a3
-; CHECK-NEXT:    lui a0, 5
+; CHECK-NEXT:    lui a1, 1
+; CHECK-NEXT:    lui a2, 3
+; CHECK-NEXT:    lui a3, 5
 ; CHECK-NEXT:    vor.vv v8, v8, v24, v0.t
-; CHECK-NEXT:    addi a5, a2, -241
-; CHECK-NEXT:    addi a2, a4, 819
-; CHECK-NEXT:    addi a0, a0, 1365
+; CHECK-NEXT:    addi a1, a1, -241
+; CHECK-NEXT:    addi a2, a2, 819
+; CHECK-NEXT:    addi a3, a3, 1365
 ; CHECK-NEXT:    vsrl.vi v24, v8, 4, v0.t
-; CHECK-NEXT:    vand.vx v8, v8, a5, v0.t
-; CHECK-NEXT:    vand.vx v24, v24, a5, v0.t
+; CHECK-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    vand.vx v24, v24, a1, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    vor.vv v8, v24, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v6, v0
-; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    vsetvli zero, a3, e16, m8, ta, ma
-; CHECK-NEXT:    vsrl.vi v24, v16, 8, v0.t
-; CHECK-NEXT:    vsll.vi v16, v16, 8, v0.t
-; CHECK-NEXT:    vor.vv v16, v16, v24, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v6
-; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vsrl.vi v24, v8, 2, v0.t
 ; CHECK-NEXT:    vand.vx v8, v8, a2, v0.t
 ; CHECK-NEXT:    vand.vx v24, v24, a2, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 2, v0.t
 ; CHECK-NEXT:    vor.vv v8, v24, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    vsetvli zero, a3, e16, m8, ta, ma
-; CHECK-NEXT:    vsrl.vi v24, v16, 4, v0.t
-; CHECK-NEXT:    vand.vx v16, v16, a5, v0.t
-; CHECK-NEXT:    vand.vx v24, v24, a5, v0.t
-; CHECK-NEXT:    vsll.vi v16, v16, 4, v0.t
-; CHECK-NEXT:    vor.vv v16, v24, v16, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v6
-; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vsrl.vi v24, v8, 1, v0.t
-; CHECK-NEXT:    vand.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    vand.vx v24, v24, a0, v0.t
+; CHECK-NEXT:    vand.vx v8, v8, a3, v0.t
+; CHECK-NEXT:    vand.vx v24, v24, a3, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vor.vv v8, v24, v8, v0.t
+; CHECK-NEXT:    addi a4, a0, -64
+; CHECK-NEXT:    sltu a0, a0, a4
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a0, a0, a4
 ; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    vsetvli zero, a3, e16, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-NEXT:    vsrl.vi v24, v16, 8, v0.t
+; CHECK-NEXT:    vsll.vi v16, v16, 8, v0.t
+; CHECK-NEXT:    vor.vv v16, v16, v24, v0.t
+; CHECK-NEXT:    vsrl.vi v24, v16, 4, v0.t
+; CHECK-NEXT:    vand.vx v16, v16, a1, v0.t
+; CHECK-NEXT:    vand.vx v24, v24, a1, v0.t
+; CHECK-NEXT:    vsll.vi v16, v16, 4, v0.t
+; CHECK-NEXT:    vor.vv v16, v24, v16, v0.t
 ; CHECK-NEXT:    vsrl.vi v24, v16, 2, v0.t
 ; CHECK-NEXT:    vand.vx v16, v16, a2, v0.t
 ; CHECK-NEXT:    vand.vx v24, v24, a2, v0.t
 ; CHECK-NEXT:    vsll.vi v16, v16, 2, v0.t
 ; CHECK-NEXT:    vor.vv v16, v24, v16, v0.t
 ; CHECK-NEXT:    vsrl.vi v24, v16, 1, v0.t
-; CHECK-NEXT:    vand.vx v16, v16, a0, v0.t
-; CHECK-NEXT:    vand.vx v24, v24, a0, v0.t
+; CHECK-NEXT:    vand.vx v16, v16, a3, v0.t
+; CHECK-NEXT:    vand.vx v24, v24, a3, v0.t
 ; CHECK-NEXT:    vsll.vi v16, v16, 1, v0.t
 ; CHECK-NEXT:    vor.vv v16, v24, v16, v0.t
 ; CHECK-NEXT:    ret

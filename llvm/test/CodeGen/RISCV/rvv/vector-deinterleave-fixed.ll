@@ -101,16 +101,13 @@ define {<4 x i64>, <4 x i64>} @vector_deinterleave_v4i64_v8i64(<8 x i64> %vec) {
 ; V-NEXT:    vmv.v.i v0, 8
 ; V-NEXT:    vsetivli zero, 4, e64, m4, ta, ma
 ; V-NEXT:    vslidedown.vi v12, v8, 4
-; V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; V-NEXT:    vmv.v.i v17, 2
 ; V-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; V-NEXT:    vslideup.vi v10, v12, 2
 ; V-NEXT:    vslideup.vi v10, v12, 1, v0.t
 ; V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; V-NEXT:    vmv.v.i v18, 12
+; V-NEXT:    vmv.v.i v0, 2
 ; V-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; V-NEXT:    vslidedown.vi v14, v8, 1
-; V-NEXT:    vmv1r.v v0, v17
 ; V-NEXT:    vslidedown.vi v14, v8, 2, v0.t
 ; V-NEXT:    vslidedown.vi v8, v8, 1, v0.t
 ; V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
@@ -118,7 +115,9 @@ define {<4 x i64>, <4 x i64>} @vector_deinterleave_v4i64_v8i64(<8 x i64> %vec) {
 ; V-NEXT:    vmv2r.v v16, v12
 ; V-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; V-NEXT:    vslideup.vi v16, v12, 1, v0.t
-; V-NEXT:    vmv1r.v v0, v18
+; V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; V-NEXT:    vmv.v.i v0, 12
+; V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; V-NEXT:    vmerge.vvm v10, v14, v16, v0
 ; V-NEXT:    ret
@@ -483,16 +482,13 @@ define {<4 x double>, <4 x double>} @vector_deinterleave_v4f64_v8f64(<8 x double
 ; V-NEXT:    vmv.v.i v0, 8
 ; V-NEXT:    vsetivli zero, 4, e64, m4, ta, ma
 ; V-NEXT:    vslidedown.vi v12, v8, 4
-; V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; V-NEXT:    vmv.v.i v17, 2
 ; V-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; V-NEXT:    vslideup.vi v10, v12, 2
 ; V-NEXT:    vslideup.vi v10, v12, 1, v0.t
 ; V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; V-NEXT:    vmv.v.i v18, 12
+; V-NEXT:    vmv.v.i v0, 2
 ; V-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; V-NEXT:    vslidedown.vi v14, v8, 1
-; V-NEXT:    vmv1r.v v0, v17
 ; V-NEXT:    vslidedown.vi v14, v8, 2, v0.t
 ; V-NEXT:    vslidedown.vi v8, v8, 1, v0.t
 ; V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
@@ -500,7 +496,9 @@ define {<4 x double>, <4 x double>} @vector_deinterleave_v4f64_v8f64(<8 x double
 ; V-NEXT:    vmv2r.v v16, v12
 ; V-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; V-NEXT:    vslideup.vi v16, v12, 1, v0.t
-; V-NEXT:    vmv1r.v v0, v18
+; V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; V-NEXT:    vmv.v.i v0, 12
+; V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; V-NEXT:    vmerge.vvm v10, v14, v16, v0
 ; V-NEXT:    ret

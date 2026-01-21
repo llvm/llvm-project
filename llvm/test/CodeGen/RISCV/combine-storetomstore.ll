@@ -212,10 +212,10 @@ define void @test_masked_store_success_v8f16(<8 x half> %x, ptr %ptr, <8 x i1> %
 ; RISCV-NEXT:    vmv1r.v v13, v0
 ; RISCV-NEXT:    vmerge.vim v8, v9, 1, v0
 ; RISCV-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; RISCV-NEXT:    vslidedown.vi v8, v8, 2
+; RISCV-NEXT:    vslidedown.vi v10, v8, 2
 ; RISCV-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RISCV-NEXT:    vmsne.vi v0, v8, 0
 ; RISCV-NEXT:    vmv.v.i v8, 0
+; RISCV-NEXT:    vmsne.vi v0, v10, 0
 ; RISCV-NEXT:    vmv1r.v v12, v0
 ; RISCV-NEXT:    vmerge.vim v10, v8, 1, v0
 ; RISCV-NEXT:    vslidedown.vi v10, v10, 1
@@ -567,10 +567,10 @@ define void @test_masked_store_multiple_v8i32(<8 x i32> %x, <8 x i32> %y, ptr %p
 ; RISCV-LABEL: test_masked_store_multiple_v8i32:
 ; RISCV:       # %bb.0:
 ; RISCV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RISCV-NEXT:    vle32.v v14, (a1)
+; RISCV-NEXT:    vle32.v v16, (a1)
 ; RISCV-NEXT:    vse32.v v8, (a0), v0.t
 ; RISCV-NEXT:    vmv1r.v v0, v12
-; RISCV-NEXT:    vmerge.vvm v8, v14, v10, v0
+; RISCV-NEXT:    vmerge.vvm v8, v16, v10, v0
 ; RISCV-NEXT:    vse32.v v8, (a1)
 ; RISCV-NEXT:    ret
   %load = load <8 x i32>, ptr %ptr1, align 32
@@ -586,10 +586,10 @@ define void @test_masked_store_multiple_v8i64(<8 x i64> %x, <8 x i64> %y, ptr %p
 ; RISCV-LABEL: test_masked_store_multiple_v8i64:
 ; RISCV:       # %bb.0:
 ; RISCV-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RISCV-NEXT:    vle64.v v20, (a1)
+; RISCV-NEXT:    vle64.v v24, (a1)
 ; RISCV-NEXT:    vse64.v v8, (a0), v0.t
 ; RISCV-NEXT:    vmv1r.v v0, v16
-; RISCV-NEXT:    vmerge.vvm v8, v20, v12, v0
+; RISCV-NEXT:    vmerge.vvm v8, v24, v12, v0
 ; RISCV-NEXT:    vse64.v v8, (a1)
 ; RISCV-NEXT:    ret
   %load = load <8 x i64>, ptr %ptr1, align 32

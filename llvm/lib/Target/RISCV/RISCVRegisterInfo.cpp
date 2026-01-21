@@ -862,7 +862,7 @@ float RISCVRegisterInfo::getSpillWeightScaleFactor(
 unsigned RISCVRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
                                                    unsigned Idx) const {
   if (Idx == RISCV::RegisterPressureSets::VMV0)
-    return 2;
+    return 1;
   return RISCVGenRegisterInfo::getRegPressureSetLimit(MF, Idx);
 }
 
