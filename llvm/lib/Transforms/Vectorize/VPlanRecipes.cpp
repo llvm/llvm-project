@@ -2448,6 +2448,23 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
          getScalarType() == getRegion()->getCanonicalIVType();
 }
 
+void VPDerivedIVRecipe::execute(VPTransformState &State) {
+  assert(!State.Lane && "VPDerivedIVRecipe being replicated.");
+
+  // Fast-math-flags propagate from the original induction instruction.
+  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
+  if (FPBinOp)
+    State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
+
+  Value *Step = State.get(getStepValue(), VPLane(0));
+  Value *Index = State.get(getOperand(1), VPLane(0));
+  Value *DerivedIV = emitTransformedIndex(
+      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
+      cast_if_present<BinaryOperator>(FPBinOp));
+  DerivedIV->setName(Name);
+  State.set(this, DerivedIV, VPLane(0));
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
@@ -3402,6 +3419,20 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1), Ctx);
     if (isSingleScalar())
       return ScalarCost;
+
+    // If any of the operands is from a different replicate region and has its
+    // cost skipped, it may have been forced to scalar. Fall back to legacy cost
+    // model to avoid cost mis-match.
+    if (any_of(operands(), [&Ctx, VF](VPValue *Op) {
+          auto *PredR = dyn_cast<VPPredInstPHIRecipe>(Op);
+          if (!PredR)
+            return false;
+          return Ctx.skipCostComputation(
+              dyn_cast_or_null<Instruction>(
+                  PredR->getOperand(0)->getUnderlyingValue()),
+              VF.isVector());
+        }))
+      break;
 
     ScalarCost = ScalarCost * VF.getFixedValue() +
                  Ctx.getScalarizationOverhead(Ctx.Types.inferScalarType(this),
