@@ -1,4 +1,4 @@
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(Python ${Python3_VERSION} EXACT COMPONENTS Interpreter Development.Module REQUIRED)
 
 execute_process(
     COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
@@ -10,5 +10,6 @@ set_target_properties(LLVMEmbUtils PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 nanobind_add_module(ir2vec MODULE PyIR2Vec.cpp)
 target_link_libraries(ir2vec PRIVATE LLVMEmbUtils)
+target_include_directories(ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 message(STATUS "Python bindings for llvm-ir2vec will be built with nanobind")

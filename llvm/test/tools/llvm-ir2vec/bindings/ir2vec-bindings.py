@@ -1,7 +1,22 @@
-# RUN: env PYTHONPATH=%llvm_lib_dir %python %s
+# RUN: rm -rf %t.ll
+# RUN: echo "define i32 @add(i32 %%a, i32 %%b) {" > %t.ll
+# RUN: echo "entry:" >> %t.ll
+# RUN: echo "  %%sum = add i32 %%a, %%b" >> %t.ll
+# RUN: echo "  ret i32 %%sum" >> %t.ll
+# RUN: echo "}" >> %t.ll
+# RUN: env PYTHONPATH=%llvm_lib_dir %python %s %t.ll %ir2vec_test_vocab_dir/dummy_3D_nonzero_opc_vocab.json | FileCheck %s
 
+import sys
 import ir2vec
 
-print("SUCCESS: Module imported")
+ll_file = sys.argv[1]
+vocab_path = sys.argv[2]
 
-# CHECK: SUCCESS: Module imported
+tool = ir2vec.initEmbedding(filename=ll_file, mode="sym", vocab_path=vocab_path)
+
+if tool is not None:
+    print("SUCCESS: Tool initialized")
+    print(f"Tool type: {type(tool).__name__}")
+
+# CHECK: SUCCESS: Tool initialized
+# CHECK: Tool type: IR2VecTool
