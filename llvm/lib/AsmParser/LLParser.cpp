@@ -10187,6 +10187,7 @@ bool LLParser::parseOptionalCalls(
         if (parseToken(lltok::colon, "expected ':'") || parseHotness(Hotness))
           return true;
         break;
+      // Deprecated, keep in order to support old files.
       case lltok::kw_relbf:
         Lex.Lex();
         if (parseToken(lltok::colon, "expected ':'") || parseUInt32(RelBF))
@@ -10201,15 +10202,13 @@ bool LLParser::parseOptionalCalls(
         return error(Lex.getLoc(), "expected hotness, relbf, or tail");
       }
     }
-    if (Hotness != CalleeInfo::HotnessType::Unknown && RelBF > 0)
-      return tokError("Expected only one of hotness or relbf");
     // Keep track of the Call array index needing a forward reference.
     // We will save the location of the ValueInfo needing an update, but
     // can only do so once the std::vector is finalized.
     if (VI.getRef() == FwdVIRef)
       IdToIndexMap[GVId].push_back(std::make_pair(Calls.size(), Loc));
     Calls.push_back(
-        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall, RelBF)});
+        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall)});
 
     if (parseToken(lltok::rparen, "expected ')' in call"))
       return true;
