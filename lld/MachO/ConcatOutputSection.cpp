@@ -115,7 +115,6 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 
 DenseMap<Symbol *, ThunkInfo> lld::macho::thunkMap;
 
-
 // Returns true if `osec` can be the target of a BRANCH relocation.
 // Branch targets include code sections and stub sections for dynamic calls.
 static bool isBranchTargetSection(const OutputSection *osec) {
@@ -136,10 +135,11 @@ uint64_t TextOutputSection::estimateFurthestBranchTargetEndVA() const {
   uint64_t curVA = estimateEndVA(addr);
   uint64_t furthestTargetEndVA = isBranchTargetSection(this) ? curVA : addr;
 
-  // Find this section in the segment's section list and get subsequent sections.
+  // Find this section in the segment's section list and get subsequent
+  // sections.
   ArrayRef<OutputSection *> sections = parent->getSections();
-  ArrayRef<OutputSection *> fromThis = sections.drop_until(
-      [this](const OutputSection *s) { return s == this; });
+  ArrayRef<OutputSection *> fromThis =
+      sections.drop_until([this](const OutputSection *s) { return s == this; });
   assert(!fromThis.empty() && "section not found in parent segment");
   ArrayRef<OutputSection *> subsequentSections = fromThis.drop_front(1);
 
