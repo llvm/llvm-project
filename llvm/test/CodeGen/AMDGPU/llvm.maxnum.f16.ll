@@ -1115,4 +1115,4 @@ entry:
   ret void
 }
 
-attributes #0 = { denormal_fpenv(float: preservesign,preservesign) }
+attributes #0 = { denormal_fpenv(float: preservesign) }

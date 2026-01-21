@@ -66,4 +66,4 @@ entry:
   ret float %fdiv
 }
 
-attributes #0 = { nounwind denormal_fpenv(float: preservesign,preservesign) }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }

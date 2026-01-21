@@ -861,16 +861,16 @@ define i32 @call_dynamic_dynamic_psz_psz_f32_from_psz_psz() #1 {
   ret i32 %result
 }
 
-attributes #0 = { denormal_fpenv(ieee,ieee) }
-attributes #1 = { denormal_fpenv(preservesign,preservesign) }
-attributes #2 = { denormal_fpenv(preservesign,ieee) }
-attributes #3 = { denormal_fpenv(ieee,preservesign) }
-attributes #4 = { denormal_fpenv(dynamic,dynamic) }
-attributes #5 = { denormal_fpenv(dynamic,ieee) }
-attributes #6 = { denormal_fpenv(ieee,dynamic) }
-attributes #7 = { denormal_fpenv(preservesign,dynamic) }
-attributes #8 = { denormal_fpenv(dynamic,preservesign) }
-attributes #9 = { denormal_fpenv(float: dynamic,dynamic) }
-attributes #10 = { denormal_fpenv(float: preservesign,preservesign) }
-attributes #11 = { denormal_fpenv(float: ieee,ieee) denormal_fpenv(preservesign,preservesign) }
-attributes #12 = { denormal_fpenv(dynamic,dynamic float: preservesign,preservesign) }
+attributes #0 = { denormal_fpenv(ieee|ieee) }
+attributes #1 = { denormal_fpenv(preservesign) }
+attributes #2 = { denormal_fpenv(preservesign|ieee) }
+attributes #3 = { denormal_fpenv(ieee|preservesign) }
+attributes #4 = { denormal_fpenv(dynamic) }
+attributes #5 = { denormal_fpenv(dynamic|ieee) }
+attributes #6 = { denormal_fpenv(ieee|dynamic) }
+attributes #7 = { denormal_fpenv(preservesign|dynamic) }
+attributes #8 = { denormal_fpenv(dynamic|preservesign) }
+attributes #9 = { denormal_fpenv(float: dynamic) }
+attributes #10 = { denormal_fpenv(float: preservesign) }
+attributes #11 = { denormal_fpenv(float: ieee|ieee) denormal_fpenv(preservesign) }
+attributes #12 = { denormal_fpenv(dynamic float: preservesign) }

@@ -17,5 +17,5 @@ define float @test_preserve_sign() #1 {
   ret float %1
 }
 
-attributes #0 = {denormal_fpenv(ieee,ieee)}
-attributes #1 = {denormal_fpenv(preservesign,preservesign)}
+attributes #0 = {denormal_fpenv(ieee|ieee)}
+attributes #1 = {denormal_fpenv(preservesign)}

@@ -2660,7 +2660,7 @@ For example:
 ``denormal_fpenv``
     This indicates the denormal (subnormal) handling that may be
     assumed for the default floating-point environment. The base form
-    is a comma separated pair. The elements may be one of ``ieee``,
+    is a ``|`` separated pair. The elements may be one of ``ieee``,
     ``preservesign``, ``positivezero``, or ``dynamic``. The first
     entry indicates the flushing mode for the result of floating point
     operations. The second indicates the handling of denormal inputs
@@ -2668,7 +2668,7 @@ For example:
     bitcode, if the second value is omitted, both input and output
     modes will assume the same mode.
 
-    If this is attribute is not specified, the default is ``ieee,ieee``.
+    If this is attribute is not specified, the default is ``ieee|ieee``.
 
     If the output mode is ``preservesign``, or ``positivezero``,
     denormal outputs may be flushed to zero by standard floating-point
@@ -2703,8 +2703,9 @@ For example:
 :Examples:
    ``denormal_fpenv(preservesign)``
    ``denormal_fpenv(float: preservesign)``
-   ``denormal_fpenv(ieee,ieee, float:preservesign,preservesign)``
-   ``denormal_fpenv(ieee,dynamic, float:preservesign,ieee)``
+   ``denormal_fpenv(dynamic, float: preservesign|ieee)``
+   ``denormal_fpenv(ieee|ieee, float:preservesign|preservesign)``
+   ``denormal_fpenv(ieee|dynamic, float:preservesign|ieee)``
 
 ``"thunk"``
     This attribute indicates that the function will delegate to some other

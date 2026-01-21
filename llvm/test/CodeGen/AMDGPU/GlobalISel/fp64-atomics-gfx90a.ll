@@ -2502,9 +2502,9 @@ main_body:
   ret double %ret
 }
 
-attributes #0 = { nounwind denormal_fpenv(preservesign,preservesign) }
+attributes #0 = { nounwind denormal_fpenv(preservesign) }
 attributes #1 = { nounwind }
-attributes #2 = { nounwind denormal_fpenv(preservesign,preservesign) }
+attributes #2 = { nounwind denormal_fpenv(preservesign) }
 
 !0 = !{}
 !1 = !{i32 5, i32 6}

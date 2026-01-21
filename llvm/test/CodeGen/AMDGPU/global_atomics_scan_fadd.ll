@@ -12931,8 +12931,8 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
   ret void
 }
 
-attributes #0 = { denormal_fpenv(float: preservesign,preservesign)  }
-attributes #1 = { strictfp denormal_fpenv(float: preservesign,preservesign) }
+attributes #0 = { denormal_fpenv(float: preservesign)  }
+attributes #1 = { strictfp denormal_fpenv(float: preservesign) }
 attributes #2 = { strictfp }
 
 !1 = !{}

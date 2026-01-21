@@ -4831,10 +4831,10 @@ declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
 declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #1
 declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) #1
 
-attributes #0 = { nounwind denormal_fpenv(float: preservesign,preservesign) }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "amdgpu-dx10-clamp"="false" denormal_fpenv(float: preservesign,preservesign) "no-nans-fp-math"="false" }
-attributes #3 = { nounwind "amdgpu-dx10-clamp"="true" denormal_fpenv(float: preservesign,preservesign) "no-nans-fp-math"="false" }
-attributes #4 = { nounwind "amdgpu-dx10-clamp"="false" denormal_fpenv(float: preservesign,preservesign) "no-nans-fp-math"="false" }
+attributes #2 = { nounwind "amdgpu-dx10-clamp"="false" denormal_fpenv(float: preservesign) "no-nans-fp-math"="false" }
+attributes #3 = { nounwind "amdgpu-dx10-clamp"="true" denormal_fpenv(float: preservesign) "no-nans-fp-math"="false" }
+attributes #4 = { nounwind "amdgpu-dx10-clamp"="false" denormal_fpenv(float: preservesign) "no-nans-fp-math"="false" }
 attributes #5 = { nounwind readnone "amdgpu-ieee"="false" }
 attributes #6 = { nounwind "amdgpu-dx10-clamp"="false" }

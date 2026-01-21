@@ -2077,6 +2077,6 @@ define amdgpu_kernel void @test_udiv24_u23_u16_i32(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
-attributes #0 = { denormal_fpenv(float: preservesign,preservesign) }
-attributes #1 = { denormal_fpenv(float: ieee,preservesign) }
-attributes #2 = { denormal_fpenv(float: preservesign,ieee) }
+attributes #0 = { denormal_fpenv(float: preservesign) }
+attributes #1 = { denormal_fpenv(float: ieee|preservesign) }
+attributes #2 = { denormal_fpenv(float: preservesign|ieee) }

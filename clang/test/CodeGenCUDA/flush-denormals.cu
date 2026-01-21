@@ -41,7 +41,7 @@
 // CHECK-LABEL: define void @foo() #0
 extern "C" __device__ void foo() {}
 
-// FTZ: attributes #0 = {{.*}} denormal_fpenv(float: preservesign,preservesign)
+// FTZ: attributes #0 = {{.*}} denormal_fpenv(float: preservesign)
 // NOFTZ-NOT: denormal_fpenv
 
 // PTXFTZ:!llvm.module.flags = !{{{.*}}[[MODFLAG:![0-9]+]]}

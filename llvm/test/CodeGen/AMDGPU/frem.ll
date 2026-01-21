@@ -18903,4 +18903,4 @@ define amdgpu_kernel void @frem_v2f64_const(ptr addrspace(1) %out) #0 {
 
 
 
-attributes #0 = { nounwind denormal_fpenv(float: preservesign,preservesign) }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }

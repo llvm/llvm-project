@@ -24,19 +24,19 @@ entry:
   ret i32 0
 }
 
-; ALL-DAG: attributes [[ATTR]] = { nounwind denormal_fpenv(preservesign,ieee) }
+; ALL-DAG: attributes [[ATTR]] = { nounwind denormal_fpenv(preservesign|ieee) }
 
-; IEEE-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(ieee,ieee) }
-; PRESERVESIGN-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(preservesign,preservesign) }
-; POSITIVEZERO-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(positivezero,positivezero) }
+; IEEE-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(ieee) }
+; PRESERVESIGN-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(preservesign) }
+; POSITIVEZERO-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(positivezero) }
 
-; IEEEF32-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(ieee,ieee) }
-; PRESERVESIGNF32-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(float: preservesign,preservesign) }
-; POSITIVEZEROF32-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(float: positivezero,positivezero) }
+; IEEEF32-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(ieee) }
+; PRESERVESIGNF32-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(float: preservesign) }
+; POSITIVEZEROF32-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(float: positivezero) }
 
-; IEEE-BOTH-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(ieee,ieee) }
-; PRESERVESIGN-BOTH-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(preservesign,preservesign) }
-; POSITIVEZERO-BOTH-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(positivezero,positivezero) }
+; IEEE-BOTH-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(ieee) }
+; PRESERVESIGN-BOTH-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(preservesign) }
+; POSITIVEZERO-BOTH-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(positivezero) }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind denormal_fpenv(preservesign,ieee float: preservesign,ieee) }
+attributes #1 = { nounwind denormal_fpenv(preservesign|ieee, float: preservesign|ieee) }

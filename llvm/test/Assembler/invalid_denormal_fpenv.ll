@@ -7,7 +7,8 @@
 ; RUN: not llvm-as %t/invalid_multi_entry0.ll -disable-output 2>&1 | FileCheck -check-prefix=INVALID_MULTI_ENTRY0 %s
 ; RUN: not llvm-as %t/invalid_multi_entry1.ll -disable-output 2>&1 | FileCheck -check-prefix=INVALID_MULTI_ENTRY1 %s
 ; RUN: not llvm-as %t/invalid_second_element.ll -disable-output 2>&1 | FileCheck -check-prefix=INVALID_SECOND_ELEMENT %s
-; RUN: not llvm-as %t/missing_comma.ll -disable-output 2>&1 | FileCheck -check-prefix=MISSING_COMMA %s
+; RUN: not llvm-as %t/missing_bar.ll -disable-output 2>&1 | FileCheck -check-prefix=MISSING_BAR %s
+; RUN: not llvm-as %t/with_comma.ll -disable-output 2>&1 | FileCheck -check-prefix=WITH_COMMA %s
 ; RUN: not llvm-as %t/missing_rparen_one_elt.ll -disable-output 2>&1 | FileCheck -check-prefix=MISSING_RPAREN_ONEELT %s
 ; RUN: not llvm-as %t/missing_rparen_two_elt.ll -disable-output 2>&1 | FileCheck -check-prefix=MISSING_RPAREN_TWOELT %s
 ; RUN: not llvm-as %t/extra_elt.ll -disable-output 2>&1 | FileCheck -check-prefix=EXTRA_ELT %s
@@ -61,28 +62,35 @@ define void @func() denormal_fpenv(invalid) {
 ;--- invalid_multi_entry0.ll
 
 ; INVALID_MULTI_ENTRY0: :36: error: expected denormal behavior kind (ieee, preservesign, positivezero, dynamic)
-define void @func() denormal_fpenv(invalid,invalid) {
+define void @func() denormal_fpenv(invalid|invalid) {
   ret void
 }
 
 ;--- invalid_multi_entry1.ll
 
 ; INVALID_MULTI_ENTRY1: :36: error: expected denormal behavior kind (ieee, preservesign, positivezero, dynamic)
-define void @func() denormal_fpenv(invalid0,invalid1) {
+define void @func() denormal_fpenv(invalid0|invalid1) {
   ret void
 }
 
 ;--- invalid_second_element.ll
 
 ; INVALID_SECOND_ELEMENT: :44: error: expected denormal behavior kind (ieee, preservesign, positivezero, dynamic)
-define void @func() denormal_fpenv(dynamic,invalid1) {
+define void @func() denormal_fpenv(dynamic|invalid1) {
   ret void
 }
 
-;--- missing_comma.ll
+;--- missing_bar.ll
 
-; MISSING_COMMA: :49: error: unterminated denormal_fpenv
+; MISSING_BAR: :49: error: unterminated denormal_fpenv
 define void @func() denormal_fpenv(preservesign preservesign) {
+  ret void
+}
+
+;--- with_comma.ll
+
+; WITH_COMMA: :49: error: unterminated denormal_fpenv
+define void @func() denormal_fpenv(preservesign,preservesign) {
   ret void
 }
 
@@ -96,14 +104,14 @@ define void @func() denormal_fpenv(preservesign {
 ;--- missing_rparen_two_elt.ll
 
 ; MISSING_RPAREN_TWOELT: :58: error: unterminated denormal_fpenv
-define void @func() denormal_fpenv(preservesign, dynamic {
+define void @func() denormal_fpenv(preservesign| dynamic {
   ret void
 }
 
 ;--- extra_elt.ll
 
 ; EXTRA_ELT: :53: error: unterminated denormal_fpenv
-define void @func() denormal_fpenv(preservesign,ieee,preservesign) {
+define void @func() denormal_fpenv(preservesign|ieee|preservesign) {
   ret void
 }
 
@@ -152,35 +160,35 @@ define void @func() denormal_fpenv(float:invalid) {
 ;--- only_float_mode_invalid_two_entries.ll
 
 ; FLOAT_INVALID_TWO_ELT: :42: error: expected denormal behavior kind (ieee, preservesign, positivezero, dynamic)
-define void @func() denormal_fpenv(float:invalid,invalid) {
+define void @func() denormal_fpenv(float:invalid|invalid) {
   ret void
 }
 
 ;--- only_float_mode_invalid_second_entry.ll
 
 ; FLOAT_INVALID_SECOND_ENTRY: :55: error: expected denormal behavior kind (ieee, preservesign, positivezero, dynamic)
-define void @func() denormal_fpenv(float:preservesign,invalid) {
+define void @func() denormal_fpenv(float:preservesign|invalid) {
   ret void
 }
 
 ;--- both_sections_wrong_type.ll
 
 ; BOTH_SECTIONS_WRONG_TYPE: :60: error: expected float:
-define void @func() denormal_fpenv(preservesign,ieee double:dynamic,preservesign) {
+define void @func() denormal_fpenv(preservesign|ieee double:dynamic|preservesign) {
   ret void
 }
 
 ;--- both_sections_invalid_float_entry0.ll
 
 ; BOTH_SECTIONS_INVALID_FLOAT_ENTRY0: :60: error: expected denormal behavior kind (ieee, preservesign, positivezero, dynamic)
-define void @func() denormal_fpenv(preservesign,ieee float:invalid,dynamic) {
+define void @func() denormal_fpenv(preservesign|ieee float:invalid|dynamic) {
   ret void
 }
 
 ;--- both_sections_invalid_float_entry1.ll
 
 ; BOTH_SECTIONS_INVALID_FLOAT_ENTRY1: :68: error: expected denormal behavior kind (ieee, preservesign, positivezero, dynamic)
-define void @func() denormal_fpenv(preservesign,ieee float:dynamic,invalid) {
+define void @func() denormal_fpenv(preservesign|ieee float:dynamic|invalid) {
   ret void
 }
 

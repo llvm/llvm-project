@@ -2,7 +2,7 @@
 
 ; Invalid but didn't fail the verifier
 define void @str_denormal_fp_math_no_val() "denormal-fp-math" {
-; CHECK: Function Attrs: denormal_fpenv(ieee,ieee)
+; CHECK: Function Attrs: denormal_fpenv(ieee)
 ; CHECK-LABEL: define void @str_denormal_fp_math_no_val(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -12,7 +12,7 @@ define void @str_denormal_fp_math_no_val() "denormal-fp-math" {
 
 ; Invalid but didn't fail the verifier
 define void @str_denormal_fp_math_empty_str() "denormal-fp-math"="" {
-; CHECK: Function Attrs: denormal_fpenv(ieee,ieee)
+; CHECK: Function Attrs: denormal_fpenv(ieee)
 ; CHECK-LABEL: define void @str_denormal_fp_math_empty_str(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret void
@@ -21,7 +21,7 @@ define void @str_denormal_fp_math_empty_str() "denormal-fp-math"="" {
 }
 
 define void @str_denormal_fp_math_ieee() "denormal-fp-math"="ieee" {
-; CHECK: Function Attrs: denormal_fpenv(ieee,ieee)
+; CHECK: Function Attrs: denormal_fpenv(ieee)
 ; CHECK-LABEL: define void @str_denormal_fp_math_ieee(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret void
@@ -30,7 +30,7 @@ define void @str_denormal_fp_math_ieee() "denormal-fp-math"="ieee" {
 }
 
 define void @str_denormal_fp_math_ieee_ieee() "denormal-fp-math"="ieee,ieee" {
-; CHECK: Function Attrs: denormal_fpenv(ieee,ieee)
+; CHECK: Function Attrs: denormal_fpenv(ieee)
 ; CHECK-LABEL: define void @str_denormal_fp_math_ieee_ieee(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret void
@@ -39,7 +39,7 @@ define void @str_denormal_fp_math_ieee_ieee() "denormal-fp-math"="ieee,ieee" {
 }
 
 define void @str_denormal_fp_math_preserve_sign() "denormal-fp-math"="preserve-sign" {
-; CHECK: Function Attrs: denormal_fpenv(preservesign,preservesign)
+; CHECK: Function Attrs: denormal_fpenv(preservesign)
 ; CHECK-LABEL: define void @str_denormal_fp_math_preserve_sign(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -48,7 +48,7 @@ define void @str_denormal_fp_math_preserve_sign() "denormal-fp-math"="preserve-s
 }
 
 define void @str_denormal_fp_math_preserve_sign_preserve_sign() "denormal-fp-math"="preserve-sign,preserve-sign" {
-; CHECK: Function Attrs: denormal_fpenv(preservesign,preservesign)
+; CHECK: Function Attrs: denormal_fpenv(preservesign)
 ; CHECK-LABEL: define void @str_denormal_fp_math_preserve_sign_preserve_sign(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    ret void
@@ -57,7 +57,7 @@ define void @str_denormal_fp_math_preserve_sign_preserve_sign() "denormal-fp-mat
 }
 
 define void @str_denormal_fp_math_dynamic() "denormal-fp-math"="dynamic" {
-; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic)
+; CHECK: Function Attrs: denormal_fpenv(dynamic)
 ; CHECK-LABEL: define void @str_denormal_fp_math_dynamic(
 ; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -66,7 +66,7 @@ define void @str_denormal_fp_math_dynamic() "denormal-fp-math"="dynamic" {
 }
 
 define void @str_denormal_fp_math_dynamic_dynamic() "denormal-fp-math"="dynamic,dynamic" {
-; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic)
+; CHECK: Function Attrs: denormal_fpenv(dynamic)
 ; CHECK-LABEL: define void @str_denormal_fp_math_dynamic_dynamic(
 ; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
@@ -75,7 +75,7 @@ define void @str_denormal_fp_math_dynamic_dynamic() "denormal-fp-math"="dynamic,
 }
 
 define void @str_denormal_fp_math_positivezero() "denormal-fp-math"="positive-zero" {
-; CHECK: Function Attrs: denormal_fpenv(positivezero,positivezero)
+; CHECK: Function Attrs: denormal_fpenv(positivezero)
 ; CHECK-LABEL: define void @str_denormal_fp_math_positivezero(
 ; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -84,7 +84,7 @@ define void @str_denormal_fp_math_positivezero() "denormal-fp-math"="positive-ze
 }
 
 define void @str_denormal_fp_math_positivezero_positivezero() "denormal-fp-math"="positive-zero,positive-zero" {
-; CHECK: Function Attrs: denormal_fpenv(positivezero,positivezero)
+; CHECK: Function Attrs: denormal_fpenv(positivezero)
 ; CHECK-LABEL: define void @str_denormal_fp_math_positivezero_positivezero(
 ; CHECK-SAME: ) #[[ATTR3]] {
 ; CHECK-NEXT:    ret void
@@ -93,7 +93,7 @@ define void @str_denormal_fp_math_positivezero_positivezero() "denormal-fp-math"
 }
 
 define void @str_denormal_fp_math_ieee_preservesign() "denormal-fp-math"="ieee,preserve-sign" {
-; CHECK: Function Attrs: denormal_fpenv(ieee,preservesign)
+; CHECK: Function Attrs: denormal_fpenv(ieee|preservesign)
 ; CHECK-LABEL: define void @str_denormal_fp_math_ieee_preservesign(
 ; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -102,7 +102,7 @@ define void @str_denormal_fp_math_ieee_preservesign() "denormal-fp-math"="ieee,p
 }
 
 define void @str_denormal_fp_math_preservesign_ieee() "denormal-fp-math"="preserve-sign,ieee" {
-; CHECK: Function Attrs: denormal_fpenv(preservesign,ieee)
+; CHECK: Function Attrs: denormal_fpenv(preservesign|ieee)
 ; CHECK-LABEL: define void @str_denormal_fp_math_preservesign_ieee(
 ; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -113,7 +113,7 @@ define void @str_denormal_fp_math_preservesign_ieee() "denormal-fp-math"="preser
 
 ; Invalid but didn't fail the verifier
 define void @str_denormal_fp_math_f32_no_val() "denormal-fp-math-f32" {
-; CHECK: Function Attrs: denormal_fpenv(ieee,ieee)
+; CHECK: Function Attrs: denormal_fpenv(ieee)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_no_val(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret void
@@ -123,7 +123,7 @@ define void @str_denormal_fp_math_f32_no_val() "denormal-fp-math-f32" {
 
 ; Invalid but didn't fail the verifier
 define void @str_denormal_fp_math_f32_empty_str() "denormal-fp-math-f32"="" {
-; CHECK: Function Attrs: denormal_fpenv(ieee,ieee)
+; CHECK: Function Attrs: denormal_fpenv(ieee)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_empty_str(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret void
@@ -132,7 +132,7 @@ define void @str_denormal_fp_math_f32_empty_str() "denormal-fp-math-f32"="" {
 }
 
 define void @str_denormal_fp_math_f32_ieee() "denormal-fp-math-f32"="ieee" {
-; CHECK: Function Attrs: denormal_fpenv(ieee,ieee)
+; CHECK: Function Attrs: denormal_fpenv(ieee)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_ieee(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret void
@@ -141,7 +141,7 @@ define void @str_denormal_fp_math_f32_ieee() "denormal-fp-math-f32"="ieee" {
 }
 
 define void @str_denormal_fp_math_f32_ieee_ieee() "denormal-fp-math-f32"="ieee,ieee" {
-; CHECK: Function Attrs: denormal_fpenv(ieee,ieee)
+; CHECK: Function Attrs: denormal_fpenv(ieee)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_ieee_ieee(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret void
@@ -150,7 +150,7 @@ define void @str_denormal_fp_math_f32_ieee_ieee() "denormal-fp-math-f32"="ieee,i
 }
 
 define void @str_denormal_fp_math_f32_preserve_sign() "denormal-fp-math-f32"="preserve-sign" {
-; CHECK: Function Attrs: denormal_fpenv(preservesign,preservesign)
+; CHECK: Function Attrs: denormal_fpenv(preservesign)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_preserve_sign(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    ret void
@@ -159,7 +159,7 @@ define void @str_denormal_fp_math_f32_preserve_sign() "denormal-fp-math-f32"="pr
 }
 
 define void @str_denormal_fp_math_f32_preserve_sign_preserve_sign() "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
-; CHECK: Function Attrs: denormal_fpenv(preservesign,preservesign)
+; CHECK: Function Attrs: denormal_fpenv(preservesign)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_preserve_sign_preserve_sign(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    ret void
@@ -168,7 +168,7 @@ define void @str_denormal_fp_math_f32_preserve_sign_preserve_sign() "denormal-fp
 }
 
 define void @str_denormal_fp_math_f32_dynamic() "denormal-fp-math-f32"="dynamic" {
-; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic)
+; CHECK: Function Attrs: denormal_fpenv(dynamic)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_dynamic(
 ; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
@@ -177,7 +177,7 @@ define void @str_denormal_fp_math_f32_dynamic() "denormal-fp-math-f32"="dynamic"
 }
 
 define void @str_denormal_fp_math_f32_dynamic_dynamic() "denormal-fp-math-f32"="dynamic,dynamic" {
-; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic)
+; CHECK: Function Attrs: denormal_fpenv(dynamic)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_dynamic_dynamic(
 ; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
@@ -186,7 +186,7 @@ define void @str_denormal_fp_math_f32_dynamic_dynamic() "denormal-fp-math-f32"="
 }
 
 define void @str_denormal_fp_math_f32_positivezero() "denormal-fp-math-f32"="positive-zero" {
-; CHECK: Function Attrs: denormal_fpenv(positivezero,positivezero)
+; CHECK: Function Attrs: denormal_fpenv(positivezero)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_positivezero(
 ; CHECK-SAME: ) #[[ATTR3]] {
 ; CHECK-NEXT:    ret void
@@ -195,7 +195,7 @@ define void @str_denormal_fp_math_f32_positivezero() "denormal-fp-math-f32"="pos
 }
 
 define void @str_denormal_fp_math_f32_positivezero_positivezero() "denormal-fp-math-f32"="positive-zero,positive-zero" {
-; CHECK: Function Attrs: denormal_fpenv(positivezero,positivezero)
+; CHECK: Function Attrs: denormal_fpenv(positivezero)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_positivezero_positivezero(
 ; CHECK-SAME: ) #[[ATTR3]] {
 ; CHECK-NEXT:    ret void
@@ -204,7 +204,7 @@ define void @str_denormal_fp_math_f32_positivezero_positivezero() "denormal-fp-m
 }
 
 define void @str_denormal_fp_math_f32_ieee_preservesign() "denormal-fp-math-f32"="ieee,preserve-sign" {
-; CHECK: Function Attrs: denormal_fpenv(ieee,preservesign)
+; CHECK: Function Attrs: denormal_fpenv(ieee|preservesign)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_ieee_preservesign(
 ; CHECK-SAME: ) #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
@@ -213,7 +213,7 @@ define void @str_denormal_fp_math_f32_ieee_preservesign() "denormal-fp-math-f32"
 }
 
 define void @str_denormal_fp_math_f32_preservesign_ieee() "denormal-fp-math-f32"="preserve-sign,ieee" {
-; CHECK: Function Attrs: denormal_fpenv(preservesign,ieee)
+; CHECK: Function Attrs: denormal_fpenv(preservesign|ieee)
 ; CHECK-LABEL: define void @str_denormal_fp_math_f32_preservesign_ieee(
 ; CHECK-SAME: ) #[[ATTR5]] {
 ; CHECK-NEXT:    ret void
@@ -222,7 +222,7 @@ define void @str_denormal_fp_math_f32_preservesign_ieee() "denormal-fp-math-f32"
 }
 
 define void @str_denormal_fp_math_ieee__denormal_fp_math_f32_ieee() "denormal-fp-math"="ieee" "denormal-fp-math-f32"="ieee" {
-; CHECK: Function Attrs: denormal_fpenv(ieee,ieee)
+; CHECK: Function Attrs: denormal_fpenv(ieee)
 ; CHECK-LABEL: define void @str_denormal_fp_math_ieee__denormal_fp_math_f32_ieee(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret void
@@ -232,7 +232,7 @@ define void @str_denormal_fp_math_ieee__denormal_fp_math_f32_ieee() "denormal-fp
 
 
 define void @str_denormal_fp_math_ieee__denormal_fp_math_f32_preserve_sign() "denormal-fp-math"="ieee" "denormal-fp-math-f32"="preserve-sign" {
-; CHECK: Function Attrs: denormal_fpenv(preservesign,preservesign)
+; CHECK: Function Attrs: denormal_fpenv(preservesign)
 ; CHECK-LABEL: define void @str_denormal_fp_math_ieee__denormal_fp_math_f32_preserve_sign(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    ret void
@@ -241,7 +241,7 @@ define void @str_denormal_fp_math_ieee__denormal_fp_math_f32_preserve_sign() "de
 }
 
 define void @str_denormal_fp_math_ieee_ieee__denormal_fp_math_f32_preserve_sign_preserve_sign() "denormal-fp-math"="ieee,ieee" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
-; CHECK: Function Attrs: denormal_fpenv(preservesign,preservesign)
+; CHECK: Function Attrs: denormal_fpenv(preservesign)
 ; CHECK-LABEL: define void @str_denormal_fp_math_ieee_ieee__denormal_fp_math_f32_preserve_sign_preserve_sign(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    ret void
@@ -250,7 +250,7 @@ define void @str_denormal_fp_math_ieee_ieee__denormal_fp_math_f32_preserve_sign_
 }
 
 define void @str_denormal_fp_math_ieee_ieee__denormal_fp_math_f32_preserve_sign_dynamic_dynamic() "denormal-fp-math"="ieee,ieee" "denormal-fp-math-f32"="dynamic,dynamic" {
-; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic)
+; CHECK: Function Attrs: denormal_fpenv(dynamic)
 ; CHECK-LABEL: define void @str_denormal_fp_math_ieee_ieee__denormal_fp_math_f32_preserve_sign_dynamic_dynamic(
 ; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
@@ -260,7 +260,7 @@ define void @str_denormal_fp_math_ieee_ieee__denormal_fp_math_f32_preserve_sign_
 
 
 define void @str_denormal_fp_math_dynamic_dynamic__denormal_fp_math_f32_preserve_sign_dynamic_dynamic() "denormal-fp-math"="dynamic,dynamic" "denormal-fp-math-f32"="dynamic,dynamic" {
-; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic)
+; CHECK: Function Attrs: denormal_fpenv(dynamic)
 ; CHECK-LABEL: define void @str_denormal_fp_math_dynamic_dynamic__denormal_fp_math_f32_preserve_sign_dynamic_dynamic(
 ; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
@@ -270,7 +270,7 @@ define void @str_denormal_fp_math_dynamic_dynamic__denormal_fp_math_f32_preserve
 
 
 define void @str_denormal_fp_math_dynamic_dynamic__denormal_fp_math_f32_preserve_sign_preserve_sign() "denormal-fp-math"="dynamic,dynamic" "denormal-fp-math-f32"="preserve-sign,preserve-sign" {
-; CHECK: Function Attrs: denormal_fpenv(preservesign,preservesign)
+; CHECK: Function Attrs: denormal_fpenv(preservesign)
 ; CHECK-LABEL: define void @str_denormal_fp_math_dynamic_dynamic__denormal_fp_math_f32_preserve_sign_preserve_sign(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    ret void
@@ -279,7 +279,7 @@ define void @str_denormal_fp_math_dynamic_dynamic__denormal_fp_math_f32_preserve
 }
 
 define void @str_denormal_fp_math_dynamic_positive_zero__denormal_fp_math_f32_preserve_sign_dynamic_preserve_sign() "denormal-fp-math"="dynamic,positive-zero" "denormal-fp-math-f32"="dynamic,preserve-sign" {
-; CHECK: Function Attrs: denormal_fpenv(dynamic,preservesign)
+; CHECK: Function Attrs: denormal_fpenv(dynamic|preservesign)
 ; CHECK-LABEL: define void @str_denormal_fp_math_dynamic_positive_zero__denormal_fp_math_f32_preserve_sign_dynamic_preserve_sign(
 ; CHECK-SAME: ) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -337,7 +337,7 @@ define float @test_both_denormal_fp_math_invalid() "denormal-fp-math"="bar" "den
 }
 
 define float @test_denormal_fp_math_invalid_with_invalid_f32() "denormal-fp-math"="dynamic,dynamic" "denormal-fp-math-f32"="foo,ieee" {
-; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic)
+; CHECK: Function Attrs: denormal_fpenv(dynamic)
 ; CHECK-LABEL: define float @test_denormal_fp_math_invalid_with_invalid_f32(
 ; CHECK-SAME: ) #[[ATTR11:[0-9]+]] {
 ; CHECK-NEXT:    ret float 1.000000e+00
@@ -346,7 +346,7 @@ define float @test_denormal_fp_math_invalid_with_invalid_f32() "denormal-fp-math
 }
 
 define float @test_invalid_denormal_fp_math_with_valid_f32() "denormal-fp-math"="foo,dynamic" "denormal-fp-math-f32"="dynamic,dynamic" {
-; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic)
+; CHECK: Function Attrs: denormal_fpenv(dynamic)
 ; CHECK-LABEL: define float @test_invalid_denormal_fp_math_with_valid_f32(
 ; CHECK-SAME: ) #[[ATTR12:[0-9]+]] {
 ; CHECK-NEXT:    ret float 1.000000e+00
@@ -355,19 +355,19 @@ define float @test_invalid_denormal_fp_math_with_valid_f32() "denormal-fp-math"=
 }
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { denormal_fpenv(ieee,ieee) }
-; CHECK: attributes #[[ATTR1]] = { denormal_fpenv(preservesign,preservesign) }
-; CHECK: attributes #[[ATTR2]] = { denormal_fpenv(dynamic,dynamic) }
-; CHECK: attributes #[[ATTR3]] = { denormal_fpenv(positivezero,positivezero) }
-; CHECK: attributes #[[ATTR4]] = { denormal_fpenv(ieee,preservesign) }
-; CHECK: attributes #[[ATTR5]] = { denormal_fpenv(preservesign,ieee) }
-; CHECK: attributes #[[ATTR6]] = { denormal_fpenv(dynamic,preservesign) }
+; CHECK: attributes #[[ATTR0]] = { denormal_fpenv(ieee) }
+; CHECK: attributes #[[ATTR1]] = { denormal_fpenv(preservesign) }
+; CHECK: attributes #[[ATTR2]] = { denormal_fpenv(dynamic) }
+; CHECK: attributes #[[ATTR3]] = { denormal_fpenv(positivezero) }
+; CHECK: attributes #[[ATTR4]] = { denormal_fpenv(ieee|preservesign) }
+; CHECK: attributes #[[ATTR5]] = { denormal_fpenv(preservesign|ieee) }
+; CHECK: attributes #[[ATTR6]] = { denormal_fpenv(dynamic|preservesign) }
 ; CHECK: attributes #[[ATTR7]] = { "denormal-fp-math"="foo,ieee" }
 ; CHECK: attributes #[[ATTR8]] = { "denormal-fp-math"="ieee,ieee,ieee" }
 ; CHECK: attributes #[[ATTR9]] = { "denormal-fp-math-f32"="foo,ieee" }
 ; CHECK: attributes #[[ATTR10]] = { "denormal-fp-math"="bar" "denormal-fp-math-f32"="foo,ieee" }
-; CHECK: attributes #[[ATTR11]] = { denormal_fpenv(dynamic,dynamic) "denormal-fp-math-f32"="foo,ieee" }
-; CHECK: attributes #[[ATTR12]] = { denormal_fpenv(dynamic,dynamic) "denormal-fp-math"="foo,dynamic" }
+; CHECK: attributes #[[ATTR11]] = { denormal_fpenv(dynamic) "denormal-fp-math-f32"="foo,ieee" }
+; CHECK: attributes #[[ATTR12]] = { denormal_fpenv(dynamic) "denormal-fp-math"="foo,dynamic" }
 ; CHECK: attributes #[[ATTR13]] = { "denormal-fp-math"="preserve-sign,preserve-sign" }
 ; CHECK: attributes #[[ATTR14]] = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 ; CHECK: attributes #[[ATTR15]] = { "denormal-fp-math"="dynamic,ieee" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

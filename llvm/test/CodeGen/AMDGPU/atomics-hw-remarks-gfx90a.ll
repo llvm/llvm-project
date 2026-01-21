@@ -91,6 +91,6 @@ main_body:
   ret void
 }
 
-attributes #0 = { denormal_fpenv(preservesign,preservesign) }
+attributes #0 = { denormal_fpenv(preservesign) }
 
 !0 = !{}

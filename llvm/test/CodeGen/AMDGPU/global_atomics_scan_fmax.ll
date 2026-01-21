@@ -7413,7 +7413,7 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_system_scope
   ret void
 }
 
-attributes #0 = { denormal_fpenv(float: preservesign,preservesign) }
+attributes #0 = { denormal_fpenv(float: preservesign) }
 
 !1 = !{}
 

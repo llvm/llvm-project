@@ -738,6 +738,6 @@ entry:
 
 declare void @llvm.amdgcn.s.barrier() #2
 
-attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" denormal_fpenv(preservesign,preservesign) }
-attributes #1 = { nounwind denormal_fpenv(preservesign,preservesign) }
+attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" denormal_fpenv(preservesign) }
+attributes #1 = { nounwind denormal_fpenv(preservesign) }
 attributes #2 = { nounwind convergent }

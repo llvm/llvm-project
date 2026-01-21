@@ -1389,6 +1389,6 @@ define <64 x bfloat> @v_test_canonicalize_var_v64bf16(<64 x bfloat> %val) #1 {
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind denormal_fpenv(float: preservesign,preservesign) }
-attributes #2 = { nounwind denormal_fpenv(preservesign,preservesign) }
-attributes #3 = { nounwind denormal_fpenv(float: preservesign,preservesign) }
+attributes #1 = { nounwind denormal_fpenv(float: preservesign) }
+attributes #2 = { nounwind denormal_fpenv(preservesign) }
+attributes #3 = { nounwind denormal_fpenv(float: preservesign) }

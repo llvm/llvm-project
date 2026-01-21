@@ -1315,9 +1315,9 @@ declare i1 @llvm.amdgcn.class.f16(half, i32)
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32)
 declare float @llvm.amdgcn.interp.p1.f16(float, i32, i32, i1, i32)
 
-attributes #0 = { denormal_fpenv(ieee,ieee) }
-attributes #1 = { denormal_fpenv(preservesign,preservesign) }
-attributes #2 = { denormal_fpenv(dynamic,dynamic) }
-attributes #3 = { denormal_fpenv(ieee,ieee) strictfp }
-attributes #4 = { denormal_fpenv(preservesign,preservesign) strictfp }
-attributes #5 = { denormal_fpenv(dynamic,dynamic) strictfp }
+attributes #0 = { denormal_fpenv(ieee|ieee) }
+attributes #1 = { denormal_fpenv(preservesign) }
+attributes #2 = { denormal_fpenv(dynamic) }
+attributes #3 = { denormal_fpenv(ieee|ieee) strictfp }
+attributes #4 = { denormal_fpenv(preservesign) strictfp }
+attributes #5 = { denormal_fpenv(dynamic) strictfp }

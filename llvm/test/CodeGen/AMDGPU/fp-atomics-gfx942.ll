@@ -268,6 +268,6 @@ define <2 x i16> @local_atomic_fadd_v2bf16_rtn(ptr addrspace(3) %ptr, <2 x i16> 
   ret <2 x i16> %ret
 }
 
-attributes #0 = { denormal_fpenv(float: ieee,ieee) }
+attributes #0 = { denormal_fpenv(float: ieee|ieee) }
 
 !0 = !{}

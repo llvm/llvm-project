@@ -361,7 +361,7 @@ declare void @func_attr_denormal_fp_math_f32_preserve_sign() denormal_fpenv(floa
 ; CHECK-SAME passthrough = [
 ; CHECK-SAME: ["denormal_fpenv", "215"]
 ; CHECK-SAME: ]}
-declare void @func_attr_mixed_denormal_modes() denormal_fpenv(dynamic,preservesign float: preservesign, dynamic)
+declare void @func_attr_mixed_denormal_modes() denormal_fpenv(dynamic|preservesign float: preservesign|dynamic)
 
 ; // -----
 

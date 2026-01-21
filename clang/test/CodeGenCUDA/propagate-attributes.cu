@@ -60,7 +60,7 @@ __global__ void kernel() { lib_fn(); }
 // CHECK-SAME: convergent
 // CHECK-SAME: norecurse
 
-// FTZ-SAME: denormal_fpenv(float: preservesign,preservesign)
+// FTZ-SAME: denormal_fpenv(float: preservesign)
 
 // CHECK-SAME: "no-trapping-math"="true"
 

@@ -206,7 +206,8 @@ struct DenormalMode {
     return MergedMode;
   }
 
-  inline void print(raw_ostream &OS, bool Legacy = true) const;
+  inline void print(raw_ostream &OS, bool Legacy = true,
+                    bool OmitIfSame = false) const;
 
   inline std::string str() const {
     std::string storage;
@@ -267,9 +268,12 @@ inline DenormalMode parseDenormalFPAttribute(StringRef Str) {
   return Mode;
 }
 
-void DenormalMode::print(raw_ostream &OS, bool Legacy) const {
-  OS << denormalModeKindName(Output, Legacy) << ','
-     << denormalModeKindName(Input, Legacy);
+void DenormalMode::print(raw_ostream &OS, bool Legacy, bool OmitIfSame) const {
+  OS << denormalModeKindName(Output, Legacy);
+  if (!OmitIfSame || Input != Output) {
+    OS << (Legacy ? ',' : '|');
+    OS << denormalModeKindName(Input, Legacy);
+  }
 }
 
 /// Represents the full denormal controls for a function, including the default
@@ -318,7 +322,7 @@ public:
     return !(*this == Other);
   }
 
-  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS, bool OmitIfSame = true) const;
 
   DenormalFPEnv mergeCalleeMode(DenormalFPEnv Callee) const {
     return DenormalFPEnv{DefaultMode.mergeCalleeMode(Callee.DefaultMode),

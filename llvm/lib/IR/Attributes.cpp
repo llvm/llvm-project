@@ -700,7 +700,11 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   if (hasAttribute(Attribute::DenormalFPEnv)) {
     std::string Result = "denormal_fpenv(";
     raw_string_ostream OS(Result);
-    OS << getDenormalFPEnv() << ')';
+
+    struct DenormalFPEnv FPEnv = getDenormalFPEnv();
+    FPEnv.print(OS, /*OmitIfSame=*/true);
+
+    OS << ')';
     return Result;
   }
 

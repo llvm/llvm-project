@@ -7,9 +7,9 @@
 
 // The ieee,ieee is the default, so omit the attribute
 // CHECK-IEEE-NOT:denormal_fpenv
-// CHECK-PS: attributes #0 = {{.*}}denormal_fpenv(preservesign,preservesign){{.*}}
-// CHECK-PZ: attributes #0 = {{.*}}denormal_fpenv(positivezero,positivezero){{.*}}
-// CHECK-DYNAMIC: attributes #0 = {{.*}}denormal_fpenv(dynamic,dynamic){{.*}}
+// CHECK-PS: attributes #0 = {{.*}}denormal_fpenv(preservesign){{.*}}
+// CHECK-PZ: attributes #0 = {{.*}}denormal_fpenv(positivezero){{.*}}
+// CHECK-DYNAMIC: attributes #0 = {{.*}}denormal_fpenv(dynamic){{.*}}
 
 int main(void) {
   return 0;

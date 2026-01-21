@@ -20138,4 +20138,4 @@ define void @global_system_atomic_fsub_noret_v2bf16__offset12b_pos(ptr addrspace
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind denormal_fpenv(float: preservesign,preservesign) }
+attributes #1 = { nounwind denormal_fpenv(float: preservesign) }

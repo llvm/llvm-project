@@ -2694,7 +2694,7 @@ std::optional<DenormalMode> LLParser::parseDenormalFPEnvEntry() {
   Lex.Lex();
 
   std::optional<DenormalMode::DenormalModeKind> InputMode;
-  if (EatIfPresent(lltok::comma)) {
+  if (EatIfPresent(lltok::bar)) {
     InputMode = keywordToDenormalModeKind(Lex.getKind());
     if (!InputMode) {
       tokError("expected denormal behavior kind (ieee, preservesign, "
@@ -2733,6 +2733,8 @@ std::optional<DenormalFPEnv> LLParser::parseDenormalFPEnvAttr() {
       return {};
     DefaultMode = *ParsedDefaultMode;
   }
+
+  EatIfPresent(lltok::comma);
 
   if (Lex.getKind() == lltok::Type) {
     Type *Ty = nullptr;

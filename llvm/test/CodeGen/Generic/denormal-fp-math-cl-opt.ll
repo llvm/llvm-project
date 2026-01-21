@@ -3,7 +3,7 @@
 ; Check that the command line flag annotates the IR with the
 ; appropriate attributes.
 
-; CHECK: attributes #0 = { denormal_fpenv(dynamic,dynamic float: preservesign,preservesign) }
+; CHECK: attributes #0 = { denormal_fpenv(dynamic float: preservesign) }
 define float @foo(float %var) {
   ret float %var
 }
