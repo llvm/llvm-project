@@ -1652,7 +1652,38 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
     }
 
     // Create the vector select and bitcast once for this condition.
-    Builder.SetInsertPoint(BC->getNextNode());
+    // Insert in a block that dominates all selects and after any local defs.
+    BasicBlock *InsertBB = Selects.front()->getParent();
+    for (SelectInst *Sel : Selects)
+      InsertBB = DT.findNearestCommonDominator(InsertBB, Sel->getParent());
+    if (!InsertBB)
+      continue;
+
+    BasicBlock::iterator InsertPt = InsertBB->getFirstInsertionPt();
+    if (InsertPt == InsertBB->end())
+      continue;
+
+    auto ProcessDef = [&](Value *V) -> bool {
+      auto *DefI = dyn_cast<Instruction>(V);
+      if (!DefI || DefI->getParent() != InsertBB)
+        return true;
+
+      auto AfterDefOpt = DefI->getInsertionPointAfterDef();
+      if (!AfterDefOpt)
+        return false;
+
+      BasicBlock::iterator AfterDefIt = *AfterDefOpt;
+      Instruction &AfterDef = *AfterDefIt;
+      if (InsertPt->comesBefore(&AfterDef))
+        InsertPt = AfterDefIt;
+
+      return true;
+    };
+
+    if (!ProcessDef(Cond) || !ProcessDef(SrcVec))
+      continue;
+
+    Builder.SetInsertPoint(InsertBB, InsertPt);
     Value *VecSel =
         Builder.CreateSelect(Cond, SrcVec, Constant::getNullValue(SrcVecTy));
     Value *NewBC = Builder.CreateBitCast(VecSel, DstVecTy);

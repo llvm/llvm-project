@@ -4,31 +4,24 @@
 define i8 @fold_selects_from_bitcast_dominance() {
 ; CHECK-LABEL: define i8 @fold_selects_from_bitcast_dominance() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i32> splat (i32 1) to <8 x i8>
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <8 x i8> [[BC]], i64 0
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 0, 0
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <8 x i8> [[BC]], i64 1
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <8 x i8> [[BC]], i64 2
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <8 x i8> [[BC]], i64 3
-; CHECK-NEXT:    [[E4:%.*]] = extractelement <8 x i8> [[BC]], i64 4
-; CHECK-NEXT:    [[E5:%.*]] = extractelement <8 x i8> [[BC]], i64 5
-; CHECK-NEXT:    [[E6:%.*]] = extractelement <8 x i8> [[BC]], i64 6
-; CHECK-NEXT:    [[E7:%.*]] = extractelement <8 x i8> [[BC]], i64 7
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[COND]], i8 [[E0]], i8 0
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[COND]], i8 [[E1]], i8 0
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[COND]], i8 [[E2]], i8 0
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[COND]], i8 [[E3]], i8 0
-; CHECK-NEXT:    [[S4:%.*]] = select i1 [[COND]], i8 [[E4]], i8 0
-; CHECK-NEXT:    [[S5:%.*]] = select i1 [[COND]], i8 [[E5]], i8 0
-; CHECK-NEXT:    [[S6:%.*]] = select i1 [[COND]], i8 [[E6]], i8 0
-; CHECK-NEXT:    [[S7:%.*]] = select i1 [[COND]], i8 [[E7]], i8 0
-; CHECK-NEXT:    [[SUM0:%.*]] = add i8 [[S0]], [[S1]]
-; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[SUM0]], [[S2]]
-; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[S3]]
-; CHECK-NEXT:    [[SUM3:%.*]] = add i8 [[SUM2]], [[S4]]
-; CHECK-NEXT:    [[SUM4:%.*]] = add i8 [[SUM3]], [[S5]]
-; CHECK-NEXT:    [[SUM5:%.*]] = add i8 [[SUM4]], [[S6]]
-; CHECK-NEXT:    [[SUM6:%.*]] = add i8 [[SUM5]], [[S7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[COND]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = add <8 x i8> [[TMP1]], [[SHIFT]]
+; CHECK-NEXT:    [[SHIFT2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP3:%.*]] = add <8 x i8> [[FOLDEXTEXTBINOP]], [[SHIFT2]]
+; CHECK-NEXT:    [[SHIFT5:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP6:%.*]] = add <8 x i8> [[FOLDEXTEXTBINOP3]], [[SHIFT5]]
+; CHECK-NEXT:    [[SHIFT8:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 4, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP9:%.*]] = add <8 x i8> [[FOLDEXTEXTBINOP6]], [[SHIFT8]]
+; CHECK-NEXT:    [[SHIFT11:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 5, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP12:%.*]] = add <8 x i8> [[FOLDEXTEXTBINOP9]], [[SHIFT11]]
+; CHECK-NEXT:    [[SHIFT14:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP15:%.*]] = add <8 x i8> [[FOLDEXTEXTBINOP12]], [[SHIFT14]]
+; CHECK-NEXT:    [[SHIFT17:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP18:%.*]] = add <8 x i8> [[FOLDEXTEXTBINOP15]], [[SHIFT17]]
+; CHECK-NEXT:    [[SUM6:%.*]] = extractelement <8 x i8> [[FOLDEXTEXTBINOP18]], i64 0
 ; CHECK-NEXT:    ret i8 [[SUM6]]
 ;
 entry:
