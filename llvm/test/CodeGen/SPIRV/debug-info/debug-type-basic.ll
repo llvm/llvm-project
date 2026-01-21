@@ -1,43 +1,44 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
+; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-MIR-DAG: [[type_void:%[0-9]+\:type]] = OpTypeVoid
-; CHECK-MIR-DAG: [[type_i32:%[0-9]+\:type]] = OpTypeInt 32, 0
-; CHECK-MIR-DAG: [[encoding_signedchar:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 5
-; CHECK-MIR-DAG: [[encoding_float:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 3
-; CHECK-MIR-DAG: [[flag_zero:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 0
-; CHECK-MIR-DAG: [[str_bool:%[0-9]+\:id\(s32\)]] = OpString 1819242338, 0
-; CHECK-MIR-DAG: [[size_8bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 8
-; CHECK-MIR-DAG: [[encoding_boolean:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 2
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_bool]], [[size_8bits]], [[encoding_boolean]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_int:%[0-9]+\:id\(s32\)]] = OpString 7630441
-; CHECK-MIR-DAG: [[size_32bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 32
-; CHECK-MIR-DAG: [[encoding_signed:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 4
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_int]], [[size_32bits]], [[encoding_signed]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_short:%[0-9]+\:id\(s32\)]] = OpString 1919903859, 116
-; CHECK-MIR-DAG: [[size_16bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 16
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_short]], [[size_16bits]], [[encoding_signed]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_char:%[0-9]+\:id\(s32\)]] = OpString 1918986339, 0
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_char]], [[size_8bits]], [[encoding_signedchar]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_long:%[0-9]+\:id\(s32\)]] = OpString 1735290732, 0
-; CHECK-MIR-DAG: [[size_64bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 64
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_long]], [[size_64bits]], [[encoding_signed]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_uint:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1953392928, 0
-; CHECK-MIR-DAG: [[encoding_unsigned:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 6
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_uint]], [[size_32bits]], [[encoding_unsigned]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_ushort:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1869116192, 29810
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_ushort]], [[size_16bits]], [[encoding_unsigned]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_uchar:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1634231072, 114
-; CHECK-MIR-DAG: [[encoding_unsignedchar:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 7
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_uchar]], [[size_8bits]], [[encoding_unsignedchar]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_ulong:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1852795936, 103
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_ulong]], [[size_64bits]], [[encoding_unsigned]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_float:%[0-9]+\:id\(s32\)]] = OpString 1634692198, 116
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_float]], [[size_32bits]], [[encoding_float]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_double:%[0-9]+\:id\(s32\)]] = OpString 1651863396, 25964
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_double]], [[size_64bits]], [[encoding_float]], [[flag_zero]]
+; CHECK-MIR: [[type_void:%[0-9]+]]:type = OpTypeVoid
+; CHECK-MIR: [[type_i32:%[0-9]+]]:type = OpTypeInt 32, 0
+; CHECK-MIR: [[flag_zero:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 0
+; CHECK-MIR: [[encoding_signedchar:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 5
+; CHECK-MIR: [[encoding_float:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 3
+; CHECK-MIR: [[size_8bits:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 8
+; CHECK-MIR: [[encoding_boolean:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 2
+; CHECK-MIR: [[size_32bits:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 32
+; CHECK-MIR: [[encoding_signed:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 4
+; CHECK-MIR: [[size_16bits:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 16
+; CHECK-MIR: [[size_64bits:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 64
+; CHECK-MIR: [[encoding_unsigned:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 6
+; CHECK-MIR: [[encoding_unsignedchar:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 7
+; CHECK-MIR: [[encoding_extra:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 256
+; CHECK-MIR: [[str_bool:%[0-9]+]]:id(s32) = OpString 1819242338, 0
+; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_bool]](s32), [[size_8bits]](s32), [[encoding_boolean]](s32), [[flag_zero]](s32)
+; CHECK-MIR: [[str_int:%[0-9]+]]:id(s32) = OpString 7630441
+; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_int]](s32), [[size_32bits]](s32), [[encoding_signed]](s32), [[flag_zero]](s32)
+; CHECK-MIR: [[str_short:%[0-9]+]]:id(s32) = OpString 1919903859, 116
+; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_short]](s32), [[size_16bits]](s32), [[encoding_signed]](s32), [[flag_zero]](s32)
+; CHECK-MIR: [[str_char:%[0-9]+]]:id(s32) = OpString 1918986339, 0
+; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_char]](s32), [[size_8bits]](s32), [[encoding_signedchar]](s32), [[flag_zero]](s32)
+; CHECK-MIR: [[str_long:%[0-9]+]]:id(s32) = OpString 1735290732, 0
+; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_long]](s32), [[size_64bits]](s32), [[encoding_signed]](s32), [[flag_zero]](s32)
+; CHECK-MIR: [[str_uint:%[0-9]+]]:id(s32) = OpString 1769172597, 1684368999, 1953392928, 0
+; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_uint]](s32), [[size_32bits]](s32), [[encoding_unsigned]](s32), [[flag_zero]](s32)
+; CHECK-MIR: [[str_ushort:%[0-9]+]]:id(s32) = OpString 1769172597, 1684368999, 1869116192, 29810
+; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_ushort]](s32), [[size_16bits]](s32), [[encoding_unsigned]](s32), [[flag_zero]](s32)
+; CHECK-MIR: [[str_uchar:%[0-9]+]]:id(s32) = OpString 1769172597, 1684368999, 1634231072, 114
+; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_uchar]](s32), [[size_8bits]](s32), [[encoding_unsignedchar]](s32), [[flag_zero]](s32)
+; CHECK-MIR: [[str_ulong:%[0-9]+]]:id(s32) = OpString 1769172597, 1684368999, 1852795936, 103
+; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_ulong]](s32), [[size_64bits]](s32), [[encoding_unsigned]](s32), [[flag_zero]](s32)
+; CHECK-MIR: [[str_float:%[0-9]+]]:id(s32) = OpString 1634692198, 116
+; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_float]](s32), [[size_32bits]](s32), [[encoding_float]](s32), [[flag_zero]](s32)
+; CHECK-MIR: [[str_double:%[0-9]+]]:id(s32) = OpString 1651863396, 25964
+; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_double]](s32), [[size_64bits]](s32), [[encoding_float]](s32), [[flag_zero]](s32)
 
 ; CHECK-SPIRV: [[ext_inst_non_semantic:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-SPIRV-DAG: [[str_bool:%[0-9]+]] = OpString "bool"
@@ -174,60 +175,60 @@ entry:
 !11 = !{!12}
 !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !13 = !{}
-!14 = !DILocalVariable(name: "b0", scope: !9, file: !1, line: 2, type: !15)
+!14 = !DILocalVariable(name: "b0", scope: !9, file: !1, line: 2, type: !15, flags: DIFlagPublic)
 !15 = !DIBasicType(name: "bool", size: 8, encoding: DW_ATE_boolean)
 !16 = !DILocation(line: 2, column: 8, scope: !9)
-!17 = !DILocalVariable(name: "a0", scope: !9, file: !1, line: 3, type: !12)
+!17 = !DILocalVariable(name: "a0", scope: !9, file: !1, line: 3, type: !12, flags: DIFlagPublic)
 !18 = !DILocation(line: 3, column: 7, scope: !9)
-!19 = !DILocalVariable(name: "s0", scope: !9, file: !1, line: 4, type: !20)
+!19 = !DILocalVariable(name: "s0", scope: !9, file: !1, line: 4, type: !20, flags: DIFlagPublic)
 !20 = !DIBasicType(name: "short", size: 16, encoding: DW_ATE_signed)
 !21 = !DILocation(line: 4, column: 9, scope: !9)
-!22 = !DILocalVariable(name: "c0", scope: !9, file: !1, line: 5, type: !23)
+!22 = !DILocalVariable(name: "c0", scope: !9, file: !1, line: 5, type: !23, flags: DIFlagPublic)
 !23 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
 !24 = !DILocation(line: 5, column: 8, scope: !9)
-!25 = !DILocalVariable(name: "l0", scope: !9, file: !1, line: 6, type: !26)
+!25 = !DILocalVariable(name: "l0", scope: !9, file: !1, line: 6, type: !26, flags: DIFlagPublic)
 !26 = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
 !27 = !DILocation(line: 6, column: 8, scope: !9)
-!28 = !DILocalVariable(name: "ua0", scope: !9, file: !1, line: 7, type: !29)
+!28 = !DILocalVariable(name: "ua0", scope: !9, file: !1, line: 7, type: !29, flags: DIFlagPublic)
 !29 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
 !30 = !DILocation(line: 7, column: 16, scope: !9)
-!31 = !DILocalVariable(name: "us0", scope: !9, file: !1, line: 8, type: !32)
+!31 = !DILocalVariable(name: "us0", scope: !9, file: !1, line: 8, type: !32, flags: DIFlagPublic)
 !32 = !DIBasicType(name: "unsigned short", size: 16, encoding: DW_ATE_unsigned)
 !33 = !DILocation(line: 8, column: 18, scope: !9)
-!34 = !DILocalVariable(name: "uc0", scope: !9, file: !1, line: 9, type: !35)
+!34 = !DILocalVariable(name: "uc0", scope: !9, file: !1, line: 9, type: !35, flags: DIFlagPublic)
 !35 = !DIBasicType(name: "unsigned char", size: 8, encoding: DW_ATE_unsigned_char)
 !36 = !DILocation(line: 9, column: 17, scope: !9)
-!37 = !DILocalVariable(name: "ul0", scope: !9, file: !1, line: 10, type: !38)
+!37 = !DILocalVariable(name: "ul0", scope: !9, file: !1, line: 10, type: !38, flags: DIFlagPublic)
 !38 = !DIBasicType(name: "unsigned long", size: 64, encoding: DW_ATE_unsigned)
 !39 = !DILocation(line: 10, column: 17, scope: !9)
-!40 = !DILocalVariable(name: "f0", scope: !9, file: !1, line: 11, type: !41)
+!40 = !DILocalVariable(name: "f0", scope: !9, file: !1, line: 11, type: !41, flags: DIFlagPublic)
 !41 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
 !42 = !DILocation(line: 11, column: 9, scope: !9)
-!43 = !DILocalVariable(name: "d0", scope: !9, file: !1, line: 12, type: !44)
+!43 = !DILocalVariable(name: "d0", scope: !9, file: !1, line: 12, type: !44, flags: DIFlagPublic)
 !44 = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
 !45 = !DILocation(line: 12, column: 10, scope: !9)
 !46 = !DILocation(line: 13, column: 3, scope: !9)
 !47 = distinct !DISubprogram(name: "test2", linkageName: "YYYY", scope: !1, file: !1, line: 16, type: !10, scopeLine: 16, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !13)
-!48 = !DILocalVariable(name: "b1", scope: !47, file: !1, line: 17, type: !15)
+!48 = !DILocalVariable(name: "b1", scope: !47, file: !1, line: 17, type: !15, flags: DIFlagPublic)
 !49 = !DILocation(line: 17, column: 8, scope: !47)
-!50 = !DILocalVariable(name: "a1", scope: !47, file: !1, line: 18, type: !12)
+!50 = !DILocalVariable(name: "a1", scope: !47, file: !1, line: 18, type: !12, flags: DIFlagPublic)
 !51 = !DILocation(line: 18, column: 7, scope: !47)
-!52 = !DILocalVariable(name: "s1", scope: !47, file: !1, line: 19, type: !20)
+!52 = !DILocalVariable(name: "s1", scope: !47, file: !1, line: 19, type: !20, flags: DIFlagPublic)
 !53 = !DILocation(line: 19, column: 9, scope: !47)
-!54 = !DILocalVariable(name: "c1", scope: !47, file: !1, line: 20, type: !23)
+!54 = !DILocalVariable(name: "c1", scope: !47, file: !1, line: 20, type: !23, flags: DIFlagPublic)
 !55 = !DILocation(line: 20, column: 8, scope: !47)
-!56 = !DILocalVariable(name: "l1", scope: !47, file: !1, line: 21, type: !26)
+!56 = !DILocalVariable(name: "l1", scope: !47, file: !1, line: 21, type: !26, flags: DIFlagPublic)
 !57 = !DILocation(line: 21, column: 8, scope: !47)
-!58 = !DILocalVariable(name: "ua1", scope: !47, file: !1, line: 22, type: !29)
+!58 = !DILocalVariable(name: "ua1", scope: !47, file: !1, line: 22, type: !29, flags: DIFlagPublic)
 !59 = !DILocation(line: 22, column: 16, scope: !47)
-!60 = !DILocalVariable(name: "us1", scope: !47, file: !1, line: 23, type: !32)
+!60 = !DILocalVariable(name: "us1", scope: !47, file: !1, line: 23, type: !32, flags: DIFlagPublic)
 !61 = !DILocation(line: 23, column: 18, scope: !47)
-!62 = !DILocalVariable(name: "uc1", scope: !47, file: !1, line: 24, type: !35)
+!62 = !DILocalVariable(name: "uc1", scope: !47, file: !1, line: 24, type: !35, flags: DIFlagPublic)
 !63 = !DILocation(line: 24, column: 17, scope: !47)
-!64 = !DILocalVariable(name: "ul1", scope: !47, file: !1, line: 25, type: !38)
+!64 = !DILocalVariable(name: "ul1", scope: !47, file: !1, line: 25, type: !38, flags: DIFlagPublic)
 !65 = !DILocation(line: 25, column: 17, scope: !47)
-!66 = !DILocalVariable(name: "f1", scope: !47, file: !1, line: 26, type: !41)
+!66 = !DILocalVariable(name: "f1", scope: !47, file: !1, line: 26, type: !41, flags: DIFlagPublic)
 !67 = !DILocation(line: 26, column: 9, scope: !47)
-!68 = !DILocalVariable(name: "d1", scope: !47, file: !1, line: 27, type: !44)
+!68 = !DILocalVariable(name: "d1", scope: !47, file: !1, line: 27, type: !44, flags: DIFlagPublic)
 !69 = !DILocation(line: 27, column: 10, scope: !47)
 !70 = !DILocation(line: 28, column: 3, scope: !47)
