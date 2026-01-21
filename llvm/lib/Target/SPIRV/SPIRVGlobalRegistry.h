@@ -615,6 +615,9 @@ public:
 
   SPIRVType *getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
 
+  SPIRVType *getOrCreateVulkanPushConstantType(MachineIRBuilder &MIRBuilder,
+                                               Type *ElemType);
+
   SPIRVType *getOrCreateLayoutType(MachineIRBuilder &MIRBuilder,
                                    const TargetExtType *T, bool EmitIr = false);
 

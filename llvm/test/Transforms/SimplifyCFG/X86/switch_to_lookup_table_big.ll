@@ -434,7 +434,7 @@ define i32 @reachable_default_holes_0to32(i32 %x, i32 %y) {
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[BB0]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ], [ 3, [[BB3]] ], [ 4, [[BB4]] ], [ 5, [[BB5]] ], [ 6, [[BB6]] ], [ 7, [[BB7]] ], [ [[Y:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 7, [[BB7]] ], [ 0, [[BB0]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ], [ 3, [[BB3]] ], [ 4, [[BB4]] ], [ 5, [[BB5]] ], [ 6, [[BB6]] ], [ [[Y:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:

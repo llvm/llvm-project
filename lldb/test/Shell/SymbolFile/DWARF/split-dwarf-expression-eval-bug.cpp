@@ -1,4 +1,4 @@
-// This tests a crash which occured under very specific circumstances. The
+// This tests a crash which occurred under very specific circumstances. The
 // interesting aspects of this test are:
 // - we print a global variable from one compile unit
 // - we are stopped in a member function of a class in a namespace

@@ -683,9 +683,45 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                       << " new";
 
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_RETURN_PARAM) {
-      uintptr_t Delta = (uintptr_t)HstPtrBegin - (uintptr_t)HstPtrBase;
-      void *TgtPtrBase = (void *)((uintptr_t)TgtPtrBegin - Delta);
-      ODBG(ODT_Mapping) << "Returning device pointer " << TgtPtrBase;
+      uintptr_t Delta = reinterpret_cast<uintptr_t>(HstPtrBegin) -
+                        reinterpret_cast<uintptr_t>(HstPtrBase);
+      void *TgtPtrBase;
+      if (TgtPtrBegin) {
+        // Lookup succeeded, return device pointer adjusted by delta
+        TgtPtrBase = reinterpret_cast<void *>(
+            reinterpret_cast<uintptr_t>(TgtPtrBegin) - Delta);
+        ODBG(ODT_Mapping) << "Returning device pointer " << TgtPtrBase;
+      } else {
+        // Lookup failed. So we have to decide what to do based on the
+        // requested fallback behavior.
+        //
+        // Treat "preserve" as the default fallback behavior, since as per
+        // OpenMP 5.1, for use_device_ptr/addr, when there's no corresponding
+        // device pointer to translate into, it's the user's responsibility to
+        // ensure that the host address is device-accessible.
+        //
+        // OpenMP 5.1, sec 2.14.2, target data construct, p 188, l26-31:
+        // If a list item that appears in a use_device_ptr clause ... does not
+        // point to a mapped object, it must contain a valid device address for
+        // the target device, and the list item references are instead converted
+        // to references to a local device pointer that refers to this device
+        // address.
+        //
+        // OpenMP 6.1's `fb_nullify` fallback behavior: when the FB_NULLIFY bit
+        // is set by the compiler, e.g. for `use/need_device_ptr(fb_nullify)`),
+        // return `nullptr - Delta` when lookup fails.
+        if (ArgTypes[I] & OMP_TGT_MAPTYPE_FB_NULLIFY) {
+          TgtPtrBase = reinterpret_cast<void *>(
+              reinterpret_cast<uintptr_t>(nullptr) - Delta);
+          ODBG(ODT_Mapping) << "Returning offsetted null pointer " << TgtPtrBase
+                            << " as fallback (lookup failed)";
+        } else {
+          TgtPtrBase = reinterpret_cast<void *>(
+              reinterpret_cast<uintptr_t>(HstPtrBegin) - Delta);
+          ODBG(ODT_Mapping) << "Returning host pointer " << TgtPtrBase
+                            << " as fallback (lookup failed)";
+        }
+      }
       ArgsBase[I] = TgtPtrBase;
     }
 
@@ -776,7 +812,13 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
   if (AttachInfo.AttachEntries.empty())
     return OFFLOAD_SUCCESS;
 
-  ODBG(ODT_Mapping) << "Processing " << AttachInfo.AttachEntries.size();
+  ODBG(ODT_Mapping) << "Processing " << AttachInfo.AttachEntries.size()
+                    << " deferred ATTACH map entries";
+
+  bool TreatAttachAutoAsAlways = MappingConfig::get().TreatAttachAutoAsAlways;
+  if (TreatAttachAutoAsAlways)
+    ODBG(ODT_Mapping) << "Treating ATTACH(auto) as ATTACH(always) because "
+                      << "LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS is true";
 
   int Ret = OFFLOAD_SUCCESS;
   bool IsFirstPointerAttachment = true;
@@ -798,7 +840,8 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
                       << ", PtrSize=" << PtrSize << ", MapType=0x"
                       << llvm::utohexstr(MapType);
 
-    const bool IsAttachAlways = MapType & OMP_TGT_MAPTYPE_ALWAYS;
+    bool IsAttachAlways =
+        (MapType & OMP_TGT_MAPTYPE_ALWAYS) || TreatAttachAutoAsAlways;
 
     // Lambda to check if a pointer was newly allocated
     auto WasNewlyAllocated = [&](void *Ptr, const char *PtrName) {
@@ -1217,12 +1260,12 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
                   << "Restoring target descriptor " << ShadowPtr.TgtPtrAddr
                   << " to its original content (" << ShadowPtr.PtrSize
                   << " bytes), containing pointee address "
-                  << ShadowPtr.TgtPtrContent.data();
+                  << static_cast<const void *>(ShadowPtr.TgtPtrContent.data());
             } else {
               ODBG(ODT_Mapping)
                   << "Restoring target pointer " << ShadowPtr.TgtPtrAddr
                   << " to its original value "
-                  << ShadowPtr.TgtPtrContent.data();
+                  << static_cast<const void *>(ShadowPtr.TgtPtrContent.data());
             }
             Ret = Device.submitData(ShadowPtr.TgtPtrAddr,
                                     ShadowPtr.TgtPtrContent.data(),
@@ -1262,12 +1305,14 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
                     << "Restoring host descriptor " << ShadowPtr.HstPtrAddr
                     << " to its original content (" << ShadowPtr.PtrSize
                     << " bytes), containing pointee address "
-                    << ShadowPtr.HstPtrContent.data();
+                    << static_cast<const void *>(
+                           ShadowPtr.HstPtrContent.data());
               } else {
                 ODBG(ODT_Mapping)
                     << "Restoring host pointer " << ShadowPtr.HstPtrAddr
                     << " to its original value "
-                    << ShadowPtr.HstPtrContent.data();
+                    << static_cast<const void *>(
+                           ShadowPtr.HstPtrContent.data());
               }
               std::memcpy(ShadowPtr.HstPtrAddr, ShadowPtr.HstPtrContent.data(),
                           ShadowPtr.PtrSize);
@@ -1310,7 +1355,7 @@ static int targetDataNonContiguous(ident_t *Loc, DeviceTy &Device,
       }
     }
   } else {
-    char *Ptr = (char *)ArgsBase + Offset;
+    void *Ptr = reinterpret_cast<void *>((char *)ArgsBase + Offset);
     ODBG(ODT_Mapping) << "Transfer of non-contiguous : host ptr " << Ptr
                       << " offset " << Offset << " len " << Size;
     Ret = targetDataContiguous(Loc, Device, ArgsBase, Ptr, Size, ArgType,

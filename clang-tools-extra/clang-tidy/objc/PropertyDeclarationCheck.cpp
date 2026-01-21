@@ -88,9 +88,8 @@ static bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
   const size_t Start = PropertyName.find_first_of('_');
   assert(Start != llvm::StringRef::npos && Start + 1 < PropertyName.size());
   auto Prefix = PropertyName.substr(0, Start);
-  if (Prefix.lower() != Prefix) {
+  if (Prefix.lower() != Prefix)
     return false;
-  }
   auto RegexExp = llvm::Regex(llvm::StringRef(validPropertyNameRegex(false)));
   return RegexExp.match(PropertyName.substr(Start + 1));
 }
