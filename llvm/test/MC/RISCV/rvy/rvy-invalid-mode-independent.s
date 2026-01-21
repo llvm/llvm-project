@@ -1,8 +1,15 @@
 # RUN: not llvm-mc --triple riscv32 --mattr=+experimental-y <%s 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-32 '--implicit-check-not=error:'
+# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-32 --implicit-check-not=error:
 # RUN: not llvm-mc --triple riscv64 --mattr=+experimental-y <%s 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-64 '--implicit-check-not=error:'
+# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-64 --implicit-check-not=error:
 
+addiy a0, a0, -2049
+# CHECK: :[[#@LINE-1]]:15: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+addiy a0, a0, 2048
+# CHECK: :[[#@LINE-1]]:15: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+## ADDY with x0 is illegal (since that is the encoding for YMV).
+## Since X0 is invalid, we fall back to checking the immediate alias and get that error instead
+## TODO: It would be nice to report operand must be a a register other than X0 instead.
 addy a0, a1, zero
 # CHECK: :[[#@LINE-1]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 addy a0, a1, x0

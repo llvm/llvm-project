@@ -79,7 +79,7 @@ LLVMInitializeRISCVDisassembler() {
 }
 
 template <unsigned BaseReg>
-static DecodeStatus DecodeGPRLikeRegisterClass(MCInst &Inst, uint32_t RegNo,
+static DecodeStatus decodeGPRLikeRC(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {
   bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
@@ -92,29 +92,10 @@ static DecodeStatus DecodeGPRLikeRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
-                                           uint64_t Address,
-                                           const MCDisassembler *Decoder) {
-  return DecodeGPRLikeRegisterClass<RISCV::X0>(Inst, RegNo, Address, Decoder);
-}
-
-static DecodeStatus DecodeYGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
-                                            uint64_t Address,
-                                            const MCDisassembler *Decoder) {
-  return DecodeGPRLikeRegisterClass<RISCV::X0_Y>(Inst, RegNo, Address, Decoder);
-}
-
-static DecodeStatus DecodeGPRF16RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                              uint64_t Address,
-                                              const MCDisassembler *Decoder) {
-  return DecodeGPRLikeRegisterClass<RISCV::X0_H>(Inst, RegNo, Address, Decoder);
-}
-
-static DecodeStatus DecodeGPRF32RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                              uint64_t Address,
-                                              const MCDisassembler *Decoder) {
-  return DecodeGPRLikeRegisterClass<RISCV::X0_W>(Inst, RegNo, Address, Decoder);
-}
+constexpr auto DecodeGPRRegisterClass = decodeGPRLikeRC<RISCV::X0>;
+constexpr auto DecodeYGPRRegisterClass = decodeGPRLikeRC<RISCV::X0_Y>;
+constexpr auto DecodeGPRF16RegisterClass = decodeGPRLikeRC<RISCV::X0_H>;
+constexpr auto DecodeGPRF32RegisterClass = decodeGPRLikeRC<RISCV::X0_W>;
 
 static DecodeStatus DecodeGPRX1X5RegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,

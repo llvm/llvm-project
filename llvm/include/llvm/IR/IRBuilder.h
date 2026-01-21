@@ -1923,6 +1923,20 @@ public:
     return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID));
   }
 
+  CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
+                                ArrayRef<Value *> Indices,
+                                const Twine &Name = "") {
+    SmallVector<Value *> Args;
+    Args.push_back(PtrBase);
+    llvm::append_range(Args, Indices);
+
+    CallInst *Output = CreateIntrinsic(Intrinsic::structured_gep,
+                                       {PtrBase->getType()}, Args, {}, Name);
+    Output->addParamAttr(
+        0, Attribute::get(getContext(), Attribute::ElementType, BaseType));
+    return Output;
+  }
+
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                    const Twine &Name = "",
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
@@ -2013,23 +2027,6 @@ public:
                               const Twine &Name = "") {
     return CreateGEP(getInt8Ty(), Ptr, Offset, Name,
                      GEPNoWrapFlags::inBounds());
-  }
-
-  /// Same as CreateGlobalString, but return a pointer with "i8*" type
-  /// instead of a pointer to array of i8.
-  ///
-  /// If no module is given via \p M, it is take from the insertion point basic
-  /// block.
-  LLVM_DEPRECATED("Use CreateGlobalString instead", "CreateGlobalString")
-  Constant *CreateGlobalStringPtr(StringRef Str, const Twine &Name = "",
-                                  unsigned AddressSpace = 0,
-                                  Module *M = nullptr, bool AddNull = true) {
-    GlobalVariable *GV =
-        CreateGlobalString(Str, Name, AddressSpace, M, AddNull);
-    Constant *Zero = ConstantInt::get(Type::getInt32Ty(Context), 0);
-    Constant *Indices[] = {Zero, Zero};
-    return ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV,
-                                                  Indices);
   }
 
   //===--------------------------------------------------------------------===//

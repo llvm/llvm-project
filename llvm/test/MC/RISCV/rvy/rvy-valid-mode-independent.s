@@ -203,7 +203,7 @@ ypermr a0, a0
 ytyper a0, a0
 # CHECK-NEXT: srliy		a0, a0, [[#XLEN]]
 # CHECK-ASM-64-SAME: # encoding: [0x13,0x55,0x05,0x04]
-# CHECK-ASM-NEXT: # <MCInst #[[#]] SRLIY{{$}}
+# CHECK-ASM-NEXT: # <MCInst #[[#]] SRLIY[[#XLEN]]{{$}}
 # CHECK-ASM-NEXT: #  <MCOperand Reg:X10>
 # CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
 # CHECK-ASM-NEXT: #  <MCOperand Imm:[[#XLEN]]>>
@@ -215,7 +215,7 @@ srliy a0, a0, 32
 # CHECK-NEXT: srliy		a0, a0, [[#XLEN]]
 # CHECK-ASM-32-SAME: # encoding: [0x13,0x55,0x05,0x02]
 # CHECK-ASM-64-SAME: # encoding: [0x13,0x55,0x05,0x04]
-# CHECK-ASM-NEXT: # <MCInst #[[#]] SRLIY{{$}}
+# CHECK-ASM-NEXT: # <MCInst #[[#]] SRLIY[[#XLEN]]{{$}}
 # CHECK-ASM-NEXT: #  <MCOperand Reg:X10>
 # CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
 # CHECK-ASM-NEXT: #  <MCOperand Imm:[[#XLEN]]>>
