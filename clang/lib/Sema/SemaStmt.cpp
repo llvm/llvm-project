@@ -1769,8 +1769,7 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
     Values.reserve(std::distance(ED->enumerator_begin(), ED->enumerator_end()));
 
     for (auto *EC : ED->enumerators()) {
-      llvm::APSInt V = EC->getInitVal();
-      Values.push_back(V);
+      Values.push_back(EC->getInitVal());
       AdjustAPSInt(Values.back(), DstWidth, DstIsSigned);
     }
 
