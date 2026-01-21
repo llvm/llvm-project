@@ -1,9 +1,7 @@
 ! Test the new RANK clause.  This uses the examples from the F2023 Standard and
 ! related explanation documents.
 !
-! RUN: %flang %s -o %t
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
-! CHECK-NOT: FAIL
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 program rank_clause01
     implicit none
@@ -12,22 +10,16 @@ program rank_clause01
     integer :: array1(10,10)
 
     interface
-
       subroutine sub02(arg1)
         integer, rank(2) :: arg1
       end subroutine
-
-      subroutine new(arg1)
-        integer, rank(2) :: arg1
-      end subroutine
-
     end interface
 
     call sub01(X0)
 
     call sub02(array1)
 
-    call new(array1)
+    call sub_errors()
 
   contains
 
@@ -49,11 +41,25 @@ program rank_clause01
 
     end subroutine
 
+    subroutine sub_errors()
+      integer :: not_constant
+      ! Rank below range
+      !ERROR: RANK value (-1) must be between 0 and 15
+      integer, rank(-1) :: err_rank01
+      ! Rank above range
+      !ERROR: RANK value (16) must be between 0 and 15
+      integer, rank(16) :: err_rank02
+      ! Non-Constant
+      !ERROR: RANK value must be a constant expression
+      !ERROR: Must be a constant value
+      integer, rank(not_constant) :: err_rank03
+    end subroutine
+
 end program
 
 subroutine sub02(A)
-    integer, rank(2) :: A, B
-    entry new(B)
+    integer, rank(2) :: A
+    integer, allocatable, rank(2) :: B
 
     if (rank(A) == rank(B)) then
       print *, "PASS"
