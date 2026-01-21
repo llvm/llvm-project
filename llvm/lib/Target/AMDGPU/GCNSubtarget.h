@@ -166,6 +166,7 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasMcastLoadInsts = false;
   bool HasCubeInsts = false;
   bool HasLerpInst = false;
   bool HasSadInsts = false;
@@ -300,6 +301,7 @@ protected:
 
   bool HasClusters = false;
   bool RequiresWaitsBeforeSystemScopeStores = false;
+  bool UseAddPC64Inst = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -372,6 +374,8 @@ public:
   Generation getGeneration() const {
     return (Generation)Gen;
   }
+
+  bool isGFX11Plus() const { return getGeneration() >= GFX11; }
 
   unsigned getMaxWaveScratchSize() const {
     // See COMPUTE_TMPRING_SIZE.WAVESIZE.
@@ -872,6 +876,8 @@ public:
   }
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
+
+  bool hasMcastLoadInsts() const { return HasMcastLoadInsts; }
 
   bool hasCubeInsts() const { return HasCubeInsts; }
 
@@ -1444,6 +1450,8 @@ public:
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
+  bool useAddPC64Inst() const { return UseAddPC64Inst; }
+
   bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
 
   bool hasSetregVGPRMSBFixup() const { return HasSetregVGPRMSBFixup; }
@@ -1559,6 +1567,8 @@ public:
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
   bool hasGFX1250Insts() const { return GFX1250Insts; }
+
+  bool hasINVWBL2WaitCntRequirement() const { return GFX1250Insts; }
 
   bool hasVOPD3() const { return GFX1250Insts; }
 

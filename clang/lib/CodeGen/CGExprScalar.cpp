@@ -1597,22 +1597,21 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   if (SrcType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
     // Cast to FP using the intrinsic if the half type itself isn't supported.
     if (DstTy->isFloatingPointTy()) {
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics())
-        return Builder.CreateCall(
-            CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_from_fp16, DstTy),
-            Src);
+      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
+        Value *BitCast = Builder.CreateBitCast(Src, CGF.CGM.HalfTy);
+        return Builder.CreateFPExt(BitCast, DstTy, "conv");
+      }
     } else {
       // Cast to other types through float, using either the intrinsic or FPExt,
       // depending on whether the half type itself is supported
       // (as opposed to operations on half, available with NativeHalfType).
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-        Src = Builder.CreateCall(
-            CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_from_fp16,
-                                 CGF.CGM.FloatTy),
-            Src);
-      } else {
-        Src = Builder.CreateFPExt(Src, CGF.CGM.FloatTy, "conv");
+
+      if (Src->getType() != CGF.CGM.HalfTy) {
+        assert(CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics());
+        Src = Builder.CreateBitCast(Src, CGF.CGM.HalfTy);
       }
+
+      Src = Builder.CreateFPExt(Src, CGF.CGM.FloatTy, "conv");
       SrcType = CGF.getContext().FloatTy;
       SrcTy = CGF.FloatTy;
     }
@@ -1723,27 +1722,33 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   if (DstType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
     // Make sure we cast in a single step if from another FP type.
     if (SrcTy->isFloatingPointTy()) {
-      // Use the intrinsic if the half type itself isn't supported
-      // (as opposed to operations on half, available with NativeHalfType).
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics())
-        return Builder.CreateCall(
-            CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_to_fp16, SrcTy), Src);
+      // Handle the case where the half type is represented as an integer (as
+      // opposed to operations on half, available with NativeHalfType).
+
       // If the half type is supported, just use an fptrunc.
-      return Builder.CreateFPTrunc(Src, DstTy);
+      Value *Res = Builder.CreateFPTrunc(Src, CGF.CGM.HalfTy, "conv");
+      if (DstTy == CGF.CGM.HalfTy)
+        return Res;
+
+      assert(DstTy->isIntegerTy(16) &&
+             CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics() &&
+             "Only half FP requires extra conversion");
+      return Builder.CreateBitCast(Res, DstTy);
     }
+
     DstTy = CGF.FloatTy;
   }
 
   Res = EmitScalarCast(Src, SrcType, DstType, SrcTy, DstTy, Opts);
 
   if (DstTy != ResTy) {
-    if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-      assert(ResTy->isIntegerTy(16) && "Only half FP requires extra conversion");
-      Res = Builder.CreateCall(
-        CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_to_fp16, CGF.CGM.FloatTy),
-        Res);
-    } else {
-      Res = Builder.CreateFPTrunc(Res, ResTy, "conv");
+    Res = Builder.CreateFPTrunc(Res, CGF.CGM.HalfTy, "conv");
+
+    if (ResTy != CGF.CGM.HalfTy) {
+      assert(ResTy->isIntegerTy(16) &&
+             CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics() &&
+             "Only half FP requires extra conversion");
+      Res = Builder.CreateBitCast(Res, ResTy);
     }
   }
 
@@ -2130,7 +2135,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     MB.CreateIndexAssumption(RowIdx, NumRows);
 
   Value *FlatMatrix = Visit(E->getBase());
-  llvm::Type *ElemTy = CGF.ConvertType(MatrixTy->getElementType());
+  llvm::Type *ElemTy = CGF.ConvertTypeForMem(MatrixTy->getElementType());
   auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
   Value *RowVec = llvm::PoisonValue::get(ResultTy);
 
@@ -2146,7 +2151,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     RowVec = Builder.CreateInsertElement(RowVec, Elt, Lane, "matrix_row_ins");
   }
 
-  return RowVec;
+  return CGF.EmitFromMemory(RowVec, E->getType());
 }
 
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
@@ -3401,15 +3406,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
 
     if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-      // Another special case: half FP increment should be done via float
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-        value = Builder.CreateCall(
-            CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_from_fp16,
-                                 CGF.CGM.FloatTy),
-            input, "incdec.conv");
-      } else {
-        value = Builder.CreateFPExt(input, CGF.CGM.FloatTy, "incdec.conv");
-      }
+      // Another special case: half FP increment should be done via float. If
+      // the input isn't already half, it may be i16.
+      Value *bitcast = Builder.CreateBitCast(input, CGF.CGM.HalfTy);
+      value = Builder.CreateFPExt(bitcast, CGF.CGM.FloatTy, "incdec.conv");
     }
 
     if (value->getType()->isFloatTy())
@@ -3442,14 +3442,8 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     value = Builder.CreateFAdd(value, amt, isInc ? "inc" : "dec");
 
     if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-        value = Builder.CreateCall(
-            CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_to_fp16,
-                                 CGF.CGM.FloatTy),
-            value, "incdec.conv");
-      } else {
-        value = Builder.CreateFPTrunc(value, input->getType(), "incdec.conv");
-      }
+      value = Builder.CreateFPTrunc(value, CGF.CGM.HalfTy, "incdec.conv");
+      value = Builder.CreateBitCast(value, input->getType());
     }
 
   // Fixed-point types.
@@ -5385,10 +5379,8 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
       CGF.incrementProfileCounter(E);
 
       // If the top of the logical operator nest, reset the MCDC temp to 0.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeResetMCDCCondBitmap(E);
-
-      CGF.MCDCLogOpStack.push_back(E);
 
       Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
 
@@ -5409,9 +5401,8 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
       } else
         CGF.markStmtMaybeUsed(E->getRHS());
 
-      CGF.MCDCLogOpStack.pop_back();
       // If the top of the logical operator nest, update the MCDC bitmap.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
       // ZExt result to int or bool.
@@ -5426,10 +5417,8 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeResetMCDCCondBitmap(E);
-
-  CGF.MCDCLogOpStack.push_back(E);
 
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("land.end");
   llvm::BasicBlock *RHSBlock  = CGF.createBasicBlock("land.rhs");
@@ -5481,9 +5470,8 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   // Insert an entry into the phi node for the edge with the value of RHSCond.
   PN->addIncoming(RHSCond, RHSBlock);
 
-  CGF.MCDCLogOpStack.pop_back();
   // If the top of the logical operator nest, update the MCDC bitmap.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   // Artificial location to preserve the scope information
@@ -5528,10 +5516,8 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
       CGF.incrementProfileCounter(E);
 
       // If the top of the logical operator nest, reset the MCDC temp to 0.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeResetMCDCCondBitmap(E);
-
-      CGF.MCDCLogOpStack.push_back(E);
 
       Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
 
@@ -5552,9 +5538,8 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
       } else
         CGF.markStmtMaybeUsed(E->getRHS());
 
-      CGF.MCDCLogOpStack.pop_back();
       // If the top of the logical operator nest, update the MCDC bitmap.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
       // ZExt result to int or bool.
@@ -5569,10 +5554,8 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeResetMCDCCondBitmap(E);
-
-  CGF.MCDCLogOpStack.push_back(E);
 
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("lor.end");
   llvm::BasicBlock *RHSBlock = CGF.createBasicBlock("lor.rhs");
@@ -5624,9 +5607,8 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
   CGF.EmitBlock(ContBlock);
   PN->addIncoming(RHSCond, RHSBlock);
 
-  CGF.MCDCLogOpStack.pop_back();
   // If the top of the logical operator nest, update the MCDC bitmap.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   // ZExt result to int.
@@ -5792,8 +5774,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.
-  if (CGF.MCDCLogOpStack.empty())
-    CGF.maybeResetMCDCCondBitmap(condExpr);
+  if (auto E = CGF.stripCond(condExpr); CGF.isMCDCDecisionExpr(E))
+    CGF.maybeResetMCDCCondBitmap(E);
 
   llvm::BasicBlock *LHSBlock = CGF.createBasicBlock("cond.true");
   llvm::BasicBlock *RHSBlock = CGF.createBasicBlock("cond.false");
@@ -5808,8 +5790,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // If the top of the logical operator nest, update the MCDC bitmap for the
   // ConditionalOperator prior to visiting its LHS and RHS blocks, since they
   // may also contain a boolean expression.
-  if (CGF.MCDCLogOpStack.empty())
-    CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
+  if (auto E = CGF.stripCond(condExpr); CGF.isMCDCDecisionExpr(E))
+    CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   if (llvm::EnableSingleByteCoverage)
     CGF.incrementProfileCounter(lhsExpr);
@@ -5828,8 +5810,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // If the top of the logical operator nest, update the MCDC bitmap for the
   // ConditionalOperator prior to visiting its LHS and RHS blocks, since they
   // may also contain a boolean expression.
-  if (CGF.MCDCLogOpStack.empty())
-    CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
+  if (auto E = CGF.stripCond(condExpr); CGF.isMCDCDecisionExpr(E))
+    CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   if (llvm::EnableSingleByteCoverage)
     CGF.incrementProfileCounter(rhsExpr);

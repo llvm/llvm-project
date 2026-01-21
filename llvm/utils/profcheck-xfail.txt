@@ -505,11 +505,6 @@ Transforms/PreISelIntrinsicLowering/AArch64/expand-exp.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-log.ll
 Transforms/PreISelIntrinsicLowering/PowerPC/memset-pattern.ll
 Transforms/PreISelIntrinsicLowering/RISCV/memset-pattern.ll
-Transforms/PreISelIntrinsicLowering/X86/memcpy-inline-non-constant-len.ll
-Transforms/PreISelIntrinsicLowering/X86/memset-inline-non-constant-len.ll
-Transforms/PreISelIntrinsicLowering/X86/memset-pattern.ll
-Transforms/SampleProfile/pseudo-probe-profile-mismatch-thinlto.ll
-Transforms/SampleProfile/remarks-hotness.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-load.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-store.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/streaming-compatible-expand-masked-gather-scatter.ll
@@ -546,5 +541,6 @@ Transforms/UnifyLoopExits/nested.ll
 Transforms/UnifyLoopExits/restore-ssa.ll
 Transforms/UnifyLoopExits/switch.ll
 Transforms/UnifyLoopExits/undef-phis.ll
+Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
