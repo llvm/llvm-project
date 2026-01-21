@@ -3302,6 +3302,21 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
+  case AArch64::AUTPAC: {
+    const Register Pointer = AArch64::X16;
+    const Register Scratch = AArch64::X17;
+
+    PtrAuthSchema AuthSchema((AArch64PACKey::ID)MI->getOperand(0).getImm(),
+                             MI->getOperand(1).getImm(), MI->getOperand(2));
+
+    PtrAuthSchema SignSchema((AArch64PACKey::ID)MI->getOperand(3).getImm(),
+                             MI->getOperand(4).getImm(), MI->getOperand(5));
+
+    emitPtrauthAuthResign(Pointer, Scratch, AuthSchema, SignSchema,
+                          std::nullopt, MI->getDeactivationSymbol());
+    return;
+  }
+
   case AArch64::AUTRELLOADPAC: {
     const Register Pointer = AArch64::X16;
     const Register Scratch = AArch64::X17;
@@ -3316,26 +3331,6 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
                           MI->getOperand(6).getImm(),
                           MI->getDeactivationSymbol());
 
-    emitPtrauthAuthResign(
-        AArch64::X16, (AArch64PACKey::ID)MI->getOperand(0).getImm(),
-        MI->getOperand(1).getImm(), &MI->getOperand(2), AArch64::X17,
-        (AArch64PACKey::ID)MI->getOperand(3).getImm(),
-        MI->getOperand(4).getImm(), MI->getOperand(5).getReg(),
-        MI->getOperand(6).getImm(), MI->getDeactivationSymbol());
-    return;
-  }
-  case AArch64::AUTPAC: {
-    const Register Pointer = AArch64::X16;
-    const Register Scratch = AArch64::X17;
-
-    PtrAuthSchema AuthSchema((AArch64PACKey::ID)MI->getOperand(0).getImm(),
-                             MI->getOperand(1).getImm(), MI->getOperand(2));
-
-    PtrAuthSchema SignSchema((AArch64PACKey::ID)MI->getOperand(3).getImm(),
-                             MI->getOperand(4).getImm(), MI->getOperand(5));
-
-    emitPtrauthAuthResign(Pointer, Scratch, AuthSchema, SignSchema,
-                          std::nullopt, MI->getDeactivationSymbol());
     return;
   }
 
