@@ -1574,8 +1574,8 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
   if (!BC)
     return false;
 
-  auto *SrcVecTy = dyn_cast<FixedVectorType>(BC->getSrcTy());
-  auto *DstVecTy = dyn_cast<FixedVectorType>(BC->getDestTy());
+  FixedVectorType *SrcVecTy = dyn_cast<FixedVectorType>(BC->getSrcTy());
+  FixedVectorType *DstVecTy = dyn_cast<FixedVectorType>(BC->getDestTy());
   if (!SrcVecTy || !DstVecTy)
     return false;
 
@@ -1590,6 +1590,29 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
     return false;
 
   if (!DstEltTy->isIntegerTy() || DstEltBits >= SrcEltBits)
+    return false;
+
+  // Check profitability using TTI before collecting users.
+  Type *CondTy = CmpInst::makeCmpResultType(DstEltTy);
+  Type *VecCondTy = CmpInst::makeCmpResultType(SrcVecTy);
+
+  InstructionCost ScalarSelCost =
+      TTI.getCmpSelInstrCost(Instruction::Select, DstEltTy, CondTy,
+                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  InstructionCost VecSelCost =
+      TTI.getCmpSelInstrCost(Instruction::Select, SrcVecTy, VecCondTy,
+                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
+
+  // We need at least this many selects for vectorization to be profitable.
+  // VecSelCost < ScalarSelCost * NumSelects => NumSelects > VecSelCost /
+  // ScalarSelCost
+  if (!ScalarSelCost.isValid() || ScalarSelCost == 0)
+    return false;
+
+  unsigned MinSelects = (VecSelCost.getValue() / ScalarSelCost.getValue()) + 1;
+
+  // Quick check: if bitcast doesn't have enough users, bail early.
+  if (!BC->hasNUsesOrMore(MinSelects))
     return false;
 
   // Collect all select users that match the pattern, grouped by condition.
@@ -1613,24 +1636,13 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
   if (CondToSelects.empty())
     return false;
 
-  // Check profitability using TTI.
-  auto *CondTy = CmpInst::makeCmpResultType(DstEltTy);
-  auto *VecCondTy = CmpInst::makeCmpResultType(SrcVecTy);
-
-  InstructionCost ScalarSelCost =
-      TTI.getCmpSelInstrCost(Instruction::Select, DstEltTy, CondTy,
-                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  InstructionCost VecSelCost =
-      TTI.getCmpSelInstrCost(Instruction::Select, SrcVecTy, VecCondTy,
-                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
-
   bool MadeChange = false;
   Value *SrcVec = BC->getOperand(0);
 
   // Process each group of selects with the same condition.
-  for (auto &[Cond, Selects] : CondToSelects) {
+  for (auto [Cond, Selects] : CondToSelects) {
     // Only profitable if vector select cost < total scalar select cost.
-    if (VecSelCost >= ScalarSelCost * Selects.size()) {
+    if (Selects.size() < MinSelects) {
       LLVM_DEBUG(dbgs() << "VectorCombine: foldSelectsFromBitcast not "
                         << "profitable (VecCost=" << VecSelCost
                         << ", ScalarCost=" << ScalarSelCost
@@ -3320,7 +3332,7 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
 bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
   Value *V0;
   ArrayRef<int> Mask;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_Undef(), m_Mask(Mask))))
+  if (!match(&I, m_Shuffle(m_Value(V0), m_Undef(), m_Mask(Mask))))
     return false;
 
   auto *II0 = dyn_cast<IntrinsicInst>(V0);
@@ -3342,8 +3354,10 @@ bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
     return false;
 
   // Cost analysis
+  InstructionCost IntrinsicCost =
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind);
   InstructionCost OldCost =
-      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind) +
+      IntrinsicCost +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleDstTy,
                          IntrinsicSrcTy, Mask, CostKind, 0, nullptr, {V0}, &I);
 
@@ -3364,6 +3378,11 @@ bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
   }
   IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
   NewCost += TTI.getIntrinsicInstrCost(NewAttr, CostKind);
+
+  // If the intrinsic has multiple uses, we need to account for the cost of
+  // keeping the original intrinsic around.
+  if (!II0->hasOneUse())
+    NewCost += IntrinsicCost;
 
   LLVM_DEBUG(dbgs() << "Found a permute of intrinsic: " << I << "\n  OldCost: "
                     << OldCost << " vs NewCost: " << NewCost << "\n");
@@ -3939,8 +3958,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       if (!ShouldBeCallOrBinInst)
         return false;
 
-      if (!IsFirstCallOrBinInst &&
-          any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
+      if (!IsFirstCallOrBinInst && any_of(PrevVecV, equal_to(nullptr)))
         return false;
 
       // For the first found call/bin op, the vector has to come from the
@@ -3987,8 +4005,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       if (!ShouldBeCallOrBinInst)
         return false;
 
-      if (!IsFirstCallOrBinInst &&
-          any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
+      if (!IsFirstCallOrBinInst && any_of(PrevVecV, equal_to(nullptr)))
         return false;
 
       if (BinOp != (IsFirstCallOrBinInst ? VecOpEE : PrevVecV[0]))
@@ -4028,8 +4045,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     } else if (auto *SVInst = dyn_cast<ShuffleVectorInst>(CI)) {
       // We shouldn't have any null values in the previous vectors,
       // is so, there was a mismatch in pattern.
-      if (ShouldBeCallOrBinInst ||
-          any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
+      if (ShouldBeCallOrBinInst || any_of(PrevVecV, equal_to(nullptr)))
         return false;
 
       if (SVInst != PrevVecV[1])

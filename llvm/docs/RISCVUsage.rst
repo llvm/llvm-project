@@ -370,6 +370,9 @@ It is our intention to follow the naming conventions described in `riscv-non-isa
 
 The current vendor extensions supported are:
 
+``XAIFET``
+  LLVM implements `the AIFET (AI Foundry's ET) vendor-defined instructions specified in <https://github.com/aifoundry-org/et-man/blob/main/ET%20Programmer's%20Reference%20Manual.pdf>`__ originally defined by Esperanto Technologies (and now under the AI Foundry non-profit).  Instructions are prefixed with `aif.` as described in the specification.
+
 ``XTHeadBa``
   LLVM implements `the THeadBa (address-generation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
@@ -460,7 +463,7 @@ The current vendor extensions supported are:
 ``Xwchc``
   LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
 
-``experimental-Xqccmp``
+``Xqccmp``
   LLVM implements `version 0.3 of the 16-bit Push/Pop instructions and double-moves extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqccmp_extension-0.3.0>`__ by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
 
 ``Xqci``

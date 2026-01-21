@@ -719,6 +719,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
+  bool IsEHScopeEntry = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
   std::optional<UniqueBBID> BBID;
@@ -746,6 +747,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_ehfunclet_entry:
         IsEHFuncletEntry = true;
+        lex();
+        break;
+      case MIToken::kw_ehscope_entry:
+        IsEHScopeEntry = true;
         lex();
         break;
       case MIToken::kw_align:
@@ -804,6 +809,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsEHPad(IsLandingPad);
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
+  MBB->setIsEHScopeEntry(IsEHScopeEntry);
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
@@ -1762,7 +1768,7 @@ bool MIParser::assignRegisterTies(MachineInstr &MI,
 bool MIParser::parseRegisterOperand(MachineOperand &Dest,
                                     std::optional<unsigned> &TiedDefIdx,
                                     bool IsDef) {
-  unsigned Flags = IsDef ? RegState::Define : 0;
+  unsigned Flags = getDefRegState(IsDef);
   while (Token.isRegisterFlag()) {
     if (parseRegisterFlag(Flags))
       return true;
@@ -1789,7 +1795,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
         return true;
   }
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if ((Flags & RegState::Define) == 0) {
+  if (!hasRegState(Flags, RegState::Define)) {
     if (consumeIfPresent(MIToken::lparen)) {
       unsigned Idx;
       if (!parseRegisterTiedDefIndex(Idx))
@@ -1837,19 +1843,23 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       return error("generic virtual registers must have a type");
   }
 
-  if (Flags & RegState::Define) {
-    if (Flags & RegState::Kill)
+  if (hasRegState(Flags, RegState::Define)) {
+    if (hasRegState(Flags, RegState::Kill))
       return error("cannot have a killed def operand");
   } else {
-    if (Flags & RegState::Dead)
+    if (hasRegState(Flags, RegState::Dead))
       return error("cannot have a dead use operand");
   }
 
-  Dest = MachineOperand::CreateReg(
-      Reg, Flags & RegState::Define, Flags & RegState::Implicit,
-      Flags & RegState::Kill, Flags & RegState::Dead, Flags & RegState::Undef,
-      Flags & RegState::EarlyClobber, SubReg, Flags & RegState::Debug,
-      Flags & RegState::InternalRead, Flags & RegState::Renamable);
+  Dest = MachineOperand::CreateReg(Reg, hasRegState(Flags, RegState::Define),
+                                   hasRegState(Flags, RegState::Implicit),
+                                   hasRegState(Flags, RegState::Kill),
+                                   hasRegState(Flags, RegState::Dead),
+                                   hasRegState(Flags, RegState::Undef),
+                                   hasRegState(Flags, RegState::EarlyClobber),
+                                   SubReg, hasRegState(Flags, RegState::Debug),
+                                   hasRegState(Flags, RegState::InternalRead),
+                                   hasRegState(Flags, RegState::Renamable));
 
   return false;
 }

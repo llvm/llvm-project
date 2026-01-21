@@ -27,6 +27,7 @@ define i32 @inline_asm_div() {
 ; ACC64-TRAP-EMPTY:
 ; ACC64-TRAP-NEXT:    div $zero, $2, $3
 ; ACC64-TRAP-NEXT:    bnez $3, .Ltmp0
+; ACC64-TRAP-NEXT:    nop
 ; ACC64-TRAP-NEXT:    break 7
 ; ACC64-TRAP-NEXT:  .Ltmp0:
 ; ACC64-TRAP-NEXT:    mflo $2
@@ -71,6 +72,7 @@ define i32 @inline_asm_rem() {
 ; ACC64-TRAP-EMPTY:
 ; ACC64-TRAP-NEXT:    div $zero, $2, $3
 ; ACC64-TRAP-NEXT:    bnez $3, .Ltmp1
+; ACC64-TRAP-NEXT:    nop
 ; ACC64-TRAP-NEXT:    break 7
 ; ACC64-TRAP-NEXT:  .Ltmp1:
 ; ACC64-TRAP-NEXT:    mfhi $2
@@ -115,6 +117,7 @@ define i64 @inline_asm_ddiv() {
 ; ACC64-TRAP-EMPTY:
 ; ACC64-TRAP-NEXT:    ddiv $zero, $2, $3
 ; ACC64-TRAP-NEXT:    bne $3, $zero, .Ltmp2
+; ACC64-TRAP-NEXT:    nop
 ; ACC64-TRAP-NEXT:    break 7
 ; ACC64-TRAP-NEXT:  .Ltmp2:
 ; ACC64-TRAP-NEXT:    mflo $2
@@ -159,6 +162,7 @@ define i64 @inline_asm_drem() {
 ; ACC64-TRAP-EMPTY:
 ; ACC64-TRAP-NEXT:    ddiv $zero, $2, $3
 ; ACC64-TRAP-NEXT:    bne $3, $zero, .Ltmp3
+; ACC64-TRAP-NEXT:    nop
 ; ACC64-TRAP-NEXT:    break 7
 ; ACC64-TRAP-NEXT:  .Ltmp3:
 ; ACC64-TRAP-NEXT:    mfhi $2
@@ -203,6 +207,7 @@ define i32 @inline_asm_divu() {
 ; ACC64-TRAP-EMPTY:
 ; ACC64-TRAP-NEXT:    divu $zero, $2, $3
 ; ACC64-TRAP-NEXT:    bnez $3, .Ltmp4
+; ACC64-TRAP-NEXT:    nop
 ; ACC64-TRAP-NEXT:    break 7
 ; ACC64-TRAP-NEXT:  .Ltmp4:
 ; ACC64-TRAP-NEXT:    mflo $2
@@ -247,6 +252,7 @@ define i32 @inline_asm_remu() {
 ; ACC64-TRAP-EMPTY:
 ; ACC64-TRAP-NEXT:    divu $zero, $2, $3
 ; ACC64-TRAP-NEXT:    bnez $3, .Ltmp5
+; ACC64-TRAP-NEXT:    nop
 ; ACC64-TRAP-NEXT:    break 7
 ; ACC64-TRAP-NEXT:  .Ltmp5:
 ; ACC64-TRAP-NEXT:    mfhi $2
@@ -291,6 +297,7 @@ define i64 @inline_asm_ddivu() {
 ; ACC64-TRAP-EMPTY:
 ; ACC64-TRAP-NEXT:    ddivu $zero, $2, $3
 ; ACC64-TRAP-NEXT:    bne $3, $zero, .Ltmp6
+; ACC64-TRAP-NEXT:    nop
 ; ACC64-TRAP-NEXT:    break 7
 ; ACC64-TRAP-NEXT:  .Ltmp6:
 ; ACC64-TRAP-NEXT:    mflo $2
@@ -335,6 +342,7 @@ define i64 @inline_asm_dremu() {
 ; ACC64-TRAP-EMPTY:
 ; ACC64-TRAP-NEXT:    ddivu $zero, $2, $3
 ; ACC64-TRAP-NEXT:    bne $3, $zero, .Ltmp7
+; ACC64-TRAP-NEXT:    nop
 ; ACC64-TRAP-NEXT:    break 7
 ; ACC64-TRAP-NEXT:  .Ltmp7:
 ; ACC64-TRAP-NEXT:    mfhi $2

@@ -137,8 +137,10 @@ public:
 
   /// This method returns a target specific FastISel object, or null if the
   /// target does not support "fast" ISel.
-  FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                           const TargetLibraryInfo *libInfo) const override;
+  FastISel *
+  createFastISel(FunctionLoweringInfo &funcInfo,
+                 const TargetLibraryInfo *libInfo,
+                 const LibcallLoweringInfo *libcallLowering) const override;
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
@@ -357,10 +359,10 @@ public:
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   TargetLoweringBase::AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
   TargetLoweringBase::AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
   bool useLoadStackGuardNode(const Module &M) const override;
   TargetLoweringBase::LegalizeTypeAction
@@ -920,8 +922,6 @@ private:
 
   unsigned getMinimumJumpTableEntries() const override;
 
-  bool softPromoteHalfType() const override { return true; }
-
   bool shouldScalarizeBinop(SDValue VecOp) const override {
     return VecOp.getOpcode() == ISD::SETCC;
   }
@@ -933,7 +933,8 @@ private:
 
 namespace AArch64 {
 FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                         const TargetLibraryInfo *libInfo);
+                         const TargetLibraryInfo *libInfo,
+                         const LibcallLoweringInfo *libcallLowering);
 } // end namespace AArch64
 
 } // end namespace llvm
