@@ -237,8 +237,9 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
   if (!EntryCount) {
     auto *MD = F.getMetadata(LLVMContext::MD_prof);
     if (!MD || !isExplicitlyUnknownProfileMetadata(*MD)) {
-      F.getContext().emitError("Profile verification failed: function entry "
-                               "count missing (set to 0 if cold)");
+      F.getContext().emitError(
+          "Profile verification failed for function '" + F.getName() +
+          "': function entry count missing (set to 0 if cold)");
       return PreservedAnalyses::all();
     }
   } else if (EntryCount->getCount() == 0) {
@@ -253,14 +254,15 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
           if (I.getMetadata(LLVMContext::MD_prof))
             continue;
           F.getContext().emitError(
-              "Profile verification failed: select annotation missing");
+              "Profile verification failed for function '" + F.getName() +
+              "': select annotation missing");
         }
     }
     if (const auto *Term =
             ProfileInjector::getTerminatorBenefitingFromMDProf(BB))
       if (!Term->getMetadata(LLVMContext::MD_prof))
-        F.getContext().emitError(
-            "Profile verification failed: branch annotation missing");
+        F.getContext().emitError("Profile verification failed for function '" +
+                                 F.getName() + "': branch annotation missing");
   }
   return PreservedAnalyses::all();
 }
