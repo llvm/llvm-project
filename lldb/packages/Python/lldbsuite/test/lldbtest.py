@@ -2347,7 +2347,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
             msg="FileCheck'ing result of `{0}`".format(command),
         )
 
-        self.assertEqual(not expect_cmd_failure, self.res.Succeeded())
+        self.assertNotEqual(expect_cmd_failure, self.res.Succeeded())
 
         # Get the error text if there was an error, and the regular text if not.
         output = self.res.GetOutput() if self.res.Succeeded() else self.res.GetError()
