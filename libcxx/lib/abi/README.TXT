@@ -6,4 +6,4 @@ lists *MUST* be updated to reflect the changes. This can be done by using the
 `generate-cxx-abilist` CMake target.
 
 We do not keep an up-to-date ABI list for all the build configurations of libc++.
-Currently, only the default configuration on MacOS and Linux are supported.
+Currently, only the default configuration on macOS and Linux are supported.

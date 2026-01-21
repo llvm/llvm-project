@@ -57,7 +57,7 @@ static void collectUnderlyingAddressValues2(
   LDBG() << "  inputValue: " << inputValue;
   LDBG() << "  inputIndex: " << inputIndex;
   LDBG() << "  maxDepth: " << maxDepth;
-  ValueRange inputs = initialSuccessor.getSuccessorInputs();
+  ValueRange inputs = branch.getSuccessorInputs(initialSuccessor);
   if (inputs.empty()) {
     LDBG() << "  input is empty, enqueue value";
     output.push_back(inputValue);
@@ -108,9 +108,9 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
   // Check to see if we can reason about the control flow of this op.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     LDBG() << "  Processing region branch operation";
-    return collectUnderlyingAddressValues2(
-        branch, RegionSuccessor(op, op->getResults()), result,
-        result.getResultNumber(), maxDepth, visited, output);
+    return collectUnderlyingAddressValues2(branch, RegionSuccessor::parent(),
+                                           result, result.getResultNumber(),
+                                           maxDepth, visited, output);
   }
 
   LDBG() << "  Adding result to output: " << result;

@@ -156,9 +156,8 @@ public:
     if (auto TmpCA = CA)
       CA->callController(std::move(OnComplete), T, std::move(ArgBytes));
     else
-      OnComplete(
-          WrapperFunctionBuffer::createOutOfBandError("no controller attached")
-              .release());
+      OnComplete(WrapperFunctionBuffer::createOutOfBandError(
+          "no controller attached"));
   }
 
 private:
