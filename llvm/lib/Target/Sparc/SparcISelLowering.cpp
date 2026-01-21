@@ -2328,17 +2328,19 @@ SDValue SparcTargetLowering::LowerF128_LibCallArg(SDValue Chain,
   return Chain;
 }
 
-SDValue
-SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
-                                 const char *LibFuncName,
-                                 unsigned numArgs) const {
+SDValue SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
+                                         RTLIB::Libcall LibFunc,
+                                         unsigned numArgs) const {
+  RTLIB::LibcallImpl LibFuncImpl = DAG.getLibcalls().getLibcallImpl(LibFunc);
+  if (LibFuncImpl == RTLIB::Unsupported)
+    return SDValue();
 
   ArgListTy Args;
 
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
-  SDValue Callee = DAG.getExternalSymbol(LibFuncName, PtrVT);
+  SDValue Callee = DAG.getExternalSymbol(LibFuncImpl, PtrVT);
   Type *RetTy = Op.getValueType().getTypeForEVT(*DAG.getContext());
   Type *RetTyABI = RetTy;
   SDValue Chain = DAG.getEntryNode();
@@ -2362,9 +2364,11 @@ SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
   for (unsigned i = 0, e = numArgs; i != e; ++i) {
     Chain = LowerF128_LibCallArg(Chain, Args, Op.getOperand(i), SDLoc(Op), DAG);
   }
+
+  CallingConv::ID CC = DAG.getLibcalls().getLibcallImplCallingConv(LibFuncImpl);
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(SDLoc(Op)).setChain(Chain)
-    .setCallee(CallingConv::C, RetTyABI, Callee, std::move(Args));
+  CLI.setDebugLoc(SDLoc(Op)).setChain(Chain).setCallee(CC, RetTyABI, Callee,
+                                                       std::move(Args));
 
   std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
 
@@ -2483,12 +2487,10 @@ LowerF128_FPEXTEND(SDValue Op, SelectionDAG &DAG,
                    const SparcTargetLowering &TLI) {
 
   if (Op.getOperand(0).getValueType() == MVT::f64)
-    return TLI.LowerF128Op(Op, DAG,
-                           TLI.getLibcallName(RTLIB::FPEXT_F64_F128), 1);
+    return TLI.LowerF128Op(Op, DAG, RTLIB::FPEXT_F64_F128, 1);
 
   if (Op.getOperand(0).getValueType() == MVT::f32)
-    return TLI.LowerF128Op(Op, DAG,
-                           TLI.getLibcallName(RTLIB::FPEXT_F32_F128), 1);
+    return TLI.LowerF128Op(Op, DAG, RTLIB::FPEXT_F32_F128, 1);
 
   llvm_unreachable("fpextend with non-float operand!");
   return SDValue();
@@ -2502,11 +2504,9 @@ LowerF128_FPROUND(SDValue Op, SelectionDAG &DAG,
     return Op;
 
   if (Op.getValueType() == MVT::f64)
-    return TLI.LowerF128Op(Op, DAG,
-                           TLI.getLibcallName(RTLIB::FPROUND_F128_F64), 1);
+    return TLI.LowerF128Op(Op, DAG, RTLIB::FPROUND_F128_F64, 1);
   if (Op.getValueType() == MVT::f32)
-    return TLI.LowerF128Op(Op, DAG,
-                           TLI.getLibcallName(RTLIB::FPROUND_F128_F32), 1);
+    return TLI.LowerF128Op(Op, DAG, RTLIB::FPROUND_F128_F32, 1);
 
   llvm_unreachable("fpround to non-float!");
   return SDValue();
@@ -2522,10 +2522,9 @@ static SDValue LowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG,
   // Expand f128 operations to fp128 abi calls.
   if (Op.getOperand(0).getValueType() == MVT::f128
       && (!hasHardQuad || !TLI.isTypeLegal(VT))) {
-    const char *libName = TLI.getLibcallName(VT == MVT::i32
-                                             ? RTLIB::FPTOSINT_F128_I32
-                                             : RTLIB::FPTOSINT_F128_I64);
-    return TLI.LowerF128Op(Op, DAG, libName, 1);
+    RTLIB::Libcall LibFunc =
+        VT == MVT::i32 ? RTLIB::FPTOSINT_F128_I32 : RTLIB::FPTOSINT_F128_I64;
+    return TLI.LowerF128Op(Op, DAG, LibFunc, 1);
   }
 
   // Expand if the resulting type is illegal.
@@ -2553,10 +2552,9 @@ static SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG,
   // Expand f128 operations to fp128 ABI calls.
   if (Op.getValueType() == MVT::f128
       && (!hasHardQuad || !TLI.isTypeLegal(OpVT))) {
-    const char *libName = TLI.getLibcallName(OpVT == MVT::i32
-                                             ? RTLIB::SINTTOFP_I32_F128
-                                             : RTLIB::SINTTOFP_I64_F128);
-    return TLI.LowerF128Op(Op, DAG, libName, 1);
+    RTLIB::Libcall LibFunc =
+        OpVT == MVT::i32 ? RTLIB::SINTTOFP_I32_F128 : RTLIB::SINTTOFP_I64_F128;
+    return TLI.LowerF128Op(Op, DAG, LibFunc, 1);
   }
 
   // Expand if the operand type is illegal.
@@ -2582,11 +2580,9 @@ static SDValue LowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG,
 
   assert(VT == MVT::i32 || VT == MVT::i64);
 
-  return TLI.LowerF128Op(Op, DAG,
-                         TLI.getLibcallName(VT == MVT::i32
-                                            ? RTLIB::FPTOUINT_F128_I32
-                                            : RTLIB::FPTOUINT_F128_I64),
-                         1);
+  return TLI.LowerF128Op(
+      Op, DAG,
+      VT == MVT::i32 ? RTLIB::FPTOUINT_F128_I32 : RTLIB::FPTOUINT_F128_I64, 1);
 }
 
 static SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG,
@@ -2601,9 +2597,8 @@ static SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   return TLI.LowerF128Op(Op, DAG,
-                         TLI.getLibcallName(OpVT == MVT::i32
-                                            ? RTLIB::UINTTOFP_I32_F128
-                                            : RTLIB::UINTTOFP_I64_F128),
+                         OpVT == MVT::i32 ? RTLIB::UINTTOFP_I32_F128
+                                          : RTLIB::UINTTOFP_I64_F128,
                          1);
 }
 
@@ -3180,16 +3175,16 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
   case ISD::LOAD:               return LowerLOAD(Op, DAG);
   case ISD::STORE:              return LowerSTORE(Op, DAG);
-  case ISD::FADD:               return LowerF128Op(Op, DAG,
-                                       getLibcallName(RTLIB::ADD_F128), 2);
-  case ISD::FSUB:               return LowerF128Op(Op, DAG,
-                                       getLibcallName(RTLIB::SUB_F128), 2);
-  case ISD::FMUL:               return LowerF128Op(Op, DAG,
-                                       getLibcallName(RTLIB::MUL_F128), 2);
-  case ISD::FDIV:               return LowerF128Op(Op, DAG,
-                                       getLibcallName(RTLIB::DIV_F128), 2);
-  case ISD::FSQRT:              return LowerF128Op(Op, DAG,
-                                       getLibcallName(RTLIB::SQRT_F128),1);
+  case ISD::FADD:
+    return LowerF128Op(Op, DAG, RTLIB::ADD_F128, 2);
+  case ISD::FSUB:
+    return LowerF128Op(Op, DAG, RTLIB::SUB_F128, 2);
+  case ISD::FMUL:
+    return LowerF128Op(Op, DAG, RTLIB::MUL_F128, 2);
+  case ISD::FDIV:
+    return LowerF128Op(Op, DAG, RTLIB::DIV_F128, 2);
+  case ISD::FSQRT:
+    return LowerF128Op(Op, DAG, RTLIB::SQRT_F128, 1);
   case ISD::FABS:
   case ISD::FNEG:               return LowerFNEGorFABS(Op, DAG, isV9);
   case ISD::FP_EXTEND:          return LowerF128_FPEXTEND(Op, DAG, *this);
@@ -3516,10 +3511,7 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
                ? RTLIB::FPTOSINT_F128_I64
                : RTLIB::FPTOUINT_F128_I64);
 
-    Results.push_back(LowerF128Op(SDValue(N, 0),
-                                  DAG,
-                                  getLibcallName(libCall),
-                                  1));
+    Results.push_back(LowerF128Op(SDValue(N, 0), DAG, libCall, 1));
     return;
   case ISD::READCYCLECOUNTER: {
     assert(Subtarget->hasLeonCycleCounter());
@@ -3542,10 +3534,7 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
                ? RTLIB::SINTTOFP_I64_F128
                : RTLIB::UINTTOFP_I64_F128);
 
-    Results.push_back(LowerF128Op(SDValue(N, 0),
-                                  DAG,
-                                  getLibcallName(libCall),
-                                  1));
+    Results.push_back(LowerF128Op(SDValue(N, 0), DAG, libCall, 1));
     return;
   case ISD::LOAD: {
     LoadSDNode *Ld = cast<LoadSDNode>(N);
