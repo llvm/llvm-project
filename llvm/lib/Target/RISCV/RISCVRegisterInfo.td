@@ -875,7 +875,7 @@ def ZZZ_VRMF2NoV0 : VReg<VMF2VTs, (add VRNoV0), 1>;
 def VMV0 : VReg<VMaskVTs, (add V0), 1>;
 
 // The register class is added for inline assembly for vector mask types.
-// The ZZZ_ prefix is to make sure these are order after VR/VRNoV0 in the
+// The ZZZ_ prefix is to make sure these are ordered after VR/VRNoV0 in the
 // regclass enum. Tablegen uses the name to break ties. This is important
 // because only VR/VRNoV0 have the full type lists.
 def ZZZ_VM : VReg<VMaskVTs, (add VR), 1>;
