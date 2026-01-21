@@ -122,6 +122,7 @@ bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD);
 bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
                               const FixedPoint &FP);
 
+bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I);
 bool isConstexprUnknown(const Pointer &P);
 
 enum class ShiftDir { Left, Right };
@@ -1908,10 +1909,7 @@ inline bool CheckNull(InterpState &S, CodePtr OpPC) {
 
 inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
                            const Pointer &Ptr) {
-  Pointer Base = Ptr;
-  while (Base.isBaseClass())
-    Base = Base.getBase();
-
+  Pointer Base = Ptr.stripBaseCasts();
   const Record::Base *VirtBase = Base.getRecord()->getVirtualBase(Decl);
   S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
   return true;
@@ -2469,38 +2467,6 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
   return true;
 }
 
-//===----------------------------------------------------------------------===//
-// Destroy
-//===----------------------------------------------------------------------===//
-
-inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
-  assert(S.Current->getFunction());
-
-  // FIXME: We iterate the scope once here and then again in the destroy() call
-  // below.
-  for (auto &Local : S.Current->getFunction()->getScope(I).locals_reverse()) {
-    const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
-
-    if (Ptr.getLifetime() == Lifetime::Ended) {
-      // Try to use the declaration for better diagnostics
-      if (const Decl *D = Ptr.getDeclDesc()->asDecl()) {
-        auto *ND = cast<NamedDecl>(D);
-        S.FFDiag(ND->getLocation(),
-                 diag::note_constexpr_destroy_out_of_lifetime)
-            << ND->getNameAsString();
-      } else {
-        S.FFDiag(Ptr.getDeclDesc()->getLocation(),
-                 diag::note_constexpr_destroy_out_of_lifetime)
-            << Ptr.toDiagnosticString(S.getASTContext());
-      }
-      return false;
-    }
-  }
-
-  S.Current->destroy(I);
-  return true;
-}
-
 inline bool InitScope(InterpState &S, CodePtr OpPC, uint32_t I) {
   S.Current->initScope(I);
   return true;
@@ -2888,7 +2854,9 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS,
     S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
     if (!S.noteUndefinedBehavior())
       return false;
-    RHS = -RHS;
+
+    RHS = RHS.isMin() ? RT(APSInt::getMaxValue(RHS.bitWidth(), false)) : -RHS;
+
     return DoShift<LT, RT,
                    Dir == ShiftDir::Left ? ShiftDir::Right : ShiftDir::Left>(
         S, OpPC, LHS, RHS, Result);

@@ -7357,9 +7357,13 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
     // 256 bit non-temporal stores can be lowered to STNP. Do this as part of
     // the custom lowering, as there are no un-paired non-temporal stores and
     // legalization will break up 256 bit inputs.
+    //
+    // Currently, STNP lowering can only either keep or increase code size, thus
+    // we predicate it to not apply when optimizing for code size.
     ElementCount EC = MemVT.getVectorElementCount();
     if (StoreNode->isNonTemporal() && MemVT.getSizeInBits() == 256u &&
         EC.isKnownEven() && DAG.getDataLayout().isLittleEndian() &&
+        !DAG.shouldOptForSize() &&
         (MemVT.getScalarSizeInBits() == 8u ||
          MemVT.getScalarSizeInBits() == 16u ||
          MemVT.getScalarSizeInBits() == 32u ||
@@ -9369,7 +9373,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
       CallAttrs.requiresPreservingAllZAState() ||
       CallAttrs.requiresPreservingZT0() ||
-      CallAttrs.caller().hasStreamingBody())
+      CallAttrs.caller().hasStreamingBody() || CallAttrs.caller().isNewZA() ||
+      CallAttrs.caller().isNewZT0())
     return false;
 
   // Functions using the C or Fast calling convention that have an SVE signature
@@ -12401,6 +12406,8 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
 SDValue AArch64TargetLowering::LowerVECTOR_SPLICE(SDValue Op,
                                                   SelectionDAG &DAG) const {
   EVT Ty = Op.getValueType();
+  if (!isa<ConstantSDNode>(Op.getOperand(2)))
+    return SDValue();
   auto Idx = Op.getConstantOperandAPInt(2);
   int64_t IdxVal = Idx.getSExtValue();
   assert(Ty.isScalableVector() &&
@@ -19888,6 +19895,10 @@ static SDValue performBuildShuffleExtendCombine(SDValue BV, SelectionDAG &DAG) {
       return SDValue();
 
     unsigned Opc = Op.getOpcode();
+    if (BV.getOpcode() == ISD::VECTOR_SHUFFLE &&
+        (Opc != ISD::SIGN_EXTEND && Opc != ISD::ZERO_EXTEND))
+      return SDValue();
+
     if (Opc == ISD::ANY_EXTEND)
       continue;
 
@@ -26947,9 +26958,13 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   }
 
   //    setcc_merge_zero(
-  //       pred, insert_subvector(undef, signext_inreg(vNi1), 0), != splat(0))
+  //       pred, insert_subvector(undef, signext_inreg(x), 0), != splat(0))
   // => setcc_merge_zero(
-  //       pred, insert_subvector(undef, shl(vNi1), 0), != splat(0))
+  //       pred, insert_subvector(undef, shl(x), 0), != splat(0))
+  // or:
+  // => setcc_merge_zero(
+  //       pred, insert_subvector(undef, x, 0), != splat(0))
+  // iff it can be proven that x is already sign-extended.
   if (Cond == ISD::SETNE && isZerosVector(RHS.getNode()) &&
       LHS->getOpcode() == ISD::INSERT_SUBVECTOR && LHS.hasOneUse()) {
     SDValue L0 = LHS->getOperand(0);
@@ -26958,9 +26973,13 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
     if (L0.isUndef() && isNullConstant(L2) && isSignExtInReg(L1)) {
       SDLoc DL(N);
-      SDValue Shl = L1.getOperand(0);
+      SDValue ExtVal = L1.getOperand(0);
+      unsigned NumShiftBits = ExtVal.getConstantOperandVal(1);
+      SDValue ShlSrc = ExtVal.getOperand(0);
+      if (DCI.DAG.ComputeNumSignBits(ShlSrc) > NumShiftBits)
+        ExtVal = ShlSrc;
       SDValue NewLHS = DAG.getNode(ISD::INSERT_SUBVECTOR, DL,
-                                   LHS.getValueType(), L0, Shl, L2);
+                                   LHS.getValueType(), L0, ExtVal, L2);
       return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, N->getValueType(0),
                          Pred, NewLHS, RHS, N->getOperand(3));
     }
@@ -30087,7 +30106,8 @@ static Value *UseTlsOffset(IRBuilderBase &IRB, unsigned Offset) {
       IRB.getPtrTy(0));
 }
 
-Value *AArch64TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
+Value *AArch64TargetLowering::getIRStackGuard(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
   // Android provides a fixed TLS slot for the stack cookie. See the definition
   // of TLS_SLOT_STACK_GUARD in
   // https://android.googlesource.com/platform/bionic/+/main/libc/platform/bionic/tls_defines.h
@@ -30099,16 +30119,17 @@ Value *AArch64TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
   if (Subtarget->isTargetFuchsia())
     return UseTlsOffset(IRB, -0x10);
 
-  return TargetLowering::getIRStackGuard(IRB);
+  return TargetLowering::getIRStackGuard(IRB, Libcalls);
 }
 
-void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
+void AArch64TargetLowering::insertSSPDeclarations(
+    Module &M, const LibcallLoweringInfo &Libcalls) const {
   // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+      Libcalls.getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
 
   RTLIB::LibcallImpl SecurityCookieVar =
-      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
@@ -30126,18 +30147,18 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
     }
     return;
   }
-  TargetLowering::insertSSPDeclarations(M);
+  TargetLowering::insertSSPDeclarations(M, Libcalls);
 }
 
-Value *
-AArch64TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
+Value *AArch64TargetLowering::getSafeStackPointerLocation(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
   // Android provides a fixed TLS slot for the SafeStack pointer. See the
   // definition of TLS_SLOT_SAFESTACK in
   // https://android.googlesource.com/platform/bionic/+/master/libc/private/bionic_tls.h
   if (Subtarget->isTargetAndroid())
     return UseTlsOffset(IRB, 0x48);
 
-  return TargetLowering::getSafeStackPointerLocation(IRB);
+  return TargetLowering::getSafeStackPointerLocation(IRB, Libcalls);
 }
 
 /// If a physical register, this returns the register that receives the

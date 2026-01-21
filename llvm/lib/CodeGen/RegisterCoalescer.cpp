@@ -392,9 +392,7 @@ class RegisterCoalescerLegacy : public MachineFunctionPass {
 public:
   static char ID; ///< Class identification, replacement for typeinfo
 
-  RegisterCoalescerLegacy() : MachineFunctionPass(ID) {
-    initializeRegisterCoalescerLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  RegisterCoalescerLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
