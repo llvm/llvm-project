@@ -29,7 +29,14 @@ namespace flangomp {
 
 using namespace mlir;
 
-namespace {
+/// This function triggers TODO errors and halts compilation if it detects
+/// patterns representing unimplemented features.
+///
+/// It exclusively checks situations that cannot be detected after all of the
+/// MLIR pipeline has ran (i.e. at the MLIR to LLVM IR translation stage, where
+/// the preferred location for these types of checks is), and it only checks for
+/// features that have not been implemented for target offload, but are
+/// supported on host execution.
 void checkDeviceImplementationStatus(
     omp::OffloadModuleInterface offloadModule) {
   if (!offloadModule.getIsGPU())
@@ -58,6 +65,7 @@ void checkDeviceImplementationStatus(
   });
 }
 
+namespace {
 class FunctionFilteringPass
     : public flangomp::impl::FunctionFilteringPassBase<FunctionFilteringPass> {
 public:
