@@ -800,7 +800,7 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
   }
 
   for (const auto &[ArgIndex, Replacement] : ArgFixes) {
-    const auto NextToken = utils::lexer::findNextTokenSkippingComments(
+    const std::optional<Token> NextToken = utils::lexer::findNextTokenSkippingComments(
         Args[ArgIndex]->getEndLoc(), SM, LangOpts);
     if (!NextToken)
       continue;
