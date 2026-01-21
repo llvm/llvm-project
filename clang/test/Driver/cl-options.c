@@ -350,9 +350,6 @@
 // WJoined: "-cc1"
 // WJoined: "-Wunused-pragmas"
 
-// RUN: %clang_cl -c -fms-extensions -### -- %s 2>&1 | FileCheck -check-prefix=CHECK-MS-ANON-STRUCT %s
-// CHECK-MS-ANON-STRUCT: "-fms-extensions" "-fms-anonymous-structs"
-
 // We recognize -f[no-]strict-aliasing.
 // RUN: %clang_cl -c -### -- %s 2>&1 | FileCheck -check-prefix=DEFAULTSTRICT %s
 // DEFAULTSTRICT: "-relaxed-aliasing"

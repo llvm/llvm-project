@@ -7156,9 +7156,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fms-extensions=0 is default.
   if (Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
-                   IsWindowsMSVC || IsUEFI)) {
+                   IsWindowsMSVC || IsUEFI))
     CmdArgs.push_back("-fms-extensions");
-  }
 
   // -fms-compatibility=0 is default.
   bool IsMSVCCompat = Args.hasFlag(

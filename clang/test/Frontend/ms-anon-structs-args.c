@@ -1,4 +1,4 @@
-// Test that -fms-anonymous-structs is a CC1-only option and properly rejected by driver
+// Test that -fms-anonymous-structs is a CC1-only option and is accepted by CC1 without error.
 
 // RUN: %clang_cc1 -triple powerpc-ibm-aix -fms-anonymous-structs %s -fsyntax-only 2>&1 | \
 // RUN:     FileCheck --check-prefix=CC1-OK %s --allow-empty
@@ -13,3 +13,8 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix -fms-extensions -fms-anonymous-structs %s -fsyntax-only 2>&1 | \
 // RUN:     FileCheck --check-prefix=WITH-MS-EXT %s --allow-empty
 // WITH-MS-EXT-NOT: error: unknown argument
+
+// Test rejection of the unsupported negative form.
+// RUN: not %clang_cc1 -triple powerpc-ibm-aix -fno-ms-anonymous-structs %s -fsyntax-only 2>&1 | \
+// RUN:     FileCheck %s
+// CHECK: error: unknown argument: '-fno-ms-anonymous-structs'
