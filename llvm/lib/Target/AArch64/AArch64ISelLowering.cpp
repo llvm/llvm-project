@@ -12113,6 +12113,88 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
       }
     }
 
+    // Optimize bit-0 conditional float negation to stay in SIMD domain.
+    // Pattern: (SELECT_CC seteq/setne, (and x, 1), 0, float, fneg(float))
+    // This conditionally negates a float based on bit 0 of an integer.
+    // Instead of: fmov GPR (if needed); tst GPR, #1; fneg; fcsel
+    // Generate:   shl (bit 0 to sign position); eor (flip sign) - stays in SIMD
+    if ((CC == ISD::SETEQ || CC == ISD::SETNE) && RHSC && RHSC->isZero() &&
+        LHS.getOpcode() == ISD::AND && Subtarget->isNeonAvailable()) {
+      ConstantSDNode *AndConst = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+      if (AndConst && AndConst->getZExtValue() == 1) {
+        // Check if one of TVal/FVal is fneg of the other
+        SDValue FloatVal;
+        bool NegateOnOdd = false;  // True if we negate when bit 0 is 1 (odd)
+
+        if (TVal.getOpcode() == ISD::FNEG && TVal.getOperand(0) == FVal) {
+          // TVal = fneg(FVal), so select fneg when condition is true
+          FloatVal = FVal;
+          // CC == SETEQ: condition true when bit0 == 0, so negate on even
+          // CC == SETNE: condition true when bit0 != 0, so negate on odd
+          NegateOnOdd = (CC == ISD::SETNE);
+        } else if (FVal.getOpcode() == ISD::FNEG && FVal.getOperand(0) == TVal) {
+          // FVal = fneg(TVal), so select fneg when condition is false
+          FloatVal = TVal;
+          // CC == SETEQ: condition false when bit0 != 0, so negate on odd
+          // CC == SETNE: condition false when bit0 == 0, so negate on even
+          NegateOnOdd = (CC == ISD::SETEQ);
+        }
+
+        if (FloatVal) {
+          EVT FloatVT = FloatVal.getValueType();
+          if (FloatVT == MVT::f32 || FloatVT == MVT::f64) {
+            // Determine vector types
+            MVT VecIntVT = FloatVT == MVT::f32 ? MVT::v4i32 : MVT::v2i64;
+            MVT VecFloatVT = FloatVT == MVT::f32 ? MVT::v4f32 : MVT::v2f64;
+            unsigned ShiftAmt = FloatVT == MVT::f32 ? 31 : 63;
+            unsigned SubReg = FloatVT == MVT::f32 ? AArch64::ssub : AArch64::dsub;
+
+            SDValue IntVal = LHS.getOperand(0);  // The integer being tested
+            EVT IntVT = IntVal.getValueType();
+
+            // If integer type doesn't match float type size, we need to handle it
+            // For f32 we need i32, for f64 we need i64
+            EVT ExpectedIntVT = FloatVT == MVT::f32 ? MVT::i32 : MVT::i64;
+
+            if (IntVT == ExpectedIntVT) {
+              SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+
+              // Insert integer into vector and shift bit 0 to sign position
+              SDValue IntVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecIntVT,
+                                           DAG.getUNDEF(VecIntVT), IntVal, Zero);
+              SDValue Shifted = DAG.getNode(ISD::SHL, DL, VecIntVT, IntVec,
+                                            DAG.getConstant(ShiftAmt, DL, VecIntVT));
+
+              // Insert float into vector
+              SDValue FloatVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecFloatVT,
+                                             DAG.getUNDEF(VecFloatVT), FloatVal, Zero);
+
+              // XOR to conditionally flip sign bit
+              // If NegateOnOdd is true, XOR directly (bit0=1 -> flip sign)
+              // If NegateOnOdd is false, we need to invert the logic
+              SDValue FloatAsInt = DAG.getNode(ISD::BITCAST, DL, VecIntVT, FloatVec);
+              SDValue Result;
+              if (NegateOnOdd) {
+                Result = DAG.getNode(ISD::XOR, DL, VecIntVT, FloatAsInt, Shifted);
+              } else {
+                // Negate on even: first XOR with sign bit constant, then XOR with shifted
+                // This is equivalent to: sign ^ (bit0 << 31) ^ sign_bit
+                // Or simpler: invert bit 0 first by XORing shifted with sign constant
+                SDValue SignBit = DAG.getConstant(
+                    FloatVT == MVT::f32 ? 0x80000000ULL : 0x8000000000000000ULL,
+                    DL, VecIntVT);
+                SDValue InvertedShift = DAG.getNode(ISD::XOR, DL, VecIntVT, Shifted, SignBit);
+                Result = DAG.getNode(ISD::XOR, DL, VecIntVT, FloatAsInt, InvertedShift);
+              }
+
+              SDValue ResultFloat = DAG.getNode(ISD::BITCAST, DL, VecFloatVT, Result);
+              return DAG.getTargetExtractSubreg(SubReg, DL, FloatVT, ResultFloat);
+            }
+          }
+        }
+      }
+    }
+
     // Canonicalise absolute difference patterns:
     //   select_cc lhs, rhs, sub(lhs, rhs), sub(rhs, lhs), cc ->
     //   select_cc lhs, rhs, sub(lhs, rhs), neg(sub(lhs, rhs)), cc
