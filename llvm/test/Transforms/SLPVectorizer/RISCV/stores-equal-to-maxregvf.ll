@@ -50,4 +50,5 @@ define void @test_max_reg_vf_boundary(ptr %pl, ptr %ps) {
   store i32 %add7, ptr %gep_s7, align 4
 
   ret void
+
 }
