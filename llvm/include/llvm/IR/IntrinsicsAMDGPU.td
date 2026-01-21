@@ -4215,25 +4215,24 @@ def int_amdgcn_cluster_load_b32         : AMDGPUClusterLoad<global_ptr_ty>;
 def int_amdgcn_cluster_load_b64         : AMDGPUClusterLoad<global_ptr_ty>;
 def int_amdgcn_cluster_load_b128        : AMDGPUClusterLoad<global_ptr_ty>;
 
-class AMDGPULoadMonitor<LLVMType ptr_ty>:
+class AMDGPUAtomicLoadMonitor<LLVMType ptr_ty>:
   Intrinsic<
     [llvm_any_ty],
     [ptr_ty,
-     llvm_i32_ty],  // gfx12+ cachepolicy:
-                    //   bits [0-2] = th
-                    //   bits [3-4] = scope
+     llvm_i32_ty,            // C ABI Atomic Ordering ID
+     llvm_metadata_ty],      // syncscope
     [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
      IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
     "",
-    [SDNPMemOperand]
+    [SDNPMemOperand, SDNPMayLoad]
   >;
 
-def int_amdgcn_flat_load_monitor_b32    : AMDGPULoadMonitor<flat_ptr_ty>;
-def int_amdgcn_flat_load_monitor_b64    : AMDGPULoadMonitor<flat_ptr_ty>;
-def int_amdgcn_flat_load_monitor_b128   : AMDGPULoadMonitor<flat_ptr_ty>;
-def int_amdgcn_global_load_monitor_b32  : AMDGPULoadMonitor<global_ptr_ty>;
-def int_amdgcn_global_load_monitor_b64  : AMDGPULoadMonitor<global_ptr_ty>;
-def int_amdgcn_global_load_monitor_b128 : AMDGPULoadMonitor<global_ptr_ty>;
+def int_amdgcn_flat_atomic_load_monitor_b32    : AMDGPUAtomicLoadMonitor<flat_ptr_ty>;
+def int_amdgcn_flat_atomic_load_monitor_b64    : AMDGPUAtomicLoadMonitor<flat_ptr_ty>;
+def int_amdgcn_flat_atomic_load_monitor_b128   : AMDGPUAtomicLoadMonitor<flat_ptr_ty>;
+def int_amdgcn_global_atomic_load_monitor_b32  : AMDGPUAtomicLoadMonitor<global_ptr_ty>;
+def int_amdgcn_global_atomic_load_monitor_b64  : AMDGPUAtomicLoadMonitor<global_ptr_ty>;
+def int_amdgcn_global_atomic_load_monitor_b128 : AMDGPUAtomicLoadMonitor<global_ptr_ty>;
 
 /// Emit an addrspacecast without null pointer checking.
 /// Should only be inserted by a pass based on analysis of an addrspacecast's src.

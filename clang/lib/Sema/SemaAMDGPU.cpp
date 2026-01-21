@@ -143,6 +143,13 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
     return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/true);
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b32:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b64:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b128:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b32:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b64:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b128:
+    return checkAtomicMonitorLoad(TheCall);
   case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_1darray_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f16_i32:
@@ -365,6 +372,39 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   return false;
 }
 
+bool SemaAMDGPU::checkAtomicOrderingCABIArg(CallExpr *TheCall, unsigned ArgIdx,
+                                            bool MayLoad, bool MayStore) {
+  Expr *AtomicOrdArg = TheCall->getArg(ArgIdx);
+  Expr::EvalResult AtomicOrdArgRes;
+  if (!AtomicOrdArg->EvaluateAsInt(AtomicOrdArgRes, getASTContext()))
+    llvm_unreachable("Intrinsic requires imm for atomic ordering argument!");
+  auto Ord =
+      llvm::AtomicOrderingCABI(AtomicOrdArgRes.Val.getInt().getZExtValue());
+
+  // Atomic ordering cannot be acq_rel in any case, acquire for stores or
+  // release for loads.
+  if (!llvm::isValidAtomicOrderingCABI((unsigned)Ord) ||
+      (!(MayLoad && MayStore) && (Ord == llvm::AtomicOrderingCABI::acq_rel)) ||
+      (!MayLoad && Ord == llvm::AtomicOrderingCABI::acquire) ||
+      (!MayStore && Ord == llvm::AtomicOrderingCABI::release)) {
+    return Diag(AtomicOrdArg->getBeginLoc(),
+                diag::warn_atomic_op_has_invalid_memory_order)
+           << 0 << AtomicOrdArg->getSourceRange();
+  }
+
+  return false;
+}
+
+bool SemaAMDGPU::checkStringLiteralArg(CallExpr *TheCall, unsigned ArgIdx) {
+  Expr *Arg = TheCall->getArg(TheCall->getNumArgs() - 1);
+  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts())) {
+    Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+        << Arg->getSourceRange();
+    return true;
+  }
+  return false;
+}
+
 bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
   bool Fail = false;
 
@@ -380,32 +420,19 @@ bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
   }
 
   // Check atomic ordering
-  Expr *AtomicOrdArg = TheCall->getArg(IsStore ? 2 : 1);
-  Expr::EvalResult AtomicOrdArgRes;
-  if (!AtomicOrdArg->EvaluateAsInt(AtomicOrdArgRes, getASTContext()))
-    llvm_unreachable("Intrinsic requires imm for atomic ordering argument!");
-  auto Ord =
-      llvm::AtomicOrderingCABI(AtomicOrdArgRes.Val.getInt().getZExtValue());
+  Fail |= checkAtomicOrderingCABIArg(
+      TheCall, IsStore ? 2 : 1, /*MayLoad=*/!IsStore, /*MayStore=*/IsStore);
+  // Last argument is the syncscope as a string literal.
+  Fail |= checkStringLiteralArg(TheCall, TheCall->getNumArgs() - 1);
 
-  // Atomic ordering cannot be acq_rel in any case, acquire for stores or
-  // release for loads.
-  if (!llvm::isValidAtomicOrderingCABI((unsigned)Ord) ||
-      (Ord == llvm::AtomicOrderingCABI::acq_rel) ||
-      Ord == (IsStore ? llvm::AtomicOrderingCABI::acquire
-                      : llvm::AtomicOrderingCABI::release)) {
-    return Diag(AtomicOrdArg->getBeginLoc(),
-                diag::warn_atomic_op_has_invalid_memory_order)
-           << 0 << AtomicOrdArg->getSourceRange();
-  }
+  return Fail;
+}
 
-  // Last argument is a string literal
-  Expr *Arg = TheCall->getArg(TheCall->getNumArgs() - 1);
-  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts())) {
-    Fail = true;
-    Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
-        << Arg->getSourceRange();
-  }
-
+bool SemaAMDGPU::checkAtomicMonitorLoad(CallExpr *TheCall) {
+  bool Fail = false;
+  Fail |= checkAtomicOrderingCABIArg(TheCall, 1, /*MayLoad=*/true,
+                                     /*MayStore=*/false);
+  Fail |= checkStringLiteralArg(TheCall, 2);
   return Fail;
 }
 

@@ -366,6 +366,14 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
 }
 
+static llvm::MetadataAsValue *getStringAsMDValue(llvm::LLVMContext &Ctx,
+                                                 const clang::Expr *E) {
+  StringRef Arg =
+      cast<clang::StringLiteral>(E->IgnoreParenCasts())->getString();
+  llvm::MDNode *MD = llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, Arg)});
+  return llvm::MetadataAsValue::get(Ctx, MD);
+}
+
 static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:
@@ -789,40 +797,42 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr});
   }
-  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b32:
-  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
-  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
-  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b32:
-  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b64:
-  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b128: {
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b32:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b64:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b128:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b32:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b64:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b128: {
 
     Intrinsic::ID IID;
     switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b32:
-      IID = Intrinsic::amdgcn_global_load_monitor_b32;
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b32:
+      IID = Intrinsic::amdgcn_global_atomic_load_monitor_b32;
       break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
-      IID = Intrinsic::amdgcn_global_load_monitor_b64;
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b64:
+      IID = Intrinsic::amdgcn_global_atomic_load_monitor_b64;
       break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
-      IID = Intrinsic::amdgcn_global_load_monitor_b128;
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_load_monitor_b128:
+      IID = Intrinsic::amdgcn_global_atomic_load_monitor_b128;
       break;
-    case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b32:
-      IID = Intrinsic::amdgcn_flat_load_monitor_b32;
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b32:
+      IID = Intrinsic::amdgcn_flat_atomic_load_monitor_b32;
       break;
-    case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b64:
-      IID = Intrinsic::amdgcn_flat_load_monitor_b64;
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b64:
+      IID = Intrinsic::amdgcn_flat_atomic_load_monitor_b64;
       break;
-    case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b128:
-      IID = Intrinsic::amdgcn_flat_load_monitor_b128;
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_load_monitor_b128:
+      IID = Intrinsic::amdgcn_flat_atomic_load_monitor_b128;
       break;
     }
 
+    LLVMContext &Ctx = CGM.getLLVMContext();
     llvm::Type *LoadTy = ConvertType(E->getType());
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Val = EmitScalarExpr(E->getArg(1));
+    llvm::Value *AO = EmitScalarExpr(E->getArg(1));
+    llvm::Value *Scope = getStringAsMDValue(Ctx, E->getArg(2));
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
-    return Builder.CreateCall(F, {Addr, Val});
+    return Builder.CreateCall(F, {Addr, AO, Scope});
   }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
@@ -884,10 +894,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     const unsigned ScopeArg = E->getNumArgs() - 1;
     for (unsigned i = 0; i != ScopeArg; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
-    StringRef Arg = cast<StringLiteral>(E->getArg(ScopeArg)->IgnoreParenCasts())
-                        ->getString();
-    llvm::MDNode *MD = llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, Arg)});
-    Args.push_back(llvm::MetadataAsValue::get(Ctx, MD));
+    Args.push_back(getStringAsMDValue(Ctx, E->getArg(ScopeArg)));
     // Intrinsic is typed based on the pointer AS. Pointer is always the first
     // argument.
     llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});

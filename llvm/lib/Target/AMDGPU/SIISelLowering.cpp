@@ -1293,51 +1293,54 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
   case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
+  case Intrinsic::amdgcn_flat_atomic_load_monitor_b32:
+  case Intrinsic::amdgcn_global_atomic_load_monitor_b32:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
   case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
   case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
+  case Intrinsic::amdgcn_flat_atomic_load_monitor_b64:
+  case Intrinsic::amdgcn_global_atomic_load_monitor_b64:
     return 64;
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
   case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
   case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
+  case Intrinsic::amdgcn_flat_atomic_load_monitor_b128:
+  case Intrinsic::amdgcn_global_atomic_load_monitor_b128:
     return 128;
   default:
     llvm_unreachable("Unknown width");
   }
 }
 
-static void getCoopAtomicOperandsInfo(const CallBase &CI, bool IsLoad,
-                                      TargetLoweringBase::IntrinsicInfo &Info) {
-  Value *OrderingArg = CI.getArgOperand(IsLoad ? 1 : 2);
+static AtomicOrdering parseAtomicOrderingCABIArg(const CallBase &CI,
+                                                 unsigned ArgIdx) {
+  Value *OrderingArg = CI.getArgOperand(ArgIdx);
   unsigned Ord = cast<ConstantInt>(OrderingArg)->getZExtValue();
   switch (AtomicOrderingCABI(Ord)) {
   case AtomicOrderingCABI::acquire:
-    Info.order = AtomicOrdering::Acquire;
+    return AtomicOrdering::Acquire;
     break;
   case AtomicOrderingCABI::release:
-    Info.order = AtomicOrdering::Release;
+    return AtomicOrdering::Release;
     break;
   case AtomicOrderingCABI::seq_cst:
-    Info.order = AtomicOrdering::SequentiallyConsistent;
+    return AtomicOrdering::SequentiallyConsistent;
     break;
   default:
-    Info.order = AtomicOrdering::Monotonic;
-    break;
+    return AtomicOrdering::Monotonic;
   }
+}
 
-  Info.flags =
-      (IsLoad ? MachineMemOperand::MOLoad : MachineMemOperand::MOStore);
-  Info.flags |= MOCooperative;
-
+static unsigned parseSyncscopeMDArg(const CallBase &CI, unsigned ArgIdx) {
   MDNode *ScopeMD = cast<MDNode>(
-      cast<MetadataAsValue>(CI.getArgOperand(IsLoad ? 2 : 3))->getMetadata());
+      cast<MetadataAsValue>(CI.getArgOperand(ArgIdx))->getMetadata());
   StringRef Scope = cast<MDString>(ScopeMD->getOperand(0))->getString();
-  Info.ssid = CI.getContext().getOrInsertSyncScopeID(Scope);
+  return CI.getContext().getOrInsertSyncScopeID(Scope);
 }
 
 void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
@@ -1578,12 +1581,6 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Infos.push_back(Info);
     return;
   }
-  case Intrinsic::amdgcn_flat_load_monitor_b32:
-  case Intrinsic::amdgcn_flat_load_monitor_b64:
-  case Intrinsic::amdgcn_flat_load_monitor_b128:
-  case Intrinsic::amdgcn_global_load_monitor_b32:
-  case Intrinsic::amdgcn_global_load_monitor_b64:
-  case Intrinsic::amdgcn_global_load_monitor_b128:
   case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_cluster_load_b64:
   case Intrinsic::amdgcn_cluster_load_b128:
@@ -1607,6 +1604,21 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::amdgcn_flat_atomic_load_monitor_b32:
+  case Intrinsic::amdgcn_flat_atomic_load_monitor_b64:
+  case Intrinsic::amdgcn_flat_atomic_load_monitor_b128:
+  case Intrinsic::amdgcn_global_atomic_load_monitor_b32:
+  case Intrinsic::amdgcn_global_atomic_load_monitor_b64:
+  case Intrinsic::amdgcn_global_atomic_load_monitor_b128: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    Info.ptrVal = CI.getOperand(0);
+    Info.align.reset();
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.order = parseAtomicOrderingCABIArg(CI, 1);
+    Info.ssid = parseSyncscopeMDArg(CI, 2);
+    return true;
+  }
   case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
   case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
   case Intrinsic::amdgcn_cooperative_atomic_load_8x16B: {
@@ -1614,8 +1626,9 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    getCoopAtomicOperandsInfo(CI, /*IsLoad=*/true, Info);
-    Infos.push_back(Info);
+    Info.flags = (MachineMemOperand::MOLoad | MOCooperative);
+    Info.order = parseAtomicOrderingCABIArg(CI, 1);
+    Info.ssid = parseSyncscopeMDArg(CI, 2);
     return;
   }
   case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
@@ -1625,8 +1638,9 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
     Info.ptrVal = CI.getArgOperand(0);
     Info.align.reset();
-    getCoopAtomicOperandsInfo(CI, /*IsLoad=*/false, Info);
-    Infos.push_back(Info);
+    Info.flags = (MachineMemOperand::MOStore | MOCooperative);
+    Info.order = parseAtomicOrderingCABIArg(CI, 2);
+    Info.ssid = parseSyncscopeMDArg(CI, 3);
     return;
   }
   case Intrinsic::amdgcn_ds_gws_init:
@@ -1801,15 +1815,9 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
-  case Intrinsic::amdgcn_flat_load_monitor_b128:
-  case Intrinsic::amdgcn_flat_load_monitor_b32:
-  case Intrinsic::amdgcn_flat_load_monitor_b64:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
-  case Intrinsic::amdgcn_global_load_monitor_b128:
-  case Intrinsic::amdgcn_global_load_monitor_b32:
-  case Intrinsic::amdgcn_global_load_monitor_b64:
   case Intrinsic::amdgcn_global_load_tr_b64:
   case Intrinsic::amdgcn_global_load_tr_b128:
   case Intrinsic::amdgcn_global_load_tr4_b64:
@@ -11264,6 +11272,26 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     EVT VT = Op->getValueType(0);
     return DAG.getAtomicLoad(ISD::NON_EXTLOAD, DL, MII->getMemoryVT(), VT,
                              Chain, Ptr, MII->getMemOperand());
+  }
+  case Intrinsic::amdgcn_flat_atomic_load_monitor_b32:
+  case Intrinsic::amdgcn_flat_atomic_load_monitor_b64:
+  case Intrinsic::amdgcn_flat_atomic_load_monitor_b128: {
+    MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
+    SDValue Chain = Op->getOperand(0);
+    SDValue Ptr = Op->getOperand(2);
+    return DAG.getMemIntrinsicNode(AMDGPUISD::FLAT_ATOMIC_LOAD_MONITOR, DL,
+                                   Op->getVTList(), {Chain, Ptr},
+                                   MII->getMemoryVT(), MII->getMemOperand());
+  }
+  case Intrinsic::amdgcn_global_atomic_load_monitor_b32:
+  case Intrinsic::amdgcn_global_atomic_load_monitor_b64:
+  case Intrinsic::amdgcn_global_atomic_load_monitor_b128: {
+    MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
+    SDValue Chain = Op->getOperand(0);
+    SDValue Ptr = Op->getOperand(2);
+    return DAG.getMemIntrinsicNode(AMDGPUISD::GLOBAL_ATOMIC_LOAD_MONITOR, DL,
+                                   Op->getVTList(), {Chain, Ptr},
+                                   MII->getMemoryVT(), MII->getMemOperand());
   }
   default:
 
