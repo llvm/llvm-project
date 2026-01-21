@@ -55,14 +55,7 @@ def MY_T_PTR_EVEN : InstAlias<"t_ptr.even $src", (TEST_PTR EvenPtrRC:$dst, EvenP
 // CHECK-NEXT:      llvm_unreachable("Unknown MCOperandPredicate kind");
 // CHECK-NEXT:      break;
 // CHECK-NEXT:    case 1: {
-// CHECK-NEXT:      auto getNullReg = [](unsigned HwMode) {
-// CHECK-NEXT:        switch (HwMode) {
-// CHECK-NEXT:        case 0: return MyTarget::X0; // DefaultMode
-// CHECK-NEXT:        case 1: return MyTarget::Y0; // PtrY
-// CHECK-NEXT:        default: llvm_unreachable("Unhandled HwMode for Register NullReg");
-// CHECK-NEXT:        }
-// CHECK-NEXT:      };
-// CHECK-NEXT:      return MCOp.isReg() && MCOp.getReg() == getNullReg(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+// CHECK-NEXT:      return MCOp.isReg() && MCOp.getReg() == MyTarget::RegisterByHwMode::getNullReg(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
 // CHECK-NEXT:    }
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }

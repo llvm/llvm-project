@@ -19,7 +19,7 @@
 // REGINFO-HEADER-NEXT: LLVM_READONLY MCRegister getNullReg(unsigned HwMode);
 // REGINFO-HEADER-NEXT: LLVM_READONLY MCRegister getPtrRegFor64BitModesOnly(unsigned HwMode);
 // REGINFO-HEADER-NEXT: } // end namespace MyTarget::RegisterByHwMode
-// REGINFO-HEADER-NEXT:
+// REGINFO-HEADER-EMPTY:
 // REGINFO-HEADER-NEXT: } // end namespace llvm
 
 // REGINFO-MCDESC-LABEL: // Registers by HwMode
@@ -50,7 +50,7 @@
 // REGINFO-MCDESC-NEXT:   }
 // REGINFO-MCDESC-NEXT: }
 // REGINFO-MCDESC-NEXT: } // end namespace MyTarget::RegisterByHwMode
-// REGINFO-MCDESC-NEXT:
+// REGINFO-MCDESC-EMPTY:
 // REGINFO-MCDESC-NEXT: } // end namespace llvm
 
 // SUBTARGET-LABEL:  enum class MyTargetHwModeBits : unsigned {
@@ -124,7 +124,7 @@
 // ASMWRITER-NEXT:    {AliasPatternCond::K_Reg, MyTarget::X0},
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClass, MyTarget::EvenXRegsRegClassID},
 // ASMWRITER-NEXT:    // (TEST_XREG ModeCountReg, XRegs:$src) -
-// ASMWRITER-NEXT:    {AliasPatternCond::K_Custom, 2/*ModeCountReg*/},
+// ASMWRITER-NEXT:    {AliasPatternCond::K_Custom, 3/*ModeCountReg*/},
 // ASMWRITER-NEXT:    {AliasPatternCond::K_RegClass, MyTarget::XRegsRegClassID},
 // ASMWRITER-NEXT:    // (TEST_YREG Y0, YRegs:$src) -
 // ASMWRITER-NEXT:    {AliasPatternCond::K_Reg, MyTarget::Y0},
@@ -142,40 +142,13 @@
 // ASMWRITER-NEXT:      llvm_unreachable("Unknown MCOperandPredicate kind");
 // ASMWRITER-NEXT:      break;
 // ASMWRITER-NEXT:    case 1: {
-// ASMWRITER-NEXT:      auto getNullReg = [](unsigned HwMode) {
-// ASMWRITER-NEXT:        switch (HwMode) {
-// ASMWRITER-NEXT:        case 0: return MyTarget::X0; // DefaultMode
-// ASMWRITER-NEXT:        case 1: return MyTarget::X0; // XPtr64
-// ASMWRITER-NEXT:        case 2: return MyTarget::Y0; // YPtr32
-// ASMWRITER-NEXT:        case 3: return MyTarget::Y0; // YPtr64
-// ASMWRITER-NEXT:        default: llvm_unreachable("Unhandled HwMode for Register NullReg");
-// ASMWRITER-NEXT:        }
-// ASMWRITER-NEXT:      };
-// ASMWRITER-NEXT:      return MCOp.isReg() && MCOp.getReg() == getNullReg(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+// ASMWRITER-NEXT:      return MCOp.isReg() && MCOp.getReg() == MyTarget::RegisterByHwMode::getNullReg(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
 // ASMWRITER-NEXT:    }
 // ASMWRITER-NEXT:    case 2: {
-// ASMWRITER-NEXT:      auto getModeCountReg = [](unsigned HwMode) {
-// ASMWRITER-NEXT:        switch (HwMode) {
-// ASMWRITER-NEXT:        case 0: return MyTarget::X0; // DefaultMode
-// ASMWRITER-NEXT:        case 1: return MyTarget::X1; // XPtr64
-// ASMWRITER-NEXT:        case 2: return MyTarget::X2; // YPtr32
-// ASMWRITER-NEXT:        case 3: return MyTarget::X3; // YPtr64
-// ASMWRITER-NEXT:        default: llvm_unreachable("Unhandled HwMode for Register ModeCountReg");
-// ASMWRITER-NEXT:        }
-// ASMWRITER-NEXT:      };
-// ASMWRITER-NEXT:      return MCOp.isReg() && MCOp.getReg() == getModeCountReg(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+// ASMWRITER-NEXT:      return MCOp.isReg() && MCOp.getReg() == MyTarget::RegisterByHwMode::getPtrRegFor64BitModesOnly(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
 // ASMWRITER-NEXT:    }
 // ASMWRITER-NEXT:    case 3: {
-// ASMWRITER-NEXT:      auto getModeCountReg = [](unsigned HwMode) {
-// ASMWRITER-NEXT:        switch (HwMode) {
-// ASMWRITER-NEXT:        case 0: return MyTarget::X0; // DefaultMode
-// ASMWRITER-NEXT:        case 1: return MyTarget::X1; // XPtr64
-// ASMWRITER-NEXT:        case 2: return MyTarget::X2; // YPtr32
-// ASMWRITER-NEXT:        case 3: return MyTarget::X3; // YPtr64
-// ASMWRITER-NEXT:        default: llvm_unreachable("Unhandled HwMode for Register ModeCountReg");
-// ASMWRITER-NEXT:        }
-// ASMWRITER-NEXT:      };
-// ASMWRITER-NEXT:      return MCOp.isReg() && MCOp.getReg() == getModeCountReg(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+// ASMWRITER-NEXT:      return MCOp.isReg() && MCOp.getReg() == MyTarget::RegisterByHwMode::getModeCountReg(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
 // ASMWRITER-NEXT:    }
 // ASMWRITER-NEXT:    }
 // ASMWRITER-NEXT:  }

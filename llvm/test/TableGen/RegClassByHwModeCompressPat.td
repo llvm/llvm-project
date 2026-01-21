@@ -89,13 +89,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:   default: return false;
 // CHECK-NEXT:   case MyTarget::PTR_MOV: {
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() &&
-// CHECK-NEXT:         (MI.getOperand(1).getReg() == [](unsigned HwMode) {
-// CHECK-NEXT:           switch (HwMode)
-// CHECK-NEXT:           case 0: return MyTarget::X0; // DefaultMode
-// CHECK-NEXT:           case 1: return MyTarget::Y0; // Ptr64
-// CHECK-NEXT:           default: llvm_unreachable("Unhandled HwMode for Register NullReg");
-// CHECK-NEXT:           }
-// CHECK-NEXT:         }(HwModeId)) &&
+// CHECK-NEXT:         (MI.getOperand(1).getReg() == MyTarget::RegisterByHwMode::getNullReg(HwModeId)) &&
 // CHECK-NEXT:         MI.getOperand(0).isReg() &&
 // CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // ptr_mov.zero $dst
@@ -223,13 +217,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       OutInst.addOperand(MI.getOperand(0));
 // CHECK-NEXT:       // Operand: src
-// CHECK-NEXT:       OutInst.addOperand(MCOperand::createReg([](unsigned HwMode) {
-// CHECK-NEXT:           switch (HwMode) {
-// CHECK-NEXT:           case 0: return MyTarget::X0; // DefaultMode
-// CHECK-NEXT:           case 1: return MyTarget::Y0; // Ptr64
-// CHECK-NEXT:           default: llvm_unreachable("Unhandled HwMode for Register NullReg");
-// CHECK-NEXT:           }
-// CHECK-NEXT:         }(HwModeId)));
+// CHECK-NEXT:       OutInst.addOperand(MCOperand::createReg(MyTarget::RegisterByHwMode::getNullReg(HwModeId)));
 // CHECK-NEXT:       OutInst.setLoc(MI.getLoc());
 // CHECK-NEXT:       return true;
 // CHECK-NEXT:     } // if
@@ -310,13 +298,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       return true;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() &&
-// CHECK-NEXT:         (MI.getOperand(1).getReg() == [](unsigned HwMode) {
-// CHECK-NEXT:           switch (HwMode)
-// CHECK-NEXT:           case 0: return MyTarget::X0; // DefaultMode
-// CHECK-NEXT:           case 1: return MyTarget::Y0; // Ptr64
-// CHECK-NEXT:           default: llvm_unreachable("Unhandled HwMode for Register NullReg");
-// CHECK-NEXT:           }
-// CHECK-NEXT:         }(HwModeId)) &&
+// CHECK-NEXT:         (MI.getOperand(1).getReg() == MyTarget::RegisterByHwMode::getNullReg(HwModeId)) &&
 // CHECK-NEXT:         MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
 // CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // ptr_mov.zero $dst
