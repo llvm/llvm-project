@@ -17084,8 +17084,7 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
   SDValue TrueVal = N->getOperand(1);
   SDValue FalseVal = N->getOperand(2);
 
-  SDValue Res = foldShareConstSelect(N, DCI, Cond, TrueVal, FalseVal);
-  if (Res)
+  if (SDValue Res = foldShareConstSelect(N, DCI, Cond, TrueVal, FalseVal))
     return Res;
   else
     return castTypeSelect(N, DCI, Cond, TrueVal, FalseVal);
