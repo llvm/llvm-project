@@ -201,7 +201,7 @@ public:
   MemoryBufferRef getFileBuffer() const { return MbRef; }
   // Returns true if this input should be materialized to disk for distribution.
   bool shouldMaterialize() const { return ShouldMaterialize; }
-  // Mark this input file as being an entire file on disk.
+  // Mark whether this input should be materialized to disk for distribution.
   void setShouldMaterialize(bool SM) { ShouldMaterialize = SM; }
   // Returns true if this bitcode came from a FatLTO object.
   bool isFatLTOObject() const { return IsFatLTOObject; }
