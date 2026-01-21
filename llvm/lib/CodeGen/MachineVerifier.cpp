@@ -366,9 +366,7 @@ struct MachineVerifierLegacyPass : public MachineFunctionPass {
   const std::string Banner;
 
   MachineVerifierLegacyPass(std::string banner = std::string())
-      : MachineFunctionPass(ID), Banner(std::move(banner)) {
-    initializeMachineVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+      : MachineFunctionPass(ID), Banner(std::move(banner)) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addUsedIfAvailable<LiveStacksWrapperLegacy>();

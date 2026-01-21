@@ -43,6 +43,9 @@ public:
   static char ID;
 
   GCEmptyBasicBlocksLegacy() : MachineFunctionPass(ID) {
+    // TODO: Move this call to llvm::initializeCodeGen() once
+    // `gc-empty-basic-blocks` command line alias in TargetPassConfig.cpp has
+    // been removed.
     initializeGCEmptyBasicBlocksLegacyPass(*PassRegistry::getPassRegistry());
   }
 
