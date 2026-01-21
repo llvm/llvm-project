@@ -9,8 +9,13 @@
 #include "src/__support/macros/config.h"
 #include "src/stdio/sprintf.h"
 
+#ifndef LIBC_COPT_PRINTF_DISABLE_WIDE
+#include "hdr/types/wint_t.h"
+#include "hdr/wchar_macros.h"
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
+
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 #include <inttypes.h>
@@ -3487,3 +3492,94 @@ TEST(LlvmLibcSPrintfTest, IndexModeParsing) {
                    "why would u do this, this is such   a pain. %");
 }
 #endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
+
+#ifndef LIBC_COPT_PRINTF_DISABLE_WIDE
+TEST(LlvmLibcSprintfTest, WideCharConversion) {
+  char buff[16];
+  int written;
+
+  // 1 byte UTF-8 character.
+  written = LIBC_NAMESPACE::sprintf(buff, "%lc", L'A');
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ_LEN(written, buff, "A");
+
+  // 1 byte UTF-8 character left justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%-4lc", L'A');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "A   ");
+
+  // 1 byte UTF-8 character right justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%4lc", L'A');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "   A");
+
+  // 2 byte UTF-8 character.
+  written = LIBC_NAMESPACE::sprintf(buff, "%lc", L'¢');
+  EXPECT_EQ(written, 2);
+  ASSERT_STREQ_LEN(written, buff, "¢");
+
+  // 2 byte UTF-8 character left justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%-4lc", L'¢');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "¢  ");
+
+  // 2 byte UTF-8 character right justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%4lc", L'¢');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "  ¢");
+
+  // Euro sign is a 3-byte UTF-8 character.
+  written = LIBC_NAMESPACE::sprintf(buff, "%lc", L'€');
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ_LEN(written, buff, "€");
+
+  // Euro sign left justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%-4lc", L'€');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "€ ");
+
+  // Euro sign right justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%4lc", L'€');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, " €");
+
+  // Euro sign right justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%+4lc", L'€');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, " €");
+
+  // Grinning face emoji is a 4-byte UTF-8 character.
+  written = LIBC_NAMESPACE::sprintf(buff, "%lc", L'😀');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "😀");
+
+  // Grinning face emoji left justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%-4lc", L'😀');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "😀");
+
+  // Grinning face emoji right justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%4lc", L'😀');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "😀");
+
+  // Grinning face emoji with smaller width, left justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%-3lc", L'😀');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "😀");
+
+  // Grinning face emoji with smaller width, right justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%3lc", L'😀');
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "😀");
+
+  // WEOF test.
+  EXPECT_EQ(LIBC_NAMESPACE::sprintf(buff, "%lc", WEOF), -1);
+  ASSERT_ERRNO_EQ(EILSEQ);
+
+  // Invalid wide character test
+  EXPECT_EQ(LIBC_NAMESPACE::sprintf(buff, "%lc", static_cast<wint_t>(0x12ffff)),
+            -1);
+  ASSERT_ERRNO_EQ(EILSEQ);
+}
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
