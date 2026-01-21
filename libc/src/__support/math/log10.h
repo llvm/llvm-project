@@ -34,8 +34,8 @@ using LIBC_NAMESPACE::operator""_u128;
 using namespace common_constants_internal;
 using namespace math::log_range_reduction_internal;
 
-constexpr fputil::DoubleDouble LOG10_E = {0x1.95355baaafad3p-57,
-                                          0x1.bcb7b1526e50ep-2};
+LIBC_INLINE_VAR constexpr fputil::DoubleDouble LOG10_E = {0x1.95355baaafad3p-57,
+                                                          0x1.bcb7b1526e50ep-2};
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // A simple upper bound for the error of e_x * log(2) - log(r).
