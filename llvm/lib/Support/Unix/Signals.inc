@@ -119,7 +119,9 @@ public:
       free(F);
   }
 
-  /// Allocate a new node or pull one off the free list.
+  /// Allocate a new node or pull one off the free list. We recycle nodes to
+  /// avoid deallocating them, which can race with signals delivered to other
+  /// threads.
   static FileToRemoveList *allocateNode(const std::string &Filename) {
     // Try to get a node from the recycle list first.
     FileToRemoveList *NewHead = nullptr;
