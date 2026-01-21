@@ -4,8 +4,8 @@ bugprone-unsafe-to-allow-exceptions
 ===================================
 
 Finds functions where throwing exceptions is unsafe but the function is still
-marked as potentially throwing. Throwing exceptions from the following functions
-can be problematic:
+marked as potentially throwing. Throwing exceptions from the following
+functions can be problematic:
 
 * Destructors
 * Move constructors
@@ -26,9 +26,10 @@ function also results in unexpected termination.
 The check finds any of these functions if it is marked with ``noexcept(false)``
 or ``throw(exception)``. This would indicate that the function is expected to
 throw exceptions. Only the presence of these keywords is checked, not if the
-function actually throws any exception. To check if the function actually throws
-exception, the check :doc:`bugprone-exception-escape <exception-escape>` can be
-used (but it does not warn if a function is explicitly marked as throwing).
+function actually throws any exception. To check if the function actually
+throws exception, the check :doc:`bugprone-exception-escape <exception-escape>`
+can be used (but it does not warn if a function is explicitly marked as
+throwing).
 
 Options
 -------
