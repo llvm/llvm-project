@@ -4322,7 +4322,7 @@ static FailureOr<Operation *> vectorizeConvolution(
     size_t chDimIdx = 0;
     if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(op))
       chDimIdx = 2;
-    else if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(op))
+    if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(op))
       chDimIdx = 1;
 
     vecChDimSize = inputVecSizes[chDimIdx];
