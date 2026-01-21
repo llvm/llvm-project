@@ -7335,9 +7335,7 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   EVT VT = Value.getValueType();
   EVT MemVT = StoreNode->getMemoryVT();
 
-  // Currently, STNP lowering can only either keep or increase code size, thus
-  // we predicate it to not apply when optimizing for code size.
-  if (StoreNode->isNonTemporal() && !DAG.shouldOptForSize()) {
+  if (StoreNode->isNonTemporal()) {
     if (auto MaybeSTNP = LowerNTStore(StoreNode, VT, MemVT, Dl, DAG))
       return MaybeSTNP;
   }
@@ -7388,6 +7386,11 @@ static SDValue LowerNTStore(StoreSDNode *StoreNode, EVT VT, EVT MemVT,
                             const SDLoc &DL, SelectionDAG &DAG) {
   assert(StoreNode && "Expected a store operation");
   assert(StoreNode->isNonTemporal() && "Expected a non-temporal store");
+
+  // Currently, STNP lowering can only either keep or increase code size, thus
+  // we predicate it to not apply when optimizing for code size.
+  if (DAG.shouldOptForSize())
+    return SDValue();
 
   // Currently we only support NT stores lowering for little-endian targets.
   if (!DAG.getDataLayout().isLittleEndian())
