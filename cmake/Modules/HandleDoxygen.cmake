@@ -38,4 +38,3 @@ if (LLVM_ENABLE_DOXYGEN)
 else()
   message(STATUS "Doxygen disabled.")
 endif()
-
