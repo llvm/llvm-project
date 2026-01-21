@@ -73,12 +73,19 @@ constexpr bool test() {
   test_contract<const double>();
   test_contract<const X>();
 
-  std::optional<X> opt{X{}};
   {
+    std::optional<X> opt{X{}};
     assert((*std::as_const(opt)).test() == 3);
     assert((*opt).test() == 4);
     assert((*std::move(std::as_const(opt))).test() == 5);
     assert((*std::move(opt)).test() == 6);
+
+    // Test that operator* returns a stable reference
+    X& x = *opt;
+    assert(&x == &(*opt));
+
+    const X& x2 = *std::as_const(opt);
+    assert(&x2 == &(*opt));
   }
 
 #if TEST_STD_VER >= 26
@@ -118,9 +125,13 @@ constexpr bool test() {
     assert(x.nonConstCopy == 0);
   }
   {
+    // Verify that optional<T&>::operator* always returns a T&
     X x{};
     std::optional<X&> o3(x);
     assert((*o3).test() == 4);
+    assert((*std::as_const(o3)).test() == 4);
+    assert((*std::move(o3)).test() == 4);
+    assert((*std::move(std::as_const(o3))).test() == 4);
   }
 #endif
 

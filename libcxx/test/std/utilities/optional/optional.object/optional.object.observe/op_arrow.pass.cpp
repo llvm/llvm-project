@@ -47,8 +47,6 @@ constexpr void test_ref_contract() {
   ASSERT_NOEXCEPT(std::as_const(opt).operator->());
 }
 
-constexpr void test_ref() {}
-
 #endif
 
 constexpr bool test() {
