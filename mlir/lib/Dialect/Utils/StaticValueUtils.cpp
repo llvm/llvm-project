@@ -346,10 +346,13 @@ std::optional<APInt> constantTripCount(
   std::optional<std::pair<APInt, bool>> maybeLbCst = getConstantAPIntValue(lb);
   std::optional<std::pair<APInt, bool>> maybeUbCst = getConstantAPIntValue(ub);
   if (maybeLbCst) {
+    APSInt lbCst(maybeLbCst->first, /*isUnsigned=*/!isSigned);
+    if (lbCst.isZero() && step == ub)
+      return APInt(bitwidth, 1);
+
     // If one of the bounds is not a constant, we can't compute the trip count.
     if (!maybeUbCst)
       return std::nullopt;
-    APSInt lbCst(maybeLbCst->first, /*isUnsigned=*/!isSigned);
     APSInt ubCst(maybeUbCst->first, /*isUnsigned=*/!isSigned);
     if (ubCst <= lbCst) {
       LDBG() << "constantTripCount is 0 because ub <= lb (" << lbCst << "("

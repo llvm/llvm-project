@@ -789,6 +789,25 @@ func.func @replace_single_iteration_loop_unsigned_cmp() {
 
 // -----
 
+// CHECK-LABEL: @replace_single_iteration_loop_ub_equal_step
+func.func @replace_single_iteration_loop_ub_equal_step(%ub_step : index) {
+  // CHECK: %[[LB:.*]] = arith.constant 0
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[INIT:.*]] = "test.init"
+  %init = "test.init"() : () -> i32
+  // CHECK-NOT: scf.for
+  // CHECK: %[[VAL:.*]] = "test.op"(%[[LB]], %[[INIT]])
+  %0 = scf.for %i = %c0 to %ub_step step %ub_step iter_args(%arg = %init) -> (i32) {
+    %1 = "test.op"(%i, %arg) : (index, i32) -> i32
+    scf.yield %1 : i32
+  }
+  // CHECK: "test.consume"(%[[VAL]])
+  "test.consume"(%0) : (i32) -> ()
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @remove_empty_parallel_loop
 func.func @remove_empty_parallel_loop(%lb: index, %ub: index, %s: index) {
   // CHECK: %[[INIT:.*]] = "test.init"
