@@ -788,7 +788,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     stderrTempFiles = []
     opened_files = []
     named_temp_files = []
-    builtin_commands = set(["cat", "diff"])
+    builtin_commands = set(["cat", "diff", "json-diff"])
     builtin_commands_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "builtin_commands"
     )

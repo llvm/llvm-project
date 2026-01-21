@@ -1,0 +1,2 @@
+# Test that identical JSON files match (even with different key ordering)
+# RUN: json-diff %S/identical-expected.json %S/identical-actual.json

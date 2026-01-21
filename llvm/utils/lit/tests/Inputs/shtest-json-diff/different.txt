@@ -1,0 +1,2 @@
+# Test that different JSON files are detected
+# RUN: not json-diff %S/different-expected.json %S/different-actual.json
