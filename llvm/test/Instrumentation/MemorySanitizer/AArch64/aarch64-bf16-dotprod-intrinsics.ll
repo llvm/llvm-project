@@ -243,9 +243,9 @@ define <4 x float> @test_vbfmlalbq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bfl
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i16> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP5]], 0
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[VBFMLALBQ_V3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.bfmlalb(<4 x float> [[R]], <8 x bfloat> [[A]], <8 x bfloat> [[B]])
