@@ -116,12 +116,12 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
 
   // Common BCD type-validation helpers
   // Emit error diagnostics and return true on success
-  //  - IsVectorType: enforces vector unsigned char
+  //  - IsTypeVecUChar: enforces vector unsigned char
   //  - IsIntType: enforces any integer type
   // Lambdas centralize type checks for BCD builtin handlers
 
   // Lambda 1: verify vector unsigned char type
-  auto IsVectorType = [&](QualType ArgTy, unsigned ArgIndex) -> bool {
+  auto IsTypeVecUChar = [&](QualType ArgTy, unsigned ArgIndex) -> bool {
     QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
                                              VectorKind::AltiVecVector);
     if (Context.hasSameType(ArgTy, VecType))
@@ -157,7 +157,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   case PPC::BI__builtin_ppc_bcdtruncate: {
 
     // Arg0 must be vector unsigned char
-    if (!IsVectorType(TheCall->getArg(0)->getType(), 0))
+    if (!IsTypeVecUChar(TheCall->getArg(0)->getType(), 0))
       return false;
 
     // Arg1 must be integer type
