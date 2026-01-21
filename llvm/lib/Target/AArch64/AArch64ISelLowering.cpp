@@ -7384,14 +7384,13 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
 }
 
 // Lower non-temporal stores that would otherwise be broken by legalization.
-SDValue AArch64TargetLowering::LowerNTStore(StoreSDNode *StoreNode, EVT VT,
-                                            EVT MemVT, const SDLoc &DL,
-                                            SelectionDAG &DAG) const {
+static SDValue LowerNTStore(StoreSDNode *StoreNode, EVT VT, EVT MemVT,
+                            const SDLoc &DL, SelectionDAG &DAG) {
   assert(StoreNode && "Expected a store operation");
   assert(StoreNode->isNonTemporal() && "Expected a non-temporal store");
 
   // Currently we only support NT stores lowering for little-endian targets.
-  if (!Subtarget->isLittleEndian())
+  if (!DAG.getDataLayout().isLittleEndian())
     return SDValue();
 
   if (VT.isVector()) {
