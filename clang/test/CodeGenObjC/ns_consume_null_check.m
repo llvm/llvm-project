@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -emit-llvm -fobjc-arc -fobjc-dispatch-method=mixed -fobjc-runtime-has-weak -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fobjc-dispatch-method=mixed -fobjc-runtime-has-weak -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
 
 @interface NSObject
 - (id) new;
@@ -83,10 +83,10 @@ void test2(id a) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test2(
-// CHECK: %call1 = call ptr @objc_msgSend(ptr noundef %0, ptr noundef %4, ptr noundef %2) [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK: call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
+// CHECK: %[[CALL:.*]] = call ptr @objc_msgSend
+// CHECK-NEXT: %[[V6:.*]] = {{.*}}call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %[[CALL]])
 
-// CHECK: phi ptr [ %call1, %{{.*}} ], [ null, %{{.*}} ]
+// CHECK: phi ptr [ %[[V6]], %{{.*}} ], [ null, %{{.*}} ]
 
 void test3(id a) {
   @try {
@@ -96,9 +96,9 @@ void test3(id a) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test3(
-// CHECK: %call1 = invoke ptr @objc_msgSend(ptr noundef %0, ptr noundef %4, ptr noundef %2) [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK: call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
+// CHECK: %[[CALL:.*]] = invoke ptr @objc_msgSend
+// CHECK: %[[V6:.*]] = {{.*}}call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %[[CALL]])
 
-// CHECK: phi ptr [ %call1, %{{.*}} ], [ null, %{{.*}} ]
+// CHECK: phi ptr [ %[[V6]], %{{.*}} ], [ null, %{{.*}} ]
 
 // CHECK: attributes [[NUW]] = { nounwind }

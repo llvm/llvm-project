@@ -20,12 +20,12 @@ void test0(NSArray *array) {
   }
 }
 
-// CHECK-LP64-ATTACHED-LABEL:    define{{.*}} void @test0(
-// CHECK-LP64-ATTACHED:      [[ARRAY:%.*]] = alloca ptr,
-// CHECK-LP64-ATTACHED-NEXT: [[X:%.*]] = alloca ptr,
-// CHECK-LP64-ATTACHED-NEXT: [[STATE:%.*]] = alloca [[STATE_T:%.*]],
-// CHECK-LP64-ATTACHED-NEXT: [[BUFFER:%.*]] = alloca [16 x ptr], align 8
-// CHECK-LP64-ATTACHED-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
+// CHECK-LP64-LABEL:    define{{.*}} void @test0(
+// CHECK-LP64:      [[ARRAY:%.*]] = alloca ptr,
+// CHECK-LP64-NEXT: [[X:%.*]] = alloca ptr,
+// CHECK-LP64-NEXT: [[STATE:%.*]] = alloca [[STATE_T:%.*]],
+// CHECK-LP64-NEXT: [[BUFFER:%.*]] = alloca [16 x ptr], align 8
+// CHECK-LP64-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
 
 // CHECK-LP64-OPT-LABEL: define{{.*}} void @test0
 // CHECK-LP64-OPT: [[STATE:%.*]] = alloca [[STATE_T:%.*]], align 8
@@ -33,57 +33,57 @@ void test0(NSArray *array) {
 // CHECK-LP64-OPT-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]], align 8
 
 // Initialize 'array'.
-// CHECK-LP64-ATTACHED-NEXT: store ptr null, ptr [[ARRAY]]
-// CHECK-LP64-ATTACHED-NEXT: call void @llvm.objc.storeStrong(ptr [[ARRAY]], ptr {{%.*}}) [[NUW:#[0-9]+]]
+// CHECK-LP64-NEXT: store ptr null, ptr [[ARRAY]]
+// CHECK-LP64-NEXT: call void @llvm.objc.storeStrong(ptr [[ARRAY]], ptr {{%.*}}) [[NUW:#[0-9]+]]
 
 // Initialize the fast enumaration state.
-// CHECK-LP64-ATTACHED-NEXT: call void @llvm.memset.p0.i64(ptr align 8 [[STATE]], i8 0, i64 64, i1 false)
+// CHECK-LP64-NEXT: call void @llvm.memset.p0.i64(ptr align 8 [[STATE]], i8 0, i64 64, i1 false)
 
 // Evaluate the collection expression and retain.
-// CHECK-LP64-ATTACHED-NEXT: [[T0:%.*]] = load ptr, ptr [[ARRAY]], align 8
-// CHECK-LP64-ATTACHED-NEXT: [[SAVED_ARRAY:%.*]] = call ptr @llvm.objc.retain(ptr [[T0]])
+// CHECK-LP64-NEXT: [[T0:%.*]] = load ptr, ptr [[ARRAY]], align 8
+// CHECK-LP64-NEXT: [[SAVED_ARRAY:%.*]] = call ptr @llvm.objc.retain(ptr [[T0]])
 
 // Call the enumeration method.
-// CHECK-LP64-ATTACHED-NEXT: [[T1:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
-// CHECK-LP64-ATTACHED-NEXT: [[SIZE:%.*]] = call i64 @objc_msgSend(ptr [[SAVED_ARRAY]], ptr [[T1]], ptr [[STATE]], ptr [[BUFFER]], i64 16)
+// CHECK-LP64-NEXT: [[T1:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
+// CHECK-LP64-NEXT: [[SIZE:%.*]] = call i64 @objc_msgSend(ptr [[SAVED_ARRAY]], ptr [[T1]], ptr [[STATE]], ptr [[BUFFER]], i64 16)
 
 // Check for a nonzero result.
-// CHECK-LP64-ATTACHED-NEXT: [[T0:%.*]] = icmp eq i64 [[SIZE]], 0
-// CHECK-LP64-ATTACHED-NEXT: br i1 [[T0]]
+// CHECK-LP64-NEXT: [[T0:%.*]] = icmp eq i64 [[SIZE]], 0
+// CHECK-LP64-NEXT: br i1 [[T0]]
 
-// CHECK-LP64-ATTACHED:      [[T0:%.*]] = getelementptr inbounds nuw [[STATE_T]], ptr [[STATE]], i32 0, i32 1
-// CHECK-LP64-ATTACHED-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]]
-// CHECK-LP64-ATTACHED-NEXT: [[T2:%.*]] = getelementptr inbounds ptr, ptr [[T1]], i64
-// CHECK-LP64-ATTACHED-NEXT: [[T3:%.*]] = load ptr, ptr [[T2]]
-// CHECK-LP64-ATTACHED-NEXT: store ptr [[T3]], ptr [[X]]
+// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds nuw [[STATE_T]], ptr [[STATE]], i32 0, i32 1
+// CHECK-LP64-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]]
+// CHECK-LP64-NEXT: [[T2:%.*]] = getelementptr inbounds ptr, ptr [[T1]], i64
+// CHECK-LP64-NEXT: [[T3:%.*]] = load ptr, ptr [[T2]]
+// CHECK-LP64-NEXT: store ptr [[T3]], ptr [[X]]
 
-// CHECK-LP64-ATTACHED:      [[CAPTURED:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
-// CHECK-LP64-ATTACHED-NEXT: [[T1:%.*]] = load ptr, ptr [[X]]
-// CHECK-LP64-ATTACHED-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retain(ptr [[T1]])
-// CHECK-LP64-ATTACHED-NEXT: store ptr [[T2]], ptr [[CAPTURED]]
-// CHECK-LP64-ATTACHED-NEXT: call void @use_block(ptr [[BLOCK]])
-// CHECK-LP64-ATTACHED-NEXT: call void @llvm.objc.storeStrong(ptr [[CAPTURED]], ptr null)
-// CHECK-LP64-ATTACHED-NOT:  call void (...) @llvm.objc.clang.arc.use(
+// CHECK-LP64:      [[CAPTURED:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+// CHECK-LP64-NEXT: [[T1:%.*]] = load ptr, ptr [[X]]
+// CHECK-LP64-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retain(ptr [[T1]])
+// CHECK-LP64-NEXT: store ptr [[T2]], ptr [[CAPTURED]]
+// CHECK-LP64-NEXT: call void @use_block(ptr [[BLOCK]])
+// CHECK-LP64-NEXT: call void @llvm.objc.storeStrong(ptr [[CAPTURED]], ptr null)
+// CHECK-LP64-NOT:  call void (...) @llvm.objc.clang.arc.use(
 
 // CHECK-LP64-OPT: [[D0:%.*]] = getelementptr inbounds nuw i8, ptr [[BLOCK]], i64 32
 // CHECK-LP64-OPT: [[CAPTURE:%.*]] = load ptr, ptr [[D0]]
 // CHECK-LP64-OPT: call void (...) @llvm.objc.clang.arc.use(ptr [[CAPTURE]])
 
-// CHECK-LP64-ATTACHED: [[T1:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
-// CHECK-LP64-ATTACHED-NEXT: [[SIZE:%.*]] = call i64 @objc_msgSend(ptr [[SAVED_ARRAY]], ptr [[T1]], ptr [[STATE]], ptr [[BUFFER]], i64 16)
+// CHECK-LP64: [[T1:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
+// CHECK-LP64-NEXT: [[SIZE:%.*]] = call i64 @objc_msgSend(ptr [[SAVED_ARRAY]], ptr [[T1]], ptr [[STATE]], ptr [[BUFFER]], i64 16)
 
 // Release the array.
-// CHECK-LP64-ATTACHED: call void @llvm.objc.release(ptr [[SAVED_ARRAY]])
+// CHECK-LP64: call void @llvm.objc.release(ptr [[SAVED_ARRAY]])
 
 // Destroy 'array'.
-// CHECK-LP64-ATTACHED: call void @llvm.objc.storeStrong(ptr [[ARRAY]], ptr null)
-// CHECK-LP64-ATTACHED-NEXT: ret void
+// CHECK-LP64: call void @llvm.objc.storeStrong(ptr [[ARRAY]], ptr null)
+// CHECK-LP64-NEXT: ret void
 
-// CHECK-LP64-ATTACHED-LABEL:    define internal void @__test0_block_invoke
-// CHECK-LP64-ATTACHED-NOT:  ret
-// CHECK-LP64-ATTACHED:      [[T0:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr {{%.*}}, i32 0, i32 5
-// CHECK-LP64-ATTACHED-NEXT: [[T2:%.*]] = load ptr, ptr [[T0]], align 8 
-// CHECK-LP64-ATTACHED-NEXT: call void @use(ptr [[T2]])
+// CHECK-LP64-LABEL:    define internal void @__test0_block_invoke
+// CHECK-LP64-NOT:  ret
+// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr {{%.*}}, i32 0, i32 5
+// CHECK-LP64-NEXT: [[T2:%.*]] = load ptr, ptr [[T0]], align 8 
+// CHECK-LP64-NEXT: call void @use(ptr [[T2]])
 
 void test1(NSArray *array) {
   for (__weak id x in array) {
@@ -91,24 +91,24 @@ void test1(NSArray *array) {
   }
 }
 
-// CHECK-LP64-ATTACHED-LABEL:    define{{.*}} void @test1(
-// CHECK-LP64-ATTACHED:      alloca ptr,
-// CHECK-LP64-ATTACHED-NEXT: [[X:%.*]] = alloca ptr,
-// CHECK-LP64-ATTACHED-NEXT: [[STATE:%.*]] = alloca [[STATE_T:%.*]],
-// CHECK-LP64-ATTACHED-NEXT: alloca [16 x ptr], align 8
-// CHECK-LP64-ATTACHED-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
+// CHECK-LP64-LABEL:    define{{.*}} void @test1(
+// CHECK-LP64:      alloca ptr,
+// CHECK-LP64-NEXT: [[X:%.*]] = alloca ptr,
+// CHECK-LP64-NEXT: [[STATE:%.*]] = alloca [[STATE_T:%.*]],
+// CHECK-LP64-NEXT: alloca [16 x ptr], align 8
+// CHECK-LP64-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
 
-// CHECK-LP64-ATTACHED:      [[T0:%.*]] = getelementptr inbounds nuw [[STATE_T]], ptr [[STATE]], i32 0, i32 1
-// CHECK-LP64-ATTACHED-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]]
-// CHECK-LP64-ATTACHED-NEXT: [[T2:%.*]] = getelementptr inbounds ptr, ptr [[T1]], i64
-// CHECK-LP64-ATTACHED-NEXT: [[T3:%.*]] = load ptr, ptr [[T2]]
-// CHECK-LP64-ATTACHED-NEXT: call ptr @llvm.objc.initWeak(ptr [[X]], ptr [[T3]])
+// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds nuw [[STATE_T]], ptr [[STATE]], i32 0, i32 1
+// CHECK-LP64-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]]
+// CHECK-LP64-NEXT: [[T2:%.*]] = getelementptr inbounds ptr, ptr [[T1]], i64
+// CHECK-LP64-NEXT: [[T3:%.*]] = load ptr, ptr [[T2]]
+// CHECK-LP64-NEXT: call ptr @llvm.objc.initWeak(ptr [[X]], ptr [[T3]])
 
-// CHECK-LP64-ATTACHED:      [[T0:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
-// CHECK-LP64-ATTACHED: call void @llvm.objc.copyWeak(ptr [[T0]], ptr [[X]])
-// CHECK-LP64-ATTACHED: call void @use_block
-// CHECK-LP64-ATTACHED-NEXT: call void @llvm.objc.destroyWeak(ptr [[T0]])
-// CHECK-LP64-ATTACHED-NEXT: call void @llvm.objc.destroyWeak(ptr [[X]])
+// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+// CHECK-LP64: call void @llvm.objc.copyWeak(ptr [[T0]], ptr [[X]])
+// CHECK-LP64: call void @use_block
+// CHECK-LP64-NEXT: call void @llvm.objc.destroyWeak(ptr [[T0]])
+// CHECK-LP64-NEXT: call void @llvm.objc.destroyWeak(ptr [[X]])
 
 @interface Test2
 - (NSArray *) array;
@@ -120,19 +120,19 @@ void test2(Test2 *a) {
 }
 
 // CHECK-LP64-LABEL:    define{{.*}} void @test2(
-// CHECK-LP64:      %call1 = call ptr @objc_msgSend(ptr %0, ptr %1) [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK-LP64:      call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #1
+// CHECK-LP64:      [[T0:%.*]] = call ptr @objc_msgSend(
+// CHECK-LP64-NEXT: [[T2:%.*]] = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr [[T0]])
 
 // Make sure it's not immediately released before starting the iteration.
 // CHECK-LP64-NEXT: load ptr, ptr @OBJC_SELECTOR_REFERENCES_
 // CHECK-LP64-NEXT: @objc_msgSend
 
-// CHECK-LP64-ATTACHED: @objc_enumerationMutation
+// CHECK-LP64: @objc_enumerationMutation
 
-// CHECK-LP64-ATTACHED: load ptr, ptr @OBJC_SELECTOR_REFERENCES_
-// CHECK-LP64-ATTACHED-NEXT: @objc_msgSend
+// CHECK-LP64: load ptr, ptr @OBJC_SELECTOR_REFERENCES_
+// CHECK-LP64-NEXT: @objc_msgSend
 
-// CHECK-LP64-ATTACHED: call void @llvm.objc.release(ptr [[T2]])
+// CHECK-LP64: call void @llvm.objc.release(ptr [[T2]])
 
 
 // Check that the 'continue' label is positioned appropriately
@@ -143,16 +143,16 @@ void test3(NSArray *array) {
     use(x);
   }
 
-  // CHECK-LP64-ATTACHED-LABEL:    define{{.*}} void @test3(
-  // CHECK-LP64-ATTACHED:      [[ARRAY:%.*]] = alloca ptr, align 8
-  // CHECK-LP64-ATTACHED-NEXT: [[X:%.*]] = alloca ptr, align 8
-  // CHECK-LP64-ATTACHED:      [[T0:%.*]] = load ptr, ptr [[X]], align 8
-  // CHECK-LP64-ATTACHED-NEXT: [[T1:%.*]] = icmp ne ptr [[T0]], null
-  // CHECK-LP64-ATTACHED-NEXT: br i1 [[T1]],
-  // CHECK-LP64-ATTACHED:      br label [[L:%[^ ]+]]
-  // CHECK-LP64-ATTACHED:      [[T0:%.*]] = load ptr, ptr [[X]], align 8
-  // CHECK-LP64-ATTACHED-NEXT: call void @use(ptr [[T0]])
-  // CHECK-LP64-ATTACHED-NEXT: br label [[L]]
+  // CHECK-LP64-LABEL:    define{{.*}} void @test3(
+  // CHECK-LP64:      [[ARRAY:%.*]] = alloca ptr, align 8
+  // CHECK-LP64-NEXT: [[X:%.*]] = alloca ptr, align 8
+  // CHECK-LP64:      [[T0:%.*]] = load ptr, ptr [[X]], align 8
+  // CHECK-LP64-NEXT: [[T1:%.*]] = icmp ne ptr [[T0]], null
+  // CHECK-LP64-NEXT: br i1 [[T1]],
+  // CHECK-LP64:      br label [[L:%[^ ]+]]
+  // CHECK-LP64:      [[T0:%.*]] = load ptr, ptr [[X]], align 8
+  // CHECK-LP64-NEXT: call void @use(ptr [[T0]])
+  // CHECK-LP64-NEXT: br label [[L]]
 }
 
 @interface NSObject @end
@@ -178,36 +178,36 @@ NSArray *array4;
 }
 @end
 
-// CHECK-LP64-ATTACHED-LABEL: define internal void @"\01-[I1 foo2]"(
-// CHECK-LP64-ATTACHED:         [[SELF_ADDR:%.*]] = alloca ptr,
-// CHECK-LP64-ATTACHED:         [[BLOCK:%.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>,
-// CHECK-LP64-ATTACHED:         store ptr %self, ptr [[SELF_ADDR]]
-// CHECK-LP64-ATTACHED:         [[BC:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr [[BLOCK]], i32 0, i32 5
-// CHECK-LP64-ATTACHED:         [[T1:%.*]] = load ptr, ptr [[SELF_ADDR]]
-// CHECK-LP64-ATTACHED:         call ptr @llvm.objc.retain(ptr [[T1]])
+// CHECK-LP64-LABEL: define internal void @"\01-[I1 foo2]"(
+// CHECK-LP64:         [[SELF_ADDR:%.*]] = alloca ptr,
+// CHECK-LP64:         [[BLOCK:%.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>,
+// CHECK-LP64:         store ptr %self, ptr [[SELF_ADDR]]
+// CHECK-LP64:         [[BC:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr [[BLOCK]], i32 0, i32 5
+// CHECK-LP64:         [[T1:%.*]] = load ptr, ptr [[SELF_ADDR]]
+// CHECK-LP64:         call ptr @llvm.objc.retain(ptr [[T1]])
 
 // CHECK-LP64-OPT-LABEL: define internal void @"\01-[I1 foo2]"(
 // CHECK-LP64-OPT: ptr %self
 // CHECK-LP64-OPT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
 // CHECK-LP64-OPT: [[T0:%.*]] = getelementptr inbounds nuw i8, ptr [[BLOCK]], i64 32
 
-// CHECK-LP64-ATTACHED:         call void @llvm.objc.storeStrong(ptr [[BC]], ptr null)
-// CHECK-LP64-ATTACHED-NOT:     call void (...) @llvm.objc.clang.arc.use(ptr [[BC]])
-// CHECK-LP64-ATTACHED:         switch i32 {{%.*}}, label %[[UNREACHABLE:.*]] [
-// CHECK-LP64-ATTACHED-NEXT:      i32 0, label %[[CLEANUP_CONT:.*]]
-// CHECK-LP64-ATTACHED-NEXT:      i32 2, label %[[FORCOLL_END:.*]]
-// CHECK-LP64-ATTACHED-NEXT:    ]
+// CHECK-LP64:         call void @llvm.objc.storeStrong(ptr [[BC]], ptr null)
+// CHECK-LP64-NOT:     call void (...) @llvm.objc.clang.arc.use(ptr [[BC]])
+// CHECK-LP64:         switch i32 {{%.*}}, label %[[UNREACHABLE:.*]] [
+// CHECK-LP64-NEXT:      i32 0, label %[[CLEANUP_CONT:.*]]
+// CHECK-LP64-NEXT:      i32 2, label %[[FORCOLL_END:.*]]
+// CHECK-LP64-NEXT:    ]
 
 // CHECK-LP64-OPT: [[T5:%.*]] = load ptr, ptr [[T0]]
 // CHECK-LP64-OPT: call void (...) @llvm.objc.clang.arc.use(ptr [[T5]])
 
-// CHECK-LP64-ATTACHED:       {{^|:}}[[CLEANUP_CONT]]
-// CHECK-LP64-ATTACHED-NEXT:    br label %[[FORCOLL_END]]
+// CHECK-LP64:       {{^|:}}[[CLEANUP_CONT]]
+// CHECK-LP64-NEXT:    br label %[[FORCOLL_END]]
 
-// CHECK-LP64-ATTACHED:       {{^|:}}[[FORCOLL_END]]
-// CHECK-LP64-ATTACHED-NEXT:    ret void
+// CHECK-LP64:       {{^|:}}[[FORCOLL_END]]
+// CHECK-LP64-NEXT:    ret void
 
-// CHECK-LP64-ATTACHED:       {{^|:}}[[UNREACHABLE]]
-// CHECK-LP64-ATTACHED-NEXT:    unreachable
+// CHECK-LP64:       {{^|:}}[[UNREACHABLE]]
+// CHECK-LP64-NEXT:    unreachable
 
-// CHECK-LP64-ATTACHED: attributes [[NUW]] = { nounwind }
+// CHECK-LP64: attributes [[NUW]] = { nounwind }

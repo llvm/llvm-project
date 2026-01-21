@@ -25,7 +25,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -3157,10 +3156,6 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // Allow SelectionDAG isel to handle indirect calls with KCFI checks.
   if (CLI.CB && CLI.CB->isIndirectCall() &&
       CLI.CB->getOperandBundle(LLVMContext::OB_kcfi))
-    return false;
-
-  // Allow SelectionDAG isel to handle clang.arc.attachedcall operand bundle.
-  if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB))
     return false;
 
   // Allow SelectionDAG isel to handle tail calls.
