@@ -547,7 +547,7 @@ NVPTXSerializer::compileToBinary(StringRef ptxCode) {
     if (auto status = (expr)) {                                                \
       emitError(loc) << llvm::Twine(#expr).concat(" failed with error code ")  \
                      << status;                                                \
-      return mlir::failure();                                                  \
+      return failure();                                                  \
     }                                                                          \
   } while (false)
 
