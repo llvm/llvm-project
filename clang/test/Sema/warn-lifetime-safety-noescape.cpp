@@ -33,6 +33,35 @@ View return_both(
   return b;   // expected-note {{returned here}}
 }
 
+View mixed_noescape_lifetimebound(
+    const MyObj& a [[clang::noescape]], // expected-warning {{parameter is marked [[clang::noescape]] but escapes through return}}
+    const MyObj& b [[clang::lifetimebound]],
+    bool cond) {
+  if (cond)
+    return a; // expected-note {{returned here}}
+  return b;
+}
+
+View mixed_only_noescape_escapes(
+    const MyObj& a [[clang::noescape]],
+    const MyObj& b [[clang::lifetimebound]]) {
+  (void)a;
+  return b;
+}
+
+View multiple_reassign(
+    const MyObj& a [[clang::noescape]],
+    const MyObj& b [[clang::noescape]], // expected-warning {{parameter is marked [[clang::noescape]] but escapes through return}}
+    const MyObj& c [[clang::noescape]], // expected-warning {{parameter is marked [[clang::noescape]] but escapes through return}}
+    bool cond) {
+  View v = a;
+  if (cond)
+    v = b;
+  else
+    v = c;
+  return v; // expected-note 2 {{returned here}}
+}
+
 int* return_noescape_pointer(int* p [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes through return}}
   return p; // expected-note {{returned here}}
 }
@@ -69,27 +98,10 @@ void pointer_used_locally(MyObj* p [[clang::noescape]]) {
   p->id = 42;
 }
 
-// Both noescape and lifetimebound - contradictory annotations
-// noescape should take precedence and warn since the parameter does escape
+// Noescape should take precedence and warn since the parameter does escape
 View both_noescape_and_lifetimebound(
     const MyObj& in [[clang::noescape]] [[clang::lifetimebound]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes through return}}
   return in; // expected-note {{returned here}}
-}
-
-View mixed_noescape_lifetimebound(
-    const MyObj& a [[clang::noescape]], // expected-warning {{parameter is marked [[clang::noescape]] but escapes through return}}
-    const MyObj& b [[clang::lifetimebound]],
-    bool cond) {
-  if (cond)
-    return a; // expected-note {{returned here}}
-  return b;
-}
-
-View mixed_only_noescape_escapes(
-    const MyObj& a [[clang::noescape]],
-    const MyObj& b [[clang::lifetimebound]]) {
-  (void)a;
-  return b;
 }
 
 View identity_lifetimebound(View v [[clang::lifetimebound]]) { return v; }
@@ -112,19 +124,6 @@ View reassign_to_second(
   View v = a;
   v = b;
   return v; // expected-note {{returned here}}
-}
-
-View multiple_reassign(
-    const MyObj& a [[clang::noescape]],
-    const MyObj& b [[clang::noescape]], // expected-warning {{parameter is marked [[clang::noescape]] but escapes through return}}
-    const MyObj& c [[clang::noescape]], // expected-warning {{parameter is marked [[clang::noescape]] but escapes through return}}
-    bool cond) {
-  View v = a;
-  if (cond)
-    v = b;
-  else
-    v = c;
-  return v; // expected-note 2 {{returned here}}
 }
 
 struct Container {
