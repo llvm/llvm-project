@@ -2,13 +2,13 @@
 set(ENABLE_CHECK_TARGETS TRUE)
 
 if (TARGET FileCheck)
-  set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
+  set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/FileCheck)
 else()
   message(STATUS "Cannot find 'FileCheck'.")
   message(WARNING "The check targets will not be available!")
   set(ENABLE_CHECK_TARGETS FALSE)
 endif()
-set(OPENMP_NOT_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/not)
+set(OPENMP_NOT_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/not)
 
 # Macro to extract information about compiler from file. (no own scope)
 macro(extract_test_compiler_information lang file)
