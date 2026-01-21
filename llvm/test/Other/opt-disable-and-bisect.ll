@@ -1,21 +1,11 @@
 ; This test uses the same IR functions of the opt-bisect test
-; but it checks the correctness of the -opt-disable flag.
-
-; RUN: opt -disable-output -disable-verify \
-; RUN:     -passes=inferattrs -opt-disable=inferattrs %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-MODULE-PASS
-; CHECK-MODULE-PASS: BISECT: NOT running pass (1) inferattrs on [module]
-
-; RUN: opt -disable-output -disable-verify \
-; RUN:     -passes=sroa -opt-disable=sroa %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-FUNCTION-PASS
-; CHECK-FUNCTION-PASS: BISECT: NOT running pass (1) sroa on f1
-; CHECK-FUNCTION-PASS: BISECT: NOT running pass (2) sroa on f2
-; CHECK-FUNCTION-PASS: BISECT: NOT running pass (3) sroa on f3
-; CHECK-FUNCTION-PASS: BISECT: NOT running pass (4) sroa on f4
+; and it checks if it correctly cohexists with the opt-disable flag.
+; Passes before opt-bisect-limit should be ran unless disabled 
+; by opt-disable. Later passes NOT run.
 
 ; RUN: opt -disable-output -disable-verify \
 ; RUN:     -opt-disable=inferattrs,function-attrs  \
+; RUN:     -opt-bisect-limit=6 \
 ; RUN:     -passes='inferattrs,cgscc(function-attrs,function(early-cse))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MULTI-PASS
 ; CHECK-MULTI-PASS: BISECT: NOT running pass (1) inferattrs on [module]
@@ -24,9 +14,9 @@
 ; CHECK-MULTI-PASS: BISECT: NOT running pass (4) function-attrs on (f2)
 ; CHECK-MULTI-PASS: BISECT: running pass (5) early-cse on f2
 ; CHECK-MULTI-PASS: BISECT: NOT running pass (6) function-attrs on (f3)
-; CHECK-MULTI-PASS: BISECT: running pass (7) early-cse on f3
+; CHECK-MULTI-PASS: BISECT: NOT running pass (7) early-cse on f3
 ; CHECK-MULTI-PASS: BISECT: NOT running pass (8) function-attrs on (f4)
-; CHECK-MULTI-PASS: BISECT: running pass (9) early-cse on f4
+; CHECK-MULTI-PASS: BISECT: NOT running pass (9) early-cse on f4
 
 declare i32 @g()
 
