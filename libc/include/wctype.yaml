@@ -2,9 +2,51 @@ header: wctype.h
 types:
   - type_name: wint_t
 functions:
+  - name: iswalnum
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
   - name: iswalpha
     standards:
       - stdc
     return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswdigit
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswlower
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswspace
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswupper
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: towlower
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: wint_t
+  - name: towupper
+    standards:
+      - stdc
+    return_type: wint_t
     arguments:
       - type: wint_t
