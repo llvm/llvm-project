@@ -61714,6 +61714,7 @@ static SDValue combinePCLMULQDQ(SDNode *N, SelectionDAG &DAG,
                                 TargetLowering::DAGCombinerInfo &DCI) {
   MVT VT = N->getSimpleValueType(0);
   unsigned NumElts = VT.getVectorNumElements();
+  assert(VT.getVectorElementType() == MVT::i64 && "vXi64 type expected");
 
   // Use the PCLMULQDQ lo/hi mask to attempt to remove an unnecessary shuffle,
   // rescaled back to vXi64, repeating every v2i64 sublane.
