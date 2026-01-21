@@ -34,9 +34,6 @@ define void @type_info_cache_clobber(ptr %dstv, ptr %src, i64 %wide.trip.count) 
 ; CHECK-NEXT:    [[TMP24:%.*]] = trunc <vscale x 8 x i32> [[TMP17]] to <vscale x 8 x i8>
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP20]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP19]], 8
-; CHECK-NEXT:    [[TMP21:%.*]] = mul i64 [[TMP12]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 8 x i8> [[TMP24]], i64 [[TMP10]]
 ; CHECK-NEXT:    store i8 [[TMP14]], ptr [[DSTV]], align 1, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    store i16 0, ptr null, align 2

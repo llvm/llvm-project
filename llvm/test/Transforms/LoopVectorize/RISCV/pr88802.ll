@@ -29,9 +29,6 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc <vscale x 8 x i32> [[TMP8]] to <vscale x 8 x i8>
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP10]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP12]], 8
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP16]], 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 8 x i8> [[TMP9]], i64 [[TMP15]]
 ; CHECK-NEXT:    store i8 [[TMP13]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP11]]

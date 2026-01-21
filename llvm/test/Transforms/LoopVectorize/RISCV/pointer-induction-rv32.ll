@@ -18,9 +18,6 @@ define i32 @widenpointerinduction_evl(ptr noalias %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP8]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x ptr> [[VECTOR_GEP]], i64 [[TMP3]]
 ; CHECK-NEXT:    store ptr [[TMP7]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]

@@ -460,6 +460,11 @@ struct VPlanTransforms {
   /// are only valid for a subset of VFs in Range, Range.End is updated.
   static void createPartialReductions(VPlan &Plan, VPCostContext &CostCtx,
                                       VFRange &Range);
+
+  /// Convert the scatter to extract-last-active-lane + scalar store if
+  /// profitable.
+  static void narrowScatters(VPlan &Plan, VPCostContext &Ctx, VFRange &Range,
+                             const bool &FoldTailWithEVL);
 };
 
 } // namespace llvm
