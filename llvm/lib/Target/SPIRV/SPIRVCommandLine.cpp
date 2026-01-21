@@ -181,9 +181,7 @@ static const std::map<StringRef, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::
              SPV_ALTERA_arbitrary_precision_fixed_point},
         {"SPV_EXT_image_raw10_raw12",
-         SPIRV::Extension::Extension::SPV_EXT_image_raw10_raw12},
-        {"SPV_KHR_relaxed_extended_instruction",
-         SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction}};
+         SPIRV::Extension::Extension::SPV_EXT_image_raw10_raw12}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
