@@ -8,7 +8,7 @@ find_package(nanobind CONFIG REQUIRED)
 
 set_target_properties(LLVMEmbUtils PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-nanobind_add_module(py_ir2vec MODULE ir2vec_bindings.cpp)
-target_link_libraries(py_ir2vec PRIVATE LLVMEmbUtils)
+nanobind_add_module(ir2vec MODULE PyIR2Vec.cpp)
+target_link_libraries(ir2vec PRIVATE LLVMEmbUtils)
 
 message(STATUS "Python bindings for llvm-ir2vec will be built with nanobind")

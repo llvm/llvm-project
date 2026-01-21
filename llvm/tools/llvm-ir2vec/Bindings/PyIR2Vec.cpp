@@ -10,4 +10,4 @@
 
 namespace nb = nanobind;
 
-NB_MODULE(py_ir2vec, m) { m.doc() = "Python bindings for IR2Vec"; }
+NB_MODULE(ir2vec, m) { m.doc() = "Python bindings for IR2Vec"; }
