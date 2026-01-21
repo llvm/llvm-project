@@ -12,5 +12,22 @@ if tool is not None:
     print("SUCCESS: Tool initialized")
     print(f"Tool type: {type(tool).__name__}")
 
+    # Test getFuncEmbMap
+    func_emb_map = tool.getFuncEmbMap()
+    print(f"Number of functions: {len(func_emb_map)}")
+
+    # Check that all three functions are present
+    expected_funcs = ["add", "multiply", "conditional"]
+    for func_name in expected_funcs:
+        if func_name in func_emb_map:
+            emb = func_emb_map[func_name]
+            print(f"Function '{func_name}': embedding shape = {emb.shape}")
+        else:
+            print(f"ERROR: Function '{func_name}' not found")
+
 # CHECK: SUCCESS: Tool initialized
 # CHECK: Tool type: IR2VecTool
+# CHECK: Number of functions: 3
+# CHECK: Function 'add': embedding shape =
+# CHECK: Function 'multiply': embedding shape =
+# CHECK: Function 'conditional': embedding shape =

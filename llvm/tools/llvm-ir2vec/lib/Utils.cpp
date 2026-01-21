@@ -151,6 +151,41 @@ void IR2VecTool::writeEntitiesToStream(raw_ostream &OS) {
     OS << Entities[EntityID] << '\t' << EntityID << '\n';
 }
 
+std::pair<const Function *, Embedding>
+IR2VecTool::getFunctionEmbedding(const Function &F, IR2VecKind Kind) const {
+  assert(Vocab && Vocab->isValid() && "Vocabulary not initialized");
+
+  if (F.isDeclaration())
+    return {nullptr, Embedding()};
+
+  auto Emb = Embedder::create(Kind, F, *Vocab);
+  if (!Emb) {
+    return {nullptr, Embedding()};
+  }
+
+  auto FuncVec = Emb->getFunctionVector();
+
+  return {&F, std::move(FuncVec)};
+}
+
+FuncEmbMap IR2VecTool::getFunctionEmbeddings(IR2VecKind Kind) const {
+  assert(Vocab && Vocab->isValid() && "Vocabulary not initialized");
+
+  FuncEmbMap Result;
+
+  for (const Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    auto Emb = getFunctionEmbedding(F, Kind);
+    if (Emb.first != nullptr) {
+      Result.try_emplace(Emb.first, std::move(Emb.second));
+    }
+  }
+
+  return Result;
+}
+
 void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
                                          EmbeddingLevel Level) const {
   if (!Vocab->isValid()) {

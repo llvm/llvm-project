@@ -42,12 +42,18 @@ private:
   std::unique_ptr<LLVMContext> Ctx;
   std::unique_ptr<Module> M;
   std::unique_ptr<IR2VecTool> Tool;
+  IR2VecKind EmbKind;
 
 public:
   PyIR2VecTool(const std::string &Filename, const std::string &Mode,
                const std::string &VocabPath) {
-    if (Mode != "sym" && Mode != "fa")
+    EmbKind = [](const std::string &Mode) -> IR2VecKind {
+      if (Mode == "sym")
+        return IR2VecKind::Symbolic;
+      if (Mode == "fa")
+        return IR2VecKind::FlowAware;
       throw nb::value_error("Invalid mode. Use 'sym' or 'fa'");
+    }(Mode);
 
     if (VocabPath.empty())
       throw nb::value_error("Empty Vocab Path not allowed");
@@ -62,6 +68,27 @@ public:
                                 .c_str());
     }
   }
+
+  nb::dict getFuncEmbMap() {
+    auto result = Tool->getFunctionEmbeddings(EmbKind);
+    nb::dict nb_result;
+
+    for (const auto &[func_ptr, embedding] : result) {
+      std::string func_name = func_ptr->getName().str();
+      auto data = embedding.getData();
+      size_t shape[1] = {data.size()};
+      double *data_ptr = new double[data.size()];
+      std::copy(data.data(), data.data() + data.size(), data_ptr);
+
+      auto nb_array = nb::ndarray<nb::numpy, double>(
+          data_ptr, {data.size()}, nb::capsule(data_ptr, [](void *p) noexcept {
+            delete[] static_cast<double *>(p);
+          }));
+      nb_result[nb::str(func_name.c_str())] = nb_array;
+    }
+
+    return nb_result;
+  }
 };
 
 } // namespace
@@ -72,7 +99,11 @@ NB_MODULE(ir2vec, m) {
   nb::class_<PyIR2VecTool>(m, "IR2VecTool")
       .def(nb::init<const std::string &, const std::string &,
                     const std::string &>(),
-           nb::arg("filename"), nb::arg("mode"), nb::arg("vocabPath"));
+           nb::arg("filename"), nb::arg("mode"), nb::arg("vocabPath"))
+      .def("getFuncEmbMap", &PyIR2VecTool::getFuncEmbMap,
+           "Generate function-level embeddings for all functions\n"
+           "Returns: dict[str, ndarray[float64]] - "
+           "{function_name: embedding}");
 
   m.def(
       "initEmbedding",
