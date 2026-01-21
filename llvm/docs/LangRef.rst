@@ -7460,19 +7460,20 @@ be loaded. The representation is an i32 constant integer encoding a
 10-bit bitmask, with the same meaning and format as the
 :ref:`nofpclass <nofpclass>` attribute. If the loaded value is one of
 the specified floating-point classes, a poison value is returned. The
-intrepretation does not depend on the floating-point environment. A
+interpretation does not depend on the floating-point environment. A
 zero value would be meaningless and is invalid.
 
 Examples:
 
 .. code-block:: llvm
+
   %not.nan = load float, ptr %p, align 4, !nofpclass !0
   %not.inf = load <2 x float>, ptr %p, align 4, !nofpclass !1
   %only.normal = load double, ptr %p, align 8, !nofpclass !2
   %always.poison = load double, ptr %p, align 8, !nofpclass !3
   %not.nan.array = load [2 x <2 x float>], ptr %p, !nofpclass !1
   %not.nan.struct = load { 2 x float }, ptr %p, align 8, !nofpclass !1
-
+  ...
   !0 = !{ i32 3 }
   !1 = !{ i32 516 }
   !2 = !{ i32 759 }

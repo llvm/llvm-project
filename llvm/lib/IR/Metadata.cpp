@@ -1397,6 +1397,23 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
   return MDNode::get(A->getContext(), MDs);
 }
 
+MDNode *MDNode::getMostGenericNoFPClass(MDNode *A, MDNode *B) {
+  if (!A || !B)
+    return nullptr;
+
+  if (A == B)
+    return A;
+
+  ConstantInt *AVal = mdconst::extract<ConstantInt>(A->getOperand(0));
+  ConstantInt *BVal = mdconst::extract<ConstantInt>(B->getOperand(0));
+  unsigned Intersect = AVal->getZExtValue() & BVal->getZExtValue();
+  if (Intersect == 0)
+    return nullptr;
+
+  return MDNode::get(A->getContext(), ConstantAsMetadata::get(ConstantInt::get(
+                                          AVal->getType(), Intersect)));
+}
+
 MDNode *MDNode::getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B) {
   if (!A || !B)
     return nullptr;
