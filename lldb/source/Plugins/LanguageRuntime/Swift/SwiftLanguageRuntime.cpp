@@ -1039,7 +1039,23 @@ static llvm::Error PrintObjectViaPointer(Stream &strm, ValueObject &object,
   if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
     return llvm::createStringError("invalid address 0x%x", addr);
 
-  StringRef mangled_type_name = object.GetMangledTypeName();
+  StringRef mangled_type_name;
+  if (auto static_object = object.GetStaticValue())
+    // Dynamic types can expose private types. This causes problems when
+    // querying the Swift runtime for classes by mangled name. Use the static
+    // type instead.
+    //
+    // Private types include a discriminator which is usable in the context of
+    // Swift ASTs and debug info, but not usable in the context of Swift runtime
+    // lookups. An example of a mangled name for a private type is:
+    //   $s1b8Subclass33_8CC290D01A98D2866F487ABF00E545A7LLCN
+    // This discriminator (_8CC290D01A98D2866F487ABF00E545A7) is a hash based on
+    // the path of the source file. This info is not present in the runtime, and
+    // thus cannot be used to lookup a type.
+    mangled_type_name = static_object->GetMangledTypeName();
+  else
+    mangled_type_name = object.GetMangledTypeName();
+
   // Swift APIs that receive mangled names require the prefix removed.
   mangled_type_name.consume_front("$s");
   mangled_type_name.consume_front("$e"); // Embedded Swift prefix
