@@ -23984,7 +23984,7 @@ bool SLPVectorizerPass::vectorizeStores(
       auto VFIsProfitable = [](unsigned Size, const unsigned RS) {
         return Size >= RS;
       };
-      auto FirstSizeSame = [](unsigned Size, const unsigned RS) {
+      auto RangeSizeSame = [](unsigned Size, const unsigned RS) {
         return Size == RS;
       };
       while (true) {
@@ -24082,7 +24082,7 @@ bool SLPVectorizerPass::vectorizeStores(
               // trees, just with larger number of elements.
               if (VF > MaxRegVF && TreeSize > 1 && VF > MaxRegVF &&
                   all_of(RangeSizes.slice(SliceStartIdx, VF),
-                         std::bind(FirstSizeSame, TreeSize, _1))) {
+                         std::bind(RangeSizeSame, TreeSize, _1))) {
                 SliceStartIdx += VF;
                 while (SliceStartIdx != MaxSliceEnd &&
                        RangeSizes[SliceStartIdx] == TreeSize)
