@@ -235,7 +235,7 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef name,
 DefinedData *SymbolTable::addOptionalDataSymbol(StringRef name,
                                                 uint64_t value) {
   Symbol *s = find(name);
-  if (!s && (ctx.arg.exportAll || ctx.arg.exportedSymbols.count(name) != 0))
+  if (!s && (ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
     s = insertName(name).first;
   else if (!s || s->isDefined())
     return nullptr;

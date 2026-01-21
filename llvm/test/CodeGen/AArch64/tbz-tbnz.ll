@@ -599,7 +599,7 @@ define ptr @tbnz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ;
 ; CHECK-GI-LABEL: tbnz_wzr:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #0 // =0x0
+; CHECK-GI-NEXT:    mov w8, wzr
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB20_3
 ; CHECK-GI-NEXT:  // %bb.1: // %if.end10
 ; CHECK-GI-NEXT:    tbnz w8, #0, .LBB20_4
@@ -672,9 +672,8 @@ define ptr @tbz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-GI-NEXT:    mov x0, xzr
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB21_3: // %opnfil.exit.thread
-; CHECK-GI-NEXT:    mov w8, #0 // =0x0
 ; CHECK-GI-NEXT:    str wzr, [x1]
-; CHECK-GI-NEXT:    tbz w8, #0, .LBB21_2
+; CHECK-GI-NEXT:    b .LBB21_2
 ; CHECK-GI-NEXT:  .LBB21_4: // %if.else25
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:    mov x0, xzr
