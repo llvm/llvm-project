@@ -51,7 +51,7 @@ func.func @invalid_materialize_in_destination(%arg0: tensor<4xf32>, %arg1: tenso
 // -----
 
 func.func @invalid_materialize_in_destination(%arg0: tensor<5x5xf32>, %arg1: tensor<5xf32>) {
-  // expected-error @below{{rank mismatch between source and destination shape}}
+  // expected-error @below{{'bufferization.materialize_in_destination' op source rank (2) does not match destination rank (1)}}
   bufferization.materialize_in_destination %arg0 in %arg1 : (tensor<5x5xf32>, tensor<5xf32>) -> tensor<5xf32>
 }
 
