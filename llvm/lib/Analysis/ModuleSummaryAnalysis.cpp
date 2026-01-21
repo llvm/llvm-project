@@ -1063,7 +1063,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     std::unique_ptr<BlockFrequencyInfo> BFIPtr;
     if (GetBFICallback)
       BFI = GetBFICallback(F);
-    else if (F.hasProfileData()) {
+    if (!BFI && F.hasProfileData()) {
       LoopInfo LI{DT};
       BranchProbabilityInfo BPI{F, LI};
       BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, LI);
@@ -1165,7 +1165,7 @@ ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   return buildModuleSummaryIndex(
       M,
       [&FAM](const Function &F) {
-        return &FAM.getResult<BlockFrequencyAnalysis>(
+        return FAM.getCachedResult<BlockFrequencyAnalysis>(
             *const_cast<Function *>(&F));
       },
       &PSI,
@@ -1199,9 +1199,9 @@ bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
   Index.emplace(buildModuleSummaryIndex(
       M,
       [this](const Function &F) {
-        return &(this->getAnalysis<BlockFrequencyInfoWrapperPass>(
-                         *const_cast<Function *>(&F))
-                     .getBFI());
+        auto *BFIWP =
+            this->getAnalysisIfAvailable<BlockFrequencyInfoWrapperPass>();
+        return BFIWP ? &BFIWP->getBFI() : nullptr;
       },
       PSI,
       [&](const Function &F) -> const StackSafetyInfo * {
@@ -1220,7 +1220,7 @@ bool ModuleSummaryIndexWrapperPass::doFinalization(Module &M) {
 
 void ModuleSummaryIndexWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<BlockFrequencyInfoWrapperPass>();
+  AU.addUsedIfAvailable<BlockFrequencyInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   AU.addRequired<StackSafetyInfoWrapperPass>();
 }
