@@ -849,7 +849,8 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 }
 Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                                                       StringRef InputTgtImage) {
-  ODBG(OLDT_Init) << "Load data from image " << InputTgtImage.bytes_begin();
+  ODBG(OLDT_Init) << "Load data from image "
+                  << static_cast<const void *>(InputTgtImage.bytes_begin());
 
   std::unique_ptr<MemoryBuffer> Buffer;
   if (identify_magic(InputTgtImage) == file_magic::bitcode) {
@@ -1198,12 +1199,14 @@ Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
   return Plugin::success();
 }
 
-Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo) {
+Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
+                                  bool ReleaseQueue,
+                                  bool *IsQueueWorkCompleted) {
   if (!AsyncInfo || !AsyncInfo->Queue)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "invalid async info queue");
 
-  return queryAsyncImpl(*AsyncInfo);
+  return queryAsyncImpl(*AsyncInfo, ReleaseQueue, IsQueueWorkCompleted);
 }
 
 Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {
@@ -1657,8 +1660,9 @@ int32_t GenericPluginTy::is_initialized() const { return Initialized; }
 int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
     std::string ErrStr = toString(std::move(Err));
-    ODBG(OLDT_Init) << "Failure to check validity of image " << Image.data()
-                    << ": " << ErrStr;
+    ODBG(OLDT_Init) << "Failure to check validity of image "
+                    << static_cast<const void *>(Image.data()) << ": "
+                    << ErrStr;
     return false;
   };
   switch (identify_magic(Image)) {
@@ -1686,7 +1690,8 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
 int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
     std::string ErrStr = toString(std::move(Err));
-    ODBG(OLDT_Init) << "Failure to check validity of image " << Image << ": "
+    ODBG(OLDT_Init) << "Failure to check validity of image "
+                    << static_cast<const void *>(Image.data()) << ": "
                     << ErrStr;
     return false;
   };
