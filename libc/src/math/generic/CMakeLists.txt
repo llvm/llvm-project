@@ -4214,6 +4214,9 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
     libc.src.__support.math.expxf16_utils
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.math.sinhf16
 )
 
 add_entrypoint_object(
