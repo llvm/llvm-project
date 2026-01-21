@@ -61727,7 +61727,7 @@ static SDValue combinePCLMULQDQ(SDNode *N, SelectionDAG &DAG,
         !isInRange(RepeatedMask[M & 1], 0, 2))
       return false;
     Op = DAG.getBitcast(VT, Src[0]);
-    M = RepeatedMask[M & 1] & 1;
+    M = RepeatedMask[M & 1];
     return true;
   };
 
