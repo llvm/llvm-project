@@ -77,9 +77,8 @@ class LLVMLoweringInfo {
   string llvmOp = "";
 }
 
-class loweringBuilders<dag p, code b = ""> {
+class LoweringBuilders<dag p> {
   dag dagParams = p;
-  code body = b;
 }
 
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
@@ -107,7 +106,7 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
   // pattern is not automatically added to the RewritePatternSet. Users are
   // responsible for manually registering the lowering pattern in the lowering
   // pass.
-  loweringBuilders customLLVMLoweringConstructorDecl = ?;
+  LoweringBuilders customLLVMLoweringConstructorDecl = ?;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1502,7 +1501,7 @@ def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
   let hasVerifier = 1;
 
   let customLLVMLoweringConstructorDecl =
-    loweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6046,7 +6045,7 @@ def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
   }];
 
   let customLLVMLoweringConstructorDecl =
-    loweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//

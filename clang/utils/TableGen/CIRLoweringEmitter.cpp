@@ -33,7 +33,6 @@ struct CustomLoweringCtor {
   };
 
   std::vector<Param> Params;
-  std::string Body;
 };
 
 // Adapted from mlir/lib/TableGen/Operator.cpp
@@ -77,7 +76,6 @@ std::optional<CustomLoweringCtor> parseCustomLoweringCtor(const Record *R) {
 
   CustomLoweringCtor Ctor;
   const DagInit *Args = R->getValueAsDag("dagParams");
-  Ctor.Body = R->getValueAsString("body");
 
   for (const auto &[Arg, Name] : Args->getArgAndNames()) {
     Ctor.Params.push_back(
@@ -86,9 +84,10 @@ std::optional<CustomLoweringCtor> parseCustomLoweringCtor(const Record *R) {
 
   return Ctor;
 }
+
 void emitCustomParamList(raw_ostream &Code,
                          ArrayRef<CustomLoweringCtor::Param> Params) {
-  for (const auto &Param : Params) {
+  for (const CustomLoweringCtor::Param &Param : Params) {
     Code << ", ";
     Code << Param.Type << " " << Param.Name;
   }
@@ -96,7 +95,7 @@ void emitCustomParamList(raw_ostream &Code,
 
 void emitCustomInitList(raw_ostream &Code,
                         ArrayRef<CustomLoweringCtor::Param> Params) {
-  for (auto &P : Params)
+  for (const CustomLoweringCtor::Param &P : Params)
     Code << ", " << P.Name << "(" << P.Name << ")";
 }
 
@@ -134,7 +133,8 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
                                  llvm::StringRef PatternName, bool IsRecursive,
                                  llvm::StringRef ExtraDecl,
                                  const Record *CustomCtorRec) {
-  auto CustomCtor = parseCustomLoweringCtor(CustomCtorRec);
+  std::optional<CustomLoweringCtor> CustomCtor =
+      parseCustomLoweringCtor(CustomCtorRec);
   std::string CodeBuffer;
   llvm::raw_string_ostream Code(CodeBuffer);
 
@@ -144,7 +144,7 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
   Code << "  [[maybe_unused]] mlir::DataLayout const &dataLayout;\n";
 
   if (CustomCtor) {
-    for (auto &P : CustomCtor->Params)
+    for (const CustomLoweringCtor::Param &P : CustomCtor->Params)
       Code << "  " << P.Type << " " << P.Name << ";\n";
   }
 
@@ -177,9 +177,6 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
 
   if (IsRecursive)
     Code << "    setHasBoundedRewriteRecursion();\n";
-
-  if (CustomCtor)
-    Code << CustomCtor->Body << "\n";
 
   Code << "  }\n\n";
 
