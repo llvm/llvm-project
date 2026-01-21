@@ -7115,19 +7115,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     }
     return;
   }
-  case Intrinsic::convert_to_fp16:
-    setValue(&I, DAG.getNode(ISD::BITCAST, sdl, MVT::i16,
-                             DAG.getNode(ISD::FP_ROUND, sdl, MVT::f16,
-                                         getValue(I.getArgOperand(0)),
-                                         DAG.getTargetConstant(0, sdl,
-                                                               MVT::i32))));
-    return;
-  case Intrinsic::convert_from_fp16:
-    setValue(&I, DAG.getNode(ISD::FP_EXTEND, sdl,
-                             TLI.getValueType(DAG.getDataLayout(), I.getType()),
-                             DAG.getNode(ISD::BITCAST, sdl, MVT::f16,
-                                         getValue(I.getArgOperand(0)))));
-    return;
   case Intrinsic::fptosi_sat: {
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     setValue(&I, DAG.getNode(ISD::FP_TO_SINT_SAT, sdl, VT,
