@@ -142,7 +142,7 @@ void test_auth_load_relative_and_sign(int *dp, int (*fp)(int)) {
   fr = __builtin_ptrauth_auth_load_relative_and_sign(fp, INVALID_KEY, 0, VALID_CODE_KEY, dp, 10); // expected-error {{does not identify a valid pointer authentication key for the current target}}
   fr = __builtin_ptrauth_auth_load_relative_and_sign(fp, VALID_CODE_KEY, 0, INVALID_KEY, dp, 10); // expected-error {{does not identify a valid pointer authentication key for the current target}}
 
-  float *mismatch = __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, 0, VALID_DATA_KEY, dp,0); // expected-warning {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
+  float *mismatch = __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, 0, VALID_DATA_KEY, dp,0); // expected-error {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
 }
 
 void test_sign_generic_data(int *dp) {
