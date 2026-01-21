@@ -41174,7 +41174,10 @@ static SDValue combineX86ShuffleChainWithExtract(
 
   // Remove unused/repeated shuffle source ops.
   resolveTargetShuffleInputsAndMask(WideInputs, WideMask);
-  assert(!WideInputs.empty() && "Shuffle with no inputs detected");
+  if (WideInputs.empty() || all_of(WideInputs, [WideSizeInBits](SDValue V) {
+        return V.getValueSizeInBits() < WideSizeInBits;
+      }))
+    return SDValue();
 
   // Bail if we're always extracting from the lowest subvectors,
   // combineX86ShuffleChain should match this for the current width, or the

@@ -1198,12 +1198,14 @@ Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
   return Plugin::success();
 }
 
-Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo) {
+Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
+                                  bool ReleaseQueue,
+                                  bool *IsQueueWorkCompleted) {
   if (!AsyncInfo || !AsyncInfo->Queue)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "invalid async info queue");
 
-  return queryAsyncImpl(*AsyncInfo);
+  return queryAsyncImpl(*AsyncInfo, ReleaseQueue, IsQueueWorkCompleted);
 }
 
 Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {

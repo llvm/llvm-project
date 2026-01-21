@@ -854,8 +854,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Query for the completion of the pending operations on the __tgt_async_info
   /// structure in a non-blocking manner.
-  Error queryAsync(__tgt_async_info *AsyncInfo);
-  virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo) = 0;
+  Error queryAsync(__tgt_async_info *AsyncInfo, bool ReleaseQueue = true,
+                   bool *IsQueueWorkCompleted = nullptr);
+  virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
+                               bool *IsQueueWorkCompleted) = 0;
 
   /// Check whether the architecture supports VA management
   virtual bool supportVAManagement() const { return false; }

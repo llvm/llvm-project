@@ -2642,7 +2642,7 @@ bool hasMAIInsts(const MCSubtargetInfo &STI) {
 }
 
 bool hasVOPD(const MCSubtargetInfo &STI) {
-  return STI.hasFeature(AMDGPU::FeatureVOPD);
+  return STI.hasFeature(AMDGPU::FeatureVOPDInsts);
 }
 
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI) {

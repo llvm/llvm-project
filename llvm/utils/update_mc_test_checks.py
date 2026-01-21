@@ -3,7 +3,7 @@
 A test update script.  This script is a utility to update LLVM 'llvm-mc' based test cases with new FileCheck patterns.
 """
 
-from __future__ import print_function
+from __future__ import annotations, print_function
 
 from sys import stderr
 from traceback import print_exc
