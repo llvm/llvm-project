@@ -12,6 +12,8 @@ inline constexpr void* operator new(__SIZE_TYPE__, void* p) noexcept { return p;
 namespace std {
 template<typename T, typename... Args>
 constexpr T* construct_at(T* p, Args&&... args) { return ::new((void*)p) T(static_cast<Args&&>(args)...); }
+template<typename T>
+constexpr void destroy_at(T *p) { p->~T(); } // #destroy
 }
 
 constexpr int f(int n) {  // all20-error {{constexpr function never produces a constant expression}}
@@ -528,6 +530,37 @@ namespace InactiveLocalsInConditionalOp {
   static_assert(test2(true));
 
 }
+
+namespace PrimitiveArrayLifetimes {
+  consteval int test1() {
+    int a[3];
+    assert_active(a[0]);
+    assert_active(a[1]);
+    assert_active(a[2]);
+    std::destroy_at(&a[0]);
+    assert_inactive(a[0]);
+
+    std::construct_at(&a[0]);
+    assert_active(a[0]);
+    return a[0];
+  }
+  static_assert(test1() == 0);
+
+  consteval int test2() {
+    int a[3] = {1,2,3};
+    assert_active(a[0]);
+    assert_active(a[1]);
+    assert_active(a[2]);
+    std::destroy_at(&a[0]);
+    assert_inactive(a[0]);
+
+    std::construct_at(&a[0]);
+    assert_active(a[0]);
+    return a[0];
+  }
+  static_assert(test2() == 0);
+}
+
 #endif
 
 namespace UnknownParams {
