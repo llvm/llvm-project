@@ -104,7 +104,7 @@ template <bool IsTypeKeyword = false> struct SpaceCheck {
         if constexpr (IsTypeKeyword) {
           if (!state.inFixedForm()) {
             state.Say(
-                "Unexpected syntax while parsing the statement-function statement"_err_en_US);
+                "A blank space or a separator (::) is required after the type keyword"_err_en_US);
           }
         } else {
           MissingSpace(state);
