@@ -9,7 +9,7 @@ func.func @add_type_cast(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf16>, %
 // -----
 
 func.func @add_broadcast(%arg0: memref<8x16xf32>, %arg1: memref<4x8x16xf32>, %arg2: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.add ins(%arg0, %arg1 : memref<8x16xf32>, memref<4x8x16xf32>) outs(%arg2: memref<4x8x16xf32>)
   return
 }
@@ -25,7 +25,7 @@ func.func @sub_type_cast(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf16>, %
 // -----
 
 func.func @sub_broadcast(%arg0: memref<8x16xf32>, %arg1: memref<4x8x16xf32>, %arg2: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.sub ins(%arg0, %arg1 : memref<8x16xf32>, memref<4x8x16xf32>) outs(%arg2: memref<4x8x16xf32>)
   return
 }
@@ -41,7 +41,7 @@ func.func @mul_type_cast(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf16>, %
 // -----
 
 func.func @mul_broadcast(%arg0: memref<8x16xf32>, %arg1: memref<4x8x16xf32>, %arg2: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.mul ins(%arg0, %arg1 : memref<8x16xf32>, memref<4x8x16xf32>) outs(%arg2: memref<4x8x16xf32>)
   return
 }
@@ -57,7 +57,7 @@ func.func @div_type_cast(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf16>, %
 // -----
 
 func.func @div_broadcast(%arg0: memref<8x16xf32>, %arg1: memref<4x8x16xf32>, %arg2: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.div ins(%arg0, %arg1 : memref<8x16xf32>, memref<4x8x16xf32>) outs(%arg2: memref<4x8x16xf32>)
   return
 }
@@ -73,7 +73,7 @@ func.func @divu_type_cast(%arg0: memref<4x8x16xi32>, %arg1: memref<4x8x16xi16>, 
 // -----
 
 func.func @divu_broadcast(%arg0: memref<8x16xi32>, %arg1: memref<4x8x16xi32>, %arg2: memref<4x8x16xi32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.div_unsigned ins(%arg0, %arg1 : memref<8x16xi32>, memref<4x8x16xi32>) outs(%arg2: memref<4x8x16xi32>)
   return
 }
@@ -89,7 +89,7 @@ func.func @exp_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
 // -----
 
 func.func @exp_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.exp ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -105,7 +105,7 @@ func.func @log_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
 // -----
 
 func.func @log_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.log ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -121,7 +121,7 @@ func.func @abs_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
 // -----
 
 func.func @abs_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.abs ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -137,7 +137,7 @@ func.func @ceil_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
 // -----
 
 func.func @ceil_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.ceil ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -153,7 +153,7 @@ func.func @floor_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
 // -----
 
 func.func @floor_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.floor ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -169,7 +169,7 @@ func.func @negf_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
 // -----
 
 func.func @negf_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.negf ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -185,7 +185,7 @@ func.func @reciprocal_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf3
 // -----
 
 func.func @reciprocal_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.reciprocal ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -201,7 +201,7 @@ func.func @round_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
 // -----
 
 func.func @round_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.round ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -217,7 +217,7 @@ func.func @sqrt_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
 // -----
 
 func.func @sqrt_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.sqrt ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -233,7 +233,7 @@ func.func @rsqrt_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
 // -----
 
 func.func @rsqrt_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.rsqrt ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -249,7 +249,7 @@ func.func @square_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) 
 // -----
 
 func.func @square_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.square ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -265,7 +265,7 @@ func.func @tanh_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
 // -----
 
 func.func @tanh_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.tanh ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -281,7 +281,7 @@ func.func @erf_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
 // -----
 
 func.func @erf_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.erf ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
   return
 }
@@ -297,7 +297,7 @@ func.func @max_type_cast(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf16>, %
 // -----
 
 func.func @max_broadcast(%arg0: memref<8x16xf32>, %arg1: memref<4x8x16xf32>, %arg2: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.max ins(%arg0, %arg1 : memref<8x16xf32>, memref<4x8x16xf32>) outs(%arg2: memref<4x8x16xf32>)
   return
 }
@@ -313,7 +313,7 @@ func.func @min_type_cast(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf16>, %
 // -----
 
 func.func @min_broadcast(%arg0: memref<8x16xf32>, %arg1: memref<4x8x16xf32>, %arg2: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.min ins(%arg0, %arg1 : memref<8x16xf32>, memref<4x8x16xf32>) outs(%arg2: memref<4x8x16xf32>)
   return
 }
@@ -329,7 +329,7 @@ func.func @powf_type_cast(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf16>, 
 // -----
 
 func.func @powf_broadcast(%arg0: memref<8x16xf32>, %arg1: memref<4x8x16xf32>, %arg2: memref<4x8x16xf32>) {
-  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
   linalg.powf ins(%arg0, %arg1 : memref<8x16xf32>, memref<4x8x16xf32>) outs(%arg2: memref<4x8x16xf32>)
   return
 }
@@ -349,4 +349,3 @@ func.func @select_wrong_condition_type(%arg0: memref<4x8x16xf32>, %arg1: memref<
   linalg.select ins(%arg0, %arg1, %arg2 : memref<4x8x16xf32>, memref<4x8x16xf32>, memref<4x8x16xf32>) outs(%arg3: memref<4x8x16xf32>)
   return
 }
-

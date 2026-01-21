@@ -16,7 +16,7 @@
 define i32 @cols_needed(<4 x i16> %wide.load) {
 ; POWERPC_64LE-LABEL: cols_needed:
 ; POWERPC_64LE:       # %bb.0: # %entry
-; POWERPC_64LE-NEXT:    xxlxor v3, v3, v3
+; POWERPC_64LE-NEXT:    vspltish v3, 7
 ; POWERPC_64LE-NEXT:    li r3, 0
 ; POWERPC_64LE-NEXT:    vcmpequh v2, v2, v3
 ; POWERPC_64LE-NEXT:    vspltisw v3, 1
@@ -32,7 +32,7 @@ define i32 @cols_needed(<4 x i16> %wide.load) {
 ;
 ; POWERPC_64-LABEL: cols_needed:
 ; POWERPC_64:       # %bb.0: # %entry
-; POWERPC_64-NEXT:    xxlxor v3, v3, v3
+; POWERPC_64-NEXT:    vspltish v3, 7
 ; POWERPC_64-NEXT:    li r3, 0
 ; POWERPC_64-NEXT:    vcmpequh v2, v2, v3
 ; POWERPC_64-NEXT:    vspltisw v3, 1
@@ -48,7 +48,7 @@ define i32 @cols_needed(<4 x i16> %wide.load) {
 ;
 ; POWERPC_32-LABEL: cols_needed:
 ; POWERPC_32:       # %bb.0: # %entry
-; POWERPC_32-NEXT:    xxlxor v3, v3, v3
+; POWERPC_32-NEXT:    vspltish v3, 7
 ; POWERPC_32-NEXT:    vcmpequh v2, v2, v3
 ; POWERPC_32-NEXT:    vspltisw v3, 1
 ; POWERPC_32-NEXT:    xxlnor v2, v2, v2
@@ -62,7 +62,7 @@ define i32 @cols_needed(<4 x i16> %wide.load) {
 ; POWERPC_32-NEXT:    lwz r3, -16(r1)
 ; POWERPC_32-NEXT:    blr
 entry:
-  %0 = icmp ne <4 x i16> %wide.load, zeroinitializer
+  %0 = icmp ne <4 x i16> %wide.load, splat (i16 7)
   %1 = zext <4 x i1> %0 to <4 x i32>
   %2 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %1)
   ret i32 %2

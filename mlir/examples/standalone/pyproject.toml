@@ -6,7 +6,7 @@
 [project]
 name = "standalone-python-bindings"
 dynamic = ["version"]
-requires-python = ">=3.8,<=3.14"
+requires-python = ">=3.8"
 dependencies = [
     "numpy>=1.19.5, <=2.1.2",
     "PyYAML>=5.4.0, <=6.0.1",
@@ -56,9 +56,14 @@ MLIR_DIR = { env = "MLIR_DIR", default = "" }
 # Non-optional
 CMAKE_BUILD_TYPE = { env = "CMAKE_BUILD_TYPE", default = "Release" }
 MLIR_ENABLE_BINDINGS_PYTHON = "ON"
+
 # Effectively non-optional (any downstream project should specify this).
-MLIR_PYTHON_PACKAGE_PREFIX = "mlir_standalone"
+MLIR_BINDINGS_PYTHON_NB_DOMAIN = { env = "MLIR_BINDINGS_PYTHON_NB_DOMAIN", default = "mlir_standalone" }
+MLIR_PYTHON_PACKAGE_PREFIX = { env = "MLIR_PYTHON_PACKAGE_PREFIX", default = "mlir_standalone" }
+
 # This specifies the directory in the install directory (i.e., /tmp/pip-wheel/platlib) where _mlir_libs, dialects, etc.
 # are installed. Thus, this will be the package location (and the name of the package) that pip assumes is
 # the root package.
-MLIR_BINDINGS_PYTHON_INSTALL_PREFIX = "mlir_standalone"
+MLIR_BINDINGS_PYTHON_INSTALL_PREFIX = { env = "MLIR_BINDINGS_PYTHON_INSTALL_PREFIX", default = "mlir_standalone" }
+# Optional
+MLIR_INCLUDE_TESTS = { env = "MLIR_INCLUDE_TESTS", default = "ON" }

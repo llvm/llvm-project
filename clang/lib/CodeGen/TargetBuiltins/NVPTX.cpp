@@ -415,6 +415,14 @@ static Value *MakeHalfType(unsigned IntrinsicID, unsigned BuiltinID,
   return MakeHalfType(CGF.CGM.getIntrinsic(IntrinsicID), BuiltinID, E, CGF);
 }
 
+static Value *MakeFMAOOB(unsigned IntrinsicID, llvm::Type *Ty,
+                         const CallExpr *E, CodeGenFunction &CGF) {
+  return CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(IntrinsicID, {Ty}),
+                                {CGF.EmitScalarExpr(E->getArg(0)),
+                                 CGF.EmitScalarExpr(E->getArg(1)),
+                                 CGF.EmitScalarExpr(E->getArg(2))});
+}
+
 } // namespace
 
 Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
@@ -963,6 +971,34 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return MakeHalfType(Intrinsic::nvvm_fma_rn_sat_f16, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_sat_f16x2:
     return MakeHalfType(Intrinsic::nvvm_fma_rn_sat_f16x2, BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_f16:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob, Builder.getHalfTy(), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_f16x2:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob,
+                      llvm::FixedVectorType::get(Builder.getHalfTy(), 2), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_bf16:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob, Builder.getBFloatTy(), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_bf16x2:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob,
+                      llvm::FixedVectorType::get(Builder.getBFloatTy(), 2), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_f16:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu, Builder.getHalfTy(), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_f16x2:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu,
+                      llvm::FixedVectorType::get(Builder.getHalfTy(), 2), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_bf16:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu, Builder.getBFloatTy(), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_bf16x2:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu,
+                      llvm::FixedVectorType::get(Builder.getBFloatTy(), 2), E,
+                      *this);
   case NVPTX::BI__nvvm_fmax_f16:
     return MakeHalfType(Intrinsic::nvvm_fmax_f16, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_f16x2:
@@ -1197,6 +1233,27 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_count),
         {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1))});
+  case NVPTX::BI__nvvm_bar0_and:
+    return Builder.CreateZExt(
+        Builder.CreateIntrinsic(
+            Intrinsic::nvvm_barrier_cta_red_and_aligned_all, {},
+            {Builder.getInt32(0),
+             Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
+                                  Builder.getInt32(0))}),
+        Builder.getInt32Ty());
+  case NVPTX::BI__nvvm_bar0_or:
+    return Builder.CreateZExt(
+        Builder.CreateIntrinsic(
+            Intrinsic::nvvm_barrier_cta_red_or_aligned_all, {},
+            {Builder.getInt32(0),
+             Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
+                                  Builder.getInt32(0))}),
+        Builder.getInt32Ty());
+  case NVPTX::BI__nvvm_bar0_popc:
+    return Builder.CreateIntrinsic(
+        Intrinsic::nvvm_barrier_cta_red_popc_aligned_all, {},
+        {Builder.getInt32(0), Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
+                                                   Builder.getInt32(0))});
   default:
     return nullptr;
   }

@@ -1999,11 +1999,14 @@ public:
           cast<VectorType>(Args[0]->getType()), {}, CostKind, Index,
           cast<VectorType>(Args[1]->getType()));
     }
-    case Intrinsic::vector_splice: {
+    case Intrinsic::vector_splice_left:
+    case Intrinsic::vector_splice_right: {
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
-      return thisT()->getShuffleCost(TTI::SK_Splice, cast<VectorType>(RetTy),
-                                     cast<VectorType>(Args[0]->getType()), {},
-                                     CostKind, Index, cast<VectorType>(RetTy));
+      return thisT()->getShuffleCost(
+          TTI::SK_Splice, cast<VectorType>(RetTy),
+          cast<VectorType>(Args[0]->getType()), {}, CostKind,
+          IID == Intrinsic::vector_splice_left ? Index : -Index,
+          cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:

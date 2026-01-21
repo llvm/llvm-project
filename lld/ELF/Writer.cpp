@@ -2111,20 +2111,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // Dynamic section must be the last one in this list and dynamic
     // symbol table section (dynSymTab) must be the first one.
     for (Partition &part : ctx.partitions) {
-      if (part.relaDyn) {
-        part.relaDyn->mergeRels();
-        // Compute DT_RELACOUNT to be used by part.dynamic.
-        part.relaDyn->partitionRels();
-        finalizeSynthetic(ctx, part.relaDyn.get());
-      }
-      if (part.relrDyn) {
-        part.relrDyn->mergeRels();
-        finalizeSynthetic(ctx, part.relrDyn.get());
-      }
-      if (part.relrAuthDyn) {
-        part.relrAuthDyn->mergeRels();
-        finalizeSynthetic(ctx, part.relrAuthDyn.get());
-      }
+      finalizeSynthetic(ctx, part.relaDyn.get());
+      finalizeSynthetic(ctx, part.relrDyn.get());
+      finalizeSynthetic(ctx, part.relrAuthDyn.get());
 
       finalizeSynthetic(ctx, part.dynSymTab.get());
       finalizeSynthetic(ctx, part.gnuHashTab.get());
