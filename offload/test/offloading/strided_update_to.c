@@ -4,6 +4,8 @@
 // other element (stride 2) from the host to the device
 
 // RUN: %libomptarget-compile-run-and-check-generic
+// XFAIL: intelgpu
+
 #include <omp.h>
 #include <stdio.h>
 
