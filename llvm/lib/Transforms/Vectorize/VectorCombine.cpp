@@ -39,7 +39,6 @@
 #include <optional>
 #include <queue>
 #include <set>
-#include <tuple>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -4794,10 +4793,11 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         return false;
 
       // Create new load of smaller vector.
-      Value *NewPtr =
-          LowOffset > 0u
-              ? Builder.CreateInBoundsPtrAdd(PtrOp, Builder.getInt32(LowOffset))
-              : PtrOp;
+      Type *IndexTy = DL->getIndexType(PtrOp->getType());
+      Constant *PtrOffset = ConstantInt::get(IndexTy, LowOffset);
+      Value *NewPtr = LowOffset > 0u
+                          ? Builder.CreateInBoundsPtrAdd(PtrOp, PtrOffset)
+                          : PtrOp;
 
       auto *NewLoad = cast<LoadInst>(
           Builder.CreateAlignedLoad(NewLoadTy, NewPtr, OldLoad->getAlign()));
