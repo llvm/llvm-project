@@ -9,7 +9,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; X86-LABEL: define i32 @simple_csa_int_select(
 ; X86-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i32 [[A:%.*]]) {
 ; X86-NEXT:  [[ENTRY:.*]]:
-; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 24
+; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 28
 ; X86-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; X86:       [[VECTOR_PH]]:
 ; X86-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
@@ -496,7 +496,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; X86-LABEL: define i32 @int_select_with_extra_arith_payload(
 ; X86-SAME: i64 [[N:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr noalias [[C:%.*]], i32 [[THRESHOLD:%.*]]) {
 ; X86-NEXT:  [[ENTRY:.*]]:
-; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 12
+; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; X86-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; X86:       [[VECTOR_PH]]:
 ; X86-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
@@ -644,7 +644,7 @@ define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) {
 ; X86-LABEL: define i8 @simple_csa_byte_select(
 ; X86-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i8 [[A:%.*]]) {
 ; X86-NEXT:  [[ENTRY:.*]]:
-; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 96
+; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 112
 ; X86-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; X86:       [[VECTOR_PH]]:
 ; X86-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
