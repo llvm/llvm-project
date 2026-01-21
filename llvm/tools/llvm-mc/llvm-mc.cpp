@@ -21,6 +21,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
@@ -626,6 +627,12 @@ int main(int argc, char **argv) {
     Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
                                            std::move(CE), std::move(MAB)));
 
+    Triple T(TripleName);
+    if (T.isLFI()) {
+      Str->initSections(NoExecStack, *STI);
+      initializeLFIMCStreamer(*Str.get(), Ctx, T);
+    }
+
   } else if (FileType == OFT_Null) {
     Str.reset(TheTarget->createNullStreamer(Ctx));
   } else {
@@ -646,6 +653,13 @@ int main(int argc, char **argv) {
     if (NoExecStack)
       Str->switchSection(
           Ctx.getAsmInfo()->getStackSection(Ctx, /*Exec=*/false));
+
+    Triple T(TripleName);
+    if (T.isLFI()) {
+      Str->initSections(NoExecStack, *STI);
+      initializeLFIMCStreamer(*Str.get(), Ctx, T);
+    }
+
     Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
                               VersionTuple());
   }

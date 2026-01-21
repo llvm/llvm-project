@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
@@ -120,13 +121,14 @@ public:
   /// @}
 };
 
-MCAsmParserExtension *createDarwinAsmParser();
-MCAsmParserExtension *createELFAsmParser();
-MCAsmParserExtension *createCOFFAsmParser();
-MCAsmParserExtension *createCOFFMasmParser();
-MCAsmParserExtension *createGOFFAsmParser();
-MCAsmParserExtension *createXCOFFAsmParser();
-MCAsmParserExtension *createWasmAsmParser();
+LLVM_ABI MCAsmParserExtension *createDarwinAsmParser();
+LLVM_ABI MCAsmParserExtension *createELFAsmParser();
+LLVM_ABI MCAsmParserExtension *createCOFFAsmParser();
+LLVM_ABI MCAsmParserExtension *createCOFFMasmParser();
+LLVM_ABI MCAsmParserExtension *createGOFFAsmParser();
+LLVM_ABI MCAsmParserExtension *createXCOFFAsmParser();
+LLVM_ABI MCAsmParserExtension *createWasmAsmParser();
+LLVM_ABI MCAsmParserExtension *createLFIAsmParser(MCLFIRewriter *Exp);
 
 } // end namespace llvm
 
