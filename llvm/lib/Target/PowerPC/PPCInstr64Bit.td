@@ -1514,18 +1514,12 @@ class GETtlsADDRPseudo <string asmstr> : PPCEmitTimePseudo<(outs g8rc:$rD), (ins
                                              asmstr,
                                              [(set i64:$rD,
                                                (PPCgetTlsAddr i64:$reg, tglobaltlsaddr:$sym))]>,
-                                      isPPC64 {
-  // May be either 4 or 8 bytes, specify upper bound.
-  let Size = 8;
-}
+                                      isPPC64;
 class GETtlsldADDRPseudo <string asmstr> : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$reg, tlsgd:$sym),
                                              asmstr,
                                              [(set i64:$rD,
                                                (PPCgetTlsldAddr i64:$reg, tglobaltlsaddr:$sym))]>,
-                                      isPPC64 {
-  // May be either 4 or 8 bytes, specify upper bound.
-  let Size = 8;
-}
+                                      isPPC64;
 
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1 in {
 // LR8 is a true define, while the rest of the Defs are clobbers. X3 is
