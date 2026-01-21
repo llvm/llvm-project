@@ -386,7 +386,6 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
   // Propagate argument/result attributes to all converted arguments/result
   // obtained after converting a given original argument/result.
   if (ArrayAttr resAttrDicts = funcOp.getAllResultAttrs()) {
-    assert(!resAttrDicts.empty() && "expected array to be non-empty");
     if (funcOp.getNumResults() == 1)
       newFuncOp.setAllResultAttrs(resAttrDicts);
   }
