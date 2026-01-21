@@ -304,6 +304,9 @@ static bool isQualificationConvertiblePointer(QualType From, QualType To,
            "From pointer or array has no pointee or element!");
     assert(ToPointeeOrElem && "To pointer or array has no pointee or element!");
 
+    if (!FromPointeeOrElem || !ToPointeeOrElem)
+      return false;
+
     From = *FromPointeeOrElem;
     To = *ToPointeeOrElem;
   }
