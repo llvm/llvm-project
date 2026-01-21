@@ -134,6 +134,8 @@ Improvements to Coverage Mapping
 Bug Fixes in This Version
 -------------------------
 
+- Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
