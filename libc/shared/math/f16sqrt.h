@@ -1,4 +1,4 @@
-//===-- Implementation of f16sqrt function --------------------------------===//
+//===-- Shared f16sqrt function --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/f16sqrt.h"
+#ifndef LLVM_LIBC_SHARED_MATH_F16SQRT_H
+#define LLVM_LIBC_SHARED_MATH_F16SQRT_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/f16sqrt.h"
 
 namespace LIBC_NAMESPACE_DECL {
-LLVM_LIBC_FUNCTION(float16, f16sqrt, (double x)) {
-  return math::f16sqrt(x);
-}
+namespace shared {
+
+using math::f16sqrt;
+
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_F16SQRT_H

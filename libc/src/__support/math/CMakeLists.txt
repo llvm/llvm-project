@@ -1096,3 +1096,13 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  f16sqrt
+  HDRS
+    f16sqrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)

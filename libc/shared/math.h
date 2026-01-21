@@ -69,6 +69,7 @@
 #include "math/log.h"
 #include "math/rsqrtf.h"
 #include "math/rsqrtf16.h"
+#include "math/f16sqrt.h"
 #include "math/sin.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H
