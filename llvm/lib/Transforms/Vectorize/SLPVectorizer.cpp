@@ -24025,8 +24025,6 @@ bool SLPVectorizerPass::vectorizeStores(
               std::distance(RangeSizes.begin(),
                             find_if(RangeSizes, std::bind(IsNotVectorized,
                                                           VF > MaxRegVF, _1)));
-          // Treat VF==MaxRegVF as a small VF. Large-VF will be considered when VF>MaxRegVF
-          // prevents skipping of viable subslices with mixed tree sizes
 
           // Form slices of size VF starting from FirstUnvecStore and try to
           // vectorize them.
