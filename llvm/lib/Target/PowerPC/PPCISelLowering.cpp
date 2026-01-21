@@ -804,6 +804,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   if (Subtarget.hasAltivec()) {
     for (MVT VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
+      setOperationAction(ISD::AVGCEILS, VT, Legal);
+      setOperationAction(ISD::AVGCEILU, VT, Legal);
       setOperationAction(ISD::SADDSAT, VT, Legal);
       setOperationAction(ISD::SSUBSAT, VT, Legal);
       setOperationAction(ISD::UADDSAT, VT, Legal);
