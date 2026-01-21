@@ -9,8 +9,8 @@
 // REQUIRES: std-at-least-c++26
 
 // operator-(x, y)
-// operator-(x, sentinel)
-// operator-(sentinel, x)
+// operator-(x, default_sentinel )
+// operator-(default_sentinel , x)
 // operator-(x, n)
 // operator+(x, n)
 // operator+=(x, n)
@@ -217,7 +217,7 @@ constexpr bool test() {
   }
 
   {
-    // operator-(sentinel, x)
+    // operator-(default_sentinel , x)
     std::array<int, 2> array1{0, 1};
     std::array<int, 2> array2{2, 3};
     std::array<int, 2> array3{4, 5};
@@ -228,7 +228,28 @@ constexpr bool test() {
   }
 
   {
-    // operator-(x, sentinel)
+    // operator-(default_sentinel , x) with empty ranges
+    std::array<int, 2> array1{0, 1};
+    std::array<int, 0> array2;
+    std::array<int, 2> array3{2, 3};
+    std::ranges::concat_view view(std::views::all(array1), std::views::all(array2), std::views::all(array3));
+    auto it1 = view.begin();
+    auto res = std::default_sentinel_t{} - it1;
+    assert(res == 4);
+  }
+
+  {
+    // operator-(default_sentinel , x) with different types
+    std::array<int, 2> array1{0, 1};
+    std::vector<int> array2{2, 3};
+    std::ranges::concat_view view(a, std::views::all(array1), std::views::all(array2));
+    auto it1 = view.begin();
+    auto res = std::default_sentinel_t{} - it1;
+    assert(res == 9);
+  }
+
+  {
+    // operator-(x, default_sentinel )
     std::array<int, 2> array1{0, 1};
     std::array<int, 2> array2{2, 3};
     std::array<int, 2> array3{4, 5};
@@ -251,7 +272,7 @@ constexpr bool test() {
   }
 
   {
-    // One of the ranges does not have sized sentinel
+    // One of the ranges is not random access
     std::ranges::concat_view v(a, b, InputCommonView{buffer1});
     using Iter = decltype(v.begin());
     static_assert(!std::invocable<std::minus<>, Iter, Iter>);

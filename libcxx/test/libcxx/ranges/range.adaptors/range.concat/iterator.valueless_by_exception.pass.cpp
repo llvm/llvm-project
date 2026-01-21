@@ -407,9 +407,8 @@ int main() {
     flag = false;
     Range<0> r1;
     Range<1> r2;
-    lse
 
-        auto cv = std::views::concat(r1, r2);
+    auto cv    = std::views::concat(r1, r2);
     auto iter1 = cv.begin();
     auto iter2 = std::ranges::next(cv.begin(), 4);
     flag       = true;
@@ -426,22 +425,18 @@ int main() {
     NonSimpleRange<0, int> r1;
     NonSimpleRange<1, int> r2;
 
-    auto cv    = std::views::concat(r1, r2);
-    auto iter1 = cv.begin();
-    auto iter2 = std::ranges::next(cv.begin(), 4);
-    flag       = true;
-    using Iter  = std::ranges::iterator_t<decltype(cv)>;       // iterator<fa>
+    auto cv     = std::views::concat(r1, r2);
+    auto iter1  = cv.begin();
+    auto iter2  = std::ranges::next(cv.begin(), 4);
+    flag        = true;
+    using Iter  = std::ranges::iterator_t<decltype(cv)>;       // iterator<false>
     using CIter = std::ranges::iterator_t<const decltype(cv)>; // iterator<true>
 
     try {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE(
-          [&] {
-            [[maybe_unused]] CIter it3(iter1);
-          }(),
-          "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE([&] { [[maybe_unused]] CIter it3(iter1); }(), "valueless by exception");
     }
 
   }
