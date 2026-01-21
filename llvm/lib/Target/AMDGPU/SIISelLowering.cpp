@@ -5553,7 +5553,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const DebugLoc &DL = MI.getDebugLoc();
   const SIInstrInfo *TII = ST.getInstrInfo();
-  bool IsGFX12Plus = AMDGPU::isGFX12Plus(ST);
+  bool IsGFX12Plus = ST.getGeneration() >= AMDGPUSubtarget::GFX12;
 
   // Reduction operations depend on whether the input operand is SGPR or VGPR.
   Register SrcReg = MI.getOperand(1).getReg();
