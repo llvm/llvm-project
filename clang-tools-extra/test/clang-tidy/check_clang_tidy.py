@@ -292,7 +292,7 @@ class CheckRunner:
             sys.exit("No diagnostics were expected, but found the ones above")
 
     def check_fixes(self, input_file: str = "", check_file: str = "") -> None:
-        if not check_file and not self.has_check_fixes:
+        if not check_file or self.has_check_fixes:
             return
 
         input_file = input_file or self.temp_file_name
@@ -379,15 +379,14 @@ class CheckRunner:
 
         header_messages = defaultdict(list)
         remaining_lines: List[str] = []
-        current_file: str = ""
+        current_file = ""
 
         for line in clang_tidy_output.splitlines(keepends=True):
             if re.match(r"^\d+ warnings? generated\.", line):
                 continue
             # Matches the beginning of a clang-tidy diagnostic line,
             # which starts with "file_path:line:col: ".
-            match = re.match(r"^(.+):\d+:\d+: ", line)
-            if match:
+            if match := re.match(r"^(.+):\d+:\d+: ", line):
                 abs_path = os.path.normcase(os.path.abspath(match.group(1)))
                 current_file = abs_path if abs_path in self.check_header_map else ""
 
