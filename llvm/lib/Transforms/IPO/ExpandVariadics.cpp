@@ -310,9 +310,7 @@ public:
     }
 
     void initializeStructAlloca(const DataLayout &DL, IRBuilder<> &Builder,
-                                AllocaInst *Alloced) {
-
-      StructType *VarargsTy = cast<StructType>(Alloced->getAllocatedType());
+                                AllocaInst *Alloced, StructType *VarargsTy) {
 
       for (size_t I = 0; I < size(); I++) {
 
@@ -758,7 +756,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   // Initialize the fields in the struct
   Builder.SetInsertPoint(CB);
   Builder.CreateLifetimeStart(Alloced);
-  Frame.initializeStructAlloca(DL, Builder, Alloced);
+  Frame.initializeStructAlloca(DL, Builder, Alloced, VarargsTy);
 
   const unsigned NumArgs = FuncType->getNumParams();
   SmallVector<Value *> Args(CB->arg_begin(), CB->arg_begin() + NumArgs);
