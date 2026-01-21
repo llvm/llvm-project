@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdangling -Wdangling-field -Wreturn-stack-address -verify %s
 // RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify=cfg %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wexperimental-lifetime-safety -Wno-dangling -verify=cfg %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -919,10 +920,13 @@ struct MySpan {
   MySpan(const std::vector<T>& v);
   ~MySpan();
   using iterator = std::iterator<T>;
-  iterator begin() const [[clang::lifetimebound]];
+  // FIXME: It is not possible to annotate accessor methods of non-owning view types.
+  // Clang should provide another annotation to mark such functions as 'transparent'.
+  iterator begin() const;
 };
+// FIXME: Same as above.
 template <typename T>
-typename MySpan<T>::iterator ReturnFirstIt(const MySpan<T>& v [[clang::lifetimebound]]);
+typename MySpan<T>::iterator ReturnFirstIt(const MySpan<T>& v);
 
 void test4() {
   std::vector<int> v{1};
@@ -934,14 +938,86 @@ void test4() {
   // Ideally, we would diagnose the following case, but due to implementation
   // constraints, we do not.
   const int& t4 = *MySpan<int>(std::vector<int>{}).begin();
+  use(t1, t2, t4);
 
-  // FIXME: Detect this using the CFG-based lifetime analysis (constructor of a pointer).
-  auto it1 = MySpan<int>(v).begin(); // expected-warning {{temporary whose address is use}}
-  auto it2 = ReturnFirstIt(MySpan<int>(v)); // expected-warning {{temporary whose address is used}}
+  auto it1 = MySpan<int>(v).begin();
+  auto it2 = ReturnFirstIt(MySpan<int>(v));
   use(it1, it2);
 }
 
 } // namespace LifetimeboundInterleave
+
+namespace range_based_for_loop_variables {
+std::string_view test_view_loop_var(std::vector<std::string> strings) {
+  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s; //cfg-note {{returned here}}
+  }
+  return "";
+}
+
+const char* test_view_loop_var_with_data(std::vector<std::string> strings) {
+  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s.data(); //cfg-note {{returned here}}
+  }
+  return "";
+}
+
+std::string_view test_no_error_for_views(std::vector<std::string_view> views) {
+  for (std::string_view s : views) {
+    return s;
+  }
+  return "";
+}
+
+std::string_view test_string_ref_var(std::vector<std::string> strings) {
+  for (const std::string& s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s; //cfg-note {{returned here}}
+  }
+  return "";
+}
+
+std::string_view test_opt_strings(std::optional<std::vector<std::string>> strings_or) {
+  for (const std::string& s : *strings_or) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s; //cfg-note {{returned here}}
+  }
+  return "";
+}
+} // namespace range_based_for_loop_variables
+
+namespace iterator_arrow {
+std::string_view test() {
+  std::vector<std::string> strings;
+  return strings.begin()->data(); // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+}
+
+void operator_star_arrow_reference() {
+  std::vector<std::string> v;
+  const char* p = v.begin()->data();
+  const char* q = (*v.begin()).data();
+  const std::string& r = *v.begin();
+
+  auto temporary = []() { return std::vector<std::string>{{"1"}}; };
+  const char* x = temporary().begin()->data();    // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const char* y = (*temporary().begin()).data();  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const std::string& z = (*temporary().begin());  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+
+  use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
+}
+
+void operator_star_arrow_of_iterators_false_positive_no_cfg_analysis() {
+  std::vector<std::pair<int, std::string>> v;
+  const char* p = v.begin()->second.data();
+  const char* q = (*v.begin()).second.data();
+  const std::string& r = (*v.begin()).second;
+
+  auto temporary = []() { return std::vector<std::pair<int, std::string>>{{1, "1"}}; };
+  const char* x = temporary().begin()->second.data();   // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const std::string& z = (*temporary().begin()).second; // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+
+  use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
+}
+} // namespace iterator_arrow
 
 namespace GH120206 {
 struct S {
@@ -979,24 +1055,27 @@ struct S {
 };
 struct Q {
   const S* get() const [[clang::lifetimebound]];
+  ~Q();
 };
 
 std::string_view foo(std::string_view sv [[clang::lifetimebound]]);
 
-// FIXME: Detect this using the CFG-based lifetime analysis.
-//        Detect dangling references to struct field.
-//        https://github.com/llvm/llvm-project/issues/176144
 void test1() {
   std::string_view k1 = S().sv; // OK
-  std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}}
+  std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}} \
+                               // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
   std::string_view k3 = Q().get()->sv; // OK
-  std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}}
+  std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}} \
+                                       // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
-  std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}}
-  std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}}
 
-  use(k1, k2, k3, k4, lb1, lb2);
+  std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}} \
+                                     // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}} \
+                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+
+  use(k1, k2, k3, k4, lb1, lb2);  // cfg-note 4 {{later used here}}
 }
 
 struct Bar {};

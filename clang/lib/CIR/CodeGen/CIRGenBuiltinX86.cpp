@@ -158,6 +158,33 @@ computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
 
   outIndices.resize(numElts);
 }
+
+static mlir::Value emitPrefetch(CIRGenFunction &cgf, unsigned builtinID,
+                                const CallExpr *e,
+                                const SmallVector<mlir::Value> &ops) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location location = cgf.getLoc(e->getExprLoc());
+  mlir::Type voidTy = builder.getVoidTy();
+  mlir::Value address = builder.createPtrBitcast(ops[0], voidTy);
+  bool isWrite{};
+  int locality{};
+
+  assert(builtinID == X86::BI_mm_prefetch || builtinID == X86::BI_m_prefetchw ||
+         builtinID == X86::BI_m_prefetch && "Expected prefetch builtin");
+
+  if (builtinID == X86::BI_mm_prefetch) {
+    int hint = cgf.getSExtIntValueFromConstOp(ops[1]);
+    isWrite = (hint >> 2) & 0x1;
+    locality = hint & 0x3;
+  } else {
+    isWrite = (builtinID == X86::BI_m_prefetchw);
+    locality = 0x3;
+  }
+
+  cir::PrefetchOp::create(builder, location, address, locality, isWrite);
+  return {};
+}
+
 static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
                                          mlir::Location loc, mlir::Value source,
                                          mlir::Value mask,
@@ -767,6 +794,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
                                "x86.sse.sfence", voidTy);
   case X86::BI_mm_prefetch:
+  case X86::BI_m_prefetch:
+  case X86::BI_m_prefetchw:
+    return emitPrefetch(*this, builtinID, expr, ops);
   case X86::BI__rdtsc:
   case X86::BI__builtin_ia32_rdtscp: {
     cgm.errorNYI(expr->getSourceRange(),
@@ -2268,10 +2298,23 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   }
   case X86::BI__shiftleft128:
   case X86::BI__shiftright128: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    // Flip low/high ops and zero-extend amount to matching type.
+    // shiftleft128(Low, High, Amt) -> fshl(High, Low, Amt)
+    // shiftright128(Low, High, Amt) -> fshr(High, Low, Amt)
+    std::swap(ops[0], ops[1]);
+
+    // Zero-extend shift amount to i64 if needed
+    auto amtTy = mlir::cast<cir::IntType>(ops[2].getType());
+    cir::IntType i64Ty = builder.getUInt64Ty();
+
+    if (amtTy != i64Ty)
+      ops[2] = builder.createIntCast(ops[2], i64Ty);
+
+    const StringRef intrinsicName =
+        (builtinID == X86::BI__shiftleft128) ? "fshl" : "fshr";
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               intrinsicName, i64Ty,
+                               mlir::ValueRange{ops[0], ops[1], ops[2]});
   }
   case X86::BI_ReadWriteBarrier:
   case X86::BI_ReadBarrier:
