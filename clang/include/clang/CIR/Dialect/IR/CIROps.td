@@ -3467,6 +3467,11 @@ def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
     the length of the copy is known, `cir.memcpy` copies only from and to void
     pointers, requiring the copy length to be passed as an argument.
 
+    As is the case for memcpy in the C standard library, this operation
+    exhibits undefined behavior (UB) if any of the following conditions hold:
+      * `src` and/or `dst` are null pointers; or
+      * the memory regions referenced by `src` and `dst` overlap.
+
     Examples:
 
     ```mlir
@@ -3480,7 +3485,7 @@ def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
 
   let assemblyFormat = [{
     $len `bytes` `from` $src `to` $dst attr-dict
-    `:` type($len) `` `,` qualified(type($src)) `->` qualified(type($dst))
+    `:` type($len) `,` qualified(type($src)) `->` qualified(type($dst))
   }];
 
   let extraClassDeclaration = [{
