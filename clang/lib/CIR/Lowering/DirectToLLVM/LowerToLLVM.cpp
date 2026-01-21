@@ -1566,8 +1566,8 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::addressSpace());
   assert(!cir::MissingFeatures::opAllocaAnnotations());
 
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AllocaOp>(
-      op, resultTy, elementTy, size, op.getAlignmentAttr().getInt());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AllocaOp>(op, resultTy, elementTy,
+                                                    size, op.getAlignment());
 
   return mlir::success();
 }
