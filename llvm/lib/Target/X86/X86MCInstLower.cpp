@@ -1801,6 +1801,10 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
     OutStreamer->emitWinCFIUnwindVersion(MI->getOperand(0).getImm());
     break;
 
+  case X86::SEH_SplitChained:
+    OutStreamer->emitWinCFISplitChained();
+    break;
+
   default:
     llvm_unreachable("expected SEH_ instruction");
   }
@@ -2529,6 +2533,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::SEH_EndEpilogue:
   case X86::SEH_UnwindV2Start:
   case X86::SEH_UnwindVersion:
+  case X86::SEH_SplitChained:
     EmitSEHInstruction(MI);
     return;
 
@@ -2625,6 +2630,18 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   EmitAndCountInstruction(TmpInst);
+}
+
+void X86AsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
+                                     const MCSubtargetInfo *EndInfo,
+                                     const MachineInstr *MI) {
+  if (MI) {
+    // If unwinding inline asm ends on a call, wineh may require insertion of
+    // a nop.
+    unsigned ExtraInfo = MI->getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+    if (ExtraInfo & InlineAsm::Extra_MayUnwind)
+      maybeEmitNopAfterCallForWindowsEH(MI);
+  }
 }
 
 void X86AsmPrinter::emitCallInstruction(const llvm::MCInst &MCI) {

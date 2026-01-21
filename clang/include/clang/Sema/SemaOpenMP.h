@@ -1176,8 +1176,8 @@ public:
     SourceLocation RLoc;
     CXXScopeSpec ReductionOrMapperIdScopeSpec;
     DeclarationNameInfo ReductionOrMapperId;
-    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend or
-                            ///< lastprivate clause.
+    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend,
+                            ///< lastprivate, or use_device_ptr clause.
     int OriginalSharingModifier = 0; // Default is shared
     int NeedDevicePtrModifier = 0;
     SourceLocation NeedDevicePtrModifierLoc;
@@ -1369,8 +1369,10 @@ public:
                         ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                         ArrayRef<Expr *> UnresolvedMappers = {});
   /// Called on well-formed 'use_device_ptr' clause.
-  OMPClause *ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
-                                           const OMPVarListLocTy &Locs);
+  OMPClause *ActOnOpenMPUseDevicePtrClause(
+      ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
+      OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+      SourceLocation FallbackModifierLoc);
   /// Called on well-formed 'use_device_addr' clause.
   OMPClause *ActOnOpenMPUseDeviceAddrClause(ArrayRef<Expr *> VarList,
                                             const OMPVarListLocTy &Locs);

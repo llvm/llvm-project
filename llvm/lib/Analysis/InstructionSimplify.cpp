@@ -4108,13 +4108,16 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   assert(CmpInst::isFPPredicate(Pred) && "Not an FP compare!");
 
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
-    if (Constant *CRHS = dyn_cast<Constant>(RHS))
-      return ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI,
-                                             Q.CxtI);
-
-    // If we have a constant, make sure it is on the RHS.
-    std::swap(LHS, RHS);
-    Pred = CmpInst::getSwappedPredicate(Pred);
+    if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
+      // if the folding isn't successfull, fall back to the rest of the logic
+      if (auto *Result = ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL,
+                                                         Q.TLI, Q.CxtI))
+        return Result;
+    } else {
+      // If we have a constant, make sure it is on the RHS.
+      std::swap(LHS, RHS);
+      Pred = CmpInst::getSwappedPredicate(Pred);
+    }
   }
 
   // Fold trivial predicates.
@@ -6475,10 +6478,17 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
 
   Value *X;
   switch (IID) {
-  case Intrinsic::fabs:
-    if (computeKnownFPSignBit(Op0, Q) == false)
+  case Intrinsic::fabs: {
+    KnownFPClass KnownClass = computeKnownFPClass(Op0, fcAllFlags, Q);
+    if (KnownClass.SignBit == false)
       return Op0;
+
+    if (KnownClass.cannotBeOrderedLessThanZero() &&
+        KnownClass.isKnownNeverNaN() && Call->hasNoSignedZeros())
+      return Op0;
+
     break;
+  }
   case Intrinsic::bswap:
     // bswap(bswap(x)) -> x
     if (match(Op0, m_BSwap(m_Value(X))))

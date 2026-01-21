@@ -241,6 +241,7 @@ def CIR_CastOp : CIR_Op<"cast", [
   // The input and output types should match the cast kind.
   let hasVerifier = 1;
   let hasFolder = 1;
+  let hasCXXABILowering = 1;
 
   let extraLLVMLoweringPatternDecl = [{
     mlir::Type convertTy(mlir::Type ty) const;
@@ -2866,6 +2867,10 @@ def CIR_OptionalPriorityAttr : OptionalAttr<
   >
 >;
 
+// TODO(CIR): CallingConv is a placeholder here so we can use it in
+// infrastructure calls, but it currently has no values.
+def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", []>;
+
 def CIR_FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
@@ -3807,6 +3812,60 @@ def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
 
   let hasCXXABILowering = true;
   let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// GetMethodOp
+//===----------------------------------------------------------------------===//
+
+def CIR_GetMethodOp : CIR_Op<"get_method"> {
+  let summary = "Resolve a method to a function pointer as callee";
+  let description = [{
+    The `cir.get_method` operation takes a pointer to method (!cir.method) and
+    a pointer to a class object (!cir.ptr<!cir.record>>) as input, and
+    yields a function pointer that points to the actual function corresponding
+    to the input method. The operation also applies any necessary adjustments to
+    the input object pointer for calling the method and yields the adjusted
+    pointer.
+
+    This operation is generated when calling a method through a pointer-to-
+    member-function in C++:
+
+    ```cpp
+    // Foo *object;
+    // int arg;
+    // void (Foo::*method)(int);
+
+    (object->*method)(arg);
+    ```
+
+    The code above will generate CIR similar to:
+
+    ```mlir
+    %callee, %this = cir.get_method %method, %object
+    cir.call %callee(%this, %arg)
+    ```
+
+    The method type must match the callee type. That is:
+    - The return type of the method must match the return type of the callee.
+    - The first parameter of the callee must have type `!cir.ptr<!cir.void>`.
+    - Types of other parameters of the callee must match the parameters of the
+      method.
+  }];
+
+  let arguments = (ins CIR_MethodType:$method, CIR_PtrToRecordType:$object);
+  let results = (outs CIR_PtrToFunc:$callee, CIR_VoidPtrType:$adjusted_this);
+
+  let assemblyFormat = [{
+    $method `,` $object
+    `:` `(` qualified(type($method)) `,` qualified(type($object)) `)`
+    `->` `(` qualified(type($callee)) `,` qualified(type($adjusted_this)) `)`
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//

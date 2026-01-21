@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from functools import wraps
 from packaging import version
+import contextlib
 import ctypes
 import locale
 import os
@@ -100,11 +101,13 @@ def _match_decorator_property(expected, actual):
     return expected == actual
 
 
-def _compiler_supports(
-    compiler, flag, source="int main() {}", output_file=temp_file.OnDiskTempFile()
-):
+def _compiler_supports(compiler, flag, source="int main() {}", output_file=None):
     """Test whether the compiler supports the given flag."""
-    with output_file:
+    if output_file:
+        context = contextlib.nullcontext(output_file)
+    else:
+        context = temp_file.OnDiskTempFile()
+    with context as ctx:
         if platform.system() == "Darwin":
             compiler = "xcrun " + compiler
         try:
@@ -112,7 +115,7 @@ def _compiler_supports(
                 source,
                 compiler,
                 flag,
-                output_file.path,
+                ctx.path,
             )
             subprocess.check_call(cmd, shell=True)
         except subprocess.CalledProcessError:
@@ -1034,22 +1037,21 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
             )
 
         # We need to write out the object into a named temp file for inspection.
-        outputf = temp_file.OnDiskTempFile()
+        with temp_file.OnDiskTempFile() as outputf:
+            # Try to compile with ubsan turned on.
+            if not _compiler_supports(
+                lldbplatformutil.getCompiler(),
+                "-fsanitize=undefined",
+                "int main() { int x = 0; return x / x; }",
+                outputf,
+            ):
+                return "Compiler cannot compile with -fsanitize=undefined"
 
-        # Try to compile with ubsan turned on.
-        if not _compiler_supports(
-            lldbplatformutil.getCompiler(),
-            "-fsanitize=undefined",
-            "int main() { int x = 0; return x / x; }",
-            outputf,
-        ):
-            return "Compiler cannot compile with -fsanitize=undefined"
-
-        # Check that we actually see ubsan instrumentation in the binary.
-        cmd = "nm %s" % outputf.path
-        with os.popen(cmd) as nm_output:
-            if "___ubsan_handle_divrem_overflow" not in nm_output.read():
-                return "Division by zero instrumentation is missing"
+            # Check that we actually see ubsan instrumentation in the binary.
+            cmd = "nm %s" % outputf.path
+            with os.popen(cmd) as nm_output:
+                if "___ubsan_handle_divrem_overflow" not in nm_output.read():
+                    return "Division by zero instrumentation is missing"
 
         # Find the ubsan dylib.
         # FIXME: This check should go away once compiler-rt gains support for __ubsan_on_report.
@@ -1113,6 +1115,7 @@ def skipUnlessBoundsSafety(func):
         return None
 
     return skipTestIfFn(is_compiler_with_bounds_safety)(func)
+
 
 def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB *itself* under ASAN."""
