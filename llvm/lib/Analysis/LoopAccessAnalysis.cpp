@@ -964,8 +964,8 @@ private:
 
 } // end anonymous namespace
 
-/// Try to compute a constant stride for \p AR. Used by getPtrStride and
-/// isNoWrap.
+/// Try to compute a constant stride for \p AR. Used by getPtrStride,
+/// getPtrConstRuntimeStride and isNoWrap.
 static std::optional<int64_t>
 getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
                     Value *Ptr, PredicatedScalarEvolution &PSE,
@@ -988,21 +988,18 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
     return std::nullopt;
   }
 
-  // Calculate the pointer stride and check if it is constant.
-  // If we allow strided pointers we also check the add recurrence
-  // expression is making use of loop-invariant
-  // runtime constant for example
+  // Calculate the pointer stride and check if it is constant. If we allow
+  // strided pointers we also check the add recurrence expression is making use
+  // of loop-invariant runtime constant for example
   //
   // Step = { stride * runtime_constant }
   //
-  // we should treat this as a constant add recurrence.
-  // To achieve this we check the arguments of
-  // the step are loop invariant and compute the step
-  // as equivalent to just stride.
+  // we should treat this as a constant add recurrence. To achieve this we check
+  // the arguments of the step are loop invariant and compute the step as
+  // equivalent to just stride.
   //
-  // We only check this for mul expressions as these
-  // are most common and expected for strided
-  // pointer recurrence expressions.
+  // We only check this for mul expressions as these are most common and
+  // expected for strided pointer recurrence expressions.
   const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
   const APInt *APStepVal;
   auto IsInvariantConstAddRecStep = [&](const SCEV *Step) -> bool {
@@ -1013,10 +1010,14 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
       return true;
 
     if (AllowStridedPtrs) {
+      if (PSE.getSE()->isKnownNegative(Step))
+        return false;
+
       for (const auto *Op : Step->operands()) {
         if (!PSE.getSE()->isLoopInvariant(Op, Lp))
           return false;
       }
+
       return match(Step,
                    m_scev_c_Mul(m_scev_APInt(APStepVal), m_SCEV(Multiplier)));
     }
@@ -1657,7 +1658,7 @@ std::optional<int64_t>
 llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
                    const Loop *Lp, const DominatorTree &DT,
                    const DenseMap<Value *, const SCEV *> &StridesMap,
-                   bool Assume, bool ShouldCheckWrap, bool AllowStridedPtrs) {
+                   bool Assume, bool ShouldCheckWrap) {
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
@@ -1675,7 +1676,7 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   }
 
   std::optional<int64_t> Stride =
-      getStrideFromAddRec(AR, Lp, AccessTy, Ptr, PSE, AllowStridedPtrs);
+      getStrideFromAddRec(AR, Lp, AccessTy, Ptr, PSE);
   if (!ShouldCheckWrap || !Stride)
     return Stride;
 
@@ -1686,6 +1687,40 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
       dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
              << *Ptr << " SCEV: " << *AR << "\n");
   return std::nullopt;
+}
+
+/// Check whether the access through \p Ptr has a constant runtime stride
+std::optional<int64_t> llvm::getPtrConstRuntimeStride(
+    PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr, const Loop *Lp,
+    const DominatorTree &DT, const DenseMap<Value *, const SCEV *> &StridesMap,
+    bool Assume) {
+  const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
+  if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
+    return 0;
+
+  assert(Ptr->getType()->isPointerTy() && "Unexpected non-ptr");
+
+  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
+  if (Assume && !AR)
+    AR = PSE.getAsAddRec(Ptr);
+
+  if (!AR) {
+    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not an AddRecExpr pointer " << *Ptr
+                      << " SCEV: " << *PtrScev << "\n");
+    return std::nullopt;
+  }
+
+  std::optional<int64_t> Stride = getStrideFromAddRec(
+      AR, Lp, AccessTy, Ptr, PSE, /* AllowStridedPtrs =*/true);
+
+  if (!Stride) {
+    LLVM_DEBUG(
+        dbgs() << "LAA: Bad stride - Pointer isn't runtime const strided "
+               << *Ptr << " SCEV: " << *AR << "\n");
+    return std::nullopt;
+  }
+
+  return Stride;
 }
 
 std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
