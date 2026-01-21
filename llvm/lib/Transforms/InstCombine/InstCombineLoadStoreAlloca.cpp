@@ -1153,7 +1153,7 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
           isSafeToLoadUnconditionally(SI->getOperand(2), LI.getType(),
                                       Alignment, DL, SI)) {
 
-        auto MaybeCastedLoadOperant = [&](Value *Op) {
+        auto MaybeCastedLoadOperand = [&](Value *Op) {
           if (ASC)
             return Builder.CreateAddrSpaceCast(Op, ASC->getType(),
                                                Op->getName() + ".cast");
