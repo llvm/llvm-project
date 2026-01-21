@@ -1802,3 +1802,6 @@ def TrivialAutoVarInit : DiagGroup<"trivial-auto-var-init">;
 
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;
+
+// Warnings about incorrect libc usage
+def IncorrectLibcUse : DiagGroup<"incorrect-libc-use">;

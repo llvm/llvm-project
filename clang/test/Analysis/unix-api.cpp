@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.API -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.API -Wno-incorrect-libc-use -verify %s
 extern "C" {
 #ifndef O_RDONLY
 #define O_RDONLY 0

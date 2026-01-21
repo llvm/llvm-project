@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wassign-enum -Wswitch-enum -Wcovered-switch-default %s
+// RUN: %clang_cc1 -fno-builtin-open -fsyntax-only -verify -Wassign-enum -Wswitch-enum -Wcovered-switch-default %s
 
 enum Enum {
   A0 = 1, A1 = 10

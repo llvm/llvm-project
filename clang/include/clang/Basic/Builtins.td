@@ -3539,6 +3539,56 @@ def StrnCaseCmp : GNULibBuiltin<"strings.h"> {
   let RequiresUndef = 1;
 }
 
+// POSIX fcntl.h
+
+def Open : LibBuiltin<"fcntl.h"> {
+  let Spellings = ["open"];
+  let Attributes = [NoThrow];
+  let Prototype = "int(char const*, int, ...)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def Open64 : LibBuiltin<"fcntl.h"> {
+  let Spellings = ["open64"];
+  let Attributes = [NoThrow];
+  let Prototype = "int(char const*, int, ...)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def OpenAt : LibBuiltin<"fcntl.h"> {
+  let Spellings = ["openat"];
+  let Attributes = [NoThrow];
+  let Prototype = "int(int, char const*, int, ...)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def OpenAt64 : LibBuiltin<"fcntl.h"> {
+  let Spellings = ["openat64"];
+  let Attributes = [NoThrow];
+  let Prototype = "int(int, char const*, int, ...)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+// POSIX stat.h
+
+def UMask : LibBuiltin<"sys/stat.h"> {
+  let Spellings = ["umask"];
+  let Attributes = [NoThrow];
+  let Prototype = "mode_t(mode_t)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+// POSIX stdlib.h
+
+def RealPath : LibBuiltin<"stdlib.h"> {
+  let Spellings = ["realpath"];
+  let Attributes = [NoThrow, NonNull<NonOptimizing, [0]>];
+  let Prototype = "char*(char const* restrict, char* restrict)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+// POSIX unistd.h
+
 def GNU_Exit : GNULibBuiltin<"unistd.h"> {
   let Spellings = ["_exit"];
   let Attributes = [NoReturn];
