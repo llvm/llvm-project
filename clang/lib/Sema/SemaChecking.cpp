@@ -4563,6 +4563,125 @@ void Sema::CheckConstructorCall(FunctionDecl *FDecl, QualType ThisType,
             Loc, SourceRange(), CallType);
 }
 
+static std::optional<llvm::APSInt> GetArrayElementCount(Sema &S,
+                                                        const Expr *BaseExpr) {
+  const Type *EffectiveType =
+      BaseExpr->getType()->getPointeeOrArrayElementType();
+  if (EffectiveType->isDependentType())
+    return {};
+
+  BaseExpr = BaseExpr->IgnoreParenCasts();
+  const ConstantArrayType *ArrayTy =
+      S.Context.getAsConstantArrayType(BaseExpr->getType());
+
+  if (!ArrayTy)
+    return {};
+
+  const Type *BaseType = ArrayTy->getElementType().getTypePtr();
+
+  if (BaseType->isDependentType() || BaseType->isIncompleteType())
+    return {};
+
+  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+      S.getLangOpts().getStrictFlexArraysLevel();
+
+  if (BaseExpr->isFlexibleArrayMemberLike(
+          S.Context, StrictFlexArraysLevel,
+          /*IgnoreTemplateOrMacroSubstitution=*/true))
+    return {};
+
+  llvm::APInt ArrayTySize = ArrayTy->getSize();
+  if (BaseType != EffectiveType) {
+    // Make sure we're comparing apples to apples when comparing index to
+    // size.
+    uint64_t ptrarith_typesize = S.Context.getTypeSize(EffectiveType);
+    uint64_t array_typesize = S.Context.getTypeSize(BaseType);
+
+    // Handle ptrarith_typesize being zero, such as when casting to void*.
+    // Use the size in bits (what "getTypeSize()" returns) rather than bytes.
+    if (!ptrarith_typesize)
+      ptrarith_typesize = S.Context.getCharWidth();
+
+    if (ptrarith_typesize != array_typesize) {
+      // There's a cast to a different size type involved.
+      uint64_t ratio = array_typesize / ptrarith_typesize;
+
+      // TODO: Be smarter about handling cases where array_typesize is not a
+      // multiple of ptrarith_typesize.
+      if (ptrarith_typesize * ratio == array_typesize)
+        ArrayTySize *= llvm::APInt(ArrayTySize.getBitWidth(), ratio);
+    }
+  }
+
+  return llvm::APSInt(std::move(ArrayTySize));
+}
+
+static bool CheckLibcPoll(Sema &S, FunctionDecl *FDecl, CallExpr *TheCall) {
+  // Check that the function resembles libc poll
+  if (!S.getSourceManager().isInSystemHeader(FDecl->getLocation()))
+    return false;
+
+  if (TheCall->getNumArgs() != 3)
+    return false;
+
+  if (!FDecl->getReturnType()->isSignedIntegerType())
+    return false;
+
+  const IdentifierTable::iterator It = S.Context.Idents.find("pollfd");
+
+  // If we can't find pollfd cancel the check
+  if (It == S.Context.Idents.end())
+    return false;
+
+  const IdentifierInfo *II = It->second;
+
+  Expr *FdsArg = TheCall->getArg(0);
+  QualType FdsType = FdsArg->getType();
+
+  if (!FdsType->isPointerOrReferenceType() && !FdsType->isArrayType())
+    return false;
+
+  const Type *elType = FdsType->getPointeeOrArrayElementType();
+
+  if (!elType->isRecordType())
+    return false;
+
+  const RecordDecl *RD = elType->getAsRecordDecl();
+  if (II != RD->getIdentifier())
+    return false;
+
+  // Check size type
+  Expr *NfdsArg = TheCall->getArg(1);
+  auto &ExpectedNfdsType = S.Context.UnsignedLongTy;
+  if (S.Context.getTargetInfo().getTriple().isOSDarwin())
+    ExpectedNfdsType = S.Context.UnsignedIntTy;
+
+  if (!S.Context.hasSameType(NfdsArg->getType().getUnqualifiedType(),
+                             ExpectedNfdsType))
+    return false;
+
+  Expr::EvalResult Result;
+  if (!NfdsArg->EvaluateAsInt(Result, S.getASTContext()))
+    return false;
+  llvm::APSInt NfdsValue = Result.Val.getInt();
+  NfdsValue.setIsUnsigned(true);
+
+  std::optional<llvm::APSInt> FdsElCount = GetArrayElementCount(S, FdsArg);
+
+  if (FdsElCount) {
+    if (llvm::APSInt::compareValues(NfdsValue, *FdsElCount) > 0) {
+      SmallString<16> FdsElCountStr;
+      SmallString<16> NfdsValueStr;
+      FdsElCount->toString(FdsElCountStr, /*Radix=*/10);
+      NfdsValue.toString(NfdsValueStr, /*Radix=*/10);
+      S.Diag(TheCall->getBeginLoc(), diag::warn_pollfd_nfds)
+          << NfdsValueStr << FdsElCountStr;
+    }
+  }
+
+  return true;
+}
+
 bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                              const FunctionProtoType *Proto) {
   bool IsMemberOperatorCall = isa<CXXOperatorCallExpr>(TheCall) &&
@@ -4620,6 +4739,13 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   CheckAbsoluteValueFunction(TheCall, FDecl);
   CheckMaxUnsignedZero(TheCall, FDecl);
   CheckInfNaNFunction(TheCall, FDecl);
+
+  if (FDecl->isExternC()) {
+    const IdentifierInfo *II = FDecl->getIdentifier();
+    if (II->isStr("poll")) {
+      CheckLibcPoll(*this, FDecl, TheCall);
+    }
+  }
 
   if (getLangOpts().ObjC)
     ObjC().DiagnoseCStringFormatDirectiveInCFAPI(FDecl, Args, NumArgs);

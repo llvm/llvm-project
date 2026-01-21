@@ -81,3 +81,45 @@ void call_realpath() {
   __builtin_realpath("hah", too_big);
   __builtin_realpath("hah", too_just_right);
 }
+
+# 1 "poll.h" 1 3
+# 1 "sys/poll.h" 1 3
+
+#if defined(__APPLE__)
+typedef unsigned int nfds_t;
+#elif defined(__linux__)
+typedef unsigned long int nfds_t;
+#endif
+
+struct pollfd {
+  int fd;
+  short events;
+  short revents;
+};
+extern int poll (struct pollfd *__fds, nfds_t __nfds, int __timeout);
+
+# 2 "poll_test.c" 2
+
+#define __builtin_poll poll
+
+void call_poll(void) {
+  struct pollfd fds[] = {
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0},
+  };
+  const nfds_t nfds = sizeof(fds) / sizeof(*fds);
+  __builtin_poll(fds, nfds, 0);
+  __builtin_poll(fds, nfds + 1, 0); // expected-warning {{the element count value '10' is higher than the number of elements in the array '9'}}
+  __builtin_poll(fds, nfds - 1, 0);
+  /* Unhandled errors */
+  __builtin_poll(&fds[1], nfds, 0);
+  __builtin_poll(fds + 1, nfds, 0);
+  __builtin_poll(fds - 1, nfds, 0);
+}
