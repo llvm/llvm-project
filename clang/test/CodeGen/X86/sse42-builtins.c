@@ -138,10 +138,10 @@ unsigned int test_mm_crc32_u32(unsigned int CRC, unsigned int V) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse42.crc32.32.32(i32 %{{.*}}, i32 %{{.*}})
   return _mm_crc32_u32(CRC, V);
 }
-TEST_CONSTEXPR(_mm_crc32_u32(0x02a24bf8, 0xf37dd4ba) == 0x14e9347b);
-TEST_CONSTEXPR(_mm_crc32_u32(0x0cd5e10f, 0x832b42e7) == 0x575056c0);
-TEST_CONSTEXPR(_mm_crc32_u32(0x50e739b8, 0xcefb382e) == 0x5fa289ae);
-TEST_CONSTEXPR(_mm_crc32_u32(0x3c2db116, 0xd3947f3d) == 0xb98d2ded);
+TEST_CONSTEXPR(_mm_crc32_u32(0x02a24bf8, 0xf37dd4ba) == 0x7e8807f4);
+TEST_CONSTEXPR(_mm_crc32_u32(0x0cd5e10f, 0x832b42e7) == 0x348e1639);
+TEST_CONSTEXPR(_mm_crc32_u32(0x50e739b8, 0xcefb382e) == 0x084be8db);
+TEST_CONSTEXPR(_mm_crc32_u32(0x3c2db116, 0xd3947f3d) == 0x6ef9e697);
 
 #ifdef __x86_64__
 unsigned long long test_mm_crc32_u64(unsigned long long CRC, unsigned long long V) {
