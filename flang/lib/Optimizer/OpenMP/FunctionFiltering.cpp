@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
@@ -27,6 +28,42 @@ namespace flangomp {
 } // namespace flangomp
 
 using namespace mlir;
+
+/// This function triggers TODO errors and halts compilation if it detects
+/// patterns representing unimplemented features.
+///
+/// It exclusively checks situations that cannot be detected after all of the
+/// MLIR pipeline has ran (i.e. at the MLIR to LLVM IR translation stage, where
+/// the preferred location for these types of checks is), and it only checks for
+/// features that have not been implemented for target offload, but are
+/// supported on host execution.
+void checkDeviceImplementationStatus(
+    omp::OffloadModuleInterface offloadModule) {
+  if (!offloadModule.getIsGPU())
+    return;
+
+  offloadModule->walk<WalkOrder::PreOrder>([&](omp::DeclareReductionOp redOp) {
+    if (redOp.symbolKnownUseEmpty(offloadModule))
+      return WalkResult::advance();
+
+    if (!redOp.getByrefElementType())
+      return WalkResult::advance();
+
+    auto seqTy =
+        mlir::dyn_cast<fir::SequenceType>(*redOp.getByrefElementType());
+
+    bool isByRefReductionSupported =
+        !seqTy || !fir::sequenceWithNonConstantShape(seqTy);
+
+    if (!isByRefReductionSupported) {
+      TODO(redOp.getLoc(),
+           "Reduction of dynamically-shaped arrays are not supported yet "
+           "on the GPU.");
+    }
+
+    return WalkResult::advance();
+  });
+}
 
 namespace {
 class FunctionFilteringPass
@@ -101,6 +138,8 @@ public:
       }
       return WalkResult::advance();
     });
+
+    checkDeviceImplementationStatus(op);
   }
 };
 } // namespace
