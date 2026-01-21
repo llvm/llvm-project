@@ -7808,9 +7808,8 @@ void AArch64DAGToDAGISel::PreprocessISelDAG() {
     switch (N.getOpcode()) {
     case ISD::SCALAR_TO_VECTOR: {
       EVT VT = N.getValueType(0);
-      if (!VT.isVector() || VT.isScalableVector() || !VT.isInteger())
-        break;
-      if (VT.getVectorElementType() != N.getOperand(0).getValueType())
+      if (VT.isScalableVector() || !VT.isInteger() ||
+          VT.getVectorElementType() != N.getOperand(0).getValueType())
         break;
 
       Result = addBitcastHints(*CurDAG, N);
