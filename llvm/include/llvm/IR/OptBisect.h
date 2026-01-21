@@ -40,7 +40,7 @@ public:
 
 /// This class implements a mechanism to disable passes and individual
 /// optimizations at compile time based on two command line options
-/// (-opt-bisect and -opt-disable) in order to perform a bisecting 
+/// (-opt-bisect and -opt-disable) in order to perform a bisecting
 /// search for optimization-related problems, and/or disable individual
 /// passes or combinations thereof.
 class LLVM_ABI OptBisect : public OptPassGate {
@@ -68,7 +68,7 @@ public:
                      StringRef IRDescription) const override;
 
   /// isEnabled() should return true before calling shouldRunPass().
-  bool isEnabled() const override { 
+  bool isEnabled() const override {
     return !BisectIntervals.empty() || !DisabledPasses.empty();
   }
 
@@ -85,9 +85,7 @@ public:
 
   /// Parses the command line argument to extract the names of the passes
   /// to be disabled. Multiple pass names can be provided with comma separation.
-  void setDisabled(StringRef Pass) {
-    DisabledPasses.insert(Pass);
-  }
+  void setDisabled(StringRef Pass) { DisabledPasses.insert(Pass); }
 
 private:
   mutable int LastBisectNum = 0;

@@ -75,8 +75,9 @@ static cl::opt<std::string> OptBisectIntervals(
 
 static cl::opt<bool> OptBisectVerbose(
     "opt-bisect-verbose",
-    cl::desc("Show verbose output when opt-bisect-limit and/or opt-disable are set"), cl::Hidden,
-    cl::init(true), cl::Optional);
+    cl::desc(
+        "Show verbose output when opt-bisect-limit and/or opt-disable are set"),
+    cl::Hidden, cl::init(true), cl::Optional);
 
 static cl::list<std::string> OptDisablePasses(
     "opt-disable", cl::Hidden, cl::CommaSeparated, cl::Optional,
@@ -101,9 +102,10 @@ bool OptBisect::shouldRunPass(StringRef PassName,
   // Check if current pass number falls within any of the specified intervals.
   // Since the bisector may be enabled by opt-disable, we also need to check if the
   // BisectIntervals are empty.
-  bool ShouldRun = BisectIntervals.empty() ||
+  bool ShouldRun =
+      BisectIntervals.empty() ||
       IntegerInclusiveIntervalUtils::contains(BisectIntervals, CurBisectNum);
-    
+
   // Also check if the pass is disabled via -opt-disable.
   ShouldRun = ShouldRun && !DisabledPasses.contains(PassName);
 
@@ -112,6 +114,4 @@ bool OptBisect::shouldRunPass(StringRef PassName,
   return ShouldRun;
 }
 
-OptPassGate &llvm::getGlobalPassGate() {
-  return getOptBisector();
-}
+OptPassGate &llvm::getGlobalPassGate() { return getOptBisector(); }
