@@ -65,6 +65,12 @@ func.func @mpi_test(%ref : memref<100xf32>) -> () {
     // CHECK-NEXT: [[v5:%.*]] = mpi.barrier([[v1]]) -> !mpi.retval
     %err7 = mpi.barrier(%comm) -> !mpi.retval
 
+    // CHECK-NEXT: [[e3:%.*]] = mpi.allgather([[varg0]], [[varg0]], [[v1]]) : memref<100xf32>, memref<100xf32> -> !mpi.retval
+    %err3 = mpi.allgather(%ref, %ref, %comm) : memref<100xf32>, memref<100xf32> -> !mpi.retval
+
+    // CHECK-NEXT: mpi.allgather([[varg0]], [[varg0]], [[v1]]) : memref<100xf32>, memref<100xf32>
+    mpi.allgather(%ref, %ref, %comm) : memref<100xf32>, memref<100xf32>
+
     // CHECK-NEXT: [[v6:%.*]] = mpi.allreduce([[varg0]], [[varg0]], MPI_SUM, [[v1]]) : memref<100xf32>, memref<100xf32> -> !mpi.retval
     %err8 = mpi.allreduce(%ref, %ref, MPI_SUM, %comm) : memref<100xf32>, memref<100xf32> -> !mpi.retval
 

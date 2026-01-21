@@ -849,7 +849,6 @@ public:
       break;
     case OperationType::ReductionOp:
       llvm_unreachable("reduction ops should not use applyFlags");
-      [[fallthrough]];
     case OperationType::Cmp:
     case OperationType::Other:
       break;
