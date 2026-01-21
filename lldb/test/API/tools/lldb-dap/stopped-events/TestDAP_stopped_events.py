@@ -31,10 +31,6 @@ class TestDAP_stopped_events(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr15824 thread states not properly maintained",
-    )
-    @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18190 thread states not properly maintained",
     )
@@ -89,10 +85,6 @@ class TestDAP_stopped_events(lldbdap_testcase.DAPTestCaseBase):
 
         self.continue_to_exit()
 
-    @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr15824 thread states not properly maintained",
-    )
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18190 thread states not properly maintained",
