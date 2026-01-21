@@ -394,9 +394,9 @@ namespace gh61145 {
   // a.k.a. Vec::Vec(Vec&&)
   // CHECK-NEXT: call void @_ZN7gh611453VecC1EOS0_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]], ptr noundef nonnull align 1 dereferenceable(1) [[V]])
   // a.k.a. S1::~S1()
-  // CHECK-NEXT: call void @_ZN7gh611452S1D1Ev(ptr dead_on_return noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]])
+  // CHECK-NEXT: call void @_ZN7gh611452S1D1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]])
   // a.k.a.Vec::~Vec()
-  // CHECK-NEXT: call void @_ZN7gh611453VecD1Ev(ptr dead_on_return noundef nonnull align 1 dereferenceable(1) [[V]])
+  // CHECK-NEXT: call void @_ZN7gh611453VecD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[V]])
   // CHECK-NEXT: ret void
   template <int I>
   void make1() {
@@ -416,9 +416,9 @@ namespace gh61145 {
   // CHECK-NEXT: [[C:%.*c.*]] = getelementptr inbounds nuw [[STRUCT_S2]], ptr [[AGG_TMP_ENSURED]], i32 0, i32
   // CHECK-NEXT: store i8 0, ptr [[C]], align 1
   // a.k.a. S2::~S2()
-  // CHECK-NEXT: call void @_ZN7gh611452S2D1Ev(ptr dead_on_return noundef nonnull align 1 dereferenceable(2) [[AGG_TMP_ENSURED]])
+  // CHECK-NEXT: call void @_ZN7gh611452S2D1Ev(ptr noundef nonnull align 1 dereferenceable(2) [[AGG_TMP_ENSURED]])
   // a.k.a. Vec::~Vec()
-  // CHECK-NEXT: call void @_ZN7gh611453VecD1Ev(ptr dead_on_return noundef nonnull align 1 dereferenceable(1) [[V]])
+  // CHECK-NEXT: call void @_ZN7gh611453VecD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[V]])
   // CHECK-NEXT: ret void
   template <int I>
   void make2() {

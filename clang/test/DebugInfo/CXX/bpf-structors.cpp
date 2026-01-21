@@ -11,4 +11,4 @@ public:
   ~Bar() noexcept override;
 };
 
-// CHECK: declare !dbg !{{[0-9]+}} void @_ZN3FooD2Ev(ptr dead_on_return noundef nonnull align 8 dereferenceable(8))
+// CHECK: declare !dbg !{{[0-9]+}} void @_ZN3FooD2Ev(ptr noundef nonnull align 8 dereferenceable(8))

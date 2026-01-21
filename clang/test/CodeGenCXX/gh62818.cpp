@@ -19,7 +19,7 @@ struct B {
   // CHECK: define linkonce_odr void @_ZN1BIiE4testEv
   // CHECK: call void @_ZN1AC1Ev(ptr noundef nonnull align 1 dereferenceable(1)
   // CHECK: [[CALL:%.*]] = call noundef nonnull align 1 dereferenceable(1) ptr @_ZNR1AaSES_
-  // CHECK: call void @_ZN1AD2Ev(ptr dead_on_return noundef nonnull align 1 dereferenceable(1)
+  // CHECK: call void @_ZN1AD2Ev(ptr noundef nonnull align 1 dereferenceable(1)
 
   A a;
 };

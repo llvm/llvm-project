@@ -12,8 +12,8 @@ foo::foo() {
 }
 
 foo::~foo() {
-  // CHECK-LABEL: define{{.*}} void @_ZN3fooD2Ev(ptr dead_on_return inreg noundef nonnull align 1 dereferenceable(1) %this)
-  // CHECK-LABEL: define{{.*}} void @_ZN3fooD1Ev(ptr dead_on_return inreg noundef nonnull align 1 dereferenceable(1) %this)
+  // CHECK-LABEL: define{{.*}} void @_ZN3fooD2Ev(ptr inreg noundef nonnull align 1 dereferenceable(1) %this)
+  // CHECK-LABEL: define{{.*}} void @_ZN3fooD1Ev(ptr inreg noundef nonnull align 1 dereferenceable(1) %this)
 }
 
 void dummy() {

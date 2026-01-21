@@ -543,13 +543,6 @@
 // CHECK-NO-NULL-POINTER-CHECKS: "-fno-delete-null-pointer-checks"
 // CHECK-NULL-POINTER-CHECKS-NOT: "-fno-delete-null-pointer-checks"
 
-// RUN: %clang -### -S -flifetime-dse %s 2>&1 | FileCheck -check-prefix=CHECK-OBJECT-DEAD-DESTRUCTOR %s
-// RUN: %clang -### -S -fno-lifetime-dse %s 2>&1 | FileCheck -check-prefix=CHECK-NO-OBJECT-DEAD-DESTRUCTOR %s
-// RUN: %clang -### -S -fno-lifetime-dse -flifetime-dse %s 2>&1 | FileCheck -check-prefix=CHECK-OBJECT-DEAD-DESTRUCTOR %s
-// RUN: %clang -### -S -flifetime-dse -fno-lifetime-dse %s 2>&1 | FileCheck -check-prefix=CHECK-NO-OBJECT-DEAD-DESTRUCTOR %s
-// CHECK-OBJECT-DEAD-DESTRUCTOR-NOT: "-fno-lifetime-dse"
-// CHECK-NO-OBJECT-DEAD-DESTRUCTOR: "-fno-lifetime-dse"
-
 // RUN: %clang -### -S --target=x86_64-unknown-linux -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
 // RUN: %clang -### -S --target=x86_64-unknown-linux -fno-record-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RECORD-GCC-SWITCHES %s
 // RUN: %clang -### -S --target=x86_64-unknown-linux -fno-record-gcc-switches -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
