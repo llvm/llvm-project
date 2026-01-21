@@ -80,8 +80,8 @@ LLVMInitializeRISCVDisassembler() {
 
 template <unsigned BaseReg>
 static DecodeStatus decodeGPRLikeRC(MCInst &Inst, uint32_t RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
+                                    uint64_t Address,
+                                    const MCDisassembler *Decoder) {
   bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
 
   if (RegNo >= 32 || (IsRVE && RegNo >= 16))
