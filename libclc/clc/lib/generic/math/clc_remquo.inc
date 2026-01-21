@@ -76,7 +76,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
   } else {
     ret = x;
     q7 = 0;
-    bool c = (ay<0x1.0p+127f & 2.0f * ax> ay) | (ax > 0.5f * ay);
+    bool c = (ay < 0x1.0p+127f & 2.0f * ax > ay) | (ax > 0.5f * ay);
 
     int qsgn = 1 + (((__clc_as_int(x) ^ __clc_as_int(y)) >> 31) << 1);
     float t = __clc_fma(y, -(float)qsgn, x);
