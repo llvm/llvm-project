@@ -374,10 +374,22 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// Print information about the device.
   Expected<InfoTreeNode> obtainInfoImpl() override {
+    constexpr auto uint32_max = std::numeric_limits<uint32_t>::max();
     InfoTreeNode Info;
     Info.add("Device Type", "Generic-elf-64bit");
     Info.add("Product Name", "Host", "", DeviceInfo::PRODUCT_NAME);
-    Info.add("Device Name", " Host Device", "", DeviceInfo::NAME);
+    Info.add("Vendor", "Unknown", "", DeviceInfo::VENDOR);
+    Info.add("Vendor ID", 1, "", DeviceInfo::VENDOR_ID);
+    Info.add("Device Name", " Host Offload Device", "", DeviceInfo::NAME);
+    Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
+    Info.add("Number of total EUs", 1, "", DeviceInfo::NUM_COMPUTE_UNITS);
+    Info.add("Max memory clock frequency (MHz)", 1, "", DeviceInfo::MEMORY_CLOCK_RATE);
+    Info.add("Max clock frequency (MHz)", 1, "", DeviceInfo::MAX_CLOCK_FREQUENCY);
+    Info.add("Memory Address Size", uint64_t{64u}, "bits",
+           DeviceInfo::ADDRESS_BITS);
+    Info.add("Local memory size (bytes)", 1, "", DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
+    Info.add("Global memory size (bytes)", 1, "", DeviceInfo::GLOBAL_MEM_SIZE);
+    Info.add("Max Memory Allocation Size (bytes)", 1, "", DeviceInfo::MAX_MEM_ALLOC_SIZE);
     Info.add("Max Group size", 1, "", DeviceInfo::MAX_WORK_GROUP_SIZE);
     auto &MaxGroupSize =
       *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
@@ -385,14 +397,19 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     MaxGroupSize.add("x", 1);
     MaxGroupSize.add("y", 1);
     MaxGroupSize.add("z", 1);
-    Info.add("Maximum Grid Dimensions", 1,
+    Info.add("Maximum Grid Dimensions", uint32_max,
            "", DeviceInfo::MAX_WORK_SIZE);
     auto &MaxSize = *Info.add("Grid Size per Dimension", std::monostate{}, "",
                             DeviceInfo::MAX_WORK_SIZE_PER_DIMENSION);
-    MaxSize.add("x", 1);
-    MaxSize.add("y", 1);
-    MaxSize.add("z", 1);
+    MaxSize.add("x", uint32_max);
+    MaxSize.add("y", uint32_max);
+    MaxSize.add("z", uint32_max);
     return Info;
+  }
+
+  Error getDeviceMemorySize(uint64_t &DSize) override {
+    DSize = 1;
+    return Plugin::success();
   }
 
   /// Getters and setters for stack size and heap size not relevant.
