@@ -167,7 +167,8 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_EXTRACT_SUBVECTOR) {
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_EXTRACT_SUBVECTOR) {
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
-  auto ScalableVecVT = EVT::getVectorVT(Context, IntVT, 16, /*IsScalable=*/true);
+  auto ScalableVecVT =
+      EVT::getVectorVT(Context, IntVT, 16, /*IsScalable=*/true);
   auto FixedVecVT = EVT::getVectorVT(Context, IntVT, 16, /*IsScalable=*/false);
   auto IdxVT = EVT::getIntegerVT(Context, 64);
   auto Vec = DAG->getConstant(1, Loc, ScalableVecVT);

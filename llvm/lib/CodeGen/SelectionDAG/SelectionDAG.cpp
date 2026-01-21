@@ -4721,7 +4721,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   unsigned FirstAnswer = 1;
 
   assert((!VT.isScalableVector() || NumElts == 1) &&
-       "DemandedElts for scalable vectors must be 1 to represent all lanes");
+         "DemandedElts for scalable vectors must be 1 to represent all lanes");
 
   if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
     const APInt &Val = C->getAPIntValue();
