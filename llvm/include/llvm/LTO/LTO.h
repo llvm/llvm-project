@@ -132,7 +132,7 @@ private:
 
   MemoryBufferRef MbRef;
   bool IsFatLTOObject = false;
-  bool IsEntireFile = true;
+  bool ShouldMaterialize = false;
   bool IsThinLTO = false;
   StringRef ArchivePath;
   StringRef MemberName;
@@ -199,11 +199,10 @@ public:
   LLVM_ABI BitcodeModule &getPrimaryBitcodeModule();
   // Returns the memory buffer reference for this input file.
   MemoryBufferRef getFileBuffer() const { return MbRef; }
-  // Returns false if this input file is a member of an archive or of a FatLTO
-  // object.
-  bool isEntireFile() const { return IsEntireFile; }
+  // Returns true if this input should be materialized to disk for distribution.
+  bool shouldMaterialize() const { return ShouldMaterialize; }
   // Mark this input file as being an entire file on disk.
-  void entireFile(bool EF) { IsEntireFile = EF; }
+  void setShouldMaterialize(bool SM) { ShouldMaterialize = SM; }
   // Returns true if this bitcode came from a FatLTO object.
   bool isFatLTOObject() const { return IsFatLTOObject; }
   // Mark this bitcode as coming from a FatLTO object.

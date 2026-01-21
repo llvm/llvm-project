@@ -139,8 +139,9 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
   SmallString<64> NewModuleId;
   BitcodeModule &BM = Input->getPrimaryBitcodeModule();
 
-  // Check if the archive is a thin archive and the object is not fat.
-  // This means we have a file already that we can point to.
+  // For a member of a thin archive that is not a FatLTO object, there is an
+  // existing file on disk that can be used, so we can avoid having to
+  // materialize.
   Expected<bool> IsThin =
       Input->isFatLTOObject() ? false : isThinArchive(ArchivePath);
   if (!IsThin)
@@ -152,7 +153,7 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
         computeThinArchiveMemberPath(ArchivePath, Input->getMemberName());
   } else {
     // For regular archives and FatLTO objects, generate a unique name.
-    Input->entireFile(false);
+    Input->setShouldMaterialize(true);
 
     // Create unique identifier using process ID and sequence number.
     std::string PID = utohexstr(sys::Process::getProcessId());
@@ -172,8 +173,8 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
 // previously terminated linker process and can be safely overwritten.
 Error lto::DTLTO::saveInputArchiveMember(lto::InputFile *Input) {
   StringRef ModuleId = Input->getName();
-  if (!Input->isEntireFile()) {
-    TimeTraceScope TimeScope("Save input archive member for DTLTO", ModuleId);
+  if (Input->shouldMaterialize()) {
+    TimeTraceScope TimeScope("Materialize bitcode input for DTLTO", ModuleId);
     MemoryBufferRef MemoryBufferRef = Input->getFileBuffer();
     if (Error EC = saveBuffer(MemoryBufferRef.getBuffer(), ModuleId))
       return EC;
@@ -210,7 +211,7 @@ void lto::DTLTO::cleanup() {
   {
     TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
     for (auto &Input : InputFiles)
-      if (!Input->isEntireFile())
+      if (Input->shouldMaterialize())
         sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
   }
   Base::cleanup();
