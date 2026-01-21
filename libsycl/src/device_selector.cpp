@@ -25,7 +25,7 @@ static int getDevicePreference(const device &Device) {
   int Score = 0;
   const auto &DeviceImpl = detail::getSyclObjImpl(Device);
 
-  // TODO: increase score for devices with compatible dev images
+  // TODO: increase score for devices with compatible program  images.
 
   if (DeviceImpl->getBackend() == backend::level_zero)
     Score += 50;
@@ -34,18 +34,14 @@ static int getDevicePreference(const device &Device) {
 }
 
 _LIBSYCL_EXPORT int default_selector_v(const device &dev) {
-  int Score = 0;
+  int Score = getDevicePreference(dev);
 
   if (dev.is_gpu())
     Score += GPUDeviceDefaultScore;
-
-  if (dev.is_cpu())
+  else if (dev.is_cpu())
     Score += CPUDeviceDefaultScore;
-
-  if (dev.is_accelerator())
+  else if (dev.is_accelerator())
     Score += AccDeviceDefaultScore;
-
-  Score += getDevicePreference(dev);
 
   return Score;
 }
@@ -110,9 +106,8 @@ SelectDevice(const DeviceSelectorInvocableType &DeviceSelector) {
     }
   }
 
-  if (ChosenDevice != nullptr) {
+  if (ChosenDevice != nullptr)
     return *ChosenDevice;
-  }
 
   throw exception(make_error_code(errc::runtime),
                   "No device of requested type is available");

@@ -34,6 +34,9 @@ using PlatformImplUPtr = std::unique_ptr<PlatformImpl>;
 using DeviceImplUPtr = std::unique_ptr<DeviceImpl>;
 
 class PlatformImpl {
+  // Helper to limit PlatformImpl creation. It must be created in getPlatforms
+  // only. Using tag instead of private ctor + friend class to allow make_unique
+  // usage and to align with classes which impl is shared_ptr<>.
   struct PrivateTag {
     explicit PrivateTag() = default;
   };
@@ -79,13 +82,12 @@ public:
   static PlatformImpl &getPlatformImpl(ol_platform_handle_t Platform);
 
   /// Indicates if all of the SYCL devices on this platform have the
-  /// given feature.
+  /// given aspect.
   ///
-  /// \param Aspect is one of the values in Table 4.20 of the SYCL 2020
-  /// Provisional Spec.
+  /// \param Aspect is one of the values defined in SYCL 2020 Section 4.6.4.5.
   ///
   /// \return true all of the SYCL devices on this platform have the
-  /// given feature.
+  /// given aspect.
   bool has(aspect Aspect) const;
 
   /// Queries this SYCL platform for info.

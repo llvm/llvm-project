@@ -21,6 +21,9 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 class DeviceImpl {
+  // Helper to limit DeviceImpl creation. It must be created in platform ctor
+  // only. Using tag instead of private ctor + friend class to allow make_unique
+  // usage and to align with classes which impl is shared_ptr<>.
   struct PrivateTag {
     explicit PrivateTag() = default;
   };

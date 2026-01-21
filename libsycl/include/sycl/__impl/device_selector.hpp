@@ -8,7 +8,7 @@
 ///
 /// \file
 /// This file contains the declaration of the standard device selectors
-/// (SYCL 2020 4.6.1.1. Device selector) included with all SYCL implementations.
+/// (SYCL 2020 4.6.1.1. Device selector).
 ///
 //===----------------------------------------------------------------------===//
 
@@ -49,7 +49,7 @@ SelectDevice(const DeviceSelectorInvocableType &DeviceSelector);
 /// Standard device selector to select SYCL device from any supported SYCL
 /// backend based on an implementation-defined heuristic.
 ///
-/// \param Dev SYCL 2020 device to calculate the score for.
+/// \param Dev device to calculate the score for.
 /// \return score value for the provided device. Further device selection is
 /// based on score values.
 _LIBSYCL_EXPORT int default_selector_v(const device &Dev);
@@ -57,7 +57,7 @@ _LIBSYCL_EXPORT int default_selector_v(const device &Dev);
 /// Standard device selector to select SYCL device from any supported SYCL
 /// backend for which the device type is info::device_type::gpu.
 ///
-/// \param Dev SYCL 2020 device to calculate the score for.
+/// \param Dev device to calculate the score for.
 /// \return score value for the provided device. Further device selection is
 /// based on score values.
 _LIBSYCL_EXPORT int gpu_selector_v(const device &Dev);
@@ -65,7 +65,7 @@ _LIBSYCL_EXPORT int gpu_selector_v(const device &Dev);
 /// Standard device selector to select SYCL device from any supported SYCL
 /// backend for which the device type is info::device_type::cpu.
 ///
-/// \param Dev SYCL 2020 device to calculate the score for.
+/// \param Dev device to calculate the score for.
 /// \return score value for the provided device. Further device selection is
 /// based on score values.
 _LIBSYCL_EXPORT int cpu_selector_v(const device &Dev);
@@ -73,7 +73,7 @@ _LIBSYCL_EXPORT int cpu_selector_v(const device &Dev);
 /// Standard device selector to select SYCL device from any supported SYCL
 /// backend for which the device type is info::device_type::accelerator.
 ///
-/// \param Dev SYCL 2020 device to calculate the score for.
+/// \param Dev device to calculate the score for.
 /// \return score value for the provided device. Further device selection is
 /// based on score values.
 _LIBSYCL_EXPORT int accelerator_selector_v(const device &Dev);

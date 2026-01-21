@@ -21,7 +21,6 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 

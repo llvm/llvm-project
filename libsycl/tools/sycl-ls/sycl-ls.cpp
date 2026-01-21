@@ -46,7 +46,7 @@ std::string getDeviceTypeName(const device &Device) {
   case info::device_type::host:
     return "host";
   case info::device_type::accelerator:
-    return "fpga";
+    return "accelerator";
   default:
     return "unknown";
   }
@@ -83,7 +83,7 @@ printSelectorChoice(const detail::DeviceSelectorInvocableType &Selector,
                     Prepend + DeviceTypeName + ", " + PlatformName);
   } catch (const sycl::exception &Exception) {
     std::string What = Exception.what();
-    constexpr size_t MaxLength = 50;
+    constexpr size_t MaxLength = 80;
     // Truncate long string so it can fit in one-line
     if (What.length() > MaxLength)
       What = What.substr(0, MaxLength) + "...";
@@ -97,7 +97,8 @@ int main(int argc, char **argv) {
   llvm::cl::alias VerboseShort("v", llvm::cl::desc("Alias for -verbose"),
                                llvm::cl::aliasopt(Verbose));
   llvm::cl::ParseCommandLineOptions(
-      argc, argv, "This program lists all devices discovered by SYCL");
+      argc, argv,
+      "This program lists all backends and devices discovered by SYCL");
 
   try {
     const auto &Platforms = platform::get_platforms();

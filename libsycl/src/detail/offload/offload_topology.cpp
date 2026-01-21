@@ -21,7 +21,7 @@ range_view<const ol_platform_handle_t> OffloadTopology::getPlatforms() const {
   return {MPlatforms.data(), MPlatforms.size()};
 }
 
-// Devices for a specific platform (platform_id is index into Platforms)
+// Devices for a specific platform (PlatformId is index into Platforms)
 range_view<ol_device_handle_t>
 OffloadTopology::getDevices(size_t PlatformId) const {
   if (PlatformId >= MDeviceRange.size()) {
@@ -36,7 +36,8 @@ void OffloadTopology::registerNewPlatformsAndDevices(
   if (!PlatformsAndDev.size())
     return;
 
-  // MDevices reallocation is prevented to keep correct ranges in MDeviceRange
+  // MDeviceRange is populated with iterators of MDevices. Allocate required
+  // space in advance to keep them valid.
   MDevices.reserve(PlatformsAndDev.size());
 
   for (auto &[Platform, NewDev] : PlatformsAndDev) {

@@ -91,19 +91,17 @@ bool PlatformImpl::has(aspect Aspect) const {
 void PlatformImpl::iterateDevices(
     info::device_type DeviceType,
     std::function<void(DeviceImpl *)> callback) const {
-  // Early exit if host device is requested
-  if (DeviceType == info::device_type::host)
-    return;
-  if (DeviceType == info::device_type::custom)
-    return;
-  if (DeviceType == info::device_type::accelerator)
+  // Early exit if host/custom/accelerator device is requested
+  if ((DeviceType == info::device_type::host) ||
+      (DeviceType == info::device_type::custom) ||
+      (DeviceType == info::device_type::accelerator))
     return;
 
   const auto &DeviceImpls = getRootDevices();
 
-  // TODO: need an way to get default device from liboffload
-  // as temporal solution just return the first device for DeviceType ==
-  // automatic
+  // TODO: Need a way to get default device from liboffload.
+  // As a temporal solution just return the first device for DeviceType ==
+  // automatic.
   bool KeepAll = DeviceType == info::device_type::all;
   for (auto &Impl : DeviceImpls) {
     if (DeviceType == info::device_type::automatic) {

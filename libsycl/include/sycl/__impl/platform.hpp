@@ -66,7 +66,7 @@ public:
   /// type, resulting vector is empty.
   ///
   /// \param DeviceType is a SYCL device type.
-  /// \return a vector of SYCL devices.
+  /// \return a vector of SYCL devices matching given device type.
   std::vector<device>
   get_devices(info::device_type DeviceType = info::device_type::all) const;
 
@@ -84,13 +84,12 @@ public:
   get_backend_info() const;
 
   /// Indicates if all of the SYCL devices on this platform have the
-  /// given feature.
+  /// given aspect.
   ///
-  /// \param Aspect is one of the values in Table 4.20 of the SYCL 2020
-  /// Provisional Spec.
+  /// \param Aspect is one of the values defined in SYCL 2020 Section 4.6.4.5.
   ///
   /// \return true if all of the SYCL devices on this platform have the
-  /// given feature.
+  /// given aspect.
   bool has(aspect Aspect) const;
 
   /// Returns all SYCL platforms from all backends that are available in the
