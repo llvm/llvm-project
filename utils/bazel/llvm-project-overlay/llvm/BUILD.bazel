@@ -4972,10 +4972,12 @@ cc_binary(
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",
+        ":IRReader",
         ":MC",
         ":Object",
         ":Support",
         ":TargetParser",
+        ":ir_headers",
     ],
 )
 
