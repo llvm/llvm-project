@@ -143,12 +143,12 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
   // For a member of a thin archive that is not a FatLTO object, there is an
   // existing file on disk that can be used, so we can avoid having to
   // materialize.
-  Expected<bool> IsThin =
+  Expected<bool> UseThinMember =
       Input->isFatLTOObject() ? false : isThinArchive(ArchivePath);
-  if (!IsThin)
-    return IsThin.takeError();
+  if (!UseThinMember)
+    return UseThinMember.takeError();
 
-  if (*IsThin) {
+  if (*UseThinMember) {
     // For thin archives, use the path to the actual file.
     NewModuleId =
         computeThinArchiveMemberPath(ArchivePath, Input->getMemberName());
