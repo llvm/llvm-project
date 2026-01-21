@@ -1253,7 +1253,8 @@ SystemZTargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-SystemZTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+SystemZTargetLowering::shouldExpandAtomicRMWInIR(
+    const AtomicRMWInst *RMW) const {
   // Don't expand subword operations as they require special treatment.
   if (RMW->getType()->isIntegerTy(8) || RMW->getType()->isIntegerTy(16))
     return AtomicExpansionKind::None;
@@ -2099,17 +2100,10 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       MVT PartVT;
       unsigned NumParts;
       if (analyzeArgSplit(Ins, ArgLocs, I, PartVT, NumParts)) {
-        // TODO: It is strange that while LowerCallTo() sets the PartOffset
-        // relative to the first split part LowerArguments() sets the offset
-        // from the beginning of the struct. So with {i32, i256}, the
-        // PartOffset for the i256 parts are differently handled. Try to
-        // remove that difference and use PartOffset directly here (instead
-        // of SplitBaseOffs).
-        unsigned SplitBaseOffs = Ins[I].PartOffset;
         for (unsigned PartIdx = 1; PartIdx < NumParts; ++PartIdx) {
           ++I;
           CCValAssign &PartVA = ArgLocs[I];
-          unsigned PartOffset = Ins[I].PartOffset - SplitBaseOffs;
+          unsigned PartOffset = Ins[I].PartOffset;
           SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, ArgValue,
                                         DAG.getIntPtrConstant(PartOffset, DL));
           InVals.push_back(DAG.getLoad(PartVA.getValVT(), DL, Chain, Address,

@@ -7016,6 +7016,19 @@ AST_MATCHER_P(ReferenceTypeLoc, hasReferentLoc, internal::Matcher<TypeLoc>,
 extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, ArrayTypeLoc>
     arrayTypeLoc;
 
+/// Matches `FunctionTypeLoc`s.
+///
+/// Given
+/// \code
+///   void f(int);
+///   using g = double (char, float);
+///   char (*fn_ptr)();
+/// \endcode
+/// functionTypeLoc()
+///   matches "void (int)", "double (char, float)", and "char ()".
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, FunctionTypeLoc>
+    functionTypeLoc;
+
 /// Matches template specialization `TypeLoc`s.
 ///
 /// Given

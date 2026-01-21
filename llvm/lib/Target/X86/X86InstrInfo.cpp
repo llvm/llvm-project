@@ -4811,7 +4811,7 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIdx,
                                         const TargetRegisterClass *RC,
-                                        Register VReg,
+                                        Register VReg, unsigned SubReg,
                                         MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -10562,9 +10562,8 @@ struct LDTLSCleanup : public MachineFunctionPass {
     }
 
     // Visit the children of this block in the dominator tree.
-    for (auto &I : *Node) {
+    for (MachineDomTreeNode *I : Node->children())
       Changed |= VisitNode(I, TLSBaseAddrReg);
-    }
 
     return Changed;
   }

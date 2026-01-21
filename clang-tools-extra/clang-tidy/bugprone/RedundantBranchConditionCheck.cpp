@@ -8,6 +8,7 @@
 
 #include "RedundantBranchConditionCheck.h"
 #include "../utils/Aliasing.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
@@ -132,18 +133,17 @@ void RedundantBranchConditionCheck::check(
 
     // If the other side has side effects then keep it.
     if (OtherSide && OtherSide->HasSideEffects(*Result.Context)) {
-      const auto NextToken = Lexer::findNextToken(
-          OtherSide->getEndLoc(), *Result.SourceManager, getLangOpts());
-      if (NextToken) {
-        const SourceLocation BeforeOtherSide =
-            OtherSide->getBeginLoc().getLocWithOffset(-1);
-        const SourceLocation AfterOtherSide = NextToken->getLocation();
-        Diag << FixItHint::CreateRemoval(
-                    CharSourceRange::getTokenRange(IfBegin, BeforeOtherSide))
-             << FixItHint::CreateInsertion(AfterOtherSide, ";")
-             << FixItHint::CreateRemoval(
-                    CharSourceRange::getTokenRange(AfterOtherSide, IfEnd));
-      }
+      const SourceLocation BeforeOtherSide =
+          OtherSide->getBeginLoc().getLocWithOffset(-1);
+      const SourceLocation AfterOtherSide =
+          utils::lexer::findNextTokenSkippingComments(
+              OtherSide->getEndLoc(), *Result.SourceManager, getLangOpts())
+              ->getLocation();
+      Diag << FixItHint::CreateRemoval(
+                  CharSourceRange::getTokenRange(IfBegin, BeforeOtherSide))
+           << FixItHint::CreateInsertion(AfterOtherSide, ";")
+           << FixItHint::CreateRemoval(
+                  CharSourceRange::getTokenRange(AfterOtherSide, IfEnd));
     } else {
       Diag << FixItHint::CreateRemoval(
           CharSourceRange::getTokenRange(IfBegin, IfEnd));
@@ -167,13 +167,13 @@ void RedundantBranchConditionCheck::check(
       Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
           CondOp->getLHS()->getBeginLoc(), BeforeRHS));
     } else {
-      const auto NextToken = Lexer::findNextToken(
-          CondOp->getLHS()->getEndLoc(), *Result.SourceManager, getLangOpts());
-      if (NextToken) {
-        const SourceLocation AfterLHS = NextToken->getLocation();
-        Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-            AfterLHS, CondOp->getRHS()->getEndLoc()));
-      }
+      const SourceLocation AfterLHS =
+          utils::lexer::findNextTokenSkippingComments(
+              CondOp->getLHS()->getEndLoc(), *Result.SourceManager,
+              getLangOpts())
+              ->getLocation();
+      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+          AfterLHS, CondOp->getRHS()->getEndLoc()));
     }
   }
 }

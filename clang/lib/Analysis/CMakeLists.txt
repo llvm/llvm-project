@@ -40,7 +40,9 @@ add_clang_library(clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic
+  clangFormat
   clangLex
+  clangToolingCore
 
   DEPENDS
   omp_gen

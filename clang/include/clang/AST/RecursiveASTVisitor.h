@@ -2894,6 +2894,7 @@ DEF_TRAVERSE_STMT(CXXMemberCallExpr, {})
 // over the children.
 DEF_TRAVERSE_STMT(AddrLabelExpr, {})
 DEF_TRAVERSE_STMT(ArraySubscriptExpr, {})
+DEF_TRAVERSE_STMT(MatrixSingleSubscriptExpr, {})
 DEF_TRAVERSE_STMT(MatrixSubscriptExpr, {})
 DEF_TRAVERSE_STMT(ArraySectionExpr, {})
 DEF_TRAVERSE_STMT(OMPArrayShapingExpr, {})
@@ -3527,6 +3528,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPDefaultClause(OMPDefaultClause *) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPThreadsetClause(
     OMPThreadsetClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPTransparentClause(
+    OMPTransparentClause *C) {
+  TRY_TO(TraverseStmt(C->getImpexType()));
   return true;
 }
 

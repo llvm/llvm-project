@@ -70,6 +70,7 @@ namespace readability {
 
 // clang-format off
 #define NAMING_KEYS(m) \
+    m(Default) \
     m(Namespace) \
     m(InlineNamespace) \
     m(EnumConstant) \
@@ -319,10 +320,9 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
 
   const char *const PosList[] = {strchr(Begin, '='), strchr(Begin, ';'),
                                  strchr(Begin, ','), strchr(Begin, ')'), EOL};
-  for (const auto &Pos : PosList) {
+  for (const auto &Pos : PosList)
     if (Pos > Begin)
       EOL = std::min(EOL, Pos);
-  }
 
   StrLen = EOL - Begin;
   std::string TypeName;
@@ -340,18 +340,15 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
         "virtual"};
 
     // Remove keywords
-    for (const StringRef Kw : Keywords) {
-      for (size_t Pos = 0; (Pos = Type.find(Kw, Pos)) != std::string::npos;) {
+    for (const StringRef Kw : Keywords)
+      for (size_t Pos = 0; (Pos = Type.find(Kw, Pos)) != std::string::npos;)
         Type.replace(Pos, Kw.size(), "");
-      }
-    }
     TypeName = Type.erase(0, Type.find_first_not_of(' '));
 
     // Remove template parameters
     const size_t Pos = Type.find('<');
-    if (Pos != std::string::npos) {
+    if (Pos != std::string::npos)
       TypeName = Type.erase(Pos, Type.size() - Pos);
-    }
 
     // Replace spaces with single space.
     for (size_t Pos = 0; (Pos = Type.find("  ", Pos)) != std::string::npos;
@@ -699,10 +696,9 @@ size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
     const std::string &TypeName) const {
   size_t Pos = TypeName.find('*');
   size_t Count = 0;
-  for (; Pos < TypeName.length(); Pos++, Count++) {
+  for (; Pos < TypeName.length(); Pos++, Count++)
     if ('*' != TypeName[Pos])
       break;
-  }
   return Count;
 }
 
@@ -943,9 +939,8 @@ std::string IdentifierNamingCheck::fixupWithCase(
   if (Words.empty())
     return Name.str();
 
-  if (IdentifierNamingCheck::HungarianPrefixType::HPT_Off != Style.HPType) {
+  if (IdentifierNamingCheck::HungarianPrefixType::HPT_Off != Style.HPType)
     HungarianNotation.removeDuplicatedPrefix(Words, HNOption);
-  }
 
   SmallString<128> Fixup;
   switch (Case) {
@@ -1163,7 +1158,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_Constant])
       return SK_Constant;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (const auto *Decl = dyn_cast<RecordDecl>(D)) {
@@ -1195,15 +1190,14 @@ StyleKind IdentifierNamingCheck::findStyleKind(
         return SK_Enum;
     }
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (const auto *Decl = dyn_cast<FieldDecl>(D)) {
     if (CheckAnonFieldInParentScope) {
       const RecordDecl *Record = Decl->getParent();
-      if (Record->isAnonymousStructOrUnion()) {
+      if (Record->isAnonymousStructOrUnion())
         return findStyleKindForAnonField(Decl, NamingStyles);
-      }
     }
 
     return findStyleKindForField(Decl, Decl->getType(), NamingStyles);
@@ -1239,12 +1233,11 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_Parameter])
       return SK_Parameter;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
-  if (const auto *Decl = dyn_cast<VarDecl>(D)) {
+  if (const auto *Decl = dyn_cast<VarDecl>(D))
     return findStyleKindForVar(Decl, Decl->getType(), NamingStyles);
-  }
 
   if (const auto *Decl = dyn_cast<CXXMethodDecl>(D)) {
     if (Decl->isMain() || !Decl->isUserProvided() ||
@@ -1285,7 +1278,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_Function])
       return SK_Function;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (const auto *Decl = dyn_cast<FunctionDecl>(D)) {
@@ -1309,7 +1302,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_TemplateParameter])
       return SK_TemplateParameter;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (isa<NonTypeTemplateParmDecl>(D)) {
@@ -1319,7 +1312,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_TemplateParameter])
       return SK_TemplateParameter;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (isa<TemplateTemplateParmDecl>(D)) {
@@ -1329,13 +1322,13 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_TemplateParameter])
       return SK_TemplateParameter;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (isa<ConceptDecl>(D) && NamingStyles[SK_Concept])
     return SK_Concept;
 
-  return SK_Invalid;
+  return undefinedStyle(NamingStyles);
 }
 
 std::optional<RenamerClangTidyCheck::FailureInfo>
@@ -1360,8 +1353,10 @@ IdentifierNamingCheck::getFailureInfo(
     return std::nullopt;
 
   std::string KindName =
-      fixupWithCase(Type, StyleNames[SK], ND, Style, HNOption,
-                    IdentifierNamingCheck::CT_LowerCase);
+      SK == SK_Default
+          ? "identifier"
+          : fixupWithCase(Type, StyleNames[SK], ND, Style, HNOption,
+                          IdentifierNamingCheck::CT_LowerCase);
   llvm::replace(KindName, '_', ' ');
 
   std::string Fixup = fixupWithStyle(Type, Name, Style, HNOption, ND);
@@ -1406,9 +1401,14 @@ IdentifierNamingCheck::getMacroFailureInfo(const Token &MacroNameTok,
   if (!Style.isActive())
     return std::nullopt;
 
+  const auto &Styles = Style.getStyles();
+  const StyleKind UsedKind = !Styles[SK_MacroDefinition] && Styles[SK_Default]
+                                 ? SK_Default
+                                 : SK_MacroDefinition;
+
   return getFailureInfo("", MacroNameTok.getIdentifierInfo()->getName(),
                         nullptr, Loc, Style.getStyles(), Style.getHNOption(),
-                        SK_MacroDefinition, SM, IgnoreFailedSplit);
+                        UsedKind, SM, IgnoreFailedSplit);
 }
 
 RenamerClangTidyCheck::DiagInfo
@@ -1464,15 +1464,13 @@ StyleKind IdentifierNamingCheck::findStyleKindForAnonField(
 
   const QualType Type = AnonField->getType();
 
-  if (const auto *F = dyn_cast<FieldDecl>(IFD->chain().front())) {
+  if (const auto *F = dyn_cast<FieldDecl>(IFD->chain().front()))
     return findStyleKindForField(F, Type, NamingStyles);
-  }
 
-  if (const auto *V = IFD->getVarDecl()) {
+  if (const auto *V = IFD->getVarDecl())
     return findStyleKindForVar(V, Type, NamingStyles);
-  }
 
-  return SK_Invalid;
+  return undefinedStyle(NamingStyles);
 }
 
 StyleKind IdentifierNamingCheck::findStyleKindForField(
@@ -1498,7 +1496,7 @@ StyleKind IdentifierNamingCheck::findStyleKindForField(
   if (NamingStyles[SK_Member])
     return SK_Member;
 
-  return SK_Invalid;
+  return undefinedStyle(NamingStyles);
 }
 
 StyleKind IdentifierNamingCheck::findStyleKindForVar(
@@ -1575,7 +1573,12 @@ StyleKind IdentifierNamingCheck::findStyleKindForVar(
   if (NamingStyles[SK_Variable])
     return SK_Variable;
 
-  return SK_Invalid;
+  return undefinedStyle(NamingStyles);
+}
+
+StyleKind IdentifierNamingCheck::undefinedStyle(
+    ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
+  return NamingStyles[SK_Default] ? SK_Default : SK_Invalid;
 }
 
 } // namespace readability

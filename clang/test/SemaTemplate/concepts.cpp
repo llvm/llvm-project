@@ -1703,3 +1703,25 @@ struct : named_unit<"", thermodynamic_temperature, zeroth_kelvin> {
 struct ice_point : relative_point_origin<point<kelvin>> {};
 
 }
+
+namespace GH174667 {
+
+template<class T, class, class U>
+concept C = requires{ requires U(T(1)); };
+
+template<C<void, bool> T> int f();
+void main() { f<int>(); }
+
+}
+
+namespace GH176402 {
+  void f() {
+    auto recursiveLambda = [](auto self, int depth) -> void {
+      struct MyClass;
+      auto testConcept = []<typename T> {
+        return requires(T) { &MyClass::operator0 } /* expected-error {{expected ';' at end of requirement}} */;
+      };
+    };
+    recursiveLambda(recursiveLambda, 5);
+  }
+}
