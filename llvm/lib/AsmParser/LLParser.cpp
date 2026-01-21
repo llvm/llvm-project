@@ -2697,17 +2697,12 @@ std::optional<DenormalMode> LLParser::parseDenormalFPEnvEntry() {
   if (EatIfPresent(lltok::comma)) {
     InputMode = keywordToDenormalModeKind(Lex.getKind());
     if (!InputMode) {
-      if (Lex.getKind() != lltok::Type) {
-        tokError("expected denormal behavior kind (ieee, preservesign, "
-                 "positivezero, dynamic)");
-        return {};
-      }
-
-      InputMode = OutputMode;
-    } else {
-      Lex.Lex();
+      tokError("expected denormal behavior kind (ieee, preservesign, "
+               "positivezero, dynamic)");
+      return {};
     }
 
+    Lex.Lex();
   } else {
     // Single item, input == output mode
     InputMode = OutputMode;
@@ -2738,11 +2733,6 @@ std::optional<DenormalFPEnv> LLParser::parseDenormalFPEnvAttr() {
       return {};
     DefaultMode = *ParsedDefaultMode;
   }
-
-  if (EatIfPresent(lltok::comma)) {
-
-  }
-
 
   if (Lex.getKind() == lltok::Type) {
     Type *Ty = nullptr;
