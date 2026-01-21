@@ -130,7 +130,7 @@
 "`P3709R2 <https://wg21.link/P3709R2>`__","Reconsider parallel ``ranges::rotate_copy`` and ``ranges::reverse_copy``","2025-06 (Sofia)","","","`#148138 <https://github.com/llvm/llvm-project/issues/148138>`__",""
 "`P3641R0 <https://wg21.link/P3641R0>`__","Rename ``std::observable`` to ``std::observable_checkpoint``, and add a feature-test macro","2025-06 (Sofia)","","","`#148139 <https://github.com/llvm/llvm-project/issues/148139>`__",""
 "`P3044R2 <https://wg21.link/P3044R2>`__","sub-``string_view`` from ``string``","2025-06 (Sofia)","|Complete|","22","`#148140 <https://github.com/llvm/llvm-project/issues/148140>`__",""
-"`P2876R3 <https://wg21.link/P2876R3>`__","Proposal to extend ``std::simd`` with more constructors and accessors","2025-06 (Sofia)","","","`#148143 <https://github.com/llvm/llvm-project/issues/148143>`__",""
+"`P2876R3 <https://wg21.link/P2876R3>`__","Proposal to extend ``std::simd`` with more constructors and accessors","2025-06 (Sofia)","|Complete|","22","`#148143 <https://github.com/llvm/llvm-project/issues/148143>`__",""
 "`P3480R6 <https://wg21.link/P3480R6>`__","``std::simd`` is a range","2025-06 (Sofia)","","","`#148144 <https://github.com/llvm/llvm-project/issues/148144>`__",""
 "`P2664R11 <https://wg21.link/P2664R11>`__","Extend ``std::simd`` with permutation API","2025-06 (Sofia)","","","`#148145 <https://github.com/llvm/llvm-project/issues/148145>`__",""
 "`P3691R1 <https://wg21.link/P3691R1>`__","Reconsider naming of the namespace for ``std::simd``","2025-06 (Sofia)","","","`#148148 <https://github.com/llvm/llvm-project/issues/148148>`__",""

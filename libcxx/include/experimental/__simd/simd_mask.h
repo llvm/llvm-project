@@ -14,6 +14,8 @@
 #include <__cstddef/size_t.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
+#include <bitset>
+#include <concepts>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/reference.h>
 #include <experimental/__simd/traits.h>
@@ -65,6 +67,26 @@ public:
     _Impl::__load(__s_, _Flags::template __apply<simd_mask>(__mem));
   }
 
+  // [simd.mask.ctor]
+  _LIBCPP_HIDE_FROM_ABI constexpr simd_mask(const std::bitset<size()>& __b) noexcept {
+    for (size_t __i = 0; __i < size(); ++__i) {
+      (*this)[__i] = __b[__i];
+    }
+  }
+
+  template <class _Up>
+    requires std::unsigned_integral<_Up>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit simd_mask(_Up __val) noexcept {
+    constexpr size_t __bit_limit = sizeof(_Up) * 8;
+    for (size_t __i = 0; __i < size(); ++__i) {
+      if (__i >= __bit_limit) {
+        (*this)[__i] = false;
+      } else {
+        (*this)[__i] = static_cast<bool>((__val >> __i) & 1);
+      }
+    }
+  }
+
   // copy functions
   template <class _Flags, enable_if_t<is_simd_flag_type_v<_Flags>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void copy_from(const value_type* __mem, _Flags) {
@@ -74,6 +96,24 @@ public:
   template <class _Flags, enable_if_t<is_simd_flag_type_v<_Flags>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void copy_to(value_type* __mem, _Flags) const {
     _Impl::__store(__s_, _Flags::template __apply<simd_mask>(__mem));
+  }
+
+  // [simd.mask.namedconv]
+  _LIBCPP_HIDE_FROM_ABI constexpr std::bitset<size()> to_bitset() const noexcept {
+    std::bitset<size()> __b;
+    for (size_t __i = 0; __i < size(); ++__i) {
+      __b[__i] = (*this)[__i];
+    }
+    return __b;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr unsigned long long to_ullong() const noexcept {
+    unsigned long long __val = 0;
+    constexpr size_t __limit = (size() < 64) ? size() : 64;
+    for (size_t __i = 0; __i < __limit; ++__i) {
+      __val |= (static_cast<unsigned long long>((*this)[__i]) << __i);
+    }
+    return __val;
   }
 
   // scalar access [simd.mask.subscr]
