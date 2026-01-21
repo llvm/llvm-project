@@ -292,7 +292,7 @@ class CheckRunner:
             sys.exit("No diagnostics were expected, but found the ones above")
 
     def check_fixes(self, input_file: str = "", check_file: str = "") -> None:
-        if not check_file or self.has_check_fixes:
+        if not (check_file or self.has_check_fixes):
             return
 
         input_file = input_file or self.temp_file_name
