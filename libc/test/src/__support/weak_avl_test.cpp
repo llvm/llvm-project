@@ -8,7 +8,6 @@
 
 #include "src/__support/CPP/optional.h"
 #include "src/__support/weak_avl.h"
-#include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
 using Node = LIBC_NAMESPACE::WeakAVLNode<int>;
