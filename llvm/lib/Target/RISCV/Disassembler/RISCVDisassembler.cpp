@@ -78,56 +78,42 @@ LLVMInitializeRISCVDisassembler() {
                                          createRISCVDisassembler);
 }
 
-static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
-                                           uint64_t Address,
-                                           const MCDisassembler *Decoder) {
+template <unsigned BaseReg>
+static DecodeStatus DecodeGPRLikeRegisterClass(MCInst &Inst, uint32_t RegNo,
+                                               uint64_t Address,
+                                               const MCDisassembler *Decoder) {
   bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
 
   if (RegNo >= 32 || (IsRVE && RegNo >= 16))
     return MCDisassembler::Fail;
 
-  MCRegister Reg = RISCV::X0 + RegNo;
+  MCRegister Reg = BaseReg + RegNo;
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder) {
+  return DecodeGPRLikeRegisterClass<RISCV::X0>(Inst, RegNo, Address, Decoder);
 }
 
 static DecodeStatus DecodeYGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
-  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
-
-  if (RegNo >= 32 || (IsRVE && RegNo >= 16))
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = RISCV::X0_Y + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
+  return DecodeGPRLikeRegisterClass<RISCV::X0_Y>(Inst, RegNo, Address, Decoder);
 }
 
 static DecodeStatus DecodeGPRF16RegisterClass(MCInst &Inst, uint32_t RegNo,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder) {
-  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
-
-  if (RegNo >= 32 || (IsRVE && RegNo >= 16))
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = RISCV::X0_H + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
+  return DecodeGPRLikeRegisterClass<RISCV::X0_H>(Inst, RegNo, Address, Decoder);
 }
 
 static DecodeStatus DecodeGPRF32RegisterClass(MCInst &Inst, uint32_t RegNo,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder) {
-  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
-
-  if (RegNo >= 32 || (IsRVE && RegNo >= 16))
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = RISCV::X0_W + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
+  return DecodeGPRLikeRegisterClass<RISCV::X0_W>(Inst, RegNo, Address, Decoder);
 }
 
 static DecodeStatus DecodeGPRX1X5RegisterClass(MCInst &Inst, uint32_t RegNo,
@@ -763,9 +749,6 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXSMT32, XSMTGroup, "SpacemiT extensions"},
     {DecoderTableXAIF32, XAIFGroup, "AI Foundry extensions"},
     // Standard Extensions
-    {DecoderTableRVYOnly32,
-     {RISCV::FeatureStdExtY},
-     "RVY-only standard 32-bit instructions"},
     {DecoderTable32, {}, "standard 32-bit instructions"},
     {DecoderTableRV32Only32, {}, "RV32-only standard 32-bit instructions"},
     {DecoderTableZfinx32, {}, "Zfinx (Float in Integer)"},

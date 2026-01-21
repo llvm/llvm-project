@@ -25711,7 +25711,8 @@ static Value *useTpOffset(IRBuilderBase &IRB, unsigned Offset) {
                                 IRB.CreateCall(ThreadPointerFunc), Offset);
 }
 
-Value *RISCVTargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
+Value *RISCVTargetLowering::getIRStackGuard(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
   // Fuchsia provides a fixed TLS slot for the stack cookie.
   // <zircon/tls.h> defines ZX_TLS_STACK_GUARD_OFFSET with this value.
   if (Subtarget.isTargetFuchsia())
@@ -25731,7 +25732,7 @@ Value *RISCVTargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
     return useTpOffset(IRB, Offset);
   }
 
-  return TargetLowering::getIRStackGuard(IRB);
+  return TargetLowering::getIRStackGuard(IRB, Libcalls);
 }
 
 bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,

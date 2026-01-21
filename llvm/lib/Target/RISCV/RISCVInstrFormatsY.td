@@ -66,7 +66,7 @@ class RVYInstSrcDst<bits<7> funct7, bits<5> funct5, bits<3> funct3,
   let Inst{6 -0} = opcode.Value;
 }
 
-class RVYInstSetBoundsImmFmt<dag outs, dag ins, string opcodestr, string argstr>
+class RVYInstBNDSWImmFmt<dag outs, dag ins, string opcodestr, string argstr>
     : RVInstIBase<0b011, OPC_OP_IMM_32, outs, ins, opcodestr, argstr> {
   bits<5> rd;
   bits<5> rs1;
