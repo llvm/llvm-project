@@ -485,6 +485,7 @@ func.func @launch_cluster() {
 // CHECK-NEXT: gpu.func @launch_cluster_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
 // CHECK-SAME: known_block_size = array<i32: 20, 24, 28>
+// CHECK-SAME: known_cluster_size = array<i32: 1, 2, 1>
 // CHECK-SAME: known_grid_size = array<i32: 8, 12, 16>
 // CHECK-NEXT: %[[BID:.*]] = gpu.block_id x
 // CHECK-NEXT: = gpu.block_id y

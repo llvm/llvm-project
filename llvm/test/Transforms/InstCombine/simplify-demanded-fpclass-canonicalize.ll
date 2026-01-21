@@ -58,8 +58,7 @@ define nofpclass(nan zero) float @ret_nofpclass_nan_zero__canonicalize_select_su
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call float @returns_sub_norm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float [[SUB]]
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[SELECT]])
-; CHECK-NEXT:    ret float [[CANON]]
+; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %sub = call float @returns_sub_norm()
   %select = select i1 %cond, float %x, float %sub
@@ -97,8 +96,7 @@ define nofpclass(nan zero) float @ret_nofpclass_nan_zero__canonicalize_select_su
 ; CHECK-LABEL: define nofpclass(nan zero) float @ret_nofpclass_nan_zero__canonicalize_select_sub_daz(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call float @returns_sub()
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[X]])
-; CHECK-NEXT:    ret float [[CANON]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %sub = call float @returns_sub()
   %select = select i1 %cond, float %x, float %sub
@@ -353,8 +351,7 @@ define nofpclass(zero) float @ret_nofpclass_zero__canonicalize_nnan_src_ieee(flo
 define nofpclass(zero) float @ret_nofpclass_zero__canonicalize_nnan_src_daz(float nofpclass(nan) %x, i1 %cond) #0 {
 ; CHECK-LABEL: define nofpclass(zero) float @ret_nofpclass_zero__canonicalize_nnan_src_daz(
 ; CHECK-SAME: float nofpclass(nan) [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[X]])
-; CHECK-NEXT:    ret float [[CANON]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %canon = call float @llvm.canonicalize.f32(float %x)
   ret float %canon
