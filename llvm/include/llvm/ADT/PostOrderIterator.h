@@ -108,7 +108,7 @@ public:
       Data.resize(Idx + 1);
     bool Inserted = !Data[Idx];
     Data[Idx] = true;
-    return std::make_pair(std::nullopt, Inserted);
+    return {std::nullopt, Inserted};
   }
 };
 
