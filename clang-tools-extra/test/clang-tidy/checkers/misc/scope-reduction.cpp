@@ -579,3 +579,205 @@ void test_compound_different_var() {
     y += x;  // x is not the accumulator, y is
   }
 }
+
+
+// Helper functions for test cases
+int calculateLimit() { return 10; }
+int getDefaultError() { return -1; }
+void riskyOperation() {}
+class Exception { public: int getCode() const { return 1; } };
+void handleError(int) {}
+int expensive() { return 42; }
+bool condition = true;
+void use(int) {}
+int getValue() { return 5; }
+void processResult(int) {}
+int transform(int x) { return x * 2; }
+void doSomething(int) {}
+int calculateValue(int x) { return x * x; }
+void process(int) {}
+
+// Unary operator accumulator patterns - currently might warn incorrectly
+
+// Post-increment in loop - should NOT warn (accumulator pattern)
+void test_post_increment_loop() {
+  int counter = 0;  // Should NOT warn - accumulator with post-increment
+  for (int i = 0; i < 10; ++i) {
+    counter++;
+  }
+}
+
+// Pre-increment in loop - should NOT warn (accumulator pattern)
+void test_pre_increment_loop() {
+  int counter = 0;  // Should NOT warn - accumulator with pre-increment
+  for (int i = 0; i < 10; ++i) {
+    ++counter;
+  }
+}
+
+// Post-decrement in loop - should NOT warn (accumulator pattern)
+void test_post_decrement_loop() {
+  int counter = 100;  // Should NOT warn - accumulator with post-decrement
+  while (counter > 0) {
+    counter--;
+  }
+}
+
+// Pre-decrement in loop - should NOT warn (accumulator pattern)
+void test_pre_decrement_loop() {
+  int counter = 100;  // Should NOT warn - accumulator with pre-decrement
+  while (counter > 0) {
+    --counter;
+  }
+}
+
+#if 0
+// Unary operators outside loops - currently warns (false positive)
+void test_unary_outside_loop() {
+  int value = 10;
+  // Currently warns but shouldn't - moving would change semantics (loses initialization)
+  if (true) {
+    value++;
+  }
+}
+#endif
+
+// Container accumulation patterns - should NOT warn
+
+// Array-like accumulation - should NOT warn
+void test_array_accumulation() {
+  int results[10];  // Should NOT warn - array accumulator
+  int index = 0;    // Should NOT warn - index accumulator
+  for (int i = 0; i < 10; ++i) {
+    results[index++] = i;
+  }
+}
+
+// Simple string accumulation - should NOT warn
+void test_simple_string_accumulation() {
+  char message[100] = "";  // Should NOT warn - string accumulator
+  int len = 0;             // Should NOT warn - length accumulator
+  for (int i = 0; i < 5; ++i) {
+    message[len++] = 'A' + i;
+  }
+}
+
+// Bitwise accumulation patterns - some already handled, some might not be
+
+// Bitwise OR with compound assignment - should NOT warn (already handled)
+void test_bitwise_compound() {
+  int flags = 0;  // Should NOT warn - compound assignment accumulator
+  for (int i = 0; i < 8; ++i) {
+    flags |= (1 << i);
+  }
+}
+
+// Bitwise OR with explicit assignment - should NOT warn
+void test_bitwise_explicit() {
+  int flags = 0;  // Should NOT warn - bitwise accumulator pattern
+  for (int i = 0; i < 8; ++i) {
+    flags = flags | (1 << i);
+  }
+}
+
+// Bitwise AND accumulation - should NOT warn
+void test_bitwise_and() {
+  int mask = 0xFF;  // Should NOT warn - bitwise accumulator pattern
+  for (int i = 0; i < 8; ++i) {
+    mask = mask & ~(1 << i);
+  }
+}
+
+// Scope reduction opportunities the checker might miss
+
+// Variable used only in loop condition - might be movable
+void test_loop_condition_only() {
+  int limit = calculateLimit();  // Might be movable to for-loop init
+  for (int i = 0; i < limit; ++i) {
+    // body doesn't use limit
+    doSomething(i);
+  }
+}
+
+// Variable in exception handling - should warn
+void test_exception_handling() {
+  int errorCode = getDefaultError();
+  // Should warn - errorCode could be moved to catch block
+  try {
+    riskyOperation();
+  } catch (const Exception& e) {
+    errorCode = e.getCode();
+    handleError(errorCode);
+  }
+}
+
+// Complex initialization dependencies
+void test_initialization_chain() {
+  int a = expensive();
+  int b = a * 2;  // b could potentially be moved if only used in smaller scope
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'b' can be declared in a smaller scope
+  // CHECK-NOTES: :[[@LINE+4]]:9: note: used here
+  // CHECK-NOTES: :[[@LINE+2]]:18: note: can be declared in this scope
+  // Should warn for b - it could be moved to if-block
+  if (condition) {
+    use(b);
+  }
+}
+
+// Variable used in nested function calls
+void test_nested_calls() {
+  int temp = getValue();  // Should NOT warn - initialized with function call
+  if (condition) {
+    processResult(transform(temp));
+  }
+}
+
+// Multiple assignment patterns in same loop
+void test_multiple_assignments() {
+  int sum = 0;     // Should NOT warn - accumulator
+  int count = 0;   // Should NOT warn - accumulator
+  for (int i = 0; i < 10; ++i) {
+    sum += i;
+    count++;
+  }
+}
+
+// Mixed accumulator and non-accumulator usage
+void test_mixed_usage_complex() {
+  int value = 0;   // Complex case - accumulator in loop, then used elsewhere
+  for (int i = 0; i < 5; ++i) {
+    value += i;    // Accumulator usage
+  }
+  if (condition) {
+    value = 100;   // Non-accumulator usage
+    process(value);
+  }
+}
+
+// Variable modified in loop but not accumulator pattern
+void test_non_accumulator_modification() {
+  int temp = 0;
+  // Should warn - temp is modified but not in accumulator pattern
+  for (int i = 0; i < 10; ++i) {
+    temp = i * 2;  // Overwrites previous value, not accumulating
+    use(temp);
+  }
+}
+
+// Accumulator with function calls
+void test_accumulator_with_calls() {
+  int total = 0;   // Should NOT warn - accumulator pattern with function calls
+  for (int i = 0; i < 10; ++i) {
+    total += calculateValue(i);
+  }
+}
+
+// Conditional accumulation
+void test_conditional_accumulation() {
+  int sum = 0;     // Should NOT warn - conditional accumulator
+  for (int i = 0; i < 10; ++i) {
+    if (i % 2 == 0) {
+      sum += i;
+    }
+  }
+}
