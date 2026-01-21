@@ -70,10 +70,11 @@ static cl::opt<bool> EnableWMMAVnopHoisting(
 static bool shouldRunLdsBranchVmemWARHazardFixup(const MachineFunction &MF,
                                                  const GCNSubtarget &ST);
 
-GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF)
+GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF,
+                                         MachineLoopInfo *MLI)
     : IsHazardRecognizerMode(false), CurrCycleInstr(nullptr), MF(MF),
       ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
-      TRI(TII.getRegisterInfo()), TSchedModel(TII.getSchedModel()),
+      TRI(TII.getRegisterInfo()), TSchedModel(TII.getSchedModel()), MLI(MLI),
       ClauseUses(TRI.getNumRegUnits()), ClauseDefs(TRI.getNumRegUnits()) {
   MaxLookAhead = MF.getRegInfo().isPhysRegUsed(AMDGPU::AGPR0) ? 19 : 5;
   RunLdsBranchVmemWARHazardFixup = shouldRunLdsBranchVmemWARHazardFixup(MF, ST);
@@ -2206,13 +2207,15 @@ bool GCNHazardRecognizer::hasWMMAToVALURegOverlap(
 
 bool GCNHazardRecognizer::isCoexecutionHazardFor(const MachineInstr &I,
                                                  const MachineInstr &MI) const {
+  // I is the potential WMMA hazard source, MI is the instruction being checked
+  // for hazard.
   if (!TII.isXDLWMMA(I))
     return false;
 
   // Dispatch based on MI type
   if (TII.isXDLWMMA(MI))
     return hasWMMAToWMMARegOverlap(I, MI);
-  else if (isCoexecutableVALUInst(MI))
+  if (isCoexecutableVALUInst(MI))
     return hasWMMAToVALURegOverlap(I, MI);
 
   return false;
@@ -2235,22 +2238,10 @@ bool GCNHazardRecognizer::hasWMMAHazardInLoop(MachineLoop *L, MachineInstr *MI,
   return false;
 }
 
-void GCNHazardRecognizer::ensureLoopInfoAvailable() {
-  // Lazily compute MDT and MLI only when needed
-  if (MLI)
-    return;
-
-  OwnedMDT =
-      std::make_unique<MachineDominatorTree>(const_cast<MachineFunction &>(MF));
-  OwnedMLI = std::make_unique<MachineLoopInfo>();
-  OwnedMLI->analyze(*OwnedMDT);
-
-  MLI = OwnedMLI.get();
-}
-
 bool GCNHazardRecognizer::tryHoistWMMAVnopsFromLoop(MachineInstr *MI,
                                                     int WaitStatesNeeded) {
-  ensureLoopInfoAvailable();
+  if (!MLI)
+    return false;
 
   MachineLoop *L = MLI->getLoopFor(MI->getParent());
   if (!L) {

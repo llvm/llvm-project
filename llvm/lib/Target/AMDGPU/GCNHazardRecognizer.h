@@ -53,9 +53,7 @@ private:
   const SIRegisterInfo &TRI;
   const TargetSchedModel &TSchedModel;
 
-  // Loop info for V_NOP hoisting, computed on demand only when needed.
-  std::unique_ptr<MachineDominatorTree> OwnedMDT;
-  std::unique_ptr<MachineLoopInfo> OwnedMLI;
+  // Loop info for V_NOP hoisting, passed from the pass manager.
   MachineLoopInfo *MLI = nullptr;
 
   bool RunLdsBranchVmemWARHazardFixup;
@@ -125,7 +123,6 @@ private:
   bool fixWMMAHazards(MachineInstr *MI);
   int checkWMMACoexecutionHazards(MachineInstr *MI);
   bool fixWMMACoexecutionHazards(MachineInstr *MI);
-  void ensureLoopInfoAvailable();
   bool tryHoistWMMAVnopsFromLoop(MachineInstr *MI, int WaitStatesNeeded);
   bool hasWMMAHazardInLoop(MachineLoop *L, MachineInstr *MI,
                            bool IncludeSubloops = true);
@@ -167,7 +164,8 @@ private:
   int checkPermlaneHazards(MachineInstr *MI);
 
 public:
-  GCNHazardRecognizer(const MachineFunction &MF);
+  GCNHazardRecognizer(const MachineFunction &MF,
+                      MachineLoopInfo *MLI = nullptr);
   // We can only issue one instruction per cycle.
   bool atIssueLimit() const override { return true; }
   void EmitInstruction(SUnit *SU) override;
