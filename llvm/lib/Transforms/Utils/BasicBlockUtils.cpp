@@ -1054,6 +1054,28 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
   return SplitBlockImpl(Old, SplitPt, DTU, /*DT=*/nullptr, LI, MSSAU, BBName);
 }
 
+static bool hasReachableLoopEntry(const Loop &L, const DominatorTree &DT) {
+  for (const auto Pred : inverse_children<const BasicBlock *>(L.getHeader()))
+    if (!L.contains(Pred) && DT.isReachableFromEntry(Pred))
+      return true;
+
+  return false;
+}
+
+// Destroy the loop.
+static void Destroy(Loop *L, LoopInfo &LI) {
+  auto *ParentL = L->getParentLoop();
+  for (auto *BB : L->getBlocks())
+    LI.changeLoopFor(BB, ParentL);
+
+  if (ParentL)
+    ParentL->removeChildLoop(L);
+  else
+    LI.removeLoop(llvm::find(LI, L));
+
+  LI.destroy(L);
+}
+
 /// Update DominatorTree, LoopInfo, and LCCSA analysis information.
 /// Invalidates DFS Numbering when DTU or DT is provided.
 static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
@@ -1163,8 +1185,14 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
       InnermostPredLoop->addBasicBlockToLoop(NewBB, *LI);
   } else {
     L->addBasicBlockToLoop(NewBB, *LI);
-    if (SplitMakesNewLoopHeader)
-      L->moveToHeader(NewBB);
+    if (SplitMakesNewLoopHeader) {
+      if (!hasReachableLoopEntry(*L, *DT))
+        // Old header lost all entries.
+        L->moveToHeader(NewBB);
+      else
+        // Both OldBB and NewBB have loop entries.
+        Destroy(L, *LI);
+    }
   }
 }
 

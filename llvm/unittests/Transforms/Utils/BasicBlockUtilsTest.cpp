@@ -496,7 +496,8 @@ exit:
 
   EXPECT_TRUE(DT.verify());
   LLVM_DEBUG(F->dump(); LI.print(dbgs()));
-  EXPECT_DEATH({LI.verify(DT);}, "Assertion.*Loop has multiple entry points!");
+  LI.verify(DT);
+  EXPECT_EQ(LI.getLoopFor(getBasicBlockByName(*F, "catch_dest")), nullptr);
 }
 
 TEST(BasicBlockUtils, SplitCriticalEdge) {
