@@ -10963,20 +10963,21 @@ static bool foldableSelect(const MachineInstr &Def) {
   return true;
 }
 
-static bool setsSCCifResultIsZero(const MachineInstr &Def, bool &NeedInversion,
+static bool setsSCCIfResultIsZero(const MachineInstr &Def, bool &NeedInversion,
                                   unsigned &NewDefOpc) {
   // S_ADD_U32 X, 1 sets SCC on carryout which can only happen if result==0.
   // S_ADD_I32 X, 1 can be converted to S_ADD_U32 X, 1 if SCC is dead.
   if (Def.getOpcode() != AMDGPU::S_ADD_I32 &&
       Def.getOpcode() != AMDGPU::S_ADD_U32)
     return false;
-  MachineOperand AddSrc1 = Def.getOperand(1);
-  MachineOperand AddSrc2 = Def.getOperand(2);
+  const MachineOperand &AddSrc1 = Def.getOperand(1);
+  const MachineOperand &AddSrc2 = Def.getOperand(2);
   int64_t addend;
-  if (!(AddSrc1.isImm() && AddSrc1.getImm() == 1) &&
-      !(AddSrc2.isImm() && AddSrc2.getImm() == 1) &&
-      !(getFoldableImm(&AddSrc1, addend) && addend == 1) &&
-      !(getFoldableImm(&AddSrc2, addend) && addend == 1))
+
+  if ((!AddSrc1.isImm() || AddSrc1.getImm() != 1) &&
+      (!AddSrc2.isImm() || AddSrc2.getImm() != 1) &&
+      (!getFoldableImm(&AddSrc1, addend) || addend != 1) &&
+      (!getFoldableImm(&AddSrc2, addend) || addend != 1))
     return false;
 
   if (Def.getOpcode() == AMDGPU::S_ADD_I32) {
@@ -10986,7 +10987,6 @@ static bool setsSCCifResultIsZero(const MachineInstr &Def, bool &NeedInversion,
       return false;
     NewDefOpc = AMDGPU::S_ADD_U32;
   }
-
   NeedInversion = !NeedInversion;
   return true;
 }
@@ -11027,8 +11027,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     //   (non-zero imm), 0)
 
     unsigned NewDefOpc = Def->getOpcode();
-    if (!setsSCCifResultIsNonZero(*Def) &&
-        !setsSCCifResultIsZero(*Def, NeedInversion, NewDefOpc) &&
+    if (!setsSCCIfResultIsNonZero(*Def) &&
+        !setsSCCIfResultIsZero(*Def, NeedInversion, NewDefOpc) &&
         !foldableSelect(*Def))
       return false;
 
