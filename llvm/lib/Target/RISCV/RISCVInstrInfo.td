@@ -2369,6 +2369,9 @@ include "RISCVInstrInfoZicfiss.td"
 // Short Forward Branch
 include "RISCVInstrInfoSFB.td"
 
+// CHERI
+include "RISCVInstrInfoY.td"
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
