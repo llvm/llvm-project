@@ -1761,10 +1761,6 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
     return;
   }
 
-  auto EnumValuesCmp = [](const llvm::APSInt &A, const llvm::APSInt &B) {
-    return A < B;
-  };
-
   const EnumDecl *Key = ED->getCanonicalDecl();
   auto [It, Inserted] = AssignEnumCache.try_emplace(Key);
   auto &Values = It->second;
@@ -1774,18 +1770,18 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
 
     for (auto *EC : ED->enumerators()) {
       llvm::APSInt V = EC->getInitVal();
-      AdjustAPSInt(V, DstWidth, DstIsSigned);
       Values.push_back(V);
+      AdjustAPSInt(Values.back(), DstWidth, DstIsSigned);
     }
 
     if (Values.empty())
       return;
 
-    llvm::sort(Values, EnumValuesCmp);
+    llvm::sort(Values);
     Values.erase(llvm::unique(Values), Values.end());
   }
 
-  if (llvm::binary_search(Values, *RHSVal, EnumValuesCmp))
+  if (llvm::binary_search(Values, *RHSVal))
     return;
 
   Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
