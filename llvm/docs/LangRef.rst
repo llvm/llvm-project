@@ -1567,11 +1567,10 @@ Currently, only the following parameter attributes are defined:
     attribute may only be applied to pointer-typed parameters. A pointer that
     is dereferenceable can be loaded from speculatively without a risk of
     trapping. The number of bytes known to be dereferenceable must be provided
-    in parentheses. It is legal for the number of bytes to be less than the
-    size of the pointee type. The ``nonnull`` attribute does not imply
-    dereferenceability (consider a pointer to one element past the end of an
-    array), however ``dereferenceable(<n>)`` does imply ``nonnull`` in
-    ``addrspace(0)`` (which is the default address space), except if the
+    in parentheses. The ``nonnull`` attribute does not imply dereferenceability
+    (consider a pointer to one element past the end of an array), however
+    ``dereferenceable(<n>)`` does imply ``nonnull`` in ``addrspace(0)``
+    (which is the default address space), except if the
     ``null_pointer_is_valid`` function attribute is present.
     ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
@@ -20890,20 +20889,20 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.vector.splice.left.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.left.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %offset)
+      declare <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %offset)
 
 Overview:
 """""""""
 
 The '``llvm.vector.splice.left.*``' intrinsics construct a vector by
-concatenating two vectors together, shifting the elements left by ``imm``, and
-extracting the lower half.
+concatenating two vectors together, shifting the elements left by ``offset``,
+and extracting the lower half.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
-fixed-width vectors is still to use a shufflevector, as that may allow for more
-optimization opportunities.
+fixed-width vectors with an immediate offset is still to use a shufflevector, as
+that may allow for more optimization opportunities.
 
 For example:
 
@@ -20917,11 +20916,13 @@ For example:
 
 Arguments:
 """"""""""
+The first two operands are vectors with the same type. ``offset`` is an unsigned
+scalar i32 that determines how many elements to shift left by.
 
-The first two operands are vectors with the same type. For a fixed-width vector
-<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm < N. For
-a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
-the range 0 <= imm < X where X=vscale_range_min * N.
+Semantics:
+""""""""""
+For a vector type with a runtime length of N, if ``offset`` > N then the result
+is a :ref:`poison value <poisonvalues>`.
 
 '``llvm.vector.splice.right``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20932,20 +20933,20 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.vector.splice.right.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.right.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %offset)
+      declare <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %offset)
 
 Overview:
 """""""""
 
 The '``llvm.vector.splice.right.*``' intrinsics construct a vector by
-concatenating two vectors together, shifting the elements right by ``imm``, and
-extracting the upper half.
+concatenating two vectors together, shifting the elements right by ``offset``,
+and extracting the upper half.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
-fixed-width vectors is still to use a shufflevector, as that may allow for more
-optimization opportunities.
+fixed-width vectors with an immediate offset is still to use a shufflevector, as
+that may allow for more optimization opportunities.
 
 For example:
 
@@ -20959,11 +20960,13 @@ For example:
 
 Arguments:
 """"""""""
+The first two operands are vectors with the same type. ``offset`` is an unsigned
+scalar i32 that determines how many elements to shift right by.
 
-The first two operands are vectors with the same type. For a fixed-width vector
-<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm <= N. For
-a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
-the range 0 <= imm <= X where X=vscale_range_min * N.
+Semantics:
+""""""""""
+For a vector type with a runtime length of N, if ``offset`` > N then the result
+is a :ref:`poison value <poisonvalues>`.
 
 '``llvm.stepvector``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -21461,104 +21464,6 @@ and columns, respectively, and must be positive, constant integers.
 The :ref:`align <attr_align>` parameter attribute can be provided
 for the ``%Ptr`` arguments.
 
-
-Half Precision Floating-Point Intrinsics
-----------------------------------------
-
-For most target platforms, half precision floating-point is a
-storage-only format. This means that it is a dense encoding (in memory)
-but does not support computation in the format.
-
-This means that code must first load the half-precision floating-point
-value as an i16, then convert it to float with
-:ref:`llvm.convert.from.fp16 <int_convert_from_fp16>`. Computation can
-then be performed on the float value (including extending to double
-etc). To store the value back to memory, it is first converted to float
-if needed, then converted to i16 with
-:ref:`llvm.convert.to.fp16 <int_convert_to_fp16>`, then storing as an
-i16 value.
-
-.. _int_convert_to_fp16:
-
-'``llvm.convert.to.fp16``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare i16 @llvm.convert.to.fp16.f32(float %a)
-      declare i16 @llvm.convert.to.fp16.f64(double %a)
-
-Overview:
-"""""""""
-
-The '``llvm.convert.to.fp16``' intrinsic function performs a conversion from a
-conventional floating-point type to half precision floating-point format.
-
-Arguments:
-""""""""""
-
-The intrinsic function contains single argument - the value to be
-converted.
-
-Semantics:
-""""""""""
-
-The '``llvm.convert.to.fp16``' intrinsic function performs a conversion from a
-conventional floating-point format to half precision floating-point format. The
-return value is an ``i16`` which contains the converted number.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %res = call i16 @llvm.convert.to.fp16.f32(float %a)
-      store i16 %res, i16* @x, align 2
-
-.. _int_convert_from_fp16:
-
-'``llvm.convert.from.fp16``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare float @llvm.convert.from.fp16.f32(i16 %a)
-      declare double @llvm.convert.from.fp16.f64(i16 %a)
-
-Overview:
-"""""""""
-
-The '``llvm.convert.from.fp16``' intrinsic function performs a
-conversion from half precision floating-point format to single precision
-floating-point format.
-
-Arguments:
-""""""""""
-
-The intrinsic function contains single argument - the value to be
-converted.
-
-Semantics:
-""""""""""
-
-The '``llvm.convert.from.fp16``' intrinsic function performs a
-conversion from half single precision floating-point format to single
-precision floating-point format. The input half-float value is
-represented by an ``i16`` value.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %a = load i16, ptr @x, align 2
-      %res = call float @llvm.convert.from.fp16(i16 %a)
 
 Saturating floating-point to integer conversions
 ------------------------------------------------

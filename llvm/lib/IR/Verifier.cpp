@@ -3864,7 +3864,7 @@ void Verifier::visitCallBase(CallBase &Call) {
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
   bool IsIntrinsic = Callee && Callee->isIntrinsic();
   if (IsIntrinsic)
-    Check(Callee->getValueType() == FTy,
+    Check(Callee->getFunctionType() == FTy,
           "Intrinsic called with incompatible signature", Call);
 
   // Verify if the calling convention of the callee is callable.
@@ -6688,33 +6688,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "Stride must be greater or equal than the number of rows!", IF);
     }
 
-    break;
-  }
-  case Intrinsic::vector_splice_left:
-  case Intrinsic::vector_splice_right: {
-    VectorType *VecTy = cast<VectorType>(Call.getType());
-    uint64_t Idx = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
-    uint64_t KnownMinNumElements = VecTy->getElementCount().getKnownMinValue();
-    if (VecTy->isScalableTy() && Call.getParent() &&
-        Call.getParent()->getParent()) {
-      AttributeList Attrs = Call.getParent()->getParent()->getAttributes();
-      if (Attrs.hasFnAttr(Attribute::VScaleRange))
-        KnownMinNumElements *= Attrs.getFnAttrs().getVScaleRangeMin();
-    }
-    if (ID == Intrinsic::vector_splice_left)
-      Check(Idx < KnownMinNumElements,
-            "The splice index exceeds the range [0, VL-1] where VL is the "
-            "known minimum number of elements in the vector. For scalable "
-            "vectors the minimum number of elements is determined from "
-            "vscale_range.",
-            &Call);
-    else
-      Check(Idx <= KnownMinNumElements,
-            "The splice index exceeds the range [0, VL] where VL is the "
-            "known minimum number of elements in the vector. For scalable "
-            "vectors the minimum number of elements is determined from "
-            "vscale_range.",
-            &Call);
     break;
   }
   case Intrinsic::stepvector: {

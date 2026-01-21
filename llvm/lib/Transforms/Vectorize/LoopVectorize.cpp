@@ -4347,20 +4347,34 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 }
 #endif
 
+/// Returns true if the VPlan contains a VPReductionPHIRecipe with
+/// FindLast recurrence kind.
+static bool hasFindLastReductionPhi(VPlan &Plan) {
+  return any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+                [](VPRecipeBase &R) {
+                  auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
+                  return RedPhi &&
+                         RecurrenceDescriptor::isFindLastRecurrenceKind(
+                             RedPhi->getRecurrenceKind());
+                });
+}
+
 bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     ElementCount VF) const {
   // Cross iteration phis such as fixed-order recurrences and FMaxNum/FMinNum
   // reductions need special handling and are currently unsupported.
-  // FindLast reductions also require special handling for the synthesized
-  // mask PHI.
   if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
         if (!Legal->isReductionVariable(&Phi))
           return Legal->isFixedOrderRecurrence(&Phi);
         RecurKind Kind =
             Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind();
-        return RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) ||
-               RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind);
+        return RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind);
       }))
+    return false;
+
+  // FindLast reductions require special handling for the synthesized mask PHI
+  // and are currently unsupported for epilogue vectorization.
+  if (hasFindLastReductionPhi(getPlanFor(VF)))
     return false;
 
   // Phis with uses outside of the loop require special handling and are
@@ -4666,11 +4680,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
              IsaPred<VPReductionPHIRecipe>);
 
   // FIXME: implement interleaving for FindLast transform correctly.
-  if (any_of(make_second_range(Legal->getReductionVars()),
-             [](const RecurrenceDescriptor &RdxDesc) {
-               return RecurrenceDescriptor::isFindLastRecurrenceKind(
-                   RdxDesc.getRecurrenceKind());
-             }))
+  if (hasFindLastReductionPhi(Plan))
     return 1;
 
   // If we did not calculate the cost for VF (because the user selected the VF)

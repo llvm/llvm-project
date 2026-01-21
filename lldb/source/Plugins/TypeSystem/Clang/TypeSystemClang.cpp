@@ -9702,7 +9702,8 @@ TypeSystemClang::DeclContextGetTypeSystemClang(const CompilerDeclContext &dc) {
 void TypeSystemClang::RequireCompleteType(CompilerType type) {
   // Technically, enums can be incomplete too, but we don't handle those as they
   // are emitted even under -flimit-debug-info.
-  if (!TypeSystemClang::IsCXXClassType(type))
+  if (!TypeSystemClang::IsCXXClassType(type) &&
+      !TypeSystemClang::IsObjCObjectOrInterfaceType(type))
     return;
 
   if (type.GetCompleteType())
