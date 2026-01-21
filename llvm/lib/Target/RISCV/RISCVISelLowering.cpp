@@ -26186,3 +26186,9 @@ bool RISCVTargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
 
   return true;
 }
+
+bool RISCVTargetLowering::generateFMAsInMachineCombiner(
+    EVT VT, CodeGenOptLevel OptLevel) const {
+  return (OptLevel >= CodeGenOptLevel::Aggressive) &&
+         (VT.isVector() && Subtarget.hasVInstructions());
+}
