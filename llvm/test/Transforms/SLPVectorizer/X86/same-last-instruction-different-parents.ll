@@ -6,17 +6,17 @@ define i32 @test(i32 %0, i1 %1) {
 ; CHECK-SAME: i32 [[TMP0:%.*]], i1 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <2 x i32> [[TMP4]] to <2 x double>
 ; CHECK-NEXT:    [[TMP6:%.*]] = sitofp <2 x i32> [[TMP4]] to <2 x double>
+; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <2 x i32> [[TMP4]] to <2 x double>
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB7:.*]], label %[[BB9:.*]]
 ; CHECK:       [[BB7]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP5]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)
 ; CHECK-NEXT:    br label %[[BB16:.*]]
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    br i1 false, label %[[BB14:.*]], label %[[BB10:.*]]
 ; CHECK:       [[BB10]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = call <2 x double> @llvm.copysign.v2f64(<2 x double> zeroinitializer, <2 x double> [[TMP6]])
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> <double 0.000000e+00, double poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP11:%.*]] = call <2 x double> @llvm.copysign.v2f64(<2 x double> zeroinitializer, <2 x double> [[TMP5]])
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> <double 0.000000e+00, double poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP11]], <2 x double> [[TMP12]], <2 x double> zeroinitializer)
 ; CHECK-NEXT:    br label %[[BB14]]
 ; CHECK:       [[BB14]]:

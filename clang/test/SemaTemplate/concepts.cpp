@@ -1658,3 +1658,70 @@ struct {
 void foo() { call(""); }
 
 }
+
+namespace GH170856 {
+
+template <unsigned N, unsigned M> struct symbol_text {
+  consteval symbol_text(const char txt[]) {}
+};
+template <unsigned N> symbol_text(const char (&)[N]) -> symbol_text<1, 1>;
+struct quantity_spec_interface_base {};
+template <symbol_text, auto...> struct named_unit;
+struct quantity_spec_interface : quantity_spec_interface_base {};
+struct : quantity_spec_interface {
+} thermodynamic_temperature;
+
+template <typename T>
+concept QuantitySpec = __is_convertible(T*, quantity_spec_interface_base*);
+template <typename, auto QS>
+concept QuantitySpecOf = QuantitySpec<decltype(QS)>;
+template <typename T, auto QS>
+concept PointOriginFor = QuantitySpecOf<decltype(QS), T::_quantity_spec_>;
+
+template <symbol_text Symbol, auto QS, auto PO>
+struct named_unit<Symbol, QS, PO> {
+  static constexpr auto _point_origin_ = PO;
+};
+template <auto QS> struct absolute_point_origin {
+  static constexpr auto _quantity_spec_ = QS;
+};
+template <auto> struct relative_point_origin {};
+template <class R>
+consteval PointOriginFor<R{}> auto default_point_origin(R) {
+  return R{}._point_origin_;
+}
+template <auto> class quantity_point;
+template <class R> struct point_ {
+  quantity_point<default_point_origin(R{})> operator0();
+};
+template <auto R> point_<decltype(R)> point;
+struct absolute_zero : absolute_point_origin<thermodynamic_temperature> {
+} absolute_zero;
+auto zeroth_kelvin = absolute_zero;
+struct : named_unit<"", thermodynamic_temperature, zeroth_kelvin> {
+} kelvin;
+struct ice_point : relative_point_origin<point<kelvin>> {};
+
+}
+
+namespace GH174667 {
+
+template<class T, class, class U>
+concept C = requires{ requires U(T(1)); };
+
+template<C<void, bool> T> int f();
+void main() { f<int>(); }
+
+}
+
+namespace GH176402 {
+  void f() {
+    auto recursiveLambda = [](auto self, int depth) -> void {
+      struct MyClass;
+      auto testConcept = []<typename T> {
+        return requires(T) { &MyClass::operator0 } /* expected-error {{expected ';' at end of requirement}} */;
+      };
+    };
+    recursiveLambda(recursiveLambda, 5);
+  }
+}

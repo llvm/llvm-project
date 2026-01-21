@@ -863,7 +863,7 @@ static void mergeConsecutiveTileZerosInBlock(Block *block) {
   uint32_t mergedZeroMask = 0;
   SmallVector<arm_sme::aarch64_sme_zero, 16> zeroOpsToMerge;
   auto replaceMergedZeroOps = [&] {
-    auto cleanup = llvm::make_scope_exit([&] {
+    llvm::scope_exit cleanup([&] {
       mergedZeroMask = 0;
       zeroOpsToMerge.clear();
     });

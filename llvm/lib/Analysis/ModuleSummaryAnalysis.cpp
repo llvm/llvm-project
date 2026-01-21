@@ -85,6 +85,19 @@ static cl::opt<bool> EnableMemProfIndirectCallSupport(
     cl::desc(
         "Enable MemProf support for summarizing and cloning indirect calls"));
 
+// This can be used to override the number of callees created from VP metadata
+// normally taken from the -icp-max-prom option with a larger amount, if useful
+// for analysis. Use a separate option so that we can control the number of
+// indirect callees for ThinLTO summary based analysis (e.g. for MemProf which
+// needs this information for a correct and not overly-conservative callsite
+// graph analysis, especially because allocation contexts may not be very
+// frequent), without affecting normal ICP.
+cl::opt<unsigned>
+    MaxSummaryIndirectEdges("module-summary-max-indirect-edges", cl::init(0),
+                            cl::Hidden,
+                            cl::desc("Max number of summary edges added from "
+                                     "indirect call profile metadata"));
+
 LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
@@ -455,13 +468,6 @@ static void computeFunctionSummary(
         ValueInfo.updateHotness(Hotness);
         if (CB->isTailCall())
           ValueInfo.setHasTailCall(true);
-        // Add the relative block frequency to CalleeInfo if there is no profile
-        // information.
-        if (BFI != nullptr && Hotness == CalleeInfo::HotnessType::Unknown) {
-          uint64_t BBFreq = BFI->getBlockFreq(&BB).getFrequency();
-          uint64_t EntryFreq = BFI->getEntryFreq().getFrequency();
-          ValueInfo.updateRelBlockFreq(BBFreq, EntryFreq);
-        }
       } else {
         HasUnknownCall = true;
         // If F is imported, a local linkage ifunc (e.g. target_clones on a
@@ -494,8 +500,8 @@ static void computeFunctionSummary(
         }
 
         CandidateProfileData =
-            ICallAnalysis.getPromotionCandidatesForInstruction(&I, TotalCount,
-                                                               NumCandidates);
+            ICallAnalysis.getPromotionCandidatesForInstruction(
+                &I, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
         for (const auto &Candidate : CandidateProfileData)
           CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
               .updateHotness(getHotness(Candidate.Count, PSI));

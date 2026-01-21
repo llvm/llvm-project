@@ -274,6 +274,7 @@ public:
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
+  void emitPrefAlign(Align Alignment) override;
 
   void emitValueToOffset(const MCExpr *Offset,
                          unsigned char Value,
@@ -375,8 +376,7 @@ public:
   void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
   void emitWinCFIEndProc(SMLoc Loc) override;
   void emitWinCFIFuncletOrFuncEnd(SMLoc Loc) override;
-  void emitWinCFIStartChained(SMLoc Loc) override;
-  void emitWinCFIEndChained(SMLoc Loc) override;
+  void emitWinCFISplitChained(SMLoc Loc) override;
   void emitWinCFIPushReg(MCRegister Register, SMLoc Loc) override;
   void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                           SMLoc Loc) override;
@@ -774,6 +774,9 @@ bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
     // Assemblers currently do not support a .cold directive.
   case MCSA_Exported:
     // Non-AIX assemblers currently do not support exported visibility.
+  case MCSA_OSLinkage:
+  case MCSA_XPLinkage:
+    // Only for HLASM.
     return false;
   case MCSA_Memtag:
     OS << "\t.memtag\t";
@@ -1540,6 +1543,11 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
+void MCAsmStreamer::emitPrefAlign(Align Alignment) {
+  OS << "\t.prefalign\t" << Alignment.value();
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,
                                       unsigned char Value,
                                       SMLoc Loc) {
@@ -2175,17 +2183,10 @@ void MCAsmStreamer::emitWinCFIFuncletOrFuncEnd(SMLoc Loc) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitWinCFIStartChained(SMLoc Loc) {
-  MCStreamer::emitWinCFIStartChained(Loc);
+void MCAsmStreamer::emitWinCFISplitChained(SMLoc Loc) {
+  MCStreamer::emitWinCFISplitChained(Loc);
 
-  OS << "\t.seh_startchained";
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitWinCFIEndChained(SMLoc Loc) {
-  MCStreamer::emitWinCFIEndChained(Loc);
-
-  OS << "\t.seh_endchained";
+  OS << "\t.seh_splitchained";
   EmitEOL();
 }
 
@@ -2452,7 +2453,7 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
 
   // Show the MCInst if enabled.
   if (ShowInst) {
-    Inst.dump_pretty(getCommentOS(), InstPrinter.get(), "\n ");
+    Inst.dump_pretty(getCommentOS(), InstPrinter.get(), "\n ", &getContext());
     getCommentOS() << "\n";
   }
 

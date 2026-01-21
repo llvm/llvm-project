@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Validate if TOSA dialect input matchs with the specification for given
+// Validate if TOSA dialect input matches with the specification for given
 // requirements.
 //
 //===----------------------------------------------------------------------===//
@@ -129,6 +129,15 @@ static LogicalResult checkConstantOperandNegate(Operation *op,
   return success();
 }
 
+static LogicalResult checkConstantOperandSilceShape(Operation *op,
+                                                    const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::SliceShapeOp>(op)) {
+    // Check 'start' and 'size'
+    return checkConstantOperands(op, {1, 2});
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Validation Pass.
 //===----------------------------------------------------------------------===//
@@ -177,6 +186,7 @@ private:
     constCheckers.emplace_back(checkConstantOperandMatMul);
     constCheckers.emplace_back(checkConstantOperandAvgPool2d);
     constCheckers.emplace_back(checkConstantOperandNegate);
+    constCheckers.emplace_back(checkConstantOperandSilceShape);
   }
 
   LogicalResult levelCheckKernel(Operation *op, int32_t v,
@@ -239,6 +249,18 @@ private:
     return levelCheckSize(op, v.getType(), operandOrResult);
   }
 
+  // Perform the Level shape length check on a value.
+  LogicalResult levelCheckShapeLength(Operation *op, const Type typeToCheck,
+                                      const StringRef operandOrResult) {
+    if (tosa::shapeType shapeType = dyn_cast<tosa::shapeType>(typeToCheck)) {
+      if (shapeType.getRank() > targetEnv.getLevel().MAX_SHAPE_LEN)
+        return op->emitOpError()
+               << "failed shape type level check: " << typeToCheck
+               << " exceeds MAX_SHAPE_LEN";
+    }
+    return success();
+  }
+
   // Level check sizes of all operands and results of the operation.
   template <typename T>
   LogicalResult levelCheckSizes(T tosaOp) {
@@ -269,6 +291,21 @@ private:
       if (failed(levelCheckRank(op, v, "result", tosaLevel.MAX_RANK)))
         return failure();
     }
+    return success();
+  }
+  // Level check shape lengths of all operands and results of an operation that
+  // are tosa.shape type.
+  template <typename T>
+  LogicalResult levelCheckShapeLengths(T tosaOp) {
+    for (const auto &v : tosaOp->getOperands()) {
+      if (failed(levelCheckShapeLength(tosaOp, v.getType(), "operand")))
+        return failure();
+    }
+    for (const auto &v : tosaOp->getResults()) {
+      if (failed(levelCheckShapeLength(tosaOp, v.getType(), "result")))
+        return failure();
+    }
+
     return success();
   }
 
@@ -351,6 +388,52 @@ private:
         }
       }
     }
+    return success();
+  }
+
+  LogicalResult levelCheckConv2DBlockScaled(Operation *op) {
+    auto convOp = dyn_cast<Conv2DBlockScaledOp>(op);
+    if (!convOp)
+      return success();
+
+    SmallVector<int64_t> padValues;
+    if (tosa::getConstShapeValues(convOp.getPad().getDefiningOp(), padValues)) {
+      for (const auto p : padValues)
+        if (failed(levelCheckKernel(op, p, "pad <= MAX_KERNEL")))
+          return failure();
+    }
+
+    SmallVector<int64_t> strideValues;
+    if (tosa::getConstShapeValues(convOp.getStride().getDefiningOp(),
+                                  strideValues)) {
+      for (const auto s : strideValues)
+        if (failed(levelCheckKernel(op, s, "stride <= MAX_KERNEL")))
+          return failure();
+    }
+
+    SmallVector<int64_t> dilationValues;
+    if (tosa::getConstShapeValues(convOp.getDilation().getDefiningOp(),
+                                  dilationValues)) {
+      int64_t KH = ShapedType::kDynamic;
+      int64_t KW = ShapedType::kDynamic;
+      const ShapeAdaptor weightDataShape(convOp.getWeightData().getType());
+      KH = weightDataShape.getDimSize(1);
+      KW = weightDataShape.getDimSize(2);
+      const ShapeAdaptor weightScaleShape(convOp.getWeightScale().getType());
+      KH = ShapedType::isDynamic(KH) ? weightScaleShape.getDimSize(1) : KH;
+      KW = ShapedType::isDynamic(KW) ? weightScaleShape.getDimSize(2) : KW;
+
+      if (!ShapedType::isDynamic(KH) &&
+          failed(levelCheckKernel(op, dilationValues[0] * KH,
+                                  "dilation_y * KH <= MAX_KERNEL)")))
+        return failure();
+
+      if (!ShapedType::isDynamic(KW) &&
+          failed(levelCheckKernel(op, dilationValues[1] * KW,
+                                  "dilation_x * KW <= MAX_KERNEL)")))
+        return failure();
+    }
+
     return success();
   }
 
@@ -475,6 +558,8 @@ private:
         return failure();
       }
     }
+    if (auto concat_shape = dyn_cast<tosa::ConcatShapeOp>(op))
+      return levelCheckListSize(op, concat_shape.getInput().size(), "input");
     return success();
   }
 
@@ -573,6 +658,12 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
       return failure();                                                        \
   }
 
+#define CHECK_SHAPE_LEN(tosaOp)                                                \
+  if (isa<tosa::tosaOp##Op>(op)) {                                             \
+    if (failed(levelCheckShapeLengths(cast<tosa::tosaOp##Op>(op))))            \
+      return failure();                                                        \
+  }
+
   // Tensor Operators
   CHECK_RANKS_AND_SIZES(ArgMax);
   // Activation Functions
@@ -638,15 +729,17 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(CastFromBlockScaled);
   CHECK_RANKS_AND_SIZES(CastToBlockScaled);
   CHECK_RANKS_AND_SIZES(Rescale);
+  // Data Nodes
+  CHECK_RANKS_AND_SIZES(Const);
+  CHECK_RANKS_AND_SIZES(Identity);
   // Control Flow Operators
   CHECK_RANKS_AND_SIZES(If);
   // Variable Operators
   CHECK_RANKS_AND_SIZES(Variable);
   CHECK_RANKS_AND_SIZES(VariableWrite);
   CHECK_RANKS_AND_SIZES(VariableRead);
-  // Data Nodes
-  CHECK_RANKS_AND_SIZES(Const);
-  CHECK_RANKS_AND_SIZES(Identity);
+  // Shape Operators
+  CHECK_RANKS_AND_SIZES(Dim);
 
   // For the following operators, check whether the size of each tensor
   // operand is valid in a given Level.
@@ -654,6 +747,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   // Tensor Operators
   CHECK_SIZES(AvgPool2d);
   CHECK_SIZES(Conv2D);
+  CHECK_SIZES(Conv2DBlockScaled);
   CHECK_SIZES(Conv3D);
   CHECK_SIZES(DepthwiseConv2D);
   CHECK_SIZES(TransposeConv2D);
@@ -674,8 +768,28 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   // Shape Operators
   CHECK_SIZES(ConstShape);
 
+  // For the following operations, check whether the shape length of each
+  // operand is valid given a level.
+
+  // Shape Operators
+  CHECK_SHAPE_LEN(AddShape);
+  CHECK_SHAPE_LEN(AssertEqualShape);
+  CHECK_SHAPE_LEN(ConcatShape);
+  CHECK_SHAPE_LEN(DivCeilShape);
+  CHECK_SHAPE_LEN(DivFloorShape);
+  CHECK_SHAPE_LEN(Exp2Shape);
+  CHECK_SHAPE_LEN(Log2CeilShape);
+  CHECK_SHAPE_LEN(Log2FloorShape);
+  CHECK_SHAPE_LEN(MaxShape);
+  CHECK_SHAPE_LEN(MinShape);
+  CHECK_SHAPE_LEN(ModShape);
+  CHECK_SHAPE_LEN(MulShape);
+  CHECK_SHAPE_LEN(SliceShape);
+  CHECK_SHAPE_LEN(SubShape);
+
 #undef CHECK_RANKS_AND_SIZES
 #undef CHECK_SIZES
+#undef CHECK_SHAPE_LEN
   return success();
 }
 
@@ -688,9 +802,22 @@ LogicalResult TosaValidation::levelCheckSize(Operation *op,
       return op->emitOpError() << "failed level check: unranked tensor";
     auto shape = type.getShape();
     for (auto dim : shape) {
-      if (mlir::ShapedType::isDynamic(dim))
+      const bool dimIsDynamic = mlir::ShapedType::isDynamic(dim);
+      const TosaSpecificationVersion targetVersion = targetEnv.getSpecVersion();
+      const TosaSpecificationVersion minRequiredVersion(1, 1);
+      if (targetVersion.isBackwardsCompatibleWith(minRequiredVersion) &&
+          dimIsDynamic)
+        // TOSA 1.1 and above supports dynamic dimensions, however, they must be
+        // resolved at backend compile time. Runtime dynamism is not currently
+        // supported. Checking this requirement is met is delegated to backends.
+        return success();
+
+      // When targeting TOSA 1.0 or below, dynamic dims are not supported
+      if (dimIsDynamic)
         return op->emitOpError() << "failed level check: " << operandOrResult
-                                 << " shape dimension cannot be dynamic";
+                                 << " shape dimension cannot be dynamic when"
+                                 << " targeting TOSA specification version 1.0"
+                                 << " or below";
     }
 
     int64_t element_bits = tosa::getBitWidth(getElementTypeOrSelf(type));
@@ -722,7 +849,6 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
   if (failed(levelCheckRanksAndSizes(op)))
     return failure();
 
-  // additional level checks from spec 0.70
   if (failed(levelCheckPool<tosa::AvgPool2dOp>(op)) ||
       failed(levelCheckConv<tosa::Conv2DOp>(op)) ||
       failed(levelCheckConv<tosa::Conv3DOp>(op)) ||
@@ -730,7 +856,8 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
       failed(levelCheckFFT<tosa::FFT2dOp>(op)) ||
       failed(levelCheckPool<tosa::MaxPool2dOp>(op)) ||
       failed(levelCheckFFT<tosa::RFFT2dOp>(op)) ||
-      failed(levelCheckTransposeConv2d(op)) || failed(levelCheckResize(op))) {
+      failed(levelCheckTransposeConv2d(op)) || failed(levelCheckResize(op)) ||
+      failed(levelCheckConv2DBlockScaled(op))) {
     return failure();
   }
 
@@ -1226,16 +1353,16 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
 
 void TosaValidation::runOnOperation() {
   ModuleOp modOp = getOperation();
+  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
+  if (!tosaDialect)
+    return;
+
   const TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(modOp);
   const auto maybeTargetEnv =
       tosa::TargetEnv::createTargetEnvFromAttr(targetEnvAttr, modOp.getLoc());
   if (failed(maybeTargetEnv))
     return signalPassFailure();
   targetEnv = *maybeTargetEnv;
-
-  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
-  if (!tosaDialect)
-    return;
 
   modOp.walk([&](Operation *op) {
     if (op->getDialect() != tosaDialect)

@@ -469,6 +469,25 @@ let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE],
 } // End SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE]
   // SchedRW = [WriteSFPU], isReMaterializable = 1
 
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in {
+    // Fallback patterns for f32->i16 conversion.
+    def : GCNPat<(i16 (UniformUnaryFrag<fp_to_sint> f32:$src0)),
+                 (S_CVT_I32_F32 $src0)>;
+    def : GCNPat<(i16 (UniformUnaryFrag<fp_to_uint> f32:$src0)),
+                 (S_CVT_U32_F32 $src0)>;
+    // f16 -> i32 : form chain f16 -> f32 -> i32
+    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_sint> f16:$src0)),
+                 (S_CVT_I32_F32 (S_CVT_F32_F16 $src0))>;
+    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_uint> f16:$src0)),
+                 (S_CVT_U32_F32 (S_CVT_F32_F16 $src0))>;
+
+    // i32 -> f16 : form chain i32 -> f32 -> f16
+    def : GCNPat<(f16 (UniformUnaryFrag<sint_to_fp> i32:$src0)),
+                 (S_CVT_F16_F32 (S_CVT_F32_I32 $src0))>;
+    def : GCNPat<(f16 (UniformUnaryFrag<uint_to_fp> i32:$src0)),
+                 (S_CVT_F16_F32 (S_CVT_F32_U32 $src0))>;
+}
+
 let hasSideEffects = 1 in {
 let has_sdst = 0 in {
 let Uses = [M0] in {
@@ -504,6 +523,12 @@ def S_BARRIER_JOIN_M0 : SOP1_Pseudo <"s_barrier_join m0", (outs), (ins),
   let isConvergent = 1;
 }
 
+def S_WAKEUP_BARRIER_M0 : SOP1_Pseudo <"s_wakeup_barrier m0", (outs), (ins),
+  "", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+  let SubtargetPredicate = HasSWakeupBarrier;
+}
 } // End Uses = [M0]
 
 def S_BARRIER_SIGNAL_IMM : SOP1_Pseudo <"s_barrier_signal", (outs),
@@ -527,6 +552,12 @@ def S_BARRIER_JOIN_IMM : SOP1_Pseudo <"s_barrier_join", (outs),
   let isConvergent = 1;
 }
 
+def S_WAKEUP_BARRIER_IMM : SOP1_Pseudo <"s_wakeup_barrier", (outs),
+  (ins SplitBarrier:$src0), "$src0", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+  let SubtargetPredicate = HasSWakeupBarrier;
+}
 } // End has_sdst = 0
 
 def S_GET_BARRIER_STATE_IMM : SOP1_Pseudo <"s_get_barrier_state", (outs SSrc_b32:$sdst),
@@ -2226,6 +2257,8 @@ defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12<0x058>;
 // GFX1250
 defm S_GET_SHADER_CYCLES_U64      : SOP1_Real_gfx12<0x06>;
 defm S_ADD_PC_I64                 : SOP1_Real_gfx12<0x04b>;
+defm S_WAKEUP_BARRIER_M0          : SOP1_M0_Real_gfx12<0x057>;
+defm S_WAKEUP_BARRIER_IMM         : SOP1_IMM_Real_gfx12<0x057>;
 
 //===----------------------------------------------------------------------===//
 // SOP1 - GFX1150, GFX12

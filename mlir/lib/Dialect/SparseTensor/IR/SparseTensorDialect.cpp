@@ -47,7 +47,7 @@ using namespace mlir::sparse_tensor;
 // Support hashing LevelType such that SparseTensorEncodingAttr can be hashed as
 // well.
 namespace mlir::sparse_tensor {
-llvm::hash_code hash_value(LevelType lt) {
+static llvm::hash_code hash_value(LevelType lt) {
   return llvm::hash_value(static_cast<uint64_t>(lt));
 }
 } // namespace mlir::sparse_tensor
@@ -2605,9 +2605,14 @@ void IterateOp::getSuccessorRegions(RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // Both the operation itself and the region may be branching into the body
   // or back into the operation itself.
-  regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
+  regions.push_back(RegionSuccessor(&getRegion()));
   // It is possible for loop not to enter the body.
-  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange IterateOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults())
+                              : ValueRange(getRegionIterArgs());
 }
 
 void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,

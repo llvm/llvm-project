@@ -8,6 +8,8 @@
 module somemod
   implicit none
   real :: test_var_xmod
+  real, pointer :: test_var_ptr
+  real, allocatable :: test_var_alloc
   interface
     subroutine may_capture(x)
       real, target :: x
@@ -80,3 +82,23 @@ subroutine test_common
 end subroutine
 ! CHECK-LABEL: Testing : "_QPtest_common"
 ! CHECK: test_effect_external -> test_var_x_common#0: ModRef
+
+subroutine test_module_pointer
+  use somemod, only : may_capture, test_var_ptr
+  implicit none
+  call may_capture(test_var_ptr)
+  call test_effect_external()
+end subroutine
+! CHECK-LABEL: Testing : "_QPtest_module_pointer"
+! CHECK-DAG: test_effect_external -> test_var_ptr#0: ModRef
+! CHECK-DAG: test_effect_external -> box_addr_0#0: ModRef
+
+subroutine test_module_allocatable
+  use somemod, only : may_capture, test_var_alloc
+  implicit none
+  call may_capture(test_var_alloc)
+  call test_effect_external()
+end subroutine
+! CHECK-LABEL: Testing : "_QPtest_module_allocatable"
+! CHECK-DAG: test_effect_external -> test_var_alloc#0: ModRef
+! CHECK-DAG: test_effect_external -> box_addr_1#0: ModRef

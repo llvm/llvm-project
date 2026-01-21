@@ -261,10 +261,18 @@ static StructType *getBinaryWithCarryType(LLVMContext &Context) {
   return StructType::create({Int32Ty, Int1Ty}, "dx.types.i32c");
 }
 
-static StructType *getDimensionsType(LLVMContext &Ctx) {
-  Type *Int32Ty = Type::getInt32Ty(Ctx);
+static StructType *getDimensionsType(LLVMContext &Context) {
+  Type *Int32Ty = Type::getInt32Ty(Context);
   return getOrCreateStructType("dx.types.Dimensions",
-                               {Int32Ty, Int32Ty, Int32Ty, Int32Ty}, Ctx);
+                               {Int32Ty, Int32Ty, Int32Ty, Int32Ty}, Context);
+}
+
+static StructType *getFouri32sType(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.fouri32"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  return getOrCreateStructType("dx.types.fouri32",
+                               {Int32Ty, Int32Ty, Int32Ty, Int32Ty}, Context);
 }
 
 static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
@@ -326,7 +334,10 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getBinaryWithCarryType(Ctx);
   case OpParamType::DimensionsTy:
     return getDimensionsType(Ctx);
+  case OpParamType::Fouri32s:
+    return getFouri32sType(Ctx);
   }
+
   llvm_unreachable("Invalid parameter kind");
   return nullptr;
 }

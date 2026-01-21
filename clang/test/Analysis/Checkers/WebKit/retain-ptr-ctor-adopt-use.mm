@@ -190,6 +190,14 @@ void adopt_retainptr() {
   auto bar = adoptNS([allocSomeObj() init]);
 }
 
+CFTypeRef make_cf_obj() CF_RETURNS_RETAINED {
+  return CFArrayCreateMutable(kCFAllocatorDefault, 1);
+}
+
+void get_cf_obj(CFTypeRef* CF_RETURNS_RETAINED result) {
+  *result = CFArrayCreateMutable(kCFAllocatorDefault, 1);
+}
+
 RetainPtr<CFArrayRef> return_arg(CFArrayRef arg) {
   return arg;
 }

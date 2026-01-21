@@ -14,6 +14,7 @@
 #define FORTRAN_OPTIMIZER_OPENACC_SUPPORT_FIROPENACCUTILS_H
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Value.h"
 #include <string>
 
@@ -50,6 +51,42 @@ std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type,
 /// \param bounds Array of DataBoundsOp values to check
 /// \return true if all bounds have constant lowerbound/upperbound or extent
 bool areAllBoundsConstant(llvm::ArrayRef<mlir::Value> bounds);
+
+/// Create or get a private recipe for the given type and name.
+/// \param builder The FIR builder
+/// \param loc The location
+/// \param ty The type of the variable
+/// \param dataBoundOps Optional bounds for the variable
+/// \return The existing or created PrivateRecipeOp symbol
+mlir::SymbolRefAttr
+createOrGetPrivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
+                         mlir::Type ty,
+                         llvm::SmallVector<mlir::Value> &dataBoundOps);
+
+/// Create or get a firstprivate recipe for the given type and name.
+/// \param builder The FIR builder
+/// \param loc The location
+/// \param ty The type of the variable
+/// \param dataBoundOps Optional bounds for the variable
+/// \return The existing or created FirstprivateRecipeOp symbol
+mlir::SymbolRefAttr
+createOrGetFirstprivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
+                              mlir::Type ty,
+                              llvm::SmallVector<mlir::Value> &dataBoundOps);
+
+/// Create or get a reduction recipe for the given type, name and operator.
+/// \param builder The FIR builder
+/// \param loc The location
+/// \param ty The type of the variable
+/// \param op The reduction operator
+/// \param dataBoundOps Optional bounds for the variable
+/// \param fastMathAttr Optional fast math attributes
+/// \return The existing or created ReductionRecipeOp symbol
+mlir::SymbolRefAttr
+createOrGetReductionRecipe(mlir::OpBuilder &builder, mlir::Location loc,
+                           mlir::Type ty, mlir::acc::ReductionOperator op,
+                           llvm::SmallVector<mlir::Value> &dataBoundOps,
+                           mlir::Attribute fastMathAttr = {});
 
 } // namespace acc
 } // namespace fir

@@ -50,6 +50,14 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   unsigned IsBitwidth16 = MI->getFlags() & SPIRV::INST_PRINTER_WIDTH16;
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
 
+  if (MI->getOpcode() == SPIRV::OpConstantI && NumVarOps > 2) {
+    // SPV_ALTERA_arbitrary_precision_integers allows for integer widths greater
+    // than 64, which will be encoded via multiple operands.
+    for (unsigned I = StartIndex; I != MI->getNumOperands(); ++I)
+      O << ' ' << MI->getOperand(I).getImm();
+    return;
+  }
+
   assert((NumVarOps == 1 || NumVarOps == 2) &&
          "Unsupported number of bits for literal variable");
 

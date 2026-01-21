@@ -550,33 +550,25 @@ corresponding internal ``llvm::RegState`` representation:
      - Internal Value
      - Meaning
 
-   * - ``implicit``
-     - ``RegState::Implicit``
-     - Not emitted register (e.g., carry, or temporary result).
-
-   * - ``implicit-def``
-     - ``RegState::ImplicitDefine``
-     - ``implicit`` and ``def``
-
    * - ``def``
      - ``RegState::Define``
      - Register definition.
 
-   * - ``dead``
-     - ``RegState::Dead``
-     - Unused definition.
+   * - ``implicit``
+     - ``RegState::Implicit``
+     - Not emitted register (e.g., carry, or temporary result).
 
    * - ``killed``
      - ``RegState::Kill``
      - The last use of a register.
 
+   * - ``dead``
+     - ``RegState::Dead``
+     - Unused definition.
+
    * - ``undef``
      - ``RegState::Undef``
      - Value of the register doesn't matter.
-
-   * - ``internal``
-     - ``RegState::InternalRead``
-     - Register reads a value that is defined inside the same instruction or bundle.
 
    * - ``early-clobber``
      - ``RegState::EarlyClobber``
@@ -586,9 +578,17 @@ corresponding internal ``llvm::RegState`` representation:
      - ``RegState::Debug``
      - Register 'use' is for debugging purpose.
 
+   * - ``internal``
+     - ``RegState::InternalRead``
+     - Register reads a value that is defined inside the same instruction or bundle.
+
    * - ``renamable``
      - ``RegState::Renamable``
      - Register that may be renamed.
+
+   * - ``implicit-def``
+     - ``RegState::ImplicitDefine``
+     - ``implicit`` and ``def``
 
 .. _subregister-indices:
 
@@ -806,6 +806,22 @@ For an int eq predicate ``ICMP_EQ``, the syntax is:
 .. code-block:: text
 
    %2:gpr(s32) = G_ICMP intpred(eq), %0, %1
+
+LaneMask Operands
+^^^^^^^^^^^^^^^^^
+
+A LaneMask operand contains a LaneBitmask struct representing the covering of a
+register with sub-registers. Instructions typically associate a LaneMask operand
+with one or more Register operands, and use it to represent sub-register
+granularity information like liveness for those associated Register operands.
+
+
+For example, the COPY_LANEMASK instruction uses this operand to copy only active
+lanes (of the source register) in the mask. The syntax for it would look like:
+
+.. code-block:: text
+
+   $vgpr1 = COPY_LANEMASK $vgpr0, lanemask(0x00000000000000C0)
 
 .. TODO: Describe the parsers default behaviour when optional YAML attributes
    are missing.

@@ -58,6 +58,10 @@ class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   InstructionCost getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                           TTI::TargetCostKind CostKind) const;
 
+  // Return the cost of generating a PC relative address
+  InstructionCost
+  getStaticDataAddrGenerationCost(const TTI::TargetCostKind CostKind) const;
+
   /// Return the cost of accessing a constant pool entry of the specified
   /// type.
   InstructionCost getConstantPoolLoadCost(Type *Ty,
@@ -147,9 +151,8 @@ public:
   getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
                            TTI::TargetCostKind CostKind) const override;
 
-  InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const override;
+  InstructionCost getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                        TTI::TargetCostKind CostKind) const;
 
   InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
@@ -194,21 +197,15 @@ public:
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
 
-  InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override;
+  InstructionCost getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                         TTI::TargetCostKind CostKind) const;
 
   InstructionCost
   getExpandCompressMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                                TTI::TargetCostKind CostKind) const override;
+                                TTI::TargetCostKind CostKind) const;
 
-  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override;
+  InstructionCost getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                         TTI::TargetCostKind CostKind) const;
 
   InstructionCost
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const override;

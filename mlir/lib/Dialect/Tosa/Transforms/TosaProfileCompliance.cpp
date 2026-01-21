@@ -112,6 +112,18 @@ ProfileInfoDepot::populateProfileInfo(tosa::DepthwiseConv2DOp op) {
 }
 
 template <>
+LogicalResult
+ProfileInfoDepot::populateProfileInfo(tosa::Conv2DBlockScaledOp op) {
+  addValue(op.getInputData());
+  addValue(op.getInputScale());
+  addValue(op.getWeightData());
+  addValue(op.getWeightScale());
+  addValue(op.getBias());
+  addValue(op.getOutput());
+  return success();
+}
+
+template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::PadOp op) {
   addValue(op.getInput1());
   addValue(op.getPadConst());
@@ -217,6 +229,12 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableWriteOp op) {
   return success();
 }
 
+template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::DimOp op) {
+  addValue(op.getInput1());
+  return success();
+}
+
 LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
 // This helper function only populates the info for the customised operands.
 #define POPULATE_PROFILE_INFO_CUSTOM(tosaOp)                                   \
@@ -239,6 +257,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(AvgPool2d)
   POPULATE_PROFILE_INFO_CUSTOM(TransposeConv2D)
   POPULATE_PROFILE_INFO_CUSTOM(Conv2D)
+  POPULATE_PROFILE_INFO_CUSTOM(Conv2DBlockScaled)
   POPULATE_PROFILE_INFO_CUSTOM(Conv3D)
   POPULATE_PROFILE_INFO_CUSTOM(DepthwiseConv2D)
   POPULATE_PROFILE_INFO_CUSTOM(Mul)
@@ -256,6 +275,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(MatMul)
   POPULATE_PROFILE_INFO_CUSTOM(Variable)
   POPULATE_PROFILE_INFO_CUSTOM(VariableWrite)
+  POPULATE_PROFILE_INFO_CUSTOM(Dim)
 
   // For the most of tosa operators, all operands are profile/extension related
   // and hence are all considered in this profile-based compilance check.
@@ -317,7 +337,21 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   // Type Invariant Extension, a capability extension that is independent
   // of the data type, meaning any compatible type can be used. No type
   // constraint for those operations.
+  POPULATE_PROFILE_INFO_SKIP(AddShape)
+  POPULATE_PROFILE_INFO_SKIP(AssertEqualShape)
+  POPULATE_PROFILE_INFO_SKIP(ConcatShape)
   POPULATE_PROFILE_INFO_SKIP(ConstShape)
+  POPULATE_PROFILE_INFO_SKIP(DivCeilShape)
+  POPULATE_PROFILE_INFO_SKIP(DivFloorShape)
+  POPULATE_PROFILE_INFO_SKIP(Exp2Shape)
+  POPULATE_PROFILE_INFO_SKIP(Log2CeilShape)
+  POPULATE_PROFILE_INFO_SKIP(Log2FloorShape)
+  POPULATE_PROFILE_INFO_SKIP(MaxShape)
+  POPULATE_PROFILE_INFO_SKIP(MinShape)
+  POPULATE_PROFILE_INFO_SKIP(ModShape)
+  POPULATE_PROFILE_INFO_SKIP(MulShape)
+  POPULATE_PROFILE_INFO_SKIP(SliceShape)
+  POPULATE_PROFILE_INFO_SKIP(SubShape)
   POPULATE_PROFILE_INFO_SKIP(Yield)
   POPULATE_PROFILE_INFO_SKIP(If)
   POPULATE_PROFILE_INFO_SKIP(While)

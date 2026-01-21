@@ -165,8 +165,7 @@ LLVM_ABI void printXSfmmVType(unsigned VType, raw_ostream &OS);
 
 LLVM_ABI unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul);
 
-LLVM_ABI std::optional<VLMUL> getSameRatioLMUL(unsigned SEW, VLMUL VLMUL,
-                                               unsigned EEW);
+LLVM_ABI std::optional<VLMUL> getSameRatioLMUL(unsigned Ratio, unsigned EEW);
 } // namespace RISCVVType
 
 } // namespace llvm

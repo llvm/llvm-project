@@ -80,9 +80,7 @@ INITIALIZE_PASS(MachineCFGPrinter, DEBUG_TYPE, "Machine CFG Printer Pass",
                 false, true)
 
 /// Default construct and initialize the pass.
-MachineCFGPrinter::MachineCFGPrinter() : MachineFunctionPass(ID) {
-  initializeMachineCFGPrinterPass(*PassRegistry::getPassRegistry());
-}
+MachineCFGPrinter::MachineCFGPrinter() : MachineFunctionPass(ID) {}
 
 bool MachineCFGPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (!MCFGFuncName.empty() && !MF.getName().contains(MCFGFuncName))
