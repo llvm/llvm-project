@@ -175,8 +175,8 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
 }
 
 [[noreturn]] void RTNAME(FailImageStatement)() {
-  Fortran::runtime::NotifyOtherImagesOfFailImageStatement();
   CloseAllExternalUnits("FAIL IMAGE statement");
+  Fortran::runtime::NotifyOtherImagesOfFailImageStatement();
   Fortran::runtime::exitHandler.NormalExit(EXIT_FAILURE);
 }
 
