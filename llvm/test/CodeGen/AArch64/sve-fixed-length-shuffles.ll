@@ -34,8 +34,6 @@ define void @crash_when_lowering_extract_shuffle(ptr %dst, i1 %cond) vscale_rang
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    umov w8, v2.b[8]
 ; CHECK-NEXT:    mov v0.b[1], v2.b[1]
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #16
-; CHECK-NEXT:    ext v4.16b, v3.16b, v3.16b, #8
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    mov v0.b[2], v2.b[2]
 ; CHECK-NEXT:    mov v1.b[1], v2.b[9]
@@ -51,29 +49,28 @@ define void @crash_when_lowering_extract_shuffle(ptr %dst, i1 %cond) vscale_rang
 ; CHECK-NEXT:    mov v1.b[6], v2.b[14]
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    mov v1.b[7], v2.b[15]
-; CHECK-NEXT:    uunpklo z2.h, z3.b
-; CHECK-NEXT:    uunpklo z3.h, z4.b
+; CHECK-NEXT:    movprfx z2, z3
+; CHECK-NEXT:    ext z2.b, z2.b, z3.b, #16
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    sunpklo z2.h, z2.b
 ; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    uunpklo z3.s, z3.h
 ; CHECK-NEXT:    lsl z0.s, z0.s, #31
+; CHECK-NEXT:    sunpklo z3.h, z3.b
+; CHECK-NEXT:    sunpklo z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    lsl z2.s, z2.s, #31
-; CHECK-NEXT:    lsl z3.s, z3.s, #31
 ; CHECK-NEXT:    asr z0.s, z0.s, #31
-; CHECK-NEXT:    asr z2.s, z2.s, #31
-; CHECK-NEXT:    asr z3.s, z3.s, #31
-; CHECK-NEXT:    lsl z1.s, z1.s, #31
-; CHECK-NEXT:    cmpne p3.s, p0/z, z0.s, #0
+; CHECK-NEXT:    sunpklo z3.s, z3.h
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z2.s, #0
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    cmpne p2.s, p0/z, z3.s, #0
+; CHECK-NEXT:    lsl z1.s, z1.s, #31
+; CHECK-NEXT:    cmpne p3.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    asr z1.s, z1.s, #31
-; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
+; CHECK-NEXT:    cmpne p2.s, p0/z, z3.s, #0
 ; CHECK-NEXT:    st1w { z2.s }, p1, [x0, #2, mul vl]
-; CHECK-NEXT:    st1w { z2.s }, p2, [x0, #3, mul vl]
 ; CHECK-NEXT:    st1w { z2.s }, p3, [x0]
+; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
+; CHECK-NEXT:    st1w { z2.s }, p2, [x0, #3, mul vl]
 ; CHECK-NEXT:    st1w { z2.s }, p0, [x0, #1, mul vl]
 ; CHECK-NEXT:  .LBB1_2: // %exit
 ; CHECK-NEXT:    ret
