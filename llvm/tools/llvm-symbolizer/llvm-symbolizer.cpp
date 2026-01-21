@@ -162,44 +162,49 @@ static Error makeStringError(StringRef Msg) {
   return make_error<StringError>(Msg, inconvertibleErrorCode());
 }
 
-// Helper function to get XCOFF section type flag from string
- static std::optional<XCOFF::SectionTypeFlags> parseXCOFFSectionType(StringRef TypeStr) {
-   return StringSwitch<std::optional<XCOFF::SectionTypeFlags>>(TypeStr)
-       .Case("PAD", XCOFF::STYP_PAD)
-       .Case("DWARF", XCOFF::STYP_DWARF)
-       .Case("TEXT", XCOFF::STYP_TEXT)
-       .Case("DATA", XCOFF::STYP_DATA)
-       .Case("BSS", XCOFF::STYP_BSS)
-       .Case("EXCEPT", XCOFF::STYP_EXCEPT)
-       .Case("INFO", XCOFF::STYP_INFO)
-       .Case("TDATA", XCOFF::STYP_TDATA)
-       .Case("TBSS", XCOFF::STYP_TBSS)
-       .Case("LOADER", XCOFF::STYP_LOADER)
-       .Case("DEBUG", XCOFF::STYP_DEBUG)
-       .Case("TYPCHK", XCOFF::STYP_TYPCHK)
-       .Case("OVRFLO", XCOFF::STYP_OVRFLO)
-       .Default(std::nullopt);
- }
+// Helper function to get XCOFF section type flag from string.
+// Only TEXT and DATA are supported since:
+// - These are the only sections mapped by the AIX process map (procmap).
+// - BSS addresses are relative to DATA section base.
+// - Thread-local sections (TDATA, TBSS) cannot be symbolized from runtime
+//   addresses.
+static std::optional<XCOFF::SectionTypeFlags>
+parseXCOFFSectionType(StringRef TypeStr) {
+  return StringSwitch<std::optional<XCOFF::SectionTypeFlags>>(TypeStr)
+      .Case("TEXT", XCOFF::STYP_TEXT)
+      .Case("DATA", XCOFF::STYP_DATA)
+      .Default(std::nullopt);
+}
 
- // Find the base VMA of the first section matching the given type for XCOFF.
- // The syntax (SECTION_TYPE)(+offset) represents an offset from the section base,
- // so we return the section's base address to compute: VMA = base + offset.
- static Expected<uint64_t> getXCOFFSectionBaseAddress(
-     const object::XCOFFObjectFile *XCOFFObj,
-     XCOFF::SectionTypeFlags TypeFlag) {
+// Find the base VMA of the unique section matching the given type for XCOFF.
+// The syntax (SECTION_TYPE)(+offset) represents an offset from the section base,
+// so we return the section's base address to compute: VMA = base + offset.
+// This function verifies there is exactly one section of the given type, as
+// multiple sections of the same type would make the address ambiguous.
+static Expected<uint64_t>
+getXCOFFSectionBaseAddress(const object::XCOFFObjectFile *XCOFFObj,
+                           XCOFF::SectionTypeFlags TypeFlag) {
+  std::optional<uint64_t> SectionBase;
 
-   for (const auto &Section : XCOFFObj->sections()) {
-     DataRefImpl SecRef = Section.getRawDataRefImpl();
-     int32_t Flags = XCOFFObj->getSectionFlags(SecRef);
+  for (const auto &Section : XCOFFObj->sections()) {
+    DataRefImpl SecRef = Section.getRawDataRefImpl();
+    int32_t Flags = XCOFFObj->getSectionFlags(SecRef);
 
-     if ((Flags & 0xFFFF) == TypeFlag) {
-       return Section.getAddress();
-     }
-   }
+    if ((Flags & 0xFFFF) == TypeFlag) {
+      if (SectionBase)
+        return createStringError(
+            inconvertibleErrorCode(),
+            "multiple sections of the same type found in XCOFF object");
+      SectionBase = Section.getAddress();
+    }
+  }
 
-   return createStringError(inconvertibleErrorCode(),
-                            "section type not found in XCOFF object");
- }
+  if (!SectionBase)
+    return createStringError(inconvertibleErrorCode(),
+                             "section type not found in XCOFF object");
+
+  return *SectionBase;
+}
 
  static Expected<uint64_t> validateSectionType(StringRef ModulePath,
                                                  StringRef SectionType,
@@ -209,7 +214,8 @@ static Error makeStringError(StringRef Msg) {
    auto SectionTypeFlag = parseXCOFFSectionType(SectionType);
    if (!SectionTypeFlag) {
      return createStringError(inconvertibleErrorCode(),
-                             "unknown section type: " + SectionType.str());
+                              "unknown or unsupported section type: " +
+                                  SectionType.str());
    }
 
    // Get the module info to access the object file

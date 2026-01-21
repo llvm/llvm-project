@@ -25,7 +25,7 @@
 # RUN:   FileCheck %s --check-prefix=EMPTY-SECTION
 
 ## Verify error messages are helpful
-# INVALID-TYPE: unknown section type
+# INVALID-TYPE: unknown or unsupported section type
 # NO-PLUS: section-relative offset must start with '+'
 # INVALID-OFFSET: invalid offset in section-relative address
-# EMPTY-SECTION: unknown section type
+# EMPTY-SECTION: unknown section type: empty section type
