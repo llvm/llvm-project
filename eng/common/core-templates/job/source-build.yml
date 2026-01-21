@@ -63,7 +63,7 @@ jobs:
           demands: ImageOverride -equals build.ubuntu.2204.amd64
         ${{ if eq(variables['System.TeamProject'], 'internal') }}:
           name: $[replace(replace(eq(contains(coalesce(variables['System.PullRequest.TargetBranch'], variables['Build.SourceBranch'], 'refs/heads/main'), 'release'), 'true'), True, 'NetCore1ESPool-Svc-Internal'), False, 'NetCore1ESPool-Internal')]
-          image: 1es-azurelinux-3
+          image: Azure-Linux-3-Amd64
           os: linux
     ${{ else }}:
       pool:

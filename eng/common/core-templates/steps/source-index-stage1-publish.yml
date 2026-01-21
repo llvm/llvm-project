@@ -14,8 +14,8 @@ steps:
     workingDirectory: $(Agent.TempDirectory)
 
 - script: |
-    $(Agent.TempDirectory)/dotnet/dotnet tool install BinLogToSln --version ${{parameters.sourceIndexProcessBinlogPackageVersion}} --source ${{parameters.SourceIndexPackageSource}} --tool-path $(Agent.TempDirectory)/.source-index/tools
-    $(Agent.TempDirectory)/dotnet/dotnet tool install UploadIndexStage1 --version ${{parameters.sourceIndexUploadPackageVersion}} --source ${{parameters.SourceIndexPackageSource}} --tool-path $(Agent.TempDirectory)/.source-index/tools
+    $(Agent.TempDirectory)/dotnet/dotnet tool install BinLogToSln --version ${{parameters.sourceIndexProcessBinlogPackageVersion}} --source ${{parameters.sourceIndexPackageSource}} --tool-path $(Agent.TempDirectory)/.source-index/tools
+    $(Agent.TempDirectory)/dotnet/dotnet tool install UploadIndexStage1 --version ${{parameters.sourceIndexUploadPackageVersion}} --source ${{parameters.sourceIndexPackageSource}} --tool-path $(Agent.TempDirectory)/.source-index/tools
   displayName: "Source Index: Download netsourceindex Tools"
   # Set working directory to temp directory so 'dotnet' doesn't try to use global.json and use the repo's sdk.
   workingDirectory: $(Agent.TempDirectory)

@@ -18,7 +18,7 @@ parameters:
     type: boolean
 
 steps:
-- ${{ if eq(parameters.enablePreviewMicrobuild, 'true') }}:
+- ${{ if eq(parameters.enablePreviewMicrobuild, true) }}:
     - task: MicroBuildSigningPluginPreview@4
       displayName: Install Preview MicroBuild plugin
       inputs: ${{ parameters.microbuildTaskInputs }}

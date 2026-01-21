@@ -293,11 +293,11 @@ stages:
         ${{ else }}:
           ${{ if eq(parameters.is1ESPipeline, true) }}:
             name: NetCore1ESPool-Publishing-Internal
-            image: windows.vs2019.amd64
+            image: windows.vs2022.amd64
             os: windows
           ${{ else }}:
             name: NetCore1ESPool-Publishing-Internal
-            demands: ImageOverride -equals windows.vs2019.amd64
+            demands: ImageOverride -equals windows.vs2022.amd64
       steps:
       - template: /eng/common/core-templates/post-build/setup-maestro-vars.yml
         parameters:
