@@ -3,7 +3,7 @@
 ; This was caused by an infinite loop between OptimizeNoopCopyExpression
 ; and optimizePhiType when handling same-type bitcasts.
 
-define void @foo() {
+define void @foo(ptr %p) {
 entry:
   %val = load i32, ptr null, align 4
   br i1 false, label %bb1, label %bb3
