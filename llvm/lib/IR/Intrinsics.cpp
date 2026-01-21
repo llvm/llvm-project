@@ -970,8 +970,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
           VTy->getElementType()->getPrimitiveSizeInBits().getFixedValue();
       if (EltBits & 1 == 0)
         NewTy = VectorType::getTruncatedElementVectorType(VTy);
-    }
-    else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
+    } else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
       NewTy = IntegerType::get(ITy->getContext(), ITy->getBitWidth() / 2);
     else
       return true;
