@@ -158,10 +158,7 @@ public:
   static char ID;
 
   ComplexDeinterleavingLegacyPass(const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), TM(TM) {
-    initializeComplexDeinterleavingLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+      : FunctionPass(ID), TM(TM) {}
 
   StringRef getPassName() const override {
     return "Complex Deinterleaving Pass";

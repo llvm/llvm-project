@@ -582,6 +582,11 @@ define void @dead_on_return(ptr dead_on_return %p) {
   ret void
 }
 
+; CHECK: define void @dead_on_return_sized(ptr dead_on_return(4) %p)
+define void @dead_on_return_sized(ptr dead_on_return(4) %p) {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }

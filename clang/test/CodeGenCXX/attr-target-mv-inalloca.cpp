@@ -55,18 +55,18 @@ void usage() {
 // WINDOWS-NEXT: ret i32 %[[RET]]
 
 
-// WINDOWS64: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z"(ptr dead_on_return noundef %[[O:[0-9a-zA-Z]+]])
+// WINDOWS64: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z"(ptr noundef dead_on_return %[[O:[0-9a-zA-Z]+]])
 // WINDOWS64: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS64: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
 // WINDOWS64: ret i32 %[[LOAD]]
 
-// WINDOWS64: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.sse4.2"(ptr dead_on_return noundef %[[O:[0-9a-zA-Z]+]])
+// WINDOWS64: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.sse4.2"(ptr noundef dead_on_return %[[O:[0-9a-zA-Z]+]])
 // WINDOWS64: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS64: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
 // WINDOWS64: %[[ADD:[0-9a-zA-Z]+]] = add nsw i32 %[[LOAD]], 1
 // WINDOWS64: ret i32 %[[ADD]]
 
-// WINDOWS64: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.arch_ivybridge"(ptr dead_on_return noundef %[[O:[0-9a-zA-Z]+]])
+// WINDOWS64: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.arch_ivybridge"(ptr noundef dead_on_return %[[O:[0-9a-zA-Z]+]])
 // WINDOWS64: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS64: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
 // WINDOWS64: %[[ADD:[0-9a-zA-Z]+]] = add nsw i32 %[[LOAD]], 2
@@ -75,7 +75,7 @@ void usage() {
 // WINDOWS64: define dso_local void @"?usage@@YAXXZ"()
 // WINDOWS64: %[[F:[0-9a-zA-Z]+]] = alloca %struct.Foo
 // WINDOWS64: %[[ARG:[0-9a-zA-Z.]+]] = alloca %struct.Foo
-// WINDOWS64: %[[CALL:[0-9a-zA-Z]+]] = call noundef i32 @"?bar@@YAHUFoo@@@Z.resolver"(ptr dead_on_return noundef %[[ARG]])
+// WINDOWS64: %[[CALL:[0-9a-zA-Z]+]] = call noundef i32 @"?bar@@YAHUFoo@@@Z.resolver"(ptr noundef dead_on_return %[[ARG]])
 
 // WINDOWS64: define weak_odr dso_local i32 @"?bar@@YAHUFoo@@@Z.resolver"(ptr %0)
 // WINDOWS64: %[[RET:[0-9a-zA-Z]+]] = musttail call i32 @"?bar@@YAHUFoo@@@Z.arch_ivybridge"(ptr %0)

@@ -51,6 +51,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
@@ -200,10 +201,7 @@ class TwoAddressInstructionLegacyPass : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  TwoAddressInstructionLegacyPass() : MachineFunctionPass(ID) {
-    initializeTwoAddressInstructionLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  TwoAddressInstructionLegacyPass() : MachineFunctionPass(ID) {}
 
   /// Pass entry point.
   bool runOnMachineFunction(MachineFunction &MF) override {

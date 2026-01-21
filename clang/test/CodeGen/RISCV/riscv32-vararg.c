@@ -64,7 +64,7 @@ int f_va_callee(int, ...);
 // CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL4]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[COERCE_DIVE]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[BYVAL_TEMP]], ptr align 4 [[DOTCOMPOUNDLITERAL6]], i32 16, i1 false)
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 (i32, ...) @f_va_callee(i32 noundef 1, i32 noundef 2, i64 noundef 3, double noundef 4.000000e+00, double noundef 5.000000e+00, i32 [[TMP0]], [2 x i32] [[TMP1]], i64 [[TMP2]], ptr dead_on_return noundef [[BYVAL_TEMP]])
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 (i32, ...) @f_va_callee(i32 noundef 1, i32 noundef 2, i64 noundef 3, double noundef 4.000000e+00, double noundef 5.000000e+00, i32 [[TMP0]], [2 x i32] [[TMP1]], i64 [[TMP2]], ptr noundef dead_on_return [[BYVAL_TEMP]])
 // CHECK-NEXT:    ret void
 //
 void f_va_caller(void) {

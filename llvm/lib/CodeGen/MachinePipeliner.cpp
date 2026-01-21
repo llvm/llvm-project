@@ -72,6 +72,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"

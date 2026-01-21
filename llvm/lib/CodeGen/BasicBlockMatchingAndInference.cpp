@@ -85,10 +85,7 @@ INITIALIZE_PASS_END(BasicBlockMatchingAndInference, "machine-block-match-infer",
 char BasicBlockMatchingAndInference::ID = 0;
 
 BasicBlockMatchingAndInference::BasicBlockMatchingAndInference()
-    : MachineFunctionPass(ID) {
-  initializeBasicBlockMatchingAndInferencePass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 void BasicBlockMatchingAndInference::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBlockHashInfo>();

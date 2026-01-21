@@ -804,6 +804,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   if (Subtarget.hasAltivec()) {
     for (MVT VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
+      setOperationAction(ISD::AVGCEILS, VT, Legal);
+      setOperationAction(ISD::AVGCEILU, VT, Legal);
       setOperationAction(ISD::SADDSAT, VT, Legal);
       setOperationAction(ISD::SSUBSAT, VT, Legal);
       setOperationAction(ISD::UADDSAT, VT, Legal);
@@ -11024,6 +11026,19 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   unsigned IntrinsicID = Op.getConstantOperandVal(0);
 
   SDLoc dl(Op);
+  // Note: BCD instructions expect the immediate operand in vector form (v4i32),
+  // but the builtin provides it as a scalar. To satisfy the instruction
+  // encoding, we splat the scalar across all lanes using SPLAT_VECTOR.
+  auto MapNodeWithSplatVector =
+      [&](unsigned Opcode,
+          std::initializer_list<SDValue> ExtraOps = {}) -> SDValue {
+    SDValue SplatVal =
+        DAG.getNode(ISD::SPLAT_VECTOR, dl, MVT::v4i32, Op.getOperand(2));
+
+    SmallVector<SDValue, 4> Ops{SplatVal, Op.getOperand(1)};
+    Ops.append(ExtraOps.begin(), ExtraOps.end());
+    return DAG.getNode(Opcode, dl, MVT::v16i8, Ops);
+  };
 
   switch (IntrinsicID) {
   case Intrinsic::thread_pointer:
@@ -11077,6 +11092,17 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                         DAG.getTargetConstant(ME, dl, MVT::i32)}),
                    0);
   }
+
+  case Intrinsic::ppc_bcdshift:
+    return MapNodeWithSplatVector(PPCISD::BCDSHIFT, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdshiftround:
+    return MapNodeWithSplatVector(PPCISD::BCDSHIFTROUND, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdtruncate:
+    return MapNodeWithSplatVector(PPCISD::BCDTRUNC, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdunsignedtruncate:
+    return MapNodeWithSplatVector(PPCISD::BCDUTRUNC);
+  case Intrinsic::ppc_bcdunsignedshift:
+    return MapNodeWithSplatVector(PPCISD::BCDUSHIFT);
 
   case Intrinsic::ppc_rlwnm: {
     if (Op.getConstantOperandVal(3) == 0)

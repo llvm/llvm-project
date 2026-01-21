@@ -364,7 +364,6 @@ void TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 SelectionDAGISelLegacy::SelectionDAGISelLegacy(
     char &ID, std::unique_ptr<SelectionDAGISel> S)
     : MachineFunctionPass(ID), Selector(std::move(S)) {
-  initializeGCModuleInfoPass(*PassRegistry::getPassRegistry());
   initializeBranchProbabilityInfoWrapperPassPass(
       *PassRegistry::getPassRegistry());
   initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
@@ -408,7 +407,6 @@ SelectionDAGISel::SelectionDAGISel(TargetMachine &tm, CodeGenOptLevel OL)
       SDB(std::make_unique<SelectionDAGBuilder>(*CurDAG, *FuncInfo, *SwiftError,
                                                 OL)),
       OptLevel(OL) {
-  initializeGCModuleInfoPass(*PassRegistry::getPassRegistry());
   initializeBranchProbabilityInfoWrapperPassPass(
       *PassRegistry::getPassRegistry());
   initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());

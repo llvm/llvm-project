@@ -876,9 +876,7 @@ class SafeStackLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid..
 
-  SafeStackLegacyPass() : FunctionPass(ID) {
-    initializeSafeStackLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  SafeStackLegacyPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LibcallLoweringInfoWrapper>();

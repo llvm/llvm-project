@@ -223,16 +223,10 @@ public:
   BasicBlockSectionsProfileReader BBSPR;
 
   BasicBlockSectionsProfileReaderWrapperPass(const MemoryBuffer *Buf)
-      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader(Buf)) {
-    initializeBasicBlockSectionsProfileReaderWrapperPassPass(
-        *PassRegistry::getPassRegistry());
-  };
+      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader(Buf)) {}
 
   BasicBlockSectionsProfileReaderWrapperPass()
-      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader()) {
-    initializeBasicBlockSectionsProfileReaderWrapperPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader()) {}
 
   StringRef getPassName() const override {
     return "Basic Block Sections Profile Reader";

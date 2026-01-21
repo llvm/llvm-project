@@ -58,10 +58,7 @@ char MachineBranchProbabilityInfoWrapperPass::ID = 0;
 
 MachineBranchProbabilityInfoWrapperPass::
     MachineBranchProbabilityInfoWrapperPass()
-    : ImmutablePass(ID) {
-  PassRegistry &Registry = *PassRegistry::getPassRegistry();
-  initializeMachineBranchProbabilityInfoWrapperPassPass(Registry);
-}
+    : ImmutablePass(ID) {}
 
 void MachineBranchProbabilityInfoWrapperPass::anchor() {}
 

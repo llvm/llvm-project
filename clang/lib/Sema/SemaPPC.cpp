@@ -114,6 +114,36 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return Diag(TheCall->getBeginLoc(), diag::err_64_bit_builtin_32_bit_tgt)
            << TheCall->getSourceRange();
 
+  // Common BCD type-validation helpers
+  // Emit error diagnostics and return true on success
+  //  - IsTypeVecUChar: enforces vector unsigned char
+  //  - IsIntType: enforces any integer type
+  // Lambdas centralize type checks for BCD builtin handlers
+
+  // Lambda 1: verify vector unsigned char type
+  auto IsTypeVecUChar = [&](QualType ArgTy, unsigned ArgIndex) -> bool {
+    QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
+                                             VectorKind::AltiVecVector);
+    if (Context.hasSameType(ArgTy, VecType))
+      return true;
+
+    Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
+         diag::err_ppc_invalid_arg_type)
+        << ArgIndex << VecType << ArgTy;
+    return false;
+  };
+
+  // Lambda 2: verify integer type
+  auto IsIntType = [&](QualType ArgTy, unsigned ArgIndex) -> bool {
+    if (ArgTy->isIntegerType())
+      return true;
+
+    Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
+         diag::err_ppc_invalid_arg_type)
+        << ArgIndex << "integer" << ArgTy;
+    return false;
+  };
+
   switch (BuiltinID) {
   default:
     return false;
@@ -122,6 +152,21 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   case PPC::BI__builtin_ppc_packed2zoned:
   case PPC::BI__builtin_ppc_zoned2packed:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
+  case PPC::BI__builtin_ppc_bcdshift:
+  case PPC::BI__builtin_ppc_bcdshiftround:
+  case PPC::BI__builtin_ppc_bcdtruncate: {
+
+    // Arg0 must be vector unsigned char
+    if (!IsTypeVecUChar(TheCall->getArg(0)->getType(), 0))
+      return false;
+
+    // Arg1 must be integer type
+    if (!IsIntType(TheCall->getArg(1)->getType(), 1))
+      return false;
+
+    // Restrict Arg2 constant range (0–1)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 1);
+  }
   case PPC::BI__builtin_altivec_crypto_vshasigmaw:
   case PPC::BI__builtin_altivec_crypto_vshasigmad:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1) ||

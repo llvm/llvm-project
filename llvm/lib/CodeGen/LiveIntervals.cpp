@@ -40,6 +40,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/IR/Statepoint.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
@@ -117,9 +118,8 @@ void LiveIntervalsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-LiveIntervalsWrapperPass::LiveIntervalsWrapperPass() : MachineFunctionPass(ID) {
-  initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+LiveIntervalsWrapperPass::LiveIntervalsWrapperPass()
+    : MachineFunctionPass(ID) {}
 
 LiveIntervals::~LiveIntervals() { clear(); }
 

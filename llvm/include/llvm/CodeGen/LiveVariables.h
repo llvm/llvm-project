@@ -37,7 +37,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Compiler.h"
 
@@ -327,9 +326,7 @@ class LLVM_ABI LiveVariablesWrapperPass : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  LiveVariablesWrapperPass() : MachineFunctionPass(ID) {
-    initializeLiveVariablesWrapperPassPass(*PassRegistry::getPassRegistry());
-  }
+  LiveVariablesWrapperPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     LV.analyze(MF);

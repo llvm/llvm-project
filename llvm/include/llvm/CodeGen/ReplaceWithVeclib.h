@@ -15,7 +15,6 @@
 #define LLVM_CODEGEN_REPLACEWITHVECLIB_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Compiler.h"
@@ -29,9 +28,7 @@ struct ReplaceWithVeclib : public PassInfoMixin<ReplaceWithVeclib> {
 // Legacy pass
 struct LLVM_ABI ReplaceWithVeclibLegacy : public FunctionPass {
   static char ID;
-  ReplaceWithVeclibLegacy() : FunctionPass(ID) {
-    initializeReplaceWithVeclibLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  ReplaceWithVeclibLegacy() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
 };

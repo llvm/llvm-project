@@ -67,10 +67,7 @@ class FixupStatepointCallerSavedLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  FixupStatepointCallerSavedLegacy() : MachineFunctionPass(ID) {
-    initializeFixupStatepointCallerSavedLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  FixupStatepointCallerSavedLegacy() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
