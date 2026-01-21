@@ -1156,8 +1156,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::XOR, MVT::i128, Custom);
 
     if (Subtarget.hasPCLMUL()) {
-      setOperationAction(ISD::CLMUL, MVT::i64, Custom);
-      setOperationAction(ISD::CLMULH, MVT::i64, Custom);
+      for (auto VT : {MVT::i64, MVT::v4i32, MVT::v2i64}) {
+        setOperationAction(ISD::CLMUL, VT, Custom);
+        setOperationAction(ISD::CLMULH, VT, Custom);
+      }
       setOperationAction(ISD::CLMUL, MVT::i32, Custom);
       setOperationAction(ISD::CLMUL, MVT::i16, Custom);
       setOperationAction(ISD::CLMUL, MVT::i8, Custom);
@@ -2811,10 +2813,10 @@ X86TargetLowering::getPreferredVectorAction(MVT VT) const {
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
 
-FastISel *
-X86TargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
-                                  const TargetLibraryInfo *libInfo) const {
-  return X86::createFastISel(funcInfo, libInfo);
+FastISel *X86TargetLowering::createFastISel(
+    FunctionLoweringInfo &funcInfo, const TargetLibraryInfo *libInfo,
+    const LibcallLoweringInfo *libcallLowering) const {
+  return X86::createFastISel(funcInfo, libInfo, libcallLowering);
 }
 
 //===----------------------------------------------------------------------===//
@@ -33185,6 +33187,11 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
 
+  // Just scalarize vXi32/vXi64 vector cases and rely on shuffle combining to
+  // clean it up.
+  if (VT.isVector())
+    return DAG.UnrollVectorOp(Op.getNode());
+
   // On 64-bit, use i64/v2i64. On 32-bit, i64 is not legal, use i32/v4i32.
   MVT ScalarVT = Subtarget.is64Bit() ? MVT::i64 : MVT::i32;
   MVT VecVT = Subtarget.is64Bit() ? MVT::v2i64 : MVT::v4i32;
@@ -41167,7 +41174,10 @@ static SDValue combineX86ShuffleChainWithExtract(
 
   // Remove unused/repeated shuffle source ops.
   resolveTargetShuffleInputsAndMask(WideInputs, WideMask);
-  assert(!WideInputs.empty() && "Shuffle with no inputs detected");
+  if (WideInputs.empty() || all_of(WideInputs, [WideSizeInBits](SDValue V) {
+        return V.getValueSizeInBits() < WideSizeInBits;
+      }))
+    return SDValue();
 
   // Bail if we're always extracting from the lowest subvectors,
   // combineX86ShuffleChain should match this for the current width, or the

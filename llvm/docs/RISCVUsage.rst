@@ -165,6 +165,7 @@ on support follow.
      ``Svinval``       Assembly Support
      ``Svnapot``       Assembly Support
      ``Svpbmt``        Supported
+     ``Svrsw60t59b``   Supported
      ``Svvptc``        Supported
      ``V``             Supported
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)

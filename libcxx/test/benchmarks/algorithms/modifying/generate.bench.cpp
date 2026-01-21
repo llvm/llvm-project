@@ -50,9 +50,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::generate(vector<int>)", std_generate);
     bm.operator()<std::deque<int>>("std::generate(deque<int>)", std_generate);
     bm.operator()<std::list<int>>("std::generate(list<int>)", std_generate);
-    bm.operator()<std::vector<int>>("rng::generate(vector<int>)", std::ranges::generate);
-    bm.operator()<std::deque<int>>("rng::generate(deque<int>)", std::ranges::generate);
-    bm.operator()<std::list<int>>("rng::generate(list<int>)", std::ranges::generate);
   }
 
   benchmark::Initialize(&argc, argv);
