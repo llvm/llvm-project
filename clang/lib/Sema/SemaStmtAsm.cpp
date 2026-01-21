@@ -240,7 +240,10 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
     return ExprError();
 
   if (auto *SL = dyn_cast<StringLiteral>(Expr)) {
-    assert(SL->isOrdinary());
+    if (!SL->isOrdinary()) {
+      Diag(SL->getBeginLoc(), diag::err_asm_string_literal_not_ordinary);
+      return ExprError();
+    }
     if (ForAsmLabel && SL->getString().empty()) {
       Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string)
           << SL->getSourceRange();
