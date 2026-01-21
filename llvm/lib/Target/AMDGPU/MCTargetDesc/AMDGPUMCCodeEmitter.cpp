@@ -353,6 +353,14 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
     return AMDGPU::getInlineEncodingV2F16(static_cast<uint32_t>(Imm))
         .value_or(255);
 
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
+    // V_PK_FMAC_F16 has different inline constant behavior on pre-GFX11 vs
+    // GFX11+: pre-GFX11 produces (f16, 0), GFX11+ duplicates f16 to both
+    // halves.
+    return AMDGPU::getPKFMACF16InlineEncoding(static_cast<uint32_t>(Imm),
+                                              AMDGPU::isGFX11Plus(STI))
+        .value_or(255);
+
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return AMDGPU::getInlineEncodingV2BF16(static_cast<uint32_t>(Imm))

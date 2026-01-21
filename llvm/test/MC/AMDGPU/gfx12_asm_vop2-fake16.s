@@ -1922,7 +1922,10 @@ v_pk_fmac_f16 v5, -1, v2
 // GFX12: v_pk_fmac_f16 v5, -1, v2                ; encoding: [0xc1,0x04,0x0a,0x78]
 
 v_pk_fmac_f16 v5, 0.5, v2
-// GFX12: v_pk_fmac_f16 v5, 0.5, v2               ; encoding: [0xf0,0x04,0x0a,0x78]
+// GFX11: v_pk_fmac_f16 v5, 0.5, v2               ; encoding: [0xff,0x04,0x0a,0x78,0x00,0x38,0x00,0x00]
+
+v_pk_fmac_f16 v5, 0x38003800, v2
+// GFX11: v_pk_fmac_f16 v5, 0x38003800, v2        ; encoding: [0xf0,0x04,0x0a,0x78]
 
 v_pk_fmac_f16 v5, exec_hi, v2
 // GFX12: v_pk_fmac_f16 v5, exec_hi, v2           ; encoding: [0x7f,0x04,0x0a,0x78]
