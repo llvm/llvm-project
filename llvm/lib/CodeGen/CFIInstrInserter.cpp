@@ -64,6 +64,20 @@ class CFIInstrInserter : public MachineFunctionPass {
   }
 
 private:
+  /// In order to reduce memory overhead, we will fix an ordering of CSRs so
+  /// that we can operate on vectors where `i`th element represents some
+  /// information about `i`th CSR in this ordering. We will need to perform the
+  /// following mappings:
+
+  /// What is the dwarf register at index `Idx in this ordering?
+  int getDwarfRegFromOrderIdx(unsigned Idx) const;
+  /// What is the index of the dwarf register `Reg`?
+  unsigned getOrderIdxFromDwarfReg(int DwarfReg) const;
+
+  SmallVector<int> OrderedCSRs;
+  SmallDenseMap<int, unsigned> DwarfRegToOrdIdxMap;
+  void initCSRsOrder(const MachineFunction &MF, const TargetRegisterInfo &TRI);
+
   /// contains the location where CSR register is saved.
   class CSRSavedLocation {
   public:
@@ -203,8 +217,35 @@ INITIALIZE_PASS(CFIInstrInserter, "cfi-instr-inserter",
                 false)
 FunctionPass *llvm::createCFIInstrInserter() { return new CFIInstrInserter(); }
 
+void CFIInstrInserter::initCSRsOrder(const MachineFunction &MF,
+                                     const TargetRegisterInfo &TRI) {
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+
+  for (unsigned i = 0; CSRegs[i]; ++i) {
+    // Use the EH dwarf reg number. This is correct as long as target emits CFIs
+    // using EH Dwarf numbers (which seems to be the case for all targets).
+    auto DwarfRegNum = TRI.getDwarfRegNum(CSRegs[i], true);
+    OrderedCSRs.push_back(DwarfRegNum);
+    DwarfRegToOrdIdxMap[DwarfRegNum] = i;
+  }
+}
+
+int CFIInstrInserter::getDwarfRegFromOrderIdx(unsigned Idx) const {
+  assert(Idx < OrderedCSRs.size() && "Wrong order index for a register.");
+  return OrderedCSRs[Idx];
+}
+
+unsigned CFIInstrInserter::getOrderIdxFromDwarfReg(int DwarfReg) const {
+  auto Lookup = DwarfRegToOrdIdxMap.find(DwarfReg);
+  assert(Lookup != DwarfRegToOrdIdxMap.end() &&
+         "Register order index not found.");
+  return Lookup->second;
+}
+
 void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  initCSRsOrder(MF, TRI);
+
   // Initial CFA offset value i.e. the one valid at the beginning of the
   // function.
   int InitialOffset =
@@ -214,7 +255,7 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
   Register InitialRegister =
       MF.getSubtarget().getFrameLowering()->getInitialCFARegister(MF);
   unsigned DwarfInitialRegister = TRI.getDwarfRegNum(InitialRegister, true);
-  unsigned NumRegs = TRI.getNumSupportedRegs(MF);
+  unsigned NumRegs = OrderedCSRs.size();
 
   // Initialize MBBMap.
   for (MachineBasicBlock &MBB : MF) {
@@ -243,8 +284,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
   unsigned SetRegister = MBBInfo.IncomingCFARegister;
   MachineFunction *MF = MBBInfo.MBB->getParent();
   const std::vector<MCCFIInstruction> &Instrs = MF->getFrameInstructions();
-  const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
-  unsigned NumRegs = TRI.getNumSupportedRegs(*MF);
+  unsigned NumRegs = OrderedCSRs.size();
   BitVector CSRSaved(NumRegs), CSRRestored(NumRegs);
 
 #ifndef NDEBUG
@@ -282,7 +322,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         CSROffset = CFI.getOffset() - SetOffset;
         break;
       case MCCFIInstruction::OpRestore:
-        CSRRestored.set(CFI.getRegister());
+        CSRRestored.set(getOrderIdxFromDwarfReg(CFI.getRegister()));
         break;
       case MCCFIInstruction::OpLLVMDefAspaceCfa:
         // TODO: Add support for handling cfi_def_aspace_cfa.
@@ -341,7 +381,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         if (!Inserted && It->second != CSRLoc)
           reportFatalInternalError(
               "Different saved locations for the same CSR");
-        CSRSaved.set(CFI.getRegister());
+        CSRSaved.set(getOrderIdxFromDwarfReg(CFI.getRegister()));
       }
     }
   }
@@ -445,7 +485,8 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
 
     BitVector::apply([](auto x, auto y) { return x & ~y; }, SetDifference,
                      PrevMBBInfo->OutgoingCSRSaved, MBBInfo.IncomingCSRSaved);
-    for (int Reg : SetDifference.set_bits()) {
+    for (unsigned Idx : SetDifference.set_bits()) {
+      int Reg = getDwarfRegFromOrderIdx(Idx);
       unsigned CFIIndex =
           MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, Reg));
       BuildMI(*MBBInfo.MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
@@ -455,7 +496,8 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
 
     BitVector::apply([](auto x, auto y) { return x & ~y; }, SetDifference,
                      MBBInfo.IncomingCSRSaved, PrevMBBInfo->OutgoingCSRSaved);
-    for (int Reg : SetDifference.set_bits()) {
+    for (unsigned Idx : SetDifference.set_bits()) {
+      int Reg = getDwarfRegFromOrderIdx(Idx);
       auto it = CSRLocMap.find(Reg);
       assert(it != CSRLocMap.end() && "Reg should have an entry in CSRLocMap");
       unsigned CFIIndex;
@@ -506,13 +548,17 @@ void CFIInstrInserter::reportCSRError(const MBBCFAInfo &Pred,
          << Pred.MBB->getParent()->getName() << " ***\n";
   errs() << "Pred: " << Pred.MBB->getName() << " #" << Pred.MBB->getNumber()
          << " outgoing CSR Saved: ";
-  for (int Reg : Pred.OutgoingCSRSaved.set_bits())
+  for (unsigned Idx : Pred.OutgoingCSRSaved.set_bits()) {
+    int Reg = getDwarfRegFromOrderIdx(Idx);
     errs() << Reg << " ";
+  }
   errs() << "\n";
   errs() << "Succ: " << Succ.MBB->getName() << " #" << Succ.MBB->getNumber()
          << " incoming CSR Saved: ";
-  for (int Reg : Succ.IncomingCSRSaved.set_bits())
+  for (unsigned Idx : Succ.IncomingCSRSaved.set_bits()) {
+    int Reg = getDwarfRegFromOrderIdx(Idx);
     errs() << Reg << " ";
+  }
   errs() << "\n";
 }
 
