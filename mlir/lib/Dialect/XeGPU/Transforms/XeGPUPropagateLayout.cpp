@@ -289,9 +289,9 @@ static LayoutInfo getDefaultSIMTLayoutInfo(mlir::MLIRContext *ctx,
 
 /// Helper to get the default layout for 2D block operations.
 template <typename Ty>
-static LayoutInfo getSIMTLayoutInforForBlockIO(Ty ty,
-                                               const xegpu::uArch::uArch *uArch,
-                                               unsigned packingSize) {
+static LayoutInfo getSIMTLayoutInfoBlockIO(Ty ty,
+                                           const xegpu::uArch::uArch *uArch,
+                                           unsigned packingSize) {
   // Expecting a 1D or 2D vector.
   assert((ty.getRank() == 1 || ty.getRank() == 2) &&
          "Expected 1D or 2D vector.");
@@ -309,10 +309,8 @@ static LayoutInfo getSIMTLayoutInforForBlockIO(Ty ty,
 }
 
 /// Helper to get the default layout for a vector type.
-static LayoutInfo
-getSIMTLayoutInforForScatterIO(VectorType vectorTy,
-                               const xegpu::uArch::uArch *uArch,
-                               unsigned packingSize) {
+static LayoutInfo getSIMTLayoutInfoScatterIO(VectorType vectorTy,
+                                             const xegpu::uArch::uArch *uArch) {
   // Expecting a 1D or 2D vector.
   assert((vectorTy.getRank() == 1 || vectorTy.getRank() == 2) &&
          "Expected 1D or 2D vector.");
@@ -320,6 +318,7 @@ getSIMTLayoutInforForScatterIO(VectorType vectorTy,
   assert(vectorTy.getElementType().isIntOrFloat() &&
          "Expected int or float element type.");
   // If the rank is 1, then return default layout for 1D vector.
+  const unsigned packingSize{uArch->getGeneralPackedFormatBitSize()};
   if (vectorTy.getRank() == 1)
     return getDefaultSIMTLayoutInfo(vectorTy.getContext(), 1, uArch);
   // Packing factor is determined by the element type bitwidth.
@@ -354,7 +353,7 @@ getSIMTLayoutInfoForDPASOperand(VectorType vectorTy, unsigned operandNum,
         xegpu::LayoutAttr::get(vectorTy.getContext(), layout, data));
   }
   // Otherwise, return the default layout for the vector type.
-  return getSIMTLayoutInforForBlockIO(vectorTy, uArch, packingSize);
+  return getSIMTLayoutInfoBlockIO(vectorTy, uArch, packingSize);
 }
 
 //===----------------------------------------------------------------------===//
@@ -631,7 +630,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
       prefetchLayout =
           LayoutInfo(xegpu::LayoutAttr::get(tdescTy.getContext(), instData));
     else
-      prefetchLayout = getSIMTLayoutInforForBlockIO(
+      prefetchLayout = getSIMTLayoutInfoBlockIO(
           tdescTy, uArch, uArchInstruction->getPackedFormatBitSize());
 
     prefetch.setLayoutAttr(
@@ -983,7 +982,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
       storeLayout =
           LayoutInfo(xegpu::LayoutAttr::get(dataTy.getContext(), instData));
     else if (layoutKind == LayoutKind::Lane)
-      storeLayout = getSIMTLayoutInforForBlockIO(
+      storeLayout = getSIMTLayoutInfoBlockIO(
           store.getValueType(), uArch,
           uArchInstruction->getPackedFormatBitSize());
     else { // LayoutKind::Subgroup
@@ -1169,8 +1168,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
       loadLayout =
           LayoutInfo(xegpu::LayoutAttr::get(load.getContext(), instData));
     else
-      loadLayout = getSIMTLayoutInforForScatterIO(
-          payloadTy, uArch, uArch->getGeneralPackedFormatBitSize());
+      loadLayout = getSIMTLayoutInfoScatterIO(payloadTy, uArch);
 
     // Mask operand should have 1D default layout.
     maskLayout = getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
@@ -1246,8 +1244,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
                "Expected the first dimension of 2D tensor descriptor to be "
                "equal to "
                "subgroup size.");
-      payloadLayout = getSIMTLayoutInforForScatterIO(
-          payloadTy, uArch, uArch->getGeneralPackedFormatBitSize());
+      payloadLayout = getSIMTLayoutInfoScatterIO(payloadTy, uArch);
     }
 
     maskLayout =
@@ -1267,6 +1264,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     propagateIfChanged(operands[3], operands[3]->meet(maskLayout));
 }
 
+// Store matrix is a flavor of scattered store for 2D shapes.
 void LayoutInfoPropagation::visitStoreMatrixOp(
     xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
@@ -1275,16 +1273,24 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
       std::distance(storeMatrix.operand_begin(),
                     llvm::find(storeMatrix->getOperands(), operand));
 
-  auto uArch = getUArch(getChipStr(storeMatrix).value_or(""));
-  const int subgroupSize = uArch->getSubgroupSize();
-  SmallVector<int> instData = {1, 8};
+  xegpu::DistributeLayoutAttr anchorLayout = storeMatrix.getLayoutAttr();
   LayoutInfo layout;
-  if (layoutKind == LayoutKind::InstData)
-    layout =
-        LayoutInfo(xegpu::LayoutAttr::get(storeMatrix.getContext(), instData));
-  else
-    layout =
-        getDefaultSIMTLayoutInfo(storeMatrix->getContext(), 2, subgroupSize);
+  if (hasParamsOfLayoutKind(anchorLayout)) {
+    layout = LayoutInfo(anchorLayout);
+  } else {
+    VectorType payloadTy = llvm::cast<VectorType>(operand.getType());
+    assert(payloadTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
+    auto uArch = getUArch(getChipStr(storeMatrix).value_or(""));
+    const int subgroupSize = uArch->getSubgroupSize();
+    int instLaneVec =
+        std::min(static_cast<int>(payloadTy.getShape().back()), 16);
+    SmallVector<int> instData = {subgroupSize, instLaneVec};
+    if (layoutKind == LayoutKind::InstData)
+      layout = LayoutInfo(
+          xegpu::LayoutAttr::get(storeMatrix.getContext(), instData));
+    else
+      layout = getSIMTLayoutInfoScatterIO(payloadTy, uArch);
+  }
 
   propagateIfChanged(operands[index], operands[index]->meet(layout));
 }
