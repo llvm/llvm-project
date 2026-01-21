@@ -540,15 +540,22 @@ struct CommOpPattern : public OpConversionPattern<CommOp> {
     return gridOp;
   }
 
+  // Get an MPI_Comm_split for a given grid and axes.
+  // The color is the linear index of the process in the grid along the
+  // non-'grid-axes'. The key is the linear index of the process in the grid
+  // along the grid-axes.
   Value getComm(GridOp &gridOp, ::llvm::ArrayRef<int16_t> gridAxes,
                 ImplicitLocOpBuilder &iBuilder) const {
-    // Get an MPI_Comm_split for a given grid and axes.
-    // The color is the linear index of the process in the grid along the
-    // non-'grid-axes'. The key is the linear index of the process in the grid
-    // along the grid-axes.
+    size_t gridDims = gridOp.getShape().size();
+    auto commType = mpi::CommType::get(gridOp->getContext());
+    Value commWorld = mpi::CommWorldOp::create(iBuilder, commType);
+
+    if (gridAxes.empty() || gridAxes.size() >= gridDims) {
+      return commWorld;
+    }
+
     SmallVector<GridAxis> otherAxes;
-    for (GridAxis i = 0; i < static_cast<GridAxis>(gridOp.getShape().size());
-         ++i) {
+    for (GridAxis i = 0; i < static_cast<GridAxis>(gridDims); ++i) {
       if (!llvm::is_contained(gridAxes, i))
         otherAxes.emplace_back(i);
     }
@@ -565,8 +572,6 @@ struct CommOpPattern : public OpConversionPattern<CommOp> {
     key = arith::IndexCastOp::create(iBuilder, iBuilder.getI32Type(), key);
 
     // Finally split the communicator
-    auto commType = mpi::CommType::get(gridOp->getContext());
-    Value commWorld = mpi::CommWorldOp::create(iBuilder, commType);
     return mpi::CommSplitOp::create(iBuilder, commType, commWorld, color, key)
         .getNewcomm();
   }
