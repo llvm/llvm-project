@@ -13,11 +13,9 @@
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
+using lldb_private::PrettyPrint;
 using llvm::json::parse;
 using llvm::json::Value;
-
-/// Returns a pretty printed json string of a `llvm::json::Value`.
-static std::string pp(const Value &E) { return formatv("{0:2}", E).str(); }
 
 TEST(ProtocolEventsTest, StoppedEventBody) {
   StoppedEventBody body;
@@ -25,7 +23,7 @@ TEST(ProtocolEventsTest, StoppedEventBody) {
     "reason": ""
   })");
   ASSERT_THAT_EXPECTED(expected_body, llvm::Succeeded());
-  EXPECT_EQ(pp(*expected_body), pp(body));
+  EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
 
   body.reason = eStopReasonBreakpoint;
   body.description = "desc";
@@ -42,5 +40,5 @@ TEST(ProtocolEventsTest, StoppedEventBody) {
     "hitBreakpointIds": [1, 2, 3]
   })");
   ASSERT_THAT_EXPECTED(expected_body, llvm::Succeeded());
-  EXPECT_EQ(pp(*expected_body), pp(body));
+  EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
 }
