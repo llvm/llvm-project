@@ -13,9 +13,9 @@ void test0(Test0 *val) {
 // CHECK-NEXT: call void @llvm.objc.storeStrong(
 // CHECK-NEXT: load ptr, ptr [[VAL]],
 // CHECK-NEXT: load
-// CHECK-NEXT: %call1 = call ptr @objc_msgSend(ptr noundef %0, ptr noundef %1) [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #1
-// CHECK-NEXT: store ptr %call1, ptr %x, align 8
+// CHECK-NEXT: [[T0:%.*]] = call ptr
+// CHECK-NEXT: [[T1:%.*]] = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr [[T0]])
+// CHECK-NEXT: store ptr [[T1]], ptr [[X]]
 // CHECK-NEXT: call void @llvm.objc.storeStrong(ptr [[X]], ptr null)
 // CHECK-NEXT: call void @llvm.objc.storeStrong(ptr [[VAL]], ptr null)
 // CHECK-NEXT: ret void

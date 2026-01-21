@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -o - %s | FileCheck %s
 
 // A test to ensure that we generate fused calls at -O0.
 
@@ -31,10 +31,8 @@ void test2(void) {
 
 id test3(void) {
   extern id test3_helper(void);
-// CHECK:      %call1 = call ptr @test3_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK:      call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #1
-// CHECK:      %0 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call1) #1
-// CHECK:      ret ptr %0
+  // CHECK:      [[T0:%.*]] = call ptr @test3_helper()
+  // CHECK-NEXT: ret ptr [[T0]]
   return test3_helper();
 }
 
@@ -42,10 +40,8 @@ id test3(void) {
 @interface Test4_sub : Test4 { id y; } @end
 Test4 *test4(void) {
   extern Test4_sub *test4_helper(void);
-// CHECK:      %call1 = call ptr @test4_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK:      call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #1
-// CHECK:      %0 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call1) #1
-// CHECK:      ret ptr %0
+  // CHECK:      [[T0:%.*]] = call ptr @test4_helper()
+  // CHECK-NEXT: ret ptr [[T0]]
   return test4_helper();
 }
 
