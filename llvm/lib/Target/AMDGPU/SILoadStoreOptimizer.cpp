@@ -284,8 +284,6 @@ private:
   void updateAsyncLDSAddress(MachineInstr &MI, int32_t OffsetDiff) const;
   Register computeBase(MachineInstr &MI, const MemAddress &Addr) const;
   MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI) const;
-  std::optional<int32_t> extractConstOffset(const MachineOperand &Op) const;
-  std::optional<int64_t> extractConstOffset64(const MachineOperand &Op) const;
   bool processBaseWithConstOffset64(const MachineOperand &Base,
                                     MemAddress &Addr) const;
   void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr) const;
@@ -2175,7 +2173,8 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
 
   // Use V_ADD_U64_e64 when the original pattern used it (gfx1250+)
   if (Addr.Base.UseV64Pattern) {
-    Register FullDestReg = MRI->createVirtualRegister(TRI->getVGPR64Class());
+    Register FullDestReg = MRI->createVirtualRegister(
+        TII->getRegClass(TII->get(AMDGPU::V_ADD_U64_e64), 0));
 
     // Load the 64-bit offset into an SGPR pair if needed
     Register OffsetReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
@@ -2183,16 +2182,15 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
         BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B64_IMM_PSEUDO),
                 OffsetReg)
             .addImm(Addr.Offset);
-    (void)MovOffset;
-    LLVM_DEBUG(dbgs() << "    "; MovOffset->dump(););
-
     MachineInstr *Add64 =
         BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_U64_e64), FullDestReg)
             .addReg(Addr.Base.LoReg)
             .addReg(OffsetReg, RegState::Kill)
             .addImm(0);
+    (void)MovOffset;
     (void)Add64;
-    LLVM_DEBUG(dbgs() << "    "; Add64->dump(); dbgs() << "\n";);
+    LLVM_DEBUG(dbgs() << "    " << *MovOffset << "\n";
+               dbgs() << "    " << *Add64 << "\n\n";);
 
     return FullDestReg;
   }
@@ -2217,23 +2215,19 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
   Register DestSub0 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   Register DestSub1 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   MachineInstr *LoHalf =
-    BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_CO_U32_e64), DestSub0)
-      .addReg(CarryReg, RegState::Define)
-      .addReg(Addr.Base.LoReg, 0, Addr.Base.LoSubReg)
-      .add(OffsetLo)
-      .addImm(0); // clamp bit
-  (void)LoHalf;
-  LLVM_DEBUG(dbgs() << "    "; LoHalf->dump(););
+      BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_CO_U32_e64), DestSub0)
+          .addReg(CarryReg, RegState::Define)
+          .addReg(Addr.Base.LoReg, 0, Addr.Base.LoSubReg)
+          .add(OffsetLo)
+          .addImm(0); // clamp bit
 
   MachineInstr *HiHalf =
-  BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADDC_U32_e64), DestSub1)
-    .addReg(DeadCarryReg, RegState::Define | RegState::Dead)
-    .addReg(Addr.Base.HiReg, 0, Addr.Base.HiSubReg)
-    .add(OffsetHi)
-    .addReg(CarryReg, RegState::Kill)
-    .addImm(0); // clamp bit
-  (void)HiHalf;
-  LLVM_DEBUG(dbgs() << "    "; HiHalf->dump(););
+      BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADDC_U32_e64), DestSub1)
+          .addReg(DeadCarryReg, RegState::Define | RegState::Dead)
+          .addReg(Addr.Base.HiReg, 0, Addr.Base.HiSubReg)
+          .add(OffsetHi)
+          .addReg(CarryReg, RegState::Kill)
+          .addImm(0); // clamp bit
 
   Register FullDestReg = MRI->createVirtualRegister(TRI->getVGPR64Class());
   MachineInstr *FullBase =
@@ -2242,8 +2236,13 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
       .addImm(AMDGPU::sub0)
       .addReg(DestSub1)
       .addImm(AMDGPU::sub1);
+
+  (void)LoHalf;
+  (void)HiHalf;
   (void)FullBase;
-  LLVM_DEBUG(dbgs() << "    "; FullBase->dump(); dbgs() << "\n";);
+  LLVM_DEBUG(dbgs() << "    " << *LoHalf << "\n";
+             dbgs() << "    " << *HiHalf << "\n";
+             dbgs() << "    " << *FullBase << "\n\n";);
 
   return FullDestReg;
 }
@@ -2258,41 +2257,6 @@ void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
   TII->getNamedOperand(MI, AMDGPU::OpName::offset)->setImm(NewOffset);
 }
 
-std::optional<int32_t>
-SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) const {
-  if (Op.isImm())
-    return Op.getImm();
-
-  if (!Op.isReg())
-    return std::nullopt;
-
-  MachineInstr *Def = MRI->getUniqueVRegDef(Op.getReg());
-  if (!Def || Def->getOpcode() != AMDGPU::S_MOV_B32 ||
-      !Def->getOperand(1).isImm())
-    return std::nullopt;
-
-  return Def->getOperand(1).getImm();
-}
-
-std::optional<int64_t>
-SILoadStoreOptimizer::extractConstOffset64(const MachineOperand &Op) const {
-  if (Op.isImm())
-    return Op.getImm();
-
-  if (!Op.isReg())
-    return std::nullopt;
-
-  MachineInstr *Def = MRI->getUniqueVRegDef(Op.getReg());
-  if (!Def)
-    return std::nullopt;
-
-  // Handle S_MOV_B64_IMM_PSEUDO for 64-bit immediates
-  if (Def->getOpcode() == AMDGPU::S_MOV_B64_IMM_PSEUDO)
-    return TII->getNamedImmOperand(*Def, AMDGPU::OpName::src0);
-
-  return std::nullopt;
-}
-
 // Helper to extract a 64-bit constant offset from a V_ADD_U64_e64 instruction.
 // Returns true if successful, populating Addr with base register info and
 // offset.
@@ -2301,22 +2265,18 @@ bool SILoadStoreOptimizer::processBaseWithConstOffset64(
   if (!Base.isReg())
     return false;
 
-  MachineInstr *Def = MRI->getUniqueVRegDef(Base.getReg());
+  MachineInstr *Def = MRI->getVRegDef(Base.getReg());
   if (!Def || Def->getOpcode() != AMDGPU::V_ADD_U64_e64)
     return false;
 
-  const auto *Src0 = TII->getNamedOperand(*Def, AMDGPU::OpName::src0);
-  const auto *Src1 = TII->getNamedOperand(*Def, AMDGPU::OpName::src1);
-  if (!Src0 || !Src1)
-    return false;
+  MachineOperand *Src0 = TII->getNamedOperand(*Def, AMDGPU::OpName::src0);
+  MachineOperand *Src1 = TII->getNamedOperand(*Def, AMDGPU::OpName::src1);
 
-  const MachineOperand *ConstOp = nullptr;
   const MachineOperand *BaseOp = nullptr;
 
-  auto Offset = extractConstOffset64(*Src1);
+  auto Offset = TII->getImmOrMaterializedImm(*Src1);
 
   if (Offset) {
-    ConstOp = Src1;
     BaseOp = Src0;
     Addr.Offset = *Offset;
   } else {
@@ -2333,9 +2293,6 @@ bool SILoadStoreOptimizer::processBaseWithConstOffset64(
          "Expected 64-bit Base Register for V_ADD_U64_e64 pattern and no "
          "subregisters");
   Addr.Base.LoReg = BaseOp->getReg();
-  Addr.Base.HiReg = 0;
-  Addr.Base.LoSubReg = 0;
-  Addr.Base.HiSubReg = 0;
   Addr.Base.UseV64Pattern = true;
   return true;
 }
@@ -2385,14 +2342,14 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
       !BaseHiDef || BaseHiDef->getOpcode() != AMDGPU::V_ADDC_U32_e64)
     return;
 
-  const auto *Src0 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src0);
-  const auto *Src1 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src1);
+  MachineOperand *Src0 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src0);
+  MachineOperand *Src1 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src1);
 
-  auto Offset0P = extractConstOffset(*Src0);
+  auto Offset0P = TII->getImmOrMaterializedImm(*Src0);
   if (Offset0P)
     BaseLo = *Src1;
   else {
-    if (!(Offset0P = extractConstOffset(*Src1)))
+    if (!(Offset0P = TII->getImmOrMaterializedImm(*Src1)))
       return;
     BaseLo = *Src0;
   }
