@@ -21,6 +21,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -3214,6 +3215,10 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Indirect calls with CFI checks need special handling.
   if (CB && CB->isIndirectCall() && CB->getOperandBundle(LLVMContext::OB_kcfi))
+    return false;
+
+  // Allow SelectionDAG isel to handle clang.arc.attachedcall operand bundle.
+  if (CB && objcarc::hasAttachedCallOpBundle(CB))
     return false;
 
   // Functions using thunks for indirect calls need to use SDISel.
