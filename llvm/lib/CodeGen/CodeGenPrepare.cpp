@@ -1468,11 +1468,6 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
       return false;
   }
 
-  // Skip same-type casts to avoid infinite loop with optimizePhiType.
-  if (CI->getOperand(0)->getType() == CI->getType()) {
-    return false;
-  }
-
   // If this is a noop copy,
   EVT SrcVT = TLI.getValueType(DL, CI->getOperand(0)->getType());
   EVT DstVT = TLI.getValueType(DL, CI->getType());
