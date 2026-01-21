@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/ADT/DynamicAPInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
@@ -83,6 +84,12 @@ bool isAsmOnly(const Function &F) {
     }
   return true;
 }
+
+SmallString<128> profileErrorMessage(StringRef Msg, Function &F) {
+  return SmallString<128>{"Profile verification failed for function '",
+                          F.getName(), "': ", Msg};
+}
+
 } // namespace
 
 // FIXME: currently this injects only for terminators. Select isn't yet
@@ -237,9 +244,8 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
   if (!EntryCount) {
     auto *MD = F.getMetadata(LLVMContext::MD_prof);
     if (!MD || !isExplicitlyUnknownProfileMetadata(*MD)) {
-      F.getContext().emitError(
-          "Profile verification failed for function '" + F.getName() +
-          "': function entry count missing (set to 0 if cold)");
+      F.getContext().emitError(profileErrorMessage(
+          "function entry count missing (set to 0 if cold)", F));
       return PreservedAnalyses::all();
     }
   } else if (EntryCount->getCount() == 0) {
@@ -254,15 +260,14 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
           if (I.getMetadata(LLVMContext::MD_prof))
             continue;
           F.getContext().emitError(
-              "Profile verification failed for function '" + F.getName() +
-              "': select annotation missing");
+              profileErrorMessage("select annotation missing", F));
         }
     }
     if (const auto *Term =
             ProfileInjector::getTerminatorBenefitingFromMDProf(BB))
       if (!Term->getMetadata(LLVMContext::MD_prof))
-        F.getContext().emitError("Profile verification failed for function '" +
-                                 F.getName() + "': branch annotation missing");
+        F.getContext().emitError(
+            profileErrorMessage("branch annotation missing", F));
   }
   return PreservedAnalyses::all();
 }
