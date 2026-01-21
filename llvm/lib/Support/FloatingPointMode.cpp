@@ -116,7 +116,7 @@ void DenormalFPEnv::print(raw_ostream &OS) const {
   // Omit printing the base mode if only the f32 mode isn't the default.
   if (DefaultMode != DenormalMode::getDefault()) {
     DefaultMode.print(OS, /*Legacy=*/false);
-    OS << ' ';
+    OS << ", ";
   }
 
   OS << "float: ";

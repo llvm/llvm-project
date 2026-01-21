@@ -254,7 +254,7 @@ define void @func_f32_dynamic_positivezero() denormal_fpenv(float:dynamic,positi
 }
 
 define void @func_f64_dynamic__f32_ieee() denormal_fpenv(dynamic float:ieee) {
-; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic float: ieee,ieee)
+; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic, float: ieee,ieee)
 ; CHECK-LABEL: define void @func_f64_dynamic__f32_ieee(
 ; CHECK-SAME: ) #[[ATTR18:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -262,8 +262,8 @@ define void @func_f64_dynamic__f32_ieee() denormal_fpenv(dynamic float:ieee) {
   ret void
 }
 
-define void @func_f64_dynamic__f32_preservesign() denormal_fpenv(dynamic float:preservesign) {
-; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic float: preservesign,preservesign)
+define void @func_f64_dynamic__f32_preservesign() denormal_fpenv(dynamic, float:preservesign) {
+; CHECK: Function Attrs: denormal_fpenv(dynamic,dynamic, float: preservesign,preservesign)
 ; CHECK-LABEL: define void @func_f64_dynamic__f32_preservesign(
 ; CHECK-SAME: ) #[[ATTR19:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -292,6 +292,6 @@ attributes #1 = { denormal_fpenv(preservesign) }
 ; CHECK: attributes #[[ATTR15]] = { denormal_fpenv(float: dynamic,dynamic) }
 ; CHECK: attributes #[[ATTR16]] = { denormal_fpenv(float: preservesign,ieee) }
 ; CHECK: attributes #[[ATTR17]] = { denormal_fpenv(float: dynamic,positivezero) }
-; CHECK: attributes #[[ATTR18]] = { denormal_fpenv(dynamic,dynamic float: ieee,ieee) }
-; CHECK: attributes #[[ATTR19]] = { denormal_fpenv(dynamic,dynamic float: preservesign,preservesign) }
+; CHECK: attributes #[[ATTR18]] = { denormal_fpenv(dynamic,dynamic, float: ieee,ieee) }
+; CHECK: attributes #[[ATTR19]] = { denormal_fpenv(dynamic,dynamic, float: preservesign,preservesign) }
 ;.
