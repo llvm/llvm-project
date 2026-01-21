@@ -178,10 +178,11 @@ void MCObjectStreamer::reset() {
   MCStreamer::reset();
 }
 
-void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
+void MCObjectStreamer::emitFrames() {
   if (!getNumFrameInfos())
     return;
 
+  auto *MAB = &getAssembler().getBackend();
   if (EmitEHFrame)
     MCDwarfFrameEmitter::Emit(*this, MAB, true);
 
@@ -675,6 +676,10 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   F->u.align.EmitNops = true;
   F->STI = STI;
+}
+
+void MCObjectStreamer::emitPrefAlign(Align Alignment) {
+  getCurrentSectionOnly()->ensurePreferredAlignment(Alignment);
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,

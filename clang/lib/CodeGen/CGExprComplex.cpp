@@ -320,7 +320,7 @@ public:
   QualType getPromotionType(FPOptionsOverride Features, QualType Ty,
                             bool IsComplexDivisor) {
     if (auto *CT = Ty->getAs<ComplexType>()) {
-      QualType ElementType = CT->getElementType();
+      QualType ElementType = CT->getElementType().getCanonicalType();
       bool IsFloatingType = ElementType->isFloatingType();
       bool IsComplexRangePromoted = CGF.getLangOpts().getComplexRange() ==
                                     LangOptions::ComplexRangeKind::CX_Promoted;
@@ -621,6 +621,7 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:

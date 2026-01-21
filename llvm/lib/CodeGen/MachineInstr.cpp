@@ -100,7 +100,7 @@ void MachineInstr::addImplicitDefUseOperands(MachineFunction &MF) {
 MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
                            DebugLoc DL, bool NoImp)
     : MCID(&TID), NumOperands(0), Flags(0), AsmPrinterFlags(0),
-      DbgLoc(std::move(DL)), DebugInstrNum(0), Opcode(TID.Opcode) {
+      Opcode(TID.Opcode), DebugInstrNum(0), DbgLoc(std::move(DL)) {
   assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   // Reserve space for the expected number of operands.
@@ -119,8 +119,8 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
 /// uniqueness.
 MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
     : MCID(&MI.getDesc()), NumOperands(0), Flags(0), AsmPrinterFlags(0),
-      Info(MI.Info), DbgLoc(MI.getDebugLoc()), DebugInstrNum(0),
-      Opcode(MI.getOpcode()) {
+      Opcode(MI.getOpcode()), DebugInstrNum(0), Info(MI.Info),
+      DbgLoc(MI.getDebugLoc()) {
   assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   CapOperands = OperandCapacity::get(MI.getNumOperands());
@@ -322,15 +322,17 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
                                 MCSymbol *PreInstrSymbol,
                                 MCSymbol *PostInstrSymbol,
                                 MDNode *HeapAllocMarker, MDNode *PCSections,
-                                uint32_t CFIType, MDNode *MMRAs) {
+                                uint32_t CFIType, MDNode *MMRAs, Value *DS) {
   bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
   bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
   bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
   bool HasPCSections = PCSections != nullptr;
   bool HasCFIType = CFIType != 0;
   bool HasMMRAs = MMRAs != nullptr;
+  bool HasDS = DS != nullptr;
   int NumPointers = MMOs.size() + HasPreInstrSymbol + HasPostInstrSymbol +
-                    HasHeapAllocMarker + HasPCSections + HasCFIType + HasMMRAs;
+                    HasHeapAllocMarker + HasPCSections + HasCFIType + HasMMRAs +
+                    HasDS;
 
   // Drop all extra info if there is none.
   if (NumPointers <= 0) {
@@ -343,10 +345,10 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
   // 32-bit pointers.
   // FIXME: Maybe we should make the symbols in the extra info mutable?
   else if (NumPointers > 1 || HasMMRAs || HasHeapAllocMarker || HasPCSections ||
-           HasCFIType) {
+           HasCFIType || HasDS) {
     Info.set<EIIK_OutOfLine>(
         MF.createMIExtraInfo(MMOs, PreInstrSymbol, PostInstrSymbol,
-                             HeapAllocMarker, PCSections, CFIType, MMRAs));
+                             HeapAllocMarker, PCSections, CFIType, MMRAs, DS));
     return;
   }
 
@@ -365,7 +367,7 @@ void MachineInstr::dropMemRefs(MachineFunction &MF) {
 
   setExtraInfo(MF, {}, getPreInstrSymbol(), getPostInstrSymbol(),
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setMemRefs(MachineFunction &MF,
@@ -377,7 +379,7 @@ void MachineInstr::setMemRefs(MachineFunction &MF,
 
   setExtraInfo(MF, MMOs, getPreInstrSymbol(), getPostInstrSymbol(),
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::addMemOperand(MachineFunction &MF,
@@ -488,7 +490,7 @@ void MachineInstr::setPreInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
 
   setExtraInfo(MF, memoperands(), Symbol, getPostInstrSymbol(),
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
@@ -504,7 +506,7 @@ void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), Symbol,
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setHeapAllocMarker(MachineFunction &MF, MDNode *Marker) {
@@ -513,7 +515,8 @@ void MachineInstr::setHeapAllocMarker(MachineFunction &MF, MDNode *Marker) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               Marker, getPCSections(), getCFIType(), getMMRAMetadata());
+               Marker, getPCSections(), getCFIType(), getMMRAMetadata(),
+               getDeactivationSymbol());
 }
 
 void MachineInstr::setPCSections(MachineFunction &MF, MDNode *PCSections) {
@@ -523,7 +526,7 @@ void MachineInstr::setPCSections(MachineFunction &MF, MDNode *PCSections) {
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
                getHeapAllocMarker(), PCSections, getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setCFIType(MachineFunction &MF, uint32_t Type) {
@@ -532,7 +535,8 @@ void MachineInstr::setCFIType(MachineFunction &MF, uint32_t Type) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker(), getPCSections(), Type, getMMRAMetadata());
+               getHeapAllocMarker(), getPCSections(), Type, getMMRAMetadata(),
+               getDeactivationSymbol());
 }
 
 void MachineInstr::setMMRAMetadata(MachineFunction &MF, MDNode *MMRAs) {
@@ -541,7 +545,18 @@ void MachineInstr::setMMRAMetadata(MachineFunction &MF, MDNode *MMRAs) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker(), getPCSections(), getCFIType(), MMRAs);
+               getHeapAllocMarker(), getPCSections(), getCFIType(), MMRAs,
+               getDeactivationSymbol());
+}
+
+void MachineInstr::setDeactivationSymbol(MachineFunction &MF, Value *DS) {
+  // Do nothing if old and new symbols are the same.
+  if (DS == getDeactivationSymbol())
+    return;
+
+  setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
+               getHeapAllocMarker(), getPCSections(), getCFIType(),
+               getMMRAMetadata(), DS);
 }
 
 void MachineInstr::cloneInstrSymbols(MachineFunction &MF,
@@ -727,8 +742,23 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
   if (getPreInstrSymbol() != Other.getPreInstrSymbol() ||
       getPostInstrSymbol() != Other.getPostInstrSymbol())
     return false;
-  // Call instructions with different CFI types are not identical.
-  if (isCall() && getCFIType() != Other.getCFIType())
+  if (isCall()) {
+    // Call instructions with different CFI types are not identical.
+    if (getCFIType() != Other.getCFIType())
+      return false;
+    // Even if the call instructions have the same ops, they are not identical
+    // if they are for different globals (this may happen with indirect calls).
+    if (isCandidateForAdditionalCallInfo()) {
+      MachineFunction::CalledGlobalInfo ThisCGI =
+          getParent()->getParent()->tryGetCalledGlobal(this);
+      MachineFunction::CalledGlobalInfo OtherCGI =
+          Other.getParent()->getParent()->tryGetCalledGlobal(&Other);
+      if (ThisCGI.Callee != OtherCGI.Callee ||
+          ThisCGI.TargetFlags != OtherCGI.TargetFlags)
+        return false;
+    }
+  }
+  if (getDeactivationSymbol() != Other.getDeactivationSymbol())
     return false;
 
   return true;
@@ -1907,6 +1937,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << " [isconvergent]";
     if (ExtraInfo & InlineAsm::Extra_IsAlignStack)
       OS << " [alignstack]";
+    if (ExtraInfo & InlineAsm::Extra_MayUnwind)
+      OS << " [unwind]";
     if (getInlineAsmDialect() == InlineAsm::AD_ATT)
       OS << " [attdialect]";
     if (getInlineAsmDialect() == InlineAsm::AD_Intel)
@@ -1994,7 +2026,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   // operands.
   if (MCSymbol *PreInstrSymbol = getPreInstrSymbol()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " pre-instr-symbol ";
@@ -2002,7 +2033,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MCSymbol *PostInstrSymbol = getPostInstrSymbol()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " post-instr-symbol ";
@@ -2010,7 +2040,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *HeapAllocMarker = getHeapAllocMarker()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " heap-alloc-marker ";
@@ -2018,7 +2047,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *PCSections = getPCSections()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " pcsections ";
@@ -2026,7 +2054,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *MMRA = getMMRAMetadata()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " mmra ";
@@ -2037,6 +2064,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << ',';
     OS << " cfi-type " << CFIType;
   }
+  if (getDeactivationSymbol())
+    OS << ", deactivation-symbol " << getDeactivationSymbol()->getName();
 
   if (DebugInstrNum) {
     if (!FirstOp)

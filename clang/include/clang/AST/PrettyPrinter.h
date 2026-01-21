@@ -15,6 +15,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "llvm/ADT/STLForwardCompat.h"
 
 namespace clang {
 
@@ -55,14 +56,16 @@ public:
 /// This type is intended to be small and suitable for passing by value.
 /// It is very frequently copied.
 struct PrintingPolicy {
-  enum SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
+  enum class SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
 
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
-        SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
-        SuppressScope(false), SuppressUnwrittenScope(false),
-        SuppressInlineNamespace(SuppressInlineNamespaceMode::Redundant),
+        SuppressTagKeyword(LO.CPlusPlus), SuppressTagKeywordInAnonNames(false),
+        IncludeTagDefinition(false), SuppressScope(false),
+        SuppressUnwrittenScope(false),
+        SuppressInlineNamespace(
+            llvm::to_underlying(SuppressInlineNamespaceMode::Redundant)),
         SuppressInitializers(false), ConstantArraySizeAsWritten(false),
         AnonymousTagLocations(true), SuppressStrongLifetime(false),
         SuppressLifetimeQualifiers(false),
@@ -79,7 +82,8 @@ struct PrintingPolicy {
         PrintAsCanonical(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
-        UseEnumerators(true), UseHLSLTypes(LO.HLSL) {}
+        UseEnumerators(true), UseHLSLTypes(LO.HLSL),
+        SuppressDeclAttributes(false) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -121,6 +125,15 @@ struct PrintingPolicy {
   /// \endcode
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressTagKeyword : 1;
+
+  /// Whether type printing should skip printing the tag keyword
+  /// of anonymous entities. E.g.,
+  ///
+  /// * \c (anonymous) as opopsed to (anonymous struct)
+  /// * \c (unnamed) as opposed to (unnamed enum)
+  ///
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SuppressTagKeywordInAnonNames : 1;
 
   /// When true, include the body of a tag definition.
   ///
@@ -345,6 +358,10 @@ struct PrintingPolicy {
   /// sugared types when possible.
   LLVM_PREFERRED_TYPE(bool)
   unsigned UseHLSLTypes : 1;
+
+  /// Whether to suppress attributes in decl printing.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SuppressDeclAttributes : 1;
 
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;

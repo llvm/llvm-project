@@ -118,8 +118,7 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   }();
 
   const SCEV *BECount = SE.getBackedgeTakenCount(L);
-  const DataLayout &DL = L->getHeader()->getDataLayout();
-  SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
+  SCEVExpander Expander(SE, "lsr_fold_term_cond");
 
   PHINode *ToHelpFold = nullptr;
   const SCEV *TermValueS = nullptr;
@@ -260,8 +259,7 @@ static bool RunTermFold(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     cast<Instruction>(LoopValue)->dropPoisonGeneratingFlags();
 
   // SCEVExpander for both use in preheader and latch
-  const DataLayout &DL = L->getHeader()->getDataLayout();
-  SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
+  SCEVExpander Expander(SE, "lsr_fold_term_cond");
 
   assert(Expander.isSafeToExpand(TermValueS) &&
          "Terminating value was checked safe in canFoldTerminatingCondition");

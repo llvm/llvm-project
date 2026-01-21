@@ -21,7 +21,7 @@ static bool isDefinedAsZero(Value val) {
 
   // Check whether val is a constant scalar / vector splat / tensor splat float
   // or integer zero.
-  if (matchPattern(val, m_AnyZeroFloat()) || matchPattern(val, m_Zero()))
+  if (isZeroIntegerOrFloat(val))
     return true;
 
   return TypeSwitch<Operation *, bool>(val.getDefiningOp())

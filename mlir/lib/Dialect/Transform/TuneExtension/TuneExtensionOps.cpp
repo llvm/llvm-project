@@ -123,13 +123,18 @@ void transform::tune::AlternativesOp::getSuccessorRegions(
   if (point.isParent())
     if (auto selectedRegionIdx = getSelectedRegionAttr())
       regions.emplace_back(
-          &getAlternatives()[selectedRegionIdx->getSExtValue()],
-          Block::BlockArgListType());
+          &getAlternatives()[selectedRegionIdx->getSExtValue()]);
     else
       for (Region &alternative : getAlternatives())
-        regions.emplace_back(&alternative, Block::BlockArgListType());
+        regions.emplace_back(&alternative);
   else
-    regions.emplace_back(getOperation(), getOperation()->getResults());
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange
+transform::tune::AlternativesOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange();
 }
 
 void transform::tune::AlternativesOp::getRegionInvocationBounds(
@@ -156,7 +161,7 @@ DiagnosedSilenceableFailure
 transform::tune::AlternativesOp::apply(transform::TransformRewriter &rewriter,
                                        transform::TransformResults &results,
                                        transform::TransformState &state) {
-  std::optional<size_t> selectedRegionIdx;
+  std::optional<int64_t> selectedRegionIdx;
 
   if (auto selectedRegionAttr = getSelectedRegionAttr())
     selectedRegionIdx = selectedRegionAttr->getSExtValue();
@@ -232,7 +237,7 @@ LogicalResult transform::tune::AlternativesOp::verify() {
   }
 
   if (auto selectedRegionAttr = getSelectedRegionAttr()) {
-    size_t regionIdx = selectedRegionAttr->getSExtValue();
+    int64_t regionIdx = selectedRegionAttr->getSExtValue();
     if (regionIdx < 0 || regionIdx >= getNumRegions())
       return emitOpError()
              << "'selected_region' attribute specifies region at index "

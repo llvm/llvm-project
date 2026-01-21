@@ -41,7 +41,7 @@ static bool allowUndefined(const Symbol* sym) {
   if (isa<UndefinedFunction>(sym) && ctx.arg.importUndefined)
     return true;
 
-  return ctx.arg.allowUndefinedSymbols.count(sym->getName()) != 0;
+  return ctx.arg.allowUndefinedSymbols.contains(sym->getName());
 }
 
 static void reportUndefined(ObjFile *file, Symbol *sym) {

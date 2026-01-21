@@ -296,10 +296,9 @@ bool PointerReplacer::collectUsers() {
       /// TODO: Handle poison and null pointers for PHI and select.
       // If all incoming values are available, mark this PHI as
       // replacable and push it's users into the worklist.
-      bool IsReplaceable = true;
-      if (all_of(PHI->incoming_values(), [&](Value *V) {
-            if (!isa<Instruction>(V))
-              return IsReplaceable = false;
+      bool IsReplaceable = all_of(PHI->incoming_values(),
+                                  [](Value *V) { return isa<Instruction>(V); });
+      if (IsReplaceable && all_of(PHI->incoming_values(), [&](Value *V) {
             return isAvailable(cast<Instruction>(V));
           })) {
         UsersToReplace.insert(PHI);
@@ -873,20 +872,9 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
     // If we know how big this object is, and it is less than MaxSize, continue
     // searching. Otherwise, return false.
     if (AllocaInst *AI = dyn_cast<AllocaInst>(P)) {
-      if (!AI->getAllocatedType()->isSized())
-        return false;
-
-      ConstantInt *CS = dyn_cast<ConstantInt>(AI->getArraySize());
-      if (!CS)
-        return false;
-
-      TypeSize TS = DL.getTypeAllocSize(AI->getAllocatedType());
-      if (TS.isScalable())
-        return false;
-      // Make sure that, even if the multiplication below would wrap as an
-      // uint64_t, we still do the right thing.
-      if ((CS->getValue().zext(128) * APInt(128, TS.getFixedValue()))
-              .ugt(MaxSize))
+      std::optional<TypeSize> AllocSize = AI->getAllocationSize(DL);
+      if (!AllocSize || AllocSize->isScalable() ||
+          AllocSize->getFixedValue() > MaxSize)
         return false;
       continue;
     }

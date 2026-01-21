@@ -99,20 +99,20 @@ namespace llvm {
 
     /// Return a VT for a vector type whose attributes match ourselves
     /// with the exception of the element type that is chosen by the caller.
-    EVT changeVectorElementType(EVT EltVT) const {
-      if (isSimple()) {
-        assert(EltVT.isSimple() &&
-               "Can't change simple vector VT to have extended element VT");
-        return getSimpleVT().changeVectorElementType(EltVT.getSimpleVT());
+    EVT changeVectorElementType(LLVMContext &Context, EVT EltVT) const {
+      if (isSimple() && EltVT.isSimple()) {
+        MVT M = MVT::getVectorVT(EltVT.getSimpleVT(), getVectorElementCount());
+        if (M != MVT::INVALID_SIMPLE_VALUE_TYPE)
+          return M;
       }
-      return changeExtendedVectorElementType(EltVT);
+      return getVectorVT(Context, EltVT, getVectorElementCount());
     }
 
     /// Return a VT for a type whose attributes match ourselves with the
     /// exception of the element type that is chosen by the caller.
-    EVT changeElementType(EVT EltVT) const {
+    EVT changeElementType(LLVMContext &Context, EVT EltVT) const {
       EltVT = EltVT.getScalarType();
-      return isVector() ? changeVectorElementType(EltVT) : EltVT;
+      return isVector() ? changeVectorElementType(Context, EltVT) : EltVT;
     }
 
     /// Return the type converted to an equivalently sized integer or vector

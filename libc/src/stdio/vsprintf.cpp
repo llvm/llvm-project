@@ -28,9 +28,8 @@ LLVM_LIBC_FUNCTION(int, vsprintf,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
 
-  printf_core::WriteBuffer<printf_core::Mode<
-      printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
-      wb(buffer, cpp::numeric_limits<size_t>::max());
+  printf_core::DropOverflowBuffer wb(buffer,
+                                     cpp::numeric_limits<size_t>::max());
   printf_core::Writer writer(wb);
 
   auto ret_val = printf_core::printf_main(&writer, format, args);
