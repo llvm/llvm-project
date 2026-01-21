@@ -84,6 +84,17 @@ class RISCVAsmParser : public MCTargetAsmParser {
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
   bool isRV64() const { return getSTI().hasFeature(RISCV::Feature64Bit); }
   bool isRVE() const { return getSTI().hasFeature(RISCV::FeatureStdExtE); }
+  /// \return When true, pointers should use YGPR instead of GPR
+  bool isCapMode() const { return getSTI().hasFeature(RISCV::FeatureCapMode); }
+  unsigned getPtrAddiOpcode() const {
+    return isCapMode() ? RISCV::ADDIY : RISCV::ADDI;
+  }
+  unsigned getPtrLoadOpcode() const {
+    if (isCapMode())
+      return RISCV::LY;
+    return isRV64() ? RISCV::LD : RISCV::LW;
+  }
+
   bool enableExperimentalExtension() const {
     return getSTI().hasFeature(RISCV::Experimental);
   }
@@ -488,6 +499,11 @@ public:
            RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.Reg);
   }
 
+  bool isYGPR() const {
+    return Kind == KindTy::Register &&
+           RISCVMCRegisterClasses[RISCV::YGPRRegClassID].contains(Reg.Reg);
+  }
+
   bool isGPRPair() const {
     return Kind == KindTy::Register &&
            RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(Reg.Reg);
@@ -762,6 +778,11 @@ public:
     });
   }
 
+  bool isUImm7Srliy() const {
+    return isUImmPred(
+        [this](int64_t Imm) { return isRV64Expr() ? Imm == 64 : Imm == 32; });
+  }
+
   bool isUImm8GE32() const {
     return isUImmPred([](int64_t Imm) { return isUInt<8>(Imm) && Imm >= 32; });
   }
@@ -792,6 +813,29 @@ public:
       return false;
     bool IsConstantImm = evaluateConstantExpr(getExpr(), Imm);
     return IsConstantImm && isInt<N>(fixImmediateForRV32(Imm, isRV64Expr()));
+  }
+
+  bool isYBNDSWImm() const {
+    if (!isExpr())
+      return false;
+
+    int64_t Imm;
+    bool IsConstantImm = evaluateConstantExpr(getExpr(), Imm);
+    if (!IsConstantImm)
+      return false;
+    // The immediate is encoded using `((imm[7:0] + 257) << imm[9:8]) - 256`
+    // which gives the following valid ranges:
+    if (Imm < 1)
+      return false;
+    if (Imm <= 256)
+      return true;
+    if (Imm <= 768)
+      return (Imm % 2) == 0;
+    if (Imm <= 1792)
+      return (Imm % 4) == 0;
+    if (Imm <= 3840)
+      return (Imm % 8) == 0;
+    return false;
   }
 
   template <class Pred> bool isSImmPred(Pred p) const {
@@ -1301,6 +1345,11 @@ static MCRegister convertFPR64ToFPR128(MCRegister Reg) {
   return Reg - RISCV::F0_D + RISCV::F0_Q;
 }
 
+static MCRegister convertGPRToYGPR(MCRegister Reg) {
+  assert(Reg >= RISCV::X0 && Reg <= RISCV::X31 && "Invalid register");
+  return Reg - RISCV::X0 + RISCV::X0_Y;
+}
+
 static MCRegister convertVRToVRMx(const MCRegisterInfo &RI, MCRegister Reg,
                                   unsigned Kind) {
   unsigned RegClassID;
@@ -1334,6 +1383,21 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg);
   bool IsRegVR = RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg);
 
+  // In RVY mode, the various Ptr register class should select capability
+  // registers for the base pointer operands, otherwise we use GPRs.
+  // TODO: Is there any way we could do this in tablegen automatically?
+  if (Kind == MCK_RegByHwMode_PtrReg)
+    Kind = isCapMode() ? MCK_YGPR : MCK_GPR;
+  else if (Kind == MCK_RegByHwMode_BasePtrRC)
+    Kind = isCapMode() ? MCK_YGPRNoX0 : MCK_GPR;
+
+  if (Op.isGPR() && (Kind == MCK_YGPR || Kind == MCK_YGPRNoX0)) {
+    // GPR and capability GPR use the same register names, convert if required.
+    Op.Reg.Reg = convertGPRToYGPR(Reg);
+    if (Kind == MCK_YGPRNoX0 && Op.Reg.Reg == RISCV::X0_Y)
+      return Match_InvalidRegClassYGPRNoNull;
+    return Match_Success;
+  }
   if (IsRegFPR64 && Kind == MCK_FPR256) {
     Op.Reg.Reg = convertFPR64ToFPR256(Reg);
     return Match_Success;
@@ -1711,6 +1775,18 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(
         ErrorLoc,
         "stack adjustment is invalid for this instruction and register list");
+  }
+  case Match_InvalidYBNDSWImm: {
+    const SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "immediate must be an integer in the range "
+                           "[1, 256], a multiple of 2 in the range [258, 768], "
+                           "a multiple of 4 in the range [772, 1792], or "
+                           "a multiple of 8 in the range [1800, 3840]");
+  }
+  case Match_InvalidUImm7Srliy: {
+    const SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "immediate must be an integer equal to XLEN (" +
+                               Twine(isRV64() ? "64" : "32") + ")");
   }
   }
 
@@ -3538,7 +3614,7 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_PCREL_HI20,
-                    RISCV::ADDI, IDLoc, Out);
+                    getPtrAddiOpcode(), IDLoc, Out);
 }
 
 void RISCVAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
@@ -3551,7 +3627,7 @@ void RISCVAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
   //             Lx rdest, %pcrel_lo(TmpLabel)(rdest)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
-  unsigned SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
+  unsigned SecondOpcode = getPtrLoadOpcode();
   emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_GOT_HI20,
                     SecondOpcode, IDLoc, Out);
 }
@@ -3581,9 +3657,8 @@ void RISCVAsmParser::emitLoadTLSIEAddress(MCInst &Inst, SMLoc IDLoc,
   //             Lx rdest, %pcrel_lo(TmpLabel)(rdest)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
-  unsigned SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
   emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_TLS_GOT_HI20,
-                    SecondOpcode, IDLoc, Out);
+                    getPtrLoadOpcode(), IDLoc, Out);
 }
 
 void RISCVAsmParser::emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc,
@@ -3597,7 +3672,7 @@ void RISCVAsmParser::emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_TLS_GD_HI20,
-                    RISCV::ADDI, IDLoc, Out);
+                    getPtrAddiOpcode(), IDLoc, Out);
 }
 
 void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
