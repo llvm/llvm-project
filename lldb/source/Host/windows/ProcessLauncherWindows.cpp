@@ -116,9 +116,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
 
   HPCON hPC = launch_info.GetPTY().GetPseudoTerminalHandle();
-  bool use_pty = hPC != INVALID_HANDLE_VALUE &&
-                 launch_info.GetNumFileActions() == 0 &&
-                 launch_info.GetFlags().Test(lldb::eLaunchFlagLaunchInTTY);
+  bool use_pty =
+      hPC != INVALID_HANDLE_VALUE && launch_info.GetNumFileActions() == 0;
 
   HANDLE stdin_handle = GetStdioHandle(launch_info, STDIN_FILENO);
   HANDLE stdout_handle = GetStdioHandle(launch_info, STDOUT_FILENO);
@@ -199,7 +198,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   BOOL result = ::CreateProcessW(
       wexecutable.c_str(), pwcommandLine, NULL, NULL,
-      /*bInheritHandles=*/!inherited_handles.empty(), flags, environment.data(),
+      /*bInheritHandles=*/TRUE, flags, environment.data(),
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
       reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 

@@ -958,9 +958,15 @@ public:
                   IOHandler::Type::ProcessIO),
         m_process(process),
         m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
-        m_write_file(conpty_input), m_interrupt_event(INVALID_HANDLE_VALUE) {}
+        m_write_file(conpty_input),
+        m_interrupt_event(
+            CreateEvent(/*lpEventAttributes=*/NULL, /*bManualReset=*/FALSE,
+                        /*bInitialState=*/FALSE, /*lpName=*/NULL)) {}
 
-  ~IOHandlerProcessSTDIOWindows() override = default;
+  ~IOHandlerProcessSTDIOWindows() override {
+    if (m_interrupt_event != INVALID_HANDLE_VALUE)
+      ::CloseHandle(m_interrupt_event);
+  }
 
   void SetIsRunning(bool running) {
     std::lock_guard<std::mutex> guard(m_mutex);
@@ -977,6 +983,14 @@ public:
   /// \return
   ///     true if the pipe has text input.
   llvm::Expected<bool> ConsoleHasTextInput(const HANDLE hStdin) {
+    // Check if there are already characters buffered. Pressing enter counts as
+    // 2 characters '\r\n' and only one of them is a keyDown event.
+    DWORD bytesAvailable = 0;
+    if (PeekNamedPipe(hStdin, NULL, 0, NULL, &bytesAvailable, NULL)) {
+      if (bytesAvailable > 0)
+        return true;
+    }
+
     while (true) {
       INPUT_RECORD inputRecord;
       DWORD numRead = 0;
@@ -1010,6 +1024,9 @@ public:
 
     DWORD consoleMode;
     bool isConsole = GetConsoleMode(hStdin, &consoleMode) != 0;
+    DWORD oldConsoleMode = consoleMode;
+    SetConsoleMode(hStdin,
+                   consoleMode & ~ENABLE_LINE_INPUT & ~ENABLE_ECHO_INPUT);
 
     while (true) {
       {
@@ -1025,8 +1042,10 @@ public:
       case WAIT_OBJECT_0: {
         if (isConsole) {
           auto hasInputOrErr = ConsoleHasTextInput(hStdin);
-          if (hasInputOrErr.takeError())
+          if (!hasInputOrErr) {
+            llvm::consumeError(hasInputOrErr.takeError());
             goto exit_loop;
+          }
 
           // If no text input is ready, go back to waiting.
           if (!*hasInputOrErr)
@@ -1059,6 +1078,8 @@ public:
 
   exit_loop:;
     SetIsRunning(false);
+    SetIsDone(true);
+    SetConsoleMode(hStdin, oldConsoleMode);
   }
 
   void Cancel() override {
