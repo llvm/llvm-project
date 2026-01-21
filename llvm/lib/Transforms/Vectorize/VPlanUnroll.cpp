@@ -144,11 +144,11 @@ void UnrollState::addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
   }
   StartIndex = Builder.createScalarSExtOrTrunc(
       StartIndex, IntStepTy, TypeInfo.inferScalarType(StartIndex),
-      DebugLoc::getUnknown());
+      Steps->getDebugLoc());
 
   if (BaseIVTy->isFloatingPointTy())
     StartIndex = Builder.createScalarCast(Instruction::SIToFP, StartIndex,
-                                          BaseIVTy, DebugLoc::getUnknown());
+                                          BaseIVTy, Steps->getDebugLoc());
 
   Steps->addOperand(StartIndex);
 }

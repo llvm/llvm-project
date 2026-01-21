@@ -2518,8 +2518,8 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     StartLane = State.Lane->getKnownLane();
     EndLane = StartLane + 1;
   }
-  Value *StartIdx0 = getNumOperands() == 3 ? Constant::getNullValue(BaseIVTy)
-                                           : State.get(getOperand(3), true);
+  Value *StartIdx0 = getStartIndex() ? State.get(getStartIndex(), true)
+                                     : Constant::getNullValue(BaseIVTy);
 
   for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
     // It is okay if the induction variable type cannot hold the lane number,
