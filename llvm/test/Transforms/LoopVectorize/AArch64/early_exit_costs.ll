@@ -91,7 +91,6 @@ loop.end:
 define i64 @vectorization_not_profitable_due_to_trunc(ptr dereferenceable(800) %src) {
 ; CHECK-LABEL: LV: Checking a loop in 'vectorization_not_profitable_due_to_trunc'
 ; CHECK: LV: Selecting VF: 1.
-; CHECK-NEXT: Calculating cost of work in exit block vector.early.exit:
 ; CHECK: LV: Vectorization is possible but not beneficial.
 entry:
   br label %loop.header

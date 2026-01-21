@@ -9182,18 +9182,11 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   if (!RtC.isValid())
     return false;
 
-  InstructionCost TotalCost = RtC;
-  // Add on the cost of any work required in the vector early exit block, if
-  // one exists.
-  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
-
-  TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
-
   // When interleaving only scalar and vector cost will be equal, which in turn
   // would lead to a divide by 0. Fall back to hard threshold.
   if (VF.Width.isScalar()) {
     // TODO: Should we rename VectorizeMemoryCheckThreshold?
-    if (TotalCost > VectorizeMemoryCheckThreshold) {
+    if (RtC > VectorizeMemoryCheckThreshold) {
       LLVM_DEBUG(
           dbgs()
           << "LV: Interleaving only is not profitable due to runtime checks\n");
@@ -9207,6 +9200,12 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   uint64_t ScalarC = VF.ScalarCost.getValue();
   if (ScalarC == 0)
     return true;
+
+  InstructionCost TotalCost = RtC;
+  // Add on the cost of any work required in the vector early exit block, if
+  // one exists.
+  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
+  TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
 
   // First, compute the minimum iteration count required so that the vector
   // loop outperforms the scalar loop.
