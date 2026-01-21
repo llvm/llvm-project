@@ -114,6 +114,10 @@ Changes in existing checks
   - Added support for analyzing function parameters with the `AnalyzeParameters`
     option.
 
+- Improved :doc:`modernize-use-std-format
+  <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
+  when an argument is part of a macro expansion.
+
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
   of invalid code for function types with redundant parentheses.
