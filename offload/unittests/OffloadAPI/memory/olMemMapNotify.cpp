@@ -30,8 +30,7 @@ TEST_P(olMemMapNotifyTest, SuccessMultipleMapNotify) {
 
 TEST_P(olMemMapNotifyTest, InvalidSizeMapNotify) {
   int Arr[50];
-  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
-               olMemDataMappedNotify(Device, Arr, 0));
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE, olMemDataMappedNotify(Device, Arr, 0));
 }
 
 TEST_P(olMemMapNotifyTest, InvalidPtrMapNotify) {
@@ -43,6 +42,7 @@ TEST_P(olMemMapNotifyTest, InvalidPtrMapNotify) {
 TEST_P(olMemMapNotifyTest, InvalidPtrUnMapNotify) {
   int Arr[50];
   ASSERT_SUCCESS(olMemDataMappedNotify(Device, Arr, sizeof(Arr)));
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olMemDataUnMappedNotify(Device, nullptr));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+               olMemDataUnMappedNotify(Device, nullptr));
   ASSERT_SUCCESS(olMemDataUnMappedNotify(Device, Arr));
 }
