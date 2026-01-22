@@ -187,7 +187,7 @@ public:
   unsigned convertToVALUOp(unsigned Opc, bool UseVOP3 = false) const {
     switch (Opc) {
     case AMDGPU::S_ADD_I32: {
-      if (ST->hasAddNoCarry())
+      if (ST->hasAddNoCarryInsts())
         return UseVOP3 ? AMDGPU::V_ADD_U32_e64 : AMDGPU::V_ADD_U32_e32;
       return UseVOP3 ? AMDGPU::V_ADD_CO_U32_e64 : AMDGPU::V_ADD_CO_U32_e32;
     }
