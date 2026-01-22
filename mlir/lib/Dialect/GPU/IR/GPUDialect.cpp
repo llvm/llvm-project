@@ -1483,19 +1483,19 @@ static LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
     rewriter.modifyOpInPlace(op, [&]() {
       if (!nextMemfence) {
         op.removeAddressSpacesAttr();
-      } else {
-        // Fast path - mergge where the two barriers fence the same spaces.
-        if (*thisMemfence == *nextMemfence) {
-          return;
-        }
-        llvm::SmallSetVector<Attribute, 4> mergedSpaces;
-        for (Attribute attr : *thisMemfence)
-          mergedSpaces.insert(attr);
-        for (Attribute attr : *nextMemfence)
-          mergedSpaces.insert(attr);
-        op.setAddressSpacesAttr(
-            rewriter.getArrayAttr(mergedSpaces.takeVector()));
+        return;
       }
+      // Fast path - mergge where the two barriers fence the same spaces.
+      if (*thisMemfence == *nextMemfence) {
+        return;
+      }
+
+      llvm::SmallSetVector<Attribute, 4> mergedSpaces;
+      for (Attribute attr : *thisMemfence)
+        mergedSpaces.insert(attr);
+      for (Attribute attr : *nextMemfence)
+        mergedSpaces.insert(attr);
+      op.setAddressSpacesAttr(rewriter.getArrayAttr(mergedSpaces.takeVector()));
     });
   }
 
