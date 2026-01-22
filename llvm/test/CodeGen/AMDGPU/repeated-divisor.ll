@@ -246,17 +246,14 @@ define <2 x half> @v_repeat_divisor_f16_x2_arcp(half %x, half %y, half %D) #0 {
 ; GFX6-LABEL: v_repeat_divisor_f16_x2_arcp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    v_div_scale_f32 v3, s[4:5], v2, v2, 1.0
 ; GFX6-NEXT:    v_rcp_f32_e32 v4, v3
+; GFX6-NEXT:    v_fma_f32 v5, -v3, v4, 1.0
+; GFX6-NEXT:    v_fma_f32 v4, v5, v4, v4
 ; GFX6-NEXT:    v_div_scale_f32 v5, vcc, 1.0, v2, 1.0
-; GFX6-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
-; GFX6-NEXT:    v_fma_f32 v4, v6, v4, v4
 ; GFX6-NEXT:    v_mul_f32_e32 v6, v5, v4
 ; GFX6-NEXT:    v_fma_f32 v7, -v3, v6, v5
 ; GFX6-NEXT:    v_fma_f32 v6, v7, v4, v6
@@ -530,10 +527,6 @@ define <3 x half> @v_repeat_divisor_f16_x3_arcp(half %x, half %y, half %z, half 
 ; GFX6-LABEL: v_repeat_divisor_f16_x3_arcp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0

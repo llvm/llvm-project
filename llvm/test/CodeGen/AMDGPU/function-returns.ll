@@ -2259,24 +2259,14 @@ define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0)
 }
 
 define bfloat @bf16_func_void() #0 {
-; CI-LABEL: bf16_func_void:
-; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    s_mov_b32 s7, 0xf000
-; CI-NEXT:    s_mov_b32 s6, -1
-; CI-NEXT:    buffer_load_ushort v0, off, s[4:7], 0
-; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX89-LABEL: bf16_func_void:
-; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    s_mov_b32 s7, 0xf000
-; GFX89-NEXT:    s_mov_b32 s6, -1
-; GFX89-NEXT:    buffer_load_ushort v0, off, s[4:7], 0
-; GFX89-NEXT:    s_waitcnt vmcnt(0)
-; GFX89-NEXT:    s_setpc_b64 s[30:31]
+; GFX789-LABEL: bf16_func_void:
+; GFX789:       ; %bb.0:
+; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX789-NEXT:    s_mov_b32 s7, 0xf000
+; GFX789-NEXT:    s_mov_b32 s6, -1
+; GFX789-NEXT:    buffer_load_ushort v0, off, s[4:7], 0
+; GFX789-NEXT:    s_waitcnt vmcnt(0)
+; GFX789-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: bf16_func_void:
 ; GFX11:       ; %bb.0:

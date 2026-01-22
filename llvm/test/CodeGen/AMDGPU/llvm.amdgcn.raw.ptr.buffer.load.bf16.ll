@@ -12,7 +12,6 @@ define bfloat @raw_ptr_buffer_load_bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: raw_ptr_buffer_load_bf16:

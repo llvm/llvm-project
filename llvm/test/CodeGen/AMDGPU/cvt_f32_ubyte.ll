@@ -474,20 +474,12 @@ define <4 x float> @v_uitofp_unpack_i32_to_v4f32(i32 %arg0) nounwind {
 }
 
 define half @v_uitofp_i32_to_f16_mask255(i32 %arg0) nounwind {
-; SI-LABEL: v_uitofp_i32_to_f16_mask255:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_uitofp_i32_to_f16_mask255:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: v_uitofp_i32_to_f16_mask255:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_uitofp_i32_to_f16_mask255:
 ; GFX10:       ; %bb.0:
@@ -524,20 +516,12 @@ define half @v_uitofp_i32_to_f16_mask255(i32 %arg0) nounwind {
 }
 
 define half @v_sitofp_i32_to_f16_mask255(i32 %arg0) nounwind {
-; SI-LABEL: v_sitofp_i32_to_f16_mask255:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_sitofp_i32_to_f16_mask255:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: v_sitofp_i32_to_f16_mask255:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sitofp_i32_to_f16_mask255:
 ; GFX10:       ; %bb.0:
@@ -574,20 +558,12 @@ define half @v_sitofp_i32_to_f16_mask255(i32 %arg0) nounwind {
 }
 
 define half @v_uitofp_to_f16_lshr8_mask255(i32 %arg0) nounwind {
-; SI-LABEL: v_uitofp_to_f16_lshr8_mask255:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_uitofp_to_f16_lshr8_mask255:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
-; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: v_uitofp_to_f16_lshr8_mask255:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
+; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_uitofp_to_f16_lshr8_mask255:
 ; GFX10:       ; %bb.0:
@@ -625,20 +601,12 @@ define half @v_uitofp_to_f16_lshr8_mask255(i32 %arg0) nounwind {
 }
 
 define half @v_uitofp_to_f16_lshr16_mask255(i32 %arg0) nounwind {
-; SI-LABEL: v_uitofp_to_f16_lshr16_mask255:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f32_ubyte2_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_uitofp_to_f16_lshr16_mask255:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_ubyte2_e32 v0, v0
-; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: v_uitofp_to_f16_lshr16_mask255:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_f32_ubyte2_e32 v0, v0
+; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_uitofp_to_f16_lshr16_mask255:
 ; GFX10:       ; %bb.0:
@@ -676,20 +644,12 @@ define half @v_uitofp_to_f16_lshr16_mask255(i32 %arg0) nounwind {
 }
 
 define half @v_uitofp_to_f16_lshr24_mask255(i32 %arg0) nounwind {
-; SI-LABEL: v_uitofp_to_f16_lshr24_mask255:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f32_ubyte3_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_uitofp_to_f16_lshr24_mask255:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_ubyte3_e32 v0, v0
-; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: v_uitofp_to_f16_lshr24_mask255:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_f32_ubyte3_e32 v0, v0
+; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_uitofp_to_f16_lshr24_mask255:
 ; GFX10:       ; %bb.0:
@@ -732,7 +692,6 @@ define half @v_uitofp_i8_to_f16(i8 %arg0) nounwind {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_uitofp_i8_to_f16:

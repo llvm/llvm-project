@@ -24,6 +24,7 @@ define half @test_vector_reduce_fmax_v2half(<2 x half> %v) {
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: test_vector_reduce_fmax_v2half:
@@ -189,6 +190,7 @@ define half @test_vector_reduce_fmax_v3half(<3 x half> %v) {
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_max3_f32 v0, v0, v2, v1
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: test_vector_reduce_fmax_v3half:
@@ -396,6 +398,7 @@ define half @test_vector_reduce_fmax_v4half(<4 x half> %v) {
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v3
 ; GFX7-SDAG-NEXT:    v_max3_f32 v0, v0, v1, v2
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: test_vector_reduce_fmax_v4half:
@@ -631,6 +634,7 @@ define half @test_vector_reduce_fmax_v8half(<8 x half> %v) {
 ; GFX7-SDAG-NEXT:    v_max3_f32 v0, v0, v1, v6
 ; GFX7-SDAG-NEXT:    v_max3_f32 v0, v0, v2, v5
 ; GFX7-SDAG-NEXT:    v_max3_f32 v0, v0, v3, v4
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: test_vector_reduce_fmax_v8half:
@@ -994,6 +998,7 @@ define half @test_vector_reduce_fmax_v16half(<16 x half> %v) {
 ; GFX7-SDAG-NEXT:    v_max3_f32 v0, v0, v5, v10
 ; GFX7-SDAG-NEXT:    v_max3_f32 v0, v0, v6, v9
 ; GFX7-SDAG-NEXT:    v_max3_f32 v0, v0, v7, v8
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: test_vector_reduce_fmax_v16half:

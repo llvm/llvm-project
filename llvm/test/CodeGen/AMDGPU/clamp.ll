@@ -4352,8 +4352,8 @@ define half @v_clamp_f16_minimumnum_maximumnum(half %a) #1 {
 ; GFX6-LABEL: v_clamp_f16_minimumnum_maximumnum:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f32_f16_e64 v0, v0 clamp
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_clamp_f16_minimumnum_maximumnum:
@@ -4408,8 +4408,8 @@ define half @v_clamp_f16_minimumnum_maximumnum_no_ieee(half %a) #5 {
 ; GFX6-LABEL: v_clamp_f16_minimumnum_maximumnum_no_ieee:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f32_f16_e64 v0, v0 clamp
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_clamp_f16_minimumnum_maximumnum_no_ieee:
@@ -4464,11 +4464,10 @@ define half @v_clamp_f16_minimumnum_maximumnum_foldable_source(half %a, half %b)
 ; GFX6-LABEL: v_clamp_f16_minimumnum_maximumnum_foldable_source:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    v_add_f32_e64 v0, v0, v1 clamp
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_clamp_f16_minimumnum_maximumnum_foldable_source:
@@ -4524,11 +4523,10 @@ define half @v_clamp_f16_minimumnum_maximumnum_no_ieee_foldable_source(half %a, 
 ; GFX6-LABEL: v_clamp_f16_minimumnum_maximumnum_no_ieee_foldable_source:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    v_add_f32_e64 v0, v0, v1 clamp
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_clamp_f16_minimumnum_maximumnum_no_ieee_foldable_source:
