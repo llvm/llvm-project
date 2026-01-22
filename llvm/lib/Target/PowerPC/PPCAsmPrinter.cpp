@@ -2813,7 +2813,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   if (GV->hasCommonLinkage() || GVKind.isBSSLocal() ||
       GVKind.isThreadBSSLocal()) {
     Align Alignment = GV->getAlign().value_or(DL.getPreferredAlign(GV));
-    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t Size = GV->getGlobalSize(DL);
     GVSym->setStorageClass(
         TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
@@ -2927,7 +2927,7 @@ void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
   const DataLayout &DL = M.getDataLayout();
   for (GlobalVariable &GV : M.globals())
     if (GV.hasSection() && GV.getSection() == "__llvm_prf_cnts" &&
-        DL.getTypeAllocSize(GV.getValueType()) > 0) {
+        GV.getGlobalSize(DL) > 0) {
       HasNonZeroLengthPrfCntsSection = true;
       break;
     }
@@ -3090,7 +3090,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     if (G.isThreadLocal() && !G.isDeclaration()) {
       TLSVarAddress = alignTo(TLSVarAddress, getGVAlignment(&G, DL));
       TLSVarsToAddressMapping[&G] = TLSVarAddress;
-      TLSVarAddress += DL.getTypeAllocSize(G.getValueType());
+      TLSVarAddress += G.getGlobalSize(DL);
     }
   }
 
