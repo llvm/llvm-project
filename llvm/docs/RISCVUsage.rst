@@ -165,6 +165,7 @@ on support follow.
      ``Svinval``       Assembly Support
      ``Svnapot``       Assembly Support
      ``Svpbmt``        Supported
+     ``Svrsw60t59b``   Supported
      ``Svvptc``        Supported
      ``V``             Supported
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -172,6 +173,7 @@ on support follow.
      ``Zaamo``         Assembly Support
      ``Zabha``         Supported
      ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
+     ``Zalasr``        Supported
      ``Zalrsc``        Assembly Support
      ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zawrs``         Assembly Support
@@ -336,9 +338,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-p``
   LLVM implements the `018 draft specification <https://www.jhauser.us/RISCV/ext-P/>`__.
 
-``experimental-zalasr``
-  LLVM implements the `0.9 draft specification <https://github.com/riscv/riscv-zalasr/releases/tag/v0.9>`__.
-
 ``experimental-zibi``
   LLVM implements the `0.1 release specification <https://github.com/riscv/zibi/releases/tag/v0.1.0>`__.
 
@@ -369,6 +368,9 @@ Inclusion of a vendor extension will be considered on a case by case basis.  All
 It is our intention to follow the naming conventions described in `riscv-non-isa/riscv-toolchain-conventions <https://github.com/riscv-non-isa/riscv-toolchain-conventions#conventions-for-vendor-extensions>`__.  Exceptions to this naming will need to be strongly motivated.
 
 The current vendor extensions supported are:
+
+``XAIFET``
+  LLVM implements `the AIFET (AI Foundry's ET) vendor-defined instructions specified in <https://github.com/aifoundry-org/et-man/blob/main/ET%20Programmer's%20Reference%20Manual.pdf>`__ originally defined by Esperanto Technologies (and now under the AI Foundry non-profit).  Instructions are prefixed with `aif.` as described in the specification.
 
 ``XTHeadBa``
   LLVM implements `the THeadBa (address-generation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.

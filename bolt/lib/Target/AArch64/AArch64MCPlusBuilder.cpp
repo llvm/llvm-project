@@ -1669,6 +1669,70 @@ public:
     return Base + Offset;
   }
 
+  /// This function is used to patch PLT entries to include a BTI instruction.
+  /// This currently only works for binaries linked using LLD.
+  ///
+  /// PLT entry before patching:
+  ///
+  ///    adrp x16, Page(&(.got.plt[n]))
+  ///    ldr  x17, [x16, Offset(&(.got.plt[n]))]
+  ///    add  x16, x16, Offset(&(.got.plt[n]))
+  ///    br   x17
+  ///    nop
+  ///    nop
+  ///
+  /// PLT entry after patching:
+  ///
+  ///    bti c
+  ///    adrp x16, Page(&(.got.plt[n]))
+  ///    ldr  x17, [x16, Offset(&(.got.plt[n]))]
+  ///    add  x16, x16, Offset(&(.got.plt[n]))
+  ///    br   x17
+  ///    nop
+  ///
+  /// Safety considerations:
+  ///
+  /// The PLT entry will become incorrect if shifting the ADRP by one
+  /// instruction (4 bytes) moves it across a page boundary.
+  ///
+  /// The PLT entry is 24 bytes, and page size is 4096 (or 16384) bytes.
+  /// Their GCD is 8 bytes, meaning that shifting the ADRP is safe, as long as
+  /// it is shifted by less than 8 bytes.
+  ///
+  /// If the PLT entry does not contain extra nops, this function will create an
+  /// error. This can happen in binaries linked using BFD.
+  void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) override {
+    BinaryContext &BC = PLTFunction.getBinaryContext();
+    assert(PLTFunction.isPLTFunction() &&
+           "patchPLTEntryForBTI called on a non-PLT function");
+    // Checking if the PLT entry already starts with the BTI needed for Call.
+    auto FirstBBI = PLTFunction.begin();
+    auto FirstII = FirstBBI->begin();
+    assert(FirstII != FirstBBI->end() && "Cannot patch empty PLT entry");
+    if (isCallCoveredByBTI(Call, *FirstII))
+      return;
+    // Checking if there are extra nops at the end. If not, BOLT cannot patch
+    // the PLT entry.
+    auto LastBBI = std::prev(PLTFunction.end());
+    auto LastII = std::prev(LastBBI->end());
+    if (!isNoop(*LastII)) {
+      errs() << "BOLT-ERROR: Cannot patch PLT entry "
+             << PLTFunction.getPrintName()
+             << " to have a BTI landing pad. Relink the binary using LLD.\n";
+      exit(1);
+    }
+    // If the PLT does not have a BTI, and it has nops, create a new instruction
+    // sequence to patch the entry with.
+    InstructionListType NewPLTSeq;
+    MCInst BTIInst;
+    createBTI(BTIInst, BTIKind::C);
+    NewPLTSeq.push_back(BTIInst);
+    // Only adding the instructions from the first BB (adrp, ldr, add, br) to
+    // NewPLTSeq.
+    NewPLTSeq.insert(NewPLTSeq.end(), FirstBBI->begin(), FirstBBI->end());
+    BC.createInstructionPatch(PLTFunction.getAddress(), NewPLTSeq);
+  }
+
   unsigned getInvertedBranchOpcode(unsigned Opcode) const {
     switch (Opcode) {
     default:

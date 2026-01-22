@@ -5,11 +5,9 @@
 shard.grid @grid0(shape = 3x4x5)
 func.func @process_multi_index() -> (index, index, index) {
   // CHECK: mpi.comm_rank
-  // CHECK-DAG: %[[v4:.*]] = arith.remsi
-  // CHECK-DAG: %[[v0:.*]] = arith.remsi
-  // CHECK-DAG: %[[v1:.*]] = arith.remsi
+  // CHECK: [[res:%.*]]:3 = affine.delinearize_index %1 into (3, 4, 5) : index, index, index 
   %0:3 = shard.process_multi_index on @grid0 axes = [] : index, index, index
-  // CHECK: return %[[v1]], %[[v0]], %[[v4]] : index, index, index
+  // CHECK: return [[res]]#0, [[res]]#1, [[res]]#2 : index, index, index
   return %0#0, %0#1, %0#2 : index, index, index
 }
 
@@ -77,6 +75,23 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 24> } {
     %0 = shard.process_linear_index on @grid0 : index
     // CHECK: return %[[c24]] : index
     return %0 : index
+  }
+}
+
+// -----
+// CHECK: shard.grid @grid0
+module {
+  shard.grid @grid0(shape = 3x4x5)
+  // CHECK-LABEL: func @all_slice
+  func.func @all_slice(%arg0 : tensor<3x5xf32>) -> tensor<3x1xf32> {
+    // CHECK: [[v0:%.*]] = mpi.comm_world : !mpi.comm
+    // CHECK: [[vretval:%.*]], [[vrank:%.*]] = mpi.comm_rank([[v0]]) : !mpi.retval, i32
+    // CHECK: [[v1:%.*]] = arith.index_cast [[vrank]] : i32 to index
+    // CHECK: [[v2:%.*]]:3 = affine.delinearize_index [[v1]] into (3, 4, 5) : index, index, index
+    // CHECK: [[vextracted_slice:%.*]] = tensor.extract_slice
+    // CHECK-SAME: [0, [[v2]]#2] [3, 1] [1, 1] : tensor<3x5xf32> to tensor<3x1xf32>
+    %1 = shard.all_slice %arg0 on @grid0 grid_axes = [2] slice_axis = 1 : tensor<3x5xf32> -> tensor<3x1xf32>
+    return %1 : tensor<3x1xf32>
   }
 }
 

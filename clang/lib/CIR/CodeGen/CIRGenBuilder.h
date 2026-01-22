@@ -189,6 +189,16 @@ public:
     return getType<cir::RecordType>(nameAttr, kind);
   }
 
+  //
+  // Operation creation helpers
+  // --------------------------
+  //
+  cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
+                             mlir::Value src, mlir::Value len) {
+    return cir::MemCpyOp::create(*this, loc, dst, src, len);
+  }
+  // ---------------------------
+
   cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
                                         unsigned memberIndex) {
     return cir::DataMemberAttr::get(ty, memberIndex);

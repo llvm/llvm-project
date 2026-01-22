@@ -1,6 +1,6 @@
-; Expanding the bitcode marker works only for AMD at the moment.
-; RUN: not llc -verify-machineinstrs -mtriple=spirv-unknown-unknown %s -o -
-; RUN: llc -verify-machineinstrs -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=spirv-unknown-unknown %s -o - | FileCheck --check-prefixes=CHECK,SPIRV %s
+; RUN: llc -verify-machineinstrs -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck --check-prefixes=CHECK,AMDGCNSPIRV %s
+; RUN: %if spirv-tools %{ llc -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -mtriple=spirv64-amd-amdhsa %s -o - -filetype=obj | spirv-val %}
 ;
 ; Verify that we lower the embedded bitcode
@@ -11,12 +11,15 @@
 ; CHECK: OpName %[[#LLVM_EMBEDDED_MODULE:]] "llvm.embedded.module"
 ; CHECK: OpDecorate %[[#LLVM_EMBEDDED_MODULE]] Constant
 ; CHECK: %[[#UCHAR:]] = OpTypeInt 8 0
-; CHECK: %[[#UINT:]] = OpTypeInt 32 0
-; CHECK: %[[#ONE:]] = OpConstant %[[#UINT]] 1
-; CHECK: %[[#UCHAR_ARR_1:]] = OpTypeArray %[[#UCHAR]] %[[#ONE]]
-; CHECK: %[[#UCHAR_ARR_1_PTR:]] = OpTypePointer CrossWorkgroup %[[#UCHAR_ARR_1]]
-; CHECK: %[[#CONST_UCHAR_ARR_1:]] = OpConstantNull %[[#UCHAR_ARR_1]]
-; CHECK: %[[#LLVM_EMBEDDED_MODULE]] = OpVariable %[[#UCHAR_ARR_1_PTR]] CrossWorkgroup %[[#CONST_UCHAR_ARR_1]]
+; AMDGCNSPIRV: %[[#UINT64:]] = OpTypeInt 64 0
+; SPIRV: %[[#UCHAR_PTR:]] = OpTypePointer Generic %[[#UCHAR]]
+; AMDGCNSPIRV: %[[#UINT64_MAX:]] = OpConstant %[[#UINT64]] 18446744073709551615
+; AMDGCNSPIRV: %[[#UCHAR_ARR_UINT64_MAX:]] = OpTypeArray %[[#UCHAR]] %[[#UINT64_MAX]]
+; AMDGCNSPIRV: %[[#UCHAR_ARR_UINT64_MAX_PTR:]] = OpTypePointer CrossWorkgroup %[[#UCHAR_ARR_UINT64_MAX]]
+; AMDGCNSPIRV: %[[#CONST_UCHAR_ARR_UINT64_MAX:]] = OpConstantNull %[[#UCHAR_ARR_UINT64_MAX]]
+; SPIRV: %[[#CONST_UCHAR_NULL_PTR:]] = OpConstantNull %[[#UCHAR_PTR]]
+; AMDGCNSPIRV: %[[#LLVM_EMBEDDED_MODULE]] = OpVariable %[[#UCHAR_ARR_UINT64_MAX_PTR]] CrossWorkgroup %[[#CONST_UCHAR_ARR_UINT64_MAX]]
+; SPIRV: %[[#LLVM_EMBEDDED_MODULE]] = OpVariable %[[#]] CrossWorkgroup %[[#CONST_UCHAR_NULL_PTR]]
 
 define spir_kernel void @foo() {
 entry:

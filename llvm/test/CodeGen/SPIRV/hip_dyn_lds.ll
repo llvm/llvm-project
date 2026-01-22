@@ -4,8 +4,9 @@
 ; CHECK: OpName %[[#LDS:]] "lds"
 ; CHECK: OpDecorate %[[#LDS]] LinkageAttributes "lds" Import
 ; CHECK: %[[#UINT:]] = OpTypeInt 32 0
-; CHECK: %[[#UINT_MAX:]] = OpConstant %[[#UINT]] 4294967295
-; CHECK: %[[#LDS_ARR_TY:]] = OpTypeArray %[[#UINT]] %[[#UINT_MAX]]
+; CHECK: %[[#UINT64:]] = OpTypeInt 64 0
+; CHECK: %[[#UINT64_MAX:]] = OpConstant %[[#UINT64]] 18446744073709551615
+; CHECK: %[[#LDS_ARR_TY:]] = OpTypeArray %[[#UINT]] %[[#UINT64_MAX]]
 ; CHECK: %[[#LDS_ARR_PTR_WG:]] = OpTypePointer Workgroup %[[#LDS_ARR_TY]]
 ; CHECK: %[[#LDS]] = OpVariable %[[#LDS_ARR_PTR_WG]] Workgroup
 

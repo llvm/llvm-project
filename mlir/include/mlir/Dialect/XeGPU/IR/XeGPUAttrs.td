@@ -454,7 +454,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return 0;
     }
 
-    LayoutAttr dropSgLayoutAndData() {
+    LayoutAttr dropSgLayoutAndData() const{
       // avoid every field of the attribute is nullptr, which may lead to segment fault
       if (!getInstData() && !getLaneLayout())
         return nullptr;
@@ -462,7 +462,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
                              getLaneLayout(), getLaneData(), getOrder());
     }
 
-    LayoutAttr dropInstData() {
+    LayoutAttr dropInstData() const{
       // avoid every field of the attribute is nullptr, which may lead to segment fault
       if (!getSgLayout() && !getLaneLayout())
         return nullptr;
@@ -501,10 +501,10 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     }
 
     //set the layout for the sepcified unit dims: sg_data, inst_data and lane_data to 1
-    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims);
+    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims) const;
 
     //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims);
+    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims) const;
 
     /// Delinearizes a linear ID into its multidimensional indices
     /// based on the effective level of the layout.
@@ -520,9 +520,9 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
-    
+
     /// Check if this is identical to some other layout.
-    bool isEqualTo(const xegpu::DistributeLayoutAttr &other); 
+    bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
 
   }];
 
@@ -653,7 +653,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       return {};
     }
 
-    SliceAttr dropSgLayoutAndData() {
+    SliceAttr dropSgLayoutAndData() const{
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       parent = parent.dropSgLayoutAndData();
@@ -662,7 +662,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       return SliceAttr::get(getContext(), parent, attr.getDims());
     }
 
-    SliceAttr dropInstData() {
+    SliceAttr dropInstData() const{
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       parent = parent.dropInstData();
@@ -672,10 +672,10 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     }
 
     //set the layout for the sepcified unit dims: sg_data, inst_data and lane_data to 1
-    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims);
+    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims) const;
 
     //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims);
+    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims) const;
 
     /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr
     /// #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0]>, dims = [0]>
@@ -698,9 +698,12 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
-    
+
+    /// Drop the slice dims to get the original layout.
+    SliceAttr dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop);
+
     /// Check if this is identical to some other layout.
-    bool isEqualTo(const xegpu::DistributeLayoutAttr &other); 
+    bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
   }];
 
   let assemblyFormat = "`<` qualified($parent) `,` `dims` `=` $dims `>`";
@@ -782,13 +785,13 @@ def AnchorLayoutInterface : OpInterface<"AnchorLayoutInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/"Get the anchor layout attribute.",
-      /*retTy=*/"xegpu::DistributeLayoutAttr", 
+      /*retTy=*/"xegpu::DistributeLayoutAttr",
       /*methodName=*/"getAnchorLayout",
       /*args=*/(ins)
     >,
     InterfaceMethod<
       /*desc=*/"Set the anchor layout attribute.",
-      /*retTy=*/"void", 
+      /*retTy=*/"void",
       /*methodName=*/"setAnchorLayout",
       /*args=*/(ins "xegpu::DistributeLayoutAttr":$layout)
     >,

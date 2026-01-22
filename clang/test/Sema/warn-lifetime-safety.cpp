@@ -1,9 +1,15 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify %s
+
+#include "Inputs/lifetime-analysis.h"
 
 struct View;
 
 struct [[gsl::Owner]] MyObj {
   int id;
+  MyObj();
+  MyObj(int);
+  MyObj(const MyObj&);
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
   
@@ -944,7 +950,7 @@ View lifetimebound_return_by_value_param_template(T t) {
                       // expected-note@-1 {{returned here}}
 }
 void use_lifetimebound_return_by_value_param_template() { 
-  lifetimebound_return_by_value_param_template(MyObj{}); // expected-note {{in instantiation of}}
+  lifetimebound_return_by_value_param_template(MyObj{}); // function-note {{in instantiation of}}
 }
 
 void lambda_uar_param() {
@@ -1393,6 +1399,40 @@ void add(int c, MyObj* node) {
 }
 } // namespace CppCoverage
 
+namespace do_not_warn_on_std_move {
+void silenced() {
+  MyObj b;
+  View v;
+  {
+    MyObj a;
+    v = a;
+    b = std::move(a); // No warning for 'a' being moved.
+  }
+  (void)v;
+}
+
+void silenced_flow_insensitive(bool c) {
+  MyObj a;
+  View v = a;
+  if (c) {
+    MyObj b = std::move(a);
+  }
+  (void)v;
+}
+
+// FIXME: Silence when move arg is not a declref.
+void take(MyObj&&);
+void not_silenced_via_conditional(bool cond) {
+  View v;
+  {
+    MyObj a, b;
+    v = cond ? a : b; // expected-warning 2 {{object whose reference }}
+    take(std::move(cond ? a : b));
+  }         // expected-note 2 {{destroyed here}}
+  (void)v;  // expected-note 2 {{later used here}}
+}
+} // namespace do_not_warn_on_std_move
+
 // Implicit this annotations with redecls.
 namespace GH172013 {
 // https://github.com/llvm/llvm-project/issues/62072
@@ -1409,10 +1449,108 @@ void bar() {
     {
         S s;
         x = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
-        View y = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} \
-          expected-note {{destroyed here}}
-        (void)y; // expected-note {{later used here}}
+        View y = S().x(); // FIXME: Handle temporaries.
     } // expected-note {{destroyed here}}
     (void)x; // expected-note {{used here}}
 }
 }
+
+namespace reference_type_decl_ref_expr {
+struct S {
+  S();
+  ~S();
+  const std::string& x() const [[clang::lifetimebound]];
+};
+
+const std::string& identity(const std::string& in [[clang::lifetimebound]]);
+const S& identity(const S& in [[clang::lifetimebound]]);
+
+void test_temporary() {
+  const std::string& x = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)x; // expected-note {{later used here}}
+
+  const std::string& y = identity(S().x()); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)y; // expected-note {{later used here}}
+
+  std::string_view z;
+  {
+    S s;
+    const std::string& zz = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
+    z = zz;
+  } // expected-note {{destroyed here}}
+  (void)z; // expected-note {{later used here}}
+}
+
+void test_lifetime_extension_ok() {
+  const S& x = S();
+  (void)x;
+  const S& y = identity(S()); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)y; // expected-note {{later used here}}
+}
+
+const std::string& test_return() {
+  const std::string& x = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  return x; // expected-note {{later used here}}
+}
+} // namespace reference_type_decl_ref_expr
+
+namespace field_access {
+
+struct S {
+  std::string s;
+  std::string_view sv;
+};
+
+void uaf() {
+  std::string_view view;
+  {
+    S str;
+    S* p = &str;  // expected-warning {{object whose reference is captured does not live long enough}}
+    view = p->s;
+  } // expected-note {{destroyed here}}
+  (void)view;  // expected-note {{later used here}}
+}
+
+void not_uaf() {
+  std::string_view view;
+  {
+    S str;
+    S* p = &str;
+    view = p->sv;
+  }
+  (void)view;
+}
+
+union U {
+  std::string s;
+  std::string_view sv;
+  ~U() {}
+};
+
+void uaf_union() {
+  std::string_view view;
+  {
+    U u = U{"hello"};
+    U* up = &u;  // expected-warning {{object whose reference is captured does not live long enough}}
+    view = up->s;
+  } // expected-note {{destroyed here}}
+  (void)view;  // expected-note {{later used here}}
+}
+
+struct AnonymousUnion {
+union {
+  int x;
+  float y;
+};
+};
+
+void uaf_anonymous_union() {
+  int* ip;
+  {
+    AnonymousUnion au;
+    AnonymousUnion* up = &au;  // expected-warning {{object whose reference is captured does not live long enough}}
+    ip = &up->x;
+  } // expected-note {{destroyed here}}
+  (void)ip;  // expected-note {{later used here}}
+}
+} // namespace field_access
