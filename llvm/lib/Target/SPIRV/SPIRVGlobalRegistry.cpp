@@ -885,6 +885,18 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
           .addUse(getSPIRVTypeID(ElemType))
           .addUse(NumElementsVReg);
     });
+  } else if (ST.getTargetTriple().getVendor() == Triple::VendorType::AMD) {
+    // We set the array size to the token UINT64_MAX value, which is generally
+    // illegal (the maximum legal size is 61-bits) for the foreseeable future.
+    SPIRVType *SpvTypeInt64 = getOrCreateSPIRVIntegerType(64, MIRBuilder);
+    Register NumElementsVReg =
+        buildConstantInt(UINT64_MAX, MIRBuilder, SpvTypeInt64, EmitIR);
+    ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+      return MIRBuilder.buildInstr(SPIRV::OpTypeArray)
+          .addDef(createTypeVReg(MIRBuilder))
+          .addUse(getSPIRVTypeID(ElemType))
+          .addUse(NumElementsVReg);
+    });
   } else {
     if (!ST.isShader()) {
       llvm::reportFatalUsageError(

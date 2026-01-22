@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t.before.log
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-cxxabi-lowering %s -o %t.cir 2> %t.before.log
 // RUN: FileCheck %s --input-file=%t.before.log -check-prefix=CIR-BEFORE
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare %s -o %t.cir 2> %t.after.log
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-cxxabi-lowering %s -o %t.cir 2> %t.after.log
 // RUN: FileCheck %s --input-file=%t.after.log -check-prefix=CIR-AFTER
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck %s --input-file=%t-cir.ll -check-prefix=LLVM
@@ -115,7 +115,7 @@ void *ptr_cast_to_complete(Base *ptr) {
 // CIR-AFTER-NEXT:   %[[SRC_IS_NOT_NULL:.*]] = cir.cast ptr_to_bool %[[SRC]] : !cir.ptr<!rec_Base> -> !cir.bool
 // CIR-AFTER-NEXT:   %{{.+}} = cir.ternary(%[[SRC_IS_NOT_NULL]], true {
 // CIR-AFTER-NEXT:     %[[VPTR_PTR:.*]] = cir.vtable.get_vptr %[[SRC]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>
-// CIR-AFTER-NEXT:     %[[VPTR:.*]] = cir.load %[[VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR-AFTER-NEXT:     %[[VPTR:.*]] = cir.load {{.*}} %[[VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR-AFTER-NEXT:     %[[ELEM_PTR:.*]] = cir.cast bitcast %[[VPTR]] : !cir.vptr -> !cir.ptr<!s64i>
 // CIR-AFTER-NEXT:     %[[MINUS_TWO:.*]] = cir.const #cir.int<-2> : !s64i
 // CIR-AFTER-NEXT:     %[[BASE_OFFSET_PTR:.*]] = cir.ptr_stride %[[ELEM_PTR]], %[[MINUS_TWO]] : (!cir.ptr<!s64i>, !s64i) -> !cir.ptr<!s64i>

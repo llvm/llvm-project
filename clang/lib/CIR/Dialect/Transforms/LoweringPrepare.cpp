@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LoweringPrepareCXXABI.h"
 #include "PassDetail.h"
 #include "mlir/IR/Attributes.h"
 #include "clang/AST/ASTContext.h"
@@ -71,7 +70,6 @@ struct LoweringPreparePass
   void lowerComplexMulOp(cir::ComplexMulOp op);
   void lowerUnaryOp(cir::UnaryOp op);
   void lowerGlobalOp(cir::GlobalOp op);
-  void lowerDynamicCastOp(cir::DynamicCastOp op);
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
   void lowerTrivialCopyCall(cir::CallOp op);
@@ -107,9 +105,6 @@ struct LoweringPreparePass
 
   clang::ASTContext *astCtx;
 
-  // Helper for lowering C++ ABI specific operations.
-  std::shared_ptr<cir::LoweringPrepareCXXABI> cxxABI;
-
   /// Tracks current module.
   mlir::ModuleOp mlirModule;
 
@@ -122,24 +117,7 @@ struct LoweringPreparePass
   /// List of dtors and their priorities to be called when unloading module.
   llvm::SmallVector<std::pair<std::string, uint32_t>, 4> globalDtorList;
 
-  void setASTContext(clang::ASTContext *c) {
-    astCtx = c;
-    switch (c->getCXXABIKind()) {
-    case clang::TargetCXXABI::GenericItanium:
-      // We'll need X86-specific support for handling vaargs lowering, but for
-      // now the Itanium ABI will work.
-      assert(!cir::MissingFeatures::loweringPrepareX86CXXABI());
-      cxxABI.reset(cir::LoweringPrepareCXXABI::createItaniumABI());
-      break;
-    case clang::TargetCXXABI::GenericAArch64:
-    case clang::TargetCXXABI::AppleARM64:
-      assert(!cir::MissingFeatures::loweringPrepareAArch64XXABI());
-      cxxABI.reset(cir::LoweringPrepareCXXABI::createItaniumABI());
-      break;
-    default:
-      llvm_unreachable("NYI");
-    }
-  }
+  void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
 
 } // namespace
@@ -985,17 +963,6 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   cir::ReturnOp::create(builder, f.getLoc());
 }
 
-void LoweringPreparePass::lowerDynamicCastOp(DynamicCastOp op) {
-  CIRBaseBuilderTy builder(getContext());
-  builder.setInsertionPointAfter(op);
-
-  assert(astCtx && "AST context is not available during lowering prepare");
-  auto loweredValue = cxxABI->lowerDynamicCast(builder, *astCtx, op);
-
-  op.replaceAllUsesWith(loweredValue);
-  op.erase();
-}
-
 static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
                                        clang::ASTContext *astCtx,
                                        mlir::Operation *op, mlir::Type eltTy,
@@ -1118,8 +1085,6 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerComplexMulOp(complexMul);
   } else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op)) {
     lowerGlobalOp(glob);
-  } else if (auto dynamicCast = mlir::dyn_cast<cir::DynamicCastOp>(op)) {
-    lowerDynamicCastOp(dynamicCast);
   } else if (auto unary = mlir::dyn_cast<cir::UnaryOp>(op)) {
     lowerUnaryOp(unary);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {

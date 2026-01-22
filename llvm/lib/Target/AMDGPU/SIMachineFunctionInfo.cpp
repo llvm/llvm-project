@@ -37,7 +37,7 @@ static cl::opt<bool, true> MFMAVGPRFormOpt(
     "amdgpu-mfma-vgpr-form",
     cl::desc("Whether to force use VGPR for Opc and Dest of MFMA. If "
              "unspecified, default to compiler heuristics"),
-    cl::location(SIMachineFunctionInfo::MFMAVGPRForm), cl::init(false),
+    cl::location(SIMachineFunctionInfo::MFMAVGPRForm), cl::init(true),
     cl::Hidden);
 
 const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
