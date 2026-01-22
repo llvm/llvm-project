@@ -3757,6 +3757,8 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
   SmallVector<StringRef> AssociatedCommentLines;
 
   bool FormattingOff = false;
+  bool InBlockComment = false;
+  bool InTextBlock = false;
 
   for (;;) {
     auto Pos = Code.find('\n', SearchFrom);
@@ -3769,7 +3771,33 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
     else if (isClangFormatOn(Trimmed))
       FormattingOff = false;
 
-    if (ImportRegex.match(Line, &Matches)) {
+    // Track block comments (/* ... */)
+    // Check if we're starting a block comment on this line
+    bool IsBlockComment = false;
+    if (Trimmed.starts_with("/*")) {
+      IsBlockComment = true;
+      if (!Trimmed.contains("*/"))
+        InBlockComment = true;
+    }
+    // Check if we're ending a block comment that started on a previous line
+    if (InBlockComment && Trimmed.contains("*/")) {
+      InBlockComment = false;
+      IsBlockComment = true;
+    }
+    // If we're in a multi-line block comment (not the first or last line)
+    if (InBlockComment && !Trimmed.starts_with("/*"))
+      IsBlockComment = true;
+
+    // Track Java text blocks (""" ... """)
+    size_t Count = 0;
+    size_t StartPos = 0;
+    while ((StartPos = Trimmed.find("\"\"\"", StartPos)) != StringRef::npos) {
+      ++Count;
+      StartPos += 3;
+    }
+    if (Count % 2 == 1)
+      InTextBlock = !InTextBlock;
+    if (!IsBlockComment && !InTextBlock && ImportRegex.match(Line, &Matches)) {
       if (FormattingOff) {
         // If at least one import line has formatting turned off, turn off
         // formatting entirely.
