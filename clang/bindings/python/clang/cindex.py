@@ -3086,19 +3086,19 @@ class CompletionChunk:
         return CompletionString(res)
 
     def isKindOptional(self) -> bool:
-        return self.__kind_id == 0
+        return self.kind == CompletionChunkKind.OPTIONAL
 
     def isKindTypedText(self) -> bool:
-        return self.__kind_id == 1
+        return self.kind == CompletionChunkKind.TYPED_TEXT
 
     def isKindPlaceHolder(self) -> bool:
-        return self.__kind_id == 3
+        return self.kind == CompletionChunkKind.PLACEHOLDER
 
     def isKindInformative(self) -> bool:
-        return self.__kind_id == 4
+        return self.kind == CompletionChunkKind.INFORMATIVE
 
     def isKindResultType(self) -> bool:
-        return self.__kind_id == 15
+        return self.kind == CompletionChunkKind.RESULT_TYPE
 
 ### Completion Chunk Kinds ###
 class CompletionChunkKind(BaseEnumeration):
