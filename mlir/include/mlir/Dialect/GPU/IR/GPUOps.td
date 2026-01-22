@@ -1459,11 +1459,11 @@ def GPU_BarrierOp : GPU_Op<"barrier">,
     work items.
 
     ```mlir
-    // only workgroup address spaces accesses required to be visible
+    // Only workgroup address spaces accesses required to be visible.
     gpu.barrier memfence [#gpu.address_space<workgroup>]
-    // no memory accesses required to be visible
+    // No memory accesses required to be visible.
     gpu.barrier memfence []
-    // all memory accesses required to be visible
+    // All memory accesses required to be visible.
     gpu.barrier
     ```
 
