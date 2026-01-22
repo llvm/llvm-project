@@ -137,6 +137,7 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
   SmallVector<Operation *> dataEntryOps;
   SmallVector<Operation *> dataExitOps;
   SmallVector<Operation *> firstprivateOps;
+  SmallVector<Operation *> privateOps;
   SmallVector<Operation *> reductionOps;
 
   // Collect data entry operations
@@ -150,7 +151,11 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
     if (Operation *defOp = operand.getDefiningOp())
       firstprivateOps.push_back(defOp);
   }
-
+  // Collect private operations
+  for (Value operand : computeConstructOp.getPrivateOperands()) {
+    if (Operation *defOp = operand.getDefiningOp())
+      privateOps.push_back(defOp);
+  }
   // Collect reduction operations
   for (Value operand : computeConstructOp.getReductionOperands()) {
     if (Operation *defOp = operand.getDefiningOp())
@@ -178,19 +183,25 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
   // Clone data entry operations
   SmallVector<Value> deviceDataOperands;
   SmallVector<Value> firstprivateOperands;
+  SmallVector<Value> privateOperands;
   SmallVector<Value> reductionOperands;
 
   // Map the data entry and firstprivate ops for the cloned region
   IRMapping deviceMapping;
   for (Operation *dataOp : dataEntryOps) {
-    Operation *clonedDataOp = rewriter.clone(*dataOp, deviceMapping);
-    deviceDataOperands.push_back(clonedDataOp->getResult(0));
-    deviceMapping.map(dataOp->getResult(0), clonedDataOp->getResult(0));
+    Operation *clonedOp = rewriter.clone(*dataOp, deviceMapping);
+    deviceDataOperands.push_back(clonedOp->getResult(0));
+    deviceMapping.map(dataOp->getResult(0), clonedOp->getResult(0));
   }
   for (Operation *firstprivateOp : firstprivateOps) {
     Operation *clonedOp = rewriter.clone(*firstprivateOp, deviceMapping);
     firstprivateOperands.push_back(clonedOp->getResult(0));
     deviceMapping.map(firstprivateOp->getResult(0), clonedOp->getResult(0));
+  }
+  for (Operation *privateOp : privateOps) {
+    Operation *clonedOp = rewriter.clone(*privateOp, deviceMapping);
+    privateOperands.push_back(clonedOp->getResult(0));
+    deviceMapping.map(privateOp->getResult(0), clonedOp->getResult(0));
   }
   for (Operation *reductionOp : reductionOps) {
     Operation *clonedOp = rewriter.clone(*reductionOp, deviceMapping);
@@ -205,6 +216,7 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
   newComputeOp.getIfCondMutable().clear();
   newComputeOp.getDataClauseOperandsMutable().assign(deviceDataOperands);
   newComputeOp.getFirstprivateOperandsMutable().assign(firstprivateOperands);
+  newComputeOp.getPrivateOperandsMutable().assign(privateOperands);
   newComputeOp.getReductionOperandsMutable().assign(reductionOperands);
 
   // Clone data exit operations
@@ -251,6 +263,10 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
   for (Operation *firstprivateOp : firstprivateOps) {
     getAccVar(firstprivateOp).replaceAllUsesWith(getVar(firstprivateOp));
     eraseOps.push_back(firstprivateOp);
+  }
+  for (Operation *privateOp : privateOps) {
+    getAccVar(privateOp).replaceAllUsesWith(getVar(privateOp));
+    eraseOps.push_back(privateOp);
   }
   for (Operation *reductionOp : reductionOps) {
     getAccVar(reductionOp).replaceAllUsesWith(getVar(reductionOp));
