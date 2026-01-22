@@ -105,6 +105,10 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
                          std::string &ErrorStr) {
   Module = nullptr;
 
+  uint64_t InputFilesValidationTimestamp = 0;
+  if (Type == MK_ImplicitModule)
+    InputFilesValidationTimestamp = ModCache.getModuleTimestamp(FileName);
+
   // Look for the file entry. This only fails if the expected size or
   // modification time differ.
   OptionalFileEntryRef Entry;
@@ -172,11 +176,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   NewModule->Index = Chain.size();
   NewModule->FileName = FileName.str();
   NewModule->ImportLoc = ImportLoc;
-  NewModule->InputFilesValidationTimestamp = 0;
-
-  if (NewModule->Kind == MK_ImplicitModule)
-    NewModule->InputFilesValidationTimestamp =
-        ModCache.getModuleTimestamp(NewModule->FileName);
+  NewModule->InputFilesValidationTimestamp = InputFilesValidationTimestamp;
 
   // Load the contents of the module
   std::unique_ptr<llvm::MemoryBuffer> NewFileBuffer = nullptr;

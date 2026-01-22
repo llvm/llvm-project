@@ -278,7 +278,7 @@ std::optional<Expr<SomeType>> FoldTransfer(
         (elements == 0 || totalBytes / elements == *sourceBytes)) {
       InitialImage image{*sourceBytes};
       auto status{image.Add(0, *sourceBytes, *source, context)};
-      if (status == InitialImage::Ok) {
+      if (status == InitialImage::Ok || status == InitialImage::OkNoChange) {
         return image.AsConstant(
             context, *moldType, moldLength, *extents, true /*pad with 0*/);
       } else {
