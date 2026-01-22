@@ -2829,7 +2829,8 @@ TEST(ASTMatchersTestOpenMP, OMPFromClause) {
   )";
   EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
 
-  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
   ASSERT_TRUE(astUnit);
 
   auto Results = match(ompTargetUpdateDirective().bind("directive"),
@@ -2893,7 +2894,8 @@ TEST(ASTMatchersTestOpenMP, OMPToClause) {
   )";
   EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
 
-  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
   ASSERT_TRUE(astUnit);
 
   auto Results = match(ompTargetUpdateDirective().bind("directive"),

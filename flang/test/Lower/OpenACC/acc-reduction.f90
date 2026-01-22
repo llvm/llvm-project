@@ -2,6 +2,41 @@
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
+! CHECK-LABEL:   acc.reduction.recipe @reduction_lor_ref_box_heap_l32 : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>> reduction_operator <lor> init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>):
+! CHECK:           %[[CONSTANT_0:.*]] = arith.constant false
+! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
+! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<!fir.logical<4>>>) -> !fir.heap<!fir.logical<4>>
+! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.logical<4> {bindc_name = "acc.reduction.init", uniq_name = ""}
+! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i1, !fir.heap<!fir.logical<4>>
+! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]] : (!fir.heap<!fir.logical<4>>) -> !fir.box<!fir.heap<!fir.logical<4>>>
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.logical<4>>>
+! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
+! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
+
+! CHECK-LABEL:   } combiner {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>):
+! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
+! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<!fir.logical<4>>>) -> !fir.heap<!fir.logical<4>>
+! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
+! CHECK:           %[[BOX_ADDR_1:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.logical<4>>>) -> !fir.heap<!fir.logical<4>>
+! CHECK:           %[[LOAD_2:.*]] = fir.load %[[BOX_ADDR_0]] : !fir.heap<!fir.logical<4>>
+! CHECK:           %[[LOAD_3:.*]] = fir.load %[[BOX_ADDR_1]] : !fir.heap<!fir.logical<4>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_3]] : (!fir.logical<4>) -> i1
+! CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[LOAD_2]] : (!fir.logical<4>) -> i1
+! CHECK:           %[[ORI_0:.*]] = arith.ori %[[CONVERT_0]], %[[CONVERT_1]] : i1
+! CHECK:           %[[CONVERT_2:.*]] = fir.convert %[[ORI_0]] : (i1) -> !fir.logical<4>
+! CHECK:           hlfir.assign %[[CONVERT_2]] to %[[BOX_ADDR_1]] : !fir.logical<4>, !fir.heap<!fir.logical<4>>
+! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
+
+! CHECK-LABEL:   } destroy {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>):
+! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
+! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<!fir.logical<4>>>) -> !fir.heap<!fir.logical<4>>
+! CHECK:           fir.freemem %[[BOX_ADDR_0]] : !fir.heap<!fir.logical<4>>
+! CHECK:           acc.terminator
+! CHECK:         }
+
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_max_box_UxUxf32 : !fir.box<!fir.array<?x?xf32>> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.box<!fir.array<?x?xf32>>):
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -1.401300e-45 : f32
@@ -1840,3 +1875,12 @@ end subroutine
 ! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_reduction_max_dynamic_extent_maxEa"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
 ! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL_A]]#0 : !fir.box<!fir.array<?x?xf32>>) recipe(@reduction_max_box_UxUxf32) -> !fir.box<!fir.array<?x?xf32>> {name = "a"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.box<!fir.array<?x?xf32>>)
+
+subroutine acc_reduction_logical_allocatable(l)
+  logical, allocatable :: l
+  !$acc parallel reduction(.or.:l)
+  !$acc end parallel
+end subroutine
+! CHECK-LABEL:   func.func @_QPacc_reduction_logical_allocatable(
+! CHECK:           %[[REDUCTION_0:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>) recipe(@reduction_lor_ref_box_heap_l32) -> !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>> {name = "l"}
+! CHECK:           acc.parallel reduction(%[[REDUCTION_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>)

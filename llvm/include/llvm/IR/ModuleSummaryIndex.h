@@ -30,7 +30,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/InterleavedRange.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScaledNumber.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
@@ -76,19 +75,11 @@ struct CalleeInfo {
   LLVM_PREFERRED_TYPE(bool)
   uint32_t HasTailCall : 1;
 
-  /// The value stored in RelBlockFreq has to be interpreted as the digits of
-  /// a scaled number with a scale of \p -ScaleShift.
-  static constexpr unsigned RelBlockFreqBits = 28;
-  uint32_t RelBlockFreq : RelBlockFreqBits;
-  static constexpr int32_t ScaleShift = 8;
-  static constexpr uint64_t MaxRelBlockFreq = (1 << RelBlockFreqBits) - 1;
-
   CalleeInfo()
       : Hotness(static_cast<uint32_t>(HotnessType::Unknown)),
-        HasTailCall(false), RelBlockFreq(0) {}
-  explicit CalleeInfo(HotnessType Hotness, bool HasTC, uint64_t RelBF)
-      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC),
-        RelBlockFreq(RelBF) {}
+        HasTailCall(false) {}
+  explicit CalleeInfo(HotnessType Hotness, bool HasTC)
+      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC) {}
 
   void updateHotness(const HotnessType OtherHotness) {
     Hotness = std::max(Hotness, static_cast<uint32_t>(OtherHotness));
@@ -99,24 +90,6 @@ struct CalleeInfo {
   void setHasTailCall(const bool HasTC) { HasTailCall = HasTC; }
 
   HotnessType getHotness() const { return HotnessType(Hotness); }
-
-  /// Update \p RelBlockFreq from \p BlockFreq and \p EntryFreq
-  ///
-  /// BlockFreq is divided by EntryFreq and added to RelBlockFreq. To represent
-  /// fractional values, the result is represented as a fixed point number with
-  /// scale of -ScaleShift.
-  void updateRelBlockFreq(uint64_t BlockFreq, uint64_t EntryFreq) {
-    if (EntryFreq == 0)
-      return;
-    using Scaled64 = ScaledNumber<uint64_t>;
-    Scaled64 Temp(BlockFreq, ScaleShift);
-    Temp /= Scaled64::get(EntryFreq);
-
-    uint64_t Sum =
-        SaturatingAdd<uint64_t>(Temp.toInt<uint64_t>(), RelBlockFreq);
-    Sum = std::min(Sum, uint64_t(MaxRelBlockFreq));
-    RelBlockFreq = static_cast<uint32_t>(Sum);
-  }
 };
 
 inline const char *getHotnessName(CalleeInfo::HotnessType HT) {

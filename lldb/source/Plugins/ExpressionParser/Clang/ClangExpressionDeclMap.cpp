@@ -784,6 +784,10 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
     sym_ctx = frame->GetSymbolContext(lldb::eSymbolContextFunction |
                                       lldb::eSymbolContextBlock);
 
+  // FIXME: Currently m_ctx_obj is only used through
+  // SBValue::EvaluateExpression. Can we instead *always* use m_ctx_obj
+  // regardless of which EvaluateExpression path we go through? Then we wouldn't
+  // need two separate code-paths here.
   if (m_ctx_obj) {
     Status status;
     lldb::ValueObjectSP ctx_obj_ptr = m_ctx_obj->AddressOf(status);
@@ -851,14 +855,19 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
     return;
   }
 
-  // This branch will get hit if we are executing code in the context of
-  // a function that claims to have an object pointer (through
-  // DW_AT_object_pointer?) but is not formally a method of the class.
-  // In that case, just look up the "this" variable in the current scope
-  // and use its type.
-  // FIXME: This code is formally correct, but clang doesn't currently
-  // emit DW_AT_object_pointer
-  // for C++ so it hasn't actually been tested.
+  // FIXME: this code is supposed to handl cases where a function decl
+  // was not attached to a class scope but its DIE had a `DW_AT_object_pointer`
+  // (and thus has a local `this` variable). This isn't a tested flow and
+  // even -flimit-debug-info doesn't seem to generate DWARF like that, so
+  // we should get rid of this code-path. An alternative fix if we ever
+  // encounter such DWARF is for the TypeSystem to attach the function
+  // to some valid class context (we can derive the type of the context
+  // through the `this` pointer anyway.
+  //
+  // The actual reason we can't remove this code is that LLDB currently
+  // creates decls for function templates by attaching them to the TU instead
+  // of a class context. So we can actually have template methods scoped
+  // outside of a class. Once we fix that, we can remove this code-path.
 
   VariableList *vars = frame->GetVariableList(false, nullptr);
 
