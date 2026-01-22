@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <type_traits>
 
 class CopyConstructible {
   int data_;
@@ -68,6 +69,6 @@ public:
   template <class T>
   friend void operator,(T, CopyConstructible const&) = delete;
 };
-static_assert(std::is_copy_constructible_v<CopyConstructible>);
+static_assert(std::is_copy_constructible<CopyConstructible>::value, "Needs to be copy-constructible");
 
 #endif
