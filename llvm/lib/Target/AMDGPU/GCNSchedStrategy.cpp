@@ -1590,14 +1590,14 @@ void PreRARematStage::finalizeGCNRegion() {
   // occupancy for rematerializations to be possibly useful, otherwise we will
   // just hurt latency for no benefit. If minimum occupancy drops below the
   // target there is no point in trying to re-schedule further regions.
-  if (TargetOcc) {
-    RegionReverts.emplace_back(RegionIdx, Unsched, PressureBefore);
-    if (DAG.MinOccupancy < *TargetOcc) {
-      REMAT_DEBUG(dbgs() << "Region " << RegionIdx
-                         << " cannot meet occupancy target, interrupting "
-                            "re-scheduling in all regions\n");
-      RescheduleRegions.reset();
-    }
+  if (!TargetOcc)
+    return;
+  RegionReverts.emplace_back(RegionIdx, Unsched, PressureBefore);
+  if (DAG.MinOccupancy < *TargetOcc) {
+    REMAT_DEBUG(dbgs() << "Region " << RegionIdx
+                       << " cannot meet occupancy target, interrupting "
+                          "re-scheduling in all regions\n");
+    RescheduleRegions.reset();
   }
 }
 
