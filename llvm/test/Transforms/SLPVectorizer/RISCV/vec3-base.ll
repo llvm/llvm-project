@@ -63,17 +63,12 @@ define void @v3_load_i32_udiv_by_constant_store(ptr %src, ptr %dst) {
 ; POW2-ONLY-LABEL: @v3_load_i32_udiv_by_constant_store(
 ; POW2-ONLY-NEXT:  entry:
 ; POW2-ONLY-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[L_SRC_0:%.*]] = load i32, ptr [[GEP_SRC_0]], align 4
-; POW2-ONLY-NEXT:    [[MUL_0:%.*]] = udiv i32 10, [[L_SRC_0]]
-; POW2-ONLY-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 1
-; POW2-ONLY-NEXT:    [[L_SRC_1:%.*]] = load i32, ptr [[GEP_SRC_1]], align 4
-; POW2-ONLY-NEXT:    [[MUL_1:%.*]] = udiv i32 10, [[L_SRC_1]]
 ; POW2-ONLY-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 2
 ; POW2-ONLY-NEXT:    [[L_SRC_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 4
 ; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = udiv i32 10, [[L_SRC_2]]
-; POW2-ONLY-NEXT:    store i32 [[MUL_0]], ptr [[DST:%.*]], align 4
-; POW2-ONLY-NEXT:    [[DST_1:%.*]] = getelementptr i32, ptr [[DST]], i32 1
-; POW2-ONLY-NEXT:    store i32 [[MUL_1]], ptr [[DST_1]], align 4
+; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[GEP_SRC_0]], align 4
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = udiv <2 x i32> splat (i32 10), [[TMP0]]
+; POW2-ONLY-NEXT:    store <2 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
 ; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
 ; POW2-ONLY-NEXT:    store i32 [[MUL_2]], ptr [[DST_2]], align 4
 ; POW2-ONLY-NEXT:    ret void
