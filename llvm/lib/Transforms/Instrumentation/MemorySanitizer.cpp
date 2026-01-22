@@ -4097,8 +4097,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (PredicateAsOperand) {
       assert(I.arg_size() == 3);
       assert(I.paramHasAttr(2, Attribute::ImmArg));
-    }
-    else
+    } else
       assert(I.arg_size() == 2);
 
     IRBuilder<> IRB(&I);
