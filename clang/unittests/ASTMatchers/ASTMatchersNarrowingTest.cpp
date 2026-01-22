@@ -4840,7 +4840,8 @@ TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_From_HasClause) {
   )";
   EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
 
-  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
   ASSERT_TRUE(astUnit);
 
   auto Results = match(ompTargetUpdateDirective().bind("directive"),
@@ -4900,7 +4901,8 @@ TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_From_ArraySection_NoStride) {
     }
   )";
 
-  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
   ASSERT_TRUE(astUnit);
 
   auto Results = match(ompTargetUpdateDirective().bind("directive"),
@@ -4959,7 +4961,8 @@ TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_To_HasClause) {
   )";
   EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
 
-  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
   ASSERT_TRUE(astUnit);
 
   auto Results = match(ompTargetUpdateDirective().bind("directive"),
@@ -5016,7 +5019,8 @@ TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_To_ArraySection_NoStride) {
     }
   )";
 
-  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
   ASSERT_TRUE(astUnit);
 
   auto Results = match(ompTargetUpdateDirective().bind("directive"),

@@ -271,6 +271,18 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                   return SE.getTruncateExpr(AddRec, R->getScalarType());
                 return AddRec;
               })
+          .Case<VPWidenPointerInductionRecipe>(
+              [&SE, &PSE, L](const VPWidenPointerInductionRecipe *R) {
+                const SCEV *Start =
+                    getSCEVExprForVPValue(R->getStartValue(), PSE, L);
+                if (!L || isa<SCEVCouldNotCompute>(Start))
+                  return SE.getCouldNotCompute();
+                const SCEV *Step =
+                    getSCEVExprForVPValue(R->getStepValue(), PSE, L);
+                if (isa<SCEVCouldNotCompute>(Step))
+                  return SE.getCouldNotCompute();
+                return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+              })
           .Case<VPDerivedIVRecipe>([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
             const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
             const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);

@@ -1665,7 +1665,34 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_shuf_f32x4:
   case X86::BI__builtin_ia32_shuf_f64x2:
   case X86::BI__builtin_ia32_shuf_i32x4:
-  case X86::BI__builtin_ia32_shuf_i64x2:
+  case X86::BI__builtin_ia32_shuf_i64x2: {
+    mlir::Value src1 = ops[0];
+    mlir::Value src2 = ops[1];
+
+    unsigned imm =
+        ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
+
+    unsigned numElems = cast<cir::VectorType>(src1.getType()).getSize();
+    unsigned totalBits = getContext().getTypeSize(expr->getArg(0)->getType());
+    unsigned numLanes = totalBits == 512 ? 4 : 2;
+    unsigned numElemsPerLane = numElems / numLanes;
+
+    SmallVector<mlir::Attribute, 16> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
+
+    for (unsigned l = 0; l != numElems; l += numElemsPerLane) {
+      unsigned index = (imm % numLanes) * numElemsPerLane;
+      imm /= numLanes;
+      if (l >= (numElems / 2))
+        index += numElems;
+      for (unsigned i = 0; i != numElemsPerLane; ++i) {
+        indices.push_back(cir::IntAttr::get(i32Ty, index + i));
+      }
+    }
+
+    return builder.createVecShuffle(getLoc(expr->getExprLoc()), src1, src2,
+                                    indices);
+  }
   case X86::BI__builtin_ia32_vperm2f128_pd256:
   case X86::BI__builtin_ia32_vperm2f128_ps256:
   case X86::BI__builtin_ia32_vperm2f128_si256:
