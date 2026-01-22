@@ -10161,12 +10161,14 @@ void ResolveNamesVisitor::Post(const parser::AssignStmt &x) {
   if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
     CheckEntryDummyUse(name->source, name->symbol);
     ConvertToObjectEntity(DEREF(name->symbol));
+    context().NoteDefinedSymbol(*name->symbol);
   }
 }
 void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
   if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
     CheckEntryDummyUse(name->source, name->symbol);
     ConvertToObjectEntity(DEREF(name->symbol));
+    context().NoteUsedSymbol(*name->symbol);
   }
 }
 
