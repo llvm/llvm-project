@@ -1904,7 +1904,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
-    return Subtarget->enableFlatScratch()
+    return Subtarget->hasFlatScratchEnabled()
                ? isLegalFlatAddressingMode(AM, AMDGPUAS::PRIVATE_ADDRESS)
                : isLegalMUBUFAddressingMode(AM);
 
@@ -3126,7 +3126,7 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
   // the scratch registers to pass in.
   bool RequiresStackAccess = HasStackObjects || MFI.hasCalls();
 
-  if (!ST.enableFlatScratch()) {
+  if (!ST.hasFlatScratchEnabled()) {
     if (RequiresStackAccess && ST.isAmdHsaOrMesa(MF.getFunction())) {
       // If we have stack objects, we unquestionably need the private buffer
       // resource. For the Code Object V2 ABI, this will be the first 4 user
@@ -3269,7 +3269,7 @@ SDValue SITargetLowering::LowerFormalArguments(
            !Info->hasLDSKernelId() && !Info->hasWorkItemIDX() &&
            !Info->hasWorkItemIDY() && !Info->hasWorkItemIDZ());
     (void)UserSGPRInfo;
-    if (!Subtarget->enableFlatScratch())
+    if (!Subtarget->hasFlatScratchEnabled())
       assert(!UserSGPRInfo.hasFlatScratchInit());
     if ((CallConv != CallingConv::AMDGPU_CS &&
          CallConv != CallingConv::AMDGPU_Gfx &&
@@ -3340,7 +3340,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
 
     // FIXME: Sink this into allocateSpecialInputSGPRs
-    if (!Subtarget->enableFlatScratch())
+    if (!Subtarget->hasFlatScratchEnabled())
       CCInfo.AllocateReg(Info->getScratchRSrcReg());
 
     allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
@@ -4252,7 +4252,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
 
   if (!IsSibCall || IsChainCallConv) {
-    if (!Subtarget->enableFlatScratch()) {
+    if (!Subtarget->hasFlatScratchEnabled()) {
       SmallVector<SDValue, 4> CopyFromChains;
 
       // In the HSA case, this should be an identity copy.
@@ -12764,7 +12764,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       return SDValue();
     case 16:
       if (NumElements > 4 ||
-          (NumElements == 3 && !Subtarget->enableFlatScratch()))
+          (NumElements == 3 && !Subtarget->hasFlatScratchEnabled()))
         return SplitVectorStore(Op, DAG);
       return SDValue();
     default:

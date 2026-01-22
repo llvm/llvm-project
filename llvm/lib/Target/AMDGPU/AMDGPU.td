@@ -1094,12 +1094,6 @@ def FeatureMaxPrivateElementSize4 : FeatureMaxPrivateElementSize<4>;
 def FeatureMaxPrivateElementSize8 : FeatureMaxPrivateElementSize<8>;
 def FeatureMaxPrivateElementSize16 : FeatureMaxPrivateElementSize<16>;
 
-def FeatureDumpCode : SubtargetFeature <"DumpCode",
-  "DumpCode",
-  "true",
-  "Dump MachineInstrs in the CodeEmitter"
->;
-
 def FeatureDumpCodeLower : SubtargetFeature <"dumpcode",
   "DumpCode",
   "true",
@@ -1153,8 +1147,8 @@ def FeatureEnablePRTStrictNull : SubtargetFeature<"enable-prt-strict-null",
 // FIXME: moveToVALU should be able to handle converting addr64 MUBUF
 // instructions.
 
-def FeatureFlatForGlobal : SubtargetFeature<"flat-for-global",
-  "FlatForGlobal",
+def FeatureUseFlatForGlobal : SubtargetFeature<"flat-for-global",
+  "UseFlatForGlobal",
   "true",
   "Force to generate flat instruction for global"
 >;
@@ -2471,9 +2465,9 @@ def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
 def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
-def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
+def HasFlatScratchEnabled : Predicate<"Subtarget->hasFlatScratchEnabled()">;
 
-def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
+def NotHasFlatScratchEnabled : Predicate<"!Subtarget->hasFlatScratchEnabled()">;
 
 def NotHasMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
