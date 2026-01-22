@@ -1057,8 +1057,7 @@ void SystemZAsmPrinter::emitXXStructorList(const DataLayout &DL,
         static_cast<MCSectionGOFF *>(Obj.getADASection());
     assert(ADASection && "ADA section must exist for GOFF targets!");
     const MCSymbol *ADASym = ADASection->getBeginSymbol();
-    if (!ADASym)
-      ADASym = Ctx.getOrCreateSymbol(ADASection->getName());
+    assert(ADASym && "ADA symbol should already be set!");
 
     ADAFuncRefExpr = MCBinaryExpr::createAdd(
         MCSpecifierExpr::create(MCSymbolRefExpr::create(ADASym, OutContext),
