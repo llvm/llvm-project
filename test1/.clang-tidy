@@ -1,0 +1,2 @@
+Checks: clang-analyzer-cplusplus.NewDelete
+WarningsAsErrors: '*'
