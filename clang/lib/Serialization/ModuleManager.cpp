@@ -189,6 +189,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
         ModCache.getModuleTimestamp(NewModule->FileName);
 
   // Load the contents of the module
+  std::unique_ptr<llvm::MemoryBuffer> NewFileBuffer = nullptr;
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
     // The buffer was already provided for us.
     NewModule->Buffer = &getModuleCache().getInMemoryModuleCache().addBuiltPCM(
@@ -225,8 +226,8 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
       return Missing;
     }
 
-    NewModule->Buffer = &getModuleCache().getInMemoryModuleCache().addPCM(
-        FileName, std::move(*Buf));
+    NewFileBuffer = std::move(*Buf);
+    NewModule->Buffer = NewFileBuffer.get();
   }
 
   // Initialize the stream.
@@ -237,6 +238,10 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   if (ExpectedSignature && checkSignature(ReadSignature(NewModule->Data),
                                           ExpectedSignature, ErrorStr))
     return OutOfDate;
+
+  if (NewFileBuffer)
+    getModuleCache().getInMemoryModuleCache().addPCM(FileName,
+                                                     std::move(NewFileBuffer));
 
   // We're keeping this module.  Store it everywhere.
   Module = Modules[*Entry] = NewModule.get();
