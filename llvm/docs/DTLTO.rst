@@ -11,7 +11,7 @@ DTLTO
 Distributed ThinLTO (DTLTO)
 ===========================
 
-Distributed ThinLTO (DTLTO) enables the distribution of ThinLTO backend
+Distributed ThinLTO (DTLTO) enables the distribution of backend ThinLTO
 compilations via external distribution systems, such as Incredibuild, during the
 link step.
 
@@ -24,11 +24,11 @@ here:
 Using the *separate thin-link* approach requires a build system capable of
 handling the dynamic dependencies specified in the individual summary index
 files, such as Bazel. DTLTO removes this requirement, allowing it to be used
-with any build process that supports in-process ThinLTO. Note that, to
-facilitate this, DTLTO aims to support common in-process ThinLTO features, such
-as caching. Archived bitcode objects are also handled transparently by
-temporarily extracting referenced objects for distribution. If thin archives
-are used, extraction is not needed.
+with any build process that supports in-process ThinLTO. To facilitate this,
+DTLTO supports common in-process ThinLTO features, such as caching. Bitcode
+objects in static libraries/archives (e.g., libc.a) are also handled
+transparently by temporarily extracting referenced objects for distribution;
+when thin archives are used, no extraction is required.
 
 The following commands show the steps used for the *separate thin-link*
 approach for a basic example:
@@ -178,6 +178,9 @@ The following features are planned for DTLTO but not yet implemented:
 - Support for more LTO configurations; only a very limited set of LTO
   configurations is supported currently, e.g., support for basic block sections
   is not currently available.
+- Support for sharing ThinLTO cache entries with in-process ThinLTO entries.
+  This is not currently supported because identical code generation is not yet
+  guaranteed.
 
 Constraints
 -----------
