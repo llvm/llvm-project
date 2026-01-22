@@ -403,9 +403,49 @@ lldb_private::formatters::LibStdcppSharedPtrSyntheticFrontEndCreator(
   return (valobj_sp ? new LibStdcppSharedPtrSyntheticFrontEnd(valobj_sp)
                     : nullptr);
 }
+static ValueObjectSP GetReferenceCountPointer(ValueObject &parent,
+                                              bool is_atomic_child) {
+  auto refcount = parent.GetChildMemberWithName("_M_refcount");
+  if (!refcount)
+    return nullptr;
+
+  if (!is_atomic_child)
+    return refcount->GetChildMemberWithName("_M_pi");
+
+  auto val = refcount->GetChildMemberWithName("_M_val");
+  if (!val || !val->GetCompilerType())
+    return nullptr;
+
+  // May be a scalar value depending on libstdc++ version
+  if (!val->GetCompilerType().IsScalarType()) {
+    val = val->GetChildMemberWithName("_M_i");
+    if (!val)
+      return nullptr;
+  }
+
+  // Extract and align the raw value
+  bool is_success = false;
+  uint64_t raw_val = val->GetValueAsUnsigned(0, &is_success);
+  if (!is_success || raw_val == 0)
+    return nullptr;
+  // Clear the least significant bit. See
+  // https://github.com/gcc-mirror/gcc/blob/releases/gcc-15.2.0/libstdc%2B%2B-v3/include/bits/shared_ptr_atomic.h#L465
+  raw_val &= ~1ULL;
+
+  // Get the pointer type
+  auto ref_count_ptr =
+      refcount->GetCompilerType().GetDirectNestedTypeWithName("pointer");
+  if (!ref_count_ptr)
+    return nullptr;
+
+  return ValueObject::CreateValueObjectFromAddress(
+      "", raw_val, parent.GetExecutionContextRef(), ref_count_ptr,
+      /*do_deref=*/false);
+}
 
 bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options,
+    bool is_atomic_child) {
   ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
   if (!valobj_sp)
     return false;
@@ -416,11 +456,10 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
 
   DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
 
-  ValueObjectSP pi_sp = valobj_sp->GetChildAtNamePath({"_M_refcount", "_M_pi"});
+  auto pi_sp = GetReferenceCountPointer(*valobj_sp, is_atomic_child);
   if (!pi_sp)
     return false;
-
-  bool success;
+  bool success = false;
   uint64_t pi_addr = pi_sp->GetValueAsUnsigned(0, &success);
   // Empty control field. We're done.
   if (!success || pi_addr == 0)
@@ -428,7 +467,7 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
 
   int64_t shared_count = 0;
   if (auto count_sp = pi_sp->GetChildMemberWithName("_M_use_count")) {
-    bool success;
+    bool success = false;
     shared_count = count_sp->GetValueAsSigned(0, &success);
     if (!success)
       return false;
@@ -438,8 +477,8 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
 
   // _M_weak_count is the number of weak references + (_M_use_count != 0).
   if (auto weak_count_sp = pi_sp->GetChildMemberWithName("_M_weak_count")) {
-    bool success;
-    int64_t count = weak_count_sp->GetValueAsUnsigned(0, &success);
+    bool success = false;
+    uint64_t count = weak_count_sp->GetValueAsUnsigned(0, &success);
     if (!success)
       return false;
 

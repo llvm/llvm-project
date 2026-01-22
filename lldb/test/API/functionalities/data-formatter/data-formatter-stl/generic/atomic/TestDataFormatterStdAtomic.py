@@ -18,7 +18,7 @@ class StdAtomicTestCase(TestBase):
         var.SetPreferSyntheticValue(True)
         return var
 
-    def do_test(self):
+    def do_test(self, test_smart_pointers: bool = False):
         """Test that std::atomic is correctly printed by LLDB"""
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
@@ -73,7 +73,7 @@ class StdAtomicTestCase(TestBase):
         self.assertIsNotNone(val_bool, msg="atomic_bool child is None.")
         self.assertEqual(bool(val_bool.unsigned), True)
 
-        # func
+        # function
         atomic_func = self.get_variable("atomic_func")
         val_func = atomic_func.child[0]
         self.assertIsNotNone(val_func, msg="atomic_func child is None.")
@@ -92,6 +92,19 @@ class StdAtomicTestCase(TestBase):
         self.expect(
             "frame var p.child.parent", substrs=["p.child.parent = {\n  Value = 0x"]
         )
+
+        if test_smart_pointers:
+            # shared_pointer
+            atomic_shared = self.get_variable("atomic_shared")
+            val_shared = atomic_shared.child[0]
+            self.assertIsNotNone(val_shared, msg="atomic_shared child is None.")
+            self.assertEqual(300, val_shared.deref.unsigned)
+
+            # weak_pointer
+            atomic_weak = self.get_variable("atomic_weak")
+            val_weak = atomic_weak.child[0]
+            self.assertIsNotNone(val_weak, msg="atomic_weak child is None.")
+            self.assertEqual(300, val_weak.deref.unsigned)
 
     def verify_floating_point_equal(self, value: str, expected: float):
         self.assertAlmostEqual(float(value), float(expected), places=4)
@@ -117,6 +130,11 @@ class StdAtomicTestCase(TestBase):
     def test_libstdcxx_17(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1, "CXXFLAGS_EXTRAS": "-std=c++17"})
         self.do_test()
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx_20(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1, "CXXFLAGS_EXTRAS": "-std=c++20"})
+        self.do_test(test_smart_pointers=True)
 
     @add_test_categories(["msvcstl"])
     def test_msvcstl(self):

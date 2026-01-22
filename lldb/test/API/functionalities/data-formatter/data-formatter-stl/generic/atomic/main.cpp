@@ -1,4 +1,9 @@
 #include <atomic>
+#include <version>
+
+#if __cpp_lib_atomic_shared_ptr
+#include <memory>
+#endif // __cpp_lib_atomic_shared_ptr
 
 // Define a Parent and Child struct that can point to each other.
 class Parent;
@@ -39,6 +44,13 @@ int main() {
 
   S data;
   std::atomic<S *> atomic_pointer{&data};
+
+  // smart atomic shared pointer was added in c++20
+#if __cpp_lib_atomic_shared_ptr
+  std::shared_ptr<int> s_value = std::make_shared<int>(300);
+  std::atomic<std::shared_ptr<int>> atomic_shared{s_value};
+  std::atomic<std::weak_ptr<int>> atomic_weak{s_value};
+#endif // __cpp_lib_atomic_shared_ptr
 
   return 0; // Set break point at this line.
 }

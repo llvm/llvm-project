@@ -63,10 +63,13 @@ public:
     ValueObject &backend = *non_synthetic;
 
     const CompilerType type = backend.GetCompilerType();
-    if (!type.IsValid() || type.GetNumTemplateArguments() < 1)
+    if (!type || type.GetNumTemplateArguments() < 1)
       return {};
 
     const CompilerType first_type = type.GetTypeTemplateArgument(0);
+    if (!first_type)
+      return {};
+
     const lldb::BasicType basic_type = first_type.GetBasicTypeEnumeration();
     if (basic_type == eBasicTypeBool)
       return backend.GetChildAtNamePath({"_M_base", "_M_i"});
@@ -82,6 +85,11 @@ public:
 
     if (first_type.IsPointerType())
       return backend.GetChildAtNamePath({"_M_b", "_M_p"});
+
+    const auto first_typename = first_type.GetDisplayTypeName().GetStringRef();
+    if (first_typename.starts_with("std::shared_ptr<") ||
+        first_typename.starts_with("std::weak_ptr<"))
+      return backend.GetChildAtNamePath({"_M_impl", "_M_ptr"});
 
     return backend.GetChildMemberWithName("_M_i");
   }
@@ -115,6 +123,12 @@ bool LibStdcppAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
         !summary.empty()) {
       stream << summary;
       return true;
+    }
+
+    auto aparent = atomic_value->GetParent();
+    if (aparent && aparent->GetName().GetStringRef() == "_M_impl") {
+      return LibStdcppSmartPointerSummaryProvider(*aparent, stream, options,
+                                                  /*is_atomic_child=*/true);
     }
   }
 

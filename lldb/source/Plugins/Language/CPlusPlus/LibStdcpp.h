@@ -32,9 +32,9 @@ bool LibStdcppWStringViewSummaryProvider(
     const TypeSummaryOptions &options); // libstdc++ std::wstring_view
 
 bool LibStdcppSmartPointerSummaryProvider(
-    ValueObject &valobj, Stream &stream,
-    const TypeSummaryOptions
-        &options); // libstdc++ std::shared_ptr<> and std::weak_ptr<>
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options,
+    bool is_atomic_child =
+        false); // libstdc++ std::shared_ptr<> and std::weak_ptr<>
 
 bool LibStdcppUniquePointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
