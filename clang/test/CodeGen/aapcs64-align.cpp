@@ -122,8 +122,8 @@ unsigned sizeof_RidiculouslyOverSizedBitfield = sizeof(RidiculouslyOverSizedBitf
 unsigned alignof_RidiculouslyOverSizedBitfield = alignof(RidiculouslyOverSizedBitfield);
 
 // CHECK: define{{.*}} void @g9
-// CHECK: call void @f9(i32 noundef 1, ptr dead_on_return noundef nonnull %agg.tmp)
-// CHECK: declare void @f9(i32 noundef, ptr dead_on_return noundef)
+// CHECK: call void @f9(i32 noundef 1, ptr noundef nonnull dead_on_return %agg.tmp)
+// CHECK: declare void @f9(i32 noundef, ptr noundef dead_on_return)
 void f9(int a, RidiculouslyOverSizedBitfield b);
 void g9() {
   RidiculouslyOverSizedBitfield s = {42};

@@ -32,18 +32,18 @@ RUN:   -Wl,--thinlto-remote-compiler=%clang
 RUN: ls | FileCheck %s --check-prefix=OUTPUTS
 
 # JSON jobs description.
-OUTPUTS-DAG:    {{^}}main.[[PID:[0-9]+]].dist-file.json
+OUTPUTS-DAG: {{^}}main.[[#PID:]].dist-file.json
 
 # Sources.
-OUTPUTS-DAG:    {{^}}start.{{[0-9]+}}.[[PID]].native.o{{$}}
-OUTPUTS-DAG:    {{^}}start.{{[0-9]+}}.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG: {{^}}start.1.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}start.1.[[#PID]].native.o.thinlto.bc{{$}}
 
 # Archive members.
-# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o[.thinlto.bc].
-OUTPUTS-DAG:    {{^}}archive.a(t3.o at {{[0-9]+}}).2.[[HEXPID:[a-fA-F0-9]+]].2.[[PID]].native.o{{$}}
-OUTPUTS-DAG:    {{^}}archive.a(t3.o at {{[0-9]+}}).2.[[HEXPID]].2.[[PID]].native.o.thinlto.bc{{$}}
-OUTPUTS-DAG:    {{^}}archive.a(t1.o at {{[0-9]+}}).3.[[HEXPID]].3.[[PID]].native.o{{$}}
-OUTPUTS-DAG:    {{^}}archive.a(t1.o at {{[0-9]+}}).3.[[HEXPID]].3.[[PID]].native.o.thinlto.bc{{$}}
+# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o.
+OUTPUTS-DAG: {{^}}archive.a(t3.o at [[#T3_OFFSET:]]).2.[[#%X,HEXPID:]].2.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}archive.a(t3.o at [[#T3_OFFSET]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG: {{^}}archive.a(t1.o at [[#T1_OFFSET:]]).3.[[#%X,HEXPID]].3.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}archive.a(t1.o at [[#T1_OFFSET]]).3.[[#%X,HEXPID]].3.[[#PID]].native.o.thinlto.bc{{$}}
 
 #--- t1.c
 __attribute__((retain)) void t1() { }

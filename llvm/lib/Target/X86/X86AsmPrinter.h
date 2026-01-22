@@ -36,6 +36,7 @@ private:
   bool ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = false;
   bool IndCSPrefix = false;
   bool EnableImportCallOptimization = false;
+  bool SplitChainedAtEndOfBlock = false;
 
   enum ImportCallKind : unsigned {
     IMAGE_RETPOLINE_AMD64_IMPORT_BR = 0x02,
