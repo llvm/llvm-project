@@ -61766,7 +61766,7 @@ static SDValue combineMOVDQ2Q(SDNode *N, SelectionDAG &DAG) {
 
 // Common folds for BMI2/BMI2 intrinsics.
 static SDValue combineBMI(SDNode *N, SelectionDAG &DAG,
-                           TargetLowering::DAGCombinerInfo &DCI) {
+                          TargetLowering::DAGCombinerInfo &DCI) {
   unsigned NumBits = N->getSimpleValueType(0).getSizeInBits();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.SimplifyDemandedBits(SDValue(N, 0), APInt::getAllOnes(NumBits), DCI))
