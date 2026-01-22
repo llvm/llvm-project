@@ -3063,9 +3063,19 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
+  bool IsLifetimeSafetyDiagnosticEnabled =
+      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_permissive,
+                       D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_strict,
+                       D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_permissive,
+                       D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_strict,
+                       D->getBeginLoc());
   bool EnableLifetimeSafetyAnalysis =
       S.getLangOpts().EnableLifetimeSafety &&
-      !S.getLangOpts().EnableLifetimeSafetyTUAnalysis;
+      !S.getLangOpts().EnableLifetimeSafetyTUAnalysis &&
+      IsLifetimeSafetyDiagnosticEnabled;
 
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.

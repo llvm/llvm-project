@@ -27,6 +27,10 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 STATISTIC(NumDeadStore, "Number of dead stores eliminated");
 STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 
@@ -1164,7 +1168,8 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         // poison-generating metadata.
         V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
         V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
-        return SelectInst::Create(SI->getCondition(), V1, V2);
+        return SelectInst::Create(SI->getCondition(), V1, V2, "", nullptr,
+                                  ProfcheckDisableMetadataFixes ? nullptr : SI);
       }
     }
   }

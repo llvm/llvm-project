@@ -27,31 +27,55 @@
 #include "AMDGPUGenSubtargetInfo.inc"
 
 //===----------------------------------------------------------------------===//
-// X-Macro for simple subtarget features.
+// X-Macros for simple subtarget features.
 //
-// This macro defines features that follow the simple pattern:
-//   bool HasXXX = false;          // member declaration
-//   bool hasXXX() const { return HasXXX; }  // getter
+// GCN_SUBTARGET_HAS_FEATURE_MEMBER_ONLY: Features with member only (no getter)
+//   bool HasXXX = false;                      // member declaration only
+//
+// GCN_SUBTARGET_HAS_FEATURE: Features with both member and getter
+//   bool HasXXX = false;                      // member declaration
+//   bool hasXXX() const { return HasXXX; }    // getter
 //
 // To add a new simple feature:
-//   1. Add X(FeatureName) to this list
+//   1. Add X(FeatureName) to the appropriate macro below
 //   2. Remove the manual bool HasFeatureName declaration from protected section
-//   3. Remove the manual hasFeatureName() getter from public section
-//
-// The macro will generate both automatically.
+//   3. If using GCN_SUBTARGET_HAS_FEATURE, also remove the manual getter
 //
 // Note: The features are ordered alphabetically for convenience. Preferably
 // this would be generated automatically by TableGen, but there are some cases
 // where the features were not defined in a way that was compatible with the
 // auto-generation.
 //===----------------------------------------------------------------------===//
+
+// Features with member only (no getter generated).
+// These features either have custom getters or code accesses the member
+// directly.
+#define GCN_SUBTARGET_HAS_FEATURE_MEMBER_ONLY(X)                               \
+  X(AssemblerPermissiveWavesize)                                               \
+  X(CIInsts)                                                                   \
+  X(FastDenormalF32)                                                           \
+  X(GCN3Encoding)                                                              \
+  X(GFX10Insts)                                                                \
+  X(GFX11Insts)                                                                \
+  X(GFX12Insts)                                                                \
+  X(GFX7GFX8GFX9Insts)                                                         \
+  X(GFX8Insts)                                                                 \
+  X(GFX9Insts)                                                                 \
+  X(LDSMisalignedBug)                                                          \
+  X(UnalignedBufferAccess)                                                     \
+  X(UnalignedScratchAccess)                                                    \
+  X(UserSGPRInit16Bug)
+
+// Features with both member and getter.
 #define GCN_SUBTARGET_HAS_FEATURE(X)                                           \
   X(1_5xVGPRs)                                                                 \
   X(1024AddressableVGPRs)                                                      \
   X(45BitNumRecordsBufferResource)                                             \
+  X(AutoWaitcntBeforeBarrier)                                                  \
   X(64BitLiterals)                                                             \
   X(A16)                                                                       \
   X(AddMinMaxInsts)                                                            \
+  X(AddNoCarryInsts)                                                           \
   X(AddSubU64Insts)                                                            \
   X(AgentScopeFineGrainedRemoteMemoryAtomics)                                  \
   X(ApertureRegs)                                                              \
@@ -71,6 +95,7 @@
   X(AtomicFMinFMaxF64FlatInsts)                                                \
   X(AtomicFMinFMaxF64GlobalInsts)                                              \
   X(AtomicGlobalPkAddBF16Inst)                                                 \
+  X(BackOffBarrier)                                                            \
   X(BitOp3Insts)                                                               \
   X(BVHDualAndBVH8Insts)                                                       \
   X(Clusters)                                                                  \
@@ -101,26 +126,43 @@
   X(DPPSrc1SGPR)                                                               \
   X(EmulatedSystemScopeAtomics)                                                \
   X(ExtendedImageInsts)                                                        \
+  X(FlatAddressSpace)                                                          \
   X(FlatAtomicFaddF32Inst)                                                     \
   X(FlatBufferGlobalAtomicFaddF64Inst)                                         \
+  X(FlatGlobalInsts)                                                           \
+  X(FlatGVSMode)                                                               \
+  X(FlatInstOffsets)                                                           \
+  X(FlatScratchInsts)                                                          \
   X(FlatSegmentOffsetBug)                                                      \
+  X(FMA)                                                                       \
   X(FmacF64Inst)                                                               \
   X(FmaMixBF16Insts)                                                           \
   X(FmaMixInsts)                                                               \
+  X(FP64)                                                                      \
   X(FP8ConversionInsts)                                                        \
   X(FP8E5M3Insts)                                                              \
   X(FP8Insts)                                                                  \
+  X(FullRate64Ops)                                                             \
   X(G16)                                                                       \
   X(GDS)                                                                       \
   X(GetWaveIdInst)                                                             \
+  X(GFX10_3Insts)                                                              \
+  X(GFX10_AEncoding)                                                           \
+  X(GFX10_BEncoding)                                                           \
+  X(GFX1250Insts)                                                              \
+  X(GFX90AInsts)                                                               \
+  X(GFX940Insts)                                                               \
+  X(GFX950Insts)                                                               \
   X(GloballyAddressableScratch)                                                \
   X(GWS)                                                                       \
+  X(HalfRate64Ops)                                                             \
   X(IEEEMinimumMaximumInsts)                                                   \
   X(ImageGather4D16Bug)                                                        \
   X(ImageInsts)                                                                \
   X(ImageStoreD16Bug)                                                          \
   X(InstFwdPrefetchBug)                                                        \
   X(IntClamp)                                                                  \
+  X(KernargPreload)                                                            \
   X(LdsBarrierArriveAtomic)                                                    \
   X(LdsBranchVmemWARHazard)                                                    \
   X(LerpInst)                                                                  \
@@ -131,12 +173,15 @@
   X(McastLoadInsts)                                                            \
   X(MemoryAtomicFaddF32DenormalSupport)                                        \
   X(MFMAInlineLiteralBug)                                                      \
+  X(MIMG_R128)                                                                 \
   X(Min3Max3PKF16)                                                             \
   X(Minimum3Maximum3F16)                                                       \
   X(Minimum3Maximum3F32)                                                       \
   X(Minimum3Maximum3PKF16)                                                     \
   X(Movrel)                                                                    \
   X(MSAALoadDstSelBug)                                                         \
+  X(NegativeScratchOffsetBug)                                                  \
+  X(NegativeUnalignedScratchOffsetBug)                                         \
   X(NoDataDepHazard)                                                           \
   X(NoSdstCMPX)                                                                \
   X(NSAClauseBug)                                                              \
@@ -156,6 +201,7 @@
   X(PseudoScalarTrans)                                                         \
   X(QsadInsts)                                                                 \
   X(R128A16)                                                                   \
+  X(RelaxedBufferOOBMode)                                                      \
   X(RequiredExportPriority)                                                    \
   X(RestrictedSOffset)                                                         \
   X(SadInsts)                                                                  \
@@ -164,6 +210,7 @@
   X(SALUFloatInsts)                                                            \
   X(ScalarAtomics)                                                             \
   X(ScalarDwordx3Loads)                                                        \
+  X(ScalarFlatScratchInsts)                                                    \
   X(ScalarStores)                                                              \
   X(SDWAMac)                                                                   \
   X(SDWAOmod)                                                                  \
@@ -172,6 +219,7 @@
   X(SDWASdst)                                                                  \
   X(SetPrioIncWgInst)                                                          \
   X(SetregVGPRMSBFixup)                                                        \
+  X(SGPRInitBug)                                                               \
   X(ShaderCyclesHiLoRegisters)                                                 \
   X(ShaderCyclesRegister)                                                      \
   X(SMemRealTime)                                                              \
@@ -181,6 +229,9 @@
   X(TanhInsts)                                                                 \
   X(TensorCvtLutInsts)                                                         \
   X(TransposeLoadF4F6Insts)                                                    \
+  X(TrapHandler)                                                               \
+  X(UnalignedAccessMode)                                                       \
+  X(UnalignedDSAccess)                                                         \
   X(UnpackedD16VMem)                                                           \
   X(VALUTransUseHazard)                                                        \
   X(VcmpxExecWARHazard)                                                        \
@@ -236,20 +287,9 @@ protected:
   int LDSBankCount = 0;
   unsigned MaxPrivateElementSize = 0;
 
-  // Possibly statically set by tablegen, but may want to be overridden.
-  bool FastDenormalF32 = false;
-  bool HalfRate64Ops = false;
-  bool FullRate64Ops = false;
-
   // Dynamically set bits that enable features.
   bool FlatForGlobal = false;
-  bool AutoWaitcntBeforeBarrier = false;
-  bool BackOffBarrier = false;
-  bool UnalignedScratchAccess = false;
-  bool UnalignedAccessMode = false;
-  bool RelaxedBufferOOBMode = false;
   bool SupportsXNACK = false;
-  bool KernargPreload = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for XNACK.
@@ -257,7 +297,6 @@ protected:
 
   bool EnableTgSplit = false;
   bool EnableCuMode = false;
-  bool TrapHandler = false;
   bool EnablePreciseMemory = false;
 
   // Used as options.
@@ -267,30 +306,7 @@ protected:
   bool EnableDS128 = false;
   bool EnablePRTStrictNull = false;
   bool DumpCode = false;
-  bool AssemblerPermissiveWavesize = false;
 
-  // Subtarget statically properties set by tablegen
-  bool FP64 = false;
-  bool FMA = false;
-  bool MIMG_R128 = false;
-  bool CIInsts = false;
-  bool GFX8Insts = false;
-  bool GFX9Insts = false;
-  bool GFX90AInsts = false;
-  bool GFX940Insts = false;
-  bool GFX950Insts = false;
-  bool GFX10Insts = false;
-  bool GFX11Insts = false;
-  bool GFX12Insts = false;
-  bool GFX1250Insts = false;
-  bool GFX10_3Insts = false;
-  bool GFX7GFX8GFX9Insts = false;
-  bool SGPRInitBug = false;
-  bool UserSGPRInit16Bug = false;
-  bool NegativeScratchOffsetBug = false;
-  bool NegativeUnalignedScratchOffsetBug = false;
-  bool GFX10_AEncoding = false;
-  bool GFX10_BEncoding = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
   /// indicates a lack of S_CLAUSE support.
@@ -304,17 +320,7 @@ protected:
   // for SRAMECC.
   bool EnableSRAMECC = false;
 
-  bool FlatAddressSpace = false;
-  bool FlatInstOffsets = false;
-  bool FlatGlobalInsts = false;
-  bool FlatScratchInsts = false;
-  bool FlatGVSMode = false;
-  bool ScalarFlatScratchInsts = false;
   bool EnableFlatScratch = false;
-  bool AddNoCarryInsts = false;
-  bool LDSMisalignedBug = false;
-  bool UnalignedBufferAccess = false;
-  bool UnalignedDSAccess = false;
   bool ScalarizeGlobal = false;
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -322,12 +328,9 @@ protected:
   bool RequiresWaitsBeforeSystemScopeStores = false;
   bool UseAddPC64Inst = false;
 
-  // Dummy feature to use for assembler in tablegen.
-  bool FeatureDisable = false;
-
-  // Simple subtarget features - auto-generated from X-macro.
 #define DECL_HAS_MEMBER(Name) bool Has##Name = false;
   GCN_SUBTARGET_HAS_FEATURE(DECL_HAS_MEMBER)
+  GCN_SUBTARGET_HAS_FEATURE_MEMBER_ONLY(DECL_HAS_MEMBER)
 #undef DECL_HAS_MEMBER
 
 private:
@@ -392,11 +395,13 @@ public:
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
   // Simple subtarget feature getters - auto-generated from X-macro.
+  // Note: GCN_SUBTARGET_HAS_FEATURE_MEMBER_ONLY features don't get getters.
 #define DECL_HAS_GETTER(Name)                                                  \
   bool has##Name() const { return Has##Name; }
   GCN_SUBTARGET_HAS_FEATURE(DECL_HAS_GETTER)
 #undef DECL_HAS_GETTER
 #undef GCN_SUBTARGET_HAS_FEATURE
+#undef GCN_SUBTARGET_HAS_FEATURE_MEMBER_ONLY
 
   Generation getGeneration() const { return (Generation)Gen; }
 
@@ -435,20 +440,12 @@ public:
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
   bool supportsWGP() const {
-    if (GFX1250Insts)
+    if (HasGFX1250Insts)
       return false;
     return getGeneration() >= GFX10;
   }
 
-  bool hasFP64() const { return FP64; }
-
-  bool hasMIMG_R128() const { return MIMG_R128; }
-
-  bool hasHWFP64() const { return FP64; }
-
-  bool hasHalfRate64Ops() const { return HalfRate64Ops; }
-
-  bool hasFullRate64Ops() const { return FullRate64Ops; }
+  bool hasHWFP64() const { return HasFP64; }
 
   bool hasAddr64() const {
     return (getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS);
@@ -472,13 +469,11 @@ public:
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
 
-  bool hasFMA() const { return FMA; }
+  bool hasSwap() const { return HasGFX9Insts; }
 
-  bool hasSwap() const { return GFX9Insts; }
+  bool hasScalarPackInsts() const { return HasGFX9Insts; }
 
-  bool hasScalarPackInsts() const { return GFX9Insts; }
-
-  bool hasScalarMulHiInsts() const { return GFX9Insts; }
+  bool hasScalarMulHiInsts() const { return HasGFX9Insts; }
 
   bool hasScalarSubwordLoads() const { return getGeneration() >= GFX12; }
 
@@ -550,13 +545,13 @@ public:
 
   /// \returns If target supports ds_read/write_b128 and user enables generation
   /// of ds_read/write_b128.
-  bool useDS128() const { return CIInsts && EnableDS128; }
+  bool useDS128() const { return HasCIInsts && EnableDS128; }
 
   /// \return If target supports ds_read/write_b96/128.
-  bool hasDS96AndDS128() const { return CIInsts; }
+  bool hasDS96AndDS128() const { return HasCIInsts; }
 
   /// Have v_trunc_f64, v_ceil_f64, v_rndne_f64
-  bool haveRoundOpsF64() const { return CIInsts; }
+  bool haveRoundOpsF64() const { return HasCIInsts; }
 
   /// \returns If MUBUF instructions always perform range checking, even for
   /// buffer resources used for private memory access.
@@ -568,35 +563,17 @@ public:
   /// for sparse texture support).
   bool usePRTStrictNull() const { return EnablePRTStrictNull; }
 
-  bool hasAutoWaitcntBeforeBarrier() const { return AutoWaitcntBeforeBarrier; }
-
-  /// \returns true if the target supports backing off of s_barrier instructions
-  /// when an exception is raised.
-  bool supportsBackOffBarrier() const { return BackOffBarrier; }
-
-  bool hasUnalignedBufferAccess() const { return UnalignedBufferAccess; }
-
   bool hasUnalignedBufferAccessEnabled() const {
-    return UnalignedBufferAccess && UnalignedAccessMode;
+    return HasUnalignedBufferAccess && HasUnalignedAccessMode;
   }
-
-  bool hasUnalignedDSAccess() const { return UnalignedDSAccess; }
 
   bool hasUnalignedDSAccessEnabled() const {
-    return UnalignedDSAccess && UnalignedAccessMode;
+    return HasUnalignedDSAccess && HasUnalignedAccessMode;
   }
-
-  bool hasUnalignedScratchAccess() const { return UnalignedScratchAccess; }
 
   bool hasUnalignedScratchAccessEnabled() const {
-    return UnalignedScratchAccess && UnalignedAccessMode;
+    return HasUnalignedScratchAccess && HasUnalignedAccessMode;
   }
-
-  bool hasUnalignedAccessMode() const { return UnalignedAccessMode; }
-
-  bool hasRelaxedBufferOOBMode() const { return RelaxedBufferOOBMode; }
-
-  bool isTrapHandlerEnabled() const { return TrapHandler; }
 
   bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
@@ -606,15 +583,7 @@ public:
 
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
-  bool hasFlatAddressSpace() const { return FlatAddressSpace; }
-
   bool hasFlatScrRegister() const { return hasFlatAddressSpace(); }
-
-  bool hasFlatInstOffsets() const { return FlatInstOffsets; }
-
-  bool hasFlatGlobalInsts() const { return FlatGlobalInsts; }
-
-  bool hasFlatScratchInsts() const { return FlatScratchInsts; }
 
   // Check if target supports ST addressing mode with FLAT scratch instructions.
   // The ST addressing mode means no registers are used, either VGPR or SGPR,
@@ -623,18 +592,16 @@ public:
     return hasFlatScratchInsts() && (hasGFX10_3Insts() || hasGFX940Insts());
   }
 
-  bool hasFlatScratchSVSMode() const { return GFX940Insts || GFX11Insts; }
-
-  bool hasScalarFlatScratchInsts() const { return ScalarFlatScratchInsts; }
+  bool hasFlatScratchSVSMode() const { return HasGFX940Insts || HasGFX11Insts; }
 
   bool enableFlatScratch() const {
     return flatScratchIsArchitected() ||
            (EnableFlatScratch && hasFlatScratchInsts());
   }
 
-  bool hasGlobalAddTidInsts() const { return GFX10_BEncoding; }
+  bool hasGlobalAddTidInsts() const { return HasGFX10_BEncoding; }
 
-  bool hasAtomicCSub() const { return GFX10_BEncoding; }
+  bool hasAtomicCSub() const { return HasGFX10_BEncoding; }
 
   bool hasMTBUFInsts() const { return !hasGFX1250Insts(); }
 
@@ -644,7 +611,9 @@ public:
     return !hasGFX940Insts() && !hasGFX1250Insts();
   }
 
-  bool hasVINTERPEncoding() const { return GFX11Insts && !hasGFX1250Insts(); }
+  bool hasVINTERPEncoding() const {
+    return HasGFX11Insts && !hasGFX1250Insts();
+  }
 
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const {
@@ -677,13 +646,7 @@ public:
   bool hasGWSAutoReplay() const { return getGeneration() >= GFX9; }
 
   /// \returns if target has ds_gws_sema_release_all instruction.
-  bool hasGWSSemaReleaseAll() const { return CIInsts; }
-
-  /// \returns true if the target has integer add/sub instructions that do not
-  /// produce a carry-out. This includes v_add_[iu]32, v_sub_[iu]32,
-  /// v_add_[iu]16, and v_sub_[iu]16, all of which support the clamp modifier
-  /// for saturation.
-  bool hasAddNoCarry() const { return AddNoCarryInsts; }
+  bool hasGWSSemaReleaseAll() const { return HasCIInsts; }
 
   bool hasScalarAddSub64() const { return getGeneration() >= GFX12; }
 
@@ -708,7 +671,7 @@ public:
     return getGeneration() == GFX10 || getGeneration() == GFX11;
   }
 
-  bool hasPrefetch() const { return GFX12Insts; }
+  bool hasPrefetch() const { return HasGFX12Insts; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
@@ -756,8 +719,10 @@ public:
     return getGeneration() >= VOLCANIC_ISLANDS;
   }
 
-  bool hasLDSFPAtomicAddF32() const { return GFX8Insts; }
-  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts || GFX1250Insts; }
+  bool hasLDSFPAtomicAddF32() const { return HasGFX8Insts; }
+  bool hasLDSFPAtomicAddF64() const {
+    return HasGFX90AInsts || HasGFX1250Insts;
+  }
 
   /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
   bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
@@ -772,7 +737,7 @@ public:
   }
 
   // Has V_PK_MOV_B32 opcode
-  bool hasPkMovB32() const { return GFX90AInsts; }
+  bool hasPkMovB32() const { return HasGFX90AInsts; }
 
   bool hasFmaakFmamkF32Insts() const {
     return getGeneration() >= GFX10 || hasGFX940Insts();
@@ -786,36 +751,22 @@ public:
     return AMDGPU::getNSAMaxSize(*this, HasSampler);
   }
 
-  bool hasGFX10_AEncoding() const { return GFX10_AEncoding; }
-
-  bool hasGFX10_BEncoding() const { return GFX10_BEncoding; }
-
-  bool hasGFX10_3Insts() const { return GFX10_3Insts; }
-
   bool hasMadF16() const;
 
-  bool hasMovB64() const { return GFX940Insts || GFX1250Insts; }
+  bool hasMovB64() const { return HasGFX940Insts || HasGFX1250Insts; }
 
   // Scalar and global loads support scale_offset bit.
-  bool hasScaleOffset() const { return GFX1250Insts; }
-
-  bool hasFlatGVSMode() const { return FlatGVSMode; }
+  bool hasScaleOffset() const { return HasGFX1250Insts; }
 
   // FLAT GLOBAL VOffset is signed
-  bool hasSignedGVSOffset() const { return GFX1250Insts; }
+  bool hasSignedGVSOffset() const { return HasGFX1250Insts; }
 
   bool enableSIScheduler() const { return EnableSIScheduler; }
 
   bool loadStoreOptEnabled() const { return EnableLoadStoreOpt; }
 
-  bool hasSGPRInitBug() const { return SGPRInitBug; }
-
-  bool hasUserSGPRInit16Bug() const { return UserSGPRInit16Bug && isWave32(); }
-
-  bool hasNegativeScratchOffsetBug() const { return NegativeScratchOffsetBug; }
-
-  bool hasNegativeUnalignedScratchOffsetBug() const {
-    return NegativeUnalignedScratchOffsetBug;
+  bool hasUserSGPRInit16Bug() const {
+    return HasUserSGPRInit16Bug && isWave32();
   }
 
   bool has12DWordStoreHazard() const {
@@ -823,7 +774,7 @@ public:
   }
 
   // \returns true if the subtarget supports DWORDX3 load/store instructions.
-  bool hasDwordx3LoadStores() const { return CIInsts; }
+  bool hasDwordx3LoadStores() const { return HasCIInsts; }
 
   bool hasReadM0MovRelInterpHazard() const {
     return getGeneration() == AMDGPUSubtarget::GFX9;
@@ -842,29 +793,31 @@ public:
     return getGeneration() == AMDGPUSubtarget::GFX9;
   }
 
-  bool hasLDSMisalignedBug() const { return LDSMisalignedBug && !EnableCuMode; }
+  bool hasLDSMisalignedBug() const {
+    return HasLDSMisalignedBug && !EnableCuMode;
+  }
 
   // Shift amount of a 64 bit shift cannot be a highest allocated register
   // if also at the end of the allocation block.
-  bool hasShift64HighRegBug() const { return GFX90AInsts && !GFX940Insts; }
+  bool hasShift64HighRegBug() const {
+    return HasGFX90AInsts && !HasGFX940Insts;
+  }
 
   // Has one cycle hazard on transcendental instruction feeding a
   // non transcendental VALU.
-  bool hasTransForwardingHazard() const { return GFX940Insts; }
+  bool hasTransForwardingHazard() const { return HasGFX940Insts; }
 
   // Has one cycle hazard on a VALU instruction partially writing dst with
   // a shift of result bits feeding another VALU instruction.
-  bool hasDstSelForwardingHazard() const { return GFX940Insts; }
+  bool hasDstSelForwardingHazard() const { return HasGFX940Insts; }
 
   // Cannot use op_sel with v_dot instructions.
-  bool hasDOTOpSelHazard() const { return GFX940Insts || GFX11Insts; }
+  bool hasDOTOpSelHazard() const { return HasGFX940Insts || HasGFX11Insts; }
 
   // Does not have HW interlocs for VALU writing and then reading SGPRs.
-  bool hasVDecCoExecHazard() const { return GFX940Insts; }
+  bool hasVDecCoExecHazard() const { return HasGFX940Insts; }
 
   bool hasHardClauses() const { return MaxHardClauseLength > 0; }
-
-  bool hasGFX90AInsts() const { return GFX90AInsts; }
 
   bool hasFPAtomicToDenormModeHazard() const {
     return getGeneration() == GFX10;
@@ -880,7 +833,7 @@ public:
     return getGeneration() == GFX11;
   }
 
-  bool hasCvtScaleForwardingHazard() const { return GFX950Insts; }
+  bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
@@ -888,38 +841,32 @@ public:
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
-  bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
+  bool hasVALUReadSGPRHazard() const {
+    return HasGFX12Insts && !HasGFX1250Insts;
+  }
 
   bool setRegModeNeedsVNOPs() const {
-    return GFX1250Insts && getGeneration() == GFX12;
+    return HasGFX1250Insts && getGeneration() == GFX12;
   }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return RequiresAlignVGPR; }
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
-  bool hasSPackHL() const { return GFX11Insts; }
+  bool hasSPackHL() const { return HasGFX11Insts; }
 
   /// Return true if the target's EXP instruction has the COMPR flag, which
   /// affects the meaning of the EN (enable) bits.
-  bool hasCompressedExport() const { return !GFX11Insts; }
+  bool hasCompressedExport() const { return !HasGFX11Insts; }
 
   /// Return true if the target's EXP instruction supports the NULL export
   /// target.
-  bool hasNullExportTarget() const { return !GFX11Insts; }
+  bool hasNullExportTarget() const { return !HasGFX11Insts; }
 
   bool hasFlatScratchSVSSwizzleBug() const { return getGeneration() == GFX11; }
 
   /// Return true if the target has the S_DELAY_ALU instruction.
-  bool hasDelayAlu() const { return GFX11Insts; }
-
-  // GFX94* is a derivation to GFX90A. hasGFX940Insts() being true implies that
-  // hasGFX90AInsts is also true.
-  bool hasGFX940Insts() const { return GFX940Insts; }
-
-  // GFX950 is a derivation to GFX94*. hasGFX950Insts() implies that
-  // hasGFX940Insts and hasGFX90AInsts are also true.
-  bool hasGFX950Insts() const { return GFX950Insts; }
+  bool hasDelayAlu() const { return HasGFX11Insts; }
 
   /// Returns true if the target supports
   /// global_load_lds_dwordx3/global_load_lds_dwordx4 or
@@ -940,10 +887,10 @@ public:
   /// bits from a scalar operand (SGPR or literal) and replicates the bits to
   /// both channels.
   bool hasPKF32InstsReplicatingLower32BitsOfScalarInput() const {
-    return getGeneration() == GFX12 && GFX1250Insts;
+    return getGeneration() == GFX12 && HasGFX1250Insts;
   }
 
-  bool hasAddPC64Inst() const { return GFX1250Insts; }
+  bool hasAddPC64Inst() const { return HasGFX1250Insts; }
 
   bool useAddPC64Inst() const { return UseAddPC64Inst; }
 
@@ -989,12 +936,6 @@ public:
   /// In this case it is readonly.
   bool flatScratchIsArchitected() const { return HasArchitectedFlatScratch; }
 
-  /// \returns true if the architected SGPRs are enabled.
-
-  /// \returns true if Global Data Share is supported.
-
-  /// \returns true if Global Wave Sync is supported.
-
   /// \returns true if the machine has merged shaders in which s0-s7 are
   /// reserved by the hardware and user SGPRs start at s8
   bool hasMergedShaders() const { return getGeneration() >= GFX9; }
@@ -1002,22 +943,14 @@ public:
   // \returns true if the target supports the pre-NGG legacy geometry path.
   bool hasLegacyGeometry() const { return getGeneration() < GFX11; }
 
-  // \returns true if preloading kernel arguments is supported.
-  bool hasKernargPreload() const { return KernargPreload; }
-
   // \returns true if the target has split barriers feature
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
-
-  // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
-  // no-return form.
 
   // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
   bool hasDX10ClampMode() const { return getGeneration() < GFX12; }
 
   // \returns true if the target has IEEE kernel descriptor mode bit
   bool hasIEEEMode() const { return getGeneration() < GFX12; }
-
-  // \returns true if the target has IEEE fminimum/fmaximum instructions
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
@@ -1026,48 +959,40 @@ public:
   /// values.
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
-  bool hasGFX1250Insts() const { return GFX1250Insts; }
+  bool hasINVWBL2WaitCntRequirement() const { return HasGFX1250Insts; }
 
-  bool hasINVWBL2WaitCntRequirement() const { return GFX1250Insts; }
-
-  bool hasVOPD3() const { return GFX1250Insts; }
-
-  // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
-
-  // \returns true if the target has V_MAD_U32 instruction.
+  bool hasVOPD3() const { return HasGFX1250Insts; }
 
   // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
-  bool hasVectorMulU64() const { return GFX1250Insts; }
+  bool hasVectorMulU64() const { return HasGFX1250Insts; }
 
   // \returns true if the target has V_MAD_NC_U64_U32/V_MAD_NC_I64_I32
   // instructions.
-  bool hasMadU64U32NoCarry() const { return GFX1250Insts; }
+  bool hasMadU64U32NoCarry() const { return HasGFX1250Insts; }
 
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
-  bool hasIntMinMax64() const { return GFX1250Insts; }
-
-  // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
-
-  // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
+  bool hasIntMinMax64() const { return HasGFX1250Insts; }
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
-  bool hasPkMinMax3Insts() const { return GFX1250Insts; }
+  bool hasPkMinMax3Insts() const { return HasGFX1250Insts; }
 
   // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
-  bool hasSGetShaderCyclesInst() const { return GFX1250Insts; }
+  bool hasSGetShaderCyclesInst() const { return HasGFX1250Insts; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1250 has not only fixed the bug but also
   // extended VA to 57 bits.
-  bool hasGetPCZeroExtension() const { return GFX12Insts && !GFX1250Insts; }
+  bool hasGetPCZeroExtension() const {
+    return HasGFX12Insts && !HasGFX1250Insts;
+  }
 
   // \returns true if the target needs to create a prolog for backward
   // compatibility when preloading kernel arguments.
   bool needsKernArgPreloadProlog() const {
-    return hasKernargPreload() && !GFX1250Insts;
+    return hasKernargPreload() && !HasGFX1250Insts;
   }
 
-  bool hasCondSubInsts() const { return GFX12Insts; }
+  bool hasCondSubInsts() const { return HasGFX12Insts; }
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
 
@@ -1281,11 +1206,11 @@ public:
 
   // \returns true if the subtarget has a hazard requiring an "s_nop 0"
   // instruction before "s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)".
-  bool requiresNopBeforeDeallocVGPRs() const { return !GFX1250Insts; }
+  bool requiresNopBeforeDeallocVGPRs() const { return !HasGFX1250Insts; }
 
   // \returns true if the subtarget needs S_WAIT_ALU 0 before S_GETREG_B32 on
   // STATUS, STATE_PRIV, EXCP_FLAG_PRIV, or EXCP_FLAG_USER.
-  bool requiresWaitIdleBeforeGetReg() const { return GFX1250Insts; }
+  bool requiresWaitIdleBeforeGetReg() const { return HasGFX1250Insts; }
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
   unsigned getDynamicVGPRBlockSize() const {
@@ -1307,20 +1232,20 @@ public:
   // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base
   // read.
   bool hasScratchBaseForwardingHazard() const {
-    return GFX1250Insts && getGeneration() == GFX12;
+    return HasGFX1250Insts && getGeneration() == GFX12;
   }
 
   // src_flat_scratch_hi cannot be used as a source in SALU producing a 64-bit
   // result.
   bool hasFlatScratchHiInB64InstHazard() const {
-    return GFX1250Insts && getGeneration() == GFX12;
+    return HasGFX1250Insts && getGeneration() == GFX12;
   }
 
   /// \returns true if the subtarget requires a wait for xcnt before VMEM
   /// accesses that must never be repeated in the event of a page fault/re-try.
   /// Atomic stores/rmw and all volatile accesses fall under this criteria.
   bool requiresWaitXCntForSingleAccessInstructions() const {
-    return GFX1250Insts;
+    return HasGFX1250Insts;
   }
 
   /// \returns the number of significant bits in the immediate field of the
