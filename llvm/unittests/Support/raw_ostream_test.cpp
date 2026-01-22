@@ -17,7 +17,6 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <optional>
-#include <thread>
 
 using namespace llvm;
 
