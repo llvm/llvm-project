@@ -60,13 +60,13 @@ static void BM_WriteToOutputInParallel(benchmark::State &State) {
           sys::path::append(Path, "file_" + std::to_string(FileIdx) + ".bin");
 
           Error E = writeToOutput(Path, [=](raw_ostream &Out) -> Error {
-                // Write 32-bit integers up to BytesPerFile
-                const int NumInts = BytesPerFile / sizeof(int32_t);
-                for (int32_t I = 0; I < NumInts; ++I) {
-                  Out.write(reinterpret_cast<const char *>(&I), sizeof(I));
-                }
-                return Error::success();
-              });
+            // Write 32-bit integers up to BytesPerFile
+            const int NumInts = BytesPerFile / sizeof(int32_t);
+            for (int32_t I = 0; I < NumInts; ++I) {
+              Out.write(reinterpret_cast<const char *>(&I), sizeof(I));
+            }
+            return Error::success();
+          });
           if (E) {
             State.SkipWithError("Failed to create outputfile " +
                                 Path.str().str());
@@ -87,7 +87,7 @@ static void BM_WriteToOutputInParallel(benchmark::State &State) {
   // Report throughput metrics
   const int64_t TotalFiles = NumThreads * FilesPerThread;
   const int64_t TotalBytes = TotalFiles * BytesPerFile;
-  
+
   State.SetItemsProcessed(State.iterations() * TotalFiles);
   State.SetBytesProcessed(State.iterations() * TotalBytes);
   State.counters["threads"] = NumThreads;
@@ -102,12 +102,12 @@ static void BM_WriteToOutputInParallel(benchmark::State &State) {
 // - Balanced scenarios
 
 BENCHMARK(BM_WriteToOutputInParallel)
-    ->Args({1, 1000})      // 1 thread, 1000 files
-    ->Args({2, 500})       // 2 threads, 500 files each
-    ->Args({4, 250})       // 4 threads, 250 files each
-    ->Args({8, 125})       // 8 threads, 125 files each
-    ->Args({10, 100})      // 10 threads, 100 files each
-    ->Args({10, 1000})     // 10 threads, 1000 files each (stress test)
+    ->Args({1, 1000})  // 1 thread, 1000 files
+    ->Args({2, 500})   // 2 threads, 500 files each
+    ->Args({4, 250})   // 4 threads, 250 files each
+    ->Args({8, 125})   // 8 threads, 125 files each
+    ->Args({10, 100})  // 10 threads, 100 files each
+    ->Args({10, 1000}) // 10 threads, 1000 files each (stress test)
     ->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();
