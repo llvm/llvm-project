@@ -3160,6 +3160,14 @@ TEST_P(ASTMatchersTest, IsVolatileQualified) {
                       varDecl(hasType(isVolatileQualified()))));
 }
 
+TEST_P(ASTMatchersTest, IsRestrictQualified) {
+  EXPECT_TRUE(
+      matches("int* __restrict__ p;", varDecl(hasType(isRestrictQualified()))));
+  EXPECT_TRUE(notMatches("int* p;", varDecl(hasType(isRestrictQualified()))));
+  EXPECT_TRUE(matches("typedef int* __restrict__ r_ptr; r_ptr p;",
+                      varDecl(hasType(isRestrictQualified()))));
+}
+
 TEST_P(ASTMatchersTest, IsConstQualified_MatchesConstInt) {
   EXPECT_TRUE(
       matches("const int i = 42;", varDecl(hasType(isConstQualified()))));

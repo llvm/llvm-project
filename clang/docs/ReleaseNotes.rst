@@ -224,6 +224,7 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 - Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
+- Add ``isRestrictQualified`` matcher for matching restrict-qualified types.
 
 clang-format
 ------------

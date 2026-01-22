@@ -6711,6 +6711,20 @@ AST_MATCHER(QualType, isVolatileQualified) {
   return Node.isVolatileQualified();
 }
 
+/// Matches QualType nodes that are restrict-qualified, i.e., that include
+/// "top-level" restrict.
+///
+/// Given
+/// \code
+///   void a(int*);
+///   void b(int* __restrict__);
+/// \endcode
+/// functionDecl(hasAnyParameter(hasType(isRestrictQualified()))) matches "void
+/// b(int* __restrict__)".
+AST_MATCHER(QualType, isRestrictQualified) {
+  return Node.isRestrictQualified();
+}
+
 /// Matches QualType nodes that have local CV-qualifiers attached to
 /// the node, not hidden within a typedef.
 ///
