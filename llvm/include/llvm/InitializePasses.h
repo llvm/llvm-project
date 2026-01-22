@@ -104,6 +104,7 @@ LLVM_ABI void initializeDomPrinterWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeDomViewerWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeDominanceFrontierWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeDominatorTreeWrapperPassPass(PassRegistry &);
+LLVM_ABI void initializeDummyCGSCCPassPass(PassRegistry &);
 LLVM_ABI void initializeDwarfEHPrepareLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeEarlyCSELegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeEarlyCSEMemSSALegacyPassPass(PassRegistry &);

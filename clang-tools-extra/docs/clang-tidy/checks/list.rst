@@ -363,6 +363,7 @@ Clang-Tidy Checks
    :doc:`performance-noexcept-destructor <performance/noexcept-destructor>`, "Yes"
    :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
    :doc:`performance-noexcept-swap <performance/noexcept-swap>`, "Yes"
+   :doc:`performance-string-view-conversions <performance/string-view-conversions>`, "Yes"
    :doc:`performance-trivially-destructible <performance/trivially-destructible>`, "Yes"
    :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes"
    :doc:`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>`, "Yes"

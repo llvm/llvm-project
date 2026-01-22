@@ -106,7 +106,6 @@ public:
    start_load_cmd_addr = (const char *)(mock_header.data() + header_size);
    sizeofcmds = header->sizeofcmds;
 
-   const char *last_byte_load_cmd_addr = (start_load_cmd_addr + sizeofcmds - 1);
    data_.current_image = -1;  // So the loop in ::Next runs just once
  }
 

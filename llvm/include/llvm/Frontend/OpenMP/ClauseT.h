@@ -527,9 +527,6 @@ struct DefaultmapT {
   std::tuple<ImplicitBehavior, OPT(VariableCategory)> t;
 };
 
-template <typename T, typename I, typename E> //
-struct DoacrossT;
-
 // V5.2: [15.9.5] `depend` clause
 template <typename T, typename I, typename E> //
 struct DependT {
@@ -537,15 +534,9 @@ struct DependT {
   using LocatorList = ObjectListT<I, E>;
   using DependenceType = tomp::type::DependenceType;
 
-  struct TaskDep { // The form with task dependence type.
-    using TupleTrait = std::true_type;
-    // Empty LocatorList means "omp_all_memory".
-    std::tuple<DependenceType, OPT(Iterator), LocatorList> t;
-  };
-
-  using Doacross = DoacrossT<T, I, E>;
-  using UnionTrait = std::true_type;
-  std::variant<Doacross, TaskDep> u; // Doacross form is legacy
+  using TupleTrait = std::true_type;
+  // Empty LocatorList means "omp_all_memory".
+  std::tuple<DependenceType, OPT(Iterator), LocatorList> t;
 };
 
 // V5.2: [3.5] `destroy` clause
@@ -1273,7 +1264,7 @@ struct ToT {
   std::tuple<OPT(Expectation), OPT(Mappers), OPT(Iterator), LocatorList> t;
 };
 
-// [6.0:440-441] `transparent` clause
+// [6.0:510:25] `transparent` clause
 template <typename T, typename I, typename E> //
 struct TransparentT {
   using IncompleteTrait = std::true_type;

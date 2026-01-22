@@ -66,15 +66,6 @@ static bool IsBetterCanonical(const GlobalVariable &A,
   return A.hasGlobalUnnamedAddr();
 }
 
-static bool hasMetadataOtherThanDebugLoc(const GlobalVariable *GV) {
-  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  GV->getAllMetadata(MDs);
-  for (const auto &V : MDs)
-    if (V.first != LLVMContext::MD_dbg)
-      return true;
-  return false;
-}
-
 static void copyDebugLocMetadata(const GlobalVariable *From,
                                  GlobalVariable *To) {
   SmallVector<DIGlobalVariableExpression *, 1> MDs;
@@ -104,9 +95,9 @@ enum class CanMerge { No, Yes };
 static CanMerge makeMergeable(GlobalVariable *Old, GlobalVariable *New) {
   if (!Old->hasGlobalUnnamedAddr() && !New->hasGlobalUnnamedAddr())
     return CanMerge::No;
-  if (hasMetadataOtherThanDebugLoc(Old))
+  if (Old->hasMetadataOtherThanDebugLoc())
     return CanMerge::No;
-  assert(!hasMetadataOtherThanDebugLoc(New));
+  assert(!New->hasMetadataOtherThanDebugLoc());
   if (!Old->hasGlobalUnnamedAddr())
     New->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
   return CanMerge::Yes;
@@ -172,7 +163,7 @@ static bool mergeConstants(Module &M) {
         continue;
 
       // Don't touch globals with metadata other then !dbg.
-      if (hasMetadataOtherThanDebugLoc(&GV))
+      if (GV.hasMetadataOtherThanDebugLoc())
         continue;
 
       Constant *Init = GV.getInitializer();

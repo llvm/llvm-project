@@ -187,10 +187,7 @@ INITIALIZE_PASS_END(MachineBlockFrequencyInfoWrapperPass, DEBUG_TYPE,
 char MachineBlockFrequencyInfoWrapperPass::ID = 0;
 
 MachineBlockFrequencyInfoWrapperPass::MachineBlockFrequencyInfoWrapperPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineBlockFrequencyInfoWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 MachineBlockFrequencyInfo::MachineBlockFrequencyInfo() = default;
 

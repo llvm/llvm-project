@@ -2847,6 +2847,49 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   if (Src->getResultElementType() != GEP.getSourceElementType())
     return nullptr;
 
+  // Fold chained GEP with constant base into single GEP:
+  // gep i8, (gep i8, %base, C1), (select Cond, C2, C3)
+  // -> gep i8, %base, (select Cond, C1+C2, C1+C3)
+  if (Src->hasOneUse() && GEP.getNumIndices() == 1 &&
+      Src->getNumIndices() == 1) {
+    Value *SrcIdx = *Src->idx_begin();
+    Value *GEPIdx = *GEP.idx_begin();
+    const APInt *ConstOffset, *TrueVal, *FalseVal;
+    Value *Cond;
+
+    if ((match(SrcIdx, m_APInt(ConstOffset)) &&
+         match(GEPIdx,
+               m_Select(m_Value(Cond), m_APInt(TrueVal), m_APInt(FalseVal)))) ||
+        (match(GEPIdx, m_APInt(ConstOffset)) &&
+         match(SrcIdx,
+               m_Select(m_Value(Cond), m_APInt(TrueVal), m_APInt(FalseVal))))) {
+      auto *Select = isa<SelectInst>(GEPIdx) ? cast<SelectInst>(GEPIdx)
+                                             : cast<SelectInst>(SrcIdx);
+
+      // Make sure the select has only one use.
+      if (!Select->hasOneUse())
+        return nullptr;
+
+      if (TrueVal->getBitWidth() != ConstOffset->getBitWidth() ||
+          FalseVal->getBitWidth() != ConstOffset->getBitWidth())
+        return nullptr;
+
+      APInt NewTrueVal = *ConstOffset + *TrueVal;
+      APInt NewFalseVal = *ConstOffset + *FalseVal;
+      Constant *NewTrue = ConstantInt::get(Select->getType(), NewTrueVal);
+      Constant *NewFalse = ConstantInt::get(Select->getType(), NewFalseVal);
+      Value *NewSelect = Builder.CreateSelect(
+          Cond, NewTrue, NewFalse, /*Name=*/"",
+          /*MDFrom=*/(ProfcheckDisableMetadataFixes ? nullptr : Select));
+      GEPNoWrapFlags Flags =
+          getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
+      return replaceInstUsesWith(GEP,
+                                 Builder.CreateGEP(GEP.getResultElementType(),
+                                                   Src->getPointerOperand(),
+                                                   NewSelect, "", Flags));
+    }
+  }
+
   // Find out whether the last index in the source GEP is a sequential idx.
   bool EndsWithSequential = false;
   for (gep_type_iterator I = gep_type_begin(*Src), E = gep_type_end(*Src);
@@ -2990,7 +3033,9 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
         if (auto *II = dyn_cast<IntrinsicInst>(V))
           return Builder->CreateBinaryIntrinsic(
               getInverseMinMaxIntrinsic(II->getIntrinsicID()), NotA, NotB);
-        return Builder->CreateSelect(Cond, NotA, NotB);
+        return Builder->CreateSelect(
+            Cond, NotA, NotB, "",
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(V));
       }
       return NonNull;
     }
@@ -4347,8 +4392,9 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
     return nullptr;
   };
 
-  // Attempt to invert and simplify the switch condition.
-  if (auto InvertFn = MaybeInvertible(Cond); InvertFn) {
+  // Attempt to invert and simplify the switch condition, as long as the
+  // condition is not used further, as it may not be profitable otherwise.
+  if (auto InvertFn = MaybeInvertible(Cond); InvertFn && Cond->hasOneUse()) {
     for (auto &Case : SI.cases()) {
       const APInt &New = InvertFn(Case.getCaseValue()->getValue(), *CondOpC);
       Case.setValue(ConstantInt::get(SI.getContext(), New));
