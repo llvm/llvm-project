@@ -44,17 +44,10 @@ using namespace mlir;
 
 namespace {
 
-static Value resolveTy(ConversionPatternRewriter &rewriter,
-                       TypedValue<VectorType> v, VectorType expectedTy) {
-  // llvm::errs() << "value:" << v << " expectedTy: " << expectedTy << "\n";
+static Value castValueTo(ConversionPatternRewriter &rewriter,
+                         TypedValue<VectorType> v, VectorType expectedTy) {
   if (v.getType() == expectedTy)
     return v;
-  // assert(v.getType().getElementType() == expectedTy.getElementType() &&
-  //        "element types must match");
-  // assert(v.getType().getNumElements() == expectedTy.getNumElements() &&
-  //        "total number of elements must match");
-  // If both types are vector type and number of elements match, insert a shape
-  // cast.
   if (isa<VectorType>(v.getType()) &&
       v.getType().getNumElements() == expectedTy.getNumElements())
     return vector::ShapeCastOp::create(rewriter, v.getLoc(), expectedTy, v);
@@ -143,8 +136,8 @@ struct LoadNdOpPattern : public OpConversionPattern<xegpu::LoadNdOp> {
         adaptor.getTensorDesc(), op.getMixedOffsets(), op.getPackedAttr(),
         op.getTransposeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
         op.getL3HintAttr(), /**layout**/ nullptr);
-    rewriter.replaceOp(op, resolveTy(rewriter, newOp.getResult(),
-                                     expectedWiResultTyOrFailure.value()));
+    rewriter.replaceOp(op, castValueTo(rewriter, newOp.getResult(),
+                                       expectedWiResultTyOrFailure.value()));
     return success();
   }
 };
@@ -178,8 +171,8 @@ struct StoreNdOpPattern : public OpConversionPattern<xegpu::StoreNdOp> {
 
     xegpu::StoreNdOp::create(
         rewriter, op.getLoc(),
-        resolveTy(rewriter, cast<TypedValue<VectorType>>(adaptor.getValue()),
-                  supportedWiValueTyOrFailure.value()),
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getValue()),
+                    supportedWiValueTyOrFailure.value()),
         adaptor.getTensorDesc(), op.getMixedOffsets(), op.getL1HintAttr(),
         op.getL2HintAttr(), op.getL3HintAttr(), /**layout**/ nullptr);
     rewriter.eraseOp(op);
@@ -222,17 +215,17 @@ struct DpasOpPattern : public OpConversionPattern<xegpu::DpasOp> {
     // "\n"; llvm::errs() << "ops acc type: " << op.getAcc().getType() << "\n";
     auto newOp = xegpu::DpasOp::create(
         rewriter, op->getLoc(), wiResultTyOrFailure.value(),
-        resolveTy(rewriter, cast<TypedValue<VectorType>>(adaptor.getLhs()),
-                  wiATypeOrFailure.value()),
-        resolveTy(rewriter, cast<TypedValue<VectorType>>(adaptor.getRhs()),
-                  wiBTypeOrFailure.value()),
-        resolveTy(rewriter, cast<TypedValue<VectorType>>(adaptor.getAcc()),
-                  wiResultTyOrFailure.value()),
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getLhs()),
+                    wiATypeOrFailure.value()),
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getRhs()),
+                    wiBTypeOrFailure.value()),
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getAcc()),
+                    wiResultTyOrFailure.value()),
         /** layoutA**/ nullptr,
         /** layoutB**/ nullptr, /** layoutCd**/ nullptr);
     // Explicitly set the new types to enable correct type materializations.
-    rewriter.replaceOp(op, resolveTy(rewriter, newOp.getResult(),
-                                     expectedWiResultTyOrFailure.value()));
+    rewriter.replaceOp(op, castValueTo(rewriter, newOp.getResult(),
+                                       expectedWiResultTyOrFailure.value()));
     return success();
   }
 };
@@ -332,140 +325,56 @@ struct XeGPUSgToWiDistributeExperimentalPass
 
 void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
 
-  // llvm::errs() << "Running XeGPUSgToWiDistributeExperimentalPass\n";
   // Verify if all XeGPU anchor ops and vector ops have result layouts.
   Operation *root = getOperation();
-  // if (failed(verifyLayouts(root))) {
-  //   LLVM_DEBUG(DBGS() << "XeGPUSgToWiDistributeExperimentalPass: layout "
-  //                        "verification failed\n");
-  //   signalPassFailure();
-  //   return;
-  // }
-  // Collect existing UnrealizedConversionCastOps.
+  if (failed(verifyLayouts(root))) {
+    LLVM_DEBUG(DBGS() << "XeGPUSgToWiDistributeExperimentalPass: layout "
+                         "verification failed\n");
+    signalPassFailure();
+    return;
+  }
+  // Collect existing UnrealizedConversionCastOps. These must be preserved.
   llvm::SmallSetVector<UnrealizedConversionCastOp, 8> existingCasts;
-  // root->walk(
-  //     [&](UnrealizedConversionCastOp castOp) { existingCasts.insert(castOp);
-  //     });
-  // Perform a structural type conversion. This will insert
-  // UnrealizedConversionCastOps for type materializations.
-  // auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
-  //                            mlir::ValueRange inputs,
-  //                            mlir::Location loc) -> mlir::Value {
-  //   // If single input and both input and output types are vector types,
-  //   // and they have same number of elements, insert a shape cast.
-  //   // if (inputs.size() == 1) {
-  //   //   auto inputTy = dyn_cast<VectorType>(inputs[0].getType());
-  //   //   auto outputTy = dyn_cast<VectorType>(type);
-  //   //   if (inputTy && outputTy &&
-  //   //       inputTy.getNumElements() == outputTy.getNumElements()) {
-  //   //     return vector::ShapeCastOp::create(builder, loc, outputTy,
-  //   //     inputs[0])
-  //   //         .getResult();
-  //   //   }
-  //   // }
-  //   UnrealizedConversionCastOp castOp =
-  //       UnrealizedConversionCastOp::create(builder, loc, type, inputs);
-
-  //   // // If inputs is a single vector type and type is also a vector, then
-  //   // layout
-  //   // // must be propagated.
-  //   // if (inputs.size() == 1 && isa<VectorType>(inputs[0].getType()) &&
-  //   //     isa<VectorType>(type)) {
-  //   //   auto layout = xegpu::getDistributeLayoutAttr(inputs[0]);
-  //   //   if (layout)
-  //   //     xegpu::setDistributeLayoutAttr(castOp->getOpResult(0), layout);
-  //   // }
-
-  //   return castOp.getResult(0);
-  // };
-  // {
-  //   ConversionTarget target(getContext());
-  //   TypeConverter typeConverter;
-  //   RewritePatternSet patterns(&getContext());
-  //   typeConverter.addSourceMaterialization(materializeCast);
-  //   typeConverter.addTargetMaterialization(materializeCast);
-  //   xegpu::populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
-  //   scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
-  //                                                        patterns, target);
-  //   target.addLegalOp<UnrealizedConversionCastOp>();
-  //   (void)applyPartialConversion(root, target, std::move(patterns));
-  // }
-  // // Apply the XeGPU subgroup to workitem distribution patterns.
-  // {
-  //   ConversionTarget target(getContext());
-  //   TypeConverter typeConverter;
-  //   typeConverter.addTargetMaterialization(materializeCast);
-  //   typeConverter.addSourceMaterialization(materializeCast);
-  //   RewritePatternSet patterns(&getContext());
-  //   xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
-  //       typeConverter, patterns, target);
-  //   target.addLegalOp<UnrealizedConversionCastOp>();
-  //   (void)applyPartialConversion(root, target, std::move(patterns));
-  // }
-  // UnrealizedConversionCastOp is legal if it existed before.
-  // target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
-  //     [&](UnrealizedConversionCastOp op) {
-  //       return existingCasts.contains(op);
-  //     });
-  // Define a pattern for handling UnrealizedConversionCastOps that were
-  // newly created during the structural type conversion.
-  class ResolveUnrealizedCastPattern
-      : public OpConversionPattern<UnrealizedConversionCastOp> {
-  public:
-    // Pass existsingCasts in the constructor to identify existing casts.
-    ResolveUnrealizedCastPattern(
-        TypeConverter &typeConverter,
-        llvm::SmallSetVector<UnrealizedConversionCastOp, 8> &existingCasts,
-        MLIRContext &ctx)
-        : OpConversionPattern<UnrealizedConversionCastOp>(typeConverter, &ctx),
-          existingCasts(existingCasts) {}
-    // using
-    // OpConversionPattern<UnrealizedConversionCastOp>::OpConversionPattern;
-    LogicalResult
-    matchAndRewrite(UnrealizedConversionCastOp op, OpAdaptor adaptor,
-                    ConversionPatternRewriter &rewriter) const override {
-      // If this op existed before, nothing to do.
-      if (existingCasts.contains(op))
-        return failure();
-      // number of inputs and outputs must be 1.
-      if (op.getNumOperands() != 1 || op.getNumResults() != 1)
-        return failure();
-      // Both input and output types must be vector types.
-      auto singleInput = op.getInputs()[0];
-      auto inputTy = dyn_cast<VectorType>(singleInput.getType());
-      auto outputTy = dyn_cast<VectorType>(op.getResult(0).getType());
-      llvm::errs() << "input ty : " << inputTy << " output ty: " << outputTy
-                   << "\n";
-      if (!inputTy || !outputTy)
-        return failure();
-
-      // Check if the defining op of the input is also an
-      // UnrealizedConversionCastOp.
-      auto definingOp = singleInput.getDefiningOp<UnrealizedConversionCastOp>();
-      if (!definingOp)
-        return rewriter.notifyMatchFailure(
-            op, "input defining op is not an UnrealizedConversionCastOp");
-      auto inputOfDefiningOp = definingOp.getInputs()[0];
-      // If the input of the defining op and output type are both vector types
-      // have same number of elements, insert a shape cast.
-      auto inputOfDefiningOpTy =
-          dyn_cast<VectorType>(inputOfDefiningOp.getType());
-      if (inputOfDefiningOpTy && outputTy &&
-          inputOfDefiningOpTy.getNumElements() == outputTy.getNumElements()) {
-        auto shapeCast = vector::ShapeCastOp::create(
-            rewriter, op.getLoc(), outputTy, inputOfDefiningOp);
-        rewriter.replaceOp(op, shapeCast.getResult());
-        return success();
-      }
-
-      return rewriter.notifyMatchFailure(
-          op, "unable to resolve unrealized conversion cast");
-    }
-
-  private:
-    llvm::SmallSetVector<UnrealizedConversionCastOp, 8> &existingCasts;
+  root->walk(
+      [&](UnrealizedConversionCastOp castOp) { existingCasts.insert(castOp); });
+  // Perform a structural type conversion to convert structural ops to have WI
+  // types. This will insert UnrealizedConversionCastOps to make the IR
+  // valid.
+  auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
+                             mlir::ValueRange inputs,
+                             mlir::Location loc) -> mlir::Value {
+    UnrealizedConversionCastOp castOp =
+        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
+    return castOp.getResult(0);
   };
-  // Finally, remove unnecessary UnrealizedConversionCastOps.
+  {
+    ConversionTarget target(getContext());
+    TypeConverter typeConverter;
+    RewritePatternSet patterns(&getContext());
+    typeConverter.addSourceMaterialization(materializeCast);
+    typeConverter.addTargetMaterialization(materializeCast);
+    xegpu::populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
+    scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
+                                                         patterns, target);
+    target.addLegalOp<UnrealizedConversionCastOp>();
+    (void)applyPartialConversion(root, target, std::move(patterns));
+  }
+  // Apply the XeGPU subgroup to workitem distribution patterns.
+  {
+    ConversionTarget target(getContext());
+    TypeConverter typeConverter;
+    typeConverter.addTargetMaterialization(materializeCast);
+    typeConverter.addSourceMaterialization(materializeCast);
+    RewritePatternSet patterns(&getContext());
+    xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+        typeConverter, patterns, target);
+    target.addLegalOp<UnrealizedConversionCastOp>();
+    (void)applyPartialConversion(root, target, std::move(patterns));
+  }
+  // Structural type conversion can generate some redundant
+  // UnrealizedConversionCastOps to materialize the SG type from type converted
+  // WI type. These are redundant at this point and can be eliminated by
+  // inserting shape casts instead.
   OpBuilder builder(root);
   root->walk([&](UnrealizedConversionCastOp op) {
     // If this op existed before, nothing to do.
