@@ -1191,12 +1191,18 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto CXXMethod = dyn_cast<CXXMethodDecl>(D)) {
       if (!isa<CXXConstructorDecl>(CXXMethod) &&
           !isa<CXXDestructorDecl>(CXXMethod) &&
-          !isa<CXXConversionDecl>(CXXMethod) &&
-          !CXXMethod->isOverloadedOperator()) {
+          !isa<CXXConversionDecl>(CXXMethod)) {
         for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
           if (auto Context = UnwindTagContext(TagContext, APINotes)) {
-            auto Info =
-                Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
+            std::string MethodName;
+            if (CXXMethod->isOverloadedOperator())
+              MethodName =
+                  std::string("operator") +
+                  getOperatorSpelling(CXXMethod->getOverloadedOperator());
+            else
+              MethodName = CXXMethod->getName();
+
+            auto Info = Reader->lookupCXXMethod(Context->id, MethodName);
             ProcessVersionedAPINotes(*this, CXXMethod, Info);
           }
         }

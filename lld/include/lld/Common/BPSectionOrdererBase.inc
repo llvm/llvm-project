@@ -224,7 +224,7 @@ auto BPOrderer<D>::computeOrder(
   SmallVector<unsigned> sectionIdxsForFunctionCompression,
       sectionIdxsForDataCompression;
   for (unsigned sectionIdx = 0; sectionIdx < sections.size(); sectionIdx++) {
-    if (startupSectionIdxUNs.count(sectionIdx))
+    if (startupSectionIdxUNs.contains(sectionIdx))
       continue;
     const auto *isec = sections[sectionIdx];
     if (D::isCodeSection(*isec)) {

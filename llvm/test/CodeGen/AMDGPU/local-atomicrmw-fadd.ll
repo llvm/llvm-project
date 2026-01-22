@@ -1572,7 +1572,6 @@ define half @local_atomic_fadd_ret_f16(ptr addrspace(3) %ptr) nounwind {
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, v0, v3
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-LABEL: local_atomic_fadd_ret_f16:
@@ -1606,7 +1605,6 @@ define half @local_atomic_fadd_ret_f16(ptr addrspace(3) %ptr) nounwind {
 ; GFX6-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v0, v0, v3
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw fadd ptr addrspace(3) %ptr, half 4.0 seq_cst
   ret half %result
@@ -1967,7 +1965,6 @@ define half @local_atomic_fadd_ret_f16__offset(ptr addrspace(3) %ptr) nounwind {
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, v1, v3
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-LABEL: local_atomic_fadd_ret_f16__offset:
@@ -2002,7 +1999,6 @@ define half @local_atomic_fadd_ret_f16__offset(ptr addrspace(3) %ptr) nounwind {
 ; GFX6-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v0, v1, v3
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr half, ptr addrspace(3) %ptr, i32 32767
   %result = atomicrmw fadd ptr addrspace(3) %gep, half 4.0 seq_cst
@@ -3021,34 +3017,33 @@ define half @local_atomic_fadd_ret_f16__offset__align4(ptr addrspace(3) %ptr) no
 ; GFX7-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v1
+; GFX7-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-LABEL: local_atomic_fadd_ret_f16__offset__align4:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_add_i32_e32 v0, vcc, 0xfffe, v0
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 0xfffe, v0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
-; GFX6-NEXT:    ds_read_b32 v1, v0
+; GFX6-NEXT:    ds_read_b32 v0, v1
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX6-NEXT:  .LBB12_1: ; %atomicrmw.start
 ; GFX6-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    v_mov_b32_e32 v2, v1
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v2
+; GFX6-NEXT:    v_mov_b32_e32 v2, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v2
 ; GFX6-NEXT:    v_and_b32_e32 v3, 0xffff0000, v2
-; GFX6-NEXT:    v_add_f32_e32 v1, 4.0, v1
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX6-NEXT:    v_or_b32_e32 v1, v3, v1
-; GFX6-NEXT:    ds_cmpst_rtn_b32 v1, v0, v2, v1
+; GFX6-NEXT:    v_add_f32_e32 v0, 4.0, v0
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-NEXT:    v_or_b32_e32 v0, v3, v0
+; GFX6-NEXT:    ds_cmpst_rtn_b32 v0, v1, v2, v0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; GFX6-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GFX6-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX6-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr half, ptr addrspace(3) %ptr, i32 32767
   %result = atomicrmw fadd ptr addrspace(3) %gep, half 4.0 seq_cst, align 4
@@ -3754,7 +3749,6 @@ define bfloat @local_atomic_fadd_ret_bf16(ptr addrspace(3) %ptr) nounwind {
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, v0, v3
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-LABEL: local_atomic_fadd_ret_bf16:
@@ -3788,7 +3782,6 @@ define bfloat @local_atomic_fadd_ret_bf16(ptr addrspace(3) %ptr) nounwind {
 ; GFX6-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v0, v0, v3
-; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw fadd ptr addrspace(3) %ptr, bfloat 4.0 seq_cst
   ret bfloat %result
@@ -4220,7 +4213,6 @@ define bfloat @local_atomic_fadd_ret_bf16__offset(ptr addrspace(3) %ptr) nounwin
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, v1, v3
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-LABEL: local_atomic_fadd_ret_bf16__offset:
@@ -4255,7 +4247,6 @@ define bfloat @local_atomic_fadd_ret_bf16__offset(ptr addrspace(3) %ptr) nounwin
 ; GFX6-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v0, v1, v3
-; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr bfloat, ptr addrspace(3) %ptr, i32 32767
   %result = atomicrmw fadd ptr addrspace(3) %gep, bfloat 4.0 seq_cst
@@ -5492,34 +5483,33 @@ define bfloat @local_atomic_fadd_ret_bf16__offset__align4(ptr addrspace(3) %ptr)
 ; GFX7-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v1
+; GFX7-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-LABEL: local_atomic_fadd_ret_bf16__offset__align4:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_add_i32_e32 v0, vcc, 0xfffe, v0
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 0xfffe, v0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
-; GFX6-NEXT:    ds_read_b32 v1, v0
+; GFX6-NEXT:    ds_read_b32 v0, v1
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX6-NEXT:  .LBB18_1: ; %atomicrmw.start
 ; GFX6-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    v_mov_b32_e32 v2, v1
-; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
-; GFX6-NEXT:    v_add_f32_e32 v1, 4.0, v1
+; GFX6-NEXT:    v_mov_b32_e32 v2, v0
+; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
+; GFX6-NEXT:    v_add_f32_e32 v0, 4.0, v0
 ; GFX6-NEXT:    v_and_b32_e32 v3, 0xffff0000, v2
-; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX6-NEXT:    v_or_b32_e32 v1, v3, v1
-; GFX6-NEXT:    ds_cmpst_rtn_b32 v1, v0, v2, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-NEXT:    v_or_b32_e32 v0, v3, v0
+; GFX6-NEXT:    ds_cmpst_rtn_b32 v0, v1, v2, v0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; GFX6-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GFX6-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX6-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr bfloat, ptr addrspace(3) %ptr, i32 32767
   %result = atomicrmw fadd ptr addrspace(3) %gep, bfloat 4.0 seq_cst, align 4

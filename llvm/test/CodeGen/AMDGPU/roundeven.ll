@@ -380,17 +380,17 @@ define half @v_roundeven_f16(half %x) {
 ; SDAG_GFX6-LABEL: v_roundeven_f16:
 ; SDAG_GFX6:       ; %bb.0:
 ; SDAG_GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG_GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG_GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG_GFX6-NEXT:    v_rndne_f32_e32 v0, v0
+; SDAG_GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG_GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG_GFX7-LABEL: v_roundeven_f16:
 ; SDAG_GFX7:       ; %bb.0:
 ; SDAG_GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG_GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG_GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG_GFX7-NEXT:    v_rndne_f32_e32 v0, v0
+; SDAG_GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG_GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG_GFX8-LABEL: v_roundeven_f16:

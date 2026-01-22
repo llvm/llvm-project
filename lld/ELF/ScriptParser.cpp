@@ -541,9 +541,9 @@ void ScriptParser::readRegionAlias() {
   StringRef name = readName();
   expect(")");
 
-  if (ctx.script->memoryRegions.count(alias))
+  if (ctx.script->memoryRegions.contains(alias))
     setError("redefinition of memory region '" + alias + "'");
-  if (!ctx.script->memoryRegions.count(name))
+  if (!ctx.script->memoryRegions.contains(name))
     setError("memory region '" + name + "' is not defined");
   ctx.script->memoryRegions.insert({alias, ctx.script->memoryRegions[name]});
 }
@@ -1590,7 +1590,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (tok == "LENGTH") {
     StringRef name = readParenName();
-    if (ctx.script->memoryRegions.count(name) == 0) {
+    if (!ctx.script->memoryRegions.contains(name)) {
       setError("memory region not defined: " + name);
       return [] { return 0; };
     }
@@ -1626,7 +1626,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (tok == "ORIGIN") {
     StringRef name = readParenName();
-    if (ctx.script->memoryRegions.count(name) == 0) {
+    if (!ctx.script->memoryRegions.contains(name)) {
       setError("memory region not defined: " + name);
       return [] { return 0; };
     }

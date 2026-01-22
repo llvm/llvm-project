@@ -1121,6 +1121,9 @@ MVT SITargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     return Size == 32 ? ScalarVT.getSimpleVT() : MVT::i32;
   }
 
+  if (!Subtarget->has16BitInsts() && VT.getSizeInBits() == 16)
+    return MVT::i32;
+
   if (VT.getSizeInBits() > 32)
     return MVT::i32;
 

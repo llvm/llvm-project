@@ -27,24 +27,14 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16,GFX12-GISEL,GFX12-FAKE16-GISEL %s
 
 define half @v_maximumnum_f16(half %x, half %y) {
-; GFX7-SDAG-LABEL: v_maximumnum_f16:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: v_maximumnum_f16:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: v_maximumnum_f16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: v_maximumnum_f16:
 ; GFX8-SDAG:       ; %bb.0:
@@ -189,11 +179,10 @@ define half @v_maximumnum_f16_nnan(half %x, half %y) {
 ; GFX7-SDAG-LABEL: v_maximumnum_f16_nnan:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: v_maximumnum_f16_nnan:
@@ -259,21 +248,13 @@ define half @v_maximumnum_f16_nnan(half %x, half %y) {
 }
 
 define half @v_maximumnum_f16_1.0(half %x) {
-; GFX7-SDAG-LABEL: v_maximumnum_f16_1.0:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, 1.0, v0
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: v_maximumnum_f16_1.0:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_max_f32_e32 v0, 1.0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: v_maximumnum_f16_1.0:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_max_f32_e32 v0, 1.0, v0
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_maximumnum_f16_1.0:
 ; GFX8:       ; %bb.0:
@@ -924,24 +905,14 @@ define double @v_maximumnum_f64_1.0(double %x) {
 }
 
 define half @v_maximumnum_f16_s_v(half inreg %x, half %y) {
-; GFX7-SDAG-LABEL: v_maximumnum_f16_s_v:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, s16
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v1, v0
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: v_maximumnum_f16_s_v:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, s16
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_max_f32_e32 v0, v1, v0
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: v_maximumnum_f16_s_v:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, s16
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_max_f32_e32 v0, v1, v0
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: v_maximumnum_f16_s_v:
 ; GFX8-SDAG:       ; %bb.0:
@@ -1099,24 +1070,14 @@ define half @v_maximumnum_f16_s_v(half inreg %x, half %y) {
 }
 
 define half @v_maximumnum_f16_v_s(half %x, half inreg %y) {
-; GFX7-SDAG-LABEL: v_maximumnum_f16_v_s:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, s16
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: v_maximumnum_f16_v_s:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, s16
-; GFX7-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: v_maximumnum_f16_v_s:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, s16
+; GFX7-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: v_maximumnum_f16_v_s:
 ; GFX8-SDAG:       ; %bb.0:
@@ -1274,24 +1235,14 @@ define half @v_maximumnum_f16_v_s(half %x, half inreg %y) {
 }
 
 define half @v_maximumnum_f16_s_s(half inreg %x, half inreg %y) {
-; GFX7-SDAG-LABEL: v_maximumnum_f16_s_s:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, s16
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, s17
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: v_maximumnum_f16_s_s:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, s16
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, s17
-; GFX7-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: v_maximumnum_f16_s_s:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, s16
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, s17
+; GFX7-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: v_maximumnum_f16_s_s:
 ; GFX8-SDAG:       ; %bb.0:
@@ -2612,24 +2563,14 @@ define float @v_maximumnum_f32_fneg(float %x, float %y) {
 }
 
 define half @v_maximumnum_f16_fabs_rhs(half %x, half %y) {
-; GFX7-SDAG-LABEL: v_maximumnum_f16_fabs_rhs:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
-; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: v_maximumnum_f16_fabs_rhs:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
-; GFX7-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: v_maximumnum_f16_fabs_rhs:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
+; GFX7-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: v_maximumnum_f16_fabs_rhs:
 ; GFX8-SDAG:       ; %bb.0:
@@ -2775,11 +2716,11 @@ define half @v_maximumnum_f16_fneg_fabs_rhs(half %x, half %y) {
 ; GFX7-SDAG-LABEL: v_maximumnum_f16_fneg_fabs_rhs:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX7-SDAG-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v1, -|v1|
 ; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: v_maximumnum_f16_fneg_fabs_rhs:
@@ -2933,24 +2874,14 @@ define half @v_maximumnum_f16_fneg_fabs_rhs(half %x, half %y) {
 }
 
 define half @v_maximumnum_f16_fabs(half %x, half %y) {
-; GFX7-SDAG-LABEL: v_maximumnum_f16_fabs:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
-; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: v_maximumnum_f16_fabs:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
-; GFX7-GISEL-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
-; GFX7-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: v_maximumnum_f16_fabs:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
+; GFX7-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
+; GFX7-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: v_maximumnum_f16_fabs:
 ; GFX8-SDAG:       ; %bb.0:
@@ -3097,11 +3028,12 @@ define half @v_maximumnum_f16_fneg(half %x, half %y) {
 ; GFX7-SDAG-LABEL: v_maximumnum_f16_fneg:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e64 v0, -v0
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e64 v1, -v1
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-SDAG-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX7-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v0, -v0
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e64 v1, -v1
 ; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: v_maximumnum_f16_fneg:
@@ -8222,11 +8154,10 @@ define half @v_maximumnum_f16_no_ieee(half %x, half %y) #0 {
 ; GFX7-SDAG-LABEL: v_maximumnum_f16_no_ieee:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: v_maximumnum_f16_no_ieee:
@@ -8327,11 +8258,10 @@ define half @v_maximumnum_f16_nan_no_ieee(half %x, half %y) #0 {
 ; GFX7-SDAG-LABEL: v_maximumnum_f16_nan_no_ieee:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-GISEL-LABEL: v_maximumnum_f16_nan_no_ieee:

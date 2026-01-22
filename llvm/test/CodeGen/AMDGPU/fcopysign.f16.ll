@@ -16,11 +16,10 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 define amdgpu_ps i16 @s_copysign_f16(half inreg %mag, half inreg %sign) {
 ; SI-LABEL: s_copysign_f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s1
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, s0
 ; SI-NEXT:    s_brev_b32 s0, -2
-; SI-NEXT:    v_mov_b32_e32 v1, s1
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_bfi_b32 v0, s0, v0, v1
+; SI-NEXT:    v_bfi_b32 v0, s0, v1, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-NEXT:    ; return to shader part epilog
@@ -67,9 +66,7 @@ define amdgpu_ps i16 @s_copysign_f16(half inreg %mag, half inreg %sign) {
 define amdgpu_ps i16 @s_test_copysign_f16_0(half inreg %mag) {
 ; SI-LABEL: s_test_copysign_f16_0:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
-; SI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    s_and_b32 s0, s0, 0x7fff
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_test_copysign_f16_0:
@@ -94,9 +91,7 @@ define amdgpu_ps i16 @s_test_copysign_f16_0(half inreg %mag) {
 define amdgpu_ps i16 @s_test_copysign_f16_1(half inreg %mag) {
 ; SI-LABEL: s_test_copysign_f16_1:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
-; SI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    s_and_b32 s0, s0, 0x7fff
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_test_copysign_f16_1:
@@ -121,9 +116,7 @@ define amdgpu_ps i16 @s_test_copysign_f16_1(half inreg %mag) {
 define amdgpu_ps i16 @s_test_copysign_f16_10.0(half inreg %mag) {
 ; SI-LABEL: s_test_copysign_f16_10.0:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
-; SI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    s_and_b32 s0, s0, 0x7fff
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_test_copysign_f16_10.0:
@@ -148,9 +141,8 @@ define amdgpu_ps i16 @s_test_copysign_f16_10.0(half inreg %mag) {
 define amdgpu_ps i16 @s_test_copysign_f16_neg1(half inreg %mag) {
 ; SI-LABEL: s_test_copysign_f16_neg1:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
-; SI-NEXT:    v_or_b32_e32 v0, 0x8000, v0
-; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    s_and_b32 s0, s0, 0x7fff
+; SI-NEXT:    s_bitset1_b32 s0, 15
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_test_copysign_f16_neg1:
@@ -175,9 +167,8 @@ define amdgpu_ps i16 @s_test_copysign_f16_neg1(half inreg %mag) {
 define amdgpu_ps i16 @s_test_copysign_f16_neg10(half inreg %mag) {
 ; SI-LABEL: s_test_copysign_f16_neg10:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
-; SI-NEXT:    v_or_b32_e32 v0, 0x8000, v0
-; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    s_and_b32 s0, s0, 0x7fff
+; SI-NEXT:    s_bitset1_b32 s0, 15
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_test_copysign_f16_neg10:
@@ -202,9 +193,7 @@ define amdgpu_ps i16 @s_test_copysign_f16_neg10(half inreg %mag) {
 define amdgpu_ps i16 @s_test_copysign_f16_0_mag(half inreg %sign) {
 ; SI-LABEL: s_test_copysign_f16_0_mag:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
-; SI-NEXT:    v_and_b32_e32 v0, 0x8000, v0
-; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    s_and_b32 s0, s0, 0x8000
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_test_copysign_f16_0_mag:
@@ -230,10 +219,8 @@ define amdgpu_ps i16 @s_test_copysign_f16_0_mag(half inreg %sign) {
 define amdgpu_ps i16 @s_test_copysign_f16_1_mag(half inreg %sign) {
 ; SI-LABEL: s_test_copysign_f16_1_mag:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
-; SI-NEXT:    v_and_b32_e32 v0, 0x8000, v0
-; SI-NEXT:    v_or_b32_e32 v0, 0x3c00, v0
-; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    s_and_b32 s0, s0, 0xffff8000
+; SI-NEXT:    s_or_b32 s0, s0, 0x3c00
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_test_copysign_f16_1_mag:
@@ -263,9 +250,9 @@ define i16 @s_test_copysign_f16_10_mag(half inreg %sign) {
 ; SI-LABEL: s_test_copysign_f16_10_mag:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s16
-; SI-NEXT:    v_and_b32_e32 v0, 0x8000, v0
-; SI-NEXT:    v_or_b32_e32 v0, 0x4900, v0
+; SI-NEXT:    s_and_b32 s4, s16, 0xffff8000
+; SI-NEXT:    s_or_b32 s4, s4, 0x4900
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: s_test_copysign_f16_10_mag:
@@ -300,10 +287,8 @@ define i16 @s_test_copysign_f16_10_mag(half inreg %sign) {
 define amdgpu_ps i16 @s_test_copysign_f16_neg1_mag(half inreg %sign) {
 ; SI-LABEL: s_test_copysign_f16_neg1_mag:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
-; SI-NEXT:    v_and_b32_e32 v0, 0x8000, v0
-; SI-NEXT:    v_or_b32_e32 v0, 0x3c00, v0
-; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    s_and_b32 s0, s0, 0xffff8000
+; SI-NEXT:    s_or_b32 s0, s0, 0x3c00
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_test_copysign_f16_neg1_mag:
@@ -332,10 +317,8 @@ define amdgpu_ps i16 @s_test_copysign_f16_neg1_mag(half inreg %sign) {
 define amdgpu_ps i16 @s_test_copysign_f16_neg10_mag(half inreg %sign) {
 ; SI-LABEL: s_test_copysign_f16_neg10_mag:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
-; SI-NEXT:    v_and_b32_e32 v0, 0x8000, v0
-; SI-NEXT:    v_or_b32_e32 v0, 0x4900, v0
-; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    s_and_b32 s0, s0, 0xffff8000
+; SI-NEXT:    s_or_b32 s0, s0, 0x4900
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_test_copysign_f16_neg10_mag:
@@ -365,10 +348,11 @@ define half @v_copysign_f16(half %mag, half %sign) {
 ; SI-LABEL: v_copysign_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    s_brev_b32 s4, -2
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    s_brev_b32 s4, -2
 ; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_copysign_f16:
@@ -398,8 +382,7 @@ define half @v_test_copysign_f16_0(half %mag) {
 ; SI-LABEL: v_test_copysign_f16_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
+; SI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_test_copysign_f16_0:
@@ -433,8 +416,7 @@ define half @v_test_copysign_f16_1(half %mag) {
 ; SI-LABEL: v_test_copysign_f16_1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
+; SI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_test_copysign_f16_1:
@@ -468,8 +450,7 @@ define half @v_test_copysign_f16_10(half %mag) {
 ; SI-LABEL: v_test_copysign_f16_10:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
+; SI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_test_copysign_f16_10:
@@ -503,8 +484,8 @@ define half @v_test_copysign_f16_neg1(half %mag) {
 ; SI-LABEL: v_test_copysign_f16_neg1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e64 v0, -|v0|
+; SI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; SI-NEXT:    v_or_b32_e32 v0, 0x8000, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_test_copysign_f16_neg1:
@@ -538,8 +519,8 @@ define half @v_test_copysign_f16_neg10(half %mag) {
 ; SI-LABEL: v_test_copysign_f16_neg10:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e64 v0, -|v0|
+; SI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; SI-NEXT:    v_or_b32_e32 v0, 0x8000, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_test_copysign_f16_neg10:
@@ -573,6 +554,7 @@ define float @v_copysign_out_f32_mag_f16_sign_f32(half %mag, float %sign) {
 ; SI-LABEL: v_copysign_out_f32_mag_f16_sign_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_brev_b32 s4, -2
 ; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -617,8 +599,9 @@ define double @v_copysign_out_f64_mag_f16_sign_f64(half %mag, double %sign) {
 ; SI-LABEL: v_copysign_out_f64_mag_f16_sign_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_brev_b32 s4, -2
+; SI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
 ; SI-NEXT:    v_bfi_b32 v1, s4, v1, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -666,6 +649,7 @@ define float @v_copysign_out_f32_mag_f32_sign_f16(float %mag, half %sign) {
 ; SI-LABEL: v_copysign_out_f32_mag_f32_sign_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    s_brev_b32 s4, -2
 ; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -710,6 +694,7 @@ define double @v_copysign_out_f64_mag_f64_sign_f16(double %mag, half %sign) {
 ; SI-LABEL: v_copysign_out_f64_mag_f64_sign_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SI-NEXT:    s_brev_b32 s4, -2
 ; SI-NEXT:    v_bfi_b32 v1, s4, v1, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -754,10 +739,10 @@ define half @v_copysign_out_f16_mag_f16_sign_f32(half %mag, float %sign) {
 ; SI-LABEL: v_copysign_out_f16_mag_f16_sign_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    s_brev_b32 s4, -2
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    s_brev_b32 s4, -2
 ; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_copysign_out_f16_mag_f16_sign_f32:
@@ -792,10 +777,10 @@ define half @v_copysign_out_f16_mag_f16_sign_f64(half %mag, double %sign) {
 ; SI-LABEL: v_copysign_out_f16_mag_f16_sign_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    s_brev_b32 s4, -2
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    s_brev_b32 s4, -2
 ; SI-NEXT:    v_bfi_b32 v0, s4, v0, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_copysign_out_f16_mag_f16_sign_f64:
@@ -831,9 +816,11 @@ define half @v_copysign_out_f16_mag_f32_sign_f16(float %mag, half %sign) {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    s_brev_b32 s4, -2
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_copysign_out_f16_mag_f32_sign_f16:
@@ -883,8 +870,9 @@ define half @v_copysign_out_f16_mag_f64_sign_f16(double %mag, half %sign) {
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffe, v3
 ; SI-NEXT:    v_bfe_u32 v4, v1, 20, 11
+; SI-NEXT:    s_movk_i32 s4, 0x3f1
 ; SI-NEXT:    v_or_b32_e32 v0, v3, v0
-; SI-NEXT:    v_sub_i32_e32 v5, vcc, 0x3f1, v4
+; SI-NEXT:    v_sub_i32_e32 v5, vcc, s4, v4
 ; SI-NEXT:    v_or_b32_e32 v3, 0x1000, v0
 ; SI-NEXT:    v_med3_i32 v5, v5, 0, 13
 ; SI-NEXT:    v_lshrrev_b32_e32 v6, v5, v3
@@ -918,9 +906,11 @@ define half @v_copysign_out_f16_mag_f64_sign_f16(double %mag, half %sign) {
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_brev_b32 s4, -2
 ; SI-NEXT:    v_bfi_b32 v0, s4, v0, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_copysign_out_f16_mag_f64_sign_f16:
@@ -1115,51 +1105,51 @@ define half @v_copysign_out_f16_mag_f64_sign_f16(double %mag, half %sign) {
 define amdgpu_ps i16 @s_copysign_out_f16_mag_f64_sign_f16(double inreg %mag, half inreg %sign) {
 ; SI-LABEL: s_copysign_out_f16_mag_f64_sign_f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_and_b32 s3, s1, 0x1ff
-; SI-NEXT:    s_or_b32 s0, s3, s0
-; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s2
+; SI-NEXT:    s_and_b32 s2, s1, 0x1ff
+; SI-NEXT:    s_or_b32 s0, s2, s0
+; SI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; SI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
 ; SI-NEXT:    s_lshr_b32 s0, s1, 8
-; SI-NEXT:    s_bfe_u32 s4, s1, 0xb0014
+; SI-NEXT:    s_bfe_u32 s3, s1, 0xb0014
 ; SI-NEXT:    s_and_b32 s0, s0, 0xffe
-; SI-NEXT:    v_readfirstlane_b32 s3, v0
-; SI-NEXT:    s_sub_i32 s5, 0x3f1, s4
-; SI-NEXT:    s_or_b32 s0, s0, s3
-; SI-NEXT:    v_med3_i32 v0, s5, 0, 13
-; SI-NEXT:    s_or_b32 s3, s0, 0x1000
-; SI-NEXT:    v_readfirstlane_b32 s5, v0
-; SI-NEXT:    s_lshr_b32 s6, s3, s5
-; SI-NEXT:    s_lshl_b32 s5, s6, s5
-; SI-NEXT:    s_cmp_lg_u32 s5, s3
-; SI-NEXT:    s_cselect_b32 s3, 1, 0
-; SI-NEXT:    s_addk_i32 s4, 0xfc10
-; SI-NEXT:    s_lshl_b32 s5, s4, 12
-; SI-NEXT:    s_or_b32 s3, s6, s3
-; SI-NEXT:    s_or_b32 s5, s0, s5
-; SI-NEXT:    s_cmp_lt_i32 s4, 1
-; SI-NEXT:    s_cselect_b32 s3, s3, s5
-; SI-NEXT:    s_and_b32 s5, s3, 7
-; SI-NEXT:    s_cmp_gt_i32 s5, 5
-; SI-NEXT:    s_cselect_b32 s6, 1, 0
-; SI-NEXT:    s_cmp_eq_u32 s5, 3
+; SI-NEXT:    v_readfirstlane_b32 s2, v1
+; SI-NEXT:    s_sub_i32 s4, 0x3f1, s3
+; SI-NEXT:    s_or_b32 s0, s0, s2
+; SI-NEXT:    v_med3_i32 v1, s4, 0, 13
+; SI-NEXT:    s_or_b32 s2, s0, 0x1000
+; SI-NEXT:    v_readfirstlane_b32 s4, v1
+; SI-NEXT:    s_lshr_b32 s5, s2, s4
+; SI-NEXT:    s_lshl_b32 s4, s5, s4
+; SI-NEXT:    s_cmp_lg_u32 s4, s2
+; SI-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-NEXT:    s_addk_i32 s3, 0xfc10
+; SI-NEXT:    s_lshl_b32 s4, s3, 12
+; SI-NEXT:    s_or_b32 s2, s5, s2
+; SI-NEXT:    s_or_b32 s4, s0, s4
+; SI-NEXT:    s_cmp_lt_i32 s3, 1
+; SI-NEXT:    s_cselect_b32 s2, s2, s4
+; SI-NEXT:    s_and_b32 s4, s2, 7
+; SI-NEXT:    s_cmp_gt_i32 s4, 5
 ; SI-NEXT:    s_cselect_b32 s5, 1, 0
-; SI-NEXT:    s_or_b32 s5, s5, s6
-; SI-NEXT:    s_lshr_b32 s3, s3, 2
-; SI-NEXT:    s_add_i32 s3, s3, s5
-; SI-NEXT:    s_cmp_lt_i32 s4, 31
-; SI-NEXT:    s_cselect_b32 s3, s3, 0x7c00
+; SI-NEXT:    s_cmp_eq_u32 s4, 3
+; SI-NEXT:    s_cselect_b32 s4, 1, 0
+; SI-NEXT:    s_or_b32 s4, s4, s5
+; SI-NEXT:    s_lshr_b32 s2, s2, 2
+; SI-NEXT:    s_add_i32 s2, s2, s4
+; SI-NEXT:    s_cmp_lt_i32 s3, 31
+; SI-NEXT:    s_cselect_b32 s2, s2, 0x7c00
 ; SI-NEXT:    s_cmp_lg_u32 s0, 0
 ; SI-NEXT:    s_movk_i32 s0, 0x7e00
 ; SI-NEXT:    s_cselect_b32 s0, s0, 0x7c00
-; SI-NEXT:    s_cmpk_eq_i32 s4, 0x40f
-; SI-NEXT:    s_cselect_b32 s0, s0, s3
+; SI-NEXT:    s_cmpk_eq_i32 s3, 0x40f
+; SI-NEXT:    s_cselect_b32 s0, s0, s2
 ; SI-NEXT:    s_lshr_b32 s1, s1, 16
 ; SI-NEXT:    s_and_b32 s1, s1, 0x8000
 ; SI-NEXT:    s_or_b32 s0, s1, s0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, s0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, s0
 ; SI-NEXT:    s_brev_b32 s0, -2
-; SI-NEXT:    v_mov_b32_e32 v1, s2
-; SI-NEXT:    v_bfi_b32 v0, s0, v0, v1
+; SI-NEXT:    v_bfi_b32 v0, s0, v1, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-NEXT:    ; return to shader part epilog
@@ -2551,10 +2541,10 @@ define <32 x half> @v_copysign_v32f32(<32 x half> %mag, <32 x half> %sign) {
 define amdgpu_ps i32 @s_copysign_out_f32_mag_f16_sign_f32(half inreg %mag, float inreg %sign) {
 ; SI-LABEL: s_copysign_out_f32_mag_f16_sign_f32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_brev_b32 s2, -2
-; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s0
+; SI-NEXT:    s_brev_b32 s0, -2
 ; SI-NEXT:    v_mov_b32_e32 v1, s1
-; SI-NEXT:    v_bfi_b32 v0, s2, v0, v1
+; SI-NEXT:    v_bfi_b32 v0, s0, v0, v1
 ; SI-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-NEXT:    ; return to shader part epilog
 ;
@@ -2592,12 +2582,13 @@ define amdgpu_ps i32 @s_copysign_out_f32_mag_f16_sign_f32(half inreg %mag, float
 define amdgpu_ps <2 x i32> @s_copysign_out_f64_mag_f16_sign_f64(half inreg %mag, double inreg %sign) {
 ; SI-LABEL: s_copysign_out_f64_mag_f16_sign_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f64_f32_e32 v[0:1], s0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s0
 ; SI-NEXT:    s_brev_b32 s0, -2
 ; SI-NEXT:    v_mov_b32_e32 v2, s2
+; SI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
 ; SI-NEXT:    v_bfi_b32 v1, s0, v1, v2
-; SI-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_copysign_out_f64_mag_f16_sign_f64:
@@ -2641,10 +2632,10 @@ define amdgpu_ps <2 x i32> @s_copysign_out_f64_mag_f16_sign_f64(half inreg %mag,
 define amdgpu_ps i32 @s_copysign_out_f32_mag_f32_sign_f16(float inreg %mag, half inreg %sign) {
 ; SI-LABEL: s_copysign_out_f32_mag_f32_sign_f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_brev_b32 s2, -2
-; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    v_mov_b32_e32 v1, s1
-; SI-NEXT:    v_bfi_b32 v0, s2, v0, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s1
+; SI-NEXT:    s_brev_b32 s1, -2
+; SI-NEXT:    v_mov_b32_e32 v1, s0
+; SI-NEXT:    v_bfi_b32 v0, s1, v1, v0
 ; SI-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-NEXT:    ; return to shader part epilog
 ;
@@ -2690,10 +2681,10 @@ define amdgpu_ps i32 @s_copysign_out_f32_mag_f32_sign_f16(float inreg %mag, half
 define amdgpu_ps <2 x i32> @s_copysign_out_f64_mag_f64_sign_f16(double inreg %mag, half inreg %sign) {
 ; SI-LABEL: s_copysign_out_f64_mag_f64_sign_f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_brev_b32 s3, -2
-; SI-NEXT:    v_mov_b32_e32 v0, s1
-; SI-NEXT:    v_mov_b32_e32 v1, s2
-; SI-NEXT:    v_bfi_b32 v0, s3, v0, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s2
+; SI-NEXT:    s_brev_b32 s2, -2
+; SI-NEXT:    v_mov_b32_e32 v1, s1
+; SI-NEXT:    v_bfi_b32 v0, s2, v1, v0
 ; SI-NEXT:    v_readfirstlane_b32 s1, v0
 ; SI-NEXT:    ; return to shader part epilog
 ;
@@ -2739,10 +2730,9 @@ define amdgpu_ps <2 x i32> @s_copysign_out_f64_mag_f64_sign_f16(double inreg %ma
 define amdgpu_ps i16 @s_copysign_out_f16_mag_f16_sign_f32(half inreg %mag, float inreg %sign) {
 ; SI-LABEL: s_copysign_out_f16_mag_f16_sign_f32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s0
 ; SI-NEXT:    s_brev_b32 s0, -2
 ; SI-NEXT:    v_mov_b32_e32 v1, s1
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_bfi_b32 v0, s0, v0, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_readfirstlane_b32 s0, v0
@@ -2791,10 +2781,9 @@ define amdgpu_ps i16 @s_copysign_out_f16_mag_f16_sign_f32(half inreg %mag, float
 define amdgpu_ps i16 @s_copysign_out_f16_mag_f16_sign_f64(half inreg %mag, double inreg %sign) {
 ; SI-LABEL: s_copysign_out_f16_mag_f16_sign_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s0
 ; SI-NEXT:    s_brev_b32 s0, -2
 ; SI-NEXT:    v_mov_b32_e32 v1, s2
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_bfi_b32 v0, s0, v0, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_readfirstlane_b32 s0, v0
@@ -2844,8 +2833,8 @@ define amdgpu_ps i16 @s_copysign_out_f16_mag_f32_sign_f16(float inreg %mag, half
 ; SI-LABEL: s_copysign_out_f16_mag_f32_sign_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, s1
 ; SI-NEXT:    s_brev_b32 s0, -2
-; SI-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_bfi_b32 v0, s0, v0, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
@@ -6900,9 +6889,7 @@ define <4 x half> @v_copysign_out_v4f16_mag_v4f16_sign_v4f64(<4 x half> %mag, <4
 define amdgpu_ps i32 @s_copysign_f16_0_f16(half inreg %sign) {
 ; SI-LABEL: s_copysign_f16_0_f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, s0
-; SI-NEXT:    v_and_b32_e32 v0, 0x8000, v0
-; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    s_and_b32 s0, s0, 0x8000
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_copysign_f16_0_f16:
@@ -6929,7 +6916,7 @@ define half @v_copysign_f16_0_f16(half %sign) {
 ; SI-LABEL: v_copysign_f16_0_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0x8000, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_copysign_f16_0_f16:
@@ -7007,7 +6994,8 @@ define half @v_copysign_f16_0_f32(float %sign) {
 ; SI-LABEL: v_copysign_f16_0_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0x8000, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_copysign_f16_0_f32:
@@ -7242,7 +7230,45 @@ define half @v_copysign_f16_0_f64(double %sign) {
 ; SI-LABEL: v_copysign_f16_0_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_and_b32_e32 v0, 0x80000000, v1
+; SI-NEXT:    v_and_b32_e32 v2, 0x1ff, v1
+; SI-NEXT:    v_or_b32_e32 v0, v2, v0
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
+; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; SI-NEXT:    v_and_b32_e32 v2, 0xffe, v2
+; SI-NEXT:    v_bfe_u32 v3, v1, 20, 11
+; SI-NEXT:    v_or_b32_e32 v0, v2, v0
+; SI-NEXT:    v_sub_i32_e32 v4, vcc, 0x3f1, v3
+; SI-NEXT:    v_or_b32_e32 v2, 0x1000, v0
+; SI-NEXT:    v_med3_i32 v4, v4, 0, 13
+; SI-NEXT:    v_lshrrev_b32_e32 v5, v4, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v4, v4, v5
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, v4, v2
+; SI-NEXT:    s_movk_i32 s4, 0xfc10
+; SI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; SI-NEXT:    v_add_i32_e32 v3, vcc, s4, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v4, 12, v3
+; SI-NEXT:    v_or_b32_e32 v2, v5, v2
+; SI-NEXT:    v_or_b32_e32 v0, v0, v4
+; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v3
+; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; SI-NEXT:    v_and_b32_e32 v2, 7, v0
+; SI-NEXT:    v_cmp_lt_i32_e32 vcc, 5, v2
+; SI-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v2
+; SI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; SI-NEXT:    v_or_b32_e32 v2, v2, v4
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
+; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; SI-NEXT:    s_movk_i32 s4, 0x40f
+; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
+; SI-NEXT:    v_cmp_ne_u32_e64 s[4:5], s4, v3
+; SI-NEXT:    v_mov_b32_e32 v2, 0x7c00
+; SI-NEXT:    s_and_b64 vcc, s[4:5], vcc
+; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0x8000, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_copysign_f16_0_f64:
