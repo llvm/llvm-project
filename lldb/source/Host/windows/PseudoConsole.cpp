@@ -119,8 +119,10 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   m_conpty_output = hOutputRead;
   m_conpty_input = hInputWrite;
 
-  if (auto err = DrainInitSequences())
-    return err;
+  if (auto error = DrainInitSequences()) {
+    Log *log = GetLog(LLDBLog::Host);
+    LLDB_LOG(log, "error: {0}", error);
+  }
 
   return llvm::Error::success();
 }
@@ -151,9 +153,19 @@ llvm::Error PseudoConsole::DrainInitSequences() {
     return error;
 
   PROCESS_INFORMATION pi = {};
-  wchar_t cmdline[] = L"cmd.exe /c 'echo foo && exit'";
 
-  if (!CreateProcessW(/*lpApplicationName=*/NULL, cmdline,
+  wchar_t comspec[MAX_PATH];
+  DWORD comspecLen = GetEnvironmentVariableW(L"COMSPEC", comspec, MAX_PATH);
+  if (comspecLen == 0 || comspecLen >= MAX_PATH)
+    return llvm::createStringError(
+        std::error_code(GetLastError(), std::system_category()),
+        "Failed to get the 'COMSPEC' environment variable");
+
+  std::wstring cmdline_str = std::wstring(comspec) + L" /c 'echo foo && exit'";
+  std::vector<wchar_t> cmdline(cmdline_str.begin(), cmdline_str.end());
+  cmdline.push_back(L'\0');
+
+  if (!CreateProcessW(/*lpApplicationName=*/comspec, cmdline.data(),
                       /*lpProcessAttributes=*/NULL, /*lpThreadAttributes=*/NULL,
                       /*bInheritHandles=*/TRUE,
                       /*dwCreationFlags=*/EXTENDED_STARTUPINFO_PRESENT |
