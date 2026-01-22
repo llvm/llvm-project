@@ -156,6 +156,8 @@ public:
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
   virtual swift::remote::RemoteAbsolutePointer
   StripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) = 0;
+  virtual std::optional<swift::remote::RemoteExistential>
+  ReadMetadataAndValueOpaqueExistential(lldb::addr_t existential_address) = 0;
   struct AsyncTaskInfo {
     bool isChildTask = false;
     bool isFuture = false;
