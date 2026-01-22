@@ -1,13 +1,22 @@
 import getopt
-import os, subprocess
-import stat
+import os
 import pathlib
 import platform
 import shutil
+import stat
+import subprocess
 from io import StringIO
 
-from lit.ShellEnvironment import expand_glob_expressions, InternalShellError, kIsWindows, processRedirects, ShellCommandResult, updateEnv
 import lit.util
+from lit.ShellEnvironment import (
+    InternalShellError,
+    ShellCommandResult,
+    expand_glob_expressions,
+    kIsWindows,
+    processRedirects,
+    updateEnv,
+)
+
 
 def executeBuiltinCd(cmd, shenv):
     """executeBuiltinCd - Change the current directory."""
@@ -97,7 +106,7 @@ def executeBuiltinEcho(cmd, shenv):
     if write_newline:
         stdout.write("\n")
 
-    for (name, mode, f, path) in opened_files:
+    for name, mode, f, path in opened_files:
         f.close()
 
     output = "" if is_redirected else stdout.getvalue()
@@ -186,10 +195,17 @@ def executeBuiltinRm(cmd, cmd_shenv):
                     # NOTE: use ctypes to access `SHFileOperationsW` on Windows to
                     # use the NT style path to get access to long file paths which
                     # cannot be removed otherwise.
+                    from ctypes import (
+                        POINTER,
+                        Structure,
+                        WinError,
+                        addressof,
+                        byref,
+                        c_void_p,
+                        create_unicode_buffer,
+                        windll,
+                    )
                     from ctypes.wintypes import BOOL, HWND, LPCWSTR, UINT, WORD
-                    from ctypes import addressof, byref, c_void_p, create_unicode_buffer
-                    from ctypes import Structure
-                    from ctypes import windll, WinError, POINTER
 
                     class SHFILEOPSTRUCTW(Structure):
                         _fields_ = [

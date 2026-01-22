@@ -6,7 +6,6 @@ import tempfile
 import lit.util
 from lit.ShCommands import GlobItem
 
-
 kIsWindows = platform.system() == "Windows"
 
 # Don't use close_fds on Windows.
@@ -105,7 +104,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     # from a file are represented with a list [file, mode, file-object]
     # where file-object is initially None.
     redirects = [(0,), (1,), (2,)]
-    for (op, filename) in cmd.redirects:
+    for op, filename in cmd.redirects:
         if op == (">", 2):
             redirects[2] = [filename, "w", None]
         elif op == (">>", 2):
@@ -127,7 +126,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
 
     # Open file descriptors in a second pass.
     std_fds = [None, None, None]
-    for (index, r) in enumerate(redirects):
+    for index, r in enumerate(redirects):
         # Handle the sentinel values for defaults up front.
         if isinstance(r, tuple):
             if r == (0,):
@@ -148,7 +147,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
             std_fds[index] = fd
             continue
 
-        (filename, mode, fd) = r
+        filename, mode, fd = r
 
         # Check if we already have an open fd. This can happen if stdout and
         # stderr go to the same place.

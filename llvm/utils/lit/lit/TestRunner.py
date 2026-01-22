@@ -1,20 +1,37 @@
 from __future__ import absolute_import
-import os, signal, subprocess, sys
-import re
+
+import os
 import pathlib
+import re
 import shlex
+import signal
+import subprocess
+import sys
 import tempfile
 import threading
 import traceback
 from typing import Optional, Tuple
 
-from lit.ShCommands import Command
-from lit.ShellEnvironment import expand_glob, expand_glob_expressions, InternalShellError, kAvoidDevNull, kDevNull, kIsWindows, kUseCloseFDs, processRedirects, ShellEnvironment, ShellCommandResult, quote_windows_command, updateEnv
 import lit.InprocBuiltins as InprocBuiltins
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
 from lit.BooleanExpression import BooleanExpression
+from lit.ShCommands import Command
+from lit.ShellEnvironment import (
+    InternalShellError,
+    ShellCommandResult,
+    ShellEnvironment,
+    expand_glob,
+    expand_glob_expressions,
+    kAvoidDevNull,
+    kDevNull,
+    kIsWindows,
+    kUseCloseFDs,
+    processRedirects,
+    quote_windows_command,
+    updateEnv,
+)
 
 
 class ScriptFatal(Exception):
