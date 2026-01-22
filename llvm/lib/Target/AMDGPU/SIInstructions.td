@@ -950,7 +950,7 @@ def ADJCALLSTACKDOWN : SPseudoInstSI<
 
 // Get the offset of the base of the stack, skipping any reserved areas.
 def GET_STACK_BASE : SPseudoInstSI<(outs SGPR_32:$dst), (ins),
-  [(set SGPR_32:$dst, (int_amdgcn_get_stack_base))]> {
+  [(set p5:$dst, (AMDGPUsponentry))]> {
   let hasSideEffects = 0;
   let SchedRW = [WriteSALU];
 }
@@ -4832,6 +4832,13 @@ def G_AMDGPU_COPY_VCC_SCC : AMDGPUGenericInstruction {
 def G_AMDGPU_READANYLANE : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0);
+  let hasSideEffects = 0;
+}
+
+// llvm.sponentry
+def G_AMDGPU_SPONENTRY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
   let hasSideEffects = 0;
 }
 

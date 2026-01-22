@@ -2568,12 +2568,12 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       // (3 is unused, so we ignore it). Unfortunately, S_GETREG doesn't set
       // SCC, so we need to check for 0 manually.
       BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_LG_U32)).addImm(0).addReg(DestReg);
-      MI.setDesc(get(AMDGPU::S_CMOVK_I32));
-      MI.addOperand(MachineOperand::CreateImm(VGPRSize));
       // Change the implicif-def of SCC to an explicit use (but first remove
       // the dead flag if present).
       MI.getOperand(MI.getNumExplicitOperands()).setIsDead(false);
       MI.getOperand(MI.getNumExplicitOperands()).setIsUse();
+      MI.setDesc(get(AMDGPU::S_CMOVK_I32));
+      MI.addOperand(MachineOperand::CreateImm(VGPRSize));
     } else {
       MI.setDesc(get(AMDGPU::S_MOV_B32));
       MI.addOperand(MachineOperand::CreateImm(0));

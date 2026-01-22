@@ -6795,6 +6795,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBRCOND(Op, DAG);
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
+  case ISD::SPONENTRY:
+    // return Op; // Legal enough, we'll replace with a pseudo later on.
+    return LowerSPONENTRY(Op, DAG);
   case ISD::LOAD: {
     SDValue Result = LowerLOAD(Op, DAG);
     assert((!Result.getNode() || Result.getNode()->getNumValues() == 2) &&
@@ -7806,6 +7809,25 @@ SDValue SITargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const {
                               getRegClassFor(VT, Op.getNode()->isDivergent()));
 
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
+}
+
+SDValue SITargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  MFI->setUsesSPOnEntry(true);
+
+  // For functions that set up their own stack, use the AMDGPUsponentry
+  // node which will be selected to GET_STACK_BASE pseudo.
+  if (MFI->isBottomOfStack()) {
+    return Op;
+  }
+
+  // For other functions, force a base pointer and return a copy from it.
+  const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
+  Register BasePtr = TRI->getBaseRegister();
+
+  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), BasePtr, Op.getValueType());
 }
 
 SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,

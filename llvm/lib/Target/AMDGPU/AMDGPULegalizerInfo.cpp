@@ -7749,6 +7749,17 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
   auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrID) {
+  case Intrinsic::sponentry: {
+    // FIXME: Get the pattern to check for p5 instead of s32.
+    const LLT S32 = LLT::scalar(32);
+    Register TmpReg = MRI.createGenericVirtualRegister(S32);
+    B.buildInstr(AMDGPU::G_AMDGPU_SPONENTRY).addDef(TmpReg);
+
+    Register DstReg = MI.getOperand(0).getReg();
+    B.buildIntToPtr(DstReg, TmpReg);
+    MI.eraseFromParent();
+    return true;
+  }
   case Intrinsic::amdgcn_if:
   case Intrinsic::amdgcn_else: {
     MachineInstr *Br = nullptr;
