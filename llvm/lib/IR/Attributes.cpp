@@ -288,6 +288,11 @@ Attribute Attribute::getWithNoFPClass(LLVMContext &Context,
   return get(Context, NoFPClass, ClassMask);
 }
 
+Attribute Attribute::getWithDeadOnReturnInfo(LLVMContext &Context,
+                                             DeadOnReturnInfo DI) {
+  return get(Context, DeadOnReturn, DI.toIntValue());
+}
+
 Attribute Attribute::getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI) {
   return get(Context, Captures, CI.toIntValue());
 }
