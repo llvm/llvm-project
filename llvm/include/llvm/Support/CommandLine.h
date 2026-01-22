@@ -19,6 +19,11 @@
 #ifndef LLVM_SUPPORT_COMMANDLINE_H
 #define LLVM_SUPPORT_COMMANDLINE_H
 
+// Fix conflict with illumos FS macro in sys/regset.h.
+#ifdef __sun
+#undef FS
+#endif
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
