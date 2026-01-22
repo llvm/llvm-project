@@ -323,7 +323,7 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
                          "' is already defined");
 
     const DataLayout &DL = GV->getDataLayout();
-    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t Size = GV->getGlobalSize(DL);
     Align Alignment = GV->getAlign().value_or(Align(4));
 
     emitVisibility(GVSym, GV->getVisibility(), !GV->isDeclaration());

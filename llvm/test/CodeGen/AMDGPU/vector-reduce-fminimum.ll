@@ -21,6 +21,7 @@ define half @test_vector_reduce_fminimum_v2half(<2 x half> %v) {
 ; GFX7-NEXT:    v_min_f32_e32 v3, v0, v1
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_vector_reduce_fminimum_v2half:
@@ -133,6 +134,7 @@ define half @test_vector_reduce_fminimum_v3half(<3 x half> %v) {
 ; GFX7-NEXT:    v_min_f32_e32 v2, v0, v1
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_vector_reduce_fminimum_v3half:
@@ -279,6 +281,7 @@ define half @test_vector_reduce_fminimum_v4half(<4 x half> %v) {
 ; GFX7-NEXT:    v_min_f32_e32 v1, v0, v3
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v3
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v5, v1, vcc
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_vector_reduce_fminimum_v4half:
@@ -462,6 +465,7 @@ define half @test_vector_reduce_fminimum_v8half(<8 x half> %v) {
 ; GFX7-NEXT:    v_min_f32_e32 v1, v0, v4
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v4
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v9, v1, vcc
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_vector_reduce_fminimum_v8half:
@@ -766,6 +770,7 @@ define half @test_vector_reduce_fminimum_v16half(<16 x half> %v) {
 ; GFX7-NEXT:    v_min_f32_e32 v1, v0, v8
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v8
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v17, v1, vcc
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_vector_reduce_fminimum_v16half:

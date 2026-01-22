@@ -2672,7 +2672,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       GlobalVariable *GV;
       if ((GV = dyn_cast<GlobalVariable>(Val)) && GV->canIncreaseAlignment() &&
           GV->getPointerAlignment(*DL) < PrefAlign &&
-          DL->getTypeAllocSize(GV->getValueType()) >= MinSize + Offset2)
+          GV->getGlobalSize(*DL) >= MinSize + Offset2)
         GV->setAlignment(PrefAlign);
     }
   }
