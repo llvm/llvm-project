@@ -323,7 +323,7 @@ def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
                               (sequence "X%u_Y", 18, 27),
                               (sequence "X%u_Y", 0, 4))> {
   let RegInfos = YLenRI;
-  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=/*16>";
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=*/16>";
 }
 
 def GPRX0 : GPRRegisterClass<(add X0)>;
