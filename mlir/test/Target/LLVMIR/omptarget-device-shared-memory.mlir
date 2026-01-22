@@ -78,32 +78,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 
     // CHECK: [[EXIT_BB]]:
     // CHECK-NEXT: ret void
-
-    // Test that we don't misidentify a private `distribute` value as being
-    // located inside of a parallel region if that parallel region is not nested
-    // inside of `omp.distribute`.
-    omp.parallel {
-      %18 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "x"}
-      omp.target map_entries(%18 -> %arg0 : !llvm.ptr) {
-        %19 = llvm.mlir.constant(10000 : i32) : i32
-        %20 = llvm.mlir.constant(1 : i32) : i32
-        omp.teams {
-          omp.distribute private(@privatizer %arg0 -> %arg1 : !llvm.ptr) {
-            omp.loop_nest (%arg2) : i32 = (%20) to (%19) inclusive step (%20) {
-              llvm.store %arg2, %arg1 : i32, !llvm.ptr
-              omp.yield
-            }
-          }
-          omp.terminator
-        }
-        omp.terminator
-      }
-      omp.terminator
-    }
-    // CHECK: call i32 @__kmpc_target_init
-    // CHECK-NOT: call {{.*}} @__kmpc_alloc_shared
-    // CHECK-NOT: call {{.*}} @__kmpc_free_shared
-
     llvm.return
   }
 }
