@@ -211,9 +211,9 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
   // For candidate specified by --rocm-path we do not do strict check, i.e.,
   // checking existence of HIP version file and device library files.
-  // These are added first as highest priority candidates, but we continue
-  // to add clang-relative paths to support cases where the compiler has its
-  // own device libraries (e.g., python wheels with bundled device libs).
+  // Typically the resource directory is the correct place for the device
+  // libraries. For backwards compatibility, we allow to overwrite this with
+  // the ROCM_PATH environment variable/compiler argument.
   if (!RocmPathArg.empty()) {
     ROCmSearchDirs.emplace_back(RocmPathArg.str());
   } else if (std::optional<std::string> RocmPathEnv =
