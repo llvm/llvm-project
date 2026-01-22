@@ -156,10 +156,10 @@ end subroutine declare_simd_combined
 ! CHECK: omp.declare_simd
 ! CHECK-SAME: aligned(%[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>> -> 64 : i64,
 ! CHECK-SAME:         %[[Y_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>> -> 64 : i64)
+! CHECK-SAME: inbranch
 ! CHECK-SAME: linear(%[[I_DECL]]#0 = %[[C1]] : !fir.ref<i32>)
 ! CHECK-SAME: simdlen(8)
 ! CHECK-SAME: uniform(%[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>,
 ! CHECK-SAME:         %[[Y_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
-! CHECK-SAME: inbranch
 ! CHECK-SAME: {linear_var_types = [i32]}{{$}}
 ! CHECK: return

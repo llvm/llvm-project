@@ -4485,11 +4485,11 @@ LogicalResult DeclareSimdOp::verify() {
 void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                           const DeclareSimdOperands &clauses) {
   MLIRContext *ctx = odsBuilder.getContext();
-  DeclareSimdOp::build(
-      odsBuilder, odsState, clauses.alignedVars,
-      makeArrayAttr(ctx, clauses.alignments), clauses.linearVars,
-      clauses.linearStepVars, clauses.linearVarTypes, clauses.simdlen,
-      clauses.uniformVars, clauses.inbranch, clauses.notinbranch);
+  DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
+                       makeArrayAttr(ctx, clauses.alignments), clauses.inbranch,
+                       clauses.linearVars, clauses.linearStepVars,
+                       clauses.linearVarTypes, clauses.notinbranch,
+                       clauses.simdlen, clauses.uniformVars);
 }
 
 //===----------------------------------------------------------------------===//

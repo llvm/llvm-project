@@ -3447,11 +3447,11 @@ func.func @omp_declare_simd_multiple_clauses(%a: f64, %b: f64,
   // CHECK-SAME: aligned(
   // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
   // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
+  // CHECK-SAME: notinbranch
   // CHECK-SAME: simdlen(8)
   // CHECK-SAME: uniform(
   // CHECK-SAME: %{{.*}} : memref<i32>,
   // CHECK-SAME: %{{.*}} : memref<i32>)
-  // CHECK-SAME: notinbranch
   omp.declare_simd simdlen(8)
     aligned(%p0 : memref<i32> -> 32 : i64,
             %p1 : memref<i32> -> 128 : i64)
@@ -3468,12 +3468,12 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
   // CHECK-SAME: aligned(
   // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
   // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
+  // CHECK-SAME: inbranch
   // CHECK-SAME: linear(%{{.*}} = %{{.*}} : i32)
   // CHECK-SAME: simdlen(8)
   // CHECK-SAME: uniform(
   // CHECK-SAME: %{{.*}} : memref<i32>,
   // CHECK-SAME: %{{.*}} : memref<i32>)
-  // CHECK-SAME: inbranch
   omp.declare_simd simdlen(8)
     aligned(%p0 : memref<i32> -> 32 : i64,
             %p1 : memref<i32> -> 128 : i64)
