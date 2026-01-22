@@ -74,6 +74,7 @@ write_lit_config("lit_site_cfg") {
     "LLVM_LIBS_DIR=" + rebase_path("$root_out_dir/lib", dir),
     "LLVM_LINK_LLVM_DYLIB=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
+    "LLVM_IR2VEC_TEST_PYTHON_BINDINGS=0",
     "LLVM_NATIVE_ARCH=$native_target",
     "LLVM_TOOL_LLVM_DRIVER_BUILD=0",  # FIXME: Add actual support for this.
     "LLVM_USE_INTEL_JITEVENTS=0",
