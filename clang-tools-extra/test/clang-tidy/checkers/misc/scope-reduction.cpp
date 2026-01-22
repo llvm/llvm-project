@@ -774,3 +774,154 @@ void test_unary_outside_loop() {
     value++;
   }
 }
+
+// Pre-increment - should NOT warn
+void test_pre_increment_outside_loop() {
+  int value = 10;
+  // Should NOT warn - moving would lose initialization value
+  if (true) {
+    ++value;
+  }
+}
+
+// Post-decrement - should NOT warn  
+void test_post_decrement_outside_loop() {
+  int counter = 100;
+  // Should NOT warn - moving would lose initialization value
+  if (true) {
+    counter--;
+  }
+}
+
+// Pre-decrement - should NOT warn
+void test_pre_decrement_outside_loop() {
+  int counter = 100;
+  // Should NOT warn - moving would lose initialization value
+  if (true) {
+    --counter;
+  }
+}
+
+// Complex initialization with unary operator - should NOT warn
+void test_complex_init_with_unary() {
+  int calculated = 5 * 3 + 2;
+  // Should NOT warn - moving would lose initialization value
+  if (true) {
+    calculated++;
+  }
+}
+
+// Array initialization with unary operator - should NOT warn
+void test_array_init_with_unary() {
+  int arr[] = {1, 2, 3};
+  int size = 3;
+  // Should NOT warn - moving would lose initialization value
+  if (true) {
+    size--;
+  }
+}
+
+// Pointer initialization with unary operator - should NOT warn
+void test_pointer_init_with_unary() {
+  int value = 42;
+  int* ptr = &value;
+  // Should NOT warn - moving would lose initialization value  
+  if (true) {
+    ++ptr;
+  }
+}
+
+// Switch body edge cases
+
+// Switch with no default case - should NOT warn
+void test_switch_no_default(int value) {
+  int result = 0;
+  // Should NOT warn - moving to switch body would make initialization conditional
+  switch (value) {
+    case 1:
+      result = 10;
+      break;
+    case 2:
+      result = 20;
+      break;
+  }
+}
+
+// Switch with only default case - should NOT warn
+void test_switch_default_only_v2(int value) {
+  int result = 0;
+  // Should NOT warn - moving to switch body would make initialization conditional
+  switch (value) {
+    default:
+      result = 100;
+      break;
+  }
+}
+
+// Empty switch - should NOT warn (though variable unused)
+void test_switch_empty(int value) {
+  int result = 0;
+  // Should NOT warn - variable not used, but if it were used in switch body, would be conditional
+  switch (value) {
+  }
+}
+
+// Combination cases
+
+// Unary operator inside switch case - should NOT warn
+void test_unary_in_switch_case(int value) {
+  int counter = 0;
+  // Should NOT warn - moving to switch body would make initialization conditional
+  switch (value) {
+    case 1:
+      counter++;
+      break;
+    default:
+      break;
+  }
+}
+
+// Unary operator inside loop (accumulator pattern) - should NOT warn
+void test_unary_in_loop_accumulator() {
+  int counter = 0;
+  // Should NOT warn - accumulator pattern in loop
+  for (int i = 0; i < 10; ++i) {
+    counter++;
+  }
+}
+
+// Multiple unary operations on same variable - should NOT warn
+void test_multiple_unary_operations() {
+  int value = 10;
+  // Should NOT warn - moving would lose initialization value
+  if (true) {
+    value++;
+    ++value;
+    value--;
+  }
+}
+
+// Unary operator with other operations - should NOT warn
+void test_unary_with_other_ops() {
+  int value = 5;
+  // Should NOT warn - moving would lose initialization value
+  if (true) {
+    value++;
+    value *= 2;
+  }
+}
+
+// Nested switch with unary operator - should NOT warn
+void test_nested_switch_with_unary(int outer, int inner) {
+  int counter = 0;
+  // Should NOT warn - moving to outer switch would make initialization conditional
+  switch (outer) {
+    case 1:
+      switch (inner) {
+        case 1:
+          counter++;
+          break;
+      }
+      break;
+  }
+}
