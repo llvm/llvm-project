@@ -78,10 +78,10 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
   MCSectionELF *ELFSection =
       BC.Ctx->getELFSection(SectionName, getELFType(), getELFFlags());
 
-      DEBUG_WITH_TYPE("bolt-flags", {
-  dbgs() << "[flags] emitAsData " << SectionName
-         << " flags=0x" << llvm::format_hex(getELFFlags(), 8) << "\n";
-});
+  DEBUG_WITH_TYPE("bolt-flags", {
+    dbgs() << "[flags] emitAsData " << SectionName << " flags=0x"
+           << llvm::format_hex(getELFFlags(), 8) << "\n";
+  });
 
   Streamer.switchSection(ELFSection);
   Streamer.emitValueToAlignment(getAlign());
@@ -224,12 +224,10 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
 BinarySection::~BinarySection() {
   LLVM_DEBUG({
     dbgs() << "BOLT-DEBUG: dtor this=" << (const void *)this
-           << " name=" << getName()
-           << " data=" << (const void *)getData()
+           << " name=" << getName() << " data=" << (const void *)getData()
            << " size=" << getSize()
            << " outputData=" << (const void *)getOutputData()
-           << " outputSize=" << getOutputSize()
-           << "\n";
+           << " outputSize=" << getOutputSize() << "\n";
   });
 
   updateContents(nullptr, 0);

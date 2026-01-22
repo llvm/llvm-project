@@ -70,13 +70,13 @@ using ConstBinaryFunctionListType = std::vector<const BinaryFunction *>;
 
 /// Information on loadable part of the file.
 struct SegmentInfo {
-  uint64_t Address;           /// Address of the segment in memory.
-  uint64_t Size;              /// Size of the segment in memory.
-  uint64_t FileOffset;        /// Offset in the file.
-  uint64_t FileSize;          /// Size in file.
-  uint64_t Alignment;         /// Alignment of the segment.
-  bool IsExecutable;          /// Is the executable bit set on the Segment?
-  bool IsWritable;            /// Is the segment writable.
+  uint64_t Address;    /// Address of the segment in memory.
+  uint64_t Size;       /// Size of the segment in memory.
+  uint64_t FileOffset; /// Offset in the file.
+  uint64_t FileSize;   /// Size in file.
+  uint64_t Alignment;  /// Alignment of the segment.
+  bool IsExecutable;   /// Is the executable bit set on the Segment?
+  bool IsWritable;     /// Is the segment writable.
 
   void print(raw_ostream &OS) const {
     OS << "SegmentInfo { Address: 0x" << Twine::utohexstr(Address)
@@ -141,10 +141,24 @@ public:
   using pointer = typename inner_traits::pointer;
   using reference = typename inner_traits::reference;
 
-  Iterator &operator++() { next(); return *this; }
-  Iterator &operator--() { prev(); return *this; }
-  Iterator operator++(int) { auto Tmp(Itr); next(); return Tmp; }
-  Iterator operator--(int) { auto Tmp(Itr); prev(); return Tmp; }
+  Iterator &operator++() {
+    next();
+    return *this;
+  }
+  Iterator &operator--() {
+    prev();
+    return *this;
+  }
+  Iterator operator++(int) {
+    auto Tmp(Itr);
+    next();
+    return Tmp;
+  }
+  Iterator operator--(int) {
+    auto Tmp(Itr);
+    prev();
+    return Tmp;
+  }
   bool operator==(const Iterator &Other) const { return Itr == Other.Itr; }
   bool operator!=(const Iterator &Other) const { return !operator==(Other); }
   reference operator*() { return *Itr; }

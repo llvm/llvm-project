@@ -18,6 +18,8 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include <cstdint>
 #define DEBUG_TYPE "bolt-ppc"
+#include "MCTargetDesc/PPCFixupKinds.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCContext.h"
@@ -26,8 +28,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "MCTargetDesc/PPCFixupKinds.h"
-#include "MCTargetDesc/PPCMCAsmInfo.h"
 // #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include <optional>
 #include <string>
@@ -512,17 +512,18 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
   const unsigned R2 = PPC::X2;   // caller TOC
   const unsigned R12 = PPC::X12; // scratch / entry per ELFv2
 
-// Wrap with PPC specifiers:
+  // Wrap with PPC specifiers:
   const MCExpr *HA = MCSymbolRefExpr::create(TargetSym, PPC::S_HA, *Ctx);
   const MCExpr *LO = MCSymbolRefExpr::create(TargetSym, PPC::S_LO, *Ctx);
 
- MCInst I;
+  MCInst I;
 
   // std r2, 24(r1)      ; save caller's TOC
- I.setOpcode(PPC::STD);
- I.addOperand(R(PPC::X2));  // reg (src)
- I.addOperand(MCOperand::createExpr(MCConstantExpr::create(24, *Ctx))); // disp (slot #1)
- I.addOperand(R(PPC::X1));  // base (slot #2)
+  I.setOpcode(PPC::STD);
+  I.addOperand(R(PPC::X2)); // reg (src)
+  I.addOperand(MCOperand::createExpr(
+      MCConstantExpr::create(24, *Ctx))); // disp (slot #1)
+  I.addOperand(R(PPC::X1));               // base (slot #2)
   Out.push_back(I);
 
   // addis r12, r2, sym@ha
@@ -536,9 +537,9 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
   // ld r12, sym@lo(r12) ; DS-form: (dst, imm/expr, base)
   I = MCInst();
   I.setOpcode(PPC::LD);
- I.addOperand(R(PPC::X12));                         // reg (dst)
- I.addOperand(MCOperand::createExpr(LO));           // disp expr (slot #1)
- I.addOperand(R(PPC::X12));                         // base (slot #2)
+  I.addOperand(R(PPC::X12));               // reg (dst)
+  I.addOperand(MCOperand::createExpr(LO)); // disp expr (slot #1)
+  I.addOperand(R(PPC::X12));               // base (slot #2)
   Out.push_back(I);
 
   // mtctr r12
@@ -553,15 +554,16 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
   Out.push_back(I);
 
   // ld r2, 24(r1)       ; restore TOC
- I.setOpcode(PPC::LD);
- I.addOperand(R(PPC::X2));  // reg (dst)
- I.addOperand(MCOperand::createExpr(MCConstantExpr::create(24, *Ctx))); // disp (slot #1)
- I.addOperand(R(PPC::X1));  // base (slot #2)
+  I.setOpcode(PPC::LD);
+  I.addOperand(R(PPC::X2)); // reg (dst)
+  I.addOperand(MCOperand::createExpr(
+      MCConstantExpr::create(24, *Ctx))); // disp (slot #1)
+  I.addOperand(R(PPC::X1));               // base (slot #2)
   Out.push_back(I);
 
   // blr                 ; return to caller
   I = MCInst();
-  I.setOpcode(PPC::BLR8);            // or PPC::BLR on some trees
+  I.setOpcode(PPC::BLR8); // or PPC::BLR on some trees
   Out.push_back(I);
 }
 

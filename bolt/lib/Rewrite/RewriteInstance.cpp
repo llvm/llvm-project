@@ -48,14 +48,17 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/ELF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -67,11 +70,8 @@
 #include <optional>
 #include <system_error>
 #include <unordered_map>
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Object/ELF.h"
 
-#undef  DEBUG_TYPE
+#undef DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
 
 using namespace llvm;
@@ -153,19 +153,15 @@ bool shouldDumpDot(const bolt::BinaryFunction &Function) {
   return false;
 }
 
-static cl::list<std::string>
-ForceFunctionNames("funcs",
-  cl::CommaSeparated,
-  cl::desc("limit optimizations to functions from the list"),
-  cl::value_desc("func1,func2,func3,..."),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::list<std::string> ForceFunctionNames(
+    "funcs", cl::CommaSeparated,
+    cl::desc("limit optimizations to functions from the list"),
+    cl::value_desc("func1,func2,func3,..."), cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<std::string>
-FunctionNamesFile("funcs-file",
-  cl::desc("file with list of functions to optimize"),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    FunctionNamesFile("funcs-file",
+                      cl::desc("file with list of functions to optimize"),
+                      cl::Hidden, cl::cat(BoltCategory));
 
 static cl::list<std::string> ForceFunctionNamesNR(
     "funcs-no-regex", cl::CommaSeparated,
@@ -177,22 +173,17 @@ static cl::opt<std::string> FunctionNamesFileNR(
     cl::desc("file with list of functions to optimize (non-regex)"), cl::Hidden,
     cl::cat(BoltCategory));
 
-cl::opt<bool>
-KeepTmp("keep-tmp",
-  cl::desc("preserve intermediate .o file"),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<bool> KeepTmp("keep-tmp", cl::desc("preserve intermediate .o file"),
+                      cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<unsigned>
-LiteThresholdPct("lite-threshold-pct",
-  cl::desc("threshold (in percent) for selecting functions to process in lite "
-            "mode. Higher threshold means fewer functions to process. E.g "
-            "threshold of 90 means only top 10 percent of functions with "
-            "profile will be processed."),
-  cl::init(0),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> LiteThresholdPct(
+    "lite-threshold-pct",
+    cl::desc(
+        "threshold (in percent) for selecting functions to process in lite "
+        "mode. Higher threshold means fewer functions to process. E.g "
+        "threshold of 90 means only top 10 percent of functions with "
+        "profile will be processed."),
+    cl::init(0), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> LiteThresholdCount(
     "lite-threshold-count",
@@ -245,19 +236,14 @@ static cl::opt<cl::boolOrDefault> RelocationMode(
 
 extern cl::opt<std::string> SaveProfile;
 
-static cl::list<std::string>
-SkipFunctionNames("skip-funcs",
-  cl::CommaSeparated,
-  cl::desc("list of functions to skip"),
-  cl::value_desc("func1,func2,func3,..."),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::list<std::string> SkipFunctionNames(
+    "skip-funcs", cl::CommaSeparated, cl::desc("list of functions to skip"),
+    cl::value_desc("func1,func2,func3,..."), cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<std::string>
-SkipFunctionNamesFile("skip-funcs-file",
-  cl::desc("file with list of functions to skip"),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    SkipFunctionNamesFile("skip-funcs-file",
+                          cl::desc("file with list of functions to skip"),
+                          cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool> TrapOldCode(
     "trap-old-code",
@@ -269,12 +255,11 @@ static cl::opt<std::string> DWPPathName("dwp",
                                         cl::Hidden, cl::init(""),
                                         cl::cat(BoltCategory));
 
-static cl::opt<bool>
-UseGnuStack("use-gnu-stack",
-  cl::desc("use GNU_STACK program header for new segment (workaround for "
-           "issues with strip/objcopy)"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+static cl::opt<bool> UseGnuStack(
+    "use-gnu-stack",
+    cl::desc("use GNU_STACK program header for new segment (workaround for "
+             "issues with strip/objcopy)"),
+    cl::ZeroOrMore, cl::cat(BoltCategory));
 
 static cl::opt<uint64_t> CustomAllocationVMA(
     "custom-allocation-vma",
@@ -283,10 +268,9 @@ static cl::opt<uint64_t> CustomAllocationVMA(
     cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
-SequentialDisassembly("sequential-disassembly",
-  cl::desc("performs disassembly sequentially"),
-  cl::init(false),
-  cl::cat(BoltOptCategory));
+    SequentialDisassembly("sequential-disassembly",
+                          cl::desc("performs disassembly sequentially"),
+                          cl::init(false), cl::cat(BoltOptCategory));
 
 static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
@@ -612,12 +596,12 @@ Error RewriteInstance::discoverStorage() {
   for (const ELF64LE::Phdr &Phdr : PHs) {
     switch (Phdr.p_type) {
     case ELF::PT_LOAD:
-      BC->FirstAllocAddress = std::min(BC->FirstAllocAddress,
-                                       static_cast<uint64_t>(Phdr.p_vaddr));
-      NextAvailableAddress = std::max(NextAvailableAddress,
-                                      Phdr.p_vaddr + Phdr.p_memsz);
-      NextAvailableOffset = std::max(NextAvailableOffset,
-                                     Phdr.p_offset + Phdr.p_filesz);
+      BC->FirstAllocAddress =
+          std::min(BC->FirstAllocAddress, static_cast<uint64_t>(Phdr.p_vaddr));
+      NextAvailableAddress =
+          std::max(NextAvailableAddress, Phdr.p_vaddr + Phdr.p_memsz);
+      NextAvailableOffset =
+          std::max(NextAvailableOffset, Phdr.p_offset + Phdr.p_filesz);
 
       BC->SegmentMapInfo[Phdr.p_vaddr] =
           SegmentInfo{Phdr.p_vaddr,
@@ -795,7 +779,6 @@ Error RewriteInstance::run() {
           << "BOLT-WARNING: .got not found; PPC64 TOC base unavailable\n";
     }
   }
-
 
   if (opts::Instrument && !BC->IsStaticExecutable) {
     if (Error E = discoverRtInitAddress())
@@ -1825,7 +1808,7 @@ void RewriteInstance::registerFragments() {
       }
     }
 
-registerParent:
+  registerParent:
     // No local parent is found, use global parent function.
     if (!ParentAddress)
       if (BinaryData *ParentBD = BC->getBinaryDataByName(ParentName))
@@ -2921,14 +2904,12 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
       (void)SymbolAddress;
     }
 
-    LLVM_DEBUG(
-      SmallString<16> TypeName;
-      Rel.getTypeName(TypeName);
-      dbgs() << "BOLT-DEBUG: dynamic relocation at 0x"
-             << Twine::utohexstr(Rel.getOffset()) << " : " << TypeName
-             << " : " << SymbolName << " : " <<  Twine::utohexstr(SymbolAddress)
-             << " : + 0x" << Twine::utohexstr(Addend) << '\n'
-    );
+    LLVM_DEBUG(SmallString<16> TypeName; Rel.getTypeName(TypeName);
+               dbgs() << "BOLT-DEBUG: dynamic relocation at 0x"
+                      << Twine::utohexstr(Rel.getOffset()) << " : " << TypeName
+                      << " : " << SymbolName << " : "
+                      << Twine::utohexstr(SymbolAddress) << " : + 0x"
+                      << Twine::utohexstr(Addend) << '\n');
 
     if (IsJmpRel)
       IsJmpRelocation[RType] = true;
@@ -4236,88 +4217,84 @@ void RewriteInstance::emitAndLink() {
   ErrorOr<BinarySection &> TextSection =
       BC->getUniqueSectionByName(BC->getMainCodeSectionName());
 
-// If present, show flags BEFORE renaming (this captures the "original .text" state)
-if (TextSection) {
-  DEBUG_WITH_TYPE("bolt-ppc64", {
-    const unsigned F = TextSection->getELFFlags();
-    dbgs() << "[ppc64] pre-rename: " << TextSection->getName() << "\n"
-           << "  flags=0x" << llvm::format_hex(F, 8)
-           << " (ALLOC=" << ((F & ELF::SHF_ALLOC) ? "yes" : "no")
-           << ", EXEC="  << ((F & ELF::SHF_EXECINSTR) ? "yes" : "no")
-           << ", EXCL="  << ((F & ELF::SHF_EXCLUDE) ? "yes" : "no")
-           << ")\n";
-  });
-}
+  // If present, show flags BEFORE renaming (this captures the "original .text"
+  // state)
+  if (TextSection) {
+    DEBUG_WITH_TYPE("bolt-ppc64", {
+      const unsigned F = TextSection->getELFFlags();
+      dbgs() << "[ppc64] pre-rename: " << TextSection->getName() << "\n"
+             << "  flags=0x" << llvm::format_hex(F, 8)
+             << " (ALLOC=" << ((F & ELF::SHF_ALLOC) ? "yes" : "no")
+             << ", EXEC=" << ((F & ELF::SHF_EXECINSTR) ? "yes" : "no")
+             << ", EXCL=" << ((F & ELF::SHF_EXCLUDE) ? "yes" : "no") << ")\n";
+    });
+  }
 
-// Guard logging BEFORE rename
-DEBUG_WITH_TYPE("bolt-flags", {
-  dbgs() << "[decide-rename] HasRelocations=" << (BC->HasRelocations ? "true" : "false")
-         << " TextSection=" << (TextSection ? "non-null" : "null");
-  if (TextSection)
-    dbgs() << " name=" << TextSection->getName();
-  dbgs() << "\n";
-});
-
-
-if (BC->HasRelocations && TextSection) {
-  const std::string NewName = (getOrgSecPrefix() + BC->getMainCodeSectionName()).str();
+  // Guard logging BEFORE rename
   DEBUG_WITH_TYPE("bolt-flags", {
-    dbgs() << "[decide-rename] renaming " << TextSection->getName()
-           << " -> " << NewName << "\n";
+    dbgs() << "[decide-rename] HasRelocations="
+           << (BC->HasRelocations ? "true" : "false")
+           << " TextSection=" << (TextSection ? "non-null" : "null");
+    if (TextSection)
+      dbgs() << " name=" << TextSection->getName();
+    dbgs() << "\n";
   });
 
-  BC->renameSection(*TextSection, NewName);
+  if (BC->HasRelocations && TextSection) {
+    const std::string NewName =
+        (getOrgSecPrefix() + BC->getMainCodeSectionName()).str();
+    DEBUG_WITH_TYPE("bolt-flags", {
+      dbgs() << "[decide-rename] renaming " << TextSection->getName() << " -> "
+             << NewName << "\n";
+    });
 
-auto OldU = BC->getUniqueSectionByName(BC->getMainCodeSectionName());
-auto NewU = BC->getUniqueSectionByName(NewName);
+    BC->renameSection(*TextSection, NewName);
 
-BinarySection *ByOld = OldU ? &*OldU : nullptr;
-BinarySection *ByNew = NewU ? &*NewU : nullptr;
+    auto OldU = BC->getUniqueSectionByName(BC->getMainCodeSectionName());
+    auto NewU = BC->getUniqueSectionByName(NewName);
 
-DEBUG_WITH_TYPE("bolt-flags", {
-  dbgs() << "[decide-rename] lookup old="
-         << BC->getMainCodeSectionName()
-         << " -> " << (ByOld ? "FOUND" : "NULL")
-         << " | new=" << NewName
-         << " -> " << (ByNew ? "FOUND" : "NULL") << "\n";
-});
+    BinarySection *ByOld = OldU ? &*OldU : nullptr;
+    BinarySection *ByNew = NewU ? &*NewU : nullptr;
 
-assert(!ByOld && "old name still visible after rename");
-assert( ByNew && "new name not visible after rename");
+    DEBUG_WITH_TYPE("bolt-flags", {
+      dbgs() << "[decide-rename] lookup old=" << BC->getMainCodeSectionName()
+             << " -> " << (ByOld ? "FOUND" : "NULL") << " | new=" << NewName
+             << " -> " << (ByNew ? "FOUND" : "NULL") << "\n";
+    });
+
+    assert(!ByOld && "old name still visible after rename");
+    assert(ByNew && "new name not visible after rename");
   }
 
   // Log flags after rename
   DEBUG_WITH_TYPE("bolt-flags", {
     const unsigned F = TextSection->getELFFlags();
-    dbgs() << "[post-rename] " << TextSection->getName()
-           << " flags=0x" << format_hex(F, 8)
+    dbgs() << "[post-rename] " << TextSection->getName() << " flags=0x"
+           << format_hex(F, 8)
            << " (ALLOC=" << ((F & ELF::SHF_ALLOC) ? "yes" : "no")
-           << ", EXEC="  << ((F & ELF::SHF_EXECINSTR) ? "yes" : "no")
-           << ", EXCL="  << ((F & ELF::SHF_EXCLUDE) ? "yes" : "no")
-           << ")\n";
+           << ", EXEC=" << ((F & ELF::SHF_EXECINSTR) ? "yes" : "no")
+           << ", EXCL=" << ((F & ELF::SHF_EXCLUDE) ? "yes" : "no") << ")\n";
   });
 
-
-// AFTER: same section object, new name. log immediately to catch bad flags
-if (TextSection) {
-  DEBUG_WITH_TYPE("bolt-ppc64", {
-    const unsigned F = TextSection->getELFFlags();
-    dbgs() << "[ppc64] post-rename: " << TextSection->getName() << "\n"
-           << "  flags=0x" << llvm::format_hex(F, 8)
-           << " (ALLOC=" << ((F & ELF::SHF_ALLOC) ? "yes" : "no")
-           << ", EXEC="  << ((F & ELF::SHF_EXECINSTR) ? "yes" : "no")
-           << ", EXCL="  << ((F & ELF::SHF_EXCLUDE) ? "yes" : "no")
-           << ")\n";
-if (TextSection->getName().starts_with(getOrgSecPrefix()) &&
-        ((F & ELF::SHF_ALLOC) || (F & ELF::SHF_EXECINSTR))) {
-      dbgs() << "[ppc64][WARN] backup is RX right after rename\n";
-    }
-  });
-} else {
-  DEBUG_WITH_TYPE("bolt-ppc64", {
-    dbgs() << "[ppc64] pre/post-rename skipped: .text section not found\n";
-  });
-}
+  // AFTER: same section object, new name. log immediately to catch bad flags
+  if (TextSection) {
+    DEBUG_WITH_TYPE("bolt-ppc64", {
+      const unsigned F = TextSection->getELFFlags();
+      dbgs() << "[ppc64] post-rename: " << TextSection->getName() << "\n"
+             << "  flags=0x" << llvm::format_hex(F, 8)
+             << " (ALLOC=" << ((F & ELF::SHF_ALLOC) ? "yes" : "no")
+             << ", EXEC=" << ((F & ELF::SHF_EXECINSTR) ? "yes" : "no")
+             << ", EXCL=" << ((F & ELF::SHF_EXCLUDE) ? "yes" : "no") << ")\n";
+      if (TextSection->getName().starts_with(getOrgSecPrefix()) &&
+          ((F & ELF::SHF_ALLOC) || (F & ELF::SHF_EXECINSTR))) {
+        dbgs() << "[ppc64][WARN] backup is RX right after rename\n";
+      }
+    });
+  } else {
+    DEBUG_WITH_TYPE("bolt-ppc64", {
+      dbgs() << "[ppc64] pre/post-rename skipped: .text section not found\n";
+    });
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   // Assign addresses to new sections.
@@ -4708,17 +4685,13 @@ void RewriteInstance::mapCodeSectionsInPlace(
     const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/true,
                                                    /*IsText=*/true,
                                                    /*IsAllocatable=*/true);
-  StringRef NewName = getBOLTTextSectionName();
-  LLVM_DEBUG(dbgs() << "[reg] creating section name=" << NewName
-                    << " flags=" << llvm::format_hex(Flags, 8) << "\n");
+    StringRef NewName = getBOLTTextSectionName();
+    LLVM_DEBUG(dbgs() << "[reg] creating section name=" << NewName
+                      << " flags=" << llvm::format_hex(Flags, 8) << "\n");
 
-    BinarySection &Section =
-      BC->registerOrUpdateSection(getBOLTTextSectionName(),
-                                  ELF::SHT_PROGBITS,
-                                  Flags,
-                                  /*Data=*/nullptr,
-                                  NewTextSectionSize,
-                                  16);
+    BinarySection &Section = BC->registerOrUpdateSection(
+        getBOLTTextSectionName(), ELF::SHT_PROGBITS, Flags,
+        /*Data=*/nullptr, NewTextSectionSize, 16);
     Section.setOutputAddress(NewTextSectionStartAddress);
     Section.setOutputFileOffset(
         getFileOffsetForAddress(NewTextSectionStartAddress));
@@ -5047,7 +5020,7 @@ uint64_t appendPadding(raw_pwrite_stream &OS, uint64_t Offset,
   return Offset + PaddingSize;
 }
 
-}
+} // namespace
 
 void RewriteInstance::rewriteNoteSections() {
   auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
@@ -5160,12 +5133,9 @@ void RewriteInstance::finalizeSectionStringTable(ELFObjectFile<ELFT> *File) {
   uint8_t *DataCopy = new uint8_t[SHStrTabSize];
   memset(DataCopy, 0, SHStrTabSize);
   SHStrTab.write(DataCopy);
-  BC->registerOrUpdateNoteSection(".shstrtab",
-                                  DataCopy,
-                                  SHStrTabSize,
+  BC->registerOrUpdateNoteSection(".shstrtab", DataCopy, SHStrTabSize,
                                   /*Alignment=*/1,
-                                  /*IsReadOnly=*/true,
-                                  ELF::SHT_STRTAB);
+                                  /*IsReadOnly=*/true, ELF::SHT_STRTAB);
 }
 
 void RewriteInstance::addBoltInfoSection() {
@@ -5240,9 +5210,8 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   auto addSection = [&](const ELFShdrTy &Section, BinarySection &BinSec) {
     ELFShdrTy NewSection = Section;
     LLVM_DEBUG({
-  dbgs() << "[shstrtab] assigning name="
-         << BinSec.getOutputName() << "\n";
-});
+      dbgs() << "[shstrtab] assigning name=" << BinSec.getOutputName() << "\n";
+    });
     NewSection.sh_name = SHStrTab.getOffset(BinSec.getOutputName());
     OutputSections.emplace_back(&BinSec, std::move(NewSection));
   };
@@ -5345,7 +5314,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     BinarySection *BinSec = BC->getSectionForSectionRef(SecRef);
     assert(BinSec && "Matching BinarySection should exist.");
 
-    if(BinSec->isAnonymous())
+    if (BinSec->isAnonymous())
       continue;
 
     ELFShdrTy NewSection = Section;
@@ -5365,7 +5334,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     if (Section.getOutputFileOffset() <= LastFileOffset)
       continue;
 
-    if( Section.isAnonymous())
+    if (Section.isAnonymous())
       continue;
 
     if (opts::Verbosity >= 1)
@@ -5434,11 +5403,9 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
   std::vector<uint32_t> NewSectionIndex;
   std::vector<ELFShdrTy> OutputSections =
       getOutputSections(File, NewSectionIndex);
-  LLVM_DEBUG(
-    dbgs() << "BOLT-DEBUG: old to new section index mapping:\n";
-    for (uint64_t I = 0; I < NewSectionIndex.size(); ++I)
-      dbgs() << "  " << I << " -> " << NewSectionIndex[I] << '\n';
-  );
+  LLVM_DEBUG(dbgs() << "BOLT-DEBUG: old to new section index mapping:\n";
+             for (uint64_t I = 0; I < NewSectionIndex.size(); ++I) dbgs()
+             << "  " << I << " -> " << NewSectionIndex[I] << '\n';);
 
   // Align starting address for section header table. There's no architecutal
   // need to align this, it is just for pleasant human readability.
@@ -5940,13 +5907,10 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   if (DynSymSection) {
     updateELFSymbolTable(
         File,
-        /*IsDynSym=*/true,
-        *DynSymSection,
-        NewSectionIndex,
+        /*IsDynSym=*/true, *DynSymSection, NewSectionIndex,
         [&](size_t Offset, const ELFSymTy &Sym) {
           Out->os().pwrite(reinterpret_cast<const char *>(&Sym),
-                           sizeof(ELFSymTy),
-                           DynSymSection->sh_offset + Offset);
+                           sizeof(ELFSymTy), DynSymSection->sh_offset + Offset);
         },
         [](StringRef) -> size_t { return 0; });
   }
@@ -5978,9 +5942,7 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   NumLocalSymbols = 0;
   updateELFSymbolTable(
       File,
-      /*IsDynSym=*/false,
-      *SymTabSection,
-      NewSectionIndex,
+      /*IsDynSym=*/false, *SymTabSection, NewSectionIndex,
       [&](size_t Offset, const ELFSymTy &Sym) {
         if (Sym.getBinding() == ELF::STB_LOCAL)
           ++NumLocalSymbols;
@@ -5994,19 +5956,15 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
         return Idx;
       });
 
-  BC->registerOrUpdateNoteSection(SecName,
-                                  copyByteArray(NewContents),
+  BC->registerOrUpdateNoteSection(SecName, copyByteArray(NewContents),
                                   NewContents.size(),
                                   /*Alignment=*/1,
-                                  /*IsReadOnly=*/true,
-                                  ELF::SHT_SYMTAB);
+                                  /*IsReadOnly=*/true, ELF::SHT_SYMTAB);
 
-  BC->registerOrUpdateNoteSection(StrSecName,
-                                  copyByteArray(NewStrTab),
+  BC->registerOrUpdateNoteSection(StrSecName, copyByteArray(NewStrTab),
                                   NewStrTab.size(),
                                   /*Alignment=*/1,
-                                  /*IsReadOnly=*/true,
-                                  ELF::SHT_STRTAB);
+                                  /*IsReadOnly=*/true, ELF::SHT_STRTAB);
 }
 
 template <typename ELFT>
@@ -6102,8 +6060,8 @@ void RewriteInstance::patchELFAllocatableRelrSection(
 }
 
 template <typename ELFT>
-void
-RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
+void RewriteInstance::patchELFAllocatableRelaSections(
+    ELFObjectFile<ELFT> *File) {
   using Elf_Rela = typename ELFT::Rela;
   raw_fd_ostream &OS = Out->os();
   const ELFFile<ELFT> &EF = File->getELFFile();
