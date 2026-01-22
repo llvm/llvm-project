@@ -6315,7 +6315,8 @@ private:
       m_debugger.GetCommandInterpreter().GetExecutionContext();
     Process *process = exe_ctx.GetProcessPtr();
 
-    if (!process || !process->IsAlive()) return;
+    if (!process || !process->IsAlive())
+      return;
 
     // Buffer for reading output
     char buffer[1024];
@@ -6337,7 +6338,8 @@ private:
   }
 
   void AppendOutput(const char *text, bool is_stderr) {
-    if (!text || text[0] == '\0') return;
+    if (!text || text[0] == '\0')
+      return;
 
     std::lock_guard<std::mutex> lock(m_output_mutex);
 
@@ -6348,17 +6350,15 @@ private:
     size_t start = 0, pos = 0;
     while ((pos = remaining.find('\n', start)) != std::string::npos) {
       std::string line = remaining.substr(start, pos - start);
-      if (is_stderr) {
+      if (is_stderr)
         line = "[stderr] " + line;
-      }
       m_output_lines.push_back(line);
 
       // Keep buffer size under limit
       while (m_output_lines.size() > m_max_lines) {
         m_output_lines.pop_front();
-        if (m_first_visible_line > 0) {
+        if (m_first_visible_line > 0)
           --m_first_visible_line;
-        }
       }
 
       start = pos + 1;
@@ -6425,21 +6425,18 @@ public:
 
       // Highlight stderr lines?
       bool is_stderr = (line.find("[stderr]") == 0);
-      if (is_stderr) {
+      if (is_stderr)
         window.AttributeOn(COLOR_PAIR(2));
-      }
 
       // Truncate line to fit window width
       int available_width = width - 3;
-      if (static_cast<int>(line.length()) > available_width) {
+      if (static_cast<int>(line.length()) > available_width)
         window.PutCString(line.substr(0, available_width).c_str());
-      } else {
+      else
         window.PutCString(line.c_str());
-      }
 
-      if (is_stderr) {
+      if (is_stderr)
         window.AttributeOff(COLOR_PAIR(2));
-      }
     }
 
     return true;
@@ -6460,21 +6457,18 @@ public:
       return eKeyHandled;
 
     case KEY_DOWN:
-      if (m_first_visible_line + visible_height < total_lines) {
+      if (m_first_visible_line + visible_height < total_lines)
         ++m_first_visible_line;
-      }
       // Re-enable Auto-scroll at bottom
-      if (m_first_visible_line + visible_height >= total_lines) {
+      if (m_first_visible_line + visible_height >= total_lines)
         m_auto_scroll = true;
-      }
       return eKeyHandled;
 
     case KEY_PPAGE:
-      if (m_first_visible_line > static_cast<size_t>(visible_height)) {
+      if (m_first_visible_line > static_cast<size_t>(visible_height))
         m_first_visible_line -= visible_height;
-      } else {
+      else
         m_first_visible_line = 0;
-      }
       m_auto_scroll = false;
       return eKeyHandled;
 
@@ -6489,10 +6483,9 @@ public:
 
     case 'a':
       m_auto_scroll = !m_auto_scroll;
-      if (m_auto_scroll && total_lines > 0) {
+      if (m_auto_scroll && total_lines > 0)
         m_first_visible_line = total_lines > static_cast<size_t>(visible_height)
                                   ? total_lines - visible_height : 0;
-      }
       return eKeyHandled;
 
     case 'c':
