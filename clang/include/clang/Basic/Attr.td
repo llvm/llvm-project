@@ -969,9 +969,10 @@ def XRayLogArgs : InheritableAttr {
 
 def PatchableFunctionEntry
     : InheritableAttr,
-      TargetSpecificAttr<TargetArch<
-          ["aarch64", "aarch64_be", "loongarch32", "loongarch64", "riscv32",
-           "riscv64", "x86", "x86_64", "ppc", "ppc64", "ppc64le"]>> {
+      TargetSpecificAttr<
+          TargetArch<["aarch64", "aarch64_be", "loongarch32", "loongarch64",
+                      "riscv32", "riscv64", "x86", "x86_64", "ppc", "ppc64",
+                      "ppc64le", "systemz"]>> {
   let Spellings = [GCC<"patchable_function_entry">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
   let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>,
