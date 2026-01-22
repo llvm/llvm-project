@@ -2273,9 +2273,11 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   }
   case Instruction::ExtractValue: {
     assert(getNumOperands() == 2 && "expected single level extractvalue");
-    Value *Op = State.get(getOperand(0));
+    Value *Op = State.get(getOperand(0), /*NeedsScalar=*/true);
     Value *Extract = Builder.CreateExtractValue(
         Op, cast<VPConstantInt>(getOperand(1))->getZExtValue());
+    if (!Extract->getType()->isVectorTy())
+      Extract = Builder.CreateVectorSplat(State.VF, Extract);
     State.set(this, Extract);
     break;
   }
