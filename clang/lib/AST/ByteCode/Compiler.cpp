@@ -6468,10 +6468,15 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (!Scope.destroyLocals())
       return false;
   }
+  if (const auto *Body = cast_if_present<CompoundStmt>(Ctor->getBody());
+      Body && !Body->body_empty()) {
 
-  if (const auto *Body = Ctor->getBody())
+    if (!this->emitCtorCheck(SourceInfo{}))
+      return false;
+
     if (!visitStmt(Body))
       return false;
+  }
 
   return this->emitRetVoid(SourceInfo{});
 }

@@ -3297,6 +3297,16 @@ inline bool SideEffect(InterpState &S, CodePtr OpPC) {
   return S.noteSideEffect();
 }
 
+/// Abort without a diagnostic if we're checking for a potential constant
+/// expression and this is not the bottom frame. This is used in constructors to
+/// allow evaluating their initializers but abort if we encounter anything in
+/// their body.
+inline bool CtorCheck(InterpState &S, CodePtr OpPC) {
+  if (S.checkingPotentialConstantExpression() && !S.Current->isBottomFrame())
+    return false;
+  return true;
+}
+
 inline bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
                          bool SrcIsVoidPtr) {
   const auto &Ptr = S.Stk.peek<Pointer>();
