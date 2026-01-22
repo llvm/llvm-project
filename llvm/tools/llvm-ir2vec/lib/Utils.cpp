@@ -41,14 +41,16 @@ namespace llvm {
 
 namespace ir2vec {
 
-bool IR2VecTool::initializeVocabulary() {
-  // Register and run the IR2Vec vocabulary analysis
-  // The vocabulary file path is specified via --ir2vec-vocab-path global
-  // option
-  MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
-  MAM.registerPass([&] { return IR2VecVocabAnalysis(); });
-  // This will throw an error if vocab is not found or invalid
-  Vocab = &MAM.getResult<IR2VecVocabAnalysis>(M);
+bool IR2VecTool::initializeVocabulary(StringRef VocabPath) {
+  auto VocabOrErr = Vocabulary::fromFile(VocabPath);
+
+  if (!VocabOrErr) {
+    llvm::errs() << "Failed to load vocabulary: "
+                 << toString(VocabOrErr.takeError()) << "\n";
+    return false;
+  }
+
+  Vocab = std::make_unique<Vocabulary>(std::move(*VocabOrErr));
   return Vocab->isValid();
 }
 
