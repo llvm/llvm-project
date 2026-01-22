@@ -1716,6 +1716,10 @@ private:
     // since merging the latches may affect the dispositions.
     SE.forgetBlockAndLoopDispositions();
 
+    // Forget the cached SCEV values including the induction variable that may
+    // have changed after the fusion.
+    SE.forgetLoop(FC0.L);
+
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
     for (BasicBlock *BB : Blocks) {
