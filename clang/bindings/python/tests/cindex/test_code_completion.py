@@ -181,7 +181,7 @@ void f(P x, Q y) {
             self.assertEqual(str(kind), string)
 
     def test_completion_chunk_kind_compatibility(self):
-        valueToOldStr = {
+        value_to_old_str = {
             0: "Optional",
             1: "TypedText",
             2: "Text",
@@ -206,11 +206,11 @@ void f(P x, Q y) {
         }
 
         # Check that all new kinds correspond to an old kind
-        for newKind in CompletionChunkKind:
-            oldStr = valueToOldStr[newKind.value]
-            self.assertEqual(oldStr, str(newKind))
+        for new_kind in CompletionChunkKind:
+            old_str = value_to_old_str[new_kind.value]
+            self.assertEqual(old_str, str(new_kind))
 
         # Check that all old kinds correspond to a new kind
-        for value, oldStr in valueToOldStr.items():
-            newKind = CompletionChunkKind.from_id(value)
-            self.assertEqual(oldStr, str(newKind))
+        for value, old_str in value_to_old_str.items():
+            new_kind = CompletionChunkKind.from_id(value)
+            self.assertEqual(old_str, str(new_kind))

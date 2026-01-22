@@ -3058,24 +3058,24 @@ class CompletionChunk:
     def __init__(self, completionString: CObjP, key: int):
         self.cs = completionString
         self.key = key
-        self.__kind_id = -1
 
     def __repr__(self) -> str:
         return "{'" + self.spelling + "', " + str(self.kind) + "}"
 
     @CachedProperty
     def spelling(self) -> str:
-        if self.__kind_id in SPELLING_CACHE:
-            return SPELLING_CACHE[self.__kind_id]
+        kind_id = conf.lib.clang_getCompletionChunkKind(self.cs, self.key)
+        if kind_id in SPELLING_CACHE:
+            return SPELLING_CACHE[kind_id]
         return _CXString.from_result(
             conf.lib.clang_getCompletionChunkText(self.cs, self.key)
         )
 
     @CachedProperty
     def kind(self) -> CompletionChunkKind:
-        if self.__kind_id == -1:
-            self.__kind_id = conf.lib.clang_getCompletionChunkKind(self.cs, self.key)
-        return CompletionChunkKind.from_id(self.__kind_id)
+        return CompletionChunkKind.from_id(
+            conf.lib.clang_getCompletionChunkKind(self.cs, self.key)
+        )
 
     @CachedProperty
     def string(self) -> CompletionString | None:
