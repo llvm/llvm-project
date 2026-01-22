@@ -163,13 +163,6 @@ struct SemiNCAInfo {
 
   static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
 
-  static bool isInputGraphEmpty(const DomTreeT &DT) {
-    if (!DT.Parent)
-      return true;
-    using GraphT = GraphTraits<typename DomTreeT::ParentPtr>;
-    return GraphT::nodes_begin(DT.Parent) == GraphT::nodes_end(DT.Parent);
-  }
-
   struct BlockNamePrinter {
     NodePtr N;
 
@@ -350,8 +343,6 @@ struct SemiNCAInfo {
 
   static NodePtr GetEntryNode(const DomTreeT &DT) {
     assert(DT.Parent && "Parent not set");
-    if (isInputGraphEmpty(DT))
-      return nullptr;
     return GraphTraits<typename DomTreeT::ParentPtr>::getEntryNode(DT.Parent);
   }
 
@@ -364,8 +355,7 @@ struct SemiNCAInfo {
 
     // For dominators, function entry CFG node is always a tree root node.
     if (!IsPostDom) {
-      if (NodePtr Entry = GetEntryNode(DT))
-        Roots.push_back(Entry);
+      Roots.push_back(GetEntryNode(DT));
       return Roots;
     }
 
@@ -556,9 +546,6 @@ struct SemiNCAInfo {
 
   template <typename DescendCondition>
   void doFullDFSWalk(const DomTreeT &DT, DescendCondition DC) {
-    if (DT.Roots.empty())
-      return;
-
     if (!IsPostDom) {
       assert(DT.Roots.size() == 1 && "Dominators should have a singe root");
       runDFS(DT.Roots[0], 0, DC, 0);
@@ -585,25 +572,20 @@ struct SemiNCAInfo {
     // This is rebuilding the whole tree, not incrementally, but PostViewBUI is
     // used in case the caller needs a DT update with a CFGView.
     SemiNCAInfo SNCA(PostViewBUI);
-    auto MarkRecalculated = [&]() {
-      if (!BUI)
-        return;
-      BUI->IsRecalculated = true;
-      LLVM_DEBUG(
-          dbgs() << "DomTree recalculated, skipping future batch updates\n");
-    };
 
     // Step #0: Number blocks in depth-first order and initialize variables used
     // in later stages of the algorithm.
     DT.Roots = FindRoots(DT, PostViewBUI);
-    if (DT.Roots.empty()) {
-      MarkRecalculated();
-      return;
-    }
     SNCA.doFullDFSWalk(DT, AlwaysDescend);
 
     SNCA.runSemiNCA();
-    MarkRecalculated();
+    if (BUI) {
+      BUI->IsRecalculated = true;
+      LLVM_DEBUG(
+          dbgs() << "DomTree recalculated, skipping future batch updates\n");
+    }
+
+    if (DT.Roots.empty()) return;
 
     // Add a node for the root. If the tree is a PostDominatorTree it will be
     // the virtual exit (denoted by (BasicBlock *) nullptr) which postdominates
@@ -1227,34 +1209,15 @@ struct SemiNCAInfo {
       errs().flush();
       return false;
     }
-    if (!DT.Parent)
-      return DT.Roots.empty();
-
-    const bool GraphEmpty = isInputGraphEmpty(DT);
 
     if (!IsPostDom) {
       if (DT.Roots.empty()) {
-        if (GraphEmpty)
-          return true;
         errs() << "Tree doesn't have a root!\n";
         errs().flush();
         return false;
       }
 
-      if (GraphEmpty) {
-        errs() << "Tree has a root but the parent graph is empty!\n";
-        errs().flush();
-        return false;
-      }
-
-      NodePtr Entry = GetEntryNode(DT);
-      if (!Entry) {
-        errs() << "Parent graph has no entry node!\n";
-        errs().flush();
-        return false;
-      }
-
-      if (DT.getRoot() != Entry) {
+      if (DT.getRoot() != GetEntryNode(DT)) {
         errs() << "Tree's root is not its parent's entry node!\n";
         errs().flush();
         return false;
@@ -1350,7 +1313,7 @@ struct SemiNCAInfo {
   // be valid, and when that is the case, we don't verify the numbers.
   // Running time: O(N log(N)).
   static bool VerifyDFSNumbers(const DomTreeT &DT) {
-    if (!DT.DFSInfoValid || !DT.Parent || DT.Roots.empty())
+    if (!DT.DFSInfoValid || !DT.Parent)
       return true;
 
     const NodePtr RootBB = IsPostDom ? nullptr : *DT.root_begin();
