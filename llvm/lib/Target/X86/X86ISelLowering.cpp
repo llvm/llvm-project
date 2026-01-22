@@ -61747,7 +61747,7 @@ static SDValue combineMOVDQ2Q(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-// Common folds for BMI2/BMI2 intrinsics.
+// Common folds for BMI1/BMI2/TBM intrinsics.
 static SDValue combineBMI(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI) {
   unsigned NumBits = N->getSimpleValueType(0).getSizeInBits();
