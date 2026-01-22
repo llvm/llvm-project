@@ -302,3 +302,13 @@ void test_wider_shift_amount(uint8_t u8, uint16_t u16, uint32_t u32, unsigned _B
   result_u9 = __builtin_stdc_rotate_left((unsigned _BitInt(9))0x1FF, (int64_t)-2147483647);
 }
 
+#ifdef __SIZEOF_INT128__
+// CHECK-LABEL: test_int128_rotate
+// CHECK:  call i128 @llvm.fshl.i128(i128 %{{.*}}, i128 %{{.*}}, i128 32)
+// CHECK:  call i128 @llvm.fshr.i128(i128 %{{.*}}, i128 %{{.*}}, i128 32)
+void test_int128_rotate(unsigned __int128 u128) {
+  volatile unsigned __int128 result_u128;
+  result_u128 = __builtin_stdc_rotate_left(u128, 32);
+  result_u128 = __builtin_stdc_rotate_right(u128, 32);
+}
+#endif
