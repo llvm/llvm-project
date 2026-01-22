@@ -101,6 +101,12 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Added ``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
+  for bit rotation of unsigned integers including ``_BitInt`` types. Rotation
+  counts are normalized modulo the bit-width and support negative values.
+  Usable in constant expressions. Implicit conversion is supported for
+  class/struct types with conversion operators.
+
 New Compiler Flags
 ------------------
 
@@ -118,6 +124,33 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
+  a CFG-based intra-procedural analysis that detects use-after-free and related
+  temporal safety bugs. See the
+  `RFC <https://discourse.llvm.org/t/rfc-intra-procedural-lifetime-analysis-in-clang/86291>`_
+  for more details. By design, this warning is enabled in ``-Wall``. To disable
+  the analysis, use ``-Wno-lifetime-safety`` or ``-fno-lifetime-safety``.
+
+- Added ``-Wlifetime-safety-suggestions`` to enable lifetime annotation suggestions.
+  This provides suggestions for function parameters that
+  should be marked ``[[clang::lifetimebound]]`` based on lifetime analysis. For
+  example, for the following function:
+
+  .. code-block:: c++
+
+    int* p(int *in) { return in; }
+
+  Clang will suggest:
+
+  .. code-block:: c++
+
+    warning: parameter in intra-TU function should be marked [[clang::lifetimebound]]
+    int* p(int *in) { return in; }
+           ^~~~~~~
+                   [[clang::lifetimebound]]
+    note: param returned here
+    int* p(int *in) { return in; }
+                             ^~
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -128,6 +161,8 @@ Improvements to Coverage Mapping
 Bug Fixes in This Version
 -------------------------
 
+- Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -137,6 +172,7 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -159,6 +195,8 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
+
+- Initial support for gfx1310
 
 NVPTX Support
 ^^^^^^^^^^^^^^

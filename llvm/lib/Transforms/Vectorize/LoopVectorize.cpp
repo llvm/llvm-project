@@ -1503,12 +1503,13 @@ private:
   /// disabled or unsupported, then the scalable part will be equal to
   /// ElementCount::getScalable(0).
   FixedScalableVFPair computeFeasibleMaxVF(unsigned MaxTripCount,
-                                           ElementCount UserVF,
+                                           ElementCount UserVF, unsigned UserIC,
                                            bool FoldTailByMasking);
 
-  /// If \p VF > MaxTripcount, clamps it to the next lower VF that is <=
-  /// MaxTripCount.
+  /// If \p VF * \p UserIC > MaxTripcount, clamps VF to the next lower VF that
+  /// results in VF * UserIC <= MaxTripCount.
   ElementCount clampVFByMaxTripCount(ElementCount VF, unsigned MaxTripCount,
+                                     unsigned UserIC,
                                      bool FoldTailByMasking) const;
 
   /// \return the maximized element count based on the targets vector
@@ -1517,7 +1518,7 @@ private:
   ElementCount getMaximizedVFForTarget(unsigned MaxTripCount,
                                        unsigned SmallestType,
                                        unsigned WidestType,
-                                       ElementCount MaxSafeVF,
+                                       ElementCount MaxSafeVF, unsigned UserIC,
                                        bool FoldTailByMasking);
 
   /// Checks if scalable vectorization is supported and enabled. Caches the
@@ -3444,7 +3445,8 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 }
 
 FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
-    unsigned MaxTripCount, ElementCount UserVF, bool FoldTailByMasking) {
+    unsigned MaxTripCount, ElementCount UserVF, unsigned UserIC,
+    bool FoldTailByMasking) {
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
   unsigned SmallestType, WidestType;
   std::tie(SmallestType, WidestType) = getSmallestAndWidestTypes();
@@ -3540,12 +3542,12 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
                              ElementCount::getScalable(0));
   if (auto MaxVF =
           getMaximizedVFForTarget(MaxTripCount, SmallestType, WidestType,
-                                  MaxSafeFixedVF, FoldTailByMasking))
+                                  MaxSafeFixedVF, UserIC, FoldTailByMasking))
     Result.FixedVF = MaxVF;
 
   if (auto MaxVF =
           getMaximizedVFForTarget(MaxTripCount, SmallestType, WidestType,
-                                  MaxSafeScalableVF, FoldTailByMasking))
+                                  MaxSafeScalableVF, UserIC, FoldTailByMasking))
     if (MaxVF.isScalable()) {
       Result.ScalableVF = MaxVF;
       LLVM_DEBUG(dbgs() << "LV: Found feasible scalable VF = " << MaxVF
@@ -3598,7 +3600,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   switch (ScalarEpilogueStatus) {
   case CM_ScalarEpilogueAllowed:
-    return computeFeasibleMaxVF(MaxTC, UserVF, false);
+    return computeFeasibleMaxVF(MaxTC, UserVF, UserIC, false);
   case CM_ScalarEpilogueNotAllowedUsePredicate:
     [[fallthrough]];
   case CM_ScalarEpilogueNotNeededUsePredicate:
@@ -3637,7 +3639,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
   }
 
-  FixedScalableVFPair MaxFactors = computeFeasibleMaxVF(MaxTC, UserVF, true);
+  FixedScalableVFPair MaxFactors =
+      computeFeasibleMaxVF(MaxTC, UserVF, UserIC, true);
 
   // Avoid tail folding if the trip count is known to be a multiple of any VF
   // we choose.
@@ -3792,7 +3795,8 @@ bool LoopVectorizationCostModel::useMaxBandwidth(
 }
 
 ElementCount LoopVectorizationCostModel::clampVFByMaxTripCount(
-    ElementCount VF, unsigned MaxTripCount, bool FoldTailByMasking) const {
+    ElementCount VF, unsigned MaxTripCount, unsigned UserIC,
+    bool FoldTailByMasking) const {
   unsigned EstimatedVF = VF.getKnownMinValue();
   if (VF.isScalable() && TheFunction->hasFnAttribute(Attribute::VScaleRange)) {
     auto Attr = TheFunction->getFnAttribute(Attribute::VScaleRange);
@@ -3806,16 +3810,24 @@ ElementCount LoopVectorizationCostModel::clampVFByMaxTripCount(
   if (MaxTripCount > 0 && requiresScalarEpilogue(true))
     MaxTripCount -= 1;
 
-  if (MaxTripCount && MaxTripCount <= EstimatedVF &&
+  // When the user specifies an interleave count, we need to ensure that
+  // VF * UserIC <= MaxTripCount to avoid a dead vector loop.
+  unsigned IC = UserIC > 0 ? UserIC : 1;
+  unsigned EstimatedVFTimesIC = EstimatedVF * IC;
+
+  if (MaxTripCount && MaxTripCount <= EstimatedVFTimesIC &&
       (!FoldTailByMasking || isPowerOf2_32(MaxTripCount))) {
     // If upper bound loop trip count (TC) is known at compile time there is no
-    // point in choosing VF greater than TC (as done in the loop below). Select
-    // maximum power of two which doesn't exceed TC. If VF is
+    // point in choosing VF greater than TC / IC (as done in the loop below).
+    // Select maximum power of two which doesn't exceed TC / IC. If VF is
     // scalable, we only fall back on a fixed VF when the TC is less than or
     // equal to the known number of lanes.
-    auto ClampedUpperTripCount = llvm::bit_floor(MaxTripCount);
+    auto ClampedUpperTripCount = llvm::bit_floor(MaxTripCount / IC);
+    if (ClampedUpperTripCount == 0)
+      ClampedUpperTripCount = 1;
     LLVM_DEBUG(dbgs() << "LV: Clamping the MaxVF to maximum power of two not "
-                         "exceeding the constant trip count: "
+                         "exceeding the constant trip count"
+                      << (UserIC > 0 ? " divided by UserIC" : "") << ": "
                       << ClampedUpperTripCount << "\n");
     return ElementCount::get(ClampedUpperTripCount,
                              FoldTailByMasking ? VF.isScalable() : false);
@@ -3825,7 +3837,7 @@ ElementCount LoopVectorizationCostModel::clampVFByMaxTripCount(
 
 ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     unsigned MaxTripCount, unsigned SmallestType, unsigned WidestType,
-    ElementCount MaxSafeVF, bool FoldTailByMasking) {
+    ElementCount MaxSafeVF, unsigned UserIC, bool FoldTailByMasking) {
   bool ComputeScalableMaxVF = MaxSafeVF.isScalable();
   const TypeSize WidestRegister = TTI.getRegisterBitWidth(
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
@@ -3854,8 +3866,8 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     return ElementCount::getFixed(1);
   }
 
-  ElementCount MaxVF = clampVFByMaxTripCount(MaxVectorElementCount,
-                                             MaxTripCount, FoldTailByMasking);
+  ElementCount MaxVF = clampVFByMaxTripCount(
+      MaxVectorElementCount, MaxTripCount, UserIC, FoldTailByMasking);
   // If the MaxVF was already clamped, there's no point in trying to pick a
   // larger one.
   if (MaxVF != MaxVectorElementCount)
@@ -3885,7 +3897,8 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
       }
     }
 
-    MaxVF = clampVFByMaxTripCount(MaxVF, MaxTripCount, FoldTailByMasking);
+    MaxVF =
+        clampVFByMaxTripCount(MaxVF, MaxTripCount, UserIC, FoldTailByMasking);
 
     if (MaxVectorElementCount != MaxVF) {
       // Invalidate any widening decisions we might have made, in case the loop
@@ -4334,20 +4347,34 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 }
 #endif
 
+/// Returns true if the VPlan contains a VPReductionPHIRecipe with
+/// FindLast recurrence kind.
+static bool hasFindLastReductionPhi(VPlan &Plan) {
+  return any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+                [](VPRecipeBase &R) {
+                  auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
+                  return RedPhi &&
+                         RecurrenceDescriptor::isFindLastRecurrenceKind(
+                             RedPhi->getRecurrenceKind());
+                });
+}
+
 bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     ElementCount VF) const {
   // Cross iteration phis such as fixed-order recurrences and FMaxNum/FMinNum
   // reductions need special handling and are currently unsupported.
-  // FindLast reductions also require special handling for the synthesized
-  // mask PHI.
   if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
         if (!Legal->isReductionVariable(&Phi))
           return Legal->isFixedOrderRecurrence(&Phi);
         RecurKind Kind =
             Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind();
-        return RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) ||
-               RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind);
+        return RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind);
       }))
+    return false;
+
+  // FindLast reductions require special handling for the synthesized mask PHI
+  // and are currently unsupported for epilogue vectorization.
+  if (hasFindLastReductionPhi(getPlanFor(VF)))
     return false;
 
   // Phis with uses outside of the loop require special handling and are
@@ -4653,11 +4680,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
              IsaPred<VPReductionPHIRecipe>);
 
   // FIXME: implement interleaving for FindLast transform correctly.
-  if (any_of(make_second_range(Legal->getReductionVars()),
-             [](const RecurrenceDescriptor &RdxDesc) {
-               return RecurrenceDescriptor::isFindLastRecurrenceKind(
-                   RdxDesc.getRecurrenceKind());
-             }))
+  if (hasFindLastReductionPhi(Plan))
     return 1;
 
   // If we did not calculate the cost for VF (because the user selected the VF)

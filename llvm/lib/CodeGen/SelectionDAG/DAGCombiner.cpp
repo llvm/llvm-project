@@ -3174,6 +3174,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
 // Attempt to form avgfloor(A, B) from (A & B) + ((A ^ B) >> 1)
 // Attempt to form avgfloor(A, B) from ((A >> 1) + (B >> 1)) + (A & B & 1)
+// Attempt to form avgceil(A, B) from ((A >> 1) + (B >> 1)) + ((A | B) & 1)
 SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
@@ -3198,6 +3199,21 @@ SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
                        m_Sra(m_Deferred(A), m_One()),
                        m_Sra(m_Deferred(B), m_One()))))) {
     return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
+  }
+
+  if ((!LegalOperations || hasOperation(ISD::AVGCEILU, VT)) &&
+      sd_match(N,
+               m_ReassociatableAdd(m_And(m_Or(m_Value(A), m_Value(B)), m_One()),
+                                   m_Srl(m_Deferred(A), m_One()),
+                                   m_Srl(m_Deferred(B), m_One())))) {
+    return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
+  }
+  if ((!LegalOperations || hasOperation(ISD::AVGCEILS, VT)) &&
+      sd_match(N,
+               m_ReassociatableAdd(m_And(m_Or(m_Value(A), m_Value(B)), m_One()),
+                                   m_Sra(m_Deferred(A), m_One()),
+                                   m_Sra(m_Deferred(B), m_One())))) {
+    return DAG.getNode(ISD::AVGCEILS, DL, VT, A, B);
   }
 
   return SDValue();
@@ -5809,6 +5825,34 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
       SDValue SmallABD = DAG.getNode(Opcode, DL, SmallVT, {ExtedX, ExtedY});
       SDValue ZExted = DAG.getZExtOrTrunc(SmallABD, DL, VT);
       return ZExted;
+    }
+  }
+
+  // fold (abd? (?ext ty:x), small_const:c) -> (zext (abd? x, c))
+  if (sd_match(N, m_c_BinOp(ISD::ABDU, m_ZExt(m_Value(X)), m_Value(Y))) ||
+      sd_match(N, m_c_BinOp(ISD::ABDS, m_SExt(m_Value(X)), m_Value(Y)))) {
+    EVT SmallVT = X.getValueType();
+    if (!LegalOperations || hasOperation(Opcode, SmallVT)) {
+      uint64_t Bits = SmallVT.getScalarSizeInBits();
+      unsigned RelevantBits =
+          (Opcode == ISD::ABDS) ? DAG.ComputeMaxSignificantBits(Y)
+                                : DAG.computeKnownBits(Y).countMaxActiveBits();
+      bool TruncatingYIsCheap = TLI.isTruncateFree(Y, SmallVT) ||
+                                ISD::matchUnaryPredicate(
+                                    Y,
+                                    [&](auto *C) {
+                                      const APInt &YConst = C->getAsAPIntVal();
+                                      return (Opcode == ISD::ABDS)
+                                                 ? YConst.isSignedIntN(Bits)
+                                                 : YConst.isIntN(Bits);
+                                    },
+                                    /*AllowUndefs=*/true);
+
+      if (RelevantBits <= Bits && TruncatingYIsCheap) {
+        SDValue NewY = DAG.getNode(ISD::TRUNCATE, SDLoc(Y), SmallVT, Y);
+        SDValue SmallABD = DAG.getNode(Opcode, DL, SmallVT, {X, NewY});
+        return DAG.getZExtOrTrunc(SmallABD, DL, VT);
+      }
     }
   }
 
