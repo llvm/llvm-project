@@ -842,9 +842,9 @@ private:
       DTU.flush();
     }
     LLVM_DEBUG(
-          dbgs() << "Sucessfully peeled " << FC0.PP.PeelCount
-                 << " iterations from the first loop.\n"
-                    "Both Loops have the same number of iterations now.\n");
+        dbgs() << "Sucessfully peeled " << FC0.PP.PeelCount
+               << " iterations from the first loop.\n"
+                  "Both Loops have the same number of iterations now.\n");
   }
 
   /// Walk each set of control flow equivalent fusion candidates and attempt to
