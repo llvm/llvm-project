@@ -193,9 +193,9 @@ public:
     return FromPtrBits.anyextOrTrunc(ToASBitSize);
   }
 
-  virtual APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
-                                                 unsigned DstAS) const {
-    return APInt::getZero(DL.getPointerSizeInBits());
+  virtual std::optional<APInt>
+  getAddrSpaceCastPreservedPtrMask(unsigned SrcAS, unsigned DstAS) const {
+    return std::nullopt;
   }
 
   virtual bool

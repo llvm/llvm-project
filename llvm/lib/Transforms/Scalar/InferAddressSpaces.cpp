@@ -130,6 +130,7 @@
 #include <cassert>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -429,7 +430,7 @@ bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
   if (I2P->getType()->isVectorTy())
     return false;
 
-  auto *LogicOP = dyn_cast<Operator>(I2P->getOperand(0));
+  Operator *LogicOP = dyn_cast<Operator>(I2P->getOperand(0));
   if (!LogicOP)
     return false;
 
@@ -438,26 +439,33 @@ bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
       LogicOP->getOpcode() != Instruction::And)
     return false;
 
-  auto *LHS = LogicOP->getOperand(0);
-  auto *Mask = LogicOP->getOperand(1);
-  auto *P2I = dyn_cast<Operator>(LHS);
+  Value *LHS = LogicOP->getOperand(0);
+  Value *Mask = LogicOP->getOperand(1);
+  Operator *P2I = dyn_cast<Operator>(LHS);
   if (!P2I || P2I->getOpcode() != Instruction::PtrToInt)
     std::swap(LHS, Mask);
   P2I = dyn_cast<Operator>(LHS);
   if (!P2I || P2I->getOpcode() != Instruction::PtrToInt)
     return false;
 
-  auto *ASCast = dyn_cast<Operator>(P2I->getOperand(0));
+  Operator *ASCast = dyn_cast<Operator>(P2I->getOperand(0));
   if (!ASCast || ASCast->getOpcode() != Instruction::AddrSpaceCast)
     return false;
 
   unsigned SrcAS = I2P->getType()->getPointerAddressSpace();
   unsigned DstAS = ASCast->getOperand(0)->getType()->getPointerAddressSpace();
-  APInt PreservedPtrMask = TTI->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+  std::optional<APInt> PreservedPtrMask =
+      TTI->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+  if (!PreservedPtrMask)
+    return false;
+
   APInt ChangedPtrBits = computeMaxChangedPtrBits(LogicOP, Mask, DL, &AC, DT);
   // Check if the address bits change is within the preserved mask. If the bits
   // change is not preserved, it is not safe to perform address space cast.
-  if ((ChangedPtrBits & (~PreservedPtrMask)).isZero()) {
+  if (ChangedPtrBits.getBitWidth() != PreservedPtrMask->getBitWidth())
+    return false;
+
+  if (ChangedPtrBits.isSubsetOf(*PreservedPtrMask)) {
     PtrIntCastPairs[I2P] = P2I->getOperand(0);
     return true;
   }

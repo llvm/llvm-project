@@ -180,17 +180,19 @@ public:
     }
   }
 
-  APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
-                                         unsigned DstAS) const override {
+  std::optional<APInt>
+  getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                   unsigned DstAS) const override {
     if (SrcAS != llvm::ADDRESS_SPACE_GENERIC)
-      return APInt::getZero(DL.getPointerSizeInBits());
+      return std::nullopt;
     if (DstAS != llvm::ADDRESS_SPACE_GLOBAL &&
         DstAS != llvm::ADDRESS_SPACE_SHARED)
-      return APInt::getZero(DL.getPointerSizeInBits());
+      return std::nullopt;
 
     // Address change within 4K size does not change the original address space
     // and is safe to perform address cast form SrcAS to DstAS.
-    return {DL.getPointerSizeInBits(), 0xfff};
+    APInt PtrMask(DL.getPointerSizeInBits(llvm::ADDRESS_SPACE_GENERIC), 0xfff);
+    return PtrMask;
   }
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
