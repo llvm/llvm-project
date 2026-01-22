@@ -32,7 +32,7 @@ int main(void) {
 }
 
 // clang-format off
-// CHECK: OFFLOAD ERROR: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l30)
+// CHECK: OFFLOAD ERROR: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-8]])
 // CHECK: OFFLOAD ERROR: execution interrupted by hardware trap instruction
 // TRACE:     launchKernel
 // DEBUG:     kernel_trap_async.c:

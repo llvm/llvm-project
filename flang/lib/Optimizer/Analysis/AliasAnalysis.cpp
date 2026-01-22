@@ -29,7 +29,7 @@ using namespace mlir;
 #define DEBUG_TYPE "fir-alias-analysis"
 
 llvm::cl::opt<bool> supportCrayPointers(
-    "funsafe-cray-pointers",
+    "unsafe-cray-pointers",
     llvm::cl::desc("Support Cray POINTERs that ALIAS with non-TARGET data"),
     llvm::cl::init(false));
 

@@ -131,6 +131,8 @@ bool mlirAttributeIsAFloat(MlirAttribute attr) {
   return llvm::isa<FloatAttr>(unwrap(attr));
 }
 
+MlirStringRef mlirFloatAttrGetName(void) { return wrap(FloatAttr::name); }
+
 MlirAttribute mlirFloatAttrDoubleGet(MlirContext ctx, MlirType type,
                                      double value) {
   return wrap(FloatAttr::get(unwrap(type), value));

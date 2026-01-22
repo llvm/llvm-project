@@ -3,6 +3,7 @@
 # FIXME: remove when LLDB_MINIMUM_PYTHON_VERSION > 3.8
 from __future__ import annotations
 
+from typing import Protocol
 import argparse
 import binascii
 import dataclasses
@@ -42,7 +43,12 @@ DEFAULT_TIMEOUT: Final[float] = 50 * (10 if ("ASAN_OPTIONS" in os.environ) else 
 
 # See lldbtest.Base.spawnSubprocess, which should help ensure any processes
 # created by the DAP client are terminated correctly when the test ends.
-SpawnHelperCallback = Callable[[str, List[str], List[str]], subprocess.Popen]
+class SpawnHelperCallback(Protocol):
+    def __call__(
+        self, executable: str, args: List[str], extra_env: List[str], **kwargs
+    ) -> subprocess.Popen:
+        ...
+
 
 ## DAP type references
 
@@ -265,6 +271,7 @@ class DebugCommunication(object):
         self.module_events: List[Dict] = []
         self.sequence: int = 1
         self.output: Dict[str, str] = {}
+        self.reverse_process: Optional[subprocess.Popen] = None
 
         # debuggee state
         self.threads: Optional[dict] = None
@@ -525,8 +532,10 @@ class DebugCommunication(object):
             assert self.spawn_helper is not None, "Not configured to spawn subprocesses"
             [exe, *args] = arguments["args"]
             env = [f"{k}={v}" for k, v in arguments.get("env", {}).items()]
-            proc = self.spawn_helper(exe, args, env)
-            body = {"processId": proc.pid}
+            self.reverse_process = self.spawn_helper(
+                exe, args, env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            body = {"processId": self.reverse_process.pid}
             self.send_packet(
                 {
                     "type": "response",
@@ -865,8 +874,7 @@ class DebugCommunication(object):
         *,
         program: Optional[str] = None,
         pid: Optional[int] = None,
-        debuggerId: Optional[int] = None,
-        targetId: Optional[int] = None,
+        session: Optional[dict[str, int]] = None,
         waitFor=False,
         initCommands: Optional[list[str]] = None,
         preRunCommands: Optional[list[str]] = None,
@@ -886,10 +894,8 @@ class DebugCommunication(object):
             args_dict["pid"] = pid
         if program is not None:
             args_dict["program"] = program
-        if debuggerId is not None:
-            args_dict["debuggerId"] = debuggerId
-        if targetId is not None:
-            args_dict["targetId"] = targetId
+        if session is not None:
+            args_dict["session"] = session
         if waitFor:
             args_dict["waitFor"] = waitFor
         args_dict["initCommands"] = self.init_commands
@@ -1396,7 +1402,12 @@ class DebugCommunication(object):
         return response
 
     def request_completions(self, text, frameId=None):
-        args_dict = {"text": text, "column": len(text) + 1}
+        def code_units(input: str) -> int:
+            utf16_bytes = input.encode("utf-16-le")
+            # one UTF16 codeunit = 2 bytes.
+            return len(utf16_bytes) // 2
+
+        args_dict = {"text": text, "column": code_units(text) + 1}
         if frameId:
             args_dict["frameId"] = frameId
         command_dict = {

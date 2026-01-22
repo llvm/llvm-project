@@ -4,7 +4,7 @@
 
 module {
   cir.func @fold_complex_real_test() -> !s32i {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
     %2 = cir.const #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
     %4 = cir.complex.real %2 : !cir.complex<!s32i> -> !s32i
     cir.store %4, %0 : !s32i, !cir.ptr<!s32i>

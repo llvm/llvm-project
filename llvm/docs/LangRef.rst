@@ -1567,11 +1567,10 @@ Currently, only the following parameter attributes are defined:
     attribute may only be applied to pointer-typed parameters. A pointer that
     is dereferenceable can be loaded from speculatively without a risk of
     trapping. The number of bytes known to be dereferenceable must be provided
-    in parentheses. It is legal for the number of bytes to be less than the
-    size of the pointee type. The ``nonnull`` attribute does not imply
-    dereferenceability (consider a pointer to one element past the end of an
-    array), however ``dereferenceable(<n>)`` does imply ``nonnull`` in
-    ``addrspace(0)`` (which is the default address space), except if the
+    in parentheses. The ``nonnull`` attribute does not imply dereferenceability
+    (consider a pointer to one element past the end of an array), however
+    ``dereferenceable(<n>)`` does imply ``nonnull`` in ``addrspace(0)``
+    (which is the default address space), except if the
     ``null_pointer_is_valid`` function attribute is present.
     ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
@@ -1842,20 +1841,26 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
-``dead_on_return``
+``dead_on_return`` or ``dead_on_return(<n>)``
     This attribute indicates that the memory pointed to by the argument is dead
     upon function return, both upon normal return and if the calls unwinds, meaning
     that the caller will not depend on its contents. Stores that would be observable
-    either on the return path or on the unwind path may be elided.
+    either on the return path or on the unwind path may be elided. A number of
+    bytes known to be dead may optionally be provided in parentheses. If a number
+    of bytes is not specified, all memory reachable through the pointer is marked as
+    dead on return.
 
     Specifically, the behavior is as-if any memory written through the pointer
     during the execution of the function is overwritten with a poison value
     upon function return. The caller may access the memory, but any load
-    not preceded by a store will return poison.
+    not preceded by a store will return poison. If a byte count is specified,
+    only writes within the specified range are overwritten with poison on
+    function return.
 
     This attribute does not imply aliasing properties. For pointer arguments that
     do not alias other memory locations, ``noalias`` attribute may be used in
-    conjunction. Conversely, this attribute always implies ``dead_on_unwind``.
+    conjunction. Conversely, this attribute always implies ``dead_on_unwind``. When
+    a byte count is specified, ``dead_on_unwind`` is implied only for that range.
 
     This attribute cannot be applied to return values.
 
@@ -3115,6 +3120,7 @@ the behavior is undefined, unless one of the following exceptions applies:
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
   dereferenceable at the point of the assumption. The pointer may not be
   dereferenceable at later pointers, e.g., because it could have been freed.
+  Only ``n > 0`` implies that the pointer is dereferenceable.
 
 In addition to allowing operand bundles encoding function and parameter
 attributes, an assume operand bundle may also encode a ``separate_storage``
@@ -6394,8 +6400,8 @@ multiple metadata attachments with the same identifier.
 A transformation is required to drop any metadata attachment that it
 does not recognize or cannot preserve. Currently there is an
 exception for metadata attachment to globals for ``!func_sanitize``,
-``!type``, ``!absolute_symbol`` and ``!associated`` which can't be
-unconditionally dropped unless the global is itself deleted.
+``!type``, ``!absolute_symbol``, ``!implicit.ref`` and ``!associated`` which
+can't be unconditionally dropped unless the global is itself deleted.
 
 Metadata attached to a module using named metadata may not be dropped, with
 the exception of debug metadata (named metadata with the name ``!llvm.dbg.*``).
@@ -7447,6 +7453,38 @@ Examples:
     !1 = !{ i8 255, i8 2 }
     !2 = !{ i8 0, i8 2, i8 3, i8 6 }
     !3 = !{ i8 -2, i8 0, i8 3, i8 6 }
+
+
+.. _nofpclass-metadata:
+
+'``nofpclass``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+``nofpclass`` metadata may be attached only to ``load``
+instructions. It asserts floating-point value classes which will not
+be loaded. The representation is an i32 constant integer encoding a
+10-bit bitmask, with the same meaning and format as the
+:ref:`nofpclass <nofpclass>` attribute. If the loaded value is one of
+the specified floating-point classes, a poison value is returned. The
+interpretation does not depend on the floating-point environment. A
+zero value would be meaningless and is invalid.
+
+Examples:
+
+.. code-block:: llvm
+
+  %not.nan = load float, ptr %p, align 4, !nofpclass !0
+  %not.inf = load <2 x float>, ptr %p, align 4, !nofpclass !1
+  %only.normal = load double, ptr %p, align 8, !nofpclass !2
+  %always.poison = load double, ptr %p, align 8, !nofpclass !3
+  %not.nan.array = load [2 x <2 x float>], ptr %p, !nofpclass !1
+  %not.nan.struct = load { 2 x float }, ptr %p, align 8, !nofpclass !1
+  ...
+  !0 = !{ i32 3 }
+  !1 = !{ i32 516 }
+  !2 = !{ i32 759 }
+  !3 = !{ i32 1023 }
+
 
 '``absolute_symbol``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -8693,6 +8731,36 @@ of requiring a stack protector.
    %a = alloca [1000 x i8], align 1, !stack-protector !0
 
   !0 = !{i32 0}
+
+'``implicit.ref``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``implicit.ref`` metadata may be attached to a function or global variable
+definition with a single argument that references a global object.
+This is typically used when there is some implicit dependence between the
+symbols that is otherwise opaque to the linker. One such example is metadata
+which is accessed by a runtime with associated ``__start_<section_name>`` and
+``__stop_<section_name>`` symbols.
+
+It does not have any effect on non-XCOFF targets.
+
+This metadata lowers to the .ref assembly directive which will add a relocation
+representing an implicit reference from the section the global belongs to, to
+the associated symbol. This link will keep the referenced symbol alive if the
+section is not garbage collected. More than one ref node can be attached
+to the same function or global variable.
+
+
+Example:
+
+.. code-block:: text
+
+    @a = global i32 1
+    @b = global i32 2
+    @c = global i32 3, section "abc", !implicit.ref !0, !implicit.ref !1
+    !0 = !{ptr @a}
+    !1 = !{ptr @b}
+
 
 Module Flags Metadata
 =====================
@@ -14642,6 +14710,37 @@ Semantics:
 
 Note this intrinsic is only verified on AArch64 and ARM.
 
+'``llvm.stackaddress``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptr @llvm.stackaddress.p0()
+
+Overview:
+"""""""""
+
+The '``llvm.stackaddress``' intrinsic returns the starting address of the
+stack region that may be used by called functions.
+
+Semantics:
+""""""""""
+
+This intrinsic returns the *logical* value of the stack pointer register, that
+is, the address separating the stack space of the current function from the
+stack space that may be modified by called functions. It corresponds to the
+address returned by '``llvm.sponentry``', offset by the size of the current
+function's stack frame.
+
+On certain targets (e.g. x86), the logical and actual (or physical) values of
+the stack pointer register are the same. However, on other architectures (e.g.
+SPARCv9), the logical value of the stack pointer register may differ from the
+physical value. '``llvm.stackaddress``' handles this discrepancy and returns
+the correct boundary address.
+
 '``llvm.frameaddress``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -14928,6 +15027,155 @@ Semantics:
 """"""""""
 
 See the description for :ref:`llvm.stacksave <int_stacksave>`.
+
+.. _i_structured_gep:
+
+'``llvm.structured.gep``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <ret_type>
+      @llvm.structured.gep(ptr elementtype(<basetype>) <source>
+                           {, [i32/i64] <index> }*)
+
+Overview:
+"""""""""
+
+The '``llvm.structured.gep``' intrinsic (structured
+**G**\ et\ **E**\ lement\ **P**\ tr) computes a new pointer address resulting
+from a logical indexing into the ``<source>`` pointer. The returned address
+depends on the indices and may depend on the layout of ``<basetype>``
+at runtime.
+
+Arguments:
+""""""""""
+
+``ptr elementtype(<basetype>) <source>``:
+A pointer to the memory location used as base for the address computation.
+
+The ``source`` argument must be annotated with an :ref:`elementtype
+<attr_elementtype>` attribute at the call-site. This attribute specifies the
+type of the element pointed to by the pointer source. This type will be
+used along with the provided indices and source operand to compute a new
+pointer representing the result of a logical indexing into the basetype
+pointed by source.
+
+The ``basetype`` is only associated with ``<source>`` for this particular
+call. A frontend could possibly emit multiple structured
+GEP with the same source pointer but a different ``basetype``.
+
+``[i32/i64] index, ...``:
+Indices used to traverse into the ``basetype`` and compute a pointer to the
+target element. Indices can be 32-bit or 64-bit unsigned integers. Indices being
+handled one by one, both sizes can be mixed in the same instruction. The
+precision used to compute the resulting pointer is target-dependent.
+When used to index into a struct, only integer constants are allowed.
+
+Semantics:
+""""""""""
+
+The ``llvm.structured.gep`` performs a logical traversal of the type
+``basetype`` using the list of provided indices, computing the pointer
+addressing the targeted element/field assuming ``source`` points to a
+physically laid out ``basetype``. The physical layout of the source depends
+on the target and does not necessarily match the one described by the
+datalayout.
+
+The first index determines which element/field of ``basetype`` is selected,
+computes the pointer to access this element/field assuming ``source`` points
+to the start of ``basetype``.
+This pointer becomes the new ``source``, the current type the new
+``basetype``, and the next indices is consumed until a scalar type is
+reached or all indices are consumed.
+
+All indices must be consumed, and it is illegal to index into a scalar type.
+Meaning the maximum number of indices depends on the depth of the basetype.
+
+Because this instruction performs a logical addressing, all indices are
+assumed to be inbounds. This means it is not possible to access the next
+element in the logical layout by overflowing:
+
+- If the indexed type is a struct with N fields, the index must be an
+  immediate/constant value in the range ``[0; N[``.
+- If indexing into an array or vector, the index can be a variable, but
+  is assumed to be inbounds with regards to the current basetype logical layout.
+- If the traversed type is an array or vector of N elements with ``N > 0``,
+  the index is assumed to belong to ``[0; N[``.
+- If the traversed type is an array of size ``0``, the array size is assumed
+  to be known at runtime, and the instruction assumes the index is always
+  inbounds.
+
+In all cases **except** when the accessed type is a 0-sized array, indexing
+out of bounds yields `poison`. When the index value is unknown, optimizations
+can use the type bounds to determine the range of values the index can have.
+If the source pointer is poison, the instruction returns poison.
+The resulting pointer belongs to the same address space as ``source``.
+This instruction does not dereference the pointer.
+
+Example:
+""""""""
+
+**Simple case: logical access of a struct field**
+
+.. code-block:: cpp
+
+    struct A { int a, int b, int c, int d };
+    int val = my_struct->b;
+
+Could be translated to:
+
+.. code-block:: llvm
+
+    %A = type { i32, i32, i32, i32 }
+    %src = call ptr @llvm.structured.gep(ptr elementtype(%A) %my_struct, i32 1)
+    %val = load i32, ptr %src
+
+**A more complex case**
+
+This instruction can also be used on the same pointer with different
+basetypes, as long as codegen knows how those are physically laid out.
+Let’s consider the following code:
+
+.. code-block:: cpp
+
+   struct S {
+       uint a;
+       uint b;
+       uint c;
+       uint d;
+   }
+
+   int val = my_struct->b;
+
+
+In this example, the frontend doesn't know the exact physical layout, but
+knows those logical layouts are lowered to the same physical layout:
+
+    - `{ i32, i32, i32, i32 }`
+    - `[ i32 x 4 ]`
+
+This means is is valid to lower the following code to either:
+
+.. code-block:: llvm
+
+    %S = type { i32, i32, i32, i32 }
+    %src = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 1)
+    load i32, ptr %src
+
+Or:
+
+.. code-block:: llvm
+
+    %src = call ptr @llvm.structured.gep(ptr elementtype([ 4 x i32 ]) %my_struct, i32 1)
+    load i32, ptr %src
+
+This is, however, dependent on context that codegen has an insight on. The
+fact that `[ i32 x 4 ]` and `%S` are equivalent depends on the target.
+
 
 .. _int_get_dynamic_area_offset:
 
@@ -20822,20 +21070,20 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.vector.splice.left.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.left.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %offset)
+      declare <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %offset)
 
 Overview:
 """""""""
 
 The '``llvm.vector.splice.left.*``' intrinsics construct a vector by
-concatenating two vectors together, shifting the elements left by ``imm``, and
-extracting the lower half.
+concatenating two vectors together, shifting the elements left by ``offset``,
+and extracting the lower half.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
-fixed-width vectors is still to use a shufflevector, as that may allow for more
-optimization opportunities.
+fixed-width vectors with an immediate offset is still to use a shufflevector, as
+that may allow for more optimization opportunities.
 
 For example:
 
@@ -20849,11 +21097,13 @@ For example:
 
 Arguments:
 """"""""""
+The first two operands are vectors with the same type. ``offset`` is an unsigned
+scalar i32 that determines how many elements to shift left by.
 
-The first two operands are vectors with the same type. For a fixed-width vector
-<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm < N. For
-a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
-the range 0 <= imm < X where X=vscale_range_min * N.
+Semantics:
+""""""""""
+For a vector type with a runtime length of N, if ``offset`` > N then the result
+is a :ref:`poison value <poisonvalues>`.
 
 '``llvm.vector.splice.right``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20864,20 +21114,20 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.vector.splice.right.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.right.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %offset)
+      declare <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %offset)
 
 Overview:
 """""""""
 
 The '``llvm.vector.splice.right.*``' intrinsics construct a vector by
-concatenating two vectors together, shifting the elements right by ``imm``, and
-extracting the upper half.
+concatenating two vectors together, shifting the elements right by ``offset``,
+and extracting the upper half.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
-fixed-width vectors is still to use a shufflevector, as that may allow for more
-optimization opportunities.
+fixed-width vectors with an immediate offset is still to use a shufflevector, as
+that may allow for more optimization opportunities.
 
 For example:
 
@@ -20891,11 +21141,13 @@ For example:
 
 Arguments:
 """"""""""
+The first two operands are vectors with the same type. ``offset`` is an unsigned
+scalar i32 that determines how many elements to shift right by.
 
-The first two operands are vectors with the same type. For a fixed-width vector
-<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm <= N. For
-a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
-the range 0 <= imm <= X where X=vscale_range_min * N.
+Semantics:
+""""""""""
+For a vector type with a runtime length of N, if ``offset`` > N then the result
+is a :ref:`poison value <poisonvalues>`.
 
 '``llvm.stepvector``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -21394,104 +21646,6 @@ The :ref:`align <attr_align>` parameter attribute can be provided
 for the ``%Ptr`` arguments.
 
 
-Half Precision Floating-Point Intrinsics
-----------------------------------------
-
-For most target platforms, half precision floating-point is a
-storage-only format. This means that it is a dense encoding (in memory)
-but does not support computation in the format.
-
-This means that code must first load the half-precision floating-point
-value as an i16, then convert it to float with
-:ref:`llvm.convert.from.fp16 <int_convert_from_fp16>`. Computation can
-then be performed on the float value (including extending to double
-etc). To store the value back to memory, it is first converted to float
-if needed, then converted to i16 with
-:ref:`llvm.convert.to.fp16 <int_convert_to_fp16>`, then storing as an
-i16 value.
-
-.. _int_convert_to_fp16:
-
-'``llvm.convert.to.fp16``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare i16 @llvm.convert.to.fp16.f32(float %a)
-      declare i16 @llvm.convert.to.fp16.f64(double %a)
-
-Overview:
-"""""""""
-
-The '``llvm.convert.to.fp16``' intrinsic function performs a conversion from a
-conventional floating-point type to half precision floating-point format.
-
-Arguments:
-""""""""""
-
-The intrinsic function contains single argument - the value to be
-converted.
-
-Semantics:
-""""""""""
-
-The '``llvm.convert.to.fp16``' intrinsic function performs a conversion from a
-conventional floating-point format to half precision floating-point format. The
-return value is an ``i16`` which contains the converted number.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %res = call i16 @llvm.convert.to.fp16.f32(float %a)
-      store i16 %res, i16* @x, align 2
-
-.. _int_convert_from_fp16:
-
-'``llvm.convert.from.fp16``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare float @llvm.convert.from.fp16.f32(i16 %a)
-      declare double @llvm.convert.from.fp16.f64(i16 %a)
-
-Overview:
-"""""""""
-
-The '``llvm.convert.from.fp16``' intrinsic function performs a
-conversion from half precision floating-point format to single precision
-floating-point format.
-
-Arguments:
-""""""""""
-
-The intrinsic function contains single argument - the value to be
-converted.
-
-Semantics:
-""""""""""
-
-The '``llvm.convert.from.fp16``' intrinsic function performs a
-conversion from half single precision floating-point format to single
-precision floating-point format. The input half-float value is
-represented by an ``i16`` value.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %a = load i16, ptr @x, align 2
-      %res = call float @llvm.convert.from.fp16(i16 %a)
-
 Saturating floating-point to integer conversions
 ------------------------------------------------
 
@@ -21652,6 +21806,164 @@ This intrinsic is assumed to execute in the default :ref:`floating-point
 environment <floatenv>` *except* for the rounding mode.
 This intrinsic is not supported on all targets. Some targets may not support
 all rounding modes.
+
+'``llvm.convert.to.arbitrary.fp``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <iNxM> @llvm.convert.to.arbitrary.fp.<iNxM>.<fNxM>(
+          <fNxM> <value>, metadata <interpretation>,
+          metadata <rounding mode>, i1 <saturation>)
+
+Overview:
+"""""""""
+
+The ``llvm.convert.to.arbitrary.fp`` intrinsic converts a native LLVM
+floating-point value to an arbitrary FP format, returning the result as an integer
+containing the arbitrary FP bits. This intrinsic is overloaded on both its return
+type and first argument.
+
+Arguments:
+""""""""""
+
+``value``
+  The native LLVM floating-point value to convert (e.g., ``half``, ``float``, ``double``).
+
+``interpretation``
+  A metadata string describing the target arbitrary FP format. Supported format names include:
+
+  - FP8 formats: ``"Float8E5M2"``, ``"Float8E5M2FNUZ"``, ``"Float8E4M3"``,
+    ``"Float8E4M3FN"``, ``"Float8E4M3FNUZ"``, ``"Float8E4M3B11FNUZ"``, ``"Float8E3M4"``,
+    ``"Float8E8M0FNU"``
+  - FP6 formats: ``"Float6E3M2FN"``, ``"Float6E2M3FN"``
+  - FP4 formats: ``"Float4E2M1FN"``
+
+``rounding mode``
+  A metadata string specifying the rounding mode. The permitted strings match those
+  accepted by ``llvm.fptrunc.round`` (for example,
+  ``"round.tonearest"`` or ``"round.towardzero"``).
+
+  The rounding mode is only consulted when ``value`` is not exactly representable in the target format.
+  If the value is exactly representable, all rounding modes produce the same result.
+
+``saturation``
+  A compile-time constant boolean value (``i1``). This parameter controls how overflow is handled
+  when values exceed the representable finite range of the target format:
+
+  - When ``true``: overflowing values are clamped to the minimum or maximum representable finite value
+    (saturating to the largest negative finite value or largest positive finite value).
+  - When ``false``: overflowing values are converted to infinity (preserving sign of the original value) if the
+    target format supports infinity, or return a poison value if infinity is not supported
+    by the target format.
+
+  This parameter must be an immediate constant.
+
+Semantics:
+""""""""""
+
+The intrinsic converts the native LLVM floating-point value to the arbitrary FP
+format specified by ``interpretation``, applying the requested rounding mode and
+saturation behavior. The conversion is performed in two steps: first, the value is
+rounded according to the specified rounding mode to fit the target format's precision;
+then, if the rounded result exceeds the target format's representable range, saturation
+is applied according to the ``saturation`` parameter. The result is returned as an
+integer (e.g., ``i8`` for FP8, ``i6`` for FP6) containing the encoded arbitrary FP bits.
+
+**Handling of special values:**
+
+- **NaN**: NaN values follow LLVM's standard :ref:`NaN rules <floatnan>`. When the target
+  format supports NaN, the NaN representation is preserved (quiet NaNs remain quiet, signaling
+  NaNs remain signaling). The exact NaN payload may be truncated or extended to fit the target
+  format's payload size. If the target format does not support NaN, the intrinsic returns a
+  poison value.
+- **Infinity and Overflow**: If the input is +/-Inf or a finite value that exceeds the representable range:
+
+  - When ``saturation`` is ``false`` and the target format supports infinity, the result is +/-Inf (preserving the sign).
+  - When ``saturation`` is ``false`` and the target format does not support infinity (e.g., formats
+    with "FN" suffix), the intrinsic returns a poison value.
+  - When ``saturation`` is ``true``, the value is clamped to the maximum/minimum representable finite value.
+
+For FP6/FP4 interpretations, producers are expected to use ``saturation`` = ``true``; using ``saturation`` = ``false`` and generating NaN/Inf/overflowing values results in a poison value.
+
+Example:
+""""""""
+
+::
+
+      ; Convert half to FP8 E4M3 format
+      %fp8bits = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(
+          half %value, metadata !"Float8E4M3",
+          metadata !"round.tonearest", i1 false)
+
+      ; Convert vector of float to FP8 E5M2 with saturation
+      %vec_fp8 = call <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4f32(
+          <4 x float> %values, metadata !"Float8E5M2",
+          metadata !"round.towardzero", i1 true)
+
+'``llvm.convert.from.arbitrary.fp``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <fNxM> @llvm.convert.from.arbitrary.fp.<fNxM>.<iNxM>(
+          <iNxM> <value>, metadata <interpretation>)
+
+Overview:
+"""""""""
+
+The ``llvm.convert.from.arbitrary.fp`` intrinsic converts an integer containing
+arbitrary FP bits to a native LLVM floating-point value. This intrinsic is
+overloaded on both its return type and first argument.
+
+Arguments:
+""""""""""
+
+``value``
+  An integer value containing the arbitrary FP bits (e.g., ``i8`` for FP8, ``i6`` for FP6).
+
+``interpretation``
+  A metadata string describing the source arbitrary FP format. Supported format names include:
+
+  - FP8 formats: ``"Float8E5M2"``, ``"Float8E5M2FNUZ"``, ``"Float8E4M3"``,
+    ``"Float8E4M3FN"``, ``"Float8E4M3FNUZ"``, ``"Float8E4M3B11FNUZ"``, ``"Float8E3M4"``,
+    ``"Float8E8M0FNU"``
+  - FP6 formats: ``"Float6E3M2FN"``, ``"Float6E2M3FN"``
+  - FP4 formats: ``"Float4E2M1FN"``
+
+Semantics:
+""""""""""
+
+The intrinsic interprets the integer value as arbitrary FP bits according to
+``interpretation``, then converts to the native LLVM floating-point result type.
+
+Conversions from arbitrary FP formats to native LLVM floating-point types are
+widening conversions (e.g., FP8 to FP16 or FP32), which are exact and require no rounding.
+Normal finite values are converted exactly. NaN values follow LLVM's standard :ref:`NaN rules
+<floatnan>`; the NaN representation is preserved (quiet NaNs remain quiet, signaling NaNs
+remain signaling), and the NaN payload may be truncated or extended to fit the target format's
+payload size. Infinity values are preserved as infinity. If a value exceeds the representable
+range of the target type (for example, converting ``Float8E8M0FNU`` with large exponents to
+``half``), the result is converted to infinity with the appropriate sign.
+
+Example:
+""""""""
+
+::
+
+      ; Convert FP8 E4M3 bits to half
+      %half_val = call half @llvm.convert.from.arbitrary.fp.f16.i8(
+          i8 %fp8bits, metadata !"Float8E4M3")
+
+      ; Convert vector of FP8 E5M2 bits to float
+      %vec_float = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i8(
+          <4 x i8> %fp8_values, metadata !"Float8E5M2")
 
 Convergence Intrinsics
 ----------------------

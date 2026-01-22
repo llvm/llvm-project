@@ -639,7 +639,7 @@ MachineInstr *HexagonExpandCondsets::genCondTfrFor(MachineOperand &SrcOp,
   /// predicate.
 
   unsigned Opc = getCondTfrOpcode(SrcOp, PredSense);
-  unsigned DstState = RegState::Define | (ReadUndef ? RegState::Undef : 0);
+  unsigned DstState = RegState::Define | getUndefRegState(ReadUndef);
   unsigned PredState = getRegState(PredOp) & ~RegState::Kill;
   MachineInstrBuilder MIB;
 
@@ -889,7 +889,7 @@ void HexagonExpandCondsets::predicateAt(const MachineOperand &DefOp,
   // Add the new def, then the predicate register, then the rest of the
   // operands.
   MB.addReg(DefOp.getReg(), getRegState(DefOp), DefOp.getSubReg());
-  MB.addReg(PredOp.getReg(), PredOp.isUndef() ? RegState::Undef : 0,
+  MB.addReg(PredOp.getReg(), getUndefRegState(PredOp.isUndef()),
             PredOp.getSubReg());
   while (Ox < NP) {
     MachineOperand &MO = MI.getOperand(Ox);

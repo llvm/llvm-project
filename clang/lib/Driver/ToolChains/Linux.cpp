@@ -206,6 +206,19 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   if (Triple.getArch() == llvm::Triple::riscv32)
     return "lib32";
 
+  if (Triple.getArch() == llvm::Triple::loongarch32) {
+    switch (Triple.getEnvironment()) {
+    default:
+      return "lib32";
+    case llvm::Triple::GNUSF:
+    case llvm::Triple::MuslSF:
+      return "lib32/sf";
+    case llvm::Triple::GNUF32:
+    case llvm::Triple::MuslF32:
+      return "lib32/f32";
+    }
+  }
+
   return Triple.isArch32Bit() ? "lib" : "lib64";
 }
 
@@ -914,7 +927,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   Res |= SanitizerKind::KernelAddress;
   Res |= SanitizerKind::Vptr;
   Res |= SanitizerKind::SafeStack;
-  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsLoongArch64)
+  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsLoongArch64 || IsSystemZ)
     Res |= SanitizerKind::DataFlow;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch || IsPowerPC64 ||
       IsRISCV64 || IsSystemZ || IsHexagon || IsLoongArch64)
