@@ -661,41 +661,73 @@ static uint64_t getARMStaticBase(const Symbol &sym) {
   return os->ptLoad->firstSec->addr;
 }
 
-// For RE_RISCV_PC_INDIRECT (R_RISCV_PCREL_LO12_{I,S}), the symbol actually
-// points the corresponding R_RISCV_PCREL_HI20 relocation, and the target VA
-// is calculated using PCREL_HI20's symbol.
+struct RISCVPCRel {
+  static constexpr const char *loReloc = "R_RISCV_PCREL_LO12";
+  static constexpr const char *hiReloc = "R_RISCV_PCREL_HI20";
+
+  static bool isHiReloc(uint32_t type) {
+    return is_contained({R_RISCV_PCREL_HI20, R_RISCV_GOT_HI20,
+                         R_RISCV_TLS_GD_HI20, R_RISCV_TLS_GOT_HI20},
+                        type);
+  }
+};
+
+struct LoongArchPCAdd {
+  static constexpr const char *loReloc = "R_LARCH_*PCADD_LO12";
+  static constexpr const char *hiReloc = "R_LARCH_*PCADD_HI20";
+
+  static bool isHiReloc(uint32_t type) {
+    return is_contained({R_LARCH_PCADD_HI20, R_LARCH_GOT_PCADD_HI20,
+                         R_LARCH_TLS_IE_PCADD_HI20, R_LARCH_TLS_LD_PCADD_HI20,
+                         R_LARCH_TLS_GD_PCADD_HI20,
+                         R_LARCH_TLS_DESC_PCADD_HI20},
+                        type);
+  }
+};
+
+// For PC-relative indirect relocations (e.g. R_RISCV_PCREL_LO12_* and
+// R_LARCH_*PCADD_LO12), the symbol referenced by the LO12 relocation does not
+// directly represent the final target address. Instead, it points to the
+// corresponding HI20 relocation, and the target VA is computed using the
+// symbol associated with that HI20 relocation.
 //
-// This function returns the R_RISCV_PCREL_HI20 relocation from the
-// R_RISCV_PCREL_LO12 relocation.
-static Relocation *getRISCVPCRelHi20(Ctx &ctx, const InputSectionBase *loSec,
-                                     const Relocation &loReloc) {
-  uint64_t addend = loReloc.addend;
+// This helper locates and returns the matching HI20 relocation corresponding
+// to a given LO12 relocation.
+template <typename PCRel>
+static Relocation *getPCRelHi20(Ctx &ctx, const InputSectionBase *loSec,
+                                const Relocation &loReloc) {
+  int64_t addend = loReloc.addend;
   Symbol *sym = loReloc.sym;
 
-  const Defined *d = cast<Defined>(sym);
-  if (!d->section) {
+  const Defined *d = dyn_cast<Defined>(sym);
+  if (!d) {
     Err(ctx) << loSec->getLocation(loReloc.offset)
-             << ": R_RISCV_PCREL_LO12 relocation points to an absolute symbol: "
-             << sym->getName();
+             << " points to undefined symbol";
+    return nullptr;
+  }
+  if (!d->section) {
+    Err(ctx) << loSec->getLocation(loReloc.offset) << ": " << PCRel::loReloc
+             << " relocation points to an absolute symbol: " << sym->getName();
     return nullptr;
   }
   InputSection *hiSec = cast<InputSection>(d->section);
 
-  if (hiSec != loSec)
-    Err(ctx) << loSec->getLocation(loReloc.offset)
-             << ": R_RISCV_PCREL_LO12 relocation points to a symbol '"
-             << sym->getName() << "' in a different section '" << hiSec->name
-             << "'";
+  if (hiSec != loSec) {
+    Err(ctx) << loSec->getLocation(loReloc.offset) << ": " << PCRel::loReloc
+             << " relocation points to a symbol '" << sym->getName()
+             << "' in a different section '" << hiSec->name << "'";
+    return nullptr;
+  }
 
   if (addend != 0)
-    Warn(ctx) << loSec->getLocation(loReloc.offset)
-              << ": non-zero addend in R_RISCV_PCREL_LO12 relocation to "
+    Warn(ctx) << loSec->getLocation(loReloc.offset) << ": non-zero addend in "
+              << PCRel::loReloc << " relocation to "
               << hiSec->getObjMsg(d->value) << " is ignored";
 
   // Relocations are sorted by offset, so we can use std::equal_range to do
   // binary search.
   Relocation hiReloc;
-  hiReloc.offset = d->value;
+  hiReloc.offset = d->value + addend;
   auto range =
       std::equal_range(hiSec->relocs().begin(), hiSec->relocs().end(), hiReloc,
                        [](const Relocation &lhs, const Relocation &rhs) {
@@ -703,14 +735,12 @@ static Relocation *getRISCVPCRelHi20(Ctx &ctx, const InputSectionBase *loSec,
                        });
 
   for (auto it = range.first; it != range.second; ++it)
-    if (it->type == R_RISCV_PCREL_HI20 || it->type == R_RISCV_GOT_HI20 ||
-        it->type == R_RISCV_TLS_GD_HI20 || it->type == R_RISCV_TLS_GOT_HI20)
+    if (PCRel::isHiReloc(it->type))
       return &*it;
 
-  Err(ctx) << loSec->getLocation(loReloc.offset)
-           << ": R_RISCV_PCREL_LO12 relocation points to "
-           << hiSec->getObjMsg(d->value)
-           << " without an associated R_RISCV_PCREL_HI20 relocation";
+  Err(ctx) << loSec->getLocation(loReloc.offset) << ": " << PCRel::loReloc
+           << " relocation points to " << hiSec->getObjMsg(d->value)
+           << " without an associated " << PCRel::hiReloc << " relocation";
   return nullptr;
 }
 
@@ -889,8 +919,13 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return getAArch64Page(val) - getAArch64Page(p);
   }
   case RE_RISCV_PC_INDIRECT: {
-    if (const Relocation *hiRel = getRISCVPCRelHi20(ctx, this, r))
+    if (const Relocation *hiRel = getPCRelHi20<RISCVPCRel>(ctx, this, r))
       return getRelocTargetVA(ctx, *hiRel, r.sym->getVA(ctx));
+    return 0;
+  }
+  case RE_LOONGARCH_PC_INDIRECT: {
+    if (const Relocation *hiRel = getPCRelHi20<LoongArchPCAdd>(ctx, this, r))
+      return getRelocTargetVA(ctx, *hiRel, r.sym->getVA(ctx, a));
     return 0;
   }
   case RE_LOONGARCH_PAGE_PC:

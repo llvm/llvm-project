@@ -1567,11 +1567,10 @@ Currently, only the following parameter attributes are defined:
     attribute may only be applied to pointer-typed parameters. A pointer that
     is dereferenceable can be loaded from speculatively without a risk of
     trapping. The number of bytes known to be dereferenceable must be provided
-    in parentheses. It is legal for the number of bytes to be less than the
-    size of the pointee type. The ``nonnull`` attribute does not imply
-    dereferenceability (consider a pointer to one element past the end of an
-    array), however ``dereferenceable(<n>)`` does imply ``nonnull`` in
-    ``addrspace(0)`` (which is the default address space), except if the
+    in parentheses. The ``nonnull`` attribute does not imply dereferenceability
+    (consider a pointer to one element past the end of an array), however
+    ``dereferenceable(<n>)`` does imply ``nonnull`` in ``addrspace(0)``
+    (which is the default address space), except if the
     ``null_pointer_is_valid`` function attribute is present.
     ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
@@ -1842,20 +1841,26 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
-``dead_on_return``
+``dead_on_return`` or ``dead_on_return(<n>)``
     This attribute indicates that the memory pointed to by the argument is dead
     upon function return, both upon normal return and if the calls unwinds, meaning
     that the caller will not depend on its contents. Stores that would be observable
-    either on the return path or on the unwind path may be elided.
+    either on the return path or on the unwind path may be elided. A number of
+    bytes known to be dead may optionally be provided in parentheses. If a number
+    of bytes is not specified, all memory reachable through the pointer is marked as
+    dead on return.
 
     Specifically, the behavior is as-if any memory written through the pointer
     during the execution of the function is overwritten with a poison value
     upon function return. The caller may access the memory, but any load
-    not preceded by a store will return poison.
+    not preceded by a store will return poison. If a byte count is specified,
+    only writes within the specified range are overwritten with poison on
+    function return.
 
     This attribute does not imply aliasing properties. For pointer arguments that
     do not alias other memory locations, ``noalias`` attribute may be used in
-    conjunction. Conversely, this attribute always implies ``dead_on_unwind``.
+    conjunction. Conversely, this attribute always implies ``dead_on_unwind``. When
+    a byte count is specified, ``dead_on_unwind`` is implied only for that range.
 
     This attribute cannot be applied to return values.
 
@@ -14991,6 +14996,155 @@ Semantics:
 
 See the description for :ref:`llvm.stacksave <int_stacksave>`.
 
+.. _i_structured_gep:
+
+'``llvm.structured.gep``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <ret_type>
+      @llvm.structured.gep(ptr elementtype(<basetype>) <source>
+                           {, [i32/i64] <index> }*)
+
+Overview:
+"""""""""
+
+The '``llvm.structured.gep``' intrinsic (structured
+**G**\ et\ **E**\ lement\ **P**\ tr) computes a new pointer address resulting
+from a logical indexing into the ``<source>`` pointer. The returned address
+depends on the indices and may depend on the layout of ``<basetype>``
+at runtime.
+
+Arguments:
+""""""""""
+
+``ptr elementtype(<basetype>) <source>``:
+A pointer to the memory location used as base for the address computation.
+
+The ``source`` argument must be annotated with an :ref:`elementtype
+<attr_elementtype>` attribute at the call-site. This attribute specifies the
+type of the element pointed to by the pointer source. This type will be
+used along with the provided indices and source operand to compute a new
+pointer representing the result of a logical indexing into the basetype
+pointed by source.
+
+The ``basetype`` is only associated with ``<source>`` for this particular
+call. A frontend could possibly emit multiple structured
+GEP with the same source pointer but a different ``basetype``.
+
+``[i32/i64] index, ...``:
+Indices used to traverse into the ``basetype`` and compute a pointer to the
+target element. Indices can be 32-bit or 64-bit unsigned integers. Indices being
+handled one by one, both sizes can be mixed in the same instruction. The
+precision used to compute the resulting pointer is target-dependent.
+When used to index into a struct, only integer constants are allowed.
+
+Semantics:
+""""""""""
+
+The ``llvm.structured.gep`` performs a logical traversal of the type
+``basetype`` using the list of provided indices, computing the pointer
+addressing the targeted element/field assuming ``source`` points to a
+physically laid out ``basetype``. The physical layout of the source depends
+on the target and does not necessarily match the one described by the
+datalayout.
+
+The first index determines which element/field of ``basetype`` is selected,
+computes the pointer to access this element/field assuming ``source`` points
+to the start of ``basetype``.
+This pointer becomes the new ``source``, the current type the new
+``basetype``, and the next indices is consumed until a scalar type is
+reached or all indices are consumed.
+
+All indices must be consumed, and it is illegal to index into a scalar type.
+Meaning the maximum number of indices depends on the depth of the basetype.
+
+Because this instruction performs a logical addressing, all indices are
+assumed to be inbounds. This means it is not possible to access the next
+element in the logical layout by overflowing:
+
+- If the indexed type is a struct with N fields, the index must be an
+  immediate/constant value in the range ``[0; N[``.
+- If indexing into an array or vector, the index can be a variable, but
+  is assumed to be inbounds with regards to the current basetype logical layout.
+- If the traversed type is an array or vector of N elements with ``N > 0``,
+  the index is assumed to belong to ``[0; N[``.
+- If the traversed type is an array of size ``0``, the array size is assumed
+  to be known at runtime, and the instruction assumes the index is always
+  inbounds.
+
+In all cases **except** when the accessed type is a 0-sized array, indexing
+out of bounds yields `poison`. When the index value is unknown, optimizations
+can use the type bounds to determine the range of values the index can have.
+If the source pointer is poison, the instruction returns poison.
+The resulting pointer belongs to the same address space as ``source``.
+This instruction does not dereference the pointer.
+
+Example:
+""""""""
+
+**Simple case: logical access of a struct field**
+
+.. code-block:: cpp
+
+    struct A { int a, int b, int c, int d };
+    int val = my_struct->b;
+
+Could be translated to:
+
+.. code-block:: llvm
+
+    %A = type { i32, i32, i32, i32 }
+    %src = call ptr @llvm.structured.gep(ptr elementtype(%A) %my_struct, i32 1)
+    %val = load i32, ptr %src
+
+**A more complex case**
+
+This instruction can also be used on the same pointer with different
+basetypes, as long as codegen knows how those are physically laid out.
+Let’s consider the following code:
+
+.. code-block:: cpp
+
+   struct S {
+       uint a;
+       uint b;
+       uint c;
+       uint d;
+   }
+
+   int val = my_struct->b;
+
+
+In this example, the frontend doesn't know the exact physical layout, but
+knows those logical layouts are lowered to the same physical layout:
+
+    - `{ i32, i32, i32, i32 }`
+    - `[ i32 x 4 ]`
+
+This means is is valid to lower the following code to either:
+
+.. code-block:: llvm
+
+    %S = type { i32, i32, i32, i32 }
+    %src = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 1)
+    load i32, ptr %src
+
+Or:
+
+.. code-block:: llvm
+
+    %src = call ptr @llvm.structured.gep(ptr elementtype([ 4 x i32 ]) %my_struct, i32 1)
+    load i32, ptr %src
+
+This is, however, dependent on context that codegen has an insight on. The
+fact that `[ i32 x 4 ]` and `%S` are equivalent depends on the target.
+
+
 .. _int_get_dynamic_area_offset:
 
 '``llvm.get.dynamic.area.offset``' Intrinsic
@@ -20884,20 +21038,20 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.vector.splice.left.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.left.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %offset)
+      declare <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %offset)
 
 Overview:
 """""""""
 
 The '``llvm.vector.splice.left.*``' intrinsics construct a vector by
-concatenating two vectors together, shifting the elements left by ``imm``, and
-extracting the lower half.
+concatenating two vectors together, shifting the elements left by ``offset``,
+and extracting the lower half.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
-fixed-width vectors is still to use a shufflevector, as that may allow for more
-optimization opportunities.
+fixed-width vectors with an immediate offset is still to use a shufflevector, as
+that may allow for more optimization opportunities.
 
 For example:
 
@@ -20911,11 +21065,13 @@ For example:
 
 Arguments:
 """"""""""
+The first two operands are vectors with the same type. ``offset`` is an unsigned
+scalar i32 that determines how many elements to shift left by.
 
-The first two operands are vectors with the same type. For a fixed-width vector
-<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm < N. For
-a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
-the range 0 <= imm < X where X=vscale_range_min * N.
+Semantics:
+""""""""""
+For a vector type with a runtime length of N, if ``offset`` > N then the result
+is a :ref:`poison value <poisonvalues>`.
 
 '``llvm.vector.splice.right``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20926,20 +21082,20 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.vector.splice.right.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.right.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %offset)
+      declare <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %offset)
 
 Overview:
 """""""""
 
 The '``llvm.vector.splice.right.*``' intrinsics construct a vector by
-concatenating two vectors together, shifting the elements right by ``imm``, and
-extracting the upper half.
+concatenating two vectors together, shifting the elements right by ``offset``,
+and extracting the upper half.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
-fixed-width vectors is still to use a shufflevector, as that may allow for more
-optimization opportunities.
+fixed-width vectors with an immediate offset is still to use a shufflevector, as
+that may allow for more optimization opportunities.
 
 For example:
 
@@ -20953,11 +21109,13 @@ For example:
 
 Arguments:
 """"""""""
+The first two operands are vectors with the same type. ``offset`` is an unsigned
+scalar i32 that determines how many elements to shift right by.
 
-The first two operands are vectors with the same type. For a fixed-width vector
-<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm <= N. For
-a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
-the range 0 <= imm <= X where X=vscale_range_min * N.
+Semantics:
+""""""""""
+For a vector type with a runtime length of N, if ``offset`` > N then the result
+is a :ref:`poison value <poisonvalues>`.
 
 '``llvm.stepvector``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -21455,104 +21613,6 @@ and columns, respectively, and must be positive, constant integers.
 The :ref:`align <attr_align>` parameter attribute can be provided
 for the ``%Ptr`` arguments.
 
-
-Half Precision Floating-Point Intrinsics
-----------------------------------------
-
-For most target platforms, half precision floating-point is a
-storage-only format. This means that it is a dense encoding (in memory)
-but does not support computation in the format.
-
-This means that code must first load the half-precision floating-point
-value as an i16, then convert it to float with
-:ref:`llvm.convert.from.fp16 <int_convert_from_fp16>`. Computation can
-then be performed on the float value (including extending to double
-etc). To store the value back to memory, it is first converted to float
-if needed, then converted to i16 with
-:ref:`llvm.convert.to.fp16 <int_convert_to_fp16>`, then storing as an
-i16 value.
-
-.. _int_convert_to_fp16:
-
-'``llvm.convert.to.fp16``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare i16 @llvm.convert.to.fp16.f32(float %a)
-      declare i16 @llvm.convert.to.fp16.f64(double %a)
-
-Overview:
-"""""""""
-
-The '``llvm.convert.to.fp16``' intrinsic function performs a conversion from a
-conventional floating-point type to half precision floating-point format.
-
-Arguments:
-""""""""""
-
-The intrinsic function contains single argument - the value to be
-converted.
-
-Semantics:
-""""""""""
-
-The '``llvm.convert.to.fp16``' intrinsic function performs a conversion from a
-conventional floating-point format to half precision floating-point format. The
-return value is an ``i16`` which contains the converted number.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %res = call i16 @llvm.convert.to.fp16.f32(float %a)
-      store i16 %res, i16* @x, align 2
-
-.. _int_convert_from_fp16:
-
-'``llvm.convert.from.fp16``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare float @llvm.convert.from.fp16.f32(i16 %a)
-      declare double @llvm.convert.from.fp16.f64(i16 %a)
-
-Overview:
-"""""""""
-
-The '``llvm.convert.from.fp16``' intrinsic function performs a
-conversion from half precision floating-point format to single precision
-floating-point format.
-
-Arguments:
-""""""""""
-
-The intrinsic function contains single argument - the value to be
-converted.
-
-Semantics:
-""""""""""
-
-The '``llvm.convert.from.fp16``' intrinsic function performs a
-conversion from half single precision floating-point format to single
-precision floating-point format. The input half-float value is
-represented by an ``i16`` value.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %a = load i16, ptr @x, align 2
-      %res = call float @llvm.convert.from.fp16(i16 %a)
 
 Saturating floating-point to integer conversions
 ------------------------------------------------

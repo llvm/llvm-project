@@ -20,6 +20,7 @@
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
@@ -1606,17 +1607,31 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     return false;
   }
   case Attribute::Dereferenceable: {
-    uint64_t Bytes;
-    if (parseOptionalDerefAttrBytes(lltok::kw_dereferenceable, Bytes))
+    std::optional<uint64_t> Bytes;
+    if (parseOptionalAttrBytes(lltok::kw_dereferenceable, Bytes))
       return true;
-    B.addDereferenceableAttr(Bytes);
+    assert(Bytes.has_value());
+    B.addDereferenceableAttr(Bytes.value());
+    return false;
+  }
+  case Attribute::DeadOnReturn: {
+    std::optional<uint64_t> Bytes;
+    if (parseOptionalAttrBytes(lltok::kw_dead_on_return, Bytes,
+                               /*ErrorNoBytes=*/false))
+      return true;
+    if (Bytes.has_value()) {
+      B.addDeadOnReturnAttr(DeadOnReturnInfo(Bytes.value()));
+    } else {
+      B.addDeadOnReturnAttr(DeadOnReturnInfo());
+    }
     return false;
   }
   case Attribute::DereferenceableOrNull: {
-    uint64_t Bytes;
-    if (parseOptionalDerefAttrBytes(lltok::kw_dereferenceable_or_null, Bytes))
+    std::optional<uint64_t> Bytes;
+    if (parseOptionalAttrBytes(lltok::kw_dereferenceable_or_null, Bytes))
       return true;
-    B.addDereferenceableOrNullAttr(Bytes);
+    assert(Bytes.has_value());
+    B.addDereferenceableOrNullAttr(Bytes.value());
     return false;
   }
   case Attribute::UWTable: {
@@ -2468,31 +2483,38 @@ bool LLParser::parseOptionalCodeModel(CodeModel::Model &model) {
   return false;
 }
 
-/// parseOptionalDerefAttrBytes
+/// parseOptionalAttrBytes
 ///   ::= /* empty */
 ///   ::= AttrKind '(' 4 ')'
 ///
-/// where AttrKind is either 'dereferenceable' or 'dereferenceable_or_null'.
-bool LLParser::parseOptionalDerefAttrBytes(lltok::Kind AttrKind,
-                                           uint64_t &Bytes) {
+/// where AttrKind is either 'dereferenceable', 'dereferenceable_or_null', or
+/// 'dead_on_return'
+bool LLParser::parseOptionalAttrBytes(lltok::Kind AttrKind,
+                                      std::optional<uint64_t> &Bytes,
+                                      bool ErrorNoBytes) {
   assert((AttrKind == lltok::kw_dereferenceable ||
-          AttrKind == lltok::kw_dereferenceable_or_null) &&
+          AttrKind == lltok::kw_dereferenceable_or_null ||
+          AttrKind == lltok::kw_dead_on_return) &&
          "contract!");
 
   Bytes = 0;
   if (!EatIfPresent(AttrKind))
     return false;
   LocTy ParenLoc = Lex.getLoc();
-  if (!EatIfPresent(lltok::lparen))
-    return error(ParenLoc, "expected '('");
+  if (!EatIfPresent(lltok::lparen)) {
+    if (ErrorNoBytes)
+      return error(ParenLoc, "expected '('");
+    Bytes = std::nullopt;
+    return false;
+  }
   LocTy DerefLoc = Lex.getLoc();
-  if (parseUInt64(Bytes))
+  if (parseUInt64(Bytes.value()))
     return true;
   ParenLoc = Lex.getLoc();
   if (!EatIfPresent(lltok::rparen))
     return error(ParenLoc, "expected ')'");
-  if (!Bytes)
-    return error(DerefLoc, "dereferenceable bytes must be non-zero");
+  if (!Bytes.value())
+    return error(DerefLoc, "byte count specified must be non-zero");
   return false;
 }
 
@@ -10165,6 +10187,7 @@ bool LLParser::parseOptionalCalls(
         if (parseToken(lltok::colon, "expected ':'") || parseHotness(Hotness))
           return true;
         break;
+      // Deprecated, keep in order to support old files.
       case lltok::kw_relbf:
         Lex.Lex();
         if (parseToken(lltok::colon, "expected ':'") || parseUInt32(RelBF))
@@ -10179,15 +10202,13 @@ bool LLParser::parseOptionalCalls(
         return error(Lex.getLoc(), "expected hotness, relbf, or tail");
       }
     }
-    if (Hotness != CalleeInfo::HotnessType::Unknown && RelBF > 0)
-      return tokError("Expected only one of hotness or relbf");
     // Keep track of the Call array index needing a forward reference.
     // We will save the location of the ValueInfo needing an update, but
     // can only do so once the std::vector is finalized.
     if (VI.getRef() == FwdVIRef)
       IdToIndexMap[GVId].push_back(std::make_pair(Calls.size(), Loc));
     Calls.push_back(
-        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall, RelBF)});
+        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall)});
 
     if (parseToken(lltok::rparen, "expected ')' in call"))
       return true;

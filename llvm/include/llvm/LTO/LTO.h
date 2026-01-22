@@ -16,6 +16,7 @@
 #define LLVM_LTO_LTO_H
 
 #include "llvm/IR/LLVMRemarkStreamer.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
 
@@ -167,6 +168,12 @@ public:
     using irsymtab::Symbol::getSectionName;
     using irsymtab::Symbol::isExecutable;
     using irsymtab::Symbol::isUsed;
+
+    // Returns whether this symbol is a library call that LTO code generation
+    // may emit references to. Such symbols must be considered external, as
+    // removing them or modifying their interfaces would invalidate the code
+    // generator's knowledge about them.
+    bool isLibcall(const RTLIB::RuntimeLibcallsInfo &Libcalls) const;
   };
 
   /// A range over the symbols in this InputFile.
@@ -194,6 +201,8 @@ public:
 
   // Returns the only BitcodeModule from InputFile.
   LLVM_ABI BitcodeModule &getSingleBitcodeModule();
+  // Returns the primary BitcodeModule from InputFile.
+  LLVM_ABI BitcodeModule &getPrimaryBitcodeModule();
   // Returns the memory buffer reference for this input file.
   MemoryBufferRef getFileBuffer() const { return MbRef; }
   // Returns true if this input file is a member of an archive.
@@ -443,6 +452,13 @@ public:
   LLVM_ABI static SmallVector<const char *>
   getRuntimeLibcallSymbols(const Triple &TT);
 
+protected:
+  // Called at the start of run().
+  virtual Error handleArchiveInputs() { return Error::success(); }
+
+  // Called before returning from run().
+  virtual void cleanup() {}
+
 private:
   Config Conf;
 
@@ -574,7 +590,7 @@ private:
 
   void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
-                            bool InSummary);
+                            bool InSummary, const Triple &TT);
 
   // These functions take a range of symbol resolutions and consume the
   // resolutions used by a single input module. Functions return ranges refering
@@ -620,8 +636,6 @@ public:
   addInput(std::unique_ptr<lto::InputFile> InputPtr) {
     return std::shared_ptr<lto::InputFile>(InputPtr.release());
   }
-
-  virtual llvm::Error handleArchiveInputs() { return llvm::Error::success(); }
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

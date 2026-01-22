@@ -129,14 +129,12 @@ public:
                                  bool UseFalsePath, bool UseBoth,
                                  llvm::Value *StepV);
   void emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
-                                      Address MCDCCondBitmapAddr,
                                       CodeGenFunction &CGF);
   void emitMCDCParameters(CGBuilderTy &Builder);
-  void emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
-                               Address MCDCCondBitmapAddr);
+  std::vector<Address *> getMCDCCondBitmapAddrArray(CGBuilderTy &Builder);
+  void emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S);
   void emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
-                                Address MCDCCondBitmapAddr, llvm::Value *Val,
-                                CodeGenFunction &CGF);
+                                llvm::Value *Val, CodeGenFunction &CGF);
 
   void markStmtAsUsed(bool Skipped, const Stmt *S) {
     // Do nothing.
