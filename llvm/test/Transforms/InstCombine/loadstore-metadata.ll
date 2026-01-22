@@ -327,6 +327,75 @@ entry:
   ret double %l.sel
 }
 
+define float @preserve_load_metadata_after_select_transform_nofpclass(i1 %c, ptr dereferenceable(8) %a, ptr dereferenceable(8) %b) {
+; CHECK-LABEL: define float @preserve_load_metadata_after_select_transform_nofpclass(
+; CHECK-SAME: i1 [[C:%.*]], ptr dereferenceable(8) [[A:%.*]], ptr dereferenceable(8) [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[B_VAL:%.*]] = load float, ptr [[B]], align 1, !nofpclass [[META16:![0-9]+]]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load float, ptr [[A]], align 1, !nofpclass [[META16]]
+; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[C]], float [[B_VAL]], float [[A_VAL]]
+; CHECK-NEXT:    ret float [[L_SEL]]
+;
+entry:
+  %ptr.sel = select i1 %c, ptr %b, ptr %a
+  %l.sel = load float, ptr %ptr.sel, align 1, !nofpclass !{i32 3}
+  ret float %l.sel
+}
+
+; nofpclass should be dropped
+define i32 @test_load_cast_combine_nofpclass_int(ptr %ptr) {
+; CHECK-LABEL: define i32 @test_load_cast_combine_nofpclass_int(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret i32 [[L1]]
+;
+entry:
+  %l = load float, ptr %ptr, !nofpclass !{i32 3}
+  %c = bitcast float %l to i32
+  ret i32 %c
+}
+
+; nofpclass should be dropped
+define <2 x half> @test_load_cast_combine_nofpclass_fpvec(ptr %ptr) {
+; CHECK-LABEL: define <2 x half> @test_load_cast_combine_nofpclass_fpvec(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L1:%.*]] = load <2 x half>, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret <2 x half> [[L1]]
+;
+entry:
+  %l = load float, ptr %ptr, !nofpclass !{i32 3}
+  %c = bitcast float %l to <2 x half>
+  ret <2 x half> %c
+}
+
+define float @test_load_cast_combine_nofpclass_1xvec_to_scalar(ptr %ptr) {
+; CHECK-LABEL: define float @test_load_cast_combine_nofpclass_1xvec_to_scalar(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L1:%.*]] = load float, ptr [[PTR]], align 4, !nofpclass [[META16]]
+; CHECK-NEXT:    ret float [[L1]]
+;
+entry:
+  %l = load <1 x float>, ptr %ptr, !nofpclass !{i32 3}
+  %c = bitcast <1 x float> %l to float
+  ret float %c
+}
+
+define <1 x float> @test_load_cast_combine_nofpclass_scalar_to_1xvec(ptr %ptr) {
+; CHECK-LABEL: define <1 x float> @test_load_cast_combine_nofpclass_scalar_to_1xvec(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L1:%.*]] = load <1 x float>, ptr [[PTR]], align 4, !nofpclass [[META16]]
+; CHECK-NEXT:    ret <1 x float> [[L1]]
+;
+entry:
+  %l = load float, ptr %ptr, !nofpclass !{i32 3}
+  %c = bitcast float %l to <1 x float>
+  ret <1 x float> %c
+}
+
 !0 = !{!1, !1, i64 0}
 !1 = !{!"scalar type", !2}
 !2 = !{!"root"}
@@ -362,4 +431,5 @@ entry:
 ; CHECK: [[META13]] = distinct !{[[META13]], [[META14:![0-9]+]]}
 ; CHECK: [[META14]] = distinct !{[[META14]]}
 ; CHECK: [[ACC_GRP15]] = distinct !{}
+; CHECK: [[META16]] = !{i32 3}
 ;.

@@ -592,6 +592,49 @@ out:
   ret void
 }
 
+define void @hoist_nofpclass_intersect(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_nofpclass_intersect(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[P:%.*]], align 4, !nofpclass [[META12:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  %t = load float, ptr %p, !nofpclass !{i32 3} ; nan
+  br label %out
+
+else:
+  %e = load float, ptr %p, !nofpclass !{i32 519} ; inf nan
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_nofpclass_drop(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_nofpclass_drop(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  %t = load float, ptr %p, !nofpclass !{i32 3} ; nan
+  br label %out
+
+else:
+  %e = load float, ptr %p, !nofpclass !{i32 512} ; inf
+  br label %out
+
+out:
+  ret void
+}
+
+
 !0 = !{ i8 0, i8 1 }
 !1 = !{ i8 3, i8 5 }
 !2 = !{}
@@ -616,4 +659,5 @@ out:
 ; CHECK: [[META9]] = !{!"address"}
 ; CHECK: [[META10]] = !{!"address", !"read_provenance"}
 ; CHECK: [[META11]] = !{!"provenance"}
+; CHECK: [[META12]] = !{i32 3}
 ;.
