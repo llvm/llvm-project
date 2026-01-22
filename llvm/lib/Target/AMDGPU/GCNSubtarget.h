@@ -970,12 +970,6 @@ public:
   /// In this case it is readonly.
   bool flatScratchIsArchitected() const { return HasArchitectedFlatScratch; }
 
-  /// \returns true if the architected SGPRs are enabled.
-
-  /// \returns true if Global Data Share is supported.
-
-  /// \returns true if Global Wave Sync is supported.
-
   /// \returns true if the machine has merged shaders in which s0-s7 are
   /// reserved by the hardware and user SGPRs start at s8
   bool hasMergedShaders() const { return getGeneration() >= GFX9; }
@@ -989,16 +983,11 @@ public:
   // \returns true if the target has split barriers feature
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
-  // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
-  // no-return form.
-
   // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
   bool hasDX10ClampMode() const { return getGeneration() < GFX12; }
 
   // \returns true if the target has IEEE kernel descriptor mode bit
   bool hasIEEEMode() const { return getGeneration() < GFX12; }
-
-  // \returns true if the target has IEEE fminimum/fmaximum instructions
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
@@ -1013,10 +1002,6 @@ public:
 
   bool hasVOPD3() const { return HasGFX1250Insts; }
 
-  // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
-
-  // \returns true if the target has V_MAD_U32 instruction.
-
   // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
   bool hasVectorMulU64() const { return HasGFX1250Insts; }
 
@@ -1026,10 +1011,6 @@ public:
 
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
   bool hasIntMinMax64() const { return HasGFX1250Insts; }
-
-  // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
-
-  // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return HasGFX1250Insts; }
