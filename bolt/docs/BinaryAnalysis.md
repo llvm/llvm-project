@@ -20,6 +20,8 @@ shared object. Similar to other BOLT tools, `llvm-bolt-binary-analysis` expects
 
 In addition to options printed by `llvm-bolt-binary-analysis --help-hidden`,
 other relevant BOLT options can generally be passed, see `llvm-bolt --help-hidden`.
+Incomplete help message is a known issue and is tracked in
+[#176969](https://github.com/llvm/llvm-project/issues/176969).
 
 The only analysis which is currently implemented is validation of Pointer
 Authentication hardening applied to the binary.
