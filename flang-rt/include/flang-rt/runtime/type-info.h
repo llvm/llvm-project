@@ -114,7 +114,7 @@ private:
   std::uint8_t kind_{0};
   std::uint8_t rank_{0};
   MemorySpace memorySpace_{MemorySpace::Host}; // memory space of the component
-  std::uint8_t padding_[3]; // 3 bytes padding
+  [[maybe_unused]] std::uint8_t padding_[3]; // 3 bytes padding
   std::uint64_t offset_{0};
   Value characterLen_; // for TypeCategory::Character
   StaticDescriptor<0, true> derivedType_; // TYPE(DERIVEDTYPE), POINTER
