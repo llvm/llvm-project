@@ -864,7 +864,9 @@ void LayoutInfoPropagation::visitDpasOp(
             "Unable to determine the number of subgroups for the operation.");
         return;
       }
-      // Step 1. Retrieve D layout. Get all valid layouts for A and B
+
+      // Step 1. Get all valid layouts for A, B, and C operands.
+      // All operands must have at least one valid subgroup layout.
       LayoutInfo layoutD = results[0]->getValue();
       SmallVector<int> sgLayoutD = layoutD.getSgLayout();
       assert(!sgLayoutD.empty() && "Expected layout for DPAS result.");
@@ -886,45 +888,44 @@ void LayoutInfoPropagation::visitDpasOp(
         return;
       }
 
-      // Step 2. Find common layouts.
-      // Ideally, we want to find given layout D in all A, B and C candidates.
-
-      // Ensure D layout matches one of C layouts.
-      if (hasAcc && llvm::find(layoutsC, layoutDVal) == layoutsC.end()) {
-        dpas.emitWarning("Subgroup layout for D does not match any valid C "
-                         "subgroup layout.");
-        return;
-      }
-      // The best pick is layout D. If not found, we will pick any common layout
-      // between A and B.
-      std::optional<std::pair<int, int>> bestPick;
+      // Step 2. If the result D layout can be reused for all operands, that
+      // layout is chosen. Otherwise, pick the most balanced subgroup layout
+      // that is valid for A, B and C (if present) operands
       llvm::DenseSet<std::pair<int, int>> setA(layoutsA.begin(),
                                                layoutsA.end());
-      SmallVector<std::pair<int, int>> common;
+      llvm::DenseSet<std::pair<int, int>> setC;
+      if (hasAcc)
+        setC = llvm::DenseSet<std::pair<int, int>>(layoutsC.begin(),
+                                                   layoutsC.end());
+      std::optional<std::pair<int, int>> bestPick;
       for (auto &l : layoutsB) {
+        // Is in valid A layouts
         if (setA.contains(l)) {
+          // Is in valid C layouts
+          if (hasAcc && !setC.contains(l))
+            continue;
+          // Is in (A and B and C) and matches D -> best pick
           if (l == layoutDVal) {
             bestPick = l;
             break;
           }
-          common.push_back(l);
+          // Is in (A and B and C), balanced layout comes first
+          if (!bestPick)
+            bestPick = l;
         }
       }
-      // Step 3. The best pick either matches D or is any common layout between
-      // A and B. If no common layout, warn and pick any valid layout.
+      // Step 3. If there is no subgroup layout compatible with A, B and C (if
+      // present) operands, we fail.
       SmallVector<int> sgLayoutA;
       SmallVector<int> sgLayoutB;
-      if (!bestPick && !common.empty())
-        bestPick = common[0];
+      SmallVector<int> sgLayoutC;
       if (bestPick) {
         sgLayoutA = {bestPick->first, bestPick->second};
         sgLayoutB = sgLayoutA;
+        sgLayoutC = sgLayoutA;
       } else {
-        dpas.emitWarning(
-            "Unable to find common subgroup layout for matrices matching "
-            "layout of result. Picking any valid layout.");
-        sgLayoutA = {layoutsA[0].first, layoutsA[0].second};
-        sgLayoutB = {layoutsB[0].first, layoutsB[0].second};
+        dpas.emitWarning("Unable to find common subgroup layout for matrices.");
+        return;
       }
       SmallVector<int> sgDataA = {
           static_cast<int>(aTy.getShape()[0]) / sgLayoutA[0],
@@ -935,9 +936,9 @@ void LayoutInfoPropagation::visitDpasOp(
       SmallVector<int> sgDataC;
       if (hasAcc)
         sgDataC = {static_cast<int>(dpas.getResultType().getShape()[0]) /
-                       sgLayoutD[0],
+                       sgLayoutC[0],
                    static_cast<int>(dpas.getResultType().getShape()[1]) /
-                       sgLayoutD[1]};
+                       sgLayoutC[1]};
 
       dpasALayout = LayoutInfo(xegpu::LayoutAttr::get(
           aTy.getContext(), DenseI32ArrayAttr::get(aTy.getContext(), sgLayoutA),
