@@ -43,7 +43,7 @@ func.func @_QQmain() {
 
 // CHECK: %[[UPPER_BOUND:.*]] = arith.subi %{{.*}}#1, %{{c1.*}} : index
 
-// CHECK: %[[BOUNDS:.*]] = omp.map.bounds 
+// CHECK: %[[BOUNDS:.*]] = omp.map.bounds
 // CHECK-SAME: lower_bound(%{{c0.*}} : index) upper_bound(%[[UPPER_BOUND]] : index)
 // CHECK-SAME: extent(%{{.*}}#1 : index) stride(%{{.*}}#2 : index)
 // CHECK-SAME: start_idx(%{{.*}}#0 : index) {stride_in_bytes = true}
@@ -57,8 +57,13 @@ func.func @_QQmain() {
 
 // CHECK: %[[FIELD_MAP:.*]] = omp.map.info var_ptr(
 // CHECK-SAME: %[[FIELD_COORD]] : {{.*}}) map_clauses(
-// CHECK-SAME: implicit, to) capture(ByRef) ->
+// CHECK-SAME: always, implicit, to) capture(ByRef) ->
 // CHECK-SAME: {{.*}} {name = "dst_record.to_implicitly_map.implicit_map"}
+
+// CHECK: %[[ATTACH_MAP:.*]] = omp.map.info var_ptr(
+// CHECK-SAME: %[[FIELD_COORD]] : {{.*}}) map_clauses(
+// CHECK-SAME: attach, ref_ptr_ptee) capture(ByRef)
+// CHECK-SAME: var_ptr_ptr(%[[BASE_ADDR]] : {{.*}}
 
 // CHECK: %[[RECORD_MAP:.*]] = omp.map.info var_ptr(
 // CHECK-SAME: %[[RECORD_DECL]]#1 : {{.*}}) map_clauses(
@@ -69,6 +74,7 @@ func.func @_QQmain() {
 
 // Verify map ops when using a mapper:
 // Implicit field mapping is the same as for the non-mapper case.
+// CHECK: omp.map.info
 // CHECK: omp.map.info
 // CHECK: omp.map.info
 
