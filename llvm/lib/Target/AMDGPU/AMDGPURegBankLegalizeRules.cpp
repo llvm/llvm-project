@@ -509,6 +509,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64, Vcc}, {Vgpr32, Vgpr32, Vgpr64}})
       .Uni(S64, {{Sgpr64, Sgpr32Trunc}, {Sgpr32, Sgpr32, Sgpr64}, UniMAD64});
 
+  bool HasScalarSMulU64 = ST->hasScalarSMulU64();
+  addRulesForGOpcs({G_AMDGPU_S_MUL_U64_U32, G_AMDGPU_S_MUL_I64_I32}, Standard)
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr64}, UniMul64}, HasScalarSMulU64)
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}, DivSMulToMAD});
+
   addRulesForGOpcs({G_XOR, G_OR, G_AND}, StandardB)
       .Any({{UniS1}, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}}})
       .Any({{DivS1}, {{Vcc}, {Vcc, Vcc}}})
@@ -1077,6 +1082,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
 
+  // TODO: This opcode is generated from the i64->i16 signed clamped pattern in
+  // the PreLegalizerCombiner. Move the combine to RegBankCombiner to keep more
+  // instructions on SALU.
+  addRulesForGOpcs({G_AMDGPU_SMED3}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
+
   // FNEG and FABS are either folded as source modifiers or can be selected as
   // bitwise XOR and AND with Mask. XOR and AND are available on SALU but for
   // targets without SALU float we still select them as VGPR since there would
@@ -1123,6 +1135,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}}})
       .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}}, hasSALUFloat)
       .Any({{UniS32, S16}, {{UniInVgprS32}, {Vgpr16}}}, !hasSALUFloat);
+
+  addRulesForGOpcs({G_AMDGPU_CVT_PK_I16_I32}, Standard)
+      .Uni(V2S16, {{UniInVgprV2S16}, {Vgpr32, Vgpr32}})
+      .Div(V2S16, {{VgprV2S16}, {Vgpr32, Vgpr32}});
 
   addRulesForGOpcs({G_FPTRUNC})
       .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})

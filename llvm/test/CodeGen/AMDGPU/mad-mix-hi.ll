@@ -40,7 +40,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo(half %src0, half %s
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v0
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo:
@@ -50,7 +50,8 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo(half %src0, half %s
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GISEL-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
-; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float
@@ -102,8 +103,8 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo(half %src0, half %s
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v0
-; SDAG-CI-NEXT:    v_mov_b32_e32 v0, 1.0
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SDAG-CI-NEXT:    v_or_b32_e32 v0, 0x3c00, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo:
@@ -122,8 +123,9 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo(half %src0, half %s
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GISEL-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
-; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v1, v2
-; GISEL-CI-NEXT:    v_mov_b32_e32 v0, 0x3c00
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GISEL-CI-NEXT:    v_or_b32_e32 v0, 0x3c00, v0
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float
@@ -173,8 +175,9 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo(half %src0, half %src
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v0
-; SDAG-CI-NEXT:    v_mov_b32_e32 v0, v3
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v3
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SDAG-CI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
@@ -192,8 +195,10 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo(half %src0, half %src
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GISEL-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
-; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v1, v2
-; GISEL-CI-NEXT:    v_mov_b32_e32 v0, v3
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; GISEL-CI-NEXT:    v_and_b32_e32 v1, 0xffff, v3
+; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GISEL-CI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float
@@ -416,7 +421,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt(half %
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_mad_f32 v0, v0, v1, v2 clamp
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v0
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt:
@@ -435,7 +440,8 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt(half %
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GISEL-CI-NEXT:    v_mad_f32 v0, v0, v1, v2 clamp
-; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v1, v0
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float
@@ -476,7 +482,9 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt(half 
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v1, v0 clamp
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v0, v0 clamp
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt:
@@ -492,7 +500,8 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt(half 
 ; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GISEL-CI-NEXT:    v_min_f32_e32 v0, 1.0, v0
-; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v1, v0
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float
@@ -558,6 +567,8 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v1, v0 clamp
 ; SDAG-CI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi_use:
@@ -587,6 +598,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GISEL-CI-NEXT:    v_min_f32_e32 v1, 1.0, v1
 ; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v1
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float
