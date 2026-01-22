@@ -85,9 +85,9 @@ bool isAsmOnly(const Function &F) {
   return true;
 }
 
-SmallString<128> profileErrorMessage(StringRef Msg, Function &F) {
-  return SmallString<128>{"Profile verification failed for function '",
-                          F.getName(), "': ", Msg};
+void emitProfileError(StringRef Msg, Function &F) {
+  F.getContext().emitError("Profile verification failed for function '" +
+                           F.getName() + "': " + Msg);
 }
 
 } // namespace
@@ -244,8 +244,7 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
   if (!EntryCount) {
     auto *MD = F.getMetadata(LLVMContext::MD_prof);
     if (!MD || !isExplicitlyUnknownProfileMetadata(*MD)) {
-      F.getContext().emitError(profileErrorMessage(
-          "function entry count missing (set to 0 if cold)", F));
+      emitProfileError("function entry count missing (set to 0 if cold)", F);
       return PreservedAnalyses::all();
     }
   } else if (EntryCount->getCount() == 0) {
@@ -259,15 +258,13 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
             continue;
           if (I.getMetadata(LLVMContext::MD_prof))
             continue;
-          F.getContext().emitError(
-              profileErrorMessage("select annotation missing", F));
+          emitProfileError("select annotation missing", F);
         }
     }
     if (const auto *Term =
             ProfileInjector::getTerminatorBenefitingFromMDProf(BB))
       if (!Term->getMetadata(LLVMContext::MD_prof))
-        F.getContext().emitError(
-            profileErrorMessage("branch annotation missing", F));
+        emitProfileError("branch annotation missing", F);
   }
   return PreservedAnalyses::all();
 }
