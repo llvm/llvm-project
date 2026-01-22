@@ -999,7 +999,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
   // division.
   MaxDivRemBitWidthSupported = 128;
 
-  MaxLargeFPConvertBitWidthSupported = llvm::IntegerType::MAX_INT_BITS;
+  MaxLargeFPConvertBitWidthSupported = 128;
 
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
