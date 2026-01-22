@@ -1510,7 +1510,7 @@ bool PreRARematStage::initGCNSchedStage() {
   });
 
   SmallVector<ScoredRemat> ScoredRemats;
-  for (const RematReg &Remat : RematRegs)
+  for (RematReg &Remat : RematRegs)
     ScoredRemats.emplace_back(&Remat, FreqInfo, DAG);
 
 // Rematerialize registers in successive rounds until all RP targets are
@@ -1556,7 +1556,7 @@ bool PreRARematStage::initGCNSchedStage() {
         break;
       }
 
-      const RematReg &Remat = *Candidate.Remat;
+      RematReg &Remat = *Candidate.Remat;
       // When previous rematerializations in this round have already satisfied
       // RP targets in all regions this rematerialization can impact, we have a
       // good indication that our scores have diverged significantly from
@@ -2882,8 +2882,7 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   }
 }
 
-PreRARematStage::ScoredRemat::ScoredRemat(const RematReg *Remat,
-                                          const FreqInfo &Freq,
+PreRARematStage::ScoredRemat::ScoredRemat(RematReg *Remat, const FreqInfo &Freq,
                                           const GCNScheduleDAGMILive &DAG)
     : Remat(Remat), NumRegs(getNumRegs(DAG)), FreqDiff(getFreqDiff(Freq)) {}
 
@@ -2960,9 +2959,18 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
   Remat.insertMI(Remat.UseRegion, RematMI, DAG);
   if (Rollback) {
     Rollback->RematMI = RematMI;
-    // Make the original MI a debug instruction so that it does not influence
-    // scheduling.
+    // Make the original MI a debug value so that it does not influence
+    // scheduling and replace all read registers with a sentinel register to
+    // prevent operands to appear in use-lists of other MIs during LIS
+    // updates. Store mappings between operand indices and original registers
+    // for potential rollback.
     DefMI.setDesc(TII->get(TargetOpcode::DBG_VALUE));
+    for (auto [Idx, MO] : enumerate(Remat.DefMI->operands())) {
+      if (MO.isReg() && MO.readsReg()) {
+        Rollback->RegMap.insert({Idx, MO.getReg()});
+        MO.setReg(Register());
+      }
+    }
   } else {
     // Just delete the original instruction if it cannot be rolled back.
     DAG.deleteMI(Remat.DefRegion, &DefMI);
@@ -3016,11 +3024,15 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
 }
 
 void PreRARematStage::rollback(const RollbackInfo &Rollback) const {
-  auto &[Remat, RematMI] = Rollback;
+  const auto &[Remat, RematMI, RegMap] = Rollback;
+
+  // Restore the original defining instruction to its original state.
+  Remat->DefMI->setDesc(DAG.TII->get(RematMI->getOpcode()));
+  for (const auto &[MOIdx, Reg] : RegMap)
+    Remat->DefMI->getOperand(MOIdx).setReg(Reg);
 
   // Switch back to using the original register and delete the
   // rematerialization.
-  Remat->DefMI->setDesc(DAG.TII->get(RematMI->getOpcode()));
   Register Reg = RematMI->getOperand(0).getReg();
   Register OriginalReg = Remat->DefMI->getOperand(0).getReg();
   Remat->UseMI->substituteRegister(Reg, OriginalReg, 0, *DAG.TRI);

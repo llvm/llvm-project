@@ -24,7 +24,7 @@ body:             |
   ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 10 from rematerializing (original was 9, target was 10)
   ; DEBUG-NEXT: ********** MI Scheduling **********
   ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_region_1:%bb.1
-  ; DEBUG-NEXT:   From: %23:vgpr_32 = nofpexcept DBG_VALUE 23, implicit $exec, implicit $mode
+  ; DEBUG-NEXT:   From: %23:vgpr_32 = nofpexcept DBG_VALUE 23, implicit $noreg, implicit $noreg
   ; DEBUG-NEXT:     To: End RegionInstrs: 2
   bb.0:
     successors: %bb.1
@@ -96,7 +96,7 @@ body:             |
   ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 10 from rematerializing (original was 9, target was 10)
   ; DEBUG-NEXT: ********** MI Scheduling **********
   ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_regions_2:%bb.1
-  ; DEBUG-NEXT:   From: %23:vgpr_32 = nofpexcept DBG_VALUE 23, implicit $exec, implicit $mode
+  ; DEBUG-NEXT:   From: %23:vgpr_32 = nofpexcept DBG_VALUE 23, implicit $noreg, implicit $noreg
   ; DEBUG-NEXT:     To: End RegionInstrs: 2
   bb.0:
     successors: %bb.1
