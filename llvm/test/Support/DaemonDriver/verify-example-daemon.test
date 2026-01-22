@@ -1,0 +1,9 @@
+This test is verifying that the "ExampleDaemon" tool works as expected when run
+normally (not in daemon mode).
+RUN: echo "testTESTtestTEST" | not ExampleDaemon >%t.stdout 2>%t.stderr
+RUN: FileCheck < %t.stdout %s --check-prefix=CHECK-STDOUT-1
+END.
+CHECK-STDOUT-1: testtest
+RUN: FileCheck < %t.stderr %s --check-prefix=CHECK-STDERR-1
+CHECK-STDERR-1: TESTTEST
+
