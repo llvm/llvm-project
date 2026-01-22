@@ -1323,10 +1323,12 @@ define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) "target-fe
 ;
 ; CHECK-SME-LABEL: udot_v16i8tov2i32:
 ; CHECK-SME:       // %bb.0: // %entry
+; CHECK-SME-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-SME-NEXT:    uunpklo z2.h, z1.b
+; CHECK-SME-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-SME-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-SME-NEXT:    uunpklo z1.h, z1.b
 ; CHECK-SME-NEXT:    uaddwb z0.s, z0.s, z2.h
+; CHECK-SME-NEXT:    uunpklo z1.h, z1.b
 ; CHECK-SME-NEXT:    uaddwt z0.s, z0.s, z2.h
 ; CHECK-SME-NEXT:    ext z2.b, z2.b, z2.b, #8
 ; CHECK-SME-NEXT:    uaddwb z0.s, z0.s, z2.h
@@ -1336,6 +1338,7 @@ define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) "target-fe
 ; CHECK-SME-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-SME-NEXT:    uaddwb z0.s, z0.s, z1.h
 ; CHECK-SME-NEXT:    uaddwt z0.s, z0.s, z1.h
+; CHECK-SME-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SME-NEXT:    ret
 entry:
     %input.wide = zext <16 x i8> %input to <16 x i32>
