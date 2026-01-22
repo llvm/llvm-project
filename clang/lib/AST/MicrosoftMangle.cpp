@@ -1711,12 +1711,6 @@ void MicrosoftCXXNameMangler::mangleIntegerLiteral(
 void MicrosoftCXXNameMangler::mangleExpression(
     const Expr *E, const NonTypeTemplateParmDecl *PD) {
 
-  // // issue diagnostics for reflection
-  // if (isa<CXXReflectExpr>(E->IgnoreParenImpCasts())) {
-  //   Error(E->getExprLoc(), "expression type: ", E->getStmtClassName())
-  //     << E->getSourceRange();
-  // }
-
   // See if this is a constant expression.
   if (std::optional<llvm::APSInt> Value =
           E->getIntegerConstantExpr(Context.getASTContext())) {
