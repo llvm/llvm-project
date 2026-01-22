@@ -37,7 +37,7 @@ def ybndsw_imm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
 }
 
 def uimm7_srliy : RISCVUImmOp<7>, ImmLeaf<XLenVT, [{
-  return Subtarget->is64Bit() ? Imm == 64 : Imm == 32;
+  return Imm == Subtarget->getXLen();
 }]> {
   let ParserMatchClass = UImmAsmOperand<7, "Srliy">;
   let DecoderMethod = "decodeUImm7SrliyOperand";
@@ -45,7 +45,7 @@ def uimm7_srliy : RISCVUImmOp<7>, ImmLeaf<XLenVT, [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return Subtarget->is64Bit() ? Imm == 64 : Imm == 32;
+    return Imm == Subtarget->getXLen()
   }];
   let OperandType = "OPERAND_UIMM7_SRLIY";
 }
@@ -95,7 +95,7 @@ class RVYInstSRLIYFmt<bits<7> imm, dag outs, dag ins, string opcodestr,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class RVY_r<bits<5> funct5, string opcodestr, DAGOperand rdOp = GPR,
             DAGOperand rs1Op = YGPR>
-    : RVYInstSrcDst<0x8, funct5, 0x0, OPC_OP, (outs rdOp:$rd),
+    : RVYInstSrcDst<0b0001000, funct5, 0b000, OPC_OP, (outs rdOp:$rd),
                     (ins rs1Op:$rs1), opcodestr, "$rd, $rs1">;
 class RVY_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
              DAGOperand rdOp = YGPR, DAGOperand rs1Op = YGPR,
@@ -120,42 +120,42 @@ let Predicates = [HasStdExtY] in {
 // Instructions to Update The Capability Pointer
 //
 let isReMaterializable = true, isAsCheapAsAMove = true in {
-def ADDY : RVY_rr<0x6, 0x0, "addy", YGPR, YGPR, GPRNoX0>;
-def ADDIY : RVY_ri<0x2, OPC_OP_IMM_32, "addiy">;
+def ADDY : RVY_rr<0b0000110, 0b000, "addy", YGPR, YGPR, GPRNoX0>;
+def ADDIY : RVY_ri<0b010, OPC_OP_IMM_32, "addiy">;
 }
 def : InstAlias<"addy $rd, $rs1, $imm12",
                 (ADDIY YGPR:$rd, YGPR:$rs1, simm12_lo:$imm12), 0>;
-def YADDRW : RVY_rr<0x6, 0x1, "yaddrw", YGPR, YGPR, GPR>;
+def YADDRW : RVY_rr<0b0000110, 0b001, "yaddrw", YGPR, YGPR, GPR>;
 
 //
 // Instructions to Manipulate Capabilities
 //
-def YPERMC : RVY_rr<0x6, 0x2, "ypermc", YGPR, YGPR, GPR>;
+def YPERMC : RVY_rr<0b0000110, 0b010, "ypermc", YGPR, YGPR, GPR>;
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isReMaterializable = true,
     isAsCheapAsAMove = true, isMoveReg = true in
-def YMV : RVYInstSrcDst<0x6, 0x0, 0x0, OPC_OP, (outs YGPR:$rd), (ins YGPR:$rs1),
-                        "ymv", "$rd, $rs1">;
-def PACKY : RVY_rr<0x6, 0x3, "packy", YGPR, YGPR, GPR>;
+def YMV : RVYInstSrcDst<0b0000110, 0b00000, 0b000, OPC_OP, (outs YGPR:$rd),
+                        (ins YGPR:$rs1), "ymv", "$rd, $rs1">;
+def PACKY : RVY_rr<0b0000100, 0b011, "packy", YGPR, YGPR, GPR>;
 def : MnemonicAlias<"yhiw", "packy">;
-def YBNDSW : RVY_rr<0x7, 0x0, "ybndsw", YGPR, YGPR, GPR>;
+def YBNDSW : RVY_rr<0b0000111, 0b000, "ybndsw", YGPR, YGPR, GPR>;
 def YBNDSWI : RVY_bndswi<"ybndswi">;
 def : InstAlias<"ybndsw $rd, $rs1, $imm",
                 (YBNDSWI YGPR:$rd, YGPR:$rs1, ybndsw_imm:$imm), 0>;
-def YBNDSRW : RVY_rr<0x7, 0x1, "ybndsrw", YGPR, YGPR, GPR>;
-def YSUNSEAL : RVY_rr<0x7, 0x2, "ysunseal", YGPR, YGPR, YGPR>;
+def YBNDSRW : RVY_rr<0b0000111, 0b001, "ybndsrw", YGPR, YGPR, GPR>;
+def YSUNSEAL : RVY_rr<0b0000111, 0b010, "ysunseal", YGPR, YGPR, YGPR>;
 
 //
 // Instructions to Decode Capability Bounds
 //
-def YBASER : RVY_r<0x5, "ybaser", GPR, YGPR>;
-def YLENR : RVY_r<0x6, "ylenr", GPR, YGPR>;
+def YBASER : RVY_r<0b00101, "ybaser", GPR, YGPR>;
+def YLENR : RVY_r<0b00110, "ylenr", GPR, YGPR>;
 
 //
 // Instructions to Extract Capability Fields
 //
-def YTAGR : RVY_r<0x0, "ytagr", GPR, YGPR>;
-def YPERMR : RVY_r<0x1, "ypermr", GPR, YGPR>;
-def YTYPER : RVY_r<0x2, "ytyper", GPR, YGPR>;
+def YTAGR : RVY_r<0b00000, "ytagr", GPR, YGPR>;
+def YPERMR : RVY_r<0b00001, "ypermr", GPR, YGPR>;
+def YTYPER : RVY_r<0b00010, "ytyper", GPR, YGPR>;
 // Extracting the high bits of capabilities is encoded as a XLEN-bit right shift
 // (SRLIY), with the only legal immediate being XLEN. YHIR is a pseudo that
 // expands to the correct shift value depending on RV32/RV64.
@@ -174,7 +174,7 @@ def : InstAlias<"yhir $rd, $rs1", (SRLIY32 GPR:$rd, YGPR:$rs1, 32)>;
 //
 // Miscellaneous Instructions to Handle Capability Data
 //
-def SYEQ : RVY_rr<0x6, 0x4, "syeq", GPR, YGPR, YGPR>;
-def YLT : RVY_rr<0x6, 0x6, "ylt", GPR, YGPR, YGPR>;
-def YAMASK : RVY_r<0x7, "yamask", GPR, GPR>;
+def SYEQ : RVY_rr<0b0000110, 0b100, "syeq", GPR, YGPR, YGPR>;
+def YLT : RVY_rr<0b0000110, 0b110, "ylt", GPR, YGPR, YGPR>;
+def YAMASK : RVY_r<0b00111, "yamask", GPR, GPR>;
 } // Predicates = [HasStdExtY]
