@@ -46,3 +46,46 @@ subroutine nested_do_while()
   end do
 end subroutine nested_do_while
 
+! CHECK-LABEL: func.func @_QPdo_while_goto_internal_forward()
+! CHECK: scf.while
+! CHECK: scf.condition
+! CHECK: fir.if
+! CHECK-NOT: cf.br
+! CHECK: scf.yield
+subroutine do_while_goto_internal_forward()
+  implicit none
+  integer :: i, sum
+
+  i = 0
+  sum = 0
+  do while (i < 10)
+    i = i + 1
+
+    if (mod(i, 2) == 0) goto 100
+    sum = sum + i
+
+100 continue
+  end do
+  print *, "sum=", sum
+end subroutine do_while_goto_internal_forward
+
+! CHECK-LABEL: func.func @_QPdo_while_goto_internal_backedge()
+! CHECK-NOT: scf.while
+! CHECK: cf.cond_br
+! CHECK: cf.br
+subroutine do_while_goto_internal_backedge()
+  implicit none
+  integer :: i, sum
+
+  i = 0
+  sum = 0
+  do while (i < 5)
+    i = i + 1
+
+10  continue
+    sum = sum + 1
+    if (sum < 3) goto 10
+  end do
+  print *, "sum=", sum
+end subroutine do_while_goto_internal_backedge
+
