@@ -419,11 +419,11 @@ define amdgpu_kernel void @module_1_kernel_normal_indirect_extern_normal(i32 %id
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 2
 ; CHECK-NEXT:    s_mov_b32 s14, s16
 ; CHECK-NEXT:    s_mov_b32 s15, 4
 ; CHECK-NEXT:    ds_write_b16 v1, v0
-; CHECK-NEXT:    ds_write_b16 v1, v2 offset:2
+; CHECK-NEXT:    v_mov_b32_e32 v0, 2
+; CHECK-NEXT:    ds_write_b16 v1, v0 offset:2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    s_endpgm
@@ -502,11 +502,11 @@ define amdgpu_kernel void @module_1_kernel_overalign_indirect_extern_normal(i32 
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 2
 ; CHECK-NEXT:    s_mov_b32 s14, s16
 ; CHECK-NEXT:    s_mov_b32 s15, 6
 ; CHECK-NEXT:    ds_write_b16 v1, v0
-; CHECK-NEXT:    ds_write_b16 v1, v2 offset:4
+; CHECK-NEXT:    v_mov_b32_e32 v0, 2
+; CHECK-NEXT:    ds_write_b16 v1, v0 offset:4
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    s_endpgm
@@ -585,11 +585,11 @@ define amdgpu_kernel void @module_1_kernel_normal_indirect_extern_overalign(i32 
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 2
 ; CHECK-NEXT:    s_mov_b32 s14, s16
 ; CHECK-NEXT:    s_mov_b32 s15, 5
 ; CHECK-NEXT:    ds_write_b16 v1, v0
-; CHECK-NEXT:    ds_write_b16 v1, v2 offset:2
+; CHECK-NEXT:    v_mov_b32_e32 v0, 2
+; CHECK-NEXT:    ds_write_b16 v1, v0 offset:2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    s_endpgm
@@ -668,11 +668,11 @@ define amdgpu_kernel void @module_1_kernel_overalign_indirect_extern_overalign(i
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 2
 ; CHECK-NEXT:    s_mov_b32 s14, s16
 ; CHECK-NEXT:    s_mov_b32 s15, 7
 ; CHECK-NEXT:    ds_write_b16 v1, v0
-; CHECK-NEXT:    ds_write_b16 v1, v2 offset:4
+; CHECK-NEXT:    v_mov_b32_e32 v0, 2
+; CHECK-NEXT:    ds_write_b16 v1, v0 offset:4
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    s_endpgm

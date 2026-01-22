@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=1 -debug-only=machine-scheduler < %s 2>&1 | FileCheck --check-prefix=GCN-DEBUG %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers -debug-only=machine-scheduler < %s 2>&1 | FileCheck --check-prefix=GCN-DEBUG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=0 -debug-only=machine-scheduler < %s 2>&1 | FileCheck --check-prefix=GENERIC-DEBUG %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=1 < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers < %s | FileCheck --check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=0 < %s | FileCheck --check-prefix=NO-GCN %s
 ; REQUIRES: asserts
 

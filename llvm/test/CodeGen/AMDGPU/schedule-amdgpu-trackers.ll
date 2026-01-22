@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-misched < %s | FileCheck --check-prefixes=GFX11-PAL %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GFX11-PAL-GCNTRACKERS %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-scalarize-global-loads=false -verify-misched < %s | FileCheck --check-prefixes=TONGA %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-scalarize-global-loads=false -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=TONGA-GCNTRACKERS %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched < %s | FileCheck --check-prefixes=GFX908 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GFX908-GCNTRACKERS %s
-; RUN: llc -mtriple=amdgcn -verify-misched < %s | FileCheck --check-prefixes=GENERIC %s
-; RUN: llc -mtriple=amdgcn -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GENERIC-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -amdgpu-use-amdgpu-trackers=0 -verify-misched < %s | FileCheck --check-prefixes=GFX11-PAL %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -amdgpu-use-amdgpu-trackers -verify-misched < %s | FileCheck --check-prefixes=GFX11-PAL-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-scalarize-global-loads=false -amdgpu-use-amdgpu-trackers=0 -verify-misched < %s | FileCheck --check-prefixes=TONGA %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-scalarize-global-loads=false -amdgpu-use-amdgpu-trackers -verify-misched < %s | FileCheck --check-prefixes=TONGA-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -amdgpu-use-amdgpu-trackers=0 -verify-misched < %s | FileCheck --check-prefixes=GFX908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -amdgpu-use-amdgpu-trackers -verify-misched < %s | FileCheck --check-prefixes=GFX908-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn -amdgpu-use-amdgpu-trackers=0 -verify-misched < %s | FileCheck --check-prefixes=GENERIC %s
+; RUN: llc -mtriple=amdgcn -amdgpu-use-amdgpu-trackers -verify-misched < %s | FileCheck --check-prefixes=GENERIC-GCNTRACKERS %s
 
 ; GCN Trackers are sensitive to minor changes in RP, and will avoid scheduling certain instructions, which, if scheduled,
 ; allow scheduling of other instructions which reduce RP

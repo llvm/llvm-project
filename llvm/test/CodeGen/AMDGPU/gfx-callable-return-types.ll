@@ -2518,12 +2518,15 @@ define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
 ; GFX11-LABEL: return_72xi32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0xc ; 52-byte Folded Spill
-; GFX11-NEXT:    scratch_store_b32 off, v40, s32 offset:212
-; GFX11-NEXT:    scratch_store_b32 off, v41, s32 offset:208
-; GFX11-NEXT:    scratch_store_b32 off, v42, s32 offset:204
-; GFX11-NEXT:    scratch_store_b32 off, v43, s32 offset:200
-; GFX11-NEXT:    scratch_store_b32 off, v44, s32 offset:196
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Spill
+; GFX11-NEXT:    scratch_store_b32 off, v40, s32 offset:224
+; GFX11-NEXT:    scratch_store_b32 off, v41, s32 offset:220
+; GFX11-NEXT:    scratch_store_b32 off, v42, s32 offset:216
+; GFX11-NEXT:    scratch_store_b32 off, v43, s32 offset:212
+; GFX11-NEXT:    scratch_store_b32 off, v44, s32 offset:208
+; GFX11-NEXT:    scratch_store_b32 off, v45, s32 offset:204
+; GFX11-NEXT:    scratch_store_b32 off, v46, s32 offset:200
+; GFX11-NEXT:    scratch_store_b32 off, v47, s32 offset:196
 ; GFX11-NEXT:    scratch_store_b32 off, v56, s32 offset:192
 ; GFX11-NEXT:    scratch_store_b32 off, v57, s32 offset:188
 ; GFX11-NEXT:    scratch_store_b32 off, v58, s32 offset:184
@@ -2532,10 +2535,18 @@ define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
 ; GFX11-NEXT:    scratch_store_b32 off, v61, s32 offset:172
 ; GFX11-NEXT:    scratch_store_b32 off, v62, s32 offset:168
 ; GFX11-NEXT:    scratch_store_b32 off, v63, s32 offset:164
-; GFX11-NEXT:    s_clause 0x11
+; GFX11-NEXT:    v_dual_mov_b32 v47, v31 :: v_dual_mov_b32 v46, v30
+; GFX11-NEXT:    v_mov_b32_e32 v45, v29
+; GFX11-NEXT:    scratch_store_b128 off, v[25:28], s32 offset:228 ; 16-byte Folded Spill
+; GFX11-NEXT:    v_dual_mov_b32 v28, v8 :: v_dual_mov_b32 v27, v7
+; GFX11-NEXT:    v_dual_mov_b32 v26, v6 :: v_dual_mov_b32 v25, v5
+; GFX11-NEXT:    v_dual_mov_b32 v32, v4 :: v_dual_mov_b32 v31, v3
+; GFX11-NEXT:    v_dual_mov_b32 v30, v2 :: v_dual_mov_b32 v29, v1
+; GFX11-NEXT:    s_clause 0x1b
 ; GFX11-NEXT:    scratch_load_b32 v36, off, s32 offset:16
 ; GFX11-NEXT:    scratch_load_b32 v35, off, s32 offset:12
 ; GFX11-NEXT:    scratch_load_b32 v34, off, s32 offset:8
+; GFX11-NEXT:    scratch_load_b32 v33, off, s32 offset:4
 ; GFX11-NEXT:    scratch_load_b32 v51, off, s32 offset:32
 ; GFX11-NEXT:    scratch_load_b32 v50, off, s32 offset:28
 ; GFX11-NEXT:    scratch_load_b32 v49, off, s32 offset:24
@@ -2551,64 +2562,66 @@ define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
 ; GFX11-NEXT:    scratch_load_b32 v59, off, s32 offset:96
 ; GFX11-NEXT:    scratch_load_b32 v58, off, s32 offset:92
 ; GFX11-NEXT:    scratch_load_b32 v57, off, s32 offset:88
+; GFX11-NEXT:    scratch_load_b32 v56, off, s32 offset:84
+; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:112
+; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:108
+; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:104
+; GFX11-NEXT:    scratch_load_b32 v8, off, s32 offset:128
+; GFX11-NEXT:    scratch_load_b32 v7, off, s32 offset:124
+; GFX11-NEXT:    scratch_load_b32 v6, off, s32 offset:120
+; GFX11-NEXT:    scratch_load_b32 v4, off, s32 offset:144
+; GFX11-NEXT:    scratch_load_b32 v3, off, s32 offset:140
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b128 v0, v[21:24], off offset:80
 ; GFX11-NEXT:    scratch_store_b128 v0, v[17:20], off offset:64
-; GFX11-NEXT:    s_clause 0x5
-; GFX11-NEXT:    scratch_load_b32 v23, off, s32 offset:112
-; GFX11-NEXT:    scratch_load_b32 v22, off, s32 offset:108
-; GFX11-NEXT:    scratch_load_b32 v21, off, s32 offset:104
-; GFX11-NEXT:    scratch_load_b32 v19, off, s32 offset:128
-; GFX11-NEXT:    scratch_load_b32 v18, off, s32 offset:124
-; GFX11-NEXT:    scratch_load_b32 v17, off, s32 offset:120
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    scratch_store_b128 v0, v[13:16], off offset:48
-; GFX11-NEXT:    scratch_store_b128 v0, v[9:12], off offset:32
-; GFX11-NEXT:    s_clause 0x10
-; GFX11-NEXT:    scratch_load_b32 v15, off, s32 offset:144
-; GFX11-NEXT:    scratch_load_b32 v14, off, s32 offset:140
-; GFX11-NEXT:    scratch_load_b32 v13, off, s32 offset:136
-; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:160
-; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:156
-; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:152
-; GFX11-NEXT:    scratch_load_b32 v60, off, s32 offset:148
-; GFX11-NEXT:    scratch_load_b32 v12, off, s32 offset:132
-; GFX11-NEXT:    scratch_load_b32 v16, off, s32 offset:116
-; GFX11-NEXT:    scratch_load_b32 v20, off, s32 offset:100
-; GFX11-NEXT:    scratch_load_b32 v56, off, s32 offset:84
+; GFX11-NEXT:    s_clause 0xb
+; GFX11-NEXT:    scratch_load_b32 v2, off, s32 offset:136
+; GFX11-NEXT:    scratch_load_b32 v23, off, s32 offset:160
+; GFX11-NEXT:    scratch_load_b32 v22, off, s32 offset:156
+; GFX11-NEXT:    scratch_load_b32 v21, off, s32 offset:152
+; GFX11-NEXT:    scratch_load_b32 v20, off, s32 offset:148
+; GFX11-NEXT:    scratch_load_b32 v1, off, s32 offset:132
+; GFX11-NEXT:    scratch_load_b32 v5, off, s32 offset:116
+; GFX11-NEXT:    scratch_load_b32 v60, off, s32 offset:100
 ; GFX11-NEXT:    scratch_load_b32 v41, off, s32 offset:68
 ; GFX11-NEXT:    scratch_load_b32 v37, off, s32 offset:52
 ; GFX11-NEXT:    scratch_load_b32 v52, off, s32 offset:36
 ; GFX11-NEXT:    scratch_load_b32 v48, off, s32 offset:20
-; GFX11-NEXT:    scratch_load_b32 v33, off, s32 offset:4
-; GFX11-NEXT:    scratch_load_b32 v32, off, s32
-; GFX11-NEXT:    s_waitcnt vmcnt(10)
-; GFX11-NEXT:    scratch_store_b128 v0, v[60:63], off offset:272
-; GFX11-NEXT:    s_waitcnt vmcnt(9)
-; GFX11-NEXT:    scratch_store_b128 v0, v[12:15], off offset:256
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    scratch_store_b128 v0, v[13:16], off offset:48
+; GFX11-NEXT:    scratch_store_b128 v0, v[9:12], off offset:32
+; GFX11-NEXT:    scratch_load_b32 v12, off, s32
+; GFX11-NEXT:    v_dual_mov_b32 v9, v45 :: v_dual_mov_b32 v10, v46
+; GFX11-NEXT:    v_mov_b32_e32 v11, v47
 ; GFX11-NEXT:    s_waitcnt vmcnt(8)
-; GFX11-NEXT:    scratch_store_b128 v0, v[16:19], off offset:240
+; GFX11-NEXT:    scratch_store_b128 v0, v[20:23], off offset:272
 ; GFX11-NEXT:    s_waitcnt vmcnt(7)
-; GFX11-NEXT:    scratch_store_b128 v0, v[20:23], off offset:224
+; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:256
 ; GFX11-NEXT:    s_waitcnt vmcnt(6)
-; GFX11-NEXT:    scratch_store_b128 v0, v[56:59], off offset:208
+; GFX11-NEXT:    scratch_store_b128 v0, v[5:8], off offset:240
 ; GFX11-NEXT:    s_waitcnt vmcnt(5)
-; GFX11-NEXT:    scratch_store_b128 v0, v[41:44], off offset:192
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    scratch_store_b128 v0, v[60:63], off offset:224
+; GFX11-NEXT:    scratch_store_b128 v0, v[56:59], off offset:208
 ; GFX11-NEXT:    s_waitcnt vmcnt(4)
-; GFX11-NEXT:    scratch_store_b128 v0, v[37:40], off offset:176
+; GFX11-NEXT:    scratch_store_b128 v0, v[41:44], off offset:192
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-NEXT:    scratch_store_b128 v0, v[52:55], off offset:160
+; GFX11-NEXT:    scratch_store_b128 v0, v[37:40], off offset:176
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-NEXT:    scratch_store_b128 v0, v[48:51], off offset:144
+; GFX11-NEXT:    scratch_store_b128 v0, v[52:55], off offset:160
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    scratch_store_b128 v0, v[48:51], off offset:144
 ; GFX11-NEXT:    scratch_store_b128 v0, v[33:36], off offset:128
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_clause 0x3
-; GFX11-NEXT:    scratch_store_b128 v0, v[29:32], off offset:112
-; GFX11-NEXT:    scratch_store_b128 v0, v[25:28], off offset:96
-; GFX11-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off
-; GFX11-NEXT:    s_clause 0xc ; 52-byte Folded Reload
+; GFX11-NEXT:    scratch_store_b128 v0, v[9:12], off offset:112
+; GFX11-NEXT:    scratch_load_b128 v[1:4], off, s32 offset:228 ; 16-byte Folded Reload
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_clause 0x2
+; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:96
+; GFX11-NEXT:    scratch_store_b128 v0, v[25:28], off offset:16
+; GFX11-NEXT:    scratch_store_b128 v0, v[29:32], off
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:164
 ; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:168
 ; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:172
@@ -2617,11 +2630,14 @@ define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
 ; GFX11-NEXT:    scratch_load_b32 v58, off, s32 offset:184
 ; GFX11-NEXT:    scratch_load_b32 v57, off, s32 offset:188
 ; GFX11-NEXT:    scratch_load_b32 v56, off, s32 offset:192
-; GFX11-NEXT:    scratch_load_b32 v44, off, s32 offset:196
-; GFX11-NEXT:    scratch_load_b32 v43, off, s32 offset:200
-; GFX11-NEXT:    scratch_load_b32 v42, off, s32 offset:204
-; GFX11-NEXT:    scratch_load_b32 v41, off, s32 offset:208
-; GFX11-NEXT:    scratch_load_b32 v40, off, s32 offset:212
+; GFX11-NEXT:    scratch_load_b32 v47, off, s32 offset:196
+; GFX11-NEXT:    scratch_load_b32 v46, off, s32 offset:200
+; GFX11-NEXT:    scratch_load_b32 v45, off, s32 offset:204
+; GFX11-NEXT:    scratch_load_b32 v44, off, s32 offset:208
+; GFX11-NEXT:    scratch_load_b32 v43, off, s32 offset:212
+; GFX11-NEXT:    scratch_load_b32 v42, off, s32 offset:216
+; GFX11-NEXT:    scratch_load_b32 v41, off, s32 offset:220
+; GFX11-NEXT:    scratch_load_b32 v40, off, s32 offset:224
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   ret <72 x i32> %val
@@ -2735,141 +2751,160 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_writelane_b32 v63, s31, 1
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[36:37]
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:636
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:640
-; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:644
-; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:648
-; GFX9-NEXT:    buffer_load_dword v34, off, s[0:3], s33 offset:652
-; GFX9-NEXT:    buffer_load_dword v35, off, s[0:3], s33 offset:656
-; GFX9-NEXT:    buffer_load_dword v36, off, s[0:3], s33 offset:660
-; GFX9-NEXT:    buffer_load_dword v37, off, s[0:3], s33 offset:664
-; GFX9-NEXT:    buffer_load_dword v38, off, s[0:3], s33 offset:668
-; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s33 offset:672
-; GFX9-NEXT:    buffer_load_dword v48, off, s[0:3], s33 offset:676
-; GFX9-NEXT:    buffer_load_dword v49, off, s[0:3], s33 offset:680
-; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s33 offset:684
-; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s33 offset:688
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s33 offset:692
-; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s33 offset:696
-; GFX9-NEXT:    buffer_load_dword v54, off, s[0:3], s33 offset:700
-; GFX9-NEXT:    buffer_load_dword v55, off, s[0:3], s33 offset:704
-; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:708
-; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:712
-; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:716
-; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s33 offset:720
-; GFX9-NEXT:    buffer_load_dword v44, off, s[0:3], s33 offset:724
-; GFX9-NEXT:    buffer_load_dword v45, off, s[0:3], s33 offset:728
-; GFX9-NEXT:    buffer_load_dword v46, off, s[0:3], s33 offset:732
-; GFX9-NEXT:    buffer_load_dword v47, off, s[0:3], s33 offset:736
-; GFX9-NEXT:    buffer_load_dword v56, off, s[0:3], s33 offset:740
-; GFX9-NEXT:    buffer_load_dword v57, off, s[0:3], s33 offset:748
-; GFX9-NEXT:    buffer_load_dword v58, off, s[0:3], s33 offset:752
-; GFX9-NEXT:    buffer_load_dword v59, off, s[0:3], s33 offset:756
-; GFX9-NEXT:    buffer_load_dword v60, off, s[0:3], s33 offset:760
-; GFX9-NEXT:    buffer_load_dword v61, off, s[0:3], s33 offset:764
-; GFX9-NEXT:    buffer_load_dword v62, off, s[0:3], s33 offset:768
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s33 offset:772
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s33 offset:776
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s33 offset:780
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s33 offset:784
-; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s33 offset:788
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s33 offset:792
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s33 offset:796
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:516
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:632
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v9, off, s[0:3], s33 offset:1536 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:520
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1536 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:628
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v9, off, s[0:3], s33 offset:1540 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:524
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1540 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:624
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v9, off, s[0:3], s33 offset:1544 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:528
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1544 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:620
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v9, off, s[0:3], s33 offset:1548 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:532
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1548 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:616
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v9, off, s[0:3], s33 offset:1552 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:536
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1552 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:612
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v9, off, s[0:3], s33 offset:1556 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:540
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1556 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:608
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v9, off, s[0:3], s33 offset:1560 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1560 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:604
+; GFX9-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:600
+; GFX9-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:596
+; GFX9-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:592
+; GFX9-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:588
+; GFX9-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:584
+; GFX9-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:580
+; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s33 offset:516
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s33 offset:520
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s33 offset:524
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s33 offset:528
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s33 offset:532
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s33 offset:536
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s33 offset:540
 ; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:544
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s33 offset:548
 ; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s33 offset:552
-; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s33 offset:556
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s33 offset:560
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s33 offset:564
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s33 offset:568
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s33 offset:572
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s33 offset:576
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s33 offset:580
-; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s33 offset:584
-; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s33 offset:588
-; GFX9-NEXT:    buffer_load_dword v21, off, s[0:3], s33 offset:592
-; GFX9-NEXT:    buffer_load_dword v22, off, s[0:3], s33 offset:596
-; GFX9-NEXT:    buffer_load_dword v23, off, s[0:3], s33 offset:600
-; GFX9-NEXT:    buffer_load_dword v24, off, s[0:3], s33 offset:604
-; GFX9-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:608
-; GFX9-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:612
-; GFX9-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:616
-; GFX9-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:620
-; GFX9-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:624
-; GFX9-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:628
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:632
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_load_dword v24, off, s[0:3], s33 offset:556
+; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s33 offset:560
+; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s33 offset:564
+; GFX9-NEXT:    buffer_load_dword v21, off, s[0:3], s33 offset:568
+; GFX9-NEXT:    buffer_load_dword v22, off, s[0:3], s33 offset:572
+; GFX9-NEXT:    buffer_load_dword v23, off, s[0:3], s33 offset:576
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s33 offset:796
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s33 offset:792
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:788
+; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:784
+; GFX9-NEXT:    buffer_load_dword v34, off, s[0:3], s33 offset:780
+; GFX9-NEXT:    buffer_load_dword v35, off, s[0:3], s33 offset:776
+; GFX9-NEXT:    buffer_load_dword v36, off, s[0:3], s33 offset:772
+; GFX9-NEXT:    buffer_load_dword v37, off, s[0:3], s33 offset:768
+; GFX9-NEXT:    buffer_load_dword v38, off, s[0:3], s33 offset:764
+; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s33 offset:760
+; GFX9-NEXT:    buffer_load_dword v48, off, s[0:3], s33 offset:756
+; GFX9-NEXT:    buffer_load_dword v49, off, s[0:3], s33 offset:752
+; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s33 offset:748
+; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s33 offset:740
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s33 offset:736
+; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s33 offset:732
+; GFX9-NEXT:    buffer_load_dword v54, off, s[0:3], s33 offset:728
+; GFX9-NEXT:    buffer_load_dword v55, off, s[0:3], s33 offset:724
+; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:720
+; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:716
+; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:712
+; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s33 offset:708
+; GFX9-NEXT:    buffer_load_dword v44, off, s[0:3], s33 offset:704
+; GFX9-NEXT:    buffer_load_dword v45, off, s[0:3], s33 offset:700
+; GFX9-NEXT:    buffer_load_dword v46, off, s[0:3], s33 offset:696
+; GFX9-NEXT:    buffer_load_dword v47, off, s[0:3], s33 offset:692
+; GFX9-NEXT:    buffer_load_dword v56, off, s[0:3], s33 offset:688
+; GFX9-NEXT:    buffer_load_dword v57, off, s[0:3], s33 offset:684
+; GFX9-NEXT:    buffer_load_dword v58, off, s[0:3], s33 offset:680
+; GFX9-NEXT:    buffer_load_dword v59, off, s[0:3], s33 offset:676
+; GFX9-NEXT:    buffer_load_dword v60, off, s[0:3], s33 offset:672
+; GFX9-NEXT:    buffer_load_dword v61, off, s[0:3], s33 offset:668
+; GFX9-NEXT:    buffer_load_dword v62, off, s[0:3], s33 offset:664
+; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s33 offset:660
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s33 offset:656
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s33 offset:652
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s33 offset:648
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s33 offset:644
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:640
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:636
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32
 ; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:8
-; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:12
-; GFX9-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:16
-; GFX9-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:20
-; GFX9-NEXT:    buffer_store_dword v36, off, s[0:3], s32 offset:24
-; GFX9-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:28
-; GFX9-NEXT:    buffer_store_dword v38, off, s[0:3], s32 offset:32
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:36
-; GFX9-NEXT:    buffer_store_dword v48, off, s[0:3], s32 offset:40
-; GFX9-NEXT:    buffer_store_dword v49, off, s[0:3], s32 offset:44
-; GFX9-NEXT:    buffer_store_dword v50, off, s[0:3], s32 offset:48
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:52
-; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:56
-; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:60
-; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:64
-; GFX9-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:68
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:72
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:76
-; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:80
-; GFX9-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:84
-; GFX9-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:88
-; GFX9-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:92
-; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:96
-; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:100
-; GFX9-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:104
+; GFX9-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:8
+; GFX9-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:12
+; GFX9-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:16
+; GFX9-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:20
+; GFX9-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:24
+; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:28
+; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:32
+; GFX9-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:36
+; GFX9-NEXT:    buffer_store_dword v59, off, s[0:3], s32 offset:40
+; GFX9-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:44
+; GFX9-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:48
+; GFX9-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:52
+; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:56
+; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:60
+; GFX9-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:64
+; GFX9-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:68
+; GFX9-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:72
+; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:76
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:80
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:84
+; GFX9-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:88
+; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:92
+; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:96
+; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:100
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:104
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 24
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:108
-; GFX9-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:112
-; GFX9-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:116
-; GFX9-NEXT:    buffer_store_dword v59, off, s[0:3], s32 offset:120
-; GFX9-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:124
-; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:128
-; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:132
-; GFX9-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:136
-; GFX9-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:140
-; GFX9-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:144
-; GFX9-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:148
-; GFX9-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:152
+; GFX9-NEXT:    buffer_store_dword v50, off, s[0:3], s32 offset:112
+; GFX9-NEXT:    buffer_store_dword v49, off, s[0:3], s32 offset:116
+; GFX9-NEXT:    buffer_store_dword v48, off, s[0:3], s32 offset:120
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:124
+; GFX9-NEXT:    buffer_store_dword v38, off, s[0:3], s32 offset:128
+; GFX9-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:132
+; GFX9-NEXT:    buffer_store_dword v36, off, s[0:3], s32 offset:136
+; GFX9-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:140
+; GFX9-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:144
+; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:148
+; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:152
 ; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:156
 ; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:160
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s33 offset:1536 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s33 offset:1540 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s33 offset:1544 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s33 offset:1548 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s33 offset:1552 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s33 offset:1556 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s33 offset:1560 ; 4-byte Folded Reload
+; GFX9-NEXT:    v_mov_b32_e32 v2, v12
+; GFX9-NEXT:    v_mov_b32_e32 v3, v13
+; GFX9-NEXT:    v_mov_b32_e32 v4, v14
+; GFX9-NEXT:    v_mov_b32_e32 v5, v15
+; GFX9-NEXT:    v_mov_b32_e32 v6, v16
+; GFX9-NEXT:    v_mov_b32_e32 v7, v17
+; GFX9-NEXT:    v_mov_b32_e32 v8, v18
+; GFX9-NEXT:    v_mov_b32_e32 v12, v24
+; GFX9-NEXT:    v_mov_b32_e32 v13, v19
+; GFX9-NEXT:    v_mov_b32_e32 v14, v20
+; GFX9-NEXT:    v_mov_b32_e32 v15, v21
+; GFX9-NEXT:    v_mov_b32_e32 v16, v22
+; GFX9-NEXT:    v_mov_b32_e32 v17, v23
+; GFX9-NEXT:    v_mov_b32_e32 v18, v25
+; GFX9-NEXT:    v_mov_b32_e32 v19, v26
+; GFX9-NEXT:    v_mov_b32_e32 v20, v27
+; GFX9-NEXT:    v_mov_b32_e32 v21, v28
+; GFX9-NEXT:    v_mov_b32_e32 v22, v29
+; GFX9-NEXT:    v_mov_b32_e32 v23, v30
+; GFX9-NEXT:    v_mov_b32_e32 v24, v31
+; GFX9-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:1560 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:1556 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:1552 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:1548 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:1544 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:1540 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:1536 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshrrev_b32_e64 v0, 6, s33
 ; GFX9-NEXT:    v_add_u32_e32 v0, 0x400, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 42
@@ -3008,8 +3043,8 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX10-NEXT:    buffer_store_dword v62, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX10-NEXT:    v_writelane_b32 v63, s31, 1
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[36:37]
-; GFX10-NEXT:    s_clause 0x28
-; GFX10-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:636
+; GFX10-NEXT:    s_clause 0x3a
+; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:636
 ; GFX10-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:640
 ; GFX10-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:644
 ; GFX10-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:648
@@ -3049,31 +3084,14 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX10-NEXT:    buffer_load_dword v6, off, s[0:3], s33 offset:788
 ; GFX10-NEXT:    buffer_load_dword v7, off, s[0:3], s33 offset:792
 ; GFX10-NEXT:    buffer_load_dword v8, off, s[0:3], s33 offset:796
-; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:516
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1536 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:520
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1540 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:524
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1544 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:528
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1548 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:532
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1552 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:536
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1556 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:540
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1560 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:544
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1564 ; 4-byte Folded Spill
-; GFX10-NEXT:    s_clause 0x15
+; GFX10-NEXT:    buffer_load_dword v20, off, s[0:3], s33 offset:516
+; GFX10-NEXT:    buffer_load_dword v21, off, s[0:3], s33 offset:520
+; GFX10-NEXT:    buffer_load_dword v22, off, s[0:3], s33 offset:524
+; GFX10-NEXT:    buffer_load_dword v23, off, s[0:3], s33 offset:528
+; GFX10-NEXT:    buffer_load_dword v24, off, s[0:3], s33 offset:532
+; GFX10-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:536
+; GFX10-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:540
+; GFX10-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:544
 ; GFX10-NEXT:    buffer_load_dword v10, off, s[0:3], s33 offset:548
 ; GFX10-NEXT:    buffer_load_dword v11, off, s[0:3], s33 offset:552
 ; GFX10-NEXT:    buffer_load_dword v12, off, s[0:3], s33 offset:556
@@ -3084,21 +3102,38 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX10-NEXT:    buffer_load_dword v17, off, s[0:3], s33 offset:576
 ; GFX10-NEXT:    buffer_load_dword v18, off, s[0:3], s33 offset:580
 ; GFX10-NEXT:    buffer_load_dword v19, off, s[0:3], s33 offset:584
-; GFX10-NEXT:    buffer_load_dword v20, off, s[0:3], s33 offset:588
-; GFX10-NEXT:    buffer_load_dword v21, off, s[0:3], s33 offset:592
-; GFX10-NEXT:    buffer_load_dword v22, off, s[0:3], s33 offset:596
-; GFX10-NEXT:    buffer_load_dword v23, off, s[0:3], s33 offset:600
-; GFX10-NEXT:    buffer_load_dword v24, off, s[0:3], s33 offset:604
-; GFX10-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:608
-; GFX10-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:612
+; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:588
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v27, off, s[0:3], s33 offset:1564 ; 4-byte Folded Spill
+; GFX10-NEXT:    s_clause 0x4
+; GFX10-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:592
+; GFX10-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:596
+; GFX10-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:600
+; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:604
+; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:608
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v27, off, s[0:3], s33 offset:1560 ; 4-byte Folded Spill
+; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:612
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v27, off, s[0:3], s33 offset:1556 ; 4-byte Folded Spill
 ; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:616
-; GFX10-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:620
-; GFX10-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:624
-; GFX10-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:628
-; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:632
-; GFX10-NEXT:    v_mov_b32_e32 v0, 24
-; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:108
-; GFX10-NEXT:    buffer_store_dword v9, off, s[0:3], s32
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v27, off, s[0:3], s33 offset:1552 ; 4-byte Folded Spill
+; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:620
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v27, off, s[0:3], s33 offset:1548 ; 4-byte Folded Spill
+; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:624
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v27, off, s[0:3], s33 offset:1544 ; 4-byte Folded Spill
+; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:628
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v27, off, s[0:3], s33 offset:1540 ; 4-byte Folded Spill
+; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:632
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v27, off, s[0:3], s33 offset:1536 ; 4-byte Folded Spill
+; GFX10-NEXT:    v_mov_b32_e32 v27, 24
+; GFX10-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:108
+; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s32
 ; GFX10-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4
 ; GFX10-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:8
 ; GFX10-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:12
@@ -3138,15 +3173,26 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX10-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:152
 ; GFX10-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:156
 ; GFX10-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:160
-; GFX10-NEXT:    s_clause 0x7 ; 32-byte Folded Reload
-; GFX10-NEXT:    buffer_load_dword v2, off, s[0:3], s33 offset:1536
-; GFX10-NEXT:    buffer_load_dword v3, off, s[0:3], s33 offset:1540
-; GFX10-NEXT:    buffer_load_dword v4, off, s[0:3], s33 offset:1544
-; GFX10-NEXT:    buffer_load_dword v5, off, s[0:3], s33 offset:1548
-; GFX10-NEXT:    buffer_load_dword v6, off, s[0:3], s33 offset:1552
-; GFX10-NEXT:    buffer_load_dword v7, off, s[0:3], s33 offset:1556
-; GFX10-NEXT:    buffer_load_dword v8, off, s[0:3], s33 offset:1560
-; GFX10-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:1564
+; GFX10-NEXT:    v_mov_b32_e32 v3, v21
+; GFX10-NEXT:    v_mov_b32_e32 v4, v22
+; GFX10-NEXT:    v_mov_b32_e32 v5, v23
+; GFX10-NEXT:    v_mov_b32_e32 v6, v24
+; GFX10-NEXT:    v_mov_b32_e32 v7, v25
+; GFX10-NEXT:    v_mov_b32_e32 v8, v26
+; GFX10-NEXT:    v_mov_b32_e32 v21, v28
+; GFX10-NEXT:    v_mov_b32_e32 v22, v29
+; GFX10-NEXT:    v_mov_b32_e32 v23, v30
+; GFX10-NEXT:    v_mov_b32_e32 v24, v31
+; GFX10-NEXT:    s_clause 0x6 ; 28-byte Folded Reload
+; GFX10-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:1560
+; GFX10-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:1556
+; GFX10-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:1552
+; GFX10-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:1548
+; GFX10-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:1544
+; GFX10-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:1540
+; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:1536
+; GFX10-NEXT:    v_mov_b32_e32 v2, v20
+; GFX10-NEXT:    buffer_load_dword v20, off, s[0:3], s33 offset:1564 ; 4-byte Folded Reload
 ; GFX10-NEXT:    v_lshrrev_b32_e64 v0, 5, s33
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, 0x400, v0
@@ -3182,12 +3228,12 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-LABEL: call_72xi32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s38, s33
+; GFX11-NEXT:    s_mov_b32 s35, s33
 ; GFX11-NEXT:    s_add_i32 s33, s32, 0x1ff
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s33, s33, 0xfffffe00
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
-; GFX11-NEXT:    scratch_store_b32 off, v62, s33 offset:1600 ; 4-byte Folded Spill
+; GFX11-NEXT:    scratch_store_b32 off, v61, s33 offset:1916 ; 4-byte Folded Spill
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v4, 0
@@ -3196,24 +3242,23 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    s_mov_b32 s3, s0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
-; GFX11-NEXT:    s_mov_b32 s39, s34
+; GFX11-NEXT:    s_mov_b32 s36, s34
 ; GFX11-NEXT:    s_mov_b32 s34, s32
 ; GFX11-NEXT:    s_addk_i32 s32, 0xa00
-; GFX11-NEXT:    s_clause 0xd ; 56-byte Folded Spill
-; GFX11-NEXT:    scratch_store_b32 off, v40, s33 offset:52
-; GFX11-NEXT:    scratch_store_b32 off, v41, s33 offset:48
-; GFX11-NEXT:    scratch_store_b32 off, v42, s33 offset:44
-; GFX11-NEXT:    scratch_store_b32 off, v43, s33 offset:40
-; GFX11-NEXT:    scratch_store_b32 off, v44, s33 offset:36
-; GFX11-NEXT:    scratch_store_b32 off, v45, s33 offset:32
-; GFX11-NEXT:    scratch_store_b32 off, v46, s33 offset:28
-; GFX11-NEXT:    scratch_store_b32 off, v47, s33 offset:24
-; GFX11-NEXT:    scratch_store_b32 off, v56, s33 offset:20
-; GFX11-NEXT:    scratch_store_b32 off, v57, s33 offset:16
-; GFX11-NEXT:    scratch_store_b32 off, v58, s33 offset:12
-; GFX11-NEXT:    scratch_store_b32 off, v59, s33 offset:8
-; GFX11-NEXT:    scratch_store_b32 off, v60, s33 offset:4
-; GFX11-NEXT:    scratch_store_b32 off, v61, s33
+; GFX11-NEXT:    s_clause 0xc ; 52-byte Folded Spill
+; GFX11-NEXT:    scratch_store_b32 off, v40, s33 offset:48
+; GFX11-NEXT:    scratch_store_b32 off, v41, s33 offset:44
+; GFX11-NEXT:    scratch_store_b32 off, v42, s33 offset:40
+; GFX11-NEXT:    scratch_store_b32 off, v43, s33 offset:36
+; GFX11-NEXT:    scratch_store_b32 off, v44, s33 offset:32
+; GFX11-NEXT:    scratch_store_b32 off, v45, s33 offset:28
+; GFX11-NEXT:    scratch_store_b32 off, v46, s33 offset:24
+; GFX11-NEXT:    scratch_store_b32 off, v47, s33 offset:20
+; GFX11-NEXT:    scratch_store_b32 off, v56, s33 offset:16
+; GFX11-NEXT:    scratch_store_b32 off, v57, s33 offset:12
+; GFX11-NEXT:    scratch_store_b32 off, v58, s33 offset:8
+; GFX11-NEXT:    scratch_store_b32 off, v59, s33 offset:4
+; GFX11-NEXT:    scratch_store_b32 off, v60, s33
 ; GFX11-NEXT:    s_add_i32 s0, s32, 0xa0
 ; GFX11-NEXT:    s_add_i32 s1, s32, 0x90
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
@@ -3234,7 +3279,7 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    s_add_i32 s0, s32, 32
 ; GFX11-NEXT:    s_add_i32 s1, s32, 16
 ; GFX11-NEXT:    s_add_i32 s2, s33, 0x200
-; GFX11-NEXT:    v_writelane_b32 v62, s30, 0
+; GFX11-NEXT:    v_writelane_b32 v61, s30, 0
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s0
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s1
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v3, 0
@@ -3255,106 +3300,260 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    v_dual_mov_b32 v31, 0 :: v_dual_mov_b32 v30, 0
 ; GFX11-NEXT:    s_mov_b32 s1, return_72xi32@abs32@hi
 ; GFX11-NEXT:    s_mov_b32 s0, return_72xi32@abs32@lo
-; GFX11-NEXT:    v_writelane_b32 v62, s31, 1
+; GFX11-NEXT:    v_writelane_b32 v61, s31, 1
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX11-NEXT:    s_clause 0xb
-; GFX11-NEXT:    scratch_load_b128 v[43:46], off, s33 offset:624
-; GFX11-NEXT:    scratch_load_b128 v[47:50], off, s33 offset:640
-; GFX11-NEXT:    scratch_load_b128 v[16:19], off, s33 offset:784
-; GFX11-NEXT:    scratch_load_b128 v[12:15], off, s33 offset:768
-; GFX11-NEXT:    scratch_load_b128 v[8:11], off, s33 offset:752
-; GFX11-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:736
-; GFX11-NEXT:    scratch_load_b128 v[0:3], off, s33 offset:720
-; GFX11-NEXT:    scratch_load_b128 v[24:27], off, s33 offset:656
-; GFX11-NEXT:    scratch_load_b128 v[36:39], off, s33 offset:704
-; GFX11-NEXT:    scratch_load_b128 v[32:35], off, s33 offset:688
-; GFX11-NEXT:    scratch_load_b128 v[28:31], off, s33 offset:672
-; GFX11-NEXT:    scratch_load_b128 v[20:23], off, s33 offset:512
-; GFX11-NEXT:    s_waitcnt vmcnt(6)
-; GFX11-NEXT:    v_mov_b32_e32 v6, 24
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    scratch_load_b128 v[0:3], off, s33 offset:624
+; GFX11-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:640
 ; GFX11-NEXT:    s_add_i32 s2, s32, 0xa0
-; GFX11-NEXT:    s_add_i32 s3, s32, 0x90
-; GFX11-NEXT:    s_add_i32 s35, s32, 0x80
-; GFX11-NEXT:    s_add_i32 s36, s32, 0x70
-; GFX11-NEXT:    s_add_i32 s37, s32, 0x6c
-; GFX11-NEXT:    s_waitcnt vmcnt(4)
-; GFX11-NEXT:    v_dual_mov_b32 v40, v0 :: v_dual_mov_b32 v53, v26
-; GFX11-NEXT:    v_dual_mov_b32 v41, v1 :: v_dual_mov_b32 v42, v2
-; GFX11-NEXT:    v_mov_b32_e32 v51, v24
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b128 off, v[20:23], s33 offset:1584 ; 16-byte Folded Spill
-; GFX11-NEXT:    scratch_load_b128 v[20:23], off, s33 offset:528
-; GFX11-NEXT:    v_mov_b32_e32 v52, v25
+; GFX11-NEXT:    v_dual_mov_b32 v32, v7 :: v_dual_mov_b32 v31, v6
+; GFX11-NEXT:    v_dual_mov_b32 v30, v5 :: v_dual_mov_b32 v29, v4
+; GFX11-NEXT:    v_dual_mov_b32 v28, v3 :: v_dual_mov_b32 v27, v2
+; GFX11-NEXT:    v_dual_mov_b32 v26, v1 :: v_dual_mov_b32 v25, v0
+; GFX11-NEXT:    s_clause 0x5
+; GFX11-NEXT:    scratch_load_b128 v[9:12], off, s33 offset:736
+; GFX11-NEXT:    scratch_load_b128 v[1:4], off, s33 offset:512
+; GFX11-NEXT:    scratch_load_b128 v[21:24], off, s33 offset:784
+; GFX11-NEXT:    scratch_load_b128 v[17:20], off, s33 offset:768
+; GFX11-NEXT:    scratch_load_b128 v[13:16], off, s33 offset:752
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:720
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b128 off, v[20:23], s33 offset:1536 ; 16-byte Folded Spill
-; GFX11-NEXT:    scratch_load_b128 v[20:23], off, s33 offset:544
+; GFX11-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
+; GFX11-NEXT:    scratch_store_b128 off, v[5:8], s33 offset:1536
+; GFX11-NEXT:    scratch_store_b128 off, v[9:12], s33 offset:1552
+; GFX11-NEXT:    scratch_store_b128 off, v[13:16], s33 offset:1568
+; GFX11-NEXT:    scratch_store_b128 off, v[17:20], s33 offset:1584
+; GFX11-NEXT:    scratch_store_b128 off, v[21:24], s33 offset:1600
+; GFX11-NEXT:    scratch_store_b128 off, v[25:28], s33 offset:1616
+; GFX11-NEXT:    scratch_store_b128 off, v[29:32], s33 offset:1632
+; GFX11-NEXT:    scratch_store_b128 off, v[33:36], s33 offset:1648
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    scratch_load_b128 v[12:15], off, s33 offset:704
+; GFX11-NEXT:    scratch_load_b128 v[8:11], off, s33 offset:688
+; GFX11-NEXT:    v_dual_mov_b32 v0, 24 :: v_dual_mov_b32 v1, 42
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b128 off, v[20:23], s33 offset:1568 ; 16-byte Folded Spill
-; GFX11-NEXT:    scratch_load_b128 v[20:23], off, s33 offset:560
+; GFX11-NEXT:    v_mov_b32_e32 v16, v15
+; GFX11-NEXT:    v_mov_b32_e32 v15, v14
+; GFX11-NEXT:    v_mov_b32_e32 v14, v13
+; GFX11-NEXT:    v_mov_b32_e32 v13, v12
+; GFX11-NEXT:    v_mov_b32_e32 v12, v11
+; GFX11-NEXT:    v_mov_b32_e32 v11, v10
+; GFX11-NEXT:    v_mov_b32_e32 v10, v9
+; GFX11-NEXT:    v_mov_b32_e32 v9, v8
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:672
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b128 off, v[20:23], s33 offset:1552 ; 16-byte Folded Spill
-; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    scratch_load_b128 v[20:23], off, s33 offset:576
-; GFX11-NEXT:    scratch_load_b128 v[58:61], off, s33 offset:592
-; GFX11-NEXT:    scratch_load_b128 v[54:57], off, s33 offset:608
-; GFX11-NEXT:    scratch_store_b128 off, v[46:49], s32
-; GFX11-NEXT:    scratch_store_b32 off, v19, s2
-; GFX11-NEXT:    scratch_store_b128 off, v[15:18], s3
-; GFX11-NEXT:    scratch_store_b128 off, v[11:14], s35
-; GFX11-NEXT:    scratch_store_b128 off, v[7:10], s36
-; GFX11-NEXT:    s_add_i32 s2, s32, 0x60
-; GFX11-NEXT:    scratch_store_b32 off, v6, s37
-; GFX11-NEXT:    scratch_store_b96 off, v[3:5], s2
-; GFX11-NEXT:    s_add_i32 s2, s32, 0x50
-; GFX11-NEXT:    s_add_i32 s3, s32, 64
-; GFX11-NEXT:    s_add_i32 s35, s32, 48
-; GFX11-NEXT:    s_add_i32 s36, s32, 32
-; GFX11-NEXT:    scratch_store_b128 off, v[39:42], s2
-; GFX11-NEXT:    scratch_store_b128 off, v[35:38], s3
-; GFX11-NEXT:    scratch_store_b128 off, v[31:34], s35
-; GFX11-NEXT:    scratch_store_b128 off, v[27:30], s36
-; GFX11-NEXT:    s_add_i32 s2, s32, 16
-; GFX11-NEXT:    v_mov_b32_e32 v29, v43
-; GFX11-NEXT:    scratch_store_b128 off, v[50:53], s2
-; GFX11-NEXT:    s_clause 0x3 ; 64-byte Folded Reload
-; GFX11-NEXT:    scratch_load_b128 v[1:4], off, s33 offset:1584
+; GFX11-NEXT:    v_mov_b32_e32 v20, v16
+; GFX11-NEXT:    v_dual_mov_b32 v19, v15 :: v_dual_mov_b32 v18, v14
+; GFX11-NEXT:    v_dual_mov_b32 v17, v13 :: v_dual_mov_b32 v16, v12
+; GFX11-NEXT:    v_mov_b32_e32 v15, v11
+; GFX11-NEXT:    v_mov_b32_e32 v14, v10
+; GFX11-NEXT:    v_mov_b32_e32 v13, v9
+; GFX11-NEXT:    v_mov_b32_e32 v12, v8
+; GFX11-NEXT:    v_mov_b32_e32 v11, v7
+; GFX11-NEXT:    v_mov_b32_e32 v10, v6
+; GFX11-NEXT:    v_mov_b32_e32 v9, v5
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:656
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
+; GFX11-NEXT:    scratch_store_b128 off, v[5:8], s33 offset:1744
+; GFX11-NEXT:    scratch_store_b128 off, v[9:12], s33 offset:1760
+; GFX11-NEXT:    scratch_store_b128 off, v[13:16], s33 offset:1776
+; GFX11-NEXT:    scratch_store_b128 off, v[17:20], s33 offset:1792
+; GFX11-NEXT:    scratch_store_b128 off, v[21:24], s33 offset:1808
+; GFX11-NEXT:    scratch_store_b128 off, v[25:28], s33 offset:1824
+; GFX11-NEXT:    scratch_store_b128 off, v[29:32], s33 offset:1840
+; GFX11-NEXT:    scratch_store_b128 off, v[33:36], s33 offset:1856
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:528
+; GFX11-NEXT:    scratch_load_b128 v[57:60], off, s33 offset:608
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    scratch_store_b128 off, v[5:8], s33 offset:1728 ; 16-byte Folded Spill
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:544
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b128 off, v[5:8], s33 offset:1712 ; 16-byte Folded Spill
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:560
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b128 off, v[5:8], s33 offset:1696 ; 16-byte Folded Spill
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:576
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b128 off, v[5:8], s33 offset:1680 ; 16-byte Folded Spill
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:592
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b128 off, v[5:8], s33 offset:1664 ; 16-byte Folded Spill
+; GFX11-NEXT:    scratch_store_b128 off, v[28:31], s32
+; GFX11-NEXT:    s_clause 0x2 ; 44-byte Folded Spill
+; GFX11-NEXT:    scratch_store_b128 off, v[25:28], s33 offset:1872
+; GFX11-NEXT:    scratch_store_b128 off, v[29:32], s33 offset:1888
+; GFX11-NEXT:    scratch_store_b96 off, v[33:35], s33 offset:1904
+; GFX11-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:1536
-; GFX11-NEXT:    scratch_load_b128 v[9:12], off, s33 offset:1568
-; GFX11-NEXT:    scratch_load_b128 v[13:16], off, s33 offset:1552
-; GFX11-NEXT:    s_add_i32 s2, s33, 0x400
-; GFX11-NEXT:    v_dual_mov_b32 v30, v44 :: v_dual_mov_b32 v31, v45
+; GFX11-NEXT:    scratch_load_b128 v[9:12], off, s33 offset:1552
+; GFX11-NEXT:    scratch_load_b128 v[13:16], off, s33 offset:1568
+; GFX11-NEXT:    scratch_load_b128 v[17:20], off, s33 offset:1584
+; GFX11-NEXT:    scratch_load_b128 v[21:24], off, s33 offset:1600
+; GFX11-NEXT:    scratch_load_b128 v[25:28], off, s33 offset:1616
+; GFX11-NEXT:    scratch_load_b128 v[29:32], off, s33 offset:1632
+; GFX11-NEXT:    scratch_load_b128 v[33:36], off, s33 offset:1648
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, 42
-; GFX11-NEXT:    v_dual_mov_b32 v17, v20 :: v_dual_mov_b32 v18, v21
-; GFX11-NEXT:    v_dual_mov_b32 v19, v22 :: v_dual_mov_b32 v20, v23
-; GFX11-NEXT:    v_dual_mov_b32 v21, v58 :: v_dual_mov_b32 v22, v59
-; GFX11-NEXT:    v_dual_mov_b32 v23, v60 :: v_dual_mov_b32 v24, v61
-; GFX11-NEXT:    v_dual_mov_b32 v25, v54 :: v_dual_mov_b32 v26, v55
-; GFX11-NEXT:    v_dual_mov_b32 v27, v56 :: v_dual_mov_b32 v28, v57
+; GFX11-NEXT:    scratch_store_b32 off, v24, s2
+; GFX11-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:1536
+; GFX11-NEXT:    scratch_load_b128 v[9:12], off, s33 offset:1552
+; GFX11-NEXT:    scratch_load_b128 v[13:16], off, s33 offset:1568
+; GFX11-NEXT:    scratch_load_b128 v[17:20], off, s33 offset:1584
+; GFX11-NEXT:    scratch_load_b128 v[21:24], off, s33 offset:1600
+; GFX11-NEXT:    scratch_load_b128 v[25:28], off, s33 offset:1616
+; GFX11-NEXT:    scratch_load_b128 v[29:32], off, s33 offset:1632
+; GFX11-NEXT:    scratch_load_b128 v[33:36], off, s33 offset:1648
+; GFX11-NEXT:    s_add_i32 s2, s32, 0x90
+; GFX11-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-NEXT:    scratch_store_b128 off, v[20:23], s2
+; GFX11-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:1536
+; GFX11-NEXT:    scratch_load_b128 v[9:12], off, s33 offset:1552
+; GFX11-NEXT:    scratch_load_b128 v[13:16], off, s33 offset:1568
+; GFX11-NEXT:    scratch_load_b128 v[17:20], off, s33 offset:1584
+; GFX11-NEXT:    scratch_load_b128 v[21:24], off, s33 offset:1600
+; GFX11-NEXT:    scratch_load_b128 v[25:28], off, s33 offset:1616
+; GFX11-NEXT:    scratch_load_b128 v[29:32], off, s33 offset:1632
+; GFX11-NEXT:    scratch_load_b128 v[33:36], off, s33 offset:1648
+; GFX11-NEXT:    s_add_i32 s2, s32, 0x80
+; GFX11-NEXT:    s_waitcnt vmcnt(4)
+; GFX11-NEXT:    scratch_store_b128 off, v[16:19], s2
+; GFX11-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:1536
+; GFX11-NEXT:    scratch_load_b128 v[9:12], off, s33 offset:1552
+; GFX11-NEXT:    scratch_load_b128 v[13:16], off, s33 offset:1568
+; GFX11-NEXT:    scratch_load_b128 v[17:20], off, s33 offset:1584
+; GFX11-NEXT:    scratch_load_b128 v[21:24], off, s33 offset:1600
+; GFX11-NEXT:    scratch_load_b128 v[25:28], off, s33 offset:1616
+; GFX11-NEXT:    scratch_load_b128 v[29:32], off, s33 offset:1632
+; GFX11-NEXT:    scratch_load_b128 v[33:36], off, s33 offset:1648
+; GFX11-NEXT:    s_add_i32 s2, s32, 0x70
+; GFX11-NEXT:    s_waitcnt vmcnt(5)
+; GFX11-NEXT:    scratch_store_b128 off, v[12:15], s2
+; GFX11-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:1536
+; GFX11-NEXT:    scratch_load_b128 v[9:12], off, s33 offset:1552
+; GFX11-NEXT:    scratch_load_b128 v[13:16], off, s33 offset:1568
+; GFX11-NEXT:    scratch_load_b128 v[17:20], off, s33 offset:1584
+; GFX11-NEXT:    scratch_load_b128 v[21:24], off, s33 offset:1600
+; GFX11-NEXT:    scratch_load_b128 v[25:28], off, s33 offset:1616
+; GFX11-NEXT:    scratch_load_b128 v[29:32], off, s33 offset:1632
+; GFX11-NEXT:    scratch_load_b128 v[33:36], off, s33 offset:1648
+; GFX11-NEXT:    s_add_i32 s2, s32, 0x6c
+; GFX11-NEXT:    scratch_store_b32 off, v0, s2
+; GFX11-NEXT:    s_add_i32 s2, s32, 0x60
+; GFX11-NEXT:    s_waitcnt vmcnt(6)
+; GFX11-NEXT:    scratch_store_b96 off, v[8:10], s2
+; GFX11-NEXT:    s_clause 0x17 ; 384-byte Folded Reload
+; GFX11-NEXT:    scratch_load_b128 v[7:10], off, s33 offset:1744
+; GFX11-NEXT:    scratch_load_b128 v[11:14], off, s33 offset:1760
+; GFX11-NEXT:    scratch_load_b128 v[15:18], off, s33 offset:1776
+; GFX11-NEXT:    scratch_load_b128 v[19:22], off, s33 offset:1792
+; GFX11-NEXT:    scratch_load_b128 v[23:26], off, s33 offset:1808
+; GFX11-NEXT:    scratch_load_b128 v[27:30], off, s33 offset:1824
+; GFX11-NEXT:    scratch_load_b128 v[31:34], off, s33 offset:1840
+; GFX11-NEXT:    scratch_load_b128 v[35:38], off, s33 offset:1856
+; GFX11-NEXT:    scratch_load_b128 v[23:26], off, s33 offset:1536
+; GFX11-NEXT:    scratch_load_b128 v[27:30], off, s33 offset:1552
+; GFX11-NEXT:    scratch_load_b128 v[31:34], off, s33 offset:1568
+; GFX11-NEXT:    scratch_load_b128 v[35:38], off, s33 offset:1584
+; GFX11-NEXT:    scratch_load_b128 v[39:42], off, s33 offset:1600
+; GFX11-NEXT:    scratch_load_b128 v[43:46], off, s33 offset:1616
+; GFX11-NEXT:    scratch_load_b128 v[47:50], off, s33 offset:1632
+; GFX11-NEXT:    scratch_load_b128 v[51:54], off, s33 offset:1648
+; GFX11-NEXT:    scratch_load_b128 v[24:27], off, s33 offset:1536
+; GFX11-NEXT:    scratch_load_b128 v[28:31], off, s33 offset:1552
+; GFX11-NEXT:    scratch_load_b128 v[32:35], off, s33 offset:1568
+; GFX11-NEXT:    scratch_load_b128 v[36:39], off, s33 offset:1584
+; GFX11-NEXT:    scratch_load_b128 v[40:43], off, s33 offset:1600
+; GFX11-NEXT:    scratch_load_b128 v[44:47], off, s33 offset:1616
+; GFX11-NEXT:    scratch_load_b128 v[48:51], off, s33 offset:1632
+; GFX11-NEXT:    scratch_load_b128 v[52:55], off, s33 offset:1648
+; GFX11-NEXT:    s_add_i32 s2, s32, 0x50
+; GFX11-NEXT:    s_waitcnt vmcnt(7)
+; GFX11-NEXT:    v_mov_b32_e32 v24, v25
+; GFX11-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
+; GFX11-NEXT:    scratch_load_b128 v[25:28], off, s33 offset:1536
+; GFX11-NEXT:    scratch_load_b128 v[29:32], off, s33 offset:1552
+; GFX11-NEXT:    scratch_load_b128 v[33:36], off, s33 offset:1568
+; GFX11-NEXT:    scratch_load_b128 v[37:40], off, s33 offset:1584
+; GFX11-NEXT:    scratch_load_b128 v[41:44], off, s33 offset:1600
+; GFX11-NEXT:    scratch_load_b128 v[45:48], off, s33 offset:1616
+; GFX11-NEXT:    scratch_load_b128 v[49:52], off, s33 offset:1632
+; GFX11-NEXT:    scratch_load_b128 v[53:56], off, s33 offset:1648
+; GFX11-NEXT:    s_waitcnt vmcnt(7)
+; GFX11-NEXT:    v_dual_mov_b32 v5, v7 :: v_dual_mov_b32 v28, v60
+; GFX11-NEXT:    v_dual_mov_b32 v6, v8 :: v_dual_mov_b32 v7, v9
+; GFX11-NEXT:    v_mov_b32_e32 v8, v10
+; GFX11-NEXT:    v_mov_b32_e32 v9, v11
+; GFX11-NEXT:    s_waitcnt vmcnt(4)
+; GFX11-NEXT:    v_dual_mov_b32 v10, v12 :: v_dual_mov_b32 v37, v5
+; GFX11-NEXT:    v_dual_mov_b32 v38, v6 :: v_dual_mov_b32 v39, v7
+; GFX11-NEXT:    v_dual_mov_b32 v26, v58 :: v_dual_mov_b32 v25, v27
+; GFX11-NEXT:    v_mov_b32_e32 v27, v59
+; GFX11-NEXT:    v_mov_b32_e32 v11, v13
+; GFX11-NEXT:    v_mov_b32_e32 v12, v14
+; GFX11-NEXT:    v_mov_b32_e32 v13, v15
+; GFX11-NEXT:    v_mov_b32_e32 v14, v16
+; GFX11-NEXT:    v_mov_b32_e32 v15, v17
+; GFX11-NEXT:    v_mov_b32_e32 v16, v18
+; GFX11-NEXT:    v_mov_b32_e32 v17, v19
+; GFX11-NEXT:    v_mov_b32_e32 v18, v20
+; GFX11-NEXT:    v_mov_b32_e32 v19, v21
+; GFX11-NEXT:    v_dual_mov_b32 v20, v22 :: v_dual_mov_b32 v21, v23
+; GFX11-NEXT:    v_dual_mov_b32 v22, v24 :: v_dual_mov_b32 v23, v25
+; GFX11-NEXT:    v_mov_b32_e32 v25, v57
+; GFX11-NEXT:    scratch_store_b128 off, v[20:23], s2
+; GFX11-NEXT:    s_add_i32 s2, s32, 64
+; GFX11-NEXT:    scratch_store_b128 off, v[16:19], s2
+; GFX11-NEXT:    s_add_i32 s2, s32, 48
+; GFX11-NEXT:    scratch_store_b128 off, v[12:15], s2
+; GFX11-NEXT:    s_add_i32 s2, s32, 32
+; GFX11-NEXT:    scratch_store_b128 off, v[8:11], s2
+; GFX11-NEXT:    s_clause 0x2 ; 44-byte Folded Reload
+; GFX11-NEXT:    scratch_load_b128 v[8:11], off, s33 offset:1872
+; GFX11-NEXT:    scratch_load_b128 v[12:15], off, s33 offset:1888
+; GFX11-NEXT:    scratch_load_b96 v[16:18], off, s33 offset:1904
+; GFX11-NEXT:    s_add_i32 s2, s32, 16
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    v_dual_mov_b32 v31, v10 :: v_dual_mov_b32 v36, v15
+; GFX11-NEXT:    v_dual_mov_b32 v30, v9 :: v_dual_mov_b32 v29, v8
+; GFX11-NEXT:    scratch_store_b128 off, v[36:39], s2
+; GFX11-NEXT:    s_clause 0x4 ; 80-byte Folded Reload
+; GFX11-NEXT:    scratch_load_b128 v[5:8], off, s33 offset:1728
+; GFX11-NEXT:    scratch_load_b128 v[9:12], off, s33 offset:1712
+; GFX11-NEXT:    scratch_load_b128 v[13:16], off, s33 offset:1696
+; GFX11-NEXT:    scratch_load_b128 v[17:20], off, s33 offset:1680
+; GFX11-NEXT:    scratch_load_b128 v[21:24], off, s33 offset:1664
+; GFX11-NEXT:    s_add_i32 s2, s33, 0x400
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX11-NEXT:    s_clause 0xd ; 56-byte Folded Reload
-; GFX11-NEXT:    scratch_load_b32 v61, off, s33
-; GFX11-NEXT:    scratch_load_b32 v60, off, s33 offset:4
-; GFX11-NEXT:    scratch_load_b32 v59, off, s33 offset:8
-; GFX11-NEXT:    scratch_load_b32 v58, off, s33 offset:12
-; GFX11-NEXT:    scratch_load_b32 v57, off, s33 offset:16
-; GFX11-NEXT:    scratch_load_b32 v56, off, s33 offset:20
-; GFX11-NEXT:    scratch_load_b32 v47, off, s33 offset:24
-; GFX11-NEXT:    scratch_load_b32 v46, off, s33 offset:28
-; GFX11-NEXT:    scratch_load_b32 v45, off, s33 offset:32
-; GFX11-NEXT:    scratch_load_b32 v44, off, s33 offset:36
-; GFX11-NEXT:    scratch_load_b32 v43, off, s33 offset:40
-; GFX11-NEXT:    scratch_load_b32 v42, off, s33 offset:44
-; GFX11-NEXT:    scratch_load_b32 v41, off, s33 offset:48
-; GFX11-NEXT:    scratch_load_b32 v40, off, s33 offset:52
-; GFX11-NEXT:    v_readlane_b32 s31, v62, 1
-; GFX11-NEXT:    v_readlane_b32 s30, v62, 0
+; GFX11-NEXT:    s_clause 0xc ; 52-byte Folded Reload
+; GFX11-NEXT:    scratch_load_b32 v60, off, s33
+; GFX11-NEXT:    scratch_load_b32 v59, off, s33 offset:4
+; GFX11-NEXT:    scratch_load_b32 v58, off, s33 offset:8
+; GFX11-NEXT:    scratch_load_b32 v57, off, s33 offset:12
+; GFX11-NEXT:    scratch_load_b32 v56, off, s33 offset:16
+; GFX11-NEXT:    scratch_load_b32 v47, off, s33 offset:20
+; GFX11-NEXT:    scratch_load_b32 v46, off, s33 offset:24
+; GFX11-NEXT:    scratch_load_b32 v45, off, s33 offset:28
+; GFX11-NEXT:    scratch_load_b32 v44, off, s33 offset:32
+; GFX11-NEXT:    scratch_load_b32 v43, off, s33 offset:36
+; GFX11-NEXT:    scratch_load_b32 v42, off, s33 offset:40
+; GFX11-NEXT:    scratch_load_b32 v41, off, s33 offset:44
+; GFX11-NEXT:    scratch_load_b32 v40, off, s33 offset:48
+; GFX11-NEXT:    v_readlane_b32 s31, v61, 1
+; GFX11-NEXT:    v_readlane_b32 s30, v61, 0
 ; GFX11-NEXT:    s_mov_b32 s32, s34
-; GFX11-NEXT:    s_mov_b32 s34, s39
+; GFX11-NEXT:    s_mov_b32 s34, s36
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
-; GFX11-NEXT:    scratch_load_b32 v62, off, s33 offset:1600 ; 4-byte Folded Reload
+; GFX11-NEXT:    scratch_load_b32 v61, off, s33 offset:1916 ; 4-byte Folded Reload
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    s_mov_b32 s33, s38
+; GFX11-NEXT:    s_mov_b32 s33, s35
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:

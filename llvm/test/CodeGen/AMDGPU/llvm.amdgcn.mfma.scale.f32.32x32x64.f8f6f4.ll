@@ -4090,8 +4090,6 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_inlineimm__
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    scratch_load_dword a15, off, s32
-; GISEL-NEXT:    v_mov_b32_e32 v31, 33
-; GISEL-NEXT:    v_mov_b32_e32 v32, -2
 ; GISEL-NEXT:    v_accvgpr_write_b32 a0, v16
 ; GISEL-NEXT:    v_accvgpr_write_b32 a1, v17
 ; GISEL-NEXT:    v_accvgpr_write_b32 a2, v18
@@ -4107,9 +4105,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_inlineimm__
 ; GISEL-NEXT:    v_accvgpr_write_b32 a12, v28
 ; GISEL-NEXT:    v_accvgpr_write_b32 a13, v29
 ; GISEL-NEXT:    v_accvgpr_write_b32 a14, v30
+; GISEL-NEXT:    v_mov_b32_e32 v16, 33
+; GISEL-NEXT:    v_mov_b32_e32 v17, -2
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v31, v32 op_sel_hi:[1,1,0]
+; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v16, v17 op_sel_hi:[1,1,0]
 ; GISEL-NEXT:    s_nop 15
 ; GISEL-NEXT:    s_nop 3
 ; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
@@ -4182,8 +4182,6 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_kimm__scale
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    scratch_load_dword a15, off, s32
-; GISEL-NEXT:    v_mov_b32_e32 v31, 0x41
-; GISEL-NEXT:    v_mov_b32_e32 v32, -2
 ; GISEL-NEXT:    v_accvgpr_write_b32 a0, v16
 ; GISEL-NEXT:    v_accvgpr_write_b32 a1, v17
 ; GISEL-NEXT:    v_accvgpr_write_b32 a2, v18
@@ -4199,9 +4197,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_kimm__scale
 ; GISEL-NEXT:    v_accvgpr_write_b32 a12, v28
 ; GISEL-NEXT:    v_accvgpr_write_b32 a13, v29
 ; GISEL-NEXT:    v_accvgpr_write_b32 a14, v30
+; GISEL-NEXT:    v_mov_b32_e32 v16, 0x41
+; GISEL-NEXT:    v_mov_b32_e32 v17, -2
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v31, v32 op_sel_hi:[1,1,0]
+; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v16, v17 op_sel_hi:[1,1,0]
 ; GISEL-NEXT:    s_nop 15
 ; GISEL-NEXT:    s_nop 3
 ; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
@@ -4274,8 +4274,6 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_kimm__scale
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    scratch_load_dword a15, off, s32
-; GISEL-NEXT:    v_mov_b32_e32 v31, 0x41
-; GISEL-NEXT:    v_mov_b32_e32 v32, 1.0
 ; GISEL-NEXT:    v_accvgpr_write_b32 a0, v16
 ; GISEL-NEXT:    v_accvgpr_write_b32 a1, v17
 ; GISEL-NEXT:    v_accvgpr_write_b32 a2, v18
@@ -4291,9 +4289,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_kimm__scale
 ; GISEL-NEXT:    v_accvgpr_write_b32 a12, v28
 ; GISEL-NEXT:    v_accvgpr_write_b32 a13, v29
 ; GISEL-NEXT:    v_accvgpr_write_b32 a14, v30
+; GISEL-NEXT:    v_mov_b32_e32 v16, 0x41
+; GISEL-NEXT:    v_mov_b32_e32 v17, 1.0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v31, v32 op_sel_hi:[1,1,0]
+; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v16, v17 op_sel_hi:[1,1,0]
 ; GISEL-NEXT:    s_nop 15
 ; GISEL-NEXT:    s_nop 3
 ; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
@@ -4366,8 +4366,6 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_FP_literal_
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    scratch_load_dword a15, off, s32
-; GISEL-NEXT:    v_mov_b32_e32 v31, 1.0
-; GISEL-NEXT:    v_mov_b32_e32 v32, -2
 ; GISEL-NEXT:    v_accvgpr_write_b32 a0, v16
 ; GISEL-NEXT:    v_accvgpr_write_b32 a1, v17
 ; GISEL-NEXT:    v_accvgpr_write_b32 a2, v18
@@ -4383,9 +4381,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_FP_literal_
 ; GISEL-NEXT:    v_accvgpr_write_b32 a12, v28
 ; GISEL-NEXT:    v_accvgpr_write_b32 a13, v29
 ; GISEL-NEXT:    v_accvgpr_write_b32 a14, v30
+; GISEL-NEXT:    v_mov_b32_e32 v16, 1.0
+; GISEL-NEXT:    v_mov_b32_e32 v17, -2
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v31, v32 op_sel_hi:[1,1,0]
+; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v16, v17 op_sel_hi:[1,1,0]
 ; GISEL-NEXT:    s_nop 15
 ; GISEL-NEXT:    s_nop 3
 ; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
@@ -4458,8 +4458,6 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_FP_literal_
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    scratch_load_dword a15, off, s32
-; GISEL-NEXT:    v_mov_b32_e32 v31, 0.15915494
-; GISEL-NEXT:    v_mov_b32_e32 v32, 1.0
 ; GISEL-NEXT:    v_accvgpr_write_b32 a0, v16
 ; GISEL-NEXT:    v_accvgpr_write_b32 a1, v17
 ; GISEL-NEXT:    v_accvgpr_write_b32 a2, v18
@@ -4475,9 +4473,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_FP_literal_
 ; GISEL-NEXT:    v_accvgpr_write_b32 a12, v28
 ; GISEL-NEXT:    v_accvgpr_write_b32 a13, v29
 ; GISEL-NEXT:    v_accvgpr_write_b32 a14, v30
+; GISEL-NEXT:    v_mov_b32_e32 v16, 0.15915494
+; GISEL-NEXT:    v_mov_b32_e32 v17, 1.0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v31, v32 op_sel_hi:[1,1,0]
+; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v16, v17 op_sel_hi:[1,1,0]
 ; GISEL-NEXT:    s_nop 15
 ; GISEL-NEXT:    s_nop 3
 ; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
@@ -4550,8 +4550,6 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_kimm__scale
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    scratch_load_dword a15, off, s32
-; GISEL-NEXT:    v_mov_b32_e32 v31, 0x41
-; GISEL-NEXT:    v_mov_b32_e32 v32, 0x4d
 ; GISEL-NEXT:    v_accvgpr_write_b32 a0, v16
 ; GISEL-NEXT:    v_accvgpr_write_b32 a1, v17
 ; GISEL-NEXT:    v_accvgpr_write_b32 a2, v18
@@ -4567,9 +4565,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_kimm__scale
 ; GISEL-NEXT:    v_accvgpr_write_b32 a12, v28
 ; GISEL-NEXT:    v_accvgpr_write_b32 a13, v29
 ; GISEL-NEXT:    v_accvgpr_write_b32 a14, v30
+; GISEL-NEXT:    v_mov_b32_e32 v16, 0x41
+; GISEL-NEXT:    v_mov_b32_e32 v17, 0x4d
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v31, v32 op_sel_hi:[1,1,0]
+; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v16, v17 op_sel_hi:[1,1,0]
 ; GISEL-NEXT:    s_nop 15
 ; GISEL-NEXT:    s_nop 3
 ; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
@@ -5459,8 +5459,6 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___constant_scale_0_1(<8
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    scratch_load_dword a15, off, s32
-; GISEL-NEXT:    v_mov_b32_e32 v31, 0
-; GISEL-NEXT:    v_mov_b32_e32 v32, 1
 ; GISEL-NEXT:    v_accvgpr_write_b32 a0, v16
 ; GISEL-NEXT:    v_accvgpr_write_b32 a1, v17
 ; GISEL-NEXT:    v_accvgpr_write_b32 a2, v18
@@ -5476,9 +5474,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___constant_scale_0_1(<8
 ; GISEL-NEXT:    v_accvgpr_write_b32 a12, v28
 ; GISEL-NEXT:    v_accvgpr_write_b32 a13, v29
 ; GISEL-NEXT:    v_accvgpr_write_b32 a14, v30
+; GISEL-NEXT:    v_mov_b32_e32 v16, 0
+; GISEL-NEXT:    v_mov_b32_e32 v17, 1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v31, v32 op_sel_hi:[0,0,0]
+; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v16, v17 op_sel_hi:[0,0,0]
 ; GISEL-NEXT:    s_nop 15
 ; GISEL-NEXT:    s_nop 3
 ; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
@@ -5551,8 +5551,6 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___constant_scale_1_0_a(
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    scratch_load_dword a15, off, s32
-; GISEL-NEXT:    v_mov_b32_e32 v31, 1
-; GISEL-NEXT:    v_mov_b32_e32 v32, 0
 ; GISEL-NEXT:    v_accvgpr_write_b32 a0, v16
 ; GISEL-NEXT:    v_accvgpr_write_b32 a1, v17
 ; GISEL-NEXT:    v_accvgpr_write_b32 a2, v18
@@ -5568,9 +5566,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___constant_scale_1_0_a(
 ; GISEL-NEXT:    v_accvgpr_write_b32 a12, v28
 ; GISEL-NEXT:    v_accvgpr_write_b32 a13, v29
 ; GISEL-NEXT:    v_accvgpr_write_b32 a14, v30
+; GISEL-NEXT:    v_mov_b32_e32 v16, 1
+; GISEL-NEXT:    v_mov_b32_e32 v17, 0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v31, v32 op_sel_hi:[0,0,0]
+; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v16, v17 op_sel_hi:[0,0,0]
 ; GISEL-NEXT:    s_nop 15
 ; GISEL-NEXT:    s_nop 3
 ; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0

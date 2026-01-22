@@ -3493,6 +3493,7 @@ define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v64f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32
 ; VI-NEXT:    v_max_f16_sdwa v31, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v0
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v31
@@ -3586,11 +3587,10 @@ define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
 ; VI-NEXT:    v_max_f16_sdwa v31, v30, v30 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-NEXT:    v_max_f16_e32 v30, v30, v30
 ; VI-NEXT:    v_or_b32_e32 v30, v30, v31
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v32, v31, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v31, v31, v31
-; VI-NEXT:    v_or_b32_e32 v31, v31, v32
+; VI-NEXT:    v_max_f16_sdwa v31, v32, v32 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v32, v32, v32
+; VI-NEXT:    v_or_b32_e32 v31, v32, v31
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_var_v64f16:

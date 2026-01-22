@@ -2133,8 +2133,8 @@ define void @flat_atomic_xor_expansion_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a34
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v4, a34
+; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX90A-NEXT:  .LBB29_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

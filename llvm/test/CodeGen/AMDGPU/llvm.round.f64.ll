@@ -569,6 +569,7 @@ define amdgpu_kernel void @round_v8f64(ptr addrspace(1) %out, <8 x double> %in) 
 ; CI-LABEL: round_v8f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x19
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; CI-NEXT:    s_brev_b32 s6, -2
 ; CI-NEXT:    v_mov_b32_e32 v12, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -576,78 +577,76 @@ define amdgpu_kernel void @round_v8f64(ptr addrspace(1) %out, <8 x double> %in) 
 ; CI-NEXT:    v_trunc_f64_e32 v[4:5], s[8:9]
 ; CI-NEXT:    v_add_f64 v[2:3], s[10:11], -v[0:1]
 ; CI-NEXT:    v_add_f64 v[6:7], s[8:9], -v[4:5]
-; CI-NEXT:    v_cmp_ge_f64_e64 s[0:1], |v[2:3]|, 0.5
-; CI-NEXT:    v_cmp_ge_f64_e64 s[2:3], |v[6:7]|, 0.5
-; CI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; CI-NEXT:    s_cselect_b32 s7, 0x3ff00000, 0
+; CI-NEXT:    v_cmp_ge_f64_e64 s[2:3], |v[2:3]|, 0.5
+; CI-NEXT:    v_cmp_ge_f64_e64 s[4:5], |v[6:7]|, 0.5
+; CI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; CI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
 ; CI-NEXT:    v_mov_b32_e32 v8, s11
-; CI-NEXT:    s_and_b64 s[0:1], s[2:3], exec
-; CI-NEXT:    v_mov_b32_e32 v2, s7
+; CI-NEXT:    v_mov_b32_e32 v2, s2
+; CI-NEXT:    s_and_b64 s[2:3], s[4:5], exec
 ; CI-NEXT:    v_trunc_f64_e32 v[6:7], s[14:15]
 ; CI-NEXT:    v_bfi_b32 v13, s6, v2, v8
-; CI-NEXT:    s_cselect_b32 s0, 0x3ff00000, 0
+; CI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
 ; CI-NEXT:    v_add_f64 v[2:3], v[0:1], v[12:13]
-; CI-NEXT:    v_mov_b32_e32 v8, s0
+; CI-NEXT:    v_mov_b32_e32 v8, s2
 ; CI-NEXT:    v_mov_b32_e32 v9, s9
 ; CI-NEXT:    v_add_f64 v[0:1], s[14:15], -v[6:7]
 ; CI-NEXT:    v_bfi_b32 v13, s6, v8, v9
-; CI-NEXT:    v_cmp_ge_f64_e64 s[0:1], |v[0:1]|, 0.5
+; CI-NEXT:    v_cmp_ge_f64_e64 s[2:3], |v[0:1]|, 0.5
 ; CI-NEXT:    v_add_f64 v[0:1], v[4:5], v[12:13]
 ; CI-NEXT:    v_trunc_f64_e32 v[4:5], s[12:13]
-; CI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; CI-NEXT:    v_add_f64 v[8:9], s[12:13], -v[4:5]
-; CI-NEXT:    s_cselect_b32 s0, 0x3ff00000, 0
-; CI-NEXT:    v_mov_b32_e32 v10, s0
-; CI-NEXT:    v_cmp_ge_f64_e64 s[0:1], |v[8:9]|, 0.5
+; CI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
+; CI-NEXT:    v_mov_b32_e32 v10, s2
+; CI-NEXT:    v_cmp_ge_f64_e64 s[2:3], |v[8:9]|, 0.5
 ; CI-NEXT:    v_trunc_f64_e32 v[8:9], s[18:19]
 ; CI-NEXT:    v_mov_b32_e32 v11, s15
 ; CI-NEXT:    v_bfi_b32 v13, s6, v10, v11
-; CI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; CI-NEXT:    v_add_f64 v[10:11], s[18:19], -v[8:9]
-; CI-NEXT:    s_cselect_b32 s0, 0x3ff00000, 0
+; CI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
 ; CI-NEXT:    v_add_f64 v[6:7], v[6:7], v[12:13]
-; CI-NEXT:    v_mov_b32_e32 v13, s0
+; CI-NEXT:    v_mov_b32_e32 v13, s2
 ; CI-NEXT:    v_mov_b32_e32 v14, s13
-; CI-NEXT:    v_cmp_ge_f64_e64 s[0:1], |v[10:11]|, 0.5
+; CI-NEXT:    v_cmp_ge_f64_e64 s[2:3], |v[10:11]|, 0.5
 ; CI-NEXT:    v_bfi_b32 v13, s6, v13, v14
 ; CI-NEXT:    v_trunc_f64_e32 v[14:15], s[16:17]
-; CI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; CI-NEXT:    s_cselect_b32 s0, 0x3ff00000, 0
+; CI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; CI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
 ; CI-NEXT:    v_add_f64 v[10:11], s[16:17], -v[14:15]
 ; CI-NEXT:    v_add_f64 v[4:5], v[4:5], v[12:13]
-; CI-NEXT:    v_mov_b32_e32 v13, s0
+; CI-NEXT:    v_mov_b32_e32 v13, s2
 ; CI-NEXT:    v_mov_b32_e32 v16, s19
 ; CI-NEXT:    v_bfi_b32 v13, s6, v13, v16
-; CI-NEXT:    v_cmp_ge_f64_e64 s[0:1], |v[10:11]|, 0.5
+; CI-NEXT:    v_cmp_ge_f64_e64 s[2:3], |v[10:11]|, 0.5
 ; CI-NEXT:    v_trunc_f64_e32 v[16:17], s[22:23]
-; CI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; CI-NEXT:    v_add_f64 v[18:19], s[22:23], -v[16:17]
-; CI-NEXT:    s_cselect_b32 s0, 0x3ff00000, 0
 ; CI-NEXT:    v_add_f64 v[10:11], v[8:9], v[12:13]
-; CI-NEXT:    v_mov_b32_e32 v8, s0
-; CI-NEXT:    v_mov_b32_e32 v9, s17
-; CI-NEXT:    v_cmp_ge_f64_e64 s[0:1], |v[18:19]|, 0.5
-; CI-NEXT:    v_trunc_f64_e32 v[18:19], s[20:21]
-; CI-NEXT:    v_bfi_b32 v13, s6, v8, v9
-; CI-NEXT:    v_add_f64 v[8:9], v[14:15], v[12:13]
-; CI-NEXT:    v_add_f64 v[13:14], s[20:21], -v[18:19]
-; CI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; CI-NEXT:    v_cmp_ge_f64_e64 s[0:1], |v[13:14]|, 0.5
+; CI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; CI-NEXT:    v_add_f64 v[8:9], s[22:23], -v[16:17]
 ; CI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
-; CI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; CI-NEXT:    s_cselect_b32 s0, 0x3ff00000, 0
+; CI-NEXT:    v_mov_b32_e32 v13, s2
+; CI-NEXT:    v_cmp_ge_f64_e64 s[2:3], |v[8:9]|, 0.5
+; CI-NEXT:    v_mov_b32_e32 v18, s17
+; CI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; CI-NEXT:    v_bfi_b32 v13, s6, v13, v18
+; CI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
+; CI-NEXT:    v_trunc_f64_e32 v[18:19], s[20:21]
+; CI-NEXT:    v_add_f64 v[8:9], v[14:15], v[12:13]
 ; CI-NEXT:    v_mov_b32_e32 v13, s2
 ; CI-NEXT:    v_mov_b32_e32 v14, s23
-; CI-NEXT:    v_mov_b32_e32 v20, s0
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; CI-NEXT:    v_bfi_b32 v13, s6, v13, v14
-; CI-NEXT:    v_mov_b32_e32 v21, s21
-; CI-NEXT:    v_add_f64 v[14:15], v[16:17], v[12:13]
-; CI-NEXT:    v_bfi_b32 v13, s6, v20, v21
-; CI-NEXT:    v_add_f64 v[12:13], v[18:19], v[12:13]
+; CI-NEXT:    v_add_f64 v[14:15], s[20:21], -v[18:19]
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
+; CI-NEXT:    v_cmp_ge_f64_e64 s[4:5], |v[14:15]|, 0.5
+; CI-NEXT:    v_add_f64 v[14:15], v[16:17], v[12:13]
+; CI-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; CI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
+; CI-NEXT:    v_mov_b32_e32 v13, s2
+; CI-NEXT:    v_mov_b32_e32 v16, s21
+; CI-NEXT:    v_bfi_b32 v13, s6, v13, v16
+; CI-NEXT:    v_add_f64 v[12:13], v[18:19], v[12:13]
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:48
 ; CI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:32
 ; CI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16

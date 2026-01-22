@@ -41,10 +41,10 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GISEL-NEXT:    s_mov_b32 s13, s15
 ; GISEL-NEXT:    s_mov_b32 s12, s14
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GISEL-NEXT:    s_getpc_b64 s[14:15]
 ; GISEL-NEXT:    s_add_u32 s14, s14, gv.fptr0@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s15, s15, gv.fptr0@rel32@hi+12
-; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GISEL-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-NEXT:    s_add_u32 s8, s8, 8
@@ -97,11 +97,11 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GISEL-NEXT:    s_mov_b32 s13, s15
 ; GISEL-NEXT:    s_mov_b32 s12, s14
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GISEL-NEXT:    s_getpc_b64 s[14:15]
 ; GISEL-NEXT:    s_add_u32 s14, s14, gv.fptr1@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s15, s15, gv.fptr1@rel32@hi+12
-; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GISEL-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-NEXT:    s_add_u32 s8, s8, 8

@@ -2193,8 +2193,8 @@ define void @void_func_a13i32_inreg([13  x i32] inreg %arg0, ptr addrspace(1) %p
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v10, s0
 ; GFX11-NEXT:    s_clause 0x3
-; GFX11-NEXT:    global_store_b32 v[0:1], v14, off offset:48
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[2:5], off offset:32
+; GFX11-NEXT:    global_store_b32 v[0:1], v14, off offset:48
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[10:13], off
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1

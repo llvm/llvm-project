@@ -32,7 +32,6 @@ define void @needs_align16_default_stack_align(i32 %idx) #0 {
 ; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 144
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
@@ -71,7 +70,6 @@ define void @needs_align16_stack_align4(i32 %idx) #2 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 160
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
@@ -111,7 +109,6 @@ define void @needs_align32(i32 %idx) #0 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 192
   %alloca.align16 = alloca [8 x <4 x i32>], align 32, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 32
@@ -138,7 +135,6 @@ define void @force_realign4(i32 %idx) #1 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 52
   %alloca.align16 = alloca [8 x i32], align 4, addrspace(5)
   %gep0 = getelementptr inbounds [8 x i32], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile i32 3, ptr addrspace(5) %gep0, align 4
@@ -301,7 +297,6 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:1024
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s34
-; GCN-NEXT:    buffer_load_dword v33, off, s[0:3], s34 offset:4
 ; GCN-NEXT:    s_add_i32 s32, s32, 0x30000
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, extern_func@gotpcrel32@lo+4
@@ -309,10 +304,11 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
-; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s32
-; GCN-NEXT:    s_waitcnt vmcnt(1)
-; GCN-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4
+; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s34 offset:4
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    v_readlane_b32 s31, v40, 1

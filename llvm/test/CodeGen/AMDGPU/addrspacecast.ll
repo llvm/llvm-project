@@ -1,5 +1,5 @@
-; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri -mattr=-promote-alloca < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
-; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 -mattr=-promote-alloca < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri -mattr=-promote-alloca < %s | llc -amdgpu-use-amdgpu-trackers=0 | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 -mattr=-promote-alloca < %s | llc -amdgpu-use-amdgpu-trackers=0 | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
 
 target triple = "amdgcn-amd-amdhsa"
 

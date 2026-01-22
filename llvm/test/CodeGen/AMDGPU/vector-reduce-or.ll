@@ -2775,8 +2775,8 @@ define i64 @test_vector_reduce_or_v16i64(<16 x i64> %v) {
 ; GFX7-SDAG-LABEL: test_vector_reduce_or_v16i64:
 ; GFX7-SDAG:       ; %bb.0: ; %entry
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-SDAG-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v4, v4, v20
-; GFX7-SDAG-NEXT:    buffer_load_dword v20, off, s[0:3], s32
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v12, v12, v28
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v0, v0, v16
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v8, v8, v24
@@ -2803,7 +2803,7 @@ define i64 @test_vector_reduce_or_v16i64(<16 x i64> %v) {
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v5, v5, v13
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v1, v1, v5
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-SDAG-NEXT:    v_or_b32_e32 v2, v15, v20
+; GFX7-SDAG-NEXT:    v_or_b32_e32 v2, v15, v31
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v2, v7, v2
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v1, v1, v2
@@ -2812,8 +2812,8 @@ define i64 @test_vector_reduce_or_v16i64(<16 x i64> %v) {
 ; GFX7-GISEL-LABEL: test_vector_reduce_or_v16i64:
 ; GFX7-GISEL:       ; %bb.0: ; %entry
 ; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-GISEL-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v0, v0, v16
-; GFX7-GISEL-NEXT:    buffer_load_dword v16, off, s[0:3], s32
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v2, v2, v18
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v4, v4, v20
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v6, v6, v22
@@ -2840,7 +2840,7 @@ define i64 @test_vector_reduce_or_v16i64(<16 x i64> %v) {
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v5, v5, v13
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v1, v1, v5
 ; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-GISEL-NEXT:    v_or_b32_e32 v2, v15, v16
+; GFX7-GISEL-NEXT:    v_or_b32_e32 v2, v15, v31
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v2, v7, v2
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v2, v3, v2
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v1, v1, v2
@@ -2849,8 +2849,8 @@ define i64 @test_vector_reduce_or_v16i64(<16 x i64> %v) {
 ; GFX8-SDAG-LABEL: test_vector_reduce_or_v16i64:
 ; GFX8-SDAG:       ; %bb.0: ; %entry
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-SDAG-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX8-SDAG-NEXT:    v_or_b32_e32 v4, v4, v20
-; GFX8-SDAG-NEXT:    buffer_load_dword v20, off, s[0:3], s32
 ; GFX8-SDAG-NEXT:    v_or_b32_e32 v12, v12, v28
 ; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v16
 ; GFX8-SDAG-NEXT:    v_or_b32_e32 v8, v8, v24
@@ -2877,7 +2877,7 @@ define i64 @test_vector_reduce_or_v16i64(<16 x i64> %v) {
 ; GFX8-SDAG-NEXT:    v_or_b32_e32 v5, v5, v13
 ; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v5
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v15, v20
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v15, v31
 ; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v7, v2
 ; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v2
@@ -2886,8 +2886,8 @@ define i64 @test_vector_reduce_or_v16i64(<16 x i64> %v) {
 ; GFX8-GISEL-LABEL: test_vector_reduce_or_v16i64:
 ; GFX8-GISEL:       ; %bb.0: ; %entry
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-GISEL-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v16
-; GFX8-GISEL-NEXT:    buffer_load_dword v16, off, s[0:3], s32
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v2, v2, v18
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v4, v4, v20
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v6, v6, v22
@@ -2914,7 +2914,7 @@ define i64 @test_vector_reduce_or_v16i64(<16 x i64> %v) {
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v5, v5, v13
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v1, v5
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v2, v15, v16
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v2, v15, v31
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v2, v7, v2
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v2, v3, v2
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v1, v2

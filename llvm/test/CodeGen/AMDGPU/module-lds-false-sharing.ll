@@ -125,16 +125,16 @@ define amdgpu_kernel void @withcall() {
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX10-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX10-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX10-NEXT:    s_mov_b32 s14, s10
 ; GFX10-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX10-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX10-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX10-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX10-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GFX10-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; GFX10-NEXT:    s_mov_b32 s32, 0
-; GFX10-NEXT:    ds_write_b32 v3, v3 offset:8
+; GFX10-NEXT:    ds_write_b32 v0, v0 offset:8
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX10-NEXT:    s_endpgm

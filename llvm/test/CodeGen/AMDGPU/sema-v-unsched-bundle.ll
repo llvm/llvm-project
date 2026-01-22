@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -mtriple=amdgcn -O1 -mcpu=gfx90a -debug-only=machine-scheduler -filetype=null < %s 2>&1 | FileCheck --check-prefix=DEBUG %s
+; RUN: llc -mtriple=amdgcn -O1 -mcpu=gfx90a -amdgpu-use-amdgpu-trackers=0 -debug-only=machine-scheduler -filetype=null < %s 2>&1 | FileCheck --check-prefix=DEBUG %s
 
 ; DEBUG: Attempting to revert scheduling.
 

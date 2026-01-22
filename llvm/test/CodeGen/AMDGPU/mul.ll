@@ -3400,21 +3400,21 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mul_lo_u32 v3, v4, v3
 ; VI-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v4, v2, 0
-; VI-NEXT:    v_mul_lo_u32 v2, v5, v2
-; VI-NEXT:    v_mul_lo_u32 v10, v7, v0
+; VI-NEXT:    v_mul_lo_u32 v15, v7, v0
 ; VI-NEXT:    v_mad_u64_u32 v[7:8], s[0:1], v0, v4, 0
-; VI-NEXT:    v_add_u32_e32 v3, vcc, v14, v3
-; VI-NEXT:    v_add_u32_e32 v14, vcc, v3, v2
+; VI-NEXT:    v_mul_lo_u32 v10, v5, v2
+; VI-NEXT:    v_add_u32_e32 v14, vcc, v14, v3
 ; VI-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v1, v4, v[8:9]
+; VI-NEXT:    v_add_u32_e32 v14, vcc, v14, v10
 ; VI-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v6, v0, v[13:14]
 ; VI-NEXT:    v_mov_b32_e32 v8, v2
 ; VI-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v0, v5, v[8:9]
-; VI-NEXT:    v_mul_lo_u32 v4, v6, v1
-; VI-NEXT:    v_add_u32_e32 v6, vcc, v10, v14
+; VI-NEXT:    v_add_u32_e32 v4, vcc, v15, v14
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, v3, v9
+; VI-NEXT:    v_mul_lo_u32 v16, v6, v1
 ; VI-NEXT:    v_addc_u32_e64 v3, s[0:1], 0, 0, vcc
 ; VI-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v1, v5, v[2:3]
-; VI-NEXT:    v_add_u32_e32 v2, vcc, v4, v6
+; VI-NEXT:    v_add_u32_e32 v2, vcc, v16, v4
 ; VI-NEXT:    v_add_u32_e32 v9, vcc, v0, v13
 ; VI-NEXT:    v_addc_u32_e32 v10, vcc, v1, v2, vcc
 ; VI-NEXT:    flat_store_dwordx4 v[11:12], v[7:10]
@@ -3440,10 +3440,10 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX9-NEXT:    v_mul_lo_u32 v4, v6, v1
 ; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v6, v0, v[2:3]
 ; GFX9-NEXT:    v_add_co_u32_e32 v6, vcc, v12, v10
-; GFX9-NEXT:    v_mul_lo_u32 v14, v7, v0
+; GFX9-NEXT:    v_mul_lo_u32 v16, v7, v0
 ; GFX9-NEXT:    v_addc_co_u32_e64 v7, s[0:1], 0, 0, vcc
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v1, v5, v[6:7]
-; GFX9-NEXT:    v_add3_u32 v3, v14, v3, v4
+; GFX9-NEXT:    v_add3_u32 v3, v16, v3, v4
 ; GFX9-NEXT:    v_add_co_u32_e32 v10, vcc, v0, v2
 ; GFX9-NEXT:    v_addc_co_u32_e32 v11, vcc, v1, v3, vcc
 ; GFX9-NEXT:    global_store_dwordx4 v13, v[8:11], s[2:3]
