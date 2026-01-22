@@ -648,10 +648,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
         }
       }
       break;
-    case typeInfo::Component::Genre::Pointer:
-    case typeInfo::Component::Genre::PointerDevice:
-    case typeInfo::Component::Genre::PointerManaged:
-    case typeInfo::Component::Genre::PointerUnified: {
+    case typeInfo::Component::Genre::Pointer: {
       std::size_t componentByteSize{
           this->component_->SizeInBytes(this->instance_)};
       if (IS_COMPONENTWISE && toIsContiguous_ && fromIsContiguous_) {
@@ -683,9 +680,6 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
       }
     } break;
     case typeInfo::Component::Genre::Allocatable:
-    case typeInfo::Component::Genre::AllocatableDevice:
-    case typeInfo::Component::Genre::AllocatableManaged:
-    case typeInfo::Component::Genre::AllocatableUnified:
     case typeInfo::Component::Genre::Automatic: {
       auto *toDesc{reinterpret_cast<Descriptor *>(
           this->instance_.template Element<char>(this->subscripts_) +

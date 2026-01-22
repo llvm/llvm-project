@@ -889,31 +889,9 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   // Default component initialization
   bool hasDataInit{false};
   if (IsAllocatable(symbol)) {
-    if (isDevice) {
-      AddValue(values, componentSchema_, "genre"s,
-          GetEnumValue("allocatabledevice"));
-    } else if (isManaged) {
-      AddValue(values, componentSchema_, "genre"s,
-          GetEnumValue("allocatablemanaged"));
-    } else if (isUnified) {
-      AddValue(values, componentSchema_, "genre"s,
-          GetEnumValue("allocatableunified"));
-    } else {
-      AddValue(values, componentSchema_, "genre"s, GetEnumValue("allocatable"));
-    }
+    AddValue(values, componentSchema_, "genre"s, GetEnumValue("allocatable"));
   } else if (IsPointer(symbol)) {
-    if (isDevice) {
-      AddValue(
-          values, componentSchema_, "genre"s, GetEnumValue("pointerdevice"));
-    } else if (isManaged) {
-      AddValue(
-          values, componentSchema_, "genre"s, GetEnumValue("pointermanaged"));
-    } else if (isUnified) {
-      AddValue(
-          values, componentSchema_, "genre"s, GetEnumValue("pointerunified"));
-    } else {
-      AddValue(values, componentSchema_, "genre"s, GetEnumValue("pointer"));
-    }
+    AddValue(values, componentSchema_, "genre"s, GetEnumValue("pointer"));
     hasDataInit = InitializeDataPointer(
         values, symbol, object, scope, dtScope, distinctName);
   } else if (IsAutomatic(symbol)) {
@@ -929,6 +907,15 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
                                  .str()),
               object));
     }
+  }
+  if (isDevice) {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("device"));
+  } else if (isManaged) {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("managed"));
+  } else if (isUnified) {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("unified"));
+  } else {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("host"));
   }
   if (!hasDataInit) {
     AddValue(values, componentSchema_, "initialization"s,
