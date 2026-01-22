@@ -100,7 +100,7 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
         dap.GetExceptionBPFromStopReason(thread);
     if (exc_bp) {
       body.exceptionId = exc_bp->GetFilter();
-      OS << exc_bp->GetLabel().str();
+      OS << exc_bp->GetLabel();
     } else {
       body.exceptionId = "exception";
     }
