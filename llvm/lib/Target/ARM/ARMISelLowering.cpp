@@ -10037,34 +10037,17 @@ ARMTargetLowering::LowerAEABIUnalignedLoad(SDValue Op,
   const DataLayout &DL = DAG.getDataLayout();
   bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
 
-  const char *LibcallName = nullptr;
-  if ((MF.getFunction().hasMinSize() || MF.getFunction().hasOptSize()) &&
-      !AllowsUnaligned) {
-    if (MemVT == MVT::i32 && Alignment <= llvm::Align(2))
-      LibcallName = "__aeabi_uread4";
-    else if (MemVT == MVT::i64 && Alignment <= llvm::Align(2))
-      LibcallName = "__aeabi_uread8";
-  }
+  if ((MF.getFunction().hasMinSize()) && !AllowsUnaligned &&
+      (Alignment <= llvm::Align(2))) {
 
-  if (LibcallName) {
-    LLVM_DEBUG(dbgs() << "Expanding unsupported unaligned load to "
-                      << LibcallName << "\n");
-    CallingConv::ID CC = CallingConv::ARM_AAPCS;
-    SDValue Callee = DAG.getExternalSymbol(LibcallName, getPointerTy(DL));
-    TargetLowering::ArgListTy Args;
-    TargetLowering::ArgListEntry Entry(
-        LD->getBasePtr(),
-        LD->getBasePtr().getValueType().getTypeForEVT(*DAG.getContext()));
+    RTLIB::Libcall LC =
+        (MemVT == MVT::i32) ? RTLIB::AEABI_UREAD4 : RTLIB::AEABI_UREAD8;
+
+    MakeLibCallOptions Opts;
     SDLoc dl(Op);
 
-    Args.push_back(Entry);
-
-    Type *RetTy = MemVT.getTypeForEVT(*DAG.getContext());
-    TargetLowering::CallLoweringInfo CLI(DAG);
-    CLI.setDebugLoc(dl)
-        .setChain(LD->getChain())
-        .setCallee(CC, RetTy, Callee, std::move(Args));
-    auto Pair = LowerCallTo(CLI);
+    auto Pair =
+        makeLibCall(DAG, LC, MemVT.getSimpleVT(), LD->getBasePtr(), Opts, dl);
 
     // If necessary, extend the node to 64bit
     if (LD->getExtensionType() != ISD::NON_EXTLOAD) {
@@ -10099,21 +10082,9 @@ SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
   const DataLayout &DL = DAG.getDataLayout();
   bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
 
-  const char *LibcallName = nullptr;
-  if ((MF.getFunction().hasMinSize() || MF.getFunction().hasOptSize()) &&
-      !AllowsUnaligned) {
-    if (MemVT == MVT::i32 && Alignment <= llvm::Align(2))
-      LibcallName = "__aeabi_uwrite4";
-    else if (MemVT == MVT::i64 && Alignment <= llvm::Align(2))
-      LibcallName = "__aeabi_uwrite8";
-  }
+  if ((MF.getFunction().hasMinSize()) && !AllowsUnaligned &&
+      (Alignment <= llvm::Align(2))) {
 
-  if (LibcallName) {
-    LLVM_DEBUG(dbgs() << "Expanding unsupported unaligned store to "
-                      << LibcallName << "\n");
-    CallingConv::ID CC = CallingConv::ARM_AAPCS;
-    SDValue Callee = DAG.getExternalSymbol(LibcallName, getPointerTy(DL));
-    TargetLowering::ArgListTy Args;
     SDLoc dl(Op);
 
     // If necessary, trunc the value to 32bit
@@ -10121,20 +10092,13 @@ SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
     if (ST->isTruncatingStore())
       StoreVal = DAG.getNode(ISD::TRUNCATE, dl, MemVT, ST->getOperand(1));
 
-    TargetLowering::ArgListEntry Entry(
-        StoreVal, StoreVal.getValueType().getTypeForEVT(*DAG.getContext()));
-    Args.push_back(Entry);
+    RTLIB::Libcall LC =
+        (MemVT == MVT::i32) ? RTLIB::AEABI_UWRITE4 : RTLIB::AEABI_UWRITE8;
 
-    Entry.Node = ST->getBasePtr();
-    Entry.Ty = ST->getBasePtr().getValueType().getTypeForEVT(*DAG.getContext());
-    Args.push_back(Entry);
+    MakeLibCallOptions Opts;
+    auto CallResult = makeLibCall(DAG, LC, MVT::isVoid,
+                                  {StoreVal, ST->getBasePtr()}, Opts, dl);
 
-    Type *RetTy = Type::getVoidTy(*DAG.getContext());
-    TargetLowering::CallLoweringInfo CLI(DAG);
-    CLI.setDebugLoc(dl)
-        .setChain(ST->getChain())
-        .setCallee(CC, RetTy, Callee, std::move(Args));
-    std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
     return CallResult.second;
   }
 
