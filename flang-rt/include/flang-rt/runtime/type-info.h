@@ -113,7 +113,7 @@ private:
   std::uint8_t category_; // common::TypeCategory
   std::uint8_t kind_{0};
   std::uint8_t rank_{0};
-  std::uint8_t memorySpace_{0}; // memory space of the component
+  MemorySpace memorySpace_{MemorySpace::Host}; // memory space of the component
   std::uint8_t padding_[3]; // 3 bytes padding
   std::uint64_t offset_{0};
   Value characterLen_; // for TypeCategory::Character
