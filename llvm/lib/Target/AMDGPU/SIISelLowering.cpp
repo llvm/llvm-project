@@ -528,7 +528,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasIntClamp())
     setOperationAction({ISD::UADDSAT, ISD::USUBSAT}, MVT::i32, Legal);
 
-  if (Subtarget->hasAddNoCarry())
+  if (Subtarget->hasAddNoCarryInsts())
     setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, {MVT::i16, MVT::i32},
                        Legal);
 
@@ -1111,9 +1111,9 @@ MVT SITargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     EVT ScalarVT = VT.getScalarType();
     unsigned Size = ScalarVT.getSizeInBits();
     if (Size == 16) {
-      if (Subtarget->has16BitInsts())
-        return MVT::getVectorVT(ScalarVT.getSimpleVT(), 2);
-      return VT.isInteger() ? MVT::i32 : MVT::f32;
+      return Subtarget->has16BitInsts()
+                 ? MVT::getVectorVT(ScalarVT.getSimpleVT(), 2)
+                 : MVT::i32;
     }
 
     if (Size < 16)
@@ -1139,7 +1139,7 @@ unsigned SITargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
     unsigned Size = ScalarVT.getSizeInBits();
 
     // FIXME: Should probably promote 8-bit vectors to i16.
-    if (Size == 16 && Subtarget->has16BitInsts())
+    if (Size == 16)
       return (NumElts + 1) / 2;
 
     if (Size <= 32)
@@ -1163,11 +1163,13 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
     // FIXME: We should fix the ABI to be the same on targets without 16-bit
     // support, but unless we can properly handle 3-vectors, it will be still be
     // inconsistent.
-    if (Size == 16 && Subtarget->has16BitInsts()) {
-      RegisterVT = MVT::getVectorVT(ScalarVT.getSimpleVT(), 2);
-      IntermediateVT = RegisterVT;
+    if (Size == 16) {
+      MVT SimpleIntermediateVT =
+          MVT::getVectorVT(ScalarVT.getSimpleVT(), ElementCount::getFixed(2));
+      IntermediateVT = SimpleIntermediateVT;
+      RegisterVT = Subtarget->has16BitInsts() ? SimpleIntermediateVT : MVT::i32;
       NumIntermediates = (NumElts + 1) / 2;
-      return NumIntermediates;
+      return (NumElts + 1) / 2;
     }
 
     if (Size == 32) {
@@ -1902,7 +1904,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
-    return Subtarget->enableFlatScratch()
+    return Subtarget->hasFlatScratchEnabled()
                ? isLegalFlatAddressingMode(AM, AMDGPUAS::PRIVATE_ADDRESS)
                : isLegalMUBUFAddressingMode(AM);
 
@@ -3124,7 +3126,7 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
   // the scratch registers to pass in.
   bool RequiresStackAccess = HasStackObjects || MFI.hasCalls();
 
-  if (!ST.enableFlatScratch()) {
+  if (!ST.hasFlatScratchEnabled()) {
     if (RequiresStackAccess && ST.isAmdHsaOrMesa(MF.getFunction())) {
       // If we have stack objects, we unquestionably need the private buffer
       // resource. For the Code Object V2 ABI, this will be the first 4 user
@@ -3267,7 +3269,7 @@ SDValue SITargetLowering::LowerFormalArguments(
            !Info->hasLDSKernelId() && !Info->hasWorkItemIDX() &&
            !Info->hasWorkItemIDY() && !Info->hasWorkItemIDZ());
     (void)UserSGPRInfo;
-    if (!Subtarget->enableFlatScratch())
+    if (!Subtarget->hasFlatScratchEnabled())
       assert(!UserSGPRInfo.hasFlatScratchInit());
     if ((CallConv != CallingConv::AMDGPU_CS &&
          CallConv != CallingConv::AMDGPU_Gfx &&
@@ -3338,7 +3340,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
 
     // FIXME: Sink this into allocateSpecialInputSGPRs
-    if (!Subtarget->enableFlatScratch())
+    if (!Subtarget->hasFlatScratchEnabled())
       CCInfo.AllocateReg(Info->getScratchRSrcReg());
 
     allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
@@ -4250,7 +4252,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
 
   if (!IsSibCall || IsChainCallConv) {
-    if (!Subtarget->enableFlatScratch()) {
+    if (!Subtarget->hasFlatScratchEnabled()) {
       SmallVector<SDValue, 4> CopyFromChains;
 
       // In the HSA case, this should be an identity copy.
@@ -8217,7 +8219,7 @@ SDValue SITargetLowering::lowerXMUL_LOHI(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
-  if (!Subtarget->isTrapHandlerEnabled() ||
+  if (!Subtarget->hasTrapHandler() ||
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return lowerTrapEndpgm(Op, DAG);
 
@@ -8300,7 +8302,7 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   MachineFunction &MF = DAG.getMachineFunction();
 
-  if (!Subtarget->isTrapHandlerEnabled() ||
+  if (!Subtarget->hasTrapHandler() ||
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
     LLVMContext &Ctx = MF.getFunction().getContext();
     Ctx.diagnose(DiagnosticInfoUnsupported(MF.getFunction(),
@@ -12762,7 +12764,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       return SDValue();
     case 16:
       if (NumElements > 4 ||
-          (NumElements == 3 && !Subtarget->enableFlatScratch()))
+          (NumElements == 3 && !Subtarget->hasFlatScratchEnabled()))
         return SplitVectorStore(Op, DAG);
       return SDValue();
     default:
@@ -18660,12 +18662,12 @@ static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
   // With AgentScopeFineGrainedRemoteMemoryAtomics, system scoped device local
   // allocations work.
   if (HasSystemScope) {
-    if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics() &&
+    if (Subtarget.hasAgentScopeFineGrainedRemoteMemoryAtomics() &&
         RMW->hasMetadata("amdgpu.no.remote.memory"))
       return true;
     if (Subtarget.hasEmulatedSystemScopeAtomics())
       return true;
-  } else if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics())
+  } else if (Subtarget.hasAgentScopeFineGrainedRemoteMemoryAtomics())
     return true;
 
   return RMW->hasMetadata("amdgpu.no.fine.grained.memory");
@@ -18775,7 +18777,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
       // If fine-grained remote memory works at device scope, we don't need to
       // do anything.
       if (!HasSystemScope &&
-          Subtarget->supportsAgentScopeFineGrainedRemoteMemoryAtomics())
+          Subtarget->hasAgentScopeFineGrainedRemoteMemoryAtomics())
         return atomicSupportedIfLegalIntType(RMW);
 
       // If we are targeting a remote allocated address, it depends what kind of
