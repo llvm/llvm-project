@@ -1006,11 +1006,9 @@ define <2 x i1> @isnan_v2bf16(<2 x bfloat> %x) nounwind {
 ; GFX7CHECK-LABEL: isnan_v2bf16:
 ; GFX7CHECK:       ; %bb.0:
 ; GFX7CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7CHECK-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GFX7CHECK-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX7CHECK-NEXT:    v_bfe_u32 v1, v0, 16, 15
 ; GFX7CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX7CHECK-NEXT:    v_bfe_u32 v0, v0, 16, 15
-; GFX7CHECK-NEXT:    v_bfe_u32 v1, v1, 16, 15
+; GFX7CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v0
 ; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX7CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v1
@@ -1079,14 +1077,11 @@ define <3 x i1> @isnan_v3bf16(<3 x bfloat> %x) nounwind {
 ; GFX7CHECK-LABEL: isnan_v3bf16:
 ; GFX7CHECK:       ; %bb.0:
 ; GFX7CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7CHECK-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GFX7CHECK-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX7CHECK-NEXT:    v_and_b32_e32 v2, 0x7fff, v1
 ; GFX7CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX7CHECK-NEXT:    v_bfe_u32 v0, v0, 16, 15
-; GFX7CHECK-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; GFX7CHECK-NEXT:    v_bfe_u32 v1, v1, 16, 15
+; GFX7CHECK-NEXT:    v_bfe_u32 v1, v0, 16, 15
+; GFX7CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v0
-; GFX7CHECK-NEXT:    v_bfe_u32 v2, v2, 16, 15
 ; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX7CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v1
 ; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
@@ -1171,18 +1166,14 @@ define <4 x i1> @isnan_v4bf16(<4 x bfloat> %x) nounwind {
 ; GFX7CHECK-LABEL: isnan_v4bf16:
 ; GFX7CHECK:       ; %bb.0:
 ; GFX7CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7CHECK-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GFX7CHECK-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX7CHECK-NEXT:    v_bfe_u32 v3, v1, 16, 15
 ; GFX7CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX7CHECK-NEXT:    v_bfe_u32 v0, v0, 16, 15
-; GFX7CHECK-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; GFX7CHECK-NEXT:    v_bfe_u32 v1, v1, 16, 15
+; GFX7CHECK-NEXT:    v_and_b32_e32 v2, 0x7fff, v1
+; GFX7CHECK-NEXT:    v_bfe_u32 v1, v0, 16, 15
+; GFX7CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v0
-; GFX7CHECK-NEXT:    v_mul_f32_e32 v3, 1.0, v3
-; GFX7CHECK-NEXT:    v_bfe_u32 v2, v2, 16, 15
 ; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX7CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v1
-; GFX7CHECK-NEXT:    v_bfe_u32 v3, v3, 16, 15
 ; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX7CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v2
 ; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc

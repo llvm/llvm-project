@@ -232,6 +232,7 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
   gfx1100 gfx1101 gfx1102 gfx1103
   gfx1150 gfx1151 gfx1152 gfx1153
   gfx1200 gfx1201 gfx1250 gfx1251
+  gfx1310
 )
 
 # pkg-config file

@@ -27,32 +27,11 @@ entry:
 
 ; FIXME: fails to match
 define amdgpu_ps i32 @scalar_xnor_v2i16_one_use(<2 x i16> inreg %a, <2 x i16> inreg %b) {
-; GFX7-LABEL: scalar_xnor_v2i16_one_use:
-; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
-; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX7-NEXT:    s_or_b32 s0, s1, s0
-; GFX7-NEXT:    s_xor_b32 s0, s0, -1
-; GFX7-NEXT:    ; return to shader part epilog
-;
-; GFX8-LABEL: scalar_xnor_v2i16_one_use:
-; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_xor_b32 s0, s0, s1
-; GFX8-NEXT:    s_xor_b32 s0, s0, -1
-; GFX8-NEXT:    ; return to shader part epilog
-;
-; GFX900-LABEL: scalar_xnor_v2i16_one_use:
-; GFX900:       ; %bb.0: ; %entry
-; GFX900-NEXT:    s_xor_b32 s0, s0, s1
-; GFX900-NEXT:    s_xor_b32 s0, s0, -1
-; GFX900-NEXT:    ; return to shader part epilog
-;
-; GFX906-LABEL: scalar_xnor_v2i16_one_use:
-; GFX906:       ; %bb.0: ; %entry
-; GFX906-NEXT:    s_xor_b32 s0, s0, s1
-; GFX906-NEXT:    s_xor_b32 s0, s0, -1
-; GFX906-NEXT:    ; return to shader part epilog
+; GCN-LABEL: scalar_xnor_v2i16_one_use:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_xor_b32 s0, s0, s1
+; GCN-NEXT:    s_xor_b32 s0, s0, -1
+; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: scalar_xnor_v2i16_one_use:
 ; GFX10:       ; %bb.0: ; %entry
@@ -110,8 +89,14 @@ define amdgpu_ps i64 @scalar_xnor_i64_one_use(i64 inreg %a, i64 inreg %b) {
 define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> inreg %b) {
 ; GFX7-LABEL: scalar_xnor_v4i16_one_use:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
-; GFX7-NEXT:    s_xor_b64 s[2:3], s[2:3], s[6:7]
+; GFX7-NEXT:    s_mov_b32 s4, s1
+; GFX7-NEXT:    s_mov_b32 s6, s3
+; GFX7-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX7-NEXT:    s_lshr_b32 s3, s2, 16
+; GFX7-NEXT:    s_lshr_b32 s5, s4, 16
+; GFX7-NEXT:    s_lshr_b32 s7, s6, 16
+; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX7-NEXT:    s_xor_b64 s[2:3], s[4:5], s[6:7]
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX7-NEXT:    s_or_b32 s0, s1, s0
