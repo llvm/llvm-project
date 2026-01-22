@@ -1,4 +1,4 @@
-from clang.cindex import AvailabilityKind, CompletionString, TranslationUnit
+from clang.cindex import AvailabilityKind, CompletionChunkKind, CompletionString, TranslationUnit
 
 import unittest
 from pathlib import Path
