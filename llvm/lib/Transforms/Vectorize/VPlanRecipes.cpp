@@ -477,6 +477,8 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ExtractLastActive:
     return 3;
   case Instruction::Call: {
+    // For unmasked calls, the last argument will the called function. Use that
+    // to compute the number of operands without the mask.
     VPValue *LastOp = getOperand(getNumOperands() - 1);
     if (isa<VPIRValue>(LastOp) && isa<Function>(LastOp->getLiveInIRValue()))
       return getNumOperands();

@@ -7719,9 +7719,9 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(WillWiden, Range))
     return nullptr;
 
-  VPValue *Mask = nullptr;
-  if (Legal->isMaskRequired(I))
-    Mask = VPI->getMask();
+  // If a mask is not required drop it - use unmasked version for safe loads.
+  // TODO: Determine if mask is needed in VPlan.
+  VPValue *Mask = Legal->isMaskRequired(I) ? VPI->getMask() : nullptr;
 
   // Determine if the pointer operand of the access is either consecutive or
   // reverse consecutive.
@@ -7886,19 +7886,18 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
   if (ShouldUseVectorCall) {
     if (MaskPos.has_value()) {
       // We have 2 cases that would require a mask:
-      //   1) The block needs to be predicated, either due to a conditional
+      //   1) The call needs to be predicated, either due to a conditional
       //      in the scalar loop or use of an active lane mask with
       //      tail-folding, and we use the appropriate mask for the block.
-      //   2) No mask is required for the block, but the only available
-      //      vector variant at this VF requires a mask, so we synthesize an
-      //      all-true mask.
-      VPValue *Mask =
-          Legal->isMaskRequired(CI) ? VPI->getMask() : Plan.getTrue();
+      //   2) No mask is required for the call instruction, but the only
+      //      available vector variant at this VF requires a mask, so we
+      //      synthesize an all-true mask.
+      VPValue *Mask = VPI->isMasked() ? VPI->getMask() : Plan.getTrue();
 
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
 
-    Ops.push_back(VPI->getOperand(size(VPI->operandsWithoutMask()) - 1));
+    Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
     return new VPWidenCallRecipe(CI, Variant, Ops, *VPI, *VPI,
                                  VPI->getDebugLoc());
   }
@@ -8315,7 +8314,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
   // Reduction must have 2 operands (or 3 with mask).
   assert((Reduction->getNumOperands() == 2 ||
           (Reduction->isMasked() && Reduction->getNumOperands() == 3)) &&
-         "Unexpected number of operands for partial reduction");
+         "Partial reduction expected with 2 operands plus an optional mask");
 
   VPValue *BinOp = Reduction->getOperand(0);
   VPValue *Accumulator = Reduction->getOperand(1);
@@ -8342,9 +8341,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
     Builder.insert(BinOp->getDefiningRecipe());
   }
 
-  VPValue *Cond = nullptr;
-  if (CM.blockNeedsPredicationForAnyReason(ReductionI->getParent()))
-    Cond = Reduction->getMask();
+  VPValue *Cond = Reduction->isMasked() ? Reduction->getMask() : nullptr;
 
   return new VPReductionRecipe(
       RecurKind::Add, FastMathFlags(), ReductionI, Accumulator, BinOp, Cond,

@@ -76,8 +76,8 @@ public:
   /// Compute and return the mask for the vector loop header block.
   void createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail);
 
-  /// Compute and return the predicate of \p VPBB, assuming that the header
-  /// block of the loop is set to True, or to the loop mask when tail folding.
+  /// Compute the predicate of \p VPBB, assuming that the header block of the
+  /// loop is set to True, or to the loop mask when tail folding.
   void createBlockInMask(VPBasicBlock *VPBB);
 
   /// Convert phi recipes in \p VPBB to VPBlendRecipes.
@@ -284,10 +284,8 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
 
     // Mask all VPInstructions in the block.
     for (VPRecipeBase &R : *VPBB) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI)
-        continue;
-      VPI->addMask(BlockMask);
+      if (auto *VPI = dyn_cast<VPInstruction>(&R))
+        VPI->addMask(BlockMask);
     }
   }
 

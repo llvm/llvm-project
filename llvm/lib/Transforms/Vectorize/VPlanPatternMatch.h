@@ -290,18 +290,14 @@ struct Recipe_match {
       return false;
     }
 
-    // If the recipe has more operands than expected, check if it's valid, i.e.
-    // either a masked VPInstructions or which either the masked or unmasked
-    // form is matched or a variadic opcode like phi nodes.
+    // If the recipe has more operands than expected, we only support matching
+    // masked VPInstructions where the number of operands of the matcher is the
+    // same as the number of operands excluding mask.
     if (R->getNumOperands() > std::tuple_size<Ops_t>::value) {
-      if (auto *VPI = dyn_cast<VPInstruction>(R)) {
-        // Masked VPInstructions have an extra mask operand at the end.
-        if (!VPI->isMasked() ||
-            VPI->getNumOperands() != std::tuple_size<Ops_t>::value + 1)
-          return false;
-      } else if (Opcode != Instruction::PHI) {
+      auto *VPI = dyn_cast<VPInstruction>(R);
+      if (!VPI || !VPI->isMasked() ||
+          VPI->getNumOperandsWithoutMask() != std::tuple_size<Ops_t>::value)
         return false;
-      }
     }
 
     auto IdxSeq = std::make_index_sequence<std::tuple_size<Ops_t>::value>();
