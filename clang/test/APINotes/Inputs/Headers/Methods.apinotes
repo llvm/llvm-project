@@ -9,6 +9,12 @@ Tags:
   - Name: getDecremented
     Availability: none
     AvailabilityMsg: "this should have no effect"
+  - Name: operator+
+    Availability: none
+    AvailabilityMsg: "oh no, this is an operator"
+  - Name: operator*
+    Availability: none
+    AvailabilityMsg: "oh no, this is an operator star"
 - Name: IntWrapper2
   Methods:
   - Name: getIncremented
