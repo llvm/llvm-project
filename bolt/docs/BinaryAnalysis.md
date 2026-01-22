@@ -7,53 +7,6 @@ The `llvm-bolt-binary-analysis` tool enables running requested analyses
 on binaries, and generating reports. It does this by building on top of the
 analyses implemented in the BOLT libraries.
 
-## Usage
-
-```
-llvm-bolt-binary-analysis --scanners=<list> [options] <binary>
-```
-
-The `--scanners=` option accepts a comma-separated list of analyses to run on
-the provided binary. The binary to be analyzed can be either ELF executable or
-shared object. Similar to other BOLT tools, `llvm-bolt-binary-analysis` expects
-`binary` to be unstripped and preferably linked with `--emit-relocs` linker option.
-
-In addition to options printed by `llvm-bolt-binary-analysis --help-hidden`,
-other relevant BOLT options can generally be passed, see `llvm-bolt --help-hidden`.
-Incomplete help message is a known issue and is tracked in
-[#176969](https://github.com/llvm/llvm-project/issues/176969).
-
-The only analysis which is currently implemented is validation of Pointer
-Authentication hardening applied to the binary.
-The specific set of gadget kinds which are searched for depends on command line
-options. Each gadget found by PtrAuth gadget scanner results in a plain text
-report printed at the end of the analysis.
-Furthermore, an attempt is made to provide an extra information on the
-instructions that made the register unsafe.
-Please note that this extra information is provided on a best-effort basis and
-is not expected to be as accurate as the reports themselves.
-
-Here is an example of the report:
-
-```
-GS-PAUTH: signing oracle found in function function_name, basic block .LBB08, at address 102b8
-  The instruction is     000102b8:      pacda   x0, x1
-  The 1 instructions that write to the affected registers after any authentication are:
-  1.     000102b4:      ldr     x0, [x1]
-  This happens in the following basic block:
-    000102b4:   ldr     x0, [x1]
-    000102b8:   pacda   x0, x1
-    000102bc:   ret
-```
-
-A similar report without the associated extra information looks like this:
-
-```
-GS-PAUTH: signing oracle found in function function_name, basic block .LBB016, at address 10384
-  The instruction is     00010384:      pacda   x0, x1
-  The 0 instructions that write to the affected registers after any authentication are:
-```
-
 ## Background and motivation
 
 ### Security scanners
@@ -129,6 +82,62 @@ default on most widely used Linux distributions. The hardening scheme mitigates
 attacks by making sure that return addresses are only ever stored to memory
 in a signed form. This makes it substantially harder for attackers to divert
 control flow by overwriting a return address with a different value.
+
+The approach to validation of Pointer Authentication hardening implemented in
+`llvm-bolt-binary-analysis` is tracking register safety using dataflow analysis.
+At each program point it is computed whether the particular register can be
+controlled and whether it can be inspected by an attacker under
+[Pointer Authentication threat model](https://clang.llvm.org/docs/PointerAuthentication.html#theory-of-operation).
+Then, for a number of sensitive instruction kinds (such as function calls and
+pointer signing instructions), the properties of input or output operands are
+inspected to check if the particular instruction is emitted in a safe manner.
+
+## Usage
+
+```
+llvm-bolt-binary-analysis --scanners=<list> [options] <binary>
+```
+
+The `--scanners=` option accepts a comma-separated list of analyses to run on
+the provided binary. The binary to be analyzed can be either ELF executable or
+shared object. Similar to other BOLT tools, `llvm-bolt-binary-analysis` expects
+`binary` to be unstripped and preferably linked with `--emit-relocs` linker option.
+
+In addition to options printed by `llvm-bolt-binary-analysis --help-hidden`,
+other relevant BOLT options can generally be passed, see `llvm-bolt --help-hidden`.
+Incomplete help message is a known issue and is tracked in
+[#176969](https://github.com/llvm/llvm-project/issues/176969).
+
+The only analysis which is currently implemented is validation of Pointer
+Authentication hardening applied to the binary.
+The specific set of gadget kinds which are searched for depends on command line
+options. Each gadget found by PtrAuth gadget scanner results in a plain text
+report printed at the end of the analysis.
+Furthermore, an attempt is made to provide an extra information on the
+instructions that made the register unsafe.
+Please note that this extra information is provided on a best-effort basis and
+is not expected to be as accurate as the reports themselves.
+
+Here is an example of the report:
+
+```
+GS-PAUTH: signing oracle found in function function_name, basic block .LBB08, at address 102b8
+  The instruction is     000102b8:      pacda   x0, x1
+  The 1 instructions that write to the affected registers after any authentication are:
+  1.     000102b4:      ldr     x0, [x1]
+  This happens in the following basic block:
+    000102b4:   ldr     x0, [x1]
+    000102b8:   pacda   x0, x1
+    000102bc:   ret
+```
+
+A similar report without the associated extra information looks like this:
+
+```
+GS-PAUTH: signing oracle found in function function_name, basic block .LBB016, at address 10384
+  The instruction is     00010384:      pacda   x0, x1
+  The 0 instructions that write to the affected registers after any authentication are:
+```
 
 ## Pointer Authentication validator
 
