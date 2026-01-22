@@ -4541,6 +4541,13 @@ cc_library(
         "tools/dsymutil/*.h",
     ]),
     copts = llvm_copts,
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-framework",
+            "CoreFoundation",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":AllTargetsCodeGens",
         ":BinaryFormat",
