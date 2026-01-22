@@ -174,7 +174,7 @@ test_local:
 # STAR-NEXT: live symbol: b.o:(note1)
 # STAR-NEXT: >>> in live section: b.o:(.note.1) (reserved)
 # STAR-NEXT: live symbol: b.o:(__FRAME_END__)
-# STAR-NEXT: >>> in live section: b.o:(.eh_frame)
+# STAR-NEXT: >>> in live section: b.o:(.eh_frame) (exception handling frame)
 # STAR-NOT:  {{.}}
 
 ## STT_FILE symbol

@@ -202,6 +202,9 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
 // LSDAs and personality functions if we found that they were unused.
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh) {
+  if (TrackWhyLive)
+    whyLive.try_emplace(&eh,
+                        LiveReason{std::nullopt, "exception handling frame"});
   ArrayRef<Relocation> rels = eh.rels;
   for (const EhSectionPiece &cie : eh.cies)
     if (cie.firstRelocation != unsigned(-1))
@@ -327,13 +330,8 @@ void MarkLive<ELFT, TrackWhyLive>::printWhyLive(Symbol *s) const {
 
     if (std::holds_alternative<Symbol *>(cur))
       printSymbol(std::get<Symbol *>(cur));
-    else {
-      auto *sec = std::get<InputSectionBase *>(cur);
-      msg << sec;
-      // Live EhInputSection has no tracked reason. Break.
-      if (isa<EhInputSection>(sec))
-        break;
-    }
+    else
+      msg << std::get<InputSectionBase *>(cur);
   }
 }
 
