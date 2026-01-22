@@ -86,8 +86,7 @@ static LogicalResult verifyLayouts(Operation *root) {
   return walkResult.wasInterrupted() ? failure() : success();
 }
 
-struct CreateNdDescOpPattern
-    : public OpConversionPattern<xegpu::CreateNdDescOp> {
+struct SgToWiCreateNdDesc : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
 
   LogicalResult
@@ -106,7 +105,7 @@ struct CreateNdDescOpPattern
   }
 };
 
-struct LoadNdOpPattern : public OpConversionPattern<xegpu::LoadNdOp> {
+struct SgToWiLoadNd : public OpConversionPattern<xegpu::LoadNdOp> {
   using OpConversionPattern<xegpu::LoadNdOp>::OpConversionPattern;
 
   LogicalResult
@@ -154,7 +153,7 @@ struct LoadNdOpPattern : public OpConversionPattern<xegpu::LoadNdOp> {
   }
 };
 
-struct StoreNdOpPattern : public OpConversionPattern<xegpu::StoreNdOp> {
+struct SgToWiStoreNd : public OpConversionPattern<xegpu::StoreNdOp> {
   using OpConversionPattern<xegpu::StoreNdOp>::OpConversionPattern;
 
   LogicalResult
@@ -192,7 +191,7 @@ struct StoreNdOpPattern : public OpConversionPattern<xegpu::StoreNdOp> {
   }
 };
 
-struct DpasOpPattern : public OpConversionPattern<xegpu::DpasOp> {
+struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
   using OpConversionPattern<xegpu::DpasOp>::OpConversionPattern;
 
   LogicalResult
@@ -242,8 +241,8 @@ struct DpasOpPattern : public OpConversionPattern<xegpu::DpasOp> {
   }
 };
 
-struct ElementWiseOpPattern : public ConversionPattern {
-  ElementWiseOpPattern(TypeConverter &typeConverter, MLIRContext *ctx)
+struct WgToWiElementWise : public ConversionPattern {
+  WgToWiElementWise(TypeConverter &typeConverter, MLIRContext *ctx)
       : ConversionPattern(MatchAnyOpTypeTag(), /*benefit=*/1, ctx) {}
 
   LogicalResult
@@ -287,7 +286,7 @@ struct ElementWiseOpPattern : public ConversionPattern {
   }
 };
 
-struct ArithConstantOpPattern : public OpConversionPattern<arith::ConstantOp> {
+struct SgToWiArithConstant : public OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern<arith::ConstantOp>::OpConversionPattern;
 
   LogicalResult
@@ -323,6 +322,26 @@ struct ArithConstantOpPattern : public OpConversionPattern<arith::ConstantOp> {
     auto newOp = arith::ConstantOp::create(rewriter, op.getLoc(), newResultType,
                                            newDenseAttr);
     rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
+struct SgToWiPrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
+  using OpConversionPattern<xegpu::PrefetchNdOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::PrefetchNdOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr layout = op.getAnchorLayout();
+    // If no layout, nothing to do.
+    if (!layout)
+      return failure();
+
+    xegpu::PrefetchNdOp::create(rewriter, op.getLoc(), adaptor.getTensorDesc(),
+                                op.getMixedOffsets(), op.getL1HintAttr(),
+                                op.getL2HintAttr(), op.getL3HintAttr(),
+                                /**layout**/ nullptr);
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -521,7 +540,7 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
         return !xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
       });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
-  patterns.add<CreateNdDescOpPattern, LoadNdOpPattern, StoreNdOpPattern,
-               DpasOpPattern, ElementWiseOpPattern, ArithConstantOpPattern>(
+  patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
+               WgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd>(
       typeConverter, patterns.getContext());
 }

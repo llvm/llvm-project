@@ -254,6 +254,9 @@ struct TestXeGPUSGDistribute
   }
 };
 
+/// This test pass is intended to test the subgroup to workitem distribution of
+/// xegpu/vector/arith operations in isolation, it does not handle any
+/// structural ops like scf.for etc.
 struct TestXeGPUSgToWiDistributeExperimental
     : public PassWrapper<TestXeGPUSgToWiDistributeExperimental,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -285,12 +288,19 @@ struct TestXeGPUSgToWiDistributeExperimental
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
     TypeConverter typeConverter;
+    // Define type materializations using UnrealizedConversionCastOp.
+    auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
+                               mlir::ValueRange inputs,
+                               mlir::Location loc) -> mlir::Value {
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+          .getResult(0);
+    };
+    typeConverter.addSourceMaterialization(materializeCast);
+    typeConverter.addTargetMaterialization(materializeCast);
     ConversionTarget target(*ctx);
     RewritePatternSet patterns(ctx);
     xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
         typeConverter, patterns, target);
-    scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
-                                                         patterns, target);
     (void)applyPartialConversion(getOperation(), target, std::move(patterns));
   }
 };
