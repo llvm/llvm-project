@@ -506,6 +506,12 @@ bool AArch64ConditionOptimizer::optimizeCrossBlock(MachineBasicBlock &HBB) {
     return false;
   }
 
+  // Both compares must use the same register for CSE to be possible.
+  if (HeadCmpMI->getOperand(1).getReg() != TrueCmpMI->getOperand(1).getReg()) {
+    LLVM_DEBUG(dbgs() << "Compares use different registers, skipping\n");
+    return false;
+  }
+
   AArch64CC::CondCode HeadCmp;
   if (HeadCond.empty() || !parseCond(HeadCond, HeadCmp)) {
     return false;
