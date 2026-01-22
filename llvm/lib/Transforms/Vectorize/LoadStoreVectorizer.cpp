@@ -254,8 +254,8 @@ class Vectorizer {
 public:
   Vectorizer(Function &F, AliasAnalysis &AA, AssumptionCache &AC,
              DominatorTree &DT, ScalarEvolution &SE, TargetTransformInfo &TTI)
-      : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI),
-        DL(F.getDataLayout()), Builder(SE.getContext()) {}
+      : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI), DL(F.getDataLayout()),
+        Builder(SE.getContext()) {}
 
   bool run();
 
@@ -292,6 +292,8 @@ private:
   /// Splits the chain into subchains that make legal, aligned accesses.
   /// Discards any length-1 subchains.
   std::vector<Chain> splitChainByAlignment(Chain &C);
+
+  Value *insertCast(Value *, Type *);
 
   /// Converts the instrs in the chain into a single vectorized load or store.
   /// Adds the old scalar loads/stores to ToErase.
@@ -1082,6 +1084,60 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
   return Ret;
 }
 
+Value *Vectorizer::insertCast(Value *V, Type *NewTy) {
+  auto *VTy = V->getType();
+  assert(VTy != NewTy && "Types should mismatch in this function.");
+
+  unsigned VTySize = DL.getTypeSizeInBits(VTy);
+  unsigned NewTySize = DL.getTypeSizeInBits(NewTy);
+
+  if (VTySize == NewTySize)
+    return Builder.CreateBitOrPointerCast(V, NewTy);
+
+  // Mismatched bitwidth: resize via integer and then cast to final type.
+  // This preserves the bits, which is generally what's needed for memory
+  // vectorization.
+
+  // 1. Get raw bits as a scalar integer of source width.
+  Value *VInt = V;
+  if (VTy->isPtrOrPtrVectorTy()) {
+    VInt = Builder.CreatePtrToInt(V, DL.getIntPtrType(VTy));
+  } else if (VTy->isFPOrFPVectorTy()) {
+    VInt = Builder.CreateBitCast(V, Type::getIntNTy(F.getContext(), VTySize));
+  }
+
+  // If VInt is a vector (e.g. from PtrToInt), flatten it to a scalar integer
+  // so we can perform ZExt/Trunc.
+  if (VInt->getType()->isVectorTy())
+    VInt =
+        Builder.CreateBitCast(VInt, Type::getIntNTy(F.getContext(), VTySize));
+
+  // 2. Resize
+  Value *ResizedInt = Builder.CreateZExtOrTrunc(
+      VInt, Type::getIntNTy(F.getContext(), NewTySize));
+
+  // 3. Convert to destination type
+  if (NewTy->isIntOrIntVectorTy()) {
+    if (NewTy->isVectorTy())
+      return Builder.CreateBitCast(ResizedInt, NewTy);
+    return ResizedInt;
+  }
+
+  if (NewTy->isPtrOrPtrVectorTy()) {
+    if (NewTy->isVectorTy()) {
+      Value *IntVec =
+          Builder.CreateBitCast(ResizedInt, DL.getIntPtrType(NewTy));
+      return Builder.CreateIntToPtr(IntVec, NewTy);
+    }
+    return Builder.CreateIntToPtr(ResizedInt, NewTy);
+  }
+
+  if (NewTy->isFPOrFPVectorTy())
+    return Builder.CreateBitCast(ResizedInt, NewTy);
+
+  return Builder.CreateBitOrPointerCast(V, NewTy);
+}
+
 bool Vectorizer::vectorizeChain(Chain &C) {
   if (C.size() < 2)
     return false;
@@ -1096,10 +1152,10 @@ bool Vectorizer::vectorizeChain(Chain &C) {
 
   sortChainInOffsetOrder(C);
 
-  LLVM_DEBUG({
+  {
     dbgs() << "LSV: Vectorizing chain of " << C.size() << " instructions:\n";
     dumpChain(C);
-  });
+  };
 
   Type *VecElemTy = getChainElemTy(C);
   unsigned VecElemSize = DL.getTypeSizeInBits(VecElemTy);
@@ -1129,18 +1185,6 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     unsigned OriginalSize = DL.getTypeSizeInBits(OriginalScalarTy);
     unsigned NumElems = OriginalSize / VecElemSize;
 
-    // For pointer types, we must extract a scalar (NumElems == 1), not a
-    // vector, because we can't cast a vector to a pointer.
-    if (OriginalScalarTy->isPointerTy() && NumElems > 1) {
-      LLVM_DEBUG({
-        dbgs() << "LSV: Cannot vectorize chain with pointer type "
-               << *OriginalScalarTy << " because VecElemTy " << *VecElemTy
-               << " would require extracting " << NumElems
-               << " elements (a vector), but pointers must be scalars.\n";
-      });
-      return false;
-    }
-
     // Check if the cast from VecElemTy (or vector of it) to OriginalTy would be
     // valid. For loads, we extract elements and cast them. For stores, we cast
     // values to VecElemTy.
@@ -1152,21 +1196,14 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       // We can bitcast between same-sized types.
       // We can't cast vectors to pointers.
       if (OriginalScalarTy->isPointerTy()) {
-        if (!ExtractedTy->isIntegerTy() || NumElems != 1) {
-          LLVM_DEBUG({
-            dbgs() << "LSV: Cannot vectorize chain: invalid cast from "
-                   << *ExtractedTy << " to " << *OriginalTy << "\n";
-          });
-          return false;
-        }
         // Verify sizes match for inttoptr cast
         if (DL.getTypeSizeInBits(ExtractedTy) !=
             DL.getTypeSizeInBits(OriginalScalarTy)) {
-          LLVM_DEBUG({
+          {
             dbgs() << "LSV: Cannot vectorize chain: size mismatch for inttoptr "
                       "cast from "
                    << *ExtractedTy << " to " << *OriginalScalarTy << "\n";
-          });
+          };
           return false;
         }
       }
@@ -1255,8 +1292,10 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       }
 
       Type *ExpectedTy = getLoadStoreType(I);
-      if (V->getType() != ExpectedTy)
-        V = Builder.CreateBitOrPointerCast(V, ExpectedTy);
+      if (V->getType() != ExpectedTy) {
+        dbgs() << "Casting: " << *V << " to " << *ExpectedTy << '\n';
+        V = insertCast(V, ExpectedTy);
+      }
       I->replaceAllUsesWith(V);
       VecIdx += NumElems;
     }
@@ -1633,8 +1672,9 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
   return std::nullopt;
 }
 
-std::optional<APInt> Vectorizer::getConstantOffsetSelects(
-    Value *PtrA, Value *PtrB, Instruction *ContextInst, unsigned Depth) {
+std::optional<APInt>
+Vectorizer::getConstantOffsetSelects(Value *PtrA, Value *PtrB,
+                                     Instruction *ContextInst, unsigned Depth) {
   if (Depth++ == MaxDepth)
     return std::nullopt;
 

@@ -62,12 +62,14 @@ define amdgpu_kernel void @extract_vector_elt_v2f16_dynamic_sgpr(ptr addrspace(1
 ; SI-LABEL: extract_vector_elt_v2f16_dynamic_sgpr:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-NEXT:    s_load_dword s4, s[4:5], 0xd
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s1, 0
+; SI-NEXT:    s_load_dword s4, s[4:5], 0xd
+; SI-NEXT:    s_mov_b32 s3, s1
 ; SI-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_lshl_b32 s4, s4, 4
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_lshl_b32 s4, s4, 4
 ; SI-NEXT:    s_lshr_b32 s4, s2, s4
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
@@ -77,29 +79,31 @@ define amdgpu_kernel void @extract_vector_elt_v2f16_dynamic_sgpr(ptr addrspace(1
 ; VI-LABEL: extract_vector_elt_v2f16_dynamic_sgpr:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VI-NEXT:    s_load_dword s8, s[4:5], 0x34
-; VI-NEXT:    s_mov_b32 s7, 0xf000
-; VI-NEXT:    s_mov_b32 s6, -1
+; VI-NEXT:    s_load_dword s4, s[4:5], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
-; VI-NEXT:    s_mov_b32 s4, s0
-; VI-NEXT:    s_lshl_b32 s0, s8, 4
-; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    s_mov_b32 s1, 0
+; VI-NEXT:    s_mov_b32 s3, s1
+; VI-NEXT:    s_load_dword s5, s[2:3], 0x0
+; VI-NEXT:    s_lshl_b32 s4, s4, 4
+; VI-NEXT:    s_mov_b32 s3, 0xf000
+; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b32 s0, s2, s0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    buffer_store_short v0, off, s[4:7], 0
+; VI-NEXT:    s_lshr_b32 s4, s5, s4
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: extract_vector_elt_v2f16_dynamic_sgpr:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_mov_b32 s1, 0
 ; GFX11-NEXT:    s_load_b32 s4, s[4:5], 0x34
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_mov_b32 s3, s1
 ; GFX11-NEXT:    s_load_b32 s2, s[2:3], 0x0
-; GFX11-NEXT:    s_lshl_b32 s3, s4, 4
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_lshl_b32 s3, s4, 4
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_lshr_b32 s2, s2, s3
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
@@ -190,26 +194,25 @@ define amdgpu_kernel void @extract_vector_elt_v3f16(ptr addrspace(1) %out, <3 x 
 ; SI-LABEL: extract_vector_elt_v3f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s5, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    s_and_b32 s4, s0, 0xffff
 ; SI-NEXT:    v_mov_b32_e32 v0, s3
+; SI-NEXT:    v_mov_b32_e32 v1, s2
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
-; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s2
-; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0 offset:2
+; SI-NEXT:    buffer_store_short v1, off, s[4:7], 0 offset:2
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: extract_vector_elt_v3f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_mov_b32 s5, 0
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s4, s0
-; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    s_and_b32 s4, s0, 0xffff
 ; VI-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
@@ -219,12 +222,12 @@ define amdgpu_kernel void @extract_vector_elt_v3f16(ptr addrspace(1) %out, <3 x 
 ; GFX11-LABEL: extract_vector_elt_v3f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    s_mov_b32 s5, 0
 ; GFX11-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v1, s2
-; GFX11-NEXT:    s_mov_b32 s4, s0
-; GFX11-NEXT:    s_mov_b32 s5, s1
+; GFX11-NEXT:    s_and_b32 s4, s0, 0xffff
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
 ; GFX11-NEXT:    buffer_store_b16 v1, off, s[4:7], 0 offset:2
@@ -241,15 +244,16 @@ define amdgpu_kernel void @extract_vector_elt_v3f16(ptr addrspace(1) %out, <3 x 
 define amdgpu_kernel void @dynamic_extract_vector_elt_v3f16(ptr addrspace(1) %out, <3 x half> %foo, i32 %idx) #0 {
 ; SI-LABEL: dynamic_extract_vector_elt_v3f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s6, s[4:5], 0xd
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_lshl_b32 s4, s6, 4
-; SI-NEXT:    s_lshr_b64 s[2:3], s[2:3], s4
+; SI-NEXT:    s_load_dword s1, s[4:5], 0xd
+; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_lshl_b32 s1, s1, 4
+; SI-NEXT:    s_lshr_b64 s[2:3], s[2:3], s1
+; SI-NEXT:    s_and_b32 s4, s0, 0xffff
 ; SI-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -257,13 +261,14 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v3f16(ptr addrspace(1) %ou
 ; VI-LABEL: dynamic_extract_vector_elt_v3f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VI-NEXT:    s_load_dword s8, s[4:5], 0x34
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_load_dword s1, s[4:5], 0x34
+; VI-NEXT:    s_mov_b32 s5, 0
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
+; VI-NEXT:    s_and_b32 s4, s0, 0xffff
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s4, s0
-; VI-NEXT:    s_lshl_b32 s0, s8, 4
-; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    s_lshl_b32 s0, s1, 4
 ; VI-NEXT:    s_lshr_b64 s[0:1], s[2:3], s0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    buffer_store_short v0, off, s[4:7], 0
@@ -275,11 +280,12 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v3f16(ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_lshl_b32 s4, s6, 4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_lshr_b64 s[2:3], s[2:3], s4
-; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-NEXT:    s_lshl_b32 s1, s6, 4
+; GFX11-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX11-NEXT:    s_lshr_b64 s[2:3], s[2:3], s1
+; GFX11-NEXT:    s_mov_b32 s1, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_endpgm
@@ -546,10 +552,12 @@ define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) 
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_load_dword s8, s[4:5], 0xd
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
-; SI-NEXT:    v_mov_b32_e32 v5, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s1, 0
+; SI-NEXT:    v_mov_b32_e32 v5, 0
+; SI-NEXT:    s_mov_b32 s3, s1
+; SI-NEXT:    s_mov_b32 s6, s1
 ; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-NEXT:    buffer_load_dwordx4 v[1:4], v[4:5], s[4:7], 0 addr64
 ; SI-NEXT:    v_lshlrev_b32_e32 v6, 1, v0
@@ -600,14 +608,12 @@ define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) 
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 4, v0
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v2, s3
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, s2, v1
-; VI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
+; VI-NEXT:    v_addc_u32_e64 v2, s[2:3], 0, 0, vcc
 ; VI-NEXT:    flat_load_dwordx4 v[1:4], v[1:2]
-; VI-NEXT:    v_mov_b32_e32 v6, s1
 ; VI-NEXT:    v_add_u32_e32 v5, vcc, s0, v0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 1
-; VI-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
+; VI-NEXT:    v_addc_u32_e64 v6, s[0:1], 0, 0, vcc
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -636,11 +642,13 @@ define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
-; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 4, v4
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b32 s1, 0
+; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
+; GFX11-TRUE16-NEXT:    s_mov_b32 s3, s1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 4, v4
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v0, s[2:3]
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 1
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 2
@@ -675,11 +683,13 @@ define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
-; GFX11-FAKE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 4, v4
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_mov_b32 s1, 0
+; GFX11-FAKE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
+; GFX11-FAKE16-NEXT:    s_mov_b32 s3, s1
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 4, v4
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[0:3], v0, s[2:3]
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 1
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 2
@@ -729,10 +739,12 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_load_dword s8, s[4:5], 0xd
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v8, 5, v0
-; SI-NEXT:    v_mov_b32_e32 v9, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s1, 0
+; SI-NEXT:    v_mov_b32_e32 v9, 0
+; SI-NEXT:    s_mov_b32 s3, s1
+; SI-NEXT:    s_mov_b32 s6, s1
 ; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-NEXT:    buffer_load_dwordx4 v[1:4], v[8:9], s[4:7], 0 addr64
 ; SI-NEXT:    buffer_load_dwordx4 v[5:8], v[8:9], s[4:7], 0 addr64 offset:16
@@ -820,17 +832,15 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 5, v0
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v2, s3
 ; VI-NEXT:    v_add_u32_e32 v5, vcc, s2, v1
-; VI-NEXT:    v_addc_u32_e32 v6, vcc, 0, v2, vcc
+; VI-NEXT:    v_addc_u32_e64 v6, s[2:3], 0, 0, vcc
 ; VI-NEXT:    flat_load_dwordx4 v[1:4], v[5:6]
 ; VI-NEXT:    v_add_u32_e32 v5, vcc, 16, v5
 ; VI-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; VI-NEXT:    flat_load_dwordx4 v[5:8], v[5:6]
-; VI-NEXT:    v_mov_b32_e32 v10, s1
 ; VI-NEXT:    v_add_u32_e32 v9, vcc, s0, v0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 1
-; VI-NEXT:    v_addc_u32_e32 v10, vcc, 0, v10, vcc
+; VI-NEXT:    v_addc_u32_e64 v10, s[0:1], 0, 0, vcc
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 2
 ; VI-NEXT:    s_waitcnt vmcnt(1)
@@ -888,13 +898,15 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
-; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 5, v8
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b32 s1, 0
+; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
+; GFX11-TRUE16-NEXT:    s_mov_b32 s3, s1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 5, v8
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v4, s[2:3]
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v4, s[2:3] offset:16
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 1
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 2
@@ -958,13 +970,15 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
-; GFX11-FAKE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v4, 5, v8
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_mov_b32 s1, 0
+; GFX11-FAKE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
+; GFX11-FAKE16-NEXT:    s_mov_b32 s3, s1
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v4, 5, v8
 ; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[0:3], v4, s[2:3]
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[4:7], v4, s[2:3] offset:16
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 1
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 2

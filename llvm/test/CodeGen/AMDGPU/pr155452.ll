@@ -14,7 +14,7 @@ define amdgpu_kernel void @my_kernel(i64 %foo, i32 %bar) {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_ashr_i32 s7, s6, 31
+; CHECK-NEXT:    s_ashr_i32 s5, s6, 31
 ; CHECK-NEXT:    s_abs_i32 s6, s6
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, s6
 ; CHECK-NEXT:    s_sub_i32 s0, 0, s6
@@ -29,26 +29,24 @@ define amdgpu_kernel void @my_kernel(i64 %foo, i32 %bar) {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s2
 ; CHECK-NEXT:    v_mad_u64_u32 v[3:4], s[8:9], s4, v3, 1
-; CHECK-NEXT:    s_mul_i32 s2, s5, s2
-; CHECK-NEXT:    s_mul_i32 s3, s4, s3
+; CHECK-NEXT:    s_mul_i32 s2, s4, s3
 ; CHECK-NEXT:    v_add_i32_e32 v4, vcc, s2, v4
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v3
-; CHECK-NEXT:    v_add_i32_e32 v4, vcc, s3, v4
 ; CHECK-NEXT:    s_ashr_i32 s3, s2, 31
-; CHECK-NEXT:    s_abs_i32 s8, s2
-; CHECK-NEXT:    s_xor_b32 s3, s3, s7
-; CHECK-NEXT:    v_mul_hi_u32 v3, s8, v2
-; CHECK-NEXT:    v_readfirstlane_b32 s9, v3
+; CHECK-NEXT:    s_abs_i32 s7, s2
+; CHECK-NEXT:    s_xor_b32 s3, s3, s5
+; CHECK-NEXT:    v_mul_hi_u32 v3, s7, v2
+; CHECK-NEXT:    v_readfirstlane_b32 s8, v3
 ; CHECK-NEXT:    v_add_i32_e32 v5, vcc, 1, v3
-; CHECK-NEXT:    s_mul_i32 s9, s9, s6
-; CHECK-NEXT:    s_sub_i32 s8, s8, s9
-; CHECK-NEXT:    s_sub_i32 s9, s8, s6
-; CHECK-NEXT:    s_cmp_ge_u32 s8, s6
+; CHECK-NEXT:    s_mul_i32 s8, s8, s6
+; CHECK-NEXT:    s_sub_i32 s7, s7, s8
+; CHECK-NEXT:    s_sub_i32 s8, s7, s6
+; CHECK-NEXT:    s_cmp_ge_u32 s7, s6
 ; CHECK-NEXT:    s_cselect_b64 vcc, -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
-; CHECK-NEXT:    s_cselect_b32 s8, s9, s8
+; CHECK-NEXT:    s_cselect_b32 s7, s8, s7
 ; CHECK-NEXT:    v_add_i32_e32 v5, vcc, 1, v3
-; CHECK-NEXT:    s_cmp_ge_u32 s8, s6
+; CHECK-NEXT:    s_cmp_ge_u32 s7, s6
 ; CHECK-NEXT:    s_cselect_b64 vcc, -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
 ; CHECK-NEXT:    v_xor_b32_e32 v3, s3, v3

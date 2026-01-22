@@ -366,10 +366,10 @@ entry:
 define amdgpu_kernel void @s_fneg_fpext_f16_to_f32(ptr addrspace(1) %r, i32 %a) {
 ; SI-LABEL: s_fneg_fpext_f16_to_f32:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s1, 0
+; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s2
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -377,10 +377,10 @@ define amdgpu_kernel void @s_fneg_fpext_f16_to_f32(ptr addrspace(1) %r, i32 %a) 
 ;
 ; GFX89-LABEL: s_fneg_fpext_f16_to_f32:
 ; GFX89:       ; %bb.0: ; %entry
-; GFX89-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX89-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX89-NEXT:    s_mov_b32 s3, 0xf000
+; GFX89-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX89-NEXT:    s_mov_b32 s1, 0
+; GFX89-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX89-NEXT:    v_cvt_f32_f16_e32 v0, s2
 ; GFX89-NEXT:    s_mov_b32 s2, -1
 ; GFX89-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -388,11 +388,10 @@ define amdgpu_kernel void @s_fneg_fpext_f16_to_f32(ptr addrspace(1) %r, i32 %a) 
 ;
 ; GFX11-TRUE16-LABEL: s_fneg_fpext_f16_to_f32:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
-; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b32 s1, 0
+; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
 ; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
@@ -400,11 +399,10 @@ define amdgpu_kernel void @s_fneg_fpext_f16_to_f32(ptr addrspace(1) %r, i32 %a) 
 ;
 ; GFX11-FAKE16-LABEL: s_fneg_fpext_f16_to_f32:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
-; GFX11-FAKE16-NEXT:    s_clause 0x1
-; GFX11-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_mov_b32 s1, 0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GFX11-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0

@@ -364,11 +364,9 @@ define amdgpu_kernel void @store_flat_scratch(ptr addrspace(1) noalias %out, i32
 }
 
 ; HSA-LABEL: {{^}}use_constant_to_constant32_addrspacecast
-; GFX9: s_load_dwordx2 [[PTRPTR:s\[[0-9]+:[0-9]+\]]], s[4:5], 0x0{{$}}
-; GFX9: s_load_dword [[OFFSET:s[0-9]+]], s[4:5], 0x8{{$}}
-; GFX9: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]], [[PTRPTR]], 0x0{{$}}
-; GFX9: s_mov_b32 s[[PTR_HI]], 0{{$}}
-; GFX9: s_add_i32 s[[PTR_LO]], s[[PTR_LO]], [[OFFSET]]
+; GFX9: s_load_dwordx4 [[PTRPTR:s\[[0-9]+:[0-9]+\]]], s[4:5], 0x0{{$}}
+; GFX9: s_mov_b32 s{{[0-9]+}}, 0{{$}}
+; GFX9: s_add_i32 [[PTR_LO:s[0-9]+]], s[[PTR_LO]], s[[OFFSET:[0-9]+]]
 ; GFX9: s_load_dword s{{[0-9]+}}, s[[[PTR_LO]]:[[PTR_HI]]], 0x0{{$}}
 define amdgpu_kernel void @use_constant_to_constant32_addrspacecast(ptr addrspace(4) %ptr.ptr, i32 %offset) #0 {
   %ptr = load volatile ptr addrspace(4), ptr addrspace(4) %ptr.ptr
@@ -379,7 +377,7 @@ define amdgpu_kernel void @use_constant_to_constant32_addrspacecast(ptr addrspac
 }
 
 ; HSA-LABEL: {{^}}use_global_to_constant32_addrspacecast
-; GFX9: s_load_dwordx2 [[PTRPTR:s\[[0-9]+:[0-9]+\]]], s[4:5], 0x0{{$}}
+; GFX9: s_load_dwordx4 [[PTRPTR:s\[[0-9]+:[0-9]+\]]], s[4:5], 0x0{{$}}
 ; GFX9: s_load_dword [[OFFSET:s[0-9]+]], s[4:5], 0x8{{$}}
 ; GFX9: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]], [[PTRPTR]], 0x0{{$}}
 ; GFX9: s_mov_b32 s[[PTR_HI]], 0{{$}}

@@ -7,10 +7,10 @@
 define amdgpu_kernel void @store_as4_i8(ptr addrspace(4) %p, i8 %v) {
 ; CHECK-LABEL: store_as4_i8:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s2, s[8:9], 0x8
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    global_store_byte v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -21,10 +21,10 @@ define amdgpu_kernel void @store_as4_i8(ptr addrspace(4) %p, i8 %v) {
 define amdgpu_kernel void @store_as4_i16(ptr addrspace(4) %p, i16 %v) {
 ; CHECK-LABEL: store_as4_i16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s2, s[8:9], 0x8
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    global_store_short v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -35,10 +35,10 @@ define amdgpu_kernel void @store_as4_i16(ptr addrspace(4) %p, i16 %v) {
 define amdgpu_kernel void @store_as4_i32(ptr addrspace(4) %p, i32 %v) {
 ; CHECK-LABEL: store_as4_i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s2, s[8:9], 0x8
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -63,10 +63,10 @@ define amdgpu_kernel void @store_as4_i64(ptr addrspace(4) %p, i64 %v) {
 define amdgpu_kernel void @store_as4_float(ptr addrspace(4) %p, float %v) {
 ; CHECK-LABEL: store_as4_float:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s2, s[8:9], 0x8
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -91,10 +91,10 @@ define amdgpu_kernel void @store_as4_double(ptr addrspace(4) %p, double %v) {
 define amdgpu_kernel void @store_as4_half(ptr addrspace(4) %p, half %v) {
 ; CHECK-LABEL: store_as4_half:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s2, s[8:9], 0x8
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    global_store_short v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -105,10 +105,10 @@ define amdgpu_kernel void @store_as4_half(ptr addrspace(4) %p, half %v) {
 define amdgpu_kernel void @store_as4_2xi8(ptr addrspace(4) %p, <2 x i8> %v) {
 ; CHECK-LABEL: store_as4_2xi8:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s2, s[8:9], 0x8
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    global_store_short v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -119,10 +119,11 @@ define amdgpu_kernel void @store_as4_2xi8(ptr addrspace(4) %p, <2 x i8> %v) {
 define amdgpu_kernel void @store_as4_2xi16(ptr addrspace(4) %p, <2 x i16> %v) {
 ; CHECK-LABEL: store_as4_2xi16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s2, s[8:9], 0x8
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_and_b32 s0, s0, 0xffff
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -136,7 +137,9 @@ define amdgpu_kernel void @store_as4_2xi32(ptr addrspace(4) %p, <2 x i32> %v) {
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s2
+; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; CHECK-NEXT:    s_endpgm
   store <2 x i32> %v, ptr addrspace(4) %p
@@ -146,10 +149,11 @@ define amdgpu_kernel void @store_as4_2xi32(ptr addrspace(4) %p, <2 x i32> %v) {
 define amdgpu_kernel void @store_as4_2xhalf(ptr addrspace(4) %p, <2 x half> %v) {
 ; CHECK-LABEL: store_as4_2xhalf:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s2, s[8:9], 0x8
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_and_b32 s0, s0, 0xffff
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -163,7 +167,9 @@ define amdgpu_kernel void @store_as4_2xfloat(ptr addrspace(4) %p, <2 x float> %v
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s2
+; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; CHECK-NEXT:    s_endpgm
   store <2 x float> %v, ptr addrspace(4) %p

@@ -468,10 +468,10 @@ define amdgpu_kernel void @div_v4_c_by_minus_x_25ulp(ptr addrspace(1) %arg) {
 define amdgpu_kernel void @div_v_by_x_25ulp(ptr addrspace(1) %arg, float %num) {
 ; GCN-DENORM-LABEL: div_v_by_x_25ulp:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-DENORM-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GCN-DENORM-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-DENORM-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DENORM-NEXT:    s_mov_b32 s1, 0
+; GCN-DENORM-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-DENORM-NEXT:    s_load_dword s3, s[0:1], 0x0
 ; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s2
 ; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v3, s2
@@ -487,12 +487,12 @@ define amdgpu_kernel void @div_v_by_x_25ulp(ptr addrspace(1) %arg, float %num) {
 ;
 ; GCN-FLUSH-LABEL: div_v_by_x_25ulp:
 ; GCN-FLUSH:       ; %bb.0:
-; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-FLUSH-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GCN-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-FLUSH-NEXT:    s_mov_b32 s1, 0
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v0, 0x6f800000
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0x2f800000
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-FLUSH-NEXT:    s_load_dword s3, s[0:1], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-FLUSH-NEXT:    v_cmp_gt_f32_e64 vcc, |s3|, v0

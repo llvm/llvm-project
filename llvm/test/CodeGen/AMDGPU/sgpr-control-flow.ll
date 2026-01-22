@@ -11,30 +11,26 @@
 define amdgpu_kernel void @sgpr_if_else_salu_br(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; SI-LABEL: sgpr_if_else_salu_br:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
+; SI-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s2, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB0_4
 ; SI-NEXT:  ; %bb.1: ; %else
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xe
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_add_i32 s3, s0, s1
+; SI-NEXT:    s_add_i32 s1, s5, s6
 ; SI-NEXT:    s_cbranch_execnz .LBB0_3
 ; SI-NEXT:  .LBB0_2: ; %if
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xc
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_sub_i32 s3, s0, s1
+; SI-NEXT:    s_sub_i32 s1, s3, s4
 ; SI-NEXT:  .LBB0_3: ; %endif
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
-; SI-NEXT:    s_add_i32 s0, s3, s2
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_add_i32 s0, s1, s2
+; SI-NEXT:    s_mov_b32 s5, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB0_4:
-; SI-NEXT:    ; implicit-def: $sgpr3
+; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    s_branch .LBB0_2
 
 entry:

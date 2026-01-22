@@ -46,8 +46,9 @@ define amdgpu_kernel void @kernel_writelane_intrinsic(ptr addrspace(1) %out, i32
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 45
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_mov_b32 s1, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_mov_b32 m0, s3
 ; GCN-NEXT:    v_writelane_b32 v1, s2, m0
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1]

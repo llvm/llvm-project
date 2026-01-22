@@ -8,16 +8,16 @@
 define amdgpu_kernel void @ds_load_stores_aainfo(ptr addrspace(1) %arg, i32 %i) {
 ; GCN-LABEL: ds_load_stores_aainfo:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s0, s0, 2
-; GCN-NEXT:    v_mov_b32_e32 v4, s0
+; GCN-NEXT:    s_lshl_b32 s1, s2, 2
+; GCN-NEXT:    v_mov_b32_e32 v4, s1
 ; GCN-NEXT:    ds_read2_b32 v[2:3], v4 offset1:1
 ; GCN-NEXT:    ds_write_b64 v1, v[0:1] offset:512
 ; GCN-NEXT:    ds_read2_b32 v[4:5], v4 offset0:64 offset1:65
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000200) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(1) SyncID(0)

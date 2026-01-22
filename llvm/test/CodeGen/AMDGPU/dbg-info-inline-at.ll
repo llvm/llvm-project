@@ -14,6 +14,7 @@ define amdgpu_kernel void @_Z3fooPiiii(ptr addrspace(1) nocapture noundef writeo
 ; CHECK-NEXT:    s_load_dword s4, s[8:9], 0x10
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_add_i32 s3, s3, s2
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    .loc 1 5 12 is_stmt 0 ; ./a.h:5:12 @[ a.hip:13:9 ]

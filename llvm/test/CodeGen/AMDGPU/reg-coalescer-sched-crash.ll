@@ -16,14 +16,11 @@ define amdgpu_kernel void @reg_coalescer_breaks_dead(ptr addrspace(1) nocapture 
 ; GFX6-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX6-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX6-NEXT:  ; %bb.1: ; %bb3
-; GFX6-NEXT:    s_load_dword s2, s[4:5], 0xb
-; GFX6-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x9
+; GFX6-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
-; GFX6-NEXT:    s_lshl_b64 s[2:3], s[2:3], 3
-; GFX6-NEXT:    s_add_u32 s2, s6, s2
-; GFX6-NEXT:    s_addc_u32 s3, s7, s3
-; GFX6-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; GFX6-NEXT:    s_ashr_i32 s11, s10, 31
+; GFX6-NEXT:    s_lshl_b64 s[2:3], s[10:11], 3
+; GFX6-NEXT:    s_load_dwordx2 s[2:3], s[2:3], s8
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX6-NEXT:    v_mov_b32_e32 v2, s3
@@ -46,14 +43,11 @@ define amdgpu_kernel void @reg_coalescer_breaks_dead(ptr addrspace(1) nocapture 
 ; GFX8-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX8-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX8-NEXT:  ; %bb.1: ; %bb3
-; GFX8-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_ashr_i32 s3, s2, 31
-; GFX8-NEXT:    s_lshl_b64 s[2:3], s[2:3], 3
-; GFX8-NEXT:    s_add_u32 s2, s6, s2
-; GFX8-NEXT:    s_addc_u32 s3, s7, s3
-; GFX8-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; GFX8-NEXT:    s_ashr_i32 s11, s10, 31
+; GFX8-NEXT:    s_lshl_b64 s[2:3], s[10:11], 3
+; GFX8-NEXT:    s_load_dwordx2 s[2:3], s[2:3], s8
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s3

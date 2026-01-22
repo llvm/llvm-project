@@ -8,25 +8,23 @@ define protected amdgpu_kernel void @_Z11test_kernelPii(ptr addrspace(1) nocaptu
 ; CHECK-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CHECK-NEXT:    s_add_i32 s12, s12, s17
 ; CHECK-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x2
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 3
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 3
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
-; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
-; CHECK-NEXT:    s_and_b32 s4, s0, 0xffff
-; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_mul_i32 s6, s4, 0xaaab
-; CHECK-NEXT:    s_lshl_b64 s[4:5], s[0:1], 2
-; CHECK-NEXT:    s_lshr_b32 s1, s6, 19
+; CHECK-NEXT:    s_mov_b32 s3, 0
+; CHECK-NEXT:    s_and_b32 s1, s2, 0xffff
+; CHECK-NEXT:    s_mul_i32 s1, s1, 0xaaab
+; CHECK-NEXT:    s_lshl_b64 s[4:5], s[2:3], 2
+; CHECK-NEXT:    s_lshr_b32 s1, s1, 19
 ; CHECK-NEXT:    s_mul_i32 s1, s1, 12
-; CHECK-NEXT:    s_sub_i32 s6, s0, s1
-; CHECK-NEXT:    s_and_b32 s7, s6, 0xffff
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_add_u32 s0, s2, s4
-; CHECK-NEXT:    s_addc_u32 s1, s3, s5
-; CHECK-NEXT:    s_bfe_u32 s2, s6, 0xd0003
-; CHECK-NEXT:    s_add_i32 s2, s2, s7
+; CHECK-NEXT:    s_sub_i32 s2, s2, s1
+; CHECK-NEXT:    s_and_b32 s3, s2, 0xffff
+; CHECK-NEXT:    s_add_u32 s0, s0, s4
+; CHECK-NEXT:    s_addc_u32 s1, 0, s5
+; CHECK-NEXT:    s_bfe_u32 s2, s2, 0xd0003
+; CHECK-NEXT:    s_add_i32 s2, s2, s3
 ; CHECK-NEXT:    s_or_b32 s2, s2, 0xc0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1

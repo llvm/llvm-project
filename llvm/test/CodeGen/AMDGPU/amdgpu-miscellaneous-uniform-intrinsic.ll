@@ -79,11 +79,11 @@ define amdgpu_kernel void @readlane_readlane(ptr addrspace(1) %out) {
 define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src) {
 ; CHECK-LABEL: permlane64_uniform:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.permlane64(i32 %src)

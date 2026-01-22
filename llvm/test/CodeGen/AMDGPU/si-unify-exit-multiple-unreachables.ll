@@ -189,12 +189,12 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; UNIFY-NEXT:    [[CMP:%.*]] = icmp eq i32 [[N:%.*]], 256
 ; UNIFY-NEXT:    [[CMP32:%.*]] = zext i1 [[CMP]] to i32
 ; UNIFY-NEXT:    callbr void asm "", "r,!i"(i32 [[CMP32]])
-; UNIFY-NEXT:            to label [[IF_THEN:%.*]] [label %if.else]
+; UNIFY-NEXT:            to label [[IF_THEN:%.*]] [label [[IF_ELSE:%.*]]]
 ; UNIFY:       if.then:
 ; UNIFY-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; UNIFY-NEXT:    [[CMP1_32:%.*]] = zext i1 [[CMP1]] to i32
 ; UNIFY-NEXT:    callbr void asm "", "r,!i"(i32 [[CMP1_32]])
-; UNIFY-NEXT:            to label [[IF_END6_SINK_SPLIT:%.*]] [label %cond.false]
+; UNIFY-NEXT:            to label [[IF_END6_SINK_SPLIT:%.*]] [label [[COND_FALSE:%.*]]]
 ; UNIFY:       cond.false:
 ; UNIFY-NEXT:    call void @llvm.trap()
 ; UNIFY-NEXT:    unreachable
@@ -202,12 +202,12 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; UNIFY-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[TID]], 10
 ; UNIFY-NEXT:    [[CMP2_32:%.*]] = zext i1 [[CMP2]] to i32
 ; UNIFY-NEXT:    callbr void asm "", "r,!i"(i32 [[CMP2_32]])
-; UNIFY-NEXT:            to label [[IF_THEN3:%.*]] [label %if.end6]
+; UNIFY-NEXT:            to label [[IF_THEN3:%.*]] [label [[IF_END6:%.*]]]
 ; UNIFY:       if.then3:
 ; UNIFY-NEXT:    [[CMP1_I7:%.*]] = icmp eq i32 [[A]], 0
 ; UNIFY-NEXT:    [[CMP1_I7_32:%.*]] = zext i1 [[CMP1_I7]] to i32
 ; UNIFY-NEXT:    callbr void asm "", "r,!i"(i32 [[CMP1_I7_32]])
-; UNIFY-NEXT:            to label [[IF_END6_SINK_SPLIT]] [label %cond.false.i8]
+; UNIFY-NEXT:            to label [[IF_END6_SINK_SPLIT]] [label [[COND_FALSE_I8:%.*]]]
 ; UNIFY:       cond.false.i8:
 ; UNIFY-NEXT:    call void @llvm.trap()
 ; UNIFY-NEXT:    unreachable
@@ -215,7 +215,7 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; UNIFY-NEXT:    [[X1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[X:%.*]], i32 [[TID]]
 ; UNIFY-NEXT:    store i32 [[A]], ptr addrspace(1) [[X1]], align 4
 ; UNIFY-NEXT:    callbr void asm "", ""()
-; UNIFY-NEXT:            to label [[IF_END6:%.*]] []
+; UNIFY-NEXT:            to label [[IF_END6]] []
 ; UNIFY:       if.end6:
 ; UNIFY-NEXT:    ret void
 ;

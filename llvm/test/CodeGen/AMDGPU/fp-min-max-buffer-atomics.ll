@@ -609,10 +609,10 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    v_mov_b32_e32 v1, s5
 ; SI-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 4 offen glc slc
+; SI-NEXT:    s_mov_b32 s1, 0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_mov_b32 s0, s6
-; SI-NEXT:    s_mov_b32 s1, s7
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -624,10 +624,10 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 4 offen glc slc
+; GFX7-NEXT:    s_mov_b32 s1, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s2, -1
 ; GFX7-NEXT:    s_mov_b32 s0, s6
-; GFX7-NEXT:    s_mov_b32 s1, s7
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
@@ -636,6 +636,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s15, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX10-NEXT:    buffer_atomic_fmax v0, v1, s[8:11], 4 offen glc slc
@@ -648,6 +649,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; GFX1030:       ; %bb.0: ; %main_body
 ; GFX1030-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x24
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1030-NEXT:    s_mov_b32 s7, 0
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1030-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1030-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 4 offen glc slc
@@ -660,6 +662,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; GFX1100:       ; %bb.0: ; %main_body
 ; GFX1100-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-NEXT:    s_mov_b32 s7, 0
 ; GFX1100-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX1100-NEXT:    buffer_atomic_max_f32 v0, v1, s[0:3], 4 offen glc slc
 ; GFX1100-NEXT:    v_mov_b32_e32 v1, 0
@@ -671,6 +674,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s7, 0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX12-NEXT:    s_mov_b32 s4, 4
 ; GFX12-NEXT:    buffer_atomic_max_num_f32 v0, v1, s[0:3], s4 offen th:TH_ATOMIC_NT_RETURN
@@ -683,6 +687,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; G_SI:       ; %bb.0: ; %main_body
 ; G_SI-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
 ; G_SI-NEXT:    s_waitcnt lgkmcnt(0)
+; G_SI-NEXT:    s_mov_b32 s7, 0
 ; G_SI-NEXT:    v_mov_b32_e32 v0, s4
 ; G_SI-NEXT:    v_mov_b32_e32 v1, s5
 ; G_SI-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 4 offen glc slc
@@ -697,6 +702,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; G_GFX7:       ; %bb.0: ; %main_body
 ; G_GFX7-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
 ; G_GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; G_GFX7-NEXT:    s_mov_b32 s7, 0
 ; G_GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; G_GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; G_GFX7-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 4 offen glc slc
@@ -711,6 +717,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; G_GFX10:       ; %bb.0: ; %main_body
 ; G_GFX10-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
 ; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; G_GFX10-NEXT:    s_mov_b32 s15, 0
 ; G_GFX10-NEXT:    v_mov_b32_e32 v0, s12
 ; G_GFX10-NEXT:    v_mov_b32_e32 v1, s13
 ; G_GFX10-NEXT:    buffer_atomic_fmax v0, v1, s[8:11], 4 offen glc slc
@@ -723,6 +730,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; G_GFX1030:       ; %bb.0: ; %main_body
 ; G_GFX1030-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x24
 ; G_GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
+; G_GFX1030-NEXT:    s_mov_b32 s7, 0
 ; G_GFX1030-NEXT:    v_mov_b32_e32 v0, s4
 ; G_GFX1030-NEXT:    v_mov_b32_e32 v1, s5
 ; G_GFX1030-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 4 offen glc slc
@@ -735,6 +743,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; G_GFX1100:       ; %bb.0: ; %main_body
 ; G_GFX1100-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; G_GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
+; G_GFX1100-NEXT:    s_mov_b32 s7, 0
 ; G_GFX1100-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; G_GFX1100-NEXT:    buffer_atomic_max_f32 v0, v1, s[0:3], 4 offen glc slc
 ; G_GFX1100-NEXT:    v_mov_b32_e32 v1, 0

@@ -223,26 +223,29 @@ define amdgpu_kernel void @s_test_add_v2i16_kernarg(ptr addrspace(1) %out, <2 x 
 ; VI-LABEL: s_test_add_v2i16_kernarg:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b32 s4, s3, 16
-; VI-NEXT:    s_lshr_b32 s5, s2, 16
-; VI-NEXT:    s_add_i32 s2, s2, s3
-; VI-NEXT:    s_add_i32 s5, s5, s4
-; VI-NEXT:    s_and_b32 s2, s2, 0xffff
-; VI-NEXT:    s_lshl_b32 s3, s5, 16
-; VI-NEXT:    s_or_b32 s2, s2, s3
+; VI-NEXT:    s_lshr_b32 s1, s3, 16
+; VI-NEXT:    s_lshr_b32 s4, s2, 16
+; VI-NEXT:    s_and_b32 s0, s0, 0xffff
+; VI-NEXT:    s_add_i32 s4, s4, s1
+; VI-NEXT:    s_add_i32 s1, s2, s3
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    s_lshl_b32 s0, s4, 16
+; VI-NEXT:    s_and_b32 s1, s1, 0xffff
+; VI-NEXT:    s_or_b32 s0, s1, s0
+; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: s_test_add_v2i16_kernarg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s3
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX9-NEXT:    v_pk_add_u16 v1, s2, v1
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -252,7 +255,9 @@ define amdgpu_kernel void @s_test_add_v2i16_kernarg(ptr addrspace(1) %out, <2 x 
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s1, 0
 ; GFX10-NEXT:    v_pk_add_u16 v1, s2, s3
+; GFX10-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -261,7 +266,9 @@ define amdgpu_kernel void @s_test_add_v2i16_kernarg(ptr addrspace(1) %out, <2 x 
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_mov_b32 s1, 0
 ; GFX11-NEXT:    v_pk_add_u16 v1, s2, s3
+; GFX11-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %add = add <2 x i16> %a, %b

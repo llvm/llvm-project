@@ -2955,20 +2955,23 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(ptr addrspa
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GCN-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; GCN-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p1) from %ir.p.kernarg.offset1, align 16, addrspace 4)
-  ; GCN-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](s64)
-  ; GCN-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32) from %ir.idx.kernarg.offset, align 8, addrspace 4)
+  ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (<3 x s32>) from %ir.p.kernarg.offset1, align 16, addrspace 4)
+  ; GCN-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[LOAD]](<3 x s32>), [[C]](s32)
+  ; GCN-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[EVEC]](s32)
+  ; GCN-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[ZEXT]](s64)
+  ; GCN-NEXT:   [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[LOAD]](<3 x s32>), [[C1]](s32)
   ; GCN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v33i32_func_v33i32_i32
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GCN-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN-NEXT:   [[COPY12:%[0-9]+]]:_(p4) = COPY [[COPY9]](p4)
-  ; GCN-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; GCN-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY12]], [[C1]](s64)
+  ; GCN-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY12]], [[C2]](s64)
   ; GCN-NEXT:   [[COPY13:%[0-9]+]]:_(s64) = COPY [[COPY6]]
   ; GCN-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
@@ -2976,23 +2979,23 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(ptr addrspa
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; GCN-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-  ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY18]], [[C2]](s32)
+  ; GCN-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+  ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY18]], [[C3]](s32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY17]], [[SHL]]
   ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; GCN-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
+  ; GCN-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+  ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C4]](s32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](p1)
+  ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[INTTOPTR]](p1)
   ; GCN-NEXT:   $vgpr0 = COPY [[FRAME_INDEX]](p5)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV]](s32)
   ; GCN-NEXT:   $vgpr2 = COPY [[UV1]](s32)
-  ; GCN-NEXT:   $vgpr3 = COPY [[LOAD1]](s32)
+  ; GCN-NEXT:   $vgpr3 = COPY [[EVEC1]](s32)
   ; GCN-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; GCN-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; GCN-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
   ; GCN-NEXT:   $sgpr6_sgpr7 = COPY [[COPY11]](p4)
-  ; GCN-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD1]](p4)
+  ; GCN-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
   ; GCN-NEXT:   $sgpr10_sgpr11 = COPY [[COPY13]](s64)
   ; GCN-NEXT:   $sgpr12 = COPY [[COPY14]](s32)
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
@@ -3001,8 +3004,8 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(ptr addrspa
   ; GCN-NEXT:   $vgpr31 = COPY [[OR1]](s32)
   ; GCN-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_v33i32_func_v33i32_i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; GCN-NEXT:   [[LOAD2:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[FRAME_INDEX]](p5) :: (load (<33 x s32>) from %stack.0, align 256, addrspace 5)
-  ; GCN-NEXT:   G_STORE [[LOAD2]](<33 x s32>), [[DEF]](p1) :: (volatile store (<33 x s32>) into `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; GCN-NEXT:   [[LOAD1:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[FRAME_INDEX]](p5) :: (load (<33 x s32>) from %stack.0, align 256, addrspace 5)
+  ; GCN-NEXT:   G_STORE [[LOAD1]](<33 x s32>), [[DEF]](p1) :: (volatile store (<33 x s32>) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %val = call <33 x i32> @external_v33i32_func_v33i32_i32(ptr addrspace(1) %p, i32 %idx)
   store volatile <33 x i32> %val, ptr addrspace(1) poison, align 8
