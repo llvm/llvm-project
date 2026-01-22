@@ -1926,8 +1926,8 @@ def integer_reassoc_combines: GICombineGroup<[
   AMinusC1PlusC2
 ]>;
 
-// fold (A+shl(0-B, C)) -> (A-shl(B, C))
-// fold (shl(0-B, C)+A) -> (A-shl(B, C))
+// fold (A+(shl (0-B), C)) -> (A-(shl B, C))
+// fold ((shl (0-B), C)+A) -> (A-(shl B, C))
 def add_shl_neg_frags : GICombinePatFrag<
   (outs root:$dst), (ins $x, $y, $n),
   [
