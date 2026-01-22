@@ -1748,16 +1748,39 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
   LI->getParent()->insertDbgRecordAfter(DV, LI);
 }
 
-/// Determine whether this alloca is either a VLA or an array.
-static bool isArray(AllocaInst *AI) {
-  return AI->isArrayAllocation() ||
-         (AI->getAllocatedType() && AI->getAllocatedType()->isArrayTy());
+/// Determine whether this debug variable is a not a basic type.
+/// We strip through DIDerivedType modifiers (typedefs, const, etc.)
+/// to find the underlying type to decide if it seems perhaps worthwhile to
+/// do LowerDbgDeclare.
+static bool isCompositeType(DbgVariableRecord *DVR) {
+  DIType *Ty = DVR->getVariable()->getType();
+  if (Ty == nullptr)
+    return true;
+  // Strip through modifier types to find the underlying type.
+  while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+    switch (DTy->getTag()) {
+    case dwarf::DW_TAG_pointer_type:
+    case dwarf::DW_TAG_reference_type:
+    case dwarf::DW_TAG_rvalue_reference_type:
+    case dwarf::DW_TAG_ptr_to_member_type:
+    case dwarf::DW_TAG_LLVM_ptrauth_type:
+      return false;
+    case dwarf::DW_TAG_typedef:
+    case dwarf::DW_TAG_const_type:
+    case dwarf::DW_TAG_volatile_type:
+    case dwarf::DW_TAG_restrict_type:
+    case dwarf::DW_TAG_atomic_type:
+    case dwarf::DW_TAG_immutable_type:
+      Ty = DTy->getBaseType();
+      continue;
+    default:
+      break;
+    }
+    break;
+  }
+  return !isa<DIBasicType>(Ty);
 }
 
-/// Determine whether this alloca is a structure.
-static bool isStructure(AllocaInst *AI) {
-  return AI->getAllocatedType() && AI->getAllocatedType()->isStructTy();
-}
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, PHINode *APN,
                                            DIBuilder &Builder) {
   auto *DIVar = DVR->getVariable();
@@ -1820,10 +1843,13 @@ bool llvm::LowerDbgDeclare(Function &F) {
     // stored on the stack, while the dbg.declare can only describe
     // the stack slot (and at a lexical-scope granularity). Later
     // passes will attempt to elide the stack slot.
-    if (!AI || isArray(AI) || isStructure(AI))
+    // Skip VLAs (dynamic allocas) and composite types (arrays/structs) since
+    // they can't be represented as a single dbg.value.
+    if (!AI || !isa<Constant>(AI->getArraySize()) || isCompositeType(DDI))
       return;
 
     // A volatile load/store means that the alloca can't be elided anyway.
+    // Just look at direct uses however, and ignore any other instructions.
     if (llvm::any_of(AI->users(), [](User *U) -> bool {
           if (LoadInst *LI = dyn_cast<LoadInst>(U))
             return LI->isVolatile();
