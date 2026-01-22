@@ -13,7 +13,8 @@ body:             |
     ; CHECK-LABEL: name: regsequence-propagate-undef-on-use
     ; CHECK: [[COPY:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
     ; CHECK-NEXT: undef [[DEF:%[0-9]+]].sub0:sreg_64 = COPY [[COPY]]
-    ; CHECK-NEXT: [[OTH:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 undef [[DEF]].sub1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]].sub1:sreg_64 = COPY undef [[UND:%[0-9]+]]:sgpr_32
+    ; CHECK-NEXT: [[OTH:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[DEF]].sub1
     
     %0:sgpr_32 = S_MOV_B32  0, implicit $exec
 
