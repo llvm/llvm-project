@@ -151,7 +151,7 @@ LLVM_ABI bool canReplaceReg(Register DstReg, Register SrcReg,
 /// constraints. Compared to `canReplaceReg`, this does not check types, so
 /// even for registers with different types it can return true.
 LLVM_ABI bool canReplaceRegNoTypeCheck(Register DstReg, Register SrcReg,
-                            MachineRegisterInfo &MRI);
+                                       MachineRegisterInfo &MRI);
 
 /// Check whether an instruction \p MI is dead: it only defines dead virtual
 /// registers, and doesn't have other side effects.
