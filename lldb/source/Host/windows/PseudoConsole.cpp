@@ -11,6 +11,7 @@
 #include <mutex>
 
 #include "lldb/Host/windows/PipeWindows.h"
+#include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/LLDBLog.h"
 
@@ -118,6 +119,9 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   m_conpty_output = hOutputRead;
   m_conpty_input = hInputWrite;
 
+  if (auto err = DrainInitSequences())
+    return err;
+
   return llvm::Error::success();
 }
 
@@ -132,4 +136,50 @@ void PseudoConsole::Close() {
   m_conpty_handle = INVALID_HANDLE_VALUE;
   m_conpty_input = INVALID_HANDLE_VALUE;
   m_conpty_output = INVALID_HANDLE_VALUE;
+}
+
+llvm::Error PseudoConsole::DrainInitSequences() {
+  STARTUPINFOEXW startupinfoex = {};
+  startupinfoex.StartupInfo.cb = sizeof(STARTUPINFOEXW);
+  startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+  auto attributelist_or_err = ProcThreadAttributeList::Create(startupinfoex);
+  if (!attributelist_or_err)
+    return llvm::errorCodeToError(attributelist_or_err.getError());
+
+  PROCESS_INFORMATION pi = {};
+  wchar_t cmdline[] = L"echo foo";
+
+  if (!CreateProcessW(/*lpApplicationName=*/NULL, cmdline,
+                      /*lpProcessAttributes=*/NULL, /*lpThreadAttributes=*/NULL,
+                      /*bInheritHandles=*/TRUE,
+                      /*dwCreationFlags=*/EXTENDED_STARTUPINFO_PRESENT |
+                          CREATE_UNICODE_ENVIRONMENT,
+                      /*lpEnvironment=*/NULL, /*lpCurrentDirectory=*/NULL,
+                      /*lpStartupInfo=*/
+                      reinterpret_cast<STARTUPINFOW *>(&startupinfoex),
+                      /*lpProcessInformation=*/&pi))
+    return llvm::errorCodeToError(
+        std::error_code(GetLastError(), std::system_category()));
+
+  char buf[4096];
+  OVERLAPPED ov = {};
+  ov.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+
+  DWORD read;
+  ReadFile(m_conpty_output, buf, sizeof(buf), &read, &ov);
+
+  WaitForSingleObject(pi.hProcess, INFINITE);
+
+  if (GetOverlappedResult(m_conpty_output, &ov, &read, FALSE) && read > 0) {
+    ResetEvent(ov.hEvent);
+    ReadFile(m_conpty_output, buf, sizeof(buf), &read, &ov);
+  }
+
+  CancelIo(m_conpty_output);
+  CloseHandle(ov.hEvent);
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+
+  return llvm::Error::success();
 }
