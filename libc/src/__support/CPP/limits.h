@@ -25,7 +25,7 @@ template <typename T> struct numeric_limits_impl<T, true> {
   LIBC_INLINE_VAR static constexpr bool is_signed = T(-1) < T(0);
 
   LIBC_INLINE_VAR static constexpr int digits =
-      (CHAR_BIT * sizeof(T)) - cpp::is_signed_v<T>;
+      (CHAR_BIT * sizeof(T)) - is_signed;
 
   LIBC_INLINE static constexpr T min() {
     if constexpr (is_signed) {
