@@ -631,17 +631,6 @@ void test_pre_decrement_loop() {
   }
 }
 
-#if 0
-// Unary operators outside loops - currently warns (false positive)
-void test_unary_outside_loop() {
-  int value = 10;
-  // Currently warns but shouldn't - moving would change semantics (loses initialization)
-  if (true) {
-    value++;
-  }
-}
-#endif
-
 // Container accumulation patterns - should NOT warn
 
 // Array-like accumulation - should NOT warn
@@ -779,5 +768,15 @@ void test_conditional_accumulation() {
     if (i % 2 == 0) {
       sum += i;
     }
+  }
+}
+
+
+// Unary operators outside loops - should NOT warn
+void test_unary_outside_loop() {
+  int value = 10;
+  // Should NOT warn - moving would change semantics (loses initialization)
+  if (true) {
+    value++;
   }
 }

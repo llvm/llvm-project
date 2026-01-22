@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This checker uses an 8-step algorithm to accomplish scope analysis of a
+// This checker uses a 9-step algorithm to accomplish scope analysis of a
 // variable and determine if it can be declared in a smaller scope. Note that
 // the clang-tidy framework is aimed mainly at supporting text-manipulation,
 // diagnostics, or common AST patterns. Scope reduction analysis is
@@ -15,7 +15,7 @@
 // this code in a more concrete way other than simply suggesting it can
 // be simpler.
 //
-// The 8-step algorithm used by this checker for scope reduction analysis is:
+// The 9-step algorithm used by this checker for scope reduction analysis is:
 // 1) AST Matcher Filtering
 //    - Only match variables within functions (hasAncestor(functionDecl())
 //    - Exclude for-loop declared variables
@@ -24,6 +24,7 @@
 //       (unless(hasInitializer(...)))
 //    - Exclude parameters from analysis
 //       (unless(parmVarDecl())
+//    - Exclude try-catch variables (unless(hasParent(cxxCatchStmt())))
 // 2) Collect variable uses
 //    - Find all DeclRefExpr nodes that reference the variable
 // 3) Build scope chains
@@ -31,22 +32,21 @@
 //      innermost to outermost)
 // 4) Find the innermost compound statement that contains all uses
 //    - This is the smallest scope where the variable could be declared
-// 5) Check for loop usage and variable modifications
-//    - Skip analysis for any variable used within loops to avoid false
-//    positives
-//    - Skip analysis for variables modified in smaller scopes (changes
-//    semantics)
+// 5) Check for modification detection
+//    - Skip analysis for initialized variables modified with unary operators
+//    - This prevents moving variables where initialization would be lost
+//    - Skip analysis for variables modified with simple assignments
+// 6) Check for loop body placement
+//    - Skip analysis if suggested scope would place variable inside loop body
 //    - This prevents suggesting moving variables into loop bodies (inefficient)
-//    - This prevents moving variables that are modified, changing their
-//    lifetime
-// 6) Switch case analysis
+// 7) Switch case analysis
 //    - Check if variable uses span multiple case labels in the same switch
 //    - Skip analysis if so, as variables cannot be declared in switch body
-// 7) Verify scope nesting and report
+// 8) Verify scope nesting and report
 //    - Find the compound statement containing the variable declaration
 //    - Only report if the usage scope is nested within the declaration scope
 //    - This ensures we only suggest moving variables to smaller scopes
-// 8) Alternative analysis - check for for-loop initialization opportunity
+// 9) Alternative analysis - check for for-loop initialization opportunity
 //    - Only runs if compound statement analysis didn't find a smaller scope
 //    - Only check local variables, not parameters
 //    - Determine if all uses are within the same for-loop and suggest
@@ -181,15 +181,27 @@ void ScopeReductionCheck::check(
     }
   }
 
-  // Step 5: Check if suggested scope would place variable inside loop body
-  // or if variable is modified in suggested scope (changing semantics)
+  // Step 5: Check for modification detection
+  // Skip analysis for initialized variables that would lose initialization
+  // semantics
   if (InnermostScope) {
     for (const auto *Use : Uses) {
-      // TODO: Implement precise modification detection
-      // Current approach is too complex and breaks existing tests
-      // For now, accept the false positive in test_unary_outside_loop
+      // Check if initialized variable is modified with unary operators
+      // Moving would lose initialization value
+      if (Var->hasInit()) {
+        auto UseParents =
+            Result.Context->getParentMapContext().getParents(*Use);
+        if (!UseParents.empty()) {
+          if (const auto *UnaryOp = UseParents[0].get<UnaryOperator>()) {
+            if (UnaryOp->isIncrementDecrementOp()) {
+              return; // Skip - moving initialized variable that gets
+                      // incremented/decremented would lose initialization
+            }
+          }
+        }
+      }
 
-      // Check if this use is inside a loop
+      // Step 6: Check if this use is inside a loop
       const Stmt *Current = Use;
       const Stmt *ContainingLoop = nullptr;
 
@@ -243,7 +255,7 @@ void ScopeReductionCheck::check(
     }
   }
 
-  // Step 6: Check if current variable declaration can be moved to a smaller
+  // Step 7: Check if current variable declaration can be moved to a smaller
   // scope
   if (InnermostScope) {
     // Check if variable uses span multiple case labels in the same switch
@@ -301,7 +313,7 @@ void ScopeReductionCheck::check(
       ParentNodes = Parents.getParents(*Parent);
     }
 
-    // Step 7: Verify that usage scope is nested within declaration scope
+    // Step 8: Verify that usage scope is nested within declaration scope
     // Only report if we can move the variable to a smaller scope
     if (VarScope && VarScope != InnermostScope) {
       // Walk up from innermost usage scope to see if declaration scope is
@@ -338,7 +350,7 @@ void ScopeReductionCheck::check(
     }
   }
 
-  // Step 8: Alternative analysis - check for for-loop initialization
+  // Step 9: Alternative analysis - check for for-loop initialization
   // opportunity This only runs if the compound statement analysis didn't find
   // a smaller scope Only check local variables, not parameters
   const ForStmt *CommonForLoop = nullptr;
