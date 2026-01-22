@@ -9,8 +9,6 @@
 define amdgpu_ps void @buffer_store_bf16(ptr addrspace(8) inreg %rsrc, bfloat %data, i32 %offset) {
 ; GFX7-LABEL: buffer_store_bf16:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    buffer_store_short v0, v1, s[0:3], 0 offen
 ; GFX7-NEXT:    s_endpgm
 ;
