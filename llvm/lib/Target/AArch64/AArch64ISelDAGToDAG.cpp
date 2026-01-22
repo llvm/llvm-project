@@ -537,10 +537,11 @@ INITIALIZE_PASS(AArch64DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 /// to help instruction selector determine which operands are in Neon registers.
 static SDValue addBitcastHints(SelectionDAG &DAG, SDNode &N) {
   SDLoc DL(&N);
-  auto getFloatVT = [](EVT VT) {
+  auto getFloatVT = [&](EVT VT) {
     EVT ScalarVT = VT.getScalarType();
     assert((ScalarVT == MVT::i32 || ScalarVT == MVT::i64) && "Unexpected VT");
-    return VT.changeElementType(ScalarVT == MVT::i32 ? MVT::f32 : MVT::f64);
+    return VT.changeElementType(*(DAG.getContext()),
+                                ScalarVT == MVT::i32 ? MVT::f32 : MVT::f64);
   };
   auto bitcastToFloat = [&](SDValue Val) {
     return DAG.getBitcast(getFloatVT(Val.getValueType()), Val);
@@ -7828,7 +7829,7 @@ void AArch64DAGToDAGISel::PreprocessISelDAG() {
       EVT ScalarTy = N.getValueType(0).getVectorElementType();
       if ((ScalarTy == MVT::i32 || ScalarTy == MVT::i64) && ScalarTy == N.getOperand(0).getValueType())
         Result = addBitcastHints(*CurDAG, N);
-      
+
       break;
     }
     default:
