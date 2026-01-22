@@ -7,26 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/Extensions/ShardingExtensions.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Shard/Interfaces/ShardingInterfaceImpl.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 
 using namespace mlir;
 
 /// Variadic helper function.
 template <typename... OpTypes>
 static void registerAll(MLIRContext *ctx) {
-  (OpTypes::template attachInterface<shard::IndependentParallelIteratorDomainShardingInterface<OpTypes>>(*ctx), ...);
+  (OpTypes::template attachInterface<
+       shard::IndependentParallelIteratorDomainShardingInterface<OpTypes>>(
+       *ctx),
+   ...);
 }
 
 void mlir::bufferization::shard_ext::registerShardingInterfaceExternalModels(
     DialectRegistry &registry) {
 
-  registry.addExtension(+[](MLIRContext *ctx, bufferization::BufferizationDialect *dialect) {
-        registerAll<
-          bufferization::AllocTensorOp,
-          bufferization::DeallocTensorOp,
-          bufferization::MaterializeInDestinationOp
-        >(ctx);
+  registry.addExtension(+[](MLIRContext *ctx,
+                            bufferization::BufferizationDialect *dialect) {
+    registerAll<bufferization::AllocTensorOp, bufferization::DeallocTensorOp,
+                bufferization::MaterializeInDestinationOp>(ctx);
   });
 }
