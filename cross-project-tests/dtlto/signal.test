@@ -12,12 +12,13 @@ RUN: %clang --target=x86_64-linux-gnu -O2 t1.c t2.c -flto=thin -c
 RUN: llvm-ar rcs t.a t1.o t2.o
 
 DEFINE: %{tdir} = dummy-to-make-lit-work
-DEFINE: %{kill-dtlto} = rm -f send-signal && mkdir %{tdir} && \
-DEFINE:   %python killer.py \
+DEFINE: %{kill-dtlto} = \
+DEFINE:   rm -f send-signal1 && rm -f send-signal2 && mkdir %{tdir} && \
+DEFINE:   %python %S/test_temps.py %{tdir} kill \
 DEFINE:     %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin \
 DEFINE:       -fuse-ld=lld -Wl,--whole-archive t.a -o %{tdir}/t.elf -shared \
 DEFINE:       -fthinlto-distributor=%python \
-DEFINE:       -Xthinlto-distributor=local_codegen_and_wait.py
+DEFINE:       -Xthinlto-distributor=%S/local_codegen_and_wait.py
 
 # Check that all temporary files are removed if the process is aborted.
 REDEFINE: %{tdir} = empty
@@ -56,45 +57,3 @@ __attribute__((retain)) int t1(int x) { return x; }
 
 #--- t2.c
 __attribute__((retain)) int t2(int x) { return x; }
-
-#--- local_codegen_and_wait.py
-"""Perform codegen locally, create "send-signal" file and wait."""
-from pathlib import Path
-import json, subprocess, sys, time
-
-# Load the DTLTO information from the input JSON file.
-data = json.loads(Path(sys.argv[-1]).read_bytes())
-
-# Iterate over the jobs and execute the codegen tool.
-for job in data["jobs"]:
-    subprocess.check_call(data["common"]["args"] + job["args"])
-Path("send-signal").touch()
-while True:
-    time.sleep(1)
-
-#--- killer.py
-"""Run command, wait for "send-signal" file to exist, and then send a
-termination signal."""
-import os, sys, time, signal, subprocess
-
-if os.name == "nt":
-    # CREATE_NEW_PROCESS_GROUP is used so that p.send_signal(CTRL_BREAK_EVENT)
-    # does not get sent to the LIT processes that are running the test.
-    kwargs = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
-else:
-    # Makes the child a process-group leader so os.killpg(p.pid, SIGINT) works.
-    kwargs = {"start_new_session": True}
-
-p = subprocess.Popen(sys.argv[1:], **kwargs)
-
-while not os.path.exists("send-signal"):
-    time.sleep(0.05)
-
-if os.name == "nt":
-    # Note that CTRL_C_EVENT does not appear to work for clang.
-    p.send_signal(signal.CTRL_BREAK_EVENT)
-else:
-    os.killpg(p.pid, signal.SIGINT)
-p.wait()
-
-sys.exit(0 if p.returncode != 0 else 1)

@@ -1,8 +1,16 @@
-"""Run command, wait for "send-signal1" file to exist, perform some action on
-the DTLTO files (such as locking them) the action performed is based on the test
-directory name, then create "send-signal2" file."""
+"""
+Run a command, wait for the "send-signal1" file to appear, then perform an
+action on the DTLTO files in the output directory (for example, locking
+them). The output directory is specified by sys.argv[1], and the action to
+perform is specified by sys.argv[2]. Finally, create the "send-signal2" file.
 
-import ctypes, os, subprocess, sys, time
+This script works in tandem with local_codegen_and_wait.py. By coordinating
+via the "send-signal*" files, the scripts ensure that the action is performed
+after all DTLTO backend compilations have completed but before DTLTO itself
+finishes. At this stage, DTLTO temporary files have not yet been cleaned up.
+"""
+
+import ctypes, os, subprocess, sys, time, signal
 from ctypes import wintypes
 from pathlib import Path
 
@@ -37,20 +45,39 @@ def lock_no_delete_share(path):
 
 
 output_dir = sys.argv[1]
-p = subprocess.Popen(sys.argv[2:])
+action = sys.argv[2]
+
+kwargs = {}
+if action == "kill":
+    if os.name == "nt":
+        # CREATE_NEW_PROCESS_GROUP is used so that p.send_signal(CTRL_BREAK_EVENT)
+        # does not get sent to the LIT processes that are running the test.
+        kwargs = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    else:
+        # Makes the child a process-group leader so os.killpg(p.pid, SIGINT) works.
+        kwargs = {"start_new_session": True}
+
+p = subprocess.Popen(sys.argv[3:], **kwargs)
 
 while not os.path.exists("send-signal1") and p.poll() is None:
     time.sleep(0.05)
 if p.poll() is not None:
     sys.exit(1)
 
-if output_dir == "locked":
+if action == "kill":
+    if os.name == "nt":
+        # Note that CTRL_C_EVENT does not appear to work for clang.
+        p.send_signal(signal.CTRL_BREAK_EVENT)
+    else:
+        os.killpg(p.pid, signal.SIGINT)
+
+if action == "lock":
     print("Lock any files in the output directory.")
     for f in Path(output_dir).iterdir():
         if f.is_file():
             lock_no_delete_share(str(f))
 
-if output_dir == "removed":
+if action == "remove":
     print("Remove non-essential files in the output directory.")
     for f in Path(output_dir).iterdir():
         if f.is_file() and not f.name.endswith("native.o"):
@@ -58,4 +85,9 @@ if output_dir == "removed":
 
 Path("send-signal2").touch()
 
-sys.exit(p.wait())
+if action == "kill":
+    p.wait()
+    sys.exit(0 if p.returncode != 0 else 1)
+else:
+    sys.exit(p.wait())
+
