@@ -10,7 +10,7 @@ define amdgpu_ps void @scalar_alloca_ptr_with_vector_gep_of_gep(i32 %idx, ptr ad
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <20 x i32> [[TMP1]], i32 2, i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[IDX]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 1, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <20 x i32> [[TMP3]], i32 [[TMP5]]
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr addrspace(1) [[OUTPUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -31,12 +31,12 @@ define amdgpu_ps void @scalar_alloca_ptr_with_vector_gep_of_gep3(i32 %idx, ptr a
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[IDX]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 8, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i32> [[ALLOCA]], i32 10, i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i32> [[TMP2]], i32 20, i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[IDX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 9, [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], 9
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x i32> [[TMP4]], i32 [[TMP6]]
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr addrspace(1) [[OUTPUT]], align 4
 ; CHECK-NEXT:    ret void

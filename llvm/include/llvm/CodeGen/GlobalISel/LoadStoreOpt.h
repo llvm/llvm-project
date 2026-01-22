@@ -162,7 +162,7 @@ private:
   DenseMap<unsigned, BitVector> LegalStoreSizes;
   bool IsPreLegalizer = false;
   /// Contains instructions to be erased at the end of a block scan.
-  SmallSet<MachineInstr *, 16> InstsToErase;
+  SmallPtrSet<MachineInstr *, 16> InstsToErase;
 
 public:
   LoadStoreOpt();

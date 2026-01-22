@@ -1,4 +1,4 @@
-//===--- PreferStaticOverAnonymousNamespaceCheck.h - clang-tidy -*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::llvm_check {
 /// suggests replacing them with ``static`` declarations.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvm/prefer-static-over-anonymous-namespace.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/llvm/prefer-static-over-anonymous-namespace.html
 class PreferStaticOverAnonymousNamespaceCheck : public ClangTidyCheck {
 public:
   PreferStaticOverAnonymousNamespaceCheck(StringRef Name,

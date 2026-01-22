@@ -82,7 +82,7 @@ llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
     ReportErrnumFatal("pthread_attr_init failed", errnum);
   }
 
-  auto AttrGuard = llvm::make_scope_exit([&] {
+  llvm::scope_exit AttrGuard([&] {
     if ((errnum = ::pthread_attr_destroy(&Attr)) != 0) {
       ReportErrnumFatal("pthread_attr_destroy failed", errnum);
     }
@@ -119,9 +119,17 @@ void llvm_thread_join_impl(pthread_t Thread) {
   }
 }
 
-pthread_t llvm_thread_get_id_impl(pthread_t Thread) { return Thread; }
+llvm::thread::id llvm_thread_get_id_impl(pthread_t Thread) {
+#ifdef __MVS__
+  return Thread.__;
+#else
+  return Thread;
+#endif
+}
 
-pthread_t llvm_thread_get_current_id_impl() { return ::pthread_self(); }
+llvm::thread::id llvm_thread_get_current_id_impl() {
+  return llvm_thread_get_id_impl(::pthread_self());
+}
 
 } // namespace llvm
 
@@ -148,6 +156,8 @@ uint64_t llvm::get_threadid() {
   return uint64_t(syscall(__NR_gettid));
 #elif defined(_AIX)
   return uint64_t(thread_self());
+#elif defined(__MVS__)
+  return llvm_thread_get_id_impl(pthread_self());
 #else
   return uint64_t(pthread_self());
 #endif
@@ -194,9 +204,9 @@ void llvm::set_thread_name(const Twine &Name) {
   if (get_max_thread_name_length() > 0)
     NameStr = NameStr.take_back(get_max_thread_name_length() - 1);
   (void)NameStr;
-#if defined(HAVE_PTHREAD_SET_NAME_NP)
+#if defined(HAVE_PTHREAD_SET_NAME_NP) && HAVE_PTHREAD_SET_NAME_NP
   ::pthread_set_name_np(::pthread_self(), NameStr.data());
-#elif defined(HAVE_PTHREAD_SETNAME_NP)
+#elif defined(HAVE_PTHREAD_SETNAME_NP) && HAVE_PTHREAD_SETNAME_NP
 #if defined(__NetBSD__)
   ::pthread_setname_np(::pthread_self(), "%s",
                        const_cast<char *>(NameStr.data()));

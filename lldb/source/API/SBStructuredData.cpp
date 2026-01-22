@@ -232,3 +232,47 @@ lldb::SBScriptObject SBStructuredData::GetGenericValue() const {
 
   return {m_impl_up->GetGenericValue(), eScriptLanguageDefault};
 }
+
+void SBStructuredData::SetValueForKey(const char *key,
+                                      SBStructuredData &value) {
+  LLDB_INSTRUMENT_VA(this, key, value);
+
+  if (StructuredData::ObjectSP obj_sp = value.m_impl_up->GetObjectSP())
+    m_impl_up->SetValueForKey(key, obj_sp);
+}
+
+void SBStructuredData::SetUnsignedIntegerValue(uint64_t value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetUnsignedIntegerValue(value);
+}
+
+void SBStructuredData::SetSignedIntegerValue(int64_t value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetSignedIntegerValue(value);
+}
+
+void SBStructuredData::SetFloatValue(double value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetFloatValue(value);
+}
+
+void SBStructuredData::SetBooleanValue(bool value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetBooleanValue(value);
+}
+
+void SBStructuredData::SetStringValue(const char *value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetStringValue(value);
+}
+
+void SBStructuredData::SetGenericValue(SBScriptObject value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetGenericValue(value.GetPointer());
+}

@@ -27,7 +27,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
 
-cl::opt<bool> NoKernelInfoEndLTO(
+cl::opt<bool> llvm::NoKernelInfoEndLTO(
     "no-kernel-info-end-lto",
     cl::desc("remove the kernel-info pass at the end of the full LTO pipeline"),
     cl::init(false), cl::Hidden);
@@ -133,7 +133,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
             .isReadOnlyWithRel())
       return false;
     const DataLayout &DL = GV->getDataLayout();
-    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t Size = GV->getGlobalSize(DL);
     return Size == 0 || Size > LargeDataThreshold;
   }
 
@@ -158,11 +158,9 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
     Options.X = F.getFnAttribute(Y).getValueAsBool();     \
   } while (0)
 
-  RESET_OPTION(UnsafeFPMath, "unsafe-fp-math");
   RESET_OPTION(NoInfsFPMath, "no-infs-fp-math");
   RESET_OPTION(NoNaNsFPMath, "no-nans-fp-math");
   RESET_OPTION(NoSignedZerosFPMath, "no-signed-zeros-fp-math");
-  RESET_OPTION(ApproxFuncFPMath, "approx-func-fp-math");
 }
 
 /// Returns the code generation relocation model. The choices are static, PIC,

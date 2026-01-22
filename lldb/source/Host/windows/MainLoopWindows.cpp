@@ -53,13 +53,12 @@ public:
 
   ~PipeEvent() override {
     if (m_monitor_thread.joinable()) {
-      m_stopped = true;
-      SetEvent(m_ready);
-      // Keep trying to cancel ReadFile() until the thread exits.
-      do {
-        CancelIoEx(m_handle, /*lpOverlapped=*/NULL);
-      } while (WaitForSingleObject(m_monitor_thread.native_handle(), 1) ==
-               WAIT_TIMEOUT);
+      {
+        std::lock_guard<std::mutex> guard(m_mutex);
+        m_stopped = true;
+        SetEvent(m_ready);
+        CancelIoEx(m_handle, &m_ov);
+      }
       m_monitor_thread.join();
     }
     CloseHandle(m_event);
@@ -67,20 +66,25 @@ public:
   }
 
   void WillPoll() override {
-    if (WaitForSingleObject(m_event, /*dwMilliseconds=*/0) != WAIT_TIMEOUT) {
-      // The thread has already signalled that the data is available. No need
-      // for further polling until we consume that event.
-      return;
-    }
-    if (WaitForSingleObject(m_ready, /*dwMilliseconds=*/0) != WAIT_TIMEOUT) {
-      // The thread is already waiting for data to become available.
+    std::lock_guard<std::mutex> guard(m_mutex);
+
+    HANDLE handles[2] = {m_event, m_ready};
+    if (WaitForMultipleObjects(2, handles, /*bWaitAll=*/FALSE,
+                               /*dwMilliseconds=*/0) != WAIT_TIMEOUT) {
+      // Either:
+      // - The thread has already signalled that the data is available. No need
+      //   for further polling until we consume that event.
+      // - The thread is already waiting for data to become available.
       return;
     }
     // Start waiting.
     SetEvent(m_ready);
   }
 
-  void Disarm() override { ResetEvent(m_event); }
+  void Disarm() override {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    ResetEvent(m_event);
+  }
 
   /// Monitors the handle performing a zero byte read to determine when data is
   /// avaiable.
@@ -91,17 +95,16 @@ public:
     do {
       char buf[1];
       DWORD bytes_read = 0;
-      OVERLAPPED ov;
-      ZeroMemory(&ov, sizeof(ov));
+      ZeroMemory(&m_ov, sizeof(m_ov));
       // Block on a 0-byte read; this will only resume when data is
       // available in the pipe. The pipe must be PIPE_WAIT or this thread
       // will spin.
-      BOOL success =
-          ReadFile(m_handle, buf, /*nNumberOfBytesToRead=*/0, &bytes_read, &ov);
+      BOOL success = ReadFile(m_handle, buf, /*nNumberOfBytesToRead=*/0,
+                              &bytes_read, &m_ov);
       DWORD bytes_available = 0;
       DWORD err = GetLastError();
       if (!success && err == ERROR_IO_PENDING) {
-        success = GetOverlappedResult(m_handle, &ov, &bytes_read,
+        success = GetOverlappedResult(m_handle, &m_ov, &bytes_read,
                                       /*bWait=*/TRUE);
         err = GetLastError();
       }
@@ -123,12 +126,20 @@ public:
         // Read may have been cancelled, try again.
         continue;
       }
+      {
+        std::lock_guard<std::mutex> guard(m_mutex);
 
-      // Notify that data is available on the pipe. It's important to set this
-      // before clearing m_ready to avoid a race with WillPoll.
-      SetEvent(m_event);
-      // Stop polling until we're told to resume.
-      ResetEvent(m_ready);
+        // Notify that data is available on the pipe.
+        SetEvent(m_event);
+        if (m_stopped) {
+          // The destructor might have called SetEvent(m_ready) before this
+          // block. If that's the case, ResetEvent(m_ready) will cause
+          // WaitForSingleObject to wait forever unless we break early.
+          break;
+        }
+        // Stop polling until we're told to resume.
+        ResetEvent(m_ready);
+      }
 
       // Wait until the current read is consumed before doing the next read.
       WaitForSingleObject(m_ready, INFINITE);
@@ -138,8 +149,10 @@ public:
 private:
   HANDLE m_handle;
   HANDLE m_ready;
+  OVERLAPPED m_ov;
   std::thread m_monitor_thread;
   std::atomic<bool> m_stopped = false;
+  std::mutex m_mutex;
 };
 
 class SocketEvent : public MainLoopWindows::IOEvent {
@@ -276,4 +289,6 @@ Status MainLoopWindows::Run() {
   return Status();
 }
 
-void MainLoopWindows::Interrupt() { WSASetEvent(m_interrupt_event); }
+bool MainLoopWindows::Interrupt() {
+  return WSASetEvent(m_interrupt_event);
+}

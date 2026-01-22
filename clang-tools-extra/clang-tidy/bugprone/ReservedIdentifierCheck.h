@@ -1,4 +1,4 @@
-//===--- ReservedIdentifierCheck.h - clang-tidy -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,7 @@ namespace clang::tidy::bugprone {
 /// double underscore occurring anywhere.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/reserved-identifier.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/reserved-identifier.html
 class ReservedIdentifierCheck final : public RenamerClangTidyCheck {
   const bool Invert;
   const std::vector<StringRef> AllowedIdentifiersRaw;

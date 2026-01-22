@@ -238,6 +238,16 @@ func.func private @samped_image_type_invaid_type(!spirv.sampled_image<f32>) -> (
 
 // -----
 
+// expected-error @+1 {{sampled image Dim must not be SubpassData or Buffer, got Buffer}}
+func.func private @sampled_image_type(!spirv.sampled_image<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>) -> ()
+
+// -----
+
+// expected-error @+1 {{sampled image Dim must not be SubpassData or Buffer, got SubpassData}}
+func.func private @sampled_image_type(!spirv.sampled_image<!spirv.image<f32, SubpassData, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>) -> ()
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // StructType
 //===----------------------------------------------------------------------===//

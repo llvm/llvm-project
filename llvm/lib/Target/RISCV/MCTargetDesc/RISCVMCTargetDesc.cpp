@@ -60,7 +60,13 @@ static MCRegisterInfo *createRISCVMCRegisterInfo(const Triple &TT) {
 static MCAsmInfo *createRISCVMCAsmInfo(const MCRegisterInfo &MRI,
                                        const Triple &TT,
                                        const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new RISCVMCAsmInfo(TT);
+  MCAsmInfo *MAI = nullptr;
+  if (TT.isOSBinFormatELF())
+    MAI = new RISCVMCAsmInfo(TT);
+  else if (TT.isOSBinFormatMachO())
+    MAI = new RISCVMCAsmInfoDarwin();
+  else
+    reportFatalUsageError("unsupported object format");
 
   unsigned SP = MRI.getDwarfRegNum(RISCV::X2, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, SP, 0);
@@ -113,7 +119,17 @@ createRISCVObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSBinFormatELF())
     return new RISCVTargetELFStreamer(S, STI);
-  return nullptr;
+  return new RISCVTargetStreamer(S);
+}
+
+static MCStreamer *
+createMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
+                    std::unique_ptr<MCObjectWriter> &&OW,
+                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
+                             std::move(Emitter),
+                             /*DWARFMustBeAtTheEnd*/ false,
+                             /*LabelSections*/ true);
 }
 
 static MCTargetStreamer *
@@ -135,14 +151,24 @@ class RISCVMCInstrAnalysis : public MCInstrAnalysis {
   static bool isGPR(MCRegister Reg) {
     return Reg >= RISCV::X0 && Reg <= RISCV::X31;
   }
+  static bool isYGPR(MCRegister Reg) {
+    return Reg >= RISCV::X0_Y && Reg <= RISCV::X31_Y;
+  }
+  static bool isZeroReg(MCRegister Reg) {
+    return Reg == RISCV::X0 || Reg == RISCV::X0_Y;
+  }
 
   static unsigned getRegIndex(MCRegister Reg) {
+    if (isYGPR(Reg)) {
+      assert(Reg != RISCV::X0_Y && "Invalid GPR reg");
+      return Reg - RISCV::X1_Y;
+    }
     assert(isGPR(Reg) && Reg != RISCV::X0 && "Invalid GPR reg");
     return Reg - RISCV::X1;
   }
 
   void setGPRState(MCRegister Reg, std::optional<int64_t> Value) {
-    if (Reg == RISCV::X0)
+    if (isZeroReg(Reg))
       return;
 
     auto Index = getRegIndex(Reg);
@@ -156,7 +182,7 @@ class RISCVMCInstrAnalysis : public MCInstrAnalysis {
   }
 
   std::optional<int64_t> getGPRState(MCRegister Reg) const {
-    if (Reg == RISCV::X0)
+    if (isZeroReg(Reg))
       return 0;
 
     auto Index = getRegIndex(Reg);
@@ -376,7 +402,8 @@ static MCInstrAnalysis *createRISCVInstrAnalysis(const MCInstrInfo *Info) {
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeRISCVTargetMC() {
-  for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target()}) {
+  for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target(),
+                    &getTheRISCV32beTarget(), &getTheRISCV64beTarget()}) {
     TargetRegistry::RegisterMCAsmInfo(*T, createRISCVMCAsmInfo);
     TargetRegistry::RegisterMCObjectFileInfo(*T, createRISCVMCObjectFileInfo);
     TargetRegistry::RegisterMCInstrInfo(*T, createRISCVMCInstrInfo);
@@ -386,6 +413,7 @@ LLVMInitializeRISCVTargetMC() {
     TargetRegistry::RegisterMCInstPrinter(*T, createRISCVMCInstPrinter);
     TargetRegistry::RegisterMCSubtargetInfo(*T, createRISCVMCSubtargetInfo);
     TargetRegistry::RegisterELFStreamer(*T, createRISCVELFStreamer);
+    TargetRegistry::RegisterMachOStreamer(*T, createMachOStreamer);
     TargetRegistry::RegisterObjectTargetStreamer(
         *T, createRISCVObjectTargetStreamer);
     TargetRegistry::RegisterMCInstrAnalysis(*T, createRISCVInstrAnalysis);

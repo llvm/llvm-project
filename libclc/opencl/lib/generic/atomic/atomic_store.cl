@@ -6,14 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__opencl_c_atomic_order_seq_cst) &&                                \
-    defined(__opencl_c_atomic_scope_device)
-
 #include <clc/atomic/clc_atomic_store.h>
-#include <clc/opencl/atomic/atomic_store.h>
+#include <clc/opencl/utils.h>
 
-#define FUNCTION atomic_store
-#define __IMPL_FUNCTION __clc_atomic_store
+#define __CLC_FUNCTION atomic_store
+#define __CLC_IMPL_FUNCTION __clc_atomic_store
 #define __CLC_RETURN_VOID
 
 #define __CLC_BODY <atomic_def.inc>
@@ -21,6 +18,3 @@
 
 #define __CLC_BODY <atomic_def.inc>
 #include <clc/math/gentype.inc>
-
-#endif // defined(__opencl_c_atomic_order_seq_cst) &&
-       // defined(__opencl_c_atomic_scope_device)

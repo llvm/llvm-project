@@ -131,8 +131,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atan2(__CLC_GENTYPE y,
   {
     __CLC_GENTYPE val = vbyu > 0.0625 ? vbyu : 0.063;
     __CLC_INTN index = __CLC_CONVERT_INTN(__clc_fma(256.0, val, 0.5));
-    q1 = USE_TABLE(atan_jby256_tbl_head, index - 16);
-    q2 = USE_TABLE(atan_jby256_tbl_tail, index - 16);
+    q1 = __CLC_USE_TABLE(atan_jby256_tbl_head, index - 16);
+    q2 = __CLC_USE_TABLE(atan_jby256_tbl_tail, index - 16);
     __CLC_GENTYPE c = __CLC_CONVERT_GENTYPE(index) * 0x1.0p-8;
 
     // We're going to scale u and v by 2^(-u_exponent) to bring them close to 1

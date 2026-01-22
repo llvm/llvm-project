@@ -653,12 +653,11 @@ define i8 @mul_const_incoming0_speculatable(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ 42, [[ENTRY:%.*]] ], [ [[X:%.*]], [[IF]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ 17, [[ENTRY]] ], [ [[Y:%.*]], [[IF]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ -54, [[ENTRY:%.*]] ], [ [[TMP0]], [[IF]] ]
 ; CHECK-NEXT:    call void @sideeffect()
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[P0]], [[P1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:

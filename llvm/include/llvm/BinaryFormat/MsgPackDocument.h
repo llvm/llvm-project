@@ -213,6 +213,7 @@ public:
   LLVM_ABI DocNode &operator=(unsigned Val);
   LLVM_ABI DocNode &operator=(int64_t Val);
   LLVM_ABI DocNode &operator=(uint64_t Val);
+  LLVM_ABI DocNode &operator=(double Val);
 
 private:
   // Private constructor setting KindAndDoc, used by methods in Document.

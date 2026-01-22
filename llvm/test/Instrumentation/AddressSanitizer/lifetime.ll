@@ -16,17 +16,13 @@ define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-NEXT:    [[TMP1:%.*]] = alloca i64, align 32
 ; CHECK-DEFAULT-NEXT:    store i64 0, ptr [[TMP1]], align 8
 ; CHECK-DEFAULT-NEXT:    [[MYALLOCA:%.*]] = alloca i8, i64 64, align 32
-; CHECK-DEFAULT-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[MYALLOCA]] to i64
-; CHECK-DEFAULT-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 32
-; CHECK-DEFAULT-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; CHECK-DEFAULT-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; CHECK-DEFAULT-NEXT:    store i64 1102416563, ptr [[TMP5]], align 8
-; CHECK-DEFAULT-NEXT:    [[TMP6:%.*]] = add i64 [[TMP2]], 8
-; CHECK-DEFAULT-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[MYALLOCA]], i64 32
+; CHECK-DEFAULT-NEXT:    store i64 1102416563, ptr [[MYALLOCA]], align 8
+; CHECK-DEFAULT-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[MYALLOCA]], i64 8
 ; CHECK-DEFAULT-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack to i64), ptr [[TMP7]], align 8
-; CHECK-DEFAULT-NEXT:    [[TMP8:%.*]] = add i64 [[TMP2]], 16
-; CHECK-DEFAULT-NEXT:    [[TMP9:%.*]] = inttoptr i64 [[TMP8]] to ptr
+; CHECK-DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[MYALLOCA]], i64 16
 ; CHECK-DEFAULT-NEXT:    store i64 ptrtoint (ptr @lifetime to i64), ptr [[TMP9]], align 8
+; CHECK-DEFAULT-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[MYALLOCA]] to i64
 ; CHECK-DEFAULT-NEXT:    [[TMP10:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-DEFAULT-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 2147450880
 ; CHECK-DEFAULT-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], 0
@@ -41,16 +37,16 @@ define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
 ; CHECK-DEFAULT-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
 ; CHECK-DEFAULT-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP20]], 0
-; CHECK-DEFAULT-NEXT:    br i1 [[TMP21]], label %[[BB22:.*]], label %[[BB27:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK-DEFAULT:       [[BB22]]:
+; CHECK-DEFAULT-NEXT:    br i1 [[TMP21]], label %[[BB18:.*]], label %[[BB23:.*]], !prof [[PROF1:![0-9]+]]
+; CHECK-DEFAULT:       [[BB18]]:
 ; CHECK-DEFAULT-NEXT:    [[TMP23:%.*]] = and i64 [[TMP16]], 7
 ; CHECK-DEFAULT-NEXT:    [[TMP24:%.*]] = trunc i64 [[TMP23]] to i8
 ; CHECK-DEFAULT-NEXT:    [[TMP25:%.*]] = icmp sge i8 [[TMP24]], [[TMP20]]
-; CHECK-DEFAULT-NEXT:    br i1 [[TMP25]], label %[[BB26:.*]], label %[[BB27]]
-; CHECK-DEFAULT:       [[BB26]]:
+; CHECK-DEFAULT-NEXT:    br i1 [[TMP25]], label %[[BB22:.*]], label %[[BB23]]
+; CHECK-DEFAULT:       [[BB22]]:
 ; CHECK-DEFAULT-NEXT:    call void @__asan_report_store1(i64 [[TMP16]]) #[[ATTR4:[0-9]+]]
 ; CHECK-DEFAULT-NEXT:    unreachable
-; CHECK-DEFAULT:       [[BB27]]:
+; CHECK-DEFAULT:       [[BB23]]:
 ; CHECK-DEFAULT-NEXT:    store volatile i8 0, ptr [[TMP4]], align 1
 ; CHECK-DEFAULT-NEXT:    [[TMP28:%.*]] = add i64 [[TMP11]], 4
 ; CHECK-DEFAULT-NEXT:    [[TMP29:%.*]] = inttoptr i64 [[TMP28]] to ptr
@@ -73,16 +69,16 @@ define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-NEXT:    [[TMP41:%.*]] = inttoptr i64 [[TMP40]] to ptr
 ; CHECK-DEFAULT-NEXT:    [[TMP42:%.*]] = load i8, ptr [[TMP41]], align 1
 ; CHECK-DEFAULT-NEXT:    [[TMP43:%.*]] = icmp ne i8 [[TMP42]], 0
-; CHECK-DEFAULT-NEXT:    br i1 [[TMP43]], label %[[BB44:.*]], label %[[BB49:.*]], !prof [[PROF1]]
-; CHECK-DEFAULT:       [[BB44]]:
+; CHECK-DEFAULT-NEXT:    br i1 [[TMP43]], label %[[BB40:.*]], label %[[BB45:.*]], !prof [[PROF1]]
+; CHECK-DEFAULT:       [[BB40]]:
 ; CHECK-DEFAULT-NEXT:    [[TMP45:%.*]] = and i64 [[TMP38]], 7
 ; CHECK-DEFAULT-NEXT:    [[TMP46:%.*]] = trunc i64 [[TMP45]] to i8
 ; CHECK-DEFAULT-NEXT:    [[TMP47:%.*]] = icmp sge i8 [[TMP46]], [[TMP42]]
-; CHECK-DEFAULT-NEXT:    br i1 [[TMP47]], label %[[BB48:.*]], label %[[BB49]]
-; CHECK-DEFAULT:       [[BB48]]:
+; CHECK-DEFAULT-NEXT:    br i1 [[TMP47]], label %[[BB44:.*]], label %[[BB45]]
+; CHECK-DEFAULT:       [[BB44]]:
 ; CHECK-DEFAULT-NEXT:    call void @__asan_report_store1(i64 [[TMP38]]) #[[ATTR4]]
 ; CHECK-DEFAULT-NEXT:    unreachable
-; CHECK-DEFAULT:       [[BB49]]:
+; CHECK-DEFAULT:       [[BB45]]:
 ; CHECK-DEFAULT-NEXT:    store volatile i8 0, ptr [[TMP36]], align 1
 ; CHECK-DEFAULT-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-DEFAULT-NEXT:    call void @__asan_poison_stack_memory(i64 [[TMP50]], i64 40)
@@ -95,16 +91,16 @@ define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-NEXT:    [[TMP56:%.*]] = inttoptr i64 [[TMP55]] to ptr
 ; CHECK-DEFAULT-NEXT:    [[TMP57:%.*]] = load i8, ptr [[TMP56]], align 1
 ; CHECK-DEFAULT-NEXT:    [[TMP58:%.*]] = icmp ne i8 [[TMP57]], 0
-; CHECK-DEFAULT-NEXT:    br i1 [[TMP58]], label %[[BB59:.*]], label %[[BB64:.*]], !prof [[PROF1]]
-; CHECK-DEFAULT:       [[BB59]]:
+; CHECK-DEFAULT-NEXT:    br i1 [[TMP58]], label %[[BB55:.*]], label %[[BB60:.*]], !prof [[PROF1]]
+; CHECK-DEFAULT:       [[BB55]]:
 ; CHECK-DEFAULT-NEXT:    [[TMP60:%.*]] = and i64 [[TMP53]], 7
 ; CHECK-DEFAULT-NEXT:    [[TMP61:%.*]] = trunc i64 [[TMP60]] to i8
 ; CHECK-DEFAULT-NEXT:    [[TMP62:%.*]] = icmp sge i8 [[TMP61]], [[TMP57]]
-; CHECK-DEFAULT-NEXT:    br i1 [[TMP62]], label %[[BB63:.*]], label %[[BB64]]
-; CHECK-DEFAULT:       [[BB63]]:
+; CHECK-DEFAULT-NEXT:    br i1 [[TMP62]], label %[[BB59:.*]], label %[[BB60]]
+; CHECK-DEFAULT:       [[BB59]]:
 ; CHECK-DEFAULT-NEXT:    call void @__asan_report_store1(i64 [[TMP53]]) #[[ATTR4]]
 ; CHECK-DEFAULT-NEXT:    unreachable
-; CHECK-DEFAULT:       [[BB64]]:
+; CHECK-DEFAULT:       [[BB60]]:
 ; CHECK-DEFAULT-NEXT:    store volatile i8 0, ptr [[TMP4]], align 1
 ; CHECK-DEFAULT-NEXT:    [[TMP65:%.*]] = add i64 [[TMP11]], 4
 ; CHECK-DEFAULT-NEXT:    [[TMP66:%.*]] = inttoptr i64 [[TMP65]] to ptr
@@ -112,7 +108,7 @@ define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-NEXT:    [[TMP67:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-DEFAULT-NEXT:    [[TMP68:%.*]] = load i64, ptr [[TMP1]], align 8
 ; CHECK-DEFAULT-NEXT:    call void @__asan_allocas_unpoison(i64 [[TMP68]], i64 [[TMP67]])
-; CHECK-DEFAULT-NEXT:    store i64 1172321806, ptr [[TMP5]], align 8
+; CHECK-DEFAULT-NEXT:    store i64 1172321806, ptr [[MYALLOCA]], align 8
 ; CHECK-DEFAULT-NEXT:    [[TMP69:%.*]] = add i64 [[TMP11]], 0
 ; CHECK-DEFAULT-NEXT:    [[TMP70:%.*]] = inttoptr i64 [[TMP69]] to ptr
 ; CHECK-DEFAULT-NEXT:    store i64 0, ptr [[TMP70]], align 1
@@ -121,17 +117,13 @@ define void @lifetime() sanitize_address {
 ; CHECK-NO-DYNAMIC-LABEL: define void @lifetime(
 ; CHECK-NO-DYNAMIC-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NO-DYNAMIC-NEXT:    [[MYALLOCA:%.*]] = alloca i8, i64 64, align 32
-; CHECK-NO-DYNAMIC-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[MYALLOCA]] to i64
-; CHECK-NO-DYNAMIC-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 32
-; CHECK-NO-DYNAMIC-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; CHECK-NO-DYNAMIC-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP1]] to ptr
-; CHECK-NO-DYNAMIC-NEXT:    store i64 1102416563, ptr [[TMP4]], align 8
-; CHECK-NO-DYNAMIC-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], 8
-; CHECK-NO-DYNAMIC-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; CHECK-NO-DYNAMIC-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[MYALLOCA]], i64 32
+; CHECK-NO-DYNAMIC-NEXT:    store i64 1102416563, ptr [[MYALLOCA]], align 8
+; CHECK-NO-DYNAMIC-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[MYALLOCA]], i64 8
 ; CHECK-NO-DYNAMIC-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack to i64), ptr [[TMP6]], align 8
-; CHECK-NO-DYNAMIC-NEXT:    [[TMP7:%.*]] = add i64 [[TMP1]], 16
-; CHECK-NO-DYNAMIC-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
+; CHECK-NO-DYNAMIC-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[MYALLOCA]], i64 16
 ; CHECK-NO-DYNAMIC-NEXT:    store i64 ptrtoint (ptr @lifetime to i64), ptr [[TMP8]], align 8
+; CHECK-NO-DYNAMIC-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[MYALLOCA]] to i64
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP1]], 3
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 2147450880
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 0
@@ -146,16 +138,16 @@ define void @lifetime() sanitize_address {
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP19]], 0
-; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP20]], label %[[BB21:.*]], label %[[BB26:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK-NO-DYNAMIC:       [[BB21]]:
+; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP20]], label %[[BB17:.*]], label %[[BB22:.*]], !prof [[PROF1:![0-9]+]]
+; CHECK-NO-DYNAMIC:       [[BB17]]:
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP22:%.*]] = and i64 [[TMP15]], 7
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP23:%.*]] = trunc i64 [[TMP22]] to i8
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP24:%.*]] = icmp sge i8 [[TMP23]], [[TMP19]]
-; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP24]], label %[[BB25:.*]], label %[[BB26]]
-; CHECK-NO-DYNAMIC:       [[BB25]]:
+; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP24]], label %[[BB21:.*]], label %[[BB22]]
+; CHECK-NO-DYNAMIC:       [[BB21]]:
 ; CHECK-NO-DYNAMIC-NEXT:    call void @__asan_report_store1(i64 [[TMP15]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NO-DYNAMIC-NEXT:    unreachable
-; CHECK-NO-DYNAMIC:       [[BB26]]:
+; CHECK-NO-DYNAMIC:       [[BB22]]:
 ; CHECK-NO-DYNAMIC-NEXT:    store volatile i8 0, ptr [[TMP3]], align 1
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP27:%.*]] = add i64 [[TMP10]], 4
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP28:%.*]] = inttoptr i64 [[TMP27]] to ptr
@@ -171,16 +163,16 @@ define void @lifetime() sanitize_address {
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP34:%.*]] = inttoptr i64 [[TMP33]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP35:%.*]] = load i8, ptr [[TMP34]], align 1
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP36:%.*]] = icmp ne i8 [[TMP35]], 0
-; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP36]], label %[[BB37:.*]], label %[[BB42:.*]], !prof [[PROF1]]
-; CHECK-NO-DYNAMIC:       [[BB37]]:
+; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP36]], label %[[BB33:.*]], label %[[BB38:.*]], !prof [[PROF1]]
+; CHECK-NO-DYNAMIC:       [[BB33]]:
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP38:%.*]] = and i64 [[TMP31]], 7
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP39:%.*]] = trunc i64 [[TMP38]] to i8
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP40:%.*]] = icmp sge i8 [[TMP39]], [[TMP35]]
-; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP40]], label %[[BB41:.*]], label %[[BB42]]
-; CHECK-NO-DYNAMIC:       [[BB41]]:
+; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP40]], label %[[BB37:.*]], label %[[BB38]]
+; CHECK-NO-DYNAMIC:       [[BB37]]:
 ; CHECK-NO-DYNAMIC-NEXT:    call void @__asan_report_store1(i64 [[TMP31]]) #[[ATTR4]]
 ; CHECK-NO-DYNAMIC-NEXT:    unreachable
-; CHECK-NO-DYNAMIC:       [[BB42]]:
+; CHECK-NO-DYNAMIC:       [[BB38]]:
 ; CHECK-NO-DYNAMIC-NEXT:    store volatile i8 0, ptr [[ARR]], align 1
 ; CHECK-NO-DYNAMIC-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARR]])
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP43:%.*]] = add i64 [[TMP10]], 4
@@ -192,21 +184,21 @@ define void @lifetime() sanitize_address {
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP48:%.*]] = inttoptr i64 [[TMP47]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP49:%.*]] = load i8, ptr [[TMP48]], align 1
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP50:%.*]] = icmp ne i8 [[TMP49]], 0
-; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP50]], label %[[BB51:.*]], label %[[BB56:.*]], !prof [[PROF1]]
-; CHECK-NO-DYNAMIC:       [[BB51]]:
+; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP50]], label %[[BB47:.*]], label %[[BB52:.*]], !prof [[PROF1]]
+; CHECK-NO-DYNAMIC:       [[BB47]]:
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP52:%.*]] = and i64 [[TMP45]], 7
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP53:%.*]] = trunc i64 [[TMP52]] to i8
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP54:%.*]] = icmp sge i8 [[TMP53]], [[TMP49]]
-; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP54]], label %[[BB55:.*]], label %[[BB56]]
-; CHECK-NO-DYNAMIC:       [[BB55]]:
+; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP54]], label %[[BB51:.*]], label %[[BB52]]
+; CHECK-NO-DYNAMIC:       [[BB51]]:
 ; CHECK-NO-DYNAMIC-NEXT:    call void @__asan_report_store1(i64 [[TMP45]]) #[[ATTR4]]
 ; CHECK-NO-DYNAMIC-NEXT:    unreachable
-; CHECK-NO-DYNAMIC:       [[BB56]]:
+; CHECK-NO-DYNAMIC:       [[BB52]]:
 ; CHECK-NO-DYNAMIC-NEXT:    store volatile i8 0, ptr [[TMP3]], align 1
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP57:%.*]] = add i64 [[TMP10]], 4
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP58:%.*]] = inttoptr i64 [[TMP57]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    store i8 -8, ptr [[TMP58]], align 1
-; CHECK-NO-DYNAMIC-NEXT:    store i64 1172321806, ptr [[TMP4]], align 8
+; CHECK-NO-DYNAMIC-NEXT:    store i64 1172321806, ptr [[MYALLOCA]], align 8
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP59:%.*]] = add i64 [[TMP10]], 0
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP60:%.*]] = inttoptr i64 [[TMP59]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    store i64 0, ptr [[TMP60]], align 1

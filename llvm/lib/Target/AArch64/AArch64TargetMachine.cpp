@@ -53,8 +53,6 @@
 #include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <memory>
-#include <optional>
-#include <string>
 
 using namespace llvm;
 
@@ -224,6 +222,17 @@ static cl::opt<bool>
                            cl::desc("Enable Machine Pipeliner for AArch64"),
                            cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    EnableNewSMEABILowering("aarch64-new-sme-abi",
+                            cl::desc("Enable new lowering for the SME ABI"),
+                            cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EnableSRLTSubregToRegMitigation(
+    "aarch64-srlt-mitigate-sr2r",
+    cl::desc("Enable SUBREG_TO_REG mitigation by adding 'implicit-def' for "
+             "super-regs when using Subreg Liveness Tracking"),
+    cl::init(true), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
   // Register the target.
@@ -257,12 +266,15 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PostSelectOptimizePass(PR);
   initializeAArch64PromoteConstantPass(PR);
   initializeAArch64RedundantCopyEliminationPass(PR);
+  initializeAArch64RedundantCondBranchPass(PR);
   initializeAArch64StorePairSuppressPass(PR);
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
   initializeLDTLSCleanupPass(PR);
   initializeKCFIPass(PR);
   initializeSMEABIPass(PR);
+  initializeMachineSMEABIPass(PR);
+  initializeAArch64SRLTDefineSuperRegsPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
@@ -287,27 +299,6 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
     return std::make_unique<AArch64_COFFTargetObjectFile>();
 
   return std::make_unique<AArch64_ELFTargetObjectFile>();
-}
-
-// Helper function to build a DataLayout string
-static std::string computeDataLayout(const Triple &TT,
-                                     const MCTargetOptions &Options,
-                                     bool LittleEndian) {
-  if (TT.isOSBinFormatMachO()) {
-    if (TT.getArch() == Triple::aarch64_32)
-      return "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
-             "n32:64-S128-Fn32";
-    return "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-"
-           "Fn32";
-  }
-  if (TT.isOSBinFormatCOFF())
-    return "e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-i64:64-i128:"
-           "128-n32:64-S128-Fn32";
-  std::string Endian = LittleEndian ? "e" : "E";
-  std::string Ptr32 = TT.getEnvironment() == Triple::GNUILP32 ? "-p:32:32" : "";
-  return Endian + "-m:e" + Ptr32 +
-         "-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-"
-         "n32:64-S128-Fn32";
 }
 
 static StringRef computeDefaultCPU(const Triple &TT, StringRef CPU) {
@@ -362,12 +353,12 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT,
                                            bool LittleEndian)
-    : CodeGenTargetMachineImpl(
-          T, computeDataLayout(TT, Options.MCOptions, LittleEndian), TT,
-          computeDefaultCPU(TT, CPU), FS, Options,
-          getEffectiveRelocModel(TT, RM),
-          getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
-      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT,
+                               computeDefaultCPU(TT, CPU), FS, Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
+      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian),
+      UseNewSMEABILowering(EnableNewSMEABILowering) {
   initAsmInfo();
 
   if (TT.isOSBinFormatMachO()) {
@@ -478,7 +469,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
-        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize);
+        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize,
+        EnableSRLTSubregToRegMitigation);
   }
 
   if (IsStreaming && !I->hasSME())
@@ -566,6 +558,7 @@ public:
   void addMachineSSAOptimization() override;
   bool addILPOpts() override;
   void addPreRegAlloc() override;
+  void addPostRewrite() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -582,7 +575,8 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(LoopIdiomVectorizePass());
+        if (Level != OptimizationLevel::O0)
+          LPM.addPass(LoopIdiomVectorizePass());
       });
   if (getTargetTriple().isOSWindows())
     PB.registerPipelineEarlySimplificationEPCallback(
@@ -668,10 +662,12 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createInterleavedAccessPass());
   }
 
-  // Expand any functions marked with SME attributes which require special
-  // changes for the calling convention or that require the lazy-saving
-  // mechanism specified in the SME ABI.
-  addPass(createSMEABIPass());
+  if (!EnableNewSMEABILowering) {
+    // Expand any functions marked with SME attributes which require special
+    // changes for the calling convention or that require the lazy-saving
+    // mechanism specified in the SME ABI.
+    addPass(createSMEABIPass());
+  }
 
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows()) {
@@ -706,12 +702,6 @@ bool AArch64PassConfig::addPreISel() {
     // is disabled as we emit the .subsections_via_symbols directive which
     // means that merging extern globals is not safe.
     bool MergeExternalByDefault = !TM->getTargetTriple().isOSBinFormatMachO();
-
-    // FIXME: extern global merging is only enabled when we optimise for size
-    // because there are some regressions with it also enabled for performance.
-    if (!OnlyOptimizeForSize)
-      MergeExternalByDefault = false;
-
     addPass(createGlobalMergePass(TM, 4095, OnlyOptimizeForSize,
                                   MergeExternalByDefault));
   }
@@ -782,6 +772,9 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableNewSMEABILowering)
+    addPass(createMachineSMEABIPass(TM->getOptLevel()));
+
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableSMEPeepholeOpt)
     addPass(createSMEPeepholeOptPass());
 
@@ -812,6 +805,9 @@ bool AArch64PassConfig::addILPOpts() {
 }
 
 void AArch64PassConfig::addPreRegAlloc() {
+  if (TM->getOptLevel() == CodeGenOptLevel::None && EnableNewSMEABILowering)
+    addPass(createMachineSMEABIPass(CodeGenOptLevel::None));
+
   // Change dead register definitions to refer to the zero register.
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableDeadRegisterElimination)
@@ -826,6 +822,11 @@ void AArch64PassConfig::addPreRegAlloc() {
   }
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
+}
+
+void AArch64PassConfig::addPostRewrite() {
+  if (EnableSRLTSubregToRegMitigation)
+    addPass(createAArch64SRLTDefineSuperRegsPass());
 }
 
 void AArch64PassConfig::addPostRegAlloc() {
@@ -876,6 +877,8 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive &&
       EnableAArch64CopyPropagation)
     addPass(createMachineCopyPropagationPass(true));
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64RedundantCondBranchPass());
 
   addPass(createAArch64A53Fix835769());
 

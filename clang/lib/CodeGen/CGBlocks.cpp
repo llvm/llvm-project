@@ -420,14 +420,11 @@ static void addBlockLayout(CharUnits align, CharUnits size,
 
 /// Determines if the given type is safe for constant capture in C++.
 static bool isSafeForCXXConstantCapture(QualType type) {
-  const RecordType *recordType =
-    type->getBaseElementTypeUnsafe()->getAs<RecordType>();
+  const auto *record = type->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
 
   // Only records can be unsafe.
-  if (!recordType) return true;
-
-  const auto *record =
-      cast<CXXRecordDecl>(recordType->getOriginalDecl())->getDefinitionOrSelf();
+  if (!record)
+    return true;
 
   // Maintain semantics for classes with non-trivial dtors or copy ctors.
   if (!record->hasTrivialDestructor()) return false;
@@ -1210,7 +1207,7 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
   } else {
     // Bitcast the block literal to a generic block literal.
     BlockPtr =
-        Builder.CreatePointerCast(BlockPtr, UnqualPtrTy, "block.literal");
+        Builder.CreatePointerCast(BlockPtr, DefaultPtrTy, "block.literal");
     // Get pointer to the block invoke function
     FuncPtr = Builder.CreateStructGEP(GenBlockTy, BlockPtr, 3);
 

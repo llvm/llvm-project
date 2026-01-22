@@ -11,7 +11,7 @@ define i8 @test_or(i8 %a, i8 %b) sanitize_memory {
 ; CHECK-LABEL: define i8 @test_or(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[A]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[B]], -1
@@ -32,7 +32,7 @@ define i8 @test_disjoint_or(i8 %a, i8 %b) sanitize_memory {
 ; CHECK-IMPRECISE-LABEL: define i8 @test_disjoint_or(
 ; CHECK-IMPRECISE-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-IMPRECISE-NEXT:    [[TMP1:%.*]] = load i8, ptr @__msan_param_tls, align 8
-; CHECK-IMPRECISE-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-IMPRECISE-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-IMPRECISE-NEXT:    call void @llvm.donothing()
 ; CHECK-IMPRECISE-NEXT:    [[TMP3:%.*]] = xor i8 [[A]], -1
 ; CHECK-IMPRECISE-NEXT:    [[TMP4:%.*]] = xor i8 [[B]], -1
@@ -48,7 +48,7 @@ define i8 @test_disjoint_or(i8 %a, i8 %b) sanitize_memory {
 ; CHECK-PRECISE-LABEL: define i8 @test_disjoint_or(
 ; CHECK-PRECISE-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-PRECISE-NEXT:    [[TMP1:%.*]] = load i8, ptr @__msan_param_tls, align 8
-; CHECK-PRECISE-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-PRECISE-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-PRECISE-NEXT:    call void @llvm.donothing()
 ; CHECK-PRECISE-NEXT:    [[TMP3:%.*]] = xor i8 [[A]], -1
 ; CHECK-PRECISE-NEXT:    [[TMP4:%.*]] = xor i8 [[B]], -1

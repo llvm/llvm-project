@@ -392,45 +392,8 @@ bool Symbol::Compare(ConstString name, SymbolType type) const {
   return false;
 }
 
-#define ENUM_TO_CSTRING(x)                                                     \
-  case eSymbolType##x:                                                         \
-    return #x;
-
 const char *Symbol::GetTypeAsString() const {
-  switch (m_type) {
-    ENUM_TO_CSTRING(Invalid);
-    ENUM_TO_CSTRING(Absolute);
-    ENUM_TO_CSTRING(Code);
-    ENUM_TO_CSTRING(Resolver);
-    ENUM_TO_CSTRING(Data);
-    ENUM_TO_CSTRING(Trampoline);
-    ENUM_TO_CSTRING(Runtime);
-    ENUM_TO_CSTRING(Exception);
-    ENUM_TO_CSTRING(SourceFile);
-    ENUM_TO_CSTRING(HeaderFile);
-    ENUM_TO_CSTRING(ObjectFile);
-    ENUM_TO_CSTRING(CommonBlock);
-    ENUM_TO_CSTRING(Block);
-    ENUM_TO_CSTRING(Local);
-    ENUM_TO_CSTRING(Param);
-    ENUM_TO_CSTRING(Variable);
-    ENUM_TO_CSTRING(VariableType);
-    ENUM_TO_CSTRING(LineEntry);
-    ENUM_TO_CSTRING(LineHeader);
-    ENUM_TO_CSTRING(ScopeBegin);
-    ENUM_TO_CSTRING(ScopeEnd);
-    ENUM_TO_CSTRING(Additional);
-    ENUM_TO_CSTRING(Compiler);
-    ENUM_TO_CSTRING(Instrumentation);
-    ENUM_TO_CSTRING(Undefined);
-    ENUM_TO_CSTRING(ObjCClass);
-    ENUM_TO_CSTRING(ObjCMetaClass);
-    ENUM_TO_CSTRING(ObjCIVar);
-    ENUM_TO_CSTRING(ReExported);
-  default:
-    break;
-  }
-  return "<unknown SymbolType>";
+  return GetTypeAsString(static_cast<lldb::SymbolType>(m_type));
 }
 
 void Symbol::CalculateSymbolContext(SymbolContext *sc) {
@@ -774,6 +737,79 @@ bool Symbol::operator==(const Symbol &rhs) const {
   return true;
 }
 
+#define ENUM_TO_CSTRING(x)                                                     \
+  case eSymbolType##x:                                                         \
+    return #x;
+
+const char *Symbol::GetTypeAsString(lldb::SymbolType symbol_type) {
+  switch (symbol_type) {
+    ENUM_TO_CSTRING(Invalid);
+    ENUM_TO_CSTRING(Absolute);
+    ENUM_TO_CSTRING(Code);
+    ENUM_TO_CSTRING(Resolver);
+    ENUM_TO_CSTRING(Data);
+    ENUM_TO_CSTRING(Trampoline);
+    ENUM_TO_CSTRING(Runtime);
+    ENUM_TO_CSTRING(Exception);
+    ENUM_TO_CSTRING(SourceFile);
+    ENUM_TO_CSTRING(HeaderFile);
+    ENUM_TO_CSTRING(ObjectFile);
+    ENUM_TO_CSTRING(CommonBlock);
+    ENUM_TO_CSTRING(Block);
+    ENUM_TO_CSTRING(Local);
+    ENUM_TO_CSTRING(Param);
+    ENUM_TO_CSTRING(Variable);
+    ENUM_TO_CSTRING(VariableType);
+    ENUM_TO_CSTRING(LineEntry);
+    ENUM_TO_CSTRING(LineHeader);
+    ENUM_TO_CSTRING(ScopeBegin);
+    ENUM_TO_CSTRING(ScopeEnd);
+    ENUM_TO_CSTRING(Additional);
+    ENUM_TO_CSTRING(Compiler);
+    ENUM_TO_CSTRING(Instrumentation);
+    ENUM_TO_CSTRING(Undefined);
+    ENUM_TO_CSTRING(ObjCClass);
+    ENUM_TO_CSTRING(ObjCMetaClass);
+    ENUM_TO_CSTRING(ObjCIVar);
+    ENUM_TO_CSTRING(ReExported);
+  }
+  return "<unknown SymbolType>";
+}
+
+lldb::SymbolType Symbol::GetTypeFromString(const char *str) {
+  std::string str_lower = llvm::StringRef(str).lower();
+  return llvm::StringSwitch<lldb::SymbolType>(str_lower)
+      .Case("absolute", eSymbolTypeAbsolute)
+      .Case("code", eSymbolTypeCode)
+      .Case("resolver", eSymbolTypeResolver)
+      .Case("data", eSymbolTypeData)
+      .Case("trampoline", eSymbolTypeTrampoline)
+      .Case("runtime", eSymbolTypeRuntime)
+      .Case("exception", eSymbolTypeException)
+      .Case("sourcefile", eSymbolTypeSourceFile)
+      .Case("headerfile", eSymbolTypeHeaderFile)
+      .Case("objectfile", eSymbolTypeObjectFile)
+      .Case("commonblock", eSymbolTypeCommonBlock)
+      .Case("block", eSymbolTypeBlock)
+      .Case("local", eSymbolTypeLocal)
+      .Case("param", eSymbolTypeParam)
+      .Case("variable", eSymbolTypeVariable)
+      .Case("variableType", eSymbolTypeVariableType)
+      .Case("lineentry", eSymbolTypeLineEntry)
+      .Case("lineheader", eSymbolTypeLineHeader)
+      .Case("scopebegin", eSymbolTypeScopeBegin)
+      .Case("scopeend", eSymbolTypeScopeEnd)
+      .Case("additional,", eSymbolTypeAdditional)
+      .Case("compiler", eSymbolTypeCompiler)
+      .Case("instrumentation", eSymbolTypeInstrumentation)
+      .Case("undefined", eSymbolTypeUndefined)
+      .Case("objcclass", eSymbolTypeObjCClass)
+      .Case("objcmetaclass", eSymbolTypeObjCMetaClass)
+      .Case("objcivar", eSymbolTypeObjCIVar)
+      .Case("reexported", eSymbolTypeReExported)
+      .Default(eSymbolTypeInvalid);
+}
+
 namespace llvm {
 namespace json {
 
@@ -804,36 +840,8 @@ bool fromJSON(const llvm::json::Value &value, lldb_private::JSONSymbol &symbol,
 bool fromJSON(const llvm::json::Value &value, lldb::SymbolType &type,
               llvm::json::Path path) {
   if (auto str = value.getAsString()) {
-    type = llvm::StringSwitch<lldb::SymbolType>(*str)
-               .Case("absolute", eSymbolTypeAbsolute)
-               .Case("code", eSymbolTypeCode)
-               .Case("resolver", eSymbolTypeResolver)
-               .Case("data", eSymbolTypeData)
-               .Case("trampoline", eSymbolTypeTrampoline)
-               .Case("runtime", eSymbolTypeRuntime)
-               .Case("exception", eSymbolTypeException)
-               .Case("sourcefile", eSymbolTypeSourceFile)
-               .Case("headerfile", eSymbolTypeHeaderFile)
-               .Case("objectfile", eSymbolTypeObjectFile)
-               .Case("commonblock", eSymbolTypeCommonBlock)
-               .Case("block", eSymbolTypeBlock)
-               .Case("local", eSymbolTypeLocal)
-               .Case("param", eSymbolTypeParam)
-               .Case("variable", eSymbolTypeVariable)
-               .Case("variableType", eSymbolTypeVariableType)
-               .Case("lineentry", eSymbolTypeLineEntry)
-               .Case("lineheader", eSymbolTypeLineHeader)
-               .Case("scopebegin", eSymbolTypeScopeBegin)
-               .Case("scopeend", eSymbolTypeScopeEnd)
-               .Case("additional,", eSymbolTypeAdditional)
-               .Case("compiler", eSymbolTypeCompiler)
-               .Case("instrumentation", eSymbolTypeInstrumentation)
-               .Case("undefined", eSymbolTypeUndefined)
-               .Case("objcclass", eSymbolTypeObjCClass)
-               .Case("objcmetaClass", eSymbolTypeObjCMetaClass)
-               .Case("objcivar", eSymbolTypeObjCIVar)
-               .Case("reexporte", eSymbolTypeReExported)
-               .Default(eSymbolTypeInvalid);
+    llvm::StringRef str_ref = str.value_or("");
+    type = Symbol::GetTypeFromString(str_ref.data());
 
     if (type == eSymbolTypeInvalid) {
       path.report("invalid symbol type");

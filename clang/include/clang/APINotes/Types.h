@@ -46,6 +46,8 @@ enum class SwiftNewTypeKind {
   Enum,
 };
 
+enum class SwiftSafetyKind { Unspecified, Safe, Unsafe, None };
+
 /// Describes API notes data for any entity.
 ///
 /// This is used as the base of all API notes.
@@ -71,13 +73,19 @@ private:
   LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftPrivate : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftSafetyAudited : 1;
+
+  LLVM_PREFERRED_TYPE(SwiftSafetyKind)
+  unsigned SwiftSafety : 2;
+
 public:
   /// Swift name of this entity.
   std::string SwiftName;
 
   CommonEntityInfo()
       : Unavailable(0), UnavailableInSwift(0), SwiftPrivateSpecified(0),
-        SwiftPrivate(0) {}
+        SwiftPrivate(0), SwiftSafetyAudited(0), SwiftSafety(0) {}
 
   std::optional<bool> isSwiftPrivate() const {
     return SwiftPrivateSpecified ? std::optional<bool>(SwiftPrivate)
@@ -87,6 +95,17 @@ public:
   void setSwiftPrivate(std::optional<bool> Private) {
     SwiftPrivateSpecified = Private.has_value();
     SwiftPrivate = Private.value_or(0);
+  }
+
+  std::optional<SwiftSafetyKind> getSwiftSafety() const {
+    return SwiftSafetyAudited ? std::optional<SwiftSafetyKind>(
+                                    static_cast<SwiftSafetyKind>(SwiftSafety))
+                              : std::nullopt;
+  }
+
+  void setSwiftSafety(SwiftSafetyKind Safety) {
+    SwiftSafetyAudited = 1;
+    SwiftSafety = static_cast<unsigned>(Safety);
   }
 
   friend bool operator==(const CommonEntityInfo &, const CommonEntityInfo &);
@@ -108,6 +127,9 @@ public:
     if (!SwiftPrivateSpecified)
       setSwiftPrivate(RHS.isSwiftPrivate());
 
+    if (!SwiftSafetyAudited && RHS.SwiftSafetyAudited)
+      setSwiftSafety(*RHS.getSwiftSafety());
+
     if (SwiftName.empty())
       SwiftName = RHS.SwiftName;
 
@@ -123,7 +145,9 @@ inline bool operator==(const CommonEntityInfo &LHS,
          LHS.Unavailable == RHS.Unavailable &&
          LHS.UnavailableInSwift == RHS.UnavailableInSwift &&
          LHS.SwiftPrivateSpecified == RHS.SwiftPrivateSpecified &&
-         LHS.SwiftPrivate == RHS.SwiftPrivate && LHS.SwiftName == RHS.SwiftName;
+         LHS.SwiftPrivate == RHS.SwiftPrivate &&
+         LHS.SwiftSafetyAudited == RHS.SwiftSafetyAudited &&
+         LHS.SwiftSafety == RHS.SwiftSafety && LHS.SwiftName == RHS.SwiftName;
 }
 
 inline bool operator!=(const CommonEntityInfo &LHS,

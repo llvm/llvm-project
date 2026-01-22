@@ -792,6 +792,39 @@ void show_usage_and_exit(int exit_code) {
                DEBUGSERVER_PROGRAM_NAME);
   RNBLogSTDERR("  %s /path/file --attach=<process_name>\n",
                DEBUGSERVER_PROGRAM_NAME);
+  RNBLogSTDERR("\n");
+  RNBLogSTDERR("  -a | --attach <pid>\n");
+  RNBLogSTDERR("  -w | --waitfor <name>\n");
+  RNBLogSTDERR("  -A | --arch <arch>\n");
+  RNBLogSTDERR("  -g | --debug\n");
+  RNBLogSTDERR("  -K | --kill-on-error\n");
+  RNBLogSTDERR("  -v | --verbose\n");
+  RNBLogSTDERR("  -V | --version\n");
+  RNBLogSTDERR("  -k | --lockdown\n");
+  RNBLogSTDERR("  -t | --applist\n");
+  RNBLogSTDERR("  -l | --log-file\n");
+  RNBLogSTDERR("  -f | --log-flags\n");
+  RNBLogSTDERR("  -x | --launch <auto|posix-spawn|fork-exec|springboard>\n");
+  RNBLogSTDERR("  -d | --waitfor-duration <seconds>\n");
+  RNBLogSTDERR("  -i | --waitfor-interval <usecs>\n");
+  RNBLogSTDERR("  -r | --native-regs\n");
+  RNBLogSTDERR("  -s | --studio-path <path>\n");
+  RNBLogSTDERR("  -I | --stdin-path <path>\n");
+  RNBLogSTDERR("  -O | --stdout-path <path>\n");
+  RNBLogSTDERR("  -E | --stderr-path <path>\n");
+  RNBLogSTDERR("  -n | --no-stdio\n");
+  RNBLogSTDERR("  -S | --setsid\n");
+  RNBLogSTDERR("  -D | --disable-aslr\n");
+  RNBLogSTDERR("  -W | --working-dir <dir>\n");
+  RNBLogSTDERR("  -p | --platform <arg?>\n");
+  RNBLogSTDERR("  -u | --unix-socket <unix socket name>\n");
+  RNBLogSTDERR("  -2 | --fd <file descriptor number>\n");
+  RNBLogSTDERR("  -P | --named-pipe <pipe>\n");
+  RNBLogSTDERR("  -R | --reverse-connect\n");
+  RNBLogSTDERR("  -e | --env <env>\n");
+  RNBLogSTDERR("  -F | --forward-env <env>\n");
+  RNBLogSTDERR("  -U | --unmask-signals\n");
+
   exit(exit_code);
 }
 

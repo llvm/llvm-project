@@ -1,6 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -pass-remarks-analysis="polly-scops" \
-; RUN:     -polly-allow-differing-element-types \
-; RUN:     -disable-output < %s  2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -pass-remarks-analysis=polly-scops -polly-allow-differing-element-types -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void foo(long n, long m, char A[][m]) {
 ;      for (long i = 0; i < n; i++)

@@ -218,6 +218,7 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #  include <__cxx03/__fwd/ios.h>
 #  include <__cxx03/__ios/fpos.h>
 #  include <__cxx03/__locale>
+#  include <__cxx03/__memory/addressof.h>
 #  include <__cxx03/__system_error/error_category.h>
 #  include <__cxx03/__system_error/error_code.h>
 #  include <__cxx03/__system_error/error_condition.h>
@@ -696,7 +697,7 @@ inline _LIBCPP_HIDE_FROM_ABI _CharT basic_ios<_CharT, _Traits>::fill(char_type _
 
 template <class _CharT, class _Traits>
 basic_ios<_CharT, _Traits>& basic_ios<_CharT, _Traits>::copyfmt(const basic_ios& __rhs) {
-  if (this != &__rhs) {
+  if (this != std::addressof(__rhs)) {
     __call_callbacks(erase_event);
     ios_base::copyfmt(__rhs);
     __tie_  = __rhs.__tie_;

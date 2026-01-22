@@ -7,7 +7,7 @@ if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
   endif()
 endif()
 
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_definitions("-D_ALL_SOURCE")
 endif()
 
@@ -17,6 +17,7 @@ macro(add_host_subdirectory group)
 endmacro()
 
 add_host_subdirectory(common
+  common/DiagnosticsRendering.cpp
   common/FileAction.cpp
   common/FileCache.cpp
   common/File.cpp
@@ -75,6 +76,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/MainLoopWindows.cpp
     windows/PipeWindows.cpp
     windows/ProcessLauncherWindows.cpp
+    windows/PseudoConsole.cpp
     windows/ProcessRunLock.cpp
     )
 else()

@@ -65,10 +65,10 @@ entry:
 define void @ham() {
 ; CHECK-LABEL: ham:
 ; CHECK:       ## %bb.0: ## %bb
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movq _global@GOTPCREL(%rip), %rdx
 ; CHECK-NEXT:    movq _global2@GOTPCREL(%rip), %rsi
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    je LBB3_2
 ; CHECK-NEXT:    .p2align 4

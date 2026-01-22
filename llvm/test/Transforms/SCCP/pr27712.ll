@@ -2,7 +2,7 @@
 ; RUN: opt -passes=sccp -S < %s | FileCheck %s
 
 define i32 @main() {
-; CHECK-LABEL: define i32 @main() {
+; CHECK-LABEL: define range(i32 33554432, 0) i32 @main() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LBL_1154:.*]]
 ; CHECK:       [[LBL_1154]]:

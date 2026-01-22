@@ -35,9 +35,9 @@ define ptr @xzy(i64 %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: define ptr @xzy(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr inbounds [10 x [10 x [10 x i32]]], ptr getelementptr inbounds nuw (i8, ptr @glob, i64 40), i64 0, i64 [[X]]
-; CHECK-NEXT:    [[GEP_SPLIT1:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[GEP_SPLIT]], i64 0, i64 [[Z]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [10 x i32], ptr [[GEP_SPLIT1]], i64 0, i64 [[Y]]
+; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr getelementptr inbounds nuw (i8, ptr @glob, i64 40), i64 [[X]]
+; CHECK-NEXT:    [[GEP_SPLIT1:%.*]] = getelementptr inbounds [10 x i32], ptr [[GEP_SPLIT]], i64 [[Z]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[GEP_SPLIT1]], i64 [[Y]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
 entry:
@@ -49,7 +49,7 @@ define ptr @zerox(i64 %x) {
 ; CHECK-LABEL: define ptr @zerox(
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [10 x i32], ptr getelementptr inbounds nuw (i8, ptr @glob, i64 32), i64 0, i64 [[X]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr getelementptr inbounds nuw (i8, ptr @glob, i64 32), i64 [[X]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
 entry:

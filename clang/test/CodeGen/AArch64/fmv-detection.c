@@ -437,7 +437,7 @@ int caller() {
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv.resolver() {{[#0-9]* }}comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8

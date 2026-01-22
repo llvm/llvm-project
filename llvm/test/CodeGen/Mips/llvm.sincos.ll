@@ -844,22 +844,13 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) #0 {
 ; SOFT-FLOAT-64:       # %bb.0:
 ; SOFT-FLOAT-64-NEXT:    daddiu $sp, $sp, -48
 ; SOFT-FLOAT-64-NEXT:    sd $ra, 40($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    sd $16, 32($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    mov.d $f12, $f13
-; SOFT-FLOAT-64-NEXT:    move $16, $4
 ; SOFT-FLOAT-64-NEXT:    daddiu $6, $sp, 16
-; SOFT-FLOAT-64-NEXT:    daddiu $7, $sp, 0
 ; SOFT-FLOAT-64-NEXT:    jal sincosl
-; SOFT-FLOAT-64-NEXT:    mov.d $f13, $f14
-; SOFT-FLOAT-64-NEXT:    ld $1, 8($sp)
-; SOFT-FLOAT-64-NEXT:    sd $1, 24($16)
-; SOFT-FLOAT-64-NEXT:    ld $1, 0($sp)
-; SOFT-FLOAT-64-NEXT:    sd $1, 16($16)
-; SOFT-FLOAT-64-NEXT:    ld $1, 24($sp)
-; SOFT-FLOAT-64-NEXT:    sd $1, 8($16)
-; SOFT-FLOAT-64-NEXT:    ld $1, 16($sp)
-; SOFT-FLOAT-64-NEXT:    sd $1, 0($16)
-; SOFT-FLOAT-64-NEXT:    ld $16, 32($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    daddiu $7, $sp, 0
+; SOFT-FLOAT-64-NEXT:    ldc1 $f0, 16($sp)
+; SOFT-FLOAT-64-NEXT:    ldc1 $f2, 24($sp)
+; SOFT-FLOAT-64-NEXT:    ld $2, 0($sp)
+; SOFT-FLOAT-64-NEXT:    ld $3, 8($sp)
 ; SOFT-FLOAT-64-NEXT:    ld $ra, 40($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64-NEXT:    jr $ra
 ; SOFT-FLOAT-64-NEXT:    daddiu $sp, $sp, 48

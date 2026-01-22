@@ -1,0 +1,14 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test CUDA Fortran instrinsics lowerings for synchronization.
+
+attributes(global) subroutine sync()
+  call threadfence()
+  call threadfence_block()
+  call threadfence_system()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsync() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: nvvm.memory.barrier <gpu>
+! CHECK: nvvm.memory.barrier <cta>
+! CHECK: nvvm.memory.barrier <sys>

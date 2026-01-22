@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc_convert.h>
-#include <clc/clcmacro.h>
 #include <clc/integer/clc_add_sat.h>
 #include <clc/integer/clc_mad24.h>
 #include <clc/integer/clc_mul_hi.h>

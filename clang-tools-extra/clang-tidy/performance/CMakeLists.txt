@@ -21,9 +21,10 @@ add_clang_library(clangTidyPerformanceModule STATIC
   NoexceptMoveConstructorCheck.cpp
   NoexceptSwapCheck.cpp
   PerformanceTidyModule.cpp
+  StringViewConversionsCheck.cpp
   TriviallyDestructibleCheck.cpp
   TypePromotionInMathFnCheck.cpp
-  UnnecessaryCopyInitialization.cpp
+  UnnecessaryCopyInitializationCheck.cpp
   UnnecessaryValueParamCheck.cpp
 
   LINK_LIBS

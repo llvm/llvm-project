@@ -19,7 +19,7 @@
 define void @main_scalar() local_unnamed_addr #0 {
 entry:
 ; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
-  %s_h.i = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false, ptr nonnull @.str.b0)
+  %s_h.i = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, ptr nonnull @.str.b0)
 
 ; CHECK: [[R:%[0-9]+]] = OpImageRead [[v4int]] [[H]] [[one]] SignExtend
 ; CHECK: [[V:%[0-9]+]] = OpCompositeExtract [[uint]] [[R]] 0
@@ -58,7 +58,7 @@ bb_both:
 define void @main_vector2() local_unnamed_addr #0 {
 entry:
 ; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
-  %s_h.i = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false, ptr nonnull @.str.b0)
+  %s_h.i = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, ptr nonnull @.str.b0)
 
 ; CHECK: [[R:%[0-9]+]] = OpImageRead [[v4int]] [[H]] [[one]] SignExtend
 ; CHECK: [[E0:%[0-9]+]] = OpCompositeExtract [[uint]] [[R]] 0
@@ -101,7 +101,7 @@ bb_both:
 define void @main_vector4() local_unnamed_addr #0 {
 entry:
 ; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
-  %s_h.i = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false, ptr nonnull @.str.b0)
+  %s_h.i = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, ptr nonnull @.str.b0)
 
 ; CHECK: [[R:%[0-9]+]] = OpImageRead [[v4int]] [[H]] [[one]] SignExtend
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %s_h.i, i32 1)

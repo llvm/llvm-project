@@ -30,18 +30,18 @@ constexpr StringRef AssumptionAttrKey = "llvm.assume";
 
 /// A set of known assumption strings that are accepted without warning and
 /// which can be recommended as typo correction.
-LLVM_ABI extern StringSet<> KnownAssumptionStrings;
+LLVM_ABI extern StringSet<> &getKnownAssumptionStrings();
 
 /// Helper that allows to insert a new assumption string in the known assumption
 /// set by creating a (static) object.
 struct KnownAssumptionString {
   KnownAssumptionString(const char *AssumptionStr)
       : AssumptionStr(AssumptionStr) {
-    KnownAssumptionStrings.insert(AssumptionStr);
+    getKnownAssumptionStrings().insert(AssumptionStr);
   }
   KnownAssumptionString(StringRef AssumptionStr)
       : AssumptionStr(AssumptionStr) {
-    KnownAssumptionStrings.insert(AssumptionStr);
+    getKnownAssumptionStrings().insert(AssumptionStr);
   }
   operator StringRef() const { return AssumptionStr; }
 

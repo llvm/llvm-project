@@ -217,7 +217,7 @@ bool FindUninitializedFields::isDereferencableUninit(
 static std::optional<DereferenceInfo> dereference(ProgramStateRef State,
                                                   const FieldRegion *FR) {
 
-  llvm::SmallSet<const TypedValueRegion *, 5> VisitedRegions;
+  llvm::SmallPtrSet<const TypedValueRegion *, 5> VisitedRegions;
 
   SVal V = State->getSVal(FR);
   assert(V.getAsRegion() && "V must have an underlying region!");

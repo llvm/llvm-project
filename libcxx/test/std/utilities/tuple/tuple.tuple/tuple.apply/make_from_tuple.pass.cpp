@@ -286,6 +286,8 @@ LIBCPP_STATIC_ASSERT(can_make_from_tuple_impl<float, std::tuple<double>>);
 
 } // namespace LWG3528
 
+static_assert(LWG3528::can_make_from_tuple<int, std::tuple<>>);
+
 int main(int, char**)
 {
     test_constexpr_construction();

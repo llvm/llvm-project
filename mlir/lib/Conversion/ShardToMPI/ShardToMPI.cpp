@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ShardToMPI/ShardToMPI.h"
+#include "mlir/Dialect/Shard/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -71,9 +73,9 @@ static SmallVector<Value> getMixedAsValues(OpBuilder b, const Location &loc,
 }
 
 /// Create operations converting a linear index to a multi-dimensional index.
-static SmallVector<Value> linearToMultiIndex(Location loc, OpBuilder b,
-                                             Value linearIndex,
-                                             ValueRange dimensions) {
+[[maybe_unused]] static SmallVector<Value>
+linearToMultiIndex(Location loc, OpBuilder b, Value linearIndex,
+                   ValueRange dimensions) {
   int n = dimensions.size();
   SmallVector<Value> multiIndex(n);
 
@@ -250,46 +252,6 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
   }
 };
 
-struct ConvertProcessMultiIndexOp
-    : public OpConversionPattern<ProcessMultiIndexOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(ProcessMultiIndexOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-
-    // Currently converts its linear index to a multi-dimensional index.
-
-    SymbolTableCollection symbolTableCollection;
-    Location loc = op.getLoc();
-    auto gridOp = getGrid(op, symbolTableCollection);
-    // For now we only support static grid shapes
-    if (ShapedType::isDynamicShape(gridOp.getShape()))
-      return failure();
-
-    SmallVector<Value> dims;
-    llvm::transform(
-        gridOp.getShape(), std::back_inserter(dims), [&](int64_t i) {
-          return arith::ConstantIndexOp::create(rewriter, loc, i).getResult();
-        });
-    Value rank = ProcessLinearIndexOp::create(rewriter, op.getLoc(), gridOp);
-    auto mIdx = linearToMultiIndex(loc, rewriter, rank, dims);
-
-    // optionally extract subset of grid axes
-    auto axes = adaptor.getAxes();
-    if (!axes.empty()) {
-      SmallVector<Value> subIndex;
-      for (auto axis : axes) {
-        subIndex.emplace_back(mIdx[axis]);
-      }
-      mIdx = std::move(subIndex);
-    }
-
-    rewriter.replaceOp(op, mIdx);
-    return success();
-  }
-};
-
 class ConvertProcessLinearIndexOp
     : public OpConversionPattern<ProcessLinearIndexOp> {
 
@@ -301,7 +263,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // Create mpi::CommRankOp
     Location loc = op.getLoc();
-    auto ctx = op.getContext();
+    auto *ctx = op.getContext();
     Value commWorld =
         mpi::CommWorldOp::create(rewriter, loc, mpi::CommType::get(ctx));
     auto rank = mpi::CommRankOp::create(
@@ -520,7 +482,7 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
 };
 
 static mpi::MPI_ReductionOpEnumAttr getMPIReductionOp(ReductionKindAttr kind) {
-  auto ctx = kind.getContext();
+  auto *ctx = kind.getContext();
   auto getReductionOp = [ctx](mpi::MPI_ReductionOpEnum redOp) {
     return mpi::MPI_ReductionOpEnumAttr::get(ctx, redOp);
   };
@@ -919,10 +881,11 @@ struct ConvertShardToMPIPass
     // ...except the global GridOp. GridShapeOp which will get folded later.
     target.addLegalOp<shard::GridOp, shard::GridShapeOp>();
     // Allow all the stuff that our patterns will convert to
-    target.addLegalDialect<
-        BuiltinDialect, mpi::MPIDialect, scf::SCFDialect, arith::ArithDialect,
-        tensor::TensorDialect, bufferization::BufferizationDialect,
-        linalg::LinalgDialect, memref::MemRefDialect, affine::AffineDialect>();
+    target.addLegalDialect<BuiltinDialect, mpi::MPIDialect, scf::SCFDialect,
+                           arith::ArithDialect, tensor::TensorDialect,
+                           bufferization::BufferizationDialect,
+                           linalg::LinalgDialect, memref::MemRefDialect,
+                           affine::AffineDialect, cf::ControlFlowDialect>();
     // Make sure the function signature, calls etc. are legal
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return typeConverter.isSignatureLegal(op.getFunctionType());
@@ -931,9 +894,12 @@ struct ConvertShardToMPIPass
         [&](Operation *op) { return typeConverter.isLegal(op); });
 
     patterns.add<ConvertUpdateHaloOp, ConvertNeighborsLinearIndicesOp,
-                 ConvertProcessMultiIndexOp, ConvertGetShardingOp,
-                 ConvertShardingOp, ConvertShardShapeOp, ConvertAllReduceOp,
-                 ConvertProcessLinearIndexOp>(typeConverter, ctxt);
+                 ConvertGetShardingOp, ConvertShardingOp, ConvertShardShapeOp,
+                 ConvertAllReduceOp, ConvertProcessLinearIndexOp>(typeConverter,
+                                                                  ctxt);
+    SymbolTableCollection stc;
+    populateProcessMultiIndexOpLoweringPatterns(patterns, stc);
+    populateAllSliceOpLoweringPatterns(patterns, stc);
 
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
         patterns, typeConverter);

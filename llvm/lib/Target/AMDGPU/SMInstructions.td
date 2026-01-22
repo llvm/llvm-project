@@ -295,7 +295,6 @@ class SM_Pseudo_Atomic<string opName,
   let has_soffset = offsets.HasSOffset;
 
   let Constraints = !if(isRet, "$sdst = $sdata", "");
-  let DisableEncoding = !if(isRet, "$sdata", "");
 }
 
 multiclass SM_Pseudo_Atomics<RegisterClass baseClass,
@@ -678,7 +677,6 @@ class SMEM_Atomic_Real_vi <bits<8> op, SM_Atomic_Pseudo ps>
   bits<7> sdata;
 
   let Constraints = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   let cpol{CPolBit.GLC} = ps.glc;
   let Inst{12-6} = !if(ps.glc, sdst{6-0}, sdata{6-0});
@@ -1295,7 +1293,6 @@ class SMEM_Atomic_Real_gfx10 <bits<8> op, SM_Atomic_Pseudo ps>
   bits<7> sdata;
 
   let Constraints = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   let cpol{CPolBit.GLC} = ps.glc;
 

@@ -10,8 +10,8 @@ Introduction
 
 This document seeks to dispel the mystery and confusion surrounding LLVM's
 `GetElementPtr <LangRef.html#getelementptr-instruction>`_ (GEP) instruction.
-Questions about the wily GEP instruction are probably the most frequently
-occurring questions once a developer gets down to coding with LLVM. Here we lay
+Questions about the wily GEP instruction are probably the most frequent
+questions once a developer gets down to coding with LLVM. Here we lay
 out the sources of confusion and show that the GEP instruction is really quite
 simple.
 
@@ -30,8 +30,8 @@ What is the first index of the GEP instruction?
 Quick answer: The index stepping through the second operand.
 
 The confusion with the first index usually arises from thinking about the
-GetElementPtr instruction as if it was a C index operator. They aren't the
-same. For example, when we write, in "C":
+GetElementPtr instruction as if it were a C index operator. They aren't the
+same. For example, when we write, in C:
 
 .. code-block:: c++
 
@@ -62,7 +62,7 @@ The answer is simply because memory does not have to be accessed to perform the
 computation. The second operand to the GEP instruction must be a value of a
 pointer type. The value of the pointer is provided directly to the GEP
 instruction as an operand without any need for accessing memory. It must,
-therefore be indexed and requires an index operand. Consider this example:
+therefore, be indexed and requires an index operand. Consider this example:
 
 .. code-block:: c++
 
@@ -285,7 +285,7 @@ I'm writing a backend for a target which needs custom lowering for GEP. How do I
 -----------------------------------------------------------------------------------------
 
 You don't. The integer computation implied by a GEP is target-independent.
-Typically what you'll need to do is make your backend pattern-match expressions
+Typically what you'll need to do is make your backend pattern-match expression
 trees involving ADD, MUL, etc., which are what GEP is lowered into. This has the
 advantage of letting your code work correctly in more cases.
 
@@ -377,7 +377,7 @@ the underlying object.
 
 Furthermore, loads and stores don't have to use the same types as the type of
 the underlying object. Types in this context serve only to specify memory size
-and alignment. Beyond that there are merely a hint to the optimizer indicating
+and alignment. Beyond that they are merely a hint to the optimizer indicating
 how the value will likely be used.
 
 Can I cast an object's address to integer and add it to null?
@@ -496,17 +496,17 @@ primitive integer expressions, which allows them to be combined with other
 integer expressions and/or split into multiple separate integer expressions. If
 they've made non-trivial changes, translating back into LLVM IR can involve
 reverse-engineering the structure of the addressing in order to fit it into the
-static type of the original first operand. It isn't always possibly to fully
+static type of the original first operand. It isn't always possible to fully
 reconstruct this structure; sometimes the underlying addressing doesn't
 correspond with the static type at all. In such cases the optimizer instead will
-emit a GEP with the base pointer casted to a simple address-unit pointer, using
+emit a GEP with the base pointer cast to a simple address-unit pointer, using
 the name "uglygep". This isn't pretty, but it's just as valid, and it's
 sufficient to preserve the pointer aliasing guarantees that GEP provides.
 
 Summary
 =======
 
-In summary, here's some things to always remember about the GetElementPtr
+In summary, here are some things to always remember about the GetElementPtr
 instruction:
 
 

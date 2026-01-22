@@ -23,20 +23,19 @@ using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap_tests;
 using namespace lldb_dap::protocol;
+using testing::_;
 
 class DisconnectRequestHandlerTest : public DAPTestBase {};
 
 TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminated) {
   DisconnectRequestHandler handler(*dap);
-  EXPECT_FALSE(dap->disconnecting);
   ASSERT_THAT_ERROR(handler.Run(std::nullopt), Succeeded());
-  EXPECT_TRUE(dap->disconnecting);
-  std::vector<Message> messages = DrainOutput();
-  EXPECT_THAT(messages,
-              testing::Contains(testing::VariantWith<Event>(testing::FieldsAre(
-                  /*event=*/"terminated", /*body=*/testing::_))));
+  EXPECT_CALL(client, Received(IsEvent("terminated", _)));
+  Run();
 }
 
+// Is flaky on Linux, see https://github.com/llvm/llvm-project/issues/154763.
+#ifndef __linux__
 TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
   CreateDebugger();
 
@@ -47,17 +46,15 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
 
   DisconnectRequestHandler handler(*dap);
 
-  EXPECT_FALSE(dap->disconnecting);
   dap->configuration.terminateCommands = {"?script print(1)",
                                           "script print(2)"};
   EXPECT_EQ(dap->target.GetProcess().GetState(), lldb::eStateStopped);
   ASSERT_THAT_ERROR(handler.Run(std::nullopt), Succeeded());
-  EXPECT_TRUE(dap->disconnecting);
-  std::vector<Message> messages = DrainOutput();
-  EXPECT_THAT(messages, testing::ElementsAre(
-                            OutputMatcher("Running terminateCommands:\n"),
-                            OutputMatcher("(lldb) script print(2)\n"),
-                            OutputMatcher("2\n"),
-                            testing::VariantWith<Event>(testing::FieldsAre(
-                                /*event=*/"terminated", /*body=*/testing::_))));
+  EXPECT_CALL(client, Received(Output("1\n")));
+  EXPECT_CALL(client, Received(Output("2\n"))).Times(2);
+  EXPECT_CALL(client, Received(Output("(lldb) script print(2)\n")));
+  EXPECT_CALL(client, Received(Output("Running terminateCommands:\n")));
+  EXPECT_CALL(client, Received(IsEvent("terminated", _)));
+  Run();
 }
+#endif

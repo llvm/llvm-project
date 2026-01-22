@@ -40,6 +40,7 @@ add_unittest_framework_library(
     LibcGpuBenchmarkMain.cpp
   HDRS
     LibcGpuBenchmark.h
+    Random.h
   DEPENDS
     libc.benchmarks.gpu.timing.timing
     libc.hdr.stdint_proxy
@@ -49,12 +50,17 @@ add_unittest_framework_library(
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.array
+    libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.FPUtil.sqrt
+    libc.src.__support.sign
     libc.src.__support.fixedvector
     libc.src.__support.GPU.utils
     libc.src.__support.time.gpu.time_utils
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
     libc.src.stdio.printf
     libc.src.time.clock
 )

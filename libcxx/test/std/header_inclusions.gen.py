@@ -9,6 +9,11 @@
 # Test that all headers include all the other headers they're supposed to, as
 # prescribed by the Standard.
 
+# UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
+
+# TODO: This is currently a libc++-specific way of testing the includes, but is a requirement for all implementation
+# REQUIRES: stdlib=libc++
+
 # RUN: %{python} %s %{libcxx-dir}/utils
 # END.
 
@@ -46,11 +51,6 @@ for header in public_headers:
     print(
         f"""\
 //--- {header}.compile.pass.cpp
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
-
-// TODO: This is currently a libc++-specific way of testing the includes, but is a requirement for all implementation
-// REQUIRES: stdlib=libc++
-
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 

@@ -3,4 +3,5 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from ._bufferization_ops_gen import *
+from ._bufferization_ops_gen import _Dialect
 from ._bufferization_enum_gen import *

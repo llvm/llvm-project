@@ -10,8 +10,7 @@
 // CHECK-LABEL: @_Z9cond_boolu10__SVBool_tS_(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ult <vscale x 16 x i1> [[A:%.*]], [[B:%.*]]
-// CHECK-NEXT:    [[VECTOR_COND:%.*]] = icmp ne <vscale x 16 x i1> [[CMP]], zeroinitializer
-// CHECK-NEXT:    [[VECTOR_SELECT:%.*]] = select <vscale x 16 x i1> [[VECTOR_COND]], <vscale x 16 x i1> [[A]], <vscale x 16 x i1> [[B]]
+// CHECK-NEXT:    [[VECTOR_SELECT:%.*]] = select <vscale x 16 x i1> [[CMP]], <vscale x 16 x i1> [[A]], <vscale x 16 x i1> [[B]]
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[VECTOR_SELECT]]
 //
 svbool_t cond_bool(svbool_t a, svbool_t b) {

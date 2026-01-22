@@ -14,6 +14,7 @@
 #define LLVMIR_INTERFACES
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
   let description = [{
@@ -529,6 +530,61 @@ def LLVM_DIRecursiveTypeAttrInterface
       Build a rec-self instance using the provided `recId`.
     }], "DIRecursiveTypeAttrInterface", "getRecSelf",
     (ins "DistinctAttr":$recId)>
+  ];
+}
+
+def LLVM_LLVMAddrSpaceAttrInterface :
+    AttrInterface<"LLVMAddrSpaceAttrInterface"> {
+  let description = [{
+    An interface for attributes that represent LLVM address spaces.
+    Implementing attributes should provide access to the address space value
+    as an unsigned integer.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the address space as an unsigned integer.",
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getAddressSpace",
+      /*args=*/(ins)
+    >
+  ];
+}
+
+def LLVM_TargetAttrInterface
+  : AttrInterface<"TargetAttrInterface", [DLTIQueryInterface]> {
+  let description = [{
+    Interface for attributes that describe LLVM targets.
+
+    These attributes should be able to return the specified target `triple`,
+    `chip` and `features`.
+
+    Implementing attributes should provide a `DLTIQueryInterface::query()`
+    implementation which responds to keys `"triple"`, `"chip"` and `"features"`
+    by returning appropriate `StringAttr`s.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the target triple identifier.",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getTriple",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target chip (i.e. \"cpu\") identifier.",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getChip",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target features as a TargetFeaturesAttr.",
+      /*retTy=*/"Attribute", // NB: will be a LLVM::TargetFeaturesAttr, though
+                             // need to work around a cyclic dependency on
+                             // LLVMInterfaces.td and LLVMAttrDefs.td.
+      /*methodName=*/"getFeatures",
+      /*args=*/(ins)
+    >
   ];
 }
 

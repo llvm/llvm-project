@@ -999,10 +999,8 @@ PropertyImplStrategy::PropertyImplStrategy(CodeGenModule &CGM,
 
   // Compute whether the ivar has strong members.
   if (CGM.getLangOpts().getGC())
-    if (const RecordType *recordType = ivarType->getAs<RecordType>())
-      HasStrong = recordType->getOriginalDecl()
-                      ->getDefinitionOrSelf()
-                      ->hasObjectMember();
+    if (const auto *RD = ivarType->getAsRecordDecl())
+      HasStrong = RD->hasObjectMember();
 
   // We can never access structs with object members with a native
   // access, because we need to use write barriers.  This is what
@@ -2058,7 +2056,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     EmitAutoVarCleanups(variable);
 
   // Perform the loop body, setting up break and continue labels.
-  BreakContinueStack.push_back(BreakContinue(LoopEnd, AfterBody));
+  BreakContinueStack.push_back(BreakContinue(S, LoopEnd, AfterBody));
   {
     RunCleanupsScope Scope(*this);
     EmitStmt(S.getBody());
@@ -2417,9 +2415,7 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
   emitAutoreleasedReturnValueMarker(CGF);
 
   // Add operand bundle "clang.arc.attachedcall" to the call instead of emitting
-  // retainRV or claimRV calls in the IR. We currently do this only when the
-  // optimization level isn't -O0 since global-isel, which is currently run at
-  // -O0, doesn't know about the operand bundle.
+  // retainRV or claimRV calls in the IR.
   ObjCEntrypoints &EPs = CGF.CGM.getObjCEntrypoints();
   llvm::Function *&EP = IsRetainRV
                             ? EPs.objc_retainAutoreleasedReturnValue
@@ -2431,11 +2427,10 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
 
   llvm::Triple::ArchType Arch = CGF.CGM.getTriple().getArch();
 
-  // FIXME: Do this on all targets and at -O0 too. This can be enabled only if
+  // FIXME: Do this on all targets. This can be enabled only if
   // the target backend knows how to handle the operand bundle.
-  if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
-       Arch == llvm::Triple::x86_64)) {
+  if (Arch == llvm::Triple::x86_64 ||
+      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32)) {
     llvm::Value *bundleArgs[] = {EP};
     llvm::OperandBundleDef OB("clang.arc.attachedcall", bundleArgs);
     auto *oldCall = cast<llvm::CallBase>(value);

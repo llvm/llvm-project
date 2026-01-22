@@ -605,6 +605,9 @@ protected:
                           LValue PosLVal, const OMPTaskDataTy::DependData &Data,
                           Address DependenciesArray);
 
+  /// Keep track of VTable Declarations so we don't register duplicate VTable.
+  llvm::SmallDenseMap<CXXRecordDecl *, const VarDecl *> VTableDeclMap;
+
 public:
   explicit CGOpenMPRuntime(CodeGenModule &CGM);
   virtual ~CGOpenMPRuntime() {}
@@ -777,11 +780,22 @@ public:
   /// specified, nullptr otherwise.
   /// \param NumThreads The value corresponding to the num_threads clause, if
   /// any, or nullptr.
+  /// \param NumThreadsModifier The modifier of the num_threads clause, if
+  /// any, ignored otherwise.
+  /// \param Severity The severity corresponding to the num_threads clause, if
+  /// any, ignored otherwise.
+  /// \param Message The message string corresponding to the num_threads clause,
+  /// if any, or nullptr.
   ///
-  virtual void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
-                                llvm::Function *OutlinedFn,
-                                ArrayRef<llvm::Value *> CapturedVars,
-                                const Expr *IfCond, llvm::Value *NumThreads);
+  virtual void
+  emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
+                   llvm::Function *OutlinedFn,
+                   ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond,
+                   llvm::Value *NumThreads,
+                   OpenMPNumThreadsClauseModifier NumThreadsModifier =
+                       OMPC_NUMTHREADS_unknown,
+                   OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
+                   const Expr *Message = nullptr);
 
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.
@@ -1037,13 +1051,28 @@ public:
                                    Address IL, Address LB,
                                    Address UB, Address ST);
 
+  virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
+                                         const Expr *Message,
+                                         SourceLocation Loc);
+
+  virtual llvm::Value *emitSeverityClause(OpenMPSeverityClauseKind Severity,
+                                          SourceLocation Loc);
+
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
   /// clause.
+  /// If the modifier 'strict' is given:
+  /// Emits call to void __kmpc_push_num_threads_strict(ident_t *loc, kmp_int32
+  /// global_tid, kmp_int32 num_threads, int severity, const char *message) to
+  /// generate code for 'num_threads' clause with 'strict' modifier.
   /// \param NumThreads An integer value of threads.
-  virtual void emitNumThreadsClause(CodeGenFunction &CGF,
-                                    llvm::Value *NumThreads,
-                                    SourceLocation Loc);
+  virtual void emitNumThreadsClause(
+      CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
+      OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
+      OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
+      SourceLocation SeverityLoc = SourceLocation(),
+      const Expr *Message = nullptr,
+      SourceLocation MessageLoc = SourceLocation());
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
@@ -1084,6 +1113,23 @@ public:
   /// \param PerformInit true if initialization expression is not constant.
   virtual void emitDeclareTargetFunction(const FunctionDecl *FD,
                                          llvm::GlobalValue *GV);
+
+  /// Register VTable to OpenMP offload entry.
+  /// \param VTable VTable of the C++ class.
+  /// \param RD C++ class decl.
+  virtual void registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
+                                          const VarDecl *VD);
+  /// Emit code for registering vtable by scanning through map clause
+  /// in OpenMP target region.
+  /// \param D OpenMP target directive.
+  virtual void registerVTable(const OMPExecutableDirective &D);
+
+  /// Emit and register VTable for the C++ class in OpenMP offload entry.
+  /// \param CXXRecord C++ class decl.
+  /// \param VD Variable decl which holds VTable.
+  virtual void emitAndRegisterVTable(CodeGenModule &CGM,
+                                     CXXRecordDecl *CXXRecord,
+                                     const VarDecl *VD);
 
   /// Creates artificial threadprivate variable with name \p Name and type \p
   /// VarType.
@@ -1737,11 +1783,21 @@ public:
   /// specified, nullptr otherwise.
   /// \param NumThreads The value corresponding to the num_threads clause, if
   /// any, or nullptr.
+  /// \param NumThreadsModifier The modifier of the num_threads clause, if
+  /// any, ignored otherwise.
+  /// \param Severity The severity corresponding to the num_threads clause, if
+  /// any, ignored otherwise.
+  /// \param Message The message string corresponding to the num_threads clause,
+  /// if any, or nullptr.
   ///
   void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                         llvm::Function *OutlinedFn,
                         ArrayRef<llvm::Value *> CapturedVars,
-                        const Expr *IfCond, llvm::Value *NumThreads) override;
+                        const Expr *IfCond, llvm::Value *NumThreads,
+                        OpenMPNumThreadsClauseModifier NumThreadsModifier =
+                            OMPC_NUMTHREADS_unknown,
+                        OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
+                        const Expr *Message = nullptr) override;
 
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.
@@ -1911,9 +1967,18 @@ public:
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
   /// clause.
+  /// If the modifier 'strict' is given:
+  /// Emits call to void __kmpc_push_num_threads_strict(ident_t *loc, kmp_int32
+  /// global_tid, kmp_int32 num_threads, int severity, const char *message) to
+  /// generate code for 'num_threads' clause with 'strict' modifier.
   /// \param NumThreads An integer value of threads.
-  void emitNumThreadsClause(CodeGenFunction &CGF, llvm::Value *NumThreads,
-                            SourceLocation Loc) override;
+  void emitNumThreadsClause(
+      CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
+      OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
+      OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
+      SourceLocation SeverityLoc = SourceLocation(),
+      const Expr *Message = nullptr,
+      SourceLocation MessageLoc = SourceLocation()) override;
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.

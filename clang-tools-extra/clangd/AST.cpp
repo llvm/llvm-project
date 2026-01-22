@@ -18,7 +18,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
@@ -29,9 +28,10 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -146,7 +146,8 @@ std::string getQualification(ASTContext &Context,
     if (auto *TD = llvm::dyn_cast<TagDecl>(CurD)) {
       QualType T;
       if (const auto *RD = dyn_cast<CXXRecordDecl>(TD);
-          ClassTemplateDecl *CTD = RD->getDescribedClassTemplate()) {
+          ClassTemplateDecl *CTD =
+              RD ? RD->getDescribedClassTemplate() : nullptr) {
         ArrayRef<TemplateArgument> Args;
         if (const auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
           Args = SD->getTemplateArgs().asArray();
@@ -479,10 +480,12 @@ namespace {
 /// a deduced type set. The AST should be improved to simplify this scenario.
 class DeducedTypeVisitor : public RecursiveASTVisitor<DeducedTypeVisitor> {
   SourceLocation SearchedLocation;
+  const HeuristicResolver *Resolver;
 
 public:
-  DeducedTypeVisitor(SourceLocation SearchedLocation)
-      : SearchedLocation(SearchedLocation) {}
+  DeducedTypeVisitor(SourceLocation SearchedLocation,
+                     const HeuristicResolver *Resolver)
+      : SearchedLocation(SearchedLocation), Resolver(Resolver) {}
 
   // Handle auto initializers:
   //- auto i = 1;
@@ -499,6 +502,14 @@ public:
       return true;
 
     if (auto *AT = D->getType()->getContainedAutoType()) {
+      if (AT->isUndeducedAutoType()) {
+        if (const auto *VD = dyn_cast<VarDecl>(D)) {
+          if (Resolver && VD->hasInit()) {
+            DeducedType = Resolver->resolveExprToType(VD->getInit());
+            return true;
+          }
+        }
+      }
       DeducedType = AT->desugar();
     }
     return true;
@@ -608,10 +619,12 @@ public:
 };
 } // namespace
 
-std::optional<QualType> getDeducedType(ASTContext &ASTCtx, SourceLocation Loc) {
+std::optional<QualType> getDeducedType(ASTContext &ASTCtx,
+                                       const HeuristicResolver *Resolver,
+                                       SourceLocation Loc) {
   if (!Loc.isValid())
     return {};
-  DeducedTypeVisitor V(Loc);
+  DeducedTypeVisitor V(Loc, Resolver);
   V.TraverseAST(ASTCtx);
   if (V.DeducedType.isNull())
     return std::nullopt;
@@ -985,7 +998,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
     // Recurse on pack parameters
     size_t Depth = 0;
     const FunctionDecl *CurrentFunction = D;
-    llvm::SmallSet<const FunctionTemplateDecl *, 4> SeenTemplates;
+    llvm::SmallPtrSet<const FunctionTemplateDecl *, 4> SeenTemplates;
     if (const auto *Template = D->getPrimaryTemplate()) {
       SeenTemplates.insert(Template);
     }
@@ -1024,6 +1037,81 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
 
 bool isExpandedFromParameterPack(const ParmVarDecl *D) {
   return getUnderlyingPackType(D) != nullptr;
+}
+
+bool isLikelyForwardingFunction(const FunctionTemplateDecl *FT) {
+  const auto *FD = FT->getTemplatedDecl();
+  const auto NumParams = FD->getNumParams();
+  // Check whether its last parameter is a parameter pack...
+  if (NumParams > 0) {
+    const auto *LastParam = FD->getParamDecl(NumParams - 1);
+    if (const auto *PET = dyn_cast<PackExpansionType>(LastParam->getType())) {
+      // ... of the type T&&... or T...
+      const auto BaseType = PET->getPattern().getNonReferenceType();
+      if (const auto *TTPT =
+              dyn_cast<TemplateTypeParmType>(BaseType.getTypePtr())) {
+        // ... whose template parameter comes from the function directly
+        if (FT->getTemplateParameters()->getDepth() == TTPT->getDepth()) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+class ForwardingToConstructorVisitor
+    : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
+public:
+  ForwardingToConstructorVisitor(
+      llvm::DenseSet<const FunctionDecl *> &SeenFunctions,
+      SmallVector<const CXXConstructorDecl *, 1> &Output)
+      : SeenFunctions(SeenFunctions), Constructors(Output) {}
+
+  bool VisitCallExpr(CallExpr *E) {
+    // Adjust if recurison not deep enough
+    if (SeenFunctions.size() >= 10)
+      return true;
+    if (auto *FD = E->getDirectCallee()) {
+      // Check if we already visited this function to prevent endless recursion
+      if (SeenFunctions.contains(FD))
+        return true;
+      if (auto *PT = FD->getPrimaryTemplate();
+          PT && isLikelyForwardingFunction(PT)) {
+        SeenFunctions.insert(FD);
+        ForwardingToConstructorVisitor Visitor{SeenFunctions, Constructors};
+        Visitor.TraverseStmt(FD->getBody());
+        SeenFunctions.erase(FD);
+      }
+    }
+    return true;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    if (auto *CE = E->getConstructExpr())
+      if (auto *Callee = CE->getConstructor()) {
+        auto *Adjusted = &adjustDeclToTemplate(*Callee);
+        if (auto *Template = dyn_cast<TemplateDecl>(Adjusted))
+          Adjusted = Template->getTemplatedDecl();
+        if (auto *Constructor = dyn_cast<CXXConstructorDecl>(Adjusted))
+          Constructors.push_back(Constructor);
+      }
+    return true;
+  }
+
+  // Stack of seen functions
+  llvm::DenseSet<const FunctionDecl *> &SeenFunctions;
+  // Output of this visitor
+  SmallVector<const CXXConstructorDecl *, 1> &Constructors;
+};
+
+SmallVector<const CXXConstructorDecl *, 1>
+searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
+  SmallVector<const CXXConstructorDecl *, 1> Result;
+  llvm::DenseSet<const FunctionDecl *> SeenFunctions{FD};
+  ForwardingToConstructorVisitor Visitor{SeenFunctions, Result};
+  Visitor.TraverseStmt(FD->getBody());
+  return Result;
 }
 
 } // namespace clangd

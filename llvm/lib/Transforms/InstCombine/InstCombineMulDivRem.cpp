@@ -69,9 +69,13 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
       IC.isKnownToBeAPowerOfTwo(I->getOperand(0), false, &CxtI)) {
     // We know that this is an exact/nuw shift and that the input is a
     // non-zero context as well.
-    if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
-      IC.replaceOperand(*I, 0, V2);
-      MadeChange = true;
+    {
+      IRBuilderBase::InsertPointGuard Guard(IC.Builder);
+      IC.Builder.SetInsertPoint(I);
+      if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
+        IC.replaceOperand(*I, 0, V2);
+        MadeChange = true;
+      }
     }
 
     if (I->getOpcode() == Instruction::LShr && !I->isExact()) {
@@ -316,6 +320,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
   if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
     return FoldedMul;
+
+  if (Instruction *FoldedLogic = foldBinOpSelectBinOp(I))
+    return FoldedLogic;
 
   if (Value *FoldedMul = foldMulSelectToNegate(I, Builder))
     return replaceInstUsesWith(I, FoldedMul);
@@ -1642,10 +1649,11 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
   }
 
   Constant *C;
+  auto &DL = IC.getDataLayout();
   if (isa<Instruction>(N) && match(N, m_OneUse(m_ZExt(m_Value(X)))) &&
       match(D, m_Constant(C))) {
     // If the constant is the same in the smaller type, use the narrow version.
-    Constant *TruncC = IC.getLosslessUnsignedTrunc(C, X->getType());
+    Constant *TruncC = getLosslessUnsignedTrunc(C, X->getType(), DL);
     if (!TruncC)
       return nullptr;
 
@@ -1656,7 +1664,7 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
   if (isa<Instruction>(D) && match(D, m_OneUse(m_ZExt(m_Value(X)))) &&
       match(N, m_Constant(C))) {
     // If the constant is the same in the smaller type, use the narrow version.
-    Constant *TruncC = IC.getLosslessUnsignedTrunc(C, X->getType());
+    Constant *TruncC = getLosslessUnsignedTrunc(C, X->getType(), DL);
     if (!TruncC)
       return nullptr;
 

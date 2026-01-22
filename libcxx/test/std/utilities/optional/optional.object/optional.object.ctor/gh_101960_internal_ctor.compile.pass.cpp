@@ -10,7 +10,7 @@
 
 // <optional>
 
-// Regression test for https://github.com/llvm/llvm-project/issues/101960 where a constructor
+// Regression test for https://llvm.org/PR101960 where a constructor
 // of std::optional that should have been private was instead publicly available.
 
 #include <optional>

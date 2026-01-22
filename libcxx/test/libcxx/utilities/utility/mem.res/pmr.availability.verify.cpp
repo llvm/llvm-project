@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // REQUIRES: availability-pmr-missing
 
-// TODO: This test doesn't work until https://github.com/llvm/llvm-project/issues/40340
+// TODO: This test doesn't work until https://llvm.org/PR40995
 //       has been fixed, because we actually disable availability markup.
 // XFAIL: *
 

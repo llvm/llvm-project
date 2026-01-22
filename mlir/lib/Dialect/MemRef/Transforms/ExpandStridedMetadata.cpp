@@ -959,7 +959,11 @@ class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
                   PatternRewriter &rewriter) const override {
     auto viewLikeOp =
         extractOp.getSource().getDefiningOp<ViewLikeOpInterface>();
-    if (!viewLikeOp)
+    // ViewLikeOpInterface by itself doesn't guarantee to preserve the base
+    // pointer in general and `memref.view` is one such example, so just check
+    // for a few specific cases.
+    if (!viewLikeOp || extractOp.getSource() != viewLikeOp.getViewDest() ||
+        !isa<memref::SubViewOp, memref::ReinterpretCastOp>(viewLikeOp))
       return rewriter.notifyMatchFailure(extractOp, "not a ViewLike source");
     rewriter.modifyOpInPlace(extractOp, [&]() {
       extractOp.getSourceMutable().assign(viewLikeOp.getViewSource());
@@ -1026,91 +1030,6 @@ class ExtractStridedMetadataOpReinterpretCastFolder
     for (unsigned i = 0; i < rank; ++i) {
       results[sizeStartIdx + i] = sizes[i];
       results[strideStartIdx + i] = strides[i];
-    }
-    rewriter.replaceOp(extractStridedMetadataOp,
-                       getValueOrCreateConstantIndexOp(rewriter, loc, results));
-    return success();
-  }
-};
-
-/// Replace `base, offset, sizes, strides =
-///              extract_strided_metadata(
-///                 cast(src) to dstTy)`
-/// With
-/// ```
-/// base, ... = extract_strided_metadata(src)
-/// offset = !dstTy.srcOffset.isDynamic()
-///            ? dstTy.srcOffset
-///            : extract_strided_metadata(src).offset
-/// sizes = for each srcSize in dstTy.srcSizes:
-///           !srcSize.isDynamic()
-///             ? srcSize
-//              : extract_strided_metadata(src).sizes[i]
-/// strides = for each srcStride in dstTy.srcStrides:
-///             !srcStrides.isDynamic()
-///               ? srcStrides
-///               : extract_strided_metadata(src).strides[i]
-/// ```
-///
-/// In other words, consume the `cast` and apply its effects
-/// on the offset, sizes, and strides or compute them directly from `src`.
-class ExtractStridedMetadataOpCastFolder
-    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult
-  matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,
-                  PatternRewriter &rewriter) const override {
-    Value source = extractStridedMetadataOp.getSource();
-    auto castOp = source.getDefiningOp<memref::CastOp>();
-    if (!castOp)
-      return failure();
-
-    Location loc = extractStridedMetadataOp.getLoc();
-    // Check if the source is suitable for extract_strided_metadata.
-    SmallVector<Type> inferredReturnTypes;
-    if (failed(extractStridedMetadataOp.inferReturnTypes(
-            rewriter.getContext(), loc, {castOp.getSource()},
-            /*attributes=*/{}, /*properties=*/nullptr, /*regions=*/{},
-            inferredReturnTypes)))
-      return rewriter.notifyMatchFailure(castOp,
-                                         "cast source's type is incompatible");
-
-    auto memrefType = cast<MemRefType>(source.getType());
-    unsigned rank = memrefType.getRank();
-    SmallVector<OpFoldResult> results;
-    results.resize_for_overwrite(rank * 2 + 2);
-
-    auto newExtractStridedMetadata = memref::ExtractStridedMetadataOp::create(
-        rewriter, loc, castOp.getSource());
-
-    // Register the base_buffer.
-    results[0] = newExtractStridedMetadata.getBaseBuffer();
-
-    auto getConstantOrValue = [&rewriter](int64_t constant,
-                                          OpFoldResult ofr) -> OpFoldResult {
-      return ShapedType::isStatic(constant)
-                 ? OpFoldResult(rewriter.getIndexAttr(constant))
-                 : ofr;
-    };
-
-    auto [sourceStrides, sourceOffset] = memrefType.getStridesAndOffset();
-    assert(sourceStrides.size() == rank && "unexpected number of strides");
-
-    // Register the new offset.
-    results[1] =
-        getConstantOrValue(sourceOffset, newExtractStridedMetadata.getOffset());
-
-    const unsigned sizeStartIdx = 2;
-    const unsigned strideStartIdx = sizeStartIdx + rank;
-    ArrayRef<int64_t> sourceSizes = memrefType.getShape();
-
-    SmallVector<OpFoldResult> sizes = newExtractStridedMetadata.getSizes();
-    SmallVector<OpFoldResult> strides = newExtractStridedMetadata.getStrides();
-    for (unsigned i = 0; i < rank; ++i) {
-      results[sizeStartIdx + i] = getConstantOrValue(sourceSizes[i], sizes[i]);
-      results[strideStartIdx + i] =
-          getConstantOrValue(sourceStrides[i], strides[i]);
     }
     rewriter.replaceOp(extractStridedMetadataOp,
                        getValueOrCreateConstantIndexOp(rewriter, loc, results));
@@ -1209,7 +1128,6 @@ void memref::populateExpandStridedMetadataPatterns(
                RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
                ExtractStridedMetadataOpReinterpretCastFolder,
                ExtractStridedMetadataOpSubviewFolder,
-               ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpMemorySpaceCastFolder,
                ExtractStridedMetadataOpAssumeAlignmentFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(
@@ -1226,7 +1144,6 @@ void memref::populateResolveExtractStridedMetadataPatterns(
                ExtractStridedMetadataOpSubviewFolder,
                RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
                ExtractStridedMetadataOpReinterpretCastFolder,
-               ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpMemorySpaceCastFolder,
                ExtractStridedMetadataOpAssumeAlignmentFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(

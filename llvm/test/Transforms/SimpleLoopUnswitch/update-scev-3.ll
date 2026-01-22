@@ -19,42 +19,56 @@ define i32 @foo(i1 %not) {
 ; CHECK-NEXT:    [[FALSE:%.*]] = and i1 true, false
 ; CHECK-NEXT:    br i1 [[NOT]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
+; CHECK-NEXT:    br i1 [[FALSE]], label [[ENTRY_SPLIT_US_SPLIT_US:%.*]], label [[ENTRY_SPLIT_US_SPLIT:%.*]]
+; CHECK:       entry.split.us.split.us:
+; CHECK-NEXT:    br label [[FOR_COND_US_US:%.*]]
+; CHECK:       for.cond.us.us:
+; CHECK-NEXT:    br label [[FOR_COND_SPLIT_US_US_US:%.*]]
+; CHECK:       for.cond.split.us.us.us:
+; CHECK-NEXT:    br label [[FOR_COND_SPLIT_US_SPLIT_US_SPLIT_US_SPLIT_US:%.*]]
+; CHECK:       for.cond.split.us.split.us.split.us.split.us:
+; CHECK-NEXT:    br label [[FOR_COND_SPLIT_US_SPLIT_US_SPLIT_US:%.*]]
+; CHECK:       entry.split.us.split:
 ; CHECK-NEXT:    br label [[FOR_COND_US:%.*]]
 ; CHECK:       for.cond.us:
 ; CHECK-NEXT:    br label [[FOR_COND_SPLIT_US_US:%.*]]
 ; CHECK:       for.inc11.us:
-; CHECK-NEXT:    br label [[FOR_COND_US]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br label [[FOR_COND_US]]
 ; CHECK:       for.cond.split.us.us:
-; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_US_US:%.*]]
-; CHECK:       for.cond5.preheader.us.us:
-; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_SPLIT_US_US_US:%.*]]
+; CHECK-NEXT:    br label [[FOR_COND_SPLIT_US_SPLIT_US11:%.*]]
+; CHECK:       for.cond5.preheader.us.us9:
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_SPLIT_US_US_US10:%.*]]
 ; CHECK:       for.inc8.us.us:
-; CHECK-NEXT:    br i1 [[FALSE]], label [[FOR_INC8_FOR_COND5_PREHEADER_CRIT_EDGE_US_US:%.*]], label [[FOR_INC11_SPLIT_US_US:%.*]]
+; CHECK-NEXT:    br i1 false, label [[FOR_INC8_FOR_COND5_PREHEADER_CRIT_EDGE_US_US:%.*]], label [[FOR_INC11_SPLIT_US_US:%.*]]
 ; CHECK:       for.inc8.for.cond5.preheader_crit_edge.us.us:
-; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_US_US]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_US_US9:%.*]]
 ; CHECK:       for.end.us.us:
-; CHECK-NEXT:    br i1 [[FALSE]], label [[FOR_INC8_US_US:%.*]], label [[CLEANUP15_SPLIT_US_SPLIT_US:%.*]]
-; CHECK:       for.cond5.preheader.split.us.us.us:
-; CHECK-NEXT:    br label [[FOR_BODY7_US_US_US:%.*]]
-; CHECK:       for.body7.us.us.us:
-; CHECK-NEXT:    br label [[HANDLER_POINTER_OVERFLOW_US_US_US:%.*]]
-; CHECK:       handler.pointer_overflow.us.us.us:
-; CHECK-NEXT:    br label [[CONT_US_US_US:%.*]]
-; CHECK:       cont.us.us.us:
-; CHECK-NEXT:    br i1 [[FALSE]], label [[CONT_FOR_BODY7_CRIT_EDGE_US_US_US:%.*]], label [[FOR_END_SPLIT_US_US_US:%.*]]
-; CHECK:       cont.for.body7_crit_edge.us.us.us:
-; CHECK-NEXT:    br label [[FOR_BODY7_US_US_US]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 false, label [[FOR_INC8_US_US:%.*]], label [[CLEANUP15_SPLIT_US_SPLIT_US:%.*]]
+; CHECK:       for.cond5.preheader.split.us.us.us10:
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_SPLIT_US_SPLIT_US7_US:%.*]]
+; CHECK:       for.body7.us.us4.us:
+; CHECK-NEXT:    br label [[HANDLER_POINTER_OVERFLOW_US_US5_US:%.*]]
+; CHECK:       handler.pointer_overflow.us.us5.us:
+; CHECK-NEXT:    br label [[CONT_US_US6_US:%.*]]
+; CHECK:       cont.us.us6.us:
+; CHECK-NEXT:    br label [[FOR_END_SPLIT_US_US_US:%.*]]
 ; CHECK:       for.end.split.us.us.us:
 ; CHECK-NEXT:    br label [[FOR_END_US_US:%.*]]
+; CHECK:       for.cond5.preheader.split.us.split.us7.us:
+; CHECK-NEXT:    br label [[FOR_BODY7_US_US4_US:%.*]]
 ; CHECK:       for.inc11.split.us.us:
 ; CHECK-NEXT:    br label [[FOR_INC11_US:%.*]]
+; CHECK:       for.cond.split.us.split.us11:
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_US_US9]]
+; CHECK:       for.cond.split.us.split.us.split.us:
+; CHECK-NEXT:    br label [[FOR_COND_SPLIT_US_SPLIT_US:%.*]]
 ; CHECK:       cleanup15.split.us.split.us:
 ; CHECK-NEXT:    br label [[CLEANUP15_SPLIT_US:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br i1 [[FALSE]], label [[ENTRY_SPLIT_SPLIT_US:%.*]], label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK:       entry.split.split.us:
-; CHECK-NEXT:    br label [[FOR_COND_US5:%.*]]
-; CHECK:       for.cond.us5:
+; CHECK-NEXT:    br label [[FOR_COND_US12:%.*]]
+; CHECK:       for.cond.us12:
 ; CHECK-NEXT:    br label [[FOR_COND_SPLIT_US:%.*]]
 ; CHECK:       for.cond.split.us:
 ; CHECK-NEXT:    br label [[FOR_COND_SPLIT_SPLIT_US_SPLIT_US:%.*]]
@@ -64,13 +78,23 @@ define i32 @foo(i1 %not) {
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br label [[FOR_COND_SPLIT:%.*]]
+; CHECK:       for.cond.split.us.split.us:
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_US_US:%.*]]
+; CHECK:       for.cond5.preheader.us.us:
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_SPLIT_US_US_US:%.*]]
+; CHECK:       for.cond5.preheader.split.us.us.us:
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_SPLIT_US_SPLIT_US_SPLIT_US_SPLIT_US:%.*]]
+; CHECK:       for.cond5.preheader.split.us.split.us.split.us.split.us:
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_SPLIT_US_SPLIT_US_SPLIT_US:%.*]]
 ; CHECK:       cleanup15.split.us:
 ; CHECK-NEXT:    br label [[CLEANUP15:%.*]]
+; CHECK:       for.cond5.preheader.split.us.split.us.split.us:
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_SPLIT_US_SPLIT_US:%.*]]
 ; CHECK:       for.cond.split:
 ; CHECK-NEXT:    br label [[FOR_COND_SPLIT_SPLIT:%.*]]
 ; CHECK:       for.cond.split.split.us:
-; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_US4:%.*]]
-; CHECK:       for.cond5.preheader.us4:
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_US8:%.*]]
+; CHECK:       for.cond5.preheader.us8:
 ; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_SPLIT_US:%.*]]
 ; CHECK:       for.cond5.preheader.split.us:
 ; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_SPLIT_SPLIT_US_SPLIT_US:%.*]]
@@ -80,6 +104,16 @@ define i32 @foo(i1 %not) {
 ; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER:%.*]]
 ; CHECK:       for.cond5.preheader:
 ; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_SPLIT:%.*]]
+; CHECK:       for.cond5.preheader.split.us.split.us:
+; CHECK-NEXT:    br label [[FOR_BODY7_US_US:%.*]]
+; CHECK:       for.body7.us.us:
+; CHECK-NEXT:    br label [[HANDLER_POINTER_OVERFLOW_US_US:%.*]]
+; CHECK:       handler.pointer_overflow.us.us:
+; CHECK-NEXT:    br label [[CONT_US_US:%.*]]
+; CHECK:       cont.us.us:
+; CHECK-NEXT:    br label [[CONT_FOR_BODY7_CRIT_EDGE_US_US:%.*]]
+; CHECK:       cont.for.body7_crit_edge.us.us:
+; CHECK-NEXT:    br label [[FOR_BODY7_US_US]]
 ; CHECK:       for.cond5.preheader.split:
 ; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_SPLIT_SPLIT:%.*]]
 ; CHECK:       for.cond5.preheader.split.split.us:

@@ -320,7 +320,7 @@ protected:
 
   /// A set of location contexts that correspoind to call sites which should be
   /// considered "interesting".
-  llvm::SmallSet<const LocationContext *, 2> InterestingLocationContexts;
+  llvm::SmallPtrSet<const LocationContext *, 2> InterestingLocationContexts;
 
   /// A set of custom visitors which generate "event" diagnostics at
   /// interesting points in the path.
@@ -348,7 +348,7 @@ protected:
   llvm::SmallSet<InvalidationRecord, 4> Invalidations;
 
   /// Conditions we're already tracking.
-  llvm::SmallSet<const ExplodedNode *, 4> TrackedConditions;
+  llvm::SmallPtrSet<const ExplodedNode *, 4> TrackedConditions;
 
   /// Reports with different uniqueing locations are considered to be different
   /// for the purposes of deduplication.
@@ -623,10 +623,12 @@ public:
   ASTContext &getContext() { return D.getASTContext(); }
 
   const SourceManager &getSourceManager() { return D.getSourceManager(); }
+  const SourceManager &getSourceManager() const { return D.getSourceManager(); }
 
   const AnalyzerOptions &getAnalyzerOptions() { return D.getAnalyzerOptions(); }
 
   Preprocessor &getPreprocessor() { return D.getPreprocessor(); }
+  const Preprocessor &getPreprocessor() const { return D.getPreprocessor(); }
 
   /// Get the top-level entry point for the issue to be reported.
   const Decl *getAnalysisEntryPoint() const { return AnalysisEntryPoint; }

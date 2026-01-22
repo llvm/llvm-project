@@ -637,10 +637,19 @@ void IRMemoryMap::WriteScalarToMemory(lldb::addr_t process_address,
 }
 
 void IRMemoryMap::WritePointerToMemory(lldb::addr_t process_address,
-                                       lldb::addr_t address, Status &error) {
+                                       lldb::addr_t pointer, Status &error) {
   error.Clear();
 
-  Scalar scalar(address);
+  /// Only ask the Process to fix `pointer` if the address belongs to the
+  /// process. An address belongs to the process if the Allocation policy is not
+  /// eAllocationPolicyHostOnly.
+  auto it = FindAllocation(pointer, 1);
+  if (it == m_allocations.end() ||
+      it->second.m_policy != AllocationPolicy::eAllocationPolicyHostOnly)
+    if (auto process_sp = GetProcessWP().lock())
+      pointer = process_sp->FixAnyAddress(pointer);
+
+  Scalar scalar(pointer);
 
   WriteScalarToMemory(process_address, scalar, GetAddressByteSize(), error);
 }

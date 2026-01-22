@@ -97,6 +97,9 @@ class RegisterCommandsTestCase(TestBase):
     @skipIf(oslist=no_match(["linux"]))
     def test_aarch64_dynamic_regset_config(self):
         """Test AArch64 Dynamic Register sets configuration."""
+        if not self.isAArch64SVE():
+            self.skipTest("SVE must be present")
+
         register_sets = self.setup_register_config_test()
 
         for registerSet in register_sets:
@@ -259,6 +262,8 @@ class RegisterCommandsTestCase(TestBase):
     def test_aarch64_dynamic_regset_config_sme_write_za_to_enable(self):
         """Test that ZA and ZT0 (if present) shows as 0s when disabled and
         can be enabled by writing to ZA."""
+        if not self.isAArch64SVE():
+            self.skipTest("SVE must be present.")
         if not self.isAArch64SME():
             self.skipTest("SME must be present.")
 
@@ -270,6 +275,8 @@ class RegisterCommandsTestCase(TestBase):
     def test_aarch64_dynamic_regset_config_sme_write_zt0_to_enable(self):
         """Test that ZA and ZT0 (if present) shows as 0s when disabled and
         can be enabled by writing to ZT0."""
+        if not self.isAArch64SVE():
+            self.skipTest("SVE must be present.")
         if not self.isAArch64SME():
             self.skipTest("SME must be present.")
         if not self.isAArch64SME2():

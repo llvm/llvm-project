@@ -31,7 +31,7 @@ resign_xpaci_good:
         xpaci   x16
         cmp     x0, x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -46,7 +46,7 @@ resign_xpacd_good:
         xpacd   x16
         cmp     x0, x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc473
 1:
         pacda   x0, x2
         ret
@@ -117,7 +117,7 @@ resign_xpaci_unrelated_auth_and_check:
         xpaci   x16
         cmp     x0, x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x10, x2
         ret
@@ -139,7 +139,7 @@ resign_xpaci_wrong_pattern_1:
         xpaci   x16
         cmp     x0, x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -157,7 +157,7 @@ resign_xpaci_wrong_pattern_2:
         xpaci   x0        // x0 instead of x16
         cmp     x0, x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -174,7 +174,7 @@ resign_xpaci_wrong_pattern_3:
         xpaci   x16
         cmp     x16, x16  // x16 instead of x0
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -191,7 +191,7 @@ resign_xpaci_wrong_pattern_4:
         xpaci   x16
         cmp     x0, x0    // x0 instead of x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -208,7 +208,7 @@ resign_xpaci_wrong_pattern_5:
         mov     x16, x16  // replace xpaci with a no-op instruction
         cmp     x0, x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -228,7 +228,7 @@ resign_xpaclri_good:
         xpaclri
         cmp     x30, x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x30, x2
 
@@ -246,7 +246,7 @@ xpaclri_check_keeps_lr_safe:
         xpaclri         // clobbers LR
         cmp     x30, x16
         b.eq    1f
-        brk     0x1234    // marks LR as trusted and safe-to-dereference
+        brk     0xc471    // marks LR as trusted and safe-to-dereference
 1:
         ret             // not reporting non-protected return
         .size xpaclri_check_keeps_lr_safe, .-xpaclri_check_keeps_lr_safe
@@ -265,7 +265,7 @@ xpaclri_check_requires_safe_lr:
         xpaclri
         cmp     x30, x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         ret
         .size xpaclri_check_requires_safe_lr, .-xpaclri_check_requires_safe_lr
@@ -283,7 +283,7 @@ resign_xpaclri_wrong_reg:
         xpaclri         // ... but xpaclri still operates on x30
         cmp     x20, x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x20, x2
 
@@ -303,7 +303,7 @@ resign_checked_not_authenticated:
         xpaci   x16
         cmp     x0, x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -323,7 +323,7 @@ resign_checked_before_authenticated:
         xpaci   x16
         cmp     x0, x16
         b.eq    1f
-        brk     0x1234
+        brk     0xc471
 1:
         autib   x0, x1
         pacia   x0, x2
@@ -339,7 +339,7 @@ resign_high_bits_tbz_good:
         autib   x0, x1
         eor     x16, x0, x0, lsl #1
         tbz     x16, #62, 1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -378,7 +378,7 @@ resign_high_bits_tbz_wrong_bit:
         autib   x0, x1
         eor     x16, x0, x0, lsl #1
         tbz     x16, #63, 1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -393,7 +393,7 @@ resign_high_bits_tbz_wrong_shift_amount:
         autib   x0, x1
         eor     x16, x0, x0, lsl #2
         tbz     x16, #62, 1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -408,7 +408,7 @@ resign_high_bits_tbz_wrong_shift_type:
         autib   x0, x1
         eor     x16, x0, x0, lsr #1
         tbz     x16, #62, 1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -423,7 +423,7 @@ resign_high_bits_tbz_wrong_pattern_1:
         autib   x0, x1
         eor     x16, x0, x0, lsl #1
         tbz     x17, #62, 1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -438,7 +438,7 @@ resign_high_bits_tbz_wrong_pattern_2:
         autib   x0, x1
         eor     x16, x10, x0, lsl #1
         tbz     x16, #62, 1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -453,7 +453,7 @@ resign_high_bits_tbz_wrong_pattern_3:
         autib   x0, x1
         eor     x16, x0, x10, lsl #1
         tbz     x16, #62, 1f
-        brk     0x1234
+        brk     0xc471
 1:
         pacia   x0, x2
         ret
@@ -648,7 +648,7 @@ many_checked_regs:
         xpacd   x16       // ...
         cmp     x2, x16   // ...
         b.eq    2f        // end of basic block
-        brk     0x1234
+        brk     0xc473
 2:
         pacdza  x0
         pacdza  x1

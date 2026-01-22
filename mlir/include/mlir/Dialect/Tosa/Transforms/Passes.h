@@ -15,7 +15,6 @@
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Dialect/Tosa/Transforms/PassesEnums.h.inc"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -42,6 +41,8 @@ void populateTosaConstantReduction(MLIRContext *ctx,
 void populateTosaTypeConversion(TypeConverter &converter);
 
 std::unique_ptr<Pass> createTosaTestQuantUtilAPIPass();
+std::unique_ptr<Pass>
+createTosaInputShapePass(std::vector<std::string> args = {});
 
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"

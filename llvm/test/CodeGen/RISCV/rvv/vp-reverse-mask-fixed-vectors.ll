@@ -158,7 +158,3 @@ define <16 x i1> @test_vp_reverse_v16i1(<16 x i1> %src, i32 zeroext %evl) {
   ret <16 x i1> %dst
 }
 
-declare <2 x i1> @llvm.experimental.vp.reverse.v2i1(<2 x i1>,<2 x i1>,i32)
-declare <4 x i1> @llvm.experimental.vp.reverse.v4i1(<4 x i1>,<4 x i1>,i32)
-declare <8 x i1> @llvm.experimental.vp.reverse.v8i1(<8 x i1>,<8 x i1>,i32)
-declare <16 x i1> @llvm.experimental.vp.reverse.v16i1(<16 x i1>,<16 x i1>,i32)

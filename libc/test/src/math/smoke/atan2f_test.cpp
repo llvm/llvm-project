@@ -8,7 +8,6 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/atan2f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -16,8 +15,6 @@
 using LlvmLibcAtan2fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcAtan2fTest, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2f(sNaN, sNaN),
                               FE_INVALID);
   EXPECT_MATH_ERRNO(0);

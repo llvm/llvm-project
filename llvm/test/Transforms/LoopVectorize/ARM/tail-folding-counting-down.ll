@@ -19,9 +19,9 @@ define dso_local void @sgt_loopguard(ptr noalias nocapture readonly %a, ptr noal
 
 ; CHECK-TF:     %[[VIVELEM0:.*]] = extractelement <16 x i32> %vec.iv, i32 0
 ; CHECK-TF:     %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %[[VIVELEM0]], i32 %N)
-; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr %{{.*}}, i32 1, <16 x i1> %active.lane.mask
-; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr %{{.*}}, i32 1, <16 x i1> %active.lane.mask
-; CHECK-TF:     llvm.masked.store.v16i8.p0(<16 x i8> %{{.*}}, ptr %{{.*}}, i32 1, <16 x i1> %active.lane.mask)
+; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask
+; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask
+; CHECK-TF:     llvm.masked.store.v16i8.p0(<16 x i8> %{{.*}}, ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask)
 entry:
   %cmp5 = icmp sgt i32 %N, 0
   br i1 %cmp5, label %while.body.preheader, label %while.end

@@ -42,11 +42,8 @@ AST Visitors
 
 Clang LLVM IR generation
 ~~~~~~~~~~~~~~~~~~~~~~~~
-| John McCall
-| rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
-
 | Eli Friedman
-| efriedma\@quicinc.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
+| efriedma\@qti.qualcomm.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
 
 | Anton Korobeynikov
 | anton\@korobeynikov.info (email), asl (Phabricator), asl (GitHub)
@@ -113,6 +110,12 @@ Templates
 | ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
 
 
+Concepts
+~~~~~~~~
+| Corentin Jabot
+| corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
+
+
 Lambdas
 ~~~~~~~
 | Corentin Jabot
@@ -140,14 +143,13 @@ Exception handling
 Clang static analyzer
 ~~~~~~~~~~~~~~~~~~~~~
 | Artem Dergachev
-| adergachev\@apple.com (email), NoQ (Phabricator), haoNoQ (GitHub)
+| artem.dergachev\@gmail.com (email), NoQ (Phabricator), haoNoQ (GitHub)
 
 | Gábor Horváth
 | xazax.hun\@gmail.com (email), xazax.hun (Phabricator), Xazax-hun (GitHub)
 
 | Balázs Benics
 | benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
-| balazs.benics\@sonarsource.com (email), balazs-benics-sonarsource (GitHub)
 
 Compiler options
 ~~~~~~~~~~~~~~~~
@@ -202,6 +204,21 @@ Function Effect Analysis
 | aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 
+Code Coverage
+~~~~~~~~~~~~~
+| Takumi Nakamura
+| geek4civic\@gmail.com (email), chapuni(GitHub), chapuni (Discord), chapuni (Discourse)
+
+| Alan Phipps
+| a-phipps\@ti.com (email), evodius96 (GitHub), evodius96 (Discourse)
+
+
+Python Bindings
+~~~~~~~~~~~~~~~
+| Vlad Serebrennikov
+| serebrennikov.vladislav\@gmail.com (email), Endilll (GitHub), Endill (Discord), Endill (Discourse)
+
+
 Tools
 -----
 These maintainers are responsible for user-facing tools under the Clang
@@ -242,13 +259,13 @@ ARM EABI
 Compiler-Wide Topics
 --------------------
 The following people are responsible for functionality that does not fit into
-a single part of the compiler, but instead span multiple components within the
+a single part of the compiler, but instead spans multiple components within the
 compiler.
 
 Attributes
 ~~~~~~~~~~
-| Erich Keane
-| ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+| Aaron Ballman
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 Plugins
@@ -265,9 +282,6 @@ Inline assembly
 
 Text encodings
 ~~~~~~~~~~~~~~
-| Tom Honermann
-| tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)
-
 | Corentin Jabot
 | corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
 
@@ -386,3 +400,5 @@ Inactive component maintainers
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
+| Tom Honermann (tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)) -- Text Encodings
+| John McCall (rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)) -- Clang LLVM IR generation

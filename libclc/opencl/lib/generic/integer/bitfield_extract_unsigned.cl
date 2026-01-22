@@ -9,10 +9,9 @@
 #ifdef cl_khr_extended_bit_ops
 
 #include <clc/integer/clc_bitfield_extract_unsigned.h>
-#include <clc/opencl/integer/bitfield_extract_unsigned.h>
 
-#define FUNCTION bitfield_extract_unsigned
-#define __RETTYPE __CLC_U_GENTYPE
+#define __CLC_FUNCTION bitfield_extract_unsigned
+#define __CLC_RETTYPE __CLC_U_GENTYPE
 
 #define __CLC_BODY <bitfield_extract_def.inc>
 #include <clc/integer/gentype.inc>

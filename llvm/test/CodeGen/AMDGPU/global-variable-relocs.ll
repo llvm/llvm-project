@@ -14,8 +14,8 @@
 
 ; CHECK-LABEL: private_test:
 ; CHECK: s_getpc_b64 s[[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]]
-; CHECK: s_add_u32 s[[ADDR_LO:[0-9]+]], s[[PC_LO]], private@rel32@lo+8
-; CHECK: s_addc_u32 s[[ADDR_HI:[0-9]+]], s[[PC_HI]], private@rel32@hi+16
+; CHECK: s_add_u32 s[[ADDR_LO:[0-9]+]], s[[PC_LO]], .Lprivate@rel32@lo+8
+; CHECK: s_addc_u32 s[[ADDR_HI:[0-9]+]], s[[PC_HI]], .Lprivate@rel32@hi+16
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]]
 define amdgpu_kernel void @private_test(ptr addrspace(1) %out) {
   %ptr = getelementptr [256 x i32], ptr addrspace(1) @private, i32 0, i32 1
@@ -153,7 +153,7 @@ define amdgpu_kernel void @external_w_init_test(ptr addrspace(1) %out) {
   ret void
 }
 
-; CHECK: .local private
+; CHECK: .local .Lprivate
 ; CHECK: .local internal
 ; CHECK: .weak linkonce
 ; CHECK: .weak weak

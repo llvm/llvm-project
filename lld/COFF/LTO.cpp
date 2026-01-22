@@ -20,12 +20,14 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <memory>
@@ -100,6 +102,10 @@ lto::Config BitcodeCompiler::createConfig() {
     checkError(c.addSaveTemps(std::string(ctx.config.outputFile) + ".",
                               /*UseInputModulePath*/ true,
                               ctx.config.saveTempsArgs));
+
+  c.PTO.LoopVectorization = c.OptLevel > 1;
+  c.PTO.SLPVectorization = c.OptLevel > 1;
+
   return c;
 }
 
@@ -117,8 +123,8 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
         /*ShouldEmitIndexFiles=*/false,
         /*ShouldEmitImportFiles=*/false, ctx.config.outputFile,
         ctx.config.dtltoDistributor, ctx.config.dtltoDistributorArgs,
-        ctx.config.dtltoCompiler, ctx.config.dtltoCompilerArgs,
-        !ctx.config.saveTempsArgs.empty());
+        ctx.config.dtltoCompiler, ctx.config.dtltoCompilerPrependArgs,
+        ctx.config.dtltoCompilerArgs, !ctx.config.saveTempsArgs.empty());
   } else if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
@@ -132,8 +138,12 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
         llvm::heavyweight_hardware_concurrency(ctx.config.thinLTOJobs));
   }
 
-  ltoObj = std::make_unique<lto::LTO>(createConfig(), backend,
-                                      ctx.config.ltoPartitions);
+  if (ctx.config.dtltoDistributor.empty())
+    ltoObj = std::make_unique<lto::LTO>(createConfig(), backend,
+                                        ctx.config.ltoPartitions);
+  else
+    ltoObj = std::make_unique<lto::DTLTO>(createConfig(), backend,
+                                          ctx.config.ltoPartitions);
 }
 
 BitcodeCompiler::~BitcodeCompiler() = default;
@@ -176,6 +186,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
 std::vector<InputFile *> BitcodeCompiler::compile() {
+  llvm::TimeTraceScope timeScope("Bitcode compile");
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);

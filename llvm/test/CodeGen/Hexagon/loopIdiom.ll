@@ -61,7 +61,7 @@ if.end:                                           ; preds = %for.end7, %entry
   ret void
 }
 
-attributes #0 = { noinline nounwind "approx-func-fp-math"="true" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv79" "target-features"="+v79,-long-calls" "unsafe-fp-math"="true" }
+attributes #0 = { noinline nounwind "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv79" "target-features"="+v79,-long-calls" "unsafe-fp-math"="true" }
 
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}

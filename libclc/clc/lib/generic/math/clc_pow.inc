@@ -103,8 +103,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_pow(__CLC_GENTYPE x,
                     __CLC_AS_GENTYPE(0x3f000000 | (ixn & MANTBITS_SP32));
 
   indx = indx >> 16;
-  __CLC_GENTYPE rh = f * USE_TABLE(log_inv_tbl_ep_head, indx);
-  __CLC_GENTYPE rt = f * USE_TABLE(log_inv_tbl_ep_tail, indx);
+  __CLC_GENTYPE rh = f * __CLC_USE_TABLE(log_inv_tbl_ep_head, indx);
+  __CLC_GENTYPE rt = f * __CLC_USE_TABLE(log_inv_tbl_ep_tail, indx);
   r = rh + rt;
 
   poly = __clc_mad(r, __clc_mad(r, 0x1.0p-2f, 0x1.555556p-2f), 0x1.0p-1f) *
@@ -113,8 +113,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_pow(__CLC_GENTYPE x,
 
   const __CLC_GENTYPE LOG2_HEAD = 0x1.62e000p-1f;  /* 0.693115234 */
   const __CLC_GENTYPE LOG2_TAIL = 0x1.0bfbe8p-15f; /* 0.0000319461833 */
-  __CLC_GENTYPE logel = USE_TABLE(loge_tbl_lo, indx);
-  __CLC_GENTYPE logeh = USE_TABLE(loge_tbl_hi, indx);
+  __CLC_GENTYPE logel = __CLC_USE_TABLE(loge_tbl_lo, indx);
+  __CLC_GENTYPE logeh = __CLC_USE_TABLE(loge_tbl_hi, indx);
   __CLC_GENTYPE lth = -r;
   __CLC_GENTYPE ltt = __clc_mad(mfn, LOG2_TAIL, -poly) + logeh;
   __CLC_GENTYPE lt = lth + ltt;
@@ -161,8 +161,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_pow(__CLC_GENTYPE x,
                              0x1.000000p-1f),
                    r * r, r);
 
-  __CLC_GENTYPE exp_head = USE_TABLE(exp_tbl_ep_head, j);
-  __CLC_GENTYPE exp_tail = USE_TABLE(exp_tbl_ep_tail, j);
+  __CLC_GENTYPE exp_head = __CLC_USE_TABLE(exp_tbl_ep_head, j);
+  __CLC_GENTYPE exp_tail = __CLC_USE_TABLE(exp_tbl_ep_tail, j);
 
   __CLC_GENTYPE expylogx =
       __clc_mad(exp_head, poly, __clc_mad(exp_tail, poly, exp_tail)) + exp_head;
@@ -275,8 +275,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_pow(__CLC_GENTYPE x,
     __CLC_GENTYPE F = __CLC_AS_GENTYPE(rax | 0x3FE0000000000000L);
     __CLC_GENTYPE Y = __CLC_AS_GENTYPE(mantissa | 0x3FE0000000000000L);
     __CLC_GENTYPE f = F - Y;
-    __CLC_GENTYPE log_h = USE_TABLE(log_f_inv_tbl_head, index);
-    __CLC_GENTYPE log_t = USE_TABLE(log_f_inv_tbl_tail, index);
+    __CLC_GENTYPE log_h = __CLC_USE_TABLE(log_f_inv_tbl_head, index);
+    __CLC_GENTYPE log_t = __CLC_USE_TABLE(log_f_inv_tbl_tail, index);
     __CLC_GENTYPE f_inv = (log_h + log_t) * f;
     __CLC_GENTYPE r1 =
         __CLC_AS_GENTYPE(__CLC_AS_ULONGN(f_inv) & 0xfffffffff8000000L);
@@ -296,8 +296,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_pow(__CLC_GENTYPE x,
     __CLC_GENTYPE poly0t = r1 - poly0h + hr1r1;
     poly = __clc_fma(r1, r2, __clc_fma(0.5 * r2, r2, poly)) + r2 + poly0t;
 
-    log_h = USE_TABLE(powlog_tbl_head, index);
-    log_t = USE_TABLE(powlog_tbl_tail, index);
+    log_h = __CLC_USE_TABLE(powlog_tbl_head, index);
+    log_t = __CLC_USE_TABLE(powlog_tbl_tail, index);
 
     __CLC_GENTYPE resT_t = __clc_fma(xexp, real_log2_tail, +log_t) - poly;
     __CLC_GENTYPE resT = resT_t - poly0h;
@@ -345,8 +345,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_pow(__CLC_GENTYPE x,
     __CLC_INTN j = n & 0x0000003f;
     __CLC_INTN m = n >> 6;
 
-    __CLC_GENTYPE f1 = USE_TABLE(two_to_jby64_ep_tbl_head, j);
-    __CLC_GENTYPE f2 = USE_TABLE(two_to_jby64_ep_tbl_tail, j);
+    __CLC_GENTYPE f1 = __CLC_USE_TABLE(two_to_jby64_ep_tbl_head, j);
+    __CLC_GENTYPE f2 = __CLC_USE_TABLE(two_to_jby64_ep_tbl_tail, j);
     __CLC_GENTYPE f = f1 + f2;
 
     __CLC_GENTYPE r1 = __clc_fma(dn, -lnof2_by_64_head, v);

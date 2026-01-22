@@ -1,4 +1,4 @@
-//===--- RestrictSystemIncludesCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,8 +43,9 @@ void RestrictedIncludesPPCallbacks::EndOfMainFile() {
     for (const auto &Include : FileDirectives) {
       // Fetch the length of the include statement from the start to just after
       // the newline, for finding the end (including the newline).
-      unsigned ToLen = std::strcspn(SM.getCharacterData(Include.Loc), "\n") + 1;
-      CharSourceRange ToRange = CharSourceRange::getCharRange(
+      const unsigned ToLen =
+          std::strcspn(SM.getCharacterData(Include.Loc), "\n") + 1;
+      const CharSourceRange ToRange = CharSourceRange::getCharRange(
           Include.Loc, Include.Loc.getLocWithOffset(ToLen));
 
       if (!Include.IsInMainFile) {

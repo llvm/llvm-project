@@ -13,6 +13,7 @@
 #include "flang-rt/runtime/tools.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang-rt/runtime/work-queue.h"
+#include "flang/Runtime/CUDA/memmove-function.h"
 
 namespace Fortran::runtime {
 
@@ -32,9 +33,9 @@ static RT_API_ATTRS void GetComponentExtents(SubscriptValue (&extents)[maxRank],
 
 RT_API_ATTRS int Initialize(const Descriptor &instance,
     const typeInfo::DerivedType &derived, Terminator &terminator, bool,
-    const Descriptor *) {
+    const Descriptor *, MemcpyFct memcpyFct) {
   WorkQueue workQueue{terminator};
-  int status{workQueue.BeginInitialize(instance, derived)};
+  int status{workQueue.BeginInitialize(instance, derived, memcpyFct)};
   return status == StatContinue ? workQueue.Run() : status;
 }
 
@@ -63,7 +64,8 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
   char *rawInstance{instance_.OffsetElement<char>()};
   for (; !Componentwise::IsComplete(); SkipToNextComponent()) {
     char *rawComponent{rawInstance + component_->offset()};
-    if (component_->genre() == typeInfo::Component::Genre::Allocatable) {
+    if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableDevice) {
       Descriptor &allocDesc{*reinterpret_cast<Descriptor *>(rawComponent)};
       component_->EstablishDescriptor(
           allocDesc, instance_, workQueue.terminator());
@@ -71,8 +73,13 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
       // Explicit initialization of data pointers and
       // non-allocatable non-automatic components
       std::size_t bytes{component_->SizeInBytes(instance_)};
-      std::memcpy(rawComponent, init, bytes);
-    } else if (component_->genre() == typeInfo::Component::Genre::Pointer) {
+      if (memcpyFct_) {
+        memcpyFct_(rawComponent, init, bytes);
+      } else {
+        Fortran::runtime::memcpy(rawComponent, init, bytes);
+      }
+    } else if (component_->genre() == typeInfo::Component::Genre::Pointer ||
+        component_->genre() == typeInfo::Component::Genre::PointerDevice) {
       // Data pointers without explicit initialization are established
       // so that they are valid right-hand side targets of pointer
       // assignment statements.
@@ -108,20 +115,33 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
             chunk = done;
           }
           char *uninitialized{rawInstance + done * *stride};
-          std::memcpy(uninitialized, rawInstance, chunk * *stride);
+          if (memcpyFct_) {
+            memcpyFct_(uninitialized, rawInstance, chunk * *stride);
+          } else {
+            Fortran::runtime::memcpy(
+                uninitialized, rawInstance, chunk * *stride);
+          }
           done += chunk;
         }
       } else {
         for (std::size_t done{1}; done < elements_; ++done) {
           char *uninitialized{rawInstance + done * *stride};
-          std::memcpy(uninitialized, rawInstance, elementBytes);
+          if (memcpyFct_) {
+            memcpyFct_(uninitialized, rawInstance, elementBytes);
+          } else {
+            Fortran::runtime::memcpy(uninitialized, rawInstance, elementBytes);
+          }
         }
       }
     } else { // one at a time with subscription
       for (Elementwise::Advance(); !Elementwise::IsComplete();
           Elementwise::Advance()) {
         char *element{instance_.Element<char>(subscripts_)};
-        std::memcpy(element, rawInstance, elementBytes);
+        if (memcpyFct_) {
+          memcpyFct_(element, rawInstance, elementBytes);
+        } else {
+          Fortran::runtime::memcpy(element, rawInstance, elementBytes);
+        }
       }
     }
   }
@@ -143,7 +163,8 @@ RT_API_ATTRS int InitializeClone(const Descriptor &clone,
 
 RT_API_ATTRS int InitializeCloneTicket::Continue(WorkQueue &workQueue) {
   while (!IsComplete()) {
-    if (component_->genre() == typeInfo::Component::Genre::Allocatable) {
+    if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableDevice) {
       Descriptor &origDesc{*instance_.ElementComponent<Descriptor>(
           subscripts_, component_->offset())};
       if (origDesc.IsAllocated()) {
@@ -320,7 +341,9 @@ RT_API_ATTRS int FinalizeTicket::Begin(WorkQueue &workQueue) {
 
 RT_API_ATTRS int FinalizeTicket::Continue(WorkQueue &workQueue) {
   while (!IsComplete()) {
-    if (component_->genre() == typeInfo::Component::Genre::Allocatable &&
+    if ((component_->genre() == typeInfo::Component::Genre::Allocatable ||
+            component_->genre() ==
+                typeInfo::Component::Genre::AllocatableDevice) &&
         component_->category() == TypeCategory::Derived) {
       // Component may be polymorphic or unlimited polymorphic. Need to use the
       // dynamic type to check whether finalization is needed.
@@ -342,6 +365,7 @@ RT_API_ATTRS int FinalizeTicket::Continue(WorkQueue &workQueue) {
         }
       }
     } else if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableDevice ||
         component_->genre() == typeInfo::Component::Genre::Automatic) {
       if (const typeInfo::DerivedType *compType{component_->derivedType()};
           compType && !compType->noFinalizationNeeded()) {
@@ -424,7 +448,8 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
   // Contrary to finalization, the order of deallocation does not matter.
   while (!IsComplete()) {
     const auto *componentDerived{component_->derivedType()};
-    if (component_->genre() == typeInfo::Component::Genre::Allocatable) {
+    if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableDevice) {
       if (fixedStride_ &&
           (!componentDerived || componentDerived->noDestructionNeeded())) {
         // common fast path, just deallocate in every element

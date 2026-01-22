@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- --
-// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -- -x c++
+// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-sizeof-expression %t -- -- -x c++
 
 #ifdef __cplusplus
 #define STRKWD

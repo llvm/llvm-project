@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__opencl_c_atomic_order_seq_cst) &&                                \
-    defined(__opencl_c_atomic_scope_device)
-
 #include <clc/atomic/clc_atomic_compare_exchange.h>
-#include <clc/opencl/atomic/atomic_compare_exchange_strong.h>
+#include <clc/opencl/utils.h>
 
-#define FUNCTION atomic_compare_exchange_strong
+#define __CLC_FUNCTION atomic_compare_exchange_strong
+#define __CLC_IMPL_FUNCTION __clc_atomic_compare_exchange
 #define __CLC_COMPARE_EXCHANGE
 
 #define __CLC_BODY <atomic_def.inc>
@@ -20,6 +18,3 @@
 
 #define __CLC_BODY <atomic_def.inc>
 #include <clc/math/gentype.inc>
-
-#endif // defined(__opencl_c_atomic_order_seq_cst) &&
-       // defined(__opencl_c_atomic_scope_device)

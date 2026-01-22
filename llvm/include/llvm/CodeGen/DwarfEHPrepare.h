@@ -24,7 +24,7 @@ class DwarfEHPreparePass : public PassInfoMixin<DwarfEHPreparePass> {
   const TargetMachine *TM;
 
 public:
-  explicit DwarfEHPreparePass(const TargetMachine *TM_) : TM(TM_) {}
+  explicit DwarfEHPreparePass(const TargetMachine &TM_) : TM(&TM_) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 

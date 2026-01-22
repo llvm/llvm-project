@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Wno-portability
 ! Test 15.5.2.4 constraints and restrictions for non-POINTER non-ALLOCATABLE
 ! dummy arguments.
 
@@ -237,6 +237,7 @@ module m01
     call charray(assumed_shape_char(1))  ! not an error if character
     call assumedsize(arr(1))  ! not an error if element in sequence
     call assumedrank(x)  ! not an error
+    !PORTABILITY: A scalar actual argument for an assumed-size TYPE(*) dummy is not portable [-Wassumed-type-size-dummy]
     call assumedtypeandsize(x)  ! not an error
   end subroutine
 

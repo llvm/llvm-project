@@ -658,10 +658,10 @@ void TosaReduceTransposes::runOnOperation() {
     // (like the TransposeOp we insert for ReshapeOp),
     // but in this case, that is specialized enough and overlaps
     // with another direct-use TransposeOp case we need to cover anyway.
-    transposeInfo.push_back({transposeOp, dependentOps});
+    transposeInfo.emplace_back(transposeOp, dependentOps);
 
     // This is for the final replacement across all transposes.
-    totalTransposeOrder.push({transposeOp, perms});
+    totalTransposeOrder.emplace(transposeOp, perms);
   });
 
   // We want to do a full fan-in analysis on a perms-level,

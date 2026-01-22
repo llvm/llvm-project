@@ -95,9 +95,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   StackFrame *frame = m_exe_ctx.GetFramePtr();
 
   // Either the language was explicitly specified, or we check the frame.
-  lldb::LanguageType language = m_expr_options.language;
-  if (language == lldb::eLanguageTypeUnknown && frame)
-    language = frame->GuessLanguage().AsLanguageType();
+  SourceLanguage language{m_expr_options.language};
+  if (!language && frame)
+    language = frame->GuessLanguage();
 
   // Add a hint if object description was requested, but no description
   // function was implemented.
@@ -119,8 +119,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         "^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
 
     if (GetDebugger().GetShowDontUsePoHint() && target_ptr &&
-        (language == lldb::eLanguageTypeSwift ||
-         language == lldb::eLanguageTypeObjC) &&
+        (language.AsLanguageType() == lldb::eLanguageTypeSwift ||
+         language.IsObjC()) &&
         std::regex_match(output.data(), swift_class_regex)) {
 
       result.AppendNote(
@@ -193,7 +193,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   // Second, try `expr` as a persistent variable.
   if (expr.starts_with("$"))
-    if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
+    if (auto *state = target.GetPersistentExpressionStateForLanguage(
+            language.AsLanguageType()))
       if (auto var_sp = state->GetVariable(expr))
         if (auto valobj_sp = var_sp->GetValueObject()) {
           dump_val_object(*valobj_sp);

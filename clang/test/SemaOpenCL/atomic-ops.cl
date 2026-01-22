@@ -68,12 +68,12 @@ void f(atomic_int *i, const atomic_int *ci,
 
   bool cmpexch_1 = __opencl_atomic_compare_exchange_strong(i, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
   bool cmpexch_2 = __opencl_atomic_compare_exchange_strong(p, P, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
-  bool cmpexch_3 = __opencl_atomic_compare_exchange_strong(f, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{incompatible pointer types passing '__generic int *__private' to parameter of type '__generic float *'}}
+  bool cmpexch_3 = __opencl_atomic_compare_exchange_strong(f, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-error {{incompatible pointer types passing '__generic int *__private' to parameter of type '__generic float *'}}
   (void)__opencl_atomic_compare_exchange_strong(i, CI, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{passing 'const __generic int *__private' to parameter of type '__generic int *' discards qualifiers}}
 
   bool cmpexchw_1 = __opencl_atomic_compare_exchange_weak(i, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
   bool cmpexchw_2 = __opencl_atomic_compare_exchange_weak(p, P, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group);
-  bool cmpexchw_3 = __opencl_atomic_compare_exchange_weak(f, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{incompatible pointer types passing '__generic int *__private' to parameter of type '__generic float *'}}
+  bool cmpexchw_3 = __opencl_atomic_compare_exchange_weak(f, I, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-error {{incompatible pointer types passing '__generic int *__private' to parameter of type '__generic float *'}}
   (void)__opencl_atomic_compare_exchange_weak(i, CI, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_work_group); // expected-warning {{passing 'const __generic int *__private' to parameter of type '__generic int *' discards qualifiers}}
 
   // Pointers to different address spaces are allowed.
