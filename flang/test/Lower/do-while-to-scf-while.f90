@@ -29,3 +29,20 @@ subroutine do_while_with_exit()
   end do
 end subroutine do_while_with_exit
 
+! CHECK-LABEL: func.func @_QPnested_do_while()
+! CHECK: scf.while
+! CHECK: scf.while
+subroutine nested_do_while()
+  implicit none
+  integer :: i, j
+
+  i = 1
+  do while (i <= 3)
+    j = 1
+    do while (j <= 2)
+      j = j + 1
+    end do
+    i = i + 1
+  end do
+end subroutine nested_do_while
+

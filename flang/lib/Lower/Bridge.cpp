@@ -1650,20 +1650,74 @@ private:
     genConditionalBranch(cond, trueTarget->block, falseTarget->block);
   }
 
-  /// Returns true iff \p eval's nested subtree contains no unstructured
-  /// evaluations except \p allowedEval (typically the NonLabelDoStmt of an
-  /// outer DO WHILE).
-  bool
-  doWhileBodyIsStructuredExcept(Fortran::lower::pft::Evaluation &eval,
-                                Fortran::lower::pft::Evaluation *allowedEval) {
-    if (&eval != allowedEval && eval.isUnstructured)
-      return false;
-    if (!eval.evaluationList)
+  /// Return true iff there is any control-flow transfer within \p outerDoWhile
+  /// that can exit the outer loop early or jump to the outer loop end-do
+  /// (i.e. early "continue"). Nested loop exits that remain inside the outer
+  /// loop are allowed.
+  bool doWhileHasEarlyExit(const Fortran::lower::pft::Evaluation &outerDoWhile,
+                           const Fortran::lower::pft::Evaluation &outerDoStmt,
+                           const Fortran::lower::pft::Evaluation &outerEndDo) {
+    auto branchTargetIsEarlyExit =
+        [&](const Fortran::lower::pft::Evaluation &target) -> bool {
+      // Disallow early "continue" of the outer loop (e.g. CYCLE outer) under
+      // the "only exit is condition false" restriction.
+      if (&target == &outerEndDo)
+        return true;
+      // Any branch target outside the outer loop is an early exit.
+      for (auto *e = &target; e; e = e->parentConstruct)
+        if (e == &outerDoWhile)
+          return false;
       return true;
-    for (Fortran::lower::pft::Evaluation &nested : *eval.evaluationList)
-      if (!doWhileBodyIsStructuredExcept(nested, allowedEval))
+    };
+
+    std::function<bool(const Fortran::lower::pft::Evaluation &)>
+        hasEarlyExitInSubtree =
+            [&](const Fortran::lower::pft::Evaluation &e) -> bool {
+      // Skip structural nodes for the outer loop itself.
+      if (&e == &outerDoStmt || &e == &outerEndDo)
         return false;
-    return true;
+
+      // Catch branches represented through the PFT controlSuccessor link.
+      if (e.controlSuccessor && branchTargetIsEarlyExit(*e.controlSuccessor))
+        return true;
+
+      // Support branch statements inside the loop by checking that all their
+      // targets remain inside the outer DO WHILE.
+      if (const auto *s = e.getIf<Fortran::parser::GotoStmt>()) {
+        if (branchTargetIsEarlyExit(evalOfLabel(s->v)))
+          return true;
+      } else if (const auto *s = e.getIf<Fortran::parser::ComputedGotoStmt>()) {
+        for (const auto &lab :
+             std::get<std::list<Fortran::parser::Label>>(s->t))
+          if (branchTargetIsEarlyExit(evalOfLabel(lab)))
+            return true;
+      } else if (const auto *s = e.getIf<Fortran::parser::ArithmeticIfStmt>()) {
+        if (branchTargetIsEarlyExit(evalOfLabel(std::get<1>(s->t))) ||
+            branchTargetIsEarlyExit(evalOfLabel(std::get<2>(s->t))) ||
+            branchTargetIsEarlyExit(evalOfLabel(std::get<3>(s->t))))
+          return true;
+      }
+
+      // Statements that exit the procedure are early exits from the loop.
+      if (e.isA<Fortran::parser::ReturnStmt>() ||
+          e.isA<Fortran::parser::StopStmt>() ||
+          e.isA<Fortran::parser::FailImageStmt>())
+        return true;
+
+      if (!e.evaluationList)
+        return false;
+      for (const Fortran::lower::pft::Evaluation &nested : *e.evaluationList)
+        if (hasEarlyExitInSubtree(nested))
+          return true;
+      return false;
+    };
+
+    if (outerDoWhile.evaluationList)
+      for (const Fortran::lower::pft::Evaluation &nested :
+           *outerDoWhile.evaluationList)
+        if (hasEarlyExitInSubtree(nested))
+          return true;
+    return false;
   }
 
   void
@@ -1705,7 +1759,6 @@ private:
       genFIR(*iter, /*unstructuredContext=*/false);
 
     mlir::scf::YieldOp::create(*builder, loc);
-
     builder->setInsertionPointAfter(scfWhile);
   }
 
@@ -2552,17 +2605,10 @@ private:
       // etc.) by requiring that the loop body is structured (as decided by the
       // PFT branch analysis), allowing the loop to exit only when the condition
       // becomes false.
-      bool doWhileBodyStructured = true;
-      if (auto *nestedList = eval.evaluationList.get()) {
-        for (Fortran::lower::pft::Evaluation &nested : *nestedList) {
-          if (!doWhileBodyIsStructuredExcept(nested,
-                                             /*allowedEval=*/&doStmtEval)) {
-            doWhileBodyStructured = false;
-            break;
-          }
-        }
-      }
-      if (lowerDoWhileToSCFWhile && doWhileBodyStructured) {
+      Fortran::lower::pft::Evaluation &endDoEval =
+          eval.getLastNestedEvaluation();
+      if (lowerDoWhileToSCFWhile &&
+          !doWhileHasEarlyExit(eval, doStmtEval, endDoEval)) {
         maybeStartBlock(preheaderBlock); // no block or empty block
         genDoWhileAsSCFWhile(*whileCondition, eval, doStmtEval);
         return;
