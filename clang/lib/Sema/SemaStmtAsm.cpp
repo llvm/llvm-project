@@ -241,7 +241,8 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
 
   if (auto *SL = dyn_cast<StringLiteral>(Expr)) {
     if (!SL->isOrdinary()) {
-      Diag(SL->getBeginLoc(), diag::err_asm_operand_wide_string_literal << (SL->isWide() ? 1 : 0));
+      Diag(SL->getBeginLoc(), 
+           diag::err_asm_operand_wide_string_literal << (SL->isWide() ? 1 : 0));
       return ExprError();
     }
     if (ForAsmLabel && SL->getString().empty()) {
