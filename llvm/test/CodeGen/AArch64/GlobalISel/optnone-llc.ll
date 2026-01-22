@@ -1,7 +1,7 @@
 ; NOTE: Do not autogenerate
-; RUN: llc -O1 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
-; RUN: llc -O2 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
-; RUN: llc -O3 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
+; RUN: llc -O1 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -filetype=null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
+; RUN: llc -O2 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -filetype=null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
+; RUN: llc -O3 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -filetype=null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
 
 ; REQUIRES: asserts
 
