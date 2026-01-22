@@ -1095,6 +1095,14 @@ bool llvm::computeUnrollCount(
     LLVM_DEBUG(
         dbgs() << "  will not try to unroll loop with runtime trip count "
                << "-unroll-runtime not given\n");
+    if (ORE) {
+      ORE->emit([&]() {
+        auto Remark = OptimizationRemarkMissed(DEBUG_TYPE, "RuntimeUnrollSkipped",
+                                               L->getStartLoc(), L->getHeader())
+                      << "runtime unrolling was skipped";
+        return Remark;
+      });
+    }
     UP.Count = 0;
     return false;
   }
@@ -1171,7 +1179,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   LLVM_DEBUG(dbgs() << "Loop Unroll: F["
                     << L->getHeader()->getParent()->getName() << "] Loop %"
-                    << L->getHeader()->getName() << "\n");
+                    << L->getHeader()->getName() << " OnlyFullUnroll="
+                    << OnlyFullUnroll << "\n");
   TransformationMode TM = hasUnrollTransformation(L);
   if (TM & TM_Disable)
     return LoopUnrollResult::Unmodified;
