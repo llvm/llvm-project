@@ -159,6 +159,7 @@ add_llvm_component_library(LLVMAnalysis
   ValueLattice.cpp
   ValueLatticeUtils.cpp
   ValueTracking.cpp
+  ValueTrackingUtils.cpp
   VectorUtils.cpp
   ${GeneratedMLSources}
 
