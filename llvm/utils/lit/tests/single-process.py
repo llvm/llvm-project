@@ -14,7 +14,9 @@
 # These are the semaphores that fail in sandboxed environments, so verifying
 # they don't appear with -j1 confirms the fix works.
 
-# RUN: env PATH="%{system-path}" strace -f -e trace=openat %{lit} -j1 %{inputs}/shtest-format \
+# RUN: export PATH="%{system-path}"
+#
+# RUN: strace -f -e trace=openat %{lit} -j1 %{inputs}/shtest-format \
 # RUN:     > %t.j1.out 2>&1 || true
 # RUN: FileCheck --check-prefix=CHECK-J1 %s < %t.j1.out
 #
@@ -26,7 +28,7 @@
 # POSIX semaphores. This validates that the CHECK-NOT pattern above is correct
 # and won't become stale if Python/glibc changes how semaphores are created.
 #
-# RUN: env PATH="%{system-path}" strace -f -e trace=openat %{lit} -j2 %{inputs}/shtest-format \
+# RUN: strace -f -e trace=openat %{lit} -j2 %{inputs}/shtest-format \
 # RUN:     > %t.j2.out 2>&1 || true
 # RUN: FileCheck --check-prefix=CHECK-J2 %s < %t.j2.out
 #
