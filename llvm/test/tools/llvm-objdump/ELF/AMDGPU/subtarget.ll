@@ -4,6 +4,13 @@ define amdgpu_kernel void @test_kernel() {
 
 ; Test subtarget detection. Disassembly is only supported for GFX8 and beyond.
 ;
+; ----------------------------------GFX13--------------------------------------
+;
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1310 %t.o > %t-specify.txt
+; RUN: llvm-objdump -D %t.o > %t-detect.txt
+; RUN: diff %t-specify.txt %t-detect.txt
+;
 ; ----------------------------------GFX12--------------------------------------
 ;
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=6 -mcpu=gfx12-generic -filetype=obj -O0 -o %t.o %s
