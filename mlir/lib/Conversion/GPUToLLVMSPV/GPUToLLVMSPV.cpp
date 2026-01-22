@@ -145,7 +145,7 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
       memFenceFlag = localMemFenceFlag | globalMemFenceFlag;
     }
     Location loc = op->getLoc();
-    Value flag = rewriter.create<LLVM::ConstantOp>(loc, flagTy, memFenceFlag);
+    Value flag = LLVM::ConstantOp::create(rewriter, loc, flagTy, memFenceFlag);
     rewriter.replaceOp(op, createSPIRVBuiltinCall(loc, rewriter, func, flag));
     return success();
   }
