@@ -6919,10 +6919,15 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return LowerVectorMatch(Op, DAG);
   }
   case Intrinsic::aarch64_cls:
-  case Intrinsic::aarch64_cls64:
+  case Intrinsic::aarch64_cls64: {
     SDValue Res = DAG.getNode(ISD::CTLS, DL, Op.getOperand(1).getValueType(),
                               Op.getOperand(1));
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
+  }
+  case Intrinsic::aarch64_sve_pmul:
+  case Intrinsic::aarch64_neon_pmul:
+    return DAG.getNode(ISD::CLMUL, DL, Op.getValueType(), Op.getOperand(1),
+                       Op.getOperand(2));
   }
 }
 
