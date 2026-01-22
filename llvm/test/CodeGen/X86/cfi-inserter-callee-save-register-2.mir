@@ -76,10 +76,10 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   CFI_INSTRUCTION def_cfa $rbp, 16
+  ; CHECK-NEXT:   CFI_INSTRUCTION offset $rbp, -16
   ; CHECK-NEXT:   CFI_INSTRUCTION offset $r12, -24
   ; CHECK-NEXT:   CFI_INSTRUCTION register $r13, $rcx
   ; CHECK-NEXT:   CFI_INSTRUCTION offset $r14, -40
-  ; CHECK-NEXT:   CFI_INSTRUCTION offset $rbp, -16
   ; CHECK-NEXT:   renamable $rdi = IMPLICIT_DEF
   ; CHECK-NEXT:   renamable $rsi = IMPLICIT_DEF
   ; CHECK-NEXT: {{  $}}
