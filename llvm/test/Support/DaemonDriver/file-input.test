@@ -1,0 +1,22 @@
+# This test verifies that the tool gives the correct output when the input is
+# provided with "in.file".
+RUN: sed 's@SOURCEDIR@%{/S:regex_replacement}@g' %S/Inputs/file-input.txt | ExampleDaemon --daemon --daemon-status-pipe=path:%t.status > %t.stdout 2> %t.stderr
+RUN: FileCheck < %t.stdout %s --check-prefix=CHECK-STDOUT --strict-whitespace
+RUN: FileCheck < %t.stderr %s --check-prefix=CHECK-STDERR --strict-whitespace
+RUN: FileCheck < %t.status %s --check-prefix=CHECK-STATUS --strict-whitespace
+END.
+CHECK-STATUS: ready
+
+# 1st command.
+CHECK-STATUS-NEXT: returned 2
+CHECK-STDOUT: ace
+CHECK-STDERR: BD
+
+# 2nd command.
+CHECK-STATUS-NEXT: returned 4
+CHECK-STDOUT-NEXT: BDFH
+CHECK-STDERR-SAME: aceg
+
+# 3rd command.
+CHECK-STATUS-NEXT: returned 0
+CHECK-STDOUT-NEXT: aaaa

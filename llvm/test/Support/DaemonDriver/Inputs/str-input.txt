@@ -1,0 +1,21 @@
+arg 13
+ExampleDaemon
+input_string 5
+aBcDe
+run
+
+arg 13
+ExampleDaemon
+arg 28
+--separate-lowercase-instead
+input_string 8
+aBcDeFgH
+run 
+
+arg 13
+ExampleDaemon
+input_string 4
+aaaa
+run
+
+exit

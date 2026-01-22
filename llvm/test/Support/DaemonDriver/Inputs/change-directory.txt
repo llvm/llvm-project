@@ -1,0 +1,32 @@
+arg 13
+ExampleDaemon
+arg 25
+--print-current-directory
+run
+
+; Checking that we can change directory.
+cd ./A
+arg 13
+ExampleDaemon
+arg 25
+--print-current-directory
+run
+
+; Checking that the directory is properly reset.
+arg 13
+ExampleDaemon
+arg 25
+--print-current-directory
+run
+
+; Checking that input_file is properly scoped to the current directory.
+cd ./A
+arg 13
+ExampleDaemon
+input_file ./b
+run
+
+cd ./DoesNotExist
+arg 13
+ExampleDaemon
+run

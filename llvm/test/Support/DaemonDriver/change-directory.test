@@ -1,0 +1,23 @@
+RUN: mkdir %t
+RUN: mkdir %t/A
+RUN: echo "ABC" > %t/A/b
+RUN: cd %t
+RUN: not ExampleDaemon < %S/Inputs/change-directory.txt --daemon --daemon-status-pipe=path:%t.status > %t.stdout 2> %t.stderr
+RUN: FileCheck < %t.status %s --check-prefix=CHECK-STATUS --strict-whitespace
+RUN: FileCheck < %t.stdout %s --check-prefix=CHECK-STDOUT --strict-whitespace -DTEST_DIR=%S -DTEMP_DIR=%t
+END.
+
+CHECK-STATUS: ready
+
+CHECK-STATUS-NEXT: returned 0
+CHECK-STDOUT: [[TEMP_DIR]]
+
+CHECK-STATUS-NEXT: returned 0
+CHECK-STDOUT-NEXT: [[TEMP_DIR]]{{[\/\\]}}A
+
+CHECK-STATUS-NEXT: returned 0
+CHECK-STDOUT-NEXT: [[TEMP_DIR]]
+
+CHECK-STATUS-NEXT: returned 3
+
+CHECK-STATUS-NEXT: error cd: './DoesNotExist' is not a directory.

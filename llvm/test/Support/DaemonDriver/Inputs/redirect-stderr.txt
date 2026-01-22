@@ -1,0 +1,14 @@
+arg 13
+ExampleDaemon
+input_string 8
+aBcDeFgH
+redirect_stderr_to_stdout
+run
+
+; Checking that stderr is correctly reset.
+arg 13
+ExampleDaemon
+input_string 8
+aaaaAAAA
+run
+exit
