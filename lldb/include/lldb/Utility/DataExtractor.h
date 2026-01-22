@@ -818,6 +818,20 @@ public:
   ///     The extracted unsigned integer value.
   uint64_t GetULEB128(lldb::offset_t *offset_ptr) const;
 
+  /// Return a new DataExtractor which represents a subset of an existing
+  /// data extractor's bytes, copying all other fields from the existing
+  /// data extractor.
+  ///
+  /// \param[in] offset
+  ///     The starting byte offset into the shared data buffer.
+  /// \param[in] length
+  ///     The length of bytes that the new extractor can operate on.
+  ///
+  /// \return
+  ///     A shared pointer to a new DataExtractor.
+  virtual lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset,
+                                                     lldb::offset_t length);
+
   lldb::DataBufferSP &GetSharedDataBuffer() { return m_data_sp; }
 
   bool HasData() { return m_start && m_end && m_end - m_start > 0; }
