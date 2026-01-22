@@ -14,6 +14,7 @@ Checks: >
   cppcoreguidelines-virtual-class-destructor,
   google-readability-casting,
   misc-const-correctness,
+  misc-header-guard,
   misc-include-cleaner,
   modernize-*,
   -modernize-avoid-c-arrays,
@@ -42,5 +43,9 @@ Checks: >
 CheckOptions:
   - key:             performance-move-const-arg.CheckTriviallyCopyableMove
     value:           false
+  - key:             misc-header-guard.Prefix
+    value:           LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_
+  - key:             misc-header-guard.HeaderDirs
+    value:           "clang-tools-extra/clang-tidy;include"
   - key:             misc-include-cleaner.MissingIncludes
     value:           false
