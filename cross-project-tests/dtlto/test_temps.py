@@ -90,4 +90,3 @@ if action == "kill":
     sys.exit(0 if p.returncode != 0 else 1)
 else:
     sys.exit(p.wait())
-
