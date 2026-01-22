@@ -179,6 +179,12 @@ def olMemUnregister : Function {
 
 def olMemDataMappedNotify : Function {
   let desc = "Notifies device about mapping of memory block.";
+  let details = [
+        "Notifies device about mapping of host memory block after user created",
+        "a mapping of that memory block. The device would mark the buffer",
+        "as mapped so the buffer may be locked and used as source/destination",
+        "for memory transfers."
+  ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
     Param<"void *", "Ptr", "Host Pointer", PARAM_IN>,
@@ -193,6 +199,10 @@ def olMemDataMappedNotify : Function {
 
 def olMemDataUnMappedNotify : Function {
   let desc = "Notifies device about unmapping of memory block.";
+  let details = [
+        "Notifies device about unmapping of a memory block.",
+        "The device would mark that buffer as unmapped and unlock it if it was locked."
+  ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
     Param<"void *", "Ptr", "Host Pointer", PARAM_IN>
