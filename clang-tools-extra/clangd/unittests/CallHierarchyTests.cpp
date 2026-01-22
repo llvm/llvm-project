@@ -48,6 +48,12 @@ MATCHER_P(withDetail, N, "") { return arg.detail == N; }
 MATCHER_P(withFile, N, "") { return arg.uri.file() == N; }
 MATCHER_P(withSelectionRange, R, "") { return arg.selectionRange == R; }
 
+template <typename... Tags>
+::testing::Matcher<CallHierarchyItem> withSymbolTags(Tags... tags) {
+  // Matches the tags vector ignoring element order.
+  return Field(&CallHierarchyItem::tags, UnorderedElementsAre(tags...));
+}
+
 template <class ItemMatcher>
 ::testing::Matcher<CallHierarchyIncomingCall> from(ItemMatcher M) {
   return Field(&CallHierarchyIncomingCall::from, M);
@@ -728,6 +734,56 @@ TEST(CallHierarchy, CallInDifferentFileThanCaller) {
               ElementsAre(AllOf(from(withName("caller")), iFromRanges())));
 }
 
+TEST(CallHierarchy, IncomingCalls) {
+  Annotations Source(R"cpp(
+    class A {
+      public:
+        void call^ee() {};
+    };
+    void caller(A &a) {
+      a.callee();
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("callee")));
+
+  auto Incoming = incomingCalls(Items[0], Index.get(), AST);
+  EXPECT_THAT(
+      Incoming,
+      UnorderedElementsAre(AllOf(from(
+          AllOf(withName("caller"), withSymbolTags(SymbolTag::Declaration,
+                                                   SymbolTag::Definition))))));
+}
+
+TEST(CallHierarchy, OutgoingCalls) {
+  Annotations Source(R"cpp(
+    void callee() {}
+    class A {
+      public:
+        void call^er() {
+          callee();
+        };
+    };
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto Outgoing = outgoingCalls(Items[0], Index.get(), AST);
+  EXPECT_THAT(Outgoing, UnorderedElementsAre(AllOf(
+                            to(AllOf(withName("callee"),
+                                     withSymbolTags(SymbolTag::Declaration,
+                                                    SymbolTag::Definition))))));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
