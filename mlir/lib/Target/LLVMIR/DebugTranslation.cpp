@@ -441,7 +441,7 @@ DebugTranslation::translateImpl(DISubroutineTypeAttr attr) {
     types.push_back(translate(type));
   return llvm::DISubroutineType::get(
       llvmCtx, llvm::DINode::FlagZero, attr.getCallingConvention(),
-      llvm::DITypeRefArray(llvm::MDNode::get(llvmCtx, types)));
+      llvm::DITypeArray(llvm::MDNode::get(llvmCtx, types)));
 }
 
 llvm::DIType *DebugTranslation::translateImpl(DITypeAttr attr) {

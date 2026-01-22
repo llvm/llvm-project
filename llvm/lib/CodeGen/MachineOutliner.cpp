@@ -488,9 +488,7 @@ struct MachineOutliner : public ModulePass {
     ModulePass::getAnalysisUsage(AU);
   }
 
-  MachineOutliner() : ModulePass(ID) {
-    initializeMachineOutlinerPass(*PassRegistry::getPassRegistry());
-  }
+  MachineOutliner() : ModulePass(ID) {}
 
   /// Remark output explaining that not outlining a set of candidates would be
   /// better than outlining that set.

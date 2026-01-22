@@ -2,21 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32,-wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32,-wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
 
-declare <2 x i32>    @llvm.amdgcn.global.load.tr4.b64.v2i32.p1(ptr addrspace(1))
-declare <2 x i32>    @llvm.amdgcn.global.load.tr.b64.v2i32.p1(ptr addrspace(1))
-declare <3 x i32>    @llvm.amdgcn.global.load.tr6.b96.v3i32.p1(ptr addrspace(1))
-declare <8 x i16>    @llvm.amdgcn.global.load.tr.b128.v8i16.p1(ptr addrspace(1))
-declare <8 x half>   @llvm.amdgcn.global.load.tr.b128.v8f16.p1(ptr addrspace(1))
-declare <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16.p1(ptr addrspace(1))
-
-declare <2 x i32>    @llvm.amdgcn.ds.load.tr4.b64.v2i32.p3(ptr addrspace(3))
-declare <2 x i32>    @llvm.amdgcn.ds.load.tr8.b64.v2i32.p3(ptr addrspace(3))
-declare <3 x i32>    @llvm.amdgcn.ds.load.tr6.b96.v3i32.p3(ptr addrspace(3))
-declare <8 x i16>    @llvm.amdgcn.ds.load.tr16.b128.v8i16.p3(ptr addrspace(3))
-declare <8 x half>   @llvm.amdgcn.ds.load.tr16.b128.v8f16.p3(ptr addrspace(3))
-declare <8 x bfloat> @llvm.amdgcn.ds.load.tr16.b128.v8bf16.p3(ptr addrspace(3))
-
-
 define amdgpu_ps void @global_load_tr4_b64_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr4_b64_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
