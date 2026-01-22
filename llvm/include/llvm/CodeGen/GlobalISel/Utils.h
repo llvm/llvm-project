@@ -147,6 +147,12 @@ LLVM_ABI bool constrainSelectedInstRegOperands(MachineInstr &I,
 LLVM_ABI bool canReplaceReg(Register DstReg, Register SrcReg,
                             MachineRegisterInfo &MRI);
 
+/// Check if DstReg can be replaced with SrcReg depending on the register
+/// constraints. Compared to `canReplaceReg`, this does not check types, so
+/// even for registers with different types it can return true.
+LLVM_ABI bool canReplaceRegNoTypeCheck(Register DstReg, Register SrcReg,
+                            MachineRegisterInfo &MRI);
+
 /// Check whether an instruction \p MI is dead: it only defines dead virtual
 /// registers, and doesn't have other side effects.
 LLVM_ABI bool isTriviallyDead(const MachineInstr &MI,

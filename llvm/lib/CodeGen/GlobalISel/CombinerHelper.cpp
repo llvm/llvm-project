@@ -2969,8 +2969,35 @@ void CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
                                                  Register Replacement) const {
   assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
   Register OldReg = MI.getOperand(0).getReg();
-  assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
-  replaceRegWith(MRI, OldReg, Replacement);
+  bool canReplace = canReplaceReg(OldReg, Replacement, MRI);
+  if (canReplace) {
+    replaceRegWith(MRI, OldReg, Replacement);
+    MI.eraseFromParent();
+    return;
+  }
+
+  // `canReplaceReg` can fail because register types don't match, but they can
+  // be _compatible_ (e.g. <2 x s32> and s64). In fact, we expect such a
+  // scenario for some combiner opts (e.g. merge-unmerge), so we need to
+  // explicitly allow mismatched types, and manually check if they are
+  // _compatible_. `canReplaceRegNoTypeCheck` does exactly the same than
+  // `canReplaceReg`, but without type checking. If it still returns false, then
+  // it's something else, and we shouldn't proceed. If it returns true, then we
+  // go on to check type compatibility, and if that passes, we insert a bitcast.
+  assert(canReplaceRegNoTypeCheck(OldReg, Replacement, MRI) &&
+         "Cannot replace register?");
+  LLT SrcType = MRI.getType(OldReg);
+  LLT DstType = MRI.getType(Replacement);
+  // Check if G_BITCAST from SrcType to DstType is legal.
+  LLT BitcastTypes[] = {DstType, SrcType};
+  LegalityQuery Query(TargetOpcode::G_BITCAST, BitcastTypes);
+  // If types are not compatible, we shouldn't proceed.
+  assert(isLegalOrBeforeLegalizer(Query));
+
+  // Build the bitcast from OldReg to Replacement and insert it before MI.
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildBitcast(OldReg, Replacement);
+
   MI.eraseFromParent();
 }
 
