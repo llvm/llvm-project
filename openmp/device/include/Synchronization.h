@@ -34,13 +34,16 @@ enum MemScopeTy {
   single = __MEMORY_SCOPE_SINGLE,
 };
 
-/// Atomically increment \p *Addr and wrap at \p V with \p Ordering semantics.
-uint32_t inc(uint32_t *Addr, uint32_t V, OrderingTy Ordering,
-             MemScopeTy MemScope = MemScopeTy::device);
-
 /// Atomically perform <op> on \p V and \p *Addr with \p Ordering semantics. The
 /// result is stored in \p *Addr;
 /// {
+
+/// Atomically increments with wrapping semantics modulo \p Val.
+template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
+V inc(Ty *Address, V Val, atomic::OrderingTy Ordering,
+      MemScopeTy MemScope = MemScopeTy::device) {
+  return __scoped_atomic_fetch_uinc(Address, Val, Ordering, MemScope);
+}
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 bool cas(Ty *Address, V ExpectedV, V DesiredV, atomic::OrderingTy OrderingSucc,

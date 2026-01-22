@@ -502,6 +502,19 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue Ctlz = DAG->getNode(ISD::CTLZ, DL, Int32VT, Op0);
   SDValue Cttz = DAG->getNode(ISD::CTTZ, DL, Int32VT, Op0);
 
+  SDValue SignBit = DAG->getConstant(0x80000000u, DL, Int32VT);
+  SDValue LSB = DAG->getConstant(0x00000001u, DL, Int32VT);
+  SDValue NotSignBit = DAG->getNOT(DL, SignBit, Int32VT);
+
+  // Clear sign bit of Op0
+  SDValue NonNegativeValue =
+      DAG->getNode(ISD::AND, DL, Int32VT, Op0, NotSignBit);
+  // Set sign bit to Op0
+  SDValue NegativeValue = DAG->getNode(ISD::OR, DL, Int32VT, Op0, SignBit);
+  // Set LSB of Op0
+  SDValue PositiveValue =
+      DAG->getNode(ISD::OR, DL, Int32VT, NonNegativeValue, LSB);
+
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(ZExt, m_UnaryOp(ISD::ZERO_EXTEND, m_Value())));
   EXPECT_TRUE(sd_match(SExt, m_SExt(m_Value())));
@@ -527,6 +540,66 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   EXPECT_FALSE(sd_match(ZExt, m_Neg(m_Value())));
   EXPECT_FALSE(sd_match(Sub, m_Neg(m_Value())));
   EXPECT_FALSE(sd_match(Neg, m_Not(m_Value())));
+
+  SDValue BindVal;
+
+  EXPECT_FALSE(sd_match(Abs, DAG.get(), m_Negative()));
+
+  EXPECT_FALSE(
+      sd_match(NonNegativeValue, DAG.get(), m_Negative(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NonNegativeValue);
+  EXPECT_FALSE(
+      sd_match(NonNegativeValue, DAG.get(), m_NonZero(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NonNegativeValue);
+  EXPECT_FALSE(sd_match(NonNegativeValue, DAG.get(),
+                        m_StrictlyPositive(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NonNegativeValue);
+  EXPECT_FALSE(
+      sd_match(NonNegativeValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NonNegativeValue);
+
+  EXPECT_TRUE(
+      sd_match(NonNegativeValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, NonNegativeValue);
+
+  EXPECT_FALSE(
+      sd_match(NegativeValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NegativeValue);
+  EXPECT_FALSE(
+      sd_match(NegativeValue, DAG.get(), m_StrictlyPositive(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NegativeValue);
+
+  EXPECT_TRUE(sd_match(NegativeValue, DAG.get(), m_Negative(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, NegativeValue);
+  EXPECT_TRUE(sd_match(NegativeValue, DAG.get(), m_NonZero(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, NegativeValue);
+  EXPECT_TRUE(
+      sd_match(NegativeValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, NegativeValue);
+
+  EXPECT_FALSE(
+      sd_match(PositiveValue, DAG.get(), m_Negative(m_Value(BindVal))));
+  EXPECT_NE(BindVal, PositiveValue);
+  EXPECT_FALSE(
+      sd_match(PositiveValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
+  EXPECT_NE(BindVal, PositiveValue);
+
+  EXPECT_TRUE(sd_match(PositiveValue, DAG.get(), m_NonZero(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, PositiveValue);
+  EXPECT_TRUE(
+      sd_match(PositiveValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, PositiveValue);
+  EXPECT_TRUE(
+      sd_match(PositiveValue, DAG.get(), m_StrictlyPositive(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, PositiveValue);
+
+  // If DAG is not provided all matches fail regardless of the value
+  EXPECT_FALSE(sd_match(NegativeValue, m_Negative(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(NonNegativeValue, m_NonNegative(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(NegativeValue, m_NonZero(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(NegativeValue, m_NonPositive(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(PositiveValue, m_StrictlyPositive(m_Value(BindVal))));
+
   EXPECT_TRUE(sd_match(VScale, m_VScale(m_Value())));
 
   EXPECT_TRUE(sd_match(FPToUI, m_FPToUI(m_Value())));
@@ -564,6 +637,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   SDValue ConstSplat = DAG->getSplat(VInt32VT, DL, Const3);
   SDValue Zero = DAG->getConstant(0, DL, Int32VT);
   SDValue One = DAG->getConstant(1, DL, Int32VT);
+  SDValue MinusOne = DAG->getConstant(
+      APInt(Int32VT.getScalarSizeInBits(), -1, true), DL, Int32VT);
   SDValue AllOnes = DAG->getConstant(APInt::getAllOnes(32), DL, Int32VT);
   SDValue SetCC = DAG->getSetCC(DL, Int32VT, Arg0, Const3, ISD::SETULT);
 
@@ -582,6 +657,31 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   EXPECT_TRUE(sd_match(Zero, DAG.get(), m_False()));
   EXPECT_TRUE(sd_match(One, DAG.get(), m_True()));
   EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_True()));
+
+  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_Negative()));
+  EXPECT_FALSE(sd_match(MinusOne, DAG.get(), m_NonNegative()));
+  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_NonZero()));
+  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_NonPositive()));
+  EXPECT_FALSE(sd_match(MinusOne, DAG.get(), m_StrictlyPositive()));
+
+  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_Negative()));
+  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_NonNegative()));
+  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_NonZero()));
+  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_NonPositive()));
+  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_StrictlyPositive()));
+
+  EXPECT_FALSE(sd_match(One, DAG.get(), m_Negative()));
+  EXPECT_TRUE(sd_match(One, DAG.get(), m_NonNegative()));
+  EXPECT_TRUE(sd_match(One, DAG.get(), m_NonZero()));
+  EXPECT_FALSE(sd_match(One, DAG.get(), m_NonPositive()));
+  EXPECT_TRUE(sd_match(One, DAG.get(), m_StrictlyPositive()));
+
+  // If DAG is not provided all matches would fail
+  EXPECT_FALSE(sd_match(MinusOne, m_Negative()));
+  EXPECT_FALSE(sd_match(Zero, m_NonNegative()));
+  EXPECT_FALSE(sd_match(One, m_NonZero()));
+  EXPECT_FALSE(sd_match(Zero, m_NonPositive()));
+  EXPECT_FALSE(sd_match(One, m_StrictlyPositive()));
 
   ISD::CondCode CC;
   EXPECT_TRUE(sd_match(
@@ -650,6 +750,8 @@ TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {
   EXPECT_TRUE(A == Op64);
   EXPECT_TRUE(sd_match(Trunc, m_TruncOrSelf(m_Value(A))));
   EXPECT_TRUE(A == Op64);
+
+  EXPECT_TRUE(sd_match(ZExt, DAG.get(), m_NonNegative(m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchNode) {
@@ -1029,6 +1131,12 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
     EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_Zero()));
+
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_Negative()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
   }
 
   // m_One: splat vector of 1 → bitcast
@@ -1037,6 +1145,12 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
     EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_One()));
+
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_Negative()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
   }
 
   // m_AllOnes: splat vector of -1 → bitcast
@@ -1045,6 +1159,12 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
     EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_AllOnes()));
+
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_Negative()));
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
   }
 
   // splat vector with one undef → default should NOT match

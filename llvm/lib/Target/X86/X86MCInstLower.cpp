@@ -2532,6 +2532,12 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitSEHInstruction(MI);
     return;
 
+  case X86::SEH_SplitChainedAtEndOfBlock:
+    assert(!SplitChainedAtEndOfBlock &&
+           "Duplicate SEH_SplitChainedAtEndOfBlock in a current block");
+    SplitChainedAtEndOfBlock = true;
+    return;
+
   case X86::SEH_BeginEpilogue: {
     assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     EmitSEHInstruction(MI);

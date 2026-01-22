@@ -39,9 +39,7 @@ class CFGuardLongjmp : public MachineFunctionPass {
 public:
   static char ID;
 
-  CFGuardLongjmp() : MachineFunctionPass(ID) {
-    initializeCFGuardLongjmpPass(*PassRegistry::getPassRegistry());
-  }
+  CFGuardLongjmp() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Control Flow Guard longjmp targets";

@@ -1306,9 +1306,7 @@ namespace {
 struct InterleavedLoadCombine : public FunctionPass {
   static char ID;
 
-  InterleavedLoadCombine() : FunctionPass(ID) {
-    initializeInterleavedLoadCombinePass(*PassRegistry::getPassRegistry());
-  }
+  InterleavedLoadCombine() : FunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Interleaved Load Combine Pass";

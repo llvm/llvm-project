@@ -353,11 +353,11 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
 }
 
 Value *SafeStack::getStackGuard(IRBuilder<> &IRB, Function &F) {
-  Value *StackGuardVar = TL.getIRStackGuard(IRB);
+  Value *StackGuardVar = TL.getIRStackGuard(IRB, Libcalls);
   Module *M = F.getParent();
 
   if (!StackGuardVar) {
-    TL.insertSSPDeclarations(*M);
+    TL.insertSSPDeclarations(*M, Libcalls);
     return IRB.CreateIntrinsic(Intrinsic::stackguard, {});
   }
 
@@ -816,7 +816,7 @@ bool SafeStack::run() {
         SafestackPointerAddressName, IRB.getPtrTy(0));
     UnsafeStackPtr = IRB.CreateCall(Fn);
   } else {
-    UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB);
+    UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB, Libcalls);
   }
 
   // Load the current stack pointer (we'll also use it as a base pointer).
@@ -876,9 +876,7 @@ class SafeStackLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid..
 
-  SafeStackLegacyPass() : FunctionPass(ID) {
-    initializeSafeStackLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  SafeStackLegacyPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LibcallLoweringInfoWrapper>();

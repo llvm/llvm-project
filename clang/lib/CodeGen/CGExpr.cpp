@@ -620,6 +620,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
       if (isInConditionalBranch() && !E->getType().isDestructedType() &&
           ((!SanOpts.has(SanitizerKind::HWAddress) &&
             !SanOpts.has(SanitizerKind::Memory) &&
+            !SanOpts.has(SanitizerKind::MemtagStack) &&
             !CGM.getCodeGenOpts().SanitizeAddressUseAfterScope) ||
            inSuspendBlock())) {
         OldConditional = OutermostConditional;
