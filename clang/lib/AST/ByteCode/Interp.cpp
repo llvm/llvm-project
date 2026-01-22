@@ -1042,7 +1042,9 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
     return false;
 
-  if (F->isValid() && F->hasBody() && F->isConstexpr())
+  if (F->isValid() && F->hasBody() &&
+      (F->isConstexpr() || (S.Current->MSVCConstexprAllowed &&
+                            F->getDecl()->hasAttr<MSConstexprAttr>())))
     return true;
 
   const FunctionDecl *DiagDecl = F->getDecl();
@@ -1551,7 +1553,8 @@ bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
   const Stmt *Body = FD->getBody(Definition);
 
   if (Definition && Body &&
-      (Definition->isConstexpr() || Definition->hasAttr<MSConstexprAttr>()))
+      (Definition->isConstexpr() || (S.Current->MSVCConstexprAllowed &&
+                                     Definition->hasAttr<MSConstexprAttr>())))
     return true;
 
   return diagnoseCallableDecl(S, OpPC, FD);
@@ -2061,9 +2064,12 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
     const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
 
     if (NewExpr->getNumPlacementArgs() > 0) {
-      // This is allowed pre-C++26, but only an std function.
-      if (S.getLangOpts().CPlusPlus26 || S.Current->isStdFunction())
+      // This is allowed pre-C++26, but only an std function or if
+      // [[msvc::constexpr]] was used.
+      if (S.getLangOpts().CPlusPlus26 || S.Current->isStdFunction() ||
+          S.Current->MSVCConstexprAllowed)
         return true;
+
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_placement)
           << /*C++26 feature*/ 1 << E->getSourceRange();
     } else if (
