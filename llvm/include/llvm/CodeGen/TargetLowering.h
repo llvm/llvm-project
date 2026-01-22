@@ -1759,10 +1759,16 @@ public:
     if (auto *PTy = dyn_cast<PointerType>(Ty))
       return getPointerTy(DL, PTy->getAddressSpace());
 
-    if (auto *VTy = dyn_cast<VectorType>(Ty))
-      return EVT::getVectorVT(Ty->getContext(),
-                              getValueType(DL, VTy->getElementType(), false),
-                              VTy->getElementCount());
+    if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+      Type *EltTy = VTy->getElementType();
+      // Lower vectors of pointers to native pointer types.
+      EVT EltVT;
+      if (auto *PTy = dyn_cast<PointerType>(EltTy))
+        EltVT = getPointerTy(DL, PTy->getAddressSpace());
+      else
+        EltVT = EVT::getEVT(EltTy, false);
+      return EVT::getVectorVT(Ty->getContext(), EltVT, VTy->getElementCount());
+    }
 
     return EVT::getEVT(Ty, AllowUnknown);
   }
@@ -1773,10 +1779,15 @@ public:
     if (auto *PTy = dyn_cast<PointerType>(Ty))
       return getPointerMemTy(DL, PTy->getAddressSpace());
 
-    if (auto *VTy = dyn_cast<VectorType>(Ty))
-      return EVT::getVectorVT(Ty->getContext(),
-                              getMemValueType(DL, VTy->getElementType(), false),
-                              VTy->getElementCount());
+    if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+      Type *EltTy = VTy->getElementType();
+      EVT EltVT;
+      if (auto *PTy = dyn_cast<PointerType>(EltTy))
+        EltVT = getPointerMemTy(DL, PTy->getAddressSpace());
+      else
+        EltVT = EVT::getEVT(EltTy, false);
+      return EVT::getVectorVT(Ty->getContext(), EltVT, VTy->getElementCount());
+    }
 
     return getValueType(DL, Ty, AllowUnknown);
   }
