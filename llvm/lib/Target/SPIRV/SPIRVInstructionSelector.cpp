@@ -345,7 +345,7 @@ private:
                    const SPIRVType *ResType = nullptr) const;
 
   Register buildZerosVal(const SPIRVType *ResType, MachineInstr &I) const;
-  bool isConstantZero(Register Reg) const;
+  bool isScalarOrVectorIntConstantZero(Register Reg) const;
   Register buildZerosValF(const SPIRVType *ResType, MachineInstr &I) const;
   Register buildOnesVal(bool AllOnes, const SPIRVType *ResType,
                         MachineInstr &I) const;
@@ -3023,10 +3023,17 @@ Register SPIRVInstructionSelector::buildZerosVal(const SPIRVType *ResType,
   return GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
 }
 
-bool SPIRVInstructionSelector::isConstantZero(Register Reg) const {
+bool SPIRVInstructionSelector::isScalarOrVectorIntConstantZero(
+    Register Reg) const {
+  SPIRVType *Type = GR.getSPIRVTypeForVReg(Reg);
+  if (!Type)
+    return false;
+  SPIRVType *CompType = GR.getScalarOrVectorComponentType(Type);
+  if (!CompType || CompType->getOpcode() != SPIRV::OpTypeInt)
+    return false;
+
   auto IsZero = [this](Register Reg) {
-    Register R = Reg;
-    MachineInstr *Def = getDefInstrMaybeConstant(R, MRI);
+    MachineInstr *Def = getDefInstrMaybeConstant(Reg, MRI);
     if (!Def)
       return false;
 
@@ -3035,7 +3042,7 @@ bool SPIRVInstructionSelector::isConstantZero(Register Reg) const {
 
     if (Def->getOpcode() == TargetOpcode::G_CONSTANT ||
         Def->getOpcode() == SPIRV::OpConstantI)
-      return getIConstVal(R, MRI) == 0;
+      return getIConstVal(Reg, MRI) == 0;
 
     return false;
   };
@@ -4161,7 +4168,7 @@ bool SPIRVInstructionSelector::selectSampleIntrinsic(Register &ResVReg,
           .addUse(CoordinateReg);
 
   uint32_t ImageOperands = 0;
-  if (OffsetReg && !isConstantZero(*OffsetReg)) {
+  if (OffsetReg && !isScalarOrVectorIntConstantZero(*OffsetReg)) {
     ImageOperands |= 0x8; // ConstOffset
   }
 
