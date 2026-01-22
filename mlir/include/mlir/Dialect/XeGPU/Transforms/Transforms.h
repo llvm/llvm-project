@@ -71,8 +71,13 @@ void populateXeGPUMoveFuncBodyToWarpOpPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU workgroup to subgroup distribution into
 /// `patterns`.
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
+/// Define only the type conversions needed for XeGPU subgroup to workitem
+/// distribution.
+void populateXeGPUSgToWiDistributeTypeConversions(TypeConverter &typeConverter);
 /// Defines type conversions and legality for XeGPU subgroup to workitem
 /// distribution and appends the required conversion patterns into `patterns`.
+/// Appends patterns for XeGPU subgroup to workitem distribution into
+/// `patterns`.
 void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);

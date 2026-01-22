@@ -8,19 +8,27 @@
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace mlir {
 namespace xegpu {
@@ -31,17 +39,30 @@ namespace xegpu {
 
 using namespace mlir;
 
+#define DEBUG_TYPE "xegpu-sg-to-wi-distribute-experimental"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
+
 namespace {
 
 static Value resolveTy(ConversionPatternRewriter &rewriter,
                        TypedValue<VectorType> v, VectorType expectedTy) {
+  // llvm::errs() << "value:" << v << " expectedTy: " << expectedTy << "\n";
   if (v.getType() == expectedTy)
     return v;
-  assert(v.getType().getElementType() == expectedTy.getElementType() &&
-         "element types must match");
-  assert(v.getType().getNumElements() == expectedTy.getNumElements() &&
-         "total number of elements must match");
-  return vector::ShapeCastOp::create(rewriter, v.getLoc(), expectedTy, v);
+  // assert(v.getType().getElementType() == expectedTy.getElementType() &&
+  //        "element types must match");
+  // assert(v.getType().getNumElements() == expectedTy.getNumElements() &&
+  //        "total number of elements must match");
+  // If both types are vector type and number of elements match, insert a shape
+  // cast.
+  if (isa<VectorType>(v.getType()) &&
+      v.getType().getNumElements() == expectedTy.getNumElements())
+    return vector::ShapeCastOp::create(rewriter, v.getLoc(), expectedTy, v);
+
+  // else create an unrealized cast.
+  auto newOp = UnrealizedConversionCastOp::create(rewriter, v.getLoc(),
+                                                  expectedTy, ValueRange{v});
+  return newOp.getResult(0);
 }
 
 static LogicalResult verifyLayouts(Operation *root) {
@@ -172,13 +193,14 @@ struct DpasOpPattern : public OpConversionPattern<xegpu::DpasOp> {
   LogicalResult
   matchAndRewrite(xegpu::DpasOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // llvm::errs() << "DpasOpPattern matchAndRewrite called\n";
     // Check if the op has A, B and CD layouts attached.
     auto layoutA = cast<xegpu::LayoutAttr>(op.getLayoutAAttr());
     auto layoutB = cast<xegpu::LayoutAttr>(op.getLayoutBAttr());
     auto layoutCd = cast<xegpu::LayoutAttr>(op.getLayoutCdAttr());
     if (!layoutA || !layoutB || !layoutCd)
       return failure();
-
+    // llvm::errs() << "tryning to calculate wi types for dpas op\n";
     auto wiResultTyOrFailure =
         xegpu::getDistributedVectorType(op.getType(), layoutCd);
     auto wiATypeOrFailure =
@@ -196,6 +218,8 @@ struct DpasOpPattern : public OpConversionPattern<xegpu::DpasOp> {
       return rewriter.notifyMatchFailure(
           op, "unable to compute expected workitem vector type for DpasOp from "
               "lane layout");
+    // llvm::errs() << "adaptor acc type: " << adaptor.getAcc().getType() <<
+    // "\n"; llvm::errs() << "ops acc type: " << op.getAcc().getType() << "\n";
     auto newOp = xegpu::DpasOp::create(
         rewriter, op->getLoc(), wiResultTyOrFailure.value(),
         resolveTy(rewriter, cast<TypedValue<VectorType>>(adaptor.getLhs()),
@@ -307,17 +331,194 @@ struct XeGPUSgToWiDistributeExperimentalPass
 } // namespace
 
 void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
-  // Verify if all XeGPU and vector operations have layouts.
+
+  // llvm::errs() << "Running XeGPUSgToWiDistributeExperimentalPass\n";
+  // Verify if all XeGPU anchor ops and vector ops have result layouts.
   Operation *root = getOperation();
-  if (failed(verifyLayouts(root))) {
-    signalPassFailure();
-    return;
+  // if (failed(verifyLayouts(root))) {
+  //   LLVM_DEBUG(DBGS() << "XeGPUSgToWiDistributeExperimentalPass: layout "
+  //                        "verification failed\n");
+  //   signalPassFailure();
+  //   return;
+  // }
+  // Collect existing UnrealizedConversionCastOps.
+  llvm::SmallSetVector<UnrealizedConversionCastOp, 8> existingCasts;
+  // root->walk(
+  //     [&](UnrealizedConversionCastOp castOp) { existingCasts.insert(castOp);
+  //     });
+  // Perform a structural type conversion. This will insert
+  // UnrealizedConversionCastOps for type materializations.
+  // auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
+  //                            mlir::ValueRange inputs,
+  //                            mlir::Location loc) -> mlir::Value {
+  //   // If single input and both input and output types are vector types,
+  //   // and they have same number of elements, insert a shape cast.
+  //   // if (inputs.size() == 1) {
+  //   //   auto inputTy = dyn_cast<VectorType>(inputs[0].getType());
+  //   //   auto outputTy = dyn_cast<VectorType>(type);
+  //   //   if (inputTy && outputTy &&
+  //   //       inputTy.getNumElements() == outputTy.getNumElements()) {
+  //   //     return vector::ShapeCastOp::create(builder, loc, outputTy,
+  //   //     inputs[0])
+  //   //         .getResult();
+  //   //   }
+  //   // }
+  //   UnrealizedConversionCastOp castOp =
+  //       UnrealizedConversionCastOp::create(builder, loc, type, inputs);
+
+  //   // // If inputs is a single vector type and type is also a vector, then
+  //   // layout
+  //   // // must be propagated.
+  //   // if (inputs.size() == 1 && isa<VectorType>(inputs[0].getType()) &&
+  //   //     isa<VectorType>(type)) {
+  //   //   auto layout = xegpu::getDistributeLayoutAttr(inputs[0]);
+  //   //   if (layout)
+  //   //     xegpu::setDistributeLayoutAttr(castOp->getOpResult(0), layout);
+  //   // }
+
+  //   return castOp.getResult(0);
+  // };
+  // {
+  //   ConversionTarget target(getContext());
+  //   TypeConverter typeConverter;
+  //   RewritePatternSet patterns(&getContext());
+  //   typeConverter.addSourceMaterialization(materializeCast);
+  //   typeConverter.addTargetMaterialization(materializeCast);
+  //   xegpu::populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
+  //   scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
+  //                                                        patterns, target);
+  //   target.addLegalOp<UnrealizedConversionCastOp>();
+  //   (void)applyPartialConversion(root, target, std::move(patterns));
+  // }
+  // // Apply the XeGPU subgroup to workitem distribution patterns.
+  // {
+  //   ConversionTarget target(getContext());
+  //   TypeConverter typeConverter;
+  //   typeConverter.addTargetMaterialization(materializeCast);
+  //   typeConverter.addSourceMaterialization(materializeCast);
+  //   RewritePatternSet patterns(&getContext());
+  //   xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+  //       typeConverter, patterns, target);
+  //   target.addLegalOp<UnrealizedConversionCastOp>();
+  //   (void)applyPartialConversion(root, target, std::move(patterns));
+  // }
+  // UnrealizedConversionCastOp is legal if it existed before.
+  // target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
+  //     [&](UnrealizedConversionCastOp op) {
+  //       return existingCasts.contains(op);
+  //     });
+  // Define a pattern for handling UnrealizedConversionCastOps that were
+  // newly created during the structural type conversion.
+  class ResolveUnrealizedCastPattern
+      : public OpConversionPattern<UnrealizedConversionCastOp> {
+  public:
+    // Pass existsingCasts in the constructor to identify existing casts.
+    ResolveUnrealizedCastPattern(
+        TypeConverter &typeConverter,
+        llvm::SmallSetVector<UnrealizedConversionCastOp, 8> &existingCasts,
+        MLIRContext &ctx)
+        : OpConversionPattern<UnrealizedConversionCastOp>(typeConverter, &ctx),
+          existingCasts(existingCasts) {}
+    // using
+    // OpConversionPattern<UnrealizedConversionCastOp>::OpConversionPattern;
+    LogicalResult
+    matchAndRewrite(UnrealizedConversionCastOp op, OpAdaptor adaptor,
+                    ConversionPatternRewriter &rewriter) const override {
+      // If this op existed before, nothing to do.
+      if (existingCasts.contains(op))
+        return failure();
+      // number of inputs and outputs must be 1.
+      if (op.getNumOperands() != 1 || op.getNumResults() != 1)
+        return failure();
+      // Both input and output types must be vector types.
+      auto singleInput = op.getInputs()[0];
+      auto inputTy = dyn_cast<VectorType>(singleInput.getType());
+      auto outputTy = dyn_cast<VectorType>(op.getResult(0).getType());
+      llvm::errs() << "input ty : " << inputTy << " output ty: " << outputTy
+                   << "\n";
+      if (!inputTy || !outputTy)
+        return failure();
+
+      // Check if the defining op of the input is also an
+      // UnrealizedConversionCastOp.
+      auto definingOp = singleInput.getDefiningOp<UnrealizedConversionCastOp>();
+      if (!definingOp)
+        return rewriter.notifyMatchFailure(
+            op, "input defining op is not an UnrealizedConversionCastOp");
+      auto inputOfDefiningOp = definingOp.getInputs()[0];
+      // If the input of the defining op and output type are both vector types
+      // have same number of elements, insert a shape cast.
+      auto inputOfDefiningOpTy =
+          dyn_cast<VectorType>(inputOfDefiningOp.getType());
+      if (inputOfDefiningOpTy && outputTy &&
+          inputOfDefiningOpTy.getNumElements() == outputTy.getNumElements()) {
+        auto shapeCast = vector::ShapeCastOp::create(
+            rewriter, op.getLoc(), outputTy, inputOfDefiningOp);
+        rewriter.replaceOp(op, shapeCast.getResult());
+        return success();
+      }
+
+      return rewriter.notifyMatchFailure(
+          op, "unable to resolve unrealized conversion cast");
+    }
+
+  private:
+    llvm::SmallSetVector<UnrealizedConversionCastOp, 8> &existingCasts;
+  };
+  // Finally, remove unnecessary UnrealizedConversionCastOps.
+  OpBuilder builder(root);
+  root->walk([&](UnrealizedConversionCastOp op) {
+    // If this op existed before, nothing to do.
+    if (existingCasts.contains(op))
+      return;
+    // number of inputs and outputs must be 1.
+    if (op.getNumOperands() != 1 || op.getNumResults() != 1)
+      return;
+    // Both input and output types must be vector types.
+    auto singleInput = op.getInputs()[0];
+    auto inputTy = dyn_cast<VectorType>(singleInput.getType());
+    auto outputTy = dyn_cast<VectorType>(op.getResult(0).getType());
+    if (!inputTy || !outputTy)
+      return;
+
+    // Check if the defining op of the input is also an
+    // UnrealizedConversionCastOp and it has a single user (which is this op).
+    auto definingOp = singleInput.getDefiningOp<UnrealizedConversionCastOp>();
+    if (!definingOp || !definingOp->hasOneUse())
+      return;
+    auto inputOfDefiningOp = definingOp.getInputs()[0];
+    // If the input of the defining op and output type are both vector types
+    // have same number of elements, insert a shape cast.
+    auto inputOfDefiningOpTy =
+        dyn_cast<VectorType>(inputOfDefiningOp.getType());
+    if (inputOfDefiningOpTy &&
+        inputOfDefiningOpTy.getNumElements() == outputTy.getNumElements()) {
+      builder.setInsertionPoint(op);
+      auto shapeCast = vector::ShapeCastOp::create(builder, op.getLoc(),
+                                                   outputTy, inputOfDefiningOp);
+      op.replaceAllUsesWith(ValueRange{shapeCast.getResult()});
+      return;
+    }
+  });
+  // At this point, we will have some dead UnrealizedConversionCastOps. Just
+  // erase them.
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    root->walk([&](UnrealizedConversionCastOp op) {
+      // Skip existing casts.
+      if (existingCasts.contains(op))
+        return;
+      if (op.use_empty()) {
+        op.erase();
+        changed = true;
+      }
+    });
   }
 }
-void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
-    TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target) {
 
+void xegpu::populateXeGPUSgToWiDistributeTypeConversions(
+    TypeConverter &typeConverter) {
   // Populate type conversions.
   // - Any type other than TensorDescType and VectorType are legal as is.
   typeConverter.addConversion([](Type type) -> std::optional<Type> {
@@ -325,7 +526,7 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       return type;
     return std::nullopt;
   });
-  // For TensorDescType, drop the layout attribute if any.
+  // - For TensorDescType, drop the layout attribute if any.
   typeConverter.addConversion([](TensorDescType type) -> Type {
     if (type.getLayoutAttr()) {
       return type.dropLayouts();
@@ -336,29 +537,25 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
   //   value. If so, convert to the distributed vector type based on the layout.
   typeConverter.addConversion([](Value v) -> std::optional<Type> {
     auto type = v.getType();
-    auto layout = xegpu::getDistributeLayoutAttr(v);
-    // If no valid layout, nothing to do.
-    if (!layout || !layout.isForSubgroup())
+    // If value is not vector type, nothing to do.
+    if (!isa<VectorType>(type))
       return std::nullopt;
+    auto layout = xegpu::getDistributeLayoutAttr(v);
+    if (!layout || !layout.isForSubgroup())
+      return type;
     // Vector type is distributed based on lane layout.
-    if (isa<VectorType>(type)) {
-      auto newTyOrFailure =
-          getDistVecTypeBasedOnLaneLayout(layout, cast<VectorType>(type));
-      if (succeeded(newTyOrFailure))
-        return *newTyOrFailure;
-    }
-    return std::nullopt;
+    auto newTyOrFailure =
+        getDistVecTypeBasedOnLaneLayout(layout, cast<VectorType>(type));
+    if (failed(newTyOrFailure))
+      return type;
+    return *newTyOrFailure;
   });
-  // - Materialization casts are only used for testing purposes.
-  auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
-                             mlir::ValueRange inputs,
-                             mlir::Location loc) -> mlir::Value {
-    return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
-        .getResult(0);
-  };
-  typeConverter.addSourceMaterialization(materializeCast);
-  typeConverter.addTargetMaterialization(materializeCast);
-  // Define legality.
+}
+
+void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target) {
+  populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
   // - CreateNdDescOp is legal only if its result type has no layout attribute.
   target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
       [&](xegpu::CreateNdDescOp op) { return !op.getType().getLayoutAttr(); });
