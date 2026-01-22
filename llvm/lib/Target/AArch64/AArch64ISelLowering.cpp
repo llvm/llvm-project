@@ -9669,7 +9669,7 @@ static bool shouldLowerTailCallStackArg(const MachineFunction &MF,
       if (CallOffset != MFI.getObjectOffset(FI))
         return true;
       uint64_t SizeInBits = LoadNode->getMemoryVT().getFixedSizeInBits();
-      if (SizeInBits / 8 != static_cast<uint64_t>(MFI.getObjectSize(FI)))
+      if (SizeInBits != VA.getValVT().getSizeInBits())
         return true;
       return false;
     }
