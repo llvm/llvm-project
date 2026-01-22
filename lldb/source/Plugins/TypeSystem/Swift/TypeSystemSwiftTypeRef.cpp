@@ -409,6 +409,19 @@ CompilerType TypeSystemSwiftTypeRef::GetTypeFromTypeMetadataNode(
   return RemangleAsType(dem, type, flavor);
 }
 
+CompilerType TypeSystemSwiftTypeRef::GetTypeFromValueWitnessTable(
+    llvm::StringRef mangled_name) {
+  Demangler dem;
+  NodePointer node = dem.demangleSymbol(mangled_name);
+  NodePointer type = swift_demangle::NodeAtPath(
+      node,
+      {Node::Kind::Global, Node::Kind::ValueWitnessTable, Node::Kind::Type});
+  if (!type)
+    return {};
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
+  return RemangleAsType(dem, type, flavor);
+}
+
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref,
                                                SymbolContext sc) {
   llvm::SmallVector<CompilerContext, 2> decl_context;
