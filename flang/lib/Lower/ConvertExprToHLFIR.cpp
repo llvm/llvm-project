@@ -1751,8 +1751,6 @@ private:
       assert(right.isArray() && "must have at least one array operand");
       shape = hlfir::genShape(loc, builder, right);
     }
-    // Array operations may need to handle reassoc flag inside of
-    // hlfir.elemental
     auto genKernel = [&op, &left, &right, &binaryOp, noReassoc](
                          mlir::Location l, fir::FirOpBuilder &b,
                          mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
