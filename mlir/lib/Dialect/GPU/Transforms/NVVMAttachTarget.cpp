@@ -80,7 +80,8 @@ void NVVMAttachTarget::runOnOperation() {
   SmallVector<StringRef> filesToLink(libs);
   auto target = builder.getAttr<NVVMTargetAttr>(
       optLevel, triple, chip, features, getFlags(builder),
-      filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink));
+      filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink),
+      verifyTarget);
   llvm::Regex matcher(moduleMatcher);
   for (Region &region : getOperation()->getRegions())
     for (Block &block : region.getBlocks())

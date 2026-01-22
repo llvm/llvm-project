@@ -45,3 +45,20 @@ constexpr int a = 12;
 constexpr const int *b = &a;
 constexpr int *f = (int*)(void*)b;
 static_assert(*f == 12);
+
+namespace ExplicitThisInBacktrace {
+  struct S {
+    constexpr void foo(this const S& self) {
+      throw; // both-note {{not valid in a constant expression}}
+    }
+  };
+
+  constexpr bool test() {
+    S s;
+    s.foo(); // both-note {{in call to}}
+    return true;
+  }
+
+  static_assert(test()); // both-error {{not an integral constant expression}} \
+                         // both-note {{in call to}}
+}
