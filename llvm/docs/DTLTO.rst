@@ -25,10 +25,10 @@ Using the *separate thin-link* approach requires a build system capable of
 handling the dynamic dependencies specified in the individual summary index
 files, such as Bazel. DTLTO removes this requirement, allowing it to be used
 with any build process that supports in-process ThinLTO. Note that, to
-facilitate this, DTLTO aims to support all in-process ThinLTO features, such as
-caching (for incremental builds), and aims to support all linker input file
-types, including static libraries/archives (e.g. libc.a), rather than being
-limited to plain bitcode files.
+facilitate this, DTLTO aims to support common in-process ThinLTO features, such
+as caching. Archived bitcode objects are also handled transparently by
+temporarily extracting referenced objects for distribution. If thin archives
+are used, extraction is not needed.
 
 The following commands show the steps used for the *separate thin-link*
 approach for a basic example:
