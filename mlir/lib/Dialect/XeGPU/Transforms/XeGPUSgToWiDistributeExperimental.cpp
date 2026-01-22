@@ -14,6 +14,7 @@
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -120,6 +121,12 @@ struct LoadNdOpPattern : public OpConversionPattern<xegpu::LoadNdOp> {
     if (op.getTensorDescType().getLayout() != layout)
       return rewriter.notifyMatchFailure(
           op, "conflicting layout attributes on tensor descriptor and anchor");
+    auto uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    if (!uArch)
+      return rewriter.notifyMatchFailure(
+          op, "xegpu::LoadNdOp require target attribute attached to "
+              "determine transpose "
+              "requirement");
     auto supportedWiResultTyOrFailure =
         xegpu::getDistributedVectorType(op.getTensorDescType());
     auto expectedWiResultTyOrFailure =
@@ -136,6 +143,11 @@ struct LoadNdOpPattern : public OpConversionPattern<xegpu::LoadNdOp> {
         adaptor.getTensorDesc(), op.getMixedOffsets(), op.getPackedAttr(),
         op.getTransposeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
         op.getL3HintAttr(), /**layout**/ nullptr);
+    // Set the packed attribute if the layout requires it.
+    newOp.setPacked(xegpu::requirePacked(cast<xegpu::LayoutAttr>(layout)));
+    // Set the transpose attribute if the layout requires it.
+    if (xegpu::requireTranspose(cast<xegpu::LayoutAttr>(layout), uArch))
+      newOp.setTranspose(DenseI64ArrayAttr::get(rewriter.getContext(), {1, 0}));
     rewriter.replaceOp(op, castValueTo(rewriter, newOp.getResult(),
                                        expectedWiResultTyOrFailure.value()));
     return success();

@@ -103,34 +103,6 @@ static Value resolveDistributedTy(Value orig, T expected,
   return orig;
 }
 
-/// Helper function to check if the layout is packed. Layout is packed if it is
-/// 2D and lane_data[0] != 1 (data packed from col dimension).
-/// TODO: Move to target info.
-static bool requirePacked(const xegpu::LayoutAttr layout) {
-  if (!layout)
-    return false;
-  auto laneData = layout.getEffectiveLaneDataAsInt();
-  if (laneData.size() != 2)
-    return false;
-  return laneData[0] != 1;
-}
-
-/// Helper function to check if the layout requires a transpose effect.
-static bool requireTranspose(const xegpu::LayoutAttr layout,
-                             const xegpu::uArch::uArch *uArch) {
-  // Return false for unsupported targets.
-  // TODO: Add more support or move to target info.
-  if (uArch->getName().equals_insensitive("pvc") &&
-      uArch->getName().equals_insensitive("bmg"))
-    return false;
-  if (!layout)
-    return false;
-  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
-  if (laneLayout.size() != 2)
-    return false;
-  return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
-}
-
 /// Given a vector type and its distributed vector type, return the list of
 /// dimensions that are distributed.
 static SmallVector<int64_t> getDistributedDims(VectorType originalType,
@@ -533,9 +505,9 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
         newLoadOperands, loadOp->getAttrs());
     xegpu::removeLayoutAttrs(newLoadOp);
     // Set the packed attribute if the layout requires it.
-    newLoadOp.setPacked(requirePacked(layout));
+    newLoadOp.setPacked(xegpu::requirePacked(layout));
     // Set the transpose attribute if the layout requires it.
-    if (requireTranspose(layout, uArch))
+    if (xegpu::requireTranspose(layout, uArch))
       newLoadOp.setTranspose(
           DenseI64ArrayAttr::get(rewriter.getContext(), {1, 0}));
     Value distributedVal = newWarpOp.getResult(operandIdx);

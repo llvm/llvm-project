@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
@@ -762,3 +763,27 @@ template int xegpu::getLargestDivisor<int>(int dim, ArrayRef<int> candidates,
 template int
 xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
                                    ArrayRef<unsigned> candidateMultiples);
+
+bool xegpu::requirePacked(const xegpu::LayoutAttr layout) {
+  if (!layout)
+    return false;
+  auto laneData = layout.getEffectiveLaneDataAsInt();
+  if (laneData.size() != 2)
+    return false;
+  return laneData[0] != 1;
+}
+
+bool xegpu::requireTranspose(const xegpu::LayoutAttr layout,
+                             const xegpu::uArch::uArch *uArch) {
+  // Return false for unsupported targets.
+  // TODO: Add more support or move to target info.
+  if (uArch->getName().equals_insensitive("pvc") &&
+      uArch->getName().equals_insensitive("bmg"))
+    return false;
+  if (!layout)
+    return false;
+  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
+  if (laneLayout.size() != 2)
+    return false;
+  return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
+}

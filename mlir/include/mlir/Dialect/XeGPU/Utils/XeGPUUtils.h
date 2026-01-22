@@ -26,6 +26,10 @@ namespace xegpu {
 class DistributeLayoutAttr;
 class LayoutAttr;
 class TensorDescType;
+
+namespace uArch {
+class uArch;
+} // namespace uArch
 } // namespace xegpu
 
 namespace xegpu {
@@ -206,6 +210,14 @@ void recoverTemporaryLayoutsDeprecated(Operation *op);
 /// the given operation's region. Reports an error if any vector operand lacks
 /// a layout attribute.
 bool recoverTemporaryLayouts(Operation *rootOp);
+
+/// Helper function to check if the layout is packed. Layout is packed if it is
+/// 2D and lane_data[0] != 1 (data packed from col dimension).
+/// TODO: Move to target info.
+bool requirePacked(const LayoutAttr layout);
+
+/// Helper function to check if the layout requires a transpose effect.
+bool requireTranspose(const LayoutAttr layout, const uArch::uArch *uArch);
 
 } // namespace xegpu
 
