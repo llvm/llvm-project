@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "benchmark/benchmark.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <thread>
@@ -19,9 +19,10 @@
 
 using namespace llvm;
 
-// Benchmark parallel file writing using writeToOutput.
-// This simulates scenarios where multiple threads are writing files
-// concurrently, which is common in parallel compilation scenarios.
+// Benchmark parallel file writing using writeToOutput. This simulates scenarios
+// where multiple threads are writing files concurrently, which is common in
+// parallel compilation scenarios. The goal of this benchmark is to ensure that
+// LLVM's global signal handling state updates aren't too expensive.
 static void BM_WriteToOutputInParallel(benchmark::State &State) {
   const int NumThreads = State.range(0);
   const int FilesPerThread = State.range(1);
@@ -58,8 +59,6 @@ static void BM_WriteToOutputInParallel(benchmark::State &State) {
           SmallString<128> Path(ThreadDir);
           sys::path::append(Path, "file_" + std::to_string(FileIdx) + ".bin");
 
-          // Ignore errors in benchmark - we're measuring performance, not
-          // correctness
           Error E = writeToOutput(Path, [=](raw_ostream &Out) -> Error {
                 // Write 32-bit integers up to BytesPerFile
                 const int NumInts = BytesPerFile / sizeof(int32_t);
