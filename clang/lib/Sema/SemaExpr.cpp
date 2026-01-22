@@ -17924,13 +17924,13 @@ void Sema::PushExpressionEvaluationContextForFunction(
 }
 
 ExprResult Sema::ActOnCXXReflectExpr(SourceLocation CaretCaretLoc,
-                                     TypeLoc *TL) {
-  return BuildCXXReflectExpr(CaretCaretLoc, TL);
+                                     TypeSourceInfo *TSI) {
+  return BuildCXXReflectExpr(CaretCaretLoc, TSI);
 }
 
 ExprResult Sema::BuildCXXReflectExpr(SourceLocation CaretCaretLoc,
-                                     TypeLoc *TL) {
-  return CXXReflectExpr::Create(Context, CaretCaretLoc, TL);
+                                     TypeSourceInfo *TSI) {
+  return CXXReflectExpr::Create(Context, CaretCaretLoc, TSI);
 }
 
 namespace {

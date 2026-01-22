@@ -5510,28 +5510,30 @@ class CXXReflectExpr : public Expr {
 
   // TODO(Reflection): add support for TemplateReference, NamespaceReference and
   // DeclRefExpr
-  using operand_type = llvm::PointerUnion<const TypeLoc *>;
+  using operand_type = llvm::PointerUnion<const TypeSourceInfo *>;
 
   SourceLocation CaretCaretLoc;
   operand_type Operand;
 
-  CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeLoc *TL);
+  CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeSourceInfo *TSI);
   CXXReflectExpr(EmptyShell Empty);
 
 public:
   static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
-                                TypeLoc *TL);
+                                TypeSourceInfo *TL);
 
   static CXXReflectExpr *CreateEmpty(ASTContext &C);
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
-        .Case<const TypeLoc *>([](auto *Ptr) { return Ptr->getBeginLoc(); });
+        .Case<const TypeSourceInfo *>(
+            [](auto *Ptr) { return Ptr->getTypeLoc().getBeginLoc(); });
   }
 
   SourceLocation getEndLoc() const LLVM_READONLY {
     return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
-        .Case<const TypeLoc *>([](auto *Ptr) { return Ptr->getEndLoc(); });
+        .Case<const TypeSourceInfo *>(
+            [](auto *Ptr) { return Ptr->getTypeLoc().getEndLoc(); });
   }
 
   /// Returns location of the '^^'-operator.

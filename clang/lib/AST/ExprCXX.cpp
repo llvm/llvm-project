@@ -1942,14 +1942,15 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
 CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
     : Expr(CXXReflectExprClass, Empty) {}
 
-CXXReflectExpr::CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeLoc *TL)
-    : Expr(CXXReflectExprClass, TL->getType(), VK_PRValue, OK_Ordinary),
-      CaretCaretLoc(CaretCaretLoc), Operand(TL) {}
+CXXReflectExpr::CXXReflectExpr(SourceLocation CaretCaretLoc,
+                               const TypeSourceInfo *TSI)
+    : Expr(CXXReflectExprClass, TSI->getType(), VK_PRValue, OK_Ordinary),
+      CaretCaretLoc(CaretCaretLoc), Operand(TSI) {}
 
 CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
                                        SourceLocation CaretCaretLoc,
-                                       TypeLoc *TL) {
-  return new (C) CXXReflectExpr(CaretCaretLoc, TL);
+                                       TypeSourceInfo *TSI) {
+  return new (C) CXXReflectExpr(CaretCaretLoc, TSI);
 }
 
 CXXReflectExpr *CXXReflectExpr::CreateEmpty(ASTContext &C) {

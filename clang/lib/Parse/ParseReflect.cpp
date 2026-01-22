@@ -40,11 +40,11 @@ ExprResult Parser::ParseCXXReflectExpression() {
     if (!TSI)
       TSI = Actions.getASTContext().getTrivialTypeSourceInfo(QT, OperandLoc);
 
-    TypeLoc TL = TSI->getTypeLoc();
-    QualType Canon = QT.getCanonicalType();
-    if (!TL.isNull() && Canon->isBuiltinType()) {
+    // TypeLoc TL = TSI->getTypeLoc();
+    QT = QT.getCanonicalType().getUnqualifiedType();
+    if (TSI && QT.getTypePtr()->isBuiltinType()) {
       // Only supports builtin types for now
-      return Actions.ActOnCXXReflectExpr(CaretCaretLoc, &TL);
+      return Actions.ActOnCXXReflectExpr(CaretCaretLoc, TSI);
     }
   }
 
