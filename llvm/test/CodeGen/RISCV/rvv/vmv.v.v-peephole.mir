@@ -112,7 +112,7 @@ body: |
     ; CHECK-LABEL: name: diff_regclass
     ; CHECK: liveins: $v8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PseudoVMV_V_I_MF2_:%[0-9]+]]:vmnov0 = PseudoVMV_V_I_MF2 $noreg, 0, 0, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: [[PseudoVMV_V_I_MF2_:%[0-9]+]]:vrnov0 = PseudoVMV_V_I_MF2 $noreg, 0, 0, 5 /* e32 */, 1 /* ta, mu */
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vmv0 = COPY $v8
     ; CHECK-NEXT: [[PseudoVADD_VV_M1_MASK:%[0-9]+]]:vrnov0 = PseudoVADD_VV_M1_MASK [[PseudoVMV_V_I_MF2_]], $noreg, $noreg, [[COPY]], 0, 5 /* e32 */, 0 /* tu, mu */
     %0:vr = PseudoVMV_V_I_MF2 $noreg, 0, -1, 5 /* e32 */, 0 /* tu, mu */
@@ -128,7 +128,7 @@ body: |
     ; CHECK-LABEL: name: diff_regclass_passthru
     ; CHECK: liveins: $v8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PseudoVMV_V_I_MF2_:%[0-9]+]]:vmnov0 = PseudoVMV_V_I_MF2 $noreg, 0, 0, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: [[PseudoVMV_V_I_MF2_:%[0-9]+]]:vrnov0 = PseudoVMV_V_I_MF2 $noreg, 0, 0, 5 /* e32 */, 1 /* ta, mu */
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vmv0 = COPY $v8
     ; CHECK-NEXT: [[PseudoVLSE32_V_MF2_MASK:%[0-9]+]]:vrnov0 = PseudoVLSE32_V_MF2_MASK [[PseudoVMV_V_I_MF2_]], $noreg, $noreg, [[COPY]], 0, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size, align 4)
     %2:vr = PseudoVMV_V_I_MF2 $noreg, 0, -1, 5 /* e32 */, 0 /* tu, mu */
@@ -162,7 +162,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %passthru:vrnov0 = COPY $v8
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
-    ; CHECK-NEXT: %x:vmnov0 = PseudoVMERGE_VVM_M1 %passthru, %passthru, $noreg, %mask, 4, 5 /* e32 */
+    ; CHECK-NEXT: %x:vrnov0 = PseudoVMERGE_VVM_M1 %passthru, %passthru, $noreg, %mask, 4, 5 /* e32 */
     %passthru:vrnov0 = COPY $v8
     %mask:vmv0 = COPY $v0
     %x:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %passthru, $noreg, %mask, 4, 5 /* e32 */

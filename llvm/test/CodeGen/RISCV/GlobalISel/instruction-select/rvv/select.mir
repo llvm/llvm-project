@@ -11,7 +11,7 @@ body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: select_nxv1i8
     ; RV32I: [[DEF:%[0-9]+]]:vmv0 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[DEF1:%[0-9]+]]:vmnov0 = IMPLICIT_DEF
+    ; RV32I-NEXT: [[DEF1:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV32I-NEXT: [[DEF2:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV32I-NEXT: [[PseudoVMERGE_VVM_MF4_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_MF4 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1, 3 /* e8 */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_MF4_]]
@@ -19,7 +19,7 @@ body:             |
     ;
     ; RV64I-LABEL: name: select_nxv1i8
     ; RV64I: [[DEF:%[0-9]+]]:vmv0 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[DEF1:%[0-9]+]]:vmnov0 = IMPLICIT_DEF
+    ; RV64I-NEXT: [[DEF1:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV64I-NEXT: [[DEF2:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_MF4_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_MF4 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1, 3 /* e8 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_MF4_]]
@@ -40,7 +40,7 @@ body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: select_nxv4i8
     ; RV32I: [[DEF:%[0-9]+]]:vmv0 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[DEF1:%[0-9]+]]:vmnov0 = IMPLICIT_DEF
+    ; RV32I-NEXT: [[DEF1:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV32I-NEXT: [[DEF2:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV32I-NEXT: [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1, 3 /* e8 */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_M1_]]
@@ -48,7 +48,7 @@ body:             |
     ;
     ; RV64I-LABEL: name: select_nxv4i8
     ; RV64I: [[DEF:%[0-9]+]]:vmv0 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[DEF1:%[0-9]+]]:vmnov0 = IMPLICIT_DEF
+    ; RV64I-NEXT: [[DEF1:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV64I-NEXT: [[DEF2:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1, 3 /* e8 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_M1_]]
@@ -98,7 +98,7 @@ body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: select_nxv64i8
     ; RV32I: [[DEF:%[0-9]+]]:vmv0 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[DEF1:%[0-9]+]]:vmnov0 = IMPLICIT_DEF
+    ; RV32I-NEXT: [[DEF1:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV32I-NEXT: [[DEF2:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV32I-NEXT: [[PseudoVMERGE_VVM_MF4_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_MF4 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1, 4 /* e16 */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_MF4_]]
@@ -106,7 +106,7 @@ body:             |
     ;
     ; RV64I-LABEL: name: select_nxv64i8
     ; RV64I: [[DEF:%[0-9]+]]:vmv0 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[DEF1:%[0-9]+]]:vmnov0 = IMPLICIT_DEF
+    ; RV64I-NEXT: [[DEF1:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV64I-NEXT: [[DEF2:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_MF4_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_MF4 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1, 4 /* e16 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_MF4_]]
@@ -127,7 +127,7 @@ body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: select_nxv2i16
     ; RV32I: [[DEF:%[0-9]+]]:vmv0 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[DEF1:%[0-9]+]]:vmnov0 = IMPLICIT_DEF
+    ; RV32I-NEXT: [[DEF1:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV32I-NEXT: [[DEF2:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV32I-NEXT: [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1, 4 /* e16 */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_M1_]]
@@ -135,7 +135,7 @@ body:             |
     ;
     ; RV64I-LABEL: name: select_nxv2i16
     ; RV64I: [[DEF:%[0-9]+]]:vmv0 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[DEF1:%[0-9]+]]:vmnov0 = IMPLICIT_DEF
+    ; RV64I-NEXT: [[DEF1:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV64I-NEXT: [[DEF2:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1, 4 /* e16 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_M1_]]
@@ -185,7 +185,7 @@ body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: select_nxv32i16
     ; RV32I: [[DEF:%[0-9]+]]:vmv0 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[DEF1:%[0-9]+]]:vmnov0 = IMPLICIT_DEF
+    ; RV32I-NEXT: [[DEF1:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV32I-NEXT: [[DEF2:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV32I-NEXT: [[PseudoVMERGE_VVM_MF2_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_MF2 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1, 5 /* e32 */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_MF2_]]
@@ -193,7 +193,7 @@ body:             |
     ;
     ; RV64I-LABEL: name: select_nxv32i16
     ; RV64I: [[DEF:%[0-9]+]]:vmv0 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[DEF1:%[0-9]+]]:vmnov0 = IMPLICIT_DEF
+    ; RV64I-NEXT: [[DEF1:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV64I-NEXT: [[DEF2:%[0-9]+]]:vrnov0 = IMPLICIT_DEF
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_MF2_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_MF2 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1, 5 /* e32 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_MF2_]]
