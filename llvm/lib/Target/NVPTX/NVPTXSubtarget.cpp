@@ -139,7 +139,7 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
         "Minimum required PTX version is {3}.{4}. "
         "Either remove the PTX version to use the default, "
         "or increase it to at least {3}.{4}.",
-        PTXVersion / 10, PTXVersion % 10, CPU, MinPTX / 10, MinPTX % 10));
+        PTXVersion / 10, PTXVersion % 10, getTargetName(), MinPTX / 10, MinPTX % 10));
   }
 
   return *this;
