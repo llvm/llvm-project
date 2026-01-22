@@ -18,7 +18,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/CallingConv.h"
@@ -102,25 +101,15 @@ public:
                      RuntimeLibcallNameSizeTable[CallImpl]);
   }
 
-  /// Set the DefaultLibcallImplCallingConv that should be used for all
-  /// non-overriden libcall implementations.
-  void setDefaultLibcallImplCallingConv(CallingConv::ID CC) {
-    DefaultLibcallImplCallingConv = CC;
-  }
-
   /// Set the CallingConv that should be used for the specified libcall
   /// implementation
-  void setLibcallImplCallingConvOverride(RTLIB::LibcallImpl Call,
-                                         CallingConv::ID CC) {
-    LibcallImplCallingConvOverrides[Call] = CC;
+  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
+    LibcallImplCallingConvs[Call] = CC;
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
   CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
-    auto It = LibcallImplCallingConvOverrides.find(Call);
-    return It != LibcallImplCallingConvOverrides.end()
-               ? It->second
-               : DefaultLibcallImplCallingConv;
+    return LibcallImplCallingConvs[Call];
   }
 
   /// Return the libcall provided by \p Impl
@@ -185,13 +174,9 @@ private:
   static_assert(static_cast<int>(CallingConv::C) == 0,
                 "default calling conv should be encoded as 0");
 
-  /// Store the CallingConv that should be used for each libcall implementation.
-  /// LibcallImpls will use the CallingConv specified by
-  /// DefaultLibcallImplCallingConv unless overridden in
-  /// LibcallImplCallingConvOverrides.
-  CallingConv::ID DefaultLibcallImplCallingConv = CallingConv::C;
-  SmallDenseMap<RTLIB::LibcallImpl, CallingConv::ID, 32>
-      LibcallImplCallingConvOverrides;
+  /// Stores the CallingConv that should be used for each libcall
+  /// implementation.;
+  CallingConv::ID LibcallImplCallingConvs[RTLIB::NumLibcallImpls] = {};
 
   /// Names of concrete implementations of runtime calls. e.g. __ashlsi3 for
   /// SHL_I32

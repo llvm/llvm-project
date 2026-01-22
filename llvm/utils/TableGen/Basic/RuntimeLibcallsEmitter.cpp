@@ -371,8 +371,10 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
           DefaultCCClass->getValueAsString("CallingConv").trim();
 
       if (!DefaultCC.empty()) {
-        OS << "    const CallingConv::ID DefaultCC = " << DefaultCC << ";\n";
-        OS << "    setDefaultLibcallImplCallingConv(DefaultCC);\n\n";
+        OS << "    const CallingConv::ID DefaultCC = " << DefaultCC << ";\n"
+           << "    for (CallingConv::ID &Entry : LibcallImplCallingConvs) {\n"
+              "      Entry = DefaultCC;\n"
+              "    }\n\n";
       }
     }
 
@@ -531,8 +533,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       if (FuncsWithCC.CallingConv) {
         StringRef CCEnum =
             FuncsWithCC.CallingConv->getValueAsString("CallingConv");
-        OS << indent(IndentDepth + 4)
-           << "setLibcallImplCallingConvOverride(Impl, " << CCEnum << ");\n";
+        OS << indent(IndentDepth + 4) << "setLibcallImplCallingConv(Impl, "
+           << CCEnum << ");\n";
       }
 
       OS << indent(IndentDepth + 2) << "}\n";

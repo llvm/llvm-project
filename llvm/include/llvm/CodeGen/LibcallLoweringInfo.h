@@ -55,13 +55,13 @@ public:
   // FIXME: Remove this wrapper in favor of directly using
   // getLibcallImplCallingConv
   LLVM_ABI CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
-    return RTLCI.getLibcallImplCallingConv(LibcallImpls[Call]);
+    return RTLCI.LibcallImplCallingConvs[LibcallImpls[Call]];
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
   LLVM_ABI CallingConv::ID
   getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
-    return RTLCI.getLibcallImplCallingConv(Call);
+    return RTLCI.LibcallImplCallingConvs[Call];
   }
 
   /// Return a function impl compatible with RTLIB::MEMCPY, or
