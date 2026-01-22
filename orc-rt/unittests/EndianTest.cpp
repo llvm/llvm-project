@@ -60,7 +60,7 @@ void forAllRotatedValues(Op O, T InitialValue) {
   T V = InitialValue;
   for (size_t I = 0; I != CHAR_BIT * sizeof(T); ++I) {
     O(V);
-    V = llvm::rotl(V, 1);
+    V = orc_rt::rotl(V, 1);
   }
 }
 
