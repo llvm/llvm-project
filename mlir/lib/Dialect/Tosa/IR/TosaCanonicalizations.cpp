@@ -922,6 +922,8 @@ binaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs, ShapedType returnTy,
   }
 
   if (foldDenseValues) {
+    assert(lETy.isIntOrIndex() &&
+           "Only integer types are currently supported.");
     SmallVector<APInt> resultValues;
     for (auto [l, r] :
          llvm::zip(lhs.getValues<APInt>(), rhs.getValues<APInt>())) {
