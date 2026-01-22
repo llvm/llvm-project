@@ -1070,6 +1070,57 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     // conjuring an expression instead.
     SymbolRef LHSSym = lhs.getAsLocSymbol();
     SymbolRef RHSSym = rhs.getAsLocSymbol();
+
+    // Check if one symbol is derived from the other through a pointer field.
+    // In linked list traversal patterns like `ptr = ptr->next`, the new ptr
+    // cannot equal the old ptr (assuming acyclic lists). This helps avoid
+    // false positives in use-after-free detection for list traversal code.
+    if (LHSSym && RHSSym && (op == BO_EQ || op == BO_NE)) {
+      // Check if Sym's origin region contains a SymbolicRegion based on Target,
+      // accessed through a pointer-typed field. This detects patterns like:
+      //   ptr2 = ptr1->next (where ptr2 cannot equal ptr1 for acyclic structures)
+      auto isDerivedThroughPointerField = [](SymbolRef Sym,
+                                             SymbolRef Target) -> bool {
+        // Get the origin region for this symbol
+        const MemRegion *SymRegion = Sym->getOriginRegion();
+        if (!SymRegion)
+          return false;
+
+        // Walk up the region hierarchy looking for:
+        // 1. A pointer-typed FieldRegion (the "next" pointer)
+        // 2. That is based on a SymbolicRegion of Target
+        bool foundPointerField = false;
+        const MemRegion *R = SymRegion;
+        while (R) {
+          if (const auto *FR = dyn_cast<FieldRegion>(R)) {
+            if (FR->getDecl()->getType()->isPointerType())
+              foundPointerField = true;
+          }
+          if (const auto *SymR = dyn_cast<SymbolicRegion>(R)) {
+            if (foundPointerField && SymR->getSymbol() == Target)
+              return true;
+            // Stop at symbolic regions - don't continue past them
+            break;
+          }
+          if (const auto *SR = dyn_cast<SubRegion>(R))
+            R = SR->getSuperRegion();
+          else
+            break;
+        }
+        return false;
+      };
+
+      if (isDerivedThroughPointerField(LHSSym, RHSSym) ||
+          isDerivedThroughPointerField(RHSSym, LHSSym)) {
+        // A symbol derived through a pointer field cannot equal its parent
+        // (assuming acyclic data structures, which is the common case).
+        if (op == BO_EQ)
+          return makeTruthVal(false, resultTy);
+        if (op == BO_NE)
+          return makeTruthVal(true, resultTy);
+      }
+    }
+
     if (LHSSym && RHSSym)
       return makeNonLoc(LHSSym, op, RHSSym, resultTy);
 
