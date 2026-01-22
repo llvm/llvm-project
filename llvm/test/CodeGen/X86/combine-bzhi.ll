@@ -8,7 +8,6 @@ define i32 @test_bzhi32_zero(i32 %a) nounwind {
 ; CHECK-LABEL: test_bzhi32_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    bzhil %eax, %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %a, i32 0)
   ret i32 %1
@@ -18,7 +17,6 @@ define i64 @test_bzhi64_zero(i64 %a) nounwind readnone {
 ; CHECK-LABEL: test_bzhi64_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    bzhiq %rax, %rdi, %rax
 ; CHECK-NEXT:    retq
   %1 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %a, i64 0)
   ret i64 %1
@@ -28,8 +26,6 @@ define i32 @test_bzhi32_constfold() nounwind readnone {
 ; CHECK-LABEL: test_bzhi32_constfold:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    movl $5, %ecx
-; CHECK-NEXT:    bzhil %eax, %ecx, %eax
 ; CHECK-NEXT:    retq
   %1 = tail call i32 @llvm.x86.bmi.bzhi.32(i32 5, i32 1)
   ret i32 %1
@@ -39,8 +35,6 @@ define i64 @test_bzhi64_constfold() nounwind readnone {
 ; CHECK-LABEL: test_bzhi64_constfold:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    movl $5, %ecx
-; CHECK-NEXT:    bzhiq %rax, %rcx, %rax
 ; CHECK-NEXT:    retq
   %1 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 5, i64 1)
   ret i64 %1
