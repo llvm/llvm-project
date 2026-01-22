@@ -34,8 +34,9 @@
 //    - This is the smallest scope where the variable could be declared
 // 5) Check for modification detection
 //    - Skip analysis for initialized variables modified with unary operators
-//    - This prevents moving variables where initialization would be lost
-//    - Skip analysis for variables modified with simple assignments
+//    - Skip analysis for initialized variables moved into switch bodies
+//    - This prevents moving variables where initialization would be lost or
+//    conditional
 // 6) Check for loop body placement
 //    - Skip analysis if suggested scope would place variable inside loop body
 //    - This prevents suggesting moving variables into loop bodies (inefficient)
@@ -183,7 +184,7 @@ void ScopeReductionCheck::check(
 
   // Step 5: Check for modification detection
   // Skip analysis for initialized variables that would lose initialization
-  // semantics
+  // semantics or make initialization conditional
   if (InnermostScope) {
     for (const auto *Use : Uses) {
       // Check if initialized variable is modified with unary operators
@@ -196,6 +197,32 @@ void ScopeReductionCheck::check(
             if (UnaryOp->isIncrementDecrementOp()) {
               return; // Skip - moving initialized variable that gets
                       // incremented/decremented would lose initialization
+            }
+          }
+        }
+      }
+
+      // Check if initialized variable would be moved into a switch body
+      // Moving would make initialization conditional on case execution
+      if (Var->hasInit() && InnermostScope) {
+        auto ScopeParents =
+            Result.Context->getParentMapContext().getParents(*InnermostScope);
+        if (!ScopeParents.empty()) {
+          const Stmt *ScopeParent = ScopeParents[0].get<Stmt>();
+          if (!ScopeParent) {
+            if (const auto *DeclParent = ScopeParents[0].get<Decl>()) {
+              auto DeclParentNodes =
+                  Result.Context->getParentMapContext().getParents(*DeclParent);
+              if (!DeclParentNodes.empty())
+                ScopeParent = DeclParentNodes[0].get<Stmt>();
+            }
+          }
+
+          // Check if the suggested scope is the body of a switch statement
+          if (const auto *Switch = dyn_cast_or_null<SwitchStmt>(ScopeParent)) {
+            if (Switch->getBody() == InnermostScope) {
+              return; // Skip - moving initialized variable into switch body
+                      // would make initialization conditional
             }
           }
         }

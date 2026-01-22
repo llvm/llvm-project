@@ -76,12 +76,10 @@ void test_for_loop_expressions() {
   }
 }
 
-// Variable can be moved to switch case
+// should NOT warn.
+// moving would make initialization conditional
 void test_switch_case(int value) {
   int result = 0;
-  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'result' can be declared in a smaller scope
-  // CHECK-NOTES: :[[@LINE+4]]:7: note: used here
-  // CHECK-NOTES: :[[@LINE+1]]:18: note: can be declared in this scope
   switch (value) {
     case 1:
       result = 10;
@@ -286,12 +284,10 @@ void test_switch_mixed_usage(int value) {
   }
 }
 
-// Variable in nested switch - should warn for single case
+// Variable in nested switch - should NOT warn
+// moving would make initialization conditional
 void test_nested_switch(int outer, int inner) {
   int nested = 0;
-  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'nested' can be declared in a smaller scope
-  // CHECK-NOTES: :[[@LINE+6]]:11: note: used here
-  // CHECK-NOTES: :[[@LINE+3]]:22: note: can be declared in this scope
   switch (outer) {
     case 1:
       switch (inner) {
@@ -303,12 +299,10 @@ void test_nested_switch(int outer, int inner) {
   }
 }
 
-// Variable used in switch default only - should warn
+// Variable used in switch default only - should NOT warn
+// moving would make initialization conditional
 void test_switch_default_only(int value) {
   int def = 0;
-  // CHECK-NOTES: :[[@LINE-1]]:7: warning: variable 'def' can be declared in a smaller scope
-  // CHECK-NOTES: :[[@LINE+6]]:7: note: used here
-  // CHECK-NOTES: :[[@LINE+1]]:18: note: can be declared in this scope
   switch (value) {
     case 1:
       break;
