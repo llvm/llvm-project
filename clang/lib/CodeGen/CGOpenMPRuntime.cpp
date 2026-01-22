@@ -11812,25 +11812,6 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
   }
 }
 
-namespace {
-  /// Kind of parameter in a function with 'declare simd' directive.
-enum ParamKindTy {
-  Linear,
-  LinearRef,
-  LinearUVal,
-  LinearVal,
-  Uniform,
-  Vector,
-};
-/// Attribute set of the parameter.
-struct ParamAttrTy {
-  ParamKindTy Kind = Vector;
-  llvm::APSInt StrideOrArg;
-  llvm::APSInt Alignment;
-  bool HasVarStride = false;
-};
-} // namespace
-
 static unsigned evaluateCDTSize(const FunctionDecl *FD,
                                 ArrayRef<ParamAttrTy> ParamAttrs) {
   // Every vector variant of a SIMD-enabled function has a vector length (VLEN).
