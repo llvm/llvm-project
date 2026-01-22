@@ -77,14 +77,7 @@ public:
     return TargetLowering::getNumRegisters(Context, VT);
   }
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
-                                    EVT VT) const override {
-    // 128-bit single-element vector types are passed like other vectors,
-    // not like their element type.
-    if (VT.isVector() && VT.getSizeInBits() == 128 &&
-        VT.getVectorNumElements() == 1)
-      return MVT::v16i8;
-    return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
-  }
+                                    EVT VT) const override;
   bool isCheapToSpeculateCtlz(Type *) const override { return true; }
   bool isCheapToSpeculateCttz(Type *) const override { return true; }
   bool preferZeroCompareBranch() const override { return true; }
