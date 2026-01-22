@@ -1430,7 +1430,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       if (MF.getSubtarget<AArch64Subtarget>().isTargetILP32()) {
         auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
         unsigned Reg32 = TRI->getSubReg(DstReg, AArch64::sub_32);
-        unsigned DstFlags = MI.getOperand(0).getTargetFlags();
+        unsigned DstFlags = getRegState(MI.getOperand(0));
         MIB2 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::LDRWui))
                    .addDef(Reg32)
                    .addReg(DstReg, RegState::Kill)
