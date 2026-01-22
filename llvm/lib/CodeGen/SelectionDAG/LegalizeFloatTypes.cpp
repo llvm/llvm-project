@@ -634,17 +634,6 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
 
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
 
-  if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat) {
-    Op = GetPromotedFloat(Op);
-    // If the promotion did the FP_EXTEND to the destination type for us,
-    // there's nothing left to do here.
-    if (Op.getValueType() == N->getValueType(0)) {
-      if (IsStrict)
-        ReplaceValueWith(SDValue(N, 1), Chain);
-      return BitConvertToInteger(Op);
-    }
-  }
-
   // There's only a libcall for f16 -> f32 and shifting is only valid for bf16
   // -> f32, so proceed in two stages. Also, it's entirely possible for both
   // f16 and f32 to be legal, so use the fully hard-float FP_EXTEND rather
@@ -3298,8 +3287,6 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_VECREDUCE_SEQ(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
-  EVT VT = N->getValueType(0);
-
   AtomicSDNode *AM = cast<AtomicSDNode>(N);
   SDLoc SL(N);
 
@@ -3314,18 +3301,11 @@ SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
 
   SDValue Result = NewAtomic;
 
-  if (getTypeAction(VT) == TargetLowering::TypePromoteFloat) {
-    EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-    Result = DAG.getNode(GetPromotionOpcode(VT, NFPVT), SL, NFPVT,
-                                     NewAtomic);
-  }
-
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
   ReplaceValueWith(SDValue(N, 1), NewAtomic.getValue(1));
 
   return Result;
-
 }
 
 //===----------------------------------------------------------------------===//
