@@ -11,9 +11,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Testing/Support/SupportHelpers.h"
-#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
@@ -29,37 +28,51 @@ static void BM_WriteToOutputInParallel(benchmark::State &State) {
   const int BytesPerFile = 40 * 1024; // ~40KB per file
 
   for (auto _ : State) {
-    // Pause timing while we set up temporary directories
-    State.PauseTiming();
-    
-    // Create temporary directories for each thread
-    std::vector<std::unique_ptr<llvm::unittest::TempDir>> TempDirs;
-    for (int i = 0; i < NumThreads; ++i) {
-      TempDirs.push_back(std::make_unique<llvm::unittest::TempDir>(
-          "writeToOutputBM", /*Unique*/ true));
+    // Create one top-level unique directory
+    SmallString<128> TopLevelDir;
+    if (sys::fs::createUniqueDirectory("writeToOutputBM", TopLevelDir)) {
+      State.SkipWithError("Failed to create temporary directory");
+      return;
     }
-    
-    State.ResumeTiming();
+    auto Cleanup =
+        llvm::scope_exit([&]() { sys::fs::remove_directories(TopLevelDir); });
+
+    // Create subdirectories for each thread within the top-level directory
+    std::vector<SmallString<128>> ThreadDirs;
+    for (int I = 0; I < NumThreads; ++I) {
+      SmallString<128> ThreadDir(TopLevelDir);
+      sys::path::append(ThreadDir, "thread_" + std::to_string(I));
+      if (sys::fs::create_directory(ThreadDir)) {
+        State.SkipWithError("Failed to create thread directory");
+        return;
+      }
+      ThreadDirs.push_back(ThreadDir);
+    }
 
     // Launch threads, each writing multiple files
     std::vector<std::thread> Threads;
-    for (int threadIdx = 0; threadIdx < NumThreads; ++threadIdx) {
-      Threads.emplace_back([&, threadIdx]() {
-        const auto &TempDir = TempDirs[threadIdx];
-        for (int fileIdx = 0; fileIdx < FilesPerThread; ++fileIdx) {
-          SmallString<128> Path(TempDir->path());
-          sys::path::append(Path, "file_" + std::to_string(fileIdx) + ".bin");
+    for (int ThreadIdx = 0; ThreadIdx < NumThreads; ++ThreadIdx) {
+      Threads.emplace_back([&, ThreadIdx]() {
+        const auto &ThreadDir = ThreadDirs[ThreadIdx];
+        for (int FileIdx = 0; FileIdx < FilesPerThread; ++FileIdx) {
+          SmallString<128> Path(ThreadDir);
+          sys::path::append(Path, "file_" + std::to_string(FileIdx) + ".bin");
 
           // Ignore errors in benchmark - we're measuring performance, not
           // correctness
-          (void)writeToOutput(Path, [BytesPerFile](raw_ostream &Out) -> Error {
-            // Write 32-bit integers up to BytesPerFile
-            const int NumInts = BytesPerFile / sizeof(int32_t);
-            for (int32_t i = 0; i < NumInts; ++i) {
-              Out.write(reinterpret_cast<const char *>(&i), sizeof(i));
-            }
-            return Error::success();
-          });
+          Error E = writeToOutput(Path, [=](raw_ostream &Out) -> Error {
+                // Write 32-bit integers up to BytesPerFile
+                const int NumInts = BytesPerFile / sizeof(int32_t);
+                for (int32_t I = 0; I < NumInts; ++I) {
+                  Out.write(reinterpret_cast<const char *>(&I), sizeof(I));
+                }
+                return Error::success();
+              });
+          if (E) {
+            State.SkipWithError("Failed to create outputfile " +
+                                Path.str().str());
+            return;
+          }
         }
       });
     }
@@ -69,7 +82,7 @@ static void BM_WriteToOutputInParallel(benchmark::State &State) {
       Thread.join();
     }
 
-    // Cleanup happens automatically when TempDirs goes out of scope
+    // Cleanup happens automatically via scope_exit
   }
 
   // Report throughput metrics
