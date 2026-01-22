@@ -15,41 +15,45 @@
 ;CHECK-LABEL: @test1
 ;CHECK: jump __extendhfsf2
 ;CHECK: r0 = memuh
-define dso_local float @test1(ptr nocapture readonly %a) local_unnamed_addr #0 {
+define dso_local float @test1(ptr readonly captures(none) %a) local_unnamed_addr #0 {
 entry:
   %0 = load i16, ptr %a, align 2
-  %1 = tail call float @llvm.convert.from.fp16.f32(i16 %0)
-  ret float %1
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  ret float %2
 }
 
 ;CHECK-LABEL: @test2
 ;CHECK: call __extendhfsf2
 ;CHECK: r0 = memuh
 ;CHECK: convert_sf2d
-define dso_local double @test2(ptr nocapture readonly %a) local_unnamed_addr #0 {
+define dso_local double @test2(ptr readonly captures(none) %a) local_unnamed_addr #0 {
 entry:
   %0 = load i16, ptr %a, align 2
-  %1 = tail call double @llvm.convert.from.fp16.f64(i16 %0)
-  ret double %1
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to double
+  ret double %2
 }
 
 ;CHECK-LABEL: @test3
 ;CHECK: call __truncsfhf2
 ;CHECK: memh{{.*}}= r0
-define dso_local void @test3(float %src, ptr nocapture %dst) local_unnamed_addr #0 {
+define dso_local void @test3(float %src, ptr captures(none) %dst) local_unnamed_addr #0 {
 entry:
-  %0 = tail call i16 @llvm.convert.to.fp16.f32(float %src)
-  store i16 %0, ptr %dst, align 2
+  %0 = fptrunc float %src to half
+  %1 = bitcast half %0 to i16
+  store i16 %1, ptr %dst, align 2
   ret void
 }
 
 ;CHECK-LABEL: @test4
 ;CHECK: call __truncdfhf2
 ;CHECK: memh{{.*}}= r0
-define dso_local void @test4(double %src, ptr nocapture %dst) local_unnamed_addr #0 {
+define dso_local void @test4(double %src, ptr captures(none) %dst) local_unnamed_addr #0 {
 entry:
-  %0 = tail call i16 @llvm.convert.to.fp16.f64(double %src)
-  store i16 %0, ptr %dst, align 2
+  %0 = fptrunc double %src to half
+  %1 = bitcast half %0 to i16
+  store i16 %1, ptr %dst, align 2
   ret void
 }
 
@@ -57,20 +61,16 @@ entry:
 ;CHECK: call __extendhfsf2
 ;CHECK: call __extendhfsf2
 ;CHECK: sfadd
-define dso_local float @test5(ptr nocapture readonly %a, ptr nocapture readonly %b) local_unnamed_addr #0 {
+define dso_local float @test5(ptr readonly captures(none) %a, ptr readonly captures(none) %b) local_unnamed_addr #0 {
 entry:
   %0 = load i16, ptr %a, align 2
-  %1 = tail call float @llvm.convert.from.fp16.f32(i16 %0)
-  %2 = load i16, ptr %b, align 2
-  %3 = tail call float @llvm.convert.from.fp16.f32(i16 %2)
-  %add = fadd float %1, %3
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %3 = load i16, ptr %b, align 2
+  %4 = bitcast i16 %3 to half
+  %5 = fpext half %4 to float
+  %add = fadd float %2, %5
   ret float %add
 }
 
-declare float @llvm.convert.from.fp16.f32(i16) #1
-declare double @llvm.convert.from.fp16.f64(i16) #1
-declare i16 @llvm.convert.to.fp16.f32(float) #1
-declare i16 @llvm.convert.to.fp16.f64(double) #1
-
 attributes #0 = { nounwind readonly }
-attributes #1 = { nounwind readnone }

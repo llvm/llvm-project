@@ -562,6 +562,54 @@ namespace IgnoreUnusedArgSideEffects {
 #endif
 }
 
+namespace GH175895 {
+
+using int32_t = int;
+
+struct wxuin_t {
+  wxuin_t() {}
+  wxuin_t(int32_t v) __attribute__((enable_if(v == 0, "Expect only constant expressions"))) {}
+};
+
+struct wxuin64_t {
+  wxuin64_t() {}
+
+  explicit operator wxuin_t() const { return {}; }
+
+private:
+  operator int() const { return 0; }
+};
+
+struct wxuin64_t_deleted {
+  wxuin64_t_deleted() {}
+
+  explicit operator wxuin_t() const { return {}; }
+
+  operator int() = delete;
+};
+
+void main() {
+  wxuin64_t uin64{};
+  wxuin64_t_deleted deleted{};
+  auto b = static_cast<wxuin_t>(uin64);
+  auto c = static_cast<wxuin_t>(deleted);
+}
+
+namespace Regression {
+
+const int kMaxNumber = 1;
+struct Arg {
+  Arg(int);
+};
+void PlaceholderBitmask();
+void Substitute(Arg) __attribute__((enable_if(PlaceholderBitmask, ""))) {
+  (void)[] { Substitute(kMaxNumber); };
+}
+
+}
+
+}
+
 namespace DefaultArgs {
   void f(int n = __builtin_LINE()) __attribute__((enable_if(n == 12345, "only callable on line 12345"))); // expected-note {{only callable on line 12345}}
   void g() { f(); } // expected-error {{no matching function}}

@@ -26,109 +26,6 @@ define half @return(ptr %p) nounwind {
   ret half %r
 }
 
-define dso_local double @loadd(ptr nocapture readonly %a) local_unnamed_addr nounwind {
-; SPARC32-LABEL: loadd:
-; SPARC32:       ! %bb.0: ! %entry
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    lduh [%i0+2], %o0
-; SPARC32-NEXT:    fstod %f0, %f0
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
-;
-; SPARC64-LABEL: loadd:
-; SPARC64:       ! %bb.0: ! %entry
-; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    lduh [%i0+2], %o0
-; SPARC64-NEXT:    fstod %f0, %f0
-; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
-entry:
-  %arrayidx = getelementptr inbounds i16, ptr %a, i64 1
-  %0 = load i16, ptr %arrayidx, align 2
-  %1 = tail call double @llvm.convert.from.fp16.f64(i16 %0)
-  ret double %1
-}
-
-define dso_local float @loadf(ptr nocapture readonly %a) local_unnamed_addr nounwind {
-; SPARC32-LABEL: loadf:
-; SPARC32:       ! %bb.0: ! %entry
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    lduh [%i0+2], %o0
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
-;
-; SPARC64-LABEL: loadf:
-; SPARC64:       ! %bb.0: ! %entry
-; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    lduh [%i0+2], %o0
-; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
-entry:
-  %arrayidx = getelementptr inbounds i16, ptr %a, i64 1
-  %0 = load i16, ptr %arrayidx, align 2
-  %1 = tail call float @llvm.convert.from.fp16.f32(i16 %0)
-  ret float %1
-}
-
-define dso_local void @stored(ptr nocapture %a, double %b) local_unnamed_addr nounwind {
-; SPARC32-LABEL: stored:
-; SPARC32:       ! %bb.0: ! %entry
-; SPARC32-NEXT:    save %sp, -112, %sp
-; SPARC32-NEXT:    mov %i2, %i3
-; SPARC32-NEXT:    mov %i1, %i2
-; SPARC32-NEXT:    std %i2, [%fp+-8]
-; SPARC32-NEXT:    ldd [%fp+-8], %f0
-; SPARC32-NEXT:    std %f0, [%fp+-16]
-; SPARC32-NEXT:    call __truncdfhf2
-; SPARC32-NEXT:    ldd [%fp+-16], %o0
-; SPARC32-NEXT:    sth %o0, [%i0]
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
-;
-; SPARC64-LABEL: stored:
-; SPARC64:       ! %bb.0: ! %entry
-; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    fmovd %f2, %f0
-; SPARC64-NEXT:    call __truncdfhf2
-; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    sth %o0, [%i0]
-; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
-entry:
-  %0 = tail call i16 @llvm.convert.to.fp16.f64(double %b)
-  store i16 %0, ptr %a, align 2
-  ret void
-}
-
-define dso_local void @storef(ptr nocapture %a, float %b) local_unnamed_addr nounwind {
-; SPARC32-LABEL: storef:
-; SPARC32:       ! %bb.0: ! %entry
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __truncsfhf2
-; SPARC32-NEXT:    mov %i1, %o0
-; SPARC32-NEXT:    sth %o0, [%i0]
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
-;
-; SPARC64-LABEL: storef:
-; SPARC64:       ! %bb.0: ! %entry
-; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    fmovs %f3, %f1
-; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    sth %o0, [%i0]
-; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
-entry:
-  %0 = tail call i16 @llvm.convert.to.fp16.f32(float %b)
-  store i16 %0, ptr %a, align 2
-  ret void
-}
-
 define void @test_load_store(ptr %in, ptr %out) nounwind {
 ; CHECK-LABEL: test_load_store:
 ; CHECK:       ! %bb.0:
@@ -348,10 +245,10 @@ define i64 @test_fptoui_i64(ptr %p) nounwind {
 ; SPARC64-NEXT:    save %sp, -192, %sp
 ; SPARC64-NEXT:    call __extendhfsf2
 ; SPARC64-NEXT:    lduh [%i0], %o0
-; SPARC64-NEXT:    sethi %h44(.LCPI17_0), %i0
-; SPARC64-NEXT:    add %i0, %m44(.LCPI17_0), %i0
+; SPARC64-NEXT:    sethi %h44(.LCPI13_0), %i0
+; SPARC64-NEXT:    add %i0, %m44(.LCPI13_0), %i0
 ; SPARC64-NEXT:    sllx %i0, 12, %i0
-; SPARC64-NEXT:    ld [%i0+%l44(.LCPI17_0)], %f1
+; SPARC64-NEXT:    ld [%i0+%l44(.LCPI13_0)], %f1
 ; SPARC64-NEXT:    fsubs %f0, %f1, %f2
 ; SPARC64-NEXT:    fstox %f2, %f2
 ; SPARC64-NEXT:    std %f2, [%fp+2031]
@@ -699,16 +596,16 @@ define half @PR40273(half) nounwind {
 ; V8-NEXT:    save %sp, -96, %sp
 ; V8-NEXT:    call __extendhfsf2
 ; V8-NEXT:    mov %i0, %o0
-; V8-NEXT:    sethi %hi(.LCPI24_0), %i0
-; V8-NEXT:    ld [%i0+%lo(.LCPI24_0)], %f1
+; V8-NEXT:    sethi %hi(.LCPI20_0), %i0
+; V8-NEXT:    ld [%i0+%lo(.LCPI20_0)], %f1
 ; V8-NEXT:    fcmps %f0, %f1
 ; V8-NEXT:    nop
-; V8-NEXT:    fbne .LBB24_2
+; V8-NEXT:    fbne .LBB20_2
 ; V8-NEXT:    nop
 ; V8-NEXT:  ! %bb.1:
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore %g0, %g0, %o0
-; V8-NEXT:  .LBB24_2:
+; V8-NEXT:  .LBB20_2:
 ; V8-NEXT:    sethi 15, %i0
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore
@@ -718,8 +615,8 @@ define half @PR40273(half) nounwind {
 ; V9-NEXT:    save %sp, -96, %sp
 ; V9-NEXT:    call __extendhfsf2
 ; V9-NEXT:    mov %i0, %o0
-; V9-NEXT:    sethi %hi(.LCPI24_0), %i0
-; V9-NEXT:    ld [%i0+%lo(.LCPI24_0)], %f1
+; V9-NEXT:    sethi %hi(.LCPI20_0), %i0
+; V9-NEXT:    ld [%i0+%lo(.LCPI20_0)], %f1
 ; V9-NEXT:    mov %g0, %i0
 ; V9-NEXT:    sethi 15, %i1
 ; V9-NEXT:    fcmps %fcc0, %f0, %f1
@@ -732,10 +629,10 @@ define half @PR40273(half) nounwind {
 ; SPARC64-NEXT:    save %sp, -176, %sp
 ; SPARC64-NEXT:    call __extendhfsf2
 ; SPARC64-NEXT:    srl %i0, 0, %o0
-; SPARC64-NEXT:    sethi %h44(.LCPI24_0), %i0
-; SPARC64-NEXT:    add %i0, %m44(.LCPI24_0), %i0
+; SPARC64-NEXT:    sethi %h44(.LCPI20_0), %i0
+; SPARC64-NEXT:    add %i0, %m44(.LCPI20_0), %i0
 ; SPARC64-NEXT:    sllx %i0, 12, %i0
-; SPARC64-NEXT:    ld [%i0+%l44(.LCPI24_0)], %f1
+; SPARC64-NEXT:    ld [%i0+%l44(.LCPI20_0)], %f1
 ; SPARC64-NEXT:    mov %g0, %i0
 ; SPARC64-NEXT:    sethi 15, %i1
 ; SPARC64-NEXT:    fcmps %fcc0, %f0, %f1

@@ -1246,8 +1246,7 @@ struct SemiNCAInfo {
     clear();
     doFullDFSWalk(DT, AlwaysDescend);
 
-    for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.get();
+    for (auto *TN : DT.DomTreeNodes) {
       if (!TN)
         continue;
       const NodePtr BB = TN->getBlock();
@@ -1281,8 +1280,7 @@ struct SemiNCAInfo {
   // have level L + 1.
   // Running time: O(N).
   static bool VerifyLevels(const DomTreeT &DT) {
-    for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.get();
+    for (auto *TN : DT.DomTreeNodes) {
       if (!TN)
         continue;
       const NodePtr BB = TN->getBlock();
@@ -1338,8 +1336,7 @@ struct SemiNCAInfo {
 
     // For each tree node verify if children's DFS numbers cover their parent's
     // DFS numbers with no gaps.
-    for (const auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr Node = NodeToTN.get();
+    for (auto *Node : DT.DomTreeNodes) {
       if (!Node)
         continue;
 
@@ -1453,8 +1450,7 @@ struct SemiNCAInfo {
   // This means that if a node gets disconnected from the graph, then all of
   // the nodes it dominated previously will now become unreachable.
   bool verifyParentProperty(const DomTreeT &DT) {
-    for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.get();
+    for (auto *TN : DT.DomTreeNodes) {
       if (!TN)
         continue;
       const NodePtr BB = TN->getBlock();
@@ -1489,8 +1485,7 @@ struct SemiNCAInfo {
   // This means that if a node gets disconnected from the graph, then all of its
   // siblings will now still be reachable.
   bool verifySiblingProperty(const DomTreeT &DT) {
-    for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.get();
+    for (auto *TN : DT.DomTreeNodes) {
       if (!TN)
         continue;
       const NodePtr BB = TN->getBlock();
