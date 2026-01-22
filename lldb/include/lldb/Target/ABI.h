@@ -152,6 +152,31 @@ public:
 
   static lldb::ABISP FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch);
 
+  struct MemoryPermissions {
+    // Both of these are sets of lldb::Permissions values.
+    // Overlay are the permissions being applied to the original permissions.
+    uint32_t overlay;
+    // Effective is the result of applying the overlay to the original
+    // permissions. Calculating this is done by the plugin because some
+    // permission overlays are done as positive (add permissions) and some as
+    // negative (remove permissions).
+    uint32_t effective;
+  };
+
+  /// Get the permissions being overlayed for a given memory key, and the
+  /// resulting permissions after applying the overlay. Typically the protection
+  /// key is used to look up in some architecture specific set of permissions.
+  /// On AArch64, this is the POR register, used by the Permission Overlay
+  /// Extension.
+  ///
+  /// Returns std::nullopt if the current target does not have such an overlay
+  /// system, or if the protection key is not valid.
+  virtual std::optional<MemoryPermissions>
+  GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
+                       unsigned protection_key, uint32_t original_permissions) {
+    return std::nullopt;
+  }
+
 protected:
   ABI(lldb::ProcessSP process_sp, std::unique_ptr<llvm::MCRegisterInfo> info_up)
       : m_process_wp(process_sp), m_mc_register_info_up(std::move(info_up)) {
