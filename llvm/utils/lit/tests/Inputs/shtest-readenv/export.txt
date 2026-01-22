@@ -1,0 +1,2 @@
+# RUN: export VAR="VAR CONTENT"
+# RUN: echo PRE %{readenv:VAR} POST

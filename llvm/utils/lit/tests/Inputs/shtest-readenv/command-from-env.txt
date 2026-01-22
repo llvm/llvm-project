@@ -1,0 +1,2 @@
+# RUN: export CMD="echo"
+# RUN: %{readenv:CMD} SUCCESS

@@ -1,0 +1,3 @@
+# RUN: export ASDF=""
+# RUN: echo PRE %{readenv:ASDF} POST
+

@@ -1,0 +1,4 @@
+# Test that env vars are expanded for the entire pipeline at the start
+# RUN: export A=INIT
+# RUN: export A=FIRST && echo PRE1 %{readenv:A} POST1 ; export A=SECOND ; echo PRE2 %{readenv:A} POST2
+# RUN: echo PRE3 %{readenv:A} POST3

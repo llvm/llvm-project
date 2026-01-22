@@ -663,6 +663,7 @@ TestRunner.py:
  %:t                     On Windows, %/t but a ``:`` is removed if its the second character.
                          Otherwise, %t but with a single leading ``/`` removed.
  %{readfile:<filename>}  Reads the file specified.
+ %{readenv:<var>}        Reads the environment variable specified.
  ======================= ==============
 
 Other substitutions are provided that are variations on this base set and

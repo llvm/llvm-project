@@ -725,7 +725,9 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     return std_fds
 
 
-def _expandLateSubstitutions(cmd, arguments, cwd):
+def _expandLateSubstitutions(cmd, arguments, cwd, env):
+    isAtEcho = arguments[0] == "@echo"
+
     for i, arg in enumerate(arguments):
         if not isinstance(arg, str):
             continue
@@ -744,7 +746,23 @@ def _expandLateSubstitutions(cmd, arguments, cwd):
                     % filePath,
                 )
 
+        def _replaceReadEnv(match):
+            varName = match.group(1)
+            if isAtEcho:
+                # This echo executes before the actual command, so some env vars
+                # may not be unset. Use normal shell syntax to ease reproducing.
+                return "$" + varName
+            try:
+                return env[varName]
+            except KeyError:
+                raise InternalShellError(
+                    cmd,
+                    "Environment variable specified in readenv subsitution is not set: %s"
+                    % varName,
+                )
+
         arguments[i] = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, arg)
+        arguments[i] = re.sub(r"%{readenv:([^}]*)}", _replaceReadEnv, arg)
 
     return arguments
 
@@ -817,7 +835,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         not_crash = False
 
         # Expand all late substitutions.
-        args = _expandLateSubstitutions(j, args, cmd_shenv.cwd)
+        args = _expandLateSubstitutions(j, args, cmd_shenv.cwd, shenv.env)
 
         while True:
             if args[0] == "env":
@@ -2429,7 +2447,14 @@ def _expandLateSubstitutionsExternal(commandLine):
         filePaths.append(filePath)
         return "$(cat %s)" % shlex.quote(filePath)
 
+    def _replaceReadEnv(match):
+        return (
+            "${%s-'Environment variable specified in readenv subsitution is not set: %s'}"
+            % (match.group(1), match.group(1))
+        )
+
     commandLine = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, commandLine)
+    commandLine = re.sub(r"%{readenv:([^}]*)}", _replaceReadEnv, commandLine)
     # Add test commands before the command to check if the file exists as
     # cat inside a subshell will never return a non-zero exit code outside
     # of the subshell.

@@ -1,0 +1,4 @@
+# RUN: export VAR="FIRST"
+# RUN: export VAR="%{readenv:VAR}:SECOND"
+# RUN: echo PRE %{readenv:VAR} POST
+
