@@ -114,7 +114,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
 
-    if (!ST.enableFlatScratch()) {
+    if (!ST.hasFlatScratchEnabled()) {
       // Non-entry functions have no special inputs for now, other registers
       // required for scratch access.
       ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
@@ -169,7 +169,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (WorkItemIDZ)
       WorkItemIDY = true;
 
-    if (!ST.flatScratchIsArchitected()) {
+    if (!ST.hasArchitectedFlatScratch()) {
       PrivateSegmentWaveByteOffset = true;
 
       // HS and GS always have the scratch wave offset in SGPR5 on GFX9.
