@@ -910,11 +910,8 @@ bool MemProfUsePass::annotateGlobalVariables(
 
   if (!DataAccessProf) {
     M.addModuleFlag(Module::Warning, "EnableDataAccessProf", 0U);
-    M.getContext().diagnose(DiagnosticInfoPGOProfile(
-        MemoryProfileFileName.data(),
-        StringRef("Data access profiles not found in memprof. Ignore "
-                  "-memprof-annotate-static-data-prefix."),
-        DS_Warning));
+    // FIXME: Add a diagnostic message without failing the compilation when
+    // data access profile payload is not available.
     return false;
   }
   M.addModuleFlag(Module::Warning, "EnableDataAccessProf", 1U);
