@@ -3174,6 +3174,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
 // Attempt to form avgfloor(A, B) from (A & B) + ((A ^ B) >> 1)
 // Attempt to form avgfloor(A, B) from ((A >> 1) + (B >> 1)) + (A & B & 1)
+// Attempt to form avgceil(A, B) from ((A >> 1) + (B >> 1)) + ((A | B) & 1)
 SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
@@ -3198,6 +3199,21 @@ SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
                        m_Sra(m_Deferred(A), m_One()),
                        m_Sra(m_Deferred(B), m_One()))))) {
     return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
+  }
+
+  if ((!LegalOperations || hasOperation(ISD::AVGCEILU, VT)) &&
+      sd_match(N,
+               m_ReassociatableAdd(m_And(m_Or(m_Value(A), m_Value(B)), m_One()),
+                                   m_Srl(m_Deferred(A), m_One()),
+                                   m_Srl(m_Deferred(B), m_One())))) {
+    return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
+  }
+  if ((!LegalOperations || hasOperation(ISD::AVGCEILS, VT)) &&
+      sd_match(N,
+               m_ReassociatableAdd(m_And(m_Or(m_Value(A), m_Value(B)), m_One()),
+                                   m_Sra(m_Deferred(A), m_One()),
+                                   m_Sra(m_Deferred(B), m_One())))) {
+    return DAG.getNode(ISD::AVGCEILS, DL, VT, A, B);
   }
 
   return SDValue();
@@ -6220,16 +6236,6 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (N0 == N1)
     return N0;
 
-  // Fold operation with vscale operands.
-  if (N0.getOpcode() == ISD::VSCALE && N1.getOpcode() == ISD::VSCALE) {
-    uint64_t C0 = N0->getConstantOperandVal(0);
-    uint64_t C1 = N1->getConstantOperandVal(0);
-    if (Opcode == ISD::UMAX)
-      return C0 > C1 ? N0 : N1;
-    else if (Opcode == ISD::UMIN)
-      return C0 > C1 ? N1 : N0;
-  }
-
   // canonicalize constant to RHS
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
@@ -6244,24 +6250,34 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (SDValue RMINMAX = reassociateOps(Opcode, DL, N0, N1, N->getFlags()))
     return RMINMAX;
 
-  // Is sign bits are zero, flip between UMIN/UMAX and SMIN/SMAX.
+  // If both operands are known to have the same sign (both non-negative or both
+  // negative), flip between UMIN/UMAX and SMIN/SMAX.
   // Only do this if:
   // 1. The current op isn't legal and the flipped is.
   // 2. The saturation pattern is broken by canonicalization in InstCombine.
   bool IsOpIllegal = !TLI.isOperationLegal(Opcode, VT);
   bool IsSatBroken = Opcode == ISD::UMIN && N0.getOpcode() == ISD::SMAX;
-  if ((IsSatBroken || IsOpIllegal) && (N0.isUndef() || DAG.SignBitIsZero(N0)) &&
-      (N1.isUndef() || DAG.SignBitIsZero(N1))) {
-    unsigned AltOpcode;
-    switch (Opcode) {
-    case ISD::SMIN: AltOpcode = ISD::UMIN; break;
-    case ISD::SMAX: AltOpcode = ISD::UMAX; break;
-    case ISD::UMIN: AltOpcode = ISD::SMIN; break;
-    case ISD::UMAX: AltOpcode = ISD::SMAX; break;
-    default: llvm_unreachable("Unknown MINMAX opcode");
+
+  if (IsSatBroken || IsOpIllegal) {
+    auto HasKnownSameSign = [&](SDValue A, SDValue B) {
+      if (A.isUndef() || B.isUndef())
+        return true;
+
+      KnownBits KA = DAG.computeKnownBits(A);
+      if (!KA.isNonNegative() && !KA.isNegative())
+        return false;
+
+      KnownBits KB = DAG.computeKnownBits(B);
+      if (KA.isNonNegative())
+        return KB.isNonNegative();
+      return KB.isNegative();
+    };
+
+    if (HasKnownSameSign(N0, N1)) {
+      unsigned AltOpcode = ISD::getOppositeSignednessMinMaxOpcode(Opcode);
+      if ((IsSatBroken && IsOpIllegal) || TLI.isOperationLegal(AltOpcode, VT))
+        return DAG.getNode(AltOpcode, DL, VT, N0, N1);
     }
-    if ((IsSatBroken && IsOpIllegal) || TLI.isOperationLegal(AltOpcode, VT))
-      return DAG.getNode(AltOpcode, DL, VT, N0, N1);
   }
 
   if (Opcode == ISD::SMIN || Opcode == ISD::SMAX)
@@ -6290,6 +6306,35 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (SDValue SD = reassociateReduction(ReductionOpcode(Opcode), Opcode,
                                         SDLoc(N), VT, N0, N1))
     return SD;
+
+  // Fold operation with vscale operands.
+  if (N0.getOpcode() == ISD::VSCALE && N1.getOpcode() == ISD::VSCALE) {
+    uint64_t C0 = N0->getConstantOperandVal(0);
+    uint64_t C1 = N1->getConstantOperandVal(0);
+    if (Opcode == ISD::UMAX)
+      return C0 > C1 ? N0 : N1;
+    else if (Opcode == ISD::UMIN)
+      return C0 > C1 ? N1 : N0;
+  }
+
+  // If we know the range of vscale, see if we can fold it given a constant.
+  // TODO: Generalize this to other nodes by adding computeConstantRange
+  if (N0.getOpcode() == ISD::VSCALE) {
+    if (auto *C1 = dyn_cast<ConstantSDNode>(N1)) {
+      const Function &F = DAG.getMachineFunction().getFunction();
+      ConstantRange Range =
+          getVScaleRange(&F, VT.getScalarSizeInBits())
+              .multiply(ConstantRange(N0.getConstantOperandAPInt(0)));
+
+      const APInt &C1V = C1->getAPIntValue();
+      if ((Opcode == ISD::UMAX && Range.getUnsignedMax().ule(C1V)) ||
+          (Opcode == ISD::UMIN && Range.getUnsignedMin().uge(C1V)) ||
+          (Opcode == ISD::SMAX && Range.getSignedMax().sle(C1V)) ||
+          (Opcode == ISD::SMIN && Range.getSignedMin().sge(C1V))) {
+        return N1;
+      }
+    }
+  }
 
   // Simplify the operands using demanded-bits information.
   if (SimplifyDemandedBits(SDValue(N, 0)))

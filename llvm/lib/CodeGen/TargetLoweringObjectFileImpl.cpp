@@ -1924,8 +1924,11 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
     if (MCSymbol *Sym =
             static_cast<MCSectionCOFF *>(Streamer.getCurrentSectionOnly())
                 ->getCOMDATSymbol())
-      if (Sym->isUndefined())
+      if (Sym->isUndefined()) {
+        // COMDAT symbol must be external to perform deduplication.
+        Streamer.emitSymbolAttribute(Sym, MCSA_Global);
         Streamer.emitLabel(Sym);
+      }
   });
 }
 

@@ -1856,7 +1856,7 @@ define i32 @fptosi(float nofpclass(inf nan) %arg) {
 
 define float @fptrunc(double noundef nofpclass(inf nan) %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @fptrunc
+; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @fptrunc
 ; CHECK-SAME: (double noundef nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[CAST:%.*]] = fptrunc double [[ARG]] to float
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CAST]], [[CAST]]

@@ -573,6 +573,12 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           "Assumed-size array may not be associated with assumed-shape %s"_err_en_US,
           dummyName);
     }
+  } else if (dummyIsAssumedSize && dummy.type.type().IsAssumedType() &&
+      actualRank == 0 && !actualIsAssumedRank) {
+    // F'2023 15.5.2.5 p14 third bullet allows a scalar actual
+    // argument to associate with a TYPE(*) assumed-size dummy
+    foldingContext.Warn(common::UsageWarning::AssumedTypeSizeDummy,
+        "A scalar actual argument for an assumed-size TYPE(*) dummy is not portable"_port_en_US);
   } else if (dummyRank > 0) {
     bool basicError{false};
     if (actualRank == 0 && !actualIsAssumedRank &&
@@ -589,9 +595,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           actualType.type().category() == TypeCategory::Character &&
           actualType.type().kind() == 1};
       if (!actualIsCKindCharacter) {
-        if (!actualIsArrayElement &&
-            !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize) &&
-            !dummyIsAssumedRank &&
+        if (!actualIsArrayElement && !dummyIsAssumedRank &&
             !dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
           basicError = true;
           messages.Say(

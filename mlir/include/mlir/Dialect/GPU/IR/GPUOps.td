@@ -3090,7 +3090,8 @@ def GPU_SetCsrPointersOp : GPU_Op<"set_csr_pointers", [GPU_AsyncOpInterface]> {
 }
 
 def GPU_WarpExecuteOnLane0Op : GPU_Op<"warp_execute_on_lane_0",
-      [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["areTypesCompatible"]>,
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+          "areTypesCompatible", "getSuccessorInputs"]>,
        SingleBlockImplicitTerminator<"gpu::YieldOp">,
        RecursiveMemoryEffects]> {
   let summary = "Executes operations in the associated region on thread #0 of a"

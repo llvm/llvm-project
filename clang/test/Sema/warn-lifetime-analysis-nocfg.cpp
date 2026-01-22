@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdangling -Wdangling-field -Wreturn-stack-address -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify=cfg %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=cfg %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=cfg %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -280,13 +281,21 @@ std::string_view danglingRefToOptionalFromTemp4() {
 }
 
 void danglingReferenceFromTempOwner() {
+  int &&r = *std::optional<int>();          // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
   // FIXME: Detect this using the CFG-based lifetime analysis.
   //        https://github.com/llvm/llvm-project/issues/175893
-  int &&r = *std::optional<int>();          // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
   int &&r2 = *std::optional<int>(5);        // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+
+  // FIXME: Detect this using the CFG-based lifetime analysis.
+  //        https://github.com/llvm/llvm-project/issues/175893
   int &&r3 = std::optional<int>(5).value(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-  int &r4 = std::vector<int>().at(3);       // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-  use(r, r2, r3, r4);
+
+  const int &r4 = std::vector<int>().at(3); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  int &&r5 = std::vector<int>().at(3);      // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(r, r2, r3, r4, r5);                   // cfg-note 3 {{later used here}}
 
   std::string_view sv = *getTempOptStr();  // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
@@ -299,8 +308,8 @@ std::optional<std::vector<int>> getTempOptVec();
 void testLoops() {
   for (auto i : getTempVec()) // ok
     ;
-  // FIXME: Detect this using the CFG-based lifetime analysis.
-  for (auto i : *getTempOptVec()) // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+  for (auto i : *getTempOptVec()) // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}} cfg-note {{later used here}}
     ;
 }
 
@@ -911,10 +920,13 @@ struct MySpan {
   MySpan(const std::vector<T>& v);
   ~MySpan();
   using iterator = std::iterator<T>;
-  iterator begin() const [[clang::lifetimebound]];
+  // FIXME: It is not possible to annotate accessor methods of non-owning view types.
+  // Clang should provide another annotation to mark such functions as 'transparent'.
+  iterator begin() const;
 };
+// FIXME: Same as above.
 template <typename T>
-typename MySpan<T>::iterator ReturnFirstIt(const MySpan<T>& v [[clang::lifetimebound]]);
+typename MySpan<T>::iterator ReturnFirstIt(const MySpan<T>& v);
 
 void test4() {
   std::vector<int> v{1};
@@ -926,14 +938,86 @@ void test4() {
   // Ideally, we would diagnose the following case, but due to implementation
   // constraints, we do not.
   const int& t4 = *MySpan<int>(std::vector<int>{}).begin();
+  use(t1, t2, t4);
 
-  // FIXME: Detect this using the CFG-based lifetime analysis (constructor of a pointer).
-  auto it1 = MySpan<int>(v).begin(); // expected-warning {{temporary whose address is use}}
-  auto it2 = ReturnFirstIt(MySpan<int>(v)); // expected-warning {{temporary whose address is used}}
+  auto it1 = MySpan<int>(v).begin();
+  auto it2 = ReturnFirstIt(MySpan<int>(v));
   use(it1, it2);
 }
 
 } // namespace LifetimeboundInterleave
+
+namespace range_based_for_loop_variables {
+std::string_view test_view_loop_var(std::vector<std::string> strings) {
+  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s; //cfg-note {{returned here}}
+  }
+  return "";
+}
+
+const char* test_view_loop_var_with_data(std::vector<std::string> strings) {
+  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s.data(); //cfg-note {{returned here}}
+  }
+  return "";
+}
+
+std::string_view test_no_error_for_views(std::vector<std::string_view> views) {
+  for (std::string_view s : views) {
+    return s;
+  }
+  return "";
+}
+
+std::string_view test_string_ref_var(std::vector<std::string> strings) {
+  for (const std::string& s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s; //cfg-note {{returned here}}
+  }
+  return "";
+}
+
+std::string_view test_opt_strings(std::optional<std::vector<std::string>> strings_or) {
+  for (const std::string& s : *strings_or) {  // cfg-warning {{address of stack memory is returned later}} 
+    return s; //cfg-note {{returned here}}
+  }
+  return "";
+}
+} // namespace range_based_for_loop_variables
+
+namespace iterator_arrow {
+std::string_view test() {
+  std::vector<std::string> strings;
+  return strings.begin()->data(); // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+}
+
+void operator_star_arrow_reference() {
+  std::vector<std::string> v;
+  const char* p = v.begin()->data();
+  const char* q = (*v.begin()).data();
+  const std::string& r = *v.begin();
+
+  auto temporary = []() { return std::vector<std::string>{{"1"}}; };
+  const char* x = temporary().begin()->data();    // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const char* y = (*temporary().begin()).data();  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const std::string& z = (*temporary().begin());  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+
+  use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
+}
+
+void operator_star_arrow_of_iterators_false_positive_no_cfg_analysis() {
+  std::vector<std::pair<int, std::string>> v;
+  const char* p = v.begin()->second.data();
+  const char* q = (*v.begin()).second.data();
+  const std::string& r = (*v.begin()).second;
+
+  auto temporary = []() { return std::vector<std::pair<int, std::string>>{{1, "1"}}; };
+  const char* x = temporary().begin()->second.data();   // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  const std::string& z = (*temporary().begin()).second; // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+
+  use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
+}
+} // namespace iterator_arrow
 
 namespace GH120206 {
 struct S {
@@ -971,24 +1055,27 @@ struct S {
 };
 struct Q {
   const S* get() const [[clang::lifetimebound]];
+  ~Q();
 };
 
 std::string_view foo(std::string_view sv [[clang::lifetimebound]]);
 
-// FIXME: Detect this using the CFG-based lifetime analysis.
-//        Detect dangling references to struct field.
-//        https://github.com/llvm/llvm-project/issues/176144
 void test1() {
   std::string_view k1 = S().sv; // OK
-  std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}}
+  std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}} \
+                               // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
   std::string_view k3 = Q().get()->sv; // OK
-  std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}}
+  std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}} \
+                                       // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
-  std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}}
-  std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}}
 
-  use(k1, k2, k3, k4, lb1, lb2);
+  std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}} \
+                                     // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}} \
+                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+
+  use(k1, k2, k3, k4, lb1, lb2);  // cfg-note 4 {{later used here}}
 }
 
 struct Bar {};
@@ -1039,3 +1126,141 @@ const char* foo() {
 }
 
 } // namespace GH127195
+
+// Lifetimebound on definition vs declaration on implicit this param.
+namespace GH175391 {
+// Version A: Attribute on declaration only
+class StringA {
+public:
+    const char* data() const [[clang::lifetimebound]];  // Declaration with attribute
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringA::data() const {  // Definition WITHOUT attribute
+    return buffer;
+}
+
+// Version B: Attribute on definition only
+class StringB {
+public:
+    const char* data() const;  // No attribute
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringB::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+// Version C: Attribute on BOTH declaration and definition
+class StringC {
+public:
+    const char* data() const [[clang::lifetimebound]];
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringC::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+// TEMPLATED VERSIONS
+
+// Template Version A: Attribute on declaration only
+template<typename T>
+class StringTemplateA {
+public:
+    const T* data() const [[clang::lifetimebound]];  // Declaration with attribute
+private:
+    T buffer[32];
+};
+template<typename T>
+inline const T* StringTemplateA<T>::data() const {  // Definition WITHOUT attribute
+    return buffer;
+}
+
+// Template Version B: Attribute on definition only
+template<typename T>
+class StringTemplateB {
+public:
+    const T* data() const;  // No attribute
+private:
+    T buffer[32];
+};
+template<typename T>
+inline const T* StringTemplateB<T>::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+// Template Version C: Attribute on BOTH declaration and definition
+template<typename T>
+class StringTemplateC {
+public:
+    const T* data() const [[clang::lifetimebound]];
+private:
+    T buffer[32];
+};
+template<typename T>
+inline const T* StringTemplateC<T>::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+// TEMPLATE SPECIALIZATION VERSIONS
+
+// Template predeclarations for specializations
+template<typename T> class StringTemplateSpecA;
+template<typename T> class StringTemplateSpecB;
+template<typename T> class StringTemplateSpecC;
+
+// Template Specialization Version A: Attribute on declaration only - <char> specialization
+template<>
+class StringTemplateSpecA<char> {
+public:
+    const char* data() const [[clang::lifetimebound]];  // Declaration with attribute
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringTemplateSpecA<char>::data() const {  // Definition WITHOUT attribute
+    return buffer;
+}
+
+// Template Specialization Version B: Attribute on definition only - <char> specialization
+template<>
+class StringTemplateSpecB<char> {
+public:
+    const char* data() const;  // No attribute
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringTemplateSpecB<char>::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+// Template Specialization Version C: Attribute on BOTH declaration and definition - <char> specialization
+template<>
+class StringTemplateSpecC<char> {
+public:
+    const char* data() const [[clang::lifetimebound]];
+private:
+    char buffer[32] = "hello";
+};
+inline const char* StringTemplateSpecC<char>::data() const [[clang::lifetimebound]] {
+    return buffer;
+}
+
+void test() {
+    // Non-templated tests
+    const auto ptrA = StringA().data();  // Declaration-only attribute  // expected-warning {{temporary whose address is used}}
+    const auto ptrB = StringB().data();  // Definition-only attribute   // expected-warning {{temporary whose address is used}}
+    const auto ptrC = StringC().data();  // Both have attribute         // expected-warning {{temporary whose address is used}}
+
+    // Templated tests (generic templates)
+    const auto ptrTA = StringTemplateA<char>().data();  // Declaration-only attribute // expected-warning {{temporary whose address is used}}
+    // FIXME: Definition is not instantiated until the end of TU. The attribute is not merged when this call is processed.
+    const auto ptrTB = StringTemplateB<char>().data();  // Definition-only attribute
+    const auto ptrTC = StringTemplateC<char>().data();  // Both have attribute        // expected-warning {{temporary whose address is used}}
+
+    // Template specialization tests
+    const auto ptrTSA = StringTemplateSpecA<char>().data();  // Declaration-only attribute  // expected-warning {{temporary whose address is used}}
+    const auto ptrTSB = StringTemplateSpecB<char>().data();  // Definition-only attribute   // expected-warning {{temporary whose address is used}}
+    const auto ptrTSC = StringTemplateSpecC<char>().data();  // Both have attribute         // expected-warning {{temporary whose address is used}}
+}
+} // namespace GH175391

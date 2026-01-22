@@ -199,15 +199,18 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
     return SDValue();
   }
 
+  RTLIB::LibcallImpl NewLCImpl = DAG.getLibcalls().getLibcallImpl(NewLC);
+  if (NewLCImpl == RTLIB::Unsupported)
+    return SDValue();
+
   EVT PointerVT = TLI->getPointerTy(DAG.getDataLayout());
-  SDValue Symbol =
-      DAG.getExternalSymbol(DAG.getLibcalls().getLibcallName(NewLC), PointerVT);
+  SDValue Symbol = DAG.getExternalSymbol(NewLCImpl, PointerVT);
   Args.emplace_back(Size, DAG.getDataLayout().getIntPtrType(*DAG.getContext()));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   PointerType *RetTy = PointerType::getUnqual(*DAG.getContext());
   CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-      DAG.getLibcalls().getLibcallCallingConv(NewLC), RetTy, Symbol,
+      DAG.getLibcalls().getLibcallImplCallingConv(NewLCImpl), RetTy, Symbol,
       std::move(Args));
 
   auto [Result, ChainOut] = TLI->LowerCallTo(CLI);

@@ -3644,17 +3644,6 @@ multiclass VFLAT_Real_gfx1250<bits<8> op,
   }
 }
 
-multiclass VFLAT_Aliases_gfx1250<string name> {
-  defvar ps = get_FLAT_ps<NAME>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX125xOnly]>;
-}
-
-multiclass VFLAT_Real_Base_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Aliases_gfx1250<name> {
-  defm "" : VFLAT_Real_gfx1250<op, name>;
-}
-
 multiclass VFLAT_Real_RTN_gfx1250<bits<8> op, string name> {
   defm _RTN : VFLAT_Real_gfx1250<op, name>;
 }
@@ -3667,9 +3656,14 @@ multiclass VFLAT_Real_SADDR_RTN_gfx1250<bits<8> op, string name> {
   defm _SADDR_RTN : VFLAT_Real_gfx1250<op, name>;
 }
 
-multiclass VFLAT_Real_AllAddr_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Real_Base_gfx1250<op, name>,
-  VFLAT_Real_SADDR_gfx1250<op, name>;
+multiclass VFLAT_Real_AllAddr_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic,
+                                      list<Predicate> aliasPreds = [isGFX125xOnly]> :
+  VFLAT_Real_gfx1250<op, name>,
+  VFLAT_Real_SADDR_gfx1250<op, name> {
+  defvar ps = get_FLAT_ps<NAME>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<aliasPreds>;
+}
 
 multiclass VFLAT_Real_Atomics_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
   VFLAT_Real_AllAddr_gfx1250<op, name>,

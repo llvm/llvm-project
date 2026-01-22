@@ -2439,7 +2439,8 @@ def fir_IfOp
     : region_Op<
           "if", [DeclareOpInterfaceMethods<
                      RegionBranchOpInterface, ["getRegionInvocationBounds",
-                                               "getEntrySuccessorRegions"]>,
+                                               "getEntrySuccessorRegions",
+                                               "getSuccessorInputs"]>,
                  RecursiveMemoryEffects, NoRegionArguments,
                  WeightedRegionBranchOpInterface]> {
   let summary = "if-then-else conditional operation";

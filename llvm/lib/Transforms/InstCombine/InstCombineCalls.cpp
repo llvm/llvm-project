@@ -1486,7 +1486,8 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
 /// try to shuffle after the intrinsic.
 Instruction *
 InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
-  if (!isTriviallyVectorizable(II->getIntrinsicID()) ||
+  if (!II->getType()->isVectorTy() ||
+      !isTriviallyVectorizable(II->getIntrinsicID()) ||
       !II->getCalledFunction()->isSpeculatable())
     return nullptr;
 
@@ -3523,7 +3524,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // even for empty lifetime range.
     if (II->getFunction()->hasFnAttribute(Attribute::SanitizeAddress) ||
         II->getFunction()->hasFnAttribute(Attribute::SanitizeMemory) ||
-        II->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress))
+        II->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress) ||
+        II->getFunction()->hasFnAttribute(Attribute::SanitizeMemTag))
       break;
 
     if (removeTriviallyEmptyRange(*II, *this, [](const IntrinsicInst &I) {

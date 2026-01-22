@@ -17,6 +17,7 @@
 #define LLVM_CAS_ONDISKGRAPHDB_H
 
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskDataAllocator.h"
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
 #include <atomic>
@@ -370,6 +371,7 @@ public:
   LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<OnDiskGraphDB>>
   open(StringRef Path, StringRef HashName, unsigned HashByteSize,
        OnDiskGraphDB *UpstreamDB = nullptr,
+       std::shared_ptr<OnDiskCASLogger> Logger = nullptr,
        FaultInPolicy Policy = FaultInPolicy::FullTree);
 
   LLVM_ABI_FOR_TEST ~OnDiskGraphDB();
@@ -446,7 +448,7 @@ private:
   // Private constructor.
   OnDiskGraphDB(StringRef RootPath, OnDiskTrieRawHashMap Index,
                 OnDiskDataAllocator DataPool, OnDiskGraphDB *UpstreamDB,
-                FaultInPolicy Policy);
+                FaultInPolicy Policy, std::shared_ptr<OnDiskCASLogger> Logger);
 
   /// Mapping from hash to object reference.
   ///
@@ -469,6 +471,9 @@ private:
 
   /// The policy used to fault in data from upstream.
   FaultInPolicy FIPolicy;
+
+  /// Debug Logger.
+  std::shared_ptr<OnDiskCASLogger> Logger;
 };
 
 } // namespace llvm::cas::ondisk

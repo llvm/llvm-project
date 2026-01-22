@@ -423,7 +423,12 @@ getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
     return;
   }
 
-  regions.push_back(RegionSuccessor::parent(op->getResults()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+static ValueRange getSingleRegionSuccessorInputs(Operation *op,
+                                                 RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(op->getResults()) : ValueRange();
 }
 
 void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
@@ -432,10 +437,18 @@ void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
                                     regions);
 }
 
+ValueRange KernelsOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
+}
+
 void ParallelOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
                                     regions);
+}
+
+ValueRange ParallelOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
 void SerialOp::getSuccessorRegions(RegionBranchPoint point,
@@ -444,10 +457,18 @@ void SerialOp::getSuccessorRegions(RegionBranchPoint point,
                                     regions);
 }
 
+ValueRange SerialOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
+}
+
 void KernelEnvironmentOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
                                     regions);
+}
+
+ValueRange KernelEnvironmentOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
 void DataOp::getSuccessorRegions(RegionBranchPoint point,
@@ -456,10 +477,18 @@ void DataOp::getSuccessorRegions(RegionBranchPoint point,
                                     regions);
 }
 
+ValueRange DataOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
+}
+
 void HostDataOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
                                     regions);
+}
+
+ValueRange HostDataOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
 void LoopOp::getSuccessorRegions(RegionBranchPoint point,
@@ -472,13 +501,17 @@ void LoopOp::getSuccessorRegions(RegionBranchPoint point,
       regions.push_back(RegionSuccessor(&getRegion()));
       return;
     }
-    regions.push_back(RegionSuccessor::parent(getResults()));
+    regions.push_back(RegionSuccessor::parent());
     return;
   }
 
   // Structured loops: model a loop-shaped region graph similar to scf.for.
   regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor::parent(getResults()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange LoopOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
 //===----------------------------------------------------------------------===//

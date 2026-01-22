@@ -2141,16 +2141,19 @@ public:
   /// returns the address of that location. Otherwise, returns nullptr.
   /// DEPRECATED: please override useLoadStackGuardNode and customize
   ///             LOAD_STACK_GUARD, or customize \@llvm.stackguard().
-  virtual Value *getIRStackGuard(IRBuilderBase &IRB) const;
+  virtual Value *getIRStackGuard(IRBuilderBase &IRB,
+                                 const LibcallLoweringInfo &Libcalls) const;
 
   /// Inserts necessary declarations for SSP (stack protection) purpose.
   /// Should be used only when getIRStackGuard returns nullptr.
-  virtual void insertSSPDeclarations(Module &M) const;
+  virtual void insertSSPDeclarations(Module &M,
+                                     const LibcallLoweringInfo &Libcalls) const;
 
   /// Return the variable that's previously inserted by insertSSPDeclarations,
   /// if any, otherwise return nullptr. Should be used only when
   /// getIRStackGuard returns nullptr.
-  virtual Value *getSDagStackGuard(const Module &M) const;
+  virtual Value *getSDagStackGuard(const Module &M,
+                                   const LibcallLoweringInfo &Libcalls) const;
 
   /// If this function returns true, stack protection checks should XOR the
   /// frame pointer (or whichever pointer is used to address locals) into the
@@ -2162,7 +2165,8 @@ public:
   /// performs validation and error handling, returns the function. Otherwise,
   /// returns nullptr. Must be previously inserted by insertSSPDeclarations.
   /// Should be used only when getIRStackGuard returns nullptr.
-  Function *getSSPStackGuardCheck(const Module &M) const;
+  Function *getSSPStackGuardCheck(const Module &M,
+                                  const LibcallLoweringInfo &Libcalls) const;
 
 protected:
   Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
@@ -2170,7 +2174,9 @@ protected:
 
 public:
   /// Returns the target-specific address of the unsafe stack pointer.
-  virtual Value *getSafeStackPointerLocation(IRBuilderBase &IRB) const;
+  virtual Value *
+  getSafeStackPointerLocation(IRBuilderBase &IRB,
+                              const LibcallLoweringInfo &Libcalls) const;
 
   /// Returns the name of the symbol used to emit stack probes or the empty
   /// string if not applicable.
@@ -3024,6 +3030,9 @@ public:
     case ISD::UMIN:
     case ISD::UMAX:
     case ISD::MUL:
+    case ISD::CLMUL:
+    case ISD::CLMULH:
+    case ISD::CLMULR:
     case ISD::MULHU:
     case ISD::MULHS:
     case ISD::SMUL_LOHI:
@@ -5181,7 +5190,8 @@ public:
   /// This method returns a target specific FastISel object, or null if the
   /// target does not support "fast" ISel.
   virtual FastISel *createFastISel(FunctionLoweringInfo &,
-                                   const TargetLibraryInfo *) const {
+                                   const TargetLibraryInfo *,
+                                   const LibcallLoweringInfo *) const {
     return nullptr;
   }
 

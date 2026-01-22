@@ -76,30 +76,37 @@ def main(argv):
             logging.info(f'Skipping {commit} which already has data in {output_file}')
             continue
         else:
-            logging.info(f'Benchmarking {commit}')
+            logging.info(f'Benchmarking {commit} against test-suite in {args.git_repo}')
 
-        with tempfile.TemporaryDirectory() as build_dir:
-            test_cmd = [PARENT_DIR / 'test-at-commit', '--git-repo', args.git_repo,
-                                                       '--build', build_dir,
-                                                       '--commit', commit]
-            test_cmd += ['--'] + lit_options
+        with tempfile.TemporaryDirectory() as libcxx_install_dir:
+            with tempfile.TemporaryDirectory() as build_dir:
+                build_cmd = [PARENT_DIR / 'build-at-commit', '--git-repo', args.git_repo,
+                                                             '--commit', commit,
+                                                             '--install-dir', libcxx_install_dir,
+                                                             '--', '-DCMAKE_BUILD_TYPE=RelWithDebInfo']
 
-            if args.dry_run:
-                pretty = ' '.join(str(a) for a in test_cmd)
-                logging.info(f'Running {pretty}')
-                continue
+                test_cmd = [PARENT_DIR / 'test-at-commit', '--git-repo', args.git_repo,
+                                                           '--libcxx-installation', libcxx_install_dir,
+                                                           '--build-dir', build_dir]
+                test_cmd += ['--'] + lit_options
 
-            subprocess.call(test_cmd)
-            output_file.parent.mkdir(parents=True, exist_ok=True)
-            mode = 'a' if args.existing == 'append' else 'w'
-            if output_file.exists() and args.existing == 'append':
-                logging.info(f'Appending to existing data for {commit}')
-            elif output_file.exists() and args.existing == 'overwrite':
-                logging.info(f'Overwriting existing data for {commit}')
-            else:
-                logging.info(f'Writing data for {commit}')
-            with open(output_file, mode) as out:
-                subprocess.check_call([(PARENT_DIR / 'consolidate-benchmarks'), build_dir], stdout=out)
+                if args.dry_run:
+                    logging.info(f'Running {" ".join(str(a) for a in build_cmd)}')
+                    logging.info(f'Running {" ".join(str(a) for a in test_cmd)}')
+                    continue
+
+                subprocess.check_call(build_cmd)
+                subprocess.call(test_cmd)
+                output_file.parent.mkdir(parents=True, exist_ok=True)
+                mode = 'a' if args.existing == 'append' else 'w'
+                if output_file.exists() and args.existing == 'append':
+                    logging.info(f'Appending to existing data for {commit}')
+                elif output_file.exists() and args.existing == 'overwrite':
+                    logging.info(f'Overwriting existing data for {commit}')
+                else:
+                    logging.info(f'Writing data for {commit}')
+                with open(output_file, mode) as out:
+                    subprocess.check_call([(PARENT_DIR / 'consolidate-benchmarks'), build_dir], stdout=out)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

@@ -142,12 +142,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         // do this if there is an extra alignment requirement.
         if (AI->isStaticAlloca() &&
             (TFI->isStackRealignable() || (Alignment <= StackAlign))) {
-          const ConstantInt *CUI = cast<ConstantInt>(AI->getArraySize());
           uint64_t TySize =
-              MF->getDataLayout().getTypeAllocSize(Ty).getKnownMinValue();
-
-          TySize *= CUI->getZExtValue();   // Get total allocated size.
-          if (TySize == 0) TySize = 1; // Don't create zero-sized stack objects.
+              AI->getAllocationSize(MF->getDataLayout())->getKnownMinValue();
+          if (TySize == 0)
+            TySize = 1; // Don't create zero-sized stack objects.
           int FrameIndex = INT_MAX;
           auto Iter = CatchObjects.find(AI);
           if (Iter != CatchObjects.end() && TLI->needsFixedCatchObjects()) {

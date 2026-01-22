@@ -59,6 +59,10 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
+  intrinsics. These are equivalent to `fptrunc` and `fpext` with half
+  with a bitcast.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -112,6 +116,9 @@ Changes to the WebAssembly Backend
 
 Changes to the Windows Target
 -----------------------------
+
+* The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
+  with a new `.seh_splitchained` instruction.
 
 Changes to the X86 Backend
 --------------------------

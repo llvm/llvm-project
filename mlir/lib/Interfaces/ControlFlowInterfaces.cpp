@@ -193,7 +193,7 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
       // Verify number of successor operands and successor inputs.
       OperandRange succOperands =
           regionInterface.getSuccessorOperands(branchPoint, successor);
-      ValueRange succInputs = successor.getSuccessorInputs();
+      ValueRange succInputs = regionInterface.getSuccessorInputs(successor);
       if (succOperands.size() != succInputs.size()) {
         return emitRegionEdgeError()
                << ": region branch point has " << succOperands.size()
@@ -439,9 +439,7 @@ RegionBranchOpInterface::getSuccessorOperands(RegionBranchPoint src,
                                               RegionSuccessor dest) {
   if (src.isParent())
     return getEntrySuccessorOperands(dest);
-  auto terminator = cast<RegionBranchTerminatorOpInterface>(
-      src.getTerminatorPredecessorOrNull());
-  return terminator.getSuccessorOperands(dest);
+  return src.getTerminatorPredecessorOrNull().getSuccessorOperands(dest);
 }
 
 static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
@@ -456,10 +454,10 @@ getSuccessorOperandInputMapping(RegionBranchOpInterface branchOp,
   branchOp.getSuccessorRegions(src, successors);
   for (RegionSuccessor dst : successors) {
     OperandRange operands = branchOp.getSuccessorOperands(src, dst);
-    assert(operands.size() == dst.getSuccessorInputs().size() &&
+    assert(operands.size() == branchOp.getSuccessorInputs(dst).size() &&
            "expected the same number of operands and inputs");
     for (const auto &[operand, input] : llvm::zip_equal(
-             operandsToOpOperands(operands), dst.getSuccessorInputs()))
+             operandsToOpOperands(operands), branchOp.getSuccessorInputs(dst)))
       mapping[&operand].push_back(input);
   }
 }

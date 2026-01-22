@@ -1360,6 +1360,13 @@ public:
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
+  std::pair<mlir::Value, mlir::Type>
+  emitAsmInputLValue(const TargetInfo::ConstraintInfo &info, LValue inputValue,
+                     QualType inputType, std::string &constraintString,
+                     SourceLocation loc);
+  std::pair<mlir::Value, mlir::Type>
+  emitAsmInput(const TargetInfo::ConstraintInfo &info, const Expr *inputExpr,
+               std::string &constraintString);
   mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
 
   RValue emitAtomicExpr(AtomicExpr *e);
@@ -1552,6 +1559,9 @@ public:
       ReturnValueSlot returnValue, bool hasQualifier,
       clang::NestedNameSpecifier qualifier, bool isArrow,
       const clang::Expr *base);
+
+  RValue emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
+                                      ReturnValueSlot returnValue);
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
@@ -1864,6 +1874,10 @@ public:
   /// Note: CIR defers most of the special casting to the final lowering passes
   /// to conserve the high level information.
   mlir::Value emitToMemory(mlir::Value value, clang::QualType ty);
+
+  /// EmitFromMemory - Change a scalar value from its memory
+  /// representation to its value representation.
+  mlir::Value emitFromMemory(mlir::Value value, clang::QualType ty);
 
   /// Emit a trap instruction, which is used to abort the program in an abnormal
   /// way, usually for debugging purposes.
