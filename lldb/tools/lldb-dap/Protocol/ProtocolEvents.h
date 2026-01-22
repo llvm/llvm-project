@@ -118,7 +118,7 @@ struct MemoryEventBody {
 llvm::json::Value toJSON(const MemoryEventBody &);
 
 enum StopReason : unsigned {
-  eStopReasonEmpty,
+  eStopReasonUninitialized,
   eStopReasonStep,
   eStopReasonBreakpoint,
   eStopReasonException,
@@ -140,7 +140,7 @@ struct StoppedEventBody {
   ///
   /// For backward compatibility this string is shown in the UI if the
   /// `description` attribute is missing (but it must not be translated).
-  StopReason reason = eStopReasonEmpty;
+  StopReason reason = eStopReasonUninitialized;
 
   /// The full reason for the event, e.g. 'Paused on exception'. This string is
   /// shown in the UI as is and can be translated.

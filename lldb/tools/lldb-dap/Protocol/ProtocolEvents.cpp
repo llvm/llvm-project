@@ -67,8 +67,9 @@ llvm::json::Value toJSON(const MemoryEventBody &MEB) {
 }
 
 static llvm::json::Value toJSON(const StopReason &SR) {
+  assert(SR != eStopReasonUninitialized && "StopReason Uninitialized");
   switch (SR) {
-  case eStopReasonEmpty:
+  case eStopReasonUninitialized:
     return "";
   case eStopReasonStep:
     return "step";

@@ -19,8 +19,9 @@ using llvm::json::Value;
 
 TEST(ProtocolEventsTest, StoppedEventBody) {
   StoppedEventBody body;
+  body.reason = lldb_dap::protocol::eStopReasonBreakpoint;
   Expected<Value> expected_body = parse(R"({
-    "reason": ""
+    "reason": "breakpoint"
   })");
   ASSERT_THAT_EXPECTED(expected_body, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
