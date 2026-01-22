@@ -1258,14 +1258,12 @@ public:
 
     OperandValueInfo mergeWith(const OperandValueInfo OpInfoY) {
       OperandValueKind MergeKind = OK_AnyValue;
-      OperandValueProperties MergeProp = OP_None;
-
-      if (this->isConstant() || OpInfoY.isConstant())
+      if (isConstant() && OpInfoY.isConstant())
         MergeKind = OK_NonUniformConstantValue;
-      else
-        MergeKind = OK_AnyValue;
 
-      MergeProp = Properties == OpInfoY.Properties ? Properties : OP_None;
+      OperandValueProperties MergeProp = OP_None;
+      if (Properties == OpInfoY.Properties)
+        MergeProp = Properties;
       return {MergeKind, MergeProp};
     }
   };
