@@ -229,7 +229,7 @@ void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
     for (const auto &CSPos : FI.NestingThresholders) {
       diag(CSPos, "nesting level %0 starts here (threshold %1)",
            DiagnosticIDs::Note)
-          << NestingThreshold.value() + 1 << NestingThreshold.value();
+          << *NestingThreshold + 1 << *NestingThreshold;
     }
   }
 
