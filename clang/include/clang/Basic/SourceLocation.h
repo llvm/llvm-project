@@ -86,6 +86,10 @@ using FileIDAndOffset = std::pair<FileID, unsigned>;
 /// In addition, one bit of SourceLocation is used for quick access to the
 /// information whether the location is in a file or a macro expansion.
 ///
+/// SourceLocation operates on a character level, i.e. offsets describe
+/// character distances, but in most cases, they are used on a token level,
+/// where a SourceLocation points to the first character of a lexer token.
+///
 /// It is important that this type remains small. It is currently 32 bits wide.
 class SourceLocation {
   friend class ASTReader;
@@ -212,6 +216,11 @@ inline bool operator>=(const SourceLocation &LHS, const SourceLocation &RHS) {
 }
 
 /// A trivial tuple used to represent a source range.
+///
+/// SourceRange is an inclusive range [begin, end] that contains its endpoints,
+/// and when referring to tokens, its begin SourceLocation usually points to
+/// the first character of the first token and its end SourceLocation points to
+/// the last character of the last token.
 class SourceRange {
   SourceLocation B;
   SourceLocation E;
@@ -251,6 +260,15 @@ public:
 /// last token of the range (a "token range").  In the token range case, the
 /// size of the last token must be measured to determine the actual end of the
 /// range.
+///
+/// CharSourceRange is interpreted differently depending on whether it is a
+/// TokenRange or a CharRange.
+/// For a TokenRange, the range contains the endpoint, i.e. the token containing
+/// the end SourceLocation.
+/// For a CharRange, the range doesn't contain the endpoint, i.e. it ends at the
+/// character before the end SourceLocation. This allows representing a point
+/// CharRange [begin, begin) that points at the empty range right in front of
+/// the begin SourceLocation.
 class CharSourceRange {
   SourceRange Range;
   bool IsTokenRange = false;
