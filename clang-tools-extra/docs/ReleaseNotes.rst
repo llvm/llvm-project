@@ -108,7 +108,7 @@ Diagnostics
 Hover
 ^^^^^
 
-- Added support for parsing and presenting doxygen documentation
+- Added support for parsing and presenting doxygen and markdown documentation
 - Added a ``MacroContentsLimit`` config option to allow users to opt into
   showing macro definitions in hovers even if they're very long  
 - Fixed a bug that prevented documentation from being shown for members of
