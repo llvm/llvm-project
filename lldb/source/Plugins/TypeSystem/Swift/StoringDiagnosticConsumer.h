@@ -172,16 +172,16 @@ public:
       // user code, but doing this here could interfere with
       // ExprOptions.PoundLineLine mechanism used Swift
       // Playgrounds. So instead we find the markers from both ends.
-      StringRef buffer_data = buffer->getBuffer();
+      llvm::StringRef buffer_data = buffer->getBuffer();
       size_t pos = buffer_data.find("__LLDB_USER_START__");
-      if (pos == StringRef::npos)
+      if (pos == llvm::StringRef::npos)
         return;
       auto start_loc =
           llvm::SMLoc::getFromPointer(buffer->getBufferStart() + pos);
       unsigned start_line = src_mgr.FindLineNumber(start_loc, buffer_id);
 
       pos = buffer_data.rfind("__LLDB_USER_END__");
-      if (pos == StringRef::npos)
+      if (pos == llvm::StringRef::npos)
         return;
       auto end_loc =
           llvm::SMLoc::getFromPointer(buffer->getBufferStart() + pos);

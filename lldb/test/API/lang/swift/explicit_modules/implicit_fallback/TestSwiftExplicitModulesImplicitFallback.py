@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestCase(lldbtest.TestBase):
+    NO_DEBUG_INFO_TESTCASE = True
     @swiftTest
     def test_missing_explicit_modules(self):
         """Test missing explicit Swift modules and fallback to implicit modules."""
@@ -56,3 +57,23 @@ class TestCase(lldbtest.TestBase):
         # CHECK-SANITY: Explicit modules : true
         # CHECK-SANITY: Turning off implicit modules
         # CHECK-SANITY: Turning on implicit modules
+
+    @swiftTest
+    def test_setting(self):
+        """Check the normal behavior."""
+        self.build()
+
+        lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
+
+        log = self.getBuildArtifact("types.log")
+        self.runCmd(f"log enable lldb types -f '{log}'")
+        self.expect("settings set target.experimental.swift-allow-implicit-modules true")
+
+        self.expect("expression c")
+
+        self.filecheck(f"platform shell cat {log}", __file__,
+                       '--check-prefix=CHECK-SETTING')
+        # CHECK-SETTING: Explicit modules : true
+        # CHECK-SETTING-NOT: Turning {{.*}} implicit modules

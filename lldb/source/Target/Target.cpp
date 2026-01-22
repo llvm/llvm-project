@@ -4741,6 +4741,50 @@ bool TargetProperties::GetSwiftAllowExplicitModules() const {
   return true;
 }
 
+bool TargetProperties::GetSwiftAllowImplicitModules() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertySwiftAllowImplicitModules)
+        .value_or(false);
+
+  return false;
+}
+
+void TargetProperties::SetSwiftAllowImplicitModules(bool b) const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    exp_values->SetPropertyAtIndex(ePropertySwiftAllowImplicitModules, b);
+}
+
+bool TargetProperties::GetSwiftAllowImplicitModuleLoader() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertySwiftAllowImplicitModuleLoader)
+        .value_or(true);
+
+  return false;
+}
+
+void TargetProperties::SetSwiftAllowImplicitModuleLoader(bool b) const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    exp_values->SetPropertyAtIndex(ePropertySwiftAllowImplicitModuleLoader, b);
+}
+
 AutoBool TargetProperties::GetSwiftPCMValidation() const {
   const Property *exp_property =
       m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);

@@ -1319,13 +1319,13 @@ SwiftExpressionParser::ParseAndImport(
     process_sp = this_frame_sp->CalculateProcess();
   if (!m_swift_ast_ctx.GetASTContext()->LangOpts.hasFeature(
           swift::Feature::Embedded))
-    if (auto error =
+    if (llvm::Error error =
             m_swift_ast_ctx.LoadImplicitModules(process_sp, *m_exe_scope))
       return make_error<ModuleImportError>(llvm::toString(std::move(error)));
 
   if (!m_options.GetUseContextFreeSwiftPrintObject())
-    if (auto error = m_swift_ast_ctx.GetImplicitImports(m_sc, process_sp,
-                                                        additional_imports))
+    if (llvm::Error error = m_swift_ast_ctx.GetImplicitImports(
+            m_sc, process_sp, additional_imports))
       return make_error<ModuleImportError>(llvm::toString(std::move(error)));
 
   swift::ImplicitImportInfo importInfo;
@@ -1493,7 +1493,8 @@ SwiftExpressionParser::ParseAndImport(
         IRExecutionUnit::GetLLVMGlobalContextMutex());
 
     Status auto_import_error;
-    if (auto error = m_swift_ast_ctx.CacheUserImports(process_sp, *source_file))
+    if (llvm::Error error =
+            m_swift_ast_ctx.CacheUserImports(process_sp, *source_file))
       return make_error<ModuleImportError>(llvm::toString(std::move(error)),
                                            /*is_new_dylib=*/true);
     if (m_swift_ast_ctx.HasFatalErrors()) {
