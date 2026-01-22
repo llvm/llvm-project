@@ -117,7 +117,7 @@ removeEmptyPTLoad(Ctx &ctx, SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs) {
   for (auto it2 = it; it2 != phdrs.end(); ++it2)
     removed.insert(it2->get());
   for (OutputSection *sec : ctx.outputSections)
-    if (removed.count(sec->ptLoad))
+    if (removed.contains(sec->ptLoad))
       sec->ptLoad = nullptr;
   phdrs.erase(it, phdrs.end());
 }
@@ -682,7 +682,7 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
 
   // We want to put section specified by -T option first, so we
   // can start assigning VA starting from them later.
-  if (ctx.arg.sectionStartMap.count(osec.name))
+  if (ctx.arg.sectionStartMap.contains(osec.name))
     return rank;
   rank |= RF_NOT_ADDR_SET;
 
@@ -1799,10 +1799,10 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
       for (SectionCommand *cmd : osec->commands)
         if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
           llvm::erase_if(isd->sections, [&](InputSection *isec) {
-            return unused.count(isec);
+            return unused.contains(isec);
           });
   llvm::erase_if(ctx.script->orphanSections, [&](const InputSectionBase *sec) {
-    return unused.count(sec);
+    return unused.contains(sec);
   });
 }
 
@@ -1943,7 +1943,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       for (SharedFile *file : ctx.sharedFiles) {
         bool allNeededIsKnown =
             llvm::all_of(file->dtNeeded, [&](StringRef needed) {
-              return ctx.symtab->soNames.count(CachedHashStringRef(needed));
+              return ctx.symtab->soNames.contains(CachedHashStringRef(needed));
             });
         if (!allNeededIsKnown)
           continue;
