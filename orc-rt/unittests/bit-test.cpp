@@ -83,71 +83,71 @@ TEST(BitTest, CountlZero) {
   uint16_t Z16 = 0;
   uint32_t Z32 = 0;
   uint64_t Z64 = 0;
-  EXPECT_EQ(8, llvm::countl_zero(Z8));
-  EXPECT_EQ(16, llvm::countl_zero(Z16));
-  EXPECT_EQ(32, llvm::countl_zero(Z32));
-  EXPECT_EQ(64, llvm::countl_zero(Z64));
+  EXPECT_EQ(8, orc_rt::countl_zero(Z8));
+  EXPECT_EQ(16, orc_rt::countl_zero(Z16));
+  EXPECT_EQ(32, orc_rt::countl_zero(Z32));
+  EXPECT_EQ(64, orc_rt::countl_zero(Z64));
 
   uint8_t NZ8 = 42;
   uint16_t NZ16 = 42;
   uint32_t NZ32 = 42;
   uint64_t NZ64 = 42;
-  EXPECT_EQ(2, llvm::countl_zero(NZ8));
-  EXPECT_EQ(10, llvm::countl_zero(NZ16));
-  EXPECT_EQ(26, llvm::countl_zero(NZ32));
-  EXPECT_EQ(58, llvm::countl_zero(NZ64));
+  EXPECT_EQ(2, orc_rt::countl_zero(NZ8));
+  EXPECT_EQ(10, orc_rt::countl_zero(NZ16));
+  EXPECT_EQ(26, orc_rt::countl_zero(NZ32));
+  EXPECT_EQ(58, orc_rt::countl_zero(NZ64));
 
-  EXPECT_EQ(8, llvm::countl_zero(0x00F000FFu));
-  EXPECT_EQ(8, llvm::countl_zero(0x00F12345u));
+  EXPECT_EQ(8, orc_rt::countl_zero(0x00F000FFu));
+  EXPECT_EQ(8, orc_rt::countl_zero(0x00F12345u));
   for (unsigned i = 0; i <= 30; ++i) {
-    EXPECT_EQ(int(31 - i), llvm::countl_zero(1u << i));
+    EXPECT_EQ(int(31 - i), orc_rt::countl_zero(1u << i));
   }
 
-  EXPECT_EQ(8, llvm::countl_zero(0x00F1234500F12345ULL));
-  EXPECT_EQ(1, llvm::countl_zero(1ULL << 62));
+  EXPECT_EQ(8, orc_rt::countl_zero(0x00F1234500F12345ULL));
+  EXPECT_EQ(1, orc_rt::countl_zero(1ULL << 62));
   for (unsigned i = 0; i <= 62; ++i) {
-    EXPECT_EQ(int(63 - i), llvm::countl_zero(1ULL << i));
+    EXPECT_EQ(int(63 - i), orc_rt::countl_zero(1ULL << i));
   }
 }
 
 TEST(BitTest, BitWidth) {
-  EXPECT_EQ(0, llvm::bit_width(uint8_t(0)));
-  EXPECT_EQ(0, llvm::bit_width(uint16_t(0)));
-  EXPECT_EQ(0, llvm::bit_width(uint32_t(0)));
-  EXPECT_EQ(0, llvm::bit_width(uint64_t(0)));
+  EXPECT_EQ(0, orc_rt::bit_width(uint8_t(0)));
+  EXPECT_EQ(0, orc_rt::bit_width(uint16_t(0)));
+  EXPECT_EQ(0, orc_rt::bit_width(uint32_t(0)));
+  EXPECT_EQ(0, orc_rt::bit_width(uint64_t(0)));
 
-  EXPECT_EQ(1, llvm::bit_width(uint8_t(1)));
-  EXPECT_EQ(1, llvm::bit_width(uint16_t(1)));
-  EXPECT_EQ(1, llvm::bit_width(uint32_t(1)));
-  EXPECT_EQ(1, llvm::bit_width(uint64_t(1)));
+  EXPECT_EQ(1, orc_rt::bit_width(uint8_t(1)));
+  EXPECT_EQ(1, orc_rt::bit_width(uint16_t(1)));
+  EXPECT_EQ(1, orc_rt::bit_width(uint32_t(1)));
+  EXPECT_EQ(1, orc_rt::bit_width(uint64_t(1)));
 
-  EXPECT_EQ(2, llvm::bit_width(uint8_t(2)));
-  EXPECT_EQ(2, llvm::bit_width(uint16_t(2)));
-  EXPECT_EQ(2, llvm::bit_width(uint32_t(2)));
-  EXPECT_EQ(2, llvm::bit_width(uint64_t(2)));
+  EXPECT_EQ(2, orc_rt::bit_width(uint8_t(2)));
+  EXPECT_EQ(2, orc_rt::bit_width(uint16_t(2)));
+  EXPECT_EQ(2, orc_rt::bit_width(uint32_t(2)));
+  EXPECT_EQ(2, orc_rt::bit_width(uint64_t(2)));
 
-  EXPECT_EQ(2, llvm::bit_width(uint8_t(3)));
-  EXPECT_EQ(2, llvm::bit_width(uint16_t(3)));
-  EXPECT_EQ(2, llvm::bit_width(uint32_t(3)));
-  EXPECT_EQ(2, llvm::bit_width(uint64_t(3)));
+  EXPECT_EQ(2, orc_rt::bit_width(uint8_t(3)));
+  EXPECT_EQ(2, orc_rt::bit_width(uint16_t(3)));
+  EXPECT_EQ(2, orc_rt::bit_width(uint32_t(3)));
+  EXPECT_EQ(2, orc_rt::bit_width(uint64_t(3)));
 
-  EXPECT_EQ(3, llvm::bit_width(uint8_t(4)));
-  EXPECT_EQ(3, llvm::bit_width(uint16_t(4)));
-  EXPECT_EQ(3, llvm::bit_width(uint32_t(4)));
-  EXPECT_EQ(3, llvm::bit_width(uint64_t(4)));
+  EXPECT_EQ(3, orc_rt::bit_width(uint8_t(4)));
+  EXPECT_EQ(3, orc_rt::bit_width(uint16_t(4)));
+  EXPECT_EQ(3, orc_rt::bit_width(uint32_t(4)));
+  EXPECT_EQ(3, orc_rt::bit_width(uint64_t(4)));
 
-  EXPECT_EQ(7, llvm::bit_width(uint8_t(0x7f)));
-  EXPECT_EQ(15, llvm::bit_width(uint16_t(0x7fff)));
-  EXPECT_EQ(31, llvm::bit_width(uint32_t(0x7fffffffu)));
-  EXPECT_EQ(63, llvm::bit_width(uint64_t(0x7fffffffffffffffull)));
+  EXPECT_EQ(7, orc_rt::bit_width(uint8_t(0x7f)));
+  EXPECT_EQ(15, orc_rt::bit_width(uint16_t(0x7fff)));
+  EXPECT_EQ(31, orc_rt::bit_width(uint32_t(0x7fffffffu)));
+  EXPECT_EQ(63, orc_rt::bit_width(uint64_t(0x7fffffffffffffffull)));
 
-  EXPECT_EQ(8, llvm::bit_width(uint8_t(0x80)));
-  EXPECT_EQ(16, llvm::bit_width(uint16_t(0x8000)));
-  EXPECT_EQ(32, llvm::bit_width(uint32_t(0x80000000u)));
-  EXPECT_EQ(64, llvm::bit_width(uint64_t(0x8000000000000000ull)));
+  EXPECT_EQ(8, orc_rt::bit_width(uint8_t(0x80)));
+  EXPECT_EQ(16, orc_rt::bit_width(uint16_t(0x8000)));
+  EXPECT_EQ(32, orc_rt::bit_width(uint32_t(0x80000000u)));
+  EXPECT_EQ(64, orc_rt::bit_width(uint64_t(0x8000000000000000ull)));
 
-  EXPECT_EQ(8, llvm::bit_width(uint8_t(0xff)));
-  EXPECT_EQ(16, llvm::bit_width(uint16_t(0xffff)));
-  EXPECT_EQ(32, llvm::bit_width(uint32_t(0xffffffffu)));
-  EXPECT_EQ(64, llvm::bit_width(uint64_t(0xffffffffffffffffull)));
+  EXPECT_EQ(8, orc_rt::bit_width(uint8_t(0xff)));
+  EXPECT_EQ(16, orc_rt::bit_width(uint16_t(0xffff)));
+  EXPECT_EQ(32, orc_rt::bit_width(uint32_t(0xffffffffu)));
+  EXPECT_EQ(64, orc_rt::bit_width(uint64_t(0xffffffffffffffffull)));
 }
