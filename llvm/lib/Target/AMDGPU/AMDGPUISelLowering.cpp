@@ -481,7 +481,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
        MVT::v4i64,  MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64},
       Custom);
 
-  setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+  setOperationAction({ISD::FP16_TO_FP, ISD::STRICT_FP16_TO_FP}, MVT::f64,
+                     Expand);
   setOperationAction(ISD::FP_TO_FP16, {MVT::f64, MVT::f32}, Custom);
 
   const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
