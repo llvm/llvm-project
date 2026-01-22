@@ -5645,21 +5645,22 @@ static void TryReferenceInitializationCore(Sema &S,
     //   applied.
     // Postpone address space conversions to after the temporary materialization
     // conversion to allow creating temporaries in the alloca address space.
-    auto T1QualsIgnoreAS = T1Quals;
-    auto T2QualsIgnoreAS = T2Quals;
+    auto T1QualsIgnoreConvertions = T1Quals;
+    auto T2QualsIgnoreConvertions = T2Quals;
     if (T1Quals.getAddressSpace() != T2Quals.getAddressSpace()) {
-      T1QualsIgnoreAS.removeAddressSpace();
-      T2QualsIgnoreAS.removeAddressSpace();
+      T1QualsIgnoreConvertions.removeAddressSpace();
+      T2QualsIgnoreConvertions.removeAddressSpace();
     }
     // Postpone ObjC lifetime conversions to after the temporary materialization
     // conversion, similar to address space conversions. This handles cases like
     // binding a __strong rvalue to a const __autoreleasing reference.
     if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
-      T1QualsIgnoreAS.removeObjCLifetime();
-      T2QualsIgnoreAS.removeObjCLifetime();
+      T1QualsIgnoreConvertions.removeObjCLifetime();
+      T2QualsIgnoreConvertions.removeObjCLifetime();
     }
-    QualType cv1T4 = S.Context.getQualifiedType(cv2T2, T1QualsIgnoreAS);
-    if (T1QualsIgnoreAS != T2QualsIgnoreAS)
+    QualType cv1T4 =
+        S.Context.getQualifiedType(cv2T2, T1QualsIgnoreConvertions);
+    if (T1QualsIgnoreConvertions != T2QualsIgnoreConvertions)
       Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
     Sequence.AddReferenceBindingStep(cv1T4, ValueKind == VK_PRValue);
     ValueKind = isLValueRef ? VK_LValue : VK_XValue;
@@ -5675,7 +5676,10 @@ static void TryReferenceInitializationCore(Sema &S,
     if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
       auto T4Quals = cv1T4.getQualifiers();
       T4Quals.setObjCLifetime(T1Quals.getObjCLifetime());
-      QualType cv1T4WithLifetime = S.Context.getQualifiedType(T2, T4Quals);
+      // Apply T4Quals to the unqualified base type to avoid conflicting
+      // ObjC lifetime qualifiers in getQualifiedType.
+      QualType cv1T4WithLifetime =
+          S.Context.getQualifiedType(cv1T4.getUnqualifiedType(), T4Quals);
       Sequence.AddQualificationConversionStep(cv1T4WithLifetime, ValueKind);
       cv1T4 = cv1T4WithLifetime;
     }
