@@ -1024,6 +1024,10 @@ public:
 
     DWORD consoleMode;
     bool isConsole = GetConsoleMode(hStdin, &consoleMode) != 0;
+    // With ENABLE_LINE_INPUT, ReadFile returns only when a carriage return is
+    // read. This will block lldb in ReadFile until the user hits enter. Save
+    // the previous console mode to restore it later and remove
+    // ENABLE_LINE_INPUT.
     DWORD oldConsoleMode = consoleMode;
     SetConsoleMode(hStdin,
                    consoleMode & ~ENABLE_LINE_INPUT & ~ENABLE_ECHO_INPUT);
