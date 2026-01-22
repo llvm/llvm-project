@@ -1028,8 +1028,8 @@ void SystemZAsmPrinter::emitXXStructorList(const DataLayout &DL,
   const TargetLoweringObjectFileGOFF &Obj =
       static_cast<const TargetLoweringObjectFileGOFF &>(getObjFileLowering());
   for (Structor &S : Structors) {
-    MCSectionGOFF *Section = static_cast<MCSectionGOFF *>(
-        Obj.getStaticXtorSection(S.Priority));
+    MCSectionGOFF *Section =
+        static_cast<MCSectionGOFF *>(Obj.getStaticXtorSection(S.Priority));
     OutStreamer->switchSection(Section);
     if (OutStreamer->getCurrentSection() != OutStreamer->getPreviousSection())
       emitAlignment(Align);

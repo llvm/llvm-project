@@ -2863,8 +2863,8 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
   return TextSection;
 }
 
-MCSection *TargetLoweringObjectFileGOFF::getStaticXtorSection(
-    unsigned Priority) const {
+MCSection *
+TargetLoweringObjectFileGOFF::getStaticXtorSection(unsigned Priority) const {
   // XL C/C++ compilers on z/OS support priorities from min-int to max-int, with
   // sinit as source priority 0. For clang, sinit has source priority 65535.
   // For GOFF, the priority sortkey field is an unsigned value. So, we
