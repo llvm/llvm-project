@@ -9,6 +9,7 @@
 // Main header include
 #include "DynamicLoaderPOSIXDYLD.h"
 
+#include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -27,7 +28,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "llvm/Support/ThreadPool.h"
-#include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 
 #include <memory>
 #include <optional>
@@ -703,8 +703,8 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   std::vector<FileSpec> module_names;
   for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
     module_names.push_back(I->file_spec);
-  m_process->PrefetchModuleSpecs(
-      module_names, target.GetArchitecture().GetTriple());
+  m_process->PrefetchModuleSpecs(module_names,
+                                 target.GetArchitecture().GetTriple());
 
   auto load_module_fn = [this, &module_list, &target,
                          &log](const DYLDRendezvous::SOEntry &so_entry) {
@@ -718,8 +718,8 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
           module_spec, so_entry.base_addr, 512);
       bool load_addr_changed = false;
       target.GetImages().Append(module_sp, false);
-      module_sp->SetLoadAddress(target, so_entry.base_addr,
-                                false, load_addr_changed);
+      module_sp->SetLoadAddress(target, so_entry.base_addr, false,
+                                load_addr_changed);
     }
     if (module_sp.get()) {
       LLDB_LOG(log, "LoadAllCurrentModules loading module: {0}",
