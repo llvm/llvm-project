@@ -1048,8 +1048,13 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperands(asyncDependencies, asyncTokenType,
                              result.operands))
     return failure();
-  if (parser.getNumResults() > 0)
+  if (parser.getNumResults() > 0) {
+    if (!asyncTokenType)
+      return parser.emitError(
+          parser.getNameLoc(),
+          "gpu.launch requires 'async' keyword to return a value");
     result.types.push_back(asyncTokenType);
+  }
 
   bool hasCluster = false;
   if (succeeded(
