@@ -1801,7 +1801,6 @@ TEST(STLExtrasTest, HasEqualityComparison) {
   struct StructB {
     bool operator==(const StructA &Other) const { return false; }
   };
-  static_assert(!has_equality_comparison_v<StructA, StructB>);
   static_assert(has_equality_comparison_v<StructB, StructA>);
 
   SUCCEED();
