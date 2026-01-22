@@ -274,6 +274,10 @@ bool shouldRecordCommandLine(const ToolChain &TC,
                              bool &GRecordCommandLine,
 			     const bool GReproducible = false);
 
+void renderGlobalISelOptions(const Driver &D, const llvm::opt::ArgList &Args,
+                             llvm::opt::ArgStringList &CmdArgs,
+                             const llvm::Triple &Triple);
+
 void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
                                         llvm::opt::ArgStringList &CmdArgs);
 
