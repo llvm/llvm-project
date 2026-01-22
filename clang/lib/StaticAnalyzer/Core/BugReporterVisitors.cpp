@@ -3305,6 +3305,17 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
         }
       }
 
+      // The analyzer issues false positives in uninitialized_construct_buf_dispatch
+      // and __uninitialized_construct_buf from stl_tempbuf.h, triggered by
+      // std::stable_sort and std::inplace_merge.
+      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+        StringRef Name = FD->getName();
+        if (Name.contains("uninitialized_construct_buf")) {
+          BR.markInvalid(getTag(), nullptr);
+          return;
+        }
+      }
+
       for (const LocationContext *LCtx = N->getLocationContext(); LCtx;
            LCtx = LCtx->getParent()) {
         const auto *MD = dyn_cast<CXXMethodDecl>(LCtx->getDecl());
@@ -3319,6 +3330,14 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
         // because we cannot reason about the internal invariants of the
         // data structure.
         if (CD->getName() == "basic_string") {
+          BR.markInvalid(getTag(), nullptr);
+          return;
+        }
+
+        // The analyzer issues false positives in _Temporary_buffer used by
+        // std::stable_sort and std::inplace_merge due to complex buffer
+        // management logic.
+        if (CD->getName() == "_Temporary_buffer") {
           BR.markInvalid(getTag(), nullptr);
           return;
         }
