@@ -174,3 +174,38 @@ void f(P x, Q y) {
         for id, string in kindStringMap.items():
             kind = CompletionString.AvailabilityKindCompat.from_id(id)
             self.assertEqual(str(kind), string)
+
+    def test_completion_chunk_kind_compatibility(self):
+        valueToOldStr = {
+            0: "Optional",
+            1: "TypedText",
+            2: "Text",
+            3: "Placeholder",
+            4: "Informative",
+            5: "CurrentParameter",
+            6: "LeftParen",
+            7: "RightParen",
+            8: "LeftBracket",
+            9: "RightBracket",
+            10: "LeftBrace",
+            11: "RightBrace",
+            12: "LeftAngle",
+            13: "RightAngle",
+            14: "Comma",
+            15: "ResultType",
+            16: "Colon",
+            17: "SemiColon",
+            18: "Equal",
+            19: "HorizontalSpace",
+            20: "VerticalSpace",
+        }
+
+        # Check that all new kinds correspond to an old kind
+        for newKind in CompletionChunkKind:
+            oldStr = valueToOldStr[newKind.value]
+            self.assertEqual(oldStr, str(newKind))
+
+        # Check that all old kinds correspond to a new kind
+        for value, oldStr in valueToOldStr.items():
+            newKind = CompletionChunkKind.from_id(value)
+            self.assertEqual(oldStr, str(newKind))
