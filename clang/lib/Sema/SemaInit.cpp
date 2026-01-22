@@ -5651,6 +5651,13 @@ static void TryReferenceInitializationCore(Sema &S,
       T1QualsIgnoreAS.removeAddressSpace();
       T2QualsIgnoreAS.removeAddressSpace();
     }
+    // Postpone ObjC lifetime conversions to after the temporary materialization
+    // conversion, similar to address space conversions. This handles cases like
+    // binding a __strong rvalue to a const __autoreleasing reference.
+    if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
+      T1QualsIgnoreAS.removeObjCLifetime();
+      T2QualsIgnoreAS.removeObjCLifetime();
+    }
     QualType cv1T4 = S.Context.getQualifiedType(cv2T2, T1QualsIgnoreAS);
     if (T1QualsIgnoreAS != T2QualsIgnoreAS)
       Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
@@ -5663,6 +5670,14 @@ static void TryReferenceInitializationCore(Sema &S,
       QualType cv1T4WithAS = S.Context.getQualifiedType(T2, T4Quals);
       Sequence.AddQualificationConversionStep(cv1T4WithAS, ValueKind);
       cv1T4 = cv1T4WithAS;
+    }
+    // Add ObjC lifetime conversion if required.
+    if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
+      auto T4Quals = cv1T4.getQualifiers();
+      T4Quals.setObjCLifetime(T1Quals.getObjCLifetime());
+      QualType cv1T4WithLifetime = S.Context.getQualifiedType(T2, T4Quals);
+      Sequence.AddQualificationConversionStep(cv1T4WithLifetime, ValueKind);
+      cv1T4 = cv1T4WithLifetime;
     }
 
     //   In any case, the reference is bound to the resulting glvalue (or to
