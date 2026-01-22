@@ -557,8 +557,9 @@ define i32 @selectSelect22(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
 
 define i32 @selectSelect12(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
 ; CHECK-LABEL: @selectSelect12(
-; CHECK-NEXT:    [[SEL3:%.*]] = select i1 [[TMP1:%.*]], i32 [[DEFAULTVAL:%.*]], i32 [[VAR:%.*]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND2:%.*]], i32 [[SEL3]], i32 [[DEFAULTVAL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[COND1:%.*]], true
+; CHECK-NEXT:    [[COND2:%.*]] = select i1 [[COND3:%.*]], i1 [[TMP1]], i1 false
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND2]], i32 [[SEL3:%.*]], i32 [[DEFAULTVAL:%.*]]
 ; CHECK-NEXT:    ret i32 [[SEL2]]
 ;
   %sel1 = select i1 %cond1, i32 %defaultVal,i32 %var
@@ -568,8 +569,9 @@ define i32 @selectSelect12(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
 
 define i32 @selectSelect21(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
 ; CHECK-LABEL: @selectSelect21(
-; CHECK-NEXT:    [[DEFAULTVAL:%.*]] = select i1 [[TMP1:%.*]], i32 [[VAR:%.*]], i32 [[DEFAULTVAL1:%.*]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND2:%.*]], i32 [[DEFAULTVAL1]], i32 [[DEFAULTVAL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[COND1:%.*]], true
+; CHECK-NEXT:    [[COND2:%.*]] = select i1 [[COND3:%.*]], i1 true, i1 [[TMP1]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND2]], i32 [[DEFAULTVAL1:%.*]], i32 [[DEFAULTVAL:%.*]]
 ; CHECK-NEXT:    ret i32 [[SEL2]]
 ;
   %sel1 = select i1 %cond1, i32 %var, i32 %defaultVal
@@ -633,10 +635,8 @@ define i32 @selectSelect21Use(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) {
 
 define i32 @abseil_cpp_example(i32 %a, i64 %b, i32 %c) {
 ; CHECK-LABEL: @abseil_cpp_example(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[B:%.*]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[B]], 0
-; CHECK-NEXT:    [[SPEC_SELECT632:%.*]] = select i1 [[CMP2]], i32 0, i32 [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP1]], i32 [[A]], i32 [[SPEC_SELECT632]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[B:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP2]], i32 [[A:%.*]], i32 0
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %cmp1 = icmp eq i64 %b, 0
@@ -648,10 +648,9 @@ define i32 @abseil_cpp_example(i32 %a, i64 %b, i32 %c) {
 
 define i32 @hermes_example(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @hermes_example(
-; CHECK-NEXT:    [[CMP108_I:%.*]] = icmp slt i32 [[A:%.*]], 9
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[A]], 17
-; CHECK-NEXT:    [[Z_5_I:%.*]] = select i1 [[TMP2]], i32 [[B:%.*]], i32 [[C:%.*]]
-; CHECK-NEXT:    [[Z_5_I1:%.*]] = select i1 [[CMP108_I]], i32 [[C]], i32 [[Z_5_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -17
+; CHECK-NEXT:    [[CMP108_I:%.*]] = icmp ult i32 [[TMP1]], -8
+; CHECK-NEXT:    [[Z_5_I1:%.*]] = select i1 [[CMP108_I]], i32 [[C:%.*]], i32 [[Z_5_I:%.*]]
 ; CHECK-NEXT:    ret i32 [[Z_5_I1]]
 ;
   %cmp108.i = icmp slt i32 %a, 9
@@ -663,10 +662,8 @@ define i32 @hermes_example(i32 %a, i32 %b, i32 %c) {
 
 define i64 @hermes_example2(i32 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: @hermes_example2(
-; CHECK-NEXT:    [[CMP16_I_I:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[CMP20_I_I:%.*]] = icmp ugt i32 [[A]], 511
-; CHECK-NEXT:    [[RETVAL_0_I_I:%.*]] = select i1 [[CMP20_I_I]], i64 [[C:%.*]], i64 [[B:%.*]]
-; CHECK-NEXT:    [[RETVAL_0_I_I1:%.*]] = select i1 [[CMP16_I_I]], i64 [[B]], i64 [[RETVAL_0_I_I]]
+; CHECK-NEXT:    [[CMP16_I_I:%.*]] = icmp ult i32 [[A:%.*]], 512
+; CHECK-NEXT:    [[RETVAL_0_I_I1:%.*]] = select i1 [[CMP16_I_I]], i64 [[B:%.*]], i64 [[RETVAL_0_I_I:%.*]]
 ; CHECK-NEXT:    ret i64 [[RETVAL_0_I_I1]]
 ;
   %cmp16.i.i = icmp eq i32 %a, 0
@@ -674,6 +671,19 @@ define i64 @hermes_example2(i32 %a, i64 %b, i64 %c) {
   %spec.select11.i = select i1 %cmp20.i.i, i64 %b, i64 %c
   %retval.0.i.i = select i1 %cmp16.i.i, i64 %c, i64 %spec.select11.i
   ret i64 %retval.0.i.i
+}
+
+define i32 @gh82350(i32 %x, i32 %y, i32 %z, i1 %cmp1) {
+; CHECK-LABEL: @gh82350(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[Z:%.*]], 0
+; CHECK-NEXT:    [[DOTNOT:%.*]] = select i1 [[CMP2]], i1 true, i1 [[CMP1:%.*]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[DOTNOT]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[SEL2]]
+;
+  %cmp2 = icmp eq i32 %z, 0
+  %sel1 = select i1 %cmp1, i32 %x, i32 %y
+  %sel2 = select i1 %cmp2, i32 %sel1, i32 %x
+  ret i32 %sel2
 }
 
 declare void @use1(i1)

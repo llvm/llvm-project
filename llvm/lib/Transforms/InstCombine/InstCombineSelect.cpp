@@ -4525,6 +4525,14 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         replaceOperand(SI, 1, TrueSI->getTrueValue());
         return &SI;
       }
+      // select(C0, select(C1, b, a), b) -> select(C0&!C1, a, b)
+      if (TrueSI->getTrueValue() == FalseVal && TrueSI->hasOneUse()) {
+        Value *Negation = Builder.CreateNot(TrueSI->getCondition());
+        Value *And = Builder.CreateLogicalAnd(CondVal, Negation);
+        replaceOperand(SI, 0, And);
+        replaceOperand(SI, 1, TrueSI->getFalseValue());
+        return &SI;
+      }
     }
   }
   if (SelectInst *FalseSI = dyn_cast<SelectInst>(FalseVal)) {
@@ -4540,6 +4548,14 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());
         replaceOperand(SI, 0, Or);
         replaceOperand(SI, 2, FalseSI->getFalseValue());
+        return &SI;
+      }
+      // select(C0, a, select(C1, b, a)) -> select(C0|!C1, a, b)
+      if (FalseSI->getFalseValue() == TrueVal && FalseSI->hasOneUse()) {
+        Value *Negation = Builder.CreateNot(FalseSI->getCondition());
+        Value *Or = Builder.CreateLogicalOr(CondVal, Negation);
+        replaceOperand(SI, 0, Or);
+        replaceOperand(SI, 2, FalseSI->getTrueValue());
         return &SI;
       }
     }
