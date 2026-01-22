@@ -323,7 +323,7 @@ def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
                               (sequence "X%u_Y", 18, 27),
                               (sequence "X%u_Y", 0, 4))> {
   let RegInfos = YLenRI;
-  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*CheckRVE=*/true>";
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=/*16>";
 }
 
 def GPRX0 : GPRRegisterClass<(add X0)>;
@@ -557,7 +557,7 @@ def GPRF16 : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 17),
                                                 (sequence "X%u_H", 8, 9),
                                                 (sequence "X%u_H", 18, 27),
                                                 (sequence "X%u_H", 0, 4))> {
-  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_H, 32, /*CheckRVE=*/true>";
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_H, 32, /*RVELimit=*/16>";
 }
 def GPRF16C : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 15),
                                                  (sequence "X%u_H", 8, 9))> {
@@ -571,7 +571,7 @@ def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
                                                 (sequence "X%u_W", 8, 9),
                                                 (sequence "X%u_W", 18, 27),
                                                 (sequence "X%u_W", 0, 4))> {
-  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_W, 32, /*CheckRVE=*/true>";
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_W, 32, /*RVELimit=*/16>";
 }
 def GPRF32C : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 15),
                                                  (sequence "X%u_W", 8, 9))> {

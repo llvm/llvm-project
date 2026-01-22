@@ -78,14 +78,14 @@ LLVMInitializeRISCVDisassembler() {
                                          createRISCVDisassembler);
 }
 
-template <unsigned FirstReg, unsigned NumRegsInClass, bool CheckRVE = false>
+template <unsigned FirstReg, unsigned NumRegsInClass, unsigned RVELimit = 0>
 static DecodeStatus DecodeSimpleRegisterClass(MCInst &Inst, uint32_t RegNo,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder) {
-  bool IsRVE =
-      CheckRVE && Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+  bool CheckRVE = RVELimit != 0 &&
+                  Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
 
-  if (RegNo >= NumRegsInClass || (IsRVE && RegNo >= 16))
+  if (RegNo >= NumRegsInClass || (CheckRVE && RegNo >= RVELimit))
     return MCDisassembler::Fail;
 
   MCRegister Reg = FirstReg + RegNo;
