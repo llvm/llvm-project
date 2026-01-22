@@ -531,6 +531,38 @@ bool LayoutInfoPropagation::hasParamsOfLayoutKind(
   return false;
 }
 
+SmallVector<std::pair<int, int>> getValidLayouts(ArrayRef<int64_t> wgShape,
+                                                 ArrayRef<int> instData,
+                                                 int64_t sgCount) {
+  SmallVector<std::pair<int, int>> candidates;
+  // Find valid multiples of instData
+  for (int sgLayout0 = 1; sgLayout0 <= sgCount; ++sgLayout0) {
+    if (sgCount % sgLayout0)
+      continue;
+    int sgLayout1 = sgCount / sgLayout0;
+    int sgData0 = wgShape[0] / sgLayout0;
+    int sgData1 = wgShape[1] / sgLayout1;
+    // Check divisibility and instruction atomic alignment
+    if ((wgShape[0] % sgLayout0 || wgShape[1] % sgLayout1) ||
+        (sgData0 % instData[0] || sgData1 % instData[1]))
+      continue;
+
+    candidates.emplace_back(sgLayout0, sgLayout1);
+  }
+  // Sort primarily by how balanced they are
+  // (i.e., minimize the absolute difference between the two dimensions), and
+  // secondarily by the first dimension in ascending order.
+  llvm::sort(candidates, [](const std::pair<int, int> &lhs,
+                            const std::pair<int, int> &rhs) {
+    int64_t diffLhs = std::abs(lhs.first - lhs.second);
+    int64_t diffRhs = std::abs(rhs.first - rhs.second);
+    if (diffLhs != diffRhs)
+      return diffLhs < diffRhs;
+    return lhs.first < rhs.first;
+  });
+  return candidates;
+}
+
 FailureOr<std::pair<SmallVector<int>, SmallVector<int>>>
 chooseLayout(llvm::ArrayRef<int64_t> wgShape, int64_t sgCount) {
   const size_t rank = wgShape.size();
@@ -763,6 +795,10 @@ void LayoutInfoPropagation::visitDpasOp(
 
     VectorType aTy = dpas.getLhsType();
     VectorType bTy = dpas.getRhsType();
+    VectorType cTy;
+    const bool hasAcc = operands.size() > 2;
+    if (hasAcc)
+      cTy = dpas.getAccType();
 
     auto uArch = getUArch(getChipStr(dpas).value_or(""));
     const int subgroupSize = uArch->getSubgroupSize();
@@ -789,57 +825,11 @@ void LayoutInfoPropagation::visitDpasOp(
           "No suitable instruction multiple found for the given shape.");
     SmallVector<int> instDataA = {maxALen, subgroupSize};
     SmallVector<int> instDataB = {subgroupSize, maxBLen};
-
-    if (layoutKind == LayoutKind::InstData) {
-      dpasALayout =
-          LayoutInfo(xegpu::LayoutAttr::get(dpas.getContext(), instDataA));
-      dpasBLayout =
-          LayoutInfo(xegpu::LayoutAttr::get(dpas.getContext(), instDataB));
-    } else if (layoutKind == LayoutKind::Lane) {
-      dpasALayout = getSIMTLayoutInfoForDPASOperand(
-          aTy, 0, uArch, uArchInstruction->getPackedFormatBitSizeA());
-      dpasBLayout = getSIMTLayoutInfoForDPASOperand(
-          bTy, 1, uArch, uArchInstruction->getPackedFormatBitSizeB());
-    } else { // Subgroup
-      auto numSgOrErr = getNumSg(dpas, subgroupSize);
-      if (failed(numSgOrErr)) {
-        dpas.emitWarning(
-            "Unable to determine the number of subgroups for the operation.");
-        return;
-      }
-      auto layoutDataCDOrErr =
-          chooseLayout(dpas.getResultType().getShape(), numSgOrErr.value());
-      if (failed(layoutDataCDOrErr)) {
-        dpas.emitWarning(
-            "Unable to determine suitable subgroup layout and data for C/D.");
-        return;
-      }
-      auto [sgLayoutCD, sgDataCD] = layoutDataCDOrErr.value();
-      auto sgDataA = sgDataCD;
-      sgDataA[1] = aTy.getShape()[1];
-      auto sgDataB = sgDataCD;
-      sgDataB[0] = bTy.getShape()[0];
-
-      dpasALayout = LayoutInfo(xegpu::LayoutAttr::get(
-          aTy.getContext(),
-          DenseI32ArrayAttr::get(aTy.getContext(), sgLayoutCD),
-          DenseI32ArrayAttr::get(aTy.getContext(), sgDataA),
-          /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
-          /*lane_data =*/nullptr, /*order =*/nullptr));
-
-      dpasBLayout = LayoutInfo(xegpu::LayoutAttr::get(
-          bTy.getContext(),
-          DenseI32ArrayAttr::get(bTy.getContext(), sgLayoutCD),
-          DenseI32ArrayAttr::get(bTy.getContext(), sgDataB),
-          /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
-          /*lane_data =*/nullptr, /*order =*/nullptr));
-    }
-
-    if (operands.size() > 2) {
-      VectorType cTy = dpas.getAccType();
+    SmallVector<int> instDataCD;
+    if (hasAcc) {
       const unsigned dataCLen = bTy.getShape().back();
       auto supportedCLen =
-          uArchInstruction->getSupportedN(bTy.getElementType());
+          uArchInstruction->getSupportedN(cTy.getElementType());
       const int maxCLen =
           xegpu::getLargestDivisor(dataCLen, ArrayRef<unsigned>(supportedCLen));
       if (maxCLen == -1) {
@@ -847,43 +837,135 @@ void LayoutInfoPropagation::visitDpasOp(
             "No suitable instruction multiple found for the given shape.");
         return;
       }
-      SmallVector<int> instDataCD = {maxALen, maxCLen};
-      if (layoutKind == LayoutKind::InstData) {
+      instDataCD = {maxALen, maxCLen};
+    }
+    if (layoutKind == LayoutKind::InstData) {
+      dpasALayout =
+          LayoutInfo(xegpu::LayoutAttr::get(dpas.getContext(), instDataA));
+      dpasBLayout =
+          LayoutInfo(xegpu::LayoutAttr::get(dpas.getContext(), instDataB));
+      if (hasAcc) {
         dpasCDLayout =
             LayoutInfo(xegpu::LayoutAttr::get(dpas.getContext(), instDataCD));
-      } else if (layoutKind == LayoutKind::Lane) {
+      }
+    } else if (layoutKind == LayoutKind::Lane) {
+      dpasALayout = getSIMTLayoutInfoForDPASOperand(
+          aTy, 0, uArch, uArchInstruction->getPackedFormatBitSizeA());
+      dpasBLayout = getSIMTLayoutInfoForDPASOperand(
+          bTy, 1, uArch, uArchInstruction->getPackedFormatBitSizeB());
+      if (hasAcc) {
         dpasCDLayout = getSIMTLayoutInfoForDPASOperand(
             cTy, 2, uArch, uArchInstruction->getPackedFormatBitSizeB());
+      }
+    } else { // Subgroup
+      auto numSgOrErr = getNumSg(dpas, subgroupSize);
+      if (failed(numSgOrErr)) {
+        dpas.emitWarning(
+            "Unable to determine the number of subgroups for the operation.");
+        return;
+      }
+      // Step 1. Retrieve D layout. Get all valid layouts for A and B
+      LayoutInfo layoutD = results[0]->getValue();
+      SmallVector<int> sgLayoutD = layoutD.getSgLayout();
+      assert(!sgLayoutD.empty() && "Expected layout for DPAS result.");
+      auto layoutDVal = std::make_pair(sgLayoutD[0], sgLayoutD[1]);
+
+      auto layoutsA =
+          getValidLayouts(aTy.getShape(), instDataA, numSgOrErr.value());
+      auto layoutsB =
+          getValidLayouts(bTy.getShape(), instDataB, numSgOrErr.value());
+      SmallVector<std::pair<int, int>> layoutsC;
+      if (hasAcc)
+        layoutsC =
+            getValidLayouts(cTy.getShape(), instDataCD, numSgOrErr.value());
+
+      if (layoutsA.empty() || layoutsB.empty() ||
+          (hasAcc && layoutsC.empty())) {
+        dpas.emitWarning(
+            "Unable to determine suitable subgroup layout for A/B/C matrices.");
+        return;
+      }
+
+      // Step 2. Find common layouts.
+      // Ideally, we want to find given layout D in all A, B and C candidates.
+
+      // Ensure D layout matches one of C layouts.
+      if (hasAcc && llvm::find(layoutsC, layoutDVal) == layoutsC.end()) {
+        dpas.emitWarning("Subgroup layout for D does not match any valid C "
+                         "subgroup layout.");
+        return;
+      }
+      // The best pick is layout D. If not found, we will pick any common layout
+      // between A and B.
+      std::optional<std::pair<int, int>> bestPick;
+      llvm::DenseSet<std::pair<int, int>> setA(layoutsA.begin(),
+                                               layoutsA.end());
+      SmallVector<std::pair<int, int>> common;
+      for (auto &l : layoutsB) {
+        if (setA.contains(l)) {
+          if (l == layoutDVal) {
+            bestPick = l;
+            break;
+          }
+          common.push_back(l);
+        }
+      }
+      // Step 3. The best pick either matches D or is any common layout between
+      // A and B. If no common layout, warn and pick any valid layout.
+      SmallVector<int> sgLayoutA;
+      SmallVector<int> sgLayoutB;
+      if (!bestPick && !common.empty())
+        bestPick = common[0];
+      if (bestPick) {
+        sgLayoutA = {bestPick->first, bestPick->second};
+        sgLayoutB = sgLayoutA;
       } else {
-        auto numSgOrErr = getNumSg(dpas, subgroupSize);
-        if (failed(numSgOrErr)) {
-          dpas.emitWarning(
-              "Unable to determine the number of subgroups for the operation.");
-          return;
-        }
-        auto layoutDataCDOrErr =
-            chooseLayout(dpas.getResultType().getShape(), numSgOrErr.value());
-        if (failed(layoutDataCDOrErr)) {
-          dpas.emitWarning(
-              "Unable to determine suitable subgroup layout and data for C/D.");
-          return;
-        }
-        auto [sgLayoutCD, sgDataCD] = layoutDataCDOrErr.value();
+        dpas.emitWarning(
+            "Unable to find common subgroup layout for matrices matching "
+            "layout of result. Picking any valid layout.");
+        sgLayoutA = {layoutsA[0].first, layoutsA[0].second};
+        sgLayoutB = {layoutsB[0].first, layoutsB[0].second};
+      }
+      SmallVector<int> sgDataA = {
+          static_cast<int>(aTy.getShape()[0]) / sgLayoutA[0],
+          static_cast<int>(aTy.getShape()[1]) / sgLayoutA[1]};
+      SmallVector<int> sgDataB = {
+          static_cast<int>(bTy.getShape()[0]) / sgLayoutB[0],
+          static_cast<int>(bTy.getShape()[1]) / sgLayoutB[1]};
+      SmallVector<int> sgDataC;
+      if (hasAcc)
+        sgDataC = {static_cast<int>(dpas.getResultType().getShape()[0]) /
+                       sgLayoutD[0],
+                   static_cast<int>(dpas.getResultType().getShape()[1]) /
+                       sgLayoutD[1]};
+
+      dpasALayout = LayoutInfo(xegpu::LayoutAttr::get(
+          aTy.getContext(), DenseI32ArrayAttr::get(aTy.getContext(), sgLayoutA),
+          DenseI32ArrayAttr::get(aTy.getContext(), sgDataA),
+          /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
+          /*lane_data =*/nullptr, /*order =*/nullptr));
+
+      dpasBLayout = LayoutInfo(xegpu::LayoutAttr::get(
+          bTy.getContext(), DenseI32ArrayAttr::get(bTy.getContext(), sgLayoutB),
+          DenseI32ArrayAttr::get(bTy.getContext(), sgDataB),
+          /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
+          /*lane_data =*/nullptr, /*order =*/nullptr));
+      if (hasAcc) {
         dpasCDLayout = LayoutInfo(xegpu::LayoutAttr::get(
             cTy.getContext(),
-            DenseI32ArrayAttr::get(cTy.getContext(), sgLayoutCD),
-            DenseI32ArrayAttr::get(cTy.getContext(), sgDataCD),
+            DenseI32ArrayAttr::get(cTy.getContext(), sgLayoutD),
+            DenseI32ArrayAttr::get(cTy.getContext(), sgDataC),
             /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
             /*lane_data =*/nullptr, /*order =*/nullptr));
       }
-
-      dpas.setLayoutCdAttr(
-          dyn_cast<xegpu::DistributeLayoutAttr>(dpasCDLayout.get()));
     }
     dpas.setLayoutAAttr(
         dyn_cast<xegpu::DistributeLayoutAttr>(dpasALayout.get()));
     dpas.setLayoutBAttr(
         dyn_cast<xegpu::DistributeLayoutAttr>(dpasBLayout.get()));
+    if (hasAcc)
+      dpas.setLayoutCdAttr(
+          dyn_cast<xegpu::DistributeLayoutAttr>(dpasCDLayout.get()));
   }
 
   propagateIfChanged(operands[0], operands[0]->meet(dpasALayout));
@@ -935,9 +1017,9 @@ void LayoutInfoPropagation::visitStoreNdOp(
       storeLayout =
           LayoutInfo(xegpu::LayoutAttr::get(dataTy.getContext(), instData));
     else if (layoutKind == LayoutKind::Lane)
-      storeLayout =
-          getSIMTLayoutInforForBlockIO(store.getValueType(), uArch,
-                                   uArchInstruction->getPackedFormatBitSize());
+      storeLayout = getSIMTLayoutInforForBlockIO(
+          store.getValueType(), uArch,
+          uArchInstruction->getPackedFormatBitSize());
     else { // LayoutKind::Subgroup
       auto sgSize = uArch->getSubgroupSize();
       auto numSgOrErr = getNumSg(store, sgSize);
@@ -946,15 +1028,17 @@ void LayoutInfoPropagation::visitStoreNdOp(
             "Unable to determine the number of subgroups for the operation.");
         return;
       }
-      auto layoutDataOrErr =
-          chooseLayout(dataTy.getShape(), numSgOrErr.value());
-      if (failed(layoutDataOrErr)) {
+      auto sgLayouts = getValidLayouts(store.getValueType().getShape(),
+                                       instData, numSgOrErr.value());
+      if (sgLayouts.empty()) {
         store.emitWarning(
-            "Unable to determine suitable subgroup layout and data.");
+            "Unable to determine suitable subgroup layout for store value.");
         return;
       }
-      auto [sgLayout, sgData] = layoutDataOrErr.value();
-
+      SmallVector<int> sgLayout = {sgLayouts[0].first, sgLayouts[0].second};
+      SmallVector<int> sgData = {
+          static_cast<int>(dataTy.getShape()[0]) / sgLayout[0],
+          static_cast<int>(dataTy.getShape()[1]) / sgLayout[1]};
       storeLayout = LayoutInfo(xegpu::LayoutAttr::get(
           dataTy.getContext(),
           DenseI32ArrayAttr::get(dataTy.getContext(), sgLayout),
