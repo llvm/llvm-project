@@ -174,17 +174,8 @@ define <2 x i32> @dupzext_vector_v2i32_v2i64_trunc(<2 x i32> %a, ptr %p) {
 ; CHECK-SD-LABEL: dupzext_vector_v2i32_v2i64_trunc:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr d1, [x0]
-; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-SD-NEXT:    dup v2.2d, v0.d[0]
-; CHECK-SD-NEXT:    fmov w10, s0
-; CHECK-SD-NEXT:    fmov w11, s1
-; CHECK-SD-NEXT:    mov w8, v1.s[2]
-; CHECK-SD-NEXT:    mov w9, v2.s[2]
-; CHECK-SD-NEXT:    mul w10, w10, w11
-; CHECK-SD-NEXT:    mul w8, w9, w8
-; CHECK-SD-NEXT:    fmov d0, x10
-; CHECK-SD-NEXT:    mov v0.d[1], x8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    smull v0.2d, v1.2s, v0.s[0]
 ; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-SD-NEXT:    ret
 ;
@@ -210,19 +201,9 @@ entry:
 define <2 x i32> @shufflezext_vector_v2i32_v2i64_trunc(<2 x i32> %a, <2 x i32> %b, ptr %p) {
 ; CHECK-SD-LABEL: shufflezext_vector_v2i32_v2i64_trunc:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-SD-NEXT:    ldr d2, [x0]
-; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    zip1 v1.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    fmov w10, s0
-; CHECK-SD-NEXT:    fmov w11, s2
-; CHECK-SD-NEXT:    mov w9, v2.s[2]
-; CHECK-SD-NEXT:    mov w8, v1.s[2]
-; CHECK-SD-NEXT:    mul w10, w10, w11
-; CHECK-SD-NEXT:    mul w8, w8, w9
-; CHECK-SD-NEXT:    fmov d0, x10
-; CHECK-SD-NEXT:    mov v0.d[1], x8
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ldr d1, [x0]
+; CHECK-SD-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-SD-NEXT:    ret
 ;
@@ -250,10 +231,10 @@ entry:
 define <8 x i8> @dupzext_vector_v8i8_v8i16_trunc(<8 x i8> %a, ptr %p) {
 ; CHECK-SD-LABEL: dupzext_vector_v8i8_v8i16_trunc:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    ldr d1, [x0]
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-SD-NEXT:    mul v0.8h, v1.8h, v0.h[0]
+; CHECK-SD-NEXT:    dup v0.8b, v0.b[0]
+; CHECK-SD-NEXT:    smull v0.8h, v1.8b, v0.8b
 ; CHECK-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-SD-NEXT:    ret
 ;
@@ -279,12 +260,9 @@ entry:
 define <8 x i8> @shufflezext_v8i8_v8i16_trunc(<8 x i8> %a, <8 x i8> %b, ptr %p) {
 ; CHECK-SD-LABEL: shufflezext_v8i8_v8i16_trunc:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
-; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    ldr d2, [x0]
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ushll v1.8h, v2.8b, #0
-; CHECK-SD-NEXT:    mul v0.8h, v1.8h, v0.8h
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ldr d1, [x0]
+; CHECK-SD-NEXT:    smull v0.8h, v1.8b, v0.8b
 ; CHECK-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-SD-NEXT:    ret
 ;
