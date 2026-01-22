@@ -194,7 +194,7 @@ public:
     if (!Reporter)
       return;
     SourceManager &SM = AST.getSourceManager();
-    for (const auto &[Target, EscapeExpr] : AnnotationWarningsMap) {
+    for (auto [Target, EscapeExpr] : AnnotationWarningsMap) {
       if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>()) {
         if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
           Reporter->suggestAnnotation(
@@ -216,12 +216,10 @@ public:
   }
 
   void inferAnnotations() {
-    for (const auto &[Target, EscapeExpr] : AnnotationWarningsMap) {
+    for (auto [Target, EscapeExpr] : AnnotationWarningsMap) {
       if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
-        CXXMethodDecl *MutableMD = const_cast<CXXMethodDecl *>(MD);
-        if (!MutableMD->hasAttr<LifetimeBoundAttr>())
-          MutableMD->addAttr(
-              LifetimeBoundAttr::CreateImplicit(AST, MutableMD->getLocation()));
+        if (!implicitObjectParamIsLifetimeBound(MD))
+          Reporter->addLifetimeBoundToImplicitThis(cast<CXXMethodDecl>(MD));
       } else if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>()) {
         const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
         if (!FD)

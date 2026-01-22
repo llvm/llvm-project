@@ -12,6 +12,8 @@ struct View;
 
 struct [[gsl::Owner]] MyObj {
   int id;
+  MyObj(int i) : id(i) {} 
+  MyObj() {}
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
 
@@ -161,38 +163,48 @@ static View return_view_static(View a) {  // expected-warning {{parameter in int
   return a;                               // expected-note {{param returned here}} 
 }
 
-struct ReturnThis {
-  const ReturnThis& get() {      // expected-warning {{implict this in intra-TU function should be marked [[clang::lifetimebound]]}}.
-    return *this;                // expected-note {{param returned here}}
-  }
-};
-
 struct ReturnsSelf {
-  const ReturnsSelf& get() const { // expected-warning {{implict this in intra-TU function should be marked [[clang::lifetimebound]]}}.
+  ReturnsSelf() {}
+  ~ReturnsSelf() {}
+  const ReturnsSelf& get() const { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}.
     return *this;                  // expected-note {{param returned here}}
   }
 };
 
-//===----------------------------------------------------------------------===//
-// FIXME Test Cases
-//===----------------------------------------------------------------------===//
+struct ReturnThisAnnotated {
+  const ReturnThisAnnotated& get() [[clang::lifetimebound]] { return *this; }
+};
+
 struct ViewProvider {
+  ViewProvider() {}
+  ViewProvider(int d) : data(d) {}
+  ~ViewProvider() {}
   MyObj data;
-  View getView() const {
-    return data;
+  View getView() const {        // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}.
+    return data;                // expected-note {{param returned here}}
   }
 };
 
-// FIXME: Fails to generate lifetime suggestions for the implicit 'this' parameter, as this feature is not yet implemented.
-void test_get_on_temporary() {
-  const ReturnsSelf& s_ref = ReturnsSelf().get();
-  (void)s_ref;
+View return_view_field(const ViewProvider& v) {    // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
+  return v.data;                                   // expected-note {{param returned here}}
 }
 
-// FIXME: Fails to generate lifetime suggestions for the implicit 'this' parameter, as this feature is not yet implemented.
+void test_get_on_temporary_pointer() {
+  const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{object whose reference is captured does not live long enough}}.
+                                                   // expected-note@-1 {{destroyed here}}
+  (void)s_ref;                                     // expected-note {{later used here}}
+}
+
+void test_get_on_temporary_ref() {
+  const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{object whose reference is captured does not live long enough}}.
+                                                   // expected-note@-1 {{destroyed here}}
+  (void)s_ref;                                     // expected-note {{later used here}}
+}
+
 void test_getView_on_temporary() {
-  View sv = ViewProvider{1}.getView();
-  (void)sv;
+  View sv = ViewProvider{1}.getView();      // expected-warning {{object whose reference is captured does not live long enough}}.
+                                            // expected-note@-1 {{destroyed here}}
+  (void)sv;                                 // expected-note {{later used here}}
 }
 
 //===----------------------------------------------------------------------===//

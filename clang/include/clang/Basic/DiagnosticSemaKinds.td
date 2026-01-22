@@ -10833,7 +10833,7 @@ def warn_lifetime_safety_cross_tu_suggestion
       DefaultIgnore;
 
 def warn_lifetime_safety_this_intra_tu_suggestion
-    : Warning<"implict this in intra-TU function should be marked "
+    : Warning<"implicit this in intra-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyIntraTUSuggestions>,
       DefaultIgnore;

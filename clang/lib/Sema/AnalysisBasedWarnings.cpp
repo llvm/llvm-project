@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/AnalysisBasedWarnings.h"
+#include "TypeLocBuilder.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -30,6 +31,7 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
@@ -2934,21 +2936,35 @@ public:
                           : diag::warn_lifetime_safety_this_intra_tu_suggestion;
 
     SourceLocation InsertionPoint;
-    if (auto *TSI = MD->getTypeSourceInfo())
-      InsertionPoint =
-          Lexer::getLocForEndOfToken(TSI->getTypeLoc().getEndLoc(), 0,
-                                     S.getSourceManager(), S.getLangOpts());
-    else
-      InsertionPoint = MD->getLocation();
-
+    InsertionPoint = Lexer::getLocForEndOfToken(
+        MD->getTypeSourceInfo()->getTypeLoc().getEndLoc(), 0,
+        S.getSourceManager(), S.getLangOpts());
     S.Diag(InsertionPoint, DiagID)
         << MD->getNameInfo().getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint,
                                       " [[clang::lifetimebound]]");
-
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();
+  }
+
+  void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
+    CXXMethodDecl *MutableMD = const_cast<CXXMethodDecl *>(MD);
+    ASTContext &Ctx = S.getASTContext();
+    if (lifetimes::implicitObjectParamIsLifetimeBound(MutableMD))
+      return;
+    auto *Attr =
+        LifetimeBoundAttr::CreateImplicit(Ctx, MutableMD->getLocation());
+    QualType MethodType = MutableMD->getType();
+    QualType AttributedType =
+        Ctx.getAttributedType(Attr, MethodType, MethodType);
+    TypeLocBuilder TLB;
+    if (TypeSourceInfo *TSI = MutableMD->getTypeSourceInfo())
+      TLB.pushFullCopy(TSI->getTypeLoc());
+    AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
+    TyLoc.setAttr(Attr);
+    MutableMD->setType(AttributedType);
+    MutableMD->setTypeSourceInfo(TLB.getTypeSourceInfo(Ctx, AttributedType));
   }
 
 private:

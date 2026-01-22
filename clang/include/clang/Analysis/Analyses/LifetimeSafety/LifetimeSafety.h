@@ -64,6 +64,10 @@ public:
   // Suggests lifetime bound annotations for implicit this
   virtual void suggestAnnotation(SuggestionScope Scope, const CXXMethodDecl *MD,
                                  const Expr *EscapeExpr) {}
+
+  // Adds inferred lifetime bound attribute for implicit this to its
+  // TypeSourceInfo
+  virtual void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) {}
 };
 
 /// The main entry point for the analysis.

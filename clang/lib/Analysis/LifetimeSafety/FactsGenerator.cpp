@@ -628,7 +628,7 @@ void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
 // parameter at the function's entry.
 llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   const auto *FD = dyn_cast<FunctionDecl>(AC.getDecl());
-  if (!FD || FD->isImplicit())
+  if (!FD)
     return {};
 
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
