@@ -4083,7 +4083,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Instrument compare-packed intrinsic.
   //
-  // x86 has the predicate as the third operand e.g.,
+  // x86 has the predicate as the third operand, which is ImmArg e.g.,
   // - <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double>, <4 x double>, i8)
   // - <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double>, <2 x double>, i8)
   //
