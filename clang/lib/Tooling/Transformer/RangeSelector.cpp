@@ -405,8 +405,7 @@ RangeSelector transformer::constructExprArgs(std::string ID) {
 namespace {
 // Returns the range of the elements of the initializer list. Includes all
 // source between the braces.
-CharSourceRange getElementsRange(const MatchResult &,
-                                 const InitListExpr &E) {
+CharSourceRange getElementsRange(const MatchResult &, const InitListExpr &E) {
   return CharSourceRange::getCharRange(E.getLBraceLoc().getLocWithOffset(1),
                                        E.getRBraceLoc());
 }

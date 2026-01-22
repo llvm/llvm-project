@@ -173,7 +173,7 @@ TEST(RangeSelectorTest, AfterOp) {
   )cc";
   StringRef Call = "call";
   TestMatch Match = matchCode(Code, callExpr().bind(Call));
-  const auto* E = Match.Result.Nodes.getNodeAs<Expr>(Call);
+  const auto *E = Match.Result.Nodes.getNodeAs<Expr>(Call);
   assert(E != nullptr);
   const SourceRange Range = E->getSourceRange();
   // The end token, a right paren, is one character wide, so advance by one,
