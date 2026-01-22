@@ -23,16 +23,13 @@
 #include "gtest/gtest.h"
 
 #include <algorithm>
-#include <optional>
 #include <string>
 #include <vector>
 
 using namespace llvm;
 using namespace llvm::orc;
 
-// Disabled due to test setup issue — YAML to shared library creation seems
-// invalid on some build bots. (PR #165360) Not related to code logic.
-#if 0
+#if defined(__APPLE__) || defined(__linux__)
 // TODO: Add COFF (Windows) support for these tests.
 // this facility also works correctly on Windows (COFF),
 // so we should eventually enable and run these tests for that platform as well.
@@ -105,8 +102,9 @@ public:
     if (!sys::fs::exists(InputDirPath))
       return;
 
-    SmallString<128> UniqueDir;
-    sys::path::append(UniqueDir, InputDirPath);
+    SmallString<512> ExecPath(sys::fs::getMainExecutable(nullptr, nullptr));
+    sys::path::remove_filename(ExecPath);
+    SmallString<128> UniqueDir(ExecPath);
     std::error_code EC = sys::fs::createUniqueDirectory(UniqueDir, DirPath);
 
     if (EC)
@@ -311,6 +309,14 @@ static bool endsWith(const std::string &s, const std::string &suffix) {
   return std::equal(suffix.rbegin(), suffix.rend(), s.rbegin());
 }
 
+static llvm::SmallVector<llvm::StringRef, 16>
+toRefs(const std::vector<std::string> &Syms) {
+  llvm::SmallVector<llvm::StringRef, 16> R;
+  for (auto &S : Syms)
+    R.push_back(S);
+  return R;
+}
+
 TEST_F(LibraryResolverIT, EnumerateSymbols_ExportsOnly_DefaultFlags) {
   const std::string libC = lib("C");
   SymbolEnumeratorOptions Opts = SymbolEnumeratorOptions::defaultOptions();
@@ -386,7 +392,7 @@ TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
                                    platformSymbolName("sayZ")};
 
   bool CallbackRan = false;
-  Driver->resolveSymbols(Syms, [&](SymbolQuery &Q) {
+  Driver->resolveSymbols(toRefs(Syms), [&](SymbolQuery &Q) {
     CallbackRan = true;
 
     // sayA should resolve to A.dylib
@@ -437,7 +443,7 @@ TEST_F(LibraryResolverIT, ResolveManySymbols) {
       platformSymbolName("sayA"), platformSymbolName("sayB")};
 
   bool CallbackRan = false;
-  Driver->resolveSymbols(Syms, [&](SymbolQuery &Q) {
+  Driver->resolveSymbols(toRefs(Syms), [&](SymbolQuery &Q) {
     CallbackRan = true;
     EXPECT_TRUE(Q.isResolved(platformSymbolName("sayA")));
     EXPECT_TRUE(Q.isResolved(platformSymbolName("sayB")));
@@ -621,7 +627,7 @@ TEST_F(LibraryResolverIT, ResolveFromUsrOrSystemPaths) {
   auto LibPathCache = std::make_shared<LibraryPathCache>();
   auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  DylibPathValidator validator(*PResolver);
+  DylibPathValidator validator(*PResolver, *LibPathCache);
 
   std::vector<std::string> Paths = {"/foo/bar/", "temp/foo",  libdir("C"),
                                     libdir("A"), libdir("B"), libdir("Z")};
@@ -673,7 +679,7 @@ TEST_F(LibraryResolverIT, ResolveViaLoaderPathAndRPathSubstitution) {
   auto LibPathCache = std::make_shared<LibraryPathCache>();
   auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  DylibPathValidator validator(*PResolver);
+  DylibPathValidator validator(*PResolver, *LibPathCache);
 
   std::vector<std::string> Paths = {"@loader_path/../A", "@loader_path/../B",
                                     "@loader_path/../C", "@loader_path/../Z"};
@@ -719,7 +725,7 @@ TEST_F(LibraryResolverIT, ResolveViaOriginAndRPathSubstitution) {
   auto LibPathCache = std::make_shared<LibraryPathCache>();
   auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  DylibPathValidator validator(*PResolver);
+  DylibPathValidator validator(*PResolver, *LibPathCache);
 
   // On Linux, $ORIGIN works like @loader_path
   std::vector<std::string> Paths = {"$ORIGIN/../A", "$ORIGIN/../B",

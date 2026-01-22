@@ -476,9 +476,8 @@ public:
 
   static Status
   GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                  const FileSpecList *module_search_paths_ptr,
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr, bool always_create = false);
+                  bool *did_create_ptr, bool invoke_locate_callback = true);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 
@@ -510,6 +509,12 @@ public:
 
   /// Atomically swaps the contents of this module list with \a other.
   void Swap(ModuleList &other);
+
+  /// For each module in this ModuleList, preload its symbols.
+  ///
+  /// \param[in] parallelize
+  ///     If true, all modules will be preloaded in parallel.
+  void PreloadSymbols(bool parallelize) const;
 
 protected:
   // Class typedefs.

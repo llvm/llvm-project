@@ -341,7 +341,7 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
   SmallVector<AllocaSetType, 4> NonOverlapedAllocas;
 
   // We need to add field for allocas at the end of this function.
-  auto AddFieldForAllocasAtExit = make_scope_exit([&]() {
+  llvm::scope_exit AddFieldForAllocasAtExit([&]() {
     for (auto AllocaList : NonOverlapedAllocas) {
       auto *LargestAI = *AllocaList.begin();
       FieldIDType Id = addFieldForAlloca(LargestAI);
@@ -554,6 +554,7 @@ static void cacheDIVar(FrameDataInfo &FrameData,
         DIVarCache.insert({V, (*I)->getVariable()});
     };
     CacheIt(findDVRDeclares(V));
+    CacheIt(findDVRDeclareValues(V));
   }
 }
 
@@ -978,6 +979,83 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   return FrameTy;
 }
 
+/// If MaybeArgument is a byval Argument, return its byval type. Also removes
+/// the captures attribute, so that the argument *value* may be stored directly
+/// on the coroutine frame.
+static Type *extractByvalIfArgument(Value *MaybeArgument) {
+  if (auto *Arg = dyn_cast<Argument>(MaybeArgument)) {
+    Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::Captures);
+
+    if (Arg->hasByValAttr())
+      return Arg->getParamByValType();
+  }
+  return nullptr;
+}
+
+/// Store Def into the coroutine frame.
+static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
+                                 Type *ByValTy, const coro::Shape &Shape,
+                                 const FrameDataInfo &FrameData) {
+  auto Index = FrameData.getFieldIndex(Def);
+  auto *G = Builder.CreateConstInBoundsGEP2_32(
+      Shape.FrameTy, Shape.FramePtr, 0, Index,
+      Def->getName() + Twine(".spill.addr"));
+  auto SpillAlignment = Align(FrameData.getAlign(Def));
+
+  // For byval arguments, store the pointed-to value in the frame.
+  if (ByValTy)
+    Builder.CreateAlignedStore(Builder.CreateLoad(ByValTy, Def), G,
+                               SpillAlignment);
+  else
+    Builder.CreateAlignedStore(Def, G, SpillAlignment);
+}
+
+/// Returns a GEP into the coroutine frame at the offset where Orig is located.
+static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
+                                      IRBuilder<> &Builder, coro::Shape &Shape,
+                                      Value *Orig) {
+  LLVMContext &Ctx = Shape.CoroBegin->getContext();
+  FieldIDType Index = FrameData.getFieldIndex(Orig);
+  SmallVector<Value *, 3> Indices = {
+      ConstantInt::get(Type::getInt32Ty(Ctx), 0),
+      ConstantInt::get(Type::getInt32Ty(Ctx), Index),
+  };
+
+  // If Orig is an array alloca, preserve the original type by adding an extra
+  // zero offset.
+  if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(AI->getArraySize())) {
+      auto Count = CI->getValue().getZExtValue();
+      if (Count > 1)
+        Indices.push_back(ConstantInt::get(Type::getInt32Ty(Ctx), 0));
+    } else {
+      report_fatal_error("Coroutines cannot handle non static allocas yet");
+    }
+  }
+
+  auto *GEP = Builder.CreateInBoundsGEP(Shape.FrameTy, Shape.FramePtr, Indices);
+  if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
+    if (FrameData.getDynamicAlign(Orig) != 0) {
+      assert(FrameData.getDynamicAlign(Orig) == AI->getAlign().value());
+      auto *M = AI->getModule();
+      auto *IntPtrTy = M->getDataLayout().getIntPtrType(AI->getType());
+      auto *PtrValue = Builder.CreatePtrToInt(GEP, IntPtrTy);
+      auto *AlignMask = ConstantInt::get(IntPtrTy, AI->getAlign().value() - 1);
+      PtrValue = Builder.CreateAdd(PtrValue, AlignMask);
+      PtrValue = Builder.CreateAnd(PtrValue, Builder.CreateNot(AlignMask));
+      return Builder.CreateIntToPtr(PtrValue, AI->getType());
+    }
+    // If the type of GEP is not equal to the type of AllocaInst, it implies
+    // that the AllocaInst may be reused in the Frame slot of other AllocaInst.
+    // Note: If the strategy dealing with alignment changes, this cast must be
+    // refined
+    if (GEP->getType() != Orig->getType())
+      GEP = Builder.CreateAddrSpaceCast(GEP, Orig->getType(),
+                                        Orig->getName() + Twine(".cast"));
+  }
+  return GEP;
+}
+
 // Replace all alloca and SSA values that are accessed across suspend points
 // with GetElementPointer from coroutine frame + loads and stores. Create an
 // AllocaSpillBB that will become the new entry block for the resume parts of
@@ -1004,88 +1082,15 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   Function *F = Shape.CoroBegin->getFunction();
   IRBuilder<> Builder(C);
   StructType *FrameTy = Shape.FrameTy;
-  Value *FramePtr = Shape.FramePtr;
   DominatorTree DT(*F);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
-  // Create a GEP with the given index into the coroutine frame for the original
-  // value Orig. Appends an extra 0 index for array-allocas, preserving the
-  // original type.
-  auto GetFramePointer = [&](Value *Orig) -> Value * {
-    FieldIDType Index = FrameData.getFieldIndex(Orig);
-    SmallVector<Value *, 3> Indices = {
-        ConstantInt::get(Type::getInt32Ty(C), 0),
-        ConstantInt::get(Type::getInt32Ty(C), Index),
-    };
-
-    if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
-      if (auto *CI = dyn_cast<ConstantInt>(AI->getArraySize())) {
-        auto Count = CI->getValue().getZExtValue();
-        if (Count > 1) {
-          Indices.push_back(ConstantInt::get(Type::getInt32Ty(C), 0));
-        }
-      } else {
-        report_fatal_error("Coroutines cannot handle non static allocas yet");
-      }
-    }
-
-    auto GEP = cast<GetElementPtrInst>(
-        Builder.CreateInBoundsGEP(FrameTy, FramePtr, Indices));
-    if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
-      if (FrameData.getDynamicAlign(Orig) != 0) {
-        assert(FrameData.getDynamicAlign(Orig) == AI->getAlign().value());
-        auto *M = AI->getModule();
-        auto *IntPtrTy = M->getDataLayout().getIntPtrType(AI->getType());
-        auto *PtrValue = Builder.CreatePtrToInt(GEP, IntPtrTy);
-        auto *AlignMask =
-            ConstantInt::get(IntPtrTy, AI->getAlign().value() - 1);
-        PtrValue = Builder.CreateAdd(PtrValue, AlignMask);
-        PtrValue = Builder.CreateAnd(PtrValue, Builder.CreateNot(AlignMask));
-        return Builder.CreateIntToPtr(PtrValue, AI->getType());
-      }
-      // If the type of GEP is not equal to the type of AllocaInst, it implies
-      // that the AllocaInst may be reused in the Frame slot of other
-      // AllocaInst. So We cast GEP to the AllocaInst here to re-use
-      // the Frame storage.
-      //
-      // Note: If we change the strategy dealing with alignment, we need to refine
-      // this casting.
-      if (GEP->getType() != Orig->getType())
-        return Builder.CreateAddrSpaceCast(GEP, Orig->getType(),
-                                           Orig->getName() + Twine(".cast"));
-    }
-    return GEP;
-  };
-
   for (auto const &E : FrameData.Spills) {
     Value *Def = E.first;
-    auto SpillAlignment = Align(FrameData.getAlign(Def));
-    // Create a store instruction storing the value into the
-    // coroutine frame.
-    BasicBlock::iterator InsertPt = coro::getSpillInsertionPt(Shape, Def, DT);
+    Type *ByValTy = extractByvalIfArgument(Def);
 
-    Type *ByValTy = nullptr;
-    if (auto *Arg = dyn_cast<Argument>(Def)) {
-      // If we're spilling an Argument, make sure we clear 'captures'
-      // from the coroutine function.
-      Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::Captures);
-
-      if (Arg->hasByValAttr())
-        ByValTy = Arg->getParamByValType();
-    }
-
-    auto Index = FrameData.getFieldIndex(Def);
-    Builder.SetInsertPoint(InsertPt->getParent(), InsertPt);
-    auto *G = Builder.CreateConstInBoundsGEP2_32(
-        FrameTy, FramePtr, 0, Index, Def->getName() + Twine(".spill.addr"));
-    if (ByValTy) {
-      // For byval arguments, we need to store the pointed value in the frame,
-      // instead of the pointer itself.
-      auto *Value = Builder.CreateLoad(ByValTy, Def);
-      Builder.CreateAlignedStore(Value, G, SpillAlignment);
-    } else {
-      Builder.CreateAlignedStore(Def, G, SpillAlignment);
-    }
+    Builder.SetInsertPoint(coro::getSpillInsertionPt(Shape, Def, DT));
+    createStoreIntoFrame(Builder, Def, ByValTy, Shape, FrameData);
 
     BasicBlock *CurrentBlock = nullptr;
     Value *CurrentReload = nullptr;
@@ -1098,14 +1103,16 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         Builder.SetInsertPoint(CurrentBlock,
                                CurrentBlock->getFirstInsertionPt());
 
-        auto *GEP = GetFramePointer(E.first);
+        auto *GEP = createGEPToFramePointer(FrameData, Builder, Shape, E.first);
         GEP->setName(E.first->getName() + Twine(".reload.addr"));
         if (ByValTy)
           CurrentReload = GEP;
-        else
+        else {
+          auto SpillAlignment = Align(FrameData.getAlign(Def));
           CurrentReload = Builder.CreateAlignedLoad(
               FrameTy->getElementType(FrameData.getFieldIndex(E.first)), GEP,
               SpillAlignment, E.first->getName() + Twine(".reload"));
+        }
 
         TinyPtrVector<DbgVariableRecord *> DVRs = findDVRDeclares(Def);
         // Try best to find dbg.declare. If the spill is a temp, there may not
@@ -1141,6 +1148,47 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         };
         for_each(DVRs, SalvageOne);
       }
+
+      TinyPtrVector<DbgVariableRecord *> DVRDeclareValues =
+          findDVRDeclareValues(Def);
+      // Try best to find dbg.declare_value. If the spill is a temp, there may
+      // not be a direct dbg.declare_value. Walk up the load chain to find one
+      // from an alias.
+      if (F->getSubprogram()) {
+        auto *CurDef = Def;
+        while (DVRDeclareValues.empty() && isa<LoadInst>(CurDef)) {
+          auto *LdInst = cast<LoadInst>(CurDef);
+          // Only consider ptr to ptr same type load.
+          if (LdInst->getPointerOperandType() != LdInst->getType())
+            break;
+          CurDef = LdInst->getPointerOperand();
+          if (!isa<AllocaInst, LoadInst>(CurDef))
+            break;
+          DVRDeclareValues = findDVRDeclareValues(CurDef);
+        }
+      }
+
+      auto SalvageOneCoro = [&](auto *DDI) {
+        // This dbg.declare_value is preserved for all coro-split function
+        // fragments. It will be unreachable in the main function, and
+        // processed by coro::salvageDebugInfo() by the Cloner. However, convert
+        // it to a dbg.declare to make sure future passes don't have to deal
+        // with a dbg.declare_value.
+        auto *VAM = ValueAsMetadata::get(CurrentReload);
+        Type *Ty = VAM->getValue()->getType();
+        // If the metadata type is not a pointer, emit a dbg.value instead.
+        DbgVariableRecord *NewDVR = new DbgVariableRecord(
+            ValueAsMetadata::get(CurrentReload), DDI->getVariable(),
+            DDI->getExpression(), DDI->getDebugLoc(),
+            Ty->isPointerTy() ? DbgVariableRecord::LocationType::Declare
+                              : DbgVariableRecord::LocationType::Value);
+        Builder.GetInsertPoint()->getParent()->insertDbgRecordBefore(
+            NewDVR, Builder.GetInsertPoint());
+        // This dbg.declare_value is for the main function entry point.  It
+        // will be deleted in all coro-split functions.
+        coro::salvageDebugInfo(ArgToAllocaMap, *DDI, false /*UseEntryValue*/);
+      };
+      for_each(DVRDeclareValues, SalvageOneCoro);
 
       // If we have a single edge PHINode, remove it and replace it with a
       // reload from the coroutine frame. (We already took care of multi edge
@@ -1178,7 +1226,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     Builder.SetInsertPoint(SpillBlock, SpillBlock->begin());
     for (const auto &P : FrameData.Allocas) {
       AllocaInst *Alloca = P.Alloca;
-      auto *G = GetFramePointer(Alloca);
+      auto *G = createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
 
       // Remove any lifetime intrinsics, now that these are no longer allocas.
       for (User *U : make_early_inc_range(Alloca->users())) {
@@ -1220,7 +1268,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
     if (UsersToUpdate.empty())
       continue;
-    auto *G = GetFramePointer(Alloca);
+    auto *G = createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
     G->setName(Alloca->getName() + Twine(".reload.addr"));
 
     SmallVector<DbgVariableRecord *> DbgVariableRecords;
@@ -1240,7 +1288,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         report_fatal_error(
             "Coroutines cannot handle copying of array allocas yet");
 
-      auto *G = GetFramePointer(Alloca);
+      auto *G = createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
       auto *Value = Builder.CreateLoad(Alloca->getAllocatedType(), Alloca);
       Builder.CreateStore(Value, G);
     }
@@ -1248,7 +1296,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     // CoroBegin, we recreate them after CoroBegin by applying the offset
     // to the pointer in the frame.
     for (const auto &Alias : A.Aliases) {
-      auto *FramePtr = GetFramePointer(Alloca);
+      auto *FramePtr =
+          createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
       auto &Value = *Alias.second;
       auto ITy = IntegerType::get(C, Value.getBitWidth());
       auto *AliasPtr =
@@ -1293,7 +1342,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     });
     if (HasAccessingPromiseBeforeCB) {
       Builder.SetInsertPoint(&*Shape.getInsertPtAfterFramePtr());
-      auto *G = GetFramePointer(PA);
+      auto *G = createGEPToFramePointer(FrameData, Builder, Shape, PA);
       auto *Value = Builder.CreateLoad(PA->getAllocatedType(), PA);
       Builder.CreateStore(Value, G);
     }
@@ -1882,21 +1931,25 @@ salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
     return std::nullopt;
 
   auto *StorageAsArg = dyn_cast<Argument>(Storage);
-  const bool IsSwiftAsyncArg =
-      StorageAsArg && StorageAsArg->hasAttribute(Attribute::SwiftAsync);
 
-  // Swift async arguments are described by an entry value of the ABI-defined
-  // register containing the coroutine context.
+  const bool IsSingleLocationExpression = Expr->isSingleLocationExpression();
+  // Use an EntryValue when requested (UseEntryValue) for swift async Arguments.
   // Entry values in variadic expressions are not supported.
-  if (IsSwiftAsyncArg && UseEntryValue && !Expr->isEntryValue() &&
-      Expr->isSingleLocationExpression())
+  const bool WillUseEntryValue =
+      UseEntryValue && StorageAsArg &&
+      StorageAsArg->hasAttribute(Attribute::SwiftAsync) &&
+      !Expr->isEntryValue() && IsSingleLocationExpression;
+
+  if (WillUseEntryValue)
     Expr = DIExpression::prepend(Expr, DIExpression::EntryValue);
 
   // If the coroutine frame is an Argument, store it in an alloca to improve
   // its availability (e.g. registers may be clobbered).
   // Avoid this if the value is guaranteed to be available through other means
   // (e.g. swift ABI guarantees).
-  if (StorageAsArg && !IsSwiftAsyncArg) {
+  // Avoid this if multiple location expressions are involved, as LLVM does not
+  // know how to prepend a deref in this scenario.
+  if (StorageAsArg && !WillUseEntryValue && IsSingleLocationExpression) {
     auto &Cached = ArgToAllocaMap[StorageAsArg];
     if (!Cached) {
       Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
@@ -1925,7 +1978,7 @@ void coro::salvageDebugInfo(
   Function *F = DVR.getFunction();
   // Follow the pointer arithmetic all the way to the incoming
   // function argument and convert into a DIExpression.
-  bool SkipOutermostLoad = DVR.isDbgDeclare();
+  bool SkipOutermostLoad = DVR.isDbgDeclare() || DVR.isDbgDeclareValue();
   Value *OriginalStorage = DVR.getVariableLocationOp(0);
 
   auto SalvagedInfo =
@@ -1939,10 +1992,11 @@ void coro::salvageDebugInfo(
 
   DVR.replaceVariableLocationOp(OriginalStorage, Storage);
   DVR.setExpression(Expr);
-  // We only hoist dbg.declare today since it doesn't make sense to hoist
-  // dbg.value since it does not have the same function wide guarantees that
-  // dbg.declare does.
-  if (DVR.getType() == DbgVariableRecord::LocationType::Declare) {
+  // We only hoist dbg.declare and dbg.declare_value today since it doesn't make
+  // sense to hoist dbg.value since it does not have the same function wide
+  // guarantees that dbg.declare does.
+  if (DVR.getType() == DbgVariableRecord::LocationType::Declare ||
+      DVR.getType() == DbgVariableRecord::LocationType::DeclareValue) {
     std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
@@ -1957,6 +2011,19 @@ void coro::salvageDebugInfo(
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt) {
       DVR.removeFromParent();
+      // If there is a dbg.declare_value being reinserted, insert it as a
+      // dbg.declare instead, so that subsequent passes don't have to deal with
+      // a dbg.declare_value.
+      if (DVR.getType() == DbgVariableRecord::LocationType::DeclareValue) {
+        auto *MD = DVR.getRawLocation();
+        if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
+          Type *Ty = VAM->getValue()->getType();
+          if (Ty->isPointerTy())
+            DVR.Type = DbgVariableRecord::LocationType::Declare;
+          else
+            DVR.Type = DbgVariableRecord::LocationType::Value;
+        }
+      }
       (*InsertPt)->getParent()->insertDbgRecordBefore(&DVR, *InsertPt);
     }
   }

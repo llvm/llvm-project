@@ -401,19 +401,8 @@ struct ConvertNVGPUToNVVMPass
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext(), options);
     IRRewriter rewriter(&getContext());
-    populateGpuMemorySpaceAttributeConversions(
-        converter, [](gpu::AddressSpace space) -> unsigned {
-          switch (space) {
-          case gpu::AddressSpace::Global:
-            return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
-          case gpu::AddressSpace::Workgroup:
-            return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
-          case gpu::AddressSpace::Private:
-            return 0;
-          }
-          llvm_unreachable("unknown address space enum value");
-          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
-        });
+    nvgpu::populateCommonGPUTypeAndAttributeConversions(converter);
+
     /// device-side async tokens cannot be materialized in nvvm. We just
     /// convert them to a dummy i32 type in order to easily drop them during
     /// conversion.
@@ -865,13 +854,7 @@ struct NVGPUMBarrierArriveLowering
                        adaptor.getMbarId(), rewriter);
     Type tokenType = getTypeConverter()->convertType(
         nvgpu::MBarrierTokenType::get(op->getContext()));
-    if (isMbarrierShared(op.getBarriers().getType())) {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveSharedOp>(op, tokenType,
-                                                                barrier);
-    } else {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, tokenType,
-                                                          barrier);
-    }
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, tokenType, barrier);
     return success();
   }
 };
@@ -892,13 +875,8 @@ struct NVGPUMBarrierArriveNoCompleteLowering
     Type tokenType = getTypeConverter()->convertType(
         nvgpu::MBarrierTokenType::get(op->getContext()));
     Value count = truncToI32(b, adaptor.getCount());
-    if (isMbarrierShared(op.getBarriers().getType())) {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveNocompleteSharedOp>(
-          op, tokenType, barrier, count);
-    } else {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveNocompleteOp>(
-          op, tokenType, barrier, count);
-    }
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveNocompleteOp>(
+        op, tokenType, barrier, count);
     return success();
   }
 };
@@ -915,13 +893,8 @@ struct NVGPUMBarrierTestWaitLowering
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
     Type retType = rewriter.getI1Type();
-    if (isMbarrierShared(op.getBarriers().getType())) {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierTestWaitSharedOp>(
-          op, retType, barrier, adaptor.getToken());
-    } else {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierTestWaitOp>(
-          op, retType, barrier, adaptor.getToken());
-    }
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierTestWaitOp>(op, retType, barrier,
+                                                          adaptor.getToken());
     return success();
   }
 };
@@ -938,15 +911,12 @@ struct NVGPUMBarrierArriveExpectTxLowering
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
     Value txcount = truncToI32(b, adaptor.getTxcount());
-
-    if (isMbarrierShared(op.getBarriers().getType())) {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxSharedOp>(
-          op, barrier, txcount, adaptor.getPredicate());
-      return success();
-    }
-
     rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxOp>(
-        op, barrier, txcount, adaptor.getPredicate());
+        op, Type{},       // return-value is optional and is void by default
+        barrier, txcount, // barrier and txcount
+        NVVM::MemScopeKind::CTA, // default scope is CTA
+        false,                   // relaxed-semantics is false
+        adaptor.getPredicate());
     return success();
   }
 };
@@ -965,13 +935,6 @@ struct NVGPUMBarrierTryWaitParityLowering
     Value ticks = truncToI32(b, adaptor.getTicks());
     Value phase =
         LLVM::ZExtOp::create(b, b.getI32Type(), adaptor.getPhaseParity());
-
-    if (isMbarrierShared(op.getBarriers().getType())) {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierTryWaitParitySharedOp>(
-          op, barrier, phase, ticks);
-      return success();
-    }
-
     rewriter.replaceOpWithNewOp<NVVM::MBarrierTryWaitParityOp>(op, barrier,
                                                                phase, ticks);
     return success();
@@ -1744,6 +1707,26 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
   }
 };
 } // namespace
+
+void mlir::nvgpu::populateCommonGPUTypeAndAttributeConversions(
+    TypeConverter &typeConverter) {
+  // NVVM uses alloca in the default address space to represent private
+  // memory allocations, so drop private annotations. NVVM uses address
+  // space 3 for shared memory. NVVM uses the default address space to
+  // represent global memory.
+  populateGpuMemorySpaceAttributeConversions(
+      typeConverter, [](gpu::AddressSpace space) -> unsigned {
+        switch (space) {
+        case gpu::AddressSpace::Global:
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
+        case gpu::AddressSpace::Workgroup:
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
+        case gpu::AddressSpace::Private:
+          return 0;
+        }
+        llvm_unreachable("unknown address space enum value");
+      });
+}
 
 void mlir::populateNVGPUToNVVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {

@@ -1,44 +1,31 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_TEST_CLANG_TIDY_CHECKERS_INPUTS_BDE_TYPES_OPTIONAL_H_
 #define LLVM_CLANG_TOOLS_EXTRA_TEST_CLANG_TIDY_CHECKERS_INPUTS_BDE_TYPES_OPTIONAL_H_
 
-/// Mock of `bsl::optional`.
+#include "../../std/types/optional.h"
+
 namespace bsl {
+  class string {};
+}
 
-// clang-format off
-template <typename T> struct remove_reference      { using type = T; };
-template <typename T> struct remove_reference<T&>  { using type = T; };
-template <typename T> struct remove_reference<T&&> { using type = T; };
-// clang-format on
+/// Mock of `BloombergLP::bslstl::Optional_Base`
+namespace BloombergLP::bslstl {
 
-template <typename T>
-using remove_reference_t = typename remove_reference<T>::type;
+template <class T>
+constexpr bool isAllocatorAware() {
+  return false;
+}
 
-template <typename T>
-constexpr T &&forward(remove_reference_t<T> &t) noexcept;
+template <>
+constexpr bool isAllocatorAware<bsl::string>() {
+  return true;
+}
 
-template <typename T>
-constexpr T &&forward(remove_reference_t<T> &&t) noexcept;
-
-template <typename T>
-constexpr remove_reference_t<T> &&move(T &&x);
-
-struct nullopt_t {
-  constexpr explicit nullopt_t() {}
-};
-
-constexpr nullopt_t nullopt;
-
-template <typename T>
-class optional {
+// Note: real `Optional_Base` uses `BloombergLP::bslma::UsesBslmaAllocator`
+// to check if type is allocator-aware.
+// This is simplified mock to illustrate similar behaviour.
+template <class T, bool AA = isAllocatorAware<T>()>
+class Optional_Base {
 public:
-  constexpr optional() noexcept;
-
-  constexpr optional(nullopt_t) noexcept;
-
-  optional(const optional &) = default;
-
-  optional(optional &&) = default;
-
   const T &operator*() const &;
   T &operator*() &;
   const T &&operator*() const &&;
@@ -65,9 +52,37 @@ public:
 
   void reset() noexcept;
 
-  void swap(optional &rhs) noexcept;
+  void swap(Optional_Base &rhs) noexcept;
 
-  template <typename U> optional &operator=(const U &u);
+  template <typename U> Optional_Base &operator=(const U &u);
+};
+
+template <class T>
+class Optional_Base<T, false> : public std::optional<T> {
+};
+
+} // namespace BloombergLP::bslstl
+
+
+/// Mock of `bsl::optional`.
+namespace bsl {
+
+struct nullopt_t {
+  constexpr explicit nullopt_t() {}
+};
+
+constexpr nullopt_t nullopt;
+
+template <typename T>
+class optional : public BloombergLP::bslstl::Optional_Base<T> {
+public:
+  constexpr optional() noexcept;
+
+  constexpr optional(nullopt_t) noexcept;
+
+  optional(const optional &) = default;
+
+  optional(optional &&) = default;
 };
 
 } // namespace bsl

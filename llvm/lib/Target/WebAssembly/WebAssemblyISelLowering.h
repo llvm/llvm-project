@@ -19,17 +19,6 @@
 
 namespace llvm {
 
-namespace WebAssemblyISD {
-
-enum NodeType : unsigned {
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-#define HANDLE_NODETYPE(NODE) NODE,
-#include "WebAssemblyISD.def"
-#undef HANDLE_NODETYPE
-};
-
-} // end namespace WebAssemblyISD
-
 class WebAssemblySubtarget;
 
 class WebAssemblyTargetLowering final : public TargetLowering {
@@ -45,15 +34,17 @@ private:
   /// right decision when generating code for different targets.
   const WebAssemblySubtarget *Subtarget;
 
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
   bool shouldScalarizeBinop(SDValue VecOp) const override;
-  FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
-                           const TargetLibraryInfo *LibInfo) const override;
+  FastISel *
+  createFastISel(FunctionLoweringInfo &FuncInfo,
+                 const TargetLibraryInfo *LibInfo,
+                 const LibcallLoweringInfo *LibcallLowering) const override;
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT) const override;
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
-  const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
@@ -70,7 +61,7 @@ private:
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
@@ -142,7 +133,8 @@ private:
 
 namespace WebAssembly {
 FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                         const TargetLibraryInfo *libInfo);
+                         const TargetLibraryInfo *libInfo,
+                         const LibcallLoweringInfo *libcallLowering);
 } // end namespace WebAssembly
 
 } // end namespace llvm

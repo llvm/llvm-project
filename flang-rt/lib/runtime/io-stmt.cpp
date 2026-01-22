@@ -270,13 +270,11 @@ int ExternalIoStatementBase::EndIoStatement() {
     }
   }
 #else
-  // Fetch the unit pointer before *this disappears.
-  ExternalFileUnit *unitPtr{&unit_};
   // The pseudo file units are dynamically allocated
-  // and are not tracked in the unit map.
-  // They have to be destructed and deallocated here.
-  unitPtr->~ExternalFileUnit();
-  FreeMemory(unitPtr);
+  // and are not tracked in any unit map.
+  // They have to be destroyed and deallocated here.
+  unit_.~ExternalFileUnit();
+  FreeMemory(&unit_);
 #endif
   return result;
 }
@@ -1109,20 +1107,20 @@ ChildListIoStatementState<DIR>::ChildListIoStatementState(
     ChildIo &child, const char *sourceFile, int sourceLine)
     : ChildIoStatementState<DIR>{child, sourceFile, sourceLine} {
 #if !defined(RT_DEVICE_AVOID_RECURSION)
-  if constexpr (DIR == Direction::Input) {
-    if (const auto *listInput{child.parent()
-                .get_if<ListDirectedStatementState<Direction::Input>>()}) {
-      this->set_eatComma(listInput->eatComma());
-      this->namelistGroup_ = listInput->namelistGroup();
-      if (auto *childListInput{child.parent()
-                  .get_if<ChildListIoStatementState<Direction::Input>>()}) {
-        // Child list input whose parent is child list input: can advance
-        // if the parent can.
-        this->canAdvance_ = childListInput->CanAdvance();
-      } else {
-        // Child list input of top-level list input: can advance.
-        this->canAdvance_ = true;
-      }
+  if (const auto *listParent{
+          child.parent().get_if<ListDirectedStatementState<DIR>>()}) {
+    if constexpr (DIR == Direction::Input) {
+      this->set_eatComma(listParent->eatComma());
+      this->namelistGroup_ = listParent->namelistGroup();
+    }
+    if (auto *childListParent{
+            child.parent().get_if<ChildListIoStatementState<DIR>>()}) {
+      // Child list I/O whose parent is child list I/O: can advance
+      // if the parent can.
+      this->canAdvance_ = childListParent->CanAdvance();
+    } else {
+      // Child list I/O of top-level list I/O: can advance.
+      this->canAdvance_ = true;
     }
   }
 #else

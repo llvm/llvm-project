@@ -30,7 +30,7 @@ namespace {
 class RegisterBank {
 
   /// A vector of register classes that are included in the register bank.
-  typedef std::vector<const CodeGenRegisterClass *> RegisterClassesTy;
+  using RegisterClassesTy = std::vector<const CodeGenRegisterClass *>;
 
 private:
   const Record &TheDef;

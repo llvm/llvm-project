@@ -783,37 +783,20 @@ multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
 
 multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
                                      RegisterOperand vdataClass,
-                                     ValueType vdataType,
-                                     SDPatternOperator atomic> {
+                                     ValueType vdataType> {
   let FPAtomic = vdataType.isFP in {
-    def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset),
-               vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <0, NAME # "_RTN">;
-
-    def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset),
-                vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <1, NAME # "_RTN">;
-
+    def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0>,
+                      MUBUFAddr64Table <0, NAME # "_RTN">;
+    def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0>,
+                      MUBUFAddr64Table <1, NAME # "_RTN">;
     def _OFFEN_RTN  : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.OffEn,  vdataClass, 0>;
     def _IDXEN_RTN  : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.IdxEn,  vdataClass, 0>;
     def _BOTHEN_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, 0>;
 
-    def _VBUFFER_OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset),
-               vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <0, NAME # "_VBUFFER_RTN">;
-
-    def _VBUFFER_ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Addr64, vdataClass, 1,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset),
-                vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <1, NAME # "_VBUFFER_RTN">;
-
+    def _VBUFFER_OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1>,
+                      MUBUFAddr64Table <0, NAME # "_VBUFFER_RTN">;
+    def _VBUFFER_ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Addr64, vdataClass, 1>,
+                      MUBUFAddr64Table <1, NAME # "_VBUFFER_RTN">;
     def _VBUFFER_OFFEN_RTN  : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.OffEn,  vdataClass, 1>;
     def _VBUFFER_IDXEN_RTN  : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.IdxEn,  vdataClass, 1>;
     def _VBUFFER_BOTHEN_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.BothEn, vdataClass, 1>;
@@ -822,10 +805,9 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
 
 multiclass MUBUF_Pseudo_Atomics <string opName,
                                  RegisterOperand vdataClass,
-                                 ValueType vdataType,
-                                 SDPatternOperator atomic = null_frag> :
+                                 ValueType vdataType> :
   MUBUF_Pseudo_Atomics_NO_RTN<opName, vdataClass, vdataType>,
-  MUBUF_Pseudo_Atomics_RTN<opName, vdataClass, vdataType, atomic>;
+  MUBUF_Pseudo_Atomics_RTN<opName, vdataClass, vdataType>;
 
 
 //===----------------------------------------------------------------------===//
@@ -1096,7 +1078,7 @@ defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
 
 let OtherPredicates = [HasGFX10_BEncoding] in {
   defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics <
-    "buffer_atomic_csub", VGPROp_32, i32, int_amdgcn_global_atomic_csub
+    "buffer_atomic_csub", VGPROp_32, i32
   >;
 }
 
@@ -1117,22 +1099,22 @@ def BUFFER_WBINVL1_SC : MUBUF_Invalidate <"buffer_wbinvl1_sc",
 let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
 
 defm BUFFER_ATOMIC_FCMPSWAP : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fcmpswap", AVLdSt_64, v2f32, null_frag
+  "buffer_atomic_fcmpswap", AVLdSt_64, v2f32
 >;
 }
 
 let SubtargetPredicate = HasAtomicFMinFMaxF32GlobalInsts in {
 defm BUFFER_ATOMIC_FMIN : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fmin", AVLdSt_32, f32, null_frag
+  "buffer_atomic_fmin", AVLdSt_32, f32
 >;
 defm BUFFER_ATOMIC_FMAX : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fmax", AVLdSt_32, f32, null_frag
+  "buffer_atomic_fmax", AVLdSt_32, f32
 >;
 }
 
 let SubtargetPredicate = isGFX6GFX7GFX10 in {
 defm BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fcmpswap_x2", VGPROp_128, v2f64, null_frag
+  "buffer_atomic_fcmpswap_x2", VGPROp_128, v2f64
 >;
 }
 
@@ -1201,12 +1183,12 @@ defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_NO_RTN <
 
 let SubtargetPredicate = HasAtomicFaddRtnInsts in
 defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_RTN<
-  "buffer_atomic_add_f32", AVLdSt_32, f32, null_frag
+  "buffer_atomic_add_f32", AVLdSt_32, f32
 >;
 
 let SubtargetPredicate = HasAtomicBufferGlobalPkAddF16Insts in
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_RTN <
-  "buffer_atomic_pk_add_f16", AVLdSt_32, v2f16, null_frag
+  "buffer_atomic_pk_add_f16", AVLdSt_32, v2f16
 >;
 
 let SubtargetPredicate = isGFX12Plus in {
@@ -2008,7 +1990,7 @@ multiclass MUBUFScratchLoadPat_D16 <string Instr,
   defm : MUBUFScratchLoadPat_D16_Common<Instr # "_VBUFFER", vt, ld_frag>;
 }
 
-let OtherPredicates = [DisableFlatScratch] in {
+let OtherPredicates = [NotHasFlatScratchEnabled] in {
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_SBYTE", i32, sextloadi8_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_UBYTE", i32, extloadi8_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_UBYTE", i32, zextloadi8_private>;
@@ -2027,7 +2009,7 @@ defm : MUBUFScratchLoadPat <"BUFFER_LOAD_DWORDX2", v2i32, load_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_DWORDX3", v3i32, load_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_DWORDX4", v4i32, load_private>;
 
-let OtherPredicates = [D16PreservesUnusedBits, DisableFlatScratch] in {
+let OtherPredicates = [D16PreservesUnusedBits, NotHasFlatScratchEnabled] in {
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_SHORT_D16_HI", v2i16, load_d16_hi_private>;
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_UBYTE_D16_HI", v2i16, az_extloadi8_d16_hi_private>;
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_SBYTE_D16_HI", v2i16, sextloadi8_d16_hi_private>;
@@ -2043,7 +2025,7 @@ defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_UBYTE_D16", v2f16, az_extloadi8_d16_
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_SBYTE_D16", v2f16, sextloadi8_d16_lo_private>;
 }
 
-} // End OtherPredicates = [DisableFlatScratch]
+} // End OtherPredicates = [NotHasFlatScratchEnabled]
 
 multiclass MUBUFStore_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo Instr_OFFSET,
                                       ValueType vt, PatFrag atomic_st> {
@@ -2112,7 +2094,7 @@ multiclass MUBUFScratchStorePat <string Instr,
   defm : MUBUFScratchStorePat_Common<Instr # "_VBUFFER", vt, st, rc>;
 }
 
-let OtherPredicates = [DisableFlatScratch] in {
+let OtherPredicates = [NotHasFlatScratchEnabled] in {
 defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE", i32, truncstorei8_private>;
 defm : MUBUFScratchStorePat <"BUFFER_STORE_SHORT", i32, truncstorei16_private>;
 defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE", i16, truncstorei8_private>;
@@ -2127,7 +2109,7 @@ defm : MUBUFScratchStorePat <"BUFFER_STORE_DWORDX3", v3i32, store_private, VReg_
 defm : MUBUFScratchStorePat <"BUFFER_STORE_DWORDX4", v4i32, store_private, VReg_128>;
 
 
-let OtherPredicates = [HasD16LoadStore, DisableFlatScratch] in {
+let OtherPredicates = [HasD16LoadStore, NotHasFlatScratchEnabled] in {
  // Hiding the extract high pattern in the PatFrag seems to not
  // automatically increase the complexity.
 let AddedComplexity = 1 in {
@@ -2135,7 +2117,7 @@ defm : MUBUFScratchStorePat <"BUFFER_STORE_SHORT_D16_HI", i32, store_hi16_privat
 defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE_D16_HI", i32, truncstorei8_hi16_private>;
 }
 }
-} // End OtherPredicates = [DisableFlatScratch]
+} // End OtherPredicates = [NotHasFlatScratchEnabled]
 
 //===----------------------------------------------------------------------===//
 // MTBUF Patterns

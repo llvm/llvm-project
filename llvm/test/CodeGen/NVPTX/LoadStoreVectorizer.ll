@@ -45,29 +45,31 @@ define half @fh(ptr %p) {
 ; ENABLED-LABEL: fh(
 ; ENABLED:       {
 ; ENABLED-NEXT:    .reg .b16 %rs<10>;
-; ENABLED-NEXT:    .reg .b32 %r<13>;
+; ENABLED-NEXT:    .reg .b32 %r<17>;
 ; ENABLED-NEXT:    .reg .b64 %rd<2>;
 ; ENABLED-EMPTY:
 ; ENABLED-NEXT:  // %bb.0:
 ; ENABLED-NEXT:    ld.param.b64 %rd1, [fh_param_0];
-; ENABLED-NEXT:    ld.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
-; ENABLED-NEXT:    ld.b16 %rs5, [%rd1+8];
-; ENABLED-NEXT:    cvt.f32.f16 %r1, %rs2;
-; ENABLED-NEXT:    cvt.f32.f16 %r2, %rs1;
-; ENABLED-NEXT:    add.rn.f32 %r3, %r2, %r1;
-; ENABLED-NEXT:    cvt.rn.f16.f32 %rs6, %r3;
-; ENABLED-NEXT:    cvt.f32.f16 %r4, %rs4;
-; ENABLED-NEXT:    cvt.f32.f16 %r5, %rs3;
-; ENABLED-NEXT:    add.rn.f32 %r6, %r5, %r4;
-; ENABLED-NEXT:    cvt.rn.f16.f32 %rs7, %r6;
-; ENABLED-NEXT:    cvt.f32.f16 %r7, %rs7;
-; ENABLED-NEXT:    cvt.f32.f16 %r8, %rs6;
-; ENABLED-NEXT:    add.rn.f32 %r9, %r8, %r7;
-; ENABLED-NEXT:    cvt.rn.f16.f32 %rs8, %r9;
-; ENABLED-NEXT:    cvt.f32.f16 %r10, %rs8;
-; ENABLED-NEXT:    cvt.f32.f16 %r11, %rs5;
-; ENABLED-NEXT:    add.rn.f32 %r12, %r10, %r11;
-; ENABLED-NEXT:    cvt.rn.f16.f32 %rs9, %r12;
+; ENABLED-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; ENABLED-NEXT:    { .reg .b16 tmp; mov.b32 {%rs1, tmp}, %r3; }
+; ENABLED-NEXT:    mov.b32 {%rs2, %rs3}, %r2;
+; ENABLED-NEXT:    mov.b32 {%rs4, %rs5}, %r1;
+; ENABLED-NEXT:    cvt.f32.f16 %r5, %rs5;
+; ENABLED-NEXT:    cvt.f32.f16 %r6, %rs4;
+; ENABLED-NEXT:    add.rn.f32 %r7, %r6, %r5;
+; ENABLED-NEXT:    cvt.rn.f16.f32 %rs6, %r7;
+; ENABLED-NEXT:    cvt.f32.f16 %r8, %rs3;
+; ENABLED-NEXT:    cvt.f32.f16 %r9, %rs2;
+; ENABLED-NEXT:    add.rn.f32 %r10, %r9, %r8;
+; ENABLED-NEXT:    cvt.rn.f16.f32 %rs7, %r10;
+; ENABLED-NEXT:    cvt.f32.f16 %r11, %rs7;
+; ENABLED-NEXT:    cvt.f32.f16 %r12, %rs6;
+; ENABLED-NEXT:    add.rn.f32 %r13, %r12, %r11;
+; ENABLED-NEXT:    cvt.rn.f16.f32 %rs8, %r13;
+; ENABLED-NEXT:    cvt.f32.f16 %r14, %rs8;
+; ENABLED-NEXT:    cvt.f32.f16 %r15, %rs1;
+; ENABLED-NEXT:    add.rn.f32 %r16, %r14, %r15;
+; ENABLED-NEXT:    cvt.rn.f16.f32 %rs9, %r16;
 ; ENABLED-NEXT:    st.param.b16 [func_retval0], %rs9;
 ; ENABLED-NEXT:    ret;
 ;

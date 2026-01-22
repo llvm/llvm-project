@@ -18,7 +18,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <map>
 #include <vector>
 
 using namespace llvm;

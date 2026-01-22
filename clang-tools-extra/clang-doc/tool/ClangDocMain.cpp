@@ -22,7 +22,9 @@
 #include "Generators.h"
 #include "Representation.h"
 #include "support/Utils.h"
-#include "clang/ASTMatchers/ASTMatchersInternal.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Tooling/AllTUsExecution.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
@@ -41,7 +43,6 @@
 #include <mutex>
 #include <string>
 
-using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
 
@@ -110,21 +111,20 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
 
-enum OutputFormatTy { md, yaml, html, mustache, json };
+enum OutputFormatTy { md, yaml, html, json };
 
-static llvm::cl::opt<OutputFormatTy> FormatEnum(
-    "format", llvm::cl::desc("Format for outputted docs."),
-    llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
-                                "Documentation in YAML format."),
-                     clEnumValN(OutputFormatTy::md, "md",
-                                "Documentation in MD format."),
-                     clEnumValN(OutputFormatTy::html, "html",
-                                "Documentation in HTML format."),
-                     clEnumValN(OutputFormatTy::mustache, "mustache",
-                                "Documentation in mustache HTML format"),
-                     clEnumValN(OutputFormatTy::json, "json",
-                                "Documentation in JSON format")),
-    llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
+static llvm::cl::opt<OutputFormatTy>
+    FormatEnum("format", llvm::cl::desc("Format for outputted docs."),
+               llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
+                                           "Documentation in YAML format."),
+                                clEnumValN(OutputFormatTy::md, "md",
+                                           "Documentation in MD format."),
+                                clEnumValN(OutputFormatTy::html, "html",
+                                           "Documentation in HTML format."),
+                                clEnumValN(OutputFormatTy::json, "json",
+                                           "Documentation in JSON format")),
+               llvm::cl::init(OutputFormatTy::yaml),
+               llvm::cl::cat(ClangDocCategory));
 
 static llvm::ExitOnError ExitOnErr;
 
@@ -136,8 +136,6 @@ static std::string getFormatString() {
     return "md";
   case OutputFormatTy::html:
     return "html";
-  case OutputFormatTy::mustache:
-    return "mustache";
   case OutputFormatTy::json:
     return "json";
   }
@@ -153,6 +151,7 @@ static std::string getExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
+// TODO: Rename this, since it only gets custom CSS/JS
 static llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   using DirIt = llvm::sys::fs::directory_iterator;
   std::error_code FileErr;
@@ -173,58 +172,15 @@ static llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   return llvm::Error::success();
 }
 
-static llvm::Error getDefaultAssetFiles(const char *Argv0,
-                                        clang::doc::ClangDocContext &CDCtx) {
-  void *MainAddr = (void *)(intptr_t)getExecutablePath;
-  std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
-  llvm::SmallString<128> NativeClangDocPath;
-  llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
-
-  llvm::SmallString<128> AssetsPath;
-  AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
-  llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
-  llvm::SmallString<128> DefaultStylesheet =
-      appendPathNative(AssetsPath, "clang-doc-default-stylesheet.css");
-  llvm::SmallString<128> IndexJS = appendPathNative(AssetsPath, "index.js");
-
-  if (!llvm::sys::fs::is_regular_file(IndexJS))
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "default index.js file missing at " +
-                                       IndexJS + "\n");
-
-  if (!llvm::sys::fs::is_regular_file(DefaultStylesheet))
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "default clang-doc-default-stylesheet.css file missing at " +
-            DefaultStylesheet + "\n");
-
-  CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
-                               std::string(DefaultStylesheet));
-  CDCtx.JsScripts.emplace_back(IndexJS.str());
-
-  return llvm::Error::success();
-}
-
-static llvm::Error getHtmlAssetFiles(const char *Argv0,
-                                     clang::doc::ClangDocContext &CDCtx) {
-  if (!UserAssetPath.empty() &&
-      !llvm::sys::fs::is_directory(std::string(UserAssetPath)))
-    llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
-                 << " falling back to default\n";
-  if (llvm::sys::fs::is_directory(std::string(UserAssetPath)))
-    return getAssetFiles(CDCtx);
-  return getDefaultAssetFiles(Argv0, CDCtx);
-}
-
-static llvm::Error getMustacheHtmlFiles(const char *Argv0,
-                                        clang::doc::ClangDocContext &CDCtx) {
+static llvm::Error getHtmlFiles(const char *Argv0,
+                                clang::doc::ClangDocContext &CDCtx) {
   bool IsDir = llvm::sys::fs::is_directory(UserAssetPath);
   if (!UserAssetPath.empty() && !IsDir)
     llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
                  << " falling back to default\n";
   if (IsDir) {
-    getMustacheHtmlFiles(UserAssetPath, CDCtx);
-    return llvm::Error::success();
+    if (auto Err = getAssetFiles(CDCtx))
+      return Err;
   }
   void *MainAddr = (void *)(intptr_t)getExecutablePath;
   std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
@@ -235,7 +191,7 @@ static llvm::Error getMustacheHtmlFiles(const char *Argv0,
   AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
   llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
 
-  getMustacheHtmlFiles(AssetsPath, CDCtx);
+  getHtmlFiles(AssetsPath, CDCtx);
 
   return llvm::Error::success();
 }
@@ -257,13 +213,16 @@ sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
   }
 }
 
-static llvm::Error handleMappingFailures(llvm::Error Err) {
+static llvm::Error handleMappingFailures(DiagnosticsEngine &Diags,
+                                         llvm::Error Err) {
   if (!Err)
     return llvm::Error::success();
   if (IgnoreMappingFailures) {
-    llvm::errs() << "Error mapping decls in files. Clang-doc will ignore these "
-                    "files and continue:\n"
-                 << toString(std::move(Err)) << "\n";
+    unsigned ID = Diags.getCustomDiagID(
+        DiagnosticsEngine::Warning,
+        "Error mapping decls in files. Clang-doc will ignore these files and "
+        "continue:\n%0");
+    Diags.Report(ID) << toString(std::move(Err));
     return llvm::Error::success();
   }
   return Err;
@@ -315,28 +274,25 @@ Example usage for a project using a compile commands database:
                                     tooling::ArgumentInsertPosition::END),
           ArgAdjuster);
 
-    clang::doc::ClangDocContext CDCtx = {
-        Executor->getExecutionContext(),
-        ProjectName,
-        PublicOnly,
-        OutDirectory,
-        SourceRoot,
-        RepositoryUrl,
-        RepositoryCodeLinePrefix,
-        BaseDirectory,
-        {UserStylesheets.begin(), UserStylesheets.end()},
-        FTimeTrace};
+    auto DiagOpts = std::make_unique<DiagnosticOptions>();
+    TextDiagnosticPrinter *DiagClient =
+        new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
+    IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+    DiagnosticsEngine Diags(DiagID, *DiagOpts, DiagClient);
 
-    if (Format == "html") {
-      ExitOnErr(getHtmlAssetFiles(argv[0], CDCtx));
-    } else if (Format == "mustache") {
-      ExitOnErr(getMustacheHtmlFiles(argv[0], CDCtx));
-    }
+    clang::doc::ClangDocContext CDCtx(
+        Executor->getExecutionContext(), ProjectName, PublicOnly, OutDirectory,
+        SourceRoot, RepositoryUrl, RepositoryCodeLinePrefix, BaseDirectory,
+        {UserStylesheets.begin(), UserStylesheets.end()}, Diags, FTimeTrace);
+
+    if (Format == "html")
+      ExitOnErr(getHtmlFiles(argv[0], CDCtx));
 
     llvm::timeTraceProfilerBegin("Executor Launch", "total runtime");
     // Mapping phase
     llvm::outs() << "Mapping decls...\n";
     ExitOnErr(handleMappingFailures(
+        Diags,
         Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster)));
     llvm::timeTraceProfilerEnd();
 
@@ -362,13 +318,18 @@ Example usage for a project using a compile commands database:
     std::atomic<bool> Error;
     Error = false;
     llvm::sys::Mutex IndexMutex;
+    llvm::sys::Mutex DiagMutex;
+    unsigned DiagIDBitcodeReading = Diags.getCustomDiagID(
+        DiagnosticsEngine::Error, "error reading bitcode: %0");
+    unsigned DiagIDBitcodeMerging = Diags.getCustomDiagID(
+        DiagnosticsEngine::Error, "error merging bitcode: %0");
     // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
     llvm::DefaultThreadPool Pool(
         llvm::hardware_concurrency(ExecutorConcurrency));
     {
       llvm::TimeTraceScope TS("Reduce");
       for (auto &Group : USRToBitcode) {
-        Pool.async([&]() { // time trace decoding bitcode
+        Pool.async([&, &Diags = Diags]() { // time trace decoding bitcode
           if (FTimeTrace)
             llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
@@ -377,10 +338,13 @@ Example usage for a project using a compile commands database:
             llvm::TimeTraceScope Red("decoding bitcode");
             for (auto &Bitcode : Group.getValue()) {
               llvm::BitstreamCursor Stream(Bitcode);
-              doc::ClangDocBitcodeReader Reader(Stream);
+              doc::ClangDocBitcodeReader Reader(Stream, Diags);
               auto ReadInfos = Reader.readBitcode();
               if (!ReadInfos) {
-                llvm::errs() << toString(ReadInfos.takeError()) << "\n";
+                std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
+
+                Diags.Report(DiagIDBitcodeReading)
+                    << toString(ReadInfos.takeError());
                 Error = true;
                 return;
               }
@@ -396,7 +360,9 @@ Example usage for a project using a compile commands database:
             auto ExpReduced = doc::mergeInfos(Infos);
 
             if (!ExpReduced) {
-              llvm::errs() << llvm::toString(ExpReduced.takeError());
+              std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
+              Diags.Report(DiagIDBitcodeMerging)
+                  << toString(ExpReduced.takeError());
               return;
             }
             Reduced = std::move(*ExpReduced);
@@ -438,7 +404,8 @@ Example usage for a project using a compile commands database:
     // Run the generator.
     llvm::outs() << "Generating docs...\n";
 
-    ExitOnErr(G->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx));
+    ExitOnErr(
+        G->generateDocumentation(OutDirectory, std::move(USRToInfo), CDCtx));
     llvm::outs() << "Generating assets for docs...\n";
     ExitOnErr(G->createResources(CDCtx));
     llvm::timeTraceProfilerEnd();

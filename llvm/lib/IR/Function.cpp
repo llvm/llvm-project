@@ -130,10 +130,9 @@ bool Argument::hasByValAttr() const {
   return hasAttribute(Attribute::ByVal);
 }
 
-bool Argument::hasDeadOnReturnAttr() const {
-  if (!getType()->isPointerTy())
-    return false;
-  return hasAttribute(Attribute::DeadOnReturn);
+DeadOnReturnInfo Argument::getDeadOnReturnInfo() const {
+  assert(getType()->isPointerTy() && "Only pointers have dead_on_return bytes");
+  return getParent()->getDeadOnReturnInfo(getArgNo());
 }
 
 bool Argument::hasByRefAttr() const {
@@ -395,6 +394,9 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
     break;
   case FramePointerKind::NonLeaf:
     B.addAttribute("frame-pointer", "non-leaf");
+    break;
+  case FramePointerKind::NonLeafNoReserve:
+    B.addAttribute("frame-pointer", "non-leaf-no-reserve");
     break;
   case FramePointerKind::All:
     B.addAttribute("frame-pointer", "all");

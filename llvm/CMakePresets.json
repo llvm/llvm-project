@@ -1,0 +1,90 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "llvm-build-shared-libs",
+      "hidden": true,
+      "description": "Build shared libraries",
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": true
+      }
+    },
+    {
+      "name": "llvm-build-tests",
+      "hidden": true,
+      "description": "Build tests",
+      "cacheVariables": {
+        "LLVM_BUILD_TESTS": true
+      }
+    },
+    {
+      "name": "llvm-enable-assertions",
+      "hidden": true,
+      "description": "Enable runtime assertions",
+      "cacheVariables": {
+        "LLVM_ENABLE_ASSERTIONS": true
+      }
+    },
+    {
+      "name": "llvm-enable-projects-clang",
+      "hidden": true,
+      "description": "Enable projects clang",
+      "cacheVariables": {
+        "LLVM_ENABLE_PROJECTS": "clang"
+      }
+    },
+    {
+      "name": "llvm-enable-projects-clang-tools-extra",
+      "hidden": true,
+      "description": "Enable projects clang, clang-tools-extra",
+      "cacheVariables": {
+        "LLVM_ENABLE_PROJECTS": "clang;clang-tools-extra"
+      }
+    },
+    {
+      "name": "llvm-enable-lto",
+      "hidden": true,
+      "description": "Enable link time optimizations (LTO)",
+      "cacheVariables": {
+        "LLVM_ENABLE_LTO": true
+      }
+    },
+    {
+      "name": "llvm-export-compile-commands",
+      "hidden": true,
+      "description": "Generate a compile_commands.json database",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+      }
+    },
+    {
+      "name": "llvm-no-build-testing",
+      "hidden": true,
+      "description": "Turn off building of tests",
+      "cacheVariables": {
+        "BUILD_TESTING": false
+      }
+    },
+    {
+      "name": "llvm-target-x86",
+      "hidden": true,
+      "description": "Only target x86 back end",
+      "cacheVariables": {
+        "LLVM_TARGETS_TO_BUILD": "X86"
+      }
+    },
+    {
+      "name": "llvm-use-sanitizer-asan",
+      "hidden": true,
+      "description": "Build with ASAN",
+      "cacheVariables": {
+        "LLVM_USE_SANITIZER": "Address"
+      }
+    }
+  ]
+}

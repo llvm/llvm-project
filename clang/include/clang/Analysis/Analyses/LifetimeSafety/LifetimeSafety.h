@@ -21,8 +21,10 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 
 namespace clang::lifetimes {
@@ -34,6 +36,12 @@ enum class Confidence : uint8_t {
   Definite // Reported as a definite error (-Wlifetime-safety-permissive)
 };
 
+/// Enum to track functions visible across or within TU.
+enum class SuggestionScope {
+  CrossTU, // For suggestions on declarations visible across Translation Units.
+  IntraTU  // For suggestions on definitions local to a Translation Unit.
+};
+
 class LifetimeSafetyReporter {
 public:
   LifetimeSafetyReporter() = default;
@@ -42,13 +50,28 @@ public:
   virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
                                   SourceLocation FreeLoc,
                                   Confidence Confidence) {}
+
+  virtual void reportUseAfterReturn(const Expr *IssueExpr,
+                                    const Expr *EscapeExpr,
+                                    SourceLocation ExpiryLoc,
+                                    Confidence Confidence) {}
+
+  // Suggests lifetime bound annotations for function paramters
+  virtual void suggestAnnotation(SuggestionScope Scope,
+                                 const ParmVarDecl *ParmToAnnotate,
+                                 const Expr *EscapeExpr) {}
 };
 
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter);
+                               LifetimeSafetyReporter *Reporter,
+                               LifetimeSafetyStats &Stats, bool CollectStats);
 
 namespace internal {
+
+void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
+                          LifetimeSafetyStats &Stats);
+
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
@@ -71,13 +94,13 @@ public:
     return *LoanPropagation;
   }
   LiveOriginsAnalysis &getLiveOrigins() const { return *LiveOrigins; }
-  FactManager &getFactManager() { return FactMgr; }
+  FactManager &getFactManager() { return *FactMgr; }
 
 private:
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
   LifetimeFactory Factory;
-  FactManager FactMgr;
+  std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
 };

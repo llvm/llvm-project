@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdSpanDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def findVariable(self, name):
         var = self.frame().FindVariable(name)
         self.assertTrue(var.IsValid())
@@ -74,7 +76,7 @@ class StdSpanDataFormatterTestCase(TestBase):
             result_summary="item 0 is 1",
         )
 
-        self.runCmd("type summary delete span")
+        self.runCmd("type summary clear")
 
         # New span with strings
         lldbutil.continue_to_breakpoint(process, bkpt)
@@ -89,21 +91,26 @@ class StdSpanDataFormatterTestCase(TestBase):
         )
 
         # check access to synthetic children for dynamic spans
+        dynamic_string_span = (
+            "std::span<std::basic_string<char, std::char_traits<char>, std::allocator<char>>, -1>"
+            if self.getDebugInfo() == "pdb"
+            else "dynamic_string_span"
+        )
         self.runCmd(
-            'type summary add --summary-string "item 0 is ${var[0]}" dynamic_string_span'
+            f'type summary add --summary-string "item 0 is ${{var[0]}}" "{dynamic_string_span}"'
         )
         self.expect_var_path("strings_span", summary='item 0 is "smart"')
 
         self.runCmd(
-            'type summary add --summary-string "item 0 is ${svar[0]}" dynamic_string_span'
+            f'type summary add --summary-string "item 0 is ${{svar[0]}}" "{dynamic_string_span}"'
         )
         self.expect_var_path("strings_span", summary='item 0 is "smart"')
 
-        self.runCmd("type summary delete dynamic_string_span")
+        self.runCmd(f'type summary delete "{dynamic_string_span}"')
 
         # test summaries based on synthetic children
         self.runCmd(
-            'type summary add --summary-string "span has ${svar%#} items" -e dynamic_string_span'
+            f'type summary add --summary-string "span has ${{svar%#}} items" -e "{dynamic_string_span}"'
         )
 
         self.expect_var_path("strings_span", summary="span has 2 items")
@@ -127,7 +134,7 @@ class StdSpanDataFormatterTestCase(TestBase):
             result_children=expectedStringSpanChildren,
         )
 
-        self.runCmd("type summary delete dynamic_string_span")
+        self.runCmd(f'type summary delete "{dynamic_string_span}"')
 
         lldbutil.continue_to_breakpoint(process, bkpt)
 
@@ -155,12 +162,6 @@ class StdSpanDataFormatterTestCase(TestBase):
         )
         self.check_size("nested", 2)
 
-    @skipIf(compiler="clang", compiler_version=["<", "11.0"])
-    @add_test_categories(["libc++"])
-    def test_libcxx(self):
-        self.build(dictionary={"USE_LIBCPP": 1})
-        self.do_test()
-
     def do_test_ref_and_ptr(self):
         """Test that std::span is correctly formatted when passed by ref and ptr"""
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -176,6 +177,36 @@ class StdSpanDataFormatterTestCase(TestBase):
 
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    @skipIf(compiler="clang", compiler_version=["<", "11.0"])
+    @add_test_categories(["libc++"])
     def test_ref_and_ptr_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_ref_and_ptr()
+
+    @skipIf(compiler="clang", compiler_version=["<", "11.0"])
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
+
+    @skipIf(compiler="clang", compiler_version=["<", "11.0"])
+    @add_test_categories(["libstdcxx"])
+    def test_ref_and_ptr_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_ref_and_ptr()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
+        self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_ref_and_ptr_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
         self.do_test_ref_and_ptr()

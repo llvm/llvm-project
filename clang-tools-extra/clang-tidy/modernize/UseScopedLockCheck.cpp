@@ -74,7 +74,8 @@ findLocksInCompoundStmt(const CompoundStmt *Block,
 
   for (const Stmt *Stmt : Block->body()) {
     if (const auto *DS = dyn_cast<DeclStmt>(Stmt)) {
-      llvm::SmallVector<const VarDecl *> LockGuards = getLockGuardsFromDecl(DS);
+      const llvm::SmallVector<const VarDecl *> LockGuards =
+          getLockGuardsFromDecl(DS);
 
       if (!LockGuards.empty()) {
         CurrentLockGuardGroup.append(LockGuards);
@@ -176,7 +177,7 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseScopedLockCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *DS = Result.Nodes.getNodeAs<DeclStmt>("lock-decl-single")) {
-    llvm::SmallVector<const VarDecl *> Decls = getLockGuardsFromDecl(DS);
+    const llvm::SmallVector<const VarDecl *> Decls = getLockGuardsFromDecl(DS);
     diagOnMultipleLocks({Decls}, Result);
     return;
   }

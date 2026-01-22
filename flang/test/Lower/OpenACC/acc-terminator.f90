@@ -17,7 +17,7 @@ program main
     !$acc data copyin(a(:,:,i),b(:,:,i),c(:,:,i)) copyout(c2(:,:,i))
 
     !$acc host_data use_device(a(:,:,i),b(:,:,i),c(:,:,i))
-    
+
     !$acc end host_data
 
     if ( stat .ne. 0 ) then

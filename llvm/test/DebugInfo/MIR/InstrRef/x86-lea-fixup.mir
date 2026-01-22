@@ -1,6 +1,9 @@
-# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-gnu-unknown -verify-machineinstrs -mcpu=corei7-avx -o - %s | FileCheck %s --check-prefixes=COREI7,CHECK
-# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-gnu-unknown -verify-machineinstrs -mcpu=haswell -o - %s | FileCheck %s --check-prefixes=HASWELL,CHECK
-# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-unknown-unknown -verify-machineinstrs -mcpu=atom -o - %s | FileCheck %s --check-prefixes=ATOM,CHECK
+# RUN: llc -run-pass x86-fixup-leas -mtriple=x86_64-gnu-unknown -verify-machineinstrs -mcpu=corei7-avx -o - %s | FileCheck %s --check-prefixes=COREI7,CHECK
+# RUN: llc -passes="require<profile-summary>,function(machine-function(x86-fixup-leas))" -mtriple=x86_64-gnu-unknown -mcpu=corei7-avx -o - %s | FileCheck %s --check-prefixes=COREI7,CHECK
+# RUN: llc -run-pass x86-fixup-leas -mtriple=x86_64-gnu-unknown -verify-machineinstrs -mcpu=haswell -o - %s | FileCheck %s --check-prefixes=HASWELL,CHECK
+# RUN: llc -passes="require<profile-summary>,function(machine-function(x86-fixup-leas))" -mtriple=x86_64-gnu-unknown -mcpu=haswell -o - %s | FileCheck %s --check-prefixes=HASWELL,CHECK
+# RUN: llc -run-pass x86-fixup-leas -mtriple=x86_64-unknown-unknown -verify-machineinstrs -mcpu=atom -o - %s | FileCheck %s --check-prefixes=ATOM,CHECK
+# RUN: llc -passes="require<profile-summary>,function(machine-function(x86-fixup-leas))" -mtriple=x86_64-unknown-unknown -mcpu=atom -o - %s | FileCheck %s --check-prefixes=ATOM,CHECK
 #
 # Test several LEA <=> ADD transformations that the fixup-leas pass performs,
 # and check that any debug-instr-number attached to the original instruction

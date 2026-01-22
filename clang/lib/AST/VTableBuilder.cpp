@@ -999,7 +999,7 @@ private:
 public:
   /// Component indices of the first component of each of the vtables in the
   /// vtable group.
-  SmallVector<size_t, 4> VTableIndices;
+  VTableLayout::VTableIndicesTy VTableIndices;
 
   ItaniumVTableBuilder(ItaniumVTableContext &VTables,
                        const CXXRecordDecl *MostDerivedClass,
@@ -2306,18 +2306,19 @@ MakeAddressPointIndices(const VTableLayout::AddressPointsMapTy &addressPoints,
   return indexMap;
 }
 
-VTableLayout::VTableLayout(ArrayRef<size_t> VTableIndices,
+VTableLayout::VTableLayout(VTableIndicesTy VTableIndices,
                            ArrayRef<VTableComponent> VTableComponents,
                            ArrayRef<VTableThunkTy> VTableThunks,
                            const AddressPointsMapTy &AddressPoints)
-    : VTableComponents(VTableComponents), VTableThunks(VTableThunks),
-      AddressPoints(AddressPoints), AddressPointIndices(MakeAddressPointIndices(
-                                        AddressPoints, VTableIndices.size())) {
-  if (VTableIndices.size() <= 1)
-    assert(VTableIndices.size() == 1 && VTableIndices[0] == 0);
-  else
-    this->VTableIndices = OwningArrayRef<size_t>(VTableIndices);
-
+    : VTableIndices(std::move(VTableIndices)),
+      VTableComponents(VTableComponents), VTableThunks(VTableThunks),
+      AddressPoints(AddressPoints),
+      AddressPointIndices(
+          MakeAddressPointIndices(AddressPoints, this->VTableIndices.size())) {
+  assert(!this->VTableIndices.empty() &&
+         "VTableLayout requires at least one index.");
+  assert(this->VTableIndices.front() == 0 &&
+         "VTableLayout requires the first index is 0.");
   llvm::sort(this->VTableThunks, [](const VTableLayout::VTableThunkTy &LHS,
                                     const VTableLayout::VTableThunkTy &RHS) {
     assert((LHS.first != RHS.first || LHS.second == RHS.second) &&
@@ -2658,7 +2659,12 @@ private:
       MethodVFTableLocation Loc(MI.VBTableIndex, WhichVFPtr.getVBaseWithVPtr(),
                                 WhichVFPtr.NonVirtualOffset, MI.VFTableIndex);
       if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-        MethodVFTableLocations[GlobalDecl(DD, Dtor_Deleting)] = Loc;
+        // In Microsoft ABI vftable always references vector deleting dtor.
+        CXXDtorType DtorTy = Context.getTargetInfo().emitVectorDeletingDtors(
+                                 Context.getLangOpts())
+                                 ? Dtor_VectorDeleting
+                                 : Dtor_Deleting;
+        MethodVFTableLocations[GlobalDecl(DD, DtorTy)] = Loc;
       } else {
         MethodVFTableLocations[MD] = Loc;
       }
@@ -3288,7 +3294,11 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
       const CXXDestructorDecl *DD = Component.getDestructorDecl();
 
       DD->printQualifiedName(Out);
-      Out << "() [scalar deleting]";
+      if (Context.getTargetInfo().emitVectorDeletingDtors(
+              Context.getLangOpts()))
+        Out << "() [vector deleting]";
+      else
+        Out << "() [scalar deleting]";
 
       if (DD->isPureVirtual())
         Out << " [pure]";
@@ -3721,8 +3731,8 @@ void MicrosoftVTableContext::computeVTableRelatedInformation(
     SmallVector<VTableLayout::VTableThunkTy, 1> VTableThunks(
         Builder.vtable_thunks_begin(), Builder.vtable_thunks_end());
     VFTableLayouts[id] = std::make_unique<VTableLayout>(
-        ArrayRef<size_t>{0}, Builder.vtable_components(), VTableThunks,
-        EmptyAddressPointsMap);
+        VTableLayout::VTableIndicesTy{0}, Builder.vtable_components(),
+        VTableThunks, EmptyAddressPointsMap);
     Thunks.insert(Builder.thunks_begin(), Builder.thunks_end());
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
@@ -3758,7 +3768,7 @@ void MicrosoftVTableContext::dumpMethodLocations(
         PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
 
     if (isa<CXXDestructorDecl>(MD)) {
-      IndicesMap[I.second] = MethodName + " [scalar deleting]";
+      IndicesMap[I.second] = MethodName + " [vector deleting]";
     } else {
       IndicesMap[I.second] = MethodName;
     }
@@ -3874,7 +3884,8 @@ MicrosoftVTableContext::getMethodVFTableLocation(GlobalDecl GD) {
   assert(hasVtableSlot(cast<CXXMethodDecl>(GD.getDecl())) &&
          "Only use this method for virtual methods or dtors");
   if (isa<CXXDestructorDecl>(GD.getDecl()))
-    assert(GD.getDtorType() == Dtor_Deleting);
+    assert(GD.getDtorType() == Dtor_VectorDeleting ||
+           GD.getDtorType() == Dtor_Deleting);
 
   GD = GD.getCanonicalDecl();
 

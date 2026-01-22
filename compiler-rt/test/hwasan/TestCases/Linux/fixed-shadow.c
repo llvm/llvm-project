@@ -3,12 +3,12 @@
 // Default compiler instrumentation works with any shadow base (dynamic or fixed).
 // RUN: %clang_hwasan %s -o %t
 // RUN: %run %t
-// RUN: env HWASAN_OPTIONS=fixed_shadow_base=263878495698944 %run %t 2>%t.out || (cat %t.out | FileCheck %s)
+// RUN: env HWASAN_OPTIONS=fixed_shadow_base=17592186044416 %run %t
 // RUN: env HWASAN_OPTIONS=fixed_shadow_base=4398046511104 %run %t
 //
 // If -hwasan-mapping-offset is set, then the fixed_shadow_base needs to match.
-// RUN: %clang_hwasan %s -mllvm -hwasan-mapping-offset=263878495698944 -o %t
-// RUN: env HWASAN_OPTIONS=fixed_shadow_base=263878495698944 %run %t 2>%t.out || (cat %t.out | FileCheck %s)
+// RUN: %clang_hwasan %s -mllvm -hwasan-mapping-offset=17592186044416 -o %t
+// RUN: env HWASAN_OPTIONS=fixed_shadow_base=17592186044416 %run %t
 // RUN: env HWASAN_OPTIONS=fixed_shadow_base=4398046511104 not %run %t
 
 // RUN: %clang_hwasan %s -mllvm -hwasan-mapping-offset=4398046511104 -o %t
@@ -25,8 +25,6 @@
 // REQUIRES: Clang
 //
 // UNSUPPORTED: android
-
-// CHECK: FATAL: HWAddressSanitizer: Shadow range {{.*}} is not available
 
 #include <assert.h>
 #include <sanitizer/allocator_interface.h>

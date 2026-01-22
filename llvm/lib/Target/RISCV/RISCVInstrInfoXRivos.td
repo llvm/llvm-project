@@ -156,7 +156,7 @@ foreach m = MxList in {
     let BaseInstr = RI_VEXTRACT in
     def PseudoRI_VEXTRACT_  # mx :
       RISCVVPseudo<(outs GPR:$rd),
-                   (ins m.vrclass:$rs2, uimm5:$idx, ixlenimm:$sew),
+                   (ins m.vrclass:$rs2, uimm5:$idx, sew:$sew),
                    []>;
 
     let HasVLOp = 1, BaseInstr = RI_VINSERT, HasVecPolicyOp = 1,
@@ -164,7 +164,7 @@ foreach m = MxList in {
     def PseudoRI_VINSERT_ # mx :
       RISCVVPseudo<(outs m.vrclass:$rd),
                    (ins m.vrclass:$rs1, GPR:$rs2, uimm5:$idx, AVL:$vl,
-                        ixlenimm:$sew, ixlenimm:$policy),
+                        sew:$sew, vec_policy:$policy),
                    []>;
   }
 }

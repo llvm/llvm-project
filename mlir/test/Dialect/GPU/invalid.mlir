@@ -688,7 +688,7 @@ func.func @mmamatrix_operand_type(){
 func.func @mmamatrix_invalid_element_type(){
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
-    // expected-error @+1 {{MMAMatrixType elements must be SI8, UI8, I32, F16, or F32}}
+    // expected-error @+1 {{MMAMatrixType elements must be SI8, UI8, I32, F16, F32, or F64}}
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xbf16, "AOp">
     return
 }
@@ -708,7 +708,7 @@ func.func @mmaLoadOp_identity_layout(){
 // -----
 
 func.func @mma_invalid_memref_type(%src: memref<32x4xvector<4x8xf32>>, %i: index) {
-    // expected-error @+1 {{operand #0 must be memref of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float or vector of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float values of ranks 1 values}}
+    // expected-error @+1 {{operand #0 must be memref of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float or 64-bit float or vector of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float or 64-bit float values of ranks 1 values}}
     %0 = gpu.subgroup_mma_load_matrix %src[%i, %i] {leadDimension = 4 : index} : memref<32x4xvector<4x8xf32>> -> !gpu.mma_matrix<16x16xf16, "AOp">
     return
 }
@@ -777,7 +777,7 @@ func.func @alloc() {
 // Number of dynamic dimension operand count greater than memref dynamic dimension count.
 func.func @alloc() {
    %0 = arith.constant 7 : index
-   // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+   // expected-error@+1 {{incorrect number of dynamic sizes, has 2, expected 1}}
    %1 = gpu.alloc(%0, %0) : memref<2x?xf32, 1>
    return
 }
@@ -787,7 +787,7 @@ func.func @alloc() {
 // Number of dynamic dimension operand count less than memref dynamic dimension count.
 func.func @alloc() {
    %0 = arith.constant 7 : index
-   // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+   // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
    %1 = gpu.alloc(%0) : memref<2x?x?xf32, 1>
    return
 }

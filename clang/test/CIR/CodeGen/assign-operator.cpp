@@ -13,12 +13,11 @@ void a() {
   a = 1u;
 }
 
-// CIR: cir.func private @_ZN1xaSEi(!cir.ptr<!rec_x>, !s32i)
+// CIR: cir.func {{.*}} @_ZN1xaSEi(!cir.ptr<!rec_x>, !s32i)
 // CIR: cir.func{{.*}} @_Z1av()
 // CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_x, !cir.ptr<!rec_x>, ["a"]
-// CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !u32i
-// CIR:   %[[ONE_CAST:.*]] = cir.cast integral %[[ONE]] : !u32i -> !s32i
-// CIR:   %[[RET:.*]] = cir.call @_ZN1xaSEi(%[[A_ADDR]], %[[ONE_CAST]]) : (!cir.ptr<!rec_x>, !s32i) -> !s32i
+// CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:   %[[RET:.*]] = cir.call @_ZN1xaSEi(%[[A_ADDR]], %[[ONE]]) : (!cir.ptr<!rec_x>, !s32i) -> !s32i
 
 // LLVM: define{{.*}} @_Z1av(){{.*}}
 // OGCG: define{{.*}} @_Z1av()
@@ -63,7 +62,7 @@ void copy_c(C &c1, C &c2) {
 
 // Implicit assignment operator for C.
 
-// CIR: cir.func comdat linkonce_odr @_ZN1CaSERKS_(%arg0: !cir.ptr<!rec_C> {{.*}}, %arg1: !cir.ptr<!rec_C> {{.*}}) -> !cir.ptr<!rec_C>
+// CIR: cir.func {{.*}} @_ZN1CaSERKS_(%arg0: !cir.ptr<!rec_C> {{.*}}, %arg1: !cir.ptr<!rec_C> {{.*}}) -> !cir.ptr<!rec_C>
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["this", init]
 // CIR:   %[[ARG1_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["", init, const]
 // CIR:   %[[RET_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["__retval"]

@@ -320,10 +320,10 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
 }
 
 //===----------------------------------------------------------------------===//
-// OpWithResultShapePerDimInterfaceOp
+// ReifyShapedTypeUsingReifyResultShapesOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
+LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
   Location loc = getLoc();
   shapes.reserve(getNumOperands());
@@ -342,6 +342,103 @@ LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
     shapes.emplace_back(std::move(currShape));
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReifyShapedTypeUsingReifyShapeOfResultOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReifyShapedTypeUsingReifyShapeOfResultOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+ReifyShapedTypeUsingReifyShapeOfResultOp::reifyShapeOfResult(OpBuilder &builder,
+                                                             int resultIndex) {
+  Location loc = getLoc();
+  Value sourceOperand = getOperand(getNumOperands() - 1 - resultIndex);
+  SmallVector<OpFoldResult> shape =
+      tensor::getMixedSizes(builder, loc, sourceOperand);
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// ReifyShapedTypeUsingReifyDimOfResultOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReifyShapedTypeUsingReifyDimOfResultOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+ReifyShapedTypeUsingReifyDimOfResultOp::reifyShapeOfResult(OpBuilder &builder,
+                                                           int resultIndex) {
+  return failure();
+}
+
+FailureOr<OpFoldResult>
+ReifyShapedTypeUsingReifyDimOfResultOp::reifyDimOfResult(OpBuilder &builder,
+                                                         int resultIndex,
+                                                         int dim) {
+  Location loc = getLoc();
+  Value sourceOperand = getOperand(getNumOperands() - 1 - resultIndex);
+  OpFoldResult shape = tensor::getMixedSize(builder, loc, sourceOperand, dim);
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapesOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableResultShapesOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  Location loc = getLoc();
+  shapes.resize(1);
+  shapes[0] = {tensor::getMixedSize(builder, loc, getOperand(), 0),
+               OpFoldResult()};
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableResultShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+UnreifiableResultShapeOp::reifyShapeOfResult(OpBuilder &builder,
+                                             int resultIndex) {
+  SmallVector<OpFoldResult> shape = {
+      tensor::getMixedSize(builder, getLoc(), getOperand(), 0), OpFoldResult()};
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableDimOfResultShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+UnreifiableDimOfResultShapeOp::reifyShapeOfResult(OpBuilder &builder,
+                                                  int resultIndex) {
+  return failure();
+}
+
+FailureOr<OpFoldResult>
+UnreifiableDimOfResultShapeOp::reifyDimOfResult(OpBuilder &builder,
+                                                int resultIndex, int dim) {
+  if (dim == 0)
+    return tensor::getMixedSize(builder, getLoc(), getOperand(), 0);
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
@@ -646,15 +743,27 @@ void RegionIfOp::getSuccessorRegions(
   if (!point.isParent()) {
     if (point.getTerminatorPredecessorOrNull()->getParentRegion() !=
         &getJoinRegion())
-      regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
+      regions.push_back(RegionSuccessor(&getJoinRegion()));
     else
-      regions.push_back(RegionSuccessor(getOperation(), getResults()));
+      regions.push_back(RegionSuccessor::parent());
     return;
   }
 
   // The then and else regions are the entry regions of this op.
-  regions.push_back(RegionSuccessor(&getThenRegion(), getThenArgs()));
-  regions.push_back(RegionSuccessor(&getElseRegion(), getElseArgs()));
+  regions.push_back(RegionSuccessor(&getThenRegion()));
+  regions.push_back(RegionSuccessor(&getElseRegion()));
+}
+
+ValueRange RegionIfOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  if (successor == &getThenRegion())
+    return getThenArgs();
+  if (successor == &getElseRegion())
+    return getElseArgs();
+  if (successor == &getJoinRegion())
+    return getJoinArgs();
+  llvm_unreachable("invalid region successor");
 }
 
 void RegionIfOp::getRegionInvocationBounds(
@@ -675,7 +784,11 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
   if (point.isParent())
     regions.emplace_back(&getRegion());
   else
-    regions.emplace_back(getOperation(), getResults());
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange AnyCondOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
 }
 
 void AnyCondOp::getRegionInvocationBounds(
@@ -764,6 +877,16 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), {getUmin(), getUmax(), getSmin(), getSmax()});
+}
+
+//===----------------------------------------------------------------------===//
+// TestWithoutBoundsOp
+//===----------------------------------------------------------------------===//
+
+void TestWithoutBoundsOp::inferResultRangesFromOptional(
+    ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRanges) {
+  // Mimic ops with uninitialized range.
+  setResultRanges(getResult(), IntegerValueRange{});
 }
 
 //===----------------------------------------------------------------------===//
@@ -1052,6 +1175,32 @@ LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
 }
 
 //===----------------------------------------------------------------------===//
+// TilingNoDpsOp
+//===----------------------------------------------------------------------===//
+
+SmallVector<Range> TilingNoDpsOp::getIterationDomain(OpBuilder &builder) {
+  return {};
+}
+
+SmallVector<utils::IteratorType> TilingNoDpsOp::getLoopIteratorTypes() {
+  return {};
+}
+
+FailureOr<TilingResult>
+TilingNoDpsOp::getTiledImplementation(OpBuilder &builder,
+                                      ArrayRef<OpFoldResult> offsets,
+                                      ArrayRef<OpFoldResult> sizes) {
+  return failure();
+}
+
+LogicalResult TilingNoDpsOp::getResultTilePosition(
+    OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
+    SmallVector<OpFoldResult> &resultSizes) {
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
 // OpWithShapedTypeInferTypeAdaptorInterfaceOp
 //===----------------------------------------------------------------------===//
 
@@ -1105,11 +1254,16 @@ LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
 
 void LoopBlockOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  regions.emplace_back(&getBody(), getBody().getArguments());
+  regions.emplace_back(&getBody());
   if (point.isParent())
     return;
 
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange LoopBlockOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().getArguments());
 }
 
 OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
@@ -1213,9 +1367,14 @@ MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
 void TestStoreWithARegion::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent())
-    regions.emplace_back(&getBody(), getBody().front().getArguments());
+    regions.emplace_back(&getBody());
   else
-    regions.emplace_back(getOperation(), getOperation()->getResults());
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange TestStoreWithARegion::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().front().getArguments());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1227,9 +1386,14 @@ void TestStoreWithALoopRegion::getSuccessorRegions(
   // Both the operation itself and the region may be branching into the body or
   // back into the operation itself. It is possible for the operation not to
   // enter the body.
-  regions.emplace_back(
-      RegionSuccessor(&getBody(), getBody().front().getArguments()));
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.emplace_back(&getBody());
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange
+TestStoreWithALoopRegion::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().front().getArguments());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1513,4 +1677,15 @@ test::TestCreateTensorOp::getBufferType(
     return failure();
 
   return convertTensorToBuffer(getOperation(), options, type);
+}
+
+// Define a custom builder for ManyRegionsOp declared in TestOps.td.
+//  OpBuilder<(ins "::std::unique_ptr<::mlir::Region>":$firstRegion,
+//                 "::std::unique_ptr<::mlir::Region>":$secondRegion)>
+void test::ManyRegionsOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &state,
+    llvm::SmallVectorImpl<std::unique_ptr<mlir::Region>> &&regions) {
+  for (auto &&regionPtr : std::move(regions))
+    state.addRegion(std::move(regionPtr));
+  ManyRegionsOp::build(builder, state, {}, regions.size());
 }

@@ -8,6 +8,8 @@
 
 #define DEBUG_TYPE "runtime-libcall-emitter"
 
+#include "RuntimeLibcalls.h"
+
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -65,160 +67,12 @@ template <> struct DenseMapInfo<PredicateWithCC, void> {
     return LHS == RHS;
   }
 };
-} // namespace llvm
-
-namespace {
-
-class AvailabilityPredicate {
-  const Record *TheDef;
-  StringRef PredicateString;
-
-public:
-  AvailabilityPredicate(const Record *Def) : TheDef(Def) {
-    if (TheDef)
-      PredicateString = TheDef->getValueAsString("Cond");
-  }
-
-  const Record *getDef() const { return TheDef; }
-
-  bool isAlwaysAvailable() const { return PredicateString.empty(); }
-
-  void emitIf(raw_ostream &OS) const {
-    OS << "if (" << PredicateString << ") {\n";
-  }
-
-  void emitEndIf(raw_ostream &OS) const { OS << "}\n"; }
-
-  void emitTableVariableNameSuffix(raw_ostream &OS) const {
-    if (TheDef)
-      OS << '_' << TheDef->getName();
-  }
-};
-
-class RuntimeLibcallEmitter;
-class RuntimeLibcallImpl;
-
-/// Used to apply predicates to nested sets of libcalls.
-struct LibcallPredicateExpander : SetTheory::Expander {
-  const RuntimeLibcallEmitter &LibcallEmitter;
-  DenseMap<const RuntimeLibcallImpl *,
-           std::pair<std::vector<const Record *>, const Record *>> &Func2Preds;
-
-  LibcallPredicateExpander(
-      const RuntimeLibcallEmitter &LibcallEmitter,
-      DenseMap<const RuntimeLibcallImpl *,
-               std::pair<std::vector<const Record *>, const Record *>>
-          &Func2Preds)
-      : LibcallEmitter(LibcallEmitter), Func2Preds(Func2Preds) {}
-
-  void expand(SetTheory &ST, const Record *Def,
-              SetTheory::RecSet &Elts) override;
-};
-
-class RuntimeLibcall {
-  const Record *TheDef = nullptr;
-  const size_t EnumVal;
-
-public:
-  RuntimeLibcall() = delete;
-  RuntimeLibcall(const Record *Def, size_t EnumVal)
-      : TheDef(Def), EnumVal(EnumVal) {
-    assert(Def);
-  }
-
-  ~RuntimeLibcall() { assert(TheDef); }
-
-  const Record *getDef() const { return TheDef; }
-
-  StringRef getName() const { return TheDef->getName(); }
-
-  size_t getEnumVal() const { return EnumVal; }
-
-  void emitEnumEntry(raw_ostream &OS) const {
-    OS << "RTLIB::" << TheDef->getValueAsString("Name");
-  }
-};
-
-class RuntimeLibcallImpl {
-  const Record *TheDef;
-  const RuntimeLibcall *Provides = nullptr;
-  const size_t EnumVal;
-
-public:
-  RuntimeLibcallImpl(
-      const Record *Def,
-      const DenseMap<const Record *, const RuntimeLibcall *> &ProvideMap,
-      size_t EnumVal)
-      : TheDef(Def), EnumVal(EnumVal) {
-    if (const Record *ProvidesDef = Def->getValueAsDef("Provides"))
-      Provides = ProvideMap.lookup(ProvidesDef);
-  }
-
-  ~RuntimeLibcallImpl() = default;
-
-  const Record *getDef() const { return TheDef; }
-
-  StringRef getName() const { return TheDef->getName(); }
-
-  size_t getEnumVal() const { return EnumVal; }
-
-  const RuntimeLibcall *getProvides() const { return Provides; }
-
-  StringRef getLibcallFuncName() const {
-    return TheDef->getValueAsString("LibCallFuncName");
-  }
-
-  const Record *getCallingConv() const {
-    return TheDef->getValueAsOptionalDef("CallingConv");
-  }
-
-  void emitQuotedLibcallFuncName(raw_ostream &OS) const {
-    OS << '\"' << getLibcallFuncName() << '\"';
-  }
-
-  bool isDefault() const { return TheDef->getValueAsBit("IsDefault"); }
-
-  void emitEnumEntry(raw_ostream &OS) const {
-    OS << "RTLIB::impl_" << this->getName();
-  }
-
-  void emitSetImplCall(raw_ostream &OS) const {
-    OS << "setLibcallImpl(";
-    Provides->emitEnumEntry(OS);
-    OS << ", ";
-    emitEnumEntry(OS);
-    OS << "); // " << getLibcallFuncName() << '\n';
-  }
-
-  void emitTableEntry(raw_ostream &OS) const {
-    OS << '{';
-    Provides->emitEnumEntry(OS);
-    OS << ", ";
-    emitEnumEntry(OS);
-    OS << "}, // " << getLibcallFuncName() << '\n';
-  }
-
-  void emitSetCallingConv(raw_ostream &OS) const {}
-};
-
-struct LibcallsWithCC {
-  std::vector<const RuntimeLibcallImpl *> LibcallImpls;
-  const Record *CallingConv = nullptr;
-};
 
 class RuntimeLibcallEmitter {
 private:
   const RecordKeeper &Records;
-  DenseMap<const Record *, const RuntimeLibcall *> Def2RuntimeLibcall;
-  DenseMap<const Record *, const RuntimeLibcallImpl *> Def2RuntimeLibcallImpl;
+  RuntimeLibcalls Libcalls;
 
-  std::vector<RuntimeLibcall> RuntimeLibcallDefList;
-  std::vector<RuntimeLibcallImpl> RuntimeLibcallImplDefList;
-
-  DenseMap<const RuntimeLibcall *, const RuntimeLibcallImpl *>
-      LibCallToDefaultImpl;
-
-private:
   void emitGetRuntimeLibcallEnum(raw_ostream &OS) const;
 
   void emitNameMatchHashTable(raw_ostream &OS,
@@ -229,61 +83,7 @@ private:
   void emitSystemRuntimeLibrarySetCalls(raw_ostream &OS) const;
 
 public:
-  RuntimeLibcallEmitter(const RecordKeeper &R) : Records(R) {
-
-    ArrayRef<const Record *> AllRuntimeLibcalls =
-        Records.getAllDerivedDefinitions("RuntimeLibcall");
-
-    RuntimeLibcallDefList.reserve(AllRuntimeLibcalls.size());
-
-    size_t CallTypeEnumVal = 0;
-    for (const Record *RuntimeLibcallDef : AllRuntimeLibcalls) {
-      RuntimeLibcallDefList.emplace_back(RuntimeLibcallDef, CallTypeEnumVal++);
-      Def2RuntimeLibcall[RuntimeLibcallDef] = &RuntimeLibcallDefList.back();
-    }
-
-    for (RuntimeLibcall &LibCall : RuntimeLibcallDefList)
-      Def2RuntimeLibcall[LibCall.getDef()] = &LibCall;
-
-    ArrayRef<const Record *> AllRuntimeLibcallImplsRaw =
-        Records.getAllDerivedDefinitions("RuntimeLibcallImpl");
-
-    SmallVector<const Record *, 1024> AllRuntimeLibcallImpls(
-        AllRuntimeLibcallImplsRaw);
-
-    // Sort by libcall impl name and secondarily by the enum name.
-    sort(AllRuntimeLibcallImpls, [](const Record *A, const Record *B) {
-      return std::pair(A->getValueAsString("LibCallFuncName"), A->getName()) <
-             std::pair(B->getValueAsString("LibCallFuncName"), B->getName());
-    });
-
-    RuntimeLibcallImplDefList.reserve(AllRuntimeLibcallImpls.size());
-
-    size_t LibCallImplEnumVal = 1;
-    for (const Record *LibCallImplDef : AllRuntimeLibcallImpls) {
-      RuntimeLibcallImplDefList.emplace_back(LibCallImplDef, Def2RuntimeLibcall,
-                                             LibCallImplEnumVal++);
-
-      const RuntimeLibcallImpl &LibCallImpl = RuntimeLibcallImplDefList.back();
-      Def2RuntimeLibcallImpl[LibCallImplDef] = &LibCallImpl;
-
-      if (LibCallImpl.isDefault()) {
-        const RuntimeLibcall *Provides = LibCallImpl.getProvides();
-        if (!Provides)
-          PrintFatalError(LibCallImplDef->getLoc(),
-                          "default implementations must provide a libcall");
-        LibCallToDefaultImpl[Provides] = &LibCallImpl;
-      }
-    }
-  }
-
-  const RuntimeLibcall *getRuntimeLibcall(const Record *Def) const {
-    return Def2RuntimeLibcall.lookup(Def);
-  }
-
-  const RuntimeLibcallImpl *getRuntimeLibcallImpl(const Record *Def) const {
-    return Def2RuntimeLibcallImpl.lookup(Def);
-  }
+  RuntimeLibcallEmitter(const RecordKeeper &R) : Records(R), Libcalls(R) {}
 
   void run(raw_ostream &OS);
 };
@@ -297,24 +97,25 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
         "namespace RTLIB {\n"
         "enum Libcall : unsigned short {\n";
 
-  for (const RuntimeLibcall &LibCall : RuntimeLibcallDefList) {
+  for (const RuntimeLibcall &LibCall : Libcalls.getRuntimeLibcallDefList()) {
     StringRef Name = LibCall.getName();
     OS << "  " << Name << " = " << LibCall.getEnumVal() << ",\n";
   }
 
-  OS << "  UNKNOWN_LIBCALL = " << RuntimeLibcallDefList.size()
+  OS << "  UNKNOWN_LIBCALL = " << Libcalls.getRuntimeLibcallDefList().size()
      << "\n};\n\n"
         "enum LibcallImpl : unsigned short {\n"
         "  Unsupported = 0,\n";
 
-  for (const RuntimeLibcallImpl &LibCall : RuntimeLibcallImplDefList) {
+  for (const RuntimeLibcallImpl &LibCall :
+       Libcalls.getRuntimeLibcallImplDefList()) {
     OS << "  impl_" << LibCall.getName() << " = " << LibCall.getEnumVal()
        << ", // " << LibCall.getLibcallFuncName() << '\n';
   }
 
   OS << "};\n"
      << "constexpr size_t NumLibcallImpls = "
-     << RuntimeLibcallImplDefList.size() + 1
+     << Libcalls.getRuntimeLibcallImplDefList().size() + 1
      << ";\n"
         "} // End namespace RTLIB\n"
         "} // End namespace llvm\n";
@@ -394,6 +195,8 @@ constructPerfectHashTable(ArrayRef<RuntimeLibcallImpl> Keywords,
 /// Generate hash table based lookup by name.
 void RuntimeLibcallEmitter::emitNameMatchHashTable(
     raw_ostream &OS, StringToOffsetTable &OffsetTable) const {
+  ArrayRef<RuntimeLibcallImpl> RuntimeLibcallImplDefList =
+      Libcalls.getRuntimeLibcallImplDefList();
   std::vector<uint64_t> Hashes(RuntimeLibcallImplDefList.size());
   std::vector<unsigned> TableValues(RuntimeLibcallImplDefList.size());
   DenseSet<StringRef> SeenFuncNames;
@@ -495,7 +298,8 @@ void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallNames(
   {
     IfDefEmitter IfDef(OS, "GET_INIT_RUNTIME_LIBCALL_NAMES");
 
-    for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList)
+    for (const RuntimeLibcallImpl &LibCallImpl :
+         Libcalls.getRuntimeLibcallImplDefList())
       Table.GetOrAddStringOffset(LibCallImpl.getLibcallFuncName());
 
     Table.EmitStringTableDef(OS, "RuntimeLibcallImplNameTable");
@@ -505,7 +309,8 @@ const uint16_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameOffsetTable[] = {
 
     OS << formatv("  {}, // {}\n", Table.GetStringOffset(""),
                   ""); // Unsupported entry
-    for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList) {
+    for (const RuntimeLibcallImpl &LibCallImpl :
+         Libcalls.getRuntimeLibcallImplDefList()) {
       StringRef ImplName = LibCallImpl.getLibcallFuncName();
       OS << formatv("  {}, // {}\n", Table.GetStringOffset(ImplName), ImplName);
     }
@@ -516,7 +321,8 @@ const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
 )";
 
     OS << "  0,\n";
-    for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList)
+    for (const RuntimeLibcallImpl &LibCallImpl :
+         Libcalls.getRuntimeLibcallImplDefList())
       OS << "  " << LibCallImpl.getLibcallFuncName().size() << ",\n";
     OS << "};\n\n";
 
@@ -525,7 +331,8 @@ const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
           "ImplToLibcall[RTLIB::NumLibcallImpls] = {\n"
           "  RTLIB::UNKNOWN_LIBCALL, // RTLIB::Unsupported\n";
 
-    for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList) {
+    for (const RuntimeLibcallImpl &LibCallImpl :
+         Libcalls.getRuntimeLibcallImplDefList()) {
       const RuntimeLibcall *Provides = LibCallImpl.getProvides();
       OS << "  ";
       Provides->emitEnumEntry(OS);
@@ -533,6 +340,7 @@ const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
       LibCallImpl.emitEnumEntry(OS);
       OS << '\n';
     }
+
     OS << "};\n\n";
   }
 
@@ -544,11 +352,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
         "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
         "FloatABI::ABIType FloatABI, EABI EABIVersion, "
-        "StringRef ABIName) {\n"
-        "  struct LibcallImplPair {\n"
-        "    RTLIB::Libcall Func;\n"
-        "    RTLIB::LibcallImpl Impl;\n"
-        "  };\n";
+        "StringRef ABIName) {\n";
+
   ArrayRef<const Record *> AllLibs =
       Records.getAllDerivedDefinitions("SystemRuntimeLibrary");
 
@@ -579,7 +384,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
              std::pair<std::vector<const Record *>, const Record *>>
         Func2Preds;
     Sets.addExpander("LibcallImpls", std::make_unique<LibcallPredicateExpander>(
-                                         *this, Func2Preds));
+                                         Libcalls, Func2Preds));
 
     const SetTheory::RecVec *Elements =
         Sets.expand(R->getValueAsDef("MemberList"));
@@ -592,11 +397,12 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     constexpr unsigned BitsPerStorageElt = 64;
     DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
 
-    SmallVector<uint64_t, 32> BitsetValues(
-        divideCeil(RuntimeLibcallImplDefList.size() + 1, BitsPerStorageElt));
+    SmallVector<uint64_t, 32> BitsetValues(divideCeil(
+        Libcalls.getRuntimeLibcallImplDefList().size() + 1, BitsPerStorageElt));
 
     for (const Record *Elt : *Elements) {
-      const RuntimeLibcallImpl *LibCallImpl = getRuntimeLibcallImpl(Elt);
+      const RuntimeLibcallImpl *LibCallImpl =
+          Libcalls.getRuntimeLibcallImpl(Elt);
       if (!LibCallImpl) {
         PrintError(R, "entry for SystemLibrary is not a RuntimeLibcallImpl");
         PrintNote(Elt->getLoc(), "invalid entry `" + Elt->getName() + "`");
@@ -703,7 +509,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       Funcs.erase(UniqueI, Funcs.end());
 
       OS << indent(IndentDepth + 2)
-         << "static const LibcallImplPair LibraryCalls";
+         << "static const RTLIB::LibcallImpl LibraryCalls";
       SubsetPredicate.emitTableVariableNameSuffix(OS);
       if (FuncsWithCC.CallingConv)
         OS << '_' << FuncsWithCC.CallingConv->getName();
@@ -711,18 +517,18 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       OS << "[] = {\n";
       for (const RuntimeLibcallImpl *LibCallImpl : Funcs) {
         OS << indent(IndentDepth + 6);
-        LibCallImpl->emitTableEntry(OS);
+        LibCallImpl->emitEnumEntry(OS);
+        OS << ", // " << LibCallImpl->getLibcallFuncName() << '\n';
       }
 
       OS << indent(IndentDepth + 2) << "};\n\n"
          << indent(IndentDepth + 2)
-         << "for (const auto [Func, Impl] : LibraryCalls";
+         << "for (const RTLIB::LibcallImpl Impl : LibraryCalls";
       SubsetPredicate.emitTableVariableNameSuffix(OS);
       if (FuncsWithCC.CallingConv)
         OS << '_' << FuncsWithCC.CallingConv->getName();
 
-      OS << ") {\n"
-         << indent(IndentDepth + 4) << "setLibcallImpl(Func, Impl);\n";
+      OS << ") {\n" << indent(IndentDepth + 4) << "setAvailable(Impl);\n";
 
       if (FuncsWithCC.CallingConv) {
         StringRef CCEnum =
@@ -759,42 +565,8 @@ void RuntimeLibcallEmitter::run(raw_ostream &OS) {
   emitGetInitRuntimeLibcallNames(OS);
 
   {
-    IfDefEmitter IfDef(OS, "GET_SET_TARGET_RUNTIME_LIBCALL_SETS");
+    IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALLS_INFO");
     emitSystemRuntimeLibrarySetCalls(OS);
-  }
-}
-
-void LibcallPredicateExpander::expand(SetTheory &ST, const Record *Def,
-                                      SetTheory::RecSet &Elts) {
-  assert(Def->isSubClassOf("LibcallImpls"));
-
-  SetTheory::RecSet TmpElts;
-
-  ST.evaluate(Def->getValueInit("MemberList"), TmpElts, Def->getLoc());
-
-  Elts.insert(TmpElts.begin(), TmpElts.end());
-
-  AvailabilityPredicate AP(Def->getValueAsDef("AvailabilityPredicate"));
-  const Record *CCClass = Def->getValueAsOptionalDef("CallingConv");
-
-  // This is assuming we aren't conditionally applying a calling convention to
-  // some subsets, and not another, but this doesn't appear to be used.
-
-  for (const Record *LibcallImplDef : TmpElts) {
-    const RuntimeLibcallImpl *LibcallImpl =
-        LibcallEmitter.getRuntimeLibcallImpl(LibcallImplDef);
-    if (!AP.isAlwaysAvailable() || CCClass) {
-      auto [It, Inserted] = Func2Preds.insert({LibcallImpl, {{}, CCClass}});
-      if (!Inserted) {
-        PrintError(
-            Def,
-            "combining nested libcall set predicates currently unhandled: '" +
-                LibcallImpl->getLibcallFuncName() + "'");
-      }
-
-      It->second.first.push_back(AP.getDef());
-      It->second.second = CCClass;
-    }
   }
 }
 

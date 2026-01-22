@@ -1295,6 +1295,18 @@ public:
   ///     an empty std::optional is returned in that case.
   std::optional<lldb::addr_t> GetPreviousFrameZeroPC();
 
+  lldb::StackFrameListSP GetStackFrameList();
+
+  llvm::Error
+  LoadScriptedFrameProvider(const ScriptedFrameProviderDescriptor &descriptor);
+
+  void ClearScriptedFrameProvider();
+
+  const llvm::SmallVector<lldb::SyntheticFrameProviderSP, 0> &
+  GetFrameProviders() const {
+    return m_frame_providers;
+  }
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;
@@ -1335,8 +1347,6 @@ protected:
   virtual lldb_private::StructuredData::ObjectSP FetchThreadExtendedInfo() {
     return StructuredData::ObjectSP();
   }
-
-  lldb::StackFrameListSP GetStackFrameList();
 
   void SetTemporaryResumeState(lldb::StateType new_state) {
     m_temporary_resume_state = new_state;
@@ -1399,6 +1409,9 @@ protected:
 
   /// The Thread backed by this thread, if any.
   lldb::ThreadWP m_backed_thread;
+
+  /// The Scripted Frame Providers for this thread.
+  llvm::SmallVector<lldb::SyntheticFrameProviderSP, 0> m_frame_providers;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info

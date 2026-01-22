@@ -79,7 +79,7 @@ void testGlobalCtorJitCallback(void) {
   // Create execution engine with initialization disabled
   MlirExecutionEngine jit = mlirExecutionEngineCreate(
       module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL,
-      /*enableObjectDump=*/false);
+      /*enableObjectDump=*/false, /*enablePIC=*/false);
 
   if (mlirExecutionEngineIsNull(jit)) {
     fprintf(stderr, "Execution engine creation failed");

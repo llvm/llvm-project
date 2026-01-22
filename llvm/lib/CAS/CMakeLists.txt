@@ -1,3 +1,7 @@
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  set(additional_libs bsd)
+endif()
+
 add_llvm_component_library(LLVMCAS
   ActionCache.cpp
   ActionCaches.cpp
@@ -8,6 +12,7 @@ add_llvm_component_library(LLVMCAS
   MappedFileRegionArena.cpp
   ObjectStore.cpp
   OnDiskCAS.cpp
+  OnDiskCASLogger.cpp
   OnDiskCommon.cpp
   OnDiskDataAllocator.cpp
   OnDiskGraphDB.cpp
@@ -20,6 +25,7 @@ add_llvm_component_library(LLVMCAS
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
+  ${additional_libs}
 
   LINK_COMPONENTS
   Support

@@ -30,8 +30,8 @@ A common mistake is to compare the result to `1` or `-1`.
     if (strcmp(...) == -1)  // Incorrect usage of the returned value.
 
 Additionally, the check warns if the results value is implicitly cast to a
-*suspicious* non-integer type. It's happening when the returned value is used in
-a wrong context.
+*suspicious* non-integer type. It's happening when the returned value is
+used in a wrong context.
 
 .. code-block:: c++
 

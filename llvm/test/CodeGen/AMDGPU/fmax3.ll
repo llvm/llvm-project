@@ -162,6 +162,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-LABEL: test_fmax3_olt_0_f32:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
 ; GFX1250-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x31016000
@@ -352,6 +353,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-LABEL: test_fmax3_olt_1_f32:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
 ; GFX1250-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x31016000
@@ -609,6 +611,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-TRUE16-LABEL: test_fmax3_olt_0_f16:
 ; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-TRUE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
@@ -639,6 +642,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-FAKE16-LABEL: test_fmax3_olt_0_f16:
 ; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-FAKE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
@@ -897,6 +901,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-TRUE16-LABEL: test_fmax3_olt_1_f16:
 ; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-TRUE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
@@ -927,6 +932,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-FAKE16-LABEL: test_fmax3_olt_1_f16:
 ; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-FAKE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
@@ -969,26 +975,26 @@ define <2 x half> @no_fmax3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ; SI-LABEL: no_fmax3_v2f16:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
+; SI-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
+; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
+; SI-NEXT:    v_lshrrev_b32_e32 v7, 16, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SI-NEXT:    v_cvt_f32_f16_e32 v5, v5
 ; SI-NEXT:    v_cvt_f32_f16_e32 v6, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_max_f32_e32 v1, v1, v3
-; SI-NEXT:    v_max_f32_e32 v0, v0, v2
-; SI-NEXT:    v_max3_f32 v0, v4, v0, v6
-; SI-NEXT:    v_max3_f32 v1, v5, v1, v7
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; SI-NEXT:    v_max_f32_e32 v0, v0, v1
+; SI-NEXT:    v_max_f32_e32 v1, v7, v6
+; SI-NEXT:    v_max3_f32 v0, v2, v0, v3
+; SI-NEXT:    v_max3_f32 v1, v5, v1, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: no_fmax3_v2f16:

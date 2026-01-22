@@ -80,12 +80,22 @@ constexpr int test()
       assert((std::move(opt).value_or({2, 3}) == Z{2, 3}));
       assert(!opt);
     }
+#if TEST_STD_VER >= 26
+    {
+      int y = 2;
+      optional<int&> opt;
+      ASSERT_SAME_TYPE(decltype(std::move(opt).value_or(y)), int);
+      assert(std::move(opt).value_or(y) == 2);
+      assert(!opt);
+    }
+#endif
     return 0;
 }
 
 int main(int, char**)
 {
-    static_assert(test() == 0);
+  assert(test() == 0);
+  static_assert(test() == 0);
 
   return 0;
 }

@@ -107,6 +107,9 @@ public:
 
   static void Destroy(lldb::DebuggerSP &debugger_sp);
 
+  /// Get the build configuration as structured data.
+  static StructuredData::DictionarySP GetBuildConfiguration();
+
   static lldb::DebuggerSP FindDebuggerWithID(lldb::user_id_t id);
 
   static lldb::DebuggerSP

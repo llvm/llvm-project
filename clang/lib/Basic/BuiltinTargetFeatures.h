@@ -20,7 +20,7 @@ using llvm::StringRef;
 namespace clang {
 namespace Builtin {
 /// TargetFeatures - This class is used to check whether the builtin function
-/// has the required tagert specific features. It is able to support the
+/// has the required target specific features. It is able to support the
 /// combination of ','(and), '|'(or), and '()'. By default, the priority of
 /// ',' is higher than that of '|' .
 /// E.g:

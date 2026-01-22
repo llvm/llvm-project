@@ -547,7 +547,6 @@ TEST_F(OrcCAPITestBase, DISABLED_EnableDebugSupport) {
 #else
 static LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << "Linking in runtime functions\n"
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n';
 }
 TEST_F(OrcCAPITestBase, EnableDebugSupport) {

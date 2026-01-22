@@ -605,6 +605,7 @@ TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 TRIPLE_ARG_RE = re.compile(r"-m?triple[= ]([^ ]+)")
 MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
 DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
+STOP_PASS_RE = re.compile(r"-stop-(before|after)=(\w+)")
 
 IS_DEBUG_RECORD_RE = re.compile(r"^(\s+)#dbg_")
 IS_SWITCH_CASE_RE = re.compile(r"^\s+i\d+ \d+, label %\S+")
@@ -1576,7 +1577,12 @@ def find_diff_matching(lhs: List[str], rhs: List[str]) -> List[tuple]:
 
 
 VARIABLE_TAG = "[[@@]]"
-METAVAR_RE = re.compile(r"\[\[([A-Z0-9_]+)(?::[^]]+)?\]\]")
+METAVAR_PATTERN = r"\[\[([A-Z0-9_]+)(?::[^]]+)?\]\]"
+LABEL_METAVAR_PATTERN1 = r"label %" + METAVAR_PATTERN
+LABEL_METAVAR_PATTERN2 = r"^" + METAVAR_PATTERN + r":"
+METAVAR_RE = re.compile(
+    rf"(?:{LABEL_METAVAR_PATTERN1})|(?:{LABEL_METAVAR_PATTERN2})|(?:{METAVAR_PATTERN})"
+)
 NUMERIC_SUFFIX_RE = re.compile(r"[0-9]*$")
 
 
@@ -2013,7 +2019,8 @@ def generalize_check_lines(
                     CheckValueInfo(
                         key=None,
                         text=None,
-                        name=m.group(1),
+                        # The sole capturing group is only designated for the name.
+                        name=m.group(m.lastindex),
                         prefix="",
                         suffix="",
                     )

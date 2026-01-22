@@ -37,7 +37,7 @@ end subroutine
 subroutine no_extui(ch)
   integer, parameter :: kind = selected_char_kind('ISO_10646')
   character(*, kind), intent(in) :: ch(:)
-  integer :: i, j 
+  integer :: i, j
   ! CHECK-NOT: arith.extui
   j = ichar(ch(i)(i:i))
 end subroutine

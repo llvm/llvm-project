@@ -101,6 +101,14 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(Type *Ty) const;
 
+  /// \returns true if V might be divergent even when all of its operands
+  /// are uniform.
+  bool isSourceOfDivergence(const Value *V) const;
+
+  /// Returns true for the target specific set of operations which produce
+  /// uniform result even taking non-uniform arguments.
+  bool isAlwaysUniform(const Value *V) const;
+
 public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
@@ -174,8 +182,6 @@ public:
                                      const Value *Op1) const override;
 
   bool isReadRegisterSourceOfDivergence(const IntrinsicInst *ReadReg) const;
-  bool isSourceOfDivergence(const Value *V) const override;
-  bool isAlwaysUniform(const Value *V) const override;
 
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
     // Address space casts must cast between different address spaces.
@@ -302,6 +308,8 @@ public:
   /// together under a single i32 value. Otherwise fall back to base
   /// implementation.
   unsigned getNumberOfParts(Type *Tp) const override;
+
+  InstructionUniformity getInstructionUniformity(const Value *V) const override;
 };
 
 } // end namespace llvm

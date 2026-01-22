@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__cstddef/nullptr_t.h>
+#include <__cstddef/size_t.h>
 #include <__exception/operations.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
@@ -18,7 +19,7 @@
 #include <__type_traits/is_pointer.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
-#include <cstdlib>
+#include <__verbose_abort>
 #include <typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -35,7 +36,7 @@ _LIBCPP_PUSH_MACROS
 namespace __cxxabiv1 {
 
 extern "C" {
-_LIBCPP_OVERRIDABLE_FUNC_VIS void* __cxa_allocate_exception(size_t) throw();
+_LIBCPP_OVERRIDABLE_FUNC_VIS void* __cxa_allocate_exception(std::size_t) throw();
 _LIBCPP_OVERRIDABLE_FUNC_VIS void __cxa_free_exception(void*) throw();
 
 struct __cxa_exception;
@@ -74,9 +75,7 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
 
 public:
   // exception_ptr is basically a COW string so it is trivially relocatable.
-  // It is also replaceable because assignment has normal value semantics.
   using __trivially_relocatable _LIBCPP_NODEBUG = exception_ptr;
-  using __replaceable _LIBCPP_NODEBUG           = exception_ptr;
 
   _LIBCPP_HIDE_FROM_ABI exception_ptr() _NOEXCEPT : __ptr_() {}
   _LIBCPP_HIDE_FROM_ABI exception_ptr(nullptr_t) _NOEXCEPT : __ptr_() {}
@@ -174,7 +173,7 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 #  else  // !_LIBCPP_HAS_EXCEPTIONS
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT {
-  std::abort();
+  _LIBCPP_VERBOSE_ABORT("make_exception_ptr was called in -fno-exceptions mode");
 }
 #  endif // _LIBCPP_HAS_EXCEPTIONS
 

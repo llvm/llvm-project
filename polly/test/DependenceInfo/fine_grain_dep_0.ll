@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-dependences>' -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=reference-wise -disable-output < %s | FileCheck %s --check-prefix=REF
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-dependences>' -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=access-wise -disable-output < %s | FileCheck %s --check-prefix=ACC
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<deps>' -polly-print-deps -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=reference-wise -disable-output < %s | FileCheck %s --check-prefix=REF
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<deps>' -polly-print-deps -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=access-wise -disable-output < %s | FileCheck %s --check-prefix=ACC
 
 ; REF:      RAW dependences:
 ; REF-NEXT:     [N] -> { [Stmt_for_body[i0] -> MemRef_b[]] -> [Stmt_for_body[6 + i0] -> MemRef_b[]] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[6 + i0] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[4 + i0] : 0 <= i0 <= -11 + N; [Stmt_for_body[i0] -> MemRef_a[]] -> [Stmt_for_body[4 + i0] -> MemRef_a[]] : 0 <= i0 <= -11 + N }

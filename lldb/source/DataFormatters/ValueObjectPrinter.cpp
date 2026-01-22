@@ -12,6 +12,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/Error.h"
@@ -100,8 +101,10 @@ llvm::Error ValueObjectPrinter::PrintValueObject() {
     llvm::Expected<std::string> object_desc_or_err =
         GetMostSpecializedValue().GetObjectDescription();
     if (!object_desc_or_err) {
-      auto error_msg = toString(object_desc_or_err.takeError());
-      *m_stream << "error: " << error_msg << maybeNewline(error_msg);
+      *m_stream << "warning: `po` was unsuccessful, running `p` instead\n";
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions),
+                     object_desc_or_err.takeError(),
+                     "Object description fallback due to error: {0}");
 
       // Print the value object directly.
       m_options.DisableObjectDescription();
