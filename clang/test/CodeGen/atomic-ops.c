@@ -255,6 +255,18 @@ _Bool fd4(struct S *a, struct S *b, struct S *c) {
   return __atomic_compare_exchange(a, b, c, 1, 5, 5);
 }
 
+int ui1(int* p) {
+  // CHECK-LABEL: @ui1
+  // CHECK: atomicrmw uinc_wrap ptr {{.*}}, i32 {{.*}} release
+  return __atomic_fetch_uinc(p, 42, memory_order_release);
+}
+
+int ud1(int* p) {
+  // CHECK-LABEL: @ud1
+  // CHECK: atomicrmw udec_wrap ptr {{.*}}, i32 {{.*}} release
+  return __atomic_fetch_udec(p, 42, memory_order_release);
+}
+
 int* fp1(_Atomic(int*) *p) {
   // CHECK-LABEL: @fp1
   // CHECK: load atomic i32, ptr {{.*}} seq_cst, align 4

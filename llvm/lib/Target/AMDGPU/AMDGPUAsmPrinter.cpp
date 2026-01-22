@@ -1255,8 +1255,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.UserSGPR = MFI->getNumUserSGPRs();
   // For AMDHSA, TRAP_HANDLER must be zero, as it is populated by the CP.
-  ProgInfo.TrapHandlerEnable =
-      STM.isAmdHsaOS() ? 0 : STM.isTrapHandlerEnabled();
+  ProgInfo.TrapHandlerEnable = STM.isAmdHsaOS() ? 0 : STM.hasTrapHandler();
   ProgInfo.TGIdXEnable = MFI->hasWorkGroupIDX();
   ProgInfo.TGIdYEnable = MFI->hasWorkGroupIDY();
   ProgInfo.TGIdZEnable = MFI->hasWorkGroupIDZ();

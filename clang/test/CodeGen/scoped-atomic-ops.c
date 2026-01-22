@@ -4640,8 +4640,8 @@ _Bool fi7e(_Bool *c) {
 // SPIRV-NEXT:    ret void
 //
 void fi8a(unsigned int *a, unsigned int *b) {
-  *b = __scoped_atomic_uinc_wrap(b, ~0U, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
-  *a = __scoped_atomic_udec_wrap(a, ~0U, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
+  *b = __scoped_atomic_fetch_uinc(b, ~0U, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
+  *a = __scoped_atomic_fetch_udec(a, ~0U, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
 }
 
 //.

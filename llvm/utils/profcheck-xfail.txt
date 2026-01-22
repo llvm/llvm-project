@@ -254,7 +254,6 @@ Transforms/InstCombine/icmp-with-selects.ll
 Transforms/InstCombine/intrinsic-select.ll
 Transforms/InstCombine/ldexp-ext.ll
 Transforms/InstCombine/ldexp.ll
-Transforms/InstCombine/load-addrspacecast-select.ll
 Transforms/InstCombine/load-bitcast-select.ll
 Transforms/InstCombine/load.ll
 Transforms/InstCombine/load-select.ll
