@@ -5098,6 +5098,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             .intersectWith(ComputeForArm(Op->getOperand(2), /*Invert=*/true));
     break;
   }
+  case Instruction::Load: {
+    const MDNode *NoFPClass =
+        cast<LoadInst>(Op)->getMetadata(LLVMContext::MD_nofpclass);
+    if (!NoFPClass)
+      break;
+
+    ConstantInt *MaskVal =
+        mdconst::extract<ConstantInt>(NoFPClass->getOperand(0));
+    Known.knownNot(static_cast<FPClassTest>(MaskVal->getZExtValue()));
+    break;
+  }
   case Instruction::Call: {
     const CallInst *II = cast<CallInst>(Op);
     const Intrinsic::ID IID = II->getIntrinsicID();
