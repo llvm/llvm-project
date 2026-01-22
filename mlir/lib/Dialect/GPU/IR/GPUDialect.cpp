@@ -1472,17 +1472,44 @@ LogicalResult RotateOp::verify() {
 /// Remove gpu.barrier after gpu.barrier, the threads are already synchronized!
 static LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
                                                  PatternRewriter &rewriter) {
-  if (isa_and_nonnull<BarrierOp>(op->getNextNode())) {
-    rewriter.eraseOp(op);
-    return success();
+  auto nextOp = dyn_cast_or_null<BarrierOp>(op->getNextNode());
+  if (!nextOp)
+    return failure();
+
+  std::optional<ArrayAttr> thisMemfence = op.getAddressSpaces();
+  std::optional<ArrayAttr> nextMemfence = nextOp.getAddressSpaces();
+
+  if (thisMemfence) {
+    rewriter.modifyOpInPlace(op, [&]() {
+      if (!nextMemfence) {
+        op.removeAddressSpacesAttr();
+      } else {
+        // Fast path - mergge where the two barriers fence the same spaces.
+        if (*thisMemfence == *nextMemfence) {
+          return;
+        }
+        llvm::SmallSetVector<Attribute, 4> mergedSpaces;
+        for (Attribute attr : *thisMemfence)
+          mergedSpaces.insert(attr);
+        for (Attribute attr : *nextMemfence)
+          mergedSpaces.insert(attr);
+        op.setAddressSpacesAttr(
+            rewriter.getArrayAttr(mergedSpaces.takeVector()));
+      }
+    });
   }
-  return failure();
+
+  rewriter.eraseOp(nextOp);
+  return success();
 }
 
 void BarrierOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add(eraseRedundantGpuBarrierOps);
 }
+
+void BarrierOp::build(mlir::OpBuilder &odsBuilder,
+                      mlir::OperationState &odsState) {}
 
 //===----------------------------------------------------------------------===//
 // GPUFuncOp
