@@ -6483,8 +6483,7 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target",
                      CArg<"ArrayAttr", "nullptr">:$linkFiles,
                      CArg<"bool", "true">:$verifyTarget), [{
       return $_get($_ctxt, optLevel, triple, chip, features, targetFlags, linkFiles, verifyTarget);
-    }]>
-  ];
+    }]>];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
   let extraClassDeclaration = [{
