@@ -15,7 +15,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
@@ -95,10 +94,7 @@ INITIALIZE_PASS(MachineDominatorTreeWrapperPass, "machinedomtree",
                 "MachineDominator Tree Construction", true, true)
 
 MachineDominatorTreeWrapperPass::MachineDominatorTreeWrapperPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineDominatorTreeWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 char &llvm::MachineDominatorsID = MachineDominatorTreeWrapperPass::ID;
 

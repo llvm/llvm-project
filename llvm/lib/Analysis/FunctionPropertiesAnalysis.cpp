@@ -29,10 +29,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "func-properties-stats"
 
-#define FUNCTION_PROPERTY(Name, Description)                                   \
-  STATISTIC(Total##Name, Description);
+#define FUNCTION_PROPERTY(Name, Description) STATISTIC(Num##Name, Description);
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  STATISTIC(Total##Name, Description);
+  STATISTIC(Num##Name, Description);
 #include "llvm/IR/FunctionProperties.def"
 
 namespace llvm {
@@ -382,10 +381,9 @@ FunctionPropertiesStatisticsPass::run(Function &F,
                     << "\n");
   auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
 
-#define FUNCTION_PROPERTY(Name, Description)                                   \
-  Total##Name += AnalysisResults.Name;
+#define FUNCTION_PROPERTY(Name, Description) Num##Name += AnalysisResults.Name;
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  Total##Name += AnalysisResults.Name;
+  Num##Name += AnalysisResults.Name;
 #include "llvm/IR/FunctionProperties.def"
 
   return PreservedAnalyses::all();

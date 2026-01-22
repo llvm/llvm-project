@@ -401,7 +401,7 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
     // * SEH_UnwindV2Start at the start of each epilog.
     // * If the current instruction is too far away from where the last unwind
     //   info ended OR there are too many unwind codes in the info, then add
-    //   SEH_SplitChained to finish the current info.
+    //   SEH_SplitChainedAtEndOfBlock to finish the current info.
     unsigned LastUnwindInfoEndPosition = FI.ApproximateInstructionCount;
     unsigned UnwindCodeCount = FI.ApproximatePrologCodeCount + 1;
     for (auto &Info : llvm::reverse(FI.EpilogInfos)) {
@@ -413,8 +413,8 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
       if ((LastUnwindInfoEndPosition - Info.ApproximateInstructionPosition >=
            InstructionCountThreshold) ||
           (UnwindCodeCount >= UnwindCodeThreshold)) {
-        BuildMI(&MBB, DL, TII->get(X86::SEH_SplitChained));
-        BuildMI(&MBB, DL, TII->get(X86::SEH_EndPrologue));
+        BuildMI(MBB, MBB.begin(), DL,
+                TII->get(X86::SEH_SplitChainedAtEndOfBlock));
         LastUnwindInfoEndPosition = Info.ApproximateInstructionPosition;
         // Doesn't reset to 0, as the prolog unwind codes are now in this info.
         UnwindCodeCount = FI.ApproximatePrologCodeCount + 1;

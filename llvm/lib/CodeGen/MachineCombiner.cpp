@@ -79,9 +79,7 @@ class MachineCombiner : public MachineFunctionPass {
 
 public:
   static char ID;
-  MachineCombiner() : MachineFunctionPass(ID) {
-    initializeMachineCombinerPass(*PassRegistry::getPassRegistry());
-  }
+  MachineCombiner() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
   StringRef getPassName() const override { return "Machine InstCombiner"; }

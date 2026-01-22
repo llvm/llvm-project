@@ -260,9 +260,7 @@ class ShrinkWrapLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  ShrinkWrapLegacy() : MachineFunctionPass(ID) {
-    initializeShrinkWrapLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  ShrinkWrapLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
