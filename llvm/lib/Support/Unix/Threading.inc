@@ -119,17 +119,9 @@ void llvm_thread_join_impl(pthread_t Thread) {
   }
 }
 
-llvm::thread::id llvm_thread_get_id_impl(pthread_t Thread) {
-#ifdef __MVS__
-  return Thread.__;
-#else
-  return Thread;
-#endif
-}
+pthread_t llvm_thread_get_id_impl(pthread_t Thread) { return Thread; }
 
-llvm::thread::id llvm_thread_get_current_id_impl() {
-  return llvm_thread_get_id_impl(::pthread_self());
-}
+pthread_t llvm_thread_get_current_id_impl() { return ::pthread_self(); }
 
 } // namespace llvm
 
@@ -156,8 +148,6 @@ uint64_t llvm::get_threadid() {
   return uint64_t(syscall(__NR_gettid));
 #elif defined(_AIX)
   return uint64_t(thread_self());
-#elif defined(__MVS__)
-  return llvm_thread_get_id_impl(pthread_self());
 #else
   return uint64_t(pthread_self());
 #endif
