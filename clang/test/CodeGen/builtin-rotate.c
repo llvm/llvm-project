@@ -95,7 +95,7 @@ long long rotr64(long long x, unsigned long long y) {
 // CHECK:  call i8 @llvm.fshl.i8(i8 %{{.*}}, i8 %{{.*}}, i8 0)
 void test_builtin_stdc_rotate_left(uint8_t u8, uint16_t u16,
                                    uint32_t u32, uint64_t u64,
-                                   uint64_t u64_2, unsigned __int128 u128,
+                                   uint64_t u64_2, unsigned _BitInt(128) u128,
                                    unsigned _BitInt(9) u9, unsigned _BitInt(37) u37,
                                    unsigned _BitInt(10) u10, unsigned _BitInt(16) u16_bit,
                                    unsigned _BitInt(24) u24, unsigned _BitInt(48) u48) {
@@ -105,7 +105,7 @@ void test_builtin_stdc_rotate_left(uint8_t u8, uint16_t u16,
   volatile uint32_t result_u32;
   volatile uint64_t result_u64;
   volatile uint64_t result_u64_2;
-  volatile unsigned __int128 result_u128;
+  volatile unsigned _BitInt(128) result_u128;
   volatile unsigned _BitInt(9) result_u9;
   volatile unsigned _BitInt(37) result_u37;
   volatile unsigned _BitInt(10) result_u10;
@@ -187,7 +187,7 @@ void test_builtin_stdc_rotate_left(uint8_t u8, uint16_t u16,
 // CHECK:  call i16 @llvm.fshl.i16(i16 %{{.*}}, i16 %{{.*}}, i16 1)
 void test_builtin_stdc_rotate_right(uint8_t u8, uint16_t u16,
                                     uint32_t u32, uint64_t u64,
-                                    uint64_t u64_2, unsigned __int128 u128,
+                                    uint64_t u64_2, unsigned _BitInt(128) u128,
                                     unsigned _BitInt(9) u9, unsigned _BitInt(12) u12,
                                     unsigned _BitInt(20) u20, unsigned _BitInt(32) u32_bit) {
 
@@ -196,7 +196,7 @@ void test_builtin_stdc_rotate_right(uint8_t u8, uint16_t u16,
   volatile uint32_t result_u32;
   volatile uint64_t result_u64;
   volatile uint64_t result_u64_2;
-  volatile unsigned __int128 result_u128;
+  volatile unsigned _BitInt(128) result_u128;
   volatile unsigned _BitInt(9) result_u9;
   volatile unsigned _BitInt(12) result_u12;
   volatile unsigned _BitInt(20) result_u20;
