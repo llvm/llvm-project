@@ -1693,7 +1693,11 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
 std::optional<int64_t> llvm::getPtrConstRuntimeStride(
     PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr, const Loop *Lp,
     const DominatorTree &DT, const DenseMap<Value *, const SCEV *> &StridesMap,
-    bool Assume) {
+    bool AllowRuntimeSCEVChecks) {
+  // Require runtime checks to ensure correctness of runtime stride
+  if (!AllowRuntimeSCEVChecks)
+    return std::nullopt;
+
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
@@ -1701,7 +1705,7 @@ std::optional<int64_t> llvm::getPtrConstRuntimeStride(
   assert(Ptr->getType()->isPointerTy() && "Unexpected non-ptr");
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
-  if (Assume && !AR)
+  if (AllowRuntimeSCEVChecks && !AR)
     AR = PSE.getAsAddRec(Ptr);
 
   if (!AR) {
@@ -1718,6 +1722,16 @@ std::optional<int64_t> llvm::getPtrConstRuntimeStride(
         dbgs() << "LAA: Bad stride - Pointer isn't runtime const strided "
                << *Ptr << " SCEV: " << *AR << "\n");
     return std::nullopt;
+  }
+
+  // Add runtime SCEV check for multiplier
+  const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
+  const APInt *APStepVal;
+  const SCEV *Multiplier;
+  if (match(Step, m_scev_c_Mul(m_scev_APInt(APStepVal), m_SCEV(Multiplier)))) {
+    const SCEV *One = PSE.getSE()->getOne(Multiplier->getType());
+    PSE.addPredicate(
+        *PSE.getSE()->getComparePredicate(CmpInst::ICMP_EQ, Multiplier, One));
   }
 
   return Stride;

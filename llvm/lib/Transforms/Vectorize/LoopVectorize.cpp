@@ -1261,6 +1261,10 @@ public:
   /// access that can be widened.
   bool memoryInstructionCanBeWidened(Instruction *I, ElementCount VF);
 
+  // Returns true if \p is a memory instruction with strided memory access that
+  // can be widened.
+  bool stridedMemoryAccessCanBeWidened(Instruction *I, ElementCount VF);
+
   /// Returns true if \p I is a memory instruction in an interleaved-group
   /// of memory accesses that can be vectorized with wide vector loads/stores
   /// and shuffles.
@@ -1549,7 +1553,8 @@ private:
 
   /// The cost computation for widening instruction \p I with consecutive
   /// memory access.
-  InstructionCost getConsecutiveMemOpCost(Instruction *I, ElementCount VF);
+  InstructionCost getConsecutiveMemOpCost(Instruction *I, ElementCount VF,
+                                          bool IsRuntimeConstStrided = false);
 
   /// The cost calculation for Load/Store instruction \p I with uniform pointer -
   /// Load: scalar load + broadcast.
@@ -3081,6 +3086,32 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
 
   // In order to be widened, the pointer should be consecutive, first of all.
   if (!Legal->isConsecutivePtr(ScalarTy, Ptr))
+    return false;
+
+  // If the instruction is a store located in a predicated block, it will be
+  // scalarized.
+  if (isScalarWithPredication(I, VF))
+    return false;
+
+  // If the instruction's allocated size doesn't equal it's type size, it
+  // requires padding and will be scalarized.
+  auto &DL = I->getDataLayout();
+  if (hasIrregularType(ScalarTy, DL))
+    return false;
+
+  return true;
+}
+
+bool LoopVectorizationCostModel::stridedMemoryAccessCanBeWidened(
+    Instruction *I, ElementCount VF) {
+  // Get and ensure we have a valid memory instruction.
+  assert((isa<LoadInst, StoreInst>(I)) && "Invalid memory instruction");
+
+  auto *Ptr = getLoadStorePointerOperand(I);
+  auto *ScalarTy = getLoadStoreType(I);
+
+  // In order to be widened, the pointer should be consecutive, first of all.
+  if (!Legal->isConstRuntimeStridedPtr(ScalarTy, Ptr))
     return false;
 
   // If the instruction is a store located in a predicated block, it will be
@@ -5306,14 +5337,17 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   return Cost;
 }
 
-InstructionCost
-LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
-                                                    ElementCount VF) {
+InstructionCost LoopVectorizationCostModel::getConsecutiveMemOpCost(
+    Instruction *I, ElementCount VF, bool IsRuntimeConstStrided) {
   Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   Value *Ptr = getLoadStorePointerOperand(I);
   unsigned AS = getLoadStoreAddressSpace(I);
   int ConsecutiveStride = Legal->isConsecutivePtr(ValTy, Ptr);
+
+  ConsecutiveStride = (!ConsecutiveStride && IsRuntimeConstStrided)
+                          ? Legal->isConstRuntimeStridedPtr(ValTy, Ptr)
+                          : ConsecutiveStride;
 
   assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
          "Stride should be 1 or -1 for consecutive memory access");
@@ -5766,6 +5800,23 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         InstWidening Decision =
             ConsecutiveStride == 1 ? CM_Widen : CM_Widen_Reverse;
         setWideningDecision(&I, VF, Decision, Cost);
+        continue;
+      } else if (stridedMemoryAccessCanBeWidened(&I, VF)) {
+        int BaseStride = Legal->isConstRuntimeStridedPtr(
+            getLoadStoreType(&I), getLoadStorePointerOperand(&I));
+        assert((BaseStride >= 1) && "Expected base stride to be >= 1");
+
+        // For base strides greater than 1 we should default to
+        // gather/scatters
+        InstructionCost Cost;
+        if (BaseStride == 1) {
+          Cost = getConsecutiveMemOpCost(&I, VF, true);
+          setWideningDecision(&I, VF, CM_Widen, Cost);
+        } else {
+          Cost = isLegalGatherOrScatter(&I, VF) ? getGatherScatterCost(&I, VF)
+                                                : InstructionCost::getInvalid();
+          setWideningDecision(&I, VF, CM_GatherScatter, Cost);
+        }
         continue;
       }
 

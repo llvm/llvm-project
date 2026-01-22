@@ -489,10 +489,10 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   return 0;
 }
 
-bool LoopVectorizationLegality::isConstRuntimeStridedPtr(Type *AccessTy,
-                                                         Value *Ptr) const {
+int LoopVectorizationLegality::isConstRuntimeStridedPtr(Type *AccessTy,
+                                                        Value *Ptr) const {
   if (!AllowStridedPointerIVs)
-    return false;
+    return 0;
 
   const auto &Strides =
       LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
