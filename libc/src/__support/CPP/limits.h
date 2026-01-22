@@ -28,11 +28,19 @@ template <typename T> struct numeric_limits_impl<T, true> {
       (CHAR_BIT * sizeof(T)) - cpp::is_signed_v<T>;
 
   LIBC_INLINE static constexpr T min() {
-    return is_signed ? T(T(1) << digits) : 0;
+    if constexpr (is_signed) {
+      return T(T(1) << digits);
+    } else {
+      return 0;
+    }
   }
 
   LIBC_INLINE static constexpr T max() {
-    return is_signed ? T(T(~0) ^ min()) : T(~0);
+    if constexpr (is_signed) {
+      return T(T(~0) ^ min());
+    } else {
+      return T(~0);
+    }
   }
 };
 
