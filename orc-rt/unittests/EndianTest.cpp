@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/Endian.h"
+#include "orc-rt/bit.h"
 #include "gtest/gtest.h"
 
 #include <algorithm>
