@@ -207,7 +207,7 @@ public:
       } else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
         if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
           Reporter->suggestAnnotation(SuggestionScope::CrossTU,
-                                      cast<const CXXMethodDecl>(CrossTUDecl),
+                                      cast<CXXMethodDecl>(CrossTUDecl),
                                       EscapeExpr);
         else
           Reporter->suggestAnnotation(SuggestionScope::IntraTU, MD, EscapeExpr);

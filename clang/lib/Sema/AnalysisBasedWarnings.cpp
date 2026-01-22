@@ -2950,9 +2950,9 @@ public:
 
   void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
     CXXMethodDecl *MutableMD = const_cast<CXXMethodDecl *>(MD);
-    ASTContext &Ctx = S.getASTContext();
     if (lifetimes::implicitObjectParamIsLifetimeBound(MutableMD))
       return;
+    ASTContext &Ctx = S.getASTContext();
     auto *Attr =
         LifetimeBoundAttr::CreateImplicit(Ctx, MutableMD->getLocation());
     QualType MethodType = MutableMD->getType();

@@ -48,6 +48,10 @@ inline View redeclared_in_header(View a) {  // expected-warning {{parameter in i
   return a;                                 // expected-note {{param returned here}}
 }
 
+struct ReturnThis {
+  const ReturnThis& get() const;           // expected-warning {{implicit this in cross-TU function should be marked [[clang::lifetimebound]]}}.
+};
+
 #endif // TEST_HEADER_H
 
 //--- test_source.cpp
@@ -161,6 +165,10 @@ View intra_tu_func_redecl(View a) {   // expected-warning {{parameter in intra-T
 
 static View return_view_static(View a) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
   return a;                               // expected-note {{param returned here}} 
+}
+
+const ReturnThis& ReturnThis::get() const {
+  return *this;                       // expected-note {{param returned here}}
 }
 
 struct ReturnsSelf {
