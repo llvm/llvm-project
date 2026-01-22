@@ -2371,16 +2371,15 @@ void TypeSystemSwiftTypeRefForExpressions::ModulesDidLoad(
   });
 }
 
-Status TypeSystemSwiftTypeRefForExpressions::PerformCompileUnitImports(
+llvm::Error TypeSystemSwiftTypeRefForExpressions::PerformCompileUnitImports(
     const SymbolContext &sc) {
-  Status status;
   lldb::ProcessSP process_sp;
   if (auto target_sp = sc.target_sp)
     process_sp = target_sp->GetProcessSP();
 
   if (auto swift_ast_ctx = GetSwiftASTContextOrNull(sc))
-    swift_ast_ctx->PerformCompileUnitImports(sc, process_sp, status);
-  return status;
+    return swift_ast_ctx->PerformCompileUnitImports(sc, process_sp);
+  return llvm::Error::success();
 }
 
 UserExpression *TypeSystemSwiftTypeRefForExpressions::GetUserExpression(
@@ -2539,17 +2538,20 @@ SwiftASTContextSP TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext(
   assert(llvm::isa<SwiftASTContextForExpressions>(swift_ast_context.get()));
 
   auto perform_initial_import = [&](const SymbolContext &sc) {
-    Status error;
     lldb::ProcessSP process_sp;
     TargetSP target_sp = GetTargetWP().lock();
     if (target_sp)
       process_sp = target_sp->GetProcessSP();
-    swift_ast_context->PerformCompileUnitImports(sc, process_sp, error);
-    if (error.Fail() && target_sp)
-      if (StreamSP errs_sp = target_sp->GetDebugger().GetAsyncErrorStream())
-        errs_sp->Printf(
-            "Could not import Swift modules for translation unit: %s",
-            error.AsCString());
+    if (auto error =
+            swift_ast_context->PerformCompileUnitImports(sc, process_sp)) {
+      if (target_sp) {
+        if (StreamSP errs_sp = target_sp->GetDebugger().GetAsyncErrorStream())
+          errs_sp->Printf(
+              "Could not import Swift modules for translation unit: %s",
+              llvm::toString(std::move(error)).c_str());
+      } else
+        llvm::consumeError(std::move(error));
+    }
   };
 
   perform_initial_import(sc);
