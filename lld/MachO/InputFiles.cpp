@@ -1451,7 +1451,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       continue;
     }
 
-    assert(cieMap.count(cieIsec));
+    assert(cieMap.contains(cieIsec));
     const CIE &cie = cieMap[cieIsec];
     // Offset of the function address within the EH frame.
     const size_t funcAddrOff = dataOff;
