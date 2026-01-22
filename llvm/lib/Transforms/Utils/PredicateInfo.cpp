@@ -399,7 +399,7 @@ void PredicateInfoBuilder::processAssume(
 
     for (Value *V : Values) {
       if (shouldRename(V)) {
-        auto *PA = new (Allocator) PredicateAssume(V, II, Cond);
+        auto *PA = new (Allocator) PredicateConditionAssume(V, II, Cond);
         addInfoFor(OpsToRename, V, PA);
       }
     }
@@ -733,7 +733,7 @@ std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
                                    cast<PointerType>(OriginalOp->getType()))}};
   }
 
-  case PT_Assume:
+  case PT_ConditionAssume:
   case PT_Branch: {
     bool TrueEdge = true;
     if (auto *PBranch = dyn_cast<PredicateBranch>(this))
@@ -845,8 +845,13 @@ public:
         PS->To->printAsOperand(OS);
         OS << "]";
       } else if (const auto *PA = dyn_cast<PredicateAssume>(PI)) {
-        OS << "; assume predicate info {"
-           << " Comparison:" << *PA->Condition;
+        OS << "; assume predicate info {";
+        if (auto * PBA = dyn_cast<PredicateBundleAssume>(PA)) {
+          OS << " Attribute: " << Attribute::getNameFromAttrKind(PBA->AttrKind);
+        } else {
+          assert(isa<PredicateConditionAssume>(PA));
+          OS << " Comparison:" << *PA->Condition;
+        }
       }
       OS << ", RenamedOp: ";
       PI->RenamedOp->printAsOperand(OS, false);
