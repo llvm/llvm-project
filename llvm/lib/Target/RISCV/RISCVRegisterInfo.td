@@ -817,20 +817,26 @@ def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8>;
 def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
 // Fractional LMUL register classes for inline assembly.
-def VRMF8 : VReg<VMF8VTs, (add VR), 1>;
-def VRMF8NoV0 : VReg<VMF8VTs, (add VRNoV0), 1>;
+// The ZZZ_ prefix is to make sure these are ordered after VR/VRNoV0 in the
+// regclass enum. Tablegen uses the name to break ties. This is important
+// because only VR/VRNoV0 have the full type lists.
+def ZZZ_VRMF8 : VReg<VMF8VTs, (add VR), 1>;
+def ZZZ_VRMF8NoV0 : VReg<VMF8VTs, (add VRNoV0), 1>;
 
-def VRMF4 : VReg<VMF4VTs, (add VR), 1>;
-def VRMF4NoV0 : VReg<VMF4VTs, (add VRNoV0), 1>;
+def ZZZ_VRMF4 : VReg<VMF4VTs, (add VR), 1>;
+def ZZZ_VRMF4NoV0 : VReg<VMF4VTs, (add VRNoV0), 1>;
 
-def VRMF2 : VReg<VMF2VTs, (add VR), 1>;
-def VRMF2NoV0 : VReg<VMF2VTs, (add VRNoV0), 1>;
+def ZZZ_VRMF2 : VReg<VMF2VTs, (add VR), 1>;
+def ZZZ_VRMF2NoV0 : VReg<VMF2VTs, (add VRNoV0), 1>;
 
 def VMV0 : VReg<VMaskVTs, (add V0), 1>;
 
 // The register class is added for inline assembly for vector mask types.
-def VM : VReg<VMaskVTs, (add VR), 1>;
-def VMNoV0 : VReg<VMaskVTs, (add VRNoV0), 1>;
+// The ZZZ_ prefix is to make sure these are ordered after VR/VRNoV0 in the
+// regclass enum. Tablegen uses the name to break ties. This is important
+// because only VR/VRNoV0 have the full type lists.
+def ZZZ_VM : VReg<VMaskVTs, (add VR), 1>;
+def ZZZ_VMNoV0 : VReg<VMaskVTs, (add VRNoV0), 1>;
 
 defvar VTupM1N2VTs = [riscv_nxv8i8x2, riscv_nxv4i8x2, riscv_nxv2i8x2, riscv_nxv1i8x2];
 defvar VTupM1N3VTs = [riscv_nxv8i8x3, riscv_nxv4i8x3, riscv_nxv2i8x3, riscv_nxv1i8x3];
