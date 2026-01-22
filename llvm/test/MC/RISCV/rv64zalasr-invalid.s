@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv64 -mattr=+experimental-zalasr < %s 2>&1 | FileCheck -check-prefixes=CHECK %s
+# RUN: not llvm-mc -triple riscv64 -mattr=+zalasr < %s 2>&1 | FileCheck -check-prefixes=CHECK %s
 
 # CHECK: error: unrecognized instruction mnemonic
 lw. a1, (t0)

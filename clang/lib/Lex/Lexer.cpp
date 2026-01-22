@@ -36,7 +36,6 @@
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/UnicodeCharRanges.h"
-
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -46,7 +45,7 @@
 #include <optional>
 #include <string>
 
-#if defined(__i386__) || defined(__x86_64__)
+#ifdef __SSE4_2__
 #include <nmmintrin.h>
 #endif
 
@@ -1931,21 +1930,10 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
   return true;
 }
 
-static const char *fastParseASCIIIdentifierScalar(const char *CurPtr) {
-  unsigned char C = *CurPtr;
-  while (isAsciiIdentifierContinue(C))
-    C = *++CurPtr;
-  return CurPtr;
-}
-
-// Fast path for lexing ASCII identifiers using SSE4.2 instructions.
-// Only enabled on x86/x86_64 when building with __SSE4_2__ enabled, or with a
-// compiler and platform that support runtime dispatch.
-#if defined(__SSE4_2__) || LLVM_SUPPORTS_RUNTIME_SSE42_CHECK
-// LLVM_ATTRIBUTE_USED is a hack to suppress a false-positive warning due to a
-// bug in clang-18 and less. See PR175452.
-LLVM_ATTRIBUTE_USED LLVM_TARGET_SSE42 static const char *
-fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
+static const char *
+fastParseASCIIIdentifier(const char *CurPtr,
+                         [[maybe_unused]] const char *BufferEnd) {
+#ifdef __SSE4_2__
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
       '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
   };
@@ -1965,19 +1953,13 @@ fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
       continue;
     return CurPtr;
   }
-
-  return fastParseASCIIIdentifierScalar(CurPtr);
-}
 #endif
 
-#ifndef __SSE4_2__
-#if LLVM_SUPPORTS_RUNTIME_SSE42_CHECK
-LLVM_TARGET_DEFAULT
-#endif
-static const char *fastParseASCIIIdentifier(const char *CurPtr, const char *) {
-  return fastParseASCIIIdentifierScalar(CurPtr);
+  unsigned char C = *CurPtr;
+  while (isAsciiIdentifierContinue(C))
+    C = *++CurPtr;
+  return CurPtr;
 }
-#endif
 
 bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
   // Match [_A-Za-z0-9]*, we have already matched an identifier start.

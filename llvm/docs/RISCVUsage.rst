@@ -173,6 +173,7 @@ on support follow.
      ``Zaamo``         Assembly Support
      ``Zabha``         Supported
      ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
+     ``Zalasr``        Supported
      ``Zalrsc``        Assembly Support
      ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zawrs``         Assembly Support
@@ -336,9 +337,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-p``
   LLVM implements the `018 draft specification <https://www.jhauser.us/RISCV/ext-P/>`__.
-
-``experimental-zalasr``
-  LLVM implements the `0.9 draft specification <https://github.com/riscv/riscv-zalasr/releases/tag/v0.9>`__.
 
 ``experimental-zibi``
   LLVM implements the `0.1 release specification <https://github.com/riscv/zibi/releases/tag/v0.1.0>`__.
