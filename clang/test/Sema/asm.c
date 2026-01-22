@@ -43,6 +43,10 @@ void test3(void) {
   int x;
   asm(L"foo" : "=r"(x)); // expected-error {{wide string}}
   asm("foo" : L"=r"(x)); // expected-error {{wide string}}
+
+  // GH177056
+  asm("" ::: (u8"")); // expected-error {{the expression in this asm operand must be a string literal or an object with 'data()' and 'size()' member functions}}
+  asm(R"(nop)");
 }
 
 void test4(const volatile void *addr)
