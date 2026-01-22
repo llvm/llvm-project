@@ -6370,29 +6370,29 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target",
       }
     ```
   }];
-  let parameters = (ins
-    DefaultValuedParameter<"int", "2", "Optimization level to apply.">:$O,
-    StringRefParameter<"Target triple.", "\"nvptx64-nvidia-cuda\"">:$triple,
-    StringRefParameter<"Target chip.", "\"sm_50\"">:$chip,
-    StringRefParameter<"Target chip features.", "\"\"">:$features,
-    OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
-    OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link,
-    DefaultValuedParameter<"bool", "true", "Perform SM version check on Ops.">:$verifyTarget
-  );
+  let parameters = (ins DefaultValuedParameter<
+                        "int", "2", "Optimization level to apply.">:$O,
+      StringRefParameter<"Target triple.", "\"nvptx64-nvidia-cuda\"">:$triple,
+      StringRefParameter<"Target chip.", "\"sm_50\"">:$chip,
+      StringRefParameter<"Target chip features.", "\"\"">:$features,
+      OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
+      OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link,
+      DefaultValuedParameter<"bool", "true",
+                             "Perform SM version check on Ops.">:$verifyTarget);
   let assemblyFormat = [{
     (`<` struct($O, $triple, $chip, $features, $flags, $link, $verifyTarget)^ `>`)?
   }];
-  let builders = [
-    AttrBuilder<(ins CArg<"int", "2">:$optLevel,
-                     CArg<"StringRef", "\"nvptx64-nvidia-cuda\"">:$triple,
-                     CArg<"StringRef", "\"sm_50\"">:$chip,
-                     CArg<"StringRef", "\"\"">:$features,
-                     CArg<"DictionaryAttr", "nullptr">:$targetFlags,
-                     CArg<"ArrayAttr", "nullptr">:$linkFiles,
-                     CArg<"bool", "true">:$verifyTarget), [{
+  let builders = [AttrBuilder<
+      (ins CArg<"int", "2">:$optLevel,
+          CArg<"StringRef", "\"nvptx64-nvidia-cuda\"">:$triple,
+          CArg<"StringRef", "\"sm_50\"">:$chip,
+          CArg<"StringRef", "\"\"">:$features,
+          CArg<"DictionaryAttr", "nullptr">:$targetFlags,
+          CArg<"ArrayAttr", "nullptr">:$linkFiles,
+          CArg<"bool", "true">:$verifyTarget),
+      [{
       return $_get($_ctxt, optLevel, triple, chip, features, targetFlags, linkFiles, verifyTarget);
-    }]>
-  ];
+    }]>];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
   let extraClassDeclaration = [{
