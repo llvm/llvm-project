@@ -134,7 +134,7 @@
 "`P3480R6 <https://wg21.link/P3480R6>`__","``std::simd`` is a range","2025-06 (Sofia)","","","`#148144 <https://github.com/llvm/llvm-project/issues/148144>`__",""
 "`P2664R11 <https://wg21.link/P2664R11>`__","Extend ``std::simd`` with permutation API","2025-06 (Sofia)","","","`#148145 <https://github.com/llvm/llvm-project/issues/148145>`__",""
 "`P3691R1 <https://wg21.link/P3691R1>`__","Reconsider naming of the namespace for ``std::simd``","2025-06 (Sofia)","","","`#148148 <https://github.com/llvm/llvm-project/issues/148148>`__",""
-"`P3383R3 <https://wg21.link/P3383R3>`__","``mdspan.at()``","2025-06 (Sofia)","","","`#148149 <https://github.com/llvm/llvm-project/issues/148149>`__",""
+"`P3383R3 <https://wg21.link/P3383R3>`__","``mdspan.at()``","2025-06 (Sofia)","|Complete|","23","`#148149 <https://github.com/llvm/llvm-project/issues/148149>`__",""
 "`P2927R3 <https://wg21.link/P2927R3>`__","Inspecting ``exception_ptr``","2025-06 (Sofia)","","","`#148150 <https://github.com/llvm/llvm-project/issues/148150>`__",""
 "`P3748R0 <https://wg21.link/P3748R0>`__","Inspecting ``exception_ptr`` should be constexpr","2025-06 (Sofia)","","","`#148151 <https://github.com/llvm/llvm-project/issues/148151>`__",""
 "`P2830R10 <https://wg21.link/P2830R10>`__","Standardized Constexpr Type Ordering","2025-06 (Sofia)","","","`#148152 <https://github.com/llvm/llvm-project/issues/148152>`__",""

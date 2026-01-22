@@ -40,6 +40,7 @@
 #include <__utility/integer_sequence.h>
 #include <array>
 #include <span>
+#include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -213,6 +214,37 @@ public:
     }(make_index_sequence<rank()>()));
   }
 
+#  if _LIBCPP_STD_VER >= 26
+  template <class... _OtherIndexTypes>
+    requires((is_convertible_v<_OtherIndexTypes, index_type> && ...) &&
+             (is_nothrow_constructible_v<index_type, _OtherIndexTypes> && ...) &&
+             (sizeof...(_OtherIndexTypes) == rank()))
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference at(_OtherIndexTypes... __indices) const {
+    if (!__mdspan_detail::__is_multidimensional_index_in(__map_.extents(), __indices...)) {
+      __throw_out_of_range();
+    }
+    return (*this)[static_cast<index_type>(std::move(__indices))...];
+  }
+
+  template <class _OtherIndexType>
+    requires(is_convertible_v<const _OtherIndexType&, index_type> &&
+             is_nothrow_constructible_v<index_type, const _OtherIndexType&>)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference at(const array<_OtherIndexType, rank()>& __indices) const {
+    return [&]<size_t... _Idxs>(index_sequence<_Idxs...>) -> reference {
+      return at(static_cast<index_type>(__indices[_Idxs])...);
+    }(make_index_sequence<rank()>());
+  }
+
+  template <class _OtherIndexType>
+    requires(is_convertible_v<const _OtherIndexType&, index_type> &&
+             is_nothrow_constructible_v<index_type, const _OtherIndexType&>)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference at(span<_OtherIndexType, rank()> __indices) const {
+    return [&]<size_t... _Idxs>(index_sequence<_Idxs...>) -> reference {
+      return at(static_cast<index_type>(__indices[_Idxs])...);
+    }(make_index_sequence<rank()>());
+  }
+#  endif
+
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr size_type size() const noexcept {
     // Could leave this as only checked in debug mode: semantically size() is never
     // guaranteed to be related to any accessible range
@@ -269,6 +301,10 @@ private:
 
   template <class, class, class, class>
   friend class mdspan;
+
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range() const { std::__throw_out_of_range("mdspan"); }
+#  endif
 };
 
 #  if _LIBCPP_STD_VER >= 26
