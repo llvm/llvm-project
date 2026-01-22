@@ -979,6 +979,37 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   return FrameTy;
 }
 
+/// If MaybeArgument is a byval Argument, return its byval type. Also removes
+/// the captures attribute, so that the argument *value* may be stored directly
+/// on the coroutine frame.
+static Type *extractByvalIfArgument(Value *MaybeArgument) {
+  if (auto *Arg = dyn_cast<Argument>(MaybeArgument)) {
+    Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::Captures);
+
+    if (Arg->hasByValAttr())
+      return Arg->getParamByValType();
+  }
+  return nullptr;
+}
+
+/// Store Def into the coroutine frame.
+static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
+                                 Type *ByValTy, const coro::Shape &Shape,
+                                 const FrameDataInfo &FrameData) {
+  auto Index = FrameData.getFieldIndex(Def);
+  auto *G = Builder.CreateConstInBoundsGEP2_32(
+      Shape.FrameTy, Shape.FramePtr, 0, Index,
+      Def->getName() + Twine(".spill.addr"));
+  auto SpillAlignment = Align(FrameData.getAlign(Def));
+
+  // For byval arguments, store the pointed-to value in the frame.
+  if (ByValTy)
+    Builder.CreateAlignedStore(Builder.CreateLoad(ByValTy, Def), G,
+                               SpillAlignment);
+  else
+    Builder.CreateAlignedStore(Def, G, SpillAlignment);
+}
+
 /// Returns a GEP into the coroutine frame at the offset where Orig is located.
 static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
                                       IRBuilder<> &Builder, coro::Shape &Shape,
@@ -1051,39 +1082,15 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   Function *F = Shape.CoroBegin->getFunction();
   IRBuilder<> Builder(C);
   StructType *FrameTy = Shape.FrameTy;
-  Value *FramePtr = Shape.FramePtr;
   DominatorTree DT(*F);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
   for (auto const &E : FrameData.Spills) {
     Value *Def = E.first;
-    auto SpillAlignment = Align(FrameData.getAlign(Def));
-    // Create a store instruction storing the value into the
-    // coroutine frame.
-    BasicBlock::iterator InsertPt = coro::getSpillInsertionPt(Shape, Def, DT);
+    Type *ByValTy = extractByvalIfArgument(Def);
 
-    Type *ByValTy = nullptr;
-    if (auto *Arg = dyn_cast<Argument>(Def)) {
-      // If we're spilling an Argument, make sure we clear 'captures'
-      // from the coroutine function.
-      Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::Captures);
-
-      if (Arg->hasByValAttr())
-        ByValTy = Arg->getParamByValType();
-    }
-
-    auto Index = FrameData.getFieldIndex(Def);
-    Builder.SetInsertPoint(InsertPt->getParent(), InsertPt);
-    auto *G = Builder.CreateConstInBoundsGEP2_32(
-        FrameTy, FramePtr, 0, Index, Def->getName() + Twine(".spill.addr"));
-    if (ByValTy) {
-      // For byval arguments, we need to store the pointed value in the frame,
-      // instead of the pointer itself.
-      auto *Value = Builder.CreateLoad(ByValTy, Def);
-      Builder.CreateAlignedStore(Value, G, SpillAlignment);
-    } else {
-      Builder.CreateAlignedStore(Def, G, SpillAlignment);
-    }
+    Builder.SetInsertPoint(coro::getSpillInsertionPt(Shape, Def, DT));
+    createStoreIntoFrame(Builder, Def, ByValTy, Shape, FrameData);
 
     BasicBlock *CurrentBlock = nullptr;
     Value *CurrentReload = nullptr;
@@ -1100,10 +1107,12 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         GEP->setName(E.first->getName() + Twine(".reload.addr"));
         if (ByValTy)
           CurrentReload = GEP;
-        else
+        else {
+          auto SpillAlignment = Align(FrameData.getAlign(Def));
           CurrentReload = Builder.CreateAlignedLoad(
               FrameTy->getElementType(FrameData.getFieldIndex(E.first)), GEP,
               SpillAlignment, E.first->getName() + Twine(".reload"));
+        }
 
         TinyPtrVector<DbgVariableRecord *> DVRs = findDVRDeclares(Def);
         // Try best to find dbg.declare. If the spill is a temp, there may not
