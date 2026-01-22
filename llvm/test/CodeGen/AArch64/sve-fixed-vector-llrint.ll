@@ -595,30 +595,26 @@ define <8 x i64> @llrint_v8i64_v8f64(<8 x double> %x) nounwind {
 ; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
 ; CHECK-NEXT:    frintx z2.d, p0/m, z2.d
-; CHECK-NEXT:    mov z4.d, z2.d[2]
-; CHECK-NEXT:    mov z5.d, z0.d[2]
-; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    mov z3.d, z2.d[3]
-; CHECK-NEXT:    mov z6.d, z0.d[3]
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    mov z0.d, z2.d[1]
-; CHECK-NEXT:    fcvtzs x10, d2
-; CHECK-NEXT:    fcvtzs x11, d4
-; CHECK-NEXT:    fcvtzs x12, d5
-; CHECK-NEXT:    fcvtzs x9, d1
-; CHECK-NEXT:    fcvtzs x13, d3
-; CHECK-NEXT:    fcvtzs x14, d6
-; CHECK-NEXT:    fcvtzs x15, d0
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d2, x10
-; CHECK-NEXT:    fmov d1, x12
-; CHECK-NEXT:    fmov d3, x11
-; CHECK-NEXT:    mov v0.d[1], x9
-; CHECK-NEXT:    mov v2.d[1], x15
-; CHECK-NEXT:    mov v1.d[1], x14
-; CHECK-NEXT:    mov v3.d[1], x13
+; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
+; CHECK-NEXT:    mov z1.d, z2.d[3]
+; CHECK-NEXT:    mov z3.d, z0.d[3]
+; CHECK-NEXT:    mov z4.d, z0.d[1]
+; CHECK-NEXT:    mov z5.d, z2.d[2]
+; CHECK-NEXT:    mov z6.d, z0.d[2]
+; CHECK-NEXT:    mov z7.d, z2.d[1]
+; CHECK-NEXT:    fcvtzs d2, d2
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    fcvtzs x8, d1
+; CHECK-NEXT:    fcvtzs x9, d3
+; CHECK-NEXT:    fcvtzs x10, d4
+; CHECK-NEXT:    fcvtzs d3, d5
+; CHECK-NEXT:    fcvtzs d1, d6
+; CHECK-NEXT:    fcvtzs x11, d7
+; CHECK-NEXT:    mov v0.d[1], x10
+; CHECK-NEXT:    mov v2.d[1], x11
+; CHECK-NEXT:    mov v1.d[1], x9
+; CHECK-NEXT:    mov v3.d[1], x8
 ; CHECK-NEXT:    ret
   %a = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> %x)
   ret <8 x i64> %a
@@ -628,72 +624,60 @@ declare <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double>)
 define <16 x i64> @llrint_v16f64(<16 x double> %x) nounwind {
 ; CHECK-LABEL: llrint_v16f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d, vl2
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-NEXT:    // kill: def $q4 killed $q4 def $z4
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
 ; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
-; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    splice z6.d, p0, z6.d, z7.d
 ; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
 ; CHECK-NEXT:    splice z4.d, p0, z4.d, z5.d
 ; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    splice z4.d, p1, z4.d, z5.d
-; CHECK-NEXT:    splice z2.d, p1, z2.d, z3.d
-; CHECK-NEXT:    splice z6.d, p1, z6.d, z7.d
-; CHECK-NEXT:    splice z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    frintx z6.d, p0/m, z6.d
 ; CHECK-NEXT:    frintx z4.d, p0/m, z4.d
 ; CHECK-NEXT:    frintx z2.d, p0/m, z2.d
-; CHECK-NEXT:    frintx z6.d, p0/m, z6.d
 ; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
-; CHECK-NEXT:    mov z3.d, z4.d[2]
+; CHECK-NEXT:    mov z1.d, z6.d[3]
+; CHECK-NEXT:    mov z3.d, z4.d[3]
 ; CHECK-NEXT:    mov z5.d, z2.d[3]
-; CHECK-NEXT:    mov z1.d, z6.d[2]
-; CHECK-NEXT:    fcvtzs x11, d0
-; CHECK-NEXT:    fcvtzs x12, d4
-; CHECK-NEXT:    fcvtzs x13, d2
-; CHECK-NEXT:    fcvtzs x14, d6
-; CHECK-NEXT:    mov z7.d, z6.d[3]
-; CHECK-NEXT:    mov z16.d, z0.d[3]
-; CHECK-NEXT:    fcvtzs x10, d3
-; CHECK-NEXT:    mov z3.d, z2.d[2]
-; CHECK-NEXT:    fcvtzs x8, d5
-; CHECK-NEXT:    mov z5.d, z0.d[2]
-; CHECK-NEXT:    fcvtzs x9, d1
-; CHECK-NEXT:    mov z1.d, z4.d[3]
-; CHECK-NEXT:    mov z2.d, z2.d[1]
-; CHECK-NEXT:    mov z17.d, z6.d[1]
-; CHECK-NEXT:    fcvtzs x17, d7
-; CHECK-NEXT:    fcvtzs x15, d3
+; CHECK-NEXT:    mov z16.d, z4.d[1]
+; CHECK-NEXT:    mov z7.d, z0.d[3]
+; CHECK-NEXT:    mov z17.d, z0.d[2]
+; CHECK-NEXT:    mov z18.d, z4.d[2]
+; CHECK-NEXT:    mov z19.d, z6.d[1]
+; CHECK-NEXT:    fcvtzs d4, d4
+; CHECK-NEXT:    fcvtzs x8, d1
+; CHECK-NEXT:    mov z1.d, z2.d[1]
+; CHECK-NEXT:    fcvtzs x9, d3
 ; CHECK-NEXT:    mov z3.d, z0.d[1]
-; CHECK-NEXT:    fmov d0, x11
-; CHECK-NEXT:    fcvtzs x16, d5
-; CHECK-NEXT:    mov z5.d, z4.d[1]
-; CHECK-NEXT:    fmov d4, x12
-; CHECK-NEXT:    fcvtzs x11, d2
-; CHECK-NEXT:    fmov d2, x13
+; CHECK-NEXT:    fcvtzs x10, d5
+; CHECK-NEXT:    mov z5.d, z6.d[2]
 ; CHECK-NEXT:    fcvtzs x12, d16
-; CHECK-NEXT:    fcvtzs x13, d3
-; CHECK-NEXT:    fmov d6, x14
-; CHECK-NEXT:    fcvtzs x18, d1
-; CHECK-NEXT:    fcvtzs x14, d5
-; CHECK-NEXT:    fcvtzs x0, d17
-; CHECK-NEXT:    fmov d3, x15
-; CHECK-NEXT:    fmov d1, x16
-; CHECK-NEXT:    fmov d5, x10
-; CHECK-NEXT:    fmov d7, x9
-; CHECK-NEXT:    mov v2.d[1], x11
-; CHECK-NEXT:    mov v0.d[1], x13
-; CHECK-NEXT:    mov v3.d[1], x8
-; CHECK-NEXT:    mov v4.d[1], x14
-; CHECK-NEXT:    mov v1.d[1], x12
-; CHECK-NEXT:    mov v6.d[1], x0
-; CHECK-NEXT:    mov v5.d[1], x18
-; CHECK-NEXT:    mov v7.d[1], x17
+; CHECK-NEXT:    mov z16.d, z2.d[2]
+; CHECK-NEXT:    fcvtzs x11, d7
+; CHECK-NEXT:    fcvtzs x13, d1
+; CHECK-NEXT:    fcvtzs d1, d17
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    fcvtzs x14, d3
+; CHECK-NEXT:    fcvtzs d7, d5
+; CHECK-NEXT:    fcvtzs d2, d2
+; CHECK-NEXT:    fcvtzs d3, d16
+; CHECK-NEXT:    fcvtzs d5, d18
+; CHECK-NEXT:    fcvtzs x15, d19
+; CHECK-NEXT:    fcvtzs d6, d6
+; CHECK-NEXT:    mov v4.d[1], x12
+; CHECK-NEXT:    mov v1.d[1], x11
+; CHECK-NEXT:    mov v0.d[1], x14
+; CHECK-NEXT:    mov v2.d[1], x13
+; CHECK-NEXT:    mov v7.d[1], x8
+; CHECK-NEXT:    mov v3.d[1], x10
+; CHECK-NEXT:    mov v5.d[1], x9
+; CHECK-NEXT:    mov v6.d[1], x15
 ; CHECK-NEXT:    ret
   %a = call <16 x i64> @llvm.llrint.v16i64.v16f64(<16 x double> %x)
   ret <16 x i64> %a
